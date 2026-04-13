@@ -248,7 +248,7 @@ Computed from missing prices + blacklist gaps + on-chain supply monitor, with be
 
 #### Missing-price ratio bands (2026-04-13)
 
-The `missingPriceRatio` thresholds were raised on 2026-04-13 to eliminate boundary flapping at the ~15% operating point. With 194 tracked stablecoins and a baseline of ~29-30 persistently missing prices, the pre-fix 15.00% degraded boundary produced 3+ visible `healthy↔degraded` transitions per day purely from counting noise.
+The `missingPriceRatio` thresholds were raised on 2026-04-13 to eliminate boundary flapping at the ~15% operating point. With 181 active tracked stablecoins and a baseline of ~26-27 persistently missing prices, the pre-fix 15.00% degraded boundary produced 3+ visible `healthy↔degraded` transitions per day purely from counting noise.
 
 | Band | Enter | Cause code | Severity | Drives `dataQualityStatus`? |
 |---|---|---|---|---|

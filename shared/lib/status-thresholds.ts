@@ -57,10 +57,10 @@ export function hasRepresentativeOnchainRatioSample(trackedCoins: number): boole
 
 // --- Missing price thresholds ---
 // Raised 2026-04-13 (see agents/plans/2026-04-13-status-stability-hardening-plan.md).
-// Prior values 0.15/0.40 were too tight for the current ~194-stablecoin tracked
-// set: the normal operating point hovers at ~15% (~29-30 persistently missing
+// Prior values 0.15/0.40 were too tight for the current 181-active-coin tracked
+// set: the normal operating point hovers near 15% (~26-27 persistently missing
 // prices), which produced 2-3 visible healthy↔degraded transitions per day
-// driven entirely by coin-counting noise. New values 0.18/0.45 give ≈ 6 coins
+// driven entirely by coin-counting noise. New values 0.18/0.45 give roughly 5 coins
 // of slack above normal; the elevated band 0.15-0.18 is surfaced as an
 // info-severity cause for observability without driving status.
 export const STATUS_MISSING_PRICE_THRESHOLDS = {

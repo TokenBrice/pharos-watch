@@ -2167,7 +2167,7 @@ describe("handleStatus", () => {
   // -------------------------------------------------------------------------
   //
   // Raise `missingPriceRatio` thresholds from 0.15/0.40 to 0.18/0.45 so the
-  // normal ~15% operating point with ~184 active canonical stablecoins no
+  // normal ~15% operating point with 181 active canonical stablecoins no
   // longer flaps at the 15% boundary. Add a new info-severity
   // `missing_prices_elevated` cause in the 15-18% band for early-warning
   // observability.
@@ -2216,8 +2216,8 @@ describe("handleStatus", () => {
       causes: { dataQuality: DataQualityCause[] };
     };
 
-    it("stays healthy at 33 missing out of 184 active canonical (17.93% — just below the 18% degraded threshold)", async () => {
-      const db = buildBaselineDb(184, 33);
+    it("stays healthy at 32 missing out of 181 active canonical (17.68% — just below the 18% degraded threshold)", async () => {
+      const db = buildBaselineDb(181, 32);
       const request = makeApiRequest("/api/status", { adminKey: "secret-key" });
       const res = await handleStatus(db, true, request);
       const body = (await res.json()) as StatusBody;
@@ -2227,8 +2227,8 @@ describe("handleStatus", () => {
       expect(codes).not.toContain("missing_prices_stale");
     });
 
-    it("degrades at 35 missing out of 184 active canonical (19.02%) with threshold=0.18", async () => {
-      const db = buildBaselineDb(184, 35);
+    it("degrades at 33 missing out of 181 active canonical (18.23%) with threshold=0.18", async () => {
+      const db = buildBaselineDb(181, 33);
       const request = makeApiRequest("/api/status", { adminKey: "secret-key" });
       const res = await handleStatus(db, true, request);
       const body = (await res.json()) as StatusBody;
@@ -2239,8 +2239,8 @@ describe("handleStatus", () => {
       expect(degradedCause?.severity).toBe("warning");
     });
 
-    it("stays healthy and emits missing_prices_elevated info cause at 30 missing out of 184 (16.30% — in the elevated band)", async () => {
-      const db = buildBaselineDb(184, 30);
+    it("stays healthy and emits missing_prices_elevated info cause at 29 missing out of 181 (16.02% — in the elevated band)", async () => {
+      const db = buildBaselineDb(181, 29);
       const request = makeApiRequest("/api/status", { adminKey: "secret-key" });
       const res = await handleStatus(db, true, request);
       const body = (await res.json()) as StatusBody;
@@ -2252,7 +2252,7 @@ describe("handleStatus", () => {
     });
 
     it("does not emit missing_prices_elevated when ratio is below the 15% elevated floor", async () => {
-      const db = buildBaselineDb(184, 20);
+      const db = buildBaselineDb(181, 20);
       const request = makeApiRequest("/api/status", { adminKey: "secret-key" });
       const res = await handleStatus(db, true, request);
       const body = (await res.json()) as StatusBody;
@@ -2263,8 +2263,8 @@ describe("handleStatus", () => {
       expect(codes).not.toContain("missing_prices_stale");
     });
 
-    it("goes stale at 85 missing out of 184 (46.20%) with threshold=0.45", async () => {
-      const db = buildBaselineDb(184, 85);
+    it("goes stale at 82 missing out of 181 (45.30%) with threshold=0.45", async () => {
+      const db = buildBaselineDb(181, 82);
       const request = makeApiRequest("/api/status", { adminKey: "secret-key" });
       const res = await handleStatus(db, true, request);
       const body = (await res.json()) as StatusBody;
@@ -2282,11 +2282,11 @@ describe("handleStatus", () => {
   //
   // The pre-follow-up implementation counted all peggedAssets in the cache,
   // including DefiLlama residuals (numeric IDs from the DL API that we are
-  // not actively tracking). In prod that inflated the denominator from 184
-  // active canonical to 403 total, giving a baseline missing ratio of
-  // 14.14% that was always flapping near the 15% threshold. Restricting
-  // the denominator to ACTIVE_STABLECOINS drops the prod baseline to
-  // ~4.89% (9 canonical missing out of 184). See
+  // not actively tracking). In prod that inflated the denominator beyond the
+  // active canonical set, giving a baseline missing ratio that was always
+  // flapping near the 15% threshold. Restricting the denominator to
+  // ACTIVE_STABLECOINS drops the prod baseline to the true canonical-missing
+  // ratio. See
   // agents/research/2026-04-13-missing-price-coins-audit.md.
   describe("missingPriceRatio canonical scoping", () => {
     function buildMixedCacheDb(params: {

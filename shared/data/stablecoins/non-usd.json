@@ -3116,65 +3116,6 @@
     ]
   },
   {
-    "id": "gbpm-mento",
-    "name": "Mento British Pound",
-    "symbol": "GBPm",
-    "flags": {
-      "backing": "crypto-backed",
-      "pegCurrency": "GBP",
-      "governance": "centralized-dependent",
-      "yieldBearing": false,
-      "rwa": false,
-      "navToken": false
-    },
-    "collateral": "USDm (Mento Dollar) deposited as sole collateral into Liquity v2-style CDPs; USDm is itself Reserve-backed by sUSDS, EURC, CELO, stETH, USDT, USDC, and ETH",
-    "pegMechanism": "Liquity v2-style CDPs: users lock USDm collateral and borrow GBPm at oracle-enforced GBP/USD rates; redemptions allow GBPm holders to claim USDm from the least-collateralized troves; FPMM pools provide secondary liquidity at oracle price; circuit breakers halt trading during FX market closures or extreme deviation",
-    "llamaId": "358",
-    "detailProvider": "defillama",
-    "geckoId": "celo-british-pound",
-    "proofOfReserves": {
-      "type": "real-time",
-      "url": "https://reserve.mento.org/",
-      "provider": "Mento Reserve (on-chain, publicly verifiable)"
-    },
-    "links": [
-      { "label": "Website", "url": "https://www.mento.org/" },
-      { "label": "Twitter", "url": "https://x.com/MentoLabs" },
-      { "label": "Docs", "url": "https://docs.mento.org/mento-v3" },
-      { "label": "GitHub", "url": "https://github.com/mento-protocol" }
-    ],
-    "contracts": [
-      { "chain": "celo", "address": "0xccf663b1ff11028f0b19058d0f7b674004a40746", "decimals": 18 }
-    ],
-    "chainTier": "established-alt-l1",
-    "deploymentModel": "single-chain",
-    "custodyModel": "onchain",
-    "collateralQuality": "alt-lst-bridged-or-mixed",
-    "governanceQuality": "dao-governance",
-    "reserves": [
-      { "name": "USDm (Mento Dollar, Reserve-backed stablecoin)", "pct": 100, "risk": "medium" }
-    ],
-    "dependencies": [
-      { "id": "cusd-celo", "weight": 1.0, "type": "collateral" }
-    ],
-    "liveReservesConfig": {
-      "adapter": "mento",
-      "version": 1,
-      "semantics": "collateral-mix",
-      "breakerScope": "mento-reserve",
-      "display": {
-        "url": "https://reserve.mento.org/",
-        "label": "Reserve"
-      },
-      "inputs": {
-        "primary": {
-          "kind": "http-html",
-          "url": "https://reserve.mento.org/"
-        }
-      }
-    }
-  },
-  {
     "id": "cjpy-yamato",
     "name": "Convertible JPY Token",
     "symbol": "CJPY",

@@ -1,6 +1,6 @@
 # Stablecoin Dashboard (Pharos)
 
-Analytics dashboard tracking 194 stablecoins (+2 shadow assets for PSI). Static Next.js 16 export to Cloudflare Pages. API: Cloudflare Worker + D1.
+Analytics dashboard tracking 191 stablecoins (+2 shadow assets for PSI). Static Next.js 16 export to Cloudflare Pages. API: Cloudflare Worker + D1.
 
 Live: https://pharos.watch
 

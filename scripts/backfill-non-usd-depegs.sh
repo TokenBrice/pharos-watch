@@ -51,7 +51,6 @@ NON_USD_COINS=(
   # GBP
   "vgbp-vnx"
   "tgbp-tokenised"
-  "gbpm-mento"
   # BRL
   "brz-transfero"
   "brla-brla-digital"
