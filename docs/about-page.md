@@ -63,6 +63,7 @@ The page is organized into these sections, in order:
 ## Content Notes
 
 - The page is public-facing product copy, so internal workflow references should stay clear and non-novelty-first.
+- The `Get in Touch` copy describes Pharos as MIT-licensed open source and links to the GitHub repository.
 - When adding a new major data source or externally visible feature surfaced on this page, update this document and the route copy together.
 - Supply/price sourcing now explicitly includes direct protocol redemption quotes for selected redeemable assets, alongside market-data sources, with current examples including Cap cUSD and infiniFi iUSD. Primary pricing uses N-source consensus across CoinGecko, DefiLlama, Pyth Network oracles, Binance/Kraken/Bitstamp/Coinbase spot tickers, RedStone oracle, and Curve on-chain StableSwap prices, with Jupiter Price API available as a Solana fallback. For tracked DefiLlama-backed assets whose known deployments are missing from DefiLlama chain coverage, CoinGecko also repairs the total supply / market-cap buckets so multichain issuer supply is not understated.
 - Reserve-transparency sources now include issuer/protocol reserve APIs, dashboards, proof-of-reserve portals, and direct on-chain vault/accounting reads used for live reserve composition where available, with current examples including Anzen, Ethena, Falcon, Frankencoin, infiniFi, M0, Mento Reserve, OpenEden, Re, USDD, USD.AI, Accountable, Tether, Frax, Circle, First Digital Labs, SG-FORGE, Paxos, Sky/MakerDAO, Chainlink PoR/NAV feeds, and Aave GHO.

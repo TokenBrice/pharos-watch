@@ -1,6 +1,7 @@
 {
   "name": "stablecoin-api",
   "private": true,
+  "license": "MIT",
   "engines": {
     "node": ">=22.12 <26"
   },

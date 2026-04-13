@@ -355,4 +355,4 @@ Optional mint/burn freshness env overrides (secret or plain env): `MINT_BURN_DIS
 
 ## License
 
-All rights reserved.
+Pharos is open source under the [MIT License](./LICENSE).

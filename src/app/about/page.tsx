@@ -706,8 +706,8 @@ export default function AboutPage() {
           contentClassName="space-y-3 text-sm leading-relaxed text-muted-foreground"
         >
           <p>
-            Pharos is fully open source. If you spot a bad data point, want a stablecoin added, or want to understand
-            how something is computed, open the code or reach out directly.
+            Pharos is MIT-licensed open source. If you spot a bad data point, want a stablecoin added, or want to
+            understand how something is computed, open the code or reach out directly.
           </p>
           <div className="flex flex-wrap gap-2">
             <Button asChild variant="outline" className={CTA_BUTTON_CLASS}>
