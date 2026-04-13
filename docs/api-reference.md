@@ -1340,13 +1340,15 @@ Public transition history for the read-only `/status/` page. Returns the current
 | Field           | Type                                | Description |
 | --------------- | ----------------------------------- | ----------- |
 | `timestamp`     | `number`                            | Unix seconds at time of response |
-| `currentStatus` | `"healthy" \| "degraded" \| "stale"` | Current public status |
-| `lastChangedAt` | `number \| null`                    | Unix seconds for the latest public status change, if known |
-| `transitions`   | `PublicStatusTransition[]`          | Recent transitions inside the requested window, newest first |
+| `currentStatus` | `"healthy" \| "degraded" \| "stale"` | Current public status, sourced from `assessPublicHealth` (matches `/api/health.status`) |
+| `lastChangedAt` | `number \| null`                    | Unix seconds for the latest admin status-machine change, if known |
+| `transitions`   | `PublicStatusTransition[]`          | Recent transitions filtered to public-facing causes, inside the requested window, newest first |
 
 This endpoint powers two separate public `/status/` views: the hero `Status runway` always uses `window=30d`, while the transition table owns its own user-selected `24h` / `7d` / `30d` filter.
 
 Browser consumers on `pharos.watch` and `ops.pharos.watch` should use same-origin `/_site-data/public-status-history`, which proxies onto the internal website lane instead of calling the external API host directly.
+
+**Public-impact filtering (2026-04-13):** The endpoint filters the admin state-machine transitions down to those whose causes include at least one public-facing impact code (`cache_ratio_*`, `cache_freshness_query_failed`, `fx_source_*`, `fx_cached_fallback`, `mint_burn_public_*`, `open_circuit_groups`, `circuit_query_failed`, `cron_error_runs`, `multiple_unhealthy_crons`, `unhealthy_crons_present`, `db_unhealthy`). Admin-only data-quality causes (`missing_prices_*`, `blacklist_gaps_*`, `reserve_sync_*`, `onchain_*`, `watch_*`) are excluded, and `info`-severity causes are excluded regardless of code. This ensures the public `/status/` hero (driven by `/api/health`) and the uptime bar / transition timeline (driven by this endpoint) always agree. The unfiltered admin view is still available via the admin `/api/status` endpoint.
 
 ---
 

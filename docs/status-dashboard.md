@@ -86,6 +86,7 @@ The active frontend operator mode is now:
   - Calls `GET /api/public-status-history` through same-origin `/_site-data/public-status-history` on website hosts
   - Uses the endpoint's explicit `window=24h|7d|30d` filter instead of approximating windows with row-count-only limits
   - The public page binds one fixed `30d` query for the runway and a separate user-selected query for the transition log, so the hero summary and history table no longer fight over the same state
+  - **Public-impact filter (2026-04-13):** `/api/public-status-history` filters the state-machine transitions down to those whose causes include at least one public-facing impact code (`cache_ratio_*`, `cache_freshness_query_failed`, `fx_source_*`, `fx_cached_fallback`, `mint_burn_public_*`, `open_circuit_groups`, `circuit_query_failed`, `cron_error_runs`, `multiple_unhealthy_crons`, `unhealthy_crons_present`, `db_unhealthy`). Admin-only data-quality causes (`missing_prices_*`, `blacklist_gaps_*`, `reserve_sync_*`, `onchain_*`, `watch_*`) are excluded, and any `info`-severity cause is excluded regardless of code. The endpoint also sources its `currentStatus` field from `assessPublicHealth` (matching `/api/health`) instead of the hysteresis-smoothed admin `status_state.current_status`, so the `/status/` page hero badge and the uptime bar / transition timeline always agree.
 - `src/hooks/use-status-history.ts`
   - Calls `GET /api/status-history` through same-origin `/api/admin/status-history` on `ops.pharos.watch`
   - Query key uses the fixed ops-proxy scope; no browser-held secret is involved
@@ -226,7 +227,7 @@ Computed from missing prices + blacklist gaps + on-chain supply monitor, with be
 
 - `stale` if any of:
   - stablecoins cache is unavailable/corrupt (`dataQuality.stablecoinsCacheStatus === "error"`)
-  - `missingPriceRatio > 0.4`
+  - `missingPriceRatio > 0.45`
   - `blacklistMissingRatio >= 0.02` (2%)
   - `blacklistRecentMissingAmounts >= 25` (last 24h)
   - `staleOnchainSupply >= 10`
@@ -236,13 +237,25 @@ Computed from missing prices + blacklist gaps + on-chain supply monitor, with be
   - `reserveComposition.status === "stale"`
 - `degraded` if any of:
   - stablecoins cache is degraded but still usable (`dataQuality.stablecoinsCacheStatus === "degraded"`, currently legacy-array payloads only)
-  - `missingPriceRatio > 0.15`
+  - `missingPriceRatio > 0.18`
   - `blacklistRecentMissingAmounts > 0` (last 24h)
   - `blacklistMissingRatio >= 0.01` (1%)
   - `onchainStaleRatio >= 0.1` when `onchainSupplyTrackedCoins >= 10`
   - `onchainDivergenceRatio >= 0.1` when `onchainSupplyTrackedCoins >= 10`
   - `reserveComposition.status === "degraded"`
 - else `healthy`
+
+#### Missing-price ratio bands (2026-04-13)
+
+The `missingPriceRatio` thresholds were raised on 2026-04-13 to eliminate boundary flapping at the ~15% operating point. With 194 tracked stablecoins and a baseline of ~29-30 persistently missing prices, the pre-fix 15.00% degraded boundary produced 3+ visible `healthy↔degraded` transitions per day purely from counting noise.
+
+| Band | Enter | Cause code | Severity | Drives `dataQualityStatus`? |
+|---|---|---|---|---|
+| elevated | ≥ 15% | `missing_prices_elevated` | info | no — advisory only |
+| degraded | > 18% | `missing_prices_degraded` | warning | yes → `degraded` |
+| stale    | > 45% | `missing_prices_stale`    | critical | yes → `stale`    |
+
+The `missing_prices_elevated` info cause exists to preserve operator observability in the 15-18% band without forcing a visible status transition. See `agents/plans/2026-04-13-status-stability-hardening-plan.md` for the full rationale.
 
 `dataQuality.sourceFailures` still records failed data-quality subqueries, but those failures now emit info-level causes and increment `summary.diagnosticIssueCount` instead of degrading `dataQualityStatus` on their own. Only the stablecoins cache remains a hard dependency in this path.
 
