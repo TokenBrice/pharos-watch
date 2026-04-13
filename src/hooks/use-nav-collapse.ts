@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { usePathname } from "next/navigation";
 import { NAV_GROUPS, DEFAULT_EXPANDED } from "@/lib/nav-config";
 import { getWindowStorage, safeStorageGetItem, safeStorageSetItem } from "@/lib/browser-storage";
@@ -28,6 +28,10 @@ export function setExpandedState(state: Record<string, boolean>): void {
   safeStorageSetItem(getWindowStorage("local"), STORAGE_KEY, JSON.stringify(state));
 }
 
+function getDefaultExpandedState(): Record<string, boolean> {
+  return { ...DEFAULT_EXPANDED };
+}
+
 /* ── Route → group key resolver ──────────────────────────────── */
 
 function findGroupKeyForRoute(pathname: string): string | null {
@@ -41,9 +45,16 @@ function findGroupKeyForRoute(pathname: string): string | null {
 
 export function useNavCollapse() {
   const pathname = usePathname();
-  const [state, setState] = useState(getExpandedState);
+  const [state, setState] = useState(getDefaultExpandedState);
   // Groups the user has explicitly collapsed while the active page is inside them
   const [manualOverrides, setManualOverrides] = useState<Record<string, boolean>>({});
+
+  useEffect(() => {
+    const timeout = window.setTimeout(() => {
+      setState(getExpandedState());
+    }, 0);
+    return () => window.clearTimeout(timeout);
+  }, []);
 
   const activeGroupKey = useMemo(() => findGroupKeyForRoute(pathname), [pathname]);
 

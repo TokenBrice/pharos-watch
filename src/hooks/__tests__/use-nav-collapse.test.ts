@@ -1,3 +1,8 @@
+// @vitest-environment jsdom
+
+import { renderHook, waitFor } from "@testing-library/react";
+import { createElement } from "react";
+import { renderToString } from "react-dom/server";
 import { describe, expect, it, vi, beforeEach } from "vitest";
 
 // Mock browser-storage before importing the hook module
@@ -8,6 +13,11 @@ vi.mock("@/lib/browser-storage", () => ({
 }));
 
 let mockStorage: Storage;
+let mockPathname = "/stablecoin/m-m0/";
+
+vi.mock("next/navigation", () => ({
+  usePathname: () => mockPathname,
+}));
 
 function createMockStorage(): Storage {
   const store: Record<string, string> = {};
@@ -22,10 +32,11 @@ function createMockStorage(): Storage {
 }
 
 // Import after mocks are in place
-const { getExpandedState, setExpandedState, STORAGE_KEY } = await import("@/hooks/use-nav-collapse");
+const { getExpandedState, setExpandedState, STORAGE_KEY, useNavCollapse } = await import("@/hooks/use-nav-collapse");
 
 beforeEach(() => {
   mockStorage = createMockStorage();
+  mockPathname = "/stablecoin/m-m0/";
 });
 
 describe("getExpandedState", () => {
@@ -58,5 +69,24 @@ describe("setExpandedState", () => {
     setExpandedState({ data: true, tools: false, info: true });
     const raw = mockStorage.getItem(STORAGE_KEY);
     expect(JSON.parse(raw!)).toEqual({ data: true, tools: false, info: true });
+  });
+});
+
+describe("useNavCollapse", () => {
+  function NavCollapseProbe() {
+    const navCollapse = useNavCollapse();
+    return createElement("div", { "data-expanded": String(navCollapse.isExpanded("data")) });
+  }
+
+  it("renders the hydration pass from defaults before applying localStorage state", async () => {
+    mockStorage.setItem(STORAGE_KEY, JSON.stringify({ data: true }));
+
+    expect(renderToString(createElement(NavCollapseProbe))).toContain('data-expanded="false"');
+
+    const { result } = renderHook(() => useNavCollapse());
+
+    await waitFor(() => {
+      expect(result.current.isExpanded("data")).toBe(true);
+    });
   });
 });

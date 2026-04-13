@@ -16,7 +16,7 @@ import { TRACKED_STABLECOINS } from "@shared/lib/stablecoins";
 import Link from "next/link";
 import { buildStablecoinUrl } from "@/lib/urls";
 import { DETAIL_SECTION_TITLE_CLASS } from "@/components/stablecoin-detail/section-title";
-import { MethodologyCardActions, MethodologyLabel } from "@/components/methodology-hint";
+import { MethodologyCardActions, MethodologyHint, MethodologyLabel } from "@/components/methodology-hint";
 import { cn } from "@/lib/utils";
 import { LIQUIDITY_SCORE_WEIGHTS } from "@shared/lib/liquidity-score-weights";
 
@@ -60,6 +60,28 @@ function GradeGlow({ grade }: { grade: string }) {
 // Dimension Row Component
 // ---------------------------------------------------------------------------
 
+function DimensionLabel({ dimKey }: { dimKey: DimensionKey }) {
+  if (dimKey === "resilience") {
+    return (
+      <span className="inline-flex items-center gap-1.5">
+        <span>{DIMENSION_LABELS[dimKey]}</span>
+        <MethodologyHint topic="resilience" className="pointer-events-auto" />
+      </span>
+    );
+  }
+
+  if (dimKey === "dependencyRisk") {
+    return (
+      <span className="inline-flex items-center gap-1.5">
+        <span>{DIMENSION_LABELS[dimKey]}</span>
+        <MethodologyHint topic="dependencyRisk" className="pointer-events-auto" />
+      </span>
+    );
+  }
+
+  return DIMENSION_LABELS[dimKey];
+}
+
 interface DimensionRowProps {
   dimKey: DimensionKey;
   dim: ReportCardType["dimensions"][DimensionKey];
@@ -72,50 +94,59 @@ function DimensionRow({ dimKey, dim, card, liquidityComponents }: DimensionRowPr
   const dimRange = dim.grade.charAt(0);
   const dimBorder = GRADE_BORDER_HEX[dimRange] ?? 'transparent';
   const hasDetails = (dimKey === "resilience" || dimKey === "decentralization" || dimKey === "dependencyRisk" || dimKey === "liquidity") && dim.score !== null;
+  const detailsId = `report-card-${card.id}-${dimKey}-details`;
 
   return (
     <div className="group">
-      <button
-        onClick={() => hasDetails && setExpanded(!expanded)}
+      <div
         className={cn(
-          "w-full flex items-center justify-between rounded-lg border border-l-[4px] px-3 py-2.5 transition-colors",
-          hasDetails ? "hover:bg-muted/30 cursor-pointer" : "cursor-default"
+          "relative w-full rounded-lg border border-l-[4px] px-3 py-2.5 transition-colors",
+          hasDetails ? "cursor-pointer hover:bg-muted/30" : "cursor-default"
         )}
         style={{ borderLeftColor: dimBorder }}
       >
-        <div className="flex items-center gap-2">
-          <span className="text-sm font-medium">
-            {dimKey === "resilience" ? (
-              <MethodologyLabel topic="resilience">{DIMENSION_LABELS[dimKey]}</MethodologyLabel>
-            ) : dimKey === "dependencyRisk" ? (
-              <MethodologyLabel topic="dependencyRisk">{DIMENSION_LABELS[dimKey]}</MethodologyLabel>
-            ) : (
-              DIMENSION_LABELS[dimKey]
-            )}
-          </span>
-          {hasDetails && (
-            <ChevronDown aria-hidden="true" className={cn("h-4 w-4 text-muted-foreground transition-transform", expanded && "rotate-180")} />
-          )}
-        </div>
-        <div className="flex items-center gap-3">
-          <Badge
-            variant="outline"
-            className={`text-xs font-semibold ${REPORT_CARD_GRADE_COLORS[dim.grade]}`}
+        {hasDetails && (
+          <button
+            type="button"
+            onClick={() => setExpanded((prev) => !prev)}
+            className="pharos-focus-ring absolute inset-0 z-0 cursor-pointer rounded-lg border-0 bg-transparent p-0"
+            aria-expanded={expanded}
+            aria-controls={detailsId}
           >
-            {dim.grade}
-          </Badge>
-          <span className="w-14 text-right text-sm tabular-nums text-muted-foreground">
-            {dim.score !== null ? (
-              <>
-                {dim.score}
-                <span className="text-xs">/100</span>
-              </>
-            ) : (
-              "\u2014"
+            <span className="sr-only">
+              {expanded ? "Hide" : "Show"} {DIMENSION_LABELS[dimKey]} details
+            </span>
+          </button>
+        )}
+        <div className={cn("relative z-10 flex items-center justify-between", hasDetails && "pointer-events-none")}>
+          <div className="flex items-center gap-2">
+            <span className="text-sm font-medium">
+              <DimensionLabel dimKey={dimKey} />
+            </span>
+            {hasDetails && (
+              <ChevronDown aria-hidden="true" className={cn("h-4 w-4 text-muted-foreground transition-transform", expanded && "rotate-180")} />
             )}
-          </span>
+          </div>
+          <div className="flex items-center gap-3">
+            <Badge
+              variant="outline"
+              className={`text-xs font-semibold ${REPORT_CARD_GRADE_COLORS[dim.grade]}`}
+            >
+              {dim.grade}
+            </Badge>
+            <span className="w-14 text-right text-sm tabular-nums text-muted-foreground">
+              {dim.score !== null ? (
+                <>
+                  {dim.score}
+                  <span className="text-xs">/100</span>
+                </>
+              ) : (
+                "\u2014"
+              )}
+            </span>
+          </div>
         </div>
-      </button>
+      </div>
 
       {/* Peg stability cap warning - always visible */}
       {dimKey === "pegStability" && dim.detail.includes("capped at C") && (
@@ -126,7 +157,7 @@ function DimensionRow({ dimKey, dim, card, liquidityComponents }: DimensionRowPr
 
       {/* Expanded Details */}
       {expanded && hasDetails && (
-        <div className="mt-2 ml-4 space-y-2 animate-in slide-in-from-top-1 duration-200">
+        <div id={detailsId} className="mt-2 ml-4 space-y-2 animate-in slide-in-from-top-1 duration-200">
           {/* Factor breakdown for resilience/decentralization/dependencyRisk */}
           {(dimKey === "resilience" || dimKey === "decentralization" || dimKey === "dependencyRisk") && (
             <div className="space-y-1">
@@ -286,12 +317,12 @@ export function ReportCardDetail({ card, liquidityComponents }: ReportCardDetail
     >
       <CardHeader>
         <CardTitle as="h2" className="text-xl font-bold tracking-tight">
-          <div className="flex items-center justify-between">
+          <span className="flex items-center justify-between">
             <MethodologyLabel topic="safetyScore">Safety Score</MethodologyLabel>
             <span className="text-xs font-normal text-muted-foreground">
               v{METHODOLOGY_VERSION}
             </span>
-          </div>
+          </span>
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-6">
