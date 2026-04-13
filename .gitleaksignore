@@ -18,6 +18,11 @@
 2b4956d9f873b2dac9d8c34b45769af83790d2c4:agents/plans/historical/2026-03-14-live-reserve-coverage-expansion.md:generic-api-key:984
 2b4956d9f873b2dac9d8c34b45769af83790d2c4:agents/research/2026-03-14-live-reserve-coverage-expansion.md:generic-api-key:73
 2b4956d9f873b2dac9d8c34b45769af83790d2c4:agents/research/2026-03-14-live-reserve-data-source-survey.md:generic-api-key:483
+3133a963f406d8592a365dcfe7b57691d7767fb2:shared/data/stablecoins/usd-minor.json:generic-api-key:7906
+3e5efced13d6b59a79d4694f002bf968594cde44:worker/src/cron/dex-liquidity/__tests__/staging-merge.test.ts:generic-api-key:295
+3e5efced13d6b59a79d4694f002bf968594cde44:worker/src/cron/dex-liquidity/__tests__/staging-merge.test.ts:generic-api-key:296
+3e5efced13d6b59a79d4694f002bf968594cde44:worker/src/cron/dex-liquidity/__tests__/staging-merge.test.ts:generic-api-key:339
+3e5efced13d6b59a79d4694f002bf968594cde44:worker/src/cron/dex-liquidity/__tests__/staging-merge.test.ts:generic-api-key:340
 58102b4c10defb3535078bd63505214332a66918:shared/lib/stablecoins.ts:generic-api-key:3836
 58102b4c10defb3535078bd63505214332a66918:shared/lib/stablecoins.ts:generic-api-key:3881
 58102b4c10defb3535078bd63505214332a66918:shared/lib/stablecoins.ts:generic-api-key:3926
