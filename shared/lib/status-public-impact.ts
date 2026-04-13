@@ -35,7 +35,7 @@ const PUBLIC_IMPACT_CODES: ReadonlySet<string> = new Set([
  * severity is `warning` or `critical` AND (b) its code is in the
  * public-impact allowlist.
  */
-export function causeIsPublicImpacting(cause: StatusCause): boolean {
+function causeIsPublicImpacting(cause: StatusCause): boolean {
   if (cause.severity === "info") return false;
   return PUBLIC_IMPACT_CODES.has(cause.code);
 }
