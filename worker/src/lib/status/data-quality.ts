@@ -7,6 +7,7 @@ import {
   STATUS_ONCHAIN_FRESH_WINDOW_SEC,
   STATUS_ONCHAIN_MONITORING_ACTIVE_WINDOW_SEC,
 } from "@shared/lib/status-thresholds";
+import { ACTIVE_IDS } from "@shared/lib/stablecoins";
 import type { DataQuality, StatusResponse } from "@shared/types/status";
 
 type DataQualitySourceKey = StatusResponse["dataQuality"]["sourceFailures"][number]["source"];
@@ -84,8 +85,15 @@ export async function getDataQuality(
     : [];
   const stablecoinAssetMap = new Map(stablecoinAssets.map((asset) => [asset.id, asset]));
 
-  const totalStablecoins = stablecoinAssets.length;
-  const missingPrices = stablecoinAssets.filter(
+  // Scope `missingPriceRatio` denominator to active canonical stablecoins
+  // only. The DL stablecoins API emits residuals (numeric IDs not in
+  // canonical-order.json) that ride in the cache but are not actively
+  // tracked, and pre-launch canonical coins legitimately have no price yet.
+  // Counting either inflates the ratio and drives false degradations.
+  // See agents/research/2026-04-13-missing-price-coins-audit.md.
+  const activeCanonicalAssets = stablecoinAssets.filter((asset) => ACTIVE_IDS.has(asset.id));
+  const totalStablecoins = activeCanonicalAssets.length;
+  const missingPrices = activeCanonicalAssets.filter(
     (asset: { price?: number | null }) => asset.price == null || asset.price === 0,
   ).length;
 

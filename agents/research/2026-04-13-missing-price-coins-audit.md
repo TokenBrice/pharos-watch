@@ -63,17 +63,26 @@ Most of these are either pre-launch, deprecated (e.g., USTC from Terra collapse)
 
 ## Recommended follow-ups
 
-1. **Scope `missingPriceRatio` denominator to canonical coins only.** Modify `worker/src/lib/status/data-quality.ts` to filter `stablecoinAssets` against the canonical ID set from `shared/data/stablecoins/canonical-order.json` before computing `totalStablecoins` and `missingPrices`. This is the most surgical fix.
-2. **Triage the 9 canonical missing coins.** Each needs individual investigation: is it pre-launch (keep as missing), is the price-source config wrong (fix), or should it be removed from canonical tracking (delete).
-3. **Decide whether to drop DL residuals from the cache write.** They are used for discovery candidate surfacing, so removing them entirely is a tradeoff. At minimum, a separate `cacheWriteResidualFilter` could exclude them from the main `stablecoins` payload and keep them in a separate `discovery-residuals` cache key.
-4. **Add a test** that fixes the denominator at the canonical tracked count so threshold drift can be caught via unit tests instead of prod flapping.
+1. **~~Scope `missingPriceRatio` denominator to canonical coins only.~~** ✅ **Implemented 2026-04-13** in `worker/src/lib/status/data-quality.ts` using the `ACTIVE_IDS` set from `shared/lib/stablecoins`. The filter excludes both DL residuals and pre-launch canonical coins. New tests in `worker/src/api/__tests__/status.test.ts` cover the `buildMixedCacheDb` cases. The prod normal-state ratio drops from 14.14% (57/403) to ~4.89% (9/184).
+2. **Triage the 9 canonical missing coins.** Each needs individual investigation: is it pre-launch (keep as missing), is the price-source config wrong (fix), or should it be removed from canonical tracking (delete). **Still open.**
+3. **Decide whether to drop DL residuals from the cache write.** They are used for discovery candidate surfacing, so removing them entirely is a tradeoff. At minimum, a separate `cacheWriteResidualFilter` could exclude them from the main `stablecoins` payload and keep them in a separate `discovery-residuals` cache key. **Still open but lower priority now that residuals no longer affect the status ratio.**
+4. **~~Add a test that fixes the denominator at the canonical tracked count.~~** ✅ **Implemented 2026-04-13** — the `missingPriceRatio canonical scoping` describe block in `worker/src/api/__tests__/status.test.ts` covers both "residuals unpriced but ignored" and "canonical missing without dilution by residuals".
 
 ## Status of the immediate fix
 
-The Workstream 1 threshold raise (0.15 → 0.18 for `ratioDegraded`, 0.40 → 0.45 for `ratioStale`) handles the current situation comfortably:
+Both layers of the fix have now landed:
 
-- Current ratio 14.14% < 18% → healthy
-- Even if 10 more coins became unpriced (ratio 16.6%) → still healthy
-- Requires 73+ missing prices out of 403 to degrade → meaningful regression
+**Layer 1 — Workstream 1 threshold raise** (`ca4ab112`): 0.15 → 0.18 for `ratioDegraded`, 0.40 → 0.45 for `ratioStale`. This was the minimal stabilizer that unblocked the flapping problem using the old (inflated) denominator.
 
-The deeper fixes above are strict improvements but not blocking. Filed as follow-up tasks.
+**Layer 2 — Canonical scoping** (follow-up #1 above, 2026-04-13): `getDataQuality` now filters `stablecoinAssets` through `ACTIVE_IDS` before computing `totalStablecoins` and `missingPrices`. The prod normal-state ratio drops from 14.14% (57/403) to ~4.89% (9/184) — well below the elevated band, so the `missing_prices_elevated` info cause will stop firing too.
+
+Combined effect:
+
+- Prod normal: 4.89% → comfortably healthy
+- Elevated band fires at 15% of 184 = 28 missing active canonical
+- Degraded fires at 18% of 184 = 34 missing active canonical
+- Stale fires at 45% of 184 = 83 missing active canonical
+
+Even if all 9 currently-missing-canonical coins went unpriced AND another 18 existing coins lost their prices (total 27), the system would still be healthy (below 15% elevated floor). A meaningful regression is now required to drive status transitions.
+
+Remaining open follow-ups: triage the 9 canonical missing coins, and decide whether to split DL residuals out of the main `stablecoins` cache write.

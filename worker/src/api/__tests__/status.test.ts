@@ -3,6 +3,7 @@ import { mockD1 } from "./helpers/mock-d1";
 import { makeApiRequest, stubCryptoForAuth } from "./helpers/auth";
 import { mockFetch } from "./helpers/mock-fetch";
 import { CRON_INTERVALS } from "@shared/lib/cron-jobs";
+import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins";
 
 stubCryptoForAuth();
 
@@ -2166,33 +2167,26 @@ describe("handleStatus", () => {
   // -------------------------------------------------------------------------
   //
   // Raise `missingPriceRatio` thresholds from 0.15/0.40 to 0.18/0.45 so the
-  // normal ~15% operating point with 194 tracked coins no longer flaps at
-  // the 15% boundary. Add a new info-severity `missing_prices_elevated`
-  // cause in the 15-18% band for early-warning observability.
+  // normal ~15% operating point with ~184 active canonical stablecoins no
+  // longer flaps at the 15% boundary. Add a new info-severity
+  // `missing_prices_elevated` cause in the 15-18% band for early-warning
+  // observability.
   describe("missingPriceRatio raised thresholds + elevated info cause", () => {
     /**
-     * Build a peggedAssets list of `total` coins where exactly `missing` of
-     * them have `price == null`. Supplemental fields are stubbed to the
-     * minimum the data-quality loader needs.
+     * Build a peggedAssets list using real canonical IDs from
+     * ACTIVE_STABLECOINS. The first `total` active IDs are used; the first
+     * `missing` of those get `price: null`. This ensures the canonical-
+     * scoping filter in `getDataQuality` keeps them in the denominator.
      */
     function buildPeggedAssets(total: number, missing: number): unknown[] {
-      const assets: Array<{
-        id: string;
-        symbol: string;
-        pegType: string;
-        price: number | null;
-        circulating: Record<string, number>;
-      }> = [];
-      for (let i = 0; i < total; i++) {
-        assets.push({
-          id: `stub-coin-${i}`,
-          symbol: `STUB${i}`,
-          pegType: "peggedUSD",
-          price: i < missing ? null : 1,
-          circulating: { peggedUSD: 10_000_000 },
-        });
-      }
-      return assets;
+      const ids = ACTIVE_STABLECOINS.slice(0, total).map((c) => c.id);
+      return ids.map((id, i) => ({
+        id,
+        symbol: id.toUpperCase(),
+        pegType: "peggedUSD",
+        price: i < missing ? null : 1,
+        circulating: { peggedUSD: 10_000_000 },
+      }));
     }
 
     function buildBaselineDb(total: number, missing: number) {
@@ -2222,8 +2216,8 @@ describe("handleStatus", () => {
       causes: { dataQuality: DataQualityCause[] };
     };
 
-    it("stays healthy at 34 missing out of 194 (17.53% — just below the 18% degraded threshold)", async () => {
-      const db = buildBaselineDb(194, 34);
+    it("stays healthy at 33 missing out of 184 active canonical (17.93% — just below the 18% degraded threshold)", async () => {
+      const db = buildBaselineDb(184, 33);
       const request = makeApiRequest("/api/status", { adminKey: "secret-key" });
       const res = await handleStatus(db, true, request);
       const body = (await res.json()) as StatusBody;
@@ -2233,8 +2227,8 @@ describe("handleStatus", () => {
       expect(codes).not.toContain("missing_prices_stale");
     });
 
-    it("degrades at 36 missing out of 194 (18.56%) with threshold=0.18", async () => {
-      const db = buildBaselineDb(194, 36);
+    it("degrades at 35 missing out of 184 active canonical (19.02%) with threshold=0.18", async () => {
+      const db = buildBaselineDb(184, 35);
       const request = makeApiRequest("/api/status", { adminKey: "secret-key" });
       const res = await handleStatus(db, true, request);
       const body = (await res.json()) as StatusBody;
@@ -2245,8 +2239,8 @@ describe("handleStatus", () => {
       expect(degradedCause?.severity).toBe("warning");
     });
 
-    it("stays healthy and emits missing_prices_elevated info cause at 30 missing out of 194 (15.46% — in the elevated band)", async () => {
-      const db = buildBaselineDb(194, 30);
+    it("stays healthy and emits missing_prices_elevated info cause at 30 missing out of 184 (16.30% — in the elevated band)", async () => {
+      const db = buildBaselineDb(184, 30);
       const request = makeApiRequest("/api/status", { adminKey: "secret-key" });
       const res = await handleStatus(db, true, request);
       const body = (await res.json()) as StatusBody;
@@ -2258,7 +2252,7 @@ describe("handleStatus", () => {
     });
 
     it("does not emit missing_prices_elevated when ratio is below the 15% elevated floor", async () => {
-      const db = buildBaselineDb(194, 20);
+      const db = buildBaselineDb(184, 20);
       const request = makeApiRequest("/api/status", { adminKey: "secret-key" });
       const res = await handleStatus(db, true, request);
       const body = (await res.json()) as StatusBody;
@@ -2269,8 +2263,8 @@ describe("handleStatus", () => {
       expect(codes).not.toContain("missing_prices_stale");
     });
 
-    it("goes stale at 90 missing out of 194 (46.39%) with threshold=0.45", async () => {
-      const db = buildBaselineDb(194, 90);
+    it("goes stale at 85 missing out of 184 (46.20%) with threshold=0.45", async () => {
+      const db = buildBaselineDb(184, 85);
       const request = makeApiRequest("/api/status", { adminKey: "secret-key" });
       const res = await handleStatus(db, true, request);
       const body = (await res.json()) as StatusBody;
@@ -2279,6 +2273,112 @@ describe("handleStatus", () => {
       expect(staleCause).toBeDefined();
       expect(staleCause?.threshold).toBe(0.45);
       expect(staleCause?.severity).toBe("critical");
+    });
+  });
+
+  // -------------------------------------------------------------------------
+  // Follow-up #4 — scope missingPriceRatio denominator to active canonical
+  // -------------------------------------------------------------------------
+  //
+  // The pre-follow-up implementation counted all peggedAssets in the cache,
+  // including DefiLlama residuals (numeric IDs from the DL API that we are
+  // not actively tracking). In prod that inflated the denominator from 184
+  // active canonical to 403 total, giving a baseline missing ratio of
+  // 14.14% that was always flapping near the 15% threshold. Restricting
+  // the denominator to ACTIVE_STABLECOINS drops the prod baseline to
+  // ~4.89% (9 canonical missing out of 184). See
+  // agents/research/2026-04-13-missing-price-coins-audit.md.
+  describe("missingPriceRatio canonical scoping", () => {
+    function buildMixedCacheDb(params: {
+      canonicalTotal: number;
+      canonicalMissing: number;
+      residuals: number;
+      residualsMissing: number;
+    }) {
+      const now = Math.floor(Date.now() / 1000);
+      const canonicalIds = ACTIVE_STABLECOINS.slice(0, params.canonicalTotal).map((c) => c.id);
+      type Asset = { id: string; symbol: string; pegType: string; price: number | null; circulating: Record<string, number> };
+      const assets: Asset[] = [];
+      canonicalIds.forEach((id, i) => {
+        assets.push({
+          id,
+          symbol: id.toUpperCase(),
+          pegType: "peggedUSD",
+          price: i < params.canonicalMissing ? null : 1,
+          circulating: { peggedUSD: 10_000_000 },
+        });
+      });
+      for (let i = 0; i < params.residuals; i++) {
+        assets.push({
+          id: `residual-${i}`, // intentionally not in ACTIVE_IDS
+          symbol: `RES${i}`,
+          pegType: "peggedUSD",
+          price: i < params.residualsMissing ? null : 1,
+          circulating: { peggedUSD: 5_000_000 },
+        });
+      }
+      const stablecoinsCache = JSON.stringify({ peggedAssets: assets });
+      return mockD1([
+        { match: "cache WHERE key IN", rows: [makeCacheRow("stablecoins")] },
+        { match: "dex_liquidity", rows: [], first: { age: 300 } },
+        { match: "yield_data", rows: [], first: { age: 300 } },
+        { match: "stress_signals", rows: [], first: { age: 300 } },
+        { match: "cron_runs", rows: [makeCronRow("sync-stablecoins", "ok", 30)] },
+        { match: "cache", rows: [], first: { value: stablecoinsCache, updated_at: now - 60 } },
+        { match: "blacklist_events", rows: [], first: { total: 0, missing: 0, missing_recent: 0 } },
+        { match: "depeg_events", rows: [], first: { cnt: 0 } },
+        { match: "onchain_supply WHERE updated_at", rows: [], first: { cnt: 0 } },
+        { match: "onchain_supply WHERE updated_at >", rows: [] },
+        { match: "FROM discovery_candidates WHERE dismissed = 0", rows: [] },
+      ]);
+    }
+
+    type CanonicalScopeBody = {
+      dataQualityStatus: string;
+      dataQuality: { totalStablecoins: number; missingPrices: number };
+      causes: { dataQuality: Array<{ code: string }> };
+    };
+
+    it("excludes DL residuals from the denominator even when they are all unpriced", async () => {
+      // 10 active canonical (all priced) + 100 DL residuals (all unpriced).
+      // Pre-follow-up: ratio = 100/110 = 90.9% → stale.
+      // Post-follow-up: ratio = 0/10 = 0% → healthy.
+      const db = buildMixedCacheDb({
+        canonicalTotal: 10,
+        canonicalMissing: 0,
+        residuals: 100,
+        residualsMissing: 100,
+      });
+      const request = makeApiRequest("/api/status", { adminKey: "secret-key" });
+      const res = await handleStatus(db, true, request);
+      const body = (await res.json()) as CanonicalScopeBody;
+      expect(body.dataQualityStatus).toBe("healthy");
+      expect(body.dataQuality.totalStablecoins).toBe(10);
+      expect(body.dataQuality.missingPrices).toBe(0);
+      const codes = body.causes.dataQuality.map((c) => c.code);
+      expect(codes).not.toContain("missing_prices_degraded");
+      expect(codes).not.toContain("missing_prices_stale");
+    });
+
+    it("counts canonical missing prices without double-counting residuals", async () => {
+      // 10 active canonical (2 missing = 20%) + 50 DL residuals (all priced).
+      // Pre-follow-up: ratio = 2/60 = 3.3% → healthy (accidentally).
+      // Post-follow-up: ratio = 2/10 = 20% → degraded.
+      // The DL residuals being priced doesn't dilute a real canonical issue.
+      const db = buildMixedCacheDb({
+        canonicalTotal: 10,
+        canonicalMissing: 2,
+        residuals: 50,
+        residualsMissing: 0,
+      });
+      const request = makeApiRequest("/api/status", { adminKey: "secret-key" });
+      const res = await handleStatus(db, true, request);
+      const body = (await res.json()) as CanonicalScopeBody;
+      expect(body.dataQualityStatus).toBe("degraded");
+      expect(body.dataQuality.totalStablecoins).toBe(10);
+      expect(body.dataQuality.missingPrices).toBe(2);
+      const degradedCause = body.causes.dataQuality.find((c) => c.code === "missing_prices_degraded");
+      expect(degradedCause).toBeDefined();
     });
   });
 
