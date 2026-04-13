@@ -54,13 +54,6 @@ export function resolveMintBurnFreshnessConfig(env?: MintBurnFreshnessEnv): Mint
   };
 }
 
-export interface MintBurnFreshnessEvaluation {
-  staleMajorSymbols: string[];
-  criticalStaleCount: number;
-  warnDetails: string[];
-  critDetails: string[];
-}
-
 export type MintBurnSyncFreshnessStatus = "fresh" | "degraded" | "stale";
 
 export interface MintBurnSyncHealth {
@@ -68,38 +61,6 @@ export interface MintBurnSyncHealth {
   freshnessStatus: MintBurnSyncFreshnessStatus;
   warning: string | null;
   criticalLaneHealthy: boolean;
-}
-
-export function evaluateMintBurnFreshness(
-  nowSec: number,
-  latestBySymbol: Map<string, number | null | undefined>,
-  config: Pick<MintBurnFreshnessConfig, "majorSymbols" | "staleWarnSec" | "staleCritSec">,
-): MintBurnFreshnessEvaluation {
-  const staleMajorSymbols: string[] = [];
-  const warnDetails: string[] = [];
-  const critDetails: string[] = [];
-  let criticalStaleCount = 0;
-
-  for (const symbol of config.majorSymbols) {
-    const latest = latestBySymbol.get(symbol);
-    const ageSec = latest == null ? Number.POSITIVE_INFINITY : Math.max(0, nowSec - latest);
-    if (ageSec >= config.staleWarnSec) {
-      staleMajorSymbols.push(symbol);
-      if (ageSec >= config.staleCritSec) {
-        criticalStaleCount++;
-        critDetails.push(`${symbol}:${latest == null ? "missing" : `${Math.round(ageSec / 3600)}h`}`);
-      } else {
-        warnDetails.push(`${symbol}:${Math.round(ageSec / 3600)}h`);
-      }
-    }
-  }
-
-  return {
-    staleMajorSymbols,
-    criticalStaleCount,
-    warnDetails,
-    critDetails,
-  };
 }
 
 export function computeMintBurnSyncFreshnessStatus(
