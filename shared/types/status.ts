@@ -55,6 +55,14 @@ export interface CronStatus {
   healthy: boolean;
   telemetryUnknown?: boolean;
   inFlight?: CronInFlight | null;
+  /**
+   * Set to `true` only for watch-tier crons that have zero historical runs
+   * (bootstrap state). The cron is considered healthy in this state because
+   * its first successful run has not yet produced a `cron_runs` row, so
+   * there is no history to compare against. Critical-tier crons do not get
+   * this flag — they are unhealthy until they have produced at least one run.
+   */
+  bootstrap?: boolean;
 }
 
 export interface StatusCause {

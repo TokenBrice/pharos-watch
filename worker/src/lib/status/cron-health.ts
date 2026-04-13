@@ -194,9 +194,18 @@ export async function loadCronHealth(
       (lastRun.status === "ok" ||
         lastRun.status === "degraded" ||
         (lastRun.status === "skipped_locked" && hasFreshOk));
-    const healthy = telemetryUnknown ? true : inFlightFresh || availabilityHealthyFromLastRun;
-    const availabilityUnhealthy = !telemetryUnknown && !healthy;
     const statusImpact = getCronStatusImpact(job);
+    // Bootstrap = never ran at all. For watch-tier crons (especially monthly
+    // ones), a fresh install or a just-registered trigger legitimately has no
+    // history yet; treating it as unhealthy produces a permanent false
+    // positive. Critical-tier crons with no runs still count as unhealthy
+    // because the system cannot credibly claim healthy operation without
+    // them. Mirrors the reserveComposition.bootstrap pattern.
+    const watchBootstrap = runs.length === 0 && statusImpact === "watch";
+    const healthy = telemetryUnknown
+      ? true
+      : inFlightFresh || availabilityHealthyFromLastRun || watchBootstrap;
+    const availabilityUnhealthy = !telemetryUnknown && !healthy;
 
     if (availabilityUnhealthy) {
       unhealthyCrons++;
@@ -239,6 +248,7 @@ export async function loadCronHealth(
           stale: now - inFlight.updatedAt > Math.max(300, interval),
         };
       })(),
+      ...(watchBootstrap ? { bootstrap: true } : {}),
     };
   }
 

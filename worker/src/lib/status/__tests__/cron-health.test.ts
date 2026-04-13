@@ -110,3 +110,64 @@ describe("loadCronHealth — availabilityImpactingConsecutiveCronErrors", () => 
     expect(snapshot.availabilityImpactingConsecutiveCronErrors).toBe(0);
   });
 });
+
+// ---------------------------------------------------------------------------
+// Workstream 2 of agents/plans/2026-04-13-status-stability-hardening-plan.md
+// ---------------------------------------------------------------------------
+//
+// A watch-tier cron with zero historical cron_runs rows is in bootstrap mode,
+// not unhealthy. This mirrors the reserveComposition bootstrap pattern and
+// eliminates the persistent watch_unhealthy_crons_present info cause driven
+// by yield-coverage-audit having no runs on prod (its monthly trigger was
+// added on 2026-03-26 but the Apr 1 06:00 UTC window produced no row).
+// Critical-tier crons with zero runs still count as unhealthy.
+describe("loadCronHealth — watch-tier bootstrap guard", () => {
+  const NOW = 1_775_890_000;
+
+  /** Seed every cron with a baseline ok row, except for the jobs named in
+   *  `clearedJobs` which are left entirely absent from the cron_runs rows. */
+  function seedWithClearedJobs(now: number, clearedJobs: string[]): Record<string, unknown>[] {
+    const cleared = new Set(clearedJobs);
+    const rows: Record<string, unknown>[] = [];
+    for (const job of Object.keys(CRON_INTERVALS)) {
+      if (cleared.has(job)) continue;
+      rows.push(makeCronRow(job, "ok", 30, now));
+    }
+    return rows;
+  }
+
+  it("does not count a never-ran watch-tier cron as unhealthy", async () => {
+    // yield-coverage-audit is a monthly watch-tier cron. On the current prod
+    // deploy it has zero rows in cron_runs despite its trigger being
+    // registered. Under the bootstrap guard it should not contribute to
+    // watchUnhealthyCrons.
+    const rows = seedWithClearedJobs(NOW, ["yield-coverage-audit"]);
+    const snapshot = await loadCronHealth(makeDb(NOW, rows), NOW);
+    expect(snapshot.watchUnhealthyCrons).toBe(0);
+    expect(snapshot.availabilityImpactingUnhealthyCrons).toBe(0);
+    expect(snapshot.crons["yield-coverage-audit"]?.bootstrap).toBe(true);
+    expect(snapshot.crons["yield-coverage-audit"]?.healthy).toBe(true);
+    expect(snapshot.crons["yield-coverage-audit"]?.lastRun).toBeNull();
+  });
+
+  it("still counts a critical-tier cron with no runs as unhealthy", async () => {
+    // sync-stablecoins is critical. Its absence must flag the availability
+    // lane — the system cannot credibly claim healthy operation without
+    // the critical data feed having ever run.
+    const rows = seedWithClearedJobs(NOW, ["sync-stablecoins"]);
+    const snapshot = await loadCronHealth(makeDb(NOW, rows), NOW);
+    expect(snapshot.availabilityImpactingUnhealthyCrons).toBeGreaterThanOrEqual(1);
+    expect(snapshot.crons["sync-stablecoins"]?.healthy).toBe(false);
+    // bootstrap field is not set for critical crons (only watch-tier get the flag)
+    expect(snapshot.crons["sync-stablecoins"]?.bootstrap).toBeUndefined();
+  });
+
+  it("does not set bootstrap for a watch-tier cron that has some history", async () => {
+    // If a watch-tier cron has at least one historical run (even very old or
+    // failed), it is NOT in bootstrap — regular health rules apply.
+    const rows = seedWithClearedJobs(NOW, ["sync-dex-liquidity"]);
+    rows.push(makeCronRow("sync-dex-liquidity", "error", 30, NOW));
+    const snapshot = await loadCronHealth(makeDb(NOW, rows), NOW);
+    expect(snapshot.crons["sync-dex-liquidity"]?.bootstrap).toBeUndefined();
+  });
+});
