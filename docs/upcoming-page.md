@@ -21,7 +21,7 @@ Primary audience:
 - **Server shell:** `src/app/upcoming/page.tsx`
 - **Client implementation:** `src/components/upcoming-client.tsx`
 - **Shared helpers:** `src/lib/pre-launch.ts`
-- **Primary dataset:** `PRE_LAUNCH_STABLECOINS` from `@shared/lib/stablecoins`
+- **Primary dataset:** `PRE_LAUNCH_STABLECOINS` from `@shared/lib/stablecoins`, loaded from `shared/data/stablecoins/pre-launch.json`
 
 The route renders through `FeaturePageShell` with:
 
@@ -44,6 +44,7 @@ Metadata is authored directly in `src/app/upcoming/page.tsx` with canonical `/up
 | Source                   | Used for                                                                                          |
 | ------------------------ | ------------------------------------------------------------------------------------------------- |
 | `PRE_LAUNCH_STABLECOINS` | the route's full card/filter universe                                                             |
+| `shared/data/stablecoins/pre-launch.json` | checked-in pre-launch metadata source, kept separate from active stablecoin shards       |
 | `data/logos.json`        | per-coin logo display                                                                             |
 | `data/ai-summaries.json` | teaser copy shown on cards when available                                                         |
 | `src/lib/pre-launch.ts`  | launch-phase labels, drift heuristics, fuzzy-date formatting, teaser truncation, and sort scoring |

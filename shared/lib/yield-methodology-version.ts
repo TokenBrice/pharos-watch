@@ -3,9 +3,24 @@ import {
 } from "./methodology-version";
 
 const yieldMethodology = createMethodologyVersion({
-  currentVersion: "7.3",
+  currentVersion: "7.4",
   changelogPath: "/methodology/yield-changelog/",
   changelog: [
+  {
+    version: "7.4",
+    title: "Pre-Launch Lending Overrides Quarantined",
+    date: "2026-04-13",
+    effectiveAt: 1776038400,
+    summary:
+      "Pre-launch assets are now isolated from deterministic lending override publication, so upcoming coins cannot appear in live yield rankings before launch.",
+    impact: [
+      "`pusd-polaris` is now an explicit pre-launch intentional gap instead of resolving through a deterministic Silo v2 lending override",
+      "Yield source resolution now skips configured explicit or deterministic lending candidates unless the target asset is in the active stablecoin universe",
+      "The stablecoin metadata registry now keeps pre-launch assets in `shared/data/stablecoins/pre-launch.json`, preserving upcoming pages and launch alerts while avoiding accidental live-pipeline inclusion from the main data shards",
+    ],
+    commits: [],
+    reconstructed: false,
+  },
   {
     version: "7.3",
     title: "scrvUSD Current-Rate On-Chain Reader",

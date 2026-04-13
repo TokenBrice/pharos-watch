@@ -1,6 +1,15 @@
 # Yield Intelligence Methodology - Version Timeline
 
-Internal changelog reconstructed from git history. Covers Yield Intelligence `v1.0` through `v7.3` (2026-03-01 -> 2026-04-11).
+Internal changelog reconstructed from git history. Covers Yield Intelligence `v1.0` through `v7.4` (2026-03-01 -> 2026-04-13).
+
+---
+
+## v7.4 - Pre-launch lending overrides quarantined (Apr 13, 2026)
+
+- Pre-launch metadata now lives in `shared/data/stablecoins/pre-launch.json` instead of the active peg-category data shards
+- `pusd-polaris` is now an explicit pre-launch intentional gap instead of resolving through a deterministic Silo v2 lending override
+- Explicit and deterministic lending candidate publication now checks the active stablecoin universe before resolving metadata, so upcoming assets cannot enter live yield rankings before launch
+- `/upcoming/`, pre-launch detail pages, and Telegram launch alerts continue to use the combined tracked metadata universe
 
 ---
 

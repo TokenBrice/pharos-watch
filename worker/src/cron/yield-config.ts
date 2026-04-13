@@ -642,8 +642,6 @@ export const LENDING_PROTOCOL_LABELS: Record<string, string> = Object.fromEntrie
 const RAW_AUTO_LENDING_POOL_MAP: Record<string, string> = {
   // U (United Stables) - venus-core-pool on BSC, ~$15M TVL, ~2.4% APY
   "u-united-stables": "d8e9bb79-79d3-4897-8a4f-8d489040097d",
-  // pUSD - silo-v2 on Sonic, yield-bearing coin with missing report-card row
-  "pusd-polaris": "add30093-8fb6-4972-bb6a-a0f3add8bfe8",
   // pmUSD - yearn-finance (symbol drift: PMFRXUSD), Ethereum
   "pmusd-precious-metals": "099fab49-5103-4c85-b5e6-fff734eb1691",
   // USDH - morpho-v1 (symbol drift: FEUSDH), HyperEVM
@@ -666,7 +664,6 @@ const RAW_AUTO_LENDING_POOL_MAP: Record<string, string> = {
  */
 const RAW_AUTO_LENDING_SAFETY_BYPASS_IDS = new Set([
   "u-united-stables", // U: explicitly requested inclusion despite D-grade score
-  "pusd-polaris", // Yield-bearing coin with missing report-card coverage; vetted Silo market keeps native yield visibility intact.
   "usdx-hex-trust", // Large protocol-native USDX market; keep visible despite D-grade issuer risk.
   "usdo-openeden", // OpenEden's native USDO market remains meaningful despite sub-C safety.
   "usdm-moneta", // Exact single-asset Liqwid market; explicit edge-case inclusion for yield coverage.
@@ -688,6 +685,7 @@ const DIRECT_PROTOCOL_API_STRATEGIES: Record<string, string> = {
 
 const INTENTIONAL_GAP_REASONS: Record<string, string> = {
   "bd-basedollar": "pre-launch asset with no reliable runtime yield source yet",
+  "pusd-polaris": "pre-launch asset with no reliable runtime yield source yet",
   "trusd-tori": "pre-launch asset with no reliable runtime yield source yet",
   "usg-tangent": "pre-launch asset with no reliable runtime yield source yet",
 };

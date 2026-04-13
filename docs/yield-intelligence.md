@@ -6,7 +6,7 @@ Risk-adjusted yield tracking and ranking for yield-bearing stablecoins and curat
 
 ## Methodology Versioning
 
-- **Current methodology version:** `v7.3`
+- **Current methodology version:** `v7.4`
 - **Public changelog page:** `/methodology/yield-changelog/`
 - **Canonical source:** `shared/lib/yield-methodology-version.ts`
 
@@ -25,13 +25,14 @@ Rankings provenance now carries source-native freshness for derived sources:
 - read-time `data-stale` warnings now follow source cadence: hourly families use the shared three-cycle publish threshold, supplemental families wait 6 hours so they do not false-positive inside their 4-hour refresh window, and `price-derived` rows wait 36 hours because they are backed by daily `supply_history` snapshots
 - published `lending-opportunity` suggestions now require observable venue TVL and a size floor of `max(existing absolute floor, 0.1% of the tracked stablecoin supply)`, so tiny markets do not surface as the live recommendation for large base assets
 - published `lending-opportunity` suggestions now explicitly exclude Resolv / `USR`, `stUSR`, and `wstUSR`-linked venues across both supplemental protocol APIs and auto-discovered DeFiLlama lending pools, so impaired wrapper ecosystems do not surface as recommended base-asset yield routes
-- pre-launch yield-bearing assets with no live runtime source now publish as explicit intentional manifest gaps rather than appearing as covered entries with zero strategies; this currently includes `bd-basedollar`, `trusd-tori`, and `usg-tangent`
+- pre-launch yield-bearing assets with no live runtime source now publish as explicit intentional manifest gaps rather than appearing as covered entries with zero strategies; this currently includes `bd-basedollar`, `pusd-polaris`, `trusd-tori`, and `usg-tangent`
+- explicit and deterministic lending candidates are ignored unless the target asset is in the active stablecoin universe, so pre-launch metadata cannot surface on the live yield leaderboard before launch
 
 ---
 
 ## Tracked Coins
 
-Every stablecoin with `flags.yieldBearing: true` in `shared/lib/stablecoins/index.ts` is inventoried by the yield manifest. Live cron resolution operates on the active subset (`status !== "pre-launch"`), while pre-launch or intentionally uncovered assets remain visible to operators through explicit manifest entries instead of silently disappearing from coverage accounting. The sync also supports deterministic custom sources for select non-yield-bearing coins, exact-pool curated overrides for select non-stablecoin assets, plus automatic lending pool discovery for tracked non-gold/silver stablecoins rated C- or above (safety score >= 50), including coins already flagged `yieldBearing`. `yieldConfig` is used when present to provide canonical source/type labels; auto-discovered lending rows synthesize protocol-derived labels when the source is `defillama-auto`.
+Every stablecoin with `flags.yieldBearing: true` in `shared/lib/stablecoins/index.ts` is inventoried by the yield manifest. Live cron resolution operates on the active subset (`status !== "pre-launch"`), while pre-launch or intentionally uncovered assets remain visible to operators through explicit manifest entries instead of silently disappearing from coverage accounting. Pre-launch records live in `shared/data/stablecoins/pre-launch.json` and are skipped by explicit lending override publication until they move into the active registry shards. The sync also supports deterministic custom sources for select non-yield-bearing coins, exact-pool curated overrides for select non-stablecoin assets, plus automatic lending pool discovery for tracked non-gold/silver stablecoins rated C- or above (safety score >= 50), including coins already flagged `yieldBearing`. `yieldConfig` is used when present to provide canonical source/type labels; auto-discovered lending rows synthesize protocol-derived labels when the source is `defillama-auto`.
 
 | Field         | Type        | Description                                                                                   |
 | ------------- | ----------- | --------------------------------------------------------------------------------------------- |
@@ -484,7 +485,7 @@ CREATE TABLE yield_history (
 
 **Execution flow:**
 
-1. Filter `TRACKED_STABLECOINS` where `flags.yieldBearing === true` for the base four-tier resolution, then evaluate explicit exact-pool overrides plus auto-discovery across the eligible tracked non-gold/silver coins
+1. Filter the active stablecoin universe where `flags.yieldBearing === true` for the base four-tier resolution, then evaluate explicit exact-pool overrides plus auto-discovery across eligible active non-gold/silver coins
 2. Fetch DeFiLlama pools (`https://yields.llama.fi/pools`) — circuit-breaker protected
 3. Load the latest cached supplemental-source snapshot from `sync-yield-supplemental`; stale or missing supplemental cache is treated as optional loss, not a publisher hard-stop
 4. Fetch on-chain exchange rates via `eth_call` for `ON_CHAIN_RATE_CONFIGS` entries, unless the deterministic lane is in a cooldown window after consecutive masked all-fail runs; protocol-specific hourly on-chain readers such as scrvUSD's current-rate source run during per-coin resolution and fall back to curated rows if unavailable

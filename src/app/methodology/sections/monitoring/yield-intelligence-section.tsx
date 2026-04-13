@@ -24,16 +24,14 @@ export function YieldIntelligenceMethodologySection() {
             changelogClassName="hover:text-violet-700 dark:text-violet-400"
           >
               <p>
-                Pharos tracks yield-bearing stablecoins and computes a risk-adjusted ranking via the Pharos Yield Score
-                (PYS). Core rankings publish hourly using a source-aware APY resolution strategy, while slower
+                Pharos tracks yield-bearing stablecoins and computes a risk-adjusted ranking via the Pharos Yield Score (PYS). Core rankings publish hourly using a source-aware APY resolution strategy, while slower
                 supplemental-source families refresh on a separate four-hour lane. Alternative sources are retained when
                 multiple valid yield paths exist, address-first identity is used before symbol fallback, curated
                 exact-pool overrides can cover named non-stablecoin venues, confidence-weighted arbitration selects
                 the primary row, and published lending suggestions exclude Resolv / USR-linked venues so broken wrapper
                 ecosystems do not surface as recommended base-asset routes. Published lending-opportunity rows now also
                 require observable venue TVL and a size floor of at least 0.1% of the tracked stablecoin&apos;s current
-                supply before they can become the live recommendation. PYS is benchmark-aware, and Curve Savings crvUSD
-                now follows the active on-chain profit-unlock stream instead of a trailing exchange-rate delta.
+                supply before they can become the live recommendation. PYS is benchmark-aware, and Curve Savings crvUSD now follows the active on-chain profit-unlock stream instead of a trailing exchange-rate delta; pre-launch assets remain manifest-visible as intentional gaps but cannot publish into the live leaderboard before launch.
               </p>
               <MethodologyFacts
                 facts={[
@@ -155,7 +153,8 @@ export function YieldIntelligenceMethodologySection() {
                     not outrank stronger native wrapper yields purely because they query protocol state directly, and
                     Resolv / USR-linked lending-opportunity venues are excluded from publication entirely. Published
                     lending-opportunity rows also need observable venue TVL and must clear the higher of the absolute
-                    TVL floor or 0.1% of the tracked stablecoin&apos;s current supply.
+                    TVL floor or 0.1% of the tracked stablecoin&apos;s current supply, and explicit lending overrides only
+                    publish for active assets.
                   </p>
                   <p>
                     Yield-bearing coverage is now explicitly inventoried per asset. If no reliable runtime source exists,

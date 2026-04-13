@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { TRACKED_STABLECOINS } from "@shared/lib/stablecoins";
+import { PRE_LAUNCH_STABLECOINS, TRACKED_STABLECOINS } from "@shared/lib/stablecoins";
 import {
   EXPLICIT_YIELD_SOURCE_POOL_MAP,
   AUTO_LENDING_POOL_MAP,
@@ -81,7 +81,7 @@ describe("yield config registry", () => {
   });
 
   it("marks intentional manifest gaps explicitly instead of leaving them implicit", () => {
-    for (const stablecoinId of ["bd-basedollar", "trusd-tori", "usg-tangent"]) {
+    for (const stablecoinId of ["bd-basedollar", "pusd-polaris", "trusd-tori", "usg-tangent"]) {
       expect(
         YIELD_ADAPTER_MANIFEST.find((entry) => entry.stablecoinId === stablecoinId),
       ).toMatchObject({
@@ -92,6 +92,13 @@ describe("yield config registry", () => {
           }),
         ],
       });
+    }
+  });
+
+  it("keeps pre-launch assets out of deterministic lending overrides", () => {
+    for (const stablecoin of PRE_LAUNCH_STABLECOINS) {
+      expect(AUTO_LENDING_POOL_MAP[stablecoin.id], stablecoin.id).toBeUndefined();
+      expect(AUTO_LENDING_SAFETY_BYPASS_IDS.has(stablecoin.id), stablecoin.id).toBe(false);
     }
   });
 

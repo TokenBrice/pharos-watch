@@ -32,6 +32,7 @@ const stablecoinAssets = [
   "shared/data/stablecoins/usd-minor.json",
   "shared/data/stablecoins/non-usd.json",
   "shared/data/stablecoins/commodity.json",
+  "shared/data/stablecoins/pre-launch.json",
 ].map((relativePath) => ({
   relativePath,
   data: readJson(relativePath),

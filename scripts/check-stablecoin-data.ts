@@ -14,6 +14,7 @@ const STABLECOIN_ASSET_FILES = new Set([
   "usd-minor.json",
   "non-usd.json",
   "commodity.json",
+  "pre-launch.json",
 ]);
 
 interface DataFile {
@@ -26,6 +27,7 @@ const DATA_FILES: DataFile[] = [
   { file: "usd-minor.json", schema: StablecoinMetaAssetArraySchema },
   { file: "non-usd.json", schema: StablecoinMetaAssetArraySchema },
   { file: "commodity.json", schema: StablecoinMetaAssetArraySchema },
+  { file: "pre-launch.json", schema: StablecoinMetaAssetArraySchema },
   { file: "canonical-order.json", schema: CanonicalOrderAssetSchema },
 ];
 
@@ -67,6 +69,18 @@ function getRuntimeAdmissionIssue(coin: StablecoinMeta): string | null {
     "active asset lacks a /api/stablecoins cache admission path; add llamaId, or mark detailProvider=coingecko " +
     "with geckoId or a supported on-chain supply contract"
   );
+}
+
+function getStatusPartitionIssue(file: string, coin: StablecoinMeta): string | null {
+  if (file === "pre-launch.json") {
+    return coin.status === "pre-launch"
+      ? null
+      : "pre-launch.json may only contain assets with status=pre-launch";
+  }
+
+  return coin.status === "pre-launch"
+    ? "pre-launch assets belong in shared/data/stablecoins/pre-launch.json"
+    : null;
 }
 
 for (const { file, schema } of DATA_FILES) {
@@ -112,6 +126,12 @@ for (const { file, schema } of DATA_FILES) {
 }
 
 for (const { file, coin } of stablecoinEntries) {
+  const partitionIssue = getStatusPartitionIssue(file, coin);
+  if (partitionIssue) {
+    process.stderr.write(`${join(DATA_DIR, file)} (${coin.id}): ${partitionIssue}\n`);
+    errorCount++;
+  }
+
   const issue = getRuntimeAdmissionIssue(coin);
   if (!issue) continue;
   process.stderr.write(`${join(DATA_DIR, file)} (${coin.id}): ${issue}\n`);

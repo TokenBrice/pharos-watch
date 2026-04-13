@@ -1,4 +1,4 @@
-import { ACTIVE_STABLECOINS, TRACKED_META_BY_ID } from "@shared/lib/stablecoins";
+import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins";
 import { resolveChainId } from "@shared/lib/chains";
 import {
   MIN_LENDING_POOL_APY,
@@ -27,6 +27,10 @@ import { scanForNewVariants } from "./variant-scanner";
 
 const SMALL_ECOSYSTEM_CHAINS = new Set(["solana", "sui", "aptos", "cardano", "stacks"]);
 
+function getActiveStablecoinMeta(stablecoinId: string) {
+  return ACTIVE_STABLECOINS.find((meta) => meta.id === stablecoinId);
+}
+
 export function buildReservedYieldPoolIds(): Set<string> {
   return new Set([
     ...Object.values(YIELD_POOL_MAP),
@@ -50,7 +54,7 @@ function getLendingOpportunityAbsoluteTvlFloor(chain: string | null | undefined)
 }
 
 function shouldApplyStablecoinSupplySizeGate(stablecoinId: string): boolean {
-  const meta = TRACKED_META_BY_ID.get(stablecoinId);
+  const meta = getActiveStablecoinMeta(stablecoinId);
   if (!meta) return false;
   return meta.flags.pegCurrency !== "GOLD" && meta.flags.pegCurrency !== "SILVER";
 }
@@ -135,7 +139,7 @@ function appendResolvedYieldCandidates(
     }
 
     if (entry.stablecoinId) {
-      const meta = TRACKED_META_BY_ID.get(entry.stablecoinId);
+      const meta = getActiveStablecoinMeta(entry.stablecoinId);
       if (!meta) {
         unresolvedDrops += 1;
         continue;
@@ -169,7 +173,7 @@ function appendResolvedYieldCandidates(
       continue;
     }
 
-    const meta = TRACKED_META_BY_ID.get(resolution.stablecoinId);
+    const meta = getActiveStablecoinMeta(resolution.stablecoinId);
     if (!meta) continue;
     if (
       entry.yield.yieldType === "lending-opportunity" &&
@@ -231,7 +235,7 @@ export function appendPoolFamilyYieldSources(params: {
 
   if (params.dlPools.length > 0) {
     for (const [stablecoinId, configs] of Object.entries(EXPLICIT_YIELD_SOURCE_POOL_MAP)) {
-      const meta = TRACKED_META_BY_ID.get(stablecoinId);
+      const meta = getActiveStablecoinMeta(stablecoinId);
       if (!meta) continue;
 
       for (const config of configs) {
@@ -312,7 +316,7 @@ export function appendPoolFamilyYieldSources(params: {
         continue;
       }
 
-      const meta = TRACKED_META_BY_ID.get(stablecoinId);
+      const meta = getActiveStablecoinMeta(stablecoinId);
       if (!meta) continue;
 
       appendResolvedAutoDiscoveredYield(params.resolved, autoDiscoveredIds, meta, pool);

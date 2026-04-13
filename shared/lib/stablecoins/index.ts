@@ -2,6 +2,7 @@ import type { StablecoinMeta } from "../../types";
 import canonicalOrderAsset from "../../data/stablecoins/canonical-order.json";
 import commodityAsset from "../../data/stablecoins/commodity.json";
 import nonUsdAsset from "../../data/stablecoins/non-usd.json";
+import preLaunchAsset from "../../data/stablecoins/pre-launch.json";
 import usdMajorAsset from "../../data/stablecoins/usd-major.json";
 import usdMinorAsset from "../../data/stablecoins/usd-minor.json";
 import {
@@ -34,11 +35,17 @@ export const COMMODITY_COINS: StablecoinMeta[] = parseStablecoinMetaAssets(
   "shared/data/stablecoins/commodity.json",
 );
 
+const PRE_LAUNCH_COIN_ENTRIES: StablecoinMeta[] = parseStablecoinMetaAssets(
+  preLaunchAsset,
+  "shared/data/stablecoins/pre-launch.json",
+);
+
 const allEntries: StablecoinMeta[] = [
   ...USD_MAJOR_COINS,
   ...USD_MINOR_COINS,
   ...NON_USD_COINS,
   ...COMMODITY_COINS,
+  ...PRE_LAUNCH_COIN_ENTRIES,
 ];
 
 const byId = new Map(allEntries.map((stablecoin) => [stablecoin.id, stablecoin]));
