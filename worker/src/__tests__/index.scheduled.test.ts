@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { mockD1 } from "../api/__tests__/helpers/mock-d1";
 
 const cronMocks = vi.hoisted(() => ({
   syncStablecoins: vi.fn(async () => ({
@@ -599,8 +600,9 @@ describe("worker.scheduled", () => {
 
   it("runs only critical mint/burn on the dedicated :04/:24/:44 trigger", async () => {
     const { ctx, waits } = makeCtx();
+    const db = mockD1();
     const env = {
-      DB: {} as D1Database,
+      DB: db,
       CORS_ORIGIN: "https://pharos.watch",
       ALCHEMY_API_KEY: "alchemy-key",
     } as const;
@@ -618,6 +620,7 @@ describe("worker.scheduled", () => {
       lane: "critical",
       jobName: "sync-mint-burn",
     });
+    expect(db.getHistory().some((entry) => entry.sql.includes("FROM mint_burn_events"))).toBe(false);
     expect(cronMocks.syncBlacklist).not.toHaveBeenCalled();
     expect(cronMocks.syncDexDiscovery).not.toHaveBeenCalled();
   });

@@ -14,13 +14,7 @@ import {
   type CircuitRecord,
 } from "./circuit-breaker";
 import { CIRCUIT_SOURCE } from "./constants";
-import { buildInClause } from "./db";
-import {
-  buildMintBurnSyncHealth,
-  evaluateMintBurnFreshness,
-  resolveMintBurnFreshnessConfig,
-  type MintBurnFreshnessConfig,
-} from "./mint-burn-health-config";
+import { buildMintBurnSyncHealth } from "./mint-burn-health-config";
 
 const DEFAULT_CIRCUIT_RECORD: CircuitRecord = {
   state: "closed",
@@ -41,7 +35,7 @@ const EMPTY_BLACKLIST_HEALTH: HealthResponse["blacklist"] = {
 };
 
 const EMPTY_MINT_BURN_HEALTH: HealthResponse["mintBurn"] = {
-  totalEvents: 0,
+  totalEvents: null,
   latestEventTs: null,
   latestHourlyTs: null,
   freshnessAgeSec: null,
@@ -125,7 +119,6 @@ async function checkDbHealth(
 async function loadMintBurnHealth(
   db: D1Database,
   now: number,
-  mintBurnConfig: MintBurnFreshnessConfig,
 ): Promise<{
   mintBurn: HealthResponse["mintBurn"];
   mintBurnImpactStatus: HealthResponse["status"];
@@ -134,30 +127,7 @@ async function loadMintBurnHealth(
   mintBurnBootstrap: boolean;
 }> {
   try {
-    const majorSymbolInClause = buildInClause(mintBurnConfig.majorSymbols);
-    const [counts, latestEvent, latestHourly, majorRows, latestRun, latestSuccessfulSyncAt] = await Promise.all([
-      db
-        .prepare(
-          `SELECT
-             COALESCE(SUM(mint_count + burn_count), 0) as total
-           FROM mint_burn_hourly`,
-        )
-        .first<{ total: number }>(),
-      db
-        .prepare("SELECT MAX(timestamp) as latest FROM mint_burn_events")
-        .first<{ latest: number | null }>(),
-      db
-        .prepare("SELECT MAX(hour_ts) as latest FROM mint_burn_hourly")
-        .first<{ latest: number | null }>(),
-      db
-        .prepare(
-          `SELECT symbol, MAX(timestamp) as latest
-           FROM mint_burn_events
-           WHERE symbol IN (${majorSymbolInClause.sql})
-           GROUP BY symbol`,
-        )
-        .bind(...majorSymbolInClause.binds)
-        .all<{ symbol: string; latest: number | null }>(),
+    const [latestRun, latestSuccessfulSyncAt] = await Promise.all([
       db
         .prepare(
           `SELECT status
@@ -178,23 +148,14 @@ async function loadMintBurnHealth(
         .catch(() => null),
     ]);
 
-    const latestBySymbol = new Map<string, number>();
-    for (const row of majorRows.results ?? []) {
-      if (row.latest != null) latestBySymbol.set(row.symbol, row.latest);
-    }
-
     const sync = buildMintBurnSyncHealth(now, latestSuccessfulSyncAt, latestRun?.status ?? null);
-    const rawFreshness = evaluateMintBurnFreshness(now, latestBySymbol, mintBurnConfig);
-    const actionableMajorStaleness = sync.freshnessStatus !== "fresh" || !sync.criticalLaneHealthy;
-    const staleMajorSymbols = actionableMajorStaleness ? rawFreshness.staleMajorSymbols : [];
-    const latestEventTs = latestEvent?.latest ?? null;
     const mintBurn: HealthResponse["mintBurn"] = {
-      totalEvents: counts?.total ?? 0,
-      latestEventTs,
-      latestHourlyTs: latestHourly?.latest ?? null,
-      freshnessAgeSec: latestEventTs == null ? null : Math.max(0, now - latestEventTs),
-      majorStaleCount: staleMajorSymbols.length,
-      staleMajorSymbols,
+      totalEvents: null,
+      latestEventTs: null,
+      latestHourlyTs: null,
+      freshnessAgeSec: null,
+      majorStaleCount: 0,
+      staleMajorSymbols: [],
       sync,
     };
 
@@ -221,11 +182,9 @@ export async function assessPublicHealth(
   db: D1Database,
   now: number,
   options?: {
-    mintBurnConfig?: MintBurnFreshnessConfig;
     logPrefix?: string;
   },
 ): Promise<PublicHealthAssessment> {
-  const mintBurnConfig = options?.mintBurnConfig ?? resolveMintBurnFreshnessConfig();
   const logPrefix = options?.logPrefix ?? "health";
   const warnings: string[] = [];
 
@@ -276,7 +235,7 @@ export async function assessPublicHealth(
         console.error(`[${logPrefix}] Failed to query blacklist counts:`, err);
         return { metrics: null, error: publicHealthErrorMessage("blacklist") };
       }),
-    loadMintBurnHealth(db, now, mintBurnConfig),
+    loadMintBurnHealth(db, now),
     getCircuitStates(db)
       .then((circuits) => ({ circuits: completeCircuitStates(circuits), error: null as string | null }))
       .catch((err) => {

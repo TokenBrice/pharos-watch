@@ -3,20 +3,11 @@ import {
   jsonResponse,
 } from "../lib/api-utils";
 import type { HealthResponse, TelegramHealthSummary } from "@shared/types/status";
-import {
-  resolveMintBurnFreshnessConfig,
-  type MintBurnFreshnessConfig,
-} from "../lib/mint-burn-health-config";
 import { assessPublicHealth } from "../lib/public-health-assessment";
 
-interface HealthOptions {
-  mintBurnConfig?: MintBurnFreshnessConfig;
-}
-
-export const handleHealth = withErrorHandler("health", async (db: D1Database, options?: HealthOptions): Promise<Response> => {
+export const handleHealth = withErrorHandler("health", async (db: D1Database): Promise<Response> => {
   const now = Math.floor(Date.now() / 1000);
-  const mintBurnConfig = options?.mintBurnConfig ?? resolveMintBurnFreshnessConfig();
-  const assessment = await assessPublicHealth(db, now, { mintBurnConfig, logPrefix: "health" });
+  const assessment = await assessPublicHealth(db, now, { logPrefix: "health" });
 
   // Lightweight telegram summary — silently null if tables are not migrated
   let telegramSummary: TelegramHealthSummary | null = null;

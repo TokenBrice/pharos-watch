@@ -556,7 +556,7 @@ export interface HealthResponse {
     missingRatio: number;
   };
   mintBurn: {
-    totalEvents: number;
+    totalEvents: number | null;
     latestEventTs: number | null;
     latestHourlyTs: number | null;
     freshnessAgeSec: number | null;
@@ -586,7 +586,7 @@ export const HealthResponseSchema: z.ZodType<HealthResponse> = z.object({
     missingRatio: z.number(),
   }),
   mintBurn: z.object({
-    totalEvents: z.number(),
+    totalEvents: z.number().nullable(),
     latestEventTs: z.number().nullable(),
     latestHourlyTs: z.number().nullable(),
     freshnessAgeSec: z.number().nullable(),

@@ -34,7 +34,7 @@ export function SiteHeader({ total, pegCount, chainCount }: SiteHeaderProps) {
       stats.push(`${formatCompactCount(totalPools)} pools processed`);
     }
 
-    if (mintBurnEvents != null) {
+    if (mintBurnEvents != null && mintBurnEvents > 0) {
       stats.push(`${formatCompactCount(mintBurnEvents)} mint/burn events recorded`);
     }
     if (blacklistEvents != null) {

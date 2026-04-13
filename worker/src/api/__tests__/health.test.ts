@@ -27,7 +27,7 @@ describe("handleHealth", () => {
         missingRatio: number;
       };
       mintBurn: {
-        totalEvents: number;
+        totalEvents: number | null;
         latestEventTs: number | null;
         latestHourlyTs: number | null;
         freshnessAgeSec: number | null;
@@ -55,7 +55,7 @@ describe("handleHealth", () => {
       recentMissingAmounts: 0,
       missingRatio: 0,
     });
-    expect(body.mintBurn.totalEvents).toBe(1234);
+    expect(body.mintBurn.totalEvents).toBeNull();
     expect(body.warnings).toEqual([]);
     expect(body.mintBurn).toHaveProperty("latestEventTs");
     expect(body.mintBurn).toHaveProperty("latestHourlyTs");
@@ -64,6 +64,8 @@ describe("handleHealth", () => {
     expect(body.mintBurn).toHaveProperty("staleMajorSymbols");
     expect(body.mintBurn).toHaveProperty("sync");
     expect(["healthy", "degraded", "stale"]).toContain(body.status);
+    expect(db.getHistory().some((entry) => entry.sql.includes("FROM mint_burn_events"))).toBe(false);
+    expect(db.getHistory().some((entry) => entry.sql.includes("FROM mint_burn_hourly"))).toBe(false);
   });
 
   it("returns Cache-Control: no-store", async () => {

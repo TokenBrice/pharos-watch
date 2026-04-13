@@ -140,7 +140,6 @@ const BASE_ENDPOINT_DEFINITIONS = [
     adminRequired: false,
     mutatingAdmin: false,
     cacheBypass: true,
-    routeDependencies: ["mintBurnFreshnessConfig"],
     probeGroup: "public",
   },
   {
