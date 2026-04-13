@@ -332,6 +332,33 @@ describe("enrichMissingPrices", () => {
     expect(stats.finalMissing).toBe(0);
   });
 
+  it("enriches via curated tracked contract metadata when the upstream row is addressless", async () => {
+    const assets: PeggedAsset[] = [
+      {
+        id: "ctusd-citrea", name: "Citrea USD", symbol: "ctUSD", price: 0,
+        pegType: "peggedUSD", circulating: {},
+      },
+    ];
+
+    mockFetch([
+      {
+        match: "coins.llama.fi/prices/current/citrea:0x8d82c4e3c936c7b5724a382a9c5a4e6eb7ab6d5d",
+        body: {
+          coins: {
+            "citrea:0x8d82c4e3c936c7b5724a382a9c5a4e6eb7ab6d5d": { price: 1.0015, symbol: "ctUSD", timestamp: 1776079738, confidence: 0.97 },
+          },
+        },
+      },
+    ]);
+
+    const stats = await enrichMissingPrices(assets);
+
+    expect(stats.pass1).toBe(1);
+    expect(assets[0].price).toBe(1.0015);
+    expect(assets[0].priceSource).toBe("defillama-contract");
+    expect(stats.finalMissing).toBe(0);
+  });
+
   it("rejects unreasonable DefiLlama contract prices and allows later fallback passes to resolve", async () => {
     const assets: PeggedAsset[] = [
       {

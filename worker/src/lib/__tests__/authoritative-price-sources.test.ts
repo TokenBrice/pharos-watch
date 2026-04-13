@@ -234,6 +234,12 @@ describe("authoritative-price-sources", () => {
         circulating: { peggedUSD: 1_600_000 },
       },
       {
+        id: "usdnr-nerona",
+        name: "Nerona USD",
+        symbol: "USDnr",
+        circulating: { peggedUSD: 50_000_000 },
+      },
+      {
         id: "wm-m0",
         name: "Wrapped M",
         symbol: "wM",
@@ -250,6 +256,11 @@ describe("authoritative-price-sources", () => {
       confidence: "high",
     });
     expect(overrides.get("xo-exodus")).toEqual({
+      price: 0.99981234,
+      source: "protocol-redeem",
+      confidence: "high",
+    });
+    expect(overrides.get("usdnr-nerona")).toEqual({
       price: 0.99981234,
       source: "protocol-redeem",
       confidence: "high",
@@ -414,8 +425,26 @@ describe("authoritative-price-sources", () => {
         candidateTimestamps: [1_776_000_000, 1_776_003_600],
       },
     );
+    const usdnrResult = await fetchAuthoritativeHistoricalPriceSeries(
+      {
+        id: "usdnr-nerona",
+        name: "Nerona USD",
+        symbol: "USDnr",
+        flags: {
+          pegCurrency: "USD",
+          backing: "rwa-backed",
+          governance: "centralized",
+          yieldBearing: false,
+          rwa: true,
+          navToken: false,
+        },
+      },
+      {
+        candidateTimestamps: [1_776_000_000, 1_776_003_600],
+      },
+    );
 
-    expect(fetchMarketBackfillPriceSeriesMock).toHaveBeenCalledTimes(2);
+    expect(fetchMarketBackfillPriceSeriesMock).toHaveBeenCalledTimes(3);
     expect(fetchMarketBackfillPriceSeriesMock).toHaveBeenNthCalledWith(
       1,
       expect.objectContaining({
@@ -440,6 +469,18 @@ describe("authoritative-price-sources", () => {
         coingeckoApiKey: null,
       },
     );
+    expect(fetchMarketBackfillPriceSeriesMock).toHaveBeenNthCalledWith(
+      3,
+      expect.objectContaining({
+        id: "wm-m0",
+        geckoId: "wrappedm-by-m0",
+      }),
+      "wrappedm-by-m0",
+      {
+        granularity: "hourly",
+        coingeckoApiKey: null,
+      },
+    );
     expect(usdkResult).toEqual({
       matched: true,
       source: "protocol-redeem",
@@ -449,6 +490,14 @@ describe("authoritative-price-sources", () => {
       ],
     });
     expect(xoResult).toEqual({
+      matched: true,
+      source: "protocol-redeem",
+      prices: [
+        { timestamp: 1_776_000_000, price: 0.99971 },
+        { timestamp: 1_776_003_600, price: 1.00006 },
+      ],
+    });
+    expect(usdnrResult).toEqual({
       matched: true,
       source: "protocol-redeem",
       prices: [

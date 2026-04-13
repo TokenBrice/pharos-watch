@@ -86,3 +86,20 @@ Combined effect:
 Even if all 9 currently-missing-canonical coins went unpriced AND another 18 existing coins lost their prices (total 27), the system would still be healthy (below 15% elevated floor). A meaningful regression is now required to drive status transitions.
 
 Remaining open follow-ups: triage the 9 canonical missing coins, and decide whether to split DL residuals out of the main `stablecoins` cache write.
+
+## Follow-up triage (2026-04-13)
+
+User-requested follow-up after removing `gbpm-mento`, `evausdc-eva`, and `evausdt-eva` from tracking.
+
+Current remaining visible missing-price set from the table screenshot:
+
+| id | symbol | Finding | Action |
+|---|---|---|---|
+| `ctusd-citrea` | ctUSD | DefiLlama stablecoins list is addressless, but `coins.llama.fi/prices/current/citrea:<contract>` returns a fresh ctUSD quote. The existing pass only tried contract lookup when the upstream row had `address`. | Fixed: Pass 1 now falls back to curated tracked `contracts` metadata when the upstream row is addressless. |
+| `usdnr-nerona` | USDnr | No direct CG/DL/DexScreener quote found. It is modeled locally as an M0 extension/wrapper, matching the existing `usdk-kast` and `xo-exodus` inheritance pattern. | Fixed: added `usdnr-nerona -> wm-m0` authoritative tracked-parent inheritance. |
+| `usbd-bima` | USBD | CoinGecko returns no USD price, DefiLlama list and coins API return no contract price, and DexScreener exact lookups for curated Ethereum/BSC contracts return no pools. Symbol search hits unrelated Solana `USBD` tokens, so it is unsafe. | Leave missing until BIMA exposes a reliable redemption or market API. |
+| `usdq-quill` | USDQ | CoinGecko has a stale USD mark; DefiLlama list and coins API return no current price; DexScreener exact Scroll lookup returns no pairs. GeckoTerminal has only dust pools with zero recent volume, far below the existing GT probe TVL floor. | Leave missing. Do not use symbol search because it resolves unrelated Ethereum USDQ markets. |
+| `tryb-bilira` | TRYB | CoinGecko native TRY/USD quote exists but was stale beyond the freshness gate; DefiLlama list/coins return no price; DexScreener exact lookups only found sub-$100 Avalanche liquidity. | Leave missing unless a fresh native quote returns or a real market/API source appears. |
+| `chfau-allunity` | CHFAU | CoinGecko returns `last_updated_at: 0`, DefiLlama coins has no contract price, and DexScreener has no exact/search pool. | Leave missing until AllUnity or an aggregator exposes a live price. |
+
+Methodology version updated to Pricing Pipeline `v4.31` for the two implemented pricing-path changes.

@@ -3,9 +3,24 @@ import {
 } from "./methodology-version";
 
 const pricing = createMethodologyVersion({
-  currentVersion: "4.3",
+  currentVersion: "4.31",
   changelogPath: "/methodology/pricing-pipeline-changelog/",
   changelog: [
+    {
+      version: "4.31",
+      title: "Curated-contract price fallback and USDnr M0 inheritance",
+      date: "2026-04-13",
+      effectiveAt: 1776082800,
+      summary:
+        "DefiLlama contract-price fallback now starts from curated tracked deployments when an upstream stablecoin row is addressless, and USDnr joins the M0 tracked-parent price inheritance path.",
+      impact: [
+        "Addressless DefiLlama stablecoin rows can now recover prices through exact curated `contracts` metadata instead of requiring the upstream row to carry its own `address` field",
+        "`ctusd-citrea` can publish the fresh DefiLlama `citrea:<contract>` quote surfaced by the coins API without relying on symbol search or stale CoinGecko rows",
+        "`usdnr-nerona` now inherits tracked `wm-m0` live pricing and historical replay through the existing authoritative `protocol-redeem` lane used by other M0 extension assets",
+      ],
+      commits: [],
+      reconstructed: false,
+    },
     {
       version: "4.3",
       title: "CoinGecko simple-price upstream freshness gate",

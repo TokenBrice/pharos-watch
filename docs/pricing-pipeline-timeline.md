@@ -1,6 +1,16 @@
 # Pricing Pipeline Methodology - Version Timeline
 
-Internal changelog reconstructed from the machine-readable methodology version source. Covers Pricing Pipeline `v1.0` through `v4.3` (2026-02-01 -> 2026-04-11).
+Internal changelog reconstructed from the machine-readable methodology version source. Covers Pricing Pipeline `v1.0` through `v4.31` (2026-02-01 -> 2026-04-13).
+
+---
+
+## v4.31 - Curated-contract price fallback and USDnr M0 inheritance (Apr 13, 2026)
+
+**Commit:** `unreleased`
+
+- DefiLlama contract-price fallback now tries curated tracked `contracts` metadata when the upstream stablecoin row has no `address`
+- `ctusd-citrea` can resolve through its fresh DefiLlama `citrea:<contract>` quote without relying on stale CoinGecko rows or symbol search
+- `usdnr-nerona` now inherits tracked `wm-m0` live pricing and historical replay through the existing authoritative `protocol-redeem` lane used by other M0 extension assets
 
 ---
 

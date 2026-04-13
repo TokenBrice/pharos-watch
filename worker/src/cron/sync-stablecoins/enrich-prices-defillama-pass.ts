@@ -89,7 +89,7 @@ function buildTrackedDeploymentCoinIds(asset: PeggedAsset): string[] {
 
 function buildPrimaryContractCoinIds(asset: PeggedAsset): string[] {
   const rawAddress = (asset.address?.trim() || ADDRESS_OVERRIDES[asset.id])?.trim();
-  if (!rawAddress) return [];
+  if (!rawAddress) return buildTrackedDeploymentCoinIds(asset);
   if (rawAddress.includes(":")) {
     return [addressToCoinId(rawAddress)];
   }

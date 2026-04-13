@@ -21,7 +21,7 @@ When an asset still has no usable current price after validation and fallback re
 
 ## Versioning
 
-- **Current methodology version:** `v4.3`
+- **Current methodology version:** `v4.31`
 - **Canonical version module:** `shared/lib/pricing-pipeline-version.ts`
 - **Public changelog route:** `/methodology/pricing-pipeline-changelog/`
 - **Longform methodology section:** `/methodology/#pricing-pipeline-methodology`
@@ -169,6 +169,7 @@ After market/oracle consensus, `worker/src/lib/authoritative-price-sources.ts` c
 | `usdai-usd-ai` | inherits tracked `pyusd-paypal` pricing as a redeemable PYUSD wrapper |
 | `usdk-kast` | inherits tracked `wm-m0` pricing as a Solana M0 extension unit |
 | `xo-exodus` | inherits tracked `wm-m0` pricing as a Solana M0 extension unit |
+| `usdnr-nerona` | inherits tracked `wm-m0` pricing as an M0 extension unit |
 
 When a live override validates successfully, the cached asset is written with:
 
@@ -182,6 +183,7 @@ Current tracked-base inheritance paths are:
 - `usdai-usd-ai -> pyusd-paypal`
 - `usdk-kast -> wm-m0`
 - `xo-exodus -> wm-m0`
+- `usdnr-nerona -> wm-m0`
 
 This prevents thin secondary-market child-token prints, or missing child-market coverage, from dragging PegScore away from the executable value of the tracked parent rail.
 
@@ -197,7 +199,7 @@ The same registry also supports historical replay for backfills so admin rebuild
 
 Assets still missing prices after primary consensus run through `enrichMissingPrices()`:
 
-1. **Pass 1:** DefiLlama `coins.llama.fi` by canonical tracked contract identity; quotes are validated against shared peg-aware bounds before they can resolve the asset, and assets can probe multiple exact tracked coin ids when needed
+1. **Pass 1:** DefiLlama `coins.llama.fi` by canonical tracked contract identity, using the upstream row address when present and falling back to curated tracked `contracts` metadata when the upstream row is addressless; quotes are validated against shared peg-aware bounds before they can resolve the asset, and assets can probe multiple exact tracked coin ids when needed
 2. **Pass 1b:** alternate tracked deployment fallback via DefiLlama; only known tracked deployments are probed, never synthetic same-address cross-chain identities
 3. **Pass 2:** CoinMarketCap stablecoins category batch (`v1/cryptocurrency/category?id=604f2753ebccdd50cd175fc1&limit=300&convert=USD`) — prefers `cmcSlug`-based matching over symbol, and symbol fallback is only allowed when the tracked symbol is unique. Rate-limited to 1 call/hour via D1 cache (see data-pipeline.md)
 4. **Pass 3:** Jupiter Price API for tracked Solana mints — liquidity-gated and still subject to peg-aware validation

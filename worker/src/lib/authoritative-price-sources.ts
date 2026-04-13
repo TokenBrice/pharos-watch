@@ -15,6 +15,7 @@ const USDAI_USD_AI_ID = "usdai-usd-ai";
 const PYUSD_PAYPAL_ID = "pyusd-paypal";
 const USDK_KAST_ID = "usdk-kast";
 const XO_EXODUS_ID = "xo-exodus";
+const USDNR_NERONA_ID = "usdnr-nerona";
 const WM_M0_ID = "wm-m0";
 const USDC_CIRCLE_ID = "usdc-circle";
 const CAP_GET_BURN_AMOUNT_SELECTOR = "0xb7c4a6bf"; // getBurnAmount(address,uint256)
@@ -33,6 +34,7 @@ const INHERITED_TRACKED_PRICE_PARENTS = {
   [USDAI_USD_AI_ID]: PYUSD_PAYPAL_ID,
   [USDK_KAST_ID]: WM_M0_ID,
   [XO_EXODUS_ID]: WM_M0_ID,
+  [USDNR_NERONA_ID]: WM_M0_ID,
 } as const satisfies Record<string, string>;
 
 export interface CurrentPriceOverride {
