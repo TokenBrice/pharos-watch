@@ -83,8 +83,8 @@
     "disposition": "queued-p4",
     "notes": "DEX-liquidity metadata orchestration now sits in the candidate set after earlier splits. Track a later pass to separate derivation policy, summary shaping, and operator-facing metadata assembly."
   },
-  "worker/src/cron/dex-liquidity/pool-helpers.ts": {
+  "worker/src/cron/daily-digest/prompt.ts": {
     "disposition": "queued-p4",
-    "notes": "Pool helper branch density is known DEX identity and quality-classification policy. Keep waived until the planned DEX pool-matching helper tranche reaches this file."
+    "notes": "Candidate-led digest prompting intentionally centralizes the editorial contract while the digest rewrite stabilizes. Split prompt policy, rubric text, and safety instructions in a follow-up digest cleanup pass."
   }
 }

@@ -96,8 +96,8 @@
     "notes": "Section body is now isolated from the methodology shell. Keep future PSI copy changes local to this module unless composition order changes."
   },
   "src/app/methodology/sections/core/safety-scores-section.tsx": {
-    "fileLines": 503,
-    "maxFunctionLines": 489,
+    "fileLines": 507,
+    "maxFunctionLines": 493,
     "branchCount": 0,
     "disposition": "queued-p4",
     "targetBudget": {
@@ -204,9 +204,9 @@
     "notes": "Reference tables are already separated. Keep future lookup tables here rather than regrowing the per-version modules."
   },
   "src/app/coverage/client.tsx": {
-    "fileLines": 32,
-    "maxFunctionLines": 21,
-    "branchCount": 0,
+    "fileLines": 39,
+    "maxFunctionLines": 27,
+    "branchCount": 2,
     "disposition": "stabilized",
     "targetBudget": {
       "fileLines": 35,
@@ -228,9 +228,9 @@
     "notes": "Collector family is still broad but already partly modular. Defer deeper split until digest sourcing requirements stop moving."
   },
   "worker/src/cron/daily-digest.ts": {
-    "fileLines": 189,
-    "maxFunctionLines": 161,
-    "branchCount": 15,
+    "fileLines": 202,
+    "maxFunctionLines": 174,
+    "branchCount": 17,
     "disposition": "stabilized",
     "targetBudget": {
       "fileLines": 191,
