@@ -1,0 +1,191 @@
+// @vitest-environment jsdom
+
+import { act, renderHook } from "@testing-library/react";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+import {
+  parseBlacklistPageFilters,
+  useBlacklistPageController,
+} from "./view-model";
+
+const { useBlacklistSummaryMock, useBlacklistEventsPageMock, replaceParamsMock, trackEventMock, trackSearchMock } = vi.hoisted(() => ({
+  useBlacklistSummaryMock: vi.fn(),
+  useBlacklistEventsPageMock: vi.fn(),
+  replaceParamsMock: vi.fn(),
+  trackEventMock: vi.fn(),
+  trackSearchMock: vi.fn(),
+}));
+
+let currentSearch = "";
+
+vi.mock("@/hooks/use-blacklist-events", () => ({
+  useBlacklistSummary: useBlacklistSummaryMock,
+  useBlacklistEventsPage: useBlacklistEventsPageMock,
+}));
+
+vi.mock("@/hooks/use-url-filters", () => ({
+  useUrlFilters: () => ({
+    searchParams: new URLSearchParams(currentSearch),
+    replaceParams: replaceParamsMock,
+  }),
+}));
+
+vi.mock("@/lib/analytics", () => ({
+  trackEvent: trackEventMock,
+  trackSearch: trackSearchMock,
+}));
+
+describe("parseBlacklistPageFilters", () => {
+  it("normalizes accepted values and falls back for invalid input", () => {
+    const filters = parseBlacklistPageFilters(
+      "?stablecoin=usdt&chain=tron&event=destroy&sortBy=event&sortDirection=asc&page=2&q=abc&status=yes",
+    );
+
+    expect(filters).toEqual({
+      stablecoinFilter: "USDT",
+      chainFilter: "tron",
+      eventTypeFilter: "destroy",
+      sortKey: "event",
+      sortDirection: "asc",
+      page: 2,
+      searchQuery: "abc",
+      statusBucket: "yes",
+    });
+  });
+
+  it("treats invalid filters and sentinel query values as defaults", () => {
+    const filters = parseBlacklistPageFilters("?stablecoin=bad&page=0&q=all&status=unknown");
+
+    expect(filters.stablecoinFilter).toBe("all");
+    expect(filters.page).toBe(1);
+    expect(filters.searchQuery).toBe("");
+    expect(filters.statusBucket).toBeNull();
+  });
+});
+
+describe("useBlacklistPageController", () => {
+  beforeEach(() => {
+    currentSearch = "?stablecoin=usdt&chain=tron&event=destroy&sortBy=event&sortDirection=asc&page=2&q=abc&status=yes";
+    useBlacklistSummaryMock.mockReset();
+    useBlacklistEventsPageMock.mockReset();
+    replaceParamsMock.mockReset();
+    trackEventMock.mockReset();
+    trackSearchMock.mockReset();
+    useBlacklistSummaryMock.mockReturnValue({
+      data: {
+        chains: [
+          { id: "tron", name: "Tron" },
+          { id: "ethereum", name: "Ethereum" },
+        ],
+        stats: { totalEvents: 2 },
+        chart: null,
+      },
+      isLoading: false,
+      error: null,
+      dataUpdatedAt: 123,
+      refetch: vi.fn(),
+      meta: { preset: "blacklist" },
+    });
+    useBlacklistEventsPageMock.mockImplementation((params) => {
+      return {
+        data: {
+          events: [{ id: "evt-1" }],
+          total: 120,
+        },
+        isLoading: false,
+        error: null,
+        dataUpdatedAt: 456,
+        refetch: vi.fn(),
+        meta: { preset: "blacklist" },
+        params,
+      };
+    });
+    replaceParamsMock.mockImplementation((updater: (params: URLSearchParams) => void) => {
+      const params = new URLSearchParams(currentSearch);
+      updater(params);
+      currentSearch = params.toString() ? `?${params.toString()}` : "";
+    });
+    HTMLElement.prototype.scrollIntoView = vi.fn();
+  });
+
+  it("derives page state, updates URL filters, and preserves pagination semantics", () => {
+    const { result, rerender } = renderHook(() => useBlacklistPageController());
+
+    expect(useBlacklistEventsPageMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        stablecoin: "USDT",
+        chainName: "Tron",
+        eventType: "destroy",
+        query: "abc",
+        sortBy: "event",
+        sortDirection: "asc",
+        limit: 50,
+        offset: 50,
+      }),
+    );
+    expect(result.current.stablecoinFilter).toBe("USDT");
+    expect(result.current.chainFilter).toBe("tron");
+    expect(result.current.statusBucket).toBe("yes");
+    expect(result.current.clampedPage).toBe(2);
+    expect(result.current.totalPages).toBe(3);
+    expect(result.current.rangeStart).toBe(51);
+    expect(result.current.rangeEnd).toBe(100);
+
+    act(() => {
+      result.current.handleStablecoinChange("all");
+    });
+
+    const nextSearch = new URLSearchParams(currentSearch);
+    expect(nextSearch.get("stablecoin")).toBeNull();
+    expect(nextSearch.get("page")).toBeNull();
+    expect(nextSearch.get("q")).toBe("abc");
+    expect(trackEventMock).toHaveBeenCalledWith("filter_applied", {
+      page: "blacklist",
+      filter_type: "stablecoin",
+      filter_value: "all",
+    });
+
+    act(() => {
+      result.current.handleNextPage();
+    });
+    expect(new URLSearchParams(currentSearch).get("page")).toBe("3");
+
+    rerender();
+    act(() => {
+      result.current.handlePreviousPage();
+    });
+    expect(new URLSearchParams(currentSearch).get("page")).toBe("2");
+  });
+
+  it("debounces search updates and scrolls the drilldown when the status bucket changes", () => {
+    vi.useFakeTimers();
+    const { result, rerender } = renderHook(() => useBlacklistPageController());
+    const drilldownEl = document.createElement("div");
+    drilldownEl.scrollIntoView = vi.fn();
+    result.current.drilldownRef.current = drilldownEl;
+
+    act(() => {
+      result.current.handleSearchChange("0xdeadbeef");
+    });
+    expect(result.current.searchInput).toBe("0xdeadbeef");
+    expect(trackSearchMock).not.toHaveBeenCalled();
+
+    act(() => {
+      vi.advanceTimersByTime(299);
+    });
+    expect(trackSearchMock).not.toHaveBeenCalled();
+
+    act(() => {
+      vi.advanceTimersByTime(1);
+    });
+    expect(trackSearchMock).toHaveBeenCalledWith("blacklist", "0xdeadbeef".length);
+    expect(new URLSearchParams(currentSearch).get("q")).toBe("0xdeadbeef");
+
+    currentSearch = "?status=possible";
+    act(() => {
+      rerender();
+    });
+    expect(drilldownEl.scrollIntoView).toHaveBeenCalledTimes(1);
+
+    vi.useRealTimers();
+  });
+});
