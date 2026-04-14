@@ -1,27 +1,20 @@
-import {
-  TRACKED_META_BY_ID,
-} from "@shared/lib/stablecoins";
 import { DAY_SECONDS } from "@shared/lib/time-constants";
 import type { YieldType } from "@shared/types/core";
 import type { YieldBenchmarkKey, YieldBenchmarkSelectionMode } from "@shared/types/yield";
 import { DEFAULT_SAFETY_SCORE, PYS_SCALING_FACTOR } from "../../lib/constants";
-import {
-  buildOnChainSourceKey,
-  computeApyVarianceScore,
-  computePYS,
-  computeYieldStability,
-} from "../yield-helpers";
-import { LENDING_PROTOCOL_LABELS } from "../yield-config";
+import { computeApyVarianceScore, computePYS, computeYieldStability } from "../yield-helpers";
 import type { YieldHistorySnapshotRow } from "./history";
 import { computeTvlWeightedMedianApy } from "./rankings";
 import type { ResolvedYield, ResolvedYieldEntry } from "./types";
 import { resolveBenchmarkForStablecoin, type ParsedYieldBenchmarkMeta, type ParsedYieldBenchmarkRegistry } from "./benchmarks";
+import { buildHistoryKey, pickHistoryRowsForSource } from "./evaluation-history";
+import { compareCandidates, getConfidencePriority, getConfidenceTier, relativeDivergence, resolveYieldSourceLabel, resolveYieldTypeLabel } from "./evaluation-arbitration";
+
+export { buildHistoryKey, isLegacyDeterministicOnChainSourceKey, normalizePreviousBestSourceKey } from "./evaluation-history";
+export { buildSelectionReason } from "./evaluation-arbitration";
 
 const LOW_SOURCE_TVL_USD = 250_000;
 const CROSS_SOURCE_DIVERGENCE_THRESHOLD = 0.35;
-const LEGACY_HISTORY_MAX_AGE_SEC = 30 * DAY_SECONDS + 5 * DAY_SECONDS;
-const LEGACY_LUSD_BPROTOCOL_SOURCE_KEY = "bprotocol-lqty-only";
-const SCRVUSD_CURRENT_RATE_SOURCE_KEY = "onchain:crvusd-curve:scrvusd-current-rate";
 const MAX_RETAINED_RISK_FREE_RATE_AGE_SEC = 3 * DAY_SECONDS;
 
 export type ConfidenceTier = "deterministic" | "curated" | "discovered" | "fallback";
@@ -80,57 +73,6 @@ function isResolvedYieldEntryWithYield(
   return entry.yield != null;
 }
 
-export function buildHistoryKey(stablecoinId: string, sourceKey: string): string {
-  return `${stablecoinId}::${sourceKey}`;
-}
-
-export function isLegacyDeterministicOnChainSourceKey(
-  stablecoinId: string,
-  sourceKey: string | null | undefined,
-): boolean {
-  return stablecoinId === "lusd-liquity" && sourceKey === LEGACY_LUSD_BPROTOCOL_SOURCE_KEY;
-}
-
-function shouldNormalizeOnChainSourceKey(row: {
-  stablecoin_id: string;
-  source_key: string | null;
-  data_source: string;
-  exchange_rate?: number | null;
-}): boolean {
-  return row.data_source === "onchain"
-    && (row.exchange_rate != null || isLegacyDeterministicOnChainSourceKey(row.stablecoin_id, row.source_key));
-}
-
-function getConfidenceTier(dataSource: string): ConfidenceTier {
-  switch (dataSource) {
-    case "onchain":
-    case "rate-derived":
-      return "deterministic";
-    case "defillama":
-    case "protocol-api":
-      return "curated";
-    case "defillama-auto":
-      return "discovered";
-    case "price-derived":
-    default:
-      return "fallback";
-  }
-}
-
-function getConfidencePriority(tier: ConfidenceTier): number {
-  switch (tier) {
-    case "deterministic":
-      return 4;
-    case "curated":
-      return 3;
-    case "discovered":
-      return 2;
-    case "fallback":
-    default:
-      return 1;
-  }
-}
-
 export function shouldDegradeForRiskFreeRate(meta: {
   fallbackMode: string | null;
   isFallback: boolean;
@@ -139,138 +81,6 @@ export function shouldDegradeForRiskFreeRate(meta: {
   if (!meta.fallbackMode) return false;
   if (meta.isFallback) return true;
   return meta.ageSeconds == null || meta.ageSeconds > MAX_RETAINED_RISK_FREE_RATE_AGE_SEC;
-}
-
-function relativeDivergence(a: number, b: number): number {
-  const maxValue = Math.max(Math.abs(a), Math.abs(b), 1e-9);
-  return Math.abs(a - b) / maxValue;
-}
-
-function resolveYieldSourceLabel(params: {
-  id: string;
-  dataSource: string;
-  project?: string;
-  explicitSource?: string;
-}): string {
-  const meta = TRACKED_META_BY_ID.get(params.id);
-  const yieldConfig = meta?.yieldConfig;
-  return (
-    params.explicitSource ??
-    (params.dataSource === "defillama-auto" && params.project
-      ? (LENDING_PROTOCOL_LABELS[params.project] ??
-        params.project.replace(/-/g, " ").replace(/\b\w/g, (c) => c.toUpperCase()))
-      : (yieldConfig?.yieldSource ?? "Unknown"))
-  );
-}
-
-function resolveYieldTypeLabel(params: {
-  id: string;
-  dataSource: string;
-  explicitType?: YieldType;
-}): YieldType {
-  const meta = TRACKED_META_BY_ID.get(params.id);
-  const yieldConfig = meta?.yieldConfig;
-  return (
-    params.explicitType ??
-    (params.dataSource === "defillama-auto"
-      ? "lending-opportunity"
-      : (yieldConfig?.yieldType ?? "nav-appreciation"))
-  );
-}
-
-function pickHistoryRowsForSource(
-  stablecoinId: string,
-  sourceKey: string,
-  dataSource: string,
-  sourceHistory: Map<string, YieldHistorySnapshotRow[]>,
-  onChainCompatibilityHistoryById: Map<string, YieldHistorySnapshotRow[]>,
-  legacyDeterministicOnChainHistoryById: Map<string, YieldHistorySnapshotRow[]>,
-  legacyHistoryById: Map<string, YieldHistorySnapshotRow[]>,
-  resolvedCountByCoin: Map<string, number>,
-  startSec: number,
-): { rows: YieldHistorySnapshotRow[]; usedLegacyHistory: boolean } {
-  const directRows = sourceHistory.get(buildHistoryKey(stablecoinId, sourceKey)) ?? [];
-  if (directRows.length > 0) {
-    return { rows: directRows, usedLegacyHistory: false };
-  }
-
-  if (dataSource === "onchain" && sourceKey === buildOnChainSourceKey(stablecoinId)) {
-    const compatibilityRows = onChainCompatibilityHistoryById.get(stablecoinId) ?? [];
-    if (compatibilityRows.length > 0) {
-      return { rows: compatibilityRows, usedLegacyHistory: false };
-    }
-
-    const legacyDeterministicRows = legacyDeterministicOnChainHistoryById.get(stablecoinId) ?? [];
-    if (legacyDeterministicRows.length > 0) {
-      return { rows: legacyDeterministicRows, usedLegacyHistory: false };
-    }
-  }
-
-  const legacyRows = legacyHistoryById.get(stablecoinId) ?? [];
-  const legacyDataSources = new Set(
-    legacyRows
-      .map((row) => row.data_source)
-      .filter((value): value is string => typeof value === "string" && value.length > 0),
-  );
-  const legacyMatchesCurrentSourceFamily =
-    legacyDataSources.size === 1 &&
-    legacyDataSources.has(dataSource);
-
-  const legacyCutoff = startSec - LEGACY_HISTORY_MAX_AGE_SEC;
-  const freshLegacyRows = legacyRows.filter((row) => row.recorded_at >= legacyCutoff);
-  const hasKnownSourceSemanticsBreak =
-    stablecoinId === "crvusd-curve" && sourceKey === SCRVUSD_CURRENT_RATE_SOURCE_KEY;
-
-  if (
-    freshLegacyRows.length > 0 &&
-    !hasKnownSourceSemanticsBreak &&
-    (resolvedCountByCoin.get(stablecoinId) ?? 0) <= 1 &&
-    legacyMatchesCurrentSourceFamily
-  ) {
-    return { rows: freshLegacyRows, usedLegacyHistory: true };
-  }
-
-  return { rows: [], usedLegacyHistory: false };
-}
-
-function compareCandidates(a: EvaluatedYieldSource, b: EvaluatedYieldSource): number {
-  if (a.rejected !== b.rejected) return a.rejected ? 1 : -1;
-
-  const aHasPositiveApy = a.currentApy > 0;
-  const bHasPositiveApy = b.currentApy > 0;
-  if (aHasPositiveApy !== bHasPositiveApy) return aHasPositiveApy ? -1 : 1;
-
-  const confidenceDiff = getConfidencePriority(b.confidenceTier) - getConfidencePriority(a.confidenceTier);
-  if (confidenceDiff !== 0) return confidenceDiff;
-
-  if (a.currentApy !== b.currentApy) return b.currentApy - a.currentApy;
-
-  return (b.sourceTvlUsd ?? 0) - (a.sourceTvlUsd ?? 0);
-}
-
-export function buildSelectionReason(source: EvaluatedYieldSource, rejectedPeers: number): string {
-  if (source.rejected) {
-    return "Selected as the least-bad remaining source after arbitration penalties";
-  }
-
-  const confidenceLabel =
-    source.confidenceTier === "deterministic"
-      ? "deterministic"
-      : source.confidenceTier === "curated"
-        ? "curated canonical"
-        : source.confidenceTier === "discovered"
-          ? "discovered opportunity"
-          : "fallback-derived";
-
-  if (source.usedLegacyHistory) {
-    return `${confidenceLabel} source selected by confidence-weighted arbitration using legacy history carry-forward`;
-  }
-
-  if (rejectedPeers > 0) {
-    return `${confidenceLabel} source selected by confidence-weighted arbitration after rejecting ${rejectedPeers} conflicting candidate${rejectedPeers > 1 ? "s" : ""}`;
-  }
-
-  return `${confidenceLabel} source selected by confidence-weighted arbitration`;
 }
 
 export interface EvaluateYieldSourcesInput {
@@ -535,15 +345,4 @@ export function evaluateYieldSources(input: EvaluateYieldSourcesInput): Evaluate
     sourceSwitches,
     medianApy,
   };
-}
-
-export function normalizePreviousBestSourceKey(row: {
-  stablecoin_id: string;
-  source_key: string | null;
-  data_source: string;
-  exchange_rate?: number | null;
-}): string {
-  return shouldNormalizeOnChainSourceKey(row)
-    ? buildOnChainSourceKey(row.stablecoin_id)
-    : (row.source_key ?? "legacy-best");
 }
