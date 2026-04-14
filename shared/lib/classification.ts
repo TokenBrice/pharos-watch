@@ -412,7 +412,7 @@ export const FEATURE_STATUS_CONFIG: Record<FeatureStatus, { label: string; cls: 
     cls: "bg-emerald-500/15 text-emerald-700 border-emerald-500/30 dark:text-emerald-400 dark:border-emerald-500/40",
   },
   experimental: {
-    label: "Experimental",
+    label: "Beta",
     cls: "bg-amber-500/15 text-amber-700 border-amber-500/30 dark:text-amber-400 dark:border-amber-500/40",
   },
   beta: {
