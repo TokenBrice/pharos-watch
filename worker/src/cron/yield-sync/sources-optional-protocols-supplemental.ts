@@ -424,7 +424,7 @@ export async function fetchBeefySources(
   }
 }
 
-export async function fetchCompoundV3SupplyRateCandidates(
+async function fetchCompoundV3SupplyRateCandidates(
   chainRpcs?: Map<string, ChainRpcConfig>,
   signal?: AbortSignal,
 ): Promise<{
@@ -459,7 +459,7 @@ export async function fetchCompoundV3SupplyRateCandidates(
   return { candidates, telemetry };
 }
 
-export async function fetchAaveV3SupplyRateCandidates(
+async function fetchAaveV3SupplyRateCandidates(
   chainRpcs?: Map<string, ChainRpcConfig>,
   startSec = Math.floor(Date.now() / 1000),
   signal?: AbortSignal,

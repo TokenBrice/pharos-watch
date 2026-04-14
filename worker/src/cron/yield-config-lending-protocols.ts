@@ -1,4 +1,4 @@
-export const LENDING_PROTOCOLS = {
+const LENDING_PROTOCOLS = {
   "aave-v3": { label: "Aave v3" },
   "compound-v3": { label: "Compound v3" },
   "sparklend": { label: "SparkLend" },

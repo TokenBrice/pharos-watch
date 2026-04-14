@@ -15,7 +15,7 @@ const LiveReserveRpcModeSchema = z.enum(LIVE_RESERVE_RPC_MODE_VALUES);
 const LiveReserveRiskSchema = z.enum(LIVE_RESERVE_RISK_VALUES);
 const LiveReserveDependencyTypeSchema = z.enum(DEPENDENCY_TYPE_VALUES);
 
-export const LiveReserveInputSchema: z.ZodType<LiveReserveInput> = z.union([
+const LiveReserveInputSchema: z.ZodType<LiveReserveInput> = z.union([
   z.object({
     kind: z.literal("http-json"),
     url: z.string(),
@@ -38,7 +38,7 @@ export const LiveReserveInputSchema: z.ZodType<LiveReserveInput> = z.union([
   }).strict(),
 ]);
 
-export const LiveReserveDisplaySchema = z.object({
+const LiveReserveDisplaySchema = z.object({
   url: z.string().optional(),
   label: z.string().optional(),
 }).strict();

@@ -63,7 +63,7 @@ type DexLiquidityPoolResponse = {
   source?: string;
 } & Record<string, unknown>;
 
-export function normalizePoolSource(source: unknown): LiquidityPoolSourceFamily | undefined {
+function normalizePoolSource(source: unknown): LiquidityPoolSourceFamily | undefined {
   if (typeof source !== "string" || source.length === 0) return undefined;
   if (source === "cg") return "cg_onchain";
   if (source === "gt") return "gecko_terminal";

@@ -3,8 +3,6 @@ export {
   enrichLiveSlicesForBlacklist,
   getBlacklistStatusLabel,
   isBlacklistable,
-  resolveBlacklistStatus,
-  createBlacklistResolutionContext,
 } from "./report-card-blacklist-matchers";
 export type {
   BlacklistStatus,

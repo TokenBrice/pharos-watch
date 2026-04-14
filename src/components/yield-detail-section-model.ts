@@ -12,7 +12,7 @@ import type { AltYieldSource, YieldRanking } from "@shared/types";
 
 export const ALT_SOURCE_INITIAL_COUNT = 6;
 
-export const DATA_SOURCE_BADGES: Record<string, { label: string; badge: string }> = {
+const DATA_SOURCE_BADGES: Record<string, { label: string; badge: string }> = {
   onchain: {
     label: "On-chain",
     badge: "bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-500/20",

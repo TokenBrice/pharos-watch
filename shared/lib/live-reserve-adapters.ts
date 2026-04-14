@@ -8,7 +8,6 @@ export type LiveReserveRedemptionCapacityTelemetry = "direct" | "proxy" | "none"
 export type LiveReserveRedemptionFeeTelemetry = "current-bps" | "none";
 
 export {
-  adapterParamsSchemas,
   LiveReservesConfigSchema,
   LIVE_RESERVE_ADAPTER_DEFINITIONS,
 };
