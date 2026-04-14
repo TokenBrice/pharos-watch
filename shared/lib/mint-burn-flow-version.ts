@@ -3,9 +3,24 @@ import {
 } from "./methodology-version";
 
 const mintBurnFlow = createMethodologyVersion({
-  currentVersion: "5.1",
+  currentVersion: "5.2",
   changelogPath: "/methodology/mint-burn-flow-changelog/",
   changelog: [
+  {
+    version: "5.2",
+    title: "GYD retirement from active mint/burn coverage",
+    date: "2026-04-14",
+    effectiveAt: 1776169200,
+    summary:
+      "GYD was removed from active mint/burn flow tracking after its cross-chain contract incident left the token functionally dead and moved it to the cemetery dataset.",
+    impact: [
+      "Mint/burn flow configs no longer scan the Ethereum GYD token after the asset moved out of the active stablecoin registry",
+      "Public flow coverage counts and stablecoin registry totals now exclude GYD from active surfaces",
+      "Historical rows remain in D1 if previously ingested, but current API scope is driven by the active config registry",
+    ],
+    commits: [],
+    reconstructed: false,
+  },
   {
     version: "5.1",
     title: "Canonical-chain mint/burn scope for native issuance tracking",

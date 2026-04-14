@@ -1,6 +1,16 @@
 # Mint/Burn Flow Methodology - Version Timeline
 
-Internal changelog reconstructed from git history. Covers Mint/Burn Flow `v1.0` through `v5.1` (2026-03-01 -> 2026-04-08).
+Internal changelog reconstructed from git history. Covers Mint/Burn Flow `v1.0` through `v5.2` (2026-03-01 -> 2026-04-14).
+
+---
+
+## v5.2 - GYD retirement from active mint/burn coverage (Apr 14, 2026)
+
+**Commit:** `unreleased`
+
+- GYD mint/burn tracking was removed after the cross-chain contract incident moved the asset out of the active stablecoin registry and into the cemetery dataset
+- Current public flow scope now excludes GYD from active config selection; historical rows remain in D1 if previously ingested
+- Registry counts and flow documentation now reflect the active config surface after the GYD retirement
 
 ---
 

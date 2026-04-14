@@ -1630,5 +1630,28 @@
     "obituary": "Saga Dollar was the native stablecoin of the SagaEVM chainlet, a Cosmos SDK-based L1 app-chain. On January 21, 2026, an attacker deployed malicious contracts that abused IBC mechanisms to mint tokens out of thin air, draining nearly $7M in USDC, yUSD, ETH, and tBTC to Ethereum mainnet. The chain was halted at block 6,593,800. Saga Dollar depegged to $0.75, and the sibling stablecoins Mustang and Colt were also wiped out. The exploit did not involve a consensus breach — just a creative reading of IBC semantics.",
     "sourceUrl": "https://cointelegraph.com/news/saga-pauses-sagaevm-after-7m-exploit",
     "sourceLabel": "CoinTelegraph"
+  },
+  {
+    "name": "Gyroscope GYD",
+    "symbol": "GYD",
+    "llamaId": "185",
+    "pegCurrency": "USD",
+    "causeOfDeath": "counterparty-failure",
+    "deathDate": "2026-02",
+    "peakMcap": 26793861,
+    "epitaph": "Gyro stopped spinning",
+    "obituary": "Gyroscope's cross-chain GYD contract was exploited at the end of January 2026. The team told users not to interact with GYD, paused Gyro liquidity pools containing the token, and later offered a settlement to recover enough ETH to make users whole. The recovery never materialized publicly: Ethereum transfers stopped on January 31, Etherscan now reports 0 circulating GYD and $0 circulating market cap, CoinGecko no longer resolves the token through its API, and the remaining Balancer pools are one-sided GYD with zero volume.",
+    "sourceUrl": "https://x.com/GyroStable/status/2017546048114250219",
+    "sourceLabel": "Gyroscope",
+    "contracts": [
+      {
+        "chain": "ethereum",
+        "address": "0xe07f9d810a48ab5c3c914ba3ca53af14e4491e8a"
+      },
+      {
+        "chain": "polygon",
+        "address": "0xca5d8f8a8d49439357d3cf46ca2e720702f132b8"
+      }
+    ]
   }
 ]

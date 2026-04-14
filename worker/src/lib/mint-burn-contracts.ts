@@ -64,7 +64,6 @@ const EXTENDED_ETHEREUM_TRANSFER_EXPANSION_SPECS: Array<{
   { stablecoinId: "mim-abracadabra", dustThreshold: 10_000 },
   { stablecoinId: "usat-tether", dustThreshold: 10_000 },
   { stablecoinId: "zeusd-zoth", dustThreshold: 10_000 },
-  { stablecoinId: "gyd-gyroscope", dustThreshold: 10_000 },
   { stablecoinId: "ggbr-goldfish-gold", dustThreshold: 10 },
   { stablecoinId: "xsgd-straitsx", dustThreshold: 10_000 },
   { stablecoinId: "idrt-rupiah-token", dustThreshold: 10_000 },

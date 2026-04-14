@@ -357,7 +357,6 @@ describe("mint-burn-contracts top-200 Ethereum additions", () => {
     { stablecoinId: "mim-abracadabra", symbol: "MIM", address: "0x99d8a9c45b2eca8864373a26d1459e3dff1e17f3", decimals: 18, dustThreshold: 10_000 },
     { stablecoinId: "usat-tether", symbol: "USAT", address: "0x07041776f5007aca2a54844f50503a18a72a8b68", decimals: 6, dustThreshold: 10_000 },
     { stablecoinId: "zeusd-zoth", symbol: "ZeUSD", address: "0x7dc9748da8e762e569f9269f48f69a1a9f8ea761", decimals: 6, dustThreshold: 10_000 },
-    { stablecoinId: "gyd-gyroscope", symbol: "GYD", address: "0xe07f9d810a48ab5c3c914ba3ca53af14e4491e8a", decimals: 18, dustThreshold: 10_000 },
     { stablecoinId: "ggbr-goldfish-gold", symbol: "GGBR", address: "0x7e2ac793f3e692f388e66c7dc28f739d13b0b71a", decimals: 18, dustThreshold: 10 },
     { stablecoinId: "xsgd-straitsx", symbol: "XSGD", address: "0x70e8de73ce538da2beed35d14187f6959a8eca96", decimals: 6, dustThreshold: 10_000 },
     { stablecoinId: "idrt-rupiah-token", symbol: "IDRT", address: "0x998ffe1e43facffb941dc337dd0468d52ba5b48a", decimals: 2, dustThreshold: 10_000 },

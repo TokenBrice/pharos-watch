@@ -291,16 +291,8 @@ describe("getRedemptionBackstopConfig", () => {
     expect(getRedemptionBackstopConfig("mxnb-juno")?.docs?.length).toBeGreaterThanOrEqual(2);
   });
 
-  it("promotes FPI and GYD to reviewed collateral-redemption routes", () => {
+  it("promotes FPI to a reviewed collateral-redemption route", () => {
     expect(getRedemptionBackstopConfig("fpi-frax")).toMatchObject({
-      routeFamily: "collateral-redeem",
-      outputAssetType: "mixed-collateral",
-      capacityModel: { kind: "supply-full", confidence: "documented-bound" },
-      costModel: { kind: "dynamic-or-unclear" },
-      reviewedAt: "2026-03-23",
-    });
-
-    expect(getRedemptionBackstopConfig("gyd-gyroscope")).toMatchObject({
       routeFamily: "collateral-redeem",
       outputAssetType: "mixed-collateral",
       capacityModel: { kind: "supply-full", confidence: "documented-bound" },

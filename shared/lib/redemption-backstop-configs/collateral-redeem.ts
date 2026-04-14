@@ -138,19 +138,6 @@ export const COLLATERAL_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackst
       "Mento docs describe cEUR as mintable by depositing reserve collateral and burnable back into reserve assets at oracle value, with overcollateralization and circuit breakers governing the reserve",
     ],
   },
-  "gyd-gyroscope": {
-    ...collateralRedeemBase,
-    ...reviewedDirectRedemptionSupplyFull,
-    outputAssetType: "mixed-collateral",
-    costModel: documentedVariableFee("Primary-market AMM (PAMM) adjusts redemption prices based on reserve ratio"),
-    docs: [
-      sourceRef("Gyroscope docs", "https://docs.gyro.finance/", ["route", "capacity"]),
-      sourceRef("Gyroscope website", "https://www.gyro.finance/", ["route"]),
-    ],
-    notes: [
-      "Tracked metadata describes GYD as mintable and burnable against the reserve basket through the primary-market AMM, with redemption price determined by reserve-ratio-aware PAMM mechanics",
-    ],
-  },
   "usdp-parallel": {
     ...collateralRedeemBase,
     outputAssetType: "mixed-collateral",
