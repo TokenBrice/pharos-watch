@@ -416,19 +416,19 @@ describe("scorePegStability", () => {
     expect(result.score).toBe(88);
   });
 
-  // --- Active depeg cap ---
+  // --- Active depeg detail ---
 
-  it("caps score at 65 during active depeg", () => {
+  it("passes pegScore through during active depeg", () => {
     const result = scorePegStability(
       makePeg({ pegScore: 90, activeDepeg: true }),
       makeMeta(),
     );
-    expect(result.score).toBe(65);
+    expect(result.score).toBe(90);
     expect(result.detail).toContain("active depeg");
-    expect(result.detail).toContain("capped at C");
+    expect(result.detail).not.toContain("capped");
   });
 
-  it("does not raise score to 65 when pegScore is already below 65 during active depeg", () => {
+  it("does not raise low pegScore during active depeg", () => {
     const result = scorePegStability(
       makePeg({ pegScore: 40, activeDepeg: true }),
       makeMeta(),
@@ -951,10 +951,9 @@ describe("golden-path: overall grade from realistic coin profiles", () => {
     };
     const result = computeOverallGrade(dims);
 
-    // Active depeg caps peg stability at 65, which applies as power-curve multiplier
-    // (65/100)^0.40 ≈ 0.842 — a materially stronger drag than the old 0.20 exponent
-    // This should drag the overall grade down noticeably vs the DAI-like test
+    // Peg score itself already includes active-event penalties from computePegScore.
+    // Final D/F active-depeg caps are applied only when activeDepegBps is provided.
     expect(result.score).not.toBeNull();
-    expect(result.score!).toBeLessThan(90);
+    expect(result.score!).toBeLessThan(100);
   });
 });

@@ -70,6 +70,10 @@ interface RedemptionBackstopRow {
 }
 
 export type RedemptionBackstopSnapshotRecord = RedemptionBackstopEntry;
+export interface RedemptionBackstopLoadResult {
+  map: RedemptionBackstopMap;
+  latestUpdatedAt: number | null;
+}
 
 export class RedemptionBackstopSnapshotUnavailableError extends Error {
   cause?: unknown;
@@ -411,16 +415,29 @@ export async function loadRedemptionBackstopMap(db: D1Database): Promise<Redempt
   return Object.fromEntries((rows.results ?? []).map((row) => [row.stablecoin_id, toEntry(row)]));
 }
 
-export async function buildRedemptionBackstopsSnapshot(db: D1Database): Promise<RedemptionBackstopsResponse> {
-  let coins: RedemptionBackstopMap;
-  let latest: { updated_at: number | null } | null;
+export async function loadRedemptionBackstopSnapshot(db: D1Database): Promise<RedemptionBackstopLoadResult> {
   try {
-    [coins, latest] = await Promise.all([
+    const [map, latest] = await Promise.all([
       loadRedemptionBackstopMap(db),
       db
         .prepare("SELECT MAX(updated_at) AS updated_at FROM redemption_backstop")
         .first<{ updated_at: number | null }>(),
     ]);
+    return { map, latestUpdatedAt: latest?.updated_at ?? null };
+  } catch (error) {
+    if (error instanceof RedemptionBackstopSnapshotUnavailableError) {
+      throw error;
+    }
+    throw new RedemptionBackstopSnapshotUnavailableError("Failed to load redemption backstop snapshot", {
+      cause: error,
+    });
+  }
+}
+
+export async function buildRedemptionBackstopsSnapshot(db: D1Database): Promise<RedemptionBackstopsResponse> {
+  let loaded: RedemptionBackstopLoadResult;
+  try {
+    loaded = await loadRedemptionBackstopSnapshot(db);
   } catch (error) {
     if (error instanceof RedemptionBackstopSnapshotUnavailableError) {
       throw error;
@@ -430,7 +447,8 @@ export async function buildRedemptionBackstopsSnapshot(db: D1Database): Promise<
     });
   }
 
-  const updatedAt = latest?.updated_at ?? 0;
+  const coins = loaded.map;
+  const updatedAt = loaded.latestUpdatedAt ?? 0;
   const snapshotMethodology = resolveSnapshotMethodologyVersion(coins, updatedAt);
 
   return {

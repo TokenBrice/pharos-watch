@@ -5,15 +5,12 @@ import type {
   ReportCardGrade,
 } from "../types";
 import {
-  ACTIVE_DEPEG_CAP_D_BPS,
-  ACTIVE_DEPEG_CAP_D_SCORE,
-  ACTIVE_DEPEG_CAP_F_BPS,
-  ACTIVE_DEPEG_CAP_F_SCORE,
   DIMENSION_WEIGHTS,
   NO_LIQUIDITY_PENALTY,
   PEG_MULTIPLIER_EXPONENT,
   scoreToGrade,
 } from "./report-card-core";
+import { activeDepegCapScore } from "./report-card-active-depeg";
 import { scoreDependencyRisk } from "./report-card-dependency";
 
 export function computeOverallGrade(
@@ -54,14 +51,9 @@ export function computeOverallGrade(
     score *= NO_LIQUIDITY_PENALTY;
   }
 
-  // Active depeg cap: hard-cap overall score for severe ongoing depegs
-  const depegBps = options?.activeDepegBps;
-  if (depegBps != null) {
-    if (depegBps >= ACTIVE_DEPEG_CAP_F_BPS) {
-      score = Math.min(score, ACTIVE_DEPEG_CAP_F_SCORE);
-    } else if (depegBps >= ACTIVE_DEPEG_CAP_D_BPS) {
-      score = Math.min(score, ACTIVE_DEPEG_CAP_D_SCORE);
-    }
+  const capScore = activeDepegCapScore(options?.activeDepegBps);
+  if (capScore != null) {
+    score = Math.min(score, capScore);
   }
 
   const clamped = Math.max(0, Math.min(100, Math.round(score)));
@@ -74,6 +66,7 @@ export function computeStressedGrades(
   cards: ReportCard[],
   overrides: Map<string, number>,
 ): ReportCard[] {
+  const cardById = new Map(cards.map((card) => [card.id, card]));
   const overallScores = new Map<string, number>();
   for (const card of cards) {
     const override = overrides.get(card.id);
@@ -85,47 +78,94 @@ export function computeStressedGrades(
   }
 
   const overriddenIds = new Set(overrides.keys());
-  const affectedIds = new Set<string>();
+  const dependentsByUpstream = new Map<string, string[]>();
   for (const card of cards) {
-    const dependencies = card.rawInputs.dependencies;
-    if (dependencies.length > 0 && dependencies.some((dependency) => overriddenIds.has(dependency.id))) {
-      affectedIds.add(card.id);
+    for (const dependency of card.rawInputs.dependencies) {
+      const existing = dependentsByUpstream.get(dependency.id);
+      if (existing) {
+        existing.push(card.id);
+      } else {
+        dependentsByUpstream.set(dependency.id, [card.id]);
+      }
     }
   }
 
-  return cards.map((card) => {
-    if (overriddenIds.has(card.id)) {
-      const newScore = overrides.get(card.id)!;
-      return {
+  const affectedIds = new Set<string>();
+  const queue = [...overriddenIds];
+  for (let index = 0; index < queue.length; index += 1) {
+    const upstreamId = queue[index];
+    for (const dependentId of dependentsByUpstream.get(upstreamId) ?? []) {
+      if (overriddenIds.has(dependentId) || affectedIds.has(dependentId)) continue;
+      affectedIds.add(dependentId);
+      queue.push(dependentId);
+    }
+  }
+
+  const recomputeOrder: string[] = [];
+  const visited = new Set<string>();
+  const visiting = new Set<string>();
+
+  function visitAffected(id: string): void {
+    if (visited.has(id) || !affectedIds.has(id)) return;
+    if (visiting.has(id)) return;
+    visiting.add(id);
+    const card = cardById.get(id);
+    if (card) {
+      for (const dependency of card.rawInputs.dependencies) {
+        visitAffected(dependency.id);
+      }
+    }
+    visiting.delete(id);
+    visited.add(id);
+    recomputeOrder.push(id);
+  }
+
+  for (const id of affectedIds) {
+    visitAffected(id);
+  }
+
+  const updatedCards = new Map<string, ReportCard>();
+  for (const card of cards) {
+    const override = overrides.get(card.id);
+    if (override !== undefined) {
+      updatedCards.set(card.id, {
         ...card,
-        overallGrade: scoreToGrade(newScore),
-        overallScore: newScore,
+        overallGrade: scoreToGrade(override),
+        overallScore: override,
         baseScore: card.baseScore,
-      };
-    }
-
-    if (affectedIds.has(card.id)) {
-      const meta = {
-        flags: { governance: card.rawInputs.governanceTier },
-        dependencies: card.rawInputs.dependencies,
-        reserves: undefined,
-      };
-      const dependencyRisk = scoreDependencyRisk(meta, overallScores);
-      const dimensions = { ...card.dimensions, dependencyRisk };
-      const overall = computeOverallGrade(dimensions, {
-        navToken: card.rawInputs.navToken,
-        activeDepegBps: card.rawInputs.activeDepegBps ?? null,
       });
-      return {
-        ...card,
-        dimensions,
-        overallGrade: overall.grade,
-        overallScore: overall.score,
-        baseScore: overall.baseScore,
-        ratedDimensions: overall.ratedDimensions,
-      };
     }
+  }
 
-    return card;
-  });
+  for (const id of recomputeOrder) {
+    const card = cardById.get(id);
+    if (!card) continue;
+    const meta = {
+      flags: { governance: card.rawInputs.governanceTier },
+      dependencies: card.rawInputs.dependencies,
+      reserves: undefined,
+    };
+    const dependencyRisk = scoreDependencyRisk(meta, overallScores);
+    const dimensions = { ...card.dimensions, dependencyRisk };
+    const overall = computeOverallGrade(dimensions, {
+      navToken: card.rawInputs.navToken,
+      activeDepegBps: card.rawInputs.activeDepegBps ?? null,
+    });
+    const updated = {
+      ...card,
+      dimensions,
+      overallGrade: overall.grade,
+      overallScore: overall.score,
+      baseScore: overall.baseScore,
+      ratedDimensions: overall.ratedDimensions,
+    };
+    updatedCards.set(card.id, updated);
+    if (overall.score !== null) {
+      overallScores.set(card.id, overall.score);
+    } else {
+      overallScores.delete(card.id);
+    }
+  }
+
+  return cards.map((card) => updatedCards.get(card.id) ?? card);
 }

@@ -10,7 +10,7 @@ import { RedemptionBackstopSnapshotUnavailableError } from "../redemption-backst
 import type { PegSummaryCoin } from "@shared/types/market";
 import type { RedemptionBackstopEntry } from "@shared/types/redemption";
 
-const loadRedemptionBackstopMapMock = vi.hoisted(() =>
+const loadRedemptionBackstopSnapshotMock = vi.hoisted(() =>
   vi.fn(),
 );
 
@@ -32,7 +32,7 @@ vi.mock("../redemption-backstops-store", async (importOriginal) => {
   >();
   return {
     ...original,
-    loadRedemptionBackstopMap: loadRedemptionBackstopMapMock,
+    loadRedemptionBackstopSnapshot: loadRedemptionBackstopSnapshotMock,
   };
 });
 
@@ -157,8 +157,8 @@ function makeReportCardsDbWithBluechipValue(
 
 describe("buildReportCardsSnapshot", () => {
   beforeEach(() => {
-    loadRedemptionBackstopMapMock.mockReset();
-    loadRedemptionBackstopMapMock.mockResolvedValue({});
+    loadRedemptionBackstopSnapshotMock.mockReset();
+    loadRedemptionBackstopSnapshotMock.mockResolvedValue({ map: {}, latestUpdatedAt: nowSec });
     loadDexLiquiditySnapshotMock.mockReset();
     loadDexLiquiditySnapshotMock.mockImplementation(async (db: D1Database) => {
       const rows = await db
@@ -201,6 +201,7 @@ describe("buildReportCardsSnapshot", () => {
     derivePegAnalyticsSnapshotMock.mockReset();
     derivePegAnalyticsSnapshotMock.mockResolvedValue({
       pegDataById: new Map(),
+      eventsByCoin: new Map(),
       methodology: {
         version: "test",
         activeDepegThresholdBps: 1000,
@@ -296,8 +297,9 @@ describe("buildReportCardsSnapshot", () => {
       { match: "depeg_events", rows: [] },
       { match: "supply_history", rows: [] },
     ]);
-    loadRedemptionBackstopMapMock.mockResolvedValueOnce({
-      "cusd-cap": makeRedemptionEntry({}),
+    loadRedemptionBackstopSnapshotMock.mockResolvedValueOnce({
+      map: { "cusd-cap": makeRedemptionEntry({}) },
+      latestUpdatedAt: nowSec,
     });
 
     const snapshot = await buildReportCardsSnapshot(db);
@@ -307,6 +309,49 @@ describe("buildReportCardsSnapshot", () => {
     expect(card?.rawInputs.redemptionUsedForLiquidity).toBe(true);
     expect(card?.rawInputs.effectiveExitScore).toBe(91);
     expect(card?.dimensions.liquidity.score).toBe(91);
+  });
+
+  it("suppresses stale redemption backstop rows from report-card liquidity", async () => {
+    const cacheValue = JSON.stringify({
+      peggedAssets: [makeAsset({ id: "cusd-cap", symbol: "CUSD" })],
+    });
+    const db = mockD1([
+      {
+        match: "cache",
+        rows: [
+          { key: "stablecoins", value: cacheValue, updated_at: nowSec },
+          { key: "bluechip-ratings", value: "{}", updated_at: nowSec },
+        ],
+        first: { key: "stablecoins", value: cacheValue, updated_at: nowSec },
+      },
+      {
+        match: "dex_liquidity",
+        rows: [
+          {
+            stablecoin_id: "cusd-cap",
+            liquidity_score: 29,
+            concentration_hhi: 1,
+            pool_count: 1,
+            chain_count: 1,
+            updated_at: nowSec,
+          },
+        ],
+      },
+      { match: "depeg_events", rows: [] },
+      { match: "supply_history", rows: [] },
+    ]);
+    loadRedemptionBackstopSnapshotMock.mockResolvedValueOnce({
+      map: { "cusd-cap": makeRedemptionEntry({}) },
+      latestUpdatedAt: nowSec - 7200,
+    });
+
+    const snapshot = await buildReportCardsSnapshot(db);
+    const card = snapshot.cards.find((entry) => entry.id === "cusd-cap");
+    expect(snapshot.redemptionStale).toBe(true);
+    expect(snapshot.inputFreshness.redemptionBackstops.stale).toBe(true);
+    expect(card?.rawInputs.redemptionBackstopScore).toBeNull();
+    expect(card?.rawInputs.redemptionUsedForLiquidity).toBe(false);
+    expect(card?.dimensions.liquidity.score).toBe(29);
   });
 
   it("keeps severe-depeg redemption eligibility aligned with scoreLiquidity rules", async () => {
@@ -351,6 +396,9 @@ describe("buildReportCardsSnapshot", () => {
           eventCount: 1,
         })],
       ]),
+      eventsByCoin: new Map([
+        ["cusd-cap", [{ endedAt: null, peakDeviationBps: -3000 }]],
+      ]),
       methodology: {
         version: "test",
         activeDepegThresholdBps: 1000,
@@ -359,15 +407,19 @@ describe("buildReportCardsSnapshot", () => {
       },
       updatedAt: nowSec,
     });
-    loadRedemptionBackstopMapMock.mockResolvedValueOnce({
-      "cusd-cap": makeRedemptionEntry({
-        capacityConfidence: "documented-bound",
-        sourceMode: "estimated",
-      }),
+    loadRedemptionBackstopSnapshotMock.mockResolvedValueOnce({
+      map: {
+        "cusd-cap": makeRedemptionEntry({
+          capacityConfidence: "documented-bound",
+          sourceMode: "estimated",
+        }),
+      },
+      latestUpdatedAt: nowSec,
     });
 
     const staticSnapshot = await buildReportCardsSnapshot(db);
     const staticCard = staticSnapshot.cards.find((entry) => entry.id === "cusd-cap");
+    expect(staticCard?.rawInputs.activeDepegBps).toBe(3000);
     expect(staticCard?.rawInputs.redemptionUsedForLiquidity).toBe(false);
     expect(staticCard?.dimensions.liquidity.detail).toContain("active severe depeg requires live-open redemption evidence");
 
@@ -384,6 +436,9 @@ describe("buildReportCardsSnapshot", () => {
           eventCount: 1,
         })],
       ]),
+      eventsByCoin: new Map([
+        ["cusd-cap", [{ endedAt: null, peakDeviationBps: -3000 }]],
+      ]),
       methodology: {
         version: "test",
         activeDepegThresholdBps: 1000,
@@ -392,13 +447,16 @@ describe("buildReportCardsSnapshot", () => {
       },
       updatedAt: nowSec,
     });
-    loadRedemptionBackstopMapMock.mockResolvedValueOnce({
-      "cusd-cap": makeRedemptionEntry({
-        capacityConfidence: "live-direct",
-        sourceMode: "dynamic",
-        accessModel: "permissionless-onchain",
-        settlementModel: "atomic",
-      }),
+    loadRedemptionBackstopSnapshotMock.mockResolvedValueOnce({
+      map: {
+        "cusd-cap": makeRedemptionEntry({
+          capacityConfidence: "live-direct",
+          sourceMode: "dynamic",
+          accessModel: "permissionless-onchain",
+          settlementModel: "atomic",
+        }),
+      },
+      latestUpdatedAt: nowSec,
     });
 
     const liveSnapshot = await buildReportCardsSnapshot(db);
@@ -474,7 +532,7 @@ describe("buildReportCardsSnapshot", () => {
 
   it("throws when the redemption backstop snapshot is unavailable", async () => {
     const db = makeReportCardsDb([makeAsset({ id: "usdt-tether", symbol: "USDT" })]);
-    loadRedemptionBackstopMapMock.mockRejectedValueOnce(
+    loadRedemptionBackstopSnapshotMock.mockRejectedValueOnce(
       new RedemptionBackstopSnapshotUnavailableError(
         "redemption snapshot unavailable",
       ),

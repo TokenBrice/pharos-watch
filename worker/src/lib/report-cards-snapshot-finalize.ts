@@ -7,6 +7,13 @@ import {
   PEG_MULTIPLIER_EXPONENT,
   GRADE_THRESHOLDS,
 } from "@shared/lib/report-cards";
+import {
+  ACTIVE_DEPEG_SEVERITY_SOURCE,
+  ACTIVE_DEPEG_CAP_D_BPS,
+  ACTIVE_DEPEG_CAP_D_SCORE,
+  ACTIVE_DEPEG_CAP_F_BPS,
+  ACTIVE_DEPEG_CAP_F_SCORE,
+} from "@shared/lib/report-card-active-depeg";
 import type {
   StablecoinMeta,
   GovernanceType,
@@ -21,6 +28,7 @@ import type {
   ReportCardGrade,
 } from "@shared/types/report-cards";
 import type { CollateralDriftEntry } from "./collateral-drift";
+import type { ReportCardsInputFreshness } from "./report-cards-snapshot-inputs";
 
 export function buildDefunctReportCards(): ReportCard[] {
   return DEAD_STABLECOINS.map((dead) => {
@@ -86,6 +94,8 @@ export function buildReportCardsSnapshotEnvelope(input: {
   cards: ReportCard[];
   updatedAt: number;
   liquidityStale: boolean;
+  redemptionStale: boolean;
+  inputFreshness: ReportCardsInputFreshness;
   collateralDriftCoins: CollateralDriftEntry[];
   liveToFallbackCoins: string[];
 }) {
@@ -95,11 +105,18 @@ export function buildReportCardsSnapshotEnvelope(input: {
       version: METHODOLOGY_VERSION,
       weights: DIMENSION_WEIGHTS,
       pegMultiplierExponent: PEG_MULTIPLIER_EXPONENT,
+      activeDepegSeveritySource: ACTIVE_DEPEG_SEVERITY_SOURCE,
+      activeDepegCaps: {
+        d: { thresholdBps: ACTIVE_DEPEG_CAP_D_BPS, score: ACTIVE_DEPEG_CAP_D_SCORE },
+        f: { thresholdBps: ACTIVE_DEPEG_CAP_F_BPS, score: ACTIVE_DEPEG_CAP_F_SCORE },
+      },
       thresholds: GRADE_THRESHOLDS as { grade: ReportCardGrade; min: number }[],
     },
     dependencyGraph: { edges: buildDependencyGraphEdges(ACTIVE_STABLECOINS as StablecoinMeta[]) },
     updatedAt: input.updatedAt,
     liquidityStale: input.liquidityStale,
+    redemptionStale: input.redemptionStale,
+    inputFreshness: input.inputFreshness,
     ...(input.collateralDriftCoins.length > 0 ? { collateralDriftCoins: input.collateralDriftCoins } : {}),
     ...(input.liveToFallbackCoins.length > 0 ? { liveToFallbackCoins: input.liveToFallbackCoins } : {}),
   };

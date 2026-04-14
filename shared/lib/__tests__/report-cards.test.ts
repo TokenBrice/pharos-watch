@@ -197,6 +197,23 @@ describe("scoreDependencyRisk", () => {
     // Wrapper cap: dep_score - 3 = 77
     expect(result.score).toBeLessThanOrEqual(77);
   });
+
+  it("scores partially unavailable dependency weights at the conservative fallback", () => {
+    const meta = {
+      flags: { governance: "centralized" as const },
+      dependencies: [
+        { id: "available", weight: 0.5, type: "collateral" as const },
+        { id: "missing", weight: 0.3, type: "collateral" as const },
+      ],
+      reserves: undefined,
+    };
+    const result = scoreDependencyRisk(meta as never, new Map([["available", 90]]));
+
+    // 50% * 90 + 30% * 70 + 20% self-backed centralized score 95 = 85, then
+    // the unavailable dependency is treated as weak (<75), applying -10.
+    expect(result.score).toBe(75);
+    expect(result.detail).toContain("Unavailable upstream scores: 1 dep");
+  });
 });
 
 describe("scoreLiquidity", () => {
@@ -446,7 +463,7 @@ describe("computeStressedGrades", () => {
     expect(result.baseScore).toBe(base.baseScore);
   });
 
-  it("recomputes dependency risk and overall score for direct dependents only", () => {
+  it("recomputes dependency risk and overall score through transitive dependents", () => {
     const upstream = makeCard({
       id: "usdc",
       name: "USD Coin",
@@ -538,7 +555,8 @@ describe("computeStressedGrades", () => {
     expect(stressedDependent.dimensions.dependencyRisk.score).toBe(44);
     expect(stressedDependent.dimensions.dependencyRisk.grade).toBe(scoreToGrade(44));
     expect(stressedDependent.overallScore).toBeLessThan(dependent.overallScore ?? 0);
-    expect(stressedTransitive).toEqual(transitive);
+    expect(stressedTransitive.dimensions.dependencyRisk.score).toBeLessThan(transitive.dimensions.dependencyRisk.score ?? 100);
+    expect(stressedTransitive.overallScore).toBeLessThan(transitive.overallScore ?? 0);
   });
 });
 

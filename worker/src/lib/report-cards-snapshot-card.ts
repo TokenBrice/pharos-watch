@@ -32,6 +32,7 @@ import type { RedemptionBackstopEntry } from "@shared/types/redemption";
 export interface ComputeCardInput {
   meta: (typeof ACTIVE_STABLECOINS)[number];
   pegDataById: Map<string, PegSummaryCoin>;
+  activeDepegPeakBpsById: Map<string, number>;
   dexLiqMap: Record<string, Pick<DexLiquidityData, "liquidityScore" | "concentrationHhi" | "poolCount" | "chainCount">>;
   redemptionBackstopMap: Record<string, RedemptionBackstopEntry>;
   bluechipMap: Record<string, BluechipRating>;
@@ -43,6 +44,7 @@ export interface ComputeCardInput {
 
 export interface BuildLiveReportCardsInput {
   pegDataById: Map<string, PegSummaryCoin>;
+  activeDepegPeakBpsById: Map<string, number>;
   dexLiqMap: ComputeCardInput["dexLiqMap"];
   redemptionBackstopMap: Record<string, RedemptionBackstopEntry>;
   bluechipMap: Record<string, BluechipRating>;
@@ -89,6 +91,7 @@ function computeReportCard(input: ComputeCardInput): ReportCard {
   const {
     meta,
     pegDataById,
+    activeDepegPeakBpsById,
     dexLiqMap,
     redemptionBackstopMap,
     bluechipMap,
@@ -102,8 +105,8 @@ function computeReportCard(input: ComputeCardInput): ReportCard {
   const liq = liquidityStale ? undefined : dexLiqMap[meta.id];
   const redemption = redemptionBackstopMap[meta.id];
   const rating = bluechipMap[meta.id];
-  const activeDepegBps = peg?.activeDepeg && peg?.currentDeviationBps != null
-    ? Math.abs(peg.currentDeviationBps)
+  const activeDepegBps = peg?.activeDepeg
+    ? activeDepegPeakBpsById.get(meta.id) ?? null
     : null;
   const redemptionUsedForLiquidity = isRedemptionEligibleForLiquidity(redemption, { activeDepegBps });
 
@@ -177,6 +180,7 @@ export function buildLiveReportCards(input: BuildLiveReportCardsInput): ReportCa
     const card = computeReportCard({
       meta,
       pegDataById: input.pegDataById,
+      activeDepegPeakBpsById: input.activeDepegPeakBpsById,
       dexLiqMap: input.dexLiqMap,
       redemptionBackstopMap: input.redemptionBackstopMap,
       bluechipMap: input.bluechipMap,

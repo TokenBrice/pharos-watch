@@ -1,6 +1,5 @@
 import type { RedemptionRouteStatus, RedemptionRouteStatusSource } from "@shared/types/redemption";
-
-export const REDEMPTION_SEVERE_ACTIVE_DEPEG_BPS = 2500;
+import { REDEMPTION_SEVERE_ACTIVE_DEPEG_BPS } from "@shared/lib/report-card-active-depeg";
 
 interface ActiveDepegAvailabilityRow {
   stablecoin_id: string;

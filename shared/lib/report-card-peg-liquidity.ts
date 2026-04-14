@@ -6,30 +6,55 @@ import type {
   StablecoinMeta,
 } from "../types";
 import { computeEffectiveExitScore, REDEMPTION_ROUTE_FAMILY_LABELS } from "./redemption-backstop-scoring";
-import { ACTIVE_DEPEG_CAP_F_BPS, scoreToGrade } from "./report-card-core";
+import { ACTIVE_DEPEG_CAP_F_BPS } from "./report-card-active-depeg";
+import { scoreToGrade } from "./report-card-core";
+
+interface PegStabilityFacts {
+  score: number;
+  label: string;
+  activeDepeg: boolean;
+  eventCount: number;
+  worstDeviationBps: number | null;
+  yieldBearing: boolean;
+}
+
+function buildPegStabilityFacts(
+  peg: PegSummaryCoin,
+  meta: StablecoinMeta,
+  label: string,
+): PegStabilityFacts {
+  return {
+    score: Math.round(Math.max(0, Math.min(100, peg.pegScore ?? 0))),
+    label,
+    activeDepeg: peg.activeDepeg,
+    eventCount: peg.eventCount,
+    worstDeviationBps: peg.worstDeviationBps,
+    yieldBearing: !!meta.flags.yieldBearing,
+  };
+}
 
 function buildPegStabilityDimension(
   peg: PegSummaryCoin,
   meta: StablecoinMeta,
   label: string,
 ): ReportCardDimension {
-  let score = Math.round(Math.max(0, Math.min(100, peg.pegScore ?? 0)));
-  if (peg.activeDepeg) score = Math.min(65, score);
+  const facts = buildPegStabilityFacts(peg, meta, label);
+  const score = facts.score;
 
   const parts: string[] = [];
-  parts.push(`${label}: ${score}/100`);
-  if (peg.activeDepeg) parts.push("(active depeg, capped at C)");
-  if (peg.eventCount === 0) {
+  parts.push(`${facts.label}: ${score}/100`);
+  if (facts.activeDepeg) parts.push("active depeg");
+  if (facts.eventCount === 0) {
     parts.push("No depeg events recorded");
   } else {
-    parts.push(`${peg.eventCount} depeg event${peg.eventCount === 1 ? "" : "s"}`);
+    parts.push(`${facts.eventCount} depeg event${facts.eventCount === 1 ? "" : "s"}`);
   }
-  if (peg.worstDeviationBps !== null) {
-    parts.push(`worst deviation: ${peg.worstDeviationBps} bps`);
+  if (facts.worstDeviationBps !== null) {
+    parts.push(`worst deviation: ${facts.worstDeviationBps} bps`);
   }
 
   let detail = parts.join(". ");
-  if (meta.flags.yieldBearing) {
+  if (facts.yieldBearing) {
     detail += " (yield-bearing — expected price appreciation excluded)";
   }
 
@@ -129,43 +154,69 @@ export function isRedemptionEligibleForLiquidity(
   return redemption != null && getRedemptionExclusionReason(redemption, options) == null;
 }
 
+interface LiquidityScoringFacts {
+  dexScore: number | null;
+  redemptionEligibleForLiquidity: boolean;
+  redemptionExclusionReason: string | null;
+  redemptionScore: number | null;
+  effectiveScore: number | null;
+  hasConfiguredRedemption: boolean;
+  hasResolvedRedemption: boolean;
+  hasLowConfidenceRedemption: boolean;
+  hasImpairedRedemption: boolean;
+}
+
+function buildLiquidityScoringFacts(
+  liq: Pick<DexLiquidityData, "liquidityScore"> | undefined,
+  redemption: RedemptionLiquidityInput | undefined,
+  options?: { activeDepegBps?: number | null },
+): LiquidityScoringFacts {
+  const dexScore = liq?.liquidityScore ?? null;
+  const redemptionEligibleForLiquidity = isRedemptionEligibleForLiquidity(redemption, options);
+  const redemptionExclusionReason = getRedemptionExclusionReason(redemption, options);
+  const redemptionScore = redemption?.score ?? null;
+  return {
+    dexScore,
+    redemptionEligibleForLiquidity,
+    redemptionExclusionReason,
+    redemptionScore,
+    effectiveScore: computeEffectiveExitScore(
+      dexScore,
+      redemptionEligibleForLiquidity ? redemptionScore : null,
+    ),
+    hasConfiguredRedemption: !!redemption,
+    hasResolvedRedemption: redemption?.resolutionState === "resolved",
+    hasLowConfidenceRedemption: redemption?.modelConfidence === "low",
+    hasImpairedRedemption: redemption?.resolutionState === "impaired",
+  };
+}
+
 export function scoreLiquidity(
   liq: Pick<DexLiquidityData, "liquidityScore" | "concentrationHhi" | "poolCount" | "chainCount"> | undefined,
   redemption?: RedemptionLiquidityInput,
   options?: { activeDepegBps?: number | null },
 ): ReportCardDimension {
-  const dexScore = liq?.liquidityScore ?? null;
-  const redemptionEligibleForLiquidity = isRedemptionEligibleForLiquidity(redemption, options);
-  const redemptionExclusionReason = getRedemptionExclusionReason(redemption, options);
-  const redemptionScore = redemption?.score ?? null;
-  const effectiveScore = computeEffectiveExitScore(
-    dexScore,
-    redemptionEligibleForLiquidity ? redemptionScore : null,
-  );
-  const hasConfiguredRedemption = !!redemption;
-  const hasResolvedRedemption = redemption?.resolutionState === "resolved";
-  const hasLowConfidenceRedemption = redemption?.modelConfidence === "low";
-  const hasImpairedRedemption = redemption?.resolutionState === "impaired";
+  const facts = buildLiquidityScoringFacts(liq, redemption, options);
 
-  if (effectiveScore === null) {
+  if (facts.effectiveScore === null) {
     return {
       grade: "NR",
       score: null,
-      detail: hasConfiguredRedemption
-        ? hasImpairedRedemption
+      detail: facts.hasConfiguredRedemption
+        ? facts.hasImpairedRedemption
           ? "DEX liquidity unavailable. Redemption route is configured but currently impaired by market or route-availability evidence"
-          : hasLowConfidenceRedemption
+          : facts.hasLowConfidenceRedemption
           ? "DEX liquidity unavailable. A low-confidence redemption route exists, but it is excluded from Safety Score liquidity until evidence improves"
           : "DEX liquidity unavailable. Redemption route is configured but currently unrated"
         : "No DEX liquidity data",
     };
   }
 
-  const score = Math.round(Math.max(0, Math.min(100, effectiveScore)));
+  const score = Math.round(Math.max(0, Math.min(100, facts.effectiveScore)));
   const parts: string[] = [];
   parts.push(`Effective exit score: ${score}/100`);
-  if (dexScore !== null) {
-    parts.push(`DEX liquidity ${Math.round(Math.max(0, Math.min(100, dexScore)))}/100`);
+  if (facts.dexScore !== null) {
+    parts.push(`DEX liquidity ${Math.round(Math.max(0, Math.min(100, facts.dexScore)))}/100`);
   } else {
     parts.push("DEX liquidity unavailable");
   }
@@ -177,15 +228,15 @@ export function scoreLiquidity(
   if (liq?.concentrationHhi != null && liq.concentrationHhi > 0.5) {
     parts.push(`high concentration (HHI: ${liq.concentrationHhi.toFixed(2)})`);
   }
-  if (redemptionScore !== null) {
-    parts.push(`Redemption backstop ${Math.round(redemptionScore)}/100`);
+  if (facts.redemptionScore !== null) {
+    parts.push(`Redemption backstop ${Math.round(facts.redemptionScore)}/100`);
     if (redemption?.routeFamily) {
       parts.push(REDEMPTION_ROUTE_FAMILY_LABELS[redemption.routeFamily]);
     }
-    if (!redemptionEligibleForLiquidity) {
+    if (!facts.redemptionEligibleForLiquidity) {
       parts.push(
-        redemptionExclusionReason
-          ? `not used for Safety Score uplift (${redemptionExclusionReason})`
+        facts.redemptionExclusionReason
+          ? `not used for Safety Score uplift (${facts.redemptionExclusionReason})`
           : "not used for Safety Score uplift",
       );
     }
@@ -196,10 +247,10 @@ export function scoreLiquidity(
     } else if (redemption?.immediateCapacityUsd != null) {
       parts.push(`immediate capacity ${formatCapacityUsd(redemption.immediateCapacityUsd)}`);
     }
-  } else if (hasConfiguredRedemption && hasImpairedRedemption) {
+  } else if (facts.hasConfiguredRedemption && facts.hasImpairedRedemption) {
     parts.push("Redemption route configured but currently impaired");
     if (redemption?.routeStatusReason) parts.push(redemption.routeStatusReason);
-  } else if (hasConfiguredRedemption && !hasResolvedRedemption) {
+  } else if (facts.hasConfiguredRedemption && !facts.hasResolvedRedemption) {
     parts.push("Redemption route configured but currently unrated");
   }
 

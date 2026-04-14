@@ -5,7 +5,7 @@ import {
 } from "./dex-liquidity";
 import { loadFreshIndependentLiveReserveMap } from "./live-reserves-store";
 import {
-  loadRedemptionBackstopMap,
+  loadRedemptionBackstopSnapshot,
   RedemptionBackstopSnapshotUnavailableError,
 } from "./redemption-backstops-store";
 import { loadStablecoinsCache, type StablecoinsCacheLoadOk } from "./stablecoins-cache";
@@ -26,12 +26,42 @@ export interface ReportCardsSnapshotInputs {
   redemptionBackstopMap: Record<string, RedemptionBackstopEntry>;
   liveReserveMap: Map<string, ReserveSlice[]>;
   liquidityStale: boolean;
+  redemptionStale: boolean;
+  inputFreshness: ReportCardsInputFreshness;
 }
 
 const EMPTY_DEX_LIQUIDITY_SNAPSHOT: DexLiquidityLoadResult = {
   map: {},
   latestUpdatedAt: null,
 };
+
+const REPORT_CARD_DEX_LIQUIDITY_FRESHNESS_SEC = 3600;
+const REPORT_CARD_REDEMPTION_FRESHNESS_SEC = 3600;
+
+export interface ReportCardsInputFreshnessEntry {
+  updatedAt: number | null;
+  ageSeconds: number | null;
+  stale: boolean;
+}
+
+export interface ReportCardsInputFreshness {
+  dexLiquidity: ReportCardsInputFreshnessEntry;
+  redemptionBackstops: ReportCardsInputFreshnessEntry;
+}
+
+function buildFreshnessEntry(
+  updatedAt: number | null,
+  nowSec: number,
+  maxAgeSec: number,
+  forceStale = false,
+): ReportCardsInputFreshnessEntry {
+  const ageSeconds = updatedAt == null ? null : Math.max(0, nowSec - updatedAt);
+  return {
+    updatedAt,
+    ageSeconds,
+    stale: forceStale || ageSeconds == null || ageSeconds > maxAgeSec,
+  };
+}
 
 export async function loadReportCardsSnapshotInputs(db: D1Database): Promise<ReportCardsSnapshotInputs> {
   const [
@@ -44,7 +74,7 @@ export async function loadReportCardsSnapshotInputs(db: D1Database): Promise<Rep
     loadStablecoinsCache(db, { mode: "strict", allowLegacyArray: false }),
     getCache(db, "bluechip-ratings"),
     loadDexLiquiditySnapshot(db),
-    loadRedemptionBackstopMap(db),
+    loadRedemptionBackstopSnapshot(db),
     loadFreshIndependentLiveReserveMap(db),
   ]);
 
@@ -74,11 +104,12 @@ export async function loadReportCardsSnapshotInputs(db: D1Database): Promise<Rep
 
   let dexLiquiditySnapshot = EMPTY_DEX_LIQUIDITY_SNAPSHOT;
   let liquidityStale = false;
+  const nowSec = Math.floor(Date.now() / 1000);
   if (dexLiquiditySnapshotResult.status === "fulfilled") {
     dexLiquiditySnapshot = dexLiquiditySnapshotResult.value;
     if (dexLiquiditySnapshot.latestUpdatedAt != null) {
-      const ageSec = Math.floor(Date.now() / 1000) - dexLiquiditySnapshot.latestUpdatedAt;
-      if (ageSec > 3600) {
+      const ageSec = nowSec - dexLiquiditySnapshot.latestUpdatedAt;
+      if (ageSec > REPORT_CARD_DEX_LIQUIDITY_FRESHNESS_SEC) {
         console.warn(`[report-cards] Liquidity data is stale (age: ${ageSec}s)`);
         liquidityStale = true;
       }
@@ -95,12 +126,36 @@ export async function loadReportCardsSnapshotInputs(db: D1Database): Promise<Rep
         return new Map<string, ReserveSlice[]>();
       })();
 
+  const redemptionFreshness = buildFreshnessEntry(
+    redemptionBackstopMapResult.value.latestUpdatedAt,
+    nowSec,
+    REPORT_CARD_REDEMPTION_FRESHNESS_SEC,
+  );
+  const redemptionStale = redemptionFreshness.stale;
+  const redemptionBackstopMap = redemptionStale ? {} : redemptionBackstopMapResult.value.map;
+  if (redemptionStale) {
+    console.warn(
+      `[report-cards] Redemption backstop data is stale or missing` +
+      (redemptionFreshness.ageSeconds != null ? ` (age: ${redemptionFreshness.ageSeconds}s)` : ""),
+    );
+  }
+
   return {
     stablecoinsCached,
     bluechipCached,
     dexLiquiditySnapshot,
-    redemptionBackstopMap: redemptionBackstopMapResult.value,
+    redemptionBackstopMap,
     liveReserveMap,
     liquidityStale,
+    redemptionStale,
+    inputFreshness: {
+      dexLiquidity: buildFreshnessEntry(
+        dexLiquiditySnapshot.latestUpdatedAt,
+        nowSec,
+        REPORT_CARD_DEX_LIQUIDITY_FRESHNESS_SEC,
+        dexLiquiditySnapshotResult.status === "rejected",
+      ),
+      redemptionBackstops: redemptionFreshness,
+    },
   };
 }

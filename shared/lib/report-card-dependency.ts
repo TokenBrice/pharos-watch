@@ -19,6 +19,8 @@ const GOVERNANCE_DETAIL_LABEL: Record<GovernanceType, string> = {
   centralized: "Centralized",
 };
 
+const UNAVAILABLE_DEPENDENCY_SCORE = 70;
+
 export function scoreDependencyRisk(
   meta: Pick<StablecoinMeta, "dependencies" | "reserves"> & {
     flags: Pick<StablecoinMeta["flags"], "governance">;
@@ -36,7 +38,8 @@ export function scoreDependencyRisk(
     };
   }
 
-  const resolved: { id: string; weight: number; score: number; type: DependencyType }[] = [];
+  const resolved: { id: string; weight: number; score: number; type: DependencyType; available: boolean }[] = [];
+  const missingDependencies: { id: string; weight: number; type: DependencyType }[] = [];
   for (const dependency of dependencies) {
     const score = overallScores.get(dependency.id);
     if (score !== undefined) {
@@ -45,16 +48,40 @@ export function scoreDependencyRisk(
         weight: dependency.weight,
         score,
         type: dependency.type ?? "collateral",
+        available: true,
+      });
+    } else {
+      missingDependencies.push({
+        id: dependency.id,
+        weight: dependency.weight,
+        type: dependency.type ?? "collateral",
       });
     }
   }
 
   if (resolved.length === 0) {
-    return { grade: scoreToGrade(70), score: 70, detail: "Upstream dependency scores unavailable" };
+    return {
+      grade: scoreToGrade(UNAVAILABLE_DEPENDENCY_SCORE),
+      score: UNAVAILABLE_DEPENDENCY_SCORE,
+      detail: "Upstream dependency scores unavailable",
+    };
+  }
+
+  for (const dependency of missingDependencies) {
+    resolved.push({
+      ...dependency,
+      score: UNAVAILABLE_DEPENDENCY_SCORE,
+      available: false,
+    });
   }
 
   const governance = meta.flags.governance;
   const selfBackedScore = SELF_BACKED_SCORE_BY_GOVERNANCE[governance];
+  const declaredWeight = dependencies.reduce((sum, dependency) => sum + dependency.weight, 0);
+  const resolvedWeight = resolved
+    .filter((dependency) => dependency.available)
+    .reduce((sum, dependency) => sum + dependency.weight, 0);
+  const missingWeight = missingDependencies.reduce((sum, dependency) => sum + dependency.weight, 0);
   const rawTotal = resolved.reduce((sum, dependency) => sum + dependency.weight, 0);
   const totalWeight = Math.min(1, rawTotal);
   const selfBackedFraction = 1 - totalWeight;
@@ -86,6 +113,15 @@ export function scoreDependencyRisk(
   parts.push(
     `Upstream: ${resolved.length} upstream dep${resolved.length === 1 ? "" : "s"} (${Math.round(totalWeight * 100)}% weight) (${Math.round(blendedScore)})`,
   );
+  parts.push(`Declared dependency weight: ${Math.round(Math.min(1, declaredWeight) * 100)}%`);
+  if (missingDependencies.length > 0) {
+    parts.push(
+      `Unavailable upstream scores: ${missingDependencies.length} dep${missingDependencies.length === 1 ? "" : "s"} (${Math.round(missingWeight * 100)}% weight, scored at ${UNAVAILABLE_DEPENDENCY_SCORE})`,
+    );
+  }
+  if (resolvedWeight !== rawTotal) {
+    parts.push(`Resolved upstream weight: ${Math.round(resolvedWeight * 100)}%`);
+  }
   parts.push(`Self-backed: ${GOVERNANCE_DETAIL_LABEL[governance]} (${selfBackedScore})`);
   if (weakDependencies.length > 0) {
     parts.push(`Penalty: ${weakDependencies.length} weak dep${weakDependencies.length === 1 ? "" : "s"} below 75 (-10)`);

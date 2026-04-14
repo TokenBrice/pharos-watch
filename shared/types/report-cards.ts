@@ -145,6 +145,11 @@ const ReportCardsMethodologySchema = z.object({
     dependencyRisk: z.number(),
   }),
   pegMultiplierExponent: z.number(),
+  activeDepegSeveritySource: z.string().optional(),
+  activeDepegCaps: z.object({
+    d: z.object({ thresholdBps: z.number(), score: z.number() }),
+    f: z.object({ thresholdBps: z.number(), score: z.number() }),
+  }).optional(),
   thresholds: z.array(z.object({ grade: ReportCardGradeSchema, min: z.number() })),
 });
 
@@ -159,11 +164,23 @@ const ReportCardsDependencyGraphSchema = z.object({
   edges: z.array(ReportCardsDependencyGraphEdgeSchema),
 });
 
+const ReportCardsFreshnessEntrySchema = z.object({
+  updatedAt: z.number().nullable(),
+  ageSeconds: z.number().nullable(),
+  stale: z.boolean(),
+});
+
 export const ReportCardsResponseSchema = z.object({
   cards: z.array(ReportCardSchema),
   methodology: ReportCardsMethodologySchema,
   dependencyGraph: ReportCardsDependencyGraphSchema,
   updatedAt: z.number(),
+  liquidityStale: z.boolean().optional(),
+  redemptionStale: z.boolean().optional(),
+  inputFreshness: z.object({
+    dexLiquidity: ReportCardsFreshnessEntrySchema,
+    redemptionBackstops: ReportCardsFreshnessEntrySchema,
+  }).optional(),
 });
 
 export interface ReportCardsResponse extends z.infer<typeof ReportCardsResponseSchema> {
@@ -172,6 +189,11 @@ export interface ReportCardsResponse extends z.infer<typeof ReportCardsResponseS
     version: string;
     weights: Record<DimensionKey, number>;
     pegMultiplierExponent: number;
+    activeDepegSeveritySource?: string;
+    activeDepegCaps?: {
+      d: { thresholdBps: number; score: number };
+      f: { thresholdBps: number; score: number };
+    };
     thresholds: { grade: ReportCardGrade; min: number }[];
   };
 }

@@ -6,7 +6,10 @@ import {
 } from "./collateral-drift";
 import { parseBluechipRatingsCache } from "./bluechip-cache";
 import { resolveBlacklistStatuses } from "@shared/lib/report-cards";
-import { loadReportCardsSnapshotInputs } from "./report-cards-snapshot-inputs";
+import {
+  loadReportCardsSnapshotInputs,
+  type ReportCardsInputFreshness,
+} from "./report-cards-snapshot-inputs";
 import { buildLiveReportCards } from "./report-cards-snapshot-card";
 import {
   buildDefunctReportCards,
@@ -14,6 +17,7 @@ import {
   sortReportCards,
 } from "./report-cards-snapshot-finalize";
 import type { StablecoinData } from "@shared/types/market";
+import type { DependencyGraphEdge } from "@shared/lib/dependency-graph";
 import type {
   DimensionKey,
   ReportCard,
@@ -29,13 +33,20 @@ export interface ReportCardsSnapshot {
     version: string;
     weights: Record<DimensionKey, number>;
     pegMultiplierExponent: number;
+    activeDepegSeveritySource: string;
+    activeDepegCaps: {
+      d: { thresholdBps: number; score: number };
+      f: { thresholdBps: number; score: number };
+    };
     thresholds: { grade: ReportCardGrade; min: number }[];
   };
   dependencyGraph: {
-    edges: { from: string; to: string }[];
+    edges: DependencyGraphEdge[];
   };
   updatedAt: number;
   liquidityStale: boolean;
+  redemptionStale: boolean;
+  inputFreshness: ReportCardsInputFreshness;
   /** Coins where live vs curated collateral score diverges by >15 points */
   collateralDriftCoins?: CollateralDriftEntry[];
   /** Coins that fell back from live to curated scoring */
@@ -50,6 +61,8 @@ export async function buildReportCardsSnapshot(db: D1Database): Promise<ReportCa
     redemptionBackstopMap,
     liveReserveMap,
     liquidityStale,
+    redemptionStale,
+    inputFreshness,
   } = await loadReportCardsSnapshotInputs(db);
 
   const peggedAssets: StablecoinData[] = stablecoinsCached.payload.peggedAssets;
@@ -74,9 +87,19 @@ export async function buildReportCardsSnapshot(db: D1Database): Promise<ReportCa
       trackedMetaById: ACTIVE_META_BY_ID,
     },
   );
+  const activeDepegPeakBpsById = new Map<string, number>();
+  for (const [stablecoinId, events] of pegAnalytics.eventsByCoin ?? new Map()) {
+    const activePeakBps = events
+      .filter((event) => event.endedAt === null)
+      .reduce((max, event) => Math.max(max, Math.abs(event.peakDeviationBps)), 0);
+    if (activePeakBps > 0) {
+      activeDepegPeakBpsById.set(stablecoinId, activePeakBps);
+    }
+  }
 
   const liveCards = buildLiveReportCards({
     pegDataById: pegAnalytics.pegDataById,
+    activeDepegPeakBpsById,
     dexLiqMap: dexLiquiditySnapshot.map,
     redemptionBackstopMap,
     bluechipMap,
@@ -94,6 +117,8 @@ export async function buildReportCardsSnapshot(db: D1Database): Promise<ReportCa
     cards: sortReportCards([...liveCards, ...buildDefunctReportCards()]),
     updatedAt: stablecoinsCached.updatedAt,
     liquidityStale,
+    redemptionStale,
+    inputFreshness,
     collateralDriftCoins,
     liveToFallbackCoins,
   });

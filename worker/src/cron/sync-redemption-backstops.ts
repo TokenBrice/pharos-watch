@@ -1,4 +1,5 @@
 import { getConfiguredRedemptionBackstopIds, getRedemptionBackstopConfig } from "@shared/lib/redemption-backstops";
+import { REDEMPTION_SEVERE_ACTIVE_DEPEG_BPS } from "@shared/lib/report-card-active-depeg";
 import type { CronResult } from "../lib/cron-logger";
 import { batchExecute } from "../lib/db";
 import { loadDexLiquiditySnapshot } from "../lib/dex-liquidity";
@@ -12,7 +13,6 @@ import {
 import {
   formatRouteAvailabilityReviewedAt,
   loadSevereActiveDepegAvailabilityMap,
-  REDEMPTION_SEVERE_ACTIVE_DEPEG_BPS,
 } from "../lib/redemption-backstop-availability";
 import { hasUsableStablecoinsPayload, loadStablecoinsCache } from "../lib/stablecoins-cache";
 
