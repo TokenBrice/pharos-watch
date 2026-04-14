@@ -38,6 +38,9 @@ function makeRealisticRow(overrides: Record<string, unknown> = {}) {
       feeConfidence: "undisclosed-reviewed",
       feeModelKind: "undisclosed-reviewed",
       modelConfidence: "low",
+      routeStatus: "open",
+      routeStatusSource: "static-config",
+      holderEligibility: "verified-customer",
       capsApplied: ["offchain-route-cap"],
       feeDescription: "EEA burn fee is 0 bps; other Circle redemption fees may vary",
       docs: { label: "Reserve feed", url: "https://example.com/reserves", provenance: "proof-of-reserves" },
@@ -80,6 +83,9 @@ describe("loadRedemptionBackstopMap", () => {
     expect(result["usdc-circle"]?.feeConfidence).toBe("fixed");
     expect(result["usdc-circle"]?.feeModelKind).toBe("fixed-bps");
     expect(result["usdc-circle"]?.modelConfidence).toBe("low");
+    expect(result["usdc-circle"]?.routeStatus).toBe("unknown");
+    expect(result["usdc-circle"]?.routeStatusSource).toBe("static-config");
+    expect(result["usdc-circle"]?.holderEligibility).toBe("unknown");
   });
 
   it("throws a typed error when the current map query fails", async () => {
@@ -114,6 +120,9 @@ describe("loadRedemptionBackstopMap", () => {
     expect(entry!.feeConfidence).toBe("undisclosed-reviewed");
     expect(entry!.feeModelKind).toBe("undisclosed-reviewed");
     expect(entry!.modelConfidence).toBe("low");
+    expect(entry!.routeStatus).toBe("open");
+    expect(entry!.routeStatusSource).toBe("static-config");
+    expect(entry!.holderEligibility).toBe("verified-customer");
     expect(entry!.capsApplied).toEqual(["offchain-route-cap"]);
     expect(entry!.feeDescription).toBe("EEA burn fee is 0 bps; other Circle redemption fees may vary");
     expect(entry!.docs).toEqual({
@@ -152,6 +161,9 @@ describe("loadRedemptionBackstopMap", () => {
     expect(entry!.feeConfidence).toBe("fixed");
     expect(entry!.feeModelKind).toBe("fixed-bps");
     expect(entry!.modelConfidence).toBe("low");
+    expect(entry!.routeStatus).toBe("unknown");
+    expect(entry!.routeStatusSource).toBe("static-config");
+    expect(entry!.holderEligibility).toBe("unknown");
   });
 
   it("infers missing-capacity resolution when score is null and details omit resolutionState", async () => {

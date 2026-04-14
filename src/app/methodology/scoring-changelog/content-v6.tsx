@@ -1,17 +1,11 @@
 import { VersionCard, getScoringEntry } from "./content-shared";
-import {
-  ScoringChangelogV695Entry,
-  ScoringChangelogV691Entry,
-  ScoringChangelogV692Entry,
-  ScoringChangelogV693Entry,
-  ScoringChangelogV694Entry,
-} from "./content-v7-0";
+import { ScoringChangelogV696Entry, ScoringChangelogV695Entry, ScoringChangelogV691Entry, ScoringChangelogV692Entry, ScoringChangelogV693Entry, ScoringChangelogV694Entry } from "./content-v7-0";
 import { ScoringChangelogV69Entry } from "./content-v6-9";
 
 export function ScoringChangelogV6Entries() {
   return (
     <>
-            <ScoringChangelogV695Entry />
+            <ScoringChangelogV696Entry /><ScoringChangelogV695Entry />
 
             <ScoringChangelogV694Entry />
 

@@ -14,6 +14,9 @@ import type {
   RedemptionFeeConfidence,
   RedemptionFeeModelKind,
   RedemptionModelConfidence,
+  RedemptionRouteStatus,
+  RedemptionRouteStatusSource,
+  RedemptionHolderEligibility,
 } from "@shared/types/redemption";
 import { batchExecute } from "./db";
 import {
@@ -92,6 +95,11 @@ type RedemptionBackstopDetails = Partial<
     | "feeConfidence"
     | "feeModelKind"
     | "modelConfidence"
+    | "routeStatus"
+    | "routeStatusSource"
+    | "routeStatusReason"
+    | "routeStatusReviewedAt"
+    | "holderEligibility"
   >
 >;
 
@@ -108,6 +116,11 @@ function pickValidDetails(raw: Record<string, unknown>): RedemptionBackstopDetai
   if (typeof raw.feeConfidence === "string") result.feeConfidence = raw.feeConfidence as RedemptionFeeConfidence;
   if (typeof raw.feeModelKind === "string") result.feeModelKind = raw.feeModelKind as RedemptionFeeModelKind;
   if (typeof raw.modelConfidence === "string") result.modelConfidence = raw.modelConfidence as RedemptionModelConfidence;
+  if (typeof raw.routeStatus === "string") result.routeStatus = raw.routeStatus as RedemptionRouteStatus;
+  if (typeof raw.routeStatusSource === "string") result.routeStatusSource = raw.routeStatusSource as RedemptionRouteStatusSource;
+  if (typeof raw.routeStatusReason === "string") result.routeStatusReason = raw.routeStatusReason;
+  if (typeof raw.routeStatusReviewedAt === "string") result.routeStatusReviewedAt = raw.routeStatusReviewedAt;
+  if (typeof raw.holderEligibility === "string") result.holderEligibility = raw.holderEligibility as RedemptionHolderEligibility;
   return result;
 }
 
@@ -154,6 +167,9 @@ function toEntry(row: RedemptionBackstopRow): RedemptionBackstopEntry {
       capacityConfidence,
       feeConfidence,
     });
+  const routeStatus = details.routeStatus ?? "unknown";
+  const routeStatusSource = details.routeStatusSource ?? "static-config";
+  const holderEligibility = details.holderEligibility ?? "unknown";
   return {
     stablecoinId: row.stablecoin_id,
     ...details,
@@ -174,6 +190,11 @@ function toEntry(row: RedemptionBackstopRow): RedemptionBackstopEntry {
     provider: row.provider,
     sourceMode: row.source_mode,
     resolutionState,
+    routeStatus,
+    routeStatusSource,
+    ...(details.routeStatusReason ? { routeStatusReason: details.routeStatusReason } : {}),
+    ...(details.routeStatusReviewedAt ? { routeStatusReviewedAt: details.routeStatusReviewedAt } : {}),
+    holderEligibility,
     capacityConfidence,
     capacitySemantics,
     feeConfidence,
@@ -197,6 +218,11 @@ function buildDetailsJson(record: RedemptionBackstopSnapshotRecord): string {
     feeConfidence: record.feeConfidence,
     feeModelKind: record.feeModelKind,
     modelConfidence: record.modelConfidence,
+    routeStatus: record.routeStatus,
+    routeStatusSource: record.routeStatusSource,
+    ...(record.routeStatusReason ? { routeStatusReason: record.routeStatusReason } : {}),
+    ...(record.routeStatusReviewedAt ? { routeStatusReviewedAt: record.routeStatusReviewedAt } : {}),
+    holderEligibility: record.holderEligibility,
     routeFamily: record.routeFamily,
     provider: record.provider,
     sourceMode: record.sourceMode,

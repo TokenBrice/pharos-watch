@@ -6,7 +6,7 @@ import type {
   StablecoinMeta,
 } from "../types";
 import { computeEffectiveExitScore, REDEMPTION_ROUTE_FAMILY_LABELS } from "./redemption-backstop-scoring";
-import { scoreToGrade } from "./report-card-core";
+import { ACTIVE_DEPEG_CAP_F_BPS, scoreToGrade } from "./report-card-core";
 
 function buildPegStabilityDimension(
   peg: PegSummaryCoin,
@@ -61,6 +61,25 @@ export function scorePegStability(
   return buildPegStabilityDimension(peg, meta, label);
 }
 
+type RedemptionLiquidityInput = Pick<
+  RedemptionBackstopEntry,
+  | "score"
+  | "routeFamily"
+  | "immediateCapacityUsd"
+  | "immediateCapacityRatio"
+  | "resolutionState"
+  | "modelConfidence"
+  | "capacitySemantics"
+> & Partial<Pick<
+  RedemptionBackstopEntry,
+  | "routeStatus"
+  | "routeStatusReason"
+  | "capacityConfidence"
+  | "sourceMode"
+  | "accessModel"
+  | "settlementModel"
+>>;
+
 function formatCapacityUsd(value: number): string {
   if (value >= 1_000_000_000) return `$${(value / 1_000_000_000).toFixed(1)}B`;
   if (value >= 1_000_000) return `$${(value / 1_000_000).toFixed(1)}M`;
@@ -68,22 +87,56 @@ function formatCapacityUsd(value: number): string {
   return `$${Math.round(value)}`;
 }
 
+function hasStrongLiveDirectRoute(redemption: RedemptionLiquidityInput): boolean {
+  return redemption.capacityConfidence === "live-direct" &&
+    redemption.sourceMode === "dynamic" &&
+    redemption.accessModel === "permissionless-onchain" &&
+    (redemption.settlementModel === "atomic" || redemption.settlementModel === "immediate");
+}
+
+function isSevereActiveDepeg(activeDepegBps: number | null | undefined): boolean {
+  return activeDepegBps != null && activeDepegBps >= ACTIVE_DEPEG_CAP_F_BPS;
+}
+
+function getRedemptionExclusionReason(
+  redemption: RedemptionLiquidityInput | undefined,
+  options?: { activeDepegBps?: number | null },
+): string | null {
+  if (!redemption) return null;
+  if (redemption.resolutionState === "impaired") {
+    return "route currently impaired";
+  }
+  if (redemption.resolutionState !== "resolved" || redemption.score == null) {
+    return "route currently unrated";
+  }
+  if (redemption.modelConfidence === "low") {
+    return "low confidence";
+  }
+  const routeStatus = redemption.routeStatus ?? "unknown";
+  if (routeStatus === "degraded" || routeStatus === "paused" || routeStatus === "cohort-limited") {
+    return `route currently ${routeStatus}`;
+  }
+  if (isSevereActiveDepeg(options?.activeDepegBps) && !hasStrongLiveDirectRoute(redemption)) {
+    return "active severe depeg requires live-open redemption evidence";
+  }
+  return null;
+}
+
+export function isRedemptionEligibleForLiquidity(
+  redemption: RedemptionLiquidityInput | undefined,
+  options?: { activeDepegBps?: number | null },
+): boolean {
+  return redemption != null && getRedemptionExclusionReason(redemption, options) == null;
+}
+
 export function scoreLiquidity(
   liq: Pick<DexLiquidityData, "liquidityScore" | "concentrationHhi" | "poolCount" | "chainCount"> | undefined,
-  redemption?: Pick<
-    RedemptionBackstopEntry,
-    | "score"
-    | "routeFamily"
-    | "immediateCapacityUsd"
-    | "immediateCapacityRatio"
-    | "resolutionState"
-    | "modelConfidence"
-    | "capacitySemantics"
-  >,
+  redemption?: RedemptionLiquidityInput,
+  options?: { activeDepegBps?: number | null },
 ): ReportCardDimension {
   const dexScore = liq?.liquidityScore ?? null;
-  const redemptionEligibleForLiquidity =
-    redemption?.resolutionState === "resolved" && redemption?.modelConfidence !== "low";
+  const redemptionEligibleForLiquidity = isRedemptionEligibleForLiquidity(redemption, options);
+  const redemptionExclusionReason = getRedemptionExclusionReason(redemption, options);
   const redemptionScore = redemption?.score ?? null;
   const effectiveScore = computeEffectiveExitScore(
     dexScore,
@@ -92,13 +145,16 @@ export function scoreLiquidity(
   const hasConfiguredRedemption = !!redemption;
   const hasResolvedRedemption = redemption?.resolutionState === "resolved";
   const hasLowConfidenceRedemption = redemption?.modelConfidence === "low";
+  const hasImpairedRedemption = redemption?.resolutionState === "impaired";
 
   if (effectiveScore === null) {
     return {
       grade: "NR",
       score: null,
       detail: hasConfiguredRedemption
-        ? hasLowConfidenceRedemption
+        ? hasImpairedRedemption
+          ? "DEX liquidity unavailable. Redemption route is configured but currently impaired by market or route-availability evidence"
+          : hasLowConfidenceRedemption
           ? "DEX liquidity unavailable. A low-confidence redemption route exists, but it is excluded from Safety Score liquidity until evidence improves"
           : "DEX liquidity unavailable. Redemption route is configured but currently unrated"
         : "No DEX liquidity data",
@@ -127,7 +183,11 @@ export function scoreLiquidity(
       parts.push(REDEMPTION_ROUTE_FAMILY_LABELS[redemption.routeFamily]);
     }
     if (!redemptionEligibleForLiquidity) {
-      parts.push("not used for Safety Score uplift (low confidence)");
+      parts.push(
+        redemptionExclusionReason
+          ? `not used for Safety Score uplift (${redemptionExclusionReason})`
+          : "not used for Safety Score uplift",
+      );
     }
     if (redemption?.immediateCapacityRatio != null) {
       parts.push(`immediate capacity ${(redemption.immediateCapacityRatio * 100).toFixed(1)}% of supply`);
@@ -136,6 +196,9 @@ export function scoreLiquidity(
     } else if (redemption?.immediateCapacityUsd != null) {
       parts.push(`immediate capacity ${formatCapacityUsd(redemption.immediateCapacityUsd)}`);
     }
+  } else if (hasConfiguredRedemption && hasImpairedRedemption) {
+    parts.push("Redemption route configured but currently impaired");
+    if (redemption?.routeStatusReason) parts.push(redemption.routeStatusReason);
   } else if (hasConfiguredRedemption && !hasResolvedRedemption) {
     parts.push("Redemption route configured but currently unrated");
   }

@@ -9,6 +9,11 @@ import {
   buildRedemptionBackstopEntry,
   resolveRedemptionBackstopEntry,
 } from "../lib/redemption-backstop-sources";
+import {
+  formatRouteAvailabilityReviewedAt,
+  loadSevereActiveDepegAvailabilityMap,
+  REDEMPTION_SEVERE_ACTIVE_DEPEG_BPS,
+} from "../lib/redemption-backstop-availability";
 import { hasUsableStablecoinsPayload, loadStablecoinsCache } from "../lib/stablecoins-cache";
 
 const MISSING_CAPACITY_OK_RATIO = 0.01;
@@ -58,6 +63,10 @@ export async function syncRedemptionBackstops(db: D1Database, signal: AbortSigna
   const { map: dexLiquidityMap, latestUpdatedAt } = await loadDexLiquiditySnapshot(db);
   const reserveSnapshotMetadataById = await loadReserveSnapshotMetadataMap(db, configuredIds);
   const now = Math.floor(Date.now() / 1000);
+  const routeAvailabilityById = await loadSevereActiveDepegAvailabilityMap(
+    db,
+    formatRouteAvailabilityReviewedAt(now),
+  );
 
   let liquidityStale = false;
   if (latestUpdatedAt != null) {
@@ -79,12 +88,14 @@ export async function syncRedemptionBackstops(db: D1Database, signal: AbortSigna
     try {
       const asset = stablecoinAssetById.get(stablecoinId);
       const dexLiquidityScore = dexLiquidityMap[stablecoinId]?.liquidityScore ?? null;
+      const routeAvailability = routeAvailabilityById.get(stablecoinId) ?? null;
       let resolved = null;
 
       if (asset) {
         resolved = await resolveRedemptionBackstopEntry(db, asset, dexLiquidityScore, now, {
           reserveSnapshotMetadata: reserveSnapshotMetadataById.get(stablecoinId) ?? null,
           suppressEffectiveExitScore: liquidityStale,
+          routeAvailability,
         });
       } else {
         const config = configById.get(stablecoinId);
@@ -92,6 +103,7 @@ export async function syncRedemptionBackstops(db: D1Database, signal: AbortSigna
           resolved = await buildRedemptionBackstopEntry(db, stablecoinId, config, null, dexLiquidityScore, now, {
             reserveSnapshotMetadata: reserveSnapshotMetadataById.get(stablecoinId) ?? null,
             suppressEffectiveExitScore: liquidityStale,
+            routeAvailability,
           });
         }
       }
@@ -116,6 +128,10 @@ export async function syncRedemptionBackstops(db: D1Database, signal: AbortSigna
   const resolvedCount = snapshots.filter((entry) => entry.resolutionState === "resolved").length;
   const unresolvedCount = snapshots.length - resolvedCount;
   const missingCapacityCount = snapshots.filter((entry) => entry.resolutionState === "missing-capacity").length;
+  const availabilityDegradedIds = snapshots
+    .filter((entry) => entry.resolutionState === "impaired")
+    .map((entry) => entry.stablecoinId);
+  const availabilityDegradedCount = availabilityDegradedIds.length;
   const criticalUnresolvedCount = snapshots.filter(
     (entry) => entry.resolutionState !== "resolved" && entry.resolutionState !== "missing-capacity",
   ).length;
@@ -130,6 +146,7 @@ export async function syncRedemptionBackstops(db: D1Database, signal: AbortSigna
       : failedIds.length > 0
         || missingFromCache.length > 0
         || criticalUnresolvedCount > 0
+        || availabilityDegradedCount > 0
         || !missingCapacityWithinTolerance
         || liquidityStale
         ? "degraded"
@@ -146,6 +163,8 @@ export async function syncRedemptionBackstops(db: D1Database, signal: AbortSigna
       unresolved: unresolvedCount,
       unresolvedMissingCapacity: missingCapacityCount,
       unresolvedCritical: criticalUnresolvedCount,
+      availabilityDegraded: availabilityDegradedCount,
+      severeActiveDepegThresholdBps: REDEMPTION_SEVERE_ACTIVE_DEPEG_BPS,
       missingCapacityOkThreshold: allowedMissingCapacityCount,
       coverageRatio,
       dynamic: dynamicCount,
@@ -153,6 +172,7 @@ export async function syncRedemptionBackstops(db: D1Database, signal: AbortSigna
       static: staticCount,
       liquidityStale,
       ...(failedIds.length > 0 ? { failedIds } : {}),
+      ...(availabilityDegradedIds.length > 0 ? { availabilityDegradedIds } : {}),
       ...(missingFromCache.length > 0 ? { missingFromCache } : {}),
     }),
   };

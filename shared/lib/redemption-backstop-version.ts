@@ -1,9 +1,24 @@
 import { createMethodologyVersion, toMethodologyVersionLabel } from "./methodology-version";
 
 const redemptionBackstop = createMethodologyVersion({
-  currentVersion: "3.7",
+  currentVersion: "3.8",
   changelogPath: "/methodology/#safety-scores-methodology",
   changelog: [
+    {
+      version: "3.8",
+      title: "Active-depeg exercisability gate",
+      date: "2026-04-14",
+      effectiveAt: 1776124800,
+      summary:
+        "Severe active depegs now impair static or non-live-direct redemption routes unless current live-open redemption evidence is available.",
+      impact: [
+        "Open depeg rows at or above 2500 bps now mark static, documented-bound, live-proxy, issuer/API, queue, and estimated redemption routes as impaired instead of publishing a normal current score",
+        "Impaired rows keep route metadata visible but set score and effectiveExitScore to null, lower model confidence, and carry a market-implied route-status reason",
+        "Live-direct, dynamic, permissionless, atomic or immediate redemption routes can remain scoreable during severe active depegs because they provide current direct exercisability evidence",
+      ],
+      commits: [],
+      reconstructed: false,
+    },
     {
       version: "3.7",
       title: "Best-path effective exit model replaces weighted blend",

@@ -6,11 +6,11 @@ Modeled redemption-route coverage for tracked stablecoins. This subsystem estima
 
 ## Methodology Versioning
 
-- **Current methodology version:** `v3.7`
+- **Current methodology version:** `v3.8`
 - **Public methodology anchor:** `/methodology/#safety-scores-methodology`
 - **Canonical source files:** `shared/lib/redemption-backstops.ts`, `shared/lib/redemption-backstop-configs/*`, `shared/lib/redemption-backstop-scoring.ts`, `shared/lib/redemption-backstop-version.ts`
 
-Latest `v3.7` update: effective exit scoring now uses a best-path model (`max(dex, redemption) + min(dex, redemption) × 0.10`) instead of the previous weighted blend. Redemption-only coins use the raw backstop score with no cap or discount; route family caps remain as guardrails.
+Latest `v3.8` update: severe active depegs now impair static or non-live-direct redemption routes unless current live-open redemption evidence is available. Impaired routes stay visible but do not publish a usable current score or effective-exit uplift.
 
 There is no standalone changelog page yet. The public methodology link currently points at the Safety Scores section because redemption backstops feed the report-card liquidity dimension.
 
@@ -92,6 +92,8 @@ An optional per-config `totalScoreCap` can apply an additional `config-cap`.
 
 The redemption-backstop cron only materializes `effectiveExitScore` on resolved rows when the reused DEX liquidity input is fresh. Report cards then apply their own confidence gating on top, so low-confidence redemption routes stay visible but do not uplift Safety Score liquidity.
 
+Severe active depegs add a current-exercisability gate on top of the static route score. When an open `depeg_events` row has `abs(peak_deviation_bps) >= 2500`, a static, estimated, live-proxy, issuer/API, queue, or documented-bound redemption route is marked `impaired` unless it has live-direct dynamic permissionless redemption capacity with atomic or immediate settlement. This prevents stale route documentation from producing a strong par-exit score while the market is indicating that broad redemption is not currently clearing.
+
 The effective exit model parameters are surfaced by `/api/redemption-backstops.methodology.effectiveExitModel` and reused by report cards.
 
 ---
@@ -144,6 +146,17 @@ Each row also carries:
   - `missing-cache` when the stablecoins snapshot did not contain the asset or its current supply
   - `missing-capacity` when the route is configured but current runtime inputs could not produce usable capacity
   - `failed` when a route-specific resolver failed
+  - `impaired` when the route shape is known but current market or route-availability evidence contradicts broad par redemption; impaired rows have `score = null`, `effectiveExitScore = null`, and `modelConfidence = low`
+- `routeStatus`:
+  - `open` for normal resolved routes without current impairment evidence
+  - `degraded` when the route is currently impaired by market-implied evidence such as a severe active depeg
+  - `paused`, `cohort-limited`, and `unknown` are reserved for explicit route-availability sources and backward-compatible legacy rows
+- `routeStatusSource`:
+  - `static-config` for normal config-derived status
+  - `market-implied` for the severe active-depeg exercisability gate
+  - `operator-notice`, `protocol-api`, and `onchain` are reserved for future current-route evidence sources
+- `holderEligibility`:
+  - derived from the route access model by default: permissionless onchain routes are `any-holder`, whitelist routes are `whitelisted-primary`, issuer API routes are `verified-customer`, and manual routes are `issuer-discretionary`
 - `capacityConfidence`:
   - `live-direct` for live reserve-sync capacity sourced from direct current redemption telemetry
   - `live-proxy` for live reserve-sync capacity inferred from a live proxy liquidity bucket rather than a protocol-native redemption-limit feed
@@ -165,7 +178,7 @@ Each row also carries:
   - `fixed-bps`, `formula`, `documented-variable`, or `undisclosed-reviewed`
 - `modelConfidence`:
   - `high`, `medium`, or `low` rollups used by the API and detail page to communicate fidelity
-  - currently `low` for heuristic-capacity routes and all unresolved rows
+  - currently `low` for heuristic-capacity routes, unresolved rows, and impaired rows
 
 ### Docs / Notes
 
@@ -228,7 +241,7 @@ Key columns:
 - `methodology_version`
 - `details_json`
 
-`details_json` now also stores `routeFamily`, provider/source provenance, immediate-capacity fields, fee fields, `resolutionState`, `capacityConfidence`, `capacityBasis`, `capacitySemantics`, `feeConfidence`, `feeModelKind`, `modelConfidence`, and `feeDescription` alongside `docs`, `notes`, and `capsApplied`, so richer runtime context survives current-snapshot and history writes without a schema migration.
+`details_json` now also stores `routeFamily`, provider/source provenance, immediate-capacity fields, fee fields, `resolutionState`, `routeStatus`, `routeStatusSource`, `routeStatusReason`, `routeStatusReviewedAt`, `holderEligibility`, `capacityConfidence`, `capacityBasis`, `capacitySemantics`, `feeConfidence`, `feeModelKind`, `modelConfidence`, and `feeDescription` alongside `docs`, `notes`, and `capsApplied`, so richer runtime context survives current-snapshot and history writes without a schema migration.
 
 ### `redemption_backstop_history`
 
@@ -266,10 +279,10 @@ See [API Reference](./api-reference.md) for the exact response shape.
 
 - `src/hooks/api-hooks.ts` exports `useRedemptionBackstops()` with `CRON_1H`
 - `src/hooks/use-stablecoin-detail-view-model.ts` fetches the map and passes the coin-specific entry into the stablecoin detail view model
-- `src/components/stablecoin-detail/redemption-backstop-card.tsx` renders the detail-page card (score badges, route family, source mode, resolution state, model confidence, access/settlement/output/capacity blocks, eventual-only vs immediate-bounded capacity messaging, explicit redemption-fee summaries keyed off `feeModelKind`, reviewed docs/source context, component subscores, and contextual methodology hint / footer actions)
+- `src/components/stablecoin-detail/redemption-backstop-card.tsx` renders the detail-page card (score badges, route family, source mode, resolution state, route status, model confidence, access/settlement/output/capacity blocks, eventual-only vs immediate-bounded capacity messaging, explicit redemption-fee summaries keyed off `feeModelKind`, reviewed docs/source context, component subscores, and contextual methodology hint / footer actions)
 - `src/lib/stablecoin-detail-view-model.ts` includes redemption freshness in the detail-page stale-query rail
 - `worker/src/lib/report-cards-snapshot.ts` injects `redemptionBackstopScore`, `redemptionRouteFamily`, and immediate-capacity fields into `rawInputs`, and `shared/lib/report-cards.ts` consumes the score in `scoreLiquidity()`
-- `src/lib/coverage.ts` now distinguishes configured-but-unrated routes and low-confidence heuristic routes from genuinely covered routes, so unresolved or weakly evidenced rows do not inflate public coverage counts
+- `src/lib/coverage.ts` now distinguishes configured-but-unrated routes, impaired routes, and low-confidence heuristic routes from genuinely covered routes, so unresolved or weakly evidenced rows do not inflate public coverage counts
 
 There is currently no dedicated list page or standalone public methodology section for redemption backstops; the primary user-facing surface is the stablecoin detail page plus the report-card liquidity dimension. Contextual hints on those surfaces currently deep-link into the Safety Scores methodology section where effective-exit logic is documented.
 

@@ -37,4 +37,21 @@ describe("summarizeCronMetadata", () => {
 
     expect(summary).toContain("missing-capacity tail 3 exceeds 2-coin tolerance");
   });
+
+  it("surfaces redemption availability impairments", () => {
+    const summary = summarizeCronMetadata("sync-redemption-backstops", {
+      synced: 148,
+      configured: 148,
+      resolved: 147,
+      unresolved: 1,
+      unresolvedMissingCapacity: 0,
+      unresolvedCritical: 1,
+      availabilityDegraded: 1,
+      dynamic: 5,
+      estimated: 142,
+      static: 1,
+    });
+
+    expect(summary).toContain("availability impaired 1");
+  });
 });

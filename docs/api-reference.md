@@ -1573,6 +1573,9 @@ Current redemption-backstop dataset for redeemable assets.
       "immediateCapacityRatio": null,
       "sourceMode": "estimated",
       "resolutionState": "resolved",
+      "routeStatus": "open",
+      "routeStatusSource": "static-config",
+      "holderEligibility": "any-holder",
       "capacityConfidence": "heuristic",
       "capacitySemantics": "eventual-only",
       "feeConfidence": "undisclosed-reviewed",
@@ -1603,7 +1606,7 @@ Current redemption-backstop dataset for redeemable assets.
 
 `score` is the direct redemption-quality score.
 
-`effectiveExitScore` is the blended exit score written into the redemption snapshot when the route resolved cleanly and the reused DEX liquidity input was fresh. Report cards may still recompute liquidity from the same underlying redemption score with additional confidence gating.
+`effectiveExitScore` is the blended exit score written into the redemption snapshot when the route resolved cleanly, the reused DEX liquidity input was fresh, and the route is not currently impaired. Report cards may still recompute liquidity from the same underlying redemption score with additional confidence and active-depeg gating.
 
 `methodology.version` is attributed from the latest stored redemption snapshot row. `methodology.currentVersion` remains the live code version when the API is serving an older snapshot that has not yet been recomputed.
 
@@ -1619,6 +1622,9 @@ Current redemption-backstop dataset for redeemable assets.
 - `missing-cache` = the stablecoins snapshot did not include the asset or its current supply
 - `missing-capacity` = the route is configured, but the snapshot could not resolve enough capacity to score it
 - `failed` = a route-specific resolver failed
+- `impaired` = the route shape is known but current market or route-availability evidence contradicts broad par redemption
+
+`routeStatus` / `routeStatusSource` describe current route availability separately from the static route shape. Normal rows use `routeStatus: "open"` and `routeStatusSource: "static-config"`. A severe active depeg (`>=2500 bps`) can publish `routeStatus: "degraded"` and `routeStatusSource: "market-implied"` for static or non-live-direct routes; those impaired rows have `score = null`, `effectiveExitScore = null`, and `modelConfidence = "low"`. `holderEligibility` describes the modeled holder cohort, such as `any-holder`, `verified-customer`, `whitelisted-primary`, `pre-incident-holder`, `issuer-discretionary`, or `unknown`.
 
 Top-level fields:
 
@@ -1640,7 +1646,12 @@ Top-level fields:
 | `settlementModel`        | `string`                                        | `atomic`, `immediate`, `same-day`, `days`, or `queued`                                                      |
 | `outputAssetType`        | `string`                                        | `stable-single`, `stable-basket`, `bluechip-collateral`, `mixed-collateral`, or `nav`                       |
 | `sourceMode`             | `string`                                        | `dynamic`, `estimated`, or `static` capacity provenance                                                     |
-| `resolutionState`        | `string`                                        | `resolved`, `missing-cache`, `missing-capacity`, or `failed`                                                |
+| `resolutionState`        | `string`                                        | `resolved`, `missing-cache`, `missing-capacity`, `failed`, or `impaired`                                    |
+| `routeStatus`            | `string`                                        | Current route availability: `open`, `degraded`, `paused`, `cohort-limited`, or `unknown`                   |
+| `routeStatusSource`      | `string`                                        | Source for current route availability: `static-config`, `market-implied`, `operator-notice`, `protocol-api`, or `onchain` |
+| `routeStatusReason`      | `string \| undefined`                           | Human-readable explanation when current availability impairs scoring                                       |
+| `routeStatusReviewedAt`  | `string \| undefined`                           | UTC date (`YYYY-MM-DD`) for the current route-status assessment                                            |
+| `holderEligibility`      | `string`                                        | Modeled holder cohort: `any-holder`, `verified-customer`, `whitelisted-primary`, `pre-incident-holder`, `issuer-discretionary`, or `unknown` |
 | `capacityConfidence`     | `string`                                        | `live-direct`, `live-proxy`, `documented-bound`, `heuristic`, or legacy `dynamic` fidelity tag for the capacity model |
 | `capacityBasis`          | `string \| undefined`                           | Typed basis for the modeled capacity, such as `issuer-term-redemption`, `full-system-eventual`, `psm-balance-share`, `strategy-buffer`, `hot-buffer`, `daily-limit`, `live-direct-telemetry`, or `live-proxy-buffer` |
 | `capacitySemantics`      | `string`                                        | `immediate-bounded` or `eventual-only`, distinguishing current redeemable buffer from eventual redeemability |

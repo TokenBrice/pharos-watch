@@ -57,9 +57,42 @@ export const RedemptionResolutionStateSchema = z.enum([
   "missing-cache",
   "missing-capacity",
   "failed",
+  "impaired",
 ]);
 export type RedemptionResolutionState = z.infer<
   typeof RedemptionResolutionStateSchema
+>;
+
+export const RedemptionRouteStatusSchema = z.enum([
+  "open",
+  "degraded",
+  "paused",
+  "cohort-limited",
+  "unknown",
+]);
+export type RedemptionRouteStatus = z.infer<typeof RedemptionRouteStatusSchema>;
+
+export const RedemptionRouteStatusSourceSchema = z.enum([
+  "static-config",
+  "market-implied",
+  "operator-notice",
+  "protocol-api",
+  "onchain",
+]);
+export type RedemptionRouteStatusSource = z.infer<
+  typeof RedemptionRouteStatusSourceSchema
+>;
+
+export const RedemptionHolderEligibilitySchema = z.enum([
+  "any-holder",
+  "verified-customer",
+  "whitelisted-primary",
+  "pre-incident-holder",
+  "issuer-discretionary",
+  "unknown",
+]);
+export type RedemptionHolderEligibility = z.infer<
+  typeof RedemptionHolderEligibilitySchema
 >;
 
 export const RedemptionCapacityConfidenceSchema = z.enum([
@@ -176,6 +209,11 @@ export const RedemptionBackstopEntrySchema = z.object({
   provider: z.string(),
   sourceMode: RedemptionSourceModeSchema,
   resolutionState: RedemptionResolutionStateSchema,
+  routeStatus: RedemptionRouteStatusSchema.optional().default("unknown"),
+  routeStatusSource: RedemptionRouteStatusSourceSchema.optional().default("static-config"),
+  routeStatusReason: z.string().optional(),
+  routeStatusReviewedAt: z.string().optional(),
+  holderEligibility: RedemptionHolderEligibilitySchema.optional().default("unknown"),
   capacityConfidence: RedemptionCapacityConfidenceSchema,
   capacityBasis: RedemptionCapacityBasisSchema.optional(),
   capacitySemantics: RedemptionCapacitySemanticsSchema,

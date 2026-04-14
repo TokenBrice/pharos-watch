@@ -1,6 +1,16 @@
 # Report Cards Scoring — Version Timeline
 
-Internal changelog reconstructed from git history plus the live version metadata source. Covers v1.0 through v6.95 (2026-02-25 → 2026-04-07).
+Internal changelog reconstructed from git history plus the live version metadata source. Covers v1.0 through v6.96 (2026-02-25 → 2026-04-14).
+
+## v6.96 — Severe active depegs disable weak redemption uplift (2026-04-14)
+
+Liquidity / Exit no longer accepts static or non-live-direct redemption uplift during severe active depegs unless current live-open redemption evidence exists:
+
+- Redemption uplift now requires a resolved non-low-confidence route that is not impaired by route availability or severe active-depeg contradiction
+- Active depegs at or above 2500 bps disable static, documented-bound, live-proxy, issuer/API, queue, and estimated redemption uplift until live-open evidence returns
+- Live-direct, dynamic, permissionless, atomic or immediate redemption routes can still contribute to Liquidity / Exit during a severe depeg because they provide current direct exercisability evidence
+
+---
 
 ## v6.95 — Direct inherited freeze risk now counts custodied BTC wrappers and issuer-seizable collateral (2026-04-07)
 

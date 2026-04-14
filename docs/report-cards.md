@@ -2,7 +2,7 @@
 
 Multi-dimensional risk grades (A+ through F) for every tracked stablecoin. Computed on-demand by the API from live data.
 
-## Overall Grade (v6.95)
+## Overall Grade (v6.96)
 
 Three-step computation:
 
@@ -13,7 +13,7 @@ Three-step computation:
 
 Cemetery coins get a permanent F.
 
-Current-version note: v6.95 keeps the stronger peg treatment introduced in v6.93 and the NAV-wrapper peg inheritance from v6.94, and now treats custodied BTC wrappers plus issuer-seizable tokenized collateral as direct inherited freeze exposure for blacklistability attribution when they dominate reserve weight. The `activeDepegBps` field remains in `RawDimensionInputs` so stressed-grade recomputations and the frontend can apply the same cap.
+Current-version note: v6.96 keeps the stronger peg treatment introduced in v6.93 and the NAV-wrapper peg inheritance from v6.94, treats custodied BTC wrappers plus issuer-seizable tokenized collateral as direct inherited freeze exposure for blacklistability attribution when they dominate reserve weight, and now disables static or non-live-direct redemption uplift during severe active depegs unless current live-open redemption evidence exists. The `activeDepegBps` field remains in `RawDimensionInputs` so stressed-grade recomputations and the frontend can apply the same cap.
 
 ## Dimensions
 
@@ -48,7 +48,8 @@ Current-version note: v6.95 keeps the stronger peg treatment introduced in v6.93
   - `effectiveExitScore = round(min(100, max(liquidityScore, redemptionBackstopScore) + min(liquidityScore, redemptionBackstopScore) × 0.10))`
 - If only DEX liquidity exists, `effectiveExitScore = liquidityScore`
 - If only redemption exists, `effectiveExitScore = redemptionBackstopScore` (route family caps are the guardrails — offchain-issuer ≤ 65, queue-redeem ≤ 70)
-- Redemption uplift is only used when the redemption route is resolved and above the low-confidence / heuristic tier
+- Redemption uplift is only used when the redemption route is resolved, above the low-confidence / heuristic tier, and not currently impaired by route-availability evidence
+- During severe active depegs (`activeDepegBps >= 2500`), redemption uplift requires live-direct dynamic permissionless redemption capacity with atomic or immediate settlement; static, documented-bound, live-proxy, issuer/API, queue, and estimated routes stay visible but do not uplift Liquidity / Exit until live-open evidence returns
 - Low-confidence redemption routes stay visible in the dimension detail, but they do not improve the Safety Score liquidity score
 - Formula-based routes with live on-chain fee telemetry can use the current redemption fee bps for cost scoring while remaining labeled as formula models
 - When DEX liquidity is stale, report cards do not reuse it for effective-exit scoring; the dimension falls back to redemption-only or `NR`

@@ -213,8 +213,8 @@ export function SafetyScoresMethodologySection() {
                   <p>
                     Redemption backstops are scored across access, settlement, execution certainty, capacity, output-asset
                     quality, and cost. Low-confidence redemption routes stay visible on the site but do not uplift the Safety Score
-                    liquidity dimension, stale DEX inputs are not used for effective exit, and stale live reserve metadata ages out instead of staying resolved indefinitely.
-                  </p>
+                    liquidity dimension. Severe active depegs also disable static or non-live-direct redemption uplift unless
+                    current live-open redemption evidence exists. Stale DEX inputs are not used for effective exit, and stale live reserve metadata ages out instead of staying resolved indefinitely.</p>
                 </div>
                 {/* Peg multiplier */}
                 <div className="space-y-2">

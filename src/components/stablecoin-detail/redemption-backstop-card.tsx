@@ -48,6 +48,23 @@ function formatResolutionState(value: RedemptionBackstopEntry["resolutionState"]
       return "missing capacity";
     case "failed":
       return "failed";
+    case "impaired":
+      return "impaired";
+  }
+}
+
+function formatRouteStatus(value: RedemptionBackstopEntry["routeStatus"]): string {
+  switch (value) {
+    case "open":
+      return "open";
+    case "degraded":
+      return "degraded";
+    case "paused":
+      return "paused";
+    case "cohort-limited":
+      return "cohort limited";
+    case "unknown":
+      return "status unknown";
   }
 }
 
@@ -69,6 +86,10 @@ function getResolutionSummary(entry: RedemptionBackstopEntry): string | null {
   }
   if (entry.resolutionState === "missing-capacity") {
     return "This route is configured, but the current snapshot could not resolve enough capacity data to produce a usable redemption score.";
+  }
+  if (entry.resolutionState === "impaired") {
+    return entry.routeStatusReason ??
+      "This route is configured, but current market or route-availability evidence contradicts broad par redemption. Pharos excludes it from current redemption scoring until live-open evidence returns.";
   }
   return "This route is configured, but the current snapshot failed to resolve a usable redemption score.";
 }
@@ -232,6 +253,11 @@ export function RedemptionBackstopCard({
           {entry.resolutionState !== "resolved" && (
             <Badge variant="outline" className="border-amber-500/30 bg-amber-500/10 text-xs text-amber-700 dark:text-amber-300">
               {formatResolutionState(entry.resolutionState)}
+            </Badge>
+          )}
+          {entry.routeStatus !== "open" && (
+            <Badge variant="outline" className="border-amber-500/30 bg-amber-500/10 text-xs text-amber-700 dark:text-amber-300">
+              {formatRouteStatus(entry.routeStatus)}
             </Badge>
           )}
           <Badge variant="outline" className="border-border/60 bg-muted/30 text-xs">

@@ -1,5 +1,33 @@
 import { VersionCard, getScoringEntry } from "./content-shared";
 
+export function ScoringChangelogV696Entry() {
+  return (
+    <VersionCard
+      entry={getScoringEntry("6.96")}
+      accent="border-l-amber-500"
+    >
+      <p>
+        Severe active depegs now force redemption uplift to prove current exercisability instead of
+        relying on static route documentation.
+      </p>
+      <ul className="list-disc list-inside space-y-1">
+        <li>
+          Liquidity / Exit now ignores redemption backstops that are unresolved, low-confidence, or
+          marked impaired by route-availability evidence.
+        </li>
+        <li>
+          Active depegs at or above <code className="text-xs bg-muted px-1 py-0.5 rounded">2500 bps</code>{" "}
+          disable static, documented-bound, live-proxy, issuer/API, queue, and estimated redemption uplift.
+        </li>
+        <li>
+          Live-direct, dynamic, permissionless routes with atomic or immediate settlement can still contribute
+          during severe depegs because they carry current direct redemption evidence.
+        </li>
+      </ul>
+    </VersionCard>
+  );
+}
+
 export function ScoringChangelogV695Entry() {
   return (
     <VersionCard

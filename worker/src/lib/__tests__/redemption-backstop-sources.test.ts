@@ -513,6 +513,100 @@ describe("buildRedemptionBackstopEntry", () => {
     expect(entry.effectiveExitScore!).toBeGreaterThan(40);
   });
 
+  it("marks static redemption routes impaired during severe active depegs", async () => {
+    const entry = await buildRedemptionBackstopEntry(
+      mockD1(),
+      "test-coin",
+      {
+        routeFamily: "stablecoin-redeem",
+        accessModel: "permissionless-onchain",
+        settlementModel: "atomic",
+        executionModel: "deterministic-onchain",
+        outputAssetType: "stable-single",
+        capacityModel: { kind: "supply-ratio", ratio: 0.1, confidence: "documented-bound" },
+        costModel: { kind: "dynamic-or-unclear", feeDescription: "Reviewed route" },
+      },
+      100_000_000,
+      33,
+      now,
+      {
+        routeAvailability: {
+          routeStatus: "degraded",
+          routeStatusSource: "market-implied",
+          routeStatusReason:
+            "Active severe depeg of 8332 bps started 2026-03-22; static redemption route requires current live-open evidence before it can score.",
+          routeStatusReviewedAt: "2026-04-14",
+          activeDepegBps: 8332,
+          activeDepegStartedAt: 1_774_145_097,
+        },
+      },
+    );
+
+    expect(entry.resolutionState).toBe("impaired");
+    expect(entry.score).toBeNull();
+    expect(entry.effectiveExitScore).toBeNull();
+    expect(entry.routeStatus).toBe("degraded");
+    expect(entry.routeStatusSource).toBe("market-implied");
+    expect(entry.routeStatusReviewedAt).toBe("2026-04-14");
+    expect(entry.modelConfidence).toBe("low");
+    expect(entry.capsApplied).toContain("market-implied-depeg-impairment");
+    expect(entry.notes).toContain(
+      "Active severe depeg of 8332 bps started 2026-03-22; static redemption route requires current live-open evidence before it can score.",
+    );
+  });
+
+  it("keeps strong live-direct routes scoreable during severe active depegs", async () => {
+    const entry = await buildRedemptionBackstopEntry(
+      mockD1(),
+      "zchf-frankencoin",
+      {
+        routeFamily: "stablecoin-redeem",
+        accessModel: "permissionless-onchain",
+        settlementModel: "atomic",
+        executionModel: "deterministic-onchain",
+        outputAssetType: "stable-single",
+        capacityModel: { kind: "reserve-sync-metadata" },
+        costModel: { kind: "fee-bps", feeBps: 0 },
+      },
+      50_000_000,
+      33,
+      now,
+      {
+        reserveSnapshotMetadata: {
+          stablecoinId: "zchf-frankencoin",
+          fetchedAt: now - 120,
+          source: "test",
+          metadata: {
+            immediateRedeemableUsd: 5_000_000,
+            immediateRedeemableRatio: 0.1,
+            sourceTimestamp: now - 120,
+          },
+          warningCount: 0,
+          warnings: [],
+          sourceModel: "dynamic-mix",
+          evidenceClass: "independent",
+          syncStatus: "ok",
+        },
+        routeAvailability: {
+          routeStatus: "degraded",
+          routeStatusSource: "market-implied",
+          routeStatusReason:
+            "Active severe depeg of 3000 bps started 2026-04-14; static redemption route requires current live-open evidence before it can score.",
+          routeStatusReviewedAt: "2026-04-14",
+          activeDepegBps: 3000,
+          activeDepegStartedAt: now,
+        },
+      },
+    );
+
+    expect(entry.resolutionState).toBe("resolved");
+    expect(entry.score).not.toBeNull();
+    expect(entry.routeStatus).toBe("open");
+    expect(entry.routeStatusSource).toBe("static-config");
+    expect(entry.modelConfidence).toBe("high");
+    expect(entry.capsApplied).not.toContain("market-implied-depeg-impairment");
+  });
+
   it("derives modelConfidence correctly for resolved entries", async () => {
     // Dynamic capacity + fixed fee → high
     const highEntry = await buildRedemptionBackstopEntry(

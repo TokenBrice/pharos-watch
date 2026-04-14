@@ -34,6 +34,7 @@ import {
   resolveBlacklistStatuses,
   type BlacklistStatus,
 } from "@shared/lib/report-cards";
+import { isRedemptionEligibleForLiquidity } from "@shared/lib/report-card-peg-liquidity";
 import { loadStablecoinsCache, type StablecoinsCacheLoadOk } from "./stablecoins-cache";
 import type {
   StablecoinMeta,
@@ -371,8 +372,10 @@ function computeCard(input: ComputeCardInput): ReportCard {
   const liq = liquidityStale ? undefined : dexLiqMap[meta.id];
   const redemption = redemptionBackstopMap[meta.id];
   const rating = bluechipMap[meta.id];
-  const redemptionUsedForLiquidity =
-    redemption?.resolutionState === "resolved" && redemption?.modelConfidence !== "low";
+  const activeDepegBps = peg?.activeDepeg && peg?.currentDeviationBps != null
+    ? Math.abs(peg.currentDeviationBps)
+    : null;
+  const redemptionUsedForLiquidity = isRedemptionEligibleForLiquidity(redemption, { activeDepegBps });
 
   const resilienceFactors = resolveResilienceFactors(meta);
   const liveSlices = liveReserveMap.get(meta.id);
@@ -383,24 +386,19 @@ function computeCard(input: ComputeCardInput): ReportCard {
       inheritedFromReference: resolvedPeg.inheritedFromReference,
       pegReferenceMeta: resolvedPeg.pegReferenceMeta,
     }),
-    liquidity: scoreLiquidity(liq, redemption),
+    liquidity: scoreLiquidity(liq, redemption, { activeDepegBps }),
     resilience: scoreResilience(meta, blacklistStatus, liveSlices),
     decentralization: scoreDecentralization(meta.flags.governance as GovernanceType, meta),
     dependencyRisk: scoreDependencyRisk(meta, overallScores),
   };
 
   const navToken = !!meta.flags.navToken;
-  const activeDepegBps = peg?.activeDepeg && peg?.currentDeviationBps != null
-    ? Math.abs(peg.currentDeviationBps)
-    : null;
   const overall = computeOverallGrade(dimensions, { navToken, activeDepegBps });
 
   const rawInputs: RawDimensionInputs = {
     pegScore: peg?.pegScore ?? null,
     activeDepeg: peg?.activeDepeg ?? false,
-    activeDepegBps: peg?.activeDepeg && peg?.currentDeviationBps != null
-      ? Math.abs(peg.currentDeviationBps)
-      : null,
+    activeDepegBps,
     depegEventCount: peg?.eventCount ?? 0,
     lastEventAt: peg?.lastEventAt ?? null,
     liquidityScore: liq?.liquidityScore ?? null,

@@ -211,8 +211,7 @@ function DimensionRow({ dimKey, dim, card, liquidityComponents }: DimensionRowPr
                     <MethodologyLabel topic="redemptionBackstop" className="text-muted-foreground">Redemption backstop</MethodologyLabel>
                     <span className="tabular-nums text-foreground font-mono">
                       {card.rawInputs.redemptionBackstopScore}/100
-                      {!card.rawInputs.redemptionUsedForLiquidity &&
-                      card.rawInputs.redemptionModelConfidence === "low"
+                      {!card.rawInputs.redemptionUsedForLiquidity
                         ? " (not used)"
                         : ""}
                     </span>

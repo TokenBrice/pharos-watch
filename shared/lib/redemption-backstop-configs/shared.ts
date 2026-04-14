@@ -8,7 +8,9 @@ import type {
   RedemptionExecutionModel,
   RedemptionFeeConfidence,
   RedemptionFeeModelKind,
+  RedemptionHolderEligibility,
   RedemptionOutputAssetType,
+  RedemptionRouteStatus,
   RedemptionRouteFamily,
   RedemptionSettlementModel,
 } from "../../types";
@@ -54,10 +56,27 @@ export interface RedemptionBackstopConfig {
   outputAssetType: RedemptionOutputAssetType;
   capacityModel: RedemptionCapacityModel;
   costModel: RedemptionCostModel;
+  holderEligibility?: RedemptionHolderEligibility;
+  routeStatus?: Extract<RedemptionRouteStatus, "open" | "unknown">;
   totalScoreCap?: number;
   docs?: RedemptionDocSource[];
   reviewedAt?: string;
   notes?: string[];
+}
+
+export function resolveDefaultHolderEligibility(
+  config: Pick<RedemptionBackstopConfig, "accessModel">,
+): RedemptionHolderEligibility {
+  switch (config.accessModel) {
+    case "permissionless-onchain":
+      return "any-holder";
+    case "whitelisted-onchain":
+      return "whitelisted-primary";
+    case "issuer-api":
+      return "verified-customer";
+    case "manual":
+      return "issuer-discretionary";
+  }
 }
 
 export function applyTrackedReviewedDocs(

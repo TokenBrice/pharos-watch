@@ -13,6 +13,7 @@ import {
   getLatestSuccessfulReserveSnapshotMetadata,
   type ReserveSnapshotMetadataRecord,
 } from "./live-reserves-store";
+import type { RedemptionRouteAvailability } from "./redemption-backstop-availability";
 import { readRedemptionBackstopLiveMetadata } from "./redemption-backstop-live-metadata";
 
 export interface CapacityResolution {
@@ -32,6 +33,7 @@ export interface CapacityResolution {
 export interface RedemptionBackstopBuildOptions {
   reserveSnapshotMetadata?: ReserveSnapshotMetadataRecord | null;
   suppressEffectiveExitScore?: boolean;
+  routeAvailability?: RedemptionRouteAvailability | null;
 }
 
 export function resolveReserveSyncCapacityConfidence(

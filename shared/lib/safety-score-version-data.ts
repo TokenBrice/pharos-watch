@@ -1,9 +1,24 @@
 import type { MethodologyVersionConfig } from "./methodology-version";
 
 export const SAFETY_SCORE_VERSION_CONFIG: MethodologyVersionConfig = {
-  currentVersion: "6.95",
+  currentVersion: "6.96",
   changelogPath: "/methodology/scoring-changelog/",
   changelog: [
+    {
+      version: "6.96",
+      title: "Severe active depegs disable weak redemption uplift",
+      date: "2026-04-14",
+      effectiveAt: 1776124800,
+      summary:
+        "Liquidity / Exit no longer accepts static or non-live-direct redemption uplift during severe active depegs unless current live-open redemption evidence exists.",
+      impact: [
+        "Redemption backstop uplift now requires a resolved non-low-confidence route that is not impaired by route availability or severe active-depeg contradiction",
+        "Active depegs at or above 2500 bps disable static, documented-bound, live-proxy, issuer/API, queue, and estimated redemption uplift until live-open evidence returns",
+        "Live-direct, dynamic, permissionless, atomic or immediate redemption routes can still contribute to Liquidity / Exit during a severe depeg because they provide current direct exercisability evidence",
+      ],
+      commits: [],
+      reconstructed: false,
+    },
     {
       version: "6.95",
       title: "Direct inherited freeze risk now counts custodied BTC wrappers and issuer-seizable collateral",

@@ -50,6 +50,9 @@ function makeRedemptionEntry(
     provider: "supply-ratio-model",
     sourceMode: "estimated",
     resolutionState: "resolved",
+    routeStatus: "open",
+    routeStatusSource: "static-config",
+    holderEligibility: "any-holder",
     capacityConfidence: "documented-bound",
     capacitySemantics: "immediate-bounded",
     feeConfidence: "undisclosed-reviewed",
@@ -192,6 +195,25 @@ describe("coverage helpers", () => {
     expect(status.kind).toBe("modeled-heuristic");
     expect(status.available).toBe(false);
     expect(status.label).toBe("Heur.");
+  });
+
+  it("treats impaired redemption rows as unavailable coverage", () => {
+    const status = resolveRedemptionCoverage(
+      makeRedemptionEntry({
+        score: null,
+        effectiveExitScore: null,
+        resolutionState: "impaired",
+        routeStatus: "degraded",
+        routeStatusSource: "market-implied",
+        routeStatusReason: "Active severe depeg requires current live-open evidence.",
+        modelConfidence: "low",
+      }),
+    );
+
+    expect(status.kind).toBe("configured-unrated");
+    expect(status.available).toBe(false);
+    expect(status.label).toBe("Impaired");
+    expect(status.detail).toContain("Active severe depeg");
   });
 
   it("maps mint/burn coverage states into visible labels", () => {

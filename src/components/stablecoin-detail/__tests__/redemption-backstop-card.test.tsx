@@ -22,6 +22,9 @@ const BASE_ENTRY: RedemptionBackstopEntry = {
   provider: "supply-full-model",
   sourceMode: "estimated",
   resolutionState: "resolved",
+  routeStatus: "open",
+  routeStatusSource: "static-config",
+  holderEligibility: "verified-customer",
   capacityConfidence: "heuristic",
   capacitySemantics: "eventual-only",
   feeConfidence: "undisclosed-reviewed",
@@ -138,5 +141,29 @@ describe("RedemptionBackstopCard", () => {
     expect(html).toContain("Supports capacity");
     expect(html).toContain("Reviewed 2026-03-30");
     expect(html).toContain("Fallback proof-of-reserves source");
+  });
+
+  it("renders impaired route availability state", () => {
+    const html = renderToStaticMarkup(
+      <RedemptionBackstopCard
+        entry={{
+          ...BASE_ENTRY,
+          score: null,
+          effectiveExitScore: null,
+          resolutionState: "impaired",
+          routeStatus: "degraded",
+          routeStatusSource: "market-implied",
+          routeStatusReason:
+            "Active severe depeg of 8332 bps started 2026-03-22; static redemption route requires current live-open evidence before it can score.",
+          routeStatusReviewedAt: "2026-04-14",
+          modelConfidence: "low",
+        }}
+      />,
+    );
+
+    expect(html).toContain("NR");
+    expect(html).toContain("impaired");
+    expect(html).toContain("degraded");
+    expect(html).toContain("Active severe depeg");
   });
 });

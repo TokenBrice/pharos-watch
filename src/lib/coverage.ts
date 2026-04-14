@@ -595,6 +595,25 @@ export function resolveRedemptionCoverage(
     );
   }
 
+  const routeStatus = entry.routeStatus ?? "unknown";
+  if (
+    entry.resolutionState === "impaired" ||
+    routeStatus === "degraded" ||
+    routeStatus === "paused" ||
+    routeStatus === "cohort-limited"
+  ) {
+    return createStatus(
+      "configured-unrated",
+      "Impaired",
+      "amber",
+      false,
+      1,
+      entry.routeStatusReason ??
+        "A redemption route is configured, but current market or route-availability evidence contradicts strong redemption coverage.",
+      "Impaired route",
+    );
+  }
+
   if (entry.resolutionState !== "resolved") {
     return createStatus(
       "configured-unrated",

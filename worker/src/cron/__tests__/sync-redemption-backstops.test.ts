@@ -241,6 +241,60 @@ describe("syncRedemptionBackstops", () => {
     expect(metadata.estimated).toBe(1);
   });
 
+  it("passes severe active depeg availability into builders and degrades impaired rows", async () => {
+    const now = Math.floor(Date.now() / 1000);
+    resolveRedemptionBackstopEntryMock
+      .mockResolvedValueOnce(
+        makeResolvedSnapshot("cusd-cap", now, {
+          score: null,
+          effectiveExitScore: null,
+          resolutionState: "impaired",
+          routeStatus: "degraded",
+          routeStatusSource: "market-implied",
+          routeStatusReason:
+            "Active severe depeg of 8332 bps started 2026-03-22; static redemption route requires current live-open evidence before it can score.",
+          routeStatusReviewedAt: "2026-04-14",
+          modelConfidence: "low",
+        }),
+      )
+      .mockResolvedValueOnce(makeResolvedSnapshot("iusd-infinifi", now));
+
+    const db = mockD1([
+      {
+        match: "FROM depeg_events",
+        rows: [
+          {
+            stablecoin_id: "cusd-cap",
+            peak_deviation_bps: -8332,
+            started_at: 1_774_145_097,
+          },
+        ],
+      },
+    ]);
+    const { syncRedemptionBackstops } = await import("../sync-redemption-backstops");
+    const result = await syncRedemptionBackstops(db, new AbortController().signal);
+
+    expect(result.status).toBe("degraded");
+    expect(resolveRedemptionBackstopEntryMock).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({ id: "cusd-cap" }),
+      29,
+      expect.any(Number),
+      expect.objectContaining({
+        routeAvailability: expect.objectContaining({
+          routeStatus: "degraded",
+          routeStatusSource: "market-implied",
+          activeDepegBps: 8332,
+        }),
+      }),
+    );
+
+    const metadata = JSON.parse(result.metadata ?? "{}") as Record<string, unknown>;
+    expect(metadata.availabilityDegraded).toBe(1);
+    expect(metadata.availabilityDegradedIds).toEqual(["cusd-cap"]);
+    expect(metadata.severeActiveDepegThresholdBps).toBe(2500);
+  });
+
   it("still snapshots configured ids that are missing from the stablecoins cache", async () => {
     loadStablecoinsCacheMock.mockResolvedValue({
       kind: "ok",
@@ -296,7 +350,7 @@ describe("syncRedemptionBackstops", () => {
       null,
       47,
       expect.any(Number),
-      { reserveSnapshotMetadata: null, suppressEffectiveExitScore: false },
+      { reserveSnapshotMetadata: null, suppressEffectiveExitScore: false, routeAvailability: null },
     );
     expect(upsertRedemptionBackstopSnapshotsMock).toHaveBeenCalledWith(
       expect.anything(),

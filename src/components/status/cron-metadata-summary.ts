@@ -293,6 +293,7 @@ function summarizeRedemptionBackstops(metadata: Record<string, unknown>): string
   const unresolved = readNumber(metadata.unresolved);
   const unresolvedMissingCapacity = readNumber(metadata.unresolvedMissingCapacity);
   const unresolvedCritical = readNumber(metadata.unresolvedCritical);
+  const availabilityDegraded = readNumber(metadata.availabilityDegraded);
   const missingCapacityOkThreshold = readNumber(metadata.missingCapacityOkThreshold);
   const coverageRatio = readNumber(metadata.coverageRatio);
   const dynamic = readNumber(metadata.dynamic);
@@ -309,6 +310,9 @@ function summarizeRedemptionBackstops(metadata: Record<string, unknown>): string
       : null,
     unresolvedMissingCapacity != null && unresolvedMissingCapacity > 0 && unresolvedCritical === 0 && missingCapacityOkThreshold != null
       ? `missing-capacity tail ${unresolvedMissingCapacity}${unresolvedMissingCapacity <= missingCapacityOkThreshold ? ` within ${missingCapacityOkThreshold}-coin tolerance` : ` exceeds ${missingCapacityOkThreshold}-coin tolerance`}`
+      : null,
+    availabilityDegraded != null && availabilityDegraded > 0
+      ? `availability impaired ${availabilityDegraded}`
       : null,
     dynamic != null || estimated != null || staticCount != null
       ? `source mix${dynamic != null ? ` dynamic ${dynamic}` : ""}${estimated != null ? `, estimated ${estimated}` : ""}${staticCount != null ? `, static ${staticCount}` : ""}`
