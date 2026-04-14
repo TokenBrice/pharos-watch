@@ -9,33 +9,36 @@ export { DEPENDENCY_TYPE_VALUES, DependencyTypeSchema } from "./dependency-types
 // --- Flag-based classification ---
 
 /** Backing mechanism */
-export type BackingType = "rwa-backed" | "crypto-backed" | "algorithmic";
+export const BACKING_TYPE_VALUES = ["rwa-backed", "crypto-backed", "algorithmic"] as const;
+export type BackingType = (typeof BACKING_TYPE_VALUES)[number];
 
 /** Peg currency */
-export type PegCurrency =
-  | "USD"
-  | "EUR"
-  | "GBP"
-  | "CHF"
-  | "BRL"
-  | "RUB"
-  | "JPY"
-  | "IDR"
-  | "SGD"
-  | "TRY"
-  | "AUD"
-  | "ZAR"
-  | "CAD"
-  | "CNY"
-  | "CNH"
-  | "PHP"
-  | "MXN"
-  | "UAH"
-  | "ARS"
-  | "GOLD"
-  | "SILVER"
-  | "VAR"
-  | "OTHER";
+export const PEG_CURRENCY_VALUES = [
+  "USD",
+  "EUR",
+  "GBP",
+  "CHF",
+  "BRL",
+  "RUB",
+  "JPY",
+  "IDR",
+  "SGD",
+  "TRY",
+  "AUD",
+  "ZAR",
+  "CAD",
+  "CNY",
+  "CNH",
+  "PHP",
+  "MXN",
+  "UAH",
+  "ARS",
+  "GOLD",
+  "SILVER",
+  "VAR",
+  "OTHER",
+] as const;
+export type PegCurrency = (typeof PEG_CURRENCY_VALUES)[number];
 
 /** Governance model */
 export type GovernanceType = "centralized" | "centralized-dependent" | "decentralized";
@@ -49,7 +52,8 @@ interface StablecoinFlags {
   navToken: boolean;
 }
 
-type ProofOfReservesType = "independent-audit" | "real-time" | "self-reported";
+export const PROOF_OF_RESERVES_TYPE_VALUES = ["independent-audit", "real-time", "self-reported"] as const;
+export type ProofOfReservesType = (typeof PROOF_OF_RESERVES_TYPE_VALUES)[number];
 
 interface ProofOfReserves {
   type: ProofOfReservesType;
@@ -124,8 +128,11 @@ export const CollateralQualitySchema = z.enum(COLLATERAL_QUALITY_VALUES);
 export const CustodyModelSchema = z.enum(CUSTODY_MODEL_VALUES);
 export const GovernanceQualitySchema = z.enum(GOVERNANCE_QUALITY_VALUES);
 
+export const COIN_NOTICE_TYPE_VALUES = ["danger", "warning", "info"] as const;
+export type CoinNoticeType = (typeof COIN_NOTICE_TYPE_VALUES)[number];
+
 export interface CoinNotice {
-  type: "danger" | "warning" | "info";
+  type: CoinNoticeType;
   title: string;
   message: string;
 }
@@ -157,16 +164,19 @@ interface YieldConfig {
   yieldType: YieldType;
 }
 
-export type LaunchPhase = "announced" | "testnet" | "auditing" | "beta" | "launching-soon";
+export const LAUNCH_PHASE_VALUES = ["announced", "testnet", "auditing", "beta", "launching-soon"] as const;
+export type LaunchPhase = (typeof LAUNCH_PHASE_VALUES)[number];
 
-export type LaunchMilestoneType =
-  | "announcement"
-  | "milestone"
-  | "delay"
-  | "partnership"
-  | "regulatory"
-  | "audit"
-  | "testnet";
+export const LAUNCH_MILESTONE_TYPE_VALUES = [
+  "announcement",
+  "milestone",
+  "delay",
+  "partnership",
+  "regulatory",
+  "audit",
+  "testnet",
+] as const;
+export type LaunchMilestoneType = (typeof LAUNCH_MILESTONE_TYPE_VALUES)[number];
 
 export interface LaunchMilestone {
   date: string;
@@ -181,7 +191,8 @@ export interface DateHistoryEntry {
   setOn: string;
 }
 
-export type FeaturedContentType = "tweet" | "blog" | "video" | "article";
+export const FEATURED_CONTENT_TYPE_VALUES = ["tweet", "blog", "video", "article"] as const;
+export type FeaturedContentType = (typeof FEATURED_CONTENT_TYPE_VALUES)[number];
 
 export interface FeaturedContent {
   type: FeaturedContentType;
@@ -191,6 +202,9 @@ export interface FeaturedContent {
   image?: string;
   source?: string;
 }
+
+export const STABLECOIN_STATUS_VALUES = ["pre-launch", "active"] as const;
+export type StablecoinStatus = (typeof STABLECOIN_STATUS_VALUES)[number];
 
 export interface StablecoinMeta {
   id: string;
@@ -225,7 +239,7 @@ export interface StablecoinMeta {
   notices?: CoinNotice[];
   tags?: string[];
   yieldConfig?: YieldConfig;
-  status?: "pre-launch" | "active";
+  status?: StablecoinStatus;
   launchDate?: string;
   announcedDate?: string;
   expectedLaunchDate?: string;

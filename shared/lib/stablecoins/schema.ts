@@ -2,6 +2,8 @@ import { z } from "zod";
 import type { DeadStablecoin, StablecoinMeta } from "../../types";
 import { LiveReservesConfigSchema } from "../live-reserve-adapters";
 import {
+  BACKING_TYPE_VALUES,
+  PEG_CURRENCY_VALUES,
   DEPENDENCY_TYPE_VALUES,
   GOVERNANCE_TYPE_VALUES,
   CHAIN_TIER_VALUES,
@@ -10,50 +12,18 @@ import {
   CUSTODY_MODEL_VALUES,
   GOVERNANCE_QUALITY_VALUES,
   INFRASTRUCTURE_VALUES,
+  PROOF_OF_RESERVES_TYPE_VALUES,
+  COIN_NOTICE_TYPE_VALUES,
   YIELD_TYPE_VALUES,
+  LAUNCH_PHASE_VALUES,
+  LAUNCH_MILESTONE_TYPE_VALUES,
+  FEATURED_CONTENT_TYPE_VALUES,
+  STABLECOIN_STATUS_VALUES,
 } from "../../types/core";
+import { CAUSE_OF_DEATH_VALUES } from "../../types/market";
 
-const BACKING_TYPE_VALUES = ["rwa-backed", "crypto-backed", "algorithmic"] as const;
-const PEG_CURRENCY_VALUES = [
-  "USD",
-  "EUR",
-  "GBP",
-  "CHF",
-  "BRL",
-  "RUB",
-  "JPY",
-  "IDR",
-  "SGD",
-  "TRY",
-  "AUD",
-  "ZAR",
-  "CAD",
-  "CNY",
-  "CNH",
-  "PHP",
-  "MXN",
-  "UAH",
-  "ARS",
-  "GOLD",
-  "SILVER",
-  "VAR",
-  "OTHER",
-] as const;
 const DETAIL_PROVIDER_VALUES = ["defillama", "coingecko", "commodity"] as const;
-const PROOF_OF_RESERVES_TYPE_VALUES = ["independent-audit", "real-time", "self-reported"] as const;
 const RESERVE_RISK_VALUES = ["very-low", "low", "medium", "high", "very-high"] as const;
-const COIN_NOTICE_TYPE_VALUES = ["danger", "warning", "info"] as const;
-const LAUNCH_PHASE_VALUES = ["announced", "testnet", "auditing", "beta", "launching-soon"] as const;
-const LAUNCH_MILESTONE_TYPE_VALUES = ["announcement", "milestone", "delay", "partnership", "regulatory", "audit", "testnet"] as const;
-const FEATURED_CONTENT_TYPE_VALUES = ["tweet", "blog", "video", "article"] as const;
-const STATUS_VALUES = ["pre-launch", "active"] as const;
-const CAUSE_OF_DEATH_VALUES = [
-  "algorithmic-failure",
-  "counterparty-failure",
-  "liquidity-drain",
-  "regulatory",
-  "abandoned",
-] as const;
 
 const StablecoinFlagsAssetSchema = z.object({
   backing: z.enum(BACKING_TYPE_VALUES),
@@ -169,7 +139,7 @@ export const StablecoinMetaAssetSchema = z.object({
   notices: z.array(CoinNoticeAssetSchema).optional(),
   tags: z.array(z.string()).optional(),
   yieldConfig: YieldConfigAssetSchema.optional(),
-  status: z.enum(STATUS_VALUES).optional(),
+  status: z.enum(STABLECOIN_STATUS_VALUES).optional(),
   launchDate: z.string().optional(),
   announcedDate: z.string().optional(),
   expectedLaunchDate: z.string().optional(),
