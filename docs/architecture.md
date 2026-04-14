@@ -62,6 +62,7 @@ Cron trigger metadata follows the same single-source pattern. `shared/lib/cron-j
 | `POST /api/backfill-mint-burn-prices`        | Admin: backfill mint/burn event prices (preferred access: `ops-api.pharos.watch` + Access service-token headers)                                                                                                               |
 | `GET /api/debug-sync-state`                  | Admin: view blacklist sync state for all chains (preferred access: `ops-api.pharos.watch` + Access service-token headers)                                                                                                      |
 | `GET /api/api-keys`                          | Admin: list public API keys (masked token, owner/tier metadata, usage timestamps; preferred access: `ops-api.pharos.watch` + Access service-token headers)                                                                   |
+| `GET /api/api-keys/audit-log`                | Admin: list API key lifecycle audit-log entries, optionally filtered by API key ID (preferred access: `ops-api.pharos.watch` + Access service-token headers)                                                                 |
 | `POST /api/api-keys`                         | Admin: create a new public API key and return the plaintext token once (preferred access: `ops-api.pharos.watch` + Access service-token headers)                                                                             |
 | `POST /api/api-keys/:id/update`              | Admin: update public API key metadata / rate limit / active state (preferred access: `ops-api.pharos.watch` + Access service-token headers)                                                                                  |
 | `POST /api/api-keys/:id/deactivate`          | Admin: deactivate a public API key immediately (preferred access: `ops-api.pharos.watch` + Access service-token headers)                                                                                                      |
@@ -199,7 +200,7 @@ src/                              # Next.js frontend (static export)
 │   │   ├── page.tsx
 │   │   ├── client.tsx
 │   │   └── error.tsx
-│   ├── status/                   # Public system-status shell (read-only, noindex)
+│   ├── status/                   # Public system-status shell (read-only, indexable)
 │   │   ├── page.tsx
 │   │   ├── client.tsx
 │   │   └── error.tsx

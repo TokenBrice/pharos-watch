@@ -207,7 +207,7 @@ User-supplied strings are only partially normalized before the GitHub write:
 
 ## Environment Variables
 
-Set in `wrangler.toml` (non-secret) or via Cloudflare dashboard / `wrangler secret put` (secrets):
+Set in `worker/wrangler.toml` (non-secret) or via Cloudflare dashboard / `wrangler secret put` (secrets):
 
 | Variable | Type | Required | Description |
 |----------|------|----------|-------------|

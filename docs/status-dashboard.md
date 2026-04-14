@@ -51,7 +51,7 @@ The active frontend operator mode is now:
   - a `Follow this order` lane list that mirrors the priority-ranked section order
   - a sticky `LongformScrollspyNav` rail for section-level navigation while scrolling
 - `/admin/` disables indexing (`robots: { index: false, follow: false }`)
-- `/status/` stays read-only, uses only public read endpoints, and also disables indexing (`robots: { index: false, follow: false }`)
+- `/status/` stays read-only, uses only public read endpoints, and is public/indexable through its route metadata and sitemap entry
 - The public `/status/` top fold now keeps browser-sync metadata inside a dedicated `Live watch` side panel instead of the page-title row, so the page title stays stable at narrow and medium widths
 - The public `/status/` top fold also keeps the `Status runway` explicitly fixed to the last 30 days; the `24h` / `7d` / `30d` pills now belong only to the transition log below so filter changes do not silently reframe the hero summary
 - `src/components/status/public-status-hero.tsx`

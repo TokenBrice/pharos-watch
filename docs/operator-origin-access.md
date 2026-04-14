@@ -26,12 +26,13 @@ Still true:
 
 ### Worker route declarations
 
-`worker/wrangler.toml` now declares two custom-domain routes:
+`worker/wrangler.toml` now declares three custom-domain routes:
 
 - `api.pharos.watch`
+- `site-api.pharos.watch`
 - `ops-api.pharos.watch`
 
-Deploying the Worker will attach the script to both hostnames.
+Deploying the Worker will attach the script to all three hostnames.
 If the operator API hostname still does not resolve afterward, finish the custom-domain side in Cloudflare before treating it as live.
 
 ### CORS allowlist
@@ -94,7 +95,7 @@ The current proxy now fails closed on its own trust boundary:
 
 ### Proxy contract
 
-- Allowed upstream paths are limited to admin routes and shared dynamic-admin matchers exported from `shared/lib/api-endpoints.ts` (including `/api/discovery-candidates/:id/dismiss`).
+- Allowed upstream paths are limited to admin routes and shared dynamic-admin matchers exported from `shared/lib/api-endpoints/` (including `/api/discovery-candidates/:id/dismiss`).
 - HTTP method rules are enforced by `validateEndpointMethod()`, so the proxy returns `405` with `Allow` when a caller uses the wrong verb for an otherwise valid admin route.
 - The proxy verifies the inbound UI Access token before the upstream fetch. Missing or invalid Access token evidence (`Cf-Access-Jwt-Assertion`, `cf-access-token`, or `CF_Authorization`) returns `401`.
 - Mutating requests (`POST`, `PUT`, `PATCH`, `DELETE`) must include a same-origin `Origin` header matching `OPS_UI_ORIGIN`; missing or foreign origins return `403`.

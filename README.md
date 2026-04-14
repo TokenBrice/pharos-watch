@@ -53,13 +53,13 @@ All external API calls and on-chain contract reads go through the Cloudflare Wor
 | [RedStone](https://redstone.finance/)                                   | Exact-case oracle snapshots used as an additional pricing voice                                            | 15 min                            |
 | [Chainlink Data Feeds](https://data.chain.link/)                        | Reference-feed overlays for supported fiat and commodity pegs                                              | 15 min                            |
 | [DefiLlama Yields](https://defillama.com/yields)                        | DEX pool TVL, volume, and composition for liquidity scoring                                                | 30 min                            |
-| [DefiLlama Protocols](https://defillama.com/protocols)                  | Protocol TVL context used by DEX liquidity scoring and fallback coverage checks                            | 30 min                            |
+| [DefiLlama Protocols](https://api.llama.fi/protocols)                   | Protocol TVL context used by DEX liquidity scoring and fallback coverage checks                            | 30 min                            |
 | [Curve Finance API](https://api.curve.finance/)                         | Pool A-factors, per-token balances, implied prices                                                         | 30 min                            |
 | [The Graph](https://thegraph.com/)                                      | Uniswap V3 (4 chains) + Aerodrome (Base) subgraphs for fee tiers and implied prices                        | 30 min                            |
-| [CoinGecko Onchain](https://www.coingecko.com/en/api/onchain)           | Discovery-stage DEX pool crawl, locked liquidity %, fee tiers, balance approximation                       | 30 min                            |
+| [CoinGecko Onchain](https://docs.coingecko.com/reference/top-pools-contract-address) | Discovery-stage DEX pool crawl, locked liquidity %, fee tiers, balance approximation                       | 30 min                            |
 | [GeckoTerminal](https://www.geckoterminal.com/)                         | Fallback DEX pool crawl for GT-only chains or no-CoinGecko-key runs                                        | 30 min                            |
 | [DexScreener](https://dexscreener.com/)                                 | Discovery fallback, DEX-implied price fallback, and last-resort price enrichment                           | Varies by pipeline (15/30 min)    |
-| [Jupiter Price API](https://hub.jup.ag/docs/price-api/v2)               | Solana-specific fallback price enrichment for tracked mint addresses                                       | 15 min (as fallback)              |
+| [Jupiter Price API](https://developers.jup.ag/docs/price)               | Solana-specific fallback price enrichment for tracked mint addresses                                       | 15 min (as fallback)              |
 | Direct DEX APIs (Fluid, Balancer, Raydium, Orca, Meteora, PancakeSwap, Aerodrome Slipstream, Velodrome Slipstream) | Direct pool/liquidity reads that supplement DefiLlama, Curve, Graph, and crawl-based DEX coverage         | 30 min                            |
 | [CoinGecko](https://www.coingecko.com/)                                 | Gold/silver/fiat token supply (not in DefiLlama), fallback price enrichment                                | 15 min (as fallback)              |
 | [CoinMarketCap](https://coinmarketcap.com/)                             | Fallback price enrichment for assets with CMC slugs                                                        | 15 min (rate-limited to 1/hour)   |
@@ -156,7 +156,7 @@ src/                              Frontend (Next.js static export)
 │   ├── stablecoins/governance/[governance]/ Governance taxonomy landing pages
 │   ├── stablecoins/infrastructure/[infrastructure]/ Infrastructure landing pages
 │   ├── admin/                    Access-gated operator admin panel (ops.pharos.watch only)
-│   ├── status/                   Public system-status dashboard (read-only, noindex)
+│   ├── status/                   Public system-status dashboard (read-only, indexable)
 │   ├── telegram/                 Telegram alerts + digest landing page
 │   ├── yield/                    Yield intelligence leaderboard
 │   ├── changelog/                Weekly release notes
@@ -218,7 +218,8 @@ Runtime host split:
 
 ```
 Cloudflare Worker (API layer)
-  ├── Cron: */15 * * * *                        → sync stablecoins (includes depeg detection + confirmation) + downstream-safe snapshot-supply retry + snapshot-chain-supply + FX rates + status self-check
+  ├── Cron: */15 * * * *                        → sync stablecoins (includes depeg detection + confirmation) + downstream-safe snapshot-supply retry + snapshot-chain-supply + FX rates
+  ├── Cron: 9,24,39,54 * * * *                  → status self-check
   ├── Cron: 3 * * * *                           → blacklist sync
   ├── Cron: 4,24,44 * * * *                     → mint/burn critical lane
   ├── Cron: 6,36 * * * *                         → DEX discovery staging (30 min)

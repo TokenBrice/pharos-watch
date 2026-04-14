@@ -212,7 +212,7 @@ function checkLiquidityDoc(failures: Failure[]): void {
     { row: "**Volume Activity**", label: "liquidity component Volume Activity", expected: LIQUIDITY_SCORE_WEIGHTS[1].weight * 100 },
     { row: "**Pool Quality**", label: "liquidity component Pool Quality", expected: LIQUIDITY_SCORE_WEIGHTS[2].weight * 100 },
     { row: "**Durability**", label: "liquidity component Durability", expected: LIQUIDITY_SCORE_WEIGHTS[3].weight * 100 },
-    { row: "**Pair Diversity**", label: "liquidity component Pair Diversity", expected: LIQUIDITY_SCORE_WEIGHTS[4].weight * 100 },
+    { row: "**Diversity**", label: "liquidity component Diversity", expected: LIQUIDITY_SCORE_WEIGHTS[4].weight * 100 },
   ];
 
   for (const component of componentRows) {
