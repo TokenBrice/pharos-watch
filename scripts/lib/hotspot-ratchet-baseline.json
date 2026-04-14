@@ -132,8 +132,8 @@
     "notes": "Mint/burn copy is localized, but still larger than the desired long-term budget. Split the detailed pipeline tables from the overview copy when touched next."
   },
   "src/app/methodology/sections/monitoring/yield-intelligence-section.tsx": {
-    "fileLines": 251,
-    "maxFunctionLines": 237,
+    "fileLines": 250,
+    "maxFunctionLines": 236,
     "branchCount": 0,
     "disposition": "queued-p4",
     "targetBudget": {
@@ -156,7 +156,7 @@
     "notes": "PegScore and DEWS now share an isolated section body, but the dual-surface copy is still oversized. Split PegScore-specific and DEWS-specific detail blocks before adding more content."
   },
   "src/app/methodology/scoring-changelog/content-v6.tsx": {
-    "fileLines": 287,
+    "fileLines": 281,
     "maxFunctionLines": 276,
     "branchCount": 0,
     "disposition": "queued-p4",
@@ -265,7 +265,7 @@
   },
   "worker/src/cron/dex-liquidity/orchestrator.ts": {
     "fileLines": 506,
-    "maxFunctionLines": 266,
+    "maxFunctionLines": 89,
     "branchCount": 15,
     "disposition": "stabilized",
     "targetBudget": {
@@ -348,7 +348,7 @@
     "notes": "Core helpers are already extracted. Next split should isolate orchestration, persistence, and fallback policy from the cron entrypoint."
   },
   "worker/src/cron/yield-config.ts": {
-    "fileLines": 723,
+    "fileLines": 60,
     "maxFunctionLines": 1,
     "branchCount": 0,
     "disposition": "deferred",
@@ -360,7 +360,7 @@
     "notes": "The yield adapter registry is large but mostly data-heavy. Keep additions structured, and extract manifest families before allowing the registry file to grow further."
   },
   "worker/src/cron/yield-sync/sources.ts": {
-    "fileLines": 34,
+    "fileLines": 28,
     "maxFunctionLines": 0,
     "branchCount": 0,
     "disposition": "deferred",
