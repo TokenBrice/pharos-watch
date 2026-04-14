@@ -1,10 +1,77 @@
+export type DigestEditorialCandidateKind =
+  | "depeg"
+  | "resolved-depeg"
+  | "psi"
+  | "supply"
+  | "mint-burn"
+  | "dews"
+  | "grade"
+  | "yield"
+  | "liquidity"
+  | "blacklist"
+  | "market";
+
+export type DigestEditorialCandidateNovelty =
+  | "new"
+  | "worsening"
+  | "improving"
+  | "reversal"
+  | "accelerating"
+  | "decelerating"
+  | "recurring"
+  | "chronic"
+  | "structural";
+
+export type DigestEditorialCandidateConfidence = "high" | "medium" | "low";
+
+export type DigestEditorialCandidateArtifactRisk = "none" | "low" | "medium" | "high";
+
+export interface DigestEditorialCandidate {
+  id: string;
+  kind: DigestEditorialCandidateKind;
+  title: string;
+  symbols: string[];
+  impactScore: number;
+  novelty: DigestEditorialCandidateNovelty;
+  confidence: DigestEditorialCandidateConfidence;
+  artifactRisk: DigestEditorialCandidateArtifactRisk;
+  headlineFacts: string[];
+  whyItMatters: string;
+  suppressReason?: string;
+}
+
+export interface DigestDataQuality {
+  generatedAt: number;
+  stablecoinsCacheUpdatedAt: number | null;
+  stablecoinsCacheAgeSec: number | null;
+  degradedSources?: string[];
+  windows: {
+    blacklistActivity: { label: string; start: number; end: number };
+    mintBurnFlows: { label: string; start: number; end: number };
+    supplyVelocity: { label: string; dates: number[] };
+    psi: { label: string; sampleAt: number | null; dailySnapshotAt: number | null };
+  };
+}
+
 export interface DigestInputData {
   digestVersion?: number;
   totalMcapUsd: number;
   mcap7dDelta: number;
+  dataQuality?: DigestDataQuality;
+  editorialCandidates?: DigestEditorialCandidate[];
   degradedSources?: string[];
   activeDepegCount: number;
-  topDepegs: { symbol: string; bps: number; mcapUsd: number }[];
+  topDepegs: {
+    stablecoinId?: string;
+    symbol: string;
+    bps: number;
+    direction?: "above" | "below";
+    mcapUsd: number;
+    startedAt?: number;
+    ageHours?: number;
+    impactScore?: number;
+    suppressReason?: string;
+  }[];
   biggestSupplyChange: {
     id: string;
     symbol: string;
@@ -41,10 +108,15 @@ export interface DigestInputData {
     fCount: number;
   };
   resolvedDepegs?: {
+    stablecoinId?: string;
     symbol: string;
     peakBps: number;
+    direction?: "above" | "below";
     durationHours: number;
     mcapUsd: number;
+    startedAt?: number;
+    endedAt?: number;
+    impactScore?: number;
   }[];
   mintBurnFlows?: {
     gaugeScore: number;
@@ -69,6 +141,7 @@ export interface DigestInputData {
       to: string;
       score: number;
       topDriver: string;
+      mcapUsd?: number;
     }[];
     elevatedCoins: {
       symbol: string;

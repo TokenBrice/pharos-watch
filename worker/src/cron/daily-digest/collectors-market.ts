@@ -17,26 +17,77 @@ type FlowIntensityRow = {
 
 type FlowIntensityRowWithIntensity = FlowIntensityRow & { intensity: number };
 
+function getDepegImpactScore(bps: number, mcapUsd: number): number {
+  return Math.round(Math.abs(bps) * mcapUsd / 1_000_000_000 * 10) / 10;
+}
+
+function getActiveDepegSuppressReason(params: {
+  mcapUsd: number;
+  ageHours: number;
+  bps: number;
+}): string | undefined {
+  if (params.mcapUsd < 20_000_000) {
+    return "sub-$20M active depeg, too small for a lead unless nothing larger moved";
+  }
+  if (params.ageHours >= 168 && params.mcapUsd < 250_000_000) {
+    return "week-old mid/small-cap depeg, treat as chronic unless it worsened today";
+  }
+  if (params.ageHours >= 72 && params.mcapUsd < 50_000_000) {
+    return "multi-day small-cap depeg, likely background condition";
+  }
+  if (Math.abs(params.bps) < 50 && params.mcapUsd < 250_000_000) {
+    return "low-deviation smaller-cap depeg, weak lead material";
+  }
+  return undefined;
+}
+
 export async function collectActiveDepegs(
   ctx: CollectorContext,
 ): Promise<CollectorResult<{ activeDepegCount: number; topDepegs: DigestInputData["topDepegs"] }>> {
   try {
     const activeDepegs = await ctx.db
-      .prepare("SELECT stablecoin_id, symbol, peak_deviation_bps FROM depeg_events WHERE ended_at IS NULL")
-      .all<{ stablecoin_id: string; symbol: string; peak_deviation_bps: number }>();
+      .prepare("SELECT stablecoin_id, symbol, direction, peak_deviation_bps, started_at FROM depeg_events WHERE ended_at IS NULL")
+      .all<{ stablecoin_id: string; symbol: string; direction: "above" | "below"; peak_deviation_bps: number; started_at: number }>();
     const rows = activeDepegs.results ?? [];
 
     const withImpact = rows.map((row) => {
       const mcapUsd = ctx.mcapById.get(row.stablecoin_id) ?? 0;
+      const ageHours = Math.max(0, Math.round((ctx.nowSec - row.started_at) / SECONDS.ONE_HOUR));
+      const impactScore = getDepegImpactScore(row.peak_deviation_bps, mcapUsd);
       return {
+        stablecoinId: row.stablecoin_id,
         symbol: row.symbol,
         bps: row.peak_deviation_bps,
+        direction: row.direction,
         mcapUsd,
-        impact: row.peak_deviation_bps * mcapUsd,
+        startedAt: row.started_at,
+        ageHours,
+        impactScore,
+        suppressReason: getActiveDepegSuppressReason({ mcapUsd, ageHours, bps: row.peak_deviation_bps }),
       };
     });
-    withImpact.sort((a, b) => b.impact - a.impact);
-    const topDepegs = withImpact.slice(0, 3).map(({ symbol, bps, mcapUsd }) => ({ symbol, bps, mcapUsd }));
+    withImpact.sort((a, b) => b.impactScore - a.impactScore);
+    const topDepegs = withImpact.slice(0, 3).map(({
+      stablecoinId,
+      symbol,
+      bps,
+      direction,
+      mcapUsd,
+      startedAt,
+      ageHours,
+      impactScore,
+      suppressReason,
+    }) => ({
+      stablecoinId,
+      symbol,
+      bps,
+      direction,
+      mcapUsd,
+      startedAt,
+      ageHours,
+      impactScore,
+      ...(suppressReason ? { suppressReason } : {}),
+    }));
 
     return collectorOk({ activeDepegCount: rows.length, topDepegs });
   } catch (error) {
@@ -53,7 +104,7 @@ export async function collectBlacklistActivity(
       .prepare(
         "SELECT stablecoin AS symbol, chain_name, event_type, amount_usd_at_event FROM blacklist_events WHERE timestamp >= ? AND timestamp < ? ORDER BY amount_usd_at_event DESC",
       )
-      .bind(ctx.todayTs - SECONDS.ONE_DAY, ctx.todayTs)
+      .bind(ctx.nowSec - SECONDS.ONE_DAY, ctx.nowSec)
       .all<{ symbol: string; chain_name: string; event_type: string; amount_usd_at_event: number | null }>();
     const blEvents = blRows.results ?? [];
     if (blEvents.length > 0) {
@@ -126,14 +177,17 @@ export async function collectSupplyVelocity(
         const change7d = todayVal - weekAgoVal;
         const dailyAvg7d = change7d / 7;
         const directionReversed = (change1d > 0 && change7d < 0) || (change1d < 0 && change7d > 0);
+        const sameDirection = (change1d > 0 && change7d > 0) || (change1d < 0 && change7d < 0);
         const velocityRatio = dailyAvg7d !== 0 ? Math.abs(change1d / dailyAvg7d) : 0;
+        const hasMaterialDailyMove = Math.abs(change1d) >= 1_000_000 && Math.abs(change1d) >= coin.mcap * 0.001;
+        const hasMaterialWeeklyMove = Math.abs(change7d) >= 10_000_000 && Math.abs(change7d) >= coin.mcap * 0.002;
 
-        if (Math.abs(change1d) < 1_000_000 || Math.abs(change1d) < coin.mcap * 0.001) continue;
+        if (!hasMaterialDailyMove && !hasMaterialWeeklyMove) continue;
 
-        if (directionReversed || velocityRatio > 2.5) {
+        if ((directionReversed && hasMaterialDailyMove) || (sameDirection && velocityRatio > 2.5 && hasMaterialDailyMove) || (sameDirection && velocityRatio < 0.4 && hasMaterialWeeklyMove)) {
           const signal = directionReversed
             ? "reversed"
-            : velocityRatio > 2.5 && Math.abs(change1d) > Math.abs(dailyAvg7d)
+            : velocityRatio > 2.5
               ? "accelerating"
               : "decelerating";
           velocitySignals.push({ coin: coin.symbol, change1d, change7d, signal });
@@ -158,23 +212,32 @@ export async function collectResolvedDepegs(
     const cutoff48h = ctx.nowSec - SECONDS.TWO_DAYS;
     const resolvedRows = await ctx.db
       .prepare(
-        `SELECT symbol, peak_deviation_bps, started_at, ended_at, stablecoin_id
+        `SELECT symbol, direction, peak_deviation_bps, started_at, ended_at, stablecoin_id
          FROM depeg_events
          WHERE ended_at IS NOT NULL AND ended_at >= ?
-         ORDER BY peak_deviation_bps DESC
-         LIMIT 10`,
+         ORDER BY ABS(peak_deviation_bps) DESC
+         LIMIT 20`,
       )
       .bind(cutoff48h)
-      .all<{ symbol: string; peak_deviation_bps: number; started_at: number; ended_at: number; stablecoin_id: string }>();
+      .all<{ symbol: string; direction: "above" | "below"; peak_deviation_bps: number; started_at: number; ended_at: number; stablecoin_id: string }>();
 
     const candidates = (resolvedRows.results ?? [])
-      .map((row) => ({
-        symbol: row.symbol,
-        peakBps: Math.abs(row.peak_deviation_bps),
-        durationHours: Math.round((row.ended_at - row.started_at) / SECONDS.ONE_HOUR),
-        mcapUsd: ctx.mcapById.get(row.stablecoin_id) ?? 0,
-      }))
+      .map((row) => {
+        const mcapUsd = ctx.mcapById.get(row.stablecoin_id) ?? 0;
+        return {
+          stablecoinId: row.stablecoin_id,
+          symbol: row.symbol,
+          peakBps: Math.abs(row.peak_deviation_bps),
+          direction: row.direction,
+          durationHours: Math.round((row.ended_at - row.started_at) / SECONDS.ONE_HOUR),
+          mcapUsd,
+          startedAt: row.started_at,
+          endedAt: row.ended_at,
+          impactScore: getDepegImpactScore(row.peak_deviation_bps, mcapUsd),
+        };
+      })
       .filter((row) => row.peakBps > 100 && row.mcapUsd > 20_000_000)
+      .sort((a, b) => b.impactScore - a.impactScore)
       .slice(0, 5);
 
     if (candidates.length > 0) {

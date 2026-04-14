@@ -149,6 +149,8 @@ import {
   collectLiquidityShifts,
   collectCrossDayTrends,
   collectDewsStress,
+  collectActiveDepegs,
+  collectSupplyVelocity,
   type CollectorContext,
 } from "../daily-digest/collectors";
 import type { DigestInputData } from "@shared/types/digest";
@@ -160,14 +162,27 @@ import { postDigestToTelegram } from "../../lib/telegram";
 import { prepareTelegramDigestAppendices } from "../../lib/telegram-digest-appendices";
 import { shouldAttemptFetch } from "../../lib/circuit-breaker";
 
+const VALID_DAILY_EXTENDED = [
+  "PSI held at 91.2 BEDROCK with severity 2 and breadth 1, so the headline market still looks calm. USDT sat 150 bps off peg on a $100M float in the fixture, which gives the model a real candidate but not a systemic alarm. The point is selection, not volume.",
+  "USDT added $5M over the week while USDC lost $2M, a mixed flow pattern rather than a single-direction stampede. The candidate list marks the depeg by impact first, then leaves supply as supporting context, which is the behavior this test expects. A smaller signal can still appear without becoming the lead.",
+  "Safety scores stayed A for USDT and USDC, leaving the daily note with a dry but restrained read. Nothing in the fixture should force panic, but the digest still has enough numbers to produce a publishable editorial paragraph set today. That is the editorial balance the prompt is supposed to protect.",
+].join("\n\n");
+
 const ANTHROPIC_OK_RESPONSE = {
   content: [
     {
       type: "text",
       text: JSON.stringify({
         title: "Calm Drift",
-        extended: "PSI held firm.\n\nUSDT and USDC stayed in range.",
-        text: "USDT and USDC absorbed another quiet day near peg.",
+        extended: VALID_DAILY_EXTENDED,
+        text: "USDT's fixture depeg outranked supply noise while PSI stayed at 91.2 BEDROCK.",
+        meta: {
+          leadSignalId: "depeg:usdt-tether:active",
+          lead: "depeg",
+          tone: "dry",
+          coins: ["USDT", "USDC"],
+          usedCandidateIds: ["depeg:usdt-tether:active"],
+        },
       }),
     },
   ],
@@ -198,7 +213,7 @@ function makeBaseTables(): MockTableConfig[] {
     },
     {
       match: "FROM depeg_events WHERE ended_at IS NULL",
-      rows: [{ stablecoin_id: "usdt-tether", symbol: "USDT", peak_deviation_bps: 150 }],
+      rows: [{ stablecoin_id: "usdt-tether", symbol: "USDT", direction: "below", peak_deviation_bps: 150, started_at: nowSec - 3600 }],
     },
     {
       match: "FROM stability_index_samples ORDER BY stored_at DESC LIMIT 1",
@@ -304,11 +319,11 @@ describe("generateDailyDigest", () => {
       ],
     });
 
-    vi.mocked(fetchWithRetry).mockReset().mockResolvedValue(
+    vi.mocked(fetchWithRetry).mockReset().mockImplementation(async () =>
       new Response(JSON.stringify(ANTHROPIC_OK_RESPONSE), {
         status: 200,
         headers: { "Content-Type": "application/json" },
-      }),
+      })
     );
 
     vi.mocked(postDigestTweet).mockReset().mockResolvedValue(undefined);
@@ -363,17 +378,19 @@ describe("generateDailyDigest", () => {
 
     const insertBinds = getInsertDigestBinds(db as MockD1Database);
     expect(insertBinds).toBeDefined();
-    expect(insertBinds?.[1]).toBe("USDT and USDC absorbed another quiet day near peg.");
+    expect(insertBinds?.[1]).toBe("USDT's fixture depeg outranked supply noise while PSI stayed at 91.2 BEDROCK.");
     expect(insertBinds?.[2]).toBe("Calm Drift");
 
     const storedInput = JSON.parse(String(insertBinds?.[3])) as {
       totalMcapUsd: number;
       activeDepegCount: number;
       topDepegs: Array<{ symbol: string; bps: number }>;
+      editorialCandidates?: unknown[];
     };
     expect(storedInput.totalMcapUsd).toBe(160_000_000);
     expect(storedInput.activeDepegCount).toBe(1);
-    expect(storedInput.topDepegs).toEqual([{ symbol: "USDT", bps: 150, mcapUsd: 100_000_000 }]);
+    expect(storedInput.topDepegs[0]).toMatchObject({ symbol: "USDT", bps: 150, mcapUsd: 100_000_000 });
+    expect(storedInput.editorialCandidates?.length).toBeGreaterThan(0);
 
     expect(postDigestTweet).toHaveBeenCalledTimes(1);
     expect(postDigestToTelegram).toHaveBeenCalledTimes(1);
@@ -387,9 +404,14 @@ describe("generateDailyDigest", () => {
       ANTHROPIC_MAX_RETRIES,
       { timeoutMs: ANTHROPIC_TIMEOUT_MS },
     );
+    const anthropicBody = JSON.parse(String(vi.mocked(fetchWithRetry).mock.calls[0]?.[1]?.body)) as {
+      messages: { content: string }[];
+    };
+    expect(anthropicBody.messages[0].content).toContain("Data quality notes:");
+    expect(anthropicBody.messages[0].content).toContain("Editorial Candidates");
   });
 
-  it("falls back gracefully when LLM returns malformed code-block JSON", async () => {
+  it("repairs malformed code-block JSON with one corrective retry", async () => {
     const malformed = "```json\n{\"title\":\"Broken\", \"text\":\n```";
     const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
 
@@ -407,10 +429,11 @@ describe("generateDailyDigest", () => {
 
     expect(result.itemCount).toBe(1);
     const insertBinds = getInsertDigestBinds(db as MockD1Database);
-    expect(insertBinds?.[1]).toBe(malformed);
-    expect(insertBinds?.[2]).toBeNull();
+    expect(insertBinds?.[1]).toBe("USDT's fixture depeg outranked supply noise while PSI stayed at 91.2 BEDROCK.");
+    expect(insertBinds?.[2]).toBe("Calm Drift");
+    expect(fetchWithRetry).toHaveBeenCalledTimes(2);
     expect(warnSpy).toHaveBeenCalledWith(
-      "[daily-digest] Failed to parse JSON response, using raw text fallback",
+      expect.stringContaining("[daily-digest] Failed to parse digest model response"),
     );
   });
 
@@ -702,7 +725,7 @@ describe("generateDailyDigest", () => {
         type: "text",
         text: JSON.stringify({
           title: "Alert Watch",
-          extended: "PSI dipped below 90.\n\nFRAX entered ALERT on pool drift.",
+          extended: VALID_DAILY_EXTENDED,
           text: "FRAX hit ALERT while PSI slid to 88, the first STEADY reading in 47 days.",
           meta: { lead: "dews-band-change", tone: "foreboding", coins: ["FRAX"] },
         }),
@@ -808,7 +831,7 @@ describe("generateDailyDigest", () => {
     expect(result.metadata).toContain("telegram: ok+appendix(");
     expect(postDigestToTelegram).toHaveBeenCalledWith(
       "Calm Drift",
-      "PSI held firm.\n\nUSDT and USDC stayed in range.",
+      VALID_DAILY_EXTENDED,
       "2026-03-06",
       { botToken: "tg-token", chatId: "tg-chat" },
       1,
@@ -881,19 +904,26 @@ describe("classifyRegime", () => {
     })).toBe("CRISIS");
   });
 
-  it("returns TENSION when 3+ coins ALERT+", () => {
+  it("returns TENSION when ALERT+ coins have material mcap", () => {
     expect(classifyRegime({
       ...baseData,
       dewsStress: {
         bandCounts: { calm: 100, watch: 10, alert: 2, warning: 1, danger: 0 },
         yesterdayBandCounts: { calm: 100, watch: 10, alert: 2, warning: 1, danger: 0 },
-        bandChanges: [], elevatedCoins: [],
+        bandChanges: [],
+        elevatedCoins: [
+          { symbol: "USDT", band: "ALERT", score: 50, mcapUsd: 2_000_000_000 },
+        ],
       },
     })).toBe("TENSION");
   });
 
-  it("returns WATCHFUL when 1 active depeg", () => {
-    expect(classifyRegime({ ...baseData, activeDepegCount: 1 })).toBe("WATCHFUL");
+  it("returns WATCHFUL when 1 unsuppressed active depeg is present", () => {
+    expect(classifyRegime({
+      ...baseData,
+      activeDepegCount: 1,
+      topDepegs: [{ symbol: "USDT", bps: 5, mcapUsd: 100_000_000_000 }],
+    })).toBe("WATCHFUL");
   });
 });
 
@@ -935,6 +965,85 @@ function makeCollectorCtx(db: ReturnType<typeof mockD1>): CollectorContext {
 
   return { db: db as unknown as D1Database, trackedStablecoinAssets, mcapById, nowSec, todayTs, yesterdayTs };
 }
+
+describe("collectActiveDepegs", () => {
+  beforeEach(() => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-03-06T12:00:00Z"));
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it("sorts active depegs by absolute market impact and marks small chronic noise", async () => {
+    const nowSec = Math.floor(Date.now() / 1000);
+    const db = mockD1([
+      {
+        match: "FROM depeg_events WHERE ended_at IS NULL",
+        rows: [
+          {
+            stablecoin_id: "dai-makerdao",
+            symbol: "DAI",
+            direction: "above",
+            peak_deviation_bps: 500,
+            started_at: nowSec - 8 * 86_400,
+          },
+          {
+            stablecoin_id: "usdc-circle",
+            symbol: "USDC",
+            direction: "below",
+            peak_deviation_bps: -100,
+            started_at: nowSec - 3600,
+          },
+        ],
+      },
+    ]);
+
+    const result = await collectActiveDepegs(makeCollectorCtx(db));
+
+    expect(result.value.topDepegs[0]).toMatchObject({
+      symbol: "USDC",
+      bps: -100,
+      direction: "below",
+    });
+    expect(result.value.topDepegs[1].suppressReason).toContain("sub-$20M");
+  });
+});
+
+describe("collectSupplyVelocity", () => {
+  beforeEach(() => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-03-06T12:00:00Z"));
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it("emits decelerating when a material weekly trend slows sharply", async () => {
+    const nowSec = Math.floor(Date.now() / 1000);
+    const todayTs = nowSec - (nowSec % 86_400);
+    const yesterdayTs = todayTs - 86_400;
+    const weekAgoTs = todayTs - 7 * 86_400;
+    const db = mockD1([
+      {
+        match: "FROM supply_history WHERE stablecoin_id IN",
+        rows: [
+          { stablecoin_id: "usdt-tether", snapshot_date: todayTs, circulating_usd: 101_400_000_000 },
+          { stablecoin_id: "usdt-tether", snapshot_date: yesterdayTs, circulating_usd: 101_350_000_000 },
+          { stablecoin_id: "usdt-tether", snapshot_date: weekAgoTs, circulating_usd: 100_000_000_000 },
+        ],
+      },
+    ]);
+
+    const result = await collectSupplyVelocity(makeCollectorCtx(db));
+
+    expect(result.value).toEqual([
+      expect.objectContaining({ coin: "USDT", signal: "decelerating" }),
+    ]);
+  });
+});
 
 describe("collectPsiContributors", () => {
   beforeEach(() => {

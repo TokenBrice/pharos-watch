@@ -157,7 +157,14 @@ export async function collectDewsStress(
 
         const coin = ctx.trackedStablecoinAssets.find((candidate) => candidate.id === today.stablecoin_id);
         if (!coin) continue;
-        bandChanges.push({ symbol: coin.symbol, from: yesterday.band, to: today.band, score: today.score, topDriver });
+        bandChanges.push({
+          symbol: coin.symbol,
+          from: yesterday.band,
+          to: today.band,
+          score: today.score,
+          topDriver,
+          mcapUsd: getCirculatingRaw(coin),
+        });
       }
 
       const elevatedCoins = todayRows

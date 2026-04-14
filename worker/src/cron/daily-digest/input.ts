@@ -27,6 +27,8 @@ import {
   buildRecentDigestMeta,
   type RecentDigestMetaEntry,
 } from "./runtime-helpers";
+import { NON_WEEKLY_DIGEST_SQL_FILTER } from "./shared";
+import { buildEditorialCandidates } from "./editorial-candidates";
 
 function consumeCollectorResult<T>(result: CollectorResult<T>, degradedReasons: string[]): T {
   if (result.degradedReason) {
@@ -51,7 +53,12 @@ export interface DailyDigestInputBuildResult {
 
 export async function buildDailyDigestInput(db: D1Database): Promise<DailyDigestInputBuildResult> {
   const recentRows = await db
-    .prepare("SELECT digest_title, digest_text, digest_extended, digest_meta FROM daily_digest ORDER BY generated_at DESC LIMIT 7")
+    .prepare(
+      `SELECT digest_title, digest_text, digest_extended, digest_meta
+       FROM daily_digest
+       WHERE ${NON_WEEKLY_DIGEST_SQL_FILTER}
+       ORDER BY generated_at DESC LIMIT 7`,
+    )
     .all<{ digest_title: string | null; digest_text: string; digest_extended: string | null; digest_meta: string | null }>();
   const recentMeta = buildRecentDigestMeta(recentRows.results ?? []);
   const degradedReasons: string[] = [];
@@ -128,13 +135,11 @@ export async function buildDailyDigestInput(db: D1Database): Promise<DailyDigest
   const { activeDepegCount, topDepegs } = consumeCollectorResult(await collectActiveDepegs(ctx), degradedReasons);
 
   const latestSample = await db
-    .prepare("SELECT score, band, components FROM stability_index_samples ORDER BY stored_at DESC LIMIT 1")
-    .first<{ score: number; band: string; components: string }>();
-  const latestDaily = latestSample
-    ? null
-    : await db
-      .prepare("SELECT score, band, components FROM stability_index ORDER BY computed_at DESC LIMIT 1")
-      .first<{ score: number; band: string; components: string }>();
+    .prepare("SELECT score, band, components, stored_at FROM stability_index_samples ORDER BY stored_at DESC LIMIT 1")
+    .first<{ score: number; band: string; components: string; stored_at: number }>();
+  const latestDaily = await db
+    .prepare("SELECT score, band, components, computed_at as stored_at FROM stability_index ORDER BY computed_at DESC LIMIT 1")
+    .first<{ score: number; band: string; components: string; stored_at: number }>();
   const currentPsiSource = latestSample ?? latestDaily;
 
   const avg24hRow = await db
@@ -197,11 +202,39 @@ export async function buildDailyDigestInput(db: D1Database): Promise<DailyDigest
   const liquidityShifts = await collectLiquidityShifts(ctx);
   const crossDayTrends = await collectCrossDayTrends(ctx, degradedReasons);
 
-  return {
-    inputData: {
+  const inputData: DigestInputData = {
       digestVersion: 2,
       totalMcapUsd,
       mcap7dDelta: totalMcapUsd - totalPrevWeek,
+      dataQuality: {
+        generatedAt: nowSec,
+        stablecoinsCacheUpdatedAt: stablecoinsCacheResult.updatedAt,
+        stablecoinsCacheAgeSec: stablecoinsCacheResult.updatedAt
+          ? Math.max(0, nowSec - stablecoinsCacheResult.updatedAt)
+          : null,
+        ...(degradedReasons.length > 0 ? { degradedSources: [...degradedReasons] } : {}),
+        windows: {
+          blacklistActivity: {
+            label: "rolling last 24h",
+            start: nowSec - SECONDS.ONE_DAY,
+            end: nowSec,
+          },
+          mintBurnFlows: {
+            label: "rolling last 24h",
+            start: nowSec - SECONDS.ONE_DAY,
+            end: nowSec,
+          },
+          supplyVelocity: {
+            label: "UTC snapshots: today, yesterday, 7d ago",
+            dates: [todayTs, yesterdayTs, todayTs - 7 * SECONDS.ONE_DAY],
+          },
+          psi: {
+            label: latestSample ? "latest 15-minute sample with daily snapshot fallback" : "latest daily snapshot fallback",
+            sampleAt: latestSample?.stored_at ?? null,
+            dailySnapshotAt: latestDaily?.stored_at ?? null,
+          },
+        },
+      },
       ...(degradedReasons.length > 0 ? { degradedSources: [...degradedReasons] } : {}),
       activeDepegCount,
       topDepegs,
@@ -220,7 +253,11 @@ export async function buildDailyDigestInput(db: D1Database): Promise<DailyDigest
       yieldAnomalies,
       liquidityShifts,
       crossDayTrends,
-    },
+    };
+  inputData.editorialCandidates = buildEditorialCandidates(inputData);
+
+  return {
+    inputData,
     degradedReasons,
     recentMeta,
     stablecoinsCacheReason: null,

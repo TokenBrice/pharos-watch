@@ -20,14 +20,17 @@ export const CronMetadataSchema = z.record(z.string(), z.unknown());
 
 /** LLM digest response JSON */
 export const DigestResponseSchema = z.object({
-  title: z.string().optional().default(""),
-  text: z.string().optional().default(""),
-  extended: z.string().optional().default(""),
+  title: z.string().min(1),
+  text: z.string().min(1),
+  extended: z.string().min(1),
   meta: z
     .object({
+      leadSignalId: z.string().optional(),
       lead: z.string().optional(),
       tone: z.string().optional(),
       coins: z.array(z.string()).optional(),
+      usedCandidateIds: z.array(z.string()).optional(),
+      suppressedCandidateIds: z.array(z.string()).optional(),
     })
     .optional(),
 });

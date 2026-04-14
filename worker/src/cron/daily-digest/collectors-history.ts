@@ -11,10 +11,10 @@ export async function collectPsiContributors(
   ctx: CollectorContext,
 ): Promise<DigestInputData["psiContributors"]> {
   try {
-    const latestSample = await ctx.db
-      .prepare("SELECT input_snapshot FROM stability_index_samples ORDER BY stored_at DESC LIMIT 1")
-      .first<{ input_snapshot: string }>();
-    if (!latestSample) return undefined;
+	    const latestSample = await ctx.db
+	      .prepare("SELECT input_snapshot FROM stability_index_samples ORDER BY stored_at DESC LIMIT 1")
+	      .first<{ input_snapshot: string }>();
+	    if (!latestSample || typeof latestSample.input_snapshot !== "string") return undefined;
 
     const snapshot = JSON.parse(latestSample.input_snapshot) as {
       contributors?: { id: string; symbol: string; bps: number; mcapUsd: number; ageDays: number; factor: number }[];

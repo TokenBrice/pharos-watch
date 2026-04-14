@@ -1,8 +1,17 @@
-import type { DigestModelResponseParseOptions } from "../daily-digest/response";
+import type {
+  DigestModelResponseParseOptions,
+  DigestValidationIssue,
+  DigestValidationProfile,
+} from "../daily-digest/response";
 import { fetchWithRetry } from "../../lib/fetch-retry";
 import { ANTHROPIC_MAX_RETRIES, ANTHROPIC_TIMEOUT_MS, CIRCUIT_SOURCE } from "../../lib/constants";
 import { recordOutcomeSafe, shouldAttemptFetch } from "../../lib/circuit-breaker";
-import { parseDigestModelResponse } from "../daily-digest/response";
+import {
+  formatDigestValidationIssues,
+  hasBlockingDigestQualityIssues,
+  parseDigestModelResponse,
+  validateDigestModelOutput,
+} from "../daily-digest/response";
 
 interface RequestDigestCopyOptions {
   db: D1Database;
@@ -13,6 +22,7 @@ interface RequestDigestCopyOptions {
   signal?: AbortSignal;
   logPrefix: string;
   parseOptions?: DigestModelResponseParseOptions;
+  validationProfile?: DigestValidationProfile;
 }
 
 interface RequestDigestCopyResult {
@@ -24,6 +34,8 @@ interface RequestDigestCopyResult {
   strippedDashCount: number;
   strippedForbiddenCharCount: number;
   usedRawTextFallback: boolean;
+  qualityIssues: DigestValidationIssue[];
+  hasBlockingQualityIssues: boolean;
 }
 
 interface InsertDigestRecordOptions {
@@ -58,10 +70,13 @@ export async function requestDigestCopy(
       strippedDashCount: 0,
       strippedForbiddenCharCount: 0,
       usedRawTextFallback: false,
+      qualityIssues: [],
+      hasBlockingQualityIssues: false,
     };
   }
 
-  const response = await fetchWithRetry(
+  const requestClaude = async (userPrompt: string): Promise<string> => {
+    const response = await fetchWithRetry(
     "https://api.anthropic.com/v1/messages",
     {
       method: "POST",
@@ -74,7 +89,7 @@ export async function requestDigestCopy(
         model: "claude-opus-4-6",
         max_tokens: options.maxTokens,
         system: options.systemPrompt,
-        messages: [{ role: "user", content: options.userPrompt }],
+        messages: [{ role: "user", content: userPrompt }],
       }),
       signal: options.signal
         ? AbortSignal.any([options.signal, AbortSignal.timeout(ANTHROPIC_TIMEOUT_MS)])
@@ -82,26 +97,51 @@ export async function requestDigestCopy(
     },
     ANTHROPIC_MAX_RETRIES,
     { timeoutMs: ANTHROPIC_TIMEOUT_MS },
-  );
-
-  if (!response || !response.ok) {
-    await recordOutcomeSafe(options.db, CIRCUIT_SOURCE.ANTHROPIC, false);
-    const errorText = response ? await response.text() : "no response after retries";
-    throw new Error(
-      `Claude API error ${response?.status ?? "null"}: ${typeof errorText === "string" ? errorText.slice(0, 500) : errorText}`,
     );
-  }
-  await recordOutcomeSafe(options.db, CIRCUIT_SOURCE.ANTHROPIC, true);
 
-  const result = (await response.json()) as {
-    content?: { type: string; text: string }[];
+    if (!response || !response.ok) {
+      await recordOutcomeSafe(options.db, CIRCUIT_SOURCE.ANTHROPIC, false);
+      const errorText = response ? await response.text() : "no response after retries";
+      throw new Error(
+        `Claude API error ${response?.status ?? "null"}: ${typeof errorText === "string" ? errorText.slice(0, 500) : errorText}`,
+      );
+    }
+    await recordOutcomeSafe(options.db, CIRCUIT_SOURCE.ANTHROPIC, true);
+
+    const result = (await response.json()) as {
+      content?: { type: string; text: string }[];
+    };
+    const rawText = result.content?.[0]?.text ?? "";
+    if (!rawText) {
+      throw new Error("Claude API returned empty digest text");
+    }
+    return rawText;
   };
-  const rawText = result.content?.[0]?.text ?? "";
-  if (!rawText) {
-    throw new Error("Claude API returned empty digest text");
+
+  let prompt = options.userPrompt;
+  let parsed = parseDigestModelResponse(await requestClaude(prompt), options.parseOptions);
+  let qualityIssues = options.validationProfile
+    ? validateDigestModelOutput(parsed, options.validationProfile)
+    : [];
+
+  if (qualityIssues.length > 0) {
+    console.warn(
+      `[${options.logPrefix}] Digest quality checks failed, retrying once: ${formatDigestValidationIssues(qualityIssues)}`,
+    );
+    prompt = [
+      options.userPrompt,
+      "",
+      "REVISION REQUIRED:",
+      "Your previous response failed these quality checks:",
+      formatDigestValidationIssues(qualityIssues),
+      "Return ONLY corrected JSON with the same schema. Do not add markdown fences or commentary.",
+    ].join("\n");
+    parsed = parseDigestModelResponse(await requestClaude(prompt), options.parseOptions);
+    qualityIssues = options.validationProfile
+      ? validateDigestModelOutput(parsed, options.validationProfile)
+      : [];
   }
 
-  const parsed = parseDigestModelResponse(rawText, options.parseOptions);
   if (parsed.usedRawTextFallback) {
     console.warn(`[${options.logPrefix}] Failed to parse JSON response, using raw text fallback`);
   }
@@ -113,10 +153,15 @@ export async function requestDigestCopy(
       `[${options.logPrefix}] Prompt compliance: stripped ${parsed.strippedForbiddenCharCount} chars of forbidden phrases`,
     );
   }
+  if (qualityIssues.length > 0) {
+    console.warn(`[${options.logPrefix}] Digest quality checks still failing: ${formatDigestValidationIssues(qualityIssues)}`);
+  }
 
   return {
     kind: "ok",
     ...parsed,
+    qualityIssues,
+    hasBlockingQualityIssues: hasBlockingDigestQualityIssues(qualityIssues),
   };
 }
 

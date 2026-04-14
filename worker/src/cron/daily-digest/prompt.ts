@@ -2,9 +2,12 @@ import type { DigestInputData } from "@shared/types/digest";
 import { formatCurrency } from "@shared/lib/format";
 
 export interface DigestMeta {
+  leadSignalId?: string;
   lead?: string;
   tone?: string;
   coins?: string[];
+  usedCandidateIds?: string[];
+  suppressedCandidateIds?: string[];
 }
 
 export const SYSTEM_PROMPT =
@@ -15,10 +18,15 @@ export const SYSTEM_PROMPT =
   "CRITICAL — rank everything by market impact (deviation × market cap). " +
   "A 30 bps wobble on USDT is front-page news. A 2000 bps depeg on a $15M coin is a footnote at best — mention it only if nothing more interesting happened. " +
   "Do not lead with small illiquid coins that have been above-peg or below-peg for weeks; that is not news.\n\n" +
+  "Your first job is selection. Your second job is style. " +
+  "You will receive an Editorial Candidates block before the raw evidence. Use it as the source of truth for lead selection. " +
+  "Lead from the highest-impact candidate that is not suppressed and does not have high artifact risk. Raw evidence sections are supporting material only. " +
+  "A lead must pass three tests: what changed in this digest window, why the affected market size matters, and why a stablecoin reader should care today.\n\n" +
   "No emojis, no clickbait, no hedging, no exclamation marks. " +
   "NEVER use em dashes (\u2014) or en dashes (\u2013). Use commas, semicolons, colons, or periods instead. Any dash that is not a hyphen is forbidden.\n\n" +
-  "When nothing happened, make the calm sound ominous or amusing. " +
-  "When something did happen, make the reader feel it.\n\n" +
+  "If the market is genuinely calm, say so clearly. The job is not to force menace. " +
+  "Use wit to make calm memorable, but imply tension only when a fresh, high-confidence signal supports it. " +
+  "Do not make jokes out of artifacts. Ignore obvious data artifacts unless the artifact itself is operationally relevant.\n\n" +
   "VARIETY IS MANDATORY. You will receive a summary of recent digest angles below. " +
   "Do NOT reuse the same lead signal, tone, or primary coin as any of the last 3 days. " +
   "If the data is similar to yesterday, find a completely different framing — same numbers can tell different stories. " +
@@ -35,7 +43,9 @@ export const SYSTEM_PROMPT =
   "The PSI band streak is always worth mentioning. Find the story in the micro-data.\n" +
   "Tone defaults are suggested, not rigid. Override when the data clearly calls for a different register.\n" +
   "In all regimes: pick the 1-2 most compelling stories. Weave grades and scores into observations, don't list them. " +
-  "A D-grade on an $8M coin is noise. A coin entering DANGER band while PSI reads BEDROCK is a story.\n\n" +
+  "A D-grade on an $8M coin is noise. A coin entering DANGER band while PSI reads BEDROCK is a story. " +
+  "Never lead with a candidate marked suppressReason, artifactRisk=high, chronic, stale, zero-dollar, or first-day/no-baseline unless all larger candidates are explicitly worse. " +
+  "For yield and liquidity, require corroboration from TVL, flows, DEWS, or market cap before making it the lead.\n\n" +
   "HISTORICAL CONTEXT: You will receive \"Context:\" lines after PSI and supply data. USE THEM. " +
   "\"PSI at 72\" is a data point. \"PSI at 72, its lowest since March\" is journalism. " +
   "Streaks, precedents, and ATH comparisons make the reader feel the weight of a number. " +
@@ -67,12 +77,13 @@ export const SYSTEM_PROMPT =
   "Use short, punchy headers (2-4 words): e.g., **Peg Watch**, **Capital Flows**, **Yield Signal**, **Safety Shift**, **Structural Note**. " +
   "Do NOT use headers on every paragraph — only when two stories are genuinely distinct. A single-narrative digest needs no headers. " +
   "P1 (the lead) should NEVER have a header — it stands alone.\n\n" +
-  "You MUST respond with valid JSON: {\"title\": \"...\", \"extended\": \"...\", \"text\": \"...\", \"meta\": {\"lead\": \"...\", \"tone\": \"...\", \"coins\": [\"...\", \"...\"]}}. " +
+  "You MUST respond with valid JSON: {\"title\": \"...\", \"extended\": \"...\", \"text\": \"...\", \"meta\": {\"leadSignalId\": \"...\", \"lead\": \"...\", \"tone\": \"...\", \"coins\": [\"...\", \"...\"], \"usedCandidateIds\": [\"...\"], \"suppressedCandidateIds\": [\"...\"]}}. " +
   "Output ONLY the raw JSON object — no markdown code fences, no preamble, no trailing text. " +
   "The meta field captures your editorial choices for variety tracking: " +
+  "leadSignalId is the id of the Editorial Candidate you used as the lead; " +
   "lead is the primary signal you led with (e.g., \"psi-streak\", \"dews-band-change\", \"ftq\", \"grade-transition\", \"supply-reversal\", \"blacklist-contrast\", \"macro-observation\", \"yield-anomaly\", \"liquidity-shift\"); " +
   "tone is the dominant tone (e.g., \"bemused\", \"foreboding\", \"clinical\", \"wistful\", \"darkly-amused\", \"urgent\"); " +
-  "coins are the 1-3 coin symbols you featured most prominently.\n\n" +
+  "coins are the 1-3 coin symbols you featured most prominently; usedCandidateIds are the candidate ids you relied on; suppressedCandidateIds are any candidate ids you deliberately ignored because they looked noisy.\n\n" +
   "The title is 2-6 words that capture the day's theme — punchy, catchy, like a newspaper column header. " +
   "The extended field (write this FIRST): 3-4 short paragraphs of editorial analysis, separated by \\n\\n. " +
   "The text field (write this AFTER extended): distill the single most compelling take from your extended analysis into a tweet-sized line. " +
@@ -91,7 +102,12 @@ export const SYSTEM_PROMPT =
 
 export function classifyRegime(data: DigestInputData): "CRISIS" | "TENSION" | "WATCHFUL" | "CALM" {
   const band = data.stabilityIndex?.band ?? "BEDROCK";
-  const activeDepegs = data.activeDepegCount;
+  const activeDepegImpact = data.topDepegs.reduce((sum, depeg) => {
+    const impact = depeg.impactScore ?? Math.abs(depeg.bps) * depeg.mcapUsd / 1_000_000_000;
+    const suppressedButMaterial = depeg.suppressReason && impact < 5_000;
+    return suppressedButMaterial ? sum : sum + impact;
+  }, 0);
+  const unsuppressedActiveDepegs = data.topDepegs.filter((depeg) => !depeg.suppressReason).length;
   const gaugeScore = data.mintBurnFlows?.gaugeScore ?? 0;
   const ftqActive = data.mintBurnFlows?.flightToQuality.active ?? false;
   const alertPlus = (data.dewsStress?.bandCounts.alert ?? 0)
@@ -100,16 +116,67 @@ export function classifyRegime(data: DigestInputData): "CRISIS" | "TENSION" | "W
   const alertPlusMcap = (data.dewsStress?.elevatedCoins ?? [])
     .reduce((sum, coin) => sum + coin.mcapUsd, 0);
 
-  if (band === "TREMOR" || band === "FRACTURE" || band === "CRISIS" || ftqActive || gaugeScore < -50) {
+  if (band === "TREMOR" || band === "FRACTURE" || band === "CRISIS" || ftqActive || gaugeScore < -50 || activeDepegImpact >= 50_000) {
     return "CRISIS";
   }
-  if (activeDepegs >= 2 || gaugeScore < -20 || alertPlus >= 3 || alertPlusMcap > 5_000_000_000) {
+  if (activeDepegImpact >= 1_000 || gaugeScore < -20 || alertPlusMcap > 1_000_000_000 || (alertPlus >= 3 && alertPlusMcap > 100_000_000)) {
     return "TENSION";
   }
-  if ((data.dewsStress?.bandChanges?.length ?? 0) > 0 || activeDepegs >= 1 || gaugeScore < -10) {
+  if ((data.dewsStress?.bandChanges?.length ?? 0) > 0 || unsuppressedActiveDepegs >= 1 || gaugeScore < -10) {
     return "WATCHFUL";
   }
   return "CALM";
+}
+
+function formatDateTime(ts: number): string {
+  return new Date(ts * 1000).toISOString().replace("T", " ").slice(0, 16) + " UTC";
+}
+
+function pushDataQualityLines(lines: string[], data: DigestInputData): void {
+  if (!data.dataQuality) return;
+
+  const quality = data.dataQuality;
+  lines.push("", "Data quality notes:");
+  if (quality.stablecoinsCacheAgeSec != null) {
+    lines.push(`  Stablecoins cache age: ${Math.round(quality.stablecoinsCacheAgeSec / 60)} minutes`);
+  }
+  if (quality.degradedSources && quality.degradedSources.length > 0) {
+    lines.push(`  Missing/degraded collectors: ${quality.degradedSources.join(", ")}`);
+    lines.push("  Do not infer calm from missing sections. Avoid claims about unavailable categories.");
+  } else {
+    lines.push("  No degraded collectors reported.");
+  }
+  lines.push(`  Blacklist window: ${quality.windows.blacklistActivity.label}, ${formatDateTime(quality.windows.blacklistActivity.start)} to ${formatDateTime(quality.windows.blacklistActivity.end)}`);
+  lines.push(`  Mint/burn window: ${quality.windows.mintBurnFlows.label}, ${formatDateTime(quality.windows.mintBurnFlows.start)} to ${formatDateTime(quality.windows.mintBurnFlows.end)}`);
+  lines.push(`  PSI source: ${quality.windows.psi.label}; sample=${quality.windows.psi.sampleAt ? formatDateTime(quality.windows.psi.sampleAt) : "n/a"}, daily=${quality.windows.psi.dailySnapshotAt ? formatDateTime(quality.windows.psi.dailySnapshotAt) : "n/a"}`);
+}
+
+function pushEditorialCandidateLines(lines: string[], data: DigestInputData): void {
+  const candidates = data.editorialCandidates ?? [];
+  if (candidates.length === 0) return;
+
+  const usable = candidates.filter((candidate) => !candidate.suppressReason).slice(0, 8);
+  const suppressed = candidates.filter((candidate) => candidate.suppressReason).slice(0, 5);
+
+  lines.push("", "Editorial Candidates (lead from these unless a higher candidate is suppressed):");
+  for (const candidate of usable) {
+    const symbols = candidate.symbols.length > 0 ? ` | coins=${candidate.symbols.join(",")}` : "";
+    lines.push(
+      `  ${candidate.id} | ${candidate.kind}/${candidate.novelty}${symbols} | impact=${candidate.impactScore} | confidence=${candidate.confidence} | artifactRisk=${candidate.artifactRisk}`,
+    );
+    lines.push(`    facts: ${candidate.headlineFacts.join("; ")}`);
+    lines.push(`    why: ${candidate.whyItMatters}`);
+  }
+
+  if (suppressed.length > 0) {
+    lines.push("Suppressed or noisy candidates (do NOT lead with these):");
+    for (const candidate of suppressed) {
+      lines.push(
+        `  ${candidate.id} | ${candidate.kind}/${candidate.novelty} | impact=${candidate.impactScore} | artifactRisk=${candidate.artifactRisk} | reason=${candidate.suppressReason}`,
+      );
+      lines.push(`    facts: ${candidate.headlineFacts.join("; ")}`);
+    }
+  }
 }
 
 export function buildUserPrompt(
@@ -119,17 +186,26 @@ export function buildUserPrompt(
   const regime = classifyRegime(data);
   const lines: string[] = [
     `Market regime: ${regime}`,
+  ];
+
+  pushDataQualityLines(lines, data);
+  pushEditorialCandidateLines(lines, data);
+
+  lines.push(
     "",
+    "Supporting evidence:",
     `Total stablecoin market cap: ${formatCurrency(data.totalMcapUsd)}`,
     `7-day market cap change: ${data.mcap7dDelta >= 0 ? "+" : ""}${formatCurrency(data.mcap7dDelta)} (${((data.mcap7dDelta / (data.totalMcapUsd - data.mcap7dDelta)) * 100).toFixed(2)}%)`,
     `Currently active depegs (ongoing, not yet resolved): ${data.activeDepegCount}`,
     `Depegs resolved in last 24h: ${data.resolvedDepegs?.length ?? 0}`,
-  ];
+  );
 
   if (data.topDepegs.length > 0) {
     lines.push("Active depegs by market impact (deviation × mcap):");
     for (const depeg of data.topDepegs) {
-      lines.push(`  ${depeg.symbol} | ${Math.abs(depeg.bps)} bps ${depeg.bps >= 0 ? "above" : "below"}-peg | ${formatCurrency(depeg.mcapUsd)} mcap`);
+      const age = depeg.ageHours != null ? ` | age ${depeg.ageHours}h` : "";
+      const suppression = depeg.suppressReason ? ` | suppress: ${depeg.suppressReason}` : "";
+      lines.push(`  ${depeg.symbol} | ${Math.abs(depeg.bps)} bps ${depeg.direction ?? (depeg.bps >= 0 ? "above" : "below")}-peg | ${formatCurrency(depeg.mcapUsd)} mcap | impact ${depeg.impactScore ?? "n/a"}${age}${suppression}`);
     }
   }
 
@@ -197,7 +273,7 @@ export function buildUserPrompt(
 
   if (data.blacklistActivity) {
     const { eventCount, totalAmountUsd, topEvents } = data.blacklistActivity;
-    lines.push("", `Blacklist activity (last 24h): ${eventCount} events, ${formatCurrency(totalAmountUsd)} affected`);
+    lines.push("", `Blacklist activity (rolling last 24h): ${eventCount} events, ${formatCurrency(totalAmountUsd)} affected`);
     for (const event of topEvents) {
       lines.push(`  ${event.symbol} on ${event.chain}: ${event.type} (${formatCurrency(event.amountUsd)})`);
     }

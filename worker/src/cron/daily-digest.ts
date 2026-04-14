@@ -91,6 +91,13 @@ export async function generateDailyDigest(
     maxTokens: 1400,
     signal,
     logPrefix: "daily-digest",
+    validationProfile: {
+      kind: "daily",
+      recentMeta: recentMeta.map((entry) => ({
+        meta: entry.meta as Record<string, unknown> | null,
+        title: entry.title,
+      })),
+    },
   });
   if (digestCopy.kind === "circuit-open") {
     throw new Error("Anthropic circuit open — skipping LLM call");
@@ -112,7 +119,9 @@ export async function generateDailyDigest(
     .all<{ cnt: number }>();
   const editionNumber = (countResult.results?.[0] as { cnt: number } | undefined)?.cnt ?? null;
 
-  const tweetStatus = await runDigestChannelDelivery({
+  const qualityGateStatus = digestCopy.hasBlockingQualityIssues ? "skipped: quality-gate" : null;
+
+  const tweetStatus = qualityGateStatus ?? await runDigestChannelDelivery({
     db,
     circuitSource: CIRCUIT_SOURCE.TWITTER_API,
     creds: twitterCreds,
@@ -124,7 +133,7 @@ export async function generateDailyDigest(
     },
   });
 
-  const telegramStatus = await runDigestChannelDelivery({
+  const telegramStatus = qualityGateStatus ?? await runDigestChannelDelivery({
     db,
     circuitSource: CIRCUIT_SOURCE.TELEGRAM_API,
     creds: telegramCreds,
@@ -179,10 +188,14 @@ export async function generateDailyDigest(
     },
   });
 
-  console.log(`[daily-digest] Generated and stored digest: "${digestCopy.digestTitle}" (${digestCopy.digestText.length} chars + ${digestCopy.digestExtended.length} extended), tweet: ${tweetStatus}, telegram: ${telegramStatus}`);
+  const qualityMetadata = digestCopy.qualityIssues.length > 0
+    ? `, quality: ${digestCopy.qualityIssues.map((issue) => `${issue.code}:${issue.severity}`).join("|")}`
+    : "";
+
+  console.log(`[daily-digest] Generated and stored digest: "${digestCopy.digestTitle}" (${digestCopy.digestText.length} chars + ${digestCopy.digestExtended.length} extended), tweet: ${tweetStatus}, telegram: ${telegramStatus}${qualityMetadata}`);
   return {
     itemCount: 1,
-    ...(degradedReasons.length > 0 ? { status: "degraded" as const } : {}),
-    metadata: `${digestCopy.digestText.length} chars, tweet: ${tweetStatus}, telegram: ${telegramStatus}${degradedReasons.length > 0 ? `, degraded: ${degradedReasons.join("|")}` : ""}`,
+    ...(degradedReasons.length > 0 || digestCopy.qualityIssues.length > 0 ? { status: "degraded" as const } : {}),
+    metadata: `${digestCopy.digestText.length} chars, tweet: ${tweetStatus}, telegram: ${telegramStatus}${degradedReasons.length > 0 ? `, degraded: ${degradedReasons.join("|")}` : ""}${qualityMetadata}`,
   };
 }
