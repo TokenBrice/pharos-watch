@@ -19,6 +19,40 @@ import { fetchWithRetry } from "../../lib/fetch-retry";
 import { postDigestToTelegram } from "../../lib/telegram";
 import { shouldAttemptFetch } from "../../lib/circuit-breaker";
 
+const VALID_WEEKLY_EXTENDED = [
+  "PSI opened the trailing edition window at 90 and closed at 86, never leaving BEDROCK but losing four points across five daily notes. USDT stayed near 1.00 in every fixture row, which makes the week's story less about a broken peg and more about calm data refusing to become a headline. The recap should notice the drift without inventing a crisis.",
+  "The active depeg observations rose from 0 to 4 as the week progressed, but the recap input separates those observations from unique signals. That distinction matters because one persistent condition should not masquerade as five independent events just because it survived five daily snapshots. It is burden, not necessarily breadth.",
+  "Blacklist activity accumulated 10 fixture events while grade transitions appeared on alternating days, giving the model enough secondary texture without overwhelming the market-cap arc. The Bank Run Gauge climbed from 10 to 14, a mild range that supports watchfulness rather than panic. Weekly structure should tie those pieces together instead of stapling them into a list.",
+  "The weekly note should therefore synthesize the slow drift: PSI softened, enforcement kept tapping the glass, and supply rose by $4M from the first daily edition to the last. That is a complete recap, but it is still restrained enough for a market that mostly held together. A reader should leave with a coherent week, not seven smaller mornings, and should understand which signals were excluded because they were too small or too stale for a serious lead in public without drama today.",
+].join("\n\n");
+
+function weeklyClaudeResponse(overrides: Partial<{
+  title: string;
+  text: string;
+  extended: string;
+  meta: Record<string, unknown>;
+}> = {}): Response {
+  return new Response(JSON.stringify({
+    content: [
+      {
+        type: "text",
+        text: JSON.stringify({
+          title: overrides.title ?? "Weekly Calm",
+          text: overrides.text ?? "PSI softened by 4 points while USDT stayed near peg and blacklist activity kept tapping the glass.",
+          extended: overrides.extended ?? VALID_WEEKLY_EXTENDED,
+          meta: overrides.meta ?? {
+            leadSignalId: "weekly:psi",
+            lead: "psi-regime",
+            tone: "dry",
+            coins: ["USDT", "USDC"],
+            usedCandidateIds: ["weekly:psi"],
+          },
+        }),
+      },
+    ],
+  }), { status: 200 });
+}
+
 function buildDailyRows() {
   const baseTs = Math.floor(Date.UTC(2026, 2, 23, 12, 0, 0) / 1000);
   return Array.from({ length: 5 }).map((_, index) => ({
@@ -55,6 +89,10 @@ function makeTables(overrides: Partial<{
       first: overrides.existingWeekly ?? null,
     },
     {
+      match: "SELECT digest_title, digest_text, digest_meta",
+      rows: [],
+    },
+    {
       match: "WHERE generated_at >= ? AND (digest_meta IS NULL OR json_extract(digest_meta, '$.type') IS NULL OR json_extract(digest_meta, '$.type') != 'weekly')",
       rows: overrides.dailyRows ?? buildDailyRows(),
     },
@@ -79,21 +117,7 @@ describe("generateWeeklyRecap", () => {
 
   it("stores a weekly digest and posts to Telegram when generation succeeds", async () => {
     const db = mockD1(makeTables(), { requireMatch: true });
-    vi.mocked(fetchWithRetry).mockResolvedValue(
-      new Response(JSON.stringify({
-        content: [
-          {
-            type: "text",
-            text: JSON.stringify({
-              title: "Weekly Calm",
-              text: "USDT and USDC ended the week near peg.",
-              extended: "USDT held 1.00 for most of the week.\n\nUSDC matched the tone into Friday.",
-              meta: { lead: "USDT", tone: "dry", coins: ["USDT", "USDC"] },
-            }),
-          },
-        ],
-      }), { status: 200 }),
-    );
+    vi.mocked(fetchWithRetry).mockImplementation(async () => weeklyClaudeResponse());
 
     const result = await generateWeeklyRecap(
       db,
@@ -107,28 +131,31 @@ describe("generateWeeklyRecap", () => {
     expect(postDigestToTelegram).toHaveBeenCalledTimes(1);
     expect(postDigestToTelegram).toHaveBeenCalledWith(
       "Weekly Recap: Weekly Calm",
-      "USDT held 1.00 for most of the week.\n\nUSDC matched the tone into Friday.",
-      "2026-03-30",
+      VALID_WEEKLY_EXTENDED,
+      "2026-03-30-weekly",
       { botToken: "bot", chatId: "chat" },
     );
 
     const insert = db.getHistory().find((entry) => entry.sql.includes("INSERT INTO daily_digest"));
     expect(insert).toBeTruthy();
-    expect(insert?.binds[1]).toBe("USDT and USDC ended the week near peg.");
+    expect(insert?.binds[1]).toBe("PSI softened by 4 points while USDT stayed near peg and blacklist activity kept tapping the glass.");
     expect(insert?.binds[2]).toBe("Weekly Calm");
     expect(JSON.parse(String(insert?.binds[5]))).toEqual({
-      lead: "USDT",
+      leadSignalId: "weekly:psi",
+      lead: "psi-regime",
       tone: "dry",
       coins: ["USDT", "USDC"],
+      usedCandidateIds: ["weekly:psi"],
       type: "weekly",
+      periodType: "trailing-daily-editions",
       weekStart: "2026-03-23",
       weekEnd: "2026-03-27",
     });
   });
 
-  it("marks the run degraded and persists fallback metadata when the LLM returns non-JSON", async () => {
+  it("repairs non-JSON weekly output with a corrective retry", async () => {
     const db = mockD1(makeTables(), { requireMatch: true });
-    vi.mocked(fetchWithRetry).mockResolvedValue(
+    vi.mocked(fetchWithRetry).mockResolvedValueOnce(
       new Response(JSON.stringify({
         content: [
           {
@@ -138,23 +165,18 @@ describe("generateWeeklyRecap", () => {
         ],
       }), { status: 200 }),
     );
+    vi.mocked(fetchWithRetry).mockImplementation(async () => weeklyClaudeResponse());
 
     const result = await generateWeeklyRecap(db, "anthropic-key", null);
 
     expect(result.itemCount).toBe(1);
-    expect(result.status).toBe("degraded");
-    expect(result.metadata).toContain("degraded: raw-text-fallback");
+    expect(result.status).toBeUndefined();
+    expect(fetchWithRetry).toHaveBeenCalledTimes(2);
 
     const insert = db.getHistory().find((entry) => entry.sql.includes("INSERT INTO daily_digest"));
     expect(insert).toBeTruthy();
-    expect(insert?.binds[1]).toBe("USDT stayed at 1.00 all week, blacklist pressure faded, and weekly flows stayed calm.");
-    expect(insert?.binds[2]).toBeNull();
-    expect(JSON.parse(String(insert?.binds[5]))).toEqual({
-      type: "weekly",
-      weekStart: "2026-03-23",
-      weekEnd: "2026-03-27",
-      degraded: "raw-text-fallback",
-    });
+    expect(insert?.binds[1]).toBe("PSI softened by 4 points while USDT stayed near peg and blacklist activity kept tapping the glass.");
+    expect(insert?.binds[2]).toBe("Weekly Calm");
   });
 
   it("prints N/A for weekly market-cap change when the week starts from zero", async () => {
@@ -168,21 +190,7 @@ describe("generateWeeklyRecap", () => {
     };
 
     const db = mockD1(makeTables({ dailyRows: zeroStartRows }), { requireMatch: true });
-    vi.mocked(fetchWithRetry).mockResolvedValue(
-      new Response(JSON.stringify({
-        content: [
-          {
-            type: "text",
-            text: JSON.stringify({
-              title: "Zero Base Week",
-              text: "USDT and USDC still closed the week above the zero-start baseline.",
-              extended: "USDT and USDC still closed the week above the zero-start baseline.",
-              meta: { lead: "USDT", tone: "dry", coins: ["USDT", "USDC"] },
-            }),
-          },
-        ],
-      }), { status: 200 }),
-    );
+    vi.mocked(fetchWithRetry).mockImplementation(async () => weeklyClaudeResponse({ title: "Zero Base Week" }));
 
     await generateWeeklyRecap(db, "anthropic-key", null);
 

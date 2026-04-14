@@ -83,4 +83,56 @@ describe("handleDigestSnapshot", () => {
     // Should extract first daily (start-of-week) as prevInputData
     expect(body.prevInputData?.totalMcapUsd).toBe(90e9);
   });
+
+  it("uses the requested digest type when daily and weekly rows share a date", async () => {
+    const dayStart = Math.floor(new Date(`${todayStr}T00:00:00Z`).getTime() / 1000);
+    const dailyRow = {
+      generated_at: dayStart + 3600,
+      input_data: JSON.stringify({ totalMcapUsd: 100e9, mcap7dDelta: 1 }),
+    };
+    const weeklyRow = {
+      generated_at: dayStart + 7200,
+      input_data: JSON.stringify({
+        dailyDigests: [
+          { inputData: { totalMcapUsd: 90e9, mcap7dDelta: 1 } },
+          { inputData: { totalMcapUsd: 110e9, mcap7dDelta: 2 } },
+        ],
+      }),
+    };
+    const db = mockD1([
+      { match: "json_extract(digest_meta, '$.type') = 'weekly'", rows: [], first: weeklyRow },
+      { match: "digest_meta IS NULL OR json_extract", rows: [], first: dailyRow },
+      { match: "depeg_events", rows: [] },
+      { match: "blacklist_events", rows: [] },
+    ]);
+
+    const dailyRes = await handleDigestSnapshot(db, new URL(`https://x/api/digest-snapshot?date=${todayStr}`));
+    const weeklyRes = await handleDigestSnapshot(db, new URL(`https://x/api/digest-snapshot?date=${todayStr}-weekly`));
+
+    expect(dailyRes.status).toBe(200);
+    expect(weeklyRes.status).toBe(200);
+    const dailyBody = await dailyRes.json() as { inputData: { totalMcapUsd: number } | null };
+    const weeklyBody = await weeklyRes.json() as { inputData: { totalMcapUsd: number } | null };
+    expect(dailyBody.inputData?.totalMcapUsd).toBe(100e9);
+    expect(weeklyBody.inputData?.totalMcapUsd).toBe(110e9);
+  });
+
+  it("orders snapshot depeg events by absolute deviation", async () => {
+    const dayStart = Math.floor(new Date(`${todayStr}T00:00:00Z`).getTime() / 1000);
+    const db = mockD1([
+      {
+        match: "daily_digest",
+        rows: [{
+          generated_at: dayStart + 3600,
+          input_data: JSON.stringify({ totalMcapUsd: 100e9, mcap7dDelta: 1 }),
+        }],
+      },
+      { match: "depeg_events", rows: [] },
+      { match: "blacklist_events", rows: [] },
+    ]);
+
+    await handleDigestSnapshot(db, new URL(`https://x/api/digest-snapshot?date=${todayStr}`));
+
+    expect(db.getHistory().some((entry) => entry.sql.includes("ORDER BY ABS(peak_deviation_bps) DESC"))).toBe(true);
+  });
 });

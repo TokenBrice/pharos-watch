@@ -1,5 +1,6 @@
 import { withErrorHandler, safeJsonParse, errorResponse, jsonResponse } from "../lib/api-utils";
 import type { DigestInputData } from "@shared/types/digest";
+import { NON_WEEKLY_DIGEST_SQL_FILTER } from "../cron/daily-digest/shared";
 
 interface DigestRow {
   generated_at: number;
@@ -33,6 +34,7 @@ export const handleDigestSnapshot = withErrorHandler("digest-snapshot", async (
   url: URL,
 ): Promise<Response> => {
   const date = url.searchParams.get("date");
+  const isWeekly = date?.endsWith("-weekly") ?? false;
   const dateForParsing = date?.replace(/-weekly$/, "");
   const match = dateForParsing?.match(DATE_RE);
   if (!match) {
@@ -52,31 +54,33 @@ export const handleDigestSnapshot = withErrorHandler("digest-snapshot", async (
   const dayStart = Math.floor(parsed.getTime() / 1000);
   const dayEnd = dayStart + 86_400;
 
-  // Find the digest row for this date + the previous one for deltas.
-  // Rows where generated_at < dayEnd, ordered DESC — the first with generated_at >= dayStart
-  // is the target; the next is the previous digest.
-  const digestResult = await db
+  const targetFilter = isWeekly
+    ? "json_extract(digest_meta, '$.type') = 'weekly'"
+    : NON_WEEKLY_DIGEST_SQL_FILTER;
+
+  const targetRow = await db
     .prepare(
       `SELECT generated_at, input_data FROM daily_digest
-       WHERE generated_at < ? ORDER BY generated_at DESC LIMIT 2`,
+       WHERE generated_at >= ? AND generated_at < ? AND (${targetFilter})
+       ORDER BY generated_at DESC LIMIT 1`,
     )
-    .bind(dayEnd)
-    .all<DigestRow>();
-
-  const digestRows = digestResult.results ?? [];
-
-  // Identify target (generated on that date) and previous
-  let targetRow: DigestRow | null = null;
-  let prevRow: DigestRow | null = null;
-
-  if (digestRows.length > 0 && digestRows[0].generated_at >= dayStart) {
-    targetRow = digestRows[0];
-    prevRow = digestRows.length > 1 ? digestRows[1] : null;
-  }
+    .bind(dayStart, dayEnd)
+    .first<DigestRow>();
 
   if (!targetRow) {
     return errorResponse(404, "No digest found for this date");
   }
+
+  const prevRow = isWeekly
+    ? null
+    : await db
+      .prepare(
+        `SELECT generated_at, input_data FROM daily_digest
+         WHERE generated_at < ? AND (${NON_WEEKLY_DIGEST_SQL_FILTER})
+         ORDER BY generated_at DESC LIMIT 1`,
+      )
+      .bind(dayStart)
+      .first<DigestRow>();
 
   // Weekly recaps store WeeklyInputData (with a dailyDigests[] array) instead of
   // DigestInputData.  Detect that shape and extract the last daily's inputData as
@@ -107,7 +111,7 @@ export const handleDigestSnapshot = withErrorHandler("digest-snapshot", async (
       `SELECT stablecoin_id, symbol, direction, peak_deviation_bps, started_at, ended_at
        FROM depeg_events
        WHERE started_at < ? AND (ended_at IS NULL OR ended_at >= ?)
-       ORDER BY peak_deviation_bps DESC
+       ORDER BY ABS(peak_deviation_bps) DESC
        LIMIT 20`,
     )
     .bind(dayEnd, dayStart)
