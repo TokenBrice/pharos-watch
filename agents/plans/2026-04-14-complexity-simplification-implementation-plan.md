@@ -2,7 +2,7 @@
 
 Date: 2026-04-14
 
-Status: Phase 1 implemented; Phases 2-3 remain planned follow-up
+Status: Phases 1-3 implemented
 
 Inputs:
 
@@ -507,4 +507,55 @@ Results:
 - worker typecheck passed.
 - diff whitespace check passed.
 
-Phases 2 and 3 were not implemented in this tranche.
+Phases 2 and 3 were implemented after the user explicitly requested autonomous continuation.
+
+## Phase 2 Execution Note
+
+Implemented:
+
+- Added a richer internal publication decision path in `worker/src/lib/price-publish-policy.ts` while keeping public wrapper return shape unchanged.
+- Added `applyAcceptedPriceCandidate()` in `worker/src/cron/sync-stablecoins/pricing.ts`.
+- Routed accepted primary, protocol override, native-implied, and cached fallback price applications through the centralized finalizer.
+- Added/strengthened metadata expectations in pricing tests.
+
+Verification run:
+
+```bash
+npm test -- worker/src/lib/__tests__/price-validation.test.ts worker/src/lib/__tests__/price-publish-policy.test.ts worker/src/lib/__tests__/price-consensus.test.ts worker/src/cron/__tests__/enrich-prices.test.ts worker/src/cron/__tests__/sync-stablecoins-post-enrichment.test.ts worker/src/cron/__tests__/sync-stablecoins.test.ts
+npm run typecheck
+npm run lint
+git diff --check
+```
+
+Results:
+
+- focused pricing suite passed: 6 files, 201 tests.
+- root typecheck passed.
+- lint passed.
+- diff whitespace check passed.
+
+## Phase 3 Execution Note
+
+Implemented:
+
+- Split `syncDexLiquidity()` in `worker/src/cron/dex-liquidity/orchestrator.ts` into private source, pool, scoring, persistence, and final-result phases.
+- Kept matching, scoring, DEX API projection, and persistence helper internals unchanged.
+- Preserved source fetch order, guardrail checks, persistence ordering, challenger publication, and cron metadata shape.
+
+Verification run:
+
+```bash
+npm test -- worker/src/cron/__tests__/sync-dex-liquidity.test.ts worker/src/cron/dex-liquidity/__tests__/orchestrator-phases.test.ts worker/src/cron/dex-liquidity/__tests__/orchestrator-metadata.test.ts worker/src/cron/__tests__/dex-liquidity-process-pools.test.ts worker/src/cron/__tests__/dex-liquidity-scoring.test.ts worker/src/cron/__tests__/dex-liquidity-series-stability.test.ts worker/src/cron/__tests__/dex-api-common.test.ts worker/src/api/__tests__/dex-liquidity.test.ts
+npm run typecheck
+npm run lint
+cd worker && npx tsc --noEmit
+git diff --check
+```
+
+Results:
+
+- focused DEX suite passed: 8 files, 92 tests.
+- root typecheck passed.
+- lint passed.
+- worker typecheck passed.
+- diff whitespace check passed.
