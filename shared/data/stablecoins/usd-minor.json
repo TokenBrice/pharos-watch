@@ -1496,18 +1496,18 @@
       "pegCurrency": "USD",
       "governance": "centralized",
       "yieldBearing": false,
-      "rwa": false,
+      "rwa": true,
       "navToken": false
     },
-    "collateral": "ION.au tokenized gold (issued by I-ON Digital Corp) deposited as collateral into RAAC's RWf(x) overcollateralized lending protocol",
-    "pegMechanism": "Overcollateralized CDP: users deposit ION.au (tokenized gold) as collateral and mint pmUSD; Chainlink proof-of-reserves feeds attest to gold holdings in real time; Instruxi provides third-party reserve attestation",
+    "collateral": "TokenBlender (TB) base token held in RAAC's RWf(x) Treasury, backed by I-ON Digital's ION.au gold-backed digital security and in-situ gold claims",
+    "pegMechanism": "RWf(x), an f(x) protocol fork, mints pmUSD as the fToken against TB / ION.au-linked collateral; xPM absorbs collateral-price volatility while pmUSD is configured for stable fNAV; minting and system operations are manager-only through authorized silo multisigs",
     "llamaId": "332",
     "detailProvider": "defillama",
     "geckoId": "precious-metals-usd",
     "proofOfReserves": {
       "type": "real-time",
       "url": "https://pmusd.raac.io/",
-      "provider": "Chainlink / Instruxi"
+      "provider": "RAAC / Instruxi dashboard"
     },
     "links": [
       {
@@ -1533,32 +1533,11 @@
     "custodyModel": "institutional-unregulated",
     "reserves": [
       {
-        "name": "ION.au tokenized gold (I-ON Digital, Chainlink PoR attested)",
+        "name": "TokenBlender (TB) base token backed by ION.au / in-situ gold claims",
         "pct": 100,
-        "risk": "medium"
+        "risk": "high"
       }
-    ],
-    "liveReservesConfig": {
-      "adapter": "single-asset",
-      "version": 1,
-      "semantics": "single-asset",
-      "breakerScope": "pmusd-precious-metals",
-      "display": {
-        "url": "https://pmusd.raac.io/",
-        "label": "RAAC pmUSD"
-      },
-      "inputs": {
-        "primary": {
-          "kind": "onchain-evm",
-          "chain": "ethereum",
-          "rpcMode": "public-rpc"
-        }
-      },
-      "params": {
-        "label": "ION.au tokenized gold",
-        "risk": "medium"
-      }
-    }
+    ]
   },
   {
     "id": "usdz-anzen",

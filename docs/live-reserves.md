@@ -9,7 +9,7 @@ Dedicated documentation for the live reserve-composition subsystem that powers `
 - **Cron:** `sync-live-reserves` (`worker/src/cron/sync-live-reserves.ts`)
 - **Schedule:** `11 * * * *` (hourly at :11 UTC)
 - **Shared hourly lane:** after live reserve sync, the same slot runs redemption backstop sync, Kinesis supply sync, and collateral-drift checks / alerts (`worker/src/handlers/scheduled/hourly-live-reserves.ts`)
-- **Current coverage:** 136 live-enabled stablecoins across 35 registered adapters (32 currently configured in stablecoin metadata)
+- **Current coverage:** 135 live-enabled stablecoins across 35 registered adapters (32 currently configured in stablecoin metadata)
 - **Storage:** `reserve_composition`, `reserve_composition_history`, `reserve_sync_state`, `reserve_sync_attempt_history`
 - **API:** `GET /api/stablecoin-reserves/:id`
 - **Frontend consumers:** `useStablecoinReserves()`, stablecoin detail view model, `/status` reserve-sync health
@@ -359,7 +359,7 @@ This table reflects the adapter keys currently configured in `shared/data/stable
 | `re-metrics`               | `http-html`                 | `collateral-mix`                     | 1                |
 | `reservoir`                | `http-json`                 | `protocol-reserve`                   | 1                |
 | `sgforge-coinvertible`     | `http-html`                 | `attestation-mix`                    | 1                |
-| `single-asset`             | `http-json` / `onchain-evm` | `single-asset`                       | 47               |
+| `single-asset`             | `http-json` / `onchain-evm` | `single-asset`                       | 46               |
 | `sky-makercore`            | `http-json`                 | `collateral-mix`                     | 2                |
 | `usdai-proof-of-reserves`  | `http-json`                 | `collateral-mix`                     | 1                |
 | `usdd-data-platform`       | `http-json`                 | `collateral-mix`                     | 1                |
