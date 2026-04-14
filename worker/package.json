@@ -10,13 +10,13 @@
     "deploy": "wrangler deploy"
   },
   "devDependencies": {
-    "@cloudflare/workers-types": "4.20260409.1",
+    "@cloudflare/workers-types": "4.20260414.1",
     "typescript": "~5.9.0",
-    "wrangler": "^4.81.1"
+    "wrangler": "4.82.2"
   },
   "dependencies": {
     "@cf-wasm/resvg": "^0.3.3",
     "satori": "^0.26.0",
-    "viem": "^2.47.12"
+    "viem": "2.47.17"
   }
 }
