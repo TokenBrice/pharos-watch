@@ -85,7 +85,7 @@ function resolvePegInput(
   };
 }
 
-export function computeReportCard(input: ComputeCardInput): ReportCard {
+function computeReportCard(input: ComputeCardInput): ReportCard {
   const {
     meta,
     pegDataById,
