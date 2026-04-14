@@ -59,29 +59,78 @@ function extractExports(file) {
   if (!/\.(ts|tsx|js|mjs)$/.test(file)) return [];
   const content = readFileSync(file, "utf8");
   const exports = new Set();
-  const patterns = [
-    /export\s+(?:async\s+)?(?:function|class|interface|type|enum)\s+([A-Za-z_$][\w$]*)/g,
-    /export\s+const\s+([A-Za-z_$][\w$]*)/g,
-    /export\s+default\s+(?:async\s+)?function\s*([A-Za-z_$][\w$]*)?/g,
-  ];
 
-  for (const pattern of patterns) {
-    let match;
-    while ((match = pattern.exec(content)) != null) {
-      exports.add(match[1] ? `default:${match[1]}` : "default");
+  for (const line of content.split("\n")) {
+    const trimmed = line.trimStart();
+    if (trimmed.startsWith("export default async function")) {
+      addDefaultExport(exports, trimmed.slice("export default async function".length));
+      continue;
     }
-  }
+    if (trimmed.startsWith("export default function")) {
+      addDefaultExport(exports, trimmed.slice("export default function".length));
+      continue;
+    }
+    if (trimmed.startsWith("export async function ")) {
+      addNamedExport(exports, trimmed.slice("export async function ".length));
+      continue;
+    }
 
-  const namedExportPattern = /export\s*\{([^}]+)\}/g;
-  let named;
-  while ((named = namedExportPattern.exec(content)) != null) {
-    for (const part of named[1].split(",")) {
-      const name = part.trim().split(/\s+as\s+/)[0]?.trim();
-      if (name && /^[A-Za-z_$][\w$]*$/.test(name)) exports.add(name);
+    for (const prefix of ["export function ", "export class ", "export interface ", "export type ", "export enum ", "export const "]) {
+      if (trimmed.startsWith(prefix)) {
+        addNamedExport(exports, trimmed.slice(prefix.length));
+        break;
+      }
+    }
+
+    if (trimmed.startsWith("export {")) {
+      const end = trimmed.indexOf("}");
+      if (end > "export {".length) {
+        for (const part of trimmed.slice("export {".length, end).split(",")) {
+          const name = part.trim().split(" as ")[0]?.trim();
+          if (isIdentifier(name)) exports.add(name);
+        }
+      }
     }
   }
 
   return [...exports].sort().slice(0, 6);
+}
+
+function addDefaultExport(exports, rest) {
+  const name = readIdentifier(rest.trimStart());
+  exports.add(name ? `default:${name}` : "default");
+}
+
+function addNamedExport(exports, rest) {
+  const name = readIdentifier(rest.trimStart());
+  if (name) exports.add(name);
+}
+
+function readIdentifier(text) {
+  let name = "";
+  for (const char of text) {
+    if (name.length === 0) {
+      if (!isIdentifierStart(char)) return "";
+      name += char;
+      continue;
+    }
+    if (!isIdentifierChar(char)) break;
+    name += char;
+  }
+  return name;
+}
+
+function isIdentifier(value) {
+  if (!value) return false;
+  return readIdentifier(value) === value;
+}
+
+function isIdentifierStart(char) {
+  return (char >= "A" && char <= "Z") || (char >= "a" && char <= "z") || char === "_" || char === "$";
+}
+
+function isIdentifierChar(char) {
+  return isIdentifierStart(char) || (char >= "0" && char <= "9");
 }
 
 function summarizeJson(file) {

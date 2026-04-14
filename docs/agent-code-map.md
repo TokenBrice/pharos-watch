@@ -7,313 +7,313 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 ## Frontend routes
 
 - `src/app/about/api/error.tsx`
-- `src/app/about/api/page.tsx` - route /about/api; default:AboutApiPage, default:metadata
+- `src/app/about/api/page.tsx` - route /about/api; default:AboutApiPage, metadata
 - `src/app/about/error.tsx`
-- `src/app/about/page.tsx` - route /about; default:AboutPage, default:metadata
+- `src/app/about/page.tsx` - route /about; default:AboutPage, metadata
 - `src/app/admin/client.tsx` - default:StatusClient
 - `src/app/admin/error.tsx`
-- `src/app/admin/page.tsx` - route /admin; default:AdminPage, default:metadata
+- `src/app/admin/page.tsx` - route /admin; default:AdminPage, metadata
 - `src/app/blacklist/error.tsx`
-- `src/app/blacklist/layout.tsx` - default:BlacklistLayout, default:metadata
+- `src/app/blacklist/layout.tsx` - default:BlacklistLayout, metadata
 - `src/app/blacklist/page.tsx` - route /blacklist; default:BlacklistPage
 - `src/app/cemetery/error.tsx`
-- `src/app/cemetery/page.tsx` - route /cemetery; default:CemeteryPage, default:metadata
-- `src/app/chains/[chain]/client.tsx` - default:ChainProfileClient
-- `src/app/chains/[chain]/page.tsx` - route /chains/[chain]; default:ChainProfilePage, default:generateMetadata, default:generateStaticParams
-- `src/app/chains/client.tsx` - default:ChainsLeaderboardClient
-- `src/app/chains/page.tsx` - route /chains; default:ChainsPage, default:metadata
-- `src/app/changelog/page.tsx` - route /changelog; default:ChangelogPage, default:metadata
-- `src/app/compare/[slug]/page.tsx` - route /compare/[slug]; default:StaticComparisonPage, default:generateMetadata, default:generateStaticParams
-- `src/app/compare/client.tsx` - default:CompareClient
+- `src/app/cemetery/page.tsx` - route /cemetery; default:CemeteryPage, metadata
+- `src/app/chains/[chain]/client.tsx` - ChainProfileClient
+- `src/app/chains/[chain]/page.tsx` - route /chains/[chain]; default:ChainProfilePage, generateMetadata, generateStaticParams
+- `src/app/chains/client.tsx` - ChainsLeaderboardClient
+- `src/app/chains/page.tsx` - route /chains; default:ChainsPage, metadata
+- `src/app/changelog/page.tsx` - route /changelog; default:ChangelogPage, metadata
+- `src/app/compare/[slug]/page.tsx` - route /compare/[slug]; default:StaticComparisonPage, generateMetadata, generateStaticParams
+- `src/app/compare/client.tsx` - CompareClient
 - `src/app/compare/error.tsx`
-- `src/app/compare/page.tsx` - route /compare; default:metadata
-- `src/app/depeg/client.tsx` - default:DepegClient
+- `src/app/compare/page.tsx` - route /compare; metadata
+- `src/app/depeg/client.tsx` - DepegClient
 - `src/app/depeg/error.tsx`
-- `src/app/depeg/page.tsx` - route /depeg; default:metadata
-- `src/app/dependency-map/client.tsx` - default:DependencyMapClient
+- `src/app/depeg/page.tsx` - route /depeg; metadata
+- `src/app/dependency-map/client.tsx` - DependencyMapClient
 - `src/app/dependency-map/error.tsx`
-- `src/app/dependency-map/page.tsx` - route /dependency-map; default:metadata
-- `src/app/digest/[date]/page.tsx` - route /digest/[date]; default:DigestDetailPage, default:generateMetadata, default:generateStaticParams
-- `src/app/digest/page.tsx` - route /digest; default:DigestArchivePage, default:metadata
+- `src/app/dependency-map/page.tsx` - route /dependency-map; metadata
+- `src/app/digest/[date]/page.tsx` - route /digest/[date]; default:DigestDetailPage, generateMetadata, generateStaticParams
+- `src/app/digest/page.tsx` - route /digest; default:DigestArchivePage, metadata
 - `src/app/error.tsx` - default:Error
 - `src/app/flows/error.tsx`
-- `src/app/flows/layout.tsx` - default:FlowsLayout, default:metadata
+- `src/app/flows/layout.tsx` - default:FlowsLayout, metadata
 - `src/app/flows/page.tsx` - route /flows; default:FlowsPage
-- `src/app/layout.tsx` - default:RootLayout, default:metadata, default:viewport
-- `src/app/liquidity/client.tsx` - default:LiquidityClient
+- `src/app/layout.tsx` - default:RootLayout, metadata, viewport
+- `src/app/liquidity/client.tsx` - LiquidityClient
 - `src/app/liquidity/error.tsx`
-- `src/app/liquidity/page.tsx` - route /liquidity; default:metadata
-- `src/app/methodology/blacklist-tracker-changelog/page.tsx` - route /methodology/blacklist-tracker-changelog; default:metadata
-- `src/app/methodology/chain-health-changelog/page.tsx` - route /methodology/chain-health-changelog; default:metadata
-- `src/app/methodology/depeg-changelog/page.tsx` - route /methodology/depeg-changelog; default:metadata
+- `src/app/liquidity/page.tsx` - route /liquidity; metadata
+- `src/app/methodology/blacklist-tracker-changelog/page.tsx` - route /methodology/blacklist-tracker-changelog; metadata
+- `src/app/methodology/chain-health-changelog/page.tsx` - route /methodology/chain-health-changelog; metadata
+- `src/app/methodology/depeg-changelog/page.tsx` - route /methodology/depeg-changelog; metadata
 - `src/app/methodology/error.tsx`
-- `src/app/methodology/liquidity-score-changelog/page.tsx` - route /methodology/liquidity-score-changelog; default:metadata
-- `src/app/methodology/mint-burn-flow-changelog/page.tsx` - route /methodology/mint-burn-flow-changelog; default:metadata
-- `src/app/methodology/page.tsx` - route /methodology; default:MethodologyPage, default:metadata
-- `src/app/methodology/pricing-pipeline-changelog/page.tsx` - route /methodology/pricing-pipeline-changelog; default:metadata
-- `src/app/methodology/scoring-changelog/page.tsx` - route /methodology/scoring-changelog; default:metadata
-- `src/app/methodology/stability-index-changelog/page.tsx` - route /methodology/stability-index-changelog; default:metadata
-- `src/app/methodology/yield-changelog/page.tsx` - route /methodology/yield-changelog; default:metadata
+- `src/app/methodology/liquidity-score-changelog/page.tsx` - route /methodology/liquidity-score-changelog; metadata
+- `src/app/methodology/mint-burn-flow-changelog/page.tsx` - route /methodology/mint-burn-flow-changelog; metadata
+- `src/app/methodology/page.tsx` - route /methodology; default:MethodologyPage, metadata
+- `src/app/methodology/pricing-pipeline-changelog/page.tsx` - route /methodology/pricing-pipeline-changelog; metadata
+- `src/app/methodology/scoring-changelog/page.tsx` - route /methodology/scoring-changelog; metadata
+- `src/app/methodology/stability-index-changelog/page.tsx` - route /methodology/stability-index-changelog; metadata
+- `src/app/methodology/yield-changelog/page.tsx` - route /methodology/yield-changelog; metadata
 - `src/app/not-found.tsx` - default:NotFound
-- `src/app/page.tsx` - route /; default:HomePage, default:metadata
-- `src/app/portfolio/client.tsx` - default:PortfolioClient
+- `src/app/page.tsx` - route /; default:HomePage, metadata
+- `src/app/portfolio/client.tsx` - PortfolioClient
 - `src/app/portfolio/error.tsx`
-- `src/app/portfolio/page.tsx` - route /portfolio; default:metadata
-- `src/app/privacy/page.tsx` - route /privacy; default:PrivacyPage, default:metadata
-- `src/app/robots.ts` - default:dynamic, default:robots
-- `src/app/safety-scores/client.tsx` - default:ReportCardsClient
+- `src/app/portfolio/page.tsx` - route /portfolio; metadata
+- `src/app/privacy/page.tsx` - route /privacy; default:PrivacyPage, metadata
+- `src/app/robots.ts` - default:robots, dynamic
+- `src/app/safety-scores/client.tsx` - ReportCardsClient
 - `src/app/safety-scores/error.tsx`
-- `src/app/safety-scores/page.tsx` - route /safety-scores; default:metadata
-- `src/app/sitemap.ts` - default:dynamic, default:sitemap
-- `src/app/stability-index/client.tsx` - default:StabilityIndexClient
+- `src/app/safety-scores/page.tsx` - route /safety-scores; metadata
+- `src/app/sitemap.ts` - default:sitemap, dynamic
+- `src/app/stability-index/client.tsx` - StabilityIndexClient
 - `src/app/stability-index/error.tsx`
-- `src/app/stability-index/page.tsx` - route /stability-index; default:metadata
+- `src/app/stability-index/page.tsx` - route /stability-index; metadata
 - `src/app/stablecoin/[id]/client.tsx` - default:StablecoinDetailClient
 - `src/app/stablecoin/[id]/error.tsx`
-- `src/app/stablecoin/[id]/page.tsx` - route /stablecoin/[id]; default:StablecoinDetailPage, default:generateMetadata, default:generateStaticParams
-- `src/app/stablecoins/[peg]/client.tsx` - default:PegLandingClient
+- `src/app/stablecoin/[id]/page.tsx` - route /stablecoin/[id]; default:StablecoinDetailPage, generateMetadata, generateStaticParams
+- `src/app/stablecoins/[peg]/client.tsx` - PegLandingClient
 - `src/app/stablecoins/[peg]/error.tsx`
-- `src/app/stablecoins/[peg]/page.tsx` - route /stablecoins/[peg]; default:PegLandingPage, default:generateMetadata, default:generateStaticParams
-- `src/app/stablecoins/backing/[backing]/page.tsx` - route /stablecoins/backing/[backing]; default:BackingTaxonomyPage, default:generateMetadata, default:generateStaticParams
-- `src/app/stablecoins/governance/[governance]/page.tsx` - route /stablecoins/governance/[governance]; default:GovernanceTaxonomyPage, default:generateMetadata, default:generateStaticParams
-- `src/app/stablecoins/infrastructure/[infrastructure]/page.tsx` - route /stablecoins/infrastructure/[infrastructure]; default:InfrastructureTaxonomyRoute, default:generateMetadata, default:generateStaticParams
-- `src/app/start/page.tsx` - route /start; default:StartPage, default:metadata
+- `src/app/stablecoins/[peg]/page.tsx` - route /stablecoins/[peg]; default:PegLandingPage, generateMetadata, generateStaticParams
+- `src/app/stablecoins/backing/[backing]/page.tsx` - route /stablecoins/backing/[backing]; default:BackingTaxonomyPage, generateMetadata, generateStaticParams
+- `src/app/stablecoins/governance/[governance]/page.tsx` - route /stablecoins/governance/[governance]; default:GovernanceTaxonomyPage, generateMetadata, generateStaticParams
+- `src/app/stablecoins/infrastructure/[infrastructure]/page.tsx` - route /stablecoins/infrastructure/[infrastructure]; default:InfrastructureTaxonomyRoute, generateMetadata, generateStaticParams
+- `src/app/start/page.tsx` - route /start; default:StartPage, metadata
 - `src/app/status/client.tsx` - default:StatusClient
 - `src/app/status/error.tsx`
-- `src/app/status/page.tsx` - route /status; default:StatusPage, default:metadata
-- `src/app/telegram/page.tsx` - route /telegram; default:TelegramPage, default:metadata
-- `src/app/upcoming/page.tsx` - route /upcoming; default:UpcomingPage, default:metadata
-- `src/app/yield/client.tsx` - default:YieldClient
+- `src/app/status/page.tsx` - route /status; default:StatusPage, metadata
+- `src/app/telegram/page.tsx` - route /telegram; default:TelegramPage, metadata
+- `src/app/upcoming/page.tsx` - route /upcoming; default:UpcomingPage, metadata
+- `src/app/yield/client.tsx` - YieldClient
 - `src/app/yield/error.tsx`
-- `src/app/yield/page.tsx` - route /yield; default:metadata
+- `src/app/yield/page.tsx` - route /yield; metadata
 
 ## Frontend hooks
 
-- `src/hooks/api-hooks.ts` - default:NonUsdSharePoint, default:useBluechipRatings, default:useDailyDigest, default:useDexLiquidity, default:useDexLiquidityHistory, default:useDigestArchive
-- `src/hooks/use-admin-polling-query.ts` - default:useAdminPollingQuery
-- `src/hooks/use-api-keys.ts` - default:useApiKeys
-- `src/hooks/use-api-query.ts` - default:ApiQueryWithMetaResult, default:createApiQueryFn, default:createApiQueryFnWithMeta, default:createPollingQueryOptions, default:createStaticQueryOptions, default:useApiQuery
-- `src/hooks/use-blacklist-events.ts` - default:useBlacklistEventsPage, default:useBlacklistSummary
-- `src/hooks/use-chain-profile-data.ts` - default:useChainProfileData
-- `src/hooks/use-chains.ts` - default:ChainStablecoin, default:ChainStablecoinsResult, default:useChainStablecoins, default:useChains
-- `src/hooks/use-chart-container-ready.ts` - default:useChartContainerReady
-- `src/hooks/use-chart-shell.ts` - default:useChartShell
-- `src/hooks/use-command-palette-history.ts` - default:useCommandPaletteHistory
-- `src/hooks/use-compare-data-model.ts` - default:useCompareDataModel
-- `src/hooks/use-compare-selection.ts` - default:normalizeCompareRange, default:useCompareSelection
-- `src/hooks/use-compare-share-actions.ts` - default:useCompareShareActions
-- `src/hooks/use-count-up.ts` - default:useCountUp
-- `src/hooks/use-coverage-matrix-model.ts` - default:useCoverageMatrixModel
-- `src/hooks/use-data-announce.ts` - default:useDataAnnounce
-- `src/hooks/use-depeg-events.ts` - default:useInfiniteDepegEvents
-- `src/hooks/use-endpoint-probes.ts` - default:ENDPOINT_GROUPS, default:ENDPOINT_PROBE_CONCURRENCY, default:collectEndpointProbes, default:useEndpointProbes, default:usePublicEndpointProbes
-- `src/hooks/use-entrance-sequence.ts` - default:useEntranceSequence
-- `src/hooks/use-homepage-filters.ts` - default:FILTER_GROUPS, default:parseHomepageParams, default:useHomepageFilters
-- `src/hooks/use-hydrated.ts` - default:useHydrated
-- `src/hooks/use-is-mobile.ts` - default:useIsMobile
-- `src/hooks/use-logos.ts` - default:useLogos
-- `src/hooks/use-mint-burn-flows.ts` - default:useMintBurnEvents, default:useMintBurnFlows, default:useMintBurnFlowsCoin
-- `src/hooks/use-nav-collapse.ts` - default:STORAGE_KEY, default:getExpandedState, default:setExpandedState, default:useNavCollapse
-- `src/hooks/use-portfolio.ts` - categorizeCollateral, computeGroupedExposure, default:usePortfolio
-- `src/hooks/use-preferences.ts` - ALL_COLUMNS, DEFAULT_VISIBLE_COLUMNS, LOCKED_COLUMNS, MOBILE_DEFAULT_COLUMNS, default:usePreference, isColumnId
-- `src/hooks/use-prefetch-stablecoin.ts` - default:usePrefetchStablecoin
-- `src/hooks/use-public-status-history.ts` - default:usePublicStatusHistory
-- `src/hooks/use-request-source-stats.ts` - default:useRequestSourceStats
-- `src/hooks/use-sidebar-nav-signals.ts` - default:useSidebarNavSignals
-- `src/hooks/use-sort.ts` - default:SortDirection, default:getNextSortState, default:shouldToggleSortOnKeyDown, default:useSort
-- `src/hooks/use-sorted-paginated-table.ts` - default:useSortedPaginatedTable
-- `src/hooks/use-sorted-table-rows.ts` - default:TableSortState, default:sortTableRows, default:useSortedTableRows
-- `src/hooks/use-stablecoin-detail-history.ts` - default:useStablecoinDetailHistory
-- `src/hooks/use-stablecoin-detail-view-model.ts` - default:useStablecoinDetailViewModel
-- `src/hooks/use-stablecoin-reserves.ts` - default:StablecoinReservesQueryState, default:useStablecoinReserves
-- `src/hooks/use-stablecoins.ts` - default:useStablecoins, default:useSupplyHistory
-- `src/hooks/use-start-here-callout.ts` - default:useStartHereCallout
-- `src/hooks/use-start-here-nav-visibility.ts` - default:useStartHereNavVisibility
-- `src/hooks/use-status-dashboard-model.ts` - default:useStatusDashboardModel
-- `src/hooks/use-status-history.ts` - default:StatusHistoryWindow, default:useStatusHistory
-- `src/hooks/use-status.ts` - default:useStatus
-- `src/hooks/use-stress-test.ts` - default:StressTestState, default:parseStressSelectionFromSearch, default:useStressTest
-- `src/hooks/use-table-density.ts` - default:DENSITY_CONFIGS, default:TableDensity, default:useTableDensity
-- `src/hooks/use-table-pagination.ts` - default:TablePaginationState, default:derivePagination, default:reconcilePaginationStateOnTotalChange, default:useTablePagination
-- `src/hooks/use-telegram-pulse.ts` - default:useTelegramPulse
-- `src/hooks/use-theme-toggle.ts` - default:useThemeToggle
-- `src/hooks/use-time-range-filter.ts` - default:TimeRangeOption, default:useTimeRangeFilter
-- `src/hooks/use-toast.ts` - default:Toast, default:ToastType, default:useToast
+- `src/hooks/api-hooks.ts` - NonUsdSharePoint, useBluechipRatings, useDailyDigest, useDexLiquidity, useDexLiquidityHistory, useDigestArchive
+- `src/hooks/use-admin-polling-query.ts` - useAdminPollingQuery
+- `src/hooks/use-api-keys.ts` - useApiKeys
+- `src/hooks/use-api-query.ts` - ApiQueryWithMetaResult, createApiQueryFn, createApiQueryFnWithMeta, createPollingQueryOptions, createStaticQueryOptions, useApiQuery
+- `src/hooks/use-blacklist-events.ts` - useBlacklistEventsPage, useBlacklistSummary
+- `src/hooks/use-chain-profile-data.ts` - useChainProfileData
+- `src/hooks/use-chains.ts` - ChainStablecoin, ChainStablecoinsResult, useChainStablecoins, useChains
+- `src/hooks/use-chart-container-ready.ts` - useChartContainerReady
+- `src/hooks/use-chart-shell.ts` - useChartShell
+- `src/hooks/use-command-palette-history.ts` - useCommandPaletteHistory
+- `src/hooks/use-compare-data-model.ts` - useCompareDataModel
+- `src/hooks/use-compare-selection.ts` - normalizeCompareRange, useCompareSelection
+- `src/hooks/use-compare-share-actions.ts` - useCompareShareActions
+- `src/hooks/use-count-up.ts` - useCountUp
+- `src/hooks/use-coverage-matrix-model.ts` - useCoverageMatrixModel
+- `src/hooks/use-data-announce.ts` - useDataAnnounce
+- `src/hooks/use-depeg-events.ts` - useInfiniteDepegEvents
+- `src/hooks/use-endpoint-probes.ts` - ENDPOINT_GROUPS, ENDPOINT_PROBE_CONCURRENCY, collectEndpointProbes, useEndpointProbes, usePublicEndpointProbes
+- `src/hooks/use-entrance-sequence.ts` - useEntranceSequence
+- `src/hooks/use-homepage-filters.ts` - FILTER_GROUPS, parseHomepageParams, useHomepageFilters
+- `src/hooks/use-hydrated.ts` - useHydrated
+- `src/hooks/use-is-mobile.ts` - useIsMobile
+- `src/hooks/use-logos.ts` - useLogos
+- `src/hooks/use-mint-burn-flows.ts` - useMintBurnEvents, useMintBurnFlows, useMintBurnFlowsCoin
+- `src/hooks/use-nav-collapse.ts` - STORAGE_KEY, getExpandedState, setExpandedState, useNavCollapse
+- `src/hooks/use-portfolio.ts` - categorizeCollateral, computeGroupedExposure, usePortfolio
+- `src/hooks/use-preferences.ts` - usePreference
+- `src/hooks/use-prefetch-stablecoin.ts` - usePrefetchStablecoin
+- `src/hooks/use-public-status-history.ts` - usePublicStatusHistory
+- `src/hooks/use-request-source-stats.ts` - useRequestSourceStats
+- `src/hooks/use-sidebar-nav-signals.ts` - useSidebarNavSignals
+- `src/hooks/use-sort.ts` - SortDirection, getNextSortState, shouldToggleSortOnKeyDown, useSort
+- `src/hooks/use-sorted-paginated-table.ts` - useSortedPaginatedTable
+- `src/hooks/use-sorted-table-rows.ts` - TableSortState, sortTableRows, useSortedTableRows
+- `src/hooks/use-stablecoin-detail-history.ts` - useStablecoinDetailHistory
+- `src/hooks/use-stablecoin-detail-view-model.ts` - useStablecoinDetailViewModel
+- `src/hooks/use-stablecoin-reserves.ts` - StablecoinReservesQueryState, useStablecoinReserves
+- `src/hooks/use-stablecoins.ts` - useStablecoins, useSupplyHistory
+- `src/hooks/use-start-here-callout.ts` - useStartHereCallout
+- `src/hooks/use-start-here-nav-visibility.ts` - useStartHereNavVisibility
+- `src/hooks/use-status-dashboard-model.ts` - useStatusDashboardModel
+- `src/hooks/use-status-history.ts` - StatusHistoryWindow, useStatusHistory
+- `src/hooks/use-status.ts` - useStatus
+- `src/hooks/use-stress-test.ts` - StressTestState, parseStressSelectionFromSearch, useStressTest
+- `src/hooks/use-table-density.ts` - DENSITY_CONFIGS, TableDensity, useTableDensity
+- `src/hooks/use-table-pagination.ts` - TablePaginationState, derivePagination, reconcilePaginationStateOnTotalChange, useTablePagination
+- `src/hooks/use-telegram-pulse.ts` - useTelegramPulse
+- `src/hooks/use-theme-toggle.ts` - useThemeToggle
+- `src/hooks/use-time-range-filter.ts` - TimeRangeOption, useTimeRangeFilter
+- `src/hooks/use-toast.ts` - Toast, ToastType, useToast
 - ... 1 more files omitted; use `rg --files src/hooks` for the full list.
 
 ## Frontend library
 
-- `src/lib/admin-access.ts` - default:buildAdminApiPath, default:isOpsUiHost
-- `src/lib/analytics.ts` - default:trackEvent, default:trackSearch
-- `src/lib/api-reference-doc.ts` - default:ApiReferenceDocument, default:ApiReferenceSection, default:MarkdownBlock, default:MarkdownCodeBlock, default:MarkdownListBlock, default:MarkdownParagraphBlock
-- `src/lib/api.ts` - default:API_BASE, default:ApiContractMode, default:ApiFetchError, default:ApiFetchOptions, default:ApiMeta, default:SchemaValidationError
-- `src/lib/blacklist-api.ts` - default:FetchBlacklistEventsParams, default:buildBlacklistEventsPath, default:fetchBlacklistEvents, default:fetchBlacklistSummary
-- `src/lib/blacklist-status-buckets.ts` - default:BLACKLIST_STATUS_BUCKET_COLORS, default:BLACKLIST_STATUS_BUCKET_DESCRIPTIONS, default:BLACKLIST_STATUS_BUCKET_LABELS, default:BLACKLIST_STATUS_BUCKET_ORDER, default:BlacklistStatusBucket, default:BlacklistStatusBucketKey
-- `src/lib/blacklist-status.ts` - default:getResolvedBlacklistStatus, default:getResolvedBlacklistStatusLabel
-- `src/lib/bluechip.ts` - default:BLUECHIP_REPORT_BASE, default:GRADE_ORDER
-- `src/lib/browser-storage.ts` - default:getWindowStorage, default:safeStorageGetItem, default:safeStorageRemoveItem, default:safeStorageSetItem
-- `src/lib/cemetery.ts` - default:CemeterySortMode, default:CemeteryYearSection, default:buildCemeteryYearSections, default:sortCemeteryCoins
-- `src/lib/chain-ui.ts` - default:HEALTH_BADGE_CLASSES, default:HEALTH_FILL_CLASSES, default:HEALTH_TEXT_CLASSES, default:trendColor
-- `src/lib/chart-animation.ts` - default:CHART_DRAW_IN, default:CHART_NO_ANIM
-- `src/lib/chart-colors.ts` - THREAT_BAND_HEX, default:CHART_AMBER, default:CHART_BLUE, default:CHART_CYAN, default:CHART_GREEN, default:CHART_HEIGHT
-- `src/lib/chart-export.ts` - default:downloadChartPng
-- `src/lib/chart-utils.ts` - default:computeChartYDomain, default:mergeSeriesByTimestamp
-- `src/lib/client-feature-page.tsx` - default:createClientFeaturePage
-- `src/lib/column-visibility.ts` - default:ALL_COLUMNS, default:ColumnId, default:DEFAULT_VISIBLE_COLUMNS, default:LOCKED_COLUMNS, default:MOBILE_DEFAULT_COLUMNS, default:isColumnId
-- `src/lib/command-palette.ts` - default:OPEN_COMMAND_PALETTE_EVENT, default:openCommandPalette
-- `src/lib/compare-config.ts` - default:COMPARE_COIN_OPTIONS, default:COMPARE_COLORS, default:COMPARISON_PRESETS, default:ID_TO_COMPARE_COIN, default:MAX_COMPARE_COINS, default:resolveCompareSelectedIds
-- `src/lib/compare-derive.ts` - default:ComparisonCoinEntry, default:FlowCardEntry, default:FlowSeriesEntry, default:SupplySeriesEntry, default:deriveComparisonCoins, default:deriveFlowCardData
-- `src/lib/compare-pages.ts` - default:STATIC_COMPARISON_PAGES, default:STATIC_COMPARISON_PAGE_BY_SLUG, default:buildComparisonAtAGlanceRows, default:buildComparisonResearchLinks, default:buildLiveCompareUrl, default:getPrimaryStaticComparisonPageForCoin
-- `src/lib/compare-share-image.ts` - default:ShareCoinData, default:ShareRadarData, default:canvasToBlob, default:loadImage, default:renderCompareShareImage
-- `src/lib/compare-types.ts` - default:CoinOption, default:ComparePreset
-- `src/lib/confidence.ts` - default:confidenceClass
-- `src/lib/constants.ts` - DAY_MS, DAY_SECONDS, HOUR_MS, HOUR_SECONDS, SECONDS_PER_MINUTE, WEEK_MS
-- `src/lib/contagion-layout.ts` - default:CORE_LANE_HALF_WIDTH, default:CORE_LANE_MARGIN, default:CORE_PAIR_X_JITTER, default:CORE_PAIR_Y_OFFSET, default:CORE_RING_RADIUS_X, default:CORE_RING_RADIUS_Y
-- `src/lib/coverage-page-config.ts` - default:AUTHORITATIVE_ACCENT, default:CoverageFilterKey, default:CoverageSortKey, default:FEATURE_ACCENT_CLASSES, default:FEATURE_ICON, default:FILTER_OPTIONS
-- `src/lib/coverage.ts` - default:COVERAGE_BADGE_TONE_CLASS, default:COVERAGE_FEATURES, default:CoverageFeatureDefinition, default:CoverageFeatureKey, default:CoverageFeatureSummary, default:CoverageRow
-- `src/lib/cron-intervals.ts` - default:CRON_15MIN, default:CRON_1H, default:CRON_1MIN, default:CRON_20MIN, default:CRON_24H, default:CRON_30MIN
-- `src/lib/csv-export.ts` - default:downloadCsv
-- `src/lib/data-health-config.ts` - default:DATA_HEALTH_PRESETS
-- `src/lib/data-health.ts` - default:DataHealthInfo, default:deriveDataHealth, default:formatDataHealthTimestamp, default:mergeHealthStates
-- `src/lib/depeg-sort.ts` - default:DepegTrackerRow, default:attentionScore
-- `src/lib/dews-radar-utils.ts` - default:deterministicOffset, default:deterministicRadiusOffset, default:distributeAngles, default:highestBand, default:pulseDuration, default:scoreToRadius
-- `src/lib/dex-constants.ts` - default:CHAIN_COLORS, default:CHAIN_HEX, default:EXTRA_COLORS, default:PROTOCOL_COLORS, default:PROTOCOL_HEX, default:PROTOCOL_LOGOS
-- `src/lib/digest.ts` - default:EDITORIAL_BODY_STYLE, default:EDITORIAL_META_STYLE, default:getDigestBodyParagraphs, default:splitDigestParagraphs
-- `src/lib/faq.ts` - default:FaqItem, default:buildFaqJsonLd
-- `src/lib/flow-intensity.ts` - default:FlowIntensitySemantics, default:getPressureShiftDisplay, default:normalizeToSignedFlowIntensity
-- `src/lib/flow-signal-ui.ts` - default:FlowDirectionUi, default:FlowPressureUi, default:buildFlowOverviewDescription, default:buildFlowOverviewHeadline, default:buildFlowSummaryNarrative, default:getFlowDirectionUi
-- `src/lib/fonts.ts` - default:digestDisplay, default:geistMono, default:geistSans
-- `src/lib/json-ld.ts` - default:safeJsonLd
-- `src/lib/liquidity-coverage.ts` - default:formatLiquiditySourceMix, default:getLiquidityCoverageBadge
-- `src/lib/logos.ts` - default:logosById
-- `src/lib/methodology-context.ts` - default:METHODOLOGY_CONTEXT, default:MethodologyContextItem, default:MethodologyContextKey
-- `src/lib/mint-burn-coin-helpers.ts` - default:inferHas24hActivity, default:resolveNetDirection, default:resolvePressureScore, default:resolvePressureState
-- `src/lib/mint-burn-timeframes.ts` - default:formatMintBurnWindowLabel, default:getMintBurnSummaryTimeframe, default:getNetFlowForHours
-- `src/lib/nav-config.ts` - default:BOTTOM_NAV_ITEMS, default:DEFAULT_EXPANDED, default:NAV_GROUPS, default:NAV_ITEMS, default:NavGroup, default:NavItem
-- `src/lib/navigation.ts` - default:isRouteActive
-- `src/lib/page-metadata.ts` - default:buildApiOgImageUrl, default:buildPageMetadata, default:buildStablecoinDetailDescription, default:buildStablecoinDetailMetadata, default:summarizeText, default:trimTextAtWordBoundary
-- `src/lib/peg-landing.ts` - PEG_LABELS, PEG_LABELS_SHORT, default:ACTIVE_PEGS, default:PEG_INTRO, default:PEG_SLUGS, default:pegCoinCount
+- `src/lib/admin-access.ts` - buildAdminApiPath, isOpsUiHost
+- `src/lib/analytics.ts` - trackEvent, trackSearch
+- `src/lib/api-reference-doc.ts` - ApiReferenceDocument, ApiReferenceSection, MarkdownBlock, MarkdownCodeBlock, MarkdownListBlock, MarkdownParagraphBlock
+- `src/lib/api.ts` - API_BASE, ApiContractMode, ApiFetchError, ApiFetchOptions, ApiMeta, SchemaValidationError
+- `src/lib/blacklist-api.ts` - FetchBlacklistEventsParams, buildBlacklistEventsPath, fetchBlacklistEvents, fetchBlacklistSummary
+- `src/lib/blacklist-status-buckets.ts` - BLACKLIST_STATUS_BUCKET_COLORS, BLACKLIST_STATUS_BUCKET_DESCRIPTIONS, BLACKLIST_STATUS_BUCKET_LABELS, BLACKLIST_STATUS_BUCKET_ORDER, BlacklistStatusBucket, BlacklistStatusBucketKey
+- `src/lib/blacklist-status.ts` - getResolvedBlacklistStatus, getResolvedBlacklistStatusLabel
+- `src/lib/bluechip.ts` - BLUECHIP_REPORT_BASE, GRADE_ORDER
+- `src/lib/browser-storage.ts` - getWindowStorage, safeStorageGetItem, safeStorageRemoveItem, safeStorageSetItem
+- `src/lib/cemetery.ts` - CemeterySortMode, CemeteryYearSection, buildCemeteryYearSections, sortCemeteryCoins
+- `src/lib/chain-ui.ts` - HEALTH_BADGE_CLASSES, HEALTH_FILL_CLASSES, HEALTH_TEXT_CLASSES, trendColor
+- `src/lib/chart-animation.ts` - CHART_DRAW_IN, CHART_NO_ANIM
+- `src/lib/chart-colors.ts` - CHART_AMBER, CHART_BLUE, CHART_CYAN, CHART_GREEN, CHART_HEIGHT, CHART_ORANGE
+- `src/lib/chart-export.ts` - downloadChartPng
+- `src/lib/chart-utils.ts` - computeChartYDomain, mergeSeriesByTimestamp
+- `src/lib/client-feature-page.tsx` - createClientFeaturePage
+- `src/lib/column-visibility.ts` - ALL_COLUMNS, ColumnId, DEFAULT_VISIBLE_COLUMNS, LOCKED_COLUMNS, MOBILE_DEFAULT_COLUMNS, isColumnId
+- `src/lib/command-palette.ts` - OPEN_COMMAND_PALETTE_EVENT, openCommandPalette
+- `src/lib/compare-config.ts` - COMPARE_COIN_OPTIONS, COMPARE_COLORS, COMPARISON_PRESETS, ID_TO_COMPARE_COIN, MAX_COMPARE_COINS, resolveCompareSelectedIds
+- `src/lib/compare-derive.ts` - ComparisonCoinEntry, FlowCardEntry, FlowSeriesEntry, SupplySeriesEntry, deriveComparisonCoins, deriveFlowCardData
+- `src/lib/compare-pages.ts` - STATIC_COMPARISON_PAGES, STATIC_COMPARISON_PAGE_BY_SLUG, buildComparisonAtAGlanceRows, buildComparisonResearchLinks, buildLiveCompareUrl, getPrimaryStaticComparisonPageForCoin
+- `src/lib/compare-share-image.ts` - ShareCoinData, ShareRadarData, canvasToBlob, loadImage, renderCompareShareImage
+- `src/lib/compare-types.ts` - CoinOption, ComparePreset
+- `src/lib/confidence.ts` - confidenceClass
+- `src/lib/constants.ts` - CATEGORY_LINKS, DAY_HOURS, NINETY_DAYS_HOURS, NINETY_DAYS_MS, TABLE_PAGE_SIZE, THIRTY_DAYS_HOURS
+- `src/lib/contagion-layout.ts` - CORE_LANE_HALF_WIDTH, CORE_LANE_MARGIN, CORE_PAIR_X_JITTER, CORE_PAIR_Y_OFFSET, CORE_RING_RADIUS_X, CORE_RING_RADIUS_Y
+- `src/lib/coverage-page-config.ts` - AUTHORITATIVE_ACCENT, CoverageFilterKey, CoverageSortKey, FEATURE_ACCENT_CLASSES, FEATURE_ICON, FILTER_OPTIONS
+- `src/lib/coverage.ts` - COVERAGE_BADGE_TONE_CLASS, COVERAGE_FEATURES, CoverageFeatureDefinition, CoverageFeatureKey, CoverageFeatureSummary, CoverageRow
+- `src/lib/cron-intervals.ts` - CRON_15MIN, CRON_1H, CRON_1MIN, CRON_20MIN, CRON_24H, CRON_30MIN
+- `src/lib/csv-export.ts` - downloadCsv
+- `src/lib/data-health-config.ts` - DATA_HEALTH_PRESETS
+- `src/lib/data-health.ts` - DataHealthInfo, deriveDataHealth, formatDataHealthTimestamp, mergeHealthStates
+- `src/lib/depeg-sort.ts` - DepegTrackerRow, attentionScore
+- `src/lib/dews-radar-utils.ts` - deterministicOffset, deterministicRadiusOffset, distributeAngles, highestBand, pulseDuration, scoreToRadius
+- `src/lib/dex-constants.ts` - CHAIN_COLORS, CHAIN_HEX, EXTRA_COLORS, PROTOCOL_COLORS, PROTOCOL_HEX, PROTOCOL_LOGOS
+- `src/lib/digest.ts` - EDITORIAL_BODY_STYLE, EDITORIAL_META_STYLE, getDigestBodyParagraphs, splitDigestParagraphs
+- `src/lib/faq.ts` - FaqItem, buildFaqJsonLd
+- `src/lib/flow-intensity.ts` - FlowIntensitySemantics, getPressureShiftDisplay, normalizeToSignedFlowIntensity
+- `src/lib/flow-signal-ui.ts` - FlowDirectionUi, FlowPressureUi, buildFlowOverviewDescription, buildFlowOverviewHeadline, buildFlowSummaryNarrative, getFlowDirectionUi
+- `src/lib/fonts.ts` - digestDisplay, geistMono, geistSans
+- `src/lib/json-ld.ts` - safeJsonLd
+- `src/lib/liquidity-coverage.ts` - formatLiquiditySourceMix, getLiquidityCoverageBadge
+- `src/lib/logos.ts` - logosById
+- `src/lib/methodology-context.ts` - METHODOLOGY_CONTEXT, MethodologyContextItem, MethodologyContextKey
+- `src/lib/mint-burn-coin-helpers.ts` - inferHas24hActivity, resolveNetDirection, resolvePressureScore, resolvePressureState
+- `src/lib/mint-burn-timeframes.ts` - formatMintBurnWindowLabel, getMintBurnSummaryTimeframe, getNetFlowForHours
+- `src/lib/nav-config.ts` - BOTTOM_NAV_ITEMS, DEFAULT_EXPANDED, NAV_GROUPS, NAV_ITEMS, NavGroup, NavItem
+- `src/lib/navigation.ts` - isRouteActive
+- `src/lib/page-metadata.ts` - buildApiOgImageUrl, buildPageMetadata, buildStablecoinDetailDescription, buildStablecoinDetailMetadata, summarizeText, trimTextAtWordBoundary
+- `src/lib/peg-landing.ts` - ACTIVE_PEGS, PEG_INTRO, PEG_LABELS, PEG_LABELS_SHORT, PEG_SLUGS, pegCoinCount
 - ... 30 more files omitted; use `rg --files src/lib` for the full list.
 
 ## Key components
 
-- `src/components/about-reference-module.tsx` - default:AboutReferenceModule
-- `src/components/ai-summary.tsx` - default:AiSummary
-- `src/components/api-reference-layout.tsx` - default:ApiReferenceLayout
-- `src/components/api-reference-mobile-nav.tsx` - default:ApiReferenceMobileNav
-- `src/components/api-reference-sidebar.tsx` - default:ApiReferenceSidebar, default:SidebarSection, default:SidebarSubsection
-- `src/components/balance-bar.tsx` - default:BalanceBar
-- `src/components/blacklist-chart.tsx` - default:BlacklistChart, default:getBlacklistTooltipSummary
-- `src/components/blacklist-filters.tsx` - default:BlacklistFilters
-- `src/components/blacklist-stats.tsx` - default:BlacklistStats
-- `src/components/blacklist-status-charts.tsx` - default:BlacklistStatusCharts
-- `src/components/blacklist-status-drilldown.tsx` - default:BlacklistStatusDrilldown
-- `src/components/blacklist-table-logic.ts` - default:compareBlacklistRows
-- `src/components/blacklist-table.tsx` - default:BlacklistTable
-- `src/components/bluechip-header-badge.tsx` - default:BluechipHeaderBadge
-- `src/components/breadcrumb-json-ld.tsx` - default:BreadcrumbJsonLd
-- `src/components/callout-banner.tsx` - default:CalloutBanner
-- `src/components/category-stats.tsx` - default:CategoryStats
-- `src/components/cemetery-charts.tsx` - default:CemeteryCharts
-- `src/components/cemetery-client.tsx` - default:CemeteryClient
-- `src/components/cemetery-tombstones.tsx` - default:CemeteryTombstones
-- `src/components/chain-type-badge.tsx` - default:ChainTypeBadge
-- `src/components/changelog-entry-card.tsx` - default:ChangelogEntryCard, default:formatDateRange
-- `src/components/changelog-week-nav.tsx` - default:ChangelogWeekNav
-- `src/components/chart-primitives.tsx` - default:DateTooltip, default:MonoYAxis, default:TimeGrid, default:TimeXAxis
-- `src/components/chart-skeleton.tsx` - default:ChartSkeleton
-- `src/components/coin-flow-card.tsx` - default:CoinFlowCard, default:CoinFlowCardProps
-- `src/components/coin-notice.tsx` - default:CoinNotices
-- `src/components/coin-selector.tsx` - default:CoinSelector
-- `src/components/command-palette.tsx` - default:CommandPalette
-- `src/components/compare-empty-state.tsx` - default:CompareEmptyState
-- `src/components/comparison-chart.tsx` - default:ComparisonChart
-- `src/components/comparison-table.tsx` - default:ComparisonTable
-- `src/components/contagion-graph-graph.ts` - default:FocusMode, default:ResolvedLink, default:RippleState, default:computeRippleState, default:computeVisibleGraph, default:findDirectionalNeighbor
-- `src/components/contagion-graph-model.ts` - default:TYPE_COLORS, default:TYPE_DASH, default:gradeColor
-- `src/components/contagion-graph.tsx` - default:ContagionGraph
-- `src/components/copy-button.tsx` - default:CopyButton
-- `src/components/coverage-lens-summary.tsx` - default:CoverageLensSummary
-- `src/components/create-page-error.tsx` - default:createPageError
-- `src/components/daily-digest.tsx` - default:DailyDigest, default:DigestFullDisplay
-- `src/components/data-health-banner.tsx` - default:DataHealthBanner
+- `src/components/about-reference-module.tsx` - AboutReferenceModule
+- `src/components/ai-summary.tsx` - AiSummary
+- `src/components/api-reference-layout.tsx` - ApiReferenceLayout
+- `src/components/api-reference-mobile-nav.tsx` - ApiReferenceMobileNav
+- `src/components/api-reference-sidebar.tsx` - ApiReferenceSidebar, SidebarSection, SidebarSubsection
+- `src/components/balance-bar.tsx` - BalanceBar
+- `src/components/blacklist-chart.tsx` - BlacklistChart, getBlacklistTooltipSummary
+- `src/components/blacklist-filters.tsx` - BlacklistFilters
+- `src/components/blacklist-stats.tsx` - BlacklistStats
+- `src/components/blacklist-status-charts.tsx` - BlacklistStatusCharts
+- `src/components/blacklist-status-drilldown.tsx` - BlacklistStatusDrilldown
+- `src/components/blacklist-table-logic.ts` - compareBlacklistRows
+- `src/components/blacklist-table.tsx` - BlacklistTable
+- `src/components/bluechip-header-badge.tsx` - BluechipHeaderBadge
+- `src/components/breadcrumb-json-ld.tsx` - BreadcrumbJsonLd
+- `src/components/callout-banner.tsx` - CalloutBanner
+- `src/components/category-stats.tsx` - CategoryStats
+- `src/components/cemetery-charts.tsx` - CemeteryCharts
+- `src/components/cemetery-client.tsx` - CemeteryClient
+- `src/components/cemetery-tombstones.tsx` - CemeteryTombstones
+- `src/components/chain-type-badge.tsx` - ChainTypeBadge
+- `src/components/changelog-entry-card.tsx` - ChangelogEntryCard, formatDateRange
+- `src/components/changelog-week-nav.tsx` - ChangelogWeekNav
+- `src/components/chart-primitives.tsx` - DateTooltip, MonoYAxis, TimeGrid, TimeXAxis
+- `src/components/chart-skeleton.tsx` - ChartSkeleton
+- `src/components/coin-flow-card.tsx` - CoinFlowCard, CoinFlowCardProps
+- `src/components/coin-notice.tsx` - CoinNotices
+- `src/components/coin-selector.tsx` - CoinSelector
+- `src/components/command-palette.tsx` - CommandPalette
+- `src/components/compare-empty-state.tsx` - CompareEmptyState
+- `src/components/comparison-chart.tsx` - ComparisonChart
+- `src/components/comparison-table.tsx` - ComparisonTable
+- `src/components/contagion-graph-graph.ts` - FocusMode, ResolvedLink, RippleState, computeRippleState, computeVisibleGraph, findDirectionalNeighbor
+- `src/components/contagion-graph-model.ts` - TYPE_COLORS, TYPE_DASH, gradeColor
+- `src/components/contagion-graph.tsx` - ContagionGraph
+- `src/components/copy-button.tsx` - CopyButton
+- `src/components/coverage-lens-summary.tsx` - CoverageLensSummary
+- `src/components/create-page-error.tsx` - createPageError
+- `src/components/daily-digest.tsx` - DailyDigest, DigestFullDisplay
+- `src/components/data-health-banner.tsx` - DataHealthBanner
 - ... 182 more files omitted; use `rg --files src/components` for the full list.
 
 ## Pages Functions
 
-- `functions/_site-data/[[path]].ts` - default:onRequest
-- `functions/admin/[[path]].ts` - default:onRequest
-- `functions/api/admin/[[path]].ts` - default:onRequest
-- `functions/lib/ops-env.ts` - default:DEFAULT_OPS_API_ORIGIN, default:OpsAdminProxyEnv, default:OpsProxyEnvIssue, default:PAGES_FUNCTIONS_ACTIVE_ENV_KEYS, default:PAGES_FUNCTIONS_OPTIONAL_ENV_KEYS, default:PAGES_FUNCTIONS_REQUIRED_ENV_KEYS
-- `functions/lib/ops-origin.ts` - default:DEFAULT_OPS_UI_ORIGIN, default:hasMatchingOpsUiOriginHeader, default:rejectIfNotOpsUiOrigin, default:resolveOpsUiOrigin, normalizeOrigin
-- `functions/lib/proxy-utils.ts` - default:buildProxyResponse, default:buildUpstreamHeaders, default:jsonError, default:summarizeFetchError
-- `functions/lib/request-attribution.ts` - default:recordSiteDataRequest, default:resetSiteDataRequestAttributionStateForTests
-- `functions/lib/site-api-env.ts` - default:DEFAULT_SITE_API_ORIGIN, default:SITE_DATA_FUNCTIONS_ACTIVE_ENV_KEYS, default:SITE_DATA_FUNCTIONS_OPTIONAL_ENV_KEYS, default:SITE_DATA_FUNCTIONS_REQUIRED_ENV_KEYS, default:SiteDataProxyEnv, default:SiteDataProxyEnvIssue
-- `functions/lib/site-data-origin.ts` - default:DEFAULT_OPS_UI_ORIGIN, default:DEFAULT_SITE_UI_ORIGIN, default:rejectIfNotSiteDataUiOrigin
-- `functions/lib/upstream-proxy.ts` - default:DEFAULT_PROXY_TIMEOUT_MS, default:fetchUpstreamProxy, default:resolveWildcardProxyPath
+- `functions/_site-data/[[path]].ts` - onRequest
+- `functions/admin/[[path]].ts` - onRequest
+- `functions/api/admin/[[path]].ts` - onRequest
+- `functions/lib/ops-env.ts` - DEFAULT_OPS_API_ORIGIN, OpsAdminProxyEnv, OpsProxyEnvIssue, PAGES_FUNCTIONS_ACTIVE_ENV_KEYS, PAGES_FUNCTIONS_OPTIONAL_ENV_KEYS, PAGES_FUNCTIONS_REQUIRED_ENV_KEYS
+- `functions/lib/ops-origin.ts` - DEFAULT_OPS_UI_ORIGIN, hasMatchingOpsUiOriginHeader, normalizeOrigin, rejectIfNotOpsUiOrigin, resolveOpsUiOrigin
+- `functions/lib/proxy-utils.ts` - buildProxyResponse, buildUpstreamHeaders, jsonError, summarizeFetchError
+- `functions/lib/request-attribution.ts` - recordSiteDataRequest, resetSiteDataRequestAttributionStateForTests
+- `functions/lib/site-api-env.ts` - DEFAULT_SITE_API_ORIGIN, SITE_DATA_FUNCTIONS_ACTIVE_ENV_KEYS, SITE_DATA_FUNCTIONS_OPTIONAL_ENV_KEYS, SITE_DATA_FUNCTIONS_REQUIRED_ENV_KEYS, SiteDataProxyEnv, SiteDataProxyEnvIssue
+- `functions/lib/site-data-origin.ts` - DEFAULT_OPS_UI_ORIGIN, DEFAULT_SITE_UI_ORIGIN, rejectIfNotSiteDataUiOrigin
+- `functions/lib/upstream-proxy.ts` - DEFAULT_PROXY_TIMEOUT_MS, fetchUpstreamProxy, resolveWildcardProxyPath
 
 ## Shared library
 
-- `shared/lib/api-endpoints/definitions.ts` - default:DynamicAdminEndpointMatch, default:ENDPOINT_DEFINITIONS, default:EndpointDefinition, default:EndpointDefinitionByKey, default:EndpointDependenciesForKey, default:EndpointDependency
-- `shared/lib/api-endpoints/index.ts` - API_PATHS, ENDPOINT_DEFINITIONS, STRICT_CONTRACT_PATHS_LIST, buildQueryPath, getEndpointDefinition, getEndpointDefinitionByKey
-- `shared/lib/api-endpoints/paths.ts` - default:API_PATHS, default:buildQueryPath
-- `shared/lib/api-endpoints/status.ts` - default:getStatusPageActions
-- `shared/lib/api-endpoints/validation.ts` - default:getProbePaths, default:getPublicApiAccess, default:getSiteDataAccess, default:isAdminPath, default:isMutatingAdminGetAllowed, default:isProtectedPublicApiPath
-- `shared/lib/api-freshness.ts` - default:API_FRESHNESS_MAX_AGE_SEC
-- `shared/lib/blacklist-active-records.ts` - default:BlacklistActiveRecord, default:BlacklistActiveSummaryStats, default:BlacklistCurrentBalanceSnapshot, default:BlacklistTrackedSummaryStats, default:buildBlacklistActiveRecords, default:computeBlacklistActiveSummaryStats
-- `shared/lib/blacklist-aggregates.ts` - default:BlacklistChartPoint, default:BlacklistSummaryStats, default:buildBlacklistChartData, default:computeBlacklistSummaryStats
-- `shared/lib/blacklist-tracker-version.ts` - default:BLACKLIST_TRACKER_METHODOLOGY_CHANGELOG, default:BLACKLIST_TRACKER_METHODOLOGY_CHANGELOG_PATH, default:BLACKLIST_TRACKER_METHODOLOGY_VERSION, default:BLACKLIST_TRACKER_METHODOLOGY_VERSION_LABEL, default:getBlacklistTrackerMethodologyVersionAt
-- `shared/lib/blacklist.ts` - default:BlacklistAddressCountMode, default:buildBlacklistAddressCountKey, default:computeBlacklistAmountUsdAtEvent, default:isBlacklistAmountGapStatus, default:isGoldBlacklistStablecoin
-- `shared/lib/cache-health.ts` - default:getCacheFreshnessRatio, default:getCacheFreshnessStatus, default:getCacheImpactStatus
-- `shared/lib/centralized-custody.ts` - default:CENTRALIZED_CUSTODY_CRYPTO, default:computeCentralizedCustodyFraction
-- `shared/lib/chain-aggregator.ts` - default:ChainAggregatorAsset, default:ChainAggregatorInput, default:aggregateChains
-- `shared/lib/chain-circulating.ts` - default:ChainCirculatingPoint, default:RawChainCirculating, default:canonicalizeChainCirculating, default:findCanonicalChainData
-- `shared/lib/chain-health-version.ts` - default:CHAIN_HEALTH_METHODOLOGY_CHANGELOG, default:CHAIN_HEALTH_METHODOLOGY_CHANGELOG_PATH, default:CHAIN_HEALTH_METHODOLOGY_VERSION, default:CHAIN_HEALTH_METHODOLOGY_VERSION_LABEL, default:getChainHealthMethodologyVersionAt
-- `shared/lib/chain-health.ts` - default:BACKING_DIVERSITY_WEIGHT, default:CHAIN_ENVIRONMENT_SCORES, default:CHAIN_ENVIRONMENT_WEIGHT, default:CONCENTRATION_WEIGHT, default:HEALTH_METHODOLOGY_VERSION, default:PEG_STABILITY_WEIGHT
-- `shared/lib/chain-provider-registry.ts` - default:CG_CHAIN_MAP, default:CG_CHAIN_REVERSE, default:CHAIN_REGISTRY, default:DS_CHAIN_MAP, default:GT_CHAIN_MAP, default:GT_CHAIN_REVERSE
-- `shared/lib/chains.ts` - default:CHAIN_META, default:CHAIN_RESILIENCE_TIER, default:ChainResilienceTier, default:getActiveChainIds, default:getChainResilienceTier, default:resolveChainId
-- `shared/lib/classification.ts` - default:BACKING_BADGE_STYLES, default:BACKING_COLORS, default:BACKING_LABELS, default:BACKING_LABELS_SHORT, default:BLACKLIST_CHART_COLORS, default:CONFIDENCE_LEVEL_COLORS
-- `shared/lib/cloudflare-access-jwt.ts` - default:JwtVerifyOptions, default:_resetJwksCache, default:normalizeTeamDomain, default:verifyAccessJwt
-- `shared/lib/commodity-median.ts` - default:CommodityMedianSource, default:CommodityPeg, default:CommodityPricePoint, default:buildCommodityPeerMedianSeries
-- `shared/lib/cron-jobs.ts` - default:CRON_GROUPS, default:CRON_INTERVALS, default:CRON_JOB_DEFINITIONS, default:CRON_SCHEDULES, default:CronGroupDefinition, default:CronGroupKey
-- `shared/lib/dead-stablecoins.ts` - default:CAUSE_HEX, default:CAUSE_META, default:DEAD_STABLECOINS
-- `shared/lib/depeg-config.ts` - default:DEPEG_THRESHOLD_BPS, default:DEPEG_THRESHOLD_BPS_NON_USD
-- `shared/lib/depeg-detection-config.ts` - default:DEPEG_CONFIRMATION_SUPPLY_THRESHOLD, default:DEPEG_DEX_PROTOCOL_CORROBORATION_MIN, default:DEPEG_EVENT_MIN_SUPPLY_USD, default:DEPEG_EXTREME_MOVE_BPS, default:DEPEG_PENDING_EXPIRY_SEC, default:DEPEG_PENDING_MIN_AGE_SEC
-- `shared/lib/depeg-dews-version.ts` - default:DEPEG_DEWS_METHODOLOGY_CHANGELOG, default:DEPEG_DEWS_METHODOLOGY_CHANGELOG_PATH, default:DEPEG_DEWS_METHODOLOGY_VERSION, default:DEPEG_DEWS_METHODOLOGY_VERSION_LABEL, default:getDepegDewsMethodologyVersionAt
-- `shared/lib/dependency-graph.ts` - default:DependencyGraphEdge, default:buildDependencyGraphEdges, default:collectDependencyGraphIds, default:filterDependencyGraphEdgesToLive
-- `shared/lib/dews-config.ts` - default:DEWS_SIGNAL_WEIGHTS, default:DEWS_THREAT_BANDS
-- `shared/lib/env-utils.ts` - default:getConfiguredValue, default:hasConfiguredValue
-- `shared/lib/explorer.ts` - default:ExplorerEntityType, default:buildExplorerUrl
-- `shared/lib/format.ts` - default:abbreviateNumberParts, default:formatAddress, default:formatBps, default:formatChartDate, default:formatChartPercent, default:formatCompactCount
-- `shared/lib/infrastructure.ts` - default:getInfrastructureLabel, default:getInfrastructureSummary
-- `shared/lib/liquidity-score-version.ts` - default:LIQUIDITY_METHODOLOGY_CHANGELOG, default:LIQUIDITY_METHODOLOGY_CHANGELOG_PATH, default:LIQUIDITY_METHODOLOGY_VERSION, default:LIQUIDITY_METHODOLOGY_VERSION_LABEL, default:getLiquidityMethodologyVersionAt
-- `shared/lib/liquidity-score-weights.ts` - default:DURABILITY_COMPONENT_WEIGHTS, default:LIQUIDITY_SCORE_WEIGHTS, default:LiquidityScoreComponentKey
-- `shared/lib/live-reserve-adapters-config.ts` - default:LiveReservesConfigSchema
-- `shared/lib/live-reserve-adapters-definitions.ts` - default:LIVE_RESERVE_ADAPTER_DEFINITIONS
-- `shared/lib/live-reserve-adapters-schemas.ts` - default:DASHBOARD_SOURCE_MAX_AGE_SEC, default:DISCLOSURE_SOURCE_MAX_AGE_SEC, default:LiveReserveAdapterParams, default:LiveReserveAdapterParamsByKey, default:LiveReserveAdapterParamsSchemaKey, default:LiveReserveAdapterParamsSchemaMap
-- `shared/lib/live-reserve-adapters.ts` - LIVE_RESERVE_ADAPTER_DEFINITIONS, LiveReservesConfigSchema, default:LiveReserveRedemptionCapacityTelemetry, default:LiveReserveRedemptionFeeTelemetry, default:getLiveReserveAdapterDefinition, default:parseLiveReserveAdapterParams
-- `shared/lib/live-reserve-display.ts` - default:buildReserveDisplayBadge, default:getReserveDisplayBadgeKindForAdapter, default:hasReserveDisplayBadgeForAdapter, default:inferReserveDisplayBadgeKindFromEvidenceClass
-- `shared/lib/math.ts` - default:clamp
-- `shared/lib/methodology-version.ts` - default:MethodologyChangelogEntry, default:MethodologyVersion, default:MethodologyVersionConfig, default:compareMethodologyVersions, default:createMethodologyVersion, default:toMethodologyVersionLabel
-- `shared/lib/mint-burn-flow-version.ts` - default:MINT_BURN_FLOW_METHODOLOGY_CHANGELOG, default:MINT_BURN_FLOW_METHODOLOGY_CHANGELOG_PATH, default:MINT_BURN_FLOW_METHODOLOGY_VERSION_LABEL
-- `shared/lib/mint-burn-signals.ts` - default:COIN_FLOW_COMPOSITE_STATE_VALUES, default:CoinFlowCompositeState, default:NET_FLOW_DIRECTION_24H_VALUES, default:NetFlowDirection24h, default:PRESSURE_SHIFT_STABLE_BAND_MAX, default:PRESSURE_SHIFT_STATE_VALUES
-- `shared/lib/ops-limits.ts` - default:CIRCUIT_OPEN_THRESHOLD, default:CIRCUIT_PROBE_INTERVAL_SEC, default:FEEDBACK_RATE_LIMIT_MAX_SUBMISSIONS, default:FEEDBACK_RATE_LIMIT_WINDOW_SEC, default:PUBLIC_API_RATE_LIMIT_MAX_REQUESTS, default:PUBLIC_API_RATE_LIMIT_WINDOW_SEC
-- `shared/lib/peg-rates.ts` - default:COMMODITY_MEDIAN_EXCLUDES, default:PegRateSource, default:PegRatesResult, default:derivePegRates, default:getPegReference
-- `shared/lib/peg-score.ts` - default:PEG_SCORE_LOOKBACK_SEC, default:PegScoreResult, default:coinTrackingStart, default:computePegScore, default:computePegScoreWithWindow
-- `shared/lib/peg-utils.ts` - default:mergeDepegSeconds, default:worstDeviation
-- `shared/lib/pricing-pipeline-version.ts` - default:PRICING_PIPELINE_CHANGELOG, default:PRICING_PIPELINE_CHANGELOG_PATH, default:PRICING_PIPELINE_VERSION, default:PRICING_PIPELINE_VERSION_LABEL, default:getPricingPipelineVersionAt
-- `shared/lib/pricing-provider-config.ts` - default:BINANCE_MARKETS, default:BITSTAMP_MARKETS, default:CEX_PROVIDER_AUDIT_CONFIG, default:COINBASE_PRODUCTS, default:KRAKEN_MARKETS, default:REDSTONE_PROVIDER_AUDIT_CONFIG
-- `shared/lib/pricing-source-registry-aggregators.ts` - default:PRICING_SOURCE_REGISTRY_AGGREGATORS
-- `shared/lib/pricing-source-registry-dex-search.ts` - default:PRICING_SOURCE_REGISTRY_DEX_SEARCH
-- `shared/lib/pricing-source-registry-market-feeds.ts` - default:PRICING_SOURCE_REGISTRY_MARKET_FEEDS
-- `shared/lib/pricing-source-registry-special.ts` - default:PRICING_SOURCE_REGISTRY_SPECIAL
-- `shared/lib/pricing-source-registry-types.ts` - default:PricingSourceCapabilities, default:PricingSourceFreshnessKind, default:PricingSourceRegistryEntry, default:PricingSourceTrustTier
-- `shared/lib/pricing-source-registry.ts` - default:PRICING_SOURCE_REGISTRY, default:PricingSourceKey, default:getPricingSourceRegistryEntry, default:isPricingSourceProtocolOverride, default:isPricingSourceSoftGuardrailExempt
-- `shared/lib/pricing-sources.ts` - default:PRICE_SOURCE_HEALTH_BUCKET_KEYS, default:PRICE_TRANSPARENCY_SOURCE_KEYS, default:PriceSourceHealthBucketKey, default:createEmptyPriceSourceHealthDistribution, default:getPriceSourceHealthBucketShortLabel, default:getPricingSourceLabel
-- `shared/lib/psi-colors.ts` - default:ConditionBand, default:PSI_BAND_CLASSES, default:PSI_BG_OVERLAY_CLASSES, default:PSI_BORDER_CLASSES, default:PSI_HEX_COLORS, default:PSI_PULSE_DURATION
-- `shared/lib/psi-eligible.ts` - default:PSI_ELIGIBLE_IDS, default:PSI_ELIGIBLE_META_BY_ID, default:PSI_ELIGIBLE_STABLECOINS
-- `shared/lib/psi-view-model.ts` - default:PsiChartPoint, default:PsiComponentsLike, default:PsiCurrentChartLike, default:PsiCurrentLike, default:PsiHistoryPointLike, default:buildPsiChartData
-- `shared/lib/public-health.ts` - default:PublicStatusTone, default:countPublicImpactOpenCircuits, default:getCircuitImpactStatus, default:getOverallCacheImpactStatus, default:getPublicMintBurnStatus, default:getStatusSeverity
+- `shared/lib/api-endpoints/definitions.ts` - DynamicAdminEndpointMatch, ENDPOINT_DEFINITIONS, EndpointDefinition, EndpointDefinitionByKey, EndpointDependenciesForKey, EndpointDependency
+- `shared/lib/api-endpoints/index.ts` - API_PATHS, buildQueryPath, getStatusPageActions
+- `shared/lib/api-endpoints/paths.ts` - API_PATHS, buildQueryPath
+- `shared/lib/api-endpoints/status.ts` - getStatusPageActions
+- `shared/lib/api-endpoints/validation.ts` - getProbePaths, getPublicApiAccess, getSiteDataAccess, isAdminPath, isMutatingAdminGetAllowed, isProtectedPublicApiPath
+- `shared/lib/api-freshness.ts` - API_FRESHNESS_MAX_AGE_SEC
+- `shared/lib/blacklist-active-records.ts` - BlacklistActiveRecord, BlacklistActiveSummaryStats, BlacklistCurrentBalanceSnapshot, BlacklistTrackedSummaryStats, buildBlacklistActiveRecords, computeBlacklistActiveSummaryStats
+- `shared/lib/blacklist-aggregates.ts` - BlacklistChartPoint, BlacklistSummaryStats, buildBlacklistChartData, computeBlacklistSummaryStats
+- `shared/lib/blacklist-tracker-version.ts` - BLACKLIST_TRACKER_METHODOLOGY_CHANGELOG, BLACKLIST_TRACKER_METHODOLOGY_CHANGELOG_PATH, BLACKLIST_TRACKER_METHODOLOGY_VERSION, BLACKLIST_TRACKER_METHODOLOGY_VERSION_LABEL, getBlacklistTrackerMethodologyVersionAt
+- `shared/lib/blacklist.ts` - BlacklistAddressCountMode, buildBlacklistAddressCountKey, computeBlacklistAmountUsdAtEvent, isBlacklistAmountGapStatus, isGoldBlacklistStablecoin
+- `shared/lib/cache-health.ts` - getCacheFreshnessRatio, getCacheFreshnessStatus, getCacheImpactStatus
+- `shared/lib/centralized-custody.ts` - CENTRALIZED_CUSTODY_CRYPTO, computeCentralizedCustodyFraction
+- `shared/lib/chain-aggregator.ts` - ChainAggregatorAsset, ChainAggregatorInput, aggregateChains
+- `shared/lib/chain-circulating.ts` - ChainCirculatingPoint, RawChainCirculating, canonicalizeChainCirculating, findCanonicalChainData
+- `shared/lib/chain-health-version.ts` - CHAIN_HEALTH_METHODOLOGY_CHANGELOG, CHAIN_HEALTH_METHODOLOGY_CHANGELOG_PATH, CHAIN_HEALTH_METHODOLOGY_VERSION, CHAIN_HEALTH_METHODOLOGY_VERSION_LABEL, getChainHealthMethodologyVersionAt
+- `shared/lib/chain-health.ts` - BACKING_DIVERSITY_WEIGHT, CHAIN_ENVIRONMENT_SCORES, CHAIN_ENVIRONMENT_WEIGHT, CONCENTRATION_WEIGHT, HEALTH_METHODOLOGY_VERSION, PEG_STABILITY_WEIGHT
+- `shared/lib/chain-provider-registry.ts` - CG_CHAIN_MAP, CG_CHAIN_REVERSE, CHAIN_REGISTRY, DS_CHAIN_MAP, GT_CHAIN_MAP, GT_CHAIN_REVERSE
+- `shared/lib/chains.ts` - CHAIN_META, CHAIN_RESILIENCE_TIER, ChainResilienceTier, getActiveChainIds, getChainResilienceTier, resolveChainId
+- `shared/lib/classification.ts` - BACKING_BADGE_STYLES, BACKING_COLORS, BACKING_LABELS, BACKING_LABELS_SHORT, BLACKLIST_CHART_COLORS, CONFIDENCE_LEVEL_COLORS
+- `shared/lib/cloudflare-access-jwt.ts` - JwtVerifyOptions, _resetJwksCache, normalizeTeamDomain, verifyAccessJwt
+- `shared/lib/commodity-median.ts` - CommodityMedianSource, CommodityPeg, CommodityPricePoint, buildCommodityPeerMedianSeries
+- `shared/lib/cron-jobs.ts` - CRON_GROUPS, CRON_INTERVALS, CRON_JOB_DEFINITIONS, CRON_SCHEDULES, CronGroupDefinition, CronGroupKey
+- `shared/lib/dead-stablecoins.ts` - CAUSE_HEX, CAUSE_META, DEAD_STABLECOINS
+- `shared/lib/depeg-config.ts` - DEPEG_THRESHOLD_BPS, DEPEG_THRESHOLD_BPS_NON_USD
+- `shared/lib/depeg-detection-config.ts` - DEPEG_CONFIRMATION_SUPPLY_THRESHOLD, DEPEG_DEX_PROTOCOL_CORROBORATION_MIN, DEPEG_EVENT_MIN_SUPPLY_USD, DEPEG_EXTREME_MOVE_BPS, DEPEG_PENDING_EXPIRY_SEC, DEPEG_PENDING_MIN_AGE_SEC
+- `shared/lib/depeg-dews-version.ts` - DEPEG_DEWS_METHODOLOGY_CHANGELOG, DEPEG_DEWS_METHODOLOGY_CHANGELOG_PATH, DEPEG_DEWS_METHODOLOGY_VERSION, DEPEG_DEWS_METHODOLOGY_VERSION_LABEL, getDepegDewsMethodologyVersionAt
+- `shared/lib/dependency-graph.ts` - DependencyGraphEdge, buildDependencyGraphEdges, collectDependencyGraphIds, filterDependencyGraphEdgesToLive
+- `shared/lib/dews-config.ts` - DEWS_SIGNAL_WEIGHTS, DEWS_THREAT_BANDS
+- `shared/lib/env-utils.ts` - getConfiguredValue, hasConfiguredValue
+- `shared/lib/explorer.ts` - ExplorerEntityType, buildExplorerUrl
+- `shared/lib/format.ts` - abbreviateNumberParts, formatAddress, formatBps, formatChartDate, formatChartPercent, formatCompactCount
+- `shared/lib/infrastructure.ts` - getInfrastructureLabel, getInfrastructureSummary
+- `shared/lib/liquidity-score-version.ts` - LIQUIDITY_METHODOLOGY_CHANGELOG, LIQUIDITY_METHODOLOGY_CHANGELOG_PATH, LIQUIDITY_METHODOLOGY_VERSION, LIQUIDITY_METHODOLOGY_VERSION_LABEL, getLiquidityMethodologyVersionAt
+- `shared/lib/liquidity-score-weights.ts` - DURABILITY_COMPONENT_WEIGHTS, LIQUIDITY_SCORE_WEIGHTS, LiquidityScoreComponentKey
+- `shared/lib/live-reserve-adapters-config.ts` - LiveReservesConfigSchema
+- `shared/lib/live-reserve-adapters-definitions.ts` - LIVE_RESERVE_ADAPTER_DEFINITIONS
+- `shared/lib/live-reserve-adapters-schemas.ts` - DASHBOARD_SOURCE_MAX_AGE_SEC, DISCLOSURE_SOURCE_MAX_AGE_SEC, LiveReserveAdapterParams, LiveReserveAdapterParamsByKey, LiveReserveAdapterParamsSchemaKey, LiveReserveAdapterParamsSchemaMap
+- `shared/lib/live-reserve-adapters.ts` - LiveReserveRedemptionCapacityTelemetry, LiveReserveRedemptionFeeTelemetry, getLiveReserveAdapterDefinition, parseLiveReserveAdapterParams
+- `shared/lib/live-reserve-display.ts` - buildReserveDisplayBadge, getReserveDisplayBadgeKindForAdapter, hasReserveDisplayBadgeForAdapter, inferReserveDisplayBadgeKindFromEvidenceClass
+- `shared/lib/math.ts` - clamp
+- `shared/lib/methodology-version.ts` - MethodologyChangelogEntry, MethodologyVersion, MethodologyVersionConfig, compareMethodologyVersions, createMethodologyVersion, toMethodologyVersionLabel
+- `shared/lib/mint-burn-flow-version.ts` - MINT_BURN_FLOW_METHODOLOGY_CHANGELOG, MINT_BURN_FLOW_METHODOLOGY_CHANGELOG_PATH, MINT_BURN_FLOW_METHODOLOGY_VERSION_LABEL
+- `shared/lib/mint-burn-signals.ts` - COIN_FLOW_COMPOSITE_STATE_VALUES, CoinFlowCompositeState, NET_FLOW_DIRECTION_24H_VALUES, NetFlowDirection24h, PRESSURE_SHIFT_STABLE_BAND_MAX, PRESSURE_SHIFT_STATE_VALUES
+- `shared/lib/ops-limits.ts` - CIRCUIT_OPEN_THRESHOLD, CIRCUIT_PROBE_INTERVAL_SEC, FEEDBACK_RATE_LIMIT_MAX_SUBMISSIONS, FEEDBACK_RATE_LIMIT_WINDOW_SEC, PUBLIC_API_RATE_LIMIT_MAX_REQUESTS, PUBLIC_API_RATE_LIMIT_WINDOW_SEC
+- `shared/lib/peg-rates.ts` - COMMODITY_MEDIAN_EXCLUDES, PegRateSource, PegRatesResult, derivePegRates, getPegReference
+- `shared/lib/peg-score.ts` - PEG_SCORE_LOOKBACK_SEC, PegScoreResult, coinTrackingStart, computePegScore, computePegScoreWithWindow
+- `shared/lib/peg-utils.ts` - mergeDepegSeconds, worstDeviation
+- `shared/lib/pricing-pipeline-version.ts` - PRICING_PIPELINE_CHANGELOG, PRICING_PIPELINE_CHANGELOG_PATH, PRICING_PIPELINE_VERSION, PRICING_PIPELINE_VERSION_LABEL, getPricingPipelineVersionAt
+- `shared/lib/pricing-provider-config.ts` - BINANCE_MARKETS, BITSTAMP_MARKETS, CEX_PROVIDER_AUDIT_CONFIG, COINBASE_PRODUCTS, KRAKEN_MARKETS, REDSTONE_PROVIDER_AUDIT_CONFIG
+- `shared/lib/pricing-source-registry-aggregators.ts` - PRICING_SOURCE_REGISTRY_AGGREGATORS
+- `shared/lib/pricing-source-registry-dex-search.ts` - PRICING_SOURCE_REGISTRY_DEX_SEARCH
+- `shared/lib/pricing-source-registry-market-feeds.ts` - PRICING_SOURCE_REGISTRY_MARKET_FEEDS
+- `shared/lib/pricing-source-registry-special.ts` - PRICING_SOURCE_REGISTRY_SPECIAL
+- `shared/lib/pricing-source-registry-types.ts` - PricingSourceCapabilities, PricingSourceFreshnessKind, PricingSourceRegistryEntry, PricingSourceTrustTier
+- `shared/lib/pricing-source-registry.ts` - PRICING_SOURCE_REGISTRY, PricingSourceKey, getPricingSourceRegistryEntry, isPricingSourceProtocolOverride, isPricingSourceSoftGuardrailExempt
+- `shared/lib/pricing-sources.ts` - PRICE_SOURCE_HEALTH_BUCKET_KEYS, PRICE_TRANSPARENCY_SOURCE_KEYS, PriceSourceHealthBucketKey, createEmptyPriceSourceHealthDistribution, getPriceSourceHealthBucketShortLabel, getPricingSourceLabel
+- `shared/lib/psi-colors.ts` - ConditionBand, PSI_BAND_CLASSES, PSI_BG_OVERLAY_CLASSES, PSI_BORDER_CLASSES, PSI_HEX_COLORS, PSI_PULSE_DURATION
+- `shared/lib/psi-eligible.ts` - PSI_ELIGIBLE_IDS, PSI_ELIGIBLE_META_BY_ID, PSI_ELIGIBLE_STABLECOINS
+- `shared/lib/psi-view-model.ts` - PsiChartPoint, PsiComponentsLike, PsiCurrentChartLike, PsiCurrentLike, PsiHistoryPointLike, buildPsiChartData
+- `shared/lib/public-health.ts` - PublicStatusTone, countPublicImpactOpenCircuits, getCircuitImpactStatus, getOverallCacheImpactStatus, getPublicMintBurnStatus, getStatusSeverity
 - ... 49 more files omitted; use `rg --files shared/lib` for the full list.
 
 ## Stablecoin data
@@ -327,253 +327,253 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 
 ## Worker routing
 
-- `worker/src/routes/admin-routes.ts` - default:ADMIN_STATIC_ROUTES
-- `worker/src/routes/dependency-hydrators.ts` - default:ROUTE_DEPENDENCY_HYDRATORS
-- `worker/src/routes/dynamic-routes.ts` - default:getDynamicRouteMatch
-- `worker/src/routes/messaging-routes.ts` - default:MESSAGING_STATIC_ROUTES
-- `worker/src/routes/ops-routes.ts` - default:OPS_STATIC_ROUTES
-- `worker/src/routes/public-routes.ts` - default:PUBLIC_STATIC_ROUTES
-- `worker/src/routes/registry.ts` - default:ROUTER_STATIC_PATHS, default:getRouteDependencies, default:getRouteMatch
-- `worker/src/routes/shared.ts` - default:AlchemyRouteFields, default:ApiKeysRouteFields, default:ChainRpcRouteFields, default:CloudflareD1StatusRouteFields, default:CoingeckoRouteFields, default:DigestRouteFields
+- `worker/src/routes/admin-routes.ts` - ADMIN_STATIC_ROUTES
+- `worker/src/routes/dependency-hydrators.ts` - ROUTE_DEPENDENCY_HYDRATORS
+- `worker/src/routes/dynamic-routes.ts` - getDynamicRouteMatch
+- `worker/src/routes/messaging-routes.ts` - MESSAGING_STATIC_ROUTES
+- `worker/src/routes/ops-routes.ts` - OPS_STATIC_ROUTES
+- `worker/src/routes/public-routes.ts` - PUBLIC_STATIC_ROUTES
+- `worker/src/routes/registry.ts` - ROUTER_STATIC_PATHS, getRouteDependencies, getRouteMatch
+- `worker/src/routes/shared.ts` - AlchemyRouteFields, ApiKeysRouteFields, ChainRpcRouteFields, CloudflareD1StatusRouteFields, CoingeckoRouteFields, DigestRouteFields
 
 ## Worker handlers
 
-- `worker/src/handlers/http.ts` - default:handleHttpRequest
-- `worker/src/handlers/http/context.ts` - default:buildRouteContext
-- `worker/src/handlers/http/cors.ts` - default:addCorsHeaders, default:handleCorsPreflight, default:resolveCorsOrigin
-- `worker/src/handlers/http/edge-cache.ts` - default:createEdgeCacheContext, default:readEdgeCache, default:writeEdgeCache
-- `worker/src/handlers/http/gates.ts` - default:evaluateAccessGate, default:handleMaintenanceMode, default:notFoundResponse, default:warnWorkerEnvIssuesOnce
-- `worker/src/handlers/http/request-dispatch.ts` - default:handleHttpRequestImpl
-- `worker/src/handlers/http/request-source.ts` - default:createRequestSourceRecorder
-- `worker/src/handlers/scheduled.ts` - default:SLOT_RUNNER_BY_SCHEDULE, default:handleScheduledEvent
-- `worker/src/handlers/scheduled/context.ts` - default:ScheduledRuntimeContext, default:ScheduledRuntimeInit, default:createScheduledRuntimeContext, default:parseStablecoinsCapabilities
-- `worker/src/handlers/scheduled/daily-0800.ts` - default:runDaily0800Slot
-- `worker/src/handlers/scheduled/daily-0805.ts` - default:runDaily0805Slot
-- `worker/src/handlers/scheduled/five-minute-telegram.ts` - default:runFiveMinuteTelegramSlot
-- `worker/src/handlers/scheduled/half-hourly.ts` - default:runHalfHourlySlot
-- `worker/src/handlers/scheduled/hourly-blacklist.ts` - default:runHourlyBlacklistSlot
-- `worker/src/handlers/scheduled/hourly-live-reserves.ts` - default:runHourlyReserveSyncSlot
-- `worker/src/handlers/scheduled/hourly-yield.ts` - default:runHourlyYieldSlot
-- `worker/src/handlers/scheduled/mint-burn-slot.ts` - default:runMintBurnSlot
-- `worker/src/handlers/scheduled/monthly-yield-audit.ts` - default:runMonthlyYieldAuditSlot
-- `worker/src/handlers/scheduled/quarter-hourly.ts` - default:runQuarterHourlySlot
-- `worker/src/handlers/scheduled/run-best-effort-job.ts` - default:runBestEffortScheduledJob
-- `worker/src/handlers/scheduled/status-self-check.ts` - default:runStatusSelfCheckSlot
-- `worker/src/handlers/scheduled/thirty-minute-dex-discovery.ts` - default:runThirtyMinuteDexDiscoverySlot
-- `worker/src/handlers/scheduled/twenty-minute-mint-burn-critical.ts` - default:runTwentyMinuteMintBurnCriticalSlot
-- `worker/src/handlers/scheduled/twenty-minute-mint-burn-extended.ts` - default:runTwentyMinuteMintBurnExtendedSlot
-- `worker/src/handlers/scheduled/yield-supplemental.ts` - default:runYieldSupplementalSlot
+- `worker/src/handlers/http.ts` - handleHttpRequest
+- `worker/src/handlers/http/context.ts` - buildRouteContext
+- `worker/src/handlers/http/cors.ts` - addCorsHeaders, handleCorsPreflight, resolveCorsOrigin
+- `worker/src/handlers/http/edge-cache.ts` - createEdgeCacheContext, readEdgeCache, writeEdgeCache
+- `worker/src/handlers/http/gates.ts` - evaluateAccessGate, handleMaintenanceMode, notFoundResponse, warnWorkerEnvIssuesOnce
+- `worker/src/handlers/http/request-dispatch.ts` - handleHttpRequestImpl
+- `worker/src/handlers/http/request-source.ts` - createRequestSourceRecorder
+- `worker/src/handlers/scheduled.ts` - SLOT_RUNNER_BY_SCHEDULE, handleScheduledEvent
+- `worker/src/handlers/scheduled/context.ts` - ScheduledRuntimeContext, ScheduledRuntimeInit, createScheduledRuntimeContext, parseStablecoinsCapabilities
+- `worker/src/handlers/scheduled/daily-0800.ts` - runDaily0800Slot
+- `worker/src/handlers/scheduled/daily-0805.ts` - runDaily0805Slot
+- `worker/src/handlers/scheduled/five-minute-telegram.ts` - runFiveMinuteTelegramSlot
+- `worker/src/handlers/scheduled/half-hourly.ts` - runHalfHourlySlot
+- `worker/src/handlers/scheduled/hourly-blacklist.ts` - runHourlyBlacklistSlot
+- `worker/src/handlers/scheduled/hourly-live-reserves.ts` - runHourlyReserveSyncSlot
+- `worker/src/handlers/scheduled/hourly-yield.ts` - runHourlyYieldSlot
+- `worker/src/handlers/scheduled/mint-burn-slot.ts` - runMintBurnSlot
+- `worker/src/handlers/scheduled/monthly-yield-audit.ts` - runMonthlyYieldAuditSlot
+- `worker/src/handlers/scheduled/quarter-hourly.ts` - runQuarterHourlySlot
+- `worker/src/handlers/scheduled/run-best-effort-job.ts` - runBestEffortScheduledJob
+- `worker/src/handlers/scheduled/status-self-check.ts` - runStatusSelfCheckSlot
+- `worker/src/handlers/scheduled/thirty-minute-dex-discovery.ts` - runThirtyMinuteDexDiscoverySlot
+- `worker/src/handlers/scheduled/twenty-minute-mint-burn-critical.ts` - runTwentyMinuteMintBurnCriticalSlot
+- `worker/src/handlers/scheduled/twenty-minute-mint-burn-extended.ts` - runTwentyMinuteMintBurnExtendedSlot
+- `worker/src/handlers/scheduled/yield-supplemental.ts` - runYieldSupplementalSlot
 
 ## Worker API
 
-- `worker/src/api/admin-actions.ts` - default:handleDebugSyncState, default:handleDiscoveryCandidateDismiss, default:handleResetBlacklistSync, default:handleTriggerDigest
-- `worker/src/api/api-key-audit-log.ts` - default:handleApiKeyAuditLog
-- `worker/src/api/api-keys.ts` - default:handleApiKeyDeactivate, default:handleApiKeyRotate, default:handleApiKeyUpdate, default:handleApiKeys
-- `worker/src/api/audit-depeg-history.ts` - default:handleAuditDepegHistory
-- `worker/src/api/backfill-blacklist-current-balances.ts` - default:handleBackfillBlacklistCurrentBalances
-- `worker/src/api/backfill-cg-prices.ts` - default:handleBackfillCgPrices
-- `worker/src/api/backfill-depegs-extraction.ts` - default:BackfillEvent, default:BackfillEventExtractionOptions, default:SupplyPoint, default:SupplySnapshot, default:extractDepegEvents, default:findNearestSupply
-- `worker/src/api/backfill-depegs-preview.ts` - default:BackfillReplayPreview, default:ExistingDepegEventRow, default:ExistingReplayRows, default:buildBackfillReplayPreview, default:loadExistingReplayRows, default:summarizeBackfillReplayDiff
-- `worker/src/api/backfill-depegs-replay.ts` - default:BackfillCoinReplayResult, default:backfillCoin
-- `worker/src/api/backfill-depegs-window.ts` - BACKFILL_REPLAY_CONTEXT_DAYS, MAX_BACKFILL_REPLAY_CONTEXT_DAYS, default:BackfillReplayWindow, default:buildBackfillDeleteStmt, default:buildReplayWindow, default:eventOverlapsReplayWindow
-- `worker/src/api/backfill-depegs.ts` - default:handleBackfillDepegs
-- `worker/src/api/backfill-dews.ts` - default:handleBackfillDEWS
-- `worker/src/api/backfill-fx.ts` - default:COMMODITY_PEGS, default:FxTimeSeries, default:OTHER_COIN_FX, default:PEG_TO_FX, default:SECONDARY_PEG_TO_FX, default:buildCommodityMedianSeriesFromCg
-- `worker/src/api/backfill-mint-burn-prices.ts` - default:handleBackfillMintBurnPrices
-- `worker/src/api/backfill-mint-burn.ts` - default:handleBackfillMintBurn
-- `worker/src/api/backfill-price-sources.ts` - default:HistoricalMarketBackfillGranularity, default:HistoricalMarketBackfillRange, default:HistoricalMarketMergeReason, default:HistoricalMarketPolicyAdjustment, default:HistoricalMarketPriceSeriesResult, default:HistoricalMarketSeriesStats
-- `worker/src/api/backfill-stability-index.ts` - default:handleBackfillStabilityIndex
-- `worker/src/api/backfill-supply-history.ts` - default:handleBackfillSupplyHistory
-- `worker/src/api/blacklist-summary.ts` - default:handleBlacklistSummary
-- `worker/src/api/blacklist.ts` - default:handleBlacklist
-- `worker/src/api/cache-handlers.ts` - default:handleBluechipRatings, default:handleStablecoinCharts, default:handleStablecoins, default:handleUsdsStatus, default:handleYieldRankings
-- `worker/src/api/chains.ts` - default:handleChains
-- `worker/src/api/daily-digest.ts` - default:handleDailyDigest
-- `worker/src/api/depeg-events.ts` - default:handleDepegEvents
-- `worker/src/api/dex-liquidity-history.ts` - default:handleDexLiquidityHistory
-- `worker/src/api/dex-liquidity-response.ts` - default:DexHistoryRow, default:DexLiquidityCronRow, default:DexLiquidityRow, default:DexPriceRow, default:buildDexLiquidityWarning, default:classifyLiquidityEvidence
-- `worker/src/api/dex-liquidity.ts` - default:handleDexLiquidity
-- `worker/src/api/digest-archive.ts` - default:handleDigestArchive
-- `worker/src/api/digest-snapshot.ts` - default:handleDigestSnapshot
-- `worker/src/api/discovery.ts` - default:handleDiscoveryCandidates, default:handleDismissCandidate
-- `worker/src/api/feedback.ts` - default:handleFeedback
-- `worker/src/api/feedback/format.ts` - default:buildIssueSubmission
-- `worker/src/api/feedback/github.ts` - default:createGitHubIssue
-- `worker/src/api/feedback/request.ts` - default:parseFeedbackRequest, default:prepareFeedbackSubmission
-- `worker/src/api/feedback/submission.ts` - default:submitFeedback
-- `worker/src/api/feedback/types.ts` - FEEDBACK_RATE_LIMIT_MAX_SUBMISSIONS, FEEDBACK_RATE_LIMIT_WINDOW_SEC, default:FeedbackBody, default:FeedbackBodySchema, default:FeedbackEnv, default:GITHUB_OWNER
-- `worker/src/api/feedback/verification.ts` - default:verifyDataCorrection
-- `worker/src/api/health.ts` - default:handleHealth
-- `worker/src/api/mint-burn-events.ts` - default:handleMintBurnEvents
-- `worker/src/api/mint-burn-flows-shared.ts` - default:BASELINE_WINDOW_DAYS, default:DailyBaselineRow, default:ETHEREUM_CHAIN_ID, default:EventRow, default:FLOW_CACHE_PREFIX, default:FLOW_DEFAULT_WINDOW_HOURS
-- `worker/src/api/mint-burn-flows.ts` - default:handleMintBurnFlows
-- `worker/src/api/non-usd-share.ts` - default:handleNonUsdShare
-- `worker/src/api/og.tsx` - default:deriveStablecoinOgCardData, default:handleOg
-- `worker/src/api/peg-summary.ts` - default:handlePegSummary
-- `worker/src/api/public-status-history.ts` - default:handlePublicStatusHistory
-- `worker/src/api/reclassify-atomic-roundtrips.ts` - default:handleReclassifyAtomicRoundtrips
-- `worker/src/api/redemption-backstops.ts` - default:handleRedemptionBackstops
-- `worker/src/api/remediate-blacklist-amount-gaps.ts` - default:handleRemediateBlacklistAmountGaps
-- `worker/src/api/report-cards.ts` - default:handleReportCards
-- `worker/src/api/request-source-stats.ts` - default:handleRequestSourceStats
-- `worker/src/api/safety-score-history.ts` - default:handleSafetyScoreHistory
-- `worker/src/api/stability-index.ts` - default:handleStabilityIndex
-- `worker/src/api/stablecoin-detail.ts` - default:handleStablecoinDetail
-- `worker/src/api/stablecoin-detail/coingecko-only.ts` - default:handleCoinGeckoOnlyDetail
-- `worker/src/api/stablecoin-detail/commodity.ts` - default:CommodityDetailConfig, default:fetchCommodityTokens, default:handleCommodityDetail
-- `worker/src/api/stablecoin-detail/defillama.ts` - default:handleDefiLlamaDetail, default:normalizeDefiLlamaDetailBody
-- `worker/src/api/stablecoin-detail/shared.ts` - default:CACHE_TTL_SECONDS, default:DETAIL_UPSTREAM_MAX_RETRIES, default:DETAIL_UPSTREAM_TIMEOUT_MS, default:DetailResponseHelpers, default:buildPriceMapByDate, default:buildTokenRowsFromMarketCaps
-- `worker/src/api/stablecoin-reserves.ts` - default:handleStablecoinReserves
-- `worker/src/api/stablecoin-summary.ts` - default:handleStablecoinSummary
-- `worker/src/api/status-history.ts` - default:handleStatusHistory
+- `worker/src/api/admin-actions.ts` - handleDebugSyncState, handleDiscoveryCandidateDismiss, handleResetBlacklistSync, handleTriggerDigest
+- `worker/src/api/api-key-audit-log.ts` - handleApiKeyAuditLog
+- `worker/src/api/api-keys.ts` - handleApiKeyDeactivate, handleApiKeyRotate, handleApiKeyUpdate, handleApiKeys
+- `worker/src/api/audit-depeg-history.ts` - handleAuditDepegHistory
+- `worker/src/api/backfill-blacklist-current-balances.ts` - handleBackfillBlacklistCurrentBalances
+- `worker/src/api/backfill-cg-prices.ts` - handleBackfillCgPrices
+- `worker/src/api/backfill-depegs-extraction.ts` - BackfillEvent, BackfillEventExtractionOptions, SupplyPoint, SupplySnapshot, extractDepegEvents, findNearestSupply
+- `worker/src/api/backfill-depegs-preview.ts` - BackfillReplayPreview, ExistingDepegEventRow, ExistingReplayRows, buildBackfillReplayPreview, loadExistingReplayRows, summarizeBackfillReplayDiff
+- `worker/src/api/backfill-depegs-replay.ts` - BackfillCoinReplayResult, backfillCoin
+- `worker/src/api/backfill-depegs-window.ts` - BACKFILL_REPLAY_CONTEXT_DAYS, BackfillReplayWindow, MAX_BACKFILL_REPLAY_CONTEXT_DAYS, buildBackfillDeleteStmt, buildReplayWindow, eventOverlapsReplayWindow
+- `worker/src/api/backfill-depegs.ts` - handleBackfillDepegs
+- `worker/src/api/backfill-dews.ts` - handleBackfillDEWS
+- `worker/src/api/backfill-fx.ts` - COMMODITY_PEGS, FxTimeSeries, OTHER_COIN_FX, PEG_TO_FX, SECONDARY_PEG_TO_FX, buildCommodityMedianSeriesFromCg
+- `worker/src/api/backfill-mint-burn-prices.ts` - handleBackfillMintBurnPrices
+- `worker/src/api/backfill-mint-burn.ts` - handleBackfillMintBurn
+- `worker/src/api/backfill-price-sources.ts` - HistoricalMarketBackfillGranularity, HistoricalMarketBackfillRange, HistoricalMarketMergeReason, HistoricalMarketPolicyAdjustment, HistoricalMarketPriceSeriesResult, HistoricalMarketSeriesStats
+- `worker/src/api/backfill-stability-index.ts` - handleBackfillStabilityIndex
+- `worker/src/api/backfill-supply-history.ts` - handleBackfillSupplyHistory
+- `worker/src/api/blacklist-summary.ts` - handleBlacklistSummary
+- `worker/src/api/blacklist.ts` - handleBlacklist
+- `worker/src/api/cache-handlers.ts` - handleBluechipRatings, handleStablecoinCharts, handleStablecoins, handleUsdsStatus, handleYieldRankings
+- `worker/src/api/chains.ts` - handleChains
+- `worker/src/api/daily-digest.ts` - handleDailyDigest
+- `worker/src/api/depeg-events.ts` - handleDepegEvents
+- `worker/src/api/dex-liquidity-history.ts` - handleDexLiquidityHistory
+- `worker/src/api/dex-liquidity-response.ts` - DexHistoryRow, DexLiquidityCronRow, DexLiquidityRow, DexPriceRow, buildDexLiquidityWarning, classifyLiquidityEvidence
+- `worker/src/api/dex-liquidity.ts` - handleDexLiquidity
+- `worker/src/api/digest-archive.ts` - handleDigestArchive
+- `worker/src/api/digest-snapshot.ts` - handleDigestSnapshot
+- `worker/src/api/discovery.ts` - handleDiscoveryCandidates, handleDismissCandidate
+- `worker/src/api/feedback.ts` - handleFeedback
+- `worker/src/api/feedback/format.ts` - buildIssueSubmission
+- `worker/src/api/feedback/github.ts` - createGitHubIssue
+- `worker/src/api/feedback/request.ts` - parseFeedbackRequest, prepareFeedbackSubmission
+- `worker/src/api/feedback/submission.ts` - submitFeedback
+- `worker/src/api/feedback/types.ts` - FeedbackBody, FeedbackBodySchema, FeedbackEnv, GITHUB_OWNER, GITHUB_REPO, PreparedFeedbackSubmission
+- `worker/src/api/feedback/verification.ts` - verifyDataCorrection
+- `worker/src/api/health.ts` - handleHealth
+- `worker/src/api/mint-burn-events.ts` - handleMintBurnEvents
+- `worker/src/api/mint-burn-flows-shared.ts` - BASELINE_WINDOW_DAYS, DailyBaselineRow, ETHEREUM_CHAIN_ID, EventRow, FLOW_CACHE_PREFIX, FLOW_DEFAULT_WINDOW_HOURS
+- `worker/src/api/mint-burn-flows.ts` - handleMintBurnFlows
+- `worker/src/api/non-usd-share.ts` - handleNonUsdShare
+- `worker/src/api/og.tsx` - deriveStablecoinOgCardData, handleOg
+- `worker/src/api/peg-summary.ts` - handlePegSummary
+- `worker/src/api/public-status-history.ts` - handlePublicStatusHistory
+- `worker/src/api/reclassify-atomic-roundtrips.ts` - handleReclassifyAtomicRoundtrips
+- `worker/src/api/redemption-backstops.ts` - handleRedemptionBackstops
+- `worker/src/api/remediate-blacklist-amount-gaps.ts` - handleRemediateBlacklistAmountGaps
+- `worker/src/api/report-cards.ts` - handleReportCards
+- `worker/src/api/request-source-stats.ts` - handleRequestSourceStats
+- `worker/src/api/safety-score-history.ts` - handleSafetyScoreHistory
+- `worker/src/api/stability-index.ts` - handleStabilityIndex
+- `worker/src/api/stablecoin-detail.ts` - handleStablecoinDetail
+- `worker/src/api/stablecoin-detail/coingecko-only.ts` - handleCoinGeckoOnlyDetail
+- `worker/src/api/stablecoin-detail/commodity.ts` - CommodityDetailConfig, fetchCommodityTokens, handleCommodityDetail
+- `worker/src/api/stablecoin-detail/defillama.ts` - handleDefiLlamaDetail, normalizeDefiLlamaDetailBody
+- `worker/src/api/stablecoin-detail/shared.ts` - CACHE_TTL_SECONDS, DETAIL_UPSTREAM_MAX_RETRIES, DETAIL_UPSTREAM_TIMEOUT_MS, DetailResponseHelpers, buildPriceMapByDate, buildTokenRowsFromMarketCaps
+- `worker/src/api/stablecoin-reserves.ts` - handleStablecoinReserves
+- `worker/src/api/stablecoin-summary.ts` - handleStablecoinSummary
+- `worker/src/api/status-history.ts` - handleStatusHistory
 - ... 12 more files omitted; use `rg --files worker/src/api` for the full list.
 
 ## Worker cron
 
-- `worker/src/cron/blacklist/amount-recovery.ts` - default:BlacklistRecoveryErrorClass, default:BlacklistRecoveryProvider, default:backfillAmounts, default:enrichRowBalances
-- `worker/src/cron/blacklist/balance-providers.ts` - default:fetchEvmTokenBalance, default:fetchEvmTokenCurrentBalance, default:fetchTronTokenCurrentBalance
-- `worker/src/cron/blacklist/current-balance-cache.ts` - default:SyncCurrentBalanceCacheResult, default:fetchGoldPriceFromCache, default:syncCurrentBalanceCacheForRows
-- `worker/src/cron/blacklist/evm-source.ts` - default:FetchEvmEventsIncrementalResult, default:fetchEvmEventsIncremental, default:parseEvmLogs, default:resolveRpcLogTarget
-- `worker/src/cron/blacklist/persistence.ts` - default:insertBlacklistRows
-- `worker/src/cron/blacklist/post-fetch.ts` - default:BlacklistPostFetchCounters, default:CurrentBalanceCacheCounters, default:processFetchedBlacklistRows
-- `worker/src/cron/blacklist/shared.ts` - default:BlacklistRow, default:buildExplorerAddressUrl, default:buildExplorerTxUrl
-- `worker/src/cron/blacklist/tron-source.ts` - default:fetchTronEventsIncremental
-- `worker/src/cron/compute-dews.ts` - default:computeAndStoreDEWS
-- `worker/src/cron/confirm-pending-depegs.ts` - default:confirmPendingDepegs
-- `worker/src/cron/daily-digest.ts` - classifyRegime, default:generateDailyDigest
-- `worker/src/cron/daily-digest/collectors-history.ts` - default:collectCrossDayTrends, default:collectHistoricalContext, default:collectPsiContributors
-- `worker/src/cron/daily-digest/collectors-market.ts` - default:collectActiveDepegs, default:collectBlacklistActivity, default:collectLiquidityShifts, default:collectMintBurnFlows, default:collectResolvedDepegs, default:collectSupplyVelocity
-- `worker/src/cron/daily-digest/collectors-risk.ts` - default:collectDewsStress, default:collectGradeTransitions, default:collectSafetyScores, default:collectYieldAnomalies
-- `worker/src/cron/daily-digest/collectors-shared.ts` - default:CollectorContext, default:CollectorResult, default:SafetyScoresResult, default:collectorDegraded, default:collectorOk, default:logCollectorParseFailure
-- `worker/src/cron/daily-digest/collectors.ts` - collectActiveDepegs, collectBlacklistActivity, collectCrossDayTrends, collectDewsStress, collectGradeTransitions, collectHistoricalContext
-- `worker/src/cron/daily-digest/input.ts` - default:DailyDigestInputBuildResult, default:buildDailyDigestInput
-- `worker/src/cron/daily-digest/mint-burn-ftq.ts` - default:DigestMintBurnCoinIntensity, default:computeDigestMintBurnFtqFlows
-- `worker/src/cron/daily-digest/prompt.ts` - default:DigestMeta, default:SYSTEM_PROMPT, default:buildUserPrompt, default:classifyRegime
-- `worker/src/cron/daily-digest/response.ts` - default:DigestModelResponseParseOptions, default:ParsedDigestResponse, default:parseDigestModelResponse
-- `worker/src/cron/daily-digest/runtime-helpers.ts` - default:RecentDigestMetaEntry, default:buildRecentDigestMeta, default:logDailyDigestLlmCall
-- `worker/src/cron/daily-digest/shared.ts` - default:NON_WEEKLY_DIGEST_SQL_FILTER
-- `worker/src/cron/detect-depegs.ts` - default:detectDepegEvents
-- `worker/src/cron/dews/contracts.ts` - default:DewsComputedRow, default:DewsScoringResult, default:DewsScoringState, default:DewsSourceState, default:DexLiquidityRow, default:DexPriceSnapshot
-- `worker/src/cron/dews/persistence.ts` - default:persistDewsResults
-- `worker/src/cron/dews/scoring.ts` - default:buildDewsScoringResult
-- `worker/src/cron/dews/source-state.ts` - default:loadDewsSourceState
-- `worker/src/cron/dex-discovery/crawl-sources.ts` - default:CrawlResult, default:crawlCoin
+- `worker/src/cron/blacklist/amount-recovery.ts` - BlacklistRecoveryErrorClass, BlacklistRecoveryProvider, backfillAmounts, enrichRowBalances
+- `worker/src/cron/blacklist/balance-providers.ts` - fetchEvmTokenBalance, fetchEvmTokenCurrentBalance, fetchTronTokenCurrentBalance
+- `worker/src/cron/blacklist/current-balance-cache.ts` - SyncCurrentBalanceCacheResult, fetchGoldPriceFromCache, syncCurrentBalanceCacheForRows
+- `worker/src/cron/blacklist/evm-source.ts` - FetchEvmEventsIncrementalResult, fetchEvmEventsIncremental, parseEvmLogs, resolveRpcLogTarget
+- `worker/src/cron/blacklist/persistence.ts` - insertBlacklistRows
+- `worker/src/cron/blacklist/post-fetch.ts` - BlacklistPostFetchCounters, CurrentBalanceCacheCounters, processFetchedBlacklistRows
+- `worker/src/cron/blacklist/shared.ts` - BlacklistRow, buildExplorerAddressUrl, buildExplorerTxUrl
+- `worker/src/cron/blacklist/tron-source.ts` - fetchTronEventsIncremental
+- `worker/src/cron/compute-dews.ts` - computeAndStoreDEWS
+- `worker/src/cron/confirm-pending-depegs.ts` - confirmPendingDepegs
+- `worker/src/cron/daily-digest.ts` - classifyRegime, generateDailyDigest
+- `worker/src/cron/daily-digest/collectors-history.ts` - collectCrossDayTrends, collectHistoricalContext, collectPsiContributors
+- `worker/src/cron/daily-digest/collectors-market.ts` - collectActiveDepegs, collectBlacklistActivity, collectLiquidityShifts, collectMintBurnFlows, collectResolvedDepegs, collectSupplyVelocity
+- `worker/src/cron/daily-digest/collectors-risk.ts` - collectDewsStress, collectGradeTransitions, collectSafetyScores, collectYieldAnomalies
+- `worker/src/cron/daily-digest/collectors-shared.ts` - CollectorContext, CollectorResult, SafetyScoresResult, collectorDegraded, collectorOk, logCollectorParseFailure
+- `worker/src/cron/daily-digest/collectors.ts`
+- `worker/src/cron/daily-digest/input.ts` - DailyDigestInputBuildResult, buildDailyDigestInput
+- `worker/src/cron/daily-digest/mint-burn-ftq.ts` - DigestMintBurnCoinIntensity, computeDigestMintBurnFtqFlows
+- `worker/src/cron/daily-digest/prompt.ts` - DigestMeta, SYSTEM_PROMPT, buildUserPrompt, classifyRegime
+- `worker/src/cron/daily-digest/response.ts` - DigestModelResponseParseOptions, ParsedDigestResponse, parseDigestModelResponse
+- `worker/src/cron/daily-digest/runtime-helpers.ts` - RecentDigestMetaEntry, buildRecentDigestMeta, logDailyDigestLlmCall
+- `worker/src/cron/daily-digest/shared.ts` - NON_WEEKLY_DIGEST_SQL_FILTER
+- `worker/src/cron/detect-depegs.ts` - detectDepegEvents
+- `worker/src/cron/dews/contracts.ts` - DewsComputedRow, DewsScoringResult, DewsScoringState, DewsSourceState, DexLiquidityRow, DexPriceSnapshot
+- `worker/src/cron/dews/persistence.ts` - persistDewsResults
+- `worker/src/cron/dews/scoring.ts` - buildDewsScoringResult
+- `worker/src/cron/dews/source-state.ts` - loadDewsSourceState
+- `worker/src/cron/dex-discovery/crawl-sources.ts` - CrawlResult, crawlCoin
 - `worker/src/cron/dex-discovery/index.ts` - syncDexDiscovery
-- `worker/src/cron/dex-discovery/orchestrator.ts` - default:DEX_DISCOVERY_RUN_BUDGET_MS, default:EffectiveTier, default:compareDiscoveryMeta, default:computeEffectiveTier, default:isEligibleThisRun, default:syncDexDiscovery
-- `worker/src/cron/dex-discovery/persistence.ts` - default:cleanupStaging, default:incrementRunSeq, default:readDiscoveryMeta, default:updateDiscoveryMeta, default:upsertStagedPools
-- `worker/src/cron/dex-discovery/types.ts` - default:DISCOVERY_TIERS, default:DiscoveryMeta, default:STAGED_POOL_DEFAULTS, default:StagedPool, default:stagedPoolConfidence, default:stagedPoolMaturityDays
-- `worker/src/cron/dex-liquidity/challenger-persistence.ts` - default:DexPriceChallengerLoadDiagnostics, default:DexPriceChallengerLoadResult, default:DexPriceChallengerLoadRow, default:DexPriceChallengerPoolRow, default:DexPriceChallengerPublicationInput, default:DexPriceChallengerPublicationPlan
-- `worker/src/cron/dex-liquidity/coingecko-onchain-shared.ts` - default:CgPoolClassification, default:classifyCgPool, default:inferCgBalanceRatio, default:parseCgPool
-- `worker/src/cron/dex-liquidity/coingecko-tickers-shared.ts` - default:AggregatedExchangeTicker, default:CgTickerExchangeSummary, default:aggregateCgTickersByExchange, default:buildCgTickerExchangeSummaries, default:buildCgTickerPriceObservations, default:filterValidCgTickers
-- `worker/src/cron/dex-liquidity/constants.ts` - default:AERODROME_PAIR_QUERY, default:AERODROME_SUBGRAPHS, default:CG_ONCHAIN_TOKEN_POOLS_MAX_PAGES, default:CG_ONCHAIN_TOKEN_POOLS_PAGE_SIZE, default:CG_TICKERS_RATE_MS, default:CURVE_API_BASE
-- `worker/src/cron/dex-liquidity/crawl-helpers.ts` - default:BuildNewPoolArgs, default:CrawlStats, default:CrawlToken, default:CrawlTokenPoolsConfig, default:CrawlTokenPoolsResult, default:ParsedPool
-- `worker/src/cron/dex-liquidity/direct-source-helpers.ts` - default:buildDirectApiPoolIdentity, default:classifyClPoolType, default:normalizeFeeRateFromBps
-- `worker/src/cron/dex-liquidity/fetch-balancer.ts` - default:fetchBalancerPools
-- `worker/src/cron/dex-liquidity/fetch-crawlers.ts` - default:fetchCgPools, default:fetchGtPools, default:mergeCgPools, default:mergeGtPools
-- `worker/src/cron/dex-liquidity/fetch-fallbacks.ts` - default:fetchCgTickersFallback, default:fetchDsFallbackPools, default:getFallbackTargets
-- `worker/src/cron/dex-liquidity/fetch-fluid.ts` - default:fetchFluidPools
-- `worker/src/cron/dex-liquidity/fetch-meteora.ts` - default:fetchMeteoraPools
-- `worker/src/cron/dex-liquidity/fetch-orca.ts` - default:fetchOrcaPools
-- `worker/src/cron/dex-liquidity/fetch-pancakeswap.ts` - default:fetchPancakeSwapPools
-- `worker/src/cron/dex-liquidity/fetch-primary.ts` - default:buildChainAddresses, default:buildCurveLookups, default:buildKnownPoolAddresses, default:fetchAerodromeData, default:fetchCgTokenBatchPrices, default:fetchDataSources
-- `worker/src/cron/dex-liquidity/fetch-raydium.ts` - default:fetchRaydiumPools
-- `worker/src/cron/dex-liquidity/fetch-slipstream.ts` - default:fetchSlipstreamPools
-- `worker/src/cron/dex-liquidity/geckoterminal-shared.ts` - default:fetchGtTokenPools, default:getGtPoolKind, default:getGtPoolType, default:parseGtPool
+- `worker/src/cron/dex-discovery/orchestrator.ts` - DEX_DISCOVERY_RUN_BUDGET_MS, EffectiveTier, compareDiscoveryMeta, computeEffectiveTier, isEligibleThisRun, syncDexDiscovery
+- `worker/src/cron/dex-discovery/persistence.ts` - cleanupStaging, incrementRunSeq, readDiscoveryMeta, updateDiscoveryMeta, upsertStagedPools
+- `worker/src/cron/dex-discovery/types.ts` - DISCOVERY_TIERS, DiscoveryMeta, STAGED_POOL_DEFAULTS, StagedPool, stagedPoolConfidence, stagedPoolMaturityDays
+- `worker/src/cron/dex-liquidity/challenger-persistence.ts` - DexPriceChallengerLoadDiagnostics, DexPriceChallengerLoadResult, DexPriceChallengerLoadRow, DexPriceChallengerPoolRow, DexPriceChallengerPublicationInput, DexPriceChallengerPublicationPlan
+- `worker/src/cron/dex-liquidity/coingecko-onchain-shared.ts` - CgPoolClassification, classifyCgPool, inferCgBalanceRatio, parseCgPool
+- `worker/src/cron/dex-liquidity/coingecko-tickers-shared.ts` - AggregatedExchangeTicker, CgTickerExchangeSummary, aggregateCgTickersByExchange, buildCgTickerExchangeSummaries, buildCgTickerPriceObservations, filterValidCgTickers
+- `worker/src/cron/dex-liquidity/constants.ts` - AERODROME_PAIR_QUERY, AERODROME_SUBGRAPHS, CG_ONCHAIN_TOKEN_POOLS_MAX_PAGES, CG_ONCHAIN_TOKEN_POOLS_PAGE_SIZE, CG_TICKERS_RATE_MS, CURVE_API_BASE
+- `worker/src/cron/dex-liquidity/crawl-helpers.ts` - BuildNewPoolArgs, CrawlStats, CrawlToken, CrawlTokenPoolsConfig, CrawlTokenPoolsResult, ParsedPool
+- `worker/src/cron/dex-liquidity/direct-source-helpers.ts` - buildDirectApiPoolIdentity, classifyClPoolType, normalizeFeeRateFromBps
+- `worker/src/cron/dex-liquidity/fetch-balancer.ts` - fetchBalancerPools
+- `worker/src/cron/dex-liquidity/fetch-crawlers.ts` - fetchCgPools, fetchGtPools, mergeCgPools, mergeGtPools
+- `worker/src/cron/dex-liquidity/fetch-fallbacks.ts` - fetchCgTickersFallback, fetchDsFallbackPools, getFallbackTargets
+- `worker/src/cron/dex-liquidity/fetch-fluid.ts` - fetchFluidPools
+- `worker/src/cron/dex-liquidity/fetch-meteora.ts` - fetchMeteoraPools
+- `worker/src/cron/dex-liquidity/fetch-orca.ts` - fetchOrcaPools
+- `worker/src/cron/dex-liquidity/fetch-pancakeswap.ts` - fetchPancakeSwapPools
+- `worker/src/cron/dex-liquidity/fetch-primary.ts` - buildChainAddresses, buildCurveLookups, buildKnownPoolAddresses, fetchAerodromeData, fetchCgTokenBatchPrices, fetchDataSources
+- `worker/src/cron/dex-liquidity/fetch-raydium.ts` - fetchRaydiumPools
+- `worker/src/cron/dex-liquidity/fetch-slipstream.ts` - fetchSlipstreamPools
+- `worker/src/cron/dex-liquidity/geckoterminal-shared.ts` - fetchGtTokenPools, getGtPoolKind, getGtPoolType, parseGtPool
 - `worker/src/cron/dex-liquidity/index.ts` - syncDexLiquidity
-- `worker/src/cron/dex-liquidity/orchestrator-metadata.ts` - default:DexLiquidityPostScoreAnalysis, default:analyzeDexLiquidityPostScoring, default:buildDexLiquidityCronMetadata, default:isDexLiquidityDegraded
-- `worker/src/cron/dex-liquidity/orchestrator-phases.ts` - default:AuthoritativeStagedPoolConfirmationIndex, default:DirectApiFetchPhaseResult, default:DirectApiFetcher, default:DirectApiIntegrationResult, default:FallbackCrawlerPhaseResult, default:SubgraphEnrichmentPhaseResult
-- `worker/src/cron/dex-liquidity/orchestrator.ts` - default:filterPrimaryPoolsPreferDirectApi, default:syncDexLiquidity
-- `worker/src/cron/dex-liquidity/persistence.ts` - default:HistoricalSnapshotWriteResult, default:PersistScoresResult, default:persistScores, default:writeHistoricalSnapshots
-- `worker/src/cron/dex-liquidity/pool-contribution.ts` - default:addSecondaryPoolContribution
-- `worker/src/cron/dex-liquidity/pool-helpers.ts` - default:buildPoolFingerprint, default:buildSymbolLookups, default:classifyPoolType, default:computeDurabilityScore, default:computeLiquidityScore, default:computePoolPairQuality
-- `worker/src/cron/dex-liquidity/pool-identity.ts` - default:KnownPoolIdentityIndex, default:PoolDedupReason, default:PoolIdentity, default:PoolIdentityConfidence, default:PoolIdentitySource, default:buildKnownPoolIdentityIndex
-- `worker/src/cron/dex-liquidity/price-sanity.ts` - default:isPlausibleDexObservationPrice
-- `worker/src/cron/dex-liquidity/process-pools.ts` - default:processPoolMetrics
-- `worker/src/cron/dex-liquidity/score-weights.ts` - DURABILITY_COMPONENT_WEIGHTS, default:LIQUIDITY_COMPONENT_WEIGHTS
-- `worker/src/cron/dex-liquidity/scoring-helpers.ts` - default:accumulateGlobalAggregate, default:aggregateProtocolSources, default:applyProtocolCaps, default:applyRebuiltMetrics, default:buildDexPriceObservationsFromRetainedPools, default:classifyCoverage
-- `worker/src/cron/dex-liquidity/scoring.ts` - default:computeDepthStability, default:computeDexPrices, default:computeSeriesStability, default:computeStablecoinScores
-- `worker/src/cron/dex-liquidity/staging-merge.ts` - default:mergeStagedPools
-- `worker/src/cron/dex-liquidity/subgraph-family-runner.ts` - default:runSubgraphFamily
-- `worker/src/cron/dex-liquidity/subgraph-helpers.ts` - default:FetchSubgraphEntitiesConfig, default:FetchSubgraphEntitiesResult, default:SubgraphPriceObservation, default:fetchSubgraphEntities, default:mergePriceObservations
-- `worker/src/cron/dex-liquidity/subgraph-source-families.ts` - default:fetchAerodromeData, default:fetchUniV3Data
-- `worker/src/cron/dex-liquidity/token-batch-runner.ts` - default:ProviderChainAddress, default:runTokenBatchPriceFetch
-- `worker/src/cron/dex-liquidity/token-price-observations.ts` - default:TokenBatchTrackedToken, default:appendTokenBatchPriceObservations
-- `worker/src/cron/dex-liquidity/token-resolution.ts` - default:TokenResolutionOptions, default:TokenResolutionResult, default:buildChainAddressKey, default:getChainScopedSymbolIds, default:makeChainAddressKey, default:normalizeTokenAddress
-- `worker/src/cron/dex-liquidity/types.ts` - default:AerodromeLookups, default:CgNewPool, default:CgTicker, default:CurveLookups, default:CurvePool, default:CurvePoolEntry
-- `worker/src/cron/digest/platform.ts` - default:insertDigestRecord, default:requestDigestCopy, default:runDigestChannelDelivery
-- `worker/src/cron/discovery-scan.ts` - default:DiscoveryCandidateRow, default:filterDiscoveryCandidates, default:runDiscoveryScan, default:upsertDiscoveryCandidates
-- `worker/src/cron/dispatch-telegram-alerts.ts` - default:dispatchTelegramAlerts
-- `worker/src/cron/dispatch-telegram-routing.ts` - default:AlertsByChatEntry, default:FreshSendOutcome, default:RoutedSubscriberAlert, default:SubscriberRow, default:buildSubscriberQueue, default:deliverFreshAlerts
-- `worker/src/cron/fetch-tbill-rate.ts` - default:fetchTbillRate, default:parseEcbCompoundedEstrCsv, default:parseSixSar3mcCsv, default:parseTreasuryYieldXml
-- `worker/src/cron/mint-burn/chain-context.ts` - default:MintBurnChainContext, default:loadMintBurnChainContexts
-- `worker/src/cron/mint-burn/run-completion.ts` - default:completeMintBurnRun
-- `worker/src/cron/mint-burn/run-configs.ts` - default:MintBurnRunConfigPhaseResult, default:runMintBurnConfigPhase
-- `worker/src/cron/mint-burn/run-state.ts` - default:MintBurnRunStateRow, default:getMintBurnRunState, default:normalizeDisabledConfigIdSet, default:normalizeDisabledSymbolSet, default:resolveStartIndex, default:rotateArray
-- `worker/src/cron/mint-burn/sync-config.ts` - default:MintBurnConfigSummary, default:SyncMintBurnConfigInput, default:SyncMintBurnConfigResult, default:syncMintBurnConfig
+- `worker/src/cron/dex-liquidity/orchestrator-metadata.ts` - DexLiquidityPostScoreAnalysis, analyzeDexLiquidityPostScoring, buildDexLiquidityCronMetadata, isDexLiquidityDegraded
+- `worker/src/cron/dex-liquidity/orchestrator-phases.ts` - AuthoritativeStagedPoolConfirmationIndex, DirectApiFetchPhaseResult, DirectApiFetcher, DirectApiIntegrationResult, FallbackCrawlerPhaseResult, SubgraphEnrichmentPhaseResult
+- `worker/src/cron/dex-liquidity/orchestrator.ts` - filterPrimaryPoolsPreferDirectApi, syncDexLiquidity
+- `worker/src/cron/dex-liquidity/persistence.ts` - HistoricalSnapshotWriteResult, PersistScoresResult, persistScores, writeHistoricalSnapshots
+- `worker/src/cron/dex-liquidity/pool-contribution.ts` - addSecondaryPoolContribution
+- `worker/src/cron/dex-liquidity/pool-helpers.ts` - buildPoolFingerprint, buildSymbolLookups, classifyPoolType, computeDurabilityScore, computeLiquidityScore, computePoolPairQuality
+- `worker/src/cron/dex-liquidity/pool-identity.ts` - KnownPoolIdentityIndex, PoolDedupReason, PoolIdentity, PoolIdentityConfidence, PoolIdentitySource, buildKnownPoolIdentityIndex
+- `worker/src/cron/dex-liquidity/price-sanity.ts` - isPlausibleDexObservationPrice
+- `worker/src/cron/dex-liquidity/process-pools.ts` - processPoolMetrics
+- `worker/src/cron/dex-liquidity/score-weights.ts` - DURABILITY_COMPONENT_WEIGHTS, LIQUIDITY_COMPONENT_WEIGHTS
+- `worker/src/cron/dex-liquidity/scoring-helpers.ts` - accumulateGlobalAggregate, aggregateProtocolSources, applyProtocolCaps, applyRebuiltMetrics, buildDexPriceObservationsFromRetainedPools, classifyCoverage
+- `worker/src/cron/dex-liquidity/scoring.ts` - computeDepthStability, computeDexPrices, computeSeriesStability, computeStablecoinScores
+- `worker/src/cron/dex-liquidity/staging-merge.ts` - mergeStagedPools
+- `worker/src/cron/dex-liquidity/subgraph-family-runner.ts` - runSubgraphFamily
+- `worker/src/cron/dex-liquidity/subgraph-helpers.ts` - FetchSubgraphEntitiesConfig, FetchSubgraphEntitiesResult, SubgraphPriceObservation, fetchSubgraphEntities, mergePriceObservations
+- `worker/src/cron/dex-liquidity/subgraph-source-families.ts` - fetchAerodromeData, fetchUniV3Data
+- `worker/src/cron/dex-liquidity/token-batch-runner.ts` - ProviderChainAddress, runTokenBatchPriceFetch
+- `worker/src/cron/dex-liquidity/token-price-observations.ts` - TokenBatchTrackedToken, appendTokenBatchPriceObservations
+- `worker/src/cron/dex-liquidity/token-resolution.ts` - TokenResolutionOptions, TokenResolutionResult, buildChainAddressKey, getChainScopedSymbolIds, makeChainAddressKey, normalizeTokenAddress
+- `worker/src/cron/dex-liquidity/types.ts` - AerodromeLookups, CgNewPool, CgTicker, CurveLookups, CurvePool, CurvePoolEntry
+- `worker/src/cron/digest/platform.ts` - insertDigestRecord, requestDigestCopy, runDigestChannelDelivery
+- `worker/src/cron/discovery-scan.ts` - DiscoveryCandidateRow, filterDiscoveryCandidates, runDiscoveryScan, upsertDiscoveryCandidates
+- `worker/src/cron/dispatch-telegram-alerts.ts` - dispatchTelegramAlerts
+- `worker/src/cron/dispatch-telegram-routing.ts` - AlertsByChatEntry, FreshSendOutcome, RoutedSubscriberAlert, SubscriberRow, buildSubscriberQueue, deliverFreshAlerts
+- `worker/src/cron/fetch-tbill-rate.ts` - fetchTbillRate, parseEcbCompoundedEstrCsv, parseSixSar3mcCsv, parseTreasuryYieldXml
+- `worker/src/cron/mint-burn/chain-context.ts` - MintBurnChainContext, loadMintBurnChainContexts
+- `worker/src/cron/mint-burn/run-completion.ts` - completeMintBurnRun
+- `worker/src/cron/mint-burn/run-configs.ts` - MintBurnRunConfigPhaseResult, runMintBurnConfigPhase
+- `worker/src/cron/mint-burn/run-state.ts` - MintBurnRunStateRow, getMintBurnRunState, normalizeDisabledConfigIdSet, normalizeDisabledSymbolSet, resolveStartIndex, rotateArray
+- `worker/src/cron/mint-burn/sync-config.ts` - MintBurnConfigSummary, SyncMintBurnConfigInput, SyncMintBurnConfigResult, syncMintBurnConfig
 - ... 146 more files omitted; use `rg --files worker/src/cron` for the full list.
 
 ## Worker library
 
-- `worker/src/lib/abort.ts` - default:abortError, default:rethrowIfAborted, default:sleepWithSignal, default:throwIfAborted
-- `worker/src/lib/admin-job.ts` - default:AdminJobContext, default:buildAdminJobSummary, default:noAdminTargetsResponse, default:readAdminIntegerParam, default:readAdminStringParam, default:runAdminJob
-- `worker/src/lib/alchemy-logs.ts` - default:AlchemyLogEntry, default:AlchemyLogsFetchResult, default:AlchemyTransactionEntry, default:AlchemyTransactionReceipt, default:PersistentBlockTimestampCache, default:ResolveBlockTimestampOptions
-- `worker/src/lib/alerts.ts` - default:normalizeWebhookUrl, default:sendAlert
-- `worker/src/lib/api-cache-read.ts` - default:CachedJsonReadResult, default:createCacheHandler, default:readCachedJson, default:readCachedJsonOr503, default:safeJsonParse, default:safeJsonParseWithContext
-- `worker/src/lib/api-freshness.ts` - default:CacheFreshnessDiagnostic, default:CacheStatusFailure, default:CronTimestampLookupResult, default:CronTimestampLookupStatus, default:FreshnessMeta, default:addFreshnessHeaders
-- `worker/src/lib/api-history.ts` - default:StablecoinHistoryQuery, default:StablecoinHistoryQueryOptions, default:handleStablecoinHistoryRequest, default:parseStablecoinHistoryQuery
-- `worker/src/lib/api-key-admin.ts` - default:createApiKey, default:deactivateApiKey, default:listApiKeys, default:rotateApiKey, default:updateApiKey
-- `worker/src/lib/api-key-auth.ts` - default:authenticateApiKey, default:parseApiKeyToken
-- `worker/src/lib/api-key-core.ts` - default:API_KEY_TOKEN_PATTERN, default:ApiKeyAuthenticationResult, default:ApiKeyDb, default:ApiKeyPublicRow, default:ApiKeyRow, default:AuthenticatedApiKey
-- `worker/src/lib/api-key-rate-limit.ts` - default:checkApiKeyRateLimit, default:recordApiKeyUsage
-- `worker/src/lib/api-keys.ts` - authenticateApiKey, checkApiKeyRateLimit, createApiKey, deactivateApiKey, listApiKeys, parseApiKeyToken
-- `worker/src/lib/api-methodology.ts` - default:MethodologyEnvelopeInput, default:buildMethodologyEnvelope
-- `worker/src/lib/api-pagination.ts` - default:fetchPaginatedEvents
-- `worker/src/lib/api-params.ts` - default:NumericParseOptions, default:NumericRangePolicy, default:ParamSpec, default:parseEnumParam, default:parseFloatParam, default:parseIntParam
-- `worker/src/lib/api-response.ts` - default:JsonResponseOptions, default:errorResponse, default:jsonFreshResponse, default:jsonResponse, default:validatePayloadWithSchema, default:withErrorHandler
-- `worker/src/lib/api-utils.ts` - addFreshnessHeaders, buildCacheStatuses, buildFreshnessMeta, buildMethodologyEnvelope, createCacheHandler, errorResponse
-- `worker/src/lib/auth.ts` - default:AdminAuthEnv, default:SiteProxyAuthEnv, default:hasValidAdminCredential, default:hasValidSiteProxyCredential, default:isWorkerPreviewRequest, default:requireAdmin
-- `worker/src/lib/authoritative-price-sources.ts` - default:CRVUSD_PRICE_AGGREGATOR, default:CRVUSD_PRICE_SELECTOR, default:CurrentPriceOverride, default:HistoricalPriceContext, default:HistoricalPricePoint, default:HistoricalPriceResolution
-- `worker/src/lib/backfill-query.ts` - default:noCoinsInBatchResponse, default:selectBackfillCoins
-- `worker/src/lib/bigint.ts` - default:bigIntToDecimal, default:decimalNumberFromBigInt, default:decimalStringFromBigInt
-- `worker/src/lib/binary-search.ts` - default:binarySearchNearest
-- `worker/src/lib/blacklist-api.ts` - default:BlacklistEventApiRecord, default:BlacklistEventRow, default:mapBlacklistEventRow
-- `worker/src/lib/blacklist-contracts.ts` - default:BlacklistEventDef, default:BlacklistEventFamily, default:CONTRACT_CONFIGS, default:ChainConfig, default:ContractEventConfig, default:chainConfig
-- `worker/src/lib/blacklist-current-balances.ts` - default:BlacklistCurrentBalanceRow, default:deleteBlacklistCurrentBalance, default:loadBlacklistCurrentBalanceMap, default:upsertBlacklistCurrentBalance
-- `worker/src/lib/blacklist-gaps.ts` - default:BlacklistGapMetrics, default:queryBlacklistGapMetrics
-- `worker/src/lib/bluechip-cache.ts` - default:parseBluechipRatingsCache
-- `worker/src/lib/bluechip-slugs.ts` - default:BLUECHIP_SLUG_MAP
-- `worker/src/lib/cache-json.ts` - default:CachedJsonRow, default:JsonDecodeMode, default:JsonDecodeResult, default:decodeCachedJson, default:decodeJsonString
-- `worker/src/lib/cex-tickers.ts` - default:BINANCE_KNOWN_SYMBOLS, default:BITSTAMP_KNOWN_SYMBOLS, default:COINBASE_KNOWN_SYMBOLS, default:KRAKEN_KNOWN_SYMBOLS, default:fetchBinancePrices, default:fetchBitstampPrices
-- `worker/src/lib/cg-ticker.ts` - default:CG_TICKER_COINS, default:CgTickerConfig, default:CgTickerFetchResult, default:fetchCgTickerPrices, default:fetchCgTickerPricesDetailed, default:pickBestTicker
-- `worker/src/lib/chain-registry.ts` - CG_CHAIN_MAP, CG_CHAIN_REVERSE, CHAIN_REGISTRY, DS_CHAIN_MAP, GT_CHAIN_MAP, GT_CHAIN_REVERSE
-- `worker/src/lib/chainlink-feeds.ts` - default:CHAINLINK_REFERENCE_FEEDS, default:ChainlinkReferenceFeed, default:ChainlinkReferenceQuote, default:ChainlinkReferenceQuoteSnapshot, default:ChainlinkReferenceQuoteSummary, default:fetchChainlinkReferenceQuoteSnapshot
-- `worker/src/lib/chainlink-round-data.ts` - default:ChainlinkLatestRoundData, default:parseChainlinkLatestRoundData, default:parseSignedInt256Word
-- `worker/src/lib/circuit-breaker.ts` - default:CircuitOutcomeDecision, default:CircuitRecord, default:CircuitState, default:filterStaleLiveReserveCircuitStates, default:getCircuitRecord, default:getCircuitStates
-- `worker/src/lib/circuit-config.ts` - CIRCUIT_OPEN_THRESHOLD, CIRCUIT_PROBE_INTERVAL_SEC
-- `worker/src/lib/coingecko-market-history.ts` - default:CoinGeckoMarketHistorySnapshot, default:fetchCoinGeckoMarketHistory
-- `worker/src/lib/coingecko-onchain.ts` - CG_CHAIN_MAP, CG_CHAIN_REVERSE, default:CgFetchOptions, default:CgPool, default:CgPoolAttributes, default:CgPoolRelationships
-- `worker/src/lib/coingecko.ts` - default:cgHeaders, default:cgUrl, default:normalizeCgApiKey
-- `worker/src/lib/collateral-drift.ts` - default:CollateralDriftEntry, default:CollateralDriftResult, default:checkCollateralDrift, default:summarizeCollateralDriftFromLiveReserveMap
-- `worker/src/lib/collections.ts` - default:chunkArray
-- `worker/src/lib/constants.ts` - DEPEG_CONFIRMATION_SUPPLY_THRESHOLD, DEPEG_DEX_PROTOCOL_CORROBORATION_MIN, DEPEG_EVENT_MIN_SUPPLY_USD, DEPEG_EXTREME_MOVE_BPS, DEPEG_PENDING_EXPIRY_SEC, DEPEG_PENDING_MIN_AGE_SEC
-- `worker/src/lib/cron-lease.ts` - default:CRON_TIMEOUT_MS, default:CronLeaseLostError, default:CronLeaseOptions, default:CronLeaseRunResult, default:CronTimeoutError, default:DEFAULT_CRON_TIMEOUT_MS
-- `worker/src/lib/cron-logger.ts` - default:CronProgressReporter, default:CronProgressUpdate, default:CronResult, default:CronRunLoggerOptions, default:logCronRun
-- `worker/src/lib/cron-metadata.ts` - default:mergeCronMetadataWithLease, default:normalizeCronMetadata
-- `worker/src/lib/cron-progress.ts` - default:reportCronProgress, default:withBudgetMetadata
-- `worker/src/lib/curve-onchain.ts` - default:CurvePoolConfig, default:fetchCurveOnchainPrices
-- `worker/src/lib/curve-pool-configs.ts` - default:CURVE_POOL_CONFIGS
-- `worker/src/lib/db-cache.ts` - default:PriceCacheEntry, default:deleteCache, default:getCache, default:getPriceCache, default:savePriceCache, default:setCache
-- `worker/src/lib/db.ts` - default:batchExecute, default:buildInClause, default:buildPaginatedQuery, default:getFirstSeenDates, default:getLastBlock, default:normalizeBlacklistSyncStateKey
-- `worker/src/lib/depeg-helpers.ts` - default:DepegRow, default:DexPoolSource, default:DexPriceRow, default:PendingDepegReason, default:buildInsertDepegEventStmt, default:loadDexPoolChallengers
-- `worker/src/lib/depeg-pending.ts` - default:PendingDepegRow, default:PendingDepegState, default:PendingDepegUpsertParams, default:SELECT_PENDING_DEPEGS_SQL, default:buildUpsertPendingDepegStmt, default:normalizePendingDepegRow
-- `worker/src/lib/depeg-signals.ts` - default:DepegDirection, default:DepegSignal, default:DirectionalSignalStatus, default:classifyDirectionalSignal, default:coerceDepegDirection, default:deriveDepegSignal
-- `worker/src/lib/depeg-trust-policy.ts` - default:DexPriceTrustTier, default:DexTrustPolicy, default:classifyPrimaryDepegTrust, default:getDexTrustPolicy, default:hasFreshMultiSourcePrimaryAgreement, default:isAuthoritativeDepegPegReference
-- `worker/src/lib/dews.ts` - default:DEWSInput, default:DEWSResult, default:PoolEntry, default:SignalResult, default:computeDEWS, default:getThreatBand
-- `worker/src/lib/dex-api-common.ts` - DIRECT_API_MAX_POOL_TVL_USD, DIRECT_API_POOL_MIN_TVL_USD, DIRECT_API_PRICE_MIN_TVL_USD, convertToGtNewPools, extractPriceObservations, hydrateDirectApiPoolMetadata
-- `worker/src/lib/dex-api-pool-shaping.ts` - default:DIRECT_API_MAX_POOL_TVL_USD, default:DIRECT_API_POOL_MIN_TVL_USD, default:DIRECT_API_PRICE_MIN_TVL_USD, default:convertToGtNewPools, default:extractPriceObservations, default:hydrateDirectApiPoolMetadata
-- `worker/src/lib/dex-api-token-pricing.ts` - default:getTokenReferenceUsdPrice, default:isTrackedDexApiToken, default:resolveStablecoinIdForDexApiToken, derivePoolVolume24hUsd, deriveTokenUsdPrice
-- `worker/src/lib/dex-api-types.ts` - default:DexApiFetchResult, default:DexApiPool, default:DexApiPoolToken
-- `worker/src/lib/dex-constants.ts` - default:COMPOSITE_POOL_NAMES, default:GT_API_BASE, default:GT_DEX_QUALITY, default:QUALITY_MULTIPLIERS, default:isBlockedDexId, default:isUsdReferenceSymbol
+- `worker/src/lib/abort.ts` - abortError, rethrowIfAborted, sleepWithSignal, throwIfAborted
+- `worker/src/lib/admin-job.ts` - AdminJobContext, buildAdminJobSummary, noAdminTargetsResponse, readAdminIntegerParam, readAdminStringParam, runAdminJob
+- `worker/src/lib/alchemy-logs.ts` - AlchemyLogEntry, AlchemyLogsFetchResult, AlchemyTransactionEntry, AlchemyTransactionReceipt, PersistentBlockTimestampCache, ResolveBlockTimestampOptions
+- `worker/src/lib/alerts.ts` - normalizeWebhookUrl, sendAlert
+- `worker/src/lib/api-cache-read.ts` - CachedJsonReadResult, createCacheHandler, readCachedJson, readCachedJsonOr503, safeJsonParse, safeJsonParseWithContext
+- `worker/src/lib/api-freshness.ts` - CacheFreshnessDiagnostic, CacheStatusFailure, CronTimestampLookupResult, CronTimestampLookupStatus, FreshnessMeta, addFreshnessHeaders
+- `worker/src/lib/api-history.ts` - StablecoinHistoryQuery, StablecoinHistoryQueryOptions, handleStablecoinHistoryRequest, parseStablecoinHistoryQuery
+- `worker/src/lib/api-key-admin.ts` - createApiKey, deactivateApiKey, listApiKeys, rotateApiKey, updateApiKey
+- `worker/src/lib/api-key-auth.ts` - authenticateApiKey, parseApiKeyToken
+- `worker/src/lib/api-key-core.ts` - API_KEY_TOKEN_PATTERN, ApiKeyAuthenticationResult, ApiKeyDb, ApiKeyPublicRow, ApiKeyRow, AuthenticatedApiKey
+- `worker/src/lib/api-key-rate-limit.ts` - checkApiKeyRateLimit, recordApiKeyUsage
+- `worker/src/lib/api-keys.ts`
+- `worker/src/lib/api-methodology.ts` - MethodologyEnvelopeInput, buildMethodologyEnvelope
+- `worker/src/lib/api-pagination.ts` - fetchPaginatedEvents
+- `worker/src/lib/api-params.ts` - NumericParseOptions, NumericRangePolicy, ParamSpec, parseEnumParam, parseFloatParam, parseIntParam
+- `worker/src/lib/api-response.ts` - JsonResponseOptions, errorResponse, jsonFreshResponse, jsonResponse, validatePayloadWithSchema, withErrorHandler
+- `worker/src/lib/api-utils.ts` - fetchPaginatedEvents
+- `worker/src/lib/auth.ts` - AdminAuthEnv, SiteProxyAuthEnv, hasValidAdminCredential, hasValidSiteProxyCredential, isWorkerPreviewRequest, requireAdmin
+- `worker/src/lib/authoritative-price-sources.ts` - CRVUSD_PRICE_AGGREGATOR, CRVUSD_PRICE_SELECTOR, CurrentPriceOverride, HistoricalPriceContext, HistoricalPricePoint, HistoricalPriceResolution
+- `worker/src/lib/backfill-query.ts` - noCoinsInBatchResponse, selectBackfillCoins
+- `worker/src/lib/bigint.ts` - bigIntToDecimal, decimalNumberFromBigInt, decimalStringFromBigInt
+- `worker/src/lib/binary-search.ts` - binarySearchNearest
+- `worker/src/lib/blacklist-api.ts` - BlacklistEventApiRecord, BlacklistEventRow, mapBlacklistEventRow
+- `worker/src/lib/blacklist-contracts.ts` - BlacklistEventDef, BlacklistEventFamily, CONTRACT_CONFIGS, ChainConfig, ContractEventConfig, chainConfig
+- `worker/src/lib/blacklist-current-balances.ts` - BlacklistCurrentBalanceRow, deleteBlacklistCurrentBalance, loadBlacklistCurrentBalanceMap, upsertBlacklistCurrentBalance
+- `worker/src/lib/blacklist-gaps.ts` - BlacklistGapMetrics, queryBlacklistGapMetrics
+- `worker/src/lib/bluechip-cache.ts` - parseBluechipRatingsCache
+- `worker/src/lib/bluechip-slugs.ts` - BLUECHIP_SLUG_MAP
+- `worker/src/lib/cache-json.ts` - CachedJsonRow, JsonDecodeMode, JsonDecodeResult, decodeCachedJson, decodeJsonString
+- `worker/src/lib/cex-tickers.ts` - BINANCE_KNOWN_SYMBOLS, BITSTAMP_KNOWN_SYMBOLS, COINBASE_KNOWN_SYMBOLS, KRAKEN_KNOWN_SYMBOLS, fetchBinancePrices, fetchBitstampPrices
+- `worker/src/lib/cg-ticker.ts` - CG_TICKER_COINS, CgTickerConfig, CgTickerFetchResult, fetchCgTickerPrices, fetchCgTickerPricesDetailed, pickBestTicker
+- `worker/src/lib/chain-registry.ts` - ALCHEMY_CHAINS, ChainRpcConfig, buildChainRpcs, getChainRpc
+- `worker/src/lib/chainlink-feeds.ts` - CHAINLINK_REFERENCE_FEEDS, ChainlinkReferenceFeed, ChainlinkReferenceQuote, ChainlinkReferenceQuoteSnapshot, ChainlinkReferenceQuoteSummary, fetchChainlinkReferenceQuoteSnapshot
+- `worker/src/lib/chainlink-round-data.ts` - ChainlinkLatestRoundData, parseChainlinkLatestRoundData, parseSignedInt256Word
+- `worker/src/lib/circuit-breaker.ts` - CircuitOutcomeDecision, CircuitRecord, CircuitState, filterStaleLiveReserveCircuitStates, getCircuitRecord, getCircuitStates
+- `worker/src/lib/circuit-config.ts`
+- `worker/src/lib/coingecko-market-history.ts` - CoinGeckoMarketHistorySnapshot, fetchCoinGeckoMarketHistory
+- `worker/src/lib/coingecko-onchain.ts` - CG_CHAIN_MAP, CG_CHAIN_REVERSE, CgFetchOptions, CgPool, CgPoolAttributes, CgPoolRelationships
+- `worker/src/lib/coingecko.ts` - cgHeaders, cgUrl, normalizeCgApiKey
+- `worker/src/lib/collateral-drift.ts` - CollateralDriftEntry, CollateralDriftResult, checkCollateralDrift, summarizeCollateralDriftFromLiveReserveMap
+- `worker/src/lib/collections.ts` - chunkArray
+- `worker/src/lib/constants.ts` - ANTHROPIC_MAX_RETRIES, ANTHROPIC_TIMEOUT_MS, BENCHMARK_FETCH_MAX_RETRIES, BENCHMARK_FETCH_TIMEOUT_MS, CACHE_FRESHNESS_THRESHOLDS, CACHE_PROFILES
+- `worker/src/lib/cron-lease.ts` - CRON_TIMEOUT_MS, CronLeaseLostError, CronLeaseOptions, CronLeaseRunResult, CronTimeoutError, DEFAULT_CRON_TIMEOUT_MS
+- `worker/src/lib/cron-logger.ts` - CronProgressReporter, CronProgressUpdate, CronResult, CronRunLoggerOptions, logCronRun
+- `worker/src/lib/cron-metadata.ts` - mergeCronMetadataWithLease, normalizeCronMetadata
+- `worker/src/lib/cron-progress.ts` - reportCronProgress, withBudgetMetadata
+- `worker/src/lib/curve-onchain.ts` - CurvePoolConfig, fetchCurveOnchainPrices
+- `worker/src/lib/curve-pool-configs.ts` - CURVE_POOL_CONFIGS
+- `worker/src/lib/db-cache.ts` - PriceCacheEntry, deleteCache, getCache, getPriceCache, savePriceCache, setCache
+- `worker/src/lib/db.ts` - batchExecute, buildInClause, buildPaginatedQuery, getFirstSeenDates, getLastBlock, normalizeBlacklistSyncStateKey
+- `worker/src/lib/depeg-helpers.ts` - DepegRow, DexPoolSource, DexPriceRow, PendingDepegReason, buildInsertDepegEventStmt, loadDexPoolChallengers
+- `worker/src/lib/depeg-pending.ts` - PendingDepegRow, PendingDepegState, PendingDepegUpsertParams, SELECT_PENDING_DEPEGS_SQL, buildUpsertPendingDepegStmt, normalizePendingDepegRow
+- `worker/src/lib/depeg-signals.ts` - DepegDirection, DepegSignal, DirectionalSignalStatus, classifyDirectionalSignal, coerceDepegDirection, deriveDepegSignal
+- `worker/src/lib/depeg-trust-policy.ts` - DexPriceTrustTier, DexTrustPolicy, classifyPrimaryDepegTrust, getDexTrustPolicy, hasFreshMultiSourcePrimaryAgreement, isAuthoritativeDepegPegReference
+- `worker/src/lib/dews.ts` - DEWSInput, DEWSResult, PoolEntry, SignalResult, computeDEWS, getThreatBand
+- `worker/src/lib/dex-api-common.ts`
+- `worker/src/lib/dex-api-pool-shaping.ts` - DIRECT_API_MAX_POOL_TVL_USD, DIRECT_API_POOL_MIN_TVL_USD, DIRECT_API_PRICE_MIN_TVL_USD, convertToGtNewPools, extractPriceObservations, hydrateDirectApiPoolMetadata
+- `worker/src/lib/dex-api-token-pricing.ts` - derivePoolVolume24hUsd, deriveTokenUsdPrice, getTokenReferenceUsdPrice, isTrackedDexApiToken, resolveStablecoinIdForDexApiToken
+- `worker/src/lib/dex-api-types.ts` - DexApiFetchResult, DexApiPool, DexApiPoolToken
+- `worker/src/lib/dex-constants.ts` - COMPOSITE_POOL_NAMES, GT_API_BASE, GT_DEX_QUALITY, QUALITY_MULTIPLIERS, isBlockedDexId, isUsdReferenceSymbol
 - ... 128 more files omitted; use `rg --files worker/src/lib` for the full list.
 
 ## Validation and tooling
@@ -581,10 +581,10 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `scripts/__tests__/check-worker-migrations.test.ts`
 - `scripts/__tests__/classify-deploy-changes.test.ts`
 - `scripts/__tests__/doc-sync.test.ts`
-- `scripts/__tests__/fixtures/sql-safety/worker/scripts/unsafe-worker-scripts.ts` - default:buildUnsafeWorkerScriptQuery
-- `scripts/__tests__/fixtures/sql-safety/worker/src/safe-allowlist.ts` - default:buildSafeAllowlistQuery
-- `scripts/__tests__/fixtures/sql-safety/worker/src/safe-safety-comment.ts` - default:buildSafeCommentQuery
-- `scripts/__tests__/fixtures/sql-safety/worker/src/unsafe-worker-src.ts` - default:buildUnsafeWorkerSrcQuery
+- `scripts/__tests__/fixtures/sql-safety/worker/scripts/unsafe-worker-scripts.ts` - buildUnsafeWorkerScriptQuery
+- `scripts/__tests__/fixtures/sql-safety/worker/src/safe-allowlist.ts` - buildSafeAllowlistQuery
+- `scripts/__tests__/fixtures/sql-safety/worker/src/safe-safety-comment.ts` - buildSafeCommentQuery
+- `scripts/__tests__/fixtures/sql-safety/worker/src/unsafe-worker-src.ts` - buildUnsafeWorkerSrcQuery
 - `scripts/__tests__/smoke-ops.test.ts`
 - `scripts/__tests__/sql-interpolation-safety.test.ts`
 - `scripts/__tests__/test-merge-gate.test.ts`
@@ -593,21 +593,21 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `scripts/check-critical-coverage.mjs`
 - `scripts/check-cron-connection-budget.ts`
 - `scripts/check-cron-schedule-sync.ts`
-- `scripts/check-doc-counts.mjs` - default:LIVE_RESERVE_ADAPTER_DEFINITIONS
+- `scripts/check-doc-counts.mjs`
 - `scripts/check-doc-sync.ts`
 - `scripts/check-duplicate-exports.mjs`
-- `scripts/check-env-contract.mjs` - default:$
+- `scripts/check-env-contract.mjs`
 - `scripts/check-hotspot-ratchet.mjs`
 - `scripts/check-redemption-backstops.ts`
 - `scripts/check-seo-static.mjs`
 - `scripts/check-shared-cycles.mjs`
-- `scripts/check-sql-interpolation-safety.mjs` - default:DEFAULT_SQL_SAFETY_ROOTS, default:SQL_INTERPOLATION_PATTERN, default:SQL_SAFETY_EXTENSIONS, default:SQL_SAFETY_PATTERN, default:main, default:parseSqlSafetyRoots
+- `scripts/check-sql-interpolation-safety.mjs` - DEFAULT_SQL_SAFETY_ROOTS, SQL_INTERPOLATION_PATTERN, SQL_SAFETY_EXTENSIONS, SQL_SAFETY_PATTERN, main, parseSqlSafetyRoots
 - `scripts/check-stablecoin-data.ts`
 - `scripts/check-unused-code.mjs`
 - `scripts/check-verified-doc-links.mjs`
 - `scripts/check-worker-import-boundary.mjs`
-- `scripts/check-worker-migrations.mjs` - default:LEGACY_DUPLICATE_PREFIX_ALLOWLIST, default:REQUIRED_ROLLOUT_SAFETY_MODE, default:ROLLOUT_SAFETY_ENFORCEMENT_PREFIX, default:UNSAFE_ROLLOUT_SAFETY_PATTERNS, default:findDuplicatePrefixes, default:findUnsafeRolloutStatements
-- `scripts/classify-deploy-changes.mjs` - default:classifyDeployChanges, default:emitGithubOutputs, default:normalizeChangedFiles, hasDeployImpact, hasPagesDeployImpact, hasWorkerDeployImpact
+- `scripts/check-worker-migrations.mjs` - LEGACY_DUPLICATE_PREFIX_ALLOWLIST, REQUIRED_ROLLOUT_SAFETY_MODE, ROLLOUT_SAFETY_ENFORCEMENT_PREFIX, UNSAFE_ROLLOUT_SAFETY_PATTERNS, findDuplicatePrefixes, findUnsafeRolloutStatements
+- `scripts/classify-deploy-changes.mjs` - classifyDeployChanges, emitGithubOutputs, hasDeployImpact, hasPagesDeployImpact, hasWorkerDeployImpact, normalizeChangedFiles
 - `scripts/dev-api-proxy.mjs`
 - `scripts/fetch-logos.ts`
 - `scripts/fix-commodity-depeg-median.ts`
@@ -615,21 +615,21 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `scripts/generate-agent-code-map.mjs`
 - `scripts/generate-redirects.ts`
 - `scripts/generate-sitemap-dates.ts`
-- `scripts/lib/critical-coverage.mjs` - default:CRITICAL_FILES, default:findCoverageFor, default:normalizePath, default:parseLcov
-- `scripts/lib/deploy-impact.mjs` - default:hasDeployImpact, default:hasPagesDeployImpact, default:hasWorkerDeployImpact, default:normalizeRepoPath
-- `scripts/lib/doc-sync/checks.ts` - default:runDocSyncChecks
-- `scripts/lib/doc-sync/methodology-manifest.ts` - DEPEG_DEWS_METHODOLOGY_VERSION_LABEL, SAFETY_SCORE_VERSION_LABEL, default:METHODOLOGY_DOC_VERSION_CHECKS
-- `scripts/lib/doc-sync/shared.ts` - default:Failure, default:expectEqual, default:expectNumber, default:findLineValue, default:formatNumber, default:getAllNumbersFromText
-- `scripts/lib/hotspot-ratchet.mjs` - default:BASELINE_PATH, default:TARGET_FILES, default:WAIVER_PATH, default:collectAllHotspotMetrics, default:collectAllRepoHotspotMetrics, default:collectHotspotCandidateFiles
-- `scripts/lib/remote-d1.ts` - default:d1BatchExec, default:d1ExecFile, default:d1Query, default:d1QueryParsed
-- `scripts/lib/validate-contract.mjs` - default:COMMON_VALIDATE_POSTBUILD_COMMANDS, default:COMMON_VALIDATE_PREBUILD_COMMANDS, default:PAGES_VALIDATE_COMMANDS, default:WORKER_VALIDATE_COMMANDS, default:buildCiValidateCommands, default:buildCiValidateStepPlan
+- `scripts/lib/critical-coverage.mjs` - CRITICAL_FILES, findCoverageFor, normalizePath, parseLcov
+- `scripts/lib/deploy-impact.mjs` - hasDeployImpact, hasPagesDeployImpact, hasWorkerDeployImpact, normalizeRepoPath
+- `scripts/lib/doc-sync/checks.ts` - runDocSyncChecks
+- `scripts/lib/doc-sync/methodology-manifest.ts` - DEPEG_DEWS_METHODOLOGY_VERSION_LABEL, METHODOLOGY_DOC_VERSION_CHECKS, SAFETY_SCORE_VERSION_LABEL
+- `scripts/lib/doc-sync/shared.ts` - Failure, expectEqual, expectNumber, findLineValue, formatNumber, getAllNumbersFromText
+- `scripts/lib/hotspot-ratchet.mjs` - BASELINE_PATH, TARGET_FILES, WAIVER_PATH, collectAllHotspotMetrics, collectAllRepoHotspotMetrics, collectHotspotCandidateFiles
+- `scripts/lib/remote-d1.ts` - d1BatchExec, d1ExecFile, d1Query, d1QueryParsed
+- `scripts/lib/validate-contract.mjs` - COMMON_VALIDATE_POSTBUILD_COMMANDS, COMMON_VALIDATE_PREBUILD_COMMANDS, PAGES_VALIDATE_COMMANDS, WORKER_VALIDATE_COMMANDS, buildCiValidateCommands, buildCiValidateStepPlan
 - `scripts/screenshot-og.mjs`
-- `scripts/serve-static-export.mjs` - default:createStaticExportServer, default:resolveStaticFilePath
-- `scripts/smoke-api.mjs` - default:ENDPOINT_ASSERTIONS, default:assertPathCoverage
-- `scripts/smoke-ops.mjs` - default:extractCookiePairs, default:fetchJson, default:fetchOpsUiProxyStatus, default:fetchOpsUiProxyStatusWithRetry, default:hasOpsUiAccessSessionCookie, default:mergeCookieHeader
+- `scripts/serve-static-export.mjs` - createStaticExportServer, resolveStaticFilePath
+- `scripts/smoke-api.mjs` - ENDPOINT_ASSERTIONS, assertPathCoverage
+- `scripts/smoke-ops.mjs` - extractCookiePairs, fetchJson, fetchOpsUiProxyStatus, fetchOpsUiProxyStatusWithRetry, hasOpsUiAccessSessionCookie, mergeCookieHeader
 - `scripts/smoke-transport.mjs`
 - `scripts/smoke-ui.mjs`
 - `scripts/sync-digests.ts`
-- `scripts/test-merge-gate.mjs` - default:buildCommandPlan, default:getChangedFiles, default:getCommandEnv, default:normalizePath, default:runMergeGate
+- `scripts/test-merge-gate.mjs` - buildCommandPlan, getChangedFiles, getCommandEnv, normalizePath, runMergeGate
 - `scripts/update-critical-coverage-baseline.mjs`
 - `scripts/update-hotspot-ratchet-baseline.mjs`
