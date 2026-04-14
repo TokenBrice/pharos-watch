@@ -34,7 +34,7 @@ export default function ChainsPage() {
       breadcrumbName="Chains"
       path="/chains/"
       title="Chains"
-      statusBadge={{ status: "experimental" }}
+      statusBadge={{ status: "mature" }}
       methodology={{ version: CHAIN_HEALTH_METHODOLOGY_VERSION, changelogPath: CHAIN_HEALTH_METHODOLOGY_CHANGELOG_PATH }}
       leadParagraphs={[
         "Blockchain networks ranked by stablecoin supply and ecosystem health.",
