@@ -1,8 +1,4 @@
-import {
-  BACKING_LABELS_SHORT,
-  GOVERNANCE_LABELS_SHORT,
-  PEG_LABELS_SHORT,
-} from "@shared/lib/classification";
+import { BACKING_LABELS_SHORT, GOVERNANCE_LABELS_SHORT, PEG_LABELS_SHORT } from "@shared/lib/classification";
 import { getReserveDisplayBadgeKindForAdapter } from "@shared/lib/live-reserve-display";
 import { getReserves } from "@shared/lib/reserve-templates";
 import type {
@@ -24,13 +20,7 @@ export type CoverageFeatureKey =
   | "blacklist"
   | "dependency";
 
-export type CoverageTone =
-  | "emerald"
-  | "sky"
-  | "amber"
-  | "violet"
-  | "rose"
-  | "slate";
+export type CoverageTone = "emerald" | "sky" | "amber" | "violet" | "rose" | "slate";
 
 export interface CoverageStatus {
   kind: string;
@@ -80,6 +70,7 @@ export interface CoverageRow {
   backingLabel: string;
   governanceLabel: string;
   coverageCount: number;
+  headlineCoverageCount: number;
   advancedCoverageCount: number;
   statuses: Record<CoverageFeatureKey, CoverageStatus>;
 }
@@ -96,6 +87,8 @@ interface BuildCoverageRowInput {
   hasYieldCoverage: boolean;
   flowCoverageStatus: MintBurnCoverageStatus | null | undefined;
   hasDependencyCoverage: boolean;
+  liveReserveFresh?: boolean | null;
+  dataAvailability?: Partial<Record<CoverageFeatureKey, boolean>>;
 }
 
 const BLACKLIST_SYMBOLS = new Set<string>(BLACKLIST_STABLECOINS);
@@ -127,14 +120,13 @@ export const COVERAGE_FEATURES: readonly CoverageFeatureDefinition[] = [
   },
   {
     key: "reserves",
-    label: "Live Reserves Sync",
+    label: "Reserve View",
     shortLabel: "Live Sync",
     description:
-      "Reserve-sync coverage on the stablecoin detail page, with true live feeds separated from curated-validated, proof-based, curated, and estimated reserve views.",
+      "Reserve coverage on the stablecoin detail page, with fresh live sync separated from configured, curated-validated, proof-based, curated, and estimated reserve views.",
     headlineKinds: ["live"],
     headlineCountLabel: "Live tracking",
-    headlineCoverageLabel: (coveragePct) =>
-      `${coveragePct.toFixed(0)}% with live reserve tracking`,
+    headlineCoverageLabel: (coveragePct) => `${coveragePct.toFixed(0)}% with live reserve tracking`,
     headlineShareLabel: "Live reserve market-cap reach",
   },
   {
@@ -144,8 +136,7 @@ export const COVERAGE_FEATURES: readonly CoverageFeatureDefinition[] = [
     description:
       "Modeled issuer or protocol exit routes beyond secondary-market DEX liquidity. Heuristic supply-based routes are broken out separately below.",
     headlineCountLabel: "Strong coverage",
-    headlineCoverageLabel: (coveragePct) =>
-      `${coveragePct.toFixed(0)}% with strong redemption coverage`,
+    headlineCoverageLabel: (coveragePct) => `${coveragePct.toFixed(0)}% with strong redemption coverage`,
     headlineShareLabel: "Strong redemption market-cap reach",
     href: "/methodology/#safety-scores-methodology",
   },
@@ -180,13 +171,10 @@ export const COVERAGE_FEATURES: readonly CoverageFeatureDefinition[] = [
 ] as const;
 
 export const COVERAGE_BADGE_TONE_CLASS: Record<CoverageTone, string> = {
-  emerald:
-    "border-emerald-500/22 bg-emerald-500/8 text-emerald-800 dark:text-emerald-300",
+  emerald: "border-emerald-500/22 bg-emerald-500/8 text-emerald-800 dark:text-emerald-300",
   sky: "border-sky-500/24 bg-sky-500/8 text-sky-800 dark:text-sky-300",
-  amber:
-    "border-amber-500/30 bg-amber-500/12 text-amber-800 dark:text-amber-300",
-  violet:
-    "border-violet-500/28 bg-violet-500/10 text-violet-800 dark:text-violet-300",
+  amber: "border-amber-500/30 bg-amber-500/12 text-amber-800 dark:text-amber-300",
+  violet: "border-violet-500/28 bg-violet-500/10 text-violet-800 dark:text-violet-300",
   rose: "border-rose-500/35 bg-rose-500/12 text-rose-800 dark:text-rose-300",
   slate: "border-border/70 bg-muted/70 text-muted-foreground",
 };
@@ -209,6 +197,18 @@ function createStatus(
     sortRank,
     detail,
   };
+}
+
+function createDataUnavailableStatus(featureLabel: string): CoverageStatus {
+  return createStatus(
+    "data-unavailable",
+    "Data n/a",
+    "amber",
+    false,
+    -1,
+    `${featureLabel} coverage data is unavailable right now, so this state is not counted as a coverage gap.`,
+    "Data unavailable",
+  );
 }
 
 interface CoverageStatusPreset {
@@ -432,7 +432,12 @@ export function resolvePriceCoverage(
   hasPegCoverage: boolean,
   consensusSources?: string[],
   priceConfidence?: string,
+  dataAvailable = true,
 ): CoverageStatus {
+  if (!dataAvailable) {
+    return createDataUnavailableStatus("Price and depeg");
+  }
+
   if (coin.flags.navToken) {
     return createStatus(
       "price-only",
@@ -473,22 +478,53 @@ export function resolvePriceCoverage(
   );
 }
 
-export function resolveSafetyCoverage(
-  safetyScore: number | null | undefined,
-): CoverageStatus {
+export function resolveSafetyCoverage(safetyScore: number | null | undefined, dataAvailable = true): CoverageStatus {
+  if (!dataAvailable) {
+    return createDataUnavailableStatus("Safety Score");
+  }
+
   return createPresetStatus(safetyScore != null ? SAFETY_STATUS_PRESETS.rated : SAFETY_STATUS_PRESETS.nr);
 }
 
 export function resolveDexCoverage(
   coverageClass: LiquidityCoverageClass | null | undefined,
+  dataAvailable = true,
 ): CoverageStatus {
+  if (!dataAvailable) {
+    return createDataUnavailableStatus("DEX liquidity");
+  }
+
   return createPresetStatus(DEX_STATUS_PRESETS[coverageClass ?? "unknown"] ?? DEX_STATUS_PRESETS.unknown);
 }
 
-export function resolveReserveCoverage(coin: StablecoinMeta): CoverageStatus {
+export function resolveReserveCoverage(coin: StablecoinMeta, liveReserveFresh: boolean | null = true): CoverageStatus {
   if (coin.liveReservesConfig) {
     const badgeKind = getReserveDisplayBadgeKindForAdapter(coin.liveReservesConfig.adapter);
     if (badgeKind === "live") {
+      if (liveReserveFresh === null) {
+        return createStatus(
+          "checking",
+          "Checking",
+          "amber",
+          false,
+          0,
+          "Live reserve sync is configured, but current live reserve freshness has not loaded yet.",
+          "Checking live reserve sync",
+        );
+      }
+
+      if (!liveReserveFresh) {
+        return createStatus(
+          "live-configured",
+          "Configured",
+          "amber",
+          false,
+          1,
+          "Live reserve sync is configured, but the current report-card snapshot did not use fresh live reserve data.",
+          "Configured live reserve sync",
+        );
+      }
+
       return createStatus(
         "live",
         "Live",
@@ -555,9 +591,11 @@ export function resolveReserveCoverage(coin: StablecoinMeta): CoverageStatus {
   );
 }
 
-export function resolveYieldCoverage(
-  hasYieldCoverage: boolean,
-): CoverageStatus {
+export function resolveYieldCoverage(hasYieldCoverage: boolean, dataAvailable = true): CoverageStatus {
+  if (!dataAvailable) {
+    return createDataUnavailableStatus("Yield");
+  }
+
   return resolveBooleanCoverageStatus(
     hasYieldCoverage,
     {
@@ -582,7 +620,12 @@ export function resolveYieldCoverage(
 
 export function resolveRedemptionCoverage(
   entry: RedemptionBackstopEntry | null | undefined,
+  dataAvailable = true,
 ): CoverageStatus {
+  if (!dataAvailable) {
+    return createDataUnavailableStatus("Redemption backstop");
+  }
+
   if (!entry) {
     return createStatus(
       "none",
@@ -645,13 +688,16 @@ export function resolveRedemptionCoverage(
 
 export function resolveFlowCoverage(
   flowCoverageStatus: MintBurnCoverageStatus | null | undefined,
+  dataAvailable = true,
 ): CoverageStatus {
+  if (!dataAvailable) {
+    return createDataUnavailableStatus("Mint/burn flow");
+  }
+
   return createPresetStatus(FLOW_STATUS_PRESETS[flowCoverageStatus ?? "none"] ?? FLOW_STATUS_PRESETS.none);
 }
 
-export function resolveBlacklistCoverage(
-  coin: StablecoinMeta,
-): CoverageStatus {
+export function resolveBlacklistCoverage(coin: StablecoinMeta): CoverageStatus {
   return resolveBooleanCoverageStatus(
     BLACKLIST_SYMBOLS.has(coin.symbol),
     {
@@ -674,9 +720,11 @@ export function resolveBlacklistCoverage(
   );
 }
 
-export function resolveDependencyCoverage(
-  hasDependencyCoverage: boolean,
-): CoverageStatus {
+export function resolveDependencyCoverage(hasDependencyCoverage: boolean, dataAvailable = true): CoverageStatus {
+  if (!dataAvailable) {
+    return createDataUnavailableStatus("Dependency map");
+  }
+
   return resolveBooleanCoverageStatus(
     hasDependencyCoverage,
     {
@@ -708,6 +756,8 @@ function buildCoverageBreakdown(
 ) {
   if (featureKey === "price") {
     const base = `tracked ${breakdownMap.get("tracked") ?? 0} · price-only ${breakdownMap.get("price-only") ?? 0}`;
+    const unavailable = breakdownMap.get("data-unavailable") ?? 0;
+    const baseWithAvailability = unavailable > 0 ? `${base} · data n/a ${unavailable}` : base;
     if (!rows) return base;
 
     // Source-depth distribution
@@ -722,24 +772,24 @@ function buildCoverageBreakdown(
       else shallow++;
     }
     if (deep + mid + shallow > 0) {
-      return `${base} · 5+ sources: ${deep} · 3-4: ${mid} · 1-2: ${shallow}`;
+      return `${baseWithAvailability} · 5+ sources: ${deep} · 3-4: ${mid} · 1-2: ${shallow}`;
     }
-    return base;
+    return baseWithAvailability;
   }
   if (featureKey === "dex") {
-    return `primary ${breakdownMap.get("primary") ?? 0} · mixed ${breakdownMap.get("mixed") ?? 0} · fallback ${breakdownMap.get("fallback") ?? 0}`;
+    return `primary ${breakdownMap.get("primary") ?? 0} · mixed ${breakdownMap.get("mixed") ?? 0} · fallback ${breakdownMap.get("fallback") ?? 0} · data n/a ${breakdownMap.get("data-unavailable") ?? 0}`;
   }
   if (featureKey === "reserves") {
-    return `live ${breakdownMap.get("live") ?? 0} · curated-validated ${breakdownMap.get("curated-validated") ?? 0} · proof ${breakdownMap.get("proof") ?? 0} · curated ${breakdownMap.get("curated") ?? 0} · estimated ${breakdownMap.get("estimated") ?? 0}`;
+    return `live ${breakdownMap.get("live") ?? 0} · configured ${breakdownMap.get("live-configured") ?? 0} · checking ${breakdownMap.get("checking") ?? 0} · curated-validated ${breakdownMap.get("curated-validated") ?? 0} · proof ${breakdownMap.get("proof") ?? 0} · curated ${breakdownMap.get("curated") ?? 0} · estimated ${breakdownMap.get("estimated") ?? 0}`;
   }
   if (featureKey === "redemption") {
-    return `heuristic ${breakdownMap.get("modeled-heuristic") ?? 0} · configured ${breakdownMap.get("configured-unrated") ?? 0} · issuer ${breakdownMap.get("offchain-issuer") ?? 0} · psm ${breakdownMap.get("psm-swap") ?? 0} · queue ${breakdownMap.get("queue-redeem") ?? 0} · collateral ${breakdownMap.get("collateral-redeem") ?? 0} · stable ${breakdownMap.get("stablecoin-redeem") ?? 0} · basket ${breakdownMap.get("basket-redeem") ?? 0}`;
+    return `heuristic ${breakdownMap.get("modeled-heuristic") ?? 0} · configured ${breakdownMap.get("configured-unrated") ?? 0} · issuer ${breakdownMap.get("offchain-issuer") ?? 0} · psm ${breakdownMap.get("psm-swap") ?? 0} · queue ${breakdownMap.get("queue-redeem") ?? 0} · collateral ${breakdownMap.get("collateral-redeem") ?? 0} · stable ${breakdownMap.get("stablecoin-redeem") ?? 0} · basket ${breakdownMap.get("basket-redeem") ?? 0} · data n/a ${breakdownMap.get("data-unavailable") ?? 0}`;
   }
   if (featureKey === "flows") {
-    return `full ${breakdownMap.get("full") ?? 0} · partial ${breakdownMap.get("partial-history") ?? 0} · bootstrapping ${breakdownMap.get("bootstrapping") ?? 0}`;
+    return `full ${breakdownMap.get("full") ?? 0} · partial ${breakdownMap.get("partial-history") ?? 0} · lagging ${breakdownMap.get("lagging") ?? 0} · bootstrapping ${breakdownMap.get("bootstrapping") ?? 0} · data n/a ${breakdownMap.get("data-unavailable") ?? 0}`;
   }
   if (featureKey === "safety") {
-    return `rated ${breakdownMap.get("rated") ?? 0} · NR ${breakdownMap.get("nr") ?? 0}`;
+    return `rated ${breakdownMap.get("rated") ?? 0} · NR ${breakdownMap.get("nr") ?? 0} · data n/a ${breakdownMap.get("data-unavailable") ?? 0}`;
   }
 
   return `${availableCount} covered · ${totalCount - availableCount} uncovered`;
@@ -772,17 +822,9 @@ export function buildCoverageFeatureSummary(
     coveredMcapUsd,
     mcapSharePct: totalMcapUsd > 0 ? (coveredMcapUsd / totalMcapUsd) * 100 : null,
     countLabel: feature.headlineCountLabel ?? "Coin count",
-    coverageLabel:
-      feature.headlineCoverageLabel?.(coveragePct) ??
-      `${coveragePct.toFixed(0)}% of tracked coins`,
-    shareLabel: feature.headlineShareLabel ?? "Tracked market-cap reach",
-    breakdown: buildCoverageBreakdown(
-      feature.key,
-      breakdownMap,
-      availableRows.length,
-      rows.length,
-      rows,
-    ),
+    coverageLabel: feature.headlineCoverageLabel?.(coveragePct) ?? `${coveragePct.toFixed(0)}% of active coins`,
+    shareLabel: feature.headlineShareLabel ?? "Active market-cap reach",
+    breakdown: buildCoverageBreakdown(feature.key, breakdownMap, availableRows.length, rows.length, rows),
   };
 }
 
@@ -791,10 +833,25 @@ export function countAvailableFeatures(
   keys?: readonly CoverageFeatureKey[],
 ): number {
   const targetKeys = keys ?? (Object.keys(statuses) as CoverageFeatureKey[]);
-  return targetKeys.reduce(
-    (count, key) => count + (statuses[key].available ? 1 : 0),
-    0,
-  );
+  return targetKeys.reduce((count, key) => count + (statuses[key].available ? 1 : 0), 0);
+}
+
+function isHeadlineFeatureCovered(featureKey: CoverageFeatureKey, status: CoverageStatus): boolean {
+  if (featureKey === "price") {
+    return (status.sourceCount ?? 0) >= 3;
+  }
+  if (featureKey === "reserves") {
+    return status.kind === "live";
+  }
+  return status.available;
+}
+
+function countHeadlineFeatures(
+  statuses: Record<CoverageFeatureKey, CoverageStatus>,
+  keys?: readonly CoverageFeatureKey[],
+): number {
+  const targetKeys = keys ?? (Object.keys(statuses) as CoverageFeatureKey[]);
+  return targetKeys.reduce((count, key) => count + (isHeadlineFeatureCovered(key, statuses[key]) ? 1 : 0), 0);
 }
 
 export function buildCoverageRow({
@@ -809,17 +866,20 @@ export function buildCoverageRow({
   hasYieldCoverage,
   flowCoverageStatus,
   hasDependencyCoverage,
+  liveReserveFresh = true,
+  dataAvailability,
 }: BuildCoverageRowInput): CoverageRow {
+  const hasData = (key: CoverageFeatureKey) => dataAvailability?.[key] !== false;
   const statuses = {
-    price: resolvePriceCoverage(coin, hasPegCoverage, consensusSources, priceConfidence),
-    safety: resolveSafetyCoverage(safetyScore),
-    dex: resolveDexCoverage(dexCoverageClass),
-    reserves: resolveReserveCoverage(coin),
-    redemption: resolveRedemptionCoverage(redemptionEntry),
-    yield: resolveYieldCoverage(hasYieldCoverage),
-    flows: resolveFlowCoverage(flowCoverageStatus),
+    price: resolvePriceCoverage(coin, hasPegCoverage, consensusSources, priceConfidence, hasData("price")),
+    safety: resolveSafetyCoverage(safetyScore, hasData("safety")),
+    dex: resolveDexCoverage(dexCoverageClass, hasData("dex")),
+    reserves: resolveReserveCoverage(coin, liveReserveFresh),
+    redemption: resolveRedemptionCoverage(redemptionEntry, hasData("redemption")),
+    yield: resolveYieldCoverage(hasYieldCoverage, hasData("yield")),
+    flows: resolveFlowCoverage(flowCoverageStatus, hasData("flows")),
     blacklist: resolveBlacklistCoverage(coin),
-    dependency: resolveDependencyCoverage(hasDependencyCoverage),
+    dependency: resolveDependencyCoverage(hasDependencyCoverage, hasData("dependency")),
   } satisfies Record<CoverageFeatureKey, CoverageStatus>;
 
   return {
@@ -829,9 +889,9 @@ export function buildCoverageRow({
     marketCapUsd,
     pegLabel: PEG_LABELS_SHORT[coin.flags.pegCurrency] ?? coin.flags.pegCurrency,
     backingLabel: BACKING_LABELS_SHORT[coin.flags.backing] ?? coin.flags.backing,
-    governanceLabel:
-      GOVERNANCE_LABELS_SHORT[coin.flags.governance] ?? coin.flags.governance,
+    governanceLabel: GOVERNANCE_LABELS_SHORT[coin.flags.governance] ?? coin.flags.governance,
     coverageCount: countAvailableFeatures(statuses),
+    headlineCoverageCount: countHeadlineFeatures(statuses),
     advancedCoverageCount: countAvailableFeatures(statuses, [
       "safety",
       "dex",

@@ -12,15 +12,11 @@ import { MOBILE_PREVIEW_FEATURES } from "@/lib/coverage-page-config";
 import { buildStablecoinUrl } from "@/lib/urls";
 import { CoverageBadge } from "./coverage-badge";
 
-const REMAINING_MOBILE_FEATURES = COVERAGE_FEATURES.filter(
-  (feature) => !MOBILE_PREVIEW_FEATURES.includes(feature.key),
-);
+const REMAINING_MOBILE_FEATURES = COVERAGE_FEATURES.filter((feature) => !MOBILE_PREVIEW_FEATURES.includes(feature.key));
 const COVERAGE_FEATURES_BY_KEY = Object.fromEntries(
   COVERAGE_FEATURES.map((feature) => [feature.key, feature]),
 ) as Record<CoverageFeatureKey, CoverageFeatureDefinition>;
-const MOBILE_PREVIEW_DEFINITIONS = MOBILE_PREVIEW_FEATURES.map(
-  (key) => COVERAGE_FEATURES_BY_KEY[key],
-);
+const MOBILE_PREVIEW_DEFINITIONS = MOBILE_PREVIEW_FEATURES.map((key) => COVERAGE_FEATURES_BY_KEY[key]);
 
 export interface CoverageMobileCardProps {
   row: CoverageRow;
@@ -36,12 +32,8 @@ export function CoverageMobileCard({ row, logoSrc }: CoverageMobileCardProps) {
             <StablecoinLogo src={logoSrc} name={row.name} size={32} />
             <div className="min-w-0">
               <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
-                <span className="text-sm font-semibold text-foreground">
-                  {row.symbol}
-                </span>
-                <span className="truncate text-sm text-muted-foreground">
-                  {row.name}
-                </span>
+                <span className="text-sm font-semibold text-foreground">{row.symbol}</span>
+                <span className="truncate text-sm text-muted-foreground">{row.name}</span>
               </div>
               <div className="mt-1 flex flex-wrap items-center gap-1.5 text-[11px] leading-relaxed text-muted-foreground">
                 <span className="font-mono tabular-nums text-foreground">
@@ -58,9 +50,12 @@ export function CoverageMobileCard({ row, logoSrc }: CoverageMobileCardProps) {
           </div>
 
           <div className="shrink-0 text-right">
-            <div className="pharos-kicker">Covered</div>
+            <div className="pharos-kicker">Available</div>
             <div className="font-mono text-lg font-semibold text-foreground">
               {row.coverageCount}/{COVERAGE_FEATURES.length}
+            </div>
+            <div className="mt-0.5 text-[10px] font-medium text-muted-foreground">
+              Headline {row.headlineCoverageCount}/{COVERAGE_FEATURES.length}
             </div>
             <ChevronDown
               className="ml-auto mt-2 h-4 w-4 text-muted-foreground transition-transform group-open:rotate-180"
@@ -75,9 +70,7 @@ export function CoverageMobileCard({ row, logoSrc }: CoverageMobileCardProps) {
               key={feature.key}
               className="flex items-center justify-between gap-2 rounded-xl border border-border/60 bg-background/45 px-3 py-2"
             >
-              <dt className="min-w-0 text-[11px] font-medium text-muted-foreground">
-                {feature.shortLabel}
-              </dt>
+              <dt className="min-w-0 text-[11px] font-medium text-muted-foreground">{feature.shortLabel}</dt>
               <dd className="shrink-0">
                 <CoverageBadge status={row.statuses[feature.key]} compact />
               </dd>
@@ -93,9 +86,7 @@ export function CoverageMobileCard({ row, logoSrc }: CoverageMobileCardProps) {
               key={feature.key}
               className="flex items-center justify-between gap-2 rounded-xl border border-border/60 bg-background/45 px-3 py-2"
             >
-              <dt className="min-w-0 text-[11px] font-medium text-muted-foreground">
-                {feature.shortLabel}
-              </dt>
+              <dt className="min-w-0 text-[11px] font-medium text-muted-foreground">{feature.shortLabel}</dt>
               <dd className="shrink-0">
                 <CoverageBadge status={row.statuses[feature.key]} compact />
               </dd>

@@ -2,21 +2,16 @@ import { describe, expect, it } from "vitest";
 import type { CoverageRow, CoverageStatus } from "@/lib/coverage";
 import type { CoverageFeatureKey } from "@/lib/coverage";
 import type { CoverageFilterKey } from "@/lib/coverage-page-config";
-import {
-  filterCoverageRows,
-  hasCoverageFilters,
-  matchesCoverageFilter,
-  sortCoverageRows,
-} from "./coverage-filtering";
+import { filterCoverageRows, hasCoverageFilters, matchesCoverageFilter, sortCoverageRows } from "./coverage-filtering";
 
-function status(kind: string, available: boolean): CoverageStatus {
+function status(kind: string, available: boolean, sortRank = available ? 1 : 0): CoverageStatus {
   return {
     kind,
     label: kind,
     spokenLabel: kind,
     tone: "slate",
     available,
-    sortRank: 0,
+    sortRank,
     detail: kind,
   };
 }
@@ -40,6 +35,7 @@ function makeRow(overrides: Partial<CoverageRow> & Pick<CoverageRow, "id" | "nam
     backingLabel: "Curated",
     governanceLabel: "Neutral",
     coverageCount: 0,
+    headlineCoverageCount: 0,
     advancedCoverageCount: 0,
     statuses,
     ...overrides,
@@ -53,9 +49,10 @@ const rows: CoverageRow[] = [
     symbol: "ALP",
     marketCapUsd: 100,
     coverageCount: 2,
+    headlineCoverageCount: 1,
     advancedCoverageCount: 1,
     statuses: {
-      price: status("tracked", true),
+      price: { ...status("tracked", true, 2), sourceCount: 1 },
       safety: status("tracked", true),
       dex: status("none", false),
       reserves: status("none", false),
@@ -72,11 +69,12 @@ const rows: CoverageRow[] = [
     symbol: "BET",
     marketCapUsd: 300,
     coverageCount: 4,
+    headlineCoverageCount: 4,
     advancedCoverageCount: 2,
     statuses: {
-      price: status("tracked", true),
+      price: { ...status("tracked", true, 4), sourceCount: 4 },
       safety: status("tracked", true),
-      dex: status("tracked", true),
+      dex: status("tracked", true, 2),
       reserves: status("live", true),
       redemption: status("configured", true),
       yield: status("available", true),
@@ -91,11 +89,12 @@ const rows: CoverageRow[] = [
     symbol: "GAM",
     marketCapUsd: 300,
     coverageCount: 4,
+    headlineCoverageCount: 3,
     advancedCoverageCount: 1,
     statuses: {
-      price: status("tracked", true),
+      price: { ...status("tracked", true, 3), sourceCount: 3 },
       safety: status("tracked", true),
-      dex: status("tracked", true),
+      dex: status("tracked", true, 1),
       reserves: status("none", false),
       redemption: status("none", false),
       yield: status("none", false),
@@ -110,9 +109,10 @@ const rows: CoverageRow[] = [
     symbol: "DEL",
     marketCapUsd: 50,
     coverageCount: 5,
+    headlineCoverageCount: 5,
     advancedCoverageCount: 5,
     statuses: {
-      price: status("tracked", true),
+      price: { ...status("tracked", true, 5), sourceCount: 5 },
       safety: status("tracked", true),
       dex: status("tracked", true),
       reserves: status("none", false),
@@ -138,6 +138,18 @@ describe("coverage filtering", () => {
     expect(sorted.map((row) => row.id)).toEqual(["delta", "beta", "gamma", "alpha"]);
   });
 
+  it("sorts by least available coverage and headline coverage", () => {
+    const sorted = sortCoverageRows(rows, "least-covered");
+
+    expect(sorted.map((row) => row.id)).toEqual(["alpha", "gamma", "beta", "delta"]);
+  });
+
+  it("sorts by weakest feature status rank", () => {
+    const sorted = sortCoverageRows(rows, "weakest-dex");
+
+    expect(sorted.map((row) => row.id)).toEqual(["alpha", "gamma", "delta", "beta"]);
+  });
+
   it("sorts alphabetically by name", () => {
     const sorted = sortCoverageRows(rows, "name");
 
@@ -150,10 +162,18 @@ describe("coverage filtering", () => {
     ["yield", "beta"],
     ["flows", "gamma"],
     ["blacklist", "beta"],
+    ["weak-price", "alpha"],
+    ["missing-safety", ""],
+    ["missing-dex", "alpha"],
+    ["missing-live-reserves", "alpha,gamma,delta"],
+    ["missing-flows", "alpha,beta,delta"],
+    ["missing-dependency", ""],
+    ["full-available", ""],
+    ["full-headline", ""],
   ])("matches %s coverage against the expected row", (filter, expectedId) => {
     const matches = rows.filter((row) => matchesCoverageFilter(row, filter));
 
-    expect(matches.map((row) => row.id)).toEqual([expectedId]);
+    expect(matches.map((row) => row.id).join(",")).toEqual(expectedId);
   });
 
   it("filters by search across names and tickers with trimming and case folding", () => {

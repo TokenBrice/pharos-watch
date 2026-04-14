@@ -17,9 +17,31 @@ export type CoverageFilterKey =
   | "live-reserves"
   | "yield"
   | "flows"
-  | "blacklist";
+  | "blacklist"
+  | "weak-price"
+  | "missing-safety"
+  | "missing-dex"
+  | "missing-live-reserves"
+  | "missing-flows"
+  | "missing-dependency"
+  | "full-available"
+  | "full-headline";
 
-export type CoverageSortKey = "market-cap" | "name" | "most-covered";
+export type CoverageSortKey =
+  | "market-cap"
+  | "name"
+  | "most-covered"
+  | "least-covered"
+  | "most-headline"
+  | "least-headline"
+  | "weakest-price"
+  | "weakest-safety"
+  | "weakest-dex"
+  | "weakest-reserves"
+  | "weakest-redemption"
+  | "weakest-yield"
+  | "weakest-flows"
+  | "weakest-dependency";
 
 export const FEATURE_ICON: Record<CoverageFeatureKey, typeof Activity> = {
   price: Activity,
@@ -145,12 +167,55 @@ export const FILTER_OPTIONS: ReadonlyArray<{
   { key: "yield", label: "Yield" },
   { key: "flows", label: "Flows" },
   { key: "blacklist", label: "Blacklist" },
+  { key: "weak-price", label: "Weak price" },
+  { key: "missing-safety", label: "No safety" },
+  { key: "missing-dex", label: "No DEX" },
+  { key: "missing-live-reserves", label: "No live reserves" },
+  { key: "missing-flows", label: "No flows" },
+  { key: "missing-dependency", label: "No dependency" },
+  { key: "full-available", label: "Fully available" },
+  { key: "full-headline", label: "Fully headline/live" },
+] as const;
+
+export const SORT_OPTIONS: ReadonlyArray<{
+  group: string;
+  options: ReadonlyArray<{
+    key: CoverageSortKey;
+    label: string;
+  }>;
+}> = [
+  {
+    group: "Overview",
+    options: [
+      { key: "market-cap", label: "Market cap" },
+      { key: "name", label: "Alphabetical" },
+      { key: "most-covered", label: "Most available" },
+      { key: "least-covered", label: "Least available" },
+      { key: "most-headline", label: "Most headline/live" },
+      { key: "least-headline", label: "Weakest headline/live" },
+    ],
+  },
+  {
+    group: "Weakest Feature First",
+    options: [
+      { key: "weakest-price", label: "Price" },
+      { key: "weakest-safety", label: "Safety" },
+      { key: "weakest-dex", label: "DEX" },
+      { key: "weakest-reserves", label: "Reserves" },
+      { key: "weakest-redemption", label: "Redemption" },
+      { key: "weakest-yield", label: "Yield" },
+      { key: "weakest-flows", label: "Flows" },
+      { key: "weakest-dependency", label: "Dependency" },
+    ],
+  },
 ] as const;
 
 export const MOBILE_PREVIEW_FEATURES: readonly CoverageFeatureKey[] = [
   "price",
+  "safety",
   "dex",
   "reserves",
+  "redemption",
   "flows",
 ] as const;
 
@@ -158,6 +223,45 @@ export const LEGEND_ITEMS = [
   {
     term: "NR",
     description: "No current rating or observed row is available for that surface.",
+  },
+  {
+    term: "Data n/a",
+    description:
+      "The backing feed failed or has not returned usable data, so the state is not counted as a coverage gap.",
+  },
+  {
+    term: "Tracked",
+    description: "Price and depeg monitoring are available. Source count appears when the price pipeline reports it.",
+  },
+  {
+    term: "Primary / Mixed / Fallback",
+    description:
+      "DEX coverage quality: primary sources, blended primary plus fallback sources, or fallback-only discovery.",
+  },
+  {
+    term: "Live",
+    description: "Fresh live reserve data was used by the current report-card snapshot.",
+  },
+  {
+    term: "Configured",
+    description: "A live reserve adapter exists, but the current snapshot did not use fresh live reserve data.",
+  },
+  {
+    term: "Checking",
+    description:
+      "Live reserve adapter coverage is configured, but report-card freshness data is still loading or unavailable.",
+  },
+  {
+    term: "Curated-Validated",
+    description: "A reviewed reserve baseline is kept current through live validation.",
+  },
+  {
+    term: "Proof",
+    description: "Reserve view is backed by proof, attestation, or liveness evidence rather than a full live mix.",
+  },
+  {
+    term: "Curated / Estimated",
+    description: "Reserve composition is manually curated or falls back to classification-based estimates.",
   },
   {
     term: "—",
@@ -170,8 +274,7 @@ export const LEGEND_ITEMS = [
   },
   {
     term: "Config.",
-    description:
-      "A redemption route is configured, but the current snapshot could not resolve a usable score.",
+    description: "A redemption route is configured, but the current snapshot could not resolve a usable score.",
   },
   {
     term: "Bootstr.",
@@ -180,5 +283,17 @@ export const LEGEND_ITEMS = [
   {
     term: "Price only",
     description: "NAV-priced asset with price coverage, but no peg or depeg tracking.",
+  },
+  {
+    term: "Issuer / PSM / Queue / Collat. / Stable / Basket",
+    description: "The modeled redemption-backstop route family counted as strong redemption coverage.",
+  },
+  {
+    term: "Full / Partial / Lagging / Bootstr.",
+    description: "Mint/burn flow coverage maturity and sync state for configured assets.",
+  },
+  {
+    term: "Node",
+    description: "The asset participates in the report-card dependency graph.",
   },
 ] as const;

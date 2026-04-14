@@ -14,6 +14,9 @@ export function useCoveragePageModel() {
     widestFeature,
     narrowestFeature,
     mostConcentratedFeature,
+    isInitialDataLoading,
+    isStablecoinDataUnavailable,
+    unavailableFeatures,
     staleQueries,
   } = useCoverageMatrixModel();
 
@@ -33,6 +36,9 @@ export function useCoveragePageModel() {
     widestFeature,
     narrowestFeature,
     mostConcentratedFeature,
+    isInitialDataLoading,
+    isStablecoinDataUnavailable,
+    unavailableFeatures,
     staleQueries,
     ...filters,
     resetFilters,

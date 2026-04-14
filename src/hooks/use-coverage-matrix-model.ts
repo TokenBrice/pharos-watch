@@ -22,7 +22,18 @@ import {
   buildCoverageFeatureSummary,
   buildCoverageRow,
   COVERAGE_FEATURES,
+  type CoverageFeatureKey,
 } from "@/lib/coverage";
+
+const FEATURE_QUERY_AVAILABLE_KEYS = [
+  "price",
+  "safety",
+  "dex",
+  "redemption",
+  "yield",
+  "flows",
+  "dependency",
+] as const satisfies readonly CoverageFeatureKey[];
 
 export function useCoverageMatrixModel() {
   const stablecoinsQuery = useStablecoins();
@@ -33,25 +44,36 @@ export function useCoverageMatrixModel() {
   const flowQuery = useMintBurnFlows();
   const reportCardsQuery = useReportCards();
 
+  const queryAvailability = useMemo(() => {
+    const hasPegData = pegQuery.data !== undefined;
+    const hasDexData = dexQuery.data !== undefined;
+    const hasRedemptionData = redemptionQuery.data !== undefined;
+    const hasYieldData = yieldQuery.data !== undefined;
+    const hasFlowData = flowQuery.data !== undefined;
+    const hasReportCardData = reportCardsQuery.data !== undefined;
+
+    return {
+      price: hasPegData,
+      safety: hasReportCardData,
+      dex: hasDexData,
+      reserves: hasReportCardData,
+      redemption: hasRedemptionData,
+      yield: hasYieldData,
+      flows: hasFlowData,
+      blacklist: true,
+      dependency: hasReportCardData,
+    } satisfies Record<CoverageFeatureKey, boolean>;
+  }, [dexQuery.data, flowQuery.data, pegQuery.data, redemptionQuery.data, reportCardsQuery.data, yieldQuery.data]);
+
   const rows = useMemo(() => {
-    const assetById = new Map(
-      (stablecoinsQuery.data?.peggedAssets ?? []).map((asset) => [asset.id, asset]),
-    );
+    const assetById = new Map((stablecoinsQuery.data?.peggedAssets ?? []).map((asset) => [asset.id, asset]));
     const pegIds = new Set((pegQuery.data?.coins ?? []).map((coin) => coin.id));
-    const pegCoinById = new Map(
-      (pegQuery.data?.coins ?? []).map((coin) => [coin.id, coin]),
-    );
+    const pegCoinById = new Map((pegQuery.data?.coins ?? []).map((coin) => [coin.id, coin]));
     const yieldIds = new Set((yieldQuery.data?.rankings ?? []).map((row) => row.id));
-    const flowById = new Map(
-      (flowQuery.data?.coins ?? []).map((row) => [row.stablecoinId, row]),
-    );
-    const reportCardById = new Map(
-      (reportCardsQuery.data?.cards ?? []).map((card) => [card.id, card]),
-    );
+    const flowById = new Map((flowQuery.data?.coins ?? []).map((row) => [row.stablecoinId, row]));
+    const reportCardById = new Map((reportCardsQuery.data?.cards ?? []).map((card) => [card.id, card]));
     const liveIds = new Set(
-      (reportCardsQuery.data?.cards ?? [])
-        .filter((card) => !card.isDefunct)
-        .map((card) => card.id),
+      (reportCardsQuery.data?.cards ?? []).filter((card) => !card.isDefunct).map((card) => card.id),
     );
     const dependencyIds = collectDependencyGraphIds(
       filterDependencyGraphEdgesToLive(
@@ -63,6 +85,7 @@ export function useCoverageMatrixModel() {
     return ACTIVE_STABLECOINS.map((coin) => {
       const pegCoin = pegCoinById.get(coin.id);
       const asset = assetById.get(coin.id);
+      const reportCard = reportCardById.get(coin.id);
       const mcap = asset ? getCirculatingRaw(asset) : 0;
       return buildCoverageRow({
         coin,
@@ -70,12 +93,14 @@ export function useCoverageMatrixModel() {
         hasPegCoverage: pegIds.has(coin.id),
         consensusSources: pegCoin?.consensusSources,
         priceConfidence: pegCoin?.priceConfidence ?? undefined,
-        safetyScore: reportCardById.get(coin.id)?.overallScore ?? null,
+        safetyScore: reportCard?.overallScore ?? null,
         dexCoverageClass: dexQuery.data?.[coin.id]?.coverageClass ?? null,
         redemptionEntry: redemptionQuery.data?.coins?.[coin.id] ?? null,
         hasYieldCoverage: yieldIds.has(coin.id),
         flowCoverageStatus: flowById.get(coin.id)?.coverage?.status ?? null,
         hasDependencyCoverage: dependencyIds.has(coin.id),
+        liveReserveFresh: queryAvailability.reserves ? (reportCard?.rawInputs.collateralFromLive ?? false) : null,
+        dataAvailability: queryAvailability,
       });
     });
   }, [
@@ -86,18 +111,13 @@ export function useCoverageMatrixModel() {
     reportCardsQuery.data,
     dexQuery.data,
     redemptionQuery.data,
+    queryAvailability,
   ]);
 
-  const totalMcapUsd = useMemo(
-    () => rows.reduce((sum, row) => sum + row.marketCapUsd, 0),
-    [rows],
-  );
+  const totalMcapUsd = useMemo(() => rows.reduce((sum, row) => sum + row.marketCapUsd, 0), [rows]);
 
   const featureSummaries = useMemo(
-    () =>
-      COVERAGE_FEATURES.map((feature) =>
-        buildCoverageFeatureSummary(feature, rows, totalMcapUsd),
-      ),
+    () => COVERAGE_FEATURES.map((feature) => buildCoverageFeatureSummary(feature, rows, totalMcapUsd)),
     [rows, totalMcapUsd],
   );
 
@@ -113,9 +133,7 @@ export function useCoverageMatrixModel() {
     }
 
     const toSorted = (map: Map<string, number>) =>
-      [...map.entries()]
-        .map(([name, count]) => ({ name, count }))
-        .sort((a, b) => b.count - a.count);
+      [...map.entries()].map(([name, count]) => ({ name, count })).sort((a, b) => b.count - a.count);
 
     return {
       pricingSources: toSorted(consensusMap),
@@ -148,12 +166,22 @@ export function useCoverageMatrixModel() {
   const mostConcentratedFeature = useMemo(
     () =>
       [...featureSummaries].sort(
-        (left, right) =>
-          ((right.mcapSharePct ?? 0) - right.coveragePct) -
-          ((left.mcapSharePct ?? 0) - left.coveragePct),
+        (left, right) => (right.mcapSharePct ?? 0) - right.coveragePct - ((left.mcapSharePct ?? 0) - left.coveragePct),
       )[0] ?? null,
     [featureSummaries],
   );
+
+  const isStablecoinDataUnavailable = stablecoinsQuery.data === undefined && !!stablecoinsQuery.error;
+  const isInitialDataLoading = [
+    stablecoinsQuery,
+    pegQuery,
+    dexQuery,
+    redemptionQuery,
+    yieldQuery,
+    flowQuery,
+    reportCardsQuery,
+  ].some((query) => query.data === undefined && !query.error);
+  const unavailableFeatures = FEATURE_QUERY_AVAILABLE_KEYS.filter((key) => !queryAvailability[key]);
 
   return {
     rows,
@@ -163,54 +191,57 @@ export function useCoverageMatrixModel() {
     widestFeature,
     narrowestFeature,
     mostConcentratedFeature,
+    isInitialDataLoading,
+    isStablecoinDataUnavailable,
+    unavailableFeatures,
     staleQueries: [
       {
         preset: "stablecoins" as const,
         dataUpdatedAt: stablecoinsQuery.dataUpdatedAt,
         error: stablecoinsQuery.error,
-        hasData: !!stablecoinsQuery.data?.peggedAssets?.length,
+        hasData: stablecoinsQuery.data !== undefined,
         meta: stablecoinsQuery.meta,
       },
       {
         preset: "pegSummary" as const,
         dataUpdatedAt: pegQuery.dataUpdatedAt,
         error: pegQuery.error,
-        hasData: !!pegQuery.data?.coins?.length,
+        hasData: pegQuery.data !== undefined,
         meta: pegQuery.meta,
       },
       {
         preset: "dexLiquidity" as const,
         dataUpdatedAt: dexQuery.dataUpdatedAt,
         error: dexQuery.error,
-        hasData: !!dexQuery.data,
+        hasData: dexQuery.data !== undefined,
         meta: dexQuery.meta,
       },
       {
         preset: "redemptionBackstops" as const,
         dataUpdatedAt: redemptionQuery.dataUpdatedAt,
         error: redemptionQuery.error,
-        hasData: !!redemptionQuery.data?.coins,
+        hasData: redemptionQuery.data !== undefined,
         meta: redemptionQuery.meta,
       },
       {
         preset: "yieldRankings" as const,
         dataUpdatedAt: yieldQuery.dataUpdatedAt,
         error: yieldQuery.error,
-        hasData: !!yieldQuery.data?.rankings?.length,
+        hasData: yieldQuery.data !== undefined,
         meta: yieldQuery.meta,
       },
       {
         preset: "mintBurnFlows" as const,
         dataUpdatedAt: flowQuery.dataUpdatedAt,
         error: flowQuery.error,
-        hasData: !!flowQuery.data?.coins?.length,
+        hasData: flowQuery.data !== undefined,
         meta: flowQuery.meta,
       },
       {
         preset: "reportCards" as const,
         dataUpdatedAt: reportCardsQuery.dataUpdatedAt,
         error: reportCardsQuery.error,
-        hasData: !!reportCardsQuery.data?.cards?.length,
+        hasData: reportCardsQuery.data !== undefined,
         meta: reportCardsQuery.meta,
       },
     ],

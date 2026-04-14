@@ -1,7 +1,4 @@
-import {
-  type CoverageStatus,
-  COVERAGE_BADGE_TONE_CLASS,
-} from "@/lib/coverage";
+import { type CoverageStatus, COVERAGE_BADGE_TONE_CLASS } from "@/lib/coverage";
 import { cn } from "@/lib/utils";
 import { getPricingSourceLabel } from "@shared/lib/pricing-sources";
 
@@ -11,13 +8,9 @@ function buildSourceTooltip(status: CoverageStatus): string {
   const confidenceLabel = status.priceConfidence
     ? `${status.priceConfidence.charAt(0).toUpperCase()}${status.priceConfidence.slice(1).replace("-", " ")} confidence`
     : "";
-  const sourceList = status.sourceNames
-    .map((s) => getPricingSourceLabel(s))
-    .join(", ");
+  const sourceList = status.sourceNames.map((s) => getPricingSourceLabel(s)).join(", ");
 
-  return confidenceLabel
-    ? `${confidenceLabel} — ${sourceList}`
-    : sourceList;
+  return confidenceLabel ? `${confidenceLabel} — ${sourceList}` : sourceList;
 }
 
 export interface CoverageBadgeProps {
@@ -32,10 +25,13 @@ export function CoverageBadge({ status, compact = false }: CoverageBadgeProps) {
         ? ` (${status.sourceCount})`
         : ` (${status.sourceCount} sources)`
       : "";
+  const tooltip = buildSourceTooltip(status);
+  const ariaLabel = `${status.spokenLabel}${countSuffix}. ${tooltip}`;
 
   return (
     <span
-      title={buildSourceTooltip(status)}
+      title={tooltip}
+      aria-label={ariaLabel}
       className={cn(
         "inline-flex items-center justify-center rounded-full border px-2.5 py-1 text-[11px] font-medium tracking-[0.01em]",
         compact ? "min-w-[4.25rem]" : "min-w-[4.75rem]",

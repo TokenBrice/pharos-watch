@@ -6,21 +6,16 @@ import { formatCurrency } from "@shared/lib/format";
 import { getPricingSourceLabel } from "@shared/lib/pricing-sources";
 import { CoverageLensSummary } from "@/components/coverage-lens-summary";
 import { StablecoinLogo } from "@/components/stablecoin-logo";
-import {
-  TableBody,
-  TableCaption,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
+import { TableBody, TableCaption, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { useIsMobile } from "@/hooks/use-is-mobile";
 import { COVERAGE_FEATURES } from "@/lib/coverage";
 import {
   AUTHORITATIVE_ACCENT,
   FILTER_OPTIONS,
   LEGEND_ITEMS,
+  SORT_OPTIONS,
   type CoverageSortKey,
 } from "@/lib/coverage-page-config";
 import { buildStablecoinUrl } from "@/lib/urls";
@@ -32,16 +27,42 @@ import type { useCoveragePageModel } from "./use-coverage-page-model";
 
 type CoveragePageModel = ReturnType<typeof useCoveragePageModel>;
 
+export function CoverageMatrixDataStateCard({ state }: { state: "loading" | "error" }) {
+  const isError = state === "error";
+
+  return (
+    <Card className="rounded-[1.45rem] border border-border/70 bg-card/80">
+      <CardHeader className="space-y-2">
+        <p className="pharos-kicker">Coverage Matrix</p>
+        <CardTitle as="h2" className="text-xl">
+          {isError ? "Coverage snapshot unavailable" : "Loading coverage snapshot"}
+        </CardTitle>
+        <CardDescription className="max-w-3xl leading-relaxed">
+          {isError
+            ? "The stablecoin market snapshot is required before coverage counts can be trusted. The matrix will return when that feed recovers."
+            : "Waiting for the market snapshot and feature feeds before showing coverage counts, so loading states are not mistaken for real gaps."}
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="pt-0">
+        <div className="rounded-2xl border border-dashed border-border/70 bg-background/30 px-4 py-8 text-sm text-muted-foreground">
+          {isError
+            ? "No active-coin denominator is available right now."
+            : "Preparing feature availability, market-cap reach, and per-coin statuses."}
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
 export function CoverageFeatureSnapshotCard({
   featureSummaries,
   widestFeature,
   narrowestFeature,
   mostConcentratedFeature,
   totalRows,
-}: Pick<
-  CoveragePageModel,
-  "featureSummaries" | "widestFeature" | "narrowestFeature" | "mostConcentratedFeature"
-> & { totalRows: number }) {
+}: Pick<CoveragePageModel, "featureSummaries" | "widestFeature" | "narrowestFeature" | "mostConcentratedFeature"> & {
+  totalRows: number;
+}) {
   return (
     <Card className="rounded-[1.6rem] border border-border/70 bg-card/85 shadow-[0_18px_44px_oklch(0_0_0_/0.14)]">
       <CardHeader className="space-y-5">
@@ -51,8 +72,8 @@ export function CoverageFeatureSnapshotCard({
             Start with the breadth, not the coin list
           </CardTitle>
           <CardDescription className="leading-relaxed">
-            Count coverage shows how wide each Pharos surface reaches. Market-cap share shows
-            whether that coverage is spread across the field or concentrated in the majors.
+            Count coverage shows how wide each Pharos surface reaches. Market-cap share shows whether that coverage is
+            spread across the field or concentrated in the majors.
           </CardDescription>
         </div>
 
@@ -62,7 +83,7 @@ export function CoverageFeatureSnapshotCard({
               label="Widest today"
               accent={widestFeature.feature.key}
               title={widestFeature.feature.label}
-              detail={<>Reaches {widestFeature.coveragePct.toFixed(0)}% of tracked coins.</>}
+              detail={<>Reaches {widestFeature.coveragePct.toFixed(0)}% of active coins.</>}
             />
           ) : null}
           {narrowestFeature ? (
@@ -70,7 +91,7 @@ export function CoverageFeatureSnapshotCard({
               label="Narrowest today"
               accent={narrowestFeature.feature.key}
               title={narrowestFeature.feature.label}
-              detail={<>Reaches {narrowestFeature.coveragePct.toFixed(0)}% of tracked coins.</>}
+              detail={<>Reaches {narrowestFeature.coveragePct.toFixed(0)}% of active coins.</>}
             />
           ) : null}
           {mostConcentratedFeature ? (
@@ -80,9 +101,8 @@ export function CoverageFeatureSnapshotCard({
               title={mostConcentratedFeature.feature.label}
               detail={
                 <>
-                  Reaches {mostConcentratedFeature.mcapSharePct?.toFixed(0) ?? "0"}% of tracked
-                  market cap with only {mostConcentratedFeature.coveragePct.toFixed(0)}% coin
-                  coverage.
+                  Reaches {mostConcentratedFeature.mcapSharePct?.toFixed(0) ?? "0"}% of active market cap with only{" "}
+                  {mostConcentratedFeature.coveragePct.toFixed(0)}% active-coin coverage.
                 </>
               }
             />
@@ -116,8 +136,8 @@ export function CoveragePricingSourcesCard({
           Where Pharos gets its prices
         </CardTitle>
         <CardDescription className="leading-relaxed">
-          Each stablecoin price is derived from multi-source consensus. These are the providers
-          feeding the pipeline and how many coins each one covers.
+          Each stablecoin price is derived from multi-source consensus. These are the providers feeding the pipeline and
+          how many coins each one covers.
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-5 pt-0">
@@ -127,12 +147,8 @@ export function CoveragePricingSourcesCard({
               key={source.name}
               className="flex flex-col items-center gap-1.5 rounded-[1.15rem] border border-border/60 bg-background/40 px-4 py-4"
             >
-              <span className="text-sm font-semibold text-foreground">
-                {getPricingSourceLabel(source.name)}
-              </span>
-              <span className="font-mono text-2xl font-semibold tabular-nums text-foreground">
-                {source.count}
-              </span>
+              <span className="text-sm font-semibold text-foreground">{getPricingSourceLabel(source.name)}</span>
+              <span className="font-mono text-2xl font-semibold tabular-nums text-foreground">{source.count}</span>
               <span className="text-[11px] text-muted-foreground">coins</span>
             </div>
           ))}
@@ -142,7 +158,12 @@ export function CoveragePricingSourcesCard({
           <div className={cn("space-y-3 rounded-xl border p-4", AUTHORITATIVE_ACCENT.container)}>
             <div className="flex items-center gap-2">
               <p className="pharos-kicker">Authoritative Overrides</p>
-              <span className={cn("inline-flex items-center rounded-full border px-2 py-0.5 text-[10px] font-medium", AUTHORITATIVE_ACCENT.badge)}>
+              <span
+                className={cn(
+                  "inline-flex items-center rounded-full border px-2 py-0.5 text-[10px] font-medium",
+                  AUTHORITATIVE_ACCENT.badge,
+                )}
+              >
                 Protocol
               </span>
             </div>
@@ -153,14 +174,15 @@ export function CoveragePricingSourcesCard({
               {authoritativeSources.map((source) => (
                 <div
                   key={source.name}
-                  className={cn("flex flex-col items-center gap-1.5 rounded-xl border px-4 py-4", AUTHORITATIVE_ACCENT.card)}
+                  className={cn(
+                    "flex flex-col items-center gap-1.5 rounded-xl border px-4 py-4",
+                    AUTHORITATIVE_ACCENT.card,
+                  )}
                 >
                   <span className={cn("text-sm font-semibold", AUTHORITATIVE_ACCENT.cardLabel)}>
                     {getPricingSourceLabel(source.name)}
                   </span>
-                  <span className="font-mono text-2xl font-semibold tabular-nums text-foreground">
-                    {source.count}
-                  </span>
+                  <span className="font-mono text-2xl font-semibold tabular-nums text-foreground">{source.count}</span>
                   <span className="text-[11px] text-muted-foreground">coins</span>
                 </div>
               ))}
@@ -172,20 +194,28 @@ export function CoveragePricingSourcesCard({
   );
 }
 
-export function CoverageMatrixCard(model: Pick<
-  CoveragePageModel,
-  | "logos"
-  | "rows"
-  | "filter"
-  | "setFilter"
-  | "sort"
-  | "setSort"
-  | "search"
-  | "setSearch"
-  | "filteredRows"
-  | "hasActiveFilters"
-  | "resetFilters"
->) {
+export function CoverageMatrixCard(
+  model: Pick<
+    CoveragePageModel,
+    | "logos"
+    | "rows"
+    | "filter"
+    | "setFilter"
+    | "sort"
+    | "setSort"
+    | "search"
+    | "setSearch"
+    | "filteredRows"
+    | "hasActiveFilters"
+    | "resetFilters"
+    | "unavailableFeatures"
+  >,
+) {
+  const isMobileLayout = useIsMobile(768);
+  const unavailableFeatureLabels = model.unavailableFeatures
+    .map((key) => COVERAGE_FEATURES.find((feature) => feature.key === key)?.shortLabel ?? key)
+    .join(", ");
+
   return (
     <Card className="rounded-[1.45rem] border border-border/70 bg-card/80">
       <CardHeader className="space-y-4">
@@ -195,8 +225,9 @@ export function CoverageMatrixCard(model: Pick<
             Check a specific coin
           </CardTitle>
           <CardDescription className="max-w-3xl leading-relaxed">
-            Search, filter, and inspect one asset at a time. The desktop table keeps the full
-            comparison view; mobile cards show the highest-signal states first.
+            Search, filter, and inspect one asset at a time. The desktop table keeps the full comparison view; mobile
+            cards show the highest-signal states first. Available counts are broad; headline/live counts use stricter
+            thresholds for price depth, live reserves, and redemption routes.
           </CardDescription>
         </div>
 
@@ -224,9 +255,15 @@ export function CoverageMatrixCard(model: Pick<
                 className="pharos-focus-ring h-10 rounded-2xl border border-border/65 bg-background/45 px-3 text-sm text-foreground transition-colors"
                 aria-label="Sort coverage table"
               >
-                <option value="market-cap">Market cap</option>
-                <option value="most-covered">Most covered</option>
-                <option value="name">Alphabetical</option>
+                {SORT_OPTIONS.map((group) => (
+                  <optgroup key={group.group} label={group.group}>
+                    {group.options.map((option) => (
+                      <option key={option.key} value={option.key}>
+                        {option.label}
+                      </option>
+                    ))}
+                  </optgroup>
+                ))}
               </select>
             </label>
           </div>
@@ -240,7 +277,7 @@ export function CoverageMatrixCard(model: Pick<
                 aria-controls="coverage-results"
                 onClick={() => model.setFilter(option.key)}
                 className={cn(
-                  "pharos-focus-ring h-8 rounded-full border px-3 text-xs font-medium transition-colors",
+                  "pharos-focus-ring min-h-11 rounded-full border px-3 text-xs font-medium transition-colors sm:h-8 sm:min-h-0",
                   model.filter === option.key
                     ? "border-frost-blue/50 bg-frost-blue/12 text-foreground"
                     : "border-border/60 bg-background/45 text-muted-foreground hover:text-foreground",
@@ -254,13 +291,13 @@ export function CoverageMatrixCard(model: Pick<
 
         <div className="flex flex-wrap items-center justify-between gap-3 text-xs text-muted-foreground">
           <span aria-live="polite">
-            Showing {model.filteredRows.length} of {model.rows.length} tracked coins.
+            Showing {model.filteredRows.length} of {model.rows.length} active coins.
           </span>
           {model.hasActiveFilters ? (
             <button
               type="button"
               onClick={model.resetFilters}
-              className="pharos-focus-ring rounded-md px-2 py-1 text-xs font-medium text-foreground hover:text-foreground"
+              className="pharos-focus-ring min-h-11 rounded-md px-2 py-1 text-xs font-medium text-foreground hover:text-foreground sm:min-h-0"
             >
               Reset search and filters
             </button>
@@ -274,18 +311,29 @@ export function CoverageMatrixCard(model: Pick<
           filter={model.filter}
         />
 
+        {model.unavailableFeatures.length > 0 ? (
+          <div
+            role="status"
+            className="rounded-2xl border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm leading-relaxed text-amber-800 dark:text-amber-200"
+          >
+            Some feature feeds are unavailable, so affected cells are marked Data n/a, or Checking for live reserve
+            sync, instead of being counted as coverage gaps: {unavailableFeatureLabels}.
+          </div>
+        ) : null}
+
         <details className="group rounded-2xl border border-border/60 bg-background/35">
           <summary className="pharos-focus-ring flex min-h-11 cursor-pointer list-none items-center justify-between gap-3 px-4 py-3 text-sm font-medium text-foreground [&::-webkit-details-marker]:hidden">
             <span>Status legend</span>
-            <ChevronDown className="h-4 w-4 text-muted-foreground transition-transform group-open:rotate-180" aria-hidden="true" />
+            <ChevronDown
+              className="h-4 w-4 text-muted-foreground transition-transform group-open:rotate-180"
+              aria-hidden="true"
+            />
           </summary>
           <dl className="grid gap-3 border-t border-border/60 px-4 py-4 sm:grid-cols-2 lg:grid-cols-4">
             {LEGEND_ITEMS.map((item) => (
               <div key={item.term} className="rounded-xl border border-border/60 bg-background/45 px-3 py-3">
                 <dt className="text-sm font-semibold text-foreground">{item.term}</dt>
-                <dd className="mt-1 text-xs leading-relaxed text-muted-foreground">
-                  {item.description}
-                </dd>
+                <dd className="mt-1 text-xs leading-relaxed text-muted-foreground">{item.description}</dd>
               </div>
             ))}
           </dl>
@@ -296,9 +344,7 @@ export function CoverageMatrixCard(model: Pick<
         {model.filteredRows.length === 0 ? (
           <div className="rounded-2xl border border-dashed border-border/70 bg-background/30 px-4 py-10 text-center">
             <SearchX className="mx-auto h-10 w-10 text-muted-foreground" aria-hidden="true" />
-            <p className="mt-4 text-sm font-medium text-foreground">
-              No stablecoins match your search or filters.
-            </p>
+            <p className="mt-4 text-sm font-medium text-foreground">No stablecoins match your search or filters.</p>
             <p className="mt-1 text-sm text-muted-foreground">
               Try adjusting your filters or search for popular stablecoins like USDT, USDC, or DAI.
             </p>
@@ -308,7 +354,7 @@ export function CoverageMatrixCard(model: Pick<
                   key={ticker}
                   type="button"
                   onClick={() => model.setSearch(ticker)}
-                  className="pharos-focus-ring h-8 rounded-full border border-border/60 bg-background/60 px-3 text-xs font-medium text-foreground hover:bg-accent"
+                  className="pharos-focus-ring min-h-11 rounded-full border border-border/60 bg-background/60 px-3 text-xs font-medium text-foreground hover:bg-accent sm:h-8 sm:min-h-0"
                 >
                   {ticker}
                 </button>
@@ -318,7 +364,7 @@ export function CoverageMatrixCard(model: Pick<
               <button
                 type="button"
                 onClick={model.resetFilters}
-                className="pharos-focus-ring mt-4 inline-flex items-center gap-1.5 rounded-full border border-border/60 bg-background/60 px-4 py-2 text-xs font-medium text-foreground hover:bg-accent"
+                className="pharos-focus-ring mt-4 inline-flex min-h-11 items-center gap-1.5 rounded-full border border-border/60 bg-background/60 px-4 py-2 text-xs font-medium text-foreground hover:bg-accent sm:min-h-0"
               >
                 Clear all filters
               </button>
@@ -326,86 +372,88 @@ export function CoverageMatrixCard(model: Pick<
           </div>
         ) : (
           <>
-            <div className="space-y-3 md:hidden">
-              {model.filteredRows.map((row) => (
-                <CoverageMobileCard key={row.id} row={row} logoSrc={model.logos?.[row.id]} />
-              ))}
-            </div>
-
-            <div className="hidden overflow-hidden rounded-2xl border border-border/70 bg-background/30 md:block">
-              <div className="overflow-auto">
-                <table className="min-w-[68rem] w-full caption-bottom text-sm">
-                  <TableCaption className="sr-only">
-                    Per-coin feature availability across {model.rows.length} tracked stablecoins.
-                  </TableCaption>
-                  <TableHeader className="bg-muted/22 [&_tr]:border-border/70">
-                    <TableRow className="hover:bg-transparent">
-                      <TableHead
-                        scope="col"
-                        className="sticky left-0 z-20 h-11 bg-muted/22 px-4 text-sm font-medium text-foreground"
-                      >
-                        Stablecoin
-                      </TableHead>
-                      {COVERAGE_FEATURES.map((feature) => (
-                        <TableHead key={feature.key} scope="col" className="h-11 text-sm font-medium text-foreground">
-                          <span>{feature.shortLabel}</span>
-                          <span className="sr-only">: {feature.label}. {feature.description}</span>
-                        </TableHead>
-                      ))}
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {model.filteredRows.map((row, index) => {
-                      const stripeClass = index % 2 === 0 ? "bg-background/10" : "bg-muted/6";
-
-                      return (
-                        <TableRow key={row.id} className={cn("group", stripeClass)}>
-                          <TableCell
-                            className={cn(
-                              "sticky left-0 z-10 whitespace-normal px-4 py-3 group-hover:bg-muted/30",
-                              stripeClass,
-                            )}
-                          >
-                            <Link
-                              href={buildStablecoinUrl(row.id)}
-                              className="pharos-focus-ring inline-flex w-full min-w-0 items-center gap-2 rounded-lg"
-                            >
-                              <StablecoinLogo src={model.logos?.[row.id]} name={row.name} size={24} />
-                              <div className="min-w-0">
-                                <div className="flex min-w-0 items-center gap-2">
-                                  <span className="text-sm font-medium text-foreground">
-                                    {row.symbol}
-                                  </span>
-                                  <span className="truncate text-xs text-muted-foreground xl:text-sm">
-                                    {row.name}
-                                  </span>
-                                </div>
-                                <div className="mt-0.5 flex flex-wrap items-center gap-1.5 text-[11px] leading-relaxed text-muted-foreground">
-                                  <span className="font-mono tabular-nums text-foreground">
-                                    {row.marketCapUsd > 0 ? formatCurrency(row.marketCapUsd) : "Mcap —"}
-                                  </span>
-                                  <span aria-hidden>·</span>
-                                  <span>{row.pegLabel}</span>
-                                  <span aria-hidden>·</span>
-                                  <span>{row.backingLabel}</span>
-                                  <span aria-hidden>·</span>
-                                  <span>{row.governanceLabel}</span>
-                                </div>
-                              </div>
-                            </Link>
-                          </TableCell>
-                          {COVERAGE_FEATURES.map((feature) => (
-                            <TableCell key={feature.key} className="pb-2 pt-3 align-top">
-                              <CoverageBadge status={row.statuses[feature.key]} />
-                            </TableCell>
-                          ))}
-                        </TableRow>
-                      );
-                    })}
-                  </TableBody>
-                </table>
+            {isMobileLayout ? (
+              <div className="space-y-3 md:hidden">
+                {model.filteredRows.map((row) => (
+                  <CoverageMobileCard key={row.id} row={row} logoSrc={model.logos?.[row.id]} />
+                ))}
               </div>
-            </div>
+            ) : (
+              <div className="hidden overflow-hidden rounded-2xl border border-border/70 bg-background/30 md:block">
+                <div className="overflow-auto">
+                  <table className="min-w-[68rem] w-full caption-bottom text-sm">
+                    <TableCaption className="sr-only">
+                      Per-coin feature availability across {model.rows.length} active stablecoins.
+                    </TableCaption>
+                    <TableHeader className="bg-muted/22 [&_tr]:border-border/70">
+                      <TableRow className="hover:bg-transparent">
+                        <TableHead
+                          scope="col"
+                          className="sticky left-0 z-20 h-11 bg-muted/22 px-4 text-sm font-medium text-foreground"
+                        >
+                          Stablecoin
+                        </TableHead>
+                        {COVERAGE_FEATURES.map((feature) => (
+                          <TableHead key={feature.key} scope="col" className="h-11 text-sm font-medium text-foreground">
+                            <span>{feature.shortLabel}</span>
+                            <span className="sr-only">
+                              : {feature.label}. {feature.description}
+                            </span>
+                          </TableHead>
+                        ))}
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {model.filteredRows.map((row, index) => {
+                        const stripeClass = index % 2 === 0 ? "bg-background/10" : "bg-muted/6";
+
+                        return (
+                          <TableRow key={row.id} className={cn("group", stripeClass)}>
+                            <TableCell
+                              className={cn(
+                                "sticky left-0 z-10 whitespace-normal px-4 py-3 group-hover:bg-muted/30",
+                                stripeClass,
+                              )}
+                            >
+                              <Link
+                                href={buildStablecoinUrl(row.id)}
+                                className="pharos-focus-ring inline-flex w-full min-w-0 items-center gap-2 rounded-lg"
+                              >
+                                <StablecoinLogo src={model.logos?.[row.id]} name={row.name} size={24} />
+                                <div className="min-w-0">
+                                  <div className="flex min-w-0 items-center gap-2">
+                                    <span className="text-sm font-medium text-foreground">{row.symbol}</span>
+                                    <span className="truncate text-xs text-muted-foreground xl:text-sm">
+                                      {row.name}
+                                    </span>
+                                  </div>
+                                  <div className="mt-0.5 flex flex-wrap items-center gap-1.5 text-[11px] leading-relaxed text-muted-foreground">
+                                    <span className="font-mono tabular-nums text-foreground">
+                                      {row.marketCapUsd > 0 ? formatCurrency(row.marketCapUsd) : "Mcap —"}
+                                    </span>
+                                    <span aria-hidden>·</span>
+                                    <span>{row.pegLabel}</span>
+                                    <span aria-hidden>·</span>
+                                    <span>{row.backingLabel}</span>
+                                    <span aria-hidden>·</span>
+                                    <span>{row.governanceLabel}</span>
+                                  </div>
+                                </div>
+                              </Link>
+                            </TableCell>
+                            {COVERAGE_FEATURES.map((feature) => (
+                              <TableCell key={feature.key} className="pb-2 pt-3 align-top">
+                                <CoverageBadge status={row.statuses[feature.key]} />
+                              </TableCell>
+                            ))}
+                          </TableRow>
+                        );
+                      })}
+                    </TableBody>
+                  </table>
+                </div>
+              </div>
+            )}
           </>
         )}
       </CardContent>

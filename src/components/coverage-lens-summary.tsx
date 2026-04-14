@@ -12,12 +12,7 @@ interface CoverageLensSummaryProps {
   filter: CoverageFilterKey;
 }
 
-export function CoverageLensSummary({
-  rows,
-  filteredRows,
-  search,
-  filter,
-}: CoverageLensSummaryProps) {
+export function CoverageLensSummary({ rows, filteredRows, search, filter }: CoverageLensSummaryProps) {
   const { filteredTrackedMcap, filteredMcapSharePct, lensSummary } = useMemo(() => {
     const totalTrackedMcap = rows.reduce((sum, row) => sum + row.marketCapUsd, 0);
     const filteredTrackedMcap = filteredRows.reduce((sum, row) => sum + row.marketCapUsd, 0);
@@ -28,7 +23,7 @@ export function CoverageLensSummary({
       ? `Search lens: "${trimmedSearch}"`
       : filter !== "all"
         ? `Filter lens: ${activeFilterLabel}`
-        : "Full tracked universe";
+        : "Full active universe";
 
     return { filteredTrackedMcap, filteredMcapSharePct, lensSummary };
   }, [filter, filteredRows, rows, search]);
@@ -39,12 +34,13 @@ export function CoverageLensSummary({
         <p className="pharos-kicker">Current Lens</p>
         <p className="mt-1 text-sm text-foreground">{lensSummary}</p>
         <p className="mt-1 text-xs text-muted-foreground">
-          Use this matrix to separate broad market coverage from niche or still-bootstrapping surfaces before you click into a single coin.
+          Use this matrix to separate broad market coverage from niche or still-bootstrapping surfaces before you click
+          into a single coin.
         </p>
       </div>
       <div className="rounded-2xl border border-border/60 bg-background/40 px-4 py-3">
         <p className="pharos-kicker">Market Share In View</p>
-        <p className="mt-1 text-sm text-foreground">{filteredMcapSharePct.toFixed(0)}% of tracked market cap</p>
+        <p className="mt-1 text-sm text-foreground">{filteredMcapSharePct.toFixed(0)}% of active market cap</p>
         <p className="mt-1 text-xs text-muted-foreground">
           {formatCurrency(filteredTrackedMcap)} in the current result set.
         </p>

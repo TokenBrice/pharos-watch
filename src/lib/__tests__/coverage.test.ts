@@ -28,9 +28,7 @@ function makeCoin(overrides?: Partial<StablecoinMeta>): StablecoinMeta {
   };
 }
 
-function makeRedemptionEntry(
-  overrides?: Partial<RedemptionBackstopEntry>,
-): RedemptionBackstopEntry {
+function makeRedemptionEntry(overrides?: Partial<RedemptionBackstopEntry>): RedemptionBackstopEntry {
   return {
     stablecoinId: "test-usd",
     score: 72,
@@ -155,18 +153,27 @@ describe("coverage helpers", () => {
     expect(resolveReserveCoverage(makeCoin()).kind).toBe("estimated");
   });
 
+  it("does not count configured live reserve adapters as fresh live coverage without current live data", () => {
+    const liveConfiguredCoin = makeCoin({
+      liveReservesConfig: {
+        adapter: "infinifi",
+        version: 1,
+        semantics: "collateral-mix",
+        inputs: {
+          primary: { kind: "http-json", url: "https://example.com/reserves" },
+        },
+      },
+    });
+
+    expect(resolveReserveCoverage(liveConfiguredCoin, false).kind).toBe("live-configured");
+    expect(resolveReserveCoverage(liveConfiguredCoin, false).available).toBe(false);
+    expect(resolveReserveCoverage(liveConfiguredCoin, null).kind).toBe("checking");
+  });
+
   it("maps redemption route families into user-facing labels", () => {
     expect(resolveRedemptionCoverage(makeRedemptionEntry()).label).toBe("PSM");
-    expect(
-      resolveRedemptionCoverage(
-        makeRedemptionEntry({ routeFamily: "offchain-issuer" }),
-      ).label,
-    ).toBe("Issuer");
-    expect(
-      resolveRedemptionCoverage(
-        makeRedemptionEntry({ routeFamily: "queue-redeem" }),
-    ).label,
-    ).toBe("Queue");
+    expect(resolveRedemptionCoverage(makeRedemptionEntry({ routeFamily: "offchain-issuer" })).label).toBe("Issuer");
+    expect(resolveRedemptionCoverage(makeRedemptionEntry({ routeFamily: "queue-redeem" })).label).toBe("Queue");
     expect(resolveRedemptionCoverage(null).available).toBe(false);
   });
 
@@ -240,6 +247,7 @@ describe("coverage helpers", () => {
     });
 
     expect(row.coverageCount).toBe(6);
+    expect(row.headlineCoverageCount).toBe(4);
     expect(row.advancedCoverageCount).toBe(5);
     expect(row.statuses.yield.available).toBe(false);
     expect(row.statuses.blacklist.available).toBe(false);
@@ -357,11 +365,7 @@ describe("coverage helpers", () => {
       }),
     ];
 
-    const summary = buildCoverageFeatureSummary(
-      COVERAGE_FEATURES.find((f) => f.key === "price")!,
-      rows,
-      1_000,
-    );
+    const summary = buildCoverageFeatureSummary(COVERAGE_FEATURES.find((f) => f.key === "price")!, rows, 1_000);
 
     expect(summary.breakdown).toContain("tracked 2");
     expect(summary.breakdown).toContain("5+ sources: 1");
@@ -469,7 +473,9 @@ describe("coverage helpers", () => {
     expect(summary.mcapSharePct).toBe(70);
     expect(summary.shareLabel).toBe("Live reserve market-cap reach");
     expect(summary.coverageLabel).toBe("25% with live reserve tracking");
-    expect(summary.breakdown).toBe("live 1 · curated-validated 1 · proof 1 · curated 1 · estimated 0");
+    expect(summary.breakdown).toBe(
+      "live 1 · configured 0 · checking 0 · curated-validated 1 · proof 1 · curated 1 · estimated 0",
+    );
   });
 
   it("breaks down redemption coverage by route family", () => {
@@ -537,7 +543,7 @@ describe("coverage helpers", () => {
     expect(summary.coverageLabel).toBe("50% with strong redemption coverage");
     expect(summary.shareLabel).toBe("Strong redemption market-cap reach");
     expect(summary.breakdown).toBe(
-      "heuristic 1 · configured 0 · issuer 1 · psm 1 · queue 0 · collateral 0 · stable 0 · basket 0",
+      "heuristic 1 · configured 0 · issuer 1 · psm 1 · queue 0 · collateral 0 · stable 0 · basket 0 · data n/a 0",
     );
   });
 });
