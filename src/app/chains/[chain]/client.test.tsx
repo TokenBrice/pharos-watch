@@ -4,8 +4,7 @@ import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import type { ImgHTMLAttributes, ReactNode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ChainProfileClient } from "./client";
-import type { ChainSummary } from "@shared/types/chains";
-import type { ChainStablecoin } from "@/hooks/use-chains";
+import { makeChain, makeCoin } from "@/hooks/__tests__/chain-profile-fixtures";
 
 const push = vi.fn();
 const refetchAll = vi.fn();
@@ -34,59 +33,6 @@ vi.mock("@/components/methodology-hint", () => ({
 vi.mock("@/hooks/use-chain-profile-data", () => ({
   useChainProfileData: useChainProfileDataMock,
 }));
-
-function makeChain(overrides: Partial<ChainSummary> = {}): ChainSummary {
-  return {
-    id: "ethereum",
-    name: "Ethereum",
-    logoPath: "/chains/ethereum.png",
-    type: "evm",
-    totalUsd: 1_500_000_000,
-    change24h: 15_000_000,
-    change24hPct: 0.01,
-    change7d: 30_000_000,
-    change7dPct: 0.02,
-    change30d: 45_000_000,
-    change30dPct: 0.03,
-    stablecoinCount: 2,
-    dominantStablecoin: {
-      id: "usdc-circle",
-      symbol: "USDC",
-      share: 0.5,
-    },
-    dominanceShare: 0.32,
-    healthScore: 84,
-    healthBand: "robust",
-    healthFactors: {
-      quality: 82,
-      chainEnvironment: 80,
-      concentration: 78,
-      pegStability: 88,
-      backingDiversity: 76,
-    },
-    ...overrides,
-  };
-}
-
-function makeCoin(overrides: Partial<ChainStablecoin> = {}): ChainStablecoin {
-  return {
-    id: "usdc-circle",
-    name: "USD Coin",
-    symbol: "USDC",
-    price: 1,
-    pegType: "peggedUSD",
-    supplyOnChain: 500_000_000,
-    chainShare: 0.5,
-    change24h: 1_000_000,
-    change24hPct: 0.01,
-    change7d: 2_000_000,
-    change7dPct: 0.02,
-    change30d: 3_000_000,
-    change30dPct: 0.03,
-    backing: "rwa-backed",
-    ...overrides,
-  };
-}
 
 function makeHookState(overrides: Record<string, unknown> = {}) {
   return {

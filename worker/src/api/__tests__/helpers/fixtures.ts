@@ -4,6 +4,7 @@
  */
 
 import type { BlacklistStablecoin, StablecoinData } from "@shared/types/market";
+import { mockD1 } from "./mock-d1";
 
 type BlacklistRow = {
   id: string;
@@ -176,6 +177,26 @@ export function makeAsset(overrides: Partial<StablecoinData> = {}): StablecoinDa
     chains: ["Ethereum"],
   };
   return { ...defaults, ...overrides };
+}
+
+export function makeReportCardsDb(
+  assets: StablecoinData[] = [],
+  nowSec = Math.floor(Date.now() / 1000),
+) {
+  const cacheValue = JSON.stringify({ peggedAssets: assets });
+  return mockD1([
+    {
+      match: "cache",
+      rows: [
+        { key: "stablecoins", value: cacheValue, updated_at: nowSec },
+        { key: "bluechip-ratings", value: "{}", updated_at: nowSec },
+      ],
+      first: { key: "stablecoins", value: cacheValue, updated_at: nowSec },
+    },
+    { match: "dex_liquidity", rows: [] },
+    { match: "depeg_events", rows: [] },
+    { match: "supply_history", rows: [] },
+  ]);
 }
 
 export function makeBlacklistRow(overrides: Partial<BlacklistRow> = {}): BlacklistRow {

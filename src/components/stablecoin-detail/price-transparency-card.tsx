@@ -14,20 +14,7 @@ import {
 import { isPricingSourceProtocolOverride } from "@shared/lib/pricing-source-registry";
 import { CONFIDENCE_LEVEL_COLORS } from "@shared/lib/classification";
 import { timeAgo } from "@shared/lib/format";
-
-type SourceStatus = "used" | "available" | "no-data" | "not-applicable";
-
-function resolveSourceStatus(
-  sourceKey: string,
-  agreeSources: string[],
-  consensusSources: string[],
-  isProtocolRedeem: boolean,
-): SourceStatus {
-  if (isProtocolRedeem) return "not-applicable";
-  if (agreeSources.includes(sourceKey)) return "used";
-  if (consensusSources.includes(sourceKey)) return "available";
-  return "no-data";
-}
+import { resolvePriceTransparencySourceStatus, type SourceStatus } from "./price-transparency-status";
 
 interface PriceTransparencyCardProps {
   coinData: StablecoinData;
@@ -64,7 +51,7 @@ export function PriceTransparencyCard({
   // Group sources by status
   const sources: SourceInfo[] = PRICE_TRANSPARENCY_SOURCE_KEYS.map((key) => ({
     key,
-    status: resolveSourceStatus(key, agreeSources, effectiveConsensusSources, isProtocolRedeem),
+    status: resolvePriceTransparencySourceStatus(key, agreeSources, effectiveConsensusSources, isProtocolRedeem),
     label: getPricingSourceLabel(key),
   }));
 

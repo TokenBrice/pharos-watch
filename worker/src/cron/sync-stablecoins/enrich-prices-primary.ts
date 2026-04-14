@@ -1,5 +1,6 @@
 import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins";
 import { getPricingSourceRegistryEntry } from "@shared/lib/pricing-source-registry";
+import { sumPegBuckets } from "@shared/lib/supply";
 import type { PriceConfidence, PriceObservedAtMode } from "@shared/types/core";
 import type { PriceValidationReferences } from "../../lib/price-validation";
 import {
@@ -73,15 +74,6 @@ export interface PriceValidationStats {
   singleSource: number;
   cgOnly: number;
   low: number;
-}
-
-function sumCirculatingUsd(asset: Pick<PeggedAsset, "circulating">): number {
-  const circulating = asset.circulating;
-  if (!circulating || typeof circulating !== "object") return 0;
-  return Object.values(circulating).reduce(
-    (sum, value) => sum + (typeof value === "number" && Number.isFinite(value) ? value : 0),
-    0,
-  );
 }
 
 const INVALID_GECKO_ID_SENTINEL = "wrong";
@@ -695,7 +687,7 @@ export async function runGtProbePass(
       singleSourceAssets.push({
         id: asset.id,
         price: primary.price,
-        priorityUsd: sumCirculatingUsd(asset),
+        priorityUsd: sumPegBuckets(asset.circulating),
       });
     }
   }

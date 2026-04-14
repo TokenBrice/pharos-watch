@@ -1,4 +1,5 @@
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins";
+import { sumPegBuckets } from "@shared/lib/supply";
 import type { PriceConfidence, StablecoinMeta } from "@shared/types/core";
 import type { PeggedAsset } from "../cron/sync-stablecoins/enrich-prices-shared";
 import { fetchMarketBackfillPriceSeries } from "../api/backfill-price-sources";
@@ -86,15 +87,6 @@ type HistoricalBlockPriceResolver = (
   timestamp: number,
   signal?: AbortSignal,
 ) => Promise<number | null>;
-
-function sumCirculatingUsd(asset: Pick<PeggedAsset, "circulating">): number {
-  const circulating = asset.circulating;
-  if (!circulating || typeof circulating !== "object") return 0;
-  return Object.values(circulating).reduce(
-    (sum, value) => sum + (typeof value === "number" && Number.isFinite(value) ? value : 0),
-    0,
-  );
-}
 
 function encodeAddress(address: string): string {
   return address.replace(/^0x/i, "").toLowerCase().padStart(64, "0");
@@ -262,7 +254,7 @@ const capCusdProvider: PriceSourceProvider = {
     return stablecoinId === CAP_CUSD_ID;
   },
   async fetchLivePrice(asset: PeggedAsset, _context: LivePriceContext, signal?: AbortSignal): Promise<CurrentPriceOverride | null> {
-    const sampleNotionalUsd = clampSampleNotionalUsd(sumCirculatingUsd(asset));
+    const sampleNotionalUsd = clampSampleNotionalUsd(sumPegBuckets(asset.circulating));
     const price = await fetchCapRedeemQuote(sampleNotionalUsd, "latest", signal);
     if (price == null) return null;
 

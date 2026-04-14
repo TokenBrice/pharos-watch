@@ -1,28 +1,6 @@
 import { formatCompactCount, formatPercent } from "@shared/lib/format";
 import type { ApiRequestAttributionResponse } from "@shared/types";
-
-function getKeyStatus(
-  row: { isActive: boolean; expiresAt: number | null },
-  nowSeconds: number,
-): "inactive" | "expired" | "active" {
-  if (!row.isActive) {
-    return "inactive";
-  }
-  if (row.expiresAt != null && row.expiresAt <= nowSeconds) {
-    return "expired";
-  }
-  return "active";
-}
-
-function statusBadgeClassName(status: "inactive" | "expired" | "active"): string {
-  if (status === "active") {
-    return "bg-green-500/15 text-green-700 dark:text-green-400";
-  }
-  if (status === "expired") {
-    return "bg-red-500/15 text-red-700 dark:text-red-400";
-  }
-  return "bg-muted text-muted-foreground";
-}
+import { apiKeyStatusBadgeClassName, getApiKeyStatus } from "./api-key-status";
 
 function trafficClassBadgeClassName(trafficClass: "external" | "site"): string {
   return trafficClass === "site"
@@ -133,7 +111,7 @@ export function ApiKeyLoadTable({
               </thead>
               <tbody>
                 {apiKeys.map((row) => {
-                  const status = getKeyStatus(row, nowSeconds);
+                  const status = getApiKeyStatus(row, nowSeconds);
                   return (
                     <tr key={row.apiKeyId} className="border-b last:border-0">
                       <td className="py-2 align-top">
@@ -150,7 +128,7 @@ export function ApiKeyLoadTable({
                       <td className="py-2 align-top font-mono text-foreground">{formatPercent(row.shareOfTotalPublicApiRequestsPct, 1)}</td>
                       <td className="py-2 align-top font-mono text-muted-foreground">{formatCompactCount(row.rateLimitPerMinute)}/min</td>
                       <td className="py-2 align-top">
-                        <span className={`rounded-full px-2 py-0.5 text-[11px] font-medium ${statusBadgeClassName(status)}`}>
+                        <span className={`rounded-full px-2 py-0.5 text-[11px] font-medium ${apiKeyStatusBadgeClassName(status)}`}>
                           {status}
                         </span>
                       </td>

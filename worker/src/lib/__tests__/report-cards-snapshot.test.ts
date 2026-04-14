@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { mockD1 } from "../../api/__tests__/helpers/mock-d1";
-import { makeAsset } from "../../api/__tests__/helpers/fixtures";
+import { makeAsset, makeReportCardsDb } from "../../api/__tests__/helpers/fixtures";
 import { handleReportCards } from "../../api/report-cards";
 import {
   buildReportCardsSnapshot,
@@ -129,23 +129,6 @@ function makeRedemptionEntry(overrides: Partial<RedemptionBackstopEntry>): Redem
     notes: [],
     ...overrides,
   };
-}
-
-function makeReportCardsDb(assets: ReturnType<typeof makeAsset>[] = []) {
-  const cacheValue = JSON.stringify({ peggedAssets: assets });
-  return mockD1([
-    {
-      match: "cache",
-      rows: [
-        { key: "stablecoins", value: cacheValue, updated_at: nowSec },
-        { key: "bluechip-ratings", value: "{}", updated_at: nowSec },
-      ],
-      first: { key: "stablecoins", value: cacheValue, updated_at: nowSec },
-    },
-    { match: "dex_liquidity", rows: [] },
-    { match: "depeg_events", rows: [] },
-    { match: "supply_history", rows: [] },
-  ]);
 }
 
 function makeReportCardsDbWithBluechipValue(

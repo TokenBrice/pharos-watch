@@ -1,35 +1,10 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import worker from "../index";
 import { mockD1 } from "../api/__tests__/helpers/mock-d1";
+import { hmacSha256Hex, makeExecutionContext } from "../api/__tests__/helpers/auth";
 import { resetRateLimitStateForTests } from "../lib/rate-limit";
 import { resetRequestAttributionStateForTests } from "../lib/request-source-attribution";
 import { PHAROS_WEB_ACCEPT_MARKER } from "@shared/lib/request-source-marker";
-
-async function hmacSha256Hex(secret: string, input: string): Promise<string> {
-  const encoder = new TextEncoder();
-  const key = await crypto.subtle.importKey(
-    "raw",
-    encoder.encode(secret),
-    { name: "HMAC", hash: "SHA-256" },
-    false,
-    ["sign"],
-  );
-  const signature = await crypto.subtle.sign("HMAC", key, encoder.encode(input));
-  return Array.from(new Uint8Array(signature), (value) => value.toString(16).padStart(2, "0")).join("");
-}
-
-function makeCtx() {
-  const waits: Promise<unknown>[] = [];
-  return {
-    waits,
-    ctx: {
-      waitUntil: vi.fn((promise: Promise<unknown>) => {
-        waits.push(promise);
-      }),
-      passThroughOnException: vi.fn(),
-    } as unknown as ExecutionContext,
-  };
-}
 
 function makeEnv(overrides: Record<string, unknown> = {}) {
   return {
@@ -61,7 +36,7 @@ describe("worker.fetch", () => {
 
   it("returns 204 for CORS preflight", async () => {
     const env = makeEnv();
-    const { ctx } = makeCtx();
+    const { ctx } = makeExecutionContext();
 
     const res = await worker.fetch(
       new Request("https://api.pharos.watch/api/stablecoins", { method: "OPTIONS" }),
@@ -80,7 +55,7 @@ describe("worker.fetch", () => {
     const env = makeEnv({
       CORS_ORIGIN: "https://pharos.watch,https://ops.pharos.watch",
     });
-    const { ctx } = makeCtx();
+    const { ctx } = makeExecutionContext();
 
     const res = await worker.fetch(
       new Request("https://api.pharos.watch/api/stablecoins", {
@@ -98,7 +73,7 @@ describe("worker.fetch", () => {
 
   it("rejects GET on mutating admin endpoints", async () => {
     const env = makeEnv();
-    const { ctx } = makeCtx();
+    const { ctx } = makeExecutionContext();
 
     const res = await worker.fetch(
       new Request("https://api.pharos.watch/api/backfill-depegs", { method: "GET" }),
@@ -113,7 +88,7 @@ describe("worker.fetch", () => {
 
   it("rejects POST on read-only endpoints", async () => {
     const env = makeEnv({ PUBLIC_API_AUTH_MODE: "off" });
-    const { ctx } = makeCtx();
+    const { ctx } = makeExecutionContext();
 
     const res = await worker.fetch(
       new Request("https://api.pharos.watch/api/stablecoins", { method: "POST" }),
@@ -132,7 +107,7 @@ describe("worker.fetch", () => {
     }));
 
     const env = makeEnv({ PUBLIC_API_AUTH_MODE: "off" });
-    const { ctx } = makeCtx();
+    const { ctx } = makeExecutionContext();
 
     const res = await worker.fetch(
       new Request("https://api.pharos.watch/api/stablecoins", { method: "GET" }),
@@ -148,7 +123,7 @@ describe("worker.fetch", () => {
 
   it("skips edge cache for cache-bypass endpoints", async () => {
     const env = makeEnv();
-    const { ctx, waits } = makeCtx();
+    const { ctx, waits } = makeExecutionContext();
 
     const res = await worker.fetch(
       new Request("https://api.pharos.watch/api/health", { method: "GET" }),
@@ -173,7 +148,7 @@ describe("worker.fetch", () => {
         },
       ]),
     });
-    const { ctx } = makeCtx();
+    const { ctx } = makeExecutionContext();
 
     const res = await worker.fetch(
       new Request("https://api.pharos.watch/api/stablecoins", { method: "GET" }),
@@ -218,7 +193,7 @@ describe("worker.fetch", () => {
         },
       ], { requireMatch: true }),
     });
-    const { ctx, waits } = makeCtx();
+    const { ctx, waits } = makeExecutionContext();
 
     const res = await worker.fetch(
       new Request("https://api.pharos.watch/api/stablecoins", {
@@ -264,7 +239,7 @@ describe("worker.fetch", () => {
         },
       ], { requireMatch: true }),
     });
-    const { ctx } = makeCtx();
+    const { ctx } = makeExecutionContext();
     cacheMatch.mockResolvedValue(new Response(JSON.stringify({ cached: true }), {
       status: 200,
       headers: { "Content-Type": "application/json" },
@@ -287,7 +262,7 @@ describe("worker.fetch", () => {
     const env = makeEnv({
       MAINTENANCE_MODE: "true",
     });
-    const { ctx } = makeCtx();
+    const { ctx } = makeExecutionContext();
 
     const res = await worker.fetch(
       new Request("https://api.pharos.watch/api/stablecoins", { method: "GET" }),
@@ -314,7 +289,7 @@ describe("worker.fetch", () => {
         },
       ]),
     });
-    const { ctx, waits } = makeCtx();
+    const { ctx, waits } = makeExecutionContext();
 
     const res = await worker.fetch(
       new Request("https://api.pharos.watch/api/stablecoins", { method: "GET" }),
@@ -335,7 +310,7 @@ describe("worker.fetch", () => {
       PUBLIC_API_AUTH_MODE: "off",
       PUBLIC_API_RATE_LIMIT_SALT: undefined,
     });
-    const { ctx } = makeCtx();
+    const { ctx } = makeExecutionContext();
 
     const res = await worker.fetch(
       new Request("https://api.pharos.watch/api/stablecoins", { method: "GET" }),
@@ -350,7 +325,7 @@ describe("worker.fetch", () => {
 
   it("rejects site-api requests without the shared site-proxy secret", async () => {
     const env = makeEnv();
-    const { ctx } = makeCtx();
+    const { ctx } = makeExecutionContext();
 
     const res = await worker.fetch(
       new Request("https://site-api.pharos.watch/api/stablecoins", { method: "GET" }),
@@ -386,7 +361,7 @@ describe("worker.fetch", () => {
         },
       ], { requireMatch: true }),
     });
-    const { ctx, waits } = makeCtx();
+    const { ctx, waits } = makeExecutionContext();
 
     const res = await worker.fetch(
       new Request("https://site-api.pharos.watch/api/stablecoins", {
@@ -439,7 +414,7 @@ describe("worker.fetch", () => {
         },
       ], { requireMatch: true }),
     });
-    const { ctx, waits } = makeCtx();
+    const { ctx, waits } = makeExecutionContext();
 
     const res = await worker.fetch(
       new Request("https://api.pharos.watch/api/stablecoins", {
@@ -488,7 +463,7 @@ describe("worker.fetch", () => {
         },
       ], { requireMatch: true }),
     });
-    const { ctx, waits } = makeCtx();
+    const { ctx, waits } = makeExecutionContext();
 
     const historyRes = await worker.fetch(
       new Request("https://api.pharos.watch/api/public-status-history", { method: "GET" }),
@@ -519,7 +494,7 @@ describe("worker.fetch", () => {
       }));
 
     const env = makeEnv();
-    const { ctx } = makeCtx();
+    const { ctx } = makeExecutionContext();
 
     const historyRes = await worker.fetch(
       new Request("https://site-api.pharos.watch/api/public-status-history", {
@@ -581,7 +556,7 @@ describe("worker.fetch", () => {
         },
       ], { requireMatch: true }),
     });
-    const { ctx, waits } = makeCtx();
+    const { ctx, waits } = makeExecutionContext();
 
     const res = await worker.fetch(
       new Request("https://api.pharos.watch/api/stablecoins", {
@@ -667,7 +642,7 @@ describe("worker.fetch", () => {
         },
       ], { requireMatch: true }),
     });
-    const { ctx, waits } = makeCtx();
+    const { ctx, waits } = makeExecutionContext();
 
     const res = await worker.fetch(
       new Request("https://api.pharos.watch/api/stablecoins", {

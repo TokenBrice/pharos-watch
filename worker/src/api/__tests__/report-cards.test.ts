@@ -1,26 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { mockD1 } from "./helpers/mock-d1";
-import { makeAsset } from "./helpers/fixtures";
+import { makeAsset, makeReportCardsDb } from "./helpers/fixtures";
 import { handleReportCards } from "../report-cards";
-
-const nowSec = Math.floor(Date.now() / 1000);
-
-function makeReportCardsDb(assets: ReturnType<typeof makeAsset>[] = []) {
-  const cacheValue = JSON.stringify({ peggedAssets: assets });
-  return mockD1([
-    {
-      match: "cache",
-      rows: [
-        { key: "stablecoins", value: cacheValue, updated_at: nowSec },
-        { key: "bluechip-ratings", value: "{}", updated_at: nowSec },
-      ],
-      first: { key: "stablecoins", value: cacheValue, updated_at: nowSec },
-    },
-    { match: "dex_liquidity", rows: [] },
-    { match: "depeg_events", rows: [] },
-    { match: "supply_history", rows: [] },
-  ]);
-}
 
 describe("handleReportCards", () => {
   it("returns 503 when stablecoins cache is missing", async () => {

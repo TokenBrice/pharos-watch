@@ -3,22 +3,8 @@
 import { render, screen, within } from "@testing-library/react";
 import { describe, it, expect } from "vitest";
 import { PriceTransparencyCard } from "@/components/stablecoin-detail/price-transparency-card";
+import { resolvePriceTransparencySourceStatus } from "@/components/stablecoin-detail/price-transparency-status";
 import type { StablecoinData } from "@shared/types";
-
-// resolveSourceStatus is not exported, so we test the logic inline
-type SourceStatus = "used" | "available" | "no-data" | "not-applicable";
-
-function resolveSourceStatus(
-  sourceKey: string,
-  agreeSources: string[],
-  consensusSources: string[],
-  isProtocolRedeem: boolean,
-): SourceStatus {
-  if (isProtocolRedeem) return "not-applicable";
-  if (agreeSources.includes(sourceKey)) return "used";
-  if (consensusSources.includes(sourceKey)) return "available";
-  return "no-data";
-}
 
 function makeCoinData(priceSource: string): StablecoinData {
   return {
@@ -46,19 +32,19 @@ function makeCoinData(priceSource: string): StablecoinData {
 
 describe("resolveSourceStatus", () => {
   it("returns 'used' when source is in agreeSources", () => {
-    expect(resolveSourceStatus("binance", ["binance", "coingecko"], ["binance", "coingecko", "pyth"], false)).toBe("used");
+    expect(resolvePriceTransparencySourceStatus("binance", ["binance", "coingecko"], ["binance", "coingecko", "pyth"], false)).toBe("used");
   });
 
   it("returns 'available' when source is in consensusSources but not agreeSources", () => {
-    expect(resolveSourceStatus("pyth", ["binance", "coingecko"], ["binance", "coingecko", "pyth"], false)).toBe("available");
+    expect(resolvePriceTransparencySourceStatus("pyth", ["binance", "coingecko"], ["binance", "coingecko", "pyth"], false)).toBe("available");
   });
 
   it("returns 'no-data' when source is in neither", () => {
-    expect(resolveSourceStatus("redstone", ["binance"], ["binance", "coingecko"], false)).toBe("no-data");
+    expect(resolvePriceTransparencySourceStatus("redstone", ["binance"], ["binance", "coingecko"], false)).toBe("no-data");
   });
 
   it("returns 'not-applicable' for protocol-redeem coins", () => {
-    expect(resolveSourceStatus("binance", ["binance"], ["binance"], true)).toBe("not-applicable");
+    expect(resolvePriceTransparencySourceStatus("binance", ["binance"], ["binance"], true)).toBe("not-applicable");
   });
 });
 

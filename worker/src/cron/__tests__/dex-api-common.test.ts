@@ -7,6 +7,7 @@ import {
   hydrateDirectApiPoolMetadata,
   type DexApiPool,
 } from "../../lib/dex-api-common";
+import { buildChainAddressToId, buildSymbolToChainScopedIds } from "./dex-liquidity-fixtures";
 
 const MOCK_POOL: DexApiPool = {
   source: "fluid",
@@ -23,34 +24,6 @@ const MOCK_POOL: DexApiPool = {
   feeRate: 0.0001,
   balances: [250_000, 250_000],
 };
-
-function buildChainAddressToId(
-  addressToId: Map<string, string>,
-  chains: string[],
-): Map<string, string> {
-  const result = new Map<string, string>();
-  for (const chain of chains) {
-    for (const [address, stablecoinId] of addressToId) {
-      result.set(`${chain.toLowerCase()}:${address.toLowerCase()}`, stablecoinId);
-    }
-  }
-  return result;
-}
-
-function buildSymbolToChainScopedIds(
-  symbolToIds: Map<string, string[]>,
-  chains: string[],
-): Map<string, Map<string, string[]>> {
-  const result = new Map<string, Map<string, string[]>>();
-  for (const [symbol, ids] of symbolToIds) {
-    const scoped = new Map<string, string[]>();
-    for (const chain of chains) {
-      scoped.set(chain.toLowerCase(), [...ids]);
-    }
-    result.set(symbol.trim().toUpperCase(), scoped);
-  }
-  return result;
-}
 
 function buildContractMetaByChainAddress(
   entries: Array<[string, { stablecoinId: string; symbol: string; decimals: number | null; source: "contract" | "tradedContract" }]>,

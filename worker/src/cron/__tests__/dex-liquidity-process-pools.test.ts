@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { CurvePoolEntry, LlamaPool } from "../dex-liquidity/types";
 import { processPoolMetrics } from "../dex-liquidity/process-pools";
+import { buildChainAddressToId, buildSymbolToChainScopedIds } from "./dex-liquidity-fixtures";
 
 function makePool(overrides: Partial<LlamaPool>): LlamaPool {
   return {
@@ -36,34 +37,6 @@ function makeCurveEntry(overrides: Partial<CurvePoolEntry>): CurvePoolEntry {
     tokenPrices: {},
     ...overrides,
   };
-}
-
-function buildChainAddressToId(
-  addressToId: Map<string, string>,
-  chains: string[],
-): Map<string, string> {
-  const result = new Map<string, string>();
-  for (const chain of chains) {
-    for (const [address, stablecoinId] of addressToId) {
-      result.set(`${chain.toLowerCase()}:${address.toLowerCase()}`, stablecoinId);
-    }
-  }
-  return result;
-}
-
-function buildSymbolToChainScopedIds(
-  symbolToIds: Map<string, string[]>,
-  chains: string[],
-): Map<string, Map<string, string[]>> {
-  const result = new Map<string, Map<string, string[]>>();
-  for (const [symbol, ids] of symbolToIds) {
-    const scoped = new Map<string, string[]>();
-    for (const chain of chains) {
-      scoped.set(chain.toLowerCase(), [...ids]);
-    }
-    result.set(symbol.trim().toUpperCase(), scoped);
-  }
-  return result;
 }
 
 describe("processPoolMetrics", () => {

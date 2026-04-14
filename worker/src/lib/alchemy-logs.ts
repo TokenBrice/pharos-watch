@@ -179,20 +179,13 @@ export async function getAlchemyTransactionByHash(
   budget: SubrequestBudget,
   signal?: AbortSignal,
 ): Promise<AlchemyTransactionEntry | null> {
-  if (budgetExhausted(budget)) return null;
-  budget.count++;
-  try {
-    const rpc = await jsonRpcCall<AlchemyTransactionEntry>(
-      alchemyUrl,
-      "eth_getTransactionByHash",
-      [txHash],
-      signal,
-    );
-    return rpc.result ?? null;
-  } catch (err) {
-    console.debug("[alchemy-logs] eth_getTransactionByHash failed", err);
-    return null;
-  }
+  return getAlchemyTransactionObject<AlchemyTransactionEntry>(
+    alchemyUrl,
+    "eth_getTransactionByHash",
+    txHash,
+    budget,
+    signal,
+  );
 }
 
 export async function getAlchemyTransactionReceipt(
@@ -201,18 +194,29 @@ export async function getAlchemyTransactionReceipt(
   budget: SubrequestBudget,
   signal?: AbortSignal,
 ): Promise<AlchemyTransactionReceipt | null> {
+  return getAlchemyTransactionObject<AlchemyTransactionReceipt>(
+    alchemyUrl,
+    "eth_getTransactionReceipt",
+    txHash,
+    budget,
+    signal,
+  );
+}
+
+async function getAlchemyTransactionObject<T>(
+  alchemyUrl: string,
+  method: "eth_getTransactionByHash" | "eth_getTransactionReceipt",
+  txHash: string,
+  budget: SubrequestBudget,
+  signal?: AbortSignal,
+): Promise<T | null> {
   if (budgetExhausted(budget)) return null;
   budget.count++;
   try {
-    const rpc = await jsonRpcCall<AlchemyTransactionReceipt>(
-      alchemyUrl,
-      "eth_getTransactionReceipt",
-      [txHash],
-      signal,
-    );
+    const rpc = await jsonRpcCall<T>(alchemyUrl, method, [txHash], signal);
     return rpc.result ?? null;
   } catch (err) {
-    console.debug("[alchemy-logs] eth_getTransactionReceipt failed", err);
+    console.debug(`[alchemy-logs] ${method} failed`, err);
     return null;
   }
 }
