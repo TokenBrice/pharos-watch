@@ -1,9 +1,24 @@
 import { createMethodologyVersion } from "./methodology-version";
 
 const liquidity = createMethodologyVersion({
-  currentVersion: "5.3",
+  currentVersion: "5.4",
   changelogPath: "/methodology/liquidity-score-changelog/",
   changelog: [
+    {
+      version: "5.4",
+      title: "Curve enrichment scoping and staged UUID dedupe",
+      date: "2026-04-14",
+      effectiveAt: 1776165200,
+      summary:
+        "Curve API enrichment is now scoped to Curve DeFiLlama rows, and staged exact pool-id rows can dedupe against a single identity-poor DeFiLlama UUID row through the same narrow optional-metadata wildcard used by primary dedupe.",
+      impact: [
+        "Non-Curve DeFiLlama pools that share token symbols with a Curve pool no longer inherit Curve registry metadata, balance ratios, token prices, or metapool-adjusted TVL",
+        "CoinGecko/GeckoTerminal provider ids with underscores or provider suffixes normalize to the same canonical protocol family as DeFiLlama ids during pool-identity construction",
+        "Staged discovery now skips a staged exact pool-id row when it uniquely matches one primary DeFiLlama UUID row by chain, protocol, token set, and pool-shape family, while ambiguous same-pair staged buckets still remain separate",
+      ],
+      commits: [],
+      reconstructed: false,
+    },
     {
       version: "5.3",
       title: "PancakeSwap trailing-hour volume window",

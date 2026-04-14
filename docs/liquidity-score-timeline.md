@@ -1,6 +1,17 @@
 # Liquidity Score Methodology - Version Timeline
 
-Internal changelog reconstructed from git history. Covers Liquidity Score `v1.0` through `v5.3` (2026-02-19 -> 2026-04-08).
+Internal changelog reconstructed from git history. Covers Liquidity Score `v1.0` through `v5.4` (2026-02-19 -> 2026-04-14).
+
+---
+
+## v5.4 - Curve enrichment scoping and staged UUID dedupe (Apr 14, 2026)
+
+**Commit:** `unreleased`
+
+- Curve API enrichment is now applied only to Curve DeFiLlama rows; non-Curve pools that share the same token symbols no longer inherit Curve registry metadata, balance ratios, token prices, or metapool-adjusted TVL
+- Provider ids with underscores or provider suffixes, such as CoinGecko `uniswap_v3` and `uniswap-v4-ethereum`, normalize to the same pool-identity protocol family as DeFiLlama ids
+- Staged discovery can now skip a staged exact pool-id row when it uniquely matches one primary DeFiLlama UUID row by chain, protocol, token set, and pool-shape family
+- Ambiguous same-pair staged buckets still remain separate, so legitimate parallel pools are not collapsed by the relaxed optional-metadata wildcard
 
 ---
 

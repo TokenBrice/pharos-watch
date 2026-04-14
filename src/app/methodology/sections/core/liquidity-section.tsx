@@ -40,7 +40,8 @@ export function LiquidityMethodologySection() {
         on that chain for addressless tokens. If an upstream token already supplies an unknown address, it is dropped
         instead of being remapped by symbol. Pool dedupe uses exact ids plus conservative derived identity keys, so
         legitimate same-pair pools are not collapsed just because their token set matches. Balancer direct pools now key
-        exact identity off the API&apos;s real pool `address`, not the 32-byte vault pool id.
+        exact identity off the API&apos;s real pool `address`, not the 32-byte vault pool id. Provider-specific ids with
+        underscores or suffixes are normalized into canonical protocol families before identity matching.
       </p>
       <p>
         Direct-source precedence is also measurement-aware now. A protocol-native pool only replaces an overlapping
@@ -55,6 +56,11 @@ export function LiquidityMethodologySection() {
         protocol-native fetch on that chain. In practice, GT/CG/DS staging cannot invent new Balancer, Fluid, Raydium,
         Orca, Meteora, PancakeSwap, Aerodrome, or Velodrome pools after the native source succeeded; if that native
         fetch is degraded or unavailable, the scorer fails open and still allows staged recovery rows through.
+      </p>
+      <p>
+        For identity-poor DeFiLlama UUID rows, staged discovery can use the narrow optional-metadata wildcard only when
+        both sides are unique on chain, protocol, token set, and pool-shape family. That lets one staged exact-pool-id
+        row collapse against one primary row without collapsing parallel same-pair pools.
       </p>
       <p>
         When protocol-native sources expose pool inventory, Balancer, Raydium, Orca, Meteora, PancakeSwap V3, and the
@@ -78,13 +84,17 @@ export function LiquidityMethodologySection() {
       </p>
       <p>
         PancakeSwap V3 volume now uses a bounded trailing-hour window from the official subgraph&apos;s
-        `poolHourDatas.volumeUSD` buckets instead of the latest `poolDayDatas` row, so intraday volume no longer
-        decays toward zero between UTC day rollovers.
+        `poolHourDatas.volumeUSD` buckets instead of the latest `poolDayDatas` row, so intraday volume no longer decays
+        toward zero between UTC day rollovers.
       </p>
       <p>
         After bad pools are filtered and secondary-source TVL caps are applied, every exported aggregate and score input
         is rebuilt from the retained pool set. That keeps filtered or downscaled pools from lingering in the final score
         through stale pre-filter totals.
+      </p>
+      <p>
+        Curve balance, registry, token-price, and metapool TVL enrichment is applied only to Curve DeFiLlama rows.
+        Non-Curve rows that share the same token symbols as a Curve pool keep their own mechanism type and TVL.
       </p>
       <p>
         Coverage confidence is measurement-aware. Instead of a fixed score by source family, Pharos now weights how much
@@ -125,7 +135,9 @@ export function LiquidityMethodologySection() {
         <p className="font-mono">vtRatio=1M/20M=5%, volume=38&times;(log10(0.05)+3)=65</p>
         <p className="font-mono">retention=12M/20M=60%, quality=(0.60&minus;0.15)/0.65&times;100=69</p>
         <p className="font-mono">diversity=min(100,8&times;5)=40</p>
-        <p className="font-mono">score=round(0.30&times;75+0.20&times;65+0.20&times;69+0.20&times;70+0.10&times;40)=67</p>
+        <p className="font-mono">
+          score=round(0.30&times;75+0.20&times;65+0.20&times;69+0.20&times;70+0.10&times;40)=67
+        </p>
         <p>
           Result: <span className="text-foreground">Liquidity score 67</span>.
         </p>
