@@ -1,9 +1,9 @@
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins";
 import type { YieldType } from "@shared/types/core";
 import { LENDING_PROTOCOL_LABELS } from "../yield-config";
-import type { ConfidenceTier, EvaluatedYieldSource } from "./evaluation";
+import type { ConfidenceTier, EvaluatedYieldSource } from "./evaluation-types";
 
-export type { ConfidenceTier } from "./evaluation";
+export type { ConfidenceTier } from "./evaluation-types";
 
 export function resolveYieldSourceLabel(params: {
   id: string;

@@ -1,0 +1,53 @@
+import type { YieldType } from "@shared/types/core";
+import type { YieldBenchmarkKey, YieldBenchmarkSelectionMode } from "@shared/types/yield";
+import type { ParsedYieldBenchmarkMeta } from "./benchmarks";
+
+export type ConfidenceTier = "deterministic" | "curated" | "discovered" | "fallback";
+
+export interface EvaluatedYieldSource {
+  id: string;
+  symbol: string;
+  sourceKey: string;
+  yieldSource: string;
+  yieldType: YieldType;
+  currentApy: number;
+  apyBase: number | null;
+  apyReward: number | null;
+  sourcePool: string | null;
+  sourceTvlUsd: number | null;
+  dataSource: string;
+  exchangeRate: number | null;
+  sourceObservedAt: number | null;
+  comparisonAnchorObservedAt: number | null;
+  apy7d: number;
+  apy30d: number;
+  apyVarianceScore: number;
+  stdDev30d: number | null;
+  apyMin30d: number | null;
+  apyMax30d: number | null;
+  yieldStability: number | null;
+  safetyScore: number;
+  safetyGrade: string;
+  yieldToRisk: number | null;
+  excessYield: number;
+  benchmarkKey: YieldBenchmarkKey;
+  benchmarkLabel: string;
+  benchmarkCurrency: string;
+  benchmarkRate: number;
+  benchmarkRecordDate: string | null;
+  benchmarkIsFallback: boolean;
+  benchmarkFallbackMode: string | null;
+  benchmarkSelectionMode: YieldBenchmarkSelectionMode;
+  benchmarkIsProxy: boolean;
+  benchmarkMeta: ParsedYieldBenchmarkMeta;
+  pharosYieldScore: number;
+  prevExchangeRate: number | null;
+  prevTvlUsd: number | null;
+  anomalies: string[];
+  warnings: string[];
+  confidenceTier: ConfidenceTier;
+  rejected: boolean;
+  usedLegacyHistory: boolean;
+  usedDefaultSafety: boolean;
+  previousBestSourceKey: string | null;
+}

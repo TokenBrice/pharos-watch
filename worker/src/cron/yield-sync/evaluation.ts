@@ -1,71 +1,21 @@
 import { DAY_SECONDS } from "@shared/lib/time-constants";
-import type { YieldType } from "@shared/types/core";
-import type { YieldBenchmarkKey, YieldBenchmarkSelectionMode } from "@shared/types/yield";
 import { DEFAULT_SAFETY_SCORE, PYS_SCALING_FACTOR } from "../../lib/constants";
 import { computeApyVarianceScore, computePYS, computeYieldStability } from "../yield-helpers";
 import type { YieldHistorySnapshotRow } from "./history";
 import { computeTvlWeightedMedianApy } from "./rankings";
 import type { ResolvedYield, ResolvedYieldEntry } from "./types";
-import { resolveBenchmarkForStablecoin, type ParsedYieldBenchmarkMeta, type ParsedYieldBenchmarkRegistry } from "./benchmarks";
+import { resolveBenchmarkForStablecoin, type ParsedYieldBenchmarkRegistry } from "./benchmarks";
 import { buildHistoryKey, pickHistoryRowsForSource } from "./evaluation-history";
 import { compareCandidates, getConfidencePriority, getConfidenceTier, relativeDivergence, resolveYieldSourceLabel, resolveYieldTypeLabel } from "./evaluation-arbitration";
+import type { EvaluatedYieldSource } from "./evaluation-types";
 
 export { buildHistoryKey, isLegacyDeterministicOnChainSourceKey, normalizePreviousBestSourceKey } from "./evaluation-history";
 export { buildSelectionReason } from "./evaluation-arbitration";
+export type { ConfidenceTier, EvaluatedYieldSource } from "./evaluation-types";
 
 const LOW_SOURCE_TVL_USD = 250_000;
 const CROSS_SOURCE_DIVERGENCE_THRESHOLD = 0.35;
 const MAX_RETAINED_RISK_FREE_RATE_AGE_SEC = 3 * DAY_SECONDS;
-
-export type ConfidenceTier = "deterministic" | "curated" | "discovered" | "fallback";
-
-export interface EvaluatedYieldSource {
-  id: string;
-  symbol: string;
-  sourceKey: string;
-  yieldSource: string;
-  yieldType: YieldType;
-  currentApy: number;
-  apyBase: number | null;
-  apyReward: number | null;
-  sourcePool: string | null;
-  sourceTvlUsd: number | null;
-  dataSource: string;
-  exchangeRate: number | null;
-  sourceObservedAt: number | null;
-  comparisonAnchorObservedAt: number | null;
-  apy7d: number;
-  apy30d: number;
-  apyVarianceScore: number;
-  stdDev30d: number | null;
-  apyMin30d: number | null;
-  apyMax30d: number | null;
-  yieldStability: number | null;
-  safetyScore: number;
-  safetyGrade: string;
-  yieldToRisk: number | null;
-  excessYield: number;
-  benchmarkKey: YieldBenchmarkKey;
-  benchmarkLabel: string;
-  benchmarkCurrency: string;
-  benchmarkRate: number;
-  benchmarkRecordDate: string | null;
-  benchmarkIsFallback: boolean;
-  benchmarkFallbackMode: string | null;
-  benchmarkSelectionMode: YieldBenchmarkSelectionMode;
-  benchmarkIsProxy: boolean;
-  benchmarkMeta: ParsedYieldBenchmarkMeta;
-  pharosYieldScore: number;
-  prevExchangeRate: number | null;
-  prevTvlUsd: number | null;
-  anomalies: string[];
-  warnings: string[];
-  confidenceTier: ConfidenceTier;
-  rejected: boolean;
-  usedLegacyHistory: boolean;
-  usedDefaultSafety: boolean;
-  previousBestSourceKey: string | null;
-}
 
 function isResolvedYieldEntryWithYield(
   entry: ResolvedYieldEntry,
