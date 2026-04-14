@@ -404,7 +404,7 @@ export function getDewsRiskLevel(bands: ThreatBand[]): DewsRiskLevel {
 // Feature status badge styles
 // ---------------------------------------------------------------------------
 
-export type FeatureStatus = "mature" | "experimental" | "testing-in-prod";
+export type FeatureStatus = "mature" | "experimental" | "beta" | "testing-in-prod";
 
 export const FEATURE_STATUS_CONFIG: Record<FeatureStatus, { label: string; cls: string }> = {
   mature: {
@@ -413,6 +413,10 @@ export const FEATURE_STATUS_CONFIG: Record<FeatureStatus, { label: string; cls: 
   },
   experimental: {
     label: "Experimental",
+    cls: "bg-amber-500/15 text-amber-700 border-amber-500/30 dark:text-amber-400 dark:border-amber-500/40",
+  },
+  beta: {
+    label: "Beta",
     cls: "bg-amber-500/15 text-amber-700 border-amber-500/30 dark:text-amber-400 dark:border-amber-500/40",
   },
   "testing-in-prod": {
