@@ -45,7 +45,7 @@ describe("summarizeCronMetadata", () => {
       resolved: 147,
       unresolved: 1,
       unresolvedMissingCapacity: 0,
-      unresolvedCritical: 1,
+      unresolvedCritical: 0,
       availabilityDegraded: 1,
       dynamic: 5,
       estimated: 142,

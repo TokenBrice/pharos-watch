@@ -133,7 +133,10 @@ export async function syncRedemptionBackstops(db: D1Database, signal: AbortSigna
     .map((entry) => entry.stablecoinId);
   const availabilityDegradedCount = availabilityDegradedIds.length;
   const criticalUnresolvedCount = snapshots.filter(
-    (entry) => entry.resolutionState !== "resolved" && entry.resolutionState !== "missing-capacity",
+    (entry) =>
+      entry.resolutionState !== "resolved" &&
+      entry.resolutionState !== "missing-capacity" &&
+      entry.resolutionState !== "impaired",
   ).length;
   const missingFromCache = configuredIds.filter((stablecoinId) => !stablecoinAssetById.has(stablecoinId));
   const coverageRatio = configuredIds.length > 0 ? resolvedCount / configuredIds.length : 1;
@@ -146,7 +149,6 @@ export async function syncRedemptionBackstops(db: D1Database, signal: AbortSigna
       : failedIds.length > 0
         || missingFromCache.length > 0
         || criticalUnresolvedCount > 0
-        || availabilityDegradedCount > 0
         || !missingCapacityWithinTolerance
         || liquidityStale
         ? "degraded"

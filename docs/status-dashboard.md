@@ -197,6 +197,7 @@ For the split DEX pipeline:
 - `sync-mint-burn` is now the critical lane, while `sync-mint-burn-extended` drains long-tail backlog on its own offset schedule. The status surface tracks them independently so extended backlog pressure does not mask critical freshness.
 - `crons[*].inFlight` exposes live `cron_run_progress` state (`stage`, `itemsDone`, `itemsTotal`, `message`, `updatedAt`, `stale`) for long-running leased jobs such as blacklist, mint/burn, and DEX discovery. The API now suppresses orphaned progress rows once their matching lease is gone, so `running-stale` means "still leased but heartbeat stalled", not "some old progress row never got cleaned up".
 - `sync-live-reserves` now emits structured metadata (`synced`, `failed`, `skipped`, `warningCount`, `coinsWithWarnings`, `coinsWithErrors`, `breakerKeys`) summarized in the cron card.
+- `sync-redemption-backstops` keeps market-implied route impairments visible through `availabilityDegraded` metadata and impaired rows, but those expected row-level availability states do not by themselves mark the cron run degraded.
 
 ### Availability status
 

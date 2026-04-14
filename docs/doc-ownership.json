@@ -1,0 +1,67 @@
+{
+  "version": 1,
+  "status": "advisory",
+  "purpose": "Map source areas to documentation that agents should consider when behavior changes. This manifest is a navigation aid; existing CI checks and human review remain authoritative.",
+  "mappings": [
+    {
+      "name": "stablecoin-metadata",
+      "sources": ["shared/data/stablecoins/**", "shared/lib/stablecoins/**", "shared/lib/stablecoin-id-registry.ts", "shared/lib/shadow-stablecoins.ts"],
+      "docs": ["docs/classification.md", "docs/shadow-stablecoins.md", "docs/about-page.md", "README.md"],
+      "notes": ["Update methodology docs only when scoring or classification semantics change."]
+    },
+    {
+      "name": "pricing-pipeline",
+      "sources": ["worker/src/cron/sync-stablecoins/**", "worker/src/lib/price-consensus.ts", "worker/src/lib/price-validation.ts", "worker/src/lib/authoritative-price-sources.ts", "shared/lib/pricing-*.ts", "shared/lib/pricing-provider-config.ts"],
+      "docs": ["docs/pricing-pipeline.md", "docs/pricing-pipeline-timeline.md", "docs/data-pipeline.md", "docs/about-page.md", "src/app/about/page.tsx"],
+      "notes": ["Source roster and live-price selection semantics affect the about page and methodology copy."]
+    },
+    {
+      "name": "api-surface",
+      "sources": ["shared/lib/api-endpoints/**", "worker/src/routes/**", "worker/src/router.ts", "worker/src/api/**", "src/hooks/api-hooks.ts", "src/lib/api.ts"],
+      "docs": ["docs/api-reference.md", "docs/architecture.md", "docs/data-flow-map.md", "docs/worker-infrastructure.md"],
+      "notes": ["Route flags, auth lanes, cache profiles, and site-data allowlists should stay in sync with endpoint behavior."]
+    },
+    {
+      "name": "worker-cron",
+      "sources": ["shared/lib/cron-jobs.ts", "shared/lib/scheduled-runner-registry.ts", "worker/wrangler.toml", "worker/src/handlers/scheduled/**", "worker/src/cron/**"],
+      "docs": ["docs/worker-infrastructure.md", "docs/worker-and-api-limits.md", "docs/data-flow-map.md", "docs/deployment-process.md"],
+      "notes": ["Trigger slots, connection budgets, and status tracking are coupled."]
+    },
+    {
+      "name": "d1-migrations",
+      "sources": ["worker/migrations/**", "worker/src/lib/db*.ts", "worker/src/lib/*store*.ts", "worker/src/api/backfill-*.ts"],
+      "docs": ["docs/worker-infrastructure.md", "docs/deployment-process.md", "worker/migrations/MANIFEST.md"],
+      "notes": ["New migrations must be backward-compatible with the standard deploy ordering."]
+    },
+    {
+      "name": "frontend-routes",
+      "sources": ["src/app/**", "src/components/**", "src/hooks/**", "src/lib/page-metadata.ts", "src/app/sitemap.ts", "src/app/robots.ts"],
+      "docs": ["docs/architecture.md", "docs/homepage.md", "docs/start-page.md", "docs/stablecoin-detail-page.md", "docs/chains-page.md", "docs/coverage-page.md", "docs/status-dashboard.md"],
+      "notes": ["Use route-specific docs from docs/README.md when the touched page has a dedicated contract."]
+    },
+    {
+      "name": "design-system",
+      "sources": ["src/app/globals.css", "src/styles/tokens/**", "src/components/**"],
+      "docs": ["docs/design-context.md", "docs/design-language.md", "docs/design-tokens.md"],
+      "notes": ["Update design docs when deployed class patterns or tokens change."]
+    },
+    {
+      "name": "methodology",
+      "sources": ["shared/lib/*-version.ts", "shared/lib/report-card*.ts", "shared/lib/peg-score.ts", "shared/lib/dews-config.ts", "shared/lib/liquidity-score-weights.ts", "worker/src/lib/stability-index.ts", "worker/src/lib/mint-burn-scoring.ts", "worker/src/lib/dews.ts", "src/app/methodology/**"],
+      "docs": ["docs/methodology-page.md", "docs/report-cards.md", "docs/depeg-detection.md", "docs/dews.md", "docs/dex-liquidity.md", "docs/stability-index.md", "docs/mint-burn-flows.md", "docs/yield-intelligence.md"],
+      "notes": ["Also update the relevant timeline doc for versioned methodology changes."]
+    },
+    {
+      "name": "pages-functions-hosting",
+      "sources": ["functions/**", "shared/lib/site-data-routes.ts", "shared/lib/runtime-origins.ts", "src/lib/api.ts", "scripts/serve-static-export.mjs"],
+      "docs": ["docs/architecture.md", "docs/worker-infrastructure.md", "docs/deployment-process.md", "docs/operator-origin-access.md"],
+      "notes": ["Same-origin site-data proxy behavior and internal host lanes are coupled."]
+    },
+    {
+      "name": "validation-and-ci",
+      "sources": ["scripts/**", ".github/workflows/**", "package.json", "worker/package.json"],
+      "docs": ["docs/testing.md", "docs/deployment-process.md", "docs/scripts.md"],
+      "notes": ["Keep script inventory and CI descriptions aligned with behavior changes."]
+    }
+  ]
+}

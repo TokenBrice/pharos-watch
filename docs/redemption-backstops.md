@@ -45,11 +45,11 @@ No external HTTP calls happen during the redemption-backstop pass itself; any li
 
 Status semantics:
 
-- `ok` when every configured route resolves to a usable scored row and the DEX liquidity input used for effective-exit context is fresh, or when the only unresolved rows are a tiny `missing-capacity` tail within the current tolerance budget (`ceil(configured * 1%)`)
-- `degraded` when at least one row is written but any configured route fails, is missing from cache, hits a non-`missing-capacity` unresolved state, the `missing-capacity` tail exceeds that tolerance budget, or the reused DEX liquidity snapshot is stale
+- `ok` when every configured route resolves to a usable scored row and the DEX liquidity input used for effective-exit context is fresh, when the only unresolved rows are a tiny `missing-capacity` tail within the current tolerance budget (`ceil(configured * 1%)`), or when current market evidence intentionally marks a route `impaired`
+- `degraded` when at least one row is written but any configured route fails, is missing from cache, hits a non-`missing-capacity`/non-`impaired` unresolved state, the `missing-capacity` tail exceeds that tolerance budget, or the reused DEX liquidity snapshot is stale
 - `error` when zero routes resolve to a usable scored row
 
-Cron metadata includes `synced`, `resolved`, `unresolved`, `unresolvedMissingCapacity`, `unresolvedCritical`, `missingCapacityOkThreshold`, `coverageRatio`, `failed`, `configured`, `dynamic`, `estimated`, `static`, and `liquidityStale`, plus `failedIds` or `missingFromCache` when relevant.
+Cron metadata includes `synced`, `resolved`, `unresolved`, `unresolvedMissingCapacity`, `unresolvedCritical`, `availabilityDegraded`, `missingCapacityOkThreshold`, `coverageRatio`, `failed`, `configured`, `dynamic`, `estimated`, `static`, and `liquidityStale`, plus `failedIds`, `availabilityDegradedIds`, or `missingFromCache` when relevant. `availabilityDegraded`/`availabilityDegradedIds` are row-level route-availability signals and do not by themselves degrade the cron run.
 
 ---
 

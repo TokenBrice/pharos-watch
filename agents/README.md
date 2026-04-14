@@ -2,12 +2,15 @@
 
 `/agents` stores working artifacts produced during audits, investigations, implementation planning, design work, research, and execution tracking. Treat it as an agent collaboration surface and archive, not as the canonical source of product truth. Live code and the verified docs in `/docs/` win if anything here drifts.
 
+For current agent-facing navigation, start with `/docs/agent-task-router.md` and `/docs/agent-code-map.md` before mining historical audits or investigations.
+
 ## Core Rules
 
 - Prefer the category folders below over creating new top-level folders.
 - Use date-prefixed filenames for point-in-time artifacts: `YYYY-MM-DD-topic.md`.
 - Keep filenames specific to the workstream: `2026-03-24-live-reserve-sync-audit.md`, not `notes.md`.
 - If a document becomes normative product/process guidance, migrate the final truth into `/docs/` and leave `/agents/` as supporting context.
+- Keep generated or durable code-discovery maps in `/docs/` unless they are temporary one-off investigation artifacts.
 - When a folder already exists for a work type, add to it instead of scattering similar files at the root.
 
 ## Quick Routing

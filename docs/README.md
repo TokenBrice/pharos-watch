@@ -6,6 +6,8 @@ Application source-of-truth docs live in `/docs/` and [../README.md](../README.m
 ## Start Here
 
 - [../README.md](../README.md) - repo overview, local setup, deployment summary
+- [agent-task-router.md](./agent-task-router.md) - agent-first task routing from user intent to docs, files, checks, and gotchas
+- [agent-code-map.md](./agent-code-map.md) - generated compact code entrypoint/export map for fast discovery
 - [api-reference.md](./api-reference.md) - exact HTTP routes, query params, headers, and response contracts
 - [architecture.md](./architecture.md) - curated file tree, API inventory, and SEO surface
 - [worker-infrastructure.md](./worker-infrastructure.md) - Worker env bindings, cron slots, cache/auth behavior, and status endpoints
@@ -20,6 +22,7 @@ Application source-of-truth docs live in `/docs/` and [../README.md](../README.m
 - [operator-origin-access.md](./operator-origin-access.md) - operator-only origin prep, Access setup runbook, and verification steps
 - [worker-and-api-limits.md](./worker-and-api-limits.md) - repo-enforced runtime budgets, throttle constants, and external-provider assumptions to re-check before shipping worker changes
 - [data-flow-map.md](./data-flow-map.md) - external source -> cron -> D1 -> API -> hook -> page mapping
+- [doc-ownership.json](./doc-ownership.json) - advisory source-glob to documentation-update map for agents and reviewers
 - [live-reserves.md](./live-reserves.md) - live reserve-sync config, adapter registry, storage, API modes, and frontend/status consumers
 - [data-pipeline.md](./data-pipeline.md) - stablecoin sync, price enrichment, FX/metal rates, and integrity guardrails
 - [deployment-process.md](./deployment-process.md) - production deploy workflow and merge-gate policy

@@ -241,7 +241,7 @@ describe("syncRedemptionBackstops", () => {
     expect(metadata.estimated).toBe(1);
   });
 
-  it("passes severe active depeg availability into builders and degrades impaired rows", async () => {
+  it("passes severe active depeg availability into builders without degrading the cron", async () => {
     const now = Math.floor(Date.now() / 1000);
     resolveRedemptionBackstopEntryMock
       .mockResolvedValueOnce(
@@ -274,7 +274,7 @@ describe("syncRedemptionBackstops", () => {
     const { syncRedemptionBackstops } = await import("../sync-redemption-backstops");
     const result = await syncRedemptionBackstops(db, new AbortController().signal);
 
-    expect(result.status).toBe("degraded");
+    expect(result.status).toBe("ok");
     expect(resolveRedemptionBackstopEntryMock).toHaveBeenCalledWith(
       expect.anything(),
       expect.objectContaining({ id: "cusd-cap" }),
@@ -292,6 +292,7 @@ describe("syncRedemptionBackstops", () => {
     const metadata = JSON.parse(result.metadata ?? "{}") as Record<string, unknown>;
     expect(metadata.availabilityDegraded).toBe(1);
     expect(metadata.availabilityDegradedIds).toEqual(["cusd-cap"]);
+    expect(metadata.unresolvedCritical).toBe(0);
     expect(metadata.severeActiveDepegThresholdBps).toBe(2500);
   });
 
