@@ -42,7 +42,8 @@ For deployment/worktree operating procedure (including the local merge gate befo
 
 1. `Pull Request Checks`
    - runs the shared `validate` gate on `pull_request` to `main`
-   - uses the reusable workflow defaults, so PRs still run the full validate surface (`build` + `seo:check` + worker typecheck included)
+   - classifies the PR diff with `scripts/classify-deploy-changes.mjs`, then passes `pages_changed` and `worker_changed` into the reusable workflow
+   - still runs the shared non-deploy guardrails and tests on every PR, while Pages build/SEO and worker typecheck follow the same deploy-surface flags used by the push deploy workflow
    - uses the PR base SHA for the critical-coverage ratchet diff
 2. `validate` (runs before any deployment):
    - `npm run audit:deps`
@@ -65,10 +66,10 @@ For deployment/worktree operating procedure (including the local merge gate befo
    - `npm run check:hotspot-ratchet`
    - `npm run check:sql-safety` (scans `worker/src/**` and `worker/scripts/**` for unsafe SQL template interpolation; regression fixtures live in `scripts/__tests__/fixtures/sql-safety/`)
    - `npm run check:stablecoin-data`
-   - `npm run build` + `npm run seo:check` when `pages_changed=true` (always true on PR validate, diff-aware on deploy pushes)
+   - `npm run build` + `npm run seo:check` when `pages_changed=true`
    - `npm test`
    - `npm run coverage:critical`
-   - `cd worker && npx tsc --noEmit` when `worker_changed=true` (always true on PR validate, diff-aware on deploy pushes)
+   - `cd worker && npx tsc --noEmit` when `worker_changed=true`
 3. `detect-changes` (push/manual deploy workflow only):
    - Diffs `github.event.before..github.sha` on `push`
    - Emits `deploy_required`, `worker_changed`, and `pages_changed`
