@@ -474,6 +474,7 @@
   {
     "name": "USDK",
     "symbol": "USDK",
+    "logo": "usdk.png",
     "pegCurrency": "USD",
     "causeOfDeath": "counterparty-failure",
     "deathDate": "2023-06",
@@ -1266,6 +1267,7 @@
   {
     "name": "Liquid Loans USDL",
     "symbol": "USDL",
+    "logo": "liquid-loans-usdl.png",
     "llamaId": "152",
     "pegCurrency": "USD",
     "causeOfDeath": "liquidity-drain",
@@ -1546,6 +1548,7 @@
   {
     "name": "Float Protocol",
     "symbol": "FLOAT",
+    "logo": "float.png",
     "pegCurrency": "USD",
     "causeOfDeath": "abandoned",
     "deathDate": "2025-07",
@@ -1564,6 +1567,7 @@
   {
     "name": "Lift Dollar",
     "symbol": "USDL",
+    "logo": "usdl.png",
     "llamaId": "244",
     "pegCurrency": "USD",
     "causeOfDeath": "abandoned",
@@ -1583,6 +1587,7 @@
   {
     "name": "Mountain Protocol USDM",
     "symbol": "USDM",
+    "logo": "usdm-mountain.png",
     "llamaId": "132",
     "pegCurrency": "USD",
     "causeOfDeath": "abandoned",
@@ -1602,6 +1607,7 @@
   {
     "name": "Synnax Stablecoin",
     "symbol": "syUSD",
+    "logo": "syusd.png",
     "llamaId": "236",
     "pegCurrency": "USD",
     "causeOfDeath": "counterparty-failure",
@@ -1621,6 +1627,7 @@
   {
     "name": "Saga Dollar",
     "symbol": "D",
+    "logo": "saga-dollar.svg",
     "llamaId": "308",
     "pegCurrency": "USD",
     "causeOfDeath": "counterparty-failure",
@@ -1634,6 +1641,7 @@
   {
     "name": "Gyroscope GYD",
     "symbol": "GYD",
+    "logo": "gyd.png",
     "llamaId": "185",
     "pegCurrency": "USD",
     "causeOfDeath": "counterparty-failure",
