@@ -1,5 +1,5 @@
 import { isPricingSourceSoftGuardrailExempt } from "@shared/lib/pricing-source-registry";
-import { isSevereFixedPegDownside, validatePriceCandidate, type PriceValidationContext, type PriceValidationReferences } from "./price-validation";
+import { isSevereFixedPegDownside, validatePriceCandidate, type PriceValidationContext, type PriceValidationDecision, type PriceValidationReferences } from "./price-validation";
 import { FIXED_PEG_SEVERE_DOWNSIDE_RATIO, hasDepegAuthoritativeSource } from "./pricing-source-policy";
 import type { PriceConfidence, PriceObservedAtMode } from "@shared/types/core";
 
@@ -17,6 +17,14 @@ export interface TrustedPriceReference {
 export interface PublishablePriceDecision {
   accepted: boolean;
   reason: string;
+}
+
+interface PricePublicationDecision extends PublishablePriceDecision {
+  referenceType: PriceValidationDecision["referenceType"];
+  referencePrice: PriceValidationDecision["referencePrice"];
+  candidateRatio: PriceValidationDecision["candidateRatio"];
+  boundsUsed: PriceValidationDecision["boundsUsed"];
+  gates: string[];
 }
 
 export interface PublishablePriceInput {
@@ -114,26 +122,37 @@ function shouldQuarantineTemporalJump(input: PublishablePriceInput): boolean {
   return moveBps >= WEAK_FIXED_PEG_JUMP_QUARANTINE_BPS;
 }
 
-function validatePriceForPublication(input: PublishablePriceInput): PublishablePriceDecision {
+function evaluatePriceForPublication(input: PublishablePriceInput): PricePublicationDecision {
   const decision = validatePriceCandidate(
     input.price,
     input.validationContext,
     input.mode,
     input.validationReferences,
   );
+  const base = {
+    referenceType: decision.referenceType,
+    referencePrice: decision.referencePrice,
+    candidateRatio: decision.candidateRatio,
+    boundsUsed: decision.boundsUsed,
+  };
   if (!decision.accepted) {
-    return { accepted: false, reason: decision.reasonCode };
+    return { ...base, accepted: false, reason: decision.reasonCode, gates: ["price-validation"] };
   }
 
   if (!allowsSevereDownsidePublication(input)) {
-    return { accepted: false, reason: "severe_downside_requires_corroboration" };
+    return { ...base, accepted: false, reason: "severe_downside_requires_corroboration", gates: ["price-validation", "severe-downside-corroboration"] };
   }
 
   if (shouldQuarantineTemporalJump(input)) {
-    return { accepted: false, reason: "temporal_jump_requires_corroboration" };
+    return { ...base, accepted: false, reason: "temporal_jump_requires_corroboration", gates: ["price-validation", "temporal-jump-corroboration"] };
   }
 
-  return { accepted: true, reason: decision.reasonCode };
+  return { ...base, accepted: true, reason: decision.reasonCode, gates: ["price-validation"] };
+}
+
+function validatePriceForPublication(input: PublishablePriceInput): PublishablePriceDecision {
+  const decision = evaluatePriceForPublication(input);
+  return { accepted: decision.accepted, reason: decision.reason };
 }
 
 export function validatePrimaryPriceCandidate(

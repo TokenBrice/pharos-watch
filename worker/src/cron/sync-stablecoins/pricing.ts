@@ -26,6 +26,34 @@ export interface ProtocolPriceOverride {
   confidence: PeggedAsset["priceConfidence"];
 }
 
+export interface AcceptedPriceCandidate {
+  asset: PeggedAsset;
+  price: number;
+  source: string;
+  confidence: PeggedAsset["priceConfidence"];
+  observedAt: number | null;
+  observedAtMode?: PeggedAsset["priceObservedAtMode"];
+  consensusSources?: string[];
+  agreeSources?: string[];
+  syncedAt?: number | null;
+  selectedSource?: string | null;
+}
+
+export function applyAcceptedPriceCandidate(input: AcceptedPriceCandidate): void {
+  input.asset.price = input.price;
+  stampPriceMetadata(
+    input.asset,
+    input.source,
+    input.confidence,
+    input.observedAt,
+    input.observedAtMode,
+    input.consensusSources,
+    input.agreeSources,
+    input.syncedAt,
+    input.selectedSource,
+  );
+}
+
 export function createValidationContextResolver(): ValidationContextResolver {
   const cache = new Map<string, PriceValidationContext>();
   return {
@@ -113,18 +141,18 @@ function applyPrimaryCandidate(input: ApplyPrimaryCandidateInput): string | null
     return decision.reason;
   }
 
-  asset.price = candidate.price;
-  stampPriceMetadata(
+  applyAcceptedPriceCandidate({
     asset,
-    candidate.source,
-    candidate.confidence,
-    candidate.observedAt ?? null,
-    candidate.observedAtMode ?? null,
-    candidate.candidateSources,
-    candidate.agreeSources,
-    syncStartSec,
-    candidate.selectedSource ?? candidate.source,
-  );
+    price: candidate.price,
+    source: candidate.source,
+    confidence: candidate.confidence,
+    observedAt: candidate.observedAt ?? null,
+    observedAtMode: candidate.observedAtMode ?? null,
+    consensusSources: candidate.candidateSources,
+    agreeSources: candidate.agreeSources,
+    syncedAt: syncStartSec,
+    selectedSource: candidate.selectedSource ?? candidate.source,
+  });
   return null;
 }
 
@@ -423,18 +451,18 @@ export function applyProtocolPriceOverrides(input: {
       }
     }
 
-    asset.price = override.price;
-    stampPriceMetadata(
+    applyAcceptedPriceCandidate({
       asset,
-      override.source,
-      override.confidence,
-      syncStartSec,
-      "local_fetch",
-      [override.source],
-      [override.source],
-      syncStartSec,
-      override.source,
-    );
+      price: override.price,
+      source: override.source,
+      confidence: override.confidence,
+      observedAt: syncStartSec,
+      observedAtMode: "local_fetch",
+      consensusSources: [override.source],
+      agreeSources: [override.source],
+      syncedAt: syncStartSec,
+      selectedSource: override.source,
+    });
     appliedCount++;
   }
 

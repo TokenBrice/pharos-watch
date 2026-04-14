@@ -100,7 +100,12 @@ describe("runPostEnrichmentPricePipeline", () => {
     expect(result.rejectedCount).toBe(0);
     expect(asset.price).toBe(1.08);
     expect(asset.priceSource).toBe("coingecko-native-implied");
+    expect(asset.priceSelectedSource).toBe("coingecko-native-implied");
     expect(asset.priceConfidence).toBe("single-source");
+    expect(asset.priceObservedAt).toBe(1_700_000_000);
+    expect(asset.priceObservedAtMode).toBe("local_fetch");
+    expect(asset.priceSyncedAt).toBe(1_700_000_050);
+    expect(asset.consensusSources).toEqual(["coingecko-native-implied"]);
     expect(asset.agreeSources).toEqual(["coingecko-native-implied"]);
     expect(
       db.getHistory().some((entry) => entry.sql.includes("INSERT OR REPLACE INTO price_cache")),
@@ -200,6 +205,7 @@ describe("runPostEnrichmentPricePipeline", () => {
     expect(result.nativePegFillCount).toBe(0);
     expect(asset.price).toBe(1.08);
     expect(asset.priceSource).toBe("coingecko-native-implied");
+    expect(asset.priceSelectedSource).toBe("coingecko-native-implied");
     expect(asset.priceConfidence).toBe("single-source");
   });
 
@@ -252,6 +258,7 @@ describe("runPostEnrichmentPricePipeline", () => {
     expect(result.nativePegFillCount).toBe(1);
     expect(asset.price).toBe(1.08);
     expect(asset.priceSource).toBe("coingecko-native-implied");
+    expect(asset.priceSelectedSource).toBe("coingecko-native-implied");
     expect(asset.priceConfidence).toBe("single-source");
     expect(
       db.getHistory().some((entry) => entry.sql.includes("INSERT OR REPLACE INTO price_cache")),

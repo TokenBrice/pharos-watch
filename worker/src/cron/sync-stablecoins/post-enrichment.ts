@@ -46,7 +46,7 @@ import {
   isReplaySafePriceSource,
   isSingleSourceDepegAuthoritative,
 } from "../../lib/pricing-source-policy";
-import { applyProtocolPriceOverrides } from "./pricing";
+import { applyAcceptedPriceCandidate, applyProtocolPriceOverrides } from "./pricing";
 
 const PRICE_CACHE_TTL = 6 * 60 * 60;
 
@@ -231,18 +231,18 @@ export async function runPostEnrichmentPricePipeline(
         nativePegCorrectionCount++;
       }
 
-      asset.price = nativePegImpliedUsd.priceUsd;
-      stampPriceMetadata(
+      applyAcceptedPriceCandidate({
         asset,
-        COINGECKO_NATIVE_IMPLIED_SOURCE,
-        "single-source",
-        nativePegImpliedUsd.updatedAt,
-        "local_fetch",
-        [COINGECKO_NATIVE_IMPLIED_SOURCE],
-        [COINGECKO_NATIVE_IMPLIED_SOURCE],
-        input.syncStartSec,
-        COINGECKO_NATIVE_IMPLIED_SOURCE,
-      );
+        price: nativePegImpliedUsd.priceUsd,
+        source: COINGECKO_NATIVE_IMPLIED_SOURCE,
+        confidence: "single-source",
+        observedAt: nativePegImpliedUsd.updatedAt,
+        observedAtMode: "local_fetch",
+        consensusSources: [COINGECKO_NATIVE_IMPLIED_SOURCE],
+        agreeSources: [COINGECKO_NATIVE_IMPLIED_SOURCE],
+        syncedAt: input.syncStartSec,
+        selectedSource: COINGECKO_NATIVE_IMPLIED_SOURCE,
+      });
       return true;
     };
 
@@ -333,17 +333,17 @@ export async function runPostEnrichmentPricePipeline(
       });
       if (!decision.accepted) continue;
 
-      asset.price = cached.price;
-      stampPriceMetadata(
+      applyAcceptedPriceCandidate({
         asset,
-        "cached",
-        "fallback",
-        cached.observedAt ?? cached.updatedAt,
-        cached.observedAtMode ?? null,
-        cached.consensusSources,
-        cached.agreeSources,
-        cached.syncedAt ?? cached.updatedAt,
-      );
+        price: cached.price,
+        source: "cached",
+        confidence: "fallback",
+        observedAt: cached.observedAt ?? cached.updatedAt,
+        observedAtMode: cached.observedAtMode ?? null,
+        consensusSources: cached.consensusSources,
+        agreeSources: cached.agreeSources,
+        syncedAt: cached.syncedAt ?? cached.updatedAt,
+      });
       cachedFallbackCount++;
     }
   }

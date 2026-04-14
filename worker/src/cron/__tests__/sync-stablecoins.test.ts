@@ -558,6 +558,8 @@ describe("syncStablecoins", () => {
         price: number;
         priceSource: string;
         priceConfidence: string | null;
+        consensusSources: string[];
+        agreeSources: string[];
       }>;
     };
     const cusd = cached.peggedAssets.find((asset) => asset.id === "cusd-cap");
@@ -565,6 +567,8 @@ describe("syncStablecoins", () => {
       id: "cusd-cap",
       priceSource: "protocol-redeem",
       priceConfidence: "high",
+      consensusSources: ["protocol-redeem"],
+      agreeSources: ["protocol-redeem"],
     });
     expect(cusd?.price).toBeCloseTo(0.99999266, 8);
   });
@@ -703,6 +707,8 @@ describe("syncStablecoins", () => {
         price: number | null;
         priceSource: string;
         priceConfidence: string | null;
+        consensusSources: string[];
+        agreeSources: string[];
       }>;
     };
     const usdt = cached.peggedAssets.find((asset) => asset.id === "usdt-tether");
@@ -711,6 +717,8 @@ describe("syncStablecoins", () => {
       price: 1.0,
       priceSource: "defillama",
       priceConfidence: "single-source",
+      consensusSources: ["defillama"],
+      agreeSources: ["defillama"],
     });
   });
 
