@@ -52,14 +52,14 @@ const psiCount = trackedCount + shadowCount;
 
 // 3. Reserve adapters
 const adapterSrc = readFileSync(
-  resolve(root, "shared/lib/live-reserve-adapters.ts"),
+  resolve(root, "shared/lib/live-reserve-adapters-definitions.ts"),
   "utf-8",
 );
 const adapterBlock = adapterSrc.match(
   /export const LIVE_RESERVE_ADAPTER_DEFINITIONS\s*=\s*\{([\s\S]*?)\}\s*as const satisfies Record</,
 );
 if (!adapterBlock) {
-  console.error("FATAL: Could not find LIVE_RESERVE_ADAPTER_DEFINITIONS in shared/lib/live-reserve-adapters.ts");
+  console.error("FATAL: Could not find LIVE_RESERVE_ADAPTER_DEFINITIONS in shared/lib/live-reserve-adapters-definitions.ts");
   process.exit(1);
 }
 const adapterCount = (adapterBlock[1].match(/^ {2}(?:"[a-z][a-z0-9-]+"|\w+)\s*:/gm) || []).length;
