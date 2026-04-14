@@ -39,11 +39,12 @@ The cron assembles a `DigestInputData` object from 16 sources before calling the
 
 | Category | Source | Key signals |
 |----------|--------|-------------|
-| Market metrics | stablecoins cache | Total mcap, 7d delta, biggest supply mover (>$1M) |
-| Depeg events | `depeg_events` table | Active count, top 3 by impact (bps × mcap) |
+| Market metrics | stablecoins cache | Total mcap, 7d delta, biggest supply mover (>$1M), cache age |
+| Editorial candidates | derived from all collected signals | Pre-ranked lead candidates with impact, novelty, confidence, artifact risk, and suppression reasons |
+| Depeg events | `depeg_events` table | Active count, top 3 by absolute impact (\|bps\| × mcap), active age/chronic suppression, resolved depegs by absolute impact |
 | Stability Index | `stability_index_samples` + `stability_index` | Current PSI from latest 15-min sample, yesterday's from daily table |
-| Blacklist activity | `blacklist_events` (last 24h) | Event count, total USD affected; threshold: ≥2 events OR ≥$10M single |
-| Supply velocity | top 10 coins by mcap | 1d vs 7d changes; signals: "reversed", "accelerating", "decelerating" (threshold: 2.5× weekly avg OR direction reversal) |
+| Blacklist activity | `blacklist_events` (rolling last 24h) | Event count, total USD affected; threshold: ≥2 events OR ≥$10M single; zero-value bursts are artifact-risk candidates |
+| Supply velocity | top 10 coins by mcap | 1d vs 7d changes; signals: "reversed", "accelerating", "decelerating" with material daily/weekly thresholds |
 | Safety scores | computed real-time | Report card grades for mentioned coins + 2 "tension" coins (high peg score but low overall grade — structurally fragile despite stable peg) |
 | Resolved depegs | `depeg_events` (last 48h) | Filters: peak >200 bps AND mcap >$50M; top 3 by peak deviation |
 | Mint-burn flows | `mint_burn_hourly` | Bank Run Gauge (mcap-weighted composite), Flight-to-Quality (safe-haven vs risky net flows via `buildFlightToQualityClassification()`), top pressure coins (\|FIS\| > 20) |
@@ -54,7 +55,8 @@ The cron assembles a `DigestInputData` object from 16 sources before calling the
 | Yield anomalies | `yield_data` (is_best rows) | Coins with active warning signals (spike, divergence, tvl-outflow); APY vs 7d/30d averages; filtered to mcap >$10M |
 | DEX liquidity shifts | `dex_liquidity_history` | Day-over-day score changes >=8 points; TVL comparison; filtered to mcap >$10M |
 | Cross-day trends | `daily_digest` (archived input_data) | 7-day trajectories for PSI score/band, total mcap, and Bank Run Gauge; requires >=3 days of history |
-| Recent digests | last 7 rows from `daily_digest` | Passed to LLM to enforce variety |
+| Data quality | collector status + window metadata | Degraded collectors, cache age, PSI source time, mint/burn and blacklist windows |
+| Recent digests | last 7 non-weekly rows from `daily_digest` | Passed to LLM to enforce daily variety |
 
 `DigestInputData` is defined in `shared/types/digest.ts` (re-exported via `shared/types/index.ts`) and imported by the digest cron, digest snapshot API, and frontend snapshot hook.
 
@@ -72,17 +74,19 @@ The digest's Flight-to-Quality collector now uses `buildFlightToQualityClassific
 - **Timeout:** 120 seconds (Opus generates slower than Sonnet; the cron runs at 08:05 UTC with no downstream time pressure)
 - **Overload retries:** Anthropic `529 Overloaded` responses now back off exponentially (`5s`, `10s`, `20s`, `30s`) before the digest gives up
 - **Voice:** sardonic financial columnist — dry, precise, no emojis, no exclamation marks
-- **Priority rule:** rank everything by market impact (deviation × mcap); enrichment priority varies by regime
-- **Regime classification:** a `classifyRegime()` function labels each day as CRISIS, TENSION, WATCHFUL, or CALM based on PSI band, active depegs, gauge score, FTQ status, and DEWS ALERT+ count
+- **Priority rule:** lead from the highest-impact unsuppressed editorial candidate. Raw evidence sections are supporting material, not the lead-selection source.
+- **Artifact policy:** candidates can be marked high-risk or suppressed for chronic small depegs, zero-value blacklist bursts, thin-liquidity artifacts, very high APY anomalies, or other weak evidence. The prompt explicitly tells Opus not to dramatize these.
+- **Regime classification:** a `classifyRegime()` function labels each day as CRISIS, TENSION, WATCHFUL, or CALM based on PSI band, impact-weighted active depeg pressure, gauge score, FTQ status, and ALERT+ mcap rather than raw coin counts alone.
 - **Narrative structure:** regime-aware P1/P2/P3 paragraph structure; PSI is always referenced but doesn't have to open; max 3 data categories per digest
 - **Density contract:** 40–70 words per paragraph, 150–280 words total for the extended field
 - **Structured sections:** When the digest covers two distinct stories, the LLM may use bold inline headers (e.g., `**Peg Watch**`, `**Capital Flows**`) to separate paragraphs. P1 (the lead) never has a header. The frontend renders these as styled inline spans.
-- **Variety enforcement:** structured `meta` field (lead signal, tone, featured coins) from recent digests replaces raw text dump; falls back to raw text for pre-meta entries
+- **Variety enforcement:** normalized structured `meta` field (lead signal id, lead type, tone, featured coins, used/suppressed candidate ids) from recent non-weekly digests replaces raw text dump; falls back to raw text for pre-meta entries
+- **Quality gate:** parsed LLM output is validated for required fields, paragraph/word budget, title+text length, code fences, and recent title/lead/tone/coin repetition. The worker retries once with validation errors before accepting the copy. If hard issues remain after retry, the digest is stored as degraded but social posting is skipped.
 - **Output:** raw JSON `{ "title": "...", "extended": "...", "text": "...", "meta": { "lead": "...", "tone": "...", "coins": [...] } }` — no markdown fences
 
 ### Failure handling
 
-If JSON parsing fails, `title` and `extended` fall back to empty strings and `text` falls back to the raw LLM response (`rawText.trim()`). The digest is still stored and distribution is still attempted.
+If JSON parsing or quality validation fails, the worker sends one corrective retry to Opus with the failed checks. If the retry still has hard quality issues, the digest row is stored as degraded for operator inspection, but Twitter and Telegram delivery are skipped as `quality-gate`.
 
 Digest generation now fails closed on stablecoins-cache availability: if the cached stablecoin payload is missing, malformed, or otherwise non-`ok`, the cron returns `status: "degraded"` and skips regeneration instead of synthesizing a false zero-mcap digest.
 
@@ -219,21 +223,27 @@ Possible values per channel: `"no-creds"`, `"ok"`, `"failed: <truncated error>"`
 ## Weekly Recap
 
 **File:** `worker/src/cron/weekly-recap.ts`
-**Schedule:** Mondays only, chained after `daily-digest` via `.finally()` on the same `"5 8 * * *"` trigger
+**Schedule:** Mondays only, chained after `daily-digest` on the same `"5 8 * * *"` trigger
 **Dedup guard:** skips if a `digest_meta.type = "weekly"` row exists within the last 2 days
+**Period semantics:** trailing daily editions ending with the Monday daily digest, not a strict Monday-Sunday calendar week. `digest_meta.periodType` is `"trailing-daily-editions"`.
 
 ### Data collection
 
-Fetches the last 7 daily digests (excluding weekly entries via `json_extract(digest_meta, '$.type') != 'weekly'`), parses their stored `input_data`, and aggregates:
+Fetches the last 7 daily digests (excluding weekly entries via `json_extract(digest_meta, '$.type') != 'weekly'`), parses their stored `input_data`, and aggregates both summary ranges and weekly signal leaderboards:
 
 | Metric | Derivation |
 |--------|-----------|
 | PSI range | Min, max, start, end scores + dominant band (most frequent) |
 | Market cap range | Start, end, net change, percentage change |
-| Depeg total | Sum of `activeDepegCount` across all days |
-| Blacklist total | Sum of `blacklistActivity.eventCount` across all days |
+| Active depeg observations | Sum of `activeDepegCount` across all days; explicitly not described as unique events |
+| Unique depeg signals | Reconstructed from `stablecoinId` + `startedAt` where present, with symbol/direction/bps fallback for legacy rows |
+| Top depeg signals | Active and resolved signals sorted by absolute market impact |
+| Supply signals | Biggest weekly movers and daily velocity reversals/acceleration/deceleration |
+| DEWS signals | Top band changes and max ALERT+ mcap |
+| Blacklist total | Sum of `blacklistActivity.eventCount` and `totalAmountUsd`; top events by value |
 | Grade transitions | Sum of `gradeTransitions.length` across all days |
 | Gauge range | Min/max `mintBurnFlows.gaugeScore` (null if <3 data points) |
+| Other anomalies | Top mint/burn pressure, yield anomalies, and liquidity shifts |
 
 Requires >=5 daily digests to proceed.
 
@@ -244,14 +254,16 @@ Requires >=5 daily digests to proceed.
 - **max_tokens:** 2000
 - **Voice:** Same sardonic columnist, but synthesizing rather than reporting
 - **Structure:** 4-6 paragraphs, 250-400 words: week's headline, dominant story, counter-narrative, supply/capital flows, optional structural observation
+- **Artifact policy:** Same suppression principle as daily. Weekly recaps separate repeated active observations from unique signals so chronic conditions are not counted as fresh events.
+- **Variety:** Recent weekly recap metadata is supplied to avoid repeating the same weekly frame.
 
 ### Storage
 
-Stored in the same `daily_digest` table. The `digest_meta` column includes `"type": "weekly"` plus `weekStart` and `weekEnd` date strings. The `input_data` column stores the `WeeklyInputData` aggregation (not raw `DigestInputData`).
+Stored in the same `daily_digest` table. The `digest_meta` column includes `"type": "weekly"`, `"periodType": "trailing-daily-editions"`, plus `weekStart` and `weekEnd` date strings. The `input_data` column stores the `WeeklyInputData` aggregation (not raw `DigestInputData`).
 
 ### Distribution
 
-Posted to Telegram only (no Twitter for weekly recaps). Title is prefixed with "Weekly Recap:".
+Posted to Telegram only (no Twitter for weekly recaps). Title is prefixed with "Weekly Recap:" and the link uses the weekly route slug `/digest/YYYY-MM-DD-weekly/`.
 
 ---
 
@@ -294,7 +306,7 @@ The wire table shows each digest as a compact row: **date** (monospace, e.g. "27
 **Component:** `src/components/digest-snapshot.tsx`
 **Hook:** `src/hooks/api-hooks.ts` (`useDigestSnapshot`) → `GET /api/digest-snapshot?date={date}`
 
-Daily detail pages use slugs like `/digest/2026-03-24/`. Weekly recap pages use `/digest/2026-03-24-weekly/`; the archive client builds those slugs from `digestType === "weekly"` and the snapshot API accepts the matching `?date=YYYY-MM-DD-weekly` query.
+Daily detail pages use slugs like `/digest/2026-03-24/`. Weekly recap pages use `/digest/2026-03-24-weekly/`; the archive client builds those slugs from `digestType === "weekly"` and the snapshot API accepts the matching `?date=YYYY-MM-DD-weekly` query. The snapshot API filters target rows by requested type, so daily and weekly rows generated on the same UTC date cannot shadow each other.
 
 Each detail page shows the short summary intro (`text`) followed by every extended editorial paragraph plus 8 contextual data cards (Market Snapshot, Stability Index, Supply Mover, Active Depegs, Blacklist Activity, Safety Scores, Supply Velocity, Resolved Depegs). Includes JSON-LD Article structured data and prev/next navigation.
 
