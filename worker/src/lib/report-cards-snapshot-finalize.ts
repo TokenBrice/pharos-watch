@@ -21,7 +21,6 @@ import type {
   ReportCardGrade,
 } from "@shared/types/report-cards";
 import type { CollateralDriftEntry } from "./collateral-drift";
-import type { ReportCardsSnapshot } from "./report-cards-snapshot";
 
 export function buildDefunctReportCards(): ReportCard[] {
   return DEAD_STABLECOINS.map((dead) => {
@@ -89,7 +88,7 @@ export function buildReportCardsSnapshotEnvelope(input: {
   liquidityStale: boolean;
   collateralDriftCoins: CollateralDriftEntry[];
   liveToFallbackCoins: string[];
-}): ReportCardsSnapshot {
+}) {
   return {
     cards: input.cards,
     methodology: {
