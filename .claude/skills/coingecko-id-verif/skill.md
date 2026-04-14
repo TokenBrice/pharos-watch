@@ -5,9 +5,9 @@ description: Verify CoinGecko IDs for tracked stablecoins by cross-referencing o
 
 # CoinGecko ID Verification
 
-Verifies that the `geckoId` in `shared/lib/stablecoins.ts` is correct by cross-referencing three sources:
+Verifies that the `geckoId` in `shared/data/stablecoins/*.json` is correct by cross-referencing three sources:
 
-1. **Our config** (`geckoId` in stablecoins.ts) -> CoinGecko coin endpoint
+1. **Our config** (`geckoId` in the stablecoin JSON registry) -> CoinGecko coin endpoint
 2. **DefiLlama's geckoId** (`gecko_id` from stablecoins.llama.fi) -> CoinGecko coin endpoint
 3. **Contract address** (from our `contracts` array) -> CoinGecko contract lookup (ground truth)
 
@@ -40,9 +40,9 @@ python3 .claude/skills/coingecko-id-verif/verify.py --all
 
 ## Requirements
 
-- CoinGecko Pro API key in `worker/.dev.vars` as `COINGECKO_API_KEY`
+- Optional CoinGecko Pro API key in `worker/.dev.vars` as `COINGECKO_API_KEY`; without it, the script uses the free API and rate limits more aggressively
 - `curl` available on PATH
-- Python 3.8+
+- Python 3.10+
 
 ## How It Works
 
@@ -58,6 +58,6 @@ The **contract address lookup is the ground truth** -- it tells you exactly whic
 ## Interpreting Results
 
 - `VERDICT: Our geckoId is CORRECT` -- no action needed
-- `VERDICT: DL geckoId is correct, ours is WRONG` -- update `geckoId` in stablecoins.ts
-- `VERDICT: Neither matches! Contract resolves to 'xxx'` -- update our geckoId to `xxx`
-- `ERROR: Contract not found on CoinGecko` -- token may not be listed on CG (normal for some coins)
+- `VERDICT: DL geckoId is correct, ours is WRONG` -- update `geckoId` in the matching `shared/data/stablecoins/*.json` entry
+- `VERDICT: NEITHER (contract=xxx)` -- update our geckoId to `xxx`
+- `VERDICT: Token not found on CoinGecko` -- token may not be listed on CG (normal for some coins)

@@ -22,10 +22,7 @@ Weekly full-lifecycle update of all pre-launch stablecoins tracked by Pharos. Up
 
 ### Data Locations
 
-Pre-launch coins are distributed across these JSON files (find by `"status": "pre-launch"`):
-- `shared/data/stablecoins/usd-minor.json` — USD-pegged minor coins
-- `shared/data/stablecoins/non-usd.json` — Non-USD-pegged coins
-- `shared/data/stablecoins/commodity.json` — Commodity-pegged coins
+Pre-launch coins live in `shared/data/stablecoins/pre-launch.json`.
 
 AI summaries: `data/ai-summaries.json`
 
@@ -33,7 +30,7 @@ AI summaries: `data/ai-summaries.json`
 
 #### Step 1 — Read current state
 
-1. Read all three stablecoin JSON files and list every pre-launch coin with its current `launchPhase`, `expectedLaunchDate`, `launchPhaseDetail`, milestone count, and `featuredContent` count
+1. Read `shared/data/stablecoins/pre-launch.json` and list every pre-launch coin with its current `launchPhase`, `expectedLaunchDate`, `launchPhaseDetail`, milestone count, and `featuredContent` count
 2. Read `data/ai-summaries.json` to see which pre-launch coins have summaries and when they were last updated
 3. Present a summary table to the user: coin name, phase, expected date, milestones count, last summary update
 

@@ -44,7 +44,7 @@ Summaries must be grounded in Pharos's own data, not just external research. Con
 
 #### Static Metadata (always read)
 
-Stablecoin metadata lives in `shared/data/stablecoins/*.json` (split across `usd-major.json`, `usd-minor.json`, `non-usd.json`, `commodity.json`). Find the coin's entry by `id` and check:
+Stablecoin metadata lives in `shared/data/stablecoins/*.json` (split across `usd-major.json`, `usd-minor.json`, `non-usd.json`, `commodity.json`, and `pre-launch.json`). Find the coin's entry by `id` and check:
 
 - **Classification flags**: `flags.backing`, `flags.governance`, `flags.pegCurrency`, `flags.yieldBearing`, `flags.navToken`
 - **Collateral & mechanism**: `collateral` (free-text description), `pegMechanism` (how peg is maintained)

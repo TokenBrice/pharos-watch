@@ -8,7 +8,7 @@ user_invocable: true
 
 Two-phase workflow:
 1. **Gap Discovery** — fetch DefiLlama stablecoins list, compare chain coverage against our contracts, apply supply thresholds, produce gap report
-2. **Population** — for each gap, fetch CoinGecko address, verify on block explorer, write to stablecoins.ts
+2. **Population** — for each gap, fetch CoinGecko address, verify on block explorer, write to the matching `shared/data/stablecoins/*.json` entry
 
 ### Input
 
@@ -265,8 +265,9 @@ binancecoin              (BNB Beacon Chain / BEP2 — legacy)
 
 ### Step 1 — Load our stablecoin data
 
-1. Read `shared/lib/stablecoins.ts`
+1. Read `shared/data/stablecoins/{usd-major,usd-minor,non-usd,commodity,pre-launch}.json`
 2. For each stablecoin, extract: `id`, `symbol`, `name`, `llamaId`, `geckoId`, `contracts[]` (list of chain IDs already populated)
+3. Treat the runtime stablecoin re-export as import-only; contract metadata edits belong in the JSON shards and must match `shared/lib/stablecoins/schema.ts`
 
 ### Step 2 — Fetch DefiLlama data
 
@@ -406,11 +407,11 @@ vechain        | VeChain       | https://explore.vechain.org               | nul
    - Type: "evm" or "other" (use "tron" only for Tron)
    - Logo path: `/chains/{chainId}.png`
 
-### Step 5 — Write to stablecoins.ts
+### Step 5 — Write to the stablecoin JSON shard
 
-1. Edit the coin's `contracts` array using the Edit tool
+1. Edit the coin's `contracts` array in the matching `shared/data/stablecoins/*.json` entry using the Edit tool
 2. Append new entries after existing ones
-3. Format: `{ chain: "{chainId}", address: "{address}", decimals: {N} }`
+3. Format as JSON objects with `chain`, `address`, and `decimals`
 4. EVM addresses: lowercase hex
 5. Non-EVM: preserve original case from CoinGecko
 6. Sort the full contracts array by chain name after adding
@@ -460,7 +461,7 @@ Build: PASS/FAIL
 - Don't overwrite any existing contract entry
 - Don't add the same chain twice for a coin
 - Don't guess decimals — if CG returns null and it's unclear, skip
-- Don't modify any fields other than `contracts` in stablecoins.ts
+- Don't modify any fields other than `contracts` in the stablecoin JSON entry
 - Don't modify any fields other than `CHAIN_META` in chains.ts
 - Don't skip block explorer verification — every address must be confirmed
 - Don't process coins without a `geckoId` — no CG lookup possible

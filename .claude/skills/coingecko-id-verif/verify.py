@@ -1,137 +1,181 @@
 #!/usr/bin/env python3
 """
-CoinGecko ID Verification Script
+Verify CoinGecko IDs for tracked stablecoins.
 
-Cross-references geckoIds from shared/lib/stablecoins.ts against CoinGecko's
-contract-address lookup to verify correctness.
+Cross-checks:
+1. Our configured geckoId in shared/data/stablecoins/*.json
+2. DefiLlama's gecko_id from stablecoins.llama.fi
+3. CoinGecko's contract-address lookup for the Ethereum deployment
 
 Usage:
-    python3 verify.py --coin usdt-tether   # Verify single coin by ticker-issuer ID
-    python3 verify.py --scan               # Scan for DL vs our config mismatches
-    python3 verify.py --all                # Full audit of all tracked coins
+    python3 verify.py --coin usdt-tether
+    python3 verify.py --scan
+    python3 verify.py --all
+    python3 verify.py --coin usdt-tether --repo /abs/path/to/stablecoin-dashboard
 """
+
+from __future__ import annotations
 
 import argparse
 import json
-import os
 import re
 import subprocess
 import sys
 import time
-
-SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
-REPO_ROOT = os.path.abspath(os.path.join(SCRIPT_DIR, "..", "..", ".."))
-STABLECOINS_TS = os.path.join(REPO_ROOT, "shared", "lib", "stablecoins.ts")
-DEV_VARS = os.path.join(REPO_ROOT, "worker", ".dev.vars")
+from pathlib import Path
 
 CG_BASE = "https://pro-api.coingecko.com/api/v3"
 CG_FREE_BASE = "https://api.coingecko.com/api/v3"
 DL_BASE = "https://stablecoins.llama.fi"
+STABLECOIN_DATA_FILES = [
+    Path("shared/data/stablecoins/usd-major.json"),
+    Path("shared/data/stablecoins/usd-minor.json"),
+    Path("shared/data/stablecoins/non-usd.json"),
+    Path("shared/data/stablecoins/commodity.json"),
+    Path("shared/data/stablecoins/pre-launch.json"),
+]
 
 
-def load_cg_key() -> str | None:
-    """Load CoinGecko API key from worker/.dev.vars."""
-    if not os.path.exists(DEV_VARS):
+def run(cmd: list[str], timeout: int = 30) -> str:
+    result = subprocess.run(cmd, capture_output=True, text=True, timeout=timeout)
+    return result.stdout
+
+
+def is_repo_root(path: Path) -> bool:
+    return (
+        (path / "shared" / "data" / "stablecoins" / "canonical-order.json").exists()
+        and (path / "shared" / "lib" / "stablecoins" / "schema.ts").exists()
+        and (path / "worker").exists()
+    )
+
+
+def detect_repo_root(explicit_repo: str | None) -> Path:
+    candidates: list[Path] = []
+    if explicit_repo:
+        candidates.append(Path(explicit_repo).expanduser().resolve())
+
+    cwd = Path.cwd().resolve()
+    candidates.extend([cwd, *cwd.parents])
+
+    script_dir = Path(__file__).resolve().parent
+    candidates.extend([script_dir, *script_dir.parents])
+
+    try:
+        git_root = run(["git", "rev-parse", "--show-toplevel"], timeout=5).strip()
+        if git_root:
+            candidates.append(Path(git_root).resolve())
+    except Exception:
+        pass
+
+    seen: set[Path] = set()
+    for candidate in candidates:
+        if candidate in seen:
+            continue
+        seen.add(candidate)
+        if is_repo_root(candidate):
+            return candidate
+
+    print("ERROR: Could not locate the stablecoin-dashboard repo root.")
+    print("Run from the repo root or pass --repo /abs/path/to/stablecoin-dashboard")
+    sys.exit(1)
+
+
+def load_cg_key(repo_root: Path) -> str | None:
+    dev_vars = repo_root / "worker" / ".dev.vars"
+    if not dev_vars.exists():
         return None
-    with open(DEV_VARS) as f:
-        for line in f:
-            if line.strip().startswith("COINGECKO_API_KEY"):
-                return line.split("=", 1)[1].strip().strip('"')
+
+    for line in dev_vars.read_text().splitlines():
+        if line.strip().startswith("COINGECKO_API_KEY"):
+            return line.split("=", 1)[1].strip().strip('"').strip("'")
     return None
 
 
-def cg_fetch(path: str, api_key: str | None) -> dict | None:
-    """Fetch from CoinGecko API with rate limiting."""
+def fetch_json(url: str, api_key: str | None = None, timeout: int = 30) -> dict | list | None:
     time.sleep(0.4)
-    base = CG_BASE if api_key else CG_FREE_BASE
-    headers = ["-H", f"x-cg-pro-api-key: {api_key}"] if api_key else []
-    result = subprocess.run(
-        ["curl", "-s", f"{base}{path}"] + headers,
-        capture_output=True,
-        text=True,
-    )
-    if not result.stdout.strip():
+    cmd = ["curl", "-s", url]
+    if api_key:
+        cmd.extend(["-H", f"x-cg-pro-api-key: {api_key}"])
+    try:
+        raw = run(cmd, timeout=timeout).strip()
+    except Exception:
+        return None
+    if not raw:
         return None
     try:
-        return json.loads(result.stdout)
+        return json.loads(raw)
     except json.JSONDecodeError:
         return None
 
 
-def parse_stablecoins_ts() -> list[dict]:
-    """Parse stablecoins.ts to extract id, symbol, geckoId, llamaId, and eth contract address."""
-    with open(STABLECOINS_TS) as f:
-        content = f.read()
+def cg_fetch(path: str, api_key: str | None) -> dict | None:
+    base = CG_BASE if api_key else CG_FREE_BASE
+    data = fetch_json(f"{base}{path}", api_key=api_key)
+    return data if isinstance(data, dict) else None
 
-    coins = []
-    lines = content.split("\n")
-    current_id = None
-    current_symbol = None
-    current_gecko = None
-    current_llama = None
-    current_contracts: list[dict] = []
 
-    for line in lines:
-        # Match function calls: usd("ticker-issuer", "Name", "SYMBOL", ...)
-        m = re.match(
-            r'\s*(?:usd|eur|other|coin)\("([^"]+)",\s*"[^"]+",\s*"([^"]+)"', line
-        )
-        if m:
-            # Save previous coin if any
-            if current_id and current_gecko:
-                eth_addr = None
-                for c in current_contracts:
-                    if c.get("chain") == "ethereum":
-                        eth_addr = c.get("address")
-                        break
-                coins.append(
-                    {
-                        "id": current_id,
-                        "symbol": current_symbol,
-                        "geckoId": current_gecko,
-                        "llamaId": current_llama,
-                        "eth_address": eth_addr,
-                    }
-                )
-            current_id = m.group(1)
-            current_symbol = m.group(2)
-            current_gecko = None
-            current_llama = None
-            current_contracts = []
+def read_json(path: Path) -> object:
+    try:
+        return json.loads(path.read_text())
+    except Exception as exc:
+        print(f"ERROR: Could not read {path}: {exc}")
+        sys.exit(1)
 
-        # Match geckoId
-        m2 = re.search(r'geckoId:\s*"([^"]+)"', line)
-        if m2 and current_id:
-            current_gecko = m2.group(1)
 
-        # Match llamaId
-        m4 = re.search(r'llamaId:\s*"([^"]+)"', line)
-        if m4 and current_id:
-            current_llama = m4.group(1)
+def ethereum_address(asset: dict) -> str | None:
+    contracts = asset.get("contracts")
+    if not isinstance(contracts, list):
+        return None
 
-        # Match contract entries
-        m3 = re.search(
-            r'\{\s*chain:\s*"([^"]+)",\s*address:\s*"([^"]+)"', line
-        )
-        if m3 and current_id:
-            current_contracts.append(
-                {"chain": m3.group(1), "address": m3.group(2)}
-            )
+    for contract in contracts:
+        if not isinstance(contract, dict):
+            continue
+        if contract.get("chain") == "ethereum" and contract.get("address"):
+            return str(contract["address"])
+    return None
 
-    # Save last coin
-    if current_id and current_gecko:
-        eth_addr = None
-        for c in current_contracts:
-            if c.get("chain") == "ethereum":
-                eth_addr = c.get("address")
-                break
+
+def load_stablecoin_assets(repo_root: Path) -> list[dict]:
+    canonical_path = repo_root / "shared" / "data" / "stablecoins" / "canonical-order.json"
+    canonical_order = read_json(canonical_path)
+    if not isinstance(canonical_order, list):
+        print(f"ERROR: {canonical_path} is not a JSON array")
+        sys.exit(1)
+
+    assets_by_id: dict[str, dict] = {}
+    for rel_path in STABLECOIN_DATA_FILES:
+        path = repo_root / rel_path
+        assets = read_json(path)
+        if not isinstance(assets, list):
+            print(f"ERROR: {path} is not a JSON array")
+            sys.exit(1)
+
+        for asset in assets:
+            if not isinstance(asset, dict) or not asset.get("id"):
+                continue
+            coin_id = str(asset["id"])
+            asset = dict(asset)
+            asset["_source"] = str(rel_path)
+            if coin_id in assets_by_id:
+                print(f"ERROR: Duplicate stablecoin ID in JSON registry: {coin_id}")
+                sys.exit(1)
+            assets_by_id[coin_id] = asset
+
+    coins: list[dict] = []
+    for coin_id in canonical_order:
+        asset = assets_by_id.get(str(coin_id))
+        if not asset:
+            print(f"ERROR: canonical-order.json references unknown stablecoin ID: {coin_id}")
+            sys.exit(1)
+
         coins.append(
             {
-                "id": current_id,
-                "symbol": current_symbol,
-                "geckoId": current_gecko,
-                "llamaId": current_llama,
-                "eth_address": eth_addr,
+                "id": asset.get("id"),
+                "symbol": asset.get("symbol"),
+                "geckoId": asset.get("geckoId"),
+                "llamaId": asset.get("llamaId"),
+                "eth_address": ethereum_address(asset),
+                "source": asset.get("_source"),
             }
         )
 
@@ -139,17 +183,16 @@ def parse_stablecoins_ts() -> list[dict]:
 
 
 def fetch_dl_gecko_ids() -> dict[str, dict]:
-    """Fetch geckoIds from DefiLlama stablecoins list."""
-    result = subprocess.run(
-        ["curl", "-s", f"{DL_BASE}/stablecoins?includePrices=true"],
-        capture_output=True,
-        text=True,
-        timeout=30,
-    )
-    data = json.loads(result.stdout)
-    dl_map = {}
+    data = fetch_json(f"{DL_BASE}/stablecoins?includePrices=true", timeout=30)
+    if not isinstance(data, dict):
+        return {}
+
+    dl_map: dict[str, dict] = {}
     for coin in data.get("peggedAssets", []):
-        dl_map[str(coin.get("id"))] = {
+        if not isinstance(coin, dict):
+            continue
+        coin_id = str(coin.get("id"))
+        dl_map[coin_id] = {
             "symbol": coin.get("symbol"),
             "gecko_id": coin.get("gecko_id"),
             "price": coin.get("price"),
@@ -157,126 +200,120 @@ def fetch_dl_gecko_ids() -> dict[str, dict]:
     return dl_map
 
 
-def verify_coin(
-    coin: dict, dl_gecko: str | None, dl_price: float | None, api_key: str | None
-) -> dict:
-    """Verify a single coin's geckoId. Returns a result dict."""
+def verify_coin(coin: dict, dl_gecko: str | None, api_key: str | None) -> dict:
+    our_gecko = coin.get("geckoId")
     result = {
         "id": coin["id"],
         "symbol": coin["symbol"],
-        "our_gecko": coin["geckoId"],
+        "our_gecko": our_gecko,
         "dl_gecko": dl_gecko,
-        "dl_price": dl_price,
         "our_ok": None,
         "dl_ok": None,
         "contract_gecko": None,
         "verdict": None,
+        "source": coin.get("source"),
     }
 
     eth_address = coin.get("eth_address")
 
-    # Check 1: Our geckoId
-    d1 = cg_fetch(
-        f"/coins/{coin['geckoId']}?localization=false&tickers=false&community_data=false&developer_data=false",
-        api_key,
-    )
-    if d1 and "id" in d1:
-        cg_addr = d1.get("platforms", {}).get("ethereum", "")
-        result["our_name"] = d1.get("name")
-        result["our_addr"] = cg_addr
-        result["our_price"] = (
-            d1.get("market_data", {}).get("current_price", {}).get("usd")
+    if our_gecko:
+        our = cg_fetch(
+            f"/coins/{our_gecko}?localization=false&tickers=false&community_data=false&developer_data=false",
+            api_key,
         )
-        if eth_address and cg_addr:
-            result["our_ok"] = cg_addr.lower() == eth_address.lower()
+        if our and "id" in our:
+            cg_addr = our.get("platforms", {}).get("ethereum", "")
+            result["our_name"] = our.get("name")
+            result["our_addr"] = cg_addr
+            result["our_price"] = our.get("market_data", {}).get("current_price", {}).get("usd")
+            if eth_address and cg_addr:
+                result["our_ok"] = cg_addr.lower() == eth_address.lower()
+            else:
+                result["our_ok"] = True
         else:
-            result["our_ok"] = True  # can't verify without address
+            result["our_ok"] = False
+            result["our_name"] = "NOT FOUND"
     else:
         result["our_ok"] = False
-        result["our_name"] = "NOT FOUND"
+        result["our_name"] = "MISSING"
 
-    # Check 2: DL geckoId (if different)
-    if dl_gecko and dl_gecko != coin["geckoId"]:
+    if dl_gecko and dl_gecko != our_gecko:
         clean = re.sub(r"-?wrong-?", "", dl_gecko).rstrip("-")
-        d2 = cg_fetch(
+        theirs = cg_fetch(
             f"/coins/{clean}?localization=false&tickers=false&community_data=false&developer_data=false",
             api_key,
         )
-        if d2 and "id" in d2:
-            cg_addr2 = d2.get("platforms", {}).get("ethereum", "")
-            result["dl_name"] = d2.get("name")
-            result["dl_addr"] = cg_addr2
-            if eth_address and cg_addr2:
-                result["dl_ok"] = cg_addr2.lower() == eth_address.lower()
+        if theirs and "id" in theirs:
+            cg_addr = theirs.get("platforms", {}).get("ethereum", "")
+            result["dl_name"] = theirs.get("name")
+            result["dl_addr"] = cg_addr
+            if eth_address and cg_addr:
+                result["dl_ok"] = cg_addr.lower() == eth_address.lower()
             else:
                 result["dl_ok"] = False
         else:
             result["dl_ok"] = False
             result["dl_name"] = "NOT FOUND"
 
-    # Check 3: Contract address ground truth
     if eth_address:
-        d3 = cg_fetch(f"/coins/ethereum/contract/{eth_address}", api_key)
-        if d3 and "id" in d3:
-            result["contract_gecko"] = d3.get("id")
-            result["contract_name"] = d3.get("name")
-
-            if result["contract_gecko"] == coin["geckoId"]:
+        contract = cg_fetch(f"/coins/ethereum/contract/{eth_address}", api_key)
+        if contract and "id" in contract:
+            result["contract_gecko"] = contract.get("id")
+            result["contract_name"] = contract.get("name")
+            clean_dl = re.sub(r"-?wrong-?", "", dl_gecko or "").rstrip("-")
+            if our_gecko and result["contract_gecko"] == our_gecko:
                 result["verdict"] = "OUR_CORRECT"
-            elif dl_gecko and result["contract_gecko"] == re.sub(
-                r"-?wrong-?", "", dl_gecko
-            ).rstrip("-"):
+            elif clean_dl and result["contract_gecko"] == clean_dl:
                 result["verdict"] = "DL_CORRECT"
+            elif not our_gecko:
+                result["verdict"] = f"MISSING (contract={result['contract_gecko']})"
             else:
                 result["verdict"] = f"NEITHER (contract={result['contract_gecko']})"
         else:
             result["verdict"] = "NOT_ON_CG"
     else:
-        result["verdict"] = "NO_ETH_ADDRESS"
+        result["verdict"] = "NO_ETH_ADDRESS" if our_gecko else "NO_GECKO_ID"
 
     return result
 
 
-def print_result(r: dict) -> None:
-    """Pretty-print a verification result."""
+def print_result(result: dict) -> None:
     print(f"\n{'=' * 60}")
-    print(f"  {r['id']} {r['symbol']}")
-    print(f"  Our geckoId: {r['our_gecko']}")
-    if r["dl_gecko"]:
-        print(f"  DL geckoId:  {r['dl_gecko']}")
+    print(f"  {result['id']} {result['symbol']}")
+    print(f"  Source:      {result.get('source', '?')}")
+    print(f"  Our geckoId: {result['our_gecko'] or '<missing>'}")
+    if result["dl_gecko"]:
+        print(f"  DL geckoId:  {result['dl_gecko']}")
     print(f"{'=' * 60}")
 
-    # Our geckoId
-    status = "OK" if r["our_ok"] else "FAIL"
-    name = r.get("our_name", "?")
-    addr = r.get("our_addr", "N/A")
-    price = r.get("our_price")
-    price_str = f"${price}" if price else "N/A"
-    print(f"  [OUR]      {r['our_gecko']:<30} -> {name:<30} addr_match={status}  price={price_str}")
+    status = "OK" if result["our_ok"] else "FAIL"
+    price = result.get("our_price")
+    price_str = f"${price}" if price is not None else "N/A"
+    our_gecko = result["our_gecko"] or "<missing>"
+    print(
+        f"  [OUR]      {our_gecko:<30} -> {result.get('our_name', '?'):<30} "
+        f"addr_match={status}  price={price_str}"
+    )
 
-    # DL geckoId
-    if r.get("dl_name"):
-        status2 = "OK" if r["dl_ok"] else "FAIL"
-        print(
-            f"  [DL]       {r['dl_gecko']:<30} -> {r['dl_name']:<30} addr_match={status2}"
-        )
+    if result.get("dl_name"):
+        status = "OK" if result["dl_ok"] else "FAIL"
+        dl_gecko = result["dl_gecko"] or "<missing>"
+        print(f"  [DL]       {dl_gecko:<30} -> {result['dl_name']:<30} addr_match={status}")
 
-    # Contract ground truth
-    if r["contract_gecko"]:
-        print(f"  [CONTRACT] {r.get('contract_gecko', 'N/A'):<30} -> {r.get('contract_name', '?')}")
+    if result["contract_gecko"]:
+        print(f"  [CONTRACT] {result['contract_gecko']:<30} -> {result.get('contract_name', '?')}")
 
-    # Verdict
-    verdict = r["verdict"]
+    verdict = result["verdict"]
     if verdict == "OUR_CORRECT":
-        print(f"  VERDICT: Our geckoId is CORRECT")
+        print("  VERDICT: Our geckoId is CORRECT")
     elif verdict == "DL_CORRECT":
-        print(
-            f"  VERDICT: DL geckoId is correct, ours is WRONG -> change to '{r['contract_gecko']}'"
-        )
+        print(f"  VERDICT: DL geckoId is correct, ours is WRONG -> change to '{result['contract_gecko']}'")
     elif verdict == "NOT_ON_CG":
-        print(f"  VERDICT: Token not found on CoinGecko (contract lookup failed)")
+        print("  VERDICT: Token not found on CoinGecko (contract lookup failed)")
     elif verdict == "NO_ETH_ADDRESS":
-        print(f"  VERDICT: No Ethereum address to verify against")
+        print("  VERDICT: No Ethereum address to verify against")
+    elif verdict == "NO_GECKO_ID":
+        print("  VERDICT: No geckoId configured and no Ethereum address to verify against")
     else:
         print(f"  VERDICT: {verdict}")
 
@@ -284,41 +321,36 @@ def print_result(r: dict) -> None:
 def main() -> None:
     parser = argparse.ArgumentParser(description="Verify CoinGecko IDs for tracked stablecoins")
     group = parser.add_mutually_exclusive_group(required=True)
-    group.add_argument("--coin", help="Verify a single coin by ticker-issuer ID (e.g. usdt-tether)")
-    group.add_argument(
-        "--scan",
-        action="store_true",
-        help="Scan for geckoId mismatches between our config and DefiLlama",
-    )
-    group.add_argument(
-        "--all", action="store_true", help="Verify all tracked coins (slow)"
-    )
+    group.add_argument("--coin", help="Verify a single coin by ticker-issuer ID")
+    group.add_argument("--scan", action="store_true", help="Verify only DL/config mismatches")
+    group.add_argument("--all", action="store_true", help="Verify all tracked coins")
+    parser.add_argument("--repo", help="Absolute or relative path to the stablecoin-dashboard repo")
     args = parser.parse_args()
 
-    api_key = load_cg_key()
+    repo_root = detect_repo_root(args.repo)
+    api_key = load_cg_key(repo_root)
     if not api_key:
         print("WARNING: No CoinGecko API key found, using free API (rate limited)")
 
-    coins = parse_stablecoins_ts()
-    coins_by_id = {c["id"]: c for c in coins}
-
-    print(f"Loaded {len(coins)} tracked coins from stablecoins.ts")
+    coins = load_stablecoin_assets(repo_root)
+    coins_by_id = {coin["id"]: coin for coin in coins}
+    print(f"Loaded {len(coins)} tracked coins from {repo_root / 'shared/data/stablecoins/*.json'}")
 
     if args.coin:
         coin = coins_by_id.get(args.coin)
         if not coin:
             print(f"ERROR: Coin '{args.coin}' not found in tracked list")
-            print(f"  (IDs use ticker-issuer format, e.g. 'usdt-tether')")
+            print("IDs use ticker-issuer format, for example: usdt-tether")
             sys.exit(1)
+
         dl_map = fetch_dl_gecko_ids()
         dl = dl_map.get(coin.get("llamaId", ""), {})
-        r = verify_coin(coin, dl.get("gecko_id"), dl.get("price"), api_key)
-        print_result(r)
+        print_result(verify_coin(coin, dl.get("gecko_id"), api_key))
+        return
 
-    elif args.scan:
-        print("Fetching DefiLlama geckoIds...")
-        dl_map = fetch_dl_gecko_ids()
+    dl_map = fetch_dl_gecko_ids()
 
+    if args.scan:
         mismatches = []
         for coin in coins:
             llama_id = coin.get("llamaId")
@@ -326,39 +358,34 @@ def main() -> None:
                 continue
             dl = dl_map.get(llama_id, {})
             dl_gecko = dl.get("gecko_id")
-            if dl_gecko and dl_gecko != coin["geckoId"]:
-                mismatches.append((coin, dl_gecko, dl.get("price")))
+            if dl_gecko and dl_gecko != coin.get("geckoId"):
+                mismatches.append((coin, dl_gecko))
 
         if not mismatches:
-            print("No geckoId mismatches found!")
+            print("No geckoId mismatches found")
             return
 
-        print(f"\nFound {len(mismatches)} mismatches. Verifying against CoinGecko...\n")
-        for coin, dl_gecko, dl_price in mismatches:
-            r = verify_coin(coin, dl_gecko, dl_price, api_key)
-            print_result(r)
+        print(f"Found {len(mismatches)} mismatches. Verifying against CoinGecko...")
+        for coin, dl_gecko in mismatches:
+            print_result(verify_coin(coin, dl_gecko, api_key))
+        return
 
-    elif args.all:
-        print("Fetching DefiLlama geckoIds...")
-        dl_map = fetch_dl_gecko_ids()
-        print(f"Verifying all {len(coins)} coins (this will take a while)...\n")
+    print(f"Verifying all {len(coins)} coins. This may take a while...")
+    issues = []
+    for index, coin in enumerate(coins, start=1):
+        dl = dl_map.get(coin.get("llamaId", ""), {})
+        result = verify_coin(coin, dl.get("gecko_id"), api_key)
+        print_result(result)
+        if result["verdict"] not in ("OUR_CORRECT", "NOT_ON_CG", "NO_ETH_ADDRESS"):
+            issues.append(result)
+        print(f"  [{index}/{len(coins)}]")
 
-        issues = []
-        for i, coin in enumerate(coins):
-            dl = dl_map.get(coin.get("llamaId", ""), {})
-            r = verify_coin(coin, dl.get("gecko_id"), dl.get("price"), api_key)
-            print_result(r)
-            if r["verdict"] not in ("OUR_CORRECT", "NOT_ON_CG", "NO_ETH_ADDRESS"):
-                issues.append(r)
-            # Progress
-            print(f"  [{i + 1}/{len(coins)}]")
-
-        if issues:
-            print(f"\n{'=' * 60}")
-            print(f"  ISSUES FOUND: {len(issues)}")
-            print(f"{'=' * 60}")
-            for r in issues:
-                print(f"  {r['id']:>5} {r['symbol']:<10} {r['verdict']}")
+    if issues:
+        print(f"\n{'=' * 60}")
+        print(f"  ISSUES FOUND: {len(issues)}")
+        print(f"{'=' * 60}")
+        for result in issues:
+            print(f"  {result['id']:<28} {result['symbol']:<10} {result['verdict']}")
 
 
 if __name__ == "__main__":

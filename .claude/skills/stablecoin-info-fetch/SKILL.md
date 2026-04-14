@@ -1,12 +1,12 @@
 ---
 name: stablecoin-info-fetch
-description: Use when asked to verify, populate, or audit a single stablecoin's detail fields (collateral, peg mechanism, jurisdiction, links, geckoId, contracts). Run per-coin to fill gaps or validate existing data in shared/lib/stablecoins.ts.
+description: Use when asked to verify, populate, or audit a single tracked stablecoin's detail fields (collateral, peg mechanism, jurisdiction, links, geckoId, contracts). Run per-coin to fill gaps or validate existing data in shared/data/stablecoins/*.json.
 user_invocable: true
 ---
 
 ## Stablecoin Info Fetch & Verify
 
-Verify and populate a single stablecoin's metadata in `shared/lib/stablecoins.ts`. Designed to be run sequentially — one coin at a time.
+Verify and populate a single tracked stablecoin's metadata in the matching JSON shard under `shared/data/stablecoins/*.json`. Designed to be run sequentially — one coin at a time.
 
 ### Input
 
@@ -44,9 +44,10 @@ Many sites (CoinGecko, Etherscan, etc.) block plain HTTP requests with 403s. **A
 
 #### Step 1 — Read current state
 
-1. Read `shared/lib/stablecoins.ts` and locate the coin's entry
+1. Read `shared/data/stablecoins/{usd-major,usd-minor,non-usd,commodity,pre-launch}.json` and locate the coin's entry
 2. List which fields are **present**, **missing**, or **suspect** (vague placeholders like "U.S. dollar reserves" or "Direct redemption through issuer")
 3. Note the coin's `flags` (backing, pegCurrency, governance) — these are authoritative and should NOT be changed by this skill
+4. Treat the runtime stablecoin re-export as import-only. If the asset is dead/cemetery-only, use `shared/data/dead-stablecoins.json` and `DeadStablecoinAssetSchema` instead of this tracked-metadata workflow
 
 #### Step 2 — Research
 
@@ -110,13 +111,13 @@ For each field that needs updating:
 
 After user approval:
 
-1. Edit the coin's entry in `shared/lib/stablecoins.ts` using the `Edit` tool
-2. Preserve the existing code style:
-   - Use the `usd()` / `eur()` / `other()` helper functions (don't expand to raw `coin()`)
-   - Contract addresses: lowercase hex for EVM, original case for Tron
+1. Edit the coin's JSON object in the matching `shared/data/stablecoins/*.json` shard using the `Edit` tool
+2. If adding a new tracked coin, also keep `shared/data/stablecoins/canonical-order.json` aligned
+3. Preserve the existing JSON style:
+   - Contract addresses: lowercase hex for EVM, original case for Tron and other non-EVM chains
    - Links order: Website, Twitter, Docs, Proof of Reserve (if applicable)
-   - Keep entries concise — no trailing commas on last array items
-3. Run `npm run build` to verify the edit compiles cleanly
+   - Keep entries concise
+4. Run `npm run build` to verify the edit compiles cleanly
 
 ### Quality Standards
 
@@ -132,7 +133,7 @@ After user approval:
 - `flags` (backing, pegCurrency, governance, yieldBearing, rwa, navToken) — these are set intentionally
 - `id`, `name`, `symbol` — canonical identifiers
 - `commodityOunces` — requires domain-specific knowledge (gold/silver peg normalization)
-- `protocolSlug` / `cmcSlug` — only add if specifically identified as needed for price fallback
+- `detailProvider`, `status`, `protocolSlug`, or `cmcSlug` — only add or change if specifically identified as needed
 
 ### Anti-Patterns
 
