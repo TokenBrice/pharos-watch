@@ -46,7 +46,7 @@ import {
   isReplaySafePriceSource,
   isSingleSourceDepegAuthoritative,
 } from "../../lib/pricing-source-policy";
-import { applyAcceptedPriceCandidate, applyProtocolPriceOverrides } from "./pricing";
+import { applyAcceptedPriceCandidate, applyProtocolPriceOverrides, type ProtocolPriceOverride } from "./pricing";
 
 const PRICE_CACHE_TTL = 6 * 60 * 60;
 
@@ -78,6 +78,7 @@ export interface PriceValidationResult {
 
 export interface SharedPriceCompletionInput extends Omit<PostEnrichmentInput, "missingBefore"> {
   missingBefore: Set<string>;
+  authoritativeOverrides?: Map<string, ProtocolPriceOverride>;
 }
 
 export interface SharedPriceCompletionResult extends PriceValidationResult {
@@ -355,7 +356,8 @@ export async function runSharedPriceCompletion(
   input: SharedPriceCompletionInput,
   abortStagePrefix: string,
 ): Promise<SharedPriceCompletionResult | CronResult> {
-  const authoritativeOverrides = await fetchAuthoritativeLivePriceOverrides(input.assets, input.signal);
+  const authoritativeOverrides =
+    input.authoritativeOverrides ?? await fetchAuthoritativeLivePriceOverrides(input.assets, input.signal);
   const authoritativeOverrideCount = applyProtocolPriceOverrides({
     assets: input.assets,
     overrides: authoritativeOverrides,

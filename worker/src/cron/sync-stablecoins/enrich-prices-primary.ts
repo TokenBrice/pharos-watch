@@ -18,11 +18,12 @@ import {
   BITSTAMP_KNOWN_SYMBOLS,
   COINBASE_KNOWN_SYMBOLS,
   KRAKEN_KNOWN_SYMBOLS,
-  fetchBinancePrices,
+  fetchBinancePricesDetailed,
   fetchBitstampPrices,
   fetchCoinbasePrices,
   fetchKrakenPrices,
 } from "../../lib/cex-tickers";
+import type { PricingProviderAttemptDiagnostic } from "../../lib/pricing-provider-diagnostics";
 import { fetchRedstonePrices, REDSTONE_TRACKED_SYMBOL_ALLOWLIST } from "../../lib/redstone";
 import { loadDexPriceRows, loadDexPoolChallengers, loadDexPriceSources } from "../../lib/depeg-helpers";
 import { isTrustedDexPriceRow } from "../../lib/depeg-trust-policy";
@@ -454,7 +455,12 @@ export async function fetchPrimaryPrices(
   coingeckoApiKey?: string | null,
   chainRpcs?: Map<string, ChainRpcConfig>,
   dlListPrices?: Map<string, number | DlListQuote>,
-): Promise<{ results: Map<string, PrimaryPriceResult>; stats: PriceValidationStats; cgPrices: Map<string, number> }> {
+): Promise<{
+  results: Map<string, PrimaryPriceResult>;
+  stats: PriceValidationStats;
+  cgPrices: Map<string, number>;
+  providerDiagnostics?: PricingProviderAttemptDiagnostic[];
+}> {
   throwIfAborted(signal);
   const resolveDlListQuote = (assetId: string): DlListQuote | undefined => {
     const entry = dlListPrices?.get(assetId);
@@ -508,6 +514,7 @@ export async function fetchPrimaryPrices(
   let curveObservedAt: number | null = null;
   let curveOracleObservedAt: number | null = null;
   let staleCgPriceRows = 0;
+  const providerDiagnostics: PricingProviderAttemptDiagnostic[] = [];
 
   const fetches: Promise<void>[] = [];
 
@@ -617,7 +624,8 @@ export async function fetchPrimaryPrices(
       (async () => {
         if (sourceAllowed.binance) {
           await runPrimaryProviderFetch(db, signal, CIRCUIT_SOURCE.BINANCE_PRICES, "Binance ticker", async () => {
-            const prices = await fetchBinancePrices(signal);
+            const { prices, diagnostic } = await fetchBinancePricesDetailed(signal);
+            providerDiagnostics.push(diagnostic);
             for (const [symbol, price] of prices) binancePrices.set(symbol, price);
             if (prices.size > 0) binanceObservedAt = Math.floor(Date.now() / 1000);
             return prices.size > 0;
@@ -768,7 +776,7 @@ export async function fetchPrimaryPrices(
     `[primary-prices] ${stats.attempted} assets: ${stats.high} high, ${stats.singleSource} single-source, ${stats.low} low confidence`,
   );
 
-  return { results, stats, cgPrices };
+  return { results, stats, cgPrices, providerDiagnostics };
 }
 
 /**

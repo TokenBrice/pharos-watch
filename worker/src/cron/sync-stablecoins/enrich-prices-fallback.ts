@@ -1,5 +1,6 @@
 import type { PeggedAsset } from "./enrich-prices-shared";
 import { runDlContractPasses, runCmcPass, runDexScreenerPass, runJupiterPass } from "./enrich-prices-passes";
+import type { PricingProviderAttemptDiagnostic } from "../../lib/pricing-provider-diagnostics";
 
 export interface EnrichmentPassCounts {
   pass1: number;
@@ -12,6 +13,7 @@ export interface EnrichmentPassCounts {
 interface EnrichmentPassResult {
   counts: Partial<EnrichmentPassCounts>;
   failures?: string[];
+  diagnostics?: PricingProviderAttemptDiagnostic[];
 }
 
 interface EnrichmentPassContext {
@@ -54,11 +56,16 @@ const FALLBACK_PRICE_PASSES: readonly EnrichmentPassDefinition[] = [
   {
     label: "Jupiter",
     failureLabel: "jupiter",
-    run: async ({ assets, fxRates, db, signal }) => ({
-      counts: {
-        passJupiter: (await runJupiterPass(assets, fxRates, db, signal)).resolved,
-      },
-    }),
+    run: async ({ assets, fxRates, db, signal }) => {
+      const result = await runJupiterPass(assets, fxRates, db, signal);
+      return {
+        counts: {
+          passJupiter: result.resolved,
+        },
+        failures: result.failures,
+        diagnostics: result.diagnostics,
+      };
+    },
   },
   {
     label: "DexScreener",
@@ -84,9 +91,11 @@ function createEmptyEnrichmentCounts(): EnrichmentPassCounts {
 export async function runEnrichmentPasses(context: EnrichmentPassContext): Promise<{
   counts: EnrichmentPassCounts;
   failedPasses: string[];
+  providerDiagnostics: PricingProviderAttemptDiagnostic[];
 }> {
   const counts = createEmptyEnrichmentCounts();
   const failedPasses: string[] = [];
+  const providerDiagnostics: PricingProviderAttemptDiagnostic[] = [];
 
   for (const pass of FALLBACK_PRICE_PASSES) {
     try {
@@ -99,6 +108,9 @@ export async function runEnrichmentPasses(context: EnrichmentPassContext): Promi
       if (result.failures?.length) {
         failedPasses.push(...result.failures);
       }
+      if (result.diagnostics?.length) {
+        providerDiagnostics.push(...result.diagnostics);
+      }
     } catch (err) {
       if (context.signal?.aborted) throw err instanceof Error ? err : new Error(String(err));
       console.warn(`[sync-stablecoins] ${pass.label} enrichment failed:`, err);
@@ -108,5 +120,5 @@ export async function runEnrichmentPasses(context: EnrichmentPassContext): Promi
     }
   }
 
-  return { counts, failedPasses };
+  return { counts, failedPasses, providerDiagnostics };
 }

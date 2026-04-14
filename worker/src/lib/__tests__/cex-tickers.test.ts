@@ -4,6 +4,7 @@ import {
   BITSTAMP_KNOWN_SYMBOLS,
   COINBASE_KNOWN_SYMBOLS,
   KRAKEN_KNOWN_SYMBOLS,
+  fetchBinancePricesDetailed,
   fetchBinancePrices,
   fetchBitstampPrices,
   fetchCoinbasePrices,
@@ -30,11 +31,11 @@ describe("fetchBinancePrices", () => {
   });
 
   it("returns empty map on failure", async () => {
-    const cancel = vi.fn().mockResolvedValue(undefined);
-    vi.stubGlobal("fetch", vi.fn().mockResolvedValue({ ok: false, body: { cancel } }));
+    const fetchMock = vi.fn().mockResolvedValue(new Response("upstream unavailable", { status: 503 }));
+    vi.stubGlobal("fetch", fetchMock);
     const results = await fetchBinancePrices();
     expect(results.size).toBe(0);
-    expect(cancel).toHaveBeenCalledTimes(2);
+    expect(fetchMock).toHaveBeenCalledTimes(2);
   });
 
   it("returns empty map when Binance returns no stablecoin pairs", async () => {
@@ -47,6 +48,50 @@ describe("fetchBinancePrices", () => {
     }));
     const results = await fetchBinancePrices();
     expect(results.size).toBe(0);
+  });
+
+  it("reports Binance response and match counts for diagnostics", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: () => Promise.resolve([
+        { symbol: "BTCUSD", price: "65000" },
+        { symbol: "ETHUSDT", price: "3500" },
+      ]),
+    }));
+
+    const { prices, diagnostic } = await fetchBinancePricesDetailed();
+
+    expect(prices.size).toBe(0);
+    expect(diagnostic).toMatchObject({
+      source: "binance",
+      stage: "primary",
+      status: 200,
+      ok: true,
+      success: false,
+      responseRowCount: 2,
+      matchedCount: 0,
+    });
+  });
+
+  it("captures Binance non-OK snippets for diagnostics", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue({
+      ok: false,
+      status: 403,
+      headers: new Headers(),
+      text: () => Promise.resolve("blocked by upstream"),
+    }));
+
+    const { prices, diagnostic } = await fetchBinancePricesDetailed();
+
+    expect(prices.size).toBe(0);
+    expect(diagnostic).toMatchObject({
+      source: "binance",
+      status: 403,
+      ok: false,
+      success: false,
+      snippet: "blocked by upstream",
+    });
   });
 });
 

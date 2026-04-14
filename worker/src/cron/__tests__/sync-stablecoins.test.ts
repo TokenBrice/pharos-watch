@@ -573,6 +573,56 @@ describe("syncStablecoins", () => {
     expect(cusd?.price).toBeCloseTo(0.99999266, 8);
   });
 
+  it("applies protocol-backed overrides before missing-price fallback enrichment", async () => {
+    const db = makeDb();
+    const dlData = makeDlResponse(60);
+    dlData.peggedAssets[0] = {
+      ...dlData.peggedAssets[0],
+      id: "cusd-cap",
+      name: "Cap cUSD",
+      symbol: "CUSD",
+      price: 0.9866,
+      priceSource: "defillama",
+      priceConfidence: "single-source",
+      circulating: { peggedUSD: 114_000_000 },
+    };
+
+    vi.mocked(fetchAuthoritativeLivePriceOverrides).mockResolvedValue(new Map([
+      [
+        "cusd-cap",
+        { price: 0.99999266, source: "protocol-redeem", confidence: "high" },
+      ],
+    ]));
+    vi.mocked(enrichMissingPrices).mockImplementationOnce(async (assets) => {
+      const cusd = assets.find((asset) => asset.id === "cusd-cap");
+      expect(cusd).toMatchObject({
+        price: 0.99999266,
+        priceSource: "protocol-redeem",
+        priceConfidence: "high",
+      });
+      return {
+        totalMissing: 0,
+        pass1: 0,
+        pass1b: 0,
+        passCmc: 0,
+        passJupiter: 0,
+        passDex: 0,
+        finalMissing: 0,
+        failedPasses: [],
+      };
+    });
+
+    mockFetch([
+      { match: "api.coingecko.com", body: {} },
+      { match: "stablecoins.llama.fi", body: dlData },
+      { match: "coins.llama.fi/prices", body: { coins: {} } },
+    ]);
+
+    const result = await syncStablecoins(db);
+
+    expect(result.status).toBe("ok");
+  });
+
   it("keeps protocol-backed overrides as the final price even when the GT probe finds a later market quote", async () => {
     const db = makeDb();
     const writes = trackCacheWrites(db);

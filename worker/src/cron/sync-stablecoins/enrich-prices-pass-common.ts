@@ -3,11 +3,13 @@ import {
   buildPriceReasonablenessOptions,
   isReasonablePrice,
 } from "../../lib/price-validation";
+import type { PricingProviderAttemptDiagnostic } from "../../lib/pricing-provider-diagnostics";
 import type { PeggedAsset } from "./enrich-prices-shared";
 
 export interface EnrichPassResult {
   resolved: number;
   failures: string[];
+  diagnostics?: PricingProviderAttemptDiagnostic[];
 }
 
 export interface DlContractPassResult extends EnrichPassResult {

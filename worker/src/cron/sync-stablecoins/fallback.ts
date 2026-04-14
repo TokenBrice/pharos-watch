@@ -18,10 +18,12 @@ import {
   isAbortResult,
 } from "./post-enrichment";
 import {
+  applyProtocolPriceOverrides,
   buildPreviousTrustedPriceLookup,
   createValidationContextResolver,
   prevalidatePrices,
 } from "./pricing";
+import { fetchAuthoritativeLivePriceOverrides } from "../../lib/authoritative-price-sources";
 import { queueTrackedAdditionsNotice } from "./telegram-tracked-additions";
 import {
   abortResult,
@@ -142,6 +144,15 @@ export async function syncViaCoingeckoFallback(
     validationReferences,
     logLabel: "Pre-rejected fallback price",
   });
+  const authoritativeOverrides = await fetchAuthoritativeLivePriceOverrides(assets, signal);
+  applyProtocolPriceOverrides({
+    assets,
+    overrides: authoritativeOverrides,
+    previousTrustedPrices,
+    validationContexts,
+    validationReferences,
+    syncStartSec,
+  });
 
   await reportStablecoinsStage(
     reportProgress,
@@ -171,6 +182,7 @@ export async function syncViaCoingeckoFallback(
     validationReferences,
     validationContexts,
     previousTrustedPrices,
+    authoritativeOverrides,
     returnIfAborted,
     abortResult,
   }, "fallback-");
@@ -334,6 +346,7 @@ export async function syncViaCoingeckoFallback(
       fallbackMode: "coingecko-supply-fallback",
       validationFailures: 0,
       enrichment: enrichStats,
+      providerDiagnostics: enrichStats.providerDiagnostics ?? [],
       rejectedPrices: rejectedCount,
       nativePegCorrections: nativePegCorrectionCount,
       nativePegFills: nativePegFillCount,

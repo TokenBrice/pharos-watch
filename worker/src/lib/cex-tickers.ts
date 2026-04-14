@@ -13,9 +13,18 @@ import {
 import { USER_AGENT } from "./constants";
 import { fetchWithRetry } from "./fetch-retry";
 import { cancelResponseBodyQuietly } from "./response-body";
+import { sleepWithSignal, throwIfAborted } from "./abort";
+import {
+  endpointLabel,
+  errorClassFor,
+  errorMessageFor,
+  readResponseSnippet,
+  type PricingProviderAttemptDiagnostic,
+} from "./pricing-provider-diagnostics";
 
 const CEX_REQUEST_TIMEOUT_MS = 10_000;
 const CEX_REQUEST_RETRIES = 1;
+const BINANCE_TICKER_URL = "https://data-api.binance.vision/api/v3/ticker/price";
 
 const BINANCE_PAIR_TO_SYMBOL = new Map<string, string>(BINANCE_MARKETS.map((market) => [market.pair, market.symbol]));
 const KRAKEN_RESPONSE_KEY_TO_SYMBOL = new Map<string, string>(
@@ -87,31 +96,107 @@ async function fetchCexJson<T>(
   return response.json() as Promise<T>;
 }
 
+function getCexRetryDelayMs(response: Response, attempt: number): number | null {
+  if (response.status === 429) {
+    const retryAfter = response.headers.get("Retry-After");
+    const waitSec = retryAfter ? parseInt(retryAfter, 10) : 0;
+    return waitSec > 0 && waitSec <= 120 ? waitSec * 1000 : 5000;
+  }
+  if (response.status === 529) {
+    return Math.min(30_000, 5_000 * 2 ** attempt);
+  }
+  return 1000 * 2 ** attempt;
+}
+
+export async function fetchBinancePricesDetailed(
+  signal?: AbortSignal,
+): Promise<{ prices: Map<string, number>; diagnostic: PricingProviderAttemptDiagnostic }> {
+  const results = new Map<string, number>();
+  const endpoint = endpointLabel(BINANCE_TICKER_URL);
+  let diagnostic: PricingProviderAttemptDiagnostic = {
+    source: "binance",
+    stage: "primary",
+    endpoint,
+    status: null,
+    ok: false,
+    success: false,
+  };
+
+  for (let attempt = 0; attempt <= CEX_REQUEST_RETRIES; attempt++) {
+    throwIfAborted(signal);
+    try {
+      const perRequestTimeout = AbortSignal.timeout(CEX_REQUEST_TIMEOUT_MS);
+      const combinedSignal = signal
+        ? AbortSignal.any([signal, perRequestTimeout])
+        : perRequestTimeout;
+      const response = await fetch(BINANCE_TICKER_URL, {
+        signal: combinedSignal,
+        headers: { Accept: "application/json", "User-Agent": USER_AGENT },
+      });
+
+      diagnostic = {
+        source: "binance",
+        stage: "primary",
+        endpoint,
+        status: response.status,
+        ok: response.ok,
+        success: false,
+      };
+
+      if (!response.ok) {
+        diagnostic.snippet = await readResponseSnippet(response);
+        if (attempt < CEX_REQUEST_RETRIES) {
+          await sleepWithSignal(getCexRetryDelayMs(response, attempt) ?? 0, signal);
+          continue;
+        }
+        return { prices: results, diagnostic };
+      }
+
+      const payload = await response.json() as unknown;
+      if (!Array.isArray(payload)) {
+        diagnostic.errorClass = "invalid-shape";
+        diagnostic.errorMessage = "Expected Binance ticker response to be an array";
+        return { prices: results, diagnostic };
+      }
+
+      diagnostic.responseRowCount = payload.length;
+      for (const ticker of payload as Array<{ symbol?: string; price?: string }>) {
+        const symbol = ticker.symbol ? BINANCE_PAIR_TO_SYMBOL.get(ticker.symbol) : undefined;
+        const price = parsePositiveNumber(ticker.price);
+        if (symbol && price != null) {
+          results.set(symbol, price);
+        }
+      }
+
+      diagnostic.matchedCount = results.size;
+      diagnostic.success = results.size > 0;
+      return { prices: results, diagnostic };
+    } catch (err) {
+      if (signal?.aborted) throw err instanceof Error ? err : new Error(String(err));
+      diagnostic = {
+        source: "binance",
+        stage: "primary",
+        endpoint,
+        status: null,
+        ok: false,
+        success: false,
+        errorClass: errorClassFor(err),
+        errorMessage: errorMessageFor(err),
+      };
+      console.warn("[cex-binance] Fetch failed:", err);
+      if (attempt < CEX_REQUEST_RETRIES) {
+        await sleepWithSignal(1000 * 2 ** attempt, signal);
+      }
+    }
+  }
+
+  return { prices: results, diagnostic };
+}
+
 export async function fetchBinancePrices(
   signal?: AbortSignal,
 ): Promise<Map<string, number>> {
-  const results = new Map<string, number>();
-
-  try {
-    const tickers = await fetchCexJson<Array<{ symbol?: string; price?: string }>>(
-      "https://data-api.binance.vision/api/v3/ticker/price",
-      signal,
-    );
-    if (!tickers) return results;
-
-    for (const ticker of tickers) {
-      const symbol = ticker.symbol ? BINANCE_PAIR_TO_SYMBOL.get(ticker.symbol) : undefined;
-      const price = parsePositiveNumber(ticker.price);
-      if (symbol && price != null) {
-        results.set(symbol, price);
-      }
-    }
-  } catch (err) {
-    if (signal?.aborted) throw err instanceof Error ? err : new Error(String(err));
-    console.warn("[cex-binance] Fetch failed:", err);
-  }
-
-  return results;
+  return (await fetchBinancePricesDetailed(signal)).prices;
 }
 
 export async function fetchKrakenPrices(

@@ -3,9 +3,24 @@ import {
 } from "./methodology-version";
 
 const pricing = createMethodologyVersion({
-  currentVersion: "4.31",
+  currentVersion: "4.32",
   changelogPath: "/methodology/pricing-pipeline-changelog/",
   changelog: [
+    {
+      version: "4.32",
+      title: "Provider diagnostics and authoritative fallback gating",
+      date: "2026-04-14",
+      effectiveAt: 1776207600,
+      summary:
+        "Pricing provider attempts now emit durable diagnostics, and authoritative live overrides are applied before fallback enrichment so known redeemable wrappers do not poison fallback-source circuit breakers.",
+      impact: [
+        "`sync-stablecoins` cron metadata now records Binance and Jupiter attempt status, endpoint, candidate counts, response counts, matched counts, and sanitized snippets for non-OK responses",
+        "Protocol-backed live overrides are pre-applied before fallback enrichment and re-applied after GeckoTerminal probing, preserving final authoritative price semantics while keeping inherited-price assets out of unnecessary fallback probes",
+        "The Jupiter breaker can run a bounded health probe when no fallback candidates remain, allowing a previously open breaker to recover once the provider is reachable instead of staying stale-open indefinitely",
+      ],
+      commits: [],
+      reconstructed: false,
+    },
     {
       version: "4.31",
       title: "Curated-contract price fallback and USDnr M0 inheritance",

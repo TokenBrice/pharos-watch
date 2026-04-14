@@ -8,11 +8,13 @@ import type {
 import {
   applyGtProbeResults,
   applyPrimaryPriceResults,
+  applyProtocolPriceOverrides,
   buildDlListPrices,
   buildPreviousTrustedPriceLookup,
   createValidationContextResolver,
   prevalidatePrices,
 } from "./pricing";
+import { fetchAuthoritativeLivePriceOverrides } from "../../lib/authoritative-price-sources";
 import {
   enrichMissingPrices,
   fetchPrimaryPrices,
@@ -153,6 +155,7 @@ export async function runStablecoinsPricingStage(
       nativePegCorrectionCount: number;
       nativePegFillCount: number;
       cachedFallbackCount: number;
+      providerDiagnostics: NonNullable<Awaited<ReturnType<typeof fetchPrimaryPrices>>["providerDiagnostics"]>;
     }
 > {
   const validationContexts = createValidationContextResolver();
@@ -170,7 +173,11 @@ export async function runStablecoinsPricingStage(
   await reportStablecoinsStage(options.reportProgress, "price-enrichment", "Running primary pricing and enrichment", {
     itemsTotal: options.assets.length,
   });
-  const { results: primaryPriceResults, stats: priceValidationStats } = await fetchPrimaryPrices(
+  const {
+    results: primaryPriceResults,
+    stats: priceValidationStats,
+    providerDiagnostics: primaryProviderDiagnostics = [],
+  } = await fetchPrimaryPrices(
     options.assets,
     options.db,
     options.signal,
@@ -193,6 +200,15 @@ export async function runStablecoinsPricingStage(
     validationContexts,
     validationReferences: options.validationReferences,
     logLabel: "Pre-rejected bad price",
+  });
+  const authoritativeOverrides = await fetchAuthoritativeLivePriceOverrides(options.assets, options.signal);
+  applyProtocolPriceOverrides({
+    assets: options.assets,
+    overrides: authoritativeOverrides,
+    previousTrustedPrices,
+    validationContexts,
+    validationReferences: options.validationReferences,
+    syncStartSec: options.syncStartSec,
   });
   const enrichmentPhase = await runMissingPriceEnrichmentPhase({
     assets: options.assets,
@@ -243,6 +259,7 @@ export async function runStablecoinsPricingStage(
     validationReferences: options.validationReferences,
     validationContexts,
     previousTrustedPrices,
+    authoritativeOverrides,
     returnIfAborted,
     abortResult,
   }, "");
@@ -294,5 +311,9 @@ export async function runStablecoinsPricingStage(
     nativePegCorrectionCount,
     nativePegFillCount,
     cachedFallbackCount,
+    providerDiagnostics: [
+      ...primaryProviderDiagnostics,
+      ...(enrichStats.providerDiagnostics ?? []),
+    ],
   };
 }

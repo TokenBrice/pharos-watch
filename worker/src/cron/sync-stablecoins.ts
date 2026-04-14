@@ -84,7 +84,7 @@ export async function syncStablecoins(
     authoritativeOverrideCount,
     rejectedCount,
     nativePegCorrectionCount,
-    nativePegFillCount,
+    nativePegFillCount, providerDiagnostics,
   } = pricingStage;
   const fillSupplyHistoryResult = await fillStablecoinsSupplyHistoryStage(db, assets, signal);
   if (fillSupplyHistoryResult) return fillSupplyHistoryResult;
@@ -194,7 +194,7 @@ export async function syncStablecoins(
     droppedMalformedAssets,
     canonicalDeduplication,
     enrichStats,
-    priceValidationStats,
+    priceValidationStats, providerDiagnostics,
     authoritativeOverrideCount,
     rejectedCount,
     nativePegCorrectionCount,

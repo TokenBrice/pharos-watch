@@ -21,7 +21,7 @@ When an asset still has no usable current price after validation and fallback re
 
 ## Versioning
 
-- **Current methodology version:** `v4.31`
+- **Current methodology version:** `v4.32`
 - **Canonical version module:** `shared/lib/pricing-pipeline-version.ts`
 - **Public changelog route:** `/methodology/pricing-pipeline-changelog/`
 - **Longform methodology section:** `/methodology/#pricing-pipeline-methodology`
@@ -187,7 +187,7 @@ Current tracked-base inheritance paths are:
 
 This prevents thin secondary-market child-token prints, or missing child-market coverage, from dragging PegScore away from the executable value of the tracked parent rail.
 
-These authoritative overrides are applied after the GeckoTerminal single-source probe, so a later market cross-check cannot overwrite a validated redemption price.
+These authoritative overrides are pre-applied before fallback enrichment and then applied again after the GeckoTerminal single-source probe. The early pass keeps known redeemable wrappers and extension assets out of unnecessary fallback-source probes, while the final pass preserves the existing rule that a later market cross-check cannot overwrite a validated redemption price.
 
 The same registry also supports historical replay for backfills so admin rebuilds do not silently downgrade back to weaker market sources.
 
@@ -206,6 +206,8 @@ Assets still missing prices after primary consensus run through `enrichMissingPr
 5. **Pass 4:** DexScreener exact token-address pool lookup when chain+address are available. Unique-symbol search is now reserved for addressless assets only; if an exact target exists and fails, Pharos does not downgrade to symbol-only identity under the same request budget. The pass now walks the full sorted missing set and stops after 10 actual DexScreener requests, so skipped high-rank non-unique rows cannot crowd out later exact-target or unique-symbol candidates. The exact token lookup lane and the symbol-search lane now keep separate circuit-breaker state: `dexscreener-prices` tracks `/tokens/v1/{chain}/{address}`, while `dexscreener-search` tracks the last-resort `/latest/dex/search` path so a flaky search endpoint cannot suppress otherwise healthy exact-address recovery.
 
 Operationally, missing-price enrichment runs before the slower GeckoTerminal soft-source cross-check so recovery of unpriced assets stays on the critical path; the GT probe still reruns consensus later for weak CG / DL-list outcomes, self-stops once its 3-minute budget is exhausted, and protocol overrides still apply after that probe.
+
+Provider attempt diagnostics for Binance and Jupiter are persisted into `sync-stablecoins` cron metadata. Those diagnostics include the sanitized endpoint, HTTP status when available, candidate/response/match counts, and short non-OK snippets so operators can distinguish provider transport failures from successful responses that simply carry no usable tracked prices.
 
 The enrichment path is intentionally narrower than primary pricing:
 

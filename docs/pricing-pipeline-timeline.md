@@ -1,6 +1,16 @@
 # Pricing Pipeline Methodology - Version Timeline
 
-Internal changelog reconstructed from the machine-readable methodology version source. Covers Pricing Pipeline `v1.0` through `v4.31` (2026-02-01 -> 2026-04-13).
+Internal changelog reconstructed from the machine-readable methodology version source. Covers Pricing Pipeline `v1.0` through `v4.32` (2026-02-01 -> 2026-04-14).
+
+---
+
+## v4.32 - Provider diagnostics and authoritative fallback gating (Apr 14, 2026)
+
+**Commit:** `unreleased`
+
+- Binance and Jupiter price attempts now persist compact diagnostics into `sync-stablecoins` cron metadata, including endpoint, status, candidate counts, parsed/response counts, matched counts, and sanitized non-OK snippets
+- Protocol-backed live overrides are pre-applied before fallback enrichment and re-applied after GeckoTerminal probing, so known redeemable wrappers and extension assets do not hit fallback sources before their authoritative price is available
+- Jupiter can run a bounded health probe when a previously open circuit has no remaining fallback candidates, allowing a stale-open breaker to recover once the provider is reachable
 
 ---
 

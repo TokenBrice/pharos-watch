@@ -7,6 +7,7 @@ import {
   isPriceSourceHealthBucketKey,
   splitCompositePriceSource,
 } from "@shared/lib/pricing-sources";
+import type { PricingProviderAttemptDiagnostic } from "../../lib/pricing-provider-diagnostics";
 
 function mapSourceToBucket(
   source: string,
@@ -79,6 +80,7 @@ export function buildStablecoinsSyncResult(input: {
   canonicalDeduplication: CanonicalDeduplicationResult;
   enrichStats: unknown;
   priceValidationStats: unknown;
+  providerDiagnostics?: PricingProviderAttemptDiagnostic[];
   authoritativeOverrideCount?: number;
   rejectedCount: number;
   nativePegCorrectionCount?: number;
@@ -113,6 +115,7 @@ export function buildStablecoinsSyncResult(input: {
       ...input.gtProbe.stats,
     },
     priceValidation: input.priceValidationStats,
+    providerDiagnostics: input.providerDiagnostics ?? [],
     rejectedPrices: input.rejectedCount,
     nativePegCorrections: input.nativePegCorrectionCount ?? 0,
     nativePegFills: input.nativePegFillCount ?? 0,

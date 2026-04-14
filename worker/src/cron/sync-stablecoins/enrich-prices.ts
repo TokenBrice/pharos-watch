@@ -1,5 +1,6 @@
 import { getCache } from "../../lib/db-cache";
 import { throwIfAborted } from "../../lib/abort";
+import type { PricingProviderAttemptDiagnostic } from "../../lib/pricing-provider-diagnostics";
 import { hasMissingPrice, type PeggedAsset } from "./enrich-prices-shared";
 import { runEnrichmentPasses } from "./enrich-prices-fallback";
 
@@ -30,6 +31,7 @@ export interface EnrichmentStats {
   passDex: number;
   finalMissing: number;
   failedPasses: string[];
+  providerDiagnostics?: PricingProviderAttemptDiagnostic[];
 }
 
 export async function enrichMissingPrices(
@@ -53,7 +55,6 @@ export async function enrichMissingPrices(
     };
   }
 
-  // Load FX rates once — shared across all passes for dynamic price bounds
   let fxRates: Record<string, number> | undefined;
   if (db) {
     try {
@@ -64,8 +65,6 @@ export async function enrichMissingPrices(
     }
   }
 
-  // ── Pass 1/1b: Contract addresses via DefiLlama coins API ──
-  // Wrapped separately so DL failure does not abort CMC/DexScreener passes.
   const {
     counts: {
       pass1: pass1Count,
@@ -74,7 +73,7 @@ export async function enrichMissingPrices(
       passJupiter: passJupiterCount,
       passDex: passDexCount,
     },
-    failedPasses,
+    failedPasses, providerDiagnostics,
   } = await runEnrichmentPasses({
     assets,
     cmcApiKey,
@@ -105,6 +104,6 @@ export async function enrichMissingPrices(
     passJupiter: passJupiterCount,
     passDex: passDexCount,
     finalMissing,
-    failedPasses,
+    failedPasses, providerDiagnostics,
   };
 }

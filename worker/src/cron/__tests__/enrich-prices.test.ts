@@ -920,6 +920,88 @@ describe("enrichMissingPrices", () => {
     expect(stats.finalMissing).toBe(0);
   });
 
+  it("reports Jupiter non-OK responses in pass diagnostics", async () => {
+    const assets: PeggedAsset[] = [
+      {
+        id: "usdg-paxos", name: "USDG", symbol: "USDG", price: 0,
+        pegType: "peggedUSD", circulating: {},
+      },
+    ];
+    const db = mockD1([{ match: "cache", rows: [], first: null }]);
+
+    mockFetch([
+      {
+        match: "lite-api.jup.ag/price/v3",
+        status: 403,
+        body: "blocked",
+      },
+    ]);
+
+    const result = await runJupiterPass(assets, undefined, db);
+
+    expect(result.resolved).toBe(0);
+    expect(result.diagnostics?.[0]).toMatchObject({
+      source: "jupiter",
+      stage: "fallback",
+      status: 403,
+      ok: false,
+      success: false,
+      candidateCount: 1,
+      snippet: "blocked",
+    });
+  });
+
+  it("probes Jupiter health when the circuit is open but no fallback candidates remain", async () => {
+    const openedAt = Math.floor(Date.now() / 1000) - 3600;
+    const db = mockD1([
+      {
+        match: "cache",
+        rows: [],
+        first: {
+          value: JSON.stringify({
+            state: "open",
+            consecutiveFailures: 3,
+            lastFailureAt: openedAt,
+            lastSuccessAt: null,
+            openedAt,
+          }),
+          updated_at: openedAt,
+        },
+      },
+    ]);
+    const assets: PeggedAsset[] = [
+      {
+        id: "usbd-bima", name: "USBD", symbol: "USBD", price: 0,
+        pegType: "peggedUSD", circulating: {},
+      },
+    ];
+
+    mockFetch([
+      {
+        match: "lite-api.jup.ag/price/v3",
+        body: {
+          "2u1tszSeqZ3qBWF3uNGPFc8TzMk2tdiwknnRMWGWjGWH": {
+            usdPrice: 1.0001,
+            liquidity: 250_000,
+          },
+        },
+      },
+    ]);
+
+    const result = await runJupiterPass(assets, undefined, db);
+
+    expect(result.resolved).toBe(0);
+    expect(result.diagnostics?.[0]).toMatchObject({
+      source: "jupiter",
+      stage: "health-probe",
+      status: 200,
+      ok: true,
+      success: true,
+      candidateCount: 1,
+      responseRowCount: 1,
+    });
+  });
+
   it("skips the CMC breaker check when no assets are missing", async () => {
     const assets: PeggedAsset[] = [
       {
@@ -973,7 +1055,7 @@ describe("enrichMissingPrices", () => {
     expect(assets[0].price).toBe(0);
   });
 
-  it("skips the Jupiter breaker check when there are no Solana fallback candidates", async () => {
+  it("skips Jupiter fetches when there are no Solana fallback candidates and the circuit is closed", async () => {
     const assets: PeggedAsset[] = [
       {
         id: "usbd-bima", name: "USBD", symbol: "USBD", price: 0,
@@ -981,11 +1063,12 @@ describe("enrichMissingPrices", () => {
       },
     ];
 
-    const db = mockD1([], { requireMatch: true });
+    const db = mockD1([{ match: "cache", rows: [], first: null }], { requireMatch: true });
 
     await expect(runJupiterPass(assets, undefined, db)).resolves.toEqual({
       resolved: 0,
       failures: [],
+      diagnostics: [],
     });
   });
 
