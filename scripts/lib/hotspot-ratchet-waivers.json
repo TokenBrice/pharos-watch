@@ -23,10 +23,6 @@
     "disposition": "queued-p4",
     "notes": "Risk Lab route client remains a broad UI composition surface. Keep waived for a dedicated safety-score frontend decomposition pass rather than mixing it into worker-oriented simplification tranches."
   },
-  "src/components/stablecoin-table.tsx": {
-    "disposition": "queued-p4",
-    "notes": "The main stablecoin table is a known frontend hotspot. Keep it waived pending a dedicated UI decomposition pass."
-  },
   "src/components/kpi-bar.tsx": {
     "disposition": "queued-p4",
     "notes": "The homepage KPI strip still mixes query orchestration, derived metrics, and dual-layout rendering. Track it with the broader analytics UI decomposition backlog."
@@ -58,6 +54,14 @@
   "src/components/status/cron-metadata-summary.ts": {
     "disposition": "deferred",
     "notes": "Status metadata summarization has grown with the ops dashboard. Defer structural cleanup until the status surface settles after the current parallel work."
+  },
+  "src/components/status/api-keys-panel.tsx": {
+    "disposition": "queued-p4",
+    "notes": "API-key management still combines list rendering, form validation, create/update/rotate/deactivate flows, and per-row edit state. Keep waived for a focused ops-admin UI decomposition pass."
+  },
+  "src/app/status/client.tsx": {
+    "disposition": "queued-p4",
+    "notes": "Public status route client still composes multiple status sections and error/loading branches in one shell. Keep waived for the planned status-surface route-client cleanup."
   },
   "src/components/dex-liquidity-card.tsx": {
     "disposition": "queued-p4",

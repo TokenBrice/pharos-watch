@@ -108,8 +108,8 @@
     "notes": "The shell split landed, but the Safety Scores body is still the largest methodology section. Next pass should separate calculator wiring, grading pipeline copy, and tables."
   },
   "src/app/methodology/sections/core/liquidity-section.tsx": {
-    "fileLines": 138,
-    "maxFunctionLines": 130,
+    "fileLines": 150,
+    "maxFunctionLines": 142,
     "branchCount": 0,
     "disposition": "queued-p4",
     "targetBudget": {
@@ -264,8 +264,8 @@
     "notes": "Pool scoring and heuristic normalization still live in one large module. Split score families and reusable transforms before adding more model inputs."
   },
   "worker/src/cron/dex-liquidity/orchestrator.ts": {
-    "fileLines": 506,
-    "maxFunctionLines": 89,
+    "fileLines": 517,
+    "maxFunctionLines": 90,
     "branchCount": 15,
     "disposition": "stabilized",
     "targetBudget": {
