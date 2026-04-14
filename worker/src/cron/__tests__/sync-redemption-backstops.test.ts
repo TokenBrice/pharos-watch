@@ -296,6 +296,41 @@ describe("syncRedemptionBackstops", () => {
     expect(metadata.severeActiveDepegThresholdBps).toBe(2500);
   });
 
+  it("does not convert impairment-only runs into zero-resolved errors", async () => {
+    const now = Math.floor(Date.now() / 1000);
+    configuredIdsMock = ["cusd-cap"];
+    loadStablecoinsCacheMock.mockResolvedValue({
+      kind: "ok",
+      updatedAt: now,
+      payload: {
+        peggedAssets: [
+          makeAsset({ id: "cusd-cap", symbol: "CUSD", circulating: { peggedUSD: 10_000_000 } }),
+        ],
+      },
+    });
+    resolveRedemptionBackstopEntryMock.mockResolvedValueOnce(
+      makeResolvedSnapshot("cusd-cap", now, {
+        score: null,
+        effectiveExitScore: null,
+        resolutionState: "impaired",
+        routeStatus: "degraded",
+        routeStatusSource: "market-implied",
+        modelConfidence: "low",
+      }),
+    );
+
+    const { syncRedemptionBackstops } = await import("../sync-redemption-backstops");
+    const result = await syncRedemptionBackstops(mockD1(), new AbortController().signal);
+
+    expect(result.status).toBe("ok");
+
+    const metadata = JSON.parse(result.metadata ?? "{}") as Record<string, unknown>;
+    expect(metadata.resolved).toBe(0);
+    expect(metadata.unresolved).toBe(1);
+    expect(metadata.unresolvedCritical).toBe(0);
+    expect(metadata.availabilityDegraded).toBe(1);
+  });
+
   it("still snapshots configured ids that are missing from the stablecoins cache", async () => {
     loadStablecoinsCacheMock.mockResolvedValue({
       kind: "ok",

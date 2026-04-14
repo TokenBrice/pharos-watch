@@ -142,15 +142,13 @@ export async function syncRedemptionBackstops(db: D1Database, signal: AbortSigna
   const coverageRatio = configuredIds.length > 0 ? resolvedCount / configuredIds.length : 1;
   const allowedMissingCapacityCount = getAllowedMissingCapacityCount(configuredIds.length);
   const missingCapacityWithinTolerance = missingCapacityCount <= allowedMissingCapacityCount;
+  const hasBlockingUnresolved = failedIds.length > 0 || missingFromCache.length > 0 || criticalUnresolvedCount > 0;
+  const hasDegradedSyncSignal = hasBlockingUnresolved || !missingCapacityWithinTolerance || liquidityStale;
 
   const status: CronResult["status"] =
-    resolvedCount === 0 && (failedIds.length > 0 || missingFromCache.length > 0 || unresolvedCount > 0)
+    resolvedCount === 0 && hasBlockingUnresolved
       ? "error"
-      : failedIds.length > 0
-        || missingFromCache.length > 0
-        || criticalUnresolvedCount > 0
-        || !missingCapacityWithinTolerance
-        || liquidityStale
+      : hasDegradedSyncSignal
         ? "degraded"
         : "ok";
 
