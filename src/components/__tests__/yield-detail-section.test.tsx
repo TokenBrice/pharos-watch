@@ -229,4 +229,81 @@ describe("YieldDetailSection", () => {
     expect(replaceParamsMock).toHaveBeenCalledTimes(2);
     expect(sourcesParam).toBe("");
   });
+
+  it("limits the chart source selection to four alternatives", () => {
+    useYieldRankingsMock.mockReturnValue({
+      data: makeResponse([
+        makeRanking({
+          altSources: [
+            {
+              sourceKey: "alt-source-1",
+              yieldSource: "Alt Source 1",
+              yieldSourceUrl: "https://example.com/alt-1",
+              yieldType: "lending-vault",
+              currentApy: 0.049,
+              apy30d: 0.048,
+              sourceTvlUsd: 750_000,
+              dataSource: "defillama",
+            },
+            {
+              sourceKey: "alt-source-2",
+              yieldSource: "Alt Source 2",
+              yieldSourceUrl: "https://example.com/alt-2",
+              yieldType: "lending-vault",
+              currentApy: 0.048,
+              apy30d: 0.047,
+              sourceTvlUsd: 700_000,
+              dataSource: "defillama",
+            },
+            {
+              sourceKey: "alt-source-3",
+              yieldSource: "Alt Source 3",
+              yieldSourceUrl: "https://example.com/alt-3",
+              yieldType: "lending-vault",
+              currentApy: 0.047,
+              apy30d: 0.046,
+              sourceTvlUsd: 650_000,
+              dataSource: "defillama",
+            },
+            {
+              sourceKey: "alt-source-4",
+              yieldSource: "Alt Source 4",
+              yieldSourceUrl: "https://example.com/alt-4",
+              yieldType: "lending-vault",
+              currentApy: 0.046,
+              apy30d: 0.045,
+              sourceTvlUsd: 600_000,
+              dataSource: "defillama",
+            },
+            {
+              sourceKey: "alt-source-5",
+              yieldSource: "Alt Source 5",
+              yieldSourceUrl: "https://example.com/alt-5",
+              yieldType: "lending-vault",
+              currentApy: 0.045,
+              apy30d: 0.044,
+              sourceTvlUsd: 550_000,
+              dataSource: "defillama",
+            },
+          ],
+        }),
+      ]),
+      meta: null,
+      error: null,
+      isLoading: false,
+    });
+
+    const { rerender } = render(<YieldDetailSection stablecoinId="dola-inverse-finance" />);
+
+    const sourceNames = ["Alt Source 1", "Alt Source 2", "Alt Source 3", "Alt Source 4", "Alt Source 5"];
+    for (const [index, sourceName] of sourceNames.entries()) {
+      fireEvent.click(screen.getByRole("button", { name: `Show ${sourceName} on chart` }));
+      rerender(<YieldDetailSection stablecoinId="dola-inverse-finance" />);
+
+      const params = sourcesParam.split(",").filter(Boolean);
+      expect(params.length).toBe(Math.min(index + 1, 4));
+    }
+
+    expect(sourcesParam).toBe("alt-source-1,alt-source-2,alt-source-3,alt-source-4");
+  });
 });
