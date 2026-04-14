@@ -2,10 +2,9 @@ import type { StablecoinMeta } from "@shared/types/core";
 import type { LiveReservesConfig } from "@shared/types/live-reserves";
 import type { AdapterContext, AdapterResult } from "./types";
 import {
-  fetchTextWithRetry,
+  fetchPrimaryHtmlInput,
   htmlLayoutChangedError,
   parseTimestampLikeToUnixSeconds,
-  requireHtmlInput,
   slicesFromPercentages,
   unverifiedFreshnessMetadata,
   verifiedFreshnessMetadata,
@@ -83,12 +82,6 @@ export async function fetchFdusdTransparencyReserves(
   signal: AbortSignal,
   ctx?: AdapterContext,
 ): Promise<AdapterResult> {
-  const input = requireHtmlInput(config.inputs.primary, "fdusd-transparency");
-  const html = await fetchTextWithRetry(
-    input.url,
-    signal,
-    15_000,
-    ctx,
-  );
+  const html = await fetchPrimaryHtmlInput(config, "fdusd-transparency", signal, ctx);
   return adaptFdusdTransparency(html);
 }

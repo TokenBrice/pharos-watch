@@ -11,7 +11,8 @@ import {
   buildReserveDisplayBadgeView,
   buildReserveProvenanceView,
 } from "./live-reserves-store-provenance";
-import { hasConsistentSnapshotState, parseReserveCompositionRow } from "./live-reserves-store-records";
+import { hasConsistentSnapshotState } from "./live-reserves-store-legacy";
+import { parseReserveCompositionRow } from "./live-reserves-store-row-decoding";
 
 function buildSyncView(
   syncState: import("./live-reserves-store-shared").ReserveSyncStateRecord | null,

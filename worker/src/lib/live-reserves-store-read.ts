@@ -3,7 +3,7 @@ import { chunkArray } from "./collections";
 import {
   parseSnapshotMetadata,
   parseWarnings,
-} from "./live-reserves-store-parsing";
+} from "./live-reserves-store-row-decoding";
 import {
   RESERVE_SYNC_STATE_SELECT_COLUMNS,
   type ReserveCompositionRow,

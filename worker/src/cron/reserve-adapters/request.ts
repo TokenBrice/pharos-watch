@@ -1,5 +1,7 @@
 import { fetchWithRetry } from "../../lib/fetch-retry";
 import { cancelResponseBodyQuietly } from "../../lib/response-body";
+import type { LiveReservesConfig } from "@shared/types/live-reserves";
+import { requireHtmlInput } from "./input-guards";
 import type { AdapterContext } from "./types";
 
 const ADAPTER_USER_AGENT = "Mozilla/5.0";
@@ -158,4 +160,15 @@ export async function fetchTextWithRetry(
     },
     ctx,
   );
+}
+
+export async function fetchPrimaryHtmlInput(
+  config: LiveReservesConfig,
+  adapterName: string,
+  signal: AbortSignal,
+  ctx?: AdapterContext,
+  timeoutMs = 15_000,
+): Promise<string> {
+  const input = requireHtmlInput(config.inputs.primary, adapterName);
+  return fetchTextWithRetry(input.url, signal, timeoutMs, ctx);
 }

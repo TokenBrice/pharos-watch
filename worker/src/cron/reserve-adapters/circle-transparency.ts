@@ -3,9 +3,8 @@ import type { LiveReservesConfig } from "@shared/types/live-reserves";
 import { parseLiveReserveAdapterParams } from "@shared/lib/live-reserve-adapters";
 import type { AdapterContext, AdapterResult } from "./types";
 import {
-  fetchTextWithRetry,
+  fetchPrimaryHtmlInput,
   htmlLayoutChangedError,
-  requireHtmlInput,
   slicesFromPercentages,
   slicesFromValues,
   unverifiedFreshnessMetadata,
@@ -132,13 +131,7 @@ export async function fetchCircleReserves(
   signal: AbortSignal,
   ctx?: AdapterContext,
 ): Promise<AdapterResult> {
-  const input = requireHtmlInput(config.inputs.primary, "circle-transparency");
-  const html = await fetchTextWithRetry(
-    input.url,
-    signal,
-    15_000,
-    ctx,
-  );
+  const html = await fetchPrimaryHtmlInput(config, "circle-transparency", signal, ctx);
   const { coinType } = parseLiveReserveAdapterParams("circle-transparency", config.params);
   return adaptCircleTransparency(html, coinType);
 }

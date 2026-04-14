@@ -7,7 +7,7 @@ import {
   RUB_FALLBACK,
   USER_AGENT,
 } from "../lib/constants";
-import { errorResponse, jsonResponse } from "../lib/api-utils";
+import { jsonResponse } from "../lib/api-utils";
 import { cgUrl, cgHeaders } from "../lib/coingecko";
 import { fetchWithRetry } from "../lib/fetch-retry";
 import { RATE_LIMITS } from "../lib/rate-limit";
@@ -31,12 +31,8 @@ import {
 } from "./backfill-fx";
 
 import {
-  BACKFILL_REPLAY_CONTEXT_DAYS,
-  MAX_BACKFILL_REPLAY_CONTEXT_DAYS,
   buildBackfillDeleteStmt,
-  buildReplayWindow,
-  parseContextDaysParam,
-  parseDayParam,
+  parseOptionalDayWindow,
 } from "./backfill-depegs-window";
 import {
   parseSupplyData,
@@ -76,36 +72,12 @@ export async function handleBackfillDepegs(
     { request, trustedAdmin, url },
     async (context) => {
       const { dryRun } = context;
-      const hasExplicitReplayWindow = url.searchParams.has("startDay") || url.searchParams.has("endDay");
-      const requestedStartDay = parseDayParam(url.searchParams.get("startDay"));
-      const requestedEndDay = parseDayParam(url.searchParams.get("endDay"));
-      const requestedContextDays = parseContextDaysParam(url.searchParams.get("contextDays"));
-      if (
-        (url.searchParams.get("startDay") && requestedStartDay == null) ||
-        (url.searchParams.get("endDay") && requestedEndDay == null)
-      ) {
-        return errorResponse(400, "Invalid startDay/endDay. Use Unix seconds/milliseconds or YYYY-MM-DD.");
-      }
-      if (url.searchParams.get("contextDays") && requestedContextDays == null) {
-        return errorResponse(
-          400,
-          `Invalid contextDays. Use an integer between 0 and ${MAX_BACKFILL_REPLAY_CONTEXT_DAYS}.`,
-        );
-      }
-      if (
-        requestedStartDay != null &&
-        requestedEndDay != null &&
-        requestedStartDay > requestedEndDay
-      ) {
-        return errorResponse(400, "Invalid startDay/endDay: startDay must be <= endDay.");
-      }
-      const replayWindow = hasExplicitReplayWindow
-        ? buildReplayWindow(
-            requestedStartDay,
-            requestedEndDay,
-            requestedContextDays ?? BACKFILL_REPLAY_CONTEXT_DAYS,
-          )
-        : null;
+      const window = parseOptionalDayWindow(url, {
+        includeContextDays: true,
+        includeReplayWindow: true,
+      });
+      if (window instanceof Response) return window;
+      const replayWindow = window.replayWindow;
 
       const selection = selectBackfillCoins(url, PSI_ELIGIBLE_STABLECOINS, {
         defaultBatchSize: BATCH_SIZE,

@@ -7,7 +7,8 @@ import {
   type ReserveSyncStateRecord,
 } from "./live-reserves-store-shared";
 import { loadReserveCompositionRowMap, loadReserveSyncStateMap } from "./live-reserves-store-read";
-import { hasConsistentSnapshotState, hasScoringEligibleLiveReserveFreshness, hasUncertainWriteState, parseReserveCompositionRow } from "./live-reserves-store-records";
+import { hasConsistentSnapshotState, hasScoringEligibleLiveReserveFreshness, hasUncertainWriteState } from "./live-reserves-store-legacy";
+import { parseReserveCompositionRow } from "./live-reserves-store-row-decoding";
 
 export async function computeReserveCompositionOverview(
   db: D1Database,

@@ -33,6 +33,7 @@ export { htmlLayoutChangedError, htmlParseError } from "./html";
 export {
   fetchJsonPostWithRetry,
   fetchJsonWithRetry,
+  fetchPrimaryHtmlInput,
   fetchTextWithRetry,
 } from "./request";
 export { fetchDefiLlamaPrices } from "./defillama";

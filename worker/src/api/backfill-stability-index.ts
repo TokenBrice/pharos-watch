@@ -14,7 +14,7 @@ import {
   usesHistoricalStressBreadth,
 } from "../lib/psi-replay";
 import { runAdminJob } from "../lib/admin-job";
-import { parseDayParam } from "./backfill-depegs-window";
+import { parseOptionalDayWindow } from "./backfill-depegs-window";
 
 interface ExistingStabilityIndexRow {
   computed_at: number;
@@ -61,19 +61,17 @@ export async function handleBackfillStabilityIndex(
       // Start from earliest depeg event, iterate day by day
       const earliestDay = Math.floor(earliest.earliest / DAY_SECONDS) * DAY_SECONDS;
       const latestCompletedDay = todayMidnight - DAY_SECONDS;
-      const hasExplicitWindow =
-        url.searchParams.has("startDay") || url.searchParams.has("endDay");
-      const requestedStartDay = parseDayParam(url.searchParams.get("startDay"));
-      const requestedEndDay = parseDayParam(url.searchParams.get("endDay"));
+      const window = parseOptionalDayWindow(url, {
+        defaultStartDay: earliestDay,
+        defaultEndDay: latestCompletedDay,
+        minStartDay: earliestDay,
+        maxEndDay: latestCompletedDay,
+        rejectInvertedRange: false,
+      });
+      if (window instanceof Response) return window;
+      const { startDay, endDay, hasExplicitWindow } = window;
 
-      if ((url.searchParams.get("startDay") && requestedStartDay == null) || (url.searchParams.get("endDay") && requestedEndDay == null)) {
-        return errorResponse(400, "Invalid startDay/endDay. Use Unix seconds/milliseconds or YYYY-MM-DD.");
-      }
-
-      const startDay = Math.max(earliestDay, requestedStartDay ?? earliestDay);
-      const endDay = Math.min(latestCompletedDay, requestedEndDay ?? latestCompletedDay);
-
-      if (startDay > endDay) {
+      if (startDay == null || endDay == null || startDay > endDay) {
         return jsonResponse({
           ok: true,
           dryRun,

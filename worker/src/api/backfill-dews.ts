@@ -19,7 +19,7 @@ import type {
   SourceFailure,
 } from "../cron/dews/contracts";
 import { loadDewsSourceState } from "../cron/dews/source-state";
-import { parseDayParam } from "./backfill-depegs-window";
+import { parseOptionalDayWindow } from "./backfill-depegs-window";
 
 interface DepegEvent {
   stablecoin_id: string;
@@ -234,23 +234,16 @@ async function handlePruneHistoryRepair(
   }
   const stablecoinId = resolvedStablecoin?.canonicalId ?? null;
 
-  const startDayRaw = url.searchParams.get("startDay");
-  const endDayRaw = url.searchParams.get("endDay");
-  const parsedStartDay = parseDayParam(startDayRaw);
-  const parsedEndDay = parseDayParam(endDayRaw);
-  if (startDayRaw && parsedStartDay == null) {
-    return errorResponse(400, "Invalid startDay. Use Unix seconds/milliseconds or YYYY-MM-DD.");
-  }
-  if (endDayRaw && parsedEndDay == null) {
-    return errorResponse(400, "Invalid endDay. Use Unix seconds/milliseconds or YYYY-MM-DD.");
-  }
-
   const todayMidnight = getTodayMidnightUtcSec();
-  const startDay = parsedStartDay ?? DEWS_TRUST_REPAIR_WINDOW_START_DAY;
-  const endDay = parsedEndDay ?? todayMidnight;
-  if (startDay > endDay) {
-    return errorResponse(400, "Invalid startDay/endDay: startDay must be <= endDay.");
-  }
+  const window = parseOptionalDayWindow(url, {
+    defaultStartDay: DEWS_TRUST_REPAIR_WINDOW_START_DAY,
+    defaultEndDay: todayMidnight,
+    invalidStartDayMessage: "Invalid startDay. Use Unix seconds/milliseconds or YYYY-MM-DD.",
+    invalidEndDayMessage: "Invalid endDay. Use Unix seconds/milliseconds or YYYY-MM-DD.",
+  });
+  if (window instanceof Response) return window;
+  const { startDay, endDay, usedDefaultWindow } = window;
+  if (startDay == null || endDay == null) return errorResponse(400, "Invalid startDay/endDay: startDay must be <= endDay.");
 
   const candidates = await queryHistoryCandidates(db, stablecoinId, startDay, endDay);
   const boundaryBefore = await queryHistoryBoundary(db, stablecoinId, endDay);
@@ -261,7 +254,7 @@ async function handlePruneHistoryRepair(
     stablecoinId,
     startDay,
     endDay,
-    usedDefaultWindow: parsedStartDay == null && parsedEndDay == null,
+    usedDefaultWindow,
     totalMatchingRows: candidates.totalMatchingRows,
     candidateRowsSample: candidates.candidateRowsSample,
     oldestRemainingDay: boundaryBefore.oldestRemainingDay,

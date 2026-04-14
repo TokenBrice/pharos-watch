@@ -3,11 +3,10 @@ import type { LiveReservesConfig } from "@shared/types/live-reserves";
 import { parseLiveReserveAdapterParams } from "@shared/lib/live-reserve-adapters";
 import type { AdapterContext, AdapterResult } from "./types";
 import {
-  fetchTextWithRetry,
+  fetchPrimaryHtmlInput,
   htmlLayoutChangedError,
   htmlParseError,
   parseTimestampLikeToUnixSeconds,
-  requireHtmlInput,
   unverifiedFreshnessMetadata,
   verifiedFreshnessMetadata,
 } from "./helpers";
@@ -108,12 +107,6 @@ export async function fetchSgForgeCoinvertibleReserves(
   signal: AbortSignal,
   ctx?: AdapterContext,
 ): Promise<AdapterResult> {
-  const input = requireHtmlInput(config.inputs.primary, "sgforge-coinvertible");
-  const html = await fetchTextWithRetry(
-    input.url,
-    signal,
-    15_000,
-    ctx,
-  );
+  const html = await fetchPrimaryHtmlInput(config, "sgforge-coinvertible", signal, ctx);
   return adaptSgForgeCoinvertible(html, readCoinType(config));
 }

@@ -2,11 +2,10 @@ import type { ReserveSlice, StablecoinMeta } from "@shared/types/core";
 import type { LiveReserveWarning, LiveReservesConfig } from "@shared/types/live-reserves";
 import type { AdapterContext, AdapterResult } from "./types";
 import {
-  fetchTextWithRetry,
+  fetchPrimaryHtmlInput,
   htmlLayoutChangedError,
   htmlParseError,
   parseTimestampLikeToUnixSeconds,
-  requireHtmlInput,
   reserveDegradedWarning,
   slicesFromValues,
   unverifiedFreshnessMetadata,
@@ -274,12 +273,6 @@ export async function fetchReMetricsReserves(
   signal: AbortSignal,
   ctx?: AdapterContext,
 ): Promise<AdapterResult> {
-  const input = requireHtmlInput(config.inputs.primary, "re-metrics");
-  const html = await fetchTextWithRetry(
-    input.url,
-    signal,
-    15_000,
-    ctx,
-  );
+  const html = await fetchPrimaryHtmlInput(config, "re-metrics", signal, ctx);
   return adaptReMetrics(html);
 }

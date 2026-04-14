@@ -5,7 +5,7 @@ import type { LiveReserveWarning } from "@shared/types/live-reserves";
 import type { ReserveSnapshotMetadataRecord } from "./live-reserves-store";
 import { LIVE_RESERVE_FRESHNESS_SEC } from "./live-reserves-store";
 import { SCORING_LIVE_RESERVE_EVIDENCE_CLASSES } from "./live-reserves-store-shared";
-import { hasScoringEligibleLiveReserveFreshness } from "./live-reserves-store-parsing";
+import { hasScoringEligibleLiveReserveFreshness } from "./live-reserves-store-legacy";
 
 export interface RedemptionBackstopLiveMetadata {
   updatedAt: number | null;
