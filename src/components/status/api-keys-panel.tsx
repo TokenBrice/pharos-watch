@@ -15,6 +15,7 @@ import { Button } from "@/components/ui/button";
 import { buildAdminApiPath } from "@/lib/admin-access";
 import { buildRequestUrl } from "@/lib/api";
 import { useApiKeys } from "@/hooks/use-api-keys";
+import { apiKeyStatusBadgeClassName, getApiKeyStatus } from "./api-key-status";
 
 interface EditableKeyState {
   name: string;
@@ -30,6 +31,8 @@ type CreateExpiryMode = "default" | "custom" | "non-expiring";
 
 const EMPTY_KEYS: readonly ApiKeySummary[] = [];
 const API_KEY_EXPIRING_SOON_WINDOW_SEC = WEEK_SECONDS;
+const API_KEY_MIN_RATE_LIMIT_PER_MINUTE = 1;
+const API_KEY_MAX_RATE_LIMIT_PER_MINUTE = 10_000;
 
 function buildEditableState(key: ApiKeySummary): EditableKeyState {
   return {
@@ -75,14 +78,22 @@ function parseDateTimeLocalValue(value: string): number | null {
   return Number.isFinite(epochMs) ? Math.floor(epochMs / 1000) : null;
 }
 
-function getKeyStatus(key: ApiKeySummary, nowSeconds: number): "inactive" | "expired" | "active" {
-  if (!key.isActive) {
-    return "inactive";
+function parseRateLimitInput(value: string): number {
+  const trimmed = value.trim();
+  if (!/^\d+$/.test(trimmed)) {
+    throw new Error("Rate limit must be a whole number");
   }
-  if (key.expiresAt != null && key.expiresAt <= nowSeconds) {
-    return "expired";
+  const parsed = Number.parseInt(trimmed, 10);
+  if (
+    !Number.isSafeInteger(parsed) ||
+    parsed < API_KEY_MIN_RATE_LIMIT_PER_MINUTE ||
+    parsed > API_KEY_MAX_RATE_LIMIT_PER_MINUTE
+  ) {
+    throw new Error(
+      `Rate limit must be between ${API_KEY_MIN_RATE_LIMIT_PER_MINUTE} and ${API_KEY_MAX_RATE_LIMIT_PER_MINUTE}`,
+    );
   }
-  return "active";
+  return parsed;
 }
 
 function isExpiringSoon(key: ApiKeySummary, nowSeconds: number): boolean {
@@ -90,16 +101,6 @@ function isExpiringSoon(key: ApiKeySummary, nowSeconds: number): boolean {
     && key.expiresAt != null
     && key.expiresAt > nowSeconds
     && key.expiresAt - nowSeconds <= API_KEY_EXPIRING_SOON_WINDOW_SEC;
-}
-
-function statusBadgeClassName(status: "inactive" | "expired" | "active"): string {
-  if (status === "active") {
-    return "bg-green-500/15 text-green-700 dark:text-green-400";
-  }
-  if (status === "expired") {
-    return "bg-red-500/15 text-red-700 dark:text-red-400";
-  }
-  return "bg-muted text-muted-foreground";
 }
 
 function formatExpirySummary(key: ApiKeySummary, nowSeconds: number): string {
@@ -192,7 +193,7 @@ export function ApiKeysPanel() {
         ownerEmail: createOwnerEmail || null,
         tier: createTier,
         trafficClass: createTrafficClass,
-        rateLimitPerMinute: Number.parseInt(createRateLimit, 10),
+        rateLimitPerMinute: parseRateLimitInput(createRateLimit),
       };
       if (createExpiryMode === "custom") {
         const parsedExpiry = parseDateTimeLocalValue(createExpiresAtInput);
@@ -258,7 +259,15 @@ export function ApiKeysPanel() {
             </label>
             <label className="space-y-1">
               <span className="text-xs font-medium text-muted-foreground">Rate Limit / Minute</span>
-              <input className={fieldClassName()} value={createRateLimit} onChange={(event) => setCreateRateLimit(event.target.value)} />
+              <input
+                type="number"
+                min={API_KEY_MIN_RATE_LIMIT_PER_MINUTE}
+                max={API_KEY_MAX_RATE_LIMIT_PER_MINUTE}
+                step={1}
+                className={fieldClassName()}
+                value={createRateLimit}
+                onChange={(event) => setCreateRateLimit(event.target.value)}
+              />
             </label>
             <label className="space-y-1">
               <span className="text-xs font-medium text-muted-foreground">Expiry Policy</span>
@@ -327,7 +336,7 @@ export function ApiKeysPanel() {
             {keys.map((key) => {
               const draft = draftState[key.id] ?? buildEditableState(key);
               const isBusy = busyKeyId === key.id;
-              const keyStatus = getKeyStatus(key, nowSeconds);
+              const keyStatus = getApiKeyStatus(key, nowSeconds);
               const expiringSoon = isExpiringSoon(key, nowSeconds);
 
               return (
@@ -338,7 +347,7 @@ export function ApiKeysPanel() {
                       <div className="font-mono text-xs text-muted-foreground">{key.maskedToken}</div>
                     </div>
                     <div className="flex flex-wrap gap-2">
-                      <span className={`rounded-full px-2 py-0.5 text-[11px] font-medium ${statusBadgeClassName(keyStatus)}`}>
+                      <span className={`rounded-full px-2 py-0.5 text-[11px] font-medium ${apiKeyStatusBadgeClassName(keyStatus)}`}>
                         {keyStatus}
                       </span>
                       {expiringSoon && (
@@ -396,6 +405,10 @@ export function ApiKeysPanel() {
                     <label className="space-y-1">
                       <span className="text-xs font-medium text-muted-foreground">Rate Limit / Minute</span>
                       <input
+                        type="number"
+                        min={API_KEY_MIN_RATE_LIMIT_PER_MINUTE}
+                        max={API_KEY_MAX_RATE_LIMIT_PER_MINUTE}
+                        step={1}
                         className={fieldClassName()}
                         value={draft.rateLimitPerMinute}
                         onChange={(event) => setDrafts((prev) => ({ ...prev, [key.id]: { ...draft, rateLimitPerMinute: event.target.value } }))}
@@ -458,7 +471,7 @@ export function ApiKeysPanel() {
                           ownerEmail: draft.ownerEmail || null,
                           tier: draft.tier,
                           trafficClass: draft.trafficClass,
-                          rateLimitPerMinute: Number.parseInt(draft.rateLimitPerMinute, 10),
+	                          rateLimitPerMinute: parseRateLimitInput(draft.rateLimitPerMinute),
                           expiresAt,
                         });
                         setDrafts((prev) => ({ ...prev, [key.id]: buildEditableState(response.key) }));

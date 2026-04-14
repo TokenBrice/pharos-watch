@@ -1,4 +1,4 @@
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, vi } from "vitest";
 import { mockD1 } from "./helpers/mock-d1";
 import { makeDexLiquidityRow } from "./helpers/fixtures";
 import { handleDexLiquidity } from "../dex-liquidity";
@@ -31,6 +31,28 @@ describe("handleDexLiquidity", () => {
     expect(coin).toHaveProperty("hasMeasuredLiquidityEvidence");
     expect(coin).toHaveProperty("trendworthy");
     expect(coin).toHaveProperty("sourceMix");
+  });
+
+  it("logs malformed persisted JSON fields and falls back safely", async () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => undefined);
+    const db = mockD1([
+      {
+        match: "dex_liquidity",
+        rows: [makeDexLiquidityRow({ protocol_tvl_json: "{bad-json" })],
+      },
+      { match: "dex_liquidity_history", rows: [] },
+      { match: "dex_prices", rows: [] },
+    ]);
+
+    const res = await handleDexLiquidity(db);
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as Record<string, Record<string, unknown>>;
+    expect(body["usdt-tether"]?.protocolTvl).toEqual({});
+    expect(warn).toHaveBeenCalledWith(
+      "[cache] Failed to parse persisted JSON (dex-liquidity:usdt-tether:protocol_tvl_json):",
+      expect.any(String),
+    );
+    warn.mockRestore();
   });
 
   it("returns 200 with empty map when no data", async () => {

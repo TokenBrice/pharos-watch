@@ -22,6 +22,7 @@ type RepairMode = "synthetic-splits" | "contradictory-recovery-price";
 const SYNTHETIC_SPLIT_MAX_GAP_SEC = 30 * 60;
 const SYNTHETIC_SPLIT_RECOVERY_BAR_BPS = 50;
 const SYNTHETIC_SPLIT_RESUME_MIN_BPS = 500;
+const DELETE_ID_PATTERN = /^\d+$/;
 
 interface AuditedEvent {
   id: number;
@@ -97,6 +98,19 @@ function getAbsoluteDeviationBps(price: number | null | undefined, pegReference:
     return null;
   }
   return Math.abs(Math.round(((price / pegReference) - 1) * 10_000));
+}
+
+function parseDeleteIds(value: string): number[] | Response {
+  const tokens = value.split(",").map((token) => token.trim());
+  if (tokens.length === 0 || tokens.some((token) => token.length === 0 || !DELETE_ID_PATTERN.test(token))) {
+    return errorResponse(400, "Invalid delete parameter: expected comma-separated numeric event IDs");
+  }
+
+  const ids = tokens.map((token) => Number.parseInt(token, 10));
+  if (ids.some((id) => !Number.isSafeInteger(id) || id <= 0)) {
+    return errorResponse(400, "Invalid delete parameter: expected positive event IDs");
+  }
+  return ids;
 }
 
 function isSyntheticSplitPair(previous: DepegRow, next: DepegRow): boolean {
@@ -252,7 +266,8 @@ export async function handleAuditDepegHistory(
       const { limit, offset } = parsed;
       const minSupply = parsed["min-supply"];
       // Direct delete: ?delete=ID1,ID2 skips CG checks and deletes specified events
-      const deleteIds = url.searchParams.get("delete");
+      const deleteParam = url.searchParams.get("delete");
+      const hasDeleteParam = deleteParam != null;
       const repairModeRaw = url.searchParams.get("repair");
       const repairMode: RepairMode | null =
         repairModeRaw === "synthetic-splits"
@@ -263,7 +278,7 @@ export async function handleAuditDepegHistory(
       if (repairModeRaw && repairMode == null) {
         return errorResponse(400, `Unsupported repair mode: ${repairModeRaw}`);
       }
-      if (deleteIds && repairMode) {
+      if (hasDeleteParam && repairMode) {
         return errorResponse(400, "Use either delete=... or repair=..., not both");
       }
       // Dry run: preview deletions without touching the DB
@@ -277,12 +292,14 @@ export async function handleAuditDepegHistory(
       }
       // Optional symbol filter: ?symbol=USDC (case-insensitive)
       const symbolFilter = url.searchParams.get("symbol")?.toUpperCase() ?? null;
+      const deleteIds = deleteParam == null ? null : parseDeleteIds(deleteParam);
+      if (deleteIds instanceof Response) return deleteIds;
 
       // 1. Query closed depeg events
       // Apply pagination only for the default audit path. The delete path
       // targets events by ID (doesn't need the full set), and the repair path
       // has its own separate query at line 290.
-      const usePagination = !deleteIds && !repairMode;
+      const usePagination = deleteIds == null && !repairMode;
       const eventsSql = "SELECT id, stablecoin_id, symbol, peg_type, direction, peak_deviation_bps, started_at, ended_at, start_price, peak_price, recovery_price, peg_reference, source FROM depeg_events WHERE ended_at IS NOT NULL ORDER BY started_at"
         + (usePagination ? " LIMIT ? OFFSET ?" : "");
       const eventsStmt = usePagination
@@ -293,11 +310,7 @@ export async function handleAuditDepegHistory(
 
       // Fast path: direct delete of specific event IDs (pre-verified externally)
       if (deleteIds) {
-        const ids = deleteIds
-          .split(",")
-          .map((s) => parseInt(s.trim(), 10))
-          .filter((n) => !isNaN(n));
-        const toDelete = events.filter((e) => ids.includes(e.id));
+        const toDelete = events.filter((e) => deleteIds.includes(e.id));
         if (toDelete.length === 0) {
           return errorResponse(404, "No matching events found");
         }

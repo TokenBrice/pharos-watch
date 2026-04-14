@@ -11,8 +11,22 @@ function sanitizeInlineText(input: string): string {
     .slice(0, 200);
 }
 
+function sanitizeBlockText(input: string): string {
+  return normalizeMultilineText(input)
+    .replace(/`{3,}/g, (run) => Array.from(run).join("\\"))
+    .replace(/@/g, "@ ");
+}
+
+function buildTextFence(value: string): string {
+  const runs = value.match(/`+/g) ?? [];
+  const maxRun = runs.reduce((max, run) => Math.max(max, run.length), 0);
+  return "`".repeat(Math.max(3, maxRun + 1));
+}
+
 function formatTextBlock(label: string, value: string): string[] {
-  return [`**${label}:**`, "```text", normalizeMultilineText(value), "```"];
+  const text = sanitizeBlockText(value);
+  const fence = buildTextFence(text);
+  return [`**${label}:**`, `${fence}text`, text, fence];
 }
 
 function formatFeedbackBody(feedback: FeedbackBody, verificationBlock?: string): string {

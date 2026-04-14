@@ -39,3 +39,29 @@ export function makeApiRequest(path: string, options: ApiRequestOptions = {}): R
 export function stubCryptoForAuth(): void {
   vi.stubGlobal("crypto", crypto);
 }
+
+export async function hmacSha256Hex(secret: string, input: string): Promise<string> {
+  const encoder = new TextEncoder();
+  const key = await crypto.subtle.importKey(
+    "raw",
+    encoder.encode(secret),
+    { name: "HMAC", hash: "SHA-256" },
+    false,
+    ["sign"],
+  );
+  const signature = await crypto.subtle.sign("HMAC", key, encoder.encode(input));
+  return Array.from(new Uint8Array(signature), (value) => value.toString(16).padStart(2, "0")).join("");
+}
+
+export function makeExecutionContext() {
+  const waits: Promise<unknown>[] = [];
+  return {
+    waits,
+    ctx: {
+      waitUntil: vi.fn((promise: Promise<unknown>) => {
+        waits.push(promise);
+      }),
+      passThroughOnException: vi.fn(),
+    } as unknown as ExecutionContext,
+  };
+}

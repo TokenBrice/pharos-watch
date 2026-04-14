@@ -370,7 +370,7 @@ describe("handleFeedback", () => {
     expect(res.status).toBe(200);
   });
 
-  it("neutralizes markdown-style mentions in GitHub issue bodies", async () => {
+  it("neutralizes markdown mentions and code fences in GitHub issue bodies", async () => {
     const db = mockD1([{ match: "feedback_rate_limit", rows: [], runMeta: { changes: 1 } }]);
 
     fetchSpy.mockResolvedValueOnce(new Response(JSON.stringify({ id: 8, number: 49 }), { status: 201 }));
@@ -380,7 +380,7 @@ describe("handleFeedback", () => {
       makeRequest(
         makeFeedbackBody({
           title: "@ops broken",
-          description: "Ping @ops and **please** fix this regression.",
+          description: "Ping @ops and **please** fix this regression.\n```markdown\n@team",
         }),
       ),
       makeEnv(),
@@ -390,8 +390,10 @@ describe("handleFeedback", () => {
     const [, init] = fetchSpy.mock.calls[0]!;
     const issuePayload = JSON.parse(String(init?.body)) as { title: string; body: string };
     expect(issuePayload.title).toContain("@ ops");
-    expect(issuePayload.body).toContain("Ping @ops");
+    expect(issuePayload.body).toContain("Ping @ ops");
+    expect(issuePayload.body).toContain("@ team");
     expect(issuePayload.body).toContain("```text");
+    expect(issuePayload.body).not.toContain("```markdown");
   });
 
   it("includes optional contact handle in GitHub body", async () => {

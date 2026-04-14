@@ -122,6 +122,34 @@ describe("handleAuditDepegHistory method safety", () => {
     expect(body.totalMatching).toBe(0);
   });
 
+  it("rejects malformed direct delete IDs instead of partially parsing them", async () => {
+    const db = mockD1([]);
+    for (const deleteParam of ["1abc", "abc,1", ",1"]) {
+      const req = makeApiRequest(`/api/audit-depeg-history?dry-run=true&delete=${encodeURIComponent(deleteParam)}`, {
+        adminKey: "secret",
+      });
+
+      const res = await handleAuditDepegHistory(db, makeApiUrl(req.url), true, req);
+      expect(res.status).toBe(400);
+      const body = (await res.json()) as { error: string };
+      expect(body.error).toContain("Invalid delete parameter");
+    }
+  });
+
+  it("accepts valid direct delete ID lists in dry-run mode", async () => {
+    const rows = makeSyntheticSplitRows();
+    const db = mockD1([
+      { match: "FROM depeg_events WHERE ended_at IS NOT NULL ORDER BY started_at", rows },
+    ]);
+    const req = makeApiRequest("/api/audit-depeg-history?dry-run=true&delete=1,2", { adminKey: "secret" });
+
+    const res = await handleAuditDepegHistory(db, makeApiUrl(req.url), true, req);
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as { dryRun: boolean; deletedEvents: Array<{ id: number }> };
+    expect(body.dryRun).toBe(true);
+    expect(body.deletedEvents.map((event) => event.id)).toEqual([1, 2]);
+  });
+
   it("surfaces synthetic split repair candidates in dry-run mode", async () => {
     const rows = makeSyntheticSplitRows();
     const db = mockD1([

@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import worker from "../../index";
 import { mockD1 } from "./helpers/mock-d1";
-import { makeApiRequest, stubCryptoForAuth } from "./helpers/auth";
+import { hmacSha256Hex, makeApiRequest, makeExecutionContext, stubCryptoForAuth } from "./helpers/auth";
 import {
   handleApiKeyRotate,
   handleApiKeyUpdate,
@@ -12,32 +12,6 @@ import { resetRateLimitStateForTests } from "../../lib/rate-limit";
 import { resetRequestAttributionStateForTests } from "../../lib/request-source-attribution";
 
 stubCryptoForAuth();
-
-async function hmacSha256Hex(secret: string, input: string): Promise<string> {
-  const encoder = new TextEncoder();
-  const key = await crypto.subtle.importKey(
-    "raw",
-    encoder.encode(secret),
-    { name: "HMAC", hash: "SHA-256" },
-    false,
-    ["sign"],
-  );
-  const signature = await crypto.subtle.sign("HMAC", key, encoder.encode(input));
-  return Array.from(new Uint8Array(signature), (value) => value.toString(16).padStart(2, "0")).join("");
-}
-
-function makeCtx() {
-  const waits: Promise<unknown>[] = [];
-  return {
-    waits,
-    ctx: {
-      waitUntil: vi.fn((promise: Promise<unknown>) => {
-        waits.push(promise);
-      }),
-      passThroughOnException: vi.fn(),
-    } as unknown as ExecutionContext,
-  };
-}
 
 function makeEnv(db: D1Database) {
   return {
@@ -224,6 +198,49 @@ describe("api key handlers", () => {
     expect(body.key.expiresAt).toBe(5_000);
   });
 
+  it("rejects partially numeric rate-limit updates", async () => {
+    const db = mockD1([
+      {
+        match: "key_prefix,\n       secret_hash,\n       name",
+        matchBinds: [7],
+        first: {
+          id: 7,
+          key_prefix: "0123456789abcdef",
+          secret_hash: "hash",
+          name: "Ops",
+          owner_email: "ops@pharos.watch",
+          tier: "standard",
+          traffic_class: "external",
+          rate_limit_per_minute: 120,
+          is_active: 1,
+          expires_at: null,
+          created_at: 1,
+          updated_at: 1,
+          last_used_at: null,
+          last_used_route: null,
+        },
+        rows: [],
+      },
+    ], { requireMatch: true });
+
+    const response = await handleApiKeyUpdate(
+      db,
+      7,
+      true,
+      makeApiRequest("/api/api-keys/7/update", {
+        method: "POST",
+        adminKey: "secret-key",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ rateLimitPerMinute: "120abc" }),
+      }),
+    );
+
+    expect(response.status).toBe(400);
+    await expect(response.json()).resolves.toEqual({
+      error: "rateLimitPerMinute must be an integer between 1 and 10000",
+    });
+  });
+
   it("preserves the current expiry when rotating a key", async () => {
     const db = mockD1([
       {
@@ -338,7 +355,7 @@ describe("api key handlers", () => {
         runMeta: { changes: 0 },
       },
     ], { requireMatch: true });
-    const { ctx, waits } = makeCtx();
+    const { ctx, waits } = makeExecutionContext();
 
     const response = await worker.fetch(
       new Request("https://api.pharos.watch/api/stablecoins", {

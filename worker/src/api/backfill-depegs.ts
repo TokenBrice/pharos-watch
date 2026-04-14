@@ -169,8 +169,13 @@ export async function handleBackfillDepegs(
         let detail: CoinDetail | null = null;
         const dlId = meta.llamaId ?? meta.id;
         try {
-          const res = await fetch(`${DEFILLAMA_BASE}/stablecoin/${encodeURIComponent(dlId)}`);
-          if (res.ok) {
+          const res = await fetchWithRetry(
+            `${DEFILLAMA_BASE}/stablecoin/${encodeURIComponent(dlId)}`,
+            { headers: { "User-Agent": USER_AGENT } },
+            1,
+            { timeoutMs: 10_000 },
+          );
+          if (res?.ok) {
             const raw = await res.json();
             if (raw && typeof raw === "object") {
               detail = raw as CoinDetail;

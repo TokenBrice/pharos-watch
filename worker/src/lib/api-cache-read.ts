@@ -11,6 +11,23 @@ export function safeJsonParse<T>(json: string | null | undefined, fallback: T): 
   }
 }
 
+export function safeJsonParseWithContext<T>(
+  json: string | null | undefined,
+  fallback: T,
+  context: string,
+): T {
+  if (json == null) return fallback;
+  try {
+    return JSON.parse(json) as T;
+  } catch (err) {
+    console.warn(
+      `[cache] Failed to parse persisted JSON (${context}):`,
+      err instanceof Error ? err.message : String(err),
+    );
+    return fallback;
+  }
+}
+
 export type CachedJsonReadResult<T> =
   | { status: "missing" }
   | { status: "ok"; data: T }

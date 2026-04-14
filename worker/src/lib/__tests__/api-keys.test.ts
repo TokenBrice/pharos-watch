@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it } from "vitest";
 import { mockD1 } from "../../api/__tests__/helpers/mock-d1";
+import { hmacSha256Hex } from "../../api/__tests__/helpers/auth";
 import {
   authenticateApiKey,
   checkApiKeyRateLimit,
@@ -11,19 +12,6 @@ import {
   rotateApiKey,
   updateApiKey,
 } from "../api-keys";
-
-async function hmacSha256Hex(secret: string, input: string): Promise<string> {
-  const encoder = new TextEncoder();
-  const key = await crypto.subtle.importKey(
-    "raw",
-    encoder.encode(secret),
-    { name: "HMAC", hash: "SHA-256" },
-    false,
-    ["sign"],
-  );
-  const signature = await crypto.subtle.sign("HMAC", key, encoder.encode(input));
-  return Array.from(new Uint8Array(signature), (value) => value.toString(16).padStart(2, "0")).join("");
-}
 
 describe("api key helpers", () => {
   beforeEach(() => {
@@ -176,6 +164,19 @@ describe("api key helpers", () => {
     });
     expect(db.getHistory()[0]?.binds[7]).toBe(111 + (90 * 24 * 60 * 60));
     expect(parseApiKeyToken((created as Exclude<typeof created, Response>).token)).not.toBeNull();
+  });
+
+  it("rejects partial numeric rate limit strings", async () => {
+    const created = await createApiKey(mockD1([]), "pepper", {
+      name: "Bad rate",
+      rateLimitPerMinute: "120abc",
+    }, 111);
+
+    expect(created).toBeInstanceOf(Response);
+    expect((created as Response).status).toBe(400);
+    await expect((created as Response).json()).resolves.toEqual({
+      error: "rateLimitPerMinute must be an integer between 1 and 10000",
+    });
   });
 
   it("preserves explicit null expiry as a non-expiring exception", async () => {

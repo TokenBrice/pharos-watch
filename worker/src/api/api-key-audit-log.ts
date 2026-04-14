@@ -1,4 +1,4 @@
-import { jsonResponse } from "../lib/api-utils";
+import { errorResponse, jsonResponse } from "../lib/api-utils";
 import { runAdminRoute } from "../lib/route-wrappers";
 
 interface AuditLogRow {
@@ -12,6 +12,7 @@ interface AuditLogRow {
 
 const AUDIT_LOG_DEFAULT_LIMIT = 50;
 const AUDIT_LOG_MAX_LIMIT = 200;
+const POSITIVE_INTEGER_PATTERN = /^\d+$/;
 
 function parseAuditDetail(row: AuditLogRow): unknown {
   if (!row.detail_json) return null;
@@ -24,6 +25,19 @@ function parseAuditDetail(row: AuditLogRow): unknown {
     );
     return null;
   }
+}
+
+function parsePositiveIntParam(value: string | null, fieldName: string): number | Response | null {
+  if (value == null || value.trim().length === 0) return null;
+  const trimmed = value.trim();
+  if (!POSITIVE_INTEGER_PATTERN.test(trimmed)) {
+    return errorResponse(400, `Invalid ${fieldName}: must be a positive integer`);
+  }
+  const parsed = Number.parseInt(trimmed, 10);
+  if (!Number.isSafeInteger(parsed) || parsed <= 0) {
+    return errorResponse(400, `Invalid ${fieldName}: must be a positive integer`);
+  }
+  return parsed;
 }
 
 export function handleApiKeyAuditLog(
@@ -39,16 +53,16 @@ export function handleApiKeyAuditLog(
     },
     async () => {
       const url = new URL(request!.url);
-      const limitParam = Number.parseInt(url.searchParams.get("limit") ?? "", 10);
-      const limit = Number.isFinite(limitParam) && limitParam > 0
-        ? Math.min(limitParam, AUDIT_LOG_MAX_LIMIT)
-        : AUDIT_LOG_DEFAULT_LIMIT;
+      const limitParam = parsePositiveIntParam(url.searchParams.get("limit"), "limit");
+      if (limitParam instanceof Response) return limitParam;
+      const limit = limitParam == null ? AUDIT_LOG_DEFAULT_LIMIT : Math.min(limitParam, AUDIT_LOG_MAX_LIMIT);
 
       const apiKeyIdParam = url.searchParams.get("apiKeyId");
-      const apiKeyId = apiKeyIdParam ? Number.parseInt(apiKeyIdParam, 10) : null;
+      const apiKeyId = parsePositiveIntParam(apiKeyIdParam, "apiKeyId");
+      if (apiKeyId instanceof Response) return apiKeyId;
 
       let rows: AuditLogRow[];
-      if (apiKeyId && Number.isFinite(apiKeyId) && apiKeyId > 0) {
+      if (apiKeyId != null) {
         const result = await db.prepare(
           `SELECT id, api_key_id, action, actor, detail_json, created_at
            FROM api_key_audit_log

@@ -8,6 +8,12 @@ function base64urlEncode(data: string): string {
   return encoded.replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
 }
 
+function base64urlEncodeBytes(data: ArrayBuffer): string {
+  const bytes = new Uint8Array(data);
+  const encoded = btoa(String.fromCharCode(...bytes));
+  return encoded.replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+}
+
 function makeJwtParts(
   header: Record<string, unknown>,
   payload: Record<string, unknown>,
@@ -17,6 +23,41 @@ function makeJwtParts(
   // Fake signature — will fail crypto verification but allows claim tests
   const sigB64 = base64urlEncode("fake-signature-bytes");
   return { headerB64, payloadB64, token: `${headerB64}.${payloadB64}.${sigB64}` };
+}
+
+async function makeSignedJwt(
+  header: Record<string, unknown>,
+  payload: Record<string, unknown>,
+): Promise<{ token: string; jwk: Record<string, unknown> }> {
+  const keyPair = await crypto.subtle.generateKey(
+    {
+      name: "RSASSA-PKCS1-v1_5",
+      modulusLength: 2048,
+      publicExponent: new Uint8Array([1, 0, 1]),
+      hash: "SHA-256",
+    },
+    true,
+    ["sign", "verify"],
+  ) as CryptoKeyPair;
+  const publicJwk = await crypto.subtle.exportKey("jwk", keyPair.publicKey) as unknown as Record<string, unknown>;
+  const headerB64 = base64urlEncode(JSON.stringify(header));
+  const payloadB64 = base64urlEncode(JSON.stringify(payload));
+  const signingInput = `${headerB64}.${payloadB64}`;
+  const signature = await crypto.subtle.sign(
+    "RSASSA-PKCS1-v1_5",
+    keyPair.privateKey,
+    new TextEncoder().encode(signingInput),
+  );
+
+  return {
+    token: `${signingInput}.${base64urlEncodeBytes(signature)}`,
+    jwk: {
+      ...publicJwk,
+      kid: String(header.kid),
+      alg: String(header.alg),
+      use: "sig",
+    },
+  };
 }
 
 const TEAM_DOMAIN = "pharos";
@@ -194,6 +235,16 @@ describe("verifyAccessJwt", () => {
       // We can't easily distinguish "claim pass but crypto fail" from claim rejection
       // in the boolean API, but we know the fetch was called (meaning claims passed)
       expect(fetch).toHaveBeenCalledWith(JWKS_URL, expect.objectContaining({ signal: expect.any(AbortSignal) }));
+    });
+
+    it("accepts a valid signed Access JWT", async () => {
+      const { token, jwk } = await makeSignedJwt(validHeader(), validClaims());
+      vi.stubGlobal(
+        "fetch",
+        vi.fn().mockResolvedValue(new Response(JSON.stringify({ keys: [jwk] }), { status: 200 })),
+      );
+
+      await expect(verifyAccessJwt({ token, aud: AUD, teamDomain: TEAM_DOMAIN })).resolves.toBe(true);
     });
   });
 

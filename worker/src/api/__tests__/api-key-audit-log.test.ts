@@ -51,6 +51,26 @@ describe("api-key-audit-log handler", () => {
     expect(response.status).toBe(200);
   });
 
+  it("rejects partially numeric limit filters", async () => {
+    const db = mockD1([], { requireMatch: true });
+    const request = new Request("https://api.pharos.watch/api/api-keys/audit-log?limit=25abc");
+
+    const response = await handleApiKeyAuditLog(db, true, request);
+
+    expect(response.status).toBe(400);
+    await expect(response.json()).resolves.toEqual({ error: "Invalid limit: must be a positive integer" });
+  });
+
+  it("rejects invalid apiKeyId filters instead of broadening the query", async () => {
+    const db = mockD1([], { requireMatch: true });
+    const request = new Request("https://api.pharos.watch/api/api-keys/audit-log?apiKeyId=7abc");
+
+    const response = await handleApiKeyAuditLog(db, true, request);
+
+    expect(response.status).toBe(400);
+    await expect(response.json()).resolves.toEqual({ error: "Invalid apiKeyId: must be a positive integer" });
+  });
+
   it("keeps the handler healthy when detail_json is malformed", async () => {
     const warn = vi.spyOn(console, "warn").mockImplementation(() => undefined);
     const db = mockD1([

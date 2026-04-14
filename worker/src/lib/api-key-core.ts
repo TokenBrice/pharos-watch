@@ -147,11 +147,29 @@ function normalizeRateLimit(value: unknown): number | Response {
   if (value == null || value === "") {
     return API_KEY_DEFAULT_RATE_LIMIT_PER_MINUTE;
   }
-  const parsed = Number.parseInt(String(value), 10);
-  if (!Number.isFinite(parsed) || parsed < API_KEY_MIN_RATE_LIMIT_PER_MINUTE || parsed > API_KEY_MAX_RATE_LIMIT_PER_MINUTE) {
+  let parsed: number;
+  if (typeof value === "number") {
+    parsed = value;
+  } else if (typeof value === "string") {
+    const trimmed = value.trim();
+    if (!/^\d+$/.test(trimmed)) {
+      return errorResponse(
+        400,
+        `rateLimitPerMinute must be an integer between ${API_KEY_MIN_RATE_LIMIT_PER_MINUTE} and ${API_KEY_MAX_RATE_LIMIT_PER_MINUTE}`,
+      );
+    }
+    parsed = Number.parseInt(trimmed, 10);
+  } else {
     return errorResponse(
       400,
-      `rateLimitPerMinute must be between ${API_KEY_MIN_RATE_LIMIT_PER_MINUTE} and ${API_KEY_MAX_RATE_LIMIT_PER_MINUTE}`,
+      `rateLimitPerMinute must be an integer between ${API_KEY_MIN_RATE_LIMIT_PER_MINUTE} and ${API_KEY_MAX_RATE_LIMIT_PER_MINUTE}`,
+    );
+  }
+
+  if (!Number.isInteger(parsed) || !Number.isFinite(parsed) || parsed < API_KEY_MIN_RATE_LIMIT_PER_MINUTE || parsed > API_KEY_MAX_RATE_LIMIT_PER_MINUTE) {
+    return errorResponse(
+      400,
+      `rateLimitPerMinute must be an integer between ${API_KEY_MIN_RATE_LIMIT_PER_MINUTE} and ${API_KEY_MAX_RATE_LIMIT_PER_MINUTE}`,
     );
   }
   return parsed;
