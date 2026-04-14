@@ -1,209 +1,30 @@
-import type { ChainConfig } from "./blacklist-contracts";
 import { chainConfig } from "./blacklist-contracts";
-import { resolveRequiredTrackedContractConfig } from "./tracked-contract-resolution";
 import { CHAIN_META } from "@shared/lib/chains";
-
-// --- Types ---
-
-export type MintBurnDirection = "mint" | "burn";
-export type MintBurnTier = "critical" | "extended";
-export type MintBurnType = "effective_burn" | "bridge_burn" | "review_required";
-export type MintBurnAdapterKind = "transfer-zero-address" | "custom-events" | "mixed";
-export type MintBurnStartBlockConfidence = "high" | "medium" | "low";
-
-export interface MintBurnCcipBridgeDetectionConfig {
-  protocol: "ccip";
-  knownBridgePoolAddresses: string[];
-  knownBridgeRouterAddresses: string[];
-  bridgeSignalTopics: string[];
-  bridgeSignalSelectors: string[];
-}
-
-export interface MintBurnLayerZeroOftBridgeDetectionConfig {
-  protocol: "layerzero-oft";
-  knownBridgeContractAddresses: string[];
-  bridgeSignalEmitterAddresses: string[];
-  bridgeSignalTopics: string[];
-  bridgeSignalSelectors: string[];
-}
-
-export type MintBurnBridgeDetectionConfig =
-  | MintBurnCcipBridgeDetectionConfig
-  | MintBurnLayerZeroOftBridgeDetectionConfig;
-
-export interface MintBurnEventDef {
-  signature: string;
-  topicHash: string;
-  direction: MintBurnDirection;
-  amountEncoding: "transfer-value" | "first-data-uint256" | "nth-data-uint256";
-  dataSlot?: number; // Required when amountEncoding = "nth-data-uint256"; 0-indexed slot in ABI-encoded data
-  filterTopic?: {
-    index: number;
-    value: string;
-  };
-}
-
-export interface MintBurnContractConfig {
-  chain: ChainConfig;
-  stablecoinId: string;
-  symbol: string;
-  contractAddress: string;
-  decimals: number;
-  dustThreshold: number;
-  startBlock: number;
-  events: MintBurnEventDef[];
-  enabled?: boolean;
-  tier?: MintBurnTier;
-  bridgeDetection?: MintBurnBridgeDetectionConfig;
-  adapterKind: MintBurnAdapterKind;
-  startBlockSource: string;
-  startBlockConfidence: MintBurnStartBlockConfidence;
-}
-
-interface MintBurnContractConfigSpec {
-  chain: ChainConfig;
-  stablecoinId: string;
-  contractSource?: "primary" | "traded";
-  contractAddressOverride?: string;
-  decimalsOverride?: number;
-  dustThreshold: number;
-  startBlock: number;
-  events: MintBurnEventDef[];
-  enabled?: boolean;
-  tier?: MintBurnTier;
-  bridgeDetection?: MintBurnBridgeDetectionConfig;
-  adapterKind?: MintBurnAdapterKind;
-  startBlockSource?: string;
-  startBlockConfidence?: MintBurnStartBlockConfidence;
-  isDefaultStartBlock?: boolean;
-}
-
-// --- Constants ---
-
-const ZERO_ADDRESS_PADDED = "0x0000000000000000000000000000000000000000000000000000000000000000";
-const TRANSFER_TOPIC = "0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef";
-
-// Phase 2 readiness — USDT Tron uses these instead of Transfer
-const USDT_ISSUE_TOPIC = "0xcb8241adb0c3fdb35b70c24ce35c5eb0c17af7431c99f827d44a445ca624176a";
-const USDT_REDEEM_TOPIC = "0x702d5967f45f6513a38ffc42d6ba9bf230bd40e8f53b16363c7eb4fd2deb9a44";
-const CCIP_ETHEREUM_ROUTER = "0x80226fc0ee2b096224eeac085bb9a8cba1146f7d";
-const CCIP_SEND_REQUESTED_TOPIC = "0xd0c3c799bf9e2639de44391e7f524d229b2b55f5b1ea94b2bf7da42f7243dddd";
-const CCIP_SEND_SELECTOR = "0x96f4e9f9";
-const LAYERZERO_ENDPOINT_V2 = "0x1a44076050125825900e736c501f859c50fe728c";
-const LAYERZERO_PACKET_SENT_TOPIC = "0x1ab700d4ced0c005b164c0f789fd09fcbb0156d4c2041b8a3bfbcd961cd1567f";
-const LAYERZERO_PACKET_DELIVERED_TOPIC = "0x3cd5e48f9730b129dc7550f0fcea9c767b7be37837cd10e55eb35f734f4bca04";
-const LAYERZERO_SEND_SELECTOR = "0xc7c7f5b3";
-const LAYERZERO_EXECUTE302_SELECTOR = "0xcfc32570";
-const LAYERZERO_LOCAL_COMPOSE_SELECTOR = "0x7cd44734";
-
-
-// --- Helpers ---
-
-function transferMintBurn(): MintBurnEventDef[] {
-  return [
-    {
-      signature: "Transfer(address,address,uint256)",
-      topicHash: TRANSFER_TOPIC,
-      direction: "mint",
-      amountEncoding: "transfer-value",
-      filterTopic: { index: 1, value: ZERO_ADDRESS_PADDED }, // from = zero
-    },
-    {
-      signature: "Transfer(address,address,uint256)",
-      topicHash: TRANSFER_TOPIC,
-      direction: "burn",
-      amountEncoding: "transfer-value",
-      filterTopic: { index: 2, value: ZERO_ADDRESS_PADDED }, // to = zero
-    },
-  ];
-}
-
-function ccipBridgeDetection(
-  knownBridgePoolAddresses: string[],
-): MintBurnBridgeDetectionConfig {
-  return {
-    protocol: "ccip",
-    knownBridgePoolAddresses,
-    knownBridgeRouterAddresses: [
-      CCIP_ETHEREUM_ROUTER,
-    ],
-    bridgeSignalTopics: [
-      CCIP_SEND_REQUESTED_TOPIC,
-    ],
-    bridgeSignalSelectors: [
-      CCIP_SEND_SELECTOR,
-    ],
-  };
-}
-
-function layerZeroOftBridgeDetection(
-  knownBridgeContractAddresses: string[],
-): MintBurnBridgeDetectionConfig {
-  return {
-    protocol: "layerzero-oft",
-    knownBridgeContractAddresses,
-    bridgeSignalEmitterAddresses: [
-      LAYERZERO_ENDPOINT_V2,
-    ],
-    bridgeSignalTopics: [
-      LAYERZERO_PACKET_SENT_TOPIC,
-      LAYERZERO_PACKET_DELIVERED_TOPIC,
-    ],
-    bridgeSignalSelectors: [
-      LAYERZERO_SEND_SELECTOR,
-      LAYERZERO_EXECUTE302_SELECTOR,
-      LAYERZERO_LOCAL_COMPOSE_SELECTOR,
-    ],
-  };
-}
-
-function resolveMintBurnContractConfig(
-  spec: MintBurnContractConfigSpec,
-): MintBurnContractConfig {
-  const resolvedContract = resolveRequiredTrackedContractConfig(spec.stablecoinId, spec.chain.chainId, {
-    source: spec.contractSource,
-    addressOverride: spec.contractAddressOverride,
-    decimalsOverride: spec.decimalsOverride,
-  });
-
-  const adapterKind = spec.adapterKind ?? inferAdapterKind(spec.events);
-  const defaultedStartBlock = spec.isDefaultStartBlock === true;
-
-  return {
-    chain: spec.chain,
-    stablecoinId: spec.stablecoinId,
-    symbol: resolvedContract.stablecoin.symbol,
-    contractAddress: resolvedContract.contractAddress,
-    decimals: resolvedContract.decimals,
-    dustThreshold: spec.dustThreshold,
-    startBlock: spec.startBlock,
-    events: spec.events,
-    enabled: spec.enabled,
-    tier: spec.tier,
-    bridgeDetection: spec.bridgeDetection,
-    adapterKind,
-    startBlockSource: spec.startBlockSource ?? (
-      defaultedStartBlock ? "default-coverage-floor-2026-03-24" : "reviewed-contract-specific"
-    ),
-    startBlockConfidence: spec.startBlockConfidence ?? (defaultedStartBlock ? "low" : "high"),
-  };
-}
-
-function inferAdapterKind(events: MintBurnEventDef[]): MintBurnAdapterKind {
-  const hasTransferZeroAddressOnly = events.length === 2
-    && events.every((event) =>
-      event.signature === "Transfer(address,address,uint256)"
-      && event.amountEncoding === "transfer-value"
-      && (
-        (event.direction === "mint" && event.filterTopic?.index === 1 && event.filterTopic.value === ZERO_ADDRESS_PADDED)
-        || (event.direction === "burn" && event.filterTopic?.index === 2 && event.filterTopic.value === ZERO_ADDRESS_PADDED)
-      ),
-    );
-  if (hasTransferZeroAddressOnly) return "transfer-zero-address";
-
-  const hasTransfer = events.some((event) => event.signature === "Transfer(address,address,uint256)");
-  return hasTransfer ? "mixed" : "custom-events";
-}
+export type {
+  MintBurnAdapterKind,
+  MintBurnBridgeDetectionConfig,
+  MintBurnCcipBridgeDetectionConfig,
+  MintBurnContractConfig,
+  MintBurnContractConfigSpec,
+  MintBurnDirection,
+  MintBurnEventDef,
+  MintBurnLayerZeroOftBridgeDetectionConfig,
+  MintBurnStartBlockConfidence,
+  MintBurnTier,
+  MintBurnType,
+} from "./mint-burn-contracts-types";
+import type {
+  MintBurnBridgeDetectionConfig,
+  MintBurnContractConfig,
+  MintBurnContractConfigSpec,
+} from "./mint-burn-contracts-types";
+import {
+  ccipBridgeDetection,
+  layerZeroOftBridgeDetection,
+  resolveMintBurnContractConfig,
+  transferMintBurn,
+  uniqueChainIds,
+} from "./mint-burn-contracts-helpers";
 
 // --- reUSD (Re Protocol) event topic hashes ---
 // Deposited(address user, address token, uint256 amount) — all params unindexed
@@ -217,6 +38,9 @@ const REUSD_INSTANT_REDEEM_TOPIC = "0xa58dba63852b106a5b3bbc558fa3fbcfe606497cbc
 
 const ETHEREUM = chainConfig("ethereum");
 const ARBITRUM = chainConfig("arbitrum");
+// Phase 2 readiness — USDT Tron uses these instead of Transfer
+const USDT_ISSUE_TOPIC = "0xcb8241adb0c3fdb35b70c24ce35c5eb0c17af7431c99f827d44a445ca624176a";
+const USDT_REDEEM_TOPIC = "0x702d5967f45f6513a38ffc42d6ba9bf230bd40e8f53b16363c7eb4fd2deb9a44";
 // Reviewed Arbitrum deployment bound: the USDai proxy is live by block
 // 336,209,932 (2025-05-13), with first observed contract activity the next day.
 const USD_AI_ARBITRUM_DEPLOY_BLOCK = 336_209_932;
@@ -874,10 +698,6 @@ const MINT_BURN_CONFIG_SPECS: MintBurnContractConfigSpec[] = [
 export const MINT_BURN_CONFIGS: MintBurnContractConfig[] = MINT_BURN_CONFIG_SPECS.map(
   resolveMintBurnContractConfig,
 );
-
-function uniqueChainIds(configs: MintBurnContractConfig[]): string[] {
-  return [...new Set(configs.map((config) => config.chain.chainId))];
-}
 
 export function getMintBurnConfigsForStablecoin(stablecoinId: string): MintBurnContractConfig[] {
   return MINT_BURN_CONFIGS.filter((config) => config.stablecoinId === stablecoinId);
