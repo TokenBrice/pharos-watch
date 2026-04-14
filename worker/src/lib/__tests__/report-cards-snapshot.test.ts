@@ -1,35 +1,22 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { mockD1 } from "../../api/__tests__/helpers/mock-d1";
 import { makeAsset, makeReportCardsDb } from "../../api/__tests__/helpers/fixtures";
 import { handleReportCards } from "../../api/report-cards";
-import {
-  buildReportCardsSnapshot,
-  ReportCardsSnapshotUnavailableError,
-} from "../report-cards-snapshot";
+import { buildReportCardsSnapshot, ReportCardsSnapshotUnavailableError } from "../report-cards-snapshot";
 import { RedemptionBackstopSnapshotUnavailableError } from "../redemption-backstops-store";
 import type { PegSummaryCoin } from "@shared/types/market";
 import type { RedemptionBackstopEntry } from "@shared/types/redemption";
 
-const loadRedemptionBackstopSnapshotMock = vi.hoisted(() =>
-  vi.fn(),
-);
+const loadRedemptionBackstopSnapshotMock = vi.hoisted(() => vi.fn());
 
-const loadDexLiquiditySnapshotMock = vi.hoisted(() =>
-  vi.fn(),
-);
+const loadDexLiquiditySnapshotMock = vi.hoisted(() => vi.fn());
 
-const loadFreshIndependentLiveReserveMapMock = vi.hoisted(() =>
-  vi.fn(),
-);
+const loadFreshIndependentLiveReserveMapMock = vi.hoisted(() => vi.fn());
 
-const derivePegAnalyticsSnapshotMock = vi.hoisted(() =>
-  vi.fn(),
-);
+const derivePegAnalyticsSnapshotMock = vi.hoisted(() => vi.fn());
 
 vi.mock("../redemption-backstops-store", async (importOriginal) => {
-  const original = await importOriginal<
-    typeof import("../redemption-backstops-store")
-  >();
+  const original = await importOriginal<typeof import("../redemption-backstops-store")>();
   return {
     ...original,
     loadRedemptionBackstopSnapshot: loadRedemptionBackstopSnapshotMock,
@@ -37,9 +24,7 @@ vi.mock("../redemption-backstops-store", async (importOriginal) => {
 });
 
 vi.mock("../dex-liquidity", async (importOriginal) => {
-  const original = await importOriginal<
-    typeof import("../dex-liquidity")
-  >();
+  const original = await importOriginal<typeof import("../dex-liquidity")>();
   return {
     ...original,
     loadDexLiquiditySnapshot: loadDexLiquiditySnapshotMock,
@@ -47,9 +32,7 @@ vi.mock("../dex-liquidity", async (importOriginal) => {
 });
 
 vi.mock("../live-reserves-store", async (importOriginal) => {
-  const original = await importOriginal<
-    typeof import("../live-reserves-store")
-  >();
+  const original = await importOriginal<typeof import("../live-reserves-store")>();
   return {
     ...original,
     loadFreshIndependentLiveReserveMap: loadFreshIndependentLiveReserveMapMock,
@@ -57,9 +40,7 @@ vi.mock("../live-reserves-store", async (importOriginal) => {
 });
 
 vi.mock("../peg-analytics", async (importOriginal) => {
-  const original = await importOriginal<
-    typeof import("../peg-analytics")
-  >();
+  const original = await importOriginal<typeof import("../peg-analytics")>();
   return {
     ...original,
     derivePegAnalyticsSnapshot: derivePegAnalyticsSnapshotMock,
@@ -131,10 +112,7 @@ function makeRedemptionEntry(overrides: Partial<RedemptionBackstopEntry>): Redem
   };
 }
 
-function makeReportCardsDbWithBluechipValue(
-  assets: ReturnType<typeof makeAsset>[],
-  bluechipValue: string,
-) {
+function makeReportCardsDbWithBluechipValue(assets: ReturnType<typeof makeAsset>[], bluechipValue: string) {
   const stablecoinsValue = JSON.stringify({ peggedAssets: assets });
   return mockD1([
     {
@@ -157,6 +135,7 @@ function makeReportCardsDbWithBluechipValue(
 
 describe("buildReportCardsSnapshot", () => {
   beforeEach(() => {
+    vi.useFakeTimers({ now: nowSec * 1000 });
     loadRedemptionBackstopSnapshotMock.mockReset();
     loadRedemptionBackstopSnapshotMock.mockResolvedValue({ map: {}, latestUpdatedAt: nowSec });
     loadDexLiquiditySnapshotMock.mockReset();
@@ -174,12 +153,15 @@ describe("buildReportCardsSnapshot", () => {
           updated_at: number | null;
         }>();
 
-      const map: Record<string, {
-        liquidityScore: number | null;
-        concentrationHhi: number | null;
-        poolCount: number;
-        chainCount: number;
-      }> = {};
+      const map: Record<
+        string,
+        {
+          liquidityScore: number | null;
+          concentrationHhi: number | null;
+          poolCount: number;
+          chainCount: number;
+        }
+      > = {};
       let latestUpdatedAt: number | null = null;
 
       for (const row of rows.results ?? []) {
@@ -212,10 +194,12 @@ describe("buildReportCardsSnapshot", () => {
     });
   });
 
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
   it("throws when stablecoins cache is missing", async () => {
-    await expect(buildReportCardsSnapshot(mockD1())).rejects.toBeInstanceOf(
-      ReportCardsSnapshotUnavailableError,
-    );
+    await expect(buildReportCardsSnapshot(mockD1())).rejects.toBeInstanceOf(ReportCardsSnapshotUnavailableError);
   });
 
   it("returns cards + methodology + dependencyGraph + updatedAt", async () => {
@@ -245,9 +229,7 @@ describe("buildReportCardsSnapshot", () => {
   it("orders rated live cards before defunct cards and defunct cards before unrated live cards", async () => {
     const db = makeReportCardsDb([makeAsset({ id: "usdt-tether", symbol: "USDT" })]);
     derivePegAnalyticsSnapshotMock.mockResolvedValueOnce({
-      pegDataById: new Map([
-        ["usdt-tether", makePegSummary({ id: "usdt-tether", symbol: "USDT", name: "Tether" })],
-      ]),
+      pegDataById: new Map([["usdt-tether", makePegSummary({ id: "usdt-tether", symbol: "USDT", name: "Tether" })]]),
       methodology: {
         version: "test",
         activeDepegThresholdBps: 1000,
@@ -385,20 +367,21 @@ describe("buildReportCardsSnapshot", () => {
     ]);
     derivePegAnalyticsSnapshotMock.mockResolvedValueOnce({
       pegDataById: new Map([
-        ["cusd-cap", makePegSummary({
-          id: "cusd-cap",
-          symbol: "CUSD",
-          name: "Cap CUSD",
-          activeDepeg: true,
-          currentDeviationBps: -3000,
-          pegScore: 20,
-          worstDeviationBps: -3000,
-          eventCount: 1,
-        })],
+        [
+          "cusd-cap",
+          makePegSummary({
+            id: "cusd-cap",
+            symbol: "CUSD",
+            name: "Cap CUSD",
+            activeDepeg: true,
+            currentDeviationBps: -3000,
+            pegScore: 20,
+            worstDeviationBps: -3000,
+            eventCount: 1,
+          }),
+        ],
       ]),
-      eventsByCoin: new Map([
-        ["cusd-cap", [{ endedAt: null, peakDeviationBps: -3000 }]],
-      ]),
+      eventsByCoin: new Map([["cusd-cap", [{ endedAt: null, peakDeviationBps: -3000 }]]]),
       methodology: {
         version: "test",
         activeDepegThresholdBps: 1000,
@@ -421,24 +404,27 @@ describe("buildReportCardsSnapshot", () => {
     const staticCard = staticSnapshot.cards.find((entry) => entry.id === "cusd-cap");
     expect(staticCard?.rawInputs.activeDepegBps).toBe(3000);
     expect(staticCard?.rawInputs.redemptionUsedForLiquidity).toBe(false);
-    expect(staticCard?.dimensions.liquidity.detail).toContain("active severe depeg requires live-open redemption evidence");
+    expect(staticCard?.dimensions.liquidity.detail).toContain(
+      "active severe depeg requires live-open redemption evidence",
+    );
 
     derivePegAnalyticsSnapshotMock.mockResolvedValueOnce({
       pegDataById: new Map([
-        ["cusd-cap", makePegSummary({
-          id: "cusd-cap",
-          symbol: "CUSD",
-          name: "Cap CUSD",
-          activeDepeg: true,
-          currentDeviationBps: -3000,
-          pegScore: 20,
-          worstDeviationBps: -3000,
-          eventCount: 1,
-        })],
+        [
+          "cusd-cap",
+          makePegSummary({
+            id: "cusd-cap",
+            symbol: "CUSD",
+            name: "Cap CUSD",
+            activeDepeg: true,
+            currentDeviationBps: -3000,
+            pegScore: 20,
+            worstDeviationBps: -3000,
+            eventCount: 1,
+          }),
+        ],
       ]),
-      eventsByCoin: new Map([
-        ["cusd-cap", [{ endedAt: null, peakDeviationBps: -3000 }]],
-      ]),
+      eventsByCoin: new Map([["cusd-cap", [{ endedAt: null, peakDeviationBps: -3000 }]]]),
       methodology: {
         version: "test",
         activeDepegThresholdBps: 1000,
@@ -472,44 +458,50 @@ describe("buildReportCardsSnapshot", () => {
     ]);
     derivePegAnalyticsSnapshotMock.mockResolvedValueOnce({
       pegDataById: new Map([
-        ["usdai-usd-ai", {
-          id: "usdai-usd-ai",
-          symbol: "USDai",
-          name: "USDai",
-          pegType: "peggedUSD",
-          pegCurrency: "USD",
-          governance: "centralized",
-          currentDeviationBps: 18,
-          pegScore: 82,
-          pegPct: 99,
-          severityScore: 84,
-          spreadPenalty: 0,
-          eventCount: 2,
-          worstDeviationBps: -230,
-          activeDepeg: false,
-          lastEventAt: nowSec - 86400,
-          trackingSpanDays: 365,
-          methodologyVersion: "test",
-        }],
-        ["susdai-usd-ai", {
-          id: "susdai-usd-ai",
-          symbol: "sUSDai",
-          name: "sUSDai",
-          pegType: "peggedUSD",
-          pegCurrency: "USD",
-          governance: "centralized",
-          currentDeviationBps: null,
-          pegScore: null,
-          pegPct: 0,
-          severityScore: 0,
-          spreadPenalty: 0,
-          eventCount: 0,
-          worstDeviationBps: null,
-          activeDepeg: false,
-          lastEventAt: null,
-          trackingSpanDays: 365,
-          methodologyVersion: "test",
-        }],
+        [
+          "usdai-usd-ai",
+          {
+            id: "usdai-usd-ai",
+            symbol: "USDai",
+            name: "USDai",
+            pegType: "peggedUSD",
+            pegCurrency: "USD",
+            governance: "centralized",
+            currentDeviationBps: 18,
+            pegScore: 82,
+            pegPct: 99,
+            severityScore: 84,
+            spreadPenalty: 0,
+            eventCount: 2,
+            worstDeviationBps: -230,
+            activeDepeg: false,
+            lastEventAt: nowSec - 86400,
+            trackingSpanDays: 365,
+            methodologyVersion: "test",
+          },
+        ],
+        [
+          "susdai-usd-ai",
+          {
+            id: "susdai-usd-ai",
+            symbol: "sUSDai",
+            name: "sUSDai",
+            pegType: "peggedUSD",
+            pegCurrency: "USD",
+            governance: "centralized",
+            currentDeviationBps: null,
+            pegScore: null,
+            pegPct: 0,
+            severityScore: 0,
+            spreadPenalty: 0,
+            eventCount: 0,
+            worstDeviationBps: null,
+            activeDepeg: false,
+            lastEventAt: null,
+            trackingSpanDays: 365,
+            methodologyVersion: "test",
+          },
+        ],
       ]),
       methodology: {
         version: "test",
@@ -533,14 +525,10 @@ describe("buildReportCardsSnapshot", () => {
   it("throws when the redemption backstop snapshot is unavailable", async () => {
     const db = makeReportCardsDb([makeAsset({ id: "usdt-tether", symbol: "USDT" })]);
     loadRedemptionBackstopSnapshotMock.mockRejectedValueOnce(
-      new RedemptionBackstopSnapshotUnavailableError(
-        "redemption snapshot unavailable",
-      ),
+      new RedemptionBackstopSnapshotUnavailableError("redemption snapshot unavailable"),
     );
 
-    await expect(buildReportCardsSnapshot(db)).rejects.toBeInstanceOf(
-      ReportCardsSnapshotUnavailableError,
-    );
+    await expect(buildReportCardsSnapshot(db)).rejects.toBeInstanceOf(ReportCardsSnapshotUnavailableError);
   });
 
   it("degrades gracefully when dex liquidity is unavailable", async () => {
