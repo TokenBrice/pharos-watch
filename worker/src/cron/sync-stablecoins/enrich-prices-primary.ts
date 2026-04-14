@@ -77,6 +77,7 @@ export interface PriceValidationStats {
 }
 
 const INVALID_GECKO_ID_SENTINEL = "wrong";
+const PRIMARY_CG_BATCH_SIZE = 250;
 
 function isUsableGeckoId(geckoId: unknown): geckoId is string {
   return typeof geckoId === "string" && geckoId.length > 0 && !geckoId.includes(INVALID_GECKO_ID_SENTINEL);
@@ -84,6 +85,360 @@ function isUsableGeckoId(geckoId: unknown): geckoId is string {
 
 function getSourceDefaultWeight(source: string): number {
   return getPricingSourceRegistryEntry(source)?.defaultWeight ?? 1;
+}
+
+async function runPrimaryProviderFetch(
+  db: D1Database,
+  signal: AbortSignal | undefined,
+  source: string,
+  label: string,
+  fetcher: () => Promise<boolean>,
+): Promise<void> {
+  try {
+    await recordOutcome(db, source, await fetcher());
+  } catch (err) {
+    if (signal?.aborted) throw err instanceof Error ? err : new Error(String(err));
+    console.warn(`[primary-prices] ${label} failed:`, err);
+    await recordOutcome(db, source, false);
+  }
+}
+
+async function applyPrimaryPostConsensusHardening(params: {
+  db: D1Database;
+  candidates: PeggedAsset[];
+  results: Map<string, PrimaryPriceResult>;
+  stats: PriceValidationStats;
+  nowSec: number;
+}): Promise<void> {
+  for (const result of params.results.values()) {
+    if (
+      result.confidence === "high" &&
+      result.agreeSources.length === 2 &&
+      result.agreeSources.every((s) => s === "coingecko" || s === "defillama-list")
+    ) {
+      result.confidence = "single-source";
+      params.stats.high--;
+      params.stats.singleSource++;
+    }
+  }
+
+  const poolChallengers = await loadDexPoolChallengers(
+    params.db,
+    POOL_CHALLENGE_MIN_TVL,
+    DEX_FRESHNESS_SEC,
+    params.nowSec,
+  );
+  const assetPegTypes = new Map(params.candidates.map((a) => [a.id, a.pegType]));
+  const poolChallengeDowngrades = applyPoolChallenge(params.results, poolChallengers, assetPegTypes, params.stats);
+  if (poolChallengeDowngrades > 0) {
+    console.log(`[primary-prices] Pool challenge hardened ${poolChallengeDowngrades} soft-only result(s)`);
+  }
+
+  for (const result of params.results.values()) {
+    const challengeSources = result.confidence === "low" ? result.candidateSources : result.agreeSources;
+    if (isPoolChallengeEligibleConsensus(challengeSources)) {
+      result.softOnly = true;
+    }
+  }
+}
+
+interface PrimaryPricePlan {
+  candidates: PeggedAsset[];
+  metaById: Map<string, (typeof ACTIVE_STABLECOINS)[number]>;
+  nowSec: number;
+  dexRows: Awaited<ReturnType<typeof loadDexPriceRows>>;
+  dexPriceSources: Awaited<ReturnType<typeof loadDexPriceSources>>;
+  geckoIds: string[];
+  coingeckoMaxTrustedAgeSec: number;
+  pythFeedIds: Map<string, string>;
+  coinbaseSymbols: string[];
+  krakenSymbols: string[];
+  shouldFetchBitstamp: boolean;
+  redstoneSymbols: string[];
+  sourceAllowed: {
+    cg: boolean;
+    cgTicker: boolean;
+    pyth: boolean;
+    binance: boolean;
+    kraken: boolean;
+    bitstamp: boolean;
+    coinbase: boolean;
+    redstone: boolean;
+    curve: boolean;
+  };
+}
+
+interface PrimaryConsensusQuoteMaps {
+  cgPrices: Map<string, number>;
+  cgObservedAtByGeckoId: Map<string, number>;
+  cgObservedAtModeByGeckoId: Map<string, PriceObservedAtMode>;
+  cgObservedAt: number | null;
+  cgTickerPrices: Map<string, number>;
+  cgTickerObservedAt: number | null;
+  pythPrices: Map<string, { price: number; confidenceBps: number; publishTime: number }>;
+  binancePrices: Map<string, number>;
+  binanceObservedAt: number | null;
+  krakenPrices: Map<string, number>;
+  krakenObservedAt: number | null;
+  bitstampPrices: Map<string, number>;
+  bitstampObservedAt: number | null;
+  coinbasePrices: Map<string, number>;
+  coinbaseObservedAt: number | null;
+  redstonePrices: Map<string, { price: number; venueCount: number; venueAgreementPct: number; timestamp: number }>;
+  curvePrices: Map<string, number>;
+  curveObservedAt: number | null;
+  curveOraclePrice: number | null;
+  curveOracleObservedAt: number | null;
+}
+
+async function buildPrimaryPricePlan(
+  assets: PeggedAsset[],
+  db: D1Database,
+  dlListPrices?: Map<string, number | DlListQuote>,
+): Promise<PrimaryPricePlan> {
+  const metaById = new Map(ACTIVE_STABLECOINS.map((m) => [m.id, m]));
+  const nowSec = Math.floor(Date.now() / 1000);
+  const dexRows = await loadDexPriceRows(db);
+  const dexPriceSources = await loadDexPriceSources(db);
+
+  const coinbaseKnownSet = new Set(COINBASE_KNOWN_SYMBOLS);
+  const krakenKnownSet = new Set(KRAKEN_KNOWN_SYMBOLS);
+  const bitstampKnownSet = new Set(BITSTAMP_KNOWN_SYMBOLS);
+  const redstoneSymbolSet = new Set<string>(REDSTONE_TRACKED_SYMBOL_ALLOWLIST);
+  const curveEligibleIds = new Set(CURVE_POOL_CONFIGS.map((config) => config.stablecoinId));
+  curveEligibleIds.add("crvusd-curve");
+
+  const candidates = assets.filter((asset) => {
+    const meta = metaById.get(asset.id);
+    const symbolUpper = asset.symbol.toUpperCase();
+    const hasValidGeckoId = isUsableGeckoId(asset.geckoId);
+    return hasValidGeckoId ||
+      (dlListPrices?.has(asset.id) ?? false) ||
+      !!meta?.pythFeedId ||
+      coinbaseKnownSet.has(symbolUpper) ||
+      krakenKnownSet.has(symbolUpper) ||
+      bitstampKnownSet.has(symbolUpper) ||
+      redstoneSymbolSet.has(asset.symbol) ||
+      curveEligibleIds.has(asset.id) ||
+      dexRows.has(asset.id) ||
+      dexPriceSources.has(asset.id);
+  });
+
+  if (candidates.length === 0) {
+    return {
+      candidates,
+      metaById,
+      nowSec,
+      dexRows,
+      dexPriceSources,
+      geckoIds: [],
+      coingeckoMaxTrustedAgeSec: getPricingSourceRegistryEntry("coingecko")?.maxTrustedAgeSec ?? 15 * 60,
+      pythFeedIds: new Map(),
+      coinbaseSymbols: [],
+      krakenSymbols: [],
+      shouldFetchBitstamp: false,
+      redstoneSymbols: [],
+      sourceAllowed: {
+        cg: false,
+        cgTicker: false,
+        pyth: false,
+        binance: false,
+        kraken: false,
+        bitstamp: false,
+        coinbase: false,
+        redstone: false,
+        curve: false,
+      },
+    };
+  }
+
+  const [
+    cgAllowed,
+    cgTickerAllowed,
+    pythAllowed,
+    binanceAllowed,
+    krakenAllowed,
+    bitstampAllowed,
+    coinbaseAllowed,
+    redstoneAllowed,
+    curveAllowed,
+  ] = await Promise.all([
+    shouldAttemptFetch(db, CIRCUIT_SOURCE.CG_PRICES),
+    shouldAttemptFetch(db, CIRCUIT_SOURCE.CG_TICKER),
+    shouldAttemptFetch(db, CIRCUIT_SOURCE.PYTH_PRICES),
+    shouldAttemptFetch(db, CIRCUIT_SOURCE.BINANCE_PRICES),
+    shouldAttemptFetch(db, CIRCUIT_SOURCE.KRAKEN_PRICES),
+    shouldAttemptFetch(db, CIRCUIT_SOURCE.BITSTAMP_PRICES),
+    shouldAttemptFetch(db, CIRCUIT_SOURCE.COINBASE_PRICES),
+    shouldAttemptFetch(db, CIRCUIT_SOURCE.REDSTONE_PRICES),
+    shouldAttemptFetch(db, CIRCUIT_SOURCE.CURVE_ONCHAIN),
+  ]);
+
+  if (!cgAllowed && !pythAllowed && !binanceAllowed && !krakenAllowed && !bitstampAllowed && !coinbaseAllowed && !redstoneAllowed && !curveAllowed) {
+    console.warn("[primary-prices] All live primary fetch circuits are open; continuing with local DL/DEX inputs only");
+  }
+
+  const geckoIds = [...new Set(
+    candidates
+      .map((asset) => asset.geckoId)
+      .filter(isUsableGeckoId),
+  )];
+
+  const pythFeedIds = new Map<string, string>();
+  for (const asset of candidates) {
+    const meta = metaById.get(asset.id);
+    if (meta?.pythFeedId) {
+      pythFeedIds.set(asset.id, meta.pythFeedId);
+    }
+  }
+
+  const candidateSymbolsUpper = [...new Set(candidates.map((a) => a.symbol.toUpperCase()))];
+  const coinbaseSymbols = candidateSymbolsUpper.filter((s) => coinbaseKnownSet.has(s));
+  const krakenSymbols = candidateSymbolsUpper.filter((s) => krakenKnownSet.has(s));
+  const shouldFetchBitstamp = candidateSymbolsUpper.some((symbol) => bitstampKnownSet.has(symbol));
+  const redstoneSymbols = [...new Set(candidates.map((a) => a.symbol).filter((symbol) => redstoneSymbolSet.has(symbol)))];
+  const coingeckoMaxTrustedAgeSec = getPricingSourceRegistryEntry("coingecko")?.maxTrustedAgeSec ?? 15 * 60;
+
+  return {
+    candidates,
+    metaById,
+    nowSec,
+    dexRows,
+    dexPriceSources,
+    geckoIds,
+    coingeckoMaxTrustedAgeSec,
+    pythFeedIds,
+    coinbaseSymbols,
+    krakenSymbols,
+    shouldFetchBitstamp,
+    redstoneSymbols,
+    sourceAllowed: {
+      cg: cgAllowed,
+      cgTicker: cgTickerAllowed,
+      pyth: pythAllowed,
+      binance: binanceAllowed,
+      kraken: krakenAllowed,
+      bitstamp: bitstampAllowed,
+      coinbase: coinbaseAllowed,
+      redstone: redstoneAllowed,
+      curve: curveAllowed,
+    },
+  };
+}
+
+function buildPrimaryConsensusResults(params: {
+  candidates: PeggedAsset[];
+  references?: PriceValidationReferences;
+  quoteMaps: PrimaryConsensusQuoteMaps;
+  dexRows: Awaited<ReturnType<typeof loadDexPriceRows>>;
+  dexPriceSources: Awaited<ReturnType<typeof loadDexPriceSources>>;
+  nowSec: number;
+  resolveDlListQuote: (assetId: string) => DlListQuote | undefined;
+  results: Map<string, PrimaryPriceResult>;
+  stats: PriceValidationStats;
+}): void {
+  const DIVERGENCE_THRESHOLD_BPS = 50;
+
+  for (const asset of params.candidates) {
+    const gId = isUsableGeckoId(asset.geckoId) ? asset.geckoId : null;
+    const cg = gId ? (params.quoteMaps.cgPrices.get(gId) ?? null) : null;
+    const cgObservedAtForAsset = gId && cg != null
+      ? (params.quoteMaps.cgObservedAtByGeckoId.get(gId) ?? params.quoteMaps.cgObservedAt)
+      : null;
+    const cgObservedAtModeForAsset = gId && cg != null
+      ? (params.quoteMaps.cgObservedAtModeByGeckoId.get(gId) ?? (params.quoteMaps.cgObservedAt != null ? "local_fetch" : null))
+      : null;
+    const collectedQuotes: PrimaryCollectedQuotes = {
+      cgPrice: cg,
+      cgObservedAt: cgObservedAtForAsset,
+      cgObservedAtMode: cgObservedAtModeForAsset,
+      cgTickerPrice: params.quoteMaps.cgTickerPrices.get(asset.id) ?? null,
+      cgTickerObservedAt: params.quoteMaps.cgTickerObservedAt,
+      dlListQuote: params.resolveDlListQuote(asset.id),
+      pythQuote: params.quoteMaps.pythPrices.get(asset.id),
+      binancePrice: params.quoteMaps.binancePrices.get(asset.symbol.toUpperCase()) ?? null,
+      binanceObservedAt: params.quoteMaps.binanceObservedAt,
+      krakenPrice: params.quoteMaps.krakenPrices.get(asset.symbol.toUpperCase()) ?? null,
+      krakenObservedAt: params.quoteMaps.krakenObservedAt,
+      bitstampPrice: params.quoteMaps.bitstampPrices.get(asset.symbol.toUpperCase()) ?? null,
+      bitstampObservedAt: params.quoteMaps.bitstampObservedAt,
+      coinbasePrice: params.quoteMaps.coinbasePrices.get(asset.symbol.toUpperCase()) ?? null,
+      coinbaseObservedAt: params.quoteMaps.coinbaseObservedAt,
+      redstoneQuote: params.quoteMaps.redstonePrices.get(asset.symbol),
+      curvePrice: params.quoteMaps.curvePrices.get(asset.id) ?? null,
+      curveObservedAt: params.quoteMaps.curveObservedAt,
+      curveOraclePrice: params.quoteMaps.curveOraclePrice,
+      curveOracleObservedAt: params.quoteMaps.curveOracleObservedAt,
+      protocolSources: params.dexPriceSources.get(asset.id),
+      dexAggregateQuote: (() => {
+        const dexRow = params.dexRows.get(asset.id);
+        return dexRow && isTrustedDexPriceRow(dexRow, params.nowSec, "depeg") ? dexRow : undefined;
+      })(),
+    };
+
+    const { sources, hasPromotedDexProtocolSource } = buildPrimarySourceCandidates(asset, collectedQuotes, {
+      divergenceThresholdBps: DIVERGENCE_THRESHOLD_BPS,
+    });
+
+    if (hasPromotedDexProtocolSource && !sources.some((source) => source.source.endsWith("-dex"))) {
+      console.log(
+        `[primary-prices] ${asset.symbol}: suppressed promoted DEX source(s) that lacked corroboration`,
+      );
+    }
+
+    params.stats.attempted++;
+
+    const context = buildPriceValidationContext({
+      stablecoinId: String(asset.id),
+      pegType: asset.pegType,
+      navToken: asset.navToken,
+      commodityOunces: asset.commodityOunces,
+    });
+    const pegRef = context.navToken ? null : getReferencePriceForContext(context, params.references);
+    const consensus = computePriceConsensus(sources, pegRef, DIVERGENCE_THRESHOLD_BPS, {
+      mode: context.navToken ? "nav" : "fixed",
+    });
+
+    if (!consensus) continue;
+
+    params.results.set(asset.id, {
+      price: consensus.price,
+      source: consensus.source,
+      selectedSource: consensus.selectedSource,
+      priceEstimator: consensus.priceEstimator,
+      confidence: consensus.confidence,
+      dlPrice: params.resolveDlListQuote(asset.id)?.price ?? null,
+      cgPrice: cg ?? null,
+      candidateSources: sources.map((s) => s.source),
+      agreeSources: consensus.agreeSources,
+      disagreeSources: consensus.disagreeSources,
+      allPrices: consensus.allPrices,
+      observedAt: consensus.observedAt,
+      observedAtMode: consensus.observedAtMode,
+      observedAtBySource: consensus.observedAtBySource,
+      observedAtModeBySource: consensus.observedAtModeBySource,
+    });
+
+    if (consensus.confidence === "high") params.stats.high++;
+    else if (consensus.confidence === "single-source") params.stats.singleSource++;
+    else params.stats.low++;
+
+    if (consensus.confidence === "single-source" && consensus.source === "coingecko") {
+      params.stats.cgOnly++;
+    }
+
+    if (consensus.disagreeSources.length > 0) {
+      const highWeightDisagrees = sources
+        .filter((s) => s.weight >= 2 && consensus.disagreeSources.includes(s.source))
+        .map((s) => `${s.source}($${s.price.toFixed(4)})`);
+      if (highWeightDisagrees.length > 0) {
+        console.log(
+          `[primary-prices] ${asset.symbol}: high-weight disagree: ${highWeightDisagrees.join(", ")} `
+          + `vs consensus $${consensus.price.toFixed(4)}`,
+        );
+      }
+    }
+  }
 }
 
 /**
@@ -115,67 +470,26 @@ export async function fetchPrimaryPrices(
   };
   const results = new Map<string, PrimaryPriceResult>();
   const stats: PriceValidationStats = { attempted: 0, high: 0, singleSource: 0, cgOnly: 0, low: 0 };
-  const metaById = new Map(ACTIVE_STABLECOINS.map((m) => [m.id, m]));
-  const nowSec = Math.floor(Date.now() / 1000);
-  const dexRows = await loadDexPriceRows(db);
-  const dexPriceSources = await loadDexPriceSources(db);
-
-  const coinbaseKnownSet = new Set(COINBASE_KNOWN_SYMBOLS);
-  const krakenKnownSet = new Set(KRAKEN_KNOWN_SYMBOLS);
-  const bitstampKnownSet = new Set(BITSTAMP_KNOWN_SYMBOLS);
-  const redstoneSymbolSet = new Set<string>(REDSTONE_TRACKED_SYMBOL_ALLOWLIST);
-  const curveEligibleIds = new Set(CURVE_POOL_CONFIGS.map((config) => config.stablecoinId));
-  curveEligibleIds.add("crvusd-curve");
-
-  const candidates = assets.filter((asset) => {
-    const meta = metaById.get(asset.id);
-    const symbolUpper = asset.symbol.toUpperCase();
-    const hasValidGeckoId = isUsableGeckoId(asset.geckoId);
-    return hasValidGeckoId ||
-      (dlListPrices?.has(asset.id) ?? false) ||
-      !!meta?.pythFeedId ||
-      coinbaseKnownSet.has(symbolUpper) ||
-      krakenKnownSet.has(symbolUpper) ||
-      bitstampKnownSet.has(symbolUpper) ||
-      redstoneSymbolSet.has(asset.symbol) ||
-      curveEligibleIds.has(asset.id) ||
-      dexRows.has(asset.id) ||
-      dexPriceSources.has(asset.id);
-  });
+  const plan = await buildPrimaryPricePlan(assets, db, dlListPrices);
+  const {
+    candidates,
+    dexRows,
+    dexPriceSources,
+    geckoIds,
+    coingeckoMaxTrustedAgeSec,
+    pythFeedIds,
+    coinbaseSymbols,
+    krakenSymbols,
+    shouldFetchBitstamp,
+    redstoneSymbols,
+    nowSec,
+    sourceAllowed,
+  } = plan;
   if (candidates.length === 0) return { results, stats, cgPrices: new Map() };
-
-  const cgAllowed = await shouldAttemptFetch(db, CIRCUIT_SOURCE.CG_PRICES);
-  const pythAllowed = await shouldAttemptFetch(db, CIRCUIT_SOURCE.PYTH_PRICES);
-  const binanceAllowed = await shouldAttemptFetch(db, CIRCUIT_SOURCE.BINANCE_PRICES);
-  const krakenAllowed = await shouldAttemptFetch(db, CIRCUIT_SOURCE.KRAKEN_PRICES);
-  const bitstampAllowed = await shouldAttemptFetch(db, CIRCUIT_SOURCE.BITSTAMP_PRICES);
-  const coinbaseAllowed = await shouldAttemptFetch(db, CIRCUIT_SOURCE.COINBASE_PRICES);
-  const redstoneAllowed = await shouldAttemptFetch(db, CIRCUIT_SOURCE.REDSTONE_PRICES);
-  const curveAllowed = await shouldAttemptFetch(db, CIRCUIT_SOURCE.CURVE_ONCHAIN);
-
-  if (!cgAllowed && !pythAllowed && !binanceAllowed && !krakenAllowed && !bitstampAllowed && !coinbaseAllowed && !redstoneAllowed && !curveAllowed) {
-    console.warn("[primary-prices] All live primary fetch circuits are open; continuing with local DL/DEX inputs only");
-  }
-
-  const geckoIds = [...new Set(
-    candidates
-      .map((asset) => asset.geckoId)
-      .filter(isUsableGeckoId),
-  )];
-  const BATCH_SIZE = 250;
-  const coingeckoMaxTrustedAgeSec = getPricingSourceRegistryEntry("coingecko")?.maxTrustedAgeSec ?? 15 * 60;
 
   const cgPrices = new Map<string, number>();
   const cgObservedAtByGeckoId = new Map<string, number>();
   const cgObservedAtModeByGeckoId = new Map<string, PriceObservedAtMode>();
-
-  const pythFeedIds = new Map<string, string>();
-  for (const asset of candidates) {
-    const meta = metaById.get(asset.id);
-    if (meta?.pythFeedId) {
-      pythFeedIds.set(asset.id, meta.pythFeedId);
-    }
-  }
   const pythPrices = new Map<string, { price: number; confidenceBps: number; publishTime: number }>();
   const binancePrices = new Map<string, number>();
   const krakenPrices = new Map<string, number>();
@@ -195,22 +509,16 @@ export async function fetchPrimaryPrices(
   let curveOracleObservedAt: number | null = null;
   let staleCgPriceRows = 0;
 
-  const candidateSymbolsUpper = [...new Set(candidates.map((a) => a.symbol.toUpperCase()))];
-  const coinbaseSymbols = candidateSymbolsUpper.filter((s) => coinbaseKnownSet.has(s));
-  const krakenSymbols = candidateSymbolsUpper.filter((s) => krakenKnownSet.has(s));
-  const shouldFetchBitstamp = candidateSymbolsUpper.some((symbol) => bitstampKnownSet.has(symbol));
-  const redstoneSymbols = [...new Set(candidates.map((a) => a.symbol).filter((symbol) => redstoneSymbolSet.has(symbol)))];
-
   const fetches: Promise<void>[] = [];
 
-  if (cgAllowed) {
+  if (sourceAllowed.cg) {
     fetches.push(
       (async () => {
         try {
           let hadBatchFailure = false;
-          for (let i = 0; i < geckoIds.length; i += BATCH_SIZE) {
+          for (let i = 0; i < geckoIds.length; i += PRIMARY_CG_BATCH_SIZE) {
             throwIfAborted(signal);
-            const batch = geckoIds.slice(i, i + BATCH_SIZE);
+            const batch = geckoIds.slice(i, i + PRIMARY_CG_BATCH_SIZE);
             const ids = batch.join(",");
             const res = await fetchWithRetry(
               cgUrl(`/simple/price?ids=${ids}&vs_currencies=usd&include_last_updated_at=true`, coingeckoApiKey ?? null),
@@ -261,11 +569,14 @@ export async function fetchPrimaryPrices(
     );
   }
 
-  const cgTickerAllowed = await shouldAttemptFetch(db, CIRCUIT_SOURCE.CG_TICKER);
-  if (cgTickerAllowed && CG_TICKER_COINS.length > 0) {
+  if (sourceAllowed.cgTicker && CG_TICKER_COINS.length > 0) {
     fetches.push(
-      (async () => {
-        try {
+      runPrimaryProviderFetch(
+        db,
+        signal,
+        CIRCUIT_SOURCE.CG_TICKER,
+        "CG ticker API",
+        async () => {
           const { prices, successfulResponses } = await fetchCgTickerPricesDetailed(
             CG_TICKER_COINS,
             coingeckoApiKey ?? null,
@@ -273,20 +584,20 @@ export async function fetchPrimaryPrices(
           );
           for (const [coinId, price] of prices) cgTickerPrices.set(coinId, price);
           if (prices.size > 0) cgTickerObservedAt = Math.floor(Date.now() / 1000);
-          await recordOutcome(db, CIRCUIT_SOURCE.CG_TICKER, successfulResponses > 0);
-        } catch (err) {
-          if (signal?.aborted) throw err instanceof Error ? err : new Error(String(err));
-          console.warn("[primary-prices] CG ticker API failed:", err);
-          await recordOutcome(db, CIRCUIT_SOURCE.CG_TICKER, false);
-        }
-      })(),
+          return successfulResponses > 0;
+        },
+      ),
     );
   }
 
-  if (pythAllowed && pythFeedIds.size > 0) {
+  if (sourceAllowed.pyth && pythFeedIds.size > 0) {
     fetches.push(
-      (async () => {
-        try {
+      runPrimaryProviderFetch(
+        db,
+        signal,
+        CIRCUIT_SOURCE.PYTH_PRICES,
+        "Pyth Hermes API",
+        async () => {
           const results = await fetchPythPrices(pythFeedIds, signal);
           for (const [coinId, result] of results) {
             pythPrices.set(coinId, {
@@ -295,78 +606,62 @@ export async function fetchPrimaryPrices(
               publishTime: result.publishTime,
             });
           }
-          await recordOutcome(db, CIRCUIT_SOURCE.PYTH_PRICES, results.size > 0);
-        } catch (err) {
-          if (signal?.aborted) throw err instanceof Error ? err : new Error(String(err));
-          console.warn("[primary-prices] Pyth Hermes API failed:", err);
-          await recordOutcome(db, CIRCUIT_SOURCE.PYTH_PRICES, false);
-        }
-      })(),
+          return results.size > 0;
+        },
+      ),
     );
   }
 
-  if (binanceAllowed || krakenAllowed || bitstampAllowed || coinbaseAllowed) {
+  if (sourceAllowed.binance || sourceAllowed.kraken || sourceAllowed.bitstamp || sourceAllowed.coinbase) {
     fetches.push(
       (async () => {
-        if (binanceAllowed) {
-          try {
+        if (sourceAllowed.binance) {
+          await runPrimaryProviderFetch(db, signal, CIRCUIT_SOURCE.BINANCE_PRICES, "Binance ticker", async () => {
             const prices = await fetchBinancePrices(signal);
             for (const [symbol, price] of prices) binancePrices.set(symbol, price);
             if (prices.size > 0) binanceObservedAt = Math.floor(Date.now() / 1000);
-            await recordOutcome(db, CIRCUIT_SOURCE.BINANCE_PRICES, prices.size > 0);
-          } catch (err) {
-            if (signal?.aborted) throw err instanceof Error ? err : new Error(String(err));
-            console.warn("[primary-prices] Binance ticker failed:", err);
-            await recordOutcome(db, CIRCUIT_SOURCE.BINANCE_PRICES, false);
-          }
+            return prices.size > 0;
+          });
         }
 
-        if (krakenAllowed && krakenSymbols.length > 0) {
-          try {
+        if (sourceAllowed.kraken && krakenSymbols.length > 0) {
+          await runPrimaryProviderFetch(db, signal, CIRCUIT_SOURCE.KRAKEN_PRICES, "Kraken ticker", async () => {
             const prices = await fetchKrakenPrices(krakenSymbols, signal);
             for (const [symbol, price] of prices) krakenPrices.set(symbol, price);
             if (prices.size > 0) krakenObservedAt = Math.floor(Date.now() / 1000);
-            await recordOutcome(db, CIRCUIT_SOURCE.KRAKEN_PRICES, prices.size > 0);
-          } catch (err) {
-            if (signal?.aborted) throw err instanceof Error ? err : new Error(String(err));
-            console.warn("[primary-prices] Kraken ticker failed:", err);
-            await recordOutcome(db, CIRCUIT_SOURCE.KRAKEN_PRICES, false);
-          }
+            return prices.size > 0;
+          });
         }
 
-        if (bitstampAllowed && shouldFetchBitstamp) {
-          try {
+        if (sourceAllowed.bitstamp && shouldFetchBitstamp) {
+          await runPrimaryProviderFetch(db, signal, CIRCUIT_SOURCE.BITSTAMP_PRICES, "Bitstamp ticker", async () => {
             const prices = await fetchBitstampPrices(signal);
             for (const [symbol, price] of prices) bitstampPrices.set(symbol, price);
             if (prices.size > 0) bitstampObservedAt = Math.floor(Date.now() / 1000);
-            await recordOutcome(db, CIRCUIT_SOURCE.BITSTAMP_PRICES, prices.size > 0);
-          } catch (err) {
-            if (signal?.aborted) throw err instanceof Error ? err : new Error(String(err));
-            console.warn("[primary-prices] Bitstamp ticker failed:", err);
-            await recordOutcome(db, CIRCUIT_SOURCE.BITSTAMP_PRICES, false);
-          }
+            return prices.size > 0;
+          });
         }
 
-        if (coinbaseAllowed && coinbaseSymbols.length > 0) {
-          try {
+        if (sourceAllowed.coinbase && coinbaseSymbols.length > 0) {
+          await runPrimaryProviderFetch(db, signal, CIRCUIT_SOURCE.COINBASE_PRICES, "Coinbase ticker", async () => {
             const prices = await fetchCoinbasePrices(coinbaseSymbols, signal);
             for (const [symbol, price] of prices) coinbasePrices.set(symbol, price);
             if (prices.size > 0) coinbaseObservedAt = Math.floor(Date.now() / 1000);
-            await recordOutcome(db, CIRCUIT_SOURCE.COINBASE_PRICES, prices.size > 0);
-          } catch (err) {
-            if (signal?.aborted) throw err instanceof Error ? err : new Error(String(err));
-            console.warn("[primary-prices] Coinbase ticker failed:", err);
-            await recordOutcome(db, CIRCUIT_SOURCE.COINBASE_PRICES, false);
-          }
+            return prices.size > 0;
+          });
         }
       })(),
     );
   }
 
-  if (redstoneAllowed && redstoneSymbols.length > 0) {
+  if (sourceAllowed.redstone && redstoneSymbols.length > 0) {
     fetches.push(
-      (async () => {
-        try {
+      runPrimaryProviderFetch(
+        db,
+        signal,
+        CIRCUIT_SOURCE.REDSTONE_PRICES,
+        "RedStone API",
+        async () => {
           const prices = await fetchRedstonePrices(redstoneSymbols, signal);
           for (const [symbol, result] of prices) {
             redstonePrices.set(symbol, {
@@ -376,30 +671,26 @@ export async function fetchPrimaryPrices(
               timestamp: result.timestamp,
             });
           }
-          await recordOutcome(db, CIRCUIT_SOURCE.REDSTONE_PRICES, prices.size > 0);
-        } catch (err) {
-          if (signal?.aborted) throw err instanceof Error ? err : new Error(String(err));
-          console.warn("[primary-prices] RedStone API failed:", err);
-          await recordOutcome(db, CIRCUIT_SOURCE.REDSTONE_PRICES, false);
-        }
-      })(),
+          return prices.size > 0;
+        },
+      ),
     );
   }
 
-  if (curveAllowed && CURVE_POOL_CONFIGS.length > 0) {
+  if (sourceAllowed.curve && CURVE_POOL_CONFIGS.length > 0) {
     fetches.push(
-      (async () => {
-        try {
+      runPrimaryProviderFetch(
+        db,
+        signal,
+        CIRCUIT_SOURCE.CURVE_ONCHAIN,
+        "Curve on-chain",
+        async () => {
           const prices = await fetchCurveOnchainPrices(CURVE_POOL_CONFIGS, signal, chainRpcs);
           for (const [id, price] of prices) curvePrices.set(id, price);
           if (prices.size > 0) curveObservedAt = Math.floor(Date.now() / 1000);
-          await recordOutcome(db, CIRCUIT_SOURCE.CURVE_ONCHAIN, prices.size > 0);
-        } catch (err) {
-          if (signal?.aborted) throw err instanceof Error ? err : new Error(String(err));
-          console.warn("[primary-prices] Curve on-chain failed:", err);
-          await recordOutcome(db, CIRCUIT_SOURCE.CURVE_ONCHAIN, false);
-        }
-      })(),
+          return prices.size > 0;
+        },
+      ),
     );
     fetches.push(
       (async () => {
@@ -430,133 +721,40 @@ export async function fetchPrimaryPrices(
     );
   }
 
-  const DIVERGENCE_THRESHOLD_BPS = 50;
-  for (const asset of candidates) {
-    const gId = isUsableGeckoId(asset.geckoId) ? asset.geckoId : null;
-    const cg = gId ? (cgPrices.get(gId) ?? null) : null;
-    const cgObservedAtForAsset = gId && cg != null
-      ? (cgObservedAtByGeckoId.get(gId) ?? cgObservedAt)
-      : null;
-    const cgObservedAtModeForAsset = gId && cg != null
-      ? (cgObservedAtModeByGeckoId.get(gId) ?? (cgObservedAt != null ? "local_fetch" : null))
-      : null;
-    const collectedQuotes: PrimaryCollectedQuotes = {
-      cgPrice: cg,
-      cgObservedAt: cgObservedAtForAsset,
-      cgObservedAtMode: cgObservedAtModeForAsset,
-      cgTickerPrice: cgTickerPrices.get(asset.id) ?? null,
+  buildPrimaryConsensusResults({
+    candidates,
+    references,
+    quoteMaps: {
+      cgPrices,
+      cgObservedAtByGeckoId,
+      cgObservedAtModeByGeckoId,
+      cgObservedAt,
+      cgTickerPrices,
       cgTickerObservedAt,
-      dlListQuote: resolveDlListQuote(asset.id),
-      pythQuote: pythPrices.get(asset.id),
-      binancePrice: binancePrices.get(asset.symbol.toUpperCase()) ?? null,
+      pythPrices,
+      binancePrices,
       binanceObservedAt,
-      krakenPrice: krakenPrices.get(asset.symbol.toUpperCase()) ?? null,
+      krakenPrices,
       krakenObservedAt,
-      bitstampPrice: bitstampPrices.get(asset.symbol.toUpperCase()) ?? null,
+      bitstampPrices,
       bitstampObservedAt,
-      coinbasePrice: coinbasePrices.get(asset.symbol.toUpperCase()) ?? null,
+      coinbasePrices,
       coinbaseObservedAt,
-      redstoneQuote: redstonePrices.get(asset.symbol),
-      curvePrice: curvePrices.get(asset.id) ?? null,
+      redstonePrices,
+      curvePrices,
       curveObservedAt,
       curveOraclePrice,
       curveOracleObservedAt,
-      protocolSources: dexPriceSources.get(asset.id),
-      dexAggregateQuote: (() => {
-        const dexRow = dexRows.get(asset.id);
-        return dexRow && isTrustedDexPriceRow(dexRow, nowSec, "depeg") ? dexRow : undefined;
-      })(),
-    };
+    },
+    dexRows,
+    dexPriceSources,
+    nowSec,
+    resolveDlListQuote,
+    results,
+    stats,
+  });
 
-    const { sources, hasPromotedDexProtocolSource } = buildPrimarySourceCandidates(asset, collectedQuotes, {
-      divergenceThresholdBps: DIVERGENCE_THRESHOLD_BPS,
-    });
-
-    if (hasPromotedDexProtocolSource && !sources.some((source) => source.source.endsWith("-dex"))) {
-      console.log(
-        `[primary-prices] ${asset.symbol}: suppressed promoted DEX source(s) that lacked corroboration`,
-      );
-    }
-
-    stats.attempted++;
-
-    const context = buildPriceValidationContext({
-      stablecoinId: String(asset.id),
-      pegType: asset.pegType,
-      navToken: asset.navToken,
-      commodityOunces: asset.commodityOunces,
-    });
-    const pegRef = context.navToken ? null : getReferencePriceForContext(context, references);
-    const consensus = computePriceConsensus(sources, pegRef, DIVERGENCE_THRESHOLD_BPS, {
-      mode: context.navToken ? "nav" : "fixed",
-    });
-
-    if (!consensus) continue;
-
-    results.set(asset.id, {
-      price: consensus.price,
-      source: consensus.source,
-      selectedSource: consensus.selectedSource,
-      priceEstimator: consensus.priceEstimator,
-      confidence: consensus.confidence,
-      dlPrice: resolveDlListQuote(asset.id)?.price ?? null,
-      cgPrice: cg ?? null,
-      candidateSources: sources.map((s) => s.source),
-      agreeSources: consensus.agreeSources,
-      disagreeSources: consensus.disagreeSources,
-      allPrices: consensus.allPrices,
-      observedAt: consensus.observedAt,
-      observedAtMode: consensus.observedAtMode,
-      observedAtBySource: consensus.observedAtBySource,
-      observedAtModeBySource: consensus.observedAtModeBySource,
-    });
-
-    if (consensus.confidence === "high") stats.high++;
-    else if (consensus.confidence === "single-source") stats.singleSource++;
-    else stats.low++;
-
-    if (consensus.confidence === "single-source" && consensus.source === "coingecko") {
-      stats.cgOnly++;
-    }
-
-    if (consensus.disagreeSources.length > 0) {
-      const highWeightDisagrees = sources
-        .filter((s) => s.weight >= 2 && consensus.disagreeSources.includes(s.source))
-        .map((s) => `${s.source}($${s.price.toFixed(4)})`);
-      if (highWeightDisagrees.length > 0) {
-        console.log(
-          `[primary-prices] ${asset.symbol}: high-weight disagree: ${highWeightDisagrees.join(", ")} `
-          + `vs consensus $${consensus.price.toFixed(4)}`,
-        );
-      }
-    }
-  }
-
-  for (const result of results.values()) {
-    if (
-      result.confidence === "high" &&
-      result.agreeSources.length === 2 &&
-      result.agreeSources.every((s) => s === "coingecko" || s === "defillama-list")
-    ) {
-      result.confidence = "single-source";
-      stats.high--;
-      stats.singleSource++;
-    }
-  }
-
-  const poolChallengers = await loadDexPoolChallengers(db, POOL_CHALLENGE_MIN_TVL, DEX_FRESHNESS_SEC, nowSec);
-  const assetPegTypes = new Map(candidates.map((a) => [a.id, a.pegType]));
-  const poolChallengeDowngrades = applyPoolChallenge(results, poolChallengers, assetPegTypes, stats);
-  if (poolChallengeDowngrades > 0) {
-    console.log(`[primary-prices] Pool challenge hardened ${poolChallengeDowngrades} soft-only result(s)`);
-  }
-
-  for (const result of results.values()) {
-    const challengeSources = result.confidence === "low" ? result.candidateSources : result.agreeSources;
-    if (isPoolChallengeEligibleConsensus(challengeSources)) {
-      result.softOnly = true;
-    }
-  }
+  await applyPrimaryPostConsensusHardening({ db, candidates, results, stats, nowSec });
 
   if (dlListPrices) {
     const withDl = candidates.filter((a) => dlListPrices.has(a.id)).length;
