@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo } from "react";
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Cell } from "recharts";
+import { BarChart, Bar, Tooltip, Cell } from "recharts";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useChartContainerReady } from "@/hooks/use-chart-container-ready";
@@ -10,6 +10,7 @@ import { useReportCards } from "@/hooks/api-hooks";
 import { formatCurrency } from "@shared/lib/format";
 import { buildReportCardMap } from "@/lib/stablecoin-lookups";
 import { PharosChartTooltip, TooltipLabel, TooltipRow } from "@/components/pharos-chart-tooltip";
+import { CategoricalXAxis, ChartGrid, MonoYAxis } from "@/components/chart-primitives";
 import {
   BLACKLIST_STATUS_BUCKET_COLORS,
   BLACKLIST_STATUS_BUCKET_LABELS,
@@ -73,25 +74,21 @@ function StatusBarChart({
               data={data}
               margin={{ top: 8, right: 8, bottom: 0, left: 0 }}
             >
-              <CartesianGrid vertical={false} strokeDasharray="3 3" stroke="var(--color-border)" />
-              <XAxis
+              <ChartGrid strokeDasharray="3 3" />
+              <CategoricalXAxis
                 dataKey="status"
                 tick={{
                   fontSize: 11,
                   fontFamily: "var(--font-mono, monospace)",
                   fill: "var(--color-muted-foreground)",
                 }}
-                tickLine={false}
-                axisLine={false}
               />
-              <YAxis
+              <MonoYAxis
                 tick={{
                   fontSize: 11,
                   fontFamily: "var(--font-mono, monospace)",
                   fill: "var(--color-muted-foreground)",
                 }}
-                tickLine={false}
-                axisLine={false}
                 tickFormatter={formatter}
                 width={dataKey === "marketCap" ? 62 : 36}
               />

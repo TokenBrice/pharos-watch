@@ -25,6 +25,8 @@ interface SortState {
   direction: "asc" | "desc";
 }
 
+export type StablecoinTableRowRiskLevel = "depeg" | "poor" | "warning" | "normal";
+
 const SORT_KEY_TO_COLUMN: Record<StablecoinTableSortKey, ColumnId> = {
   name: "name",
   price: "price",
@@ -94,6 +96,26 @@ export function resolveEffectiveSortKey(
 ): StablecoinTableSortKey {
   const columnId = SORT_KEY_TO_COLUMN[sortKey];
   return visibleColumns.has(columnId) ? sortKey : "mcap";
+}
+
+export function getStablecoinTableRowRiskLevel(
+  coin: StablecoinData,
+  pegScores?: Map<string, PegSummaryCoin>,
+  reportCards?: Record<string, ReportCard>,
+): StablecoinTableRowRiskLevel {
+  const pegCoin = pegScores?.get(coin.id);
+  const reportCard = reportCards?.[coin.id];
+
+  if (pegCoin?.pegScore !== null && pegCoin?.pegScore !== undefined && pegCoin.pegScore < 60) {
+    return "depeg";
+  }
+  if (reportCard?.overallGrade && ["D", "F"].includes(reportCard.overallGrade)) {
+    return "poor";
+  }
+  if (reportCard?.overallGrade === "C") {
+    return "warning";
+  }
+  return "normal";
 }
 
 interface SortStablecoinsParams {

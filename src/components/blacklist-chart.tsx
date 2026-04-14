@@ -1,13 +1,14 @@
 "use client";
 
 import { useMemo } from "react";
-import { ComposedChart, Bar, Line, XAxis, YAxis, CartesianGrid, Tooltip } from "recharts";
+import { ComposedChart, Bar, Line, Tooltip } from "recharts";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useChartContainerReady } from "@/hooks/use-chart-container-ready";
 import { formatCurrency } from "@shared/lib/format";
 import { BLACKLIST_CHART_COLORS } from "@shared/lib/classification";
 import { PharosChartTooltip, TooltipLabel, TooltipRow } from "@/components/pharos-chart-tooltip";
+import { CategoricalXAxis, ChartGrid, MonoYAxis } from "@/components/chart-primitives";
 import type { BlacklistSummaryResponse, BlacklistStablecoin } from "@shared/types";
 
 const STABLECOINS_ORDER = ["USDT", "USDC", "PYUSD", "USD1", "PAXG", "XAUT"] as const satisfies readonly BlacklistStablecoin[];
@@ -115,29 +116,25 @@ export function BlacklistChart({ chart, isLoading }: BlacklistChartProps) {
                 data={chartData}
                 margin={{ top: 8, right: 8, bottom: 0, left: 0 }}
               >
-                <CartesianGrid vertical={false} strokeDasharray="3 3" stroke="var(--color-border)" />
-                <XAxis
+                <ChartGrid strokeDasharray="3 3" />
+                <CategoricalXAxis
                   dataKey="quarter"
                   tick={{
                     fontSize: 11,
                     fontFamily: "var(--font-mono, monospace)",
                     fill: "var(--color-muted-foreground)",
                   }}
-                  tickLine={false}
-                  axisLine={false}
                   angle={-35}
                   textAnchor="end"
                   height={52}
                   interval={Math.max(0, Math.floor(chartData.length / 8) - 1)}
                 />
-                <YAxis
+                <MonoYAxis
                   tick={{
                     fontSize: 11,
                     fontFamily: "var(--font-mono, monospace)",
                     fill: "var(--color-muted-foreground)",
                   }}
-                  tickLine={false}
-                  axisLine={false}
                   tickFormatter={(val: number) => formatCurrency(val, 0)}
                   width={62}
                 />

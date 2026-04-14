@@ -68,6 +68,24 @@ export function MonoYAxis({ tick = MONO_AXIS_TICK, tickLine = false, axisLine = 
   );
 }
 
+type CategoricalXAxisProps = ComponentProps<typeof XAxis>;
+
+export function CategoricalXAxis({
+  tick = MONO_AXIS_TICK,
+  tickLine = false,
+  axisLine = false,
+  ...props
+}: CategoricalXAxisProps) {
+  return (
+    <XAxis
+      tick={tick}
+      tickLine={tickLine}
+      axisLine={axisLine}
+      {...props}
+    />
+  );
+}
+
 type DateTooltipProps = ComponentProps<typeof Tooltip> & {
   locale?: string;
   dateFormat?: Intl.DateTimeFormatOptions;
@@ -94,7 +112,7 @@ export function DateTooltip({
 
 type TimeGridProps = ComponentProps<typeof CartesianGrid>;
 
-export function TimeGrid({
+export function ChartGrid({
   strokeDasharray = "2 6",
   stroke = "var(--color-border)",
   vertical = false,
@@ -102,3 +120,5 @@ export function TimeGrid({
 }: TimeGridProps) {
   return <CartesianGrid strokeDasharray={strokeDasharray} stroke={stroke} vertical={vertical} {...props} />;
 }
+
+export const TimeGrid = ChartGrid;

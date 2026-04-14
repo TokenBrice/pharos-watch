@@ -105,6 +105,7 @@ export function useCompareDataModel({
           SupplyHistoryResponseSchema,
         ),
       staleTime: CRON_1H,
+      refetchInterval: 2 * CRON_1H,
       enabled: !!id,
     })),
   });
@@ -112,11 +113,12 @@ export function useCompareDataModel({
   const flowCoinQueries = useQueries({
     queries: selectedIds.map((id) => ({
       queryKey: ["mint-burn-flows", id, flowHours],
-      queryFn: async () => {
-        const raw = await apiFetch(`/api/mint-burn-flows?stablecoin=${encodeURIComponent(id)}&hours=${flowHours}`);
-        return MintBurnPerCoinResponseSchema.parse(raw);
-      },
+      queryFn: () => apiFetch(
+        API_PATHS.mintBurnFlows({ stablecoin: id, hours: flowHours }),
+        MintBurnPerCoinResponseSchema,
+      ),
       staleTime: CRON_20MIN,
+      refetchInterval: 2 * CRON_20MIN,
       enabled: !!id,
     })),
   });

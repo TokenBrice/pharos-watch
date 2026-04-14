@@ -1,0 +1,97 @@
+"use client";
+
+import Link from "next/link";
+import { RotateCcw, Sparkles } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { TableCell, TableRow } from "@/components/ui/table";
+import { EmptyStateIllustration } from "@/components/empty-state-illustration";
+import { StablecoinLogo } from "@/components/stablecoin-logo";
+import { buildStablecoinUrl } from "@/lib/urls";
+import type { FilterTag, StablecoinData } from "@shared/types";
+
+interface StablecoinTableEmptyStateProps {
+  searchQuery?: string;
+  activeFilters: FilterTag[];
+  data?: StablecoinData[];
+  logos?: Record<string, string>;
+  onClearSearch?: () => void;
+  onClearFilters?: () => void;
+}
+
+export function StablecoinTableEmptyState({
+  searchQuery,
+  activeFilters,
+  data,
+  logos,
+  onClearSearch,
+  onClearFilters,
+}: StablecoinTableEmptyStateProps) {
+  return (
+    <TableRow>
+      <TableCell colSpan={99} className="py-10">
+        <div className="flex flex-col items-center text-center">
+          <EmptyStateIllustration variant={searchQuery ? "search" : "data"} />
+          <div className="mx-auto mt-5 max-w-lg space-y-2">
+            <p className="text-base font-medium text-foreground">
+              {searchQuery
+                ? `No results for "${searchQuery}"`
+                : activeFilters.length > 0
+                  ? "No stablecoins match your filters"
+                  : "No stablecoin data available"}
+            </p>
+            <p className="text-sm text-muted-foreground">
+              {activeFilters.length > 0
+                ? "Try adjusting your filters or clearing them to see the full tracked universe."
+                : "Check back soon — we're constantly monitoring the market."}
+            </p>
+          </div>
+          {(searchQuery || activeFilters.length > 0) && (
+            <div className="mt-5 flex flex-wrap items-center justify-center gap-2">
+              {activeFilters.length > 0 && onClearFilters && (
+                <Button
+                  variant="default"
+                  size="sm"
+                  onClick={onClearFilters}
+                  className="gap-1.5 rounded-full"
+                >
+                  <RotateCcw className="h-3.5 w-3.5" />
+                  Clear all filters
+                </Button>
+              )}
+              {searchQuery && onClearSearch && (
+                <Button
+                  variant={activeFilters.length > 0 ? "outline" : "default"}
+                  size="sm"
+                  onClick={onClearSearch}
+                  className="gap-1.5 rounded-full"
+                >
+                  <Sparkles className="h-3.5 w-3.5" />
+                  Clear search
+                </Button>
+              )}
+            </div>
+          )}
+          {(searchQuery || activeFilters.length > 0) && data && data.length > 0 && (
+            <div className="mt-6 border-t border-border/50 pt-5">
+              <p className="mb-3 text-xs font-medium uppercase tracking-wider text-muted-foreground">
+                Popular stablecoins
+              </p>
+              <div className="flex flex-wrap justify-center gap-2">
+                {data.slice(0, 5).map((coin) => (
+                  <Link
+                    key={coin.id}
+                    href={buildStablecoinUrl(coin.id)}
+                    className="pharos-focus-ring inline-flex items-center gap-1.5 rounded-full border border-border/60 bg-background/60 px-3 py-1.5 text-xs font-medium transition-colors hover:bg-accent/50 hover:text-foreground"
+                  >
+                    <StablecoinLogo src={logos?.[coin.id]} name={coin.name} size={16} />
+                    {coin.symbol}
+                  </Link>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      </TableCell>
+    </TableRow>
+  );
+}
