@@ -24,10 +24,4 @@ export {
   loadRiskFreeRateRegistry,
   loadRiskFreeRateSnapshot,
 } from "./sources-riskfree";
-
-export const COMPOUND_V3_COMETS = [
-  { stablecoinId: "usdc-circle", chain: "ethereum", comet: "0xc3d688B66703497DAA19211EEdff47f25384cdc3", symbol: "USDC" },
-  { stablecoinId: "usdt-tether", chain: "ethereum", comet: "0x3Afdc9BCA9213A35503b077a6072F3D0d5AB0840", symbol: "USDT" },
-  { stablecoinId: "usdc-circle", chain: "base", comet: "0xb125E6687d4313864e53df431d5425969c15Eb2F", symbol: "USDC" },
-  { stablecoinId: "usdc-circle", chain: "arbitrum", comet: "0xA5EDBDD9646f8dFF606d7448e414884C7d905dCA", symbol: "USDC" },
-] as const;
+export { COMPOUND_V3_COMETS } from "./sources-optional-protocols-constants";
