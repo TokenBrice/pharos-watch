@@ -1,5 +1,6 @@
-import { getCache } from "./db-cache";
+import { getCache, setCache } from "./db-cache";
 import { decodeCachedJson } from "./cache-json";
+import type { ReportCard } from "@shared/types/report-cards";
 
 export interface ReportCardScoreEntry {
   score: number;
@@ -66,4 +67,30 @@ export async function loadReportCardCache(
   }
 
   return { kind: "ok", payload: decoded.payload, updatedAt: decoded.payload.updatedAt };
+}
+
+export async function writeReportCardCache(
+  db: D1Database,
+  cards: readonly ReportCard[],
+  updatedAt: number,
+): Promise<{ writtenCount: number }> {
+  const scores: ReportCardCachePayload["scores"] = {};
+  for (const card of cards) {
+    if (card.isDefunct || card.overallScore === null) continue;
+    scores[card.id] = {
+      score: card.overallScore,
+      grade: card.overallGrade,
+    };
+  }
+
+  await setCache(
+    db,
+    "report_card_cache",
+    JSON.stringify({
+      scores,
+      updatedAt,
+    } satisfies ReportCardCachePayload),
+  );
+
+  return { writtenCount: Object.keys(scores).length };
 }

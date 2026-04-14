@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { mockD1 } from "../../api/__tests__/helpers/mock-d1";
-import { loadReportCardCache } from "../report-card-cache";
+import { loadReportCardCache, writeReportCardCache } from "../report-card-cache";
 
 function makeReportCardDb(value: string | null, updatedAt = 1_700_000_000): D1Database {
   if (value == null) {
@@ -96,6 +96,28 @@ describe("loadReportCardCache", () => {
         updatedAt: payloadUpdatedAt,
       },
       updatedAt: payloadUpdatedAt,
+    });
+  });
+});
+
+describe("writeReportCardCache", () => {
+  it("writes scored non-defunct cards using the existing cache payload shape", async () => {
+    const db = mockD1([{ match: "INSERT OR REPLACE INTO cache", rows: [] }]);
+
+    const result = await writeReportCardCache(db, [
+      { id: "rated", overallScore: 82, overallGrade: "B+", isDefunct: false },
+      { id: "nr", overallScore: null, overallGrade: "NR", isDefunct: false },
+      { id: "dead", overallScore: 0, overallGrade: "F", isDefunct: true },
+    ] as never, 1_777_000_000);
+
+    expect(result.writtenCount).toBe(1);
+    const write = db.getHistory().find((entry) => entry.sql.includes("INSERT OR REPLACE INTO cache"));
+    expect(write?.binds[0]).toBe("report_card_cache");
+    expect(JSON.parse(String(write?.binds[1]))).toEqual({
+      scores: {
+        rated: { score: 82, grade: "B+" },
+      },
+      updatedAt: 1_777_000_000,
     });
   });
 });

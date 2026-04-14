@@ -1,6 +1,6 @@
 /**
  * Quarter-hourly trigger (every 15 min):
- *   sync-fx-rates (2) → sync-stablecoins (3) → snapshot-supply (0)
+ *   sync-fx-rates (2) -> sync-stablecoins (3) -> snapshots/cache refreshes (0)
  *
  * All jobs run sequentially in-slot to avoid cross-job connection spikes.
  * Run FX first so Chainlink gets a clean RPC window before the heavier
@@ -13,6 +13,7 @@ import { syncStablecoins } from "../../cron/sync-stablecoins";
 import { syncFxRates } from "../../cron/sync-fx-rates";
 import { snapshotSupply } from "../../cron/snapshot-supply";
 import { snapshotChainSupply } from "../../cron/snapshot-chain-supply";
+import { publishReportCardCache } from "../../cron/publish-report-card-cache";
 import { parseStablecoinsCapabilities, type ScheduledRuntimeContext } from "./context";
 import { runBestEffortScheduledJob } from "./run-best-effort-job";
 
@@ -54,6 +55,12 @@ export async function runQuarterHourlySlot(runtime: ScheduledRuntimeContext): Pr
 
   if (stablecoinsCacheSafe) {
     await runBestEffortScheduledJob(runtime, "quarter-hour slot", "snapshot-chain-supply", (signal) => snapshotChainSupply(runtime.db, signal));
+  }
+
+  if (stablecoinsCacheSafe) {
+    await runBestEffortScheduledJob(runtime, "quarter-hour slot", "publish-report-card-cache", (signal) =>
+      publishReportCardCache(runtime.db, signal),
+    );
   }
 
   try {

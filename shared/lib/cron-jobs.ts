@@ -284,6 +284,15 @@ const CRON_JOB_DEFINITIONS_BASE: readonly CronJobDefinition[] = [
     maxConnections: 0,
   },
   {
+    job: "publish-report-card-cache",
+    label: "Report-card cache",
+    group: "quarter-hourly",
+    intervalSec: 900,
+    scheduleKey: "quarterHourly",
+    triggerMode: "shared",
+    maxConnections: 0,
+  },
+  {
     job: "snapshot-safety-grade-history",
     label: "Safety grade snapshot",
     group: "daily",

@@ -1,6 +1,7 @@
 import { SAFETY_SCORE_VERSION } from "@shared/lib/safety-score-version";
 import { buildReportCardsSnapshot } from "../lib/report-cards-snapshot";
 import { batchExecute } from "../lib/db";
+import { writeReportCardCache } from "../lib/report-card-cache";
 import type { CronResult } from "../lib/cron-logger";
 import type { ReportCardGrade } from "@shared/types/report-cards";
 
@@ -117,6 +118,7 @@ export async function snapshotSafetyGradeHistory(
   if (stmts.length > 0) {
     await batchExecute(db, stmts);
   }
+  const cacheResult = await writeReportCardCache(db, snapshot.cards, snapshot.updatedAt);
 
   return {
     itemCount: stmts.length,
@@ -126,6 +128,7 @@ export async function snapshotSafetyGradeHistory(
       seeded,
       changed,
       skipped,
+      reportCardCacheRows: cacheResult.writtenCount,
     }),
   };
 }

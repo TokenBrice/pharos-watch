@@ -1,7 +1,6 @@
 // worker/src/cron/sync-yield-data.ts
 import { ACTIVE_YIELD_BEARING_STABLECOINS } from "@shared/lib/tracked-stablecoin-utils";
 import { DAY_SECONDS } from "@shared/lib/time-constants";
-import { setCache } from "../lib/db-cache";
 import type { CronResult } from "../lib/cron-logger";
 import { ON_CHAIN_RATE_CONFIGS } from "./yield-config";
 import type { ChainRpcConfig } from "../lib/chain-registry";
@@ -76,7 +75,6 @@ export async function syncYieldData(
     safetyScores,
     safetyCoverageRatio,
     safetySnapshotDegraded,
-    scoresObj,
   } = await loadYieldSyncState({
     db,
     startSec,
@@ -91,19 +89,6 @@ export async function syncYieldData(
       `[sync-yield-data] Safety snapshot coverage degraded: ${safetySnapshot.coveredCount}/${safetySnapshot.trackedCount} ` +
       `(${(safetyCoverageRatio * 100).toFixed(1)}%)${safetySnapshot.reason ? ` reason=${safetySnapshot.reason}` : ""}`,
     );
-  }
-
-  if (!safetySnapshotDegraded) {
-    await setCache(
-      db,
-      "report_card_cache",
-      JSON.stringify({
-        scores: scoresObj,
-        updatedAt: startSec,
-      }),
-    );
-  } else {
-    console.warn("[sync-yield-data] Skipped report_card_cache write due to degraded safety snapshot");
   }
 
   const { resolved, tier1PrevRates } = await resolveYieldSources({

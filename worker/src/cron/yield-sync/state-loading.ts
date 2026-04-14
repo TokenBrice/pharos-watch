@@ -60,7 +60,6 @@ export interface YieldSyncLoadedState {
   safetyScores: Map<string, { score: number; grade: string }>;
   safetyCoverageRatio: number;
   safetySnapshotDegraded: boolean;
-  scoresObj: Record<string, { score: number; grade: string }>;
 }
 
 function buildStablecoinSupplyMapFromCacheValue(value: string): Map<string, number> {
@@ -294,10 +293,6 @@ export async function loadYieldSyncState(params: {
   const safetyCoverageRatio = safetySnapshot.coverageRatio;
   const safetySnapshotDegraded =
     safetySnapshot.kind !== "ok" || safetyCoverageRatio < MIN_SAFETY_SCORE_COVERAGE_RATIO;
-  const scoresObj: Record<string, { score: number; grade: string }> = {};
-  for (const [id, value] of safetyScores) {
-    scoresObj[id] = value;
-  }
 
   return {
     dlPools,
@@ -321,7 +316,6 @@ export async function loadYieldSyncState(params: {
     safetyScores,
     safetyCoverageRatio,
     safetySnapshotDegraded,
-    scoresObj,
   };
 }
 

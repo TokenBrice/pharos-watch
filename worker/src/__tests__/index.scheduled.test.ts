@@ -24,6 +24,7 @@ const cronMocks = vi.hoisted(() => ({
   dispatchTelegramAlerts: vi.fn(async () => ({ status: "ok", itemCount: 1, metadata: "{}" })),
   runStatusSelfCheck: vi.fn(async () => ({ status: "ok", itemCount: 1, metadata: "{}" })),
   snapshotSupply: vi.fn(async () => ({ status: "ok", itemCount: 1, metadata: "{}" })),
+  publishReportCardCache: vi.fn(async () => ({ status: "ok", itemCount: 1, metadata: "{}" })),
   snapshotSafetyGradeHistory: vi.fn(async () => ({ status: "ok", itemCount: 1, metadata: "{}" })),
   fetchTbillRate: vi.fn(async () => ({ status: "ok", itemCount: 1, metadata: "{}" })),
   snapshotPsiDaily: vi.fn(async () => ({ status: "ok", itemCount: 1, metadata: "{}" })),
@@ -90,6 +91,7 @@ vi.mock("../cron/compute-dews", () => ({ computeAndStoreDEWS: cronMocks.computeA
 vi.mock("../cron/dispatch-telegram-alerts", () => ({ dispatchTelegramAlerts: cronMocks.dispatchTelegramAlerts }));
 vi.mock("../cron/status-self-check", () => ({ runStatusSelfCheck: cronMocks.runStatusSelfCheck }));
 vi.mock("../cron/snapshot-supply", () => ({ snapshotSupply: cronMocks.snapshotSupply }));
+vi.mock("../cron/publish-report-card-cache", () => ({ publishReportCardCache: cronMocks.publishReportCardCache }));
 vi.mock("../cron/snapshot-safety-grade-history", () => ({
   snapshotSafetyGradeHistory: cronMocks.snapshotSafetyGradeHistory,
 }));
@@ -203,6 +205,7 @@ describe("worker.scheduled", () => {
     );
     expect(cronMocks.syncStablecoins).toHaveBeenCalledTimes(1);
     expect(cronMocks.snapshotSupply).toHaveBeenCalledTimes(1);
+    expect(cronMocks.publishReportCardCache).toHaveBeenCalledTimes(1);
     expect(cronMocks.syncFxRates).toHaveBeenCalledTimes(1);
     // stability-index and compute-dews now on the half-hourly trigger
     expect(cronMocks.computeAndStoreStabilityIndex).not.toHaveBeenCalled();
@@ -381,6 +384,7 @@ describe("worker.scheduled", () => {
 
     expect(cronMocks.syncStablecoins).toHaveBeenCalledTimes(1);
     expect(cronMocks.snapshotSupply).not.toHaveBeenCalled();
+    expect(cronMocks.publishReportCardCache).not.toHaveBeenCalled();
     expect(cronMocks.syncFxRates).toHaveBeenCalledTimes(1);
     expect(cronMocks.runStatusSelfCheck).not.toHaveBeenCalled();
   });
@@ -415,6 +419,7 @@ describe("worker.scheduled", () => {
     await Promise.all(waits);
 
     expect(cronMocks.snapshotSupply).toHaveBeenCalledTimes(1);
+    expect(cronMocks.publishReportCardCache).toHaveBeenCalledTimes(1);
   });
 
   it("runs charts → dex → dews → psi on the 30-min cron", async () => {

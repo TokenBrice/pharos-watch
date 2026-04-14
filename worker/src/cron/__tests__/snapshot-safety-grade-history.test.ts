@@ -85,11 +85,21 @@ function mockSnapshot(cards: ReportCard[]) {
         dependencyRisk: 0,
       },
       pegMultiplierExponent: 0,
+      activeDepegSeveritySource: "open-event-peak",
+      activeDepegCaps: {
+        d: { thresholdBps: 1000, score: 49 },
+        f: { thresholdBps: 2500, score: 39 },
+      },
       thresholds: [],
     },
     dependencyGraph: { edges: [] },
     updatedAt: 1_777_770_000,
     liquidityStale: false,
+    redemptionStale: false,
+    inputFreshness: {
+      dexLiquidity: { updatedAt: 1_777_770_000, ageSeconds: 0, stale: false },
+      redemptionBackstops: { updatedAt: 1_777_770_000, ageSeconds: 0, stale: false },
+    },
   });
 }
 
@@ -129,6 +139,8 @@ describe("snapshotSafetyGradeHistory", () => {
     expect(metadata.seeded).toBe(2);
     expect(metadata.changed).toBe(0);
     expect(metadata.skipped).toBe(0);
+    expect(metadata.reportCardCacheRows).toBe(2);
+    expect(db.getHistory().some((entry) => entry.sql.includes("INSERT OR REPLACE INTO cache"))).toBe(true);
   });
 
   it("inserts only transition rows when grades change", async () => {
@@ -157,6 +169,7 @@ describe("snapshotSafetyGradeHistory", () => {
     expect(metadata.seeded).toBe(0);
     expect(metadata.changed).toBe(1);
     expect(metadata.skipped).toBe(1);
+    expect(metadata.reportCardCacheRows).toBe(2);
   });
 
   it("is idempotent when all live grades are unchanged", async () => {
@@ -184,5 +197,6 @@ describe("snapshotSafetyGradeHistory", () => {
     expect(metadata.seeded).toBe(0);
     expect(metadata.changed).toBe(0);
     expect(metadata.skipped).toBe(2);
+    expect(metadata.reportCardCacheRows).toBe(2);
   });
 });
