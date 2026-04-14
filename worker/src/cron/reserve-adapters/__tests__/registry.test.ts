@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { LIVE_RESERVE_ADAPTER_KEYS } from "@shared/types/live-reserves";
 import {
   LIVE_RESERVE_ADAPTER_DEFINITIONS,
+  LiveReservesConfigSchema,
   parseLiveReserveAdapterParams,
 } from "@shared/lib/live-reserve-adapters";
 import { getReserveAdapter } from "../index";
@@ -55,5 +56,34 @@ describe("adapter registry completeness", () => {
     const definitionKeys = Object.keys(LIVE_RESERVE_ADAPTER_DEFINITIONS).sort();
     const canonicalKeys = [...LIVE_RESERVE_ADAPTER_KEYS].sort();
     expect(definitionKeys).toEqual(canonicalKeys);
+  });
+
+  it("LiveReservesConfigSchema accepts a representative config", () => {
+    const parsed = LiveReservesConfigSchema.safeParse({
+      adapter: "tether",
+      version: 1,
+      semantics: "single-asset",
+      inputs: {
+        primary: { kind: "onchain-solana" },
+      },
+    });
+
+    expect(parsed.success).toBe(true);
+  });
+
+  it("parseLiveReserveAdapterParams accepts a structured adapter payload", () => {
+    const parsed = parseLiveReserveAdapterParams("chainlink-nav", {
+      oracleAddress: "0x123",
+      tokenAddress: "0x456",
+      assetLabel: "USDC",
+      assetRisk: "low",
+    });
+
+    expect(parsed).toEqual({
+      oracleAddress: "0x123",
+      tokenAddress: "0x456",
+      assetLabel: "USDC",
+      assetRisk: "low",
+    });
   });
 });
