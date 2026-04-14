@@ -29,7 +29,8 @@ export function SafetyScoresMethodologySection() {
                 decentralization, dependency risk), then a peg stability multiplier that penalizes coins with poor pegs
                 while barely affecting well-pegged ones. The exit-liquidity dimension blends raw DEX liquidity with
                 redemption-backstop quality when a direct exit path exists. When some base dimensions lack data (NR), their
-                weight is redistributed proportionally among rated ones.
+                weight is redistributed proportionally among rated ones. Active depeg caps use the open event&apos;s peak
+                deviation, while the peg dimension itself remains a direct pegScore passthrough.
               </p>
               <MethodologyFacts
                 facts={[
@@ -214,7 +215,8 @@ export function SafetyScoresMethodologySection() {
                     Redemption backstops are scored across access, settlement, execution certainty, capacity, output-asset
                     quality, and cost. Low-confidence redemption routes stay visible on the site but do not uplift the Safety Score
                     liquidity dimension. Severe active depegs also disable static or non-live-direct redemption uplift unless
-                    current live-open redemption evidence exists. Stale DEX inputs are not used for effective exit, and stale live reserve metadata ages out instead of staying resolved indefinitely.</p>
+                    current live-open redemption evidence exists. Stale DEX inputs and stale redemption snapshots are not used
+                    for effective exit, and stale live reserve metadata ages out instead of staying resolved indefinitely.</p>
                 </div>
                 {/* Peg multiplier */}
                 <div className="space-y-2">
@@ -225,7 +227,8 @@ export function SafetyScoresMethodologySection() {
                     pegs (90+) are barely affected (~4% penalty), while coins with broken pegs are sharply penalized (e.g.
                     pegScore&nbsp;10 &rarr; 60% penalty). Pure NAV fund-share tokens with no configured peg reference keep
                     pegScore&nbsp;=&nbsp;NR and receive multiplier&nbsp;1.0, while configured NAV wrappers can inherit peg
-                    risk from a referenced base stablecoin. Severe active depegs are also hard-capped:
+                    risk from a referenced base stablecoin. The peg dimension passes through the computed peg score directly;
+                    severe active depegs are hard-capped after the multiplier using the open event&apos;s peak deviation:
                     &ge;&nbsp;2500&nbsp;bps (25%+) caps the overall score at F, &ge;&nbsp;1000&nbsp;bps (10%+) caps at D.
                   </p>
                 </div>
@@ -348,8 +351,9 @@ export function SafetyScoresMethodologySection() {
                       dependency scores below 75
                     </li>
                     <li>
-                      <span className="text-foreground">Unmapped dependencies</span> &mdash; falls back to 70 when
-                      dependencies aren&apos;t mapped or scores are unavailable
+                      <span className="text-foreground">Unavailable upstream scores</span> &mdash; falls back to 70 when
+                      all dependency scores are unavailable; partially unavailable upstream weights are scored at 70
+                      instead of being treated as self-backed
                     </li>
                   </ul>
                   <p className="mt-2">

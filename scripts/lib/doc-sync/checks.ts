@@ -49,6 +49,13 @@ import {
   PEG_MULTIPLIER_EXPONENT,
 } from "../../../shared/lib/report-cards";
 import {
+  ACTIVE_DEPEG_CAP_D_BPS,
+  ACTIVE_DEPEG_CAP_D_SCORE,
+  ACTIVE_DEPEG_CAP_F_BPS,
+  ACTIVE_DEPEG_CAP_F_SCORE,
+  REDEMPTION_SEVERE_ACTIVE_DEPEG_BPS,
+} from "../../../shared/lib/report-card-active-depeg";
+import {
   DEPEG_DEWS_METHODOLOGY_VERSION_LABEL,
   METHODOLOGY_DOC_VERSION_CHECKS,
   SAFETY_SCORE_VERSION_LABEL,
@@ -114,6 +121,34 @@ function checkReportCardsDoc(failures: Failure[]): void {
     findLineValue(doc, /final × ([0-9.]+)/),
     String(NO_LIQUIDITY_PENALTY),
   );
+
+  const activeCapNumbers = getAllNumbersFromText(
+    findLineValue(doc, /Active depeg cap\*\*: ([^\n]+)/) ?? "",
+  );
+  expectNumber(failures, file, "active depeg F threshold", activeCapNumbers[0] ?? null, ACTIVE_DEPEG_CAP_F_BPS);
+  expectNumber(failures, file, "active depeg F cap score", activeCapNumbers[2] ?? null, ACTIVE_DEPEG_CAP_F_SCORE);
+  expectNumber(failures, file, "active depeg D threshold", activeCapNumbers[3] ?? null, ACTIVE_DEPEG_CAP_D_BPS);
+  expectNumber(failures, file, "active depeg D cap score", activeCapNumbers[5] ?? null, ACTIVE_DEPEG_CAP_D_SCORE);
+
+  const severeRedemptionThreshold = getFirstNumberFromText(
+    findLineValue(doc, /During severe active depegs \(`activeDepegBps >= ([^)]+)`\)/) ?? "",
+  );
+  expectNumber(
+    failures,
+    file,
+    "redemption severe active depeg threshold",
+    severeRedemptionThreshold,
+    REDEMPTION_SEVERE_ACTIVE_DEPEG_BPS,
+  );
+
+  if (!doc.includes("When the current redemption-backstop snapshot is stale or missing")) {
+    failures.push({
+      file,
+      label: "stale redemption suppression",
+      expected: "docs mention stale redemption snapshot suppression",
+      found: null,
+    });
+  }
 
   for (const { grade, min } of GRADE_THRESHOLDS) {
     const row = requireTableRow(doc, file, grade);

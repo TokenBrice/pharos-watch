@@ -2,18 +2,18 @@
 
 Multi-dimensional risk grades (A+ through F) for every tracked stablecoin. Computed on-demand by the API from live data.
 
-## Overall Grade (v6.96)
+## Overall Grade (v6.97)
 
-Three-step computation:
+Four-step computation:
 
-1. **Base score**: weighted average of 4 base dimensions (each 0–100). NR dimensions have their weight redistributed proportionally among rated ones. Requires at least 2 rated base dimensions; otherwise overall = NR.
-2. **Peg multiplier**: `final = base × (pegScore / 100) ^ 0.40`. Coins with good pegs (90+) barely affected (~4% penalty). Coins with broken pegs get sharply penalized (pegScore 10 → 60% penalty). pegScore = NR (pure NAV tokens with no configured peg reference) → multiplier 1.0 (no penalty). pegScore = 0 → multiplier 0.
-3. **Active depeg cap**: coins with a severe ongoing depeg are hard-capped regardless of base score — depegs ≥ 2500 bps (25%+) cap at F (39), ≥ 1000 bps (10%+) cap at D (49).
+1. **Base score**: weighted average of 4 base dimensions (each 0-100). NR dimensions have their weight redistributed proportionally among rated ones. Requires at least 2 rated base dimensions; otherwise overall = NR.
+2. **Peg multiplier**: `final = base × (pegScore / 100) ^ 0.40`. Coins with good pegs (90+) barely affected (~4% penalty). Coins with broken pegs get sharply penalized (pegScore 10 -> 60% penalty). pegScore = NR (pure NAV tokens with no configured peg reference) -> multiplier 1.0 (no penalty). pegScore = 0 -> multiplier 0.
+3. **Active depeg cap**: coins with a severe ongoing depeg are hard-capped regardless of base score. `activeDepegBps` is the open event's absolute peak deviation, not the latest spot deviation. Active depegs >= 2500 bps (25%+) cap at F (39), >= 1000 bps (10%+) cap at D (49).
 4. **No-liquidity penalty**: `final × 0.9` when the Liquidity / Exit dimension is NR (no DEX or redemption-backstop signal at all). No free pass — as coverage matures, absence of any exit signal is increasingly suspicious. Implemented via `NO_LIQUIDITY_PENALTY = 0.9` in `report-cards.ts`.
 
 Cemetery coins get a permanent F.
 
-Current-version note: v6.96 keeps the stronger peg treatment introduced in v6.93 and the NAV-wrapper peg inheritance from v6.94, treats custodied BTC wrappers plus issuer-seizable tokenized collateral as direct inherited freeze exposure for blacklistability attribution when they dominate reserve weight, and now disables static or non-live-direct redemption uplift during severe active depegs unless current live-open redemption evidence exists. The `activeDepegBps` field remains in `RawDimensionInputs` so stressed-grade recomputations and the frontend can apply the same cap.
+Current-version note: v6.97 keeps the stronger peg treatment introduced in v6.93 and the NAV-wrapper peg inheritance from v6.94, treats custodied BTC wrappers plus issuer-seizable tokenized collateral as direct inherited freeze exposure for blacklistability attribution when they dominate reserve weight, disables static or non-live-direct redemption uplift during severe active depegs unless current live-open redemption evidence exists, removes the legacy active-depeg peg-dimension cap, and suppresses stale redemption-backstop rows from Safety Score Liquidity / Exit. The `activeDepegBps` field remains in `RawDimensionInputs` so stressed-grade recomputations and the frontend can apply the same peak-based cap.
 
 ## Dimensions
 
@@ -30,12 +30,13 @@ Current-version note: v6.96 keeps the stronger peg treatment introduced in v6.93
 
 | Source                      | Scoring                                                                                  |
 | --------------------------- | ---------------------------------------------------------------------------------------- |
-| `pegScore` from peg summary | Applied as `(pegScore/100)^0.40` multiplier to base score. Pure NAV tokens stay neutral; configured NAV wrappers can inherit peg risk from a referenced base stablecoin. Active depegs ≥ 2500 bps cap overall at F; ≥ 1000 bps cap at D |
+| `pegScore` from peg summary | Applied as `(pegScore/100)^0.40` multiplier to base score. Pure NAV tokens stay neutral; configured NAV wrappers can inherit peg risk from a referenced base stablecoin. Active open-event peaks >= 2500 bps cap overall at F; >= 1000 bps cap at D |
 
 ### Peg Stability Details
 
 - Direct passthrough of `computePegScore()` output (see [Depeg Detection Pipeline](./depeg-detection.md) for the composite formula)
 - v5.5 peg fairness fixes apply automatically: tracking window is capped to coin age (`coinTrackingStart()`), per-event magnitude floors prevent brief severe depegs from being under-penalized, and active-depeg penalties are steeper
+- The report-card peg dimension does not apply a second active-depeg cap before the multiplier; final D/F active-depeg caps are applied after the peg multiplier from the open event's peak deviation.
 - Pure NAV fund-share tokens (yield-accruing, price-appreciating) receive NR — multiplier 1.0, no penalty
 - Configured NAV wrappers over a stablecoin can inherit peg stability from a referenced base asset instead of receiving a neutral pass
 - Yield-bearing annotation added to detail text
@@ -53,6 +54,7 @@ Current-version note: v6.96 keeps the stronger peg treatment introduced in v6.93
 - Low-confidence redemption routes stay visible in the dimension detail, but they do not improve the Safety Score liquidity score
 - Formula-based routes with live on-chain fee telemetry can use the current redemption fee bps for cost scoring while remaining labeled as formula models
 - When DEX liquidity is stale, report cards do not reuse it for effective-exit scoring; the dimension falls back to redemption-only or `NR`
+- When the current redemption-backstop snapshot is stale or missing, report cards suppress redemption inputs for Safety Score liquidity; the dimension falls back to fresh DEX liquidity or `NR`
 - If the DEX liquidity snapshot is temporarily unavailable at read time, `/api/report-cards` degrades in place the same way: liquidity inputs are suppressed for that snapshot instead of failing the whole response
 - If a redemption route is configured but currently unrated, the dimension stays `NR` without pretending the route is absent; the detail string calls out the configured-but-unrated state explicitly
 - High concentration (HHI > 0.5) remains descriptive context, not an extra penalty
@@ -262,7 +264,7 @@ Chain penalty applies to `dao-governance` and `multisig` tiers. Exempt tiers: `i
 - **No dependencies**: `SELF_BACKED_SCORE_BY_GOVERNANCE[governance]` — varies by tier: `decentralized` = 90, `centralized-dependent` = 75, `centralized` = 95
 - **With dependencies**: `score = sum(weight_i × upstream_score_i) + (1 − totalWeight) × SELF_BACKED_SCORE`
 - −10 penalty if any dependency scores below 75 (B-)
-- Falls back to 70 if dependency scores unavailable
+- Falls back to 70 if all dependency scores are unavailable; if only some upstream scores are unavailable, those missing weights are scored at 70 and still count as weak dependencies for the below-75 penalty
 
 **Self-backed score by governance type:**
 
@@ -328,7 +330,7 @@ Lowered 5 points in v4.0 to compensate for structural deflation from removing pe
 
 `GET /api/redemption-backstops` — current redemption backstop and effective-exit dataset used by redeemable-asset detail views and report-card liquidity inputs. Cache: standard (`public, s-maxage=300, max-age=60`).
 
-Response includes `cards` (array of `ReportCard` with `rawInputs` for client-side recomputation), `dependencyGraph` (forward edges for dependency traversal, including canonical `weight` and `type` metadata), `methodology` (version, weights, `pegMultiplierExponent`, thresholds), and `updatedAt`. See [API Reference](./api-reference.md) for the full response shape.
+Response includes `cards` (array of `ReportCard` with `rawInputs` for client-side recomputation), `dependencyGraph` (forward edges for dependency traversal, including canonical `weight` and `type` metadata), `methodology` (version, weights, `pegMultiplierExponent`, thresholds), `inputFreshness` (DEX and redemption freshness used for score gating), `liquidityStale`, `redemptionStale`, and `updatedAt`. See [API Reference](./api-reference.md) for the full response shape.
 
 `GET /api/safety-score-history` — per-coin Safety Score grade history timeline (`stablecoin` required, `days` optional). Backed by `safety_grade_history` event rows written daily by `snapshot-safety-grade-history`. Cache: slow (1-hour edge).
 
@@ -340,7 +342,7 @@ Implementation notes:
 Key types:
 
 - **`DependencyWeight`**: `{ id: string; weight: number }` — upstream stablecoin ID + collateral fraction (0–1). Replaces the old `string[]` dependency format.
-- **`RawDimensionInputs`**: Raw scoring inputs per card (`pegScore`, `activeDepeg`, `liquidityScore`, `effectiveExitScore`, `redemptionBackstopScore`, `redemptionRouteFamily`, `redemptionImmediateCapacityUsd`, `redemptionImmediateCapacityRatio`, `concentrationHhi`, `bluechipGrade`, `canBeBlacklisted`, `chainTier`, `deploymentModel`, `collateralQuality`, `custodyModel`, `governanceTier`, `governanceQuality`, `dependencies`, `navToken`, `collateralFromLive`) — enables client-side stress test recomputation.
+- **`RawDimensionInputs`**: Raw scoring inputs per card (`pegScore`, `activeDepeg`, `activeDepegBps`, `liquidityScore`, `effectiveExitScore`, `redemptionBackstopScore`, `redemptionRouteFamily`, `redemptionImmediateCapacityUsd`, `redemptionImmediateCapacityRatio`, `concentrationHhi`, `bluechipGrade`, `canBeBlacklisted`, `chainTier`, `deploymentModel`, `collateralQuality`, `custodyModel`, `governanceTier`, `governanceQuality`, `dependencies`, `navToken`, `collateralFromLive`) — enables client-side stress test recomputation.
 
 ## Portfolio Analyzer & Stress Test
 
@@ -364,7 +366,7 @@ Users simulate a grade downgrade for any upstream coin and watch cascading grade
 
 - **Coin selector**: Filtered to coins appearing as `from` in `dependencyGraph.edges`, sorted by dependent count.
 - **Grade selector**: Only downgrades from the coin's current grade to F.
-- **Recomputation**: `computeStressedGrades()` injects a synthetic score, recomputes only the Dependency Risk dimension for affected downstream coins. The current snapshot size is 278 cards (190 tracked + 88 cemetery) × 5 dimensions, which remains comfortably sub-millisecond in practice.
+- **Recomputation**: `computeStressedGrades()` injects a synthetic score, walks all transitive downstream dependencies, and recomputes only the Dependency Risk dimension for affected downstream coins in dependency order. The current snapshot size is 278 cards (190 tracked + 88 cemetery) × 5 dimensions, which remains comfortably sub-millisecond in practice.
 - **Two display modes**: Portfolio mode (dollar-denominated, scoped to held coins in impact table) vs ecosystem mode (all affected coins with market cap).
 - **Card grid simulation**: ALL affected coins show dashed amber borders + "Simulated" badge regardless of portfolio mode. Unaffected cards dimmed. Sticky banner with clear button.
 

@@ -90,7 +90,7 @@ An optional per-config `totalScoreCap` can apply an additional `config-cap`.
 - If only redemption exists: passthrough redemption score (route family caps are the guardrails)
 - If neither exists: `null`
 
-The redemption-backstop cron only materializes `effectiveExitScore` on resolved rows when the reused DEX liquidity input is fresh. Report cards then apply their own confidence gating on top, so low-confidence redemption routes stay visible but do not uplift Safety Score liquidity.
+The redemption-backstop cron only materializes `effectiveExitScore` on resolved rows when the reused DEX liquidity input is fresh. Report cards then apply their own freshness and confidence gating on top, so stale redemption snapshots and low-confidence redemption routes stay visible on redemption surfaces but do not uplift Safety Score liquidity.
 
 Severe active depegs add a current-exercisability gate on top of the static route score. When an open `depeg_events` row has `abs(peak_deviation_bps) >= 2500`, a static, estimated, live-proxy, issuer/API, queue, or documented-bound redemption route is marked `impaired` unless it has live-direct dynamic permissionless redemption capacity with atomic or immediate settlement. This prevents stale route documentation from producing a strong par-exit score while the market is indicating that broad redemption is not currently clearing.
 

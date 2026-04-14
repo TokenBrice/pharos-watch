@@ -1,6 +1,6 @@
 # Worker Infrastructure
 
-Cloudflare Worker serving the Pharos API. Handles HTTP routing, edge caching, CORS, admin auth, and 28 scheduled runtime jobs across 14 cron expressions / trigger slots. `CRON_INTERVALS` / `/api/status` track the same 28 jobs; cemetery and tracking appendices are now folded into daily digest delivery instead of a separate cron.
+Cloudflare Worker serving the Pharos API. Handles HTTP routing, edge caching, CORS, admin auth, and 29 scheduled runtime jobs across 14 cron expressions / trigger slots. `CRON_INTERVALS` / `/api/status` track the same 29 jobs; cemetery and tracking appendices are now folded into daily digest delivery instead of a separate cron.
 
 Execution note: the `snapshot-supply` retry path runs on the `*/15 * * * *` trigger only after a downstream-safe `sync-stablecoins` cache write.
 
@@ -348,6 +348,7 @@ crons = [
 | `sync-stablecoins`               | `syncStablecoins()`                                                                        | `worker/src/cron/sync-stablecoins.ts`             | [Data Pipeline](./data-pipeline.md), [Depeg Detection](./depeg-detection.md) |
 | `snapshot-supply` _(retry path)_ | `snapshotSupply()` (chained after `sync-stablecoins`)                                      | `worker/src/cron/snapshot-supply.ts`              | [Supply Snapshot Pipeline](./supply-snapshot.md)                             |
 | `snapshot-chain-supply`          | `snapshotChainSupply()` (chained after `snapshot-supply`, DB-only, 0 external connections) | `worker/src/cron/snapshot-chain-supply.ts`        | [Supply Snapshot Pipeline](./supply-snapshot.md)                             |
+| `publish-report-card-cache`      | `publishReportCardCache()` (chained after safe `sync-stablecoins`, DB-only)                | `worker/src/cron/publish-report-card-cache.ts`    | [Risk Lab](./report-cards.md), [Chains Page](./chains-page.md)               |
 | _(inline)_                       | Stale-cache health alert                                                                   | `worker/src/handlers/scheduled/quarter-hourly.ts` | This doc (below)                                                             |
 
 **Execution model:** Jobs in this slot are run sequentially in `worker/src/handlers/scheduled/quarter-hourly.ts` to respect the Workers shared 6-connection fetch pool per cron trigger. `sync-fx-rates` runs first so Chainlink / FX probes get a clean fetch window before the heavier stablecoin pricing pipeline consumes the slot budget. `sync-stablecoins` now reports explicit capability metadata:
@@ -355,7 +356,7 @@ crons = [
 - `capabilities.stablecoinsCache`
 - `capabilities.depegPipeline`
 
-`snapshot-supply` retry requires the stablecoins-cache capability. Both `snapshot-supply` and `snapshot-chain-supply` enforce a 1-hour cooldown via a `cache` table key (`snapshot-supply:last-write` / `snapshot-chain-supply:last-write`) to prevent redundant DB writes when triggered on the quarter-hourly slot. `stability-index` and `compute-dews` were moved to the half-hourly trigger (Trigger 7) to halve their run frequency. `sync-dex-liquidity` still refreshes every 30 minutes, while `sync-yield-data` now publishes on its own hourly post-DEX trigger.
+`snapshot-supply` retry requires the stablecoins-cache capability. Both `snapshot-supply` and `snapshot-chain-supply` enforce a 1-hour cooldown via a `cache` table key (`snapshot-supply:last-write` / `snapshot-chain-supply:last-write`) to prevent redundant DB writes when triggered on the quarter-hourly slot. `publish-report-card-cache` also requires the stablecoins-cache capability and refreshes the shared Safety Score cache used by Chain Health without relying on the yield cron. `stability-index` and `compute-dews` were moved to the half-hourly trigger (Trigger 7) to halve their run frequency. `sync-dex-liquidity` still refreshes every 30 minutes, while `sync-yield-data` now publishes on its own hourly post-DEX trigger.
 
 **Inline staleness alert:** After sync-stablecoins completes, if the `stablecoins` cache is older than 1800 seconds (30 min), `sendAlert()` fires a webhook notification. This is a health check — not a cron job itself.
 
@@ -1064,7 +1065,7 @@ Health freshness checks for mint/burn major symbols and scheduler stale alerts u
 
 ### GET /api/status
 
-Returns raw and effective status, recent `cron_runs`, active `cron_run_progress` rows, data-quality metrics, state-machine metadata, synthetic probe summary, and transition timeline. Tracks 28 cron jobs across 14 triggers via `CRON_INTERVALS` in `shared/lib/cron-jobs.ts`:
+Returns raw and effective status, recent `cron_runs`, active `cron_run_progress` rows, data-quality metrics, state-machine metadata, synthetic probe summary, and transition timeline. Tracks 29 cron jobs across 14 triggers via `CRON_INTERVALS` in `shared/lib/cron-jobs.ts`:
 
 | Job                             | Interval         | Trigger                                           |
 | ------------------------------- | ---------------- | ------------------------------------------------- |
@@ -1084,6 +1085,7 @@ Returns raw and effective status, recent `cron_runs`, active `cron_run_progress`
 | `sync-yield-supplemental`       | 14,400s (4h)     | `25 */4 * * *`                                    |
 | `snapshot-supply`               | 86,400s (24h)    | `*/15 * * * *` (primary) / `0 8 * * *` (fallback) |
 | `snapshot-chain-supply`         | 86,400s (24h)    | `*/15 * * * *`                                    |
+| `publish-report-card-cache`     | 900s (15min)     | `*/15 * * * *`                                    |
 | `snapshot-safety-grade-history` | 86,400s (24h)    | `0 8 * * *`                                       |
 | `fetch-tbill-rate`              | 86,400s (24h)    | `0 8 * * *`                                       |
 | `snapshot-psi`                  | 86,400s (24h)    | `0 8 * * *`                                       |

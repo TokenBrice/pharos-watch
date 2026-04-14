@@ -1479,20 +1479,31 @@ Stablecoin risk grade cards with dimension-level scores. Output includes 5 dimen
     "edges": [{ "from": "usde-ethena", "to": "usdc-circle", "weight": 0.9, "type": "collateral" }, ...]
   },
   "methodology": {
-    "version": "6.8",
+    "version": "6.97",
     "weights": { "pegStability": 0, "liquidity": 0.30, "resilience": 0.20, "decentralization": 0.15, "dependencyRisk": 0.25 },
-    "pegMultiplierExponent": 0.2,
+    "pegMultiplierExponent": 0.4,
+    "activeDepegSeveritySource": "open-event-peak",
+    "activeDepegCaps": {
+      "d": { "thresholdBps": 1000, "score": 49 },
+      "f": { "thresholdBps": 2500, "score": 39 }
+    },
     "thresholds": [{ "grade": "A+", "min": 87 }, { "grade": "A", "min": 83 }, ...]
+  },
+  "liquidityStale": false,
+  "redemptionStale": false,
+  "inputFreshness": {
+    "dexLiquidity": { "updatedAt": 1771977600, "ageSeconds": 120, "stale": false },
+    "redemptionBackstops": { "updatedAt": 1771977600, "ageSeconds": 300, "stale": false }
   },
   "updatedAt": 1771977600
 }
 ```
 
-The Liquidity dimension now represents `effectiveExitScore`: the public DEX liquidity score remains the floor, while redeemable assets can receive uplift from `redemptionBackstopScore` when a meaningful direct exit path exists. Low-confidence redemption routes stay visible but do not uplift the score, and stale DEX inputs are not blended.
+The Liquidity dimension now represents `effectiveExitScore`: the public DEX liquidity score remains the floor, while redeemable assets can receive uplift from `redemptionBackstopScore` when a meaningful direct exit path exists. Low-confidence redemption routes stay visible but do not uplift the score, and stale DEX or redemption inputs are not blended.
 
-For peg handling, `rawInputs.pegScore` is the effective peg input used by report-card scoring. Most coins use their direct peg-summary value. Configured NAV wrappers can inherit peg stability from a referenced base stablecoin when the wrapper share price is not the right peg-tracking surface; pure NAV tokens without a configured reference remain `null` and keep neutral handling.
+For peg handling, `rawInputs.pegScore` is the effective peg input used by report-card scoring. Most coins use their direct peg-summary value. Configured NAV wrappers can inherit peg stability from a referenced base stablecoin when the wrapper share price is not the right peg-tracking surface; pure NAV tokens without a configured reference remain `null` and keep neutral handling. `rawInputs.activeDepegBps` is the open active depeg event's absolute peak deviation used for final Safety Score caps; it is not the latest spot deviation.
 
-`GET /api/report-cards` treats the stablecoins cache and redemption-backstop snapshot as hard dependencies. DEX liquidity, bluechip ratings, and live-reserve inputs are soft dependencies: if one of those loaders is temporarily unavailable, the endpoint continues serving a degraded snapshot instead of failing closed.
+`GET /api/report-cards` treats the stablecoins cache and readable redemption-backstop table as hard dependencies. DEX liquidity, bluechip ratings, live-reserve inputs, and stale redemption rows are soft dependencies: if one of those loaders is temporarily unavailable or stale, the endpoint continues serving a degraded snapshot instead of failing closed, with stale inputs suppressed from scoring.
 
 **`dependencyGraph.edges`**: Pre-computed forward edges. `from` = upstream stablecoin ID, `to` = dependent stablecoin ID. `weight` and `type` carry the worker's canonical dependency metadata, so frontend graph consumers can use the snapshot directly instead of re-deriving edge semantics from static stablecoin metadata.
 
@@ -1519,6 +1530,7 @@ For peg handling, `rawInputs.pegScore` is the effective peg input used by report
 | ---------------------------------- | ----------------------------------------------- |
 | `pegScore`                         | `number \| null`                                |
 | `activeDepeg`                      | `boolean`                                       |
+| `activeDepegBps`                   | `number \| null`                                |
 | `depegEventCount`                  | `number`                                        |
 | `lastEventAt`                      | `number \| null`                                |
 | `liquidityScore`                   | `number \| null`                                |

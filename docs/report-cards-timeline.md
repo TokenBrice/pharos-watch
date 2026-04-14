@@ -1,6 +1,16 @@
 # Report Cards Scoring — Version Timeline
 
-Internal changelog reconstructed from git history plus the live version metadata source. Covers v1.0 through v6.96 (2026-02-25 → 2026-04-14).
+Internal changelog reconstructed from git history plus the live version metadata source. Covers v1.0 through v6.97 (2026-02-25 → 2026-04-15).
+
+## v6.97 — Active-depeg cap source and stale redemption gating (2026-04-15)
+
+Safety Score active-depeg handling and report-card input freshness were tightened:
+
+- Peg Stability now passes through `computePegScore()` directly during active depegs instead of applying the legacy 65-point peg-dimension cap before the multiplier
+- `activeDepegBps` now uses the open depeg event's absolute peak deviation, aligning final D/F caps with the severe-redemption impairment source
+- Stale redemption-backstop snapshots are suppressed from Safety Score Liquidity / Exit; report cards fall back to fresh DEX liquidity or `NR`
+- Partially unavailable upstream dependency scores are applied at the 70-point unavailable fallback for their declared weights instead of being treated as self-backed
+- Contagion stress recomputation now propagates through transitive downstream dependency chains
 
 ## v6.96 — Severe active depegs disable weak redemption uplift (2026-04-14)
 

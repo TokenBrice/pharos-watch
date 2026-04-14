@@ -484,6 +484,7 @@ worker/                           # Cloudflare Worker (API + cron jobs)
     │   ├── sync-stablecoin-charts.ts  # Historical chart cache refresh (30-min trigger, 1h write cooldown)
     │   ├── snapshot-supply.ts    # Per-coin supply snapshots → D1 (runs on */15, writes once daily via dedup guard; primary daily run at 8AM UTC)
     │   ├── snapshot-chain-supply.ts # Daily chain-level supply snapshots → chain_supply_history (quarter-hourly slot, DB-only)
+    │   ├── publish-report-card-cache.ts # Quarter-hourly DB-only Safety Score cache publication for Chain Health consumers
     │   ├── snapshot-safety-grade-history.ts # Daily Safety Score grade transition snapshot → D1
     │   ├── sync-live-reserves.ts # Live reserve composition sync → D1 (hourly, reserve lane)
     │   ├── reserve-adapters/    # Per-protocol live reserve adapters (35 adapters)

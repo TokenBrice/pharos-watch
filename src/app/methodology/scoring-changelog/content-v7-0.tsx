@@ -1,5 +1,38 @@
 import { VersionCard, getScoringEntry } from "./content-shared";
 
+export function ScoringChangelogV697Entry() {
+  return (
+    <VersionCard
+      entry={getScoringEntry("6.97")}
+      accent="border-l-amber-500"
+    >
+      <p>
+        Active-depeg and dependency edge cases now follow the documented Safety Score model more strictly.
+      </p>
+      <ul className="list-disc list-inside space-y-1">
+        <li>
+          Peg Stability now passes through <code className="text-xs bg-muted px-1 py-0.5 rounded">computePegScore()</code>{" "}
+          during active depegs instead of applying the old 65-point peg-dimension cap before the multiplier.
+        </li>
+        <li>
+          <code className="text-xs bg-muted px-1 py-0.5 rounded">activeDepegBps</code> now comes from the
+          open depeg event&apos;s peak severity, so final Safety Score caps use the same severe-event source as
+          redemption-route impairment.
+        </li>
+        <li>
+          Stale redemption-backstop snapshots no longer uplift Liquidity / Exit; the dimension falls back to
+          fresh DEX evidence or NR until the redemption snapshot refreshes.
+        </li>
+        <li>
+          Missing upstream dependency scores are applied at the existing 70-point unavailable fallback for
+          their declared weights, and the contagion stress test now propagates transitively through downstream
+          dependency chains.
+        </li>
+      </ul>
+    </VersionCard>
+  );
+}
+
 export function ScoringChangelogV696Entry() {
   return (
     <VersionCard

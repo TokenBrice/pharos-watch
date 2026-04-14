@@ -1,9 +1,26 @@
 import type { MethodologyVersionConfig } from "./methodology-version";
 
 export const SAFETY_SCORE_VERSION_CONFIG: MethodologyVersionConfig = {
-  currentVersion: "6.96",
+  currentVersion: "6.97",
   changelogPath: "/methodology/scoring-changelog/",
   changelog: [
+    {
+      version: "6.97",
+      title: "Active-depeg caps use event peak and stale redemption inputs are suppressed",
+      date: "2026-04-15",
+      effectiveAt: 1776211200,
+      summary:
+        "Safety Score active-depeg handling now uses the open event's peak severity for final caps, removes the legacy peg-dimension cap, suppresses stale redemption rows, and makes dependency/stress behavior more conservative.",
+      impact: [
+        "Peg Stability now passes through computePegScore() directly during active depegs instead of applying an extra legacy 65-point cap before the multiplier",
+        "RawDimensionInputs.activeDepegBps now uses the open depeg event peak, aligning final Safety Score caps with the severe-redemption impairment source",
+        "Report-card Liquidity / Exit suppresses stale redemption-backstop snapshots instead of reusing old redemption uplift indefinitely",
+        "Partially unavailable upstream dependency scores are scored at the existing 70-point unavailable fallback for their declared weights rather than being treated as self-backed",
+        "The contagion stress test now propagates downstream dependency recomputations transitively instead of stopping at direct dependents",
+      ],
+      commits: [],
+      reconstructed: false,
+    },
     {
       version: "6.96",
       title: "Severe active depegs disable weak redemption uplift",

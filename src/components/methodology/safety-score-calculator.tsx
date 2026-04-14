@@ -50,10 +50,10 @@ export function SafetyScoreCalculator() {
       </div>
 
       <p className="text-xs leading-relaxed text-muted-foreground">
-        Scores below use the same formula, weights, and thresholds as production.
-        In practice each dimension is derived from on-chain data, not chosen
-        directly — use this to explore how the grading math works, not to predict
-        a specific coin&apos;s grade.
+        Scores below use the same overall combiner, weights, and thresholds as
+        production. It does not model NAV exceptions, stale-input gates, active-depeg
+        caps, or dependency derivation — use it to explore the grade math, not to
+        predict a specific coin&apos;s grade.
       </p>
 
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
