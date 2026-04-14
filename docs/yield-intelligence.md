@@ -293,7 +293,7 @@ The monthly coverage audit now treats both `AUTO_LENDING_POOL_MAP` and `EXPLICIT
 
 Risk-adjusted ranking (0–100) that balances yield magnitude against safety and consistency.
 
-**Formula (`shared/lib/yield-scoring.ts::computePYS`):**
+**Formula (`computePYS()` in `shared/lib/yield-scoring.ts`):**
 
 ```
 benchmarkSpread     = apy30d - benchmarkRate
@@ -481,7 +481,7 @@ CREATE TABLE yield_history (
 ### `sync-yield-data`
 
 **Schedule:** `20 * * * *` (every hour on a dedicated post-DEX trigger)
-**Files:** `worker/src/cron/sync-yield-data.ts` orchestration + `worker/src/cron/yield-sync/{cache,sources,resolve,evaluation,publication,history,rankings}.ts`
+**Files:** `worker/src/cron/sync-yield-data.ts` orchestration + helper modules under `worker/src/cron/yield-sync/`
 
 **Execution flow:**
 
@@ -514,7 +514,7 @@ Implementation stages:
 ### `sync-yield-supplemental`
 
 **Schedule:** `25 */4 * * *` (every 4 hours on a dedicated supplemental trigger)
-**Files:** `worker/src/cron/sync-yield-supplemental.ts` + `worker/src/cron/yield-sync/{cache,sources}.ts`
+**Files:** `worker/src/cron/sync-yield-supplemental.ts` + helper modules under `worker/src/cron/yield-sync/`
 
 This best-effort cron owns the heavier optional families that used to run inline on the publisher path:
 

@@ -12,7 +12,7 @@ Route contract for `/portfolio/`, the noindex personal stablecoin risk workspace
 - **Persistence helpers:** `src/lib/portfolio-codec.ts`, `src/lib/portfolio-analysis.ts`
 - **Shared scoring source:** `docs/report-cards.md`
 
-`src/app/portfolio/page.tsx` uses `createClientFeaturePage(...)` to keep the route shell static while lazy-loading the interactive client. The shell is intentionally `noindex,follow`, marks the route as experimental, and uses canonical `/portfolio/`.
+`src/app/portfolio/page.tsx` uses `createClientFeaturePage(...)` to keep the route shell static while lazy-loading the interactive client. The shell is intentionally `noindex,follow`, marks the route as beta, and uses canonical `/portfolio/`.
 
 ---
 

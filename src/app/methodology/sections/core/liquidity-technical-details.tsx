@@ -22,7 +22,7 @@ export function LiquidityTechnicalDetails() {
             <p className="text-xs text-muted-foreground mt-0.5">20%</p>
           </div>
           <div className="rounded-lg border p-3 text-center">
-            <p className="text-foreground font-medium">Pair Diversity</p>
+            <p className="text-foreground font-medium">Diversity</p>
             <p className="text-xs text-muted-foreground mt-0.5">10%</p>
           </div>
         </div>
@@ -52,7 +52,7 @@ export function LiquidityTechnicalDetails() {
             <p className="text-xs text-muted-foreground">20%</p>
           </div>
           <div className="rounded-lg border p-3 text-center col-span-2">
-            <p className="text-foreground font-medium text-xs">Pair Diversity</p>
+            <p className="text-foreground font-medium text-xs">Diversity</p>
             <p className="text-xs text-muted-foreground">10%</p>
           </div>
         </div>
@@ -116,7 +116,7 @@ export function LiquidityTechnicalDetails() {
                 </td>
               </tr>
               <tr className="hover:bg-muted/40 transition-colors">
-                <td className="py-2 pr-4 text-foreground">Pair Diversity</td>
+                <td className="py-2 pr-4 text-foreground">Diversity</td>
                 <td className="py-2 pr-4">10%</td>
                 <td className="py-2">Pool count with diminishing returns: min(100, poolCount &times; 5)</td>
               </tr>
