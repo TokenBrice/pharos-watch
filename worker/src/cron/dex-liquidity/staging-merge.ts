@@ -106,13 +106,25 @@ function resolveStagedPoolProfile(stagedPool: StagedPool): {
 
   if (stagedPool.source === "cg_onchain" && stagedPool.feeTier != null) {
     if (stagedPool.feeTier <= 1) {
-      return { dexId, poolType: stagedPool.poolType ?? "cg-cl-1bp", qualityMultiplier: QUALITY_MULTIPLIERS["uniswap-v3-1bp"]! };
+      return {
+        dexId,
+        poolType: stagedPool.poolType ?? "cg-cl-1bp",
+        qualityMultiplier: QUALITY_MULTIPLIERS["uniswap-v3-1bp"]!,
+      };
     }
     if (stagedPool.feeTier <= 5) {
-      return { dexId, poolType: stagedPool.poolType ?? "cg-cl-5bp", qualityMultiplier: QUALITY_MULTIPLIERS["uniswap-v3-5bp"]! };
+      return {
+        dexId,
+        poolType: stagedPool.poolType ?? "cg-cl-5bp",
+        qualityMultiplier: QUALITY_MULTIPLIERS["uniswap-v3-5bp"]!,
+      };
     }
     if (stagedPool.feeTier <= 30) {
-      return { dexId, poolType: stagedPool.poolType ?? "cg-cl-30bp", qualityMultiplier: QUALITY_MULTIPLIERS["uniswap-v3-30bp"]! };
+      return {
+        dexId,
+        poolType: stagedPool.poolType ?? "cg-cl-30bp",
+        qualityMultiplier: QUALITY_MULTIPLIERS["uniswap-v3-30bp"]!,
+      };
     }
   }
 
@@ -153,17 +165,20 @@ export async function mergeStagedPools(
   skippedCount: number;
   skippedByExactIdentityCount: number;
   skippedByUniqueDerivedIdentityCount: number;
+  skippedByOptionalWildcardIdentityCount: number;
   skippedByAuthoritativeProtocolCount: number;
   priceObservations: Map<string, DexPriceObs[]>;
 }> {
   let rows: StagedPoolRow[];
   try {
     const result = await db
-      .prepare(`SELECT pool_id, stablecoin_id, source, chain, protocol, dex_id, symbol,
+      .prepare(
+        `SELECT pool_id, stablecoin_id, source, chain, protocol, dex_id, symbol,
                        tvl_usd, volume_24h, quality_multiplier, pool_type, fee_tier, balance_ratio, is_stable,
                        base_token, quote_token, quote_symbol, price_usd, locked_liq_pct,
                        discovered_at, refreshed_at
-                FROM dex_pool_staging WHERE refreshed_at >= ?`)
+                FROM dex_pool_staging WHERE refreshed_at >= ?`,
+      )
       .bind(nowSec - DAY_SECONDS)
       .all<StagedPoolRow>();
     rows = result.results ?? [];
@@ -174,6 +189,7 @@ export async function mergeStagedPools(
       skippedCount: 0,
       skippedByExactIdentityCount: 0,
       skippedByUniqueDerivedIdentityCount: 0,
+      skippedByOptionalWildcardIdentityCount: 0,
       skippedByAuthoritativeProtocolCount: 0,
       priceObservations: new Map(),
     };
@@ -185,6 +201,7 @@ export async function mergeStagedPools(
   let skippedCount = 0;
   let exactIdentitySkipped = 0;
   let uniqueDerivedIdentitySkipped = 0;
+  let optionalWildcardIdentitySkipped = 0;
   let authoritativeProtocolSkipped = 0;
 
   const stagedEntries = rows
@@ -261,18 +278,22 @@ export async function mergeStagedPools(
       stagedPriceObs.set(stagedPool.stablecoinId, obs);
     }
 
-    const dedupReason = getIdentityDedupReason(identity, knownPoolIndex, {
-      derived: identity.derivedMatchKey
-        ? (stagedIdentityCounts.derived.get(identity.derivedMatchKey) ?? 0)
-        : 0,
-      wildcard: identity.optionalWildcardKey
-        ? (stagedIdentityCounts.wildcard.get(identity.optionalWildcardKey) ?? 0)
-        : 0,
-    });
+    const dedupReason = getIdentityDedupReason(
+      identity,
+      knownPoolIndex,
+      {
+        derived: identity.derivedMatchKey ? (stagedIdentityCounts.derived.get(identity.derivedMatchKey) ?? 0) : 0,
+        wildcard: identity.optionalWildcardKey
+          ? (stagedIdentityCounts.wildcard.get(identity.optionalWildcardKey) ?? 0)
+          : 0,
+      },
+      { allowOptionalWildcard: true },
+    );
     if (dedupReason) {
       skippedCount++;
       if (dedupReason === "exact") exactIdentitySkipped++;
       if (dedupReason === "derived_unique") uniqueDerivedIdentitySkipped++;
+      if (dedupReason === "derived_optional_wildcard") optionalWildcardIdentitySkipped++;
       continue;
     }
     registerKnownPoolIdentity(knownPoolIndex, identity);
@@ -359,6 +380,11 @@ export async function mergeStagedPools(
   if (uniqueDerivedIdentitySkipped > 0) {
     console.log(`[dex-liquidity] Skipped ${uniqueDerivedIdentitySkipped} staged pools via unique derived identity`);
   }
+  if (optionalWildcardIdentitySkipped > 0) {
+    console.log(
+      `[dex-liquidity] Skipped ${optionalWildcardIdentitySkipped} staged pools via optional wildcard identity`,
+    );
+  }
   if (authoritativeProtocolSkipped > 0) {
     console.log(
       `[dex-liquidity] Skipped ${authoritativeProtocolSkipped} staged pools missing authoritative protocol confirmation`,
@@ -377,6 +403,7 @@ export async function mergeStagedPools(
     skippedCount,
     skippedByExactIdentityCount: exactIdentitySkipped,
     skippedByUniqueDerivedIdentityCount: uniqueDerivedIdentitySkipped,
+    skippedByOptionalWildcardIdentityCount: optionalWildcardIdentitySkipped,
     skippedByAuthoritativeProtocolCount: authoritativeProtocolSkipped,
     priceObservations: stagedPriceObs,
   };

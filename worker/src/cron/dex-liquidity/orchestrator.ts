@@ -33,7 +33,11 @@ import {
   getIdentityDedupReason,
   registerKnownPoolIdentity,
 } from "./pool-identity";
-import { analyzeDexLiquidityPostScoring, buildDexLiquidityCronMetadata, isDexLiquidityDegraded } from "./orchestrator-metadata";
+import {
+  analyzeDexLiquidityPostScoring,
+  buildDexLiquidityCronMetadata,
+  isDexLiquidityDegraded,
+} from "./orchestrator-metadata";
 
 export function filterPrimaryPoolsPreferDirectApi(
   pools: LlamaPool[],
@@ -74,9 +78,7 @@ export function filterPrimaryPoolsPreferDirectApi(
       identity,
       directApiKnown,
       {
-        derived: identity.derivedMatchKey
-          ? (primaryIdentityCounts.derived.get(identity.derivedMatchKey) ?? 0)
-          : 0,
+        derived: identity.derivedMatchKey ? (primaryIdentityCounts.derived.get(identity.derivedMatchKey) ?? 0) : 0,
         wildcard: identity.optionalWildcardKey
           ? (primaryIdentityCounts.wildcard.get(identity.optionalWildcardKey) ?? 0)
           : 0,
@@ -172,6 +174,7 @@ interface DexLiquidityPoolState {
   stagedSkippedCount: number;
   stagedSkippedByExactIdentityCount: number;
   stagedSkippedByUniqueDerivedIdentityCount: number;
+  stagedSkippedByOptionalWildcardIdentityCount: number;
   stagedSkippedByAuthoritativeProtocolCount: number;
   dsFallbackCoins: number;
   cgTickerFallbackCoins: number;
@@ -291,8 +294,8 @@ async function buildDexLiquidityPoolState(
   ) {
     console.log(
       `[dex-liquidity] Preferred direct API over DL for ${primarySkippedByDirectApiExactIdentity} exact matches and ` +
-      `${primarySkippedByDirectApiDerivedIdentity} unique derived matches and ` +
-      `${primarySkippedByDirectApiWildcardIdentity} optional wildcard matches`,
+        `${primarySkippedByDirectApiDerivedIdentity} unique derived matches and ` +
+        `${primarySkippedByDirectApiWildcardIdentity} optional wildcard matches`,
     );
   }
 
@@ -356,6 +359,7 @@ async function buildDexLiquidityPoolState(
     stagedSkippedCount: staged.skippedCount,
     stagedSkippedByExactIdentityCount: staged.skippedByExactIdentityCount,
     stagedSkippedByUniqueDerivedIdentityCount: staged.skippedByUniqueDerivedIdentityCount,
+    stagedSkippedByOptionalWildcardIdentityCount: staged.skippedByOptionalWildcardIdentityCount,
     stagedSkippedByAuthoritativeProtocolCount: staged.skippedByAuthoritativeProtocolCount,
     dsFallbackCoins: fallback.dsFallbackCoins,
     cgTickerFallbackCoins: fallback.cgTickerFallbackCoins,
@@ -408,13 +412,13 @@ async function scoreDexLiquidityPoolState(
   if (analysis.hardValueGuard) {
     throw new Error(
       `[dex-liquidity] value coverage guard tripped: currentGlobalTvl=${Math.round(analysis.currentGlobalTvl)}, ` +
-      `previousGlobalTvl=${Math.round(analysis.previousGlobalTvl ?? 0)}, minExpectedGlobalTvl=${Math.round(analysis.minExpectedGlobalTvl ?? 0)}`,
+        `previousGlobalTvl=${Math.round(analysis.previousGlobalTvl ?? 0)}, minExpectedGlobalTvl=${Math.round(analysis.minExpectedGlobalTvl ?? 0)}`,
     );
   }
   if (analysis.hardMajorCoverageGuard) {
     throw new Error(
       `[dex-liquidity] major coverage guard tripped: currentTop10CoveredTvl=${Math.round(analysis.currentTop10CoveredTvl)}, ` +
-      `previousTop10CoveredTvl=${Math.round(analysis.previousTop10CoveredTvl)}`,
+        `previousTop10CoveredTvl=${Math.round(analysis.previousTop10CoveredTvl)}`,
     );
   }
   throwIfAborted(ctx.signal);
@@ -435,18 +439,19 @@ async function persistDexLiquidityScoreState(
   poolState: DexLiquidityPoolState,
   scoreState: DexLiquidityScoreState,
 ): Promise<DexLiquidityPersistenceState> {
-  const persistence = await runWithOverloadRetry(() =>
+  const persistence = (await runWithOverloadRetry(() =>
     persistScores(ctx.db, poolState.metrics, scoreState.scoreResults, scoreState.globalAgg, ctx.syncStartSec),
-  ) ?? { placeholderCount: 0, orphanRowsDeleted: 0, orphanCleanupFailed: false };
+  )) ?? { placeholderCount: 0, orphanRowsDeleted: 0, orphanCleanupFailed: false };
   const sourceCoverageCompleteByStablecoin = new Map<string, boolean>(
     ACTIVE_STABLECOINS.map((meta) => {
       const retainedPools = scoreState.retainedPoolsByStablecoin.get(meta.id) ?? [];
-      const hasPublishedRows = retainedPools.some((pool) => (
-        Number.isFinite(pool.price) &&
-        (pool.price ?? 0) > 0 &&
-        Number.isFinite(pool.tvlUsd) &&
-        pool.tvlUsd >= POOL_CHALLENGE_MIN_TVL
-      ));
+      const hasPublishedRows = retainedPools.some(
+        (pool) =>
+          Number.isFinite(pool.price) &&
+          (pool.price ?? 0) > 0 &&
+          Number.isFinite(pool.tvlUsd) &&
+          pool.tvlUsd >= POOL_CHALLENGE_MIN_TVL,
+      );
       return [meta.id, sourceState.criticalSourceFailures.length === 0 || hasPublishedRows];
     }),
   );
@@ -458,8 +463,11 @@ async function persistDexLiquidityScoreState(
   });
   await computeDexPrices(ctx.db, scoreState.retainedPoolsByStablecoin, ctx.syncStartSec);
 
-  const historicalSnapshot = await writeHistoricalSnapshots(ctx.db, scoreState.scoreResults)
-    ?? { snapshotRowsWritten: 0, skipped: false, writeFailed: false };
+  const historicalSnapshot = (await writeHistoricalSnapshots(ctx.db, scoreState.scoreResults)) ?? {
+    snapshotRowsWritten: 0,
+    skipped: false,
+    writeFailed: false,
+  };
 
   await computeDepthStability(ctx.db, scoreState.tvlStabilityMap);
 
@@ -486,20 +494,23 @@ function buildDexLiquidityCronResult(
   return {
     status: degraded ? "degraded" : "ok",
     itemCount: scoreState.scoreResults.size,
-    metadata: JSON.stringify(buildDexLiquidityCronMetadata({
-      rowsRead: sourceState.dataSources.pools.length,
-      rowsWritten: scoreState.scoreResults.size,
-      stagedPoolsMerged: poolState.stagedMergedCount,
-      stagedPoolsSkipped: poolState.stagedSkippedCount,
-      stagedPoolsSkippedByExactIdentity: poolState.stagedSkippedByExactIdentityCount,
-      stagedPoolsSkippedByUniqueDerivedIdentity: poolState.stagedSkippedByUniqueDerivedIdentityCount,
-      stagedPoolsSkippedByAuthoritativeProtocol: poolState.stagedSkippedByAuthoritativeProtocolCount,
-      sourceCoverage: scoreState.analysis.sourceCoverage,
-      challengerPublication: persistenceState.challengerPublication,
-      failedSources: sourceState.failedSources,
-      fallbackSignals: sourceState.fallbackSignals,
-      persistence: persistenceState.persistence,
-      historicalSnapshot: persistenceState.historicalSnapshot,
-    })),
+    metadata: JSON.stringify(
+      buildDexLiquidityCronMetadata({
+        rowsRead: sourceState.dataSources.pools.length,
+        rowsWritten: scoreState.scoreResults.size,
+        stagedPoolsMerged: poolState.stagedMergedCount,
+        stagedPoolsSkipped: poolState.stagedSkippedCount,
+        stagedPoolsSkippedByExactIdentity: poolState.stagedSkippedByExactIdentityCount,
+        stagedPoolsSkippedByUniqueDerivedIdentity: poolState.stagedSkippedByUniqueDerivedIdentityCount,
+        stagedPoolsSkippedByOptionalWildcardIdentity: poolState.stagedSkippedByOptionalWildcardIdentityCount,
+        stagedPoolsSkippedByAuthoritativeProtocol: poolState.stagedSkippedByAuthoritativeProtocolCount,
+        sourceCoverage: scoreState.analysis.sourceCoverage,
+        challengerPublication: persistenceState.challengerPublication,
+        failedSources: sourceState.failedSources,
+        fallbackSignals: sourceState.fallbackSignals,
+        persistence: persistenceState.persistence,
+        historicalSnapshot: persistenceState.historicalSnapshot,
+      }),
+    ),
   };
 }

@@ -36,6 +36,9 @@ export const DigestResponseSchema = z.object({
 export const DexLiquidityCronMetadataSchema = z.object({
   stagedPoolsMerged: z.number().optional(),
   stagedPoolsSkipped: z.number().optional(),
+  stagedPoolsSkippedByExactIdentity: z.number().optional(),
+  stagedPoolsSkippedByUniqueDerivedIdentity: z.number().optional(),
+  stagedPoolsSkippedByOptionalWildcardIdentity: z.number().optional(),
   stagedPoolsSkippedByAuthoritativeProtocol: z.number().optional(),
   failedSources: z.array(z.string()).optional().default([]),
   sourceCoverage: z
@@ -59,50 +62,66 @@ export const DexLiquidityCronMetadataSchema = z.object({
       measuredBalanceTvlBySourceFamily: z.record(z.string(), z.number()).optional(),
       priceObservationCoinsBySourceFamily: z.record(z.string(), z.number()).optional(),
       sourceDegradedFamilies: z.array(z.string()).optional(),
-      protocolCapReductions: z.object({
-        cappedPoolCount: z.number().optional(),
-        cappedProtocols: z.number().optional(),
-        reducedTvlUsd: z.number().optional(),
-        topProtocols: z.array(z.object({
-          protocol: z.string(),
-          preCapTvlUsd: z.number(),
-          postCapTvlUsd: z.number(),
-          reducedTvlUsd: z.number(),
-        })).optional(),
-        topStablecoins: z.array(z.object({
-          stablecoinId: z.string(),
-          reducedTvlUsd: z.number(),
-        })).optional(),
-      }).optional(),
+      protocolCapReductions: z
+        .object({
+          cappedPoolCount: z.number().optional(),
+          cappedProtocols: z.number().optional(),
+          reducedTvlUsd: z.number().optional(),
+          topProtocols: z
+            .array(
+              z.object({
+                protocol: z.string(),
+                preCapTvlUsd: z.number(),
+                postCapTvlUsd: z.number(),
+                reducedTvlUsd: z.number(),
+              }),
+            )
+            .optional(),
+          topStablecoins: z
+            .array(
+              z.object({
+                stablecoinId: z.string(),
+                reducedTvlUsd: z.number(),
+              }),
+            )
+            .optional(),
+        })
+        .optional(),
       qualityDriftFlags: z.array(z.string()).optional(),
       qualityDriftSeverity: z.enum(["none", "medium", "high"]).optional(),
-      qualityDriftMetrics: z.object({
-        previousPriceObservationCoins: z.number().nullable().optional(),
-        currentPriceObservationCoins: z.number().optional(),
-        priceObservationPctDelta: z.number().nullable().optional(),
-        previousMeasuredBalanceCoveragePct: z.number().nullable().optional(),
-        currentMeasuredBalanceCoveragePct: z.number().optional(),
-        measuredBalanceCoverageDelta: z.number().nullable().optional(),
-        previousStagedPoolsMerged: z.number().nullable().optional(),
-        currentStagedPoolsMerged: z.number().optional(),
-        stagedPoolsMergedPctDelta: z.number().nullable().optional(),
-        previousStagedPoolsSkipped: z.number().nullable().optional(),
-        currentStagedPoolsSkipped: z.number().optional(),
-        stagedPoolsSkippedPctDelta: z.number().nullable().optional(),
-        previousWeakCoverageCoins: z.number().nullable().optional(),
-        currentWeakCoverageCoins: z.number().optional(),
-        weakCoverageDelta: z.number().nullable().optional(),
-      }).optional(),
-      topAssetCoverageDeltas: z.array(z.object({
-        stablecoinId: z.string(),
-        previousPoolCount: z.number(),
-        currentPoolCount: z.number(),
-        poolCountPctDelta: z.number().nullable(),
-        previousCoverageConfidence: z.number().nullable(),
-        currentCoverageConfidence: z.number().nullable(),
-        previousMeasuredShare: z.number().nullable(),
-        currentMeasuredShare: z.number().nullable(),
-      })).optional(),
+      qualityDriftMetrics: z
+        .object({
+          previousPriceObservationCoins: z.number().nullable().optional(),
+          currentPriceObservationCoins: z.number().optional(),
+          priceObservationPctDelta: z.number().nullable().optional(),
+          previousMeasuredBalanceCoveragePct: z.number().nullable().optional(),
+          currentMeasuredBalanceCoveragePct: z.number().optional(),
+          measuredBalanceCoverageDelta: z.number().nullable().optional(),
+          previousStagedPoolsMerged: z.number().nullable().optional(),
+          currentStagedPoolsMerged: z.number().optional(),
+          stagedPoolsMergedPctDelta: z.number().nullable().optional(),
+          previousStagedPoolsSkipped: z.number().nullable().optional(),
+          currentStagedPoolsSkipped: z.number().optional(),
+          stagedPoolsSkippedPctDelta: z.number().nullable().optional(),
+          previousWeakCoverageCoins: z.number().nullable().optional(),
+          currentWeakCoverageCoins: z.number().optional(),
+          weakCoverageDelta: z.number().nullable().optional(),
+        })
+        .optional(),
+      topAssetCoverageDeltas: z
+        .array(
+          z.object({
+            stablecoinId: z.string(),
+            previousPoolCount: z.number(),
+            currentPoolCount: z.number(),
+            poolCountPctDelta: z.number().nullable(),
+            previousCoverageConfidence: z.number().nullable(),
+            currentCoverageConfidence: z.number().nullable(),
+            previousMeasuredShare: z.number().nullable(),
+            currentMeasuredShare: z.number().nullable(),
+          }),
+        )
+        .optional(),
       nearCoverageGuard: z.boolean().optional().default(false),
       nearValueGuard: z.boolean().optional().default(false),
       nearMajorCoverageGuard: z.boolean().optional().default(false),

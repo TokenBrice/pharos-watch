@@ -1,23 +1,9 @@
 import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins";
 import { DexLiquidityCronMetadataSchema } from "../../lib/schemas";
-import type {
-  HistoricalSnapshotWriteResult,
-  PersistScoresResult,
-} from "./persistence";
-import type {
-  DexPriceObs,
-  FullScoreResult,
-  GlobalAgg,
-  LiquidityMetrics,
-} from "./types";
+import type { HistoricalSnapshotWriteResult, PersistScoresResult } from "./persistence";
+import type { DexPriceObs, FullScoreResult, GlobalAgg, LiquidityMetrics } from "./types";
 
-const DRIFT_WATCHLIST = [
-  "usdc-circle",
-  "usdt-tether",
-  "dai-makerdao",
-  "usds-sky",
-  "usde-ethena",
-] as const;
+const DRIFT_WATCHLIST = ["usdc-circle", "usdt-tether", "dai-makerdao", "usds-sky", "usde-ethena"] as const;
 
 type PreviousDexLiquiditySummary = {
   stagedPoolsMerged: number;
@@ -192,6 +178,7 @@ export function buildDexLiquidityCronMetadata(params: {
   stagedPoolsSkipped: number;
   stagedPoolsSkippedByExactIdentity: number;
   stagedPoolsSkippedByUniqueDerivedIdentity: number;
+  stagedPoolsSkippedByOptionalWildcardIdentity: number;
   stagedPoolsSkippedByAuthoritativeProtocol: number;
   sourceCoverage: DexLiquidityPostScoreAnalysis["sourceCoverage"];
   challengerPublication: {
@@ -212,6 +199,7 @@ export function buildDexLiquidityCronMetadata(params: {
     stagedPoolsSkipped: params.stagedPoolsSkipped,
     stagedPoolsSkippedByExactIdentity: params.stagedPoolsSkippedByExactIdentity,
     stagedPoolsSkippedByUniqueDerivedIdentity: params.stagedPoolsSkippedByUniqueDerivedIdentity,
+    stagedPoolsSkippedByOptionalWildcardIdentity: params.stagedPoolsSkippedByOptionalWildcardIdentity,
     stagedPoolsSkippedByAuthoritativeProtocol: params.stagedPoolsSkippedByAuthoritativeProtocol,
     sourceCoverage: {
       ...params.sourceCoverage,
@@ -267,7 +255,9 @@ export async function analyzeDexLiquidityPostScoring(params: {
     previousWatchlistRows,
   ] = await Promise.all([
     params.db
-      .prepare("SELECT COUNT(*) as cnt FROM dex_liquidity WHERE stablecoin_id != '__global__' AND liquidity_score IS NOT NULL")
+      .prepare(
+        "SELECT COUNT(*) as cnt FROM dex_liquidity WHERE stablecoin_id != '__global__' AND liquidity_score IS NOT NULL",
+      )
       .first<{ cnt: number }>()
       .catch((e) => {
         console.warn("[dex-liquidity] Failed to read previous coverage count:", e instanceof Error ? e.message : e);
@@ -334,47 +324,44 @@ export async function analyzeDexLiquidityPostScoring(params: {
       }>()
       .catch((e) => {
         console.warn("[dex-liquidity] Failed to read previous watchlist rows:", e);
-        return { results: [] as Array<{
-          stablecoin_id: string;
-          pool_count: number;
-          coverage_confidence: number | null;
-          total_tvl_usd: number;
-          balance_measured_tvl_usd: number;
-        }> };
+        return {
+          results: [] as Array<{
+            stablecoin_id: string;
+            pool_count: number;
+            coverage_confidence: number | null;
+            total_tvl_usd: number;
+            balance_measured_tvl_usd: number;
+          }>,
+        };
       }),
   ]);
 
   const previousCoverageBaselineAvailable = previousCoverageRow != null;
   const previousCoverage = previousCoverageRow?.cnt ?? 0;
-  const minExpectedCoverage = previousCoverageBaselineAvailable
-    ? Math.max(1, Math.floor(previousCoverage * 0.6))
-    : 0;
-  const nearCoverageGuard = previousCoverageBaselineAvailable
-    && previousCoverage >= 10
-    && currentCoverage < Math.floor(previousCoverage * 0.8);
+  const minExpectedCoverage = previousCoverageBaselineAvailable ? Math.max(1, Math.floor(previousCoverage * 0.6)) : 0;
+  const nearCoverageGuard =
+    previousCoverageBaselineAvailable && previousCoverage >= 10 && currentCoverage < Math.floor(previousCoverage * 0.8);
 
   const currentGlobalTvl = params.globalAgg.totalTvl;
   const previousGlobalTvl = previousGlobalRow?.total_tvl_usd ?? null;
   const minExpectedGlobalTvl = previousGlobalTvl != null ? previousGlobalTvl * 0.6 : null;
   const nearValueGuard =
-    previousGlobalTvl != null &&
-    previousGlobalTvl >= 10_000_000 &&
-    currentGlobalTvl < previousGlobalTvl * 0.85;
+    previousGlobalTvl != null && previousGlobalTvl >= 10_000_000 && currentGlobalTvl < previousGlobalTvl * 0.85;
   const hardValueGuard =
-    previousGlobalTvl != null &&
-    previousGlobalTvl >= 10_000_000 &&
-    currentGlobalTvl < previousGlobalTvl * 0.6;
+    previousGlobalTvl != null && previousGlobalTvl >= 10_000_000 && currentGlobalTvl < previousGlobalTvl * 0.6;
 
-  const previousTop10CoveredTvl = (previousTopCoverageRows.results ?? [])
-    .reduce((sum, row) => sum + row.total_tvl_usd, 0);
-  const currentTop10CoveredTvl = (previousTopCoverageRows.results ?? [])
-    .reduce((sum, row) => sum + (params.scoreResults.get(row.stablecoin_id)?.tvl ?? 0), 0);
+  const previousTop10CoveredTvl = (previousTopCoverageRows.results ?? []).reduce(
+    (sum, row) => sum + row.total_tvl_usd,
+    0,
+  );
+  const currentTop10CoveredTvl = (previousTopCoverageRows.results ?? []).reduce(
+    (sum, row) => sum + (params.scoreResults.get(row.stablecoin_id)?.tvl ?? 0),
+    0,
+  );
   const nearMajorCoverageGuard =
-    previousTop10CoveredTvl >= 5_000_000 &&
-    currentTop10CoveredTvl < previousTop10CoveredTvl * 0.85;
+    previousTop10CoveredTvl >= 5_000_000 && currentTop10CoveredTvl < previousTop10CoveredTvl * 0.85;
   const hardMajorCoverageGuard =
-    previousTop10CoveredTvl >= 5_000_000 &&
-    currentTop10CoveredTvl < previousTop10CoveredTvl * 0.6;
+    previousTop10CoveredTvl >= 5_000_000 && currentTop10CoveredTvl < previousTop10CoveredTvl * 0.6;
 
   const currentCoverageClasses: CoverageClasses = {
     ...emptyCoverageClasses(),
@@ -384,14 +371,17 @@ export async function analyzeDexLiquidityPostScoring(params: {
     currentCoverageClasses[row.coverageClass] += 1;
   }
 
-  const measuredBalanceCoveragePct = params.scoreResults.size > 0
-    ? Math.round(
-      (Array.from(params.scoreResults.values()).reduce((sum, row) => {
-        if (row.tvl <= 0) return sum;
-        return sum + Math.max(0, Math.min(1, (row.balanceMeasuredTvlUsd ?? 0) / row.tvl));
-      }, 0) / params.scoreResults.size) * 10000,
-    ) / 10000
-    : 0;
+  const measuredBalanceCoveragePct =
+    params.scoreResults.size > 0
+      ? Math.round(
+          (Array.from(params.scoreResults.values()).reduce((sum, row) => {
+            if (row.tvl <= 0) return sum;
+            return sum + Math.max(0, Math.min(1, (row.balanceMeasuredTvlUsd ?? 0) / row.tvl));
+          }, 0) /
+            params.scoreResults.size) *
+            10000,
+        ) / 10000
+      : 0;
 
   const syntheticOnlyCoins = Array.from(params.scoreResults.values()).filter((row) => {
     const totalTvl = Object.values(row.sourceMix ?? {}).reduce((sum, entry) => sum + (entry?.tvlUsd ?? 0), 0);
@@ -408,19 +398,19 @@ export async function analyzeDexLiquidityPostScoring(params: {
   }
 
   const previousSummary = readPreviousDexLiquiditySummary(previousCronRow?.metadata ?? null);
-  const watchlistPreviousById = new Map(
-    (previousWatchlistRows.results ?? []).map((row) => [row.stablecoin_id, row]),
-  );
+  const watchlistPreviousById = new Map((previousWatchlistRows.results ?? []).map((row) => [row.stablecoin_id, row]));
   const currentWatchlistDeltas = DRIFT_WATCHLIST.map((stablecoinId) => {
     const previous = watchlistPreviousById.get(stablecoinId);
     const currentScore = params.scoreResults.get(stablecoinId);
     const currentPools = params.retainedPoolsByStablecoin.get(stablecoinId)?.length ?? 0;
-    const currentMeasuredShare = currentScore && currentScore.tvl > 0
-      ? Math.max(0, Math.min(1, currentScore.balanceMeasuredTvlUsd / currentScore.tvl))
-      : 0;
-    const previousMeasuredShare = previous && previous.total_tvl_usd > 0
-      ? Math.max(0, Math.min(1, (previous.balance_measured_tvl_usd ?? 0) / previous.total_tvl_usd))
-      : 0;
+    const currentMeasuredShare =
+      currentScore && currentScore.tvl > 0
+        ? Math.max(0, Math.min(1, currentScore.balanceMeasuredTvlUsd / currentScore.tvl))
+        : 0;
+    const previousMeasuredShare =
+      previous && previous.total_tvl_usd > 0
+        ? Math.max(0, Math.min(1, (previous.balance_measured_tvl_usd ?? 0) / previous.total_tvl_usd))
+        : 0;
     return {
       stablecoinId,
       previousPoolCount: previous?.pool_count ?? 0,
@@ -512,7 +502,11 @@ export async function analyzeDexLiquidityPostScoring(params: {
     if (pools.length > 0 && !hasMeasuredBalanceLiquidity) coinsWithoutMeasuredBalances++;
     if (pools.length > 0 && !hasPrimaryLiquidity) coinsCrawlerOnly++;
     if (pools.length > 0 && sourceFamilies.size === 1 && hasGeckoTerminalLiquidity) coinsGtOnly++;
-    if (pools.length > 0 && !hasMeasuredBalanceLiquidity && (params.priceObservations.get(stablecoinId)?.length ?? 0) > 0) {
+    if (
+      pools.length > 0 &&
+      !hasMeasuredBalanceLiquidity &&
+      (params.priceObservations.get(stablecoinId)?.length ?? 0) > 0
+    ) {
       coinsPriceOnlyNoMeasuredLiquidity++;
     }
   }
@@ -539,7 +533,10 @@ export async function analyzeDexLiquidityPostScoring(params: {
         reducedTvlUsd: Math.round(preCapTvl - cap),
       };
     })
-    .filter((item): item is { protocol: string; preCapTvlUsd: number; postCapTvlUsd: number; reducedTvlUsd: number } => item != null)
+    .filter(
+      (item): item is { protocol: string; preCapTvlUsd: number; postCapTvlUsd: number; reducedTvlUsd: number } =>
+        item != null,
+    )
     .sort((a, b) => b.reducedTvlUsd - a.reducedTvlUsd)
     .slice(0, 6);
 

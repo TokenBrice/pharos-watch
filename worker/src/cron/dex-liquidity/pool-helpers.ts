@@ -1,14 +1,9 @@
 import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins";
 import type { ContractDeployment, StablecoinMeta } from "@shared/types/core";
-import {
-  QUALITY_MULTIPLIERS, GT_DEX_QUALITY, COMPOSITE_POOL_NAMES, normalizeDexSymbol,
-} from "../../lib/dex-constants";
+import { QUALITY_MULTIPLIERS, GT_DEX_QUALITY, COMPOSITE_POOL_NAMES, normalizeDexSymbol } from "../../lib/dex-constants";
 import type { LiquidityMetrics, ScoreComponents, SymbolLookups } from "./types";
 import { VOLATILE_PAIR_QUALITY, SYMBOL_GOVERNANCE } from "./constants";
-import {
-  DURABILITY_COMPONENT_WEIGHTS,
-  LIQUIDITY_COMPONENT_WEIGHTS,
-} from "./score-weights";
+import { DURABILITY_COMPONENT_WEIGHTS, LIQUIDITY_COMPONENT_WEIGHTS } from "./score-weights";
 import { buildChainAddressKey } from "./token-resolution";
 
 /** Parse pool symbol string into constituent token symbols */
@@ -70,9 +65,7 @@ export function computeDurabilityScore(
   volumeStability: number | null,
 ): number {
   // Organic fraction sub-score (sqrt curve — less punishing at low end)
-  const organicFraction = m.totalTvlForOrganic > 0
-    ? m.organicTvlWeightedSum / m.totalTvlForOrganic
-    : 0.5;
+  const organicFraction = m.totalTvlForOrganic > 0 ? m.organicTvlWeightedSum / m.totalTvlForOrganic : 0.5;
   const organicScore = Math.min(100, Math.sqrt(organicFraction) * 100);
 
   // TVL stability sub-score (from depth_stability, 0-1)
@@ -84,12 +77,18 @@ export function computeDurabilityScore(
   // Maturity sub-score
   const maturityScore = Math.min(100, (m.oldestPoolDays / 365) * 100);
 
-  return Math.max(0, Math.min(100, Math.round(
-    organicScore * DURABILITY_COMPONENT_WEIGHTS.organicFraction +
-    tvlStabilityScore * DURABILITY_COMPONENT_WEIGHTS.tvlStability +
-    volumeConsistencyScore * DURABILITY_COMPONENT_WEIGHTS.volumeConsistency +
-    maturityScore * DURABILITY_COMPONENT_WEIGHTS.maturity
-  )));
+  return Math.max(
+    0,
+    Math.min(
+      100,
+      Math.round(
+        organicScore * DURABILITY_COMPONENT_WEIGHTS.organicFraction +
+          tvlStabilityScore * DURABILITY_COMPONENT_WEIGHTS.tvlStability +
+          volumeConsistencyScore * DURABILITY_COMPONENT_WEIGHTS.volumeConsistency +
+          maturityScore * DURABILITY_COMPONENT_WEIGHTS.maturity,
+      ),
+    ),
+  );
 }
 
 export function computeLiquidityScore(
@@ -106,24 +105,16 @@ export function computeLiquidityScore(
     tvlDepth = Math.min(100, Math.max(0, 35 * Math.log10(depthRatio / 0.0007)));
   } else {
     // Absolute fallback when market cap is unavailable
-    tvlDepth = Math.min(
-      100,
-      Math.max(0, 20 * Math.log10(Math.max(tvlInput, 1) / 100_000) + 20),
-    );
+    tvlDepth = Math.min(100, Math.max(0, 20 * Math.log10(Math.max(tvlInput, 1) / 100_000) + 20));
   }
 
   // Component 2: Volume activity (20%) — log-scale
   const vtRatio = m.totalTvlUsd > 0 ? m.totalVolume24hUsd / m.totalTvlUsd : 0;
-  const volumeActivity = vtRatio <= 0
-    ? 0
-    : Math.min(100, Math.max(0, 38 * (Math.log10(vtRatio) + 3)));
+  const volumeActivity = vtRatio <= 0 ? 0 : Math.min(100, Math.max(0, 38 * (Math.log10(vtRatio) + 3)));
 
   // Component 3: Pool quality (20%) — quality retention ratio
   const qualityRetention = m.totalTvlUsd > 0 ? m.qualityAdjustedTvl / m.totalTvlUsd : 0;
-  const poolQuality = Math.min(
-    100,
-    Math.max(0, (qualityRetention - 0.15) / 0.65 * 100),
-  );
+  const poolQuality = Math.min(100, Math.max(0, ((qualityRetention - 0.15) / 0.65) * 100));
 
   // Component 4: Durability (20%) — passed in from durability computation
   const durability = durabilityScore;
@@ -180,7 +171,7 @@ export function initMetrics(id: string, symbol: string): LiquidityMetrics {
 
 /** Normalize protocol names for grouping (merge variants, pass through the rest) */
 export function normalizeProtocol(project: string): string {
-  const p = project.toLowerCase();
+  const p = project.toLowerCase().replace(/_/g, "-");
   if (p.includes("curve")) return "curve";
   if (p.includes("uniswap-v3") || p === "uniswap-v3") return "uniswap-v3";
   if (p.includes("uniswap-v4")) return "uniswap-v4";
@@ -202,11 +193,7 @@ export function normalizeProtocol(project: string): string {
 }
 
 /** Build the canonical cross-source pool fingerprint for token-pair dedup. */
-export function buildPoolFingerprint(
-  chain: string,
-  protocol: string,
-  tokenAddresses: string[],
-): string | null {
+export function buildPoolFingerprint(chain: string, protocol: string, tokenAddresses: string[]): string | null {
   if (tokenAddresses.length < 2) return null;
   const normalized = tokenAddresses
     .map((token) => token.trim().toLowerCase())
@@ -268,11 +255,7 @@ export function computePoolStress(
   pairQuality: number,
 ): number {
   const immaturityPenalty = Math.max(0, 1 - maturityDays / 365);
-  const raw =
-    35 * (1 - balanceRatio) +
-    25 * (1 - organicFraction) +
-    20 * immaturityPenalty +
-    20 * (1 - pairQuality);
+  const raw = 35 * (1 - balanceRatio) + 25 * (1 - organicFraction) + 20 * immaturityPenalty + 20 * (1 - pairQuality);
   return Math.max(0, Math.min(100, Math.round(raw)));
 }
 
@@ -311,12 +294,15 @@ export function buildSymbolLookups(): SymbolLookups {
 
   const addressToId = new Map<string, string>();
   const chainAddressToId = new Map<string, string>();
-  const contractMetaByChainAddress = new Map<string, {
-    stablecoinId: string;
-    symbol: string;
-    decimals: number | null;
-    source: "contract" | "tradedContract";
-  }>();
+  const contractMetaByChainAddress = new Map<
+    string,
+    {
+      stablecoinId: string;
+      symbol: string;
+      decimals: number | null;
+      source: "contract" | "tradedContract";
+    }
+  >();
   const globalAddressOwners = new Map<string, Set<string>>();
   for (const meta of ACTIVE_STABLECOINS) {
     for (const contract of meta.contracts ?? []) {
@@ -325,7 +311,8 @@ export function buildSymbolLookups(): SymbolLookups {
       contractMetaByChainAddress.set(key, {
         stablecoinId: meta.id,
         symbol: meta.symbol,
-        decimals: typeof contract.decimals === "number" && Number.isFinite(contract.decimals) ? contract.decimals : null,
+        decimals:
+          typeof contract.decimals === "number" && Number.isFinite(contract.decimals) ? contract.decimals : null,
         source: "contract",
       });
       const owners = globalAddressOwners.get(contract.address.toLowerCase()) ?? new Set<string>();
@@ -339,7 +326,8 @@ export function buildSymbolLookups(): SymbolLookups {
         contractMetaByChainAddress.set(key, {
           stablecoinId: meta.id,
           symbol: meta.symbol,
-          decimals: typeof contract.decimals === "number" && Number.isFinite(contract.decimals) ? contract.decimals : null,
+          decimals:
+            typeof contract.decimals === "number" && Number.isFinite(contract.decimals) ? contract.decimals : null,
           source: "tradedContract",
         });
       }

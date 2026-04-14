@@ -44,6 +44,64 @@ describe("processPoolMetrics", () => {
     vi.restoreAllMocks();
   });
 
+  it("does not apply Curve symbol fallback enrichment to non-Curve DeFiLlama rows", () => {
+    vi.spyOn(console, "log").mockImplementation(() => {});
+
+    const symbolToIds = new Map<string, string[]>([
+      ["USDT", ["usdt-tether"]],
+      ["USDC", ["usdc-circle"]],
+    ]);
+    const chainAddressToId = new Map<string, string>([
+      ["ethereum:0xusdt", "usdt-tether"],
+      ["ethereum:0xusdc", "usdc-circle"],
+    ]);
+    const curvePoolMap = new Map<string, CurvePoolEntry>([
+      [
+        "ethereum:USDC-USDT",
+        makeCurveEntry({
+          A: 700,
+          balanceRatio: 0.2,
+          registryId: "factory-stable-ng",
+          metapoolAdjustedTvl: 1_000_000,
+          balanceDetails: [
+            { symbol: "USDT", balancePct: 80, isTracked: true },
+            { symbol: "USDC", balancePct: 20, isTracked: true },
+          ],
+        }),
+      ],
+    ]);
+
+    const metrics = processPoolMetrics(
+      [
+        makePool({
+          pool: "uuid-uniswap-v3",
+          project: "uniswap-v3",
+          symbol: "USDT-USDC",
+          tvlUsd: 500_000,
+          volumeUsd1d: 25_000,
+          underlyingTokens: ["0xusdt", "0xusdc"],
+        }),
+      ],
+      new Set(["uniswap-v3"]),
+      symbolToIds,
+      buildSymbolToChainScopedIds(symbolToIds, ["ethereum"]),
+      new Map(),
+      chainAddressToId,
+      curvePoolMap,
+      new Map(),
+      new Map(),
+      new Map(),
+    );
+
+    const usdt = metrics.get("usdt-tether");
+    const pool = usdt?.topPools[0];
+    expect(pool?.poolType).toBe("uniswap-v3-5bp");
+    expect(pool?.extra?.amplificationCoefficient).toBeUndefined();
+    expect(pool?.extra?.registryId).toBeUndefined();
+    expect(pool?.extra?.measurement?.balanceMeasured).toBe(false);
+    expect(usdt?.totalTvlForBalance).toBe(0);
+  });
+
   it("matches pools without mutating canonical addresses, protects symbol collisions, and enriches pool extras", () => {
     const nowMs = Date.UTC(2026, 0, 1);
     vi.spyOn(Date, "now").mockReturnValue(nowMs);
@@ -262,13 +320,9 @@ describe("processPoolMetrics", () => {
   it("does not learn wrapper addresses from positional DeFiLlama symbols", () => {
     vi.spyOn(console, "log").mockImplementation(() => {});
 
-    const symbolToIds = new Map<string, string[]>([
-      ["USR", ["usr-resolv"]],
-    ]);
+    const symbolToIds = new Map<string, string[]>([["USR", ["usr-resolv"]]]);
     const symbolToChainScopedIds = buildSymbolToChainScopedIds(symbolToIds, ["base"]);
-    const chainAddressToId = new Map<string, string>([
-      ["base:0xusr", "usr-resolv"],
-    ]);
+    const chainAddressToId = new Map<string, string>([["base:0xusr", "usr-resolv"]]);
 
     const metrics = processPoolMetrics(
       [
@@ -317,10 +371,13 @@ describe("processPoolMetrics", () => {
         ["USDT", ["usdt-tether"]],
         ["USDC", ["usdc-circle"]],
       ]),
-      buildSymbolToChainScopedIds(new Map([
-        ["USDT", ["usdt-tether"]],
-        ["USDC", ["usdc-circle"]],
-      ]), ["ethereum"]),
+      buildSymbolToChainScopedIds(
+        new Map([
+          ["USDT", ["usdt-tether"]],
+          ["USDC", ["usdc-circle"]],
+        ]),
+        ["ethereum"],
+      ),
       new Map(),
       new Map(),
       new Map(),
@@ -357,10 +414,13 @@ describe("processPoolMetrics", () => {
         ["USDT", ["usdt-tether"]],
         ["USDC", ["usdc-circle"]],
       ]),
-      buildSymbolToChainScopedIds(new Map([
-        ["USDT", ["usdt-tether"]],
-        ["USDC", ["usdc-circle"]],
-      ]), ["ethereum"]),
+      buildSymbolToChainScopedIds(
+        new Map([
+          ["USDT", ["usdt-tether"]],
+          ["USDC", ["usdc-circle"]],
+        ]),
+        ["ethereum"],
+      ),
       new Map(),
       new Map([
         ["ethereum:0xusdt", "usdt-tether"],
@@ -380,8 +440,17 @@ describe("processPoolMetrics", () => {
     const metrics = processPoolMetrics(
       [pool],
       new Set(["curve"]),
-      new Map([["USDT", ["usdt-tether"]], ["USDC", ["usdc-circle"]]]),
-      buildSymbolToChainScopedIds(new Map([["USDT", ["usdt-tether"]], ["USDC", ["usdc-circle"]]]), ["ethereum"]),
+      new Map([
+        ["USDT", ["usdt-tether"]],
+        ["USDC", ["usdc-circle"]],
+      ]),
+      buildSymbolToChainScopedIds(
+        new Map([
+          ["USDT", ["usdt-tether"]],
+          ["USDC", ["usdc-circle"]],
+        ]),
+        ["ethereum"],
+      ),
       new Map(),
       new Map(),
       new Map(),
@@ -400,8 +469,17 @@ describe("processPoolMetrics", () => {
     const metrics = processPoolMetrics(
       [pool],
       new Set(["curve"]),
-      new Map([["USDT", ["usdt-tether"]], ["USDC", ["usdc-circle"]]]),
-      buildSymbolToChainScopedIds(new Map([["USDT", ["usdt-tether"]], ["USDC", ["usdc-circle"]]]), ["ethereum"]),
+      new Map([
+        ["USDT", ["usdt-tether"]],
+        ["USDC", ["usdc-circle"]],
+      ]),
+      buildSymbolToChainScopedIds(
+        new Map([
+          ["USDT", ["usdt-tether"]],
+          ["USDC", ["usdc-circle"]],
+        ]),
+        ["ethereum"],
+      ),
       new Map(),
       new Map(),
       new Map(),
@@ -422,7 +500,10 @@ describe("processPoolMetrics", () => {
           chain: "Solana",
           project: "orca-dex",
           symbol: "USDC-USDT",
-          underlyingTokens: ["EPjFWdd5AufqSSqeM2qA5N8Y7W5a4d8nQv1F6P5a6X1", "Es9vMFrzaCERmJfrF4H2FY6q2JvE4YJzS83p2wM8wus"],
+          underlyingTokens: [
+            "EPjFWdd5AufqSSqeM2qA5N8Y7W5a4d8nQv1F6P5a6X1",
+            "Es9vMFrzaCERmJfrF4H2FY6q2JvE4YJzS83p2wM8wus",
+          ],
           tvlUsd: 500_000,
           volumeUsd1d: 100_000,
           volumeUsd7d: 700_000,
@@ -433,10 +514,13 @@ describe("processPoolMetrics", () => {
         ["USDC", ["usdc-circle"]],
         ["USDT", ["usdt-tether"]],
       ]),
-      buildSymbolToChainScopedIds(new Map([
-        ["USDC", ["usdc-circle"]],
-        ["USDT", ["usdt-tether"]],
-      ]), ["solana"]),
+      buildSymbolToChainScopedIds(
+        new Map([
+          ["USDC", ["usdc-circle"]],
+          ["USDT", ["usdt-tether"]],
+        ]),
+        ["solana"],
+      ),
       new Map(),
       new Map([
         ["solana:epjfwdd5aufqssqem2qa5n8y7w5a4d8nqv1f6p5a6x1", "usdc-circle"],

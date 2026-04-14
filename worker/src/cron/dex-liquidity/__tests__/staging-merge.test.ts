@@ -13,9 +13,7 @@ function createMockDb(results: unknown[] | (() => Promise<{ results: unknown[] }
   return {
     prepare: () => ({
       bind: () => ({
-        all: typeof results === "function"
-          ? results
-          : async () => ({ results }),
+        all: typeof results === "function" ? results : async () => ({ results }),
       }),
     }),
   } as unknown as D1Database;
@@ -26,33 +24,41 @@ function makeKnownPoolIndex(entries: string[] = []): KnownPoolIdentityIndex {
   for (const entry of entries) {
     if (entry.startsWith("derived:")) {
       const [, chain, protocol, baseToken, quoteToken, poolType, feeTierBps, isStable] = entry.split(":");
-      registerKnownPoolIdentity(known, buildPoolIdentity({
-        chain,
-        protocol,
-        tokenAddresses: [baseToken ?? "", quoteToken ?? ""],
-        poolType: poolType === "na" ? null : poolType,
-        feeTierBps: feeTierBps === "na" ? null : Number(feeTierBps),
-        isStable: isStable === "na" ? null : isStable === "stable",
-      }));
+      registerKnownPoolIdentity(
+        known,
+        buildPoolIdentity({
+          chain,
+          protocol,
+          tokenAddresses: [baseToken ?? "", quoteToken ?? ""],
+          poolType: poolType === "na" ? null : poolType,
+          feeTierBps: feeTierBps === "na" ? null : Number(feeTierBps),
+          isStable: isStable === "na" ? null : isStable === "stable",
+        }),
+      );
       continue;
     }
 
     const [chain, poolAddressOrId] = entry.split(":");
-    registerKnownPoolIdentity(known, buildPoolIdentity({
-      chain,
-      protocol: "test",
-      poolAddressOrId,
-      tokenAddresses: [],
-    }));
+    registerKnownPoolIdentity(
+      known,
+      buildPoolIdentity({
+        chain,
+        protocol: "test",
+        poolAddressOrId,
+        tokenAddresses: [],
+      }),
+    );
   }
   return known;
 }
 
-function makeAuthoritativeConfirmationIndex(entries: Array<{
-  protocol: string;
-  chains: string[];
-  exactPoolKeys?: string[];
-}>): AuthoritativeStagedPoolConfirmationIndex {
+function makeAuthoritativeConfirmationIndex(
+  entries: Array<{
+    protocol: string;
+    chains: string[];
+    exactPoolKeys?: string[];
+  }>,
+): AuthoritativeStagedPoolConfirmationIndex {
   const enforcedChainsByProtocol = new Map<string, Set<string>>();
   const confirmedExactKeysByProtocol = new Map<string, Set<string>>();
 
@@ -148,26 +154,28 @@ describe("mergeStagedPools", () => {
   });
 
   it("skips pools that exist in knownPoolAddrs", async () => {
-    const mockDb = createMockDb([{
-      pool_id: `ethereum:${exactPoolAddress}`,
-      stablecoin_id: "usdt-tether",
-      source: "gecko_terminal",
-      chain: "ethereum",
-      protocol: "pancakeswap-v3",
-      symbol: "USDT/USDC",
-      tvl_usd: 100000,
-      volume_24h: 50000,
-      fee_tier: null,
-      balance_ratio: null,
-      is_stable: 1,
-      base_token: baseToken,
-      quote_token: quoteToken,
-      quote_symbol: "USDC",
-      price_usd: 1,
-      locked_liq_pct: null,
-      discovered_at: 1709900000,
-      refreshed_at: 1710000000,
-    }]);
+    const mockDb = createMockDb([
+      {
+        pool_id: `ethereum:${exactPoolAddress}`,
+        stablecoin_id: "usdt-tether",
+        source: "gecko_terminal",
+        chain: "ethereum",
+        protocol: "pancakeswap-v3",
+        symbol: "USDT/USDC",
+        tvl_usd: 100000,
+        volume_24h: 50000,
+        fee_tier: null,
+        balance_ratio: null,
+        is_stable: 1,
+        base_token: baseToken,
+        quote_token: quoteToken,
+        quote_symbol: "USDC",
+        price_usd: 1,
+        locked_liq_pct: null,
+        discovered_at: 1709900000,
+        refreshed_at: 1710000000,
+      },
+    ]);
     const metrics = new Map();
     const knownPoolIndex = makeKnownPoolIndex([`ethereum:${exactPoolAddress}`]);
     const result = await mergeStagedPools(mockDb, metrics, knownPoolIndex, 1710000000);
@@ -179,29 +187,31 @@ describe("mergeStagedPools", () => {
   });
 
   it("skips staged pools whose token-pair fingerprint is already known", async () => {
-    const mockDb = createMockDb([{
-      pool_id: `ethereum:${newPoolAddress}`,
-      stablecoin_id: "usdt-tether",
-      source: "gecko_terminal",
-      chain: "ethereum",
-      protocol: "pancakeswap",
-      dex_id: "pancakeswap-v3",
-      symbol: "USDT/USDC",
-      tvl_usd: 100000,
-      volume_24h: 50000,
-      quality_multiplier: 0.5,
-      pool_type: "gt-concentrated",
-      fee_tier: null,
-      balance_ratio: null,
-      is_stable: 1,
-      base_token: baseToken,
-      quote_token: quoteToken,
-      quote_symbol: "USDC",
-      price_usd: 1,
-      locked_liq_pct: null,
-      discovered_at: 1709900000,
-      refreshed_at: 1710000000,
-    }]);
+    const mockDb = createMockDb([
+      {
+        pool_id: `ethereum:${newPoolAddress}`,
+        stablecoin_id: "usdt-tether",
+        source: "gecko_terminal",
+        chain: "ethereum",
+        protocol: "pancakeswap",
+        dex_id: "pancakeswap-v3",
+        symbol: "USDT/USDC",
+        tvl_usd: 100000,
+        volume_24h: 50000,
+        quality_multiplier: 0.5,
+        pool_type: "gt-concentrated",
+        fee_tier: null,
+        balance_ratio: null,
+        is_stable: 1,
+        base_token: baseToken,
+        quote_token: quoteToken,
+        quote_symbol: "USDC",
+        price_usd: 1,
+        locked_liq_pct: null,
+        discovered_at: 1709900000,
+        refreshed_at: 1710000000,
+      },
+    ]);
     const metrics = new Map();
     const knownPoolIndex = makeKnownPoolIndex([
       `derived:ethereum:pancakeswap-v3:${baseToken}:${quoteToken}:gt-concentrated:na:stable`,
@@ -213,6 +223,128 @@ describe("mergeStagedPools", () => {
     expect(result.skippedByExactIdentityCount).toBe(0);
     expect(result.skippedByUniqueDerivedIdentityCount).toBe(1);
     expect(result.mergedCount).toBe(0);
+  });
+
+  it("skips one staged exact-pool-id pool that uniquely matches an identity-poor DL row", async () => {
+    const now = 1710000000;
+    const uniswapV4PoolAddress = "0x5d0ed52610c76d7bf729130ce7ddc0488b2f4bd0a0db1f12adbe6a32deaff893";
+    const mockDb = createMockDb([
+      {
+        pool_id: `ethereum:${uniswapV4PoolAddress}`,
+        stablecoin_id: "bold-liquity",
+        source: "cg_onchain",
+        chain: "ethereum",
+        protocol: "uniswap-v4",
+        dex_id: "uniswap-v4-ethereum",
+        symbol: "BOLD / USDC 0.05%",
+        tvl_usd: 2_700_000,
+        volume_24h: 260_000,
+        quality_multiplier: 0.3,
+        pool_type: "cg-concentrated",
+        fee_tier: null,
+        balance_ratio: 1,
+        is_stable: null,
+        base_token: baseToken,
+        quote_token: quoteToken,
+        quote_symbol: "USDC",
+        price_usd: 1.001,
+        locked_liq_pct: null,
+        discovered_at: now - 3600,
+        refreshed_at: now,
+      },
+    ]);
+    const metrics = new Map();
+    const knownPoolIndex = createKnownPoolIdentityIndex();
+    registerKnownPoolIdentity(
+      knownPoolIndex,
+      buildPoolIdentity({
+        chain: "Ethereum",
+        protocol: "uniswap-v4",
+        poolAddressOrId: "d0c42a48-871a-4e83-9ef2-b3f60b3e0e90",
+        tokenAddresses: [baseToken, quoteToken],
+        poolType: "generic",
+        isStable: true,
+      }),
+    );
+
+    const result = await mergeStagedPools(mockDb, metrics as never, knownPoolIndex, now);
+
+    expect(result.skippedCount).toBe(1);
+    expect(result.skippedByOptionalWildcardIdentityCount).toBe(1);
+    expect(result.mergedCount).toBe(0);
+    expect(metrics.size).toBe(0);
+    expect(result.priceObservations.get("bold-liquity")).toHaveLength(1);
+  });
+
+  it("keeps staged exact-pool-id same-pair pools when the incoming wildcard bucket is ambiguous", async () => {
+    const now = 1710000000;
+    const mockDb = createMockDb([
+      {
+        pool_id: "ethereum:0x5d0ed52610c76d7bf729130ce7ddc0488b2f4bd0a0db1f12adbe6a32deaff893",
+        stablecoin_id: "bold-liquity",
+        source: "cg_onchain",
+        chain: "ethereum",
+        protocol: "uniswap-v4",
+        dex_id: "uniswap-v4-ethereum",
+        symbol: "BOLD / USDC 0.05%",
+        tvl_usd: 2_700_000,
+        volume_24h: 260_000,
+        quality_multiplier: 0.3,
+        pool_type: "cg-concentrated",
+        fee_tier: null,
+        balance_ratio: 1,
+        is_stable: null,
+        base_token: baseToken,
+        quote_token: quoteToken,
+        quote_symbol: "USDC",
+        price_usd: 1.001,
+        locked_liq_pct: null,
+        discovered_at: now - 3600,
+        refreshed_at: now,
+      },
+      {
+        pool_id: "ethereum:0x395f91b34aa34a477ce3bc6505639a821b286a62b1a164fc1887fa3a5ef713a5",
+        stablecoin_id: "bold-liquity",
+        source: "cg_onchain",
+        chain: "ethereum",
+        protocol: "uniswap-v4",
+        dex_id: "uniswap-v4-ethereum",
+        symbol: "BOLD / USDC 0.01%",
+        tvl_usd: 400_000,
+        volume_24h: 20_000,
+        quality_multiplier: 0.3,
+        pool_type: "cg-concentrated",
+        fee_tier: null,
+        balance_ratio: 1,
+        is_stable: null,
+        base_token: baseToken,
+        quote_token: quoteToken,
+        quote_symbol: "USDC",
+        price_usd: 1.0005,
+        locked_liq_pct: null,
+        discovered_at: now - 3600,
+        refreshed_at: now,
+      },
+    ]);
+    const metrics = new Map();
+    const knownPoolIndex = createKnownPoolIdentityIndex();
+    registerKnownPoolIdentity(
+      knownPoolIndex,
+      buildPoolIdentity({
+        chain: "Ethereum",
+        protocol: "uniswap-v4",
+        poolAddressOrId: "d0c42a48-871a-4e83-9ef2-b3f60b3e0e90",
+        tokenAddresses: [baseToken, quoteToken],
+        poolType: "generic",
+        isStable: true,
+      }),
+    );
+
+    const result = await mergeStagedPools(mockDb, metrics as never, knownPoolIndex, now);
+
+    expect(result.skippedByOptionalWildcardIdentityCount).toBe(0);
+    expect(result.mergedCount).toBe(2);
+    expect(metrics.get("bold-liquity")?.topPools).toHaveLength(2);
   });
 
   it("gracefully handles missing staging table", async () => {
@@ -233,26 +365,28 @@ describe("mergeStagedPools", () => {
 
   it("merges GT-style staged pools with confidence decay and GT dex quality", async () => {
     const now = 1710000000;
-    const mockDb = createMockDb([{
-      pool_id: "bsc:0xpool1",
-      stablecoin_id: "usdt-tether",
-      source: "gecko_terminal",
-      chain: "bsc",
-      protocol: "pancakeswap-v3",
-      symbol: "USDT/USDC",
-      tvl_usd: 100000,
-      volume_24h: 50000,
-      fee_tier: null,
-      balance_ratio: null,
-      is_stable: 1,
-      base_token: "0xbase",
-      quote_token: "0xquote",
-      quote_symbol: "USDC",
-      price_usd: 1,
-      locked_liq_pct: null,
-      discovered_at: now - 86400 * 10,
-      refreshed_at: now - 3600 * 12,
-    }]);
+    const mockDb = createMockDb([
+      {
+        pool_id: "bsc:0xpool1",
+        stablecoin_id: "usdt-tether",
+        source: "gecko_terminal",
+        chain: "bsc",
+        protocol: "pancakeswap-v3",
+        symbol: "USDT/USDC",
+        tvl_usd: 100000,
+        volume_24h: 50000,
+        fee_tier: null,
+        balance_ratio: null,
+        is_stable: 1,
+        base_token: "0xbase",
+        quote_token: "0xquote",
+        quote_symbol: "USDC",
+        price_usd: 1,
+        locked_liq_pct: null,
+        discovered_at: now - 86400 * 10,
+        refreshed_at: now - 3600 * 12,
+      },
+    ]);
     const metrics = new Map();
 
     const result = await mergeStagedPools(mockDb, metrics as never, makeKnownPoolIndex(), now);
@@ -277,29 +411,31 @@ describe("mergeStagedPools", () => {
   it("skips staged pools that claim an authoritative protocol without authoritative exact-id confirmation", async () => {
     const now = 1710000000;
     const unconfirmedBalancerPool = "0x4ba45fb7de134bcb24a6053bbe21c3a4be9f85ea";
-    const mockDb = createMockDb([{
-      pool_id: `plasma:${unconfirmedBalancerPool}`,
-      stablecoin_id: "usdai-usd-ai",
-      source: "gecko_terminal",
-      chain: "plasma",
-      protocol: "balancer",
-      dex_id: "balancer-v3-plasma",
-      symbol: "USDai/USDT0",
-      tvl_usd: 2250000,
-      volume_24h: 0,
-      quality_multiplier: 0.85,
-      pool_type: "stable",
-      fee_tier: null,
-      balance_ratio: null,
-      is_stable: 1,
-      base_token: "0x0a1a1a107e45b7ced86833863f482bc5f4ed82ef",
-      quote_token: "0xb8ce59fc3717ada4c02eadf9682a9e934f625ebb",
-      quote_symbol: "USDT0",
-      price_usd: 1,
-      locked_liq_pct: null,
-      discovered_at: now - 86400,
-      refreshed_at: now,
-    }]);
+    const mockDb = createMockDb([
+      {
+        pool_id: `plasma:${unconfirmedBalancerPool}`,
+        stablecoin_id: "usdai-usd-ai",
+        source: "gecko_terminal",
+        chain: "plasma",
+        protocol: "balancer",
+        dex_id: "balancer-v3-plasma",
+        symbol: "USDai/USDT0",
+        tvl_usd: 2250000,
+        volume_24h: 0,
+        quality_multiplier: 0.85,
+        pool_type: "stable",
+        fee_tier: null,
+        balance_ratio: null,
+        is_stable: 1,
+        base_token: "0x0a1a1a107e45b7ced86833863f482bc5f4ed82ef",
+        quote_token: "0xb8ce59fc3717ada4c02eadf9682a9e934f625ebb",
+        quote_symbol: "USDT0",
+        price_usd: 1,
+        locked_liq_pct: null,
+        discovered_at: now - 86400,
+        refreshed_at: now,
+      },
+    ]);
     const metrics = new Map();
 
     const result = await mergeStagedPools(
@@ -321,29 +457,31 @@ describe("mergeStagedPools", () => {
   it("fails open for staged pools when authoritative confirmation is unavailable", async () => {
     const now = 1710000000;
     const confirmedBalancerPool = "0x01e2c7fcde2b8d5d1413732c4e274ba5b06b1e54";
-    const mockDb = createMockDb([{
-      pool_id: `plasma:${confirmedBalancerPool}`,
-      stablecoin_id: "usdai-usd-ai",
-      source: "gecko_terminal",
-      chain: "plasma",
-      protocol: "balancer",
-      dex_id: "balancer-v3-plasma",
-      symbol: "USDai/USDT0",
-      tvl_usd: 547760,
-      volume_24h: 20190,
-      quality_multiplier: 0.85,
-      pool_type: "stable",
-      fee_tier: null,
-      balance_ratio: null,
-      is_stable: 1,
-      base_token: "0x0a1a1a107e45b7ced86833863f482bc5f4ed82ef",
-      quote_token: "0xb8ce59fc3717ada4c02eadf9682a9e934f625ebb",
-      quote_symbol: "USDT0",
-      price_usd: 1,
-      locked_liq_pct: null,
-      discovered_at: now - 86400,
-      refreshed_at: now,
-    }]);
+    const mockDb = createMockDb([
+      {
+        pool_id: `plasma:${confirmedBalancerPool}`,
+        stablecoin_id: "usdai-usd-ai",
+        source: "gecko_terminal",
+        chain: "plasma",
+        protocol: "balancer",
+        dex_id: "balancer-v3-plasma",
+        symbol: "USDai/USDT0",
+        tvl_usd: 547760,
+        volume_24h: 20190,
+        quality_multiplier: 0.85,
+        pool_type: "stable",
+        fee_tier: null,
+        balance_ratio: null,
+        is_stable: 1,
+        base_token: "0x0a1a1a107e45b7ced86833863f482bc5f4ed82ef",
+        quote_token: "0xb8ce59fc3717ada4c02eadf9682a9e934f625ebb",
+        quote_symbol: "USDT0",
+        price_usd: 1,
+        locked_liq_pct: null,
+        discovered_at: now - 86400,
+        refreshed_at: now,
+      },
+    ]);
     const metrics = new Map();
 
     const result = await mergeStagedPools(mockDb, metrics as never, makeKnownPoolIndex(), now);
@@ -355,26 +493,28 @@ describe("mergeStagedPools", () => {
 
   it("merges CG staged pools and preserves balance ratio and locked liquidity", async () => {
     const now = 1710000000;
-    const mockDb = createMockDb([{
-      pool_id: "ethereum:0xcgpool",
-      stablecoin_id: "usdt-tether",
-      source: "cg_onchain",
-      chain: "ethereum",
-      protocol: "pancakeswap-v3",
-      symbol: "USDT/USDC",
-      tvl_usd: 100000,
-      volume_24h: 50000,
-      fee_tier: 5,
-      balance_ratio: 0.8,
-      is_stable: 1,
-      base_token: "0xbase",
-      quote_token: "0xquote",
-      quote_symbol: "USDC",
-      price_usd: 1,
-      locked_liq_pct: 90,
-      discovered_at: now - 86400 * 10,
-      refreshed_at: now,
-    }]);
+    const mockDb = createMockDb([
+      {
+        pool_id: "ethereum:0xcgpool",
+        stablecoin_id: "usdt-tether",
+        source: "cg_onchain",
+        chain: "ethereum",
+        protocol: "pancakeswap-v3",
+        symbol: "USDT/USDC",
+        tvl_usd: 100000,
+        volume_24h: 50000,
+        fee_tier: 5,
+        balance_ratio: 0.8,
+        is_stable: 1,
+        base_token: "0xbase",
+        quote_token: "0xquote",
+        quote_symbol: "USDC",
+        price_usd: 1,
+        locked_liq_pct: 90,
+        discovered_at: now - 86400 * 10,
+        refreshed_at: now,
+      },
+    ]);
     const metrics = new Map();
 
     const result = await mergeStagedPools(mockDb, metrics as never, makeKnownPoolIndex(), now);
@@ -400,27 +540,29 @@ describe("mergeStagedPools", () => {
 
   it("extracts price observations from pools skipped by address dedup", async () => {
     const now = 1710000000;
-    const mockDb = createMockDb([{
-      pool_id: `ethereum:${secondExactPoolAddress}`,
-      stablecoin_id: "usdt-tether",
-      source: "cg_onchain",
-      chain: "ethereum",
-      protocol: "uniswap-v3",
-      dex_id: "uniswap_v3",
-      symbol: "USDT/USDC",
-      tvl_usd: 100000,
-      volume_24h: 50000,
-      fee_tier: 5,
-      balance_ratio: null,
-      is_stable: 1,
-      base_token: baseToken,
-      quote_token: quoteToken,
-      quote_symbol: "USDC",
-      price_usd: 0.9998,
-      locked_liq_pct: null,
-      discovered_at: now - 86400 * 10,
-      refreshed_at: now,
-    }]);
+    const mockDb = createMockDb([
+      {
+        pool_id: `ethereum:${secondExactPoolAddress}`,
+        stablecoin_id: "usdt-tether",
+        source: "cg_onchain",
+        chain: "ethereum",
+        protocol: "uniswap-v3",
+        dex_id: "uniswap_v3",
+        symbol: "USDT/USDC",
+        tvl_usd: 100000,
+        volume_24h: 50000,
+        fee_tier: 5,
+        balance_ratio: null,
+        is_stable: 1,
+        base_token: baseToken,
+        quote_token: quoteToken,
+        quote_symbol: "USDC",
+        price_usd: 0.9998,
+        locked_liq_pct: null,
+        discovered_at: now - 86400 * 10,
+        refreshed_at: now,
+      },
+    ]);
     const metrics = new Map();
     // Pool address is already known (from DL yields) — will be deduped for metrics
     const knownPoolIndex = makeKnownPoolIndex([`ethereum:${secondExactPoolAddress}`]);
@@ -443,29 +585,31 @@ describe("mergeStagedPools", () => {
 
   it("extracts price observations from pools skipped by fingerprint dedup", async () => {
     const now = 1710000000;
-    const mockDb = createMockDb([{
-      pool_id: `ethereum:${newPoolAddress}`,
-      stablecoin_id: "usdt-tether",
-      source: "gecko_terminal",
-      chain: "ethereum",
-      protocol: "pancakeswap",
-      dex_id: "pancakeswap-v3",
-      symbol: "USDT/USDC",
-      tvl_usd: 80000,
-      volume_24h: 40000,
-      quality_multiplier: 0.5,
-      pool_type: "gt-concentrated",
-      fee_tier: null,
-      balance_ratio: null,
-      is_stable: 1,
-      base_token: baseToken,
-      quote_token: quoteToken,
-      quote_symbol: "USDC",
-      price_usd: 1.0001,
-      locked_liq_pct: null,
-      discovered_at: now - 86400 * 5,
-      refreshed_at: now,
-    }]);
+    const mockDb = createMockDb([
+      {
+        pool_id: `ethereum:${newPoolAddress}`,
+        stablecoin_id: "usdt-tether",
+        source: "gecko_terminal",
+        chain: "ethereum",
+        protocol: "pancakeswap",
+        dex_id: "pancakeswap-v3",
+        symbol: "USDT/USDC",
+        tvl_usd: 80000,
+        volume_24h: 40000,
+        quality_multiplier: 0.5,
+        pool_type: "gt-concentrated",
+        fee_tier: null,
+        balance_ratio: null,
+        is_stable: 1,
+        base_token: baseToken,
+        quote_token: quoteToken,
+        quote_symbol: "USDC",
+        price_usd: 1.0001,
+        locked_liq_pct: null,
+        discovered_at: now - 86400 * 5,
+        refreshed_at: now,
+      },
+    ]);
     const metrics = new Map();
     // Fingerprint is known (from DL yields) — will be deduped for metrics
     const knownPoolIndex = makeKnownPoolIndex([
@@ -489,27 +633,29 @@ describe("mergeStagedPools", () => {
 
   it("does NOT extract price observation from deduped pool with sub-threshold TVL", async () => {
     const now = 1710000000;
-    const mockDb = createMockDb([{
-      pool_id: `ethereum:${secondExactPoolAddress}`,
-      stablecoin_id: "usdt-tether",
-      source: "cg_onchain",
-      chain: "ethereum",
-      protocol: "uniswap-v3",
-      dex_id: "uniswap_v3",
-      symbol: "USDT/USDC",
-      tvl_usd: 30000,
-      volume_24h: 5000,
-      fee_tier: 5,
-      balance_ratio: null,
-      is_stable: 1,
-      base_token: baseToken,
-      quote_token: quoteToken,
-      quote_symbol: "USDC",
-      price_usd: 1.0,
-      locked_liq_pct: null,
-      discovered_at: now - 86400 * 10,
-      refreshed_at: now,
-    }]);
+    const mockDb = createMockDb([
+      {
+        pool_id: `ethereum:${secondExactPoolAddress}`,
+        stablecoin_id: "usdt-tether",
+        source: "cg_onchain",
+        chain: "ethereum",
+        protocol: "uniswap-v3",
+        dex_id: "uniswap_v3",
+        symbol: "USDT/USDC",
+        tvl_usd: 30000,
+        volume_24h: 5000,
+        fee_tier: 5,
+        balance_ratio: null,
+        is_stable: 1,
+        base_token: baseToken,
+        quote_token: quoteToken,
+        quote_symbol: "USDC",
+        price_usd: 1.0,
+        locked_liq_pct: null,
+        discovered_at: now - 86400 * 10,
+        refreshed_at: now,
+      },
+    ]);
     const metrics = new Map();
     const knownPoolIndex = makeKnownPoolIndex([`ethereum:${secondExactPoolAddress}`]);
 
@@ -522,26 +668,28 @@ describe("mergeStagedPools", () => {
 
   it("orderbook pools skip fingerprint dedup (null tokens)", async () => {
     const now = 1710000000;
-    const mockDb = createMockDb([{
-      pool_id: "orderbook:binance:usdt-tether",
-      stablecoin_id: "usdt-tether",
-      source: "cg_tickers",
-      chain: "orderbook",
-      protocol: "binance",
-      symbol: "USDT/USD",
-      tvl_usd: 500000,
-      volume_24h: 1000000,
-      fee_tier: null,
-      balance_ratio: null,
-      is_stable: 0,
-      base_token: null,
-      quote_token: null,
-      quote_symbol: "USD",
-      price_usd: 1.0001,
-      locked_liq_pct: null,
-      discovered_at: now - 86400 * 5,
-      refreshed_at: now,
-    }]);
+    const mockDb = createMockDb([
+      {
+        pool_id: "orderbook:binance:usdt-tether",
+        stablecoin_id: "usdt-tether",
+        source: "cg_tickers",
+        chain: "orderbook",
+        protocol: "binance",
+        symbol: "USDT/USD",
+        tvl_usd: 500000,
+        volume_24h: 1000000,
+        fee_tier: null,
+        balance_ratio: null,
+        is_stable: 0,
+        base_token: null,
+        quote_token: null,
+        quote_symbol: "USD",
+        price_usd: 1.0001,
+        locked_liq_pct: null,
+        discovered_at: now - 86400 * 5,
+        refreshed_at: now,
+      },
+    ]);
     const metrics = new Map();
     // Fingerprint for this pool would be null (no tokens), so it should NOT be
     // skipped by fingerprint dedup — only exact poolId match matters

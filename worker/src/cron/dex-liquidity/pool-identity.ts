@@ -34,17 +34,26 @@ function normalizeTokenAddress(address: string): string {
   return (address ?? "").trim().toLowerCase();
 }
 
-function isTrustworthyExactPoolId(poolId: string | null | undefined): boolean {
+function isUniswapV4PoolId(poolId: string, protocol?: string | null): boolean {
+  return normalizeProtocol(protocol ?? "") === "uniswap-v4" && /^0x[a-f0-9]{64}$/i.test(poolId);
+}
+
+function isTrustworthyExactPoolId(poolId: string | null | undefined, protocol?: string | null): boolean {
   if (!poolId) return false;
   const trimmed = poolId.trim();
   if (!trimmed) return false;
   if (trimmed.startsWith("orderbook-") || trimmed.startsWith("orderbook:")) return true;
   if (/^0x[a-f0-9]{40}$/i.test(trimmed)) return true;
+  if (isUniswapV4PoolId(trimmed, protocol)) return true;
   return /^[1-9A-HJ-NP-Za-km-z]{32,64}$/.test(trimmed);
 }
 
 function resolvePoolShapeFamily(poolType?: string | null, protocol?: string | null, isStable?: boolean | null): string {
   const normalized = (poolType ?? "").toLowerCase();
+  const normalizedProtocol = normalizeProtocol(protocol ?? "");
+  if (normalizedProtocol === "uniswap-v3" || normalizedProtocol === "uniswap-v4") {
+    return "concentrated";
+  }
   if (!normalized) return "generic";
   if (normalized.includes("orderbook")) return "orderbook";
   if (normalized.includes("weighted")) {
@@ -57,6 +66,15 @@ function resolvePoolShapeFamily(poolType?: string | null, protocol?: string | nu
     return "weighted";
   }
   if (normalized.includes("clmm") || normalized.includes("whirlpool") || normalized.includes("concentrated")) {
+    return "concentrated";
+  }
+  if (
+    normalized.includes("cg-cl") ||
+    normalized.includes("ds-concentrated") ||
+    normalized.includes("gt-concentrated") ||
+    normalized.includes("v3") ||
+    normalized.includes("v4")
+  ) {
     return "concentrated";
   }
   if (
@@ -90,7 +108,9 @@ export function buildPoolIdentity(input: {
 }): PoolIdentity {
   const chain = input.chain.toLowerCase();
   const exactPoolId = input.poolAddressOrId?.trim() ?? "";
-  const exactPoolKey = isTrustworthyExactPoolId(exactPoolId) ? `${chain}:${exactPoolId.toLowerCase()}` : null;
+  const exactPoolKey = isTrustworthyExactPoolId(exactPoolId, input.protocol)
+    ? `${chain}:${exactPoolId.toLowerCase()}`
+    : null;
 
   const normalizedTokens = input.tokenAddresses
     .map((token) => normalizeTokenAddress(token))
@@ -123,7 +143,7 @@ export function buildPoolIdentity(input: {
     optionalWildcardKey,
     hasMissingOptionalIdentityFields,
     identitySource: exactPoolKey
-      ? exactPoolId.startsWith("orderbook")
+      ? exactPoolId.startsWith("orderbook") || isUniswapV4PoolId(exactPoolId, input.protocol)
         ? "native-id"
         : "address"
       : derivedMatchKey || optionalWildcardKey

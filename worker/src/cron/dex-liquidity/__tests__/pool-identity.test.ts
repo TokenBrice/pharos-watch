@@ -8,17 +8,104 @@ import {
 } from "../pool-identity";
 
 describe("pool identity dedup", () => {
+  it("can dedupe an identity-poor Uniswap v4 DL row against one staged exact-pool-id row", () => {
+    const known = createKnownPoolIdentityIndex();
+    registerKnownPoolIdentity(
+      known,
+      buildPoolIdentity({
+        chain: "Ethereum",
+        protocol: "uniswap-v4",
+        poolAddressOrId: "d0c42a48-871a-4e83-9ef2-b3f60b3e0e90",
+        tokenAddresses: ["0x6440f144b7e50d6a8439336510312d2f54beb01d", "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48"],
+        poolType: "generic",
+        isStable: true,
+      }),
+    );
+
+    const incoming = buildPoolIdentity({
+      chain: "ethereum",
+      protocol: "uniswap-v4-ethereum",
+      poolAddressOrId: "0x5d0ed52610c76d7bf729130ce7ddc0488b2f4bd0a0db1f12adbe6a32deaff893",
+      tokenAddresses: ["0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48", "0x6440f144b7e50d6a8439336510312d2f54beb01d"],
+      poolType: "cg-concentrated",
+      isStable: null,
+    });
+    const counts = countPoolIdentityKeys([incoming]);
+    expect(incoming.exactPoolKey).toBe("ethereum:0x5d0ed52610c76d7bf729130ce7ddc0488b2f4bd0a0db1f12adbe6a32deaff893");
+    expect(incoming.identitySource).toBe("native-id");
+
+    expect(
+      getIdentityDedupReason(
+        incoming,
+        known,
+        {
+          derived: counts.derived.get(incoming.derivedMatchKey!) ?? 0,
+          wildcard: counts.wildcard.get(incoming.optionalWildcardKey!) ?? 0,
+        },
+        { allowOptionalWildcard: true },
+      ),
+    ).toBe("derived_optional_wildcard");
+  });
+
+  it("does not wildcard-dedupe staged same-pair pools when the incoming bucket is ambiguous", () => {
+    const known = createKnownPoolIdentityIndex();
+    registerKnownPoolIdentity(
+      known,
+      buildPoolIdentity({
+        chain: "ethereum",
+        protocol: "uniswap-v4",
+        poolAddressOrId: "d0c42a48-871a-4e83-9ef2-b3f60b3e0e90",
+        tokenAddresses: ["0x6440f144b7e50d6a8439336510312d2f54beb01d", "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48"],
+        poolType: "generic",
+        isStable: true,
+      }),
+    );
+
+    const incoming = [
+      buildPoolIdentity({
+        chain: "ethereum",
+        protocol: "uniswap-v4-ethereum",
+        poolAddressOrId: "0x5d0ed52610c76d7bf729130ce7ddc0488b2f4bd0a0db1f12adbe6a32deaff893",
+        tokenAddresses: ["0x6440f144b7e50d6a8439336510312d2f54beb01d", "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48"],
+        poolType: "cg-concentrated",
+      }),
+      buildPoolIdentity({
+        chain: "ethereum",
+        protocol: "uniswap-v4-ethereum",
+        poolAddressOrId: "0x395f91b34aa34a477ce3bc6505639a821b286a62b1a164fc1887fa3a5ef713a5",
+        tokenAddresses: ["0x6440f144b7e50d6a8439336510312d2f54beb01d", "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48"],
+        poolType: "cg-concentrated",
+      }),
+    ];
+    const counts = countPoolIdentityKeys(incoming);
+
+    expect(
+      getIdentityDedupReason(
+        incoming[0]!,
+        known,
+        {
+          derived: counts.derived.get(incoming[0]!.derivedMatchKey!) ?? 0,
+          wildcard: counts.wildcard.get(incoming[0]!.optionalWildcardKey!) ?? 0,
+        },
+        { allowOptionalWildcard: true },
+      ),
+    ).toBeNull();
+  });
+
   it("uses optional wildcard dedup for an Orca DL row missing fee metadata", () => {
     const known = createKnownPoolIdentityIndex();
-    registerKnownPoolIdentity(known, buildPoolIdentity({
-      chain: "solana",
-      protocol: "orca",
-      poolAddressOrId: "9j7M8s9d5M5x6o8N9vQm3P4r5T6u7V8w9X1y2Z3a4Bc",
-      tokenAddresses: ["So11111111111111111111111111111111111111112", "EPjFWdd5AufqSSqeM2qA5N8Y7W5a4d8nQv1F6P5a6X1"],
-      poolType: "orca-whirlpool",
-      feeTierBps: 1,
-      isStable: true,
-    }));
+    registerKnownPoolIdentity(
+      known,
+      buildPoolIdentity({
+        chain: "solana",
+        protocol: "orca",
+        poolAddressOrId: "9j7M8s9d5M5x6o8N9vQm3P4r5T6u7V8w9X1y2Z3a4Bc",
+        tokenAddresses: ["So11111111111111111111111111111111111111112", "EPjFWdd5AufqSSqeM2qA5N8Y7W5a4d8nQv1F6P5a6X1"],
+        poolType: "orca-whirlpool",
+        feeTierBps: 1,
+        isStable: true,
+      }),
+    );
 
     const incoming = buildPoolIdentity({
       chain: "Solana",
@@ -30,28 +117,33 @@ describe("pool identity dedup", () => {
     });
     const counts = countPoolIdentityKeys([incoming]);
 
-    expect(getIdentityDedupReason(
-      incoming,
-      known,
-      {
-        derived: counts.derived.get(incoming.derivedMatchKey!) ?? 0,
-        wildcard: counts.wildcard.get(incoming.optionalWildcardKey!) ?? 0,
-      },
-      { allowOptionalWildcard: true },
-    )).toBe("derived_optional_wildcard");
+    expect(
+      getIdentityDedupReason(
+        incoming,
+        known,
+        {
+          derived: counts.derived.get(incoming.derivedMatchKey!) ?? 0,
+          wildcard: counts.wildcard.get(incoming.optionalWildcardKey!) ?? 0,
+        },
+        { allowOptionalWildcard: true },
+      ),
+    ).toBe("derived_optional_wildcard");
   });
 
   it("does not use optional wildcard dedup when the incoming pool has full optional metadata", () => {
     const known = createKnownPoolIdentityIndex();
-    registerKnownPoolIdentity(known, buildPoolIdentity({
-      chain: "solana",
-      protocol: "orca",
-      poolAddressOrId: "9j7M8s9d5M5x6o8N9vQm3P4r5T6u7V8w9X1y2Z3a4Bc",
-      tokenAddresses: ["So11111111111111111111111111111111111111112", "EPjFWdd5AufqSSqeM2qA5N8Y7W5a4d8nQv1F6P5a6X1"],
-      poolType: "orca-whirlpool",
-      feeTierBps: 1,
-      isStable: true,
-    }));
+    registerKnownPoolIdentity(
+      known,
+      buildPoolIdentity({
+        chain: "solana",
+        protocol: "orca",
+        poolAddressOrId: "9j7M8s9d5M5x6o8N9vQm3P4r5T6u7V8w9X1y2Z3a4Bc",
+        tokenAddresses: ["So11111111111111111111111111111111111111112", "EPjFWdd5AufqSSqeM2qA5N8Y7W5a4d8nQv1F6P5a6X1"],
+        poolType: "orca-whirlpool",
+        feeTierBps: 1,
+        isStable: true,
+      }),
+    );
 
     const incoming = buildPoolIdentity({
       chain: "solana",
@@ -64,37 +156,45 @@ describe("pool identity dedup", () => {
     });
     const counts = countPoolIdentityKeys([incoming]);
 
-    expect(getIdentityDedupReason(
-      incoming,
-      known,
-      {
-        derived: counts.derived.get(incoming.derivedMatchKey!) ?? 0,
-        wildcard: counts.wildcard.get(incoming.optionalWildcardKey!) ?? 0,
-      },
-      { allowOptionalWildcard: true },
-    )).toBe("derived_unique");
+    expect(
+      getIdentityDedupReason(
+        incoming,
+        known,
+        {
+          derived: counts.derived.get(incoming.derivedMatchKey!) ?? 0,
+          wildcard: counts.wildcard.get(incoming.optionalWildcardKey!) ?? 0,
+        },
+        { allowOptionalWildcard: true },
+      ),
+    ).toBe("derived_unique");
   });
 
   it("does not use optional wildcard dedup when the wildcard bucket is ambiguous", () => {
     const known = createKnownPoolIdentityIndex();
-    registerKnownPoolIdentity(known, buildPoolIdentity({
-      chain: "solana",
-      protocol: "orca",
-      poolAddressOrId: "9j7M8s9d5M5x6o8N9vQm3P4r5T6u7V8w9X1y2Z3a4Bc",
-      tokenAddresses: ["So11111111111111111111111111111111111111112", "EPjFWdd5AufqSSqeM2qA5N8Y7W5a4d8nQv1F6P5a6X1"],
-      poolType: "orca-whirlpool",
-      feeTierBps: 1,
-      isStable: true,
-    }));
-    registerKnownPoolIdentity(known, buildPoolIdentity({
-      chain: "solana",
-      protocol: "orca",
-      poolAddressOrId: "8k6N7m5b4V3c2X1z9Y8w7u6T5r4e3W2q1P9o8i7u6Y5",
-      tokenAddresses: ["So11111111111111111111111111111111111111112", "EPjFWdd5AufqSSqeM2qA5N8Y7W5a4d8nQv1F6P5a6X1"],
-      poolType: "orca-whirlpool",
-      feeTierBps: 5,
-      isStable: true,
-    }));
+    registerKnownPoolIdentity(
+      known,
+      buildPoolIdentity({
+        chain: "solana",
+        protocol: "orca",
+        poolAddressOrId: "9j7M8s9d5M5x6o8N9vQm3P4r5T6u7V8w9X1y2Z3a4Bc",
+        tokenAddresses: ["So11111111111111111111111111111111111111112", "EPjFWdd5AufqSSqeM2qA5N8Y7W5a4d8nQv1F6P5a6X1"],
+        poolType: "orca-whirlpool",
+        feeTierBps: 1,
+        isStable: true,
+      }),
+    );
+    registerKnownPoolIdentity(
+      known,
+      buildPoolIdentity({
+        chain: "solana",
+        protocol: "orca",
+        poolAddressOrId: "8k6N7m5b4V3c2X1z9Y8w7u6T5r4e3W2q1P9o8i7u6Y5",
+        tokenAddresses: ["So11111111111111111111111111111111111111112", "EPjFWdd5AufqSSqeM2qA5N8Y7W5a4d8nQv1F6P5a6X1"],
+        poolType: "orca-whirlpool",
+        feeTierBps: 5,
+        isStable: true,
+      }),
+    );
 
     const incoming = buildPoolIdentity({
       chain: "Solana",
@@ -106,14 +206,16 @@ describe("pool identity dedup", () => {
     });
     const counts = countPoolIdentityKeys([incoming]);
 
-    expect(getIdentityDedupReason(
-      incoming,
-      known,
-      {
-        derived: counts.derived.get(incoming.derivedMatchKey!) ?? 0,
-        wildcard: counts.wildcard.get(incoming.optionalWildcardKey!) ?? 0,
-      },
-      { allowOptionalWildcard: true },
-    )).toBeNull();
+    expect(
+      getIdentityDedupReason(
+        incoming,
+        known,
+        {
+          derived: counts.derived.get(incoming.derivedMatchKey!) ?? 0,
+          wildcard: counts.wildcard.get(incoming.optionalWildcardKey!) ?? 0,
+        },
+        { allowOptionalWildcard: true },
+      ),
+    ).toBeNull();
   });
 });
