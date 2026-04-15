@@ -1,8 +1,11 @@
 import { describe, expect, it } from "vitest";
+import type { RedemptionBackstopEntry } from "@shared/types/redemption";
 import { mockD1 } from "../../api/__tests__/helpers/mock-d1";
 import {
   loadRedemptionBackstopMap,
+  loadRedemptionBackstopSnapshot,
   RedemptionBackstopSnapshotUnavailableError,
+  upsertRedemptionBackstopSnapshots,
 } from "../redemption-backstops-store";
 
 /** Realistic mock row matching an actual offchain-issuer config (EURC). */
@@ -187,5 +190,90 @@ describe("loadRedemptionBackstopMap", () => {
     expect(entry).toBeDefined();
     expect(entry!.resolutionState).toBe("missing-capacity");
     expect(entry!.score).toBeNull();
+  });
+
+  it("prefers the latest completed run when loading a snapshot", async () => {
+    const db = mockD1([
+      {
+        match: "FROM redemption_backstop_runs",
+        rows: [],
+        first: {
+          run_id: "run-new",
+          completed_at: 1_700_000_010,
+          expected_count: 1,
+          written_count: 1,
+          min_updated_at: 1_700_000_000,
+          max_updated_at: 1_700_000_000,
+          methodology_version: "1.1",
+        },
+      },
+      {
+        match: "WHERE snapshot_run_id = ?",
+        matchBinds: ["run-new"],
+        rows: [makeRealisticRow({ snapshot_run_id: "run-new" })],
+      },
+      {
+        match: "MAX(updated_at)",
+        rows: [],
+        throwError: new Error("legacy path should not be used"),
+      },
+    ]);
+
+    const result = await loadRedemptionBackstopSnapshot(db);
+
+    expect(result.runId).toBe("run-new");
+    expect(result.latestUpdatedAt).toBe(1_700_000_000);
+    expect(Object.keys(result.map)).toEqual(["eurc-circle"]);
+  });
+
+  it("writes current/history rows under a completed run manifest", async () => {
+    const db = mockD1();
+    const record: RedemptionBackstopEntry = {
+      stablecoinId: "eurc-circle",
+      score: 65,
+      effectiveExitScore: 58,
+      dexLiquidityScore: 44,
+      accessScore: 40,
+      settlementScore: 65,
+      executionCertaintyScore: 60,
+      capacityScore: 100,
+      outputAssetQualityScore: 100,
+      costScore: 40,
+      routeFamily: "offchain-issuer",
+      accessModel: "issuer-api",
+      settlementModel: "same-day",
+      executionModel: "rules-based-nav",
+      outputAssetType: "stable-single",
+      provider: "supply-full-model",
+      sourceMode: "estimated",
+      resolutionState: "resolved",
+      routeStatus: "open",
+      routeStatusSource: "static-config",
+      holderEligibility: "verified-customer",
+      capacityConfidence: "heuristic",
+      capacitySemantics: "eventual-only",
+      feeConfidence: "undisclosed-reviewed",
+      feeModelKind: "undisclosed-reviewed",
+      modelConfidence: "low",
+      immediateCapacityUsd: null,
+      immediateCapacityRatio: null,
+      feeBps: null,
+      queueEnabled: false,
+      methodologyVersion: "1.1",
+      updatedAt: 1_700_000_000,
+      capsApplied: ["offchain-route-cap"],
+    };
+
+    await upsertRedemptionBackstopSnapshots(db, [record], {
+      runId: "run-test",
+      expectedCount: 1,
+      metadata: { configured: 1 },
+    });
+
+    const history = db.getHistory();
+    expect(history.some((entry) => entry.sql.includes("INSERT INTO redemption_backstop_runs"))).toBe(true);
+    expect(history.some((entry) => entry.sql.includes("UPDATE redemption_backstop_runs"))).toBe(true);
+    expect(history.some((entry) => entry.sql.includes("INSERT INTO redemption_backstop") && entry.binds.includes("run-test"))).toBe(true);
+    expect(history.some((entry) => entry.sql.includes("INSERT OR REPLACE INTO redemption_backstop_history") && entry.binds.includes("run-test"))).toBe(true);
   });
 });

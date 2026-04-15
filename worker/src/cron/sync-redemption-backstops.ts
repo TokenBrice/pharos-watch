@@ -119,7 +119,14 @@ export async function syncRedemptionBackstops(db: D1Database, signal: AbortSigna
     }
   }
 
-  await upsertRedemptionBackstopSnapshots(db, snapshots);
+  await upsertRedemptionBackstopSnapshots(db, snapshots, {
+    expectedCount: configuredIds.length,
+    metadata: {
+      configured: configuredIds.length,
+      liquidityStale,
+      severeActiveDepegThresholdBps: REDEMPTION_SEVERE_ACTIVE_DEPEG_BPS,
+    },
+  });
   await pruneRemovedRedemptionBackstops(db, configuredIds);
 
   const dynamicCount = snapshots.filter((entry) => entry.sourceMode === "dynamic").length;

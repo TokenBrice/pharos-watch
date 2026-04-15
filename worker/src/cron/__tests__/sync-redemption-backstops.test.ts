@@ -394,6 +394,10 @@ describe("syncRedemptionBackstops", () => {
         expect.objectContaining({ stablecoinId: "cusd-cap" }),
         expect.objectContaining({ stablecoinId: "iusd-infinifi" }),
       ]),
+      expect.objectContaining({
+        expectedCount: 2,
+        metadata: expect.objectContaining({ configured: 2 }),
+      }),
     );
 
     const metadata = JSON.parse(result.metadata ?? "{}") as Record<string, unknown>;
@@ -570,6 +574,10 @@ describe("syncRedemptionBackstops", () => {
         expect.objectContaining({ stablecoinId: "cusd-cap", resolutionState: "resolved" }),
         expect.objectContaining({ stablecoinId: "iusd-infinifi", resolutionState: "failed" }),
       ]),
+      expect.objectContaining({
+        expectedCount: 2,
+        metadata: expect.objectContaining({ configured: 2 }),
+      }),
     );
 
     const metadata = JSON.parse(result.metadata ?? "{}") as Record<string, unknown>;

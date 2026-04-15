@@ -1567,6 +1567,8 @@ Current redemption-backstop dataset for redeemable assets.
 
 **Error responses:** `503` when `redemption_backstop` has no rows yet, or when the current snapshot cannot be read cleanly.
 
+Rows written by the current worker are grouped by a completed snapshot run manifest. The API serves the latest completed run when one exists, which prevents a partially written hourly sync from being treated as a fresh complete dataset. Legacy rows without a completed run remain readable during bootstrap and migration fallback.
+
 **Response**
 
 ```json
@@ -1620,7 +1622,7 @@ Current redemption-backstop dataset for redeemable assets.
 
 `effectiveExitScore` is the blended exit score written into the redemption snapshot when the route resolved cleanly, the reused DEX liquidity input was fresh, and the route is not currently impaired. Report cards may still recompute liquidity from the same underlying redemption score with additional confidence and active-depeg gating.
 
-`methodology.version` is attributed from the latest stored redemption snapshot row. `methodology.currentVersion` remains the live code version when the API is serving an older snapshot that has not yet been recomputed.
+`methodology.version` is attributed from the latest completed redemption snapshot run, falling back to the latest stored row for legacy snapshots. `methodology.currentVersion` remains the live code version when the API is serving an older snapshot that has not yet been recomputed.
 
 `sourceMode`:
 
@@ -1644,7 +1646,7 @@ Top-level fields:
 | ------------- | ----------------------------------------- | -------------------------------------------------------------------------------------------- |
 | `coins`       | `Record<string, RedemptionBackstopEntry>` | Current snapshot keyed by Pharos stablecoin ID                                               |
 | `methodology` | `object`                                  | Version metadata plus component weights, effective-exit blend weights, and route-family caps |
-| `updatedAt`   | `number`                                  | Freshest `updated_at` timestamp across all current rows                                      |
+| `updatedAt`   | `number`                                  | Freshest `updated_at` timestamp for the served completed run, or freshest current row for legacy snapshots |
 
 `RedemptionBackstopEntry` highlights:
 

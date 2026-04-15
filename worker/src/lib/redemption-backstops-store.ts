@@ -67,12 +67,24 @@ interface RedemptionBackstopRow {
   updated_at: number;
   methodology_version: string;
   details_json: string | null;
+  snapshot_run_id?: string | null;
 }
 
 export type RedemptionBackstopSnapshotRecord = RedemptionBackstopEntry;
 export interface RedemptionBackstopLoadResult {
   map: RedemptionBackstopMap;
   latestUpdatedAt: number | null;
+  runId?: string | null;
+}
+
+interface RedemptionBackstopRunRow {
+  run_id: string;
+  completed_at: number | null;
+  expected_count: number;
+  written_count: number;
+  min_updated_at: number | null;
+  max_updated_at: number | null;
+  methodology_version: string;
 }
 
 export class RedemptionBackstopSnapshotUnavailableError extends Error {
@@ -261,7 +273,11 @@ function resolveSnapshotMethodologyVersion(
   };
 }
 
-function buildCurrentUpsert(db: D1Database, record: RedemptionBackstopSnapshotRecord): D1PreparedStatement {
+function buildCurrentUpsert(
+  db: D1Database,
+  record: RedemptionBackstopSnapshotRecord,
+  runId?: string | null,
+): D1PreparedStatement {
   return db
     .prepare(
       `INSERT INTO redemption_backstop (
@@ -288,8 +304,9 @@ function buildCurrentUpsert(db: D1Database, record: RedemptionBackstopSnapshotRe
          queue_enabled,
          updated_at,
          methodology_version,
-         details_json
-       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+         details_json,
+         snapshot_run_id
+       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
        ON CONFLICT(stablecoin_id) DO UPDATE SET
          score = excluded.score,
          effective_exit_score = excluded.effective_exit_score,
@@ -313,7 +330,8 @@ function buildCurrentUpsert(db: D1Database, record: RedemptionBackstopSnapshotRe
          queue_enabled = excluded.queue_enabled,
          updated_at = excluded.updated_at,
          methodology_version = excluded.methodology_version,
-         details_json = excluded.details_json`,
+         details_json = excluded.details_json,
+         snapshot_run_id = excluded.snapshot_run_id`,
     )
     .bind(
       record.stablecoinId,
@@ -340,6 +358,7 @@ function buildCurrentUpsert(db: D1Database, record: RedemptionBackstopSnapshotRe
       record.updatedAt,
       record.methodologyVersion,
       buildDetailsJson(record),
+      runId ?? null,
     );
 }
 
@@ -347,6 +366,7 @@ function buildHistoryUpsert(
   db: D1Database,
   record: RedemptionBackstopSnapshotRecord,
   snapshotDate: number,
+  runId?: string | null,
 ): D1PreparedStatement {
   return db
     .prepare(
@@ -358,8 +378,9 @@ function buildHistoryUpsert(
          dex_liquidity_score,
          updated_at,
          methodology_version,
-         details_json
-       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+         details_json,
+         snapshot_run_id
+       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     )
     .bind(
       record.stablecoinId,
@@ -370,42 +391,194 @@ function buildHistoryUpsert(
       record.updatedAt,
       record.methodologyVersion,
       buildDetailsJson(record),
+      runId ?? null,
     );
+}
+
+function createRedemptionBackstopRunId(): string {
+  const cryptoObj = (globalThis as { crypto?: { randomUUID?: () => string } }).crypto;
+  if (cryptoObj?.randomUUID) return `redemption:${cryptoObj.randomUUID()}`;
+  return `redemption:${Date.now()}:${Math.random().toString(36).slice(2, 10)}`;
+}
+
+function buildRunStartInsert(
+  db: D1Database,
+  args: {
+    runId: string;
+    startedAt: number;
+    expectedCount: number;
+    methodologyVersion: string;
+    metadata?: Record<string, unknown>;
+  },
+): D1PreparedStatement {
+  return db
+    .prepare(
+      `INSERT INTO redemption_backstop_runs (
+         run_id,
+         started_at,
+         completed_at,
+         status,
+         expected_count,
+         written_count,
+         methodology_version,
+         min_updated_at,
+         max_updated_at,
+         metadata_json
+       ) VALUES (?, ?, NULL, 'running', ?, 0, ?, NULL, NULL, ?)`,
+    )
+    .bind(
+      args.runId,
+      args.startedAt,
+      args.expectedCount,
+      args.methodologyVersion,
+      args.metadata ? JSON.stringify(args.metadata) : null,
+    );
+}
+
+function buildRunCompleteUpdate(
+  db: D1Database,
+  args: {
+    runId: string;
+    completedAt: number;
+    writtenCount: number;
+    minUpdatedAt: number | null;
+    maxUpdatedAt: number | null;
+    metadata?: Record<string, unknown>;
+  },
+): D1PreparedStatement {
+  return db
+    .prepare(
+      `UPDATE redemption_backstop_runs
+          SET completed_at = ?,
+              status = 'completed',
+              written_count = ?,
+              min_updated_at = ?,
+              max_updated_at = ?,
+              metadata_json = COALESCE(?, metadata_json)
+        WHERE run_id = ?
+          AND status = 'running'`,
+    )
+    .bind(
+      args.completedAt,
+      args.writtenCount,
+      args.minUpdatedAt,
+      args.maxUpdatedAt,
+      args.metadata ? JSON.stringify(args.metadata) : null,
+      args.runId,
+    );
+}
+
+function resolveRunBounds(records: RedemptionBackstopSnapshotRecord[]): {
+  minUpdatedAt: number | null;
+  maxUpdatedAt: number | null;
+} {
+  if (records.length === 0) return { minUpdatedAt: null, maxUpdatedAt: null };
+  let minUpdatedAt = records[0].updatedAt;
+  let maxUpdatedAt = records[0].updatedAt;
+  for (const record of records) {
+    minUpdatedAt = Math.min(minUpdatedAt, record.updatedAt);
+    maxUpdatedAt = Math.max(maxUpdatedAt, record.updatedAt);
+  }
+  return { minUpdatedAt, maxUpdatedAt };
 }
 
 export async function upsertRedemptionBackstopSnapshots(
   db: D1Database,
   records: RedemptionBackstopSnapshotRecord[],
+  options?: {
+    expectedCount?: number;
+    metadata?: Record<string, unknown>;
+    runId?: string;
+  },
 ): Promise<void> {
   if (records.length === 0) return;
 
+  const runId = options?.runId ?? createRedemptionBackstopRunId();
+  const startedAt = Math.floor(Date.now() / 1000);
   const snapshotDate = Math.floor(Date.now() / 1000 / DAY_SECONDS) * DAY_SECONDS;
+  await buildRunStartInsert(db, {
+    runId,
+    startedAt,
+    expectedCount: options?.expectedCount ?? records.length,
+    methodologyVersion: records[0].methodologyVersion,
+    metadata: options?.metadata,
+  }).run();
+
   const stmts: D1PreparedStatement[] = [];
   for (const record of records) {
-    stmts.push(buildCurrentUpsert(db, record));
-    stmts.push(buildHistoryUpsert(db, record, snapshotDate));
+    stmts.push(buildCurrentUpsert(db, record, runId));
+    stmts.push(buildHistoryUpsert(db, record, snapshotDate, runId));
   }
 
-  // Each coin produces 2 statements (current: 24 params, history: 8 params = 32 total).
-  // D1 limits total bound params per batch (~1000), so chunk at 20 (20×32=640).
+  // Each coin produces 2 statements (current: 25 params, history: 9 params = 34 total).
+  // D1 limits total bound params per batch (~1000), so chunk at 20 (20×34=680).
   await batchExecute(db, stmts, 20);
+
+  const { minUpdatedAt, maxUpdatedAt } = resolveRunBounds(records);
+  await buildRunCompleteUpdate(db, {
+    runId,
+    completedAt: Math.floor(Date.now() / 1000),
+    writtenCount: records.length,
+    minUpdatedAt,
+    maxUpdatedAt,
+    metadata: options?.metadata,
+  }).run();
 }
 
-export async function loadRedemptionBackstopMap(db: D1Database): Promise<RedemptionBackstopMap> {
+async function getLatestCompletedRedemptionBackstopRun(
+  db: D1Database,
+): Promise<RedemptionBackstopRunRow | null> {
+  try {
+    const row = await db
+      .prepare(
+        `SELECT run_id, completed_at, expected_count, written_count, min_updated_at,
+                max_updated_at, methodology_version
+           FROM redemption_backstop_runs
+          WHERE status = 'completed'
+          ORDER BY completed_at DESC
+          LIMIT 1`,
+      )
+      .first<RedemptionBackstopRunRow>();
+    return typeof row?.run_id === "string" && row.run_id.length > 0 ? row : null;
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    if (message.toLowerCase().includes("no such table")) return null;
+    throw error;
+  }
+}
+
+async function queryRedemptionBackstopMap(
+  db: D1Database,
+  runId?: string | null,
+): Promise<RedemptionBackstopMap> {
   let rows: D1Result<RedemptionBackstopRow>;
   try {
-    rows = await db
-      .prepare(
-        `SELECT stablecoin_id, score, effective_exit_score, dex_liquidity_score,
+    const statement = runId
+      ? db
+        .prepare(
+          `SELECT stablecoin_id, score, effective_exit_score, dex_liquidity_score,
+                  access_score, settlement_score, execution_certainty_score,
+                  capacity_score, output_asset_quality_score, cost_score,
+                  route_family, access_model, settlement_model, execution_model,
+                  output_asset_type, provider, source_mode, immediate_capacity_usd,
+                  immediate_capacity_ratio, fee_bps, queue_enabled, updated_at,
+                  methodology_version, details_json, snapshot_run_id
+             FROM redemption_backstop
+            WHERE snapshot_run_id = ?`,
+        )
+        .bind(runId)
+      : db
+        .prepare(
+          `SELECT stablecoin_id, score, effective_exit_score, dex_liquidity_score,
                 access_score, settlement_score, execution_certainty_score,
                 capacity_score, output_asset_quality_score, cost_score,
                 route_family, access_model, settlement_model, execution_model,
                 output_asset_type, provider, source_mode, immediate_capacity_usd,
                 immediate_capacity_ratio, fee_bps, queue_enabled, updated_at,
-                methodology_version, details_json
+                methodology_version, details_json, snapshot_run_id
            FROM redemption_backstop`,
-      )
-      .all<RedemptionBackstopRow>();
+        );
+    rows = await statement.all<RedemptionBackstopRow>();
   } catch (error) {
     throw new RedemptionBackstopSnapshotUnavailableError("Failed to load current redemption backstop snapshot", {
       cause: error,
@@ -415,10 +588,24 @@ export async function loadRedemptionBackstopMap(db: D1Database): Promise<Redempt
   return Object.fromEntries((rows.results ?? []).map((row) => [row.stablecoin_id, toEntry(row)]));
 }
 
+export async function loadRedemptionBackstopMap(db: D1Database): Promise<RedemptionBackstopMap> {
+  return queryRedemptionBackstopMap(db);
+}
+
 export async function loadRedemptionBackstopSnapshot(db: D1Database): Promise<RedemptionBackstopLoadResult> {
   try {
+    const latestRun = await getLatestCompletedRedemptionBackstopRun(db);
+    if (latestRun) {
+      const map = await queryRedemptionBackstopMap(db, latestRun.run_id);
+      return {
+        map,
+        latestUpdatedAt: latestRun.max_updated_at,
+        runId: latestRun.run_id,
+      };
+    }
+
     const [map, latest] = await Promise.all([
-      loadRedemptionBackstopMap(db),
+      queryRedemptionBackstopMap(db),
       db
         .prepare("SELECT MAX(updated_at) AS updated_at FROM redemption_backstop")
         .first<{ updated_at: number | null }>(),

@@ -35,6 +35,9 @@ Applied sequentially after the baseline (fresh setup) or after the previous indi
 | 0089     | `0089_api_key_pepper_version.sql`               | Add pepper_version column to api_keys for tracking which pepper generation hashed the secret   |
 | 0090     | `0090_api_key_request_stats.sql`                | Add retained minute-bucketed per-key request telemetry for admin load reporting                |
 | 0091     | `0091_depeg_pending_state_tracking.sql`         | Add rolling last-seen/peak tracking fields to depeg_pending for refreshable pending incidents  |
+| 0092     | `0092_mint_burn_run_state_last_config_key.sql`  | Add last processed mint/burn config key to run state for deterministic resume bookkeeping      |
+| 0093     | `0093_cleanup_legacy_mint_burn_sync_keys.sql`   | Remove legacy colon-delimited mint/burn sync-state keys after canonical key migration          |
+| 0094     | `0094_redemption_backstop_runs.sql`             | Add redemption backstop snapshot run manifest and row generation identifiers                   |
 
 ## Retired Individual Migrations
 

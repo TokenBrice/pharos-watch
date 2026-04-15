@@ -208,7 +208,7 @@ Each row also carries:
 
 ## Database Schema
 
-Migration: `worker/migrations/0000_baseline.sql` in the current post-squash tree. Historical introduction lives in the pre-squash lineage recorded in `worker/migrations/MANIFEST.md`.
+Migration: `worker/migrations/0000_baseline.sql` in the current post-squash tree, plus `0094_redemption_backstop_runs.sql` for completed-run snapshot manifests. Historical introduction lives in the pre-squash lineage recorded in `worker/migrations/MANIFEST.md`.
 
 ### `redemption_backstop`
 
@@ -240,8 +240,11 @@ Key columns:
 - `updated_at`
 - `methodology_version`
 - `details_json`
+- `snapshot_run_id`
 
 `details_json` now also stores `routeFamily`, provider/source provenance, immediate-capacity fields, fee fields, `resolutionState`, `routeStatus`, `routeStatusSource`, `routeStatusReason`, `routeStatusReviewedAt`, `holderEligibility`, `capacityConfidence`, `capacityBasis`, `capacitySemantics`, `feeConfidence`, `feeModelKind`, `modelConfidence`, and `feeDescription` alongside `docs`, `notes`, and `capsApplied`, so richer runtime context survives current-snapshot and history writes without a schema migration.
+
+`snapshot_run_id` links current rows to a completed `redemption_backstop_runs` manifest when written by the post-`0094` worker. API and report-card readers prefer the latest completed run and filter current rows to that generation. Legacy rows without a completed run remain readable as a fallback during rollout and local bootstrap.
 
 ### `redemption_backstop_history`
 
@@ -255,8 +258,28 @@ Stored fields:
 - `updated_at`
 - `methodology_version`
 - `details_json`
+- `snapshot_run_id`
 
 The cron upserts both current and history rows together through `upsertRedemptionBackstopSnapshots(...)`.
+
+### `redemption_backstop_runs`
+
+Completed-run manifest table used to prevent mixed-generation current snapshots from being treated as fresh.
+
+Stored fields:
+
+- `run_id` — unique generated run identifier
+- `started_at`
+- `completed_at`
+- `status` (`running`, `completed`, or `failed`)
+- `expected_count`
+- `written_count`
+- `methodology_version`
+- `min_updated_at`
+- `max_updated_at`
+- `metadata_json`
+
+The sync inserts a `running` row before writing current/history rows and marks it `completed` only after all row batches succeed. Readers prefer the latest completed run and use `max_updated_at` for response freshness. If no completed run exists, they fall back to legacy `MAX(updated_at)` behavior.
 
 ---
 
@@ -268,7 +291,7 @@ The cron upserts both current and history rows together through `upsertRedemptio
 
 - Returns `503` with `{ "error": "Data not yet available" }` until at least one hourly sync has written rows
 - Returns `503` with `{ "error": "Redemption backstop snapshot unavailable" }` when the current snapshot cannot be read cleanly from D1
-- Otherwise returns the current map plus methodology metadata from `buildRedemptionBackstopsSnapshot(db)`, with `methodology.version` attributed from the latest stored snapshot row and `currentVersion` preserved as the live code version
+- Otherwise returns the current map plus methodology metadata from `buildRedemptionBackstopsSnapshot(db)`, with `methodology.version` attributed from the latest completed run or latest stored snapshot row and `currentVersion` preserved as the live code version
 - Cache profile: `standard` (`public, s-maxage=300, max-age=60`) with freshness headers based on `updatedAt`
 
 See [API Reference](./api-reference.md) for the exact response shape.
