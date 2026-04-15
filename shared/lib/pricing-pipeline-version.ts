@@ -3,9 +3,24 @@ import {
 } from "./methodology-version";
 
 const pricing = createMethodologyVersion({
-  currentVersion: "4.34",
+  currentVersion: "4.35",
   changelogPath: "/methodology/pricing-pipeline-changelog/",
   changelog: [
+    {
+      version: "4.35",
+      title: "No-candidate Jupiter breaker recovery",
+      date: "2026-04-15",
+      effectiveAt: 1776214200,
+      summary:
+        "Jupiter no-candidate runs now close stale-open breaker state without making an external health probe, reflecting that no eligible Solana fallback work remains after authoritative gating.",
+      impact: [
+        "If authoritative pricing removes all Jupiter fallback candidates, the stale `jupiter-prices` breaker can recover without spending a provider request",
+        "The change prevents irrelevant provider-edge blocks from keeping the public circuit list open when Jupiter is not part of the current pricing path",
+        "Future eligible Jupiter fallback candidates still go through the normal circuit breaker and provider diagnostics path",
+      ],
+      commits: [],
+      reconstructed: false,
+    },
     {
       version: "4.34",
       title: "Binance host failover for Worker egress",

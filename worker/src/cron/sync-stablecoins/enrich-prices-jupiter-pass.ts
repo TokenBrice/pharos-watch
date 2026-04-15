@@ -25,7 +25,6 @@ import {
 } from "./enrich-prices-pass-common";
 
 const JUPITER_PRICE_API = "https://api.jup.ag/price/v3";
-const JUPITER_CANARY_ID = "2u1tszSeqZ3qBWF3uNGPFc8TzMk2tdiwknnRMWGWjGWH";
 const JUPITER_MAX_IDS_PER_REQUEST = 50;
 const JUPITER_REQUEST_TIMEOUT_MS = 5_000;
 const JUPITER_MAX_RETRIES = 0;
@@ -54,12 +53,16 @@ export async function runJupiterPass(
     if (db) {
       const record = await getCircuitRecord(db, CIRCUIT_SOURCE.JUPITER_PRICES);
       if (record.state !== "closed") {
-        const jupiterAllowed = await shouldAttemptFetch(db, CIRCUIT_SOURCE.JUPITER_PRICES);
-        if (jupiterAllowed) {
-          const { diagnostic } = await fetchJupiterPrices([JUPITER_CANARY_ID], "health-probe", signal);
-          diagnostics.push(diagnostic);
-          await recordOutcomeSafe(db, CIRCUIT_SOURCE.JUPITER_PRICES, diagnostic.success);
-        }
+        diagnostics.push({
+          source: "jupiter",
+          stage: "no-candidates",
+          endpoint: "none",
+          status: null,
+          ok: true,
+          success: true,
+          candidateCount: 0,
+        });
+        await recordOutcomeSafe(db, CIRCUIT_SOURCE.JUPITER_PRICES, true);
       }
     }
     return { resolved, failures: [], diagnostics };

@@ -1,6 +1,16 @@
 # Pricing Pipeline Methodology - Version Timeline
 
-Internal changelog reconstructed from the machine-readable methodology version source. Covers Pricing Pipeline `v1.0` through `v4.34` (2026-02-01 -> 2026-04-15).
+Internal changelog reconstructed from the machine-readable methodology version source. Covers Pricing Pipeline `v1.0` through `v4.35` (2026-02-01 -> 2026-04-15).
+
+---
+
+## v4.35 - No-candidate Jupiter breaker recovery (Apr 15, 2026)
+
+**Commit:** `unreleased`
+
+- Jupiter no-candidate runs now close stale-open breaker state without making an external provider health request
+- This reflects that authoritative pricing removed all current Jupiter fallback candidates, so a provider-edge block is not part of the active pricing path
+- Future eligible Solana fallback candidates still use the normal Jupiter circuit breaker and provider diagnostics path
 
 ---
 

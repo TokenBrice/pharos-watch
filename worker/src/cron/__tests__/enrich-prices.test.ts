@@ -951,7 +951,7 @@ describe("enrichMissingPrices", () => {
     });
   });
 
-  it("probes Jupiter health when the circuit is open but no fallback candidates remain", async () => {
+  it("closes a stale Jupiter circuit when no fallback candidates remain", async () => {
     const openedAt = Math.floor(Date.now() / 1000) - 3600;
     const db = mockD1([
       {
@@ -976,30 +976,20 @@ describe("enrichMissingPrices", () => {
       },
     ];
 
-    mockFetch([
-      {
-        match: "api.jup.ag/price/v3",
-        body: {
-          "2u1tszSeqZ3qBWF3uNGPFc8TzMk2tdiwknnRMWGWjGWH": {
-            usdPrice: 1.0001,
-            liquidity: 250_000,
-          },
-        },
-      },
-    ]);
+    const fetchSpy = mockFetch();
 
     const result = await runJupiterPass(assets, undefined, db);
 
     expect(result.resolved).toBe(0);
     expect(result.diagnostics?.[0]).toMatchObject({
       source: "jupiter",
-      stage: "health-probe",
-      status: 200,
+      stage: "no-candidates",
+      status: null,
       ok: true,
       success: true,
-      candidateCount: 1,
-      responseRowCount: 1,
+      candidateCount: 0,
     });
+    expect(fetchSpy).not.toHaveBeenCalled();
   });
 
   it("skips the CMC breaker check when no assets are missing", async () => {
