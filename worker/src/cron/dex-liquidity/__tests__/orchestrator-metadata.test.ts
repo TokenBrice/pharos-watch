@@ -71,6 +71,7 @@ describe("analyzeDexLiquidityPostScoring", () => {
       cgTickerFallbackCoins: 0,
       dlYieldsAvailable: true,
       dlProtocolsAvailable: true,
+      directCexOrderbookDepth: null,
       criticalSourceFailures: [],
     });
 

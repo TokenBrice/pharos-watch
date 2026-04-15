@@ -93,6 +93,15 @@ vi.mock("../../lib/dex-api-common", async () => {
     extractPriceObservations: vi.fn(() => new Map()),
   };
 });
+vi.mock("../../lib/cex-orderbooks", () => ({
+  fetchMajorStablecoinOrderbookDepthSummary: vi.fn(async () => ({
+    checkedSymbols: 2,
+    venueCount: 2,
+    observations: 3,
+    maxDepthDown2PctUsdBySymbol: { USDT: 1_000_000, USDC: 500_000 },
+    maxDepthUp2PctUsdBySymbol: { USDT: 900_000, USDC: 450_000 },
+  })),
+}));
 
 import { syncDexLiquidity } from "../dex-liquidity";
 import { loadStablecoinsCache } from "../../lib/stablecoins-cache";
@@ -227,6 +236,10 @@ describe("syncDexLiquidity", () => {
         nearCoverageGuard?: boolean;
         weakCoverageCoins?: number;
         coverageRecoveredCoins?: number;
+        directCexOrderbookDepth?: {
+          observations: number;
+          maxDepthDown2PctUsdBySymbol: Record<string, number>;
+        } | null;
         qualityDriftSeverity?: string;
         qualityDriftFlags?: string[];
         coinsWithoutMeasuredBalances?: number;
@@ -239,6 +252,10 @@ describe("syncDexLiquidity", () => {
     expect(metadata.sourceCoverage?.nearCoverageGuard).toBe(false);
     expect(metadata.sourceCoverage?.weakCoverageCoins).toBe(0);
     expect(metadata.sourceCoverage?.coverageRecoveredCoins).toBe(0);
+    expect(metadata.sourceCoverage?.directCexOrderbookDepth).toMatchObject({
+      observations: 3,
+      maxDepthDown2PctUsdBySymbol: { USDT: 1_000_000, USDC: 500_000 },
+    });
     expect(metadata.sourceCoverage?.qualityDriftSeverity).toBe("none");
     expect(metadata.sourceCoverage?.qualityDriftFlags).toEqual([]);
     expect(metadata.sourceCoverage?.coinsWithoutMeasuredBalances).toBe(0);

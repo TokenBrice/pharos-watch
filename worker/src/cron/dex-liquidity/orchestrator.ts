@@ -13,6 +13,7 @@ import { computeStablecoinScores, computeDepthStability, computeDexPrices } from
 import { persistScores, writeHistoricalSnapshots } from "./persistence";
 import type { ChainRpcConfig } from "../../lib/chain-registry";
 import { isPreferredDirectApiPool, type DexApiPool } from "../../lib/dex-api-common";
+import type { DirectCexOrderbookDepthSummary } from "../../lib/cex-orderbooks";
 import { POOL_CHALLENGE_MIN_TVL } from "../../lib/constants";
 import { buildDirectApiPoolIdentity } from "./direct-source-helpers";
 import {
@@ -180,6 +181,7 @@ interface DexLiquidityPoolState {
   cgTickerFallbackCoins: number;
   coverageRecoveredCoins: number;
   weakCoverageCoinsBeforeFallback: number;
+  directCexOrderbookDepth: DirectCexOrderbookDepthSummary | null;
 }
 
 interface DexLiquidityScoreState {
@@ -365,6 +367,7 @@ async function buildDexLiquidityPoolState(
     cgTickerFallbackCoins: fallback.cgTickerFallbackCoins,
     coverageRecoveredCoins: fallback.coverageRecoveredCoins,
     weakCoverageCoinsBeforeFallback: fallback.weakCoverageCoinsBeforeFallback,
+    directCexOrderbookDepth: fallback.directCexOrderbookDepth,
   };
 }
 
@@ -399,6 +402,7 @@ async function scoreDexLiquidityPoolState(
     coverageRecoveredCoins: poolState.coverageRecoveredCoins,
     dsFallbackCoins: poolState.dsFallbackCoins,
     cgTickerFallbackCoins: poolState.cgTickerFallbackCoins,
+    directCexOrderbookDepth: poolState.directCexOrderbookDepth,
     dlYieldsAvailable: sourceState.dataSources.dlYieldsAvailable,
     dlProtocolsAvailable: sourceState.dataSources.dlProtocolsAvailable,
     criticalSourceFailures: sourceState.criticalSourceFailures,

@@ -55,6 +55,16 @@ export const DexLiquidityCronMetadataSchema = z.object({
       coverageRecoveredCoins: z.number().optional(),
       dsFallbackCoins: z.number().optional(),
       cgTickerFallbackCoins: z.number().optional(),
+      directCexOrderbookDepth: z
+        .object({
+          checkedSymbols: z.number(),
+          venueCount: z.number(),
+          observations: z.number(),
+          maxDepthDown2PctUsdBySymbol: z.record(z.string(), z.number()),
+          maxDepthUp2PctUsdBySymbol: z.record(z.string(), z.number()),
+        })
+        .nullable()
+        .optional(),
       measuredBalanceCoveragePct: z.number().optional(),
       syntheticOnlyCoins: z.number().optional(),
       coinsWithoutMeasuredBalances: z.number().optional(),

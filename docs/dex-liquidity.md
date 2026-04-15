@@ -177,6 +177,19 @@ These rows are explicitly marked synthetic in persisted pool metadata. Depth-inf
 
 Uses the shared secondary-pool contribution path used by GT/CG/staged fallback merges, so aggregate math and metadata propagation stay aligned across sources.
 
+### Direct CEX Orderbook Telemetry
+
+The DEX liquidity cron also reads a tiny non-scoring direct orderbook canary for USDC and USDT from public Binance, Coinbase Exchange, and Kraken L2 endpoints. This telemetry computes 2% downside/upside depth, mid price, spread bps, and venue counts, then publishes only a compact summary in cron metadata under `sourceCoverage.directCexOrderbookDepth`.
+
+This direct CEX lane is deliberately diagnostic for now:
+
+- It does not change `liquidity_score`
+- It does not create `dex_liquidity` pool rows
+- It is bounded to major stablecoins and a few high-quality venues
+- Failures are non-fatal and only mark the direct CEX telemetry source as failed
+
+The lane exists to compare direct venue depth against CoinGecko depth-informed orderbook rows before any future scoring integration.
+
 ### Pool Stress Index (0-100)
 
 Per-pool stress metric: `35x(1-balanceRatio) + 25x(1-organicFraction) + 20xImmaturityPenalty + 20x(1-pairQuality)`. TVL-weighted average stored as `avg_pool_stress`.

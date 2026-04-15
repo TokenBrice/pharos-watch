@@ -2,6 +2,7 @@ import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins";
 import { DexLiquidityCronMetadataSchema } from "../../lib/schemas";
 import type { HistoricalSnapshotWriteResult, PersistScoresResult } from "./persistence";
 import type { DexPriceObs, FullScoreResult, GlobalAgg, LiquidityMetrics } from "./types";
+import type { DirectCexOrderbookDepthSummary } from "../../lib/cex-orderbooks";
 
 const DRIFT_WATCHLIST = ["usdc-circle", "usdt-tether", "dai-makerdao", "usds-sky", "usde-ethena"] as const;
 
@@ -97,6 +98,7 @@ export interface DexLiquidityPostScoreAnalysis {
     coverageRecoveredCoins: number;
     dsFallbackCoins: number;
     cgTickerFallbackCoins: number;
+    directCexOrderbookDepth: DirectCexOrderbookDepthSummary | null;
     measuredBalanceCoveragePct: number;
     syntheticOnlyCoins: number;
     coinsWithoutMeasuredBalances: number;
@@ -241,6 +243,7 @@ export async function analyzeDexLiquidityPostScoring(params: {
   coverageRecoveredCoins: number;
   dsFallbackCoins: number;
   cgTickerFallbackCoins: number;
+  directCexOrderbookDepth: DirectCexOrderbookDepthSummary | null;
   dlYieldsAvailable: boolean;
   dlProtocolsAvailable: boolean;
   criticalSourceFailures: string[];
@@ -592,6 +595,7 @@ export async function analyzeDexLiquidityPostScoring(params: {
       coverageRecoveredCoins: params.coverageRecoveredCoins,
       dsFallbackCoins: params.dsFallbackCoins,
       cgTickerFallbackCoins: params.cgTickerFallbackCoins,
+      directCexOrderbookDepth: params.directCexOrderbookDepth,
       measuredBalanceCoveragePct,
       syntheticOnlyCoins,
       coinsWithoutMeasuredBalances,

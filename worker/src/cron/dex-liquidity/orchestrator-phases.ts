@@ -7,6 +7,7 @@ import { classifyPrimaryDepegTrust } from "../../lib/depeg-trust-policy";
 import type { ChainRpcConfig } from "../../lib/chain-registry";
 import { CIRCUIT_SOURCE } from "../../lib/constants";
 import { shouldAttemptFetch, recordOutcomeSafe } from "../../lib/circuit-breaker";
+import { fetchMajorStablecoinOrderbookDepthSummary, type DirectCexOrderbookDepthSummary } from "../../lib/cex-orderbooks";
 import {
   convertToGtNewPools,
   extractPriceObservations,
@@ -79,6 +80,7 @@ export interface FallbackCrawlerPhaseResult {
   cgTickerFallbackCoins: number;
   coverageRecoveredCoins: number;
   weakCoverageCoinsBeforeFallback: number;
+  directCexOrderbookDepth: DirectCexOrderbookDepthSummary | null;
 }
 
 export async function loadTrackedStablecoinPriceMap(
@@ -540,6 +542,7 @@ export async function runFallbackCrawlerPhase(params: {
   const fallbackDeadlineMs = Date.now() + CRAWL_BUDGETS.FALLBACK_MS;
   let dsFallbackCoins = 0;
   let cgTickerFallbackCoins = 0;
+  let directCexOrderbookDepth: DirectCexOrderbookDepthSummary | null = null;
 
   try {
     const dsFallback = await fetchDsFallbackPools(
@@ -586,6 +589,14 @@ export async function runFallbackCrawlerPhase(params: {
       `(DS fallback: ${dsFallbackCoins} coins, CG tickers: ${cgTickerFallbackCoins} coins)`,
   );
 
+  try {
+    directCexOrderbookDepth = await fetchMajorStablecoinOrderbookDepthSummary(params.signal);
+  } catch (err) {
+    rethrowIfAborted(err, params.signal);
+    console.warn("[dex-liquidity] Direct CEX orderbook depth telemetry failed (non-fatal):", err);
+    params.failedSources.push("direct-cex-orderbook-depth");
+  }
+
   const weakCoverageTargetIdsAfterFallback = new Set(
     getFallbackTargets(params.metrics, params.priceObservations, { requireTrackedContracts: true }).map(
       (meta) => meta.id,
@@ -603,5 +614,6 @@ export async function runFallbackCrawlerPhase(params: {
     cgTickerFallbackCoins,
     coverageRecoveredCoins,
     weakCoverageCoinsBeforeFallback: weakCoverageTargetIdsBeforeFallback.size,
+    directCexOrderbookDepth,
   };
 }
