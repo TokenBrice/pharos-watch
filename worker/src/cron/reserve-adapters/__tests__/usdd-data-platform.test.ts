@@ -74,6 +74,14 @@ describe("adaptUsddLatestCollateral", () => {
       trackedVaultCount: 5,
       sourceTimestamp: 1_774_281_600,
       freshnessMode: "verified",
+      immediateRedeemableUsd: expect.closeTo(82_982_829.02, 2),
+      redemption: {
+        capacityUsd: expect.closeTo(82_982_829.02, 2),
+        capacityKind: "live-proxy-validated",
+        freshnessKind: "verified-source-timestamp",
+        sourceTimestamp: 1_774_281_600,
+        routeStatus: "open",
+      },
     });
   });
 

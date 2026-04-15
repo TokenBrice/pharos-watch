@@ -175,6 +175,10 @@ export function adaptUsddLatestCollateral(
   const warnings: LiveReserveWarning[] = unknownVaultTypes.size > 0
     ? [createUnknownVaultWarning(unknownVaultTypes, unknownExposurePct)]
     : [];
+  const stableRedeemableUsd = bucketValues.psmUsdtUsd + bucketValues.directUsdtUsd;
+  const sourceTimestamp = typeof statisticTimeMs === "number" && Number.isFinite(statisticTimeMs)
+    ? Math.floor(statisticTimeMs / 1000)
+    : null;
 
   return {
     slices: slicesFromValues(bucketSlices.sort((left, right) => right.value - left.value)),
@@ -185,9 +189,9 @@ export function adaptUsddLatestCollateral(
       ...(unknownVaultCount > 0 ? { unknownVaultCount } : {}),
       ...(unknownVaultTypes.size > 0 ? { unknownVaultTypes: Array.from(unknownVaultTypes).sort() } : {}),
       ...(unknownExposurePct > 0 ? { unknownExposurePct } : {}),
-      ...(typeof statisticTimeMs === "number" && Number.isFinite(statisticTimeMs)
+      ...(sourceTimestamp != null
         ? {
-            sourceTimestamp: Math.floor(statisticTimeMs / 1000),
+            sourceTimestamp,
             freshnessMode: "verified" as const,
           }
         : {
@@ -197,6 +201,17 @@ export function adaptUsddLatestCollateral(
               freshnessReason: "history timestamp unavailable",
             },
           }),
+      immediateRedeemableUsd: stableRedeemableUsd,
+      ...(totalVaultUsd > 0 ? { immediateRedeemableRatio: stableRedeemableUsd / totalVaultUsd } : {}),
+      redemption: {
+        capacityUsd: stableRedeemableUsd,
+        ...(totalVaultUsd > 0 ? { capacityRatioOfSupply: stableRedeemableUsd / totalVaultUsd } : {}),
+        capacityKind: "live-proxy-validated" as const,
+        freshnessKind: sourceTimestamp != null ? "verified-source-timestamp" as const : "unverified" as const,
+        ...(sourceTimestamp != null ? { sourceTimestamp } : {}),
+        routeStatus: "open" as const,
+        sourceUrls: ["https://docs.usdd.io/smart-allocator"],
+      },
     },
   };
 }

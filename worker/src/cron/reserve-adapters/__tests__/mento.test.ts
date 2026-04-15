@@ -85,6 +85,14 @@ describe("mento adapter", () => {
     expect(result.metadata).toMatchObject({
       freshnessMode: "verified",
       sourceTimestamp: 1776236230,
+      immediateRedeemableRatio: 0.6,
+      redemption: {
+        capacityRatioOfSupply: 0.6,
+        capacityKind: "live-proxy-validated",
+        freshnessKind: "verified-source-timestamp",
+        sourceTimestamp: 1776236230,
+        routeStatus: "unknown",
+      },
     });
   });
 

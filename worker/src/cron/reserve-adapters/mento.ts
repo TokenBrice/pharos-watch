@@ -113,6 +113,9 @@ export function adaptMentoReserveComposition(html: string): AdapterResult {
   }
 
   const totalPct = entries.reduce((sum, e) => sum + e.percent, 0);
+  const stablePct = entries
+    .filter((entry) => ["USDC", "USDT", "sUSDS", "EURC", "USDGLO"].includes(entry.symbol))
+    .reduce((sum, entry) => sum + entry.percent, 0);
   const slices = slicesFromPercentages(
     entries.map((entry) => {
       const config = TOKEN_CONFIG[entry.symbol];
@@ -142,6 +145,15 @@ export function adaptMentoReserveComposition(html: string): AdapterResult {
             "nextjs-embedded-payload",
             "Mento reserve page embeds composition percentages without a trustworthy source timestamp",
           )),
+      immediateRedeemableRatio: stablePct / 100,
+      redemption: {
+        capacityRatioOfSupply: stablePct / 100,
+        capacityKind: "live-proxy-validated" as const,
+        freshnessKind: sourceTimestamp != null ? "verified-source-timestamp" as const : "unverified" as const,
+        ...(sourceTimestamp != null ? { sourceTimestamp } : {}),
+        routeStatus: "unknown" as const,
+        sourceUrls: ["https://reserve.mento.org/"],
+      },
     },
   };
 }
