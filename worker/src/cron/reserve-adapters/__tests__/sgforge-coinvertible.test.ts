@@ -22,6 +22,13 @@ describe("adaptSgForgeCoinvertible", () => {
       lastUpdate: "20/03/26",
       sourceTimestamp: Date.UTC(2026, 2, 20) / 1000,
       freshnessMode: "verified",
+      redemption: {
+        capacityKind: "documented-bound",
+        freshnessKind: "verified-source-timestamp",
+        sourceTimestamp: Date.UTC(2026, 2, 20) / 1000,
+        routeStatus: "unknown",
+        holderEligibility: "verified-customer",
+      },
     });
   });
 
