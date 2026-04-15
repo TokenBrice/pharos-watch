@@ -35,7 +35,7 @@ export interface RedemptionStaticFields {
   notes: string[];
 }
 
-function resolveBoundedFeeScore(feeBps: number): number {
+export function resolveBoundedFeeScore(feeBps: number): number {
   if (feeBps <= 10) return 100;
   if (feeBps <= 50) return 80;
   if (feeBps <= 100) return 60;
