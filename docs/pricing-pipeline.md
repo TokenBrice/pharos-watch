@@ -21,7 +21,7 @@ When an asset still has no usable current price after validation and fallback re
 
 ## Versioning
 
-- **Current methodology version:** `v4.36`
+- **Current methodology version:** `v4.37`
 - **Canonical version module:** `shared/lib/pricing-pipeline-version.ts`
 - **Public changelog route:** `/methodology/pricing-pipeline-changelog/`
 - **Longform methodology section:** `/methodology/#pricing-pipeline-methodology`
@@ -92,6 +92,12 @@ Inside the winning cluster, the selected source is chosen by:
 2. stronger trust tier
 3. closer distance to the reference price
 4. alphabetical source key
+
+When severe fixed-peg downside publication is accepted because multiple candidate sources independently confirm the
+downside, that candidate-price evidence is carried through the later prevalidation and post-enrichment validation passes
+as long as the current asset price, source, and confidence still match the selected primary result. This keeps a
+corroborated low-confidence depeg price from being cleared as if it were genuinely single-source, without loosening the
+guardrail for unrelated fallback or stale prices.
 
 ### Pool Challenge (Soft-Source Guard)
 

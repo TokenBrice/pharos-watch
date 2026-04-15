@@ -1,6 +1,17 @@
 # Pricing Pipeline Methodology - Version Timeline
 
-Internal changelog reconstructed from the machine-readable methodology version source. Covers Pricing Pipeline `v1.0` through `v4.36` (2026-02-01 -> 2026-04-15).
+Internal changelog reconstructed from the machine-readable methodology version source. Covers Pricing Pipeline `v1.0` through `v4.37` (2026-02-01 -> 2026-04-15).
+
+---
+
+## v4.37 - Severe-depeg corroboration continuity through validation (Apr 15, 2026)
+
+**Commit:** `unreleased`
+
+- Primary severe-downside corroboration evidence is now preserved through the later prevalidation and post-enrichment validation passes when the selected primary price remains unchanged
+- Low-confidence severe depeg prices can stay published when multiple live candidate sources independently confirm the downside even if they do not form a tight high-confidence cluster
+- The severe-downside guardrail is unchanged for genuinely single-source prices because candidate evidence is reused only when the current asset price, source, and confidence still match the primary result
+- This prevents USR-style `N/A` flapping after primary pricing accepted a corroborated severe depeg and a later generic validation pass lost the candidate-price evidence
 
 ---
 

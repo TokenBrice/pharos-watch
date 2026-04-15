@@ -92,8 +92,10 @@ export function PricingPipelineMethodologySection() {
           <strong className="text-foreground">Enrichment &amp; confidence.</strong>{" "}
           A 5-pass enrichment pipeline fills gaps for long-tail coins. Each asset is tagged with a confidence level so
           downstream systems can react to data quality, and severe fixed-peg downside publication now requires corroboration
-          unless it comes from an explicit protocol redemption or pool-challenge replacement mark. When a confirmed severe
-          depeg briefly loses corroboration, the pipeline preserves trusted continuity from fresh replay-safe{" "}
+          unless it comes from an explicit protocol redemption or pool-challenge replacement mark. Corroborating candidate
+          prices now stay attached through later validation when the selected primary result is unchanged, so a real severe
+          depeg is not cleared as a single-source mark. When a confirmed severe depeg briefly loses corroboration, the
+          pipeline preserves trusted continuity from fresh replay-safe{" "}
           <code className="mx-1 text-xs">price_cache</code> rows instead of letting the asset flap to{" "}
           <code className="mx-1 text-xs">N/A</code>. DefiLlama contract fallbacks must now pass the same peg-aware
           plausibility gates before they can resolve an asset, and DexScreener symbol search is reserved for addressless

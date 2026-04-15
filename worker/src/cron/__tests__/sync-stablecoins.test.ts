@@ -772,6 +772,89 @@ describe("syncStablecoins", () => {
     });
   });
 
+  it("keeps severe downside primary prices when multiple candidate sources corroborate downside", async () => {
+    const db = makeDb();
+    const writes = trackCacheWrites(db);
+    const dlData = makeDlResponse(60);
+    dlData.peggedAssets[0] = {
+      ...dlData.peggedAssets[0],
+      id: "usdt-tether",
+      name: "Tether",
+      symbol: "USDT",
+      price: 0.154,
+      priceSource: "defillama",
+      priceConfidence: "single-source",
+      circulating: { peggedUSD: 100_000_000 },
+    } as unknown as (typeof dlData.peggedAssets)[0];
+
+    vi.mocked(fetchPrimaryPrices).mockResolvedValueOnce({
+      results: new Map([
+        [
+          "usdt-tether",
+          {
+            price: 0.151,
+            source: "pyth",
+            confidence: "low",
+            dlPrice: 0.154,
+            cgPrice: 0.153,
+            candidateSources: ["coingecko", "defillama-list", "pyth"],
+            agreeSources: ["pyth"],
+            disagreeSources: ["coingecko", "defillama-list"],
+            allPrices: {
+              coingecko: 0.153,
+              "defillama-list": 0.154,
+              pyth: 0.151,
+            },
+            observedAt: 1_750_000_000,
+            observedAtMode: "upstream",
+            observedAtBySource: {
+              coingecko: 1_750_000_000,
+              "defillama-list": null,
+              pyth: 1_750_000_000,
+            },
+            observedAtModeBySource: {
+              coingecko: "upstream",
+              "defillama-list": "unknown",
+              pyth: "upstream",
+            },
+          },
+        ],
+      ]),
+      stats: { attempted: 1, high: 0, singleSource: 0, cgOnly: 0, low: 1 },
+      cgPrices: new Map([["tether", 0.153]]),
+    });
+
+    mockFetch([
+      { match: "api.coingecko.com", body: {} },
+      { match: "stablecoins.llama.fi", body: dlData },
+      { match: "coins.llama.fi/prices", body: { coins: {} } },
+    ]);
+
+    const result = await syncStablecoins(db);
+
+    expect(result.status).toBe("ok");
+    const stablecoinsWrite = writes.find((entry) => entry.key === "stablecoins");
+    const cached = JSON.parse(stablecoinsWrite!.value) as {
+      peggedAssets: Array<{
+        id: string;
+        price: number | null;
+        priceSource: string;
+        priceConfidence: string | null;
+        consensusSources: string[];
+        agreeSources: string[];
+      }>;
+    };
+    const usdt = cached.peggedAssets.find((asset) => asset.id === "usdt-tether");
+    expect(usdt).toMatchObject({
+      id: "usdt-tether",
+      price: 0.151,
+      priceSource: "pyth",
+      priceConfidence: "low",
+      consensusSources: ["coingecko", "defillama-list", "pyth"],
+      agreeSources: ["pyth"],
+    });
+  });
+
   it("quarantines weak large temporal jumps against the previous trusted price", async () => {
     const nowSec = Math.floor(Date.now() / 1000);
     const previousStablecoinsPayload = {

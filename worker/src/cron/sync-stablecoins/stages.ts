@@ -196,6 +196,7 @@ export async function runStablecoinsPricingStage(
   });
   prevalidatePrices({
     assets: options.assets,
+    primaryPriceResults,
     previousTrustedPrices,
     validationContexts,
     validationReferences: options.validationReferences,
@@ -258,6 +259,7 @@ export async function runStablecoinsPricingStage(
     fxFallbackRates: options.fxFallbackRates,
     validationReferences: options.validationReferences,
     validationContexts,
+    primaryPriceResults,
     previousTrustedPrices,
     authoritativeOverrides,
     returnIfAborted,

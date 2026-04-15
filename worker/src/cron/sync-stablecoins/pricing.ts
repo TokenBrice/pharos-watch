@@ -173,6 +173,24 @@ function hasCurrentAssetPrice(asset: PeggedAsset): boolean {
   return asset.price != null && typeof asset.price === "number" && asset.price > 0;
 }
 
+export function getPrimaryCandidatePricesForCurrentAsset(
+  asset: PeggedAsset,
+  primaryPriceResults?: Map<string, PrimaryPriceResult>,
+): Record<string, number> | undefined {
+  if (!primaryPriceResults || !hasCurrentAssetPrice(asset)) return undefined;
+
+  const primaryPriceResult = primaryPriceResults.get(asset.id);
+  if (!primaryPriceResult?.allPrices) return undefined;
+  if (asset.priceSource !== primaryPriceResult.source) return undefined;
+  if (asset.priceConfidence !== primaryPriceResult.confidence) return undefined;
+
+  const currentPrice = asset.price as number;
+  const tolerance = Math.max(1e-12, Math.abs(primaryPriceResult.price) * 1e-9);
+  if (Math.abs(currentPrice - primaryPriceResult.price) > tolerance) return undefined;
+
+  return primaryPriceResult.allPrices;
+}
+
 function applyPriceResultForAsset(input: ApplyPriceResultForAssetInput): void {
   const {
     asset,
@@ -340,6 +358,7 @@ export function applyPrimaryPriceResults(input: {
 
 export function prevalidatePrices(input: {
   assets: PeggedAsset[];
+  primaryPriceResults?: Map<string, PrimaryPriceResult>;
   previousTrustedPrices?: Map<string, PreviousTrustedPrice>;
   validationContexts: ValidationContextResolver;
   validationReferences?: PriceValidationReferences;
@@ -347,6 +366,7 @@ export function prevalidatePrices(input: {
 }): void {
   const {
     assets,
+    primaryPriceResults,
     previousTrustedPrices,
     validationContexts,
     validationReferences,
@@ -356,7 +376,10 @@ export function prevalidatePrices(input: {
   for (const asset of assets) {
     if (asset.price == null || typeof asset.price !== "number" || asset.price === 0) continue;
     const decision = validatePublishedAssetPrice({
-      asset,
+      asset: {
+        ...asset,
+        candidatePrices: getPrimaryCandidatePricesForCurrentAsset(asset, primaryPriceResults),
+      },
       validationContext: validationContexts.get(asset),
       validationReferences,
       previousTrustedPrice: previousTrustedPrices?.get(asset.id) ?? null,

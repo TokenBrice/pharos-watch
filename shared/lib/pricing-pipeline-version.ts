@@ -3,9 +3,24 @@ import {
 } from "./methodology-version";
 
 const pricing = createMethodologyVersion({
-  currentVersion: "4.36",
+  currentVersion: "4.37",
   changelogPath: "/methodology/pricing-pipeline-changelog/",
   changelog: [
+    {
+      version: "4.37",
+      title: "Severe-depeg corroboration continuity through validation",
+      date: "2026-04-15",
+      effectiveAt: 1776264600,
+      summary:
+        "Primary severe-downside corroboration evidence is now preserved through the later prevalidation and post-enrichment validation passes when the selected primary price remains unchanged.",
+      impact: [
+        "Low-confidence severe depeg prices can stay published when multiple live candidate sources independently confirm the downside even if they do not form a tight high-confidence cluster",
+        "The severe-downside guardrail is unchanged for genuinely single-source prices because candidate evidence is reused only when the current asset price, source, and confidence still match the primary result",
+        "Assets such as USR no longer flap to `N/A` after primary pricing accepted a corroborated severe depeg and a later generic validation pass lost the candidate-price evidence",
+      ],
+      commits: [],
+      reconstructed: false,
+    },
     {
       version: "4.36",
       title: "Blocked Binance host accounting",

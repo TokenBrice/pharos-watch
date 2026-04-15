@@ -13,7 +13,7 @@ import { validatePayloadWithSchema } from "../../lib/api-utils";
 import { sendAlert } from "../../lib/alerts";
 import { detectDepegEvents } from "../detect-depegs";
 import { confirmPendingDepegs } from "../confirm-pending-depegs";
-import { enrichMissingPrices, hasMissingPrice } from "./enrich-prices";
+import { enrichMissingPrices, hasMissingPrice, type PrimaryPriceResult } from "./enrich-prices";
 import type { PeggedAsset } from "./enrich-prices";
 import {
   type PriceValidationContext,
@@ -46,7 +46,12 @@ import {
   isReplaySafePriceSource,
   isSingleSourceDepegAuthoritative,
 } from "../../lib/pricing-source-policy";
-import { applyAcceptedPriceCandidate, applyProtocolPriceOverrides, type ProtocolPriceOverride } from "./pricing";
+import {
+  applyAcceptedPriceCandidate,
+  applyProtocolPriceOverrides,
+  getPrimaryCandidatePricesForCurrentAsset,
+  type ProtocolPriceOverride,
+} from "./pricing";
 import type { PricingProviderAttemptDiagnostic } from "../../lib/pricing-provider-diagnostics";
 
 const PRICE_CACHE_TTL = 6 * 60 * 60;
@@ -65,6 +70,7 @@ export interface PostEnrichmentInput {
   fxFallbackRates?: Record<string, number>;
   validationReferences?: PriceValidationReferences;
   validationContexts: { get: (asset: PeggedAsset) => PriceValidationContext };
+  primaryPriceResults?: Map<string, PrimaryPriceResult>;
   previousTrustedPrices?: Map<string, TrustedPriceReference>;
   returnIfAborted: (signal: AbortSignal | undefined, stage: string) => CronResult | null;
   abortResult: (signal: AbortSignal | undefined, stage: string) => CronResult;
@@ -263,7 +269,10 @@ export async function runPostEnrichmentPricePipeline(
     if (asset.price == null || typeof asset.price !== "number") continue;
 
     const decision = validatePublishedAssetPrice({
-      asset,
+      asset: {
+        ...asset,
+        candidatePrices: getPrimaryCandidatePricesForCurrentAsset(asset, input.primaryPriceResults),
+      },
       validationContext: validationContexts.get(asset),
       validationReferences,
       previousTrustedPrice: previousTrustedPrices?.get(asset.id) ?? null,

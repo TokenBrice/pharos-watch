@@ -42,6 +42,7 @@ export interface PublishablePriceInput {
 export interface PriceAssetPublicationLike {
   priceConfidence?: PriceConfidence | null;
   priceSource?: string | null;
+  candidatePrices?: Record<string, number>;
 }
 
 function priceValidationModeForAsset(asset: PriceAssetPublicationLike): "primary_authoritative" | "fallback_enrichment" {
@@ -173,6 +174,7 @@ export function validatePublishedAssetPrice(input: {
     priceSource?: string | null;
     priceConfidence?: PriceConfidence | null;
     agreeSources?: string[];
+    candidatePrices?: Record<string, number>;
   };
   validationContext: PriceValidationContext;
   validationReferences?: PriceValidationReferences;
@@ -183,6 +185,7 @@ export function validatePublishedAssetPrice(input: {
     source: input.asset.priceSource,
     confidence: input.asset.priceConfidence ?? null,
     agreeSources: input.asset.agreeSources,
+    candidatePrices: input.asset.candidatePrices,
     mode: priceValidationModeForAsset(input.asset),
     validationContext: input.validationContext,
     validationReferences: input.validationReferences,
