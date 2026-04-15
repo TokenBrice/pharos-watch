@@ -87,6 +87,12 @@ export async function fetchErc4626SingleAssetReserves(
 
   const warnings: LiveReserveWarning[] = [];
   const assetAddress = assetResult ? parseEvmAddressResult(assetResult as `0x${string}`) : null;
+  if (!assetAddress && sliceConfig.expectedAssetAddress) {
+    warnings.push(reserveDegradedWarning(
+      "asset-unavailable",
+      `Vault asset() could not be read; expected ${sliceConfig.expectedAssetAddress}`,
+    ));
+  }
   if (
     assetAddress
     && sliceConfig.expectedAssetAddress

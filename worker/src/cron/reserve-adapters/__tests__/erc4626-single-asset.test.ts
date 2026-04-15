@@ -118,4 +118,35 @@ describe("fetchErc4626SingleAssetReserves", () => {
       }),
     ]);
   });
+
+  it("warns when expected vault asset identity cannot be read", async () => {
+    fetchWithRetryMock.mockImplementation(async (_url: string, init?: RequestInit) => {
+      const body = JSON.parse(String(init?.body)) as { params: [{ data: string }] };
+      if (body.params[0].data === "0x38d52e0f") {
+        return jsonResponse({ result: "0x" });
+      }
+      if (body.params[0].data === "0x01e1d114") {
+        return jsonResponse({ result: "0x0000000000000000000000000000000000000000000000000000000000000001" });
+      }
+      return null;
+    });
+
+    const { fetchErc4626SingleAssetReserves } = await import("../erc4626-single-asset");
+    const coin = TRACKED_META_BY_ID.get("syrupusdc-maple");
+    expect(coin?.liveReservesConfig).toBeDefined();
+
+    const result = await fetchErc4626SingleAssetReserves(
+      coin!,
+      coin!.liveReservesConfig!,
+      new AbortController().signal,
+      { chainRpcs: testChainRpcs },
+    );
+
+    expect(result.warnings).toEqual([
+      expect.objectContaining({
+        code: "asset-unavailable",
+        severity: "warning",
+      }),
+    ]);
+  });
 });
