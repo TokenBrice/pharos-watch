@@ -48,6 +48,11 @@ const riskRecordSchema = z.record(z.string(), LiveReserveRiskSchema);
 
 const noParamsSchema = z.object({}).strict();
 
+const usd1BundleOracleParamsSchema = z.object({
+  rpcUrl: z.string().optional(),
+  fallbackRpcUrl: z.string().optional(),
+}).strict();
+
 const accountableParamsSchema = z.object({
   bucket: z.enum([
     "type",
@@ -260,6 +265,7 @@ export const adapterParamsSchemas = {
   "sky-makercore": noParamsSchema,
   tether: noParamsSchema,
   "usdai-proof-of-reserves": noParamsSchema,
+  "usd1-bundle-oracle": usd1BundleOracleParamsSchema,
   "usdd-data-platform": noParamsSchema,
 } as const satisfies Record<LiveReserveAdapterKey, z.ZodTypeAny>;
 

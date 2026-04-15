@@ -9,7 +9,7 @@ Dedicated documentation for the live reserve-composition subsystem that powers `
 - **Cron:** `sync-live-reserves` (`worker/src/cron/sync-live-reserves.ts`)
 - **Schedule:** `11 * * * *` (hourly at :11 UTC)
 - **Shared hourly lane:** after live reserve sync, the same slot runs redemption backstop sync, Kinesis supply sync, and collateral-drift checks / alerts (`worker/src/handlers/scheduled/hourly-live-reserves.ts`)
-- **Current coverage:** 135 live-enabled stablecoins across 35 registered adapters (32 currently configured in stablecoin metadata)
+- **Current coverage:** 135 live-enabled stablecoins across 36 registered adapters (32 currently configured in stablecoin metadata)
 - **Storage:** `reserve_composition`, `reserve_composition_history`, `reserve_sync_state`, `reserve_sync_attempt_history`
 - **API:** `GET /api/stablecoin-reserves/:id`
 - **Frontend consumers:** `useStablecoinReserves()`, stablecoin detail view model, `/status` reserve-sync health
@@ -335,7 +335,7 @@ This table reflects the adapter keys currently configured in `shared/data/stable
 | `anzen-usdz`               | `onchain-evm`              | `single-asset`                       | 1                |
 | `asymmetry`                | `http-json`                 | `collateral-mix`                     | 1                |
 | `btcfi`                    | `http-json`                 | `collateral-mix`                     | 1                |
-| `chainlink-nav`            | `onchain-evm`               | `single-asset`                       | 4                |
+| `chainlink-nav`            | `onchain-evm`               | `single-asset`                       | 6                |
 | `chainlink-por`            | `onchain-evm`               | `attestation-mix`                    | 1                |
 | `circle-transparency`      | `http-html`                 | `attestation-mix`                    | 2                |
 | `collateral-positions-api` | `http-json`                 | `collateral-mix`                     | 2                |
@@ -347,8 +347,7 @@ This table reflects the adapter keys currently configured in `shared/data/stable
 | `evm-branch-balances`      | `onchain-evm`               | `collateral-mix`                     | 6                |
 | `falcon`                   | `http-json`                 | `collateral-mix`                     | 1                |
 | `fdusd-transparency`       | `http-html`                 | `attestation-mix`                    | 1                |
-| `frax`                     | `http-json`                 | `attestation-mix`                    | 1                |
-| `frax-balance-sheet`       | `http-json`                 | `attestation-mix`                    | 2                |
+| `frax-balance-sheet`       | `http-json`                 | `attestation-mix`                    | 3                |
 | `fx`                       | `http-json`                 | `collateral-mix`                     | 1                |
 | `gho`                      | `onchain-evm`               | `protocol-reserve`                   | 1                |
 | `infinifi`                 | `http-json`                 | `collateral-mix`                     | 1                |
@@ -359,9 +358,10 @@ This table reflects the adapter keys currently configured in `shared/data/stable
 | `re-metrics`               | `http-html`                 | `collateral-mix`                     | 1                |
 | `reservoir`                | `http-json`                 | `protocol-reserve`                   | 1                |
 | `sgforge-coinvertible`     | `http-html`                 | `attestation-mix`                    | 1                |
-| `single-asset`             | `http-json` / `onchain-evm` | `single-asset`                       | 46               |
+| `single-asset`             | `http-json` / `onchain-evm` | `single-asset`                       | 43               |
 | `sky-makercore`            | `http-json`                 | `collateral-mix`                     | 2                |
 | `usdai-proof-of-reserves`  | `http-json`                 | `collateral-mix`                     | 1                |
+| `usd1-bundle-oracle`       | `onchain-evm`               | `single-asset`                       | 1                |
 | `usdd-data-platform`       | `http-json`                 | `collateral-mix`                     | 1                |
 
 `collateral-positions-api` can now optionally attach direct redemption-capacity telemetry alongside the collateral mix when a reviewed bridge-backed stable exit exists. `zchf-frankencoin` uses this path to publish the current VCHF StablecoinBridge inventory as `immediateRedeemableUsd` for redemption-backstop modeling without changing the reserve-slice composition itself.
@@ -382,6 +382,10 @@ the `liquity-v1` adapter now covers `lusd-liquity` by reading `getEntireSystemCo
 
 Chainlink NAV note:
 `chainlink-nav` now supports both standard AggregatorV3 feeds and Ondo router-style NAV lookups. When `oracleMethod = "getAssetPrice"`, the adapter calls `getAssetPrice(token)` on the router and, when available, follows `tokenToRWAOracle(token) -> getPriceData()` to recover a verified freshness timestamp instead of treating the feed as permanently timestampless.
+
+`usd1-bundle-oracle` reads USD1's Chainlink bundle oracle on Ethereum. The adapter decodes `latestBundle()` into a source timestamp and reserve value, cross-checks `latestBundleTimestamp()`, reads live USD1 total supply, and stores collateralization metadata from latest-state on-chain data.
+
+`frax-balance-sheet` now covers both `frxusd-frax` and legacy `frax-frax` through the Frax v2 balance-sheet API. Known Frax ecosystem assets are classified explicitly; any future unmapped balance-sheet exposure is aggregated and only degrades the run when material.
 Business-day NAV feeds can set `maxOracleAgeSec` when their oracle is expected to pause through weekends or market holidays; `ousg-ondo-finance` and `mtbill-midas` use a 4-day window so normal Friday-to-Monday NAV cadence does not trip their reserve circuit breakers.
 
 Adapter helpers now live in a small helper family, with `worker/src/cron/reserve-adapters/helpers.ts` kept as the shared import surface:

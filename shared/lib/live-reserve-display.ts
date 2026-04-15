@@ -40,6 +40,7 @@ const ADAPTER_DISPLAY_BADGE_KINDS: Record<LiveReserveAdapterKey, ReserveDisplayB
   "sky-makercore": "live",
   tether: "proof",
   "usdai-proof-of-reserves": "live",
+  "usd1-bundle-oracle": "live",
   "usdd-data-platform": "live",
 };
 

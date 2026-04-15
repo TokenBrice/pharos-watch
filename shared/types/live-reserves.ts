@@ -36,6 +36,7 @@ export const LIVE_RESERVE_ADAPTER_KEYS = [
   "sky-makercore",
   "tether",
   "usdai-proof-of-reserves",
+  "usd1-bundle-oracle",
   "usdd-data-platform",
 ] as const;
 

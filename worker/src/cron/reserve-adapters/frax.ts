@@ -3,10 +3,10 @@ import type { LiveReserveWarning, LiveReservesConfig } from "@shared/types/live-
 import { getCanonicalReserveAssetRisk } from "@shared/lib/reserve-asset-risk";
 import type { AdapterContext, AdapterResult } from "./types";
 import {
+  buildUnknownExposureWarning,
   requireJsonInputFromConfig,
   fetchJsonWithRetry,
   normalizeSlices,
-  reserveDegradedWarning,
   unverifiedFreshnessMetadata,
 } from "./helpers";
 
@@ -45,11 +45,50 @@ interface TokenDisplayConfig {
 }
 
 const TOKEN_DISPLAY: Record<string, TokenDisplayConfig> = {
+  AUSD: { label: "AUSD (Agora Dollar)", risk: getCanonicalReserveAssetRisk("AUSD") ?? "low" },
+  AVAX: { label: "AVAX", risk: getCanonicalReserveAssetRisk("AVAX") ?? "high" },
   WTGXX: { label: "WTGXX (WisdomTree Government Money Market)", risk: "low" },
   USTB:  { label: "USTB (Superstate tokenized T-bills)", risk: getCanonicalReserveAssetRisk("USTB") ?? "low", coinId: "ustb-superstate" },
   BUIDL: { label: "BUIDL (BlackRock tokenized T-bills)", risk: getCanonicalReserveAssetRisk("BUIDL") ?? "low", coinId: "buidl-blackrock" },
+  CVX: { label: "CVX", risk: "very-high" },
+  CRV: { label: "CRV", risk: getCanonicalReserveAssetRisk("CRV") ?? "very-high" },
+  CHR: { label: "CHR", risk: "very-high" },
+  DAI: { label: "DAI", risk: getCanonicalReserveAssetRisk("DAI") ?? "low", coinId: "dai-makerdao" },
+  ETH: { label: "ETH", risk: getCanonicalReserveAssetRisk("ETH") ?? "very-low" },
+  FPI: { label: "FPI", risk: "medium" },
+  FRAX: { label: "FRAX", risk: getCanonicalReserveAssetRisk("FRAX") ?? "low", coinId: "frax-frax" },
+  LFRAX: { label: "LFRAX", risk: "medium" },
+  MULTI: { label: "MULTI", risk: "very-high" },
+  OP: { label: "OP", risk: "high" },
+  PYUSD: { label: "PYUSD", risk: getCanonicalReserveAssetRisk("PYUSD") ?? "low", coinId: "pyusd-paypal" },
+  RAM: { label: "RAM", risk: "very-high" },
+  SDT: { label: "SDT", risk: "very-high" },
+  THE: { label: "THE", risk: "very-high" },
   USDB:  { label: "USDB (DBS tokenized deposits)", risk: "low" },
   USDC:  { label: "USDC (Circle)", risk: "low", coinId: "usdc-circle" },
+  USCC: { label: "USCC (Superstate crypto arbitrage)", risk: "medium" },
+  USDS: { label: "USDS", risk: getCanonicalReserveAssetRisk("USDS") ?? "low", coinId: "usds-sky" },
+  USDe: { label: "USDe", risk: "high", coinId: "usde-ethena" },
+  WAVAX: { label: "WAVAX", risk: "high" },
+  WBNB: { label: "WBNB", risk: "high" },
+  WETH: { label: "WETH", risk: getCanonicalReserveAssetRisk("WETH") ?? "very-low" },
+  WPOL: { label: "WPOL", risk: "high" },
+  ZK: { label: "ZK", risk: "high" },
+  axlUSDC: { label: "axlUSDC", risk: "medium", coinId: "usdc-circle" },
+  axlfrxETH: { label: "axlfrxETH", risk: "medium" },
+  cvxCRV: { label: "cvxCRV", risk: "very-high" },
+  frxETH: { label: "frxETH", risk: "low" },
+  frxUSD: { label: "frxUSD", risk: getCanonicalReserveAssetRisk("FRXUSD") ?? "low", coinId: "frxusd-frax" },
+  lzfrxETH: { label: "lzfrxETH", risk: "medium" },
+  lzsfrxETH: { label: "lzsfrxETH", risk: "medium" },
+  reUSD: { label: "reUSD", risk: "medium", coinId: "reusd-re-protocol" },
+  sDAI: { label: "sDAI", risk: "low", coinId: "dai-makerdao" },
+  sFRAX: { label: "sFRAX", risk: "medium", coinId: "frax-frax" },
+  sfrxETH: { label: "sfrxETH", risk: getCanonicalReserveAssetRisk("SFRXETH") ?? "low" },
+  sfrxUSD: { label: "sfrxUSD", risk: "low", coinId: "frxusd-frax" },
+  stkAAVE: { label: "stkAAVE", risk: "very-high" },
+  wfrxETH: { label: "wfrxETH", risk: "medium" },
+  ZZ: { label: "ZZ", risk: "very-high" },
 };
 
 /* ---------- v2 balance-sheet adapter ---------- */
@@ -75,20 +114,35 @@ export function adaptFraxBalanceSheet(payload: FraxBalanceSheetResponse): Adapte
   if (total <= 0) throw new Error("Frax balance-sheet total asset value is zero");
 
   const slices: ReserveSlice[] = [];
+  const unknownSymbols: string[] = [];
+  let unknownUsd = 0;
   for (const [symbol, usd] of bySymbol) {
     const config = TOKEN_DISPLAY[symbol];
     if (!config) {
-      warnings.push(reserveDegradedWarning(
-        "unknown-token",
-        `Frax balance-sheet: unknown token ${symbol} ($${Math.round(usd).toLocaleString()}) defaulted to medium risk`,
-      ));
+      unknownSymbols.push(symbol);
+      unknownUsd += usd;
     }
+    if (config) {
+      slices.push({
+        name: config.label,
+        pct: (usd / total) * 100,
+        risk: config.risk,
+        ...(config.coinId ? { coinId: config.coinId } : {}),
+      });
+    }
+  }
+
+  if (unknownUsd > 0) {
     slices.push({
-      name: config?.label ?? symbol,
-      pct: (usd / total) * 100,
-      risk: config?.risk ?? "medium",
-      ...(config?.coinId ? { coinId: config.coinId } : {}),
+      name: "Unmapped Frax balance-sheet assets",
+      pct: (unknownUsd / total) * 100,
+      risk: "medium",
     });
+    warnings.push(buildUnknownExposureWarning({
+      code: "unknown-token",
+      message: `Frax balance-sheet unknown token(s): ${unknownSymbols.sort().join(", ")}`,
+      unknownExposurePct: (unknownUsd / total) * 100,
+    }));
   }
 
   return {

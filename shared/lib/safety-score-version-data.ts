@@ -1,9 +1,25 @@
 import type { MethodologyVersionConfig } from "./methodology-version";
 
 export const SAFETY_SCORE_VERSION_CONFIG: MethodologyVersionConfig = {
-  currentVersion: "6.99",
+  currentVersion: "7.0",
   changelogPath: "/methodology/scoring-changelog/",
   changelog: [
+    {
+      version: "7.0",
+      title: "Independent NAV and bundle-oracle reserve feeds",
+      date: "2026-04-15",
+      effectiveAt: 1776243600,
+      summary:
+        "Additional proof-style reserve feeds now use independent timestamped sources instead of weak single-asset liveness probes, including Chainlink-style NAV oracles, Frax's v2 balance sheet, and USD1's bundle oracle.",
+      impact: [
+        "USYC and TBILL now use Chainlink-style NAV oracles with verified oracle timestamps and 4-day business-day freshness windows",
+        "FRAX now uses the Frax v2 balance-sheet API with verified as-of timestamps and explicit token risk mapping",
+        "USD1 now uses its Chainlink bundle oracle for timestamped reserve size and live supply comparison",
+        "AUSD and DGLD remain outside live collateral passthrough for now because their discovered feeds do not currently provide payload-native freshness inside the live gate",
+      ],
+      commits: [],
+      reconstructed: false,
+    },
     {
       version: "6.99",
       title: "Asymmetry USDaf live reserve freshness promotion",

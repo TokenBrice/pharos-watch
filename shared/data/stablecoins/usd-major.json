@@ -1025,8 +1025,8 @@
       }
     ],
     "liveReservesConfig": {
-      "adapter": "single-asset",
-      "version": 1,
+      "adapter": "usd1-bundle-oracle",
+      "version": 2,
       "semantics": "single-asset",
       "breakerScope": "usd1-world-liberty-financial",
       "display": {
@@ -1041,8 +1041,8 @@
         }
       },
       "params": {
-        "label": "U.S. Treasury Bills, Money Market Funds & Cash",
-        "risk": "very-low"
+        "rpcUrl": "https://ethereum-rpc.publicnode.com",
+        "fallbackRpcUrl": "https://eth.llamarpc.com"
       }
     }
   },
@@ -1490,8 +1490,8 @@
       }
     ],
     "liveReservesConfig": {
-      "adapter": "single-asset",
-      "version": 1,
+      "adapter": "chainlink-nav",
+      "version": 2,
       "semantics": "single-asset",
       "breakerScope": "usyc-hashnote",
       "display": {
@@ -1500,27 +1500,19 @@
       },
       "inputs": {
         "primary": {
-          "kind": "http-json",
-          "url": "https://usyc.hashnote.com/api/price"
+          "kind": "onchain-evm",
+          "chain": "ethereum",
+          "rpcMode": "public-rpc"
         }
       },
       "params": {
-        "label": "U.S. Treasury Bills and reverse repos",
-        "risk": "very-low",
-        "probe": {
-          "kind": "json-path",
-          "path": [
-            "data",
-            "price"
-          ]
-        },
-        "timestampProbe": {
-          "kind": "json-path",
-          "path": [
-            "data",
-            "timestamp"
-          ]
-        }
+        "oracleAddress": "0x74f2199AEb743f68f05943e5715A33EaF2b61f53",
+        "tokenAddress": "0x136471a34f6ef19fe571effc1ca711fdb8e49f2b",
+        "assetLabel": "U.S. Treasury Bills and reverse repos",
+        "assetRisk": "very-low",
+        "rpcUrl": "https://ethereum-rpc.publicnode.com",
+        "fallbackRpcUrl": "https://eth.llamarpc.com",
+        "maxOracleAgeSec": 345600
       }
     },
     "yieldConfig": {

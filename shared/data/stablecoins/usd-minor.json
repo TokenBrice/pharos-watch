@@ -129,8 +129,8 @@
       }
     ],
     "liveReservesConfig": {
-      "adapter": "frax",
-      "version": 1,
+      "adapter": "frax-balance-sheet",
+      "version": 2,
       "semantics": "attestation-mix",
       "breakerScope": "frax-frax",
       "display": {
@@ -140,7 +140,7 @@
       "inputs": {
         "primary": {
           "kind": "http-json",
-          "url": "https://api.frax.finance/combineddata/"
+          "url": "https://api.frax.finance/v2/frax/balance-sheet/latest"
         }
       }
     }
@@ -1888,8 +1888,8 @@
       "yieldType": "nav-appreciation"
     },
     "liveReservesConfig": {
-      "adapter": "single-asset",
-      "version": 1,
+      "adapter": "chainlink-nav",
+      "version": 2,
       "semantics": "single-asset",
       "breakerScope": "tbill-openeden",
       "display": {
@@ -1904,8 +1904,13 @@
         }
       },
       "params": {
-        "label": "U.S. Treasury bills (WAM <3 months)",
-        "risk": "very-low"
+        "oracleAddress": "0xCe9a6626Eb99eaeA829D7fA613d5D0A2eaE45F40",
+        "tokenAddress": "0xdd50c053c096cb04a3e3362e2b622529ec5f2e8a",
+        "assetLabel": "U.S. Treasury bills (WAM <3 months)",
+        "assetRisk": "very-low",
+        "rpcUrl": "https://ethereum-rpc.publicnode.com",
+        "fallbackRpcUrl": "https://eth.llamarpc.com",
+        "maxOracleAgeSec": 345600
       }
     }
   },

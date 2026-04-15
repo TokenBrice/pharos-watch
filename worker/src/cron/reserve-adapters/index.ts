@@ -35,6 +35,7 @@ import { fetchSingleAssetReserves } from "./single-asset";
 import { fetchSkyMakercoreReserves } from "./sky-makercore";
 import { fetchTetherReserves } from "./tether";
 import { fetchUsdAiProofOfReserves } from "./usdai-proof-of-reserves";
+import { fetchUsd1BundleOracleReserves } from "./usd1-bundle-oracle";
 import { fetchUsddDataPlatformReserves } from "./usdd-data-platform";
 import type { AdapterFn, ReserveAdapterDefinition } from "./types";
 
@@ -75,6 +76,7 @@ const ADAPTER_FNS: Record<LiveReserveAdapterKey, AdapterFn> = {
   "sky-makercore": fetchSkyMakercoreReserves,
   tether: fetchTetherReserves,
   "usdai-proof-of-reserves": fetchUsdAiProofOfReserves,
+  "usd1-bundle-oracle": fetchUsd1BundleOracleReserves,
   "usdd-data-platform": fetchUsddDataPlatformReserves,
 };
 

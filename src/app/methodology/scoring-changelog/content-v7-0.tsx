@@ -1,5 +1,32 @@
 import { VersionCard, getScoringEntry } from "./content-shared";
 
+export function ScoringChangelogV70Entry() {
+  return (
+    <VersionCard
+      entry={getScoringEntry("7.0")}
+      accent="border-l-emerald-500"
+    >
+      <p>
+        More proof-style reserve feeds now use timestamped independent evidence instead of weak liveness checks.
+      </p>
+      <ul className="list-disc list-inside space-y-1">
+        <li>
+          USYC and TBILL now use Chainlink-style NAV oracle reads with verified source timestamps.
+        </li>
+        <li>
+          FRAX now reads Frax&apos;s v2 balance-sheet API and maps known balance-sheet assets explicitly.
+        </li>
+        <li>
+          USD1 now reads its Chainlink bundle oracle for live reserve size, timestamp, and supply comparison.
+        </li>
+        <li>
+          The global gate remains strict: proof sources without payload-native freshness stay detail-visible only.
+        </li>
+      </ul>
+    </VersionCard>
+  );
+}
+
 export function ScoringChangelogV699Entry() {
   return (
     <VersionCard

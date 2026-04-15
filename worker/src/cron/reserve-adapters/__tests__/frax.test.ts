@@ -71,8 +71,17 @@ describe("adaptFraxBalanceSheet", () => {
     const result = adaptFraxBalanceSheet(withUnknown);
     expect(result.warnings).toHaveLength(1);
     expect(result.warnings![0].message).toContain("XYZZY");
-    const xyzzy = result.slices.find((s) => s.name === "XYZZY");
-    expect(xyzzy!.risk).toBe("medium");
+    expect(result.warnings![0].effect).toBe("info");
+    const unknown = result.slices.find((s) => s.name === "Unmapped Frax balance-sheet assets");
+    expect(unknown!.risk).toBe("medium");
+  });
+
+  it("maps current FRAX balance-sheet symbols without degrading warnings", async () => {
+    const response = await fetch("https://api.frax.finance/v2/frax/balance-sheet/latest");
+    expect(response.ok).toBe(true);
+    const result = adaptFraxBalanceSheet(await response.json() as FraxBalanceSheetResponse);
+    expect(result.metadata?.freshnessMode).toBe("verified");
+    expect((result.warnings ?? []).filter((warning) => warning.effect === "degraded")).toEqual([]);
   });
 
   it("throws on empty assets", () => {
