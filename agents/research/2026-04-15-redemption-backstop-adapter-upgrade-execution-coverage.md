@@ -64,6 +64,8 @@ Purpose: map every researched adapter-upgrade opportunity to what was executed, 
 | Additional CDP routes (`fxUSD`, `feUSD`, `meUSD`, `NECT`, `resupply`, River, BIMA, Quill, Orki, Nerite, USDaf, Ebisu, Parallel, Sonic) | Need per-protocol ABI/health/probe mapping; generic full-supply capacity would be unsafe |
 | Additional stablecoin-redeem routes (`AID`, `apxUSD`, `dUSD`, `JupUSD`, `United Stables`, Avalon, Astherus, Resolv, Solstice, YOUSD`) | Need current route app/API/contract status; several are whitelisted or incident-sensitive and should not be upgraded without route availability proof |
 
+Important implementation note: these long-tail groups were not left with their previous Safety Score behavior. The v7.01 scoring change means their current `eventual-only` redemption rows stay visible but no longer uplift Liquidity / Exit by themselves. That is the safe execution path until a protocol-specific adapter proves current capacity.
+
 ## Verification Completed
 
 - Focused adapter suites across all touched reserve adapters: passing
@@ -74,4 +76,3 @@ Purpose: map every researched adapter-upgrade opportunity to what was executed, 
 - `cd worker && npx tsc --noEmit`: passing
 - `npm run lint`: passing
 - `npm test`: passing before final merge-gate doc-count fix; merge gate rerun required after this ledger and doc-count commit
-
