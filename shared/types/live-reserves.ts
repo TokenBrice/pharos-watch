@@ -7,6 +7,7 @@ export const LIVE_RESERVE_ADAPTER_KEYS = [
   "anzen-usdz",
   "asymmetry",
   "btcfi",
+  "cap-vault",
   "chainlink-nav",
   "chainlink-por",
   "circle-transparency",

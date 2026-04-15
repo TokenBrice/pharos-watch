@@ -62,6 +62,13 @@ export const LIVE_RESERVE_ADAPTER_DEFINITIONS = {
     redemptionTelemetry: { capacity: "none", fee: "none" },
     validation: { allowedFreshnessModes: UNVERIFIED_ONLY_FRESHNESS },
   },
+  "cap-vault": {
+    sourceModel: "dynamic-mix",
+    evidenceClass: "independent",
+    sharedSourceMode: "none",
+    redemptionTelemetry: { capacity: "direct", fee: "none" },
+    validation: { allowedFreshnessModes: NOT_APPLICABLE_ONLY_FRESHNESS },
+  },
   "chainlink-nav": {
     sourceModel: "single-bucket",
     evidenceClass: "independent",

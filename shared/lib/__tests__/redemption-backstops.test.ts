@@ -616,7 +616,7 @@ describe("getRedemptionBackstopConfig", () => {
       routeFamily: "basket-redeem",
       executionModel: "deterministic-basket",
       outputAssetType: "stable-basket",
-      capacityModel: { kind: "supply-full", confidence: "documented-bound" },
+      capacityModel: { kind: "reserve-sync-metadata" },
       costModel: { kind: "dynamic-or-unclear" },
       reviewedAt: "2026-03-23",
     });

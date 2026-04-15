@@ -3117,11 +3117,55 @@
     "detailProvider": "defillama",
     "geckoId": "cap-usd",
     "cmcSlug": "cap-cusd",
-    "proofOfReserves": {
-      "type": "real-time",
-      "url": "https://cap.app/vault/reserves/cUSD"
+  "proofOfReserves": {
+    "type": "real-time",
+    "url": "https://cap.app/vault/reserves/cUSD"
+  },
+  "liveReservesConfig": {
+    "version": 1,
+    "adapter": "cap-vault",
+    "semantics": "protocol-reserve",
+    "display": {
+      "url": "https://docs.cap.app/concepts/vault",
+      "label": "Cap Vault"
     },
-    "links": [
+    "inputs": {
+      "primary": {
+        "kind": "onchain-evm",
+        "chain": "ethereum",
+        "rpcMode": "alchemy"
+      }
+    },
+    "params": {
+      "assets": [
+        {
+          "address": "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
+          "name": "USDC",
+          "risk": "low",
+          "coinId": "usdc-circle"
+        },
+        {
+          "address": "0xdac17f958d2ee523a2206206994597c13d831ec7",
+          "name": "USDT",
+          "risk": "low",
+          "coinId": "usdt-tether"
+        },
+        {
+          "address": "0x6c3ea9036406852006290770bedfcaba0e23a0e8",
+          "name": "PYUSD",
+          "risk": "low",
+          "coinId": "pyusd-paypal"
+        },
+        {
+          "address": "0x7712c34205737192402172409a8f7ccef8aa2aec",
+          "name": "BUIDL",
+          "risk": "low",
+          "coinId": "buidl-blackrock"
+        }
+      ]
+    }
+  },
+  "links": [
       {
         "label": "Website",
         "url": "https://www.cap.app/"

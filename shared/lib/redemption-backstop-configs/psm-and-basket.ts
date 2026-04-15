@@ -20,6 +20,7 @@ export const PSM_AND_BASKET_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopC
   "cusd-cap": {
     ...basketRedeemBase,
     ...reviewedBasketRedemptionSupplyFull,
+    capacityModel: { kind: "reserve-sync-metadata" },
     costModel: documentedVariableFee("Fixed redemption fee, but public docs do not publish the current rate"),
     docs: [
       sourceRef("Cap introduction", "https://docs.cap.app/", ["route", "capacity"]),

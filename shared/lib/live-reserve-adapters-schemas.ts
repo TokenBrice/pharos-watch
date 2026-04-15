@@ -81,6 +81,20 @@ const chainlinkNavParamsSchema = z.object({
   maxOracleAgeSec: z.number().positive().optional(),
 }).strict();
 
+const capVaultAssetSchema = z.object({
+  address: z.string(),
+  name: z.string(),
+  risk: LiveReserveRiskSchema,
+  coinId: z.string().optional(),
+  depType: LiveReserveDependencyTypeSchema.optional(),
+}).strict();
+
+const capVaultParamsSchema = z.object({
+  rpcUrl: z.string().optional(),
+  fallbackRpcUrl: z.string().optional(),
+  assets: z.array(capVaultAssetSchema).optional(),
+}).strict();
+
 const chainlinkPorParamsSchema = z.object({
   porFeedAddress: z.string(),
   assetLabel: z.string(),
@@ -236,6 +250,7 @@ export const adapterParamsSchemas = {
   "anzen-usdz": noParamsSchema,
   asymmetry: noParamsSchema,
   btcfi: btcfiParamsSchema,
+  "cap-vault": capVaultParamsSchema,
   "chainlink-nav": chainlinkNavParamsSchema,
   "chainlink-por": chainlinkPorParamsSchema,
   "circle-transparency": circleTransparencyParamsSchema,

@@ -11,6 +11,7 @@ const ADAPTER_DISPLAY_BADGE_KINDS: Record<LiveReserveAdapterKey, ReserveDisplayB
   "anzen-usdz": "live",
   asymmetry: "live",
   btcfi: "live",
+  "cap-vault": "live",
   "chainlink-nav": "live",
   "chainlink-por": "live",
   "circle-transparency": "live",

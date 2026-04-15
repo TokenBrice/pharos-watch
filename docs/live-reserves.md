@@ -9,7 +9,7 @@ Dedicated documentation for the live reserve-composition subsystem that powers `
 - **Cron:** `sync-live-reserves` (`worker/src/cron/sync-live-reserves.ts`)
 - **Schedule:** `11 * * * *` (hourly at :11 UTC)
 - **Shared hourly lane:** after live reserve sync, the same slot runs redemption backstop sync, Kinesis supply sync, and collateral-drift checks / alerts (`worker/src/handlers/scheduled/hourly-live-reserves.ts`)
-- **Current coverage:** 135 live-enabled stablecoins across 36 registered adapters (32 currently configured in stablecoin metadata)
+- **Current coverage:** 136 live-enabled stablecoins across 37 registered adapters (33 currently configured in stablecoin metadata)
 - **Storage:** `reserve_composition`, `reserve_composition_history`, `reserve_sync_state`, `reserve_sync_attempt_history`
 - **API:** `GET /api/stablecoin-reserves/:id`
 - **Frontend consumers:** `useStablecoinReserves()`, stablecoin detail view model, `/status` reserve-sync health
@@ -342,6 +342,7 @@ This table reflects the adapter keys currently configured in `shared/data/stable
 | `anzen-usdz`               | `onchain-evm`              | `single-asset`                       | 1                |
 | `asymmetry`                | `http-json`                 | `collateral-mix`                     | 1                |
 | `btcfi`                    | `http-json`                 | `collateral-mix`                     | 1                |
+| `cap-vault`                | `onchain-evm`               | `protocol-reserve`                   | 1                |
 | `chainlink-nav`            | `onchain-evm`               | `single-asset`                       | 6                |
 | `chainlink-por`            | `onchain-evm`               | `attestation-mix`                    | 1                |
 | `circle-transparency`      | `http-html`                 | `attestation-mix`                    | 2                |
@@ -372,6 +373,8 @@ This table reflects the adapter keys currently configured in `shared/data/stable
 | `usdd-data-platform`       | `http-json`                 | `collateral-mix`                     | 1                |
 
 `collateral-positions-api` can now optionally attach direct redemption-capacity telemetry alongside the collateral mix when a reviewed bridge-backed stable exit exists. `zchf-frankencoin` uses this path to publish the current VCHF StablecoinBridge inventory as `immediateRedeemableUsd` for redemption-backstop modeling without changing the reserve-slice composition itself.
+
+`cap-vault` reads Cap cUSD's Ethereum vault state directly. Reserve slices are based on each supported asset's total supplied balance, while redemption-capacity telemetry uses unpaused available balances after borrows so the route does not treat borrowed or paused collateral as immediate exit capacity. The adapter emits nested `metadata.redemption` with `capacityKind = "live-direct-bounded"` and `freshnessKind = "same-run-onchain"`.
 
 `circle-transparency`, `m0`, and `mento` preserve source freshness when their upstream pages/API expose usable reserve disclosure or update timestamps: Circle uses the public reserve `As of` date, M0 uses the latest collateral/update timestamp exposed by its GraphQL schema, and Mento uses the embedded reserve-holding `updated` timestamps. When those timestamps are missing, the adapters keep `freshnessMode = "unverified"` and remain detail-visible without report-card collateral passthrough.
 
