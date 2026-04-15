@@ -5,7 +5,7 @@ import { STATIC_COMPARISON_PAGES } from "@/lib/compare-pages";
 import { ACTIVE_PEGS, PEG_SLUGS } from "@/lib/peg-landing";
 import { ALL_STABLECOIN_TAXONOMY_PAGES } from "@/lib/stablecoin-taxonomy";
 import { buildStablecoinUrl } from "@/lib/urls";
-import { SITE_URL } from "@/lib/site-config";
+import { SITE_ORIGIN as SITE_URL } from "@shared/lib/runtime-origins";
 import digests from "../../data/digests.json";
 import sitemapDates from "@/generated/sitemap-dates.json";
 

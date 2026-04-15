@@ -5,7 +5,7 @@ import { CemeteryClient } from "@/components/cemetery-client";
 import { CemeteryCharts } from "@/components/cemetery-charts";
 import { FaqSection } from "@/components/faq-section";
 import { safeJsonLd } from "@/lib/json-ld";
-import { SITE_URL } from "@/lib/site-config";
+import { SITE_ORIGIN as SITE_URL } from "@shared/lib/runtime-origins";
 import { DEAD_STABLECOINS } from "@shared/lib/dead-stablecoins";
 import type { FaqItem } from "@/lib/faq";
 import { sortCemeteryCoins } from "@/lib/cemetery";

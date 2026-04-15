@@ -3,7 +3,7 @@ import Link from "next/link";
 import { CHAIN_META, getActiveChainIds } from "@shared/lib/chains";
 import { CHAIN_HEALTH_METHODOLOGY_VERSION, CHAIN_HEALTH_METHODOLOGY_CHANGELOG_PATH } from "@shared/lib/chain-health-version";
 import { buildPageMetadata } from "@/lib/page-metadata";
-import { SITE_URL } from "@/lib/site-config";
+import { SITE_ORIGIN as SITE_URL } from "@shared/lib/runtime-origins";
 import { safeJsonLd } from "@/lib/json-ld";
 import { buildFaqJsonLd } from "@/lib/faq";
 import { ChainsLeaderboardClient } from "./client";

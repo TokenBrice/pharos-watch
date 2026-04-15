@@ -1,7 +1,7 @@
 import { Skeleton } from "@/components/ui/skeleton";
 import { createClientFeaturePage } from "@/lib/client-feature-page";
 import { buildPageMetadata } from "@/lib/page-metadata";
-import { SITE_URL } from "@/lib/site-config";
+import { SITE_ORIGIN as SITE_URL } from "@shared/lib/runtime-origins";
 
 const description =
   "Build your stablecoin portfolio, see your weighted safety grade, upstream collateral exposure, and simulate how a major stablecoin failure would affect your holdings.";

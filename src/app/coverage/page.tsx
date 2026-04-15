@@ -1,7 +1,7 @@
 import { Skeleton } from "@/components/ui/skeleton";
 import { createClientFeaturePage } from "@/lib/client-feature-page";
 import { buildPageMetadata } from "@/lib/page-metadata";
-import { SITE_URL } from "@/lib/site-config";
+import { SITE_ORIGIN as SITE_URL } from "@shared/lib/runtime-origins";
 import { safeJsonLd } from "@/lib/json-ld";
 import { buildFaqJsonLd } from "@/lib/faq";
 import { ACTIVE_STABLECOINS, PRE_LAUNCH_STABLECOINS } from "@shared/lib/stablecoins";

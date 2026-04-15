@@ -2,7 +2,7 @@ import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins";
 import { Skeleton } from "@/components/ui/skeleton";
 import { createClientFeaturePage } from "@/lib/client-feature-page";
 import { buildPageMetadata } from "@/lib/page-metadata";
-import { SITE_URL } from "@/lib/site-config";
+import { SITE_ORIGIN as SITE_URL } from "@shared/lib/runtime-origins";
 
 const compareDescription = `Side-by-side comparison of stablecoin stats, supply history, and peg stability for ${ACTIVE_STABLECOINS.length} tracked stablecoins.`;
 

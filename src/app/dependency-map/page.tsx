@@ -1,7 +1,7 @@
 import { Skeleton } from "@/components/ui/skeleton";
 import { createClientFeaturePage } from "@/lib/client-feature-page";
 import { buildPageMetadata } from "@/lib/page-metadata";
-import { SITE_URL } from "@/lib/site-config";
+import { SITE_ORIGIN as SITE_URL } from "@shared/lib/runtime-origins";
 
 const description =
   "Interactive graph of collateral dependencies between up to 50 dependency-linked stablecoins by market cap. Node size reflects market cap; lines show collateral links.";

@@ -6,7 +6,7 @@ import { HomepageClient } from "@/components/homepage-client";
 import { KpiBar } from "@/components/kpi-bar";
 import { SiteHeader } from "@/components/site-header";
 import { safeJsonLd } from "@/lib/json-ld";
-import { SITE_URL } from "@/lib/site-config";
+import { SITE_ORIGIN as SITE_URL } from "@shared/lib/runtime-origins";
 import { buildStablecoinUrl } from "@/lib/urls";
 
 export const metadata: Metadata = {

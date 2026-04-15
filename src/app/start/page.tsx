@@ -1,7 +1,7 @@
 import { StartHerePage } from "@/components/start-here-page";
 import { StartHereVisitMarker } from "@/components/start-here-visit-marker";
 import { buildPageMetadata } from "@/lib/page-metadata";
-import { SITE_URL } from "@/lib/site-config";
+import { SITE_ORIGIN as SITE_URL } from "@shared/lib/runtime-origins";
 
 export const metadata = buildPageMetadata({
   title: "Start Here: How to Use Pharos",

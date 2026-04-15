@@ -7,7 +7,7 @@ import { splitDigestParagraphs, EDITORIAL_BODY_STYLE } from "@/lib/digest";
 import { digestDisplay } from "@/lib/fonts";
 import { safeJsonLd } from "@/lib/json-ld";
 import { summarizeText } from "@/lib/page-metadata";
-import { SITE_URL } from "@/lib/site-config";
+import { SITE_ORIGIN as SITE_URL } from "@shared/lib/runtime-origins";
 import digests from "../../../../data/digests.json";
 
 interface DigestEntry {

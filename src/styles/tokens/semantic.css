@@ -193,9 +193,6 @@
   --border-strong:   oklch(1 0 0 / 18%);
 
   /* ── Severity (same hues, adjusted lightness for dark bg) ────── */
-  --severity-healthy:  var(--p-green-500);
-  --severity-mild:     var(--p-amber-300);
-  --severity-moderate: var(--p-orange-500);
   --severity-severe:   var(--p-red-400);
 
   /* ── Featured Surfaces (Dark) ─────────────────────────────────── */
@@ -217,7 +214,6 @@
   --risk-alert-bg:     oklch(0.22 0.03 85 / 0.25);
   --risk-danger-border: var(--p-red-400);
   --risk-danger-bg:    oklch(0.20 0.04 25 / 0.35);
-  --risk-calm-border:  var(--p-green-500);
   --risk-calm-bg:      oklch(0.22 0.03 145 / 0.15);
 
   /* ── Interactive States ───────────────────────────────────────── */
@@ -234,13 +230,10 @@
   --chart-grid-opacity: 0.08;
   --chart-fill-opacity: 0.24;
   --chart-primary:   var(--p-blue-600);
-  --chart-secondary: var(--p-green-400);
-  --chart-tertiary:  var(--p-teal-400);
   --chart-negative:  var(--p-red-400);
   --chart-stage-bg:      oklch(1 0 0 / 0.03);
   --chart-stage-border:  oklch(1 0 0 / 0.08);
   --chart-stage-shadow:  inset 0 1px 0 oklch(1 0 0 / 0.05);
-  --psi-band-opacity: 0.06;
   --dews-radar-spoke:              oklch(1 0 0 / 0.12);
   --dews-radar-calm-boundary:      oklch(1 0 0 / 0.16);
   --dews-radar-band-ring-opacity:  0.25;
@@ -254,41 +247,13 @@
   --elevation-featured: 0 20px 44px rgba(2,6,23,0.28);
 
   /* ── Component: Card ──────────────────────────────────────────── */
-  --card-bg:         var(--surface-overlay);
-  --card-border:     var(--border-default);
-  --card-shadow:     var(--elevation-rest);
-  --card-shadow-hover: var(--elevation-raised);
   --card-shell-bg: linear-gradient(180deg, oklch(0.23 0.01 255 / 0.9), oklch(0.19 0.01 255 / 0.94));
   --card-shell-highlight: radial-gradient(140% 140% at 0% 0%, oklch(0.72 0.14 248 / 0.12), transparent 48%);
   --panel-header-bg: oklch(1 0 0 / 0.04);
 
   /* ── Component: Table ─────────────────────────────────────────── */
-  --table-header-bg:    var(--surface-raised);
-  --table-row-hover:    var(--interactive-hover);
   --table-row-stripe:   oklch(1 0 0 / 4%);
-  --table-border:       var(--border-subtle);
   --table-header-shadow: inset 0 -1px 0 oklch(1 0 0 / 0.08);
   --table-sticky-column-bg: oklch(0.205 0.01 255 / 0.96);
   --table-sticky-column-shadow: 12px 0 24px oklch(0 0 0 / 0.28);
-
-  /* ── Component: Sidebar ───────────────────────────────────────── */
-  --sidebar-bg:        var(--surface-overlay);
-  --sidebar-border:    var(--border-default);
-  --sidebar-item-hover: var(--interactive-hover);
-
-  /* ── Component: Sidebar Dimensions ───────────────────────────── */
-  --sidebar-width-expanded: 220px;
-  --sidebar-width-collapsed: 56px;
-
-  /* ── Motion ───────────────────────────────────────────────────── */
-  --motion-duration-fast: 160ms;
-  --motion-duration-base: 220ms;
-  --motion-ease-standard: cubic-bezier(0.22, 1, 0.36, 1);
-  --motion-duration-slow: 600ms;
-  --motion-duration-entrance: 400ms;
-  --motion-ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
-  --motion-ease-decelerate: cubic-bezier(0.0, 0.0, 0.2, 1);
-
-  /* ── Theme Transition ─────────────────────────────────────────── */
-  --theme-transition-duration: 200ms;
 }

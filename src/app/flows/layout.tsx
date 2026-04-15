@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { BreadcrumbJsonLd } from "@/components/breadcrumb-json-ld";
 import { safeJsonLd } from "@/lib/json-ld";
 import { buildFaqJsonLd } from "@/lib/faq";
-import { SITE_URL } from "@/lib/site-config";
+import { SITE_ORIGIN as SITE_URL } from "@shared/lib/runtime-origins";
 
 export const metadata: Metadata = {
   title: "Mint/Burn Flows",

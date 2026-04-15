@@ -7,7 +7,7 @@ import { FeaturePageShell } from "@/components/feature-page-shell";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { buildPageMetadata } from "@/lib/page-metadata";
-import { SITE_URL } from "@/lib/site-config";
+import { SITE_ORIGIN as SITE_URL } from "@shared/lib/runtime-origins";
 import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins";
 import { TelegramPulseStrip } from "./telegram-pulse-strip";
 

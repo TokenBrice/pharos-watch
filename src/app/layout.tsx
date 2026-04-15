@@ -10,7 +10,7 @@ import { FeedbackButton } from "@/components/feedback-button";
 import { MobileUtilityDock } from "@/components/mobile-utility-dock";
 import { RegimeBar } from "@/components/regime-bar";
 import { safeJsonLd } from "@/lib/json-ld";
-import { SITE_URL, API_URL } from "@/lib/site-config";
+import { API_ORIGIN as API_URL, SITE_ORIGIN as SITE_URL } from "@shared/lib/runtime-origins";
 import { geistMono, geistSans } from "@/lib/fonts";
 import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins";
 import { DEAD_STABLECOINS } from "@shared/lib/dead-stablecoins";
