@@ -267,6 +267,8 @@ import { mockFetch } from "../../api/__tests__/helpers/mock-fetch";
 import * as safetyScoresModule from "../../lib/safety-scores";
 import * as yieldConfigModule from "../yield-config";
 import * as yieldSourcesModule from "../yield-sync/sources";
+import { appendOptionalYieldCandidate, type YieldCandidateAppendStatus } from "../yield-sync/resolve-helpers";
+import type { ResolvedYieldCandidate, ResolvedYieldEntry } from "../yield-sync/types";
 
 // --- Helpers ---
 
@@ -1306,5 +1308,133 @@ describe("optional source budgets", () => {
     const stmts = getWriteStatements();
     const bestRow = findYieldDataRow(stmts, "sdai-maker", "pool-sdai-native");
     expect(bestRow).toBeDefined();
+  });
+});
+
+describe("appendOptionalYieldCandidate", () => {
+  function makeEntry(overrides: Partial<ResolvedYieldCandidate> = {}): ResolvedYieldCandidate {
+    return {
+      symbol: "USDe",
+      yield: {
+        currentApy: 3.2,
+        apyBase: 3.2,
+        apyReward: null,
+        sourcePool: "pool-optional",
+        sourceTvlUsd: 10_000_000_000,
+        dataSource: "protocol-api",
+        exchangeRate: null,
+        sourceKey: "pool-optional",
+        yieldType: "lending-opportunity",
+        project: "proto",
+        yieldSource: "aave-v3",
+      },
+      ...overrides,
+    };
+  }
+
+  it("returns appended when a candidate is accepted", () => {
+    const resolved: ResolvedYieldEntry[] = [];
+    const status = appendOptionalYieldCandidate({
+      resolved,
+      entry: makeEntry({
+        stablecoinId: "usde-ethena",
+        yield: {
+          currentApy: 3.2,
+          apyBase: 3.2,
+          apyReward: null,
+          sourcePool: "pool-optional",
+          sourceTvlUsd: 10_000_000_000,
+          dataSource: "protocol-api",
+          exchangeRate: null,
+          sourceKey: "pool-optional",
+          yieldType: "lending-opportunity",
+          project: "proto",
+          yieldSource: "aave-v3",
+        },
+      }),
+      meta: { id: "usde-ethena", symbol: "USDe", contracts: [{ chain: "ethereum" }] },
+      stablecoinSupplyById: new Map([[
+        "usde-ethena",
+        2_000_000,
+      ]]),
+    });
+
+    expect(status).toBe("appended" as YieldCandidateAppendStatus);
+    expect(resolved).toHaveLength(1);
+  });
+
+  it("returns duplicate when an identical source key already exists", () => {
+    const resolved: ResolvedYieldEntry[] = [{
+      id: "usde-ethena",
+      symbol: "USDe",
+      yield: {
+        currentApy: 3.2,
+        apyBase: 3.2,
+        apyReward: null,
+        sourcePool: "pool-optional",
+        sourceTvlUsd: 1_000,
+        dataSource: "protocol-api",
+        exchangeRate: null,
+        sourceKey: "pool-optional",
+      },
+    }];
+
+    const status = appendOptionalYieldCandidate({
+      resolved,
+      entry: makeEntry({
+        stablecoinId: "usde-ethena",
+        yield: {
+          ...makeEntry({ stablecoinId: "usde-ethena" }).yield,
+          sourceKey: "pool-optional",
+          sourceTvlUsd: 10_000_000_000,
+        },
+      }),
+      meta: { id: "usde-ethena", symbol: "USDe", contracts: [{ chain: "ethereum" }] },
+      stablecoinSupplyById: new Map([[
+        "usde-ethena",
+        2_000_000,
+      ]]),
+    });
+
+    expect(status).toBe("duplicate" as YieldCandidateAppendStatus);
+    expect(resolved).toHaveLength(1);
+  });
+
+  it("returns size-gated when lending opportunity TVL fails threshold", () => {
+    const resolved: ResolvedYieldEntry[] = [];
+    const status = appendOptionalYieldCandidate({
+      resolved,
+      entry: makeEntry({
+        stablecoinId: "usde-ethena",
+        yield: {
+          ...makeEntry({ stablecoinId: "usde-ethena" }).yield,
+          sourceTvlUsd: 1,
+        },
+      }),
+      meta: { id: "usde-ethena", symbol: "USDe", contracts: [{ chain: "ethereum" }] },
+      stablecoinSupplyById: new Map([[
+        "usde-ethena",
+        2_000_000,
+      ]]),
+    });
+
+    expect(status).toBe("size-gated" as YieldCandidateAppendStatus);
+    expect(resolved).toHaveLength(0);
+  });
+
+  it("returns missing-meta when no stablecoin metadata is available", () => {
+    const status = appendOptionalYieldCandidate({
+      resolved: [],
+      entry: makeEntry({
+        yield: {
+          ...makeEntry().yield,
+          sourceTvlUsd: 10_000_000_000,
+        },
+      }),
+      meta: null,
+      stablecoinSupplyById: new Map(),
+    });
+
+    expect(status).toBe("missing-meta" as YieldCandidateAppendStatus);
   });
 });

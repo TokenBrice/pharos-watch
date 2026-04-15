@@ -118,6 +118,46 @@ function matchesExplicitYieldPool(
   return true;
 }
 
+export type YieldCandidateAppendStatus = "appended" | "duplicate" | "size-gated" | "missing-meta";
+
+interface AppendOptionalYieldCandidateInput {
+  resolved: ResolvedYieldEntry[];
+  entry: ResolvedYieldCandidate;
+  meta: { id: string; symbol: string; contracts?: Array<{ chain?: string }>; } | null;
+  stablecoinSupplyById: Map<string, number>;
+}
+
+export function appendOptionalYieldCandidate(input: AppendOptionalYieldCandidateInput): YieldCandidateAppendStatus {
+  const { resolved, entry, meta } = input;
+  if (!meta) {
+    return "missing-meta";
+  }
+
+  if (
+    entry.yield.yieldType === "lending-opportunity" &&
+    !passesLendingOpportunitySizeGate({
+      stablecoinId: meta.id,
+      poolChain: entry.chain ?? meta.contracts?.[0]?.chain ?? null,
+      sourceTvlUsd: entry.yield.sourceTvlUsd,
+      stablecoinSupplyById: input.stablecoinSupplyById,
+    })
+  ) {
+    return "size-gated";
+  }
+
+  if (resolved.some((resolvedEntry) => resolvedEntry.id === meta.id && resolvedEntry.yield?.sourceKey === entry.yield.sourceKey)) {
+    return "duplicate";
+  }
+
+  resolved.push({
+    id: meta.id,
+    symbol: meta.symbol,
+    yield: entry.yield,
+  });
+
+  return "appended";
+}
+
 function appendResolvedYieldCandidates(
   resolved: ResolvedYieldEntry[],
   entries: ResolvedYieldCandidate[],
@@ -144,22 +184,17 @@ function appendResolvedYieldCandidates(
         unresolvedDrops += 1;
         continue;
       }
-      if (
-        entry.yield.yieldType === "lending-opportunity" &&
-        !passesLendingOpportunitySizeGate({
-          stablecoinId: entry.stablecoinId,
-          poolChain: entry.chain ?? meta.contracts?.[0]?.chain ?? null,
-          sourceTvlUsd: entry.yield.sourceTvlUsd,
-          stablecoinSupplyById,
-        })
-      ) {
+      const result = appendOptionalYieldCandidate({
+        resolved,
+        entry,
+        meta,
+        stablecoinSupplyById,
+      });
+      if (result === "size-gated") {
         sizeGateDrops += 1;
-        continue;
+      } else if (result === "missing-meta") {
+        unresolvedDrops += 1;
       }
-      if (resolved.some((resolvedEntry) => resolvedEntry.id === meta.id && resolvedEntry.yield?.sourceKey === entry.yield.sourceKey)) {
-        continue;
-      }
-      resolved.push({ id: meta.id, symbol: meta.symbol, yield: entry.yield });
       continue;
     }
 
@@ -174,23 +209,19 @@ function appendResolvedYieldCandidates(
     }
 
     const meta = getActiveStablecoinMeta(resolution.stablecoinId);
-    if (!meta) continue;
-    if (
-      entry.yield.yieldType === "lending-opportunity" &&
-      !passesLendingOpportunitySizeGate({
-        stablecoinId: resolution.stablecoinId,
-        poolChain: entry.chain ?? meta.contracts?.[0]?.chain ?? null,
-        sourceTvlUsd: entry.yield.sourceTvlUsd,
-        stablecoinSupplyById,
-      })
-    ) {
+    if (!meta) {
+      continue;
+    }
+
+    const result = appendOptionalYieldCandidate({
+      resolved,
+      entry,
+      meta,
+      stablecoinSupplyById,
+    });
+    if (result === "size-gated") {
       sizeGateDrops += 1;
-      continue;
     }
-    if (resolved.some((resolvedEntry) => resolvedEntry.id === meta.id && resolvedEntry.yield?.sourceKey === entry.yield.sourceKey)) {
-      continue;
-    }
-    resolved.push({ id: meta.id, symbol: meta.symbol, yield: entry.yield });
   }
 
   if (blockedDrops > 0 || ambiguousDrops > 0 || unresolvedDrops > 0 || sizeGateDrops > 0) {

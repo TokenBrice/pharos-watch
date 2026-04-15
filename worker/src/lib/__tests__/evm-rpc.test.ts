@@ -73,6 +73,61 @@ describe("evm-rpc helpers", () => {
     expect(result).toBe("0x2a");
   });
 
+  it("falls back when first eth_call result is empty hex", async () => {
+    fetchWithRetryMock
+      .mockResolvedValueOnce(new Response(JSON.stringify({ result: "0x" }), { status: 200 }))
+      .mockResolvedValueOnce(new Response(JSON.stringify({ result: "0x2a" }), { status: 200 }));
+
+    const result = await fetchEvmCallHexAtBlock(undefined, "0xToken", "0x1234", "latest", {
+      extraRpcUrls: ["https://rpc.primary", "https://rpc.fallback"],
+    });
+
+    expect(result).toBe("0x2a");
+    expect(fetchWithRetryMock).toHaveBeenCalledTimes(2);
+  });
+
+  it("includes gas in eth_call request body when provided", async () => {
+    fetchWithRetryMock.mockResolvedValue(
+      new Response(JSON.stringify({ result: "0x2a" }), { status: 200 }),
+    );
+
+    await fetchEvmCallHexAtBlock(undefined, "0xToken", "0x1234", "latest", {
+      extraRpcUrls: ["https://rpc.example"],
+      gas: "0x7a120",
+    });
+
+    const body = JSON.parse(fetchWithRetryMock.mock.calls[0][1]?.body) as {
+      params: Array<{ to: string; data: string; gas?: string }>;
+    };
+    expect(body.params[0]).toMatchObject({ to: "0xToken", data: "0x1234", gas: "0x7a120" });
+  });
+
+  it("falls back when eth_call returns an invalid hex result", async () => {
+    fetchWithRetryMock
+      .mockResolvedValueOnce(new Response(JSON.stringify({ result: "not-hex" }), { status: 200 }))
+      .mockResolvedValueOnce(new Response(JSON.stringify({ result: "0x2a" }), { status: 200 }));
+
+    const result = await fetchEvmCallHexAtBlock(undefined, "0xToken", "0x1234", "latest", {
+      extraRpcUrls: ["https://rpc.primary", "https://rpc.fallback"],
+    });
+
+    expect(result).toBe("0x2a");
+    expect(fetchWithRetryMock).toHaveBeenCalledTimes(2);
+  });
+
+  it("returns null when eth_call returns only invalid results", async () => {
+    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+    fetchWithRetryMock.mockResolvedValue(new Response(JSON.stringify({ result: "not-hex" }), { status: 200 }));
+
+    const result = await fetchEvmCallHexAtBlock(undefined, "0xToken", "0x1234", "latest", {
+      extraRpcUrls: ["https://rpc.example"],
+    });
+
+    expect(result).toBeNull();
+    expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining("[evm-rpc] eth_call failed across 1 RPCs"));
+    warnSpy.mockRestore();
+  });
+
   it("fetches block numbers and timestamps through the shared RPC path", async () => {
     fetchWithRetryMock
       .mockResolvedValueOnce(new Response(JSON.stringify({ result: "0x10" }), { status: 200 }))

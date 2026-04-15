@@ -7,6 +7,11 @@ interface JsonRpcEnvelope<T> {
   error?: { code?: number; message?: string };
 }
 
+interface JsonRpcResultPolicy<T> {
+  acceptResult?: (value: unknown) => value is T;
+  rejectedReason?: (value: unknown) => string;
+}
+
 export interface EvmRpcOptions {
   extraRpcUrls?: string[];
   signal?: AbortSignal;
@@ -62,6 +67,7 @@ async function fetchJsonRpcResult<T>(
   method: string,
   params: unknown[],
   options?: EvmRpcOptions,
+  policy?: JsonRpcResultPolicy<T>,
 ): Promise<T | null> {
   const timeoutMs = options?.timeoutMs ?? 10_000;
   const maxRetries = options?.maxRetries ?? 1;
@@ -91,7 +97,7 @@ async function fetchJsonRpcResult<T>(
         continue;
       }
 
-      const body = await res.json() as JsonRpcEnvelope<T>;
+      const body = await res.json() as JsonRpcEnvelope<unknown>;
       if (body.error) {
         failures.push(`${rpcUrl}: RPC error ${body.error.code ?? ""} ${body.error.message ?? ""}`);
         continue;
@@ -101,7 +107,14 @@ async function fetchJsonRpcResult<T>(
         continue;
       }
 
-      return body.result;
+      if (policy?.acceptResult && !policy.acceptResult(body.result)) {
+        failures.push(
+          `${rpcUrl}: ${policy.rejectedReason ? policy.rejectedReason(body.result) : "unacceptable result"}`,
+        );
+        continue;
+      }
+
+      return body.result as T;
     } catch (err) {
       failures.push(`${rpcUrl}: ${err instanceof Error ? err.message : String(err)}`);
       continue;
@@ -162,48 +175,20 @@ export async function fetchEvmCallHexAtBlock(
   const callObj: Record<string, string> = { to, data };
   if (options?.gas) callObj.gas = options.gas;
   const blockTag = toBlockTag(blockNumberOrTag);
-  const timeoutMs = options?.timeoutMs ?? 10_000;
-  const maxRetries = options?.maxRetries ?? 1;
+  const result = await fetchJsonRpcResult<string>(
+    urls,
+    "eth_call",
+    [callObj, blockTag],
+    options,
+    {
+      acceptResult: (value): value is `0x${string}` => isHexResult(value as string) && value !== "0x",
+      rejectedReason: () => {
+        return "null result";
+      },
+    },
+  );
 
-  // Try each RPC URL, skipping empty/revert results ("0x") so fallbacks are tried
-  const failures: string[] = [];
-  for (const rpcUrl of urls) {
-    try {
-      const res = await fetchWithRetry(
-        rpcUrl,
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          signal: options?.signal,
-          body: JSON.stringify({ jsonrpc: "2.0", id: 1, method: "eth_call", params: [callObj, blockTag] }),
-        },
-        maxRetries,
-        { timeoutMs },
-      );
-      if (!res?.ok) {
-        failures.push(`${rpcUrl}: HTTP ${res?.status ?? "no-response"}`);
-        continue;
-      }
-      const body = await res.json() as JsonRpcEnvelope<string>;
-      if (body.error) {
-        failures.push(`${rpcUrl}: RPC error ${body.error.code ?? ""} ${body.error.message ?? ""}`);
-        continue;
-      }
-      const result = body.result ?? null;
-      if (!isHexResult(result ?? undefined) || result === "0x") {
-        failures.push(`${rpcUrl}: null result`);
-        continue;
-      }
-      return result as `0x${string}`;
-    } catch (err) {
-      failures.push(`${rpcUrl}: ${err instanceof Error ? err.message : String(err)}`);
-      continue;
-    }
-  }
-  if (failures.length > 0) {
-    console.warn(`[evm-rpc] eth_call failed across ${urls.length} RPCs: ${failures.join("; ")}`);
-  }
-  return null;
+  return result as `0x${string}` | null;
 }
 
 export async function fetchEvmUint256AtBlock(

@@ -242,52 +242,45 @@ export async function handleBackfillSupplyHistory(
       const errors: string[] = [];
       const skipped: string[] = [];
 
+      const runCoinGeckoMarketChartBackfill = async (
+        meta: (typeof coins)[number],
+        failureLabel: string,
+      ): Promise<void> => {
+        if (!meta.geckoId) {
+          skipped.push(meta.symbol);
+          return;
+        }
+
+        try {
+          const result = await backfillCommodity(db, meta.id, {
+            geckoId: meta.geckoId,
+            protocolSlug: meta.protocolSlug ?? undefined,
+            cgApiKey,
+            contracts: meta.contracts,
+            chainRpcs,
+          });
+          if (result.error) {
+            errors.push(`${meta.symbol}: ${result.error}`);
+          } else {
+            totalRows += result.rows;
+          }
+        } catch (err) {
+          errors.push(`${meta.symbol}: ${failureLabel} — ${err}`);
+        }
+      };
+
       for (const meta of coins) {
         // Commodity tokens: backfill from CoinGecko market_chart (primary) or protocol TVL (fallback)
         const isCommodity = meta.flags.pegCurrency === "GOLD" || meta.flags.pegCurrency === "SILVER";
         if (isCommodity && meta.geckoId) {
-          try {
-            const result = await backfillCommodity(db, meta.id, {
-              geckoId: meta.geckoId,
-              protocolSlug: meta.protocolSlug ?? undefined,
-              cgApiKey,
-              contracts: meta.contracts,
-              chainRpcs,
-            });
-            if (result.error) {
-              errors.push(`${meta.symbol}: ${result.error}`);
-            } else {
-              totalRows += result.rows;
-            }
-          } catch (err) {
-            errors.push(`${meta.symbol}: commodity backfill failed — ${err}`);
-          }
+          await runCoinGeckoMarketChartBackfill(meta, "commodity backfill failed");
           continue;
         }
 
         // CoinGecko-only and non-gold/silver commodity coins: backfill via CoinGecko market_chart
         // (same path as commodity tokens — market_cap from CG is accurate for USD stablecoins too)
         if (meta.detailProvider === "coingecko" || meta.detailProvider === "commodity") {
-          if (meta.geckoId) {
-            try {
-              const result = await backfillCommodity(db, meta.id, {
-                geckoId: meta.geckoId,
-                protocolSlug: meta.protocolSlug ?? undefined,
-                cgApiKey,
-                contracts: meta.contracts,
-                chainRpcs,
-              });
-              if (result.error) {
-                errors.push(`${meta.symbol}: ${result.error}`);
-              } else {
-                totalRows += result.rows;
-              }
-            } catch (err) {
-              errors.push(`${meta.symbol}: CoinGecko backfill failed — ${err}`);
-            }
-          } else {
-            skipped.push(meta.symbol);
-          }
+          await runCoinGeckoMarketChartBackfill(meta, "CoinGecko backfill failed");
           continue;
         }
 

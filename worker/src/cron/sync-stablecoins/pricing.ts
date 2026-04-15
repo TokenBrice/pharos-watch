@@ -169,6 +169,19 @@ interface ApplyPriceResultForAssetInput {
   stampExistingWhenMissing?: boolean;
 }
 
+interface ApplyPriceResultsForAssetsInput {
+  assets: PeggedAsset[];
+  primaryPriceResults: Map<string, PrimaryPriceResult>;
+  previousTrustedPrices?: Map<string, PreviousTrustedPrice>;
+  validationContexts: ValidationContextResolver;
+  validationReferences?: PriceValidationReferences;
+  syncStartSec: number;
+  rejectionLabel: string;
+  requiredCandidateSource?: string;
+  stampExistingWhenRejected?: boolean;
+  stampExistingWhenMissing?: boolean;
+}
+
 function hasCurrentAssetPrice(asset: PeggedAsset): boolean {
   return asset.price != null && typeof asset.price === "number" && asset.price > 0;
 }
@@ -233,6 +246,36 @@ function applyPriceResultForAsset(input: ApplyPriceResultForAssetInput): void {
 
   if (stampExistingWhenRejected && hasCurrentAssetPrice(asset)) {
     stampExistingSingleSource(asset, syncStartSec);
+  }
+}
+
+function applyPriceResultsForAssets(input: ApplyPriceResultsForAssetsInput): void {
+  const {
+    assets,
+    primaryPriceResults,
+    previousTrustedPrices,
+    validationContexts,
+    validationReferences,
+    syncStartSec,
+    rejectionLabel,
+    requiredCandidateSource,
+    stampExistingWhenRejected = false,
+    stampExistingWhenMissing = false,
+  } = input;
+
+  for (const asset of assets) {
+    applyPriceResultForAsset({
+      asset,
+      primaryPriceResult: primaryPriceResults.get(asset.id),
+      previousTrustedPrice: previousTrustedPrices?.get(asset.id) ?? null,
+      validationContext: validationContexts.get(asset),
+      validationReferences,
+      syncStartSec,
+      rejectionLabel,
+      requiredCandidateSource,
+      stampExistingWhenRejected,
+      stampExistingWhenMissing,
+    });
   }
 }
 
@@ -337,19 +380,19 @@ export function applyPrimaryPriceResults(input: {
     syncStartSec,
   } = input;
 
-  for (const asset of assets) {
-    applyPriceResultForAsset({
-      asset,
-      primaryPriceResult: primaryPriceResults.get(asset.id),
-      previousTrustedPrice: previousTrustedPrices?.get(asset.id) ?? null,
-      validationContext: validationContexts.get(asset),
-      validationReferences,
-      syncStartSec,
-      rejectionLabel: "primary consensus price",
-      stampExistingWhenRejected: true,
-      stampExistingWhenMissing: true,
-    });
+  applyPriceResultsForAssets({
+    assets,
+    primaryPriceResults,
+    previousTrustedPrices,
+    validationContexts,
+    validationReferences,
+    syncStartSec,
+    rejectionLabel: "primary consensus price",
+    stampExistingWhenRejected: true,
+    stampExistingWhenMissing: true,
+  });
 
+  for (const asset of assets) {
     if (!asset.supplySource) {
       asset.supplySource = "defillama";
     }
@@ -411,18 +454,16 @@ export function applyGtProbeResults(input: {
     syncStartSec,
   } = input;
 
-  for (const asset of assets) {
-    applyPriceResultForAsset({
-      asset,
-      primaryPriceResult: primaryPriceResults.get(asset.id),
-      previousTrustedPrice: previousTrustedPrices?.get(asset.id) ?? null,
-      validationContext: validationContexts.get(asset),
-      validationReferences,
-      syncStartSec,
-      rejectionLabel: "GT-probed price",
-      requiredCandidateSource: "geckoterminal",
-    });
-  }
+  applyPriceResultsForAssets({
+    assets,
+    primaryPriceResults,
+    previousTrustedPrices,
+    validationContexts,
+    validationReferences,
+    syncStartSec,
+    rejectionLabel: "GT-probed price",
+    requiredCandidateSource: "geckoterminal",
+  });
 }
 
 export function applyProtocolPriceOverrides(input: {
