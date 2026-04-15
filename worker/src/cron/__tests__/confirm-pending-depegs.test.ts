@@ -10,6 +10,18 @@ vi.mock("../../lib/fetch-retry", () => ({
 
 vi.mock("../../lib/cex-tickers", () => ({
   fetchBinancePrices: vi.fn(async () => new Map<string, number>()),
+  fetchBinancePricesDetailed: vi.fn(async () => ({
+    prices: new Map<string, number>(),
+    diagnostic: {
+      source: "binance",
+      stage: "primary",
+      endpoint: "data-api.binance.vision/api/v3/ticker/price",
+      status: 200,
+      ok: true,
+      success: false,
+      matchedCount: 0,
+    },
+  })),
 }));
 
 vi.mock("../../lib/circuit-breaker", () => ({
@@ -22,7 +34,7 @@ vi.mock("../../lib/native-peg-quotes", () => ({
 }));
 
 import { batchExecute } from "../../lib/db";
-import { fetchBinancePrices } from "../../lib/cex-tickers";
+import { fetchBinancePricesDetailed } from "../../lib/cex-tickers";
 import { recordOutcomeSafe } from "../../lib/circuit-breaker";
 import { fetchWithRetry } from "../../lib/fetch-retry";
 import { fetchCurrentNativePegQuotes } from "../../lib/native-peg-quotes";
@@ -371,7 +383,7 @@ describe("confirmPendingDepegs", () => {
     );
 
     expect(fetchWithRetry).toHaveBeenCalledTimes(4);
-    expect(fetchBinancePrices).toHaveBeenCalledTimes(1);
+    expect(fetchBinancePricesDetailed).toHaveBeenCalledTimes(1);
     expect(batchExecute).toHaveBeenCalledTimes(1);
 
     const [, statements] = vi.mocked(batchExecute).mock.calls[0]!;
@@ -505,7 +517,18 @@ describe("confirmPendingDepegs", () => {
     {
       label: "CEX quote",
       setup: async (nowSec: number): Promise<OppositeDirectionCase> => {
-        vi.mocked(fetchBinancePrices).mockResolvedValueOnce(new Map([["USDT", 1.03]]));
+        vi.mocked(fetchBinancePricesDetailed).mockResolvedValueOnce({
+          prices: new Map([["USDT", 1.03]]),
+          diagnostic: {
+            source: "binance",
+            stage: "primary",
+            endpoint: "data-api.binance.vision/api/v3/ticker/price",
+            status: 200,
+            ok: true,
+            success: true,
+            matchedCount: 1,
+          },
+        });
         return {
           pendingRows: [
             makePendingRow({
@@ -821,7 +844,7 @@ describe("confirmPendingDepegs", () => {
           ...makeNeutralUsdAssets(),
         ],
       ),
-    ).resolves.toBeUndefined();
+    ).resolves.toMatchObject({ providerDiagnostics: expect.any(Array) });
 
     expect(errorSpy).not.toHaveBeenCalled();
     expect(batchExecute).not.toHaveBeenCalled();
@@ -830,7 +853,18 @@ describe("confirmPendingDepegs", () => {
   it("records a successful Binance probe outcome when CEX confirmation data is available", async () => {
     const nowSec = 1_700_000_000;
     vi.spyOn(Date, "now").mockReturnValue(nowSec * 1000);
-    vi.mocked(fetchBinancePrices).mockResolvedValueOnce(new Map([["USDTUSDC", 0.9998]]));
+    vi.mocked(fetchBinancePricesDetailed).mockResolvedValueOnce({
+      prices: new Map([["USDTUSDC", 0.9998]]),
+      diagnostic: {
+        source: "binance",
+        stage: "primary",
+        endpoint: "data-api.binance.vision/api/v3/ticker/price",
+        status: 200,
+        ok: true,
+        success: true,
+        matchedCount: 1,
+      },
+    });
 
     await confirmPendingDepegs(
       makeDb({

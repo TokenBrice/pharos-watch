@@ -2,7 +2,7 @@ export type PricingProviderDiagnosticSource = "binance" | "jupiter";
 
 export interface PricingProviderAttemptDiagnostic {
   source: PricingProviderDiagnosticSource;
-  stage: "primary" | "fallback" | "health-probe";
+  stage: "primary" | "fallback" | "health-probe" | "depeg-confirmation";
   endpoint: string;
   status: number | null;
   ok: boolean;

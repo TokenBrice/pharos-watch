@@ -333,7 +333,7 @@ export async function syncViaCoingeckoFallback(
     " (CG fallback)",
   );
   if (isAbortResult(depegResult)) return depegResult;
-  const { depegErrorCount } = depegResult;
+  const { depegErrorCount, providerDiagnostics: depegProviderDiagnostics } = depegResult;
 
   const result: CronResult = {
     status: depegErrorCount > 0 ? "degraded" : "ok",
@@ -346,7 +346,7 @@ export async function syncViaCoingeckoFallback(
       fallbackMode: "coingecko-supply-fallback",
       validationFailures: 0,
       enrichment: enrichStats,
-      providerDiagnostics: enrichStats.providerDiagnostics ?? [],
+      providerDiagnostics: [...(enrichStats.providerDiagnostics ?? []), ...depegProviderDiagnostics],
       rejectedPrices: rejectedCount,
       nativePegCorrections: nativePegCorrectionCount,
       nativePegFills: nativePegFillCount,

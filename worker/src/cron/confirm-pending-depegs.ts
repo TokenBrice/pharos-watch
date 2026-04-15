@@ -21,7 +21,8 @@ import { fetchWithRetry } from "../lib/fetch-retry";
 import { cgUrl, cgHeaders } from "../lib/coingecko";
 import { throwIfAborted } from "../lib/abort";
 import { recordOutcomeSafe, shouldAttemptFetch } from "../lib/circuit-breaker";
-import { fetchBinancePrices } from "../lib/cex-tickers";
+import { fetchBinancePricesDetailed } from "../lib/cex-tickers";
+import type { PricingProviderAttemptDiagnostic } from "../lib/pricing-provider-diagnostics";
 import {
   buildInsertDepegEventStmt,
   loadDexPriceRows,
@@ -65,14 +66,15 @@ export async function confirmPendingDepegs(
   fxFallbackRates?: Record<string, number>,
   signal?: AbortSignal,
   coingeckoApiKey?: string | null,
-): Promise<void> {
+): Promise<{ providerDiagnostics: PricingProviderAttemptDiagnostic[] }> {
   throwIfAborted(signal);
+  const providerDiagnostics: PricingProviderAttemptDiagnostic[] = [];
   const pending = await db
     .prepare(SELECT_PENDING_DEPEGS_SQL)
     .all<PendingDepegRow>();
 
   const rows = pending.results ?? [];
-  if (rows.length === 0) return;
+  if (rows.length === 0) return { providerDiagnostics };
 
   const now = Math.floor(Date.now() / 1000);
   const assetById = new Map(assets.map((a) => [a.id, a]));
@@ -112,7 +114,10 @@ export async function confirmPendingDepegs(
   if (cexAllowed) {
     throwIfAborted(signal);
     try {
-      cexPrices = await fetchBinancePrices(signal);
+      const { prices, diagnostic } = await fetchBinancePricesDetailed(signal);
+      diagnostic.stage = "depeg-confirmation";
+      providerDiagnostics.push(diagnostic);
+      cexPrices = prices;
       await recordOutcomeSafe(db, CIRCUIT_SOURCE.BINANCE_PRICES, cexPrices.size > 0);
     } catch (err) {
       if (signal?.aborted) throw err instanceof Error ? err : new Error(String(err));
@@ -388,4 +393,6 @@ export async function confirmPendingDepegs(
     await batchExecute(db, stmts);
     console.log(`[depeg-confirm] Executed ${stmts.length} pending depeg mutations`);
   }
+
+  return { providerDiagnostics };
 }

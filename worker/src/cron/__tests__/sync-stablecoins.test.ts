@@ -237,7 +237,7 @@ vi.mock("../detect-depegs", () => ({
 }));
 
 vi.mock("../confirm-pending-depegs", () => ({
-  confirmPendingDepegs: vi.fn(async () => {}),
+  confirmPendingDepegs: vi.fn(async () => ({ providerDiagnostics: [] })),
 }));
 
 vi.mock("../../lib/authoritative-price-sources", () => ({
@@ -357,7 +357,7 @@ describe("syncStablecoins", () => {
     });
     vi.mocked(fetchAuthoritativeLivePriceOverrides).mockReset().mockResolvedValue(new Map());
     vi.mocked(detectDepegEvents).mockReset().mockResolvedValue(undefined);
-    vi.mocked(confirmPendingDepegs).mockReset().mockResolvedValue(undefined);
+    vi.mocked(confirmPendingDepegs).mockReset().mockResolvedValue({ providerDiagnostics: [] });
   });
 
   afterEach(() => {

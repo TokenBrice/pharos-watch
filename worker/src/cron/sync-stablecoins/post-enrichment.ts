@@ -47,6 +47,7 @@ import {
   isSingleSourceDepegAuthoritative,
 } from "../../lib/pricing-source-policy";
 import { applyAcceptedPriceCandidate, applyProtocolPriceOverrides, type ProtocolPriceOverride } from "./pricing";
+import type { PricingProviderAttemptDiagnostic } from "../../lib/pricing-provider-diagnostics";
 
 const PRICE_CACHE_TTL = 6 * 60 * 60;
 
@@ -102,6 +103,7 @@ export interface MissingPriceEnrichmentResult {
 export interface DepegPipelineResult {
   depegErrorCount: number;
   depegErrors: string[];
+  providerDiagnostics: PricingProviderAttemptDiagnostic[];
 }
 
 export interface CacheValidationResult {
@@ -499,6 +501,7 @@ export async function runDepegPipeline(
 ): Promise<DepegPipelineResult | CronResult> {
   let depegErrorCount = 0;
   const depegErrors: string[] = [];
+  const providerDiagnostics: PricingProviderAttemptDiagnostic[] = [];
 
   try {
     const depegAbort = returnIfAborted(signal, `${abortStagePrefix}depeg-detection`);
@@ -514,7 +517,10 @@ export async function runDepegPipeline(
   try {
     const confirmAbort = returnIfAborted(signal, `${abortStagePrefix}depeg-confirmation`);
     if (confirmAbort) return confirmAbort;
-    await confirmPendingDepegs(db, assets, fxFallbackRates, signal, coingeckoApiKey);
+    const confirmation = await confirmPendingDepegs(db, assets, fxFallbackRates, signal, coingeckoApiKey);
+    if (confirmation?.providerDiagnostics?.length) {
+      providerDiagnostics.push(...confirmation.providerDiagnostics);
+    }
   } catch (err) {
     if (signal?.aborted) return abortResult(signal, `${abortStagePrefix}depeg-confirmation`);
     console.error(`[sync-stablecoins] Pending depeg confirmation failed${logContext}:`, err);
@@ -522,7 +528,7 @@ export async function runDepegPipeline(
     depegErrors.push(`confirmation: ${String(err).slice(0, 200)}`);
   }
 
-  return { depegErrorCount, depegErrors };
+  return { depegErrorCount, depegErrors, providerDiagnostics };
 }
 
 /** Type guard: true when the pipeline returned a CronResult (abort). */

@@ -186,7 +186,7 @@ export async function syncStablecoins(
     returnIfAborted, abortResult, "", "",
   );
   if (isAbortResult(depegResult)) return depegResult;
-  const { depegErrorCount, depegErrors } = depegResult;
+  const { depegErrorCount, depegErrors, providerDiagnostics: depegProviderDiagnostics } = depegResult;
 
   const result = buildStablecoinsSyncResult({
     assets,
@@ -194,7 +194,7 @@ export async function syncStablecoins(
     droppedMalformedAssets,
     canonicalDeduplication,
     enrichStats,
-    priceValidationStats, providerDiagnostics,
+    priceValidationStats, providerDiagnostics: [...providerDiagnostics, ...depegProviderDiagnostics],
     authoritativeOverrideCount,
     rejectedCount,
     nativePegCorrectionCount,
