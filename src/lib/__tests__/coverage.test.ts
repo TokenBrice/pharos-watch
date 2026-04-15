@@ -372,7 +372,7 @@ describe("coverage helpers", () => {
     expect(summary.breakdown).toContain("1-2: 1");
   });
 
-  it("uses live reserve tracking as the headline metric for reserve summaries", () => {
+  it("uses score-grade live reserves as the headline metric for reserve summaries", () => {
     const rows = [
       buildCoverageRow({
         coin: makeCoin({
@@ -467,14 +467,14 @@ describe("coverage helpers", () => {
       1_000,
     );
 
-    expect(summary.countLabel).toBe("Live tracking");
+    expect(summary.countLabel).toBe("Score-grade live");
     expect(summary.availableCount).toBe(1);
     expect(summary.coveragePct).toBe(25);
     expect(summary.mcapSharePct).toBe(70);
-    expect(summary.shareLabel).toBe("Live reserve market-cap reach");
-    expect(summary.coverageLabel).toBe("25% with live reserve tracking");
+    expect(summary.shareLabel).toBe("Score-grade live reserve market-cap reach");
+    expect(summary.coverageLabel).toBe("25% with score-grade live reserves");
     expect(summary.breakdown).toBe(
-      "live 1 · configured 0 · checking 0 · curated-validated 1 · proof 1 · curated 1 · estimated 0",
+      "score-grade 1 · configured 0 · checking 0 · curated-validated 1 · proof 1 · curated 1 · estimated 0",
     );
   });
 

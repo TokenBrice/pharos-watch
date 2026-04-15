@@ -121,13 +121,13 @@ export const COVERAGE_FEATURES: readonly CoverageFeatureDefinition[] = [
   {
     key: "reserves",
     label: "Reserve View",
-    shortLabel: "Live Sync",
+    shortLabel: "Reserves",
     description:
-      "Reserve coverage on the stablecoin detail page, with fresh live sync separated from configured, curated-validated, proof-based, curated, and estimated reserve views.",
+      "Detail-page reserve views are separated from score-grade live reserve inputs. The headline counts assets whose current report-card snapshot used fresh independent live reserve data.",
     headlineKinds: ["live"],
-    headlineCountLabel: "Live tracking",
-    headlineCoverageLabel: (coveragePct) => `${coveragePct.toFixed(0)}% with live reserve tracking`,
-    headlineShareLabel: "Live reserve market-cap reach",
+    headlineCountLabel: "Score-grade live",
+    headlineCoverageLabel: (coveragePct) => `${coveragePct.toFixed(0)}% with score-grade live reserves`,
+    headlineShareLabel: "Score-grade live reserve market-cap reach",
   },
   {
     key: "redemption",
@@ -520,18 +520,19 @@ export function resolveReserveCoverage(coin: StablecoinMeta, liveReserveFresh: b
           "amber",
           false,
           1,
-          "Live reserve sync is configured, but the current report-card snapshot did not use fresh live reserve data.",
-          "Configured live reserve sync",
+          "A live reserve adapter is configured, but the current report-card snapshot did not use it for collateral scoring.",
+          "Configured reserve view",
         );
       }
 
       return createStatus(
         "live",
-        "Live",
+        "Score-grade",
         "emerald",
         true,
         4,
-        "Detail-page reserve composition is sourced from a true live reserve feed or direct onchain reserve/accounting reads.",
+        "The current report-card snapshot used a fresh independent live reserve snapshot for collateral scoring.",
+        "Score-grade live reserve",
       );
     }
 
@@ -780,7 +781,7 @@ function buildCoverageBreakdown(
     return `primary ${breakdownMap.get("primary") ?? 0} · mixed ${breakdownMap.get("mixed") ?? 0} · fallback ${breakdownMap.get("fallback") ?? 0} · data n/a ${breakdownMap.get("data-unavailable") ?? 0}`;
   }
   if (featureKey === "reserves") {
-    return `live ${breakdownMap.get("live") ?? 0} · configured ${breakdownMap.get("live-configured") ?? 0} · checking ${breakdownMap.get("checking") ?? 0} · curated-validated ${breakdownMap.get("curated-validated") ?? 0} · proof ${breakdownMap.get("proof") ?? 0} · curated ${breakdownMap.get("curated") ?? 0} · estimated ${breakdownMap.get("estimated") ?? 0}`;
+    return `score-grade ${breakdownMap.get("live") ?? 0} · configured ${breakdownMap.get("live-configured") ?? 0} · checking ${breakdownMap.get("checking") ?? 0} · curated-validated ${breakdownMap.get("curated-validated") ?? 0} · proof ${breakdownMap.get("proof") ?? 0} · curated ${breakdownMap.get("curated") ?? 0} · estimated ${breakdownMap.get("estimated") ?? 0}`;
   }
   if (featureKey === "redemption") {
     return `heuristic ${breakdownMap.get("modeled-heuristic") ?? 0} · configured ${breakdownMap.get("configured-unrated") ?? 0} · issuer ${breakdownMap.get("offchain-issuer") ?? 0} · psm ${breakdownMap.get("psm-swap") ?? 0} · queue ${breakdownMap.get("queue-redeem") ?? 0} · collateral ${breakdownMap.get("collateral-redeem") ?? 0} · stable ${breakdownMap.get("stablecoin-redeem") ?? 0} · basket ${breakdownMap.get("basket-redeem") ?? 0} · data n/a ${breakdownMap.get("data-unavailable") ?? 0}`;

@@ -35,7 +35,7 @@ The matrix currently exposes these columns:
 - `Price & Depeg`
 - `Safety Score`
 - `DEX Price`
-- `Live Reserves Sync`
+- `Reserve View`
 - `Redemption Backstop`
 - `Yield`
 - `Flows`
@@ -47,7 +47,7 @@ Status semantics are intentionally user-facing:
 - `Price & Depeg`: `Tracked`, `Price only` (NAV-priced assets), or `Missing`
 - `Safety Score`: `Rated` or `NR`
 - `DEX Price`: `Primary`, `Mixed`, `Fallback`, `Legacy`, `NR`, or `Unknown`
-- `Live Reserves Sync`: `Live`, `Curated-Validated`, `Proof`, `Curated`, `Estimated`, or `None`
+- `Reserve View`: `Score-grade`, `Configured`, `Checking`, `Curated-Validated`, `Proof`, `Curated`, `Estimated`, or `None`
 - `Redemption Backstop`: `Issuer`, `PSM`, `Queue`, `Collat.`, `Stable`, `Basket`, `Heur.`, `Config.`, or `—`
 - `Yield`: `Ranked` or `—`
 - `Flows`: `Full`, `Partial`, `Lagging`, `Bootstr.` , `Disabled`, or `—`
@@ -65,7 +65,7 @@ The page deliberately mixes structural coverage and live dataset coverage. The i
 | `Price & Depeg`       | `usePegSummary().data.coins[].id`, `consensusSources`, `priceConfidence` plus `ACTIVE_STABLECOINS[*].flags.navToken`       | `Tracked` requires a live peg-summary row. NAV tokens intentionally map to `Price only` even without depeg logic. The headline summary is stricter: it counts only rows with at least 3 consensus price sources.                                     |
 | `Safety Score`        | `useReportCards().data.cards[].overallScore`                                                                               | Coverage is `Rated` only when the report card has a non-null overall score.                                                                                                                                                                          |
 | `DEX Price`           | `useDexLiquidity().data[id].coverageClass`                                                                                 | User-facing badge labels are mapped from liquidity `coverageClass`.                                                                                                                                                                                  |
-| `Live Reserves Sync`  | `ACTIVE_STABLECOINS[*].liveReservesConfig.adapter` mapped through `shared/lib/live-reserve-display.ts`; otherwise `getReserves(coin)` from `@shared/lib/reserve-templates` | Reserve-sync adapters are split into true `Live`, `Curated-Validated`, and `Proof` states before falling back to curated or estimated reserve metadata.                                                                                             |
+| `Reserve View`        | `ACTIVE_STABLECOINS[*].liveReservesConfig.adapter` mapped through `shared/lib/live-reserve-display.ts`; `reportCard.rawInputs.collateralFromLive`; otherwise `getReserves(coin)` from `@shared/lib/reserve-templates` | Detail-page reserve views are split from score-grade live reserve inputs. The row shows `Score-grade` only when the current report-card snapshot used fresh independent live reserves for collateral scoring; configured live adapters that did not qualify render as `Configured`. |
 | `Redemption Backstop` | `useRedemptionBackstops().data.coins[id]`                                                                                  | The matrix reflects the live redemption-backstop snapshot exposed by the worker dataset, not static coin metadata alone. Configured-but-unrated routes render as `Config.`; low-confidence heuristic routes render as `Heur.`; neither counts as covered in the headline metric. |
 | `Yield`               | `useYieldRankings().data.rankings[].id`                                                                                    | Coverage reflects current inclusion in the yield rankings, not theoretical yield-bearing eligibility.                                                                                                                                                |
 | `Flows`               | `useMintBurnFlows().data.coins[].coverage.status`                                                                          | Mirrors the Ethereum mint/burn coverage state exposed on `/flows`.                                                                                                                                                                                   |
@@ -96,7 +96,7 @@ Every row shows:
 - a short per-feature breakdown
 - direct link to the underlying surface when one exists
 
-For `Live Reserves Sync`, the headline metric intentionally emphasizes `Live` reserve tracking only. `Curated-Validated`, `Proof`, curated, and estimated reserve views still appear in the breakdown so the row distinguishes true live coverage from weaker reserve-sync or metadata-only reserve composition.
+For `Reserve View`, the headline metric intentionally emphasizes score-grade live reserve inputs only. `Configured`, `Curated-Validated`, `Proof`, curated, and estimated reserve views still appear in the breakdown so the row distinguishes detail-page reserve coverage from live reserve data that actually entered report-card collateral scoring.
 
 For `Redemption Backstop`, the headline metric intentionally emphasizes strong redemption coverage only. Low-confidence heuristic routes and configured-but-unrated routes still appear in the breakdown so the row does not imply the modeled registry disappeared.
 
@@ -105,7 +105,7 @@ For `Price & Depeg`, the headline metric intentionally emphasizes breadth with c
 Breakdowns are intentionally dense and should stay short:
 
 - DEX: `primary / mixed / fallback`
-- Live reserves: `live / curated-validated / proof / curated / estimated`
+- Reserve view: `score-grade / configured / checking / curated-validated / proof / curated / estimated`
 - Redemption: `heuristic / configured / issuer / psm / queue / collateral / stable / basket`
 - Flows: `full / partial / bootstrapping`
 - Price: `tracked / price-only`

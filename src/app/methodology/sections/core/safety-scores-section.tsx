@@ -28,9 +28,11 @@ export function SafetyScoresMethodologySection() {
                 is computed in two steps: first, a weighted average of four base dimensions (exit liquidity, resilience,
                 decentralization, dependency risk), then a peg stability multiplier that penalizes coins with poor pegs
                 while barely affecting well-pegged ones. The exit-liquidity dimension blends raw DEX liquidity with
-                redemption-backstop quality when a direct exit path exists. When some base dimensions lack data (NR), their
-                weight is redistributed proportionally among rated ones. Active depeg caps use the open event&apos;s peak
-                deviation, while the peg dimension itself remains a direct pegScore passthrough.
+                redemption-backstop quality only when the route has usable current evidence. Reserve data is a separate
+                resilience input: live reserve sync can improve collateral quality only when the latest snapshot is fresh,
+                independent, clean, and score-grade. When some base dimensions lack data (NR), their weight is redistributed
+                proportionally among rated ones. Active depeg caps use the open event&apos;s peak deviation, while the peg
+                dimension itself remains a direct pegScore passthrough.
               </p>
               <MethodologyFacts
                 facts={[
@@ -47,10 +49,44 @@ export function SafetyScoresMethodologySection() {
                     { label: "Required sources", value: "Peg summary, DEX liquidity/redemption data, and dependency/metadata inputs" },
                     {
                       label: "Failure behavior",
-                      value: "NR if peg is missing on non-NAV coins; pure NAV tokens stay neutral when peg tracking is genuinely not applicable, while configured NAV wrappers can inherit peg risk from a referenced base stablecoin; 0.9 penalty applies when exit liquidity is NR (no DEX data and no redemption backstop signal available)",
+                      value: "NR if peg is missing on non-NAV coins; no-liquidity penalty when both DEX and redemption evidence are unavailable; live reserve adapters stay detail-visible when they are stale, degraded, or proof-only",
                     },
                   ]}
                 />
+              </div>
+              <div className="space-y-2">
+                <h3 className="text-foreground font-medium">Three Reserve-Related Signals</h3>
+                <p>
+                  These labels are easy to conflate. They do different jobs, and only two can affect the Safety Score.
+                </p>
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="border-b text-left">
+                        <th scope="col" className="py-2 pr-4 font-medium text-foreground">Signal</th>
+                        <th scope="col" className="py-2 pr-4 font-medium text-foreground">What it means</th>
+                        <th scope="col" className="py-2 font-medium text-foreground">Score use</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y">
+                      <tr className="hover:bg-muted/40 transition-colors">
+                        <td className="py-2 pr-4 text-foreground">Reserve view</td>
+                        <td className="py-2 pr-4">A detail-page reserve display exists: live, curated-validated, proof, curated, or estimated.</td>
+                        <td className="py-2">Informational unless it also passes the score-grade live-reserve gates.</td>
+                      </tr>
+                      <tr className="hover:bg-muted/40 transition-colors">
+                        <td className="py-2 pr-4 text-foreground">Score-grade live reserve</td>
+                        <td className="py-2 pr-4">The current report-card snapshot used a fresh, clean, independent live reserve snapshot for collateral quality.</td>
+                        <td className="py-2">Can replace curated collateral slices inside Resilience.</td>
+                      </tr>
+                      <tr className="hover:bg-muted/40 transition-colors">
+                        <td className="py-2 pr-4 text-foreground">Redemption telemetry</td>
+                        <td className="py-2 pr-4">A live reserve adapter emitted current redemption capacity, fee, freshness, or route-status metadata.</td>
+                        <td className="py-2">Can feed Redemption Backstop capacity or fee scoring; it does not automatically change collateral quality.</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
               </div>
               <WorkedExample summary="Worked example (verified against computeOverallGrade)">
                 <p className="font-mono">Inputs: DEX 30, Redemption 88, Exit 56, Res 70, Decen 60, Dep 75, Peg 92</p>
@@ -212,7 +248,8 @@ export function SafetyScoresMethodologySection() {
                     remain the guardrails against inflation.
                   </p>
                   <p>
-                    Redemption backstops are scored across access, settlement, execution certainty, capacity, output-asset quality, and cost. Low-confidence redemption routes stay visible on the site but do not uplift the Safety Score liquidity dimension. Severe active depegs also disable static or non-live-direct redemption uplift unless current live-open redemption evidence exists. Stale DEX inputs and stale redemption snapshots are not used for effective exit, and stale live reserve metadata ages out instead of staying resolved indefinitely. Timestamp-backed reserve dashboards and disclosures can drive collateral scoring only when the adapter preserves a trustworthy upstream source timestamp.</p>
+                    Redemption backstops are scored across access, settlement, execution certainty, capacity, output-asset quality, and cost. Low-confidence redemption routes stay visible on the site but do not uplift the Safety Score liquidity dimension. Severe active depegs also disable static or non-live-direct redemption uplift unless current live-open redemption evidence exists. Stale DEX inputs and stale redemption snapshots are not used for effective exit. Redemption metadata emitted by a live reserve adapter ages out with the reserve snapshot; if it is stale or degraded, the route stays visible but does not score as current capacity.
+                  </p>
                 </div>
                 {/* Peg multiplier */}
                 <div className="space-y-2">

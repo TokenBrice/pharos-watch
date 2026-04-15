@@ -163,18 +163,18 @@ export const FILTER_OPTIONS: ReadonlyArray<{
 }> = [
   { key: "all", label: "All coins" },
   { key: "redemption", label: "Redemption" },
-  { key: "live-reserves", label: "Live reserves" },
+  { key: "live-reserves", label: "Score-grade reserves" },
   { key: "yield", label: "Yield" },
   { key: "flows", label: "Flows" },
   { key: "blacklist", label: "Blacklist" },
   { key: "weak-price", label: "Weak price" },
   { key: "missing-safety", label: "No safety" },
   { key: "missing-dex", label: "No DEX" },
-  { key: "missing-live-reserves", label: "No live reserves" },
+  { key: "missing-live-reserves", label: "No score-grade reserves" },
   { key: "missing-flows", label: "No flows" },
   { key: "missing-dependency", label: "No dependency" },
   { key: "full-available", label: "Fully available" },
-  { key: "full-headline", label: "Fully headline/live" },
+  { key: "full-headline", label: "Fully headline" },
 ] as const;
 
 export const SORT_OPTIONS: ReadonlyArray<{
@@ -191,8 +191,8 @@ export const SORT_OPTIONS: ReadonlyArray<{
       { key: "name", label: "Alphabetical" },
       { key: "most-covered", label: "Most available" },
       { key: "least-covered", label: "Least available" },
-      { key: "most-headline", label: "Most headline/live" },
-      { key: "least-headline", label: "Weakest headline/live" },
+      { key: "most-headline", label: "Most headline" },
+      { key: "least-headline", label: "Weakest headline" },
     ],
   },
   {
@@ -239,17 +239,17 @@ export const LEGEND_ITEMS = [
       "DEX coverage quality: primary sources, blended primary plus fallback sources, or fallback-only discovery.",
   },
   {
-    term: "Live",
-    description: "Fresh live reserve data was used by the current report-card snapshot.",
+    term: "Score-grade",
+    description: "Fresh independent live reserve data was used by the current report-card snapshot for collateral scoring.",
   },
   {
     term: "Configured",
-    description: "A live reserve adapter exists, but the current snapshot did not use fresh live reserve data.",
+    description: "A reserve view or live reserve adapter exists, but the current report-card snapshot did not use it for collateral scoring.",
   },
   {
     term: "Checking",
     description:
-      "Live reserve adapter coverage is configured, but report-card freshness data is still loading or unavailable.",
+      "Reserve coverage is configured, but report-card freshness data is still loading or unavailable.",
   },
   {
     term: "Curated-Validated",

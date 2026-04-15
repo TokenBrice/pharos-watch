@@ -226,8 +226,8 @@ export function CoverageMatrixCard(
           </CardTitle>
           <CardDescription className="max-w-3xl leading-relaxed">
             Search, filter, and inspect one asset at a time. The desktop table keeps the full comparison view; mobile
-            cards show the highest-signal states first. Available counts are broad; headline/live counts use stricter
-            thresholds for price depth, live reserves, and redemption routes.
+            cards show the highest-signal states first. Available counts are broad; headline counts use stricter
+            thresholds for price depth, score-grade live reserves, and redemption routes.
           </CardDescription>
         </div>
 
@@ -316,7 +316,7 @@ export function CoverageMatrixCard(
             role="status"
             className="rounded-2xl border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm leading-relaxed text-amber-800 dark:text-amber-200"
           >
-            Some feature feeds are unavailable, so affected cells are marked Data n/a, or Checking for live reserve
+            Some feature feeds are unavailable, so affected cells are marked Data n/a, or Checking for reserve
             sync, instead of being counted as coverage gaps: {unavailableFeatureLabels}.
           </div>
         ) : null}

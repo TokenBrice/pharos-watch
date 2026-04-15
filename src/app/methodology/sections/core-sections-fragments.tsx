@@ -1,10 +1,12 @@
 export function CollateralQualityMethodologyCopy() {
   return (
     <p>
-      Collateral quality is derived from reserve compositions when available &mdash; curated metadata by
-      default, or a fresh authoritative independent live reserve snapshot for coins covered by the live
-      reserve sync. For report-card scoring, that live snapshot must also carry scoring-eligible freshness
-      evidence: either a verified timestamp path or an explicit on-chain latest-state{" "}
+      Collateral quality is derived from reserve compositions when available. The default source is curated
+      metadata. A live reserve snapshot replaces it only when the current report-card snapshot can prove the
+      feed is fresh, authoritative, independent, and clean. In coverage tables this is the difference between
+      a reserve view being configured and a score-grade live reserve actually being used. For report-card
+      scoring, the live snapshot must carry scoring-eligible freshness evidence: either a verified timestamp
+      path or an explicit on-chain latest-state{" "}
       <code className="text-xs bg-muted px-1 py-0.5 rounded">not-applicable</code> freshness mode.
       Direct one-bucket on-chain reserve proofs such as Liquity v1 can qualify when the adapter is
       classified as independent, but weak probe families do not qualify just because they are on-chain.

@@ -94,6 +94,14 @@ For coins with curated reserve compositions, collateral quality is computed as a
 
 #### Live Reserve Passthrough (v5.8, tightened in v6.2, v6.5, and v6.6)
 
+Three reserve-related labels mean different things:
+
+| Label | Meaning | Score impact |
+| ----- | ------- | ------------ |
+| Reserve view | The stablecoin detail page can show a reserve composition from live sync, curated validation, proof/liveness, curated metadata, or estimated templates | Informational unless the feed also satisfies the score-grade live reserve rules |
+| Score-grade live reserve | The current report-card snapshot used a fresh, clean, independent live reserve snapshot for collateral quality | Can replace curated collateral slices in the Resilience dimension |
+| Redemption telemetry | A live reserve adapter emitted current redemption capacity, fee, freshness, or route status | Can feed Redemption Backstop capacity or fee scoring; does not automatically change collateral quality |
+
 For coins with live reserve sync (`liveReservesConfig`), the collateral quality score
 can use the hourly live snapshot from `reserve_composition` instead of curated
 `StablecoinMeta.reserves`, but only when the snapshot is both authoritative and
@@ -108,7 +116,7 @@ independent:
 - `validated-static` feeds (for example `curated-validated` and `frax`) and `weak-live-probe` feeds (for example `single-asset` and `tether`) remain authoritative for reserve detail/status surfaces, but they do not override curated collateral scoring
 - the live reserve registry now enforces an explicit per-adapter freshness contract, so latest-state on-chain proofs, timestamp-backed disclosures, and explicitly unverified dashboard feeds cannot silently drift into undocumented freshness semantics
 
-This prevents collateral scores from drifting as protocol reserve compositions evolve.
+This keeps reserve displays broad while keeping collateral scoring strict.
 
 The `collateralFromLive` flag in `RawDimensionInputs` indicates which source was used.
 Dependency inference (`deriveDependencies`) remains on curated data because live

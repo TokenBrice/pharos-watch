@@ -15,7 +15,7 @@ Dedicated documentation for the live reserve-composition subsystem that powers `
 - **Frontend consumers:** `useStablecoinReserves()`, stablecoin detail view model, `/status` reserve-sync health
 - **Operational telemetry:** `sync-live-reserves` emits per-coin progress into `cron_run_progress`, including the current coin, adapter, breaker key, and running synced / failed / skipped counters
 
-This pipeline is intentionally separate from curated reserve metadata in `StablecoinMeta.reserves`. Live reserve sync affects live-enabled detail-page reserve views, status monitoring, and (since v5.8, tightened in v6.2 and v6.5) collateral quality scoring in report cards. The dependency map and all other scoring dimensions still derive from curated/static reserve metadata.
+This pipeline is intentionally separate from curated reserve metadata in `StablecoinMeta.reserves`. Live reserve sync affects live-enabled detail-page reserve views, status monitoring, and (since v5.8, tightened in v6.2 and v6.5) collateral quality scoring in report cards only when a snapshot is score-grade. A configured live adapter is not enough by itself: the report-card snapshot must use a fresh, clean, independent live reserve snapshot before `collateralFromLive` becomes true. The dependency map and all other scoring dimensions still derive from curated/static reserve metadata.
 
 ---
 
