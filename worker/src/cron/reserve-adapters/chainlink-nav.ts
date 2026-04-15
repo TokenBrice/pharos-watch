@@ -108,6 +108,12 @@ export function adaptChainlinkNavResponse(data: ChainlinkNavData, params: Chainl
             "onchain-oracle-getprice",
             "chainlink-nav getPrice() mode does not expose an oracle update timestamp",
           )),
+      redemption: {
+        capacityKind: "documented-bound" as const,
+        freshnessKind: data.updatedAt > 0 ? "verified-source-timestamp" as const : "unverified" as const,
+        ...(data.updatedAt > 0 ? { sourceTimestamp: data.updatedAt } : {}),
+        routeStatus: "unknown" as const,
+      },
     },
   };
 }

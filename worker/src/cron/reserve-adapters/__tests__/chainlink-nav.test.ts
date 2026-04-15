@@ -34,6 +34,12 @@ describe("adaptChainlinkNavResponse", () => {
     expect(result.metadata?.totalSupplyFormatted).toBe("500");
     expect(result.metadata?.freshnessMode).toBe("verified");
     expect(result.metadata?.sourceTimestamp).toBe(1773405239);
+    expect(result.metadata?.redemption).toMatchObject({
+      capacityKind: "documented-bound",
+      freshnessKind: "verified-source-timestamp",
+      sourceTimestamp: 1773405239,
+      routeStatus: "unknown",
+    });
   });
 
   it("throws on zero NAV", () => {
