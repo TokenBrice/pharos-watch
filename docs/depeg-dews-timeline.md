@@ -1,6 +1,15 @@
 # Depeg Tracker + DEWS Methodology — Version Timeline
 
-Internal changelog reconstructed from git history. Covers `v1.0` through `v5.92` (2026-02-18 -> 2026-04-15).
+Internal changelog reconstructed from git history. Covers `v1.0` through `v5.93` (2026-02-18 -> 2026-04-15).
+
+---
+## v5.93 — Blacklist signal coverage follows direct EVM wave (Apr 15, 2026)
+
+**Commit:** `unreleased`
+
+- DEWS blacklist-activity input now follows the direct EVM blacklist tracker expansion
+- FDUSD, BRZ, AUSD, MNEE, EURI, USDQ, USDO, USDX, AID, and TGBP receive blacklist-event count signals when otherwise DEWS-eligible
+- Non-USD amount valuation remains owned by the blacklist tracker ledger; DEWS uses event counts only
 
 ---
 ## v5.92 — Blacklist signal coverage follows first-wave tracker expansion (Apr 15, 2026)

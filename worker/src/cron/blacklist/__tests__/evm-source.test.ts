@@ -90,6 +90,24 @@ const A7A5_CONFIG: ContractEventConfig = {
   ],
 };
 
+const MNEE_CONFIG: ContractEventConfig = {
+  configKey: "ethereum-0x8ccedbae4916b79da7f3f612efb2eb93a2bfd6cf",
+  chain: { chainId: "ethereum", chainName: "Ethereum", evmChainId: 1, explorerUrl: "https://etherscan.io", type: "evm" },
+  stablecoinId: "mnee-mnee",
+  stablecoin: "MNEE",
+  contractAddress: "0x8ccedbae4916b79da7f3f612efb2eb93a2bfd6cf",
+  decimals: 18,
+  events: [
+    {
+      signature: "FundsConfiscated(address,uint256,address)",
+      topicHash: "0x5a592536e075e29026312219123e24de374314962469686d4c992d3c7292c1b4",
+      eventType: "destroy",
+      hasAmount: true,
+      amountTopicIndex: 2,
+    },
+  ],
+};
+
 describe("parseEvmLogs", () => {
   it("extracts address from topics[2] when addressTopicIndex is 2 (USD1)", () => {
     const callerAddr = "0x0000000000000000000000001111111111111111111111111111111111111111";
@@ -206,5 +224,35 @@ describe("parseEvmLogs", () => {
       amount_status: "resolved",
     });
     expect(rows[0].amount_usd_at_event).toBeNull();
+  });
+
+  it("extracts indexed uint256 amounts from configured amount topics", () => {
+    const confiscatedAddr = "0x8888888888888888888888888888888888888888";
+    const amountTopic = `0x${(5n * 10n ** 18n).toString(16).padStart(64, "0")}`;
+    const logs = [{
+      address: "0x8ccedbae4916b79da7f3f612efb2eb93a2bfd6cf",
+      topics: [
+        "0x5a592536e075e29026312219123e24de374314962469686d4c992d3c7292c1b4",
+        `0x000000000000000000000000${confiscatedAddr.slice(2)}`,
+        amountTopic,
+        "0x0000000000000000000000009999999999999999999999999999999999999999",
+      ],
+      data: "0x",
+      blockNumber: "0x1234",
+      transactionHash: "0xmnee",
+      logIndex: "0x4",
+      timeStamp: "0x65000000",
+    }];
+
+    const rows = parseEvmLogs(MNEE_CONFIG, logs);
+
+    expect(rows).toHaveLength(1);
+    expect(rows[0]).toMatchObject({
+      stablecoin: "MNEE",
+      event_type: "destroy",
+      address: confiscatedAddr,
+      amount_native: 5,
+      amount_usd_at_event: 5,
+    });
   });
 });

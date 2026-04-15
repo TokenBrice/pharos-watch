@@ -275,7 +275,7 @@ export default function AboutPage() {
     {
       title: "Blacklist Tracker",
       description:
-        "USDC, USDT, PAXG, XAUT, PYUSD, USD1, USDG, RLUSD, U, USDtb, and A7A5 issuer-intervention events across supported EVM and Tron networks, with a reconciled freeze ledger for major ETH and TRON blacklist totals.",
+        "issuer-intervention events for the live blacklist-tracked stablecoin set across supported EVM and Tron networks, with a reconciled freeze ledger for major ETH and TRON blacklist totals.",
       icon: ShieldAlert,
       href: "/blacklist/",
       linkLabel: "Open blacklist tracker",

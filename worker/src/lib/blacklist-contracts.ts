@@ -33,6 +33,7 @@ export interface BlacklistEventDef {
   hasAmount: boolean;
   addressTopicIndex?: number;  // EVM: which topics[] slot holds the affected address (default 1)
   addressArrayData?: boolean;  // EVM: event data is ABI-encoded address[]; emits one row per address
+  amountTopicIndex?: number;   // EVM: which topics[] slot holds an indexed uint256 amount
   tronResultKey?: string;      // Tron: which result key holds the affected address
 }
 
@@ -73,6 +74,7 @@ const OPTIMISM  = chainConfig("optimism");
 const POLYGON   = chainConfig("polygon");
 const AVALANCHE = chainConfig("avalanche");
 const BSC       = chainConfig("bsc");
+const GNOSIS    = chainConfig("gnosis");
 const TRON      = chainConfig("tron");
 
 // --- Event topic hashes (Keccak256) ---
@@ -317,6 +319,131 @@ const A7A5_EVENT_FAMILY = defineEventFamily("a7a5-blacklist", [
   },
 ]);
 
+// --- AccountFrozen/AccountUnfrozen event definitions (Agora AUSD) ---
+
+const ACCOUNT_FROZEN_TOPIC = "0x4f2a367e694e71282f29ab5eaa04c4c0be45ac5bf2ca74fb67068b98bdc2887d"; // AccountFrozen(address)
+const ACCOUNT_UNFROZEN_TOPIC = "0xf915cd9fe234de6e8d3afe7bf2388d35b2b6d48e8c629a24602019bde79c213a"; // AccountUnfrozen(address)
+
+const ACCOUNT_FREEZE_EVENT_FAMILY = defineEventFamily("account-freeze", [
+  {
+    signature: "AccountFrozen(address)",
+    topicHash: ACCOUNT_FROZEN_TOPIC,
+    eventType: "blacklist",
+    hasAmount: false,
+  },
+  {
+    signature: "AccountUnfrozen(address)",
+    topicHash: ACCOUNT_UNFROZEN_TOPIC,
+    eventType: "unblacklist",
+    hasAmount: false,
+  },
+]);
+
+// --- MNEE freeze/confiscation event definitions ---
+
+const MNEE_FUNDS_CONFISCATED_TOPIC = "0x5a592536e075e29026312219123e24de374314962469686d4c992d3c7292c1b4"; // FundsConfiscated(address,uint256,address)
+const MNEE_HOLDINGS_BURNT_TOPIC = "0x1b560ad975f2a2685fce792af7ad191c5f1c0bfbbf108c676319be3ccb014ddf"; // HoldingsBurnt(address,uint256)
+
+const MNEE_EVENT_FAMILY = defineEventFamily("mnee-freeze-confiscation", [
+  ...ACCOUNT_FREEZE_EVENT_FAMILY.events,
+  {
+    signature: "FundsConfiscated(address,uint256,address)",
+    topicHash: MNEE_FUNDS_CONFISCATED_TOPIC,
+    eventType: "destroy",
+    hasAmount: true,
+    amountTopicIndex: 2,
+  },
+  {
+    signature: "HoldingsBurnt(address,uint256)",
+    topicHash: MNEE_HOLDINGS_BURNT_TOPIC,
+    eventType: "destroy",
+    hasAmount: true,
+    amountTopicIndex: 2,
+  },
+]);
+
+// --- OpenEden / tokenized issuer account ban events ---
+
+const ACCOUNT_BANNED_TOPIC = "0xf5ccd95e2294edead25b59a71c189b3543cffbde2ec0d763800bdcc8807c7c3e"; // AccountBanned(address)
+const ACCOUNT_UNBANNED_TOPIC = "0xc98af8f4ec4ddc4c9cd83aa9d9adbf34053062dc51ad93a562c787c2cc5dbc47"; // AccountUnbanned(address)
+
+const ACCOUNT_BAN_EVENT_FAMILY = defineEventFamily("account-ban", [
+  {
+    signature: "AccountBanned(address)",
+    topicHash: ACCOUNT_BANNED_TOPIC,
+    eventType: "blacklist",
+    hasAmount: false,
+  },
+  {
+    signature: "AccountUnbanned(address)",
+    topicHash: ACCOUNT_UNBANNED_TOPIC,
+    eventType: "unblacklist",
+    hasAmount: false,
+  },
+]);
+
+// --- Hex Trust blacklist events ---
+
+const ADDED_BLACKLIST_TOPIC = "0x86c048150dfc5def3c35f7bc81582956dd964e56d8c028c9f4f5e978bb203c31"; // AddedBlacklist(address)
+const REMOVED_BLACKLIST_TOPIC = "0x90792cb7177eb70be35a14e39400d4143370da97f528237fd2b069e408ca68fb"; // RemovedBlacklist(address)
+
+const ADDED_REMOVED_BLACKLIST_EVENT_FAMILY = defineEventFamily("added-removed-blacklist", [
+  {
+    signature: "AddedBlacklist(address)",
+    topicHash: ADDED_BLACKLIST_TOPIC,
+    eventType: "blacklist",
+    hasAmount: false,
+  },
+  {
+    signature: "RemovedBlacklist(address)",
+    topicHash: REMOVED_BLACKLIST_TOPIC,
+    eventType: "unblacklist",
+    hasAmount: false,
+  },
+]);
+
+// --- Deny-list batch events ---
+
+const ADDED_TO_DENY_LIST_TOPIC = "0x02dd2f2ab1d45714c6f178e8ff8c5594023ec5d134bb99bbb230adabdb718c05"; // AddedToDenyList(address[])
+const REMOVED_FROM_DENY_LIST_TOPIC = "0xfe849628f690f8527fe506998b4ddf44a5b11ecb3ec64257db0951b62d9a4f38"; // RemovedFromDenyList(address[])
+
+const DENY_LIST_EVENT_FAMILY = defineEventFamily("deny-list", [
+  {
+    signature: "AddedToDenyList(address[])",
+    topicHash: ADDED_TO_DENY_LIST_TOPIC,
+    eventType: "blacklist",
+    hasAmount: false,
+    addressArrayData: true,
+  },
+  {
+    signature: "RemovedFromDenyList(address[])",
+    topicHash: REMOVED_FROM_DENY_LIST_TOPIC,
+    eventType: "unblacklist",
+    hasAmount: false,
+    addressArrayData: true,
+  },
+]);
+
+// --- Tokenised GBP ban events ---
+
+const BANNED_TOPIC = "0x30d1df1214d91553408ca5384ce29e10e5866af8423c628be22860e41fb81005"; // Banned(address)
+const UNBANNED_TOPIC = "0xb39966eac8a0ae96284afcbb1a1e8eb366677548a09cf1bf773b39b26bedd234"; // UnBanned(address)
+
+const BANNED_EVENT_FAMILY = defineEventFamily("banned-unbanned", [
+  {
+    signature: "Banned(address)",
+    topicHash: BANNED_TOPIC,
+    eventType: "blacklist",
+    hasAmount: false,
+  },
+  {
+    signature: "UnBanned(address)",
+    topicHash: UNBANNED_TOPIC,
+    eventType: "unblacklist",
+    hasAmount: false,
+  },
+]);
+
 const BLACKLIST_STABLECOIN_SET = new Set<BlacklistStablecoin>(BLACKLIST_STABLECOINS);
 
 function resolveBlacklistStablecoinSymbol(
@@ -405,6 +532,25 @@ const CONTRACT_CONFIG_SPECS: ContractEventConfigSpec[] = [
 
   // A7A5 (Old Vector — Ethereum only; Tron requires separate result-key verification)
   { chain: ETHEREUM, stablecoinId: "a7a5-old-vector", startBlock: 22_080_045, events: A7A5_EVENT_FAMILY.events },
+
+  // Wave 2A direct EVM coverage
+  { chain: ETHEREUM, stablecoinId: "fdusd-first-digital", stablecoin: "FDUSD", startBlock: 17_144_262, events: USD1_EVENT_FAMILY.events },
+  { chain: BSC, stablecoinId: "fdusd-first-digital", stablecoin: "FDUSD", startBlock: 27_850_220, events: USD1_EVENT_FAMILY.events },
+  { chain: ARBITRUM, stablecoinId: "fdusd-first-digital", stablecoin: "FDUSD", startBlock: 452_845_221, events: USD1_EVENT_FAMILY.events },
+  { chain: ETHEREUM, stablecoinId: "brz-transfero", stablecoin: "BRZ", startBlock: 17_517_084, events: USDC_EVENT_FAMILY.events },
+  { chain: GNOSIS, stablecoinId: "brz-transfero", stablecoin: "BRZ", startBlock: 33_257_603, events: USDC_EVENT_FAMILY.events },
+  { chain: ARBITRUM, stablecoinId: "ausd-agora", stablecoin: "AUSD", startBlock: 431_248_926, events: ACCOUNT_FREEZE_EVENT_FAMILY.events },
+  { chain: BASE, stablecoinId: "ausd-agora", stablecoin: "AUSD", startBlock: 35_760_121, events: ACCOUNT_FREEZE_EVENT_FAMILY.events },
+  { chain: ETHEREUM, stablecoinId: "mnee-mnee", stablecoin: "MNEE", startBlock: 19_482_225, events: MNEE_EVENT_FAMILY.events },
+  { chain: ETHEREUM, stablecoinId: "euri-banking-circle", stablecoin: "EURI", startBlock: 20_217_556, events: USD1_EVENT_FAMILY.events },
+  { chain: BSC, stablecoinId: "euri-banking-circle", stablecoin: "EURI", startBlock: 40_115_386, events: USD1_EVENT_FAMILY.events },
+  { chain: ETHEREUM, stablecoinId: "usdq-quantoz", stablecoin: "USDQ", startBlock: 21_179_575, events: USDT0_EVENT_FAMILY.events },
+  { chain: ETHEREUM, stablecoinId: "usdo-openeden", stablecoin: "USDO", startBlock: 20_833_910, events: ACCOUNT_BAN_EVENT_FAMILY.events },
+  { chain: BASE, stablecoinId: "usdo-openeden", stablecoin: "USDO", startBlock: 25_154_101, events: ACCOUNT_BAN_EVENT_FAMILY.events },
+  { chain: ETHEREUM, stablecoinId: "usdx-hex-trust", stablecoin: "USDX", startBlock: 21_062_695, events: ADDED_REMOVED_BLACKLIST_EVENT_FAMILY.events },
+  { chain: ETHEREUM, stablecoinId: "aid-gaib", stablecoin: "AID", startBlock: 23_682_560, events: DENY_LIST_EVENT_FAMILY.events },
+  { chain: ETHEREUM, stablecoinId: "tgbp-tokenised", stablecoin: "TGBP", startBlock: 23_046_391, events: BANNED_EVENT_FAMILY.events },
+  { chain: AVALANCHE, stablecoinId: "tgbp-tokenised", stablecoin: "TGBP", startBlock: 69_696_101, events: BANNED_EVENT_FAMILY.events },
 ];
 
 export const CONTRACT_CONFIGS: ContractEventConfig[] = CONTRACT_CONFIG_SPECS.map(

@@ -428,6 +428,16 @@ export const BLACKLIST_STABLECOINS = [
   "U",
   "USDTB",
   "A7A5",
+  "FDUSD",
+  "BRZ",
+  "AUSD",
+  "EURI",
+  "USDQ",
+  "USDO",
+  "USDX",
+  "AID",
+  "TGBP",
+  "MNEE",
 ] as const;
 
 export type BlacklistStablecoin = (typeof BLACKLIST_STABLECOINS)[number];

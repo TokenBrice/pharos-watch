@@ -11,6 +11,9 @@ const BLACKLIST_PRICE_ASSET_IDS: Partial<Record<BlacklistStablecoin, string>> = 
   PAXG: "paxg-paxos",
   XAUT: "xaut-tether",
   A7A5: "a7a5-old-vector",
+  BRZ: "brz-transfero",
+  EURI: "euri-banking-circle",
+  TGBP: "tgbp-tokenised",
 };
 
 export function getBlacklistPriceAssetId(stablecoin: BlacklistStablecoin): string | null {

@@ -215,6 +215,10 @@ async function fetchDestroyAmountFromLog(
       const matchingEvent = getBlacklistEventByTopic(config, log.topics[0]);
       if (matchingEvent?.eventType !== "destroy" || !matchingEvent.hasAmount) continue;
 
+      if (typeof matchingEvent.amountTopicIndex === "number" && log.topics.length > matchingEvent.amountTopicIndex) {
+        return decodeUint256(log.topics[matchingEvent.amountTopicIndex]!, config.decimals);
+      }
+
       const addressIndexed = log.topics.length > 1;
       if (addressIndexed) {
         return log.data.length >= 66 ? decodeUint256(log.data, config.decimals) : null;

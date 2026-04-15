@@ -1,6 +1,6 @@
 # Blacklist Tracker
 
-Multi-chain blacklist/freeze event tracker for stablecoins. Monitors on-chain events (blacklist, unblacklist, destroy/seize) across 27 contract configurations on 8 chains. Runs hourly, incrementally scanning from the last processed block or timestamp cursor.
+Multi-chain blacklist/freeze event tracker for stablecoins. Monitors on-chain events (blacklist, unblacklist, destroy/seize) across 44 contract configurations on 9 chains. Runs hourly, incrementally scanning from the last processed block or timestamp cursor.
 
 The tracker now has two distinct amount layers:
 
@@ -8,9 +8,9 @@ The tracker now has two distinct amount layers:
 - `blacklist_current_balances` stores persistent freeze-ledger snapshots used by the public frozen-total summary
 - the `/blacklist` status charts now support on-page drilldown into the matching stablecoin subset for each blacklistability bucket
 
-**Cron-backed sync coverage:** USDC, USDT, PAXG, XAUT, PYUSD, USD1, USDG, RLUSD, U, USDtb, A7A5.
+**Cron-backed sync coverage:** USDC, USDT, PAXG, XAUT, PYUSD, USD1, USDG, RLUSD, U, USDtb, A7A5, FDUSD, BRZ, AUSD, MNEE, EURI, USDQ, USDO, USDX, AID, TGBP.
 
-**Live API/UI filter enum:** USDC, USDT, PAXG, XAUT, PYUSD, USD1, USDG, RLUSD, U, USDTB, A7A5 via `BLACKLIST_STABLECOINS` in `shared/types/market.ts` (re-exported through `shared/types/index.ts`).
+**Live API/UI filter enum:** USDC, USDT, PAXG, XAUT, PYUSD, USD1, USDG, RLUSD, U, USDTB, A7A5, FDUSD, BRZ, AUSD, MNEE, EURI, USDQ, USDO, USDX, AID, TGBP via `BLACKLIST_STABLECOINS` in `shared/types/market.ts` (re-exported through `shared/types/index.ts`).
 
 Implementation note: `EURC` is intentionally not live-supported right now. Circle often mirrors the same blacklist action across both USDC and EURC, which creates many zero-balance EURC rows. Pharos will only re-enable EURC if those mirrored no-balance events can be classified without hiding genuine EURC signal.
 
@@ -37,12 +37,12 @@ Implementation note: `EURC` is intentionally not live-supported right now. Circl
 - Max 1000 logs per request (recursive splitting if exceeded, max depth 8)
 - Operational caveats:
   - historical `eth_call` can be unreliable (dRPC is now the preferred balance source for all EVM chains including mainnet)
-  - Base, Optimism, Avalanche, and BSC use chain RPC `eth_getLogs` scans rather than relying on explorer log coverage
+- Base, Optimism, Avalanche, BSC, and Gnosis use chain RPC `eth_getLogs` scans rather than relying on explorer log coverage
 
 ### Chain RPC Log Scans
 
 - Source: `getChainRpc()` from `worker/src/lib/chain-registry.ts`
-- Base, Optimism, Avalanche, and BSC prefer chain RPC `eth_getLogs` scans because the explorer path is not treated as a reliable primary log source on those chains
+- Base, Optimism, Avalanche, BSC, and Gnosis prefer chain RPC `eth_getLogs` scans because the explorer path is not treated as a reliable primary log source on those chains
 - Production uses Alchemy primaries when `ALCHEMY_API_KEY` is configured, otherwise public RPC URLs from the chain registry
 - Used for both chain-head discovery and log scans; timestamps are resolved via `eth_getBlockByNumber`
 - Range splitting is depth-first/sequential inside `worker/src/lib/alchemy-logs.ts` so one oversized scan cannot burst past the Workers shared fetch-connection pool
@@ -179,6 +179,21 @@ All use USDC events: `Blacklisted(address)`, `UnBlacklisted(address)`. Decimals:
 - **Decimals:** 6
 - **Events:** `Blacklisted(address)`, `DeBlacklisted(address)`, `DestroyedBlackFunds(address,uint256)`
 - **Note:** A7A5 is RUB-pegged. USD values use the `a7a5-old-vector` price-cache entry instead of assuming native units equal dollars.
+
+### Direct EVM coverage wave (v3.9)
+
+| Asset | Chain(s) | Events | Notes |
+| ----- | -------- | ------ | ----- |
+| FDUSD | Ethereum, BSC, Arbitrum | `Freeze(address,address)`, `Unfreeze(address,address)` | Dual-index account address in `topics[2]` |
+| BRZ | Ethereum, Gnosis | `Blacklisted(address)`, `UnBlacklisted(address)` | Indexed address; BRL-denominated USD conversion |
+| AUSD | Arbitrum, Base | `AccountFrozen(address)`, `AccountUnfrozen(address)` | Indexed address |
+| MNEE | Ethereum | `AccountFrozen(address)`, `AccountUnfrozen(address)`, `FundsConfiscated(address,uint256,address)`, `HoldingsBurnt(address,uint256)` | Confiscation/burn amounts are indexed in `topics[2]`; AccountBlacklisted/AccountDelisted intentionally deferred |
+| EURI | Ethereum, BSC | `Freeze(address,address)`, `Unfreeze(address,address)` | Dual-index account address; EUR-denominated USD conversion |
+| USDQ | Ethereum | `BlockPlaced(address)`, `BlockReleased(address)`, `DestroyedBlockedFunds(address,uint256)` | USDT0/Hadron pattern |
+| USDO | Ethereum, Base | `AccountBanned(address)`, `AccountUnbanned(address)` | Indexed address |
+| USDX | Ethereum | `AddedBlacklist(address)`, `RemovedBlacklist(address)` | Non-indexed address in data |
+| AID | Ethereum | `AddedToDenyList(address[])`, `RemovedFromDenyList(address[])` | Dynamic address-array event expands to one row per address |
+| TGBP | Ethereum, Avalanche | `Banned(address)`, `UnBanned(address)` | Indexed address; GBP-denominated USD conversion |
 
 ---
 
@@ -330,6 +345,72 @@ DestroyedBlackFunds(address,uint256)
   Address: NOT indexed (first 32 bytes of data)
   Amount: second 32 bytes of data
   hasAmount: true
+```
+
+### Wave 2A Direct EVM Events
+
+```
+AccountFrozen(address indexed)
+  Topic: 0x4f2a367e694e71282f29ab5eaa04c4c0be45ac5bf2ca74fb67068b98bdc2887d
+  Address: indexed (topics[1])
+  hasAmount: false
+
+AccountUnfrozen(address indexed)
+  Topic: 0xf915cd9fe234de6e8d3afe7bf2388d35b2b6d48e8c629a24602019bde79c213a
+  Address: indexed (topics[1])
+  hasAmount: false
+
+FundsConfiscated(address indexed,uint256 indexed,address indexed)
+  Topic: 0x5a592536e075e29026312219123e24de374314962469686d4c992d3c7292c1b4
+  Address: indexed (topics[1])
+  Amount: indexed uint256 (topics[2])
+  hasAmount: true
+
+HoldingsBurnt(address indexed,uint256 indexed)
+  Topic: 0x1b560ad975f2a2685fce792af7ad191c5f1c0bfbbf108c676319be3ccb014ddf
+  Address: indexed (topics[1])
+  Amount: indexed uint256 (topics[2])
+  hasAmount: true
+
+AccountBanned(address indexed)
+  Topic: 0xf5ccd95e2294edead25b59a71c189b3543cffbde2ec0d763800bdcc8807c7c3e
+  Address: indexed (topics[1])
+  hasAmount: false
+
+AccountUnbanned(address indexed)
+  Topic: 0xc98af8f4ec4ddc4c9cd83aa9d9adbf34053062dc51ad93a562c787c2cc5dbc47
+  Address: indexed (topics[1])
+  hasAmount: false
+
+AddedBlacklist(address)
+  Topic: 0x86c048150dfc5def3c35f7bc81582956dd964e56d8c028c9f4f5e978bb203c31
+  Address: NOT indexed (first 32 bytes of data)
+  hasAmount: false
+
+RemovedBlacklist(address)
+  Topic: 0x90792cb7177eb70be35a14e39400d4143370da97f528237fd2b069e408ca68fb
+  Address: NOT indexed (first 32 bytes of data)
+  hasAmount: false
+
+AddedToDenyList(address[])
+  Topic: 0x02dd2f2ab1d45714c6f178e8ff8c5594023ec5d134bb99bbb230adabdb718c05
+  Address list: ABI-encoded dynamic address[] in data
+  hasAmount: false
+
+RemovedFromDenyList(address[])
+  Topic: 0xfe849628f690f8527fe506998b4ddf44a5b11ecb3ec64257db0951b62d9a4f38
+  Address list: ABI-encoded dynamic address[] in data
+  hasAmount: false
+
+Banned(address indexed)
+  Topic: 0x30d1df1214d91553408ca5384ce29e10e5866af8423c628be22860e41fb81005
+  Address: indexed (topics[1])
+  hasAmount: false
+
+UnBanned(address indexed)
+  Topic: 0xb39966eac8a0ae96284afcbb1a1e8eb366677548a09cf1bf773b39b26bedd234
+  Address: indexed (topics[1])
+  hasAmount: false
 ```
 
 ---
@@ -555,7 +636,7 @@ For destroy events, try fetching from transaction receipt first (`eth_getTransac
 | `sortBy`     | string | date    | Sort field (`"date"`, `"stablecoin"`, `"chain"`, `"event"`)          |
 | `sortDirection` | string | desc | Sort direction (`"asc"`, `"desc"`)                                   |
 
-The handler now exposes only the live-supported symbols: USDC, USDT, PAXG, XAUT, PYUSD, USD1, USDG, RLUSD, U, USDTB, and A7A5.
+The handler now exposes only the live-supported symbols: USDC, USDT, PAXG, XAUT, PYUSD, USD1, USDG, RLUSD, U, USDTB, A7A5, FDUSD, BRZ, AUSD, MNEE, EURI, USDQ, USDO, USDX, AID, TGBP.
 
 **Response:**
 
@@ -679,7 +760,7 @@ Both endpoints now emit freshness headers from the same hourly `sync-blacklist` 
 
 - `null` or (`0` and not destroy): show "--"
 - Gold coins (PAXG, XAUT): 4 decimal places + symbol (converted to USD using the coin-specific price-cache entry)
-- A7A5: native amount is RUB-denominated and converted to USD using the `a7a5-old-vector` price-cache entry
+- A7A5, BRZ, EURI, and TGBP: native amounts are non-USD-denominated and converted to USD using coin-specific price-cache entries
 - USD-pegged stablecoins: `formatCurrency` (USD)
 
 ### Special UI Components
@@ -711,7 +792,7 @@ Both endpoints now emit freshness headers from the same hourly `sync-blacklist` 
 5. **PAXG FrozenAddressWiped** has no amount in the event -- must fetch via `balanceOf` at `blockNumber - 1`.
 6. **XAUT uses USDT0 event pattern** (was mistakenly using legacy pattern until 2026-02-11 fix).
 7. **Explorer historical calls** are not dependable enough to be primary on any chain -- rely on dRPC first, then chain-RPC/Alchemy fallback; explorer fallback is best-effort only.
-8. **Base, Optimism, Avalanche, and BSC log scans** use chain RPC `eth_getLogs` paths instead of depending on explorer log coverage.
+8. **Base, Optimism, Avalanche, BSC, and Gnosis log scans** use chain RPC `eth_getLogs` paths instead of depending on explorer log coverage.
 9. **EVM sentinel bug (fixed):** storing `99999999` as `last_block` could cause permanent scan stall.
 10. **Budget limit (900 subrequests)** is shared across ALL configs + backfill per cron cycle.
 11. **Partial RPC scans now preserve progress:** incomplete Base/Optimism/Avalanche/BSC log scans still advance to the highest safely covered block, so large first-sync backlogs drain over multiple cron runs instead of re-scanning genesis every time.
@@ -722,6 +803,8 @@ Both endpoints now emit freshness headers from the same hourly `sync-blacklist` 
 16. **USDtb emits batch events:** `AccountsBlocked(address[])` and `AccountsUnblocked(address[])` expand one log into one row per affected address, with the array index appended to the row ID.
 17. **A7A5 is non-USD:** never treat native A7A5 units as USD; amount conversion depends on the `a7a5-old-vector` price-cache entry.
 18. **RLUSD clawback is not covered:** v3.8 tracks account pause/unpause only. Clawback support needs transaction-input classification because the verified ABI does not expose a dedicated clawback event.
+19. **MNEE has independent blacklist and freeze states:** v3.9 tracks MNEE freeze/unfreeze plus confiscation/burn events only. AccountBlacklisted/AccountDelisted need a future restriction-source key to avoid active-state collisions.
+20. **BRZ/EURI/TGBP are non-USD:** public USD values depend on price-cache conversion rather than native token units.
 
 ---
 

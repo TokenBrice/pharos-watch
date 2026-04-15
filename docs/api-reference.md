@@ -540,7 +540,7 @@ Aggregate historical supply chart data across all stablecoins, broken down by pe
 
 ### `GET /api/blacklist`
 
-Freeze, blacklist, block/unblock, account-pause, and token-destruction events currently ingested for USDC, USDT, PAXG, XAUT, PYUSD, USD1, USDG, RLUSD, U, USDTB, and A7A5. `EURC` is intentionally excluded from the live filter set for now because Circle frequently mirrors the same blacklist actions on both USDC and EURC, which creates many zero-balance EURC rows. Data is sourced from on-chain logs via Etherscan, Tron, and EVM RPCs.
+Freeze, blacklist, block/unblock, account-pause, and token-destruction events currently ingested for USDC, USDT, PAXG, XAUT, PYUSD, USD1, USDG, RLUSD, U, USDTB, A7A5, FDUSD, BRZ, AUSD, MNEE, EURI, USDQ, USDO, USDX, AID, and TGBP. `EURC` is intentionally excluded from the live filter set for now because Circle frequently mirrors the same blacklist actions on both USDC and EURC, which creates many zero-balance EURC rows. Data is sourced from on-chain logs via Etherscan, Tron, and EVM RPCs.
 
 **Cache:** realtime
 
@@ -1499,11 +1499,11 @@ Stablecoin risk grade cards with dimension-level scores. Output includes 5 dimen
 }
 ```
 
-The Liquidity dimension now represents `effectiveExitScore`: the public DEX liquidity score remains the floor, while redeemable assets can receive uplift from `redemptionBackstopScore` when a meaningful direct exit path exists. Low-confidence redemption routes stay visible but do not uplift the score, and stale DEX or redemption inputs are not blended.
+The Liquidity dimension now represents `effectiveExitScore`: the public DEX liquidity score remains the floor, while redeemable assets can receive uplift from `redemptionBackstopScore` when a meaningful direct exit path exists. Low-confidence redemption routes stay visible but do not uplift the score, and stale DEX or materially stale redemption inputs are not blended. Report-card redemption inputs are treated as materially stale after more than twice the hourly redemption sync cadence, so normal cron lag does not globally remove medium- or high-confidence redemption uplift.
 
 For peg handling, `rawInputs.pegScore` is the effective peg input used by report-card scoring. Most coins use their direct peg-summary value. Configured NAV wrappers can inherit peg stability from a referenced base stablecoin when the wrapper share price is not the right peg-tracking surface; pure NAV tokens without a configured reference remain `null` and keep neutral handling. `rawInputs.activeDepegBps` is the open active depeg event's absolute peak deviation used for final Safety Score caps; it is not the latest spot deviation.
 
-`GET /api/report-cards` treats the stablecoins cache and readable redemption-backstop table as hard dependencies. DEX liquidity, bluechip ratings, live-reserve inputs, and stale redemption rows are soft dependencies: if one of those loaders is temporarily unavailable or stale, the endpoint continues serving a degraded snapshot instead of failing closed, with stale inputs suppressed from scoring.
+`GET /api/report-cards` treats the stablecoins cache and readable redemption-backstop table as hard dependencies. DEX liquidity, bluechip ratings, live-reserve inputs, and materially stale redemption rows are soft dependencies: if one of those loaders is temporarily unavailable or stale beyond its scoring freshness runway, the endpoint continues serving a degraded snapshot instead of failing closed, with stale inputs suppressed from scoring.
 
 **`dependencyGraph.edges`**: Pre-computed forward edges. `from` = upstream stablecoin ID, `to` = dependent stablecoin ID. `weight` and `type` carry the worker's canonical dependency metadata, so frontend graph consumers can use the snapshot directly instead of re-deriving edge semantics from static stablecoin metadata.
 
@@ -2118,17 +2118,17 @@ Aggregate responses are filtered to active tracked stablecoin IDs only, even if 
         "price": { "value": 1, "available": true }
       },
       "computedAt": 1740000000,
-      "methodologyVersion": "5.92"
+      "methodologyVersion": "5.93"
     }
   },
   "updatedAt": 1740000000,
   "oldestComputedAt": 1740000000,
   "malformedRows": 0,
   "methodology": {
-    "version": "5.92",
-    "versionLabel": "v5.92",
-    "currentVersion": "5.92",
-    "currentVersionLabel": "v5.92",
+    "version": "5.93",
+    "versionLabel": "v5.93",
+    "currentVersion": "5.93",
+    "currentVersionLabel": "v5.93",
     "changelogPath": "/methodology/depeg-changelog/",
     "asOf": 1740000000,
     "isCurrent": true
@@ -2148,7 +2148,7 @@ Aggregate responses are filtered to active tracked stablecoin IDs only, even if 
       "price": { "value": 1, "available": true }
     },
     "computedAt": 1740000000,
-    "methodologyVersion": "5.92"
+    "methodologyVersion": "5.93"
   },
   "history": [
     {
@@ -2159,15 +2159,15 @@ Aggregate responses are filtered to active tracked stablecoin IDs only, even if 
         "supply": { "value": 1, "available": true },
         "price": { "value": 1, "available": true }
       },
-      "methodologyVersion": "5.92"
+      "methodologyVersion": "5.93"
     }
   ],
   "malformedRows": 0,
   "methodology": {
-    "version": "5.92",
-    "versionLabel": "v5.92",
-    "currentVersion": "5.92",
-    "currentVersionLabel": "v5.92",
+    "version": "5.93",
+    "versionLabel": "v5.93",
+    "currentVersion": "5.93",
+    "currentVersionLabel": "v5.93",
     "changelogPath": "/methodology/depeg-changelog/",
     "asOf": 1740000000,
     "isCurrent": true

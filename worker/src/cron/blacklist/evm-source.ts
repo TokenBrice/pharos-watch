@@ -25,12 +25,13 @@ import {
 } from "../../lib/evm-logs";
 import { buildExplorerAddressUrl, buildExplorerTxUrl, type BlacklistRow } from "./shared";
 
-const RPC_LOG_SCAN_CHAIN_IDS = new Set(["base", "optimism", "avalanche", "bsc"]);
+const RPC_LOG_SCAN_CHAIN_IDS = new Set(["base", "optimism", "avalanche", "bsc", "gnosis"]);
 const RPC_LOG_SCAN_WINDOWS: Record<string, { alchemy: number; fallback: number }> = {
   base: { alchemy: 500_000, fallback: 50_000 },
   optimism: { alchemy: 500_000, fallback: 50_000 },
   avalanche: { alchemy: 250_000, fallback: 2_000 },
   bsc: { alchemy: 250_000, fallback: 50_000 },
+  gnosis: { alchemy: 250_000, fallback: 50_000 },
 };
 
 type EvmLogLike = Pick<
@@ -144,7 +145,9 @@ export function parseEvmLogs(
     const addressIndexed = log.topics.length > topicIdx;
     const affectedAddress = addressIndexed ? decodeAddress(log.topics[topicIdx]) : decodeAddress(log.data.slice(0, 66));
     const amount = eventDef.hasAmount
-      ? addressIndexed
+      ? typeof eventDef.amountTopicIndex === "number" && log.topics.length > eventDef.amountTopicIndex
+        ? decodeUint256(log.topics[eventDef.amountTopicIndex]!, config.decimals)
+        : addressIndexed
         ? log.data.length >= 66
           ? decodeUint256(log.data, config.decimals)
           : null

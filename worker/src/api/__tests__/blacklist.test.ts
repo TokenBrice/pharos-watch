@@ -136,7 +136,7 @@ describe("handleBlacklist", () => {
   });
 
   it("accepts first-wave stablecoin symbol filters", async () => {
-    for (const symbol of ["usdg", "rlusd", "u", "usdtb", "a7a5"]) {
+    for (const symbol of ["usdg", "rlusd", "u", "usdtb", "a7a5", "fdusd", "brz", "ausd", "euri", "usdq", "usdo", "usdx", "aid", "tgbp", "mnee"]) {
       const db = mockD1([
         { match: "COUNT", rows: [{ total: 0 }] },
         { match: "blacklist_events", rows: [] },

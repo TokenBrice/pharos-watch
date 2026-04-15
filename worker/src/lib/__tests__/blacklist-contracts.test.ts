@@ -91,4 +91,28 @@ describe("blacklist-contracts shared metadata alignment", () => {
     const accountPaused = getBlacklistEventBySignature(rlusd!, "AccountPaused");
     expect(accountPaused?.eventType).toBe("blacklist");
   });
+
+  it("includes direct EVM follow-up coverage configs", () => {
+    expect(CONTRACT_CONFIGS).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ stablecoinId: "fdusd-first-digital", chain: expect.objectContaining({ chainId: "ethereum" }) }),
+        expect.objectContaining({ stablecoinId: "fdusd-first-digital", chain: expect.objectContaining({ chainId: "bsc" }) }),
+        expect.objectContaining({ stablecoinId: "fdusd-first-digital", chain: expect.objectContaining({ chainId: "arbitrum" }) }),
+        expect.objectContaining({ stablecoinId: "brz-transfero", chain: expect.objectContaining({ chainId: "ethereum" }) }),
+        expect.objectContaining({ stablecoinId: "brz-transfero", chain: expect.objectContaining({ chainId: "gnosis" }) }),
+        expect.objectContaining({ stablecoinId: "ausd-agora", chain: expect.objectContaining({ chainId: "arbitrum" }) }),
+        expect.objectContaining({ stablecoinId: "ausd-agora", chain: expect.objectContaining({ chainId: "base" }) }),
+        expect.objectContaining({ stablecoinId: "mnee-mnee", chain: expect.objectContaining({ chainId: "ethereum" }) }),
+        expect.objectContaining({ stablecoinId: "euri-banking-circle", chain: expect.objectContaining({ chainId: "ethereum" }) }),
+        expect.objectContaining({ stablecoinId: "euri-banking-circle", chain: expect.objectContaining({ chainId: "bsc" }) }),
+        expect.objectContaining({ stablecoinId: "usdq-quantoz", chain: expect.objectContaining({ chainId: "ethereum" }) }),
+        expect.objectContaining({ stablecoinId: "usdo-openeden", chain: expect.objectContaining({ chainId: "ethereum" }) }),
+        expect.objectContaining({ stablecoinId: "usdo-openeden", chain: expect.objectContaining({ chainId: "base" }) }),
+        expect.objectContaining({ stablecoinId: "usdx-hex-trust", chain: expect.objectContaining({ chainId: "ethereum" }) }),
+        expect.objectContaining({ stablecoinId: "aid-gaib", chain: expect.objectContaining({ chainId: "ethereum" }) }),
+        expect.objectContaining({ stablecoinId: "tgbp-tokenised", chain: expect.objectContaining({ chainId: "ethereum" }) }),
+        expect.objectContaining({ stablecoinId: "tgbp-tokenised", chain: expect.objectContaining({ chainId: "avalanche" }) }),
+      ]),
+    );
+  });
 });

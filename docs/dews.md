@@ -6,7 +6,7 @@ Per-coin, forward-looking stress score (0-100) estimating depeg probability. Com
 
 DEWS shares its methodology versioning with the Depeg Tracker pipeline. Both are tracked together in `shared/lib/depeg-dews-version.ts`.
 
-- **Current methodology version:** `v5.92`
+- **Current methodology version:** `v5.93`
 - **Public changelog page:** `/methodology/depeg-changelog/`
 - **Canonical source:** `shared/lib/depeg-dews-version.ts`
 
@@ -106,7 +106,7 @@ Historical `stress_signal_history` rows do not retain the underlying DEX trust m
 
 ### S_black — Blacklist Activity
 
-Only for blacklist-tracked coins (currently USDC, USDT, PAXG, XAUT, PYUSD, USD1, USDG, RLUSD, U, USDTB, and A7A5). Coverage is derived from the shared supported blacklist symbol set, so DEWS stays aligned with the live blacklist tracker instead of maintaining a separate coin list. Uses 24h event count with spike detection relative to 7d daily average.
+Only for blacklist-tracked coins (currently USDC, USDT, PAXG, XAUT, PYUSD, USD1, USDG, RLUSD, U, USDTB, A7A5, FDUSD, BRZ, AUSD, MNEE, EURI, USDQ, USDO, USDX, AID, and TGBP). Coverage is derived from the shared supported blacklist symbol set, so DEWS stays aligned with the live blacklist tracker instead of maintaining a separate coin list. Uses 24h event count with spike detection relative to 7d daily average.
 
 ### S_flow — Mint/Burn Flow
 
@@ -193,7 +193,7 @@ When a coin has insufficient data in a cycle (`computeDEWS() === null`), that ru
   "updatedAt": 1740000000,
   "oldestComputedAt": 1740000000,
   "malformedRows": 0,
-  "methodology": { "version": "5.92", "versionLabel": "...", "currentVersion": "5.92", "currentVersionLabel": "...", "changelogPath": "/methodology/depeg-changelog/", "asOf": 1740000000 }
+  "methodology": { "version": "5.93", "versionLabel": "...", "currentVersion": "5.93", "currentVersionLabel": "...", "changelogPath": "/methodology/depeg-changelog/", "asOf": 1740000000 }
 }
 ```
 
@@ -211,7 +211,7 @@ Unknown IDs and tracked-but-non-active IDs both return `404` (`Stablecoin not tr
     ...
   ],
   "malformedRows": 0,
-  "methodology": { "version": "5.92", "versionLabel": "...", "currentVersion": "5.92", "currentVersionLabel": "...", "changelogPath": "/methodology/depeg-changelog/", "asOf": 1740000000 }
+  "methodology": { "version": "5.93", "versionLabel": "...", "currentVersion": "5.93", "currentVersionLabel": "...", "changelogPath": "/methodology/depeg-changelog/", "asOf": 1740000000 }
 }
 ```
 
