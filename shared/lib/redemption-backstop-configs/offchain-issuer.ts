@@ -14,6 +14,7 @@ import {
 const REVIEWED_DIRECT_REDEMPTION_AT = "2026-03-23";
 const REVIEWED_REMEDIATION_AT = "2026-03-30";
 const REVIEWED_ISSUER_API_EXPANSION_AT = "2026-04-03";
+const REVIEWED_MAJOR_ISSUER_REDEMPTION_AT = "2026-04-16";
 const reviewedDirectRedemptionSupplyFull = documentedBoundSupplyFull(
   REVIEWED_DIRECT_REDEMPTION_AT,
 );
@@ -102,12 +103,23 @@ export const OFFCHAIN_ISSUER_BACKSTOP_CONFIGS: Record<string, RedemptionBackstop
   "usdt-tether": {
     ...issuerBase,
     ...reviewedDirectRedemptionSupplyFull,
+    reviewedAt: REVIEWED_MAJOR_ISSUER_REDEMPTION_AT,
     costModel: documentedVariableFee("0.10% with a $1,000 minimum"),
+    docs: [
+      sourceRef("Tether Transparency", "https://tether.to/en/transparency", ["capacity"]),
+      sourceRef("Tether legal terms", "https://tether.to/en/legal/", ["route", "capacity", "access"]),
+      sourceRef("Tether fees", "https://tether.to/en/fees/", ["fees", "access"]),
+    ],
   },
   "usdc-circle": {
     ...issuerBase,
     ...reviewedDirectRedemptionSupplyFull,
+    reviewedAt: REVIEWED_MAJOR_ISSUER_REDEMPTION_AT,
     costModel: documentedVariableFee("1:1 via Circle Mint; EEA burn fee is 0 bps, other Circle fees may vary"),
+    docs: [
+      sourceRef("Circle Transparency", "https://www.circle.com/transparency", ["capacity"]),
+      sourceRef("Circle USDC terms", "https://www.circle.com/legal/usdc-terms", ["route", "capacity", "access", "fees"]),
+    ],
   },
   "pyusd-paypal": {
     ...issuerBase,
