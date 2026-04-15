@@ -21,3 +21,40 @@ export function CollateralQualityMethodologyCopy() {
     </p>
   );
 }
+
+export function ReserveRelatedSignalsMethodologyCopy() {
+  return (
+    <div className="space-y-2">
+      <h3 className="text-foreground font-medium">Three Reserve-Related Signals</h3>
+      <p>These labels are easy to conflate. They do different jobs, and only two can affect the Safety Score.</p>
+      <div className="overflow-x-auto">
+        <table className="w-full text-sm">
+          <thead>
+            <tr className="border-b text-left">
+              <th scope="col" className="py-2 pr-4 font-medium text-foreground">Signal</th>
+              <th scope="col" className="py-2 pr-4 font-medium text-foreground">What it means</th>
+              <th scope="col" className="py-2 font-medium text-foreground">Score use</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y">
+            <tr className="hover:bg-muted/40 transition-colors">
+              <td className="py-2 pr-4 text-foreground">Reserve view</td>
+              <td className="py-2 pr-4">A detail-page reserve display exists: live, curated-validated, proof, curated, or estimated.</td>
+              <td className="py-2">Informational unless it also passes the score-grade live-reserve gates.</td>
+            </tr>
+            <tr className="hover:bg-muted/40 transition-colors">
+              <td className="py-2 pr-4 text-foreground">Score-grade live reserve</td>
+              <td className="py-2 pr-4">The current report-card snapshot used a fresh, clean, independent live reserve snapshot for collateral quality.</td>
+              <td className="py-2">Can replace curated collateral slices inside Resilience.</td>
+            </tr>
+            <tr className="hover:bg-muted/40 transition-colors">
+              <td className="py-2 pr-4 text-foreground">Redemption telemetry</td>
+              <td className="py-2 pr-4">A live reserve adapter emitted current redemption capacity, fee, freshness, or route-status metadata.</td>
+              <td className="py-2">Can feed Redemption Backstop capacity or fee scoring; it does not automatically change collateral quality.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
