@@ -21,6 +21,12 @@ describe("adaptFdusdTransparency", () => {
       asOf: "Feb 28, 2026",
       sourceTimestamp: Date.UTC(2026, 1, 28) / 1000,
       freshnessMode: "verified",
+      redemption: {
+        capacityKind: "documented-bound",
+        freshnessKind: "verified-source-timestamp",
+        sourceTimestamp: Date.UTC(2026, 1, 28) / 1000,
+        routeStatus: "unknown",
+      },
     });
   });
 

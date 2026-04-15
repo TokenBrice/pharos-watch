@@ -72,6 +72,12 @@ export function adaptFdusdTransparency(html: string): AdapterResult {
             "html-disclosure",
             "FDUSD reserve page did not expose a parseable 'As of' timestamp",
           )),
+      redemption: {
+        capacityKind: "documented-bound" as const,
+        freshnessKind: sourceTimestamp != null ? "verified-source-timestamp" as const : "unverified" as const,
+        ...(sourceTimestamp != null ? { sourceTimestamp } : {}),
+        routeStatus: "unknown" as const,
+      },
     },
   };
 }
