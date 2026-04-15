@@ -126,6 +126,11 @@ export async function fetchErc4626SingleAssetReserves(
       contractAddress,
       totalAssetsRaw: totalAssetsRaw.toString(),
       ...(assetAddress ? { assetAddress } : {}),
+      redemption: {
+        capacityKind: "documented-eventual" as const,
+        freshnessKind: "same-run-onchain" as const,
+        routeStatus: warnings.length > 0 ? "degraded" as const : "unknown" as const,
+      },
     },
   };
 }

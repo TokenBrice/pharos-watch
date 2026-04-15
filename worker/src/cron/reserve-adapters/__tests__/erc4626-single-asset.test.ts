@@ -83,6 +83,11 @@ describe("fetchErc4626SingleAssetReserves", () => {
         proofKind: "erc4626-total-assets",
         assetAddressMatchesExpected: true,
       },
+      redemption: {
+        capacityKind: "documented-eventual",
+        freshnessKind: "same-run-onchain",
+        routeStatus: "unknown",
+      },
     });
   });
 
