@@ -29,6 +29,13 @@ describe("adaptUsd1BundleOracle", () => {
       supplyUsd: 1_540_271_014.1308322,
       reserveDecimals: 18,
       tokenDecimals: 18,
+      redemption: {
+        capacityKind: "documented-bound",
+        freshnessKind: "verified-source-timestamp",
+        sourceTimestamp: 1776154391,
+        routeStatus: "unknown",
+        holderEligibility: "verified-customer",
+      },
     });
   });
 

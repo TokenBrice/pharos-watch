@@ -97,6 +97,13 @@ export function adaptUsd1BundleOracle(input: {
       reserveDecimals,
       totalSupplyRaw: input.totalSupplyRaw.toString(),
       tokenDecimals: input.tokenDecimals,
+      redemption: {
+        capacityKind: "documented-bound" as const,
+        freshnessKind: "verified-source-timestamp" as const,
+        sourceTimestamp: bundleTimestamp,
+        routeStatus: "unknown" as const,
+        holderEligibility: "verified-customer",
+      },
     },
   };
 }
