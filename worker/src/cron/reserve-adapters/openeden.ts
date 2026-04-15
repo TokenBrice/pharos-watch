@@ -14,6 +14,7 @@ interface OpenEdenReserveCompositionResponse {
   usdoAmount: number;
   totalTbillAmountInUsd: number;
   usdcAmount: number;
+  rlusdAmount?: number;
   buidlAmount: number;
   vbillAmount: number;
   usycAmountInUsd: number;
@@ -33,6 +34,7 @@ function adaptOpenEdenReserveComposition(payload: OpenEdenReserveCompositionResp
   const componentTotal =
     payload.totalTbillAmountInUsd
     + payload.usdcAmount
+    + (payload.rlusdAmount ?? 0)
     + payload.buidlAmount
     + payload.vbillAmount
     + payload.usycAmountInUsd
@@ -81,6 +83,12 @@ function adaptOpenEdenReserveComposition(payload: OpenEdenReserveCompositionResp
       value: payload.usdcAmount,
       risk: "low",
       coinId: "usdc-circle",
+    },
+    {
+      name: "RLUSD buffer",
+      value: payload.rlusdAmount ?? 0,
+      risk: "low",
+      coinId: "rlusd-ripple",
     },
     {
       name: "Hashnote USYC",

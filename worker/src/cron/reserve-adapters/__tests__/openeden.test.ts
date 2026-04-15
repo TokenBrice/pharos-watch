@@ -30,4 +30,27 @@ describe("adaptOpenEdenUsdo", () => {
       immediateRedeemableUsd: 4_767_161.22,
     });
   });
+
+  it("includes the RLUSD component in component-total validation and slices", () => {
+    const result = adaptOpenEdenUsdo({
+      date: "2026-03-25T08:00:17.600Z",
+      usdoAmount: 100,
+      totalTbillAmountInUsd: 70,
+      usdcAmount: 10,
+      rlusdAmount: 5,
+      buidlAmount: 5,
+      vbillAmount: 10,
+      usycAmountInUsd: 0,
+      benjiAmount: 0,
+      reserveAssetsInUsd: 100,
+      ratio: 1,
+    });
+
+    expect(result.slices).toContainEqual({
+      name: "RLUSD buffer",
+      pct: 5,
+      risk: "low",
+      coinId: "rlusd-ripple",
+    });
+  });
 });
