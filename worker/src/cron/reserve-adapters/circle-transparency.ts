@@ -131,6 +131,13 @@ export function adaptCircleTransparency(html: string, coinType: string): Adapter
       rawValueSum,
       ...(displayAmount != null ? { displayAmount } : {}),
       ...(displayAmountRelativeDiff != null ? { displayAmountRelativeDiff } : {}),
+      redemption: {
+        capacityKind: "documented-bound" as const,
+        freshnessKind: sourceTimestamp != null ? "verified-source-timestamp" as const : "unverified" as const,
+        ...(sourceTimestamp != null ? { sourceTimestamp } : {}),
+        routeStatus: "unknown" as const,
+        holderEligibility: "verified-customer",
+      },
     },
   };
 }

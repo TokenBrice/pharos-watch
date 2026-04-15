@@ -40,6 +40,13 @@ describe("adaptCircleTransparency", () => {
     expect(result.metadata).toMatchObject({
       freshnessMode: "verified",
       sourceTimestamp: Date.UTC(2026, 3, 9) / 1000,
+      redemption: {
+        capacityKind: "documented-bound",
+        freshnessKind: "verified-source-timestamp",
+        sourceTimestamp: Date.UTC(2026, 3, 9) / 1000,
+        routeStatus: "unknown",
+        holderEligibility: "verified-customer",
+      },
     });
   });
 
