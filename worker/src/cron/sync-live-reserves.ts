@@ -18,7 +18,6 @@ import {
   type LiveReserveConfig,
 } from "./sync-live-reserves-shared";
 import { createAdapterIoLimiter, RESERVE_ADAPTER_MAX_PARALLEL_IO } from "./reserve-adapters/concurrency";
-
 const ADAPTER_TIMEOUT_MS = 20_000;
 
 function createAbortableAttemptSignal(
