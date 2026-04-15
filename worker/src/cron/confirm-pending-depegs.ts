@@ -114,9 +114,11 @@ export async function confirmPendingDepegs(
   if (cexAllowed) {
     throwIfAborted(signal);
     try {
-      const { prices, diagnostic } = await fetchBinancePricesDetailed(signal);
-      diagnostic.stage = "depeg-confirmation";
-      providerDiagnostics.push(diagnostic);
+      const { prices, diagnostics } = await fetchBinancePricesDetailed(signal);
+      for (const diagnostic of diagnostics) {
+        diagnostic.stage = "depeg-confirmation";
+      }
+      providerDiagnostics.push(...diagnostics);
       cexPrices = prices;
       await recordOutcomeSafe(db, CIRCUIT_SOURCE.BINANCE_PRICES, cexPrices.size > 0);
     } catch (err) {

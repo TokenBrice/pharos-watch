@@ -21,7 +21,7 @@ When an asset still has no usable current price after validation and fallback re
 
 ## Versioning
 
-- **Current methodology version:** `v4.33`
+- **Current methodology version:** `v4.34`
 - **Canonical version module:** `shared/lib/pricing-pipeline-version.ts`
 - **Public changelog route:** `/methodology/pricing-pipeline-changelog/`
 - **Longform methodology section:** `/methodology/#pricing-pipeline-methodology`
@@ -210,6 +210,8 @@ Operationally, missing-price enrichment runs before the slower GeckoTerminal sof
 Provider attempt diagnostics for Binance and Jupiter are persisted into `sync-stablecoins` cron metadata. Those diagnostics include the sanitized endpoint, HTTP status when available, candidate/response/match counts, and short non-OK snippets so operators can distinguish provider transport failures from successful responses that simply carry no usable tracked prices.
 
 Jupiter fallback uses the official `https://api.jup.ag/price/v3` gateway. The previous Lite gateway is no longer used after Worker egress received repeated Cloudflare 403 block pages from that host.
+
+Binance ticker fetches try the market-data mirror first (`data-api.binance.vision`) and then fall back to the main public API host (`api.binance.com`) before recording the source as failed. Both hosts use the same tracked `USDTUSD` / `USDCUSD` market mapping.
 
 The enrichment path is intentionally narrower than primary pricing:
 

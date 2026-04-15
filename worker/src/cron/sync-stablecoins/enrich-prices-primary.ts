@@ -624,8 +624,8 @@ export async function fetchPrimaryPrices(
       (async () => {
         if (sourceAllowed.binance) {
           await runPrimaryProviderFetch(db, signal, CIRCUIT_SOURCE.BINANCE_PRICES, "Binance ticker", async () => {
-            const { prices, diagnostic } = await fetchBinancePricesDetailed(signal);
-            providerDiagnostics.push(diagnostic);
+            const { prices, diagnostics } = await fetchBinancePricesDetailed(signal);
+            providerDiagnostics.push(...diagnostics);
             for (const [symbol, price] of prices) binancePrices.set(symbol, price);
             if (prices.size > 0) binanceObservedAt = Math.floor(Date.now() / 1000);
             return prices.size > 0;

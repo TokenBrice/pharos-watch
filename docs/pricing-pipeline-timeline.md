@@ -1,6 +1,16 @@
 # Pricing Pipeline Methodology - Version Timeline
 
-Internal changelog reconstructed from the machine-readable methodology version source. Covers Pricing Pipeline `v1.0` through `v4.33` (2026-02-01 -> 2026-04-15).
+Internal changelog reconstructed from the machine-readable methodology version source. Covers Pricing Pipeline `v1.0` through `v4.34` (2026-02-01 -> 2026-04-15).
+
+---
+
+## v4.34 - Binance host failover for Worker egress (Apr 15, 2026)
+
+**Commit:** `unreleased`
+
+- Binance ticker fetches now try `data-api.binance.vision` first and fall back to `api.binance.com` before recording a failed source outcome
+- The fallback was added after production Worker diagnostics showed HTTP 403 from the market-data mirror while local provider audits still saw healthy `USDTUSD` and `USDCUSD` Binance markets
+- Binance diagnostics preserve each attempted endpoint so operators can distinguish mirror-specific blocks from parser/config problems
 
 ---
 

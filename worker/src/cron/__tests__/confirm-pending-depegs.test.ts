@@ -12,7 +12,7 @@ vi.mock("../../lib/cex-tickers", () => ({
   fetchBinancePrices: vi.fn(async () => new Map<string, number>()),
   fetchBinancePricesDetailed: vi.fn(async () => ({
     prices: new Map<string, number>(),
-    diagnostic: {
+    diagnostics: [{
       source: "binance",
       stage: "primary",
       endpoint: "data-api.binance.vision/api/v3/ticker/price",
@@ -20,7 +20,7 @@ vi.mock("../../lib/cex-tickers", () => ({
       ok: true,
       success: false,
       matchedCount: 0,
-    },
+    }],
   })),
 }));
 
@@ -519,7 +519,7 @@ describe("confirmPendingDepegs", () => {
       setup: async (nowSec: number): Promise<OppositeDirectionCase> => {
         vi.mocked(fetchBinancePricesDetailed).mockResolvedValueOnce({
           prices: new Map([["USDT", 1.03]]),
-          diagnostic: {
+          diagnostics: [{
             source: "binance",
             stage: "primary",
             endpoint: "data-api.binance.vision/api/v3/ticker/price",
@@ -527,7 +527,7 @@ describe("confirmPendingDepegs", () => {
             ok: true,
             success: true,
             matchedCount: 1,
-          },
+          }],
         });
         return {
           pendingRows: [
@@ -855,7 +855,7 @@ describe("confirmPendingDepegs", () => {
     vi.spyOn(Date, "now").mockReturnValue(nowSec * 1000);
     vi.mocked(fetchBinancePricesDetailed).mockResolvedValueOnce({
       prices: new Map([["USDTUSDC", 0.9998]]),
-      diagnostic: {
+      diagnostics: [{
         source: "binance",
         stage: "primary",
         endpoint: "data-api.binance.vision/api/v3/ticker/price",
@@ -863,7 +863,7 @@ describe("confirmPendingDepegs", () => {
         ok: true,
         success: true,
         matchedCount: 1,
-      },
+      }],
     });
 
     await confirmPendingDepegs(

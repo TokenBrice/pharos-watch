@@ -35,7 +35,7 @@ describe("fetchBinancePrices", () => {
     vi.stubGlobal("fetch", fetchMock);
     const results = await fetchBinancePrices();
     expect(results.size).toBe(0);
-    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(fetchMock).toHaveBeenCalledTimes(4);
   });
 
   it("returns empty map when Binance returns no stablecoin pairs", async () => {
@@ -60,10 +60,10 @@ describe("fetchBinancePrices", () => {
       ]),
     }));
 
-    const { prices, diagnostic } = await fetchBinancePricesDetailed();
+    const { prices, diagnostics } = await fetchBinancePricesDetailed();
 
     expect(prices.size).toBe(0);
-    expect(diagnostic).toMatchObject({
+    expect(diagnostics[0]).toMatchObject({
       source: "binance",
       stage: "primary",
       status: 200,
@@ -82,15 +82,43 @@ describe("fetchBinancePrices", () => {
       text: () => Promise.resolve("blocked by upstream"),
     }));
 
-    const { prices, diagnostic } = await fetchBinancePricesDetailed();
+    const { prices, diagnostics } = await fetchBinancePricesDetailed();
 
     expect(prices.size).toBe(0);
-    expect(diagnostic).toMatchObject({
+    expect(diagnostics[0]).toMatchObject({
       source: "binance",
       status: 403,
       ok: false,
       success: false,
       snippet: "blocked by upstream",
+    });
+  });
+
+  it("falls back to the main Binance API host when data-api is blocked", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockImplementation((url: string) => {
+      if (url.includes("data-api.binance.vision")) {
+        return Promise.resolve(new Response("blocked", { status: 403 }));
+      }
+      return Promise.resolve(new Response(JSON.stringify([
+        { symbol: "USDTUSD", price: "1.0002" },
+        { symbol: "USDCUSD", price: "0.9999" },
+      ]), {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      }));
+    }));
+
+    const { prices, diagnostics } = await fetchBinancePricesDetailed();
+
+    expect(prices.get("USDT")).toBeCloseTo(1.0002, 4);
+    expect(prices.get("USDC")).toBeCloseTo(0.9999, 4);
+    expect(diagnostics).toHaveLength(2);
+    expect(diagnostics[0]).toMatchObject({ status: 403, success: false });
+    expect(diagnostics[1]).toMatchObject({
+      endpoint: "api.binance.com/api/v3/ticker/price",
+      status: 200,
+      success: true,
+      matchedCount: 2,
     });
   });
 });

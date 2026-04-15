@@ -24,7 +24,10 @@ import {
 
 const CEX_REQUEST_TIMEOUT_MS = 10_000;
 const CEX_REQUEST_RETRIES = 1;
-const BINANCE_TICKER_URL = "https://data-api.binance.vision/api/v3/ticker/price";
+const BINANCE_TICKER_URLS = [
+  "https://data-api.binance.vision/api/v3/ticker/price",
+  "https://api.binance.com/api/v3/ticker/price",
+] as const;
 
 const BINANCE_PAIR_TO_SYMBOL = new Map<string, string>(BINANCE_MARKETS.map((market) => [market.pair, market.symbol]));
 const KRAKEN_RESPONSE_KEY_TO_SYMBOL = new Map<string, string>(
@@ -105,14 +108,18 @@ function getCexRetryDelayMs(response: Response, attempt: number): number | null 
   if (response.status === 529) {
     return Math.min(30_000, 5_000 * 2 ** attempt);
   }
-  return 1000 * 2 ** attempt;
+  if (response.status >= 500) {
+    return 1000 * 2 ** attempt;
+  }
+  return null;
 }
 
-export async function fetchBinancePricesDetailed(
+async function fetchBinanceTickerUrl(
+  url: string,
   signal?: AbortSignal,
 ): Promise<{ prices: Map<string, number>; diagnostic: PricingProviderAttemptDiagnostic }> {
   const results = new Map<string, number>();
-  const endpoint = endpointLabel(BINANCE_TICKER_URL);
+  const endpoint = endpointLabel(url);
   let diagnostic: PricingProviderAttemptDiagnostic = {
     source: "binance",
     stage: "primary",
@@ -129,7 +136,7 @@ export async function fetchBinancePricesDetailed(
       const combinedSignal = signal
         ? AbortSignal.any([signal, perRequestTimeout])
         : perRequestTimeout;
-      const response = await fetch(BINANCE_TICKER_URL, {
+      const response = await fetch(url, {
         signal: combinedSignal,
         headers: { Accept: "application/json", "User-Agent": USER_AGENT },
       });
@@ -145,8 +152,9 @@ export async function fetchBinancePricesDetailed(
 
       if (!response.ok) {
         diagnostic.snippet = await readResponseSnippet(response);
-        if (attempt < CEX_REQUEST_RETRIES) {
-          await sleepWithSignal(getCexRetryDelayMs(response, attempt) ?? 0, signal);
+        const retryDelayMs = attempt < CEX_REQUEST_RETRIES ? getCexRetryDelayMs(response, attempt) : null;
+        if (retryDelayMs != null) {
+          await sleepWithSignal(retryDelayMs, signal);
           continue;
         }
         return { prices: results, diagnostic };
@@ -191,6 +199,20 @@ export async function fetchBinancePricesDetailed(
   }
 
   return { prices: results, diagnostic };
+}
+
+export async function fetchBinancePricesDetailed(
+  signal?: AbortSignal,
+): Promise<{ prices: Map<string, number>; diagnostics: PricingProviderAttemptDiagnostic[] }> {
+  const diagnostics: PricingProviderAttemptDiagnostic[] = [];
+  for (const url of BINANCE_TICKER_URLS) {
+    const { prices, diagnostic } = await fetchBinanceTickerUrl(url, signal);
+    diagnostics.push(diagnostic);
+    if (prices.size > 0) {
+      return { prices, diagnostics };
+    }
+  }
+  return { prices: new Map(), diagnostics };
 }
 
 export async function fetchBinancePrices(

@@ -3,9 +3,24 @@ import {
 } from "./methodology-version";
 
 const pricing = createMethodologyVersion({
-  currentVersion: "4.33",
+  currentVersion: "4.34",
   changelogPath: "/methodology/pricing-pipeline-changelog/",
   changelog: [
+    {
+      version: "4.34",
+      title: "Binance host failover for Worker egress",
+      date: "2026-04-15",
+      effectiveAt: 1776213300,
+      summary:
+        "Added a Binance ticker host failover after production Worker diagnostics showed the market-data mirror returning HTTP 403 while local audits still saw healthy Binance USD pairs.",
+      impact: [
+        "Binance pricing now tries `data-api.binance.vision` first and falls back to `api.binance.com` before recording the source as failed",
+        "Provider diagnostics preserve each attempted Binance endpoint so operators can see which host succeeded or failed",
+        "The change keeps the same tracked `USDTUSD` and `USDCUSD` market mappings and does not alter consensus weighting",
+      ],
+      commits: [],
+      reconstructed: false,
+    },
     {
       version: "4.33",
       title: "Jupiter official gateway fallback",
