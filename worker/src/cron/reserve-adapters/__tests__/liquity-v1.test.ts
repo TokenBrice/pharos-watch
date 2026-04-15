@@ -61,7 +61,17 @@ describe("fetchLiquityV1Reserves", () => {
       troveManagerAddress: "0xA39739EF8b0231DbFA0DcdA07d7e29faAbCf4bb2",
       totalCollateralRaw: "123000000000000000000",
       totalDebtRaw: "84000000000000000000",
+      immediateRedeemableUsd: 84,
       redemptionFeeBps: 50,
+      redemption: {
+        capacityUsd: 84,
+        capacityKind: "live-direct-bounded",
+        freshnessKind: "same-run-onchain",
+        routeStatus: "open",
+        holderEligibility: "any-holder",
+        settlementDelaySec: 0,
+        feeBps: 50,
+      },
       details: {
         proofKind: "liquity-v1-system-collateral",
       },

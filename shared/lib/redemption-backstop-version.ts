@@ -1,9 +1,24 @@
 import { createMethodologyVersion, toMethodologyVersionLabel } from "./methodology-version";
 
 const redemptionBackstop = createMethodologyVersion({
-  currentVersion: "3.9",
+  currentVersion: "3.91",
   changelogPath: "/methodology/#safety-scores-methodology",
   changelog: [
+    {
+      version: "3.91",
+      title: "LUSD live direct capacity telemetry",
+      date: "2026-04-15",
+      effectiveAt: 1776258000,
+      summary:
+        "LUSD now uses the Liquity v1 live reserve adapter's same-run on-chain system debt as direct redemption-capacity telemetry.",
+      impact: [
+        "The `liquity-v1` adapter now publishes nested `metadata.redemption` capacity from `TroveManager.getEntireSystemDebt()` alongside the existing live redemption fee",
+        "`lusd-liquity` now resolves redemption capacity from fresh reserve-sync metadata instead of the static full-supply model",
+        "When the Liquity on-chain snapshot is unavailable or stale, LUSD remains visible but unrated for redemption capacity rather than falling back to an immediate full-supply estimate",
+      ],
+      commits: [],
+      reconstructed: false,
+    },
     {
       version: "3.9",
       title: "Normalized redemption telemetry and live capacity adapters",

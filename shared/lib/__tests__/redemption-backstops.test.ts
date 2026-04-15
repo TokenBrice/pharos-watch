@@ -92,6 +92,17 @@ describe("getRedemptionBackstopConfig", () => {
       costModel: { kind: "fee-bps", feeBps: 0 },
     });
 
+    expect(getRedemptionBackstopConfig("lusd-liquity")).toMatchObject({
+      routeFamily: "collateral-redeem",
+      accessModel: "permissionless-onchain",
+      settlementModel: "atomic",
+      executionModel: "deterministic-onchain",
+      outputAssetType: "bluechip-collateral",
+      capacityModel: { kind: "reserve-sync-metadata" },
+      costModel: { kind: "dynamic-or-unclear", confidence: "formula" },
+      reviewedAt: "2026-03-22",
+    });
+
     expect(getRedemptionBackstopConfig("msusd-main-street")).toMatchObject({
       routeFamily: "stablecoin-redeem",
       capacityModel: { kind: "supply-full", confidence: "documented-bound" },

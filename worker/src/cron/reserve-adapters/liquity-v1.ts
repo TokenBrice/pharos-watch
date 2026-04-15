@@ -3,6 +3,7 @@ import type { LiveReservesConfig } from "@shared/types/live-reserves";
 import { parseLiveReserveAdapterParams } from "@shared/lib/live-reserve-adapters";
 import type { AdapterContext, AdapterResult } from "./types";
 import {
+  decimalNumberFromBigInt,
   fetchOnchainRateBps,
   fetchOnchainUint256,
   notApplicableFreshnessMetadata,
@@ -11,6 +12,7 @@ import {
 
 const LIQUITY_V1_GET_ENTIRE_SYSTEM_COLL_SELECTOR = "0x887105d3";
 const LIQUITY_V1_GET_ENTIRE_SYSTEM_DEBT_SELECTOR = "0x795d26c3";
+const LIQUITY_V1_DEBT_DECIMALS = 18;
 
 interface LiquityV1Params {
   troveManagerAddress: string;
@@ -85,6 +87,8 @@ export async function fetchLiquityV1Reserves(
     throw new Error("liquity-v1 getEntireSystemDebt() returned zero/unreadable debt");
   }
 
+  const capacityUsd = decimalNumberFromBigInt(totalDebtRaw, LIQUITY_V1_DEBT_DECIMALS);
+
   return {
     slices: [{
       name: params.slice.name,
@@ -101,13 +105,23 @@ export async function fetchLiquityV1Reserves(
       troveManagerAddress: params.troveManagerAddress,
       totalCollateralRaw: totalCollateralRaw.toString(),
       totalDebtRaw: totalDebtRaw.toString(),
+      immediateRedeemableUsd: capacityUsd,
+      redemption: {
+        capacityUsd,
+        capacityKind: "live-direct-bounded" as const,
+        freshnessKind: "same-run-onchain" as const,
+        routeStatus: "open" as const,
+        holderEligibility: "any-holder",
+        settlementDelaySec: 0,
+        sourceUrls: [
+          "https://docs.liquity.org/liquity-v1/faq/lusd-redemptions",
+          "https://docs.liquity.org/liquity-v1/documentation/resources",
+        ],
+        ...(redemptionFeeBps != null ? { feeBps: redemptionFeeBps } : {}),
+      },
       ...(redemptionFeeBps != null
         ? {
             redemptionFeeBps,
-            redemption: {
-              feeBps: redemptionFeeBps,
-              freshnessKind: "same-run-onchain" as const,
-            },
           }
         : {}),
     },

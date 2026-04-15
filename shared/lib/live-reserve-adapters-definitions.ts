@@ -235,7 +235,7 @@ export const LIVE_RESERVE_ADAPTER_DEFINITIONS = {
     sourceModel: "single-bucket",
     evidenceClass: "independent",
     sharedSourceMode: "none",
-    redemptionTelemetry: { capacity: "none", fee: "current-bps" },
+    redemptionTelemetry: { capacity: "direct", fee: "current-bps" },
     validation: { allowedFreshnessModes: NOT_APPLICABLE_ONLY_FRESHNESS },
   },
   m0: {

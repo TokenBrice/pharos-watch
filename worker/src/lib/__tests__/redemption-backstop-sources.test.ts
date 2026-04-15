@@ -345,6 +345,53 @@ describe("buildRedemptionBackstopEntry", () => {
     expect(entry.capacitySemantics).toBe("immediate-bounded");
   });
 
+  it("uses LUSD Liquity v1 system debt as live direct redemption capacity", async () => {
+    const config = getRedemptionBackstopConfig("lusd-liquity");
+    expect(config).not.toBeNull();
+
+    const entry = await buildRedemptionBackstopEntry(
+      mockD1(),
+      "lusd-liquity",
+      config!,
+      100_000_000,
+      null,
+      now,
+      {
+        reserveSnapshotMetadata: {
+          stablecoinId: "lusd-liquity",
+          fetchedAt: now - 120,
+          source: "liquity-v1",
+          metadata: {
+            freshnessMode: "not-applicable",
+            redemptionFeeBps: 50,
+            redemption: {
+              capacityUsd: 84_000_000,
+              capacityKind: "live-direct-bounded",
+              freshnessKind: "same-run-onchain",
+              feeBps: 50,
+            },
+          },
+          warningCount: 0,
+          warnings: [],
+          sourceModel: "single-bucket",
+          evidenceClass: "independent",
+          syncStatus: "ok",
+        },
+      },
+    );
+
+    expect(entry.provider).toBe("reserve-sync-metadata");
+    expect(entry.sourceMode).toBe("dynamic");
+    expect(entry.resolutionState).toBe("resolved");
+    expect(entry.capacityConfidence).toBe("live-direct");
+    expect(entry.capacitySemantics).toBe("immediate-bounded");
+    expect(entry.immediateCapacityUsd).toBe(84_000_000);
+    expect(entry.immediateCapacityRatio).toBe(0.84);
+    expect(entry.capacityBasis).toBe("live-direct-telemetry");
+    expect(entry.feeBps).toBe(50);
+    expect(entry.modelConfidence).toBe("high");
+  });
+
   it("models the ZCHF StablecoinBridge route with live bridge capacity and zero fee", async () => {
     const config = getRedemptionBackstopConfig("zchf-frankencoin");
     expect(config).not.toBeNull();

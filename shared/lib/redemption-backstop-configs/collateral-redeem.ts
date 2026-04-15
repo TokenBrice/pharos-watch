@@ -33,11 +33,15 @@ export const COLLATERAL_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackst
   },
   "lusd-liquity": {
     ...collateralRedeemBase,
-    capacityModel: { kind: "supply-full", confidence: "documented-bound" },
+    capacityModel: { kind: "reserve-sync-metadata" },
     costModel: documentedVariableFee(LIQUITY_STYLE_REDEMPTION_FEE, "formula"),
     reviewedAt: "2026-03-22",
     docs: [
       sourceRef("Liquity redemption docs", "https://docs.liquity.org/liquity-v1/faq/lusd-redemptions", ["route", "capacity", "fees"]),
+      sourceRef("Liquity v1 contract addresses", "https://docs.liquity.org/liquity-v1/documentation/resources", ["capacity"]),
+    ],
+    notes: [
+      "Fresh live reserve metadata reads Liquity v1 TroveManager system debt as the current direct redemption-capacity bound; if that on-chain snapshot is unavailable, the route is left unrated instead of using a full-supply fallback",
     ],
   },
   "feusd-felix": {
