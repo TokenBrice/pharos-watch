@@ -9,7 +9,7 @@ Dedicated documentation for the live reserve-composition subsystem that powers `
 - **Cron:** `sync-live-reserves` (`worker/src/cron/sync-live-reserves.ts`)
 - **Schedule:** `11 * * * *` (hourly at :11 UTC)
 - **Shared hourly lane:** after live reserve sync, the same slot runs redemption backstop sync, Kinesis supply sync, and collateral-drift checks / alerts (`worker/src/handlers/scheduled/hourly-live-reserves.ts`)
-- **Current coverage:** 138 live-enabled stablecoins across 40 registered adapters (36 currently configured in stablecoin metadata)
+- **Current coverage:** 140 live-enabled stablecoins across 43 registered adapters (39 currently configured in stablecoin metadata)
 - **Storage:** `reserve_composition`, `reserve_composition_history`, `reserve_sync_state`, `reserve_sync_attempt_history`
 - **API:** `GET /api/stablecoin-reserves/:id`
 - **Frontend consumers:** `useStablecoinReserves()`, stablecoin detail view model, `/status` reserve-sync health
@@ -75,6 +75,8 @@ Supported input kinds:
 | `onchain-solana` | On-chain Solana mint-supply reads via the public mainnet RPCs       |
 | `onchain-evm` | On-chain EVM reads via `etherscan-proxy`, `alchemy`, or `public-rpc` |
 
+The shared live-reserve config schema enforces adapter-specific primary and fallback input kinds. For example, `curated-validated` can use `onchain-evm` or `onchain-solana`, `single-asset` can use `http-json` or `onchain-evm`, and HTML scrapers such as `circle-transparency` cannot accidentally be configured with an on-chain input that would pass metadata validation but fail during cron execution.
+
 `curated-validated` can now use `onchain-solana` when a tracked coin publishes its canonical Solana mint in `coin.contracts`, allowing the adapter to validate non-zero supply without downgrading the reserve mix to a weak single-bucket feed.
 
 `onchain-solana` now tries three public RPCs in order before failing the adapter: `https://api.mainnet-beta.solana.com`, `https://api.mainnet.solana.com`, and `https://solana-rpc.publicnode.com`. This reduces false reserve incidents caused by single-endpoint Solana RPC reachability failures inside the Worker runtime.
@@ -139,6 +141,8 @@ the slice list is non-empty, and the sum is within 2 points of 100%. Invalid out
 an error. Sum deviation above 0.5 points produces a `degraded` warning, while deviation above 2 points
 hard-fails the adapter output with a `fatal` warning.
 
+Source freshness validation also rejects source timestamps that are more than 10 minutes in the future, including nested redemption telemetry timestamps, so upstream clock mistakes or millisecond/second parsing errors cannot be treated as fresh snapshots. Multi-row reserve feeds should use the oldest material contributor timestamp as `sourceTimestamp` and can persist `latest*Timestamp` / `sourceTimestampSpreadSec` metadata for diagnostics.
+
 Adapters can also declare shared validation policy in the registry:
 
 - `maxSourceAgeSec`: if adapter metadata includes `sourceTimestamp` and the upstream disclosure is older than the policy allows, the sync is marked `degraded`
@@ -171,7 +175,7 @@ Cron result statuses:
 
 Per-coin warnings still matter operationally, but they affect `reserve_sync_state.last_status` for that coin (`degraded`) and the cron metadata warning list, not the run-level `CronResult.status`.
 
-The cron loop is sequential. This is deliberate: reserve adapters can hit multiple heterogeneous sources, and the isolated hourly trigger keeps connection pressure predictable. The leased wrapper now gives `sync-live-reserves` an explicit 12-minute wall-clock budget, and the cron itself reports `setup`, `syncing`, and `finalizing` progress stages so `/status` can show which coin is currently in flight. Within a run, fetched results are only reused when the adapter registry marks the adapter as `source-invariant` (currently `m0`, `mento`, and `sky-makercore`); coin-aware adapters such as `frax` never share cached results across coins. At the end of each run, the cron also removes stale operational artifacts for coins that are no longer live-enabled: orphaned `reserve_sync_state` rows and stale `cache.key = 'circuit:live-reserves:*'` entries are deleted so `/status` and `/api/health` stop surfacing removed reserve sources as active incidents after coverage changes.
+The cron loop is sequential. This is deliberate: reserve adapters can hit multiple heterogeneous sources, and the isolated hourly trigger keeps connection pressure predictable. Each adapter attempt also receives a per-attempt I/O limiter with a peak of 2 outbound HTTP/RPC operations, so internally parallel adapters such as GHO, Cap, Anzen, and crvUSD cannot consume the whole six-connection trigger pool. The leased wrapper now gives `sync-live-reserves` an explicit 12-minute wall-clock budget, and the cron itself reports `setup`, `syncing`, and `finalizing` progress stages so `/status` can show which coin is currently in flight. Within a run, fetched results are only reused when the adapter registry marks the adapter as `source-invariant` (currently `m0`, `mento`, and `sky-makercore`); coin-aware adapters such as `frax` never share cached results across coins. At the end of each run, the cron also removes stale operational artifacts for coins that are no longer live-enabled: orphaned `reserve_sync_state` rows and stale `cache.key = 'circuit:live-reserves:*'` entries are deleted so `/status` and `/api/health` stop surfacing removed reserve sources as active incidents after coverage changes.
 
 ---
 
@@ -348,7 +352,7 @@ This table reflects the adapter keys currently configured in `shared/data/stable
 | `circle-transparency`      | `http-html`                 | `attestation-mix`                    | 2                |
 | `collateral-positions-api` | `http-json`                 | `collateral-mix`                     | 2                |
 | `crvusd`                   | `http-json`                 | `collateral-mix`                     | 1                |
-| `curated-validated`        | `onchain-evm` / `onchain-solana` | `attestation-mix` / `collateral-mix` / `single-asset` | 31 |
+| `curated-validated`        | `onchain-evm` / `onchain-solana` | `attestation-mix` / `collateral-mix` / `single-asset` | 30 |
 | `dola-inverse`             | `http-json`                 | `collateral-mix`                     | 1                |
 | `erc4626-single-asset`     | `onchain-evm`               | `single-asset`                       | 2                |
 | `ethena`                   | `http-json`                 | `collateral-mix`                     | 1                |
@@ -367,10 +371,13 @@ This table reflects the adapter keys currently configured in `shared/data/stable
 | `openeden-usdo`            | `http-json`                 | `collateral-mix`                     | 1                |
 | `re-metrics`               | `http-html`                 | `collateral-mix`                     | 1                |
 | `reservoir`                | `http-json`                 | `protocol-reserve`                   | 1                |
+| `river-protocol-info`      | `http-json`                 | `protocol-reserve`                   | 1                |
 | `sgforge-coinvertible`     | `http-html`                 | `attestation-mix`                    | 1                |
 | `single-asset`             | `http-json` / `onchain-evm` | `single-asset`                       | 43               |
 | `sky-makercore`            | `http-json`                 | `collateral-mix`                     | 2                |
+| `solstice-attestation`     | `http-json`                 | `protocol-reserve`                   | 1                |
 | `superstate-liquidity`     | `onchain-evm` + `http-json` | `single-asset`                       | 1                |
+| `usdgo-transparency`       | `http-json`                 | `attestation-mix`                    | 1                |
 | `usdai-proof-of-reserves`  | `http-json`                 | `collateral-mix`                     | 1                |
 | `usd1-bundle-oracle`       | `onchain-evm`               | `single-asset`                       | 1                |
 | `usdd-data-platform`       | `http-json`                 | `collateral-mix`                     | 1                |
@@ -397,6 +404,8 @@ Liquity v2 branch note:
 the `liquity-v2-branches` adapter reads branch ActivePool collateral balances, DefiLlama prices, ActivePool debt, optional branch shutdown status, and optional live redemption-fee telemetry. `bold-liquity`, `feusd-felix`, `usnd-nerite`, and `usdq-quill` use this path so their reserve slices remain branch-collateral based while nested redemption telemetry uses aggregate branch debt as `capacityUsd` with `capacityKind = "live-direct-bounded"` and `freshnessKind = "same-run-onchain"`.
 
 `fx` now publishes f(x) protocol-pool API debt balances as conservative live proxy redemption capacity for `fxusd-f-x-protocol`. `asymmetry` now publishes USDaf protocol supply from the timestamped stats API as live direct redemption capacity alongside branch collateral slices. `jupusd` consumes Jupiter's public transparency API and latest snapshot timestamp, grouping USDC/USDtb holdings into reserve slices while emitting whitelisted-primary live redemption capacity and route status from the public oracle endpoint.
+
+`usdgo-transparency`, `solstice-attestation`, and `river-protocol-info` are proof-class reserve-sync adapters. They make current issuer/protocol telemetry visible on reserve detail and status surfaces, but their registry evidence class is `weak-live-probe`, so they do not override report-card collateral quality. USDGO remains proof-class until source provenance, per-slice risk evidence, and date-only freshness semantics are methodology-approved; Solstice remains proof-class until its aggregate solvency feed exposes timestamped asset-category composition; River remains proof-class because its protocol-info endpoint exposes aggregate TVL/circulating-supply telemetry rather than asset-level collateral composition.
 
 Chainlink NAV note:
 `chainlink-nav` now supports both standard AggregatorV3 feeds and Ondo router-style NAV lookups. When `oracleMethod = "getAssetPrice"`, the adapter calls `getAssetPrice(token)` on the router and, when available, follows `tokenToRWAOracle(token) -> getPriceData()` to recover a verified freshness timestamp instead of treating the feed as permanently timestampless.
