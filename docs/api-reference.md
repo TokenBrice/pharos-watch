@@ -1479,7 +1479,7 @@ Stablecoin risk grade cards with dimension-level scores. Output includes 5 dimen
     "edges": [{ "from": "usde-ethena", "to": "usdc-circle", "weight": 0.9, "type": "collateral" }, ...]
   },
   "methodology": {
-    "version": "6.97",
+    "version": "7.05",
     "weights": { "pegStability": 0, "liquidity": 0.30, "resilience": 0.20, "decentralization": 0.15, "dependencyRisk": 0.25 },
     "pegMultiplierExponent": 0.4,
     "activeDepegSeveritySource": "open-event-peak",
@@ -1499,7 +1499,7 @@ Stablecoin risk grade cards with dimension-level scores. Output includes 5 dimen
 }
 ```
 
-The Liquidity dimension now represents `effectiveExitScore`: the public DEX liquidity score remains the floor, while redeemable assets can receive uplift from `redemptionBackstopScore` when a meaningful direct exit path exists. Low-confidence redemption routes stay visible but do not uplift the score, and stale DEX or materially stale redemption inputs are not blended. Report-card redemption inputs are treated as materially stale after more than twice the hourly redemption sync cadence, so normal cron lag does not globally remove medium- or high-confidence redemption uplift.
+The Liquidity dimension now represents `effectiveExitScore`: the public DEX liquidity score remains the floor, while redeemable assets can receive uplift from `redemptionBackstopScore` when a meaningful direct exit path exists. Documented offchain issuer exits with eventual-only capacity can add only a DEX-gated primary-market bonus; they do not replace missing DEX liquidity. Low-confidence redemption routes stay visible but do not uplift the score, and stale DEX or materially stale redemption inputs are not blended. Report-card redemption inputs are treated as materially stale after more than twice the hourly redemption sync cadence, so normal cron lag does not globally remove medium- or high-confidence redemption uplift.
 
 For peg handling, `rawInputs.pegScore` is the effective peg input used by report-card scoring. Most coins use their direct peg-summary value. Configured NAV wrappers can inherit peg stability from a referenced base stablecoin when the wrapper share price is not the right peg-tracking surface; pure NAV tokens without a configured reference remain `null` and keep neutral handling. `rawInputs.activeDepegBps` is the open active depeg event's absolute peak deviation used for final Safety Score caps; it is not the latest spot deviation.
 

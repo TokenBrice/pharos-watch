@@ -537,6 +537,90 @@ describe("scoreLiquidity", () => {
     expect(result.detail).toContain("not used for Safety Score uplift (eventual-only route)");
   });
 
+  it("lets documented offchain issuer eventual redemption add only a DEX-gated primary-market bonus", () => {
+    const result = scoreLiquidity(
+      { liquidityScore: 63, concentrationHhi: 0.04, poolCount: 100, chainCount: 10 },
+      {
+        score: 65,
+        routeFamily: "offchain-issuer",
+        immediateCapacityUsd: null,
+        immediateCapacityRatio: null,
+        resolutionState: "resolved",
+        modelConfidence: "medium",
+        capacitySemantics: "eventual-only",
+        capacityConfidence: "documented-bound",
+        routeStatus: "open",
+      },
+    );
+
+    expect(result.score).toBe(69);
+    expect(result.detail).toContain("primary-market exit bonus only");
+    expect(result.detail).toContain("eventual redeemability modeled; immediate buffer not separately quantified");
+    expect(result.detail).not.toContain("not used for Safety Score uplift");
+  });
+
+  it("does not let documented offchain issuer eventual redemption replace missing DEX liquidity", () => {
+    const result = scoreLiquidity(undefined, {
+      score: 65,
+      routeFamily: "offchain-issuer",
+      immediateCapacityUsd: null,
+      immediateCapacityRatio: null,
+      resolutionState: "resolved",
+      modelConfidence: "medium",
+      capacitySemantics: "eventual-only",
+      capacityConfidence: "documented-bound",
+      routeStatus: "open",
+    });
+
+    expect(result.grade).toBe("NR");
+    expect(result.score).toBeNull();
+    expect(result.detail).toContain("primary-market route requires DEX liquidity floor");
+  });
+
+  it("does not let low-confidence offchain issuer eventual redemption add a primary-market bonus", () => {
+    const result = scoreLiquidity(
+      { liquidityScore: 63, concentrationHhi: 0.04, poolCount: 100, chainCount: 10 },
+      {
+        score: 65,
+        routeFamily: "offchain-issuer",
+        immediateCapacityUsd: null,
+        immediateCapacityRatio: null,
+        resolutionState: "resolved",
+        modelConfidence: "low",
+        capacitySemantics: "eventual-only",
+        capacityConfidence: "documented-bound",
+        routeStatus: "open",
+      },
+    );
+
+    expect(result.score).toBe(63);
+    expect(result.detail).toContain("low confidence");
+  });
+
+  it("excludes documented offchain issuer eventual redemption during severe active depegs", () => {
+    const result = scoreLiquidity(
+      { liquidityScore: 63, concentrationHhi: 0.04, poolCount: 100, chainCount: 10 },
+      {
+        score: 65,
+        routeFamily: "offchain-issuer",
+        immediateCapacityUsd: null,
+        immediateCapacityRatio: null,
+        resolutionState: "resolved",
+        modelConfidence: "medium",
+        capacitySemantics: "eventual-only",
+        capacityConfidence: "documented-bound",
+        sourceMode: "estimated",
+        accessModel: "issuer-api",
+        settlementModel: "same-day",
+        routeStatus: "open",
+      },
+      { activeDepegBps: 2500 },
+    );
+
+    expect(result.score).toBe(63);
+    expect(result.detail).toContain("active severe depeg requires live-open redemption evidence");
+  });
+
   it("caps queue redemption uplift before blending with DEX liquidity", () => {
     const result = scoreLiquidity(
       { liquidityScore: 40, concentrationHhi: 0.3, poolCount: 5, chainCount: 2 },

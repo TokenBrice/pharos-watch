@@ -1,5 +1,29 @@
 import { VersionCard, getScoringEntry } from "./content-shared";
 
+export function ScoringChangelogV705Entry() {
+  return (
+    <VersionCard
+      entry={getScoringEntry("7.05")}
+      accent="border-l-emerald-500"
+    >
+      <p>
+        Documented issuer redemption now earns a small primary-market exit bonus only when DEX liquidity is already present.
+      </p>
+      <ul className="list-disc list-inside space-y-1">
+        <li>
+          Offchain issuer routes with documented-bound eventual redeemability can contribute the diversification bonus.
+        </li>
+        <li>
+          The route cannot replace missing DEX liquidity; no-DEX assets still need immediate-bounded redemption evidence to score.
+        </li>
+        <li>
+          Low-confidence, stale, impaired, route-limited, and severe-depeg-ineligible routes still fail closed.
+        </li>
+      </ul>
+    </VersionCard>
+  );
+}
+
 export function ScoringChangelogV704Entry() {
   return (
     <VersionCard

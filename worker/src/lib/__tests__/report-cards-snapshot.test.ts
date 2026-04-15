@@ -381,6 +381,104 @@ describe("buildReportCardsSnapshot", () => {
     expect(card?.dimensions.liquidity.score).toBe(91);
   });
 
+  it("uses documented offchain issuer eventual redemption only as a DEX-gated bonus", async () => {
+    const cacheValue = JSON.stringify({
+      peggedAssets: [makeAsset({ id: "cusd-cap", symbol: "CUSD" })],
+    });
+    const db = mockD1([
+      {
+        match: "cache",
+        rows: [
+          { key: "stablecoins", value: cacheValue, updated_at: nowSec },
+          { key: "bluechip-ratings", value: "{}", updated_at: nowSec },
+        ],
+        first: { key: "stablecoins", value: cacheValue, updated_at: nowSec },
+      },
+      {
+        match: "dex_liquidity",
+        rows: [
+          {
+            stablecoin_id: "cusd-cap",
+            liquidity_score: 29,
+            concentration_hhi: 1,
+            pool_count: 1,
+            chain_count: 1,
+            updated_at: nowSec,
+          },
+        ],
+      },
+      { match: "depeg_events", rows: [] },
+      { match: "supply_history", rows: [] },
+    ]);
+    loadRedemptionBackstopSnapshotMock.mockResolvedValueOnce({
+      map: {
+        "cusd-cap": makeRedemptionEntry({
+          score: 65,
+          routeFamily: "offchain-issuer",
+          accessModel: "issuer-api",
+          settlementModel: "same-day",
+          executionModel: "rules-based-nav",
+          outputAssetType: "stable-single",
+          capacitySemantics: "eventual-only",
+          capacityConfidence: "documented-bound",
+          immediateCapacityUsd: null,
+          immediateCapacityRatio: null,
+        }),
+      },
+      latestUpdatedAt: nowSec,
+    });
+
+    const snapshot = await buildReportCardsSnapshot(db);
+    const card = snapshot.cards.find((entry) => entry.id === "cusd-cap");
+    expect(card?.rawInputs.redemptionUsedForLiquidity).toBe(true);
+    expect(card?.rawInputs.effectiveExitScore).toBe(32);
+    expect(card?.dimensions.liquidity.score).toBe(32);
+    expect(card?.dimensions.liquidity.detail).toContain("primary-market exit bonus only");
+  });
+
+  it("does not use documented offchain issuer eventual redemption when DEX liquidity is unavailable", async () => {
+    const cacheValue = JSON.stringify({
+      peggedAssets: [makeAsset({ id: "cusd-cap", symbol: "CUSD" })],
+    });
+    const db = mockD1([
+      {
+        match: "cache",
+        rows: [
+          { key: "stablecoins", value: cacheValue, updated_at: nowSec },
+          { key: "bluechip-ratings", value: "{}", updated_at: nowSec },
+        ],
+        first: { key: "stablecoins", value: cacheValue, updated_at: nowSec },
+      },
+      { match: "dex_liquidity", rows: [] },
+      { match: "depeg_events", rows: [] },
+      { match: "supply_history", rows: [] },
+    ]);
+    loadRedemptionBackstopSnapshotMock.mockResolvedValueOnce({
+      map: {
+        "cusd-cap": makeRedemptionEntry({
+          score: 65,
+          routeFamily: "offchain-issuer",
+          accessModel: "issuer-api",
+          settlementModel: "same-day",
+          executionModel: "rules-based-nav",
+          outputAssetType: "stable-single",
+          capacitySemantics: "eventual-only",
+          capacityConfidence: "documented-bound",
+          immediateCapacityUsd: null,
+          immediateCapacityRatio: null,
+        }),
+      },
+      latestUpdatedAt: nowSec,
+    });
+
+    const snapshot = await buildReportCardsSnapshot(db);
+    const card = snapshot.cards.find((entry) => entry.id === "cusd-cap");
+    expect(card?.rawInputs.liquidityScore).toBeNull();
+    expect(card?.rawInputs.redemptionUsedForLiquidity).toBe(false);
+    expect(card?.rawInputs.effectiveExitScore).toBeNull();
+    expect(card?.dimensions.liquidity.detail).toContain("primary-market route requires DEX liquidity floor");
+  });
+
   it("keeps severe-depeg redemption eligibility aligned with scoreLiquidity rules", async () => {
     const cacheValue = JSON.stringify({
       peggedAssets: [makeAsset({ id: "cusd-cap", symbol: "CUSD" })],

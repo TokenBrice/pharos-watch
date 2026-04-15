@@ -1,9 +1,24 @@
 import type { MethodologyVersionConfig } from "./methodology-version";
 
 export const SAFETY_SCORE_VERSION_CONFIG: MethodologyVersionConfig = {
-  currentVersion: "7.04",
+  currentVersion: "7.05",
   changelogPath: "/methodology/scoring-changelog/",
   changelog: [
+    {
+      version: "7.05",
+      title: "Primary-market exit bonus",
+      date: "2026-04-16",
+      effectiveAt: 1776293280,
+      summary:
+        "Liquidity / Exit now lets documented offchain issuer redemption add a DEX-gated primary-market exit bonus without treating eventual redemption as a standalone liquidity substitute.",
+      impact: [
+        "Documented-bound offchain issuer routes with eventual-only semantics can contribute only the diversification bonus when a DEX liquidity score is already present",
+        "Issuer redemption can no longer replace missing DEX liquidity; no-DEX assets still remain unrated for Liquidity / Exit unless they have separate immediate-bounded redemption evidence",
+        "Low-confidence, impaired, stale, route-limited, and severe-depeg-ineligible redemption rows remain excluded from Safety Score liquidity uplift",
+      ],
+      commits: [],
+      reconstructed: false,
+    },
     {
       version: "7.04",
       title: "Redemption freshness runway",

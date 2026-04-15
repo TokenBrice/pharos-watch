@@ -1,6 +1,15 @@
 # Report Cards Scoring — Version Timeline
 
-Internal changelog reconstructed from git history plus the live version metadata source. Covers v1.0 through v7.04 (2026-02-25 → 2026-04-15).
+Internal changelog reconstructed from git history plus the live version metadata source. Covers v1.0 through v7.05 (2026-02-25 → 2026-04-16).
+
+## v7.05 — Primary-market exit bonus (2026-04-16)
+
+Liquidity / Exit now recognizes documented offchain issuer redemption as a secondary path only when observable DEX liquidity already exists:
+
+- Documented-bound offchain issuer routes with eventual-only capacity semantics can contribute the diversification bonus in the effective-exit formula
+- The contribution is DEX-gated: issuer redemption cannot replace missing DEX liquidity or turn no-DEX assets into liquidity-rated assets by itself
+- Low-confidence, impaired, stale, route-limited, and severe-depeg-ineligible redemption rows still fail closed
+- Eventual-only non-issuer routes remain visible-only unless separate immediate-bounded/current capacity evidence exists
 
 ## v7.04 — Redemption freshness runway (2026-04-15)
 

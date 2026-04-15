@@ -108,7 +108,10 @@ function computeReportCard(input: ComputeCardInput): ReportCard {
   const activeDepegBps = peg?.activeDepeg
     ? activeDepegPeakBpsById.get(meta.id) ?? null
     : null;
-  const redemptionUsedForLiquidity = isRedemptionEligibleForLiquidity(redemption, { activeDepegBps });
+  const redemptionUsedForLiquidity = isRedemptionEligibleForLiquidity(redemption, {
+    activeDepegBps,
+    dexLiquidityScore: liq?.liquidityScore ?? null,
+  });
 
   const resilienceFactors = resolveResilienceFactors(meta);
   const liveSlices = liveReserveMap.get(meta.id);

@@ -141,8 +141,23 @@ function isQueueLikeRedemption(redemption: RedemptionLiquidityInput): boolean {
   return redemption.routeFamily === "queue-redeem" || redemption.settlementModel === "queued";
 }
 
-function getSafetyEligibleRedemptionScore(redemption: RedemptionLiquidityInput | undefined): number | null {
+function isDocumentedOffchainIssuerEventualRoute(redemption: RedemptionLiquidityInput): boolean {
+  return (
+    redemption.routeFamily === "offchain-issuer" &&
+    redemption.capacitySemantics === "eventual-only" &&
+    redemption.capacityConfidence === "documented-bound"
+  );
+}
+
+function getSafetyEligibleRedemptionScore(
+  redemption: RedemptionLiquidityInput | undefined,
+  dexScore: number | null,
+): number | null {
   if (!redemption || redemption.score == null) return null;
+  if (isDocumentedOffchainIssuerEventualRoute(redemption)) {
+    if (dexScore == null) return null;
+    return Math.min(dexScore, redemption.score);
+  }
   if (redemption.capacitySemantics === "eventual-only") return null;
   if (isQueueLikeRedemption(redemption)) {
     return Math.min(redemption.score, 70);
@@ -152,7 +167,7 @@ function getSafetyEligibleRedemptionScore(redemption: RedemptionLiquidityInput |
 
 function getRedemptionExclusionReason(
   redemption: RedemptionLiquidityInput | undefined,
-  options?: { activeDepegBps?: number | null },
+  options?: { activeDepegBps?: number | null; dexLiquidityScore?: number | null },
 ): string | null {
   if (!redemption) return null;
   if (redemption.resolutionState === "impaired") {
@@ -164,7 +179,8 @@ function getRedemptionExclusionReason(
   if (redemption.modelConfidence === "low") {
     return "low confidence";
   }
-  if (redemption.capacitySemantics === "eventual-only") {
+  const documentedIssuerEventual = isDocumentedOffchainIssuerEventualRoute(redemption);
+  if (redemption.capacitySemantics === "eventual-only" && !documentedIssuerEventual) {
     return "eventual-only route";
   }
   const routeStatus = redemption.routeStatus ?? "unknown";
@@ -174,12 +190,15 @@ function getRedemptionExclusionReason(
   if (isSevereActiveDepeg(options?.activeDepegBps) && !hasStrongLiveDirectRoute(redemption)) {
     return "active severe depeg requires live-open redemption evidence";
   }
+  if (documentedIssuerEventual && options?.dexLiquidityScore == null) {
+    return "primary-market route requires DEX liquidity floor";
+  }
   return null;
 }
 
 export function isRedemptionEligibleForLiquidity(
   redemption: RedemptionLiquidityInput | undefined,
-  options?: { activeDepegBps?: number | null },
+  options?: { activeDepegBps?: number | null; dexLiquidityScore?: number | null },
 ): boolean {
   return redemption != null && getRedemptionExclusionReason(redemption, options) == null;
 }
@@ -202,11 +221,12 @@ function buildLiquidityScoringFacts(
   options?: { activeDepegBps?: number | null },
 ): LiquidityScoringFacts {
   const dexScore = liq?.liquidityScore ?? null;
-  const redemptionEligibleForLiquidity = isRedemptionEligibleForLiquidity(redemption, options);
-  const redemptionExclusionReason = getRedemptionExclusionReason(redemption, options);
+  const eligibilityOptions = { ...options, dexLiquidityScore: dexScore };
+  const redemptionEligibleForLiquidity = isRedemptionEligibleForLiquidity(redemption, eligibilityOptions);
+  const redemptionExclusionReason = getRedemptionExclusionReason(redemption, eligibilityOptions);
   const redemptionScore = redemption?.score ?? null;
   const eligibleRedemptionScore = redemptionEligibleForLiquidity
-    ? getSafetyEligibleRedemptionScore(redemption)
+    ? getSafetyEligibleRedemptionScore(redemption, dexScore)
     : null;
   return {
     dexScore,
@@ -240,6 +260,10 @@ export function scoreLiquidity(
           ? "DEX liquidity unavailable. Redemption route is configured but currently impaired by market or route-availability evidence"
           : facts.hasLowConfidenceRedemption
           ? "DEX liquidity unavailable. A low-confidence redemption route exists, but it is excluded from Safety Score liquidity until evidence improves"
+          : !facts.hasResolvedRedemption
+          ? "DEX liquidity unavailable. Redemption route is configured but currently unrated"
+          : facts.redemptionExclusionReason
+          ? `DEX liquidity unavailable. Redemption route is configured but not used for Safety Score liquidity (${facts.redemptionExclusionReason})`
           : "DEX liquidity unavailable. Redemption route is configured but currently unrated"
         : "No DEX liquidity data",
     };
@@ -272,6 +296,8 @@ export function scoreLiquidity(
           ? `not used for Safety Score uplift (${facts.redemptionExclusionReason})`
           : "not used for Safety Score uplift",
       );
+    } else if (redemption && isDocumentedOffchainIssuerEventualRoute(redemption)) {
+      parts.push("primary-market exit bonus only");
     }
     if (redemption?.immediateCapacityRatio != null) {
       parts.push(`immediate capacity ${(redemption.immediateCapacityRatio * 100).toFixed(1)}% of supply`);
