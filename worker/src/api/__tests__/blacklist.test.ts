@@ -136,7 +136,7 @@ describe("handleBlacklist", () => {
   });
 
   it("accepts first-wave stablecoin symbol filters", async () => {
-    for (const symbol of ["usdg", "rlusd", "u", "usdtb", "a7a5", "fdusd", "brz", "ausd", "euri", "usdq", "usdo", "usdx", "aid", "tgbp", "mnee"]) {
+    for (const symbol of ["usdg", "rlusd", "u", "usdtb", "a7a5", "fdusd", "brz", "ausd", "euri", "usdq", "usdo", "usdx", "aid", "tgbp", "mnee", "eurc", "buidl"]) {
       const db = mockD1([
         { match: "COUNT", rows: [{ total: 0 }] },
         { match: "blacklist_events", rows: [] },
@@ -146,10 +146,13 @@ describe("handleBlacklist", () => {
     }
   });
 
-  it("rejects EURC stablecoin filter because EURC is not currently live-supported", async () => {
-    const db = mockD1([]);
+  it("accepts EURC stablecoin filter after mirror-zero suppression support", async () => {
+    const db = mockD1([
+      { match: "COUNT", rows: [{ total: 0 }] },
+      { match: "blacklist_events", rows: [] },
+    ]);
     const res = await handleBlacklist(db, new URL("https://x/api/blacklist?stablecoin=eurc"));
-    expect(res.status).toBe(400);
+    expect(res.status).toBe(200);
   });
 
   it("normalizes stablecoin filters before binding", async () => {

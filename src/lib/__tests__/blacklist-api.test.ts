@@ -25,6 +25,7 @@ function makeEvent(id: number): BlacklistEvent {
     configKey: "ethereum-0xdac17f958d2ee523a2206206994597c13d831ec7",
     eventSignature: "AddedBlackList(address)",
     eventTopic0: "0x42e160154868087d6bfdc0ca23d96a1c1cfa32f1b72ba9ba27b69b98a0d819dc",
+    suppressionReason: null,
     explorerTxUrl: `https://etherscan.io/tx/0x${hex}`,
     explorerAddressUrl: `https://etherscan.io/address/0x${addressHex}`,
   };

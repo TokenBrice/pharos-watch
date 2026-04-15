@@ -81,6 +81,7 @@ export const handleBlacklist = withErrorHandler("blacklist", async (db: D1Databa
 
   const conditions: string[] = [];
   const filterBindings: (string | number)[] = [];
+  conditions.push("suppression_reason IS NULL");
 
   if (stablecoin) {
     const normalized = stablecoin.toUpperCase();

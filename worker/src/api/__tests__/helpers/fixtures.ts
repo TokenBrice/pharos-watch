@@ -26,6 +26,7 @@ type BlacklistRow = {
   config_key: string | null;
   event_signature: string | null;
   event_topic0: string | null;
+  suppression_reason: string | null;
   amount_attempt_count?: number;
   amount_last_attempted_at?: number | null;
   amount_last_error_class?: string | null;
@@ -220,6 +221,7 @@ export function makeBlacklistRow(overrides: Partial<BlacklistRow> = {}): Blackli
     config_key: "ethereum-0xdac17f958d2ee523a2206206994597c13d831ec7",
     event_signature: "AddedBlackList(address)",
     event_topic0: "0x42e160154868087d6bfdc0ca23d96a1c1cfa32f1b72ba9ba27b69b98a0d819dc",
+    suppression_reason: null,
     amount_attempt_count: 0,
     amount_last_attempted_at: null,
     amount_last_error_class: null,

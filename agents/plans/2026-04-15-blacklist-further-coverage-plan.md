@@ -79,6 +79,8 @@ Risk:
 
 ### Wave 2B — EURC Re-Enablement
 
+Status: implemented after user approval in this work session.
+
 Purpose: restore material Circle EURC coverage without recreating known zero-balance mirror noise.
 
 Design:
@@ -107,6 +109,8 @@ Risk:
 - Medium. This changes public semantics more than direct EVM event additions.
 
 ### Wave 3 — Solana Adapter
+
+Status: blocked for production implementation until an indexed provider and subject-identity schema are selected.
 
 Purpose: cover the largest remaining supply gap.
 
@@ -145,6 +149,8 @@ Risk:
 
 ### Wave 4 — External Lists, Roles, And Permissioned-Token State
 
+Status: partially implemented for BUIDL seize-only coverage. External list contracts, AccessControl role events, and allowlist/KYC state remain blocked behind the provenance/state model described below.
+
 Purpose: cover high-market-cap permissioned assets whose controls are not emitted directly by the token as simple blacklist events.
 
 Targets:
@@ -154,6 +160,10 @@ Targets:
 - OUSG KYC registry.
 - mTBILL/EURAU AccessControl `BLACKLISTED_ROLE`.
 - BUIDL Securitize seize events.
+
+Implemented subset:
+
+- BUIDL Securitize `Seize` and `OmnibusSeize` events are tracked as destroy/seized-value events across EVM deployments. They are not modeled as live freeze state.
 
 Required architecture:
 
@@ -177,6 +187,8 @@ Risk:
 - Medium if shipped as a new explicit compliance layer.
 
 ### Wave 5 — XRPL And Stellar Adapters
+
+Status: blocked for production implementation until chain-specific subject identity and provider/cursor choices are made.
 
 Purpose: cover issuer freeze/clawback primitives on chains with explicit regulated-asset models.
 

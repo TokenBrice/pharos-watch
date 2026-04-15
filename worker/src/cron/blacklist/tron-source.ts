@@ -84,6 +84,7 @@ function parseTronEvent(config: ContractEventConfig, evt: TronEventResult): Blac
     config_key: config.configKey,
     event_signature: eventDef.signature,
     event_topic0: null,
+    suppression_reason: null,
     amount_attempt_count: 0,
     amount_last_attempted_at: null,
     amount_last_error_class: null,

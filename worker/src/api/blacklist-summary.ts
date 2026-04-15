@@ -32,13 +32,14 @@ export const handleBlacklistSummary = withErrorHandler(
       .prepare(
         `SELECT id, stablecoin, chain_id, chain_name, event_type, address, amount_native, amount_usd_at_event,
                 amount_source, amount_status, tx_hash, block_number, timestamp, methodology_version,
-                contract_address, config_key, event_signature, event_topic0, explorer_tx_url, explorer_address_url
+                contract_address, config_key, event_signature, event_topic0, suppression_reason, explorer_tx_url, explorer_address_url
          FROM blacklist_events
          ORDER BY timestamp DESC`,
       )
       .all<BlacklistEventRow>();
 
-    const events = (result.results ?? []).map(mapBlacklistEventRow);
+    const allEvents = (result.results ?? []).map(mapBlacklistEventRow);
+    const events = allEvents.filter((event) => event.suppressionReason == null);
 
     const currentBalances = await loadBlacklistCurrentBalanceMap(db);
     const activeRecords = buildBlacklistActiveRecords(events, currentBalances);

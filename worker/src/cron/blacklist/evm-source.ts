@@ -18,6 +18,7 @@ import {
   budgetExhausted,
   decodeAddress,
   decodeUint256,
+  decodeUint256AtSlot,
   fetchEvmLogsForTopic,
   type EtherscanLogEntry,
   type RateLimitedFetch,
@@ -78,6 +79,12 @@ function decodeAddressArrayData(data: string): string[] {
   }
 }
 
+function decodeAddressAtDataSlot(data: string, slotIndex: number): string | null {
+  const cleaned = data.startsWith("0x") ? data.slice(2) : data;
+  const slot = cleaned.slice(slotIndex * 64, slotIndex * 64 + 64);
+  return slot.length >= 64 ? decodeAddress(slot) : null;
+}
+
 function buildBlacklistRow(
   config: ContractEventConfig,
   log: EvmLogLike,
@@ -110,6 +117,7 @@ function buildBlacklistRow(
     config_key: config.configKey,
     event_signature: eventDef.signature,
     event_topic0: log.topics[0] ?? null,
+    suppression_reason: null,
     amount_attempt_count: 0,
     amount_last_attempted_at: null,
     amount_last_error_class: null,
@@ -142,11 +150,17 @@ export function parseEvmLogs(
     }
 
     const topicIdx = eventDef.addressTopicIndex ?? 1;
-    const addressIndexed = log.topics.length > topicIdx;
-    const affectedAddress = addressIndexed ? decodeAddress(log.topics[topicIdx]) : decodeAddress(log.data.slice(0, 66));
+    const forcedDataAddress =
+      typeof eventDef.addressDataIndex === "number"
+        ? decodeAddressAtDataSlot(log.data, eventDef.addressDataIndex)
+        : null;
+    const addressIndexed = forcedDataAddress == null && log.topics.length > topicIdx;
+    const affectedAddress = forcedDataAddress ?? (addressIndexed ? decodeAddress(log.topics[topicIdx]) : decodeAddress(log.data.slice(0, 66)));
     const amount = eventDef.hasAmount
       ? typeof eventDef.amountTopicIndex === "number" && log.topics.length > eventDef.amountTopicIndex
         ? decodeUint256(log.topics[eventDef.amountTopicIndex]!, config.decimals)
+        : typeof eventDef.amountDataIndex === "number"
+          ? decodeUint256AtSlot(log.data, eventDef.amountDataIndex, config.decimals)
         : addressIndexed
         ? log.data.length >= 66
           ? decodeUint256(log.data, config.decimals)

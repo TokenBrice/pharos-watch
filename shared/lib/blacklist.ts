@@ -12,6 +12,7 @@ const BLACKLIST_PRICE_ASSET_IDS: Partial<Record<BlacklistStablecoin, string>> = 
   XAUT: "xaut-tether",
   A7A5: "a7a5-old-vector",
   BRZ: "brz-transfero",
+  EURC: "eurc-circle",
   EURI: "euri-banking-circle",
   TGBP: "tgbp-tokenised",
 };

@@ -18,6 +18,7 @@ import {
   type SubrequestBudget,
   budgetExhausted,
   decodeUint256,
+  decodeUint256AtSlot,
 } from "../../lib/evm-logs";
 import { ETHERSCAN_V2_BASE } from "../../lib/constants";
 import { fetchWithRetry } from "../../lib/fetch-retry";
@@ -217,6 +218,9 @@ async function fetchDestroyAmountFromLog(
 
       if (typeof matchingEvent.amountTopicIndex === "number" && log.topics.length > matchingEvent.amountTopicIndex) {
         return decodeUint256(log.topics[matchingEvent.amountTopicIndex]!, config.decimals);
+      }
+      if (typeof matchingEvent.amountDataIndex === "number") {
+        return decodeUint256AtSlot(log.data, matchingEvent.amountDataIndex, config.decimals);
       }
 
       const addressIndexed = log.topics.length > 1;

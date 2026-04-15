@@ -438,6 +438,8 @@ export const BLACKLIST_STABLECOINS = [
   "AID",
   "TGBP",
   "MNEE",
+  "EURC",
+  "BUIDL",
 ] as const;
 
 export type BlacklistStablecoin = (typeof BLACKLIST_STABLECOINS)[number];
@@ -471,6 +473,7 @@ export interface BlacklistEvent {
   configKey: string | null;
   eventSignature: string | null;
   eventTopic0: string | null;
+  suppressionReason?: string | null;
   explorerTxUrl: string;
   explorerAddressUrl: string;
 }
@@ -500,6 +503,7 @@ const BlacklistEventSchema = z.object({
   configKey: z.string().nullable(),
   eventSignature: z.string().nullable(),
   eventTopic0: z.string().nullable(),
+  suppressionReason: z.string().nullable().optional(),
   explorerTxUrl: z.string(),
   explorerAddressUrl: z.string(),
 });

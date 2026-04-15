@@ -30,6 +30,17 @@ describe("handleBlacklistSummary", () => {
             amount_usd_at_event: 500,
             timestamp: 1_777_000_100,
           }),
+          makeBlacklistRow({
+            stablecoin: "EURC",
+            chain_id: "ethereum",
+            chain_name: "Ethereum",
+            event_type: "blacklist",
+            amount: 0,
+            amount_native: 0,
+            amount_usd_at_event: 0,
+            timestamp: 1_777_000_120,
+            suppression_reason: "circle_mirror_zero_balance",
+          }),
         ],
       },
       {

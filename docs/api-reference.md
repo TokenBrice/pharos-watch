@@ -540,7 +540,7 @@ Aggregate historical supply chart data across all stablecoins, broken down by pe
 
 ### `GET /api/blacklist`
 
-Freeze, blacklist, block/unblock, account-pause, and token-destruction events currently ingested for USDC, USDT, PAXG, XAUT, PYUSD, USD1, USDG, RLUSD, U, USDTB, A7A5, FDUSD, BRZ, AUSD, MNEE, EURI, USDQ, USDO, USDX, AID, and TGBP. `EURC` is intentionally excluded from the live filter set for now because Circle frequently mirrors the same blacklist actions on both USDC and EURC, which creates many zero-balance EURC rows. Data is sourced from on-chain logs via Etherscan, Tron, and EVM RPCs.
+Freeze, blacklist, block/unblock, account-pause, and token-destruction events currently ingested for USDC, USDT, PAXG, XAUT, PYUSD, USD1, USDG, RLUSD, U, USDTB, A7A5, FDUSD, BRZ, AUSD, MNEE, EURI, USDQ, USDO, USDX, AID, TGBP, EURC, and BUIDL. EURC mirror-zero rows are preserved with suppression metadata and excluded from public aggregates. Data is sourced from on-chain logs via Etherscan, Tron, and EVM RPCs.
 
 **Cache:** realtime
 

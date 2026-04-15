@@ -26,6 +26,7 @@ export interface BlacklistEventRow {
   config_key: string | null;
   event_signature: string | null;
   event_topic0: string | null;
+  suppression_reason: string | null;
   explorer_tx_url: string;
   explorer_address_url: string;
 }
@@ -51,6 +52,7 @@ export interface BlacklistEventApiRecord {
   configKey: string | null;
   eventSignature: string | null;
   eventTopic0: string | null;
+  suppressionReason?: string | null;
 }
 
 export function mapBlacklistEventRow(row: BlacklistEventRow): BlacklistEvent {
@@ -73,6 +75,7 @@ export function mapBlacklistEventRow(row: BlacklistEventRow): BlacklistEvent {
     configKey: row.config_key,
     eventSignature: row.event_signature,
     eventTopic0: row.event_topic0,
+    suppressionReason: row.suppression_reason ?? null,
     explorerTxUrl: row.explorer_tx_url,
     explorerAddressUrl: row.explorer_address_url,
   };

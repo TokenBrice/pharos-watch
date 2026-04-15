@@ -70,6 +70,7 @@ export async function handleBackfillBlacklistCurrentBalances(
           .prepare(
             `SELECT * FROM blacklist_events
              WHERE stablecoin = ? AND chain_id = ?
+               AND suppression_reason IS NULL
              ORDER BY timestamp ASC, id ASC
              LIMIT ?`,
           )

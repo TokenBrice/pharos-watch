@@ -100,15 +100,26 @@ export async function processFetchedBlacklistRows(
     options.chainRpcs,
     assetPriceUsd,
   );
+
+  for (const row of newRows) {
+    if (
+      row.stablecoin === "EURC"
+      && (row.event_type === "blacklist" || row.event_type === "unblacklist")
+      && row.amount_native === 0
+    ) {
+      row.suppression_reason = "circle_mirror_zero_balance";
+    }
+  }
   console.log(
     `[sync-blacklist] enrichRowBalances (${options.chainLabel}): attempted=${enrichCounters.attempted} succeeded=${enrichCounters.succeeded} failed=${enrichCounters.failed}`,
   );
 
   const insertedRows = await insertBlacklistRows(options.db, newRows);
+  const ledgerRows = newRows.filter((row) => row.suppression_reason == null);
   const currentBalanceCacheCounters = await syncCurrentBalanceCacheForRows(
     options.db,
     options.config,
-    newRows,
+    ledgerRows,
     {
       etherscanApiKey: options.etherscanApiKey,
       drpcApiKey: options.drpcApiKey,

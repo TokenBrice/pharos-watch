@@ -106,7 +106,7 @@ Historical `stress_signal_history` rows do not retain the underlying DEX trust m
 
 ### S_black — Blacklist Activity
 
-Only for blacklist-tracked coins (currently USDC, USDT, PAXG, XAUT, PYUSD, USD1, USDG, RLUSD, U, USDTB, A7A5, FDUSD, BRZ, AUSD, MNEE, EURI, USDQ, USDO, USDX, AID, and TGBP). Coverage is derived from the shared supported blacklist symbol set, so DEWS stays aligned with the live blacklist tracker instead of maintaining a separate coin list. Uses 24h event count with spike detection relative to 7d daily average.
+Only for blacklist-tracked coins (currently USDC, USDT, PAXG, XAUT, PYUSD, USD1, USDG, RLUSD, U, USDTB, A7A5, FDUSD, BRZ, AUSD, MNEE, EURI, USDQ, USDO, USDX, AID, TGBP, EURC, and BUIDL). Coverage is derived from the shared supported blacklist symbol set, so DEWS stays aligned with the live blacklist tracker instead of maintaining a separate coin list. Uses 24h event count with spike detection relative to 7d daily average.
 
 ### S_flow — Mint/Burn Flow
 

@@ -8,7 +8,7 @@ Internal changelog reconstructed from git history. Covers `v1.0` through `v5.93`
 **Commit:** `unreleased`
 
 - DEWS blacklist-activity input now follows the direct EVM blacklist tracker expansion
-- FDUSD, BRZ, AUSD, MNEE, EURI, USDQ, USDO, USDX, AID, and TGBP receive blacklist-event count signals when otherwise DEWS-eligible
+- FDUSD, BRZ, AUSD, MNEE, EURI, USDQ, USDO, USDX, AID, TGBP, EURC, and BUIDL receive blacklist-event count signals when otherwise DEWS-eligible
 - Non-USD amount valuation remains owned by the blacklist tracker ledger; DEWS uses event counts only
 
 ---

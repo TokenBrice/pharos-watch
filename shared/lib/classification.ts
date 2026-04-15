@@ -343,6 +343,7 @@ export const BLACKLIST_CHART_COLORS: Record<BlacklistStablecoin, string> = {
   A7A5: "#64748b",
   FDUSD: "#0f766e",
   BRZ: "#16a34a",
+  EURC: "#1d4ed8",
   AUSD: "#0891b2",
   EURI: "#2563eb",
   USDQ: "#7c3aed",
@@ -351,6 +352,7 @@ export const BLACKLIST_CHART_COLORS: Record<BlacklistStablecoin, string> = {
   AID: "#9333ea",
   TGBP: "#be123c",
   MNEE: "#0d9488",
+  BUIDL: "#111827",
   PAXG: "#eab308",
   XAUT: "#f59e0b",
 };

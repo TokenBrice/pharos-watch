@@ -11,7 +11,9 @@ Internal changelog reconstructed from git history. Covers Blacklist Tracker `v1.
 - **AUSD coverage** — Added Arbitrum and Base `AccountFrozen` / `AccountUnfrozen` tracking
 - **MNEE coverage** — Added Ethereum freeze/unfreeze plus `FundsConfiscated` / `HoldingsBurnt` destroy tracking with indexed amount extraction
 - **EURI, USDQ, USDO, USDX, AID, and TGBP coverage** — Added direct EVM event families for issuer block/ban/deny-list events where verified ABIs expose per-address controls
-- **Non-USD valuation** — BRZ, EURI, and TGBP now use coin-specific price-cache conversion for public USD values
+- **EURC coverage** — Re-enabled EURC on Ethereum, Base, and Avalanche with suppression metadata for Circle mirror-zero rows
+- **BUIDL seize-only coverage** — Added Securitize `Seize` and `OmnibusSeize` tracking across BUIDL EVM deployments as destroy/seized-value events
+- **Non-USD valuation** — EURC, BRZ, EURI, and TGBP now use coin-specific price-cache conversion for public USD values
 
 ---
 

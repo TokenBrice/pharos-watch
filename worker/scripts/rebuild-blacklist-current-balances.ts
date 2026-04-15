@@ -41,6 +41,7 @@ type BlacklistEventRow = {
   config_key: string | null;
   event_signature: string | null;
   event_topic0: string | null;
+  suppression_reason?: string | null;
   explorer_tx_url: string;
   explorer_address_url: string;
 };
@@ -257,7 +258,7 @@ async function main() {
   const sql = `
     SELECT id, stablecoin, chain_id, chain_name, event_type, address, amount_native, amount_usd_at_event,
            amount_source, amount_status, tx_hash, block_number, timestamp, methodology_version, contract_address,
-           config_key, event_signature, event_topic0, explorer_tx_url, explorer_address_url
+           config_key, event_signature, event_topic0, suppression_reason, explorer_tx_url, explorer_address_url
     FROM blacklist_events
     WHERE stablecoin = '${options.stablecoin}'
       AND chain_id = '${options.chainId}'
@@ -284,6 +285,7 @@ async function main() {
     configKey: row.config_key,
     eventSignature: row.event_signature,
     eventTopic0: row.event_topic0,
+    suppressionReason: row.suppression_reason ?? null,
     explorerTxUrl: row.explorer_tx_url,
     explorerAddressUrl: row.explorer_address_url,
   }));

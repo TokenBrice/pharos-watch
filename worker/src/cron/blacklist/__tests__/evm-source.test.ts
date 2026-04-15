@@ -108,6 +108,25 @@ const MNEE_CONFIG: ContractEventConfig = {
   ],
 };
 
+const BUIDL_CONFIG: ContractEventConfig = {
+  configKey: "ethereum-0x7712c34205737192402172409a8f7ccef8aa2aec",
+  chain: { chainId: "ethereum", chainName: "Ethereum", evmChainId: 1, explorerUrl: "https://etherscan.io", type: "evm" },
+  stablecoinId: "buidl-blackrock",
+  stablecoin: "BUIDL",
+  contractAddress: "0x7712c34205737192402172409a8f7ccef8aa2aec",
+  decimals: 6,
+  events: [
+    {
+      signature: "OmnibusSeize(address,address,uint256,string,uint8)",
+      topicHash: "0x5c719d01bb88860dfca685ad3818d8b61a083caaf8f68abe6fa0fba4e40e33a9",
+      eventType: "destroy",
+      hasAmount: true,
+      addressDataIndex: 0,
+      amountDataIndex: 1,
+    },
+  ],
+};
+
 describe("parseEvmLogs", () => {
   it("extracts address from topics[2] when addressTopicIndex is 2 (USD1)", () => {
     const callerAddr = "0x0000000000000000000000001111111111111111111111111111111111111111";
@@ -253,6 +272,41 @@ describe("parseEvmLogs", () => {
       address: confiscatedAddr,
       amount_native: 5,
       amount_usd_at_event: 5,
+    });
+  });
+
+  it("extracts address and amount from configured data slots when indexed topics are not the subject", () => {
+    const seizedAddr = "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
+    const logs = [{
+      address: "0x7712c34205737192402172409a8f7ccef8aa2aec",
+      topics: [
+        "0x5c719d01bb88860dfca685ad3818d8b61a083caaf8f68abe6fa0fba4e40e33a9",
+        "0x000000000000000000000000bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+      ],
+      data: encodeAbiParameters(
+        [
+          { type: "address" },
+          { type: "uint256" },
+          { type: "string" },
+          { type: "uint8" },
+        ],
+        [seizedAddr, 25_000_000n, "test", 0],
+      ),
+      blockNumber: "0x1234",
+      transactionHash: "0xbuidl",
+      logIndex: "0x5",
+      timeStamp: "0x65000000",
+    }];
+
+    const rows = parseEvmLogs(BUIDL_CONFIG, logs);
+
+    expect(rows).toHaveLength(1);
+    expect(rows[0]).toMatchObject({
+      stablecoin: "BUIDL",
+      event_type: "destroy",
+      address: seizedAddr,
+      amount_native: 25,
+      amount_usd_at_event: 25,
     });
   });
 });

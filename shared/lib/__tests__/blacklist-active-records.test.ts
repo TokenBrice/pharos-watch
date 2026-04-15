@@ -27,6 +27,7 @@ function makeEvent(overrides: Partial<BlacklistEvent> = {}): BlacklistEvent {
     configKey: "ethereum-0xcontract",
     eventSignature: "Blacklisted(address)",
     eventTopic0: "0xtopic",
+    suppressionReason: null,
     explorerTxUrl: "https://etherscan.io/tx/0xtx",
     explorerAddressUrl: "https://etherscan.io/address/0xabc",
     ...overrides,

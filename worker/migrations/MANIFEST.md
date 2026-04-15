@@ -38,6 +38,7 @@ Applied sequentially after the baseline (fresh setup) or after the previous indi
 | 0092     | `0092_mint_burn_run_state_last_config_key.sql`  | Add last processed mint/burn config key to run state for deterministic resume bookkeeping      |
 | 0093     | `0093_cleanup_legacy_mint_burn_sync_keys.sql`   | Remove legacy colon-delimited mint/burn sync-state keys after canonical key migration          |
 | 0094     | `0094_redemption_backstop_runs.sql`             | Add redemption backstop snapshot run manifest and row generation identifiers                   |
+| 0095     | `0095_blacklist_event_suppression.sql`          | Add blacklist event suppression metadata and clean zero-balance EURC mirror ledger rows        |
 
 ## Retired Individual Migrations
 

@@ -10,12 +10,14 @@ const blacklistTracker = createMethodologyVersion({
     date: "2026-04-15",
     effectiveAt: 1776211200, // 2026-04-15T00:00:00Z
     summary:
-      "Adds direct EVM blacklist/freeze coverage for FDUSD, BRZ, AUSD, MNEE, EURI, USDQ, USDO, USDX, AID, and TGBP. Introduces indexed amount-topic parsing for MNEE confiscation/burn events and extends non-USD valuation to BRZ, EURI, and TGBP.",
+      "Adds direct EVM blacklist/freeze coverage for FDUSD, BRZ, AUSD, MNEE, EURI, USDQ, USDO, USDX, AID, TGBP, and EURC, plus BUIDL seize-only tracking. Introduces indexed amount-topic parsing, explicit data-slot extraction for omnibus seize events, EURC mirror-zero suppression, and expanded non-USD valuation.",
     impact: [
       "Added FDUSD Ethereum/BSC/Arbitrum dual-index Freeze/Unfreeze tracking",
-      "Added BRZ Ethereum/Gnosis, AUSD Arbitrum/Base, EURI Ethereum/BSC, USDQ Ethereum, USDO Ethereum/Base, USDX Ethereum, AID Ethereum, and TGBP Ethereum/Avalanche event coverage",
+      "Added BRZ Ethereum/Gnosis, AUSD Arbitrum/Base, EURI Ethereum/BSC, USDQ Ethereum, USDO Ethereum/Base, USDX Ethereum, AID Ethereum, TGBP Ethereum/Avalanche, and EURC Ethereum/Base/Avalanche event coverage",
       "Added MNEE Ethereum freeze/unfreeze plus confiscation/burn tracking with indexed amount extraction",
-      "Extended price-cache USD conversion to BRZ, EURI, and TGBP",
+      "Extended price-cache USD conversion to EURC, BRZ, EURI, and TGBP",
+      "Added suppression metadata so Circle mirror-zero EURC rows stay auditable without entering public aggregates",
+      "Added BUIDL Securitize Seize/OmnibusSeize tracking as destroy/seized-value events",
     ],
     commits: [],
     reconstructed: false,

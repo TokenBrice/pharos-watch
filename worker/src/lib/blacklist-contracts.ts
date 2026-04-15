@@ -32,8 +32,10 @@ export interface BlacklistEventDef {
   eventType: BlacklistEventType;
   hasAmount: boolean;
   addressTopicIndex?: number;  // EVM: which topics[] slot holds the affected address (default 1)
+  addressDataIndex?: number;   // EVM: which 32-byte data slot holds the affected address
   addressArrayData?: boolean;  // EVM: event data is ABI-encoded address[]; emits one row per address
   amountTopicIndex?: number;   // EVM: which topics[] slot holds an indexed uint256 amount
+  amountDataIndex?: number;    // EVM: which 32-byte data slot holds a non-indexed uint256 amount
   tronResultKey?: string;      // Tron: which result key holds the affected address
 }
 
@@ -444,6 +446,28 @@ const BANNED_EVENT_FAMILY = defineEventFamily("banned-unbanned", [
   },
 ]);
 
+// --- Securitize / BUIDL seize-only events ---
+
+const SECURITIZE_SEIZE_TOPIC = "0x5068c48f7f290ce2b8d555bd28014be9f312999bb621037ea3e9fc86335a21d7"; // Seize(address,address,uint256,string)
+const SECURITIZE_OMNIBUS_SEIZE_TOPIC = "0x5c719d01bb88860dfca685ad3818d8b61a083caaf8f68abe6fa0fba4e40e33a9"; // OmnibusSeize(address,address,uint256,string,uint8)
+
+const SECURITIZE_SEIZE_EVENT_FAMILY = defineEventFamily("securitize-seize", [
+  {
+    signature: "Seize(address,address,uint256,string)",
+    topicHash: SECURITIZE_SEIZE_TOPIC,
+    eventType: "destroy",
+    hasAmount: true,
+  },
+  {
+    signature: "OmnibusSeize(address,address,uint256,string,uint8)",
+    topicHash: SECURITIZE_OMNIBUS_SEIZE_TOPIC,
+    eventType: "destroy",
+    hasAmount: true,
+    addressDataIndex: 0,
+    amountDataIndex: 1,
+  },
+]);
+
 const BLACKLIST_STABLECOIN_SET = new Set<BlacklistStablecoin>(BLACKLIST_STABLECOINS);
 
 function resolveBlacklistStablecoinSymbol(
@@ -551,6 +575,19 @@ const CONTRACT_CONFIG_SPECS: ContractEventConfigSpec[] = [
   { chain: ETHEREUM, stablecoinId: "aid-gaib", stablecoin: "AID", startBlock: 23_682_560, events: DENY_LIST_EVENT_FAMILY.events },
   { chain: ETHEREUM, stablecoinId: "tgbp-tokenised", stablecoin: "TGBP", startBlock: 23_046_391, events: BANNED_EVENT_FAMILY.events },
   { chain: AVALANCHE, stablecoinId: "tgbp-tokenised", stablecoin: "TGBP", startBlock: 69_696_101, events: BANNED_EVENT_FAMILY.events },
+
+  // EURC re-enabled with mirror-zero suppression
+  { chain: ETHEREUM, stablecoinId: "eurc-circle", startBlock: 14_807_227, events: USDC_EVENT_FAMILY.events },
+  { chain: BASE, stablecoinId: "eurc-circle", startBlock: 15_107_859, events: USDC_EVENT_FAMILY.events },
+  { chain: AVALANCHE, stablecoinId: "eurc-circle", startBlock: 26_857_185, events: USDC_EVENT_FAMILY.events },
+
+  // BUIDL seize-only coverage (Securitize token family)
+  { chain: ETHEREUM, stablecoinId: "buidl-blackrock", stablecoin: "BUIDL", startBlock: 19_343_293, events: SECURITIZE_SEIZE_EVENT_FAMILY.events },
+  { chain: BSC, stablecoinId: "buidl-blackrock", stablecoin: "BUIDL", startBlock: 63_931_579, events: SECURITIZE_SEIZE_EVENT_FAMILY.events },
+  { chain: OPTIMISM, stablecoinId: "buidl-blackrock", stablecoin: "BUIDL", startBlock: 127_565_419, events: SECURITIZE_SEIZE_EVENT_FAMILY.events },
+  { chain: ARBITRUM, stablecoinId: "buidl-blackrock", stablecoin: "BUIDL", startBlock: 452_787_226, events: SECURITIZE_SEIZE_EVENT_FAMILY.events },
+  { chain: AVALANCHE, stablecoinId: "buidl-blackrock", stablecoin: "BUIDL", startBlock: 52_649_153, events: SECURITIZE_SEIZE_EVENT_FAMILY.events },
+  { chain: POLYGON, stablecoinId: "buidl-blackrock", stablecoin: "BUIDL", startBlock: 63_877_025, events: SECURITIZE_SEIZE_EVENT_FAMILY.events },
 ];
 
 export const CONTRACT_CONFIGS: ContractEventConfig[] = CONTRACT_CONFIG_SPECS.map(

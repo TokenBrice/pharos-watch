@@ -132,6 +132,7 @@ export const handleDigestSnapshot = withErrorHandler("digest-snapshot", async (
       `SELECT stablecoin, chain_name, event_type, address, amount_native, amount_usd_at_event, amount_status, timestamp
        FROM blacklist_events
        WHERE timestamp >= ? AND timestamp < ?
+         AND suppression_reason IS NULL
        ORDER BY timestamp DESC
        LIMIT 50`,
     )

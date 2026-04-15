@@ -4,6 +4,8 @@ Date: 2026-04-15
 
 Baseline: commit `537342e4` (`feat(blacklist): add first-wave CeFi freeze coverage`).
 
+Implementation update: the direct EVM wave, EURC mirror-zero suppression, and BUIDL seize-only subset were implemented after this research pass. The Solana/XRPL/Stellar and external-list/role-state waves remain implementation blockers until their provider and subject-identity models are selected.
+
 ## Scope
 
 Research only. No implementation was performed.

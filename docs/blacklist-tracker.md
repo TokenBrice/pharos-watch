@@ -1,6 +1,6 @@
 # Blacklist Tracker
 
-Multi-chain blacklist/freeze event tracker for stablecoins. Monitors on-chain events (blacklist, unblacklist, destroy/seize) across 44 contract configurations on 9 chains. Runs hourly, incrementally scanning from the last processed block or timestamp cursor.
+Multi-chain blacklist/freeze event tracker for stablecoins. Monitors on-chain events (blacklist, unblacklist, destroy/seize) across 53 contract configurations on 9 chains. Runs hourly, incrementally scanning from the last processed block or timestamp cursor.
 
 The tracker now has two distinct amount layers:
 
@@ -8,11 +8,11 @@ The tracker now has two distinct amount layers:
 - `blacklist_current_balances` stores persistent freeze-ledger snapshots used by the public frozen-total summary
 - the `/blacklist` status charts now support on-page drilldown into the matching stablecoin subset for each blacklistability bucket
 
-**Cron-backed sync coverage:** USDC, USDT, PAXG, XAUT, PYUSD, USD1, USDG, RLUSD, U, USDtb, A7A5, FDUSD, BRZ, AUSD, MNEE, EURI, USDQ, USDO, USDX, AID, TGBP.
+**Cron-backed sync coverage:** USDC, USDT, PAXG, XAUT, PYUSD, USD1, USDG, RLUSD, U, USDtb, A7A5, FDUSD, BRZ, AUSD, MNEE, EURI, USDQ, USDO, USDX, AID, TGBP, EURC, BUIDL.
 
-**Live API/UI filter enum:** USDC, USDT, PAXG, XAUT, PYUSD, USD1, USDG, RLUSD, U, USDTB, A7A5, FDUSD, BRZ, AUSD, MNEE, EURI, USDQ, USDO, USDX, AID, TGBP via `BLACKLIST_STABLECOINS` in `shared/types/market.ts` (re-exported through `shared/types/index.ts`).
+**Live API/UI filter enum:** USDC, USDT, PAXG, XAUT, PYUSD, USD1, USDG, RLUSD, U, USDTB, A7A5, FDUSD, BRZ, AUSD, MNEE, EURI, USDQ, USDO, USDX, AID, TGBP, EURC, BUIDL via `BLACKLIST_STABLECOINS` in `shared/types/market.ts` (re-exported through `shared/types/index.ts`).
 
-Implementation note: `EURC` is intentionally not live-supported right now. Circle often mirrors the same blacklist action across both USDC and EURC, which creates many zero-balance EURC rows. Pharos will only re-enable EURC if those mirrored no-balance events can be classified without hiding genuine EURC signal.
+Implementation note: `EURC` is live-supported with mirror-zero suppression. Circle often mirrors the same blacklist action across both USDC and EURC; rows classified as zero-balance mirrors stay auditable in storage but are excluded from public `/blacklist` events, active records, and frozen-value aggregates.
 
 ---
 
@@ -194,6 +194,8 @@ All use USDC events: `Blacklisted(address)`, `UnBlacklisted(address)`. Decimals:
 | USDX | Ethereum | `AddedBlacklist(address)`, `RemovedBlacklist(address)` | Non-indexed address in data |
 | AID | Ethereum | `AddedToDenyList(address[])`, `RemovedFromDenyList(address[])` | Dynamic address-array event expands to one row per address |
 | TGBP | Ethereum, Avalanche | `Banned(address)`, `UnBanned(address)` | Indexed address; GBP-denominated USD conversion |
+| EURC | Ethereum, Base, Avalanche | `Blacklisted(address)`, `UnBlacklisted(address)` | Circle mirror-zero rows are preserved with suppression metadata and excluded from public aggregates |
+| BUIDL | Ethereum, BSC, Optimism, Arbitrum, Avalanche, Polygon | `Seize(address,address,uint256,string)`, `OmnibusSeize(address,address,uint256,string,uint8)` | Seize-only coverage mapped to `destroy`; not a live blacklist/freeze state |
 
 ---
 
@@ -411,6 +413,18 @@ UnBanned(address indexed)
   Topic: 0xb39966eac8a0ae96284afcbb1a1e8eb366677548a09cf1bf773b39b26bedd234
   Address: indexed (topics[1])
   hasAmount: false
+
+Seize(address indexed,address indexed,uint256,string)
+  Topic: 0x5068c48f7f290ce2b8d555bd28014be9f312999bb621037ea3e9fc86335a21d7
+  Address: indexed `from` (topics[1])
+  Amount: first 32 bytes of data
+  hasAmount: true
+
+OmnibusSeize(address indexed,address,uint256,string,uint8)
+  Topic: 0x5c719d01bb88860dfca685ad3818d8b61a083caaf8f68abe6fa0fba4e40e33a9
+  Address: first 32-byte data slot
+  Amount: second 32-byte data slot
+  hasAmount: true
 ```
 
 ---
@@ -442,6 +456,7 @@ CREATE TABLE blacklist_events (
   config_key TEXT,
   event_signature TEXT,
   event_topic0 TEXT,
+  suppression_reason TEXT,
   amount_attempt_count INTEGER NOT NULL DEFAULT 0,
   amount_last_attempted_at INTEGER,
   amount_last_error_class TEXT,
@@ -457,6 +472,7 @@ CREATE INDEX idx_be_event_type ON blacklist_events(event_type);
 CREATE INDEX idx_blacklist_events_chain_ts ON blacklist_events(chain_name, timestamp DESC);
 CREATE INDEX idx_blacklist_events_config_key ON blacklist_events(config_key);
 CREATE INDEX idx_blacklist_events_amount_status ON blacklist_events(amount_status);
+CREATE INDEX idx_blacklist_events_suppression_reason ON blacklist_events(suppression_reason);
 ```
 
 **Row ID format:** `{chainId}-{txHash}-{logIndex}` -- ensures uniqueness via `INSERT OR IGNORE`.
@@ -471,6 +487,7 @@ CREATE INDEX idx_blacklist_events_amount_status ON blacklist_events(amount_statu
 - `amount_status` records whether the amount is resolved, recoverable, or intentionally unavailable
 - `amount_attempt_count` records how many historical-recovery attempts Pharos has made for the row
 - `amount_last_attempted_at`, `amount_last_error_class`, and `amount_last_provider` are operator diagnostics for unresolved rows
+- `suppression_reason` records auditable rows excluded from public aggregate/event surfaces; currently `circle_mirror_zero_balance` for EURC rows that mirror Circle actions without frozen EURC value
 
 `amount_source='derived'` is now treated as a legacy migration artifact, not an active ingestion mode. Older Tron blacklist/unblacklist rows that still carried current-state-derived values are reset so event rows no longer claim unsupported historical precision.
 
@@ -636,7 +653,7 @@ For destroy events, try fetching from transaction receipt first (`eth_getTransac
 | `sortBy`     | string | date    | Sort field (`"date"`, `"stablecoin"`, `"chain"`, `"event"`)          |
 | `sortDirection` | string | desc | Sort direction (`"asc"`, `"desc"`)                                   |
 
-The handler now exposes only the live-supported symbols: USDC, USDT, PAXG, XAUT, PYUSD, USD1, USDG, RLUSD, U, USDTB, A7A5, FDUSD, BRZ, AUSD, MNEE, EURI, USDQ, USDO, USDX, AID, TGBP.
+The handler now exposes only unsuppressed rows for the live-supported symbols: USDC, USDT, PAXG, XAUT, PYUSD, USD1, USDG, RLUSD, U, USDTB, A7A5, FDUSD, BRZ, AUSD, MNEE, EURI, USDQ, USDO, USDX, AID, TGBP, EURC, and BUIDL.
 
 **Response:**
 
@@ -760,7 +777,7 @@ Both endpoints now emit freshness headers from the same hourly `sync-blacklist` 
 
 - `null` or (`0` and not destroy): show "--"
 - Gold coins (PAXG, XAUT): 4 decimal places + symbol (converted to USD using the coin-specific price-cache entry)
-- A7A5, BRZ, EURI, and TGBP: native amounts are non-USD-denominated and converted to USD using coin-specific price-cache entries
+- A7A5, EURC, BRZ, EURI, and TGBP: native amounts are non-USD-denominated and converted to USD using coin-specific price-cache entries
 - USD-pegged stablecoins: `formatCurrency` (USD)
 
 ### Special UI Components
@@ -804,7 +821,7 @@ Both endpoints now emit freshness headers from the same hourly `sync-blacklist` 
 17. **A7A5 is non-USD:** never treat native A7A5 units as USD; amount conversion depends on the `a7a5-old-vector` price-cache entry.
 18. **RLUSD clawback is not covered:** v3.8 tracks account pause/unpause only. Clawback support needs transaction-input classification because the verified ABI does not expose a dedicated clawback event.
 19. **MNEE has independent blacklist and freeze states:** v3.9 tracks MNEE freeze/unfreeze plus confiscation/burn events only. AccountBlacklisted/AccountDelisted need a future restriction-source key to avoid active-state collisions.
-20. **BRZ/EURI/TGBP are non-USD:** public USD values depend on price-cache conversion rather than native token units.
+20. **EURC/BRZ/EURI/TGBP are non-USD:** public USD values depend on price-cache conversion rather than native token units.
 
 ---
 
