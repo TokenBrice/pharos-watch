@@ -4,6 +4,7 @@ import { makeAsset, makeReportCardsDb } from "../../api/__tests__/helpers/fixtur
 import { handleReportCards } from "../../api/report-cards";
 import { buildReportCardsSnapshot, ReportCardsSnapshotUnavailableError } from "../report-cards-snapshot";
 import { RedemptionBackstopSnapshotUnavailableError } from "../redemption-backstops-store";
+import { CRON_INTERVALS } from "@shared/lib/cron-jobs";
 import type { PegSummaryCoin } from "@shared/types/market";
 import type { RedemptionBackstopEntry } from "@shared/types/redemption";
 
@@ -48,6 +49,7 @@ vi.mock("../peg-analytics", async (importOriginal) => {
 });
 
 const nowSec = Math.floor(Date.now() / 1000);
+const redemptionFreshnessMaxAgeSec = CRON_INTERVALS["sync-redemption-backstops"] * 2;
 
 function makePegSummary(overrides: Partial<PegSummaryCoin>): PegSummaryCoin {
   return {
@@ -324,7 +326,7 @@ describe("buildReportCardsSnapshot", () => {
     ]);
     loadRedemptionBackstopSnapshotMock.mockResolvedValueOnce({
       map: { "cusd-cap": makeRedemptionEntry({}) },
-      latestUpdatedAt: nowSec - 7200,
+      latestUpdatedAt: nowSec - redemptionFreshnessMaxAgeSec - 1,
     });
 
     const snapshot = await buildReportCardsSnapshot(db);
@@ -334,6 +336,49 @@ describe("buildReportCardsSnapshot", () => {
     expect(card?.rawInputs.redemptionBackstopScore).toBeNull();
     expect(card?.rawInputs.redemptionUsedForLiquidity).toBe(false);
     expect(card?.dimensions.liquidity.score).toBe(29);
+  });
+
+  it("keeps redemption backstop rows through normal hourly cron lag", async () => {
+    const cacheValue = JSON.stringify({
+      peggedAssets: [makeAsset({ id: "cusd-cap", symbol: "CUSD" })],
+    });
+    const db = mockD1([
+      {
+        match: "cache",
+        rows: [
+          { key: "stablecoins", value: cacheValue, updated_at: nowSec },
+          { key: "bluechip-ratings", value: "{}", updated_at: nowSec },
+        ],
+        first: { key: "stablecoins", value: cacheValue, updated_at: nowSec },
+      },
+      {
+        match: "dex_liquidity",
+        rows: [
+          {
+            stablecoin_id: "cusd-cap",
+            liquidity_score: 29,
+            concentration_hhi: 1,
+            pool_count: 1,
+            chain_count: 1,
+            updated_at: nowSec,
+          },
+        ],
+      },
+      { match: "depeg_events", rows: [] },
+      { match: "supply_history", rows: [] },
+    ]);
+    loadRedemptionBackstopSnapshotMock.mockResolvedValueOnce({
+      map: { "cusd-cap": makeRedemptionEntry({ modelConfidence: "medium" }) },
+      latestUpdatedAt: nowSec - CRON_INTERVALS["sync-redemption-backstops"] - 1800,
+    });
+
+    const snapshot = await buildReportCardsSnapshot(db);
+    const card = snapshot.cards.find((entry) => entry.id === "cusd-cap");
+    expect(snapshot.redemptionStale).toBe(false);
+    expect(snapshot.inputFreshness.redemptionBackstops.stale).toBe(false);
+    expect(card?.rawInputs.redemptionBackstopScore).toBe(88);
+    expect(card?.rawInputs.redemptionUsedForLiquidity).toBe(true);
+    expect(card?.dimensions.liquidity.score).toBe(91);
   });
 
   it("keeps severe-depeg redemption eligibility aligned with scoreLiquidity rules", async () => {

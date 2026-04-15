@@ -379,10 +379,11 @@ function checkRedemptionBackstopsDoc(failures: Failure[]): void {
     "psm-swap",
     "basket-redeem",
   ] as const;
+  const familyCountsFromDoc = new Map(
+    Array.from(familyLine.matchAll(/(\d+)\s+`([a-z-]+)`/g), (match) => [match[2], Number(match[1])]),
+  );
   for (const family of familyOrder) {
-    const pattern = new RegExp(`(\\d+)\\s+\`${family}\``);
-    const match = familyLine.match(pattern);
-    const found = match ? Number(match[1]) : null;
+    const found = familyCountsFromDoc.get(family) ?? null;
     expectNumber(failures, file, `${family} family count`, found, familyCounts[family] ?? 0);
   }
 

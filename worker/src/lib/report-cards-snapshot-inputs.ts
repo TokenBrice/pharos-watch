@@ -9,6 +9,7 @@ import {
   RedemptionBackstopSnapshotUnavailableError,
 } from "./redemption-backstops-store";
 import { loadStablecoinsCache, type StablecoinsCacheLoadOk } from "./stablecoins-cache";
+import { CRON_INTERVALS } from "@shared/lib/cron-jobs";
 import type { ReserveSlice } from "@shared/types/core";
 import type { RedemptionBackstopEntry } from "@shared/types/redemption";
 
@@ -35,8 +36,8 @@ const EMPTY_DEX_LIQUIDITY_SNAPSHOT: DexLiquidityLoadResult = {
   latestUpdatedAt: null,
 };
 
-const REPORT_CARD_DEX_LIQUIDITY_FRESHNESS_SEC = 3600;
-const REPORT_CARD_REDEMPTION_FRESHNESS_SEC = 3600;
+const REPORT_CARD_DEX_LIQUIDITY_FRESHNESS_SEC = CRON_INTERVALS["sync-dex-liquidity"] * 2;
+const REPORT_CARD_REDEMPTION_FRESHNESS_SEC = CRON_INTERVALS["sync-redemption-backstops"] * 2;
 
 export interface ReportCardsInputFreshnessEntry {
   updatedAt: number | null;

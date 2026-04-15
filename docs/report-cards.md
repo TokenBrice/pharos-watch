@@ -2,7 +2,7 @@
 
 Multi-dimensional risk grades (A+ through F) for every tracked stablecoin. Computed on-demand by the API from live data.
 
-## Overall Grade (v7.03)
+## Overall Grade (v7.04)
 
 Four-step computation:
 
@@ -13,7 +13,7 @@ Four-step computation:
 
 Cemetery coins get a permanent F.
 
-Current-version note: v7.03 keeps the stronger peg treatment introduced in v6.93 and the NAV-wrapper peg inheritance from v6.94, treats custodied BTC wrappers plus issuer-seizable tokenized collateral as direct inherited freeze exposure for blacklistability attribution when they dominate reserve weight, disables static or non-live-direct redemption uplift during severe active depegs unless current live-open redemption evidence exists, removes the legacy active-depeg peg-dimension cap, suppresses stale redemption-backstop rows from Safety Score Liquidity / Exit, restores collateral-quality passthrough for reserve adapters whose upstreams now expose verified source timestamps, lets USDaf's Asymmetry feed qualify when its protocol API timestamp is fresh, promotes additional proof-style feeds only when they have independent timestamped NAV, balance-sheet, or bundle-oracle evidence, separates standalone redemption-route quality from Safety Score-eligible exit capacity, lets frxUSD use fresh Frax balance-sheet redemption capacity when that live route is current, and lets USTB use Superstate's current liquidity endpoint without treating NAV/AUM as immediate liquidity. Eventual-only routes stay visible but do not uplift Liquidity / Exit by themselves, while queue-like routes are capped before blending. The `activeDepegBps` field remains in `RawDimensionInputs` so stressed-grade recomputations and the frontend can apply the same peak-based cap.
+Current-version note: v7.04 keeps the stronger peg treatment introduced in v6.93 and the NAV-wrapper peg inheritance from v6.94, treats custodied BTC wrappers plus issuer-seizable tokenized collateral as direct inherited freeze exposure for blacklistability attribution when they dominate reserve weight, disables static or non-live-direct redemption uplift during severe active depegs unless current live-open redemption evidence exists, removes the legacy active-depeg peg-dimension cap, suppresses materially stale redemption-backstop rows from Safety Score Liquidity / Exit only after the report-card freshness runway expires, restores collateral-quality passthrough for reserve adapters whose upstreams now expose verified source timestamps, lets USDaf's Asymmetry feed qualify when its protocol API timestamp is fresh, promotes additional proof-style feeds only when they have independent timestamped NAV, balance-sheet, or bundle-oracle evidence, separates standalone redemption-route quality from Safety Score-eligible exit capacity, lets frxUSD use fresh Frax balance-sheet redemption capacity when that live route is current, and lets USTB use Superstate's current liquidity endpoint without treating NAV/AUM as immediate liquidity. Eventual-only routes stay visible but do not uplift Liquidity / Exit by themselves, while queue-like routes are capped before blending. The `activeDepegBps` field remains in `RawDimensionInputs` so stressed-grade recomputations and the frontend can apply the same peak-based cap.
 
 ## Dimensions
 
@@ -56,7 +56,7 @@ Current-version note: v7.03 keeps the stronger peg treatment introduced in v6.93
 - Low-confidence redemption routes stay visible in the dimension detail, but they do not improve the Safety Score liquidity score
 - Formula-based routes with live on-chain fee telemetry can use the current redemption fee bps for cost scoring while remaining labeled as formula models
 - When DEX liquidity is stale, report cards do not reuse it for effective-exit scoring; the dimension falls back to redemption-only or `NR`
-- When the current redemption-backstop snapshot is stale or missing, report cards suppress redemption inputs for Safety Score liquidity; the dimension falls back to fresh DEX liquidity or `NR`
+- When the current redemption-backstop snapshot is stale or missing (defined here as missing or older than twice the hourly redemption sync cadence), report cards suppress redemption inputs for Safety Score liquidity; the dimension falls back to fresh DEX liquidity or `NR`
 - If the DEX liquidity snapshot is temporarily unavailable at read time, `/api/report-cards` degrades in place the same way: liquidity inputs are suppressed for that snapshot instead of failing the whole response
 - If a redemption route is configured but currently unrated, the dimension stays `NR` without pretending the route is absent; the detail string calls out the configured-but-unrated state explicitly
 - High concentration (HHI > 0.5) remains descriptive context, not an extra penalty

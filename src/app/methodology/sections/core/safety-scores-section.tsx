@@ -214,7 +214,7 @@ export function SafetyScoresMethodologySection() {
                     remain the guardrails against inflation.
                   </p>
                   <p>
-                    Redemption backstops are scored across access, settlement, execution certainty, capacity, output-asset quality, and cost. Low-confidence redemption routes stay visible on the site but do not uplift the Safety Score liquidity dimension. Severe active depegs also disable static or non-live-direct redemption uplift unless current live-open redemption evidence exists. Stale DEX inputs and stale redemption snapshots are not used for effective exit. Redemption metadata emitted by a live reserve adapter ages out with the reserve snapshot; if it is stale or degraded, the route stays visible but does not score as current capacity.
+                    Redemption backstops are scored across access, settlement, execution certainty, capacity, output-asset quality, and cost. Low-confidence redemption routes stay visible on the site but do not uplift the Safety Score liquidity dimension. Severe active depegs also disable static or non-live-direct redemption uplift unless current live-open redemption evidence exists. Stale DEX inputs and materially stale redemption snapshots are not used for effective exit; normal hourly redemption-sync lag remains inside the scoring freshness runway. Redemption metadata emitted by a live reserve adapter ages out with the reserve snapshot; if it is stale or degraded, the route stays visible but does not score as current capacity.
                   </p>
                 </div>
                 {/* Peg multiplier */}

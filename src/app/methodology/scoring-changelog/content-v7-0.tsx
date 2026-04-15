@@ -1,5 +1,32 @@
 import { VersionCard, getScoringEntry } from "./content-shared";
 
+export function ScoringChangelogV704Entry() {
+  return (
+    <VersionCard
+      entry={getScoringEntry("7.04")}
+      accent="border-l-emerald-500"
+    >
+      <p>
+        Redemption backstops now stay eligible through normal hourly sync lag instead of dropping
+        out of Liquidity / Exit as soon as the previous snapshot crosses one hour old.
+      </p>
+      <ul className="list-disc list-inside space-y-1">
+        <li>
+          Report-card redemption freshness now uses a two-run runway for the hourly redemption sync.
+        </li>
+        <li>
+          Medium- and high-confidence immediate-bounded redemption routes continue to improve Liquidity / Exit
+          between normal syncs.
+        </li>
+        <li>
+          Missing, materially stale, low-confidence, impaired, eventual-only, and severe-depeg-ineligible
+          routes still fail closed.
+        </li>
+      </ul>
+    </VersionCard>
+  );
+}
+
 export function ScoringChangelogV70Entry() {
   return (
     <VersionCard
