@@ -39,6 +39,13 @@ describe("adaptM0Current", () => {
       cashUnits: "milli-usd-to-micro-usd",
       totalCashScaled: 27_250_000_000_000,
       normalizedReserveTotal: 194_750_000_000_000,
+      redemption: {
+        capacityUsd: 194_750_000_000_000,
+        capacityKind: "live-proxy-validated",
+        freshnessKind: "unverified",
+        routeStatus: "unknown",
+        holderEligibility: "whitelisted-primary",
+      },
     });
   });
 

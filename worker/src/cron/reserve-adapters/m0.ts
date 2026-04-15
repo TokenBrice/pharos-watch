@@ -106,6 +106,7 @@ export function adaptM0Collateral(payload: M0GraphQlResponse): AdapterResult {
   const cashValue = scaleM0CashToReserveUnits(current.totalCash);
   const normalizedReserveTotal = current.totalTreasuries + tokenCollateralTotal + cashValue;
   const sourceTimestamp = getLatestM0SourceTimestamp(payload);
+  const eligibleCurrentCapacityUsd = current.eligibleTreasuries + eligibleTokenCollateral + cashValue;
   const slices = slicesFromValues([
     {
       name: "Eligible U.S. Treasuries",
@@ -152,6 +153,15 @@ export function adaptM0Collateral(payload: M0GraphQlResponse): AdapterResult {
       totalTreasuries: current.totalTreasuries,
       normalizedReserveTotal,
       yieldToMaturity: current.yieldToMaturity,
+      redemption: {
+        capacityUsd: eligibleCurrentCapacityUsd,
+        capacityKind: "live-proxy-validated" as const,
+        freshnessKind: sourceTimestamp != null ? "verified-source-timestamp" as const : "unverified" as const,
+        ...(sourceTimestamp != null ? { sourceTimestamp } : {}),
+        routeStatus: "unknown" as const,
+        holderEligibility: "whitelisted-primary",
+        sourceUrls: ["https://docs.m0.org/api/recipes/collateral-composition/"],
+      },
     },
   };
 }
