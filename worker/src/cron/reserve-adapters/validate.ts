@@ -24,6 +24,7 @@ interface ValidationOptions {
 
 const PCT_SUM_WARNING_TOLERANCE = 0.5;
 const PCT_SUM_ERROR_TOLERANCE = 2;
+export const MAX_FUTURE_SOURCE_TIMESTAMP_SKEW_SEC = 10 * 60;
 
 function infoWarning(code: string, message: string): LiveReserveWarning {
   return { code, message, severity: "info", effect: "info" };
@@ -70,6 +71,23 @@ function getMetadataObject(metadata: Record<string, unknown> | undefined, key: s
 
 function describeAdapter(adapter: ReserveAdapterDefinition | undefined): string {
   return adapter ? ` for ${adapter.sourceModel}/${adapter.evidenceClass}` : "";
+}
+
+function validateFutureTimestamp(
+  value: number | null,
+  label: string,
+  now: number,
+  adapter: ReserveAdapterDefinition | undefined,
+): LiveReserveWarning | null {
+  if (value == null || value <= now + MAX_FUTURE_SOURCE_TIMESTAMP_SKEW_SEC) {
+    return null;
+  }
+
+  return fatalWarning(
+    "future-source-timestamp",
+    `${label} is ${value - now}s in the future${describeAdapter(adapter)} `
+    + `(max ${MAX_FUTURE_SOURCE_TIMESTAMP_SKEW_SEC}s)`,
+  );
 }
 
 function validateRedemptionTelemetry(
@@ -167,6 +185,17 @@ export function validateAdapterOutput(
   }
 
   const warnings: LiveReserveWarning[] = [];
+  const now = options?.now ?? Math.floor(Date.now() / 1000);
+  const sourceTimestamp = getFiniteMetadataNumber(input.metadata, "sourceTimestamp");
+  const redemption = getMetadataObject(input.metadata, "redemption");
+  const redemptionSourceTimestamp = getFiniteMetadataNumber(redemption ?? undefined, "sourceTimestamp");
+  const futureTimestampWarning =
+    validateFutureTimestamp(sourceTimestamp, "Upstream reserve source timestamp", now, options?.adapter)
+    ?? validateFutureTimestamp(redemptionSourceTimestamp, "Redemption source timestamp", now, options?.adapter);
+  if (futureTimestampWarning) {
+    return { valid: false, warnings: [futureTimestampWarning] };
+  }
+
   const redemptionWarnings = validateRedemptionTelemetry(input.metadata, options?.adapter);
   if (hasFatalWarnings(redemptionWarnings)) {
     return { valid: false, warnings: redemptionWarnings };
@@ -201,11 +230,9 @@ export function validateAdapterOutput(
     ));
   }
 
-  const now = options?.now ?? Math.floor(Date.now() / 1000);
   const maxSourceAgeSec = options?.adapter?.validation?.maxSourceAgeSec;
-  const sourceTimestamp = getFiniteMetadataNumber(input.metadata, "sourceTimestamp");
   if (maxSourceAgeSec != null && sourceTimestamp != null) {
-    const ageSec = Math.max(0, now - sourceTimestamp);
+    const ageSec = now - sourceTimestamp;
     if (ageSec > maxSourceAgeSec) {
       warnings.push(degradedWarning(
         "stale-source-data",

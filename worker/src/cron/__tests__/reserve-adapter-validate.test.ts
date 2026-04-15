@@ -137,6 +137,79 @@ describe("validateAdapterOutput", () => {
     expect(result.warnings.some((warning) => warning.code === "stale-source-data")).toBe(true);
   });
 
+  it("rejects source timestamps beyond the future skew window", () => {
+    const result = validateAdapterOutput(
+      {
+        slices: [{ name: "A", pct: 100, risk: "low" }],
+        metadata: { sourceTimestamp: 1_000 + 601, freshnessMode: "verified" },
+      },
+      {
+        adapter: {
+          key: "ethena",
+          fetch: async () => ({ slices: [] }),
+          sourceModel: LIVE_RESERVE_ADAPTER_DEFINITIONS.ethena.sourceModel,
+          evidenceClass: LIVE_RESERVE_ADAPTER_DEFINITIONS.ethena.evidenceClass,
+          sharedSourceMode: LIVE_RESERVE_ADAPTER_DEFINITIONS.ethena.sharedSourceMode,
+          validation: LIVE_RESERVE_ADAPTER_DEFINITIONS.ethena.validation,
+        },
+        now: 1_000,
+      },
+    );
+
+    expect(result.valid).toBe(false);
+    expect(result.warnings[0]?.code).toBe("future-source-timestamp");
+  });
+
+  it("allows source timestamps within the future skew window", () => {
+    const result = validateAdapterOutput(
+      {
+        slices: [{ name: "A", pct: 100, risk: "low" }],
+        metadata: { sourceTimestamp: 1_000 + 600, freshnessMode: "verified" },
+      },
+      {
+        adapter: {
+          key: "ethena",
+          fetch: async () => ({ slices: [] }),
+          sourceModel: LIVE_RESERVE_ADAPTER_DEFINITIONS.ethena.sourceModel,
+          evidenceClass: LIVE_RESERVE_ADAPTER_DEFINITIONS.ethena.evidenceClass,
+          sharedSourceMode: LIVE_RESERVE_ADAPTER_DEFINITIONS.ethena.sharedSourceMode,
+          validation: LIVE_RESERVE_ADAPTER_DEFINITIONS.ethena.validation,
+        },
+        now: 1_000,
+      },
+    );
+
+    expect(result.valid).toBe(true);
+    expect(result.warnings.some((warning) => warning.code === "future-source-timestamp")).toBe(false);
+  });
+
+  it("rejects redemption source timestamps beyond the future skew window", () => {
+    const result = validateAdapterOutput(
+      {
+        slices: [{ name: "A", pct: 100, risk: "low" }],
+        metadata: {
+          freshnessMode: "not-applicable",
+          redemption: { sourceTimestamp: 1_000 + 601 },
+        },
+      },
+      {
+        adapter: {
+          key: "cap-vault",
+          fetch: async () => ({ slices: [] }),
+          sourceModel: LIVE_RESERVE_ADAPTER_DEFINITIONS["cap-vault"].sourceModel,
+          evidenceClass: LIVE_RESERVE_ADAPTER_DEFINITIONS["cap-vault"].evidenceClass,
+          sharedSourceMode: LIVE_RESERVE_ADAPTER_DEFINITIONS["cap-vault"].sharedSourceMode,
+          redemptionTelemetry: LIVE_RESERVE_ADAPTER_DEFINITIONS["cap-vault"].redemptionTelemetry,
+          validation: LIVE_RESERVE_ADAPTER_DEFINITIONS["cap-vault"].validation,
+        },
+        now: 1_000,
+      },
+    );
+
+    expect(result.valid).toBe(false);
+    expect(result.warnings[0]?.code).toBe("future-source-timestamp");
+  });
+
   it("rejects independent outputs that claim verified freshness without a source timestamp", () => {
     const result = validateAdapterOutput(
       {

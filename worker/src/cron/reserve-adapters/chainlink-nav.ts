@@ -14,6 +14,7 @@ import {
   unverifiedFreshnessMetadata,
   verifiedFreshnessMetadata,
 } from "./helpers";
+import { MAX_FUTURE_SOURCE_TIMESTAMP_SKEW_SEC } from "./validate";
 /** Ondo-style getPrice() — returns single uint256 with 18 decimals. */
 const GET_PRICE_SELECTOR = "0x98d5fdca";
 const GET_ASSET_PRICE_SELECTOR = "0xb3596f07";
@@ -241,7 +242,11 @@ export async function fetchChainlinkNavReserves(
 
   if (updatedAt > 0) {
     const maxOracleAgeSec = params.maxOracleAgeSec ?? DEFAULT_MAX_ORACLE_AGE_SEC;
-    const ageSec = Math.max(0, (ctx?.nowSec ?? Math.floor(Date.now() / 1000)) - updatedAt);
+    const now = ctx?.nowSec ?? Math.floor(Date.now() / 1000);
+    if (updatedAt > now + MAX_FUTURE_SOURCE_TIMESTAMP_SKEW_SEC) {
+      throw new Error(`chainlink-nav: oracle data timestamp is in the future (${updatedAt - now}s)`);
+    }
+    const ageSec = now - updatedAt;
     if (ageSec > maxOracleAgeSec) {
       throw new Error(`chainlink-nav: oracle data is stale (${ageSec}s > ${maxOracleAgeSec}s)`);
     }

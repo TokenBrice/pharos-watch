@@ -6,6 +6,7 @@ import { DECIMALS_SELECTOR, LATEST_ROUND_DATA_SELECTOR } from "../../lib/evm-sel
 import type { AdapterContext, AdapterResult } from "./types";
 import { parseChainlinkLatestRoundData } from "./chainlink";
 import { fetchOnchainRawCall, fetchOnchainUint256, requireOnchainInput } from "./helpers";
+import { MAX_FUTURE_SOURCE_TIMESTAMP_SKEW_SEC } from "./validate";
 const DEFAULT_MAX_ORACLE_AGE_SEC = 2 * DAY_SECONDS;
 
 export interface ChainlinkPorParams {
@@ -99,7 +100,11 @@ export async function fetchChainlinkPorReserves(
 
   const { roundId, answer, updatedAt } = parseChainlinkLatestRoundData(rawRoundData, "chainlink-por");
   const maxOracleAgeSec = params.maxOracleAgeSec ?? DEFAULT_MAX_ORACLE_AGE_SEC;
-  const ageSec = Math.max(0, (ctx?.nowSec ?? Math.floor(Date.now() / 1000)) - updatedAt);
+  const now = ctx?.nowSec ?? Math.floor(Date.now() / 1000);
+  if (updatedAt > now + MAX_FUTURE_SOURCE_TIMESTAMP_SKEW_SEC) {
+    throw new Error(`chainlink-por: feed data timestamp is in the future (${updatedAt - now}s)`);
+  }
+  const ageSec = now - updatedAt;
   if (ageSec > maxOracleAgeSec) {
     throw new Error(`chainlink-por: feed data is stale (${ageSec}s > ${maxOracleAgeSec}s)`);
   }
