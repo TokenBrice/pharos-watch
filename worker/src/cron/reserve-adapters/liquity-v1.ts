@@ -101,7 +101,15 @@ export async function fetchLiquityV1Reserves(
       troveManagerAddress: params.troveManagerAddress,
       totalCollateralRaw: totalCollateralRaw.toString(),
       totalDebtRaw: totalDebtRaw.toString(),
-      ...(redemptionFeeBps != null ? { redemptionFeeBps } : {}),
+      ...(redemptionFeeBps != null
+        ? {
+            redemptionFeeBps,
+            redemption: {
+              feeBps: redemptionFeeBps,
+              freshnessKind: "same-run-onchain" as const,
+            },
+          }
+        : {}),
     },
   };
 }

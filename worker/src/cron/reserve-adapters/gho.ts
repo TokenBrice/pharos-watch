@@ -430,9 +430,15 @@ export function adaptGhoFacilitators(data: GhoFacilitatorData): AdapterResult {
   if (values.length === 0) return { slices: [] };
 
   const activeFacilitators = data.facilitators.filter((facilitator) => facilitator.bucketLevel > 0n);
+  const immediateRedeemableUsd = scale18ToUsd(immediateRedeemableRaw);
+  const immediateRedeemableRatio =
+    typeof data.totalSupply === "bigint" && data.totalSupply > 0n
+      ? immediateRedeemableUsd / scale18ToUsd(data.totalSupply)
+      : undefined;
   const buyFeeBpsValues = data.trackedModules
     .map((trackedModule) => trackedModule.buyFeeBps)
     .filter((fee): fee is number => typeof fee === "number" && Number.isFinite(fee));
+  const redemptionFeeBps = buyFeeBpsValues.length > 0 ? Math.max(...buyFeeBpsValues) : undefined;
 
   return {
     slices: slicesFromValues(values),
@@ -449,19 +455,26 @@ export function adaptGhoFacilitators(data: GhoFacilitatorData): AdapterResult {
       ).length,
       trackedGsmBackingUsd: scale18ToUsd(trackedBackingRaw),
       residualSupplyUsd: residualRaw > 0n ? scale18ToUsd(residualRaw) : 0,
-      immediateRedeemableUsd: scale18ToUsd(immediateRedeemableRaw),
-      ...(typeof data.totalSupply === "bigint" && data.totalSupply > 0n
-        ? { immediateRedeemableRatio: scale18ToUsd(immediateRedeemableRaw) / scale18ToUsd(data.totalSupply) }
-        : {}),
+      immediateRedeemableUsd,
+      ...(immediateRedeemableRatio != null ? { immediateRedeemableRatio } : {}),
       ...(typeof data.totalSupply === "bigint" ? { supplyUsd: scale18ToUsd(data.totalSupply), totalReserveUsd: scale18ToUsd(data.totalSupply) } : {}),
       ...(typeof data.totalSupply === "bigint" ? { onchainSupplyUsd: scale18ToUsd(data.totalSupply) } : {}),
       ...(buyFeeBpsValues.length > 0
         ? {
-            redemptionFeeBps: Math.max(...buyFeeBpsValues),
+            redemptionFeeBps,
             buyFeeBpsMin: Math.min(...buyFeeBpsValues),
-            buyFeeBpsMax: Math.max(...buyFeeBpsValues),
+            buyFeeBpsMax: redemptionFeeBps,
           }
         : {}),
+      redemption: {
+        capacityUsd: immediateRedeemableUsd,
+        ...(immediateRedeemableRatio != null ? { capacityRatioOfSupply: immediateRedeemableRatio } : {}),
+        capacityKind: "live-direct" as const,
+        freshnessKind: "same-run-onchain" as const,
+        routeStatus: immediateRedeemableRaw > 0n ? "open" as const : "paused" as const,
+        ...(redemptionFeeBps != null ? { feeBps: redemptionFeeBps } : {}),
+        sourceUrls: ["https://aave.com/help/gho-stablecoin/stability-module"],
+      },
       facilitatorLabels: activeFacilitators.map((facilitator) => facilitator.label),
       trackedGsmLabels: data.trackedModules.map((trackedModule) => trackedModule.label),
     },

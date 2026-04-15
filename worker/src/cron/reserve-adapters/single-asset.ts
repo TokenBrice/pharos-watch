@@ -159,7 +159,15 @@ export async function fetchSingleAssetReserves(
           proofKind: "erc20-total-supply-liveness",
           reserveSourceLabel: params.reserveSourceLabel ?? params.label,
         }),
-        ...(redemptionFeeBps != null ? { redemptionFeeBps } : {}),
+        ...(redemptionFeeBps != null
+          ? {
+              redemptionFeeBps,
+              redemption: {
+                feeBps: redemptionFeeBps,
+                freshnessKind: "same-run-onchain" as const,
+              },
+            }
+          : {}),
       },
     };
   }

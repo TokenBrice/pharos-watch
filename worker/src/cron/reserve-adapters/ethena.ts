@@ -136,6 +136,15 @@ export function adaptEthenaCollateral(payload: EthenaCollateralResponse): Adapte
         computedTotalBackingAssetsInUsd > 0
           ? (unknownExposureUsd / computedTotalBackingAssetsInUsd) * 100
           : 0,
+      redemption: {
+        capacityUsd: stableBucketUsd,
+        capacityKind: "live-proxy-validated" as const,
+        freshnessKind: lastUpdatedAt > 0 ? "verified-source-timestamp" as const : "unverified" as const,
+        ...(lastUpdatedAt > 0 ? { sourceTimestamp: lastUpdatedAt } : {}),
+        routeStatus: "open" as const,
+        holderEligibility: "whitelisted-primary",
+        sourceUrls: ["https://app.ethena.fi/api/positions/current/collateral"],
+      },
     },
   };
 }

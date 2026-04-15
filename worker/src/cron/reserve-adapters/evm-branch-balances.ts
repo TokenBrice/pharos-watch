@@ -42,6 +42,14 @@ export async function fetchEvmBranchBalancesReserves(
     adapterKey: ADAPTER_KEY,
     balances,
     priceMap,
-    metadata: redemptionFeeBps != null ? { redemptionFeeBps } : undefined,
+    metadata: redemptionFeeBps != null
+      ? {
+          redemptionFeeBps,
+          redemption: {
+            feeBps: redemptionFeeBps,
+            freshnessKind: "same-run-onchain" as const,
+          },
+        }
+      : undefined,
   });
 }

@@ -219,6 +219,16 @@ export function adaptCollateralPositions(
       unknownAssetCount: warnings.length,
       unknownExposurePct: total > 0 ? (unknownExposureUsd / total) * 100 : 0,
       ...(immediateRedeemableUsd != null ? { immediateRedeemableUsd } : {}),
+      ...(immediateRedeemableUsd != null
+        ? {
+            redemption: {
+              capacityUsd: immediateRedeemableUsd,
+              capacityKind: "live-direct-bounded" as const,
+              freshnessKind: "same-run-onchain" as const,
+              routeStatus: "open" as const,
+            },
+          }
+        : {}),
       ...unverifiedFreshnessMetadata(
         "position-and-price-apis",
         "Collateral positions and price payloads do not expose a trustworthy source timestamp",

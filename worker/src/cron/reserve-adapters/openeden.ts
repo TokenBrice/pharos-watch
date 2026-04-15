@@ -111,6 +111,16 @@ function adaptOpenEdenReserveComposition(payload: OpenEdenReserveCompositionResp
       componentTotalUsd: componentTotal,
       immediateRedeemableUsd: payload.usdcAmount,
       ...(payload.usdoAmount > 0 ? { immediateRedeemableRatio: payload.usdcAmount / payload.usdoAmount } : {}),
+      redemption: {
+        capacityUsd: payload.usdcAmount,
+        ...(payload.usdoAmount > 0 ? { capacityRatioOfSupply: payload.usdcAmount / payload.usdoAmount } : {}),
+        capacityKind: "live-direct-bounded" as const,
+        freshnessKind: sourceTimestamp != null ? "verified-source-timestamp" as const : "unverified" as const,
+        ...(sourceTimestamp != null ? { sourceTimestamp } : {}),
+        routeStatus: "open" as const,
+        holderEligibility: "verified-customer",
+        sourceUrls: ["https://openeden.com/usdo/transparency"],
+      },
     },
   };
 }

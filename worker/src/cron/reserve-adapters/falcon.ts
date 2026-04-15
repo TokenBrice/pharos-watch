@@ -190,6 +190,17 @@ export function adaptFalconTransparency(payload: FalconTransparencyResponse): Ad
             "Falcon transparency payload did not expose a trustworthy snapshot timestamp",
           )),
       unknownExposurePct: totalAssetUsd > 0 ? (unknownExposureUsd / totalAssetUsd) * 100 : 0,
+      redemption: {
+        capacityUsd: stableBucketUsd,
+        ...(Number.isFinite(supplyUsd) && supplyUsd > 0 ? { capacityRatioOfSupply: stableBucketUsd / supplyUsd } : {}),
+        capacityKind: "live-queue" as const,
+        freshnessKind: payload.snapshot_date > 0 ? "verified-source-timestamp" as const : "unverified" as const,
+        ...(payload.snapshot_date > 0 ? { sourceTimestamp: payload.snapshot_date } : {}),
+        routeStatus: "open" as const,
+        holderEligibility: "whitelisted-primary",
+        settlementDelaySec: 7 * 24 * 60 * 60,
+        sourceUrls: ["https://api.falcon.finance/api/v1/transparency"],
+      },
     },
   };
 }

@@ -161,6 +161,15 @@ export async function fetchSkyMakercoreReserves(
             "Sky groups payload did not expose a trustworthy snapshot timestamp",
           )),
       unknownExposurePct: totalDebt > 0 ? (unknownDebt / totalDebt) * 100 : 0,
+      redemption: {
+        capacityUsd: immediateRedeemableUsd,
+        capacityKind: "live-proxy-validated" as const,
+        freshnessKind: snapshotEpoch > 0 ? "verified-source-timestamp" as const : "unverified" as const,
+        ...(snapshotEpoch > 0 ? { sourceTimestamp: snapshotEpoch } : {}),
+        routeStatus: "open" as const,
+        holderEligibility: "any-holder",
+        sourceUrls: [primaryInput.url],
+      },
     },
     ...(warnings.length > 0 ? { warnings } : {}),
   };

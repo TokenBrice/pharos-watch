@@ -175,6 +175,16 @@ export async function fetchReservoirReserves(
             ...(adapted.supplyUsd > 0
               ? { immediateRedeemableRatio: adapted.immediateRedeemableUsd / adapted.supplyUsd }
               : {}),
+            redemption: {
+              capacityUsd: adapted.immediateRedeemableUsd,
+              ...(adapted.supplyUsd > 0
+                ? { capacityRatioOfSupply: adapted.immediateRedeemableUsd / adapted.supplyUsd }
+                : {}),
+              capacityKind: "live-proxy-validated" as const,
+              freshnessKind: "unverified" as const,
+              routeStatus: "unknown" as const,
+              sourceUrls: [primaryInput.url],
+            },
           }
         : {}),
     },

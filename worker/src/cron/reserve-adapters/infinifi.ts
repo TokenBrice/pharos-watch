@@ -171,6 +171,19 @@ export async function fetchInfiniFiReserves(
       pendingRedemptionsUsd:
         payload.data.stats.asset.pendingRedemptionsAssetNormalized,
       ...(adapted.supplyUsd != null ? { supplyUsd: adapted.supplyUsd } : {}),
+      redemption: {
+        capacityUsd: adapted.immediateRedeemableUsd,
+        ...(adapted.supplyUsd != null && adapted.supplyUsd > 0
+          ? { capacityRatioOfSupply: adapted.immediateRedeemableUsd / adapted.supplyUsd }
+          : {}),
+        capacityKind: "live-queue" as const,
+        freshnessKind: "unverified" as const,
+        routeStatus: "unknown" as const,
+        ...(payload.data.stats.asset.pendingRedemptionsAssetNormalized != null
+          ? { queueDepthUsd: payload.data.stats.asset.pendingRedemptionsAssetNormalized }
+          : {}),
+        sourceUrls: [url],
+      },
     },
   };
 }
