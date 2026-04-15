@@ -1,6 +1,23 @@
 # Report Cards Scoring — Version Timeline
 
-Internal changelog reconstructed from git history plus the live version metadata source. Covers v1.0 through v6.97 (2026-02-25 → 2026-04-15).
+Internal changelog reconstructed from git history plus the live version metadata source. Covers v1.0 through v7.01 (2026-02-25 → 2026-04-15).
+
+## v7.01 — Safety-eligible redemption tiers (2026-04-15)
+
+Liquidity / Exit now distinguishes standalone redemption-route quality from Safety Score-eligible exit capacity:
+
+- Eventual-only redemption routes remain visible on redemption surfaces but no longer uplift the Safety Score Liquidity / Exit dimension by themselves
+- Queue-like redemption routes can still contribute when resolved and current, but their Safety Score contribution is capped before blending with DEX liquidity
+- Immediate-bounded and live-direct or validated-live routes continue to improve Liquidity / Exit when they are resolved, fresh, non-low-confidence, and not impaired by route-availability evidence
+
+## v7.0 — Independent NAV and bundle-oracle reserve feeds (2026-04-15)
+
+Additional proof-style reserve feeds now use independent timestamped sources instead of weak single-asset liveness probes:
+
+- USYC and TBILL now use Chainlink-style NAV oracles with verified oracle timestamps and 4-day business-day freshness windows
+- FRAX now uses the Frax v2 balance-sheet API with verified as-of timestamps and explicit token risk mapping
+- USD1 now uses its Chainlink bundle oracle for timestamped reserve size and live supply comparison
+- AUSD and DGLD remain outside live collateral passthrough for now because their discovered feeds do not currently provide payload-native freshness inside the live gate
 
 ## v6.97 — Active-depeg cap source and stale redemption gating (2026-04-15)
 

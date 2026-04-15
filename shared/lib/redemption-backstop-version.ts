@@ -1,9 +1,24 @@
 import { createMethodologyVersion, toMethodologyVersionLabel } from "./methodology-version";
 
 const redemptionBackstop = createMethodologyVersion({
-  currentVersion: "3.8",
+  currentVersion: "3.9",
   changelogPath: "/methodology/#safety-scores-methodology",
   changelog: [
+    {
+      version: "3.9",
+      title: "Normalized redemption telemetry and live capacity adapters",
+      date: "2026-04-15",
+      effectiveAt: 1776250800,
+      summary:
+        "Live reserve adapters can now publish normalized redemption telemetry, and Cap cUSD now uses direct vault-capacity telemetry instead of full-supply eventual assumptions.",
+      impact: [
+        "Reserve-sync redemption routes prefer nested `metadata.redemption` capacity, fee, freshness, and route-status fields while keeping legacy flat metadata readable",
+        "Live reserve validation rejects malformed or unsupported redemption telemetry before it can reach redemption-backstop scoring",
+        "Cap cUSD now scores against current unpaused available vault balances through the new cap-vault adapter rather than treating full eventual basket redeemability as immediate capacity",
+      ],
+      commits: [],
+      reconstructed: false,
+    },
     {
       version: "3.8",
       title: "Active-depeg exercisability gate",

@@ -391,6 +391,45 @@ describe("scoreLiquidity", () => {
 
     expect(result.score).toBeGreaterThan(40);
   });
+
+  it("does not let eventual-only redemption uplift liquidity", () => {
+    const result = scoreLiquidity(
+      { liquidityScore: 25, concentrationHhi: 0.3, poolCount: 5, chainCount: 2 },
+      {
+        score: 87,
+        routeFamily: "basket-redeem",
+        immediateCapacityUsd: null,
+        immediateCapacityRatio: null,
+        resolutionState: "resolved",
+        modelConfidence: "medium",
+        capacitySemantics: "eventual-only",
+        routeStatus: "open",
+      },
+    );
+
+    expect(result.score).toBe(25);
+    expect(result.detail).toContain("not used for Safety Score uplift (eventual-only route)");
+  });
+
+  it("caps queue redemption uplift before blending with DEX liquidity", () => {
+    const result = scoreLiquidity(
+      { liquidityScore: 40, concentrationHhi: 0.3, poolCount: 5, chainCount: 2 },
+      {
+        score: 90,
+        routeFamily: "queue-redeem",
+        immediateCapacityUsd: 50_000_000,
+        immediateCapacityRatio: 0.5,
+        resolutionState: "resolved",
+        modelConfidence: "medium",
+        capacitySemantics: "immediate-bounded",
+        settlementModel: "queued",
+        routeStatus: "open",
+      },
+    );
+
+    // Queue cap: min(90, 70), then best-path blend with DEX 40 => 70 + 4.
+    expect(result.score).toBe(74);
+  });
 });
 
 describe("computeStressedGrades", () => {

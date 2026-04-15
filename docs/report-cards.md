@@ -2,7 +2,7 @@
 
 Multi-dimensional risk grades (A+ through F) for every tracked stablecoin. Computed on-demand by the API from live data.
 
-## Overall Grade (v7.0)
+## Overall Grade (v7.01)
 
 Four-step computation:
 
@@ -13,7 +13,7 @@ Four-step computation:
 
 Cemetery coins get a permanent F.
 
-Current-version note: v7.0 keeps the stronger peg treatment introduced in v6.93 and the NAV-wrapper peg inheritance from v6.94, treats custodied BTC wrappers plus issuer-seizable tokenized collateral as direct inherited freeze exposure for blacklistability attribution when they dominate reserve weight, disables static or non-live-direct redemption uplift during severe active depegs unless current live-open redemption evidence exists, removes the legacy active-depeg peg-dimension cap, suppresses stale redemption-backstop rows from Safety Score Liquidity / Exit, restores collateral-quality passthrough for reserve adapters whose upstreams now expose verified source timestamps, lets USDaf's Asymmetry feed qualify when its protocol API timestamp is fresh, and promotes additional proof-style feeds only when they have independent timestamped NAV, balance-sheet, or bundle-oracle evidence. The `activeDepegBps` field remains in `RawDimensionInputs` so stressed-grade recomputations and the frontend can apply the same peak-based cap.
+Current-version note: v7.01 keeps the stronger peg treatment introduced in v6.93 and the NAV-wrapper peg inheritance from v6.94, treats custodied BTC wrappers plus issuer-seizable tokenized collateral as direct inherited freeze exposure for blacklistability attribution when they dominate reserve weight, disables static or non-live-direct redemption uplift during severe active depegs unless current live-open redemption evidence exists, removes the legacy active-depeg peg-dimension cap, suppresses stale redemption-backstop rows from Safety Score Liquidity / Exit, restores collateral-quality passthrough for reserve adapters whose upstreams now expose verified source timestamps, lets USDaf's Asymmetry feed qualify when its protocol API timestamp is fresh, promotes additional proof-style feeds only when they have independent timestamped NAV, balance-sheet, or bundle-oracle evidence, and separates standalone redemption-route quality from Safety Score-eligible exit capacity. Eventual-only routes stay visible but do not uplift Liquidity / Exit by themselves, while queue-like routes are capped before blending. The `activeDepegBps` field remains in `RawDimensionInputs` so stressed-grade recomputations and the frontend can apply the same peak-based cap.
 
 ## Dimensions
 
@@ -50,6 +50,8 @@ Current-version note: v7.0 keeps the stronger peg treatment introduced in v6.93 
 - If only DEX liquidity exists, `effectiveExitScore = liquidityScore`
 - If only redemption exists, `effectiveExitScore = redemptionBackstopScore` (route family caps are the guardrails — offchain-issuer ≤ 65, queue-redeem ≤ 70)
 - Redemption uplift is only used when the redemption route is resolved, above the low-confidence / heuristic tier, and not currently impaired by route-availability evidence
+- Eventual-only redemption routes remain visible in the dimension detail, but they do not improve Safety Score Liquidity / Exit unless a separate immediate-bounded/current-capacity signal exists
+- Queue-like redemption routes can improve Liquidity / Exit when resolved and current, but their redemption contribution is capped before the best-path blend so delayed exits cannot behave like instant liquidity
 - During severe active depegs (`activeDepegBps >= 2500`), redemption uplift requires live-direct dynamic permissionless redemption capacity with atomic or immediate settlement; static, documented-bound, live-proxy, issuer/API, queue, and estimated routes stay visible but do not uplift Liquidity / Exit until live-open evidence returns
 - Low-confidence redemption routes stay visible in the dimension detail, but they do not improve the Safety Score liquidity score
 - Formula-based routes with live on-chain fee telemetry can use the current redemption fee bps for cost scoring while remaining labeled as formula models

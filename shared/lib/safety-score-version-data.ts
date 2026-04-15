@@ -1,9 +1,24 @@
 import type { MethodologyVersionConfig } from "./methodology-version";
 
 export const SAFETY_SCORE_VERSION_CONFIG: MethodologyVersionConfig = {
-  currentVersion: "7.0",
+  currentVersion: "7.01",
   changelogPath: "/methodology/scoring-changelog/",
   changelog: [
+    {
+      version: "7.01",
+      title: "Safety-eligible redemption tiers",
+      date: "2026-04-15",
+      effectiveAt: 1776250800,
+      summary:
+        "Liquidity / Exit now distinguishes standalone redemption-route quality from Safety Score-eligible exit capacity.",
+      impact: [
+        "Eventual-only redemption routes remain visible on redemption surfaces but no longer uplift the Safety Score Liquidity / Exit dimension by themselves",
+        "Queue-like redemption routes can still contribute when resolved and current, but their Safety Score contribution is capped before blending with DEX liquidity",
+        "Immediate-bounded and live-direct or validated-live routes continue to improve Liquidity / Exit when they are resolved, fresh, non-low-confidence, and not impaired by route-availability evidence",
+      ],
+      commits: [],
+      reconstructed: false,
+    },
     {
       version: "7.0",
       title: "Independent NAV and bundle-oracle reserve feeds",

@@ -6,11 +6,11 @@ Modeled redemption-route coverage for tracked stablecoins. This subsystem estima
 
 ## Methodology Versioning
 
-- **Current methodology version:** `v3.8`
+- **Current methodology version:** `v3.9`
 - **Public methodology anchor:** `/methodology/#safety-scores-methodology`
 - **Canonical source files:** `shared/lib/redemption-backstops.ts`, `shared/lib/redemption-backstop-configs/*`, `shared/lib/redemption-backstop-scoring.ts`, `shared/lib/redemption-backstop-version.ts`
 
-Latest `v3.8` update: severe active depegs now impair static or non-live-direct redemption routes unless current live-open redemption evidence is available. Impaired routes stay visible but do not publish a usable current score or effective-exit uplift.
+Latest `v3.9` update: live reserve adapters can publish normalized redemption telemetry, validator checks now reject unsupported or malformed redemption capacity/fee metadata before persistence, and Cap cUSD now uses the live Cap Vault adapter instead of full-supply eventual capacity.
 
 There is no standalone changelog page yet. The public methodology link currently points at the Safety Scores section because redemption backstops feed the report-card liquidity dimension.
 

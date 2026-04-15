@@ -123,6 +123,19 @@ function isSevereActiveDepeg(activeDepegBps: number | null | undefined): boolean
   return activeDepegBps != null && activeDepegBps >= ACTIVE_DEPEG_CAP_F_BPS;
 }
 
+function isQueueLikeRedemption(redemption: RedemptionLiquidityInput): boolean {
+  return redemption.routeFamily === "queue-redeem" || redemption.settlementModel === "queued";
+}
+
+function getSafetyEligibleRedemptionScore(redemption: RedemptionLiquidityInput | undefined): number | null {
+  if (!redemption || redemption.score == null) return null;
+  if (redemption.capacitySemantics === "eventual-only") return null;
+  if (isQueueLikeRedemption(redemption)) {
+    return Math.min(redemption.score, 70);
+  }
+  return redemption.score;
+}
+
 function getRedemptionExclusionReason(
   redemption: RedemptionLiquidityInput | undefined,
   options?: { activeDepegBps?: number | null },
@@ -136,6 +149,9 @@ function getRedemptionExclusionReason(
   }
   if (redemption.modelConfidence === "low") {
     return "low confidence";
+  }
+  if (redemption.capacitySemantics === "eventual-only") {
+    return "eventual-only route";
   }
   const routeStatus = redemption.routeStatus ?? "unknown";
   if (routeStatus === "degraded" || routeStatus === "paused" || routeStatus === "cohort-limited") {
@@ -175,6 +191,9 @@ function buildLiquidityScoringFacts(
   const redemptionEligibleForLiquidity = isRedemptionEligibleForLiquidity(redemption, options);
   const redemptionExclusionReason = getRedemptionExclusionReason(redemption, options);
   const redemptionScore = redemption?.score ?? null;
+  const eligibleRedemptionScore = redemptionEligibleForLiquidity
+    ? getSafetyEligibleRedemptionScore(redemption)
+    : null;
   return {
     dexScore,
     redemptionEligibleForLiquidity,
@@ -182,7 +201,7 @@ function buildLiquidityScoringFacts(
     redemptionScore,
     effectiveScore: computeEffectiveExitScore(
       dexScore,
-      redemptionEligibleForLiquidity ? redemptionScore : null,
+      eligibleRedemptionScore,
     ),
     hasConfiguredRedemption: !!redemption,
     hasResolvedRedemption: redemption?.resolutionState === "resolved",
