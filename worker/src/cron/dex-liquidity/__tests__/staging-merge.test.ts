@@ -606,6 +606,11 @@ describe("mergeStagedPools", () => {
         quote_symbol: "USDC",
         price_usd: 1.0001,
         locked_liq_pct: null,
+        raw_json: JSON.stringify({
+          orderbookTvlBasis: "coingecko-depth-2pct-capped-by-volume",
+          orderbookDepthUsd: 500000,
+          orderbookDepthUpUsd: 700000,
+        }),
         discovered_at: now - 86400 * 5,
         refreshed_at: now,
       },
@@ -686,6 +691,11 @@ describe("mergeStagedPools", () => {
         quote_symbol: "USD",
         price_usd: 1.0001,
         locked_liq_pct: null,
+        raw_json: JSON.stringify({
+          orderbookTvlBasis: "coingecko-depth-2pct-capped-by-volume",
+          orderbookDepthUsd: 500000,
+          orderbookDepthUpUsd: 700000,
+        }),
         discovered_at: now - 86400 * 5,
         refreshed_at: now,
       },
@@ -699,5 +709,14 @@ describe("mergeStagedPools", () => {
 
     expect(result.mergedCount).toBe(1);
     expect(result.skippedByUniqueDerivedIdentityCount).toBe(0);
+    expect(metrics.get("usdt-tether")?.topPools[0]?.extra).toMatchObject({
+      orderbookTvlBasis: "coingecko-depth-2pct-capped-by-volume",
+      orderbookDepthUsd: 500000,
+      orderbookDepthUpUsd: 700000,
+      measurement: {
+        synthetic: true,
+        tvlMeasured: true,
+      },
+    });
   });
 });

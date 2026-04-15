@@ -160,20 +160,20 @@ DexScreener pools are merged through the shared secondary-pool contribution path
 CoinGecko Tickers runs in two complementary paths:
 
 1. **Discovery cron** (`sync-dex-discovery`): Synthetic orderbook pools enter scoring through `dex_pool_staging`.
-2. **Scoring-cron fallback** (`sync-dex-liquidity`, step 5b): After DexScreener fallback, any coin that still has zero pools, no usable DEX price observation, or materially weak partial coverage and has a `geckoId` is queried via CoinGecko's `/coins/{id}/tickers` endpoint. This covers coins whose primary liquidity lives on orderbook exchanges not tracked by DeFiLlama or DexScreener (e.g. KAG and KAU on Kinesis Exchange). Shares the 2-minute fallback time budget.
+2. **Scoring-cron fallback** (`sync-dex-liquidity`, step 5b): After DexScreener fallback, any coin that still has zero pools, no usable DEX price observation, or materially weak partial coverage and has a `geckoId` is queried via CoinGecko's `/coins/{id}/tickers` endpoint with `depth=true`. This covers coins whose primary liquidity lives on orderbook exchanges not tracked by DeFiLlama or DexScreener (e.g. KAG and KAU on Kinesis Exchange). Shares the 2-minute fallback time budget.
 
 Ticker filtering: `!is_stale && !is_anomaly`, finite `converted_last.usd`, finite `converted_volume.usd >= 1,000`, and a non-empty exchange identifier. Only USD-equivalent quote assets are accepted (USD, USDT, USDC, DAI, C1USD, etc.). CoinGecko deprecated `trust_score` on March 3, 2026, so the fallback no longer depends on that field. Filtering, exchange aggregation, synthetic TVL construction, and orderbook price-observation gating are shared between discovery and liquidity through `worker/src/cron/dex-liquidity/coingecko-tickers-shared.ts`.
 
 Per-exchange aggregation: all valid tickers from the same exchange are combined into one synthetic pool entry:
 
-- `syntheticTvl = totalVolume × 3` (assumes ~33% daily turnover — conservative for precious-metals orderbooks)
+- `syntheticTvl = totalVolume × 3` when CoinGecko depth fields are unavailable. When `depth=true` returns 2% downside orderbook depth (`cost_to_move_down_usd`), Pharos uses `min(totalVolume × 3, cost_to_move_down_usd)` so measured downside depth can reduce overstated volume-derived books without inflating scores on day one.
 - `poolType: "orderbook"`, quality multiplier 0.6x
 - `priceUsd = volume-weighted average` across accepted tickers on that exchange
 - Maturity defaults to 30 days unless later refreshed through repeated discovery
 
 The 0.6x quality multiplier reflects that orderbook exchanges are legitimate but centralized (not fully on-chain), placing them between Aerodrome volatile (0.4x) and Balancer stable (0.85x).
 
-These rows are explicitly marked synthetic in persisted pool metadata. They no longer present themselves as faux `USDC` pools; the quote side is labeled as an orderbook USD proxy so downstream consumers can distinguish centralized synthetic liquidity from measured AMM inventory.
+These rows are explicitly marked synthetic in persisted pool metadata. Depth-informed rows also preserve the 2% downside/upside orderbook depth and `orderbookTvlBasis` metadata for top-pool diagnostics. They no longer present themselves as faux `USDC` pools; the quote side is labeled as an orderbook USD proxy so downstream consumers can distinguish centralized synthetic liquidity from measured AMM inventory.
 
 Uses the shared secondary-pool contribution path used by GT/CG/staged fallback merges, so aggregate math and metadata propagation stay aligned across sources.
 

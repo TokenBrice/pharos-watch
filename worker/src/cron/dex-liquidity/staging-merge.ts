@@ -6,6 +6,7 @@ import { QUALITY_MULTIPLIERS } from "../../lib/dex-constants";
 import { toFiniteNumber } from "../../lib/number-utils";
 import type { PriceValidationReferences } from "../../lib/price-validation";
 import { mergeCgPools, mergeGtPools } from "./fetch-crawlers";
+import type { CgTickerOrderbookMetadata } from "./coingecko-tickers-shared";
 import type { AuthoritativeStagedPoolConfirmationIndex } from "./orchestrator-phases";
 import { getGtDexQuality, normalizeProtocol } from "./pool-helpers";
 import { isPlausibleDexObservationPrice } from "./price-sanity";
@@ -38,6 +39,7 @@ interface StagedPoolRow {
   quote_symbol: string | null;
   price_usd: number | null;
   locked_liq_pct: number | null;
+  raw_json: string | null;
   discovered_at: number;
   refreshed_at: number;
 }
@@ -69,10 +71,32 @@ function toStagedPool(row: StagedPoolRow): StagedPool {
     quoteSymbol: row.quote_symbol,
     priceUsd: toFiniteNumber(row.price_usd),
     lockedLiqPct: toFiniteNumber(row.locked_liq_pct),
-    rawJson: null,
+    rawJson: row.raw_json ?? null,
     discoveredAt: toFiniteNumber(row.discovered_at) ?? 0,
     refreshedAt: toFiniteNumber(row.refreshed_at) ?? 0,
   };
+}
+
+function readCgTickerOrderbookMetadata(rawJson: string | null): CgTickerOrderbookMetadata | null {
+  if (!rawJson) return null;
+  try {
+    const parsed = JSON.parse(rawJson) as Record<string, unknown>;
+    const orderbookDepthUsd = toFiniteNumber(parsed.orderbookDepthUsd);
+    const orderbookDepthUpUsd = toFiniteNumber(parsed.orderbookDepthUpUsd);
+    const orderbookTvlBasis =
+      parsed.orderbookTvlBasis === "coingecko-depth-2pct-capped-by-volume" ||
+      parsed.orderbookTvlBasis === "volume-derived"
+        ? parsed.orderbookTvlBasis
+        : undefined;
+    if (orderbookDepthUsd == null && orderbookDepthUpUsd == null && !orderbookTvlBasis) return null;
+    return {
+      ...(orderbookDepthUsd != null ? { orderbookDepthUsd } : {}),
+      ...(orderbookDepthUpUsd != null ? { orderbookDepthUpUsd } : {}),
+      ...(orderbookTvlBasis ? { orderbookTvlBasis } : {}),
+    };
+  } catch {
+    return null;
+  }
 }
 
 function pushPool<T>(poolMap: Map<string, T[]>, stablecoinId: string, pool: T): void {
@@ -176,7 +200,7 @@ export async function mergeStagedPools(
         `SELECT pool_id, stablecoin_id, source, chain, protocol, dex_id, symbol,
                        tvl_usd, volume_24h, quality_multiplier, pool_type, fee_tier, balance_ratio, is_stable,
                        base_token, quote_token, quote_symbol, price_usd, locked_liq_pct,
-                       discovered_at, refreshed_at
+                       raw_json, discovered_at, refreshed_at
                 FROM dex_pool_staging WHERE refreshed_at >= ?`,
       )
       .bind(nowSec - DAY_SECONDS)
@@ -210,6 +234,9 @@ export async function mergeStagedPools(
       if (!stagedPool.poolId || !stagedPool.stablecoinId) return null;
 
       const profile = resolveStagedPoolProfile(stagedPool);
+      const orderbookMetadata = stagedPool.source === "cg_tickers"
+        ? readCgTickerOrderbookMetadata(stagedPool.rawJson)
+        : null;
       const poolAddressOrId = stagedPool.poolId.includes(":")
         ? stagedPool.poolId.split(":").slice(1).join(":")
         : stagedPool.poolId;
@@ -227,6 +254,7 @@ export async function mergeStagedPools(
         dexId: profile.dexId,
         poolType: profile.poolType,
         qualityMultiplier: profile.qualityMultiplier,
+        orderbookMetadata,
         identity,
       };
     })
@@ -234,7 +262,7 @@ export async function mergeStagedPools(
   const stagedIdentityCounts = countPoolIdentityKeys(stagedEntries.map((entry) => entry.identity));
 
   for (const entry of stagedEntries) {
-    const { stagedPool, dexId, poolType, qualityMultiplier, identity } = entry;
+    const { stagedPool, dexId, poolType, qualityMultiplier, orderbookMetadata, identity } = entry;
     const normalizedProtocol = normalizeProtocol(stagedPool.protocol || dexId);
 
     // Compute confidence and adjusted TVL early — needed for price observation gate
@@ -353,8 +381,9 @@ export async function mergeStagedPools(
       ...(stagedPool.source === "cg_tickers"
         ? {
             pairQualityOverride: 0.85,
+            ...(orderbookMetadata ?? {}),
             measurement: {
-              tvlMeasured: true,
+              tvlMeasured: orderbookMetadata?.orderbookDepthUsd != null,
               volumeMeasured: stagedPool.volume24h != null && Number.isFinite(stagedPool.volume24h),
               balanceMeasured: false,
               maturityMeasured: false,

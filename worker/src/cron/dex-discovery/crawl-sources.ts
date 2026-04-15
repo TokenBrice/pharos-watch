@@ -21,6 +21,7 @@ import { classifyCgPool, parseCgPool } from "../dex-liquidity/coingecko-onchain-
 import {
   aggregateCgTickersByExchange,
   buildCgTickerExchangeSummaries,
+  buildCgTickerOrderbookMetadata,
   buildCgTickerPriceObservations,
   filterValidCgTickers,
 } from "../dex-liquidity/coingecko-tickers-shared";
@@ -428,7 +429,7 @@ export async function crawlCoin(
     const geckoId = stablecoinMeta?.geckoId;
     if (geckoId) {
       try {
-        const url = cgUrl(`/coins/${geckoId}/tickers?include_exchange_logo=false&depth=false`, cgApiKey);
+        const url = cgUrl(`/coins/${geckoId}/tickers?include_exchange_logo=false&depth=true`, cgApiKey);
         const res = await fetchWithRetry(url, {
           headers: cgHeaders({ "User-Agent": USER_AGENT }, cgApiKey),
           signal: buildStageSignal(signal, deadlineMs, DISCOVERY_STAGE_TIMEOUT_MS.cgTickers),
@@ -442,6 +443,7 @@ export async function crawlCoin(
           for (const summary of exchangeSummaries) {
             const poolId = `orderbook:${summary.exchangeId}:${stablecoinId}`.toLowerCase();
             if (knownPoolIds.has(poolId)) continue;
+            const orderbookMetadata = buildCgTickerOrderbookMetadata(summary);
 
             addPool({
               poolId,
@@ -463,7 +465,7 @@ export async function crawlCoin(
               quoteSymbol: "USD",
               priceUsd: summary.priceUsd,
               lockedLiqPct: null,
-              rawJson: null,
+              rawJson: orderbookMetadata ? JSON.stringify(orderbookMetadata) : null,
               discoveredAt: nowSec,
               refreshedAt: nowSec,
             });

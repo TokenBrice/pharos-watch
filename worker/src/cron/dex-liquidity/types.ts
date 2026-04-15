@@ -107,6 +107,9 @@ export interface PoolEntry {
     maturityDays?: number;
     registryId?: string;
     lockedLiquidityPct?: number | null;
+    orderbookDepthUsd?: number;
+    orderbookDepthUpUsd?: number;
+    orderbookTvlBasis?: "volume-derived" | "coingecko-depth-2pct-capped-by-volume";
     balanceDetails?: {
       symbol: string;
       balancePct: number;
@@ -286,6 +289,12 @@ export interface GtNewPool {
   pairQualityOverride?: number | null;
   /** Measurement/provenance flags for downstream confidence accounting. */
   measurement?: PoolMeasurementFlags;
+  /** CoinGecko 2% downside orderbook depth when available. */
+  orderbookDepthUsd?: number | null;
+  /** CoinGecko 2% upside orderbook depth when available. */
+  orderbookDepthUpUsd?: number | null;
+  /** How synthetic orderbook TVL was derived. */
+  orderbookTvlBasis?: "volume-derived" | "coingecko-depth-2pct-capped-by-volume";
 }
 
 export interface CgNewPool extends GtNewPool {
@@ -329,6 +338,8 @@ export interface CgTicker {
   market: { name: string; identifier: string };
   converted_last: { usd: number };
   converted_volume: { usd: number };
+  cost_to_move_down_usd?: number | null;
+  cost_to_move_up_usd?: number | null;
   bid_ask_spread_percentage: number;
   is_anomaly: boolean;
   is_stale: boolean;

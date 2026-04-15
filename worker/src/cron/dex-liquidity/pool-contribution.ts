@@ -96,6 +96,9 @@ export function addSecondaryPoolContribution(
       stressIndex,
       maturityDays: pool.maturityDays,
       ...(lockedLiquidityPct != null ? { lockedLiquidityPct } : {}),
+      ...(pool.orderbookDepthUsd != null ? { orderbookDepthUsd: Math.round(pool.orderbookDepthUsd) } : {}),
+      ...(pool.orderbookDepthUpUsd != null ? { orderbookDepthUpUsd: Math.round(pool.orderbookDepthUpUsd) } : {}),
+      ...(pool.orderbookTvlBasis ? { orderbookTvlBasis: pool.orderbookTvlBasis } : {}),
       ...(measurement ? { measurement } : {}),
     },
   });

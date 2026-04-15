@@ -180,6 +180,8 @@ describe("crawlCoin DexScreener hardening", () => {
         market: { name: "Kinesis", identifier: "kinesis" },
         converted_last: { usd: 1.001 },
         converted_volume: { usd: 20_000 },
+        cost_to_move_down_usd: 40_000,
+        cost_to_move_up_usd: 45_000,
         target_coin_id: undefined,
         is_anomaly: false,
         is_stale: false,
@@ -190,6 +192,8 @@ describe("crawlCoin DexScreener hardening", () => {
         market: { name: "Kinesis", identifier: "kinesis" },
         converted_last: { usd: 0.999 },
         converted_volume: { usd: 10_000 },
+        cost_to_move_down_usd: 20_000,
+        cost_to_move_up_usd: 25_000,
         target_coin_id: "tether",
         is_anomaly: false,
         is_stale: false,
@@ -212,7 +216,7 @@ describe("crawlCoin DexScreener hardening", () => {
       protocol: "kinesis",
       dexId: "kinesis",
       symbol: "USDC / USD",
-      tvlUsd: 90_000,
+      tvlUsd: 60_000,
       volume24h: 30_000,
       qualityMultiplier: QUALITY_MULTIPLIERS["orderbook"],
       poolType: "orderbook",
@@ -224,16 +228,21 @@ describe("crawlCoin DexScreener hardening", () => {
       quoteSymbol: "USD",
       priceUsd: (1.001 * 20_000 + 0.999 * 10_000) / 30_000,
       lockedLiqPct: null,
-      rawJson: null,
+      rawJson: JSON.stringify({
+        orderbookTvlBasis: "coingecko-depth-2pct-capped-by-volume",
+        orderbookDepthUsd: 60_000,
+        orderbookDepthUpUsd: 70_000,
+      }),
       discoveredAt: expect.any(Number),
       refreshedAt: expect.any(Number),
     }]);
     expect(result.priceObs).toEqual([{
       stablecoinId: "usdc-circle",
       price: (1.001 * 20_000 + 0.999 * 10_000) / 30_000,
-      tvl: 90_000,
+      tvl: 60_000,
       chain: "orderbook",
       protocol: "cg-ticker-kinesis",
     }]);
+    expect(vi.mocked(fetchWithRetry).mock.calls[0]?.[0]).toContain("depth=true");
   });
 });

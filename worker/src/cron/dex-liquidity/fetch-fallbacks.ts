@@ -14,6 +14,7 @@ import { isPlausibleDexObservationPrice } from "./price-sanity";
 import {
   aggregateCgTickersByExchange,
   buildCgTickerExchangeSummaries,
+  buildCgTickerOrderbookMetadata,
   buildCgTickerPriceObservations,
   filterValidCgTickers,
 } from "./coingecko-tickers-shared";
@@ -259,7 +260,8 @@ export async function fetchDsFallbackPools(
  * DEX price and have a geckoId configured. Creates one synthetic GtNewPool per exchange,
  * aggregating all non-stale USD-denominated pairs.
  *
- * Synthetic TVL = totalVolume × ORDERBOOK_TVL_FACTOR (order-book depth proxy).
+ * Synthetic TVL uses CoinGecko 2% downside depth when available, capped by
+ * totalVolume × ORDERBOOK_TVL_FACTOR; otherwise falls back to the volume proxy.
  */
 export async function fetchCgTickersFallback(
   metrics: Map<string, LiquidityMetrics>,
@@ -288,7 +290,7 @@ export async function fetchCgTickersFallback(
       return { newPools, priceObs };
     }
     try {
-      const url = cgUrl(`/coins/${meta.geckoId}/tickers?include_exchange_logo=false&depth=false`, coingeckoApiKey ?? null);
+      const url = cgUrl(`/coins/${meta.geckoId}/tickers?include_exchange_logo=false&depth=true`, coingeckoApiKey ?? null);
       const timeout = AbortSignal.timeout(10_000);
       const res = await fetchWithRetry(url, {
         headers: cgHeaders({ "User-Agent": USER_AGENT }, coingeckoApiKey ?? null),
@@ -313,6 +315,7 @@ export async function fetchCgTickersFallback(
 
       const pools: GtNewPool[] = [];
       for (const summary of exchangeSummaries) {
+        const orderbookMetadata = buildCgTickerOrderbookMetadata(summary);
         pools.push({
           address: `orderbook-${summary.exchangeId}`,
           chain: "orderbook",
@@ -327,8 +330,9 @@ export async function fetchCgTickersFallback(
           symbol: `${meta.symbol} / ORDERBOOK-USD`,
           sourceFamily: "cg_tickers",
           pairQualityOverride: 0.85,
+          ...(orderbookMetadata ?? {}),
           measurement: {
-            tvlMeasured: false,
+            tvlMeasured: summary.depthDownUsd != null,
             volumeMeasured: true,
             balanceMeasured: false,
             maturityMeasured: false,

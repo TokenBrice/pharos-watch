@@ -85,7 +85,8 @@ export const CG_ONCHAIN_TOKEN_POOLS_MAX_PAGES = 3;
 
 /**
  * Synthetic TVL factor for orderbook exchanges.
- * volume × factor = estimated standing order-book depth.
+ * volume × factor = estimated standing order-book depth when measured depth
+ * is unavailable, and an upper bound when CoinGecko 2% depth is available.
  * 3× assumes ~33% daily turnover, conservative for precious-metals markets.
  */
 export const ORDERBOOK_TVL_FACTOR = 3;

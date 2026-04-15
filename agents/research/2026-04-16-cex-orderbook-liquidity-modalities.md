@@ -39,12 +39,12 @@ The docs state `depth=true` includes 2% orderbook depth. That maps well to stabl
 Implementation sketch:
 
 1. Change existing CoinGecko ticker calls from `depth=false` to `depth=true`.
-2. Extend `CgTicker` types and `filterValidCgTickers()` to require finite `cost_to_move_down_usd` for score-grade CEX depth.
+2. Extend `CgTicker` types to read `cost_to_move_down_usd` / `cost_to_move_up_usd` when present, while preserving the existing volume-derived fallback when CoinGecko omits depth fields.
 3. Build two values per exchange:
    - measured downside depth: sum or max of `cost_to_move_down_usd` across accepted stablecoin/USD-equivalent markets
    - volume sanity: keep the current converted-volume filter and possibly require a minimum depth/volume ratio
 4. Replace or blend synthetic TVL:
-   - conservative option: `tvlUsd = min(volume * 3, costToMoveDownUsd)`
+   - conservative selected option: `tvlUsd = min(volume * 3, costToMoveDownUsd)` when downside depth is available; otherwise keep `volume * 3`
    - depth-forward option: `tvlUsd = costToMoveDownUsd`
    - hybrid option: `tvlUsd = sqrt(costToMoveDownUsd * volume * 3)`
 5. Keep `poolType = "orderbook"`, source family `cg_tickers`, quality multiplier at or below `0.6x`.
@@ -227,4 +227,3 @@ Phase 3:
 
 - Decide whether a paid provider is worth it for broad coverage and history.
 - If yes, use it as primary CEX depth and direct exchange reads as canaries.
-
