@@ -11,8 +11,9 @@ import {
   reserveInfoWarning,
   slicesFromPercentages,
   unverifiedFreshnessMetadata,
+  verifiedFreshnessMetadata,
 } from "./helpers";
-import { extractEscapedJsonArrayBetween } from "./html";
+import { extractEscapedJsonArrayBetween, extractEscapedJsonValueAfterKey } from "./html";
 
 interface MentoReserveEntry {
   symbol: string;
@@ -21,6 +22,7 @@ interface MentoReserveEntry {
 
 const RESERVE_COMPOSITION_START = '\\"reserveComposition\\":';
 const RESERVE_COMPOSITION_END = '],\\"reserveHoldings\\":';
+const RESERVE_HOLDINGS_KEY = '\\"reserveHoldings\\":';
 
 interface TokenConfig {
   name: string;
@@ -68,9 +70,40 @@ export function parseMentoReserveComposition(html: string): MentoReserveEntry[] 
     );
 }
 
+function collectUpdatedTimestamps(value: unknown, timestamps: number[]): void {
+  if (!value || typeof value !== "object") return;
+  if (Array.isArray(value)) {
+    for (const item of value) collectUpdatedTimestamps(item, timestamps);
+    return;
+  }
+
+  const record = value as Record<string, unknown>;
+  const updated = record.updated;
+  if (typeof updated === "number" && Number.isFinite(updated) && updated > 0) {
+    timestamps.push(Math.floor(updated >= 1_000_000_000_000 ? updated / 1000 : updated));
+  }
+  for (const nested of Object.values(record)) {
+    collectUpdatedTimestamps(nested, timestamps);
+  }
+}
+
+function extractMentoSourceTimestamp(html: string): number | null {
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(extractEscapedJsonValueAfterKey(html, RESERVE_HOLDINGS_KEY, "mento")) as unknown;
+  } catch {
+    return null;
+  }
+
+  const timestamps: number[] = [];
+  collectUpdatedTimestamps(parsed, timestamps);
+  return timestamps.length > 0 ? Math.min(...timestamps) : null;
+}
+
 export function adaptMentoReserveComposition(html: string): AdapterResult {
   const entries = parseMentoReserveComposition(html);
   const warnings: LiveReserveWarning[] = [];
+  const sourceTimestamp = extractMentoSourceTimestamp(html);
 
   if (entries.length < 3) {
     warnings.push(reserveInfoWarning(
@@ -103,10 +136,12 @@ export function adaptMentoReserveComposition(html: string): AdapterResult {
     metadata: {
       entryCount: entries.length,
       totalPct,
-      ...unverifiedFreshnessMetadata(
-        "nextjs-embedded-payload",
-        "Mento reserve page embeds composition percentages without a trustworthy source timestamp",
-      ),
+      ...(sourceTimestamp != null
+        ? verifiedFreshnessMetadata(sourceTimestamp)
+        : unverifiedFreshnessMetadata(
+            "nextjs-embedded-payload",
+            "Mento reserve page embeds composition percentages without a trustworthy source timestamp",
+          )),
     },
   };
 }

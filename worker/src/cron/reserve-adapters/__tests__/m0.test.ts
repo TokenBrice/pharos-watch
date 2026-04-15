@@ -41,4 +41,30 @@ describe("adaptM0Current", () => {
       normalizedReserveTotal: 194_750_000_000_000,
     });
   });
+
+  it("uses the latest collateral update timestamp when M0 exposes one", () => {
+    const result = adaptM0Collateral({
+      data: {
+        ...SAMPLE_PAYLOAD.data,
+        collateralUpdateds: [
+          {
+            timestamp: "1776232804",
+            blockTimestamp: "1776232835",
+          },
+        ],
+        minterGateway_latestUpdateTimestampSnapshots: [
+          {
+            timestamp: "1776232835",
+            value: "1776232835",
+          },
+        ],
+      },
+    });
+
+    expect(result.metadata).toMatchObject({
+      freshnessMode: "verified",
+      sourceTimestamp: 1776232835,
+      latestCollateralSourceTimestamp: 1776232835,
+    });
+  });
 });

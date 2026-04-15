@@ -34,6 +34,15 @@ describe("adaptCircleTransparency", () => {
     });
   });
 
+  it("uses Circle's reserve disclosure date when the page exposes one", () => {
+    const result = adaptCircleTransparency(`${USDC_HTML}<div>As of Apr 09, 2026</div>`, "usdc");
+
+    expect(result.metadata).toMatchObject({
+      freshnessMode: "verified",
+      sourceTimestamp: Date.UTC(2026, 3, 9) / 1000,
+    });
+  });
+
   it("maps USDC slices to very-low risk", () => {
     const result = adaptCircleTransparency(USDC_HTML, "usdc");
     for (const slice of result.slices) {

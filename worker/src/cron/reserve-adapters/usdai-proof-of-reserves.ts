@@ -4,10 +4,12 @@ import type { AdapterContext, AdapterResult } from "./types";
 import {
   buildUnknownExposureWarning,
   fetchTextWithRetry,
+  parseTimestampLikeToUnixSeconds,
   requireJsonInput,
   reserveInfoWarning,
   slicesFromPercentages,
   unverifiedFreshnessMetadata,
+  verifiedFreshnessMetadata,
 } from "./helpers";
 
 const SHARE_SCALE = 10n ** 18n;
@@ -87,6 +89,14 @@ function resolveTbillBucket(name: string): ResolvedReserveBucket {
   }
 }
 
+export function extractUsdAiProofPageTimestamp(html: string): number | null {
+  const timestamps = Array.from(html.matchAll(/\\?"timeLastUpdated\\?"\s*:\s*\\?"([^"\\]+)\\?"/g))
+    .map((match) => parseTimestampLikeToUnixSeconds(match[1]))
+    .filter((value): value is number => value != null);
+
+  return timestamps.length > 0 ? Math.max(...timestamps) : null;
+}
+
 export function parseUsdAiProofOfReserves(raw: string): UsdAiProofOfReservesEntry[] {
   let parsed: unknown;
   try {
@@ -104,7 +114,10 @@ export function parseUsdAiProofOfReserves(raw: string): UsdAiProofOfReservesEntr
   return parsed as UsdAiProofOfReservesEntry[];
 }
 
-export function adaptUsdAiProofOfReserves(entries: UsdAiProofOfReservesEntry[]): AdapterResult {
+export function adaptUsdAiProofOfReserves(
+  entries: UsdAiProofOfReservesEntry[],
+  sourceTimestamp: number | null = null,
+): AdapterResult {
   const warnings: LiveReserveWarning[] = [];
   const tbillBuckets = new Map<string, { share: bigint; bucket: ResolvedReserveBucket }>();
   const unknownTypes = new Set<string>();
@@ -261,12 +274,28 @@ export function adaptUsdAiProofOfReserves(entries: UsdAiProofOfReservesEntry[]):
       ...(unknownTypes.size > 0 ? { unknownReserveTypes: Array.from(unknownTypes).sort() } : {}),
       ...(ignoredAmountOnlyEntries.length > 0 ? { ignoredMissingShareEntryCount: ignoredAmountOnlyEntries.length } : {}),
       ...(totalWeight > 0n ? { unknownExposurePct: weightToPct(unknownShare) } : {}),
-      ...unverifiedFreshnessMetadata(
-        "usdai-proof-of-reserves-api",
-        "USD.AI proof-of-reserves API does not expose a trustworthy source timestamp",
-      ),
+      ...(sourceTimestamp != null
+        ? verifiedFreshnessMetadata(sourceTimestamp)
+        : unverifiedFreshnessMetadata(
+            "usdai-proof-of-reserves-api",
+            "USD.AI proof-of-reserves API does not expose a trustworthy source timestamp",
+          )),
     },
   };
+}
+
+async function fetchUsdAiProofPageTimestamp(
+  config: LiveReservesConfig,
+  signal: AbortSignal,
+  ctx?: AdapterContext,
+): Promise<number | null> {
+  const url = config.display?.url;
+  if (!url) return null;
+  try {
+    return extractUsdAiProofPageTimestamp(await fetchTextWithRetry(url, signal, 12_000, ctx));
+  } catch {
+    return null;
+  }
 }
 
 export async function fetchUsdAiProofOfReserves(
@@ -276,6 +305,9 @@ export async function fetchUsdAiProofOfReserves(
   ctx?: AdapterContext,
 ): Promise<AdapterResult> {
   const input = requireJsonInput(config.inputs.primary, "usdai-proof-of-reserves");
-  const raw = await fetchTextWithRetry(input.url, signal, 12_000, ctx);
-  return adaptUsdAiProofOfReserves(parseUsdAiProofOfReserves(raw));
+  const [raw, sourceTimestamp] = await Promise.all([
+    fetchTextWithRetry(input.url, signal, 12_000, ctx),
+    fetchUsdAiProofPageTimestamp(config, signal, ctx),
+  ]);
+  return adaptUsdAiProofOfReserves(parseUsdAiProofOfReserves(raw), sourceTimestamp);
 }

@@ -5,9 +5,11 @@ import type { AdapterContext, AdapterResult } from "./types";
 import {
   fetchPrimaryHtmlInput,
   htmlLayoutChangedError,
+  parseTimestampLikeToUnixSeconds,
   slicesFromPercentages,
   slicesFromValues,
   unverifiedFreshnessMetadata,
+  verifiedFreshnessMetadata,
 } from "./helpers";
 
 interface CircleSliceConfig {
@@ -57,6 +59,11 @@ function extractDisplayAmount(html: string, coinType: string): number | null {
   return tag ? extractAttrValue(tag, "data-point") : null;
 }
 
+function extractDisclosureTimestamp(html: string): number | null {
+  const match = html.match(/\bAs of\s+([A-Za-z]{3,9}\s+\d{1,2},\s*\d{4})\b/i);
+  return parseTimestampLikeToUnixSeconds(match?.[1]);
+}
+
 export function adaptCircleTransparency(html: string, coinType: string): AdapterResult {
   const sliceConfigs = coinType === "eurc" ? EURC_SLICES : USDC_SLICES;
   const missingAttrs: string[] = [];
@@ -88,6 +95,7 @@ export function adaptCircleTransparency(html: string, coinType: string): Adapter
   const useAbsoluteValues = !looksLikePercentages
     && displayAmountRelativeDiff != null
     && displayAmountRelativeDiff <= CIRCLE_ABSOLUTE_MODE_MAX_RELATIVE_DIFF;
+  const sourceTimestamp = extractDisclosureTimestamp(html);
 
   const slices = useAbsoluteValues
     ? slicesFromValues(
@@ -113,10 +121,12 @@ export function adaptCircleTransparency(html: string, coinType: string): Adapter
       coinType,
       sliceCount: entries.length,
       expectedSliceCount: sliceConfigs.length,
-      ...unverifiedFreshnessMetadata(
-        "html-disclosure",
-        "Circle reserve page does not expose a parseable upstream disclosure timestamp in the adapter payload",
-      ),
+      ...(sourceTimestamp != null
+        ? verifiedFreshnessMetadata(sourceTimestamp)
+        : unverifiedFreshnessMetadata(
+            "html-disclosure",
+            "Circle reserve page does not expose a parseable upstream disclosure timestamp in the adapter payload",
+          )),
       valueMode: useAbsoluteValues ? "absolute" : "percentage",
       rawValueSum,
       ...(displayAmount != null ? { displayAmount } : {}),

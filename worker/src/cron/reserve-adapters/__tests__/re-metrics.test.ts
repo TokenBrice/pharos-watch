@@ -44,6 +44,22 @@ describe("adaptReMetrics", () => {
     });
   });
 
+  it("maps liUSD 4w explicitly instead of degrading as an unmapped token", () => {
+    const html = `
+<html><body><script>
+self.__next_f.push([1,"...\\"initialChainBreakdowns\\":{\\"ethereum\\":{\\"asOf\\":\\"2026-04-14\\",\\"rows\\":[{\\"tokenSymbol\\":\\"liusd-4w\\",\\"valueWei\\":\\"100000000000000000000\\",\\"valueKnown\\":true}]}},\\"series\\":[{\\"seriesKey\\":\\"offchain_capital\\",\\"stats\\":{\\"current\\":100},\\"points\\":[{\\"date\\":\\"2026-04-14\\",\\"value\\":100}]}]..."]);
+</script></body></html>
+`;
+    const result = adaptReMetrics(html);
+
+    expect(result.slices).toEqual([
+      { name: "liUSD 4w vault", pct: 50, risk: "medium" },
+      { name: "Off-chain insurance / reinsurance capital", pct: 50, risk: "medium" },
+    ]);
+    expect(result.warnings).toBeUndefined();
+  });
+
+
   it("throws when the page no longer exposes the expected metrics payload", () => {
     expect(() => adaptReMetrics("<html></html>")).toThrow("layout-changed");
   });

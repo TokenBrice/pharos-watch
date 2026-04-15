@@ -87,6 +87,10 @@ const SYMBOL_CONFIG: Record<string, {
     name: "reUSD / sUSDe LP position",
     risk: "high",
   },
+  "liusd-4w": {
+    name: "liUSD 4w vault",
+    risk: "medium",
+  },
 };
 
 function parseValueUsdFromWei(raw: string | undefined): number | null {

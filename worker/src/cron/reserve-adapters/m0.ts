@@ -3,9 +3,11 @@ import type { LiveReservesConfig } from "@shared/types/live-reserves";
 import type { AdapterContext, AdapterResult } from "./types";
 import {
   fetchJsonPostWithRetry,
+  parseTimestampLikeToUnixSeconds,
   requireJsonInputFromConfig,
   slicesFromValues,
   unverifiedFreshnessMetadata,
+  verifiedFreshnessMetadata,
 } from "./helpers";
 
 interface M0GraphQlResponse {
@@ -21,6 +23,14 @@ interface M0GraphQlResponse {
       remainingTerm: number;
       yieldToMaturity: number;
     };
+    collateralUpdateds?: Array<{
+      timestamp?: string | number;
+      blockTimestamp?: string | number;
+    }>;
+    minterGateway_latestUpdateTimestampSnapshots?: Array<{
+      timestamp?: string | number;
+      value?: string | number;
+    }>;
   };
   errors?: Array<{ message?: string }>;
 }
@@ -38,6 +48,14 @@ const M0_COLLATERAL_QUERY = `
       remainingTerm
       yieldToMaturity
     }
+    collateralUpdateds(first: 1, orderBy: timestamp, orderDirection: desc) {
+      timestamp
+      blockTimestamp
+    }
+    minterGateway_latestUpdateTimestampSnapshots(first: 1, orderBy: timestamp, orderDirection: desc) {
+      timestamp
+      value
+    }
   }
 `;
 
@@ -45,6 +63,19 @@ const M0_CASH_SCALE = 1_000;
 
 function scaleM0CashToReserveUnits(rawCash: number): number {
   return rawCash * M0_CASH_SCALE;
+}
+
+function getLatestM0SourceTimestamp(payload: M0GraphQlResponse): number | null {
+  const candidates = [
+    payload.data?.collateralUpdateds?.[0]?.timestamp,
+    payload.data?.collateralUpdateds?.[0]?.blockTimestamp,
+    payload.data?.minterGateway_latestUpdateTimestampSnapshots?.[0]?.value,
+    payload.data?.minterGateway_latestUpdateTimestampSnapshots?.[0]?.timestamp,
+  ]
+    .map((value) => parseTimestampLikeToUnixSeconds(value))
+    .filter((value): value is number => value != null);
+
+  return candidates.length > 0 ? Math.max(...candidates) : null;
 }
 
 export function adaptM0Collateral(payload: M0GraphQlResponse): AdapterResult {
@@ -74,6 +105,7 @@ export function adaptM0Collateral(payload: M0GraphQlResponse): AdapterResult {
   // before composing the mix, and keep the applied scale explicit in metadata/tests.
   const cashValue = scaleM0CashToReserveUnits(current.totalCash);
   const normalizedReserveTotal = current.totalTreasuries + tokenCollateralTotal + cashValue;
+  const sourceTimestamp = getLatestM0SourceTimestamp(payload);
   const slices = slicesFromValues([
     {
       name: "Eligible U.S. Treasuries",
@@ -105,12 +137,15 @@ export function adaptM0Collateral(payload: M0GraphQlResponse): AdapterResult {
   return {
     slices,
     metadata: {
-      ...unverifiedFreshnessMetadata(
-        "dashboard-graphql",
-        "M0 CollateralCurrent does not expose a trustworthy upstream disclosure timestamp",
-      ),
+      ...(sourceTimestamp != null
+        ? verifiedFreshnessMetadata(sourceTimestamp)
+        : unverifiedFreshnessMetadata(
+            "dashboard-graphql",
+            "M0 CollateralCurrent does not expose a trustworthy upstream disclosure timestamp",
+          )),
       cashScaleApplied: M0_CASH_SCALE,
       cashUnits: "milli-usd-to-micro-usd",
+      ...(sourceTimestamp != null ? { latestCollateralSourceTimestamp: sourceTimestamp } : {}),
       remainingTermDays: current.remainingTerm,
       totalCashScaled: cashValue,
       totalTokenCollateral: tokenCollateralTotal,

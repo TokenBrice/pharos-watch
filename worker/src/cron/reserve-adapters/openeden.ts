@@ -22,6 +22,12 @@ interface OpenEdenReserveCompositionResponse {
   ratio: number;
 }
 
+const OPENEDEN_BROWSER_HEADERS = {
+  Origin: "https://openeden.com",
+  Referer: "https://openeden.com/usdo/transparency",
+  "Accept-Language": "en-US,en;q=0.9",
+};
+
 function adaptOpenEdenReserveComposition(payload: OpenEdenReserveCompositionResponse): AdapterResult {
   const sourceTimestamp = parseTimestampLikeToUnixSeconds(payload.date ?? null);
   const componentTotal =
@@ -127,6 +133,7 @@ export async function fetchOpenEdenUsdoReserves(
     signal,
     12_000,
     ctx,
+    { headers: OPENEDEN_BROWSER_HEADERS },
   );
   return adaptOpenEdenReserveComposition(payload);
 }

@@ -212,11 +212,7 @@ export function SafetyScoresMethodologySection() {
                     remain the guardrails against inflation.
                   </p>
                   <p>
-                    Redemption backstops are scored across access, settlement, execution certainty, capacity, output-asset
-                    quality, and cost. Low-confidence redemption routes stay visible on the site but do not uplift the Safety Score
-                    liquidity dimension. Severe active depegs also disable static or non-live-direct redemption uplift unless
-                    current live-open redemption evidence exists. Stale DEX inputs and stale redemption snapshots are not used
-                    for effective exit, and stale live reserve metadata ages out instead of staying resolved indefinitely.</p>
+                    Redemption backstops are scored across access, settlement, execution certainty, capacity, output-asset quality, and cost. Low-confidence redemption routes stay visible on the site but do not uplift the Safety Score liquidity dimension. Severe active depegs also disable static or non-live-direct redemption uplift unless current live-open redemption evidence exists. Stale DEX inputs and stale redemption snapshots are not used for effective exit, and stale live reserve metadata ages out instead of staying resolved indefinitely. Timestamp-backed reserve dashboards and disclosures can drive collateral scoring only when the adapter preserves a trustworthy upstream source timestamp.</p>
                 </div>
                 {/* Peg multiplier */}
                 <div className="space-y-2">
@@ -281,10 +277,7 @@ export function SafetyScoresMethodologySection() {
                       </tbody>
                     </table>
                   </div>
-                  <p>
-                    Tokenized RWA collateral is scored by the ultimate reserve or legal custody layer, not only by the
-                    smart-contract location of a wrapper token.
-                  </p>
+                  <p>Tokenized RWA collateral is scored by the ultimate reserve or legal custody layer, not only by the smart-contract location of a wrapper token.</p>
                   <CollateralQualityMethodologyCopy />
                 </div>
 

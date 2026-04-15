@@ -76,6 +76,19 @@ describe("mento adapter", () => {
     });
   });
 
+  it("uses embedded reserve holding update timestamps when available", () => {
+    const updatedHtml = `<html><body><script>self.__next_f.push([1,"...\\"reserveComposition\\":[{\\"symbol\\":\\"USDC\\",\\"percent\\":60},{\\"symbol\\":\\"ETH\\",\\"percent\\":30},{\\"symbol\\":\\"CELO\\",\\"percent\\":10}],\\"reserveHoldings\\":{\\"totalReserveValue\\":100,\\"otherAssets\\":[{\\"symbol\\":\\"USDC\\",\\"updated\\":1776236240357},{\\"symbol\\":\\"ETH\\",\\"updated\\":1776236230357}]}..."]);
+</script></body></html>`;
+
+    const result = adaptMentoReserveComposition(updatedHtml);
+
+    expect(result.metadata).toMatchObject({
+      freshnessMode: "verified",
+      sourceTimestamp: 1776236230,
+    });
+  });
+
+
   it("emits an unknown-asset warning for symbols not in TOKEN_CONFIG", () => {
     const unknownTokenHtml = `<html><body><script>self.__next_f.push([1,"...\\"reserveComposition\\":[{\\"symbol\\":\\"USDC\\",\\"percent\\":50},{\\"symbol\\":\\"ETH\\",\\"percent\\":30},{\\"symbol\\":\\"NEW_TOKEN\\",\\"percent\\":10},{\\"symbol\\":\\"CELO\\",\\"percent\\":10}],\\"reserveHoldings\\":{}..."]);
 </script></body></html>`;

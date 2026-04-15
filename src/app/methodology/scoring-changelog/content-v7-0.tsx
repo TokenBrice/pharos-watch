@@ -1,5 +1,35 @@
 import { VersionCard, getScoringEntry } from "./content-shared";
 
+export function ScoringChangelogV698Entry() {
+  return (
+    <VersionCard
+      entry={getScoringEntry("6.98")}
+      accent="border-l-emerald-500"
+    >
+      <p>
+        Timestamped reserve feeds can now re-enter collateral-quality passthrough when they satisfy the
+        existing freshness and sync-health gates.
+      </p>
+      <ul className="list-disc list-inside space-y-1">
+        <li>
+          Circle, M0, Mento, and USD.AI reserve adapters now preserve usable upstream disclosure or
+          dashboard timestamps instead of leaving those snapshots marked{" "}
+          <code className="text-xs bg-muted px-1 py-0.5 rounded">freshnessMode=unverified</code>.
+        </li>
+        <li>
+          Re Protocol and Yuzu mappings now classify newly observed reserve buckets explicitly, so clean
+          fresh snapshots are not degraded as unknown exposure.
+        </li>
+        <li>
+          The global gate is unchanged: only fresh, independent,{" "}
+          <code className="text-xs bg-muted px-1 py-0.5 rounded">ok</code> sync snapshots with verified
+          or intrinsically current freshness can drive report-card collateral scoring.
+        </li>
+      </ul>
+    </VersionCard>
+  );
+}
+
 export function ScoringChangelogV697Entry() {
   return (
     <VersionCard

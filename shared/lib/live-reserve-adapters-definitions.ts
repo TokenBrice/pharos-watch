@@ -80,7 +80,7 @@ export const LIVE_RESERVE_ADAPTER_DEFINITIONS = {
     redemptionTelemetry: { capacity: "none", fee: "none" },
     validation: {
       maxSourceAgeSec: DISCLOSURE_SOURCE_MAX_AGE_SEC,
-      allowedFreshnessModes: UNVERIFIED_ONLY_FRESHNESS,
+      allowedFreshnessModes: VERIFIED_OR_UNVERIFIED_FRESHNESS,
     },
   },
   "collateral-positions-api": {
@@ -235,7 +235,7 @@ export const LIVE_RESERVE_ADAPTER_DEFINITIONS = {
     redemptionTelemetry: { capacity: "none", fee: "none" },
     validation: {
       maxSourceAgeSec: DASHBOARD_SOURCE_MAX_AGE_SEC,
-      allowedFreshnessModes: UNVERIFIED_ONLY_FRESHNESS,
+      allowedFreshnessModes: VERIFIED_OR_UNVERIFIED_FRESHNESS,
     },
   },
   mento: {
@@ -245,7 +245,7 @@ export const LIVE_RESERVE_ADAPTER_DEFINITIONS = {
     redemptionTelemetry: { capacity: "none", fee: "none" },
     validation: {
       maxSourceAgeSec: DASHBOARD_SOURCE_MAX_AGE_SEC,
-      allowedFreshnessModes: UNVERIFIED_ONLY_FRESHNESS,
+      allowedFreshnessModes: VERIFIED_OR_UNVERIFIED_FRESHNESS,
     },
   },
   "openeden-usdo": {
@@ -320,7 +320,8 @@ export const LIVE_RESERVE_ADAPTER_DEFINITIONS = {
     redemptionTelemetry: { capacity: "none", fee: "none" },
     validation: {
       maxUnknownExposurePct: MATERIAL_UNKNOWN_EXPOSURE_PCT,
-      allowedFreshnessModes: UNVERIFIED_ONLY_FRESHNESS,
+      maxSourceAgeSec: DISCLOSURE_SOURCE_MAX_AGE_SEC,
+      allowedFreshnessModes: VERIFIED_OR_UNVERIFIED_FRESHNESS,
     },
   },
   "usdd-data-platform": {
@@ -343,4 +344,3 @@ export const LIVE_RESERVE_ADAPTER_DEFINITIONS = {
   };
   validation?: LiveReserveAdapterValidationPolicy;
 }>;
-

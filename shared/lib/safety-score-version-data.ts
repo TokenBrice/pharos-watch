@@ -1,9 +1,25 @@
 import type { MethodologyVersionConfig } from "./methodology-version";
 
 export const SAFETY_SCORE_VERSION_CONFIG: MethodologyVersionConfig = {
-  currentVersion: "6.97",
+  currentVersion: "6.98",
   changelogPath: "/methodology/scoring-changelog/",
   changelog: [
+    {
+      version: "6.98",
+      title: "Timestamp-backed reserve feeds restored to collateral passthrough",
+      date: "2026-04-15",
+      effectiveAt: 1776236400,
+      summary:
+        "Several live reserve adapters now consume source timestamps already exposed by their upstream dashboards or disclosure pages, allowing clean fresh snapshots to qualify for collateral-quality passthrough without weakening the global freshness gate.",
+      impact: [
+        "Circle, M0, Mento, and USD.AI reserve adapters now emit verified freshness when their upstream source exposes a usable disclosure or update timestamp",
+        "Yuzu and Re Protocol reserve feeds now have explicit mappings for newly observed buckets/tokens, preventing clean fresh feeds from being degraded as unknown exposure",
+        "OpenEden reserve sync now sends browser-style origin hints to reduce upstream transport failures while preserving the existing verified timestamp validation",
+        "Feeds that still lack trustworthy source freshness remain detail-visible only; the report-card live collateral gate still requires independent evidence, ok sync status, and verified or not-applicable freshness",
+      ],
+      commits: [],
+      reconstructed: false,
+    },
     {
       version: "6.97",
       title: "Active-depeg caps use event peak and stale redemption inputs are suppressed",

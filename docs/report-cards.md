@@ -2,7 +2,7 @@
 
 Multi-dimensional risk grades (A+ through F) for every tracked stablecoin. Computed on-demand by the API from live data.
 
-## Overall Grade (v6.97)
+## Overall Grade (v6.98)
 
 Four-step computation:
 
@@ -13,7 +13,7 @@ Four-step computation:
 
 Cemetery coins get a permanent F.
 
-Current-version note: v6.97 keeps the stronger peg treatment introduced in v6.93 and the NAV-wrapper peg inheritance from v6.94, treats custodied BTC wrappers plus issuer-seizable tokenized collateral as direct inherited freeze exposure for blacklistability attribution when they dominate reserve weight, disables static or non-live-direct redemption uplift during severe active depegs unless current live-open redemption evidence exists, removes the legacy active-depeg peg-dimension cap, and suppresses stale redemption-backstop rows from Safety Score Liquidity / Exit. The `activeDepegBps` field remains in `RawDimensionInputs` so stressed-grade recomputations and the frontend can apply the same peak-based cap.
+Current-version note: v6.98 keeps the stronger peg treatment introduced in v6.93 and the NAV-wrapper peg inheritance from v6.94, treats custodied BTC wrappers plus issuer-seizable tokenized collateral as direct inherited freeze exposure for blacklistability attribution when they dominate reserve weight, disables static or non-live-direct redemption uplift during severe active depegs unless current live-open redemption evidence exists, removes the legacy active-depeg peg-dimension cap, suppresses stale redemption-backstop rows from Safety Score Liquidity / Exit, and restores collateral-quality passthrough for reserve adapters whose upstreams now expose verified source timestamps. The `activeDepegBps` field remains in `RawDimensionInputs` so stressed-grade recomputations and the frontend can apply the same peak-based cap.
 
 ## Dimensions
 
@@ -101,6 +101,7 @@ independent:
 - clean = `reserve_sync_state.last_status === "ok"`; warning-bearing `degraded` snapshots stay visible on reserve detail/status surfaces but do not drive scoring
 - independent = adapter `evidenceClass` is `independent`
 - scoring-eligible freshness = `freshnessMode === "verified"` or `freshnessMode === "not-applicable"`; `freshnessMode === "unverified"` stays detail-visible but does not drive scoring
+- timestamp-backed dashboard/disclosure feeds can qualify only when the adapter preserves a trustworthy upstream `sourceTimestamp` and the adapter's source-age policy still marks it fresh
 - direct one-bucket on-chain reserve proofs can qualify when they are registered as independent (for example LUSD's dedicated `liquity-v1` adapter); generic liveness probes do not qualify just because they are on-chain
 - `validated-static` feeds (for example `curated-validated` and `frax`) and `weak-live-probe` feeds (for example `single-asset` and `tether`) remain authoritative for reserve detail/status surfaces, but they do not override curated collateral scoring
 - the live reserve registry now enforces an explicit per-adapter freshness contract, so latest-state on-chain proofs, timestamp-backed disclosures, and explicitly unverified dashboard feeds cannot silently drift into undocumented freshness semantics

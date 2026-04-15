@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   adaptUsdAiProofOfReserves,
+  extractUsdAiProofPageTimestamp,
   fetchUsdAiProofOfReserves,
   parseUsdAiProofOfReserves,
 } from "../usdai-proof-of-reserves";
@@ -89,6 +90,24 @@ describe("usdai-proof-of-reserves adapter", () => {
     });
   });
 
+  it("extracts the latest proof-page collateral update timestamp", () => {
+    const timestamp = extractUsdAiProofPageTimestamp(
+      '\\"timeLastUpdated\\":\\"2026-04-10T03:44:09.495Z\\",\\"timeLastUpdated\\":\\"2026-04-09T19:43:32.664Z\\"',
+    );
+
+    expect(timestamp).toBe(Math.floor(Date.parse("2026-04-10T03:44:09.495Z") / 1000));
+  });
+
+  it("can stamp adapted rows with verified proof-page freshness", () => {
+    const sourceTimestamp = Math.floor(Date.parse("2026-04-09T19:43:32.664Z") / 1000);
+    const result = adaptUsdAiProofOfReserves(parseUsdAiProofOfReserves(SAMPLE_RAW_PAYLOAD), sourceTimestamp);
+
+    expect(result.metadata).toMatchObject({
+      freshnessMode: "verified",
+      sourceTimestamp,
+    });
+  });
+
   it("ignores amount-only rows when share-bearing rows already disclose the full mix", () => {
     const result = adaptUsdAiProofOfReserves(MIXED_WEIGHT_PAYLOAD);
 
@@ -167,6 +186,9 @@ describe("usdai-proof-of-reserves adapter", () => {
         adapter: "usdai-proof-of-reserves",
         version: 2,
         semantics: "collateral-mix",
+        display: {
+          url: "https://app.usd.ai/reserves",
+        },
         inputs: {
           primary: { kind: "http-json", url: "https://example.com/usdai/proof-of-reserves?chainId=42161" },
         },
@@ -178,6 +200,10 @@ describe("usdai-proof-of-reserves adapter", () => {
             "text-get:https://example.com/usdai/proof-of-reserves?chainId=42161:12000",
             Promise.resolve(SAMPLE_RAW_PAYLOAD),
           ],
+          [
+            "text-get:https://app.usd.ai/reserves:12000",
+            Promise.resolve('\\"timeLastUpdated\\":\\"2026-04-09T19:43:32.664Z\\"'),
+          ],
         ]),
       } as never,
     );
@@ -188,5 +214,6 @@ describe("usdai-proof-of-reserves adapter", () => {
       risk: "low",
       coinId: "pyusd-paypal",
     });
+    expect(result.metadata?.freshnessMode).toBe("verified");
   });
 });
