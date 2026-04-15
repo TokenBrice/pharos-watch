@@ -1,9 +1,26 @@
 import { createMethodologyVersion } from "./methodology-version";
 
 const blacklistTracker = createMethodologyVersion({
-  currentVersion: "3.7",
+  currentVersion: "3.8",
   changelogPath: "/methodology/blacklist-tracker-changelog/",
   changelog: [
+  {
+    version: "3.8",
+    title: "First-wave CeFi coverage expansion",
+    date: "2026-04-15",
+    effectiveAt: 1776211200, // 2026-04-15T00:00:00Z
+    summary:
+      "Expands blacklist/freeze tracking to first-wave centralized issuers with verified event surfaces: USDG, RLUSD, U, USDtb, and A7A5. Adds batch address-array parsing and non-USD A7A5 price-cache valuation while keeping clawback, allowlist/KYC, and non-EVM surfaces out of this release.",
+    impact: [
+      "Added USDG Ethereum FreezeAddress/UnfreezeAddress/FrozenAddressWiped coverage using the Paxos pattern",
+      "Added RLUSD Ethereum AccountPaused/AccountUnpaused coverage; clawback remains out of scope until transaction-input classification exists",
+      "Added U Ethereum and BSC Freeze/Unfreeze coverage using the dual-indexed address pattern",
+      "Added USDtb Ethereum AccountsBlocked/AccountsUnblocked coverage with one row per address in batch events",
+      "Added A7A5 Ethereum Blacklisted/DeBlacklisted/DestroyedBlackFunds coverage with price-cache USD conversion for the RUB-pegged token",
+    ],
+    commits: [],
+    reconstructed: false,
+  },
   {
     version: "3.7",
     title: "Balance recovery accuracy and provider resilience",

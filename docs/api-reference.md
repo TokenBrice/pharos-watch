@@ -540,7 +540,7 @@ Aggregate historical supply chart data across all stablecoins, broken down by pe
 
 ### `GET /api/blacklist`
 
-Freeze, blacklist, and token-destruction events currently ingested for USDC, USDT, PAXG, XAUT, PYUSD, and USD1. `EURC` is intentionally excluded from the live filter set for now because Circle frequently mirrors the same blacklist actions on both USDC and EURC, which creates many zero-balance EURC rows. Data is sourced from on-chain logs via Etherscan, Tron, and EVM RPCs.
+Freeze, blacklist, block/unblock, account-pause, and token-destruction events currently ingested for USDC, USDT, PAXG, XAUT, PYUSD, USD1, USDG, RLUSD, U, USDTB, and A7A5. `EURC` is intentionally excluded from the live filter set for now because Circle frequently mirrors the same blacklist actions on both USDC and EURC, which creates many zero-balance EURC rows. Data is sourced from on-chain logs via Etherscan, Tron, and EVM RPCs.
 
 **Cache:** realtime
 
@@ -2118,17 +2118,17 @@ Aggregate responses are filtered to active tracked stablecoin IDs only, even if 
         "price": { "value": 1, "available": true }
       },
       "computedAt": 1740000000,
-      "methodologyVersion": "5.91"
+      "methodologyVersion": "5.92"
     }
   },
   "updatedAt": 1740000000,
   "oldestComputedAt": 1740000000,
   "malformedRows": 0,
   "methodology": {
-    "version": "5.91",
-    "versionLabel": "v5.91",
-    "currentVersion": "5.91",
-    "currentVersionLabel": "v5.91",
+    "version": "5.92",
+    "versionLabel": "v5.92",
+    "currentVersion": "5.92",
+    "currentVersionLabel": "v5.92",
     "changelogPath": "/methodology/depeg-changelog/",
     "asOf": 1740000000,
     "isCurrent": true
@@ -2148,7 +2148,7 @@ Aggregate responses are filtered to active tracked stablecoin IDs only, even if 
       "price": { "value": 1, "available": true }
     },
     "computedAt": 1740000000,
-    "methodologyVersion": "5.91"
+    "methodologyVersion": "5.92"
   },
   "history": [
     {
@@ -2159,15 +2159,15 @@ Aggregate responses are filtered to active tracked stablecoin IDs only, even if 
         "supply": { "value": 1, "available": true },
         "price": { "value": 1, "available": true }
       },
-      "methodologyVersion": "5.91"
+      "methodologyVersion": "5.92"
     }
   ],
   "malformedRows": 0,
   "methodology": {
-    "version": "5.91",
-    "versionLabel": "v5.91",
-    "currentVersion": "5.91",
-    "currentVersionLabel": "v5.91",
+    "version": "5.92",
+    "versionLabel": "v5.92",
+    "currentVersion": "5.92",
+    "currentVersionLabel": "v5.92",
     "changelogPath": "/methodology/depeg-changelog/",
     "asOf": 1740000000,
     "isCurrent": true

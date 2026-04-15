@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { buildBlacklistChartData, computeBlacklistSummaryStats } from "../blacklist-aggregates";
 import type { BlacklistCurrentBalanceSnapshot } from "../blacklist-active-records";
-import type { BlacklistEvent } from "../../types/market";
+import { BLACKLIST_STABLECOINS, type BlacklistEvent } from "../../types/market";
 
 function makeEvent(overrides: Partial<BlacklistEvent> = {}): BlacklistEvent {
   return {
@@ -89,9 +89,12 @@ describe("buildBlacklistChartData", () => {
 
     const chart = buildBlacklistChartData(events, balances);
 
-    expect(chart).toEqual([
-      { quarter: "Q3 '24", USDT: 250, USDC: 0, PYUSD: 0, USD1: 0, PAXG: 0, XAUT: 0, total: 250 },
-    ]);
+    expect(chart).toHaveLength(1);
+    expect(chart[0]).toMatchObject({ quarter: "Q3 '24", USDT: 250, total: 250 });
+    for (const stablecoin of BLACKLIST_STABLECOINS) {
+      if (stablecoin === "USDT") continue;
+      expect(chart[0]?.[stablecoin]).toBe(0);
+    }
   });
 
   it("falls back to snapshot observation time when no local event timestamp exists", () => {
@@ -101,9 +104,25 @@ describe("buildBlacklistChartData", () => {
 
     const chart = buildBlacklistChartData([], balances);
 
-    expect(chart).toEqual([
-      { quarter: "Q4 '24", USDT: 400, USDC: 0, PYUSD: 0, USD1: 0, PAXG: 0, XAUT: 0, total: 400 },
+    expect(chart).toHaveLength(1);
+    expect(chart[0]).toMatchObject({ quarter: "Q4 '24", USDT: 400, total: 400 });
+  });
+
+  it("includes first-wave stablecoins in chart buckets", () => {
+    const events = [
+      makeEvent({ id: "1", stablecoin: "USDG", address: "0xusdg", timestamp: 1770000000 }),
+      makeEvent({ id: "2", stablecoin: "A7A5", address: "0xa7a5", timestamp: 1770000000 }),
+    ];
+    const balances = new Map<string, BlacklistCurrentBalanceSnapshot>([
+      ["USDG:ethereum:0xusdg", makeBalance({ stablecoin: "USDG", address: "0xusdg", amountUsd: 700 })],
+      ["A7A5:ethereum:0xa7a5", makeBalance({ stablecoin: "A7A5", address: "0xa7a5", amountUsd: 30 })],
     ]);
+
+    const chart = buildBlacklistChartData(events, balances);
+
+    expect(chart[0]?.USDG).toBe(700);
+    expect(chart[0]?.A7A5).toBe(30);
+    expect(chart[0]?.total).toBe(730);
   });
 });
 

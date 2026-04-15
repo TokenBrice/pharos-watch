@@ -1,6 +1,6 @@
 # Blacklist Tracker
 
-Multi-chain blacklist/freeze event tracker for stablecoins. Monitors on-chain events (blacklist, unblacklist, destroy/seize) across 21 contract configurations on 8 chains. Runs hourly, incrementally scanning from the last processed block or timestamp cursor.
+Multi-chain blacklist/freeze event tracker for stablecoins. Monitors on-chain events (blacklist, unblacklist, destroy/seize) across 27 contract configurations on 8 chains. Runs hourly, incrementally scanning from the last processed block or timestamp cursor.
 
 The tracker now has two distinct amount layers:
 
@@ -8,9 +8,9 @@ The tracker now has two distinct amount layers:
 - `blacklist_current_balances` stores persistent freeze-ledger snapshots used by the public frozen-total summary
 - the `/blacklist` status charts now support on-page drilldown into the matching stablecoin subset for each blacklistability bucket
 
-**Cron-backed sync coverage:** USDC, USDT, PAXG, XAUT, PYUSD, USD1.
+**Cron-backed sync coverage:** USDC, USDT, PAXG, XAUT, PYUSD, USD1, USDG, RLUSD, U, USDtb, A7A5.
 
-**Live API/UI filter enum:** USDC, USDT, PAXG, XAUT, PYUSD, USD1 via `BLACKLIST_STABLECOINS` in `shared/types/market.ts` (re-exported through `shared/types/index.ts`).
+**Live API/UI filter enum:** USDC, USDT, PAXG, XAUT, PYUSD, USD1, USDG, RLUSD, U, USDTB, A7A5 via `BLACKLIST_STABLECOINS` in `shared/types/market.ts` (re-exported through `shared/types/index.ts`).
 
 Implementation note: `EURC` is intentionally not live-supported right now. Circle often mirrors the same blacklist action across both USDC and EURC, which creates many zero-balance EURC rows. Pharos will only re-enable EURC if those mirrored no-balance events can be classified without hiding genuine EURC signal.
 
@@ -126,6 +126,60 @@ All use USDC events: `Blacklisted(address)`, `UnBlacklisted(address)`. Decimals:
 - **Decimals:** 6
 - **Events:** USDT0 pattern (`BlockPlaced`, `BlockReleased`, `DestroyedBlockedFunds` with indexed address)
 
+### PYUSD (PayPal USD)
+
+| Chain    | Address                                      | Decimals | Events       |
+| -------- | -------------------------------------------- | -------- | ------------ |
+| Ethereum | `0x6c3ea9036406852006290770bedfcaba0e23a0e8` | 6        | Paxos freeze |
+| Arbitrum | `0x46850ad61c2b7d64d08c9c754f45254596696984` | 6        | Paxos freeze |
+
+### USD1 (World Liberty Financial USD)
+
+| Chain    | Address                                      | Decimals | Events            |
+| -------- | -------------------------------------------- | -------- | ----------------- |
+| Ethereum | `0x8d0d000ee44948fc98c9b98a4fa4921476f08b0d` | 18       | Dual-index freeze |
+| BSC      | `0x8d0d000ee44948fc98c9b98a4fa4921476f08b0d` | 18       | Dual-index freeze |
+| Tron     | `TPFqcBAaaUMCSVRCqPaQ9QnzKhmuoLR6Rc`         | 18       | Dual-index freeze |
+
+### USDG (Global Dollar)
+
+- **Chain:** Ethereum
+- **Address:** `0xe343167631d89b6ffc58b88d6b7fb0228795491d`
+- **Decimals:** 6
+- **Events:** Paxos freeze pattern (`FreezeAddress`, `UnfreezeAddress`, `FrozenAddressWiped`)
+- **Note:** `FrozenAddressWiped` does not emit an amount; Pharos recovers value with `balanceOf()` at `blockNumber - 1`.
+
+### RLUSD (Ripple USD)
+
+- **Chain:** Ethereum
+- **Address:** `0x8292bb45bf1ee4d140127049757c2e0ff06317ed`
+- **Decimals:** 18
+- **Events:** `AccountPaused(address)`, `AccountUnpaused(address)`
+- **Note:** RLUSD `clawback(address,uint256)` is not event-covered in v3.8 because the verified ABI does not expose a dedicated clawback event. Tracking clawbacks would require transaction-input classification over token burn/transfer logs.
+
+### U (United Stables)
+
+| Chain    | Address                                      | Decimals | Events            |
+| -------- | -------------------------------------------- | -------- | ----------------- |
+| Ethereum | `0xce24439f2d9c6a2289f741120fe202248b666666` | 18       | Dual-index freeze |
+| BSC      | `0xce24439f2d9c6a2289f741120fe202248b666666` | 18       | Dual-index freeze |
+
+### USDtb (Ethena / Anchorage)
+
+- **Chain:** Ethereum
+- **Address:** `0xc139190f447e929f090edeb554d95abb8b18ac1c`
+- **Decimals:** 18
+- **Events:** `AccountsBlocked(address[])`, `AccountsUnblocked(address[])`
+- **Note:** One batch log expands into one `blacklist_events` row per affected address. Row IDs append the array index after `{chainId}-{txHash}-{logIndex}`.
+
+### A7A5 (Old Vector)
+
+- **Chain:** Ethereum
+- **Address:** `0x6fa0be17e4bea2fcfa22ef89bf8ac9aab0ab0fc9`
+- **Decimals:** 6
+- **Events:** `Blacklisted(address)`, `DeBlacklisted(address)`, `DestroyedBlackFunds(address,uint256)`
+- **Note:** A7A5 is RUB-pegged. USD values use the `a7a5-old-vector` price-cache entry instead of assuming native units equal dollars.
+
 ---
 
 ## Event Signatures
@@ -196,6 +250,86 @@ AddressUnfrozen(address indexed)
 FrozenAddressWiped(address indexed)
   Topic: 0xfc5960f1c5a5d2b60f031bf534af053b1bf7d9881989afaeb8b1d164db23aede
   Amount: NOT in event; requires balanceOf() at blockNumber-1
+```
+
+### Paxos Freeze Events (PYUSD, USDG)
+
+```
+FreezeAddress(address indexed)
+  Topic: 0x1aa660498c83ea285bc55e4cfc00afcaa7120798db87b74f3c0d7c6e001bc392
+  Address: indexed (topics[1])
+  hasAmount: false
+
+UnfreezeAddress(address indexed)
+  Topic: 0x150465b020dfc06a59269da94ed66db9b65a516cf4fdd5f583b0f12752339bbe
+  Address: indexed (topics[1])
+  hasAmount: false
+
+FrozenAddressWiped(address indexed)
+  Topic: 0xfc5960f1c5a5d2b60f031bf534af053b1bf7d9881989afaeb8b1d164db23aede
+  Amount: NOT in event; requires balanceOf() at blockNumber-1
+```
+
+### Dual-Index Freeze Events (USD1, U)
+
+```
+Freeze(address indexed caller, address indexed account)
+  Topic: 0x51d18786e9cb144f87d46e7b796309ea84c7c687d91e09c97f051eacf59bc528
+  Address: indexed account (topics[2])
+  hasAmount: false
+
+Unfreeze(address indexed caller, address indexed account)
+  Topic: 0x4f3ab9ff0cc4f039268532098e01239544b0420171876e36889d01c62c784c79
+  Address: indexed account (topics[2])
+  hasAmount: false
+```
+
+### RLUSD Events
+
+```
+AccountPaused(address)
+  Topic: 0xae7f60c1b8f645c3beffeb531169cbc446874bbf247698325318879ac850c346
+  Address: NOT indexed (first 32 bytes of data)
+  hasAmount: false
+
+AccountUnpaused(address)
+  Topic: 0x0c18efbde61ac471ead6960a3f1097735c68ecdb685ae8e2a108c28385399a65
+  Address: NOT indexed (first 32 bytes of data)
+  hasAmount: false
+```
+
+### USDtb Events
+
+```
+AccountsBlocked(address[])
+  Topic: 0x5444f9841c04ce78987f28701fa07fc4c112840c1c8439e8f52bda50c3788a87
+  Address list: ABI-encoded dynamic address[] in data
+  hasAmount: false
+
+AccountsUnblocked(address[])
+  Topic: 0x4a637dd1cd99ae43d353009d0ffbc16b05cc69808b819ebf852c68ea47b34dd4
+  Address list: ABI-encoded dynamic address[] in data
+  hasAmount: false
+```
+
+### A7A5 Events
+
+```
+Blacklisted(address)
+  Topic: 0xffa4e6181777692565cf28528fc88fd1516ea86b56da075235fa575af6a4b855
+  Address: NOT indexed (first 32 bytes of data)
+  hasAmount: false
+
+DeBlacklisted(address)
+  Topic: 0x8e6c9e5ceff66044a0b27759779a9be2e7c99655252b235ff3f754efb6b8a616
+  Address: NOT indexed (first 32 bytes of data)
+  hasAmount: false
+
+DestroyedBlackFunds(address,uint256)
+  Topic: 0x61e6e66b0d6339b2980aecc6ccc0039736791f0ccde9ed512e789a7fbdd698c6
+  Address: NOT indexed (first 32 bytes of data)
+  Amount: second 32 bytes of data
+  hasAmount: true
 ```
 
 ---
@@ -414,14 +548,14 @@ For destroy events, try fetching from transaction receipt first (`eth_getTransac
 | ------------ | ------ | ------- | -------------------------------------------------------------------- |
 | `limit`      | number | 1000    | Max results (1-1000; `0` maps to default `1000`)                     |
 | `offset`     | number | 0       | Pagination offset                                                    |
-| `stablecoin` | string | --      | Filter by name (`"USDC"`, `"USDT"`, `"PAXG"`, `"XAUT"`, `"PYUSD"`, `"USD1"`)  |
+| `stablecoin` | string | --      | Filter by name (`"USDC"`, `"USDT"`, `"PAXG"`, `"XAUT"`, `"PYUSD"`, `"USD1"`, `"USDG"`, `"RLUSD"`, `"U"`, `"USDTB"`, `"A7A5"`)  |
 | `chain`      | string | --      | Filter by `chain_name`                                               |
 | `eventType`  | string | --      | Filter by `event_type` (`"blacklist"`, `"unblacklist"`, `"destroy"`) |
 | `q`          | string | --      | Case-insensitive address substring search                            |
 | `sortBy`     | string | date    | Sort field (`"date"`, `"stablecoin"`, `"chain"`, `"event"`)          |
 | `sortDirection` | string | desc | Sort direction (`"asc"`, `"desc"`)                                   |
 
-The handler now exposes only the live-supported symbols: USDC, USDT, PAXG, XAUT, PYUSD, and USD1.
+The handler now exposes only the live-supported symbols: USDC, USDT, PAXG, XAUT, PYUSD, USD1, USDG, RLUSD, U, USDTB, and A7A5.
 
 **Response:**
 
@@ -537,15 +671,16 @@ Both endpoints now emit freshness headers from the same hourly `sync-blacklist` 
 | BlacklistFilters | `src/components/blacklist-filters.tsx` | Stablecoin, chain, event type dropdowns                                                         |
 | Search           | (inline)                               | Server-backed address search                                                                    |
 | BlacklistTable   | `src/components/blacklist-table.tsx`   | Server-sorted, 50 rows per page                                                                 |
-| BlacklistStats   | `src/components/blacklist-stats.tsx`   | USDC/USDT unique blacklisted addresses, freeze-ledger totals, gold addresses, and destroyed funds |
+| BlacklistStats   | `src/components/blacklist-stats.tsx`   | USDC/USDT unique blacklisted addresses, freeze-ledger totals across all tracked symbols, gold addresses, and destroyed funds |
 | BlacklistChart   | `src/components/blacklist-chart.tsx`   | Quarterly stacked bar chart of tracked freeze-ledger balances by stablecoin, attributed to blacklist quarter |
 | CSV export       | (inline)                               | Download filtered events as CSV                                                                 |
 
 ### Amount Display Logic
 
 - `null` or (`0` and not destroy): show "--"
-- Gold coins (PAXG, XAUT): 4 decimal places + symbol (converted to USD using live price)
-- Stablecoins (USDC, USDT): `formatCurrency` (USD)
+- Gold coins (PAXG, XAUT): 4 decimal places + symbol (converted to USD using the coin-specific price-cache entry)
+- A7A5: native amount is RUB-denominated and converted to USD using the `a7a5-old-vector` price-cache entry
+- USD-pegged stablecoins: `formatCurrency` (USD)
 
 ### Special UI Components
 
@@ -584,6 +719,9 @@ Both endpoints now emit freshness headers from the same hourly `sync-blacklist` 
 13. **Legacy mixed-case cursor rows:** older runs may have stored checksum-cased EVM addresses in `blacklist_sync_state`; current reads merge those with lowercase canonical keys to avoid duplicate cursors and redundant rescans.
 14. **RPC bootstrap guards:** Avalanche USDC, Avalanche USDT, and BSC USDT now start from known deployment blocks, and RPC-log scans use bounded per-run block windows. This prevents empty zero-cursor configs from repeatedly attempting impractical genesis-to-head scans.
 15. **Recoverable-gap telemetry is row-level:** use `amount_attempt_count`, `amount_last_error_class`, and `amount_last_provider` to diagnose stranded historical rows instead of inferring from null amounts alone.
+16. **USDtb emits batch events:** `AccountsBlocked(address[])` and `AccountsUnblocked(address[])` expand one log into one row per affected address, with the array index appended to the row ID.
+17. **A7A5 is non-USD:** never treat native A7A5 units as USD; amount conversion depends on the `a7a5-old-vector` price-cache entry.
+18. **RLUSD clawback is not covered:** v3.8 tracks account pause/unpause only. Clawback support needs transaction-input classification because the verified ABI does not expose a dedicated clawback event.
 
 ---
 

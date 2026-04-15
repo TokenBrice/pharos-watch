@@ -14,6 +14,7 @@ import {
   fetchEvmTokenCurrentBalance,
 } from "../src/cron/blacklist/balance-providers";
 import { tronBase58ToHex } from "../src/lib/tron-address";
+import type { BlacklistStablecoin } from "../../shared/types/market";
 
 type ExecuteWranglerOptions = {
   remote: boolean;
@@ -266,7 +267,7 @@ async function main() {
   const rows = (JSON.parse(raw)[0]?.results ?? []) as BlacklistEventRow[];
   const events = rows.map((row) => ({
     id: row.id,
-    stablecoin: row.stablecoin as "USDT" | "USDC" | "PAXG" | "XAUT" | "PYUSD" | "USD1",
+    stablecoin: row.stablecoin as BlacklistStablecoin,
     chainId: row.chain_id,
     chainName: row.chain_name,
     eventType: row.event_type,

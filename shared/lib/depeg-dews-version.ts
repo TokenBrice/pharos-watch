@@ -1,9 +1,24 @@
 import { createMethodologyVersion } from "./methodology-version";
 
 const depegDews = createMethodologyVersion({
-  currentVersion: "5.91",
+  currentVersion: "5.92",
   changelogPath: "/methodology/depeg-changelog/",
   changelog: [
+    {
+      version: "5.92",
+      title: "Blacklist signal coverage follows first-wave tracker expansion",
+      date: "2026-04-15",
+      effectiveAt: 1776211200,
+      summary:
+        "DEWS blacklist-activity input now follows the expanded live blacklist tracker symbol set, adding first-wave issuer-intervention signals for USDG, RLUSD, U, USDtb, and A7A5 where those assets are otherwise DEWS-eligible.",
+      impact: [
+        "The shared supported blacklist symbol set now includes USDG, RLUSD, U, USDTB, and A7A5",
+        "DEWS continues to derive blacklist-signal eligibility from that shared set instead of maintaining a separate list",
+        "A7A5's blacklist signal can participate as event-count stress only; non-USD amount valuation remains owned by the blacklist tracker ledger",
+      ],
+      commits: [],
+      reconstructed: false,
+    },
     {
       version: "5.91",
       title: "Conservative DEWS freshness and zero-supply current-row retirement",

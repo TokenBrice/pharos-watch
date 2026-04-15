@@ -32,6 +32,7 @@ export interface BlacklistEventDef {
   eventType: BlacklistEventType;
   hasAmount: boolean;
   addressTopicIndex?: number;  // EVM: which topics[] slot holds the affected address (default 1)
+  addressArrayData?: boolean;  // EVM: event data is ABI-encoded address[]; emits one row per address
   tronResultKey?: string;      // Tron: which result key holds the affected address
 }
 
@@ -246,6 +247,76 @@ const USD1_EVENT_FAMILY = defineEventFamily("wlfi-freeze", [
   },
 ]);
 
+// --- RLUSD event definitions (Ripple StablecoinUpgradeableV2 contract) ---
+// AccountPaused/AccountUnpaused — affected address is non-indexed in data
+
+const RLUSD_ACCOUNT_PAUSED_TOPIC = "0xae7f60c1b8f645c3beffeb531169cbc446874bbf247698325318879ac850c346"; // AccountPaused(address)
+const RLUSD_ACCOUNT_UNPAUSED_TOPIC = "0x0c18efbde61ac471ead6960a3f1097735c68ecdb685ae8e2a108c28385399a65"; // AccountUnpaused(address)
+
+const RLUSD_EVENT_FAMILY = defineEventFamily("ripple-account-pause", [
+  {
+    signature: "AccountPaused(address)",
+    topicHash: RLUSD_ACCOUNT_PAUSED_TOPIC,
+    eventType: "blacklist",
+    hasAmount: false,
+  },
+  {
+    signature: "AccountUnpaused(address)",
+    topicHash: RLUSD_ACCOUNT_UNPAUSED_TOPIC,
+    eventType: "unblacklist",
+    hasAmount: false,
+  },
+]);
+
+// --- USDTB event definitions (Anchorage / Ethena USDtb contract) ---
+// AccountsBlocked/AccountsUnblocked — event data is a dynamic address[].
+
+const USDTB_ACCOUNTS_BLOCKED_TOPIC = "0x5444f9841c04ce78987f28701fa07fc4c112840c1c8439e8f52bda50c3788a87"; // AccountsBlocked(address[])
+const USDTB_ACCOUNTS_UNBLOCKED_TOPIC = "0x4a637dd1cd99ae43d353009d0ffbc16b05cc69808b819ebf852c68ea47b34dd4"; // AccountsUnblocked(address[])
+
+const USDTB_EVENT_FAMILY = defineEventFamily("anchorage-batch-block", [
+  {
+    signature: "AccountsBlocked(address[])",
+    topicHash: USDTB_ACCOUNTS_BLOCKED_TOPIC,
+    eventType: "blacklist",
+    hasAmount: false,
+    addressArrayData: true,
+  },
+  {
+    signature: "AccountsUnblocked(address[])",
+    topicHash: USDTB_ACCOUNTS_UNBLOCKED_TOPIC,
+    eventType: "unblacklist",
+    hasAmount: false,
+    addressArrayData: true,
+  },
+]);
+
+// --- A7A5 event definitions (Old Vector RUB-backed token) ---
+// Blacklisted/DeBlacklisted addresses are non-indexed in event data.
+
+const A7A5_DEBLACKLISTED_TOPIC = "0x8e6c9e5ceff66044a0b27759779a9be2e7c99655252b235ff3f754efb6b8a616"; // DeBlacklisted(address)
+
+const A7A5_EVENT_FAMILY = defineEventFamily("a7a5-blacklist", [
+  {
+    signature: "Blacklisted(address)",
+    topicHash: USDC_BLACKLISTED_TOPIC,
+    eventType: "blacklist",
+    hasAmount: false,
+  },
+  {
+    signature: "DeBlacklisted(address)",
+    topicHash: A7A5_DEBLACKLISTED_TOPIC,
+    eventType: "unblacklist",
+    hasAmount: false,
+  },
+  {
+    signature: "DestroyedBlackFunds(address,uint256)",
+    topicHash: USDT_DESTROYED_FUNDS_TOPIC,
+    eventType: "destroy",
+    hasAmount: true,
+  },
+]);
+
 const BLACKLIST_STABLECOIN_SET = new Set<BlacklistStablecoin>(BLACKLIST_STABLECOINS);
 
 function resolveBlacklistStablecoinSymbol(
@@ -318,6 +389,22 @@ const CONTRACT_CONFIG_SPECS: ContractEventConfigSpec[] = [
   { chain: ETHEREUM, stablecoinId: "usd1-world-liberty-financial", startBlock: 21_720_503, events: USD1_EVENT_FAMILY.events },
   { chain: BSC, stablecoinId: "usd1-world-liberty-financial", startBlock: 46_151_905, events: USD1_EVENT_FAMILY.events },
   { chain: TRON, stablecoinId: "usd1-world-liberty-financial", events: USD1_EVENT_FAMILY.events },
+
+  // USDG (Paxos Global Dollar — Ethereum only for first-wave coverage)
+  { chain: ETHEREUM, stablecoinId: "usdg-paxos", startBlock: 20_915_336, events: PYUSD_EVENT_FAMILY.events },
+
+  // RLUSD (Ripple USD — Ethereum account pause/unpause; clawback is not event-covered here)
+  { chain: ETHEREUM, stablecoinId: "rlusd-ripple", startBlock: 20_492_031, events: RLUSD_EVENT_FAMILY.events },
+
+  // U (United Stables — Ethereum + BSC, same dual-indexed freeze pattern as USD1)
+  { chain: ETHEREUM, stablecoinId: "u-united-stables", startBlock: 24_030_193, events: USD1_EVENT_FAMILY.events },
+  { chain: BSC, stablecoinId: "u-united-stables", startBlock: 71_922_111, events: USD1_EVENT_FAMILY.events },
+
+  // USDtb (Ethena / Anchorage — Ethereum batch block/unblock events)
+  { chain: ETHEREUM, stablecoinId: "usdtb-ethena", startBlock: 21_287_284, events: USDTB_EVENT_FAMILY.events },
+
+  // A7A5 (Old Vector — Ethereum only; Tron requires separate result-key verification)
+  { chain: ETHEREUM, stablecoinId: "a7a5-old-vector", startBlock: 22_080_045, events: A7A5_EVENT_FAMILY.events },
 ];
 
 export const CONTRACT_CONFIGS: ContractEventConfig[] = CONTRACT_CONFIG_SPECS.map(

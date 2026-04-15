@@ -1,5 +1,8 @@
-import { computeBlacklistAmountUsdAtEvent, isGoldBlacklistStablecoin } from "@shared/lib/blacklist";
-import { fetchGoldPriceFromCache } from "./current-balance-cache";
+import {
+  computeBlacklistAmountUsdAtEvent,
+  getBlacklistPriceAssetId,
+} from "@shared/lib/blacklist";
+import { fetchBlacklistAssetPriceFromCache } from "./current-balance-cache";
 import { throwIfAborted } from "../../lib/abort";
 import {
   getBlacklistConfigByContract,
@@ -80,7 +83,7 @@ export async function enrichRowBalances(
   deadlineMs: number,
   signal?: AbortSignal,
   chainRpcs?: Map<string, ChainRpcConfig>,
-  goldPriceUsd?: number | null,
+  assetPriceUsd?: number | null,
 ): Promise<{ attempted: number; succeeded: number; failed: number }> {
   const counters = { attempted: 0, succeeded: 0, failed: 0 };
   for (const row of rows) {
@@ -97,7 +100,15 @@ export async function enrichRowBalances(
       }
       break;
     }
-    if (row.amount_native != null || row.amount_status === "permanently_unavailable") continue;
+    if (row.amount_native != null) {
+      row.amount_usd_at_event ??= computeBlacklistAmountUsdAtEvent(
+        config.stablecoin,
+        row.amount_native,
+        assetPriceUsd,
+      );
+      continue;
+    }
+    if (row.amount_status === "permanently_unavailable") continue;
     if (row.event_type !== "blacklist" && row.event_type !== "unblacklist" && row.event_type !== "destroy") continue;
 
     const blockForBalance = Math.max(0, row.block_number - 1);
@@ -149,7 +160,7 @@ export async function enrichRowBalances(
         }
 
         row.amount_native = amount;
-        row.amount_usd_at_event = computeBlacklistAmountUsdAtEvent(config.stablecoin, amount, goldPriceUsd);
+        row.amount_usd_at_event = computeBlacklistAmountUsdAtEvent(config.stablecoin, amount, assetPriceUsd);
         row.amount_source = source;
         row.amount_status = amount != null ? "resolved" : "provider_failed";
         row.amount_last_error_class = amount != null ? null : "provider_null";
@@ -313,10 +324,8 @@ export async function backfillAmounts(
       continue;
     }
 
-    // Resolve gold price per-row based on the resolved config's stablecoin,
-    // so PAXG uses paxg-paxos and XAUT uses xaut-tether.
-    const goldPriceUsd = isGoldBlacklistStablecoin(config.stablecoin)
-      ? await fetchGoldPriceFromCache(db, config.stablecoin)
+    const assetPriceUsd = getBlacklistPriceAssetId(config.stablecoin)
+      ? await fetchBlacklistAssetPriceFromCache(db, config.stablecoin)
       : null;
 
     let amount: number | null = null;
@@ -414,7 +423,7 @@ export async function backfillAmounts(
         ).bind(
           amount,
           amount,
-          computeBlacklistAmountUsdAtEvent(config.stablecoin, amount, goldPriceUsd),
+          computeBlacklistAmountUsdAtEvent(config.stablecoin, amount, assetPriceUsd),
           amountSource,
           amountStatus,
           config.contractAddress,

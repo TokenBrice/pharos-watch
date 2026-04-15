@@ -32,6 +32,22 @@ const ethereumConfig: ContractEventConfig = {
   events: [],
 };
 
+const a7a5Config: ContractEventConfig = {
+  configKey: "ethereum-0x6fa0be17e4bea2fcfa22ef89bf8ac9aab0ab0fc9",
+  chain: {
+    chainId: "ethereum",
+    chainName: "Ethereum",
+    evmChainId: 1,
+    explorerUrl: "https://etherscan.io",
+    type: "evm",
+  },
+  stablecoinId: "a7a5-old-vector",
+  stablecoin: "A7A5",
+  contractAddress: "0x6fa0be17e4bea2fcfa22ef89bf8ac9aab0ab0fc9",
+  decimals: 6,
+  events: [],
+};
+
 function makeContext() {
   return {
     etherscanApiKey: null,
@@ -42,6 +58,16 @@ function makeContext() {
     budget: createBudget(10),
     deadlineMs: Date.now() + 10_000,
   };
+}
+
+function makePriceDb(price: number | null): D1Database {
+  return {
+    prepare: vi.fn(() => ({
+      bind: vi.fn(() => ({
+        first: vi.fn(async () => (price == null ? null : { price })),
+      })),
+    })),
+  } as unknown as D1Database;
 }
 
 describe("syncCurrentBalanceCacheForRows", () => {
@@ -235,6 +261,55 @@ describe("syncCurrentBalanceCacheForRows", () => {
         address: "0x444",
         amountNative: 0, // genuine zero, NOT overridden to 5000
         status: "resolved",
+      }),
+    );
+  });
+
+  it("converts A7A5 ledger amounts through price_cache instead of treating RUB as USD", async () => {
+    vi.mocked(fetchEvmTokenCurrentBalance).mockResolvedValue(1_000);
+
+    const result = await syncCurrentBalanceCacheForRows(
+      makePriceDb(0.0125),
+      a7a5Config,
+      [
+        {
+          id: "5",
+          stablecoin: "A7A5",
+          chain_id: "ethereum",
+          chain_name: "Ethereum",
+          event_type: "blacklist",
+          address: "0x555",
+          amount_native: null,
+          amount_usd_at_event: null,
+          amount_source: "unavailable",
+          amount_status: "recoverable_pending",
+          tx_hash: "0xa7a5",
+          block_number: 5,
+          timestamp: 14,
+          methodology_version: "3.8",
+          contract_address: a7a5Config.contractAddress,
+          config_key: a7a5Config.configKey,
+          event_signature: "Blacklisted(address)",
+          event_topic0: "0xtopic",
+          amount_attempt_count: 0,
+          amount_last_attempted_at: null,
+          amount_last_error_class: null,
+          amount_last_provider: null,
+          explorer_tx_url: "https://etherscan.io/tx/0xa7a5",
+          explorer_address_url: "https://etherscan.io/address/0x555",
+        },
+      ],
+      makeContext(),
+    );
+
+    expect(result).toEqual({ updated: 1, deleted: 0, failed: 0 });
+    expect(upsertBlacklistCurrentBalance).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({
+        stablecoin: "A7A5",
+        address: "0x555",
+        amountNative: 1_000,
+        amountUsd: 12.5,
       }),
     );
   });

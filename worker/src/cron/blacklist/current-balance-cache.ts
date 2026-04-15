@@ -1,4 +1,9 @@
-import { computeBlacklistAmountUsdAtEvent, isGoldBlacklistStablecoin } from "@shared/lib/blacklist";
+import {
+  computeBlacklistAmountUsdAtEvent,
+  getBlacklistPriceAssetId,
+  isGoldBlacklistStablecoin,
+} from "@shared/lib/blacklist";
+import type { BlacklistStablecoin } from "@shared/types/market";
 import {
   upsertBlacklistCurrentBalance,
 } from "../../lib/blacklist-current-balances";
@@ -66,7 +71,7 @@ async function persistCurrentBalanceResult(
   address: string,
   amount: number | null,
   now: number,
-  goldPriceUsd: number | null,
+  assetPriceUsd: number | null,
 ): Promise<"updated" | "failed"> {
   if (amount == null) {
     await upsertBlacklistCurrentBalance(db, {
@@ -90,7 +95,7 @@ async function persistCurrentBalanceResult(
     chainId: config.chain.chainId,
     address,
     amountNative: amount,
-    amountUsd: computeBlacklistAmountUsdAtEvent(config.stablecoin, amount, goldPriceUsd),
+    amountUsd: computeBlacklistAmountUsdAtEvent(config.stablecoin, amount, assetPriceUsd),
     source: "current_balance",
     status: "resolved",
     observedAt: now,
@@ -101,22 +106,17 @@ async function persistCurrentBalanceResult(
   return "updated";
 }
 
-/** Map gold-pegged stablecoins to their price_cache asset_id. */
-const GOLD_PRICE_ASSET_IDS: Record<string, string> = {
-  PAXG: "paxg-paxos",
-  XAUT: "xaut-tether",
-};
-
 /**
- * Fetch the gold spot price from price_cache for a specific stablecoin.
- * Returns the coin-specific price entry so PAXG and XAUT use their own
- * market premium rather than sharing a single gold spot price.
+ * Fetch the USD conversion price for non-USD-valued blacklist assets.
+ * PAXG/XAUT use their own gold-token market entries; A7A5 is RUB-pegged
+ * and must not be treated as USD 1:1.
  */
-export async function fetchGoldPriceFromCache(
+export async function fetchBlacklistAssetPriceFromCache(
   db: D1Database,
-  stablecoin?: string,
+  stablecoin: BlacklistStablecoin,
 ): Promise<number | null> {
-  const assetId = (stablecoin && GOLD_PRICE_ASSET_IDS[stablecoin]) ?? "paxg-paxos";
+  const assetId = getBlacklistPriceAssetId(stablecoin);
+  if (!assetId) return null;
   const row = await db
     .prepare("SELECT price FROM price_cache WHERE asset_id = ? LIMIT 1")
     .bind(assetId)
@@ -143,9 +143,8 @@ export async function syncCurrentBalanceCacheForRows(
   const counters: SyncCurrentBalanceCacheResult = { updated: 0, deleted: 0, failed: 0 };
   const now = Math.floor(Date.now() / 1000);
 
-  // Resolve gold price once if this config is a gold-pegged stablecoin
-  const goldPriceUsd = isGoldBlacklistStablecoin(config.stablecoin)
-    ? await fetchGoldPriceFromCache(db, config.stablecoin)
+  const assetPriceUsd = getBlacklistPriceAssetId(config.stablecoin)
+    ? await fetchBlacklistAssetPriceFromCache(db, config.stablecoin)
     : null;
 
   for (const row of latestByAddress.values()) {
@@ -164,7 +163,7 @@ export async function syncCurrentBalanceCacheForRows(
         chainId: config.chain.chainId,
         address: row.address,
         amountNative: row.amount_native,
-        amountUsd: row.amount_usd_at_event ?? computeBlacklistAmountUsdAtEvent(config.stablecoin, row.amount_native, goldPriceUsd),
+        amountUsd: row.amount_usd_at_event ?? computeBlacklistAmountUsdAtEvent(config.stablecoin, row.amount_native, assetPriceUsd),
         source: "destroy_event",
         status: "resolved",
         observedAt: row.timestamp,
@@ -187,7 +186,7 @@ export async function syncCurrentBalanceCacheForRows(
       amount = row.amount_native;
     }
 
-    const status = await persistCurrentBalanceResult(db, config, row.address, amount, now, goldPriceUsd);
+    const status = await persistCurrentBalanceResult(db, config, row.address, amount, now, assetPriceUsd);
     counters[status]++;
   }
 

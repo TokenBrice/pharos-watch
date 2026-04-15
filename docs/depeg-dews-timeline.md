@@ -1,6 +1,15 @@
 # Depeg Tracker + DEWS Methodology — Version Timeline
 
-Internal changelog reconstructed from git history. Covers `v1.0` through `v5.91` (2026-02-18 -> 2026-04-11).
+Internal changelog reconstructed from git history. Covers `v1.0` through `v5.92` (2026-02-18 -> 2026-04-15).
+
+---
+## v5.92 — Blacklist signal coverage follows first-wave tracker expansion (Apr 15, 2026)
+
+**Commit:** `unreleased`
+
+- DEWS blacklist-activity input now follows the expanded live blacklist tracker symbol set
+- USDG, RLUSD, U, USDTB, and A7A5 receive blacklist-event count signals when they are otherwise DEWS-eligible
+- A7A5's DEWS contribution is event-count stress only; non-USD amount valuation remains part of the blacklist tracker ledger
 
 ---
 ## v5.91 — Conservative DEWS freshness and zero-supply current-row retirement (Apr 11, 2026)

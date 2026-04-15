@@ -432,7 +432,7 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 
 - `worker/src/cron/blacklist/amount-recovery.ts` - BlacklistRecoveryErrorClass, BlacklistRecoveryProvider, backfillAmounts, enrichRowBalances
 - `worker/src/cron/blacklist/balance-providers.ts` - fetchEvmTokenBalance, fetchEvmTokenCurrentBalance, fetchTronTokenCurrentBalance
-- `worker/src/cron/blacklist/current-balance-cache.ts` - SyncCurrentBalanceCacheResult, fetchGoldPriceFromCache, syncCurrentBalanceCacheForRows
+- `worker/src/cron/blacklist/current-balance-cache.ts` - SyncCurrentBalanceCacheResult, fetchBlacklistAssetPriceFromCache, syncCurrentBalanceCacheForRows
 - `worker/src/cron/blacklist/evm-source.ts` - FetchEvmEventsIncrementalResult, fetchEvmEventsIncremental, parseEvmLogs, resolveRpcLogTarget
 - `worker/src/cron/blacklist/persistence.ts` - insertBlacklistRows
 - `worker/src/cron/blacklist/post-fetch.ts` - BlacklistPostFetchCounters, CurrentBalanceCacheCounters, processFetchedBlacklistRows

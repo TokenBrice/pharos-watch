@@ -5,14 +5,14 @@ import { SITE_URL } from "@/lib/site-config";
 export const metadata: Metadata = {
   title: "Blacklist Tracker",
   description:
-    "Track USDC, USDT, PAXG, and XAUT address freezes and blacklist events across Ethereum, Tron, and L2 chains.",
+    "Track issuer freezes, blocks, pauses, blacklist events, and token wipes across supported stablecoin contracts.",
   alternates: {
     canonical: "/blacklist/",
   },
   openGraph: {
     title: "Blacklist Tracker",
     description:
-      "Track USDC, USDT, PAXG, and XAUT address freezes and blacklist events across Ethereum, Tron, and L2 chains.",
+      "Track issuer freezes, blocks, pauses, blacklist events, and token wipes across supported stablecoin contracts.",
     url: "/blacklist/",
     images: [{ url: `${SITE_URL}/og-blacklist.png`, width: 1200, height: 628 }],
   },

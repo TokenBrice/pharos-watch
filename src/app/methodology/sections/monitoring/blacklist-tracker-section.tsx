@@ -19,14 +19,16 @@ export function BlacklistTrackerMethodologySection() {
             changelogClassName="hover:text-rose-700 dark:text-rose-400"
           >
               <p>
-                The Blacklist Tracker monitors issuer intervention events across USDC, USDT, PAXG, XAUT, PYUSD, and USD1
-                contracts, including blacklist, unblacklist, and destroy/wipe actions across EVM and Tron networks.
+                The Blacklist Tracker monitors issuer intervention events across USDC, USDT, PAXG, XAUT, PYUSD, USD1,
+                USDG, RLUSD, U, USDtb, and A7A5 contracts, including blacklist, unblacklist, block/unblock, account
+                pause/unpause, and destroy/wipe actions across supported EVM and Tron networks.
               </p>
               <p>
                 Methodology revisions document changes to event coverage, cross-chain decoding behavior, cursor safety
                 policies, event-time amount attribution rules, and the separate freeze-ledger snapshot used for the public
                 summary and quarterly chart, including the reconciled `kyc.rip` / `stables.rip` bootstrap for ETH USDC,
-                ETH USDT, and TRON USDT.
+                ETH USDT, and TRON USDT. Non-USD or commodity-denominated assets use coin-specific price-cache entries
+                when Pharos reports USD frozen value.
               </p>
           </MethodologySectionShell>
   );

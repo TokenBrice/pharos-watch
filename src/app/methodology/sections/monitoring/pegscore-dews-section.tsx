@@ -425,7 +425,7 @@ export function PegScoreDewsMethodologySection() {
                     </li>
                     <li>
                       <span className="text-foreground">Blacklist Activity (0.10)</span> &mdash; issuer emergency freeze
-                      surges for USDC, USDT, PAXG, XAUT
+                      surges for the live blacklist-tracked symbol set
                     </li>
                     <li>
                       <span className="text-foreground">Mint/Burn Flow (0.10)</span> &mdash; redemption surge vs minting

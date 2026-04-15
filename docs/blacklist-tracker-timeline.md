@@ -1,10 +1,21 @@
 # Blacklist Tracker Methodology — Version Timeline
 
-Internal changelog reconstructed from git history. Covers Blacklist Tracker `v1.0` through `v3.7` (2026-02-09 -> 2026-04-08).
+Internal changelog reconstructed from git history. Covers Blacklist Tracker `v1.0` through `v3.8` (2026-02-09 -> 2026-04-15).
 
 ---
 
-### v3.7 — Balance recovery accuracy and provider resilience (2026-04-08)
+## v3.8 — First-wave CeFi coverage expansion (2026-04-15)
+
+- **USDG coverage** — Added Paxos-style `FreezeAddress`, `UnfreezeAddress`, and `FrozenAddressWiped` tracking for Global Dollar on Ethereum
+- **RLUSD coverage** — Added Ripple USD `AccountPaused` and `AccountUnpaused` tracking on Ethereum; clawback remains out of scope until transaction-input classification exists
+- **U coverage** — Added United Stables `Freeze` and `Unfreeze` tracking on Ethereum and BSC using the dual-indexed account address pattern
+- **USDtb coverage** — Added Ethena/Anchorage USDtb `AccountsBlocked(address[])` and `AccountsUnblocked(address[])` tracking on Ethereum, expanding one batch log into one row per affected address
+- **A7A5 coverage** — Added Old Vector A7A5 `Blacklisted`, `DeBlacklisted`, and `DestroyedBlackFunds` tracking on Ethereum
+- **Non-USD valuation** — A7A5 frozen/destroyed value now uses the `a7a5-old-vector` price-cache entry for USD conversion instead of treating RUB units as dollars
+
+---
+
+## v3.7 — Balance recovery accuracy and provider resilience (2026-04-08)
 
 - **Invalid block tags rejected** — `fetchEvmBalanceAtTag` now returns null on malformed hex block tags instead of silently falling back to `latest`, preventing silent historical→current balance substitution
 - **Ethereum mainnet dRPC/RPC fallback** — Mainnet historical balance lookups now try dRPC and chain-RPC before Etherscan, eliminating the single-provider-failure blind spot for ~60% of events

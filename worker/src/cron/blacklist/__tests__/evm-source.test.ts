@@ -1,4 +1,5 @@
 import { describe, it, expect } from "vitest";
+import { encodeAbiParameters } from "viem/utils";
 import { parseEvmLogs } from "../evm-source";
 import type { ContractEventConfig } from "../../../lib/blacklist-contracts";
 
@@ -33,6 +34,58 @@ const USDC_CONFIG: ContractEventConfig = {
       topicHash: "0xffa4e6181777692565cf28528fc88fd1516ea86b56da075235fa575af6a4b855",
       eventType: "blacklist",
       hasAmount: false,
+    },
+  ],
+};
+
+const RLUSD_CONFIG: ContractEventConfig = {
+  configKey: "ethereum-0x8292bb45bf1ee4d140127049757c2e0ff06317ed",
+  chain: { chainId: "ethereum", chainName: "Ethereum", evmChainId: 1, explorerUrl: "https://etherscan.io", type: "evm" },
+  stablecoinId: "rlusd-ripple",
+  stablecoin: "RLUSD",
+  contractAddress: "0x8292bb45bf1ee4d140127049757c2e0ff06317ed",
+  decimals: 18,
+  events: [
+    {
+      signature: "AccountPaused(address)",
+      topicHash: "0xae7f60c1b8f645c3beffeb531169cbc446874bbf247698325318879ac850c346",
+      eventType: "blacklist",
+      hasAmount: false,
+    },
+  ],
+};
+
+const USDTB_CONFIG: ContractEventConfig = {
+  configKey: "ethereum-0xc139190f447e929f090edeb554d95abb8b18ac1c",
+  chain: { chainId: "ethereum", chainName: "Ethereum", evmChainId: 1, explorerUrl: "https://etherscan.io", type: "evm" },
+  stablecoinId: "usdtb-ethena",
+  stablecoin: "USDTB",
+  contractAddress: "0xc139190f447e929f090edeb554d95abb8b18ac1c",
+  decimals: 18,
+  events: [
+    {
+      signature: "AccountsBlocked(address[])",
+      topicHash: "0x5444f9841c04ce78987f28701fa07fc4c112840c1c8439e8f52bda50c3788a87",
+      eventType: "blacklist",
+      hasAmount: false,
+      addressArrayData: true,
+    },
+  ],
+};
+
+const A7A5_CONFIG: ContractEventConfig = {
+  configKey: "ethereum-0x6fa0be17e4bea2fcfa22ef89bf8ac9aab0ab0fc9",
+  chain: { chainId: "ethereum", chainName: "Ethereum", evmChainId: 1, explorerUrl: "https://etherscan.io", type: "evm" },
+  stablecoinId: "a7a5-old-vector",
+  stablecoin: "A7A5",
+  contractAddress: "0x6fa0be17e4bea2fcfa22ef89bf8ac9aab0ab0fc9",
+  decimals: 6,
+  events: [
+    {
+      signature: "DestroyedBlackFunds(address,uint256)",
+      topicHash: "0x61e6e66b0d6339b2980aecc6ccc0039736791f0ccde9ed512e789a7fbdd698c6",
+      eventType: "destroy",
+      hasAmount: true,
     },
   ],
 };
@@ -78,5 +131,80 @@ describe("parseEvmLogs", () => {
     const rows = parseEvmLogs(USDC_CONFIG, logs);
     expect(rows).toHaveLength(1);
     expect(rows[0].address).toBe("0x3333333333333333333333333333333333333333");
+  });
+
+  it("extracts a non-indexed account address from RLUSD AccountPaused data", () => {
+    const pausedAddr = "0x4444444444444444444444444444444444444444";
+    const logs = [{
+      address: "0x8292bb45bf1ee4d140127049757c2e0ff06317ed",
+      topics: ["0xae7f60c1b8f645c3beffeb531169cbc446874bbf247698325318879ac850c346"],
+      data: encodeAbiParameters([{ type: "address" }], [pausedAddr]),
+      blockNumber: "0x1234",
+      transactionHash: "0xrlusd",
+      logIndex: "0x1",
+      timeStamp: "0x65000000",
+    }];
+
+    const rows = parseEvmLogs(RLUSD_CONFIG, logs);
+
+    expect(rows).toHaveLength(1);
+    expect(rows[0]).toMatchObject({
+      stablecoin: "RLUSD",
+      event_type: "blacklist",
+      address: pausedAddr,
+      amount_native: null,
+    });
+  });
+
+  it("expands USDTB dynamic address array events into unique rows", () => {
+    const firstAddr = "0x5555555555555555555555555555555555555555";
+    const secondAddr = "0x6666666666666666666666666666666666666666";
+    const logs = [{
+      address: "0xc139190f447e929f090edeb554d95abb8b18ac1c",
+      topics: ["0x5444f9841c04ce78987f28701fa07fc4c112840c1c8439e8f52bda50c3788a87"],
+      data: encodeAbiParameters([{ type: "address[]" }], [[firstAddr, secondAddr]]),
+      blockNumber: "0x1234",
+      transactionHash: "0xusdtb",
+      logIndex: "0x2",
+      timeStamp: "0x65000000",
+    }];
+
+    const rows = parseEvmLogs(USDTB_CONFIG, logs);
+
+    expect(rows).toHaveLength(2);
+    expect(rows.map((row) => row.address)).toEqual([firstAddr, secondAddr]);
+    expect(rows.map((row) => row.id)).toEqual([
+      "ethereum-0xusdtb-0x2-0",
+      "ethereum-0xusdtb-0x2-1",
+    ]);
+  });
+
+  it("extracts non-indexed A7A5 destroy address and emitted amount", () => {
+    const destroyedAddr = "0x7777777777777777777777777777777777777777";
+    const logs = [{
+      address: "0x6fa0be17e4bea2fcfa22ef89bf8ac9aab0ab0fc9",
+      topics: ["0x61e6e66b0d6339b2980aecc6ccc0039736791f0ccde9ed512e789a7fbdd698c6"],
+      data: encodeAbiParameters(
+        [{ type: "address" }, { type: "uint256" }],
+        [destroyedAddr, 123_000_000n],
+      ),
+      blockNumber: "0x1234",
+      transactionHash: "0xa7a5",
+      logIndex: "0x3",
+      timeStamp: "0x65000000",
+    }];
+
+    const rows = parseEvmLogs(A7A5_CONFIG, logs);
+
+    expect(rows).toHaveLength(1);
+    expect(rows[0]).toMatchObject({
+      stablecoin: "A7A5",
+      event_type: "destroy",
+      address: destroyedAddr,
+      amount_native: 123,
+      amount_source: "event",
+      amount_status: "resolved",
+    });
+    expect(rows[0].amount_usd_at_event).toBeNull();
   });
 });

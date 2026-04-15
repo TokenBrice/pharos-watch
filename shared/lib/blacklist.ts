@@ -7,14 +7,24 @@ export function isGoldBlacklistStablecoin(symbol: string): symbol is "PAXG" | "X
   return symbol === "PAXG" || symbol === "XAUT";
 }
 
+const BLACKLIST_PRICE_ASSET_IDS: Partial<Record<BlacklistStablecoin, string>> = {
+  PAXG: "paxg-paxos",
+  XAUT: "xaut-tether",
+  A7A5: "a7a5-old-vector",
+};
+
+export function getBlacklistPriceAssetId(stablecoin: BlacklistStablecoin): string | null {
+  return BLACKLIST_PRICE_ASSET_IDS[stablecoin] ?? null;
+}
+
 export function computeBlacklistAmountUsdAtEvent(
   stablecoin: BlacklistStablecoin,
   amountNative: number | null,
-  goldPriceUsd?: number | null,
+  assetPriceUsd?: number | null,
 ): number | null {
   if (amountNative == null) return null;
-  if (!isGoldBlacklistStablecoin(stablecoin)) return amountNative;
-  return goldPriceUsd ? amountNative * goldPriceUsd : null;
+  if (!getBlacklistPriceAssetId(stablecoin)) return amountNative;
+  return assetPriceUsd ? amountNative * assetPriceUsd : null;
 }
 
 export function isBlacklistAmountGapStatus(status: BlacklistAmountStatus): boolean {

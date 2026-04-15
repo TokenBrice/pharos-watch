@@ -52,4 +52,43 @@ describe("blacklist-contracts shared metadata alignment", () => {
       expect(new Set(topicHashes).size).toBe(topicHashes.length);
     }
   });
+
+  it("includes first-wave blacklist expansion configs", () => {
+    expect(CONTRACT_CONFIGS).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ stablecoinId: "usdg-paxos", chain: expect.objectContaining({ chainId: "ethereum" }) }),
+        expect.objectContaining({ stablecoinId: "rlusd-ripple", chain: expect.objectContaining({ chainId: "ethereum" }) }),
+        expect.objectContaining({ stablecoinId: "u-united-stables", chain: expect.objectContaining({ chainId: "ethereum" }) }),
+        expect.objectContaining({ stablecoinId: "u-united-stables", chain: expect.objectContaining({ chainId: "bsc" }) }),
+        expect.objectContaining({ stablecoinId: "usdtb-ethena", chain: expect.objectContaining({ chainId: "ethereum" }) }),
+        expect.objectContaining({ stablecoinId: "a7a5-old-vector", chain: expect.objectContaining({ chainId: "ethereum" }) }),
+      ]),
+    );
+  });
+
+  it("resolves first-wave event families by topic", () => {
+    const usdtb = CONTRACT_CONFIGS.find((config) => config.stablecoinId === "usdtb-ethena");
+    expect(usdtb).toBeDefined();
+    const usdtbBlocked = getBlacklistEventByTopic(
+      usdtb!,
+      "0x5444f9841c04ce78987f28701fa07fc4c112840c1c8439e8f52bda50c3788a87",
+    );
+    expect(usdtbBlocked).toMatchObject({
+      eventType: "blacklist",
+      addressArrayData: true,
+    });
+
+    const a7a5 = CONTRACT_CONFIGS.find((config) => config.stablecoinId === "a7a5-old-vector");
+    expect(a7a5).toBeDefined();
+    const deblacklisted = getBlacklistEventByTopic(
+      a7a5!,
+      "0x8e6c9e5ceff66044a0b27759779a9be2e7c99655252b235ff3f754efb6b8a616",
+    );
+    expect(deblacklisted?.eventType).toBe("unblacklist");
+
+    const rlusd = CONTRACT_CONFIGS.find((config) => config.stablecoinId === "rlusd-ripple");
+    expect(rlusd).toBeDefined();
+    const accountPaused = getBlacklistEventBySignature(rlusd!, "AccountPaused");
+    expect(accountPaused?.eventType).toBe("blacklist");
+  });
 });

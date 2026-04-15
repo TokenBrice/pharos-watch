@@ -135,6 +135,17 @@ describe("handleBlacklist", () => {
     expect(res.status).toBe(200);
   });
 
+  it("accepts first-wave stablecoin symbol filters", async () => {
+    for (const symbol of ["usdg", "rlusd", "u", "usdtb", "a7a5"]) {
+      const db = mockD1([
+        { match: "COUNT", rows: [{ total: 0 }] },
+        { match: "blacklist_events", rows: [] },
+      ]);
+      const res = await handleBlacklist(db, new URL(`https://x/api/blacklist?stablecoin=${symbol}`));
+      expect(res.status, symbol).toBe(200);
+    }
+  });
+
   it("rejects EURC stablecoin filter because EURC is not currently live-supported", async () => {
     const db = mockD1([]);
     const res = await handleBlacklist(db, new URL("https://x/api/blacklist?stablecoin=eurc"));

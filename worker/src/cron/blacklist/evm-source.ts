@@ -1,5 +1,6 @@
 import { getBlacklistTrackerMethodologyVersionAt } from "@shared/lib/blacklist-tracker-version";
 import { computeBlacklistAmountUsdAtEvent } from "@shared/lib/blacklist";
+import { decodeAbiParameters } from "viem/utils";
 import {
   fetchAlchemyLogs,
   getAlchemyBlockNumber,
@@ -63,6 +64,60 @@ function runtimeBudgetReached(deadlineMs: number): boolean {
   return Date.now() >= deadlineMs;
 }
 
+function decodeAddressArrayData(data: string): string[] {
+  try {
+    const [addresses] = decodeAbiParameters(
+      [{ type: "address[]" }],
+      data as `0x${string}`,
+    );
+    return [...addresses].map((address) => address.toLowerCase());
+  } catch (error) {
+    console.warn("[blacklist] Failed to decode address[] event data:", error);
+    return [];
+  }
+}
+
+function buildBlacklistRow(
+  config: ContractEventConfig,
+  log: EvmLogLike,
+  affectedAddress: string,
+  amount: number | null,
+  blockNumber: number,
+  timestamp: number,
+  rowSuffix = "",
+): BlacklistRow | null {
+  const eventDef = getBlacklistEventByTopic(config, log.topics[0]);
+  if (!eventDef) return null;
+  const methodologyVersion = getBlacklistTrackerMethodologyVersionAt(timestamp);
+
+  return {
+    id: `${config.chain.chainId}-${log.transactionHash}-${log.logIndex}${rowSuffix}`,
+    stablecoin: config.stablecoin,
+    chain_id: config.chain.chainId,
+    chain_name: config.chain.chainName,
+    event_type: eventDef.eventType,
+    address: affectedAddress,
+    amount_native: amount,
+    amount_usd_at_event: computeBlacklistAmountUsdAtEvent(config.stablecoin, amount),
+    amount_source: amount != null ? "event" : "unavailable",
+    amount_status: amount != null ? "resolved" : "recoverable_pending",
+    tx_hash: log.transactionHash,
+    block_number: blockNumber,
+    timestamp,
+    methodology_version: methodologyVersion,
+    contract_address: config.contractAddress,
+    config_key: config.configKey,
+    event_signature: eventDef.signature,
+    event_topic0: log.topics[0] ?? null,
+    amount_attempt_count: 0,
+    amount_last_attempted_at: null,
+    amount_last_error_class: null,
+    amount_last_provider: null,
+    explorer_tx_url: buildExplorerTxUrl(config.chain, log.transactionHash),
+    explorer_address_url: buildExplorerAddressUrl(config.chain, affectedAddress),
+  };
+}
+
 export function parseEvmLogs(
   config: ContractEventConfig,
   logs: EvmLogLike[],
@@ -72,6 +127,19 @@ export function parseEvmLogs(
   for (const log of logs) {
     const eventDef = getBlacklistEventByTopic(config, log.topics[0]);
     if (!eventDef) continue;
+    const blockNumber = parseInt(log.blockNumber, 16);
+    const timestamp = log.timeStamp ? parseInt(log.timeStamp, 16) : (blockTimestamps?.get(blockNumber) ?? Number.NaN);
+    if (isNaN(blockNumber) || isNaN(timestamp)) continue;
+
+    if (eventDef.addressArrayData) {
+      const addresses = decodeAddressArrayData(log.data);
+      addresses.forEach((affectedAddress, index) => {
+        const row = buildBlacklistRow(config, log, affectedAddress, null, blockNumber, timestamp, `-${index}`);
+        if (row) rows.push(row);
+      });
+      continue;
+    }
+
     const topicIdx = eventDef.addressTopicIndex ?? 1;
     const addressIndexed = log.topics.length > topicIdx;
     const affectedAddress = addressIndexed ? decodeAddress(log.topics[topicIdx]) : decodeAddress(log.data.slice(0, 66));
@@ -85,37 +153,8 @@ export function parseEvmLogs(
           : null
       : null;
 
-    const blockNumber = parseInt(log.blockNumber, 16);
-    const timestamp = log.timeStamp ? parseInt(log.timeStamp, 16) : (blockTimestamps?.get(blockNumber) ?? Number.NaN);
-    if (isNaN(blockNumber) || isNaN(timestamp)) continue;
-    const methodologyVersion = getBlacklistTrackerMethodologyVersionAt(timestamp);
-
-    rows.push({
-      id: `${config.chain.chainId}-${log.transactionHash}-${log.logIndex}`,
-      stablecoin: config.stablecoin,
-      chain_id: config.chain.chainId,
-      chain_name: config.chain.chainName,
-      event_type: eventDef.eventType,
-      address: affectedAddress,
-      amount_native: amount,
-      amount_usd_at_event: computeBlacklistAmountUsdAtEvent(config.stablecoin, amount),
-      amount_source: amount != null ? "event" : "unavailable",
-      amount_status: amount != null ? "resolved" : "recoverable_pending",
-      tx_hash: log.transactionHash,
-      block_number: blockNumber,
-      timestamp,
-      methodology_version: methodologyVersion,
-      contract_address: config.contractAddress,
-      config_key: config.configKey,
-      event_signature: eventDef.signature,
-      event_topic0: log.topics[0] ?? null,
-      amount_attempt_count: 0,
-      amount_last_attempted_at: null,
-      amount_last_error_class: null,
-      amount_last_provider: null,
-      explorer_tx_url: buildExplorerTxUrl(config.chain, log.transactionHash),
-      explorer_address_url: buildExplorerAddressUrl(config.chain, affectedAddress),
-    });
+    const row = buildBlacklistRow(config, log, affectedAddress, amount, blockNumber, timestamp);
+    if (row) rows.push(row);
   }
   return rows;
 }
