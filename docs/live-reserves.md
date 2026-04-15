@@ -465,7 +465,8 @@ Adapter helpers now live in a small helper family, with `worker/src/cron/reserve
 | `worker/src/lib/live-reserves-store.ts`         | Public facade over the live-reserve store helpers                                                |
 | `worker/src/lib/live-reserves-store-read.ts`    | D1 read/query helpers and authoritative row loaders                                              |
 | `worker/src/lib/live-reserves-store-write.ts`   | D1 write paths and history pruning                                                               |
-| `worker/src/lib/live-reserves-store-view.ts`    | Snapshot resolution, status overview, metadata views, 48h freshness contract                     |
+| `worker/src/lib/live-reserves-store-overview.ts`| Status overview, scoring-eligible freshness checks, and authoritative snapshot maps              |
+| `worker/src/lib/live-reserves-store-response.ts`| Detail/API reserve-result resolution and curated/static fallback handling                        |
 | `worker/src/lib/live-reserves-store-shared.ts`  | Shared live-reserve store types, constants, and row mapping                                      |
 | `worker/src/api/stablecoin-reserves.ts`         | Public API handler                                                                               |
 | `src/hooks/use-stablecoin-reserves.ts`          | Frontend query hook                                                                              |

@@ -225,12 +225,14 @@ Per-coin rows check the corresponding boolean on `telegram_subscriptions`:
 - `alert_dews`
 - `alert_depeg`
 - `alert_safety`
+- `alert_launch`
 
 Global all-stablecoin follows use the matching `telegram_subscribers` flags:
 
 - `global_alert_dews`
 - `global_alert_depeg`
 - `global_alert_safety`
+- `global_alert_launch`
 
 Filtering is subscription-aware:
 
@@ -268,7 +270,8 @@ drains up to 25% of its budget from the pending queue before processing fresh ev
 ensuring eventual delivery.
 
 Pending alerts have a 1-hour TTL. Rows older than the TTL are deleted at the end of each
-run. Retryable sends retry up to 2 times (3 attempts total) before being dropped.
+run. Retryable sends are queued while the stored `attempts` counter is below 5; rows that
+fail again at `attempts >= 5` are dropped.
 
 This design ensures snapshots always stay current (events are never "held back") while
 guaranteeing delivery for large subscriber populations.

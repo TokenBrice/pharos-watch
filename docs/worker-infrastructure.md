@@ -495,14 +495,14 @@ Workers enforce a **6 concurrent fetch connections** limit per cron trigger invo
 | 8       | `11 * * * *`       |                2 (reserve adapters + Kinesis are sequential; redemption is DB-only)                |    4     |
 | 9       | `20 * * * *`       |                                      1 (core yield publisher)                                      |    5     |
 | 10      | `25 */4 * * *`     |                                  5 (supplemental yield families)                                   |    1     |
-| 11      | `2,7,...,57 * * * *` |                                  1 (Telegram alert dispatcher)                                     |    5     |
+| 11      | `2,7,...,57 * * * *` |                        5 (Telegram alert dispatcher batches sends in groups of 5)                  |    1     |
 | 12      | `0 8 * * *`        |                 2 (benchmark feeds -> Etherscan -> Sim reads; chained serially, Sim peak = 2)      |    4     |
-| 13      | `5 8 * * *`        |                                4 (bluechip + Anthropic + CoinGecko)                                |    2     |
+| 13      | `5 8 * * *`        |                     5 (Bluechip batch of 3 + Anthropic + CoinGecko; digest/recap chained)          |    1     |
 | 14      | `0 6 1 * *`        |                                      1 (DeFiLlama yield scan)                                      |    5     |
 
 **Policy for new jobs:**
 
-- Jobs requiring ≤1 external connection may share any slot with headroom ≥2.
+- Jobs requiring <=1 external connection may share any slot with headroom >=2.
 - Jobs requiring >2 concurrent connections should get a dedicated trigger slot.
 - Never add a fetching job to a slot with headroom <=1 (Triggers 1, 7, and 10 are effectively full).
 

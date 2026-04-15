@@ -197,7 +197,7 @@ const CRON_JOB_DEFINITIONS_BASE: readonly CronJobDefinition[] = [
     intervalSec: 300,
     scheduleKey: "fiveMinuteTelegramAlerts",
     triggerMode: "isolated",
-    maxConnections: 1, // Sequential Telegram sendMessage calls
+    maxConnections: 5, // Telegram sendMessage batches run with SEND_BATCH_SIZE=5
   },
   {
     job: "sync-blacklist",
