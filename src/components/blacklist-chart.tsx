@@ -9,9 +9,8 @@ import { formatCurrency } from "@shared/lib/format";
 import { BLACKLIST_CHART_COLORS } from "@shared/lib/classification";
 import { PharosChartTooltip, TooltipLabel, TooltipRow } from "@/components/pharos-chart-tooltip";
 import { CategoricalXAxis, ChartGrid, MonoYAxis } from "@/components/chart-primitives";
-import type { BlacklistSummaryResponse, BlacklistStablecoin } from "@shared/types";
+import { BLACKLIST_STABLECOINS, type BlacklistSummaryResponse, type BlacklistStablecoin } from "@shared/types";
 
-const STABLECOINS_ORDER = ["USDT", "USDC", "PYUSD", "USD1", "PAXG", "XAUT"] as const satisfies readonly BlacklistStablecoin[];
 const CHART_HEIGHT = "h-[220px] sm:h-[280px]";
 
 interface BlacklistChartProps {
@@ -32,6 +31,14 @@ export function getBlacklistTooltipSummary(payload?: ReadonlyArray<BlacklistTool
   return { rows, total };
 }
 
+export function getBlacklistChartCoins(
+  chartData: ReadonlyArray<BlacklistSummaryResponse["chart"][number] & Partial<Record<BlacklistStablecoin, number>>>,
+): BlacklistStablecoin[] {
+  return BLACKLIST_STABLECOINS.filter((coin) =>
+    chartData.some((point) => (point[coin] ?? 0) > 0),
+  );
+}
+
 export function BlacklistChart({ chart, isLoading }: BlacklistChartProps) {
   const { ref: chartContainerRef, ready: isChartReady, width, height } = useChartContainerReady<HTMLDivElement>();
   const chartData = useMemo(() => chart ?? [], [chart]);
@@ -42,6 +49,7 @@ export function BlacklistChart({ chart, isLoading }: BlacklistChartProps) {
       .sort((a, b) => b.total - a.total)
       .slice(0, 2);
   }, [chartData]);
+  const chartCoins = useMemo(() => getBlacklistChartCoins(chartData), [chartData]);
 
   if (isLoading) {
     return (
@@ -89,7 +97,7 @@ export function BlacklistChart({ chart, isLoading }: BlacklistChartProps) {
         {chartData.length > 0 ? (
           <>
           <div className="mb-3 flex flex-wrap gap-2">
-            {STABLECOINS_ORDER.map((coin) => (
+            {chartCoins.map((coin) => (
               <div key={coin} className="pharos-chart-legend-chip">
                 <span
                   className="inline-block h-2.5 w-2.5 rounded-sm"
@@ -139,14 +147,14 @@ export function BlacklistChart({ chart, isLoading }: BlacklistChartProps) {
                   width={62}
                 />
                 <Tooltip content={<BlacklistTooltip />} cursor={{ fill: "currentColor", opacity: 0.05 }} />
-                {STABLECOINS_ORDER.map((coin, i) => (
+                {chartCoins.map((coin, i) => (
                   <Bar
                     key={coin}
                     dataKey={coin}
                     stackId="a"
                     fill={BLACKLIST_CHART_COLORS[coin]}
                     fillOpacity={i === 0 ? 0.75 : 0.62}
-                    radius={i === STABLECOINS_ORDER.length - 1 ? [3, 3, 0, 0] : undefined}
+                    radius={i === chartCoins.length - 1 ? [3, 3, 0, 0] : undefined}
                   />
                 ))}
                 <Line
