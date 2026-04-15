@@ -84,18 +84,17 @@ export function ReportCardMini({
               Simulated
             </span>
           )}
-          {coreSettlement && (
-            <span className="absolute left-2 top-2 rounded-full border border-frost-blue/30 bg-frost-blue/10 px-2 py-0.5 text-[10px] font-semibold leading-none text-sky-800 dark:text-sky-300">
-              Core rail
-            </span>
-          )}
-
           {/* Header: logo + name + symbol */}
           <div className="flex items-center gap-2 min-w-0 max-w-full">
             <StablecoinLogo src={logo} name={card.name} size={24} />
             <span className="truncate text-sm font-medium">{card.name}</span>
             <span className="text-xs text-muted-foreground shrink-0">{card.symbol}</span>
           </div>
+          {coreSettlement && (
+            <span className="rounded-full border border-frost-blue/30 bg-frost-blue/10 px-2 py-0.5 text-[10px] font-semibold leading-none text-sky-800 dark:text-sky-300">
+              Core rail
+            </span>
+          )}
 
           {/* Large grade badge — show before→after when simulated */}
           {isSimulated && originalGrade && originalGrade !== card.overallGrade ? (
