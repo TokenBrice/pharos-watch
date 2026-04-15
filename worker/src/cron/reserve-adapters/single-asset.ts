@@ -114,6 +114,12 @@ export async function fetchSingleAssetReserves(
         ...(totalReserveUsd != null && supplyUsd != null && supplyUsd > 0
           ? { collateralizationRatio: totalReserveUsd / supplyUsd }
           : {}),
+        redemption: {
+          capacityKind: "documented-bound" as const,
+          freshnessKind: sourceTimestamp != null ? "verified-source-timestamp" as const : "unverified" as const,
+          ...(sourceTimestamp != null ? { sourceTimestamp } : {}),
+          routeStatus: "unknown" as const,
+        },
         details: {
           proofKind: totalReserveUsd != null && supplyUsd != null
             ? "reserve-and-supply-probe"
@@ -159,13 +165,15 @@ export async function fetchSingleAssetReserves(
           proofKind: "erc20-total-supply-liveness",
           reserveSourceLabel: params.reserveSourceLabel ?? params.label,
         }),
+        redemption: {
+          capacityKind: "documented-bound" as const,
+          freshnessKind: "same-run-onchain" as const,
+          routeStatus: "unknown" as const,
+          ...(redemptionFeeBps != null ? { feeBps: redemptionFeeBps } : {}),
+        },
         ...(redemptionFeeBps != null
           ? {
               redemptionFeeBps,
-              redemption: {
-                feeBps: redemptionFeeBps,
-                freshnessKind: "same-run-onchain" as const,
-              },
             }
           : {}),
       },

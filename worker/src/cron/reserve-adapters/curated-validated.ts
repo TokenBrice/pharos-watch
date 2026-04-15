@@ -29,6 +29,11 @@ export async function fetchCuratedValidatedReserves(
     slices: coin.reserves,
     metadata: {
       totalSupplyRaw: totalSupply.toString(),
+      redemption: {
+        capacityKind: "documented-eventual" as const,
+        freshnessKind: "same-run-onchain" as const,
+        routeStatus: "unknown" as const,
+      },
     },
   };
 }

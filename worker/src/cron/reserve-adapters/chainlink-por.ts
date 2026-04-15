@@ -49,6 +49,12 @@ export function adaptChainlinkPorResponse(data: ChainlinkPorData, params: Chainl
       feedUpdatedAt: data.updatedAt,
       sourceTimestamp: data.updatedAt,
       freshnessMode: "verified",
+      redemption: {
+        capacityKind: "documented-bound" as const,
+        freshnessKind: "verified-source-timestamp" as const,
+        sourceTimestamp: data.updatedAt,
+        routeStatus: "unknown" as const,
+      },
     },
   };
 }
