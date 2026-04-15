@@ -22,6 +22,23 @@ import {
   parseStablecoinMetaAssets,
 } from "../stablecoins/schema";
 
+function makeStablecoinAsset(overrides: Record<string, unknown> = {}): Record<string, unknown> {
+  return {
+    id: "schema-test-usd",
+    name: "Schema Test USD",
+    symbol: "STUSD",
+    flags: {
+      backing: "rwa-backed",
+      pegCurrency: "USD",
+      governance: "centralized",
+      yieldBearing: false,
+      rwa: false,
+      navToken: false,
+    },
+    ...overrides,
+  };
+}
+
 describe("tracked stablecoin metadata", () => {
   it("loads all JSON registry assets through the shared schemas", () => {
     const usdMajor = parseStablecoinMetaAssets(usdMajorAsset, "usd-major");
@@ -104,6 +121,50 @@ describe("tracked stablecoin metadata", () => {
         rwa: false,
       },
     }], "broken.json")).toThrowError(/broken\.json/);
+  });
+
+  it("enforces contract decimals as finite integers from 0 through 255", () => {
+    expect(parseStablecoinMetaAssets([
+      makeStablecoinAsset({
+        contracts: [{ chain: "ethereum", address: "0x0", decimals: 0 }],
+      }),
+    ], "decimals-zero.json")[0]?.contracts?.[0]?.decimals).toBe(0);
+
+    for (const decimals of [-1, 1.5, 256, Infinity]) {
+      expect(() => parseStablecoinMetaAssets([
+        makeStablecoinAsset({
+          contracts: [{ chain: "ethereum", address: "0x0", decimals }],
+        }),
+      ], `decimals-${decimals}.json`)).toThrowError(/decimals/);
+    }
+  });
+
+  it("enforces dependency weights as finite positive fractions", () => {
+    for (const weight of [0, -0.1, 1.01, Infinity]) {
+      expect(() => parseStablecoinMetaAssets([
+        makeStablecoinAsset({
+          dependencies: [{ id: "usdc-circle", weight }],
+        }),
+      ], `dependency-${weight}.json`)).toThrowError(/weight/);
+    }
+  });
+
+  it("enforces reserve percentages as finite positive percentages", () => {
+    for (const pct of [0, -1, 100.1, Infinity]) {
+      expect(() => parseStablecoinMetaAssets([
+        makeStablecoinAsset({
+          reserves: [{ name: "Cash", pct, risk: "low" }],
+        }),
+      ], `reserve-${pct}.json`)).toThrowError(/pct/);
+    }
+  });
+
+  it("enforces commodity ounces as finite positive values", () => {
+    for (const commodityOunces of [0, -1, Infinity]) {
+      expect(() => parseStablecoinMetaAssets([
+        makeStablecoinAsset({ commodityOunces }),
+      ], `commodity-${commodityOunces}.json`)).toThrowError(/commodityOunces/);
+    }
   });
 
   it("rejects malformed dead stablecoin assets with readable schema errors", () => {

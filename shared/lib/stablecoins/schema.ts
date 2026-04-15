@@ -25,6 +25,11 @@ import { CAUSE_OF_DEATH_VALUES } from "../../types/market";
 const DETAIL_PROVIDER_VALUES = ["defillama", "coingecko", "commodity"] as const;
 const RESERVE_RISK_VALUES = ["very-low", "low", "medium", "high", "very-high"] as const;
 
+const ContractDecimalsSchema = z.number().finite().int().min(0).max(255);
+const DependencyWeightNumberSchema = z.number().finite().positive().max(1);
+const ReservePctSchema = z.number().finite().positive().max(100);
+const CommodityOuncesSchema = z.number().finite().positive();
+
 const StablecoinFlagsAssetSchema = z.object({
   backing: z.enum(BACKING_TYPE_VALUES),
   pegCurrency: z.enum(PEG_CURRENCY_VALUES),
@@ -54,18 +59,18 @@ const JurisdictionAssetSchema = z.object({
 const ContractDeploymentAssetSchema = z.object({
   chain: z.string(),
   address: z.string(),
-  decimals: z.number(),
+  decimals: ContractDecimalsSchema,
 }).strict();
 
 const DependencyWeightAssetSchema = z.object({
   id: z.string(),
-  weight: z.number(),
+  weight: DependencyWeightNumberSchema,
   type: z.enum(DEPENDENCY_TYPE_VALUES).optional(),
 }).strict();
 
 const ReserveSliceAssetSchema = z.object({
   name: z.string(),
-  pct: z.number(),
+  pct: ReservePctSchema,
   risk: z.enum(RESERVE_RISK_VALUES),
   coinId: z.string().optional(),
   depType: z.enum(DEPENDENCY_TYPE_VALUES).optional(),
@@ -116,7 +121,7 @@ export const StablecoinMetaAssetSchema = z.object({
   pegReferenceId: z.string().optional(),
   collateral: z.string().optional(),
   pegMechanism: z.string().optional(),
-  commodityOunces: z.number().optional(),
+  commodityOunces: CommodityOuncesSchema.optional(),
   geckoId: z.string().optional(),
   cmcSlug: z.string().optional(),
   pythFeedId: z.string().optional(),

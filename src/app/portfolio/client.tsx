@@ -97,9 +97,63 @@ function formatUsd(value: number): string {
   return `$${usdFormatterDetailed.format(value)}`;
 }
 
+function isDigitString(value: string): boolean {
+  if (value.length === 0) return false;
+  for (const char of value) {
+    if (char < "0" || char > "9") return false;
+  }
+  return true;
+}
+
+function isPlainDecimal(value: string): boolean {
+  let hasDigit = false;
+  let seenDecimal = false;
+
+  for (const char of value) {
+    if (char >= "0" && char <= "9") {
+      hasDigit = true;
+      continue;
+    }
+    if (char === "." && !seenDecimal) {
+      seenDecimal = true;
+      continue;
+    }
+    return false;
+  }
+
+  return hasDigit;
+}
+
+function isGroupedDecimal(value: string): boolean {
+  const parts = value.split(".");
+  if (parts.length > 2) return false;
+  const [integerPart, fractionPart] = parts;
+  if (!integerPart) return false;
+  if (fractionPart !== undefined && fractionPart !== "" && !isDigitString(fractionPart)) {
+    return false;
+  }
+
+  const groups = integerPart.split(",");
+  if (groups.length < 2) return false;
+  if (groups[0].length < 1 || groups[0].length > 3 || !isDigitString(groups[0])) {
+    return false;
+  }
+
+  return groups.slice(1).every((group) => group.length === 3 && isDigitString(group));
+}
+
 function parseUsdInput(raw: string): number {
-  const cleaned = raw.replace(/[^0-9.]/g, "");
-  const num = parseFloat(cleaned);
+  const trimmed = raw.trim();
+  if (trimmed === "") return 0;
+
+  const withoutCurrency = trimmed.startsWith("$")
+    ? trimmed.slice(1).trimStart()
+    : trimmed;
+  if (!isPlainDecimal(withoutCurrency) && !isGroupedDecimal(withoutCurrency)) {
+    return 0;
+  }
+
+  const num = Number(withoutCurrency.replaceAll(",", ""));
   return Number.isFinite(num) && num >= 0 ? num : 0;
 }
 

@@ -16,6 +16,8 @@ const STABLECOIN_ASSET_FILES = new Set([
   "commodity.json",
   "pre-launch.json",
 ]);
+const RESERVE_TOTAL_TOLERANCE = 0.5;
+const RESERVE_TOTAL_ALLOWLIST = new Set<string>();
 
 interface DataFile {
   file: string;
@@ -83,6 +85,31 @@ function getStatusPartitionIssue(file: string, coin: StablecoinMeta): string | n
     : null;
 }
 
+function getReserveTotalIssue(coin: StablecoinMeta): string | null {
+  if (!coin.reserves || coin.reserves.length === 0) return null;
+
+  const total = coin.reserves.reduce((sum, reserve) => sum + reserve.pct, 0);
+  if (total <= 0) {
+    return "reserve pct total must be greater than 0";
+  }
+
+  if (
+    !RESERVE_TOTAL_ALLOWLIST.has(coin.id)
+    && Math.abs(total - 100) > RESERVE_TOTAL_TOLERANCE
+  ) {
+    return `reserve pct total ${total} is outside 100 +/- ${RESERVE_TOTAL_TOLERANCE}`;
+  }
+
+  return null;
+}
+
+function getDependencyTotalIssue(coin: StablecoinMeta): string | null {
+  if (!coin.dependencies || coin.dependencies.length === 0) return null;
+
+  const total = coin.dependencies.reduce((sum, dependency) => sum + dependency.weight, 0);
+  return total > 0 ? null : "dependency weight total must be greater than 0";
+}
+
 for (const { file, schema } of DATA_FILES) {
   const path = join(DATA_DIR, file);
   try {
@@ -129,6 +156,18 @@ for (const { file, coin } of stablecoinEntries) {
   const partitionIssue = getStatusPartitionIssue(file, coin);
   if (partitionIssue) {
     process.stderr.write(`${join(DATA_DIR, file)} (${coin.id}): ${partitionIssue}\n`);
+    errorCount++;
+  }
+
+  const reserveTotalIssue = getReserveTotalIssue(coin);
+  if (reserveTotalIssue) {
+    process.stderr.write(`${join(DATA_DIR, file)} (${coin.id}): ${reserveTotalIssue}\n`);
+    errorCount++;
+  }
+
+  const dependencyTotalIssue = getDependencyTotalIssue(coin);
+  if (dependencyTotalIssue) {
+    process.stderr.write(`${join(DATA_DIR, file)} (${coin.id}): ${dependencyTotalIssue}\n`);
     errorCount++;
   }
 

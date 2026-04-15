@@ -16,6 +16,7 @@ import {
   encodePortfolioHoldings,
   isPortfolioHolding,
   migratePortfolioIds,
+  normalizePortfolioHolding,
   parsePortfolioUrlParam,
   type PortfolioHolding,
 } from "@/lib/portfolio-codec";
@@ -56,12 +57,7 @@ function loadFromStorage(): PortfolioHolding[] {
     if (!Array.isArray(parsed)) return [];
     const validated = parsed.filter(isPortfolioHolding);
     const migrated = migratePortfolioIds(validated);
-    if (migrated.length !== validated.length || migrated.some((holding, index) => {
-      const original = validated[index];
-      return !original
-        || original.coinId !== holding.coinId
-        || original.amount !== holding.amount;
-    })) {
+    if (JSON.stringify(parsed) !== JSON.stringify(migrated)) {
       saveToStorage(migrated);
     }
     return migrated;
@@ -114,10 +110,13 @@ export function usePortfolio(cards: ReportCard[] | undefined): PortfolioState {
   // --- Actions ---
 
   const addCoin = useCallback((coinId: string, amount: number) => {
+    const holding = normalizePortfolioHolding({ coinId, amount });
+    if (!holding) return;
+
     setHoldings((prev) => {
       // Don't add duplicates
-      if (prev.some((h) => h.coinId === coinId)) return prev;
-      return [...prev, { coinId, amount }];
+      if (prev.some((h) => h.coinId === holding.coinId)) return prev;
+      return [...prev, holding];
     });
   }, []);
 
@@ -126,8 +125,11 @@ export function usePortfolio(cards: ReportCard[] | undefined): PortfolioState {
   }, []);
 
   const setAmount = useCallback((coinId: string, amount: number) => {
+    const holding = normalizePortfolioHolding({ coinId, amount });
+    if (!holding) return;
+
     setHoldings((prev) =>
-      prev.map((h) => (h.coinId === coinId ? { ...h, amount } : h)),
+      prev.map((h) => (h.coinId === holding.coinId ? { ...h, amount: holding.amount } : h)),
     );
   }, []);
 

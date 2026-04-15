@@ -196,29 +196,32 @@ export function computeUpstreamExposure(
     collateralUsd.set(key, { name, symbol, usd });
   }
 
-  function applyReservesToRemainder(
-    reserves: ReserveSlice[],
-    remainderUsd: number,
+  function allocateReserveCollateral(
+    reserves: readonly ReserveSlice[],
+    amountUsd: number,
     backing: string,
+    options?: { excludeStablecoinSlices?: boolean },
   ): void {
-    const nonStableReserves = reserves.filter(
-      (reserve) => !isStablecoinSlice(reserve.name),
-    );
-    if (nonStableReserves.length === 0) {
-      const fallback = backingFallback(backing);
-      addCollateral(fallback.name, fallback.symbol, remainderUsd);
-      return;
-    }
-
-    const totalPct = nonStableReserves.reduce(
+    const candidates = options?.excludeStablecoinSlices
+      ? reserves.filter((reserve) => !isStablecoinSlice(reserve.name))
+      : [...reserves];
+    const positiveCandidates = candidates.filter((reserve) => reserve.pct > 0);
+    const totalPct = positiveCandidates.reduce(
       (sum, reserve) => sum + reserve.pct,
       0,
     );
-    for (const reserve of nonStableReserves) {
+
+    if (totalPct <= 0) {
+      const fallback = backingFallback(backing);
+      addCollateral(fallback.name, fallback.symbol, amountUsd);
+      return;
+    }
+
+    for (const reserve of positiveCandidates) {
       addCollateral(
         reserve.name,
         reserve.name,
-        remainderUsd * (reserve.pct / totalPct),
+        amountUsd * (reserve.pct / totalPct),
       );
     }
   }
@@ -232,14 +235,7 @@ export function computeUpstreamExposure(
 
     if (dependencies.length === 0) {
       if (reserves && reserves.length > 0) {
-        const totalPct = reserves.reduce((sum, reserve) => sum + reserve.pct, 0);
-        for (const reserve of reserves) {
-          addCollateral(
-            reserve.name,
-            reserve.name,
-            holding.amount * (reserve.pct / totalPct),
-          );
-        }
+        allocateReserveCollateral(reserves, holding.amount, backing);
       } else {
         const fallback = backingFallback(backing);
         addCollateral(fallback.name, fallback.symbol, holding.amount);
@@ -264,7 +260,9 @@ export function computeUpstreamExposure(
 
     const remainderUsd = holding.amount * remainder;
     if (reserves && reserves.length > 0) {
-      applyReservesToRemainder(reserves, remainderUsd, backing);
+      allocateReserveCollateral(reserves, remainderUsd, backing, {
+        excludeStablecoinSlices: true,
+      });
     } else {
       const fallback = backingFallback(backing);
       addCollateral(fallback.name, fallback.symbol, remainderUsd);
