@@ -60,9 +60,9 @@ function isFixedPegValidationContext(context: PriceValidationContext): boolean {
   return context.pegClass === "usd" || context.pegClass === "fiat_fx" || context.pegClass === "commodity";
 }
 
-function allowsSevereDownsidePublication(input: PublishablePriceInput): boolean {
+function hasSevereDownsidePublicationCorroboration(input: PublishablePriceInput): boolean {
   if (!isSevereFixedPegDownside(input.price, input.validationContext, input.validationReferences, FIXED_PEG_SEVERE_DOWNSIDE_RATIO)) {
-    return true;
+    return false;
   }
 
   if (isPricingSourceSoftGuardrailExempt(input.source)) {
@@ -98,6 +98,14 @@ function allowsSevereDownsidePublication(input: PublishablePriceInput): boolean 
   return false;
 }
 
+function allowsSevereDownsidePublication(input: PublishablePriceInput): boolean {
+  if (!isSevereFixedPegDownside(input.price, input.validationContext, input.validationReferences, FIXED_PEG_SEVERE_DOWNSIDE_RATIO)) {
+    return true;
+  }
+
+  return hasSevereDownsidePublicationCorroboration(input);
+}
+
 function shouldQuarantineTemporalJump(input: PublishablePriceInput): boolean {
   if (!isFixedPegValidationContext(input.validationContext)) return false;
   const previousTrustedPrice = input.previousTrustedPrice?.price;
@@ -114,6 +122,13 @@ function shouldQuarantineTemporalJump(input: PublishablePriceInput): boolean {
     (input.confidence === "high" || input.confidence === "single-source") &&
     hasDepegAuthoritativeSource(authoritativeSources);
   if (hasAuthoritativeAgreement || isPricingSourceSoftGuardrailExempt(input.source)) {
+    return false;
+  }
+
+  if (
+    isSevereFixedPegDownside(input.price, input.validationContext, input.validationReferences, FIXED_PEG_SEVERE_DOWNSIDE_RATIO) &&
+    hasSevereDownsidePublicationCorroboration(input)
+  ) {
     return false;
   }
 

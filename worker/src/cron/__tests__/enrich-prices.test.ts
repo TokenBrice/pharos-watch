@@ -2073,6 +2073,43 @@ describe("applyPoolChallenge", () => {
     expect(results.get("dusd-test")!.price).toBeCloseTo(0.81, 6);
   });
 
+  it("preserves corroborated severe downside even when multiple DEX protocols diverge upward", () => {
+    const results = new Map<string, PrimaryPriceResult>([
+      ["usr-resolv", {
+        price: 0.1525, source: "coingecko+defillama-list",
+        confidence: "single-source", dlPrice: 0.1524, cgPrice: 0.1525,
+        candidateSources: ["coingecko", "defillama-list", "pyth", "dex-promoted"],
+        agreeSources: ["coingecko", "defillama-list"],
+        allPrices: {
+          coingecko: 0.1525,
+          "defillama-list": 0.1524,
+          pyth: 0.151,
+          "dex-promoted": 1.0007,
+        },
+      }],
+    ]);
+    const pools = new Map([
+      ["usr-resolv", [
+        { price: 1.0007, tvlUsd: 1_460_000, protocol: "pancakeswap", chain: "bsc" },
+        { price: 0.9942, tvlUsd: 46_000, protocol: "uniswap-v2", chain: "bsc" },
+        { price: 0.3017, tvlUsd: 790_000, protocol: "uniswap-v4", chain: "ethereum" },
+      ]],
+    ]);
+    const pegTypes = new Map<string, string | undefined>([["usr-resolv", "peggedUSD"]]);
+    const stats: PriceValidationStats = { attempted: 1, high: 0, singleSource: 1, cgOnly: 0, low: 0 };
+
+    const downgrades = applyPoolChallenge(results, pools, pegTypes, stats);
+    const result = results.get("usr-resolv")!;
+
+    expect(downgrades).toBe(1);
+    expect(result.confidence).toBe("low");
+    expect(result.price).toBe(0.1525);
+    expect(result.source).toBe("coingecko+defillama-list");
+    expect(result.source).not.toBe("pool-tvl-weighted");
+    expect(stats.singleSource).toBe(0);
+    expect(stats.low).toBe(1);
+  });
+
   it("does NOT count a protocol as diverging when its protocol-level median still agrees", () => {
     const results = new Map<string, PrimaryPriceResult>([
       ["usr-test", {

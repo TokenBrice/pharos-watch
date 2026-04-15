@@ -46,7 +46,9 @@ export function PricingPipelineMethodologySection() {
           only when large DEX pools from at least two independent protocols diverge from soft consensus, with divergence
           evaluated from one TVL-weighted median per protocol so a single rogue pool cannot make an otherwise agreeing
           protocol count as corroborating disagreement, including
-          DEX-inclusive soft clusters unless an exempt hard source is present. Dead blocked DEX slugs such as Bunni are
+          DEX-inclusive soft clusters unless an exempt hard source is present. Corroborated severe downside from multiple
+          candidate sources including a depeg-authoritative source can be downgraded by pool challenge, but its price is
+          preserved and the same evidence satisfies the temporal-jump guard. Dead blocked DEX slugs such as Bunni are
           excluded upstream and never qualify as challenger or DEX-bridge inputs.
         </p>
 

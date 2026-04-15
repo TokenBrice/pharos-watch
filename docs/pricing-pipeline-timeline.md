@@ -1,6 +1,17 @@
 # Pricing Pipeline Methodology - Version Timeline
 
-Internal changelog reconstructed from the machine-readable methodology version source. Covers Pricing Pipeline `v1.0` through `v4.37` (2026-02-01 -> 2026-04-15).
+Internal changelog reconstructed from the machine-readable methodology version source. Covers Pricing Pipeline `v1.0` through `v4.38` (2026-02-01 -> 2026-04-15).
+
+---
+
+## v4.38 - Corroborated severe-depeg pool challenge protection (Apr 15, 2026)
+
+**Commit:** `unreleased`
+
+- Pool challenge still downgrades confidence when large DEX protocol groups disagree with a selected severe-depeg primary price
+- Pool challenge no longer replaces that selected price when at least two live candidate sources independently corroborate severe downside and at least one of them is depeg-authoritative
+- The same severe-downside candidate evidence satisfies the temporal-jump guard when the previous trusted price was near peg
+- This prevents near-peg or stale DEX liquidity from overwriting a USR-style severe depeg already confirmed by CoinGecko, DefiLlama-list, and Pyth
 
 ---
 

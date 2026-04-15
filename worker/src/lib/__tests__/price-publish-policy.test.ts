@@ -35,6 +35,30 @@ describe("validatePrimaryPriceCandidate — severe downside with directional cor
     expect(decision.accepted).toBe(true);
   });
 
+  it("accepts corroborated severe downside despite a large jump from previous trusted price", () => {
+    const decision = validatePrimaryPriceCandidate({
+      price: 0.1525,
+      source: "coingecko+defillama-list",
+      confidence: "low",
+      agreeSources: ["coingecko", "defillama-list"],
+      candidatePrices: {
+        coingecko: 0.1525,
+        "defillama-list": 0.1524,
+        pyth: 0.151,
+        "dex-promoted": 1.0007,
+      },
+      validationContext: USD_CONTEXT,
+      previousTrustedPrice: {
+        price: 1.0007,
+        source: "pyth",
+        confidence: "high",
+        observedAt: null,
+        agreeSources: ["pyth"],
+      },
+    });
+    expect(decision.accepted).toBe(true);
+  });
+
   it("rejects severe downside when only 1 candidate source is in severe downside", () => {
     const decision = validatePrimaryPriceCandidate({
       price: 0.45,

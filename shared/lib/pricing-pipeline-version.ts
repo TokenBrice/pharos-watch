@@ -3,9 +3,25 @@ import {
 } from "./methodology-version";
 
 const pricing = createMethodologyVersion({
-  currentVersion: "4.37",
+  currentVersion: "4.38",
   changelogPath: "/methodology/pricing-pipeline-changelog/",
   changelog: [
+    {
+      version: "4.38",
+      title: "Corroborated severe-depeg pool challenge protection",
+      date: "2026-04-15",
+      effectiveAt: 1776267900,
+      summary:
+        "Pool challenge and temporal-jump validation can still downgrade or scrutinize a selected severe-depeg primary price, but they no longer replace or reject that price when multiple live candidate sources corroborate severe downside and at least one is depeg-authoritative.",
+      impact: [
+        "Near-peg or stale DEX liquidity can no longer overwrite a severe depeg already corroborated by independent live candidates such as CoinGecko, DefiLlama-list, and Pyth",
+        "The same severe-downside candidate evidence satisfies the temporal-jump guard when the previous trusted price was near peg",
+        "The pool challenge remains active for weak or uncorroborated soft-source prices, and still replaces prices when independent DEX protocol medians are the only corroborating disagreement",
+        "USR now preserves the market price near the live CoinGecko/DefiLlama/Pyth severe-depeg level while marking the result low-confidence when DEX pools disagree",
+      ],
+      commits: [],
+      reconstructed: false,
+    },
     {
       version: "4.37",
       title: "Severe-depeg corroboration continuity through validation",

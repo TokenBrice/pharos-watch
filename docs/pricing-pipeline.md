@@ -21,7 +21,7 @@ When an asset still has no usable current price after validation and fallback re
 
 ## Versioning
 
-- **Current methodology version:** `v4.37`
+- **Current methodology version:** `v4.38`
 - **Canonical version module:** `shared/lib/pricing-pipeline-version.ts`
 - **Public changelog route:** `/methodology/pricing-pipeline-changelog/`
 - **Longform methodology section:** `/methodology/#pricing-pipeline-methodology`
@@ -105,6 +105,13 @@ After consensus, weak soft-source results where all relevant sources are **pool-
 
 1. Confidence is always downgraded to `low`.
 2. The price is **replaced** only when diverging protocol-level challenger prices span **≥2 independent protocols** — a single protocol's pools may share data-quality issues (vault-token counterparties, misconfigured pairs), and one rogue pool inside an otherwise agreeing protocol does not make that protocol count as corroborating disagreement. When replacement fires, Pharos first collapses each protocol to a TVL-weighted median price, then evaluates divergence and the final replacement from those protocol medians. When only one protocol diverges, the original price is preserved but confidence stays `low`.
+
+If the selected primary price is a severe fixed-peg downside and at least two live candidate sources independently
+corroborate that downside, including at least one depeg-authoritative source such as Pyth, pool challenge can still
+downgrade confidence but cannot replace the selected price with a DEX pool median. The same candidate corroboration
+also satisfies the temporal-jump guard when the previous trusted price was near peg. This keeps near-peg or stale DEX
+liquidity from erasing a corroborated severe depeg while preserving the normal challenge behavior for weak,
+uncorroborated soft-source prices.
 
 The DEX bridge and the pool challenge now deliberately read from different storage views:
 

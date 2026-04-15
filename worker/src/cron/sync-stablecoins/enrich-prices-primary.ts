@@ -6,6 +6,7 @@ import type { PriceValidationReferences } from "../../lib/price-validation";
 import {
   buildPriceValidationContext,
   getReferencePriceForContext,
+  isSevereFixedPegDownside,
 } from "../../lib/price-validation";
 import { USER_AGENT, CIRCUIT_SOURCE, DEX_FRESHNESS_SEC, POOL_CHALLENGE_MIN_TVL, getDepegThresholdBps } from "../../lib/constants";
 import { CG_TICKER_COINS, fetchCgTickerPricesDetailed } from "../../lib/cg-ticker";
@@ -111,6 +112,7 @@ async function applyPrimaryPostConsensusHardening(params: {
   results: Map<string, PrimaryPriceResult>;
   stats: PriceValidationStats;
   nowSec: number;
+  references?: PriceValidationReferences;
 }): Promise<void> {
   for (const result of params.results.values()) {
     if (
@@ -131,7 +133,13 @@ async function applyPrimaryPostConsensusHardening(params: {
     params.nowSec,
   );
   const assetPegTypes = new Map(params.candidates.map((a) => [a.id, a.pegType]));
-  const poolChallengeDowngrades = applyPoolChallenge(params.results, poolChallengers, assetPegTypes, params.stats);
+  const poolChallengeDowngrades = applyPoolChallenge(
+    params.results,
+    poolChallengers,
+    assetPegTypes,
+    params.stats,
+    params.references,
+  );
   if (poolChallengeDowngrades > 0) {
     console.log(`[primary-prices] Pool challenge hardened ${poolChallengeDowngrades} soft-only result(s)`);
   }
@@ -763,7 +771,7 @@ export async function fetchPrimaryPrices(
     stats,
   });
 
-  await applyPrimaryPostConsensusHardening({ db, candidates, results, stats, nowSec });
+  await applyPrimaryPostConsensusHardening({ db, candidates, results, stats, nowSec, references });
 
   if (dlListPrices) {
     const withDl = candidates.filter((a) => dlListPrices.has(a.id)).length;
@@ -789,6 +797,7 @@ export function applyPoolChallenge(
   poolChallengers: Map<string, Array<{ price: number; tvlUsd: number; protocol: string; chain: string; observedAt?: number }>>,
   assetPegTypes: Map<string, string | undefined>,
   stats: PriceValidationStats,
+  references?: PriceValidationReferences,
 ): number {
   let downgrades = 0;
   for (const [assetId, result] of results) {
@@ -813,6 +822,12 @@ export function applyPoolChallenge(
     const poolChallengeBps = pegType === "peggedUSD"
       ? 500
       : Math.min(getDepegThresholdBps(pegType) * 2, 500);
+    const preserveCorroboratedSevereDownside = hasCorroboratedSevereDownsideCandidate(
+      assetId,
+      result,
+      pegType,
+      references,
+    );
 
     // Evaluate divergence from one protocol-level price, not from any single pool.
     // A rogue pool inside an otherwise agreeing protocol should not count as
@@ -835,7 +850,7 @@ export function applyPoolChallenge(
       }
       downgrades++;
 
-      if (divergingProtocolGroups.length >= 2) {
+      if (divergingProtocolGroups.length >= 2 && !preserveCorroboratedSevereDownside) {
         const replacementPrice = computeWeightedMedianPrice(
           divergingProtocolGroups.map((group) => ({
             price: group.price,
@@ -862,6 +877,28 @@ export function applyPoolChallenge(
     }
   }
   return downgrades;
+}
+
+function hasCorroboratedSevereDownsideCandidate(
+  assetId: string,
+  result: PrimaryPriceResult,
+  pegType: string | undefined,
+  references?: PriceValidationReferences,
+): boolean {
+  const context = buildPriceValidationContext({ stablecoinId: assetId, pegType });
+  if (!isSevereFixedPegDownside(result.price, context, references)) {
+    return false;
+  }
+
+  const candidatePrices = result.allPrices ?? {};
+  const severeSources = Object.entries(candidatePrices)
+    .filter(([, price]) => isSevereFixedPegDownside(price, context, references))
+    .map(([source]) => source);
+  if (severeSources.length < 2) {
+    return false;
+  }
+
+  return severeSources.some((source) => getPricingSourceRegistryEntry(source)?.canBeDepegAuthoritative ?? false);
 }
 
 /**
