@@ -5,7 +5,9 @@ import {
   fetchJsonWithRetry,
   requireJsonInputFromConfig,
   reserveDegradedWarning,
+  SOURCE_TIMESTAMP_SPREAD_DEGRADE_SEC,
   slicesFromValues,
+  summarizeSourceTimestamps,
   verifiedFreshnessMetadata,
   unverifiedFreshnessMetadata,
 } from "./helpers";
@@ -104,6 +106,14 @@ export function listUnknownGroups(groups: SkyGroupResult[]): string[] {
   return groups.filter((g) => !KNOWN_GROUPS.has(g.group)).map((g) => g.group);
 }
 
+export function resolveSkyTimestampSummary(groups: SkyGroupResult[]) {
+  return summarizeSourceTimestamps(
+    groups
+      .filter((group) => parseDebt(group.debt) > 0)
+      .map((group) => group.datetime),
+  );
+}
+
 // ---------------------------------------------------------------------------
 // Adapter entry point
 // ---------------------------------------------------------------------------
@@ -135,14 +145,21 @@ export async function fetchSkyMakercoreReserves(
   const totalCollateralUsd = groups.reduce((sum, g) => sum + parseCollateral(g.collateral), 0);
   const immediateRedeemableUsd = resolveSkyImmediateRedeemableUsd(groups);
 
-  // Snapshot timestamp from the first result's datetime field
-  const datetimeStr = groups[0].datetime;
-  const snapshotEpoch = datetimeStr ? Math.floor(new Date(datetimeStr + "Z").getTime() / 1000) : 0;
+  const timestampSummary = resolveSkyTimestampSummary(groups);
 
   const unknown = listUnknownGroups(groups);
   const warnings: LiveReserveWarning[] = unknown.map((group) =>
     reserveDegradedWarning("unknown-asset", `Sky module bucketed into other: ${group}`),
   );
+  if (
+    timestampSummary
+    && timestampSummary.sourceTimestampSpreadSec > SOURCE_TIMESTAMP_SPREAD_DEGRADE_SEC
+  ) {
+    warnings.push(reserveDegradedWarning(
+      "source-timestamp-spread",
+      `Sky module source timestamps span ${timestampSummary.sourceTimestampSpreadSec}s`,
+    ));
+  }
 
   const totalDebt = groups.reduce((sum, g) => sum + parseDebt(g.debt), 0);
   const unknownDebt = groups.filter((g) => !KNOWN_GROUPS.has(g.group)).reduce((sum, g) => sum + parseDebt(g.debt), 0);
@@ -153,9 +170,14 @@ export async function fetchSkyMakercoreReserves(
       tokenCount: groups.length,
       totalCollateralUsd: Math.round(totalCollateralUsd),
       immediateRedeemableUsd,
-      snapshotDate: snapshotEpoch,
-      ...(snapshotEpoch > 0
-        ? verifiedFreshnessMetadata(snapshotEpoch)
+      ...(timestampSummary != null ? { snapshotDate: timestampSummary.sourceTimestamp } : {}),
+      ...(timestampSummary
+        ? {
+            ...verifiedFreshnessMetadata(timestampSummary.sourceTimestamp),
+            latestGroupTimestamp: timestampSummary.latestSourceTimestamp,
+            sourceTimestampSpreadSec: timestampSummary.sourceTimestampSpreadSec,
+            sourceTimestampCount: timestampSummary.timestampCount,
+          }
         : unverifiedFreshnessMetadata(
             "module-groups-api",
             "Sky groups payload did not expose a trustworthy snapshot timestamp",
@@ -164,8 +186,8 @@ export async function fetchSkyMakercoreReserves(
       redemption: {
         capacityUsd: immediateRedeemableUsd,
         capacityKind: "live-proxy-validated" as const,
-        freshnessKind: snapshotEpoch > 0 ? "verified-source-timestamp" as const : "unverified" as const,
-        ...(snapshotEpoch > 0 ? { sourceTimestamp: snapshotEpoch } : {}),
+        freshnessKind: timestampSummary != null ? "verified-source-timestamp" as const : "unverified" as const,
+        ...(timestampSummary != null ? { sourceTimestamp: timestampSummary.sourceTimestamp } : {}),
         routeStatus: "open" as const,
         holderEligibility: "any-holder",
         sourceUrls: [primaryInput.url],

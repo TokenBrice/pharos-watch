@@ -59,4 +59,26 @@ describe("adaptEthenaCollateral", () => {
 
     expect(listUnexpectedEthenaAssets(payload)).toEqual(["DOGE"]);
   });
+
+  it("uses the oldest material collateral timestamp as source freshness", () => {
+    const payload: EthenaCollateralResponse = {
+      totalBackingAssetsInUsd: 100,
+      collateral: [
+        { asset: "Liquid Cash", exchange: "Binance", timestamp: 1_000, usdAmount: 60 },
+        { asset: "BTC", exchange: "Binance", timestamp: 4_700, usdAmount: 40 },
+        { asset: "ETH", exchange: "Binance", timestamp: 100, usdAmount: 0 },
+      ],
+    };
+
+    const result = adaptEthenaCollateral(payload);
+
+    expect(result.metadata).toMatchObject({
+      sourceTimestamp: 1_000,
+      lastUpdatedAt: 4_700,
+      latestRowUpdatedAt: 4_700,
+      sourceTimestampSpreadSec: 3_700,
+      sourceTimestampCount: 2,
+    });
+    expect(result.warnings?.some((warning) => warning.code === "source-timestamp-spread")).toBe(true);
+  });
 });

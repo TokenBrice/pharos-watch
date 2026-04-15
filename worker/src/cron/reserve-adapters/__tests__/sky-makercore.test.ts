@@ -2,6 +2,7 @@ import { describe, it, expect } from "vitest";
 import {
   adaptSkyModules,
   listUnknownGroups,
+  resolveSkyTimestampSummary,
   resolveSkyImmediateRedeemableUsd,
   type SkyGroupResult,
 } from "../sky-makercore";
@@ -99,5 +100,22 @@ describe("listUnknownGroups", () => {
     const unknown = listUnknownGroups(groups);
     expect(unknown).toContain("mystery");
     expect(unknown).not.toContain("stablecoins");
+  });
+});
+
+describe("resolveSkyTimestampSummary", () => {
+  it("uses the oldest positive-debt group datetime as source timestamp", () => {
+    const summary = resolveSkyTimestampSummary([
+      { group: "stablecoins", group_name: "Stablecoins", debt: "100", collateral: "100", datetime: "2026-04-05T17:33:24" },
+      { group: "spark", group_name: "Spark", debt: "50", collateral: "50", datetime: "2026-04-05T18:33:24" },
+      { group: "legacy-rwa", group_name: "Legacy", debt: "0", collateral: "0", datetime: "2026-04-01T00:00:00" },
+    ]);
+
+    expect(summary).toMatchObject({
+      sourceTimestamp: Date.parse("2026-04-05T17:33:24") / 1000,
+      latestSourceTimestamp: Date.parse("2026-04-05T18:33:24") / 1000,
+      sourceTimestampSpreadSec: 3600,
+      timestampCount: 2,
+    });
   });
 });

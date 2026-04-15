@@ -33,6 +33,35 @@ export function notApplicableFreshnessMetadata(
       };
 }
 
+export const SOURCE_TIMESTAMP_SPREAD_DEGRADE_SEC = 60 * 60;
+
+export interface SourceTimestampSummary {
+  sourceTimestamp: number;
+  latestSourceTimestamp: number;
+  sourceTimestampSpreadSec: number;
+  timestampCount: number;
+}
+
+export function summarizeSourceTimestamps(values: readonly unknown[]): SourceTimestampSummary | null {
+  const timestamps = values
+    .map((value) => parseTimestampLikeToUnixSeconds(value))
+    .filter((value): value is number => value != null)
+    .sort((left, right) => left - right);
+
+  if (timestamps.length === 0) {
+    return null;
+  }
+
+  const sourceTimestamp = timestamps[0];
+  const latestSourceTimestamp = timestamps[timestamps.length - 1];
+  return {
+    sourceTimestamp,
+    latestSourceTimestamp,
+    sourceTimestampSpreadSec: latestSourceTimestamp - sourceTimestamp,
+    timestampCount: timestamps.length,
+  };
+}
+
 function normalizeUnixTimestampSeconds(value: number): number | null {
   if (!Number.isFinite(value) || value <= 0) return null;
   return Math.floor(value >= 1_000_000_000_000 ? value / 1000 : value);

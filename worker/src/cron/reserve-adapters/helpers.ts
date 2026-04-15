@@ -26,6 +26,8 @@ export {
 export {
   parseTimestampLikeToUnixSeconds,
   notApplicableFreshnessMetadata,
+  SOURCE_TIMESTAMP_SPREAD_DEGRADE_SEC,
+  summarizeSourceTimestamps,
   unverifiedFreshnessMetadata,
   verifiedFreshnessMetadata,
 } from "./freshness";

@@ -3,7 +3,9 @@ import type { LiveReservesConfig } from "@shared/types/live-reserves";
 import type { AdapterContext, AdapterResult } from "./types";
 import {
   fetchJsonPostWithRetry,
-  parseTimestampLikeToUnixSeconds,
+  reserveDegradedWarning,
+  SOURCE_TIMESTAMP_SPREAD_DEGRADE_SEC,
+  summarizeSourceTimestamps,
   requireJsonInputFromConfig,
   slicesFromValues,
   unverifiedFreshnessMetadata,
@@ -65,17 +67,15 @@ function scaleM0CashToReserveUnits(rawCash: number): number {
   return rawCash * M0_CASH_SCALE;
 }
 
-function getLatestM0SourceTimestamp(payload: M0GraphQlResponse): number | null {
+function getM0SourceTimestampSummary(payload: M0GraphQlResponse) {
   const candidates = [
     payload.data?.collateralUpdateds?.[0]?.timestamp,
     payload.data?.collateralUpdateds?.[0]?.blockTimestamp,
     payload.data?.minterGateway_latestUpdateTimestampSnapshots?.[0]?.value,
     payload.data?.minterGateway_latestUpdateTimestampSnapshots?.[0]?.timestamp,
-  ]
-    .map((value) => parseTimestampLikeToUnixSeconds(value))
-    .filter((value): value is number => value != null);
+  ];
 
-  return candidates.length > 0 ? Math.max(...candidates) : null;
+  return summarizeSourceTimestamps(candidates);
 }
 
 export function adaptM0Collateral(payload: M0GraphQlResponse): AdapterResult {
@@ -105,7 +105,17 @@ export function adaptM0Collateral(payload: M0GraphQlResponse): AdapterResult {
   // before composing the mix, and keep the applied scale explicit in metadata/tests.
   const cashValue = scaleM0CashToReserveUnits(current.totalCash);
   const normalizedReserveTotal = current.totalTreasuries + tokenCollateralTotal + cashValue;
-  const sourceTimestamp = getLatestM0SourceTimestamp(payload);
+  const timestampSummary = getM0SourceTimestampSummary(payload);
+  const warnings = [];
+  if (
+    timestampSummary
+    && timestampSummary.sourceTimestampSpreadSec > SOURCE_TIMESTAMP_SPREAD_DEGRADE_SEC
+  ) {
+    warnings.push(reserveDegradedWarning(
+      "source-timestamp-spread",
+      `M0 collateral timestamp candidates span ${timestampSummary.sourceTimestampSpreadSec}s`,
+    ));
+  }
   const slices = slicesFromValues([
     {
       name: "Eligible U.S. Treasuries",
@@ -136,16 +146,24 @@ export function adaptM0Collateral(payload: M0GraphQlResponse): AdapterResult {
 
   return {
     slices,
+    ...(warnings.length > 0 ? { warnings } : {}),
     metadata: {
-      ...(sourceTimestamp != null
-        ? verifiedFreshnessMetadata(sourceTimestamp)
+      ...(timestampSummary != null
+        ? verifiedFreshnessMetadata(timestampSummary.sourceTimestamp)
         : unverifiedFreshnessMetadata(
             "dashboard-graphql",
             "M0 CollateralCurrent does not expose a trustworthy upstream disclosure timestamp",
           )),
       cashScaleApplied: M0_CASH_SCALE,
       cashUnits: "milli-usd-to-micro-usd",
-      ...(sourceTimestamp != null ? { latestCollateralSourceTimestamp: sourceTimestamp } : {}),
+      ...(timestampSummary != null
+        ? {
+            earliestCollateralSourceTimestamp: timestampSummary.sourceTimestamp,
+            latestCollateralSourceTimestamp: timestampSummary.latestSourceTimestamp,
+            sourceTimestampSpreadSec: timestampSummary.sourceTimestampSpreadSec,
+            timestampCandidateCount: timestampSummary.timestampCount,
+          }
+        : {}),
       remainingTermDays: current.remainingTerm,
       totalCashScaled: cashValue,
       totalTokenCollateral: tokenCollateralTotal,

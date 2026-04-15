@@ -7,6 +7,8 @@ import {
   fetchJsonWithRetry,
   requireJsonInputFromConfig,
   reserveDegradedWarning,
+  SOURCE_TIMESTAMP_SPREAD_DEGRADE_SEC,
+  summarizeSourceTimestamps,
   unverifiedFreshnessMetadata,
   verifiedFreshnessMetadata,
 } from "./helpers";
@@ -110,13 +112,26 @@ export function adaptEthenaCollateral(payload: EthenaCollateralResponse): Adapte
   );
 
   const assetCount = new Set(payload.collateral.map((row) => row.asset)).size;
-  const lastUpdatedAt = payload.collateral.reduce(
-    (max, row) => (row.timestamp > max ? row.timestamp : max),
-    0,
+  const timestampSummary = summarizeSourceTimestamps(
+    payload.collateral
+      .filter((row) => Number.isFinite(row.usdAmount) && row.usdAmount > 0)
+      .map((row) => row.timestamp),
   );
+  const lastUpdatedAt = timestampSummary?.latestSourceTimestamp ?? 0;
+  const warnings: LiveReserveWarning[] = [];
+  if (
+    timestampSummary
+    && timestampSummary.sourceTimestampSpreadSec > SOURCE_TIMESTAMP_SPREAD_DEGRADE_SEC
+  ) {
+    warnings.push(reserveDegradedWarning(
+      "source-timestamp-spread",
+      `Ethena material collateral rows span ${timestampSummary.sourceTimestampSpreadSec}s of source timestamps`,
+    ));
+  }
 
   return {
     slices,
+    ...(warnings.length > 0 ? { warnings } : {}),
     metadata: {
       assetCount,
       computedTotalBackingAssetsInUsd,
@@ -126,8 +141,13 @@ export function adaptEthenaCollateral(payload: EthenaCollateralResponse): Adapte
         ? { immediateRedeemableRatio: stableBucketUsd / computedTotalBackingAssetsInUsd }
         : {}),
       lastUpdatedAt,
-      ...(lastUpdatedAt > 0
-        ? verifiedFreshnessMetadata(lastUpdatedAt)
+      ...(timestampSummary
+        ? {
+            ...verifiedFreshnessMetadata(timestampSummary.sourceTimestamp),
+            latestRowUpdatedAt: timestampSummary.latestSourceTimestamp,
+            sourceTimestampSpreadSec: timestampSummary.sourceTimestampSpreadSec,
+            sourceTimestampCount: timestampSummary.timestampCount,
+          }
         : unverifiedFreshnessMetadata(
             "issuer-api",
             "Ethena collateral rows did not expose a trustworthy source timestamp",
@@ -171,6 +191,8 @@ export async function fetchEthenaReserves(
 
   return {
     ...adapted,
-    ...(warnings.length > 0 ? { warnings } : {}),
+    ...((adapted.warnings?.length ?? 0) + warnings.length > 0
+      ? { warnings: [...(adapted.warnings ?? []), ...warnings] }
+      : {}),
   };
 }

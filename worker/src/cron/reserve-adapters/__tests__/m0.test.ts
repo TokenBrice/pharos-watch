@@ -46,7 +46,7 @@ describe("adaptM0Current", () => {
     expect(validateAdapterOutput(result, { adapter: getReserveAdapter("m0") ?? undefined }).valid).toBe(true);
   });
 
-  it("uses the latest collateral update timestamp when M0 exposes one", () => {
+  it("uses the oldest collateral update timestamp when M0 exposes multiple candidates", () => {
     const result = adaptM0Collateral({
       data: {
         ...SAMPLE_PAYLOAD.data,
@@ -67,8 +67,32 @@ describe("adaptM0Current", () => {
 
     expect(result.metadata).toMatchObject({
       freshnessMode: "verified",
-      sourceTimestamp: 1776232835,
+      sourceTimestamp: 1776232804,
+      earliestCollateralSourceTimestamp: 1776232804,
       latestCollateralSourceTimestamp: 1776232835,
+      sourceTimestampSpreadSec: 31,
+      timestampCandidateCount: 4,
+    });
+  });
+
+  it("degrades when M0 timestamp candidates diverge materially", () => {
+    const result = adaptM0Collateral({
+      data: {
+        ...SAMPLE_PAYLOAD.data,
+        collateralUpdateds: [
+          {
+            timestamp: "1776225600",
+            blockTimestamp: "1776232835",
+          },
+        ],
+      },
+    });
+
+    expect(result.warnings?.some((warning) => warning.code === "source-timestamp-spread")).toBe(true);
+    expect(result.metadata).toMatchObject({
+      sourceTimestamp: 1776225600,
+      latestCollateralSourceTimestamp: 1776232835,
+      sourceTimestampSpreadSec: 7235,
     });
   });
 });
