@@ -229,6 +229,13 @@ describe("adaptAccountableTypeBreakdown", () => {
       unknownBucketCount: 1,
       unknownBucketNames: ["New Bucket"],
       unknownExposurePct: 30,
+      redemption: {
+        capacityUsd: 70,
+        capacityKind: "live-proxy-validated",
+        freshnessKind: "verified-source-timestamp",
+        sourceTimestamp: Date.UTC(2026, 2, 20) / 1000,
+        routeStatus: "unknown",
+      },
     });
     expect(result.warnings?.[0]).toMatchObject({
       code: "unmapped-bucket",
