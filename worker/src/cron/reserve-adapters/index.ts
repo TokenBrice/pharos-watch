@@ -32,12 +32,15 @@ import { fetchMentoReserves } from "./mento";
 import { fetchOpenEdenUsdoReserves } from "./openeden";
 import { fetchReMetricsReserves } from "./re-metrics";
 import { fetchReservoirReserves } from "./reservoir";
+import { fetchRiverProtocolInfoReserves } from "./river-protocol-info";
 import { fetchErc4626SingleAssetReserves } from "./erc4626-single-asset";
 import { fetchSgForgeCoinvertibleReserves } from "./sgforge-coinvertible";
 import { fetchSingleAssetReserves } from "./single-asset";
 import { fetchSkyMakercoreReserves } from "./sky-makercore";
+import { fetchSolsticeAttestationReserves } from "./solstice-attestation";
 import { fetchSuperstateLiquidityReserves } from "./superstate-liquidity";
 import { fetchTetherReserves } from "./tether";
+import { fetchUsdgoTransparencyReserves } from "./usdgo-transparency";
 import { fetchUsdAiProofOfReserves } from "./usdai-proof-of-reserves";
 import { fetchUsd1BundleOracleReserves } from "./usd1-bundle-oracle";
 import { fetchUsddDataPlatformReserves } from "./usdd-data-platform";
@@ -78,11 +81,14 @@ const ADAPTER_FNS: Record<LiveReserveAdapterKey, AdapterFn> = {
   "openeden-usdo": fetchOpenEdenUsdoReserves,
   "re-metrics": fetchReMetricsReserves,
   reservoir: fetchReservoirReserves,
+  "river-protocol-info": fetchRiverProtocolInfoReserves,
   "sgforge-coinvertible": fetchSgForgeCoinvertibleReserves,
+  "solstice-attestation": fetchSolsticeAttestationReserves,
   "single-asset": fetchSingleAssetReserves,
   "sky-makercore": fetchSkyMakercoreReserves,
   "superstate-liquidity": fetchSuperstateLiquidityReserves,
   tether: fetchTetherReserves,
+  "usdgo-transparency": fetchUsdgoTransparencyReserves,
   "usdai-proof-of-reserves": fetchUsdAiProofOfReserves,
   "usd1-bundle-oracle": fetchUsd1BundleOracleReserves,
   "usdd-data-platform": fetchUsddDataPlatformReserves,

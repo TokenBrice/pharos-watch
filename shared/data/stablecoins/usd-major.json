@@ -3615,7 +3615,23 @@
         "coinId": "usdt-tether",
         "depType": "wrapper"
       }
-    ]
+    ],
+    "liveReservesConfig": {
+      "adapter": "solstice-attestation",
+      "version": 1,
+      "semantics": "protocol-reserve",
+      "breakerScope": "usx-solstice",
+      "display": {
+        "url": "https://attestation.solstice.finance/",
+        "label": "Solstice Attestation"
+      },
+      "inputs": {
+        "primary": {
+          "kind": "http-json",
+          "url": "https://attestation-api.solstice.finance/dashboard"
+        }
+      }
+    }
   },
   {
     "id": "usda-avalon",

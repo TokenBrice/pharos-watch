@@ -796,19 +796,18 @@
       }
     ],
     "liveReservesConfig": {
-      "adapter": "curated-validated",
+      "adapter": "river-protocol-info",
       "version": 1,
-      "semantics": "collateral-mix",
+      "semantics": "protocol-reserve",
       "breakerScope": "satusd-river",
       "display": {
         "url": "https://river.inc/",
-        "label": "River Dashboard"
+        "label": "River Protocol Info"
       },
       "inputs": {
         "primary": {
-          "kind": "onchain-evm",
-          "chain": "ethereum",
-          "rpcMode": "public-rpc"
+          "kind": "http-json",
+          "url": "https://api-v2.satoshiprotocol.org/protocol-info"
         }
       }
     }
@@ -6263,7 +6262,23 @@
         "pct": 20,
         "risk": "very-low"
       }
-    ]
+    ],
+    "liveReservesConfig": {
+      "adapter": "usdgo-transparency",
+      "version": 1,
+      "semantics": "attestation-mix",
+      "breakerScope": "usdgo-osl",
+      "display": {
+        "url": "https://www.usdgo.com/transparency",
+        "label": "USDGO Transparency"
+      },
+      "inputs": {
+        "primary": {
+          "kind": "http-json",
+          "url": "https://www.usdgo.com/api/lark-bitable"
+        }
+      }
+    }
   },
   {
     "id": "msusd-main-street",
