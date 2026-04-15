@@ -566,10 +566,10 @@ Freeze, blacklist, block/unblock, account-pause, and token-destruction events cu
   "events": [BlacklistEvent, ...],
   "total": 13422,
   "methodology": {
-    "version": "3.6",
-    "versionLabel": "v3.6",
-    "currentVersion": "3.6",
-    "currentVersionLabel": "v3.6",
+    "version": "3.9",
+    "versionLabel": "v3.9",
+    "currentVersion": "3.9",
+    "currentVersionLabel": "v3.9",
     "changelogPath": "/methodology/blacklist-tracker-changelog/",
     "asOf": 1772606400,
     "isCurrent": true
@@ -655,10 +655,10 @@ Server-side aggregates for the Blacklist Tracker overview cards, chart, and filt
   ],
   "totalEvents": 13422,
   "methodology": {
-    "version": "3.6",
-    "versionLabel": "v3.6",
-    "currentVersion": "3.6",
-    "currentVersionLabel": "v3.6",
+    "version": "3.9",
+    "versionLabel": "v3.9",
+    "currentVersion": "3.9",
+    "currentVersionLabel": "v3.9",
     "changelogPath": "/methodology/blacklist-tracker-changelog/",
     "asOf": 1772606400,
     "isCurrent": true
@@ -690,10 +690,10 @@ Peg deviation events (≥ 100 bps for USD-pegged, ≥ 150 bps for non-USD pegs).
   "events": [DepegEvent, ...],
   "total": 4080,
   "methodology": {
-    "version": "4.9",
-    "versionLabel": "v4.9",
-    "currentVersion": "4.9",
-    "currentVersionLabel": "v4.9",
+    "version": "5.93",
+    "versionLabel": "v5.93",
+    "currentVersion": "5.93",
+    "currentVersionLabel": "v5.93",
     "changelogPath": "/methodology/depeg-changelog/",
     "asOf": 1772606400,
     "isCurrent": true
@@ -726,7 +726,7 @@ Results are ordered by `startedAt` descending (most recent first).
 | Field                 | Type      | Description                                                             |
 | --------------------- | --------- | ----------------------------------------------------------------------- |
 | `version`             | `string`  | Methodology version attributed from the latest returned event timestamp |
-| `versionLabel`        | `string`  | Display label (e.g. `"v4.9"`)                                           |
+| `versionLabel`        | `string`  | Display label (e.g. `"v5.93"`)                                          |
 | `currentVersion`      | `string`  | Latest methodology version                                              |
 | `currentVersionLabel` | `string`  | Display label for latest methodology version                            |
 | `changelogPath`       | `string`  | Relative URL to the methodology changelog page                          |
@@ -748,10 +748,10 @@ Composite peg scores and aggregate statistics for tracked stablecoins. Scores ar
   "coins": [PegSummaryCoin, ...],
   "summary": PegSummaryStats,
   "methodology": {
-    "version": "4.9",
-    "versionLabel": "v4.9",
-    "currentVersion": "4.9",
-    "currentVersionLabel": "v4.9",
+    "version": "5.93",
+    "versionLabel": "v5.93",
+    "currentVersion": "5.93",
+    "currentVersionLabel": "v5.93",
     "changelogPath": "/methodology/depeg-changelog/",
     "asOf": 1772606400,
     "isCurrent": true
@@ -1596,11 +1596,11 @@ Rows written by the current worker are grouped by a completed snapshot run manif
       "feeModelKind": "undisclosed-reviewed",
       "modelConfidence": "low",
       "updatedAt": 1773350400,
-      "methodologyVersion": "3.96"
+      "methodologyVersion": "3.97"
     }
   },
   "methodology": {
-    "version": "3.96",
+    "version": "3.97",
     "componentWeights": {
       "access": 0.2,
       "settlement": 0.15,
@@ -1854,8 +1854,8 @@ Historical yield data for a single stablecoin. If a stored `warning_signals` pay
   },
   "history": [YieldHistoryPoint, "..."],
   "methodology": {
-    "version": "5.5",
-    "currentVersion": "5.5",
+    "version": "7.4",
+    "currentVersion": "7.4",
     "changelogPath": "/methodology/yield-changelog/"
   }
 }

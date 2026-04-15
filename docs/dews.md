@@ -187,7 +187,7 @@ When a coin has insufficient data in a cycle (`computeDEWS() === null`), that ru
 ```json
 {
   "signals": {
-    "usdt-tether": { "score": 5, "band": "CALM", "signals": { ... }, "computedAt": 1740000000, "methodologyVersion": "5.91" },
+    "usdt-tether": { "score": 5, "band": "CALM", "signals": { ... }, "computedAt": 1740000000, "methodologyVersion": "5.93" },
     ...
   },
   "updatedAt": 1740000000,
@@ -205,9 +205,9 @@ Unknown IDs and tracked-but-non-active IDs both return `404` (`Stablecoin not tr
 
 ```json
 {
-  "current": { "score": 5, "band": "CALM", "signals": { ... }, "computedAt": 1740000000, "methodologyVersion": "5.91" },
+  "current": { "score": 5, "band": "CALM", "signals": { ... }, "computedAt": 1740000000, "methodologyVersion": "5.93" },
   "history": [
-    { "date": 1739900000, "score": 3, "band": "CALM", "signals": { ... }, "methodologyVersion": "5.91" },
+    { "date": 1739900000, "score": 3, "band": "CALM", "signals": { ... }, "methodologyVersion": "5.93" },
     ...
   ],
   "malformedRows": 0,

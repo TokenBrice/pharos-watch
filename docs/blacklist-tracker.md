@@ -684,10 +684,10 @@ The handler now exposes only unsuppressed rows for the live-supported symbols: U
   ],
   "total": 12345,
   "methodology": {
-    "version": "3.6",
-    "versionLabel": "v3.6",
-    "currentVersion": "3.6",
-    "currentVersionLabel": "v3.6",
+    "version": "3.9",
+    "versionLabel": "v3.9",
+    "currentVersion": "3.9",
+    "currentVersionLabel": "v3.9",
     "changelogPath": "/methodology/blacklist-tracker-changelog/",
     "asOf": 1704067200,
     "isCurrent": true
