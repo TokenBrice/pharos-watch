@@ -6,6 +6,7 @@ import { decodeFunctionResult, encodeFunctionData, parseAbi } from "viem/utils";
 import { fetchEvmCallHexAtBlock } from "../../lib/evm-rpc";
 import { getPublicRpcUrl, getSecondaryFallbackRpcUrl } from "../../lib/public-rpc-registry";
 import type { AdapterContext, AdapterResult } from "./types";
+import { runAdapterIo } from "./concurrency";
 import {
   fetchDefiLlamaPrices,
   fetchJsonWithRetry,
@@ -100,13 +101,14 @@ async function readEthereumContract(
     functionName,
     args,
   });
-  const raw = await fetchEvmCallHexAtBlock(ETHEREUM_CHAIN, address, data, "latest", {
-    signal,
-    timeoutMs: 12_000,
-    chainRpcs: ctx?.chainRpcs,
-    extraRpcUrls: ETHEREUM_RPC_URLS,
-    ...(gas ? { gas } : {}),
-  });
+  const raw = await runAdapterIo(ctx, `crvusd-evm-call:${address}:${functionName}`, () =>
+    fetchEvmCallHexAtBlock(ETHEREUM_CHAIN, address, data, "latest", {
+      signal,
+      timeoutMs: 12_000,
+      chainRpcs: ctx?.chainRpcs,
+      extraRpcUrls: ETHEREUM_RPC_URLS,
+      ...(gas ? { gas } : {}),
+    }));
   if (!raw) {
     throw new Error(`crvUSD Yield Basis read failed for ${functionName} on ${address}`);
   }

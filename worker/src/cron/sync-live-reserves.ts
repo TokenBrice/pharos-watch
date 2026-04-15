@@ -17,6 +17,7 @@ import {
   type ConfiguredCoin,
   type LiveReserveConfig,
 } from "./sync-live-reserves-shared";
+import { createAdapterIoLimiter } from "./reserve-adapters/concurrency";
 
 const ADAPTER_TIMEOUT_MS = 20_000;
 
@@ -103,8 +104,11 @@ async function runAdapterAttempt(
   adapterCtx?: AdapterContext,
 ): Promise<AdapterResult> {
   const { signal: attemptSignal, cleanup } = createAbortableAttemptSignal(signal, ADAPTER_TIMEOUT_MS);
+  const attemptCtx: AdapterContext | undefined = adapterCtx
+    ? { ...adapterCtx, ioLimiter: createAdapterIoLimiter() }
+    : { ioLimiter: createAdapterIoLimiter() };
   try {
-    return await adapter.fetch(coin, config, attemptSignal, adapterCtx);
+    return await adapter.fetch(coin, config, attemptSignal, attemptCtx);
   } finally {
     cleanup();
   }

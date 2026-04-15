@@ -1,9 +1,9 @@
 /**
  * Hourly reserve-sync trigger (11 * * * *):
- *   sync-live-reserves (1) → sync-redemption-backstops (0) → sync-kinesis-supply (1) → collateral drift check (0)
+ *   sync-live-reserves (2) → sync-redemption-backstops (0) → sync-kinesis-supply (1) → collateral drift check (0)
  *
  * Reserve adapters run sequentially; backstops are DB-only.
- * Connection budget: 1/6 peak
+ * Connection budget: 2/6 peak during reserve adapter I/O
  */
 import { syncLiveReserves } from "../../cron/sync-live-reserves";
 import { syncRedemptionBackstops } from "../../cron/sync-redemption-backstops";

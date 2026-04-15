@@ -3,6 +3,7 @@ import { cancelResponseBodyQuietly } from "../../lib/response-body";
 import type { LiveReservesConfig } from "@shared/types/live-reserves";
 import { requireHtmlInput } from "./input-guards";
 import type { AdapterContext } from "./types";
+import { runAdapterIo } from "./concurrency";
 
 const ADAPTER_USER_AGENT = "Mozilla/5.0";
 
@@ -59,7 +60,7 @@ export async function fetchJsonWithRetry<T>(
 ): Promise<T> {
   return getCachedRequest(
     `json-get:${url}:${timeoutMs}:${JSON.stringify(options?.headers ?? null)}`,
-    async () => {
+    async () => runAdapterIo(ctx, `json-get:${url}`, async () => {
       const res = await fetchWithRetry(
         url,
         {
@@ -86,7 +87,7 @@ export async function fetchJsonWithRetry<T>(
       } catch (error) {
         throw buildJsonParseError(url, res, raw, error);
       }
-    },
+    }),
     ctx,
   );
 }
@@ -102,7 +103,7 @@ export async function fetchJsonPostWithRetry<T>(
   const serializedBody = JSON.stringify(body);
   return getCachedRequest(
     `json-post:${url}:${timeoutMs}:${serializedBody}:${JSON.stringify(options?.headers ?? null)}`,
-    async () => {
+    async () => runAdapterIo(ctx, `json-post:${url}`, async () => {
       const res = await fetchWithRetry(
         url,
         {
@@ -126,7 +127,7 @@ export async function fetchJsonPostWithRetry<T>(
         throw new Error(`HTTP ${res.status} for POST ${url}`);
       }
       return res.json() as Promise<T>;
-    },
+    }),
     ctx,
   );
 }
@@ -139,7 +140,7 @@ export async function fetchTextWithRetry(
 ): Promise<string> {
   return getCachedRequest(
     `text-get:${url}:${timeoutMs}`,
-    async () => {
+    async () => runAdapterIo(ctx, `text-get:${url}`, async () => {
       const res = await fetchWithRetry(
         url,
         {
@@ -157,7 +158,7 @@ export async function fetchTextWithRetry(
         throw new Error(`HTTP ${res.status} for ${url}`);
       }
       return res.text();
-    },
+    }),
     ctx,
   );
 }

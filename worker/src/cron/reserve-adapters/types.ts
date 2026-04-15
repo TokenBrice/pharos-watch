@@ -10,6 +10,7 @@ import type {
   LiveReservesConfig,
 } from "@shared/types/live-reserves";
 import type { ChainRpcConfig } from "../../lib/chain-registry";
+import type { AdapterIoLimiter } from "./concurrency";
 
 /** Context passed from the cron to adapters that need worker infrastructure. */
 export interface AdapterContext {
@@ -18,6 +19,7 @@ export interface AdapterContext {
   chainRpcs?: Map<string, ChainRpcConfig>;
   nowSec?: number;
   requestCache?: Map<string, Promise<unknown>>;
+  ioLimiter?: AdapterIoLimiter;
 }
 
 export interface AdapterResult {

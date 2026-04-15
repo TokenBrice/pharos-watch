@@ -3,6 +3,7 @@ import { fetchWithRetry } from "../../lib/fetch-retry";
 import { cancelResponseBodyQuietly } from "../../lib/response-body";
 import { getCachedRequest } from "./request";
 import type { AdapterContext } from "./types";
+import { runAdapterIo } from "./concurrency";
 
 const DEFILLAMA_PRICE_CHAIN_ALIASES: Record<string, string> = {
   hyperevm: "hyperliquid",
@@ -23,7 +24,7 @@ export async function fetchDefiLlamaPrices(
   const assetKeys = assets.map(({ chain, address }) => getDefiLlamaPriceAssetKey(chain, address));
   return getCachedRequest(
     `defillama-prices:${assetKeys.join(",")}`,
-    async () => {
+    async () => runAdapterIo(ctx, `defillama-prices:${assetKeys.length}`, async () => {
       const res = await fetchWithRetry(
         `${DEFILLAMA_COINS}/prices/current/${assetKeys.join(",")}`,
         { signal },
@@ -52,7 +53,7 @@ export async function fetchDefiLlamaPrices(
       }
 
       return priceMap;
-    },
+    }),
     ctx,
   );
 }

@@ -335,7 +335,7 @@ const CRON_JOB_DEFINITIONS_BASE: readonly CronJobDefinition[] = [
     intervalSec: 3600,
     scheduleKey: "hourlyReserveSync",
     triggerMode: "shared",
-    maxConnections: 1, // Sequential per-adapter reserve fetches
+    maxConnections: 2, // Sequential per-coin loop with per-adapter I/O limited to 2
   },
   {
     job: "sync-redemption-backstops",
