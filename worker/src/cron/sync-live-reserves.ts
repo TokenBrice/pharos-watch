@@ -104,12 +104,8 @@ async function runAdapterAttempt(
   adapterCtx?: AdapterContext,
 ): Promise<AdapterResult> {
   const { signal: attemptSignal, cleanup } = createAbortableAttemptSignal(signal, ADAPTER_TIMEOUT_MS);
-  const ioLimiter = createAdapterIoLimiter(RESERVE_ADAPTER_MAX_PARALLEL_IO);
-  const attemptCtx: AdapterContext | undefined = adapterCtx
-    ? { ...adapterCtx, ioLimiter }
-    : { ioLimiter };
   try {
-    return await adapter.fetch(coin, config, attemptSignal, attemptCtx);
+    return await adapter.fetch(coin, config, attemptSignal, Object.assign({}, adapterCtx, { ioLimiter: createAdapterIoLimiter(RESERVE_ADAPTER_MAX_PARALLEL_IO) }));
   } finally {
     cleanup();
   }
