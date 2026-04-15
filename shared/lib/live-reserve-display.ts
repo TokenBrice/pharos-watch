@@ -31,6 +31,7 @@ const ADAPTER_DISPLAY_BADGE_KINDS: Record<LiveReserveAdapterKey, ReserveDisplayB
   infinifi: "live",
   lista: "live",
   "liquity-v1": "live",
+  "liquity-v2-branches": "live",
   m0: "live",
   mento: "live",
   "openeden-usdo": "live",

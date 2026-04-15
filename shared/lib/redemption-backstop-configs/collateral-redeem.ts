@@ -46,7 +46,8 @@ export const COLLATERAL_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackst
   },
   "feusd-felix": {
     ...collateralRedeemBase,
-    ...reviewedDirectRedemptionSupplyFull,
+    capacityModel: { kind: "reserve-sync-metadata" },
+    reviewedAt: REVIEWED_DIRECT_REDEMPTION_AT,
     costModel: fixedFee(0, "Felix docs describe redemption as fee-free"),
   },
   "meusd-mezo": {
@@ -79,13 +80,15 @@ export const COLLATERAL_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackst
   },
   "usnd-nerite": {
     ...collateralRedeemBase,
-    ...reviewedDirectRedemptionSupplyFull,
+    capacityModel: { kind: "reserve-sync-metadata" },
+    reviewedAt: REVIEWED_DIRECT_REDEMPTION_AT,
     outputAssetType: "mixed-collateral",
     costModel: documentedVariableFee(LIQUITY_STYLE_REDEMPTION_FEE, "formula"),
   },
   "usdq-quill": {
     ...collateralRedeemBase,
-    ...reviewedDirectRedemptionSupplyFull,
+    capacityModel: { kind: "reserve-sync-metadata" },
+    reviewedAt: REVIEWED_DIRECT_REDEMPTION_AT,
     outputAssetType: "mixed-collateral",
     costModel: documentedVariableFee(LIQUITY_STYLE_REDEMPTION_FEE, "formula"),
   },

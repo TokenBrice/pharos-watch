@@ -27,6 +27,7 @@ export const LIVE_RESERVE_ADAPTER_KEYS = [
   "infinifi",
   "lista",
   "liquity-v1",
+  "liquity-v2-branches",
   "m0",
   "mento",
   "openeden-usdo",

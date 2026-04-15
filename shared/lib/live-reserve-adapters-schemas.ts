@@ -177,6 +177,12 @@ const evmBranchBalancesParamsSchema = z.object({
   redemptionRateProbe: redemptionRateProbeSchema.optional(),
 }).strict();
 
+const liquityV2BranchesParamsSchema = evmBranchBalancesParamsSchema.extend({
+  debtSelector: z.string().regex(/^0x[0-9a-fA-F]{8}$/).optional(),
+  debtDecimals: z.number().int().nonnegative().optional(),
+  shutdownSelector: z.string().regex(/^0x[0-9a-fA-F]{8}$/).optional(),
+}).strict();
+
 const ghoGsmModuleSchema = z.object({
   address: z.string(),
   label: z.string(),
@@ -270,6 +276,7 @@ export const adapterParamsSchemas = {
   infinifi: noParamsSchema,
   lista: evmBranchBalancesParamsSchema,
   "liquity-v1": liquityV1ParamsSchema,
+  "liquity-v2-branches": liquityV2BranchesParamsSchema,
   m0: noParamsSchema,
   mento: noParamsSchema,
   "openeden-usdo": noParamsSchema,

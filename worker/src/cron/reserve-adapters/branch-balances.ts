@@ -12,7 +12,7 @@ import {
   valueUsdFromBigIntPrice,
 } from "./helpers";
 
-export type BranchBalanceAdapterKey = Extract<LiveReserveAdapterKey, "evm-branch-balances" | "lista">;
+export type BranchBalanceAdapterKey = Extract<LiveReserveAdapterKey, "evm-branch-balances" | "liquity-v2-branches" | "lista">;
 
 export interface BranchConfig {
   name: string;
@@ -151,4 +151,3 @@ export function adaptBranchBalanceReserves(input: AdaptBranchBalanceInput): Adap
     },
   };
 }
-
