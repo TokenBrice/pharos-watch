@@ -54,8 +54,8 @@ export function adaptChainlinkPorResponse(
   }
 
   const totalReserveUsd = decimalNumberFromBigInt(data.reserves, data.decimals);
-  const supplyUsd = supply ? decimalNumberFromBigInt(supply.raw, supply.decimals) : null;
-  const collateralizationRatio = supplyUsd != null && supplyUsd > 0 ? totalReserveUsd / supplyUsd : null;
+  const supplyUsd = supply ? decimalNumberFromBigInt(supply.raw, supply.decimals) : undefined;
+  const collateralizationRatio = supplyUsd != null && supplyUsd > 0 ? totalReserveUsd / supplyUsd : undefined;
   const warnings = collateralizationRatio != null && collateralizationRatio < 0.995
     ? [reserveDegradedWarning(
         "por-reserve-under-supply",

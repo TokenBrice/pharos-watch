@@ -271,7 +271,7 @@ describe("tracked stablecoin metadata", () => {
       .flatMap((coin) => {
         const config = coin.liveReservesConfig!;
         const parsed = LiveReservesConfigSchema.safeParse(config);
-        const allowedKinds = LIVE_RESERVE_ADAPTER_PRIMARY_INPUT_KINDS[config.adapter];
+        const allowedKinds = LIVE_RESERVE_ADAPTER_PRIMARY_INPUT_KINDS[config.adapter] as readonly string[];
         const invalidKinds = [
           config.inputs.primary.kind,
           ...(config.inputs.fallbacks ?? []).map((fallback) => fallback.kind),
