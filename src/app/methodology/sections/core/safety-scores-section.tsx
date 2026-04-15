@@ -271,7 +271,7 @@ export function SafetyScoresMethodologySection() {
                         </tr>
                         <tr className="hover:bg-muted/40 transition-colors">
                           <td className="py-2 pr-4 text-foreground">Custody Model</td>
-                          <td className="py-2 pr-4">Who holds the collateral?</td>
+                          <td className="py-2 pr-4">Who controls the economic backing?</td>
                           <td className="py-2">
                             Fully&nbsp;on&#8209;chain&nbsp;(100), Top&#8209;tier&nbsp;custodian&nbsp;(80),
                             Regulated&nbsp;custodian&nbsp;(55), Unregulated&nbsp;custodian&nbsp;(30),
@@ -281,6 +281,10 @@ export function SafetyScoresMethodologySection() {
                       </tbody>
                     </table>
                   </div>
+                  <p>
+                    Tokenized RWA collateral is scored by the ultimate reserve or legal custody layer, not only by the
+                    smart-contract location of a wrapper token.
+                  </p>
                   <CollateralQualityMethodologyCopy />
                 </div>
 

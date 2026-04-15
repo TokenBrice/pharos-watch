@@ -67,9 +67,11 @@ Current-version note: v6.97 keeps the stronger peg treatment introduced in v6.93
 | Sub-factor             | Scoring                                    | Tiers                                                                                                                                                         |
 | ---------------------- | ------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | **Collateral Quality** | Reserve-derived weighted score (see below) | 0–100 from curated reserve compositions, or enum fallback                                                                                                     |
-| **Custody Model**      | Who holds collateral?                      | Fully on-chain (100), Top-tier custodian (80), Regulated custodian (55), Unregulated custodian (30), Sanctioned custodian (5), CEX / off-exchange custody (0) |
+| **Custody Model**      | Who controls the economic backing?         | Fully on-chain (100), Top-tier custodian (80), Regulated custodian (55), Unregulated custodian (30), Sanctioned custodian (5), CEX / off-exchange custody (0) |
 
 **Formula:** `resilience = (collateral + custody) / 2`
+
+For tokenized RWA collateral, the custody model follows the ultimate reserve/legal custody layer rather than only the smart-contract location of the wrapper token.
 
 #### Blacklist Capability Tiers
 
