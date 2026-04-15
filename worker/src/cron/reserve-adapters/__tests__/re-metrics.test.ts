@@ -26,6 +26,14 @@ describe("adaptReMetrics", () => {
       offchainCapitalUsd: 73740021.94399603,
       sourceTimestamp: Date.UTC(2026, 2, 24) / 1000,
       freshnessMode: "verified",
+      immediateRedeemableUsd: expect.any(Number),
+      redemption: {
+        capacityUsd: expect.any(Number),
+        capacityKind: "live-queue",
+        freshnessKind: "verified-source-timestamp",
+        sourceTimestamp: Date.UTC(2026, 2, 24) / 1000,
+        routeStatus: "open",
+      },
     });
   });
 
