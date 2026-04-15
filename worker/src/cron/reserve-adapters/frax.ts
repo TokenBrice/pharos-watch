@@ -112,6 +112,11 @@ export function adaptFraxBalanceSheet(payload: FraxBalanceSheetResponse): Adapte
 
   const total = [...bySymbol.values()].reduce((a, b) => a + b, 0);
   if (total <= 0) throw new Error("Frax balance-sheet total asset value is zero");
+  const stableRedeemableUsd = ["USDC", "USDS", "PYUSD", "DAI", "FRAX"]
+    .reduce((sum, symbol) => sum + (bySymbol.get(symbol) ?? 0), 0);
+  const sourceTimestamp = payload.asOfTimestamp
+    ? Math.floor(new Date(payload.asOfTimestamp).getTime() / 1000)
+    : null;
 
   const slices: ReserveSlice[] = [];
   const unknownSymbols: string[] = [];
@@ -151,12 +156,23 @@ export function adaptFraxBalanceSheet(payload: FraxBalanceSheetResponse): Adapte
     metadata: {
       totalCollateralUsd: total,
       assetCount: bySymbol.size,
-      ...(payload.asOfTimestamp
-        ? { sourceTimestamp: Math.floor(new Date(payload.asOfTimestamp).getTime() / 1000), freshnessMode: "verified" as const }
+      ...(sourceTimestamp != null
+        ? { sourceTimestamp, freshnessMode: "verified" as const }
         : unverifiedFreshnessMetadata(
             "frax-balance-sheet-api",
             "Frax balance-sheet response did not include asOfTimestamp",
           )),
+      immediateRedeemableUsd: stableRedeemableUsd,
+      ...(total > 0 ? { immediateRedeemableRatio: stableRedeemableUsd / total } : {}),
+      redemption: {
+        capacityUsd: stableRedeemableUsd,
+        ...(total > 0 ? { capacityRatioOfSupply: stableRedeemableUsd / total } : {}),
+        capacityKind: "live-proxy-validated" as const,
+        freshnessKind: sourceTimestamp != null ? "verified-source-timestamp" as const : "unverified" as const,
+        ...(sourceTimestamp != null ? { sourceTimestamp } : {}),
+        routeStatus: "unknown" as const,
+        sourceUrls: ["https://frax.com/transparency"],
+      },
     },
   };
 }

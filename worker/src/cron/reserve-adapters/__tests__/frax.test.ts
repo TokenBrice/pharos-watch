@@ -52,6 +52,11 @@ describe("adaptFraxBalanceSheet", () => {
     const result = adaptFraxBalanceSheet(BALANCE_SHEET_SAMPLE);
     expect(result.metadata?.freshnessMode).toBe("verified");
     expect(result.metadata?.sourceTimestamp).toBeGreaterThan(0);
+    expect(result.metadata?.redemption).toMatchObject({
+      capacityKind: "live-proxy-validated",
+      freshnessKind: "verified-source-timestamp",
+      routeStatus: "unknown",
+    });
   });
 
   it("falls back to unverified freshness when asOfTimestamp is missing", () => {
