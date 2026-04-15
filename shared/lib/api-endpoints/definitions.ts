@@ -1,4 +1,4 @@
-import { API_PATHS, buildQueryPath } from "./paths";
+import { API_PATHS } from "./paths";
 
 type EndpointMethod = "GET" | "POST";
 export type EndpointProbeGroup = "public" | "admin" | "manual";
@@ -208,17 +208,17 @@ const BASE_ENDPOINT_DEFINITIONS = [
   },
   {
     key: "dex-liquidity-history",
-    path: "/api/dex-liquidity-history",
+    path: API_PATHS.dexLiquidityHistoryBase(),
     methods: ["GET"],
     adminRequired: false,
     mutatingAdmin: false,
     cacheBypass: false,
     probeGroup: "public",
-    probePath: buildQueryPath("/api/dex-liquidity-history", { stablecoin: "usdt-tether" }),
+    probePath: API_PATHS.dexLiquidityHistoryProbe("usdt-tether"),
   },
   {
     key: "supply-history",
-    path: "/api/supply-history",
+    path: API_PATHS.supplyHistoryBase(),
     methods: ["GET"],
     adminRequired: false,
     mutatingAdmin: false,
@@ -246,7 +246,7 @@ const BASE_ENDPOINT_DEFINITIONS = [
   },
   {
     key: "digest-snapshot",
-    path: "/api/digest-snapshot",
+    path: API_PATHS.digestSnapshotBase(),
     methods: ["GET"],
     adminRequired: false,
     mutatingAdmin: false,
@@ -264,23 +264,23 @@ const BASE_ENDPOINT_DEFINITIONS = [
   },
   {
     key: "yield-history",
-    path: "/api/yield-history",
+    path: API_PATHS.yieldHistoryBase(),
     methods: ["GET"],
     adminRequired: false,
     mutatingAdmin: false,
     cacheBypass: false,
     probeGroup: "public",
-    probePath: buildQueryPath("/api/yield-history", { stablecoin: "usdt-tether" }),
+    probePath: API_PATHS.yieldHistoryProbe("usdt-tether"),
   },
   {
     key: "safety-score-history",
-    path: "/api/safety-score-history",
+    path: API_PATHS.safetyScoreHistoryBase(),
     methods: ["GET"],
     adminRequired: false,
     mutatingAdmin: false,
     cacheBypass: false,
     probeGroup: "public",
-    probePath: buildQueryPath("/api/safety-score-history", { stablecoin: "usdt-tether" }),
+    probePath: API_PATHS.safetyScoreHistoryProbe("usdt-tether"),
   },
   {
     key: "stability-index",
@@ -314,7 +314,7 @@ const BASE_ENDPOINT_DEFINITIONS = [
   },
   {
     key: "mint-burn-flows",
-    path: "/api/mint-burn-flows",
+    path: API_PATHS.mintBurnFlowsBase(),
     methods: ["GET"],
     adminRequired: false,
     mutatingAdmin: false,
@@ -324,17 +324,17 @@ const BASE_ENDPOINT_DEFINITIONS = [
   },
   {
     key: "mint-burn-events",
-    path: "/api/mint-burn-events",
+    path: API_PATHS.mintBurnEventsBase(),
     methods: ["GET"],
     adminRequired: false,
     mutatingAdmin: false,
     cacheBypass: false,
     probeGroup: "public",
-    probePath: "/api/mint-burn-events?stablecoin=usdt-tether",
+    probePath: API_PATHS.mintBurnEvents({ stablecoin: "usdt-tether" }),
   },
   {
     key: "stress-signals",
-    path: "/api/stress-signals",
+    path: API_PATHS.stressSignalsBase(),
     methods: ["GET"],
     adminRequired: false,
     mutatingAdmin: false,
@@ -353,13 +353,13 @@ const BASE_ENDPOINT_DEFINITIONS = [
   },
   {
     key: "non-usd-share",
-    path: "/api/non-usd-share",
+    path: API_PATHS.nonUsdShareBase(),
     methods: ["GET"],
     adminRequired: false,
     mutatingAdmin: false,
     cacheBypass: false,
     probeGroup: "public",
-    probePath: "/api/non-usd-share?days=90",
+    probePath: API_PATHS.nonUsdShare(90),
   },
   {
     key: "telegram-pulse",
@@ -372,7 +372,7 @@ const BASE_ENDPOINT_DEFINITIONS = [
   },
   {
     key: "feedback",
-    path: "/api/feedback",
+    path: API_PATHS.feedback(),
     methods: ["POST"],
     adminRequired: false,
     mutatingAdmin: false,
@@ -381,7 +381,7 @@ const BASE_ENDPOINT_DEFINITIONS = [
   },
   {
     key: "telegram-webhook",
-    path: "/api/telegram-webhook",
+    path: API_PATHS.telegramWebhook(),
     methods: ["POST"],
     adminRequired: false,
     mutatingAdmin: false,
@@ -392,7 +392,7 @@ const BASE_ENDPOINT_DEFINITIONS = [
   // Admin status/probe endpoints.
   {
     key: "status",
-    path: "/api/status",
+    path: API_PATHS.status(),
     methods: ["GET"],
     adminRequired: true,
     mutatingAdmin: false,
@@ -402,17 +402,17 @@ const BASE_ENDPOINT_DEFINITIONS = [
   },
   {
     key: "status-history",
-    path: "/api/status-history",
+    path: API_PATHS.statusHistoryBase(),
     methods: ["GET"],
     adminRequired: true,
     mutatingAdmin: false,
     cacheBypass: true,
     probeGroup: "admin",
-    probePath: "/api/status-history?limit=10",
+    probePath: API_PATHS.statusHistory({ limit: 10 }),
   },
   {
     key: "request-source-stats",
-    path: "/api/request-source-stats",
+    path: API_PATHS.requestSourceStatsBase(),
     methods: ["GET"],
     adminRequired: true,
     mutatingAdmin: false,
@@ -420,7 +420,7 @@ const BASE_ENDPOINT_DEFINITIONS = [
   },
   {
     key: "api-keys",
-    path: "/api/api-keys",
+    path: API_PATHS.apiKeys(),
     methods: ["GET", "POST"],
     adminRequired: true,
     mutatingAdmin: false,
@@ -429,7 +429,7 @@ const BASE_ENDPOINT_DEFINITIONS = [
   },
   {
     key: "api-key-audit-log",
-    path: "/api/api-keys/audit-log",
+    path: API_PATHS.apiKeyAuditLog(),
     methods: ["GET"],
     adminRequired: true,
     mutatingAdmin: false,
@@ -437,7 +437,7 @@ const BASE_ENDPOINT_DEFINITIONS = [
   },
   {
     key: "trigger-digest",
-    path: "/api/trigger-digest",
+    path: API_PATHS.triggerDigest(),
     methods: ["POST"],
     adminRequired: true,
     mutatingAdmin: true,
@@ -452,7 +452,7 @@ const BASE_ENDPOINT_DEFINITIONS = [
   },
   {
     key: "reset-blacklist-sync",
-    path: "/api/reset-blacklist-sync",
+    path: API_PATHS.resetBlacklistSync(),
     methods: ["POST"],
     adminRequired: true,
     mutatingAdmin: true,
@@ -467,7 +467,7 @@ const BASE_ENDPOINT_DEFINITIONS = [
   },
   {
     key: "debug-sync-state",
-    path: "/api/debug-sync-state",
+    path: API_PATHS.debugSyncState(),
     methods: ["GET"],
     adminRequired: true,
     mutatingAdmin: false,
@@ -481,7 +481,7 @@ const BASE_ENDPOINT_DEFINITIONS = [
   },
   {
     key: "remediate-blacklist-amount-gaps",
-    path: "/api/remediate-blacklist-amount-gaps",
+    path: API_PATHS.remediateBlacklistAmountGaps(),
     methods: ["POST"],
     adminRequired: true,
     mutatingAdmin: true,
@@ -496,7 +496,7 @@ const BASE_ENDPOINT_DEFINITIONS = [
   },
   {
     key: "backfill-blacklist-current-balances",
-    path: "/api/backfill-blacklist-current-balances",
+    path: API_PATHS.backfillBlacklistCurrentBalances(),
     methods: ["POST"],
     adminRequired: true,
     mutatingAdmin: true,
@@ -511,7 +511,7 @@ const BASE_ENDPOINT_DEFINITIONS = [
   },
   {
     key: "backfill-depegs",
-    path: "/api/backfill-depegs",
+    path: API_PATHS.backfillDepegs(),
     methods: ["POST"],
     adminRequired: true,
     mutatingAdmin: true,
@@ -526,7 +526,7 @@ const BASE_ENDPOINT_DEFINITIONS = [
   },
   {
     key: "backfill-supply-history",
-    path: "/api/backfill-supply-history",
+    path: API_PATHS.backfillSupplyHistory(),
     methods: ["POST"],
     adminRequired: true,
     mutatingAdmin: true,
@@ -542,7 +542,7 @@ const BASE_ENDPOINT_DEFINITIONS = [
   },
   {
     key: "backfill-cg-prices",
-    path: "/api/backfill-cg-prices",
+    path: API_PATHS.backfillCgPrices(),
     methods: ["POST"],
     adminRequired: true,
     mutatingAdmin: true,
@@ -558,7 +558,7 @@ const BASE_ENDPOINT_DEFINITIONS = [
   },
   {
     key: "backfill-stability-index",
-    path: "/api/backfill-stability-index",
+    path: API_PATHS.backfillStabilityIndex(),
     methods: ["POST"],
     adminRequired: true,
     mutatingAdmin: true,
@@ -572,7 +572,7 @@ const BASE_ENDPOINT_DEFINITIONS = [
   },
   {
     key: "backfill-mint-burn-prices",
-    path: "/api/backfill-mint-burn-prices",
+    path: API_PATHS.backfillMintBurnPrices(),
     methods: ["POST"],
     adminRequired: true,
     mutatingAdmin: true,
@@ -586,7 +586,7 @@ const BASE_ENDPOINT_DEFINITIONS = [
   },
   {
     key: "backfill-mint-burn",
-    path: "/api/backfill-mint-burn",
+    path: API_PATHS.backfillMintBurn(),
     methods: ["POST"],
     adminRequired: true,
     mutatingAdmin: true,
@@ -601,7 +601,7 @@ const BASE_ENDPOINT_DEFINITIONS = [
   },
   {
     key: "reclassify-atomic-roundtrips",
-    path: "/api/reclassify-atomic-roundtrips",
+    path: API_PATHS.reclassifyAtomicRoundtrips(),
     methods: ["POST"],
     adminRequired: true,
     mutatingAdmin: true,
@@ -615,23 +615,23 @@ const BASE_ENDPOINT_DEFINITIONS = [
   },
   {
     key: "audit-depeg-history",
-    path: "/api/audit-depeg-history",
+    path: API_PATHS.auditDepegHistoryBase(),
     methods: ["GET", "POST"],
     adminRequired: true,
     mutatingAdmin: true,
     cacheBypass: true,
     probeGroup: "manual",
-    probePath: "/api/audit-depeg-history?dry-run=true",
+    probePath: API_PATHS.auditDepegHistoryDryRun(),
     statusPageAction: {
       label: "Audit Depegs",
       confirm: "Run depeg history audit (dry-run)?",
       method: "GET",
-      path: "/api/audit-depeg-history?dry-run=true",
+      path: API_PATHS.auditDepegHistoryDryRun(),
     },
   },
   {
     key: "backfill-dews",
-    path: "/api/backfill-dews",
+    path: API_PATHS.backfillDews(),
     methods: ["GET", "POST"],
     adminRequired: true,
     mutatingAdmin: true,
@@ -645,7 +645,7 @@ const BASE_ENDPOINT_DEFINITIONS = [
   },
   {
     key: "discovery-candidates",
-    path: "/api/discovery-candidates",
+    path: API_PATHS.discoveryCandidates(),
     methods: ["GET"],
     adminRequired: true,
     mutatingAdmin: false,

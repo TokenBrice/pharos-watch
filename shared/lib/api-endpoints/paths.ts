@@ -30,14 +30,20 @@ export const API_PATHS = {
   usdsStatus: () => "/api/usds-status",
   bluechipRatings: () => "/api/bluechip-ratings",
   dexLiquidity: () => "/api/dex-liquidity",
+  dexLiquidityHistoryBase: () => "/api/dex-liquidity-history",
   dexLiquidityHistory: (stablecoinId: string, days = 90) =>
     buildQueryPath("/api/dex-liquidity-history", { stablecoin: stablecoinId, days }),
+  dexLiquidityHistoryProbe: (stablecoinId: string) =>
+    buildQueryPath("/api/dex-liquidity-history", { stablecoin: stablecoinId }),
+  supplyHistoryBase: () => "/api/supply-history",
   supplyHistory: (stablecoinId: string, days?: number) =>
     buildQueryPath("/api/supply-history", { stablecoin: stablecoinId, days }),
   dailyDigest: () => "/api/daily-digest",
   digestArchive: () => "/api/digest-archive",
+  digestSnapshotBase: () => "/api/digest-snapshot",
   digestSnapshot: (date: string) => buildQueryPath("/api/digest-snapshot", { date }),
   yieldRankings: () => "/api/yield-rankings",
+  yieldHistoryBase: () => "/api/yield-history",
   yieldHistory: (stablecoinId: string, days = 90, mode?: string, sourceKey?: string) =>
     buildQueryPath("/api/yield-history", {
       stablecoin: stablecoinId,
@@ -45,16 +51,25 @@ export const API_PATHS = {
       mode,
       sourceKey,
     }),
+  yieldHistoryProbe: (stablecoinId: string) =>
+    buildQueryPath("/api/yield-history", { stablecoin: stablecoinId }),
+  safetyScoreHistoryBase: () => "/api/safety-score-history",
   safetyScoreHistory: (stablecoinId: string, days = 3650) =>
     buildQueryPath("/api/safety-score-history", { stablecoin: stablecoinId, days }),
+  safetyScoreHistoryProbe: (stablecoinId: string) =>
+    buildQueryPath("/api/safety-score-history", { stablecoin: stablecoinId }),
   stabilityIndex: (detail = false) => buildQueryPath("/api/stability-index", detail ? { detail: true } : undefined),
   reportCards: () => "/api/report-cards",
   redemptionBackstops: () => "/api/redemption-backstops",
+  mintBurnFlowsBase: () => "/api/mint-burn-flows",
   mintBurnFlows: (params?: Record<string, QueryParamValue>) => buildQueryPath("/api/mint-burn-flows", params),
+  mintBurnEventsBase: () => "/api/mint-burn-events",
   mintBurnEvents: (params?: Record<string, QueryParamValue>) => buildQueryPath("/api/mint-burn-events", params),
+  stressSignalsBase: () => "/api/stress-signals",
   stressSignals: (stablecoinId?: string, days?: number) =>
     buildQueryPath("/api/stress-signals", { stablecoin: stablecoinId, days }),
   chains: () => "/api/chains",
+  nonUsdShareBase: () => "/api/non-usd-share",
   nonUsdShare: (days?: number) => buildQueryPath("/api/non-usd-share", days ? { days } : undefined),
   publicStatusHistory: (params?: { limit?: number; window?: "24h" | "7d" | "30d" }) =>
     buildQueryPath("/api/public-status-history", {
@@ -62,6 +77,12 @@ export const API_PATHS = {
       window: params?.window,
     }),
   telegramPulse: () => "/api/telegram-pulse",
+  feedback: () => "/api/feedback",
+  telegramWebhook: () => "/api/telegram-webhook",
+  status: () => "/api/status",
+  statusHistoryBase: () => "/api/status-history",
+  statusHistory: (params?: { limit?: number }) => buildQueryPath("/api/status-history", { limit: params?.limit }),
+  requestSourceStatsBase: () => "/api/request-source-stats",
   requestSourceStats: (params?: { hours?: number; bucketSec?: number; routeLimit?: number; apiKeyLimit?: number }) =>
     buildQueryPath("/api/request-source-stats", {
       hours: params?.hours,
@@ -70,7 +91,24 @@ export const API_PATHS = {
       apiKeyLimit: params?.apiKeyLimit,
     }),
   apiKeys: () => "/api/api-keys",
+  apiKeyAuditLog: () => "/api/api-keys/audit-log",
   apiKeyUpdate: (id: number) => `/api/api-keys/${id}/update`,
   apiKeyDeactivate: (id: number) => `/api/api-keys/${id}/deactivate`,
   apiKeyRotate: (id: number) => `/api/api-keys/${id}/rotate`,
+  triggerDigest: () => "/api/trigger-digest",
+  resetBlacklistSync: () => "/api/reset-blacklist-sync",
+  debugSyncState: () => "/api/debug-sync-state",
+  remediateBlacklistAmountGaps: () => "/api/remediate-blacklist-amount-gaps",
+  backfillBlacklistCurrentBalances: () => "/api/backfill-blacklist-current-balances",
+  backfillDepegs: () => "/api/backfill-depegs",
+  backfillSupplyHistory: () => "/api/backfill-supply-history",
+  backfillCgPrices: () => "/api/backfill-cg-prices",
+  backfillStabilityIndex: () => "/api/backfill-stability-index",
+  backfillMintBurnPrices: () => "/api/backfill-mint-burn-prices",
+  backfillMintBurn: () => "/api/backfill-mint-burn",
+  reclassifyAtomicRoundtrips: () => "/api/reclassify-atomic-roundtrips",
+  auditDepegHistoryBase: () => "/api/audit-depeg-history",
+  auditDepegHistoryDryRun: () => buildQueryPath("/api/audit-depeg-history", { "dry-run": true }),
+  backfillDews: () => "/api/backfill-dews",
+  discoveryCandidates: () => "/api/discovery-candidates",
 } as const;
