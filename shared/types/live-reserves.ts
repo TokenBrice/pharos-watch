@@ -37,6 +37,7 @@ export const LIVE_RESERVE_ADAPTER_KEYS = [
   "sgforge-coinvertible",
   "single-asset",
   "sky-makercore",
+  "superstate-liquidity",
   "tether",
   "usdai-proof-of-reserves",
   "usd1-bundle-oracle",
@@ -98,6 +99,14 @@ export const LIVE_RESERVE_REDEMPTION_ROUTE_STATUS_VALUES = [
   "unknown",
 ] as const;
 
+export const LIVE_RESERVE_REDEMPTION_ROUTE_STATUS_SOURCE_VALUES = [
+  "static-config",
+  "market-implied",
+  "operator-notice",
+  "protocol-api",
+  "onchain",
+] as const;
+
 export const RESERVE_DISPLAY_BADGE_KIND_VALUES = [
   "live",
   "curated-validated",
@@ -125,6 +134,7 @@ export type LiveReserveFreshnessMode = (typeof LIVE_RESERVE_FRESHNESS_MODE_VALUE
 export type LiveReserveRedemptionCapacityKind = (typeof LIVE_RESERVE_REDEMPTION_CAPACITY_KIND_VALUES)[number];
 export type LiveReserveRedemptionFreshnessKind = (typeof LIVE_RESERVE_REDEMPTION_FRESHNESS_KIND_VALUES)[number];
 export type LiveReserveRedemptionRouteStatus = (typeof LIVE_RESERVE_REDEMPTION_ROUTE_STATUS_VALUES)[number];
+export type LiveReserveRedemptionRouteStatusSource = (typeof LIVE_RESERVE_REDEMPTION_ROUTE_STATUS_SOURCE_VALUES)[number];
 export type ReserveDisplayBadgeKind = (typeof RESERVE_DISPLAY_BADGE_KIND_VALUES)[number];
 export type LiveReserveSemantics = (typeof LIVE_RESERVE_SEMANTICS_VALUES)[number];
 export type LiveReserveRisk = (typeof LIVE_RESERVE_RISK_VALUES)[number];
@@ -174,7 +184,9 @@ export interface LiveReserveRedemptionTelemetry extends Record<string, unknown> 
   sourceTimestamp?: number;
   blockNumber?: number;
   routeStatus?: LiveReserveRedemptionRouteStatus;
+  routeStatusSource?: LiveReserveRedemptionRouteStatusSource;
   routeStatusReason?: string;
+  routeStatusReviewedAt?: string;
   holderEligibility?: string;
   settlementDelaySec?: number;
   queueDepthUsd?: number;

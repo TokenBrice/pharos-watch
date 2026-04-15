@@ -345,6 +345,104 @@ describe("buildRedemptionBackstopEntry", () => {
     expect(entry.capacitySemantics).toBe("immediate-bounded");
   });
 
+  it("derives reserve-sync ratio from supply when nested capacity omits ratio", async () => {
+    const entry = await buildRedemptionBackstopEntry(
+      mockD1(),
+      "usde-ethena",
+      {
+        routeFamily: "stablecoin-redeem",
+        accessModel: "whitelisted-onchain",
+        settlementModel: "immediate",
+        executionModel: "deterministic-onchain",
+        outputAssetType: "stable-single",
+        capacityModel: { kind: "reserve-sync-metadata" },
+        costModel: { kind: "dynamic-or-unclear", feeDescription: "Reviewed variable fee" },
+        reviewedAt: "2026-04-15",
+        docs: [{ label: "Ethena collateral API", url: "https://app.ethena.fi/api/positions/current/collateral" }],
+      },
+      100_000_000,
+      null,
+      now,
+      {
+        reserveSnapshotMetadata: {
+          stablecoinId: "usde-ethena",
+          fetchedAt: now - 120,
+          source: "ethena",
+          metadata: {
+            immediateRedeemableRatio: 0.9,
+            freshnessMode: "verified",
+            sourceTimestamp: now - 120,
+            redemption: {
+              capacityUsd: 50_000_000,
+              capacityKind: "live-proxy-validated",
+              freshnessKind: "verified-source-timestamp",
+              sourceTimestamp: now - 120,
+              routeStatus: "open",
+            },
+          },
+          warningCount: 0,
+          warnings: [],
+          sourceModel: "dynamic-mix",
+          evidenceClass: "independent",
+          syncStatus: "ok",
+        },
+      },
+    );
+
+    expect(entry.immediateCapacityUsd).toBe(50_000_000);
+    expect(entry.immediateCapacityRatio).toBe(0.5);
+  });
+
+  it("propagates live route status from reserve metadata", async () => {
+    const entry = await buildRedemptionBackstopEntry(
+      mockD1(),
+      "cusd-cap",
+      {
+        routeFamily: "basket-redeem",
+        accessModel: "permissionless-onchain",
+        settlementModel: "atomic",
+        executionModel: "deterministic-basket",
+        outputAssetType: "stable-basket",
+        capacityModel: { kind: "reserve-sync-metadata" },
+        costModel: { kind: "dynamic-or-unclear", feeDescription: "Reviewed variable fee" },
+        reviewedAt: "2026-04-15",
+        docs: [{ label: "Cap vault", url: "https://docs.cap.app/concepts/vault" }],
+      },
+      100_000_000,
+      null,
+      now,
+      {
+        reserveSnapshotMetadata: {
+          stablecoinId: "cusd-cap",
+          fetchedAt: now - 120,
+          source: "cap-vault",
+          metadata: {
+            freshnessMode: "not-applicable",
+            redemption: {
+              capacityUsd: 10_000_000,
+              capacityKind: "live-direct-bounded",
+              freshnessKind: "same-run-onchain",
+              routeStatus: "paused",
+              routeStatusSource: "onchain",
+              routeStatusReason: "All vault assets are paused",
+              routeStatusReviewedAt: "2026-04-15",
+            },
+          },
+          warningCount: 0,
+          warnings: [],
+          sourceModel: "dynamic-mix",
+          evidenceClass: "independent",
+          syncStatus: "ok",
+        },
+      },
+    );
+
+    expect(entry.routeStatus).toBe("paused");
+    expect(entry.routeStatusSource).toBe("onchain");
+    expect(entry.routeStatusReason).toBe("All vault assets are paused");
+    expect(entry.routeStatusReviewedAt).toBe("2026-04-15");
+  });
+
   it("uses LUSD Liquity v1 system debt as live direct redemption capacity", async () => {
     const config = getRedemptionBackstopConfig("lusd-liquity");
     expect(config).not.toBeNull();

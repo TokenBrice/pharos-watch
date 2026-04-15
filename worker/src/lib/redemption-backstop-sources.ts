@@ -125,6 +125,12 @@ export async function buildRedemptionBackstopEntry(
   let routeStatusSource: RedemptionBackstopEntry["routeStatusSource"] = "static-config";
   let routeStatusReason: RedemptionBackstopEntry["routeStatusReason"];
   let routeStatusReviewedAt: RedemptionBackstopEntry["routeStatusReviewedAt"];
+  if (resolutionState === "resolved" && capacity.routeStatus) {
+    routeStatus = capacity.routeStatus;
+    routeStatusSource = capacity.routeStatusSource ?? "protocol-api";
+    routeStatusReason = capacity.routeStatusReason;
+    routeStatusReviewedAt = capacity.routeStatusReviewedAt;
+  }
   const holderEligibility =
     config.holderEligibility ?? resolveDefaultHolderEligibility(config);
   const routeAvailability = options.routeAvailability;

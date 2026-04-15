@@ -471,11 +471,23 @@ describe("getRedemptionBackstopConfig", () => {
       settlementModel: "atomic",
       executionModel: "deterministic-onchain",
       outputAssetType: "stable-single",
-      capacityModel: { kind: "supply-full", confidence: "documented-bound" },
+      capacityModel: { kind: "reserve-sync-metadata" },
       costModel: { kind: "dynamic-or-unclear" },
       reviewedAt: "2026-03-23",
     });
     expect(getRedemptionBackstopConfig("frxusd-frax")?.docs?.length).toBeGreaterThan(0);
+  });
+
+  it("uses live Superstate liquidity for USTB redemption capacity", () => {
+    expect(getRedemptionBackstopConfig("ustb-superstate")).toMatchObject({
+      routeFamily: "offchain-issuer",
+      accessModel: "issuer-api",
+      settlementModel: "same-day",
+      capacityModel: { kind: "reserve-sync-metadata" },
+      costModel: { kind: "dynamic-or-unclear" },
+      reviewedAt: "2026-04-15",
+    });
+    expect(getRedemptionBackstopConfig("ustb-superstate")?.docs?.length).toBeGreaterThan(0);
   });
 
   it("marks the mid-cap route-correction tranche as reviewed documented-bound", () => {

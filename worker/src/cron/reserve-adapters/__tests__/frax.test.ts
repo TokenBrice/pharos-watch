@@ -53,10 +53,13 @@ describe("adaptFraxBalanceSheet", () => {
     expect(result.metadata?.freshnessMode).toBe("verified");
     expect(result.metadata?.sourceTimestamp).toBeGreaterThan(0);
     expect(result.metadata?.redemption).toMatchObject({
+      capacityUsd: expect.any(Number),
       capacityKind: "live-proxy-validated",
       freshnessKind: "verified-source-timestamp",
       routeStatus: "unknown",
     });
+    expect(result.metadata?.immediateRedeemableRatio).toBeUndefined();
+    expect(result.metadata?.redemption?.capacityRatioOfSupply).toBeUndefined();
   });
 
   it("falls back to unverified freshness when asOfTimestamp is missing", () => {

@@ -1,9 +1,39 @@
 import { createMethodologyVersion, toMethodologyVersionLabel } from "./methodology-version";
 
 const redemptionBackstop = createMethodologyVersion({
-  currentVersion: "3.93",
+  currentVersion: "3.95",
   changelogPath: "/methodology/#safety-scores-methodology",
   changelog: [
+    {
+      version: "3.95",
+      title: "USTB live Superstate liquidity capacity",
+      date: "2026-04-15",
+      effectiveAt: 1776272400,
+      summary:
+        "USTB now combines its existing on-chain NAV reserve proof with Superstate's current public liquidity endpoint for bounded redemption-capacity telemetry.",
+      impact: [
+        "The `ustb-superstate` route now uses reserve-sync metadata instead of the static full-supply eventual model",
+        "The `superstate-liquidity` adapter preserves USTB NAV reserve slices while adding current Circle USD and USDC RedemptionIdle liquidity as capacity",
+        "If the Superstate liquidity payload is missing or malformed, USTB remains visible but unrated for redemption capacity rather than using NAV/AUM as immediate liquidity",
+      ],
+      commits: [],
+      reconstructed: false,
+    },
+    {
+      version: "3.94",
+      title: "frxUSD live reserve capacity and route-status guardrails",
+      date: "2026-04-15",
+      effectiveAt: 1776268800,
+      summary:
+        "frxUSD now resolves redemption capacity from fresh Frax balance-sheet telemetry, and live redemption route status can flow from reserve adapters into redemption-backstop scoring.",
+      impact: [
+        "The `frxusd-frax` route now uses reserve-sync metadata instead of the static full-supply eventual model",
+        "Frax balance-sheet redemption capacity emits a current stablecoin capacity amount without reusing reserve-composition ratios as supply-relative capacity",
+        "Live reserve redemption telemetry can carry route status and provenance so paused or degraded live routes do not silently score as open",
+      ],
+      commits: [],
+      reconstructed: false,
+    },
     {
       version: "3.93",
       title: "Long-tail live redemption adapters",

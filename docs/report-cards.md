@@ -2,7 +2,7 @@
 
 Multi-dimensional risk grades (A+ through F) for every tracked stablecoin. Computed on-demand by the API from live data.
 
-## Overall Grade (v7.01)
+## Overall Grade (v7.03)
 
 Four-step computation:
 
@@ -13,7 +13,7 @@ Four-step computation:
 
 Cemetery coins get a permanent F.
 
-Current-version note: v7.01 keeps the stronger peg treatment introduced in v6.93 and the NAV-wrapper peg inheritance from v6.94, treats custodied BTC wrappers plus issuer-seizable tokenized collateral as direct inherited freeze exposure for blacklistability attribution when they dominate reserve weight, disables static or non-live-direct redemption uplift during severe active depegs unless current live-open redemption evidence exists, removes the legacy active-depeg peg-dimension cap, suppresses stale redemption-backstop rows from Safety Score Liquidity / Exit, restores collateral-quality passthrough for reserve adapters whose upstreams now expose verified source timestamps, lets USDaf's Asymmetry feed qualify when its protocol API timestamp is fresh, promotes additional proof-style feeds only when they have independent timestamped NAV, balance-sheet, or bundle-oracle evidence, and separates standalone redemption-route quality from Safety Score-eligible exit capacity. Eventual-only routes stay visible but do not uplift Liquidity / Exit by themselves, while queue-like routes are capped before blending. The `activeDepegBps` field remains in `RawDimensionInputs` so stressed-grade recomputations and the frontend can apply the same peak-based cap.
+Current-version note: v7.03 keeps the stronger peg treatment introduced in v6.93 and the NAV-wrapper peg inheritance from v6.94, treats custodied BTC wrappers plus issuer-seizable tokenized collateral as direct inherited freeze exposure for blacklistability attribution when they dominate reserve weight, disables static or non-live-direct redemption uplift during severe active depegs unless current live-open redemption evidence exists, removes the legacy active-depeg peg-dimension cap, suppresses stale redemption-backstop rows from Safety Score Liquidity / Exit, restores collateral-quality passthrough for reserve adapters whose upstreams now expose verified source timestamps, lets USDaf's Asymmetry feed qualify when its protocol API timestamp is fresh, promotes additional proof-style feeds only when they have independent timestamped NAV, balance-sheet, or bundle-oracle evidence, separates standalone redemption-route quality from Safety Score-eligible exit capacity, lets frxUSD use fresh Frax balance-sheet redemption capacity when that live route is current, and lets USTB use Superstate's current liquidity endpoint without treating NAV/AUM as immediate liquidity. Eventual-only routes stay visible but do not uplift Liquidity / Exit by themselves, while queue-like routes are capped before blending. The `activeDepegBps` field remains in `RawDimensionInputs` so stressed-grade recomputations and the frontend can apply the same peak-based cap.
 
 ## Dimensions
 

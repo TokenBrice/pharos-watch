@@ -189,7 +189,7 @@ export const LIVE_RESERVE_ADAPTER_DEFINITIONS = {
     sourceModel: "dynamic-mix",
     evidenceClass: "independent",
     sharedSourceMode: "none",
-    redemptionTelemetry: { capacity: "none", fee: "none" },
+    redemptionTelemetry: { capacity: "proxy", fee: "none" },
     validation: {
       maxSourceAgeSec: DASHBOARD_SOURCE_MAX_AGE_SEC,
       maxUnknownExposurePct: MATERIAL_UNKNOWN_EXPOSURE_PCT,
@@ -330,6 +330,15 @@ export const LIVE_RESERVE_ADAPTER_DEFINITIONS = {
     validation: {
       maxSourceAgeSec: DASHBOARD_SOURCE_MAX_AGE_SEC,
       maxUnknownExposurePct: MATERIAL_UNKNOWN_EXPOSURE_PCT,
+      allowedFreshnessModes: VERIFIED_OR_UNVERIFIED_FRESHNESS,
+    },
+  },
+  "superstate-liquidity": {
+    sourceModel: "single-bucket",
+    evidenceClass: "independent",
+    sharedSourceMode: "none",
+    redemptionTelemetry: { capacity: "proxy", fee: "none" },
+    validation: {
       allowedFreshnessModes: VERIFIED_OR_UNVERIFIED_FRESHNESS,
     },
   },

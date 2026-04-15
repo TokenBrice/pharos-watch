@@ -321,4 +321,58 @@ describe("validateAdapterOutput", () => {
     expect(result.valid).toBe(false);
     expect(result.warnings[0]?.code).toBe("redemption-capacity-kind-mismatch");
   });
+
+  it("rejects invalid redemption route status telemetry", () => {
+    const result = validateAdapterOutput(
+      {
+        slices: [{ name: "A", pct: 100, risk: "low" }],
+        metadata: {
+          redemption: {
+            routeStatus: "halted",
+          },
+        },
+      },
+      {
+        adapter: {
+          key: "cap-vault",
+          fetch: async () => ({ slices: [] }),
+          sourceModel: LIVE_RESERVE_ADAPTER_DEFINITIONS["cap-vault"].sourceModel,
+          evidenceClass: LIVE_RESERVE_ADAPTER_DEFINITIONS["cap-vault"].evidenceClass,
+          sharedSourceMode: LIVE_RESERVE_ADAPTER_DEFINITIONS["cap-vault"].sharedSourceMode,
+          redemptionTelemetry: LIVE_RESERVE_ADAPTER_DEFINITIONS["cap-vault"].redemptionTelemetry,
+          validation: LIVE_RESERVE_ADAPTER_DEFINITIONS["cap-vault"].validation,
+        },
+      },
+    );
+
+    expect(result.valid).toBe(false);
+    expect(result.warnings[0]?.code).toBe("invalid-redemption-route-status");
+  });
+
+  it("rejects invalid redemption route status source telemetry", () => {
+    const result = validateAdapterOutput(
+      {
+        slices: [{ name: "A", pct: 100, risk: "low" }],
+        metadata: {
+          redemption: {
+            routeStatusSource: "spreadsheet",
+          },
+        },
+      },
+      {
+        adapter: {
+          key: "cap-vault",
+          fetch: async () => ({ slices: [] }),
+          sourceModel: LIVE_RESERVE_ADAPTER_DEFINITIONS["cap-vault"].sourceModel,
+          evidenceClass: LIVE_RESERVE_ADAPTER_DEFINITIONS["cap-vault"].evidenceClass,
+          sharedSourceMode: LIVE_RESERVE_ADAPTER_DEFINITIONS["cap-vault"].sharedSourceMode,
+          redemptionTelemetry: LIVE_RESERVE_ADAPTER_DEFINITIONS["cap-vault"].redemptionTelemetry,
+          validation: LIVE_RESERVE_ADAPTER_DEFINITIONS["cap-vault"].validation,
+        },
+      },
+    );
+
+    expect(result.valid).toBe(false);
+    expect(result.warnings[0]?.code).toBe("invalid-redemption-route-status-source");
+  });
 });

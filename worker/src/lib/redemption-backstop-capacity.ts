@@ -27,6 +27,10 @@ export interface CapacityResolution {
   capacityConfidence: RedemptionBackstopEntry["capacityConfidence"];
   capacityBasis?: RedemptionBackstopEntry["capacityBasis"];
   capacitySemantics: RedemptionBackstopEntry["capacitySemantics"];
+  routeStatus?: RedemptionBackstopEntry["routeStatus"];
+  routeStatusSource?: RedemptionBackstopEntry["routeStatusSource"];
+  routeStatusReason?: string;
+  routeStatusReviewedAt?: string;
   notes: string[];
 }
 
@@ -120,6 +124,10 @@ async function resolveCapacityFromReserveSyncMetadata(
       capacityConfidence: liveMetadata.capacityConfidence,
       capacityBasis: resolveCapacityBasis(null, model, liveMetadata.capacityConfidence),
       capacitySemantics,
+      ...(liveMetadata.routeStatus ? { routeStatus: liveMetadata.routeStatus } : {}),
+      ...(liveMetadata.routeStatusSource ? { routeStatusSource: liveMetadata.routeStatusSource } : {}),
+      ...(liveMetadata.routeStatusReason ? { routeStatusReason: liveMetadata.routeStatusReason } : {}),
+      ...(liveMetadata.routeStatusReviewedAt ? { routeStatusReviewedAt: liveMetadata.routeStatusReviewedAt } : {}),
       notes: liveMetadata.capacityNotes,
     };
   }

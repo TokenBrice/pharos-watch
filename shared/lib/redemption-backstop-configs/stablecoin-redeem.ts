@@ -304,6 +304,7 @@ export const STABLECOIN_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackst
   "frxusd-frax": {
     ...stablecoinRedeemBase,
     ...reviewedDirectRedemptionSupplyFull,
+    capacityModel: { kind: "reserve-sync-metadata" },
     costModel: documentedVariableFee(
       "Direct Ethereum mint and redeem contracts support 1:1 conversion between frxUSD and USDC; public docs do not publish a fixed redemption fee",
     ),

@@ -161,12 +161,10 @@ export function adaptFraxBalanceSheet(payload: FraxBalanceSheetResponse): Adapte
         : unverifiedFreshnessMetadata(
             "frax-balance-sheet-api",
             "Frax balance-sheet response did not include asOfTimestamp",
-          )),
+      )),
       immediateRedeemableUsd: stableRedeemableUsd,
-      ...(total > 0 ? { immediateRedeemableRatio: stableRedeemableUsd / total } : {}),
       redemption: {
         capacityUsd: stableRedeemableUsd,
-        ...(total > 0 ? { capacityRatioOfSupply: stableRedeemableUsd / total } : {}),
         capacityKind: "live-proxy-validated" as const,
         freshnessKind: sourceTimestamp != null ? "verified-source-timestamp" as const : "unverified" as const,
         ...(sourceTimestamp != null ? { sourceTimestamp } : {}),

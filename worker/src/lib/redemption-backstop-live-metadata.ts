@@ -1,6 +1,10 @@
 import { getLiveReserveAdapterDefinition } from "@shared/lib/live-reserve-adapters";
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins";
-import type { RedemptionCapacityConfidence } from "@shared/types/redemption";
+import type {
+  RedemptionCapacityConfidence,
+  RedemptionRouteStatus,
+  RedemptionRouteStatusSource,
+} from "@shared/types/redemption";
 import type { LiveReserveWarning } from "@shared/types/live-reserves";
 import type { ReserveSnapshotMetadataRecord } from "./live-reserves-store";
 import { LIVE_RESERVE_FRESHNESS_SEC } from "./live-reserves-store";
@@ -23,6 +27,10 @@ export interface RedemptionBackstopLiveMetadata {
   redemptionFeeBps: number | null;
   buyFeeBpsMin: number | null;
   buyFeeBpsMax: number | null;
+  routeStatus: RedemptionRouteStatus | null;
+  routeStatusSource: RedemptionRouteStatusSource | null;
+  routeStatusReason: string | null;
+  routeStatusReviewedAt: string | null;
 }
 
 function coerceFiniteNumber(value: unknown): number | null {
@@ -34,6 +42,30 @@ function getRedemptionTelemetry(metadata: Record<string, unknown>): Record<strin
   return metadata.redemption && typeof metadata.redemption === "object" && !Array.isArray(metadata.redemption)
     ? metadata.redemption as Record<string, unknown>
     : {};
+}
+
+function coerceRouteStatus(value: unknown): RedemptionRouteStatus | null {
+  return value === "open"
+    || value === "degraded"
+    || value === "paused"
+    || value === "cohort-limited"
+    || value === "unknown"
+    ? value
+    : null;
+}
+
+function coerceRouteStatusSource(value: unknown): RedemptionRouteStatusSource | null {
+  return value === "static-config"
+    || value === "market-implied"
+    || value === "operator-notice"
+    || value === "protocol-api"
+    || value === "onchain"
+    ? value
+    : null;
+}
+
+function coerceString(value: unknown): string | null {
+  return typeof value === "string" && value.trim().length > 0 ? value : null;
 }
 
 const CAPACITY_WARNING_EXCEPTIONS: Partial<Record<string, Partial<Record<string, string>>>> = {
@@ -159,11 +191,15 @@ export function readRedemptionBackstopLiveMetadata(
   const capacityNotes = resolveCapacityNotes(stablecoinId, snapshotMetadata);
   const telemetryCapacity = adapterDefinition?.redemptionTelemetry.capacity ?? "none";
   const telemetryFee = adapterDefinition?.redemptionTelemetry.fee ?? "none";
+  const nestedCapacityUsd = coerceFiniteNumber(redemptionTelemetry.capacityUsd);
+  const nestedCapacityRatio = coerceFiniteNumber(redemptionTelemetry.capacityRatioOfSupply);
+  const legacyCapacityUsd = coerceFiniteNumber(metadata.immediateRedeemableUsd);
+  const legacyCapacityRatio = coerceFiniteNumber(metadata.immediateRedeemableRatio);
   const fallbackCapacityTelemetryAvailable =
-    coerceFiniteNumber(redemptionTelemetry.capacityUsd) != null
-    || coerceFiniteNumber(metadata.immediateRedeemableUsd) != null
-    || coerceFiniteNumber(redemptionTelemetry.capacityRatioOfSupply) != null
-    || coerceFiniteNumber(metadata.immediateRedeemableRatio) != null;
+    nestedCapacityUsd != null
+    || legacyCapacityUsd != null
+    || nestedCapacityRatio != null
+    || legacyCapacityRatio != null;
   const fallbackFeeTelemetryAvailable =
     coerceFiniteNumber(redemptionTelemetry.feeBps) != null
     || coerceFiniteNumber(metadata.redemptionFeeBps) != null;
@@ -206,15 +242,19 @@ export function readRedemptionBackstopLiveMetadata(
     capacityReason,
     feeReason,
     immediateRedeemableUsd:
-      coerceFiniteNumber(redemptionTelemetry.capacityUsd)
-      ?? coerceFiniteNumber(metadata.immediateRedeemableUsd),
+      nestedCapacityUsd
+      ?? legacyCapacityUsd,
     immediateRedeemableRatio:
-      coerceFiniteNumber(redemptionTelemetry.capacityRatioOfSupply)
-      ?? coerceFiniteNumber(metadata.immediateRedeemableRatio),
+      nestedCapacityRatio
+      ?? (nestedCapacityUsd != null ? null : legacyCapacityRatio),
     redemptionFeeBps:
       coerceFiniteNumber(redemptionTelemetry.feeBps)
       ?? coerceFiniteNumber(metadata.redemptionFeeBps),
     buyFeeBpsMin: coerceFiniteNumber(metadata.buyFeeBpsMin),
     buyFeeBpsMax: coerceFiniteNumber(metadata.buyFeeBpsMax),
+    routeStatus: coerceRouteStatus(redemptionTelemetry.routeStatus),
+    routeStatusSource: coerceRouteStatusSource(redemptionTelemetry.routeStatusSource),
+    routeStatusReason: coerceString(redemptionTelemetry.routeStatusReason),
+    routeStatusReviewedAt: coerceString(redemptionTelemetry.routeStatusReviewedAt),
   };
 }

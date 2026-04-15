@@ -7777,7 +7777,7 @@
       }
     ],
     "liveReservesConfig": {
-      "adapter": "chainlink-nav",
+      "adapter": "superstate-liquidity",
       "version": 1,
       "semantics": "single-asset",
       "breakerScope": "ustb-superstate",
@@ -7796,7 +7796,9 @@
         "oracleAddress": "0x289B5036cd942e619E1Ee48670F98d214E745AAC",
         "tokenAddress": "0x43415eB6ff9DB7E26A15b704e7A3eDCe97d31C4e",
         "assetLabel": "Short-duration U.S. government securities",
-        "assetRisk": "very-low"
+        "assetRisk": "very-low",
+        "liquidityUrl": "https://api.superstate.com/v1/funds/liquidity",
+        "ticker": "USTB"
       }
     },
     "yieldConfig": {

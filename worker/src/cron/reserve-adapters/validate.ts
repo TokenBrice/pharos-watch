@@ -1,5 +1,9 @@
 import type { ReserveSlice } from "@shared/types/core";
-import type { LiveReserveWarning } from "@shared/types/live-reserves";
+import {
+  LIVE_RESERVE_REDEMPTION_ROUTE_STATUS_SOURCE_VALUES,
+  LIVE_RESERVE_REDEMPTION_ROUTE_STATUS_VALUES,
+  type LiveReserveWarning,
+} from "@shared/types/live-reserves";
 import type { ReserveAdapterDefinition } from "./types";
 import { isReserveRisk } from "./helpers";
 
@@ -106,6 +110,31 @@ function validateRedemptionTelemetry(
       "redemption-capacity-unverified",
       `Redemption capacity telemetry is marked unverified${adapterLabel}`,
     ));
+  }
+
+  const routeStatus = redemption?.routeStatus;
+  if (
+    typeof routeStatus === "string" &&
+    !LIVE_RESERVE_REDEMPTION_ROUTE_STATUS_VALUES.includes(
+      routeStatus as (typeof LIVE_RESERVE_REDEMPTION_ROUTE_STATUS_VALUES)[number],
+    )
+  ) {
+    return [fatalWarning("invalid-redemption-route-status", `Redemption route status is invalid${adapterLabel}`)];
+  }
+
+  const routeStatusSource = redemption?.routeStatusSource;
+  if (
+    typeof routeStatusSource === "string" &&
+    !LIVE_RESERVE_REDEMPTION_ROUTE_STATUS_SOURCE_VALUES.includes(
+      routeStatusSource as (typeof LIVE_RESERVE_REDEMPTION_ROUTE_STATUS_SOURCE_VALUES)[number],
+    )
+  ) {
+    return [fatalWarning("invalid-redemption-route-status-source", `Redemption route status source is invalid${adapterLabel}`)];
+  }
+
+  const routeStatusReviewedAt = redemption?.routeStatusReviewedAt;
+  if (routeStatusReviewedAt != null && typeof routeStatusReviewedAt !== "string") {
+    return [fatalWarning("invalid-redemption-route-reviewed-at", `Redemption route status review timestamp is invalid${adapterLabel}`)];
   }
 
   return warnings;

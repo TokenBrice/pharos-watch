@@ -1,6 +1,22 @@
 # Report Cards Scoring — Version Timeline
 
-Internal changelog reconstructed from git history plus the live version metadata source. Covers v1.0 through v7.01 (2026-02-25 → 2026-04-15).
+Internal changelog reconstructed from git history plus the live version metadata source. Covers v1.0 through v7.03 (2026-02-25 → 2026-04-15).
+
+## v7.03 — USTB live liquidity capacity (2026-04-15)
+
+Liquidity / Exit can now use USTB's current Superstate liquidity capacity:
+
+- USTB now uses Superstate's current Circle USD and USDC RedemptionIdle liquidity as bounded redemption capacity
+- USTB's on-chain NAV oracle remains reserve evidence and is not treated as immediate liquidity
+- Malformed or unavailable Superstate liquidity telemetry fails closed to no redemption uplift rather than falling back to NAV/AUM
+
+## v7.02 — frxUSD live redemption capacity (2026-04-15)
+
+Liquidity / Exit can now use frxUSD's fresh Frax balance-sheet redemption capacity:
+
+- frxUSD now resolves redemption capacity from live reserve-sync metadata instead of a static full-supply eventual route
+- Live route-status telemetry from reserve adapters can suppress redemption uplift when a route is paused, degraded, or cohort-limited
+- Live capacity rows with nested capacity amounts no longer reuse flat reserve-composition ratios as supply-relative capacity ratios
 
 ## v7.01 — Safety-eligible redemption tiers (2026-04-15)
 

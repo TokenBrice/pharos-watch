@@ -6,11 +6,11 @@ Modeled redemption-route coverage for tracked stablecoins. This subsystem estima
 
 ## Methodology Versioning
 
-- **Current methodology version:** `v3.93`
+- **Current methodology version:** `v3.95`
 - **Public methodology anchor:** `/methodology/#safety-scores-methodology`
 - **Canonical source files:** `shared/lib/redemption-backstops.ts`, `shared/lib/redemption-backstop-configs/*`, `shared/lib/redemption-backstop-scoring.ts`, `shared/lib/redemption-backstop-version.ts`
 
-Latest `v3.93` update: BOLD, Felix feUSD, Nerite USND, Quill USDQ, fxUSD, USDaf, and JupUSD now use current live reserve telemetry when public on-chain/API sources expose bounded redemption capacity. Routes fail closed to unrated capacity when the relevant live snapshot is unavailable instead of using static full-supply assumptions.
+Latest `v3.95` update: USTB now preserves its on-chain NAV reserve proof while using Superstate's current liquidity endpoint for bounded redemption-capacity telemetry. frxUSD also uses fresh Frax balance-sheet telemetry for stablecoin redemption capacity, live route status can flow from reserve adapters into redemption-backstop rows, and reserve-composition ratios are no longer reused as supply-relative redemption-capacity ratios when a nested live capacity amount is available.
 
 There is no standalone changelog page yet. The public methodology link currently points at the Safety Scores section because redemption backstops feed the report-card liquidity dimension.
 

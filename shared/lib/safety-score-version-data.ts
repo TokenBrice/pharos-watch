@@ -1,9 +1,39 @@
 import type { MethodologyVersionConfig } from "./methodology-version";
 
 export const SAFETY_SCORE_VERSION_CONFIG: MethodologyVersionConfig = {
-  currentVersion: "7.01",
+  currentVersion: "7.03",
   changelogPath: "/methodology/scoring-changelog/",
   changelog: [
+    {
+      version: "7.03",
+      title: "USTB live liquidity capacity",
+      date: "2026-04-15",
+      effectiveAt: 1776272400,
+      summary:
+        "Liquidity / Exit can now use USTB's current Superstate liquidity capacity while keeping NAV/AUM separate from immediate exit capacity.",
+      impact: [
+        "USTB now uses Superstate's current Circle USD and USDC RedemptionIdle liquidity as bounded redemption capacity",
+        "USTB's on-chain NAV oracle remains reserve evidence and is not treated as immediate liquidity",
+        "Malformed or unavailable Superstate liquidity telemetry fails closed to no redemption uplift rather than falling back to NAV/AUM",
+      ],
+      commits: [],
+      reconstructed: false,
+    },
+    {
+      version: "7.02",
+      title: "frxUSD live redemption capacity",
+      date: "2026-04-15",
+      effectiveAt: 1776268800,
+      summary:
+        "Liquidity / Exit can now use frxUSD's fresh Frax balance-sheet redemption capacity while preserving route-status and capacity-ratio fail-closed guards.",
+      impact: [
+        "frxUSD no longer relies on a static full-supply eventual redemption model for Safety Score liquidity uplift",
+        "Live route-status telemetry from reserve adapters can suppress redemption uplift when a route is paused, degraded, or cohort-limited",
+        "Live capacity rows with a nested capacity amount no longer reuse flat reserve-composition ratios as supply-relative capacity ratios",
+      ],
+      commits: [],
+      reconstructed: false,
+    },
     {
       version: "7.01",
       title: "Safety-eligible redemption tiers",

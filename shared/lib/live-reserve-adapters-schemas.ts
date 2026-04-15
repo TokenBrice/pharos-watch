@@ -81,6 +81,11 @@ const chainlinkNavParamsSchema = z.object({
   maxOracleAgeSec: z.number().positive().optional(),
 }).strict();
 
+const superstateLiquidityParamsSchema = chainlinkNavParamsSchema.extend({
+  liquidityUrl: z.string(),
+  ticker: z.enum(["USTB", "USCC"]),
+}).strict();
+
 const capVaultAssetSchema = z.object({
   address: z.string(),
   name: z.string(),
@@ -291,6 +296,7 @@ export const adapterParamsSchemas = {
   "sgforge-coinvertible": sgForgeCoinvertibleParamsSchema,
   "single-asset": singleAssetParamsSchema,
   "sky-makercore": noParamsSchema,
+  "superstate-liquidity": superstateLiquidityParamsSchema,
   tether: noParamsSchema,
   "usdai-proof-of-reserves": noParamsSchema,
   "usd1-bundle-oracle": usd1BundleOracleParamsSchema,

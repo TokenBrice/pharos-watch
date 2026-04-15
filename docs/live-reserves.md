@@ -9,7 +9,7 @@ Dedicated documentation for the live reserve-composition subsystem that powers `
 - **Cron:** `sync-live-reserves` (`worker/src/cron/sync-live-reserves.ts`)
 - **Schedule:** `11 * * * *` (hourly at :11 UTC)
 - **Shared hourly lane:** after live reserve sync, the same slot runs redemption backstop sync, Kinesis supply sync, and collateral-drift checks / alerts (`worker/src/handlers/scheduled/hourly-live-reserves.ts`)
-- **Current coverage:** 138 live-enabled stablecoins across 39 registered adapters (35 currently configured in stablecoin metadata)
+- **Current coverage:** 138 live-enabled stablecoins across 40 registered adapters (36 currently configured in stablecoin metadata)
 - **Storage:** `reserve_composition`, `reserve_composition_history`, `reserve_sync_state`, `reserve_sync_attempt_history`
 - **API:** `GET /api/stablecoin-reserves/:id`
 - **Frontend consumers:** `useStablecoinReserves()`, stablecoin detail view model, `/status` reserve-sync health
@@ -101,7 +101,7 @@ Common metadata fields:
 | `buyFeeBpsMin`, `buyFeeBpsMax`                                  | Optional raw buy-fee range context retained alongside normalized `redemptionFeeBps`             |
 | `redemption.capacityUsd`, `redemption.capacityRatioOfSupply`    | Normalized redemption-capacity telemetry. New adapters should prefer this nested shape; legacy flat fields remain readable during migration |
 | `redemption.capacityKind`, `redemption.freshnessKind`           | Typed redemption evidence tier and freshness basis used by redemption-backstop validation        |
-| `redemption.routeStatus`, `redemption.routeStatusReason`        | Optional current route availability signal, separate from reserve-sync status                   |
+| `redemption.routeStatus`, `redemption.routeStatusSource`, `redemption.routeStatusReason`, `redemption.routeStatusReviewedAt` | Optional current route availability signal and provenance, separate from reserve-sync status |
 | `redemption.settlementDelaySec`, `redemption.queueDepthUsd`     | Optional queue/delay context for redemption routes that are current but not atomic              |
 | `redemption.feeBps`                                             | Normalized current redemption fee in the nested telemetry contract                              |
 
@@ -343,7 +343,7 @@ This table reflects the adapter keys currently configured in `shared/data/stable
 | `asymmetry`                | `http-json`                 | `collateral-mix`                     | 1                |
 | `btcfi`                    | `http-json`                 | `collateral-mix`                     | 1                |
 | `cap-vault`                | `onchain-evm`               | `protocol-reserve`                   | 1                |
-| `chainlink-nav`            | `onchain-evm`               | `single-asset`                       | 6                |
+| `chainlink-nav`            | `onchain-evm`               | `single-asset`                       | 5                |
 | `chainlink-por`            | `onchain-evm`               | `attestation-mix`                    | 1                |
 | `circle-transparency`      | `http-html`                 | `attestation-mix`                    | 2                |
 | `collateral-positions-api` | `http-json`                 | `collateral-mix`                     | 2                |
@@ -370,6 +370,7 @@ This table reflects the adapter keys currently configured in `shared/data/stable
 | `sgforge-coinvertible`     | `http-html`                 | `attestation-mix`                    | 1                |
 | `single-asset`             | `http-json` / `onchain-evm` | `single-asset`                       | 43               |
 | `sky-makercore`            | `http-json`                 | `collateral-mix`                     | 2                |
+| `superstate-liquidity`     | `onchain-evm` + `http-json` | `single-asset`                       | 1                |
 | `usdai-proof-of-reserves`  | `http-json`                 | `collateral-mix`                     | 1                |
 | `usd1-bundle-oracle`       | `onchain-evm`               | `single-asset`                       | 1                |
 | `usdd-data-platform`       | `http-json`                 | `collateral-mix`                     | 1                |
@@ -400,9 +401,11 @@ the `liquity-v2-branches` adapter reads branch ActivePool collateral balances, D
 Chainlink NAV note:
 `chainlink-nav` now supports both standard AggregatorV3 feeds and Ondo router-style NAV lookups. When `oracleMethod = "getAssetPrice"`, the adapter calls `getAssetPrice(token)` on the router and, when available, follows `tokenToRWAOracle(token) -> getPriceData()` to recover a verified freshness timestamp instead of treating the feed as permanently timestampless.
 
+`superstate-liquidity` extends USTB's on-chain NAV reserve proof with Superstate's public liquidity endpoint. Reserve slices remain NAV-based, while nested redemption telemetry uses the current Circle USD available amount plus USDC RedemptionIdle balance as bounded proxy capacity. Missing or malformed liquidity fields fail the adapter instead of falling back to NAV/AUM as immediate liquidity.
+
 `usd1-bundle-oracle` reads USD1's Chainlink bundle oracle on Ethereum. The adapter decodes `latestBundle()` into a source timestamp and reserve value, cross-checks `latestBundleTimestamp()`, reads live USD1 total supply, and stores collateralization metadata from latest-state on-chain data.
 
-`frax-balance-sheet` now covers both `frxusd-frax` and legacy `frax-frax` through the Frax v2 balance-sheet API. Known Frax ecosystem assets are classified explicitly; any future unmapped balance-sheet exposure is aggregated and only degrades the run when material.
+`frax-balance-sheet` now covers both `frxusd-frax` and legacy `frax-frax` through the Frax v2 balance-sheet API. Known Frax ecosystem assets are classified explicitly; any future unmapped balance-sheet exposure is aggregated and only degrades the run when material. For frxUSD redemption modeling, the adapter emits current stablecoin capacity as a USD amount and intentionally avoids reusing reserve-composition ratios as supply-relative redemption capacity.
 Business-day NAV feeds can set `maxOracleAgeSec` when their oracle is expected to pause through weekends or market holidays; `ousg-ondo-finance` and `mtbill-midas` use a 4-day window so normal Friday-to-Monday NAV cadence does not trip their reserve circuit breakers.
 
 Adapter helpers now live in a small helper family, with `worker/src/cron/reserve-adapters/helpers.ts` kept as the shared import surface:

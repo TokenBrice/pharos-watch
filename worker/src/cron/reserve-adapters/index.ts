@@ -36,6 +36,7 @@ import { fetchErc4626SingleAssetReserves } from "./erc4626-single-asset";
 import { fetchSgForgeCoinvertibleReserves } from "./sgforge-coinvertible";
 import { fetchSingleAssetReserves } from "./single-asset";
 import { fetchSkyMakercoreReserves } from "./sky-makercore";
+import { fetchSuperstateLiquidityReserves } from "./superstate-liquidity";
 import { fetchTetherReserves } from "./tether";
 import { fetchUsdAiProofOfReserves } from "./usdai-proof-of-reserves";
 import { fetchUsd1BundleOracleReserves } from "./usd1-bundle-oracle";
@@ -80,6 +81,7 @@ const ADAPTER_FNS: Record<LiveReserveAdapterKey, AdapterFn> = {
   "sgforge-coinvertible": fetchSgForgeCoinvertibleReserves,
   "single-asset": fetchSingleAssetReserves,
   "sky-makercore": fetchSkyMakercoreReserves,
+  "superstate-liquidity": fetchSuperstateLiquidityReserves,
   tether: fetchTetherReserves,
   "usdai-proof-of-reserves": fetchUsdAiProofOfReserves,
   "usd1-bundle-oracle": fetchUsd1BundleOracleReserves,

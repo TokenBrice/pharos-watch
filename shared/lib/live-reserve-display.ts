@@ -41,6 +41,7 @@ const ADAPTER_DISPLAY_BADGE_KINDS: Record<LiveReserveAdapterKey, ReserveDisplayB
   "sgforge-coinvertible": "live",
   "single-asset": "proof",
   "sky-makercore": "live",
+  "superstate-liquidity": "live",
   tether: "proof",
   "usdai-proof-of-reserves": "live",
   "usd1-bundle-oracle": "live",
