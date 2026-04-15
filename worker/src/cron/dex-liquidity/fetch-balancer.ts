@@ -1,5 +1,6 @@
 import { makeDexApiFetchResult, type DexApiFetchResult, type DexApiPool } from "../../lib/dex-api-common";
 import { USER_AGENT } from "../../lib/constants";
+import { isDexApiRecord, readDexApiJson } from "./direct-api-json";
 
 const BALANCER_API = "https://api-v3.balancer.fi/";
 
@@ -54,6 +55,52 @@ interface BalancerPool {
   poolTokens: { address: string; symbol: string; decimals: number; balance: string; balanceUSD: string; weight?: string | null }[];
 }
 
+type BalancerResponse = {
+  data?: { poolGetPools?: unknown };
+  errors?: unknown;
+};
+
+function isOptionalString(value: unknown): value is string | null | undefined {
+  return value == null || typeof value === "string";
+}
+
+function isBalancerDynamicData(value: unknown): value is BalancerPool["dynamicData"] {
+  return isDexApiRecord(value) &&
+    typeof value.totalLiquidity === "string" &&
+    typeof value.volume24h === "string" &&
+    typeof value.swapFee === "string";
+}
+
+function isBalancerPoolToken(value: unknown): value is BalancerPool["poolTokens"][number] {
+  return isDexApiRecord(value) &&
+    typeof value.address === "string" &&
+    typeof value.symbol === "string" &&
+    typeof value.decimals === "number" &&
+    Number.isFinite(value.decimals) &&
+    typeof value.balance === "string" &&
+    typeof value.balanceUSD === "string" &&
+    isOptionalString(value.weight);
+}
+
+function isBalancerPool(value: unknown): value is BalancerPool {
+  return isDexApiRecord(value) &&
+    typeof value.id === "string" &&
+    isOptionalString(value.address) &&
+    typeof value.type === "string" &&
+    typeof value.chain === "string" &&
+    isBalancerDynamicData(value.dynamicData) &&
+    Array.isArray(value.poolTokens) &&
+    value.poolTokens.every(isBalancerPoolToken);
+}
+
+function formatGraphqlErrors(errors: unknown): string[] {
+  if (!Array.isArray(errors)) return [];
+  return errors.map((entry) => {
+    if (isDexApiRecord(entry) && typeof entry.message === "string") return entry.message;
+    return "unknown";
+  });
+}
+
 function extractBalancerPoolAddress(pool: Pick<BalancerPool, "id" | "address">): string {
   const directAddress = pool.address?.trim();
   if (directAddress && /^0x[a-f0-9]{40}$/i.test(directAddress)) {
@@ -95,10 +142,17 @@ export async function fetchBalancerPools(signal?: AbortSignal): Promise<DexApiFe
       break;
     }
 
-    const json = await res.json() as { data?: { poolGetPools?: BalancerPool[] }; errors?: Array<{ message?: string }> };
-    if (Array.isArray(json.errors) && json.errors.length > 0) {
+    const parsed = await readDexApiJson<BalancerResponse>(res, `page ${skip / pageSize + 1}`);
+    if (!parsed.ok) {
+      errors.push(parsed.error);
+      break;
+    }
+
+    const json = parsed.data;
+    const graphqlErrors = formatGraphqlErrors(json.errors);
+    if (graphqlErrors.length > 0) {
       errors.push(
-        `GraphQL errors on page ${skip / pageSize + 1}: ${json.errors.map((entry) => entry.message ?? "unknown").join("; ")}`,
+        `GraphQL errors on page ${skip / pageSize + 1}: ${graphqlErrors.join("; ")}`,
       );
       break;
     }
@@ -111,7 +165,14 @@ export async function fetchBalancerPools(signal?: AbortSignal): Promise<DexApiFe
     successfulPages++;
     if (pools.length === 0) break;
 
-    for (const pool of pools) {
+    let malformedRows = 0;
+    for (const rawPool of pools) {
+      if (!isBalancerPool(rawPool)) {
+        malformedRows++;
+        continue;
+      }
+
+      const pool = rawPool;
       if (!SUPPORTED_POOL_TYPES.has(pool.type)) continue;
 
       const chain = BALANCER_CHAIN_MAP[pool.chain];
@@ -163,6 +224,9 @@ export async function fetchBalancerPools(signal?: AbortSignal): Promise<DexApiFe
         feeRate: Number.isFinite(swapFee) ? swapFee : null,
         balances: balances.length === pool.poolTokens.length ? balances : null,
       });
+    }
+    if (malformedRows > 0) {
+      errors.push(`page ${skip / pageSize + 1} skipped ${malformedRows} malformed pool rows`);
     }
 
     if (pools.length < pageSize) break;

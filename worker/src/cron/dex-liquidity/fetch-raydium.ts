@@ -5,6 +5,7 @@ import {
   type DexApiPool,
 } from "../../lib/dex-api-common";
 import { USER_AGENT } from "../../lib/constants";
+import { isDexApiRecord, readDexApiJson } from "./direct-api-json";
 
 const RAYDIUM_API = "https://api-v3.raydium.io/pools/info/list";
 
@@ -19,6 +20,30 @@ interface RaydiumPool {
   mintAmountB: number;
   feeRate: number;
   day: { volume: number };
+}
+
+type RaydiumResponse = {
+  success?: boolean;
+  msg?: string;
+  data?: { data?: unknown };
+};
+
+function isRaydiumToken(value: unknown): value is RaydiumPool["mintA"] {
+  return isDexApiRecord(value) &&
+    typeof value.address === "string" &&
+    typeof value.symbol === "string" &&
+    typeof value.decimals === "number" &&
+    Number.isFinite(value.decimals);
+}
+
+function isRaydiumPool(value: unknown): value is RaydiumPool {
+  return isDexApiRecord(value) &&
+    typeof value.id === "string" &&
+    isRaydiumToken(value.mintA) &&
+    isRaydiumToken(value.mintB) &&
+    isDexApiRecord(value.day) &&
+    typeof value.tvl === "number" &&
+    Number.isFinite(value.tvl);
 }
 
 async function fetchPoolType(
@@ -49,7 +74,13 @@ async function fetchPoolType(
       break;
     }
 
-    const json = await res.json() as { success?: boolean; msg?: string; data?: { data?: RaydiumPool[] } };
+    const parsed = await readDexApiJson<RaydiumResponse>(res, `${poolType} page ${page}`);
+    if (!parsed.ok) {
+      errors.push(parsed.error);
+      break;
+    }
+
+    const json = parsed.data;
     if (json.success === false) {
       errors.push(`${poolType} page ${page} API error: ${json.msg ?? "unsuccessful response"}`);
       break;
@@ -65,7 +96,14 @@ async function fetchPoolType(
     if (pools.length === 0) break;
 
     let belowThreshold = false;
-    for (const pool of pools) {
+    let malformedRows = 0;
+    for (const rawPool of pools) {
+      if (!isRaydiumPool(rawPool)) {
+        malformedRows++;
+        continue;
+      }
+
+      const pool = rawPool;
       if (!Number.isFinite(pool.tvl) || pool.tvl < DIRECT_API_POOL_MIN_TVL_USD) {
         belowThreshold = true;
         break;
@@ -89,6 +127,9 @@ async function fetchPoolType(
           ? [pool.mintAmountA, pool.mintAmountB]
           : null,
       });
+    }
+    if (malformedRows > 0) {
+      errors.push(`${poolType} page ${page} skipped ${malformedRows} malformed pool rows`);
     }
 
     if (belowThreshold || pools.length < 1000) break;

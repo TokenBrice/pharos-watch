@@ -535,6 +535,64 @@ describe("fetchBalancerPools", () => {
     expect(pools.degraded).toBe(true);
   });
 
+  it("returns a degraded result when Balancer returns invalid JSON", async () => {
+    const { fetchBalancerPools } = await import("../dex-liquidity/fetch-balancer");
+    mockFetch.mockResolvedValueOnce(new Response("{bad-json", { status: 200 }));
+
+    const pools = await fetchBalancerPools();
+
+    expect(pools.pools).toHaveLength(0);
+    expect(pools.ok).toBe(false);
+    expect(pools.degraded).toBe(true);
+    expect(pools.errors[0]).toContain("invalid JSON");
+  });
+
+  it("returns a degraded result when Balancer returns a null root", async () => {
+    const { fetchBalancerPools } = await import("../dex-liquidity/fetch-balancer");
+    mockFetch.mockResolvedValueOnce(new Response("null", { status: 200 }));
+
+    const pools = await fetchBalancerPools();
+
+    expect(pools.pools).toHaveLength(0);
+    expect(pools.ok).toBe(false);
+    expect(pools.degraded).toBe(true);
+    expect(pools.errors[0]).toContain("non-object JSON root");
+  });
+
+  it("skips malformed Balancer pool rows while preserving valid rows from the same page", async () => {
+    const { fetchBalancerPools } = await import("../dex-liquidity/fetch-balancer");
+    mockJsonFetch({
+      data: { poolGetPools: [
+        {
+          id: "0xbroken",
+          type: "STABLE",
+          chain: "MAINNET",
+          poolTokens: [
+            { address: "0xa", symbol: "USDC", decimals: 6, balance: "50000", balanceUSD: "50000" },
+          ],
+        },
+        {
+          id: "0xvalid",
+          type: "STABLE",
+          chain: "MAINNET",
+          dynamicData: { totalLiquidity: "100000", volume24h: "1000", swapFee: "0.0001" },
+          poolTokens: [
+            { address: "0xb", symbol: "USDT", decimals: 6, balance: "50000", balanceUSD: "50000" },
+            { address: "0xc", symbol: "DAI", decimals: 18, balance: "50000", balanceUSD: "50000" },
+          ],
+        },
+      ]},
+    });
+
+    const pools = await fetchBalancerPools();
+
+    expect(pools.ok).toBe(true);
+    expect(pools.degraded).toBe(true);
+    expect(pools.pools).toHaveLength(1);
+    expect(pools.pools[0].poolAddress).toBe("0xvalid");
+    expect(pools.errors).toContain("page 1 skipped 1 malformed pool rows");
+  });
+
   it("maps Balancer chain enums to internal chain names", async () => {
     const { fetchBalancerPools } = await import("../dex-liquidity/fetch-balancer");
     mockJsonFetch({
@@ -699,6 +757,92 @@ describe("fetchRaydiumPools", () => {
     expect(pools.pools).toHaveLength(0);
     expect(pools.ok).toBe(false);
     expect(pools.degraded).toBe(true);
+  });
+
+  it("preserves Raydium standard pools when concentrated returns invalid JSON", async () => {
+    const { fetchRaydiumPools } = await import("../dex-liquidity/fetch-raydium");
+    mockFetch
+      .mockResolvedValueOnce(new Response("{bad-json", { status: 200 }))
+      .mockResolvedValueOnce(jsonResponse({
+        success: true,
+        data: { count: 1, data: [{
+          type: "Standard",
+          id: "stdPool",
+          mintA: { address: "addr1", symbol: "USDC", decimals: 6 },
+          mintB: { address: "addr2", symbol: "USDT", decimals: 6 },
+          price: 1.0001,
+          tvl: 100000,
+          mintAmountA: 50000,
+          mintAmountB: 50000,
+          feeRate: 0.0025,
+          day: { volume: 5000 },
+        }]},
+      }));
+
+    const pools = await fetchRaydiumPools();
+
+    expect(pools.ok).toBe(true);
+    expect(pools.degraded).toBe(true);
+    expect(pools.pools).toHaveLength(1);
+    expect(pools.pools[0].poolType).toBe("raydium-amm");
+    expect(pools.errors.some((error) => error.includes("invalid JSON"))).toBe(true);
+  });
+
+  it("returns a degraded result when Raydium returns a null root", async () => {
+    const { fetchRaydiumPools } = await import("../dex-liquidity/fetch-raydium");
+    mockFetch.mockImplementation(() => Promise.resolve(new Response("null", { status: 200 })));
+
+    const pools = await fetchRaydiumPools();
+
+    expect(pools.pools).toHaveLength(0);
+    expect(pools.ok).toBe(false);
+    expect(pools.degraded).toBe(true);
+    expect(pools.errors.every((error) => error.includes("non-object JSON root"))).toBe(true);
+  });
+
+  it("skips malformed Raydium pool rows while preserving valid rows from the same page", async () => {
+    const { fetchRaydiumPools } = await import("../dex-liquidity/fetch-raydium");
+    mockFetch
+      .mockResolvedValueOnce(jsonResponse({
+        success: true,
+        data: { count: 2, data: [
+          {
+            type: "Concentrated",
+            id: "brokenPool",
+            mintB: { address: "addr2", symbol: "USDT", decimals: 6 },
+            price: 1.0,
+            tvl: 100000,
+            mintAmountA: 50000,
+            mintAmountB: 50000,
+            feeRate: 0.0001,
+            day: { volume: 5000 },
+          },
+          {
+            type: "Concentrated",
+            id: "validPool",
+            mintA: { address: "addr1", symbol: "USDC", decimals: 6 },
+            mintB: { address: "addr2", symbol: "USDT", decimals: 6 },
+            price: 1.0,
+            tvl: 100000,
+            mintAmountA: 50000,
+            mintAmountB: 50000,
+            feeRate: 0.0001,
+            day: { volume: 5000 },
+          },
+        ]},
+      }))
+      .mockResolvedValueOnce(jsonResponse({
+        success: true,
+        data: { count: 0, data: [] },
+      }));
+
+    const pools = await fetchRaydiumPools();
+
+    expect(pools.ok).toBe(true);
+    expect(pools.degraded).toBe(true);
+    expect(pools.pools).toHaveLength(1);
+    expect(pools.pools[0].poolAddress).toBe("validPool");
+    expect(pools.errors).toContain("concentrated page 1 skipped 1 malformed pool rows");
   });
 
   it("sets price to null when pool price is zero", async () => {

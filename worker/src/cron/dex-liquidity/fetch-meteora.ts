@@ -5,6 +5,7 @@ import {
   type DexApiPool,
 } from "../../lib/dex-api-common";
 import { USER_AGENT } from "../../lib/constants";
+import { isDexApiRecord, readDexApiJson } from "./direct-api-json";
 
 const METEORA_API = "https://dlmm.datapi.meteora.ag/pools";
 const PAGE_SIZE = 500;
@@ -31,7 +32,27 @@ interface MeteoraPool {
 }
 
 interface MeteoraResponse {
-  data?: MeteoraPool[];
+  data?: unknown;
+}
+
+function isMeteoraToken(value: unknown): value is MeteoraToken {
+  return isDexApiRecord(value) &&
+    typeof value.address === "string" &&
+    typeof value.symbol === "string" &&
+    typeof value.decimals === "number" &&
+    Number.isFinite(value.decimals) &&
+    (value.price == null || (typeof value.price === "number" && Number.isFinite(value.price)));
+}
+
+function isMeteoraPool(value: unknown): value is MeteoraPool {
+  return isDexApiRecord(value) &&
+    typeof value.address === "string" &&
+    isMeteoraToken(value.token_x) &&
+    isMeteoraToken(value.token_y) &&
+    typeof value.token_x_amount === "number" &&
+    Number.isFinite(value.token_x_amount) &&
+    typeof value.token_y_amount === "number" &&
+    Number.isFinite(value.token_y_amount);
 }
 
 export async function fetchMeteoraPools(signal?: AbortSignal): Promise<DexApiFetchResult> {
@@ -57,7 +78,13 @@ export async function fetchMeteoraPools(signal?: AbortSignal): Promise<DexApiFet
       break;
     }
 
-    const json = await res.json() as MeteoraResponse;
+    const parsed = await readDexApiJson<MeteoraResponse>(res, `page ${page}`);
+    if (!parsed.ok) {
+      errors.push(parsed.error);
+      break;
+    }
+
+    const json = parsed.data;
     const rows = json.data;
     if (!Array.isArray(rows)) {
       errors.push(`page ${page} returned malformed body`);
@@ -68,7 +95,14 @@ export async function fetchMeteoraPools(signal?: AbortSignal): Promise<DexApiFet
     if (rows.length === 0) break;
 
     let pageHasEligiblePool = false;
-    for (const row of rows) {
+    let malformedRows = 0;
+    for (const rawRow of rows) {
+      if (!isMeteoraPool(rawRow)) {
+        malformedRows++;
+        continue;
+      }
+
+      const row = rawRow;
       const tvlUsd = row.tvl ?? null;
       if (!Number.isFinite(tvlUsd) || tvlUsd == null || tvlUsd < DIRECT_API_POOL_MIN_TVL_USD) continue;
       if (row.is_blacklisted) continue;
@@ -114,6 +148,9 @@ export async function fetchMeteoraPools(signal?: AbortSignal): Promise<DexApiFet
         feeRate: feePct > 0 ? feePct / 100 : null,
         balances: Number.isFinite(reserve0) && Number.isFinite(reserve1) ? [reserve0, reserve1] : null,
       });
+    }
+    if (malformedRows > 0) {
+      errors.push(`page ${page} skipped ${malformedRows} malformed pool rows`);
     }
 
     if (!pageHasEligiblePool || rows.length < PAGE_SIZE) break;

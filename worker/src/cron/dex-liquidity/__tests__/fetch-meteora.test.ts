@@ -7,6 +7,10 @@ function jsonResponse(body: unknown, status = 200): Response {
   return new Response(JSON.stringify(body), { status });
 }
 
+function textResponse(body: string, status = 200): Response {
+  return new Response(body, { status });
+}
+
 describe("fetchMeteoraPools", () => {
   afterEach(() => {
     mockFetch.mockReset();
@@ -46,5 +50,65 @@ describe("fetchMeteoraPools", () => {
       balances: [100, 9000],
     });
     expect(result.pools[0].feeRate).toBeCloseTo(0.00012);
+  });
+
+  it("returns a degraded result when Meteora returns invalid JSON", async () => {
+    const { fetchMeteoraPools } = await import("../fetch-meteora");
+    mockFetch.mockResolvedValueOnce(textResponse("{bad-json"));
+
+    const result = await fetchMeteoraPools();
+
+    expect(result.pools).toHaveLength(0);
+    expect(result.ok).toBe(false);
+    expect(result.degraded).toBe(true);
+    expect(result.errors[0]).toContain("invalid JSON");
+  });
+
+  it("returns a degraded result when Meteora returns a null root", async () => {
+    const { fetchMeteoraPools } = await import("../fetch-meteora");
+    mockFetch.mockResolvedValueOnce(textResponse("null"));
+
+    const result = await fetchMeteoraPools();
+
+    expect(result.pools).toHaveLength(0);
+    expect(result.ok).toBe(false);
+    expect(result.degraded).toBe(true);
+    expect(result.errors[0]).toContain("non-object JSON root");
+  });
+
+  it("skips malformed Meteora rows while preserving valid rows from the same page", async () => {
+    const { fetchMeteoraPools } = await import("../fetch-meteora");
+    mockFetch.mockResolvedValueOnce(jsonResponse({
+      data: [
+        {
+          address: "BrokenPool",
+          token_y: { address: "USDC111", symbol: "USDC", decimals: 6, price: 1 },
+          token_x_amount: 100,
+          token_y_amount: 100,
+          tvl: 20_000,
+        },
+        {
+          address: "Pool111",
+          token_x: { address: "So111", symbol: "SOL", decimals: 9, price: 90 },
+          token_y: { address: "USDC111", symbol: "USDC", decimals: 6, price: 1 },
+          token_x_amount: 100,
+          token_y_amount: 9000,
+          current_price: 90,
+          tvl: 18_000,
+          volume: { "24h": 25_000 },
+          pool_config: { base_fee_pct: 0.01 },
+          dynamic_fee_pct: 0.002,
+          is_blacklisted: false,
+        },
+      ],
+    }));
+
+    const result = await fetchMeteoraPools();
+
+    expect(result.ok).toBe(true);
+    expect(result.degraded).toBe(true);
+    expect(result.pools).toHaveLength(1);
+    expect(result.pools[0].poolAddress).toBe("Pool111");
+    expect(result.errors).toContain("page 1 skipped 1 malformed pool rows");
   });
 });
