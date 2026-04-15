@@ -6,6 +6,9 @@ import type {
   LiveReserveAdapterKey,
   LiveReserveEvidenceClass,
   LiveReserveFreshnessMode,
+  LiveReserveRedemptionCapacityKind,
+  LiveReserveRedemptionFreshnessKind,
+  LiveReserveRedemptionRouteStatus,
   LiveReserveSnapshotMetadata,
   LiveReserveSourceModel,
   LiveReserveWarning,
@@ -25,6 +28,29 @@ const VALID_SOURCE_MODELS = new Set<LiveReserveSourceModel>(["dynamic-mix", "val
 const VALID_EVIDENCE_CLASSES = new Set<LiveReserveEvidenceClass>(["independent", "static-validated", "weak-live-probe"]);
 const VALID_WARNING_EFFECTS = new Set(["info", "degraded", "fatal"]);
 const VALID_FRESHNESS_MODES = new Set<LiveReserveFreshnessMode>(["verified", "unverified", "not-applicable"]);
+const VALID_REDEMPTION_CAPACITY_KINDS = new Set<LiveReserveRedemptionCapacityKind>([
+  "live-direct",
+  "live-direct-bounded",
+  "live-queue",
+  "live-proxy-validated",
+  "documented-bound",
+  "documented-eventual",
+  "heuristic",
+]);
+const VALID_REDEMPTION_FRESHNESS_KINDS = new Set<LiveReserveRedemptionFreshnessKind>([
+  "verified-source-timestamp",
+  "same-run-onchain",
+  "same-run-api",
+  "reviewed-static",
+  "unverified",
+]);
+const VALID_REDEMPTION_ROUTE_STATUSES = new Set<LiveReserveRedemptionRouteStatus>([
+  "open",
+  "degraded",
+  "paused",
+  "cohort-limited",
+  "unknown",
+]);
 const STORED_SLICE_SUM_TOLERANCE = 2;
 
 function parseJsonObject(value: string | null | undefined): Record<string, unknown> {
@@ -83,6 +109,73 @@ function normalizeSnapshotMetadata(metadata: Record<string, unknown>): LiveReser
     normalized.details = metadata.details as Record<string, unknown>;
   } else {
     delete normalized.details;
+  }
+
+  if (metadata.redemption && typeof metadata.redemption === "object" && !Array.isArray(metadata.redemption)) {
+    const rawRedemption = metadata.redemption as Record<string, unknown>;
+    const redemption: NonNullable<LiveReserveSnapshotMetadata["redemption"]> = { ...rawRedemption };
+    const knownRedemptionNumberKeys: Array<keyof NonNullable<LiveReserveSnapshotMetadata["redemption"]>> = [
+      "capacityUsd",
+      "capacityRatioOfSupply",
+      "sourceTimestamp",
+      "blockNumber",
+      "settlementDelaySec",
+      "queueDepthUsd",
+      "dailyLimitUsd",
+      "minRedeemUsd",
+      "feeBps",
+    ];
+    for (const key of knownRedemptionNumberKeys) {
+      const value = coerceFiniteMetadataNumber(rawRedemption[key]);
+      if (value == null) {
+        delete redemption[key];
+      } else {
+        redemption[key] = value;
+      }
+    }
+
+    if (
+      typeof rawRedemption.capacityKind === "string" &&
+      VALID_REDEMPTION_CAPACITY_KINDS.has(rawRedemption.capacityKind as LiveReserveRedemptionCapacityKind)
+    ) {
+      redemption.capacityKind = rawRedemption.capacityKind as LiveReserveRedemptionCapacityKind;
+    } else {
+      delete redemption.capacityKind;
+    }
+    if (
+      typeof rawRedemption.freshnessKind === "string" &&
+      VALID_REDEMPTION_FRESHNESS_KINDS.has(rawRedemption.freshnessKind as LiveReserveRedemptionFreshnessKind)
+    ) {
+      redemption.freshnessKind = rawRedemption.freshnessKind as LiveReserveRedemptionFreshnessKind;
+    } else {
+      delete redemption.freshnessKind;
+    }
+    if (
+      typeof rawRedemption.routeStatus === "string" &&
+      VALID_REDEMPTION_ROUTE_STATUSES.has(rawRedemption.routeStatus as LiveReserveRedemptionRouteStatus)
+    ) {
+      redemption.routeStatus = rawRedemption.routeStatus as LiveReserveRedemptionRouteStatus;
+    } else {
+      delete redemption.routeStatus;
+    }
+    if (typeof rawRedemption.routeStatusReason === "string") {
+      redemption.routeStatusReason = rawRedemption.routeStatusReason;
+    } else {
+      delete redemption.routeStatusReason;
+    }
+    if (typeof rawRedemption.holderEligibility === "string") {
+      redemption.holderEligibility = rawRedemption.holderEligibility;
+    } else {
+      delete redemption.holderEligibility;
+    }
+    if (Array.isArray(rawRedemption.sourceUrls)) {
+      redemption.sourceUrls = rawRedemption.sourceUrls.filter((url): url is string => typeof url === "string");
+    } else {
+      delete redemption.sourceUrls;
+    }
+    normalized.redemption = redemption;
+  } else {
+    delete normalized.redemption;
   }
 
   return normalized;

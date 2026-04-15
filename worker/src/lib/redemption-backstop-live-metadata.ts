@@ -30,6 +30,12 @@ function coerceFiniteNumber(value: unknown): number | null {
   return Number.isFinite(parsed) ? parsed : null;
 }
 
+function getRedemptionTelemetry(metadata: Record<string, unknown>): Record<string, unknown> {
+  return metadata.redemption && typeof metadata.redemption === "object" && !Array.isArray(metadata.redemption)
+    ? metadata.redemption as Record<string, unknown>
+    : {};
+}
+
 const CAPACITY_WARNING_EXCEPTIONS: Partial<Record<string, Partial<Record<string, string>>>> = {
   "gho-aave": {
     "aggregated-residual-issuance":
@@ -137,6 +143,7 @@ export function readRedemptionBackstopLiveMetadata(
   now = Math.floor(Date.now() / 1000),
 ): RedemptionBackstopLiveMetadata {
   const metadata = snapshotMetadata?.metadata ?? {};
+  const redemptionTelemetry = getRedemptionTelemetry(metadata);
   const updatedAt = snapshotMetadata?.fetchedAt ?? null;
   const trackedMeta = TRACKED_META_BY_ID.get(stablecoinId);
   const adapterKey = trackedMeta?.liveReservesConfig?.adapter ?? null;
@@ -153,8 +160,13 @@ export function readRedemptionBackstopLiveMetadata(
   const telemetryCapacity = adapterDefinition?.redemptionTelemetry.capacity ?? "none";
   const telemetryFee = adapterDefinition?.redemptionTelemetry.fee ?? "none";
   const fallbackCapacityTelemetryAvailable =
-    coerceFiniteNumber(metadata.immediateRedeemableUsd) != null || coerceFiniteNumber(metadata.immediateRedeemableRatio) != null;
-  const fallbackFeeTelemetryAvailable = coerceFiniteNumber(metadata.redemptionFeeBps) != null;
+    coerceFiniteNumber(redemptionTelemetry.capacityUsd) != null
+    || coerceFiniteNumber(metadata.immediateRedeemableUsd) != null
+    || coerceFiniteNumber(redemptionTelemetry.capacityRatioOfSupply) != null
+    || coerceFiniteNumber(metadata.immediateRedeemableRatio) != null;
+  const fallbackFeeTelemetryAvailable =
+    coerceFiniteNumber(redemptionTelemetry.feeBps) != null
+    || coerceFiniteNumber(metadata.redemptionFeeBps) != null;
   const capacityReason = resolveCapacityReason({
     snapshotMetadata,
     isFresh,
@@ -193,9 +205,15 @@ export function readRedemptionBackstopLiveMetadata(
     canUseFee: feeReason == null,
     capacityReason,
     feeReason,
-    immediateRedeemableUsd: coerceFiniteNumber(metadata.immediateRedeemableUsd),
-    immediateRedeemableRatio: coerceFiniteNumber(metadata.immediateRedeemableRatio),
-    redemptionFeeBps: coerceFiniteNumber(metadata.redemptionFeeBps),
+    immediateRedeemableUsd:
+      coerceFiniteNumber(redemptionTelemetry.capacityUsd)
+      ?? coerceFiniteNumber(metadata.immediateRedeemableUsd),
+    immediateRedeemableRatio:
+      coerceFiniteNumber(redemptionTelemetry.capacityRatioOfSupply)
+      ?? coerceFiniteNumber(metadata.immediateRedeemableRatio),
+    redemptionFeeBps:
+      coerceFiniteNumber(redemptionTelemetry.feeBps)
+      ?? coerceFiniteNumber(metadata.redemptionFeeBps),
     buyFeeBpsMin: coerceFiniteNumber(metadata.buyFeeBpsMin),
     buyFeeBpsMax: coerceFiniteNumber(metadata.buyFeeBpsMax),
   };

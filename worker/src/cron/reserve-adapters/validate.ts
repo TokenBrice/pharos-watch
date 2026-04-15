@@ -45,8 +45,70 @@ function getMetadataDetails(metadata: Record<string, unknown> | undefined): Reco
     : null;
 }
 
+function getMetadataObject(metadata: Record<string, unknown> | undefined, key: string): Record<string, unknown> | null {
+  const value = metadata?.[key];
+  return value && typeof value === "object" && !Array.isArray(value)
+    ? value as Record<string, unknown>
+    : null;
+}
+
 function describeAdapter(adapter: ReserveAdapterDefinition | undefined): string {
   return adapter ? ` for ${adapter.sourceModel}/${adapter.evidenceClass}` : "";
+}
+
+function validateRedemptionTelemetry(
+  metadata: Record<string, unknown> | undefined,
+  adapter: ReserveAdapterDefinition | undefined,
+): LiveReserveWarning[] {
+  const warnings: LiveReserveWarning[] = [];
+  const adapterLabel = describeAdapter(adapter);
+  const redemption = getMetadataObject(metadata, "redemption");
+  const capacityUsd = getFiniteMetadataNumber(metadata, "immediateRedeemableUsd")
+    ?? getFiniteMetadataNumber(redemption ?? undefined, "capacityUsd");
+  const capacityRatio = getFiniteMetadataNumber(metadata, "immediateRedeemableRatio")
+    ?? getFiniteMetadataNumber(redemption ?? undefined, "capacityRatioOfSupply");
+  const feeBps = getFiniteMetadataNumber(metadata, "redemptionFeeBps")
+    ?? getFiniteMetadataNumber(redemption ?? undefined, "feeBps");
+
+  const hasCapacityTelemetry = capacityUsd != null || capacityRatio != null;
+  const hasFeeTelemetry = feeBps != null;
+  const adapterCapacity = adapter?.redemptionTelemetry?.capacity ?? "none";
+  const adapterFee = adapter?.redemptionTelemetry?.fee ?? "none";
+
+  if (capacityUsd != null && capacityUsd < 0) {
+    return [fatalWarning("invalid-redemption-capacity-usd", `Redemption capacity is negative${adapterLabel}`)];
+  }
+  if (capacityRatio != null && (capacityRatio < 0 || capacityRatio > 1)) {
+    return [fatalWarning("invalid-redemption-capacity-ratio", `Redemption capacity ratio is outside 0-1${adapterLabel}`)];
+  }
+  if (feeBps != null && feeBps < 0) {
+    return [fatalWarning("invalid-redemption-fee-bps", `Redemption fee bps is negative${adapterLabel}`)];
+  }
+  if (hasCapacityTelemetry && adapterCapacity === "none") {
+    return [fatalWarning("unsupported-redemption-capacity-telemetry", `Adapter emitted redemption capacity despite declaring no capacity telemetry${adapterLabel}`)];
+  }
+  if (hasFeeTelemetry && adapterFee === "none") {
+    return [fatalWarning("unsupported-redemption-fee-telemetry", `Adapter emitted redemption fee despite declaring no fee telemetry${adapterLabel}`)];
+  }
+
+  const capacityKind = redemption?.capacityKind;
+  if (
+    typeof capacityKind === "string" &&
+    (capacityKind === "live-direct" || capacityKind === "live-direct-bounded") &&
+    adapterCapacity !== "direct"
+  ) {
+    return [fatalWarning("redemption-capacity-kind-mismatch", `Adapter emitted ${capacityKind} capacity without direct telemetry capability${adapterLabel}`)];
+  }
+
+  const freshnessKind = redemption?.freshnessKind;
+  if (hasCapacityTelemetry && freshnessKind === "unverified") {
+    warnings.push(degradedWarning(
+      "redemption-capacity-unverified",
+      `Redemption capacity telemetry is marked unverified${adapterLabel}`,
+    ));
+  }
+
+  return warnings;
 }
 
 export function validateAdapterOutput(
@@ -58,6 +120,11 @@ export function validateAdapterOutput(
   }
 
   const warnings: LiveReserveWarning[] = [];
+  const redemptionWarnings = validateRedemptionTelemetry(input.metadata, options?.adapter);
+  if (hasFatalWarnings(redemptionWarnings)) {
+    return { valid: false, warnings: redemptionWarnings };
+  }
+  warnings.push(...redemptionWarnings);
 
   for (const slice of input.slices) {
     if (!Number.isFinite(slice.pct) || slice.pct <= 0) {

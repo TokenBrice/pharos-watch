@@ -69,6 +69,32 @@ export const LIVE_RESERVE_FRESHNESS_MODE_VALUES = [
   "not-applicable",
 ] as const;
 
+export const LIVE_RESERVE_REDEMPTION_CAPACITY_KIND_VALUES = [
+  "live-direct",
+  "live-direct-bounded",
+  "live-queue",
+  "live-proxy-validated",
+  "documented-bound",
+  "documented-eventual",
+  "heuristic",
+] as const;
+
+export const LIVE_RESERVE_REDEMPTION_FRESHNESS_KIND_VALUES = [
+  "verified-source-timestamp",
+  "same-run-onchain",
+  "same-run-api",
+  "reviewed-static",
+  "unverified",
+] as const;
+
+export const LIVE_RESERVE_REDEMPTION_ROUTE_STATUS_VALUES = [
+  "open",
+  "degraded",
+  "paused",
+  "cohort-limited",
+  "unknown",
+] as const;
+
 export const RESERVE_DISPLAY_BADGE_KIND_VALUES = [
   "live",
   "curated-validated",
@@ -93,6 +119,9 @@ export type LiveReserveEvidenceClass = (typeof LIVE_RESERVE_EVIDENCE_CLASS_VALUE
 export type LiveReserveSourceSharingMode = (typeof LIVE_RESERVE_SHARED_SOURCE_MODE_VALUES)[number];
 export type LiveReserveWarningEffect = (typeof LIVE_RESERVE_WARNING_EFFECT_VALUES)[number];
 export type LiveReserveFreshnessMode = (typeof LIVE_RESERVE_FRESHNESS_MODE_VALUES)[number];
+export type LiveReserveRedemptionCapacityKind = (typeof LIVE_RESERVE_REDEMPTION_CAPACITY_KIND_VALUES)[number];
+export type LiveReserveRedemptionFreshnessKind = (typeof LIVE_RESERVE_REDEMPTION_FRESHNESS_KIND_VALUES)[number];
+export type LiveReserveRedemptionRouteStatus = (typeof LIVE_RESERVE_REDEMPTION_ROUTE_STATUS_VALUES)[number];
 export type ReserveDisplayBadgeKind = (typeof RESERVE_DISPLAY_BADGE_KIND_VALUES)[number];
 export type LiveReserveSemantics = (typeof LIVE_RESERVE_SEMANTICS_VALUES)[number];
 export type LiveReserveRisk = (typeof LIVE_RESERVE_RISK_VALUES)[number];
@@ -130,7 +159,26 @@ export interface LiveReserveSnapshotMetadata extends Record<string, unknown> {
   redemptionFeeBps?: number;
   buyFeeBpsMin?: number;
   buyFeeBpsMax?: number;
+  redemption?: LiveReserveRedemptionTelemetry;
   details?: Record<string, unknown>;
+}
+
+export interface LiveReserveRedemptionTelemetry extends Record<string, unknown> {
+  capacityUsd?: number;
+  capacityRatioOfSupply?: number;
+  capacityKind?: LiveReserveRedemptionCapacityKind;
+  freshnessKind?: LiveReserveRedemptionFreshnessKind;
+  sourceTimestamp?: number;
+  blockNumber?: number;
+  routeStatus?: LiveReserveRedemptionRouteStatus;
+  routeStatusReason?: string;
+  holderEligibility?: string;
+  settlementDelaySec?: number;
+  queueDepthUsd?: number;
+  dailyLimitUsd?: number;
+  minRedeemUsd?: number;
+  feeBps?: number;
+  sourceUrls?: string[];
 }
 
 export interface LiveReserveAdapterValidationPolicy {

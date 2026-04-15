@@ -91,6 +91,7 @@ const ADAPTERS = Object.fromEntries(
       sourceModel: definition.sourceModel,
       evidenceClass: definition.evidenceClass,
       sharedSourceMode: definition.sharedSourceMode,
+      redemptionTelemetry: definition.redemptionTelemetry,
       ...(validation ? { validation } : {}),
     };
     })(),

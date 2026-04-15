@@ -246,4 +246,79 @@ describe("validateAdapterOutput", () => {
     expect(result.valid).toBe(true);
     expect(result.warnings.some((warning) => warning.code === "material-unknown-exposure")).toBe(true);
   });
+
+  it("rejects invalid redemption capacity ratios", () => {
+    const result = validateAdapterOutput(
+      {
+        slices: [{ name: "A", pct: 100, risk: "low" }],
+        metadata: { immediateRedeemableRatio: 1.5 },
+      },
+      {
+        adapter: {
+          key: "ethena",
+          fetch: async () => ({ slices: [] }),
+          sourceModel: LIVE_RESERVE_ADAPTER_DEFINITIONS.ethena.sourceModel,
+          evidenceClass: LIVE_RESERVE_ADAPTER_DEFINITIONS.ethena.evidenceClass,
+          sharedSourceMode: LIVE_RESERVE_ADAPTER_DEFINITIONS.ethena.sharedSourceMode,
+          redemptionTelemetry: LIVE_RESERVE_ADAPTER_DEFINITIONS.ethena.redemptionTelemetry,
+          validation: LIVE_RESERVE_ADAPTER_DEFINITIONS.ethena.validation,
+        },
+      },
+    );
+
+    expect(result.valid).toBe(false);
+    expect(result.warnings[0]?.code).toBe("invalid-redemption-capacity-ratio");
+  });
+
+  it("rejects redemption capacity from adapters without capacity telemetry", () => {
+    const result = validateAdapterOutput(
+      {
+        slices: [{ name: "A", pct: 100, risk: "low" }],
+        metadata: { redemption: { capacityUsd: 10_000, capacityRatioOfSupply: 0.1 } },
+      },
+      {
+        adapter: {
+          key: "circle-transparency",
+          fetch: async () => ({ slices: [] }),
+          sourceModel: LIVE_RESERVE_ADAPTER_DEFINITIONS["circle-transparency"].sourceModel,
+          evidenceClass: LIVE_RESERVE_ADAPTER_DEFINITIONS["circle-transparency"].evidenceClass,
+          sharedSourceMode: LIVE_RESERVE_ADAPTER_DEFINITIONS["circle-transparency"].sharedSourceMode,
+          redemptionTelemetry: LIVE_RESERVE_ADAPTER_DEFINITIONS["circle-transparency"].redemptionTelemetry,
+          validation: LIVE_RESERVE_ADAPTER_DEFINITIONS["circle-transparency"].validation,
+        },
+      },
+    );
+
+    expect(result.valid).toBe(false);
+    expect(result.warnings[0]?.code).toBe("unsupported-redemption-capacity-telemetry");
+  });
+
+  it("rejects direct redemption kind from proxy adapters", () => {
+    const result = validateAdapterOutput(
+      {
+        slices: [{ name: "A", pct: 100, risk: "low" }],
+        metadata: {
+          redemption: {
+            capacityUsd: 10_000,
+            capacityRatioOfSupply: 0.1,
+            capacityKind: "live-direct",
+          },
+        },
+      },
+      {
+        adapter: {
+          key: "ethena",
+          fetch: async () => ({ slices: [] }),
+          sourceModel: LIVE_RESERVE_ADAPTER_DEFINITIONS.ethena.sourceModel,
+          evidenceClass: LIVE_RESERVE_ADAPTER_DEFINITIONS.ethena.evidenceClass,
+          sharedSourceMode: LIVE_RESERVE_ADAPTER_DEFINITIONS.ethena.sharedSourceMode,
+          redemptionTelemetry: LIVE_RESERVE_ADAPTER_DEFINITIONS.ethena.redemptionTelemetry,
+          validation: LIVE_RESERVE_ADAPTER_DEFINITIONS.ethena.validation,
+        },
+      },
+    );
+
+    expect(result.valid).toBe(false);
+    expect(result.warnings[0]?.code).toBe("redemption-capacity-kind-mismatch");
+  });
 });

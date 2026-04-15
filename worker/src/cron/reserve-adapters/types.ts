@@ -39,5 +39,9 @@ export interface ReserveAdapterDefinition {
   sourceModel: LiveReserveSourceModel;
   evidenceClass: LiveReserveEvidenceClass;
   sharedSourceMode: LiveReserveSourceSharingMode;
+  redemptionTelemetry?: {
+    capacity: "direct" | "proxy" | "none";
+    fee: "current-bps" | "none";
+  };
   validation?: LiveReserveAdapterValidationPolicy;
 }

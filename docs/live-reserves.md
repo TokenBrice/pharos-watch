@@ -99,6 +99,13 @@ Common metadata fields:
 | `immediateRedeemableUsd`, `immediateRedeemableRatio`            | Current redeemable-capacity telemetry reused by redemption backstops                            |
 | `redemptionFeeBps`                                              | Current live redemption fee telemetry when the source exposes it                                |
 | `buyFeeBpsMin`, `buyFeeBpsMax`                                  | Optional raw buy-fee range context retained alongside normalized `redemptionFeeBps`             |
+| `redemption.capacityUsd`, `redemption.capacityRatioOfSupply`    | Normalized redemption-capacity telemetry. New adapters should prefer this nested shape; legacy flat fields remain readable during migration |
+| `redemption.capacityKind`, `redemption.freshnessKind`           | Typed redemption evidence tier and freshness basis used by redemption-backstop validation        |
+| `redemption.routeStatus`, `redemption.routeStatusReason`        | Optional current route availability signal, separate from reserve-sync status                   |
+| `redemption.settlementDelaySec`, `redemption.queueDepthUsd`     | Optional queue/delay context for redemption routes that are current but not atomic              |
+| `redemption.feeBps`                                             | Normalized current redemption fee in the nested telemetry contract                              |
+
+Redemption telemetry is validated before persistence. Negative capacity, capacity ratios outside `0..1`, negative fees, capacity emitted by adapters that do not declare redemption-capacity support, fee telemetry emitted by adapters that do not declare fee support, and direct-capacity evidence emitted by proxy-only adapters fail the adapter output validation. Existing flat fields are still parsed for backward compatibility, but new adapter work should emit the nested `metadata.redemption` object.
 
 `freshnessMode = "not-applicable"` is the expected scoring-eligible path for intrinsically current on-chain reads such as `evm-branch-balances` and `liquity-v1`, where reserve composition comes from latest-state contract balances rather than a separately timestamped disclosure.
 
