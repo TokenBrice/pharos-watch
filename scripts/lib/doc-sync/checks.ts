@@ -55,6 +55,7 @@ import {
   ACTIVE_DEPEG_CAP_F_SCORE,
   REDEMPTION_SEVERE_ACTIVE_DEPEG_BPS,
 } from "../../../shared/lib/report-card-active-depeg";
+import { REDEMPTION_BACKSTOP_CONFIGS } from "../../../shared/lib/redemption-backstops";
 import {
   DEPEG_DEWS_METHODOLOGY_VERSION_LABEL,
   METHODOLOGY_DOC_VERSION_CHECKS,
@@ -354,6 +355,52 @@ function checkChainsPageDoc(failures: Failure[]): void {
   }
 }
 
+function checkRedemptionBackstopsDoc(failures: Failure[]): void {
+  const file = "docs/redemption-backstops.md";
+  const doc = read(file);
+
+  const familyCounts: Record<string, number> = {};
+  for (const config of Object.values(REDEMPTION_BACKSTOP_CONFIGS)) {
+    familyCounts[config.routeFamily] = (familyCounts[config.routeFamily] ?? 0) + 1;
+  }
+  const totalExpected = Object.keys(REDEMPTION_BACKSTOP_CONFIGS).length;
+
+  const totalFound = getFirstNumberFromText(
+    findLineValue(doc, /- \*\*Configured coins:\*\* (\d+)/) ?? "",
+  );
+  expectNumber(failures, file, "configured coins total", totalFound, totalExpected);
+
+  const familyLine = findLineValue(doc, /- \*\*Route families:\*\* ([^\n]+)/) ?? "";
+  const familyOrder = [
+    "offchain-issuer",
+    "stablecoin-redeem",
+    "collateral-redeem",
+    "queue-redeem",
+    "psm-swap",
+    "basket-redeem",
+  ] as const;
+  for (const family of familyOrder) {
+    const pattern = new RegExp(`(\\d+)\\s+\`${family}\``);
+    const match = familyLine.match(pattern);
+    const found = match ? Number(match[1]) : null;
+    expectNumber(failures, file, `${family} family count`, found, familyCounts[family] ?? 0);
+  }
+
+  const seenInDoc = new Set(
+    Array.from(familyLine.matchAll(/`([a-z-]+)`/g), (m) => m[1]),
+  );
+  for (const family of Object.keys(familyCounts)) {
+    if (!seenInDoc.has(family)) {
+      failures.push({
+        file,
+        label: `${family} family listed in doc`,
+        expected: "present",
+        found: "missing",
+      });
+    }
+  }
+}
+
 export function runDocSyncChecks(): Failure[] {
   const failures: Failure[] = [];
 
@@ -365,6 +412,7 @@ export function runDocSyncChecks(): Failure[] {
   checkWorkerLimitsDoc(failures);
   checkChainsApiDoc(failures);
   checkChainsPageDoc(failures);
+  checkRedemptionBackstopsDoc(failures);
 
   return failures;
 }
