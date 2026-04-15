@@ -1,10 +1,15 @@
 import { z } from "zod";
 import { LIVE_RESERVE_ADAPTER_KEYS, type LiveReservesConfig } from "../types/live-reserves";
-import { adapterParamsSchemas, baseLiveReserveConfigSchema } from "./live-reserve-adapters-schemas";
+import {
+  adapterParamsSchemas,
+  baseLiveReserveConfigSchema,
+  createLiveReserveInputsSchema,
+} from "./live-reserve-adapters-schemas";
 
 const liveReserveConfigVariants = LIVE_RESERVE_ADAPTER_KEYS.map((adapterKey) =>
   baseLiveReserveConfigSchema.extend({
     adapter: z.literal(adapterKey),
+    inputs: createLiveReserveInputsSchema(adapterKey),
     params: adapterParamsSchemas[adapterKey].optional(),
   }),
 // Zod discriminatedUnion requires a non-empty tuple type that TS cannot infer from array operations

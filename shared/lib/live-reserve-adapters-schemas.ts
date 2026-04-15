@@ -14,29 +14,89 @@ const LiveReserveSemanticsSchema = z.enum(LIVE_RESERVE_SEMANTICS_VALUES);
 const LiveReserveRpcModeSchema = z.enum(LIVE_RESERVE_RPC_MODE_VALUES);
 const LiveReserveRiskSchema = z.enum(LIVE_RESERVE_RISK_VALUES);
 const LiveReserveDependencyTypeSchema = z.enum(DEPENDENCY_TYPE_VALUES);
+type LiveReserveInputKind = LiveReserveInput["kind"];
 
-const LiveReserveInputSchema: z.ZodType<LiveReserveInput> = z.union([
-  z.object({
+const LiveReserveInputSchemaByKind = {
+  "http-json": z.object({
     kind: z.literal("http-json"),
     url: z.string(),
   }).strict(),
-  z.object({
+  "http-html": z.object({
     kind: z.literal("http-html"),
     url: z.string(),
   }).strict(),
-  z.object({
+  indexer: z.object({
     kind: z.literal("indexer"),
     url: z.string(),
   }).strict(),
-  z.object({
+  "onchain-solana": z.object({
     kind: z.literal("onchain-solana"),
   }).strict(),
-  z.object({
+  "onchain-evm": z.object({
     kind: z.literal("onchain-evm"),
     chain: z.string(),
     rpcMode: LiveReserveRpcModeSchema,
   }).strict(),
-]);
+} as const satisfies Record<LiveReserveInputKind, z.ZodTypeAny>;
+
+export const LIVE_RESERVE_ADAPTER_PRIMARY_INPUT_KINDS = {
+  abracadabra: ["onchain-evm"],
+  accountable: ["http-json"],
+  "anzen-usdz": ["onchain-evm"],
+  asymmetry: ["http-json"],
+  btcfi: ["http-json"],
+  "cap-vault": ["onchain-evm"],
+  "chainlink-nav": ["onchain-evm"],
+  "chainlink-por": ["onchain-evm"],
+  "circle-transparency": ["http-html"],
+  "collateral-positions-api": ["http-json"],
+  crvusd: ["http-json"],
+  "curated-validated": ["onchain-evm", "onchain-solana"],
+  "dola-inverse": ["http-json"],
+  "erc4626-single-asset": ["onchain-evm"],
+  ethena: ["http-json"],
+  "evm-branch-balances": ["onchain-evm"],
+  falcon: ["http-json"],
+  "fdusd-transparency": ["http-html"],
+  frax: ["http-json"],
+  "frax-balance-sheet": ["http-json"],
+  fx: ["http-json"],
+  gho: ["onchain-evm"],
+  infinifi: ["http-json"],
+  jupusd: ["http-json"],
+  lista: ["onchain-evm"],
+  "liquity-v1": ["onchain-evm"],
+  "liquity-v2-branches": ["onchain-evm"],
+  m0: ["http-json"],
+  mento: ["http-html"],
+  "openeden-usdo": ["http-json"],
+  "re-metrics": ["http-html"],
+  reservoir: ["http-json"],
+  "sgforge-coinvertible": ["http-html"],
+  "single-asset": ["http-json", "onchain-evm"],
+  "sky-makercore": ["http-json"],
+  "superstate-liquidity": ["onchain-evm"],
+  tether: ["http-json"],
+  "usdai-proof-of-reserves": ["http-json"],
+  "usd1-bundle-oracle": ["onchain-evm"],
+  "usdd-data-platform": ["http-json"],
+} as const satisfies Record<LiveReserveAdapterKey, readonly LiveReserveInputKind[]>;
+
+function createInputSchemaForKinds(kinds: readonly LiveReserveInputKind[]): z.ZodTypeAny {
+  const schemas = kinds.map((kind) => LiveReserveInputSchemaByKind[kind]);
+  if (schemas.length === 1) {
+    return schemas[0];
+  }
+  return z.union(schemas as unknown as [z.ZodTypeAny, ...z.ZodTypeAny[]]);
+}
+
+export function createLiveReserveInputsSchema(adapterKey: LiveReserveAdapterKey): z.ZodTypeAny {
+  const inputSchema = createInputSchemaForKinds(LIVE_RESERVE_ADAPTER_PRIMARY_INPUT_KINDS[adapterKey]);
+  return z.object({
+    primary: inputSchema,
+    fallbacks: z.array(inputSchema).optional(),
+  }).strict();
+}
 
 const LiveReserveDisplaySchema = z.object({
   url: z.string().optional(),
@@ -238,10 +298,6 @@ export const baseLiveReserveConfigSchema = z.object({
   semantics: LiveReserveSemanticsSchema,
   breakerScope: z.string().optional(),
   display: LiveReserveDisplaySchema.optional(),
-  inputs: z.object({
-    primary: LiveReserveInputSchema,
-    fallbacks: z.array(LiveReserveInputSchema).optional(),
-  }).strict(),
 });
 
 const abracadabraCauldronSchema = z.object({

@@ -60,7 +60,7 @@ describe("adapter registry completeness", () => {
 
   it("LiveReservesConfigSchema accepts a representative config", () => {
     const parsed = LiveReservesConfigSchema.safeParse({
-      adapter: "tether",
+      adapter: "curated-validated",
       version: 1,
       semantics: "single-asset",
       inputs: {
@@ -69,6 +69,33 @@ describe("adapter registry completeness", () => {
     });
 
     expect(parsed.success).toBe(true);
+  });
+
+  it("LiveReservesConfigSchema rejects unsupported primary input kinds", () => {
+    const parsed = LiveReservesConfigSchema.safeParse({
+      adapter: "tether",
+      version: 1,
+      semantics: "single-asset",
+      inputs: {
+        primary: { kind: "onchain-solana" },
+      },
+    });
+
+    expect(parsed.success).toBe(false);
+  });
+
+  it("LiveReservesConfigSchema rejects unsupported fallback input kinds", () => {
+    const parsed = LiveReservesConfigSchema.safeParse({
+      adapter: "accountable",
+      version: 1,
+      semantics: "protocol-reserve",
+      inputs: {
+        primary: { kind: "http-json", url: "https://example.com/dashboard" },
+        fallbacks: [{ kind: "http-html", url: "https://example.com/dashboard" }],
+      },
+    });
+
+    expect(parsed.success).toBe(false);
   });
 
   it("parseLiveReserveAdapterParams accepts a structured adapter payload", () => {

@@ -7,6 +7,8 @@ import preLaunchAsset from "../../data/stablecoins/pre-launch.json";
 import usdMajorAsset from "../../data/stablecoins/usd-major.json";
 import usdMinorAsset from "../../data/stablecoins/usd-minor.json";
 import { hasReserveDisplayBadgeForAdapter } from "../live-reserve-display";
+import { LiveReservesConfigSchema } from "../live-reserve-adapters";
+import { LIVE_RESERVE_ADAPTER_PRIMARY_INPUT_KINDS } from "../live-reserve-adapters-schemas";
 import { CANONICAL_ETH_RESERVE_RISK } from "../reserve-asset-risk";
 import {
   ACTIVE_STABLECOINS,
@@ -261,6 +263,27 @@ describe("tracked stablecoin metadata", () => {
       .map(([scope]) => scope);
 
     expect(overlappingScopes).toEqual([]);
+  });
+
+  it("keeps configured live reserve inputs compatible with adapter input-kind constraints", () => {
+    const issues = TRACKED_STABLECOINS
+      .filter((coin) => coin.liveReservesConfig)
+      .flatMap((coin) => {
+        const config = coin.liveReservesConfig!;
+        const parsed = LiveReservesConfigSchema.safeParse(config);
+        const allowedKinds = LIVE_RESERVE_ADAPTER_PRIMARY_INPUT_KINDS[config.adapter];
+        const invalidKinds = [
+          config.inputs.primary.kind,
+          ...(config.inputs.fallbacks ?? []).map((fallback) => fallback.kind),
+        ].filter((kind) => !allowedKinds.includes(kind));
+
+        return [
+          ...(parsed.success ? [] : [`${coin.id}:schema:${parsed.error.issues[0]?.message ?? "invalid"}`]),
+          ...invalidKinds.map((kind) => `${coin.id}:${config.adapter}:${kind}`),
+        ];
+      });
+
+    expect(issues).toEqual([]);
   });
 
   it("gives business-day NAV oracles enough freshness headroom for weekends", () => {
