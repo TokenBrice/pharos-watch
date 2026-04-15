@@ -4,7 +4,10 @@ import {
   buildSafetyGradeCounts,
   buildSafetyHeadlineStats,
   buildSafetyMcapMap,
+  buildSafetyStablecoinMap,
+  buildCoreSettlementProfiles,
   filterAndSortReportCards,
+  getCoreSettlementProfile,
   groupReportCardsByGrade,
 } from "./view-model";
 
@@ -22,6 +25,33 @@ function makeCard(overrides: Partial<ReportCard> = {}): ReportCard {
       resilience: { score: 88, grade: "B+" },
       decentralization: { score: 70, grade: "B-" },
       dependencyRisk: { score: 62, grade: "C" },
+    },
+    rawInputs: overrides.rawInputs ?? {
+      pegScore: 95,
+      activeDepeg: false,
+      activeDepegBps: null,
+      depegEventCount: 0,
+      lastEventAt: null,
+      liquidityScore: 90,
+      effectiveExitScore: 90,
+      redemptionBackstopScore: 65,
+      redemptionRouteFamily: "offchain-issuer",
+      redemptionModelConfidence: "medium",
+      redemptionUsedForLiquidity: true,
+      redemptionImmediateCapacityUsd: null,
+      redemptionImmediateCapacityRatio: null,
+      concentrationHhi: 0.01,
+      bluechipGrade: null,
+      canBeBlacklisted: true,
+      chainTier: "ethereum",
+      deploymentModel: "native-multichain",
+      collateralQuality: "rwa",
+      custodyModel: "institutional-top",
+      governanceTier: "centralized",
+      governanceQuality: "regulated-entity",
+      dependencies: [],
+      navToken: false,
+      collateralFromLive: true,
     },
   } as ReportCard;
 }
@@ -90,5 +120,49 @@ describe("safety score view-model", () => {
       expect.objectContaining({ label: "Supply in A/B", value: "99%" }),
       expect.objectContaining({ label: "Weakest dimension", detail: expect.stringContaining("avg") }),
     ]);
+  });
+
+  it("derives core settlement profiles from objective market, peg, liquidity, dependency, and issuer-exit gates", () => {
+    const core = makeCard({
+      id: "usdt-tether",
+      symbol: "USDT",
+      overallScore: 72,
+      overallGrade: "B",
+      dimensions: {
+        pegStability: { score: 99, grade: "A+" },
+        liquidity: { score: 69, grade: "B-" },
+        resilience: { score: 71, grade: "B" },
+        decentralization: { score: 40, grade: "D" },
+        dependencyRisk: { score: 95, grade: "A+" },
+      },
+    });
+    const small = makeCard({
+      id: "small-usd",
+      symbol: "SUSD",
+      overallScore: 85,
+      overallGrade: "A",
+    });
+    const stablecoinMap = buildSafetyStablecoinMap([
+      { id: "usdt-tether", circulating: { peggedUSD: 120_000_000_000 }, chains: Array.from({ length: 20 }, (_, i) => `chain-${i}`) },
+      { id: "small-usd", circulating: { peggedUSD: 100_000_000 }, chains: Array.from({ length: 20 }, (_, i) => `chain-${i}`) },
+    ]);
+
+    expect(getCoreSettlementProfile(core, stablecoinMap.get("usdt-tether"))).toMatchObject({
+      id: "usdt-tether",
+      marketCapUsd: 120_000_000_000,
+      chainCount: 20,
+    });
+    expect(getCoreSettlementProfile(small, stablecoinMap.get("small-usd"))).toBeNull();
+
+    const profiles = buildCoreSettlementProfiles([core, small], stablecoinMap);
+    expect([...profiles.keys()]).toEqual(["usdt-tether"]);
+
+    const sorted = filterAndSortReportCards([small, core], {
+      gradeFilter: "all",
+      sortKey: "coreSettlement",
+      mcapMap: new Map(),
+      coreSettlementProfiles: profiles,
+    });
+    expect(sorted.map((card) => card.id)).toEqual(["usdt-tether", "small-usd"]);
   });
 });

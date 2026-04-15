@@ -6,11 +6,12 @@ import {
   scoreToGrade,
 } from "@shared/lib/report-cards";
 import { sumPegBuckets } from "@shared/lib/supply";
-import type { ReportCard } from "@shared/types";
+import type { ReportCard, StablecoinData } from "@shared/types";
 
 export type GradeFilter = "all" | "A" | "B" | "C" | "D" | "F" | "NR";
 export type SortKey =
   | "overall"
+  | "coreSettlement"
   | "pegStability"
   | "liquidity"
   | "resilience"
@@ -20,6 +21,19 @@ export type SortKey =
 
 export const GRADE_RANGES: Exclude<GradeFilter, "all">[] = ["A", "B", "C", "D", "F", "NR"];
 
+const CORE_SETTLEMENT_MIN_MCAP_USD = 25_000_000_000;
+const CORE_SETTLEMENT_MIN_CHAINS = 10;
+const CORE_SETTLEMENT_MIN_PEG_SCORE = 90;
+const CORE_SETTLEMENT_MIN_LIQUIDITY_SCORE = 60;
+const CORE_SETTLEMENT_MIN_DEPENDENCY_SCORE = 90;
+
+export interface CoreSettlementProfile {
+  id: string;
+  marketCapUsd: number;
+  chainCount: number;
+  sortScore: number;
+}
+
 export function buildSafetyMcapMap(
   peggedAssets?: Array<{ id: string; circulating?: Record<string, number> | null }>,
 ): Map<string, number> {
@@ -27,8 +41,60 @@ export function buildSafetyMcapMap(
   return new Map(peggedAssets.map((asset) => [asset.id, asset.circulating ? sumPegBuckets(asset.circulating) : 0]));
 }
 
-export function getSortScore(card: ReportCard, key: SortKey, mcapMap: Map<string, number>): number | null {
+export function buildSafetyStablecoinMap(
+  peggedAssets?: Array<Pick<StablecoinData, "id" | "circulating" | "chains">>,
+): Map<string, Pick<StablecoinData, "id" | "circulating" | "chains">> {
+  if (!peggedAssets) return new Map();
+  return new Map(peggedAssets.map((asset) => [asset.id, asset]));
+}
+
+export function getCoreSettlementProfile(
+  card: ReportCard,
+  stablecoin?: Pick<StablecoinData, "id" | "circulating" | "chains">,
+): CoreSettlementProfile | null {
+  if (card.isDefunct || !stablecoin) return null;
+  const marketCapUsd = stablecoin.circulating ? sumPegBuckets(stablecoin.circulating) : 0;
+  const chainCount = stablecoin.chains.length;
+  const hasIssuerExit =
+    card.rawInputs.redemptionBackstopScore != null &&
+    card.rawInputs.redemptionModelConfidence !== "low" &&
+    card.rawInputs.redemptionRouteFamily != null;
+  if (marketCapUsd < CORE_SETTLEMENT_MIN_MCAP_USD) return null;
+  if (chainCount < CORE_SETTLEMENT_MIN_CHAINS) return null;
+  if ((card.dimensions.pegStability.score ?? 0) < CORE_SETTLEMENT_MIN_PEG_SCORE) return null;
+  if ((card.dimensions.liquidity.score ?? 0) < CORE_SETTLEMENT_MIN_LIQUIDITY_SCORE) return null;
+  if ((card.dimensions.dependencyRisk.score ?? 0) < CORE_SETTLEMENT_MIN_DEPENDENCY_SCORE) return null;
+  if (card.rawInputs.dependencies.length > 0) return null;
+  if (!hasIssuerExit) return null;
+
+  return {
+    id: card.id,
+    marketCapUsd,
+    chainCount,
+    sortScore: 1_000_000_000_000 + marketCapUsd + (chainCount * 1_000_000),
+  };
+}
+
+export function buildCoreSettlementProfiles(
+  cards: ReportCard[] | undefined,
+  stablecoinMap: Map<string, Pick<StablecoinData, "id" | "circulating" | "chains">>,
+): Map<string, CoreSettlementProfile> {
+  const profiles = new Map<string, CoreSettlementProfile>();
+  for (const card of cards ?? []) {
+    const profile = getCoreSettlementProfile(card, stablecoinMap.get(card.id));
+    if (profile) profiles.set(card.id, profile);
+  }
+  return profiles;
+}
+
+export function getSortScore(
+  card: ReportCard,
+  key: SortKey,
+  mcapMap: Map<string, number>,
+  coreSettlementProfiles: Map<string, CoreSettlementProfile> = new Map(),
+): number | null {
   if (key === "overall") return card.overallScore;
+  if (key === "coreSettlement") return coreSettlementProfiles.get(card.id)?.sortScore ?? card.overallScore;
   if (key === "mcap") return mcapMap.get(card.id) ?? 0;
   return card.dimensions[key].score;
 }
@@ -52,10 +118,12 @@ export function filterAndSortReportCards(
     gradeFilter,
     sortKey,
     mcapMap,
+    coreSettlementProfiles = new Map(),
   }: {
     gradeFilter: GradeFilter;
     sortKey: SortKey;
     mcapMap: Map<string, number>;
+    coreSettlementProfiles?: Map<string, CoreSettlementProfile>;
   },
 ): ReportCard[] {
   let filtered = cards.filter((card) => !card.isDefunct);
@@ -65,8 +133,8 @@ export function filterAndSortReportCards(
   }
 
   return [...filtered].sort((a, b) => {
-    const aScore = getSortScore(a, sortKey, mcapMap);
-    const bScore = getSortScore(b, sortKey, mcapMap);
+    const aScore = getSortScore(a, sortKey, mcapMap, coreSettlementProfiles);
+    const bScore = getSortScore(b, sortKey, mcapMap, coreSettlementProfiles);
     if (aScore === null && bScore === null) return 0;
     if (aScore === null) return 1;
     if (bScore === null) return -1;

@@ -389,11 +389,11 @@ Legacy symbol-based tokens are still accepted only when the symbol is unique acr
 
 ## Frontend
 
-- **Grid page**: `src/app/safety-scores/client.tsx` — filterable/sortable grid of non-defunct grade cards with grade distribution bar, portfolio/stress panel integration, simulation mode
+- **Grid page**: `src/app/safety-scores/client.tsx` — filterable/sortable grid of non-defunct grade cards with grade distribution bar, core settlement rail strip/sort affordance, portfolio/stress panel integration, simulation mode
 - **Portfolio & stress panel**: `src/components/stress-test-panel.tsx` — collapsible panel with holdings editor, portfolio grade/radar/exposure, stress test controls + impact table
 - **Detail card**: `src/components/report-card.tsx` — full radar chart + dimension breakdown; the mobile grade strip wraps and keeps the score-breakdown disclosure on its own row so the chart keeps usable width. The title and key opaque dimensions (`Resilience`, `Dependency Risk`) now expose contextual methodology hints, and the card footer links directly back to the Safety Score methodology / changelog.
 - **Detail timeline**: `src/components/stablecoin-detail/safety-score-history-section.tsx` — per-coin grade transition timeline (seed row + changes) shown under the Safety Score section on `/stablecoin/[id]`
-- **Mini card**: `src/components/report-card-mini.tsx` — compact grid tile with simulation support (dashed border, before→after grade, "Simulated" badge); the radar stage now uses a width-driven aspect ratio so the grid cards do not carry excess vertical dead space
+- **Mini card**: `src/components/report-card-mini.tsx` — compact grid tile with simulation support (dashed border, before→after grade, "Simulated" badge) and a "Core rail" marker for objectively qualified settlement rails; the radar stage now uses a width-driven aspect ratio so the grid cards do not carry excess vertical dead space
 - **Radar chart**: `src/components/radar-chart.tsx` — hexagonal Recharts radar with `ReportCardRadar` (single) and `CompareRadar` (multi-coin overlay); `ReportCardRadar` automatically switches to short axis labels on very narrow containers
 - **Hooks**: `src/hooks/api-hooks.ts` (`useReportCards`, `useSafetyScoreHistory`), `src/hooks/use-portfolio.ts` (portfolio state + browser persistence), `src/hooks/use-stress-test.ts` (stress test state + recomputation)
 

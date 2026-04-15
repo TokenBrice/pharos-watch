@@ -22,6 +22,8 @@ interface ReportCardMiniProps {
   isSimulating?: boolean; // any simulation is active
   originalGrade?: ReportCardGrade;
   originalScore?: number | null;
+  /** The asset qualifies as a very large, self-backed settlement rail. */
+  coreSettlement?: boolean;
   /** Grid index used for staggered grade-pop animation delay */
   animIndex?: number;
   /** Trend direction based on score change from previous period */
@@ -57,6 +59,7 @@ export function ReportCardMini({
   isSimulating,
   originalGrade,
   originalScore,
+  coreSettlement,
   animIndex = 0,
   trend,
 }: ReportCardMiniProps) {
@@ -79,6 +82,11 @@ export function ReportCardMini({
           {isSimulated && (
             <span className="absolute top-2 right-2 text-[10px] font-semibold text-amber-700 dark:text-amber-400 bg-amber-500/15 rounded-full px-2 py-0.5 leading-none border border-amber-500/20">
               Simulated
+            </span>
+          )}
+          {coreSettlement && (
+            <span className="absolute left-2 top-2 rounded-full border border-frost-blue/30 bg-frost-blue/10 px-2 py-0.5 text-[10px] font-semibold leading-none text-sky-800 dark:text-sky-300">
+              Core rail
             </span>
           )}
 

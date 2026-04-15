@@ -1,7 +1,9 @@
 "use client";
 
 import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import Link from "next/link";
 import { Card, CardContent } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useReportCards } from "@/hooks/api-hooks";
@@ -9,12 +11,15 @@ import { useStablecoins } from "@/hooks/use-stablecoins";
 import { useLogos } from "@/hooks/use-logos";
 import { useStressTest } from "@/hooks/use-stress-test";
 import { ReportCardMini } from "@/components/report-card-mini";
+import { StablecoinLogo } from "@/components/stablecoin-logo";
 import { StressTestPanel } from "@/components/stress-test-panel";
 import {
   REPORT_CARD_GRADE_COLORS,
 } from "@shared/lib/report-cards";
+import { formatCurrency } from "@shared/lib/format";
 import type { ReportCard } from "@shared/types";
 import { encodeStablecoinUrlToken } from "@/lib/stablecoin-url-codec";
+import { buildStablecoinUrl } from "@/lib/urls";
 import { StaleDataBanner } from "@/components/stale-data-banner";
 import { QueryErrorNotice } from "@/components/query-error-notice";
 import { SystemicRiskHeadline } from "@/components/systemic-risk-headline";
@@ -25,9 +30,12 @@ import {
   buildSafetyGradeCounts,
   buildSafetyHeadlineStats,
   buildSafetyMcapMap,
+  buildSafetyStablecoinMap,
+  buildCoreSettlementProfiles,
   filterAndSortReportCards,
   GRADE_RANGES,
   groupReportCardsByGrade,
+  type CoreSettlementProfile,
   type GradeFilter,
   type SortKey,
 } from "./view-model";
@@ -55,6 +63,7 @@ const GRADE_BAR_COLORS: Record<string, string> = {
 
 const SORT_OPTIONS: { key: SortKey; label: string }[] = [
   { key: "overall", label: "Overall" },
+  { key: "coreSettlement", label: "Core" },
   { key: "pegStability", label: "Peg" },
   { key: "liquidity", label: "Liquidity" },
   { key: "resilience", label: "Resilience" },
@@ -127,6 +136,70 @@ function HeadlineStats({
         </div>
       ))}
     </div>
+  );
+}
+
+function CoreSettlementStrip({
+  cards,
+  profiles,
+  logos,
+}: {
+  cards: ReportCard[];
+  profiles: Map<string, CoreSettlementProfile>;
+  logos?: Record<string, string>;
+}) {
+  const coreCards = cards
+    .filter((card) => profiles.has(card.id))
+    .sort((a, b) => (profiles.get(b.id)?.marketCapUsd ?? 0) - (profiles.get(a.id)?.marketCapUsd ?? 0));
+  if (coreCards.length === 0) return null;
+
+  return (
+    <section className="rounded-lg border border-frost-blue/30 bg-frost-blue/5 px-4 py-4">
+      <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+        <div className="space-y-1">
+          <h2 className="text-lg font-semibold tracking-tight">Core settlement rails</h2>
+          <p className="text-sm text-muted-foreground">
+            Very large supply, broad chain reach, tight peg history, self-backed reserves, and a reviewed issuer exit.
+          </p>
+        </div>
+        <div className="grid gap-2 sm:grid-cols-2 lg:min-w-[34rem]">
+          {coreCards.map((card) => {
+            const profile = profiles.get(card.id);
+            return (
+              <Link
+                key={card.id}
+                href={buildStablecoinUrl(card.id)}
+                className="pharos-focus-ring rounded-lg border border-border/60 bg-background/50 px-3 py-2 transition-colors hover:bg-accent/50"
+              >
+                <div className="flex items-center gap-3">
+                  <StablecoinLogo src={logos?.[card.id]} name={card.name} size={28} />
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center gap-2">
+                      <span className="truncate text-sm font-medium">{card.symbol}</span>
+                      <span className="rounded-full border border-frost-blue/30 bg-frost-blue/10 px-2 py-0.5 text-[10px] font-semibold uppercase text-sky-800 dark:text-sky-300">
+                        Core rail
+                      </span>
+                    </div>
+                    <p className="truncate text-xs text-muted-foreground">{card.name}</p>
+                  </div>
+                  <div className="text-right">
+                    <Badge
+                      variant="outline"
+                      className={cn("font-mono text-xs font-semibold", REPORT_CARD_GRADE_COLORS[card.overallGrade])}
+                    >
+                      {card.overallGrade}
+                    </Badge>
+                    <div className="text-[10px] text-muted-foreground">
+                      {profile ? `${formatCurrency(profile.marketCapUsd)} / ${profile.chainCount} chains` : ""}
+                    </div>
+                  </div>
+                </div>
+              </Link>
+            );
+          })}
+        </div>
+      </div>
+    </section>
   );
 }
 
@@ -372,6 +445,12 @@ export function ReportCardsClient() {
   const mcapMap = useMemo(() => {
     return buildSafetyMcapMap(stablecoinsData?.peggedAssets);
   }, [stablecoinsData]);
+  const stablecoinMap = useMemo(() => {
+    return buildSafetyStablecoinMap(stablecoinsData?.peggedAssets);
+  }, [stablecoinsData]);
+  const coreSettlementProfiles = useMemo(() => {
+    return buildCoreSettlementProfiles(reportData?.cards, stablecoinMap);
+  }, [reportData?.cards, stablecoinMap]);
 
   // Stress test
   const stressTest = useStressTest(reportData, mcapMap);
@@ -424,8 +503,9 @@ export function ReportCardsClient() {
       gradeFilter,
       sortKey,
       mcapMap,
+      coreSettlementProfiles,
     });
-  }, [displayCards, gradeFilter, sortKey, mcapMap]);
+  }, [displayCards, gradeFilter, sortKey, mcapMap, coreSettlementProfiles]);
 
   // Loading state
   if (isLoadingCards) {
@@ -482,6 +562,14 @@ export function ReportCardsClient() {
       {/* Headline stats */}
       {reportData?.cards && (
         <HeadlineStats cards={reportData.cards} mcapMap={mcapMap} />
+      )}
+
+      {reportData?.cards && (
+        <CoreSettlementStrip
+          cards={reportData.cards}
+          profiles={coreSettlementProfiles}
+          logos={logos}
+        />
       )}
 
       {/* Hero: Grade Distribution */}
@@ -627,6 +715,7 @@ export function ReportCardsClient() {
                     isSimulating={isSimulating}
                     originalGrade={originalCardMap.get(card.id)?.overallGrade}
                     originalScore={originalCardMap.get(card.id)?.overallScore}
+                    coreSettlement={coreSettlementProfiles.has(card.id)}
                     animIndex={i % 5}
                   />
                 </LazyCard>
@@ -646,6 +735,7 @@ export function ReportCardsClient() {
                 isSimulating={isSimulating}
                 originalGrade={originalCardMap.get(card.id)?.overallGrade}
                 originalScore={originalCardMap.get(card.id)?.overallScore}
+                coreSettlement={coreSettlementProfiles.has(card.id)}
                 animIndex={i % 5}
               />
             </LazyCard>

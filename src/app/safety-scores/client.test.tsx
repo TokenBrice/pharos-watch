@@ -23,7 +23,7 @@ let reportCardsState: {
 };
 
 let stablecoinsState: {
-  data: { peggedAssets: Array<{ id: string; circulating?: Record<string, number> | null }> } | undefined;
+  data: { peggedAssets: Array<{ id: string; circulating?: Record<string, number> | null; chains: string[] }> } | undefined;
   dataUpdatedAt: number;
   error: Error | null;
   meta: Record<string, unknown>;
@@ -73,8 +73,11 @@ vi.mock("@/hooks/use-stress-test", () => ({
 }));
 
 vi.mock("@/components/report-card-mini", () => ({
-  ReportCardMini: ({ card }: { card: ReportCard }) => (
-    <article data-testid={`report-card-${card.id}`}>{card.symbol}</article>
+  ReportCardMini: ({ card, coreSettlement }: { card: ReportCard; coreSettlement?: boolean }) => (
+    <article data-testid={`report-card-${card.id}`}>
+      {card.symbol}
+      {coreSettlement ? " Core rail" : ""}
+    </article>
   ),
 }));
 
@@ -109,7 +112,34 @@ function makeCard(overrides: Partial<ReportCard> = {}): ReportCard {
       liquidity: { score: 90, grade: "A" },
       resilience: { score: 88, grade: "B+" },
       decentralization: { score: 70, grade: "B-" },
-      dependencyRisk: { score: 62, grade: "C" },
+      dependencyRisk: { score: 95, grade: "A+" },
+    },
+    rawInputs: overrides.rawInputs ?? {
+      pegScore: 95,
+      activeDepeg: false,
+      activeDepegBps: null,
+      depegEventCount: 0,
+      lastEventAt: null,
+      liquidityScore: 90,
+      effectiveExitScore: 90,
+      redemptionBackstopScore: 65,
+      redemptionRouteFamily: "offchain-issuer",
+      redemptionModelConfidence: "medium",
+      redemptionUsedForLiquidity: true,
+      redemptionImmediateCapacityUsd: null,
+      redemptionImmediateCapacityRatio: null,
+      concentrationHhi: 0.01,
+      bluechipGrade: null,
+      canBeBlacklisted: true,
+      chainTier: "ethereum",
+      deploymentModel: "native-multichain",
+      collateralQuality: "rwa",
+      custodyModel: "institutional-top",
+      governanceTier: "centralized",
+      governanceQuality: "regulated-entity",
+      dependencies: [],
+      navToken: false,
+      collateralFromLive: true,
     },
   } as ReportCard;
 }
@@ -134,8 +164,8 @@ describe("ReportCardsClient", () => {
     stablecoinsState = {
       data: {
         peggedAssets: [
-          { id: "usdc-circle", circulating: { peggedUSD: 60_000_000_000 } },
-          { id: "usdt-tether", circulating: { peggedUSD: 120_000_000_000 } },
+          { id: "usdc-circle", circulating: { peggedUSD: 60_000_000_000 }, chains: Array.from({ length: 20 }, (_, i) => `chain-${i}`) },
+          { id: "usdt-tether", circulating: { peggedUSD: 120_000_000_000 }, chains: Array.from({ length: 20 }, (_, i) => `chain-${i}`) },
         ],
       },
       dataUpdatedAt: Date.now(),
@@ -176,8 +206,10 @@ describe("ReportCardsClient", () => {
     render(<ReportCardsClient />);
 
     expect(screen.getByText("Safety Landscape")).toBeTruthy();
+    expect(screen.getByText("Core settlement rails")).toBeTruthy();
     expect(screen.getByTestId("report-card-usdc-circle")).toBeTruthy();
     expect(screen.getByTestId("report-card-usdt-tether")).toBeTruthy();
+    expect(screen.getAllByText("Core rail").length).toBeGreaterThanOrEqual(2);
 
     fireEvent.click(screen.getAllByRole("button", { name: /B \(1\)/ })[0]!);
 
