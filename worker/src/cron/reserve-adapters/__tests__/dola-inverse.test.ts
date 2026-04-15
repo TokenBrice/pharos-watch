@@ -124,6 +124,13 @@ describe("adaptFirmMarkets", () => {
     expect(result.metadata?.timestamp).toBe(12345);
     expect(result.metadata?.sourceTimestamp).toBe(12345);
     expect(result.metadata?.freshnessMode).toBe("verified");
+    expect(result.metadata?.redemption).toMatchObject({
+      capacityUsd: 0,
+      capacityKind: "live-proxy-validated",
+      freshnessKind: "verified-source-timestamp",
+      sourceTimestamp: 12345,
+      routeStatus: "open",
+    });
   });
 
   it("assigns correct risk levels to each bucket", () => {
