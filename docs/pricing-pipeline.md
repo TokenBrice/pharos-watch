@@ -21,7 +21,7 @@ When an asset still has no usable current price after validation and fallback re
 
 ## Versioning
 
-- **Current methodology version:** `v4.35`
+- **Current methodology version:** `v4.36`
 - **Canonical version module:** `shared/lib/pricing-pipeline-version.ts`
 - **Public changelog route:** `/methodology/pricing-pipeline-changelog/`
 - **Longform methodology section:** `/methodology/#pricing-pipeline-methodology`
@@ -212,6 +212,8 @@ Provider attempt diagnostics for Binance and Jupiter are persisted into `sync-st
 Jupiter fallback uses the official `https://api.jup.ag/price/v3` gateway. The previous Lite gateway is no longer used after Worker egress received repeated Cloudflare 403 block pages from that host.
 
 Binance ticker fetches try the market-data mirror first (`data-api.binance.vision`) and then fall back to the main public API host (`api.binance.com`) before recording the source as failed. Both hosts use the same tracked `USDTUSD` / `USDCUSD` market mapping.
+
+If every attempted Binance host returns a Worker-side 403/451 block, Pharos records the diagnostics and treats Binance as a no-contribution provider block rather than a source outage. Binance contributes zero prices in that state; it does not keep the source-wide breaker open.
 
 When authoritative pricing removes every Jupiter fallback candidate, the run closes stale-open `jupiter-prices` breaker state without making a provider health request. Future eligible Solana fallback candidates still use the normal circuit breaker and diagnostics path.
 

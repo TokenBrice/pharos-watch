@@ -22,6 +22,8 @@ vi.mock("../../lib/cex-tickers", () => ({
       matchedCount: 0,
     }],
   })),
+  isBinanceProviderBlocked: (diagnostics: Array<{ status: number | null }>) =>
+    diagnostics.length > 0 && diagnostics.every((diagnostic) => diagnostic.status === 403 || diagnostic.status === 451),
 }));
 
 vi.mock("../../lib/circuit-breaker", () => ({
@@ -883,6 +885,56 @@ describe("confirmPendingDepegs", () => {
       ],
     );
 
+    expect(recordOutcomeSafe).toHaveBeenCalledWith(
+      expect.anything(),
+      CIRCUIT_SOURCE.BINANCE_PRICES,
+      true,
+    );
+  });
+
+  it("treats Binance all-host 403 blocks as non-outage circuit outcomes", async () => {
+    const nowSec = 1_700_000_000;
+    vi.spyOn(Date, "now").mockReturnValue(nowSec * 1000);
+    vi.mocked(fetchBinancePricesDetailed).mockResolvedValueOnce({
+      prices: new Map(),
+      diagnostics: [
+        {
+          source: "binance",
+          stage: "primary",
+          endpoint: "data-api.binance.vision/api/v3/ticker/price",
+          status: 403,
+          ok: false,
+          success: false,
+        },
+        {
+          source: "binance",
+          stage: "primary",
+          endpoint: "api.binance.com/api/v3/ticker/price",
+          status: 403,
+          ok: false,
+          success: false,
+        },
+      ],
+    });
+
+    const result = await confirmPendingDepegs(
+      makeDb({
+        pendingRows: [
+          makePendingRow({
+            id: 24,
+            stablecoin_id: "usdt-tether",
+            symbol: "USDT",
+            first_seen_at: nowSec - DEPEG_PENDING_MIN_AGE_SEC + 60,
+          }),
+        ],
+      }),
+      [
+        makeAsset({ id: "usdt-tether", symbol: "USDT", geckoId: "tether", price: 0.94 }),
+        ...makeNeutralUsdAssets(),
+      ],
+    );
+
+    expect(result.providerDiagnostics).toHaveLength(2);
     expect(recordOutcomeSafe).toHaveBeenCalledWith(
       expect.anything(),
       CIRCUIT_SOURCE.BINANCE_PRICES,

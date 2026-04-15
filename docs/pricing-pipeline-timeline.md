@@ -1,6 +1,16 @@
 # Pricing Pipeline Methodology - Version Timeline
 
-Internal changelog reconstructed from the machine-readable methodology version source. Covers Pricing Pipeline `v1.0` through `v4.35` (2026-02-01 -> 2026-04-15).
+Internal changelog reconstructed from the machine-readable methodology version source. Covers Pricing Pipeline `v1.0` through `v4.36` (2026-02-01 -> 2026-04-15).
+
+---
+
+## v4.36 - Blocked Binance host accounting (Apr 15, 2026)
+
+**Commit:** `unreleased`
+
+- Binance all-host 403/451 blocks from Worker egress are now recorded as no-contribution provider blocks rather than source outages
+- Diagnostics still persist every attempted Binance endpoint, status, and snippet so operators can see the provider-edge block
+- Binance contributes zero prices in this state; consensus continues through the remaining hard venue/oracle/protocol inputs
 
 ---
 

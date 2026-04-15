@@ -3,9 +3,24 @@ import {
 } from "./methodology-version";
 
 const pricing = createMethodologyVersion({
-  currentVersion: "4.35",
+  currentVersion: "4.36",
   changelogPath: "/methodology/pricing-pipeline-changelog/",
   changelog: [
+    {
+      version: "4.36",
+      title: "Blocked Binance host accounting",
+      date: "2026-04-15",
+      effectiveAt: 1776216000,
+      summary:
+        "Binance all-host 403/451 blocks from Worker egress are now treated as no-contribution provider blocks rather than source outages, while diagnostics keep the blocked endpoints visible.",
+      impact: [
+        "When every attempted Binance host returns 403 or 451, the run records diagnostics but closes the source-wide breaker instead of escalating a persistent false outage",
+        "Binance contributes zero prices in that state, so consensus continues through Kraken, Bitstamp, Coinbase, Pyth, RedStone, Curve, DEX, CoinGecko, and DefiLlama inputs",
+        "Transport errors, server errors, malformed responses, or successful responses with zero tracked matches still follow the normal failure diagnostics path",
+      ],
+      commits: [],
+      reconstructed: false,
+    },
     {
       version: "4.35",
       title: "No-candidate Jupiter breaker recovery",

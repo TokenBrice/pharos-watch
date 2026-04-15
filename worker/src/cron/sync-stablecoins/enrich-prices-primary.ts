@@ -19,6 +19,7 @@ import {
   COINBASE_KNOWN_SYMBOLS,
   KRAKEN_KNOWN_SYMBOLS,
   fetchBinancePricesDetailed,
+  isBinanceProviderBlocked,
   fetchBitstampPrices,
   fetchCoinbasePrices,
   fetchKrakenPrices,
@@ -628,7 +629,7 @@ export async function fetchPrimaryPrices(
             providerDiagnostics.push(...diagnostics);
             for (const [symbol, price] of prices) binancePrices.set(symbol, price);
             if (prices.size > 0) binanceObservedAt = Math.floor(Date.now() / 1000);
-            return prices.size > 0;
+            return prices.size > 0 || isBinanceProviderBlocked(diagnostics);
           });
         }
 
