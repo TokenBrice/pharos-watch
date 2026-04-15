@@ -3,9 +3,24 @@ import {
 } from "./methodology-version";
 
 const pricing = createMethodologyVersion({
-  currentVersion: "4.32",
+  currentVersion: "4.33",
   changelogPath: "/methodology/pricing-pipeline-changelog/",
   changelog: [
+    {
+      version: "4.33",
+      title: "Jupiter official gateway fallback",
+      date: "2026-04-15",
+      effectiveAt: 1776212400,
+      summary:
+        "Moved Jupiter fallback probes from the Lite gateway to the official Price API V3 gateway after Worker egress repeatedly received Cloudflare 403 block pages from the Lite host.",
+      impact: [
+        "Jupiter fallback and health probes now use `https://api.jup.ag/price/v3` instead of the Lite gateway",
+        "The source-level circuit can recover through the same official V3 response shape already used by the fallback parser",
+        "The fallback remains best-effort, liquidity-gated, and downstream of authoritative protocol-backed prices",
+      ],
+      commits: [],
+      reconstructed: false,
+    },
     {
       version: "4.32",
       title: "Provider diagnostics and authoritative fallback gating",

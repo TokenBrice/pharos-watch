@@ -24,7 +24,7 @@ import {
   SOLANA_MINT_BY_ID,
 } from "./enrich-prices-pass-common";
 
-const JUPITER_PRICE_API = "https://lite-api.jup.ag/price/v3";
+const JUPITER_PRICE_API = "https://api.jup.ag/price/v3";
 const JUPITER_CANARY_ID = "2u1tszSeqZ3qBWF3uNGPFc8TzMk2tdiwknnRMWGWjGWH";
 const JUPITER_MAX_IDS_PER_REQUEST = 50;
 const JUPITER_REQUEST_TIMEOUT_MS = 5_000;

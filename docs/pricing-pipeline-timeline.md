@@ -1,6 +1,16 @@
 # Pricing Pipeline Methodology - Version Timeline
 
-Internal changelog reconstructed from the machine-readable methodology version source. Covers Pricing Pipeline `v1.0` through `v4.32` (2026-02-01 -> 2026-04-14).
+Internal changelog reconstructed from the machine-readable methodology version source. Covers Pricing Pipeline `v1.0` through `v4.33` (2026-02-01 -> 2026-04-15).
+
+---
+
+## v4.33 - Jupiter official gateway fallback (Apr 15, 2026)
+
+**Commit:** `unreleased`
+
+- Jupiter fallback and health probes now use `https://api.jup.ag/price/v3` instead of the Lite gateway
+- This follows repeated Worker-side Cloudflare 403 block pages from `lite-api.jup.ag` while the official V3 gateway continued returning the same response shape
+- Jupiter remains a best-effort Solana fallback behind primary consensus, authoritative protocol-backed prices, liquidity gates, and peg-aware validation
 
 ---
 

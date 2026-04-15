@@ -871,7 +871,7 @@ describe("enrichMissingPrices", () => {
     mockFetch([
       { match: "coins.llama.fi", body: { coins: {} } },
       {
-        match: "lite-api.jup.ag/price/v3",
+        match: "api.jup.ag/price/v3",
         body: {
           "2u1tszSeqZ3qBWF3uNGPFc8TzMk2tdiwknnRMWGWjGWH": {
             usdPrice: 1.0002,
@@ -901,7 +901,7 @@ describe("enrichMissingPrices", () => {
     mockFetch([
       { match: "coins.llama.fi", body: { coins: {} } },
       {
-        match: "lite-api.jup.ag/price/v3",
+        match: "api.jup.ag/price/v3",
         body: {
           "2u1tszSeqZ3qBWF3uNGPFc8TzMk2tdiwknnRMWGWjGWH": {
             usdPrice: 0.9998,
@@ -931,7 +931,7 @@ describe("enrichMissingPrices", () => {
 
     mockFetch([
       {
-        match: "lite-api.jup.ag/price/v3",
+        match: "api.jup.ag/price/v3",
         status: 403,
         body: "blocked",
       },
@@ -978,7 +978,7 @@ describe("enrichMissingPrices", () => {
 
     mockFetch([
       {
-        match: "lite-api.jup.ag/price/v3",
+        match: "api.jup.ag/price/v3",
         body: {
           "2u1tszSeqZ3qBWF3uNGPFc8TzMk2tdiwknnRMWGWjGWH": {
             usdPrice: 1.0001,
