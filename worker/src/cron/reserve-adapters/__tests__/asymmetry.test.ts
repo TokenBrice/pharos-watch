@@ -4,6 +4,7 @@ import { adaptAsymmetry } from "../asymmetry";
 describe("adaptAsymmetry", () => {
   it("maps branch collateral values into normalized reserve slices", () => {
     const slices = adaptAsymmetry({
+      timestamp: 1776239429591,
       usdaf: {
         branch: {
           ysyBOLD: { coll_value: "650" },
@@ -11,7 +12,7 @@ describe("adaptAsymmetry", () => {
           sUSDS: { coll_value: "74" },
           tBTC: { coll_value: "23" },
           sfrxUSD: { coll_value: "19" },
-          WBTC: { coll_value: "5" },
+          wBTC: { coll_value: "5" },
         },
       },
     });
@@ -22,16 +23,15 @@ describe("adaptAsymmetry", () => {
       { name: "sUSDS", pct: 7.4, risk: "low", coinId: "usds-sky", depType: "wrapper" },
       { name: "tBTC", pct: 2.3, risk: "medium" },
       { name: "sfrxUSD", pct: 1.9, risk: "medium", coinId: "frax-frax", depType: "wrapper" },
-      { name: "WBTC", pct: 0.5, risk: "medium" },
+      { name: "wBTC", pct: 0.5, risk: "medium" },
     ]);
     expect(slices.metadata).toMatchObject({
       branchCount: 6,
       activeBranchCount: 6,
       unknownBranchCount: 0,
-      freshnessMode: "unverified",
-      details: {
-        freshnessSource: "protocol-branch-api",
-      },
+      freshnessMode: "verified",
+      sourceTimestamp: 1776239429,
     });
+    expect(slices.warnings).toBeUndefined();
   });
 });

@@ -1,9 +1,24 @@
 import type { MethodologyVersionConfig } from "./methodology-version";
 
 export const SAFETY_SCORE_VERSION_CONFIG: MethodologyVersionConfig = {
-  currentVersion: "6.98",
+  currentVersion: "6.99",
   changelogPath: "/methodology/scoring-changelog/",
   changelog: [
+    {
+      version: "6.99",
+      title: "Asymmetry USDaf live reserve freshness promotion",
+      date: "2026-04-15",
+      effectiveAt: 1776240000,
+      summary:
+        "USDaf's Asymmetry reserve feed now preserves the protocol API timestamp and normalizes branch symbols before risk classification, allowing clean fresh snapshots to qualify for live collateral passthrough.",
+      impact: [
+        "The Asymmetry adapter now emits verified source freshness from the protocol API timestamp when available",
+        "Branch-name normalization prevents casing-only symbols such as wBTC from degrading the feed as unknown exposure",
+        "The global live collateral gate remains unchanged: only independent ok-status snapshots with scoring-eligible freshness can drive report-card collateral scoring",
+      ],
+      commits: [],
+      reconstructed: false,
+    },
     {
       version: "6.98",
       title: "Timestamp-backed reserve feeds restored to collateral passthrough",

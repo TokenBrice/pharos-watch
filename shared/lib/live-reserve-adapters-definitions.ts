@@ -50,7 +50,10 @@ export const LIVE_RESERVE_ADAPTER_DEFINITIONS = {
     evidenceClass: "independent",
     sharedSourceMode: "none",
     redemptionTelemetry: { capacity: "none", fee: "none" },
-    validation: { allowedFreshnessModes: UNVERIFIED_ONLY_FRESHNESS },
+    validation: {
+      maxSourceAgeSec: DASHBOARD_SOURCE_MAX_AGE_SEC,
+      allowedFreshnessModes: VERIFIED_OR_UNVERIFIED_FRESHNESS,
+    },
   },
   btcfi: {
     sourceModel: "single-bucket",

@@ -6,8 +6,10 @@ import {
   requireJsonInput,
   fetchJsonWithRetry,
   normalizeSlices,
+  parseTimestampLikeToUnixSeconds,
   reserveDegradedWarning,
   unverifiedFreshnessMetadata,
+  verifiedFreshnessMetadata,
 } from "./helpers";
 
 interface AsymmetryBranchStats {
@@ -15,6 +17,7 @@ interface AsymmetryBranchStats {
 }
 
 interface AsymmetryPayload {
+  timestamp?: string | number;
   usdaf?: {
     branch?: Record<string, AsymmetryBranchStats>;
   };
@@ -27,18 +30,23 @@ interface BranchRiskConfig {
 }
 
 const BRANCH_RISK_MAP: Record<string, BranchRiskConfig> = {
-  ysyBOLD: { risk: "medium", coinId: "bold-liquity", depType: "wrapper" },
-  scrvUSD: { risk: "medium", coinId: "crvusd-curve", depType: "wrapper" },
-  sUSDS: { risk: "low", coinId: "usds-sky", depType: "wrapper" },
-  sfrxUSD: { risk: "medium", coinId: "frax-frax", depType: "wrapper" },
-  tBTC: { risk: getCanonicalReserveAssetRisk("TBTC") ?? "medium" },
-  WBTC: { risk: getCanonicalReserveAssetRisk("WBTC") ?? "medium" },
+  ysybold: { risk: "medium", coinId: "bold-liquity", depType: "wrapper" },
+  scrvusd: { risk: "medium", coinId: "crvusd-curve", depType: "wrapper" },
+  susds: { risk: "low", coinId: "usds-sky", depType: "wrapper" },
+  sfrxusd: { risk: "medium", coinId: "frax-frax", depType: "wrapper" },
+  tbtc: { risk: getCanonicalReserveAssetRisk("TBTC") ?? "medium" },
+  wbtc: { risk: getCanonicalReserveAssetRisk("WBTC") ?? "medium" },
 };
+
+function normalizeBranchKey(name: string): string {
+  return name.trim().toLowerCase();
+}
 
 export function adaptAsymmetry(payload: AsymmetryPayload): AdapterResult {
   const branches = payload.usdaf?.branch ?? {};
   const warnings: LiveReserveWarning[] = [];
   let unknownExposureUsd = 0;
+  const sourceTimestamp = parseTimestampLikeToUnixSeconds(payload.timestamp);
   const entries = Object.entries(branches)
     .map(([name, stats]) => ({
       name,
@@ -52,8 +60,8 @@ export function adaptAsymmetry(payload: AsymmetryPayload): AdapterResult {
   return {
     slices: normalizeSlices(
       entries.map((entry) => {
-        const config = BRANCH_RISK_MAP[entry.name] ?? { risk: "medium" as const };
-        if (!(entry.name in BRANCH_RISK_MAP)) {
+        const config = BRANCH_RISK_MAP[normalizeBranchKey(entry.name)] ?? { risk: "medium" as const };
+        if (!(normalizeBranchKey(entry.name) in BRANCH_RISK_MAP)) {
           unknownExposureUsd += entry.usd;
           warnings.push({
             ...reserveDegradedWarning("unknown-branch", `Asymmetry branch defaulted to medium risk: ${entry.name}`),
@@ -74,10 +82,12 @@ export function adaptAsymmetry(payload: AsymmetryPayload): AdapterResult {
       activeBranchCount: entries.length,
       unknownBranchCount: warnings.length,
       unknownExposurePct: total > 0 ? (unknownExposureUsd / total) * 100 : 0,
-      ...unverifiedFreshnessMetadata(
-        "protocol-branch-api",
-        "Asymmetry branch composition payload does not expose a trustworthy source timestamp",
-      ),
+      ...(sourceTimestamp != null
+        ? verifiedFreshnessMetadata(sourceTimestamp)
+        : unverifiedFreshnessMetadata(
+            "protocol-branch-api",
+            "Asymmetry branch composition payload does not expose a trustworthy source timestamp",
+          )),
     },
   };
 }

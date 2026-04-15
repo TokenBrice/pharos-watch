@@ -1,5 +1,32 @@
 import { VersionCard, getScoringEntry } from "./content-shared";
 
+export function ScoringChangelogV699Entry() {
+  return (
+    <VersionCard
+      entry={getScoringEntry("6.99")}
+      accent="border-l-emerald-500"
+    >
+      <p>
+        USDaf&apos;s Asymmetry reserve feed can now qualify for live collateral passthrough when the protocol
+        API snapshot is fresh.
+      </p>
+      <ul className="list-disc list-inside space-y-1">
+        <li>
+          The adapter now preserves Asymmetry&apos;s top-level API timestamp as verified reserve-source freshness.
+        </li>
+        <li>
+          Branch symbols are normalized before risk lookup, so casing-only variants such as{" "}
+          <code className="text-xs bg-muted px-1 py-0.5 rounded">wBTC</code> no longer degrade the feed.
+        </li>
+        <li>
+          No scoring policy changed; the feed still needs fresh independent evidence and an{" "}
+          <code className="text-xs bg-muted px-1 py-0.5 rounded">ok</code> sync state.
+        </li>
+      </ul>
+    </VersionCard>
+  );
+}
+
 export function ScoringChangelogV698Entry() {
   return (
     <VersionCard
