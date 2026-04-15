@@ -13,7 +13,6 @@ import { computeStablecoinScores, computeDepthStability, computeDexPrices } from
 import { persistScores, writeHistoricalSnapshots } from "./persistence";
 import type { ChainRpcConfig } from "../../lib/chain-registry";
 import { isPreferredDirectApiPool, type DexApiPool } from "../../lib/dex-api-common";
-import type { DirectCexOrderbookDepthSummary } from "../../lib/cex-orderbooks";
 import { POOL_CHALLENGE_MIN_TVL } from "../../lib/constants";
 import { buildDirectApiPoolIdentity } from "./direct-source-helpers";
 import {
@@ -147,6 +146,7 @@ type DexLiquidityDataSources = NonNullable<Awaited<ReturnType<typeof fetchDataSo
 type DexLiquidityLookups = ReturnType<typeof buildSymbolLookups>;
 type DexLiquiditySubgraphEnrichment = Awaited<ReturnType<typeof fetchSubgraphEnrichmentPhase>>;
 type DexLiquidityDirectApiPhase = Awaited<ReturnType<typeof runDirectApiFetchPhase>>;
+type DexLiquidityFallbackPhase = Awaited<ReturnType<typeof runFallbackCrawlerPhase>>;
 type DexLiquidityAnalysis = Awaited<ReturnType<typeof analyzeDexLiquidityPostScoring>>;
 type DexLiquidityPersistence = NonNullable<Awaited<ReturnType<typeof persistScores>>>;
 type DexLiquidityHistoricalSnapshot = NonNullable<Awaited<ReturnType<typeof writeHistoricalSnapshots>>>;
@@ -168,7 +168,7 @@ interface DexLiquiditySourceState {
   fallbackSignals: string[];
 }
 
-interface DexLiquidityPoolState {
+interface DexLiquidityPoolState extends DexLiquidityFallbackPhase {
   metrics: Map<string, LiquidityMetrics>;
   knownPoolIndex: ReturnType<typeof buildKnownPoolAddresses>;
   stagedMergedCount: number;
@@ -177,11 +177,6 @@ interface DexLiquidityPoolState {
   stagedSkippedByUniqueDerivedIdentityCount: number;
   stagedSkippedByOptionalWildcardIdentityCount: number;
   stagedSkippedByAuthoritativeProtocolCount: number;
-  dsFallbackCoins: number;
-  cgTickerFallbackCoins: number;
-  coverageRecoveredCoins: number;
-  weakCoverageCoinsBeforeFallback: number;
-  directCexOrderbookDepth: DirectCexOrderbookDepthSummary | null;
 }
 
 interface DexLiquidityScoreState {
@@ -363,11 +358,7 @@ async function buildDexLiquidityPoolState(
     stagedSkippedByUniqueDerivedIdentityCount: staged.skippedByUniqueDerivedIdentityCount,
     stagedSkippedByOptionalWildcardIdentityCount: staged.skippedByOptionalWildcardIdentityCount,
     stagedSkippedByAuthoritativeProtocolCount: staged.skippedByAuthoritativeProtocolCount,
-    dsFallbackCoins: fallback.dsFallbackCoins,
-    cgTickerFallbackCoins: fallback.cgTickerFallbackCoins,
-    coverageRecoveredCoins: fallback.coverageRecoveredCoins,
-    weakCoverageCoinsBeforeFallback: fallback.weakCoverageCoinsBeforeFallback,
-    directCexOrderbookDepth: fallback.directCexOrderbookDepth,
+    ...fallback,
   };
 }
 

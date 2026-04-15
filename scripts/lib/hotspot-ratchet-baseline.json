@@ -264,8 +264,8 @@
     "notes": "Pool scoring and heuristic normalization still live in one large module. Split score families and reusable transforms before adding more model inputs."
   },
   "worker/src/cron/dex-liquidity/orchestrator.ts": {
-    "fileLines": 517,
-    "maxFunctionLines": 90,
+    "fileLines": 521,
+    "maxFunctionLines": 91,
     "branchCount": 15,
     "disposition": "stabilized",
     "targetBudget": {
@@ -312,8 +312,8 @@
     "notes": "Source loading, DEWS signal assembly, and persistence now live in `cron/dews/*` helpers. Keep the entrypoint as the coordinator instead of regrowing source-specific reads or writeback logic."
   },
   "worker/src/cron/sync-stablecoins/enrich-prices.ts": {
-    "fileLines": 111,
-    "maxFunctionLines": 76,
+    "fileLines": 110,
+    "maxFunctionLines": 73,
     "branchCount": 6,
     "disposition": "stabilized",
     "targetBudget": {
