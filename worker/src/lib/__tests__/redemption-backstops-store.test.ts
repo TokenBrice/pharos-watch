@@ -1,10 +1,15 @@
 import { describe, expect, it } from "vitest";
-import type { RedemptionBackstopEntry } from "@shared/types/redemption";
+import type { RedemptionBackstopEntry, RedemptionBackstopMap } from "@shared/types/redemption";
+import {
+  getRedemptionBackstopVersionAt,
+  toRedemptionBackstopVersionLabel,
+} from "@shared/lib/redemption-backstop-version";
 import { mockD1 } from "../../api/__tests__/helpers/mock-d1";
 import {
   loadRedemptionBackstopMap,
   loadRedemptionBackstopSnapshot,
   RedemptionBackstopSnapshotUnavailableError,
+  resolveSnapshotMethodologyVersion,
   upsertRedemptionBackstopSnapshots,
 } from "../redemption-backstops-store";
 
@@ -324,5 +329,51 @@ describe("loadRedemptionBackstopMap", () => {
     expect(history.some((entry) => entry.sql.includes("UPDATE redemption_backstop_runs"))).toBe(true);
     expect(history.some((entry) => entry.sql.includes("INSERT INTO redemption_backstop") && entry.binds.includes("run-test"))).toBe(true);
     expect(history.some((entry) => entry.sql.includes("INSERT OR REPLACE INTO redemption_backstop_history") && entry.binds.includes("run-test"))).toBe(true);
+  });
+});
+
+describe("resolveSnapshotMethodologyVersion", () => {
+  function makeMapEntry(updatedAt: number, methodologyVersion: string): RedemptionBackstopEntry {
+    return {
+      updatedAt,
+      methodologyVersion,
+    } as unknown as RedemptionBackstopEntry;
+  }
+
+  it("returns the matching entry's methodology version when an entry's updatedAt matches", () => {
+    const coins: RedemptionBackstopMap = {
+      "a-coin": makeMapEntry(1_700_000_000, "1.1"),
+      "b-coin": makeMapEntry(1_750_000_000, "3.97"),
+    };
+
+    const result = resolveSnapshotMethodologyVersion(coins, 1_750_000_000);
+
+    expect(result.version).toBe("3.97");
+    expect(result.versionLabel).toBe(toRedemptionBackstopVersionLabel("3.97"));
+  });
+
+  it("falls back to getRedemptionBackstopVersionAt when no entry matches the updatedAt", () => {
+    const coins: RedemptionBackstopMap = {
+      "a-coin": makeMapEntry(1_700_000_000, "1.1"),
+    };
+    const queryAt = 1_500_000_000;
+    const expectedVersion = getRedemptionBackstopVersionAt(queryAt);
+
+    const result = resolveSnapshotMethodologyVersion(coins, queryAt);
+
+    expect(result.version).toBe(expectedVersion);
+    expect(result.versionLabel).toBe(toRedemptionBackstopVersionLabel(expectedVersion));
+  });
+
+  it("falls back to getRedemptionBackstopVersionAt when updatedAt is zero", () => {
+    const coins: RedemptionBackstopMap = {
+      "a-coin": makeMapEntry(1_700_000_000, "1.1"),
+    };
+    const expectedVersion = getRedemptionBackstopVersionAt(0);
+
+    const result = resolveSnapshotMethodologyVersion(coins, 0);
+
+    expect(result.version).toBe(expectedVersion);
+    expect(result.versionLabel).toBe(toRedemptionBackstopVersionLabel(expectedVersion));
   });
 });

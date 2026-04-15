@@ -224,7 +224,7 @@ function toEntry(row: RedemptionBackstopRow): RedemptionBackstopEntry {
   };
 }
 
-function resolveSnapshotMethodologyVersion(
+export function resolveSnapshotMethodologyVersion(
   coins: RedemptionBackstopMap,
   updatedAt: number,
 ): { version: string; versionLabel: string } {
