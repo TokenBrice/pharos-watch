@@ -3,6 +3,7 @@ import {
   computeEffectiveExitScore,
   computeCapacityScore,
   computeRedemptionBackstopScore,
+  isStrongLiveDirectRoute,
 } from "../redemption-backstop-scoring";
 
 describe("computeEffectiveExitScore", () => {
@@ -104,6 +105,59 @@ describe("computeCapacityScore", () => {
     expect(ratioOnly.score).toBe(80); // 80*0.6 + 80*0.4 = 80
     expect(ratioOnly.absoluteCapacityScore).toBeNull();
   });
+
+  it("clamps ratio > 1 to the top breakpoint", () => {
+    const result = computeCapacityScore({ immediateCapacityUsd: null, immediateCapacityRatio: 2 });
+    expect(result.coverageRatioScore).toBe(100);
+  });
+
+  it("returns null for negative ratio", () => {
+    const result = computeCapacityScore({ immediateCapacityUsd: null, immediateCapacityRatio: -0.1 });
+    expect(result.coverageRatioScore).toBeNull();
+    expect(result.score).toBeNull();
+  });
+
+  it("returns null for negative USD", () => {
+    const result = computeCapacityScore({ immediateCapacityUsd: -1000, immediateCapacityRatio: null });
+    expect(result.absoluteCapacityScore).toBeNull();
+    expect(result.score).toBeNull();
+  });
+
+  it("returns null for non-finite inputs", () => {
+    const nan = computeCapacityScore({ immediateCapacityUsd: NaN, immediateCapacityRatio: null });
+    expect(nan.score).toBeNull();
+    const inf = computeCapacityScore({ immediateCapacityUsd: Infinity, immediateCapacityRatio: null });
+    expect(inf.score).toBeNull();
+  });
+
+  it("scores exact ratio breakpoints", () => {
+    const bp001 = computeCapacityScore({ immediateCapacityUsd: null, immediateCapacityRatio: 0.01 });
+    expect(bp001.coverageRatioScore).toBe(20);
+    const bp005 = computeCapacityScore({ immediateCapacityUsd: null, immediateCapacityRatio: 0.05 });
+    expect(bp005.coverageRatioScore).toBe(40);
+    const bp010 = computeCapacityScore({ immediateCapacityUsd: null, immediateCapacityRatio: 0.10 });
+    expect(bp010.coverageRatioScore).toBe(60);
+    const bp025 = computeCapacityScore({ immediateCapacityUsd: null, immediateCapacityRatio: 0.25 });
+    expect(bp025.coverageRatioScore).toBe(80);
+  });
+
+  it("scores exact USD breakpoints", () => {
+    const bp100k = computeCapacityScore({ immediateCapacityUsd: 100_000, immediateCapacityRatio: null });
+    expect(bp100k.absoluteCapacityScore).toBe(20);
+    const bp1m = computeCapacityScore({ immediateCapacityUsd: 1_000_000, immediateCapacityRatio: null });
+    expect(bp1m.absoluteCapacityScore).toBe(40);
+    const bp10m = computeCapacityScore({ immediateCapacityUsd: 10_000_000, immediateCapacityRatio: null });
+    expect(bp10m.absoluteCapacityScore).toBe(60);
+    const bp50m = computeCapacityScore({ immediateCapacityUsd: 50_000_000, immediateCapacityRatio: null });
+    expect(bp50m.absoluteCapacityScore).toBe(80);
+    const bp250m = computeCapacityScore({ immediateCapacityUsd: 250_000_000, immediateCapacityRatio: null });
+    expect(bp250m.absoluteCapacityScore).toBe(100);
+  });
+
+  it("handles USD beyond top breakpoint without overflow", () => {
+    const huge = computeCapacityScore({ immediateCapacityUsd: 1_000_000_000_000, immediateCapacityRatio: null });
+    expect(huge.absoluteCapacityScore).toBe(100);
+  });
 });
 
 describe("computeRedemptionBackstopScore", () => {
@@ -178,5 +232,110 @@ describe("computeRedemptionBackstopScore", () => {
       });
       expect(result.capsApplied).toEqual([]);
     }
+  });
+
+  it("queue-redeem cap is NOT applied when weighted score is exactly 70", () => {
+    const result = computeRedemptionBackstopScore({
+      routeFamily: "queue-redeem",
+      accessScore: 70, settlementScore: 70, executionCertaintyScore: 70,
+      capacityScore: 70, outputAssetQualityScore: 70, costScore: 70,
+    });
+    expect(result.score).toBe(70);
+    expect(result.capsApplied).toEqual([]);
+  });
+
+  it("queue-redeem cap is applied when weighted score is 71", () => {
+    const result = computeRedemptionBackstopScore({
+      routeFamily: "queue-redeem",
+      accessScore: 71, settlementScore: 71, executionCertaintyScore: 71,
+      capacityScore: 71, outputAssetQualityScore: 71, costScore: 71,
+    });
+    expect(result.score).toBe(70);
+    expect(result.capsApplied).toContain("queue-route-cap");
+  });
+
+  it("offchain-issuer cap is NOT applied when weighted score is exactly 65", () => {
+    const result = computeRedemptionBackstopScore({
+      routeFamily: "offchain-issuer",
+      accessScore: 65, settlementScore: 65, executionCertaintyScore: 65,
+      capacityScore: 65, outputAssetQualityScore: 65, costScore: 65,
+    });
+    expect(result.score).toBe(65);
+    expect(result.capsApplied).toEqual([]);
+  });
+
+  it("offchain-issuer cap is applied when weighted score is 66", () => {
+    const result = computeRedemptionBackstopScore({
+      routeFamily: "offchain-issuer",
+      accessScore: 66, settlementScore: 66, executionCertaintyScore: 66,
+      capacityScore: 66, outputAssetQualityScore: 66, costScore: 66,
+    });
+    expect(result.score).toBe(65);
+    expect(result.capsApplied).toContain("offchain-route-cap");
+  });
+});
+
+describe("isStrongLiveDirectRoute", () => {
+  const strongInput = {
+    capacityConfidence: "live-direct" as const,
+    sourceMode: "dynamic" as const,
+    accessModel: "permissionless-onchain" as const,
+    settlementModel: "atomic" as const,
+  };
+
+  it("returns true for live-direct dynamic permissionless atomic", () => {
+    expect(isStrongLiveDirectRoute(strongInput)).toBe(true);
+  });
+
+  it("returns true for live-direct dynamic permissionless immediate", () => {
+    expect(isStrongLiveDirectRoute({ ...strongInput, settlementModel: "immediate" })).toBe(true);
+  });
+
+  it("returns false for live-proxy capacity confidence", () => {
+    expect(isStrongLiveDirectRoute({ ...strongInput, capacityConfidence: "live-proxy" })).toBe(false);
+  });
+
+  it("returns false for documented-bound capacity confidence", () => {
+    expect(isStrongLiveDirectRoute({ ...strongInput, capacityConfidence: "documented-bound" })).toBe(false);
+  });
+
+  it("returns false for heuristic capacity confidence", () => {
+    expect(isStrongLiveDirectRoute({ ...strongInput, capacityConfidence: "heuristic" })).toBe(false);
+  });
+
+  it("returns false for dynamic legacy capacity confidence", () => {
+    expect(isStrongLiveDirectRoute({ ...strongInput, capacityConfidence: "dynamic" })).toBe(false);
+  });
+
+  it("returns false for estimated source mode", () => {
+    expect(isStrongLiveDirectRoute({ ...strongInput, sourceMode: "estimated" })).toBe(false);
+  });
+
+  it("returns false for static source mode", () => {
+    expect(isStrongLiveDirectRoute({ ...strongInput, sourceMode: "static" })).toBe(false);
+  });
+
+  it("returns false for whitelisted-onchain access", () => {
+    expect(isStrongLiveDirectRoute({ ...strongInput, accessModel: "whitelisted-onchain" })).toBe(false);
+  });
+
+  it("returns false for issuer-api access", () => {
+    expect(isStrongLiveDirectRoute({ ...strongInput, accessModel: "issuer-api" })).toBe(false);
+  });
+
+  it("returns false for manual access", () => {
+    expect(isStrongLiveDirectRoute({ ...strongInput, accessModel: "manual" })).toBe(false);
+  });
+
+  it("returns false for same-day settlement", () => {
+    expect(isStrongLiveDirectRoute({ ...strongInput, settlementModel: "same-day" })).toBe(false);
+  });
+
+  it("returns false for queued settlement", () => {
+    expect(isStrongLiveDirectRoute({ ...strongInput, settlementModel: "queued" })).toBe(false);
+  });
+
+  it("returns false for days settlement", () => {
+    expect(isStrongLiveDirectRoute({ ...strongInput, settlementModel: "days" })).toBe(false);
   });
 });

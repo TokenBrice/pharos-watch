@@ -1,9 +1,24 @@
 import { createMethodologyVersion, toMethodologyVersionLabel } from "./methodology-version";
 
 const redemptionBackstop = createMethodologyVersion({
-  currentVersion: "3.96",
+  currentVersion: "3.97",
   changelogPath: "/methodology/#safety-scores-methodology",
   changelog: [
+    {
+      version: "3.97",
+      title: "Redemption backstop code deduplication and boundary test coverage",
+      date: "2026-04-15",
+      effectiveAt: 1776290400,
+      summary:
+        "The \"strong live-direct route\" predicate is now defined once and reused by both the report-card liquidity consumer and the backstop builder, with inline rationale on route family caps and new boundary test coverage.",
+      impact: [
+        "`isStrongLiveDirectRoute` is now a single shared predicate in `shared/lib/redemption-backstop-scoring.ts` consumed by both `scoreLiquidity` and `buildRedemptionBackstopEntry`, removing the prior drift-prone duplicate definitions",
+        "Severe-depeg exclusion behavior is now locked in at the exact 2499 / 2500 bps boundary, live-proxy routes are explicitly confirmed not to survive severe depegs even with permissionless atomic execution, and all capacity-score and route-family cap breakpoints are covered by assertions",
+        "No coin-facing scoring semantics changed; this release is test coverage, documentation, and code deduplication only",
+      ],
+      commits: [],
+      reconstructed: false,
+    },
     {
       version: "3.96",
       title: "Redemption telemetry validation and route-status fail-closed hardening",

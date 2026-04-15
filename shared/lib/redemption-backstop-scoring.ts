@@ -1,9 +1,11 @@
 import type {
   RedemptionAccessModel,
+  RedemptionCapacityConfidence,
   RedemptionExecutionModel,
   RedemptionOutputAssetType,
   RedemptionRouteFamily,
   RedemptionSettlementModel,
+  RedemptionSourceMode,
 } from "../types";
 
 export const REDEMPTION_BACKSTOP_COMPONENT_WEIGHTS = {
@@ -17,10 +19,48 @@ export const REDEMPTION_BACKSTOP_COMPONENT_WEIGHTS = {
 
 export const EFFECTIVE_EXIT_DIVERSIFICATION_FACTOR = 0.10;
 
+/**
+ * Route-family score ceilings applied after the weighted component score.
+ *
+ * - `queueRedeem` (70): queued redemption inherently involves multi-hour or
+ *   multi-day settlement friction plus FIFO processing. Even a perfect
+ *   component mix stays below 70/100 so queued rails never match permissionless
+ *   atomic rails in the effective-exit blend. See v3.7 methodology changelog.
+ *
+ * - `offchainIssuer` (65): offchain institutional redemption is gated by KYC,
+ *   primary-market access, and banking-hour settlement. The 65 ceiling reflects
+ *   the residual par-exit guarantee that CeFi-issued coins carry for retail
+ *   holders even without a live instant buffer. See v3.7 methodology changelog.
+ */
 export const REDEMPTION_ROUTE_FAMILY_CAPS = {
   queueRedeem: 70,
   offchainIssuer: 65,
 } as const;
+
+/**
+ * Input shape for {@link isStrongLiveDirectRoute}.
+ *
+ * A route qualifies as a "strong live-direct" route when its current redemption
+ * evidence is fresh on-chain telemetry AND the route itself is permissionless +
+ * atomic/immediate. Only these routes remain scoreable during a severe active
+ * depeg because only they provide current direct exercisability evidence.
+ * See redemption backstop methodology v3.8.
+ */
+export interface StrongLiveDirectRouteInput {
+  capacityConfidence: RedemptionCapacityConfidence;
+  sourceMode: RedemptionSourceMode;
+  accessModel: RedemptionAccessModel;
+  settlementModel: RedemptionSettlementModel;
+}
+
+export function isStrongLiveDirectRoute(input: StrongLiveDirectRouteInput): boolean {
+  return (
+    input.capacityConfidence === "live-direct" &&
+    input.sourceMode === "dynamic" &&
+    input.accessModel === "permissionless-onchain" &&
+    (input.settlementModel === "atomic" || input.settlementModel === "immediate")
+  );
+}
 
 export const REDEMPTION_ACCESS_SCORES: Record<RedemptionAccessModel, number> = {
   "permissionless-onchain": 100,

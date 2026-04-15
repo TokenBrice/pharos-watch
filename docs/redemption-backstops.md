@@ -6,11 +6,11 @@ Modeled redemption-route coverage for tracked stablecoins. This subsystem estima
 
 ## Methodology Versioning
 
-- **Current methodology version:** `v3.96`
+- **Current methodology version:** `v3.97`
 - **Public methodology anchor:** `/methodology/#safety-scores-methodology`
 - **Canonical source files:** `shared/lib/redemption-backstops.ts`, `shared/lib/redemption-backstop-configs/*`, `shared/lib/redemption-backstop-scoring.ts`, `shared/lib/redemption-backstop-version.ts`
 
-Latest `v3.96` update: live route-status telemetry now fails closed for paused, degraded, or cohort-limited routes; nested and legacy redemption telemetry fields are validated independently before persistence; unsupported capacity metadata was removed from adapters whose registry definition does not expose redemption-capacity telemetry; and expanded shared route configs now receive per-asset reviewed docs.
+Latest `v3.97` update: the "strong live-direct route" predicate is now defined once in `shared/lib/redemption-backstop-scoring.ts` and reused by both the report-card liquidity consumer and the backstop builder; severe-depeg boundary behavior (2499/2500 bps), live-proxy exclusion, and capacity-score breakpoints are now locked in by explicit tests; route family cap rationale is documented inline. No coin-facing scoring semantics changed.
 
 There is no standalone changelog page yet. The public methodology link currently points at the Safety Scores section because redemption backstops feed the report-card liquidity dimension.
 

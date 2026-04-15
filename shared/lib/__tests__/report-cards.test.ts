@@ -374,6 +374,132 @@ describe("scoreLiquidity", () => {
     expect(result.detail).toContain("route currently degraded");
   });
 
+  it("does NOT exclude redemption at 2499 bps depeg (just below severe threshold)", () => {
+    const result = scoreLiquidity(
+      { liquidityScore: 10, concentrationHhi: 0.1, poolCount: 1, chainCount: 1 },
+      {
+        score: 60,
+        routeFamily: "offchain-issuer",
+        immediateCapacityUsd: 50_000_000,
+        immediateCapacityRatio: 0.2,
+        resolutionState: "resolved",
+        modelConfidence: "medium",
+        capacitySemantics: "immediate-bounded",
+        routeStatus: "open",
+        capacityConfidence: "documented-bound",
+        sourceMode: "estimated",
+        accessModel: "issuer-api",
+        settlementModel: "same-day",
+      },
+      { activeDepegBps: 2499 },
+    );
+    expect(result.score).not.toBeNull();
+    expect(result.detail).not.toContain("active severe depeg requires live-open redemption evidence");
+  });
+
+  it("excludes non-live-direct redemption at exactly 2500 bps depeg (severe threshold)", () => {
+    const result = scoreLiquidity(
+      { liquidityScore: 10, concentrationHhi: 0.1, poolCount: 1, chainCount: 1 },
+      {
+        score: 60,
+        routeFamily: "offchain-issuer",
+        immediateCapacityUsd: 50_000_000,
+        immediateCapacityRatio: 0.2,
+        resolutionState: "resolved",
+        modelConfidence: "medium",
+        capacitySemantics: "immediate-bounded",
+        routeStatus: "open",
+        capacityConfidence: "documented-bound",
+        sourceMode: "estimated",
+        accessModel: "issuer-api",
+        settlementModel: "same-day",
+      },
+      { activeDepegBps: 2500 },
+    );
+    expect(result.detail).toContain("active severe depeg requires live-open redemption evidence");
+  });
+
+  it("does NOT exclude strong live-direct redemption at exactly 2500 bps depeg", () => {
+    const result = scoreLiquidity(
+      { liquidityScore: 10, concentrationHhi: 0.1, poolCount: 1, chainCount: 1 },
+      {
+        score: 88,
+        routeFamily: "stablecoin-redeem",
+        immediateCapacityUsd: 50_000_000,
+        immediateCapacityRatio: 0.2,
+        resolutionState: "resolved",
+        modelConfidence: "high",
+        capacitySemantics: "immediate-bounded",
+        routeStatus: "open",
+        capacityConfidence: "live-direct",
+        sourceMode: "dynamic",
+        accessModel: "permissionless-onchain",
+        settlementModel: "atomic",
+      },
+      { activeDepegBps: 2500 },
+    );
+    expect(result.detail).not.toContain("active severe depeg requires live-open redemption evidence");
+    expect(result.score).not.toBeNull();
+  });
+
+  it("excludes live-proxy redemption during severe depeg (not considered strong)", () => {
+    const result = scoreLiquidity(
+      { liquidityScore: 10, concentrationHhi: 0.1, poolCount: 1, chainCount: 1 },
+      {
+        score: 82,
+        routeFamily: "stablecoin-redeem",
+        immediateCapacityUsd: 50_000_000,
+        immediateCapacityRatio: 0.2,
+        resolutionState: "resolved",
+        modelConfidence: "medium",
+        capacitySemantics: "immediate-bounded",
+        routeStatus: "open",
+        capacityConfidence: "live-proxy",
+        sourceMode: "dynamic",
+        accessModel: "permissionless-onchain",
+        settlementModel: "atomic",
+      },
+      { activeDepegBps: 2500 },
+    );
+    expect(result.detail).toContain("active severe depeg requires live-open redemption evidence");
+  });
+
+  it("excludes paused routes regardless of confidence", () => {
+    const result = scoreLiquidity(
+      { liquidityScore: 40, concentrationHhi: 0.3, poolCount: 5, chainCount: 2 },
+      {
+        score: 85,
+        routeFamily: "stablecoin-redeem",
+        immediateCapacityUsd: 50_000_000,
+        immediateCapacityRatio: 0.5,
+        resolutionState: "resolved",
+        modelConfidence: "medium",
+        capacitySemantics: "immediate-bounded",
+        routeStatus: "paused",
+      },
+    );
+    expect(result.score).toBe(40);
+    expect(result.detail).toContain("route currently paused");
+  });
+
+  it("excludes cohort-limited routes regardless of confidence", () => {
+    const result = scoreLiquidity(
+      { liquidityScore: 40, concentrationHhi: 0.3, poolCount: 5, chainCount: 2 },
+      {
+        score: 85,
+        routeFamily: "stablecoin-redeem",
+        immediateCapacityUsd: 50_000_000,
+        immediateCapacityRatio: 0.5,
+        resolutionState: "resolved",
+        modelConfidence: "medium",
+        capacitySemantics: "immediate-bounded",
+        routeStatus: "cohort-limited",
+      },
+    );
+    expect(result.score).toBe(40);
+    expect(result.detail).toContain("route currently cohort-limited");
+  });
+
   it("keeps unknown route status eligible outside severe active depegs", () => {
     const result = scoreLiquidity(
       { liquidityScore: 40, concentrationHhi: 0.3, poolCount: 5, chainCount: 2 },

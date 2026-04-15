@@ -8,6 +8,7 @@ import {
   computeCapacityScore,
   computeEffectiveExitScore,
   computeRedemptionBackstopScore,
+  isStrongLiveDirectRoute,
   REDEMPTION_ACCESS_SCORES,
   REDEMPTION_EXECUTION_SCORES,
   REDEMPTION_OUTPUT_ASSET_SCORES,
@@ -144,11 +145,12 @@ export async function buildRedemptionBackstopEntry(
   const holderEligibility =
     config.holderEligibility ?? resolveDefaultHolderEligibility(config);
   const routeAvailability = options.routeAvailability;
-  const hasStrongLiveDirectRoute =
-    capacity.capacityConfidence === "live-direct" &&
-    capacity.sourceMode === "dynamic" &&
-    config.accessModel === "permissionless-onchain" &&
-    (config.settlementModel === "atomic" || config.settlementModel === "immediate");
+  const hasStrongLiveDirectRoute = isStrongLiveDirectRoute({
+    capacityConfidence: capacity.capacityConfidence,
+    sourceMode: capacity.sourceMode,
+    accessModel: config.accessModel,
+    settlementModel: config.settlementModel,
+  });
   const routeImpaired =
     resolutionState === "resolved" &&
     routeAvailability != null &&

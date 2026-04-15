@@ -5,7 +5,11 @@ import type {
   ReportCardDimension,
   StablecoinMeta,
 } from "../types";
-import { computeEffectiveExitScore, REDEMPTION_ROUTE_FAMILY_LABELS } from "./redemption-backstop-scoring";
+import {
+  computeEffectiveExitScore,
+  isStrongLiveDirectRoute,
+  REDEMPTION_ROUTE_FAMILY_LABELS,
+} from "./redemption-backstop-scoring";
 import { ACTIVE_DEPEG_CAP_F_BPS } from "./report-card-active-depeg";
 import { scoreToGrade } from "./report-card-core";
 
@@ -113,10 +117,20 @@ function formatCapacityUsd(value: number): string {
 }
 
 function hasStrongLiveDirectRoute(redemption: RedemptionLiquidityInput): boolean {
-  return redemption.capacityConfidence === "live-direct" &&
-    redemption.sourceMode === "dynamic" &&
-    redemption.accessModel === "permissionless-onchain" &&
-    (redemption.settlementModel === "atomic" || redemption.settlementModel === "immediate");
+  if (
+    redemption.capacityConfidence == null ||
+    redemption.sourceMode == null ||
+    redemption.accessModel == null ||
+    redemption.settlementModel == null
+  ) {
+    return false;
+  }
+  return isStrongLiveDirectRoute({
+    capacityConfidence: redemption.capacityConfidence,
+    sourceMode: redemption.sourceMode,
+    accessModel: redemption.accessModel,
+    settlementModel: redemption.settlementModel,
+  });
 }
 
 function isSevereActiveDepeg(activeDepegBps: number | null | undefined): boolean {
