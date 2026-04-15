@@ -1,9 +1,24 @@
 import { createMethodologyVersion, toMethodologyVersionLabel } from "./methodology-version";
 
 const redemptionBackstop = createMethodologyVersion({
-  currentVersion: "3.95",
+  currentVersion: "3.96",
   changelogPath: "/methodology/#safety-scores-methodology",
   changelog: [
+    {
+      version: "3.96",
+      title: "Redemption telemetry validation and route-status fail-closed hardening",
+      date: "2026-04-15",
+      effectiveAt: 1776276000,
+      summary:
+        "Live reserve redemption telemetry now fails closed more consistently, and shared config/documentation provenance no longer leaks across expanded route groups.",
+      impact: [
+        "Paused, degraded, or cohort-limited live route-status telemetry now marks the redemption row impaired instead of publishing a current standalone score",
+        "Nested and legacy redemption telemetry fields are validated independently before persistence, preventing malformed nested values from being masked by valid legacy fields",
+        "Adapters that are not declared as redemption-capacity sources no longer emit unsupported capacity metadata, and expanded shared route configs now receive per-asset reviewed docs",
+      ],
+      commits: [],
+      reconstructed: false,
+    },
     {
       version: "3.95",
       title: "USTB live Superstate liquidity capacity",

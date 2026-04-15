@@ -1596,11 +1596,11 @@ Rows written by the current worker are grouped by a completed snapshot run manif
       "feeModelKind": "undisclosed-reviewed",
       "modelConfidence": "low",
       "updatedAt": 1773350400,
-      "methodologyVersion": "1.2"
+      "methodologyVersion": "3.96"
     }
   },
   "methodology": {
-    "version": "1.2",
+    "version": "3.96",
     "componentWeights": {
       "access": 0.2,
       "settlement": 0.15,
@@ -1609,9 +1609,9 @@ Rows written by the current worker are grouped by a completed snapshot run manif
       "outputAssetQuality": 0.15,
       "cost": 0.1
     },
-    "effectiveExitWeights": {
-      "liquidity": 0.55,
-      "redemption": 0.45
+    "effectiveExitModel": {
+      "model": "best-path",
+      "diversificationFactor": 0.1
     }
   },
   "updatedAt": 1773350400
@@ -1620,7 +1620,7 @@ Rows written by the current worker are grouped by a completed snapshot run manif
 
 `score` is the direct redemption-quality score.
 
-`effectiveExitScore` is the blended exit score written into the redemption snapshot when the route resolved cleanly, the reused DEX liquidity input was fresh, and the route is not currently impaired. Report cards may still recompute liquidity from the same underlying redemption score with additional confidence and active-depeg gating.
+`effectiveExitScore` is the best-path exit score written into the redemption snapshot when the route resolved cleanly, the reused DEX liquidity input was fresh, and the route is not currently impaired. When both DEX liquidity and redemption exist, the model uses `min(100, max(dex, redemption) + min(dex, redemption) × 0.10)`. Report cards may still recompute liquidity from the same underlying redemption score with additional confidence and active-depeg gating.
 
 `methodology.version` is attributed from the latest completed redemption snapshot run, falling back to the latest stored row for legacy snapshots. `methodology.currentVersion` remains the live code version when the API is serving an older snapshot that has not yet been recomputed.
 

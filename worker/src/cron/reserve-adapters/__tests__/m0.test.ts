@@ -1,5 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { adaptM0Collateral, adaptM0Current } from "../m0";
+import { getReserveAdapter } from "../index";
+import { validateAdapterOutput } from "../validate";
 
 const SAMPLE_PAYLOAD = {
   data: {
@@ -39,14 +41,9 @@ describe("adaptM0Current", () => {
       cashUnits: "milli-usd-to-micro-usd",
       totalCashScaled: 27_250_000_000_000,
       normalizedReserveTotal: 194_750_000_000_000,
-      redemption: {
-        capacityUsd: 194_750_000_000_000,
-        capacityKind: "live-proxy-validated",
-        freshnessKind: "unverified",
-        routeStatus: "unknown",
-        holderEligibility: "whitelisted-primary",
-      },
     });
+    expect(result.metadata?.redemption).toBeUndefined();
+    expect(validateAdapterOutput(result, { adapter: getReserveAdapter("m0") ?? undefined }).valid).toBe(true);
   });
 
   it("uses the latest collateral update timestamp when M0 exposes one", () => {

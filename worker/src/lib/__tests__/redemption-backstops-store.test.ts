@@ -226,6 +226,55 @@ describe("loadRedemptionBackstopMap", () => {
     expect(Object.keys(result.map)).toEqual(["eurc-circle"]);
   });
 
+  it("rejects completed run manifests that are not complete", async () => {
+    const db = mockD1([
+      {
+        match: "FROM redemption_backstop_runs",
+        rows: [],
+        first: {
+          run_id: "run-incomplete",
+          completed_at: 1_700_000_010,
+          expected_count: 2,
+          written_count: 1,
+          min_updated_at: 1_700_000_000,
+          max_updated_at: 1_700_000_000,
+          methodology_version: "1.1",
+        },
+      },
+    ]);
+
+    await expect(loadRedemptionBackstopSnapshot(db)).rejects.toThrow(
+      "Latest completed redemption backstop run is incomplete",
+    );
+  });
+
+  it("rejects completed run manifests whose rows are missing", async () => {
+    const db = mockD1([
+      {
+        match: "FROM redemption_backstop_runs",
+        rows: [],
+        first: {
+          run_id: "run-missing-row",
+          completed_at: 1_700_000_010,
+          expected_count: 1,
+          written_count: 1,
+          min_updated_at: 1_700_000_000,
+          max_updated_at: 1_700_000_000,
+          methodology_version: "1.1",
+        },
+      },
+      {
+        match: "WHERE snapshot_run_id = ?",
+        matchBinds: ["run-missing-row"],
+        rows: [],
+      },
+    ]);
+
+    await expect(loadRedemptionBackstopSnapshot(db)).rejects.toThrow(
+      "Latest completed redemption backstop run row count mismatch",
+    );
+  });
+
   it("writes current/history rows under a completed run manifest", async () => {
     const db = mockD1();
     const record: RedemptionBackstopEntry = {

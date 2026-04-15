@@ -140,9 +140,6 @@ function adaptAccountableDashboard(
       ? payload.data.reserves.total_reserves?.value
       : payload.data.reserves.total_reserves;
   const sourceTimestamp = parseTimestampLikeToUnixSeconds(payload.data.ts);
-  const stableRedeemableUsd = breakdown
-    .filter((entry) => /stable|cash|usdc|usdt|pyusd|dai|treasury/i.test(entry.name))
-    .reduce((sum, entry) => sum + entry.value, 0);
 
   return {
     slices,
@@ -173,14 +170,6 @@ function adaptAccountableDashboard(
             "accountable-dashboard",
             "Accountable dashboard payload does not expose a readable upstream timestamp",
           )),
-      redemption: {
-        capacityUsd: stableRedeemableUsd,
-        capacityKind: "live-proxy-validated" as const,
-        freshnessKind: sourceTimestamp != null ? "verified-source-timestamp" as const : "unverified" as const,
-        ...(sourceTimestamp != null ? { sourceTimestamp } : {}),
-        routeStatus: "unknown" as const,
-        sourceUrls: [],
-      },
     },
   };
 }

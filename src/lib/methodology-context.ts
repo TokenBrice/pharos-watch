@@ -23,6 +23,10 @@ import {
   PSI_METHODOLOGY_VERSION_LABEL,
 } from "@shared/lib/stability-index-version";
 import {
+  REDEMPTION_BACKSTOP_METHODOLOGY_PATH,
+  REDEMPTION_BACKSTOP_VERSION_LABEL,
+} from "@shared/lib/redemption-backstop-version";
+import {
   YIELD_METHODOLOGY_CHANGELOG_PATH,
   YIELD_METHODOLOGY_VERSION_LABEL,
 } from "@shared/lib/yield-methodology-version";
@@ -137,16 +141,16 @@ export const METHODOLOGY_CONTEXT: Record<MethodologyContextKey, MethodologyConte
     summary: "Modeled issuer or protocol exit path scored across access, settlement, execution certainty, capacity, output quality, and cost.",
     detail:
       "This is currently documented under the Safety Scores methodology because it feeds the Liquidity / Exit dimension rather than having a standalone public section.",
-    methodologyPath: "/methodology/#safety-scores-methodology",
-    versionLabel: SAFETY_SCORE_VERSION_LABEL,
+    methodologyPath: REDEMPTION_BACKSTOP_METHODOLOGY_PATH,
+    versionLabel: REDEMPTION_BACKSTOP_VERSION_LABEL,
   },
   effectiveExit: {
     title: "Effective Exit",
-    summary: "Blended exit score that preserves DEX liquidity as the floor while allowing credible redemption quality to lift the Liquidity / Exit dimension.",
+    summary: "Best-path exit score that preserves the strongest exit path while giving modest credit for a second viable route.",
     detail:
-      "When both exist, report cards use max(liquidity, liquidity*0.55 + redemption*0.45). Redemption-only paths are capped more conservatively.",
-    methodologyPath: "/methodology/#safety-scores-methodology",
-    versionLabel: SAFETY_SCORE_VERSION_LABEL,
+      "When both DEX liquidity and redemption exist, report cards use min(100, max(dex, redemption) + min(dex, redemption)*0.10). If only one path exists, that score is used directly after route caps and freshness gates.",
+    methodologyPath: REDEMPTION_BACKSTOP_METHODOLOGY_PATH,
+    versionLabel: REDEMPTION_BACKSTOP_VERSION_LABEL,
   },
   activeDepegs: {
     title: "Active Depegs",

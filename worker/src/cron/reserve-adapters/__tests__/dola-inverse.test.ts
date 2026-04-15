@@ -6,6 +6,8 @@ import {
   listUnexpectedDolaAssets,
   type FirmMarket,
 } from "../dola-inverse";
+import { getReserveAdapter } from "../index";
+import { validateAdapterOutput } from "../validate";
 
 function makeMarket(symbol: string, totalDebt = 1_000_000): FirmMarket {
   return { name: `${symbol} Market`, underlying: { symbol }, totalDebt, borrowPaused: false };
@@ -124,13 +126,8 @@ describe("adaptFirmMarkets", () => {
     expect(result.metadata?.timestamp).toBe(12345);
     expect(result.metadata?.sourceTimestamp).toBe(12345);
     expect(result.metadata?.freshnessMode).toBe("verified");
-    expect(result.metadata?.redemption).toMatchObject({
-      capacityUsd: 0,
-      capacityKind: "live-proxy-validated",
-      freshnessKind: "verified-source-timestamp",
-      sourceTimestamp: 12345,
-      routeStatus: "open",
-    });
+    expect(result.metadata?.redemption).toBeUndefined();
+    expect(validateAdapterOutput(result, { adapter: getReserveAdapter("dola-inverse") ?? undefined }).valid).toBe(true);
   });
 
   it("assigns correct risk levels to each bucket", () => {

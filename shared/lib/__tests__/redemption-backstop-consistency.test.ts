@@ -201,6 +201,24 @@ describe("redemption backstop config consistency", () => {
     expect(violations).toEqual([]);
   });
 
+  it("reserve-sync fallback ratios and score caps stay in range", () => {
+    const violations = entries.flatMap(([id, c]) => {
+      const issues: string[] = [];
+      if (
+        c.capacityModel.kind === "reserve-sync-metadata" &&
+        c.capacityModel.fallbackRatio != null &&
+        (c.capacityModel.fallbackRatio <= 0 || c.capacityModel.fallbackRatio > 1)
+      ) {
+        issues.push(`${id}: fallbackRatio=${c.capacityModel.fallbackRatio}`);
+      }
+      if (c.totalScoreCap != null && (c.totalScoreCap <= 0 || c.totalScoreCap > 100)) {
+        issues.push(`${id}: totalScoreCap=${c.totalScoreCap}`);
+      }
+      return issues;
+    });
+    expect(violations).toEqual([]);
+  });
+
   it("every route family has at least one configured coin", () => {
     const families: RedemptionRouteFamily[] = [
       "stablecoin-redeem",
@@ -227,6 +245,33 @@ describe("redemption backstop config consistency", () => {
     const violations = entries
       .filter(([, c]) => c.capacityModel.confidence === "documented-bound" && (!c.reviewedAt || !c.docs || c.docs.length === 0))
       .map(([id, c]) => `${id}: reviewedAt=${c.reviewedAt ?? "missing"} docs=${c.docs?.length ?? 0}`);
+    expect(violations).toEqual([]);
+  });
+
+  it("expanded shared configs receive per-coin reviewed docs instead of shared first-id docs", () => {
+    const expectedPrimaryUrls = new Map([
+      ["a7a5-old-vector", "https://www.a7a5.io/"],
+      ["gusd-gate", "https://www.gate.com/gusd"],
+      ["usyc-hashnote", "https://usyc.hashnote.com/"],
+      ["zarp-zarp", "https://www.zarpstablecoin.com/"],
+      ["cetes-etherfuse", "https://app.etherfuse.com/legal/proof-of-reserves"],
+    ]);
+
+    for (const [id, expectedUrl] of expectedPrimaryUrls) {
+      expect(REDEMPTION_BACKSTOP_CONFIGS[id]?.docs?.[0]?.url).toBe(expectedUrl);
+    }
+  });
+
+  it("non-issuer documented supply-full routes do not force issuer-term capacity basis", () => {
+    const violations = entries
+      .filter(
+        ([, c]) =>
+          c.capacityModel.kind === "supply-full" &&
+          c.capacityModel.basis === "issuer-term-redemption" &&
+          c.routeFamily !== "offchain-issuer" &&
+          c.routeFamily !== "stablecoin-redeem",
+      )
+      .map(([id, c]) => `${id}: ${c.routeFamily}`);
     expect(violations).toEqual([]);
   });
 

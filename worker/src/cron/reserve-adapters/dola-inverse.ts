@@ -104,7 +104,6 @@ export function adaptFirmMarkets(payload: FirmMarketsResponse): AdapterResult {
   ]);
 
   const activeMarkets = payload.markets.filter((m) => m.totalDebt > 0).length;
-  const stablecoinDebt = bucketTotals.get("stablecoin") ?? 0;
 
   return {
     slices,
@@ -119,17 +118,6 @@ export function adaptFirmMarkets(payload: FirmMarketsResponse): AdapterResult {
             "FiRM markets payload did not expose a trustworthy source timestamp",
           )),
       unknownExposurePct: totalDebt > 0 ? (unknownDebt / totalDebt) * 100 : 0,
-      immediateRedeemableUsd: stablecoinDebt,
-      ...(totalDebt > 0 ? { immediateRedeemableRatio: stablecoinDebt / totalDebt } : {}),
-      redemption: {
-        capacityUsd: stablecoinDebt,
-        ...(totalDebt > 0 ? { capacityRatioOfSupply: stablecoinDebt / totalDebt } : {}),
-        capacityKind: "live-proxy-validated" as const,
-        freshnessKind: payload.timestamp > 0 ? "verified-source-timestamp" as const : "unverified" as const,
-        ...(payload.timestamp > 0 ? { sourceTimestamp: payload.timestamp } : {}),
-        routeStatus: "open" as const,
-        sourceUrls: ["https://www.inverse.finance/transparency"],
-      },
     },
   };
 }

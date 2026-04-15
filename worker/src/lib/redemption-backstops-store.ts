@@ -316,7 +316,18 @@ export async function loadRedemptionBackstopSnapshot(db: D1Database): Promise<Re
   try {
     const latestRun = await getLatestCompletedRedemptionBackstopRun(db);
     if (latestRun) {
+      if (latestRun.written_count !== latestRun.expected_count) {
+        throw new RedemptionBackstopSnapshotUnavailableError(
+          `Latest completed redemption backstop run is incomplete (${latestRun.written_count}/${latestRun.expected_count})`,
+        );
+      }
       const map = await queryRedemptionBackstopMap(db, latestRun.run_id);
+      const rowCount = Object.keys(map).length;
+      if (rowCount !== latestRun.written_count) {
+        throw new RedemptionBackstopSnapshotUnavailableError(
+          `Latest completed redemption backstop run row count mismatch (${rowCount}/${latestRun.written_count})`,
+        );
+      }
       return {
         map,
         latestUpdatedAt: latestRun.max_updated_at,

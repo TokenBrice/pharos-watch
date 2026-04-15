@@ -3,6 +3,8 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 import { adaptMentoReserveComposition, parseMentoReserveComposition } from "../mento";
+import { getReserveAdapter } from "../index";
+import { validateAdapterOutput } from "../validate";
 
 const FIXTURES_DIR = join(dirname(fileURLToPath(import.meta.url)), "fixtures");
 const SAMPLE_HTML = readFileSync(join(FIXTURES_DIR, "mento-reserve-composition.html"), "utf8");
@@ -85,15 +87,10 @@ describe("mento adapter", () => {
     expect(result.metadata).toMatchObject({
       freshnessMode: "verified",
       sourceTimestamp: 1776236230,
-      immediateRedeemableRatio: 0.6,
-      redemption: {
-        capacityRatioOfSupply: 0.6,
-        capacityKind: "live-proxy-validated",
-        freshnessKind: "verified-source-timestamp",
-        sourceTimestamp: 1776236230,
-        routeStatus: "unknown",
-      },
+      stableReservePct: 60,
     });
+    expect(result.metadata?.redemption).toBeUndefined();
+    expect(validateAdapterOutput(result, { adapter: getReserveAdapter("mento") ?? undefined }).valid).toBe(true);
   });
 
 

@@ -123,7 +123,7 @@ function resolveCapacityReason(args: {
   hasBlockingWarnings: boolean;
   hasScoringEligibleFreshness: boolean;
   telemetryCapacity: "direct" | "proxy" | "none";
-  fallbackTelemetryAvailable: boolean;
+  capacityTelemetryAvailable: boolean;
   stablecoinId: string;
   canUseDegradedSyncCapacity: boolean;
 }): string | null {
@@ -136,12 +136,15 @@ function resolveCapacityReason(args: {
   if (!SCORING_LIVE_RESERVE_EVIDENCE_CLASSES.includes(args.snapshotMetadata.evidenceClass)) {
     return "Live reserve metadata uses weak or non-scoring evidence for redemption capacity";
   }
-  const hasCapacityTelemetry = args.telemetryCapacity !== "none" || args.fallbackTelemetryAvailable;
-  if (!args.hasScoringEligibleFreshness && !hasCapacityTelemetry) {
+  const adapterCanEmitCapacity = args.telemetryCapacity !== "none";
+  if (!args.hasScoringEligibleFreshness && !adapterCanEmitCapacity && !args.capacityTelemetryAvailable) {
     return "Live reserve metadata lacks scoring-grade freshness evidence";
   }
-  if (!hasCapacityTelemetry) {
+  if (!adapterCanEmitCapacity && !args.capacityTelemetryAvailable) {
     return `Live reserve adapter for ${args.stablecoinId} does not expose redeemable-capacity telemetry`;
+  }
+  if (!args.capacityTelemetryAvailable) {
+    return "Live reserve metadata lacks redeemable-capacity amount";
   }
   return null;
 }
@@ -209,7 +212,7 @@ export function readRedemptionBackstopLiveMetadata(
     hasBlockingWarnings,
     hasScoringEligibleFreshness,
     telemetryCapacity,
-    fallbackTelemetryAvailable: fallbackCapacityTelemetryAvailable,
+    capacityTelemetryAvailable: fallbackCapacityTelemetryAvailable,
     stablecoinId,
     canUseDegradedSyncCapacity,
   });

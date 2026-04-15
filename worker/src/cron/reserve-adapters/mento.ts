@@ -145,15 +145,7 @@ export function adaptMentoReserveComposition(html: string): AdapterResult {
             "nextjs-embedded-payload",
             "Mento reserve page embeds composition percentages without a trustworthy source timestamp",
           )),
-      immediateRedeemableRatio: stablePct / 100,
-      redemption: {
-        capacityRatioOfSupply: stablePct / 100,
-        capacityKind: "live-proxy-validated" as const,
-        freshnessKind: sourceTimestamp != null ? "verified-source-timestamp" as const : "unverified" as const,
-        ...(sourceTimestamp != null ? { sourceTimestamp } : {}),
-        routeStatus: "unknown" as const,
-        sourceUrls: ["https://reserve.mento.org/"],
-      },
+      stableReservePct: stablePct,
     },
   };
 }

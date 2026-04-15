@@ -201,17 +201,7 @@ export function adaptUsddLatestCollateral(
               freshnessReason: "history timestamp unavailable",
             },
           }),
-      immediateRedeemableUsd: stableRedeemableUsd,
-      ...(totalVaultUsd > 0 ? { immediateRedeemableRatio: stableRedeemableUsd / totalVaultUsd } : {}),
-      redemption: {
-        capacityUsd: stableRedeemableUsd,
-        ...(totalVaultUsd > 0 ? { capacityRatioOfSupply: stableRedeemableUsd / totalVaultUsd } : {}),
-        capacityKind: "live-proxy-validated" as const,
-        freshnessKind: sourceTimestamp != null ? "verified-source-timestamp" as const : "unverified" as const,
-        ...(sourceTimestamp != null ? { sourceTimestamp } : {}),
-        routeStatus: "open" as const,
-        sourceUrls: ["https://docs.usdd.io/smart-allocator"],
-      },
+      stableVaultUsd: stableRedeemableUsd,
     },
   };
 }

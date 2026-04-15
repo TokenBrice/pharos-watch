@@ -42,6 +42,18 @@ function getFiniteMetadataNumber(metadata: Record<string, unknown> | undefined, 
   return typeof value === "number" && Number.isFinite(value) ? value : null;
 }
 
+function hasNegativeNumber(values: readonly (number | null)[]): boolean {
+  return values.some((value) => value != null && value < 0);
+}
+
+function hasOutOfRangeRatio(values: readonly (number | null)[]): boolean {
+  return values.some((value) => value != null && (value < 0 || value > 1));
+}
+
+function hasNumber(values: readonly (number | null)[]): boolean {
+  return values.some((value) => value != null);
+}
+
 function getMetadataDetails(metadata: Record<string, unknown> | undefined): Record<string, unknown> | null {
   const details = metadata?.details;
   return details && typeof details === "object" && !Array.isArray(details)
@@ -67,25 +79,31 @@ function validateRedemptionTelemetry(
   const warnings: LiveReserveWarning[] = [];
   const adapterLabel = describeAdapter(adapter);
   const redemption = getMetadataObject(metadata, "redemption");
-  const capacityUsd = getFiniteMetadataNumber(metadata, "immediateRedeemableUsd")
-    ?? getFiniteMetadataNumber(redemption ?? undefined, "capacityUsd");
-  const capacityRatio = getFiniteMetadataNumber(metadata, "immediateRedeemableRatio")
-    ?? getFiniteMetadataNumber(redemption ?? undefined, "capacityRatioOfSupply");
-  const feeBps = getFiniteMetadataNumber(metadata, "redemptionFeeBps")
-    ?? getFiniteMetadataNumber(redemption ?? undefined, "feeBps");
+  const capacityUsdValues = [
+    getFiniteMetadataNumber(metadata, "immediateRedeemableUsd"),
+    getFiniteMetadataNumber(redemption ?? undefined, "capacityUsd"),
+  ] as const;
+  const capacityRatioValues = [
+    getFiniteMetadataNumber(metadata, "immediateRedeemableRatio"),
+    getFiniteMetadataNumber(redemption ?? undefined, "capacityRatioOfSupply"),
+  ] as const;
+  const feeBpsValues = [
+    getFiniteMetadataNumber(metadata, "redemptionFeeBps"),
+    getFiniteMetadataNumber(redemption ?? undefined, "feeBps"),
+  ] as const;
 
-  const hasCapacityTelemetry = capacityUsd != null || capacityRatio != null;
-  const hasFeeTelemetry = feeBps != null;
+  const hasCapacityTelemetry = hasNumber(capacityUsdValues) || hasNumber(capacityRatioValues);
+  const hasFeeTelemetry = hasNumber(feeBpsValues);
   const adapterCapacity = adapter?.redemptionTelemetry?.capacity ?? "none";
   const adapterFee = adapter?.redemptionTelemetry?.fee ?? "none";
 
-  if (capacityUsd != null && capacityUsd < 0) {
+  if (hasNegativeNumber(capacityUsdValues)) {
     return [fatalWarning("invalid-redemption-capacity-usd", `Redemption capacity is negative${adapterLabel}`)];
   }
-  if (capacityRatio != null && (capacityRatio < 0 || capacityRatio > 1)) {
+  if (hasOutOfRangeRatio(capacityRatioValues)) {
     return [fatalWarning("invalid-redemption-capacity-ratio", `Redemption capacity ratio is outside 0-1${adapterLabel}`)];
   }
-  if (feeBps != null && feeBps < 0) {
+  if (hasNegativeNumber(feeBpsValues)) {
     return [fatalWarning("invalid-redemption-fee-bps", `Redemption fee bps is negative${adapterLabel}`)];
   }
   if (hasCapacityTelemetry && adapterCapacity === "none") {

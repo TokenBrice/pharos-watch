@@ -269,15 +269,7 @@ export function adaptReMetrics(html: string): AdapterResult {
             "nextjs-embedded-payload",
             "Re Metrics embedded payload did not expose a trustworthy source timestamp",
           )),
-      immediateRedeemableUsd: stableRedeemableUsd,
-      redemption: {
-        capacityUsd: stableRedeemableUsd,
-        capacityKind: "live-queue" as const,
-        freshnessKind: sourceTimestamp != null ? "verified-source-timestamp" as const : "unverified" as const,
-        ...(sourceTimestamp != null ? { sourceTimestamp } : {}),
-        routeStatus: stableRedeemableUsd > 0 ? "open" as const : "unknown" as const,
-        sourceUrls: ["https://app.re.xyz/transparency"],
-      },
+      stableAssetUsd: stableRedeemableUsd,
     },
   };
 }

@@ -111,6 +111,16 @@ for (const [id, config] of Object.entries(REDEMPTION_BACKSTOP_CONFIGS)) {
   ) {
     errors.push(`${id}: supply-ratio out of range (${config.capacityModel.ratio})`);
   }
+  if (
+    config.capacityModel.kind === "reserve-sync-metadata" &&
+    config.capacityModel.fallbackRatio != null &&
+    (config.capacityModel.fallbackRatio <= 0 || config.capacityModel.fallbackRatio > 1)
+  ) {
+    errors.push(`${id}: reserve-sync fallbackRatio out of range (${config.capacityModel.fallbackRatio})`);
+  }
+  if (config.totalScoreCap != null && (config.totalScoreCap <= 0 || config.totalScoreCap > 100)) {
+    errors.push(`${id}: totalScoreCap out of range (${config.totalScoreCap})`);
+  }
   if (config.capacityModel.confidence === "documented-bound") {
     if (!config.reviewedAt) {
       errors.push(`${id}: documented-bound route missing reviewedAt`);

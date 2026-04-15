@@ -131,6 +131,16 @@ export async function buildRedemptionBackstopEntry(
     routeStatusReason = capacity.routeStatusReason;
     routeStatusReviewedAt = capacity.routeStatusReviewedAt;
   }
+  const liveRouteStatusImpaired =
+    resolutionState === "resolved" &&
+    capacity.routeStatus != null &&
+    capacity.routeStatus !== "open" &&
+    capacity.routeStatus !== "unknown";
+  if (liveRouteStatusImpaired) {
+    resolutionState = "impaired";
+    score = null;
+    capsApplied = [...capsApplied, "live-route-status-impairment"];
+  }
   const holderEligibility =
     config.holderEligibility ?? resolveDefaultHolderEligibility(config);
   const routeAvailability = options.routeAvailability;

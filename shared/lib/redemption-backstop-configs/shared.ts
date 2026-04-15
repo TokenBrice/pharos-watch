@@ -100,7 +100,25 @@ export function expandIds(
   ids: readonly string[],
   config: RedemptionBackstopConfig,
 ): Record<string, RedemptionBackstopConfig> {
-  return Object.fromEntries(ids.map((id) => [id, config]));
+  return Object.fromEntries(ids.map((id) => [id, cloneRedemptionBackstopConfig(config)]));
+}
+
+function cloneRedemptionBackstopConfig(config: RedemptionBackstopConfig): RedemptionBackstopConfig {
+  return {
+    ...config,
+    capacityModel: { ...config.capacityModel },
+    costModel: { ...config.costModel },
+    ...(config.docs ? { docs: config.docs.map(cloneRedemptionDocSource) } : {}),
+    ...(config.notes ? { notes: [...config.notes] } : {}),
+  };
+}
+
+function cloneRedemptionDocSource(doc: RedemptionDocSource): RedemptionDocSource {
+  return {
+    label: doc.label,
+    url: doc.url,
+    ...(doc.supports ? { supports: [...doc.supports] } : {}),
+  };
 }
 
 export function fixedFee(feeBps: number, feeDescription?: string): RedemptionCostModel {
@@ -116,7 +134,6 @@ export function documentedBoundSupplyFull(
     capacityModel: {
       kind: "supply-full",
       confidence: "documented-bound",
-      basis: "issuer-term-redemption",
     },
     reviewedAt,
   };

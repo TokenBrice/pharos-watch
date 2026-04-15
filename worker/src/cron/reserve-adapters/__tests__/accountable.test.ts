@@ -2,6 +2,8 @@ import { describe, expect, it } from "vitest";
 import { adaptAccountableTypeBreakdown } from "../accountable";
 import type { LiveReservesConfig } from "@shared/types/live-reserves";
 import { fetchAccountableReserves } from "../accountable";
+import { getReserveAdapter } from "../index";
+import { validateAdapterOutput } from "../validate";
 
 const signal = AbortSignal.timeout(5_000);
 
@@ -229,14 +231,9 @@ describe("adaptAccountableTypeBreakdown", () => {
       unknownBucketCount: 1,
       unknownBucketNames: ["New Bucket"],
       unknownExposurePct: 30,
-      redemption: {
-        capacityUsd: 70,
-        capacityKind: "live-proxy-validated",
-        freshnessKind: "verified-source-timestamp",
-        sourceTimestamp: Date.UTC(2026, 2, 20) / 1000,
-        routeStatus: "unknown",
-      },
     });
+    expect(result.metadata?.redemption).toBeUndefined();
+    expect(validateAdapterOutput(result, { adapter: getReserveAdapter("accountable") ?? undefined }).valid).toBe(true);
     expect(result.warnings?.[0]).toMatchObject({
       code: "unmapped-bucket",
       effect: "degraded",

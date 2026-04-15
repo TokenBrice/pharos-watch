@@ -441,6 +441,11 @@ describe("buildRedemptionBackstopEntry", () => {
     expect(entry.routeStatusSource).toBe("onchain");
     expect(entry.routeStatusReason).toBe("All vault assets are paused");
     expect(entry.routeStatusReviewedAt).toBe("2026-04-15");
+    expect(entry.resolutionState).toBe("impaired");
+    expect(entry.score).toBeNull();
+    expect(entry.effectiveExitScore).toBeNull();
+    expect(entry.modelConfidence).toBe("low");
+    expect(entry.capsApplied).toContain("live-route-status-impairment");
   });
 
   it("uses LUSD Liquity v1 system debt as live direct redemption capacity", async () => {
@@ -658,6 +663,47 @@ describe("buildRedemptionBackstopEntry", () => {
     expect(entry.resolutionState).toBe("missing-capacity");
     expect(entry.score).toBeNull();
     expect(entry.effectiveExitScore).toBeNull();
+  });
+
+  it("explains missing capacity when a capable live adapter omits capacity amounts", async () => {
+    const entry = await buildRedemptionBackstopEntry(
+      mockD1(),
+      "zchf-frankencoin",
+      {
+        routeFamily: "stablecoin-redeem",
+        accessModel: "permissionless-onchain",
+        settlementModel: "atomic",
+        executionModel: "deterministic-onchain",
+        outputAssetType: "stable-single",
+        capacityModel: { kind: "reserve-sync-metadata" },
+        costModel: { kind: "fee-bps", feeBps: 0 },
+      },
+      50_000_000,
+      null,
+      now,
+      {
+        reserveSnapshotMetadata: {
+          stablecoinId: "zchf-frankencoin",
+          fetchedAt: now - 120,
+          source: "collateral-positions-api",
+          metadata: {
+            freshnessMode: "unverified",
+            details: {
+              freshnessSource: "position-and-price-apis",
+              freshnessReason: "Collateral positions and price payloads do not expose a trustworthy source timestamp",
+            },
+          },
+          warningCount: 0,
+          warnings: [],
+          sourceModel: "dynamic-mix",
+          evidenceClass: "independent",
+          syncStatus: "ok",
+        },
+      },
+    );
+
+    expect(entry.resolutionState).toBe("missing-capacity");
+    expect(entry.notes).toContain("Live reserve metadata lacks redeemable-capacity amount");
   });
 
   it("does not emit an effective-exit score when the redemption route is unresolved", async () => {

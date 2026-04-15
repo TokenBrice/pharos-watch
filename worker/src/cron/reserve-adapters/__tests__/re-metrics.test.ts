@@ -3,6 +3,8 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 import { adaptReMetrics } from "../re-metrics";
+import { getReserveAdapter } from "../index";
+import { validateAdapterOutput } from "../validate";
 
 const FIXTURES_DIR = join(dirname(fileURLToPath(import.meta.url)), "fixtures");
 const SAMPLE_HTML = readFileSync(join(FIXTURES_DIR, "re-metrics-series.html"), "utf8");
@@ -26,15 +28,10 @@ describe("adaptReMetrics", () => {
       offchainCapitalUsd: 73740021.94399603,
       sourceTimestamp: Date.UTC(2026, 2, 24) / 1000,
       freshnessMode: "verified",
-      immediateRedeemableUsd: expect.any(Number),
-      redemption: {
-        capacityUsd: expect.any(Number),
-        capacityKind: "live-queue",
-        freshnessKind: "verified-source-timestamp",
-        sourceTimestamp: Date.UTC(2026, 2, 24) / 1000,
-        routeStatus: "open",
-      },
+      stableAssetUsd: expect.any(Number),
     });
+    expect(result.metadata?.redemption).toBeUndefined();
+    expect(validateAdapterOutput(result, { adapter: getReserveAdapter("re-metrics") ?? undefined }).valid).toBe(true);
   });
 
   it("accepts the renamed initialTvlData payload used by the current site", () => {

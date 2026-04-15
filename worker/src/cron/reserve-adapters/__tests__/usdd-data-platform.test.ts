@@ -15,6 +15,8 @@ import {
   buildUsddHistoryUrl,
   fetchUsddDataPlatformReserves,
 } from "../usdd-data-platform";
+import { getReserveAdapter } from "../index";
+import { validateAdapterOutput } from "../validate";
 
 const coin = {
   id: "usdd-decentralized-usd",
@@ -74,15 +76,10 @@ describe("adaptUsddLatestCollateral", () => {
       trackedVaultCount: 5,
       sourceTimestamp: 1_774_281_600,
       freshnessMode: "verified",
-      immediateRedeemableUsd: expect.closeTo(82_982_829.02, 2),
-      redemption: {
-        capacityUsd: expect.closeTo(82_982_829.02, 2),
-        capacityKind: "live-proxy-validated",
-        freshnessKind: "verified-source-timestamp",
-        sourceTimestamp: 1_774_281_600,
-        routeStatus: "open",
-      },
+      stableVaultUsd: expect.closeTo(82_982_829.02, 2),
     });
+    expect(result.metadata?.redemption).toBeUndefined();
+    expect(validateAdapterOutput(result, { adapter: getReserveAdapter("usdd-data-platform") ?? undefined }).valid).toBe(true);
   });
 
   it("preserves unknown vault types as an explicit high-risk slice and warning", () => {

@@ -6,11 +6,11 @@ Modeled redemption-route coverage for tracked stablecoins. This subsystem estima
 
 ## Methodology Versioning
 
-- **Current methodology version:** `v3.95`
+- **Current methodology version:** `v3.96`
 - **Public methodology anchor:** `/methodology/#safety-scores-methodology`
 - **Canonical source files:** `shared/lib/redemption-backstops.ts`, `shared/lib/redemption-backstop-configs/*`, `shared/lib/redemption-backstop-scoring.ts`, `shared/lib/redemption-backstop-version.ts`
 
-Latest `v3.95` update: USTB now preserves its on-chain NAV reserve proof while using Superstate's current liquidity endpoint for bounded redemption-capacity telemetry. frxUSD also uses fresh Frax balance-sheet telemetry for stablecoin redemption capacity, live route status can flow from reserve adapters into redemption-backstop rows, and reserve-composition ratios are no longer reused as supply-relative redemption-capacity ratios when a nested live capacity amount is available.
+Latest `v3.96` update: live route-status telemetry now fails closed for paused, degraded, or cohort-limited routes; nested and legacy redemption telemetry fields are validated independently before persistence; unsupported capacity metadata was removed from adapters whose registry definition does not expose redemption-capacity telemetry; and expanded shared route configs now receive per-asset reviewed docs.
 
 There is no standalone changelog page yet. The public methodology link currently points at the Safety Scores section because redemption backstops feed the report-card liquidity dimension.
 
