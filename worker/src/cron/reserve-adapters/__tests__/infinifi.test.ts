@@ -84,6 +84,27 @@ describe("adaptInfiniFi", () => {
     expect(result.unknownFarms).toContain("brand-new-farm");
   });
 
+  it("recognizes current tiny SwapFarm and Tokemak infiniFiUSD positions", () => {
+    const response: InfiniFiProtocolData = {
+      ...SAMPLE_RESPONSE,
+      data: {
+        ...SAMPLE_RESPONSE.data,
+        farms: [
+          { name: "SwapFarm", label: "Multi Farm", assetsNormalized: 1, type: "LIQUID", underlyingAssetSymbol: "USDC" },
+          { name: "tokemak-auto-infinifiUSD", label: "infinifiUSD Autopool", assetsNormalized: 9, type: "ILLIQUID", underlyingAssetSymbol: "infinifiUSD" },
+        ],
+        stats: { asset: { totalTVLAssetNormalized: 10 } },
+      },
+    };
+
+    const result = adaptInfiniFi(response);
+    expect(result.unknownFarms).toEqual([]);
+    expect(result.slices).toEqual([
+      { name: "infinifiUSD Autopool", pct: 90, risk: "medium" },
+      { name: "Multi Farm", pct: 10, risk: "low" },
+    ]);
+  });
+
   it("flags dust unknown farms and preserves them in final slices when they remain material at one-decimal precision", () => {
     const response: InfiniFiProtocolData = {
       ...SAMPLE_RESPONSE,

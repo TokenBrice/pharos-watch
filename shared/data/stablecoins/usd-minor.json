@@ -4722,7 +4722,13 @@
         "primary": {
           "kind": "http-json",
           "url": "https://accountable.xsy.fi:10443/dashboard"
-        }
+        },
+        "fallbacks": [
+          {
+            "kind": "http-json",
+            "url": "https://cache.accountable.capital/dashboard/xsy"
+          }
+        ]
       },
       "params": {
         "bucket": "reserves_split",
