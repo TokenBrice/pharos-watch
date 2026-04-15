@@ -329,7 +329,12 @@ export const STABLECOIN_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackst
   "jupusd-jupiter": {
     ...stablecoinRedeemBase,
     accessModel: "whitelisted-onchain",
-    capacityModel: { kind: "supply-ratio", ratio: 0.1, confidence: "documented-bound" },
+    capacityModel: {
+      kind: "reserve-sync-metadata",
+      fallbackRatio: 0.1,
+      confidence: "documented-bound",
+      basis: "hot-buffer",
+    },
     costModel: documentedVariableFee(
       "JupUSD's primary mint and redeem rail is benefactor-gated and settles against USDC; public materials do not publish one universal fixed redemption fee",
     ),

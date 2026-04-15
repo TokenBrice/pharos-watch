@@ -392,6 +392,54 @@ describe("buildRedemptionBackstopEntry", () => {
     expect(entry.modelConfidence).toBe("high");
   });
 
+  it("uses BOLD Liquity v2 branch debt as live direct redemption capacity", async () => {
+    const config = getRedemptionBackstopConfig("bold-liquity");
+    expect(config).not.toBeNull();
+
+    const entry = await buildRedemptionBackstopEntry(
+      mockD1(),
+      "bold-liquity",
+      config!,
+      40_000_000,
+      null,
+      now,
+      {
+        reserveSnapshotMetadata: {
+          stablecoinId: "bold-liquity",
+          fetchedAt: now - 120,
+          source: "liquity-v2-branches",
+          metadata: {
+            freshnessMode: "not-applicable",
+            redemptionFeeBps: 52,
+            redemption: {
+              capacityUsd: 32_000_000,
+              capacityKind: "live-direct-bounded",
+              freshnessKind: "same-run-onchain",
+              routeStatus: "open",
+              feeBps: 52,
+            },
+          },
+          warningCount: 0,
+          warnings: [],
+          sourceModel: "dynamic-mix",
+          evidenceClass: "independent",
+          syncStatus: "ok",
+        },
+      },
+    );
+
+    expect(entry.provider).toBe("reserve-sync-metadata");
+    expect(entry.sourceMode).toBe("dynamic");
+    expect(entry.resolutionState).toBe("resolved");
+    expect(entry.capacityConfidence).toBe("live-direct");
+    expect(entry.capacitySemantics).toBe("immediate-bounded");
+    expect(entry.immediateCapacityUsd).toBe(32_000_000);
+    expect(entry.immediateCapacityRatio).toBe(0.8);
+    expect(entry.capacityBasis).toBe("live-direct-telemetry");
+    expect(entry.feeBps).toBe(52);
+    expect(entry.modelConfidence).toBe("high");
+  });
+
   it("models the ZCHF StablecoinBridge route with live bridge capacity and zero fee", async () => {
     const config = getRedemptionBackstopConfig("zchf-frankencoin");
     expect(config).not.toBeNull();

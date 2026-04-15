@@ -24,11 +24,15 @@ export const COLLATERAL_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackst
   ),
   "bold-liquity": {
     ...collateralRedeemBase,
-    capacityModel: { kind: "supply-full", confidence: "documented-bound" },
+    capacityModel: { kind: "reserve-sync-metadata" },
     costModel: documentedVariableFee(LIQUITY_STYLE_REDEMPTION_FEE, "formula"),
     reviewedAt: "2026-03-22",
     docs: [
       sourceRef("Liquity V2 redemption docs", "https://docs.liquity.org/v2-faq/redemptions-and-delegation", ["route", "capacity", "fees"]),
+      sourceRef("Liquity v2 repository", "https://github.com/liquity/bold", ["route", "capacity", "fees"]),
+    ],
+    notes: [
+      "Fresh live reserve metadata reads Liquity v2 ActivePool branch debt as the current direct redemption-capacity bound; if that on-chain snapshot is unavailable, the route is left unrated instead of using a full-supply fallback",
     ],
   },
   "lusd-liquity": {
@@ -62,7 +66,8 @@ export const COLLATERAL_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackst
   },
   "fxusd-f-x-protocol": {
     ...collateralRedeemBase,
-    ...reviewedDirectRedemptionSupplyFull,
+    capacityModel: { kind: "reserve-sync-metadata" },
+    reviewedAt: REVIEWED_DIRECT_REDEMPTION_AT,
     costModel: fixedFee(50, "Protocol docs list a 50 bps redemption fee"),
     docs: [
       sourceRef("f(x) docs", "https://fxprotocol.gitbook.io/fx-docs", ["route", "capacity", "fees"]),
@@ -74,7 +79,8 @@ export const COLLATERAL_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackst
   },
   "usdaf-asymmetry": {
     ...collateralRedeemBase,
-    ...reviewedDirectRedemptionSupplyFull,
+    capacityModel: { kind: "reserve-sync-metadata" },
+    reviewedAt: REVIEWED_DIRECT_REDEMPTION_AT,
     outputAssetType: "mixed-collateral",
     costModel: documentedVariableFee(LIQUITY_STYLE_REDEMPTION_FEE, "formula"),
   },

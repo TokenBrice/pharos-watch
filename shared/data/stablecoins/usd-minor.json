@@ -3245,8 +3245,8 @@
       }
     ],
     "liveReservesConfig": {
-      "adapter": "evm-branch-balances",
-      "version": 1,
+      "adapter": "liquity-v2-branches",
+      "version": 2,
       "semantics": "collateral-mix",
       "breakerScope": "bold-liquity",
       "display": {
@@ -3261,6 +3261,7 @@
         }
       },
       "params": {
+        "rpcUrl": "https://ethereum-rpc.publicnode.com",
         "redemptionRateProbe": {
           "contract": "0xf949982b91c8c61e952b3ba942cbbfaef5386684",
           "selector": "0xc52861f2"
@@ -5641,7 +5642,27 @@
         "risk": "low",
         "coinId": "usdc-circle"
       }
-    ]
+    ],
+    "liveReservesConfig": {
+      "adapter": "jupusd",
+      "version": 1,
+      "semantics": "collateral-mix",
+      "breakerScope": "jupusd-jupiter",
+      "display": {
+        "url": "https://jupusd.money/transparency",
+        "label": "JupUSD transparency"
+      },
+      "inputs": {
+        "primary": {
+          "kind": "http-json",
+          "url": "https://api.jupusd.money/api/data"
+        }
+      },
+      "params": {
+        "snapshotsUrl": "https://api.jupusd.money/api/snapshots",
+        "oracleUrl": "https://api.jupusd.money/api/oracle"
+      }
+    }
   },
   {
     "id": "usdm-mega",

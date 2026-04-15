@@ -19,6 +19,7 @@ interface AsymmetryBranchStats {
 interface AsymmetryPayload {
   timestamp?: string | number;
   usdaf?: {
+    total_bold_supply?: string;
     branch?: Record<string, AsymmetryBranchStats>;
   };
 }
@@ -55,6 +56,7 @@ export function adaptAsymmetry(payload: AsymmetryPayload): AdapterResult {
     .filter((entry) => Number.isFinite(entry.usd) && entry.usd > 0);
 
   const total = entries.reduce((acc, entry) => acc + entry.usd, 0);
+  const supply = Number(payload.usdaf?.total_bold_supply ?? "0");
   if (total <= 0) return { slices: [] };
 
   return {
@@ -82,6 +84,23 @@ export function adaptAsymmetry(payload: AsymmetryPayload): AdapterResult {
       activeBranchCount: entries.length,
       unknownBranchCount: warnings.length,
       unknownExposurePct: total > 0 ? (unknownExposureUsd / total) * 100 : 0,
+      ...(Number.isFinite(supply) && supply > 0
+        ? {
+            immediateRedeemableUsd: supply,
+            redemption: {
+              capacityUsd: supply,
+              capacityKind: "live-direct-bounded" as const,
+              freshnessKind: sourceTimestamp != null ? "verified-source-timestamp" as const : "same-run-api" as const,
+              routeStatus: "open" as const,
+              holderEligibility: "any-holder",
+              settlementDelaySec: 0,
+              sourceUrls: [
+                "https://app.asymmetry.finance/api/stats",
+                "https://docs.asymmetry.finance/usdaf-stablecoin/redemptions",
+              ],
+            },
+          }
+        : {}),
       ...(sourceTimestamp != null
         ? verifiedFreshnessMetadata(sourceTimestamp)
         : unverifiedFreshnessMetadata(

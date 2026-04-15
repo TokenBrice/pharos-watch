@@ -25,6 +25,7 @@ export const LIVE_RESERVE_ADAPTER_KEYS = [
   "fx",
   "gho",
   "infinifi",
+  "jupusd",
   "lista",
   "liquity-v1",
   "liquity-v2-branches",

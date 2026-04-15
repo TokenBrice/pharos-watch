@@ -6,6 +6,7 @@ describe("adaptAsymmetry", () => {
     const slices = adaptAsymmetry({
       timestamp: 1776239429591,
       usdaf: {
+        total_bold_supply: "996",
         branch: {
           ysyBOLD: { coll_value: "650" },
           scrvUSD: { coll_value: "225" },
@@ -31,6 +32,13 @@ describe("adaptAsymmetry", () => {
       unknownBranchCount: 0,
       freshnessMode: "verified",
       sourceTimestamp: 1776239429,
+      immediateRedeemableUsd: 996,
+      redemption: {
+        capacityUsd: 996,
+        capacityKind: "live-direct-bounded",
+        freshnessKind: "verified-source-timestamp",
+        routeStatus: "open",
+      },
     });
     expect(slices.warnings).toBeUndefined();
   });

@@ -6,16 +6,16 @@ describe("adaptFx", () => {
     const result = adaptFx({
       data: {
         poolInfo: {
-          wstETH: { collateralBalance: "4420184046004807062590" },
-          wbtc: { collateralBalance: "21713855211" },
+          wstETH: { collateralBalance: "4420184046004807062590", debtBalance: "1000000000000000000000" },
+          wbtc: { collateralBalance: "21713855211", debtBalance: "2000000000000000000000" },
         },
       },
     });
 
     expect(result).toEqual({
       balances: [
-        { key: "wstETH", amountRaw: 4420184046004807062590n },
-        { key: "wbtc", amountRaw: 21713855211n },
+        { key: "wstETH", amountRaw: 4420184046004807062590n, debtRaw: 1000000000000000000000n },
+        { key: "wbtc", amountRaw: 21713855211n, debtRaw: 2000000000000000000000n },
       ],
       unknownKeys: [],
     });
@@ -32,7 +32,7 @@ describe("adaptFx", () => {
     });
 
     expect(result).toEqual({
-      balances: [{ key: "wstETH", amountRaw: 1000000000000000000n }],
+      balances: [{ key: "wstETH", amountRaw: 1000000000000000000n, debtRaw: 0n }],
       unknownKeys: ["unexpectedAsset"],
     });
   });

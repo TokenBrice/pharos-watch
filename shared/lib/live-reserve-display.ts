@@ -29,6 +29,7 @@ const ADAPTER_DISPLAY_BADGE_KINDS: Record<LiveReserveAdapterKey, ReserveDisplayB
   fx: "live",
   gho: "live",
   infinifi: "live",
+  jupusd: "live",
   lista: "live",
   "liquity-v1": "live",
   "liquity-v2-branches": "live",

@@ -92,6 +92,17 @@ describe("getRedemptionBackstopConfig", () => {
       costModel: { kind: "fee-bps", feeBps: 0 },
     });
 
+    expect(getRedemptionBackstopConfig("bold-liquity")).toMatchObject({
+      routeFamily: "collateral-redeem",
+      accessModel: "permissionless-onchain",
+      settlementModel: "atomic",
+      executionModel: "deterministic-onchain",
+      outputAssetType: "bluechip-collateral",
+      capacityModel: { kind: "reserve-sync-metadata" },
+      costModel: { kind: "dynamic-or-unclear", confidence: "formula" },
+      reviewedAt: "2026-03-22",
+    });
+
     expect(getRedemptionBackstopConfig("lusd-liquity")).toMatchObject({
       routeFamily: "collateral-redeem",
       accessModel: "permissionless-onchain",
@@ -189,7 +200,7 @@ describe("getRedemptionBackstopConfig", () => {
 
     expect(getRedemptionBackstopConfig("fxusd-f-x-protocol")).toMatchObject({
       routeFamily: "collateral-redeem",
-      capacityModel: { kind: "supply-full", confidence: "documented-bound" },
+      capacityModel: { kind: "reserve-sync-metadata" },
       costModel: { kind: "fee-bps", feeBps: 50 },
       reviewedAt: "2026-03-23",
     });
@@ -773,7 +784,7 @@ describe("getRedemptionBackstopConfig", () => {
     expect(getRedemptionBackstopConfig("jupusd-jupiter")).toMatchObject({
       routeFamily: "stablecoin-redeem",
       accessModel: "whitelisted-onchain",
-      capacityModel: { kind: "supply-ratio", ratio: 0.1, confidence: "documented-bound" },
+      capacityModel: { kind: "reserve-sync-metadata", fallbackRatio: 0.1, confidence: "documented-bound" },
       costModel: { kind: "dynamic-or-unclear" },
       reviewedAt: "2026-03-23",
     });

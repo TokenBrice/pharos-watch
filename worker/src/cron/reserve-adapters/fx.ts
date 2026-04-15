@@ -3,6 +3,7 @@ import type { LiveReservesConfig } from "@shared/types/live-reserves";
 import { getCanonicalReserveAssetRisk } from "@shared/lib/reserve-asset-risk";
 import type { AdapterContext, AdapterResult } from "./types";
 import {
+  decimalNumberFromBigInt,
   fetchDefiLlamaPrices,
   fetchJsonWithRetry,
   requireJsonInput,
@@ -13,6 +14,7 @@ import {
 
 interface FxPoolInfo {
   collateralBalance?: string;
+  debtBalance?: string;
 }
 
 interface FxPayload {
@@ -27,7 +29,7 @@ const TOKEN_META = {
 };
 
 export function adaptFx(payload: FxPayload): {
-  balances: Array<{ key: keyof typeof TOKEN_META; amountRaw: bigint }>;
+  balances: Array<{ key: keyof typeof TOKEN_META; amountRaw: bigint; debtRaw: bigint }>;
   unknownKeys: string[];
 } {
   const poolInfo = payload.data?.poolInfo ?? {};
@@ -43,9 +45,14 @@ export function adaptFx(payload: FxPayload): {
       const balance = typeof rawBalance === "string" && /^\d+$/.test(rawBalance)
         ? BigInt(rawBalance)
         : 0n;
+      const rawDebt = poolInfo[key]?.debtBalance ?? "0";
+      const debt = typeof rawDebt === "string" && /^\d+$/.test(rawDebt)
+        ? BigInt(rawDebt)
+        : 0n;
       return {
         key,
         amountRaw: balance > 0n ? balance : 0n,
+        debtRaw: debt > 0n ? debt : 0n,
       };
     })
     .filter((entry) => entry.amountRaw > 0n),
@@ -86,11 +93,35 @@ export async function fetchFxReserves(
       risk: TOKEN_META[key].risk,
     };
   });
+  const capacityUsd = balances.reduce(
+    (sum, entry) => sum + decimalNumberFromBigInt(entry.debtRaw, 18),
+    0,
+  );
+
   return {
     slices: slicesFromValues(knownValues),
-    metadata: unverifiedFreshnessMetadata(
-      "protocol-pool-api",
-      "FX protocol pool payload does not expose a trustworthy source timestamp",
-    ),
+    metadata: {
+      ...unverifiedFreshnessMetadata(
+        "protocol-pool-api",
+        "FX protocol pool payload does not expose a trustworthy source timestamp",
+      ),
+      ...(capacityUsd > 0
+        ? {
+            immediateRedeemableUsd: capacityUsd,
+            redemption: {
+              capacityUsd,
+              capacityKind: "live-proxy-validated" as const,
+              freshnessKind: "same-run-api" as const,
+              routeStatus: "open" as const,
+              holderEligibility: "any-holder",
+              settlementDelaySec: 0,
+              sourceUrls: [
+                "https://api.aladdin.club/api1/get_fx_tvl",
+                "https://fxprotocol.gitbook.io/fx-docs",
+              ],
+            },
+          }
+        : {}),
+    },
   };
 }

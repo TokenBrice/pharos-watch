@@ -9,7 +9,7 @@ Dedicated documentation for the live reserve-composition subsystem that powers `
 - **Cron:** `sync-live-reserves` (`worker/src/cron/sync-live-reserves.ts`)
 - **Schedule:** `11 * * * *` (hourly at :11 UTC)
 - **Shared hourly lane:** after live reserve sync, the same slot runs redemption backstop sync, Kinesis supply sync, and collateral-drift checks / alerts (`worker/src/handlers/scheduled/hourly-live-reserves.ts`)
-- **Current coverage:** 136 live-enabled stablecoins across 37 registered adapters (33 currently configured in stablecoin metadata)
+- **Current coverage:** 138 live-enabled stablecoins across 39 registered adapters (35 currently configured in stablecoin metadata)
 - **Storage:** `reserve_composition`, `reserve_composition_history`, `reserve_sync_state`, `reserve_sync_attempt_history`
 - **API:** `GET /api/stablecoin-reserves/:id`
 - **Frontend consumers:** `useStablecoinReserves()`, stablecoin detail view model, `/status` reserve-sync health
@@ -107,7 +107,7 @@ Common metadata fields:
 
 Redemption telemetry is validated before persistence. Negative capacity, capacity ratios outside `0..1`, negative fees, capacity emitted by adapters that do not declare redemption-capacity support, fee telemetry emitted by adapters that do not declare fee support, and direct-capacity evidence emitted by proxy-only adapters fail the adapter output validation. Existing flat fields are still parsed for backward compatibility, but new adapter work should emit the nested `metadata.redemption` object.
 
-`freshnessMode = "not-applicable"` is the expected scoring-eligible path for intrinsically current on-chain reads such as `evm-branch-balances` and `liquity-v1`, where reserve composition comes from latest-state contract balances rather than a separately timestamped disclosure.
+`freshnessMode = "not-applicable"` is the expected scoring-eligible path for intrinsically current on-chain reads such as `evm-branch-balances`, `liquity-v1`, and `liquity-v2-branches`, where reserve composition comes from latest-state contract balances rather than a separately timestamped disclosure.
 
 The registry now also declares the admissible `freshnessMode` set per adapter family so timestamp-backed disclosures, latest-state on-chain proofs, and explicitly unverified dashboard/API feeds cannot silently drift into undocumented freshness semantics.
 
@@ -352,14 +352,16 @@ This table reflects the adapter keys currently configured in `shared/data/stable
 | `dola-inverse`             | `http-json`                 | `collateral-mix`                     | 1                |
 | `erc4626-single-asset`     | `onchain-evm`               | `single-asset`                       | 2                |
 | `ethena`                   | `http-json`                 | `collateral-mix`                     | 1                |
-| `evm-branch-balances`      | `onchain-evm`               | `collateral-mix`                     | 6                |
+| `evm-branch-balances`      | `onchain-evm`               | `collateral-mix`                     | 3                |
 | `falcon`                   | `http-json`                 | `collateral-mix`                     | 1                |
 | `fdusd-transparency`       | `http-html`                 | `attestation-mix`                    | 1                |
 | `frax-balance-sheet`       | `http-json`                 | `attestation-mix`                    | 3                |
 | `fx`                       | `http-json`                 | `collateral-mix`                     | 1                |
 | `gho`                      | `onchain-evm`               | `protocol-reserve`                   | 1                |
 | `infinifi`                 | `http-json`                 | `collateral-mix`                     | 1                |
+| `jupusd`                   | `http-json`                 | `collateral-mix`                     | 1                |
 | `liquity-v1`               | `onchain-evm`               | `single-asset`                       | 1                |
+| `liquity-v2-branches`      | `onchain-evm`               | `collateral-mix`                     | 4                |
 | `m0`                       | `http-json`                 | `protocol-reserve`                   | 9                |
 | `mento`                    | `http-html`                 | `collateral-mix`                     | 2                |
 | `openeden-usdo`            | `http-json`                 | `collateral-mix`                     | 1                |
@@ -389,6 +391,11 @@ the `gho` adapter now values reviewed mainnet GSM backing directly from live onc
 
 Liquity v1 note:
 the `liquity-v1` adapter covers `lusd-liquity` by reading `getEntireSystemColl()` and `getEntireSystemDebt()` from the official Ethereum `TroveManager`, preserving LUSD as a one-slice 100% ETH reserve view while classifying the feed as independent latest-state on-chain evidence rather than a generic ERC-20 liveness probe. The adapter also publishes nested redemption telemetry from the same run: `capacityUsd` is derived from `getEntireSystemDebt()`, `capacityKind = "live-direct-bounded"`, `freshnessKind = "same-run-onchain"`, and the existing redemption-fee probe populates the nested fee field when available.
+
+Liquity v2 branch note:
+the `liquity-v2-branches` adapter reads branch ActivePool collateral balances, DefiLlama prices, ActivePool debt, optional branch shutdown status, and optional live redemption-fee telemetry. `bold-liquity`, `feusd-felix`, `usnd-nerite`, and `usdq-quill` use this path so their reserve slices remain branch-collateral based while nested redemption telemetry uses aggregate branch debt as `capacityUsd` with `capacityKind = "live-direct-bounded"` and `freshnessKind = "same-run-onchain"`.
+
+`fx` now publishes f(x) protocol-pool API debt balances as conservative live proxy redemption capacity for `fxusd-f-x-protocol`. `asymmetry` now publishes USDaf protocol supply from the timestamped stats API as live direct redemption capacity alongside branch collateral slices. `jupusd` consumes Jupiter's public transparency API and latest snapshot timestamp, grouping USDC/USDtb holdings into reserve slices while emitting whitelisted-primary live redemption capacity and route status from the public oracle endpoint.
 
 Chainlink NAV note:
 `chainlink-nav` now supports both standard AggregatorV3 feeds and Ondo router-style NAV lookups. When `oracleMethod = "getAssetPrice"`, the adapter calls `getAssetPrice(token)` on the router and, when available, follows `tokenToRWAOracle(token) -> getPriceData()` to recover a verified freshness timestamp instead of treating the feed as permanently timestampless.

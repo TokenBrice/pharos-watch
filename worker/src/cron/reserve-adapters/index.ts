@@ -23,6 +23,7 @@ import { fetchFraxReserves, fetchFraxBalanceSheetReserves } from "./frax";
 import { fetchFxReserves } from "./fx";
 import { fetchGhoReserves } from "./gho";
 import { fetchInfiniFiReserves } from "./infinifi";
+import { fetchJupUsdReserves } from "./jupusd";
 import { fetchListaReserves } from "./lista";
 import { fetchLiquityV1Reserves } from "./liquity-v1";
 import { fetchLiquityV2BranchReserves } from "./liquity-v2-branches";
@@ -67,6 +68,7 @@ const ADAPTER_FNS: Record<LiveReserveAdapterKey, AdapterFn> = {
   fx: fetchFxReserves,
   gho: fetchGhoReserves,
   infinifi: fetchInfiniFiReserves,
+  jupusd: fetchJupUsdReserves,
   lista: fetchListaReserves,
   "liquity-v1": fetchLiquityV1Reserves,
   "liquity-v2-branches": fetchLiquityV2BranchReserves,

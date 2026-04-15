@@ -204,6 +204,11 @@ const liquityV1ParamsSchema = z.object({
   redemptionRateProbe: redemptionRateProbeSchema.optional(),
 }).strict();
 
+const jupusdParamsSchema = z.object({
+  snapshotsUrl: z.string().optional(),
+  oracleUrl: z.string().optional(),
+}).strict();
+
 const sgForgeCoinvertibleParamsSchema = z.object({
   coinType: z.enum(["eur", "usd"]).optional(),
 }).strict();
@@ -274,6 +279,7 @@ export const adapterParamsSchemas = {
   fx: noParamsSchema,
   gho: ghoParamsSchema,
   infinifi: noParamsSchema,
+  jupusd: jupusdParamsSchema,
   lista: evmBranchBalancesParamsSchema,
   "liquity-v1": liquityV1ParamsSchema,
   "liquity-v2-branches": liquityV2BranchesParamsSchema,

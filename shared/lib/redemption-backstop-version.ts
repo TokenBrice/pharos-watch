@@ -1,9 +1,39 @@
 import { createMethodologyVersion, toMethodologyVersionLabel } from "./methodology-version";
 
 const redemptionBackstop = createMethodologyVersion({
-  currentVersion: "3.91",
+  currentVersion: "3.93",
   changelogPath: "/methodology/#safety-scores-methodology",
   changelog: [
+    {
+      version: "3.93",
+      title: "Long-tail live redemption adapters",
+      date: "2026-04-15",
+      effectiveAt: 1776265200,
+      summary:
+        "Additional long-tail redemption routes now use current live reserve telemetry instead of static eventual-capacity assumptions where public APIs or on-chain reads expose bounded capacity.",
+      impact: [
+        "Felix feUSD, Nerite USND, and Quill USDQ now use same-run Liquity v2 ActivePool debt as direct bounded redemption capacity",
+        "fxUSD now consumes f(x)'s protocol debt balances as live proxy capacity, while USDaf uses Asymmetry's timestamped protocol supply as direct current capacity",
+        "JupUSD now consumes its public transparency API for current USDC/USDtb holdings and route-status telemetry, retaining the reviewed 10% buffer only as fallback",
+      ],
+      commits: [],
+      reconstructed: false,
+    },
+    {
+      version: "3.92",
+      title: "BOLD live Liquity v2 branch debt capacity",
+      date: "2026-04-15",
+      effectiveAt: 1776261600,
+      summary:
+        "BOLD now uses the Liquity v2 branch adapter's same-run on-chain ActivePool debt as direct redemption-capacity telemetry.",
+      impact: [
+        "The `bold-liquity` live reserve config now uses `liquity-v2-branches`, which reads branch collateral balances plus ActivePool branch debt",
+        "`bold-liquity` now resolves redemption capacity from fresh reserve-sync metadata instead of the static full-supply model",
+        "When the Liquity v2 branch snapshot is unavailable or stale, BOLD remains visible but unrated for redemption capacity rather than falling back to an immediate full-supply estimate",
+      ],
+      commits: [],
+      reconstructed: false,
+    },
     {
       version: "3.91",
       title: "LUSD live direct capacity telemetry",
