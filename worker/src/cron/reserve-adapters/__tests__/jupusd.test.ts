@@ -22,6 +22,7 @@ describe("adaptJupUsdData", () => {
     expect(result.metadata).toMatchObject({
       totalReserveUsd: 7_500_000,
       supplyUsd: 75_000_000,
+      unknownExposurePct: 0,
       immediateRedeemableUsd: 7_500_000,
       immediateRedeemableRatio: 0.1,
       freshnessMode: "verified",
@@ -49,5 +50,42 @@ describe("adaptJupUsdData", () => {
       routeStatus: "paused",
       routeStatusReason: "manual stop",
     });
+  });
+
+  it("keeps unknown holdings explicit instead of defaulting them to medium risk", () => {
+    const result = adaptJupUsdData({
+      holdings: [
+        { name: "USDC", amount: "99000000", decimals: 6 },
+        { name: "MYSTERY", amount: "1000000", decimals: 6 },
+      ],
+    });
+
+    expect(result.slices).toEqual([
+      { name: "USDC", pct: 99, risk: "low", coinId: "usdc-circle", depType: "collateral" },
+      { name: "Unmapped JupUSD reserve holdings", pct: 1, risk: "high" },
+    ]);
+    expect(result.warnings?.[0]).toMatchObject({
+      code: "unknown-holding",
+      effect: "info",
+    });
+    expect(result.metadata).toMatchObject({
+      unknownExposurePct: 1,
+      unknownHoldingNames: ["MYSTERY"],
+    });
+  });
+
+  it("degrades material unknown holdings", () => {
+    const result = adaptJupUsdData({
+      holdings: [
+        { name: "USDC", amount: "90000000", decimals: 6 },
+        { name: "MYSTERY", amount: "10000000", decimals: 6 },
+      ],
+    });
+
+    expect(result.warnings?.[0]).toMatchObject({
+      code: "unknown-holding",
+      effect: "degraded",
+    });
+    expect(result.metadata?.unknownExposurePct).toBe(10);
   });
 });

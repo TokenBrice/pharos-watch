@@ -7,6 +7,7 @@ import {
   htmlLayoutChangedError,
   htmlParseError,
   parseTimestampLikeToUnixSeconds,
+  reserveDegradedWarning,
   unverifiedFreshnessMetadata,
   verifiedFreshnessMetadata,
 } from "./helpers";
@@ -71,10 +72,24 @@ export function adaptSgForgeCoinvertible(html: string, coinType: SgForgeCoinType
   const bankPct = Number.parseFloat(bankMatch[2] ?? "");
   const cashAmount = normalizeLocalizedNumber(cashMatch[1]);
   const sourceTimestamp = parseTimestampLikeToUnixSeconds(lastUpdate ?? null);
+  const collateralizationRatio = cashAmount / circulationAmount;
 
   if (!bankName || !Number.isFinite(bankPct) || bankPct <= 0) {
     throw htmlLayoutChangedError("sgforge-coinvertible", "incomplete reserve-bank metadata");
   }
+  if (bankPct > 100) {
+    throw htmlLayoutChangedError("sgforge-coinvertible", "reserve-bank percentage is outside expected range");
+  }
+  if (!Number.isFinite(collateralizationRatio) || collateralizationRatio <= 0) {
+    throw htmlParseError("sgforge-coinvertible", "could not compute reserve collateralization ratio");
+  }
+
+  const warnings = collateralizationRatio < 0.995
+    ? [reserveDegradedWarning(
+        "reserve-undercollateralized",
+        `SG Forge CoinVertible cash amount covers ${(collateralizationRatio * 100).toFixed(2)}% of circulation`,
+      )]
+    : [];
 
   return {
     slices: [
@@ -84,10 +99,13 @@ export function adaptSgForgeCoinvertible(html: string, coinType: SgForgeCoinType
         risk: "very-low",
       },
     ],
+    ...(warnings.length > 0 ? { warnings } : {}),
     metadata: {
       coinType,
       circulationAmount,
       cashAmount,
+      collateralizationRatio,
+      cashCoveragePct: collateralizationRatio * 100,
       bankName,
       bankPct,
       ...(lastUpdate ? { lastUpdate } : {}),

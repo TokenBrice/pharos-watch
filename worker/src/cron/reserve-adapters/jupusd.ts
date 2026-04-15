@@ -3,6 +3,7 @@ import type { ReserveSlice, StablecoinMeta } from "@shared/types/core";
 import type { LiveReservesConfig } from "@shared/types/live-reserves";
 import type { AdapterContext, AdapterResult } from "./types";
 import {
+  buildUnknownExposureWarning,
   fetchJsonWithRetry,
   normalizeSlices,
   parseTimestampLikeToUnixSeconds,
@@ -45,6 +46,7 @@ interface JupUsdHoldingValue {
   name: string;
   value: number;
   risk: ReserveSlice["risk"];
+  unknown?: boolean;
   coinId?: string;
   depType?: ReserveSlice["depType"];
 }
@@ -60,8 +62,8 @@ function parseAmount(amount: string | undefined, decimals: number | undefined): 
   return Number(amount) / (10 ** precision);
 }
 
-function resolveHoldingMeta(name: string): Pick<JupUsdHoldingValue, "risk" | "coinId" | "depType"> {
-  return HOLDING_META[name] ?? { risk: "medium" };
+function resolveHoldingMeta(name: string): Pick<JupUsdHoldingValue, "risk" | "coinId" | "depType" | "unknown"> {
+  return HOLDING_META[name] ?? { risk: "high", unknown: true };
 }
 
 export function adaptJupUsdData(
@@ -72,6 +74,8 @@ export function adaptJupUsdData(
   } = {},
 ): AdapterResult {
   const values = new Map<string, JupUsdHoldingValue>();
+  const unknownHoldingNames = new Set<string>();
+  let unknownValue = 0;
   for (const holding of payload.holdings ?? []) {
     const name = typeof holding.name === "string" && holding.name.trim().length > 0
       ? holding.name.trim()
@@ -80,10 +84,15 @@ export function adaptJupUsdData(
     if (value <= 0) continue;
     const current = values.get(name);
     const meta = resolveHoldingMeta(name);
+    if (meta.unknown) {
+      unknownHoldingNames.add(name);
+      unknownValue += value;
+    }
     values.set(name, {
-      name,
+      name: meta.unknown ? "Unmapped JupUSD reserve holdings" : name,
       value: (current?.value ?? 0) + value,
       risk: current?.risk ?? meta.risk,
+      ...(meta.unknown ? { unknown: true } : {}),
       ...(current?.coinId ?? meta.coinId ? { coinId: current?.coinId ?? meta.coinId } : {}),
       ...(current?.depType ?? meta.depType ? { depType: current?.depType ?? meta.depType } : {}),
     });
@@ -101,6 +110,14 @@ export function adaptJupUsdData(
     : undefined;
   const totalSupply = parseAmount(payload.totalSupply, 6);
   const ratio = totalSupply > 0 ? Math.min(1, totalReserveUsd / totalSupply) : undefined;
+  const unknownExposurePct = totalReserveUsd > 0 ? (unknownValue / totalReserveUsd) * 100 : 0;
+  const warnings = unknownValue > 0
+    ? [buildUnknownExposureWarning({
+        code: "unknown-holding",
+        message: `JupUSD reserve feed included unmapped holding(s): ${Array.from(unknownHoldingNames).sort().join(", ")}`,
+        unknownExposurePct,
+      })]
+    : [];
 
   return {
     slices: normalizeSlices(
@@ -112,9 +129,12 @@ export function adaptJupUsdData(
         ...(entry.depType ? { depType: entry.depType } : {}),
       })),
     ),
+    ...(warnings.length > 0 ? { warnings } : {}),
     metadata: {
       totalReserveUsd,
       ...(totalSupply > 0 ? { supplyUsd: totalSupply } : {}),
+      unknownExposurePct,
+      ...(unknownHoldingNames.size > 0 ? { unknownHoldingNames: Array.from(unknownHoldingNames).sort() } : {}),
       immediateRedeemableUsd: totalReserveUsd,
       ...(ratio != null ? { immediateRedeemableRatio: ratio } : {}),
       redemption: {

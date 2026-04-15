@@ -5,7 +5,15 @@ import { parseLiveReserveAdapterParams } from "@shared/lib/live-reserve-adapters
 import { DECIMALS_SELECTOR, LATEST_ROUND_DATA_SELECTOR } from "../../lib/evm-selectors";
 import type { AdapterContext, AdapterResult } from "./types";
 import { parseChainlinkLatestRoundData } from "./chainlink";
-import { fetchOnchainRawCall, fetchOnchainUint256, requireOnchainInput } from "./helpers";
+import { resolveCoinContractAddress } from "./evm";
+import {
+  decimalNumberFromBigInt,
+  fetchErc20TotalSupply,
+  fetchOnchainRawCall,
+  fetchOnchainUint256,
+  requireOnchainInput,
+  reserveDegradedWarning,
+} from "./helpers";
 import { MAX_FUTURE_SOURCE_TIMESTAMP_SKEW_SEC } from "./validate";
 const DEFAULT_MAX_ORACLE_AGE_SEC = 2 * DAY_SECONDS;
 
@@ -25,15 +33,35 @@ interface ChainlinkPorData {
   updatedAt: number;
 }
 
+interface ChainlinkPorSupplyData {
+  raw: bigint;
+  decimals: number;
+  tokenAddress: string;
+}
+
 function readParams(config: LiveReservesConfig): ChainlinkPorParams {
   return parseLiveReserveAdapterParams("chainlink-por", config.params);
 }
 
 /** Pure transformation from decoded Chainlink data + params → AdapterResult. Exported for testing. */
-export function adaptChainlinkPorResponse(data: ChainlinkPorData, params: ChainlinkPorParams): AdapterResult {
+export function adaptChainlinkPorResponse(
+  data: ChainlinkPorData,
+  params: ChainlinkPorParams,
+  supply?: ChainlinkPorSupplyData | null,
+): AdapterResult {
   if (data.reserves <= 0n) {
     throw new Error("chainlink-por: feed reported zero or negative reserves");
   }
+
+  const totalReserveUsd = decimalNumberFromBigInt(data.reserves, data.decimals);
+  const supplyUsd = supply ? decimalNumberFromBigInt(supply.raw, supply.decimals) : null;
+  const collateralizationRatio = supplyUsd != null && supplyUsd > 0 ? totalReserveUsd / supplyUsd : null;
+  const warnings = collateralizationRatio != null && collateralizationRatio < 0.995
+    ? [reserveDegradedWarning(
+        "por-reserve-under-supply",
+        `Chainlink PoR reserves cover ${(collateralizationRatio * 100).toFixed(2)}% of same-chain token supply`,
+      )]
+    : [];
 
   return {
     slices: [
@@ -56,12 +84,23 @@ export function adaptChainlinkPorResponse(data: ChainlinkPorData, params: Chainl
         sourceTimestamp: data.updatedAt,
         routeStatus: "unknown" as const,
       },
+      totalReserveUsd,
+      ...(supply
+        ? {
+            supplyUsd,
+            supplyRaw: supply.raw.toString(),
+            supplyDecimals: supply.decimals,
+            supplyTokenAddress: supply.tokenAddress,
+          }
+        : {}),
+      ...(collateralizationRatio != null ? { collateralizationRatio } : {}),
     },
+    ...(warnings.length > 0 ? { warnings } : {}),
   };
 }
 
 export async function fetchChainlinkPorReserves(
-  _coin: StablecoinMeta,
+  coin: StablecoinMeta,
   config: LiveReservesConfig,
   signal: AbortSignal,
   ctx?: AdapterContext,
@@ -109,8 +148,33 @@ export async function fetchChainlinkPorReserves(
     throw new Error(`chainlink-por: feed data is stale (${ageSec}s > ${maxOracleAgeSec}s)`);
   }
 
+  const tokenAddress = resolveCoinContractAddress(coin, input.chain);
+  if (!tokenAddress) {
+    throw new Error(`chainlink-por: missing ${input.chain} token contract metadata for ${coin.id}`);
+  }
+  const tokenContract = coin.contracts?.find((contract) => (
+    contract.chain === input.chain
+    && contract.address.toLowerCase() === tokenAddress.toLowerCase()
+  ));
+  const supplyRaw = await fetchErc20TotalSupply(
+    input,
+    tokenAddress,
+    signal,
+    ctx,
+    params.rpcUrl,
+    params.fallbackRpcUrl,
+  );
+  if (supplyRaw == null || supplyRaw <= 0n) {
+    throw new Error(`chainlink-por: totalSupply() call failed for ${coin.id}`);
+  }
+
   return adaptChainlinkPorResponse(
     { reserves: answer, decimals, roundId, updatedAt },
     params,
+    {
+      raw: supplyRaw,
+      decimals: tokenContract?.decimals ?? 18,
+      tokenAddress,
+    },
   );
 }

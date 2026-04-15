@@ -17,6 +17,8 @@ describe("adaptSgForgeCoinvertible", () => {
       coinType: "eur",
       circulationAmount: 92476840.64,
       cashAmount: 92476840.64,
+      collateralizationRatio: 1,
+      cashCoveragePct: 100,
       bankName: "Societe Generale",
       bankPct: 100,
       lastUpdate: "20/03/26",
@@ -52,5 +54,22 @@ describe("adaptSgForgeCoinvertible", () => {
 </div>
 `;
     expect(() => adaptSgForgeCoinvertible(malformedAmountHtml, "eur")).toThrow("parse-failed");
+  });
+
+  it("degrades when cash coverage falls below circulation", () => {
+    const undercoveredHtml = SAMPLE_HTML.replace("92 476 840,64 €", "91 000 000,00 €");
+    const result = adaptSgForgeCoinvertible(undercoveredHtml, "eur");
+
+    expect(result.metadata?.collateralizationRatio).toBeLessThan(0.995);
+    expect(result.warnings?.[0]).toMatchObject({
+      code: "reserve-undercollateralized",
+      effect: "degraded",
+    });
+  });
+
+  it("throws when the reserve bank percentage is outside expected range", () => {
+    const invalidPctHtml = SAMPLE_HTML.replace("Societe Generale : 100%", "Societe Generale : 101%");
+
+    expect(() => adaptSgForgeCoinvertible(invalidPctHtml, "eur")).toThrow("layout-changed");
   });
 });

@@ -25,11 +25,41 @@ describe("adaptChainlinkPorResponse", () => {
     const result = adaptChainlinkPorResponse(
       { reserves: 145_000_000_000n, decimals: 8, roundId: 42n, updatedAt: 1710000000 },
       params,
+      {
+        raw: 144_000_000_000_000_000_000_000_000n,
+        decimals: 18,
+        tokenAddress: "0x0000000000000000000000000000000000000001",
+      },
     );
     expect(result.metadata?.totalReservesRaw).toBe("145000000000");
     expect(result.metadata?.feedDecimals).toBe(8);
     expect(result.metadata?.feedRoundId).toBe("42");
     expect(result.metadata?.feedUpdatedAt).toBe(1710000000);
+    expect(result.metadata).toMatchObject({
+      totalReserveUsd: 1450,
+      supplyUsd: 144_000_000,
+      supplyRaw: "144000000000000000000000000",
+      supplyDecimals: 18,
+      supplyTokenAddress: "0x0000000000000000000000000000000000000001",
+    });
+  });
+
+  it("degrades when reserves do not cover same-chain token supply", () => {
+    const result = adaptChainlinkPorResponse(
+      { reserves: 99_000_000_000n, decimals: 8, roundId: 42n, updatedAt: 1710000000 },
+      params,
+      {
+        raw: 1000_000000000000000000n,
+        decimals: 18,
+        tokenAddress: "0x0000000000000000000000000000000000000001",
+      },
+    );
+
+    expect(result.metadata?.collateralizationRatio).toBe(0.99);
+    expect(result.warnings?.[0]).toMatchObject({
+      code: "por-reserve-under-supply",
+      effect: "degraded",
+    });
   });
 
   it("throws on zero reserves", () => {
