@@ -30,7 +30,10 @@ export const COMMON_VALIDATE_POSTBUILD_COMMANDS = [
   "npm run coverage:critical",
 ];
 
-export const WORKER_VALIDATE_COMMANDS = ["cd worker && npx tsc --noEmit"];
+export const WORKER_VALIDATE_COMMANDS = [
+  "cd worker && npx tsc --noEmit",
+  "cd worker && npx tsc --noEmit -p tsconfig.scripts.json",
+];
 
 export function buildCiValidateStepPlan({
   pagesChanged = true,

@@ -194,8 +194,9 @@ export interface ApiFetchOptions {
 }
 
 /** Fetch JSON from the API. Throws on non-OK responses.
- *  When a Zod schema is provided, validates the response and warns on mismatch
- *  (graceful degradation — returns data as-is on failure). */
+ *  When a Zod schema is provided, strict validation is the default and
+ *  schema mismatch throws. Pass contractMode="warn" only for explicit
+ *  graceful degradation that returns data as-is after logging. */
 export async function apiFetch<T>(
   path: string,
   schema?: ZodType<T>,

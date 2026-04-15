@@ -64,6 +64,8 @@ jobs:
           CRITICAL_COVERAGE_COMPARE_REF: ${{ inputs.coverage-compare-ref }}
       - if: ${{ inputs.worker_changed }}
         run: cd worker && npx tsc --noEmit
+      - if: ${{ inputs.worker_changed }}
+        run: cd worker && npx tsc --noEmit -p tsconfig.scripts.json
   validate-node24:
     runs-on: ubuntu-latest
     permissions:

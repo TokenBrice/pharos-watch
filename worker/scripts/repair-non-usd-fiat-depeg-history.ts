@@ -8,6 +8,7 @@ import { fileURLToPath } from "url";
 import { DAY_SECONDS } from "../../shared/lib/time-constants";
 import { derivePegRates } from "../../shared/lib/peg-rates";
 import { PSI_ELIGIBLE_META_BY_ID, PSI_ELIGIBLE_STABLECOINS } from "../../shared/lib/psi-eligible";
+import { enumerateDates } from "../../shared/lib/rate-series";
 import type { StablecoinMeta } from "../../shared/types/core";
 import {
   COMMODITY_PEGS,
@@ -15,21 +16,22 @@ import {
   PEG_TO_FX,
   SECONDARY_PEG_TO_FX,
   buildFxLookup,
-  enumerateDates,
   fetchHistoricalFxRates,
 } from "../src/api/backfill-fx";
+import {
+  extractDepegEvents,
+  parseSupplyData,
+} from "../src/api/backfill-depegs-extraction";
+import {
+  summarizeBackfillReplayDiff,
+  type ExistingDepegEventRow,
+} from "../src/api/backfill-depegs-preview";
 import {
   collapsePricesToDailyTimestamps,
   fetchMarketBackfillPriceSeries,
   type HistoricalMarketSourceDiagnostics,
   type PricePoint,
 } from "../src/api/backfill-price-sources";
-import {
-  extractDepegEvents,
-  parseSupplyData,
-  summarizeBackfillReplayDiff,
-  type ExistingDepegEventRow,
-} from "../src/api/backfill-depegs";
 import { DEFILLAMA_BASE, USER_AGENT } from "../src/lib/constants";
 import { fetchAuthoritativeHistoricalPriceSeries } from "../src/lib/authoritative-price-sources";
 import { fetchWithRetry } from "../src/lib/fetch-retry";

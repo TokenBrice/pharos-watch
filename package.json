@@ -18,6 +18,7 @@
     "start": "next start",
     "lint": "eslint . --cache --cache-strategy content --cache-location .cache/eslint/ --max-warnings=0",
     "typecheck": "tsc --noEmit -p tsconfig.typecheck.json",
+    "typecheck:worker-scripts": "cd worker && npx tsc --noEmit -p tsconfig.scripts.json",
     "audit:deps": "npm audit --audit-level=high --omit=dev",
     "test": "vitest run",
     "test:coverage": "vitest run --coverage",

@@ -65,6 +65,24 @@ describe("hasDeployImpact", () => {
     expect(hasDeployImpact(["src/app/page.tsx"])).toBe(true);
     expect(hasDeployImpact(["worker/src/api/health.ts"])).toBe(true);
   });
+
+  it("treats deploy support infrastructure as deploy-impacting", () => {
+    const deploySupportFiles = [
+      "scripts/lib/deploy-impact.mjs",
+      "scripts/lib/validate-contract.mjs",
+      ".github/actions/setup-workspace/action.yml",
+      "scripts/check-cron-connection-budget.ts",
+      "scripts/check-env-contract.mjs",
+      "scripts/check-sql-interpolation-safety.mjs",
+      "scripts/test-merge-gate.mjs",
+    ];
+
+    for (const file of deploySupportFiles) {
+      expect(hasDeployImpact([file]), file).toBe(true);
+      expect(hasWorkerDeployImpact([file]), file).toBe(true);
+      expect(hasPagesDeployImpact([file]), file).toBe(true);
+    }
+  });
 });
 
 describe("classifyDeployChanges", () => {

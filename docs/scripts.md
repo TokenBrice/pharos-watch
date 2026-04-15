@@ -157,8 +157,8 @@ These are wired into the GitHub Actions CI workflows (`.github/workflows/validat
 
 - Used only by the deploy workflow’s `detect-changes` job.
 - On `push`, diffs `DEPLOY_BASE_SHA..DEPLOY_HEAD_SHA` and emits `deploy_required`, `worker_changed`, and `pages_changed`.
-- `worker_changed` turns on worker deploy/API smoke when worker/shared runtime or worker-deploy infra paths changed.
-- `pages_changed` turns on Pages build/browser-smoke/deploy when the diff touches any Pages-impacting path (`src/`, `shared/`, `functions/`, `public/`, `data/`, selected build/config scripts, or Pages/deploy workflow files).
+- `worker_changed` turns on worker deploy/API smoke when worker/shared runtime, Worker operational scripts, or worker-deploy/validate infra paths changed.
+- `pages_changed` turns on Pages build/browser-smoke/deploy when the diff touches any Pages-impacting path (`src/`, `shared/`, `functions/`, `public/`, `data/`, selected build/config scripts, Pages/deploy workflow files, or shared validate/guardrail infrastructure).
 - `deploy_required=false` lets the push workflow skip the heavy deploy path entirely for docs-only or other non-deploy diffs.
 - On `workflow_dispatch`, forces the full deploy path for safety.
 
@@ -167,7 +167,7 @@ These are wired into the GitHub Actions CI workflows (`.github/workflows/validat
 - Skips cleanly when the changed-file set is not deploy-impacting.
 - For deploy-impacting diffs, always runs the same validate core as deploy CI: dependency audit, lint, worker-boundary, blocking cycle detection across `shared/`, `worker/src`, and `src`, migrations, cron schedule/connection checks, doc sync, duplicate-export and redemption-backstop checks, unused-code, hotspot-ratchet, full tests, and critical coverage.
 - Adds `npm run build` and `npm run seo:check` only when the changed-file set is Pages-impacting, using the same matcher as `classify-deploy-changes.mjs`.
-- Adds worker typecheck only when the changed-file set is worker-impacting.
+- Adds Worker runtime typecheck plus Worker operational-script typecheck only when the changed-file set is worker-impacting.
 - Supports `--staged`, `MERGE_GATE_BASE_REF=<ref>`, and `MERGE_GATE_DRY_RUN=1`.
 
 ### `generate-agent-code-map.mjs`
