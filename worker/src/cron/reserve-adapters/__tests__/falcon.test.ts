@@ -125,4 +125,23 @@ describe("adaptFalconTransparency", () => {
       unknownExposurePct: 0,
     });
   });
+
+  it("normalizes a millisecond snapshot_date to unix seconds", () => {
+    const payload: FalconTransparencyResponse = {
+      // 2026-04-10T00:00:00Z in ms
+      snapshot_date: 1776067200000 as unknown as number,
+      usdf: {
+        supply: "100",
+        insurance_fund: "0",
+        breakdown: {
+          assets: [{ label: "USDC", ceffu: "100" }],
+        },
+      },
+    };
+    const result = adaptFalconTransparency(payload);
+    expect(result.metadata).toMatchObject({
+      sourceTimestamp: 1776067200,
+      freshnessMode: "verified",
+    });
+  });
 });

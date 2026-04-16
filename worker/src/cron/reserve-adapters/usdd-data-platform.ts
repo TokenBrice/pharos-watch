@@ -5,6 +5,7 @@ import {
   buildUnknownExposureWarning,
   computeUnknownExposurePct,
   fetchJsonWithRetry,
+  parseTimestampLikeToUnixSeconds,
   requireJsonInputFromConfig,
   slicesFromValues,
 } from "./helpers";
@@ -176,9 +177,7 @@ export function adaptUsddLatestCollateral(
     ? [createUnknownVaultWarning(unknownVaultTypes, unknownExposurePct)]
     : [];
   const stableRedeemableUsd = bucketValues.psmUsdtUsd + bucketValues.directUsdtUsd;
-  const sourceTimestamp = typeof statisticTimeMs === "number" && Number.isFinite(statisticTimeMs)
-    ? Math.floor(statisticTimeMs / 1000)
-    : null;
+  const sourceTimestamp = parseTimestampLikeToUnixSeconds(statisticTimeMs);
 
   return {
     slices: slicesFromValues(bucketSlices.sort((left, right) => right.value - left.value)),

@@ -94,6 +94,16 @@ describe("mento adapter", () => {
   });
 
 
+  it("also accepts seconds-precision reserve holding update timestamps", () => {
+    const updatedHtml = `<html><body><script>self.__next_f.push([1,"...\\"reserveComposition\\":[{\\"symbol\\":\\"USDC\\",\\"percent\\":60},{\\"symbol\\":\\"ETH\\",\\"percent\\":30},{\\"symbol\\":\\"CELO\\",\\"percent\\":10}],\\"reserveHoldings\\":{\\"totalReserveValue\\":100,\\"otherAssets\\":[{\\"symbol\\":\\"USDC\\",\\"updated\\":1776236240}]}..."]);
+</script></body></html>`;
+    const result = adaptMentoReserveComposition(updatedHtml);
+    expect(result.metadata).toMatchObject({
+      freshnessMode: "verified",
+      sourceTimestamp: 1776236240,
+    });
+  });
+
   it("emits an unknown-asset warning for symbols not in TOKEN_CONFIG", () => {
     const unknownTokenHtml = `<html><body><script>self.__next_f.push([1,"...\\"reserveComposition\\":[{\\"symbol\\":\\"USDC\\",\\"percent\\":50},{\\"symbol\\":\\"ETH\\",\\"percent\\":30},{\\"symbol\\":\\"NEW_TOKEN\\",\\"percent\\":10},{\\"symbol\\":\\"CELO\\",\\"percent\\":10}],\\"reserveHoldings\\":{}..."]);
 </script></body></html>`;

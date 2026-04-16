@@ -6,6 +6,7 @@ import {
   fetchTextWithRetry,
   htmlLayoutChangedError,
   htmlParseError,
+  parseTimestampLikeToUnixSeconds,
   requireHtmlInput,
   reserveDegradedWarning,
   reserveInfoWarning,
@@ -78,9 +79,9 @@ function collectUpdatedTimestamps(value: unknown, timestamps: number[]): void {
   }
 
   const record = value as Record<string, unknown>;
-  const updated = record.updated;
-  if (typeof updated === "number" && Number.isFinite(updated) && updated > 0) {
-    timestamps.push(Math.floor(updated >= 1_000_000_000_000 ? updated / 1000 : updated));
+  const normalized = parseTimestampLikeToUnixSeconds(record.updated);
+  if (normalized != null) {
+    timestamps.push(normalized);
   }
   for (const nested of Object.values(record)) {
     collectUpdatedTimestamps(nested, timestamps);

@@ -5,6 +5,7 @@ import {
   accumulateBucketedExposure,
   buildBucketSlices,
   fetchJsonWithRetry,
+  parseTimestampLikeToUnixSeconds,
   requireJsonInputFromConfig,
   reserveDegradedWarning,
   unverifiedFreshnessMetadata,
@@ -170,6 +171,8 @@ export function adaptFalconTransparency(payload: FalconTransparencyResponse): Ad
     "stable",
   );
 
+  const sourceTimestamp = parseTimestampLikeToUnixSeconds(payload.snapshot_date);
+
   return {
     slices,
     ...(warnings.length > 0 ? { warnings } : {}),
@@ -183,8 +186,8 @@ export function adaptFalconTransparency(payload: FalconTransparencyResponse): Ad
         ? { immediateRedeemableRatio: stableBucketUsd / supplyUsd }
         : {}),
       assetCount: assets.length,
-      ...(payload.snapshot_date > 0
-        ? verifiedFreshnessMetadata(payload.snapshot_date)
+      ...(sourceTimestamp != null
+        ? verifiedFreshnessMetadata(sourceTimestamp)
         : unverifiedFreshnessMetadata(
             "issuer-api",
             "Falcon transparency payload did not expose a trustworthy snapshot timestamp",
@@ -194,8 +197,8 @@ export function adaptFalconTransparency(payload: FalconTransparencyResponse): Ad
         capacityUsd: stableBucketUsd,
         ...(Number.isFinite(supplyUsd) && supplyUsd > 0 ? { capacityRatioOfSupply: stableBucketUsd / supplyUsd } : {}),
         capacityKind: "live-queue" as const,
-        freshnessKind: payload.snapshot_date > 0 ? "verified-source-timestamp" as const : "unverified" as const,
-        ...(payload.snapshot_date > 0 ? { sourceTimestamp: payload.snapshot_date } : {}),
+        freshnessKind: sourceTimestamp != null ? "verified-source-timestamp" as const : "unverified" as const,
+        ...(sourceTimestamp != null ? { sourceTimestamp } : {}),
         routeStatus: "open" as const,
         holderEligibility: "whitelisted-primary",
         settlementDelaySec: 7 * 24 * 60 * 60,

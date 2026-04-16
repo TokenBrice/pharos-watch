@@ -118,6 +118,17 @@ describe("adaptFraxBalanceSheet", () => {
     const sum = result.slices.reduce((a, s) => a + s.pct, 0);
     expect(sum).toBe(100);
   });
+
+  it("accepts a numeric millisecond asOfTimestamp payload", () => {
+    const msPayload: FraxBalanceSheetResponse = {
+      ...BALANCE_SHEET_SAMPLE,
+      // 2026-04-04T13:03:47Z in ms
+      asOfTimestamp: 1775653427000 as unknown as string,
+    };
+    const result = adaptFraxBalanceSheet(msPayload);
+    expect(result.metadata?.freshnessMode).toBe("verified");
+    expect(result.metadata?.sourceTimestamp).toBe(1775653427);
+  });
 });
 
 /* ---------- legacy combineddata tests (frax-frax) ---------- */

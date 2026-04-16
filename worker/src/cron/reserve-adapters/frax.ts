@@ -4,6 +4,7 @@ import { getCanonicalReserveAssetRisk } from "@shared/lib/reserve-asset-risk";
 import type { AdapterContext, AdapterResult } from "./types";
 import {
   buildUnknownExposureWarning,
+  parseTimestampLikeToUnixSeconds,
   requireJsonInputFromConfig,
   fetchJsonWithRetry,
   normalizeSlices,
@@ -114,9 +115,7 @@ export function adaptFraxBalanceSheet(payload: FraxBalanceSheetResponse): Adapte
   if (total <= 0) throw new Error("Frax balance-sheet total asset value is zero");
   const stableRedeemableUsd = ["USDC", "USDS", "PYUSD", "DAI", "FRAX"]
     .reduce((sum, symbol) => sum + (bySymbol.get(symbol) ?? 0), 0);
-  const sourceTimestamp = payload.asOfTimestamp
-    ? Math.floor(new Date(payload.asOfTimestamp).getTime() / 1000)
-    : null;
+  const sourceTimestamp = parseTimestampLikeToUnixSeconds(payload.asOfTimestamp);
 
   const slices: ReserveSlice[] = [];
   const unknownSymbols: string[] = [];
