@@ -71,12 +71,7 @@ function parseTronEvent(config: ContractEventConfig, evt: TronEventResult): Blac
     amount_native: amount,
     amount_usd_at_event: computeBlacklistAmountUsdAtEvent(config.stablecoin, amount),
     amount_source: amount != null ? "event" : "unavailable",
-    amount_status:
-      amount != null
-        ? "resolved"
-        : eventType === "destroy"
-          ? "recoverable_pending"
-          : "permanently_unavailable",
+    amount_status: amount != null ? "resolved" : "recoverable_pending",
     tx_hash: evt.transaction_id,
     block_number: evt.block_number,
     timestamp,

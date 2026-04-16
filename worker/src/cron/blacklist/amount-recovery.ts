@@ -116,13 +116,9 @@ export async function enrichRowBalances(
     const blockForBalance = Math.max(0, row.block_number - 1);
 
     if (config.chain.type === "tron") {
-      // Tron has no historical balance API — mark blacklist/unblacklist
-      // events as permanently unavailable so they don't re-enter backfill.
-      if (row.event_type !== "destroy") {
-        row.amount_status = "permanently_unavailable";
-        row.amount_source = "unavailable";
-        markRecoveryAttempt(row, "trongrid", "provider_unsupported");
-      }
+      // Tron blacklist/unblacklist rows are resolved by backfillTronFromLedger
+      // (pure-SQL mirror from blacklist_current_balances). Destroy events keep
+      // their native amount from the event payload.
       continue;
     } else if (config.chain.evmChainId != null) {
       counters.attempted++;
@@ -380,18 +376,7 @@ export async function backfillAmounts(
         }
       }
     } else if (config.chain.type === "tron") {
-      stmts.push(
-        db.prepare(
-          `UPDATE blacklist_events
-           SET amount_status = 'permanently_unavailable',
-               amount_source = 'unavailable',
-               amount_attempt_count = COALESCE(amount_attempt_count, 0) + 1,
-               amount_last_attempted_at = ?,
-               amount_last_error_class = 'provider_unsupported',
-               amount_last_provider = 'trongrid'
-           WHERE id = ?`,
-        ).bind(attemptAt, row.id),
-      );
+      // Tron rows are resolved by backfillTronFromLedger; skip in per-row backfill.
       continue;
     } else if (config.chain.evmChainId != null) {
       lastProvider = "drpc";
@@ -473,4 +458,53 @@ export async function backfillAmounts(
   }
 
   return { runtimeBudgetReached: runtimeBudgetHit };
+}
+
+export async function backfillTronFromLedger(
+  db: D1Database,
+): Promise<{ updated: number }> {
+  const result = await db
+    .prepare(
+      `UPDATE blacklist_events
+       SET amount_native = (
+             SELECT bcb.amount_native
+             FROM blacklist_current_balances bcb
+             WHERE bcb.stablecoin = blacklist_events.stablecoin
+               AND bcb.chain_id = blacklist_events.chain_id
+               AND LOWER(bcb.address) = LOWER(blacklist_events.address)
+               AND bcb.amount_native IS NOT NULL
+             LIMIT 1
+           ),
+           amount_usd_at_event = (
+             SELECT bcb.amount_usd
+             FROM blacklist_current_balances bcb
+             WHERE bcb.stablecoin = blacklist_events.stablecoin
+               AND bcb.chain_id = blacklist_events.chain_id
+               AND LOWER(bcb.address) = LOWER(blacklist_events.address)
+               AND bcb.amount_native IS NOT NULL
+             LIMIT 1
+           ),
+           amount_source = 'current_balance_snapshot',
+           amount_status = 'resolved',
+           amount_attempt_count = COALESCE(amount_attempt_count, 0) + 1,
+           amount_last_attempted_at = ?,
+           amount_last_error_class = NULL,
+           amount_last_provider = 'current_balances_ledger'
+       WHERE chain_id = 'tron'
+         AND amount_native IS NULL
+         AND suppression_reason IS NULL
+         AND event_type IN ('blacklist', 'unblacklist')
+         AND EXISTS (
+           SELECT 1
+           FROM blacklist_current_balances bcb
+           WHERE bcb.stablecoin = blacklist_events.stablecoin
+             AND bcb.chain_id = blacklist_events.chain_id
+             AND LOWER(bcb.address) = LOWER(blacklist_events.address)
+             AND bcb.amount_native IS NOT NULL
+         )`,
+    )
+    .bind(Math.floor(Date.now() / 1000))
+    .run();
+
+  return { updated: result.meta.changes ?? 0 };
 }

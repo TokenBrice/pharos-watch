@@ -18,7 +18,7 @@ import { reportCronProgress, withBudgetMetadata } from "../lib/cron-progress";
 import { fetchEvmEventsIncremental } from "./blacklist/evm-source";
 import { fetchTronEventsIncremental } from "./blacklist/tron-source";
 import type { BlacklistRow } from "./blacklist/shared";
-import { backfillAmounts } from "./blacklist/amount-recovery";
+import { backfillAmounts, backfillTronFromLedger } from "./blacklist/amount-recovery";
 import { processRowsAndAccumulatePostFetchRows } from "./blacklist/post-fetch-counters";
 
 const EVM_SCANNED_TO_LATEST = 99999999;
@@ -125,6 +125,17 @@ export async function syncBlacklist(opts: SyncBlacklistOptions): Promise<SyncBla
     }
     apiErrorConfigs.push(entry);
   };
+
+  let tronLedgerUpdated = 0;
+  try {
+    const ledgerResult = await backfillTronFromLedger(db);
+    tronLedgerUpdated = ledgerResult.updated;
+    if (tronLedgerUpdated > 0) {
+      console.log(`[sync-blacklist] Tron ledger mirror updated ${tronLedgerUpdated} row(s)`);
+    }
+  } catch (err) {
+    console.warn("[sync-blacklist] Tron ledger mirror failed:", err);
+  }
 
   // Backfill NULL amounts first — this has priority over new event scanning
   // because the worker may time out before completing the full config loop.
@@ -419,6 +430,7 @@ export async function syncBlacklist(opts: SyncBlacklistOptions): Promise<SyncBla
       currentBalanceCacheUpdated: currentBalanceCacheCounters.updated,
       currentBalanceCacheDeleted: currentBalanceCacheCounters.deleted,
       currentBalanceCacheFailed: currentBalanceCacheCounters.failed,
+      tronLedgerUpdated,
     })),
   };
 }

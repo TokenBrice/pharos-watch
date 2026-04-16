@@ -446,7 +446,7 @@ export type BlacklistStablecoin = (typeof BLACKLIST_STABLECOINS)[number];
 export type BlacklistEventType = "blacklist" | "unblacklist" | "destroy";
 export type BlacklistSortKey = "date" | "stablecoin" | "chain" | "event";
 export type BlacklistSortDirection = "asc" | "desc";
-export type BlacklistAmountSource = "event" | "historical_balance" | "derived" | "unavailable";
+export type BlacklistAmountSource = "event" | "historical_balance" | "derived" | "unavailable" | "current_balance_snapshot" | "legacy_migration";
 export type BlacklistAmountStatus =
   | "resolved"
   | "recoverable_pending"
@@ -487,7 +487,7 @@ const BlacklistEventSchema = z.object({
   address: z.string(),
   amountNative: z.number().nullable(),
   amountUsdAtEvent: z.number().nullable(),
-  amountSource: z.enum(["event", "historical_balance", "derived", "unavailable"]),
+  amountSource: z.enum(["event", "historical_balance", "derived", "unavailable", "current_balance_snapshot", "legacy_migration"]),
   amountStatus: z.enum([
     "resolved",
     "recoverable_pending",

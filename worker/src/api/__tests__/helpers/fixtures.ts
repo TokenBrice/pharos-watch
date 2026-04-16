@@ -3,7 +3,7 @@
  * Each returns a complete row with sensible defaults; pass `overrides` for specific values.
  */
 
-import type { BlacklistStablecoin, StablecoinData } from "@shared/types/market";
+import type { BlacklistAmountSource, BlacklistAmountStatus, BlacklistStablecoin, StablecoinData } from "@shared/types/market";
 import { mockD1 } from "./mock-d1";
 
 type BlacklistRow = {
@@ -16,8 +16,8 @@ type BlacklistRow = {
   amount: number | null;
   amount_native: number | null;
   amount_usd_at_event: number | null;
-  amount_source: "event" | "historical_balance" | "derived" | "unavailable";
-  amount_status: "resolved" | "recoverable_pending" | "permanently_unavailable" | "provider_failed" | "ambiguous";
+  amount_source: BlacklistAmountSource;
+  amount_status: BlacklistAmountStatus;
   tx_hash: string;
   block_number: number;
   timestamp: number;
