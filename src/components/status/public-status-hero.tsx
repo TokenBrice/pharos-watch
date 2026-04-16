@@ -108,8 +108,8 @@ function getHeroLeadWarning(status: HealthResponse["status"], warnings: string[]
   const firstWarning = warnings[0];
   if (firstWarning) return firstWarning;
   if (status === "healthy") return "No public warnings are active right now.";
-  if (status === "degraded") return "Public health is degraded even though no human-readable warning string was attached.";
-  return "Public health is stale even though no human-readable warning string was attached.";
+  if (status === "degraded") return "Some data pipelines are experiencing delays. Check the sections below for details.";
+  return "System health data is outdated. Check the sections below for current status.";
 }
 
 export function PublicStatusHero({

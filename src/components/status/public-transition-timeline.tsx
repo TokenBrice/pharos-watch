@@ -76,7 +76,7 @@ export function PublicTransitionTimeline({
                   return (
                     <tr key={transition.id} className="border-b last:border-0">
                       <td className="py-2.5 font-mono text-xs text-muted-foreground">
-                        {new Date(transition.at * 1000).toLocaleString()}
+                        {new Date(transition.at * 1000).toLocaleString(undefined, { timeZoneName: 'short' })}
                       </td>
                       <td className="py-2.5">
                         <span className="font-mono text-xs">

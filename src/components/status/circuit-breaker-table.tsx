@@ -59,6 +59,12 @@ export function CircuitBreakerTable({ circuits }: CircuitBreakerTableProps) {
   return (
     <article className="rounded-xl border border-border/50 bg-card/60 p-5 dark:bg-card/30">
       <h3 className="text-base font-semibold tracking-tight text-foreground">Circuit Breakers</h3>
+      <p className="text-sm text-muted-foreground leading-relaxed mb-4">
+        Circuit breakers protect data quality by temporarily disabling a data source after repeated failures.
+        {" "}<strong className="text-foreground">Closed</strong> means the source is healthy.
+        {" "}<strong className="text-foreground">Half-open</strong> means Pharos is cautiously retesting after a failure period.
+        {" "}<strong className="text-foreground">Open</strong> means the source is disabled — affected features will show cached data until the source recovers.
+      </p>
       <div className="mt-4 overflow-x-auto">
         {tripped.length > 0 && (
           <table className="w-full text-sm">

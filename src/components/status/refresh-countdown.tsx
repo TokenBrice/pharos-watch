@@ -15,13 +15,11 @@ export function RefreshCountdown({ onRefresh }: RefreshCountdownProps) {
     return () => clearInterval(id);
   }, []);
 
-  const secondsLeft = Math.max(0, 60 - elapsedSeconds);
-
   return (
     <div className="flex items-center gap-2">
-      <span className="text-sm text-muted-foreground">{"\u27F3"} {secondsLeft}s</span>
+      <span className="text-sm text-muted-foreground">Updated {elapsedSeconds}s ago</span>
       <Button variant="outline" size="sm" onClick={onRefresh}>
-        Refresh
+        Refresh now
       </Button>
     </div>
   );

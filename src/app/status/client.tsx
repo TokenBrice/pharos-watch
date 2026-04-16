@@ -117,7 +117,16 @@ export default function StatusClient() {
   let content: ReactNode;
 
   if (healthLoading && !healthData) {
-    content = <div className="py-20 text-center text-muted-foreground">Loading system status...</div>;
+    content = (
+      <div className="space-y-6">
+        <div className="rounded-2xl bg-muted/30 animate-pulse h-[200px]" />
+        <div className="rounded-xl bg-muted/30 animate-pulse h-[60px]" />
+        <div className="grid gap-6 lg:grid-cols-2">
+          <div className="rounded-xl bg-muted/30 animate-pulse h-[300px]" />
+          <div className="rounded-xl bg-muted/30 animate-pulse h-[300px]" />
+        </div>
+      </div>
+    );
   } else if (healthError && !healthData) {
     content = (
       <div className="rounded-[1.6rem] border border-red-500/30 bg-red-500/10 p-6 text-red-700 shadow-[0_18px_48px_oklch(0_0_0_/0.16)] dark:text-red-300">

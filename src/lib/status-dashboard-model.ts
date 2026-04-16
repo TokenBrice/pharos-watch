@@ -153,12 +153,12 @@ export function buildBrowserProbeSummary(
 /** Status-dashboard-scoped timestamp formatter. Not a candidate for shared extraction. */
 export function formatTimestampSeconds(seconds: number | null | undefined): string {
   if (seconds == null) return "—";
-  return new Date(seconds * 1000).toLocaleString();
+  return new Date(seconds * 1000).toLocaleString(undefined, { timeZoneName: 'short' });
 }
 
 export function formatTimestampMs(ms: number): string {
   if (!ms) return "—";
-  return new Date(ms).toLocaleString();
+  return new Date(ms).toLocaleString(undefined, { timeZoneName: 'short' });
 }
 
 export function formatTransitionLabel(transition: StatusResponse["timeline"][number] | null): string {
