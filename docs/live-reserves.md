@@ -85,6 +85,8 @@ Adapters can also pass browser-style request headers through the shared JSON ret
 
 USDe's Ethena reserve config also keeps Ethena's main-domain collateral API as a same-provider JSON fallback for cases where the `app.ethena.fi` API route returns the dashboard HTML shell to Worker-origin requests.
 
+DOLA's Inverse FiRM market adapter normalizes the upstream `timestamp` field through the shared timestamp parser because the API can emit JavaScript millisecond timestamps while reserve validation requires Unix seconds.
+
 ### Snapshot Metadata and Warning Effects
 
 Successful adapters can attach structured snapshot metadata that is stored on the authoritative snapshot row (`reserve_composition.metadata`), not on the mutable latest-attempt state.

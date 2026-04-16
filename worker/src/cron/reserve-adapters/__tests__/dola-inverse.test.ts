@@ -130,6 +130,18 @@ describe("adaptFirmMarkets", () => {
     expect(validateAdapterOutput(result, { adapter: getReserveAdapter("dola-inverse") ?? undefined }).valid).toBe(true);
   });
 
+  it("normalizes millisecond API timestamps before validation", () => {
+    const result = adaptFirmMarkets({
+      markets: [makeMarket("wstETH", 1_000_000)],
+      timestamp: 1_776_330_494_053,
+    });
+
+    expect(result.metadata?.timestamp).toBe(1_776_330_494);
+    expect(result.metadata?.sourceTimestamp).toBe(1_776_330_494);
+    expect(result.metadata?.freshnessMode).toBe("verified");
+    expect(validateAdapterOutput(result, { adapter: getReserveAdapter("dola-inverse") ?? undefined }).valid).toBe(true);
+  });
+
   it("assigns correct risk levels to each bucket", () => {
     const result = adaptFirmMarkets({
       markets: [

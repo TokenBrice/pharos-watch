@@ -6,6 +6,7 @@ import {
   accumulateBucketedExposure,
   fetchJsonWithRetry,
   requireJsonInputFromConfig,
+  parseTimestampLikeToUnixSeconds,
   reserveDegradedWarning,
   slicesFromValues,
   unverifiedFreshnessMetadata,
@@ -21,7 +22,7 @@ export interface FirmMarket {
 
 interface FirmMarketsResponse {
   markets: FirmMarket[];
-  timestamp: number;
+  timestamp: number | string;
 }
 
 type DolaBucket = "stablecoin" | "eth-lst" | "btc" | "governance" | "other";
@@ -64,6 +65,7 @@ export function resolveBaseSymbol(market: FirmMarket): string {
 }
 
 export function adaptFirmMarkets(payload: FirmMarketsResponse): AdapterResult {
+  const sourceTimestamp = parseTimestampLikeToUnixSeconds(payload.timestamp);
   const {
     bucketTotals,
     totalValue: totalDebt,
@@ -110,9 +112,9 @@ export function adaptFirmMarkets(payload: FirmMarketsResponse): AdapterResult {
     metadata: {
       activeMarkets,
       totalMarkets: payload.markets.length,
-      timestamp: payload.timestamp,
-      ...(payload.timestamp > 0
-        ? verifiedFreshnessMetadata(payload.timestamp)
+      timestamp: sourceTimestamp,
+      ...(sourceTimestamp != null
+        ? verifiedFreshnessMetadata(sourceTimestamp)
         : unverifiedFreshnessMetadata(
             "firm-markets-api",
             "FiRM markets payload did not expose a trustworthy source timestamp",
