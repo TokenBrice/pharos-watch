@@ -1,3 +1,4 @@
+import type { BlacklistAmountSource, BlacklistAmountStatus, BlacklistEventType, BlacklistStablecoin } from "@shared/types/market";
 import { buildExplorerUrl } from "@shared/lib/explorer";
 import type { ChainConfig } from "../../lib/blacklist-contracts";
 
@@ -15,15 +16,15 @@ export function shouldSuppressAsMirrorZero(
 
 export interface BlacklistRow {
   id: string;
-  stablecoin: string;
+  stablecoin: BlacklistStablecoin;
   chain_id: string;
   chain_name: string;
-  event_type: string;
+  event_type: BlacklistEventType;
   address: string;
   amount_native: number | null;
   amount_usd_at_event: number | null;
-  amount_source: string;
-  amount_status: string;
+  amount_source: BlacklistAmountSource;
+  amount_status: BlacklistAmountStatus;
   tx_hash: string;
   block_number: number;
   timestamp: number;
