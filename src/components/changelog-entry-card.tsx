@@ -16,14 +16,6 @@ function inferTag(label: string): SummaryTag {
   return "feature";
 }
 
-const TAG_COLOR: Record<SummaryTag, string> = {
-  feature: "bg-frost-blue/10 border-frost-blue/25 text-frost-blue",
-  security: "bg-amber-500/10 border-amber-500/25 text-amber-500",
-  coverage: "bg-emerald-500/10 border-emerald-500/25 text-emerald-500",
-  infra: "bg-violet-500/10 border-violet-500/25 text-violet-500",
-  design: "bg-sky-500/10 border-sky-500/25 text-sky-500",
-};
-
 export function formatDateRange(
   from: string,
   to: string,
@@ -125,25 +117,26 @@ export function ChangelogEntryCard({
         </p>
       )}
 
-      <ul className="mt-5 space-y-3 mb-6">
+      <ul className="mt-5 space-y-4 mb-6">
         {summary.map((item) => {
           const tag = item.tag ?? inferTag(item.label);
           return (
-            <li key={item.label} className="flex gap-3 text-sm leading-relaxed">
-              {tag && (
-                <span className={`mt-[3px] inline-flex shrink-0 items-center rounded-full border px-1.5 py-0.5 text-[10px] uppercase tracking-wide font-medium ${TAG_COLOR[tag]}`}>
-                  {tag}
-                </span>
-              )}
-              <span>
+            <li key={item.label} className="space-y-0.5">
+              <div className="flex items-baseline gap-2">
                 {item.href ? (
-                  <a href={item.href} className="text-foreground/80 underline underline-offset-2 hover:text-foreground transition-colors font-semibold">{item.label}</a>
+                  <a href={item.href} className="text-sm font-semibold text-foreground/90 underline underline-offset-2 hover:text-foreground transition-colors">{item.label}</a>
                 ) : (
-                  <span className="font-semibold text-foreground/80">{item.label}</span>
+                  <span className="text-sm font-semibold text-foreground/90">{item.label}</span>
                 )}
-                <span className="mx-1.5 text-border">—</span>
-                <span className="text-muted-foreground">{item.description}</span>
-              </span>
+                {tag && (
+                  <span className="text-xs font-mono uppercase tracking-wider text-muted-foreground/60 shrink-0">
+                    {tag}
+                  </span>
+                )}
+              </div>
+              <p className="max-w-[72ch] text-sm leading-relaxed text-muted-foreground">
+                {item.description}
+              </p>
             </li>
           );
         })}

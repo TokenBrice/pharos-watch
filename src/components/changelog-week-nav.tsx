@@ -67,8 +67,9 @@ export function ChangelogWeekNav({ entries }: ChangelogWeekNavProps) {
               <a
                 key={id}
                 href={`#${id}`}
+                aria-current={isActive ? "true" : undefined}
                 className={cn(
-                  "pharos-focus-ring flex items-center gap-2 whitespace-nowrap rounded-md px-2.5 py-1.5 transition-colors",
+                  "pharos-focus-ring flex items-center gap-2 whitespace-nowrap rounded-md px-2.5 py-2.5 sm:py-1.5 transition-colors",
                   isActive
                     ? "bg-muted text-foreground"
                     : "text-muted-foreground hover:bg-muted/50 hover:text-foreground",
