@@ -26,9 +26,33 @@ const GET_FEE_STRATEGY_SELECTOR = "0x4101d9f4";
 const GET_BUY_FEE_SELECTOR = "0x45d6494d";
 const ZERO_ADDRESS = "0x0000000000000000000000000000000000000000";
 const ONE_GHO = 10n ** 18n;
-const FACILITATOR_READ_CONCURRENCY = 4;
-const RESIDUAL_DEGRADED_THRESHOLD_PCT = 1;
+// Keep facilitator reads below the shared adapter IO cap to avoid request
+// queue explosion when the rest of the cron contends for the same pool.
+const FACILITATOR_READ_CONCURRENCY = 2;
 const textDecoder = new TextDecoder();
+
+type FacilitatorRiskBucket = "aave-v3-direct" | "flashminter" | "unknown";
+
+function classifyFacilitatorLabel(label: string): FacilitatorRiskBucket {
+  const normalized = label.toLowerCase();
+  if (normalized.includes("flashmint") || normalized.includes("flash mint")) {
+    return "flashminter";
+  }
+  if (
+    normalized.includes("directminter")
+    || normalized.includes("direct minter")
+    || normalized.includes("directfacilitator")
+    || normalized.includes("direct facilitator")
+    || normalized.includes("aave")
+  ) {
+    return "aave-v3-direct";
+  }
+  return "unknown";
+}
+
+function riskForFacilitatorBucket(bucket: FacilitatorRiskBucket): ReserveSlice["risk"] {
+  return bucket === "aave-v3-direct" ? "medium" : "high";
+}
 
 interface GhoParams {
   rpcUrl?: string;
@@ -419,12 +443,48 @@ export function adaptGhoFacilitators(data: GhoFacilitatorData): AdapterResult {
       ...(trackedModule.coinId ? { coinId: trackedModule.coinId } : {}),
     });
   }
+  // Decompose residual across active facilitators by classifying each
+  // facilitator's label. Unknown labels feed unknownExposurePct so the
+  // standard material-unknown-exposure validator applies downstream.
+  let unknownResidualRaw = 0n;
   if (residualRaw > 0n) {
-    values.push({
-      name: "Residual facilitators / reserve buffer",
-      value: scale18ToUsd(residualRaw),
-      risk: "medium",
-    });
+    const activeWithLevel = data.facilitators.filter((f) => f.bucketLevel > 0n);
+    const totalActiveBucketLevel = activeWithLevel.reduce(
+      (sum, f) => sum + f.bucketLevel,
+      0n,
+    );
+
+    if (totalActiveBucketLevel > 0n) {
+      // Allocate the residual across facilitators proportional to bucketLevel.
+      let allocated = 0n;
+      const allocations = activeWithLevel.map((facilitator, idx) => {
+        const share = idx === activeWithLevel.length - 1
+          ? residualRaw - allocated
+          : (residualRaw * facilitator.bucketLevel) / totalActiveBucketLevel;
+        allocated += share;
+        return { facilitator, share };
+      });
+      for (const { facilitator, share } of allocations) {
+        if (share <= 0n) continue;
+        const bucket = classifyFacilitatorLabel(facilitator.label);
+        if (bucket === "unknown") {
+          unknownResidualRaw += share;
+        }
+        values.push({
+          name: facilitator.label,
+          value: scale18ToUsd(share),
+          risk: riskForFacilitatorBucket(bucket),
+        });
+      }
+    } else {
+      // No facilitator labels available — treat residual as unknown exposure.
+      unknownResidualRaw = residualRaw;
+      values.push({
+        name: "Residual facilitators / reserve buffer",
+        value: scale18ToUsd(residualRaw),
+        risk: "high",
+      });
+    }
   }
 
   if (values.length === 0) return { slices: [] };
@@ -439,6 +499,11 @@ export function adaptGhoFacilitators(data: GhoFacilitatorData): AdapterResult {
     .map((trackedModule) => trackedModule.buyFeeBps)
     .filter((fee): fee is number => typeof fee === "number" && Number.isFinite(fee));
   const redemptionFeeBps = buyFeeBpsValues.length > 0 ? Math.max(...buyFeeBpsValues) : undefined;
+
+  const supplyUsd = typeof data.totalSupply === "bigint" ? scale18ToUsd(data.totalSupply) : 0;
+  const unknownExposurePct = supplyUsd > 0
+    ? (scale18ToUsd(unknownResidualRaw) / supplyUsd) * 100
+    : 0;
 
   return {
     slices: slicesFromValues(values),
@@ -457,8 +522,9 @@ export function adaptGhoFacilitators(data: GhoFacilitatorData): AdapterResult {
       residualSupplyUsd: residualRaw > 0n ? scale18ToUsd(residualRaw) : 0,
       immediateRedeemableUsd,
       ...(immediateRedeemableRatio != null ? { immediateRedeemableRatio } : {}),
-      ...(typeof data.totalSupply === "bigint" ? { supplyUsd: scale18ToUsd(data.totalSupply), totalReserveUsd: scale18ToUsd(data.totalSupply) } : {}),
-      ...(typeof data.totalSupply === "bigint" ? { onchainSupplyUsd: scale18ToUsd(data.totalSupply) } : {}),
+      ...(typeof data.totalSupply === "bigint" ? { supplyUsd, totalReserveUsd: supplyUsd } : {}),
+      ...(typeof data.totalSupply === "bigint" ? { onchainSupplyUsd: supplyUsd } : {}),
+      ...(unknownExposurePct > 0 ? { unknownExposurePct } : {}),
       ...(buyFeeBpsValues.length > 0
         ? {
             redemptionFeeBps,
@@ -528,22 +594,10 @@ export async function fetchGhoReserves(
     totalSupply,
   });
 
-  const trackedBackingRaw = trackedModules.reduce((sum, trackedModule) => sum + trackedModule.currentBackingGho, 0n);
-  if (trackedBackingRaw < totalSupply) {
-    const activeLabels = facilitators
-      .filter((facilitator) => facilitator.bucketLevel > 0n)
-      .map((facilitator) => facilitator.label);
-    const residualPct = totalSupply > 0n ? Number((totalSupply - trackedBackingRaw) * 10_000n / totalSupply) / 100 : 0;
-    const message =
-      activeLabels.length > 0
-        ? `Residual GHO issuance outside tracked GSM backing remains aggregated (${activeLabels.join(", ")})`
-        : "Residual GHO issuance outside tracked GSM backing remains aggregated";
-    warnings.push(
-      residualPct > RESIDUAL_DEGRADED_THRESHOLD_PCT
-        ? reserveDegradedWarning("aggregated-residual-issuance", `${message} (${residualPct.toFixed(2)}%)`)
-        : reserveInfoWarning("aggregated-residual-issuance", `${message} (${residualPct.toFixed(2)}%)`),
-    );
-  }
-
-  return warnings.length > 0 ? { ...adapted, warnings } : adapted;
+  // Residual decomposition and unknownExposurePct are now computed inside
+  // adaptGhoFacilitators. The standard material-unknown-exposure validator
+  // picks up unmapped facilitator labels from metadata.unknownExposurePct.
+  return warnings.length > 0
+    ? { ...adapted, warnings: [...(adapted.warnings ?? []), ...warnings] }
+    : adapted;
 }

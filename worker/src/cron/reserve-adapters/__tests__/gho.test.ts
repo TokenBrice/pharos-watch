@@ -44,15 +44,18 @@ const SAMPLE: GhoFacilitatorData = {
 };
 
 describe("adaptGhoFacilitators", () => {
-  it("produces slices from tracked GSM backing plus residual issuance", () => {
+  it("produces slices from tracked GSM backing plus per-facilitator residual", () => {
     const result = adaptGhoFacilitators(SAMPLE);
-    expect(result.slices.length).toBe(3);
+    // 2 tracked GSM modules (with non-zero backing) + 2 residual facilitators
+    expect(result.slices.length).toBe(4);
     const total = result.slices.reduce((sum, slice) => sum + slice.pct, 0);
     expect(total).toBe(100);
 
-    const residual = result.slices.find((slice) => slice.name.includes("Residual"));
-    expect(residual).toBeDefined();
-    expect(residual?.risk).toBe("medium");
+    const aaveCore = result.slices.find((slice) => slice.name === "CoreGhoDirectMinter");
+    expect(aaveCore).toBeDefined();
+    expect(aaveCore?.risk).toBe("medium");
+    // No unknownExposurePct because all facilitators are classified Aave V3.
+    expect(result.metadata?.unknownExposurePct).toBeUndefined();
   });
 
   it("skips tracked GSM modules with zero current backing", () => {
@@ -67,9 +70,50 @@ describe("adaptGhoFacilitators", () => {
       totalSupply: 100_000_000n * 10n ** 18n,
     };
     const result = adaptGhoFacilitators(data);
+    // 2 residual facilitator slices, no tracked module slices.
+    expect(result.slices).toHaveLength(2);
+    expect(result.slices.map((s) => s.name)).toEqual(
+      expect.arrayContaining(["CoreGhoDirectMinter", "GhoDirectFacilitator GSMs Mainnet"]),
+    );
+  });
+
+  it("classifies flashminter labels as high risk", () => {
+    const data: GhoFacilitatorData = {
+      facilitators: [
+        {
+          address: "0x5555555555555555555555555555555555555555",
+          label: "GhoFlashMinter",
+          bucketLevel: 100_000_000n * 10n ** 18n,
+          bucketCapacity: 100_000_000n * 10n ** 18n,
+        },
+      ],
+      trackedModules: [],
+      totalSupply: 100_000_000n * 10n ** 18n,
+    };
+    const result = adaptGhoFacilitators(data);
     expect(result.slices).toHaveLength(1);
-    expect(result.slices[0]?.name).toContain("Residual");
-    expect(result.slices[0]?.pct).toBe(100);
+    expect(result.slices[0]?.name).toBe("GhoFlashMinter");
+    expect(result.slices[0]?.risk).toBe("high");
+    expect(result.metadata?.unknownExposurePct).toBeUndefined();
+  });
+
+  it("reports unknownExposurePct for facilitator labels that do not match known patterns", () => {
+    const data: GhoFacilitatorData = {
+      facilitators: [
+        {
+          address: "0x6666666666666666666666666666666666666666",
+          label: "SomeUnknownThirdParty",
+          bucketLevel: 100_000_000n * 10n ** 18n,
+          bucketCapacity: 100_000_000n * 10n ** 18n,
+        },
+      ],
+      trackedModules: [],
+      totalSupply: 100_000_000n * 10n ** 18n,
+    };
+    const result = adaptGhoFacilitators(data);
+    expect(result.slices).toHaveLength(1);
+    expect(result.slices[0]?.risk).toBe("high");
+    expect(result.metadata?.unknownExposurePct).toBeCloseTo(100, 2);
   });
 
   it("includes tracked GSM coinIds", () => {

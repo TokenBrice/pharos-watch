@@ -38,6 +38,9 @@ export interface BranchBalanceParams {
     selector: string;
     decimals?: number;
   };
+  debtSelector?: string;
+  debtContract?: string;
+  debtDecimals?: number;
 }
 
 export interface BranchBalanceEntry {

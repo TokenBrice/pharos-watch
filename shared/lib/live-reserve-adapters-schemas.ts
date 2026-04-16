@@ -249,11 +249,17 @@ const evmBranchBalancesParamsSchema = z.object({
   fallbackRpcUrl: z.string().optional(),
   branches: z.array(evmBranchBalanceBranchSchema).min(1),
   redemptionRateProbe: redemptionRateProbeSchema.optional(),
+  /**
+   * When provided, the adapter calls `debtSelector` on `debtContract` (or the
+   * first branch's holder if omitted) to fetch a system-wide debt/supply total
+   * and emits `collateralizationRatio` in metadata.
+   */
+  debtSelector: z.string().regex(/^0x[0-9a-fA-F]{8}$/).optional(),
+  debtContract: z.string().optional(),
+  debtDecimals: z.number().int().nonnegative().optional(),
 }).strict();
 
 const liquityV2BranchesParamsSchema = evmBranchBalancesParamsSchema.extend({
-  debtSelector: z.string().regex(/^0x[0-9a-fA-F]{8}$/).optional(),
-  debtDecimals: z.number().int().nonnegative().optional(),
   shutdownSelector: z.string().regex(/^0x[0-9a-fA-F]{8}$/).optional(),
 }).strict();
 

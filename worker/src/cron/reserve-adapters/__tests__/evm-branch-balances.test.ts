@@ -9,11 +9,12 @@ vi.mock("../helpers", async (importOriginal) => {
     fetchErc20Balance: vi.fn(),
     fetchDefiLlamaPrices: vi.fn(),
     fetchOnchainRateBps: vi.fn(),
+    fetchOnchainUint256: vi.fn(),
   };
 });
 
 import { fetchEvmBranchBalancesReserves } from "../evm-branch-balances";
-import { fetchDefiLlamaPrices, fetchErc20Balance, fetchOnchainRateBps } from "../helpers";
+import { fetchDefiLlamaPrices, fetchErc20Balance, fetchOnchainRateBps, fetchOnchainUint256 } from "../helpers";
 
 const signal = AbortSignal.timeout(5000);
 const coin = { id: "test-coin" } as unknown as StablecoinMeta;
@@ -529,5 +530,103 @@ describe("fetchEvmBranchBalancesReserves", () => {
     await expect(fetchEvmBranchBalancesReserves(coin, config, signal)).rejects.toThrow(
       "evm-branch-balances adapter params invalid",
     );
+  });
+
+  it("emits collateralizationRatio metadata when a debtSelector is configured", async () => {
+    // 1 WBTC at $60k = $60,000 collateral; debt = 50000 USD
+    vi.mocked(fetchErc20Balance).mockResolvedValueOnce(100_000_000n);
+    vi.mocked(fetchDefiLlamaPrices).mockResolvedValue(new Map([["WBTC", 60000]]));
+    vi.mocked(fetchOnchainUint256).mockResolvedValueOnce(50_000n * 10n ** 18n);
+
+    const config: LiveReservesConfig = {
+      adapter: "evm-branch-balances",
+      version: 1,
+      semantics: "collateral-mix",
+      inputs: {
+        primary: { kind: "onchain-evm", chain: "ethereum", rpcMode: "public-rpc" },
+      },
+      params: {
+        branches: [
+          {
+            name: "WBTC",
+            holder: "0xAAA",
+            token: { chain: "ethereum", address: "0xBBB", decimals: 8 },
+            risk: "medium",
+          },
+        ],
+        debtSelector: "0x18160ddd", // totalSupply() as example
+        debtDecimals: 18,
+      },
+    };
+
+    const result = await fetchEvmBranchBalancesReserves(coin, config, signal);
+    expect(result.metadata?.totalDebtUsd).toBe(50000);
+    expect(result.metadata?.collateralizationRatio).toBeCloseTo(1.2, 2);
+    // Healthy ratio → no undercollateralized warning.
+    expect(result.warnings?.some((w) => w.code === "undercollateralized") ?? false).toBe(false);
+  });
+
+  it("emits an undercollateralized warning when collateralizationRatio < 1.0", async () => {
+    // 1 WBTC at $60k = $60,000 collateral; debt = $80,000
+    vi.mocked(fetchErc20Balance).mockResolvedValueOnce(100_000_000n);
+    vi.mocked(fetchDefiLlamaPrices).mockResolvedValue(new Map([["WBTC", 60000]]));
+    vi.mocked(fetchOnchainUint256).mockResolvedValueOnce(80_000n * 10n ** 18n);
+
+    const config: LiveReservesConfig = {
+      adapter: "evm-branch-balances",
+      version: 1,
+      semantics: "collateral-mix",
+      inputs: {
+        primary: { kind: "onchain-evm", chain: "ethereum", rpcMode: "public-rpc" },
+      },
+      params: {
+        branches: [
+          {
+            name: "WBTC",
+            holder: "0xAAA",
+            token: { chain: "ethereum", address: "0xBBB", decimals: 8 },
+            risk: "medium",
+          },
+        ],
+        debtSelector: "0x18160ddd",
+        debtDecimals: 18,
+      },
+    };
+
+    const result = await fetchEvmBranchBalancesReserves(coin, config, signal);
+    expect(result.metadata?.collateralizationRatio).toBeCloseTo(0.75, 2);
+    const warning = result.warnings?.find((w) => w.code === "undercollateralized");
+    expect(warning).toBeDefined();
+    expect(warning?.severity).toBe("warning");
+  });
+
+  it("skips debt reconciliation when debtSelector is omitted", async () => {
+    vi.mocked(fetchErc20Balance).mockResolvedValueOnce(1_000_000_000_000_000_000n);
+    vi.mocked(fetchDefiLlamaPrices).mockResolvedValue(new Map([["wstETH", 2000]]));
+
+    const config: LiveReservesConfig = {
+      adapter: "evm-branch-balances",
+      version: 1,
+      semantics: "collateral-mix",
+      inputs: {
+        primary: { kind: "onchain-evm", chain: "ethereum", rpcMode: "public-rpc" },
+      },
+      params: {
+        branches: [
+          {
+            name: "wstETH",
+            holder: "0xAAA",
+            token: { chain: "ethereum", address: "0xBBB", decimals: 18 },
+            risk: "low",
+          },
+        ],
+      },
+    };
+
+    const result = await fetchEvmBranchBalancesReserves(coin, config, signal);
+    expect(result.metadata?.collateralizationRatio).toBeUndefined();
+    expect(result.metadata?.totalDebtUsd).toBeUndefined();
+    // No debt call should have been made.
+    expect(fetchOnchainUint256).not.toHaveBeenCalled();
   });
 });
