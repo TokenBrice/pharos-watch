@@ -1,5 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { adaptRiverProtocolInfo } from "../river-protocol-info";
+import { validateAdapterOutput } from "../validate";
+import { getReserveAdapter } from "../index";
 
 describe("adaptRiverProtocolInfo", () => {
   it("maps aggregate River TVL telemetry as proof-class collateral context", () => {
@@ -43,5 +45,38 @@ describe("adaptRiverProtocolInfo", () => {
     expect(result.metadata?.sourceTimestamp).toBe(1_776_500_000);
     expect(result.metadata?.freshnessMode).toBe("verified");
     expect(result.metadata?.latestSourceTimestamp).toBe(1_776_500_000);
+  });
+
+  it("throws when TVL or circulatingSupply is missing (parse-failure path)", () => {
+    expect(() => adaptRiverProtocolInfo({ circulatingSupply: 100 })).toThrow(
+      "river-protocol-info missing TVL or circulating supply",
+    );
+    expect(() => adaptRiverProtocolInfo({ tvl: 100 })).toThrow(
+      "river-protocol-info missing TVL or circulating supply",
+    );
+    expect(() => adaptRiverProtocolInfo({ tvl: 0, circulatingSupply: 100 })).toThrow();
+  });
+
+  it("falls back to unverified freshness when both time series are empty", () => {
+    const result = adaptRiverProtocolInfo({
+      tvl: 1000,
+      circulatingSupply: 500,
+      tvlData: [],
+      circulatingData: [],
+    });
+    expect(result.metadata?.freshnessMode).toBe("unverified");
+  });
+
+  it("is rejected by validateAdapterOutput when the latest source timestamp is in the future", () => {
+    const futureSec = Math.floor(Date.now() / 1000) + 7 * 24 * 60 * 60;
+    const result = adaptRiverProtocolInfo({
+      tvl: 1000,
+      circulatingSupply: 500,
+      tvlData: [{ timestamp: futureSec, value: 1000 }],
+      circulatingData: [{ timestamp: futureSec, value: 500 }],
+    });
+    const adapter = getReserveAdapter("river-protocol-info") ?? undefined;
+    const report = validateAdapterOutput(result, { adapter });
+    expect(report.valid).toBe(false);
   });
 });
