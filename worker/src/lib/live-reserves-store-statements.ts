@@ -236,3 +236,55 @@ export function buildReserveSyncFinalizeAttemptStatement(
       record.pendingAttemptId ?? null,
     );
 }
+
+export interface ReserveSyncDeferredRecord {
+  stablecoinId: string;
+  adapterKey: string;
+  breakerKey: string;
+  attemptedAt: number;
+  reason: string;
+}
+
+export function buildReserveSyncRecordDeferredStatement(
+  db: D1Database,
+  record: ReserveSyncDeferredRecord,
+): D1PreparedStatement {
+  const metadata = JSON.stringify({
+    failureCategory: record.reason,
+    reason: record.reason,
+  });
+  return db
+    .prepare(
+      `INSERT INTO reserve_sync_state (
+         stablecoin_id,
+         adapter_key,
+         breaker_key,
+         last_attempted_at,
+         last_success_at,
+         last_status,
+         warning_count,
+         warnings,
+         last_error,
+         metadata,
+         last_attempt_id,
+         pending_attempt_id,
+         last_success_attempt_id
+       ) VALUES (?, ?, ?, ?, NULL, 'skipped', 0, NULL, ?, ?, NULL, NULL, NULL)
+       ON CONFLICT(stablecoin_id) DO UPDATE SET
+         adapter_key = excluded.adapter_key,
+         breaker_key = excluded.breaker_key,
+         last_attempted_at = excluded.last_attempted_at,
+         last_status = 'skipped',
+         last_error = excluded.last_error,
+         metadata = excluded.metadata,
+         pending_attempt_id = NULL`,
+    )
+    .bind(
+      record.stablecoinId,
+      record.adapterKey,
+      record.breakerKey,
+      record.attemptedAt,
+      record.reason,
+      metadata,
+    );
+}

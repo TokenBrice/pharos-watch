@@ -339,6 +339,44 @@ describe("syncLiveReserves", () => {
     });
   });
 
+  it("defers remaining coins when the per-run budget is exhausted", async () => {
+    vi.useFakeTimers();
+    const nowBase = Date.now();
+    vi.setSystemTime(nowBase);
+
+    // Each adapter invocation advances the clock by 6 minutes so that after 2
+    // coins (>= 12min > 11min budget), the budget guard kicks in.
+    mockAdapterRegistry(async () => {
+      vi.setSystemTime(Date.now() + 6 * 60 * 1000);
+      return { slices: [{ name: "Mock Farm", pct: 100, risk: "low" as const }] };
+    });
+
+    const { syncLiveReserves } = await import("../sync-live-reserves");
+    const db = mockD1();
+    const resultPromise = syncLiveReserves(db, new AbortController().signal, {});
+    await vi.runAllTimersAsync();
+    const result = await resultPromise;
+
+    const metadata = JSON.parse(result?.metadata ?? "{}") as { skipped?: number; synced?: number };
+    expect(metadata.skipped).toBeGreaterThan(0);
+    expect(metadata.synced).toBeLessThan(configuredCoinCount);
+
+    const deferredInserts = db.getHistory().filter((entry) => (
+      entry.sql.includes("INSERT INTO reserve_sync_state")
+      && entry.binds.some(
+        (bind) => typeof bind === "string" && bind === "run-budget-exhausted",
+      )
+    ));
+    expect(deferredInserts.length).toBeGreaterThan(0);
+
+    // The deferred statement must never set pending_attempt_id — it binds its
+    // values in positional order (stablecoinId, adapterKey, breakerKey,
+    // attemptedAt, reason, metadata) and the SQL pins pending_attempt_id to NULL.
+    for (const entry of deferredInserts) {
+      expect(entry.sql).toMatch(/pending_attempt_id\s*=\s*NULL/);
+    }
+  });
+
   it("persists full primary-plus-fallback failure context for reserve source chains", async () => {
     const fallbackCoin = ACTIVE_STABLECOINS.find((coin) => (
       (coin.liveReservesConfig?.inputs.fallbacks?.length ?? 0) > 0

@@ -12,6 +12,8 @@ import {
   buildReserveSyncAttemptStartStatement,
   buildReserveSyncFinalizeAttemptStatement,
   buildReserveSyncFinalizeSuccessStatement,
+  buildReserveSyncRecordDeferredStatement,
+  type ReserveSyncDeferredRecord,
 } from "./live-reserves-store-statements";
 
 export async function upsertReserveComposition(
@@ -26,6 +28,13 @@ export async function beginReserveSyncAttempt(
   record: ReserveSyncAttemptStartRecord,
 ): Promise<void> {
   await buildReserveSyncAttemptStartStatement(db, record).run();
+}
+
+export async function recordReserveSyncDeferred(
+  db: D1Database,
+  record: ReserveSyncDeferredRecord,
+): Promise<void> {
+  await buildReserveSyncRecordDeferredStatement(db, record).run();
 }
 
 export async function finalizeReserveSyncSuccess(

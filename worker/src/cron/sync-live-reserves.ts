@@ -7,6 +7,7 @@ import { reportCronProgress } from "../lib/cron-progress";
 import {
   loadReserveSyncStateMap,
   pruneLiveReserveHistory,
+  recordReserveSyncDeferred,
 } from "../lib/live-reserves-store";
 import { syncReserveCoin } from "./sync-live-reserves-core";
 import {
@@ -19,6 +20,7 @@ import {
 } from "./sync-live-reserves-shared";
 import { createAdapterIoLimiter, RESERVE_ADAPTER_MAX_PARALLEL_IO } from "./reserve-adapters/concurrency";
 const ADAPTER_TIMEOUT_MS = 20_000;
+const SYNC_RUN_BUDGET_MS = 11 * 60 * 1000;
 
 function createAbortableAttemptSignal(
   parentSignal: AbortSignal,
@@ -120,6 +122,7 @@ export async function syncLiveReserves(
   let failed = 0;
   let skipped = 0;
   const runStartedAt = Math.floor(Date.now() / 1000);
+  const runStartedMs = Date.now();
   const warningMessages: string[] = [];
   const coinsWithErrors: string[] = [];
   const coinsWithWarnings: string[] = [];
@@ -196,6 +199,30 @@ export async function syncLiveReserves(
 
   for (const [index, coin] of CONFIGURED_COINS.entries()) {
     if (signal?.aborted) throw signal.reason ?? new Error("sync-live-reserves aborted");
+    const budgetRemaining = SYNC_RUN_BUDGET_MS - (Date.now() - runStartedMs);
+    if (budgetRemaining < ADAPTER_TIMEOUT_MS) {
+      console.warn(
+        `[sync-live-reserves] Run budget exhausted at coin ${index}/${total}, deferring remaining`,
+      );
+      for (const remaining of CONFIGURED_COINS.slice(index)) {
+        const remainingConfig = remaining.liveReservesConfig!;
+        const remainingBreakerKey = breakerKeyForConfig(remainingConfig);
+        breakerKeys.add(remainingBreakerKey);
+        try {
+          await recordReserveSyncDeferred(db, {
+            stablecoinId: remaining.id,
+            adapterKey: remainingConfig.adapter,
+            breakerKey: remainingBreakerKey,
+            attemptedAt: Math.floor(Date.now() / 1000),
+            reason: "run-budget-exhausted",
+          });
+        } catch (e) {
+          console.warn(`[sync-live-reserves] Failed to record deferred sync for ${remaining.id}:`, e);
+        }
+        skipped++;
+      }
+      break;
+    }
     const config = coin.liveReservesConfig!;
     const breakerKey = breakerKeyForConfig(config);
     breakerKeys.add(breakerKey);
