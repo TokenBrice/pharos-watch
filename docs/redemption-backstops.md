@@ -6,11 +6,11 @@ Modeled redemption-route coverage for tracked stablecoins. This subsystem estima
 
 ## Methodology Versioning
 
-- **Current methodology version:** `v3.97`
+- **Current methodology version:** `v3.98`
 - **Public methodology anchor:** `/methodology/#safety-scores-methodology`
 - **Canonical source files:** `shared/lib/redemption-backstops.ts`, `shared/lib/redemption-backstop-configs/*`, `shared/lib/redemption-backstop-scoring.ts`, `shared/lib/redemption-backstop-version.ts`
 
-Latest `v3.97` update: the "strong live-direct route" predicate is now defined once in `shared/lib/redemption-backstop-scoring.ts` and reused by both the report-card liquidity consumer and the backstop builder; severe-depeg boundary behavior (2499/2500 bps), live-proxy exclusion, and capacity-score breakpoints are now locked in by explicit tests; route family cap rationale is documented inline. No coin-facing scoring semantics changed.
+Latest `v3.98` update: live reserve capacity is now clamped to current supply for scoring, 17 new stablecoins join modeled redemption coverage (spanning collateral-redeem, stablecoin-redeem, basket-redeem, queue-redeem, and offchain-issuer families), and several lower-confidence supply-ratio routes are explicitly tagged as heuristic with reviewed docs.
 
 There is no standalone changelog page yet. The public methodology link currently points at the Safety Scores section because redemption backstops feed the report-card liquidity dimension.
 
@@ -20,8 +20,8 @@ There is no standalone changelog page yet. The public methodology link currently
 
 Configured coverage is defined statically behind the thin facade in `shared/lib/redemption-backstops.ts`, with route-family modules under `shared/lib/redemption-backstop-configs/`.
 
-- **Configured coins:** 147
-- **Route families:** 81 `offchain-issuer`, 21 `stablecoin-redeem`, 19 `collateral-redeem`, 15 `queue-redeem`, 8 `psm-swap`, 3 `basket-redeem`
+- **Configured coins:** 164
+- **Route families:** 87 `offchain-issuer`, 25 `stablecoin-redeem`, 21 `collateral-redeem`, 19 `queue-redeem`, 8 `psm-swap`, 4 `basket-redeem`
 - **No discovery layer:** only coins present in `REDEMPTION_BACKSTOP_CONFIGS` are modeled
 
 The config registry is validated at module load time against `TRACKED_META_BY_ID`, so unknown IDs fail fast during build/test/runtime startup.
