@@ -130,6 +130,7 @@ export function adaptCollateralPositions(
     risk: ReserveSlice["risk"];
     coinId?: string;
     depType?: ReserveSlice["depType"];
+    unknown?: boolean;
   }> = [];
   const missingPriceSymbols = new Set<string>();
   let unknownExposureUsd = 0;
@@ -157,7 +158,8 @@ export function adaptCollateralPositions(
     }
 
     const risk = inferRisk(entry.symbol);
-    if (!isKnownAsset(entry.symbol)) {
+    const unknown = !isKnownAsset(entry.symbol);
+    if (unknown) {
       warnings.push(reserveDegradedWarning(
         "unknown-asset",
         `Unmapped collateral symbol: ${entry.symbol} (inferred risk: ${risk})`,
@@ -171,6 +173,7 @@ export function adaptCollateralPositions(
       risk,
       coinId: inferCoinId(entry.symbol),
       depType: inferDepType(entry.symbol),
+      ...(unknown ? { unknown: true } : {}),
     });
   }
 
@@ -183,8 +186,10 @@ export function adaptCollateralPositions(
   const total = values.reduce((acc, value) => acc + value.usd, 0);
   if (total <= 0) return { slices: [] };
 
-  const major = values.filter((value) => (value.usd / total) * 100 >= otherThresholdPct);
-  const minor = values.filter((value) => (value.usd / total) * 100 < otherThresholdPct);
+  const knownValues = values.filter((value) => !value.unknown);
+  const unknownValues = values.filter((value) => value.unknown);
+  const major = knownValues.filter((value) => (value.usd / total) * 100 >= otherThresholdPct);
+  const minor = knownValues.filter((value) => (value.usd / total) * 100 < otherThresholdPct);
 
   const slices = major.map((value) => ({
     name: value.name,
@@ -205,6 +210,14 @@ export function adaptCollateralPositions(
       name: "Other collateral",
       pct: (otherUsd / total) * 100,
       risk: highestRisk,
+    });
+  }
+
+  if (unknownValues.length > 0) {
+    slices.push({
+      name: "Unknown assets",
+      pct: (unknownExposureUsd / total) * 100,
+      risk: "high",
     });
   }
 
