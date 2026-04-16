@@ -75,21 +75,4 @@ describe("adaptUsd1BundleOracle", () => {
       }),
     ).toThrow("timestamp mismatch");
   });
-
-  it("uses a configured oracleAddress in metadata instead of the hardcoded default", () => {
-    const customOracle = "0x2222222222222222222222222222222222222222";
-    const result = adaptUsd1BundleOracle({
-      bundle: encodeAbiParameters(
-        [{ type: "uint256" }, { type: "uint256" }],
-        [1776154391n, 4_089_230_010_760_000_230_000_000_000n],
-      ),
-      latestBundleTimestamp: 1776154391n,
-      bundleDecimals: [18],
-      totalSupplyRaw: 1_540_271_014_130_832_212_980_859_451n,
-      tokenDecimals: 18,
-      oracleAddress: customOracle,
-    });
-
-    expect((result.metadata?.details as Record<string, unknown>).oracleAddress).toBe(customOracle);
-  });
 });

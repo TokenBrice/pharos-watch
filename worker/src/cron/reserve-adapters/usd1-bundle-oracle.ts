@@ -12,13 +12,12 @@ import {
   verifiedFreshnessMetadata,
 } from "./helpers";
 
-const DEFAULT_USD1_BUNDLE_ORACLE = "0x691b74146cdba162449012aa32d3cbf5df77d4c4";
+const USD1_BUNDLE_ORACLE = "0x691b74146cdba162449012aa32d3cbf5df77d4c4";
 const USD1_RESERVE_LABEL = "U.S. Treasury Bills, Money Market Funds & Cash";
 
 interface Usd1BundleOracleParams {
   rpcUrl?: string;
   fallbackRpcUrl?: string;
-  oracleAddress?: string;
 }
 
 const USD1_BUNDLE_ORACLE_ABI = parseAbi([
@@ -46,7 +45,6 @@ export function adaptUsd1BundleOracle(input: {
   bundleDecimals: readonly number[];
   totalSupplyRaw: bigint;
   tokenDecimals: number;
-  oracleAddress?: string;
 }): AdapterResult {
   const [bundleTimestampRaw, totalReserveRaw] = decodeAbiParameters(
     [{ type: "uint256" }, { type: "uint256" }],
@@ -90,7 +88,7 @@ export function adaptUsd1BundleOracle(input: {
       details: {
         proofKind: "usd1-chainlink-bundle-oracle",
         reserveSourceLabel: USD1_RESERVE_LABEL,
-        oracleAddress: input.oracleAddress ?? DEFAULT_USD1_BUNDLE_ORACLE,
+        oracleAddress: USD1_BUNDLE_ORACLE,
         fundScope: "WLFI aggregate fund reserves; denominator is USD1 supply only",
       },
       totalReserveUsd,
@@ -122,7 +120,6 @@ export async function fetchUsd1BundleOracleReserves(
     throw new Error(`usd1-bundle-oracle only supports ethereum, got "${input.chain}"`);
   }
   const params = parseLiveReserveAdapterParams("usd1-bundle-oracle", config.params) as Usd1BundleOracleParams;
-  const oracleAddress = params.oracleAddress ?? DEFAULT_USD1_BUNDLE_ORACLE;
   const tokenContract = coin.contracts?.find((contract) => contract.chain === input.chain);
   if (!tokenContract) {
     throw new Error(`usd1-bundle-oracle missing ${input.chain} USD1 contract metadata`);
@@ -130,7 +127,7 @@ export async function fetchUsd1BundleOracleReserves(
 
   const [rawBundle, latestBundleTimestamp, rawBundleDecimals, totalSupplyRaw] = await Promise.all([
     fetchOnchainRawCall({
-      contract: oracleAddress,
+      contract: USD1_BUNDLE_ORACLE,
       data: LATEST_BUNDLE_SELECTOR,
       signal,
       ctx,
@@ -140,7 +137,7 @@ export async function fetchUsd1BundleOracleReserves(
       fallbackRpcUrl: params.fallbackRpcUrl,
     }),
     fetchOnchainUint256({
-      contract: oracleAddress,
+      contract: USD1_BUNDLE_ORACLE,
       data: LATEST_BUNDLE_TIMESTAMP_SELECTOR,
       signal,
       ctx,
@@ -150,7 +147,7 @@ export async function fetchUsd1BundleOracleReserves(
       fallbackRpcUrl: params.fallbackRpcUrl,
     }),
     fetchOnchainRawCall({
-      contract: oracleAddress,
+      contract: USD1_BUNDLE_ORACLE,
       data: BUNDLE_DECIMALS_SELECTOR,
       signal,
       ctx,
@@ -191,6 +188,5 @@ export async function fetchUsd1BundleOracleReserves(
     bundleDecimals,
     totalSupplyRaw,
     tokenDecimals: tokenContract.decimals,
-    oracleAddress,
   });
 }
