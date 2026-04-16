@@ -84,8 +84,8 @@
     "notes": "The staging split landed. Keep the cron shell focused on phase order and progress coordination; pricing and intake detail should stay in `sync-stablecoins/*` helpers."
   },
   "src/app/methodology/sections/core/stability-index-section.tsx": {
-    "fileLines": 225,
-    "maxFunctionLines": 211,
+    "fileLines": 230,
+    "maxFunctionLines": 216,
     "branchCount": 0,
     "disposition": "stabilized",
     "targetBudget": {
@@ -96,8 +96,8 @@
     "notes": "Section body is now isolated from the methodology shell. Keep future PSI copy changes local to this module unless composition order changes."
   },
   "src/app/methodology/sections/core/safety-scores-section.tsx": {
-    "fileLines": 507,
-    "maxFunctionLines": 493,
+    "fileLines": 515,
+    "maxFunctionLines": 501,
     "branchCount": 0,
     "disposition": "queued-p4",
     "targetBudget": {
@@ -108,8 +108,8 @@
     "notes": "The shell split landed, but the Safety Scores body is still the largest methodology section. Next pass should separate calculator wiring, grading pipeline copy, and tables."
   },
   "src/app/methodology/sections/core/liquidity-section.tsx": {
-    "fileLines": 150,
-    "maxFunctionLines": 142,
+    "fileLines": 154,
+    "maxFunctionLines": 146,
     "branchCount": 0,
     "disposition": "queued-p4",
     "targetBudget": {
@@ -132,8 +132,8 @@
     "notes": "Mint/burn copy is localized, but still larger than the desired long-term budget. Split the detailed pipeline tables from the overview copy when touched next."
   },
   "src/app/methodology/sections/monitoring/yield-intelligence-section.tsx": {
-    "fileLines": 250,
-    "maxFunctionLines": 236,
+    "fileLines": 256,
+    "maxFunctionLines": 242,
     "branchCount": 0,
     "disposition": "queued-p4",
     "targetBudget": {
@@ -144,8 +144,8 @@
     "notes": "Yield methodology is now its own module. If more source-policy copy lands, extract the arbitration and PYS formula blocks into smaller subcomponents."
   },
   "src/app/methodology/sections/monitoring/pegscore-dews-section.tsx": {
-    "fileLines": 483,
-    "maxFunctionLines": 471,
+    "fileLines": 493,
+    "maxFunctionLines": 481,
     "branchCount": 0,
     "disposition": "queued-p4",
     "targetBudget": {
@@ -204,8 +204,8 @@
     "notes": "Reference tables are already separated. Keep future lookup tables here rather than regrowing the per-version modules."
   },
   "src/app/coverage/client.tsx": {
-    "fileLines": 39,
-    "maxFunctionLines": 27,
+    "fileLines": 59,
+    "maxFunctionLines": 44,
     "branchCount": 2,
     "disposition": "stabilized",
     "targetBudget": {
@@ -276,7 +276,7 @@
     "notes": "Post-score baselines, drift guards, and metadata assembly now live in dedicated helpers. Keep the entrypoint focused on phase order, abort boundaries, and persistence sequencing."
   },
   "worker/src/cron/sync-mint-burn.ts": {
-    "fileLines": 344,
+    "fileLines": 334,
     "maxFunctionLines": 257,
     "branchCount": 16,
     "disposition": "stabilized",
@@ -324,7 +324,7 @@
     "notes": "Previously a major hotspot and now materially reduced. Preserve the split; future providers should land in helper modules, not back in this shell."
   },
   "worker/src/cron/sync-blacklist.ts": {
-    "fileLines": 437,
+    "fileLines": 435,
     "maxFunctionLines": 367,
     "branchCount": 36,
     "disposition": "queued-p4",

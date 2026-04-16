@@ -62,7 +62,7 @@ export function BlacklistTrackerMethodologySection() {
                 <div className="space-y-3">
                   <p>The blacklist tracker maintains a reconciled freeze ledger that merges event-driven updates with periodic full-state snapshots. Each cron run processes new events since the last indexed block, then reconciles against the cumulative ledger.</p>
                   <p>Backlog sync handles gaps from missed cron runs or RPC failures by replaying events from the last confirmed cursor. Tron events use a separate ingestion path due to the TRC-20 event format differences.</p>
-                  <p>The public-facing freeze totals combine per-chain counts into a single figure. When the tracker detects an Unfreeze or DestroyedBlackFunds event, it decrements the affected chain's count and recalculates the aggregate.</p>
+                  <p>The public-facing freeze totals combine per-chain counts into a single figure. When the tracker detects an Unfreeze or DestroyedBlackFunds event, it decrements the affected chain&rsquo;s count and recalculates the aggregate.</p>
                 </div>
               </MethodologyDetails>
           </MethodologySectionShell>

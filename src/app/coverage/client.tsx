@@ -10,7 +10,7 @@ import {
   CoveragePricingSourcesCard,
 } from "./coverage-page-sections";
 import { useCoveragePageModel } from "./use-coverage-page-model";
-import { COVERAGE_FAQ_ITEMS } from "./page";
+import { COVERAGE_FAQ_ITEMS } from "./coverage-faq";
 
 export default function CoveragePageClient() {
   const model = useCoveragePageModel();

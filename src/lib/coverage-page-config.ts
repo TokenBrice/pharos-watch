@@ -230,7 +230,7 @@ export const MOBILE_PREVIEW_FEATURES: readonly CoverageFeatureKey[] = [
 
 export type LegendCategory = "general" | "price" | "dex" | "reserves" | "redemption" | "flows" | "dependency";
 
-export const LEGEND_ITEMS = [
+const LEGEND_ITEMS = [
   {
     term: "NR",
     category: "general",
