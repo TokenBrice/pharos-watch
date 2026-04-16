@@ -249,10 +249,7 @@ export function buildReserveSyncRecordDeferredStatement(
   db: D1Database,
   record: ReserveSyncDeferredRecord,
 ): D1PreparedStatement {
-  const metadata = JSON.stringify({
-    failureCategory: record.reason,
-    reason: record.reason,
-  });
+  const metadata = JSON.stringify({ failureCategory: record.reason });
   return db
     .prepare(
       `INSERT INTO reserve_sync_state (
