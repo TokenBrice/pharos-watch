@@ -31,6 +31,19 @@ export function breakerKeyForConfig(config: LiveReserveConfig): string {
   return `live-reserves:${config.breakerScope ?? config.adapter}`;
 }
 
+function canonicalStringify(value: unknown): string {
+  if (value === null || typeof value !== "object") {
+    return JSON.stringify(value);
+  }
+  if (Array.isArray(value)) {
+    return `[${value.map((item) => canonicalStringify(item)).join(",")}]`;
+  }
+  const entries = Object.keys(value as Record<string, unknown>)
+    .sort()
+    .map((key) => `${JSON.stringify(key)}:${canonicalStringify((value as Record<string, unknown>)[key])}`);
+  return `{${entries.join(",")}}`;
+}
+
 export function buildSharedSourceCacheKey(
   config: LiveReserveConfig,
   adapter: ReserveAdapterDefinition,
@@ -44,7 +57,7 @@ export function buildSharedSourceCacheKey(
     return null;
   }
 
-  return JSON.stringify({
+  return canonicalStringify({
     adapter: config.adapter,
     version: config.version,
     semantics: config.semantics,

@@ -421,3 +421,45 @@ describe("syncLiveReserves", () => {
     });
   });
 });
+
+describe("buildSharedSourceCacheKey", () => {
+  it("produces the same key regardless of key insertion order", async () => {
+    const { buildSharedSourceCacheKey } = await import("../sync-live-reserves-shared");
+
+    const adapter = {
+      key: "mento",
+      fetch: async () => ({ slices: [] }),
+      sourceModel: "dynamic-mix",
+      evidenceClass: "independent",
+      sharedSourceMode: "source-invariant",
+    } as unknown as Parameters<typeof buildSharedSourceCacheKey>[1];
+
+    const configA = {
+      adapter: "mento",
+      version: 1,
+      semantics: "bucketed-collateral-mix",
+      inputs: {
+        primary: { kind: "http-json", url: "https://example.com/api" },
+        fallbacks: [{ kind: "http-json", url: "https://example.com/backup" }],
+      },
+      params: { chain: "celo", foo: "bar" },
+    } as unknown as Parameters<typeof buildSharedSourceCacheKey>[0];
+
+    const configB = {
+      params: { foo: "bar", chain: "celo" },
+      inputs: {
+        fallbacks: [{ url: "https://example.com/backup", kind: "http-json" }],
+        primary: { url: "https://example.com/api", kind: "http-json" },
+      },
+      semantics: "bucketed-collateral-mix",
+      version: 1,
+      adapter: "mento",
+    } as unknown as Parameters<typeof buildSharedSourceCacheKey>[0];
+
+    const keyA = buildSharedSourceCacheKey(configA, adapter);
+    const keyB = buildSharedSourceCacheKey(configB, adapter);
+
+    expect(keyA).toBeDefined();
+    expect(keyA).toEqual(keyB);
+  });
+});
