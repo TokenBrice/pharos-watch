@@ -1,13 +1,14 @@
 import { parseLiveReserveAdapterParams } from "@shared/lib/live-reserve-adapters";
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins";
 import type { ReserveSlice } from "@shared/types/core";
-import type { LiveReserveAdapterKey, LiveReservesConfig } from "@shared/types/live-reserves";
+import type { LiveReserveAdapterKey, LiveReservesConfig, LiveReserveWarning } from "@shared/types/live-reserves";
 import type { AdapterContext, AdapterResult } from "./types";
 import {
   fetchDefiLlamaPrices,
   fetchErc20Balance,
   notApplicableFreshnessMetadata,
   requireOnchainInput,
+  reserveDegradedWarning,
   slicesFromValues,
   valueUsdFromBigIntPrice,
 } from "./helpers";
@@ -61,11 +62,22 @@ export function readBranchBalanceParams(
   return parseLiveReserveAdapterParams(adapterKey, config.params) as BranchBalanceParams;
 }
 
-function getCoinIdFallbackPriceUsd(coinId: string | undefined): number | null {
-  if (!coinId) return null;
-  const meta = TRACKED_META_BY_ID.get(coinId);
-  if (!meta) return null;
-  return meta.flags.pegCurrency === "USD" ? 1 : null;
+function isUsdPeggedBranch(branch: BranchConfig): boolean {
+  if (!branch.coinId) return false;
+  const meta = TRACKED_META_BY_ID.get(branch.coinId);
+  return meta?.flags.pegCurrency === "USD";
+}
+
+function findUnderlyingContract(
+  branch: BranchConfig,
+): { chain: string; address: string } | null {
+  if (!branch.coinId) return null;
+  const meta = TRACKED_META_BY_ID.get(branch.coinId);
+  if (!meta?.contracts) return null;
+  const sameChain = meta.contracts.find((c) => c.chain === branch.token.chain);
+  if (sameChain) return { chain: sameChain.chain, address: sameChain.address };
+  const first = meta.contracts[0];
+  return first ? { chain: first.chain, address: first.address } : null;
 }
 
 export async function fetchBranchBalances(
@@ -97,7 +109,9 @@ export async function fetchBranchPriceMap(
 ): Promise<Map<string, number>> {
   const branchesNeedingPrices = balances
     .filter(({ branch, balanceRaw }) => balanceRaw != null && balanceRaw > 0n && branch.priceUsd == null);
-  return fetchDefiLlamaPrices(
+  if (branchesNeedingPrices.length === 0) return new Map();
+
+  const wrapperPriceMap = await fetchDefiLlamaPrices(
     branchesNeedingPrices.map(({ branch }) => ({
       key: branch.name,
       chain: branch.token.chain,
@@ -106,6 +120,38 @@ export async function fetchBranchPriceMap(
     signal,
     ctx,
   );
+
+  // For branches the wrapper-address lookup didn't resolve, fall back to the
+  // underlying coin's canonical contract price (no silent $1 clamp).
+  const underlyingLookups = branchesNeedingPrices
+    .filter(({ branch }) => !wrapperPriceMap.has(branch.name))
+    .map(({ branch }) => {
+      const underlying = findUnderlyingContract(branch);
+      return underlying ? { branch, underlying } : null;
+    })
+    .filter(
+      (entry): entry is { branch: BranchConfig; underlying: { chain: string; address: string } } =>
+        entry != null,
+    );
+
+  if (underlyingLookups.length > 0) {
+    const underlyingPriceMap = await fetchDefiLlamaPrices(
+      underlyingLookups.map(({ branch, underlying }) => ({
+        key: branch.name,
+        chain: underlying.chain,
+        address: underlying.address,
+      })),
+      signal,
+      ctx,
+    );
+    for (const [name, price] of underlyingPriceMap) {
+      if (!wrapperPriceMap.has(name)) {
+        wrapperPriceMap.set(name, price);
+      }
+    }
+  }
+
+  return wrapperPriceMap;
 }
 
 export function adaptBranchBalanceReserves(input: AdaptBranchBalanceInput): AdapterResult {
@@ -123,11 +169,28 @@ export function adaptBranchBalanceReserves(input: AdaptBranchBalanceInput): Adap
     throw new Error(`${adapterKey} adapter found no non-zero balances`);
   }
 
+  const warnings: LiveReserveWarning[] = [];
+
   const slices = slicesFromValues(
     pricedBranches.map(({ branch, balanceRaw }) => {
-      const price = branch.priceUsd ?? priceMap.get(branch.name) ?? getCoinIdFallbackPriceUsd(branch.coinId);
+      const price = branch.priceUsd ?? priceMap.get(branch.name);
       if (price == null) {
         throw new Error(`Missing DefiLlama price for ${branch.name}`);
+      }
+      // Apply depeg policy tiers to USD-pegged branches when the price came
+      // from a live source (no explicit override).
+      if (isUsdPeggedBranch(branch) && branch.priceUsd == null) {
+        if (price < 0.5 || price > 1.5) {
+          throw new Error(
+            `${adapterKey} adapter: extreme depeg on wrapper ${branch.name} (price $${price.toFixed(4)})`,
+          );
+        }
+        if (price < 0.95 || price > 1.05) {
+          warnings.push(reserveDegradedWarning(
+            "wrapper-depeg-detected",
+            `Wrapper ${branch.name} priced at $${price.toFixed(4)} vs USD peg`,
+          ));
+        }
       }
       return {
         value: valueUsdFromBigIntPrice(balanceRaw ?? 0n, branch.token.decimals, price),
@@ -141,6 +204,7 @@ export function adaptBranchBalanceReserves(input: AdaptBranchBalanceInput): Adap
 
   return {
     slices,
+    ...(warnings.length > 0 ? { warnings } : {}),
     metadata: {
       branchCount: pricedBranches.length,
       ...notApplicableFreshnessMetadata({

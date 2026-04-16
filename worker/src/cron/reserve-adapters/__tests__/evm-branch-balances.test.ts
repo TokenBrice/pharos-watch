@@ -345,9 +345,13 @@ describe("fetchEvmBranchBalancesReserves", () => {
     );
   });
 
-  it("falls back to a tracked USD peg when a branch has coinId metadata but no DefiLlama price", async () => {
+  it("falls through to the underlying coin price when the wrapper address lookup is missing", async () => {
     vi.mocked(fetchErc20Balance).mockResolvedValue(50_000_000n);
-    vi.mocked(fetchDefiLlamaPrices).mockResolvedValue(new Map());
+    // First DefiLlama call (wrapper) returns empty; second call (underlying
+    // usdc-circle contract) returns a live price near peg.
+    vi.mocked(fetchDefiLlamaPrices)
+      .mockResolvedValueOnce(new Map())
+      .mockResolvedValueOnce(new Map([["USDC branch", 1.0]]));
 
     const config: LiveReservesConfig = {
       adapter: "evm-branch-balances",
@@ -373,6 +377,100 @@ describe("fetchEvmBranchBalancesReserves", () => {
     expect(result.slices).toEqual([
       { name: "USDC branch", pct: 100, risk: "low", coinId: "usdc-circle" },
     ]);
+    expect(result.warnings).toBeUndefined();
+  });
+
+  it("emits degraded warning when a USD-pegged wrapper price is outside 5% but within 20% of peg", async () => {
+    vi.mocked(fetchErc20Balance).mockResolvedValue(50_000_000n);
+    vi.mocked(fetchDefiLlamaPrices).mockResolvedValue(
+      new Map([["USDC branch", 0.9]]),
+    );
+
+    const config: LiveReservesConfig = {
+      adapter: "evm-branch-balances",
+      version: 1,
+      semantics: "collateral-mix",
+      inputs: {
+        primary: { kind: "onchain-evm", chain: "ethereum", rpcMode: "public-rpc" },
+      },
+      params: {
+        branches: [
+          {
+            name: "USDC branch",
+            holder: "0xAAA",
+            token: { chain: "ethereum", address: "0xBBB", decimals: 6 },
+            risk: "low",
+            coinId: "usdc-circle",
+          },
+        ],
+      },
+    };
+
+    const result = await fetchEvmBranchBalancesReserves(coin, config, signal);
+    expect(result.warnings).toEqual([
+      expect.objectContaining({ code: "wrapper-depeg-detected", severity: "warning" }),
+    ]);
+  });
+
+  it("throws when a USD-pegged wrapper price is outside the 0.5-1.5 fatal band", async () => {
+    vi.mocked(fetchErc20Balance).mockResolvedValue(50_000_000n);
+    vi.mocked(fetchDefiLlamaPrices).mockResolvedValue(
+      new Map([["USDC branch", 0.4]]),
+    );
+
+    const config: LiveReservesConfig = {
+      adapter: "evm-branch-balances",
+      version: 1,
+      semantics: "collateral-mix",
+      inputs: {
+        primary: { kind: "onchain-evm", chain: "ethereum", rpcMode: "public-rpc" },
+      },
+      params: {
+        branches: [
+          {
+            name: "USDC branch",
+            holder: "0xAAA",
+            token: { chain: "ethereum", address: "0xBBB", decimals: 6 },
+            risk: "low",
+            coinId: "usdc-circle",
+          },
+        ],
+      },
+    };
+
+    await expect(fetchEvmBranchBalancesReserves(coin, config, signal)).rejects.toThrow(
+      /extreme depeg/,
+    );
+  });
+
+  it("does not warn when a USD-pegged wrapper trades within 5% of peg", async () => {
+    vi.mocked(fetchErc20Balance).mockResolvedValue(50_000_000n);
+    vi.mocked(fetchDefiLlamaPrices).mockResolvedValue(
+      new Map([["USDC branch", 1.02]]),
+    );
+
+    const config: LiveReservesConfig = {
+      adapter: "evm-branch-balances",
+      version: 1,
+      semantics: "collateral-mix",
+      inputs: {
+        primary: { kind: "onchain-evm", chain: "ethereum", rpcMode: "public-rpc" },
+      },
+      params: {
+        branches: [
+          {
+            name: "USDC branch",
+            holder: "0xAAA",
+            token: { chain: "ethereum", address: "0xBBB", decimals: 6 },
+            risk: "low",
+            coinId: "usdc-circle",
+          },
+        ],
+      },
+    };
+
+    const result = await fetchEvmBranchBalancesReserves(coin, config, signal);
+    expect(result.warnings).toBeUndefined();
   });
 
   it("throws when params.branches is missing", async () => {
