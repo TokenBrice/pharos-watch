@@ -131,6 +131,12 @@ export function toBlockTag(blockNumberOrTag: number | "latest"): string {
   return blockNumberOrTag === "latest" ? "latest" : `0x${blockNumberOrTag.toString(16)}`;
 }
 
+function normalizeJsonRpcQuantityHex(value: string): string | null {
+  if (!/^0x[0-9a-fA-F]+$/.test(value)) return null;
+  const body = value.slice(2).replace(/^0+/, "");
+  return `0x${body.length > 0 ? body : "0"}`;
+}
+
 function parseHexInteger(value: string | undefined): number | null {
   if (typeof value !== "string" || !value.startsWith("0x")) return null;
   const parsed = Number.parseInt(value, 16);
@@ -173,7 +179,10 @@ export async function fetchEvmCallHexAtBlock(
   if (urls.length === 0) return null;
 
   const callObj: Record<string, string> = { to, data };
-  if (options?.gas) callObj.gas = options.gas;
+  if (options?.gas) {
+    const normalizedGas = normalizeJsonRpcQuantityHex(options.gas);
+    if (normalizedGas) callObj.gas = normalizedGas;
+  }
   const blockTag = toBlockTag(blockNumberOrTag);
   const result = await fetchJsonRpcResult<string>(
     urls,

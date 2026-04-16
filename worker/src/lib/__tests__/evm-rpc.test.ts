@@ -102,6 +102,22 @@ describe("evm-rpc helpers", () => {
     expect(body.params[0]).toMatchObject({ to: "0xToken", data: "0x1234", gas: "0x7a120" });
   });
 
+  it("normalizes gas as a JSON-RPC quantity before sending eth_call", async () => {
+    fetchWithRetryMock.mockResolvedValue(
+      new Response(JSON.stringify({ result: "0x2a" }), { status: 200 }),
+    );
+
+    await fetchEvmCallHexAtBlock(undefined, "0xToken", "0x1234", "latest", {
+      extraRpcUrls: ["https://rpc.example"],
+      gas: "0x0F4240",
+    });
+
+    const body = JSON.parse(fetchWithRetryMock.mock.calls[0][1]?.body) as {
+      params: Array<{ gas?: string }>;
+    };
+    expect(body.params[0]?.gas).toBe("0xF4240");
+  });
+
   it("falls back when eth_call returns an invalid hex result", async () => {
     fetchWithRetryMock
       .mockResolvedValueOnce(new Response(JSON.stringify({ result: "not-hex" }), { status: 200 }))
