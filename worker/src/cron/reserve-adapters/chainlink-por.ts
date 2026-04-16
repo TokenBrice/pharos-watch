@@ -1,11 +1,10 @@
-import type { ReserveSlice, StablecoinMeta } from "@shared/types/core";
-import type { LiveReservesConfig } from "@shared/types/live-reserves";
+import type { ContractDeployment, ReserveSlice, StablecoinMeta } from "@shared/types/core";
+import type { LiveReservesConfig, LiveReserveWarning } from "@shared/types/live-reserves";
 import { DAY_SECONDS } from "@shared/lib/time-constants";
 import { parseLiveReserveAdapterParams } from "@shared/lib/live-reserve-adapters";
 import { DECIMALS_SELECTOR, LATEST_ROUND_DATA_SELECTOR } from "../../lib/evm-selectors";
 import type { AdapterContext, AdapterResult } from "./types";
 import { parseChainlinkLatestRoundData } from "./chainlink";
-import { resolveCoinContractAddress } from "./evm";
 import {
   decimalNumberFromBigInt,
   fetchErc20TotalSupply,
@@ -13,6 +12,7 @@ import {
   fetchOnchainUint256,
   requireOnchainInput,
   reserveDegradedWarning,
+  reserveInfoWarning,
 } from "./helpers";
 import { MAX_FUTURE_SOURCE_TIMESTAMP_SKEW_SEC } from "./validate";
 const DEFAULT_MAX_ORACLE_AGE_SEC = 2 * DAY_SECONDS;
@@ -33,10 +33,21 @@ interface ChainlinkPorData {
   updatedAt: number;
 }
 
-interface ChainlinkPorSupplyData {
+export interface ChainlinkPorSupplyContribution {
+  chain: string;
+  tokenAddress: string;
   raw: bigint;
   decimals: number;
-  tokenAddress: string;
+}
+
+export interface ChainlinkPorSupplyAggregate {
+  contributions: ChainlinkPorSupplyContribution[];
+  omittedNonEvmChains: string[];
+  omittedReadFailureChains: string[];
+}
+
+function isEvmContract(contract: ContractDeployment): boolean {
+  return contract.chain !== "tron" && contract.chain !== "solana";
 }
 
 function readParams(config: LiveReservesConfig): ChainlinkPorParams {
@@ -47,21 +58,48 @@ function readParams(config: LiveReservesConfig): ChainlinkPorParams {
 export function adaptChainlinkPorResponse(
   data: ChainlinkPorData,
   params: ChainlinkPorParams,
-  supply?: ChainlinkPorSupplyData | null,
+  supply?: ChainlinkPorSupplyAggregate | null,
 ): AdapterResult {
   if (data.reserves <= 0n) {
     throw new Error("chainlink-por: feed reported zero or negative reserves");
   }
 
   const totalReserveUsd = decimalNumberFromBigInt(data.reserves, data.decimals);
-  const supplyUsd = supply ? decimalNumberFromBigInt(supply.raw, supply.decimals) : undefined;
+  const supplyUsd = supply && supply.contributions.length > 0
+    ? supply.contributions.reduce(
+        (acc, contribution) => acc + decimalNumberFromBigInt(contribution.raw, contribution.decimals),
+        0,
+      )
+    : undefined;
   const collateralizationRatio = supplyUsd != null && supplyUsd > 0 ? totalReserveUsd / supplyUsd : undefined;
-  const warnings = collateralizationRatio != null && collateralizationRatio < 0.995
-    ? [reserveDegradedWarning(
-        "por-reserve-under-supply",
-        `Chainlink PoR reserves cover ${(collateralizationRatio * 100).toFixed(2)}% of same-chain token supply`,
-      )]
-    : [];
+
+  const warnings: LiveReserveWarning[] = [];
+  if (collateralizationRatio != null && collateralizationRatio < 0.995) {
+    warnings.push(reserveDegradedWarning(
+      "por-reserve-under-supply",
+      `Chainlink PoR reserves cover ${(collateralizationRatio * 100).toFixed(2)}% of multichain token supply`,
+    ));
+  }
+  if (collateralizationRatio != null && collateralizationRatio > 1.1) {
+    warnings.push(reserveDegradedWarning(
+      "por-reserve-over-supply",
+      `Chainlink PoR reserves cover ${(collateralizationRatio * 100).toFixed(2)}% of multichain token supply (possible scope mismatch)`,
+    ));
+  }
+  if (supply && supply.omittedNonEvmChains.length > 0) {
+    warnings.push(reserveInfoWarning(
+      "por-supply-chain-omitted",
+      `Supply aggregation omits non-EVM chains: ${supply.omittedNonEvmChains.join(", ")}`,
+    ));
+  }
+  if (supply && supply.omittedReadFailureChains.length > 0) {
+    warnings.push(reserveInfoWarning(
+      "por-supply-chain-partial-omitted",
+      `Supply aggregation omits EVM chains whose totalSupply() read failed: ${supply.omittedReadFailureChains.join(", ")}`,
+    ));
+  }
+
+  const primaryContribution = supply?.contributions[0];
 
   return {
     slices: [
@@ -85,12 +123,22 @@ export function adaptChainlinkPorResponse(
         routeStatus: "unknown" as const,
       },
       totalReserveUsd,
-      ...(supply
+      ...(supplyUsd != null
         ? {
             supplyUsd,
-            supplyRaw: supply.raw.toString(),
-            supplyDecimals: supply.decimals,
-            supplyTokenAddress: supply.tokenAddress,
+            supplyContributions: supply!.contributions.map((contribution) => ({
+              chain: contribution.chain,
+              tokenAddress: contribution.tokenAddress,
+              supplyRaw: contribution.raw.toString(),
+              decimals: contribution.decimals,
+            })),
+            ...(primaryContribution
+              ? {
+                  supplyRaw: primaryContribution.raw.toString(),
+                  supplyDecimals: primaryContribution.decimals,
+                  supplyTokenAddress: primaryContribution.tokenAddress,
+                }
+              : {}),
           }
         : {}),
       ...(collateralizationRatio != null ? { collateralizationRatio } : {}),
@@ -148,33 +196,51 @@ export async function fetchChainlinkPorReserves(
     throw new Error(`chainlink-por: feed data is stale (${ageSec}s > ${maxOracleAgeSec}s)`);
   }
 
-  const tokenAddress = resolveCoinContractAddress(coin, input.chain);
-  if (!tokenAddress) {
-    throw new Error(`chainlink-por: missing ${input.chain} token contract metadata for ${coin.id}`);
+  // 3. Aggregate totalSupply across all EVM chains in coin.contracts.
+  //    Non-EVM chains (tron, solana) are omitted and surfaced as an info warning.
+  const allContracts = coin.contracts ?? [];
+  const evmContracts = allContracts.filter(isEvmContract);
+  const omittedNonEvmChains = allContracts.filter((c) => !isEvmContract(c)).map((c) => c.chain);
+
+  if (evmContracts.length === 0) {
+    throw new Error(`chainlink-por: no EVM contracts available for ${coin.id}`);
   }
-  const tokenContract = coin.contracts?.find((contract) => (
-    contract.chain === input.chain
-    && contract.address.toLowerCase() === tokenAddress.toLowerCase()
+
+  const supplyReads = await Promise.all(evmContracts.map(async (contract) => {
+    const raw = await fetchErc20TotalSupply(
+      { ...input, chain: contract.chain },
+      contract.address,
+      signal,
+      ctx,
+      params.rpcUrl,
+      params.fallbackRpcUrl,
+    );
+    return { contract, raw };
+  }));
+
+  const successful = supplyReads.filter((entry): entry is { contract: ContractDeployment; raw: bigint } => (
+    entry.raw != null && entry.raw > 0n
   ));
-  const supplyRaw = await fetchErc20TotalSupply(
-    input,
-    tokenAddress,
-    signal,
-    ctx,
-    params.rpcUrl,
-    params.fallbackRpcUrl,
-  );
-  if (supplyRaw == null || supplyRaw <= 0n) {
-    throw new Error(`chainlink-por: totalSupply() call failed for ${coin.id}`);
+  const failed = supplyReads.filter((entry) => entry.raw == null || entry.raw <= 0n);
+
+  if (successful.length === 0) {
+    throw new Error(`chainlink-por: totalSupply() calls failed on all EVM chains for ${coin.id}`);
   }
+
+  const supplyAggregate: ChainlinkPorSupplyAggregate = {
+    contributions: successful.map((entry) => ({
+      chain: entry.contract.chain,
+      tokenAddress: entry.contract.address,
+      raw: entry.raw,
+      decimals: entry.contract.decimals ?? 18,
+    })),
+    omittedNonEvmChains,
+    omittedReadFailureChains: failed.map((entry) => entry.contract.chain),
+  };
 
   return adaptChainlinkPorResponse(
     { reserves: answer, decimals, roundId, updatedAt },
     params,
-    {
-      raw: supplyRaw,
-      decimals: tokenContract?.decimals ?? 18,
-      tokenAddress,
-    },
+    supplyAggregate,
   );
 }

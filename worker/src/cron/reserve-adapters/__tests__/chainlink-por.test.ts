@@ -1,5 +1,33 @@
-import { describe, it, expect } from "vitest";
-import { adaptChainlinkPorResponse, type ChainlinkPorParams } from "../chainlink-por";
+import { beforeEach, describe, it, expect, vi } from "vitest";
+import type { StablecoinMeta } from "@shared/types/core";
+import type { LiveReservesConfig } from "@shared/types/live-reserves";
+
+vi.mock("../helpers", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("../helpers")>();
+  return {
+    ...actual,
+    fetchErc20TotalSupply: vi.fn(),
+    fetchOnchainUint256: vi.fn(),
+    fetchOnchainRawCall: vi.fn(),
+  };
+});
+
+import {
+  adaptChainlinkPorResponse,
+  fetchChainlinkPorReserves,
+  type ChainlinkPorParams,
+} from "../chainlink-por";
+import {
+  fetchErc20TotalSupply,
+  fetchOnchainRawCall,
+  fetchOnchainUint256,
+} from "../helpers";
+
+const signal = AbortSignal.timeout(5_000);
+
+beforeEach(() => {
+  vi.clearAllMocks();
+});
 
 describe("adaptChainlinkPorResponse", () => {
   const params: ChainlinkPorParams = {
@@ -26,9 +54,16 @@ describe("adaptChainlinkPorResponse", () => {
       { reserves: 145_000_000_000n, decimals: 8, roundId: 42n, updatedAt: 1710000000 },
       params,
       {
-        raw: 144_000_000_000_000_000_000_000_000n,
-        decimals: 18,
-        tokenAddress: "0x0000000000000000000000000000000000000001",
+        contributions: [
+          {
+            chain: "ethereum",
+            tokenAddress: "0x0000000000000000000000000000000000000001",
+            raw: 144_000_000_000_000_000_000_000_000n,
+            decimals: 18,
+          },
+        ],
+        omittedNonEvmChains: [],
+        omittedReadFailureChains: [],
       },
     );
     expect(result.metadata?.totalReservesRaw).toBe("145000000000");
@@ -38,28 +73,78 @@ describe("adaptChainlinkPorResponse", () => {
     expect(result.metadata).toMatchObject({
       totalReserveUsd: 1450,
       supplyUsd: 144_000_000,
-      supplyRaw: "144000000000000000000000000",
-      supplyDecimals: 18,
-      supplyTokenAddress: "0x0000000000000000000000000000000000000001",
     });
   });
 
-  it("degrades when reserves do not cover same-chain token supply", () => {
+  it("degrades when reserves do not cover multichain token supply", () => {
     const result = adaptChainlinkPorResponse(
       { reserves: 99_000_000_000n, decimals: 8, roundId: 42n, updatedAt: 1710000000 },
       params,
       {
-        raw: 1000_000000000000000000n,
-        decimals: 18,
-        tokenAddress: "0x0000000000000000000000000000000000000001",
+        contributions: [
+          {
+            chain: "ethereum",
+            tokenAddress: "0x0000000000000000000000000000000000000001",
+            raw: 1000_000000000000000000n,
+            decimals: 18,
+          },
+        ],
+        omittedNonEvmChains: [],
+        omittedReadFailureChains: [],
       },
     );
 
     expect(result.metadata?.collateralizationRatio).toBe(0.99);
-    expect(result.warnings?.[0]).toMatchObject({
-      code: "por-reserve-under-supply",
-      effect: "degraded",
-    });
+    expect(result.warnings?.some((w) => w.code === "por-reserve-under-supply")).toBe(true);
+    expect(result.warnings?.find((w) => w.code === "por-reserve-under-supply")?.effect).toBe("degraded");
+  });
+
+  it("emits over-collateralization warning when ratio exceeds 1.1", () => {
+    const result = adaptChainlinkPorResponse(
+      { reserves: 160_000_000_000n, decimals: 8, roundId: 42n, updatedAt: 1710000000 },
+      params,
+      {
+        contributions: [
+          {
+            chain: "ethereum",
+            tokenAddress: "0x0000000000000000000000000000000000000001",
+            raw: 1000_000000000000000000n,
+            decimals: 18,
+          },
+        ],
+        omittedNonEvmChains: [],
+        omittedReadFailureChains: [],
+      },
+    );
+
+    // reserves = 1600 USD / supply = 1000 tokens -> ratio = 1.6
+    expect(result.metadata?.collateralizationRatio).toBeCloseTo(1.6, 5);
+    expect(result.warnings?.some((w) => w.code === "por-reserve-over-supply")).toBe(true);
+    expect(result.warnings?.find((w) => w.code === "por-reserve-over-supply")?.effect).toBe("degraded");
+  });
+
+  it("emits info warning when non-EVM chains are omitted from supply aggregation", () => {
+    const result = adaptChainlinkPorResponse(
+      { reserves: 100_000_000_000n, decimals: 8, roundId: 42n, updatedAt: 1710000000 },
+      params,
+      {
+        contributions: [
+          {
+            chain: "ethereum",
+            tokenAddress: "0x0000000000000000000000000000000000000001",
+            raw: 1000_000000000000000000n,
+            decimals: 18,
+          },
+        ],
+        omittedNonEvmChains: ["tron"],
+        omittedReadFailureChains: [],
+      },
+    );
+
+    const omitted = result.warnings?.find((w) => w.code === "por-supply-chain-omitted");
+    expect(omitted).toBeDefined();
+    expect(omitted?.severity).toBe("info");
+    expect(omitted?.message).toContain("tron");
   });
 
   it("throws on zero reserves", () => {
@@ -69,5 +154,111 @@ describe("adaptChainlinkPorResponse", () => {
         params,
       ),
     ).toThrow();
+  });
+});
+
+describe("fetchChainlinkPorReserves", () => {
+  const baseParams = {
+    porFeedAddress: "0xBE456fd14720C3aCCc30A2013Bffd782c9Cb75D5",
+    assetLabel: "USD Cash Reserves",
+    assetRisk: "very-low" as const,
+  };
+
+  const config: LiveReservesConfig = {
+    adapter: "chainlink-por",
+    version: 1,
+    semantics: "collateral-mix",
+    inputs: {
+      primary: { kind: "onchain-evm", chain: "ethereum", rpcMode: "public-rpc" },
+    },
+    params: baseParams,
+  };
+
+  // Encodes latestRoundData() result: roundId=42, answer=200e8, startedAt=0, updatedAt, answeredInRound=42
+  function encodeLatestRoundData(answer: bigint, updatedAt: number): string {
+    const word = (value: bigint) => value.toString(16).padStart(64, "0");
+    return `0x${word(42n)}${word(answer)}${word(0n)}${word(BigInt(updatedAt))}${word(42n)}`;
+  }
+
+  it("sums totalSupply across all configured EVM chains for the ratio denominator", async () => {
+    // TUSD-style: ethereum + tron + avalanche + bsc (EVM-only: ethereum + avalanche + bsc)
+    const coin: StablecoinMeta = {
+      id: "tusd-test",
+      name: "TUSD Test",
+      symbol: "TUSDT",
+      flags: {
+        backing: "rwa-backed",
+        pegCurrency: "USD",
+        governance: "centralized",
+        yieldBearing: false,
+        rwa: false,
+        navToken: false,
+      },
+      contracts: [
+        { chain: "ethereum", address: "0x0000000000085d4780b73119b644ae5ecd22b376", decimals: 18 },
+        { chain: "tron", address: "TUpMhErZL2fhh4sVNULAbNKLokS4GjC1F4", decimals: 18 },
+        { chain: "avalanche", address: "0x1c20e891bab6b1727d14da358fae2984ed9b59eb", decimals: 18 },
+        { chain: "bsc", address: "0x40af3827f39d0eacbf4a168f8d4ee67c121d11c9", decimals: 18 },
+      ],
+    };
+
+    const now = 1_700_000_000;
+
+    // decimals() returns 8 for the PoR feed
+    vi.mocked(fetchOnchainUint256).mockResolvedValueOnce(8n);
+    // latestRoundData() returns reserves of 600e8 (600 tokens' worth)
+    vi.mocked(fetchOnchainRawCall).mockResolvedValueOnce(
+      encodeLatestRoundData(600_00000000n, now - 60),
+    );
+
+    // EVM chains each return 200 tokens (18 decimals) — total 600 tokens supply
+    vi.mocked(fetchErc20TotalSupply)
+      .mockResolvedValueOnce(200_000000000000000000n) // ethereum
+      .mockResolvedValueOnce(200_000000000000000000n) // avalanche
+      .mockResolvedValueOnce(200_000000000000000000n); // bsc
+
+    const result = await fetchChainlinkPorReserves(coin, config, signal, { nowSec: now });
+
+    // reserves = $600, multichain supply = 600 tokens -> ratio ~ 1.0
+    expect(result.metadata?.collateralizationRatio).toBeCloseTo(1.0, 5);
+    expect(result.metadata?.supplyUsd).toBeCloseTo(600, 5);
+
+    // Non-EVM chain (tron) should emit info warning
+    const omitted = result.warnings?.find((w) => w.code === "por-supply-chain-omitted");
+    expect(omitted).toBeDefined();
+    expect(omitted?.message).toContain("tron");
+
+    // EVM chains called once each
+    expect(fetchErc20TotalSupply).toHaveBeenCalledTimes(3);
+  });
+
+  it("throws when all EVM chain supply reads return null", async () => {
+    const coin: StablecoinMeta = {
+      id: "tusd-test",
+      name: "TUSD Test",
+      symbol: "TUSDT",
+      flags: {
+        backing: "rwa-backed",
+        pegCurrency: "USD",
+        governance: "centralized",
+        yieldBearing: false,
+        rwa: false,
+        navToken: false,
+      },
+      contracts: [
+        { chain: "ethereum", address: "0x0000000000085d4780b73119b644ae5ecd22b376", decimals: 18 },
+        { chain: "avalanche", address: "0x1c20e891bab6b1727d14da358fae2984ed9b59eb", decimals: 18 },
+      ],
+    };
+
+    const now = 1_700_000_000;
+    vi.mocked(fetchOnchainUint256).mockResolvedValueOnce(8n);
+    vi.mocked(fetchOnchainRawCall).mockResolvedValueOnce(
+      encodeLatestRoundData(100_00000000n, now - 60),
+    );
+    vi.mocked(fetchErc20TotalSupply).mockResolvedValue(null);
+
+    await expect(fetchChainlinkPorReserves(coin, config, signal, { nowSec: now }))
+      .rejects.toThrow(/chainlink-por/);
   });
 });
