@@ -119,7 +119,7 @@ The same rule applies to Worker-side integration clients. Telegram delivery, X p
 | Live reserve adapter attempt        | `20_000 ms`                  | `worker/src/cron/sync-live-reserves.ts`                    |
 | Live reserve D1 finalize timeout    | `30_000 ms`                  | `worker/src/cron/sync-live-reserves-core.ts`               |
 | Blacklist explorer / RPC reads      | `15_000 ms`                  | `worker/src/lib/fetch-retry.ts` (default timeout)          |
-| Daily digest LLM call               | `120_000 ms`                 | `worker/src/lib/constants.ts`                              |
+| Daily digest LLM call               | `300_000 ms`                 | `worker/src/lib/constants.ts`                              |
 
 ---
 
@@ -127,11 +127,14 @@ The same rule applies to Worker-side integration clients. Telegram delivery, X p
 
 Current digest generation constraints that are actually encoded in repo code:
 
-- model: `claude-opus-4-6`
-- timeout: `120_000 ms`
+- model: `claude-opus-4-7`
+- thinking: adaptive (`thinking.type = "adaptive"`)
+- reasoning effort: max (`output_config.effort = "max"`)
+- timeout: `300_000 ms`
+- max_tokens: `16000` daily, `20000` weekly
 - cadence: daily scheduled run plus manual admin trigger
 
-Source: `worker/src/lib/constants.ts` (timeout/retries), `worker/src/cron/digest/platform.ts` (model)
+Source: `worker/src/lib/constants.ts` (timeout/retries), `worker/src/cron/digest/platform.ts` (model/thinking/effort), `worker/src/cron/daily-digest.ts` and `worker/src/cron/weekly-recap.ts` (max_tokens)
 
 This doc deliberately does not restate Anthropic account-tier RPM / token-plan numbers because those are not repo-enforced.
 
