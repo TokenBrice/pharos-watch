@@ -48,6 +48,17 @@ function adaptOpenEdenReserveComposition(payload: OpenEdenReserveCompositionResp
     );
   }
 
+  // OpenEden's reserve API returns `ratio` in one of two observed scales:
+  //  * Percent-scale (>2): historical values in the 100-101 range → /100 to
+  //    normalize into a decimal ratio.
+  //  * Decimal-scale (<=2): values in the 0.99-1.01 range → accept as-is.
+  // Anything else (undefined, NaN, non-positive) indicates the upstream
+  // contract changed and we should fail closed.
+  if (!Number.isFinite(payload.ratio) || payload.ratio <= 0) {
+    throw new Error(
+      `openeden-usdo reserve ratio is non-numeric or non-positive: ${payload.ratio}`,
+    );
+  }
   const normalizedRatio = payload.ratio > 2 ? payload.ratio / 100 : payload.ratio;
   const derivedRatio = payload.usdoAmount > 0 ? payload.reserveAssetsInUsd / payload.usdoAmount : null;
   if (

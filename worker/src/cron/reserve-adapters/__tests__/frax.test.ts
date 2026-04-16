@@ -1,3 +1,6 @@
+import { readFileSync } from "node:fs";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
 import { describe, it, expect } from "vitest";
 import type { StablecoinMeta } from "@shared/types/core";
 import {
@@ -6,6 +9,11 @@ import {
   type FraxBalanceSheetResponse,
   type FraxCombinedDataResponse,
 } from "../frax";
+
+const FIXTURES_DIR = join(dirname(fileURLToPath(import.meta.url)), "fixtures");
+const FRAX_BALANCE_SHEET_FIXTURE = JSON.parse(
+  readFileSync(join(FIXTURES_DIR, "frax-balance-sheet.json"), "utf8"),
+) as FraxBalanceSheetResponse;
 
 /* ---------- v2 balance-sheet tests ---------- */
 
@@ -84,10 +92,8 @@ describe("adaptFraxBalanceSheet", () => {
     expect(unknown!.risk).toBe("medium");
   });
 
-  it("maps current FRAX balance-sheet symbols without degrading warnings", async () => {
-    const response = await fetch("https://api.frax.finance/v2/frax/balance-sheet/latest");
-    expect(response.ok).toBe(true);
-    const result = adaptFraxBalanceSheet(await response.json() as FraxBalanceSheetResponse);
+  it("maps current frxUSD balance-sheet symbols from recorded fixture without degrading warnings", () => {
+    const result = adaptFraxBalanceSheet(FRAX_BALANCE_SHEET_FIXTURE);
     expect(result.metadata?.freshnessMode).toBe("verified");
     expect((result.warnings ?? []).filter((warning) => warning.effect === "degraded")).toEqual([]);
   });

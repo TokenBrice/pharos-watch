@@ -53,4 +53,53 @@ describe("adaptOpenEdenUsdo", () => {
       coinId: "rlusd-ripple",
     });
   });
+
+  it("accepts decimal-scale ratio values as-is", () => {
+    const result = adaptOpenEdenUsdo({
+      date: "2026-03-25T08:00:17.600Z",
+      usdoAmount: 100,
+      totalTbillAmountInUsd: 70,
+      usdcAmount: 15,
+      buidlAmount: 5,
+      vbillAmount: 10,
+      usycAmountInUsd: 0,
+      benjiAmount: 0,
+      reserveAssetsInUsd: 100,
+      ratio: 1.005,
+    });
+    expect(result.metadata?.reserveRatio).toBe(1.005);
+  });
+
+  it("divides percent-scale ratio values by 100", () => {
+    const result = adaptOpenEdenUsdo({
+      date: "2026-03-25T08:00:17.600Z",
+      usdoAmount: 100,
+      totalTbillAmountInUsd: 70,
+      usdcAmount: 15,
+      buidlAmount: 5,
+      vbillAmount: 10,
+      usycAmountInUsd: 0,
+      benjiAmount: 0,
+      reserveAssetsInUsd: 100,
+      ratio: 100.5,
+    });
+    expect(result.metadata?.reserveRatio).toBe(1.005);
+  });
+
+  it("throws for non-numeric or non-positive ratio values", () => {
+    const base = {
+      date: "2026-03-25T08:00:17.600Z",
+      usdoAmount: 100,
+      totalTbillAmountInUsd: 70,
+      usdcAmount: 15,
+      buidlAmount: 5,
+      vbillAmount: 10,
+      usycAmountInUsd: 0,
+      benjiAmount: 0,
+      reserveAssetsInUsd: 100,
+    };
+    expect(() => adaptOpenEdenUsdo({ ...base, ratio: Number.NaN })).toThrow(/ratio is non-numeric/);
+    expect(() => adaptOpenEdenUsdo({ ...base, ratio: 0 })).toThrow(/ratio is non-numeric/);
+    expect(() => adaptOpenEdenUsdo({ ...base, ratio: -1 })).toThrow(/ratio is non-numeric/);
+  });
 });
