@@ -1,9 +1,24 @@
 import { createMethodologyVersion } from "./methodology-version";
 
 const blacklistTracker = createMethodologyVersion({
-  currentVersion: "3.9",
+  currentVersion: "3.91",
   changelogPath: "/methodology/blacklist-tracker-changelog/",
   changelog: [
+  {
+    version: "3.91",
+    title: "Coverage quality + USDP addition",
+    date: "2026-04-16",
+    effectiveAt: 1776297600, // 2026-04-16T00:00:00Z
+    summary:
+      "Extends wlfi-freeze family with FrozenAccountDrained/FrozenFundsReallocated destroy events (USD1/U/FDUSD/EURI), adds USDP Paxos coverage on Ethereum, and corrects Arbitrum FDUSD/AUSD/BUIDL startBlocks.",
+    impact: [
+      "Added FrozenAccountDrained + FrozenFundsReallocated destroy tracking for USD1/U/FDUSD/EURI",
+      "Added USDP (Pax Dollar) Ethereum coverage via Paxos freeze family (65 existing events)",
+      "Corrected Arbitrum startBlocks for FDUSD/AUSD/BUIDL to actual deployment blocks",
+    ],
+    commits: [],
+    reconstructed: false,
+  },
   {
     version: "3.9",
     title: "Direct EVM coverage wave",
