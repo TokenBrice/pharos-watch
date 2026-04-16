@@ -9,9 +9,13 @@ import { syncLiveReserves } from "../../cron/sync-live-reserves";
 import { syncRedemptionBackstops } from "../../cron/sync-redemption-backstops";
 import { syncKinesisSupply } from "../../cron/sync-kinesis-supply";
 import { checkCollateralDrift } from "../../lib/collateral-drift";
-import { getMaxSyncAge } from "../../lib/live-reserves-store";
+import { computeReserveCompositionOverview, getMaxSyncAge } from "../../lib/live-reserves-store";
+import { DAY_SECONDS } from "@shared/lib/time-constants";
 import { sendAlert } from "../../lib/alerts";
 import type { ScheduledRuntimeContext } from "./context";
+
+const PERSISTENTLY_STALE_ALERT_COUNT_THRESHOLD = 3;
+const PERSISTENTLY_STALE_ALERT_MAX_AGE_SEC = 21 * DAY_SECONDS;
 
 export async function runHourlyReserveSyncSlot(runtime: ScheduledRuntimeContext): Promise<void> {
   try {
@@ -66,6 +70,31 @@ export async function runHourlyReserveSyncSlot(runtime: ScheduledRuntimeContext)
         "Live reserve sync stale",
         `No successful sync in ${Math.round(maxAge / 3600)}h. Check cron scheduler.`,
       ).catch(() => {});
+    }
+
+    try {
+      const overview = await computeReserveCompositionOverview(
+        runtime.db,
+        Math.floor(Date.now() / 1000),
+      );
+      const persistentlyStale = overview.persistentlyStaleIndependentCoins;
+      const maxStaleAgeSec = persistentlyStale.length > 0 ? persistentlyStale[0].ageSec : 0;
+      const shouldAlert =
+        persistentlyStale.length > PERSISTENTLY_STALE_ALERT_COUNT_THRESHOLD
+        || maxStaleAgeSec > PERSISTENTLY_STALE_ALERT_MAX_AGE_SEC;
+      if (shouldAlert) {
+        const summary = persistentlyStale
+          .map((entry) => `${entry.stablecoinId}: ${Math.round(entry.ageSec / DAY_SECONDS)}d`)
+          .join("\n");
+        console.warn(`[live-reserves] Persistently-stale independent sources:\n${summary}`);
+        sendAlert(
+          runtime.alertWebhookUrl,
+          "Persistently-stale independent reserve sources",
+          `${persistentlyStale.length} coin(s) configured-live with degraded/error status and last success >14d ago:\n${summary}`,
+        ).catch(() => {});
+      }
+    } catch (e) {
+      console.error("[live-reserves] Persistent-stale overview failed:", e);
     }
   } catch (e) {
     console.error("[live-reserves] Drift check failed:", e);

@@ -19,6 +19,7 @@ function makeReserveComposition(
     staticValidatedFresh: 2,
     weakProbeFresh: 2,
     writeTimeoutUncertain: 0,
+    persistentlyStaleIndependentCoins: [],
     lastSuccessAt: 1_700_000_000,
     oldestFreshAgeSec: 3600,
     status: "healthy",

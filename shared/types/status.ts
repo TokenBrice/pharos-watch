@@ -480,6 +480,12 @@ export interface StatusResponse {
     staticValidatedFresh: number;
     weakProbeFresh: number;
     writeTimeoutUncertain: number;
+    /**
+     * Coins whose adapter is classified as independent evidence but whose
+     * latest source has been stuck in degraded/error with the last
+     * successful snapshot older than 14 days. Sorted by age descending.
+     */
+    persistentlyStaleIndependentCoins: Array<{ stablecoinId: string; ageSec: number }>;
     lastSuccessAt: number | null;
     oldestFreshAgeSec: number | null;
     status: "healthy" | "degraded" | "stale";

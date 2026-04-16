@@ -10,6 +10,7 @@ import type {
 
 export const LIVE_RESERVE_FRESHNESS_SEC = 2 * DAY_SECONDS;
 export const LIVE_RESERVE_HISTORY_RETENTION_SEC = 90 * DAY_SECONDS;
+export const PERSISTENTLY_STALE_INDEPENDENT_THRESHOLD_SEC = 14 * DAY_SECONDS;
 export const SCORING_LIVE_RESERVE_EVIDENCE_CLASSES: LiveReserveEvidenceClass[] = ["independent"];
 
 export type ReserveSyncStatus = "ok" | "degraded" | "error" | "skipped";
@@ -123,6 +124,12 @@ export interface ReserveCompositionOverview {
   staticValidatedFresh: number;
   weakProbeFresh: number;
   writeTimeoutUncertain: number;
+  /**
+   * Coins whose adapter is classified as `independent` but whose latest source
+   * has been stuck in `degraded` or `error` with the last successful snapshot
+   * older than {@link PERSISTENTLY_STALE_INDEPENDENT_THRESHOLD_SEC}.
+   */
+  persistentlyStaleIndependentCoins: Array<{ stablecoinId: string; ageSec: number }>;
   lastSuccessAt: number | null;
   oldestFreshAgeSec: number | null;
 }

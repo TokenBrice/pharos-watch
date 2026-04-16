@@ -1,7 +1,9 @@
+import { getLiveReserveAdapterDefinition } from "@shared/lib/live-reserve-adapters";
 import type { ReserveCompositionOverview, ReserveCompositionRecord, ReserveSnapshotMetadataRecord } from "./live-reserves-store-shared";
 import {
   getConfiguredLiveReserveCoins,
   LIVE_RESERVE_FRESHNESS_SEC,
+  PERSISTENTLY_STALE_INDEPENDENT_THRESHOLD_SEC,
   SCORING_LIVE_RESERVE_EVIDENCE_CLASSES,
   type AuthoritativeReserveSnapshot,
   type ReserveSyncStateRecord,
@@ -30,6 +32,7 @@ export async function computeReserveCompositionOverview(
       staticValidatedFresh: 0,
       weakProbeFresh: 0,
       writeTimeoutUncertain: 0,
+      persistentlyStaleIndependentCoins: [],
       lastSuccessAt: null,
       oldestFreshAgeSec: null,
     };
@@ -52,12 +55,34 @@ export async function computeReserveCompositionOverview(
   let staticValidatedFresh = 0;
   let weakProbeFresh = 0;
   let writeTimeoutUncertain = 0;
+  const persistentlyStaleIndependentCoins: Array<{ stablecoinId: string; ageSec: number }> = [];
   let lastSuccessAt: number | null = null;
   let oldestFreshAgeSec: number | null = null;
 
   for (const coin of configuredCoins) {
     const syncState = syncById.get(coin.id) ?? null;
     const compositionRow = compositionById.get(coin.id);
+
+    // Persistently-stale independent detection runs against the sync state
+    // independently of snapshot consistency so we still flag coins whose
+    // source has been failing for weeks even when the stored composition
+    // snapshot is missing or mismatched.
+    if (
+      coin.liveReservesConfig
+      && syncState
+      && syncState.lastSuccessAt != null
+      && (syncState.lastStatus === "degraded" || syncState.lastStatus === "error")
+      && now - syncState.lastSuccessAt > PERSISTENTLY_STALE_INDEPENDENT_THRESHOLD_SEC
+    ) {
+      const adapterDef = getLiveReserveAdapterDefinition(coin.liveReservesConfig.adapter);
+      if (adapterDef?.evidenceClass === "independent") {
+        persistentlyStaleIndependentCoins.push({
+          stablecoinId: coin.id,
+          ageSec: now - syncState.lastSuccessAt,
+        });
+      }
+    }
+
     const uncertainWrite = hasUncertainWriteState(syncState);
     const hasSnapshot = hasConsistentSnapshotState(syncState, compositionRow
       ? { fetchedAt: compositionRow.fetched_at, attemptId: compositionRow.attempt_id ?? null }
@@ -131,6 +156,9 @@ export async function computeReserveCompositionOverview(
     staticValidatedFresh,
     weakProbeFresh,
     writeTimeoutUncertain,
+    persistentlyStaleIndependentCoins: persistentlyStaleIndependentCoins.sort(
+      (a, b) => b.ageSec - a.ageSec,
+    ),
     lastSuccessAt,
     oldestFreshAgeSec,
   };
