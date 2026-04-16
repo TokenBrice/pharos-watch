@@ -49,6 +49,14 @@ describe("fetchErc4626SingleAssetReserves", () => {
       if (body.params[0].data === "0x01e1d114") {
         return jsonResponse({ result: "0x0000000000000000000000000000000000000000000000000000000000000064" });
       }
+      if (body.params[0].data === "0x18160ddd") {
+        // totalSupply = 100 shares
+        return jsonResponse({ result: "0x0000000000000000000000000000000000000000000000000000000000000064" });
+      }
+      if (body.params[0].data.startsWith("0x07a2d13a")) {
+        // convertToAssets(100) = 100 assets → ratio 1.0
+        return jsonResponse({ result: "0x0000000000000000000000000000000000000000000000000000000000000064" });
+      }
       return null;
     });
 
@@ -79,6 +87,9 @@ describe("fetchErc4626SingleAssetReserves", () => {
       contractAddress: "0x80ac24aa929eaf5013f6436cda2a7ba190f5cc0b",
       assetAddress: "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
       totalAssetsRaw: "100",
+      totalSupplyRaw: "100",
+      convertToAssetsRaw: "100",
+      collateralizationRatio: 1,
       details: {
         proofKind: "erc4626-total-assets",
         assetAddressMatchesExpected: true,
@@ -91,7 +102,7 @@ describe("fetchErc4626SingleAssetReserves", () => {
     });
   });
 
-  it("warns when the vault asset differs from the configured expectation", async () => {
+  it("throws when the vault asset differs from the configured expectation", async () => {
     fetchWithRetryMock.mockImplementation(async (_url: string, init?: RequestInit) => {
       const body = JSON.parse(String(init?.body)) as { params: [{ data: string }] };
       if (body.params[0].data === "0x38d52e0f") {
@@ -109,22 +120,17 @@ describe("fetchErc4626SingleAssetReserves", () => {
     const coin = TRACKED_META_BY_ID.get("syrupusdc-maple");
     expect(coin?.liveReservesConfig).toBeDefined();
 
-    const result = await fetchErc4626SingleAssetReserves(
-      coin!,
-      coin!.liveReservesConfig!,
-      new AbortController().signal,
-      { chainRpcs: testChainRpcs },
-    );
-
-    expect(result.warnings).toEqual([
-      expect.objectContaining({
-        code: "asset-mismatch",
-        severity: "warning",
-      }),
-    ]);
+    await expect(
+      fetchErc4626SingleAssetReserves(
+        coin!,
+        coin!.liveReservesConfig!,
+        new AbortController().signal,
+        { chainRpcs: testChainRpcs },
+      ),
+    ).rejects.toThrow(/asset\(\) returned/);
   });
 
-  it("warns when expected vault asset identity cannot be read", async () => {
+  it("throws when expected vault asset identity cannot be read", async () => {
     fetchWithRetryMock.mockImplementation(async (_url: string, init?: RequestInit) => {
       const body = JSON.parse(String(init?.body)) as { params: [{ data: string }] };
       if (body.params[0].data === "0x38d52e0f") {
@@ -132,6 +138,43 @@ describe("fetchErc4626SingleAssetReserves", () => {
       }
       if (body.params[0].data === "0x01e1d114") {
         return jsonResponse({ result: "0x0000000000000000000000000000000000000000000000000000000000000001" });
+      }
+      return null;
+    });
+
+    const { fetchErc4626SingleAssetReserves } = await import("../erc4626-single-asset");
+    const coin = TRACKED_META_BY_ID.get("syrupusdc-maple");
+    expect(coin?.liveReservesConfig).toBeDefined();
+
+    await expect(
+      fetchErc4626SingleAssetReserves(
+        coin!,
+        coin!.liveReservesConfig!,
+        new AbortController().signal,
+        { chainRpcs: testChainRpcs },
+      ),
+    ).rejects.toThrow(/asset\(\) could not be read/);
+  });
+
+  it("emits degraded warning when convertToAssets diverges from totalAssets by >1%", async () => {
+    fetchWithRetryMock.mockImplementation(async (_url: string, init?: RequestInit) => {
+      const body = JSON.parse(String(init?.body)) as { params: [{ data: string }] };
+      if (body.params[0].data === "0x38d52e0f") {
+        return jsonResponse({
+          result: "0x000000000000000000000000a0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
+        });
+      }
+      if (body.params[0].data === "0x01e1d114") {
+        // totalAssets = 100
+        return jsonResponse({ result: "0x0000000000000000000000000000000000000000000000000000000000000064" });
+      }
+      if (body.params[0].data === "0x18160ddd") {
+        // totalSupply = 100
+        return jsonResponse({ result: "0x0000000000000000000000000000000000000000000000000000000000000064" });
+      }
+      if (body.params[0].data.startsWith("0x07a2d13a")) {
+        // convertToAssets(100) = 110 → ratio 1.10 (10% divergence)
+        return jsonResponse({ result: "0x000000000000000000000000000000000000000000000000000000000000006e" });
       }
       return null;
     });
@@ -149,9 +192,11 @@ describe("fetchErc4626SingleAssetReserves", () => {
 
     expect(result.warnings).toEqual([
       expect.objectContaining({
-        code: "asset-unavailable",
+        code: "erc4626-nav-divergence",
         severity: "warning",
       }),
     ]);
+    expect(result.metadata?.collateralizationRatio).toBeCloseTo(1.1, 2);
+    expect(result.metadata?.redemption?.routeStatus).toBe("degraded");
   });
 });

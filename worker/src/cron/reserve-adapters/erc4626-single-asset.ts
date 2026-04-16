@@ -1,6 +1,7 @@
 import type { ReserveSlice, StablecoinMeta } from "@shared/types/core";
 import type { LiveReserveWarning, LiveReservesConfig } from "@shared/types/live-reserves";
 import { parseLiveReserveAdapterParams } from "@shared/lib/live-reserve-adapters";
+import { TOTAL_SUPPLY_SELECTOR } from "../../lib/evm-selectors";
 import type { AdapterContext, AdapterResult } from "./types";
 import { parseEvmAddressResult, resolveCoinContractAddress } from "./evm";
 import {
@@ -12,6 +13,11 @@ import {
 
 const ERC4626_TOTAL_ASSETS_SELECTOR = "0x01e1d114";
 const ERC4626_ASSET_SELECTOR = "0x38d52e0f";
+const ERC4626_CONVERT_TO_ASSETS_SELECTOR = "0x07a2d13a";
+
+function encodeUint256Arg(value: bigint): string {
+  return value.toString(16).padStart(64, "0");
+}
 
 interface SingleAssetSliceConfig {
   name: ReserveSlice["name"];
@@ -88,20 +94,66 @@ export async function fetchErc4626SingleAssetReserves(
   const warnings: LiveReserveWarning[] = [];
   const assetAddress = assetResult ? parseEvmAddressResult(assetResult as `0x${string}`) : null;
   if (!assetAddress && sliceConfig.expectedAssetAddress) {
-    warnings.push(reserveDegradedWarning(
-      "asset-unavailable",
-      `Vault asset() could not be read; expected ${sliceConfig.expectedAssetAddress}`,
-    ));
+    throw new Error(
+      `ERC-4626 asset() could not be read for ${coin.id}; expected ${sliceConfig.expectedAssetAddress}`,
+    );
   }
   if (
     assetAddress
     && sliceConfig.expectedAssetAddress
     && assetAddress !== sliceConfig.expectedAssetAddress
   ) {
-    warnings.push(reserveDegradedWarning(
-      "asset-mismatch",
-      `Vault asset() returned ${assetAddress}, expected ${sliceConfig.expectedAssetAddress}`,
-    ));
+    throw new Error(
+      `ERC-4626 asset() returned ${assetAddress}, expected ${sliceConfig.expectedAssetAddress} for ${coin.id}`,
+    );
+  }
+
+  // NAV cross-check: totalSupply() shares valued through convertToAssets() vs totalAssets()
+  const totalSupplyResult = await fetchOnchainRawCall({
+    contract: contractAddress,
+    data: TOTAL_SUPPLY_SELECTOR,
+    signal,
+    ctx: _ctx,
+    rpcMode: primaryInput.rpcMode,
+    chain: primaryInput.chain,
+    rpcUrl: sliceConfig.rpcUrl,
+    fallbackRpcUrl: sliceConfig.fallbackRpcUrl,
+    timeoutMs: timeout,
+  });
+
+  let collateralizationRatio: number | undefined;
+  let convertToAssetsRaw: bigint | undefined;
+  let totalSupplyRaw: bigint | undefined;
+  if (totalSupplyResult) {
+    totalSupplyRaw = BigInt(totalSupplyResult);
+    if (totalSupplyRaw > 0n) {
+      const convertResult = await fetchOnchainRawCall({
+        contract: contractAddress,
+        data: `${ERC4626_CONVERT_TO_ASSETS_SELECTOR}${encodeUint256Arg(totalSupplyRaw)}`,
+        signal,
+        ctx: _ctx,
+        rpcMode: primaryInput.rpcMode,
+        chain: primaryInput.chain,
+        rpcUrl: sliceConfig.rpcUrl,
+        fallbackRpcUrl: sliceConfig.fallbackRpcUrl,
+        timeoutMs: timeout,
+      });
+      if (convertResult) {
+        convertToAssetsRaw = BigInt(convertResult);
+        if (totalAssetsRaw > 0n) {
+          collateralizationRatio = Number(convertToAssetsRaw) / Number(totalAssetsRaw);
+          if (
+            Number.isFinite(collateralizationRatio)
+            && Math.abs(collateralizationRatio - 1) > 0.01
+          ) {
+            warnings.push(reserveDegradedWarning(
+              "erc4626-nav-divergence",
+              `convertToAssets(totalSupply) diverges from totalAssets by ${((collateralizationRatio - 1) * 100).toFixed(2)}%`,
+            ));
+          }
+        }
+      }
+    }
   }
 
   return {
@@ -126,6 +178,11 @@ export async function fetchErc4626SingleAssetReserves(
       contractAddress,
       totalAssetsRaw: totalAssetsRaw.toString(),
       ...(assetAddress ? { assetAddress } : {}),
+      ...(totalSupplyRaw != null ? { totalSupplyRaw: totalSupplyRaw.toString() } : {}),
+      ...(convertToAssetsRaw != null ? { convertToAssetsRaw: convertToAssetsRaw.toString() } : {}),
+      ...(collateralizationRatio != null && Number.isFinite(collateralizationRatio)
+        ? { collateralizationRatio }
+        : {}),
       redemption: {
         capacityKind: "documented-eventual" as const,
         freshnessKind: "same-run-onchain" as const,
