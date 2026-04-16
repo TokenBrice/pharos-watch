@@ -447,7 +447,7 @@ describe("syncLiveReserves", () => {
       if (currentInput.url.includes("chain=tron")) {
         throw new Error("primary source down");
       }
-      return { slices: [{ name: "Tracked vaults", pct: 100, risk: "medium" as const }] };
+      return { slices: [{ name: "Tracked vaults", pct: 100, risk: "low" as const }] };
     });
 
     const { syncLiveReserves } = await import("../sync-live-reserves");
