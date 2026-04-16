@@ -1,0 +1,24 @@
+{
+  "id": "0x4e415957aa4fd703ad701e43ee5335d1d7891d8300020000000000000000053b",
+  "type": "STABLE",
+  "chain": "FANTOM",
+  "address": "0x4e415957aa4fd703ad701e43ee5335d1d7891d83",
+  "poolTokens": [
+    {
+      "symbol": "multiUSDC",
+      "balance": "0.000001",
+      "balanceUSD": "0.00000005684014991798558",
+      "weight": null
+    },
+    {
+      "symbol": "DEI",
+      "balance": "1000002064258.7402",
+      "balanceUSD": "337677697052.6986",
+      "weight": null
+    }
+  ],
+  "dynamicData": {
+    "totalLiquidity": "337677697052.70",
+    "volume24h": "0.00"
+  }
+}
