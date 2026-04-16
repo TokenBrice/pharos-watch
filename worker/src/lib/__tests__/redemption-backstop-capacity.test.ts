@@ -169,4 +169,46 @@ describe("resolveRedemptionCapacity — reserve-sync over-provisioned clamp", ()
     expect(result.immediateCapacityRatio).toBe(1);
     expect(result.notes.some((n) => /exceeds current supply/i.test(n))).toBe(true);
   });
+
+  it("does not clamp or annotate when live capacity is at or below supply", async () => {
+    const db = {} as D1Database;
+    const supplyUsd = 1_000_000;
+    const result = await resolveRedemptionCapacity(
+      db,
+      "lusd-liquity",
+      { kind: "reserve-sync-metadata" },
+      supplyUsd,
+      now,
+      {
+        reserveSnapshotMetadata: baseSnapshot({
+          freshnessMode: "not-applicable",
+          redemption: { capacityUsd: 400_000 },
+        }),
+      },
+    );
+    expect(result.scoringCapacityUsd).toBe(400_000);
+    expect(result.immediateCapacityUsd).toBe(400_000);
+    expect(result.immediateCapacityRatio).toBeCloseTo(0.4);
+    expect(result.notes.some((n) => /exceeds current supply/i.test(n))).toBe(false);
+  });
+
+  it("clamps live capacity to zero when supplyUsd is zero", async () => {
+    const db = {} as D1Database;
+    const result = await resolveRedemptionCapacity(
+      db,
+      "lusd-liquity",
+      { kind: "reserve-sync-metadata" },
+      0,
+      now,
+      {
+        reserveSnapshotMetadata: baseSnapshot({
+          freshnessMode: "not-applicable",
+          redemption: { capacityUsd: 500_000 },
+        }),
+      },
+    );
+    expect(result.scoringCapacityUsd).toBe(0);
+    expect(result.immediateCapacityUsd).toBe(0);
+    expect(result.notes.some((n) => /exceeds current supply/i.test(n))).toBe(true);
+  });
 });

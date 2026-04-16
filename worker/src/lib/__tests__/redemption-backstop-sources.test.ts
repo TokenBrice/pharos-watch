@@ -1184,27 +1184,28 @@ describe("buildRedemptionBackstopEntry", () => {
     expect(entry.docs).toBeUndefined();
   });
 
-  it("deduplicates notes when config + runtime emit the same string", async () => {
+  it("deduplicates notes both within config and across config + runtime sources", async () => {
+    const runtimeNote = "Live reserve metadata unavailable; using configured fallback ratio";
     const entry = await buildRedemptionBackstopEntry(
       mockD1(),
       "test-coin",
       {
-        routeFamily: "offchain-issuer",
-        accessModel: "issuer-api",
-        settlementModel: "same-day",
-        executionModel: "rules-based-nav",
+        routeFamily: "stablecoin-redeem",
+        accessModel: "permissionless-onchain",
+        settlementModel: "atomic",
+        executionModel: "deterministic-onchain",
         outputAssetType: "stable-single",
-        capacityModel: { kind: "supply-ratio", ratio: 0.33 },
+        capacityModel: { kind: "reserve-sync-metadata", fallbackRatio: 0.1 },
         costModel: { kind: "fee-bps", feeBps: 0 },
-        notes: ["Shared note", "Shared note", "Distinct note"],
+        notes: ["Shared note", "Shared note", runtimeNote],
       },
       1_000_000,
       50,
       now,
       { reserveSnapshotMetadata: null },
     );
-    expect(entry.notes ?? []).toBeDefined();
-    expect((entry.notes ?? []).filter((n) => n === "Shared note").length).toBe(1);
-    expect((entry.notes ?? []).filter((n) => n === "Distinct note").length).toBe(1);
+    const notes = entry.notes ?? [];
+    expect(notes.filter((n) => n === "Shared note").length).toBe(1);
+    expect(notes.filter((n) => n === runtimeNote).length).toBe(1);
   });
 });

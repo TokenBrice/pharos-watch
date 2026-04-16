@@ -58,6 +58,14 @@ export interface RedemptionBackstopConfig {
   costModel: RedemptionCostModel;
   holderEligibility?: RedemptionHolderEligibility;
   routeStatus?: Extract<RedemptionRouteStatus, "open" | "unknown">;
+  /**
+   * Per-config escape hatch for routes whose documented rail composes with a
+   * downstream rail the holder still has to exercise — e.g., a permissionless
+   * ERC-20 wrapper (wM, USDSC) whose `unwrap()` only returns the underlying,
+   * which itself requires an institutional redemption. The route-family caps
+   * in `redemption-backstop-scoring.ts` handle the common cases; use this when
+   * the family shape alone would overstate the actual exit quality.
+   */
   totalScoreCap?: number;
   docs?: RedemptionDocSource[];
   reviewedAt?: string;

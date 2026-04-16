@@ -15,7 +15,7 @@ const redemptionBackstop = createMethodologyVersion({
         "Live redemption capacity greater than current supply is now clamped to supply for scoring and surfaces an explicit note; previously only the ratio was clamped while the raw USD amount flowed through unchanged",
         "17 new stablecoins added to redemption coverage: dEURO, CJPY, wM, ftUSD, USDz, USDSC, Silk, USDAT, USDnr, BUCK, USDH, BRLA, ctUSD, XO, USDK, USDM, and USDKG, spanning collateral-redeem, stablecoin-redeem, basket-redeem, queue-redeem, and offchain-issuer families",
         "Lower-confidence supply-ratio routes (dusd-dtrinity, yousd-yield-optimizer, uty-xsy) now carry explicit `confidence: heuristic` plus reviewed docs rather than silently defaulting to heuristic with no evidence trail",
-        "Fee-score breakpoints extracted to named constants, GHO capacity warning exception registry exported for reuse, and route notes deduplicated end-to-end",
+        "Fee-score breakpoints extracted to named constants and route notes deduplicated end-to-end",
       ],
       commits: [],
       reconstructed: false,

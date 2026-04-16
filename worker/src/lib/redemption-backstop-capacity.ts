@@ -106,9 +106,10 @@ async function resolveCapacityFromReserveSyncMetadata(
       liveMetadata.immediateRedeemableUsd != null
         ? liveMetadata.immediateRedeemableUsd
         : (supplyUsd as number) * (liveMetadata.immediateRedeemableRatio as number);
-    const hasPositiveSupply = supplyUsd != null && supplyUsd > 0;
-    const capacityExceedsSupply = hasPositiveSupply && rawCapacityUsd > (supplyUsd as number);
-    const immediateCapacityUsd = hasPositiveSupply
+    const hasSupplyCeiling = supplyUsd != null;
+    const hasPositiveSupply = hasSupplyCeiling && (supplyUsd as number) > 0;
+    const capacityExceedsSupply = hasSupplyCeiling && rawCapacityUsd > (supplyUsd as number);
+    const immediateCapacityUsd = hasSupplyCeiling
       ? Math.max(0, Math.min(supplyUsd as number, rawCapacityUsd))
       : Math.max(0, rawCapacityUsd);
     const derivedRatio =

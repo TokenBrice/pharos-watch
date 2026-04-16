@@ -982,7 +982,7 @@ export const OFFCHAIN_ISSUER_BACKSTOP_CONFIGS: Record<string, RedemptionBackstop
       sourceRef("Gold Dollar USDKG", "https://usdkg.com/", ["route", "capacity"]),
     ],
     notes: [
-      "Licensed under Kyrgyz Republic Law on Virtual Assets (2022) / Cabinet Resolution No. 514; mutliple redemption outputs supported (USD, KGS, physical gold, or approved crypto)",
+      "Licensed under Kyrgyz Republic Law on Virtual Assets (2022) / Cabinet Resolution No. 514; multiple redemption outputs supported (USD, KGS, physical gold, or approved crypto)",
     ],
   },
   "usat-tether": {
