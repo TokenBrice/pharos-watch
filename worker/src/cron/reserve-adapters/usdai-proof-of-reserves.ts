@@ -11,6 +11,7 @@ import {
   unverifiedFreshnessMetadata,
   verifiedFreshnessMetadata,
 } from "./helpers";
+import { extractEscapedJsonValueAfterKey } from "./html";
 
 const SHARE_SCALE = 10n ** 18n;
 const PCT_MICRO_SCALE = 100_000_000n;
@@ -89,8 +90,26 @@ function resolveTbillBucket(name: string): ResolvedReserveBucket {
   }
 }
 
+// On https://app.usd.ai/reserves, all `timeLastUpdated` entries (73 on a recent
+// snapshot) live inside nested `tokens` arrays belonging to the unique
+// `dealsDetailsCache` object in the Next.js escaped-JSON payload. Scoping the
+// MAX timestamp to that container prevents picking up unrelated timestamps
+// that might appear elsewhere (activity feed, news) in future layouts.
+const USDAI_PROOF_SCOPE_KEY = '\\"dealsDetailsCache\\":';
+
 export function extractUsdAiProofPageTimestamp(html: string): number | null {
-  const timestamps = Array.from(html.matchAll(/\\?"timeLastUpdated\\?"\s*:\s*\\?"([^"\\]+)\\?"/g))
+  let proofSlice: string;
+  try {
+    proofSlice = extractEscapedJsonValueAfterKey(
+      html,
+      USDAI_PROOF_SCOPE_KEY,
+      "usdai-proof-of-reserves",
+    );
+  } catch {
+    return null;
+  }
+
+  const timestamps = Array.from(proofSlice.matchAll(/"timeLastUpdated"\s*:\s*"([^"\\]+)"/g))
     .map((match) => parseTimestampLikeToUnixSeconds(match[1]))
     .filter((value): value is number => value != null);
 
@@ -284,18 +303,45 @@ export function adaptUsdAiProofOfReserves(
   };
 }
 
+function extractUsdAiProofPageTimestampFallback(html: string): number | null {
+  const timestamps = Array.from(html.matchAll(/\\?"timeLastUpdated\\?"\s*:\s*\\?"([^"\\]+)\\?"/g))
+    .map((match) => parseTimestampLikeToUnixSeconds(match[1]))
+    .filter((value): value is number => value != null);
+
+  return timestamps.length > 0 ? Math.max(...timestamps) : null;
+}
+
+interface UsdAiProofPageTimestampResult {
+  timestamp: number | null;
+  fallbackWarning?: LiveReserveWarning;
+}
+
 async function fetchUsdAiProofPageTimestamp(
   config: LiveReservesConfig,
   signal: AbortSignal,
   ctx?: AdapterContext,
-): Promise<number | null> {
+): Promise<UsdAiProofPageTimestampResult> {
   const url = config.display?.url;
-  if (!url) return null;
+  if (!url) return { timestamp: null };
+  let html: string;
   try {
-    return extractUsdAiProofPageTimestamp(await fetchTextWithRetry(url, signal, 12_000, ctx));
+    html = await fetchTextWithRetry(url, signal, 12_000, ctx);
   } catch {
-    return null;
+    return { timestamp: null };
   }
+  const scoped = extractUsdAiProofPageTimestamp(html);
+  if (scoped != null) return { timestamp: scoped };
+
+  const whole = extractUsdAiProofPageTimestampFallback(html);
+  if (whole == null) return { timestamp: null };
+
+  return {
+    timestamp: whole,
+    fallbackWarning: reserveInfoWarning(
+      "usdai-proof-scope-fallback",
+      "USD.AI proof-row scope not found; used whole-page MAX timeLastUpdated as source timestamp",
+    ),
+  };
 }
 
 export async function fetchUsdAiProofOfReserves(
@@ -305,9 +351,16 @@ export async function fetchUsdAiProofOfReserves(
   ctx?: AdapterContext,
 ): Promise<AdapterResult> {
   const input = requireJsonInput(config.inputs.primary, "usdai-proof-of-reserves");
-  const [raw, sourceTimestamp] = await Promise.all([
+  const [raw, pageTs] = await Promise.all([
     fetchTextWithRetry(input.url, signal, 12_000, ctx),
     fetchUsdAiProofPageTimestamp(config, signal, ctx),
   ]);
-  return adaptUsdAiProofOfReserves(parseUsdAiProofOfReserves(raw), sourceTimestamp);
+  const result = adaptUsdAiProofOfReserves(parseUsdAiProofOfReserves(raw), pageTs.timestamp);
+  if (pageTs.fallbackWarning) {
+    return {
+      ...result,
+      warnings: [...(result.warnings ?? []), pageTs.fallbackWarning],
+    };
+  }
+  return result;
 }

@@ -92,10 +92,29 @@ describe("usdai-proof-of-reserves adapter", () => {
 
   it("extracts the latest proof-page collateral update timestamp", () => {
     const timestamp = extractUsdAiProofPageTimestamp(
-      '\\"timeLastUpdated\\":\\"2026-04-10T03:44:09.495Z\\",\\"timeLastUpdated\\":\\"2026-04-09T19:43:32.664Z\\"',
+      '\\"dealsDetailsCache\\":{\\"proofs\\":[{\\"timeLastUpdated\\":\\"2026-04-10T03:44:09.495Z\\"},'
+      + '{\\"timeLastUpdated\\":\\"2026-04-09T19:43:32.664Z\\"}]}',
     );
 
     expect(timestamp).toBe(Math.floor(Date.parse("2026-04-10T03:44:09.495Z") / 1000));
+  });
+
+  it("picks the latest timeLastUpdated only from the proof-row payload", () => {
+    const html =
+      '\\"activity\\":[{\\"timeLastUpdated\\":\\"2099-01-01T00:00:00.000Z\\"}],'
+      + '\\"dealsDetailsCache\\":{\\"tokens\\":['
+      + '{\\"timeLastUpdated\\":\\"2026-04-10T03:44:09.495Z\\"},'
+      + '{\\"timeLastUpdated\\":\\"2026-04-09T19:43:32.664Z\\"}'
+      + ']}';
+
+    expect(extractUsdAiProofPageTimestamp(html)).toBe(
+      Math.floor(Date.parse("2026-04-10T03:44:09.495Z") / 1000),
+    );
+  });
+
+  it("returns null when the proof-row container is absent", () => {
+    const html = '\\"news\\":[{\\"timeLastUpdated\\":\\"2099-01-01T00:00:00.000Z\\"}]';
+    expect(extractUsdAiProofPageTimestamp(html)).toBeNull();
   });
 
   it("can stamp adapted rows with verified proof-page freshness", () => {
@@ -202,7 +221,9 @@ describe("usdai-proof-of-reserves adapter", () => {
           ],
           [
             "text-get:https://app.usd.ai/reserves:12000",
-            Promise.resolve('\\"timeLastUpdated\\":\\"2026-04-09T19:43:32.664Z\\"'),
+            Promise.resolve(
+              '\\"dealsDetailsCache\\":{\\"timeLastUpdated\\":\\"2026-04-09T19:43:32.664Z\\"}',
+            ),
           ],
         ]),
       } as never,
