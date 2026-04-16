@@ -96,6 +96,12 @@ export function classifyFailure(reason: string, lastError: string | null): Reser
   if (reason === "validation-failed" || reason === "fatal-warning" || reason === "empty-slices") return "validation";
 
   const message = (lastError ?? "").toLowerCase();
+  if (message.includes("adapter params invalid") || message.includes("adapter requires")) {
+    return "adapter-config";
+  }
+  if (reason === "adapter-exception" && message.includes("invalid reserve output")) {
+    return "validation";
+  }
   if (message.includes("layout-changed")) return "parser-drift";
   if (message.includes("parse-failed") || message.includes("json parse failed")) return "parse-failure";
   if (message.includes("d1 write timeout") || message.includes("sqlite") || message.includes("database")) return "storage-write";
