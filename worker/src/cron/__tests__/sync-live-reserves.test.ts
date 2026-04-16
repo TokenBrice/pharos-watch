@@ -370,6 +370,47 @@ describe("syncLiveReserves", () => {
     }
   });
 
+  it("retains shared source-cache failures for the run so a single fetch satisfies every sharing coin", async () => {
+    // m0 has >=2 coins sharing the same source-invariant primary URL.
+    const m0Coins = ACTIVE_STABLECOINS.filter((coin) => coin.liveReservesConfig?.adapter === "m0");
+    expect(m0Coins.length).toBeGreaterThanOrEqual(2);
+    const sharedM0Primary = m0Coins[0]!.liveReservesConfig!.inputs.primary;
+    expect(sharedM0Primary.kind).toMatch(/^http-json|http-html$/);
+
+    const adapterFetch = mockAdapterRegistry(async (_coin, config) => {
+      const primary = config?.inputs.primary;
+      if (
+        config?.adapter === "m0"
+        && primary
+        && (primary.kind === "http-json" || primary.kind === "http-html")
+        && "url" in primary
+        && "url" in sharedM0Primary
+        && primary.url === sharedM0Primary.url
+      ) {
+        throw new Error("m0 upstream boom");
+      }
+      return { slices: [{ name: "Mock Farm", pct: 100, risk: "low" as const }] };
+    });
+
+    const { syncLiveReserves } = await import("../sync-live-reserves");
+    const db = mockD1();
+    await syncLiveReserves(db, new AbortController().signal, {});
+
+    const m0FetchCalls = adapterFetch.mock.calls.filter((call) => {
+      const config = call[1] as NonNullable<(typeof ACTIVE_STABLECOINS)[number]["liveReservesConfig"]> | undefined;
+      const primary = config?.inputs.primary;
+      return (
+        config?.adapter === "m0"
+        && primary
+        && (primary.kind === "http-json" || primary.kind === "http-html")
+        && "url" in primary
+        && "url" in sharedM0Primary
+        && primary.url === sharedM0Primary.url
+      );
+    });
+    expect(m0FetchCalls.length).toBe(1);
+  });
+
   it("persists full primary-plus-fallback failure context for reserve source chains", async () => {
     const fallbackCoin = ACTIVE_STABLECOINS.find((coin) => (
       (coin.liveReservesConfig?.inputs.fallbacks?.length ?? 0) > 0

@@ -196,13 +196,12 @@ export async function syncLiveReserves(
     const cached = sharedSourceResults.get(cacheKey);
     if (cached) return cached;
 
+    // Retain the promise (including rejections) for the remainder of the run
+    // so every coin sharing this source sees a single fetch outcome. The
+    // circuit breaker handles cross-run retry suppression.
     const resultPromise = runAdapterAttempt(coin, config, adapter, signal, effectiveAdapterCtx);
-    const cachedPromise = resultPromise.catch((error) => {
-      sharedSourceResults.delete(cacheKey);
-      throw error;
-    });
-    sharedSourceResults.set(cacheKey, cachedPromise);
-    return cachedPromise;
+    sharedSourceResults.set(cacheKey, resultPromise);
+    return resultPromise;
   };
 
   const runAdapter = async (
