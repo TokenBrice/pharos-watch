@@ -88,7 +88,7 @@ export async function generateDailyDigest(
     anthropicApiKey,
     systemPrompt: SYSTEM_PROMPT,
     userPrompt: userPromptContent,
-    maxTokens: 1400,
+    maxTokens: 16000,
     signal,
     logPrefix: "daily-digest",
     validationProfile: {
@@ -96,6 +96,7 @@ export async function generateDailyDigest(
       recentMeta: recentMeta.map((entry) => ({
         meta: entry.meta as Record<string, unknown> | null,
         title: entry.title,
+        rawText: entry.rawText,
       })),
     },
   });

@@ -13,28 +13,51 @@ import {
 import { NON_WEEKLY_DIGEST_SQL_FILTER } from "./daily-digest/shared";
 import { buildRecentDigestMeta } from "./daily-digest/runtime-helpers";
 
-const WEEKLY_SYSTEM_PROMPT =
-  "You write the weekly editorial recap for Pharos, a stablecoin analytics dashboard. " +
-  "Your voice is dry, sharp, and memorable. Think sardonic wit meets hard data.\n\n" +
-  "You receive a week's worth of daily digest data. Your job is to synthesize, not summarize. " +
-  "Find the week's narrative arc: what started, what ended, what's building. " +
-  "A weekly recap that reads like seven daily digests stapled together has failed.\n\n" +
-  "Use the Weekly Signals block as the source of truth. Daily headlines show how the week felt in sequence, but the signal leaderboard decides what mattered. " +
-  "Do not turn seven observations of the same chronic active depeg into seven events. Separate active observations from unique signals. " +
-  "Do not dramatize suppressed, stale, zero-dollar, tiny, or artifact-prone signals. If the week was genuinely calm, say so clearly.\n\n" +
-  "No emojis, no clickbait, no hedging, no exclamation marks. " +
-  "NEVER use em dashes or en dashes. Use commas, semicolons, colons, or periods instead.\n\n" +
-  "The extended field should be 4-6 paragraphs, 250-400 words total. Structure:\n" +
-  "P1: The week's headline — what defined it. PSI arc and dominant regime.\n" +
-  "P2: The dominant story — the thread that ran through multiple days.\n" +
-  "P3: The counter-narrative — what moved in the opposite direction, or what was quietly significant.\n" +
-  "P4: Supply and capital flows — weekly mcap movement, biggest movers, gauge trend.\n" +
-  "P5-P6 (optional): A structural observation or look-ahead.\n\n" +
-  "Every sentence must contain a specific number or coin name. " +
-  "Reference individual daily headlines when they illustrate a point.\n\n" +
-  "You MUST respond with valid JSON: {\"title\": \"...\", \"extended\": \"...\", \"text\": \"...\", \"meta\": {\"leadSignalId\": \"...\", \"lead\": \"...\", \"tone\": \"...\", \"coins\": [...], \"usedCandidateIds\": [...]}}. " +
-  "Output ONLY the raw JSON object. The title is 3-8 words capturing the week's theme. " +
-  "The text field is a tweet-sized hook. Title + text must be under 270 chars combined.";
+const WEEKLY_SYSTEM_PROMPT = [
+  "You write the weekly editorial recap for Pharos, a stablecoin analytics dashboard.",
+  "Dry, sharp, memorable, like a sardonic columnist synthesizing rather than reporting.",
+  "",
+  "You receive a week of daily digest data, pre-aggregated weekly signal leaderboards, and week-over-week delta summaries.",
+  "Use the Weekly Signals block as the source of truth for the week's protagonists. Use the week-over-week deltas to frame where this week sits versus the previous one.",
+  "Daily headlines show how the week felt in sequence; the signal leaderboard and deltas decide what mattered.",
+  "",
+  "ARC FRAMING.",
+  "Find the week's narrative arc: what started, what ended, what is building.",
+  "A weekly recap that reads like seven daily digests stapled together has failed.",
+  "Do not turn seven observations of the same chronic active depeg into seven events. Separate active observations from unique signals.",
+  "Do not dramatize suppressed, stale, zero-dollar, tiny, or artifact-prone signals. If the week was genuinely calm, say so clearly.",
+  "",
+  "FORWARD-LOOK MANDATE.",
+  "The last paragraph must contain an anticipatory sentence about next week. Acceptable: 'next week will decide whether X', 'watch the Y threshold if Z continues', 'the next trigger is W crossing V'.",
+  "Retrospective-only recaps are rejected.",
+  "",
+  "SPICE BUDGET.",
+  "Earn one sharp sentence per recap: a named analogy, a historical parallel, or a concrete-stakes observation.",
+  "One per recap. Do not force it.",
+  "",
+  "FORBIDDEN TICS.",
+  "Do NOT reuse: 'plumbing' (as metaphor), 'beneath the calm', 'restless depths', 'calm surfaces,', 'surface calm', 'something moving underneath', 'serene', 'worth watching/monitoring' or 'bears watching' as a closer, 'time will tell', 'the question is whether', 'it is worth asking whether'.",
+  "",
+  "FORMATTING.",
+  "No emojis, no clickbait, no hedging, no exclamation marks.",
+  "NEVER use em dashes or en dashes. Use commas, semicolons, colons, or periods.",
+  "",
+  "STRUCTURE.",
+  "The extended field is 4-6 paragraphs, 250-400 words total.",
+  "P1: the week's headline, what defined it, PSI arc and dominant regime.",
+  "P2: the dominant story, the thread that ran through multiple days.",
+  "P3: the counter-narrative, what moved the opposite direction or was quietly significant.",
+  "P4: supply and capital flows, weekly mcap movement, biggest movers, gauge trend, referring to week-over-week deltas when they change the story.",
+  "P5-P6 (optional): a structural observation or the forward-look.",
+  "If using fewer than 6 paragraphs, fold the forward-look into the last paragraph.",
+  "",
+  "Every sentence must contain a specific number or coin name. Reference individual daily headlines when they illustrate a point.",
+  "",
+  "OUTPUT CONTRACT.",
+  'Respond with valid JSON only: { "title": "3-8 word headline", "extended": "...", "text": "tweet-sized hook under 270 chars combined with title", ',
+  '  "meta": { "leadSignalId": "...", "lead": "one of allowed leads", "tone": "one of allowed tones", "coins": ["..."], "usedCandidateIds": [...] } }',
+  "Allowed leads and tones are identical to the daily contract.",
+].join("\n");
 
 interface WeeklyInputData {
   weekStartDate: string;
@@ -60,11 +83,77 @@ interface WeeklyInputData {
     topYieldAnomalies: { symbol: string; apy: number; warnings: string[]; mcapUsd: number; date: string }[];
     topLiquidityShifts: { symbol: string; scoreDelta: number; mcapUsd: number; date: string }[];
   };
+  weekOverWeekDeltas: {
+    mcap: { current: number; prior: number; deltaPct: number | null };
+    psi: { current: number; prior: number; delta: number };
+    psiDominantBand: { current: string; prior: string };
+    activeDepegObservations: { current: number; prior: number };
+    uniqueDepegSignals: { current: number; prior: number };
+    blacklistEvents: { current: number; prior: number };
+    blacklistUsd: { current: number; prior: number };
+    gradeTransitions: { current: number; prior: number };
+    gauge: { current: number | null; prior: number | null };
+    dataCoverage: { currentDays: number; priorDays: number };
+  } | null;
 }
 
-function buildWeeklyInputData(
+interface WeeklyBasicsParsedRow {
+  inputData: DigestInputData;
+  date: string;
+}
+
+interface WeeklyBasics {
+  mcapEnd: number;
+  psiMid: number;
+  psiDominantBand: string;
+  activeDepegObs: number;
+  uniqueDepegSignals: number;
+  blacklistEvents: number;
+  blacklistUsd: number;
+  gradeTransitions: number;
+  gaugeMid: number | null;
+  days: number;
+}
+
+function aggregateBasics(parsed: WeeklyBasicsParsedRow[]): WeeklyBasics {
+  const psiScores = parsed.map((d) => d.inputData.stabilityIndex?.score).filter((s): s is number => s != null);
+  const mcaps = parsed.map((d) => d.inputData.totalMcapUsd);
+  const psiBands = parsed.map((d) => d.inputData.stabilityIndex?.band).filter((b): b is string => b != null);
+  const bandFreq = new Map<string, number>();
+  for (const b of psiBands) bandFreq.set(b, (bandFreq.get(b) ?? 0) + 1);
+  const psiDominantBand = [...bandFreq.entries()].sort((a, b) => b[1] - a[1])[0]?.[0] ?? "BEDROCK";
+  const gauges = parsed.map((d) => d.inputData.mintBurnFlows?.gaugeScore).filter((g): g is number => g != null);
+  const depegObs = parsed.reduce((sum, d) => sum + d.inputData.activeDepegCount, 0);
+  const depegKeys = new Set<string>();
+  for (const d of parsed) {
+    for (const depeg of d.inputData.topDepegs ?? []) {
+      depegKeys.add(depeg.startedAt != null
+        ? `${depeg.stablecoinId ?? depeg.symbol}:${depeg.startedAt}:active`
+        : `${depeg.symbol}:${depeg.direction ?? ""}:${depeg.bps}:active`);
+    }
+    for (const depeg of d.inputData.resolvedDepegs ?? []) {
+      depegKeys.add(depeg.startedAt != null
+        ? `${depeg.stablecoinId ?? depeg.symbol}:${depeg.startedAt}:resolved`
+        : `${depeg.symbol}:${depeg.direction ?? ""}:${depeg.peakBps}:resolved`);
+    }
+  }
+  return {
+    mcapEnd: mcaps[mcaps.length - 1] ?? 0,
+    psiMid: psiScores.length > 0 ? psiScores.reduce((s, v) => s + v, 0) / psiScores.length : 0,
+    psiDominantBand,
+    activeDepegObs: depegObs,
+    uniqueDepegSignals: depegKeys.size,
+    blacklistEvents: parsed.reduce((s, d) => s + (d.inputData.blacklistActivity?.eventCount ?? 0), 0),
+    blacklistUsd: parsed.reduce((s, d) => s + (d.inputData.blacklistActivity?.totalAmountUsd ?? 0), 0),
+    gradeTransitions: parsed.reduce((s, d) => s + (d.inputData.gradeTransitions?.length ?? 0), 0),
+    gaugeMid: gauges.length >= 3 ? gauges.reduce((s, v) => s + v, 0) / gauges.length : null,
+    days: parsed.length,
+  };
+}
+
+function parseDailyRows(
   dailyRows: { generated_at: number; digest_title: string | null; digest_text: string; input_data: string }[],
-): WeeklyInputData | null {
+): { date: string; title: string; text: string; inputData: DigestInputData }[] {
   const parsed: { date: string; title: string; text: string; inputData: DigestInputData }[] = [];
   for (const row of dailyRows) {
     try {
@@ -82,6 +171,15 @@ function buildWeeklyInputData(
       }, error);
     }
   }
+  return parsed;
+}
+
+function buildWeeklyInputData(
+  currentDailyRows: { generated_at: number; digest_title: string | null; digest_text: string; input_data: string }[],
+  priorDailyRows: { generated_at: number; digest_title: string | null; digest_text: string; input_data: string }[] = [],
+): WeeklyInputData | null {
+  const parsed = parseDailyRows(currentDailyRows);
+  const priorParsed = parseDailyRows(priorDailyRows);
   if (parsed.length < 5) return null;
 
   const psiScores = parsed.map((d) => d.inputData.stabilityIndex?.score).filter((s): s is number => s != null);
@@ -207,6 +305,32 @@ function buildWeeklyInputData(
     }))
   ).sort((a, b) => Math.abs(b.scoreDelta) * b.mcapUsd - Math.abs(a.scoreDelta) * a.mcapUsd).slice(0, 7);
 
+  let weekOverWeekDeltas: WeeklyInputData["weekOverWeekDeltas"] = null;
+  if (priorParsed.length >= 5) {
+    // Reuse already-computed current-week values; only run the aggregation
+    // pass on the prior-week rows.
+    const currentMcapEnd = mcaps[mcaps.length - 1] ?? 0;
+    const currentPsiMid = psiScores.length > 0 ? psiScores.reduce((s, v) => s + v, 0) / psiScores.length : 0;
+    const currentGaugeMid = gauges.length >= 3 ? gauges.reduce((s, v) => s + v, 0) / gauges.length : null;
+    const pri = aggregateBasics(priorParsed);
+    weekOverWeekDeltas = {
+      mcap: {
+        current: currentMcapEnd,
+        prior: pri.mcapEnd,
+        deltaPct: pri.mcapEnd > 0 ? ((currentMcapEnd - pri.mcapEnd) / pri.mcapEnd) * 100 : null,
+      },
+      psi: { current: currentPsiMid, prior: pri.psiMid, delta: currentPsiMid - pri.psiMid },
+      psiDominantBand: { current: dominantBand, prior: pri.psiDominantBand },
+      activeDepegObservations: { current: totalDepegObservations, prior: pri.activeDepegObs },
+      uniqueDepegSignals: { current: depegSignalKeys.size, prior: pri.uniqueDepegSignals },
+      blacklistEvents: { current: totalBlacklist, prior: pri.blacklistEvents },
+      blacklistUsd: { current: totalBlacklistAmountUsd, prior: pri.blacklistUsd },
+      gradeTransitions: { current: gradeTransitionCount, prior: pri.gradeTransitions },
+      gauge: { current: currentGaugeMid, prior: pri.gaugeMid },
+      dataCoverage: { currentDays: parsed.length, priorDays: pri.days },
+    };
+  }
+
   return {
     weekStartDate: parsed[0].date,
     weekEndDate: parsed[parsed.length - 1].date,
@@ -244,12 +368,13 @@ function buildWeeklyInputData(
       topYieldAnomalies,
       topLiquidityShifts,
     },
+    weekOverWeekDeltas,
   };
 }
 
 function buildWeeklyPrompt(
   data: WeeklyInputData,
-  recentWeeklyMeta: { meta: Record<string, unknown> | null; title: string | null }[] = [],
+  recentWeeklyMeta: { meta: Record<string, unknown> | null; title: string | null; rawText?: string | null }[] = [],
 ): string {
   const lines: string[] = [
     `Weekly recap: trailing daily editions from ${data.weekStartDate} to ${data.weekEndDate}`,
@@ -265,6 +390,25 @@ function buildWeeklyPrompt(
 
   if (data.gaugeRange) {
     lines.push(`Bank Run Gauge range: ${Math.round(data.gaugeRange.min * 10) / 10} to ${Math.round(data.gaugeRange.max * 10) / 10}`);
+  }
+
+  if (data.weekOverWeekDeltas) {
+    const d = data.weekOverWeekDeltas;
+    lines.push("", "Week-over-week deltas (this week vs prior week):");
+    lines.push(`  mcap: current ${formatCurrency(d.mcap.current)} / prior ${formatCurrency(d.mcap.prior)} / delta ${d.mcap.deltaPct == null ? "n/a" : `${d.mcap.deltaPct >= 0 ? "+" : ""}${d.mcap.deltaPct.toFixed(2)}%`}`);
+    lines.push(`  PSI midpoint: current ${d.psi.current.toFixed(1)} / prior ${d.psi.prior.toFixed(1)} / delta ${d.psi.delta >= 0 ? "+" : ""}${d.psi.delta.toFixed(1)}`);
+    lines.push(`  PSI dominant band: current ${d.psiDominantBand.current} / prior ${d.psiDominantBand.prior}`);
+    lines.push(`  Active depeg observations: current ${d.activeDepegObservations.current} / prior ${d.activeDepegObservations.prior}`);
+    lines.push(`  Unique depeg signals: current ${d.uniqueDepegSignals.current} / prior ${d.uniqueDepegSignals.prior}`);
+    lines.push(`  Blacklist events: current ${d.blacklistEvents.current} / prior ${d.blacklistEvents.prior}`);
+    lines.push(`  Blacklist USD: current ${formatCurrency(d.blacklistUsd.current)} / prior ${formatCurrency(d.blacklistUsd.prior)}`);
+    lines.push(`  Grade transitions: current ${d.gradeTransitions.current} / prior ${d.gradeTransitions.prior}`);
+    if (d.gauge.current != null && d.gauge.prior != null) {
+      lines.push(`  Bank Run Gauge midpoint: current ${d.gauge.current.toFixed(1)} / prior ${d.gauge.prior.toFixed(1)}`);
+    }
+    lines.push(`  Data coverage: ${d.dataCoverage.currentDays}d current, ${d.dataCoverage.priorDays}d prior`);
+  } else {
+    lines.push("", "Week-over-week deltas: unavailable (insufficient prior-week history).");
   }
 
   lines.push("", "Weekly Signals (synthesize from this, do not merely recap daily copy):");
@@ -377,26 +521,42 @@ export async function generateWeeklyRecap(
     )
     .all<{ digest_title: string | null; digest_text: string; digest_meta: string | null }>();
   const recentWeeklyMeta = buildRecentDigestMeta(recentWeeklyRows.results ?? [])
-    .map((entry) => ({ meta: entry.meta as Record<string, unknown> | null, title: entry.title }));
+    .map((entry) => ({
+      meta: entry.meta as Record<string, unknown> | null,
+      title: entry.title,
+      rawText: entry.rawText,
+    }));
 
-  // Fetch last 7 daily digests (exclude weekly entries)
-  const cutoff = Math.floor(Date.now() / 1000) - 8 * SECONDS.ONE_DAY;
+  // 15-day cutoff + LIMIT 15 captures current + prior weeks for WoW
+  // deltas and bounds the result set deterministically even if the dedup
+  // guard ever drifts.
+  const cutoff = Math.floor(Date.now() / 1000) - 15 * SECONDS.ONE_DAY;
   const dailyRows = await db
     .prepare(
       `SELECT generated_at, digest_title, digest_text, digest_extended, input_data
        FROM daily_digest
        WHERE generated_at >= ? AND (${NON_WEEKLY_DIGEST_SQL_FILTER})
-       ORDER BY generated_at ASC`,
+       ORDER BY generated_at ASC
+       LIMIT 15`,
     )
     .bind(cutoff)
     .all<{ generated_at: number; digest_title: string | null; digest_text: string; digest_extended: string | null; input_data: string }>();
 
-  const rows = (dailyRows.results ?? []).slice(-7);
-  if (rows.length < 5) {
-    return { metadata: `skipped: only ${rows.length} daily digests available (need 5+)` };
+  const allRows = dailyRows.results ?? [];
+  // Snap the split to a UTC day boundary (= last Tuesday 00:00 UTC given
+  // the Monday 08:05 cron slot). Day-level snap removes sub-second drift
+  // ambiguity between weekly runs, unlike a rolling `now - 7d` window.
+  const nowSec = Math.floor(Date.now() / 1000);
+  const todayTs = nowSec - (nowSec % SECONDS.ONE_DAY);
+  const weekBoundary = todayTs - 6 * SECONDS.ONE_DAY;
+  const currentRows = allRows.filter((r) => r.generated_at >= weekBoundary);
+  const priorRows = allRows.filter((r) => r.generated_at < weekBoundary);
+
+  if (currentRows.length < 5) {
+    return { metadata: `skipped: only ${currentRows.length} daily digests available in current week (need 5+)` };
   }
 
-  const weeklyData = buildWeeklyInputData(rows);
+  const weeklyData = buildWeeklyInputData(currentRows, priorRows);
   if (!weeklyData) {
     return { metadata: "skipped: failed to build weekly input data" };
   }
@@ -408,7 +568,7 @@ export async function generateWeeklyRecap(
     anthropicApiKey,
     systemPrompt: WEEKLY_SYSTEM_PROMPT,
     userPrompt,
-    maxTokens: 2000,
+    maxTokens: 20000,
     signal,
     logPrefix: "weekly-recap",
     parseOptions: {
@@ -431,7 +591,6 @@ export async function generateWeeklyRecap(
   }
 
   // Store
-  const nowSec = Math.floor(Date.now() / 1000);
   await insertDigestRecord({
     db,
     generatedAt: nowSec,

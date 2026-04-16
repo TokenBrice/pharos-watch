@@ -1,4 +1,5 @@
 import { DigestResponseSchema } from "../../lib/schemas";
+import { findForbiddenTics, hasForwardLook, leadFamily, openingFingerprint, type LeadFamily } from "./voice-guards";
 
 const FORBIDDEN_PHRASES = [
   "Meanwhile, ",
@@ -29,6 +30,7 @@ export interface DigestValidationProfile {
   recentMeta?: Array<{
     meta: Record<string, unknown> | null;
     title: string | null;
+    rawText?: string | null;
   }>;
 }
 
@@ -58,22 +60,39 @@ function stripRepeatedTitlePrefix(title: string, text: string): string {
 }
 
 const ALLOWED_LEADS = new Set([
+  // PSI family
   "psi-streak",
   "psi-regime",
+  "psi-band-change",
+  "psi-divergence",
+  // Depeg family
   "depeg",
   "resolved-depeg",
+  "chronic-depeg",
+  // DEWS family
   "dews-band-change",
+  "dews-alert-breadth",
+  "dews-warning",
+  // Flow family
   "ftq",
   "mint-burn",
-  "grade-transition",
+  "gauge-flip",
+  "gauge-divergence",
   "supply-reversal",
   "supply-acceleration",
   "supply-deceleration",
+  "chain-migration",
+  // Risk family
+  "grade-transition",
   "blacklist-contrast",
-  "macro-observation",
+  "reserve-event",
   "yield-anomaly",
   "liquidity-shift",
+  // Structural / macro
+  "macro-observation",
   "market-structure",
+  "issuer-concentration",
+  "regime-divergence",
   "other",
 ]);
 
@@ -88,6 +107,11 @@ const ALLOWED_TONES = new Set([
   "analytical",
   "calm",
   "skeptical",
+  "sardonic",
+  "observant",
+  "forensic",
+  "resigned",
+  "ironic",
   "other",
 ]);
 
@@ -296,8 +320,50 @@ export function validateDigestModelOutput(
     });
   }
 
+  const tics = findForbiddenTics(parsed.digestText, parsed.digestExtended);
+  if (tics.length > 0) {
+    issues.push({
+      code: "forbidden-tic",
+      severity: "soft",
+      message: `Output contains house-style tic(s): ${tics.join(", ")}. Rewrite without them.`,
+    });
+  }
+
+  if (!hasForwardLook(`${parsed.digestText}\n${parsed.digestExtended}`)) {
+    issues.push({
+      code: "missing-forward-look",
+      severity: "soft",
+      message: "Digest lacks a forward-look cue (watch for…, if X happens…, next trigger…).",
+    });
+  }
+
   const parsedMeta = parsed.digestMeta ? JSON.parse(parsed.digestMeta) as Record<string, unknown> : null;
   const recent = profile.recentMeta ?? [];
+
+  const currentFingerprint = openingFingerprint(parsed.digestExtended);
+  if (currentFingerprint) {
+    const recentFingerprints = recent
+      .slice(0, 3)
+      .map((entry) => {
+        const source = entry.rawText ?? entry.title ?? "";
+        return openingFingerprint(source);
+      })
+      .filter((fp): fp is string => !!fp);
+    const matchCount = recentFingerprints.filter((fp) => fp === currentFingerprint).length;
+    if (matchCount >= 2) {
+      issues.push({
+        code: "opening-pattern-repetition",
+        severity: "soft",
+        message: `Opening fingerprint '${currentFingerprint}' matches ${matchCount} of last 3 digests; open differently.`,
+      });
+    } else if (currentFingerprint === "psi-verb" && matchCount >= 1) {
+      issues.push({
+        code: "opening-pattern-repetition",
+        severity: "soft",
+        message: "PSI-verb opening repeats; the lead should surface a candidate fact first.",
+      });
+    }
+  }
   const titleFingerprint = normalizeTitleFingerprint(parsed.digestTitle);
   if (titleFingerprint && recent.some((entry) => entry.title && normalizeTitleFingerprint(entry.title) === titleFingerprint)) {
     issues.push({ code: "repeated-title", severity: "soft", message: "Title repeats a recent digest title." });
@@ -307,11 +373,33 @@ export function validateDigestModelOutput(
   const tone = getMetaString(parsedMeta, "tone");
   const coins = getMetaCoins(parsedMeta);
   const recentThree = recent.slice(0, 3);
-  if (lead && recentThree.some((entry) => getMetaString(entry.meta, "lead") === lead)) {
-    issues.push({ code: "repeated-lead", severity: "soft", message: `Lead signal repeats recent lead '${lead}'.` });
+  const currentFamily = leadFamily(lead ?? undefined);
+  if (currentFamily && currentFamily !== "other") {
+    const recentFamilies = recentThree
+      .map((entry) => leadFamily(getMetaString(entry.meta, "lead") ?? undefined))
+      .filter((f): f is LeadFamily => f != null && f !== "other");
+    const sameFamilyCount = recentFamilies.filter((f) => f === currentFamily).length;
+    if (sameFamilyCount >= 2) {
+      issues.push({
+        code: "repeated-lead-family",
+        severity: "soft",
+        message: `Lead family '${currentFamily}' repeats ${sameFamilyCount} of last 3 digests.`,
+      });
+    }
   }
   if (tone && recentThree.some((entry) => getMetaString(entry.meta, "tone") === tone)) {
     issues.push({ code: "repeated-tone", severity: "soft", message: `Tone repeats recent tone '${tone}'.` });
+  }
+  const recentFive = recent.slice(0, 5);
+  if (tone) {
+    const sameToneCount = recentFive.filter((entry) => getMetaString(entry.meta, "tone") === tone).length;
+    if (sameToneCount >= 3) {
+      issues.push({
+        code: "tone-cluster",
+        severity: "soft",
+        message: `Tone '${tone}' appeared ${sameToneCount} times in last 5 digests; pick a different register.`,
+      });
+    }
   }
   if (coins.length > 0) {
     const recentCoins = new Set(recentThree.flatMap((entry) => getMetaCoins(entry.meta)));

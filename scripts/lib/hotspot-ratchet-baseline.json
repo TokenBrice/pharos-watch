@@ -216,7 +216,7 @@
     "notes": "Coverage page orchestration now lives behind a page-model hook plus section components. Keep this file as a route shell that composes the sections."
   },
   "worker/src/cron/daily-digest/collectors.ts": {
-    "fileLines": 25,
+    "fileLines": 26,
     "maxFunctionLines": 0,
     "branchCount": 0,
     "disposition": "deferred",
@@ -228,8 +228,8 @@
     "notes": "Collector family is still broad but already partly modular. Defer deeper split until digest sourcing requirements stop moving."
   },
   "worker/src/cron/daily-digest.ts": {
-    "fileLines": 202,
-    "maxFunctionLines": 174,
+    "fileLines": 203,
+    "maxFunctionLines": 175,
     "branchCount": 17,
     "disposition": "stabilized",
     "targetBudget": {

@@ -334,11 +334,22 @@ export async function collectMintBurnFlows(
         .slice(0, 3)
         .map((coin) => ({ symbol: coin.symbol, intensity: coin.intensity, net24hUsd: coin.net24h }));
 
+      const chainTotals = new Map<string, number>();
+      for (const row of flow24hRows.results ?? []) {
+        if (!isCanonicalMintBurnPair(row.stablecoin_id, row.chain_id)) continue;
+        chainTotals.set(row.chain_id, (chainTotals.get(row.chain_id) ?? 0) + row.net_24h);
+      }
+      const topChains = [...chainTotals.entries()]
+        .map(([chainId, netUsd]) => ({ chainId, netUsd }))
+        .sort((a, b) => Math.abs(b.netUsd) - Math.abs(a.netUsd))
+        .slice(0, 3);
+
       return {
         gaugeScore,
         gaugeBand: getGaugeBand(gaugeScore).label,
         flightToQuality: { active: ftq.active, safeNetUsd: safeNet24h, riskyNetUsd: riskyNet24h },
         topPressure,
+        topChains,
       };
     }
   } catch (error) {

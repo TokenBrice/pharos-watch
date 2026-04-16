@@ -47,7 +47,8 @@ The cron assembles a `DigestInputData` object from 16 sources before calling the
 | Supply velocity | top 10 coins by mcap | 1d vs 7d changes; signals: "reversed", "accelerating", "decelerating" with material daily/weekly thresholds |
 | Safety scores | computed real-time | Report card grades for mentioned coins + 2 "tension" coins (high peg score but low overall grade — structurally fragile despite stable peg) |
 | Resolved depegs | `depeg_events` (last 48h) | Filters: peak >200 bps AND mcap >$50M; top 3 by peak deviation |
-| Mint-burn flows | `mint_burn_hourly` | Bank Run Gauge (mcap-weighted composite), Flight-to-Quality (safe-haven vs risky net flows via `buildFlightToQualityClassification()`), top pressure coins (\|FIS\| > 20) |
+| Mint-burn flows | `mint_burn_hourly` | Bank Run Gauge (mcap-weighted composite), Flight-to-Quality (safe-haven vs risky net flows via `buildFlightToQualityClassification()`), top pressure coins (\|FIS\| > 20), top 3 chains by absolute 24h net flow |
+| Total mcap ATH | derived from `daily_digest` archive (`json_extract` on stored `totalMcapUsd`) | Anchors current total mcap against its Digest-window ATH value and date |
 | DEWS stress | `stress_signals` + `stress_signal_history` | Band distribution (CALM/WATCH/ALERT/WARNING/DANGER), band changes crossing WATCH/ALERT boundary, elevated coins (ALERT+ with mcap >$10M) |
 | Historical context | `stability_index` + `supply_history` | PSI precedent (last time score was at/below current), band streak, supply mover ATH and largest historical weekly change |
 | Grade transitions | `safety_grade_history` | Report card grade changes (last 48h) with dimensional context; methodology re-grade guard (>10 simultaneous changes excluded) |
@@ -70,18 +71,25 @@ The digest's Flight-to-Quality collector now uses `buildFlightToQualityClassific
 
 ### LLM call
 
-- **Model:** `claude-opus-4-6` via `https://api.anthropic.com/v1/messages`
-- **Timeout:** 120 seconds (Opus generates slower than Sonnet; the cron runs at 08:05 UTC with no downstream time pressure)
+- **Model:** `claude-opus-4-7` via `https://api.anthropic.com/v1/messages`, with adaptive thinking (`thinking.type = "adaptive"`) and max reasoning effort (`output_config.effort = "max"`)
+- **Reasoning:** adaptive thinking is on by default with omitted display; no `budget_tokens` is needed (and is rejected on Opus 4.7). Sampling parameters (`temperature` / `top_p` / `top_k`) are not sent (also rejected on Opus 4.7).
+- **Timeout:** 300 seconds (Opus 4.7 max-effort adaptive thinking can run 30–120s of model-side think time for a digest-sized task; the cron runs at 08:05 UTC with no downstream time pressure)
+- **Max tokens:** 16000 daily, 20000 weekly (max_tokens covers thinking + output; sized for max-effort headroom)
 - **Overload retries:** Anthropic `529 Overloaded` responses now back off exponentially (`5s`, `10s`, `20s`, `30s`) before the digest gives up
-- **Voice:** sardonic financial columnist — dry, precise, no emojis, no exclamation marks
+- **Voice:** sardonic financial columnist — dry, precise, no emojis, no exclamation marks, with a compact few-shot EXEMPLAR embedded in the system prompt to anchor voice and structure
 - **Priority rule:** lead from the highest-impact unsuppressed editorial candidate. Raw evidence sections are supporting material, not the lead-selection source.
+- **Momentum candidates:** a separate in-prompt block surfaces candidates with `novelty ∈ {new, accelerating, reversal}` so the model has explicit forward-watch material upstream of the regex-based forward-look validator.
+- **Opening rule:** the first sentence of the extended field must surface a fact from the lead candidate (coin/number), not a templated PSI verb. Opening-fingerprint validator blocks PSI-verb openings that repeat within the last 3 digests.
+- **Forward-look mandate:** every digest must contain at least one anticipatory line (if/when/next-trigger/watch-for); a soft validator rejects retrospective-only digests.
+- **Spice budget:** the prompt allows one sharp sentence per digest (named analogy, historical parallel, concrete-stakes observation, or ironic contrast); over-reach is discouraged by the forbidden-tic list.
 - **Artifact policy:** candidates can be marked high-risk or suppressed for chronic small depegs, zero-value blacklist bursts, thin-liquidity artifacts, very high APY anomalies, or other weak evidence. The prompt explicitly tells Opus not to dramatize these.
 - **Regime classification:** a `classifyRegime()` function labels each day as CRISIS, TENSION, WATCHFUL, or CALM based on PSI band, impact-weighted active depeg pressure, gauge score, FTQ status, and ALERT+ mcap rather than raw coin counts alone.
 - **Narrative structure:** regime-aware P1/P2/P3 paragraph structure; PSI is always referenced but doesn't have to open; max 3 data categories per digest
 - **Density contract:** 40–70 words per paragraph, 150–280 words total for the extended field
 - **Structured sections:** When the digest covers two distinct stories, the LLM may use bold inline headers (e.g., `**Peg Watch**`, `**Capital Flows**`) to separate paragraphs. P1 (the lead) never has a header. The frontend renders these as styled inline spans.
-- **Variety enforcement:** normalized structured `meta` field (lead signal id, lead type, tone, featured coins, used/suppressed candidate ids) from recent non-weekly digests replaces raw text dump; falls back to raw text for pre-meta entries
-- **Quality gate:** parsed LLM output is validated for required fields, paragraph/word budget, title+text length, code fences, and recent title/lead/tone/coin repetition. The worker retries once with validation errors before accepting the copy. If hard issues remain after retry, the digest is stored as degraded but social posting is skipped.
+- **Variety enforcement:** normalized structured `meta` field (lead signal id, lead type, tone, featured coins, used/suppressed candidate ids) from recent non-weekly digests replaces raw text dump; falls back to raw text for pre-meta entries. A coarse `leadFamily` mapper (psi, depeg, dews, flow, risk, macro) drives `repeated-lead-family` so variety enforcement survives the 28-token allowed-leads enum.
+- **Voice guards:** a forbidden-tic list (plumbing, beneath the calm, restless depths, calm surfaces,, surface calm, serene, moving underneath, plus closer-position bans on "worth watching / monitoring / bears watching") fires a soft issue when hit. Opening-pattern fingerprint blocks repeated "PSI [verb]" openings. Forward-look cue detector flags retrospective-only digests. Tone-cluster detector flags a register appearing 3+ times in the last 5 digests.
+- **Quality gate:** parsed LLM output is validated for required fields, paragraph/word budget, title+text length, code fences, forbidden tics, opening-pattern repetition, missing forward-look, repeated lead-family, tone-cluster, and recent title/tone/coin repetition. The worker retries once with validation errors before accepting the copy. If hard issues remain after retry, the digest is stored as degraded but social posting is skipped.
 - **Output:** raw JSON `{ "title": "...", "extended": "...", "text": "...", "meta": { "lead": "...", "tone": "...", "coins": [...] } }` — no markdown fences
 
 ### Failure handling
@@ -229,7 +237,7 @@ Possible values per channel: `"no-creds"`, `"ok"`, `"failed: <truncated error>"`
 
 ### Data collection
 
-Fetches the last 7 daily digests (excluding weekly entries via `json_extract(digest_meta, '$.type') != 'weekly'`), parses their stored `input_data`, and aggregates both summary ranges and weekly signal leaderboards:
+Fetches the last 15 daily digests (`LIMIT 15`, cutoff `now - 15d`, excluding weekly entries via `json_extract(digest_meta, '$.type') != 'weekly'`), splits them at a UTC-day boundary (`todayTs - 6d`, = last Tuesday 00:00 UTC given the Monday 08:05 cron slot), and aggregates both summary ranges and weekly signal leaderboards for the current week plus basic aggregates for the prior week:
 
 | Metric | Derivation |
 |--------|-----------|
@@ -244,18 +252,19 @@ Fetches the last 7 daily digests (excluding weekly entries via `json_extract(dig
 | Grade transitions | Sum of `gradeTransitions.length` across all days |
 | Gauge range | Min/max `mintBurnFlows.gaugeScore` (null if <3 data points) |
 | Other anomalies | Top mint/burn pressure, yield anomalies, and liquidity shifts |
+| Week-over-week deltas | prior 7 daily rows (same aggregation shape) produce `{ current, prior }` values for mcap end, PSI midpoint, PSI dominant band, active-depeg observations, unique depeg signals, blacklist events/USD, grade transitions, gauge midpoint; `null` when prior-week coverage is below 5 daily rows |
 
-Requires >=5 daily digests to proceed.
+Requires >=5 current-week daily digests to proceed. Prior-week coverage below 5 is tolerated; `weekOverWeekDeltas` is then `null` and the prompt notes the gap instead.
 
 ### LLM call
 
-- **Model:** `claude-opus-4-6`
-- **Timeout:** 120 seconds
-- **max_tokens:** 2000
-- **Voice:** Same sardonic columnist, but synthesizing rather than reporting
+- **Model:** `claude-opus-4-7` with adaptive thinking + max effort (identical contract to the daily digest)
+- **Timeout:** 300 seconds
+- **max_tokens:** 20000
+- **Voice:** Same sardonic columnist, but synthesizing rather than reporting; rewritten system prompt adds arc framing, forward-look mandate on the last paragraph, tic list, and explicit week-over-week references
 - **Structure:** 4-6 paragraphs, 250-400 words: week's headline, dominant story, counter-narrative, supply/capital flows, optional structural observation
 - **Artifact policy:** Same suppression principle as daily. Weekly recaps separate repeated active observations from unique signals so chronic conditions are not counted as fresh events.
-- **Variety:** Recent weekly recap metadata is supplied to avoid repeating the same weekly frame.
+- **Variety:** Recent weekly recap metadata is supplied to avoid repeating the same weekly frame. Meta is normalized on the same contract as daily (allowed leads + tones); `repeated-lead-family` applies to weekly output too.
 
 ### Storage
 

@@ -142,6 +142,11 @@ vi.mock("../../lib/circuit-breaker", () => ({
 }));
 
 import { generateDailyDigest, classifyRegime } from "../daily-digest";
+import {
+  parseDigestModelResponse,
+  validateDigestModelOutput,
+  type ParsedDigestResponse,
+} from "../daily-digest/response";
 import { ANTHROPIC_MAX_RETRIES, ANTHROPIC_TIMEOUT_MS } from "../../lib/constants";
 import {
   collectPsiContributors,
@@ -162,10 +167,33 @@ import { postDigestToTelegram } from "../../lib/telegram";
 import { prepareTelegramDigestAppendices } from "../../lib/telegram-digest-appendices";
 import { shouldAttemptFetch } from "../../lib/circuit-breaker";
 
+const DEFAULT_PARSED_EXTENDED = "T. T. T.\n\nT. T. T.\n\nT. T. T.";
+
+function makeParsedFixture(opts: {
+  extended?: string;
+  text?: string;
+  lead?: string;
+  tone?: string;
+} = {}): ParsedDigestResponse {
+  return {
+    digestTitle: "T",
+    digestText: opts.text ?? "T.",
+    digestExtended: opts.extended ?? DEFAULT_PARSED_EXTENDED,
+    digestMeta: JSON.stringify({
+      lead: opts.lead ?? "depeg",
+      tone: opts.tone ?? "dry",
+      coins: ["USDT"],
+    }),
+    strippedDashCount: 0,
+    strippedForbiddenCharCount: 0,
+    usedRawTextFallback: false,
+  };
+}
+
 const VALID_DAILY_EXTENDED = [
   "PSI held at 91.2 BEDROCK with severity 2 and breadth 1, so the headline market still looks calm. USDT sat 150 bps off peg on a $100M float in the fixture, which gives the model a real candidate but not a systemic alarm. The point is selection, not volume.",
   "USDT added $5M over the week while USDC lost $2M, a mixed flow pattern rather than a single-direction stampede. The candidate list marks the depeg by impact first, then leaves supply as supporting context, which is the behavior this test expects. A smaller signal can still appear without becoming the lead.",
-  "Safety scores stayed A for USDT and USDC, leaving the daily note with a dry but restrained read. Nothing in the fixture should force panic, but the digest still has enough numbers to produce a publishable editorial paragraph set today. That is the editorial balance the prompt is supposed to protect.",
+  "Safety scores stayed A for USDT and USDC, leaving the daily note with a dry but restrained read. Nothing in the fixture should force panic, but the digest still has enough numbers to produce a publishable editorial paragraph set today. Next session will decide whether the USDT deviation widens; if it crosses 200 bps, the impact score moves the depeg from supporting context to lead.",
 ].join("\n\n");
 
 const ANTHROPIC_OK_RESPONSE = {
@@ -405,10 +433,32 @@ describe("generateDailyDigest", () => {
       { timeoutMs: ANTHROPIC_TIMEOUT_MS },
     );
     const anthropicBody = JSON.parse(String(vi.mocked(fetchWithRetry).mock.calls[0]?.[1]?.body)) as {
+      model: string;
+      max_tokens: number;
+      thinking?: { type: string };
+      output_config?: { effort: string };
+      system: string;
       messages: { content: string }[];
     };
+    expect(anthropicBody.model).toBe("claude-opus-4-7");
+    expect(anthropicBody.thinking).toEqual({ type: "adaptive" });
+    expect(anthropicBody.output_config).toEqual({ effort: "max" });
+    expect(anthropicBody.max_tokens).toBe(16000);
     expect(anthropicBody.messages[0].content).toContain("Data quality notes:");
     expect(anthropicBody.messages[0].content).toContain("Editorial Candidates");
+
+    const systemPrompt = anthropicBody.system;
+    expect(systemPrompt).toContain("Do NOT reuse any of the following house-style tics");
+    expect(systemPrompt).toContain("plumbing");
+    expect(systemPrompt).toContain("forward-look");
+    expect(systemPrompt).toContain("Earn one sharp sentence");
+    expect(systemPrompt).toContain("EXEMPLAR");
+    expect(systemPrompt).toContain("Momentum Candidate");
+    expect(systemPrompt).toContain("total-mcap ATH");
+
+    const userPrompt = anthropicBody.messages[0].content;
+    expect(userPrompt).not.toContain("Distribution: median");
+    expect(userPrompt).not.toMatch(/\d+ above B/);
   });
 
   it("repairs malformed code-block JSON with one corrective retry", async () => {
@@ -541,6 +591,17 @@ describe("generateDailyDigest", () => {
     expect(storedInput.mintBurnFlows.gaugeBand).toBeDefined();
     expect(typeof storedInput.mintBurnFlows.gaugeScore).toBe("number");
     expect(storedInput.mintBurnFlows.flightToQuality).toBeDefined();
+    expect(storedInput.mintBurnFlows.topChains).toBeDefined();
+    expect(Array.isArray(storedInput.mintBurnFlows.topChains)).toBe(true);
+    expect(storedInput.mintBurnFlows.topChains.length).toBeLessThanOrEqual(3);
+    expect(storedInput.mintBurnFlows.topChains.length).toBeGreaterThan(0);
+    expect(storedInput.mintBurnFlows.topChains[0]).toMatchObject({
+      chainId: expect.any(String),
+      netUsd: expect.any(Number),
+    });
+
+    const body = JSON.parse(String(vi.mocked(fetchWithRetry).mock.calls[0]?.[1]?.body)) as { messages: { content: string }[] };
+    expect(body.messages[0].content).toContain("Top chains by net flow");
   });
 
   it("includes DEWS stress data with band changes in stored input", async () => {
@@ -872,6 +933,266 @@ describe("generateDailyDigest", () => {
 
     expect(result.metadata).toContain("telegram: failed:");
     expect(commitTelegramAppendices).toHaveBeenCalledTimes(0);
+  });
+});
+
+describe("parseDigestModelResponse meta normalization", () => {
+  function parseLeadTone(leadValue: string, toneValue: string): { lead?: string; tone?: string } {
+    const raw = JSON.stringify({
+      title: "T",
+      text: "T.",
+      extended: "T. T. T.\n\nT. T. T.\n\nT. T. T.",
+      meta: { lead: leadValue, tone: toneValue, coins: ["USDT"] },
+    });
+    const parsed = parseDigestModelResponse(raw);
+    const meta = parsed.digestMeta ? (JSON.parse(parsed.digestMeta) as Record<string, string>) : {};
+    return { lead: meta.lead, tone: meta.tone };
+  }
+
+  it("retains observed natural lead tokens", () => {
+    expect(parseLeadTone("gauge-flip", "dry").lead).toBe("gauge-flip");
+    expect(parseLeadTone("psi-band-change", "dry").lead).toBe("psi-band-change");
+    expect(parseLeadTone("issuer-concentration", "dry").lead).toBe("issuer-concentration");
+    expect(parseLeadTone("regime-divergence", "dry").lead).toBe("regime-divergence");
+    expect(parseLeadTone("chain-migration", "dry").lead).toBe("chain-migration");
+    expect(parseLeadTone("reserve-event", "dry").lead).toBe("reserve-event");
+  });
+
+  it("retains observed natural tones", () => {
+    expect(parseLeadTone("depeg", "sardonic").tone).toBe("sardonic");
+    expect(parseLeadTone("depeg", "observant").tone).toBe("observant");
+    expect(parseLeadTone("depeg", "forensic").tone).toBe("forensic");
+  });
+
+  it("collapses garbage to 'other'", () => {
+    expect(parseLeadTone("asdfghjkl", "dry").lead).toBe("other");
+    expect(parseLeadTone("depeg", "asdfghjkl").tone).toBe("other");
+  });
+});
+
+describe("lead family variety check", () => {
+  function validateWith(currentLead: string, recentLeads: string[]) {
+    const parsed: ParsedDigestResponse = {
+      digestTitle: "T",
+      digestText: "T.",
+      digestExtended: "T. T. T.\n\nT. T. T.\n\nT. T. T.",
+      digestMeta: JSON.stringify({ lead: currentLead, tone: "dry", coins: ["USDT"] }),
+      strippedDashCount: 0,
+      strippedForbiddenCharCount: 0,
+      usedRawTextFallback: false,
+    };
+    const recentMeta = recentLeads.map((l) => ({
+      meta: { lead: l, tone: "dry" } as Record<string, unknown>,
+      title: "x",
+    }));
+    return validateDigestModelOutput(parsed, { kind: "daily", recentMeta });
+  }
+
+  it("fires repeated-lead-family when family repeats 2 of last 3", () => {
+    const issues = validateWith("psi-streak", ["psi-regime", "psi-band-change", "supply-reversal"]);
+    expect(issues.some((i) => i.code === "repeated-lead-family")).toBe(true);
+  });
+
+  it("does not fire when lead families differ", () => {
+    const issues = validateWith("psi-streak", ["depeg", "grade-transition", "ftq"]);
+    expect(issues.some((i) => i.code === "repeated-lead-family")).toBe(false);
+  });
+});
+
+describe("forward-look voice guard", () => {
+  it("flags missing forward-look when digest is purely retrospective", () => {
+    const issues = validateDigestModelOutput(
+      makeParsedFixture({
+        extended: "USDT added $2B.\n\nUSDC pulled $500M.\n\nThe gap is now the story.",
+        text: "USDT added $2B while USDC pulled $500M.",
+      }),
+      { kind: "daily", recentMeta: [] },
+    );
+    expect(issues.some((i) => i.code === "missing-forward-look")).toBe(true);
+  });
+
+  it("does not flag when forward-look is present in extended", () => {
+    const issues = validateDigestModelOutput(
+      makeParsedFixture({ extended: "USDT added $2B.\n\nUSDC pulled $500M.\n\nIf the gap holds next week, it is a rotation." }),
+      { kind: "daily", recentMeta: [] },
+    );
+    expect(issues.some((i) => i.code === "missing-forward-look")).toBe(false);
+  });
+
+  it("does not flag when forward-look is only in the text hook", () => {
+    const issues = validateDigestModelOutput(
+      makeParsedFixture({ extended: "A.\n\nB.\n\nC.", text: "Watch if USDT crosses $185B." }),
+      { kind: "daily", recentMeta: [] },
+    );
+    expect(issues.some((i) => i.code === "missing-forward-look")).toBe(false);
+  });
+});
+
+describe("opening-fingerprint voice guard", () => {
+  it("flags PSI-verb opening when any of last 3 also opened that way", () => {
+    const recent = [
+      { meta: null, title: "a", rawText: "PSI sits at 95. USDC hit ATH." },
+      { meta: null, title: "b", rawText: "USDT minted $2B. PSI unchanged." },
+      { meta: null, title: "c", rawText: "Flows rotated into gold. USDC weak." },
+    ];
+    const parsed = makeParsedFixture({ extended: "PSI ticked to 96 in BEDROCK.\n\nUSDC added $500M.\n\nReal closer." });
+    const issues = validateDigestModelOutput(parsed, { kind: "daily", recentMeta: recent });
+    expect(issues.some((i) => i.code === "opening-pattern-repetition")).toBe(true);
+  });
+
+  it("does not flag when opening is structurally different", () => {
+    const recent = [
+      { meta: null, title: "a", rawText: "PSI sits at 95." },
+      { meta: null, title: "b", rawText: "PSI slipped to 93." },
+    ];
+    const parsed = makeParsedFixture({ extended: "USDT just added $2B overnight.\n\nPSI drifted to 93.\n\nReal closer." });
+    const issues = validateDigestModelOutput(parsed, { kind: "daily", recentMeta: recent });
+    expect(issues.some((i) => i.code === "opening-pattern-repetition")).toBe(false);
+  });
+});
+
+describe("forbidden-tic voice guard", () => {
+  it("flags plumbing metaphor anywhere in extended", () => {
+    const issues = validateDigestModelOutput(
+      makeParsedFixture({ extended: "PSI held.\n\nThe plumbing flinched again.\n\nDone." }),
+      { kind: "daily", recentMeta: [] },
+    );
+    expect(issues.some((i) => i.code === "forbidden-tic")).toBe(true);
+  });
+
+  it("flags 'worth watching' in closer position", () => {
+    const issues = validateDigestModelOutput(
+      makeParsedFixture({ extended: "Line one.\n\nLine two.\n\nLine three, worth monitoring into next week." }),
+      { kind: "daily", recentMeta: [] },
+    );
+    expect(issues.some((i) => i.code === "forbidden-tic")).toBe(true);
+  });
+
+  it("does NOT flag 'worth watching' mid-paragraph when last sentence is different", () => {
+    const issues = validateDigestModelOutput(
+      makeParsedFixture({ extended: "A coin worth watching for mcap drift, plus five others. Real closer sentence here.\n\nLine two.\n\nLine three." }),
+      { kind: "daily", recentMeta: [] },
+    );
+    expect(issues.some((i) => i.code === "forbidden-tic")).toBe(false);
+  });
+
+  it("does not flag prose free of tics", () => {
+    const issues = validateDigestModelOutput(
+      makeParsedFixture({ extended: "USDT added $3B.\n\nUSDC pulled $200M.\n\nThe gap is now the story." }),
+      { kind: "daily", recentMeta: [] },
+    );
+    expect(issues.some((i) => i.code === "forbidden-tic")).toBe(false);
+  });
+});
+
+describe("tone cluster validator", () => {
+  it("fires tone-cluster when same tone appears 3+ times in last 5", () => {
+    const recent = Array.from({ length: 5 }, () => ({
+      meta: { lead: "depeg", tone: "foreboding" } as Record<string, unknown>,
+      title: "prior",
+    }));
+    const result = validateDigestModelOutput(
+      makeParsedFixture({ tone: "foreboding" }),
+      { kind: "daily", recentMeta: recent },
+    );
+    expect(result.some((i) => i.code === "tone-cluster")).toBe(true);
+  });
+
+  it("does not fire when spread across tones", () => {
+    const recent = [
+      { meta: { tone: "dry" } as Record<string, unknown>, title: "a" },
+      { meta: { tone: "sardonic" } as Record<string, unknown>, title: "b" },
+      { meta: { tone: "foreboding" } as Record<string, unknown>, title: "c" },
+      { meta: { tone: "clinical" } as Record<string, unknown>, title: "d" },
+      { meta: { tone: "wistful" } as Record<string, unknown>, title: "e" },
+    ];
+    const result = validateDigestModelOutput(
+      makeParsedFixture({ tone: "foreboding" }),
+      { kind: "daily", recentMeta: recent },
+    );
+    expect(result.some((i) => i.code === "tone-cluster")).toBe(false);
+  });
+});
+
+describe("momentum candidates surface", () => {
+  it("renders Momentum Candidates block when momentum-novelty candidates exist", async () => {
+    const db = mockD1(makeBaseTables());
+    const result = await generateDailyDigest(db, "anthropic-key");
+    expect(result.itemCount).toBe(1);
+    const body = JSON.parse(String(vi.mocked(fetchWithRetry).mock.calls[0]?.[1]?.body)) as {
+      messages: { content: string }[];
+    };
+    expect(body.messages[0].content).toContain("Momentum Candidates");
+  });
+});
+
+describe("totalMcapAth enrichment", () => {
+  beforeEach(() => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-03-06T12:00:00Z"));
+    vi.mocked(fetchWithRetry).mockReset();
+    vi.mocked(loadStablecoinsCache).mockReset();
+    vi.mocked(computeSafetyScoresSnapshot).mockReset();
+    vi.mocked(shouldAttemptFetch).mockReset().mockResolvedValue(true);
+  });
+  afterEach(() => {
+    vi.useRealTimers();
+    vi.restoreAllMocks();
+  });
+
+  it("records ATH context when supplied", async () => {
+    const nowSec = Math.floor(Date.now() / 1000);
+    const todayTs = nowSec - (nowSec % 86_400);
+
+    vi.mocked(loadStablecoinsCache).mockResolvedValue({
+      kind: "ok",
+      payload: {
+        peggedAssets: [
+          makeAsset({
+            id: "usdt-tether",
+            symbol: "USDT",
+            circulating: { peggedUSD: 100_000_000 },
+            circulatingPrevWeek: { peggedUSD: 95_000_000 },
+          }),
+        ],
+      },
+      updatedAt: nowSec,
+    });
+    vi.mocked(computeSafetyScoresSnapshot).mockResolvedValue({
+      kind: "ok",
+      mode: "full-grades",
+      coveredCount: 1,
+      trackedCount: 1,
+      coverageRatio: 1,
+      scores: new Map(),
+      grades: [{ id: "usdt-tether", symbol: "USDT", grade: "A", score: 88, pegScore: 95, liqScore: 90 }],
+    });
+    vi.mocked(fetchWithRetry).mockImplementation(async () =>
+      new Response(JSON.stringify(ANTHROPIC_OK_RESPONSE), { status: 200, headers: { "Content-Type": "application/json" } })
+    );
+    vi.mocked(shouldAttemptFetch).mockResolvedValue(true);
+
+    const baseTables = makeBaseTables();
+    const db = mockD1([
+      ...baseTables,
+      {
+        match: "ORDER BY CAST(json_extract(input_data, '$.totalMcapUsd') AS REAL) DESC",
+        first: { ath_value: 330_000_000_000, ath_date: nowSec - 7 * 86_400 },
+        rows: [],
+      },
+    ]);
+
+    const result = await generateDailyDigest(db, "anthropic-key");
+    expect(result.itemCount).toBe(1);
+
+    const storedInput = JSON.parse(String(getInsertDigestBinds(db as MockD1Database)?.[3]));
+    expect(storedInput.totalMcapAth).toBeDefined();
+    expect(storedInput.totalMcapAth.value).toBe(330_000_000_000);
+    expect(storedInput.totalMcapAth.daysAgo).toBe(7);
+    expect(storedInput.totalMcapAth.date).toBe(todayTs - 7 * 86_400);
+
+    const body = JSON.parse(String(vi.mocked(fetchWithRetry).mock.calls[0]?.[1]?.body)) as { messages: { content: string }[] };
+    expect(body.messages[0].content).toContain("its Digest-window ATH");
   });
 });
 

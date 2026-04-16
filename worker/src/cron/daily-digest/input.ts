@@ -19,6 +19,7 @@ import {
   collectResolvedDepegs,
   collectSafetyScores,
   collectSupplyVelocity,
+  collectTotalMcapAth,
   collectYieldAnomalies,
   type CollectorContext,
   type CollectorResult,
@@ -201,11 +202,13 @@ export async function buildDailyDigestInput(db: D1Database): Promise<DailyDigest
   const yieldAnomalies = await collectYieldAnomalies(ctx, degradedReasons);
   const liquidityShifts = await collectLiquidityShifts(ctx);
   const crossDayTrends = await collectCrossDayTrends(ctx, degradedReasons);
+  const totalMcapAth = await collectTotalMcapAth(ctx);
 
   const inputData: DigestInputData = {
       digestVersion: 2,
       totalMcapUsd,
       mcap7dDelta: totalMcapUsd - totalPrevWeek,
+      totalMcapAth,
       dataQuality: {
         generatedAt: nowSec,
         stablecoinsCacheUpdatedAt: stablecoinsCacheResult.updatedAt,

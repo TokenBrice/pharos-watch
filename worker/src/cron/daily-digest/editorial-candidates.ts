@@ -100,7 +100,7 @@ function addResolvedDepegCandidates(candidates: DigestEditorialCandidate[], data
         `${formatCurrency(depeg.mcapUsd)} market cap`,
         `${depeg.durationHours}h duration`,
       ],
-      whyItMatters: "Fast recovery after a material deviation is useful plumbing evidence, not just a scare headline.",
+      whyItMatters: "Fast recovery after a material deviation is useful recovery evidence, not just a scare headline.",
     });
   }
 }
@@ -354,6 +354,14 @@ function addPsiCandidate(candidates: DigestEditorialCandidate[], data: DigestInp
     ],
     whyItMatters: "PSI frames the market regime, but it should lead only when context or breadth changed.",
   });
+}
+
+const MOMENTUM_NOVELTIES = new Set<DigestEditorialCandidateNovelty>(["new", "accelerating", "reversal"]);
+
+export function selectMomentumCandidates(candidates: DigestEditorialCandidate[]): DigestEditorialCandidate[] {
+  return candidates
+    .filter((c) => !c.suppressReason && c.artifactRisk !== "high" && MOMENTUM_NOVELTIES.has(c.novelty))
+    .slice(0, 4);
 }
 
 export function buildEditorialCandidates(data: DigestInputData): DigestEditorialCandidate[] {

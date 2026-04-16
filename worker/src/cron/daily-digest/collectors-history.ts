@@ -7,6 +7,33 @@ import {
   type CollectorContext,
 } from "./collectors-shared";
 
+export async function collectTotalMcapAth(
+  ctx: CollectorContext,
+): Promise<DigestInputData["totalMcapAth"]> {
+  try {
+    const row = await ctx.db
+      .prepare(
+        `SELECT CAST(json_extract(input_data, '$.totalMcapUsd') AS REAL) as ath_value, generated_at as ath_date
+         FROM daily_digest
+         WHERE (${NON_WEEKLY_DIGEST_SQL_FILTER})
+           AND json_extract(input_data, '$.totalMcapUsd') IS NOT NULL
+         ORDER BY CAST(json_extract(input_data, '$.totalMcapUsd') AS REAL) DESC
+         LIMIT 1`,
+      )
+      .first<{ ath_value: number | null; ath_date: number | null }>();
+    if (!row || row.ath_value == null || row.ath_date == null || row.ath_value <= 0) return undefined;
+    const dayTs = row.ath_date - (row.ath_date % SECONDS.ONE_DAY);
+    return {
+      value: row.ath_value,
+      date: dayTs,
+      daysAgo: Math.max(0, Math.round((ctx.todayTs - dayTs) / SECONDS.ONE_DAY)),
+    };
+  } catch (error) {
+    console.error("[daily-digest] Failed to collect total mcap ATH:", error);
+    return undefined;
+  }
+}
+
 export async function collectPsiContributors(
   ctx: CollectorContext,
 ): Promise<DigestInputData["psiContributors"]> {

@@ -57,6 +57,11 @@ export interface DigestInputData {
   digestVersion?: number;
   totalMcapUsd: number;
   mcap7dDelta: number;
+  totalMcapAth?: {
+    value: number;
+    date: number;
+    daysAgo: number;
+  };
   dataQuality?: DigestDataQuality;
   editorialCandidates?: DigestEditorialCandidate[];
   degradedSources?: string[];
@@ -130,6 +135,10 @@ export interface DigestInputData {
       symbol: string;
       intensity: number;
       net24hUsd: number;
+    }[];
+    topChains?: {
+      chainId: string;
+      netUsd: number;
     }[];
   };
   dewsStress?: {
