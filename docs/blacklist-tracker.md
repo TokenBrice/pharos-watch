@@ -8,9 +8,9 @@ The tracker now has two distinct amount layers:
 - `blacklist_current_balances` stores persistent freeze-ledger snapshots used by the public frozen-total summary
 - the `/blacklist` status charts now support on-page drilldown into the matching stablecoin subset for each blacklistability bucket
 
-**Cron-backed sync coverage:** USDC, USDT, PAXG, XAUT, PYUSD, USD1, USDG, RLUSD, U, USDtb, A7A5, FDUSD, BRZ, AUSD, MNEE, EURI, USDQ, USDO, USDX, AID, TGBP, EURC, BUIDL.
+**Cron-backed sync coverage:** USDC, USDT, PAXG, XAUT, PYUSD, USD1, USDG, RLUSD, U, USDtb, A7A5, FDUSD, BRZ, AUSD, MNEE, EURI, USDQ, USDO, USDX, AID, TGBP, EURC, BUIDL, USDP.
 
-**Live API/UI filter enum:** USDC, USDT, PAXG, XAUT, PYUSD, USD1, USDG, RLUSD, U, USDTB, A7A5, FDUSD, BRZ, AUSD, MNEE, EURI, USDQ, USDO, USDX, AID, TGBP, EURC, BUIDL via `BLACKLIST_STABLECOINS` in `shared/types/market.ts` (re-exported through `shared/types/index.ts`).
+**Live API/UI filter enum:** USDC, USDT, PAXG, XAUT, PYUSD, USD1, USDG, RLUSD, U, USDTB, A7A5, FDUSD, BRZ, AUSD, MNEE, EURI, USDQ, USDO, USDX, AID, TGBP, EURC, BUIDL, USDP via `BLACKLIST_STABLECOINS` in `shared/types/market.ts` (re-exported through `shared/types/index.ts`).
 
 Implementation note: `EURC` is live-supported with mirror-zero suppression. Circle often mirrors the same blacklist action across both USDC and EURC; rows classified as zero-balance mirrors stay auditable in storage but are excluded from public `/blacklist` events, active records, and frozen-value aggregates.
 
@@ -195,6 +195,7 @@ All use USDC events: `Blacklisted(address)`, `UnBlacklisted(address)`. Decimals:
 | AID | Ethereum | `AddedToDenyList(address[])`, `RemovedFromDenyList(address[])` | Dynamic address-array event expands to one row per address |
 | TGBP | Ethereum, Avalanche | `Banned(address)`, `UnBanned(address)` | Indexed address; GBP-denominated USD conversion |
 | EURC | Ethereum, Base, Avalanche | `Blacklisted(address)`, `UnBlacklisted(address)` | Circle mirror-zero rows are preserved with suppression metadata and excluded from public aggregates |
+| USDP | Ethereum | `FreezeAddress(address)`, `UnfreezeAddress(address)`, `FrozenAddressWiped(address)` | Same freeze pattern as PYUSD/USDG (Paxos family) |
 | BUIDL | Ethereum, BSC, Optimism, Arbitrum, Avalanche, Polygon | `Seize(address,address,uint256,string)`, `OmnibusSeize(address,address,uint256,string,uint8)` | Seize-only coverage mapped to `destroy`; not a live blacklist/freeze state |
 
 ---
@@ -646,14 +647,14 @@ For destroy events, try fetching from transaction receipt first (`eth_getTransac
 | ------------ | ------ | ------- | -------------------------------------------------------------------- |
 | `limit`      | number | 1000    | Max results (1-1000; `0` maps to default `1000`)                     |
 | `offset`     | number | 0       | Pagination offset                                                    |
-| `stablecoin` | string | --      | Filter by name (`"USDC"`, `"USDT"`, `"PAXG"`, `"XAUT"`, `"PYUSD"`, `"USD1"`, `"USDG"`, `"RLUSD"`, `"U"`, `"USDTB"`, `"A7A5"`, `"FDUSD"`, `"BRZ"`, `"AUSD"`, `"EURI"`, `"USDQ"`, `"USDO"`, `"USDX"`, `"AID"`, `"TGBP"`, `"MNEE"`, `"EURC"`, `"BUIDL"`) |
+| `stablecoin` | string | --      | Filter by name (`"USDC"`, `"USDT"`, `"PAXG"`, `"XAUT"`, `"PYUSD"`, `"USD1"`, `"USDG"`, `"RLUSD"`, `"U"`, `"USDTB"`, `"A7A5"`, `"FDUSD"`, `"BRZ"`, `"AUSD"`, `"EURI"`, `"USDQ"`, `"USDO"`, `"USDX"`, `"AID"`, `"TGBP"`, `"MNEE"`, `"EURC"`, `"BUIDL"`, `"USDP"`) |
 | `chain`      | string | --      | Filter by `chain_name`                                               |
 | `eventType`  | string | --      | Filter by `event_type` (`"blacklist"`, `"unblacklist"`, `"destroy"`) |
 | `q`          | string | --      | Case-insensitive address substring search                            |
 | `sortBy`     | string | date    | Sort field (`"date"`, `"stablecoin"`, `"chain"`, `"event"`)          |
 | `sortDirection` | string | desc | Sort direction (`"asc"`, `"desc"`)                                   |
 
-The handler now exposes only unsuppressed rows for the live-supported symbols: USDC, USDT, PAXG, XAUT, PYUSD, USD1, USDG, RLUSD, U, USDTB, A7A5, FDUSD, BRZ, AUSD, MNEE, EURI, USDQ, USDO, USDX, AID, TGBP, EURC, and BUIDL.
+The handler now exposes only unsuppressed rows for the live-supported symbols: USDC, USDT, PAXG, XAUT, PYUSD, USD1, USDG, RLUSD, U, USDTB, A7A5, FDUSD, BRZ, AUSD, MNEE, EURI, USDQ, USDO, USDX, AID, TGBP, EURC, BUIDL, and USDP.
 
 **Response:**
 

@@ -20,9 +20,18 @@ npm run check:unused-code # Detect unreferenced internal runtime modules and unu
 npm run check:hotspot-ratchet # Fail when enrolled hotspots regress or generated hotspot candidates lack explicit enrollment/waivers
 npm run check:cron-sync # Verify `shared/lib/cron-jobs.ts`, `shared/lib/scheduled-runner-registry.ts`, and `worker/wrangler.toml` stay aligned
 npm run check:cron-connections # Enforce the documented per-trigger outbound connection budget across cron slots
+npm run check:doc-counts # Verify tracked/shadow/adapter/bluechip/live-enabled counts in docs match code
+npm run check:verified-doc-links # Verify all markdown links in verified docs resolve
 npm run check:doc-source-paths # Verify backtick source-path references in README.md and docs/** resolve to files/directories
 npm run check:doc-sync # Verify exact methodology versions, thresholds, weights, and enforced limits stay aligned with code and canonical version labels
+npm run check:env-contract # Verify documented env bindings match the worker Env interface
+npm run check:duplicate-exports # Detect duplicate named exports across modules
+npm run check:sql-safety # Static analysis of D1 SQL patterns for safety issues
+npm run check:stablecoin-data # Validate stablecoin JSON data files against schema
+npm run check:redemption-backstops # Validate redemption backstop configs for completeness
 npm run check:migrations # Replay worker D1 migrations against a throwaway SQLite DB
+npm run audit:pricing-providers # Verify pricing provider configs are consistent
+npm run coverage:critical:update-baseline # Update the critical-coverage baseline snapshot
 npm run lint -- --fix # Auto-fix fixable warnings (stale directives, etc.)
 npm test -- --coverage # Run tests with V8 coverage report
 npm run test:critical-contracts # Critical endpoint contract suite
@@ -454,12 +463,17 @@ Useful env controls:
 - `CRITICAL_COVERAGE_RATCHET_TOLERANCE`
 - `CRITICAL_COVERAGE_RATCHET_ALL`
 - `CRITICAL_COVERAGE_BASELINE_FILE`
-- Per-file overrides such as `CRITICAL_COVERAGE_THRESHOLD_ALERTS`, `CRITICAL_COVERAGE_THRESHOLD_AUTH`, `CRITICAL_COVERAGE_THRESHOLD_EVM_RPC`, `CRITICAL_COVERAGE_THRESHOLD_DISCOVERY`, and `CRITICAL_COVERAGE_THRESHOLD_HEALTH`
+- Per-file overrides: `CRITICAL_COVERAGE_THRESHOLD_ALERTS`, `CRITICAL_COVERAGE_THRESHOLD_AUTH`, `CRITICAL_COVERAGE_THRESHOLD_EVM_RPC`, `CRITICAL_COVERAGE_THRESHOLD_STABLECOINS_CACHE`, `CRITICAL_COVERAGE_THRESHOLD_SAFETY_SCORES`, `CRITICAL_COVERAGE_THRESHOLD_SCHEDULED`, `CRITICAL_COVERAGE_THRESHOLD_DAILY_DIGEST`, `CRITICAL_COVERAGE_THRESHOLD_STABLECOIN_DETAIL`, `CRITICAL_COVERAGE_THRESHOLD_DISCOVERY`, `CRITICAL_COVERAGE_THRESHOLD_HEALTH`, `CRITICAL_COVERAGE_THRESHOLD_STATUS`, `CRITICAL_COVERAGE_THRESHOLD_DEX_ORCHESTRATOR`
 
 Current critical file set:
 
 - `src/lib/api.ts`
-- `worker/src/lib/api-utils.ts`
+- `worker/src/lib/api-cache-read.ts`
+- `worker/src/lib/api-freshness.ts`
+- `worker/src/lib/api-history.ts`
+- `worker/src/lib/api-pagination.ts`
+- `worker/src/lib/api-params.ts`
+- `worker/src/lib/api-response.ts`
 - `worker/src/lib/auth.ts`
 - `worker/src/lib/evm-rpc.ts`
 - `worker/src/lib/stablecoins-cache.ts`

@@ -73,7 +73,7 @@ Token identity now resolves from the shared stablecoin loader in `shared/lib/sta
 
 ### Tracked Stablecoins
 
-Current scope: **126 contract configs** across **125 stablecoin IDs** (7 critical + 119 extended).
+Current scope: **128 contract configs** across **125 stablecoin IDs** (7 critical + 121 extended).
 
 March 24, 2026 expansion: an additional 40 transfer-only configs were added for tracked assets that already had shared contract metadata but were not yet wired into the mint/burn registry. That wave initially included USDai on Ethereum, but canonical USDai issuance tracking now runs on native Arbitrum after LayerZero bridge-transfer filtering work. GYD was later removed when the asset moved to the cemetery. The broader active wave includes `U`, `A7A5`, `USDA` (Avalon), `BRZ`, `KAG`, `satUSD`, `rwaUSDi`, `FPI`, `AEUR`, `USDQ`, `USDX`, `MIM`, `USA₮`, `ZeUSD`, `GGBR`, `XSGD`, `IDRT`, `TRYB`, `EURS`, `pUSD` (Plume), `USBD`, `DGLD`, `AxCNH`, `EURQ`, `GYEN`, `USDU Finance`, `ZARP`, `USDp`, `PHT`, `VCHF`, `USSD`, `CADC`, `VEUR`, `dUSD` (dTRINITY), `USDaf`, `EURAU`, `DUSD` (Alto), and `ebUSD`.
 

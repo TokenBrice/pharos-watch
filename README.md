@@ -9,7 +9,7 @@ Public-facing analytics dashboard tracking 190 stablecoins in repo metadata: 180
 - **Three-tier classification** — stablecoins categorized as CeFi, CeFi-Dependent, or DeFi based on actual dependency on centralized infrastructure, not marketing claims
 - **Multi-peg support** — USD, EUR, GBP, CHF, BRL, RUB, JPY, IDR, SGD, TRY, AUD, ZAR, CAD, CNH, PHP, MXN, gold, silver, and CPI-linked stablecoins with cross-currency FX-adjusted totals
 - **Peg Tracker** — 15-minute peg monitoring with a composite Peg Score (0–100) for every tracked stablecoin, depeg event detection with direction tracking, deviation heatmaps, and a historical timeline going back 4 years
-- **Freeze & Blacklist Tracker** — hourly on-chain tracking of USDC, USDT, PAXG, XAUT, PYUSD, and USD1 freeze/blacklist events across Ethereum, Arbitrum, Base, Optimism, Polygon, Avalanche, BSC, and Tron with BigInt-precision amounts
+- **Freeze & Blacklist Tracker** — hourly on-chain tracking of 24 stablecoins (USDC, USDT, PAXG, XAUT, PYUSD, USD1, USDG, RLUSD, and others) freeze/blacklist events across Ethereum, Arbitrum, Base, Optimism, Polygon, Avalanche, BSC, Gnosis, and Tron with BigInt-precision amounts
 - **DEX Liquidity Score** — composite liquidity score (0–100) per stablecoin from DEX pool TVL, volume, quality, durability, and pair diversity
 - **DEX Price Cross-Validation** — implied prices from Curve, Uniswap V3, Aerodrome and Velodrome Slipstream, Fluid, Balancer, Raydium, Orca, Meteora, PancakeSwap, and DexScreener pools used to suppress false depeg alerts
 - **Coverage Matrix** — per-feature coverage breadth across tracked coins and tracked market cap
@@ -242,7 +242,7 @@ Cloudflare D1 (SQLite database)
   ├── price_cache          → historical price snapshots for depeg detection
   ├── dex_liquidity        → per-stablecoin DEX liquidity scores, pool data, HHI, depth stability
   ├── dex_liquidity_history → daily TVL/score snapshots for trend analysis
-  ├── dex_prices           → DEX-implied prices from Curve, Uni V3, Aerodrome, Fluid, Balancer, Raydium, Orca, and DexScreener
+  ├── dex_prices           → DEX-implied prices from Curve, Uni V3, Aerodrome, Velodrome Slipstream, Fluid, Balancer, Raydium, Orca, Meteora, PancakeSwap, and DexScreener
   ├── dex_price_challengers → published qualifying individual challenger pools used for pool-challenge and depeg-confirmation reads
   ├── dex_price_challenger_snapshots → latest per-coin challenger snapshot metadata (published_at, has_rows, source coverage completeness)
   ├── onchain_supply       → per-stablecoin on-chain supply by chain (contract calls)
@@ -254,6 +254,7 @@ Cloudflare D1 (SQLite database)
   ├── reserve_sync_attempt_history → per-attempt history for reserve syncs
   ├── redemption_backstop  → current modeled redemption-route / effective-exit snapshot per configured coin
   ├── redemption_backstop_history → daily redemption-route history snapshot per configured coin
+  ├── redemption_backstop_runs → redemption backstop cron execution tracking
   ├── stability_index      → daily ecosystem health scores (0–100) with trend band
   ├── stability_index_samples → high-frequency PSI samples (sub-daily granularity)
   ├── depeg_pending        → secondary confirmation queue for major stablecoin depegs
@@ -326,7 +327,7 @@ For the canonical delivery workflow (including worktree merge flow and the repo 
 For the full Worker, Pages Functions, and frontend runtime binding table, see [.env.example](./.env.example) and [docs/worker-infrastructure.md](./docs/worker-infrastructure.md).
 For mint/burn ingestion diagnostics and recovery, see `agents/process/mint-burn-ingestion.md`.
 
-1. **Validate gate:** `npm run audit:deps` → `npm run audit:pricing-providers` → `npm run lint` → `npm run typecheck` → `npm run check:worker-boundary` → `npm run check:shared-cycles` → `npm run check:migrations` → `npm run check:cron-sync` → `npm run check:cron-connections` → `npm run check:doc-counts` → `npm run check:verified-doc-links` → `npm run check:doc-sync` → `npm run check:env-contract` → `npm run check:duplicate-exports` → `npm run check:redemption-backstops` → `npm run check:unused-code` → `npm run check:hotspot-ratchet` → `npm run check:sql-safety` → `npm run check:stablecoin-data` → `npm run build` + `npm run seo:check` when Pages-impacting files changed → `npm test` → `npm run coverage:critical` → `cd worker && npx tsc --noEmit` when worker-impacting files changed
+1. **Validate gate:** `npm run audit:deps` → `npm run audit:pricing-providers` → `npm run lint` → `npm run typecheck` → `npm run check:worker-boundary` → `npm run check:shared-cycles` → `npm run check:migrations` → `npm run check:cron-sync` → `npm run check:cron-connections` → `npm run check:doc-counts` → `npm run check:verified-doc-links` → `npm run check:doc-source-paths` → `npm run check:doc-sync` → `npm run check:env-contract` → `npm run check:duplicate-exports` → `npm run check:redemption-backstops` → `npm run check:unused-code` → `npm run check:hotspot-ratchet` → `npm run check:sql-safety` → `npm run check:stablecoin-data` → `npm run build` + `npm run seo:check` when Pages-impacting files changed → `npm test` → `npm run coverage:critical` → `cd worker && npx tsc --noEmit` + `cd worker && npx tsc --noEmit -p tsconfig.scripts.json` when worker-impacting files changed
 2. **Worker candidate upload + preview smoke:** `npm ci` → capture the currently live Worker version ID → `cd worker && npx --no-install wrangler d1 migrations apply stablecoin-db --remote` → `cd worker && npx --no-install wrangler versions upload` → `npm run test:smoke-api` against that uploaded preview URL
 3. **Worker promotion:** `cd worker && npx --no-install wrangler versions deploy <uploaded-version>@100` → `cd worker && npx --no-install wrangler triggers deploy`
 4. **Production API smoke gate:** `npm run test:smoke-api` against `SMOKE_API_BASE` (fed from GitHub variable `SMOKE_API_BASE_URL`, fallback `API_BASE_URL`); if this fails after promotion, CI auto-rolls the Worker back to the previously live version

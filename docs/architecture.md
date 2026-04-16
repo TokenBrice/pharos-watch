@@ -131,6 +131,8 @@ Worker cron refactors should place reusable stage contracts under `worker/src/cr
   - `/compare/[slug]/`
   - `/digest/` and `/digest/[date]/`
   - `/methodology/` and `/methodology/*-changelog/`
+  - `/about/api/`
+  - `/changelog/`
   - major feature pages with standalone static copy (`/start/`, `/upcoming/`, `/blacklist/`, `/depeg/`, `/liquidity/`, `/safety-scores/`, `/stability-index/`, `/yield/`, `/flows/`, `/dependency-map/`, `/cemetery/`, `/telegram/`, `/about/`, `/privacy/`)
 - Tool roots intentionally marked `noindex,follow`:
   - `/compare/`
@@ -176,4 +178,4 @@ The worker codebase deliberately uses `!= null` (loose equality) as the standard
 
 ## TypeScript Target Constraints
 
-Root tsconfig targets ES2017 (for browser compatibility via Next.js). Worker tsconfig targets ES2021 (Cloudflare Workers runtime). Shared modules in `shared/lib/` MUST be ES2017-compatible as they compile under both targets -- avoid `??=`, `||=`, `Array.at()`, and other post-ES2017 features in shared code.
+Both the root tsconfig and worker tsconfig target ES2022. Shared modules in `shared/lib/` compile under both configs and may use ES2022 features (nullish assignment `??=`, logical assignment `||=`, `Array.at()`, top-level `await`, etc.) but must remain runtime-neutral — no DOM APIs, no Node-only APIs, no Cloudflare-only APIs.
