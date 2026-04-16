@@ -411,6 +411,44 @@ describe("syncLiveReserves", () => {
     expect(m0FetchCalls.length).toBe(1);
   });
 
+  it("emits a primary-fallback-used info warning when the fallback succeeds", async () => {
+    const fallbackCoin = ACTIVE_STABLECOINS.find((coin) => (
+      (coin.liveReservesConfig?.inputs.fallbacks?.length ?? 0) > 0
+      && coin.liveReservesConfig?.inputs.primary.kind === "http-json"
+      && coin.liveReservesConfig.inputs.primary.url.includes("chain=tron")
+    ));
+    expect(fallbackCoin).toBeDefined();
+
+    mockAdapterRegistry(async (_coin, config) => {
+      const currentInput = config?.inputs.primary;
+      if (!currentInput || (currentInput.kind !== "http-json" && currentInput.kind !== "http-html")) {
+        throw new Error("unexpected input kind");
+      }
+      if (currentInput.url.includes("chain=tron")) {
+        throw new Error("primary source down");
+      }
+      return { slices: [{ name: "Tracked vaults", pct: 100, risk: "medium" as const }] };
+    });
+
+    const { syncLiveReserves } = await import("../sync-live-reserves");
+    const db = mockD1();
+    await syncLiveReserves(db, new AbortController().signal, {});
+
+    const successAttempt = db.getHistory().find((entry) => (
+      entry.sql.includes("INSERT INTO reserve_composition_history")
+      && entry.binds[0] === fallbackCoin!.id
+    ));
+    expect(successAttempt).toBeDefined();
+
+    const warningsJson = successAttempt!.binds[6] as string | null;
+    expect(typeof warningsJson).toBe("string");
+    const parsed = JSON.parse(warningsJson!) as Array<{ code?: string; effect?: string; severity?: string }>;
+    const fallbackInfo = parsed.find((w) => w.code === "primary-fallback-used");
+    expect(fallbackInfo).toBeDefined();
+    expect(fallbackInfo!.effect).toBe("info");
+    expect(fallbackInfo!.severity).toBe("info");
+  });
+
   it("persists full primary-plus-fallback failure context for reserve source chains", async () => {
     const fallbackCoin = ACTIVE_STABLECOINS.find((coin) => (
       (coin.liveReservesConfig?.inputs.fallbacks?.length ?? 0) > 0

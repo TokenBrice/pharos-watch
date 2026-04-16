@@ -220,7 +220,23 @@ export async function syncLiveReserves(
       for (const fb of config.inputs.fallbacks ?? []) {
         try {
           const fbConfig = { ...config, inputs: { ...config.inputs, primary: fb } };
-          return await runAdapterAttempt(coin, fbConfig, adapter, signal, effectiveAdapterCtx);
+          const fallbackResult = await runAdapterAttempt(coin, fbConfig, adapter, signal, effectiveAdapterCtx);
+          const primaryMessage = primaryError instanceof Error
+            ? primaryError.message
+            : String(primaryError);
+          const truncated = primaryMessage.length > 200
+            ? `${primaryMessage.slice(0, 200)}…`
+            : primaryMessage;
+          const fallbackWarning = {
+            code: "primary-fallback-used",
+            message: `Primary reserve source failed; fell through to fallback. Primary error: ${truncated}`,
+            severity: "info" as const,
+            effect: "info" as const,
+          };
+          return {
+            ...fallbackResult,
+            warnings: [...(fallbackResult.warnings ?? []), fallbackWarning],
+          };
         } catch (e) {
           fallbackAttempts.push({ input: fb, error: e, index: fallbackAttempts.length });
           console.warn(`[sync-live-reserves] Fallback failed for ${coin.id}:`, e);
