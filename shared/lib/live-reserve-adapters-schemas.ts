@@ -299,7 +299,7 @@ const singleAssetParamsSchema = z.object({
 export const baseLiveReserveConfigSchema = z.object({
   version: z.number().int().positive(),
   semantics: LiveReserveSemanticsSchema,
-  breakerScope: z.string().optional(),
+  breakerScope: z.string().min(1).optional(),
   display: LiveReserveDisplaySchema.optional(),
 });
 
