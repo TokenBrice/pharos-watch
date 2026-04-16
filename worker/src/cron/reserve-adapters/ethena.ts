@@ -26,6 +26,7 @@ export interface EthenaCollateralResponse {
 }
 
 type EthenaBucket = "stable" | "btc" | "eth" | "other";
+const ETHENA_COLLATERAL_API_URL = "https://app.ethena.fi/api/positions/current/collateral";
 
 const ETHENA_ETH_ASSETS = new Set(["ETH", "stETH", "WBETH", "mETH", "LsETH"]);
 const ETHENA_BTC_ASSETS = new Set(["BTC"]);
@@ -56,7 +57,10 @@ export function listUnexpectedEthenaAssets(payload: EthenaCollateralResponse): s
     .filter((asset) => !knownAssets.has(asset));
 }
 
-export function adaptEthenaCollateral(payload: EthenaCollateralResponse): AdapterResult {
+export function adaptEthenaCollateral(
+  payload: EthenaCollateralResponse,
+  sourceUrl = ETHENA_COLLATERAL_API_URL,
+): AdapterResult {
   const knownAssets = new Set([
     ...ETHENA_STABLE_ASSETS,
     ...ETHENA_BTC_ASSETS,
@@ -163,7 +167,7 @@ export function adaptEthenaCollateral(payload: EthenaCollateralResponse): Adapte
         ...(lastUpdatedAt > 0 ? { sourceTimestamp: lastUpdatedAt } : {}),
         routeStatus: "open" as const,
         holderEligibility: "whitelisted-primary",
-        sourceUrls: ["https://app.ethena.fi/api/positions/current/collateral"],
+        sourceUrls: [sourceUrl],
       },
     },
   };
@@ -183,7 +187,7 @@ export async function fetchEthenaReserves(
     ctx,
     { headers: ETHENA_BROWSER_HEADERS },
   );
-  const adapted = adaptEthenaCollateral(payload);
+  const adapted = adaptEthenaCollateral(payload, primaryInput.url);
   const warnings: LiveReserveWarning[] = listUnexpectedEthenaAssets(payload).map((asset) => reserveDegradedWarning(
     "unknown-asset",
     `Ethena asset bucketed into other-crypto: ${asset}`,

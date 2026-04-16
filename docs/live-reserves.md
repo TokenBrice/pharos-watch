@@ -83,6 +83,8 @@ The shared live-reserve config schema enforces adapter-specific primary and fall
 
 Adapters can also pass browser-style request headers through the shared JSON retry helper when an upstream is sensitive to request origin hints. Ethena and Reservoir now do this because production failures showed Cloudflare Worker requests intermittently receiving HTML / network failures while the same endpoints still served healthy JSON to browser-like clients.
 
+USDe's Ethena reserve config also keeps Ethena's main-domain collateral API as a same-provider JSON fallback for cases where the `app.ethena.fi` API route returns the dashboard HTML shell to Worker-origin requests.
+
 ### Snapshot Metadata and Warning Effects
 
 Successful adapters can attach structured snapshot metadata that is stored on the authoritative snapshot row (`reserve_composition.metadata`), not on the mutable latest-attempt state.

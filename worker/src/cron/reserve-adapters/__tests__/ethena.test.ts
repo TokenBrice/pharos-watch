@@ -81,4 +81,22 @@ describe("adaptEthenaCollateral", () => {
     });
     expect(result.warnings?.some((warning) => warning.code === "source-timestamp-spread")).toBe(true);
   });
+
+  it("records the active collateral API URL in redemption telemetry", () => {
+    const payload: EthenaCollateralResponse = {
+      totalBackingAssetsInUsd: 100,
+      collateral: [
+        { asset: "Liquid Cash", exchange: "Binance", timestamp: 1, usdAmount: 100 },
+      ],
+    };
+
+    const result = adaptEthenaCollateral(
+      payload,
+      "https://ethena.fi/api/positions/current/collateral",
+    );
+
+    expect(result.metadata?.redemption).toMatchObject({
+      sourceUrls: ["https://ethena.fi/api/positions/current/collateral"],
+    });
+  });
 });
