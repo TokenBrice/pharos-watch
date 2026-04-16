@@ -4,7 +4,6 @@ import {
 import {
   MINT_BURN_CONFIGS,
   type MintBurnContractConfig,
-  type MintBurnTier,
 } from "../lib/mint-burn-contracts";
 import { loadMintBurnPriceContextBatch } from "../lib/mint-burn-pipeline/context";
 import {
@@ -20,7 +19,7 @@ import type { CronProgressReporter } from "../lib/cron-logger";
 import { reportCronProgress } from "../lib/cron-progress";
 import { loadMintBurnChainContexts } from "./mint-burn/chain-context";
 import { completeMintBurnRun } from "./mint-burn/run-completion";
-import { runMintBurnConfigPhase, type MintBurnRunConfigPhaseResult } from "./mint-burn/run-configs";
+import { configKey, configTier, runMintBurnConfigPhase, type MintBurnRunConfigPhaseResult } from "./mint-burn/run-configs";
 import {
   getMintBurnRunState,
   normalizeDisabledConfigIdSet,
@@ -41,7 +40,7 @@ const DEGRADE_CONSECUTIVE_THRESHOLD = 2;
 const ERROR_CONSECUTIVE_THRESHOLD = 3;
 const SQL_IN_CHUNK_SIZE = 90;
 
-type SyncMintBurnStatus = "ok" | "degraded" | "error";
+export type SyncMintBurnStatus = "ok" | "degraded" | "error";
 export type MintBurnLane = "all" | "critical" | "extended";
 
 export interface SyncMintBurnOptions {
@@ -51,14 +50,6 @@ export interface SyncMintBurnOptions {
   lane?: MintBurnLane;
   jobName?: string;
   onProgress?: CronProgressReporter;
-}
-
-function configKey(config: MintBurnContractConfig): string {
-  return mintBurnConfigKey(config);
-}
-
-function configTier(config: MintBurnContractConfig): MintBurnTier {
-  return config.tier ?? "critical";
 }
 
 function laneIncludesConfig(lane: MintBurnLane, config: MintBurnContractConfig): boolean {

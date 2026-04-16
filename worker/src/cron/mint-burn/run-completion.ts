@@ -7,9 +7,7 @@ import type { MintBurnContractConfig } from "../../lib/mint-burn-contracts";
 import { withBudgetMetadata } from "../../lib/cron-progress";
 import { setMintBurnRunState, type MintBurnRunStateRow } from "./run-state";
 import type { MintBurnConfigSummary } from "./sync-config";
-
-type SyncMintBurnStatus = "ok" | "degraded" | "error";
-type MintBurnLane = "all" | "critical" | "extended";
+import type { SyncMintBurnStatus, MintBurnLane } from "../sync-mint-burn";
 
 export async function completeMintBurnRun(input: {
   db: D1Database;

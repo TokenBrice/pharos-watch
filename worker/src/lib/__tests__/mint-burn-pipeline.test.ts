@@ -398,9 +398,9 @@ describe("mint-burn shared pipeline modules", () => {
     expect(affected.size).toBe(2);
 
     await recalcAffectedHours(db, affected);
-    expect(vi.mocked(batchExecute)).toHaveBeenCalledTimes(2);
-    expect(vi.mocked(batchExecute).mock.calls[0]?.[1]).toHaveLength(2);
-    expect(vi.mocked(batchExecute).mock.calls[1]?.[1]).toHaveLength(2);
+    // Interleaved: 2 hours × 2 stmts (delete + insert) = 4 statements in one call
+    expect(vi.mocked(batchExecute)).toHaveBeenCalledTimes(1);
+    expect(vi.mocked(batchExecute).mock.calls[0]?.[1]).toHaveLength(4);
   });
 
   it("rebuilds hourly buckets for whole coins after valuation repair", async () => {

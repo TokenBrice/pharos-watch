@@ -7,11 +7,11 @@ import type { MintBurnAffectedHour, MintBurnPriceContext } from "../../lib/mint-
 import type { MintBurnContractConfig, MintBurnTier } from "../../lib/mint-burn-contracts";
 import { syncMintBurnConfig, type MintBurnConfigSummary } from "./sync-config";
 
-function configKey(config: MintBurnContractConfig): string {
+export function configKey(config: MintBurnContractConfig): string {
   return mintBurnConfigKey(config);
 }
 
-function configTier(config: MintBurnContractConfig): MintBurnTier {
+export function configTier(config: MintBurnContractConfig): MintBurnTier {
   return config.tier ?? "critical";
 }
 

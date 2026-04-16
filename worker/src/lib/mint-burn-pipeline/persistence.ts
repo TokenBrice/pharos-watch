@@ -85,23 +85,8 @@ export function collectAffectedHours(
   return affectedHours;
 }
 
-export async function recalcAffectedHours(
-  db: D1Database,
-  affectedHours: Map<string, MintBurnAffectedHour>,
-): Promise<void> {
-  if (affectedHours.size === 0) return;
-
-  const deleteStmt = db.prepare(
-    `DELETE FROM mint_burn_hourly
-     WHERE stablecoin_id = ? AND chain_id = ? AND hour_ts = ?`,
-  );
-  const deleteStmts = [...affectedHours.values()].map((hour) =>
-    deleteStmt.bind(hour.stablecoinId, hour.chainId, hour.hourTs),
-  );
-  await batchExecute(db, deleteStmts);
-
-  const aggStmt = db.prepare(
-    `INSERT OR REPLACE INTO mint_burn_hourly
+function hourlyAggSql(whereClause: string): string {
+  return `INSERT OR REPLACE INTO mint_burn_hourly
       (stablecoin_id, chain_id, hour_ts, mint_count, burn_count,
        mint_volume_usd, burn_volume_usd, net_flow_usd)
      SELECT
@@ -114,15 +99,33 @@ export async function recalcAffectedHours(
       COALESCE(SUM(CASE WHEN direction = 'burn' AND burn_type = 'effective_burn' AND flow_type = 'standard' THEN amount_usd ELSE 0 END), 0),
       COALESCE(SUM(CASE WHEN direction = 'mint' AND flow_type = 'standard' THEN amount_usd WHEN direction = 'burn' AND burn_type = 'effective_burn' AND flow_type = 'standard' THEN -amount_usd ELSE 0 END), 0)
      FROM mint_burn_events
-     WHERE stablecoin_id = ? AND chain_id = ?
-       AND timestamp >= ? AND timestamp < ?
-     GROUP BY stablecoin_id, chain_id, hour_ts`,
+     WHERE ${whereClause}
+     GROUP BY stablecoin_id, chain_id, hour_ts`;
+}
+
+export async function recalcAffectedHours(
+  db: D1Database,
+  affectedHours: Map<string, MintBurnAffectedHour>,
+): Promise<void> {
+  if (affectedHours.size === 0) return;
+
+  const deleteStmt = db.prepare(
+    `DELETE FROM mint_burn_hourly
+     WHERE stablecoin_id = ? AND chain_id = ? AND hour_ts = ?`,
+  );
+  const aggStmt = db.prepare(
+    hourlyAggSql("stablecoin_id = ? AND chain_id = ? AND timestamp >= ? AND timestamp < ?"),
   );
 
-  const aggStmts = [...affectedHours.values()].map((hour) =>
-    aggStmt.bind(hour.stablecoinId, hour.chainId, hour.hourTs, hour.hourTs + 3600),
-  );
-  await batchExecute(db, aggStmts);
+  // Interleave delete+insert per hour so each pair lands in the same db.batch()
+  // call, keeping hourly recalc atomic within each chunk. D1_BATCH_SIZE (100) is
+  // even, so pairs are never split across chunk boundaries.
+  const interleaved: D1PreparedStatement[] = [];
+  for (const hour of affectedHours.values()) {
+    interleaved.push(deleteStmt.bind(hour.stablecoinId, hour.chainId, hour.hourTs));
+    interleaved.push(aggStmt.bind(hour.stablecoinId, hour.chainId, hour.hourTs, hour.hourTs + 3600));
+  }
+  await batchExecute(db, interleaved);
 }
 
 export async function rebuildHourlyForStablecoinIds(
@@ -138,23 +141,7 @@ export async function rebuildHourlyForStablecoinIds(
     ids.map((id) => deleteStmt.bind(id)),
   );
 
-  const rebuildStmt = db.prepare(
-    `INSERT OR REPLACE INTO mint_burn_hourly
-      (stablecoin_id, chain_id, hour_ts, mint_count, burn_count,
-       mint_volume_usd, burn_volume_usd, net_flow_usd)
-     SELECT
-      stablecoin_id,
-      chain_id,
-      (timestamp / 3600) * 3600 AS hour_ts,
-      SUM(CASE WHEN direction = 'mint' AND flow_type = 'standard' THEN 1 ELSE 0 END),
-      SUM(CASE WHEN direction = 'burn' AND burn_type = 'effective_burn' AND flow_type = 'standard' THEN 1 ELSE 0 END),
-      COALESCE(SUM(CASE WHEN direction = 'mint' AND flow_type = 'standard' THEN amount_usd ELSE 0 END), 0),
-      COALESCE(SUM(CASE WHEN direction = 'burn' AND burn_type = 'effective_burn' AND flow_type = 'standard' THEN amount_usd ELSE 0 END), 0),
-      COALESCE(SUM(CASE WHEN direction = 'mint' AND flow_type = 'standard' THEN amount_usd WHEN direction = 'burn' AND burn_type = 'effective_burn' AND flow_type = 'standard' THEN -amount_usd ELSE 0 END), 0)
-     FROM mint_burn_events
-     WHERE stablecoin_id = ?
-     GROUP BY stablecoin_id, chain_id, hour_ts`,
-  );
+  const rebuildStmt = db.prepare(hourlyAggSql("stablecoin_id = ?"));
   await batchExecute(
     db,
     ids.map((id) => rebuildStmt.bind(id)),
