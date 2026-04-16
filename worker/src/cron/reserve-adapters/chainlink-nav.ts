@@ -10,6 +10,7 @@ import {
   fetchOnchainRawCall,
   fetchOnchainUint256,
   requireOnchainInput,
+  reserveDegradedWarning,
   reserveInfoWarning,
   unverifiedFreshnessMetadata,
   verifiedFreshnessMetadata,
@@ -204,10 +205,19 @@ export async function fetchChainlinkNavReserves(
         data: GET_PRICE_DATA_SELECTOR,
       });
       if (rawPriceData != null) {
-        const parsed = parseOndoPriceData(rawPriceData);
-        navPerToken = parsed.price;
-        updatedAt = parsed.updatedAt;
-        oracleTimestampSource = "ondo-price-data";
+        try {
+          const parsed = parseOndoPriceData(rawPriceData);
+          navPerToken = parsed.price;
+          updatedAt = parsed.updatedAt;
+          oracleTimestampSource = "ondo-price-data";
+        } catch (error) {
+          warnings.push(reserveDegradedWarning(
+            "chainlink-nav-wrapper-oracle-malformed",
+            `chainlink-nav wrapper oracle at ${wrapperAddress} returned malformed getPriceData(): ${
+              error instanceof Error ? error.message : String(error)
+            }`,
+          ));
+        }
       }
     }
 

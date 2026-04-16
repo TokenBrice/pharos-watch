@@ -1,10 +1,23 @@
-import { describe, it, expect } from "vitest";
+import { beforeEach, describe, it, expect, vi } from "vitest";
 import { parseChainlinkLatestRoundData } from "../chainlink";
 import {
   adaptChainlinkNavResponse,
   parseOndoPriceData,
   type ChainlinkNavParams,
 } from "../chainlink-nav";
+
+vi.mock("../helpers", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("../helpers")>();
+  return {
+    ...actual,
+    fetchOnchainUint256: vi.fn(),
+    fetchOnchainRawCall: vi.fn(),
+  };
+});
+
+const ORACLE_ADDRESS = "0x74f2199AEb743f68f05943e5715A33EaF2b61f53";
+const WRAPPER_ADDRESS = "0x00000000000000000000000000000000000000aa";
+const TOKEN_ADDRESS = "0x136471a34f6ef19fE571EFFC1CA711fdb8E49f2b";
 
 describe("adaptChainlinkNavResponse", () => {
   const params: ChainlinkNavParams = {
@@ -122,5 +135,60 @@ describe("parseOndoPriceData", () => {
 
   it("throws on malformed payloads", () => {
     expect(() => parseOndoPriceData("0x1234")).toThrow("malformed payload");
+  });
+});
+
+describe("fetchChainlinkNavReserves getAssetPrice wrapper-oracle parse", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it("emits chainlink-nav-wrapper-oracle-malformed when the wrapper oracle returns garbage", async () => {
+    const helpers = await import("../helpers");
+    const { fetchChainlinkNavReserves } = await import("../chainlink-nav");
+
+    vi.mocked(helpers.fetchOnchainUint256).mockImplementation(async (opts) => {
+      if (opts.data === "0x313ce567") return 6n; // decimals()
+      if (opts.data === "0x18160ddd") return 500_000_000n; // totalSupply()
+      if (opts.data.startsWith("0xb3596f07")) return 1_000_000_000_000_000_000n; // getAssetPrice(addr) → 1e18
+      return null;
+    });
+    vi.mocked(helpers.fetchOnchainRawCall).mockImplementation(async (opts) => {
+      if (opts.data.startsWith("0xeca6f018")) {
+        // tokenToRwaOracle(addr) returns wrapper address
+        return `0x000000000000000000000000${WRAPPER_ADDRESS.slice(2)}` as `0x${string}`;
+      }
+      if (opts.data === "0xa4a28168" && opts.contract === WRAPPER_ADDRESS) {
+        // Malformed getPriceData() payload — wrong length
+        return "0xdeadbeef";
+      }
+      return null;
+    });
+
+    const config = {
+      adapter: "chainlink-nav" as const,
+      version: 1,
+      semantics: "collateral-mix" as const,
+      inputs: {
+        primary: { kind: "onchain-evm" as const, chain: "ethereum", rpcMode: "public-rpc" as const },
+      },
+      params: {
+        oracleAddress: ORACLE_ADDRESS,
+        tokenAddress: TOKEN_ADDRESS,
+        assetLabel: "Ondo T-Bills",
+        assetRisk: "very-low" as const,
+        oracleMethod: "getAssetPrice" as const,
+      },
+    };
+
+    const result = await fetchChainlinkNavReserves(
+      {} as never,
+      config as never,
+      new AbortController().signal,
+    );
+
+    expect(result.warnings?.some((w) => w.code === "chainlink-nav-wrapper-oracle-malformed")).toBe(true);
+    // freshness falls through to unverified (no valid wrapper timestamp)
+    expect(result.metadata?.freshnessMode).toBe("unverified");
   });
 });
