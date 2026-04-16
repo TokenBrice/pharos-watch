@@ -153,7 +153,7 @@ Worker cron refactors should place reusable stage contracts under `worker/src/cr
 
 - `src/lib/page-metadata.ts` is the shared helper for per-route canonical metadata, Open Graph images, Twitter cards, and sentence-aware description trimming.
 - `src/app/layout.tsx` owns the sitewide metadata baseline, icons, `api.pharos.watch` preconnect, and root JSON-LD (`WebSite`, `Organization`, `WebApplication`, `SearchAction`).
-- `src/app/sitemap.ts` owns indexable-route sitemap output. `LAST_EDITED` dates are auto-generated from git history during prebuild (`scripts/generate-sitemap-dates.ts`) and written to `src/generated/sitemap-dates.json`.
+- `src/app/sitemap.ts` owns indexable-route sitemap output. `LAST_EDITED` dates are auto-generated from git history during prebuild (`scripts/generate-sitemap-dates.ts`) and written to a generated JSON file (gitignored).
 - `src/app/robots.ts` publishes the global crawl policy (`allow: /`) and the sitemap location.
 
 ---
