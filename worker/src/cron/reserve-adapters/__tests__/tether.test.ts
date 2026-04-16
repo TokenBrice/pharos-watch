@@ -38,4 +38,50 @@ describe("adaptTetherTransparency", () => {
   it("throws on missing usdt data", () => {
     expect(() => adaptTetherTransparency({ data: {} } as TetherTransparencyResponse)).toThrow();
   });
+
+  it("throws when total_assets is zero or negative (parse-failure guard)", () => {
+    expect(() =>
+      adaptTetherTransparency({
+        data: {
+          usdt: {
+            total_assets: "0",
+            total_liabilities: "100",
+            shareholder_eq: "0",
+          },
+        },
+      }),
+    ).toThrow(/invalid or zero/);
+
+    expect(() =>
+      adaptTetherTransparency({
+        data: {
+          usdt: {
+            total_assets: "not-a-number",
+            total_liabilities: "100",
+            shareholder_eq: "0",
+          },
+        },
+      }),
+    ).toThrow();
+  });
+
+  it("accepts numeric (non-string) fields", () => {
+    const result = adaptTetherTransparency({
+      data: {
+        usdt: {
+          total_assets: 100,
+          total_liabilities: 50,
+          shareholder_eq: 50,
+        },
+      },
+    } as TetherTransparencyResponse);
+    expect(result.metadata?.totalAssetsUsd).toBe(100);
+    expect(result.metadata?.collateralizationRatio).toBe(2);
+  });
+
+  it("always reports unverified freshness (no source timestamp in payload)", () => {
+    const result = adaptTetherTransparency(SAMPLE);
+    expect(result.metadata?.freshnessMode).toBe("unverified");
+    expect(result.metadata?.sourceTimestamp).toBeUndefined();
+  });
 });
