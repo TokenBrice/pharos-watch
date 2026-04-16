@@ -293,6 +293,26 @@ describe("syncLiveReserves", () => {
     expect(duplicateFinalizeRejected).toBeUndefined();
   });
 
+  it("emits durationMs in reserve_composition metadata for successful syncs", async () => {
+    mockAdapterRegistry(
+      async () => ({ slices: [{ name: "Mock Farm", pct: 100, risk: "low" as const }] }),
+    );
+
+    const { syncLiveReserves } = await import("../sync-live-reserves");
+    const db = mockD1();
+    await syncLiveReserves(db, new AbortController().signal, {});
+
+    const compositionInsert = db.getHistory().find((entry) => (
+      entry.sql.includes("INSERT INTO reserve_composition (")
+    ));
+    expect(compositionInsert).toBeDefined();
+    // metadata is the 6th bound column per buildReserveCompositionUpsertStatement (0-indexed 5).
+    const metadataJson = compositionInsert!.binds[5] as string;
+    const metadata = JSON.parse(metadataJson) as { durationMs?: number };
+    expect(typeof metadata.durationMs).toBe("number");
+    expect(metadata.durationMs!).toBeGreaterThanOrEqual(0);
+  });
+
   it("reports per-coin progress through the cron progress hook", async () => {
     mockAdapterRegistry(
       async () => ({ slices: [{ name: "Mock Farm", pct: 100, risk: "low" as const }] }),

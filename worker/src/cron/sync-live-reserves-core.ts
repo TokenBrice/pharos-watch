@@ -63,6 +63,7 @@ export async function syncReserveCoin(args: {
   const attemptId = createReserveSyncAttemptId(coin.id);
   const attemptStartedAt = Math.floor(Date.now() / 1000);
   let attemptStarted = false;
+  let adapterStartMs: number | null = null;
 
   const recordFailure = (
     status: ReserveSyncStateRecord["lastStatus"],
@@ -117,18 +118,20 @@ export async function syncReserveCoin(args: {
       return { breakerKey, status: "failed", breakerOutcome: false, warningMessages: [], hasWarnings: false };
     }
 
+    adapterStartMs = Date.now();
     const result = await runAdapter(coin, config, adapter);
+    const durationMs = Date.now() - adapterStartMs;
     const validation = validateAdapterOutput(result, { adapter, now: attemptStartedAt });
     if (!validation.valid) {
       const message = validation.warnings.map((warning) => warning.message).join("; ");
       console.warn(`[sync-live-reserves] Adapter output invalid for ${coin.id}: ${message}`);
-      await recordFailure("error", `Validation failed: ${message}`, "validation-failed", validation.warnings);
+      await recordFailure("error", `Validation failed: ${message}`, "validation-failed", validation.warnings, { durationMs });
       return { breakerKey, status: "failed", breakerOutcome: false, warningMessages: [], hasWarnings: false };
     }
 
     if (result.slices.length === 0) {
       console.warn(`[sync-live-reserves] Adapter returned empty slices for ${coin.id}`);
-      await recordFailure("error", "Adapter returned zero reserve slices", "empty-slices");
+      await recordFailure("error", "Adapter returned zero reserve slices", "empty-slices", [], { durationMs });
       return { breakerKey, status: "failed", breakerOutcome: false, warningMessages: [], hasWarnings: false };
     }
 
@@ -138,7 +141,7 @@ export async function syncReserveCoin(args: {
         .filter((warning) => warning.effect === "fatal")
         .map((warning) => warning.message)
         .join("; ");
-      await recordFailure("error", message || "Fatal reserve adapter warning", "fatal-warning", warnings);
+      await recordFailure("error", message || "Fatal reserve adapter warning", "fatal-warning", warnings, { durationMs });
       return { breakerKey, status: "failed", breakerOutcome: false, warningMessages: [], hasWarnings: false };
     }
 
@@ -148,7 +151,7 @@ export async function syncReserveCoin(args: {
       fetchedAt: attemptStartedAt,
       source: config.adapter,
       attemptId,
-      metadata: result.metadata ?? {},
+      metadata: { ...(result.metadata ?? {}), durationMs },
       warningCount: warnings.length,
       warnings,
       adapterSourceModel: adapter.sourceModel,
@@ -171,6 +174,7 @@ export async function syncReserveCoin(args: {
           degraded: warnings.filter((warning) => warning.effect === "degraded").length,
           fatal: warnings.filter((warning) => warning.effect === "fatal").length,
         },
+        durationMs,
       },
       lastSuccessAt: attemptStartedAt,
       lastSuccessAttemptId: attemptId,
@@ -199,6 +203,7 @@ export async function syncReserveCoin(args: {
       console.warn(`[sync-live-reserves] ${timeoutMessage}; clearing pending attempt authority`);
       await recordFailure("error", timeoutMessage, "storage-write-timeout", warnings, {
         uncertainWrite: true,
+        durationMs,
       });
       failureAlreadyRecorded = true;
     }
@@ -212,7 +217,7 @@ export async function syncReserveCoin(args: {
             `Authoritative live reserve finalize rejected for ${coin.id}`,
             "success-finalize-rejected",
             warnings,
-            { uncertainWrite: true },
+            { uncertainWrite: true, durationMs },
           );
         }
         return { breakerKey, status: "failed", breakerOutcome: false, warningMessages: [], hasWarnings: false };
@@ -228,14 +233,19 @@ export async function syncReserveCoin(args: {
     };
   } catch (error) {
     console.error(`[sync-live-reserves] Failed for ${coin.id}:`, error);
+    const extras: Record<string, unknown> = {};
+    if (isReserveAdapterAttemptChainError(error)) {
+      extras.attemptSummaries = error.attemptSummaries;
+    }
+    if (adapterStartMs !== null) {
+      extras.durationMs = Date.now() - adapterStartMs;
+    }
     await recordFailure(
       "error",
       error instanceof Error ? error.message : String(error),
       "adapter-exception",
       [],
-      isReserveAdapterAttemptChainError(error)
-        ? { attemptSummaries: error.attemptSummaries }
-        : undefined,
+      Object.keys(extras).length > 0 ? extras : undefined,
     );
     return { breakerKey, status: "failed", breakerOutcome: false, warningMessages: [], hasWarnings: false };
   }
