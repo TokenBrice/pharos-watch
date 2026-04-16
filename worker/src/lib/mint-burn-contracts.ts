@@ -88,6 +88,12 @@ const EXTENDED_ETHEREUM_TRANSFER_EXPANSION_SPECS: Array<{
   { stablecoinId: "eurau-allunity", dustThreshold: 10_000 },
   { stablecoinId: "dusd-alto", dustThreshold: 10_000 },
   { stablecoinId: "ebusd-ebisu", dustThreshold: 10_000 },
+  { stablecoinId: "ftusd-flying-tulip", dustThreshold: 10_000 },
+  { stablecoinId: "usdkg-gold-dollar", dustThreshold: 10_000 },
+  { stablecoinId: "buck-buck-assets", dustThreshold: 10_000 },
+  { stablecoinId: "chfau-allunity", dustThreshold: 10_000 },
+  { stablecoinId: "mxnb-juno", dustThreshold: 10_000 },
+  { stablecoinId: "cjpy-yamato", dustThreshold: 10_000 },
 ];
 
 const MINT_BURN_CONFIG_SPECS: MintBurnContractConfigSpec[] = [
