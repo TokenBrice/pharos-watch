@@ -347,6 +347,17 @@ export function validateDigestModelOutput(
   if (tone && recentThree.some((entry) => getMetaString(entry.meta, "tone") === tone)) {
     issues.push({ code: "repeated-tone", severity: "soft", message: `Tone repeats recent tone '${tone}'.` });
   }
+  const recentFive = recent.slice(0, 5);
+  if (tone) {
+    const sameToneCount = recentFive.filter((entry) => getMetaString(entry.meta, "tone") === tone).length;
+    if (sameToneCount >= 3) {
+      issues.push({
+        code: "tone-cluster",
+        severity: "soft",
+        message: `Tone '${tone}' appeared ${sameToneCount} times in last 5 digests; pick a different register.`,
+      });
+    }
+  }
   if (coins.length > 0) {
     const recentCoins = new Set(recentThree.flatMap((entry) => getMetaCoins(entry.meta)));
     if (coins.some((coin) => recentCoins.has(coin))) {

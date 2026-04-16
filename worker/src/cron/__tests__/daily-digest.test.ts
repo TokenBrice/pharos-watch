@@ -952,6 +952,41 @@ describe("lead family variety check", () => {
   });
 });
 
+describe("tone cluster validator", () => {
+  function parsedFixture(toneOverride = "foreboding"): ParsedDigestResponse {
+    return {
+      digestTitle: "T",
+      digestText: "T.",
+      digestExtended: "T. T. T.\n\nT. T. T.\n\nT. T. T.",
+      digestMeta: JSON.stringify({ lead: "depeg", tone: toneOverride, coins: ["USDT"] }),
+      strippedDashCount: 0,
+      strippedForbiddenCharCount: 0,
+      usedRawTextFallback: false,
+    };
+  }
+
+  it("fires tone-cluster when same tone appears 3+ times in last 5", () => {
+    const recent = Array.from({ length: 5 }, () => ({
+      meta: { lead: "depeg", tone: "foreboding" } as Record<string, unknown>,
+      title: "prior",
+    }));
+    const result = validateDigestModelOutput(parsedFixture(), { kind: "daily", recentMeta: recent });
+    expect(result.some((i) => i.code === "tone-cluster")).toBe(true);
+  });
+
+  it("does not fire when spread across tones", () => {
+    const recent = [
+      { meta: { tone: "dry" } as Record<string, unknown>, title: "a" },
+      { meta: { tone: "sardonic" } as Record<string, unknown>, title: "b" },
+      { meta: { tone: "foreboding" } as Record<string, unknown>, title: "c" },
+      { meta: { tone: "clinical" } as Record<string, unknown>, title: "d" },
+      { meta: { tone: "wistful" } as Record<string, unknown>, title: "e" },
+    ];
+    const result = validateDigestModelOutput(parsedFixture(), { kind: "daily", recentMeta: recent });
+    expect(result.some((i) => i.code === "tone-cluster")).toBe(false);
+  });
+});
+
 describe("classifyRegime", () => {
   const baseData: DigestInputData = {
     totalMcapUsd: 200_000_000_000,
