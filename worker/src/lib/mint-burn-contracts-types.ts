@@ -22,9 +22,18 @@ export interface MintBurnLayerZeroOftBridgeDetectionConfig {
   bridgeSignalSelectors: string[];
 }
 
+export interface MintBurnCctpBridgeDetectionConfig {
+  protocol: "cctp";
+  knownBridgePoolAddresses: string[];
+  knownBridgeRouterAddresses: string[];
+  bridgeSignalTopics: string[];
+  bridgeSignalSelectors: string[];
+}
+
 export type MintBurnBridgeDetectionConfig =
   | MintBurnCcipBridgeDetectionConfig
-  | MintBurnLayerZeroOftBridgeDetectionConfig;
+  | MintBurnLayerZeroOftBridgeDetectionConfig
+  | MintBurnCctpBridgeDetectionConfig;
 
 export interface MintBurnEventDef {
   signature: string;

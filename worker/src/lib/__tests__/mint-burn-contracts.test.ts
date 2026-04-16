@@ -76,6 +76,22 @@ describe("mint-burn-contracts configured scope", () => {
     });
   });
 
+  it("tracks USDC with CCTP bridge detection", () => {
+    const configs = getMintBurnConfigsForStablecoin("usdc-circle");
+    expect(configs.length).toBeGreaterThan(0);
+    const ethConfig = configs.find((c) => c.chain.chainId === "ethereum");
+    expect(ethConfig).toBeDefined();
+    expect(ethConfig!.bridgeDetection?.protocol).toBe("cctp");
+  });
+
+  it("tracks EURC with CCTP bridge detection", () => {
+    const configs = getMintBurnConfigsForStablecoin("eurc-circle");
+    expect(configs.length).toBeGreaterThan(0);
+    const ethConfig = configs.find((c) => c.chain.chainId === "ethereum");
+    expect(ethConfig).toBeDefined();
+    expect(ethConfig!.bridgeDetection?.protocol).toBe("cctp");
+  });
+
   it("tracks USDai on Arbitrum with LayerZero bridge detection", () => {
     const configs = getMintBurnConfigsForStablecoin("usdai-usd-ai");
     expect(configs).toHaveLength(1);

@@ -4,6 +4,7 @@ export type {
   MintBurnAdapterKind,
   MintBurnBridgeDetectionConfig,
   MintBurnCcipBridgeDetectionConfig,
+  MintBurnCctpBridgeDetectionConfig,
   MintBurnContractConfig,
   MintBurnContractConfigSpec,
   MintBurnDirection,
@@ -20,6 +21,7 @@ import type {
 } from "./mint-burn-contracts-types";
 import {
   ccipBridgeDetection,
+  cctpBridgeDetection,
   layerZeroOftBridgeDetection,
   resolveMintBurnContractConfig,
   transferMintBurn,
@@ -122,8 +124,8 @@ const MINT_BURN_CONFIG_SPECS: MintBurnContractConfigSpec[] = [
     chain: ETHEREUM, stablecoinId: "usdc-circle",
     dustThreshold: 10_000, startBlock: 21_900_000,
     events: transferMintBurn(),
-    bridgeDetection: ccipBridgeDetection([
-      "0x03d19033ada17750d5bc2d8e325337d0748f9fef",
+    bridgeDetection: cctpBridgeDetection([
+      "0xfd78ee919681417d192449715b2594ab58f5d002", // CCTP V2 TokenMinterV2
     ]),
   },
   {
@@ -203,6 +205,9 @@ const MINT_BURN_CONFIG_SPECS: MintBurnContractConfigSpec[] = [
     dustThreshold: 10_000, startBlock: 14_807_227,
     tier: "extended",
     events: transferMintBurn(),
+    bridgeDetection: cctpBridgeDetection([
+      "0xfd78ee919681417d192449715b2594ab58f5d002", // CCTP V2 TokenMinterV2
+    ]),
   },
   {
     chain: ETHEREUM, stablecoinId: "paxg-paxos",

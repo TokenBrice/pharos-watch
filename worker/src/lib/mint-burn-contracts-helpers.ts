@@ -39,6 +39,23 @@ export function transferMintBurn(): MintBurnEventDef[] {
   ];
 }
 
+const CCTP_ETHEREUM_TOKEN_MESSENGER_V2 = "0x28b5a0e9c621a5badaa536219b3a228c8168cf5d";
+const CCTP_DEPOSIT_FOR_BURN_TOPIC = "0x2fa9ca894982930190727e75500a97d8dc500233a5065e0f3126c48fbe0343c0";
+const CCTP_DEPOSIT_FOR_BURN_SELECTOR = "0x6fd3504e";
+const CCTP_DEPOSIT_FOR_BURN_WITH_CALLER_SELECTOR = "0xf856ddb6";
+
+export function cctpBridgeDetection(
+  knownBridgePoolAddresses: string[],
+): MintBurnBridgeDetectionConfig {
+  return {
+    protocol: "cctp",
+    knownBridgePoolAddresses,
+    knownBridgeRouterAddresses: [CCTP_ETHEREUM_TOKEN_MESSENGER_V2],
+    bridgeSignalTopics: [CCTP_DEPOSIT_FOR_BURN_TOPIC],
+    bridgeSignalSelectors: [CCTP_DEPOSIT_FOR_BURN_SELECTOR, CCTP_DEPOSIT_FOR_BURN_WITH_CALLER_SELECTOR],
+  };
+}
+
 export function ccipBridgeDetection(
   knownBridgePoolAddresses: string[],
 ): MintBurnBridgeDetectionConfig {
