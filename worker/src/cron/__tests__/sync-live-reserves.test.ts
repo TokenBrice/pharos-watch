@@ -283,6 +283,21 @@ describe("syncLiveReserves", () => {
       && entry.binds.some((bind) => typeof bind === "string" && bind.includes("storage-write-timeout"))
     ));
     expect(timeoutAttempt).toBeDefined();
+
+    // Regression: a storage-write-timeout must produce exactly ONE attempt-history row
+    // for the timed-out coin, not a second success-finalize-rejected row on top.
+    const timedOutCoinId = timeoutAttempt!.binds[0];
+    const attemptsForTimedOutCoin = db.getHistory().filter((entry) => (
+      entry.sql.includes("INSERT INTO reserve_sync_attempt_history")
+      && entry.binds[0] === timedOutCoinId
+    ));
+    expect(attemptsForTimedOutCoin).toHaveLength(1);
+    const duplicateFinalizeRejected = db.getHistory().find((entry) => (
+      entry.sql.includes("INSERT INTO reserve_sync_attempt_history")
+      && entry.binds[0] === timedOutCoinId
+      && entry.binds.some((bind) => typeof bind === "string" && bind.includes("success-finalize-rejected"))
+    ));
+    expect(duplicateFinalizeRejected).toBeUndefined();
   });
 
   it("reports per-coin progress through the cron progress hook", async () => {

@@ -177,6 +177,7 @@ export async function syncReserveCoin(args: {
     });
 
     let finalizeSucceeded = false;
+    let failureAlreadyRecorded = false;
     try {
       const finalizeResult = await raceWithTimeout(
         finalizeReserveSyncSuccess(
@@ -199,18 +200,21 @@ export async function syncReserveCoin(args: {
       await recordFailure("error", timeoutMessage, "storage-write-timeout", warnings, {
         uncertainWrite: true,
       });
+      failureAlreadyRecorded = true;
     }
 
     if (!finalizeSucceeded) {
       const latestState = await getReserveSyncState(db, coin.id).catch(() => null);
       if (!didReserveSyncAttemptFinalizeAsSuccess(latestState, attemptId)) {
-        await recordFailure(
-          "error",
-          `Authoritative live reserve finalize rejected for ${coin.id}`,
-          "success-finalize-rejected",
-          warnings,
-          { uncertainWrite: true },
-        );
+        if (!failureAlreadyRecorded) {
+          await recordFailure(
+            "error",
+            `Authoritative live reserve finalize rejected for ${coin.id}`,
+            "success-finalize-rejected",
+            warnings,
+            { uncertainWrite: true },
+          );
+        }
         return { breakerKey, status: "failed", breakerOutcome: false, warningMessages: [], hasWarnings: false };
       }
     }
