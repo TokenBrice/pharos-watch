@@ -68,7 +68,7 @@ function coerceString(value: unknown): string | null {
   return typeof value === "string" && value.trim().length > 0 ? value : null;
 }
 
-const CAPACITY_WARNING_EXCEPTIONS: Partial<Record<string, Partial<Record<string, string>>>> = {
+export const REDEMPTION_CAPACITY_WARNING_EXCEPTIONS: Readonly<Partial<Record<string, Partial<Record<string, string>>>>> = {
   "gho-aave": {
     "aggregated-residual-issuance":
       "Using tracked live GSM backing as a lower-bound redemption capacity despite aggregated residual issuance outside configured GSM modules",
@@ -76,7 +76,7 @@ const CAPACITY_WARNING_EXCEPTIONS: Partial<Record<string, Partial<Record<string,
 };
 
 function isAllowedCapacityWarning(stablecoinId: string, warning: LiveReserveWarning): boolean {
-  return warning.effect !== "info" && !!CAPACITY_WARNING_EXCEPTIONS[stablecoinId]?.[warning.code];
+  return warning.effect !== "info" && !!REDEMPTION_CAPACITY_WARNING_EXCEPTIONS[stablecoinId]?.[warning.code];
 }
 
 function hasBlockingRedemptionWarnings(
@@ -111,7 +111,7 @@ function resolveCapacityNotes(
   if (!canUseCapacityDespiteDegradedSync(stablecoinId, snapshotMetadata)) return [];
   const notes = new Set<string>();
   for (const warning of snapshotMetadata?.warnings ?? []) {
-    const note = CAPACITY_WARNING_EXCEPTIONS[stablecoinId]?.[warning.code];
+    const note = REDEMPTION_CAPACITY_WARNING_EXCEPTIONS[stablecoinId]?.[warning.code];
     if (note) notes.add(note);
   }
   return [...notes];
