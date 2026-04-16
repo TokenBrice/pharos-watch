@@ -1204,4 +1204,48 @@ describe("live-reserves-store", () => {
     expect(overview.weakProbeFresh).toBe(1);
     expect(overview.writeTimeoutUncertain).toBe(1);
   });
+
+  it("counts an uncertainWrite coin with no composition in a single primary bucket", async () => {
+    const now = 10_000;
+    const emptyOverview = await computeReserveCompositionOverview(mockD1(), now);
+    const db = mockD1([
+      {
+        match: "reserve_sync_state",
+        rows: [
+          {
+            stablecoin_id: "usdo-openeden",
+            adapter_key: "openeden-usdo",
+            breaker_key: "live-reserves:openeden-usdo",
+            last_attempted_at: now,
+            last_success_at: null,
+            last_status: "error",
+            warning_count: 0,
+            warnings: null,
+            last_error: "D1 write timeout",
+            metadata: JSON.stringify({ uncertainWrite: true, reason: "storage-write-timeout" }),
+          },
+        ],
+      },
+      {
+        match: "reserve_composition",
+        rows: [],
+      },
+    ]);
+
+    const overview = await computeReserveCompositionOverview(db, now);
+
+    // Primary bucket increments by exactly 1 (errorCoins, because lastStatus=error + no composition).
+    expect(overview.errorCoins).toBe(emptyOverview.errorCoins + 1);
+    expect(overview.missingCoins).toBe(emptyOverview.missingCoins - 1);
+    expect(overview.writeTimeoutUncertain).toBe(1);
+
+    // Sum of primary buckets equals configured coins (no cross-counting).
+    const primarySum = overview.freshCoins
+      + overview.staleCoins
+      + overview.missingCoins
+      + overview.degradedCoins
+      + overview.errorCoins
+      + overview.corruptCoins;
+    expect(primarySum).toBe(overview.configuredCoins);
+  });
 });

@@ -58,9 +58,7 @@ export async function computeReserveCompositionOverview(
   for (const coin of configuredCoins) {
     const syncState = syncById.get(coin.id) ?? null;
     const compositionRow = compositionById.get(coin.id);
-    if (hasUncertainWriteState(syncState)) {
-      writeTimeoutUncertain++;
-    }
+    const uncertainWrite = hasUncertainWriteState(syncState);
     const hasSnapshot = hasConsistentSnapshotState(syncState, compositionRow
       ? { fetchedAt: compositionRow.fetched_at, attemptId: compositionRow.attempt_id ?? null }
       : null);
@@ -68,8 +66,10 @@ export async function computeReserveCompositionOverview(
     if (!hasSnapshot || !compositionRow) {
       if (syncState?.lastStatus === "error") {
         errorCoins++;
+        if (uncertainWrite) writeTimeoutUncertain++;
       } else {
         missingCoins++;
+        if (uncertainWrite) writeTimeoutUncertain++;
       }
       continue;
     }
@@ -85,20 +85,24 @@ export async function computeReserveCompositionOverview(
 
     if (syncState?.lastStatus === "error") {
       errorCoins++;
+      if (uncertainWrite) writeTimeoutUncertain++;
       continue;
     }
 
     if (syncState && syncState.lastStatus !== "ok") {
       degradedCoins++;
+      if (uncertainWrite) writeTimeoutUncertain++;
       continue;
     }
 
     if (ageSec > freshnessSec) {
       staleCoins++;
+      if (uncertainWrite) writeTimeoutUncertain++;
       continue;
     }
 
     freshCoins++;
+    if (uncertainWrite) writeTimeoutUncertain++;
     if (parsed.record.adapterEvidenceClass === "independent") {
       if (hasScoringEligibleLiveReserveFreshness(parsed.record.metadata)) {
         independentFreshEligible++;
