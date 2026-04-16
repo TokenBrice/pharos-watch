@@ -1,11 +1,26 @@
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, vi, beforeEach } from "vitest";
+import type { StablecoinMeta } from "@shared/types/core";
+import type { LiveReservesConfig } from "@shared/types/live-reserves";
 import {
   adaptSkyModules,
+  fetchSkyMakercoreReserves,
   listUnknownGroups,
   resolveSkyTimestampSummary,
   resolveSkyImmediateRedeemableUsd,
   type SkyGroupResult,
 } from "../sky-makercore";
+
+vi.mock("../helpers", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("../helpers")>();
+  return {
+    ...actual,
+    fetchJsonWithRetry: vi.fn(),
+  };
+});
+
+import { fetchJsonWithRetry } from "../helpers";
+
+const signal = AbortSignal.timeout(5000);
 
 const SAMPLE_GROUPS: SkyGroupResult[] = [
   { group: "stablecoins", group_name: "Stablecoins", debt: "4848053264.74", collateral: "4848920495.92", datetime: "2026-04-05T17:33:24.053849" },
@@ -30,7 +45,9 @@ describe("adaptSkyModules", () => {
     const byName = Object.fromEntries(slices.map((s) => [s.name, s]));
 
     expect(byName["Stablecoins (PSM)"].risk).toBe("very-low");
-    expect(byName["Stablecoins (PSM)"].coinId).toBe("usdc-circle");
+    // Sky PSM aggregates multiple stables (USDC/USDT/USDP) without per-stable
+    // breakdown; the slice is intentionally unattributed.
+    expect(byName["Stablecoins (PSM)"].coinId).toBeUndefined();
     expect(byName["Stablecoins (PSM)"].depType).toBe("mechanism");
 
     expect(byName["Spark (lending)"].risk).toBe("low");
@@ -117,5 +134,42 @@ describe("resolveSkyTimestampSummary", () => {
       sourceTimestampSpreadSec: 3600,
       timestampCount: 2,
     });
+  });
+});
+
+describe("fetchSkyMakercoreReserves PSM attribution", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  const coin = { id: "usds-sky" } as unknown as StablecoinMeta;
+  const config: LiveReservesConfig = {
+    adapter: "sky-makercore",
+    version: 1,
+    semantics: "protocol-reserve",
+    inputs: {
+      primary: {
+        kind: "http-json",
+        url: "https://info-sky.blockanalitica.com/groups/?days_ago=1&order=-debt",
+      },
+    },
+  };
+
+  it("PSM slice carries no coinId attribution and metadata surfaces the multi-stable note", async () => {
+    vi.mocked(fetchJsonWithRetry).mockResolvedValue({
+      count: 2,
+      results: [
+        { group: "stablecoins", group_name: "Stablecoins", debt: "4000000000", collateral: "4000000000", datetime: "2026-04-05T17:33:24" },
+        { group: "spark", group_name: "Spark", debt: "3000000000", collateral: "3000000000", datetime: "2026-04-05T17:33:24" },
+      ],
+    });
+
+    const result = await fetchSkyMakercoreReserves(coin, config, signal);
+    const psmSlice = result.slices.find((s) => s.name === "Stablecoins (PSM)");
+    expect(psmSlice).toBeDefined();
+    expect(psmSlice?.coinId).toBeUndefined();
+
+    const details = result.metadata?.details as { psmComposition?: string };
+    expect(details?.psmComposition).toMatch(/USDC.*USDT.*USDP/);
   });
 });

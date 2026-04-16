@@ -40,8 +40,14 @@ interface ModuleSpec {
   depType?: "mechanism";
 }
 
+// The Sky PSM group ("stablecoins") aggregates USDC + USDT + USDP without a
+// per-stable breakdown in the Block Analitica groups API response. We emit
+// the PSM slice without a `coinId` attribution (rather than hardcoding one)
+// and surface the composition note in metadata.details.
+const SKY_PSM_COMPOSITION_NOTE = "Sky PSM pool aggregates USDC, USDT, USDP without per-stable breakdown from the module-groups API";
+
 const MODULE_MAP: Record<string, ModuleSpec> = {
-  stablecoins: { name: "Stablecoins (PSM)", risk: "very-low", coinId: "usdc-circle", depType: "mechanism" },
+  stablecoins: { name: "Stablecoins (PSM)", risk: "very-low", depType: "mechanism" },
   spark:       { name: "Spark (lending)", risk: "low" },
   grove:       { name: "Grove (RWA)", risk: "low" },
   obex:        { name: "Obex", risk: "medium" },
@@ -178,6 +184,7 @@ export async function fetchSkyMakercoreReserves(
             "Sky groups payload did not expose a trustworthy snapshot timestamp",
           )),
       unknownExposurePct: totalDebt > 0 ? (unknownDebt / totalDebt) * 100 : 0,
+      details: { psmComposition: SKY_PSM_COMPOSITION_NOTE },
       redemption: {
         capacityUsd: immediateRedeemableUsd,
         capacityKind: "live-proxy-validated" as const,
