@@ -52,12 +52,7 @@ const MODULE_MAP: Record<string, ModuleSpec> = {
 
 const KNOWN_GROUPS = new Set(Object.keys(MODULE_MAP));
 
-function parseDebt(raw: string): number {
-  const n = Number(raw);
-  return Number.isFinite(n) && n > 0 ? n : 0;
-}
-
-function parseCollateral(raw: string): number {
+function parseNumericString(raw: string): number {
   const n = Number(raw);
   return Number.isFinite(n) && n > 0 ? n : 0;
 }
@@ -78,7 +73,7 @@ export function adaptSkyModules(groups: SkyGroupResult[]): AdapterResult["slices
   let unknownDebtTotal = 0;
 
   for (const g of groups) {
-    const debt = parseDebt(g.debt);
+    const debt = parseNumericString(g.debt);
     if (debt <= 0) continue;
 
     const spec = MODULE_MAP[g.group];
@@ -99,7 +94,7 @@ export function adaptSkyModules(groups: SkyGroupResult[]): AdapterResult["slices
 export function resolveSkyImmediateRedeemableUsd(groups: SkyGroupResult[]): number {
   const stableGroup = groups.find((g) => g.group === "stablecoins");
   if (!stableGroup) return 0;
-  return parseCollateral(stableGroup.collateral);
+  return parseNumericString(stableGroup.collateral);
 }
 
 export function listUnknownGroups(groups: SkyGroupResult[]): string[] {
@@ -109,7 +104,7 @@ export function listUnknownGroups(groups: SkyGroupResult[]): string[] {
 export function resolveSkyTimestampSummary(groups: SkyGroupResult[]) {
   return summarizeSourceTimestamps(
     groups
-      .filter((group) => parseDebt(group.debt) > 0)
+      .filter((group) => parseNumericString(group.debt) > 0)
       .map((group) => group.datetime),
   );
 }
@@ -142,7 +137,7 @@ export async function fetchSkyMakercoreReserves(
     throw new Error("sky-makercore: all module debt values are zero or invalid");
   }
 
-  const totalCollateralUsd = groups.reduce((sum, g) => sum + parseCollateral(g.collateral), 0);
+  const totalCollateralUsd = groups.reduce((sum, g) => sum + parseNumericString(g.collateral), 0);
   const immediateRedeemableUsd = resolveSkyImmediateRedeemableUsd(groups);
 
   const timestampSummary = resolveSkyTimestampSummary(groups);
@@ -161,8 +156,8 @@ export async function fetchSkyMakercoreReserves(
     ));
   }
 
-  const totalDebt = groups.reduce((sum, g) => sum + parseDebt(g.debt), 0);
-  const unknownDebt = groups.filter((g) => !KNOWN_GROUPS.has(g.group)).reduce((sum, g) => sum + parseDebt(g.debt), 0);
+  const totalDebt = groups.reduce((sum, g) => sum + parseNumericString(g.debt), 0);
+  const unknownDebt = groups.filter((g) => !KNOWN_GROUPS.has(g.group)).reduce((sum, g) => sum + parseNumericString(g.debt), 0);
 
   return {
     slices,
