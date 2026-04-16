@@ -9639,6 +9639,22 @@
     "yieldConfig": {
       "yieldSource": "Strategy Inc. STRC dividends (BTC-backed preferred equity)",
       "yieldType": "rebase"
+    },
+    "liveReservesConfig": {
+      "adapter": "buck-io-transparency",
+      "version": 1,
+      "semantics": "attestation-mix",
+      "breakerScope": "buck-buck-assets",
+      "display": {
+        "url": "https://buck.io/transparency",
+        "label": "Buck Transparency"
+      },
+      "inputs": {
+        "primary": {
+          "kind": "http-html",
+          "url": "https://buck.io/transparency"
+        }
+      }
     }
   }
 ]

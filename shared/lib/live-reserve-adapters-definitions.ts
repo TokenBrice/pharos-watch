@@ -63,6 +63,16 @@ export const LIVE_RESERVE_ADAPTER_DEFINITIONS = {
     redemptionTelemetry: { capacity: "none", fee: "none" },
     validation: { allowedFreshnessModes: UNVERIFIED_ONLY_FRESHNESS },
   },
+  "buck-io-transparency": {
+    sourceModel: "dynamic-mix",
+    evidenceClass: "independent",
+    sharedSourceMode: "none",
+    redemptionTelemetry: { capacity: "none", fee: "none" },
+    validation: {
+      maxSourceAgeSec: DISCLOSURE_SOURCE_MAX_AGE_SEC,
+      allowedFreshnessModes: VERIFIED_OR_UNVERIFIED_FRESHNESS,
+    },
+  },
   "cap-vault": {
     sourceModel: "dynamic-mix",
     evidenceClass: "independent",

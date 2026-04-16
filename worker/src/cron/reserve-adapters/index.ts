@@ -7,6 +7,7 @@ import { fetchAccountableReserves } from "./accountable";
 import { fetchAnzenUsdzReserves } from "./anzen-usdz";
 import { fetchAsymmetryReserves } from "./asymmetry";
 import { fetchBtcfiReserves } from "./btcfi";
+import { fetchBuckIoTransparencyReserves } from "./buck-io-transparency";
 import { fetchCapVaultReserves } from "./cap-vault";
 import { fetchCircleReserves } from "./circle-transparency";
 import { fetchChainlinkNavReserves } from "./chainlink-nav";
@@ -54,6 +55,7 @@ const ADAPTER_FNS: Record<LiveReserveAdapterKey, AdapterFn> = {
   "anzen-usdz": fetchAnzenUsdzReserves,
   asymmetry: fetchAsymmetryReserves,
   btcfi: fetchBtcfiReserves,
+  "buck-io-transparency": fetchBuckIoTransparencyReserves,
   "cap-vault": fetchCapVaultReserves,
   "chainlink-nav": fetchChainlinkNavReserves,
   "circle-transparency": fetchCircleReserves,
