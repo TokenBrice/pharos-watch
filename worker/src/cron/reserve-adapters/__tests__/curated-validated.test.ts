@@ -10,6 +10,14 @@ vi.mock("../helpers", async (importOriginal) => {
   };
 });
 
+vi.mock("@shared/lib/redemption-backstop-configs", () => ({
+  REDEMPTION_BACKSTOP_CONFIGS: {
+    "coin-with-open-route": { routeStatus: "open" },
+    "coin-with-unknown-route": { routeStatus: "unknown" },
+    "coin-without-route": {},
+  },
+}));
+
 import { fetchCuratedValidatedReserves } from "../curated-validated";
 import { probeTrackedTokenSupply } from "../helpers";
 
@@ -18,8 +26,9 @@ const signal = AbortSignal.timeout(5000);
 function makeCoin(
   reserves?: ReserveSlice[],
   contracts?: Array<{ chain: string; address: string }>,
+  id = "test-coin",
 ): StablecoinMeta {
-  return { id: "test-coin", name: "Test", ticker: "TST", reserves, contracts } as unknown as StablecoinMeta;
+  return { id, name: "Test", ticker: "TST", reserves, contracts } as unknown as StablecoinMeta;
 }
 
 const BASE_CONFIG: LiveReservesConfig = {
@@ -131,5 +140,39 @@ describe("fetchCuratedValidatedReserves", () => {
 
     expect(result.slices).toEqual(MULTI_SLICE_RESERVES);
     expect(result.metadata?.totalSupplyRaw).toBe("42");
+  });
+
+  it("derives routeStatus 'open' from the coin's redemption-backstop config", async () => {
+    vi.mocked(probeTrackedTokenSupply).mockResolvedValue(1n);
+    const result = await fetchCuratedValidatedReserves(
+      makeCoin(MULTI_SLICE_RESERVES, [{ chain: "ethereum", address: "0x1234" }], "coin-with-open-route"),
+      BASE_CONFIG,
+      signal,
+    );
+    const redemption = result.metadata?.redemption as { routeStatus?: string; routeStatusSource?: string };
+    expect(redemption.routeStatus).toBe("open");
+    expect(redemption.routeStatusSource).toBe("static-config");
+  });
+
+  it("falls back to routeStatus 'unknown' when the coin has no backstop config", async () => {
+    vi.mocked(probeTrackedTokenSupply).mockResolvedValue(1n);
+    const result = await fetchCuratedValidatedReserves(
+      makeCoin(MULTI_SLICE_RESERVES, [{ chain: "ethereum", address: "0x1234" }], "coin-unmapped"),
+      BASE_CONFIG,
+      signal,
+    );
+    const redemption = result.metadata?.redemption as { routeStatus?: string };
+    expect(redemption.routeStatus).toBe("unknown");
+  });
+
+  it("falls back to routeStatus 'unknown' when the backstop config does not specify one", async () => {
+    vi.mocked(probeTrackedTokenSupply).mockResolvedValue(1n);
+    const result = await fetchCuratedValidatedReserves(
+      makeCoin(MULTI_SLICE_RESERVES, [{ chain: "ethereum", address: "0x1234" }], "coin-without-route"),
+      BASE_CONFIG,
+      signal,
+    );
+    const redemption = result.metadata?.redemption as { routeStatus?: string };
+    expect(redemption.routeStatus).toBe("unknown");
   });
 });

@@ -1,8 +1,20 @@
 import type { StablecoinMeta } from "@shared/types/core";
-import type { LiveReservesConfig } from "@shared/types/live-reserves";
+import type { LiveReservesConfig, LiveReserveRedemptionRouteStatus } from "@shared/types/live-reserves";
 import { parseLiveReserveAdapterParams } from "@shared/lib/live-reserve-adapters";
+import { REDEMPTION_BACKSTOP_CONFIGS } from "@shared/lib/redemption-backstop-configs";
 import type { AdapterContext, AdapterResult } from "./types";
 import { probeTrackedTokenSupply } from "./helpers";
+
+/**
+ * Resolve the route-status signal for a curated-validated reserve entry by
+ * consulting the coin's redemption-backstop config. Backstop configs express
+ * the current rail availability (open/unknown) via `routeStatus`; anything
+ * else falls back to "unknown" because this adapter has no live proof.
+ */
+function resolveCuratedRouteStatus(coin: StablecoinMeta): LiveReserveRedemptionRouteStatus {
+  const backstop = REDEMPTION_BACKSTOP_CONFIGS[coin.id];
+  return backstop?.routeStatus ?? "unknown";
+}
 
 /**
  * Adapter that validates on-chain supply is non-zero, then returns the
@@ -24,6 +36,7 @@ export async function fetchCuratedValidatedReserves(
   const totalSupply = await probeTrackedTokenSupply(
     coin, config.inputs.primary, signal, "curated-validated", ctx, params.rpcUrl, params.fallbackRpcUrl,
   );
+  const routeStatus = resolveCuratedRouteStatus(coin);
 
   return {
     slices: coin.reserves,
@@ -32,7 +45,8 @@ export async function fetchCuratedValidatedReserves(
       redemption: {
         capacityKind: "documented-eventual" as const,
         freshnessKind: "same-run-onchain" as const,
-        routeStatus: "unknown" as const,
+        routeStatus,
+        routeStatusSource: "static-config" as const,
       },
     },
   };
