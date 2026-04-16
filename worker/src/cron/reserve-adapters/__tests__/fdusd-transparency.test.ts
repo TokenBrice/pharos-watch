@@ -3,6 +3,8 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 import { adaptFdusdTransparency } from "../fdusd-transparency";
+import { validateAdapterOutput } from "../validate";
+import { getReserveAdapter } from "../index";
 
 const FIXTURES_DIR = join(dirname(fileURLToPath(import.meta.url)), "fixtures");
 const SAMPLE_HTML = readFileSync(join(FIXTURES_DIR, "fdusd-transparency.html"), "utf8");
@@ -30,7 +32,51 @@ describe("adaptFdusdTransparency", () => {
     });
   });
 
-  it("throws when the page no longer exposes any reserve badges", () => {
+  it("throws when the page no longer exposes any reserve badges (layout-changed/parse-failure path)", () => {
     expect(() => adaptFdusdTransparency("<html></html>")).toThrow("layout-changed");
+  });
+
+  it("throws layout-changed when badges exist but percent-value parses to 0 / NaN", () => {
+    const brokenHtml = `
+      <div role="listitem" class="chart-badge w-dyn-item">
+        <div>US Treasury Bills</div>
+        <div class="percent-value">not-a-number</div>
+      </div>
+    `;
+    expect(() => adaptFdusdTransparency(brokenHtml)).toThrow("layout-changed");
+  });
+
+  it("falls back to unverified freshness metadata when the 'As of' block is missing", () => {
+    const htmlWithoutAsOf = `
+      <div role="listitem" class="chart-badge w-dyn-item">
+        <div>US Treasury Bills</div>
+        <div class="percent-value">100</div>
+      </div>
+    `;
+    const result = adaptFdusdTransparency(htmlWithoutAsOf);
+    expect(result.metadata?.freshnessMode).toBe("unverified");
+    expect(result.metadata?.sourceTimestamp).toBeUndefined();
+    expect(result.metadata?.redemption).toMatchObject({
+      freshnessKind: "unverified",
+    });
+  });
+
+  it("is rejected by validateAdapterOutput when the source timestamp is in the future", () => {
+    const futureDate = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
+    const month = futureDate.toLocaleString("en-US", { month: "short" });
+    const day = futureDate.getUTCDate();
+    const year = futureDate.getUTCFullYear();
+    const futureHtml = `
+      <div class="chart-date">As of</div><div class="chart-date">${month} ${day}, ${year}</div>
+      <div role="listitem" class="chart-badge w-dyn-item">
+        <div>US Treasury Bills</div>
+        <div class="percent-value">100</div>
+      </div>
+    `;
+
+    const result = adaptFdusdTransparency(futureHtml);
+    const adapter = getReserveAdapter("fdusd-transparency") ?? undefined;
+    const report = validateAdapterOutput(result, { adapter });
+    expect(report.valid).toBe(false);
   });
 });
