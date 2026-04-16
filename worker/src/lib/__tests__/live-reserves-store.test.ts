@@ -1342,4 +1342,112 @@ describe("live-reserves-store", () => {
     // reports lastStatus=ok and age=0.
     expect(overview.freshCoins).toBe(emptyOverview.freshCoins);
   });
+
+  it("flags independent-class coins whose source has been degraded/error for >14d as persistently stale", async () => {
+    const now = Math.floor(Date.now() / 1000);
+    const FIFTEEN_DAYS = 15 * 86_400;
+    const db = mockD1([
+      {
+        match: "reserve_sync_state",
+        rows: [
+          {
+            stablecoin_id: "iusd-infinifi",
+            adapter_key: "infinifi",
+            breaker_key: "live-reserves:infinifi",
+            last_attempted_at: now,
+            last_success_at: now - FIFTEEN_DAYS,
+            last_status: "degraded",
+            warning_count: 1,
+            warnings: null,
+            last_error: null,
+            metadata: "{}",
+          },
+        ],
+      },
+      {
+        match: "reserve_composition",
+        rows: [],
+      },
+    ]);
+
+    const overview = await computeReserveCompositionOverview(db, now);
+
+    const entry = overview.persistentlyStaleIndependentCoins.find(
+      (e) => e.stablecoinId === "iusd-infinifi",
+    );
+    expect(entry).toBeDefined();
+    expect(entry!.ageSec).toBeGreaterThanOrEqual(FIFTEEN_DAYS);
+  });
+
+  it("does not flag independent coins whose last success is within the 14d threshold", async () => {
+    const now = Math.floor(Date.now() / 1000);
+    const THIRTEEN_DAYS = 13 * 86_400;
+    const db = mockD1([
+      {
+        match: "reserve_sync_state",
+        rows: [
+          {
+            stablecoin_id: "iusd-infinifi",
+            adapter_key: "infinifi",
+            breaker_key: "live-reserves:infinifi",
+            last_attempted_at: now,
+            last_success_at: now - THIRTEEN_DAYS,
+            last_status: "degraded",
+            warning_count: 1,
+            warnings: null,
+            last_error: null,
+            metadata: "{}",
+          },
+        ],
+      },
+      {
+        match: "reserve_composition",
+        rows: [],
+      },
+    ]);
+
+    const overview = await computeReserveCompositionOverview(db, now);
+
+    expect(
+      overview.persistentlyStaleIndependentCoins.find(
+        (e) => e.stablecoinId === "iusd-infinifi",
+      ),
+    ).toBeUndefined();
+  });
+
+  it("does not flag independent coins with an ok sync status even when old", async () => {
+    const now = Math.floor(Date.now() / 1000);
+    const TWENTY_DAYS = 20 * 86_400;
+    const db = mockD1([
+      {
+        match: "reserve_sync_state",
+        rows: [
+          {
+            stablecoin_id: "iusd-infinifi",
+            adapter_key: "infinifi",
+            breaker_key: "live-reserves:infinifi",
+            last_attempted_at: now,
+            last_success_at: now - TWENTY_DAYS,
+            last_status: "ok",
+            warning_count: 0,
+            warnings: null,
+            last_error: null,
+            metadata: "{}",
+          },
+        ],
+      },
+      {
+        match: "reserve_composition",
+        rows: [],
+      },
+    ]);
+
+    const overview = await computeReserveCompositionOverview(db, now);
+
+    expect(
+      overview.persistentlyStaleIndependentCoins.find(
+        (e) => e.stablecoinId === "iusd-infinifi",
+      ),
+    ).toBeUndefined();
+  });
 });

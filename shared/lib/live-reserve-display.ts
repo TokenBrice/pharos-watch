@@ -46,6 +46,7 @@ const ADAPTER_DISPLAY_BADGE_KINDS: Record<LiveReserveAdapterKey, ReserveDisplayB
   tether: "proof",
   "river-protocol-info": "proof",
   "usdgo-transparency": "proof",
+  "usdh-native-markets": "proof",
   "usdai-proof-of-reserves": "live",
   "usd1-bundle-oracle": "live",
   "usdd-data-platform": "live",

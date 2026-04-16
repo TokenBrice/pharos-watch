@@ -42,6 +42,7 @@ import { fetchSolsticeAttestationReserves } from "./solstice-attestation";
 import { fetchSuperstateLiquidityReserves } from "./superstate-liquidity";
 import { fetchTetherReserves } from "./tether";
 import { fetchUsdgoTransparencyReserves } from "./usdgo-transparency";
+import { fetchUsdhNativeMarketsReserves } from "./usdh-native-markets";
 import { fetchUsdAiProofOfReserves } from "./usdai-proof-of-reserves";
 import { fetchUsd1BundleOracleReserves } from "./usd1-bundle-oracle";
 import { fetchUsddDataPlatformReserves } from "./usdd-data-platform";
@@ -90,6 +91,7 @@ const ADAPTER_FNS: Record<LiveReserveAdapterKey, AdapterFn> = {
   "superstate-liquidity": fetchSuperstateLiquidityReserves,
   tether: fetchTetherReserves,
   "usdgo-transparency": fetchUsdgoTransparencyReserves,
+  "usdh-native-markets": fetchUsdhNativeMarketsReserves,
   "usdai-proof-of-reserves": fetchUsdAiProofOfReserves,
   "usd1-bundle-oracle": fetchUsd1BundleOracleReserves,
   "usdd-data-platform": fetchUsddDataPlatformReserves,

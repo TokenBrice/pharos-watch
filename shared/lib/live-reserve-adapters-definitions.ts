@@ -380,6 +380,16 @@ export const LIVE_RESERVE_ADAPTER_DEFINITIONS = {
       allowedFreshnessModes: VERIFIED_OR_UNVERIFIED_FRESHNESS,
     },
   },
+  "usdh-native-markets": {
+    sourceModel: "single-bucket",
+    evidenceClass: "weak-live-probe",
+    sharedSourceMode: "none",
+    redemptionTelemetry: { capacity: "none", fee: "none" },
+    validation: {
+      maxSourceAgeSec: DISCLOSURE_SOURCE_MAX_AGE_SEC,
+      allowedFreshnessModes: VERIFIED_OR_UNVERIFIED_FRESHNESS,
+    },
+  },
   "usdai-proof-of-reserves": {
     sourceModel: "dynamic-mix",
     evidenceClass: "independent",
