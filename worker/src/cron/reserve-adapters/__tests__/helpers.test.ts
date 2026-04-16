@@ -97,6 +97,21 @@ describe("normalizeSlices", () => {
     const result = normalizeSlices(slices);
     expect(result.map((s) => s.name)).toEqual(["Large", "Mid", "Small"]);
   });
+
+  it("never produces negative pctUnits when upstream is grossly oversummed", () => {
+    // 3 slices summing to 300% — far beyond validation tolerance. The clamp
+    // should prevent the largest slice from being pushed below zero.
+    const slices: ReserveSlice[] = [
+      { name: "A", pct: 150, risk: "low" },
+      { name: "B", pct: 100, risk: "medium" },
+      { name: "C", pct: 50, risk: "high" },
+    ];
+    const result = normalizeSlices(slices);
+    expect(result.every((slice) => slice.pct > 0)).toBe(true);
+    // Largest slice is unchanged from its rounded value (no negative remainder applied).
+    expect(result[0].name).toBe("A");
+    expect(result[0].pct).toBe(150);
+  });
 });
 
 describe("accumulateBucketedExposure", () => {

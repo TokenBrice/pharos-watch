@@ -63,7 +63,10 @@ export function normalizeSlices(slices: ReserveSlice[], decimals = 1): ReserveSl
     (maxIndex, slice, index, arr) => (slice.pctUnits > arr[maxIndex].pctUnits ? index : maxIndex),
     0,
   );
-  normalized[maxIdx].pctUnits += (100 * factor) - sumUnits;
+  // Clamp negative remainder so a wildly-oversummed upstream (e.g. 300%) can't
+  // push the largest slice below zero. Validation catches the gross deviation
+  // upstream; this is defense-in-depth.
+  normalized[maxIdx].pctUnits += Math.max(0, (100 * factor) - sumUnits);
 
   return normalized
     .map(({ pctUnits, ...slice }) => ({ ...slice, pct: pctUnits / factor }))
