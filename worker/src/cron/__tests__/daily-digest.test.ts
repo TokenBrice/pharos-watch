@@ -555,6 +555,17 @@ describe("generateDailyDigest", () => {
     expect(storedInput.mintBurnFlows.gaugeBand).toBeDefined();
     expect(typeof storedInput.mintBurnFlows.gaugeScore).toBe("number");
     expect(storedInput.mintBurnFlows.flightToQuality).toBeDefined();
+    expect(storedInput.mintBurnFlows.topChains).toBeDefined();
+    expect(Array.isArray(storedInput.mintBurnFlows.topChains)).toBe(true);
+    expect(storedInput.mintBurnFlows.topChains.length).toBeLessThanOrEqual(3);
+    expect(storedInput.mintBurnFlows.topChains.length).toBeGreaterThan(0);
+    expect(storedInput.mintBurnFlows.topChains[0]).toMatchObject({
+      chainId: expect.any(String),
+      netUsd: expect.any(Number),
+    });
+
+    const body = JSON.parse(String(vi.mocked(fetchWithRetry).mock.calls[0]?.[1]?.body)) as { messages: { content: string }[] };
+    expect(body.messages[0].content).toContain("Top chains by net flow");
   });
 
   it("includes DEWS stress data with band changes in stored input", async () => {

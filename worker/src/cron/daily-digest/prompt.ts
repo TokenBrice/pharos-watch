@@ -303,6 +303,12 @@ export function buildUserPrompt(
         lines.push(`    ${pressure.symbol}: ${Math.round(pressure.intensity)} (net ${formatCurrency(pressure.net24hUsd)} yesterday)`);
       }
     }
+    if (data.mintBurnFlows.topChains && data.mintBurnFlows.topChains.length > 0) {
+      lines.push("  Top chains by net flow:");
+      for (const chain of data.mintBurnFlows.topChains) {
+        lines.push(`    ${chain.chainId}: ${chain.netUsd >= 0 ? "+" : ""}${formatCurrency(chain.netUsd)} net`);
+      }
+    }
   }
 
   if (data.dewsStress) {

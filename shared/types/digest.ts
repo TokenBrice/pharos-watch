@@ -131,6 +131,10 @@ export interface DigestInputData {
       intensity: number;
       net24hUsd: number;
     }[];
+    topChains?: {
+      chainId: string;
+      netUsd: number;
+    }[];
   };
   dewsStress?: {
     bandCounts: { calm: number; watch: number; alert: number; warning: number; danger: number };
