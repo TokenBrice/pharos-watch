@@ -1012,7 +1012,7 @@ describe("handleMintBurnFlows contract tests", () => {
     const usdt = body.coins.find((coin) => coin.stablecoinId === "usdt-tether");
     expect(sync.freshnessStatus).toBe("fresh");
     expect(sync.warning).toBeNull();
-    expect(usdt?.coverage?.adapterKinds).toEqual(["mixed"]);
+    expect(usdt?.coverage?.adapterKinds).toEqual(["custom-events"]);
     expect(usdt?.coverage?.startBlockSource).toBe("reviewed-contract-specific");
     expect(usdt?.coverage?.startBlockConfidence).toBe("high");
     expect(res.headers.get("Warning")).toBeNull();

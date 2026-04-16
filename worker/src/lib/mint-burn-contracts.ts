@@ -30,7 +30,7 @@ import {
 // Deposited(address user, address token, uint256 amount) — all params unindexed
 // Confirmed from ETH tx 0xf58255931c37cbca0859946c45d9a19e48b1da5476d1aab76ec788100c8d7a59
 const REUSD_DEPOSITED_TOPIC     = "0x8752a472e571a816aea92eec8dae9baf628e840f4929fbcc2d155e6233ff68a7";
-// InstantRedemptionProcessed(address indexed user, uint256 sharesBurned, uint256 netPayout) — user indexed
+// InstantRedemptionRouted(address indexed user, uint256 sharesBurned, uint256 netPayout) — user indexed
 // Confirmed from ETH tx 0x831367d37ebb2bd3bf41a1152124a493c309b1f092ce161da578d635b49d23e8
 const REUSD_INSTANT_REDEEM_TOPIC = "0xa58dba63852b106a5b3bbc558fa3fbcfe606497cbc0af66837a83c3560ec6220";
 
@@ -95,9 +95,9 @@ const MINT_BURN_CONFIG_SPECS: MintBurnContractConfigSpec[] = [
   {
     chain: ETHEREUM, stablecoinId: "usdt-tether",
     dustThreshold: 10_000, startBlock: 21_900_000,
+    // USDT issue()/redeem() emit only Issue/Redeem, not Transfer.
+    // No zero-address Transfer events are produced.
     events: [
-      ...transferMintBurn(),
-      // USDT Ethereum uses custom Issue/Redeem events (issue() does NOT emit Transfer)
       {
         signature: "Issue(uint256)",
         topicHash: USDT_ISSUE_TOPIC,
@@ -686,7 +686,7 @@ const MINT_BURN_CONFIG_SPECS: MintBurnContractConfigSpec[] = [
     dustThreshold: 10_000, startBlock: 23_479_000,
     tier: "extended",
     events: [{
-      signature: "InstantRedemptionProcessed(address,uint256,uint256)",
+      signature: "InstantRedemptionRouted(address,uint256,uint256)",
       topicHash: REUSD_INSTANT_REDEEM_TOPIC,
       direction: "burn",
       amountEncoding: "first-data-uint256", // data[0] = sharesBurned

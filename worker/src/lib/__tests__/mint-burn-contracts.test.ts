@@ -429,7 +429,7 @@ describe("mint-burn-contracts provenance metadata", () => {
   it("marks reviewed custom-event adapters as high-confidence", () => {
     const cfg = MINT_BURN_CONFIGS.find((entry) => entry.stablecoinId === "usdt-tether");
     expect(cfg).toBeDefined();
-    expect(cfg?.adapterKind).toBe("mixed");
+    expect(cfg?.adapterKind).toBe("custom-events");
     expect(cfg?.startBlockSource).toBe("reviewed-contract-specific");
     expect(cfg?.startBlockConfidence).toBe("high");
   });
