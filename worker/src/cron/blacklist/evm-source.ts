@@ -175,9 +175,9 @@ export function parseEvmLogs(
       typeof eventDef.addressDataIndex === "number"
         ? decodeAddressAtDataSlot(log.data, eventDef.addressDataIndex)
         : null;
-    const addressIndexed = forcedDataAddress == null && log.topics.length > topicIdx;
-    const affectedAddress = forcedDataAddress ?? (addressIndexed ? decodeAddress(log.topics[topicIdx]) : decodeAddress(log.data.slice(0, 66)));
-    const amount = decodeEvmLogAmount(eventDef, log, config.decimals, addressIndexed);
+    const addressFromTopic = forcedDataAddress == null && log.topics.length > topicIdx;
+    const affectedAddress = forcedDataAddress ?? (addressFromTopic ? decodeAddress(log.topics[topicIdx]) : decodeAddress(log.data.slice(0, 66)));
+    const amount = decodeEvmLogAmount(eventDef, log, config.decimals, addressFromTopic);
 
     const row = buildBlacklistRow(config, log, affectedAddress, amount, blockNumber, timestamp);
     if (row) rows.push(row);

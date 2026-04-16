@@ -406,19 +406,19 @@ const ACCOUNT_BAN_EVENT_FAMILY = defineEventFamily("account-ban", [
 
 // --- Hex Trust blacklist events ---
 
-const ADDED_BLACKLIST_TOPIC = "0x86c048150dfc5def3c35f7bc81582956dd964e56d8c028c9f4f5e978bb203c31"; // AddedBlacklist(address)
-const REMOVED_BLACKLIST_TOPIC = "0x90792cb7177eb70be35a14e39400d4143370da97f528237fd2b069e408ca68fb"; // RemovedBlacklist(address)
+const HEX_TRUST_ADDED_BLACKLIST_TOPIC = "0x86c048150dfc5def3c35f7bc81582956dd964e56d8c028c9f4f5e978bb203c31"; // AddedBlacklist(address)
+const HEX_TRUST_REMOVED_BLACKLIST_TOPIC = "0x90792cb7177eb70be35a14e39400d4143370da97f528237fd2b069e408ca68fb"; // RemovedBlacklist(address)
 
 const ADDED_REMOVED_BLACKLIST_EVENT_FAMILY = defineEventFamily("added-removed-blacklist", [
   {
     signature: "AddedBlacklist(address)",
-    topicHash: ADDED_BLACKLIST_TOPIC,
+    topicHash: HEX_TRUST_ADDED_BLACKLIST_TOPIC,
     eventType: "blacklist",
     hasAmount: false,
   },
   {
     signature: "RemovedBlacklist(address)",
-    topicHash: REMOVED_BLACKLIST_TOPIC,
+    topicHash: HEX_TRUST_REMOVED_BLACKLIST_TOPIC,
     eventType: "unblacklist",
     hasAmount: false,
   },
