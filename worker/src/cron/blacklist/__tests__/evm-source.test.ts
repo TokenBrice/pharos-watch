@@ -393,3 +393,88 @@ describe("wlfi-freeze destroy events", () => {
     expect(rows[0].amount_native).toBe(2);
   });
 });
+
+describe("parseEvmLogs branch coverage", () => {
+  it("skips logs with malformed blockNumber", () => {
+    const rows = parseEvmLogs(USDC_CONFIG, [
+      {
+        address: USDC_CONFIG.contractAddress,
+        topics: ["0xffa4e6181777692565cf28528fc88fd1516ea86b56da075235fa575af6a4b855", "0x" + "0".repeat(24) + "aa".repeat(20)],
+        data: "0x",
+        blockNumber: "0xzz",
+        transactionHash: "0xdeadbeef".padEnd(66, "0"),
+        logIndex: "0x0",
+        timeStamp: "0x1000",
+      },
+    ]);
+    expect(rows).toHaveLength(0);
+  });
+
+  it("skips logs with missing timestamp", () => {
+    const rows = parseEvmLogs(USDC_CONFIG, [
+      {
+        address: USDC_CONFIG.contractAddress,
+        topics: ["0xffa4e6181777692565cf28528fc88fd1516ea86b56da075235fa575af6a4b855", "0x" + "0".repeat(24) + "aa".repeat(20)],
+        data: "0x",
+        blockNumber: "0x100",
+        transactionHash: "0xdeadbeef".padEnd(66, "0"),
+        logIndex: "0x0",
+      },
+    ]);
+    expect(rows).toHaveLength(0);
+  });
+
+  it("returns undefined for unknown topic hash", () => {
+    const rows = parseEvmLogs(USDC_CONFIG, [
+      {
+        address: USDC_CONFIG.contractAddress,
+        topics: ["0xdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef"],
+        data: "0x",
+        blockNumber: "0x100",
+        transactionHash: "0xdeadbeef".padEnd(66, "0"),
+        logIndex: "0x0",
+        timeStamp: "0x1000",
+      },
+    ]);
+    expect(rows).toHaveLength(0);
+  });
+
+  it("handles malformed address array data gracefully", () => {
+    const rows = parseEvmLogs(USDTB_CONFIG, [
+      {
+        address: USDTB_CONFIG.contractAddress,
+        topics: ["0x5444f9841c04ce78987f28701fa07fc4c112840c1c8439e8f52bda50c3788a87"],
+        data: "0xdeadbeef",
+        blockNumber: "0x100",
+        transactionHash: "0xdeadbeef".padEnd(66, "0"),
+        logIndex: "0x0",
+        timeStamp: "0x1000",
+      },
+    ]);
+    expect(rows).toHaveLength(0);
+  });
+
+  it("decodes non-indexed address from data for USDT DestroyedBlackFunds", () => {
+    const usdtConfig = CONTRACT_CONFIGS.find(
+      (c) => c.stablecoinId === "usdt-tether" && c.chain.chainId === "ethereum",
+    )!;
+    const destroyTopic = "0x61e6e66b0d6339b2980aecc6ccc0039736791f0ccde9ed512e789a7fbdd698c6";
+    const address = "0x" + "bb".repeat(20);
+    const amount = encodeAbiParameters([{ type: "uint256" }], [5_000_000n]);
+    const data = "0x" + "0".repeat(24) + address.slice(2) + amount.slice(2);
+    const rows = parseEvmLogs(usdtConfig, [
+      {
+        address: usdtConfig.contractAddress,
+        topics: [destroyTopic],
+        data,
+        blockNumber: "0x200",
+        transactionHash: "0xcafebabe".padEnd(66, "0"),
+        logIndex: "0x0",
+        timeStamp: "0x2000",
+      },
+    ]);
+    expect(rows).toHaveLength(1);
+    expect(rows[0].event_type).toBe("destroy");
+    expect(rows[0].amount_native).toBe(5);
+  });
+});

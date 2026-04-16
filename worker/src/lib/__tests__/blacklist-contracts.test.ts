@@ -3,6 +3,8 @@ import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins";
 import {
   CONTRACT_CONFIGS,
   PYUSD_EVENT_FAMILY,
+  chainConfig,
+  getBlacklistConfigsForSymbolAndChain,
   getBlacklistEventBySignature,
   getBlacklistEventByTopic,
   getBlacklistTopicHashes,
@@ -138,5 +140,26 @@ describe("blacklist-contracts shared metadata alignment", () => {
     expect(config).toBeDefined();
     expect(config!.stablecoin).toBe("USDP");
     expect(config!.events).toEqual(PYUSD_EVENT_FAMILY.events);
+  });
+
+  it("throws when chainConfig is called with an unknown chainId", () => {
+    expect(() => chainConfig("nonexistent-chain")).toThrow();
+  });
+
+  it("returns undefined for an unknown topic hash", () => {
+    const config = CONTRACT_CONFIGS[0];
+    expect(getBlacklistEventByTopic(config, "0xdeadbeef")).toBeUndefined();
+    expect(getBlacklistEventByTopic(config, null)).toBeUndefined();
+    expect(getBlacklistEventByTopic(config, undefined)).toBeUndefined();
+  });
+
+  it("matches topic hashes case-insensitively", () => {
+    const config = CONTRACT_CONFIGS.find((c) => c.stablecoinId === "usdc-circle" && c.chain.chainId === "ethereum")!;
+    const upper = "0xFFA4E6181777692565CF28528FC88FD1516EA86B56DA075235FA575AF6A4B855";
+    expect(getBlacklistEventByTopic(config, upper)?.eventType).toBe("blacklist");
+  });
+
+  it("returns empty array when getBlacklistConfigsForSymbolAndChain has no match", () => {
+    expect(getBlacklistConfigsForSymbolAndChain("USDC", "nowhere")).toEqual([]);
   });
 });
