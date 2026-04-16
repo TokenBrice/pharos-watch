@@ -1,6 +1,30 @@
 # Blacklist Tracker Methodology — Version Timeline
 
-Internal changelog reconstructed from git history. Covers Blacklist Tracker `v1.0` through `v3.9` (2026-02-09 -> 2026-04-15).
+Internal changelog reconstructed from git history. Covers Blacklist Tracker `v1.0` through `v3.93` (2026-02-09 -> 2026-04-16).
+
+---
+
+## v3.93 — Backlog-safe scanner guardrails (2026-04-16)
+
+- **Partial-topic cursor safety** — EVM sync cursors stay pinned when the subrequest budget is exhausted before every configured event topic has been scanned
+- **Budget status accuracy** — Runs that skip configs after exhausting the subrequest budget now surface as degraded instead of ok
+- **D1 chunk safety** — Duplicate-row checks use smaller D1-safe chunks for high-row event batches
+
+---
+
+## v3.92 — Amount attribution: Tron ledger mirror + derived-zero recovery (2026-04-16)
+
+- **Tron ledger mirror** — Tron USDT blacklist/unblacklist rows can receive amounts from the freeze-ledger snapshot using `current_balance_snapshot`
+- **Derived-zero recovery** — Legacy derived-zero EVM rows re-enter the backfill pool for amount remediation
+- **Amount provenance** — Snapshot-sourced amounts render with a dedicated provenance badge
+
+---
+
+## v3.91 — Coverage quality + USDP addition (2026-04-16)
+
+- **WLFI destroy events** — Added `FrozenAccountDrained` and `FrozenFundsReallocated` tracking for USD1/U/FDUSD/EURI
+- **USDP coverage** — Added Pax Dollar Ethereum coverage using the Paxos freeze family
+- **Start-block corrections** — Corrected Arbitrum start blocks for FDUSD, AUSD, and BUIDL
 
 ---
 

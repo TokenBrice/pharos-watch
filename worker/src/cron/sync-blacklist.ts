@@ -1,6 +1,4 @@
-import {
-  CONTRACT_CONFIGS,
-} from "../lib/blacklist-contracts";
+import { CONTRACT_CONFIGS } from "../lib/blacklist-contracts";
 import { CIRCUIT_SOURCE } from "../lib/constants";
 import { shouldAttemptFetch, recordOutcomeSafe } from "../lib/circuit-breaker";
 import { getLastBlock, setLastBlock } from "../lib/db";
@@ -189,10 +187,9 @@ export async function syncBlacklist(opts: SyncBlacklistOptions): Promise<SyncBla
       },
     }, budget);
     if (budgetExhausted(budget)) {
+      runtimeBudgetHit = true;
       contractsSkipped = configStates.length - ci;
-      console.log(
-        `[sync-blacklist] Budget exhausted (${budget.count}/${budget.limit}), skipping ${contractsSkipped} remaining contracts`,
-      );
+      console.log(`[sync-blacklist] Budget exhausted (${budget.count}/${budget.limit}), skipping ${contractsSkipped} remaining contracts`);
       break;
     }
 
@@ -423,6 +420,7 @@ export async function syncBlacklist(opts: SyncBlacklistOptions): Promise<SyncBla
       rpcLogConfigs,
       apiErrorClasses,
       runtimeBudgetReached: runtimeBudgetHit,
+      subrequestBudgetReached: budgetExhausted(budget),
       runtimeBudgetMs: SYNC_BLACKLIST_RUNTIME_BUDGET_MS,
       enrichAttempted: enrichCounters.attempted,
       enrichSucceeded: enrichCounters.succeeded,

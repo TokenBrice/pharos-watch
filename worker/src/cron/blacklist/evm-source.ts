@@ -262,7 +262,10 @@ export async function fetchEvmEventsIncremental(
       incomplete = true;
       break;
     }
-    if (budgetExhausted(budget)) break;
+    if (budgetExhausted(budget)) {
+      incomplete = true;
+      break;
+    }
 
     let rows: BlacklistRow[] = [];
     let fetched = false;

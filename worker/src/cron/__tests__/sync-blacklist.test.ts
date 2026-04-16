@@ -183,6 +183,7 @@ describe("syncBlacklist", () => {
   beforeEach(() => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date("2025-06-15T12:00:00Z"));
+    vi.clearAllMocks();
     // Reset mocks to defaults
     vi.mocked(getLastBlock).mockResolvedValue(0);
     vi.mocked(setLastBlock).mockResolvedValue(undefined);
@@ -613,6 +614,74 @@ describe("syncBlacklist", () => {
     ]);
     expect(meta.zeroCursorConfigs).toContain("base-0x833589fcd6edb6e08f4c7c32d4f71b54bda02913");
     expect(setLastBlock).toHaveBeenCalledWith(db, "base-0x833589fcd6edb6e08f4c7c32d4f71b54bda02913", 12345);
+  });
+
+  it("does not advance a multi-topic RPC cursor when budget is exhausted before all topics are scanned", async () => {
+    const db = makeDb();
+    const baseConfig = CONTRACT_CONFIGS.find((config) => config.chain.chainId === "base");
+    expect(baseConfig).toBeDefined();
+    if (!baseConfig) return;
+
+    const previousEvents = baseConfig.events;
+    baseConfig.events = [
+      ...previousEvents,
+      {
+        signature: "UnBlacklisted(address)",
+        topicHash: "0x117e3210bb9aa7d9baff172026820255c6f6c30ba8999d1c2fd88e2848137c4e",
+        eventType: "unblacklist",
+        hasAmount: false,
+      },
+    ];
+
+    vi.mocked(getLastBlock).mockImplementation(async (_db, configKey: string) =>
+      configKey.startsWith("base-") ? 0 : 100,
+    );
+    vi.mocked(fetchEvmLogsForTopic).mockResolvedValue([]);
+    vi.mocked(fetchAlchemyLogs).mockImplementationOnce(async (
+      _rpcUrl,
+      _contractAddress,
+      _topics,
+      _fromBlock,
+      _toBlock,
+      budget,
+    ) => {
+      budget.count = budget.limit;
+      return {
+        logs: [],
+        complete: true,
+        scannedToBlock: 12345,
+        calls: 1,
+        maxDepth: 0,
+      };
+    });
+
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(
+        async () =>
+          new Response(JSON.stringify({ success: true, data: [] }), {
+            status: 200,
+            headers: { "Content-Type": "application/json" },
+          }),
+      ),
+    );
+
+    try {
+      const result = await syncBlacklist(buildTestOpts({ db }));
+      const meta = JSON.parse(result.metadata);
+
+      expect(result.status).toBe("degraded");
+      expect(meta.runtimeBudgetReached).toBe(true);
+      expect(meta.subrequestBudgetReached).toBe(true);
+      expect(fetchAlchemyLogs).toHaveBeenCalledTimes(1);
+      expect(setLastBlock).not.toHaveBeenCalledWith(
+        db,
+        "base-0x833589fcd6edb6e08f4c7c32d4f71b54bda02913",
+        12345,
+      );
+    } finally {
+      baseConfig.events = previousEvents;
+    }
   });
 
   it("uses configured startBlock and bounded RPC scan windows for zero-cursor configs", async () => {

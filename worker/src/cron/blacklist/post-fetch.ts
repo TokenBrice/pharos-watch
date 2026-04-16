@@ -9,8 +9,8 @@ import { enrichRowBalances } from "./amount-recovery";
 import { insertBlacklistRows } from "./persistence";
 
 type BlacklistConfig = (typeof CONTRACT_CONFIGS)[number];
-// D1 limits bind parameters to 100 per prepared statement
-const EXISTING_BLACKLIST_ID_QUERY_CHUNK = 99;
+// D1's practical SQL-variable ceiling can be lower than the nominal 100.
+const EXISTING_BLACKLIST_ID_QUERY_CHUNK = 90;
 
 export interface BlacklistPostFetchCounters {
   attempted: number;

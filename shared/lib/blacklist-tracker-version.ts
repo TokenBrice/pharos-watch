@@ -1,9 +1,24 @@
 import { createMethodologyVersion } from "./methodology-version";
 
 const blacklistTracker = createMethodologyVersion({
-  currentVersion: "3.92",
+  currentVersion: "3.93",
   changelogPath: "/methodology/blacklist-tracker-changelog/",
   changelog: [
+  {
+    version: "3.93",
+    title: "Backlog-safe scanner guardrails",
+    date: "2026-04-16",
+    effectiveAt: 1776297600, // 2026-04-16T00:00:00Z
+    summary:
+      "Keeps EVM sync cursors pinned when the subrequest budget is exhausted before every configured event topic is scanned, marks budget-exhausted runs as degraded, and lowers the duplicate-row check chunk below D1's practical SQL-variable ceiling.",
+    impact: [
+      "Partial multi-topic EVM scans no longer advance cursors past unscanned topics",
+      "Runs that skip configs after exhausting the subrequest budget now surface as degraded instead of ok",
+      "Duplicate-row checks use smaller D1-safe chunks for high-row event batches",
+    ],
+    commits: [],
+    reconstructed: false,
+  },
   {
     version: "3.92",
     title: "Amount attribution: Tron ledger mirror + derived-zero recovery",
