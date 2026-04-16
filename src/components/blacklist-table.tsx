@@ -17,6 +17,16 @@ import { downloadCsv } from "@/lib/csv-export";
 import { formatAddress, formatEventDate, formatCurrency } from "@shared/lib/format";
 import { isGoldBlacklistStablecoin } from "@shared/lib/blacklist";
 import type { BlacklistEvent, BlacklistSortDirection, BlacklistSortKey } from "@shared/types";
+
+function formatBlacklistAmountCell(evt: BlacklistEvent): string {
+  if (evt.amountUsdAtEvent != null) return formatCurrency(evt.amountUsdAtEvent);
+  if (evt.amountNative != null && !(evt.amountNative === 0 && evt.eventType !== "destroy")) {
+    const digits = isGoldBlacklistStablecoin(evt.stablecoin) ? 4 : 2;
+    return `${evt.amountNative.toLocaleString(undefined, { maximumFractionDigits: digits })} ${evt.stablecoin}`;
+  }
+  if (evt.amountStatus === "permanently_unavailable") return "N/A";
+  return "\u2014";
+}
 import { EVENT_BADGE_STYLES, EVENT_LABELS } from "@shared/lib/classification";
 import { getNextSortState, shouldToggleSortOnKeyDown } from "@/hooks/use-sort";
 
@@ -76,13 +86,7 @@ export function BlacklistTable({
       { header: "Chain", accessor: (row) => row.chainName },
       { header: "Event", accessor: (row) => EVENT_LABELS[row.eventType] ?? row.eventType },
       { header: "Address", accessor: (row) => row.address },
-      {
-        header: "Amount",
-        accessor: (row) =>
-          row.amountNative != null && !(row.amountNative === 0 && row.eventType !== "destroy")
-            ? row.amountNative
-            : null,
-      },
+      { header: "Amount", accessor: (row) => formatBlacklistAmountCell(row) },
       { header: "Amount USD At Event", accessor: (row) => row.amountUsdAtEvent },
       { header: "Amount Status", accessor: (row) => row.amountStatus },
       { header: "Tx URL", accessor: (row) => row.explorerTxUrl },
@@ -169,15 +173,7 @@ export function BlacklistTable({
                 </a>
               </TableCell>
               <TableCell className="hidden sm:table-cell text-right font-mono">
-                {evt.amountUsdAtEvent != null
-                  ? formatCurrency(evt.amountUsdAtEvent)
-                  : evt.amountNative != null && !(evt.amountNative === 0 && evt.eventType !== "destroy")
-                    ? isGoldBlacklistStablecoin(evt.stablecoin)
-                      ? `${evt.amountNative.toLocaleString(undefined, { maximumFractionDigits: 4 })} ${evt.stablecoin}`
-                      : `${evt.amountNative.toLocaleString(undefined, { maximumFractionDigits: 2 })} ${evt.stablecoin}`
-                    : evt.amountStatus === "permanently_unavailable"
-                      ? "N/A"
-                      : "\u2014"}
+                {formatBlacklistAmountCell(evt)}
                 {evt.amountSource === "current_balance_snapshot" && evt.amountNative != null ? (
                   <span
                     className="ml-1 rounded px-1 py-0.5 text-[10px] uppercase tracking-wide border border-border text-muted-foreground"
