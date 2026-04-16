@@ -42,6 +42,53 @@ const BASE_GLOBAL_AGG: GlobalAgg = {
   chainTvl: { ethereum: 100 },
 };
 
+function makeAnalysisInput(overrides: Partial<Parameters<typeof analyzeDexLiquidityPostScoring>[0]> = {}) {
+  return {
+    db: mockD1(),
+    scoreResults: new Map([["usdt-tether", BASE_SCORE_RESULT]]),
+    globalAgg: BASE_GLOBAL_AGG,
+    retainedPoolsByStablecoin: new Map(),
+    priceObservations: new Map(),
+    protocolTvlCaps: new Map(),
+    diagnostics: {
+      protocolCapReductions: {},
+    },
+    stagedMergedCount: 0,
+    stagedSkippedCount: 0,
+    weakCoverageCoinsBeforeFallback: 0,
+    coverageRecoveredCoins: 0,
+    dsFallbackCoins: 0,
+    cgTickerFallbackCoins: 0,
+    dlYieldsAvailable: true,
+    dlProtocolsAvailable: true,
+    directCexOrderbookDepth: null,
+    criticalSourceFailures: [],
+    ...overrides,
+  };
+}
+
+function makeCronMetadata(params: {
+  dlProtocolsAvailable: boolean;
+  currentGlobalTvl: number;
+  failedSources?: string[];
+}) {
+  return JSON.stringify({
+    failedSources: params.failedSources ?? [],
+    sourceCoverage: {
+      dlYieldsAvailable: true,
+      dlProtocolsAvailable: params.dlProtocolsAvailable,
+      currentGlobalTvl: params.currentGlobalTvl,
+      sourceDegradedFamilies: params.failedSources ?? [],
+      currentCoverage: 159,
+      previousCoverage: 158,
+      minExpectedCoverage: 94,
+      nearCoverageGuard: false,
+      nearValueGuard: false,
+      nearMajorCoverageGuard: false,
+    },
+  });
+}
+
 describe("analyzeDexLiquidityPostScoring", () => {
   it("treats previous coverage read failures as degraded unavailable state instead of a fake high baseline", async () => {
     const db = mockD1([
@@ -53,27 +100,9 @@ describe("analyzeDexLiquidityPostScoring", () => {
       },
     ]);
 
-    const analysis = await analyzeDexLiquidityPostScoring({
+    const analysis = await analyzeDexLiquidityPostScoring(makeAnalysisInput({
       db,
-      scoreResults: new Map([["usdt-tether", BASE_SCORE_RESULT]]),
-      globalAgg: BASE_GLOBAL_AGG,
-      retainedPoolsByStablecoin: new Map(),
-      priceObservations: new Map(),
-      protocolTvlCaps: new Map(),
-      diagnostics: {
-        protocolCapReductions: {},
-      },
-      stagedMergedCount: 0,
-      stagedSkippedCount: 0,
-      weakCoverageCoinsBeforeFallback: 0,
-      coverageRecoveredCoins: 0,
-      dsFallbackCoins: 0,
-      cgTickerFallbackCoins: 0,
-      dlYieldsAvailable: true,
-      dlProtocolsAvailable: true,
-      directCexOrderbookDepth: null,
-      criticalSourceFailures: [],
-    });
+    }));
 
     expect(analysis.previousCoverage).toBe(0);
     expect(analysis.previousCoverageBaselineAvailable).toBe(false);
@@ -96,5 +125,154 @@ describe("analyzeDexLiquidityPostScoring", () => {
         },
       }),
     ).toBe(true);
+  });
+
+  it("ignores a source-incomplete persisted value baseline and uses the last source-complete cron baseline", async () => {
+    const db = mockD1([
+      {
+        match: "COUNT(*) as cnt FROM dex_liquidity",
+        rows: [],
+        first: { cnt: 159 },
+      },
+      {
+        match: "SELECT total_tvl_usd, updated_at FROM dex_liquidity WHERE stablecoin_id = '__global__'",
+        rows: [],
+        first: { total_tvl_usd: 12_703_104_619, updated_at: 1_776_323_404 },
+      },
+      {
+        match: "GROUP BY coverage_class",
+        rows: [],
+      },
+      {
+        match: "ORDER BY total_tvl_usd DESC",
+        rows: [{ stablecoin_id: "usdt-tether", total_tvl_usd: 6_000_000_000 }],
+      },
+      {
+        match: "FROM cron_runs",
+        rows: [
+          {
+            started_at: 1_776_323_404,
+            status: "degraded",
+            metadata: makeCronMetadata({
+              dlProtocolsAvailable: false,
+              currentGlobalTvl: 12_703_104_619,
+              failedSources: ["defillama-protocols"],
+            }),
+          },
+          {
+            started_at: 1_776_321_604,
+            status: "ok",
+            metadata: makeCronMetadata({
+              dlProtocolsAvailable: true,
+              currentGlobalTvl: 7_025_252_002,
+            }),
+          },
+        ],
+      },
+      {
+        match: "WHERE stablecoin_id IN",
+        rows: [],
+      },
+    ]);
+
+    const analysis = await analyzeDexLiquidityPostScoring(makeAnalysisInput({
+      db,
+      globalAgg: { ...BASE_GLOBAL_AGG, totalTvl: 7_159_006_645 },
+    }));
+
+    expect(analysis.previousGlobalTvl).toBe(7_025_252_002);
+    expect(analysis.minExpectedGlobalTvl).toBeCloseTo(4_215_151_201.2);
+    expect(analysis.hardValueGuard).toBe(false);
+    expect(analysis.sourceCoverage.valueBaselineSource).toBe("cron_metadata_source_complete");
+    expect(analysis.sourceCoverage.valueBaselineGlobalTvl).toBe(7_025_252_002);
+    expect(analysis.sourceCoverage.ignoredPersistedGlobalTvl).toBe(12_703_104_619);
+  });
+
+  it("keeps hard value guard behavior for source-complete table baselines", async () => {
+    const db = mockD1([
+      {
+        match: "COUNT(*) as cnt FROM dex_liquidity",
+        rows: [],
+        first: { cnt: 159 },
+      },
+      {
+        match: "SELECT total_tvl_usd, updated_at FROM dex_liquidity WHERE stablecoin_id = '__global__'",
+        rows: [],
+        first: { total_tvl_usd: 10_000_000_000, updated_at: 1_776_321_604 },
+      },
+      {
+        match: "GROUP BY coverage_class",
+        rows: [],
+      },
+      {
+        match: "ORDER BY total_tvl_usd DESC",
+        rows: [{ stablecoin_id: "usdt-tether", total_tvl_usd: 6_000_000_000 }],
+      },
+      {
+        match: "FROM cron_runs",
+        rows: [
+          {
+            started_at: 1_776_321_604,
+            status: "ok",
+            metadata: makeCronMetadata({
+              dlProtocolsAvailable: true,
+              currentGlobalTvl: 10_000_000_000,
+            }),
+          },
+        ],
+      },
+      {
+        match: "WHERE stablecoin_id IN",
+        rows: [],
+      },
+    ]);
+
+    const analysis = await analyzeDexLiquidityPostScoring(makeAnalysisInput({
+      db,
+      globalAgg: { ...BASE_GLOBAL_AGG, totalTvl: 5_000_000_000 },
+    }));
+
+    expect(analysis.sourceCoverage.valueBaselineSource).toBe("dex_liquidity_global");
+    expect(analysis.sourceCoverage.ignoredPersistedGlobalTvl).toBeNull();
+    expect(analysis.hardValueGuard).toBe(true);
+  });
+
+  it("falls back to the table baseline when cron metadata is not parseable", async () => {
+    const db = mockD1([
+      {
+        match: "COUNT(*) as cnt FROM dex_liquidity",
+        rows: [],
+        first: { cnt: 159 },
+      },
+      {
+        match: "SELECT total_tvl_usd, updated_at FROM dex_liquidity WHERE stablecoin_id = '__global__'",
+        rows: [],
+        first: { total_tvl_usd: 10_000_000_000, updated_at: 1_776_321_604 },
+      },
+      {
+        match: "GROUP BY coverage_class",
+        rows: [],
+      },
+      {
+        match: "ORDER BY total_tvl_usd DESC",
+        rows: [],
+      },
+      {
+        match: "FROM cron_runs",
+        rows: [{ started_at: 1_776_321_604, status: "ok", metadata: "{not-json" }],
+      },
+      {
+        match: "WHERE stablecoin_id IN",
+        rows: [],
+      },
+    ]);
+
+    const analysis = await analyzeDexLiquidityPostScoring(makeAnalysisInput({
+      db,
+      globalAgg: { ...BASE_GLOBAL_AGG, totalTvl: 5_000_000_000 },
+    }));
+
+    expect(analysis.sourceCoverage.valueBaselineSource).toBe("dex_liquidity_global");
+    expect(analysis.hardValueGuard).toBe(true);
   });
 });

@@ -109,7 +109,8 @@ import { convertToGtNewPools, extractPriceObservations } from "../../lib/dex-api
 import { fetchAerodromeData, fetchDataSources, fetchUniV3Data } from "../dex-liquidity/fetch-primary";
 import { fetchFluidPools } from "../dex-liquidity/fetch-fluid";
 import { fetchRaydiumPools } from "../dex-liquidity/fetch-raydium";
-import { computeStablecoinScores } from "../dex-liquidity/scoring";
+import { computeDepthStability, computeDexPrices, computeStablecoinScores } from "../dex-liquidity/scoring";
+import { persistScores, writeHistoricalSnapshots } from "../dex-liquidity/persistence";
 import { filterPrimaryPoolsPreferDirectApi } from "../dex-liquidity/orchestrator";
 
 const db = {
@@ -199,9 +200,21 @@ describe("syncDexLiquidity", () => {
     const metadata = JSON.parse(result.metadata ?? "{}") as {
       failedSources?: string[];
       fallbackMode?: string[];
+      rowsWritten?: number;
+      persistence?: {
+        skipped?: boolean;
+        skippedReason?: string | null;
+      };
     };
     expect(metadata.failedSources).toContain("defillama-protocols");
     expect(metadata.fallbackMode).toContain("dl-protocols-unavailable");
+    expect(metadata.rowsWritten).toBe(0);
+    expect(metadata.persistence?.skipped).toBe(true);
+    expect(metadata.persistence?.skippedReason).toBe("defillama-protocols-unavailable");
+    expect(persistScores).not.toHaveBeenCalled();
+    expect(computeDexPrices).not.toHaveBeenCalled();
+    expect(writeHistoricalSnapshots).not.toHaveBeenCalled();
+    expect(computeDepthStability).not.toHaveBeenCalled();
   });
 
   it("returns degraded when DL fails but Curve succeeds", async () => {
@@ -222,6 +235,7 @@ describe("syncDexLiquidity", () => {
       failedSources?: string[];
     };
     expect(metadata.failedSources).toContain("defillama-yields");
+    expect(persistScores).not.toHaveBeenCalled();
   });
 
   it("returns ok when required source families succeed", async () => {
@@ -283,6 +297,7 @@ describe("syncDexLiquidity", () => {
     expect(metadata.failedSources).toContain("raydium-api");
     expect(metadata.fallbackMode).toContain("raydium-api-unavailable");
     expect(metadata.sourceCoverage?.sourceDegradedFamilies).toEqual([]);
+    expect(persistScores).toHaveBeenCalled();
   });
 
   it("waits for subgraph enrichment before starting direct API fetches", async () => {
@@ -471,7 +486,7 @@ describe("syncDexLiquidity", () => {
         if (sql.includes("COUNT(*) as cnt FROM dex_liquidity WHERE stablecoin_id != '__global__'")) {
           return { first: async () => ({ cnt: 5 }) };
         }
-        if (sql.includes("SELECT total_tvl_usd FROM dex_liquidity WHERE stablecoin_id = '__global__'")) {
+        if (sql.includes("SELECT total_tvl_usd, updated_at FROM dex_liquidity WHERE stablecoin_id = '__global__'")) {
           return { first: async () => ({ total_tvl_usd: 100 }) };
         }
         if (sql.includes("GROUP BY coverage_class")) {
@@ -480,18 +495,27 @@ describe("syncDexLiquidity", () => {
         if (sql.includes("ORDER BY total_tvl_usd DESC")) {
           return { all: async () => ({ results: [{ stablecoin_id: "usdc-circle", total_tvl_usd: 100 }] }) };
         }
-        if (sql.includes("SELECT metadata") && sql.includes("cron_runs")) {
+        if (sql.includes("SELECT started_at, status, metadata") && sql.includes("cron_runs")) {
           return {
-            first: async () => ({
-              metadata: JSON.stringify({
-                stagedPoolsMerged: 10,
-                stagedPoolsSkipped: 0,
-                sourceCoverage: {
-                  priceObservationCoins: 5,
-                  measuredBalanceCoveragePct: 0.5,
-                  weakCoverageCoins: 0,
+            all: async () => ({
+              results: [
+                {
+                  started_at: 1,
+                  status: "ok",
+                  metadata: JSON.stringify({
+                    stagedPoolsMerged: 10,
+                    stagedPoolsSkipped: 0,
+                    sourceCoverage: {
+                      dlYieldsAvailable: true,
+                      dlProtocolsAvailable: true,
+                      currentGlobalTvl: 100,
+                      priceObservationCoins: 5,
+                      measuredBalanceCoveragePct: 0.5,
+                      weakCoverageCoins: 0,
+                    },
+                  }),
                 },
-              }),
+              ],
             }),
           };
         }

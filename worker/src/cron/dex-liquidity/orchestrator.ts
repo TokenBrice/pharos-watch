@@ -40,6 +40,8 @@ import {
   isDexLiquidityDegraded,
 } from "./orchestrator-metadata";
 
+const DEX_LIQUIDITY_PERSISTENCE_BLOCKING_FAILURES = new Set(["defillama-protocols"]);
+
 export function filterPrimaryPoolsPreferDirectApi(
   pools: LlamaPool[],
   directApiPools: DexApiPool[],
@@ -202,6 +204,15 @@ interface DexLiquidityPersistenceState {
   persistence: DexLiquidityPersistence;
   challengerPublication: Awaited<ReturnType<typeof publishDexPriceChallengerSnapshots>>;
   historicalSnapshot: DexLiquidityHistoricalSnapshot;
+}
+
+function getPersistenceSkipReason(criticalSourceFailures: string[]): string | null {
+  for (const source of criticalSourceFailures) {
+    if (DEX_LIQUIDITY_PERSISTENCE_BLOCKING_FAILURES.has(source)) {
+      return `${source}-unavailable`;
+    }
+  }
+  return null;
 }
 
 async function loadDexLiquiditySourceState(ctx: DexLiquidityRunContext): Promise<DexLiquiditySourceState> {
@@ -444,6 +455,30 @@ async function persistDexLiquidityScoreState(
   poolState: DexLiquidityPoolState,
   scoreState: DexLiquidityScoreState,
 ): Promise<DexLiquidityPersistenceState> {
+  const skippedReason = getPersistenceSkipReason(sourceState.criticalSourceFailures);
+  if (skippedReason) {
+    console.warn(`[dex-liquidity] Skipping persistence because ${skippedReason}`);
+    return {
+      persistence: {
+        placeholderCount: 0,
+        orphanRowsDeleted: 0,
+        orphanCleanupFailed: false,
+        skipped: true,
+        skippedReason,
+      },
+      challengerPublication: {
+        publishedStablecoins: 0,
+        skippedStablecoins: scoreState.retainedPoolsByStablecoin.size,
+        missingTables: false,
+      },
+      historicalSnapshot: {
+        snapshotRowsWritten: 0,
+        skipped: true,
+        writeFailed: false,
+      },
+    };
+  }
+
   const persistence = (await runWithOverloadRetry(() =>
     persistScores(ctx.db, poolState.metrics, scoreState.scoreResults, scoreState.globalAgg, ctx.syncStartSec),
   )) ?? { placeholderCount: 0, orphanRowsDeleted: 0, orphanCleanupFailed: false };
@@ -502,7 +537,7 @@ function buildDexLiquidityCronResult(
     metadata: JSON.stringify(
       buildDexLiquidityCronMetadata({
         rowsRead: sourceState.dataSources.pools.length,
-        rowsWritten: scoreState.scoreResults.size,
+        rowsWritten: persistenceState.persistence.skipped ? 0 : scoreState.scoreResults.size,
         stagedPoolsMerged: poolState.stagedMergedCount,
         stagedPoolsSkipped: poolState.stagedSkippedCount,
         stagedPoolsSkippedByExactIdentity: poolState.stagedSkippedByExactIdentityCount,

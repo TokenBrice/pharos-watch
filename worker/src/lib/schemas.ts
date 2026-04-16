@@ -50,6 +50,18 @@ export const DexLiquidityCronMetadataSchema = z.object({
       previousCoverage: z.number().optional(),
       previousCoverageBaselineAvailable: z.boolean().optional(),
       minExpectedCoverage: z.number().optional(),
+      dlYieldsAvailable: z.boolean().optional(),
+      dlProtocolsAvailable: z.boolean().optional(),
+      currentGlobalTvl: z.number().optional(),
+      previousGlobalTvl: z.number().nullable().optional(),
+      minExpectedGlobalTvl: z.number().nullable().optional(),
+      valueBaselineSource: z
+        .enum(["dex_liquidity_global", "cron_metadata_source_complete", "none"])
+        .optional(),
+      valueBaselineGlobalTvl: z.number().nullable().optional(),
+      ignoredPersistedGlobalTvl: z.number().nullable().optional(),
+      currentTop10CoveredTvl: z.number().optional(),
+      previousTop10CoveredTvl: z.number().optional(),
       priceObservationCoins: z.number().optional(),
       weakCoverageCoins: z.number().optional(),
       coverageRecoveredCoins: z.number().optional(),
@@ -145,4 +157,11 @@ export const DexLiquidityCronMetadataSchema = z.object({
       nearValueGuard: false,
       nearMajorCoverageGuard: false,
     })),
+  persistence: z
+    .object({
+      skipped: z.boolean().optional(),
+      skippedReason: z.string().nullable().optional(),
+    })
+    .passthrough()
+    .optional(),
 });

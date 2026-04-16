@@ -46,6 +46,8 @@ export interface PersistScoresResult {
   placeholderCount: number;
   orphanRowsDeleted: number;
   orphanCleanupFailed: boolean;
+  skipped?: boolean;
+  skippedReason?: string | null;
 }
 
 export interface HistoricalSnapshotWriteResult {

@@ -14,6 +14,24 @@ type PreviousDexLiquiditySummary = {
   weakCoverageCoins: number;
 };
 
+type DexLiquidityCronMetadata = ReturnType<typeof DexLiquidityCronMetadataSchema.parse>;
+
+type ParsedPreviousCronRow = {
+  startedAt: number | null;
+  status: string | null;
+  metadata: DexLiquidityCronMetadata;
+};
+
+type ValueBaselineSource = "dex_liquidity_global" | "cron_metadata_source_complete" | "none";
+
+type ValueBaselineSelection = {
+  previousGlobalTvl: number | null;
+  minExpectedGlobalTvl: number | null;
+  valueBaselineSource: ValueBaselineSource;
+  valueBaselineGlobalTvl: number | null;
+  ignoredPersistedGlobalTvl: number | null;
+};
+
 type CoverageClasses = {
   primary: number;
   mixed: number;
@@ -31,17 +49,10 @@ function pctDelta(current: number, previous: number): number | null {
   return round4((current - previous) / previous);
 }
 
-function readPreviousDexLiquiditySummary(metadata: string | null): PreviousDexLiquiditySummary | null {
+function parseDexLiquidityCronMetadata(metadata: string | null): DexLiquidityCronMetadata | null {
   if (!metadata) return null;
   try {
-    const parsed = DexLiquidityCronMetadataSchema.parse(JSON.parse(metadata));
-    return {
-      stagedPoolsMerged: parsed.stagedPoolsMerged ?? 0,
-      stagedPoolsSkipped: parsed.stagedPoolsSkipped ?? 0,
-      priceObservationCoins: parsed.sourceCoverage.priceObservationCoins ?? 0,
-      measuredBalanceCoveragePct: parsed.sourceCoverage.measuredBalanceCoveragePct ?? 0,
-      weakCoverageCoins: parsed.sourceCoverage.weakCoverageCoins ?? 0,
-    };
+    return DexLiquidityCronMetadataSchema.parse(JSON.parse(metadata));
   } catch (err) {
     console.warn(
       "[dex-liquidity] Failed to parse previous cron metadata:",
@@ -49,6 +60,17 @@ function readPreviousDexLiquiditySummary(metadata: string | null): PreviousDexLi
     );
     return null;
   }
+}
+
+function readPreviousDexLiquiditySummary(parsed: DexLiquidityCronMetadata | null): PreviousDexLiquiditySummary | null {
+  if (!parsed) return null;
+  return {
+    stagedPoolsMerged: parsed.stagedPoolsMerged ?? 0,
+    stagedPoolsSkipped: parsed.stagedPoolsSkipped ?? 0,
+    priceObservationCoins: parsed.sourceCoverage.priceObservationCoins ?? 0,
+    measuredBalanceCoveragePct: parsed.sourceCoverage.measuredBalanceCoveragePct ?? 0,
+    weakCoverageCoins: parsed.sourceCoverage.weakCoverageCoins ?? 0,
+  };
 }
 
 function emptyCoverageClasses(): CoverageClasses {
@@ -61,6 +83,116 @@ function emptyCoverageClasses(): CoverageClasses {
   };
 }
 
+function isFinitePositive(value: number | null | undefined): value is number {
+  return typeof value === "number" && Number.isFinite(value) && value > 0;
+}
+
+function hasCriticalDlSourceFailure(metadata: DexLiquidityCronMetadata): boolean {
+  const failed = new Set([...(metadata.failedSources ?? []), ...(metadata.sourceCoverage.sourceDegradedFamilies ?? [])]);
+  return failed.has("defillama-yields") || failed.has("defillama-protocols");
+}
+
+function isSourceCompleteMetadata(metadata: DexLiquidityCronMetadata): boolean {
+  return (
+    metadata.sourceCoverage.dlYieldsAvailable === true &&
+    metadata.sourceCoverage.dlProtocolsAvailable === true &&
+    !hasCriticalDlSourceFailure(metadata) &&
+    isFinitePositive(metadata.sourceCoverage.currentGlobalTvl)
+  );
+}
+
+function isSourceIncompleteMetadata(metadata: DexLiquidityCronMetadata): boolean {
+  return (
+    metadata.sourceCoverage.dlYieldsAvailable === false ||
+    metadata.sourceCoverage.dlProtocolsAvailable === false ||
+    hasCriticalDlSourceFailure(metadata)
+  );
+}
+
+function parsePreviousCronRows(
+  rows: Array<{ started_at: number | null; status: string | null; metadata: string | null }>,
+): ParsedPreviousCronRow[] {
+  const parsedRows: ParsedPreviousCronRow[] = [];
+  for (const row of rows) {
+    const parsed = parseDexLiquidityCronMetadata(row.metadata);
+    if (!parsed) continue;
+    parsedRows.push({
+      startedAt: typeof row.started_at === "number" && Number.isFinite(row.started_at) ? row.started_at : null,
+      status: row.status,
+      metadata: parsed,
+    });
+  }
+  return parsedRows;
+}
+
+function isApproxSameTvl(left: number | null, right: number | null): boolean {
+  if (!isFinitePositive(left) || !isFinitePositive(right)) return false;
+  const scale = Math.max(1, Math.abs(left), Math.abs(right));
+  return Math.abs(left - right) / scale <= 0.0001;
+}
+
+function findPersistedCronMetadata(
+  rows: ParsedPreviousCronRow[],
+  persistedUpdatedAt: number | null,
+  persistedGlobalTvl: number | null,
+): ParsedPreviousCronRow | null {
+  for (const row of rows) {
+    const rowGlobalTvl = row.metadata.sourceCoverage.currentGlobalTvl ?? null;
+    const timestampMatches =
+      persistedUpdatedAt != null && row.startedAt != null && Math.abs(row.startedAt - persistedUpdatedAt) <= 5;
+    if (timestampMatches || isApproxSameTvl(rowGlobalTvl, persistedGlobalTvl)) {
+      return row;
+    }
+  }
+  return null;
+}
+
+function selectValueBaseline(params: {
+  persistedGlobalTvl: number | null;
+  persistedUpdatedAt: number | null;
+  previousCronRows: ParsedPreviousCronRow[];
+}): ValueBaselineSelection {
+  const persistedRun = findPersistedCronMetadata(
+    params.previousCronRows,
+    params.persistedUpdatedAt,
+    params.persistedGlobalTvl,
+  );
+  const persistedSourceIncomplete = persistedRun != null && isSourceIncompleteMetadata(persistedRun.metadata);
+  const sourceCompleteRun = params.previousCronRows.find(
+    (row) => (row.status === "ok" || row.status === "degraded") && isSourceCompleteMetadata(row.metadata),
+  );
+
+  if (persistedSourceIncomplete) {
+    const value = sourceCompleteRun?.metadata.sourceCoverage.currentGlobalTvl ?? null;
+    return {
+      previousGlobalTvl: isFinitePositive(value) ? value : null,
+      minExpectedGlobalTvl: isFinitePositive(value) ? value * 0.6 : null,
+      valueBaselineSource: isFinitePositive(value) ? "cron_metadata_source_complete" : "none",
+      valueBaselineGlobalTvl: isFinitePositive(value) ? value : null,
+      ignoredPersistedGlobalTvl: params.persistedGlobalTvl,
+    };
+  }
+
+  if (params.persistedGlobalTvl != null) {
+    return {
+      previousGlobalTvl: params.persistedGlobalTvl,
+      minExpectedGlobalTvl: params.persistedGlobalTvl * 0.6,
+      valueBaselineSource: "dex_liquidity_global",
+      valueBaselineGlobalTvl: params.persistedGlobalTvl,
+      ignoredPersistedGlobalTvl: null,
+    };
+  }
+
+  const value = sourceCompleteRun?.metadata.sourceCoverage.currentGlobalTvl ?? null;
+  return {
+    previousGlobalTvl: isFinitePositive(value) ? value : null,
+    minExpectedGlobalTvl: isFinitePositive(value) ? value * 0.6 : null,
+    valueBaselineSource: isFinitePositive(value) ? "cron_metadata_source_complete" : "none",
+    valueBaselineGlobalTvl: isFinitePositive(value) ? value : null,
+    ignoredPersistedGlobalTvl: null,
+  };
+}
+
 export interface DexLiquidityPostScoreAnalysis {
   currentCoverage: number;
   previousCoverage: number;
@@ -69,6 +201,9 @@ export interface DexLiquidityPostScoreAnalysis {
   currentGlobalTvl: number;
   previousGlobalTvl: number | null;
   minExpectedGlobalTvl: number | null;
+  valueBaselineSource: ValueBaselineSource;
+  valueBaselineGlobalTvl: number | null;
+  ignoredPersistedGlobalTvl: number | null;
   currentTop10CoveredTvl: number;
   previousTop10CoveredTvl: number;
   nearCoverageGuard: boolean;
@@ -87,6 +222,9 @@ export interface DexLiquidityPostScoreAnalysis {
     currentGlobalTvl: number;
     previousGlobalTvl: number | null;
     minExpectedGlobalTvl: number | null;
+    valueBaselineSource: ValueBaselineSource;
+    valueBaselineGlobalTvl: number | null;
+    ignoredPersistedGlobalTvl: number | null;
     nearValueGuard: boolean;
     currentTop10CoveredTvl: number;
     previousTop10CoveredTvl: number;
@@ -215,6 +353,8 @@ export function buildDexLiquidityCronMetadata(params: {
       placeholderRowsWritten: params.persistence.placeholderCount,
       orphanRowsDeleted: params.persistence.orphanRowsDeleted,
       orphanCleanupFailed: params.persistence.orphanCleanupFailed,
+      skipped: params.persistence.skipped ?? false,
+      skippedReason: params.persistence.skippedReason ?? null,
       historicalSnapshotRowsWritten: params.historicalSnapshot.snapshotRowsWritten,
       historicalSnapshotSkipped: params.historicalSnapshot.skipped,
       historicalSnapshotWriteFailed: params.historicalSnapshot.writeFailed,
@@ -254,7 +394,7 @@ export async function analyzeDexLiquidityPostScoring(params: {
     previousGlobalRow,
     previousCoverageClassRows,
     previousTopCoverageRows,
-    previousCronRow,
+    previousCronRows,
     previousWatchlistRows,
   ] = await Promise.all([
     params.db
@@ -267,8 +407,8 @@ export async function analyzeDexLiquidityPostScoring(params: {
         return null;
       }),
     params.db
-      .prepare("SELECT total_tvl_usd FROM dex_liquidity WHERE stablecoin_id = '__global__'")
-      .first<{ total_tvl_usd: number | null }>()
+      .prepare("SELECT total_tvl_usd, updated_at FROM dex_liquidity WHERE stablecoin_id = '__global__'")
+      .first<{ total_tvl_usd: number | null; updated_at: number | null }>()
       .catch((e) => {
         console.warn("[dex-liquidity] Failed to read previous global TVL:", e);
         return null;
@@ -300,16 +440,19 @@ export async function analyzeDexLiquidityPostScoring(params: {
       }),
     params.db
       .prepare(
-        `SELECT metadata
+        `SELECT started_at, status, metadata
          FROM cron_runs
          WHERE job = 'sync-dex-liquidity'
+           AND metadata IS NOT NULL
          ORDER BY started_at DESC
-         LIMIT 1`,
+         LIMIT 12`,
       )
-      .first<{ metadata: string | null }>()
+      .all<{ started_at: number | null; status: string | null; metadata: string | null }>()
       .catch((e) => {
         console.warn("[dex-liquidity] Failed to read previous cron metadata:", e);
-        return null;
+        return {
+          results: [] as Array<{ started_at: number | null; status: string | null; metadata: string | null }>,
+        };
       }),
     params.db
       .prepare(
@@ -346,8 +489,16 @@ export async function analyzeDexLiquidityPostScoring(params: {
     previousCoverageBaselineAvailable && previousCoverage >= 10 && currentCoverage < Math.floor(previousCoverage * 0.8);
 
   const currentGlobalTvl = params.globalAgg.totalTvl;
-  const previousGlobalTvl = previousGlobalRow?.total_tvl_usd ?? null;
-  const minExpectedGlobalTvl = previousGlobalTvl != null ? previousGlobalTvl * 0.6 : null;
+  const persistedGlobalTvl = previousGlobalRow?.total_tvl_usd ?? null;
+  const persistedGlobalUpdatedAt = previousGlobalRow?.updated_at ?? null;
+  const parsedPreviousCronRows = parsePreviousCronRows(previousCronRows.results ?? []);
+  const valueBaseline = selectValueBaseline({
+    persistedGlobalTvl,
+    persistedUpdatedAt: persistedGlobalUpdatedAt,
+    previousCronRows: parsedPreviousCronRows,
+  });
+  const previousGlobalTvl = valueBaseline.previousGlobalTvl;
+  const minExpectedGlobalTvl = valueBaseline.minExpectedGlobalTvl;
   const nearValueGuard =
     previousGlobalTvl != null && previousGlobalTvl >= 10_000_000 && currentGlobalTvl < previousGlobalTvl * 0.85;
   const hardValueGuard =
@@ -364,7 +515,9 @@ export async function analyzeDexLiquidityPostScoring(params: {
   const nearMajorCoverageGuard =
     previousTop10CoveredTvl >= 5_000_000 && currentTop10CoveredTvl < previousTop10CoveredTvl * 0.85;
   const hardMajorCoverageGuard =
-    previousTop10CoveredTvl >= 5_000_000 && currentTop10CoveredTvl < previousTop10CoveredTvl * 0.6;
+    valueBaseline.ignoredPersistedGlobalTvl == null &&
+    previousTop10CoveredTvl >= 5_000_000 &&
+    currentTop10CoveredTvl < previousTop10CoveredTvl * 0.6;
 
   const currentCoverageClasses: CoverageClasses = {
     ...emptyCoverageClasses(),
@@ -400,7 +553,7 @@ export async function analyzeDexLiquidityPostScoring(params: {
     }
   }
 
-  const previousSummary = readPreviousDexLiquiditySummary(previousCronRow?.metadata ?? null);
+  const previousSummary = readPreviousDexLiquiditySummary(parsedPreviousCronRows[0]?.metadata ?? null);
   const watchlistPreviousById = new Map((previousWatchlistRows.results ?? []).map((row) => [row.stablecoin_id, row]));
   const currentWatchlistDeltas = DRIFT_WATCHLIST.map((stablecoinId) => {
     const previous = watchlistPreviousById.get(stablecoinId);
@@ -566,6 +719,9 @@ export async function analyzeDexLiquidityPostScoring(params: {
     currentGlobalTvl,
     previousGlobalTvl,
     minExpectedGlobalTvl,
+    valueBaselineSource: valueBaseline.valueBaselineSource,
+    valueBaselineGlobalTvl: valueBaseline.valueBaselineGlobalTvl,
+    ignoredPersistedGlobalTvl: valueBaseline.ignoredPersistedGlobalTvl,
     currentTop10CoveredTvl,
     previousTop10CoveredTvl,
     nearCoverageGuard,
@@ -584,6 +740,9 @@ export async function analyzeDexLiquidityPostScoring(params: {
       currentGlobalTvl,
       previousGlobalTvl,
       minExpectedGlobalTvl,
+      valueBaselineSource: valueBaseline.valueBaselineSource,
+      valueBaselineGlobalTvl: valueBaseline.valueBaselineGlobalTvl,
+      ignoredPersistedGlobalTvl: valueBaseline.ignoredPersistedGlobalTvl,
       nearValueGuard,
       currentTop10CoveredTvl,
       previousTop10CoveredTvl,
