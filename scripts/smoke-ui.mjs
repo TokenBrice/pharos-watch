@@ -2,6 +2,7 @@
 
 import { execFile } from "child_process";
 import { rmSync } from "fs";
+import { pathToFileURL } from "url";
 import { promisify } from "util";
 
 const execFileAsync = promisify(execFile);
@@ -401,6 +402,16 @@ function formatUiSummary(summary) {
   return `title="${summary.title}", rows=${summary.rows}, knownTicker=${summary.hasKnownTicker}, markers=${markerSummary}, preview="${preview}"`;
 }
 
+export function hasGaConfigInit(html, expectedGaId) {
+  const compactHtml = html.replace(/\s+/g, "");
+  return [
+    `gtag('config','${expectedGaId}')`,
+    `gtag('config',"${expectedGaId}")`,
+    `gtag("config",'${expectedGaId}')`,
+    `gtag("config","${expectedGaId}")`,
+  ].some((candidate) => compactHtml.includes(candidate));
+}
+
 async function verifyAnalyticsSnippet(url, expectedGaId) {
   if (!expectedGaId) {
     return;
@@ -415,12 +426,12 @@ async function verifyAnalyticsSnippet(url, expectedGaId) {
     `Expected GA script tag for ${expectedGaId} in ${url}`,
   );
   assert(
-    html.includes(`gtag('config', '${expectedGaId}')`),
+    hasGaConfigInit(html, expectedGaId),
     `Expected GA config init for ${expectedGaId} in ${url}`,
   );
 }
 
-async function run() {
+export async function run() {
   const { mode: rawMode, skipOverflow, url: rawUrl } = parseArgs(process.argv.slice(2));
   const url = ensureUrl(rawUrl);
   const mode = ensureMode(rawMode);
@@ -516,8 +527,10 @@ async function run() {
   }
 }
 
-run().catch((error) => {
-  console.error(`[smoke-ui] FAILED: ${error instanceof Error ? error.message : String(error)}`);
-  removePlaywrightArtifacts();
-  process.exit(1);
-});
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
+  run().catch((error) => {
+    console.error(`[smoke-ui] FAILED: ${error instanceof Error ? error.message : String(error)}`);
+    removePlaywrightArtifacts();
+    process.exit(1);
+  });
+}
