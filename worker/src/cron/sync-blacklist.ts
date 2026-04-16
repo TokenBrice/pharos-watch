@@ -87,6 +87,8 @@ export async function syncBlacklist(opts: SyncBlacklistOptions): Promise<SyncBla
     stablecoin: string;
     chainId: string;
     reason: string;
+    errorMessage?: string;
+    stackHead?: string;
   }> = [];
   const chainTimestampCaches = new Map<string, Map<number, number>>();
   const getChainTimestampCache = (chainId: string): Map<number, number> => {
@@ -106,9 +108,22 @@ export async function syncBlacklist(opts: SyncBlacklistOptions): Promise<SyncBla
     }),
   );
   const zeroCursorConfigs = configStates.filter((state) => state.lastBlock === 0).map((state) => state.configKey);
-  const recordApiErrorConfig = (configKey: string, stablecoin: string, chainId: string, reason: string): void => {
+  const recordApiErrorConfig = (
+    configKey: string,
+    stablecoin: string,
+    chainId: string,
+    reason: string,
+    error?: unknown,
+  ): void => {
     if (apiErrorConfigs.length >= 10) return;
-    apiErrorConfigs.push({ configKey, stablecoin, chainId, reason });
+    const entry: (typeof apiErrorConfigs)[number] = { configKey, stablecoin, chainId, reason };
+    if (error instanceof Error) {
+      entry.errorMessage = error.message.slice(0, 200);
+      if (error.stack) {
+        entry.stackHead = error.stack.split("\n").slice(0, 3).join(" | ").slice(0, 240);
+      }
+    }
+    apiErrorConfigs.push(entry);
   };
 
   // Backfill NULL amounts first — this has priority over new event scanning
@@ -353,7 +368,7 @@ export async function syncBlacklist(opts: SyncBlacklistOptions): Promise<SyncBla
       apiErrors++;
       const errorClass = err instanceof Error ? err.name : "UnknownError";
       apiErrorClasses[errorClass] = (apiErrorClasses[errorClass] ?? 0) + 1;
-      recordApiErrorConfig(configKey, config.stablecoin, config.chain.chainId, `exception:${errorClass}`);
+      recordApiErrorConfig(configKey, config.stablecoin, config.chain.chainId, `exception:${errorClass}`, err);
       console.warn(`[sync-blacklist] Failed ${config.stablecoin} on ${config.chain.chainName}:`, err);
     }
   }
