@@ -39,6 +39,28 @@ describe("adaptUsd1BundleOracle", () => {
     });
   });
 
+  it("does not emit misleading collateralizationRatio when oracle reports fund-wide reserves", () => {
+    const result = adaptUsd1BundleOracle({
+      bundle: encodeAbiParameters(
+        [{ type: "uint256" }, { type: "uint256" }],
+        [1776154391n, 4_089_230_010_760_000_230_000_000_000n],
+      ),
+      latestBundleTimestamp: 1776154391n,
+      bundleDecimals: [18],
+      totalSupplyRaw: 1_540_271_014_130_832_212_980_859_451n,
+      tokenDecimals: 18,
+    });
+
+    expect(result.metadata?.collateralizationRatio).toBeUndefined();
+    expect(result.metadata?.fundBackingTotalRatio).toBeCloseTo(
+      4_089_230_010.76 / 1_540_271_014.1308322,
+      3,
+    );
+    expect((result.metadata?.details as Record<string, unknown> | undefined)?.fundScope).toBe(
+      "WLFI aggregate fund reserves; denominator is USD1 supply only",
+    );
+  });
+
   it("rejects mismatched bundle timestamps", () => {
     expect(() =>
       adaptUsd1BundleOracle({
