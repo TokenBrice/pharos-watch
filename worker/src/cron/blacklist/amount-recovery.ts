@@ -3,7 +3,7 @@ import {
   getBlacklistPriceAssetId,
 } from "@shared/lib/blacklist";
 import { fetchBlacklistAssetPriceFromCache } from "./current-balance-cache";
-import { shouldSuppressAsMirrorZero } from "./post-fetch";
+import { shouldSuppressAsMirrorZero } from "./shared";
 import { throwIfAborted } from "../../lib/abort";
 import {
   getBlacklistConfigByContract,

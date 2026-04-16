@@ -4,27 +4,9 @@ import { buildInClause } from "../../lib/db";
 import { type RateLimitedFetch, type SubrequestBudget } from "../../lib/evm-logs";
 import { type ChainRpcConfig } from "../../lib/chain-registry";
 import { syncCurrentBalanceCacheForRows, fetchBlacklistAssetPriceFromCache } from "./current-balance-cache";
-import type { BlacklistRow } from "./shared";
+import { type BlacklistRow, shouldSuppressAsMirrorZero } from "./shared";
 import { enrichRowBalances } from "./amount-recovery";
 import { insertBlacklistRows } from "./persistence";
-
-export function shouldSuppressAsMirrorZero(
-  stablecoin: string,
-  eventType: string,
-  amountNative: number | null,
-): boolean {
-  // Circle often mirrors a USDC blacklist action on EURC with no actual
-  // EURC balance at the victim address. Those rows are kept auditable in
-  // storage but excluded from public aggregates. Suppression must apply
-  // equally to ingestion and backfill-path writes; otherwise a
-  // transiently-failed enrichment can later resolve to 0 and leak into
-  // /api/blacklist.
-  return (
-    stablecoin === "EURC"
-    && (eventType === "blacklist" || eventType === "unblacklist")
-    && amountNative === 0
-  );
-}
 
 type BlacklistConfig = (typeof CONTRACT_CONFIGS)[number];
 const EXISTING_BLACKLIST_ID_QUERY_CHUNK = 200;

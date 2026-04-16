@@ -1,6 +1,18 @@
 import { buildExplorerUrl } from "@shared/lib/explorer";
 import type { ChainConfig } from "../../lib/blacklist-contracts";
 
+export function shouldSuppressAsMirrorZero(
+  stablecoin: string,
+  eventType: string,
+  amountNative: number | null,
+): boolean {
+  return (
+    stablecoin === "EURC"
+    && (eventType === "blacklist" || eventType === "unblacklist")
+    && amountNative === 0
+  );
+}
+
 export interface BlacklistRow {
   id: string;
   stablecoin: string;

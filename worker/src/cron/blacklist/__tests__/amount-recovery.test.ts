@@ -3,7 +3,7 @@ import { createBudget } from "../../../lib/evm-logs";
 import type { ContractEventConfig } from "../../../lib/blacklist-contracts";
 import type { BlacklistRow } from "../shared";
 import { enrichRowBalances } from "../amount-recovery";
-import { shouldSuppressAsMirrorZero } from "../post-fetch";
+import { shouldSuppressAsMirrorZero } from "../shared";
 
 const a7a5Config: ContractEventConfig = {
   configKey: "ethereum-0x6fa0be17e4bea2fcfa22ef89bf8ac9aab0ab0fc9",
