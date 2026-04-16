@@ -318,7 +318,7 @@ export default async function AboutApiPage() {
                   <Icon className="h-4 w-4" aria-hidden="true" />
                 </span>
               </div>
-              <p className="mt-3 text-sm leading-relaxed text-muted-foreground">{lane.description}</p>
+              <p className="mt-3 text-sm leading-relaxed text-muted-foreground">{renderInlineMarkdown(lane.description)}</p>
             </section>
           );
         })}
@@ -353,7 +353,7 @@ export default async function AboutApiPage() {
       {document.introBlocks.length > 0 ? (
         <section className="rounded-[1.5rem] border border-border/60 bg-card/70 px-4 py-5 shadow-[0_18px_40px_oklch(0_0_0_/0.08)] sm:px-5 sm:py-6">
           <div className="space-y-2">
-            <p className="pharos-kicker">Base Contract</p>
+            <p className="pharos-kicker">Getting Started</p>
             <h2 className="text-2xl font-semibold tracking-tight text-foreground">Before You Call The API</h2>
           </div>
           <div className="mt-4 space-y-4">

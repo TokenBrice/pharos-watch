@@ -80,6 +80,7 @@ export function ApiReferenceSidebar({ sections, activeId, onNavigate, className 
               type="button"
               data-sidebar-id={section.id}
               onClick={() => onNavigate(section.id)}
+              aria-current={isActive ? "true" : undefined}
               className={cn(
                 "pharos-focus-ring flex w-full items-center rounded-md px-2 py-1.5 text-left text-[13px] transition-colors",
                 isActive
@@ -123,6 +124,7 @@ export function ApiReferenceSidebar({ sections, activeId, onNavigate, className 
                       type="button"
                       data-sidebar-id={sub.id}
                       onClick={() => onNavigate(sub.id)}
+                      aria-current={isSubActive ? "true" : undefined}
                       className={cn(
                         "pharos-focus-ring flex w-full items-center gap-2 rounded-md px-2 py-1 text-left transition-colors",
                         isSubActive

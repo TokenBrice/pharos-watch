@@ -37,7 +37,7 @@ describe("ApiReferenceMobileNav", () => {
     expect(screen.getByText("Surface Split")).toBeTruthy();
   });
 
-  it("shows the parent section label when an endpoint is active", () => {
+  it("shows the endpoint label when a subsection is active", () => {
     render(
       <ApiReferenceMobileNav
         sections={MOCK_SECTIONS}
@@ -45,7 +45,7 @@ describe("ApiReferenceMobileNav", () => {
         onNavigate={() => {}}
       />,
     );
-    expect(screen.getByText("Public Endpoints")).toBeTruthy();
+    expect(screen.getByText("/api/stablecoins")).toBeTruthy();
   });
 
   it("renders a menu button", () => {

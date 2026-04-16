@@ -98,7 +98,7 @@ export function ApiReferenceLayout({ sections, children }: ApiReferenceLayoutPro
       <div className="lg:grid lg:grid-cols-[240px_minmax(0,1fr)] lg:gap-8">
         <div
           ref={sidebarRef}
-          className="hidden lg:sticky lg:top-4 lg:block lg:max-h-[calc(100vh-2rem)] lg:overflow-y-auto lg:overscroll-contain lg:pb-8 lg:scrollbar-none"
+          className="hidden lg:sticky lg:top-4 lg:block lg:max-h-[calc(100vh-2rem)] lg:overflow-y-auto lg:overscroll-contain lg:pb-8 lg:scrollbar-thin lg:scrollbar-track-transparent lg:scrollbar-thumb-border/40"
         >
           <ApiReferenceSidebar sections={sections} activeId={activeId} onNavigate={scrollToId} />
         </div>

@@ -144,6 +144,33 @@ Client best practices:
 
 ---
 
+## Rate Limits
+
+All public API endpoints enforce rate limiting to ensure fair usage.
+
+### Global Limit
+
+| Scope | Limit | Window |
+|-------|-------|--------|
+| Per IP (unauthenticated) | 300 requests | 60 seconds |
+| Per API key | Varies (default 120) | 60 seconds |
+
+When a limit is exceeded, the API returns `429 Too Many Requests`:
+
+```json
+{
+  "error": "rate_limit_exceeded",
+  "retryAfter": 12
+}
+```
+
+### Retry Guidance
+
+- Respect the `retryAfter` field (seconds until the window resets)
+- Add random jitter (0–2 seconds) to avoid thundering-herd retries
+- Use exponential backoff for sustained 429 responses
+- Combine with the polling cadences in the section above to stay well under limits
+
 ## Error Response Conventions
 
 All error responses use `{ "error": "message" }` JSON format.

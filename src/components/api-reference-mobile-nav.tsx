@@ -15,7 +15,7 @@ function getActiveLabel(sections: SidebarSection[], activeId: string): string {
   for (const section of sections) {
     if (section.id === activeId) return section.label;
     for (const sub of section.subsections) {
-      if (sub.id === activeId) return section.label;
+      if (sub.id === activeId) return sub.label;
     }
   }
   return sections[0]?.label ?? "API Reference";
