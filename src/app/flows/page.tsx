@@ -53,6 +53,8 @@ function FlowsPageInner() {
   const hasData = !!summaryData || !!chartData;
   const scopeLabel = summaryData?.scope?.label ?? "Configured issuance chains";
   const syncWarning = summaryData?.sync?.warning ?? chartData?.sync?.warning ?? null;
+  // When a sync warning is active, suppress the generic stale-data banner to
+  // avoid stacking two banners.  The sync warning already conveys pipeline lag.
   const showDataHealthBanner = !syncWarning;
 
   return (

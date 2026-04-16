@@ -77,7 +77,7 @@ export function FlowChart({ hourly, isLoading }: FlowChartProps) {
   if (chartData.length === 0) {
     return (
       <div className={`flex ${CHART_HEIGHT} items-center justify-center text-muted-foreground`}>
-        Collecting flow data...
+        No flow data available for this period.
       </div>
     );
   }

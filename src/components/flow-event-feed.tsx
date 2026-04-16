@@ -225,6 +225,7 @@ export function FlowEventFeed({ stablecoinId, limit, scope = "all" }: FlowEventF
                 target="_blank"
                 rel="noopener noreferrer"
                 className="inline-flex items-center gap-1 font-mono text-xs text-muted-foreground transition-colors hover:text-foreground"
+                aria-label="View transaction on block explorer"
               >
                 <span className="hidden md:inline">{formatTxHash(evt.txHash)}</span>
                 <ExternalLink className="h-3.5 w-3.5" aria-hidden="true" />

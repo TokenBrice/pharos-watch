@@ -16,6 +16,7 @@ import {
 import { StablecoinLogo } from "@/components/stablecoin-logo";
 import { InteractiveTableRow } from "@/components/interactive-table-row";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { useLogos } from "@/hooks/use-logos";
 import { usePrefetchStablecoin } from "@/hooks/use-prefetch-stablecoin";
 import { useSortedTableRows } from "@/hooks/use-sorted-table-rows";
@@ -206,7 +207,16 @@ export function FlowTable({ coins, isLoading }: FlowTableProps) {
                   >
                     {pressureDisplay != null
                       ? `${getNetPrefix(pressureDisplay)}${pressureDisplay}`
-                      : "NR"}
+                      : (
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <span>NR</span>
+                            </TooltipTrigger>
+                            <TooltipContent>Needs at least 7 days of data plus current activity</TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
+                      )}
                   </span>
                 </TableCell>
                 <TableCell className="text-right">

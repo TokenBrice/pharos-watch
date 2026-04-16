@@ -38,7 +38,7 @@ export function CoinFlowCard({
 
   const barFillPct = pressureShiftScore != null
     ? Math.round(((Math.min(100, Math.max(-100, pressureShiftScore)) + 100) / 200) * 100)
-    : 50;
+    : 0;
 
   return (
     <div className="rounded-xl border border-border/60 bg-background/35 p-3 space-y-2">
@@ -72,7 +72,14 @@ export function CoinFlowCard({
         </span>
       </div>
 
-      <div className="pressure-track h-1 w-full rounded-full bg-border/40">
+      <div
+        className="pressure-track h-1 w-full rounded-full bg-border/40"
+        role="meter"
+        aria-label="Pressure shift vs 30-day baseline"
+        aria-valuenow={pressureShiftScore ?? undefined}
+        aria-valuemin={-100}
+        aria-valuemax={100}
+      >
         <div
           className={cn("h-1 rounded-full transition-[width]", PRESSURE_BAR_COLOR[pressureShiftState])}
           style={{ width: `${barFillPct}%` }}
