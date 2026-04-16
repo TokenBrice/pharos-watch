@@ -116,7 +116,69 @@ Not in the Phase 7 scope today, but adjacent to the Phase 6 on-chain rewrites.
 
 ---
 
+## Phase 4 adapter-swap deploy verification (Task 4.15)
+
+Phase 4 swapped adapter kinds for several coins. Phase 1.4's cleanup
+removes stale breaker-scope rows automatically on the next cron; this
+section documents the post-deploy verification needed for each swap.
+
+### Coins whose adapter kind changed in Phase 4
+
+| Coin | Previous adapter | New adapter | Landed in |
+|---|---|---|---|
+| `buidl-blackrock` | `single-asset` | `chainlink-nav` | f8117d37 |
+| `usdat-saturn` | (none) | `m0` | 21cf699f |
+| `usdk-orki` | (none) | `liquity-v2-branches` | b78e3795 |
+| `ebusd-ebisu` | (none) | `liquity-v2-branches` | 52545a64 (JSON content landed after b226f2c0 which contained Task 7.4 work under the ebUSD commit message) |
+
+### Post-deploy verification
+
+After the next deploy that includes these commits:
+
+1. Confirm `reserve_sync_state.adapter_key` reflects the new adapter
+   for each coin above (sample via `/api/stablecoin-reserves/<id>` or
+   direct D1 query).
+2. Confirm the live-reserves cron logs a successful fetch for each
+   swapped coin within the first two runs.
+3. Confirm no `single-asset`-scoped breaker rows persist for
+   `buidl-blackrock` after the Phase 1.4 cleanup sweeps.
+4. Spot-check the Pharos UI `/api/stablecoin-reserves/<id>` for each
+   coin:
+   - `buidl-blackrock` should now carry `evidenceClass=independent`
+     with a fresh `oracleUpdatedAt`.
+   - `usdat-saturn` should ride the existing M0 shared-source cache.
+   - `usdk-orki` + `ebusd-ebisu` should emit branch-level slices with
+     `freshnessMode=not-applicable`.
+
+If any coin persistently fails after deploy, check the breaker state
+first — stale breaker rows from the old adapter kind can suppress
+writes until Phase 1.4 cleanup runs.
+
+---
+
+## Phase 4 skipped tasks (2026-04-16 session)
+
+Documented here to avoid re-litigating the same feasibility work.
+
+| Task | Coin | Reason skipped | Source checked |
+|---|---|---|---|
+| 4.8 | `pyusd-paypal` | No Chainlink PoR feed exists for PYUSD. Chainlink mainnet feed manifest lists only a `pyusd-usd` price feed (not PoR). | https://reference-data-directory.vercel.app/feeds-mainnet.json |
+| 4.9 | `pusd-plume` | pUSD BoringVault (0xdddd73f5df1f0dc31373357beac77545dc5a6f3f) does not implement ERC-4626 (`asset()`, `totalAssets()`). Adapter reuse infeasible without new BoringVault-specific logic. | https://etherscan.io/address/0xdddd73f5df1f0dc31373357beac77545dc5a6f3f and https://docs.plume.org/plume/tokens/plume-usd |
+| 4.11 | `usdtb-ethena` | Ethena `/api/positions/current/collateral` has no product/stablecoin discriminator (rows are `{asset, exchange, timestamp, usdAmount}`). chainlink-nav against BUIDL NAV would misrepresent USDtb's NAV (USDtb is USD-pegged, not a BUIDL NAV passthrough). Stays on `curated-validated`. Add to "Waiting on issuer" below. | https://app.ethena.fi/api/positions/current/collateral |
+| 4.12 | `fpi-frax` | `/v2/fpi/balance-sheet/latest` does not exist in Frax's API (Swagger lists only `/frax/`, `/frxusd/`, `/sfrxusd/`, `/lfrax/` balance-sheet endpoints). The `/v2/fpifpis/fpi-collateral` endpoint has a different payload shape and would require adapter extension work out of scope here. | https://api.frax.finance/v2/docs/json |
+| 4.13 | `cjpy-yamato` | Yamato is not ABI-compatible with Liquity v1. Yamato exposes `getStates()` returning `(totalColl, totalDebt, MCR, RRR, SRR, GRR)`, whereas liquity-v1 adapter hard-codes `getEntireSystemColl()` / `getEntireSystemDebt()`. Would need new adapter, not just config. | https://raw.githubusercontent.com/DeFiGeek-Community/yamato/master/contracts/Yamato.sol |
+
+### Promotion blockers to add above
+
+- **`usdtb-ethena`** — Waiting on issuer for USDtb-scoped reserve disclosure (product filter in Ethena collateral feed OR a USDtb-specific Anchorage/BUIDL holdings endpoint).
+- **`fpi-frax`** — Waiting on issuer to restore the `/v2/fpi/balance-sheet/latest` endpoint, OR extend frax-balance-sheet adapter to accept the different `/v2/fpifpis/fpi-collateral` payload shape (adapter work).
+- **`pusd-plume`** — Waiting on adapter-level change: BoringVault-specific reserve read (Nucleus Teller → underlying USDC via custom selector instead of ERC-4626 `totalAssets()`).
+- **`cjpy-yamato`** — Waiting on adapter-level change: a Yamato-specific adapter reading `getStates()` on Yamato.sol + JPY/USD oracle to convert.
+
+---
+
 ## Review log
 
 - 2026-04-16: Tracker established per plan Task 7.3. Tasks 7.1 Path D follow-up and 7.2 USDz gate linked in.
 - 2026-04-16: Task 5.2 mxnb-transparency adapter deferred — corrected coin id to `mxnb-juno` and refined gap note (aggregate MXN-vs-MXNB only, no per-asset breakdown).
+- 2026-04-16: Task 4.15 — documented Phase 4 adapter swaps (buidl, usdat, usdk-orki, ebusd-ebisu) and skipped tasks (4.8, 4.9, 4.11, 4.12, 4.13) with concrete blockers.
