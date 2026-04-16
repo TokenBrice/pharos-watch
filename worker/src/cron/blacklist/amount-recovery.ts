@@ -264,11 +264,22 @@ export async function backfillAmounts(
   const result = await db
     .prepare(
       `SELECT id, chain_id, event_type, address, block_number, stablecoin, tx_hash, config_key, contract_address,
-              amount_attempt_count, amount_last_attempted_at, amount_last_error_class, amount_last_provider
+              amount_attempt_count, amount_last_attempted_at, amount_last_error_class, amount_last_provider,
+              amount_source
       FROM blacklist_events
        WHERE event_type IN ('blacklist', 'unblacklist', 'destroy')
-         AND amount_status IN ('recoverable_pending', 'provider_failed', 'ambiguous')
-       ORDER BY timestamp DESC
+         AND (
+               amount_status IN ('recoverable_pending', 'provider_failed', 'ambiguous')
+               OR (
+                 amount_source = 'derived'
+                 AND amount_native = 0
+                 AND amount_status = 'resolved'
+                 AND chain_id != 'tron'
+               )
+             )
+       ORDER BY
+         CASE WHEN amount_status IN ('recoverable_pending', 'provider_failed', 'ambiguous') THEN 0 ELSE 1 END ASC,
+         timestamp DESC
        LIMIT ?`,
     )
     .bind(BACKFILL_BATCH_SIZE)
@@ -286,6 +297,7 @@ export async function backfillAmounts(
       amount_last_attempted_at: number | null;
       amount_last_error_class: string | null;
       amount_last_provider: string | null;
+      amount_source: string;
     }>();
 
   if (!result.results?.length) return { runtimeBudgetReached: false };
@@ -432,23 +444,31 @@ export async function backfillAmounts(
         ),
       );
     } else {
-      stmts.push(
-        db.prepare(
-          `UPDATE blacklist_events
-           SET amount_attempt_count = COALESCE(amount_attempt_count, 0) + 1,
-               amount_last_attempted_at = ?,
-               amount_last_error_class = ?,
-               amount_last_provider = ?,
-               amount_status = ?
-           WHERE id = ?`,
-        ).bind(
-          attemptAt,
-          lastErrorClass,
-          lastProvider,
-          amountStatus,
-          row.id,
-        ),
-      );
+      const wasLegacyDerived = row.amount_source === "derived";
+      if (wasLegacyDerived) {
+        stmts.push(
+          db.prepare(
+            `UPDATE blacklist_events
+             SET amount_attempt_count = COALESCE(amount_attempt_count, 0) + 1,
+                 amount_last_attempted_at = ?,
+                 amount_last_error_class = ?,
+                 amount_last_provider = ?
+             WHERE id = ?`,
+          ).bind(attemptAt, lastErrorClass, lastProvider, row.id),
+        );
+      } else {
+        stmts.push(
+          db.prepare(
+            `UPDATE blacklist_events
+             SET amount_attempt_count = COALESCE(amount_attempt_count, 0) + 1,
+                 amount_last_attempted_at = ?,
+                 amount_last_error_class = ?,
+                 amount_last_provider = ?,
+                 amount_status = ?
+             WHERE id = ?`,
+          ).bind(attemptAt, lastErrorClass, lastProvider, amountStatus, row.id),
+        );
+      }
     }
   }
 
