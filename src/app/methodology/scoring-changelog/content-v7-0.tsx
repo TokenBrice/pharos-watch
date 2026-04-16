@@ -1,5 +1,33 @@
 import { VersionCard, getScoringEntry } from "./content-shared";
 
+export function ScoringChangelogV706Entry() {
+  return (
+    <VersionCard
+      entry={getScoringEntry("7.06")}
+      accent="border-l-emerald-500"
+    >
+      <p>
+        The GHO reserve adapter now decomposes residual issuance across active facilitators and routes unmapped
+        labels through the standard material-unknown-exposure validator instead of a GHO-specific warning.
+      </p>
+      <ul className="list-disc list-inside space-y-1">
+        <li>
+          Aave V3 direct-minter facilitators contribute medium-risk residual slices; FlashMinter and unmapped
+          facilitators contribute high-risk slices.
+        </li>
+        <li>
+          Unmapped residual share accumulates into unknown-exposure telemetry so material unknown exposure
+          can degrade the GHO sync consistently with other reserve adapters.
+        </li>
+        <li>
+          Direct GhoReserve / GhoDirectFacilitator / RemoteGSM reads remain a follow-up pending verified
+          Aave deployment addresses.
+        </li>
+      </ul>
+    </VersionCard>
+  );
+}
+
 export function ScoringChangelogV705Entry() {
   return (
     <VersionCard

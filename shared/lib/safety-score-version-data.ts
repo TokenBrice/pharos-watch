@@ -1,9 +1,25 @@
 import type { MethodologyVersionConfig } from "./methodology-version";
 
 export const SAFETY_SCORE_VERSION_CONFIG: MethodologyVersionConfig = {
-  currentVersion: "7.05",
+  currentVersion: "7.06",
   changelogPath: "/methodology/scoring-changelog/",
   changelog: [
+    {
+      version: "7.06",
+      title: "GHO residual decomposition",
+      date: "2026-04-16",
+      effectiveAt: 1776372651,
+      summary:
+        "The GHO reserve adapter now decomposes residual issuance across active facilitators and routes unmapped labels through the standard material-unknown-exposure validator, replacing the GHO-specific aggregated-residual warning.",
+      impact: [
+        "Aave V3 direct-minter facilitators contribute medium-risk residual slices; FlashMinter and unmapped facilitators contribute high-risk slices",
+        "Unmapped residual share accumulates into metadata.unknownExposurePct so material unknown exposure can degrade the GHO sync consistently with other reserve adapters",
+        "If the facilitator registry is unreadable in a run, the entire residual is treated as unknown so the fail-closed unknown-exposure policy still applies",
+        "Direct GhoReserve / GhoDirectFacilitator / RemoteGSM reads remain a follow-up tracked in agents/tasks/reserve-coverage-tracker.md pending verified Aave deployment addresses",
+      ],
+      commits: [],
+      reconstructed: false,
+    },
     {
       version: "7.05",
       title: "Primary-market exit bonus",
