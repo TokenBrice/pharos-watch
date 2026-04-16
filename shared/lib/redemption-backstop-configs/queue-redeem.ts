@@ -275,6 +275,77 @@ export const QUEUE_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopCon
     ],
     notes: ["Yuzu documents primary minting and redemption for eligible KYC / AML-cleared investors; current model treats that rail as a reviewed queued exit rather than assuming continuously available public stablecoin liquidity"],
   },
+  "usdat-saturn": {
+    ...queueRedeemBase,
+    accessModel: "whitelisted-onchain",
+    settlementModel: "same-day",
+    capacityModel: { kind: "supply-ratio", ratio: 0.5, confidence: "heuristic", basis: "strategy-buffer" },
+    costModel: documentedVariableFee(
+      "Saturn documents KYC-gated 1:1 USDC mint and redeem through the M0 Swap Facility (Uniswap V3 1bps tier); public docs reviewed do not publish a separate USDAT protocol redemption fee",
+    ),
+    reviewedAt: "2026-04-16",
+    docs: [
+      sourceRef("Saturn USDAT", "https://saturn.money/usdat", ["route", "capacity"]),
+      sourceRef("Saturn documentation", "https://docs.saturn.money/", ["route", "access"]),
+    ],
+    notes: [
+      "USDAT is a permissioned M0 wrapper: mint/redeem requires KYC onboarding and is geofenced away from US, EEA, and OFAC jurisdictions; routes through the Uniswap V3 1bps tier against USDC",
+      "The 50% ratio is a reviewed heuristic placeholder for M0 Swap Facility liquidity pending a published quantitative buffer bound",
+    ],
+  },
+  "usdnr-nerona": {
+    ...queueRedeemBase,
+    accessModel: "whitelisted-onchain",
+    settlementModel: "days",
+    capacityModel: { kind: "supply-ratio", ratio: 0.5, confidence: "heuristic", basis: "strategy-buffer" },
+    costModel: documentedVariableFee(
+      "Nerona documents permissioned 1:1 USDnr mint and redeem against underlying M; public docs reviewed do not publish a separate numeric redemption fee",
+    ),
+    reviewedAt: "2026-04-16",
+    docs: [
+      sourceRef("Nerona documentation", "https://docs.nerona.finance/", ["route", "capacity", "access"]),
+    ],
+    notes: [
+      "Permissioned M0 wrapper: KYC-gated to Nerona's private wealth platform clients; T-bill yield accrues to M0/Nerona rather than USDnr holders",
+      "The 50% ratio is a reviewed heuristic placeholder pending a published primary-market liquidity bound for Nerona's M wrapper",
+    ],
+  },
+  "buck-buck-assets": {
+    ...queueRedeemBase,
+    accessModel: "whitelisted-onchain",
+    settlementModel: "same-day",
+    capacityModel: { kind: "supply-ratio", ratio: 0.1, confidence: "heuristic", basis: "strategy-buffer" },
+    costModel: documentedVariableFee(
+      "Buck Assets documents 1:1 USDC mint and redemption via the LiquidityWindow smart contract for AML-verified participants; public docs reviewed do not publish a fixed redemption fee",
+    ),
+    reviewedAt: "2026-04-16",
+    docs: [
+      sourceRef("Buck Assets", "https://buck.assets/", ["route", "capacity"]),
+      sourceRef("Buck Assets documentation", "https://docs.buck.assets/", ["route", "access"]),
+    ],
+    notes: [
+      "LiquidityWindow contract gates primary mint/redeem to AML-verified primary-market participants; monthly yield is distributed as additional BUCK tokens via rebase",
+      "The 10% ratio is a reviewed heuristic placeholder pending a published LiquidityWindow buffer figure",
+    ],
+  },
+  "usdh-hermetica": {
+    ...queueRedeemBase,
+    accessModel: "whitelisted-onchain",
+    settlementModel: "days",
+    capacityModel: { kind: "supply-ratio", ratio: 0.1, confidence: "heuristic", basis: "strategy-buffer" },
+    costModel: documentedVariableFee(
+      "Hermetica documents KYC-gated USDH mint and redemption against a delta-neutral BTC position; public docs reviewed do not publish a fixed redemption fee",
+    ),
+    reviewedAt: "2026-04-16",
+    docs: [
+      sourceRef("Hermetica", "https://hermetica.fi/", ["route"]),
+      sourceRef("Hermetica documentation", "https://docs.hermetica.fi/", ["route", "capacity", "access"]),
+    ],
+    notes: [
+      "Delta-neutral BTC strategy (spot long + short perpetual) on Stacks; KYC-gated mint/redeem via the Hermetica app",
+      "The 10% ratio is a reviewed heuristic reflecting typical delta-neutral protocol cash buffers rather than a published Hermetica-specific figure",
+    ],
+  },
   "nusd-neutrl": {
     ...queueRedeemBase,
     ...reviewedQueueRedemptionSupplyFull,
