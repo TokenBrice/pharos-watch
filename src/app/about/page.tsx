@@ -4,8 +4,10 @@ import Image from "next/image";
 import Link from "next/link";
 import {
   Activity,
+  ArrowLeftRight,
   ArrowRight,
   BarChart3,
+  Briefcase,
   Droplets,
   ExternalLink,
   Flame,
@@ -21,6 +23,7 @@ import {
   ShieldAlert,
   ShieldCheck,
   Skull,
+  TrendingUp,
   type LucideIcon,
 } from "lucide-react";
 import { AboutReferenceModule } from "@/components/about-reference-module";
@@ -275,7 +278,7 @@ export default function AboutPage() {
     {
       title: "Blacklist Tracker",
       description:
-        "issuer-intervention events for the live blacklist-tracked stablecoin set across supported EVM and Tron networks, with a reconciled freeze ledger for major ETH and TRON blacklist totals.",
+        "Tracks issuer-intervention events (freeze, unfreeze, wipe) across supported EVM and Tron networks, with a reconciled freeze ledger for major blacklist totals.",
       icon: ShieldAlert,
       href: "/blacklist/",
       linkLabel: "Open blacklist tracker",
@@ -290,7 +293,7 @@ export default function AboutPage() {
     },
     {
       title: "Bluechip safety ratings",
-      description: "Independent SMIDGE coverage for rated stablecoins, pulled in as an outside reference signal.",
+      description: "Independent SMIDGE (Security, Management, Insurance, Decentralization, Governance, Escrow) coverage for rated stablecoins, pulled in as an outside reference signal.",
       icon: ShieldCheck,
       href: "https://bluechip.org",
       external: true,
@@ -318,6 +321,13 @@ export default function AboutPage() {
       icon: Flame,
       href: "/flows/",
       linkLabel: "Open flow tracker",
+    },
+    {
+      title: "Portfolio Audit",
+      description:
+        "Analyze your stablecoin holdings against Pharos safety, liquidity, and peg data to spot concentration risk.",
+      icon: Briefcase,
+      href: "/portfolio/",
     },
   ];
 
@@ -357,7 +367,7 @@ export default function AboutPage() {
     {
       title: "Systemic Risk Scoreboard",
       description:
-        "The highest-impact single-coin failure scenarios, surfaced inside the scorecard stress panel before a crisis makes them obvious.",
+        "The highest-impact single-coin failure scenarios (part of Safety Scores), surfaced inside the scorecard stress panel before a crisis makes them obvious.",
       icon: Layers,
       href: "/safety-scores/",
       linkLabel: "Open stress panel",
@@ -367,6 +377,21 @@ export default function AboutPage() {
       description:
         "A per-coin stress score refreshed every 30 minutes from supply velocity, pool balance drift, liquidity erosion, price confidence, source divergence, blacklist activity, mint and burn flow, and yield anomalies.",
       icon: ShieldAlert,
+      href: "/depeg/",
+    },
+    {
+      title: "Stablecoin Comparison",
+      description:
+        "Side-by-side analysis of any tracked stablecoins across safety, liquidity, peg stability, and yield metrics.",
+      icon: ArrowLeftRight,
+      href: "/compare/",
+    },
+    {
+      title: "Risk-Adjusted Yield",
+      description:
+        "Yield opportunities scored against protocol safety, so high APY from risky vaults is flagged rather than promoted.",
+      icon: TrendingUp,
+      href: "/yield/",
     },
   ];
 
@@ -402,7 +427,7 @@ export default function AboutPage() {
                 {
                   question: "Where does Pharos get its data?",
                   answer:
-                    "All data is fetched server-side by a Cloudflare Worker and cached in D1. Sources include DefiLlama for supply, price, and chain distribution, with CoinGecko repairing total supply when a tracked DefiLlama-backed asset is missing known deployments from DefiLlama chain coverage; CoinGecko also provides logos and fallback prices; CoinMarketCap and DexScreener act as further price fallbacks; direct protocol redemption quotes are used for selected redeemable assets such as Cap cUSD and infiniFi iUSD; issuer and protocol reserve APIs, dashboards, proof-of-reserve portals, and direct on-chain vault/accounting reads provide live reserve composition and redemption-backstop capacity where available, including Anzen, Ethena, Falcon, Frankencoin, Hashnote, infiniFi, M0, Mento Reserve, OpenEden, Re, Superstate, USDD, USD.AI, USD1 Chainlink bundle oracle, Accountable, Tether, Frax, Circle, First Digital Labs, SG-FORGE, Paxos, Sky/MakerDAO, Chainlink PoR/NAV oracles, Aave GHO reserve feeds, f(x), Asymmetry, JupUSD, USDGO, Solstice, River, and direct Curve/Yield Basis reserve reads for crvUSD; Etherscan v2 and TronGrid provide freeze-event tracking, with reconciled freeze-ledger bootstrap rows from kyc.rip / stables.rip for major ETH and TRON blacklist totals; Alchemy, dRPC, and selected public chain RPCs cover EVM reads including Ethereum mint/burn flow tracking and direct contract calls such as Cap and infiniFi redemption quotes, Frankencoin's ZCHF -> VCHF StablecoinBridge balance probe, Liquity/B.Protocol branch debt, ERC-4626 vault reads, Fluid DexReservesResolver reads, and Aerodrome/Velodrome Sugar view reads, while Solana mainnet RPC covers tracked mint-supply validation for live reserve feeds on Solana-issued assets; Bluechip provides safety ratings; ECB via Frankfurter plus fawazahmed0/currency-api provide live FX rates including CNH and other non-ECB coverage, with ExchangeRate-API as a tertiary full-set FX fallback; gold-api.com provides gold and silver spot prices; FRED DGS3MO, the ECB Data API for 3M compounded €STR, and SIX delayed SARON compound-rate downloads provide benchmark rates; DeFiLlama Yields &amp; Protocols, Curve Finance API, The Graph, Fluid API + DexReservesResolver, Balancer API, Raydium API, Orca API, Meteora API, PancakeSwap subgraphs, Aerodrome and Velodrome Sugar view contracts, and GeckoTerminal provide DEX liquidity data, while dead or deprecated venues such as Bunni are explicitly blocked from runtime pricing and liquidity inputs; and Anthropic Claude generates the daily digest.",
+                    "Pharos aggregates data from DefiLlama, CoinGecko, on-chain RPC nodes, block explorers (Etherscan, Tronscan), protocol-native APIs, and curated sources like Bluechip. Details on all data sources are available on the About page.",
                 },
               ]),
             ),
@@ -429,7 +454,11 @@ export default function AboutPage() {
           </p>
           <p>
             Pharos is a public good, a resource. It&apos;s a mission-driven project made to elevate the understanding of
-            stablecoin market participants: free, open source, and with no plan to monetize. Make the most of it!
+            stablecoin market participants: free, open source, and with no plan to monetize.{" "}
+            <Link href="/start/" className={INLINE_EXTERNAL_LINK_CLASS}>
+              Get started
+            </Link>{" "}
+            and make the most of it!
           </p>
         </AboutSection>
 
@@ -538,6 +567,27 @@ export default function AboutPage() {
           </div>
         </AboutSection>
 
+        <AboutSection
+          eyebrow="In the wild"
+          title="Live Walkthrough"
+          tone="brand"
+          contentClassName="flex flex-col gap-4 text-sm leading-relaxed text-muted-foreground sm:flex-row sm:items-start"
+        >
+          <Radio className={cn("mt-0.5 h-5 w-5 shrink-0", getToneClasses("brand").icon)} />
+          <div className="space-y-3">
+            <p>
+              TokenBrice walked through Pharos live on Leviathan News, covering the motivation behind the project, how
+              the data pipeline works, and how the main risk signals should be read in practice.
+            </p>
+            <Button asChild variant="outline" className={CTA_BUTTON_CLASS}>
+              <a href="https://x.com/i/broadcasts/1qxvvkeMlyAxB" target="_blank" rel="noopener noreferrer">
+                Watch the Leviathan News broadcast
+                <ExternalLink className="h-4 w-4" />
+              </a>
+            </Button>
+          </div>
+        </AboutSection>
+
         <AboutFeatureSection
           eyebrow="Coverage"
           title="What Pharos Tracks"
@@ -566,27 +616,6 @@ export default function AboutPage() {
             </div>
           }
         />
-
-        <AboutSection
-          eyebrow="In the wild"
-          title="Live Walkthrough"
-          tone="brand"
-          contentClassName="flex flex-col gap-4 text-sm leading-relaxed text-muted-foreground sm:flex-row sm:items-start"
-        >
-          <Radio className={cn("mt-0.5 h-5 w-5 shrink-0", getToneClasses("brand").icon)} />
-          <div className="space-y-3">
-            <p>
-              TokenBrice walked through Pharos live on Leviathan News, covering the motivation behind the project, how
-              the data pipeline works, and how the main risk signals should be read in practice.
-            </p>
-            <Button asChild variant="outline" className={CTA_BUTTON_CLASS}>
-              <a href="https://x.com/i/broadcasts/1qxvvkeMlyAxB" target="_blank" rel="noopener noreferrer">
-                Watch the Leviathan News broadcast
-                <ExternalLink className="h-4 w-4" />
-              </a>
-            </Button>
-          </div>
-        </AboutSection>
 
         <AboutSection
           eyebrow="Governance lens"
