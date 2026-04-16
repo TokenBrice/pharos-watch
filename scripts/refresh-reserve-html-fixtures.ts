@@ -63,6 +63,16 @@ const FIXTURES: readonly HtmlFixtureSpec[] = [
     url: "https://www.sgforge.com/product/coinvertible/",
     fixture: "sgforge-coinvertible-eur.html",
   },
+  {
+    name: "Buck (buck-buck-assets) transparency",
+    url: "https://buck.io/transparency",
+    fixture: "buck-io.html",
+  },
+  {
+    name: "USDH (usdh-native-markets) reserves",
+    url: "https://usdh.com/reserves",
+    fixture: "usdh-native-markets.html",
+  },
 ];
 
 const USER_AGENT = "Mozilla/5.0 (compatible; pharos-fixture-refresh/1.0)";
@@ -92,6 +102,7 @@ async function fetchFixture(spec: HtmlFixtureSpec): Promise<string | null> {
 function writeFixture(spec: HtmlFixtureSpec, body: string): void {
   const header = `<!-- captured-at: ${new Date().toISOString()} from ${spec.url} -->\n`;
   const path = join(FIXTURES_DIR, spec.fixture);
+  // eslint-disable-next-line security/detect-non-literal-fs-filename -- path is built from adapter-owned constants (FIXTURES_DIR + spec.fixture), not user input.
   writeFileSync(path, header + body, "utf8");
 }
 
@@ -127,6 +138,7 @@ async function main(): Promise<void> {
 // Read-only access to existing fixture paths so the script fails fast if the
 // fixtures directory has been relocated.
 for (const spec of FIXTURES) {
+  // eslint-disable-next-line security/detect-non-literal-fs-filename -- same reason as writeFixture above: path is adapter-owned, not user input.
   readFileSync(join(FIXTURES_DIR, spec.fixture), "utf8");
 }
 

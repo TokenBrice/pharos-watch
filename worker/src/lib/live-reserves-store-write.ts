@@ -107,6 +107,7 @@ async function deleteHistoryInBatches(
   cutoff: number,
   batchSize: number,
 ): Promise<number> {
+  // SAFETY: table and column are TypeScript string literal union types; every call site passes a hardcoded allowlisted literal, not user input.
   const sql = `DELETE FROM ${table} WHERE ${column} < ? LIMIT ?`;
   let totalDeleted = 0;
   // Loop until a batch deletes fewer rows than the budget, which implies the

@@ -16,6 +16,7 @@ import {
  */
 function parseDollarAmount(raw: string): number | null {
   const cleaned = raw.trim().replace(/[$,\s]/g, "");
+  // eslint-disable-next-line security/detect-unsafe-regex -- anchored number pattern with a single optional suffix; no ambiguous alternation or backtracking risk.
   const match = cleaned.match(/^([0-9]+(?:\.[0-9]+)?)([KMB])?$/i);
   if (!match) return null;
   const base = Number.parseFloat(match[1]);
