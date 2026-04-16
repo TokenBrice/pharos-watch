@@ -18,6 +18,7 @@ import { generateWeeklyRecap } from "../weekly-recap";
 import { fetchWithRetry } from "../../lib/fetch-retry";
 import { postDigestToTelegram } from "../../lib/telegram";
 import { shouldAttemptFetch } from "../../lib/circuit-breaker";
+import { ANTHROPIC_MAX_RETRIES } from "../../lib/constants";
 
 const VALID_WEEKLY_EXTENDED = [
   "PSI opened the trailing edition window at 90 and closed at 86, never leaving BEDROCK but losing four points across five daily notes. USDT stayed near 1.00 in every fixture row, which makes the week's story less about a broken peg and more about calm data refusing to become a headline. The recap should notice the drift without inventing a crisis.",
@@ -151,6 +152,13 @@ describe("generateWeeklyRecap", () => {
       weekStart: "2026-03-23",
       weekEnd: "2026-03-27",
     });
+
+    expect(fetchWithRetry).toHaveBeenCalledWith(
+      "https://api.anthropic.com/v1/messages",
+      expect.any(Object),
+      ANTHROPIC_MAX_RETRIES,
+      { timeoutMs: 300_000 },
+    );
   });
 
   it("repairs non-JSON weekly output with a corrective retry", async () => {
