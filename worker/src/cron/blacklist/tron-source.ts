@@ -47,6 +47,7 @@ function parseTronEvent(config: ContractEventConfig, evt: TronEventResult): Blac
   const eventType = TRON_EVENT_NAME_MAP[evt.event_name];
   if (!eventDef || !eventType) return null;
 
+  // Fallback chain: tronResultKey override → _user (modern Tether) → _blackListedUser (legacy) → positional "0"
   const affectedAddress = (eventDef.tronResultKey && evt.result[eventDef.tronResultKey])
     || evt.result._user
     || evt.result._blackListedUser

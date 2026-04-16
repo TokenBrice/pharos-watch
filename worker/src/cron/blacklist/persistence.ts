@@ -4,6 +4,7 @@ import type { BlacklistRow } from "./shared";
 export async function insertBlacklistRows(db: D1Database, rows: BlacklistRow[]): Promise<number> {
   if (rows.length === 0) return 0;
 
+  // `amount` is a legacy column kept in lockstep with amount_native for pre-v3.2 compat.
   const stmts = rows.map((row) =>
     db
       .prepare(
