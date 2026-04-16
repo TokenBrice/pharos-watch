@@ -1,5 +1,5 @@
 /** Tics banned anywhere in the output. */
-export const FORBIDDEN_TICS_ANYWHERE: { pattern: RegExp; label: string }[] = [
+const FORBIDDEN_TICS_ANYWHERE: { pattern: RegExp; label: string }[] = [
   { pattern: /\bplumbing\b/i, label: "plumbing" },
   { pattern: /\bbeneath the (?:calm|bedrock|surface|placid)\b/i, label: "beneath the calm" },
   { pattern: /\brestless (?:depths|plumbing|surface|currents?)\b/i, label: "restless depths" },
@@ -18,18 +18,18 @@ export const FORBIDDEN_TICS_ANYWHERE: { pattern: RegExp; label: string }[] = [
  *  scopes the haystack to the last sentence of the last paragraph and the
  *  text-hook's last sentence, so re-anchoring here would miss phrases
  *  followed by a short tail like "into next week." */
-export const FORBIDDEN_TICS_CLOSER: { pattern: RegExp; label: string }[] = [
+const FORBIDDEN_TICS_CLOSER: { pattern: RegExp; label: string }[] = [
   { pattern: /\b(?:worth watching|worth monitoring|bears? watching)\b/i, label: "worth watching/monitoring (closer)" },
 ];
 
-export function getLastSentence(text: string): string {
+function getLastSentence(text: string): string {
   const trimmed = text.trim();
   if (!trimmed) return "";
   const sentences = trimmed.split(/(?<=[.!?])\s+/);
   return sentences[sentences.length - 1] ?? "";
 }
 
-export function getLastParagraph(text: string): string {
+function getLastParagraph(text: string): string {
   const paragraphs = text.split(/\r?\n\s*\r?\n/).filter(Boolean);
   return paragraphs[paragraphs.length - 1] ?? "";
 }
@@ -68,7 +68,7 @@ export function openingFingerprint(text: string): string | null {
   return `${head.toUpperCase()}-${second}`;
 }
 
-export const FORWARD_LOOK_CUES: RegExp[] = [
+const FORWARD_LOOK_CUES: RegExp[] = [
   /\bif\s+[\w$]+\s+(?:happens|holds|fails|breaks|crosses|stays|continues|keeps|slips|rises|falls|passes|drops)\b/i,
   /\bnext (?:session|day|digest|week|cycle|round|24h|48h|month)\b/i,
   /\bcoming (?:days?|week|month|session)\b/i,
