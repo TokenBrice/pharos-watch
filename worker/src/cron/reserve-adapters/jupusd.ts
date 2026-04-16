@@ -1,6 +1,6 @@
 import { parseLiveReserveAdapterParams } from "@shared/lib/live-reserve-adapters";
 import type { ReserveSlice, StablecoinMeta } from "@shared/types/core";
-import type { LiveReservesConfig } from "@shared/types/live-reserves";
+import type { LiveReservesConfig, LiveReserveWarning } from "@shared/types/live-reserves";
 import type { AdapterContext, AdapterResult } from "./types";
 import {
   buildUnknownExposureWarning,
@@ -8,6 +8,7 @@ import {
   normalizeSlices,
   parseTimestampLikeToUnixSeconds,
   requireJsonInput,
+  reserveInfoWarning,
   unverifiedFreshnessMetadata,
   verifiedFreshnessMetadata,
 } from "./helpers";
@@ -71,6 +72,7 @@ export function adaptJupUsdData(
   options: {
     sourceTimestamp?: number | null;
     oracle?: JupUsdOraclePayload | null;
+    extraWarnings?: readonly LiveReserveWarning[];
   } = {},
 ): AdapterResult {
   const values = new Map<string, JupUsdHoldingValue>();
@@ -111,13 +113,17 @@ export function adaptJupUsdData(
   const totalSupply = parseAmount(payload.totalSupply, 6);
   const ratio = totalSupply > 0 ? Math.min(1, totalReserveUsd / totalSupply) : undefined;
   const unknownExposurePct = totalReserveUsd > 0 ? (unknownValue / totalReserveUsd) * 100 : 0;
-  const warnings = unknownValue > 0
-    ? [buildUnknownExposureWarning({
-        code: "unknown-holding",
-        message: `JupUSD reserve feed included unmapped holding(s): ${Array.from(unknownHoldingNames).sort().join(", ")}`,
-        unknownExposurePct,
-      })]
-    : [];
+  const warnings: LiveReserveWarning[] = [];
+  if (unknownValue > 0) {
+    warnings.push(buildUnknownExposureWarning({
+      code: "unknown-holding",
+      message: `JupUSD reserve feed included unmapped holding(s): ${Array.from(unknownHoldingNames).sort().join(", ")}`,
+      unknownExposurePct,
+    }));
+  }
+  if (options.extraWarnings?.length) {
+    warnings.push(...options.extraWarnings);
+  }
 
   return {
     slices: normalizeSlices(
@@ -173,18 +179,32 @@ export async function fetchJupUsdReserves(
 ): Promise<AdapterResult> {
   const input = requireJsonInput(config.inputs.primary, ADAPTER_KEY);
   const params = readParams(config);
+  const extraWarnings: LiveReserveWarning[] = [];
   const [payload, snapshots, oracle] = await Promise.all([
     fetchJsonWithRetry<JupUsdDataPayload>(input.url, signal, 12_000, ctx),
     params.snapshotsUrl
-      ? fetchJsonWithRetry<JupUsdSnapshotPayload>(params.snapshotsUrl, signal, 12_000, ctx).catch(() => null)
+      ? fetchJsonWithRetry<JupUsdSnapshotPayload>(params.snapshotsUrl, signal, 12_000, ctx).catch(() => {
+          extraWarnings.push(reserveInfoWarning(
+            "jupusd-snapshots-unavailable",
+            `JupUSD snapshots feed failed: ${params.snapshotsUrl}`,
+          ));
+          return null;
+        })
       : Promise.resolve(null),
     params.oracleUrl
-      ? fetchJsonWithRetry<JupUsdOraclePayload>(params.oracleUrl, signal, 12_000, ctx).catch(() => null)
+      ? fetchJsonWithRetry<JupUsdOraclePayload>(params.oracleUrl, signal, 12_000, ctx).catch(() => {
+          extraWarnings.push(reserveInfoWarning(
+            "jupusd-oracle-unavailable",
+            `JupUSD oracle feed failed: ${params.oracleUrl}`,
+          ));
+          return null;
+        })
       : Promise.resolve(null),
   ]);
   const latestTimestamp = parseTimestampLikeToUnixSeconds(snapshots?.snapshots?.[0]?.timestamp);
   return adaptJupUsdData(payload, {
     sourceTimestamp: latestTimestamp,
     oracle,
+    extraWarnings,
   });
 }
