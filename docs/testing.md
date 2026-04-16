@@ -346,6 +346,18 @@ import { makeBlacklistRow } from "./helpers/fixtures";
 const row = makeBlacklistRow({ stablecoin: "USDC", event_type: "freeze" });
 ```
 
+### Reserve HTML Fixtures (`worker/src/cron/reserve-adapters/__tests__/fixtures/*.html`)
+
+Five issuer dashboards feed HTML-parsing adapters (Circle transparency, FDUSD, Mento reserve, Reserve (RE) metrics, SG Forge). Their HTML layout drifts over time, so the fixtures need periodic refreshes to keep tests anchored to today's markup rather than a snapshot from months ago.
+
+Run:
+
+```bash
+npm run refresh:html-fixtures
+```
+
+The script fetches each source live, prepends a `<!-- captured-at: ISO -->` provenance header, and writes the file back under `worker/src/cron/reserve-adapters/__tests__/fixtures/`. Sources that respond with <200 bytes or an HTTP error are left untouched and a warning is printed; the script exits non-zero only when zero fixtures refreshed. Run locally before updating adapter parsers — do not run in CI.
+
 ### Shared Auth Helpers (`worker/src/api/__tests__/helpers/auth.ts`)
 
 Use these helpers in worker API contract tests that exercise admin auth and URL/request plumbing.
