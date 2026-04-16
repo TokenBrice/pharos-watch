@@ -142,6 +142,11 @@ vi.mock("../../lib/circuit-breaker", () => ({
 }));
 
 import { generateDailyDigest, classifyRegime } from "../daily-digest";
+import {
+  parseDigestModelResponse,
+  validateDigestModelOutput,
+  type ParsedDigestResponse,
+} from "../daily-digest/response";
 import { ANTHROPIC_MAX_RETRIES, ANTHROPIC_TIMEOUT_MS } from "../../lib/constants";
 import {
   collectPsiContributors,
@@ -881,6 +886,69 @@ describe("generateDailyDigest", () => {
 
     expect(result.metadata).toContain("telegram: failed:");
     expect(commitTelegramAppendices).toHaveBeenCalledTimes(0);
+  });
+});
+
+describe("parseDigestModelResponse meta normalization", () => {
+  function parseLeadTone(leadValue: string, toneValue: string): { lead?: string; tone?: string } {
+    const raw = JSON.stringify({
+      title: "T",
+      text: "T.",
+      extended: "T. T. T.\n\nT. T. T.\n\nT. T. T.",
+      meta: { lead: leadValue, tone: toneValue, coins: ["USDT"] },
+    });
+    const parsed = parseDigestModelResponse(raw);
+    const meta = parsed.digestMeta ? (JSON.parse(parsed.digestMeta) as Record<string, string>) : {};
+    return { lead: meta.lead, tone: meta.tone };
+  }
+
+  it("retains observed natural lead tokens", () => {
+    expect(parseLeadTone("gauge-flip", "dry").lead).toBe("gauge-flip");
+    expect(parseLeadTone("psi-band-change", "dry").lead).toBe("psi-band-change");
+    expect(parseLeadTone("issuer-concentration", "dry").lead).toBe("issuer-concentration");
+    expect(parseLeadTone("regime-divergence", "dry").lead).toBe("regime-divergence");
+    expect(parseLeadTone("chain-migration", "dry").lead).toBe("chain-migration");
+    expect(parseLeadTone("reserve-event", "dry").lead).toBe("reserve-event");
+  });
+
+  it("retains observed natural tones", () => {
+    expect(parseLeadTone("depeg", "sardonic").tone).toBe("sardonic");
+    expect(parseLeadTone("depeg", "observant").tone).toBe("observant");
+    expect(parseLeadTone("depeg", "forensic").tone).toBe("forensic");
+  });
+
+  it("collapses garbage to 'other'", () => {
+    expect(parseLeadTone("asdfghjkl", "dry").lead).toBe("other");
+    expect(parseLeadTone("depeg", "asdfghjkl").tone).toBe("other");
+  });
+});
+
+describe("lead family variety check", () => {
+  function validateWith(currentLead: string, recentLeads: string[]) {
+    const parsed: ParsedDigestResponse = {
+      digestTitle: "T",
+      digestText: "T.",
+      digestExtended: "T. T. T.\n\nT. T. T.\n\nT. T. T.",
+      digestMeta: JSON.stringify({ lead: currentLead, tone: "dry", coins: ["USDT"] }),
+      strippedDashCount: 0,
+      strippedForbiddenCharCount: 0,
+      usedRawTextFallback: false,
+    };
+    const recentMeta = recentLeads.map((l) => ({
+      meta: { lead: l, tone: "dry" } as Record<string, unknown>,
+      title: "x",
+    }));
+    return validateDigestModelOutput(parsed, { kind: "daily", recentMeta });
+  }
+
+  it("fires repeated-lead-family when family repeats 2 of last 3", () => {
+    const issues = validateWith("psi-streak", ["psi-regime", "psi-band-change", "supply-reversal"]);
+    expect(issues.some((i) => i.code === "repeated-lead-family")).toBe(true);
+  });
+
+  it("does not fire when lead families differ", () => {
+    const issues = validateWith("psi-streak", ["depeg", "grade-transition", "ftq"]);
+    expect(issues.some((i) => i.code === "repeated-lead-family")).toBe(false);
   });
 });
 

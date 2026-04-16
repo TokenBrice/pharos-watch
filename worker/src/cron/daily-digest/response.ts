@@ -1,4 +1,5 @@
 import { DigestResponseSchema } from "../../lib/schemas";
+import { leadFamily } from "./voice-guards";
 
 const FORBIDDEN_PHRASES = [
   "Meanwhile, ",
@@ -58,22 +59,39 @@ function stripRepeatedTitlePrefix(title: string, text: string): string {
 }
 
 const ALLOWED_LEADS = new Set([
+  // PSI family
   "psi-streak",
   "psi-regime",
+  "psi-band-change",
+  "psi-divergence",
+  // Depeg family
   "depeg",
   "resolved-depeg",
+  "chronic-depeg",
+  // DEWS family
   "dews-band-change",
+  "dews-alert-breadth",
+  "dews-warning",
+  // Flow family
   "ftq",
   "mint-burn",
-  "grade-transition",
+  "gauge-flip",
+  "gauge-divergence",
   "supply-reversal",
   "supply-acceleration",
   "supply-deceleration",
+  "chain-migration",
+  // Risk family
+  "grade-transition",
   "blacklist-contrast",
-  "macro-observation",
+  "reserve-event",
   "yield-anomaly",
   "liquidity-shift",
+  // Structural / macro
+  "macro-observation",
   "market-structure",
+  "issuer-concentration",
+  "regime-divergence",
   "other",
 ]);
 
@@ -88,6 +106,11 @@ const ALLOWED_TONES = new Set([
   "analytical",
   "calm",
   "skeptical",
+  "sardonic",
+  "observant",
+  "forensic",
+  "resigned",
+  "ironic",
   "other",
 ]);
 
@@ -307,8 +330,19 @@ export function validateDigestModelOutput(
   const tone = getMetaString(parsedMeta, "tone");
   const coins = getMetaCoins(parsedMeta);
   const recentThree = recent.slice(0, 3);
-  if (lead && recentThree.some((entry) => getMetaString(entry.meta, "lead") === lead)) {
-    issues.push({ code: "repeated-lead", severity: "soft", message: `Lead signal repeats recent lead '${lead}'.` });
+  const currentFamily = leadFamily(lead ?? undefined);
+  if (currentFamily && currentFamily !== "other") {
+    const recentFamilies = recentThree
+      .map((entry) => leadFamily(getMetaString(entry.meta, "lead") ?? undefined))
+      .filter((f): f is string => f != null && f !== "other");
+    const sameFamilyCount = recentFamilies.filter((f) => f === currentFamily).length;
+    if (sameFamilyCount >= 2) {
+      issues.push({
+        code: "repeated-lead-family",
+        severity: "soft",
+        message: `Lead family '${currentFamily}' repeats ${sameFamilyCount} of last 3 digests.`,
+      });
+    }
   }
   if (tone && recentThree.some((entry) => getMetaString(entry.meta, "tone") === tone)) {
     issues.push({ code: "repeated-tone", severity: "soft", message: `Tone repeats recent tone '${tone}'.` });
