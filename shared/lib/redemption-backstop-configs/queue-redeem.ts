@@ -63,7 +63,10 @@ export const QUEUE_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopCon
         ["capacity"],
       ),
     ],
-    notes: ["Fresh live reserve metadata scores against Falcon's current stablecoin reserve bucket; redeemed assets are still credited only after the documented 7-day cooldown"],
+    notes: [
+      "Fresh live reserve metadata scores against Falcon's current stablecoin reserve bucket; redeemed assets are still credited only after the documented 7-day cooldown",
+      "If the Falcon transparency API snapshot is unavailable or stale, the route is intentionally left unrated rather than falling back to a static heuristic buffer",
+    ],
   },
   "syrupusdc-maple": {
     ...queueRedeemBase,

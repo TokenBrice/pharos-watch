@@ -325,7 +325,10 @@ export const STABLECOIN_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackst
         ["route", "capacity"],
       ),
     ],
-    notes: ["Cross-chain and fiat off-ramp flows exist too, but the modeled backstop focuses on the direct onchain USDC redemption rail"],
+    notes: [
+      "Cross-chain and fiat off-ramp flows exist too, but the modeled backstop focuses on the direct onchain USDC redemption rail",
+      "If the Frax balance-sheet snapshot is unavailable or stale, the route is intentionally left unrated rather than falling back to a static heuristic buffer",
+    ],
   },
   "jupusd-jupiter": {
     ...stablecoinRedeemBase,
