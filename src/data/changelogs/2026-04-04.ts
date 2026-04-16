@@ -4,7 +4,7 @@ export const entry: ChangelogEntry = {
   dateRange: { from: "2026-03-25", to: "2026-04-04" },
   headline: "Yield intelligence rebuilt from the ground up, API auth goes live, and a 100+ fix security audit lands.",
   summary: [
-    { label: "Yield intelligence overhaul", tag: "feature", description: "10+ protocol-native adapters (Aave V3, Compound V3, Morpho, Pendle, Beefy, Yearn Kong), benchmark-aware scoring, coverage audits, and 365-day backfill charts" },
+    { label: "Yield intelligence overhaul", tag: "feature", description: "10+ protocol-native adapters (Aave V3, Compound V3, Morpho, Pendle, Beefy, Yearn Kong), benchmark-aware scoring, coverage audits, and 365-day backfill charts", href: "/methodology/yield-changelog/" },
     { label: "API key authentication", tag: "security", description: "Full auth gate on protected endpoints with key rotation, audit logging, dual-pepper hashing, and rate limiting" },
     { label: "Broader stablecoin coverage", tag: "coverage", description: "CHFAU, trUSD, Base Dollar added; live reserves expanded for USDSC, satUSD, USDai, Anzen USDz, and Liquity v1 LUSD" },
     { label: "Codebase hardening", tag: "security", description: "Comprehensive three-pillar audit remediation across security, reliability, and maintainability with 100+ targeted fixes" },

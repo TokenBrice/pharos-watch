@@ -57,6 +57,7 @@ export function ChangelogWeekNav({ entries }: ChangelogWeekNavProps) {
         className="overflow-x-auto scrollbar-none -mx-1 px-1 text-xs font-mono"
       >
         <div className="flex min-w-max items-center gap-1.5">
+          <span className="shrink-0 text-xs font-medium text-muted-foreground pl-1">Jump to:</span>
           {entries.map((entry, i) => {
             const id = entry.dateRange.to;
             const isActive = activeId === id;

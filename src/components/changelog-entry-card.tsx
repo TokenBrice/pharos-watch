@@ -17,11 +17,11 @@ function inferTag(label: string): SummaryTag {
 }
 
 const TAG_COLOR: Record<SummaryTag, string> = {
-  feature: "bg-frost-blue/80",
-  security: "bg-amber-500/80",
-  coverage: "bg-emerald-500/80",
-  infra: "bg-violet-500/80",
-  design: "bg-sky-500/80",
+  feature: "bg-frost-blue/10 border-frost-blue/25 text-frost-blue",
+  security: "bg-amber-500/10 border-amber-500/25 text-amber-500",
+  coverage: "bg-emerald-500/10 border-emerald-500/25 text-emerald-500",
+  infra: "bg-violet-500/10 border-violet-500/25 text-violet-500",
+  design: "bg-sky-500/10 border-sky-500/25 text-sky-500",
 };
 
 export function formatDateRange(
@@ -32,19 +32,26 @@ export function formatDateRange(
   const fromDate = new Date(from + "T00:00:00");
   const toDate = new Date(to + "T00:00:00");
   const opts: Intl.DateTimeFormatOptions = { month: "short", day: "numeric" };
-  const fromStr = fromDate.toLocaleDateString("en-US", opts);
-
   const sameMonth = fromDate.getMonth() === toDate.getMonth();
+  const fromYear = fromDate.getFullYear();
+  const toYear = toDate.getFullYear();
+  const sameYear = fromYear === toYear;
 
   if (options?.compact) {
-    const toStr = sameMonth
+    const fromStr = !sameYear
+      ? fromDate.toLocaleDateString("en-US", { ...opts, year: "numeric" })
+      : fromDate.toLocaleDateString("en-US", opts);
+    const toStr = sameMonth && sameYear
       ? String(toDate.getDate())
       : toDate.toLocaleDateString("en-US", opts);
     return `${fromStr} – ${toStr}`;
   }
 
-  const toStr = sameMonth
-    ? `${toDate.getDate()}, ${toDate.getFullYear()}`
+  const fromStr = !sameYear
+    ? fromDate.toLocaleDateString("en-US", { ...opts, year: "numeric" })
+    : fromDate.toLocaleDateString("en-US", opts);
+  const toStr = sameMonth && sameYear
+    ? `${toDate.getDate()}, ${toYear}`
     : toDate.toLocaleDateString("en-US", { ...opts, year: "numeric" });
 
   return `${fromStr} – ${toStr}`;
@@ -89,7 +96,7 @@ export function ChangelogEntryCard({
             href={`#${dateRange.to}`}
             className="pharos-focus-ring rounded-sm no-underline hover:underline underline-offset-4"
           >
-            <time dateTime={isoDate(dateRange.from)}>
+            <time dateTime={isoDate(dateRange.to)}>
               {formatDateRange(dateRange.from, dateRange.to, { compact: true })}
             </time>
             <span
@@ -123,15 +130,17 @@ export function ChangelogEntryCard({
           const tag = item.tag ?? inferTag(item.label);
           return (
             <li key={item.label} className="flex gap-3 text-sm leading-relaxed">
-              <span
-                className={cn(
-                  "mt-[7px] size-1.5 shrink-0 rounded-full",
-                  TAG_COLOR[tag],
-                )}
-                aria-hidden
-              />
+              {tag && (
+                <span className={`mt-[3px] inline-flex shrink-0 items-center rounded-full border px-1.5 py-0.5 text-[10px] uppercase tracking-wide font-medium ${TAG_COLOR[tag]}`}>
+                  {tag}
+                </span>
+              )}
               <span>
-                <span className="font-medium">{item.label}</span>
+                {item.href ? (
+                  <a href={item.href} className="text-foreground/80 underline underline-offset-2 hover:text-foreground transition-colors font-semibold">{item.label}</a>
+                ) : (
+                  <span className="font-semibold text-foreground/80">{item.label}</span>
+                )}
                 <span className="mx-1.5 text-border">—</span>
                 <span className="text-muted-foreground">{item.description}</span>
               </span>
@@ -159,7 +168,14 @@ export function ChangelogEntryCard({
         <ul className="mt-3 space-y-1 text-xs font-mono text-muted-foreground">
           {commits.slice(0, COMMIT_PREVIEW_COUNT).map((c) => (
             <li key={c.hash}>
-              <span className="text-foreground/60">{c.hash}</span>{" "}
+              <a
+                href={`https://github.com/TokenBrice/stablecoin-dashboard/commit/${c.hash}`}
+                className="text-foreground/60 hover:text-foreground transition-colors"
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                {c.hash.slice(0, 8)}
+              </a>{" "}
               {c.message}
             </li>
           ))}

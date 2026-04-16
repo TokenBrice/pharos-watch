@@ -11,7 +11,7 @@ export const entry: ChangelogEntry = {
     { label: "Ticker-issuer ID migration", tag: "infra", description: "Four-phase migration to canonical IDs across all stablecoins with portfolio migration, URL redirects, and DL remapping" },
     { label: "Worker hardening", tag: "infra", description: "Circuit breakers, AbortSignal cron timeouts, D1 retry logic, 160+ new tests, and degraded-mode pipeline handling" },
     { label: "Expanded coverage", tag: "coverage", description: "USTB, OUSG, USCC, mTBILL, USD+, apxUSD, wsrUSD, ebUSD, USND, USDaf added to tracking with reserves and AI summaries" },
-    { label: "Methodology versioning", tag: "feature", description: "Version tracking and changelogs surfaced for PSI, PegScore/DEWS, Liquidity Score, blacklist, and mint/burn flows" },
+    { label: "Methodology versioning", tag: "feature", description: "Version tracking and changelogs surfaced for PSI, PegScore/DEWS, Liquidity Score, blacklist, and mint/burn flows", href: "/methodology/" },
   ],
   stats: { totalCommits: 564 },
   commits: [

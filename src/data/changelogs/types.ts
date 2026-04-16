@@ -9,6 +9,7 @@ export interface SummaryItem {
   label: string;
   description: string;
   tag?: SummaryTag;
+  href?: string;
 }
 
 export interface ChangelogEntry {

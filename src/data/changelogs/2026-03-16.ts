@@ -10,7 +10,7 @@ export const entry: ChangelogEntry = {
     { label: "Deeper digest intelligence", tag: "feature", description: "Weekly recap format, yield anomaly signals, DEX liquidity shifts, PSI trajectories, and Telegram pending queue for reliable delivery" },
     { label: "Broader stablecoin coverage", tag: "coverage", description: "dUSD, CETES, Parallel USDp, thBILL added to tracking; CNHT, EURA, USDA moved to cemetery" },
     { label: "Codebase hardening", tag: "security", description: "Two major audit remediation campaigns (38 tasks), Zod validation at system boundaries, timing-safe auth, and shared contract consolidation" },
-    { label: "Liquidity Score v4", tag: "feature", description: "Log-scale volume, reworked durability formula, DexScreener and CG ticker fallback crawlers for broader pool coverage" },
+    { label: "Liquidity Score v4", tag: "feature", description: "Log-scale volume, reworked durability formula, DexScreener and CG ticker fallback crawlers for broader pool coverage", href: "/methodology/liquidity-score-changelog/" },
     { label: "Start Here onboarding", tag: "design", description: "New onboarding page, compare flow signals, stablecoin coverage matrix, and Telegram global alert subscriptions" },
   ],
   stats: { totalCommits: 626 },
