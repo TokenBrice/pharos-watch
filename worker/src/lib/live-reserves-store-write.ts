@@ -98,24 +98,53 @@ export async function finalizeReserveSyncAttempt(
   return { finalized };
 }
 
+const DEFAULT_PRUNE_BATCH_SIZE = 5000;
+
+async function deleteHistoryInBatches(
+  db: D1Database,
+  table: "reserve_composition_history" | "reserve_sync_attempt_history",
+  column: "fetched_at" | "attempted_at",
+  cutoff: number,
+  batchSize: number,
+): Promise<number> {
+  const sql = `DELETE FROM ${table} WHERE ${column} < ? LIMIT ?`;
+  let totalDeleted = 0;
+  // Loop until a batch deletes fewer rows than the budget, which implies the
+  // table is drained. Keeps each DELETE inside D1's 30s per-statement limit.
+  for (;;) {
+    const result = await db.prepare(sql).bind(cutoff, batchSize).run();
+    const deleted = result.meta.changes ?? 0;
+    totalDeleted += deleted;
+    if (deleted < batchSize) break;
+  }
+  return totalDeleted;
+}
+
 export async function pruneLiveReserveHistory(
   db: D1Database,
   now = Math.floor(Date.now() / 1000),
   retentionSec = LIVE_RESERVE_HISTORY_RETENTION_SEC,
+  batchSize = DEFAULT_PRUNE_BATCH_SIZE,
 ): Promise<LiveReserveHistoryPruneResult> {
   const cutoff = now - retentionSec;
-  const compositionDelete = await db
-    .prepare("DELETE FROM reserve_composition_history WHERE fetched_at < ?")
-    .bind(cutoff)
-    .run();
-  const attemptDelete = await db
-    .prepare("DELETE FROM reserve_sync_attempt_history WHERE attempted_at < ?")
-    .bind(cutoff)
-    .run();
+  const compositionHistoryDeleted = await deleteHistoryInBatches(
+    db,
+    "reserve_composition_history",
+    "fetched_at",
+    cutoff,
+    batchSize,
+  );
+  const attemptHistoryDeleted = await deleteHistoryInBatches(
+    db,
+    "reserve_sync_attempt_history",
+    "attempted_at",
+    cutoff,
+    batchSize,
+  );
 
   return {
     cutoff,
-    compositionHistoryDeleted: compositionDelete.meta.changes ?? 0,
-    attemptHistoryDeleted: attemptDelete.meta.changes ?? 0,
+    compositionHistoryDeleted,
+    attemptHistoryDeleted,
   };
 }

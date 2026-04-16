@@ -528,9 +528,49 @@ describe("live-reserves-store", () => {
       attemptHistoryDeleted: 7,
     });
 
+    // Each DELETE is paginated; single iteration when deleted < batchSize.
     const history = db.getHistory();
-    expect(history[0]?.binds).toEqual([9_000]);
-    expect(history[1]?.binds).toEqual([9_000]);
+    expect(history).toHaveLength(2);
+    expect(history[0]?.binds).toEqual([9_000, 5000]);
+    expect(history[1]?.binds).toEqual([9_000, 5000]);
+  });
+
+  it("paginates large prunes into multiple capped DELETE statements", async () => {
+    // Each DELETE call returns `batchSize` until the table drains, then a final
+    // partial batch signals completion. Total 650 composition rows + 230 attempt rows.
+    const compositionCounts = [100, 100, 100, 100, 100, 100, 50];
+    const attemptCounts = [100, 100, 30];
+    let compositionIdx = 0;
+    let attemptIdx = 0;
+    const history: Array<{ sql: string; binds: unknown[] }> = [];
+
+    const db = {
+      prepare: (sql: string) => ({
+        sql,
+        bind: (...binds: unknown[]) => ({
+          run: async () => {
+            history.push({ sql, binds });
+            if (sql.includes("reserve_composition_history")) {
+              const changes = compositionCounts[compositionIdx++] ?? 0;
+              return { success: true, meta: { changes } };
+            }
+            if (sql.includes("reserve_sync_attempt_history")) {
+              const changes = attemptCounts[attemptIdx++] ?? 0;
+              return { success: true, meta: { changes } };
+            }
+            return { success: true, meta: { changes: 0 } };
+          },
+        }),
+      }),
+    } as unknown as D1Database;
+
+    const result = await pruneLiveReserveHistory(db, 10_000, 1_000, 100);
+    expect(result.compositionHistoryDeleted).toBe(650);
+    expect(result.attemptHistoryDeleted).toBe(230);
+    expect(history.length).toBe(compositionCounts.length + attemptCounts.length);
+    for (const entry of history) {
+      expect(entry.binds[1]).toBe(100);
+    }
   });
 
   it("rejects attempt-stamped snapshots when sync state points to a different successful attempt", async () => {
