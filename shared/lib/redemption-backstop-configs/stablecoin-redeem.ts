@@ -21,8 +21,15 @@ export const STABLECOIN_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackst
     ...stablecoinRedeemBase,
     executionModel: "deterministic-basket",
     outputAssetType: "stable-basket",
-    capacityModel: { kind: "supply-ratio", ratio: 0.4 },
+    capacityModel: { kind: "supply-ratio", ratio: 0.4, confidence: "heuristic", basis: "strategy-buffer" },
     costModel: fixedFee(50, "Protocol docs describe redemption fees of up to 50 bps"),
+    reviewedAt: "2026-04-16",
+    docs: [
+      sourceRef("dTrinity documentation", "https://docs.dtrinity.org/", ["route", "capacity", "fees"]),
+    ],
+    notes: [
+      "The 40% ratio is a reviewed heuristic reflecting tracked stable-bucket share rather than a published instant-liquidity floor",
+    ],
   },
   "ousd-origin-protocol": {
     ...stablecoinRedeemBase,
@@ -124,10 +131,14 @@ export const STABLECOIN_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackst
     ...stablecoinRedeemBase,
     settlementModel: "immediate",
     executionModel: "rules-based-nav",
-    capacityModel: { kind: "supply-ratio", ratio: 0.2 },
+    capacityModel: { kind: "supply-ratio", ratio: 0.2, confidence: "heuristic", basis: "strategy-buffer" },
     costModel: documentedVariableFee(
       "ERC-4626 vault; instant redemptions up to liquidity buffer, larger withdrawals up to 24h as cross-chain positions unwind",
     ),
+    reviewedAt: "2026-04-16",
+    notes: [
+      "The 20% ratio is a reviewed heuristic reflecting ERC-4626 vault liquidity-buffer behavior rather than a published instant-liquidity floor",
+    ],
   },
   "wsrusd-reservoir": {
     ...stablecoinRedeemBase,
