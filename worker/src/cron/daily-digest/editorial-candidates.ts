@@ -100,7 +100,7 @@ function addResolvedDepegCandidates(candidates: DigestEditorialCandidate[], data
         `${formatCurrency(depeg.mcapUsd)} market cap`,
         `${depeg.durationHours}h duration`,
       ],
-      whyItMatters: "Fast recovery after a material deviation is useful plumbing evidence, not just a scare headline.",
+      whyItMatters: "Fast recovery after a material deviation is useful recovery evidence, not just a scare headline.",
     });
   }
 }

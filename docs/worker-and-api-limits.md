@@ -130,11 +130,13 @@ Current digest generation constraints that are actually encoded in repo code:
 - model: `claude-opus-4-7`
 - thinking: adaptive (`thinking.type = "adaptive"`)
 - reasoning effort: max (`output_config.effort = "max"`)
-- timeout: `300_000 ms`
+- Anthropic per-request timeout: `300_000 ms` (5 min)
+- cron lease: `12 * 60_000 ms` (12 min) for both `daily-digest` and `weekly-recap`; allows the corrective retry path (~600s) to finish inside the lease with buffer for data collection and social delivery
 - max_tokens: `16000` daily, `20000` weekly
 - cadence: daily scheduled run plus manual admin trigger
+- cost envelope (approximate, assuming single-attempt runs): Opus 4.7 input ~$5/Mtok, output ~$25/Mtok. Daily worst-case at 16k tokens ≈ $1.20; weekly worst-case at 20k ≈ $1.50. Annualized ≈ $550 at cap. Actual usage is lower since adaptive thinking rarely exhausts the ceiling. Monitor `usage.output_tokens` on the first week post-deploy before revisiting.
 
-Source: `worker/src/lib/constants.ts` (timeout/retries), `worker/src/cron/digest/platform.ts` (model/thinking/effort), `worker/src/cron/daily-digest.ts` and `worker/src/cron/weekly-recap.ts` (max_tokens)
+Source: `worker/src/lib/constants.ts` (Anthropic timeout/retries), `worker/src/lib/cron-lease.ts` (`CRON_TIMEOUT_MS` per-job lease budget), `worker/src/cron/digest/platform.ts` (model/thinking/effort), `worker/src/cron/daily-digest.ts` and `worker/src/cron/weekly-recap.ts` (max_tokens)
 
 This doc deliberately does not restate Anthropic account-tier RPM / token-plan numbers because those are not repo-enforced.
 
