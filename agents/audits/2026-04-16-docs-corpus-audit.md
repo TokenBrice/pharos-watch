@@ -246,3 +246,15 @@ Post-fix checks:
 - `npm run check:env-contract` passed.
 - `npm test -- worker/src/cron/__tests__/telegram-pending-queue.test.ts` passed (11 tests).
 - One-off source-path scan across Markdown backtick paths found no missing file-path references after the edits.
+
+## Follow-Up Remediation Update
+
+Additional follow-ups completed after the initial accuracy commit:
+
+- Added `scripts/check-doc-source-paths.mjs`, `npm run check:doc-source-paths`, CI validate wiring, and merge-gate contract wiring.
+- Reworked `scripts/check-cron-connection-budget.ts` to model sequential `connectionGroup` peaks instead of blindly summing every job in a trigger slot.
+- Updated `shared/lib/cron-jobs.ts` connection metadata for chained quarter-hourly, half-hourly, daily 08:00, reserve-sync, and daily 08:05 slots.
+- Condensed the stale-prone `docs/testing.md` test inventory from an exhaustive per-file table into live discovery commands, suite categories, and critical gate notes.
+- Removed repeated admin CLI header boilerplate from `docs/api-reference.md` and centralized it in the Admin Endpoints introduction.
+- Added `/admin/` operator-route discoverability and a route-contract update checklist to `docs/README.md`.
+- Follow-up validation passed: `npm run lint`, `npm run typecheck`, `npm run check:verified-doc-links`, `npm run check:doc-source-paths`, `npm run check:doc-sync`, `npm run check:doc-counts`, `npm run check:env-contract`, `npm run check:cron-connections`, and `npm test -- scripts/__tests__/validate-ci-parity.test.ts scripts/__tests__/test-merge-gate.test.ts`.

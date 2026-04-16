@@ -45,6 +45,7 @@ jobs:
       - run: npm run check:cron-connections
       - run: npm run check:doc-counts
       - run: npm run check:verified-doc-links
+      - run: npm run check:doc-source-paths
       - run: npm run check:doc-sync
       - run: npm run check:env-contract
       - run: npm run check:duplicate-exports

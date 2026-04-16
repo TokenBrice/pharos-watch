@@ -458,7 +458,7 @@ Dedicated trigger for Telegram work. Isolated from the quarter-hourly pipeline s
 | `sync-usds-status`              | `syncUsdsStatus()`             | `worker/src/cron/sync-usds-status.ts`              | This doc (below)                                 |
 | `fetch-tbill-rate`              | `fetchTbillRate()`             | `worker/src/cron/fetch-tbill-rate.ts`              | [Yield Intelligence](./yield-intelligence.md)    |
 
-**Connection budget:** 3 snapshot jobs are D1-only (0 external connections). `fetch-tbill-rate` (ECB/FRED/Treasury/SIX benchmark fetches, still serialized inside one job) and `sync-usds-status` (Etherscan) are chained sequentially on the external-fetch branch to keep this trigger conservative on connection use. A failed `fetch-tbill-rate` run no longer suppresses `sync-usds-status`.
+**Connection budget:** 3 snapshot jobs are D1-only (0 external connections). `fetch-tbill-rate` (ECB/FRED/Treasury/SIX benchmark fetches, still serialized inside one job) and `sync-usds-status` (Etherscan) are chained sequentially on the external-fetch branch to keep this trigger conservative on connection use. A failed `fetch-tbill-rate` run no longer suppresses `sync-usds-status`; peak external usage is 1 connection.
 
 ### Trigger 13: `5 8 * * *` (daily at 08:05 UTC — heavy external fetchers)
 
@@ -483,20 +483,22 @@ Runs once a month on the 1st at 06:00 UTC. Scans unmatched high-TVL DeFiLlama po
 
 Workers enforce a **6 concurrent fetch connections** limit per cron trigger invocation. All jobs sharing a trigger slot share this pool. Exceeding 6 causes `fetch()` to queue or fail.
 
+`npm run check:cron-connections` reads `shared/lib/cron-jobs.ts` and sums peak `connectionGroup` usage, so sequential chains count by their maximum in-chain fetch width rather than by adding every chained job together.
+
 | Trigger | Cron Expression    |                                Max Concurrent External Connections                                 | Headroom |
 | ------- | ------------------ | :------------------------------------------------------------------------------------------------: | :------: |
-| 1       | `*/15 * * * *`     |       5 (sync-stablecoins + sync-fx-rates + DB-only snapshot retry jobs; DEWS/PSI moved to Trigger 7) |    1     |
+| 1       | `*/15 * * * *`     |       3 (sync-fx-rates -> sync-stablecoins -> DB-only snapshot/report-card jobs are chained)       |    3     |
 | 2       | `9,24,39,54 * * * *` |                                     1 (status self-check probes)                                  |    5     |
 | 3       | `3 * * * *`        |                                  1 (rate-limited sequential blacklist scans)                       |    5     |
 | 4       | `4,24,44 * * * *`  |                                        1 (Alchemy JSON-RPC)                                        |    5     |
 | 5       | `6,36 * * * *`     |                                  1 (sequential CG/GT/DexScreener)                                  |    5     |
 | 6       | `13,33,53 * * * *` |                                1 (Alchemy JSON-RPC, extended lane)                                 |    5     |
-| 7       | `10,40 * * * *`    |                 5 (charts + DEX liquidity + compute-dews(0) + stability-index(0))                  |    1     |
+| 7       | `10,40 * * * *`    |                 4 (charts -> DEX liquidity -> compute-dews(0) -> stability-index(0) are chained)   |    2     |
 | 8       | `11 * * * *`       |                2 (reserve adapters + Kinesis are sequential; redemption is DB-only)                |    4     |
 | 9       | `20 * * * *`       |                                      1 (core yield publisher)                                      |    5     |
 | 10      | `25 */4 * * *`     |                                  5 (supplemental yield families)                                   |    1     |
 | 11      | `2,7,...,57 * * * *` |                        5 (Telegram alert dispatcher batches sends in groups of 5)                  |    1     |
-| 12      | `0 8 * * *`        |                 2 (benchmark feeds -> Etherscan -> Sim reads; chained serially, Sim peak = 2)      |    4     |
+| 12      | `0 8 * * *`        |                 1 (benchmark feeds -> USDS Etherscan reads are chained serially)                   |    5     |
 | 13      | `5 8 * * *`        |                     5 (Bluechip batch of 3 + Anthropic + CoinGecko; digest/recap chained)          |    1     |
 | 14      | `0 6 1 * *`        |                                      1 (DeFiLlama yield scan)                                      |    5     |
 
@@ -504,7 +506,7 @@ Workers enforce a **6 concurrent fetch connections** limit per cron trigger invo
 
 - Jobs requiring <=1 external connection may share any slot with headroom >=2.
 - Jobs requiring >2 concurrent connections should get a dedicated trigger slot.
-- Never add a fetching job to a slot with headroom <=1 (Triggers 1, 7, and 10 are effectively full).
+- Never add a fetching job to a slot with headroom <=1 (Triggers 10, 11, and 13 are effectively full).
 
 ### Cron Error Handling Policy
 

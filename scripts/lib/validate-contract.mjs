@@ -10,6 +10,7 @@ export const COMMON_VALIDATE_PREBUILD_COMMANDS = [
   "npm run check:cron-connections",
   "npm run check:doc-counts",
   "npm run check:verified-doc-links",
+  "npm run check:doc-source-paths",
   "npm run check:doc-sync",
   "npm run check:env-contract",
   "npm run check:duplicate-exports",

@@ -60,27 +60,7 @@ Hook behavior:
 Default policy:
 
 1. If the diff does not touch Pages or worker deploy surfaces, print the changed-file set and skip the gate.
-2. For deploy-impacting diffs, always run the shared validate pre-build checks:
-   - `npm run audit:deps`
-   - `npm run audit:pricing-providers`
-   - `npm run lint`
-   - `npm run typecheck`
-   - `npm run check:worker-boundary`
-   - `npm run check:shared-cycles`
-     This blocks on cycles in `shared/`, `worker/src`, and `src`.
-   - `npm run check:migrations`
-   - `npm run check:cron-sync`
-   - `npm run check:cron-connections`
-   - `npm run check:doc-counts`
-   - `npm run check:verified-doc-links`
-   - `npm run check:doc-sync`
-   - `npm run check:env-contract`
-   - `npm run check:duplicate-exports`
-   - `npm run check:redemption-backstops`
-   - `npm run check:unused-code`
-   - `npm run check:hotspot-ratchet`
-   - `npm run check:sql-safety`
-   - `npm run check:stablecoin-data`
+2. For deploy-impacting diffs, run the shared validate pre-build command set from `scripts/lib/validate-contract.mjs`. It covers dependency/pricing audits, lint/typecheck, import boundaries, cycle detection across `shared/`, `worker/src`, and `src`, migrations, cron schedule/connection checks, documentation link/source-path/sync checks, env contracts, duplicate exports, redemption-backstop registry checks, unused code, hotspot ratchets, SQL-safety, and stablecoin data validation.
 3. If Pages-impacting files changed, additionally run:
    - `npm run build`
    - `npm run seo:check`

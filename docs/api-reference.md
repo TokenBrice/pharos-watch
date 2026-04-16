@@ -2279,6 +2279,8 @@ Preferred operator access now splits by surface:
 - Browser / human operators: use `https://ops.pharos.watch/admin/`, which talks to same-origin `/api/admin/*` Pages Functions routes behind Cloudflare Access.
 - CLI / automation: call `https://ops-api.pharos.watch/api/...` with `CF-Access-Client-Id` and `CF-Access-Client-Secret` so Cloudflare Access can mint the request JWT the worker verifies. Direct `ops-api` requests also work with Cloudflare Access user/JWT headers.
 
+Endpoint sections below do not repeat the CLI header pair. Unless an endpoint says otherwise, direct operator examples assume the `ops-api` host plus those two Cloudflare Access service-token headers.
+
 ### `GET /api/status`
 
 Full admin dashboard: cron run history, cache freshness for all keys, data quality metrics, Telegram bot subscriber stats, and operator reconciliation signals.
@@ -2598,7 +2600,6 @@ Ratio-based on-chain status thresholds apply only when `dataQuality.onchainSuppl
 
 Machine-readable status timeline endpoint for tooling and incident analysis.
 
-**Direct ops-api CLI example:** `CF-Access-Client-Id: <id>` and `CF-Access-Client-Secret: <secret>`
 
 **Query parameters**
 
@@ -2622,7 +2623,6 @@ The top-line `site` bucket combines:
 
 The top-line `external` bucket is `api.pharos.watch` traffic not classified as site. Admin-only routes and `/api/telegram-webhook` remain excluded. The response also includes worker-lane telemetry so operators can distinguish total demand from actual `public-api` vs `site-api` worker load.
 
-**Direct ops-api CLI example:** `CF-Access-Client-Id: <id>` and `CF-Access-Client-Secret: <secret>`
 
 **Query parameters**
 
@@ -2652,7 +2652,6 @@ The top-line `external` bucket is `api.pharos.watch` traffic not classified as s
 
 Admin-only API key inventory. Returns masked tokens plus metadata, but never returns stored secret material. Expired keys remain listed for operator review; callers should use `isActive` plus `expiresAt` to distinguish `active`, `expired`, and deliberate non-expiring exceptions.
 
-**Direct ops-api CLI example:** `CF-Access-Client-Id: <id>` and `CF-Access-Client-Secret: <secret>`
 
 **Response shape:** `ApiKeyListResponse` (defined in `shared/types/api-keys.ts`)
 
@@ -2688,7 +2687,6 @@ Admin-only API key lifecycle audit log. Returns recent create/update/deactivate/
 
 Admin-only API key creation route.
 
-**Direct ops-api CLI example:** `CF-Access-Client-Id: <id>` and `CF-Access-Client-Secret: <secret>`
 
 **Body shape:** `ApiKeyCreateRequest`
 
@@ -2749,7 +2747,6 @@ Supported non-USD fiat assets now prefer direct CoinGecko native-fiat history fi
 
 Bounded replay windows also support `startDay` / `endDay`, plus optional `contextDays` to widen the replay pad around that UTC window. This makes long-history audits and repairs practical over `ops-api` without waiting for a full-coin rebuild. In mutating mode, bounded replays only replace overlapping `source='backfill'` rows for that coin and preserve non-overlapping backfill rows plus all `source='live'` rows.
 
-**Direct ops-api CLI example:** `CF-Access-Client-Id: <id>` and `CF-Access-Client-Secret: <secret>`
 
 **Query parameters**
 
@@ -2766,7 +2763,6 @@ Bounded replay windows also support `startDay` / `endDay`, plus optional `contex
 
 Backfills per-coin supply history snapshots. When historical market-price series are available, the endpoint also persists daily `supply_history.price` values on restored rows so historical PSI replay can use day-level deviation instead of blunt peak fallback.
 
-**Direct ops-api CLI example:** `CF-Access-Client-Id: <id>` and `CF-Access-Client-Secret: <secret>`
 
 **Query parameters**
 
@@ -2783,7 +2779,6 @@ Backfills historical stability index scores from stored depeg events and supply 
 
 The rebuild now stops at the last completed UTC day; it does not write a `stability_index` row for the current UTC day. Historical market-cap denominators in this replay path are bounded to the PSI-eligible universe (tracked coins plus configured shadow assets). Historical replay treats a depeg as active for any UTC day whose window overlaps the event interval. When a usable same-day `supply_history.price` exists, the replay derives day severity from that price, but on the UTC day the depeg begins it keeps `peak_deviation_bps` as a floor only when the event materially persisted past that UTC close and the daily snapshot undercaptures the shock by at least the configured depeg threshold. Same-day recovered wicks, near-midnight bleed-throughs, and moderate follow-on moves that the restored day price already captures use the daily historical price instead, and replay days whose restored daily price is back inside the configured depeg threshold are dropped instead of still contributing breadth. Later days fall back to `peak_deviation_bps` only for missing/invalid historical prices. The historical restore path is expected to repair replay-critical `supply_history.price` coverage, including PSI-only shadow assets, before rerunning this rebuild. For methodology `v3.0+`, the replay also derives daily `stressBreadth` from `stress_signal_history` rows in `ALERT`, `WARNING`, or `DANGER` bands. If a rebuild day cannot be replayed because archival inputs are unavailable, the endpoint preserves the existing stored row instead of deleting that day. The response includes the evaluated `startDay`/`endDay` so operators can confirm the rebuild window.
 
-**Direct ops-api CLI example:** `CF-Access-Client-Id: <id>` and `CF-Access-Client-Secret: <secret>`
 
 **Query parameters**
 
@@ -2797,7 +2792,6 @@ The rebuild now stops at the last completed UTC day; it does not write a `stabil
 
 Backfills historical market prices for the PSI-eligible universe. The endpoint fills NULL `supply_history.price` gaps and can insert missing `supply_history` day rows when market-cap history exists, including PSI-only shadow assets such as `ust-terra`.
 
-**Direct ops-api CLI example:** `CF-Access-Client-Id: <id>` and `CF-Access-Client-Secret: <secret>`
 
 **Query parameters**
 
@@ -2813,7 +2807,6 @@ Repairs incomplete mint/burn valuation metadata using a historical-first policy.
 
 Cron `sync-mint-burn` automatically heals recent NULL-price events within a 48-hour window and reports the healed count in cron metadata as `nullPricesHealed`; this endpoint is primarily for historical backfills beyond that window.
 
-**Direct ops-api CLI example:** `CF-Access-Client-Id: <id>` and `CF-Access-Client-Secret: <secret>`
 
 **Response**
 
@@ -2841,7 +2834,6 @@ Cron `sync-mint-burn` automatically heals recent NULL-price events within a 48-h
 
 Validates DEWS against historical depeg events. Reports true-positive rate and average lead time.
 
-**Direct ops-api CLI example:** `CF-Access-Client-Id: <id>` and `CF-Access-Client-Secret: <secret>`
 
 ### `GET /api/backfill-dews?repair=refresh-current&dry-run=true`
 
@@ -2874,7 +2866,6 @@ Deletes bounded `stress_signal_history` windows that cannot be deterministically
 Backfills mint/burn event ingestion for a specific contract config using the same parsing/classification pipeline as the cron.
 If `configKey` is omitted, the worker auto-selects one tracked config using a critical-first / major-symbol-first / most-behind policy and returns the selected config in the response.
 
-**Direct ops-api CLI example:** `CF-Access-Client-Id: <id>` and `CF-Access-Client-Secret: <secret>`
 
 **Request body or query parameters**
 
@@ -2890,7 +2881,6 @@ If `configKey` is omitted, the worker auto-selects one tracked config using a cr
 
 Retroactively tags same-transaction mint+burn pairs for the same stablecoin as `flow_type='atomic_roundtrip'` and recalculates the affected hourly buckets.
 
-**Direct ops-api CLI example:** `CF-Access-Client-Id: <id>` and `CF-Access-Client-Secret: <secret>`
 
 **Response**
 
@@ -2914,7 +2904,6 @@ The same endpoint also supports dry-run historical repair previews:
 - `repair=synthetic-splits` surfaces adjacent same-direction events that were likely split either by the old DEX-only auto-close behavior or by a backfill-to-live handoff where historical replay expired mid-ongoing depeg
 - `repair=contradictory-recovery-price` surfaces ended events whose stored `recovery_price` is still outside the allowed depeg threshold and should be nulled
 
-**Direct ops-api CLI example:** `CF-Access-Client-Id: <id>` and `CF-Access-Client-Secret: <secret>`
 
 **Query parameters**
 
@@ -2940,7 +2929,6 @@ When a repair group ends in a live row, the live tail is kept as the canonical r
 
 `POST /api/audit-depeg-history?repair=contradictory-recovery-price` instead nulls ended-event `recovery_price` values that still sit outside the permitted depeg threshold. This is the bounded repair path for legacy rows closed by a native-quote recovery while the stored USD price still looked depegged.
 
-**Direct ops-api CLI example:** `CF-Access-Client-Id: <id>` and `CF-Access-Client-Secret: <secret>`
 
 `GET` is accepted only with `dry-run=true`; mutating audits require `POST`.
 
@@ -2960,7 +2948,6 @@ When a repair group ends in a live row, the live tail is kept as the canonical r
 
 Queues a background daily-digest regeneration, bypassing the normal 1-hour dedup check. Routed through `worker/src/router.ts`.
 
-**Direct ops-api CLI example:** `CF-Access-Client-Id: <id>` and `CF-Access-Client-Secret: <secret>`
 
 **Response**
 
@@ -2982,7 +2969,6 @@ Unhandled pre-enqueue failures are wrapped by the shared error handler and retur
 
 Rolls back blacklist sync state to re-scan missed events. EVM chains are rolled back by 50,000 blocks; Tron is rolled back by 7 days. Routed through `worker/src/router.ts`.
 
-**Direct ops-api CLI example:** `CF-Access-Client-Id: <id>` and `CF-Access-Client-Secret: <secret>`
 
 **Response** (`evmReset` / `tronReset` are row-change counts from the `blacklist_sync_state` UPDATE, not block numbers)
 
@@ -2998,7 +2984,6 @@ Rolls back blacklist sync state to re-scan missed events. EVM chains are rolled 
 
 Returns current blacklist sync state for all configured chains. Useful for diagnosing sync issues. Routed through `worker/src/router.ts`.
 
-**Direct ops-api CLI example:** `CF-Access-Client-Id: <id>` and `CF-Access-Client-Secret: <secret>`
 
 **Response**
 
@@ -3138,7 +3123,6 @@ Admin-only one-shot backfill endpoint for `blacklist_current_balances`, intended
 
 Returns stablecoins tracked by CoinGecko or DefiLlama that Pharos does not yet monitor, surfaced by the Monday CoinGecko discovery scan plus quarter-hourly DefiLlama residual upserts.
 
-**Direct ops-api CLI example:** `CF-Access-Client-Id: <id>` and `CF-Access-Client-Secret: <secret>`
 
 **Query parameters**
 
@@ -3179,7 +3163,6 @@ Malformed `limit` / `offset` values return `400` instead of silently defaulting.
 
 Dismisses a discovery candidate so it no longer appears in the active list. Dismissed candidates will not resurface unless their market cap crosses 10× the value at dismissal time.
 
-**Direct ops-api CLI example:** `CF-Access-Client-Id: <id>` and `CF-Access-Client-Secret: <secret>`
 
 **Path parameter:** `:id` — candidate ID from `GET /api/discovery-candidates`
 

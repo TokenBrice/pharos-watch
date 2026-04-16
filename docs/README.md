@@ -85,6 +85,23 @@ Some public routes are documented by feature docs or the architecture doc rather
 | `/upcoming/` | [upcoming-page.md](./upcoming-page.md) |
 | `/yield/` | [yield-intelligence.md](./yield-intelligence.md) |
 
+## Operator Routes
+
+These routes are not public product surfaces, but they are part of the maintained operator workflow.
+
+| Route | Primary doc(s) |
+|-------|-----------------|
+| `/admin/` on `ops.pharos.watch` | [status-dashboard.md](./status-dashboard.md), [operator-origin-access.md](./operator-origin-access.md), [api-reference.md](./api-reference.md#admin-endpoints) |
+
+## Route Contract Update Checklist
+
+For route/page behavior changes, start from the route's primary doc above and then verify the adjacent code/checks:
+
+- Page shell and metadata: `src/app/**/page.tsx`, `src/app/layout.tsx`, `src/app/sitemap.ts`, `src/app/robots.ts`
+- Client behavior: route `client.tsx`, route view-model helpers, and `src/components/**`
+- API/data hooks: `src/hooks/**`, `src/lib/api.ts`, and `shared/lib/api-endpoints/**`
+- Checks: route-focused tests when present, `npm run check:verified-doc-links`, `npm run check:doc-source-paths`, and `npm run seo:check` after a Pages build for crawlability changes
+
 ## Methodology Changelog Routes
 
 These are public sub-pages of `/methodology/`. Use the route map below when you need the authoritative doc for a specific changelog URL.

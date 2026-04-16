@@ -1,12 +1,12 @@
 /**
  * Daily 08:05 UTC trigger (5 8 * * *):
- *   sync-bluechip (1)          ← parallel waitUntil
+ *   sync-bluechip (3)          ← parallel waitUntil
  *   daily-digest (1) → weekly-digest (1)  ← chained to share connection pool
  *   discovery-scan (1)         ← parallel waitUntil
  *
  * Digests are chained; bluechip and discovery run as independent waitUntil
- * promises. Worst case all four run concurrently but each uses only 1 conn.
- * Connection budget: 4/6 peak (unlikely; digests are chained so typically 3/6)
+ * promises. Worst case peak is bluechip batch (3) + digest chain (1) + discovery (1).
+ * Connection budget: 5/6 peak.
  */
 import { syncBluechip } from "../../cron/sync-bluechip";
 import { generateDailyDigest } from "../../cron/daily-digest";
