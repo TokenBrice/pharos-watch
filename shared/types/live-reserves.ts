@@ -20,7 +20,6 @@ export const LIVE_RESERVE_ADAPTER_KEYS = [
   "evm-branch-balances",
   "falcon",
   "fdusd-transparency",
-  "frax",
   "frax-balance-sheet",
   "fx",
   "gho",

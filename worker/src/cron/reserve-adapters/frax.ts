@@ -25,18 +25,6 @@ export interface FraxBalanceSheetResponse {
   assets?: BalanceSheetAsset[];
 }
 
-/* ---------- legacy combineddata API types (used by frax-frax) ---------- */
-
-export interface FraxCombinedDataResponse {
-  protocol?: {
-    collateral?: {
-      ratio: number;
-      decentralization_ratio: number;
-      total_dollar_value: number;
-    };
-  };
-}
-
 /* ---------- token → display / risk / coinId map ---------- */
 
 interface TokenDisplayConfig {
@@ -174,55 +162,11 @@ export function adaptFraxBalanceSheet(payload: FraxBalanceSheetResponse): Adapte
   };
 }
 
-/* ---------- legacy combineddata adapter (frax-frax) ---------- */
-
-const LEGACY_FALLBACK_SLICE = [
-  { name: "Tokenized T-bills and cash equivalents (BUIDL, USTB, USCC, USDC)", pct: 100, risk: "low" as const },
-];
-
-export function adaptFraxCombinedData(payload: FraxCombinedDataResponse, coin?: StablecoinMeta): AdapterResult {
-  const collateral = payload.protocol?.collateral;
-  if (!collateral || !Number.isFinite(collateral.total_dollar_value)) {
-    throw new Error("Frax combineddata response missing collateral data");
-  }
-
-  return {
-    slices: coin?.reserves?.length ? coin.reserves : LEGACY_FALLBACK_SLICE,
-    metadata: {
-      freshnessMode: "unverified",
-      collateralRatio: collateral.ratio,
-      decentralizationRatio: collateral.decentralization_ratio,
-      totalCollateralUsd: collateral.total_dollar_value,
-    },
-  };
-}
-
 /* ---------- fetch entrypoint ---------- */
 
 function isBalanceSheetResponse(payload: unknown): payload is FraxBalanceSheetResponse {
   return Array.isArray((payload as FraxBalanceSheetResponse)?.assets);
 }
-
-export async function fetchFraxReserves(
-  coin: StablecoinMeta,
-  config: LiveReservesConfig,
-  signal: AbortSignal,
-  ctx?: AdapterContext,
-): Promise<AdapterResult> {
-  const primaryInput = requireJsonInputFromConfig(config, "frax");
-  const payload = await fetchJsonWithRetry<FraxBalanceSheetResponse | FraxCombinedDataResponse>(
-    primaryInput.url,
-    signal,
-    12_000,
-    ctx,
-  );
-
-  if (isBalanceSheetResponse(payload)) {
-    return adaptFraxBalanceSheet(payload);
-  }
-  return adaptFraxCombinedData(payload as FraxCombinedDataResponse, coin);
-}
-
 
 /**
  * Dedicated balance-sheet adapter entrypoint for coins using the Frax v2

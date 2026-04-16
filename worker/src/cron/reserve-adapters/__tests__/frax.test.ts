@@ -2,12 +2,9 @@ import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, it, expect } from "vitest";
-import type { StablecoinMeta } from "@shared/types/core";
 import {
   adaptFraxBalanceSheet,
-  adaptFraxCombinedData,
   type FraxBalanceSheetResponse,
-  type FraxCombinedDataResponse,
 } from "../frax";
 
 const FIXTURES_DIR = join(dirname(fileURLToPath(import.meta.url)), "fixtures");
@@ -137,51 +134,3 @@ describe("adaptFraxBalanceSheet", () => {
   });
 });
 
-/* ---------- legacy combineddata tests (frax-frax) ---------- */
-
-const COMBINED_DATA_SAMPLE: FraxCombinedDataResponse = {
-  protocol: {
-    collateral: {
-      ratio: 0.945,
-      decentralization_ratio: 0.14,
-      total_dollar_value: 518_626_905,
-    },
-  },
-};
-
-function makeCoin(reserves?: StablecoinMeta["reserves"]): StablecoinMeta {
-  return { id: "frax-frax", name: "FRAX", ticker: "FRAX", reserves } as unknown as StablecoinMeta;
-}
-
-describe("adaptFraxCombinedData", () => {
-  it("returns single fallback slice when coin is omitted", () => {
-    const result = adaptFraxCombinedData(COMBINED_DATA_SAMPLE);
-    expect(result.slices).toHaveLength(1);
-    expect(result.slices[0].pct).toBe(100);
-    expect(result.slices[0].name).toContain("T-bills");
-  });
-
-  it("returns single fallback slice when coin.reserves is empty", () => {
-    const result = adaptFraxCombinedData(COMBINED_DATA_SAMPLE, makeCoin([]));
-    expect(result.slices).toHaveLength(1);
-    expect(result.slices[0].pct).toBe(100);
-  });
-
-  it("returns curated reserves when coin has them", () => {
-    const coin = makeCoin([
-      { name: "USTB", pct: 50, risk: "low", coinId: "ustb-superstate" },
-      { name: "BUIDL", pct: 42, risk: "low", coinId: "buidl-blackrock" },
-      { name: "USCC", pct: 3, risk: "medium" },
-      { name: "Other", pct: 5, risk: "low" },
-    ]);
-    const result = adaptFraxCombinedData(COMBINED_DATA_SAMPLE, coin);
-    expect(result.slices).toHaveLength(4);
-    expect(result.slices[0].coinId).toBe("ustb-superstate");
-  });
-
-  it("includes collateralization metadata", () => {
-    const result = adaptFraxCombinedData(COMBINED_DATA_SAMPLE);
-    expect(result.metadata?.collateralRatio).toBe(0.945);
-    expect(result.metadata?.totalCollateralUsd).toBe(518_626_905);
-  });
-});

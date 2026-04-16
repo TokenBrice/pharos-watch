@@ -15,7 +15,6 @@ import {
   type EthenaCollateralResponse,
 } from "../reserve-adapters/ethena";
 import { adaptSkyModules, listUnknownGroups, type SkyGroupResult } from "../reserve-adapters/sky-makercore";
-import { adaptFraxCombinedData, type FraxCombinedDataResponse } from "../reserve-adapters/frax";
 import { adaptGhoFacilitators, type GhoFacilitatorData } from "../reserve-adapters/gho";
 
 // --- Tether adapter tests ---
@@ -376,43 +375,6 @@ describe("listUnknownGroups (Sky)", () => {
     const unknown = listUnknownGroups(groups);
     expect(unknown).toContain("new-thing");
     expect(unknown).not.toContain("stablecoins");
-  });
-});
-
-// --- Frax adapter tests ---
-
-describe("adaptFraxCombinedData", () => {
-  it("parses valid Frax collateral data", () => {
-    const payload: FraxCombinedDataResponse = {
-      protocol: {
-        collateral: {
-          ratio: 1.05,
-          decentralization_ratio: 0.15,
-          total_dollar_value: 650_000_000,
-        },
-      },
-    };
-
-    const result = adaptFraxCombinedData(payload);
-
-    expect(result.slices).toHaveLength(1);
-    expect(result.slices[0].name).toContain("T-bills");
-    expect(result.slices[0].pct).toBe(100);
-    expect(result.slices[0].risk).toBe("low");
-
-    expect(result.metadata!.collateralRatio).toBe(1.05);
-    expect(result.metadata!.decentralizationRatio).toBe(0.15);
-    expect(result.metadata!.totalCollateralUsd).toBe(650_000_000);
-  });
-
-  it("throws when collateral data is missing", () => {
-    const payload: FraxCombinedDataResponse = { protocol: {} };
-    expect(() => adaptFraxCombinedData(payload)).toThrow("missing collateral data");
-  });
-
-  it("throws when protocol is missing entirely", () => {
-    const payload = {} as FraxCombinedDataResponse;
-    expect(() => adaptFraxCombinedData(payload)).toThrow("missing collateral data");
   });
 });
 

@@ -176,16 +176,6 @@ export const LIVE_RESERVE_ADAPTER_DEFINITIONS = {
       allowedFreshnessModes: VERIFIED_OR_UNVERIFIED_FRESHNESS,
     },
   },
-  frax: {
-    sourceModel: "validated-static",
-    evidenceClass: "static-validated",
-    sharedSourceMode: "none",
-    redemptionTelemetry: { capacity: "none", fee: "none" },
-    validation: {
-      maxSourceAgeSec: DASHBOARD_SOURCE_MAX_AGE_SEC,
-      allowedFreshnessModes: UNVERIFIED_ONLY_FRESHNESS,
-    },
-  },
   "frax-balance-sheet": {
     sourceModel: "dynamic-mix",
     evidenceClass: "independent",
