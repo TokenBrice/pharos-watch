@@ -176,12 +176,12 @@ export async function buildRedemptionBackstopEntry(
     capacityConfidence: capacity.capacityConfidence,
     feeConfidence: staticFields.feeConfidence,
   });
-  const notes = [
+  const notes = dedupNotes([
     ...(config.notes ?? []),
     ...capacity.notes,
     ...staticFields.notes,
     ...(routeStatusReason ? [routeStatusReason] : []),
-  ];
+  ]);
 
   return {
     stablecoinId,
@@ -224,6 +224,17 @@ export async function buildRedemptionBackstopEntry(
     notes,
     capsApplied,
   };
+}
+
+function dedupNotes(notes: readonly string[]): string[] {
+  const seen = new Set<string>();
+  const out: string[] = [];
+  for (const note of notes) {
+    if (seen.has(note)) continue;
+    seen.add(note);
+    out.push(note);
+  }
+  return out;
 }
 
 export function buildFailedRedemptionBackstopEntry(

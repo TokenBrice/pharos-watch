@@ -1183,4 +1183,27 @@ describe("buildRedemptionBackstopEntry", () => {
 
     expect(entry.docs).toBeUndefined();
   });
+
+  it("deduplicates notes when config + runtime emit the same string", async () => {
+    const entry = await buildRedemptionBackstopEntry(
+      mockD1(),
+      "test-coin",
+      {
+        routeFamily: "offchain-issuer",
+        accessModel: "issuer-api",
+        settlementModel: "same-day",
+        executionModel: "rules-based-nav",
+        outputAssetType: "stable-single",
+        capacityModel: { kind: "supply-ratio", ratio: 0.33 },
+        costModel: { kind: "fee-bps", feeBps: 0 },
+        notes: ["Shared note", "Shared note", "Distinct note"],
+      },
+      1_000_000,
+      50,
+      now,
+      { reserveSnapshotMetadata: null },
+    );
+    expect(entry.notes.filter((n) => n === "Shared note").length).toBe(1);
+    expect(entry.notes.filter((n) => n === "Distinct note").length).toBe(1);
+  });
 });
