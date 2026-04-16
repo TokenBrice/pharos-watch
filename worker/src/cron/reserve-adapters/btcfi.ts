@@ -1,11 +1,13 @@
 import type { ReserveSlice, StablecoinMeta } from "@shared/types/core";
 import type { LiveReserveWarning, LiveReservesConfig } from "@shared/types/live-reserves";
 import { parseLiveReserveAdapterParams } from "@shared/lib/live-reserve-adapters";
+import { getCanonicalReserveAssetRisk } from "@shared/lib/reserve-asset-risk";
 import type { AdapterContext, AdapterResult } from "./types";
 import {
   fetchJsonWithRetry,
   requireJsonInput,
   reserveDegradedWarning,
+  slicesFromValues,
   unverifiedFreshnessMetadata,
 } from "./helpers";
 
@@ -28,53 +30,67 @@ function readParams(config: LiveReservesConfig): BtcfiParams {
   return parseLiveReserveAdapterParams("btcfi", config.params);
 }
 
+const UNMAPPED_BTC_SLICE_NAME = "Unmapped BTC variants";
+
 export function adaptBtcfi(market: BtcfiMarketRow[], handlers: BtcfiHandlerRow[]): AdapterResult {
   const handlerMap = new Map(handlers.map((handler) => [handler.id, handler]));
-  const btcSymbols = new Set(["BTC", "WBTC", "BTCB", "CBBTC", "SOLVBTC", "LBTC", "TBTC"]);
-  const unexpectedSymbols = new Set<string>();
-  let unexpectedValue = 0;
+  const symbolValues = new Map<string, { value: number; risk: ReserveSlice["risk"] }>();
+  const unknownSymbols = new Set<string>();
+  let unknownValue = 0;
+  let total = 0;
 
-  const total = market.reduce((acc, row) => {
+  for (const row of market) {
     const handler = handlerMap.get(row.token_handler_id);
-    if (!handler || handler.isStable) return acc;
+    if (!handler || handler.isStable) continue;
     const value = Number(row.deposit_value ?? "0");
-    if (!Number.isFinite(value) || value <= 0) return acc;
-    if (!btcSymbols.has(handler.symbol.toUpperCase())) {
-      unexpectedSymbols.add(handler.symbol);
-      unexpectedValue += value;
-      return acc + value;
+    if (!Number.isFinite(value) || value <= 0) continue;
+
+    const normalized = handler.symbol.trim().toUpperCase();
+    const canonicalRisk = getCanonicalReserveAssetRisk(normalized);
+    total += value;
+
+    if (canonicalRisk == null) {
+      unknownSymbols.add(handler.symbol);
+      unknownValue += value;
+      continue;
     }
-    return acc + value;
-  }, 0);
+
+    const existing = symbolValues.get(normalized);
+    if (existing) {
+      existing.value += value;
+    } else {
+      symbolValues.set(normalized, { value, risk: canonicalRisk });
+    }
+  }
 
   if (total <= 0) return { slices: [] };
 
-  const mappedPct = ((total - unexpectedValue) / total) * 100;
-  const slices: ReserveSlice[] = [];
-  if (mappedPct > 0) {
-    slices.push({
-      name: "BTC / WBTC / BTCB / cbBTC",
-      pct: mappedPct,
-      risk: "medium",
-    });
-  }
-  if (unexpectedValue > 0) {
-    slices.push({
-      name: "Other BTC wrappers / unmapped handlers",
-      pct: (unexpectedValue / total) * 100,
+  const sliceInputs = Array.from(symbolValues.entries()).map(([symbol, { value, risk }]) => ({
+    name: symbol,
+    value,
+    risk,
+  }));
+
+  if (unknownValue > 0) {
+    sliceInputs.push({
+      name: UNMAPPED_BTC_SLICE_NAME,
+      value: unknownValue,
       risk: "high",
     });
   }
 
-  const warnings: LiveReserveWarning[] = Array.from(unexpectedSymbols).map((symbol) => reserveDegradedWarning(
+  const slices = slicesFromValues(sliceInputs);
+
+  const warnings: LiveReserveWarning[] = Array.from(unknownSymbols).map((symbol) => reserveDegradedWarning(
     "unknown-btc-wrapper",
-    `btcfi handler bucketed into other BTC wrappers: ${symbol}`,
+    `btcfi handler bucketed into unmapped BTC variants: ${symbol}`,
   ));
 
   return {
     slices,
     metadata: {
       handlerCount: handlers.length,
+      ...(unknownValue > 0 ? { unknownExposurePct: (unknownValue / total) * 100 } : {}),
       ...unverifiedFreshnessMetadata(
         "protocol-market-and-handler-apis",
         "btcfi market and handler payloads do not expose a trustworthy source timestamp",
