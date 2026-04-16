@@ -519,6 +519,72 @@ describe("syncLiveReserves", () => {
       ],
     });
   });
+
+  // Worst-wins breaker merge scenarios: within a single run, multiple coins
+  // may share a breakerScope. The deferred outcome recorded per breakerKey
+  // must be the WORST outcome seen — any failure downgrades the key's final
+  // outcome to false even if other coins succeeded. Undefined outcomes (e.g.
+  // circuit-skipped) are ignored, and a pure-success run records true once.
+  describe("breaker deferred-outcome merge logic", () => {
+    // Inline snippet mirroring sync-live-reserves.ts lines 317-322. Keeping
+    // this in a pure helper lets us cover the mixed scenarios that don't
+    // occur naturally today (all multi-coin breakerScope groups currently
+    // use source-invariant adapters that dedupe per shared source, so only
+    // one outcome is emitted per key per run).
+    function applyOutcome(
+      breakerOutcomes: Map<string, boolean>,
+      breakerKey: string,
+      breakerOutcome: boolean | undefined,
+    ): void {
+      if (
+        breakerOutcome === false
+        || (breakerOutcome === true && breakerOutcomes.get(breakerKey) !== false)
+      ) {
+        breakerOutcomes.set(breakerKey, breakerOutcome);
+      }
+    }
+
+    it("pure-success all-success records true", () => {
+      const m = new Map<string, boolean>();
+      applyOutcome(m, "k", true);
+      applyOutcome(m, "k", true);
+      applyOutcome(m, "k", true);
+      expect(m.get("k")).toBe(true);
+    });
+
+    it("first-success/later-failure flips the recorded outcome to false", () => {
+      const m = new Map<string, boolean>();
+      applyOutcome(m, "k", true);
+      applyOutcome(m, "k", false);
+      expect(m.get("k")).toBe(false);
+    });
+
+    it("first-failure/later-success stays false (worst-wins)", () => {
+      const m = new Map<string, boolean>();
+      applyOutcome(m, "k", false);
+      applyOutcome(m, "k", true);
+      expect(m.get("k")).toBe(false);
+    });
+
+    it("undefined-interspersed is ignored", () => {
+      const m = new Map<string, boolean>();
+      applyOutcome(m, "k", true);
+      applyOutcome(m, "k", undefined);
+      applyOutcome(m, "k", true);
+      expect(m.get("k")).toBe(true);
+
+      applyOutcome(m, "k2", false);
+      applyOutcome(m, "k2", undefined);
+      expect(m.get("k2")).toBe(false);
+    });
+
+    it("undefined only leaves no entry for the key", () => {
+      const m = new Map<string, boolean>();
+      applyOutcome(m, "k", undefined);
+      applyOutcome(m, "k", undefined);
+      expect(m.has("k")).toBe(false);
+    });
+  });
 });
 
 describe("buildSharedSourceCacheKey", () => {
