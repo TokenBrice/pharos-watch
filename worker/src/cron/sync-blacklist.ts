@@ -19,11 +19,7 @@ import { fetchEvmEventsIncremental } from "./blacklist/evm-source";
 import { fetchTronEventsIncremental } from "./blacklist/tron-source";
 import type { BlacklistRow } from "./blacklist/shared";
 import { backfillAmounts } from "./blacklist/amount-recovery";
-import {
-  type BlacklistPostFetchCounters,
-  type CurrentBalanceCacheCounters,
-  processFetchedBlacklistRows,
-} from "./blacklist/post-fetch";
+import { processRowsAndAccumulatePostFetchRows } from "./blacklist/post-fetch-counters";
 
 const EVM_SCANNED_TO_LATEST = 99999999;
 const SYNC_BLACKLIST_RUNTIME_BUDGET_MS = 7 * 60_000;
@@ -58,43 +54,6 @@ function evmSafetyMarginBlocks(evmChainId: number): number {
 
 function shouldStopBeforeNextConfig(deadlineMs: number): boolean {
   return Date.now() + SYNC_BLACKLIST_MIN_CONFIG_WINDOW_MS >= deadlineMs;
-}
-
-type SyncBlacklistPostFetchCounters = {
-  enrichCounters: BlacklistPostFetchCounters;
-  currentBalanceCacheCounters: CurrentBalanceCacheCounters;
-};
-
-type ProcessFetchedRowsContext = Parameters<typeof processFetchedBlacklistRows>[0];
-
-function addEnrichCounters(
-  target: BlacklistPostFetchCounters,
-  source: BlacklistPostFetchCounters,
-): void {
-  target.attempted += source.attempted;
-  target.succeeded += source.succeeded;
-  target.failed += source.failed;
-}
-
-function addCurrentBalanceCacheCounters(
-  target: CurrentBalanceCacheCounters,
-  source: CurrentBalanceCacheCounters,
-): void {
-  target.updated += source.updated;
-  target.deleted += source.deleted;
-  target.failed += source.failed;
-}
-
-async function processRowsAndAccumulatePostFetchRows(
-  context: ProcessFetchedRowsContext,
-  counters: SyncBlacklistPostFetchCounters,
-): Promise<number> {
-  const processed = await processFetchedBlacklistRows(context);
-
-  addEnrichCounters(counters.enrichCounters, processed.enrichCounters);
-  addCurrentBalanceCacheCounters(counters.currentBalanceCacheCounters, processed.currentBalanceCacheCounters);
-
-  return processed.insertedRows;
 }
 
 export interface SyncBlacklistOptions {
