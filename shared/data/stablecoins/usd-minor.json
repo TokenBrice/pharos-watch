@@ -9312,6 +9312,22 @@
         "risk": "very-low"
       }
     ],
+    "liveReservesConfig": {
+      "adapter": "m0",
+      "version": 1,
+      "semantics": "protocol-reserve",
+      "breakerScope": "m0",
+      "display": {
+        "url": "https://dashboard.m0.org/",
+        "label": "M0 Dashboard"
+      },
+      "inputs": {
+        "primary": {
+          "kind": "http-json",
+          "url": "https://protocol-api.m0.org/graphql"
+        }
+      }
+    },
     "yieldConfig": {
       "yieldSource": "Saturn staking (sUSDat → STRC + Treasuries)",
       "yieldType": "nav-appreciation"
