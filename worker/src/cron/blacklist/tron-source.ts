@@ -42,7 +42,7 @@ function runtimeBudgetReached(deadlineMs: number): boolean {
   return Date.now() >= deadlineMs;
 }
 
-function parseTronEvent(config: ContractEventConfig, evt: TronEventResult): BlacklistRow | null {
+export function parseTronEvent(config: ContractEventConfig, evt: TronEventResult): BlacklistRow | null {
   const eventDef = getBlacklistEventBySignature(config, evt.event_name);
   const eventType = TRON_EVENT_NAME_MAP[evt.event_name];
   if (!eventDef || !eventType) return null;
