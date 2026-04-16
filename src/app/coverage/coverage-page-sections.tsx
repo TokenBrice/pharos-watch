@@ -13,8 +13,8 @@ import { useIsMobile } from "@/hooks/use-is-mobile";
 import { COVERAGE_FEATURES } from "@/lib/coverage";
 import {
   AUTHORITATIVE_ACCENT,
-  FILTER_OPTIONS,
-  LEGEND_ITEMS,
+  getFilterGroups,
+  getLegendGroups,
   SORT_OPTIONS,
   type CoverageSortKey,
 } from "@/lib/coverage-page-config";
@@ -206,6 +206,7 @@ export function CoverageMatrixCard(
     | "hasActiveFilters"
     | "resetFilters"
     | "unavailableFeatures"
+    | "dataUpdatedAt"
   >,
 ) {
   const isMobileLayout = useIsMobile(768);
@@ -217,14 +218,22 @@ export function CoverageMatrixCard(
     <Card className="rounded-[1.45rem] border border-border/70 bg-card/80">
       <CardHeader className="space-y-4">
         <div className="space-y-2">
-          <p className="pharos-kicker">Coverage Matrix</p>
+          <div className="flex items-center justify-between">
+            <p className="pharos-kicker">Coverage Matrix</p>
+            {model.dataUpdatedAt ? (
+              <span className="text-xs text-muted-foreground">
+                Updated {new Date(model.dataUpdatedAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+              </span>
+            ) : null}
+          </div>
           <CardTitle as="h2" className="text-xl">
             Check a specific coin
           </CardTitle>
           <CardDescription className="max-w-3xl leading-relaxed">
             Search, filter, and inspect one asset at a time. The desktop table keeps the full comparison view; mobile
-            cards show the highest-signal states first. Available counts are broad; headline counts use stricter
-            thresholds for price depth, score-grade live reserves, and redemption routes.
+            cards show the highest-signal states first. Available counts all coins with any data for a feature. Headline
+            counts apply stricter thresholds — for example, pricing requires three or more independent sources, and
+            reserve coverage requires live composition feeds.
           </CardDescription>
         </div>
 
@@ -266,22 +275,26 @@ export function CoverageMatrixCard(
           </div>
 
           <div aria-label="Coverage filters" className="flex flex-wrap items-center gap-2">
-            {FILTER_OPTIONS.map((option) => (
-              <button
-                key={option.key}
-                type="button"
-                aria-pressed={model.filter === option.key}
-                aria-controls="coverage-results"
-                onClick={() => model.setFilter(option.key)}
-                className={cn(
-                  "pharos-focus-ring min-h-11 rounded-full border px-3 text-xs font-medium transition-colors sm:h-8 sm:min-h-0",
-                  model.filter === option.key
-                    ? "border-frost-blue/50 bg-frost-blue/12 text-foreground"
-                    : "border-border/60 bg-background/45 text-muted-foreground hover:text-foreground",
-                )}
-              >
-                {option.label}
-              </button>
+            {getFilterGroups().map((group, groupIndex) => (
+              <div key={groupIndex} className={cn("flex flex-wrap items-center gap-2", groupIndex < getFilterGroups().length - 1 && "border-r border-border/40 pr-2 mr-1")}>
+                {group.map((option) => (
+                  <button
+                    key={option.key}
+                    type="button"
+                    aria-pressed={model.filter === option.key}
+                    aria-controls="coverage-results"
+                    onClick={() => model.setFilter(option.key)}
+                    className={cn(
+                      "pharos-focus-ring min-h-11 rounded-full border px-3 text-xs font-medium transition-colors sm:h-8 sm:min-h-0",
+                      model.filter === option.key
+                        ? "border-frost-blue/50 bg-frost-blue/12 text-foreground"
+                        : "border-border/60 bg-background/45 text-muted-foreground hover:text-foreground",
+                    )}
+                  >
+                    {option.label}
+                  </button>
+                ))}
+              </div>
             ))}
           </div>
         </div>
@@ -326,14 +339,21 @@ export function CoverageMatrixCard(
               aria-hidden="true"
             />
           </summary>
-          <dl className="grid gap-3 border-t border-border/60 px-4 py-4 sm:grid-cols-2 lg:grid-cols-4">
-            {LEGEND_ITEMS.map((item) => (
-              <div key={item.term} className="rounded-xl border border-border/60 bg-background/45 px-3 py-3">
-                <dt className="text-sm font-semibold text-foreground">{item.term}</dt>
-                <dd className="mt-1 text-xs leading-relaxed text-muted-foreground">{item.description}</dd>
+          <div className="space-y-5 border-t border-border/60 px-4 py-4">
+            {getLegendGroups().map((group) => (
+              <div key={group.label}>
+                <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">{group.label}</p>
+                <dl className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+                  {group.items.map((item) => (
+                    <div key={item.term} className="rounded-xl border border-border/60 bg-background/45 px-3 py-3">
+                      <dt className="text-sm font-semibold text-foreground">{item.term}</dt>
+                      <dd className="mt-1 text-xs leading-relaxed text-muted-foreground">{item.description}</dd>
+                    </div>
+                  ))}
+                </dl>
               </div>
             ))}
-          </dl>
+          </div>
         </details>
       </CardHeader>
 

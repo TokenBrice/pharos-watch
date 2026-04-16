@@ -17,6 +17,7 @@ export function useCoveragePageModel() {
     isInitialDataLoading,
     isStablecoinDataUnavailable,
     unavailableFeatures,
+    dataUpdatedAt,
     staleQueries,
   } = useCoverageMatrixModel();
 
@@ -39,6 +40,7 @@ export function useCoveragePageModel() {
     isInitialDataLoading,
     isStablecoinDataUnavailable,
     unavailableFeatures,
+    dataUpdatedAt,
     staleQueries,
     ...filters,
     resetFilters,

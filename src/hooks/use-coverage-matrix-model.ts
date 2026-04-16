@@ -185,6 +185,16 @@ export function useCoverageMatrixModel() {
   ].some((query) => query.data === undefined && !query.error);
   const unavailableFeatures = FEATURE_QUERY_AVAILABLE_KEYS.filter((key) => !queryAvailability[key]);
 
+  const dataUpdatedAt = Math.max(
+    stablecoinsQuery.dataUpdatedAt ?? 0,
+    pegQuery.dataUpdatedAt ?? 0,
+    dexQuery.dataUpdatedAt ?? 0,
+    redemptionQuery.dataUpdatedAt ?? 0,
+    yieldQuery.dataUpdatedAt ?? 0,
+    flowQuery.dataUpdatedAt ?? 0,
+    reportCardsQuery.dataUpdatedAt ?? 0,
+  );
+
   return {
     rows,
     featureSummaries,
@@ -196,6 +206,7 @@ export function useCoverageMatrixModel() {
     isInitialDataLoading,
     isStablecoinDataUnavailable,
     unavailableFeatures,
+    dataUpdatedAt: dataUpdatedAt > 0 ? dataUpdatedAt : undefined,
     staleQueries: [
       {
         preset: "stablecoins" as const,

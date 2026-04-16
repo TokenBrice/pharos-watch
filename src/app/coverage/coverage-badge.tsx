@@ -1,4 +1,4 @@
-import { type CoverageStatus, COVERAGE_BADGE_TONE_CLASS } from "@/lib/coverage";
+import { type CoverageStatus, type CoverageTone, COVERAGE_BADGE_TONE_CLASS } from "@/lib/coverage";
 import { cn } from "@/lib/utils";
 import { getPricingSourceLabel } from "@shared/lib/pricing-sources";
 
@@ -12,6 +12,15 @@ function buildSourceTooltip(status: CoverageStatus): string {
 
   return confidenceLabel ? `${confidenceLabel} — ${sourceList}` : sourceList;
 }
+
+const TONE_INDICATOR: Record<CoverageTone, string> = {
+  emerald: "\u2713",
+  sky: "\u25CB",
+  amber: "\u25B3",
+  violet: "\u25C7",
+  rose: "\u2212",
+  slate: "\u2013",
+};
 
 export interface CoverageBadgeProps {
   status: CoverageStatus;
@@ -34,11 +43,14 @@ export function CoverageBadge({ status, compact = false }: CoverageBadgeProps) {
       aria-label={ariaLabel}
       className={cn(
         "inline-flex items-center justify-center rounded-full border px-2.5 py-1 text-[11px] font-medium tracking-[0.01em]",
-        compact ? "min-w-[4.25rem]" : "min-w-[4.75rem]",
+        compact ? "min-w-[4.25rem]" : "min-w-[5rem]",
         COVERAGE_BADGE_TONE_CLASS[status.tone],
       )}
     >
       <span aria-hidden="true">
+        <span className="text-[9px] mr-0.5 opacity-70" aria-hidden="true">
+          {TONE_INDICATOR[status.tone]}
+        </span>
         {status.label}
         {countSuffix}
       </span>

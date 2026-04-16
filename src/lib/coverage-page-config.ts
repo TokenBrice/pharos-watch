@@ -157,25 +157,34 @@ export const AUTHORITATIVE_ACCENT = {
   cardLabel: "text-violet-800 dark:text-violet-300",
 } as const;
 
+export type CoverageFilterGroup = "tier" | "feature" | "gap";
+
 export const FILTER_OPTIONS: ReadonlyArray<{
   key: CoverageFilterKey;
   label: string;
+  group: CoverageFilterGroup;
 }> = [
-  { key: "all", label: "All coins" },
-  { key: "redemption", label: "Redemption" },
-  { key: "live-reserves", label: "Score-grade reserves" },
-  { key: "yield", label: "Yield" },
-  { key: "flows", label: "Flows" },
-  { key: "blacklist", label: "Blacklist" },
-  { key: "weak-price", label: "Weak price" },
-  { key: "missing-safety", label: "No safety" },
-  { key: "missing-dex", label: "No DEX" },
-  { key: "missing-live-reserves", label: "No score-grade reserves" },
-  { key: "missing-flows", label: "No flows" },
-  { key: "missing-dependency", label: "No dependency" },
-  { key: "full-available", label: "Fully available" },
-  { key: "full-headline", label: "Fully headline" },
+  { key: "all", group: "tier", label: "All coins" },
+  { key: "full-available", group: "tier", label: "Fully available" },
+  { key: "full-headline", group: "tier", label: "Fully headline" },
+  { key: "redemption", group: "feature", label: "Redemption" },
+  { key: "yield", group: "feature", label: "Yield" },
+  { key: "live-reserves", group: "feature", label: "Reserves" },
+  { key: "flows", group: "feature", label: "Flows" },
+  { key: "blacklist", group: "feature", label: "Blacklist" },
+  { key: "missing-safety", group: "gap", label: "No Safety" },
+  { key: "missing-dex", group: "gap", label: "No DEX" },
+  { key: "missing-live-reserves", group: "gap", label: "No Reserves" },
+  { key: "weak-price", group: "gap", label: "Weak price" },
+  { key: "missing-flows", group: "gap", label: "No Flows" },
+  { key: "missing-dependency", group: "gap", label: "No Dependency" },
 ] as const;
+
+const FILTER_GROUPS: readonly CoverageFilterGroup[] = ["tier", "feature", "gap"] as const;
+
+export function getFilterGroups(): ReadonlyArray<ReadonlyArray<(typeof FILTER_OPTIONS)[number]>> {
+  return FILTER_GROUPS.map((group) => FILTER_OPTIONS.filter((option) => option.group === group));
+}
 
 export const SORT_OPTIONS: ReadonlyArray<{
   group: string;
@@ -219,81 +228,133 @@ export const MOBILE_PREVIEW_FEATURES: readonly CoverageFeatureKey[] = [
   "flows",
 ] as const;
 
+export type LegendCategory = "general" | "price" | "dex" | "reserves" | "redemption" | "flows" | "dependency";
+
 export const LEGEND_ITEMS = [
   {
     term: "NR",
+    category: "general",
     description: "No current rating or observed row is available for that surface.",
   },
   {
     term: "Data n/a",
+    category: "general",
     description:
       "The backing feed failed or has not returned usable data, so the state is not counted as a coverage gap.",
   },
   {
+    term: "—",
+    category: "general",
+    description: "Pharos does not currently expose that feature for the asset.",
+  },
+  {
     term: "Tracked",
+    category: "price",
     description: "Price and depeg monitoring are available. Source count appears when the price pipeline reports it.",
   },
   {
+    term: "Price only",
+    category: "price",
+    description: "NAV-priced asset with price coverage, but no peg or depeg tracking.",
+  },
+  {
     term: "Primary / Mixed / Fallback",
+    category: "dex",
     description:
       "DEX coverage quality: primary sources, blended primary plus fallback sources, or fallback-only discovery.",
   },
   {
     term: "Score-grade",
+    category: "reserves",
     description: "Fresh independent live reserve data was used by the current report-card snapshot for collateral scoring.",
   },
   {
     term: "Configured",
+    category: "reserves",
     description: "A reserve view or live reserve adapter exists, but the current report-card snapshot did not use it for collateral scoring.",
   },
   {
     term: "Checking",
+    category: "reserves",
     description:
       "Reserve coverage is configured, but report-card freshness data is still loading or unavailable.",
   },
   {
     term: "Curated-Validated",
+    category: "reserves",
     description: "A reviewed reserve baseline is kept current through live validation.",
   },
   {
     term: "Proof",
+    category: "reserves",
     description: "Reserve view is backed by proof, attestation, or liveness evidence rather than a full live mix.",
   },
   {
     term: "Curated / Estimated",
+    category: "reserves",
     description: "Reserve composition is manually curated or falls back to classification-based estimates.",
   },
   {
-    term: "—",
-    description: "Pharos does not currently expose that feature for the asset.",
+    term: "Issuer / PSM / Queue / Collat. / Stable / Basket",
+    category: "redemption",
+    description: "The modeled redemption-backstop route family counted as strong redemption coverage.",
   },
   {
     term: "Heur.",
+    category: "redemption",
     description:
       "A redemption route is modeled, but the current capacity evidence is still heuristic / low-confidence and does not count as strong coverage.",
   },
   {
     term: "Config.",
+    category: "redemption",
     description: "A redemption route is configured, but the current snapshot could not resolve a usable score.",
   },
   {
-    term: "Bootstr.",
-    description: "Tracking is configured, but the history window is still building.",
-  },
-  {
-    term: "Price only",
-    description: "NAV-priced asset with price coverage, but no peg or depeg tracking.",
-  },
-  {
-    term: "Issuer / PSM / Queue / Collat. / Stable / Basket",
-    description: "The modeled redemption-backstop route family counted as strong redemption coverage.",
-  },
-  {
     term: "Full / Partial / Lagging / Bootstr.",
+    category: "flows",
     description: "Mint/burn flow coverage maturity and sync state for configured assets.",
   },
   {
+    term: "Bootstr.",
+    category: "flows",
+    description: "Tracking is configured, but the history window is still building.",
+  },
+  {
     term: "Node",
+    category: "dependency",
     description: "The asset participates in the report-card dependency graph.",
   },
 ] as const;
+
+const LEGEND_CATEGORY_LABELS: Record<LegendCategory, string> = {
+  general: "General",
+  price: "Price & Depeg",
+  dex: "DEX Liquidity",
+  reserves: "Reserves",
+  redemption: "Redemption",
+  flows: "Flows",
+  dependency: "Dependency",
+};
+
+const LEGEND_CATEGORY_ORDER: readonly LegendCategory[] = [
+  "general",
+  "price",
+  "dex",
+  "reserves",
+  "redemption",
+  "flows",
+  "dependency",
+] as const;
+
+export function getLegendGroups(): ReadonlyArray<{
+  label: string;
+  items: ReadonlyArray<(typeof LEGEND_ITEMS)[number]>;
+}> {
+  return LEGEND_CATEGORY_ORDER
+    .map((category) => ({
+      label: LEGEND_CATEGORY_LABELS[category],
+      items: LEGEND_ITEMS.filter((item) => item.category === category),
+    }))
+    .filter((group) => group.items.length > 0);
+}
