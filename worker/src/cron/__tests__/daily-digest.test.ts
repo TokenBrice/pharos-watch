@@ -423,6 +423,15 @@ describe("generateDailyDigest", () => {
     expect(anthropicBody.max_tokens).toBe(16000);
     expect(anthropicBody.messages[0].content).toContain("Data quality notes:");
     expect(anthropicBody.messages[0].content).toContain("Editorial Candidates");
+
+    const systemPrompt = anthropicBody.system;
+    expect(systemPrompt).toContain("Do NOT reuse any of the following house-style tics");
+    expect(systemPrompt).toContain("plumbing");
+    expect(systemPrompt).toContain("forward-look");
+    expect(systemPrompt).toContain("Earn one sharp sentence");
+    expect(systemPrompt).toContain("EXEMPLAR");
+    expect(systemPrompt).toContain("Momentum Candidate");
+    expect(systemPrompt).toContain("total-mcap ATH");
   });
 
   it("repairs malformed code-block JSON with one corrective retry", async () => {
