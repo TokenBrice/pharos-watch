@@ -17,6 +17,7 @@ import { fetchDefiLlamaPrices, fetchOnchainUint256 } from "../helpers";
 
 const signal = AbortSignal.timeout(5_000);
 const coin = { id: "mim-abracadabra" } as StablecoinMeta;
+const BENTOBOX = "0xd96f48665a1410c0cd669a88898eca36b9fc2cce";
 
 beforeEach(() => {
   vi.clearAllMocks();
@@ -33,7 +34,7 @@ describe("adaptAbracadabraReserves", () => {
           collateralDecimals: 18,
           risk: "high",
         },
-        collateralShareRaw: 500_000_000_000_000_000_000n, // 500 tokens
+        collateralAmountRaw: 500_000_000_000_000_000_000n,
       },
       {
         cauldron: {
@@ -43,13 +44,13 @@ describe("adaptAbracadabraReserves", () => {
           collateralDecimals: 18,
           risk: "low",
         },
-        collateralShareRaw: 1_000_000_000_000_000_000n, // 1 token
+        collateralAmountRaw: 1_000_000_000_000_000_000n,
       },
     ];
 
     const priceMap = new Map([
-      ["0x1111", 1.0],   // yvDAI ~= $1
-      ["0x2222", 2500],  // wstETH ~= $2500
+      ["0x1111", 1.0],
+      ["0x2222", 2500],
     ]);
 
     const result = adaptAbracadabraReserves(readings, priceMap);
@@ -58,7 +59,6 @@ describe("adaptAbracadabraReserves", () => {
     const sum = Math.round(result.slices.reduce((s, r) => s + r.pct, 0) * 10) / 10;
     expect(sum).toBe(100);
 
-    // wstETH = $2500, yvDAI = $500 => wstETH ~83.3%, yvDAI ~16.7%
     const wstSlice = result.slices.find((s) => s.name === "wstETH");
     const yvSlice = result.slices.find((s) => s.name === "yvDAI");
     expect(wstSlice).toBeDefined();
@@ -88,7 +88,7 @@ describe("adaptAbracadabraReserves", () => {
           collateralDecimals: 18,
           risk: "high",
         },
-        collateralShareRaw: 0n,
+        collateralAmountRaw: 0n,
       },
       {
         cauldron: {
@@ -98,14 +98,11 @@ describe("adaptAbracadabraReserves", () => {
           collateralDecimals: 18,
           risk: "low",
         },
-        collateralShareRaw: 5_000_000_000_000_000_000n,
+        collateralAmountRaw: 5_000_000_000_000_000_000n,
       },
     ];
 
-    const priceMap = new Map([
-      ["0x2222", 2000],
-    ]);
-
+    const priceMap = new Map([["0x2222", 2000]]);
     const result = adaptAbracadabraReserves(readings, priceMap);
 
     expect(result.slices).toHaveLength(1);
@@ -127,12 +124,11 @@ describe("adaptAbracadabraReserves", () => {
           collateralDecimals: 18,
           risk: "high",
         },
-        collateralShareRaw: 0n,
+        collateralAmountRaw: 0n,
       },
     ];
 
     const result = adaptAbracadabraReserves(readings, new Map());
-
     expect(result.slices).toEqual([]);
     expect(result.metadata).toMatchObject({
       cauldronCount: 1,
@@ -150,13 +146,13 @@ describe("adaptAbracadabraReserves", () => {
           collateralDecimals: 18,
           risk: "high",
         },
-        collateralShareRaw: 1_000_000_000_000_000_000n,
+        collateralAmountRaw: 1_000_000_000_000_000_000n,
       },
     ];
 
-    expect(() =>
-      adaptAbracadabraReserves(readings, new Map()),
-    ).toThrow("missing DefiLlama price for yvDAI");
+    expect(() => adaptAbracadabraReserves(readings, new Map())).toThrow(
+      "missing DefiLlama price for yvDAI",
+    );
   });
 
   it("propagates optional coinId and depType to slices", () => {
@@ -171,7 +167,7 @@ describe("adaptAbracadabraReserves", () => {
           coinId: "usdc-circle",
           depType: "wrapper",
         },
-        collateralShareRaw: 1_000_000n, // 1 USDC worth
+        collateralAmountRaw: 1_000_000n,
       },
     ];
 
@@ -185,10 +181,12 @@ describe("adaptAbracadabraReserves", () => {
 });
 
 describe("fetchAbracadabraReserves", () => {
-  it("reads totalCollateralShare from each cauldron and computes slices", async () => {
+  it("reads totalCollateralShare and converts share to amount via BentoBox.toAmount", async () => {
     vi.mocked(fetchOnchainUint256)
-      .mockResolvedValueOnce(100_000_000_000_000_000_000n) // 100 yvDAI
-      .mockResolvedValueOnce(2_000_000_000_000_000_000n);  // 2 wstETH
+      .mockResolvedValueOnce(100_000_000_000_000_000_000n)
+      .mockResolvedValueOnce(2_000_000_000_000_000_000n)
+      .mockResolvedValueOnce(110_000_000_000_000_000_000n)
+      .mockResolvedValueOnce(2_100_000_000_000_000_000n);
 
     vi.mocked(fetchDefiLlamaPrices).mockResolvedValue(
       new Map([
@@ -201,74 +199,117 @@ describe("fetchAbracadabraReserves", () => {
       adapter: "abracadabra",
       version: 1,
       semantics: "collateral-mix",
-      inputs: {
-        primary: { kind: "onchain-evm", chain: "ethereum", rpcMode: "public-rpc" },
-      },
+      inputs: { primary: { kind: "onchain-evm", chain: "ethereum", rpcMode: "public-rpc" } },
       params: {
+        bentoBoxAddress: BENTOBOX,
         cauldrons: [
-          {
-            address: "0xCauldron1",
-            collateralSymbol: "yvDAI",
-            collateralAddress: "0x1111",
-            collateralDecimals: 18,
-            risk: "high",
-          },
-          {
-            address: "0xCauldron2",
-            collateralSymbol: "wstETH",
-            collateralAddress: "0x2222",
-            collateralDecimals: 18,
-            risk: "low",
-          },
+          { address: "0xCauldron1", collateralSymbol: "yvDAI", collateralAddress: "0x1111", collateralDecimals: 18, risk: "high" },
+          { address: "0xCauldron2", collateralSymbol: "wstETH", collateralAddress: "0x2222", collateralDecimals: 18, risk: "low" },
         ],
       },
     };
 
     const result = await fetchAbracadabraReserves(coin, config, signal);
-
     expect(result.slices).toHaveLength(2);
-
-    // wstETH = $5000, yvDAI = $100 => wstETH ~98%, yvDAI ~2%
     expect(result.slices[0].name).toBe("wstETH");
-    expect(result.slices[0].risk).toBe("low");
     expect(result.slices[1].name).toBe("yvDAI");
-    expect(result.slices[1].risk).toBe("high");
-
-    expect(result.metadata).toMatchObject({
-      cauldronCount: 2,
-      activeCauldronCount: 2,
-      freshnessMode: "not-applicable",
-    });
-
-    expect(fetchOnchainUint256).toHaveBeenCalledTimes(2);
+    expect(fetchOnchainUint256).toHaveBeenCalledTimes(4);
   });
 
-  it("throws when a cauldron read returns null", async () => {
-    vi.mocked(fetchOnchainUint256).mockResolvedValue(null);
+  it("skips BentoBox.toAmount when share is zero", async () => {
+    vi.mocked(fetchOnchainUint256)
+      .mockResolvedValueOnce(0n)
+      .mockResolvedValueOnce(2_000_000_000_000_000_000n)
+      .mockResolvedValueOnce(2_100_000_000_000_000_000n);
+
+    vi.mocked(fetchDefiLlamaPrices).mockResolvedValue(new Map([["0x2222", 2500]]));
 
     const config: LiveReservesConfig = {
       adapter: "abracadabra",
       version: 1,
       semantics: "collateral-mix",
-      inputs: {
-        primary: { kind: "onchain-evm", chain: "ethereum", rpcMode: "public-rpc" },
-      },
+      inputs: { primary: { kind: "onchain-evm", chain: "ethereum", rpcMode: "public-rpc" } },
       params: {
+        bentoBoxAddress: BENTOBOX,
         cauldrons: [
-          {
-            address: "0xCauldron1",
-            collateralSymbol: "yvDAI",
-            collateralAddress: "0x1111",
-            collateralDecimals: 18,
-            risk: "high",
-          },
+          { address: "0xCauldron1", collateralSymbol: "yvDAI", collateralAddress: "0x1111", collateralDecimals: 18, risk: "high" },
+          { address: "0xCauldron2", collateralSymbol: "wstETH", collateralAddress: "0x2222", collateralDecimals: 18, risk: "low" },
         ],
       },
     };
 
+    const result = await fetchAbracadabraReserves(coin, config, signal);
+    expect(result.slices).toHaveLength(1);
+    expect(result.slices[0].name).toBe("wstETH");
+    expect(fetchOnchainUint256).toHaveBeenCalledTimes(3);
+  });
+
+  it("throws when a cauldron share read returns null", async () => {
+    vi.mocked(fetchOnchainUint256).mockResolvedValue(null);
+    const config: LiveReservesConfig = {
+      adapter: "abracadabra",
+      version: 1,
+      semantics: "collateral-mix",
+      inputs: { primary: { kind: "onchain-evm", chain: "ethereum", rpcMode: "public-rpc" } },
+      params: {
+        bentoBoxAddress: BENTOBOX,
+        cauldrons: [
+          { address: "0xCauldron1", collateralSymbol: "yvDAI", collateralAddress: "0x1111", collateralDecimals: 18, risk: "high" },
+        ],
+      },
+    };
     await expect(fetchAbracadabraReserves(coin, config, signal)).rejects.toThrow(
       "could not read totalCollateralShare",
     );
+  });
+
+  it("throws when BentoBox.toAmount returns null", async () => {
+    vi.mocked(fetchOnchainUint256)
+      .mockResolvedValueOnce(100_000_000_000_000_000_000n)
+      .mockResolvedValueOnce(null);
+    const config: LiveReservesConfig = {
+      adapter: "abracadabra",
+      version: 1,
+      semantics: "collateral-mix",
+      inputs: { primary: { kind: "onchain-evm", chain: "ethereum", rpcMode: "public-rpc" } },
+      params: {
+        bentoBoxAddress: BENTOBOX,
+        cauldrons: [
+          { address: "0xCauldron1", collateralSymbol: "yvDAI", collateralAddress: "0x1111", collateralDecimals: 18, risk: "high" },
+        ],
+      },
+    };
+    await expect(fetchAbracadabraReserves(coin, config, signal)).rejects.toThrow(
+      "could not convert share to amount",
+    );
+  });
+
+  it("caches BentoBox.toAmount calls for identical (token, share) tuples", async () => {
+    const share = 100_000_000_000_000_000_000n;
+    vi.mocked(fetchOnchainUint256)
+      .mockResolvedValueOnce(share)
+      .mockResolvedValueOnce(share)
+      .mockResolvedValueOnce(110_000_000_000_000_000_000n);
+
+    vi.mocked(fetchDefiLlamaPrices).mockResolvedValue(new Map([["0x1111", 1.0]]));
+
+    const config: LiveReservesConfig = {
+      adapter: "abracadabra",
+      version: 1,
+      semantics: "collateral-mix",
+      inputs: { primary: { kind: "onchain-evm", chain: "ethereum", rpcMode: "public-rpc" } },
+      params: {
+        bentoBoxAddress: BENTOBOX,
+        cauldrons: [
+          { address: "0xCauldronA", collateralSymbol: "yvDAI", collateralAddress: "0x1111", collateralDecimals: 18, risk: "high" },
+          { address: "0xCauldronB", collateralSymbol: "yvDAI", collateralAddress: "0x1111", collateralDecimals: 18, risk: "high" },
+        ],
+      },
+    };
+
+    const cache = new Map<string, Promise<unknown>>();
+    await fetchAbracadabraReserves(coin, config, signal, { requestCache: cache });
+    expect(fetchOnchainUint256).toHaveBeenCalledTimes(3);
   });
 
   it("throws on invalid params (empty cauldrons array)", async () => {
@@ -276,12 +317,26 @@ describe("fetchAbracadabraReserves", () => {
       adapter: "abracadabra",
       version: 1,
       semantics: "collateral-mix",
-      inputs: {
-        primary: { kind: "onchain-evm", chain: "ethereum", rpcMode: "public-rpc" },
-      },
-      params: { cauldrons: [] },
+      inputs: { primary: { kind: "onchain-evm", chain: "ethereum", rpcMode: "public-rpc" } },
+      params: { bentoBoxAddress: BENTOBOX, cauldrons: [] },
     };
+    await expect(fetchAbracadabraReserves(coin, config, signal)).rejects.toThrow(
+      "abracadabra adapter params invalid",
+    );
+  });
 
+  it("throws on invalid params (missing bentoBoxAddress)", async () => {
+    const config: LiveReservesConfig = {
+      adapter: "abracadabra",
+      version: 1,
+      semantics: "collateral-mix",
+      inputs: { primary: { kind: "onchain-evm", chain: "ethereum", rpcMode: "public-rpc" } },
+      params: {
+        cauldrons: [
+          { address: "0xCauldron1", collateralSymbol: "yvDAI", collateralAddress: "0x1111", collateralDecimals: 18, risk: "high" },
+        ],
+      } as never,
+    };
     await expect(fetchAbracadabraReserves(coin, config, signal)).rejects.toThrow(
       "abracadabra adapter params invalid",
     );

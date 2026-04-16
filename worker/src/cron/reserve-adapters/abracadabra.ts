@@ -23,21 +23,32 @@ interface CauldronConfig {
   risk: ReserveSlice["risk"];
   coinId?: string;
   depType?: ReserveSlice["depType"];
+  version?: 2 | 3 | 4;
 }
 
 interface AbracadabraParams {
   rpcUrl?: string;
   fallbackRpcUrl?: string;
+  bentoBoxAddress: string;
   cauldrons: CauldronConfig[];
 }
 
 /** Selector for `totalCollateralShare() returns (uint256)` */
-const TOTAL_COLLATERAL_SHARE_SELECTOR = "0x966f3e46";
+const TOTAL_COLLATERAL_SHARE_SELECTOR = "0x473e3ce7";
+/** Selector for `toAmount(address token, uint256 share, bool roundUp) returns (uint256)` */
+const TO_AMOUNT_SELECTOR = "0x56623118";
+
+function encodeToAmountCall(token: string, share: bigint): string {
+  const tokenClean = token.toLowerCase().replace(/^0x/, "").padStart(64, "0");
+  const shareHex = share.toString(16).padStart(64, "0");
+  const roundUpWord = "0".repeat(64);
+  return `${TO_AMOUNT_SELECTOR}${tokenClean}${shareHex}${roundUpWord}`;
+}
 
 /** Parsed result from reading a single cauldron on-chain. */
 export interface CauldronCollateralReading {
   cauldron: CauldronConfig;
-  collateralShareRaw: bigint;
+  collateralAmountRaw: bigint;
 }
 
 function readParams(config: LiveReservesConfig): AbracadabraParams {
@@ -45,7 +56,8 @@ function readParams(config: LiveReservesConfig): AbracadabraParams {
 }
 
 /**
- * Pure transform: given per-cauldron collateral readings and their USD prices,
+ * Pure transform: given per-cauldron collateral readings (already converted
+ * from BentoBox shares to underlying token amounts) and their USD prices,
  * produce normalized reserve slices.
  */
 export function adaptAbracadabraReserves(
@@ -60,8 +72,8 @@ export function adaptAbracadabraReserves(
     depType?: ReserveSlice["depType"];
   }> = [];
 
-  for (const { cauldron, collateralShareRaw } of readings) {
-    if (collateralShareRaw <= 0n) continue;
+  for (const { cauldron, collateralAmountRaw } of readings) {
+    if (collateralAmountRaw <= 0n) continue;
 
     const price = priceMap.get(cauldron.collateralAddress.toLowerCase());
     if (price == null) {
@@ -70,7 +82,7 @@ export function adaptAbracadabraReserves(
       );
     }
 
-    const usd = valueUsdFromBigIntPrice(collateralShareRaw, cauldron.collateralDecimals, price);
+    const usd = valueUsdFromBigIntPrice(collateralAmountRaw, cauldron.collateralDecimals, price);
     if (!Number.isFinite(usd) || usd <= 0) continue;
 
     values.push({
@@ -99,9 +111,10 @@ export function adaptAbracadabraReserves(
 }
 
 /**
- * I/O entrypoint: reads totalCollateralShare from each configured cauldron
- * on Ethereum, fetches collateral prices from DefiLlama, and returns the
- * normalized reserve breakdown.
+ * I/O entrypoint: reads totalCollateralShare from each configured cauldron,
+ * converts the share to the underlying token amount via BentoBox.toAmount,
+ * fetches collateral prices from DefiLlama, and returns the normalized
+ * reserve breakdown.
  */
 export async function fetchAbracadabraReserves(
   _coin: StablecoinMeta,
@@ -112,9 +125,8 @@ export async function fetchAbracadabraReserves(
   const input = requireOnchainInput(config.inputs.primary, "abracadabra");
   const params = readParams(config);
 
-  // Read totalCollateralShare from each cauldron in parallel
-  const readings = await Promise.all(
-    params.cauldrons.map(async (cauldron): Promise<CauldronCollateralReading> => {
+  const shareReadings = await Promise.all(
+    params.cauldrons.map(async (cauldron) => {
       const raw = await fetchOnchainUint256({
         contract: cauldron.address,
         data: TOTAL_COLLATERAL_SHARE_SELECTOR,
@@ -132,11 +144,45 @@ export async function fetchAbracadabraReserves(
         );
       }
 
-      return { cauldron, collateralShareRaw: raw };
+      return { cauldron, share: raw };
     }),
   );
 
-  // Collect unique collateral addresses for price lookup
+  const cache = ctx?.requestCache;
+  const readings: CauldronCollateralReading[] = await Promise.all(
+    shareReadings.map(async ({ cauldron, share }): Promise<CauldronCollateralReading> => {
+      if (share === 0n) {
+        return { cauldron, collateralAmountRaw: 0n };
+      }
+
+      const collateralKey = cauldron.collateralAddress.toLowerCase();
+      const cacheKey = `abracadabra:toAmount:${input.chain}:${params.bentoBoxAddress.toLowerCase()}:${collateralKey}:${share.toString()}`;
+      const cached = cache?.get(cacheKey) as Promise<bigint | null> | undefined;
+      const promise: Promise<bigint | null> =
+        cached
+        ?? fetchOnchainUint256({
+          contract: params.bentoBoxAddress,
+          data: encodeToAmountCall(cauldron.collateralAddress, share),
+          signal,
+          ctx,
+          rpcUrl: params.rpcUrl,
+          fallbackRpcUrl: params.fallbackRpcUrl,
+          rpcMode: input.rpcMode,
+          chain: input.chain,
+        });
+      if (!cached && cache) cache.set(cacheKey, promise);
+      const amount = await promise;
+
+      if (amount == null) {
+        throw new Error(
+          `abracadabra adapter could not convert share to amount for cauldron ${cauldron.address} (${cauldron.collateralSymbol})`,
+        );
+      }
+
+      return { cauldron, collateralAmountRaw: amount };
+    }),
+  );
+
   const uniqueAssets = new Map(
     params.cauldrons.map((c) => [
       c.collateralAddress.toLowerCase(),

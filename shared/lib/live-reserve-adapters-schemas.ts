@@ -80,6 +80,7 @@ export const LIVE_RESERVE_ADAPTER_PRIMARY_INPUT_KINDS = {
   tether: ["http-json"],
   "river-protocol-info": ["http-json"],
   "usdgo-transparency": ["http-json"],
+  "usdh-native-markets": ["http-html"],
   "usdai-proof-of-reserves": ["http-json"],
   "usd1-bundle-oracle": ["onchain-evm"],
   "usdd-data-platform": ["http-json"],
@@ -323,11 +324,17 @@ const abracadabraCauldronSchema = z.object({
   risk: LiveReserveRiskSchema,
   coinId: z.string().optional(),
   depType: LiveReserveDependencyTypeSchema.optional(),
+  // Reserved for future V2/V3/V4 selector nuance; currently unused by the adapter.
+  version: z.union([z.literal(2), z.literal(3), z.literal(4)]).optional(),
 }).strict();
 
 const abracadabraParamsSchema = z.object({
   rpcUrl: z.string().optional(),
   fallbackRpcUrl: z.string().optional(),
+  // BentoBox / DegenBox contract that backs the configured cauldrons. Used to
+  // convert per-cauldron `totalCollateralShare` into underlying token amounts
+  // via `toAmount(token, share, false)`.
+  bentoBoxAddress: z.string(),
   cauldrons: z.array(abracadabraCauldronSchema).min(1),
 }).strict();
 
@@ -372,6 +379,7 @@ export const adapterParamsSchemas = {
   tether: noParamsSchema,
   "river-protocol-info": noParamsSchema,
   "usdgo-transparency": noParamsSchema,
+  "usdh-native-markets": noParamsSchema,
   "usdai-proof-of-reserves": noParamsSchema,
   "usd1-bundle-oracle": usd1BundleOracleParamsSchema,
   "usdd-data-platform": noParamsSchema,
