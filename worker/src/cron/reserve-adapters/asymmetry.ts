@@ -59,6 +59,18 @@ export function adaptAsymmetry(payload: AsymmetryPayload): AdapterResult {
   const supply = Number(payload.usdaf?.total_bold_supply ?? "0");
   if (total <= 0) return { slices: [] };
 
+  // Clamp redemption capacity to the lesser of declared supply and measured
+  // collateral; surface under-collateralization explicitly.
+  const supplyValid = Number.isFinite(supply) && supply > 0;
+  const capacityUsd = supplyValid ? Math.min(supply, total) : 0;
+  const capacityRatioOfSupply = supplyValid ? capacityUsd / supply : undefined;
+  if (supplyValid && supply > total) {
+    warnings.push(reserveDegradedWarning(
+      "under-collateralization",
+      `Asymmetry branch collateral (${total.toFixed(0)}) covers only ${((total / supply) * 100).toFixed(2)}% of BOLD supply`,
+    ));
+  }
+
   return {
     slices: normalizeSlices(
       entries.map((entry) => {
@@ -82,13 +94,15 @@ export function adaptAsymmetry(payload: AsymmetryPayload): AdapterResult {
     metadata: {
       branchCount: Object.keys(branches).length,
       activeBranchCount: entries.length,
-      unknownBranchCount: warnings.length,
+      unknownBranchCount: warnings.filter((w) => w.code === "unknown-branch").length,
       unknownExposurePct: total > 0 ? (unknownExposureUsd / total) * 100 : 0,
-      ...(Number.isFinite(supply) && supply > 0
+      ...(supplyValid
         ? {
-            immediateRedeemableUsd: supply,
+            immediateRedeemableUsd: capacityUsd,
+            ...(capacityRatioOfSupply != null ? { capacityRatioOfSupply } : {}),
             redemption: {
-              capacityUsd: supply,
+              capacityUsd,
+              ...(capacityRatioOfSupply != null ? { capacityRatioOfSupply } : {}),
               capacityKind: "live-direct-bounded" as const,
               freshnessKind: sourceTimestamp != null ? "verified-source-timestamp" as const : "same-run-api" as const,
               routeStatus: "open" as const,

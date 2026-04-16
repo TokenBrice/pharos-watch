@@ -33,13 +33,41 @@ describe("adaptAsymmetry", () => {
       freshnessMode: "verified",
       sourceTimestamp: 1776239429,
       immediateRedeemableUsd: 996,
+      capacityRatioOfSupply: 1,
       redemption: {
         capacityUsd: 996,
+        capacityRatioOfSupply: 1,
         capacityKind: "live-direct-bounded",
         freshnessKind: "verified-source-timestamp",
         routeStatus: "open",
       },
     });
     expect(slices.warnings).toBeUndefined();
+  });
+
+  it("clamps capacity and emits under-collateralization warning when supply > reserveTotal", () => {
+    const result = adaptAsymmetry({
+      timestamp: 1776239429,
+      usdaf: {
+        total_bold_supply: "1000",
+        branch: {
+          ysyBOLD: { coll_value: "400" },
+          scrvUSD: { coll_value: "400" },
+        },
+      },
+    });
+    expect(result.warnings).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ code: "under-collateralization", severity: "warning" }),
+      ]),
+    );
+    expect(result.metadata).toMatchObject({
+      immediateRedeemableUsd: 800,
+      capacityRatioOfSupply: 0.8,
+      redemption: {
+        capacityUsd: 800,
+        capacityRatioOfSupply: 0.8,
+      },
+    });
   });
 });
