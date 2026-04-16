@@ -180,9 +180,10 @@ export async function fetchFluidPools(
           ],
           price: Number.isFinite(price) && price > 0 ? price : null,
           tvlUsd,
-          volume24hUsd:
-            (Number.isFinite(baseVol) ? baseVol : 0) +
-            (Number.isFinite(targetVol) ? targetVol : 0),
+          // base_volume/target_volume are raw token-unit amounts; the downstream
+          // derivePoolVolume24hUsd path computes USD volume from tokenVolumes24h. Do not
+          // misinterpret them here as USD or double-count the two sides.
+          volume24hUsd: 0,
           feeRate: null,
           balances: null,
           tokenVolumes24h: [Number.isFinite(baseVol) ? baseVol : 0, Number.isFinite(targetVol) ? targetVol : 0],

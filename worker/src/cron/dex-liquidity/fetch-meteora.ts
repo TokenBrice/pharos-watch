@@ -117,9 +117,12 @@ export async function fetchMeteoraPools(signal?: AbortSignal): Promise<DexApiFet
 
       const reserve0 = row.token_x_amount;
       const reserve1 = row.token_y_amount;
-      const derivedPrice = Number.isFinite(reserve0) && reserve0 > 0 && Number.isFinite(reserve1) && reserve1 > 0
-        ? reserve1 / reserve0
-        : null;
+      // Meteora DLMM is concentrated liquidity — the bin reserve ratio is NOT the spot price.
+      // Use current_price exclusively; leave balances[] for downstream balance-ratio consumers.
+      const spotPrice =
+        row.current_price != null && Number.isFinite(row.current_price) && row.current_price > 0
+          ? row.current_price
+          : null;
 
       pools.push({
         source: "meteora",
@@ -140,9 +143,7 @@ export async function fetchMeteoraPools(signal?: AbortSignal): Promise<DexApiFet
             priceUsd: row.token_y.price ?? null,
           },
         ],
-        price: Number.isFinite(derivedPrice) && derivedPrice != null && derivedPrice > 0
-          ? derivedPrice
-          : (row.current_price != null && Number.isFinite(row.current_price) && row.current_price > 0 ? row.current_price : null),
+        price: spotPrice,
         tvlUsd,
         volume24hUsd: volume24hUsd != null && Number.isFinite(volume24hUsd) ? volume24hUsd : 0,
         feeRate: feePct > 0 ? feePct / 100 : null,

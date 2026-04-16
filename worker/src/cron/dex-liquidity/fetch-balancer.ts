@@ -29,6 +29,11 @@ const STABLE_POOL_TYPES = new Set([
 ]);
 const SUPPORTED_POOL_TYPES = new Set([...STABLE_POOL_TYPES, "WEIGHTED"]);
 
+// Direct Balancer fetcher sanity cap — protects against upstream-corrupt totalLiquidity
+// values (e.g. legacy Fantom multiUSDC/DEI pool reports $337B). Set conservatively below
+// the global DIRECT_API_MAX_POOL_TVL_USD ($10B) so obvious garbage is rejected at source.
+const BALANCER_MAX_POOL_TVL_USD = 2_000_000_000;
+
 const QUERY = `query($first: Int!, $skip: Int!) {
   poolGetPools(
     first: $first,
@@ -182,22 +187,19 @@ export async function fetchBalancerPools(signal?: AbortSignal): Promise<DexApiFe
       const volume24h = parseFloat(pool.dynamicData.volume24h);
       const swapFee = parseFloat(pool.dynamicData.swapFee);
       if (!Number.isFinite(tvlUsd) || tvlUsd <= 0) continue;
+      if (tvlUsd > BALANCER_MAX_POOL_TVL_USD) {
+        malformedRows++;
+        continue;
+      }
 
       const isStable = STABLE_POOL_TYPES.has(pool.type);
       const poolType = isStable ? "balancer-stable" : "balancer-weighted";
 
       const balances = pool.poolTokens.map((t) => parseFloat(t.balance)).filter(Number.isFinite);
 
-      // Derive price from balanceUSD / balance for each token
-      let price: number | null = null;
-      for (const t of pool.poolTokens) {
-        const bal = parseFloat(t.balance);
-        const balUsd = parseFloat(t.balanceUSD);
-        if (Number.isFinite(bal) && bal > 0 && Number.isFinite(balUsd) && balUsd > 0) {
-          price = balUsd / bal;
-          break; // use first token with valid data
-        }
-      }
+      // Per-token priceUsd is the authoritative price for Balancer rows. The scalar
+      // pool.price field is meaningless at pool granularity — drop it to remove a footgun.
+      const price: number | null = null;
 
       results.push({
         source: "balancer",

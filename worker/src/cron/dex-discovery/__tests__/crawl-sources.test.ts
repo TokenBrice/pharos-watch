@@ -155,7 +155,7 @@ describe("crawlCoin DexScreener hardening", () => {
       qualityMultiplier: QUALITY_MULTIPLIERS["uniswap-v3-1bp"],
       poolType: "cg-cl-1bp",
       feeTier: 1,
-      balanceRatio: expect.closeTo(0.9997000599880024, 8),
+      balanceRatio: null,
       baseToken: "0xabc",
       quoteToken: "0xquote",
       quoteSymbol: null,

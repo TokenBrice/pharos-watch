@@ -14,6 +14,13 @@ export function classifyClPoolType(
   const prefix = protocol === "pancakeswap" ? "pancakeswap-v3" : protocol;
   if (normalizedFeeBps <= 1) return `${prefix}-1bp`;
   if (normalizedFeeBps <= 5) return `${prefix}-5bp`;
+  // PancakeSwap V3 uses distinct 25bp and 100bp tiers. Slipstream pool_fee units
+  // are unverified (A6 deferred), so Slipstream stays on the legacy 30bp bucket.
+  if (protocol === "pancakeswap") {
+    if (normalizedFeeBps <= 25) return `${prefix}-25bp`;
+    if (normalizedFeeBps <= 30) return `${prefix}-30bp`;
+    return `${prefix}-100bp`;
+  }
   return `${prefix}-30bp`;
 }
 

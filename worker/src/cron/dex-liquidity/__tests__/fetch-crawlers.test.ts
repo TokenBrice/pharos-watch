@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { QUALITY_MULTIPLIERS } from "../../../lib/dex-constants";
-import { parseCgPool, classifyCgPool, inferCgBalanceRatio } from "../coingecko-onchain-shared";
+import { parseCgPool, classifyCgPool } from "../coingecko-onchain-shared";
 
 function makeCgPool(overrides: Partial<{
   dexId: string;
@@ -62,7 +62,7 @@ describe("CoinGecko onchain shared helpers", () => {
       poolType: "cg-cl-5bp",
       feePercentage: 0.05,
       lockedLiquidityPct: 37.5,
-      balanceRatio: 1,
+      balanceRatio: null,
     });
   });
 
@@ -84,13 +84,7 @@ describe("CoinGecko onchain shared helpers", () => {
     expect(classified.poolType).toBe("cg-stable-amm");
     expect(classified.qualityMultiplier).toBe(QUALITY_MULTIPLIERS["generic"]);
     expect(classified.feePercentage).toBeNull();
-    expect(classified.balanceRatio).toBeCloseTo(0.99, 6);
-  });
-
-  it("infers balance ratios only for near-stable pairs", () => {
-    expect(inferCgBalanceRatio(1.01, 0.99)).toBeCloseTo(0.980198, 6);
-    expect(inferCgBalanceRatio(1.0, 0.5)).toBeNull();
-    expect(inferCgBalanceRatio(0, 1.0)).toBeNull();
+    expect(classified.balanceRatio).toBeNull();
   });
 
   it("drops invalid numeric fields instead of emitting NaN", () => {

@@ -18,20 +18,6 @@ function parseOptionalFiniteNumber(value: string | null | undefined): number | n
   return Number.isFinite(parsed) ? parsed : null;
 }
 
-export function inferCgBalanceRatio(
-  baseTokenPriceUsd: number,
-  quoteTokenPriceUsd: number,
-): number | null {
-  if (baseTokenPriceUsd <= 0 || quoteTokenPriceUsd <= 0) {
-    return null;
-  }
-
-  const ratio = Math.min(baseTokenPriceUsd, quoteTokenPriceUsd) /
-    Math.max(baseTokenPriceUsd, quoteTokenPriceUsd);
-
-  return ratio > 0.5 ? ratio : null;
-}
-
 export function parseCgPool(pool: CgPool): ParsedPool | null {
   const attrs = pool.attributes;
   const dexId = pool.relationships.dex.data.id;
@@ -56,7 +42,7 @@ export function parseCgPool(pool: CgPool): ParsedPool | null {
 }
 
 export function classifyCgPool(
-  parsed: Pick<ParsedPool, "dexId" | "baseTokenPriceUsd" | "quoteTokenPriceUsd">,
+  parsed: Pick<ParsedPool, "dexId">,
   rawAttrs: Pick<CgPoolAttributes, "pool_fee_percentage" | "locked_liquidity_percentage">,
 ): CgPoolClassification {
   const feePercentage = parseOptionalFiniteNumber(rawAttrs.pool_fee_percentage);
@@ -69,7 +55,7 @@ export function classifyCgPool(
         poolType: "cg-cl-1bp",
         feePercentage,
         lockedLiquidityPct,
-        balanceRatio: inferCgBalanceRatio(parsed.baseTokenPriceUsd, parsed.quoteTokenPriceUsd),
+        balanceRatio: null,
       };
     }
 
@@ -79,7 +65,7 @@ export function classifyCgPool(
         poolType: "cg-cl-5bp",
         feePercentage,
         lockedLiquidityPct,
-        balanceRatio: inferCgBalanceRatio(parsed.baseTokenPriceUsd, parsed.quoteTokenPriceUsd),
+        balanceRatio: null,
       };
     }
 
@@ -89,7 +75,7 @@ export function classifyCgPool(
         poolType: "cg-cl-30bp",
         feePercentage,
         lockedLiquidityPct,
-        balanceRatio: inferCgBalanceRatio(parsed.baseTokenPriceUsd, parsed.quoteTokenPriceUsd),
+        balanceRatio: null,
       };
     }
 
@@ -98,7 +84,7 @@ export function classifyCgPool(
       poolType: "cg-wide-fee",
       feePercentage,
       lockedLiquidityPct,
-      balanceRatio: inferCgBalanceRatio(parsed.baseTokenPriceUsd, parsed.quoteTokenPriceUsd),
+      balanceRatio: null,
     };
   }
 
@@ -111,6 +97,6 @@ export function classifyCgPool(
         : "cg-amm",
     feePercentage: null,
     lockedLiquidityPct,
-    balanceRatio: inferCgBalanceRatio(parsed.baseTokenPriceUsd, parsed.quoteTokenPriceUsd),
+    balanceRatio: null,
   };
 }

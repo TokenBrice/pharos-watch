@@ -111,4 +111,36 @@ describe("fetchMeteoraPools", () => {
     expect(result.pools[0].poolAddress).toBe("Pool111");
     expect(result.errors).toContain("page 1 skipped 1 malformed pool rows");
   });
+
+  it("uses current_price and ignores imbalanced reserve ratio on DLMM pools", async () => {
+    const { fetchMeteoraPools } = await import("../fetch-meteora");
+    // Real fixture: SOL/USDC pool with reserve ratio 13.02 vs current_price 84.93
+    mockFetch
+      .mockResolvedValueOnce(jsonResponse({
+        data: [{
+          address: "HTvjzsfX3yU6BUodCjZ5vZkUrAxMDTrBs3CJaq43ashR",
+          token_x: { address: "So11111111111111111111111111111111111111112", symbol: "SOL", decimals: 9, price: 85 },
+          token_y: { address: "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v", symbol: "USDC", decimals: 6, price: 1 },
+          token_x_amount: 6885.094,
+          token_y_amount: 89650.78,
+          current_price: 84.93,
+          tvl: 673863,
+          volume: { "24h": 500_000 },
+          pool_config: { base_fee_pct: 0.25 },
+          dynamic_fee_pct: 0,
+          is_blacklisted: false,
+        }],
+      }))
+      .mockResolvedValueOnce(jsonResponse({ data: [] }));
+
+    const result = await fetchMeteoraPools();
+
+    expect(result.ok).toBe(true);
+    expect(result.pools).toHaveLength(1);
+    expect(result.pools[0].price).toBeCloseTo(84.93, 2);
+    // Regression guard: derived reserve ratio would be ~13.02
+    expect(result.pools[0].price).not.toBeCloseTo(13.02, 0);
+    // balances must still carry raw reserves for downstream consumers
+    expect(result.pools[0].balances).toEqual([6885.094, 89650.78]);
+  });
 });

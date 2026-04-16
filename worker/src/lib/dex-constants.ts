@@ -18,9 +18,13 @@ export const QUALITY_MULTIPLIERS: Record<string, number> = {
   "uniswap-v3-1bp": 1.1,
   "uniswap-v3-5bp": 0.85,
   "uniswap-v3-30bp": 0.4,
+  // PancakeSwap V3 tiers: 1/5/25/30/100 bp. 25bp sits between 5bp stable and 30bp
+  // generic; 100bp is a wide volatile tier that should score below 30bp.
   "pancakeswap-v3-1bp": 1.1,
   "pancakeswap-v3-5bp": 0.85,
+  "pancakeswap-v3-25bp": 0.7,
   "pancakeswap-v3-30bp": 0.4,
+  "pancakeswap-v3-100bp": 0.25,
   "pancakeswap-stableswap": 0.85,
   "meteora-dlmm": 0.85,
   "aerodrome-slipstream-1bp": 1.1,
