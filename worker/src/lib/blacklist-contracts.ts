@@ -231,6 +231,8 @@ const PYUSD_EVENT_FAMILY = defineEventFamily("paxos-pyusd-freeze", [
 
 const USD1_FREEZE_TOPIC = "0x51d18786e9cb144f87d46e7b796309ea84c7c687d91e09c97f051eacf59bc528"; // Freeze(address,address)
 const USD1_UNFREEZE_TOPIC = "0x4f3ab9ff0cc4f039268532098e01239544b0420171876e36889d01c62c784c79"; // Unfreeze(address,address)
+const WLFI_FROZEN_DRAINED_TOPIC = "0x76fa81ac53e82d7102caacc3866ae3ca5684caa4c24d995ff4d76ce8a10fbfef"; // FrozenAccountDrained(address,address,uint256)
+const WLFI_FROZEN_REALLOCATED_TOPIC = "0x10aa54b8d21641b161adf6251c11512c46fcf822feaf6f66057c006dc29def4a"; // FrozenFundsReallocated(address,address,address,uint256)
 
 const USD1_EVENT_FAMILY = defineEventFamily("wlfi-freeze", [
   {
@@ -247,6 +249,24 @@ const USD1_EVENT_FAMILY = defineEventFamily("wlfi-freeze", [
     eventType: "unblacklist",
     hasAmount: false,
     addressTopicIndex: 2,
+    tronResultKey: "account",
+  },
+  {
+    signature: "FrozenAccountDrained(address,address,uint256)",
+    topicHash: WLFI_FROZEN_DRAINED_TOPIC,
+    eventType: "destroy",
+    hasAmount: true,
+    addressTopicIndex: 2,
+    amountDataIndex: 0,
+    tronResultKey: "account",
+  },
+  {
+    signature: "FrozenFundsReallocated(address,address,address,uint256)",
+    topicHash: WLFI_FROZEN_REALLOCATED_TOPIC,
+    eventType: "destroy",
+    hasAmount: true,
+    addressTopicIndex: 2,
+    amountDataIndex: 0,
     tronResultKey: "account",
   },
 ]);

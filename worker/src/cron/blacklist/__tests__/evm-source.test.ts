@@ -337,3 +337,59 @@ describe("parseEvmLogs", () => {
     expect(rows[0].event_type).toBe("destroy");
   });
 });
+
+describe("wlfi-freeze destroy events", () => {
+  const usd1Config = CONTRACT_CONFIGS.find(
+    (c) => c.stablecoinId === "usd1-world-liberty-financial" && c.chain.chainId === "ethereum",
+  )!;
+
+  it("parses FrozenAccountDrained with victim at topics[2] and amount at data slot 0", () => {
+    const victim = "0x" + "aa".repeat(20);
+    const caller = "0x" + "bb".repeat(20);
+    const topic0 = "0x76fa81ac53e82d7102caacc3866ae3ca5684caa4c24d995ff4d76ce8a10fbfef";
+    const data = encodeAbiParameters([{ type: "uint256" }], [1_000_000_000_000_000_000n]);
+    const rows = parseEvmLogs(usd1Config, [
+      {
+        address: usd1Config.contractAddress,
+        topics: [topic0, ("0x" + "0".repeat(24) + caller.slice(2)) as `0x${string}`, ("0x" + "0".repeat(24) + victim.slice(2)) as `0x${string}`],
+        data,
+        blockNumber: "0x100",
+        transactionHash: "0xdeadbeef".padEnd(66, "0"),
+        logIndex: "0x0",
+        timeStamp: "0x1000",
+      },
+    ]);
+    expect(rows).toHaveLength(1);
+    expect(rows[0].event_type).toBe("destroy");
+    expect(rows[0].address.toLowerCase()).toBe(victim);
+    expect(rows[0].amount_native).toBe(1);
+  });
+
+  it("parses FrozenFundsReallocated with `from` at topics[2] and amount at data slot 0", () => {
+    const caller = "0x" + "11".repeat(20);
+    const from = "0x" + "22".repeat(20);
+    const to = "0x" + "33".repeat(20);
+    const topic0 = "0x10aa54b8d21641b161adf6251c11512c46fcf822feaf6f66057c006dc29def4a";
+    const data = encodeAbiParameters([{ type: "uint256" }], [2_000_000_000_000_000_000n]);
+    const rows = parseEvmLogs(usd1Config, [
+      {
+        address: usd1Config.contractAddress,
+        topics: [
+          topic0,
+          ("0x" + "0".repeat(24) + caller.slice(2)) as `0x${string}`,
+          ("0x" + "0".repeat(24) + from.slice(2)) as `0x${string}`,
+          ("0x" + "0".repeat(24) + to.slice(2)) as `0x${string}`,
+        ],
+        data,
+        blockNumber: "0x101",
+        transactionHash: "0xfeedface".padEnd(66, "0"),
+        logIndex: "0x0",
+        timeStamp: "0x1001",
+      },
+    ]);
+    expect(rows).toHaveLength(1);
+    expect(rows[0].event_type).toBe("destroy");
+    expect(rows[0].address.toLowerCase()).toBe(from);
+    expect(rows[0].amount_native).toBe(2);
+  });
+});
