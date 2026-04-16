@@ -200,6 +200,14 @@ export function buildUserPrompt(
     `Depegs resolved in last 24h: ${data.resolvedDepegs?.length ?? 0}`,
   );
 
+  if (data.totalMcapAth && data.totalMcapAth.value > 0) {
+    const pctFromAth = ((data.totalMcapAth.value - data.totalMcapUsd) / data.totalMcapAth.value * 100).toFixed(2);
+    const relation = data.totalMcapUsd < data.totalMcapAth.value ? "below" : "above";
+    lines.push(
+      `Context: total mcap is ${pctFromAth}% ${relation} its Digest-window ATH (${formatCurrency(data.totalMcapAth.value)} set ${data.totalMcapAth.daysAgo} days ago).`,
+    );
+  }
+
   if (data.topDepegs.length > 0) {
     lines.push("Active depegs by market impact (deviation × mcap):");
     for (const depeg of data.topDepegs) {

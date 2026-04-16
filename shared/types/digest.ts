@@ -57,6 +57,11 @@ export interface DigestInputData {
   digestVersion?: number;
   totalMcapUsd: number;
   mcap7dDelta: number;
+  totalMcapAth?: {
+    value: number;
+    date: number;
+    daysAgo: number;
+  };
   dataQuality?: DigestDataQuality;
   editorialCandidates?: DigestEditorialCandidate[];
   degradedSources?: string[];

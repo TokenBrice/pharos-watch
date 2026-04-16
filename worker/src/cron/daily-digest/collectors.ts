@@ -16,6 +16,7 @@ export {
   collectCrossDayTrends,
   collectHistoricalContext,
   collectPsiContributors,
+  collectTotalMcapAth,
 } from "./collectors-history";
 export type {
   CollectorContext,

@@ -1120,6 +1120,76 @@ describe("tone cluster validator", () => {
   });
 });
 
+describe("totalMcapAth enrichment", () => {
+  beforeEach(() => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-03-06T12:00:00Z"));
+    vi.mocked(fetchWithRetry).mockReset();
+    vi.mocked(loadStablecoinsCache).mockReset();
+    vi.mocked(computeSafetyScoresSnapshot).mockReset();
+    vi.mocked(shouldAttemptFetch).mockReset().mockResolvedValue(true);
+  });
+  afterEach(() => {
+    vi.useRealTimers();
+    vi.restoreAllMocks();
+  });
+
+  it("records ATH context when supplied", async () => {
+    const nowSec = Math.floor(Date.now() / 1000);
+    const todayTs = nowSec - (nowSec % 86_400);
+
+    vi.mocked(loadStablecoinsCache).mockResolvedValue({
+      kind: "ok",
+      payload: {
+        peggedAssets: [
+          makeAsset({
+            id: "usdt-tether",
+            symbol: "USDT",
+            circulating: { peggedUSD: 100_000_000 },
+            circulatingPrevWeek: { peggedUSD: 95_000_000 },
+          }),
+        ],
+      },
+      updatedAt: nowSec,
+    });
+    vi.mocked(computeSafetyScoresSnapshot).mockResolvedValue({
+      kind: "ok",
+      mode: "full-grades",
+      coveredCount: 1,
+      trackedCount: 1,
+      coverageRatio: 1,
+      scores: new Map(),
+      grades: [{ id: "usdt-tether", symbol: "USDT", grade: "A", score: 88, pegScore: 95, liqScore: 90 }],
+    });
+    vi.mocked(fetchWithRetry).mockImplementation(async () =>
+      new Response(JSON.stringify(ANTHROPIC_OK_RESPONSE), { status: 200, headers: { "Content-Type": "application/json" } })
+    );
+    vi.mocked(shouldAttemptFetch).mockResolvedValue(true);
+
+    const baseTables = makeBaseTables();
+    const db = mockD1([
+      ...baseTables,
+      {
+        match: "ORDER BY CAST(json_extract(input_data, '$.totalMcapUsd') AS REAL) DESC",
+        first: { ath_value: 330_000_000_000, ath_date: nowSec - 7 * 86_400 },
+        rows: [],
+      },
+    ]);
+
+    const result = await generateDailyDigest(db, "anthropic-key");
+    expect(result.itemCount).toBe(1);
+
+    const storedInput = JSON.parse(String(getInsertDigestBinds(db as MockD1Database)?.[3]));
+    expect(storedInput.totalMcapAth).toBeDefined();
+    expect(storedInput.totalMcapAth.value).toBe(330_000_000_000);
+    expect(storedInput.totalMcapAth.daysAgo).toBe(7);
+    expect(storedInput.totalMcapAth.date).toBe(todayTs - 7 * 86_400);
+
+    const body = JSON.parse(String(vi.mocked(fetchWithRetry).mock.calls[0]?.[1]?.body)) as { messages: { content: string }[] };
+    expect(body.messages[0].content).toContain("its Digest-window ATH");
+  });
+});
+
 describe("classifyRegime", () => {
   const baseData: DigestInputData = {
     totalMcapUsd: 200_000_000_000,
