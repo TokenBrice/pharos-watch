@@ -113,11 +113,11 @@ describe("coverage helpers", () => {
       resolveReserveCoverage(
         makeCoin({
           liveReservesConfig: {
-            adapter: "frax",
+            adapter: "curated-validated",
             version: 1,
             semantics: "attestation-mix",
             inputs: {
-              primary: { kind: "http-json", url: "https://example.com/frax" },
+              primary: { kind: "onchain-evm", chain: "ethereum", rpcMode: "public-rpc" },
             },
           },
         }),
@@ -409,11 +409,11 @@ describe("coverage helpers", () => {
           id: "validated",
           symbol: "VAL",
           liveReservesConfig: {
-            adapter: "frax",
+            adapter: "curated-validated",
             version: 1,
             semantics: "attestation-mix",
             inputs: {
-              primary: { kind: "http-json", url: "https://example.com/validated" },
+              primary: { kind: "onchain-evm", chain: "ethereum", rpcMode: "public-rpc" },
             },
           },
         }),

@@ -100,7 +100,10 @@ describe("normalizeSlices", () => {
 
   it("never produces negative pctUnits when upstream is grossly oversummed", () => {
     // 3 slices summing to 300% — far beyond validation tolerance. The clamp
-    // should prevent the largest slice from being pushed below zero.
+    // prevents the largest slice's corrected value from going below zero;
+    // in the extreme-oversum case the largest slice is zeroed out and dropped,
+    // so the remaining slices pass through unchanged. This is acceptable as
+    // defense-in-depth — upstream validation fatally rejects >2% deviation.
     const slices: ReserveSlice[] = [
       { name: "A", pct: 150, risk: "low" },
       { name: "B", pct: 100, risk: "medium" },
@@ -108,9 +111,20 @@ describe("normalizeSlices", () => {
     ];
     const result = normalizeSlices(slices);
     expect(result.every((slice) => slice.pct > 0)).toBe(true);
-    // Largest slice is unchanged from its rounded value (no negative remainder applied).
-    expect(result[0].name).toBe("A");
-    expect(result[0].pct).toBe(150);
+    // Largest slice ("A") is dropped via the Math.max(0, ...) clamp.
+    expect(result.find((slice) => slice.name === "A")).toBeUndefined();
+    expect(result.map((slice) => slice.name).sort()).toEqual(["B", "C"]);
+  });
+
+  it("corrects normal downward rounding drift (e.g. 100.1% -> 100%)", () => {
+    // Ensure the defense-in-depth clamp doesn't break normal small-over-sum
+    // normalization: the largest slice absorbs the small negative remainder.
+    const slices: ReserveSlice[] = [
+      { name: "Big", pct: 60.1, risk: "low" },
+      { name: "Small", pct: 40, risk: "medium" },
+    ];
+    const result = normalizeSlices(slices);
+    expect(result.reduce((sum, slice) => sum + slice.pct, 0)).toBeCloseTo(100, 5);
   });
 });
 

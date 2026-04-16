@@ -14,7 +14,15 @@ describe("reserve coinId validation", () => {
   it("no coin has both dependencies and reserve-linked coinIds (unless allowed)", () => {
     // Coins that intentionally use both: dependencies for dependency-map
     // weights and coinId on reserves for blacklist inheritance.
-    const ALLOWED_BOTH = new Set(["dusd-dtrinity", "buck-buck-assets", "frxusd-frax", "ftusd-flying-tulip"]);
+    // USSD is a wrapper of frxUSD (dependencies) but its reserve slices attribute to
+    // underlying treasury products (BUIDL/USTB) via coinId for blacklist inheritance.
+    const ALLOWED_BOTH = new Set([
+      "dusd-dtrinity",
+      "buck-buck-assets",
+      "frxusd-frax",
+      "ftusd-flying-tulip",
+      "ussd-sonic-labs",
+    ]);
     const conflicts: string[] = [];
     for (const meta of TRACKED_STABLECOINS) {
       if (ALLOWED_BOTH.has(meta.id)) continue;

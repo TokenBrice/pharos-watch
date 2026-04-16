@@ -325,7 +325,9 @@ describe("adaptSkyModules", () => {
     const stableSlice = slices.find((s) => s.name.includes("Stablecoins"));
     expect(stableSlice).toBeDefined();
     expect(stableSlice!.risk).toBe("very-low");
-    expect(stableSlice!.coinId).toBe("usdc-circle");
+    // Task 2.24: PSM slice no longer hardcodes coinId because PSM holds USDC+USDT+USDP;
+    // depType remains "mechanism" (the slice still describes the PSM's role).
+    expect(stableSlice!.coinId).toBeUndefined();
     expect(stableSlice!.depType).toBe("mechanism");
 
     const sparkSlice = slices.find((s) => s.name.includes("Spark"));
@@ -422,7 +424,9 @@ describe("adaptGhoFacilitators", () => {
 
     expect(result.slices.length).toBe(3);
 
-    const residualSlice = result.slices.find((s) => s.name.includes("Residual"));
+    // Task 2.5: residual is now decomposed per-facilitator; "CoreGhoDirectMinter"
+    // classifies as aave-v3-direct (medium risk) via the directminter pattern.
+    const residualSlice = result.slices.find((s) => s.name === "CoreGhoDirectMinter");
     expect(residualSlice).toBeDefined();
     expect(residualSlice!.risk).toBe("medium");
 
@@ -476,7 +480,11 @@ describe("adaptGhoFacilitators", () => {
 
     const result = adaptGhoFacilitators(data);
     expect(result.slices.length).toBe(1);
-    expect(result.slices[0].name).toBe("Residual facilitators / reserve buffer");
+    // Task 2.5: residual allocated to the active facilitator (label preserved),
+    // classified as "unknown" (high risk) since "Active Facilitator" doesn't match
+    // directminter/flashmint/aave patterns.
+    expect(result.slices[0].name).toBe("Active Facilitator");
+    expect(result.slices[0].risk).toBe("high");
     expect(result.slices[0].pct).toBe(100);
 
     expect(result.metadata!.facilitatorCount).toBe(2);
