@@ -200,4 +200,44 @@ describe("adaptReservoirReserves", () => {
     expect(usdcSlice?.pct).toBe(25);
     expect(usdtSlice?.pct).toBe(25);
   });
+
+  it("attributes USDT0/USDC pool labels to USDT per the canonical order comment", () => {
+    const { slices } = adaptReservoirReserves({
+      assets: [
+        // USDT0 pools commonly pair with USDC on cross-chain routes; attribute
+        // them to USDT so the USDT0 wrapper is not double-counted.
+        { label: "Fluid - USDT0/USDC LP", totalBalanceValue: "100" },
+      ],
+      liabilities: [],
+      totalAssets: "100",
+      totalLiabilities: "95",
+      equity: "5",
+    });
+
+    const usdtSlice = slices.find((s) => s.name === "USDT / USDT0 positions");
+    const usdcSlice = slices.find((s) => s.name === "USDC positions");
+    expect(usdtSlice?.pct).toBe(100);
+    expect(usdcSlice).toBeUndefined();
+  });
+
+  it("attributes plain USDC labels exclusively to the USDC bucket even when USD1/USDT exist", () => {
+    const { slices } = adaptReservoirReserves({
+      assets: [
+        { label: "USDC", totalBalanceValue: "40" },
+        { label: "USDT", totalBalanceValue: "30" },
+        { label: "USD1", totalBalanceValue: "30" },
+      ],
+      liabilities: [],
+      totalAssets: "100",
+      totalLiabilities: "95",
+      equity: "5",
+    });
+
+    const usdcSlice = slices.find((s) => s.name === "USDC positions");
+    const usdtSlice = slices.find((s) => s.name === "USDT / USDT0 positions");
+    const usd1Slice = slices.find((s) => s.name === "USD1 lending markets");
+    expect(usdcSlice?.pct).toBe(40);
+    expect(usdtSlice?.pct).toBe(30);
+    expect(usd1Slice?.pct).toBe(30);
+  });
 });

@@ -45,9 +45,19 @@ const RESERVOIR_STABLE_BUCKET_KEYS: readonly ReservoirBucketKey[] = [
   "usdc",
 ];
 
-// Label-match helpers are exclusive: each bucket's regex rejects the other
-// stablecoin tokens it might otherwise swallow, so the order of rules does not
-// affect attribution. USDT0 is treated as USDT per Reservoir's ledger.
+// Label-match helpers use token-exclusive regex word-boundaries so that a
+// single-token label like "USDC" only matches the USDC rule, not USD1 or USDT.
+// For multi-token labels like "Aave - PYUSD/USDC", the rule listed FIRST wins.
+//
+// Canonical ordering when adding new tokens:
+//   1. Tokens with unique prefixes/numerics (USD1) first, to prevent them
+//      matching generic "USD" patterns below.
+//   2. Wrapper-family tokens (PYUSD, RLUSD, GHO) next, so pools that pair a
+//      wrapper with USDC/USDT attribute to the wrapper family.
+//   3. USDT before USDC so USDT0-wrapped pools (e.g. "USDT0/USDC" on Plasma)
+//      attribute to USDT/USDT0, not USDC.
+//   4. Plain USDC last among the dollar-ledger buckets.
+//   5. rUSD self-strategy vaults last of all.
 const RESERVOIR_BUCKETS: readonly ValueBucketRule<ReservoirBalanceItem, ReservoirBucketKey>[] = [
   {
     key: "usd1",
