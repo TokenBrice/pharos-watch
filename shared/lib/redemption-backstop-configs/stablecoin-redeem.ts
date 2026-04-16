@@ -361,6 +361,64 @@ export const STABLECOIN_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackst
       "Tracked metadata describes direct 1:1 USDC redemption with msUSD held fully against USDC reserves, while yield generation sits in the separate msY staking layer",
     ],
   },
+  "wm-m0": {
+    ...stablecoinRedeemBase,
+    ...documentedBoundSupplyFull("2026-04-16"),
+    totalScoreCap: 70,
+    costModel: fixedFee(0, "wM docs describe wrap and unwrap as fee-free permissionless calls against the underlying M token"),
+    docs: [
+      sourceRef("M0 wM token", "https://www.m0.org/faq", ["route", "capacity", "fees"]),
+      sourceRef("M0 Dashboard", "https://dashboard.m0.org/", ["capacity"]),
+    ],
+    notes: [
+      "Permissionless ERC-20 wrapper: wrap() deposits M and mints wM; unwrap() redeems 1:1 back to M with no fee or queue",
+      "Config-level cap reflects that the wM->M unwrap does not by itself return the holder to a liquid stablecoin; the downstream M redemption rail (institution-only M0 mint/burn) still gates actual par exit",
+    ],
+  },
+  "ftusd-flying-tulip": {
+    ...stablecoinRedeemBase,
+    capacityModel: { kind: "supply-ratio", ratio: 0.1, confidence: "heuristic", basis: "strategy-buffer" },
+    costModel: documentedVariableFee(
+      "Flying Tulip's MintAndRedeem contract supports permissionless 1:1 mint and redemption against USDC or USDT; public docs reviewed do not publish a fixed redemption fee",
+    ),
+    reviewedAt: "2026-04-16",
+    docs: [
+      sourceRef("Flying Tulip documentation", "https://docs.flyingtulip.com/", ["route", "capacity"]),
+    ],
+    notes: [
+      "ftUSD uses delta-neutral stablecoin lending + short perpetual hedging",
+      "The 10% ratio is a reviewed heuristic reflecting typical delta-neutral protocol on-hand stable buffers rather than a published instant-liquidity floor for this specific protocol",
+    ],
+  },
+  "usdz-anzen": {
+    ...stablecoinRedeemBase,
+    ...documentedBoundSupplyFull("2026-04-16"),
+    accessModel: "whitelisted-onchain",
+    costModel: documentedVariableFee(
+      "Qualified Market Makers mint and redeem 1:1 USDz/USDC against SPCT collateral; public docs reviewed do not publish a fixed retail redemption fee",
+    ),
+    docs: [
+      sourceRef("Anzen Finance", "https://www.anzen.finance/", ["route"]),
+      sourceRef("Anzen documentation", "https://docs.anzen.finance/", ["route", "capacity"]),
+    ],
+    notes: [
+      "Primary mint and redeem rail is reserved for whitelisted Qualified Market Makers; retail holders exit via DEX liquidity while arbitrage by QMMs maintains the peg against SPCT collateral",
+    ],
+  },
+  "usdsc-startale": {
+    ...stablecoinRedeemBase,
+    ...documentedBoundSupplyFull("2026-04-16"),
+    totalScoreCap: 70,
+    costModel: fixedFee(0, "Startale docs describe USDSC as a fee-free 1:1 wrapper around M0's M token on Soneium"),
+    docs: [
+      sourceRef("Startale USDSC", "https://startale.com/usdsc", ["route", "capacity", "fees"]),
+      sourceRef("M0 Dashboard", "https://dashboard.m0.org/", ["capacity"]),
+    ],
+    notes: [
+      "1:1 wrapper around M: mint by wrapping, redeem by unwrapping; underlying M is backed by T-bill collateral attested by M0 Validators",
+      "Config-level cap reflects that the USDSC->M unwrap does not by itself return the holder to a liquid stablecoin; the downstream M redemption rail still gates actual par exit",
+    ],
+  },
   "apxusd-apyx": {
     ...stablecoinRedeemBase,
     ...reviewedDirectRedemptionSupplyFull,
