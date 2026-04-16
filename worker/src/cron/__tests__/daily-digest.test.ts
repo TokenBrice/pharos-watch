@@ -167,6 +167,29 @@ import { postDigestToTelegram } from "../../lib/telegram";
 import { prepareTelegramDigestAppendices } from "../../lib/telegram-digest-appendices";
 import { shouldAttemptFetch } from "../../lib/circuit-breaker";
 
+const DEFAULT_PARSED_EXTENDED = "T. T. T.\n\nT. T. T.\n\nT. T. T.";
+
+function makeParsedFixture(opts: {
+  extended?: string;
+  text?: string;
+  lead?: string;
+  tone?: string;
+} = {}): ParsedDigestResponse {
+  return {
+    digestTitle: "T",
+    digestText: opts.text ?? "T.",
+    digestExtended: opts.extended ?? DEFAULT_PARSED_EXTENDED,
+    digestMeta: JSON.stringify({
+      lead: opts.lead ?? "depeg",
+      tone: opts.tone ?? "dry",
+      coins: ["USDT"],
+    }),
+    strippedDashCount: 0,
+    strippedForbiddenCharCount: 0,
+    usedRawTextFallback: false,
+  };
+}
+
 const VALID_DAILY_EXTENDED = [
   "PSI held at 91.2 BEDROCK with severity 2 and breadth 1, so the headline market still looks calm. USDT sat 150 bps off peg on a $100M float in the fixture, which gives the model a real candidate but not a systemic alarm. The point is selection, not volume.",
   "USDT added $5M over the week while USDC lost $2M, a mixed flow pattern rather than a single-direction stampede. The candidate list marks the depeg by impact first, then leaves supply as supporting context, which is the behavior this test expects. A smaller signal can still appear without becoming the lead.",
@@ -977,24 +1000,12 @@ describe("lead family variety check", () => {
 });
 
 describe("forward-look voice guard", () => {
-  function parsedFixture(extended: string, text = "T."): ParsedDigestResponse {
-    return {
-      digestTitle: "T",
-      digestText: text,
-      digestExtended: extended,
-      digestMeta: JSON.stringify({ lead: "depeg", tone: "dry", coins: ["USDT"] }),
-      strippedDashCount: 0,
-      strippedForbiddenCharCount: 0,
-      usedRawTextFallback: false,
-    };
-  }
-
   it("flags missing forward-look when digest is purely retrospective", () => {
     const issues = validateDigestModelOutput(
-      parsedFixture(
-        "USDT added $2B.\n\nUSDC pulled $500M.\n\nThe gap is now the story.",
-        "USDT added $2B while USDC pulled $500M.",
-      ),
+      makeParsedFixture({
+        extended: "USDT added $2B.\n\nUSDC pulled $500M.\n\nThe gap is now the story.",
+        text: "USDT added $2B while USDC pulled $500M.",
+      }),
       { kind: "daily", recentMeta: [] },
     );
     expect(issues.some((i) => i.code === "missing-forward-look")).toBe(true);
@@ -1002,7 +1013,7 @@ describe("forward-look voice guard", () => {
 
   it("does not flag when forward-look is present in extended", () => {
     const issues = validateDigestModelOutput(
-      parsedFixture("USDT added $2B.\n\nUSDC pulled $500M.\n\nIf the gap holds next week, it is a rotation."),
+      makeParsedFixture({ extended: "USDT added $2B.\n\nUSDC pulled $500M.\n\nIf the gap holds next week, it is a rotation." }),
       { kind: "daily", recentMeta: [] },
     );
     expect(issues.some((i) => i.code === "missing-forward-look")).toBe(false);
@@ -1010,7 +1021,7 @@ describe("forward-look voice guard", () => {
 
   it("does not flag when forward-look is only in the text hook", () => {
     const issues = validateDigestModelOutput(
-      parsedFixture("A.\n\nB.\n\nC.", "Watch if USDT crosses $185B."),
+      makeParsedFixture({ extended: "A.\n\nB.\n\nC.", text: "Watch if USDT crosses $185B." }),
       { kind: "daily", recentMeta: [] },
     );
     expect(issues.some((i) => i.code === "missing-forward-look")).toBe(false);
@@ -1018,25 +1029,13 @@ describe("forward-look voice guard", () => {
 });
 
 describe("opening-fingerprint voice guard", () => {
-  function parsedFixture(extended: string): ParsedDigestResponse {
-    return {
-      digestTitle: "T",
-      digestText: "T.",
-      digestExtended: extended,
-      digestMeta: JSON.stringify({ lead: "depeg", tone: "dry", coins: ["USDT"] }),
-      strippedDashCount: 0,
-      strippedForbiddenCharCount: 0,
-      usedRawTextFallback: false,
-    };
-  }
-
   it("flags PSI-verb opening when any of last 3 also opened that way", () => {
     const recent = [
       { meta: null, title: "a", rawText: "PSI sits at 95. USDC hit ATH." },
       { meta: null, title: "b", rawText: "USDT minted $2B. PSI unchanged." },
       { meta: null, title: "c", rawText: "Flows rotated into gold. USDC weak." },
     ];
-    const parsed = parsedFixture("PSI ticked to 96 in BEDROCK.\n\nUSDC added $500M.\n\nReal closer.");
+    const parsed = makeParsedFixture({ extended: "PSI ticked to 96 in BEDROCK.\n\nUSDC added $500M.\n\nReal closer." });
     const issues = validateDigestModelOutput(parsed, { kind: "daily", recentMeta: recent });
     expect(issues.some((i) => i.code === "opening-pattern-repetition")).toBe(true);
   });
@@ -1046,28 +1045,16 @@ describe("opening-fingerprint voice guard", () => {
       { meta: null, title: "a", rawText: "PSI sits at 95." },
       { meta: null, title: "b", rawText: "PSI slipped to 93." },
     ];
-    const parsed = parsedFixture("USDT just added $2B overnight.\n\nPSI drifted to 93.\n\nReal closer.");
+    const parsed = makeParsedFixture({ extended: "USDT just added $2B overnight.\n\nPSI drifted to 93.\n\nReal closer." });
     const issues = validateDigestModelOutput(parsed, { kind: "daily", recentMeta: recent });
     expect(issues.some((i) => i.code === "opening-pattern-repetition")).toBe(false);
   });
 });
 
 describe("forbidden-tic voice guard", () => {
-  function parsedFixture(extended: string, text = "T."): ParsedDigestResponse {
-    return {
-      digestTitle: "T",
-      digestText: text,
-      digestExtended: extended,
-      digestMeta: JSON.stringify({ lead: "depeg", tone: "dry", coins: ["USDT"] }),
-      strippedDashCount: 0,
-      strippedForbiddenCharCount: 0,
-      usedRawTextFallback: false,
-    };
-  }
-
   it("flags plumbing metaphor anywhere in extended", () => {
     const issues = validateDigestModelOutput(
-      parsedFixture("PSI held.\n\nThe plumbing flinched again.\n\nDone."),
+      makeParsedFixture({ extended: "PSI held.\n\nThe plumbing flinched again.\n\nDone." }),
       { kind: "daily", recentMeta: [] },
     );
     expect(issues.some((i) => i.code === "forbidden-tic")).toBe(true);
@@ -1075,7 +1062,7 @@ describe("forbidden-tic voice guard", () => {
 
   it("flags 'worth watching' in closer position", () => {
     const issues = validateDigestModelOutput(
-      parsedFixture("Line one.\n\nLine two.\n\nLine three, worth monitoring into next week."),
+      makeParsedFixture({ extended: "Line one.\n\nLine two.\n\nLine three, worth monitoring into next week." }),
       { kind: "daily", recentMeta: [] },
     );
     expect(issues.some((i) => i.code === "forbidden-tic")).toBe(true);
@@ -1083,7 +1070,7 @@ describe("forbidden-tic voice guard", () => {
 
   it("does NOT flag 'worth watching' mid-paragraph when last sentence is different", () => {
     const issues = validateDigestModelOutput(
-      parsedFixture("A coin worth watching for mcap drift, plus five others. Real closer sentence here.\n\nLine two.\n\nLine three."),
+      makeParsedFixture({ extended: "A coin worth watching for mcap drift, plus five others. Real closer sentence here.\n\nLine two.\n\nLine three." }),
       { kind: "daily", recentMeta: [] },
     );
     expect(issues.some((i) => i.code === "forbidden-tic")).toBe(false);
@@ -1091,7 +1078,7 @@ describe("forbidden-tic voice guard", () => {
 
   it("does not flag prose free of tics", () => {
     const issues = validateDigestModelOutput(
-      parsedFixture("USDT added $3B.\n\nUSDC pulled $200M.\n\nThe gap is now the story."),
+      makeParsedFixture({ extended: "USDT added $3B.\n\nUSDC pulled $200M.\n\nThe gap is now the story." }),
       { kind: "daily", recentMeta: [] },
     );
     expect(issues.some((i) => i.code === "forbidden-tic")).toBe(false);
@@ -1099,24 +1086,15 @@ describe("forbidden-tic voice guard", () => {
 });
 
 describe("tone cluster validator", () => {
-  function parsedFixture(toneOverride = "foreboding"): ParsedDigestResponse {
-    return {
-      digestTitle: "T",
-      digestText: "T.",
-      digestExtended: "T. T. T.\n\nT. T. T.\n\nT. T. T.",
-      digestMeta: JSON.stringify({ lead: "depeg", tone: toneOverride, coins: ["USDT"] }),
-      strippedDashCount: 0,
-      strippedForbiddenCharCount: 0,
-      usedRawTextFallback: false,
-    };
-  }
-
   it("fires tone-cluster when same tone appears 3+ times in last 5", () => {
     const recent = Array.from({ length: 5 }, () => ({
       meta: { lead: "depeg", tone: "foreboding" } as Record<string, unknown>,
       title: "prior",
     }));
-    const result = validateDigestModelOutput(parsedFixture(), { kind: "daily", recentMeta: recent });
+    const result = validateDigestModelOutput(
+      makeParsedFixture({ tone: "foreboding" }),
+      { kind: "daily", recentMeta: recent },
+    );
     expect(result.some((i) => i.code === "tone-cluster")).toBe(true);
   });
 
@@ -1128,7 +1106,10 @@ describe("tone cluster validator", () => {
       { meta: { tone: "clinical" } as Record<string, unknown>, title: "d" },
       { meta: { tone: "wistful" } as Record<string, unknown>, title: "e" },
     ];
-    const result = validateDigestModelOutput(parsedFixture(), { kind: "daily", recentMeta: recent });
+    const result = validateDigestModelOutput(
+      makeParsedFixture({ tone: "foreboding" }),
+      { kind: "daily", recentMeta: recent },
+    );
     expect(result.some((i) => i.code === "tone-cluster")).toBe(false);
   });
 });

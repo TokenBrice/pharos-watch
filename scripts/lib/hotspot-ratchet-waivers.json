@@ -67,10 +67,6 @@
     "disposition": "deferred",
     "notes": "Shared formatting helpers are branchy but broadly reused. Defer any breakup until a dedicated shared-utility cleanup lane exists."
   },
-  "src/lib/contagion-layout.ts": {
-    "disposition": "deferred",
-    "notes": "Dependency-map layout logic still concentrates graph scoring and placement heuristics in one file. Defer breakup until the next contagion-surface redesign pass."
-  },
   "worker/src/cron/sync-fx-rates-helpers.ts": {
     "disposition": "deferred",
     "notes": "FX-rate helper orchestration remains a large policy surface after earlier trims. Defer another split until the next FX-state/runtime cleanup tranche."
@@ -82,5 +78,9 @@
   "worker/src/cron/daily-digest/prompt.ts": {
     "disposition": "queued-p4",
     "notes": "Candidate-led digest prompting intentionally centralizes the editorial contract while the digest rewrite stabilizes. Split prompt policy, rubric text, and safety instructions in a follow-up digest cleanup pass."
+  },
+  "worker/src/cron/weekly-recap.ts": {
+    "disposition": "queued-p4",
+    "notes": "Weekly recap input assembly grew with week-over-week deltas, weekly signal leaderboards, and split parse-row plumbing. Keep waived until the digest prompt rewrite stabilizes; a follow-up pass should extract aggregation vs. prompt rendering into separate modules."
   }
 }

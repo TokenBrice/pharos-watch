@@ -307,23 +307,27 @@ function buildWeeklyInputData(
 
   let weekOverWeekDeltas: WeeklyInputData["weekOverWeekDeltas"] = null;
   if (priorParsed.length >= 5) {
-    const cur = aggregateBasics(parsed);
+    // Reuse already-computed current-week values; only run the aggregation
+    // pass on the prior-week rows.
+    const currentMcapEnd = mcaps[mcaps.length - 1] ?? 0;
+    const currentPsiMid = psiScores.length > 0 ? psiScores.reduce((s, v) => s + v, 0) / psiScores.length : 0;
+    const currentGaugeMid = gauges.length >= 3 ? gauges.reduce((s, v) => s + v, 0) / gauges.length : null;
     const pri = aggregateBasics(priorParsed);
     weekOverWeekDeltas = {
       mcap: {
-        current: cur.mcapEnd,
+        current: currentMcapEnd,
         prior: pri.mcapEnd,
-        deltaPct: pri.mcapEnd > 0 ? ((cur.mcapEnd - pri.mcapEnd) / pri.mcapEnd) * 100 : null,
+        deltaPct: pri.mcapEnd > 0 ? ((currentMcapEnd - pri.mcapEnd) / pri.mcapEnd) * 100 : null,
       },
-      psi: { current: cur.psiMid, prior: pri.psiMid, delta: cur.psiMid - pri.psiMid },
-      psiDominantBand: { current: cur.psiDominantBand, prior: pri.psiDominantBand },
-      activeDepegObservations: { current: cur.activeDepegObs, prior: pri.activeDepegObs },
-      uniqueDepegSignals: { current: cur.uniqueDepegSignals, prior: pri.uniqueDepegSignals },
-      blacklistEvents: { current: cur.blacklistEvents, prior: pri.blacklistEvents },
-      blacklistUsd: { current: cur.blacklistUsd, prior: pri.blacklistUsd },
-      gradeTransitions: { current: cur.gradeTransitions, prior: pri.gradeTransitions },
-      gauge: { current: cur.gaugeMid, prior: pri.gaugeMid },
-      dataCoverage: { currentDays: cur.days, priorDays: pri.days },
+      psi: { current: currentPsiMid, prior: pri.psiMid, delta: currentPsiMid - pri.psiMid },
+      psiDominantBand: { current: dominantBand, prior: pri.psiDominantBand },
+      activeDepegObservations: { current: totalDepegObservations, prior: pri.activeDepegObs },
+      uniqueDepegSignals: { current: depegSignalKeys.size, prior: pri.uniqueDepegSignals },
+      blacklistEvents: { current: totalBlacklist, prior: pri.blacklistEvents },
+      blacklistUsd: { current: totalBlacklistAmountUsd, prior: pri.blacklistUsd },
+      gradeTransitions: { current: gradeTransitionCount, prior: pri.gradeTransitions },
+      gauge: { current: currentGaugeMid, prior: pri.gaugeMid },
+      dataCoverage: { currentDays: parsed.length, priorDays: pri.days },
     };
   }
 
@@ -523,10 +527,9 @@ export async function generateWeeklyRecap(
       rawText: entry.rawText,
     }));
 
-  // Fetch last 15 daily digests (exclude weekly entries).
-  // The 15-day cutoff captures current week + prior week for WoW delta
-  // computation. The LIMIT 15 bounds the result set deterministically
-  // even if a dedup guard ever drifts.
+  // 15-day cutoff + LIMIT 15 captures current + prior weeks for WoW
+  // deltas and bounds the result set deterministically even if the dedup
+  // guard ever drifts.
   const cutoff = Math.floor(Date.now() / 1000) - 15 * SECONDS.ONE_DAY;
   const dailyRows = await db
     .prepare(

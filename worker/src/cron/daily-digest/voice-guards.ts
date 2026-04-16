@@ -86,7 +86,9 @@ export function hasForwardLook(text: string): boolean {
   return FORWARD_LOOK_CUES.some((re) => re.test(text));
 }
 
-export function leadFamily(lead: string | undefined): string | undefined {
+export type LeadFamily = "psi" | "depeg" | "dews" | "flow" | "risk" | "macro" | "other";
+
+export function leadFamily(lead: string | undefined): LeadFamily | undefined {
   if (!lead) return undefined;
   if (lead.startsWith("psi-") || lead === "psi") return "psi";
   if (lead.includes("depeg")) return "depeg";

@@ -1,5 +1,5 @@
 import { DigestResponseSchema } from "../../lib/schemas";
-import { findForbiddenTics, hasForwardLook, leadFamily, openingFingerprint } from "./voice-guards";
+import { findForbiddenTics, hasForwardLook, leadFamily, openingFingerprint, type LeadFamily } from "./voice-guards";
 
 const FORBIDDEN_PHRASES = [
   "Meanwhile, ",
@@ -377,7 +377,7 @@ export function validateDigestModelOutput(
   if (currentFamily && currentFamily !== "other") {
     const recentFamilies = recentThree
       .map((entry) => leadFamily(getMetaString(entry.meta, "lead") ?? undefined))
-      .filter((f): f is string => f != null && f !== "other");
+      .filter((f): f is LeadFamily => f != null && f !== "other");
     const sameFamilyCount = recentFamilies.filter((f) => f === currentFamily).length;
     if (sameFamilyCount >= 2) {
       issues.push({
