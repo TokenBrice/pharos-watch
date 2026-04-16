@@ -161,14 +161,101 @@ describe("buildBaselineMap", () => {
       dataDays: 3,
     });
   });
+
+  it("cross-chain-aggregates daily_net and daily_abs before averaging across days", () => {
+    // Day 1: chain A nets +100 abs 200, chain B nets -40 abs 60 → combined net=60, abs=260
+    // Day 2: chain A nets +20 abs 30 → combined net=20, abs=30
+    // nowSec in day 3 → baselineEndDayTs = day 2, firstDayTs = day 1, dataDays = 2
+    const nowSec = 3 * DAY_SECONDS + 1;
+    const baseline = buildBaselineMap(
+      nowSec,
+      [
+        { stablecoin_id: "usdc-circle", chain_id: "ethereum", day_ts: 1 * DAY_SECONDS, daily_net: 100, daily_abs: 200 },
+        { stablecoin_id: "usdc-circle", chain_id: "arbitrum", day_ts: 1 * DAY_SECONDS, daily_net: -40, daily_abs: 60 },
+        { stablecoin_id: "usdc-circle", chain_id: "ethereum", day_ts: 2 * DAY_SECONDS, daily_net: 20, daily_abs: 30 },
+      ],
+      [
+        { stablecoin_id: "usdc-circle", chain_id: "ethereum", first_hour_ts: 1 * DAY_SECONDS },
+        { stablecoin_id: "usdc-circle", chain_id: "arbitrum", first_hour_ts: 1 * DAY_SECONDS + 7200 },
+      ],
+    );
+
+    // sumNet = 60 + 20 = 80, sumAbs = 260 + 30 = 290, dataDays = 2
+    expect(baseline.get("usdc-circle")).toEqual({
+      avgNet: 40,
+      avgAbs: 145,
+      dataDays: 2,
+    });
+  });
+
+  it("produces no entry when coin is first seen today (firstDayTs > baselineEndDayTs)", () => {
+    // nowSec is within day 5 → baselineEndDayTs = day 4
+    // first_hour_ts is within day 5 → firstDayTs = day 5 > day 4 → skipped
+    const nowSec = 5 * DAY_SECONDS + 100;
+    const baseline = buildBaselineMap(
+      nowSec,
+      [
+        { stablecoin_id: "new-coin", chain_id: ETHEREUM_CHAIN_ID, day_ts: 5 * DAY_SECONDS, daily_net: 10, daily_abs: 10 },
+      ],
+      [
+        { stablecoin_id: "new-coin", chain_id: ETHEREUM_CHAIN_ID, first_hour_ts: 5 * DAY_SECONDS + 50 },
+      ],
+    );
+
+    expect(baseline.has("new-coin")).toBe(false);
+  });
+
+  it("caps dataDays at 30 when coin has been tracked for exactly 30 days", () => {
+    // firstDayTs = day 1, baselineEndDayTs = day 30 → trackedDays = 30, dataDays = 30
+    const nowSec = 31 * DAY_SECONDS + 1;
+    const baseline = buildBaselineMap(
+      nowSec,
+      [
+        { stablecoin_id: "old-coin", chain_id: ETHEREUM_CHAIN_ID, day_ts: 1 * DAY_SECONDS, daily_net: 300, daily_abs: 300 },
+      ],
+      [
+        { stablecoin_id: "old-coin", chain_id: ETHEREUM_CHAIN_ID, first_hour_ts: 1 * DAY_SECONDS },
+      ],
+    );
+
+    expect(baseline.get("old-coin")).toEqual({
+      avgNet: 10,
+      avgAbs: 10,
+      dataDays: 30,
+    });
+  });
+
+  it("sets dataDays to actual tracked days when coin has fewer than 30 days", () => {
+    // firstDayTs = day 10, baselineEndDayTs = day 20 → trackedDays = 11, dataDays = 11
+    const nowSec = 21 * DAY_SECONDS + 1;
+    const baseline = buildBaselineMap(
+      nowSec,
+      [
+        { stablecoin_id: "young-coin", chain_id: ETHEREUM_CHAIN_ID, day_ts: 15 * DAY_SECONDS, daily_net: 55, daily_abs: 55 },
+      ],
+      [
+        { stablecoin_id: "young-coin", chain_id: ETHEREUM_CHAIN_ID, first_hour_ts: 10 * DAY_SECONDS },
+      ],
+    );
+
+    expect(baseline.get("young-coin")).toEqual({
+      avgNet: 5,
+      avgAbs: 5,
+      dataDays: 11,
+    });
+  });
 });
 
 describe("buildCoinCoverageMap", () => {
-  it("marks a well-synced long-history coin as full coverage", () => {
+  // Pick a single-config Ethereum coin for isolation in each test.
+  function pickSingleConfigCoin() {
     const config = MINT_BURN_CONFIGS.find((entry) => entry.chain.chainId === ETHEREUM_CHAIN_ID);
     expect(config).toBeDefined();
-    if (!config) return;
+    return config!;
+  }
 
+  it("marks a well-synced long-history coin as full coverage", () => {
+    const config = pickSingleConfigCoin();
     const referenceHead = config.startBlock + 1_000_000;
     const coverage = buildCoinCoverageMap(
       200 * DAY_SECONDS,
@@ -188,4 +275,68 @@ describe("buildCoinCoverageMap", () => {
       status: "full",
     });
   });
+
+  it("returns bootstrapping when lastSyncedBlock is very close to startBlock", () => {
+    const config = pickSingleConfigCoin();
+    // lastSyncedBlock only 50 blocks past startBlock.
+    // No first-seen data → historyStartAt = null → has24hWindow = false → bootstrapping.
+    const lastSynced = config.startBlock + 50;
+    const chainHead = config.startBlock + 1_000_000;
+    const coverage = buildCoinCoverageMap(
+      200 * DAY_SECONDS,
+      [], // no first-seen rows for this coin
+      new Map([[`${config.chain.chainId}-${config.contractAddress}`, lastSynced]]),
+      new Map([[config.chain.chainId, chainHead]]),
+    );
+
+    expect(coverage.get(config.stablecoinId)).toMatchObject({
+      status: "bootstrapping",
+      isPartial: true,
+      has24hWindow: false,
+    });
+  });
+
+  it("returns lagging when lastSyncedBlock is > 10,000 blocks behind chain head", () => {
+    const config = pickSingleConfigCoin();
+    const chainHead = config.startBlock + 1_000_000;
+    // Lag = chainHead - lastSynced = 20,000 > 10,000 threshold
+    const lastSynced = chainHead - 20_000;
+    const coverage = buildCoinCoverageMap(
+      200 * DAY_SECONDS,
+      [{ stablecoin_id: config.stablecoinId, chain_id: config.chain.chainId, first_hour_ts: 50 * DAY_SECONDS }],
+      new Map([[`${config.chain.chainId}-${config.contractAddress}`, lastSynced]]),
+      new Map([[config.chain.chainId, chainHead]]),
+    );
+
+    expect(coverage.get(config.stablecoinId)).toMatchObject({
+      status: "lagging",
+      isPartial: true,
+      lagBlocks: 20_000,
+    });
+  });
+
+  it("returns partial-history when coin is tracked for < 30 days", () => {
+    const config = pickSingleConfigCoin();
+    const nowSec = 100 * DAY_SECONDS;
+    // first_hour_ts 10 days ago → has 24h window but NOT 30d window
+    const firstHourTs = nowSec - 10 * DAY_SECONDS;
+    const referenceHead = config.startBlock + 1_000_000;
+    const coverage = buildCoinCoverageMap(
+      nowSec,
+      [{ stablecoin_id: config.stablecoinId, chain_id: config.chain.chainId, first_hour_ts: firstHourTs }],
+      new Map([[`${config.chain.chainId}-${config.contractAddress}`, referenceHead]]),
+      new Map([[config.chain.chainId, referenceHead]]),
+    );
+
+    expect(coverage.get(config.stablecoinId)).toMatchObject({
+      status: "partial-history",
+      isPartial: true,
+      has24hWindow: true,
+      has30dWindow: false,
+    });
+  });
+
+  // Note: no MINT_BURN_CONFIGS entry has `enabled: false` today, so testing
+  // the "disabled" status would require mocking the module import. Skipped
+  // to avoid brittle coupling; the status branch is trivially readable.
 });
