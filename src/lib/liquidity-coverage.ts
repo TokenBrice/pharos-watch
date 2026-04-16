@@ -26,6 +26,7 @@ const COVERAGE_BADGES: Record<LiquidityCoverageClass, { label: string; className
 
 const SOURCE_LABELS: Record<string, string> = {
   dl: "DeFiLlama",
+  direct_api: "Direct API",
   cg_onchain: "CG Onchain",
   gecko_terminal: "GeckoTerminal",
   dexscreener: "DexScreener",

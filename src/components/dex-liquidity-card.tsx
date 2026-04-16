@@ -473,7 +473,7 @@ export function DexLiquidityCard({ stablecoinId }: { stablecoinId: string }) {
 
   const score = liq.liquidityScore ?? 0;
   const tier = getScoreTier(score);
-  const coverageBadge = getLiquidityCoverageBadge(liq.coverageClass);
+  const coverageBadge = getLiquidityCoverageBadge(liq.coverageClass ?? "unobserved");
   const isRated = liq.liquidityScore != null;
   const evidenceLabel = getLiquidityEvidenceLabel(liq);
 

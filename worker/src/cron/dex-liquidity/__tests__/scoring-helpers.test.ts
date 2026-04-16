@@ -1,5 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { accumulateGlobalAggregate } from "../scoring-helpers";
+import { isPlausibleDexObservationPrice } from "../price-sanity";
 import type { PoolEntry } from "../types";
 
 function makePool(overrides: Partial<PoolEntry>): PoolEntry {
@@ -16,6 +17,20 @@ function makePool(overrides: Partial<PoolEntry>): PoolEntry {
     ...overrides,
   } as PoolEntry;
 }
+
+describe("isPlausibleDexObservationPrice guards peg", () => {
+  it("rejects extreme off-peg prices for usdc-circle", () => {
+    // Below the reference lower bound (1% of peg = $0.01)
+    expect(isPlausibleDexObservationPrice("usdc-circle", 0.005)).toBe(false);
+    expect(isPlausibleDexObservationPrice("usdc-circle", 0)).toBe(false);
+    expect(isPlausibleDexObservationPrice("usdc-circle", -1)).toBe(false);
+  });
+
+  it("accepts near-peg prices for usdc-circle", () => {
+    expect(isPlausibleDexObservationPrice("usdc-circle", 1.0001)).toBe(true);
+    expect(isPlausibleDexObservationPrice("usdc-circle", 0.995)).toBe(true);
+  });
+});
 
 describe("accumulateGlobalAggregate", () => {
   it("dedupes the same poolId across stablecoins", () => {

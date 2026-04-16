@@ -105,7 +105,7 @@ export function LiquidityTable({ rows, logos, searchQuery, onRowClick }: Liquidi
             const liq = row.liq;
             const vtRatio = liq.totalTvlUsd > 0 ? liq.totalVolume24hUsd / liq.totalTvlUsd : 0;
             const topProtocol = Object.entries(liq.protocolTvl).sort((a, b) => b[1] - a[1])[0];
-            const coverageBadge = getLiquidityCoverageBadge(liq.coverageClass);
+            const coverageBadge = getLiquidityCoverageBadge(liq.coverageClass ?? "unobserved");
 
             return (
               <InteractiveTableRow

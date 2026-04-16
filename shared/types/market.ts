@@ -266,7 +266,7 @@ const DexLiquidityDataSchema = z.object({
   weightedBalanceRatio: z.number().nullable(),
   organicFraction: z.number().nullable(),
   durabilityScore: z.number().min(0).max(100).nullable(),
-  coverageClass: LiquidityCoverageClassSchema,
+  coverageClass: LiquidityCoverageClassSchema.nullable(),
   coverageConfidence: z.number().min(0).max(1),
   liquidityEvidenceClass: LiquidityEvidenceClassSchema,
   hasMeasuredLiquidityEvidence: z.boolean(),
@@ -281,7 +281,6 @@ const DexLiquidityDataSchema = z.object({
       poolQuality: z.number(),
       durability: z.number(),
       pairDiversity: z.number(),
-      crossChain: z.number().optional(),
     })
     .nullable(),
   lockedLiquidityPct: z.number().nullable().optional(),

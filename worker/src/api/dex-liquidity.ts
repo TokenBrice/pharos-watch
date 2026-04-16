@@ -84,7 +84,7 @@ export const handleDexLiquidity = withErrorHandler("dex-liquidity", async (db: D
 
     // Merge DEX price data if available
     const dexPrice = dexPriceById.get(id);
-    const coverageClass = row.coverage_class ?? "legacy";
+    const coverageClass = id === "__global__" ? null : (row.coverage_class ?? "legacy");
     const coverageConfidence = row.coverage_confidence ?? 0.5;
     const balanceMeasuredTvlUsd = row.balance_measured_tvl_usd ?? 0;
     const { liquidityEvidenceClass, hasMeasuredLiquidityEvidence } = classifyLiquidityEvidence(

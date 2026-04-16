@@ -466,7 +466,7 @@ async function persistDexLiquidityScoreState(
     sourceCoverageCompleteByStablecoin,
     minPoolTvlUsd: POOL_CHALLENGE_MIN_TVL,
   });
-  await computeDexPrices(ctx.db, scoreState.retainedPoolsByStablecoin, ctx.syncStartSec);
+  await computeDexPrices(ctx.db, scoreState.retainedPoolsByStablecoin, ctx.syncStartSec, sourceState.validationReferences);
 
   const historicalSnapshot = (await writeHistoricalSnapshots(ctx.db, scoreState.scoreResults)) ?? {
     snapshotRowsWritten: 0,

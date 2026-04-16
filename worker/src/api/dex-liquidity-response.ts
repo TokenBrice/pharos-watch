@@ -81,16 +81,39 @@ function normalizePoolSource(source: unknown): LiquidityPoolSourceFamily | undef
   return undefined;
 }
 
+function pickAllowedKeys(obj: Record<string, unknown>, allowed: Set<string>): Record<string, unknown> {
+  const out: Record<string, unknown> = {};
+  for (const key of allowed) {
+    if (obj[key] !== undefined) out[key] = obj[key];
+  }
+  return out;
+}
+
+const ALLOWED_POOL_KEYS = new Set<string>([
+  "project", "chain", "symbol", "poolType", "tvlUsd", "volumeUsd1d", "price", "source",
+]);
+const ALLOWED_EXTRA_KEYS = new Set<string>([
+  "amplificationCoefficient", "balanceRatio", "feeTier", "organicFraction",
+  "pairQuality", "stressIndex", "maturityDays", "balanceDetails", "measurement",
+  "effectiveTvl", "isMetaPool", "registryId", "lockedLiquidityPct",
+  "orderbookDepthUsd", "orderbookDepthUpUsd", "orderbookTvlBasis",
+]);
+
 export function normalizeTopPools(json: string | null): DexLiquidityPoolResponse[] {
   const parsed = safeJsonParse<DexLiquidityPoolResponse[]>(json, []);
   return parsed.map((pool) => {
+    const cleaned = pickAllowedKeys(pool as Record<string, unknown>, ALLOWED_POOL_KEYS);
+    if (pool.extra && typeof pool.extra === "object") {
+      cleaned.extra = pickAllowedKeys(pool.extra as Record<string, unknown>, ALLOWED_EXTRA_KEYS);
+    }
     const normalizedSource = normalizePoolSource(pool.source);
     if (normalizedSource != null) {
-      return { ...pool, source: normalizedSource };
+      cleaned.source = normalizedSource;
+    } else {
+      console.info("[dex-liquidity] Unknown pool source:", pool.source);
+      delete cleaned.source;
     }
-    console.info("[dex-liquidity] Unknown pool source:", pool.source);
-    const { source: _, ...rest } = pool;
-    return rest as DexLiquidityPoolResponse;
+    return cleaned as DexLiquidityPoolResponse;
   });
 }
 

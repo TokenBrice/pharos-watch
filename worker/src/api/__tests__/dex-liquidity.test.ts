@@ -82,6 +82,21 @@ describe("handleDexLiquidity", () => {
     });
   });
 
+  it("overrides coverageClass to null for the __global__ sentinel row", async () => {
+    const globalRow = makeDexLiquidityRow({
+      stablecoin_id: "__global__",
+      coverage_class: "unobserved",
+    });
+    const db = mockD1([
+      { match: "dex_liquidity", rows: [globalRow] },
+      { match: "dex_liquidity_history", rows: [] },
+      { match: "dex_prices", rows: [] },
+    ]);
+    const res = await handleDexLiquidity(db);
+    const body = (await res.json()) as Record<string, Record<string, unknown>>;
+    expect(body["__global__"]?.coverageClass).toBeNull();
+  });
+
   it("includes v2 fields in response", async () => {
     const db = mockD1([
       { match: "dex_liquidity", rows: [row] },

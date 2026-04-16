@@ -1,6 +1,7 @@
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins";
 import { batchExecute } from "../../lib/db";
 import { loadStablecoinsCache } from "../../lib/stablecoins-cache";
+import type { PriceValidationReferences } from "../../lib/price-validation";
 import type {
   LiquidityMetrics,
   FullScoreResult,
@@ -8,6 +9,7 @@ import type {
 } from "./types";
 import { dexPriceConfidenceForProtocol } from "./constants";
 import { computeDurabilityScore, computeLiquidityScore } from "./pool-helpers";
+import { isPlausibleDexObservationPrice } from "./price-sanity";
 import {
   accumulateGlobalAggregate,
   aggregateProtocolSources,
@@ -297,6 +299,7 @@ export async function computeDexPrices(
   db: D1Database,
   retainedPoolsByStablecoin: Map<string, LiquidityMetrics["topPools"]>,
   nowSec: number,
+  references?: PriceValidationReferences,
 ): Promise<void> {
   const priceObservations = buildDexPriceObservationsFromRetainedPools(retainedPoolsByStablecoin);
   const existingRows = await db
@@ -389,8 +392,21 @@ export async function computeDexPrices(
       deviationBps = Math.round(((medianPrice / primaryPrice) - 1) * 10000);
     }
 
-    // Persist one aggregate per protocol for the primary-pricing bridge.
-    const protocolSources = aggregateProtocolSources(collapsedObservations);
+    // Guard against retained pools whose prices are off-peg for the tracked stablecoin.
+    // This protects price_sources_json (the "show all sources" UI) from alias-collapse
+    // contamination like Fantom USDC.e rows at $0.044 flowing into usdc-circle.priceSources.
+    // The scoring-level sanity gate has a wide 1% floor to avoid rejecting legitimately
+    // depegged stablecoins. For the per-protocol display surface, apply a tighter 50%
+    // primary-price ratio guard on top so near-peg alias-collapse rows are filtered.
+    const sanePriceObs = collapsedObservations.filter((obs) => {
+      if (!isPlausibleDexObservationPrice(id, obs.price, references)) return false;
+      if (primaryPrice != null && primaryPrice > 0) {
+        const ratio = obs.price / primaryPrice;
+        if (ratio < 0.5 || ratio > 2.0) return false;
+      }
+      return true;
+    });
+    const protocolSources = aggregateProtocolSources(sanePriceObs);
 
     const meta = TRACKED_META_BY_ID.get(id);
     const symbol = meta?.symbol ?? id;
