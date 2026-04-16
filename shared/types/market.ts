@@ -440,6 +440,7 @@ export const BLACKLIST_STABLECOINS = [
   "MNEE",
   "EURC",
   "BUIDL",
+  "USDP",
 ] as const;
 
 export type BlacklistStablecoin = (typeof BLACKLIST_STABLECOINS)[number];

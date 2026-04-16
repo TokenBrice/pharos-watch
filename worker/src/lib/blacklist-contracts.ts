@@ -205,7 +205,7 @@ const PYUSD_FREEZE_TOPIC = "0x1aa660498c83ea285bc55e4cfc00afcaa7120798db87b74f3c
 const PYUSD_UNFREEZE_TOPIC = "0x150465b020dfc06a59269da94ed66db9b65a516cf4fdd5f583b0f12752339bbe"; // UnfreezeAddress(address)
 const PYUSD_WIPED_TOPIC = PAXG_WIPED_TOPIC; // FrozenAddressWiped(address) — same signature as PAXG
 
-const PYUSD_EVENT_FAMILY = defineEventFamily("paxos-pyusd-freeze", [
+export const PYUSD_EVENT_FAMILY = defineEventFamily("paxos-pyusd-freeze", [
   {
     signature: "FreezeAddress(address)",
     topicHash: PYUSD_FREEZE_TOPIC,
@@ -597,6 +597,9 @@ const CONTRACT_CONFIG_SPECS: ContractEventConfigSpec[] = [
   { chain: ETHEREUM, stablecoinId: "aid-gaib", stablecoin: "AID", startBlock: 23_682_560, events: DENY_LIST_EVENT_FAMILY.events },
   { chain: ETHEREUM, stablecoinId: "tgbp-tokenised", stablecoin: "TGBP", startBlock: 23_046_391, events: BANNED_EVENT_FAMILY.events },
   { chain: AVALANCHE, stablecoinId: "tgbp-tokenised", stablecoin: "TGBP", startBlock: 69_696_101, events: BANNED_EVENT_FAMILY.events },
+
+  // USDP (Paxos Pax Dollar — same freeze pattern as PYUSD/USDG)
+  { chain: ETHEREUM, stablecoinId: "usdp-paxos", stablecoin: "USDP", startBlock: 6_294_931, events: PYUSD_EVENT_FAMILY.events },
 
   // EURC re-enabled with mirror-zero suppression
   { chain: ETHEREUM, stablecoinId: "eurc-circle", startBlock: 14_807_227, events: USDC_EVENT_FAMILY.events },

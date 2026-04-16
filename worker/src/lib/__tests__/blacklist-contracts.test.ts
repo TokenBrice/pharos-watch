@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins";
 import {
   CONTRACT_CONFIGS,
+  PYUSD_EVENT_FAMILY,
   getBlacklistEventBySignature,
   getBlacklistEventByTopic,
   getBlacklistTopicHashes,
@@ -128,5 +129,14 @@ describe("blacklist-contracts shared metadata alignment", () => {
     expect(getStartBlock("fdusd-first-digital", "arbitrum")).toBe(336_278_229);
     expect(getStartBlock("ausd-agora", "arbitrum")).toBe(342_153_906);
     expect(getStartBlock("buidl-blackrock", "arbitrum")).toBe(270_969_308);
+  });
+
+  it("resolves usdp-paxos on ethereum with PYUSD event family", () => {
+    const config = CONTRACT_CONFIGS.find(
+      (c) => c.stablecoinId === "usdp-paxos" && c.chain.chainId === "ethereum",
+    );
+    expect(config).toBeDefined();
+    expect(config!.stablecoin).toBe("USDP");
+    expect(config!.events).toEqual(PYUSD_EVENT_FAMILY.events);
   });
 });
