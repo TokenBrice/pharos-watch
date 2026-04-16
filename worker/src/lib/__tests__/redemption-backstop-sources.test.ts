@@ -1203,7 +1203,8 @@ describe("buildRedemptionBackstopEntry", () => {
       now,
       { reserveSnapshotMetadata: null },
     );
-    expect(entry.notes.filter((n) => n === "Shared note").length).toBe(1);
-    expect(entry.notes.filter((n) => n === "Distinct note").length).toBe(1);
+    expect(entry.notes ?? []).toBeDefined();
+    expect((entry.notes ?? []).filter((n) => n === "Shared note").length).toBe(1);
+    expect((entry.notes ?? []).filter((n) => n === "Distinct note").length).toBe(1);
   });
 });

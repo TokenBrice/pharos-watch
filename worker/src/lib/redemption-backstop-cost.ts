@@ -41,7 +41,7 @@ export const REDEMPTION_FEE_SCORE_BREAKPOINTS = [
   { maxFeeBps: 100, score: 60 },
 ] as const;
 
-export const REDEMPTION_FEE_SCORE_HIGH_FEE_FALLBACK = 40;
+const REDEMPTION_FEE_SCORE_HIGH_FEE_FALLBACK = 40;
 
 export function resolveBoundedFeeScore(feeBps: number): number {
   for (const { maxFeeBps, score } of REDEMPTION_FEE_SCORE_BREAKPOINTS) {
