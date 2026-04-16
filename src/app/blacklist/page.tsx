@@ -5,6 +5,7 @@ import { StaleDataBanner } from "@/components/stale-data-banner";
 import { QueryErrorNotice } from "@/components/query-error-notice";
 import { UsdsStatusCard } from "@/components/usds-status-card";
 import { EurcBlacklistCard } from "@/components/eurc-blacklist-card";
+import { DecentralisedNoFreezeCard } from "@/components/decentralised-no-freeze-card";
 import { BlacklistStats } from "@/components/blacklist-stats";
 import { BlacklistChart } from "@/components/blacklist-chart";
 import { BlacklistStatusCharts } from "@/components/blacklist-status-charts";
@@ -143,9 +144,10 @@ function BlacklistPageInner() {
         />
       )}
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-5">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-5">
         <UsdsStatusCard />
         <EurcBlacklistCard />
+        <DecentralisedNoFreezeCard />
       </div>
     </FeaturePageShell>
   );
