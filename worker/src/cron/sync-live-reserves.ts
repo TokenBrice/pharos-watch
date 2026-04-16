@@ -2,7 +2,6 @@ import { createTimeoutSignal } from "@shared/lib/timeout-signal";
 import type { CronProgressReporter, CronResult } from "../lib/cron-logger";
 import { getReserveAdapter, type AdapterContext, type AdapterResult, type ReserveAdapterDefinition } from "./reserve-adapters/index";
 import { recordOutcomeSafe } from "../lib/circuit-breaker";
-import { deleteCache } from "../lib/db-cache";
 import { reportCronProgress } from "../lib/cron-progress";
 import {
   loadReserveSyncStateMap,
@@ -38,32 +37,68 @@ function createAbortableAttemptSignal(
   return { signal: timeout.signal, cleanup };
 }
 
+const D1_IN_PARAM_CHUNK_SIZE = 900;
+
+function chunk<T>(values: readonly T[], size: number): T[][] {
+  if (values.length === 0) return [];
+  const chunks: T[][] = [];
+  for (let i = 0; i < values.length; i += size) {
+    chunks.push(values.slice(i, i + size));
+  }
+  return chunks;
+}
+
+function buildNotInPlaceholders(count: number): string {
+  return new Array(count).fill("?").join(", ");
+}
+
 async function cleanupStaleReserveSyncArtifacts(
   db: D1Database,
   activeCoinIds: readonly string[],
   activeBreakerKeys: ReadonlySet<string>,
 ): Promise<void> {
-  const rows = await db
-    .prepare("SELECT stablecoin_id, breaker_key FROM reserve_sync_state")
-    .all<{ stablecoin_id: string; breaker_key: string | null }>();
+  const statements: D1PreparedStatement[] = [];
 
-  const activeCoinIdSet = new Set(activeCoinIds);
-  const staleRows = (rows.results ?? []).filter((row) => !activeCoinIdSet.has(row.stablecoin_id));
-  for (const row of staleRows) {
-    await db
-      .prepare("DELETE FROM reserve_sync_state WHERE stablecoin_id = ?")
-      .bind(row.stablecoin_id)
-      .run();
+  const coinIdChunks = chunk(activeCoinIds, D1_IN_PARAM_CHUNK_SIZE);
+  if (coinIdChunks.length === 0) {
+    statements.push(db.prepare("DELETE FROM reserve_sync_state"));
+    statements.push(db.prepare("DELETE FROM reserve_composition"));
+  } else {
+    for (const chunkedIds of coinIdChunks) {
+      const placeholders = buildNotInPlaceholders(chunkedIds.length);
+      statements.push(
+        db
+          .prepare(`DELETE FROM reserve_sync_state WHERE stablecoin_id NOT IN (${placeholders})`)
+          .bind(...chunkedIds),
+      );
+      statements.push(
+        db
+          .prepare(`DELETE FROM reserve_composition WHERE stablecoin_id NOT IN (${placeholders})`)
+          .bind(...chunkedIds),
+      );
+    }
   }
 
-  const cacheRows = await db
-    .prepare("SELECT key FROM cache WHERE key LIKE 'circuit:live-reserves:%'")
-    .all<{ key: string }>();
-  for (const row of cacheRows.results ?? []) {
-    const breakerKey = row.key.replace("circuit:", "");
-    if (activeBreakerKeys.has(breakerKey)) continue;
-    await deleteCache(db, row.key);
+  const cacheKeys = Array.from(activeBreakerKeys).map((key) => `circuit:${key}`);
+  const cacheKeyChunks = chunk(cacheKeys, D1_IN_PARAM_CHUNK_SIZE);
+  if (cacheKeyChunks.length === 0) {
+    statements.push(
+      db.prepare("DELETE FROM cache WHERE key LIKE 'circuit:live-reserves:%'"),
+    );
+  } else {
+    for (const chunkedKeys of cacheKeyChunks) {
+      const placeholders = buildNotInPlaceholders(chunkedKeys.length);
+      statements.push(
+        db
+          .prepare(
+            `DELETE FROM cache WHERE key LIKE 'circuit:live-reserves:%' AND key NOT IN (${placeholders})`,
+          )
+          .bind(...chunkedKeys),
+      );
+    }
   }
+
+  await db.batch(statements);
 }
 
 async function reportLiveReserveProgress(

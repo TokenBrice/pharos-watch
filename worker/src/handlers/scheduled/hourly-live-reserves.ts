@@ -22,10 +22,16 @@ export async function runHourlyReserveSyncSlot(runtime: ScheduledRuntimeContext)
         chainRpcs: runtime.chainRpcs,
       }, reportProgress),
     );
-  } finally {
+  } catch (e) {
+    console.error("[hourly-live-reserves] Live reserves sync failed:", e);
+  }
+
+  try {
     await runtime.runLeasedCron("sync-redemption-backstops", (signal) =>
       syncRedemptionBackstops(runtime.db, signal),
     );
+  } catch (e) {
+    console.error("[hourly-live-reserves] Redemption backstops sync failed:", e);
   }
 
   try {
