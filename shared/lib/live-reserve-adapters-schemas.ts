@@ -398,6 +398,9 @@ export const NOT_APPLICABLE_ONLY_FRESHNESS = ["not-applicable"] satisfies LiveRe
 export const MATERIAL_UNKNOWN_EXPOSURE_PCT = 5;
 export const DASHBOARD_SOURCE_MAX_AGE_SEC = 3 * DAY_SECONDS;
 export const DISCLOSURE_SOURCE_MAX_AGE_SEC = 7 * DAY_SECONDS;
+// Some issuer attestations publish on a monthly cadence (e.g. Native Markets USDH);
+// give those feeds a 33-day window (~month + 3d grace) before staleness degrades them.
+export const MONTHLY_DISCLOSURE_SOURCE_MAX_AGE_SEC = 33 * DAY_SECONDS;
 
 export type LiveReserveSingleAssetProbe = z.infer<typeof singleAssetProbeSchema>;
 export type LiveReserveRedemptionRateProbe = z.infer<typeof redemptionRateProbeSchema>;

@@ -9,6 +9,7 @@ import {
   DASHBOARD_SOURCE_MAX_AGE_SEC,
   DISCLOSURE_SOURCE_MAX_AGE_SEC,
   MATERIAL_UNKNOWN_EXPOSURE_PCT,
+  MONTHLY_DISCLOSURE_SOURCE_MAX_AGE_SEC,
   NOT_APPLICABLE_ONLY_FRESHNESS,
   UNVERIFIED_ONLY_FRESHNESS,
   VERIFIED_ONLY_FRESHNESS,
@@ -386,7 +387,8 @@ export const LIVE_RESERVE_ADAPTER_DEFINITIONS = {
     sharedSourceMode: "none",
     redemptionTelemetry: { capacity: "none", fee: "none" },
     validation: {
-      maxSourceAgeSec: DISCLOSURE_SOURCE_MAX_AGE_SEC,
+      // Native Markets USDH publishes attestation PDFs monthly; use the 33-day window.
+      maxSourceAgeSec: MONTHLY_DISCLOSURE_SOURCE_MAX_AGE_SEC,
       allowedFreshnessModes: VERIFIED_OR_UNVERIFIED_FRESHNESS,
     },
   },
