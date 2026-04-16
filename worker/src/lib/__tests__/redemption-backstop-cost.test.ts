@@ -1,5 +1,8 @@
 import { describe, expect, it } from "vitest";
-import { resolveBoundedFeeScore } from "../redemption-backstop-cost";
+import {
+  REDEMPTION_FEE_SCORE_BREAKPOINTS,
+  resolveBoundedFeeScore,
+} from "../redemption-backstop-cost";
 
 describe("resolveBoundedFeeScore", () => {
   it("scores 0 bps as 100", () => {
@@ -44,5 +47,17 @@ describe("resolveBoundedFeeScore", () => {
 
   it("scores 500 bps as 40 (no floor below 40)", () => {
     expect(resolveBoundedFeeScore(500)).toBe(40);
+  });
+});
+
+describe("REDEMPTION_FEE_SCORE_BREAKPOINTS", () => {
+  it("drives resolveBoundedFeeScore consistently", () => {
+    expect(resolveBoundedFeeScore(0)).toBe(100);
+    for (const bp of REDEMPTION_FEE_SCORE_BREAKPOINTS) {
+      expect(resolveBoundedFeeScore(bp.maxFeeBps)).toBe(bp.score);
+    }
+    const topBreakpoint =
+      REDEMPTION_FEE_SCORE_BREAKPOINTS[REDEMPTION_FEE_SCORE_BREAKPOINTS.length - 1];
+    expect(resolveBoundedFeeScore(topBreakpoint.maxFeeBps + 1)).toBe(40);
   });
 });

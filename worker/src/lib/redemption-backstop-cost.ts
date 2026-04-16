@@ -35,11 +35,19 @@ export interface RedemptionStaticFields {
   notes: string[];
 }
 
+export const REDEMPTION_FEE_SCORE_BREAKPOINTS = [
+  { maxFeeBps: 10, score: 100 },
+  { maxFeeBps: 50, score: 80 },
+  { maxFeeBps: 100, score: 60 },
+] as const;
+
+export const REDEMPTION_FEE_SCORE_HIGH_FEE_FALLBACK = 40;
+
 export function resolveBoundedFeeScore(feeBps: number): number {
-  if (feeBps <= 10) return 100;
-  if (feeBps <= 50) return 80;
-  if (feeBps <= 100) return 60;
-  return 40;
+  for (const { maxFeeBps, score } of REDEMPTION_FEE_SCORE_BREAKPOINTS) {
+    if (feeBps <= maxFeeBps) return score;
+  }
+  return REDEMPTION_FEE_SCORE_HIGH_FEE_FALLBACK;
 }
 
 function resolveRedemptionCost(
