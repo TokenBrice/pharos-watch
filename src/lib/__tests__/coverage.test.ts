@@ -4,6 +4,7 @@ import {
   buildCoverageFeatureSummary,
   buildCoverageRow,
   COVERAGE_FEATURES,
+  resolveBlacklistCoverage,
   resolveDexCoverage,
   resolveFlowCoverage,
   resolvePriceCoverage,
@@ -231,6 +232,12 @@ describe("coverage helpers", () => {
     expect(resolveFlowCoverage(null).available).toBe(false);
   });
 
+  it("matches blacklist tracker symbols case-insensitively while respecting resolved status", () => {
+    expect(resolveBlacklistCoverage(makeCoin({ symbol: "tGBP" }), true).available).toBe(true);
+    expect(resolveBlacklistCoverage(makeCoin({ symbol: "USDT" }), "possible").available).toBe(false);
+    expect(resolveBlacklistCoverage(makeCoin({ symbol: "USDQ" }), false).available).toBe(false);
+  });
+
   it("counts only available features when building rows", () => {
     const row = buildCoverageRow({
       coin: makeCoin({
@@ -305,6 +312,7 @@ describe("coverage helpers", () => {
 
     // headlineFilter requires sourceCount >= 3; only "one" (tracked, 3 sources) passes
     expect(summary.availableCount).toBe(1);
+    expect(summary.totalCount).toBe(2);
     expect(summary.coveragePct).toBe(50);
     expect(summary.mcapSharePct).toBe(80);
     expect(summary.breakdown).toBe("tracked 1 · price-only 1 · 5+ sources: 0 · 3-4: 1 · 1-2: 0");
@@ -469,6 +477,7 @@ describe("coverage helpers", () => {
 
     expect(summary.countLabel).toBe("Score-grade live");
     expect(summary.availableCount).toBe(1);
+    expect(summary.totalCount).toBe(4);
     expect(summary.coveragePct).toBe(25);
     expect(summary.mcapSharePct).toBe(70);
     expect(summary.shareLabel).toBe("Score-grade live reserve market-cap reach");
@@ -538,6 +547,7 @@ describe("coverage helpers", () => {
 
     expect(summary.countLabel).toBe("Strong coverage");
     expect(summary.availableCount).toBe(2);
+    expect(summary.totalCount).toBe(4);
     expect(summary.coveragePct).toBe(50);
     expect(summary.mcapSharePct).toBe(80);
     expect(summary.coverageLabel).toBe("50% with strong redemption coverage");
@@ -545,5 +555,73 @@ describe("coverage helpers", () => {
     expect(summary.breakdown).toBe(
       "heuristic 1 · configured 0 · issuer 1 · psm 1 · queue 0 · collateral 0 · stable 0 · basket 0 · data n/a 0",
     );
+  });
+
+  it("scopes blacklist snapshot summaries to directly blacklistable coins", () => {
+    const rows = [
+      buildCoverageRow({
+        coin: makeCoin({ id: "tracked", symbol: "USDC" }),
+        marketCapUsd: 700,
+        hasPegCoverage: true,
+        safetyScore: 82,
+        dexCoverageClass: "primary",
+        redemptionEntry: null,
+        hasYieldCoverage: false,
+        flowCoverageStatus: null,
+        hasDependencyCoverage: false,
+        blacklistStatus: true,
+      }),
+      buildCoverageRow({
+        coin: makeCoin({ id: "untracked", symbol: "YES" }),
+        marketCapUsd: 200,
+        hasPegCoverage: true,
+        safetyScore: 82,
+        dexCoverageClass: "primary",
+        redemptionEntry: null,
+        hasYieldCoverage: false,
+        flowCoverageStatus: null,
+        hasDependencyCoverage: false,
+        blacklistStatus: true,
+      }),
+      buildCoverageRow({
+        coin: makeCoin({ id: "possible", symbol: "USDT" }),
+        marketCapUsd: 500,
+        hasPegCoverage: true,
+        safetyScore: 82,
+        dexCoverageClass: "primary",
+        redemptionEntry: null,
+        hasYieldCoverage: false,
+        flowCoverageStatus: null,
+        hasDependencyCoverage: false,
+        blacklistStatus: "possible",
+      }),
+      buildCoverageRow({
+        coin: makeCoin({ id: "not-blacklistable", symbol: "NO" }),
+        marketCapUsd: 100,
+        hasPegCoverage: true,
+        safetyScore: 82,
+        dexCoverageClass: "primary",
+        redemptionEntry: null,
+        hasYieldCoverage: false,
+        flowCoverageStatus: null,
+        hasDependencyCoverage: false,
+        blacklistStatus: false,
+      }),
+    ];
+
+    const summary = buildCoverageFeatureSummary(
+      COVERAGE_FEATURES.find((feature) => feature.key === "blacklist")!,
+      rows,
+      1_500,
+    );
+
+    expect(summary.countLabel).toBe("Blacklistable coins");
+    expect(summary.availableCount).toBe(1);
+    expect(summary.totalCount).toBe(2);
+    expect(summary.coveragePct).toBe(50);
+    expect(summary.mcapSharePct).toBeCloseTo((700 / 900) * 100);
+    expect(summary.coverageLabel).toBe("50% of blacklistable coins");
+    expect(summary.shareLabel).toBe("Blacklistable market-cap reach");
+    expect(summary.breakdown).toBe("1 covered · 1 uncovered");
   });
 });

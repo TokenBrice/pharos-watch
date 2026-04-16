@@ -18,6 +18,7 @@ import {
 } from "@/hooks/api-hooks";
 import { useMintBurnFlows } from "@/hooks/use-mint-burn-flows";
 import { useStablecoins } from "@/hooks/use-stablecoins";
+import { getResolvedBlacklistStatus } from "@/lib/blacklist-status";
 import {
   buildCoverageFeatureSummary,
   buildCoverageRow,
@@ -99,6 +100,7 @@ export function useCoverageMatrixModel() {
         hasYieldCoverage: yieldIds.has(coin.id),
         flowCoverageStatus: flowById.get(coin.id)?.coverage?.status ?? null,
         hasDependencyCoverage: dependencyIds.has(coin.id),
+        blacklistStatus: getResolvedBlacklistStatus(coin.id, reportCard),
         liveReserveFresh: queryAvailability.reserves ? (reportCard?.rawInputs.collateralFromLive ?? false) : null,
         dataAvailability: queryAvailability,
       });

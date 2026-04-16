@@ -59,10 +59,7 @@ export function CoverageFeatureSnapshotCard({
   widestFeature,
   narrowestFeature,
   mostConcentratedFeature,
-  totalRows,
-}: Pick<CoveragePageModel, "featureSummaries" | "widestFeature" | "narrowestFeature" | "mostConcentratedFeature"> & {
-  totalRows: number;
-}) {
+}: Pick<CoveragePageModel, "featureSummaries" | "widestFeature" | "narrowestFeature" | "mostConcentratedFeature">) {
   return (
     <Card className="rounded-[1.6rem] border border-border/70 bg-card/85 shadow-[0_18px_44px_oklch(0_0_0_/0.14)]">
       <CardHeader className="space-y-5">
@@ -112,7 +109,7 @@ export function CoverageFeatureSnapshotCard({
       <CardContent className="pt-0">
         <ul className="space-y-3">
           {featureSummaries.map((summary) => (
-            <CoverageFeatureSnapshotRow key={summary.feature.key} summary={summary} totalRows={totalRows} />
+            <CoverageFeatureSnapshotRow key={summary.feature.key} summary={summary} />
           ))}
         </ul>
       </CardContent>

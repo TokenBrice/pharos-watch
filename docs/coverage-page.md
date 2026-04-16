@@ -69,7 +69,7 @@ The page deliberately mixes structural coverage and live dataset coverage. The i
 | `Redemption Backstop` | `useRedemptionBackstops().data.coins[id]`                                                                                  | The matrix reflects the live redemption-backstop snapshot exposed by the worker dataset, not static coin metadata alone. Configured-but-unrated routes render as `Config.`; low-confidence heuristic routes render as `Heur.`; neither counts as covered in the headline metric. |
 | `Yield`               | `useYieldRankings().data.rankings[].id`                                                                                    | Coverage reflects current inclusion in the yield rankings, not theoretical yield-bearing eligibility.                                                                                                                                                |
 | `Flows`               | `useMintBurnFlows().data.coins[].coverage.status`                                                                          | Mirrors the Ethereum mint/burn coverage state exposed on `/flows`.                                                                                                                                                                                   |
-| `Blacklist`           | `BLACKLIST_STABLECOINS` from `@shared/types`                                                                               | Structural support flag, matching the shared filter enum used by the blacklist route and worker handlers. Current live-supported values are `USDC`, `USDT`, `PAXG`, `XAUT`, `PYUSD`, and `USD1`.                                                  |
+| `Blacklist`           | `BLACKLIST_STABLECOINS` from `@shared/types` for row tracking state, plus resolved `rawInputs.canBeBlacklisted` / `getTrackedBlacklistStatus()` for snapshot eligibility | Structural support flag, matching the shared filter enum used by the blacklist route and worker handlers. The feature snapshot denominator is scoped to coins whose resolved blacklist status is direct `true`; `possible`, `inherited`, and non-blacklistable assets remain visible in the matrix but do not count as uncovered blacklist-tracker opportunities. |
 | `Dependency Map`      | `useReportCards().data.cards` filtered to live cards, then `deriveDependencies(meta)` from `@shared/lib/reserve-templates` | This mirrors the live dependency-edge derivation used by `src/app/dependency-map/client.tsx`.                                                                                                                                                        |
 
 Additional page-level sources:
@@ -91,8 +91,8 @@ The feature snapshot leads the page. It is the first stop for users who want to 
 Every row shows:
 
 - a headline count aligned to the feature's summary rule
-- percent of tracked coins
-- percent of tracked market cap
+- percent of tracked coins, or the feature-specific eligible coin set when a feature only applies to a subset
+- percent of tracked market cap, or the feature-specific eligible market cap when a feature only applies to a subset
 - a short per-feature breakdown
 - direct link to the underlying surface when one exists
 
@@ -102,6 +102,8 @@ For `Redemption Backstop`, the headline metric intentionally emphasizes strong r
 
 For `Price & Depeg`, the headline metric intentionally emphasizes breadth with corroborated pricing. A coin still renders `Tracked` in the matrix with fewer than 3 sources, but the feature snapshot headline only counts rows whose `consensusSources` depth is at least 3.
 
+For `Blacklist`, the headline metric is scoped to directly blacklistable coins only. Assets with `possible` or `inherited` blacklist exposure can still matter for report-card resilience, but they are not treated as missing event-tracker coverage in the snapshot denominator.
+
 Breakdowns are intentionally dense and should stay short:
 
 - DEX: `primary / mixed / fallback`
@@ -109,6 +111,7 @@ Breakdowns are intentionally dense and should stay short:
 - Redemption: `heuristic / configured / issuer / psm / queue / collateral / stable / basket`
 - Flows: `full / partial / bootstrapping`
 - Price: `tracked / price-only`
+- Blacklist: `covered / uncovered` within the directly blacklistable eligible set
 
 #### Source count enrichment
 

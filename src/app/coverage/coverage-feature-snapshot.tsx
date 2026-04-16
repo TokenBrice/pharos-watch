@@ -5,10 +5,9 @@ import { CoverageFeatureLink } from "./coverage-feature-link";
 
 export interface CoverageFeatureSnapshotRowProps {
   summary: CoverageFeatureSummary;
-  totalRows: number;
 }
 
-export function CoverageFeatureSnapshotRow({ summary, totalRows }: CoverageFeatureSnapshotRowProps) {
+export function CoverageFeatureSnapshotRow({ summary }: CoverageFeatureSnapshotRowProps) {
   const Icon = FEATURE_ICON[summary.feature.key];
   const accent = FEATURE_ACCENT_CLASSES[summary.feature.key];
   const breakdownItems = summary.breakdown.split("\u00b7").map((item) => item.trim());
@@ -43,7 +42,7 @@ export function CoverageFeatureSnapshotRow({ summary, totalRows }: CoverageFeatu
           <div className="flex items-center justify-between gap-3 text-[11px] font-medium uppercase tracking-[0.08em] text-muted-foreground">
             <span>{summary.countLabel}</span>
             <span className="font-mono text-base font-semibold tracking-tight text-foreground">
-              {summary.availableCount}/{totalRows}
+              {summary.availableCount}/{summary.totalCount}
             </span>
           </div>
           <div className="h-2 rounded-full bg-muted/80">

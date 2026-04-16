@@ -1,5 +1,6 @@
 import { BACKING_LABELS_SHORT, GOVERNANCE_LABELS_SHORT, PEG_LABELS_SHORT } from "@shared/lib/classification";
 import { getReserveDisplayBadgeKindForAdapter } from "@shared/lib/live-reserve-display";
+import type { BlacklistStatus } from "@shared/lib/report-cards";
 import { getReserves } from "@shared/lib/reserve-templates";
 import type {
   LiquidityCoverageClass,
@@ -40,6 +41,7 @@ export interface CoverageFeatureDefinition {
   label: string;
   shortLabel: string;
   description: string;
+  scopeFilter?: (row: CoverageRow) => boolean;
   headlineKinds?: readonly string[];
   headlineFilter?: (row: CoverageRow) => boolean;
   headlineCountLabel?: string;
@@ -52,6 +54,7 @@ export interface CoverageFeatureDefinition {
 export interface CoverageFeatureSummary {
   feature: CoverageFeatureDefinition;
   availableCount: number;
+  totalCount: number;
   coveragePct: number;
   coveredMcapUsd: number;
   mcapSharePct: number | null;
@@ -69,6 +72,7 @@ export interface CoverageRow {
   pegLabel: string;
   backingLabel: string;
   governanceLabel: string;
+  blacklistStatus: BlacklistStatus | null;
   coverageCount: number;
   headlineCoverageCount: number;
   advancedCoverageCount: number;
@@ -87,11 +91,19 @@ interface BuildCoverageRowInput {
   hasYieldCoverage: boolean;
   flowCoverageStatus: MintBurnCoverageStatus | null | undefined;
   hasDependencyCoverage: boolean;
+  blacklistStatus?: BlacklistStatus | null;
   liveReserveFresh?: boolean | null;
   dataAvailability?: Partial<Record<CoverageFeatureKey, boolean>>;
 }
 
 const BLACKLIST_SYMBOLS = new Set<string>(BLACKLIST_STABLECOINS);
+
+function hasBlacklistTrackerCoverage(coin: StablecoinMeta, blacklistStatus: BlacklistStatus | null = null): boolean {
+  if (blacklistStatus !== null && blacklistStatus !== true) {
+    return false;
+  }
+  return BLACKLIST_SYMBOLS.has(coin.symbol.toUpperCase());
+}
 
 export const COVERAGE_FEATURES: readonly CoverageFeatureDefinition[] = [
   {
@@ -159,6 +171,10 @@ export const COVERAGE_FEATURES: readonly CoverageFeatureDefinition[] = [
     label: "Blacklist",
     shortLabel: "Blacklist",
     description: "Freeze / blacklist event tracking for issuers with supported event coverage.",
+    scopeFilter: (row) => row.blacklistStatus === true,
+    headlineCountLabel: "Blacklistable coins",
+    headlineCoverageLabel: (coveragePct) => `${coveragePct.toFixed(0)}% of blacklistable coins`,
+    headlineShareLabel: "Blacklistable market-cap reach",
     href: "/blacklist/",
   },
   {
@@ -698,9 +714,12 @@ export function resolveFlowCoverage(
   return createPresetStatus(FLOW_STATUS_PRESETS[flowCoverageStatus ?? "none"] ?? FLOW_STATUS_PRESETS.none);
 }
 
-export function resolveBlacklistCoverage(coin: StablecoinMeta): CoverageStatus {
+export function resolveBlacklistCoverage(
+  coin: StablecoinMeta,
+  blacklistStatus: BlacklistStatus | null = null,
+): CoverageStatus {
   return resolveBooleanCoverageStatus(
-    BLACKLIST_SYMBOLS.has(coin.symbol),
+    hasBlacklistTrackerCoverage(coin, blacklistStatus),
     {
       kind: "tracked",
       label: "Tracked",
@@ -801,17 +820,21 @@ export function buildCoverageFeatureSummary(
   rows: CoverageRow[],
   totalMcapUsd: number,
 ): CoverageFeatureSummary {
-  const availableRows = rows.filter((row) => row.statuses[feature.key].available);
+  const scopedRows = feature.scopeFilter ? rows.filter((row) => feature.scopeFilter!(row)) : rows;
+  const availableRows = scopedRows.filter((row) => row.statuses[feature.key].available);
   const primaryRows = feature.headlineFilter
-    ? rows.filter((row) => feature.headlineFilter!(row))
+    ? scopedRows.filter((row) => feature.headlineFilter!(row))
     : feature.headlineKinds?.length
-      ? rows.filter((row) => feature.headlineKinds?.includes(row.statuses[feature.key].kind))
+      ? scopedRows.filter((row) => feature.headlineKinds?.includes(row.statuses[feature.key].kind))
       : availableRows;
   const coveredMcapUsd = primaryRows.reduce((sum, row) => sum + row.marketCapUsd, 0);
+  const scopedMcapUsd = feature.scopeFilter
+    ? scopedRows.reduce((sum, row) => sum + row.marketCapUsd, 0)
+    : totalMcapUsd;
   const breakdownMap = new Map<string, number>();
-  const coveragePct = rows.length > 0 ? (primaryRows.length / rows.length) * 100 : 0;
+  const coveragePct = scopedRows.length > 0 ? (primaryRows.length / scopedRows.length) * 100 : 0;
 
-  for (const row of rows) {
+  for (const row of scopedRows) {
     const kind = row.statuses[feature.key].kind;
     breakdownMap.set(kind, (breakdownMap.get(kind) ?? 0) + 1);
   }
@@ -819,13 +842,14 @@ export function buildCoverageFeatureSummary(
   return {
     feature,
     availableCount: primaryRows.length,
+    totalCount: scopedRows.length,
     coveragePct,
     coveredMcapUsd,
-    mcapSharePct: totalMcapUsd > 0 ? (coveredMcapUsd / totalMcapUsd) * 100 : null,
+    mcapSharePct: scopedMcapUsd > 0 ? (coveredMcapUsd / scopedMcapUsd) * 100 : null,
     countLabel: feature.headlineCountLabel ?? "Coin count",
     coverageLabel: feature.headlineCoverageLabel?.(coveragePct) ?? `${coveragePct.toFixed(0)}% of active coins`,
     shareLabel: feature.headlineShareLabel ?? "Active market-cap reach",
-    breakdown: buildCoverageBreakdown(feature.key, breakdownMap, availableRows.length, rows.length, rows),
+    breakdown: buildCoverageBreakdown(feature.key, breakdownMap, availableRows.length, scopedRows.length, scopedRows),
   };
 }
 
@@ -867,6 +891,7 @@ export function buildCoverageRow({
   hasYieldCoverage,
   flowCoverageStatus,
   hasDependencyCoverage,
+  blacklistStatus = null,
   liveReserveFresh = true,
   dataAvailability,
 }: BuildCoverageRowInput): CoverageRow {
@@ -879,7 +904,7 @@ export function buildCoverageRow({
     redemption: resolveRedemptionCoverage(redemptionEntry, hasData("redemption")),
     yield: resolveYieldCoverage(hasYieldCoverage, hasData("yield")),
     flows: resolveFlowCoverage(flowCoverageStatus, hasData("flows")),
-    blacklist: resolveBlacklistCoverage(coin),
+    blacklist: resolveBlacklistCoverage(coin, blacklistStatus),
     dependency: resolveDependencyCoverage(hasDependencyCoverage, hasData("dependency")),
   } satisfies Record<CoverageFeatureKey, CoverageStatus>;
 
@@ -891,6 +916,7 @@ export function buildCoverageRow({
     pegLabel: PEG_LABELS_SHORT[coin.flags.pegCurrency] ?? coin.flags.pegCurrency,
     backingLabel: BACKING_LABELS_SHORT[coin.flags.backing] ?? coin.flags.backing,
     governanceLabel: GOVERNANCE_LABELS_SHORT[coin.flags.governance] ?? coin.flags.governance,
+    blacklistStatus,
     coverageCount: countAvailableFeatures(statuses),
     headlineCoverageCount: countHeadlineFeatures(statuses),
     advancedCoverageCount: countAvailableFeatures(statuses, [

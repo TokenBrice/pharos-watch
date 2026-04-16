@@ -17,6 +17,7 @@ function status(kind: string, available: boolean, sortRank = available ? 1 : 0):
 }
 
 function makeRow(overrides: Partial<CoverageRow> & Pick<CoverageRow, "id" | "name" | "symbol">): CoverageRow {
+  const { blacklistStatus = null, ...rowOverrides } = overrides;
   const statuses: Record<CoverageFeatureKey, CoverageStatus> = {
     price: status("tracked", true),
     safety: status("tracked", true),
@@ -37,8 +38,9 @@ function makeRow(overrides: Partial<CoverageRow> & Pick<CoverageRow, "id" | "nam
     coverageCount: 0,
     headlineCoverageCount: 0,
     advancedCoverageCount: 0,
+    blacklistStatus,
     statuses,
-    ...overrides,
+    ...rowOverrides,
   };
 }
 
