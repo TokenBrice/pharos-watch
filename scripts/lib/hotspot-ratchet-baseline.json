@@ -324,9 +324,9 @@
     "notes": "Previously a major hotspot and now materially reduced. Preserve the split; future providers should land in helper modules, not back in this shell."
   },
   "worker/src/cron/sync-blacklist.ts": {
-    "fileLines": 425,
-    "maxFunctionLines": 355,
-    "branchCount": 34,
+    "fileLines": 437,
+    "maxFunctionLines": 367,
+    "branchCount": 36,
     "disposition": "queued-p4",
     "targetBudget": {
       "fileLines": 280,

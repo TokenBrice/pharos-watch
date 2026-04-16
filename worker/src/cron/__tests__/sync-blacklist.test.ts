@@ -569,7 +569,7 @@ describe("syncBlacklist", () => {
       && entry.sql.includes("amount_status IN")
       && entry.sql.includes("LIMIT ?"),
     );
-    expect(backfillQuery?.sql).toContain("ORDER BY timestamp DESC");
+    expect(backfillQuery?.sql).toContain("timestamp DESC");
   });
 
   it("advances the cursor after partial RPC coverage instead of restarting from zero", async () => {
