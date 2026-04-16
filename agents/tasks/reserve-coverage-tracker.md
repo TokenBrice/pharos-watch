@@ -103,16 +103,20 @@ Feasible adapter work that was out of scope for the 2026-04-16 plan.
 
 ## Out of Phase 4, possible future wave
 
-Not in the Phase 7 scope today, but adjacent to the Phase 6 on-chain rewrites.
+Phase 6 of the 2026-04-16 remediation plan (large on-chain rewrites) was explicitly deferred. Each item is a multi-day engagement requiring a shared Multicall3 helper + per-adapter on-chain balance/position reads. Ship Phase 6 as its own plan once the first two land and inform priorities.
 
-| Coin | Direction |
-|---|---|
-| `zchf-frankencoin` | On-chain rewrite of the reserve feed when Phase 6 expands. |
-| `deuro-deuro` | On-chain rewrite when Phase 6 expands. |
-| `wsrusd-war-sky-road` | On-chain rewrite when Phase 6 expands. |
-| `iusd-infinifi` | On-chain rewrite when Phase 6 expands. |
-| `btcusd-btcfi` | Phase 6.6 scope — handler-contract direct reads. |
-| `fxusd-f-x-protocol` | On-chain rewrite when Phase 6 expands. |
+| Task | Coin(s) | Scope | Notes |
+|---|---|---|---|
+| **6.1 crvUSD on-chain rewrite** | `crvusd-curve` | L | Replace `prices.curve.finance` leg with direct LLAMMA `bands_y`/`bands_x` reads via Multicall3. Keeps the Yield Basis leg unchanged. Unblocks scoring-live for crvUSD. |
+| **6.2 fxUSD on-chain** | `fxusd-f-x-protocol` | M | Direct f(x) pool-contract reads. |
+| **6.3 ZCHF / DEURO on-chain** | `zchf-frankencoin`, `deuro-deuro` | L | On-chain position + collateral reads via Multicall3; multi-chain fan-out. |
+| **6.4 wsrUSD cross-chain** | `wsrusd-reservoir` | L | Multi-chain balance fan-out against enumerated labeled addresses. |
+| **6.5 IUSD on-chain** | `iusd-infinifi` | M | `infinifi-vault` ERC-4626 `totalAssets`/`totalSupply` direct reads. |
+| **6.6 BtcUSD on-chain** | `btcusd-btcfi` | M | BTCfi handler contracts, `deposit_amount`/`borrow_amount` direct reads. |
+
+Prerequisite shared work for Phase 6:
+- New `worker/src/lib/evm-multicall.ts` helper wrapping Multicall3 `aggregate3` (canonical `0xcA11bde05977b3631167028862bE2a173976CA11` on every tracked EVM chain).
+- Test harness + tsc clean criteria.
 
 ---
 
