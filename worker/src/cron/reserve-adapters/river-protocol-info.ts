@@ -46,7 +46,8 @@ export function adaptRiverProtocolInfo(payload: RiverProtocolInfoPayload): Adapt
     metadata: {
       ...(timestampSummary
         ? {
-            ...verifiedFreshnessMetadata(timestampSummary.sourceTimestamp),
+            ...verifiedFreshnessMetadata(timestampSummary.latestSourceTimestamp),
+            oldestSourceTimestamp: timestampSummary.sourceTimestamp,
             latestSourceTimestamp: timestampSummary.latestSourceTimestamp,
             sourceTimestampSpreadSec: timestampSummary.sourceTimestampSpreadSec,
             sourceTimestampCount: timestampSummary.timestampCount,

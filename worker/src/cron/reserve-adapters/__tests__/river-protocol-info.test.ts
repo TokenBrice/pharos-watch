@@ -25,4 +25,23 @@ describe("adaptRiverProtocolInfo", () => {
       circulatingPointCount: 1,
     });
   });
+
+  it("uses the latest point for snapshot timestamp (not min)", () => {
+    const result = adaptRiverProtocolInfo({
+      tvl: 300_000_000,
+      circulatingSupply: 150_000_000,
+      tvlData: [
+        { timestamp: 1_775_000_000, value: 1000 },
+        { timestamp: 1_776_000_000, value: 2000 },
+      ],
+      circulatingData: [
+        { timestamp: 1_775_500_000, value: 500 },
+        { timestamp: 1_776_500_000, value: 1500 },
+      ],
+    });
+
+    expect(result.metadata?.sourceTimestamp).toBe(1_776_500_000);
+    expect(result.metadata?.freshnessMode).toBe("verified");
+    expect(result.metadata?.latestSourceTimestamp).toBe(1_776_500_000);
+  });
 });
