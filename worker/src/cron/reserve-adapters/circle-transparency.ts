@@ -59,8 +59,27 @@ function extractDisplayAmount(html: string, coinType: string): number | null {
   return tag ? extractAttrValue(tag, "data-point") : null;
 }
 
-function extractDisclosureTimestamp(html: string): number | null {
-  const match = html.match(/\bAs of\s+([A-Za-z]{3,9}\s+\d{1,2},\s*\d{4})\b/i);
+function extractReserveSectionHtml(html: string, coinType: string): string | null {
+  const canvasId = coinType === "eurc" ? "euro-in-circulation" : "usdc-in-circulation";
+  const escapedId = escapeRegExp(canvasId);
+  // Capture the HTML window immediately surrounding the reserve canvas element
+  // (id=<canvasId>) so the "As of" lookup matches the disclosure date attached
+  // to the reserve block, not some other page-level "As of" banner. Circle's
+  // reserve disclosure places the date adjacent to the chart; a ±1500-char
+  // window is more than enough without reaching unrelated site chrome.
+  // eslint-disable-next-line security/detect-non-literal-regexp -- canvasId is selected from adapter-owned constants and escaped before interpolation.
+  const anchorRe = new RegExp(`id\\s*=\\s*["']${escapedId}["']`, "i");
+  const anchorMatch = anchorRe.exec(html);
+  if (!anchorMatch) return null;
+  const anchorIndex = anchorMatch.index;
+  const windowStart = Math.max(0, anchorIndex - 1_500);
+  const windowEnd = Math.min(html.length, anchorIndex + 1_500);
+  return html.slice(windowStart, windowEnd);
+}
+
+function extractDisclosureTimestamp(html: string, coinType: string): number | null {
+  const section = extractReserveSectionHtml(html, coinType) ?? html;
+  const match = section.match(/\bAs of\s+([A-Za-z]{3,9}\s+\d{1,2},\s*\d{4})\b/i);
   return parseTimestampLikeToUnixSeconds(match?.[1]);
 }
 
@@ -95,7 +114,7 @@ export function adaptCircleTransparency(html: string, coinType: string): Adapter
   const useAbsoluteValues = !looksLikePercentages
     && displayAmountRelativeDiff != null
     && displayAmountRelativeDiff <= CIRCLE_ABSOLUTE_MODE_MAX_RELATIVE_DIFF;
-  const sourceTimestamp = extractDisclosureTimestamp(html);
+  const sourceTimestamp = extractDisclosureTimestamp(html, coinType);
 
   const slices = useAbsoluteValues
     ? slicesFromValues(

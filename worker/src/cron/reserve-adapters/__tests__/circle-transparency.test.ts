@@ -92,4 +92,16 @@ describe("adaptCircleTransparency", () => {
   it("throws when no matching canvas found", () => {
     expect(() => adaptCircleTransparency("<html></html>", "usdc")).toThrow("layout-changed");
   });
+
+  it("prefers the reserve-block 'As of' date when the page contains unrelated 'As of' banners", () => {
+    const farPadding = "<div>" + "x".repeat(3_000) + "</div>";
+    const stalePageBanner = `<div>As of Jan 01, 2020</div>${farPadding}`;
+    const futureBanner = `${farPadding}<div>As of Feb 02, 2022</div>`;
+    const adversarial = `${stalePageBanner}${USDC_AMOUNT_HTML}<div>As of Apr 09, 2026</div>${futureBanner}`;
+    const result = adaptCircleTransparency(adversarial, "usdc");
+
+    expect(result.metadata).toMatchObject({
+      sourceTimestamp: Date.UTC(2026, 3, 9) / 1000,
+    });
+  });
 });
