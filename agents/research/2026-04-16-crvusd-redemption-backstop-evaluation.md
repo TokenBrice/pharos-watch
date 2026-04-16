@@ -43,9 +43,11 @@ crvUSD's practical exit quality is dominated by the depth of the Curve crvUSD/US
 
 **Do not add a redemption backstop config for `crvusd-curve`.** The plan's exclusion was correct. Revisit only if Curve governance ships an explicit holder-redeemable contract (e.g., a deliberate PSM-style rail or a protocol-level redemption function analogous to Liquity's).
 
-## Open question for the future
+## On AMO-supplied liquidity
 
-If we later want to credit coins whose DEX-pool liquidity is partly protocol-supplied via AMO (crvUSD is the canonical example), that would be a **DEX liquidity score enrichment**, not a redemption backstop addition. Tracking AMO-deployed liquidity as a distinct sub-component of pool depth could be a valuable v7+ liquidity-score iteration, but it does not belong in the redemption backstop system.
+AMO-supplied liquidity is not a liquidity-score gap. Our DEX liquidity score measures pool depth at the time of measurement, and PegKeeper-deposited crvUSD (plus whatever USDC/USDT PegKeepers have accumulated through arbitrage) is already part of that depth. Crediting it twice — once via pool depth, once via a "protocol-supplied" enrichment — would be double-counting.
+
+The honest caveat worth surfacing in future methodology work is a **stress-state risk signal**, not a score enrichment: PegKeepers are reflexive. They deposit crvUSD when the pool is short crvUSD (price > $1) and withdraw/burn when it is long crvUSD (price < $1). In the exact regime where a holder would want to exit en masse — price below peg, stress event — the PegKeeper is pulling liquidity, not adding to it. That asymmetry belongs in a depeg-stability or stress-scenario rating, not in a redemption backstop config and not as a DEX liquidity bump.
 
 ## Sources
 
