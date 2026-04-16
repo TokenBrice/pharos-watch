@@ -40,7 +40,7 @@ Coins where the upstream source is genuinely opaque at the asset-composition lev
 | `kau-kinesis` | weak-live-probe | Kinesis publishes PDF-only commodity audits; no structured per-asset feed. |
 | `pmusd-precious-metals` | weak-live-probe | PDF-only commodity audits; no structured per-asset feed. |
 | `cgo-comtech` | weak-live-probe | PDF-only commodity audits; no structured per-asset feed. |
-| `mxnb-bitso` | weak-live-probe | Insufficient transparency-data granularity in the current transparency feed (Task 5.2 deferred). |
+| `mxnb-juno` | weak-live-probe | MXNB transparency scraper deferred (page exposes only aggregate MXN vs MXNB ratio, no asset breakdown; would deliver less than curated). Re-evaluate if Juno publishes per-asset breakdown. |
 | `usdz-anzen` | weak-live-probe | Per-asset SPCT portfolio snapshots + attestation timestamps are not published. See `agents/plans/usdz-spct-promotion-gate.md` for the evidence gate. |
 
 ---
@@ -119,3 +119,4 @@ Not in the Phase 7 scope today, but adjacent to the Phase 6 on-chain rewrites.
 ## Review log
 
 - 2026-04-16: Tracker established per plan Task 7.3. Tasks 7.1 Path D follow-up and 7.2 USDz gate linked in.
+- 2026-04-16: Task 5.2 mxnb-transparency adapter deferred — corrected coin id to `mxnb-juno` and refined gap note (aggregate MXN-vs-MXNB only, no per-asset breakdown).
