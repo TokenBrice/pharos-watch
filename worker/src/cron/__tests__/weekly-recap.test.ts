@@ -267,6 +267,27 @@ describe("generateWeeklyRecap", () => {
     expect(body.messages[0].content).toMatch(/PSI midpoint: current .+ prior .+/i);
   });
 
+  it("normalizes weekly meta lead and tone through the allowlist", async () => {
+    const db = mockD1(makeTables(), { requireMatch: true });
+    vi.mocked(fetchWithRetry).mockImplementation(async () => weeklyClaudeResponse({
+      meta: {
+        leadSignalId: "wk:arc",
+        lead: "Week narrative about USDC flow rotation accelerating mid-week",
+        tone: "structurally-concerned-sardonic",
+        coins: ["USDC"],
+      },
+    }));
+
+    await generateWeeklyRecap(db, "anthropic-key", null);
+
+    const insert = db.getHistory().find((entry) => entry.sql.includes("INSERT INTO daily_digest"));
+    expect(insert).toBeTruthy();
+    const metaStored = JSON.parse(String(insert?.binds[5])) as Record<string, unknown>;
+    expect(metaStored.lead).toBe("other");
+    expect(metaStored.tone).toBe("other");
+    expect(metaStored.type).toBe("weekly");
+  });
+
   it("skips generation cleanly when the Anthropic circuit is open", async () => {
     const db = mockD1(makeTables(), { requireMatch: true });
     vi.mocked(shouldAttemptFetch).mockResolvedValue(false);
