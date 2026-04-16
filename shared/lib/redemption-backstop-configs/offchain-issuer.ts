@@ -903,6 +903,88 @@ export const OFFCHAIN_ISSUER_BACKSTOP_CONFIGS: Record<string, RedemptionBackstop
       "The reviewed 5% bound matches the tracked stability-reserve stablecoin fund rather than assuming the full hedged book is instantly withdrawable",
     ],
   },
+  "brla-brla-digital": {
+    ...issuerBase,
+    ...documentedBoundSupplyFull("2026-04-16"),
+    costModel: documentedVariableFee(
+      "Avenia (formerly BRLA Digital) documents 1:1 BRLA mint and redemption against BRL after KYC; public docs reviewed do not publish a fixed numeric redemption fee",
+    ),
+    docs: [
+      sourceRef("BRLA Digital", "https://brla.digital/", ["route", "capacity"]),
+      sourceRef("Avenia documentation", "https://docs.avenia.io/", ["route", "access"]),
+    ],
+    notes: ["Native multichain fiat-backed BRL stablecoin; KYC-gated primary mint and redeem rail via Avenia"],
+  },
+  "ctusd-citrea": {
+    ...issuerBase,
+    ...documentedBoundSupplyFull("2026-04-16"),
+    costModel: documentedVariableFee(
+      "Citrea documents 1:1 fiat mint and redemption via MoonPay using M0 Protocol infrastructure; MoonPay fiat-ramp fees apply while public docs reviewed do not publish a separate Citrea protocol redemption fee",
+    ),
+    docs: [
+      sourceRef("Citrea", "https://citrea.xyz/", ["route", "capacity"]),
+      sourceRef("Citrea documentation", "https://docs.citrea.xyz/", ["route"]),
+    ],
+    notes: [
+      "Fiat-backed via MoonPay; reserves cryptographically attested on-chain by M0 Validators before minting",
+    ],
+  },
+  "xo-exodus": {
+    ...issuerBase,
+    ...documentedBoundSupplyFull("2026-04-16"),
+    costModel: documentedVariableFee(
+      "Exodus XO documents 1:1 fiat mint and redemption via MoonPay using M0 Protocol infrastructure; MoonPay fiat-ramp fees apply while public docs reviewed do not publish a separate XO protocol redemption fee",
+    ),
+    docs: [
+      sourceRef("Exodus Pay", "https://www.exodus.com/exodus-pay", ["route", "capacity"]),
+      sourceRef("MoonPay", "https://www.moonpay.com/", ["route"]),
+    ],
+    notes: [
+      "Solana SPL Token-2022 mint with pausable, permanent-delegate, and transfer-hook authorities held by MoonPay",
+    ],
+  },
+  "usdk-kast": {
+    ...issuerBase,
+    ...documentedBoundSupplyFull("2026-04-16"),
+    costModel: documentedVariableFee(
+      "KAST documents 1:1 mint by wrapping M (M0), and redemption by unwrapping; the fiat on/off-ramp is mediated by licensed partners (Tazapay, BitGo, Fireblocks) whose fees apply separately",
+    ),
+    docs: [
+      sourceRef("KAST documentation", "https://docs.kast.finance/", ["route", "capacity"]),
+      sourceRef("M0 Dashboard", "https://dashboard.m0.org/", ["capacity"]),
+    ],
+    notes: [
+      "Solana SPL Token-2022 wrapper around M (M0); mint/redeem gated by KAST app and licensed payment partners",
+    ],
+  },
+  "usdm-mega": {
+    ...issuerBase,
+    ...documentedBoundSupplyFull("2026-04-16"),
+    costModel: documentedVariableFee(
+      "USDM is issued on Ethena's USDtb rails; primary redemption follows USDtb's documented issuer rail and is KYC-gated; public USDM-specific redemption fees are not published",
+    ),
+    docs: [
+      sourceRef("MegaETH", "https://www.megaeth.com/", ["route"]),
+      sourceRef("Ethena USDtb", "https://ethena.fi/usdtb", ["route", "capacity"]),
+    ],
+    notes: [
+      "USDM reuses Ethena's USDtb issuer redemption rail; reserve yield funds MegaETH sequencer costs",
+    ],
+  },
+  "usdkg-gold-dollar": {
+    ...issuerBase,
+    ...documentedBoundSupplyFull("2026-04-16"),
+    settlementModel: "days",
+    costModel: documentedVariableFee(
+      "Gold Dollar documents 1:1 USDKG mint and redemption against USD, KGS, physical gold, or approved cryptocurrencies after KYC/AML; public docs reviewed do not publish a fixed numeric redemption fee",
+    ),
+    docs: [
+      sourceRef("Gold Dollar USDKG", "https://usdkg.com/", ["route", "capacity"]),
+    ],
+    notes: [
+      "Licensed under Kyrgyz Republic Law on Virtual Assets (2022) / Cabinet Resolution No. 514; mutliple redemption outputs supported (USD, KGS, physical gold, or approved crypto)",
+    ],
+  },
   "usat-tether": {
     ...issuerBase,
     ...reviewedDirectRedemptionSupplyFull,
