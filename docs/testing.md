@@ -35,7 +35,7 @@ npm run test:smoke-transport # HTTP->HTTPS edge redirect smoke for api.pharos.wa
 npm run test:smoke-ui -- --url https://pharos.watch --mode live # Browser-level UI smoke check; local mode runs the full overflow sweep, live mode runs a narrower canary smoke
 ```
 
-When `SMOKE_UI_EXPECT_GA_ID` is set, `npm run test:smoke-ui` also verifies that the homepage HTML includes the expected GA script tag and `gtag('config', ...)` initialization before it runs the browser checks.
+When `SMOKE_UI_EXPECT_GA_ID` is set, `npm run test:smoke-ui` also verifies that the homepage artifact includes the expected GA script tag and `gtag('config', ...)` initialization before it runs the browser checks. The config init may live in the root static RSC payload (`/index.txt`) on newer Next.js static exports rather than directly in `index.html`.
 
 ## CI Pipeline
 
@@ -93,7 +93,7 @@ For deployment/worktree operating procedure (including the local merge gate befo
    - on combined worker + Pages deploys, uses the uploaded Worker's preview URL for digest sync and for the local `/_site-data/*` smoke lane so the static export is rehearsed against the exact candidate API while worker promotion continues in parallel
    - `build-pages` fetches `/api/digest-archive` once from the selected API environment into `data/digests.json`, forwarding `DIGEST_API_KEY` from GitHub repository secrets and `NEXT_PUBLIC_GA_ID` from GitHub repo vars into `npm run build`, then runs `npm run seo:check`, and uploads `out/`
    - `smoke-ui` serves that exact artifact locally, proxies direct `/api/*` calls to the selected public API base, proxies `/_site-data/*` to the selected `site-api` base, injects `SITE_API_SHARED_SECRET` for the site-data proxy hop, and runs `npm run test:smoke-ui -- --url http://127.0.0.1:4173 --mode local`
-   - when `SMOKE_UI_EXPECT_GA_ID` is configured, that smoke step also verifies the built homepage HTML still contains the expected GA snippet
+   - when `SMOKE_UI_EXPECT_GA_ID` is configured, that smoke step also verifies the built homepage artifact still contains the expected GA snippet
 9. `pages-publish`:
    - reusable workflow in `.github/workflows/pages-publish.yml`
    - runs only when `pages_changed=true`
@@ -105,7 +105,7 @@ For deployment/worktree operating procedure (including the local merge gate befo
 10. `smoke-ui-live` (worker-only push path):
    - Runs only when `worker_changed=true` and `pages_changed=false`
    - Runs `npm run test:smoke-ui -- --url https://pharos.watch --mode live`
-   - when `SMOKE_UI_EXPECT_GA_ID` is configured, also verifies the live homepage HTML still contains the expected GA snippet
+   - when `SMOKE_UI_EXPECT_GA_ID` is configured, also verifies the live homepage artifact still contains the expected GA snippet
    - Verifies that the unchanged live Pages frontend still works against the newly deployed worker/API without repeating the full local overflow sweep
 11. `smoke-ops`:
 

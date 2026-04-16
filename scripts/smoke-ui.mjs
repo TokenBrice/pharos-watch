@@ -403,7 +403,10 @@ function formatUiSummary(summary) {
 }
 
 export function hasGaConfigInit(html, expectedGaId) {
-  const compactHtml = html.replace(/\s+/g, "");
+  const compactHtml = html
+    .replace(/\s+/g, "")
+    .replace(/\\"/g, '"')
+    .replace(/\\'/g, "'");
   return [
     `gtag('config','${expectedGaId}')`,
     `gtag('config',"${expectedGaId}")`,
@@ -412,12 +415,35 @@ export function hasGaConfigInit(html, expectedGaId) {
   ].some((candidate) => compactHtml.includes(candidate));
 }
 
-async function verifyAnalyticsSnippet(url, expectedGaId) {
+export function getAnalyticsPayloadUrls(url) {
+  const parsed = new URL(url);
+  return Array.from(
+    new Set([
+      new URL("index.txt", parsed).toString(),
+      new URL("__next._index.txt", parsed).toString(),
+      new URL("__next._full.txt", parsed).toString(),
+    ]),
+  );
+}
+
+async function hasGaConfigInitInPayload(url, expectedGaId, fetchImpl = fetch) {
+  for (const payloadUrl of getAnalyticsPayloadUrls(url)) {
+    const response = await fetchImpl(payloadUrl).catch(() => null);
+    if (!response?.ok) continue;
+    const text = await response.text();
+    if (hasGaConfigInit(text, expectedGaId)) {
+      return true;
+    }
+  }
+  return false;
+}
+
+export async function verifyAnalyticsSnippet(url, expectedGaId, fetchImpl = fetch) {
   if (!expectedGaId) {
     return;
   }
 
-  const response = await fetch(url);
+  const response = await fetchImpl(url);
   assert(response.ok, `Failed to fetch ${url} while checking analytics snippet (${response.status})`);
   const html = await response.text();
 
@@ -425,9 +451,12 @@ async function verifyAnalyticsSnippet(url, expectedGaId) {
     html.includes(`https://www.googletagmanager.com/gtag/js?id=${expectedGaId}`),
     `Expected GA script tag for ${expectedGaId} in ${url}`,
   );
+  if (hasGaConfigInit(html, expectedGaId)) {
+    return;
+  }
   assert(
-    hasGaConfigInit(html, expectedGaId),
-    `Expected GA config init for ${expectedGaId} in ${url}`,
+    await hasGaConfigInitInPayload(url, expectedGaId, fetchImpl),
+    `Expected GA config init for ${expectedGaId} in ${url} or its static payload`,
   );
 }
 
