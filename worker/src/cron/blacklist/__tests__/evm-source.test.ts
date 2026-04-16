@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { encodeAbiParameters } from "viem/utils";
 import { parseEvmLogs } from "../evm-source";
-import type { ContractEventConfig } from "../../../lib/blacklist-contracts";
+import { CONTRACT_CONFIGS, type ContractEventConfig } from "../../../lib/blacklist-contracts";
 
 const USD1_CONFIG: ContractEventConfig = {
   configKey: "ethereum-0x8d0d000ee44948fc98c9b98a4fa4921476f08b0d",
@@ -308,5 +308,32 @@ describe("parseEvmLogs", () => {
       amount_native: 25,
       amount_usd_at_event: 25,
     });
+  });
+
+  it("decodes BUIDL Seize with amountDataIndex=0 (regression for Agent A C1)", async () => {
+    const { encodeAbiParameters, keccak256, toBytes } = await import("viem");
+    const seizeTopic = keccak256(toBytes("Seize(address,address,uint256,string)"));
+    // data layout: [uint256 value, string reason] — ABI-encoded
+    const data = encodeAbiParameters(
+      [{ type: "uint256" }, { type: "string" }],
+      [25_000_000n, "test"],
+    );
+    const fromAddress = "0x000000000000000000000000" + "a".repeat(40);
+    const toAddress = "0x000000000000000000000000" + "b".repeat(40);
+    const config = CONTRACT_CONFIGS.find((c) => c.stablecoinId === "buidl-blackrock" && c.chain.chainId === "ethereum")!;
+    const rows = parseEvmLogs(config, [
+      {
+        address: config.contractAddress,
+        topics: [seizeTopic, fromAddress, toAddress],
+        data,
+        blockNumber: "0x100",
+        transactionHash: "0xdeadbeef".padEnd(66, "0"),
+        logIndex: "0x0",
+        timeStamp: "0x1000",
+      },
+    ]);
+    expect(rows).toHaveLength(1);
+    expect(rows[0].amount_native).toBe(25);
+    expect(rows[0].event_type).toBe("destroy");
   });
 });

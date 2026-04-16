@@ -457,6 +457,8 @@ const SECURITIZE_SEIZE_EVENT_FAMILY = defineEventFamily("securitize-seize", [
     topicHash: SECURITIZE_SEIZE_TOPIC,
     eventType: "destroy",
     hasAmount: true,
+    addressTopicIndex: 1, // from (victim)
+    amountDataIndex: 0,   // value occupies the first 32-byte data slot (reason follows as dynamic tail)
   },
   {
     signature: "OmnibusSeize(address,address,uint256,string,uint8)",
