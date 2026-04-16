@@ -448,4 +448,34 @@ describe("validateAdapterOutput", () => {
     expect(result.valid).toBe(false);
     expect(result.warnings[0]?.code).toBe("invalid-redemption-route-status-source");
   });
+
+  it("collects all redemption fatals when multiple violations occur simultaneously", () => {
+    const result = validateAdapterOutput(
+      {
+        slices: [{ name: "A", pct: 100, risk: "low" }],
+        metadata: {
+          immediateRedeemableUsd: -100,
+          redemption: {
+            routeStatus: "exploded",
+          },
+        },
+      },
+      {
+        adapter: {
+          key: "cap-vault",
+          fetch: async () => ({ slices: [] }),
+          sourceModel: LIVE_RESERVE_ADAPTER_DEFINITIONS["cap-vault"].sourceModel,
+          evidenceClass: LIVE_RESERVE_ADAPTER_DEFINITIONS["cap-vault"].evidenceClass,
+          sharedSourceMode: LIVE_RESERVE_ADAPTER_DEFINITIONS["cap-vault"].sharedSourceMode,
+          redemptionTelemetry: LIVE_RESERVE_ADAPTER_DEFINITIONS["cap-vault"].redemptionTelemetry,
+          validation: LIVE_RESERVE_ADAPTER_DEFINITIONS["cap-vault"].validation,
+        },
+      },
+    );
+
+    expect(result.valid).toBe(false);
+    const codes = result.warnings.map((w) => w.code);
+    expect(codes).toContain("invalid-redemption-capacity-usd");
+    expect(codes).toContain("invalid-redemption-route-status");
+  });
 });

@@ -116,19 +116,19 @@ function validateRedemptionTelemetry(
   const adapterFee = adapter?.redemptionTelemetry?.fee ?? "none";
 
   if (hasNegativeNumber(capacityUsdValues)) {
-    return [fatalWarning("invalid-redemption-capacity-usd", `Redemption capacity is negative${adapterLabel}`)];
+    warnings.push(fatalWarning("invalid-redemption-capacity-usd", `Redemption capacity is negative${adapterLabel}`));
   }
   if (hasOutOfRangeRatio(capacityRatioValues)) {
-    return [fatalWarning("invalid-redemption-capacity-ratio", `Redemption capacity ratio is outside 0-1${adapterLabel}`)];
+    warnings.push(fatalWarning("invalid-redemption-capacity-ratio", `Redemption capacity ratio is outside 0-1${adapterLabel}`));
   }
   if (hasNegativeNumber(feeBpsValues)) {
-    return [fatalWarning("invalid-redemption-fee-bps", `Redemption fee bps is negative${adapterLabel}`)];
+    warnings.push(fatalWarning("invalid-redemption-fee-bps", `Redemption fee bps is negative${adapterLabel}`));
   }
   if (hasCapacityTelemetry && adapterCapacity === "none") {
-    return [fatalWarning("unsupported-redemption-capacity-telemetry", `Adapter emitted redemption capacity despite declaring no capacity telemetry${adapterLabel}`)];
+    warnings.push(fatalWarning("unsupported-redemption-capacity-telemetry", `Adapter emitted redemption capacity despite declaring no capacity telemetry${adapterLabel}`));
   }
   if (hasFeeTelemetry && adapterFee === "none") {
-    return [fatalWarning("unsupported-redemption-fee-telemetry", `Adapter emitted redemption fee despite declaring no fee telemetry${adapterLabel}`)];
+    warnings.push(fatalWarning("unsupported-redemption-fee-telemetry", `Adapter emitted redemption fee despite declaring no fee telemetry${adapterLabel}`));
   }
 
   const capacityKind = redemption?.capacityKind;
@@ -137,7 +137,7 @@ function validateRedemptionTelemetry(
     (capacityKind === "live-direct" || capacityKind === "live-direct-bounded") &&
     adapterCapacity !== "direct"
   ) {
-    return [fatalWarning("redemption-capacity-kind-mismatch", `Adapter emitted ${capacityKind} capacity without direct telemetry capability${adapterLabel}`)];
+    warnings.push(fatalWarning("redemption-capacity-kind-mismatch", `Adapter emitted ${capacityKind} capacity without direct telemetry capability${adapterLabel}`));
   }
 
   const freshnessKind = redemption?.freshnessKind;
@@ -155,7 +155,7 @@ function validateRedemptionTelemetry(
       routeStatus as (typeof LIVE_RESERVE_REDEMPTION_ROUTE_STATUS_VALUES)[number],
     )
   ) {
-    return [fatalWarning("invalid-redemption-route-status", `Redemption route status is invalid${adapterLabel}`)];
+    warnings.push(fatalWarning("invalid-redemption-route-status", `Redemption route status is invalid${adapterLabel}`));
   }
 
   const routeStatusSource = redemption?.routeStatusSource;
@@ -165,12 +165,12 @@ function validateRedemptionTelemetry(
       routeStatusSource as (typeof LIVE_RESERVE_REDEMPTION_ROUTE_STATUS_SOURCE_VALUES)[number],
     )
   ) {
-    return [fatalWarning("invalid-redemption-route-status-source", `Redemption route status source is invalid${adapterLabel}`)];
+    warnings.push(fatalWarning("invalid-redemption-route-status-source", `Redemption route status source is invalid${adapterLabel}`));
   }
 
   const routeStatusReviewedAt = redemption?.routeStatusReviewedAt;
   if (routeStatusReviewedAt != null && typeof routeStatusReviewedAt !== "string") {
-    return [fatalWarning("invalid-redemption-route-reviewed-at", `Redemption route status review timestamp is invalid${adapterLabel}`)];
+    warnings.push(fatalWarning("invalid-redemption-route-reviewed-at", `Redemption route status review timestamp is invalid${adapterLabel}`));
   }
 
   return warnings;
