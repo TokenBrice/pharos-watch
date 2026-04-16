@@ -187,7 +187,7 @@ describe("adaptEthenaCollateral", () => {
       totalBackingAssetsInUsd: 5_000_000_000,
     };
 
-    const result = adaptEthenaCollateral(payload);
+    const result = adaptEthenaCollateral(payload, "https://example.com/ethena");
 
     // Should have exactly 4 slices (one per bucket with values)
     expect(result.slices.length).toBe(4);
@@ -230,7 +230,7 @@ describe("adaptEthenaCollateral", () => {
       totalBackingAssetsInUsd: 1_000_000,
     };
 
-    const result = adaptEthenaCollateral(payload);
+    const result = adaptEthenaCollateral(payload, "https://example.com/ethena");
 
     // Only ETH bucket should have a value
     const nonZero = result.slices.filter((s) => s.pct > 0);
@@ -251,7 +251,7 @@ describe("adaptEthenaCollateral", () => {
       totalBackingAssetsInUsd: 1_000_000,
     };
 
-    const result = adaptEthenaCollateral(payload);
+    const result = adaptEthenaCollateral(payload, "https://example.com/ethena");
     // All ETH assets should land in one "ETH / liquid staking" bucket
     expect(result.slices.length).toBe(1);
     expect(result.slices[0].pct).toBe(100);
@@ -268,7 +268,7 @@ describe("adaptEthenaCollateral", () => {
       totalBackingAssetsInUsd: 300,
     };
 
-    const result = adaptEthenaCollateral(payload);
+    const result = adaptEthenaCollateral(payload, "https://example.com/ethena");
     expect(result.metadata!.lastUpdatedAt).toBe(1700001000);
   });
 });

@@ -26,7 +26,6 @@ export interface EthenaCollateralResponse {
 }
 
 type EthenaBucket = "stable" | "btc" | "eth" | "other";
-const ETHENA_COLLATERAL_API_URL = "https://app.ethena.fi/api/positions/current/collateral";
 
 const ETHENA_ETH_ASSETS = new Set(["ETH", "stETH", "WBETH", "mETH", "LsETH"]);
 const ETHENA_BTC_ASSETS = new Set(["BTC"]);
@@ -59,7 +58,7 @@ export function listUnexpectedEthenaAssets(payload: EthenaCollateralResponse): s
 
 export function adaptEthenaCollateral(
   payload: EthenaCollateralResponse,
-  sourceUrl = ETHENA_COLLATERAL_API_URL,
+  sourceUrl: string,
 ): AdapterResult {
   const knownAssets = new Set([
     ...ETHENA_STABLE_ASSETS,

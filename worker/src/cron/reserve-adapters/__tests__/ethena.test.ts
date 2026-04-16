@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
 import { adaptEthenaCollateral, listUnexpectedEthenaAssets, type EthenaCollateralResponse } from "../ethena";
 
+const DEFAULT_ETHENA_URL = "https://app.ethena.fi/api/positions/current/collateral";
+
 describe("adaptEthenaCollateral", () => {
   it("groups Ethena collateral into reserve buckets", () => {
     const payload: EthenaCollateralResponse = {
@@ -14,7 +16,7 @@ describe("adaptEthenaCollateral", () => {
       ],
     };
 
-    const result = adaptEthenaCollateral(payload);
+    const result = adaptEthenaCollateral(payload, DEFAULT_ETHENA_URL);
 
     expect(result.slices).toEqual([
       { name: "Liquid stables / cash equivalents", pct: 35, risk: "low" },
@@ -70,7 +72,7 @@ describe("adaptEthenaCollateral", () => {
       ],
     };
 
-    const result = adaptEthenaCollateral(payload);
+    const result = adaptEthenaCollateral(payload, DEFAULT_ETHENA_URL);
 
     expect(result.metadata).toMatchObject({
       sourceTimestamp: 1_000,
