@@ -408,7 +408,7 @@ export async function generateWeeklyRecap(
     anthropicApiKey,
     systemPrompt: WEEKLY_SYSTEM_PROMPT,
     userPrompt,
-    maxTokens: 2000,
+    maxTokens: 20000,
     signal,
     logPrefix: "weekly-recap",
     parseOptions: {

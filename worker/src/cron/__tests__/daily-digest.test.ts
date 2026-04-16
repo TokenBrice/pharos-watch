@@ -415,6 +415,7 @@ describe("generateDailyDigest", () => {
     expect(anthropicBody.model).toBe("claude-opus-4-7");
     expect(anthropicBody.thinking).toEqual({ type: "adaptive" });
     expect(anthropicBody.output_config).toEqual({ effort: "max" });
+    expect(anthropicBody.max_tokens).toBe(16000);
     expect(anthropicBody.messages[0].content).toContain("Data quality notes:");
     expect(anthropicBody.messages[0].content).toContain("Editorial Candidates");
   });

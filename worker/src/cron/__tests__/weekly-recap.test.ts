@@ -170,6 +170,7 @@ describe("generateWeeklyRecap", () => {
     expect(weeklyBody.model).toBe("claude-opus-4-7");
     expect(weeklyBody.thinking).toEqual({ type: "adaptive" });
     expect(weeklyBody.output_config).toEqual({ effort: "max" });
+    expect(weeklyBody.max_tokens).toBe(20000);
   });
 
   it("repairs non-JSON weekly output with a corrective retry", async () => {
