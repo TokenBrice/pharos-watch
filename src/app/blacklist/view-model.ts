@@ -266,7 +266,6 @@ export function useBlacklistPageController() {
     page,
     pageSize,
     searchInput,
-    setSearchInput,
     searchQuery,
     pageLoading,
     events,

@@ -208,7 +208,6 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `src/components/blacklist-stats.tsx` - BlacklistStats
 - `src/components/blacklist-status-charts.tsx` - BlacklistStatusCharts
 - `src/components/blacklist-status-drilldown.tsx` - BlacklistStatusDrilldown
-- `src/components/blacklist-table-logic.ts` - compareBlacklistRows
 - `src/components/blacklist-table.tsx` - BlacklistTable
 - `src/components/bluechip-header-badge.tsx` - BluechipHeaderBadge
 - `src/components/breadcrumb-json-ld.tsx` - BreadcrumbJsonLd
