@@ -1,9 +1,24 @@
 import { createMethodologyVersion } from "./methodology-version";
 
 const blacklistTracker = createMethodologyVersion({
-  currentVersion: "3.91",
+  currentVersion: "3.92",
   changelogPath: "/methodology/blacklist-tracker-changelog/",
   changelog: [
+  {
+    version: "3.92",
+    title: "Amount attribution: Tron ledger mirror + derived-zero recovery",
+    date: "2026-04-16",
+    effectiveAt: 1776297600, // 2026-04-16T00:00:00Z
+    summary:
+      "Introduces current_balance_snapshot amount source for Tron freeze-ledger mirroring, widens backfill to include legacy derived-zero EVM rows, and adds provenance badge for snapshot-sourced amounts.",
+    impact: [
+      "Tron USDT blacklist/unblacklist rows receive amounts from the freeze-ledger snapshot (~6,921 rows)",
+      "Legacy derived-zero EVM rows re-enter the backfill pool (~4,381 rows)",
+      "Snapshot badge renders on amounts sourced from current_balance_snapshot",
+    ],
+    commits: [],
+    reconstructed: false,
+  },
   {
     version: "3.91",
     title: "Coverage quality + USDP addition",

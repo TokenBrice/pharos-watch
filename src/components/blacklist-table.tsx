@@ -178,6 +178,14 @@ export function BlacklistTable({
                     : evt.amountStatus === "permanently_unavailable"
                       ? "N/A"
                       : "\u2014"}
+                {evt.amountSource === "current_balance_snapshot" && evt.amountNative != null ? (
+                  <span
+                    className="ml-1 rounded px-1 py-0.5 text-[10px] uppercase tracking-wide border border-border text-muted-foreground"
+                    title="Amount is a freeze-ledger snapshot, not event-time precision"
+                  >
+                    Snapshot
+                  </span>
+                ) : null}
               </TableCell>
               <TableCell className="hidden sm:table-cell text-center">
                 <a
