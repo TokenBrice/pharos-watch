@@ -1,5 +1,5 @@
 import { DigestResponseSchema } from "../../lib/schemas";
-import { leadFamily } from "./voice-guards";
+import { findForbiddenTics, leadFamily } from "./voice-guards";
 
 const FORBIDDEN_PHRASES = [
   "Meanwhile, ",
@@ -316,6 +316,15 @@ export function validateDigestModelOutput(
       code: "extended-word-count",
       severity: wordCount < Math.floor(minWords * 0.65) || wordCount > Math.ceil(maxWords * 1.35) ? "hard" : "soft",
       message: `Extended digest has ${wordCount} words; expected ${minWords}-${maxWords}.`,
+    });
+  }
+
+  const tics = findForbiddenTics(parsed.digestText, parsed.digestExtended);
+  if (tics.length > 0) {
+    issues.push({
+      code: "forbidden-tic",
+      severity: "soft",
+      message: `Output contains house-style tic(s): ${tics.join(", ")}. Rewrite without them.`,
     });
   }
 

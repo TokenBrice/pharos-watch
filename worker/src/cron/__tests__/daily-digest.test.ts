@@ -952,6 +952,52 @@ describe("lead family variety check", () => {
   });
 });
 
+describe("forbidden-tic voice guard", () => {
+  function parsedFixture(extended: string, text = "T."): ParsedDigestResponse {
+    return {
+      digestTitle: "T",
+      digestText: text,
+      digestExtended: extended,
+      digestMeta: JSON.stringify({ lead: "depeg", tone: "dry", coins: ["USDT"] }),
+      strippedDashCount: 0,
+      strippedForbiddenCharCount: 0,
+      usedRawTextFallback: false,
+    };
+  }
+
+  it("flags plumbing metaphor anywhere in extended", () => {
+    const issues = validateDigestModelOutput(
+      parsedFixture("PSI held.\n\nThe plumbing flinched again.\n\nDone."),
+      { kind: "daily", recentMeta: [] },
+    );
+    expect(issues.some((i) => i.code === "forbidden-tic")).toBe(true);
+  });
+
+  it("flags 'worth watching' in closer position", () => {
+    const issues = validateDigestModelOutput(
+      parsedFixture("Line one.\n\nLine two.\n\nLine three, worth monitoring into next week."),
+      { kind: "daily", recentMeta: [] },
+    );
+    expect(issues.some((i) => i.code === "forbidden-tic")).toBe(true);
+  });
+
+  it("does NOT flag 'worth watching' mid-paragraph when last sentence is different", () => {
+    const issues = validateDigestModelOutput(
+      parsedFixture("A coin worth watching for mcap drift, plus five others. Real closer sentence here.\n\nLine two.\n\nLine three."),
+      { kind: "daily", recentMeta: [] },
+    );
+    expect(issues.some((i) => i.code === "forbidden-tic")).toBe(false);
+  });
+
+  it("does not flag prose free of tics", () => {
+    const issues = validateDigestModelOutput(
+      parsedFixture("USDT added $3B.\n\nUSDC pulled $200M.\n\nThe gap is now the story."),
+      { kind: "daily", recentMeta: [] },
+    );
+    expect(issues.some((i) => i.code === "forbidden-tic")).toBe(false);
+  });
+});
+
 describe("tone cluster validator", () => {
   function parsedFixture(toneOverride = "foreboding"): ParsedDigestResponse {
     return {
