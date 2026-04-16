@@ -5,17 +5,10 @@ import { USER_AGENT, CIRCUIT_SOURCE, DEX_PRICE_OBSERVATION_MIN_TVL_USD } from ".
 import { shouldAttemptFetch, recordOutcome } from "../../lib/circuit-breaker";
 import { buildDlStablecoinPoolsCache } from "../yield-sync/cache";
 import { isYieldRelevantDlPool } from "../yield-sync/pool-filter";
-import {
-  fetchCgTokensBatch, onchainRateLimit, CG_CHAIN_MAP,
-} from "../../lib/coingecko-onchain";
-import { GT_CHAIN_MAP } from "../../lib/chain-registry";
-import { RATE_LIMITS } from "../../lib/rate-limit";
-import { GT_API_BASE, normalizeDexSymbol } from "../../lib/dex-constants";
-import { sleepWithSignal } from "../../lib/abort";
+import { normalizeDexSymbol } from "../../lib/dex-constants";
 import type {
   LlamaPool, CurvePool, CurvePoolEntry, DexPriceObs,
   DataSources, CurveLookups, UniV3Lookups, AerodromeLookups,
-  GtToken,
 } from "./types";
 import {
   DEFILLAMA_YIELDS_URL, DEFILLAMA_PROTOCOLS_URL,
@@ -39,9 +32,8 @@ import {
   fetchAerodromeData as fetchAerodromeSubgraphData,
   fetchUniV3Data as fetchUniV3SubgraphData,
 } from "./subgraph-source-families";
-import {
-  runTokenBatchPriceFetch,
-  type ProviderChainAddress,
+import type {
+  ProviderChainAddress,
 } from "./token-batch-runner";
 
 /** Fetch DeFiLlama Yields, Protocols list, and Curve API data. Returns null only on truly catastrophic failure. */
@@ -460,68 +452,3 @@ export function buildChainAddresses(chainMap: Record<string, string>): Map<strin
   return result;
 }
 
-/** Fetch token-level aggregate data from GT multi-token endpoint.
- *  Returns price observations (one per token per chain). */
-export async function fetchGtTokenBatch(
-  _addressToId: Map<string, string>,
-  signal?: AbortSignal,
-  chainAddresses: Map<string, ProviderChainAddress[]> = buildChainAddresses(GT_CHAIN_MAP),
-  deadlineMs?: number,
-  references?: PriceValidationReferences,
-): Promise<Map<string, DexPriceObs[]>> {
-  const { priceObs, requestCount } = await runTokenBatchPriceFetch<GtToken>({
-    providerLabel: "GT token batch",
-    sourceLabel: "geckoterminal-aggregate",
-    signal,
-    chainAddresses,
-    deadlineMs,
-    references,
-    beforeRequest: (requestCount, requestSignal) =>
-      requestCount > 0
-        ? sleepWithSignal(RATE_LIMITS.GECKO_TERMINAL_MS, requestSignal)
-        : Promise.resolve(),
-    fetchTokens: async (gtChain, addresses, requestSignal) => {
-      const url = `${GT_API_BASE}/networks/${gtChain}/tokens/multi/${addresses.join(",")}`;
-      const res = await fetchWithRetry(url, {
-        headers: { "User-Agent": USER_AGENT, Accept: "application/json" },
-        signal: requestSignal,
-      });
-      if (!res?.ok) return [];
-      const json = (await res.json()) as { data?: GtToken[] };
-      return json.data ?? [];
-    },
-    getAddress: (token) => token.attributes.address,
-    getPriceUsd: (token) => parseFloat(token.attributes.price_usd ?? ""),
-    getTvlUsd: (token) => parseFloat(token.attributes.total_reserve_in_usd ?? ""),
-  });
-  console.log(`[dex-liquidity] GT token batch: ${priceObs.size} coins with price obs (${requestCount} requests)`);
-  return priceObs;
-}
-
-/** Fetch token-level aggregate data from CoinGecko onchain multi-token endpoint.
- *  Returns price observations (one per token per chain). */
-export async function fetchCgTokenBatchPrices(
-  _addressToId: Map<string, string>,
-  signal?: AbortSignal,
-  chainAddresses: Map<string, ProviderChainAddress[]> = buildChainAddresses(CG_CHAIN_MAP),
-  deadlineMs?: number,
-  references?: PriceValidationReferences,
-  coingeckoApiKey?: string | null,
-): Promise<Map<string, DexPriceObs[]>> {
-  const { priceObs, requestCount } = await runTokenBatchPriceFetch({
-    providerLabel: "CG token batch",
-    sourceLabel: "coingecko-aggregate",
-    signal,
-    chainAddresses,
-    deadlineMs,
-    references,
-    beforeRequest: (requestCount, requestSignal) => onchainRateLimit(requestCount, requestSignal),
-    fetchTokens: (cgChain, addresses, requestSignal) =>
-      fetchCgTokensBatch(cgChain, addresses, requestSignal, coingeckoApiKey ?? null),
-    getAddress: (token) => token.attributes.address,
-    getPriceUsd: (token) => parseFloat(token.attributes.price_usd ?? ""),
-    getTvlUsd: (token) => parseFloat(token.attributes.total_reserve_in_usd ?? ""),
-  });
-  console.log(`[dex-liquidity] CG token batch: ${priceObs.size} coins with price obs (${requestCount} requests)`);
-  return priceObs;
-}

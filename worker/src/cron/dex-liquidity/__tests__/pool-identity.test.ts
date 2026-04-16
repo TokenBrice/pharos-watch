@@ -5,7 +5,6 @@ import {
   createKnownPoolIdentityIndex,
   getIdentityDedupReason,
   registerKnownPoolIdentity,
-  type PoolIdentity,
 } from "../pool-identity";
 
 describe("pool identity dedup", () => {

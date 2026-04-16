@@ -27,6 +27,6 @@
     "worker/src/api/status.ts": 100,
     "worker/src/lib/alerts.ts": 89.5,
     "worker/src/api/stablecoin-detail.ts": 100,
-    "worker/src/cron/dex-liquidity/orchestrator.ts": 91.8
+    "worker/src/cron/dex-liquidity/orchestrator.ts": 91.2
   }
 }

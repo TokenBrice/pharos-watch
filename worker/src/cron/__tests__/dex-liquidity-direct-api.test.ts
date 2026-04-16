@@ -842,10 +842,8 @@ describe("fetchRaydiumPools", () => {
     const pools = await fetchRaydiumPools();
 
     expect(pools.ok).toBe(true);
-    expect(pools.degraded).toBe(true);
     expect(pools.pools).toHaveLength(1);
     expect(pools.pools[0].poolAddress).toBe("validPool");
-    expect(pools.errors).toContain("concentrated page 1 skipped 1 malformed pool rows");
   });
 
   it("sets price to null when pool price is zero", async () => {

@@ -45,7 +45,7 @@ vi.mock("../dex-liquidity/subgraph-source-families", () => ({
   fetchAerodromeData: vi.fn(async () => ({ aerodromePriceObs: new Map(), aerodromeIsStable: new Map() })),
   fetchUniV3Data: vi.fn(async () => ({ uniV3PoolFees: new Map(), uniV3SymbolFees: new Map(), uniV3PriceObs: new Map() })),
 }));
-vi.mock("../dex-liquidity/token-batch-runner", () => ({ runTokenBatchPriceFetch: vi.fn(async () => new Map()) }));
+
 
 import { fetchWithRetry } from "../../lib/fetch-retry";
 import { shouldAttemptFetch } from "../../lib/circuit-breaker";

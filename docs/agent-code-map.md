@@ -496,7 +496,6 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `worker/src/cron/dex-liquidity/subgraph-helpers.ts` - FetchSubgraphEntitiesConfig, FetchSubgraphEntitiesResult, SubgraphPriceObservation, fetchSubgraphEntities, mergePriceObservations
 - `worker/src/cron/dex-liquidity/subgraph-source-families.ts` - fetchAerodromeData, fetchUniV3Data
 - `worker/src/cron/dex-liquidity/token-batch-runner.ts` - ProviderChainAddress, runTokenBatchPriceFetch
-- `worker/src/cron/dex-liquidity/token-price-observations.ts` - TokenBatchTrackedToken, appendTokenBatchPriceObservations
 - `worker/src/cron/dex-liquidity/token-resolution.ts` - TokenResolutionOptions, TokenResolutionResult, buildChainAddressKey, getChainScopedSymbolIds, makeChainAddressKey, normalizeTokenAddress
 - `worker/src/cron/dex-liquidity/types.ts` - AerodromeLookups, CgNewPool, CgTicker, CurveLookups, CurvePool, CurvePoolEntry
 - `worker/src/cron/digest/platform.ts` - insertDigestRecord, requestDigestCopy, runDigestChannelDelivery

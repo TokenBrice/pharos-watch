@@ -60,7 +60,6 @@ Shared source-specific helpers now own the duplicate discovery/liquidity normali
 - GeckoTerminal request construction, bounded pagination, pool parsing, and pool-type normalization: `worker/src/cron/dex-liquidity/geckoterminal-shared.ts`
 - CoinGecko onchain parsing, fee-bucket classification, balance-ratio inference, and locked-liquidity parsing: `worker/src/cron/dex-liquidity/coingecko-onchain-shared.ts`
 - CoinGecko tickers filtering, exchange aggregation, synthetic orderbook TVL, and price-observation gating: `worker/src/cron/dex-liquidity/coingecko-tickers-shared.ts`
-- GT/CG token-batch observation mapping: `worker/src/cron/dex-liquidity/token-price-observations.ts`
 
 Data sources are split across two cron families: scoring remains on `10,40 * * * *`, while discovery sources (CoinGecko Onchain, GeckoTerminal, DexScreener, CoinGecko Tickers) now run only on `6,36 * * * *` (every 30 minutes) and write to `dex_pool_staging` for later merge.
 
