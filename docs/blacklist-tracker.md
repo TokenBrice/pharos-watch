@@ -646,7 +646,7 @@ For destroy events, try fetching from transaction receipt first (`eth_getTransac
 | ------------ | ------ | ------- | -------------------------------------------------------------------- |
 | `limit`      | number | 1000    | Max results (1-1000; `0` maps to default `1000`)                     |
 | `offset`     | number | 0       | Pagination offset                                                    |
-| `stablecoin` | string | --      | Filter by name (`"USDC"`, `"USDT"`, `"PAXG"`, `"XAUT"`, `"PYUSD"`, `"USD1"`, `"USDG"`, `"RLUSD"`, `"U"`, `"USDTB"`, `"A7A5"`)  |
+| `stablecoin` | string | --      | Filter by name (`"USDC"`, `"USDT"`, `"PAXG"`, `"XAUT"`, `"PYUSD"`, `"USD1"`, `"USDG"`, `"RLUSD"`, `"U"`, `"USDTB"`, `"A7A5"`, `"FDUSD"`, `"BRZ"`, `"AUSD"`, `"EURI"`, `"USDQ"`, `"USDO"`, `"USDX"`, `"AID"`, `"TGBP"`, `"MNEE"`, `"EURC"`, `"BUIDL"`) |
 | `chain`      | string | --      | Filter by `chain_name`                                               |
 | `eventType`  | string | --      | Filter by `event_type` (`"blacklist"`, `"unblacklist"`, `"destroy"`) |
 | `q`          | string | --      | Case-insensitive address substring search                            |
