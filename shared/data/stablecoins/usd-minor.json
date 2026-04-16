@@ -7495,6 +7495,13 @@
     "collateralQuality": "rwa",
     "custodyModel": "institutional-regulated",
     "governanceQuality": "single-entity",
+    "dependencies": [
+      {
+        "id": "frxusd-frax",
+        "weight": 1.0,
+        "type": "wrapper"
+      }
+    ],
     "reserves": [
       {
         "name": "BlackRock BUIDL (USD Institutional Digital Liquidity Fund)",
