@@ -159,6 +159,17 @@ describe("generateWeeklyRecap", () => {
       ANTHROPIC_MAX_RETRIES,
       { timeoutMs: 300_000 },
     );
+
+    const weeklyBody = JSON.parse(String(vi.mocked(fetchWithRetry).mock.calls[0]?.[1]?.body)) as {
+      model: string;
+      max_tokens: number;
+      thinking?: { type: string };
+      output_config?: { effort: string };
+      system: string;
+    };
+    expect(weeklyBody.model).toBe("claude-opus-4-7");
+    expect(weeklyBody.thinking).toEqual({ type: "adaptive" });
+    expect(weeklyBody.output_config).toEqual({ effort: "max" });
   });
 
   it("repairs non-JSON weekly output with a corrective retry", async () => {

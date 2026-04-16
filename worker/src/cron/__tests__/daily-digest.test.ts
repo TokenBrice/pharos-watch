@@ -405,8 +405,16 @@ describe("generateDailyDigest", () => {
       { timeoutMs: ANTHROPIC_TIMEOUT_MS },
     );
     const anthropicBody = JSON.parse(String(vi.mocked(fetchWithRetry).mock.calls[0]?.[1]?.body)) as {
+      model: string;
+      max_tokens: number;
+      thinking?: { type: string };
+      output_config?: { effort: string };
+      system: string;
       messages: { content: string }[];
     };
+    expect(anthropicBody.model).toBe("claude-opus-4-7");
+    expect(anthropicBody.thinking).toEqual({ type: "adaptive" });
+    expect(anthropicBody.output_config).toEqual({ effort: "max" });
     expect(anthropicBody.messages[0].content).toContain("Data quality notes:");
     expect(anthropicBody.messages[0].content).toContain("Editorial Candidates");
   });
