@@ -10,6 +10,7 @@ import {
   fetchOnchainUint256,
   notApplicableFreshnessMetadata,
   reserveDegradedWarning,
+  reserveInfoWarning,
   requireOnchainInput,
   slicesFromValues,
 } from "./helpers";
@@ -40,6 +41,11 @@ interface CapVaultAssetState {
   totalBorrowed: number;
   available: number;
   paused: boolean;
+  /**
+   * True when the asset's paused() call returned a value that could not be decoded.
+   * When true, `paused` is conservatively set to true.
+   */
+  pausedStatusUnavailable: boolean;
 }
 
 function encodeAddressArg(address: string): string {
@@ -110,6 +116,13 @@ export function adaptCapVaultState(args: {
     warnings.push(reserveDegradedWarning(
       "cap-asset-paused",
       `Cap vault asset "${asset.name}" is paused and excluded from immediate redeemable capacity`,
+    ));
+  }
+  const statusUnavailableAssets = activeAssets.filter((asset) => asset.pausedStatusUnavailable);
+  for (const asset of statusUnavailableAssets) {
+    warnings.push(reserveInfoWarning(
+      "cap-vault-asset-status-unavailable",
+      `Cap vault asset "${asset.name}" paused status could not be read; conservatively treated as paused`,
     ));
   }
 
@@ -255,7 +268,28 @@ export async function fetchCapVaultReserves(
         fallbackRpcUrl: params.fallbackRpcUrl,
       }),
     ]);
-    const decimals = decimalsRaw != null ? Number(decimalsRaw) : 18;
+
+    // Fail closed: required reads must not be null. A partial RPC failure
+    // would otherwise silently drop an asset or mis-scale values.
+    if (decimalsRaw == null) {
+      throw new Error(`${ADAPTER_KEY}: failed to read decimals() for asset ${address}`);
+    }
+    if (totalSuppliesRaw == null) {
+      throw new Error(`${ADAPTER_KEY}: failed to read totalSupplies() for asset ${address}`);
+    }
+    if (totalBorrowsRaw == null) {
+      throw new Error(`${ADAPTER_KEY}: failed to read totalBorrows() for asset ${address}`);
+    }
+    if (availableRaw == null) {
+      throw new Error(`${ADAPTER_KEY}: failed to read available() for asset ${address}`);
+    }
+
+    const decimals = Number(decimalsRaw);
+    // Conservative: treat a missing/undecodable paused() response as paused.
+    const pausedDecoded = decodeBool(pausedRaw);
+    const pausedStatusUnavailable = pausedDecoded == null;
+    const paused = pausedDecoded ?? true;
+
     const assetConfig = resolveAssetConfig(address, assetConfigs);
     return {
       address,
@@ -264,10 +298,11 @@ export async function fetchCapVaultReserves(
       ...(assetConfig.coinId ? { coinId: assetConfig.coinId } : {}),
       ...(assetConfig.depType ? { depType: assetConfig.depType } : {}),
       decimals,
-      totalSupplied: totalSuppliesRaw != null ? decimalNumberFromBigInt(totalSuppliesRaw, decimals) : 0,
-      totalBorrowed: totalBorrowsRaw != null ? decimalNumberFromBigInt(totalBorrowsRaw, decimals) : 0,
-      available: availableRaw != null ? decimalNumberFromBigInt(availableRaw, decimals) : 0,
-      paused: decodeBool(pausedRaw) ?? false,
+      totalSupplied: decimalNumberFromBigInt(totalSuppliesRaw, decimals),
+      totalBorrowed: decimalNumberFromBigInt(totalBorrowsRaw, decimals),
+      available: decimalNumberFromBigInt(availableRaw, decimals),
+      paused,
+      pausedStatusUnavailable,
     } satisfies CapVaultAssetState;
   }));
 
