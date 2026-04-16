@@ -2,12 +2,11 @@ import { recalcAffectedHours } from "../../lib/mint-burn-pipeline/persistence";
 import { getNullPriceBacklog, healNullPrices } from "../../lib/mint-burn-pipeline/price-heal";
 import { sweepRecentRoundtrips } from "../../lib/mint-burn-pipeline/roundtrip-sweep";
 import { mintBurnConfigKey } from "../../lib/mint-burn-pipeline/sync-state";
-import type { MintBurnAffectedHour } from "../../lib/mint-burn-pipeline/types";
+import type { MintBurnAffectedHour, SyncMintBurnStatus, MintBurnLane } from "../../lib/mint-burn-pipeline/types";
 import type { MintBurnContractConfig } from "../../lib/mint-burn-contracts";
 import { withBudgetMetadata } from "../../lib/cron-progress";
 import { setMintBurnRunState, type MintBurnRunStateRow } from "./run-state";
 import type { MintBurnConfigSummary } from "./sync-config";
-import type { SyncMintBurnStatus, MintBurnLane } from "../sync-mint-burn";
 
 export async function completeMintBurnRun(input: {
   db: D1Database;

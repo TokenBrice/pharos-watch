@@ -1,5 +1,8 @@
 import type { MintBurnType } from "../mint-burn-contracts";
 
+export type SyncMintBurnStatus = "ok" | "degraded" | "error";
+export type MintBurnLane = "all" | "critical" | "extended";
+
 export type MintBurnFlowType = "standard" | "atomic_roundtrip" | "bridge_transfer";
 
 export interface MintBurnRow {

@@ -9,7 +9,7 @@ import { loadMintBurnPriceContextBatch } from "../lib/mint-burn-pipeline/context
 import {
   recalcAffectedHours,
 } from "../lib/mint-burn-pipeline/persistence";
-import type { MintBurnAffectedHour } from "../lib/mint-burn-pipeline/types";
+import type { MintBurnAffectedHour, MintBurnLane, SyncMintBurnStatus } from "../lib/mint-burn-pipeline/types";
 import {
   ensureMintBurnSyncStateRows,
   mintBurnConfigKey,
@@ -40,8 +40,7 @@ const DEGRADE_CONSECUTIVE_THRESHOLD = 2;
 const ERROR_CONSECUTIVE_THRESHOLD = 3;
 const SQL_IN_CHUNK_SIZE = 90;
 
-export type SyncMintBurnStatus = "ok" | "degraded" | "error";
-export type MintBurnLane = "all" | "critical" | "extended";
+export type { SyncMintBurnStatus, MintBurnLane } from "../lib/mint-burn-pipeline/types";
 
 export interface SyncMintBurnOptions {
   signal?: AbortSignal;
