@@ -1,5 +1,6 @@
 import type { DigestInputData } from "@shared/types/digest";
 import { formatCurrency } from "@shared/lib/format";
+import { selectMomentumCandidates } from "./editorial-candidates";
 
 export interface DigestMeta {
   leadSignalId?: string;
@@ -179,6 +180,20 @@ function pushEditorialCandidateLines(lines: string[], data: DigestInputData): vo
   }
 }
 
+function pushMomentumLines(lines: string[], data: DigestInputData): void {
+  const candidates = data.editorialCandidates ?? [];
+  const momentum = selectMomentumCandidates(candidates);
+  if (momentum.length === 0) return;
+  lines.push("", "Momentum Candidates (forward-watch material — use these to anchor the required forward-look line):");
+  for (const candidate of momentum) {
+    const symbols = candidate.symbols.length > 0 ? ` | coins=${candidate.symbols.join(",")}` : "";
+    lines.push(
+      `  ${candidate.id} | ${candidate.kind}/${candidate.novelty}${symbols} | impact=${candidate.impactScore}`,
+    );
+    lines.push(`    why it may keep moving: ${candidate.whyItMatters}`);
+  }
+}
+
 export function buildUserPrompt(
   data: DigestInputData,
   recentMeta: { meta: DigestMeta | null; rawText: string | null; title: string | null }[] = [],
@@ -190,6 +205,7 @@ export function buildUserPrompt(
 
   pushDataQualityLines(lines, data);
   pushEditorialCandidateLines(lines, data);
+  pushMomentumLines(lines, data);
 
   lines.push(
     "",

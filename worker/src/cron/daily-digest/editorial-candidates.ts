@@ -356,6 +356,14 @@ function addPsiCandidate(candidates: DigestEditorialCandidate[], data: DigestInp
   });
 }
 
+const MOMENTUM_NOVELTIES = new Set<DigestEditorialCandidateNovelty>(["new", "accelerating", "reversal"]);
+
+export function selectMomentumCandidates(candidates: DigestEditorialCandidate[]): DigestEditorialCandidate[] {
+  return candidates
+    .filter((c) => !c.suppressReason && c.artifactRisk !== "high" && MOMENTUM_NOVELTIES.has(c.novelty))
+    .slice(0, 4);
+}
+
 export function buildEditorialCandidates(data: DigestInputData): DigestEditorialCandidate[] {
   const candidates: DigestEditorialCandidate[] = [];
 

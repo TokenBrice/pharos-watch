@@ -1120,6 +1120,18 @@ describe("tone cluster validator", () => {
   });
 });
 
+describe("momentum candidates surface", () => {
+  it("renders Momentum Candidates block when momentum-novelty candidates exist", async () => {
+    const db = mockD1(makeBaseTables());
+    const result = await generateDailyDigest(db, "anthropic-key");
+    expect(result.itemCount).toBe(1);
+    const body = JSON.parse(String(vi.mocked(fetchWithRetry).mock.calls[0]?.[1]?.body)) as {
+      messages: { content: string }[];
+    };
+    expect(body.messages[0].content).toContain("Momentum Candidates");
+  });
+});
+
 describe("totalMcapAth enrichment", () => {
   beforeEach(() => {
     vi.useFakeTimers();
