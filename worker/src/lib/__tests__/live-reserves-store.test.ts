@@ -334,6 +334,50 @@ describe("live-reserves-store", () => {
       attemptId,
     });
 
+    const { finalized } = await finalizeReserveSyncSuccess(
+      db,
+      {
+        stablecoinId: "iusd-infinifi",
+        slices: LIVE_SLICES,
+        fetchedAt: 1_000,
+        source: "infinifi",
+        attemptId,
+        metadata: {},
+        warningCount: 0,
+        warnings: [],
+        adapterSourceModel: "dynamic-mix",
+        adapterEvidenceClass: "independent",
+      },
+      {
+        stablecoinId: "iusd-infinifi",
+        adapterKey: "infinifi",
+        breakerKey: "live-reserves:infinifi",
+        lastAttemptedAt: 1_000,
+        lastSuccessAt: 1_000,
+        lastStatus: "ok",
+        warningCount: 0,
+        warnings: [],
+        lastError: null,
+        metadata: {},
+        lastAttemptId: attemptId,
+        pendingAttemptId: attemptId,
+        lastSuccessAttemptId: attemptId,
+      },
+      Date.now() + 30_000,
+    );
+
+    expect(finalized).toBe(true);
+    const history = db.getHistory().map((entry) => entry.sql);
+    expect(history.some((sql) => sql.includes("INSERT INTO reserve_composition ("))).toBe(true);
+    expect(history.some((sql) => sql.includes("INSERT INTO reserve_composition_history"))).toBe(true);
+    expect(history.some((sql) => sql.includes("UPDATE reserve_sync_state"))).toBe(true);
+    expect(history.some((sql) => sql.includes("INSERT INTO reserve_sync_attempt_history"))).toBe(true);
+  });
+
+  it("fences the composition upsert so a late attempt cannot overwrite a newer row", async () => {
+    const db = mockD1();
+    const attemptId = "attempt-late";
+
     await finalizeReserveSyncSuccess(
       db,
       {
@@ -366,9 +410,101 @@ describe("live-reserves-store", () => {
       Date.now() + 30_000,
     );
 
+    const upsert = db.getHistory().find((entry) => entry.sql.includes("INSERT INTO reserve_composition ("));
+    expect(upsert).toBeDefined();
+    // Fence must reject strictly older fetchedAt, and same fetchedAt only when the stored row has no attempt_id.
+    expect(upsert!.sql).toMatch(/reserve_composition\.fetched_at\s*<\s*excluded\.fetched_at/);
+    expect(upsert!.sql).toMatch(/reserve_composition\.attempt_id\s+IS\s+NULL/);
+  });
+
+  it("returns finalized=false and writes no history rows when the composition upsert no-ops", async () => {
+    const db = mockD1([
+      {
+        match: "INSERT INTO reserve_composition (",
+        rows: [],
+        runMeta: { changes: 0 },
+      },
+    ]);
+    const attemptId = "attempt-no-op";
+
+    const result = await finalizeReserveSyncSuccess(
+      db,
+      {
+        stablecoinId: "iusd-infinifi",
+        slices: LIVE_SLICES,
+        fetchedAt: 1_000,
+        source: "infinifi",
+        attemptId,
+        metadata: {},
+        warningCount: 0,
+        warnings: [],
+        adapterSourceModel: "dynamic-mix",
+        adapterEvidenceClass: "independent",
+      },
+      {
+        stablecoinId: "iusd-infinifi",
+        adapterKey: "infinifi",
+        breakerKey: "live-reserves:infinifi",
+        lastAttemptedAt: 1_000,
+        lastSuccessAt: 1_000,
+        lastStatus: "ok",
+        warningCount: 0,
+        warnings: [],
+        lastError: null,
+        metadata: {},
+        lastAttemptId: attemptId,
+        pendingAttemptId: attemptId,
+        lastSuccessAttemptId: attemptId,
+      },
+      Date.now() + 30_000,
+    );
+
+    expect(result.finalized).toBe(false);
     const history = db.getHistory().map((entry) => entry.sql);
-    expect(history.some((sql) => sql.includes("reserve_composition"))).toBe(true);
-    expect(history.some((sql) => sql.includes("reserve_sync_state"))).toBe(true);
+    expect(history.some((sql) => sql.includes("INSERT INTO reserve_composition_history"))).toBe(false);
+    expect(history.some((sql) => sql.includes("INSERT INTO reserve_sync_attempt_history"))).toBe(false);
+  });
+
+  it("inserts both history rows only when composition and finalize both apply", async () => {
+    const db = mockD1();
+    const attemptId = "attempt-both";
+
+    const result = await finalizeReserveSyncSuccess(
+      db,
+      {
+        stablecoinId: "iusd-infinifi",
+        slices: LIVE_SLICES,
+        fetchedAt: 1_000,
+        source: "infinifi",
+        attemptId,
+        metadata: {},
+        warningCount: 0,
+        warnings: [],
+        adapterSourceModel: "dynamic-mix",
+        adapterEvidenceClass: "independent",
+      },
+      {
+        stablecoinId: "iusd-infinifi",
+        adapterKey: "infinifi",
+        breakerKey: "live-reserves:infinifi",
+        lastAttemptedAt: 1_000,
+        lastSuccessAt: 1_000,
+        lastStatus: "ok",
+        warningCount: 0,
+        warnings: [],
+        lastError: null,
+        metadata: {},
+        lastAttemptId: attemptId,
+        pendingAttemptId: attemptId,
+        lastSuccessAttemptId: attemptId,
+      },
+      Date.now() + 30_000,
+    );
+
+    expect(result.finalized).toBe(true);
+    const historySqls = db.getHistory().map((entry) => entry.sql);
+    expect(historySqls.some((sql) => sql.includes("INSERT INTO reserve_composition_history"))).toBe(true);
+    expect(historySqls.some((sql) => sql.includes("INSERT INTO reserve_sync_attempt_history"))).toBe(true);
   });
 
   it("prunes reserve history tables by retention cutoff", async () => {
@@ -471,6 +607,49 @@ describe("live-reserves-store", () => {
           warnings: null,
           last_error: null,
           metadata: "{}",
+        },
+      },
+    ]);
+
+    const result = await resolveReserveResult(db, "iusd-infinifi", now + 100);
+    expect(result?.mode).toBe("curated-fallback");
+    expect(result?.sync?.status).toBe("degraded");
+    expect(result?.sync?.lastError).toContain("Stored live reserve snapshot rejected");
+  });
+
+  it("treats an unknown stored adapter key as corrupt data instead of crashing", async () => {
+    const now = Math.floor(Date.now() / 1000);
+    const db = mockD1([
+      {
+        match: "reserve_composition",
+        rows: [],
+        first: {
+          stablecoin_id: "iusd-infinifi",
+          slices: JSON.stringify(LIVE_SLICES),
+          fetched_at: now,
+          source: "removed-adapter-key",
+          attempt_id: "attempt-1",
+          metadata: "{}",
+          warning_count: 0,
+        },
+      },
+      {
+        match: "reserve_sync_state",
+        rows: [],
+        first: {
+          stablecoin_id: "iusd-infinifi",
+          adapter_key: "removed-adapter-key",
+          breaker_key: "live-reserves:removed-adapter-key",
+          last_attempted_at: now,
+          last_success_at: now,
+          last_status: "ok",
+          warning_count: 0,
+          warnings: null,
+          last_error: null,
+          metadata: "{}",
+          last_attempt_id: "attempt-1",
+          pending_attempt_id: null,
+          last_success_attempt_id: "attempt-1",
         },
       },
     ]);

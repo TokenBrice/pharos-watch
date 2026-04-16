@@ -34,13 +34,20 @@ export async function finalizeReserveSyncSuccess(
   syncState: ReserveSyncStateRecord,
   finalizeDeadlineMs: number,
 ): Promise<{ finalized: boolean }> {
-  await buildReserveCompositionUpsertStatement(db, composition).run();
-  await buildReserveCompositionHistoryInsertStatement(db, composition).run();
-  const finalizeResult = await buildReserveSyncFinalizeSuccessStatement(db, syncState, finalizeDeadlineMs).run();
-  const finalized = (finalizeResult.meta.changes ?? 0) > 0;
+  const [compositionRes, finalizeRes] = await db.batch<unknown>([
+    buildReserveCompositionUpsertStatement(db, composition),
+    buildReserveSyncFinalizeSuccessStatement(db, syncState, finalizeDeadlineMs),
+  ]);
+  const compositionApplied = ((compositionRes as D1Result).meta.changes ?? 0) > 0;
+  const finalized = ((finalizeRes as D1Result).meta.changes ?? 0) > 0;
 
-  if (finalized) {
-    await buildReserveSyncAttemptHistoryInsertStatement(db, {
+  if (!finalized || !compositionApplied) {
+    return { finalized: false };
+  }
+
+  await db.batch([
+    buildReserveCompositionHistoryInsertStatement(db, composition),
+    buildReserveSyncAttemptHistoryInsertStatement(db, {
       stablecoinId: syncState.stablecoinId,
       attemptedAt: syncState.lastAttemptedAt ?? composition.fetchedAt,
       adapterKey: syncState.adapterKey,
@@ -51,10 +58,10 @@ export async function finalizeReserveSyncSuccess(
       lastError: syncState.lastError,
       metadata: syncState.metadata,
       attemptId: syncState.lastAttemptId ?? null,
-    }).run();
-  }
+    }),
+  ]);
 
-  return { finalized };
+  return { finalized: true };
 }
 
 export async function finalizeReserveSyncAttempt(

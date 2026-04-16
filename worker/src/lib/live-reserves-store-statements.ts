@@ -34,7 +34,9 @@ export function buildReserveCompositionUpsertStatement(
          warning_count = excluded.warning_count,
          warnings = excluded.warnings,
          adapter_source_model = excluded.adapter_source_model,
-         adapter_evidence_class = excluded.adapter_evidence_class`,
+         adapter_evidence_class = excluded.adapter_evidence_class
+       WHERE reserve_composition.fetched_at < excluded.fetched_at
+          OR (reserve_composition.fetched_at = excluded.fetched_at AND reserve_composition.attempt_id IS NULL)`,
     )
     .bind(
       record.stablecoinId,
