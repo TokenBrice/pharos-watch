@@ -97,7 +97,7 @@ describe("resolveRedemptionCapacity — reserve-sync over-provisioned clamp", ()
       now,
       {
         reserveSnapshotMetadata: baseSnapshot({
-          freshness: { mode: "not-applicable" },
+          freshnessMode: "not-applicable",
           redemption: { capacityUsd: 5_000_000 },
         }),
       },
@@ -120,7 +120,7 @@ describe("resolveRedemptionCapacity — reserve-sync over-provisioned clamp", ()
       now,
       {
         reserveSnapshotMetadata: baseSnapshot({
-          freshness: { mode: "not-applicable" },
+          freshnessMode: "not-applicable",
           redemption: { capacityRatioOfSupply: 1.5 },
         }),
       },
@@ -466,50 +466,9 @@ git commit -m "fix(redemption-backstop): dedupe notes when config overlaps runti
 
 ---
 
-### Task A5: Add consistency test — every reserve-sync-metadata config must have an adapter declaring capacity != "none"
+### Task A5 (removed — redundant with existing test)
 
-**Files:**
-- Modify: `shared/lib/__tests__/redemption-backstop-consistency.test.ts`
-
-**Context:** If a config uses `kind: "reserve-sync-metadata"` but the adapter declares `redemptionTelemetry.capacity === "none"`, the route will never score against live capacity and will silently fall back to the configured ratio (or nothing). This is a mis-wiring the current tests do not detect.
-
-- [ ] **Step 1: Write the consistency test**
-
-Append to `shared/lib/__tests__/redemption-backstop-consistency.test.ts`, within the main describe block:
-
-```typescript
-  it("every reserve-sync-metadata config has an adapter declaring capacity telemetry", () => {
-    const violations: string[] = [];
-    for (const [id, config] of entries) {
-      if (config.capacityModel.kind !== "reserve-sync-metadata") continue;
-      const adapterKey = TRACKED_META_BY_ID.get(id)?.liveReservesConfig?.adapter;
-      if (!adapterKey) {
-        violations.push(`${id}: reserve-sync-metadata config but no live-reserves adapter`);
-        continue;
-      }
-      const telemetry = getLiveReserveAdapterDefinition(adapterKey).redemptionTelemetry;
-      if (telemetry.capacity === "none") {
-        violations.push(`${id}: adapter ${adapterKey} declares capacity=none`);
-      }
-    }
-    expect(violations).toEqual([]);
-  });
-```
-
-- [ ] **Step 2: Run — expect PASS (current config is already consistent)**
-
-```
-npm test -- shared/lib/__tests__/redemption-backstop-consistency.test.ts
-```
-
-If it fails, investigate whether any reserve-sync-metadata config truly lacks a capacity-emitting adapter. Fix the config before continuing (this gates future incorrect additions).
-
-- [ ] **Step 3: Commit**
-
-```
-git add shared/lib/__tests__/redemption-backstop-consistency.test.ts
-git commit -m "test(redemption-backstop): enforce reserve-sync config + adapter telemetry match"
-```
+The existing test at `shared/lib/__tests__/redemption-backstop-consistency.test.ts:278-298` ("reserve-sync routes point only at adapters with redeemable-capacity telemetry and reviewed docs") already enforces this exact invariant. No new test is added here.
 
 ---
 
