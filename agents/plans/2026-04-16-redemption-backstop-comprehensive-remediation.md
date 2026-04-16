@@ -66,38 +66,41 @@
 
 - [ ] **Step 1: Write the failing test**
 
-Edit `worker/src/lib/__tests__/redemption-backstop-capacity.test.ts`, append a new describe block before the last `});` of the file:
+Edit `worker/src/lib/__tests__/redemption-backstop-capacity.test.ts`, append a new describe block before the last `});` of the file. The `ReserveSnapshotMetadataRecord` type requires `stablecoinId`, `fetchedAt`, `source`, `metadata`, `warningCount`, `warnings`, `sourceModel`, `evidenceClass`, and `syncStatus`. The `liquity-v1` adapter declares `redemptionTelemetry.capacity === "direct"` with `NOT_APPLICABLE_ONLY_FRESHNESS`, so the snapshot's `metadata.freshness.mode === "not-applicable"` satisfies the scoring-eligibility gate:
 
 ```typescript
-import { describe, expect, it } from "vitest";
 import { resolveRedemptionCapacity } from "../redemption-backstop-capacity";
+import type { ReserveSnapshotMetadataRecord } from "../live-reserves-store";
 
 describe("resolveRedemptionCapacity — reserve-sync over-provisioned clamp", () => {
-  it("clamps immediateCapacityUsd to supplyUsd and adds a note when live capacity exceeds supply", async () => {
+  const now = 1_780_000_000;
+  const baseSnapshot = (metadata: Record<string, unknown>): ReserveSnapshotMetadataRecord => ({
+    stablecoinId: "lusd-liquity",
+    fetchedAt: now - 60,
+    source: "liquity-v1",
+    sourceModel: "single-bucket",
+    evidenceClass: "independent",
+    syncStatus: "ok",
+    warningCount: 0,
+    warnings: [],
+    metadata,
+  });
+
+  it("clamps immediateCapacityUsd to supplyUsd and adds a note when nested capacityUsd exceeds supply", async () => {
     const db = {} as D1Database;
     const supplyUsd = 1_000_000;
-    const now = 1_780_000_000;
-    const reserveSnapshotMetadata = {
-      stablecoinId: "lusd-liquity",
-      fetchedAt: now - 60,
-      syncStatus: "ok" as const,
-      evidenceClass: "independent" as const,
-      warnings: [],
-      warningCount: 0,
-      metadata: {
-        freshness: { mode: "not-applicable" },
-        redemption: {
-          capacityUsd: 5_000_000,
-        },
-      },
-    };
     const result = await resolveRedemptionCapacity(
       db,
       "lusd-liquity",
       { kind: "reserve-sync-metadata" },
       supplyUsd,
       now,
-      { reserveSnapshotMetadata },
+      {
+        reserveSnapshotMetadata: baseSnapshot({
+          freshness: { mode: "not-applicable" },
+          redemption: { capacityUsd: 5_000_000 },
+        }),
+      },
     );
     expect(result.scoringCapacityUsd).toBe(supplyUsd);
     expect(result.scoringCapacityRatio).toBe(1);
@@ -105,8 +108,32 @@ describe("resolveRedemptionCapacity — reserve-sync over-provisioned clamp", ()
     expect(result.immediateCapacityRatio).toBe(1);
     expect(result.notes.some((n) => /exceeds current supply/i.test(n))).toBe(true);
   });
+
+  it("clamps ratio-only over-provisioned live capacity to supply", async () => {
+    const db = {} as D1Database;
+    const supplyUsd = 1_000_000;
+    const result = await resolveRedemptionCapacity(
+      db,
+      "lusd-liquity",
+      { kind: "reserve-sync-metadata" },
+      supplyUsd,
+      now,
+      {
+        reserveSnapshotMetadata: baseSnapshot({
+          freshness: { mode: "not-applicable" },
+          redemption: { capacityRatioOfSupply: 1.5 },
+        }),
+      },
+    );
+    expect(result.scoringCapacityUsd).toBe(supplyUsd);
+    expect(result.immediateCapacityUsd).toBe(supplyUsd);
+    expect(result.immediateCapacityRatio).toBe(1);
+    expect(result.notes.some((n) => /exceeds current supply/i.test(n))).toBe(true);
+  });
 });
 ```
+
+Note: `describe`, `expect`, `it` are already imported at the top of this test file; no new import is needed for them.
 
 - [ ] **Step 2: Run test to verify it fails**
 
@@ -207,6 +234,7 @@ import {
 
 describe("REDEMPTION_FEE_SCORE_BREAKPOINTS", () => {
   it("drives resolveBoundedFeeScore consistently", () => {
+    expect(resolveBoundedFeeScore(0)).toBe(100);
     for (const bp of REDEMPTION_FEE_SCORE_BREAKPOINTS) {
       expect(resolveBoundedFeeScore(bp.maxFeeBps)).toBe(bp.score);
     }
@@ -267,9 +295,18 @@ git commit -m "refactor(redemption-backstop): extract fee-score breakpoints to n
 
 **Context:** The current `CAPACITY_WARNING_EXCEPTIONS` object is an internal map keyed by stablecoin ID with stringly-typed warning codes as values. Future exceptions (e.g., for a similar reserve-completeness warning on another PSM-style coin) require editing this code file. Extract it into an exported const and keep the behavior identical.
 
-- [ ] **Step 1: Add a unit test asserting GHO exception is declared in a new exported shape**
+- [ ] **Step 1: Determine whether the test file already exists**
 
-Create `worker/src/lib/__tests__/redemption-backstop-live-metadata.test.ts` (file may already exist — check first) and append:
+Run:
+```
+ls worker/src/lib/__tests__/redemption-backstop-live-metadata.test.ts 2>&1
+```
+
+If the file exists, append the new describe block below to it and skip the top-level `import` additions (they are already there). If it does not exist, create the file with the full imports + describe block below.
+
+- [ ] **Step 2: Add the failing test**
+
+File content for a new file (or append the describe block to the existing file):
 
 ```typescript
 import { describe, expect, it } from "vitest";
@@ -284,15 +321,21 @@ describe("REDEMPTION_CAPACITY_WARNING_EXCEPTIONS", () => {
 });
 ```
 
-If the file does not already exist, wrap in `import` for `describe`/`expect`/`it` too.
-
-- [ ] **Step 2: Run test, expect FAIL**
+- [ ] **Step 3: Run test, expect FAIL**
 
 ```
 npm test -- worker/src/lib/__tests__/redemption-backstop-live-metadata.test.ts
 ```
 
-- [ ] **Step 3: Export the registry, keep runtime behavior unchanged**
+- [ ] **Step 4: Verify no external consumers of the old name**
+
+```
+grep -rn 'CAPACITY_WARNING_EXCEPTIONS' worker/ shared/ src/ scripts/
+```
+
+The only references should be within `worker/src/lib/redemption-backstop-live-metadata.ts` (the declaration line plus 2 internal call sites). If you see references in any other file, stop and investigate — external consumers must be updated in the same edit.
+
+- [ ] **Step 5: Export the registry, keep runtime behavior unchanged**
 
 In `worker/src/lib/redemption-backstop-live-metadata.ts`, change:
 
@@ -306,15 +349,15 @@ to:
 export const REDEMPTION_CAPACITY_WARNING_EXCEPTIONS: Readonly<Partial<Record<string, Partial<Record<string, string>>>>> = {
 ```
 
-And rename every internal reference from `CAPACITY_WARNING_EXCEPTIONS` to `REDEMPTION_CAPACITY_WARNING_EXCEPTIONS` (there should be 3 references at lines 79, 114). Use Edit with `replace_all: true` only if no collisions exist elsewhere — otherwise edit each.
+And rename the 2 internal usage sites from `CAPACITY_WARNING_EXCEPTIONS` to `REDEMPTION_CAPACITY_WARNING_EXCEPTIONS`. `replace_all: true` is safe because Step 4 confirmed no external references exist.
 
-- [ ] **Step 4: Run full live-metadata + sources test battery**
+- [ ] **Step 6: Run full live-metadata + sources test battery**
 
 ```
 npm test -- worker/src/lib/__tests__/redemption-backstop-live-metadata.test.ts worker/src/lib/__tests__/redemption-backstop-sources.test.ts
 ```
 
-- [ ] **Step 5: Commit**
+- [ ] **Step 7: Commit**
 
 ```
 git add worker/src/lib/redemption-backstop-live-metadata.ts worker/src/lib/__tests__/redemption-backstop-live-metadata.test.ts
@@ -333,35 +376,35 @@ git commit -m "refactor(redemption-backstop): export capacity warning exception 
 
 - [ ] **Step 1: Add the failing test**
 
-Append to `worker/src/lib/__tests__/redemption-backstop-sources.test.ts` inside the existing main describe block:
+Append to `worker/src/lib/__tests__/redemption-backstop-sources.test.ts` inside the existing main describe block. Use `"usdt-tether"` as a stable real-registry ID that is guaranteed present but not affected by reserve-sync-metadata (its `capacityModel` is `supply-full` in the real registry — but the test overrides the config inline with `supply-ratio`, which bypasses the reserve-sync branch, so no D1 call is made). Passing `reserveSnapshotMetadata: null` additionally ensures the D1 lookup is skipped:
 
 ```typescript
 it("deduplicates notes when config + runtime emit the same string", async () => {
   const db = {} as D1Database;
   const entry = await buildRedemptionBackstopEntry(
     db,
-    "dai-makerdao",
+    "usdt-tether",
     {
-      routeFamily: "psm-swap",
-      accessModel: "permissionless-onchain",
-      settlementModel: "atomic",
-      executionModel: "deterministic-onchain",
+      routeFamily: "offchain-issuer",
+      accessModel: "issuer-api",
+      settlementModel: "same-day",
+      executionModel: "rules-based-nav",
       outputAssetType: "stable-single",
       capacityModel: { kind: "supply-ratio", ratio: 0.33 },
       costModel: { kind: "fee-bps", feeBps: 0 },
-      notes: ["Note A", "Note A", "Note B"],
+      notes: ["Shared note", "Shared note", "Distinct note"],
     },
     1_000_000,
     50,
     1_780_000_000,
     { reserveSnapshotMetadata: null },
   );
-  expect(entry.notes.filter((n) => n === "Note A").length).toBe(1);
-  expect(entry.notes.filter((n) => n === "Note B").length).toBe(1);
+  expect(entry.notes.filter((n) => n === "Shared note").length).toBe(1);
+  expect(entry.notes.filter((n) => n === "Distinct note").length).toBe(1);
 });
 ```
 
-Ensure `buildRedemptionBackstopEntry` is imported at the top of the test file; add the import if missing. The `reserveSnapshotMetadata: null` option bypasses the D1 lookup so the stub `db` is safe.
+The `supply-ratio` capacity model avoids the reserve-sync branch entirely; combined with the explicit `reserveSnapshotMetadata: null`, no D1 lookup happens against the `{}` db stub. Ensure `buildRedemptionBackstopEntry` is imported at the top of the test file; add the import if missing.
 
 - [ ] **Step 2: Run, expect FAIL**
 
@@ -476,8 +519,7 @@ git commit -m "test(redemption-backstop): enforce reserve-sync config + adapter 
 
 **Files:**
 - Modify: `shared/lib/redemption-backstop-configs/queue-redeem.ts` (usdf-falcon — `fallbackRatio` is absent)
-- Modify: `shared/lib/redemption-backstop-configs/stablecoin-redeem.ts` (frxusd-frax — fallbackRatio absent)
-- Modify: `shared/lib/redemption-backstop-configs/stablecoin-redeem.ts` (usde-ethena — has fallbackRatio, document the telemetry degraded path)
+- Modify: `shared/lib/redemption-backstop-configs/stablecoin-redeem.ts` (frxusd-frax — `fallbackRatio` absent)
 
 **Context:** Today, when live reserve telemetry is absent or stale and no `fallbackRatio` is set, the route falls through to a `missing-capacity` state. This is intentional fail-closed behavior, but the `notes` field should explicitly declare that the route intentionally becomes unrated under those conditions.
 
@@ -639,13 +681,15 @@ In `shared/lib/redemption-backstop-configs/stablecoin-redeem.ts`, append to the 
   "wm-m0": {
     ...stablecoinRedeemBase,
     ...documentedBoundSupplyFull("2026-04-16"),
+    totalScoreCap: 70,
     costModel: fixedFee(0, "wM docs describe wrap and unwrap as fee-free permissionless calls against the underlying M token"),
     docs: [
       sourceRef("M0 wM token", "https://www.m0.org/faq", ["route", "capacity", "fees"]),
       sourceRef("M0 Dashboard", "https://dashboard.m0.org/", ["capacity"]),
     ],
     notes: [
-      "Permissionless ERC-20 wrapper: wrap() deposits M and mints wM; unwrap() redeems 1:1 back to M with no fee or queue; underlying M liquidity depends on M0 issuance",
+      "Permissionless ERC-20 wrapper: wrap() deposits M and mints wM; unwrap() redeems 1:1 back to M with no fee or queue",
+      "Config-level cap reflects that the wM->M unwrap does not by itself return the holder to a liquid stablecoin; the downstream M redemption rail (institution-only M0 mint/burn) still gates actual par exit",
     ],
   },
 ```
@@ -672,7 +716,7 @@ git commit -m "feat(redemption-backstop): add wM M0 stablecoin-redeem config"
 ```typescript
   "ftusd-flying-tulip": {
     ...stablecoinRedeemBase,
-    capacityModel: { kind: "supply-ratio", ratio: 0.1, confidence: "documented-bound" },
+    capacityModel: { kind: "supply-ratio", ratio: 0.1, confidence: "heuristic", basis: "strategy-buffer" },
     costModel: documentedVariableFee(
       "Flying Tulip's MintAndRedeem contract supports permissionless 1:1 mint and redemption against USDC or USDT; public docs reviewed do not publish a fixed redemption fee",
     ),
@@ -681,7 +725,8 @@ git commit -m "feat(redemption-backstop): add wM M0 stablecoin-redeem config"
       sourceRef("Flying Tulip documentation", "https://docs.flyingtulip.com/", ["route", "capacity"]),
     ],
     notes: [
-      "ftUSD uses delta-neutral stablecoin lending + short perpetual hedging; the reviewed 10% bound matches the tracked on-hand stablecoin buffer rather than assuming the full hedged book is instantly withdrawable",
+      "ftUSD uses delta-neutral stablecoin lending + short perpetual hedging",
+      "The 10% ratio is a reviewed heuristic reflecting typical delta-neutral protocol on-hand stable buffers rather than a published instant-liquidity floor for this specific protocol",
     ],
   },
 ```
@@ -742,6 +787,7 @@ git commit -m "feat(redemption-backstop): add USDz Anzen stablecoin-redeem confi
   "usdsc-startale": {
     ...stablecoinRedeemBase,
     ...documentedBoundSupplyFull("2026-04-16"),
+    totalScoreCap: 70,
     costModel: fixedFee(0, "Startale docs describe USDSC as a fee-free 1:1 wrapper around M0's M token on Soneium"),
     docs: [
       sourceRef("Startale USDSC", "https://startale.com/usdsc", ["route", "capacity", "fees"]),
@@ -749,6 +795,7 @@ git commit -m "feat(redemption-backstop): add USDz Anzen stablecoin-redeem confi
     ],
     notes: [
       "1:1 wrapper around M: mint by wrapping, redeem by unwrapping; underlying M is backed by T-bill collateral attested by M0 Validators",
+      "Config-level cap reflects that the USDSC->M unwrap does not by itself return the holder to a liquid stablecoin; the downstream M redemption rail still gates actual par exit",
     ],
   },
 ```
@@ -774,6 +821,7 @@ git commit -m "feat(redemption-backstop): add USDSC Startale stablecoin-redeem c
   "silk-shade-protocol": {
     ...basketRedeemBase,
     ...documentedBoundSupplyFull("2026-04-16"),
+    outputAssetType: "mixed-collateral",
     costModel: documentedVariableFee(
       "Shade Protocol documents Silk redemption pools plus ShadeDAO bond-assisted arbitrage; public docs reviewed do not publish a single fixed bps redemption fee",
     ),
@@ -782,6 +830,7 @@ git commit -m "feat(redemption-backstop): add USDSC Startale stablecoin-redeem c
     ],
     notes: [
       "Silk tracks a basket of GDP-weighted currencies; redemption pools combined with ShadeLend overcollateralization provide a reviewed basket-exit rail rather than a single-stable PSM",
+      "Output asset type is mixed-collateral because the redeemed basket is not guaranteed to be all-stablecoin; it can include native Shade collateral assets",
     ],
   },
 ```
@@ -808,7 +857,7 @@ git commit -m "feat(redemption-backstop): add Silk Shade Protocol basket-redeem 
     ...queueRedeemBase,
     accessModel: "whitelisted-onchain",
     settlementModel: "same-day",
-    capacityModel: { kind: "supply-ratio", ratio: 0.5, confidence: "documented-bound" },
+    capacityModel: { kind: "supply-ratio", ratio: 0.5, confidence: "heuristic", basis: "strategy-buffer" },
     costModel: documentedVariableFee(
       "Saturn documents KYC-gated 1:1 USDC mint and redeem through the M0 Swap Facility (Uniswap V3 1bps tier); public docs reviewed do not publish a separate USDAT protocol redemption fee",
     ),
@@ -819,7 +868,7 @@ git commit -m "feat(redemption-backstop): add Silk Shade Protocol basket-redeem 
     ],
     notes: [
       "USDAT is a permissioned M0 wrapper: mint/redeem requires KYC onboarding and is geofenced away from US, EEA, and OFAC jurisdictions; routes through the Uniswap V3 1bps tier against USDC",
-      "Modeled as a 50% supply-ratio bound reflecting M0 Swap Facility liquidity rather than the full supply being instantly swappable",
+      "The 50% ratio is a reviewed heuristic placeholder for M0 Swap Facility liquidity pending a published quantitative buffer bound",
     ],
   },
 ```
@@ -846,7 +895,7 @@ git commit -m "feat(redemption-backstop): add USDAT Saturn queue-redeem config"
     ...queueRedeemBase,
     accessModel: "whitelisted-onchain",
     settlementModel: "days",
-    capacityModel: { kind: "supply-ratio", ratio: 0.5, confidence: "documented-bound" },
+    capacityModel: { kind: "supply-ratio", ratio: 0.5, confidence: "heuristic", basis: "strategy-buffer" },
     costModel: documentedVariableFee(
       "Nerona documents permissioned 1:1 USDnr mint and redeem against underlying M; public docs reviewed do not publish a separate numeric redemption fee",
     ),
@@ -856,6 +905,7 @@ git commit -m "feat(redemption-backstop): add USDAT Saturn queue-redeem config"
     ],
     notes: [
       "Permissioned M0 wrapper: KYC-gated to Nerona's private wealth platform clients; T-bill yield accrues to M0/Nerona rather than USDnr holders",
+      "The 50% ratio is a reviewed heuristic placeholder pending a published primary-market liquidity bound for Nerona's M wrapper",
     ],
   },
 ```
@@ -882,7 +932,7 @@ git commit -m "feat(redemption-backstop): add USDnr Nerona queue-redeem config"
     ...queueRedeemBase,
     accessModel: "whitelisted-onchain",
     settlementModel: "same-day",
-    capacityModel: { kind: "supply-ratio", ratio: 0.1, confidence: "documented-bound" },
+    capacityModel: { kind: "supply-ratio", ratio: 0.1, confidence: "heuristic", basis: "strategy-buffer" },
     costModel: documentedVariableFee(
       "Buck Assets documents 1:1 USDC mint and redemption via the LiquidityWindow smart contract for AML-verified participants; public docs reviewed do not publish a fixed redemption fee",
     ),
@@ -893,7 +943,7 @@ git commit -m "feat(redemption-backstop): add USDnr Nerona queue-redeem config"
     ],
     notes: [
       "LiquidityWindow contract gates primary mint/redeem to AML-verified primary-market participants; monthly yield is distributed as additional BUCK tokens via rebase",
-      "Modeled as a conservative 10% supply-ratio bound reflecting the documented LiquidityWindow buffer",
+      "The 10% ratio is a reviewed heuristic placeholder pending a published LiquidityWindow buffer figure",
     ],
   },
 ```
@@ -920,7 +970,7 @@ git commit -m "feat(redemption-backstop): add BUCK Buck Assets queue-redeem conf
     ...queueRedeemBase,
     accessModel: "whitelisted-onchain",
     settlementModel: "days",
-    capacityModel: { kind: "supply-ratio", ratio: 0.1, confidence: "documented-bound" },
+    capacityModel: { kind: "supply-ratio", ratio: 0.1, confidence: "heuristic", basis: "strategy-buffer" },
     costModel: documentedVariableFee(
       "Hermetica documents KYC-gated USDH mint and redemption against a delta-neutral BTC position; public docs reviewed do not publish a fixed redemption fee",
     ),
@@ -931,7 +981,7 @@ git commit -m "feat(redemption-backstop): add BUCK Buck Assets queue-redeem conf
     ],
     notes: [
       "Delta-neutral BTC strategy (spot long + short perpetual) on Stacks; KYC-gated mint/redeem via the Hermetica app",
-      "Modeled as a conservative 10% supply-ratio bound because delta-neutral exchange collateral is not immediately redeemable as cash",
+      "The 10% ratio is a reviewed heuristic reflecting typical delta-neutral protocol cash buffers rather than a published Hermetica-specific figure",
     ],
   },
 ```
@@ -956,8 +1006,7 @@ git commit -m "feat(redemption-backstop): add USDH Hermetica queue-redeem config
 ```typescript
   "brla-brla-digital": {
     ...issuerBase,
-    ...reviewedDirectRedemptionSupplyFull,
-    reviewedAt: "2026-04-16",
+    ...documentedBoundSupplyFull("2026-04-16"),
     costModel: documentedVariableFee(
       "Avenia (formerly BRLA Digital) documents 1:1 BRLA mint and redemption against BRL after KYC; public docs reviewed do not publish a fixed numeric redemption fee",
     ),
@@ -1260,7 +1309,7 @@ In `shared/lib/redemption-backstop-version.ts`, bump `currentVersion` to `"3.98"
       version: "3.98",
       title: "Capacity-over-supply clamp, coverage expansion, and runtime hardening",
       date: "2026-04-16",
-      effectiveAt: 1776846000,
+      effectiveAt: 1776297600,
       summary:
         "Live reserve capacity is now clamped to current supply for scoring, 17 new stablecoins join modeled redemption coverage, and several lower-confidence supply-ratio routes are explicitly tagged as heuristic rather than silently relying on uncited ratios.",
       impact: [
@@ -1388,7 +1437,7 @@ Expected: PASS.
 
 - [ ] **Step 7: If any step fails, STOP and investigate the root cause.** Do not skip hooks or force-push.
 
-- [ ] **Step 8: Commit any final adjustments as `chore: final cleanup` before moving to simplification pass.**
+- [ ] **Step 8: Commit any final adjustments as `chore: final cleanup`.**
 
 ---
 
