@@ -30,6 +30,9 @@ describe("integrateDirectApiLiquidityPhase", () => {
     const knownPoolIndex = createKnownPoolIdentityIndex();
     const metrics = new Map();
     const priceObservations = new Map();
+    const chainAddressToId = new Map([
+      ["plasma:0x0a1a1a107e45b7ced86833863f482bc5f4ed82ef", "usdai-usd-ai"],
+    ]);
 
     integrateDirectApiLiquidityPhase({
       directApiPools,
@@ -37,7 +40,7 @@ describe("integrateDirectApiLiquidityPhase", () => {
       contractMetaByChainAddress: new Map(),
       metrics,
       priceObservations,
-      chainAddressToId: new Map(),
+      chainAddressToId,
       symbolToChainScopedIds: new Map(),
       symbolToIds: new Map(),
       validationReferences: {} as never,
@@ -47,6 +50,42 @@ describe("integrateDirectApiLiquidityPhase", () => {
     expect(metrics.size).toBe(0);
     expect(priceObservations.size).toBe(0);
     expect(knownPoolIndex.exactKeys.has(`plasma:${poolAddress}`)).toBe(true);
+  });
+
+  it("skips untracked direct API pools before identity processing", () => {
+    const directApiPools: DexApiPool[] = [
+      {
+        source: "raydium",
+        chain: "solana",
+        poolAddress: "pool-untracked",
+        poolType: "raydium-amm",
+        tokens: [
+          { address: "token-a", symbol: "AAA", decimals: 6 },
+          { address: "token-b", symbol: "BBB", decimals: 6 },
+        ],
+        price: 1,
+        tvlUsd: 1_000_000,
+        volume24hUsd: 50_000,
+        feeRate: null,
+        balances: [500_000, 500_000],
+      },
+    ];
+
+    const result = integrateDirectApiLiquidityPhase({
+      directApiPools,
+      knownPoolIndex: createKnownPoolIdentityIndex(),
+      contractMetaByChainAddress: new Map(),
+      metrics: new Map(),
+      priceObservations: new Map(),
+      chainAddressToId: new Map(),
+      symbolToChainScopedIds: new Map(),
+      symbolToIds: new Map(),
+      validationReferences: {} as never,
+      stablecoinPriceById: new Map(),
+    });
+
+    expect(result.directApiSkippedUntracked).toBe(1);
+    expect(result.directApiDedupSkippedByAddress).toBe(0);
   });
 });
 

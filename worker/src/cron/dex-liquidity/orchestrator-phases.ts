@@ -17,6 +17,7 @@ import {
   type DexApiFetchResult,
   type DexApiPool,
 } from "../../lib/dex-api-common";
+import { resolveStablecoinIdForDexApiToken } from "../../lib/dex-api-token-pricing";
 import { fetchFluidPools } from "./fetch-fluid";
 import { fetchBalancerPools } from "./fetch-balancer";
 import { fetchRaydiumPools } from "./fetch-raydium";
@@ -73,6 +74,7 @@ export interface DirectApiIntegrationResult {
   directApiDedupSkippedByAddress: number;
   directApiDedupSkippedByDerivedIdentity: number;
   directApiDedupSkippedByOptionalWildcardIdentity: number;
+  directApiSkippedUntracked: number;
 }
 
 export interface FallbackCrawlerPhaseResult {
@@ -417,20 +419,41 @@ export function integrateDirectApiLiquidityPhase(params: {
   let directApiDedupSkippedByAddress = 0;
   let directApiDedupSkippedByDerivedIdentity = 0;
   let directApiDedupSkippedByOptionalWildcardIdentity = 0;
+  let directApiSkippedUntracked = 0;
 
   if (params.directApiPools.length === 0) {
     return {
       directApiDedupSkippedByAddress,
       directApiDedupSkippedByDerivedIdentity,
       directApiDedupSkippedByOptionalWildcardIdentity,
+      directApiSkippedUntracked,
     };
   }
 
   console.log(`[dex-liquidity] Fetched ${params.directApiPools.length} direct API pools total`);
-  hydrateDirectApiPoolMetadata(params.directApiPools, params.contractMetaByChainAddress);
+  const trackedDirectApiPools = params.directApiPools.filter((pool) =>
+    pool.tokens.some(
+      (token) =>
+        resolveStablecoinIdForDexApiToken(
+          pool.chain,
+          token,
+          params.chainAddressToId,
+          params.symbolToChainScopedIds,
+        ) != null,
+    ),
+  );
+  directApiSkippedUntracked = params.directApiPools.length - trackedDirectApiPools.length;
+  if (directApiSkippedUntracked > 0) {
+    console.log(
+      `[dex-liquidity] Retained ${trackedDirectApiPools.length} direct API pools with tracked tokens ` +
+        `(skipped ${directApiSkippedUntracked} untracked pools before identity processing)`,
+    );
+  }
 
-  const allDirectApiIdentities = params.directApiPools.map(buildDirectApiPoolIdentity);
-  const eligibleDirectApiPools = params.directApiPools.filter((pool) => isEligibleDirectApiPool(pool));
+  hydrateDirectApiPoolMetadata(trackedDirectApiPools, params.contractMetaByChainAddress);
+
+  const allDirectApiIdentities = trackedDirectApiPools.map(buildDirectApiPoolIdentity);
+  const eligibleDirectApiPools = trackedDirectApiPools.filter((pool) => isEligibleDirectApiPool(pool));
   const eligibleDirectApiIdentities = eligibleDirectApiPools.map(buildDirectApiPoolIdentity);
   const directApiIdentityCounts = countPoolIdentityKeys(eligibleDirectApiIdentities);
 
@@ -522,6 +545,7 @@ export function integrateDirectApiLiquidityPhase(params: {
     directApiDedupSkippedByAddress,
     directApiDedupSkippedByDerivedIdentity,
     directApiDedupSkippedByOptionalWildcardIdentity,
+    directApiSkippedUntracked,
   };
 }
 
