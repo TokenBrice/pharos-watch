@@ -141,7 +141,20 @@ function validateRedemptionTelemetry(
   }
 
   const freshnessKind = redemption?.freshnessKind;
-  if (hasCapacityTelemetry && freshnessKind === "unverified") {
+  // Skip the redemption-capacity-unverified degrade when the adapter's policy
+  // already restricts freshness to "unverified" only — in that case the output
+  // is expected to be unverified and re-degrading on top of that policy would
+  // double-count the same freshness concern.
+  const allowedFreshnessModes = adapter?.validation?.allowedFreshnessModes;
+  const freshnessPolicyIsUnverifiedOnly =
+    Array.isArray(allowedFreshnessModes)
+    && allowedFreshnessModes.length === 1
+    && allowedFreshnessModes[0] === "unverified";
+  if (
+    hasCapacityTelemetry
+    && freshnessKind === "unverified"
+    && !freshnessPolicyIsUnverifiedOnly
+  ) {
     warnings.push(degradedWarning(
       "redemption-capacity-unverified",
       `Redemption capacity telemetry is marked unverified${adapterLabel}`,

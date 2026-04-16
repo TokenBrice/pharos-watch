@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import type { ReserveAdapterDefinition } from "../types";
 import { getReserveAdapter } from "../index";
 import { validateAdapterOutput } from "../validate";
 
@@ -73,5 +74,66 @@ describe("validateAdapterOutput redemption telemetry", () => {
       code: "invalid-redemption-fee-bps",
       effect: "fatal",
     });
+  });
+
+  it("suppresses redemption-capacity-unverified when the adapter policy is unverified-only (infinifi)", () => {
+    const adapter = getReserveAdapter("infinifi");
+    const result = validateAdapterOutput(
+      {
+        slices,
+        metadata: {
+          immediateRedeemableUsd: 1_000_000,
+          redemption: {
+            capacityUsd: 1_000_000,
+            freshnessKind: "unverified",
+          },
+        },
+      },
+      { adapter: adapter ?? undefined },
+    );
+
+    expect(result.valid).toBe(true);
+    expect(result.warnings.some((w) => w.code === "redemption-capacity-unverified")).toBe(false);
+  });
+
+  it("suppresses redemption-capacity-unverified when the adapter policy is unverified-only (reservoir)", () => {
+    const adapter = getReserveAdapter("reservoir");
+    const result = validateAdapterOutput(
+      {
+        slices,
+        metadata: {
+          immediateRedeemableUsd: 1_000_000,
+          redemption: {
+            capacityUsd: 1_000_000,
+            freshnessKind: "unverified",
+          },
+        },
+      },
+      { adapter: adapter ?? undefined },
+    );
+
+    expect(result.valid).toBe(true);
+    expect(result.warnings.some((w) => w.code === "redemption-capacity-unverified")).toBe(false);
+  });
+
+  it("still emits redemption-capacity-unverified when the adapter allows verified freshness (ethena)", () => {
+    const baseAdapter = getReserveAdapter("ethena");
+    expect(baseAdapter).not.toBeNull();
+    const adapter: ReserveAdapterDefinition = baseAdapter!;
+    const result = validateAdapterOutput(
+      {
+        slices,
+        metadata: {
+          immediateRedeemableUsd: 1_000_000,
+          redemption: {
+            capacityUsd: 1_000_000,
+            freshnessKind: "unverified",
+          },
+        },
+      },
+      { adapter },
+    );
+
+    expect(result.warnings.some((w) => w.code === "redemption-capacity-unverified")).toBe(true);
   });
 });
