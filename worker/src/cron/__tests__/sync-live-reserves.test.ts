@@ -327,6 +327,8 @@ describe("syncLiveReserves", () => {
   it("persists full primary-plus-fallback failure context for reserve source chains", async () => {
     const fallbackCoin = ACTIVE_STABLECOINS.find((coin) => (
       (coin.liveReservesConfig?.inputs.fallbacks?.length ?? 0) > 0
+      && coin.liveReservesConfig?.inputs.primary.kind === "http-json"
+      && coin.liveReservesConfig.inputs.primary.url.includes("chain=tron")
     ));
     expect(fallbackCoin).toBeDefined();
 
