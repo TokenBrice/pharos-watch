@@ -1,5 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { adaptAsymmetry } from "../asymmetry";
+import { validateAdapterOutput } from "../validate";
+import { getReserveAdapter } from "../index";
 
 describe("adaptAsymmetry", () => {
   it("maps branch collateral values into normalized reserve slices", () => {
@@ -69,5 +71,47 @@ describe("adaptAsymmetry", () => {
         capacityRatioOfSupply: 0.8,
       },
     });
+  });
+
+  it("returns an empty slice list when all branches have zero collateral (parse-failure path)", () => {
+    const result = adaptAsymmetry({
+      timestamp: 1776239429,
+      usdaf: {
+        total_bold_supply: "1000",
+        branch: {
+          ysyBOLD: { coll_value: "0" },
+          scrvUSD: { coll_value: "not-a-number" },
+        },
+      },
+    });
+    expect(result.slices).toEqual([]);
+  });
+
+  it("falls back to unverified freshness when timestamp is missing", () => {
+    const result = adaptAsymmetry({
+      usdaf: {
+        total_bold_supply: "100",
+        branch: {
+          ysyBOLD: { coll_value: "100" },
+        },
+      },
+    });
+    expect(result.metadata?.freshnessMode).toBe("unverified");
+  });
+
+  it("is rejected by validateAdapterOutput when timestamp is in the future", () => {
+    const futureMs = (Math.floor(Date.now() / 1000) + 7 * 24 * 60 * 60) * 1000;
+    const result = adaptAsymmetry({
+      timestamp: futureMs,
+      usdaf: {
+        total_bold_supply: "100",
+        branch: {
+          ysyBOLD: { coll_value: "100" },
+        },
+      },
+    });
+    const adapter = getReserveAdapter("asymmetry") ?? undefined;
+    const report = validateAdapterOutput(result, { adapter });
+    expect(report.valid).toBe(false);
   });
 });
