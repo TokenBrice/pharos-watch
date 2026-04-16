@@ -1,10 +1,17 @@
 import { jsonFreshResponse, errorResponse, withErrorHandler } from "../lib/api-utils";
 import { ACTIVE_IDS, TRACKED_META_BY_ID } from "@shared/lib/stablecoins";
-import type { StablecoinReservesResponse } from "@shared/types/live-reserves";
+import type { ReservePresentationMode, StablecoinReservesResponse } from "@shared/types/live-reserves";
 import { resolveReserveResult } from "../lib/live-reserves-store";
 
 const LIVE_CACHE_CONTROL = "public, s-maxage=3600, max-age=300";
+const LIVE_STALE_CACHE_CONTROL = "public, s-maxage=1800, max-age=120";
 const FALLBACK_CACHE_CONTROL = "public, s-maxage=300, max-age=60";
+
+export function reserveCacheControlForMode(mode: ReservePresentationMode): string {
+  if (mode === "live") return LIVE_CACHE_CONTROL;
+  if (mode === "live-stale") return LIVE_STALE_CACHE_CONTROL;
+  return FALLBACK_CACHE_CONTROL;
+}
 
 export const handleStablecoinReserves = withErrorHandler("stablecoin-reserves", async (
   db: D1Database,
@@ -39,6 +46,6 @@ export const handleStablecoinReserves = withErrorHandler("stablecoin-reserves", 
   };
 
   return jsonFreshResponse(body, {
-    cacheControl: resolved.mode === "live" ? LIVE_CACHE_CONTROL : FALLBACK_CACHE_CONTROL,
+    cacheControl: reserveCacheControlForMode(resolved.mode),
   });
 });

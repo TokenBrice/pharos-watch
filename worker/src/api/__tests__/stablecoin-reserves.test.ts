@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { mockD1 } from "./helpers/mock-d1";
-import { handleStablecoinReserves } from "../stablecoin-reserves";
+import { handleStablecoinReserves, reserveCacheControlForMode } from "../stablecoin-reserves";
+import type { ReservePresentationMode } from "@shared/types/live-reserves";
 
 describe("handleStablecoinReserves", () => {
   it("keeps USDAI on the reserve endpoint with the curated PYUSD fallback until a validated snapshot is synced", async () => {
@@ -159,5 +160,70 @@ describe("handleStablecoinReserves", () => {
     expect(res.status).toBe(200);
     const body = (await res.json()) as { sync?: { lastError?: string } };
     expect(body.sync?.lastError).toBe("HTTP 503 for https://api.example.com");
+  });
+
+  it("routes live-stale mode to the intermediate cache-control tier", async () => {
+    // Composition fetched_at + sync.last_success_at both well beyond the
+    // 2-day freshness window (LIVE_RESERVE_FRESHNESS_SEC) so resolveReserveResult
+    // returns mode=live-stale.
+    const now = Math.floor(Date.now() / 1000);
+    const fetchedAt = now - 3 * 24 * 3600;
+    const db = mockD1([
+      {
+        match: "reserve_composition",
+        rows: [],
+        first: {
+          stablecoin_id: "iusd-infinifi",
+          slices: JSON.stringify([{ name: "Test Farm", pct: 100, risk: "low" }]),
+          fetched_at: fetchedAt,
+          source: "infinifi",
+          metadata: JSON.stringify({ freshnessMode: "not-applicable" }),
+          adapter_source_model: "dynamic-mix",
+          adapter_evidence_class: "independent",
+        },
+      },
+      {
+        match: "reserve_sync_state",
+        rows: [],
+        first: {
+          stablecoin_id: "iusd-infinifi",
+          adapter_key: "infinifi",
+          breaker_key: "live-reserves:infinifi",
+          last_attempted_at: fetchedAt,
+          last_success_at: fetchedAt,
+          last_status: "ok",
+          warning_count: 0,
+          warnings: null,
+          last_error: null,
+          metadata: "{}",
+        },
+      },
+    ]);
+
+    const res = await handleStablecoinReserves(db, "iusd-infinifi");
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as { mode: string };
+    expect(body.mode).toBe("live-stale");
+    expect(res.headers.get("Cache-Control")).toBe("public, s-maxage=1800, max-age=120");
+  });
+
+  it("keeps curated-fallback mode on the short fallback cache-control tier", async () => {
+    // Existing behaviour: no live snapshot + curated reserves present -> curated-fallback.
+    const db = mockD1();
+    const res = await handleStablecoinReserves(db, "usdai-usd-ai");
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as { mode: string };
+    expect(body.mode).toBe("curated-fallback");
+    expect(res.headers.get("Cache-Control")).toBe("public, s-maxage=300, max-age=60");
+  });
+
+  it.each<[ReservePresentationMode, string]>([
+    ["live", "public, s-maxage=3600, max-age=300"],
+    ["live-stale", "public, s-maxage=1800, max-age=120"],
+    ["curated-fallback", "public, s-maxage=300, max-age=60"],
+    ["template-fallback", "public, s-maxage=300, max-age=60"],
+    ["unavailable", "public, s-maxage=300, max-age=60"],
+  ])("maps mode=%s to the correct Cache-Control tier", (mode, expected) => {
+    expect(reserveCacheControlForMode(mode)).toBe(expected);
   });
 });
