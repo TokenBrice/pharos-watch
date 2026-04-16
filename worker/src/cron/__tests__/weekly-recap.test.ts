@@ -55,7 +55,10 @@ function weeklyClaudeResponse(overrides: Partial<{
 }
 
 function buildDailyRows() {
-  const baseTs = Math.floor(Date.UTC(2026, 2, 23, 12, 0, 0) / 1000);
+  // Start at Tuesday 2026-03-24 12:00 UTC so all 5 rows fall within the
+  // "current week" window (weekBoundary = todayTs - 6d = Tue 00:00 UTC
+  // given the cron runs Monday 03-30 08:05 UTC).
+  const baseTs = Math.floor(Date.UTC(2026, 2, 24, 12, 0, 0) / 1000);
   return Array.from({ length: 5 }).map((_, index) => ({
     generated_at: baseTs + index * 86_400,
     digest_title: `Day ${index + 1}`,
@@ -149,8 +152,8 @@ describe("generateWeeklyRecap", () => {
       usedCandidateIds: ["weekly:psi"],
       type: "weekly",
       periodType: "trailing-daily-editions",
-      weekStart: "2026-03-23",
-      weekEnd: "2026-03-27",
+      weekStart: "2026-03-24",
+      weekEnd: "2026-03-28",
     });
 
     expect(fetchWithRetry).toHaveBeenCalledWith(
@@ -219,6 +222,43 @@ describe("generateWeeklyRecap", () => {
     expect(typeof body).toBe("string");
     expect(body).toContain("(N/A)");
     expect(body).not.toContain("Infinity");
+  });
+
+  it("includes week-over-week deltas in prompt when prior week data exists", async () => {
+    const current = buildDailyRows();
+    const prior = buildDailyRows().map((row, i) => ({
+      ...row,
+      generated_at: row.generated_at - 7 * 86_400,
+      input_data: JSON.stringify({
+        ...(JSON.parse(row.input_data) as Record<string, unknown>),
+        totalMcapUsd: 99_000_000 + i * 1_000_000,
+        stabilityIndex: { score: 92 - i, band: "BEDROCK" },
+      }),
+    }));
+
+    const db = mockD1([
+      {
+        match: "SELECT id FROM daily_digest WHERE generated_at >= ? AND json_extract(digest_meta, '$.type') = 'weekly'",
+        first: null,
+        rows: [],
+      },
+      { match: "SELECT digest_title, digest_text, digest_meta", rows: [] },
+      {
+        match: "WHERE generated_at >= ? AND (digest_meta IS NULL",
+        rows: [...prior, ...current],
+      },
+      { match: "INSERT INTO daily_digest", rows: [] },
+    ]);
+    vi.mocked(fetchWithRetry).mockImplementation(async () => weeklyClaudeResponse());
+
+    await generateWeeklyRecap(db, "anthropic-key", null);
+
+    const body = JSON.parse(String(vi.mocked(fetchWithRetry).mock.calls[0]?.[1]?.body)) as {
+      messages: { content: string }[];
+    };
+    expect(body.messages[0].content).toContain("Week-over-week deltas");
+    expect(body.messages[0].content).toMatch(/mcap: current .+ prior .+ delta/i);
+    expect(body.messages[0].content).toMatch(/PSI midpoint: current .+ prior .+/i);
   });
 
   it("skips generation cleanly when the Anthropic circuit is open", async () => {

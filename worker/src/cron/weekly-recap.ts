@@ -60,11 +60,77 @@ interface WeeklyInputData {
     topYieldAnomalies: { symbol: string; apy: number; warnings: string[]; mcapUsd: number; date: string }[];
     topLiquidityShifts: { symbol: string; scoreDelta: number; mcapUsd: number; date: string }[];
   };
+  weekOverWeekDeltas: {
+    mcap: { current: number; prior: number; deltaPct: number | null };
+    psi: { current: number; prior: number; delta: number };
+    psiDominantBand: { current: string; prior: string };
+    activeDepegObservations: { current: number; prior: number };
+    uniqueDepegSignals: { current: number; prior: number };
+    blacklistEvents: { current: number; prior: number };
+    blacklistUsd: { current: number; prior: number };
+    gradeTransitions: { current: number; prior: number };
+    gauge: { current: number | null; prior: number | null };
+    dataCoverage: { currentDays: number; priorDays: number };
+  } | null;
 }
 
-function buildWeeklyInputData(
+interface WeeklyBasicsParsedRow {
+  inputData: DigestInputData;
+  date: string;
+}
+
+interface WeeklyBasics {
+  mcapEnd: number;
+  psiMid: number;
+  psiDominantBand: string;
+  activeDepegObs: number;
+  uniqueDepegSignals: number;
+  blacklistEvents: number;
+  blacklistUsd: number;
+  gradeTransitions: number;
+  gaugeMid: number | null;
+  days: number;
+}
+
+function aggregateBasics(parsed: WeeklyBasicsParsedRow[]): WeeklyBasics {
+  const psiScores = parsed.map((d) => d.inputData.stabilityIndex?.score).filter((s): s is number => s != null);
+  const mcaps = parsed.map((d) => d.inputData.totalMcapUsd);
+  const psiBands = parsed.map((d) => d.inputData.stabilityIndex?.band).filter((b): b is string => b != null);
+  const bandFreq = new Map<string, number>();
+  for (const b of psiBands) bandFreq.set(b, (bandFreq.get(b) ?? 0) + 1);
+  const psiDominantBand = [...bandFreq.entries()].sort((a, b) => b[1] - a[1])[0]?.[0] ?? "BEDROCK";
+  const gauges = parsed.map((d) => d.inputData.mintBurnFlows?.gaugeScore).filter((g): g is number => g != null);
+  const depegObs = parsed.reduce((sum, d) => sum + d.inputData.activeDepegCount, 0);
+  const depegKeys = new Set<string>();
+  for (const d of parsed) {
+    for (const depeg of d.inputData.topDepegs ?? []) {
+      depegKeys.add(depeg.startedAt != null
+        ? `${depeg.stablecoinId ?? depeg.symbol}:${depeg.startedAt}:active`
+        : `${depeg.symbol}:${depeg.direction ?? ""}:${depeg.bps}:active`);
+    }
+    for (const depeg of d.inputData.resolvedDepegs ?? []) {
+      depegKeys.add(depeg.startedAt != null
+        ? `${depeg.stablecoinId ?? depeg.symbol}:${depeg.startedAt}:resolved`
+        : `${depeg.symbol}:${depeg.direction ?? ""}:${depeg.peakBps}:resolved`);
+    }
+  }
+  return {
+    mcapEnd: mcaps[mcaps.length - 1] ?? 0,
+    psiMid: psiScores.length > 0 ? psiScores.reduce((s, v) => s + v, 0) / psiScores.length : 0,
+    psiDominantBand,
+    activeDepegObs: depegObs,
+    uniqueDepegSignals: depegKeys.size,
+    blacklistEvents: parsed.reduce((s, d) => s + (d.inputData.blacklistActivity?.eventCount ?? 0), 0),
+    blacklistUsd: parsed.reduce((s, d) => s + (d.inputData.blacklistActivity?.totalAmountUsd ?? 0), 0),
+    gradeTransitions: parsed.reduce((s, d) => s + (d.inputData.gradeTransitions?.length ?? 0), 0),
+    gaugeMid: gauges.length >= 3 ? gauges.reduce((s, v) => s + v, 0) / gauges.length : null,
+    days: parsed.length,
+  };
+}
+
+function parseDailyRows(
   dailyRows: { generated_at: number; digest_title: string | null; digest_text: string; input_data: string }[],
-): WeeklyInputData | null {
+): { date: string; title: string; text: string; inputData: DigestInputData }[] {
   const parsed: { date: string; title: string; text: string; inputData: DigestInputData }[] = [];
   for (const row of dailyRows) {
     try {
@@ -82,6 +148,15 @@ function buildWeeklyInputData(
       }, error);
     }
   }
+  return parsed;
+}
+
+function buildWeeklyInputData(
+  currentDailyRows: { generated_at: number; digest_title: string | null; digest_text: string; input_data: string }[],
+  priorDailyRows: { generated_at: number; digest_title: string | null; digest_text: string; input_data: string }[] = [],
+): WeeklyInputData | null {
+  const parsed = parseDailyRows(currentDailyRows);
+  const priorParsed = parseDailyRows(priorDailyRows);
   if (parsed.length < 5) return null;
 
   const psiScores = parsed.map((d) => d.inputData.stabilityIndex?.score).filter((s): s is number => s != null);
@@ -207,6 +282,28 @@ function buildWeeklyInputData(
     }))
   ).sort((a, b) => Math.abs(b.scoreDelta) * b.mcapUsd - Math.abs(a.scoreDelta) * a.mcapUsd).slice(0, 7);
 
+  let weekOverWeekDeltas: WeeklyInputData["weekOverWeekDeltas"] = null;
+  if (priorParsed.length >= 5) {
+    const cur = aggregateBasics(parsed);
+    const pri = aggregateBasics(priorParsed);
+    weekOverWeekDeltas = {
+      mcap: {
+        current: cur.mcapEnd,
+        prior: pri.mcapEnd,
+        deltaPct: pri.mcapEnd > 0 ? ((cur.mcapEnd - pri.mcapEnd) / pri.mcapEnd) * 100 : null,
+      },
+      psi: { current: cur.psiMid, prior: pri.psiMid, delta: cur.psiMid - pri.psiMid },
+      psiDominantBand: { current: cur.psiDominantBand, prior: pri.psiDominantBand },
+      activeDepegObservations: { current: cur.activeDepegObs, prior: pri.activeDepegObs },
+      uniqueDepegSignals: { current: cur.uniqueDepegSignals, prior: pri.uniqueDepegSignals },
+      blacklistEvents: { current: cur.blacklistEvents, prior: pri.blacklistEvents },
+      blacklistUsd: { current: cur.blacklistUsd, prior: pri.blacklistUsd },
+      gradeTransitions: { current: cur.gradeTransitions, prior: pri.gradeTransitions },
+      gauge: { current: cur.gaugeMid, prior: pri.gaugeMid },
+      dataCoverage: { currentDays: cur.days, priorDays: pri.days },
+    };
+  }
+
   return {
     weekStartDate: parsed[0].date,
     weekEndDate: parsed[parsed.length - 1].date,
@@ -244,6 +341,7 @@ function buildWeeklyInputData(
       topYieldAnomalies,
       topLiquidityShifts,
     },
+    weekOverWeekDeltas,
   };
 }
 
@@ -265,6 +363,25 @@ function buildWeeklyPrompt(
 
   if (data.gaugeRange) {
     lines.push(`Bank Run Gauge range: ${Math.round(data.gaugeRange.min * 10) / 10} to ${Math.round(data.gaugeRange.max * 10) / 10}`);
+  }
+
+  if (data.weekOverWeekDeltas) {
+    const d = data.weekOverWeekDeltas;
+    lines.push("", "Week-over-week deltas (this week vs prior week):");
+    lines.push(`  mcap: current ${formatCurrency(d.mcap.current)} / prior ${formatCurrency(d.mcap.prior)} / delta ${d.mcap.deltaPct == null ? "n/a" : `${d.mcap.deltaPct >= 0 ? "+" : ""}${d.mcap.deltaPct.toFixed(2)}%`}`);
+    lines.push(`  PSI midpoint: current ${d.psi.current.toFixed(1)} / prior ${d.psi.prior.toFixed(1)} / delta ${d.psi.delta >= 0 ? "+" : ""}${d.psi.delta.toFixed(1)}`);
+    lines.push(`  PSI dominant band: current ${d.psiDominantBand.current} / prior ${d.psiDominantBand.prior}`);
+    lines.push(`  Active depeg observations: current ${d.activeDepegObservations.current} / prior ${d.activeDepegObservations.prior}`);
+    lines.push(`  Unique depeg signals: current ${d.uniqueDepegSignals.current} / prior ${d.uniqueDepegSignals.prior}`);
+    lines.push(`  Blacklist events: current ${d.blacklistEvents.current} / prior ${d.blacklistEvents.prior}`);
+    lines.push(`  Blacklist USD: current ${formatCurrency(d.blacklistUsd.current)} / prior ${formatCurrency(d.blacklistUsd.prior)}`);
+    lines.push(`  Grade transitions: current ${d.gradeTransitions.current} / prior ${d.gradeTransitions.prior}`);
+    if (d.gauge.current != null && d.gauge.prior != null) {
+      lines.push(`  Bank Run Gauge midpoint: current ${d.gauge.current.toFixed(1)} / prior ${d.gauge.prior.toFixed(1)}`);
+    }
+    lines.push(`  Data coverage: ${d.dataCoverage.currentDays}d current, ${d.dataCoverage.priorDays}d prior`);
+  } else {
+    lines.push("", "Week-over-week deltas: unavailable (insufficient prior-week history).");
   }
 
   lines.push("", "Weekly Signals (synthesize from this, do not merely recap daily copy):");
@@ -383,24 +500,37 @@ export async function generateWeeklyRecap(
       rawText: entry.rawText,
     }));
 
-  // Fetch last 7 daily digests (exclude weekly entries)
-  const cutoff = Math.floor(Date.now() / 1000) - 8 * SECONDS.ONE_DAY;
+  // Fetch last 15 daily digests (exclude weekly entries).
+  // The 15-day cutoff captures current week + prior week for WoW delta
+  // computation. The LIMIT 15 bounds the result set deterministically
+  // even if a dedup guard ever drifts.
+  const cutoff = Math.floor(Date.now() / 1000) - 15 * SECONDS.ONE_DAY;
   const dailyRows = await db
     .prepare(
       `SELECT generated_at, digest_title, digest_text, digest_extended, input_data
        FROM daily_digest
        WHERE generated_at >= ? AND (${NON_WEEKLY_DIGEST_SQL_FILTER})
-       ORDER BY generated_at ASC`,
+       ORDER BY generated_at ASC
+       LIMIT 15`,
     )
     .bind(cutoff)
     .all<{ generated_at: number; digest_title: string | null; digest_text: string; digest_extended: string | null; input_data: string }>();
 
-  const rows = (dailyRows.results ?? []).slice(-7);
-  if (rows.length < 5) {
-    return { metadata: `skipped: only ${rows.length} daily digests available (need 5+)` };
+  const allRows = dailyRows.results ?? [];
+  // Snap the split to a UTC day boundary (= last Tuesday 00:00 UTC given
+  // the Monday 08:05 cron slot). Day-level snap removes sub-second drift
+  // ambiguity between weekly runs, unlike a rolling `now - 7d` window.
+  const nowSec = Math.floor(Date.now() / 1000);
+  const todayTs = nowSec - (nowSec % SECONDS.ONE_DAY);
+  const weekBoundary = todayTs - 6 * SECONDS.ONE_DAY;
+  const currentRows = allRows.filter((r) => r.generated_at >= weekBoundary);
+  const priorRows = allRows.filter((r) => r.generated_at < weekBoundary);
+
+  if (currentRows.length < 5) {
+    return { metadata: `skipped: only ${currentRows.length} daily digests available in current week (need 5+)` };
   }
 
-  const weeklyData = buildWeeklyInputData(rows);
+  const weeklyData = buildWeeklyInputData(currentRows, priorRows);
   if (!weeklyData) {
     return { metadata: "skipped: failed to build weekly input data" };
   }
@@ -435,7 +565,6 @@ export async function generateWeeklyRecap(
   }
 
   // Store
-  const nowSec = Math.floor(Date.now() / 1000);
   await insertDigestRecord({
     db,
     generatedAt: nowSec,
