@@ -281,7 +281,9 @@ describe("redemption backstop config consistency", () => {
       .flatMap(([id, c]) => {
         const adapterKey = TRACKED_META_BY_ID.get(id)?.liveReservesConfig?.adapter;
         if (!adapterKey) return [`${id}: missing live-reserves adapter`];
-        const telemetry = getLiveReserveAdapterDefinition(adapterKey).redemptionTelemetry;
+        const definition = getLiveReserveAdapterDefinition(adapterKey);
+        if (!definition) return [`${id}: adapter ${adapterKey} definition not found`];
+        const telemetry = definition.redemptionTelemetry;
         const issues: string[] = [];
         if (telemetry.capacity === "none") {
           issues.push(`${id}: adapter ${adapterKey} has no capacity telemetry`);

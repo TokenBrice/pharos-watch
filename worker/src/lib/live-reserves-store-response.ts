@@ -54,6 +54,8 @@ function describeSnapshotIssue(issue: SnapshotIntegrityIssue): string {
       return "Stored live reserve snapshot contains invalid slices";
     case "invalid-sum":
       return issue.message;
+    case "unknown-adapter-source":
+      return "Stored live reserve snapshot references an unknown adapter";
     default:
       return "Stored live reserve snapshot is invalid";
   }

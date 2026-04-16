@@ -18,9 +18,9 @@ export type {
 };
 
 export function getLiveReserveAdapterDefinition(
-  adapterKey: LiveReserveAdapterKey,
-): (typeof LIVE_RESERVE_ADAPTER_DEFINITIONS)[LiveReserveAdapterKey] {
-  return LIVE_RESERVE_ADAPTER_DEFINITIONS[adapterKey];
+  adapterKey: string,
+): (typeof LIVE_RESERVE_ADAPTER_DEFINITIONS)[LiveReserveAdapterKey] | null {
+  return LIVE_RESERVE_ADAPTER_DEFINITIONS[adapterKey as LiveReserveAdapterKey] ?? null;
 }
 
 export function parseLiveReserveAdapterParams<K extends LiveReserveAdapterKey>(

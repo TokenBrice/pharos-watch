@@ -138,7 +138,12 @@ for (const [id, config] of Object.entries(REDEMPTION_BACKSTOP_CONFIGS)) {
       errors.push(`${id}: reserve-sync-metadata route missing liveReservesConfig adapter`);
       continue;
     }
-    const telemetry = getLiveReserveAdapterDefinition(adapterKey).redemptionTelemetry;
+    const definition = getLiveReserveAdapterDefinition(adapterKey);
+    if (!definition) {
+      errors.push(`${id}: reserve-sync-metadata route references unknown adapter (${adapterKey})`);
+      continue;
+    }
+    const telemetry = definition.redemptionTelemetry;
     if (telemetry.capacity === "none") {
       errors.push(`${id}: reserve-sync-metadata route points to fee-only/no-capacity adapter (${adapterKey})`);
     }

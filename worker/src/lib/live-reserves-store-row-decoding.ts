@@ -3,7 +3,6 @@ import {
 } from "@shared/lib/live-reserve-adapters";
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins";
 import type {
-  LiveReserveAdapterKey,
   LiveReserveEvidenceClass,
   LiveReserveFreshnessMode,
   LiveReserveRedemptionCapacityKind,
@@ -286,21 +285,21 @@ function parseSlicesStrict(value: string): { slices: ReserveSlice[] } | { issue:
 function resolveSnapshotSourceModel(
   row: ReserveCompositionRow,
   fallbackAdapterKey: string,
-): LiveReserveSourceModel {
+): LiveReserveSourceModel | null {
   if (row.adapter_source_model && VALID_SOURCE_MODELS.has(row.adapter_source_model as LiveReserveSourceModel)) {
     return row.adapter_source_model as LiveReserveSourceModel;
   }
-  return getLiveReserveAdapterDefinition(fallbackAdapterKey as LiveReserveAdapterKey).sourceModel;
+  return getLiveReserveAdapterDefinition(fallbackAdapterKey)?.sourceModel ?? null;
 }
 
 function resolveSnapshotEvidenceClass(
   row: ReserveCompositionRow,
   fallbackAdapterKey: string,
-): LiveReserveEvidenceClass {
+): LiveReserveEvidenceClass | null {
   if (row.adapter_evidence_class && VALID_EVIDENCE_CLASSES.has(row.adapter_evidence_class as LiveReserveEvidenceClass)) {
     return row.adapter_evidence_class as LiveReserveEvidenceClass;
   }
-  return getLiveReserveAdapterDefinition(fallbackAdapterKey as LiveReserveAdapterKey).evidenceClass;
+  return getLiveReserveAdapterDefinition(fallbackAdapterKey)?.evidenceClass ?? null;
 }
 
 export function parseReserveCompositionRow(
@@ -332,6 +331,18 @@ export function parseReserveCompositionRow(
     ? row.warning_count
     : finalWarnings.length;
 
+  const adapterSourceModel = resolveSnapshotSourceModel(row, fallbackAdapterKey);
+  const adapterEvidenceClass = resolveSnapshotEvidenceClass(row, fallbackAdapterKey);
+  if (adapterSourceModel === null || adapterEvidenceClass === null) {
+    return {
+      record: null,
+      issue: {
+        code: "unknown-adapter-source",
+        message: `stored reserve snapshot references unknown adapter "${fallbackAdapterKey}"`,
+      },
+    };
+  }
+
   return {
     record: {
       stablecoinId: row.stablecoin_id,
@@ -342,8 +353,8 @@ export function parseReserveCompositionRow(
       metadata: finalMetadata,
       warningCount,
       warnings: finalWarnings,
-      adapterSourceModel: resolveSnapshotSourceModel(row, fallbackAdapterKey),
-      adapterEvidenceClass: resolveSnapshotEvidenceClass(row, fallbackAdapterKey),
+      adapterSourceModel,
+      adapterEvidenceClass,
     },
     issue: null,
   };

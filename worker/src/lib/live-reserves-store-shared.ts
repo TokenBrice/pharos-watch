@@ -49,7 +49,8 @@ export interface SnapshotIntegrityIssue {
     | "invalid-payload"
     | "empty-slices"
     | "invalid-slice"
-    | "invalid-sum";
+    | "invalid-sum"
+    | "unknown-adapter-source";
   message: string;
 }
 

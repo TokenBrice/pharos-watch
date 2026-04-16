@@ -45,7 +45,7 @@ export function resolveReserveSyncCapacityConfidence(
 ): RedemptionBackstopEntry["capacityConfidence"] {
   const adapterKey = TRACKED_META_BY_ID.get(stablecoinId)?.liveReservesConfig?.adapter;
   if (!adapterKey) return "dynamic";
-  const telemetry = getLiveReserveAdapterDefinition(adapterKey).redemptionTelemetry.capacity;
+  const telemetry = getLiveReserveAdapterDefinition(adapterKey)?.redemptionTelemetry.capacity;
   if (telemetry === "direct") return "live-direct";
   if (telemetry === "proxy") return "live-proxy";
   return "dynamic";
