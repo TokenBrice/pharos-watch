@@ -264,9 +264,9 @@
     "notes": "Pool scoring and heuristic normalization still live in one large module. Split score families and reusable transforms before adding more model inputs."
   },
   "worker/src/cron/dex-liquidity/orchestrator.ts": {
-    "fileLines": 522,
+    "fileLines": 557,
     "maxFunctionLines": 87,
-    "branchCount": 15,
+    "branchCount": 19,
     "disposition": "stabilized",
     "targetBudget": {
       "fileLines": 370,
