@@ -102,16 +102,24 @@ async function resolveCapacityFromReserveSyncMetadata(
     && liveMetadata.capacityConfidence != null
     && (liveMetadata.immediateRedeemableUsd != null || (liveMetadata.immediateRedeemableRatio != null && supplyUsd != null))
   ) {
-    const immediateCapacityUsd =
+    const rawCapacityUsd =
       liveMetadata.immediateRedeemableUsd != null
         ? liveMetadata.immediateRedeemableUsd
         : (supplyUsd as number) * (liveMetadata.immediateRedeemableRatio as number);
+    const hasPositiveSupply = supplyUsd != null && supplyUsd > 0;
+    const capacityExceedsSupply = hasPositiveSupply && rawCapacityUsd > (supplyUsd as number);
+    const immediateCapacityUsd = hasPositiveSupply
+      ? Math.max(0, Math.min(supplyUsd as number, rawCapacityUsd))
+      : Math.max(0, rawCapacityUsd);
     const derivedRatio =
       liveMetadata.immediateRedeemableRatio != null
         ? Math.max(0, Math.min(1, liveMetadata.immediateRedeemableRatio))
-        : supplyUsd != null && supplyUsd > 0
-          ? Math.max(0, Math.min(1, immediateCapacityUsd / supplyUsd))
+        : hasPositiveSupply
+          ? Math.max(0, Math.min(1, immediateCapacityUsd / (supplyUsd as number)))
           : null;
+    const clampNote = capacityExceedsSupply
+      ? "Live reserve redemption capacity exceeds current supply; clamped to supply for scoring"
+      : null;
 
     return {
       immediateCapacityUsd,
@@ -128,7 +136,10 @@ async function resolveCapacityFromReserveSyncMetadata(
       ...(liveMetadata.routeStatusSource ? { routeStatusSource: liveMetadata.routeStatusSource } : {}),
       ...(liveMetadata.routeStatusReason ? { routeStatusReason: liveMetadata.routeStatusReason } : {}),
       ...(liveMetadata.routeStatusReviewedAt ? { routeStatusReviewedAt: liveMetadata.routeStatusReviewedAt } : {}),
-      notes: liveMetadata.capacityNotes,
+      notes: [
+        ...liveMetadata.capacityNotes,
+        ...(clampNote ? [clampNote] : []),
+      ],
     };
   }
 

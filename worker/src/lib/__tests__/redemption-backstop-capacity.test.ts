@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { resolveCapacityBasis } from "../redemption-backstop-capacity";
+import { resolveCapacityBasis, resolveRedemptionCapacity } from "../redemption-backstop-capacity";
+import type { ReserveSnapshotMetadataRecord } from "../live-reserves-store";
 
 describe("resolveCapacityBasis", () => {
   describe("reserve-sync-metadata model", () => {
@@ -107,5 +108,65 @@ describe("resolveCapacityBasis", () => {
         resolveCapacityBasis(null, { kind: "supply-ratio", ratio: 0.1 }),
       ).toBe("hot-buffer");
     });
+  });
+});
+
+describe("resolveRedemptionCapacity — reserve-sync over-provisioned clamp", () => {
+  const now = 1_780_000_000;
+  const baseSnapshot = (metadata: Record<string, unknown>): ReserveSnapshotMetadataRecord => ({
+    stablecoinId: "lusd-liquity",
+    fetchedAt: now - 60,
+    source: "liquity-v1",
+    sourceModel: "single-bucket",
+    evidenceClass: "independent",
+    syncStatus: "ok",
+    warningCount: 0,
+    warnings: [],
+    metadata,
+  });
+
+  it("clamps immediateCapacityUsd to supplyUsd and adds a note when nested capacityUsd exceeds supply", async () => {
+    const db = {} as D1Database;
+    const supplyUsd = 1_000_000;
+    const result = await resolveRedemptionCapacity(
+      db,
+      "lusd-liquity",
+      { kind: "reserve-sync-metadata" },
+      supplyUsd,
+      now,
+      {
+        reserveSnapshotMetadata: baseSnapshot({
+          freshnessMode: "not-applicable",
+          redemption: { capacityUsd: 5_000_000 },
+        }),
+      },
+    );
+    expect(result.scoringCapacityUsd).toBe(supplyUsd);
+    expect(result.scoringCapacityRatio).toBe(1);
+    expect(result.immediateCapacityUsd).toBe(supplyUsd);
+    expect(result.immediateCapacityRatio).toBe(1);
+    expect(result.notes.some((n) => /exceeds current supply/i.test(n))).toBe(true);
+  });
+
+  it("clamps ratio-only over-provisioned live capacity to supply", async () => {
+    const db = {} as D1Database;
+    const supplyUsd = 1_000_000;
+    const result = await resolveRedemptionCapacity(
+      db,
+      "lusd-liquity",
+      { kind: "reserve-sync-metadata" },
+      supplyUsd,
+      now,
+      {
+        reserveSnapshotMetadata: baseSnapshot({
+          freshnessMode: "not-applicable",
+          redemption: { capacityRatioOfSupply: 1.5 },
+        }),
+      },
+    );
+    expect(result.scoringCapacityUsd).toBe(supplyUsd);
+    expect(result.immediateCapacityUsd).toBe(supplyUsd);
+    expect(result.immediateCapacityRatio).toBe(1);
+    expect(result.notes.some((n) => /exceeds current supply/i.test(n))).toBe(true);
   });
 });
