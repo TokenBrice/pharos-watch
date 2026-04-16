@@ -95,4 +95,45 @@ describe("adaptM0Current", () => {
       sourceTimestampSpreadSec: 7235,
     });
   });
+
+  it("rejects snapshots where raw cash is already near the treasury scale (upstream units changed)", () => {
+    expect(() => adaptM0Collateral({
+      data: {
+        CollateralCurrent: {
+          // Raw cash already scaled to reserve units — applying *1000 would 1000x the total.
+          totalCash: 27_250_000_000_000,
+          eligibleTreasuries: 137_500_000_000_000,
+          nonEligibleTreasuries: 0,
+          totalTreasuries: 137_500_000_000_000,
+          totalTokenCollateral: 30_000_000_000_000,
+          eligibleTokenCollateral: 30_000_000_000_000,
+          nonEligibleTokenCollateral: 0,
+          remainingTerm: 86,
+          yieldToMaturity: 0.036,
+        },
+      },
+    })).toThrow(/cash-scale anomaly/);
+  });
+
+  it("accepts zero cash without tripping the scale anomaly check", () => {
+    const result = adaptM0Collateral({
+      data: {
+        CollateralCurrent: {
+          totalCash: 0,
+          eligibleTreasuries: 137_500_000_000_000,
+          nonEligibleTreasuries: 0,
+          totalTreasuries: 137_500_000_000_000,
+          totalTokenCollateral: 30_000_000_000_000,
+          eligibleTokenCollateral: 30_000_000_000_000,
+          nonEligibleTokenCollateral: 0,
+          remainingTerm: 86,
+          yieldToMaturity: 0.036,
+        },
+      },
+    });
+    expect(result.metadata).toMatchObject({
+      cashScaleApplied: 1_000,
+      totalCashScaled: 0,
+    });
+  });
 });

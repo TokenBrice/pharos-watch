@@ -103,6 +103,21 @@ export function adaptM0Collateral(payload: M0GraphQlResponse): AdapterResult {
   // The live dashboard currently exposes `totalCash` three decimal orders below the
   // treasury/token collateral fields. Normalize it into the same reserve unit
   // before composing the mix, and keep the applied scale explicit in metadata/tests.
+  // Sanity check: if the raw cash figure is already near the treasury scale (e.g. the
+  // dashboard stopped reporting milli-USD), multiplying by 1000 would materially
+  // inflate the reserve total. Reject the snapshot so operators catch the upstream
+  // unit change before it is written downstream.
+  if (current.totalCash > 0 && current.totalTreasuries > 0) {
+    const rawCashVsTreasuriesRatio = current.totalCash / current.totalTreasuries;
+    // Raw cash within 10% of treasuries magnitude (or larger) indicates the scale is
+    // already applied upstream. Under the documented 1000x scale the raw ratio is
+    // expected to be <=~0.001.
+    if (rawCashVsTreasuriesRatio > 0.1) {
+      throw new Error(
+        `M0 cash-scale anomaly: raw totalCash (${current.totalCash}) is ${(rawCashVsTreasuriesRatio * 100).toFixed(1)}% of totalTreasuries (${current.totalTreasuries}); cash*${M0_CASH_SCALE} would exceed treasury scale`,
+      );
+    }
+  }
   const cashValue = scaleM0CashToReserveUnits(current.totalCash);
   const normalizedReserveTotal = current.totalTreasuries + tokenCollateralTotal + cashValue;
   const timestampSummary = getM0SourceTimestampSummary(payload);
