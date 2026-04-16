@@ -117,4 +117,16 @@ describe("blacklist-contracts shared metadata alignment", () => {
       ]),
     );
   });
+
+  it("uses corrected Arbitrum startBlocks for FDUSD/AUSD/BUIDL", () => {
+    const getStartBlock = (stablecoinId: string, chainId: string) => {
+      const config = CONTRACT_CONFIGS.find(
+        (c) => c.stablecoinId === stablecoinId && c.chain.chainId === chainId,
+      );
+      return config?.startBlock;
+    };
+    expect(getStartBlock("fdusd-first-digital", "arbitrum")).toBe(336_278_229);
+    expect(getStartBlock("ausd-agora", "arbitrum")).toBe(342_153_906);
+    expect(getStartBlock("buidl-blackrock", "arbitrum")).toBe(270_969_308);
+  });
 });
