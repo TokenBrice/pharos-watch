@@ -11,6 +11,7 @@ import { throwIfAborted } from "../../lib/abort";
 import {
   getBlacklistEventByTopic,
   getBlacklistTopicHashes,
+  type BlacklistEventDef,
   type ContractEventConfig,
 } from "../../lib/blacklist-contracts";
 import { getChainRpc, type ChainRpcConfig } from "../../lib/chain-registry";
@@ -127,6 +128,26 @@ function buildBlacklistRow(
   };
 }
 
+function decodeEvmLogAmount(
+  eventDef: BlacklistEventDef,
+  log: EvmLogLike,
+  decimals: number,
+  addressFromTopic: boolean,
+): number | null {
+  if (!eventDef.hasAmount) return null;
+
+  if (typeof eventDef.amountTopicIndex === "number" && log.topics.length > eventDef.amountTopicIndex) {
+    return decodeUint256(log.topics[eventDef.amountTopicIndex]!, decimals);
+  }
+  if (typeof eventDef.amountDataIndex === "number") {
+    return decodeUint256AtSlot(log.data, eventDef.amountDataIndex, decimals);
+  }
+  if (addressFromTopic) {
+    return log.data.length >= 66 ? decodeUint256(log.data, decimals) : null;
+  }
+  return log.data.length > 66 ? decodeUint256("0x" + log.data.slice(66), decimals) : null;
+}
+
 export function parseEvmLogs(
   config: ContractEventConfig,
   logs: EvmLogLike[],
@@ -156,19 +177,7 @@ export function parseEvmLogs(
         : null;
     const addressIndexed = forcedDataAddress == null && log.topics.length > topicIdx;
     const affectedAddress = forcedDataAddress ?? (addressIndexed ? decodeAddress(log.topics[topicIdx]) : decodeAddress(log.data.slice(0, 66)));
-    const amount = eventDef.hasAmount
-      ? typeof eventDef.amountTopicIndex === "number" && log.topics.length > eventDef.amountTopicIndex
-        ? decodeUint256(log.topics[eventDef.amountTopicIndex]!, config.decimals)
-        : typeof eventDef.amountDataIndex === "number"
-          ? decodeUint256AtSlot(log.data, eventDef.amountDataIndex, config.decimals)
-        : addressIndexed
-        ? log.data.length >= 66
-          ? decodeUint256(log.data, config.decimals)
-          : null
-        : log.data.length > 66
-          ? decodeUint256("0x" + log.data.slice(66), config.decimals)
-          : null
-      : null;
+    const amount = decodeEvmLogAmount(eventDef, log, config.decimals, addressIndexed);
 
     const row = buildBlacklistRow(config, log, affectedAddress, amount, blockNumber, timestamp);
     if (row) rows.push(row);
