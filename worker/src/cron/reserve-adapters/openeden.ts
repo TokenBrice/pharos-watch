@@ -8,6 +8,7 @@ import {
   slicesFromValues,
   unverifiedFreshnessMetadata,
 } from "./helpers";
+import { buildBrowserHeaders } from "./request";
 
 interface OpenEdenReserveCompositionResponse {
   date?: string;
@@ -23,11 +24,10 @@ interface OpenEdenReserveCompositionResponse {
   ratio: number;
 }
 
-const OPENEDEN_BROWSER_HEADERS = {
-  Origin: "https://openeden.com",
-  Referer: "https://openeden.com/usdo/transparency",
-  "Accept-Language": "en-US,en;q=0.9",
-};
+const OPENEDEN_BROWSER_HEADERS = buildBrowserHeaders(
+  "https://openeden.com",
+  "https://openeden.com/usdo/transparency",
+);
 
 function adaptOpenEdenReserveComposition(payload: OpenEdenReserveCompositionResponse): AdapterResult {
   const sourceTimestamp = parseTimestampLikeToUnixSeconds(payload.date ?? null);

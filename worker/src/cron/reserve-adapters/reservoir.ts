@@ -10,6 +10,7 @@ import {
 } from "./helpers";
 import type { ValueBucketRule } from "./classification";
 import { wrapperAssetMeta } from "./wrapper-assets";
+import { buildBrowserHeaders } from "./request";
 
 interface ReservoirBalanceItem {
   label: string;
@@ -26,11 +27,10 @@ export interface ReservoirReservesResponse {
 
 type ReservoirBucketKey = "usd1" | "pyusd" | "rlusd" | "gho" | "usdt" | "usdc" | "rusd";
 
-const RESERVOIR_BROWSER_HEADERS = {
-  Origin: "https://app.reservoir.xyz",
-  Referer: "https://app.reservoir.xyz/reserves",
-  "Accept-Language": "en-US,en;q=0.9",
-};
+const RESERVOIR_BROWSER_HEADERS = buildBrowserHeaders(
+  "https://app.reservoir.xyz",
+  "https://app.reservoir.xyz/reserves",
+);
 
 // Stable buckets redeemable for rUSD on short notice. Reservoir holds a mix of
 // stablecoin-wrapped positions, any of which can be routed to the redemption

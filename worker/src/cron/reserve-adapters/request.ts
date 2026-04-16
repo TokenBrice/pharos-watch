@@ -7,6 +7,25 @@ import { runAdapterIo } from "./concurrency";
 
 const ADAPTER_USER_AGENT = "Mozilla/5.0";
 
+/**
+ * Some issuer dashboards gate their JSON/HTML endpoints with CORS-style
+ * origin checks. buildBrowserHeaders produces the canonical Origin/Referer
+ * /Accept-Language triple adapters pass via `fetchJsonWithRetry`'s options.
+ *
+ * @param originUrl Fully-qualified origin (e.g. "https://app.ethena.fi"). The
+ *   origin is reused as the Referer path root; adapters with a deeper Referer
+ *   can pass it via `referer`.
+ * @param referer Optional override for the Referer header; defaults to the
+ *   origin.
+ */
+export function buildBrowserHeaders(originUrl: string, referer?: string): HeadersInit {
+  return {
+    Origin: originUrl,
+    Referer: referer ?? originUrl,
+    "Accept-Language": "en-US,en;q=0.9",
+  };
+}
+
 interface JsonRetryOptions {
   headers?: HeadersInit;
 }
