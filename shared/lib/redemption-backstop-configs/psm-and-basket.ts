@@ -155,6 +155,21 @@ export const PSM_AND_BASKET_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopC
       "Alto docs describe a 0.20% (20 bps) fee on both PSM swap directions; PSM capacity is capped at 5M USDC which currently exceeds total DUSD supply",
     ),
   },
+  "silk-shade-protocol": {
+    ...basketRedeemBase,
+    ...documentedBoundSupplyFull("2026-04-16"),
+    outputAssetType: "mixed-collateral",
+    costModel: documentedVariableFee(
+      "Shade Protocol documents Silk redemption pools plus ShadeDAO bond-assisted arbitrage; public docs reviewed do not publish a single fixed bps redemption fee",
+    ),
+    docs: [
+      sourceRef("Shade Protocol Silk docs", "https://docs.shadeprotocol.io/silk", ["route", "capacity"]),
+    ],
+    notes: [
+      "Silk tracks a basket of GDP-weighted currencies; redemption pools combined with ShadeLend overcollateralization provide a reviewed basket-exit rail rather than a single-stable PSM",
+      "Output asset type is mixed-collateral because the redeemed basket is not guaranteed to be all-stablecoin; it can include native Shade collateral assets",
+    ],
+  },
   "eusd-electronic-usd": {
     ...basketRedeemBase,
     ...reviewedBasketRedemptionSupplyFull,
