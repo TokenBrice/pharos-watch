@@ -2,10 +2,19 @@ import { describe, expect, it } from "vitest";
 import { LIVE_RESERVE_ADAPTER_KEYS } from "@shared/types/live-reserves";
 import {
   LIVE_RESERVE_ADAPTER_DEFINITIONS,
+  LIVE_RESERVE_ADAPTER_PRIMARY_INPUT_KINDS,
   LiveReservesConfigSchema,
   parseLiveReserveAdapterParams,
 } from "@shared/lib/live-reserve-adapters";
 import { getReserveAdapter } from "../index";
+
+const VALID_INPUT_KINDS = new Set([
+  "http-json",
+  "http-html",
+  "indexer",
+  "onchain-solana",
+  "onchain-evm",
+]);
 
 describe("adapter registry completeness", () => {
   it.each(LIVE_RESERVE_ADAPTER_KEYS)(
@@ -97,6 +106,24 @@ describe("adapter registry completeness", () => {
 
     expect(parsed.success).toBe(false);
   });
+
+  it.each(LIVE_RESERVE_ADAPTER_KEYS)(
+    "%s declares a non-empty set of valid primary input kinds",
+    (key) => {
+      const kinds = LIVE_RESERVE_ADAPTER_PRIMARY_INPUT_KINDS[key];
+      expect(kinds, `Missing primary input-kinds entry for "${key}" in LIVE_RESERVE_ADAPTER_PRIMARY_INPUT_KINDS`).toBeDefined();
+      expect(Array.isArray(kinds)).toBe(true);
+      expect(kinds.length).toBeGreaterThan(0);
+      for (const kind of kinds) {
+        expect(
+          VALID_INPUT_KINDS.has(kind),
+          `Adapter "${key}" declares unknown input kind "${kind}" — valid kinds are ${[...VALID_INPUT_KINDS].join(", ")}`,
+        ).toBe(true);
+      }
+      // No duplicates.
+      expect(new Set(kinds).size).toBe(kinds.length);
+    },
+  );
 
   it("parseLiveReserveAdapterParams accepts a structured adapter payload", () => {
     const parsed = parseLiveReserveAdapterParams("chainlink-nav", {

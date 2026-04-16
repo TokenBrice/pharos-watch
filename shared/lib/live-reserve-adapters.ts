@@ -2,7 +2,12 @@ import { z } from "zod";
 import { type LiveReserveAdapterKey } from "../types/live-reserves";
 import { LIVE_RESERVE_ADAPTER_DEFINITIONS } from "./live-reserve-adapters-definitions";
 import { LiveReservesConfigSchema } from "./live-reserve-adapters-config";
-import { adapterParamsSchemas, type LiveReserveAdapterParamsByKey, type LiveReserveAdapterParams } from "./live-reserve-adapters-schemas";
+import {
+  adapterParamsSchemas,
+  LIVE_RESERVE_ADAPTER_PRIMARY_INPUT_KINDS,
+  type LiveReserveAdapterParamsByKey,
+  type LiveReserveAdapterParams,
+} from "./live-reserve-adapters-schemas";
 
 export type LiveReserveRedemptionCapacityTelemetry = "direct" | "proxy" | "none";
 export type LiveReserveRedemptionFeeTelemetry = "current-bps" | "none";
@@ -10,6 +15,7 @@ export type LiveReserveRedemptionFeeTelemetry = "current-bps" | "none";
 export {
   LiveReservesConfigSchema,
   LIVE_RESERVE_ADAPTER_DEFINITIONS,
+  LIVE_RESERVE_ADAPTER_PRIMARY_INPUT_KINDS,
 };
 
 export type {
