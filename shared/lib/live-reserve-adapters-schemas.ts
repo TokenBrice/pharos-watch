@@ -155,6 +155,7 @@ const capVaultAssetSchema = z.object({
   risk: LiveReserveRiskSchema,
   coinId: z.string().optional(),
   depType: LiveReserveDependencyTypeSchema.optional(),
+  priceUsd: z.number().positive().optional(),
 }).strict();
 
 const capVaultParamsSchema = z.object({

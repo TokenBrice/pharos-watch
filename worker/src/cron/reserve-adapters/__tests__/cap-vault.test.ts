@@ -124,6 +124,70 @@ describe("adaptCapVaultState", () => {
     // Paused-treated-as-true must exclude the asset from immediate redeemable capacity.
     expect(result.metadata?.immediateRedeemableUsd).toBe(0);
   });
+
+  it("emits cap-vault-peg-assumed info warning when any active asset lacks priceUsd", () => {
+    const result = adaptCapVaultState({
+      contractAddress: "0xcccc62962d17b8914c62d74ffb843d73b2a3cccc",
+      supplyUsd: 100,
+      assets: [
+        {
+          address: "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
+          name: "USDC",
+          risk: "low",
+          decimals: 6,
+          totalSupplied: 100,
+          totalBorrowed: 0,
+          available: 100,
+          paused: false,
+          pausedStatusUnavailable: false,
+        },
+      ],
+    });
+
+    const pegWarning = result.warnings?.find((w) => w.code === "cap-vault-peg-assumed");
+    expect(pegWarning).toBeDefined();
+    expect(pegWarning?.severity).toBe("info");
+    expect(result.metadata?.totalReserveUsd).toBe(100);
+    expect(result.metadata?.immediateRedeemableUsd).toBe(100);
+  });
+
+  it("scales totals by priceUsd when configured and omits the peg-assumed warning", () => {
+    const result = adaptCapVaultState({
+      contractAddress: "0xcccc62962d17b8914c62d74ffb843d73b2a3cccc",
+      supplyUsd: null,
+      assets: [
+        {
+          address: "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
+          name: "USDC",
+          risk: "low",
+          decimals: 6,
+          totalSupplied: 50,
+          totalBorrowed: 0,
+          available: 50,
+          paused: false,
+          pausedStatusUnavailable: false,
+          priceUsd: 1,
+        },
+        {
+          address: "0x7712c34205737192402172409a8f7ccef8aa2aec",
+          name: "BUIDL",
+          risk: "low",
+          decimals: 6,
+          totalSupplied: 20,
+          totalBorrowed: 0,
+          available: 20,
+          paused: false,
+          pausedStatusUnavailable: false,
+          priceUsd: 1.05,
+        },
+      ],
+    });
+
+    expect(result.warnings?.some((w) => w.code === "cap-vault-peg-assumed") ?? false).toBe(false);
+    // 50 * 1 + 20 * 1.05 = 71
+    expect(result.metadata?.totalReserveUsd).toBe(71);
+    expect(result.metadata?.immediateRedeemableUsd).toBe(71);
+  });
 });
 
 describe("fetchCapVaultReserves", () => {

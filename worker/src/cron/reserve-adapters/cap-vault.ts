@@ -28,6 +28,7 @@ interface CapVaultAssetConfig {
   risk: ReserveSlice["risk"];
   coinId?: string;
   depType?: ReserveSlice["depType"];
+  priceUsd?: number;
 }
 
 interface CapVaultAssetState {
@@ -41,6 +42,12 @@ interface CapVaultAssetState {
   totalBorrowed: number;
   available: number;
   paused: boolean;
+  /**
+   * When omitted, USD accumulation falls back to 1.0 per asset unit and a
+   * `cap-vault-peg-assumed` info warning is emitted so operators know the
+   * assumption was relied upon.
+   */
+  priceUsd?: number;
   /**
    * True when the asset's paused() call returned a value that could not be decoded.
    * When true, `paused` is conservatively set to true.
@@ -86,6 +93,7 @@ function normalizeAssetConfigs(config: LiveReservesConfig): Map<string, CapVault
         risk: asset.risk,
         ...(asset.coinId ? { coinId: asset.coinId } : {}),
         ...(asset.depType ? { depType: asset.depType } : {}),
+        ...(asset.priceUsd != null ? { priceUsd: asset.priceUsd } : {}),
       },
     ]),
   );
@@ -106,9 +114,19 @@ export function adaptCapVaultState(args: {
 }): AdapterResult {
   const warnings: LiveReserveWarning[] = [];
   const activeAssets = args.assets.filter((asset) => asset.totalSupplied > 0);
-  const totalReserveUsd = activeAssets.reduce((sum, asset) => sum + asset.totalSupplied, 0);
+  const pegAssumedAssets = activeAssets.filter((asset) => asset.priceUsd == null);
+  if (pegAssumedAssets.length > 0) {
+    warnings.push(reserveInfoWarning(
+      "cap-vault-peg-assumed",
+      `Cap vault asset(s) without configured priceUsd treated as 1 USD per unit: ${pegAssumedAssets.map((a) => a.name).join(", ")}`,
+    ));
+  }
+  const totalReserveUsd = activeAssets.reduce(
+    (sum, asset) => sum + asset.totalSupplied * (asset.priceUsd ?? 1.0),
+    0,
+  );
   const immediateRedeemableUsd = activeAssets.reduce(
-    (sum, asset) => sum + (asset.paused ? 0 : Math.max(0, asset.available)),
+    (sum, asset) => sum + (asset.paused ? 0 : Math.max(0, asset.available) * (asset.priceUsd ?? 1.0)),
     0,
   );
   const pausedAssets = activeAssets.filter((asset) => asset.paused);
@@ -129,7 +147,7 @@ export function adaptCapVaultState(args: {
   return {
     slices: slicesFromValues(activeAssets.map((asset) => ({
       name: asset.name,
-      value: asset.totalSupplied,
+      value: asset.totalSupplied * (asset.priceUsd ?? 1.0),
       risk: asset.risk,
       ...(asset.coinId ? { coinId: asset.coinId } : {}),
       ...(asset.depType ? { depType: asset.depType } : {}),
@@ -153,6 +171,7 @@ export function adaptCapVaultState(args: {
         totalBorrowed: asset.totalBorrowed,
         available: asset.available,
         paused: asset.paused,
+        ...(asset.priceUsd != null ? { priceUsd: asset.priceUsd } : {}),
       })),
       redemption: {
         capacityUsd: immediateRedeemableUsd,
@@ -303,6 +322,7 @@ export async function fetchCapVaultReserves(
       available: decimalNumberFromBigInt(availableRaw, decimals),
       paused,
       pausedStatusUnavailable,
+      ...(assetConfig.priceUsd != null ? { priceUsd: assetConfig.priceUsd } : {}),
     } satisfies CapVaultAssetState;
   }));
 
