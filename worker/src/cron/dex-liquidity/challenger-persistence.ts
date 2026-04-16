@@ -254,11 +254,21 @@ export function selectDexPriceChallengerRowsFromPools(
 
   if (qualifying.length === 0) return [];
 
-  const totalQualifyingTvl = qualifying.reduce((sum, pool) => sum + pool.tvlUsd, 0);
+  // Dedupe qualifying pools by poolId, preferring the higher-TVL row
+  const byPoolId = new Map<string, (typeof qualifying)[number]>();
+  for (const pool of qualifying) {
+    const prev = byPoolId.get(pool.poolId);
+    if (!prev || pool.tvlUsd > prev.tvlUsd) byPoolId.set(pool.poolId, pool);
+  }
+  const dedupedQualifying = [...byPoolId.values()].sort(
+    (a, b) => b.tvlUsd - a.tvlUsd || a.poolId.localeCompare(b.poolId),
+  );
+
+  const totalQualifyingTvl = dedupedQualifying.reduce((sum, pool) => sum + pool.tvlUsd, 0);
   const rows: DexPriceChallengerPoolRow[] = [];
   let retainedTvl = 0;
 
-  for (const pool of qualifying) {
+  for (const pool of dedupedQualifying) {
     rows.push({
       stablecoinId,
       poolId: pool.poolId,

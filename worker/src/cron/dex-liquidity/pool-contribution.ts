@@ -26,6 +26,11 @@ export function addSecondaryPoolContribution(
     metrics.set(stablecoinId, m);
   }
 
+  const incomingPoolId = `${pool.chain.toLowerCase()}:${pool.address.toLowerCase()}`;
+  if (m.topPools.some((existing) => existing.poolId === incomingPoolId)) {
+    return;
+  }
+
   const organicFraction = STAGED_POOL_DEFAULTS.organicFraction;
   const hasMeasuredBalance = pool.balanceRatio != null && Number.isFinite(pool.balanceRatio);
   const balanceRatio = hasMeasuredBalance ? pool.balanceRatio! : STAGED_POOL_DEFAULTS.balanceRatioFallback;

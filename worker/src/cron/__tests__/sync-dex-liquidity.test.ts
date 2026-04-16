@@ -661,11 +661,11 @@ describe("filterPrimaryPoolsPreferDirectApi", () => {
 
     expect(result.filteredPools).toHaveLength(0);
     expect(result.skippedByExactIdentity).toBe(0);
-    expect(result.skippedByUniqueDerivedIdentity).toBe(0);
-    expect(result.skippedByOptionalWildcardIdentity).toBe(1);
+    expect(result.skippedByUniqueDerivedIdentity).toBe(1);
+    expect(result.skippedByOptionalWildcardIdentity).toBe(0);
   });
 
-  it("deduplicates a Balancer V3 DL stable pool via optional wildcard identity when DL omits the stable subtype", () => {
+  it("deduplicates a Balancer V3 DL stable pool via na-variant derived identity when DL omits the stable subtype", () => {
     const pools: LlamaPool[] = [
       {
         pool: "0511276f-4d37-4919-95ab-6cdf418ddd08",
@@ -707,8 +707,8 @@ describe("filterPrimaryPoolsPreferDirectApi", () => {
 
     expect(result.filteredPools).toHaveLength(0);
     expect(result.skippedByExactIdentity).toBe(0);
-    expect(result.skippedByUniqueDerivedIdentity).toBe(0);
-    expect(result.skippedByOptionalWildcardIdentity).toBe(1);
+    expect(result.skippedByUniqueDerivedIdentity).toBe(1);
+    expect(result.skippedByOptionalWildcardIdentity).toBe(0);
   });
 
   it("does not use optional wildcard dedup when multiple direct API Orca pools share the same pair", () => {

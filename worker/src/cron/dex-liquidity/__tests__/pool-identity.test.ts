@@ -93,7 +93,7 @@ describe("pool identity dedup", () => {
     ).toBeNull();
   });
 
-  it("uses optional wildcard dedup for an Orca DL row missing fee metadata", () => {
+  it("dedupes an Orca DL row missing fee metadata via na-variant derived lookup", () => {
     const known = createKnownPoolIdentityIndex();
     registerKnownPoolIdentity(
       known,
@@ -128,7 +128,7 @@ describe("pool identity dedup", () => {
         },
         { allowOptionalWildcard: true },
       ),
-    ).toBe("derived_optional_wildcard");
+    ).toBe("derived_unique");
   });
 
   it("does not use optional wildcard dedup when the incoming pool has full optional metadata", () => {
@@ -218,6 +218,62 @@ describe("pool identity dedup", () => {
         { allowOptionalWildcard: true },
       ),
     ).toBeNull();
+  });
+
+  it("dedupes DL (fee=na) vs direct-API (fee=1) via the na-variant secondary lookup", () => {
+    const known = createKnownPoolIdentityIndex();
+    registerKnownPoolIdentity(known, buildPoolIdentity({
+      chain: "ethereum",
+      protocol: "balancer",
+      poolAddressOrId: "0xabc0000000000000000000000000000000000000",
+      tokenAddresses: ["0xusdc0000000000000000000000000000000000000", "0xusdt0000000000000000000000000000000000000"],
+      poolType: "balancer-stable",
+      feeTierBps: 1,
+      isStable: true,
+    }));
+    const incoming = buildPoolIdentity({
+      chain: "ethereum",
+      protocol: "balancer-v3",
+      poolAddressOrId: "6b6de6c7-uuid-opaque",
+      tokenAddresses: ["0xusdc0000000000000000000000000000000000000", "0xusdt0000000000000000000000000000000000000"],
+      poolType: "balancer-weighted",
+      feeTierBps: null,
+      isStable: null,
+      isStableHint: true,
+    });
+    const reason = getIdentityDedupReason(
+      incoming, known, { derived: 1, wildcard: 1 }, { allowOptionalWildcard: true },
+    );
+    expect(reason).not.toBeNull();
+  });
+
+  it("dedupes direct-API (fee=concrete) vs DL (fee=na) via na-variant reverse lookup", () => {
+    const known = createKnownPoolIdentityIndex();
+    // Known: DL row with fee=na
+    registerKnownPoolIdentity(known, buildPoolIdentity({
+      chain: "ethereum",
+      protocol: "balancer-v3",
+      poolAddressOrId: "6b6de6c7-uuid-opaque",
+      tokenAddresses: ["0xusdc0000000000000000000000000000000000000", "0xusdt0000000000000000000000000000000000000"],
+      poolType: "balancer-weighted",
+      feeTierBps: null,
+      isStable: null,
+      isStableHint: true,
+    }));
+    // Incoming: direct-API row with concrete fee
+    const incoming = buildPoolIdentity({
+      chain: "ethereum",
+      protocol: "balancer",
+      poolAddressOrId: "0xabc0000000000000000000000000000000000000",
+      tokenAddresses: ["0xusdc0000000000000000000000000000000000000", "0xusdt0000000000000000000000000000000000000"],
+      poolType: "balancer-stable",
+      feeTierBps: 1,
+      isStable: true,
+    });
+    const reason = getIdentityDedupReason(
+      incoming, known, { derived: 1, wildcard: 1 }, { allowOptionalWildcard: true },
+    );
+    expect(reason).toBe("derived_unique");
   });
 });
 

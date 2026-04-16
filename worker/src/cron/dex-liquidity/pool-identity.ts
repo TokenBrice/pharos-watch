@@ -218,11 +218,55 @@ export function getIdentityDedupReason(
     return "exact";
   }
   if (identity.derivedMatchKey && incomingCounts.derived === 1) {
+    // Primary derived-unique match.
     const knownCount = known.derivedKeyCounts.get(identity.derivedMatchKey) ?? 0;
     if (knownCount === 1) {
       const knownExactCount = known.derivedToExactKeys.get(identity.derivedMatchKey)?.size ?? 0;
       if (!(identity.exactPoolKey && knownExactCount > 0)) {
         return "derived_unique";
+      }
+    }
+
+    // Secondary: try matching with fee bucket coerced to "na" (or from "na" to
+    // a concrete bucket). DL rows often lack feeTierBps, producing feeBucket="na",
+    // while direct-API rows have a concrete bucket. Without this, the primary
+    // derived-unique check never matches across sources.
+    // Format: chain|protocol|tokens|shape|feeBucket|stability
+    const parts = identity.derivedMatchKey.split("|");
+    if (parts.length === 6 && parts[4] !== "na") {
+      // Incoming has concrete fee; try matching known rows with fee=na.
+      const naVariant = [...parts.slice(0, 4), "na", parts[5]].join("|");
+      const knownNaCount = known.derivedKeyCounts.get(naVariant) ?? 0;
+      if (knownNaCount === 1) {
+        const knownExactCount = known.derivedToExactKeys.get(naVariant)?.size ?? 0;
+        if (!(identity.exactPoolKey && knownExactCount > 0)) {
+          return "derived_unique";
+        }
+      }
+    }
+    if (parts.length === 6 && parts[4] === "na") {
+      // Incoming has fee=na; scan known derived keys for a matching concrete-fee
+      // variant. Only match if exactly one candidate exists (otherwise ambiguous).
+      const prefix = parts.slice(0, 4).join("|");
+      const suffix = parts[5];
+      let matchKey: string | null = null;
+      let matchCount = 0;
+      for (const [knownKey, knownCount] of known.derivedKeyCounts) {
+        if (knownCount !== 1) continue;
+        const knownParts = knownKey.split("|");
+        if (knownParts.length !== 6) continue;
+        if (knownParts[4] === "na") continue;
+        if (knownParts[5] !== suffix) continue;
+        if (knownParts.slice(0, 4).join("|") !== prefix) continue;
+        matchKey = knownKey;
+        matchCount++;
+        if (matchCount > 1) break;
+      }
+      if (matchCount === 1 && matchKey) {
+        const knownExactCount = known.derivedToExactKeys.get(matchKey)?.size ?? 0;
+        if (!(identity.exactPoolKey && knownExactCount > 0)) {
+          return "derived_unique";
+        }
       }
     }
   }
