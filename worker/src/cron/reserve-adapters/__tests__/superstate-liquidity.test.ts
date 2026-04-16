@@ -38,6 +38,7 @@ describe("adaptSuperstateLiquidity", () => {
         freshnessKind: "same-run-api",
         routeStatus: "open",
         routeStatusSource: "protocol-api",
+        sourceTimestamp: 1_776_000_000,
       },
     });
   });
