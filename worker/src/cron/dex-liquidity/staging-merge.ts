@@ -237,9 +237,14 @@ export async function mergeStagedPools(
       const orderbookMetadata = stagedPool.source === "cg_tickers"
         ? readCgTickerOrderbookMetadata(stagedPool.rawJson)
         : null;
-      const poolAddressOrId = stagedPool.poolId.includes(":")
-        ? stagedPool.poolId.split(":").slice(1).join(":")
-        : stagedPool.poolId;
+      // For orderbook pools, preserve the full poolId so that
+      // isTrustworthyExactPoolId recognises the "orderbook:" prefix and
+      // registers a usable exact key for downstream dedup.
+      const poolAddressOrId = stagedPool.chain === "orderbook"
+        ? stagedPool.poolId
+        : stagedPool.poolId.includes(":")
+          ? stagedPool.poolId.split(":").slice(1).join(":")
+          : stagedPool.poolId;
       const identity = buildPoolIdentity({
         chain: stagedPool.chain,
         protocol: profile.dexId,
@@ -327,7 +332,10 @@ export async function mergeStagedPools(
     registerKnownPoolIdentity(knownPoolIndex, identity);
 
     const adjustedVolume = (stagedPool.volume24h ?? 0) * confidence;
-    const address = stagedPool.poolId.split(":")[1] ?? stagedPool.poolId;
+    // Preserve the full suffix after the first colon. Orderbook ids and any colon-bearing
+    // native ids stay intact. EVM/base58 addresses are colon-free so this is safe.
+    const firstColonIndex = stagedPool.poolId.indexOf(":");
+    const address = firstColonIndex >= 0 ? stagedPool.poolId.slice(firstColonIndex + 1) : stagedPool.poolId;
     const maturityDays = stagedPoolMaturityDays(stagedPool.discoveredAt, nowSec);
 
     if (stagedPool.source === "cg_onchain") {

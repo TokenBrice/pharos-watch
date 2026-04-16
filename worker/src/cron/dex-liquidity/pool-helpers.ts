@@ -24,12 +24,12 @@ export function parsePoolSymbols(symbol: string): string[] {
 /** Classify a DeFiLlama pool into a pool type for quality weighting */
 export function classifyPoolType(project: string): string {
   const proj = project.toLowerCase();
+  if (proj.includes("aerodrome-slipstream")) return "aerodrome-slipstream-5bp";
+  if (proj.includes("velodrome-slipstream")) return "velodrome-slipstream-5bp";
   if (proj.includes("curve")) return "curve-stableswap"; // refined later via registryId
   if (proj.includes("fluid")) return "fluid-dex";
   if (proj.includes("meteora")) return "meteora-dlmm";
   if (proj.includes("aerodrome")) return "aerodrome-volatile"; // refined to aerodrome-stable via subgraph isStable flag
-  if (proj.includes("velodrome-slipstream")) return "velodrome-slipstream-5bp";
-  if (proj.includes("aerodrome-slipstream")) return "aerodrome-slipstream-5bp";
   if (proj.includes("balancer") && proj.includes("stable")) return "balancer-stable";
   if (proj.includes("balancer")) return "balancer-weighted";
   if (proj.includes("raydium")) return "raydium-amm";
@@ -171,19 +171,19 @@ export function initMetrics(id: string, symbol: string): LiquidityMetrics {
 
 /** Normalize protocol names for grouping (merge variants, pass through the rest) */
 export function normalizeProtocol(project: string): string {
-  const p = project.toLowerCase().replace(/_/g, "-");
+  const p = project.toLowerCase().replace(/[-_]/g, "");
   if (p.includes("curve")) return "curve";
-  if (p.includes("uniswap-v3") || p === "uniswap-v3") return "uniswap-v3";
-  if (p.includes("uniswap-v4")) return "uniswap-v4";
+  if (p.includes("uniswapv3") || p === "univ3") return "uniswap-v3";
+  if (p.includes("uniswapv4")) return "uniswap-v4";
   if (p.includes("uniswap")) return "uniswap-v2";
   if (p.includes("fluid")) return "fluid";
   if (p.includes("meteora")) return "meteora";
   if (p.includes("balancer")) return "balancer";
   if (p.includes("aerodrome")) return "aerodrome";
   if (p.includes("velodrome")) return "velodrome";
-  if (p.includes("pancakeswap")) return "pancakeswap";
+  if (p.includes("pancakeswap") || p.includes("pcsv")) return "pancakeswap";
   if (p.includes("sushiswap") || p === "sushi") return "sushiswap";
-  if (p.includes("trader-joe") || p.includes("traderjoe")) return "trader-joe";
+  if (p.includes("traderjoe")) return "trader-joe";
   if (p.includes("raydium")) return "raydium";
   if (p.includes("orca")) return "orca";
   if (p.includes("quickswap")) return "quickswap";

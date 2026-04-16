@@ -38,7 +38,7 @@ function isUniswapV4PoolId(poolId: string, protocol?: string | null): boolean {
   return normalizeProtocol(protocol ?? "") === "uniswap-v4" && /^0x[a-f0-9]{64}$/i.test(poolId);
 }
 
-function isTrustworthyExactPoolId(poolId: string | null | undefined, protocol?: string | null): boolean {
+export function isTrustworthyExactPoolId(poolId: string | null | undefined, protocol?: string | null): boolean {
   if (!poolId) return false;
   const trimmed = poolId.trim();
   if (!trimmed) return false;
@@ -105,6 +105,7 @@ export function buildPoolIdentity(input: {
   poolType?: string | null;
   feeTierBps?: number | null;
   isStable?: boolean | null;
+  isStableHint?: boolean;
 }): PoolIdentity {
   const chain = input.chain.toLowerCase();
   const exactPoolId = input.poolAddressOrId?.trim() ?? "";
@@ -112,14 +113,19 @@ export function buildPoolIdentity(input: {
     ? `${chain}:${exactPoolId.toLowerCase()}`
     : null;
 
+  const effectiveIsStable: boolean | null =
+    input.isStable === true || (input.isStable == null && input.isStableHint === true)
+      ? true
+      : input.isStable ?? null;
+
   const normalizedTokens = input.tokenAddresses
     .map((token) => normalizeTokenAddress(token))
     .filter(Boolean)
     .sort();
-  const poolShapeFamily = resolvePoolShapeFamily(input.poolType, input.protocol, input.isStable);
+  const poolShapeFamily = resolvePoolShapeFamily(input.poolType, input.protocol, effectiveIsStable);
   const feeTierBucket = resolveFeeTierBucket(input.feeTierBps);
-  const stabilityBucket = input.isStable == null ? "na" : input.isStable ? "stable" : "volatile";
-  const hasMissingOptionalIdentityFields = feeTierBucket === "na" || input.isStable == null;
+  const stabilityBucket = effectiveIsStable == null ? "na" : effectiveIsStable ? "stable" : "volatile";
+  const hasMissingOptionalIdentityFields = feeTierBucket === "na" || effectiveIsStable == null;
 
   const derivedMatchKey =
     normalizedTokens.length >= 2

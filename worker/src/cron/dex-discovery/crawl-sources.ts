@@ -441,7 +441,9 @@ export async function crawlCoin(
           );
 
           for (const summary of exchangeSummaries) {
-            const poolId = `orderbook:${summary.exchangeId}:${stablecoinId}`.toLowerCase();
+            // Canonical orderbook pool id — no stablecoin suffix. Multiple tracked stablecoins
+            // sharing the same exchange map to the same poolId and dedup correctly downstream.
+            const poolId = `orderbook:${summary.exchangeId}`.toLowerCase();
             if (knownPoolIds.has(poolId)) continue;
             const orderbookMetadata = buildCgTickerOrderbookMetadata(summary);
 

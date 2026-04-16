@@ -209,7 +209,7 @@ describe("crawlCoin DexScreener hardening", () => {
     );
 
     expect(result.pools).toEqual([{
-      poolId: "orderbook:kinesis:usdc-circle",
+      poolId: "orderbook:kinesis",
       stablecoinId: "usdc-circle",
       source: "cg_tickers",
       chain: "orderbook",

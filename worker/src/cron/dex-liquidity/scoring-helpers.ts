@@ -243,6 +243,7 @@ export function accumulateGlobalAggregate(
   globalChainTvl: Record<string, number>,
   globalProtoChainTvl: Record<string, number>,
   globalChains: Set<string>,
+  seenPoolTvl: Map<string, { tvl: number; vol24h: number; vol7d: number; proto: string; chain: string }>,
 ): { totalTvl: number; totalVol24h: number; totalVol7d: number; poolCount: number } {
   let totalTvl = 0;
   let totalVol24h = 0;
@@ -250,15 +251,40 @@ export function accumulateGlobalAggregate(
   let poolCount = 0;
 
   for (const pool of pools) {
-    if (globalSeenPools.has(pool.poolId)) continue;
+    const proto = normalizeProtocol(pool.project);
+    const chainKey = pool.chain.toLowerCase();
+    const incomingVol7d = pool.volumeUsd7d ?? 0;
+    const prev = seenPoolTvl.get(pool.poolId);
+
+    if (prev) {
+      if (pool.tvlUsd > prev.tvl) {
+        const tvlDelta = pool.tvlUsd - prev.tvl;
+        const vol24hDelta = pool.volumeUsd1d - prev.vol24h;
+        const vol7dDelta = incomingVol7d - prev.vol7d;
+        totalTvl += tvlDelta;
+        totalVol24h += vol24hDelta;
+        totalVol7d += vol7dDelta;
+        globalProtocolTvl[prev.proto] = (globalProtocolTvl[prev.proto] ?? 0) - prev.tvl;
+        globalChainTvl[prev.chain] = (globalChainTvl[prev.chain] ?? 0) - prev.tvl;
+        globalProtoChainTvl[`${prev.proto}:${prev.chain}`] =
+          (globalProtoChainTvl[`${prev.proto}:${prev.chain}`] ?? 0) - prev.tvl;
+        globalProtocolTvl[proto] = (globalProtocolTvl[proto] ?? 0) + pool.tvlUsd;
+        globalChainTvl[chainKey] = (globalChainTvl[chainKey] ?? 0) + pool.tvlUsd;
+        globalProtoChainTvl[`${proto}:${chainKey}`] =
+          (globalProtoChainTvl[`${proto}:${chainKey}`] ?? 0) + pool.tvlUsd;
+        globalChains.add(chainKey);
+        seenPoolTvl.set(pool.poolId, { tvl: pool.tvlUsd, vol24h: pool.volumeUsd1d, vol7d: incomingVol7d, proto, chain: chainKey });
+      }
+      continue;
+    }
+
     globalSeenPools.add(pool.poolId);
+    seenPoolTvl.set(pool.poolId, { tvl: pool.tvlUsd, vol24h: pool.volumeUsd1d, vol7d: incomingVol7d, proto, chain: chainKey });
     totalTvl += pool.tvlUsd;
     totalVol24h += pool.volumeUsd1d;
-    totalVol7d += pool.volumeUsd7d ?? 0;
+    totalVol7d += incomingVol7d;
     poolCount++;
-    const chainKey = pool.chain.toLowerCase();
     globalChains.add(chainKey);
-    const proto = normalizeProtocol(pool.project);
     globalProtocolTvl[proto] = (globalProtocolTvl[proto] ?? 0) + pool.tvlUsd;
     globalChainTvl[chainKey] = (globalChainTvl[chainKey] ?? 0) + pool.tvlUsd;
     globalProtoChainTvl[`${proto}:${chainKey}`] = (globalProtoChainTvl[`${proto}:${chainKey}`] ?? 0) + pool.tvlUsd;

@@ -125,6 +125,7 @@ export async function computeStablecoinScores(
 
   // Global dedup accumulators — accumulated per-coin BEFORE top-10 truncation
   const globalSeenPools = new Set<string>();
+  const seenPoolTvl = new Map<string, { tvl: number; vol24h: number; vol7d: number; proto: string; chain: string }>();
   const globalProtocolTvl: Record<string, number> = {};
   const globalChainTvl: Record<string, number> = {};
   const globalProtoChainTvl: Record<string, number> = {}; // "proto:chain" → TVL
@@ -151,7 +152,7 @@ export async function computeStablecoinScores(
 
     applyRebuiltMetrics(m, rebuilt);
     const globalDelta = accumulateGlobalAggregate(
-      retainedPools, globalSeenPools, globalProtocolTvl, globalChainTvl, globalProtoChainTvl, globalChains,
+      retainedPools, globalSeenPools, globalProtocolTvl, globalChainTvl, globalProtoChainTvl, globalChains, seenPoolTvl,
     );
     globalTotalTvl += globalDelta.totalTvl;
     globalTotalVol24h += globalDelta.totalVol24h;

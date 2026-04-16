@@ -11,7 +11,9 @@ import {
   computePoolStress,
   initMetrics,
   isCryptoSwap,
+  buildPoolFingerprint,
 } from "./pool-helpers";
+import { isTrustworthyExactPoolId } from "./pool-identity";
 import { getChainScopedSymbolIds, makeChainAddressKey, normalizeTokenAddress } from "./token-resolution";
 
 /** Match DeFiLlama pools to tracked stablecoins and compute per-pool metrics. */
@@ -120,6 +122,8 @@ export function processPoolMetrics(
         // Symbol fallbacks may match a different physical pool sharing the same token pair —
         // those pools must use their own TVL, not the Curve pool's.
         effectivePoolTvl = curveAddressMatch ? curveData.metapoolAdjustedTvl : pool.tvlUsd;
+        // Use the same adjusted TVL for raw totals so metapool double-counting is removed
+        // from totalTvlUsd, protocolTvl, chainTvl, and per-pool tvlUsd.
         // Pool maturity from Curve creation timestamp
         if (curveData.creationTs > 0) {
           poolMaturityDays = Math.floor((Date.now() / 1000 - curveData.creationTs) / DAY_SECONDS);
@@ -175,6 +179,10 @@ export function processPoolMetrics(
         poolMaturityDays = pool.count; // ~1 data point per day
       }
 
+      // For Curve metapools matched by address, use the adjusted TVL that strips
+      // double-counted underlying-pool value from all raw aggregates.
+      const rawContribTvl = curveAddressMatch ? curveData!.metapoolAdjustedTvl : pool.tvlUsd;
+
       for (const id of matchedIds) {
         const meta = TRACKED_META_BY_ID.get(id);
         if (!meta) continue;
@@ -196,7 +204,7 @@ export function processPoolMetrics(
         // Pool stress for this pool
         const stressIdx = computePoolStress(balanceRatio, organicFraction, poolMaturityDays, coinPairQuality);
 
-        m.totalTvlUsd += pool.tvlUsd;
+        m.totalTvlUsd += rawContribTvl;
         m.totalVolume24hUsd += vol1d;
         m.totalVolume7dUsd += vol7d;
         m.poolCount++;
@@ -224,18 +232,21 @@ export function processPoolMetrics(
         m.oldestPoolDays = Math.max(m.oldestPoolDays, poolMaturityDays);
 
         // Protocol and chain TVL
-        m.protocolTvl[protocol] = (m.protocolTvl[protocol] ?? 0) + pool.tvlUsd;
-        m.chainTvl[pool.chain] = (m.chainTvl[pool.chain] ?? 0) + pool.tvlUsd;
+        m.protocolTvl[protocol] = (m.protocolTvl[protocol] ?? 0) + rawContribTvl;
+        m.chainTvl[pool.chain] = (m.chainTvl[pool.chain] ?? 0) + rawContribTvl;
 
         // Pool-level price: use Curve per-token price when available
         const poolPrice = curveData?.tokenPrices[meta.symbol.toUpperCase()];
 
         // Pool entry with enriched extra
         m.topPools.push({
-          poolId: `${pool.chain.toLowerCase()}:${pool.pool.toLowerCase()}`,
+          poolId: isTrustworthyExactPoolId(pool.pool, pool.project)
+            ? `${pool.chain.toLowerCase()}:${pool.pool.toLowerCase()}`
+            : (buildPoolFingerprint(pool.chain, pool.project, pool.underlyingTokens ?? [])
+                ?? `${pool.chain.toLowerCase()}:${pool.pool.toLowerCase()}`),
           project: protocol,
           chain: pool.chain,
-          tvlUsd: pool.tvlUsd,
+          tvlUsd: rawContribTvl,
           symbol: pool.symbol,
           volumeUsd1d: vol1d,
           volumeUsd7d: vol7d,

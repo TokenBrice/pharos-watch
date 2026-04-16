@@ -266,6 +266,7 @@ export async function fetchDsFallbackPools(
 export async function fetchCgTickersFallback(
   metrics: Map<string, LiquidityMetrics>,
   priceObservations: Map<string, DexPriceObs[]>,
+  knownPoolIndex: KnownPoolIdentityIndex,
   signal?: AbortSignal,
   deadlineMs?: number,
   references?: PriceValidationReferences,
@@ -315,9 +316,28 @@ export async function fetchCgTickersFallback(
 
       const pools: GtNewPool[] = [];
       for (const summary of exchangeSummaries) {
+        const identity = buildPoolIdentity({
+          chain: "orderbook",
+          protocol: "cg-tickers",
+          poolAddressOrId: `orderbook:${summary.exchangeId}`,
+          tokenAddresses: [],
+          poolType: "orderbook",
+          feeTierBps: null,
+          isStable: null,
+        });
+        const dedupReason = getIdentityDedupReason(
+          identity,
+          knownPoolIndex,
+          { derived: 0, wildcard: 0 },
+        );
+        if (dedupReason !== null) {
+          continue;
+        }
+        registerKnownPoolIdentity(knownPoolIndex, identity);
+
         const orderbookMetadata = buildCgTickerOrderbookMetadata(summary);
         pools.push({
-          address: `orderbook-${summary.exchangeId}`,
+          address: summary.exchangeId,
           chain: "orderbook",
           dexId: summary.exchangeId,
           name: summary.exchangeName,

@@ -241,16 +241,16 @@ describe("processPoolMetrics", () => {
 
     const usdt = metrics.get("usdt-tether");
     expect(usdt).toBeDefined();
-    expect(usdt?.totalTvlUsd).toBe(2_750_000);
+    expect(usdt?.totalTvlUsd).toBe(2_650_000);
     expect(usdt?.poolCount).toBe(5);
     expect(usdt?.protocolTvl).toEqual({
-      curve: 1_750_000,
+      curve: 1_650_000,
       "uniswap-v3": 500_000,
       aerodrome: 300_000,
       sushiswap: 200_000,
     });
     expect(usdt?.chainTvl).toEqual({
-      Ethereum: 2_450_000,
+      Ethereum: 2_350_000,
       Base: 300_000,
     });
     expect(usdt?.totalTvlForBalance).toBe(1_750_000);
@@ -258,7 +258,7 @@ describe("processPoolMetrics", () => {
     expect(usdt?.totalTvlForOrganic).toBe(1_500_000);
     expect(usdt?.oldestPoolDays).toBe(200);
 
-    const curveAddressPool = usdt?.topPools.find((pool) => pool.poolId === "ethereum:0xcurve1");
+    const curveAddressPool = usdt?.topPools.find((pool) => pool.poolId === "fp:ethereum:curve:0xusdc-new:0xusdt");
     expect(curveAddressPool).toMatchObject({
       poolType: "curve-stableswap-high-a",
       extra: {

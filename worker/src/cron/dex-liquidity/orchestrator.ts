@@ -5,6 +5,7 @@ import { runWithOverloadRetry } from "../../lib/cron-lease";
 import { throwIfAborted } from "../../lib/abort";
 import { loadPriceValidationReferences } from "../../lib/price-validation";
 import { buildSymbolLookups, classifyPoolType } from "./pool-helpers";
+import { buildChainAddressKey } from "./token-resolution";
 import { fetchDataSources, buildCurveLookups, buildKnownPoolAddresses } from "./fetch-primary";
 import { publishDexPriceChallengerSnapshots } from "./challenger-persistence";
 import { processPoolMetrics } from "./process-pools";
@@ -42,6 +43,7 @@ import {
 export function filterPrimaryPoolsPreferDirectApi(
   pools: LlamaPool[],
   directApiPools: DexApiPool[],
+  chainAddressToId?: Map<string, string>,
 ): {
   filteredPools: LlamaPool[];
   skippedByExactIdentity: number;
@@ -54,16 +56,24 @@ export function filterPrimaryPoolsPreferDirectApi(
     registerKnownPoolIdentity(directApiKnown, buildDirectApiPoolIdentity(pool));
   }
 
-  const primaryIdentities = pools.map((pool) =>
-    buildPoolIdentity({
+  const primaryIdentities = pools.map((pool) => {
+    const tokenAddrs = pool.underlyingTokens ?? [];
+    // buildChainAddressKey lowercases its chain argument, matching the way chainAddressToId
+    // is keyed in pool-helpers.ts. Safe to pass pool.chain ("Ethereum" from DL) directly.
+    const isStableHint =
+      chainAddressToId != null &&
+      tokenAddrs.length >= 2 &&
+      tokenAddrs.every((addr) => chainAddressToId.has(buildChainAddressKey(pool.chain, addr)));
+    return buildPoolIdentity({
       chain: pool.chain,
       protocol: pool.project,
       poolAddressOrId: pool.pool,
-      tokenAddresses: pool.underlyingTokens ?? [],
+      tokenAddresses: tokenAddrs,
       poolType: classifyPoolType(pool.project),
       isStable: pool.stablecoin,
-    }),
-  );
+      isStableHint,
+    });
+  });
   const primaryIdentityCounts = countPoolIdentityKeys(primaryIdentities);
 
   const filteredPools: LlamaPool[] = [];
@@ -283,7 +293,7 @@ async function buildDexLiquidityPoolState(
     skippedByExactIdentity: primarySkippedByDirectApiExactIdentity,
     skippedByUniqueDerivedIdentity: primarySkippedByDirectApiDerivedIdentity,
     skippedByOptionalWildcardIdentity: primarySkippedByDirectApiWildcardIdentity,
-  } = filterPrimaryPoolsPreferDirectApi(sourceState.dataSources.pools, sourceState.directApiPools);
+  } = filterPrimaryPoolsPreferDirectApi(sourceState.dataSources.pools, sourceState.directApiPools, sourceState.lookups.chainAddressToId);
   if (
     primarySkippedByDirectApiExactIdentity > 0 ||
     primarySkippedByDirectApiDerivedIdentity > 0 ||

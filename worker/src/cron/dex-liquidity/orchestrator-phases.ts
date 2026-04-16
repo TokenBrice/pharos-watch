@@ -568,6 +568,7 @@ export async function runFallbackCrawlerPhase(params: {
     const cgFallback = await fetchCgTickersFallback(
       params.metrics,
       params.priceObservations,
+      params.knownPoolIndex,
       params.signal,
       fallbackDeadlineMs,
       params.validationReferences,
