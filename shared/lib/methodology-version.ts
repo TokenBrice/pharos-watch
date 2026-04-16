@@ -67,7 +67,11 @@ export function createMethodologyVersion(config: MethodologyVersionConfig): Meth
 
   const windows: VersionWindow[] = sortedChangelog
     .map((entry) => ({ version: entry.version, effectiveAt: entry.effectiveAt }))
-    .sort((a, b) => a.effectiveAt - b.effectiveAt);
+    .sort((a, b) => {
+      const timeDiff = a.effectiveAt - b.effectiveAt;
+      if (timeDiff !== 0) return timeDiff;
+      return compareMethodologyVersions(a.version, b.version);
+    });
 
   function getVersionAt(unixSeconds: number): string {
     if (!Number.isFinite(unixSeconds)) return currentVersion;
