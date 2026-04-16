@@ -1288,4 +1288,58 @@ describe("live-reserves-store", () => {
       + overview.corruptCoins;
     expect(primarySum).toBe(overview.configuredCoins);
   });
+
+  it("counts malformed stored slices as corruptCoins, not freshCoins", async () => {
+    const now = Math.floor(Date.now() / 1000);
+    const emptyOverview = await computeReserveCompositionOverview(mockD1(), now);
+
+    // Stored slices array has invalid entries (missing risk, bad pct type) that
+    // will fail the LiveReserveSnapshotSchema parse in parseReserveCompositionRow.
+    const corruptSlices = [
+      { name: "Missing Risk", pct: 20 },
+      { name: "Bad Pct", pct: "fifty", risk: "low" },
+    ];
+    const db = mockD1([
+      {
+        match: "reserve_composition",
+        rows: [
+          {
+            stablecoin_id: "iusd-infinifi",
+            slices: JSON.stringify(corruptSlices),
+            fetched_at: now,
+            source: "infinifi",
+            attempt_id: "attempt-1",
+            metadata: "{}",
+            warning_count: 0,
+          },
+        ],
+      },
+      {
+        match: "reserve_sync_state",
+        rows: [
+          {
+            stablecoin_id: "iusd-infinifi",
+            adapter_key: "infinifi",
+            breaker_key: "live-reserves:infinifi",
+            last_attempted_at: now,
+            last_success_at: now,
+            last_status: "ok",
+            warning_count: 0,
+            warnings: null,
+            last_error: null,
+            metadata: "{}",
+            last_attempt_id: "attempt-1",
+            pending_attempt_id: null,
+            last_success_attempt_id: "attempt-1",
+          },
+        ],
+      },
+    ]);
+
+    const overview = await computeReserveCompositionOverview(db, now);
+    expect(overview.corruptCoins).toBe(emptyOverview.corruptCoins + 1);
+    // Corrupt snapshot must not be counted as fresh even though the sync state
+    // reports lastStatus=ok and age=0.
+    expect(overview.freshCoins).toBe(emptyOverview.freshCoins);
+  });
 });
