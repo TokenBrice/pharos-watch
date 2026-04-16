@@ -185,6 +185,36 @@ export const COLLATERAL_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackst
       "Docs also describe a PSM against USDC, USDP, and GUSD, but the primary modeled exit is direct redemption into BTC-derivative vault collateral",
     ],
   },
+  "deuro-deuro": {
+    ...collateralRedeemBase,
+    ...documentedBoundSupplyFull("2026-04-16"),
+    outputAssetType: "mixed-collateral",
+    costModel: documentedVariableFee(
+      "dEURO allows burning tokens against collateralized positions below the position's redemption threshold; public docs reviewed describe a governance-managed fee schedule without a single fixed bps number",
+    ),
+    docs: [
+      sourceRef("dEURO documentation", "https://docs.deuro.com/", ["route", "capacity"]),
+      sourceRef("dEURO app", "https://app.deuro.com/", ["route"]),
+    ],
+    notes: [
+      "Frankencoin-fork CDP: dEURO is minted against position-specific collateral and burned at par against positions below their redemption threshold, without an external stablecoin target rail",
+    ],
+  },
+  "cjpy-yamato": {
+    ...collateralRedeemBase,
+    ...documentedBoundSupplyFull("2026-04-16"),
+    outputAssetType: "bluechip-collateral",
+    costModel: documentedVariableFee(
+      "Yamato docs describe on-chain CJPY-for-ETH redemption against the riskiest pledge; fee structure is set by protocol mechanics rather than a single fixed bps number",
+    ),
+    docs: [
+      sourceRef("Yamato Protocol", "https://yamato.jp/", ["route"]),
+      sourceRef("Yamato docs", "https://yamato-protocol.gitbook.io/docs/", ["route", "capacity", "fees"]),
+    ],
+    notes: [
+      "On-chain redemption redeems 1 CJPY for 1 JPY worth of ETH from the riskiest pledge, providing a permissionless hard floor",
+    ],
+  },
   "fpi-frax": {
     ...collateralRedeemBase,
     ...reviewedDirectRedemptionSupplyFull,
