@@ -32,54 +32,76 @@ const RESERVOIR_BROWSER_HEADERS = {
   "Accept-Language": "en-US,en;q=0.9",
 };
 
+// Stable buckets redeemable for rUSD on short notice. Reservoir holds a mix of
+// stablecoin-wrapped positions, any of which can be routed to the redemption
+// queue, so the immediate redeemable estimate should aggregate across all of
+// them rather than favouring USDC alone.
+const RESERVOIR_STABLE_BUCKET_KEYS: readonly ReservoirBucketKey[] = [
+  "usd1",
+  "pyusd",
+  "rlusd",
+  "gho",
+  "usdt",
+  "usdc",
+];
+
+// Label-match helpers are exclusive: each bucket's regex rejects the other
+// stablecoin tokens it might otherwise swallow, so the order of rules does not
+// affect attribution. USDT0 is treated as USDT per Reservoir's ledger.
 const RESERVOIR_BUCKETS: readonly ValueBucketRule<ReservoirBalanceItem, ReservoirBucketKey>[] = [
   {
     key: "usd1",
     name: "USD1 lending markets",
     risk: "medium",
     ...wrapperAssetMeta("usd1"),
-    match: (item) => item.label.includes("USD1"),
+    // USD1 is the only "USD<digit>" label, so a word-boundary match is safe
+    match: (item) => /\bUSD1\b/.test(item.label),
   },
   {
     key: "pyusd",
     name: "PYUSD lending markets",
     risk: "medium",
     ...wrapperAssetMeta("pyusd"),
-    match: (item) => item.label.includes("PYUSD"),
+    match: (item) => /\bPYUSD\b/.test(item.label),
   },
   {
     key: "rlusd",
     name: "RLUSD lending markets",
     risk: "medium",
     ...wrapperAssetMeta("rlusd"),
-    match: (item) => item.label.includes("RLUSD"),
+    match: (item) => /\bRLUSD\b/.test(item.label),
   },
   {
     key: "gho",
     name: "GHO lending markets",
     risk: "medium",
     ...wrapperAssetMeta("gho"),
-    match: (item) => item.label.includes("GHO"),
+    // Match GHO as a standalone token or sGHO; exclude RUSD/USDT labels that
+    // happen to contain a G.
+    match: (item) => /\b(?:s?GHO)\b/.test(item.label),
   },
   {
     key: "usdt",
     name: "USDT / USDT0 positions",
     risk: "medium",
     ...wrapperAssetMeta("usdt"),
-    match: (item) => item.label.includes("USDT0") || item.label === "USDT",
+    // USDT0 and plain USDT; exclude USDT-adjacent labels like "tUSD".
+    match: (item) => /\bUSDT0?\b/.test(item.label),
   },
   {
     key: "usdc",
     name: "USDC positions",
     risk: "medium",
     ...wrapperAssetMeta("usdc"),
-    match: (item) => item.label.includes("USDC"),
+    // USDC standalone only; other stablecoins that contain "USD" (USD1/USDT/etc)
+    // match their own rules first.
+    match: (item) => /\bUSDC\b/.test(item.label),
   },
   {
     key: "rusd",
     name: "rUSD strategy vaults",
     risk: "medium",
-    match: (item) => item.label.includes("RUSD"),
+    match: (item) => /\bRUSD\b/.test(item.label),
   },
 ];
 
@@ -108,7 +130,10 @@ export function adaptReservoirReserves(payload: ReservoirReservesResponse): Adap
 
   const totalLiabilities = Number(payload.totalLiabilities);
   const supplyUsd = Number.isFinite(totalLiabilities) && totalLiabilities > 0 ? totalLiabilities : null;
-  const immediateRedeemableUsd = classified.bucketTotals.get("usdc") ?? 0;
+  const immediateRedeemableUsd = RESERVOIR_STABLE_BUCKET_KEYS.reduce(
+    (sum, key) => sum + (classified.bucketTotals.get(key) ?? 0),
+    0,
+  );
 
   return {
     slices: classified.slices,
@@ -145,6 +170,19 @@ export async function fetchReservoirReserves(
         unknownExposurePct: adapted.unknownExposurePct,
       })]
     : [];
+  if (
+    Number.isFinite(totalAssetsUsd)
+    && Number.isFinite(totalLiabilitiesUsd)
+    && totalAssetsUsd > 0
+    && totalLiabilitiesUsd > totalAssetsUsd
+  ) {
+    warnings.push({
+      code: "reservoir-insolvent",
+      message: `Reservoir total liabilities (${totalLiabilitiesUsd}) exceed total assets (${totalAssetsUsd})`,
+      severity: "warning",
+      effect: "fatal",
+    });
+  }
 
   return {
     slices: adapted.slices,

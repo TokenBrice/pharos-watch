@@ -29,7 +29,8 @@ describe("adaptReservoirReserves", () => {
       { name: "USDT / USDT0 positions", pct: 10, risk: "medium", coinId: "usdt-tether", depType: "wrapper" },
       { name: "USDC positions", pct: 5, risk: "medium", coinId: "usdc-circle", depType: "wrapper" },
     ]);
-    expect(immediateRedeemableUsd).toBe(5);
+    // All stable buckets count toward immediate redemption capacity, not just USDC.
+    expect(immediateRedeemableUsd).toBe(100);
     expect(supplyUsd).toBe(95);
     expect(unknownExposurePct).toBe(0);
   });
@@ -148,5 +149,55 @@ describe("adaptReservoirReserves", () => {
       unknownAssetLabels: ["Mystery Adapter A", "Mystery Adapter B"],
       unknownExposurePct: (5 / 105) * 100,
     });
+  });
+
+  it("emits a fatal warning when total liabilities exceed total assets", async () => {
+    const result = await fetchReservoirReserves(
+      { id: "r" } as never,
+      {
+        adapter: "reservoir",
+        version: 1,
+        semantics: "protocol-reserve",
+        inputs: { primary: { kind: "http-json", url: "https://example.com/reservoir" } },
+      },
+      new AbortController().signal,
+      {
+        requestCache: new Map([
+          ["json-get:https://example.com/reservoir:12000:{\"Origin\":\"https://app.reservoir.xyz\",\"Referer\":\"https://app.reservoir.xyz/reserves\",\"Accept-Language\":\"en-US,en;q=0.9\"}", Promise.resolve({
+            ...SAMPLE_RESPONSE,
+            totalAssets: "100",
+            totalLiabilities: "120",
+            equity: "-20",
+          })],
+        ]),
+      } as never,
+    );
+
+    expect(result.warnings).toEqual(expect.arrayContaining([expect.objectContaining({
+      code: "reservoir-insolvent",
+      effect: "fatal",
+    })]));
+  });
+
+  it("classifies multi-stable labels via exclusive patterns", () => {
+    const { slices } = adaptReservoirReserves({
+      assets: [
+        // PYUSD/USDC label should go to PYUSD, not USDC, because PYUSD matches first.
+        { label: "Aave - PYUSD/USDC", totalBalanceValue: "50" },
+        { label: "Fluid - USDT0 (Plasma)", totalBalanceValue: "25" },
+        { label: "USDC", totalBalanceValue: "25" },
+      ],
+      liabilities: [],
+      totalAssets: "100",
+      totalLiabilities: "95",
+      equity: "5",
+    });
+
+    const pyusdSlice = slices.find((s) => s.name === "PYUSD lending markets");
+    const usdcSlice = slices.find((s) => s.name === "USDC positions");
+    const usdtSlice = slices.find((s) => s.name === "USDT / USDT0 positions");
+    expect(pyusdSlice?.pct).toBe(50);
+    expect(usdcSlice?.pct).toBe(25);
+    expect(usdtSlice?.pct).toBe(25);
   });
 });
