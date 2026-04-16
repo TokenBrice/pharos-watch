@@ -1,5 +1,5 @@
 import { DigestResponseSchema } from "../../lib/schemas";
-import { findForbiddenTics, leadFamily, openingFingerprint } from "./voice-guards";
+import { findForbiddenTics, hasForwardLook, leadFamily, openingFingerprint } from "./voice-guards";
 
 const FORBIDDEN_PHRASES = [
   "Meanwhile, ",
@@ -326,6 +326,14 @@ export function validateDigestModelOutput(
       code: "forbidden-tic",
       severity: "soft",
       message: `Output contains house-style tic(s): ${tics.join(", ")}. Rewrite without them.`,
+    });
+  }
+
+  if (!hasForwardLook(`${parsed.digestText}\n${parsed.digestExtended}`)) {
+    issues.push({
+      code: "missing-forward-look",
+      severity: "soft",
+      message: "Digest lacks a forward-look cue (watch for…, if X happens…, next trigger…).",
     });
   }
 

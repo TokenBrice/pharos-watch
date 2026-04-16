@@ -170,7 +170,7 @@ import { shouldAttemptFetch } from "../../lib/circuit-breaker";
 const VALID_DAILY_EXTENDED = [
   "PSI held at 91.2 BEDROCK with severity 2 and breadth 1, so the headline market still looks calm. USDT sat 150 bps off peg on a $100M float in the fixture, which gives the model a real candidate but not a systemic alarm. The point is selection, not volume.",
   "USDT added $5M over the week while USDC lost $2M, a mixed flow pattern rather than a single-direction stampede. The candidate list marks the depeg by impact first, then leaves supply as supporting context, which is the behavior this test expects. A smaller signal can still appear without becoming the lead.",
-  "Safety scores stayed A for USDT and USDC, leaving the daily note with a dry but restrained read. Nothing in the fixture should force panic, but the digest still has enough numbers to produce a publishable editorial paragraph set today. That is the editorial balance the prompt is supposed to protect.",
+  "Safety scores stayed A for USDT and USDC, leaving the daily note with a dry but restrained read. Nothing in the fixture should force panic, but the digest still has enough numbers to produce a publishable editorial paragraph set today. Next session will decide whether the USDT deviation widens; if it crosses 200 bps, the impact score moves the depeg from supporting context to lead.",
 ].join("\n\n");
 
 const ANTHROPIC_OK_RESPONSE = {
@@ -949,6 +949,47 @@ describe("lead family variety check", () => {
   it("does not fire when lead families differ", () => {
     const issues = validateWith("psi-streak", ["depeg", "grade-transition", "ftq"]);
     expect(issues.some((i) => i.code === "repeated-lead-family")).toBe(false);
+  });
+});
+
+describe("forward-look voice guard", () => {
+  function parsedFixture(extended: string, text = "T."): ParsedDigestResponse {
+    return {
+      digestTitle: "T",
+      digestText: text,
+      digestExtended: extended,
+      digestMeta: JSON.stringify({ lead: "depeg", tone: "dry", coins: ["USDT"] }),
+      strippedDashCount: 0,
+      strippedForbiddenCharCount: 0,
+      usedRawTextFallback: false,
+    };
+  }
+
+  it("flags missing forward-look when digest is purely retrospective", () => {
+    const issues = validateDigestModelOutput(
+      parsedFixture(
+        "USDT added $2B.\n\nUSDC pulled $500M.\n\nThe gap is now the story.",
+        "USDT added $2B while USDC pulled $500M.",
+      ),
+      { kind: "daily", recentMeta: [] },
+    );
+    expect(issues.some((i) => i.code === "missing-forward-look")).toBe(true);
+  });
+
+  it("does not flag when forward-look is present in extended", () => {
+    const issues = validateDigestModelOutput(
+      parsedFixture("USDT added $2B.\n\nUSDC pulled $500M.\n\nIf the gap holds next week, it is a rotation."),
+      { kind: "daily", recentMeta: [] },
+    );
+    expect(issues.some((i) => i.code === "missing-forward-look")).toBe(false);
+  });
+
+  it("does not flag when forward-look is only in the text hook", () => {
+    const issues = validateDigestModelOutput(
+      parsedFixture("A.\n\nB.\n\nC.", "Watch if USDT crosses $185B."),
+      { kind: "daily", recentMeta: [] },
+    );
+    expect(issues.some((i) => i.code === "missing-forward-look")).toBe(false);
   });
 });
 

@@ -68,6 +68,24 @@ export function openingFingerprint(text: string): string | null {
   return `${head.toUpperCase()}-${second}`;
 }
 
+export const FORWARD_LOOK_CUES: RegExp[] = [
+  /\bif\s+[\w$]+\s+(?:happens|holds|fails|breaks|crosses|stays|continues|keeps|slips|rises|falls|passes|drops)\b/i,
+  /\bnext (?:session|day|digest|week|cycle|round|24h|48h|month)\b/i,
+  /\bcoming (?:days?|week|month|session)\b/i,
+  /\bwatch (?:for|the|if|when)\b/i,
+  /\bto watch\b/i,
+  /\btrigger\b/i,
+  /\bthreshold\b/i,
+  /\btip(?:s|ping)? over\b/i,
+  /\bsnap (?:back|down)\b/i,
+  /\b(?:will|could|should) (?:be|look|matter|decide|tell)\b/i,
+  /\bnext (?:trigger|milestone|test|move)\b/i,
+];
+
+export function hasForwardLook(text: string): boolean {
+  return FORWARD_LOOK_CUES.some((re) => re.test(text));
+}
+
 export function leadFamily(lead: string | undefined): string | undefined {
   if (!lead) return undefined;
   if (lead.startsWith("psi-") || lead === "psi") return "psi";
