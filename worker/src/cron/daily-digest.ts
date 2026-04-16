@@ -96,6 +96,7 @@ export async function generateDailyDigest(
       recentMeta: recentMeta.map((entry) => ({
         meta: entry.meta as Record<string, unknown> | null,
         title: entry.title,
+        rawText: entry.rawText,
       })),
     },
   });

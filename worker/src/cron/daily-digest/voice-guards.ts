@@ -48,6 +48,26 @@ export function findForbiddenTics(digestText: string, digestExtended: string): s
   return hits;
 }
 
+const OPENING_PSI_VERBS = new Set([
+  "sits", "sat", "slipped", "ticked", "held", "holds", "climbed", "climbs",
+  "dropped", "drops", "fell", "falls", "reads", "read", "settles", "settled",
+  "rises", "rose", "opened", "opens", "landed", "lands", "clawed", "claws",
+  "extended", "extends", "hovers", "hovered", "gained", "gains",
+  "clung", "clings", "edges", "edged", "tracks", "tracked",
+]);
+
+export function openingFingerprint(text: string): string | null {
+  const firstSentence = text.trim().split(/[.!?\n]/)[0]?.trim() ?? "";
+  if (!firstSentence) return null;
+  const tokens = firstSentence.split(/\s+/).slice(0, 4);
+  if (tokens.length < 2) return null;
+  const head = tokens[0].replace(/[^A-Za-z]/g, "");
+  const second = tokens[1].replace(/[^A-Za-z]/g, "").toLowerCase();
+  if (head.toUpperCase() === "PSI" && OPENING_PSI_VERBS.has(second)) return "psi-verb";
+  if (OPENING_PSI_VERBS.has(second)) return `${head.toUpperCase()}-verb`;
+  return `${head.toUpperCase()}-${second}`;
+}
+
 export function leadFamily(lead: string | undefined): string | undefined {
   if (!lead) return undefined;
   if (lead.startsWith("psi-") || lead === "psi") return "psi";

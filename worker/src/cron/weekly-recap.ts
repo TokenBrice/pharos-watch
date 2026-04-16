@@ -249,7 +249,7 @@ function buildWeeklyInputData(
 
 function buildWeeklyPrompt(
   data: WeeklyInputData,
-  recentWeeklyMeta: { meta: Record<string, unknown> | null; title: string | null }[] = [],
+  recentWeeklyMeta: { meta: Record<string, unknown> | null; title: string | null; rawText?: string | null }[] = [],
 ): string {
   const lines: string[] = [
     `Weekly recap: trailing daily editions from ${data.weekStartDate} to ${data.weekEndDate}`,
@@ -377,7 +377,11 @@ export async function generateWeeklyRecap(
     )
     .all<{ digest_title: string | null; digest_text: string; digest_meta: string | null }>();
   const recentWeeklyMeta = buildRecentDigestMeta(recentWeeklyRows.results ?? [])
-    .map((entry) => ({ meta: entry.meta as Record<string, unknown> | null, title: entry.title }));
+    .map((entry) => ({
+      meta: entry.meta as Record<string, unknown> | null,
+      title: entry.title,
+      rawText: entry.rawText,
+    }));
 
   // Fetch last 7 daily digests (exclude weekly entries)
   const cutoff = Math.floor(Date.now() / 1000) - 8 * SECONDS.ONE_DAY;

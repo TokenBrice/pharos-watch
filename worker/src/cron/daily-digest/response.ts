@@ -1,5 +1,5 @@
 import { DigestResponseSchema } from "../../lib/schemas";
-import { findForbiddenTics, leadFamily } from "./voice-guards";
+import { findForbiddenTics, leadFamily, openingFingerprint } from "./voice-guards";
 
 const FORBIDDEN_PHRASES = [
   "Meanwhile, ",
@@ -30,6 +30,7 @@ export interface DigestValidationProfile {
   recentMeta?: Array<{
     meta: Record<string, unknown> | null;
     title: string | null;
+    rawText?: string | null;
   }>;
 }
 
@@ -330,6 +331,31 @@ export function validateDigestModelOutput(
 
   const parsedMeta = parsed.digestMeta ? JSON.parse(parsed.digestMeta) as Record<string, unknown> : null;
   const recent = profile.recentMeta ?? [];
+
+  const currentFingerprint = openingFingerprint(parsed.digestExtended);
+  if (currentFingerprint) {
+    const recentFingerprints = recent
+      .slice(0, 3)
+      .map((entry) => {
+        const source = entry.rawText ?? entry.title ?? "";
+        return openingFingerprint(source);
+      })
+      .filter((fp): fp is string => !!fp);
+    const matchCount = recentFingerprints.filter((fp) => fp === currentFingerprint).length;
+    if (matchCount >= 2) {
+      issues.push({
+        code: "opening-pattern-repetition",
+        severity: "soft",
+        message: `Opening fingerprint '${currentFingerprint}' matches ${matchCount} of last 3 digests; open differently.`,
+      });
+    } else if (currentFingerprint === "psi-verb" && matchCount >= 1) {
+      issues.push({
+        code: "opening-pattern-repetition",
+        severity: "soft",
+        message: "PSI-verb opening repeats; the lead should surface a candidate fact first.",
+      });
+    }
+  }
   const titleFingerprint = normalizeTitleFingerprint(parsed.digestTitle);
   if (titleFingerprint && recent.some((entry) => entry.title && normalizeTitleFingerprint(entry.title) === titleFingerprint)) {
     issues.push({ code: "repeated-title", severity: "soft", message: "Title repeats a recent digest title." });

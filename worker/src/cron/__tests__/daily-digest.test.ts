@@ -952,6 +952,41 @@ describe("lead family variety check", () => {
   });
 });
 
+describe("opening-fingerprint voice guard", () => {
+  function parsedFixture(extended: string): ParsedDigestResponse {
+    return {
+      digestTitle: "T",
+      digestText: "T.",
+      digestExtended: extended,
+      digestMeta: JSON.stringify({ lead: "depeg", tone: "dry", coins: ["USDT"] }),
+      strippedDashCount: 0,
+      strippedForbiddenCharCount: 0,
+      usedRawTextFallback: false,
+    };
+  }
+
+  it("flags PSI-verb opening when any of last 3 also opened that way", () => {
+    const recent = [
+      { meta: null, title: "a", rawText: "PSI sits at 95. USDC hit ATH." },
+      { meta: null, title: "b", rawText: "USDT minted $2B. PSI unchanged." },
+      { meta: null, title: "c", rawText: "Flows rotated into gold. USDC weak." },
+    ];
+    const parsed = parsedFixture("PSI ticked to 96 in BEDROCK.\n\nUSDC added $500M.\n\nReal closer.");
+    const issues = validateDigestModelOutput(parsed, { kind: "daily", recentMeta: recent });
+    expect(issues.some((i) => i.code === "opening-pattern-repetition")).toBe(true);
+  });
+
+  it("does not flag when opening is structurally different", () => {
+    const recent = [
+      { meta: null, title: "a", rawText: "PSI sits at 95." },
+      { meta: null, title: "b", rawText: "PSI slipped to 93." },
+    ];
+    const parsed = parsedFixture("USDT just added $2B overnight.\n\nPSI drifted to 93.\n\nReal closer.");
+    const issues = validateDigestModelOutput(parsed, { kind: "daily", recentMeta: recent });
+    expect(issues.some((i) => i.code === "opening-pattern-repetition")).toBe(false);
+  });
+});
+
 describe("forbidden-tic voice guard", () => {
   function parsedFixture(extended: string, text = "T."): ParsedDigestResponse {
     return {
