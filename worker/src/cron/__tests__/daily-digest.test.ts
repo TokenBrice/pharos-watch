@@ -432,6 +432,10 @@ describe("generateDailyDigest", () => {
     expect(systemPrompt).toContain("EXEMPLAR");
     expect(systemPrompt).toContain("Momentum Candidate");
     expect(systemPrompt).toContain("total-mcap ATH");
+
+    const userPrompt = anthropicBody.messages[0].content;
+    expect(userPrompt).not.toContain("Distribution: median");
+    expect(userPrompt).not.toMatch(/\d+ above B/);
   });
 
   it("repairs malformed code-block JSON with one corrective retry", async () => {

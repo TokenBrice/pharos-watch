@@ -367,10 +367,9 @@ export function buildUserPrompt(
   }
 
   if (data.safetyScores) {
-    const { mentionedCoins, medianGrade, aboveBCount, fCount } = data.safetyScores;
-    lines.push("");
+    const { mentionedCoins } = data.safetyScores;
     if (mentionedCoins.length > 0) {
-      lines.push("Safety Scores:");
+      lines.push("", "Safety Scores:");
       for (const coin of mentionedCoins) {
         const parts = [`${coin.symbol}: ${coin.grade} (${coin.score}`];
         if (coin.peg !== null) parts.push(`peg=${coin.peg}`);
@@ -378,7 +377,6 @@ export function buildUserPrompt(
         lines.push(`  ${parts.join(", ")})`);
       }
     }
-    lines.push(`  Distribution: median ${medianGrade}, ${aboveBCount} above B, ${fCount} rated F`);
   }
 
   if (data.yieldAnomalies && data.yieldAnomalies.length > 0) {
