@@ -3,6 +3,7 @@ import { createBudget } from "../../../lib/evm-logs";
 import type { ContractEventConfig } from "../../../lib/blacklist-contracts";
 import type { BlacklistRow } from "../shared";
 import { enrichRowBalances } from "../amount-recovery";
+import { shouldSuppressAsMirrorZero } from "../post-fetch";
 
 const a7a5Config: ContractEventConfig = {
   configKey: "ethereum-0x6fa0be17e4bea2fcfa22ef89bf8ac9aab0ab0fc9",
@@ -49,6 +50,28 @@ function makeRow(overrides: Partial<BlacklistRow> = {}): BlacklistRow {
     ...overrides,
   };
 }
+
+describe("EURC mirror-zero suppression (regression)", () => {
+  it("suppresses a fresh EURC blacklist row when enrichment returns 0", () => {
+    // Unit-test the pure helper since hitting the full backfill path is
+    // already covered elsewhere.
+    expect(shouldSuppressAsMirrorZero("EURC", "blacklist", 0)).toBe(true);
+    expect(shouldSuppressAsMirrorZero("EURC", "unblacklist", 0)).toBe(true);
+  });
+
+  it("leaves EURC destroy rows unsuppressed even at zero", () => {
+    expect(shouldSuppressAsMirrorZero("EURC", "destroy", 0)).toBe(false);
+  });
+
+  it("leaves non-EURC rows unsuppressed at zero", () => {
+    expect(shouldSuppressAsMirrorZero("USDC", "blacklist", 0)).toBe(false);
+  });
+
+  it("ignores non-zero amounts", () => {
+    expect(shouldSuppressAsMirrorZero("EURC", "blacklist", 123)).toBe(false);
+    expect(shouldSuppressAsMirrorZero("EURC", "blacklist", null)).toBe(false);
+  });
+});
 
 describe("enrichRowBalances", () => {
   it("fills USD value for emitted A7A5 amounts using the supplied asset price", async () => {
