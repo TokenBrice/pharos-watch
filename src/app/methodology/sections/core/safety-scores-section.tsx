@@ -33,6 +33,14 @@ export function SafetyScoresMethodologySection() {
                 independent, clean, and score-grade. When some base dimensions lack data (NR), their weight is redistributed proportionally among rated ones. Active depeg caps use the open event&apos;s peak deviation, while the peg
                 dimension itself remains a direct pegScore passthrough.
               </p>
+              <p className="text-xs text-muted-foreground">
+                See also:{" "}
+                <a href="#pegscore-dews-methodology" className="text-foreground/70 underline underline-offset-2 hover:text-foreground transition-colors">PegScore + DEWS</a>
+                {" · "}
+                <a href="#liquidity-methodology" className="text-foreground/70 underline underline-offset-2 hover:text-foreground transition-colors">Liquidity Score</a>
+                {" · "}
+                <a href="#infrastructure-methodology" className="text-foreground/70 underline underline-offset-2 hover:text-foreground transition-colors">Infrastructure</a>
+              </p>
               <MethodologyFacts
                 facts={[
                   { label: "Model shape", value: "4 dimensions + peg multiplier" },

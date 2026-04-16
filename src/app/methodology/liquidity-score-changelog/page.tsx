@@ -16,7 +16,7 @@ const route = createMethodologyChangelogRoute({
       Full version history of Liquidity Score methodology decisions, from v1.0 to {LIQUIDITY_METHODOLOGY_VERSION_LABEL}.
     </>
   ),
-  accentClass: "border-l-cyan-500",
+  accentClass: "border-l-sky-500",
   entries: LIQUIDITY_METHODOLOGY_CHANGELOG,
   selectImpact: (entry) => entry.impact,
 });

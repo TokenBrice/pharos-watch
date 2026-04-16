@@ -32,40 +32,50 @@ export function PegScoreDewsMethodologySection() {
                 same-direction off-chain sources (CoinGecko or DefiLlama), supported native-peg quotes, Binance tickers,
                 trusted aggregate DEX prices, and large challenger pools before promoting or rejecting candidates.
               </p>
-              <p>
-                When a live event is later contradicted across the peg by a low-confidence primary price, the detector now
-                retires the stale live row immediately and routes the replacement move through pending confirmation instead
-                of leaving the wrong direction active.
-              </p>
-              <p>
-                Pending incidents are no longer write-once snapshots. While a candidate is waiting for confirmation,
-                Pharos now preserves the original first-seen timestamp, refreshes the current last-seen state, tracks the
-                worst same-direction move, and resets the pending row cleanly if the market flips to the opposite side of
-                the peg.
-              </p>
-              <p>
-                DEX cross-validation uses explicit trust gates: detection and pending confirmation only trust fresh DEX rows with at least $1M of aggregate source TVL, while the public DEX Price Check UI requires a lighter but still non-trivial floor of $250K. Aggregate DEX rows also need deeper corroboration before they can mutate live event state: recoveries/suppression now require at least two protocol-level DEX groups inside threshold, and ambiguous-primary recoveries are vetoed when a large challenger pool still shows the old depeg direction. For already-open depegs, same-direction aggregate DEX disagreement is advisory rather than a synthetic recovery signal, so events stay continuous until the normal recovery path confirms the coin is back inside threshold.
-              </p>
-              <p>
-                Thin non-USD fiat peg groups also fail closed when the live peg reference would have to rely on a 1&ndash;2 coin peer median or an empty peer set instead of cached FX. Once a live row is already open, a fresh non-cached multi-source primary cluster can retire it after recovery even if that source mix is still too soft to open brand-new events directly.
-              </p>
-              <p>
-                For supported fiat pairs with a clean native-market quote, depeg routing now also checks that direct native quote before trusting a derived USD-versus-FX move. That means BRZ-style BRL reference drift can no longer open, sustain, or confirm a live depeg when the fresh direct <code className="mx-1 text-xs">BRZ/BRL</code> quote is already back near parity. Historical backfill now follows the same principle for supported non-USD fiat assets: when CoinGecko exposes a native fiat pair, replay prefers that native history and compares it directly to the native <code className="mx-1 text-xs">1.0</code> peg before falling back to USD-plus-FX reconstruction. In that native-replay mode, Pharos now uses daily points plus a two-point confirmation window across 36 hours so thin hourly native prints do not manufacture long false historical depeg streaks.
-              </p>
-              <p>
-                Live depeg events still require at least $1M of current circulating supply. Below that floor, the detail page may still show the current price deviation from peg, but it labels live event coverage as limited instead of implying the coin held peg.
-              </p>
-              <p>
-                DEWS (Depeg Early Warning System) computes forward-looking stress every 30 minutes from market, liquidity,
-                confidence, flow, and yield signals, with optional PSI-based amplification during systemic stress. Its
-                divergence input now reuses the live depeg DEX trust floor, so fresh-but-thin DEX rows stay visible for
-                analytics but do not affect the score unless they pass the same `$1M` aggregate-TVL gate.
-              </p>
-              <p>
-                Historical DEWS daily snapshots do not retain the underlying DEX trust metadata needed to replay that gate
-                exactly. When operators remediate the old thin-DEX window, the repair path refreshes current rows and
-                prunes unrecomputable daily history back to the Mar 9, 2026 trust-floor boundary before new snapshots are
-                published under the stricter rule.
+              <MethodologyDetails summary="Depeg Confirmation & Trust Gates">
+                <div className="space-y-3">
+                  <p>
+                    When a live event is later contradicted across the peg by a low-confidence primary price, the detector now
+                    retires the stale live row immediately and routes the replacement move through pending confirmation instead
+                    of leaving the wrong direction active.
+                  </p>
+                  <p>
+                    Pending incidents are no longer write-once snapshots. While a candidate is waiting for confirmation,
+                    Pharos now preserves the original first-seen timestamp, refreshes the current last-seen state, tracks the
+                    worst same-direction move, and resets the pending row cleanly if the market flips to the opposite side of
+                    the peg.
+                  </p>
+                  <p>
+                    DEX cross-validation uses explicit trust gates: detection and pending confirmation only trust fresh DEX rows with at least $1M of aggregate source TVL, while the public DEX Price Check UI requires a lighter but still non-trivial floor of $250K. Aggregate DEX rows also need deeper corroboration before they can mutate live event state: recoveries/suppression now require at least two protocol-level DEX groups inside threshold, and ambiguous-primary recoveries are vetoed when a large challenger pool still shows the old depeg direction. For already-open depegs, same-direction aggregate DEX disagreement is advisory rather than a synthetic recovery signal, so events stay continuous until the normal recovery path confirms the coin is back inside threshold.
+                  </p>
+                  <p>
+                    Thin non-USD fiat peg groups also fail closed when the live peg reference would have to rely on a 1&ndash;2 coin peer median or an empty peer set instead of cached FX. Once a live row is already open, a fresh non-cached multi-source primary cluster can retire it after recovery even if that source mix is still too soft to open brand-new events directly.
+                  </p>
+                  <p>
+                    For supported fiat pairs with a clean native-market quote, depeg routing now also checks that direct native quote before trusting a derived USD-versus-FX move. That means BRZ-style BRL reference drift can no longer open, sustain, or confirm a live depeg when the fresh direct <code className="mx-1 text-xs">BRZ/BRL</code> quote is already back near parity. Historical backfill now follows the same principle for supported non-USD fiat assets: when CoinGecko exposes a native fiat pair, replay prefers that native history and compares it directly to the native <code className="mx-1 text-xs">1.0</code> peg before falling back to USD-plus-FX reconstruction. In that native-replay mode, Pharos now uses daily points plus a two-point confirmation window across 36 hours so thin hourly native prints do not manufacture long false historical depeg streaks.
+                  </p>
+                  <p>
+                    Live depeg events still require at least $1M of current circulating supply. Below that floor, the detail page may still show the current price deviation from peg, but it labels live event coverage as limited instead of implying the coin held peg.
+                  </p>
+                  <p>
+                    DEWS (Depeg Early Warning System) computes forward-looking stress every 30 minutes from market, liquidity,
+                    confidence, flow, and yield signals, with optional PSI-based amplification during systemic stress. Its
+                    divergence input now reuses the live depeg DEX trust floor, so fresh-but-thin DEX rows stay visible for
+                    analytics but do not affect the score unless they pass the same `$1M` aggregate-TVL gate.
+                  </p>
+                  <p>
+                    Historical DEWS daily snapshots do not retain the underlying DEX trust metadata needed to replay that gate
+                    exactly. When operators remediate the old thin-DEX window, the repair path refreshes current rows and
+                    prunes unrecomputable daily history back to the Mar 9, 2026 trust-floor boundary before new snapshots are
+                    published under the stricter rule.
+                  </p>
+                </div>
+              </MethodologyDetails>
+              <p className="text-xs text-muted-foreground">
+                See also:{" "}
+                <a href="#mint-burn-flow-methodology" className="text-foreground/70 underline underline-offset-2 hover:text-foreground transition-colors">Mint/Burn Flow</a>
+                {" · "}
+                <a href="#liquidity-methodology" className="text-foreground/70 underline underline-offset-2 hover:text-foreground transition-colors">Liquidity Score</a>
               </p>
               <MethodologyFacts
                 facts={[

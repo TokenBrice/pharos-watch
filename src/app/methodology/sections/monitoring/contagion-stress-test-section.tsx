@@ -10,11 +10,17 @@ export function ContagionStressTestMethodologySection() {
           <MethodologySectionShell
             id="contagion-stress-test-methodology"
             title="Contagion Stress Test"
+            versionLabel="v1.0"
             accentClassName="border-l-emerald-500"
+            badgeClassName="border-emerald-500/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-400"
           >
               <p>
                 The stress test simulates dependency failures to reveal systemic concentration risk across the stablecoin
                 ecosystem.
+              </p>
+              <p className="text-xs text-muted-foreground">
+                See also:{" "}
+                <a href="#safety-scores-methodology" className="text-foreground/70 underline underline-offset-2 hover:text-foreground transition-colors">Safety Scores</a>
               </p>
               <MethodologyFacts
                 facts={[

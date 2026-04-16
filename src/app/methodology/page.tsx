@@ -54,7 +54,7 @@ export default function MethodologyPage() {
             },
             {
               question: "How does Pharos measure DEX liquidity?",
-              answer: "The liquidity score is a composite 0–100 metric combining TVL depth (35%), volume activity (20%), pool quality (22.5%), durability (15%), and pair diversity (7.5%). Volume uses log-scale scoring. Pool quality is adjusted for mechanism type, balance health, and pair quality.",
+              answer: "The liquidity score is a composite 0–100 metric combining TVL depth (30%), volume activity (20%), pool quality (20%), durability (20%), and pair diversity (10%). Volume uses log-scale scoring. Pool quality is adjusted for mechanism type, balance health, and pair quality.",
             },
             {
               question: "How does Pharos confirm depegs and maintain DEWS history?",
@@ -93,6 +93,14 @@ export default function MethodologyPage() {
                   Page rhythm: <span className="text-foreground">summary</span>, quick facts, worked example, technical
                   notes.
                 </p>
+                <div className="mt-4 grid grid-cols-2 gap-2">
+                  {METHODOLOGY_READING_STEPS.map((step) => (
+                    <div key={step.label} className="rounded-md border border-border/50 bg-background/40 p-2">
+                      <p className="text-[11px] font-semibold text-foreground">{step.label}</p>
+                      <p className="text-[10px] text-muted-foreground leading-snug">{step.description}</p>
+                    </div>
+                  ))}
+                </div>
               </div>
             </div>
           </div>

@@ -27,6 +27,11 @@ export function ChainHealthMethodologySection() {
                 this chain?</em>
               </p>
 
+              <p className="text-xs text-muted-foreground">
+                See also:{" "}
+                <a href="#liquidity-methodology" className="text-foreground/70 underline underline-offset-2 hover:text-foreground transition-colors">Liquidity Score</a>
+              </p>
+
               <MethodologyFacts
                 facts={[
                   { label: "Score range", value: "0–100 (null when safety-score coverage < 50%)" },
@@ -35,7 +40,7 @@ export function ChainHealthMethodologySection() {
                 ]}
               />
 
-              <MethodologyDetails summary="Formula & Weights" defaultOpen primary>
+              <MethodologyDetails summary="Formula & Weights" primary>
                 <p className="text-foreground font-medium">Composite formula</p>
                 <pre className="overflow-x-auto rounded-lg bg-muted/50 px-4 py-3 text-xs font-mono">
     {`healthScore =

@@ -140,7 +140,6 @@ export function PricingPipelineMethodologySection() {
         </WorkedExample>
 
         <MethodologyDetails
-          defaultOpen
           primary
           summary="Technical details: source weights, consensus algorithm, overrides, enrichment, and validation"
         >

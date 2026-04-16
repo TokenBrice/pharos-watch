@@ -161,10 +161,10 @@ export function LongformScrollspyNav({
       >
         <div className="flex items-center justify-between gap-2">
           <div className="flex min-w-0 items-center gap-2">
-            <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground hidden sm:block">{railLabel}</p>
-            <span className="text-xs font-medium text-foreground sm:hidden">
-              {sections.find((section) => section.id === effectiveActiveId)?.label}
-            </span>
+            <p className="shrink-0 text-xs font-medium text-muted-foreground">
+              <span className="hidden sm:inline">{railLabel ?? "Jump to Section"}</span>
+              <span className="sm:hidden">Sections:</span>
+            </p>
           </div>
           {rightSlot && <div className="hidden sm:block">{rightSlot}</div>}
         </div>

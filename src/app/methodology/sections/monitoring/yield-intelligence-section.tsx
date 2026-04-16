@@ -33,6 +33,12 @@ export function YieldIntelligenceMethodologySection() {
                 require observable venue TVL and a size floor of at least 0.1% of the tracked stablecoin&apos;s current
                 supply before they can become the live recommendation. PYS is benchmark-aware, and Curve Savings crvUSD now follows the active on-chain profit-unlock stream instead of a trailing exchange-rate delta; pre-launch assets remain manifest-visible as intentional gaps but cannot publish into the live leaderboard before launch.
               </p>
+              <p className="text-xs text-muted-foreground">
+                See also:{" "}
+                <a href="#safety-scores-methodology" className="text-foreground/70 underline underline-offset-2 hover:text-foreground transition-colors">Safety Scores</a>
+                {" · "}
+                <a href="#liquidity-methodology" className="text-foreground/70 underline underline-offset-2 hover:text-foreground transition-colors">Liquidity Score</a>
+              </p>
               <MethodologyFacts
                 facts={[
                   { label: "Update cadence", value: "1h publish / 4h supplemental" },

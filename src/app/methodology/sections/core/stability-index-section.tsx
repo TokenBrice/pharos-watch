@@ -28,6 +28,12 @@ export function StabilityIndexMethodologySection() {
                 is recomputed every 30 minutes from live depeg conditions and stress signals, then aggregated into daily
                 history snapshots.
               </p>
+              <p className="text-xs text-muted-foreground">
+                See also:{" "}
+                <a href="#pegscore-dews-methodology" className="text-foreground/70 underline underline-offset-2 hover:text-foreground transition-colors">PegScore + DEWS</a>
+                {" · "}
+                <a href="#safety-scores-methodology" className="text-foreground/70 underline underline-offset-2 hover:text-foreground transition-colors">Safety Scores</a>
+              </p>
               <MethodologyFacts
                 facts={[
                   { label: "Update cadence", value: "30m refresh" },
@@ -64,7 +70,6 @@ export function StabilityIndexMethodologySection() {
                 </p>
               </WorkedExample>
               <MethodologyDetails
-                defaultOpen
                 primary
                 summary="Technical details: formula, component math, depeg handling, and condition bands"
               >
