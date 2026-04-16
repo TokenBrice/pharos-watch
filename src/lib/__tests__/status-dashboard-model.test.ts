@@ -127,6 +127,7 @@ const BASE_STATUS: StatusResponse = {
     staticValidatedFresh: 0,
     weakProbeFresh: 0,
     writeTimeoutUncertain: 0,
+    persistentlyStaleIndependentCoins: [],
     lastSuccessAt: null,
     oldestFreshAgeSec: null,
     status: "healthy",
