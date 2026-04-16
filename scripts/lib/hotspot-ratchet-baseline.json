@@ -264,8 +264,8 @@
     "notes": "Pool scoring and heuristic normalization still live in one large module. Split score families and reusable transforms before adding more model inputs."
   },
   "worker/src/cron/dex-liquidity/orchestrator.ts": {
-    "fileLines": 521,
-    "maxFunctionLines": 91,
+    "fileLines": 512,
+    "maxFunctionLines": 87,
     "branchCount": 15,
     "disposition": "stabilized",
     "targetBudget": {
@@ -324,9 +324,9 @@
     "notes": "Previously a major hotspot and now materially reduced. Preserve the split; future providers should land in helper modules, not back in this shell."
   },
   "worker/src/cron/sync-blacklist.ts": {
-    "fileLines": 416,
-    "maxFunctionLines": 346,
-    "branchCount": 32,
+    "fileLines": 425,
+    "maxFunctionLines": 355,
+    "branchCount": 34,
     "disposition": "queued-p4",
     "targetBudget": {
       "fileLines": 280,

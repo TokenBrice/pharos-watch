@@ -59,10 +59,6 @@
     "disposition": "queued-p4",
     "notes": "API-key management still combines list rendering, form validation, create/update/rotate/deactivate flows, and per-row edit state. Keep waived for a focused ops-admin UI decomposition pass."
   },
-  "src/app/status/client.tsx": {
-    "disposition": "queued-p4",
-    "notes": "Public status route client still composes multiple status sections and error/loading branches in one shell. Keep waived for the planned status-surface route-client cleanup."
-  },
   "src/components/dex-liquidity-card.tsx": {
     "disposition": "queued-p4",
     "notes": "The DEX liquidity detail card still mixes summary copy, top-pool rendering, and history presentation in one shell. Track it for the next frontend hotspot pass rather than folding a larger decomposition into this pricing/liquidity fix."
