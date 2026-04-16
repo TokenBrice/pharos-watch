@@ -36,4 +36,37 @@ describe("adaptFx", () => {
       unknownKeys: ["unexpectedAsset"],
     });
   });
+
+  it("treats non-numeric collateralBalance strings as zero (parse-failure path)", () => {
+    const result = adaptFx({
+      data: {
+        poolInfo: {
+          wstETH: { collateralBalance: "not-a-number", debtBalance: "1000" },
+          wbtc: { collateralBalance: "-250", debtBalance: "0" },
+        },
+      },
+    });
+
+    // Both wstETH and wbtc parse to 0 -> filtered out; neither counts as unknown.
+    expect(result.balances).toEqual([]);
+    expect(result.unknownKeys).toEqual([]);
+  });
+
+  it("returns an empty balance list and no unknowns when poolInfo is absent", () => {
+    const result = adaptFx({});
+    expect(result.balances).toEqual([]);
+    expect(result.unknownKeys).toEqual([]);
+  });
+
+  it("skips unknown keys with zero collateralBalance (no false-positive unknown list)", () => {
+    const result = adaptFx({
+      data: {
+        poolInfo: {
+          wstETH: { collateralBalance: "1000000000000000000" },
+          retiredAsset: { collateralBalance: "0" },
+        },
+      },
+    });
+    expect(result.unknownKeys).toEqual([]);
+  });
 });
