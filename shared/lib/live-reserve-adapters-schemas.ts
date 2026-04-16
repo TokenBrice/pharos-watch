@@ -114,6 +114,11 @@ const noParamsSchema = z.object({}).strict();
 const usd1BundleOracleParamsSchema = z.object({
   rpcUrl: z.string().optional(),
   fallbackRpcUrl: z.string().optional(),
+  oracleAddress: z.string().optional(),
+}).strict();
+
+const anzenUsdzParamsSchema = z.object({
+  spctPoolAddress: z.string().optional(),
 }).strict();
 
 const accountableParamsSchema = z.object({
@@ -323,7 +328,7 @@ const abracadabraParamsSchema = z.object({
 export const adapterParamsSchemas = {
   abracadabra: abracadabraParamsSchema,
   accountable: accountableParamsSchema,
-  "anzen-usdz": noParamsSchema,
+  "anzen-usdz": anzenUsdzParamsSchema,
   asymmetry: noParamsSchema,
   btcfi: btcfiParamsSchema,
   "cap-vault": capVaultParamsSchema,

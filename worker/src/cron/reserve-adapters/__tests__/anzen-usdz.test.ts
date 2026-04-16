@@ -101,4 +101,25 @@ describe("fetchAnzenUsdzReserves", () => {
       "anzen-usdz totalSupply probe failed for usdz-anzen on blast",
     );
   });
+
+  it("uses a configured spctPoolAddress instead of the hardcoded default", async () => {
+    vi.mocked(fetchErc20TotalSupply)
+      .mockResolvedValueOnce(10_000_000n * 10n ** 18n)
+      .mockResolvedValueOnce(4_000_000n * 10n ** 18n)
+      .mockResolvedValueOnce(2_500_000n * 10n ** 18n)
+      .mockResolvedValueOnce(750_000n * 10n ** 18n)
+      .mockResolvedValueOnce(250_000n * 10n ** 18n)
+      .mockResolvedValueOnce(17_600_000n * 10n ** 18n);
+
+    const customPool = "0x1111111111111111111111111111111111111111";
+    const customConfig: LiveReservesConfig = {
+      ...config,
+      params: { spctPoolAddress: customPool },
+    };
+
+    const result = await fetchAnzenUsdzReserves(makeCoin(), customConfig, signal);
+
+    expect((result.metadata?.details as Record<string, unknown>).reserveContract).toBe(customPool);
+    expect(vi.mocked(fetchErc20TotalSupply).mock.calls[5]?.[1]).toBe(customPool);
+  });
 });

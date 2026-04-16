@@ -1,5 +1,6 @@
 import type { StablecoinMeta } from "@shared/types/core";
 import type { LiveReservesConfig } from "@shared/types/live-reserves";
+import { parseLiveReserveAdapterParams } from "@shared/lib/live-reserve-adapters";
 import type { AdapterContext, AdapterResult } from "./types";
 import { getPublicRpcUrl } from "../../lib/public-rpc-registry";
 import {
@@ -10,7 +11,7 @@ import {
 } from "./helpers";
 
 const ADAPTER_KEY = "anzen-usdz";
-const SPCT_POOL_CONTRACT = "0xf30a29F1C540724Fd8c5c4Be1AF604a6C6800D29";
+const DEFAULT_SPCT_POOL_CONTRACT = "0xf30a29F1C540724Fd8c5c4Be1AF604a6C6800D29";
 const SPCT_POOL_DECIMALS = 18;
 const SUPPLY_CHAINS = ["ethereum", "base", "arbitrum", "blast", "manta"] as const;
 type SupportedSupplyChain = (typeof SUPPLY_CHAINS)[number];
@@ -47,6 +48,8 @@ export async function fetchAnzenUsdzReserves(
   ctx?: AdapterContext,
 ): Promise<AdapterResult> {
   const primaryInput = requireOnchainInput(config.inputs.primary, ADAPTER_KEY);
+  const params = parseLiveReserveAdapterParams(ADAPTER_KEY, config.params);
+  const spctPoolAddress = params.spctPoolAddress ?? DEFAULT_SPCT_POOL_CONTRACT;
 
   const supplyEntries = await Promise.all(
     SUPPLY_CHAINS.map(async (chain) => {
@@ -68,7 +71,7 @@ export async function fetchAnzenUsdzReserves(
 
   const reserveRaw = await fetchErc20TotalSupply(
     { kind: "onchain-evm", chain: "ethereum", rpcMode: primaryInput.rpcMode },
-    SPCT_POOL_CONTRACT,
+    spctPoolAddress,
     signal,
     ctx,
     getSupplyChainRpcUrl("ethereum"),
@@ -110,7 +113,7 @@ export async function fetchAnzenUsdzReserves(
         proofKind: "multichain-usdz-vs-spct-total-supply",
         reserveSourceLabel: "SPCT pool total supply",
         supplySourceLabel: "USDz total supply across official deployments",
-        reserveContract: SPCT_POOL_CONTRACT,
+        reserveContract: spctPoolAddress,
         reserveChain: "ethereum",
         supplyByChainUsd,
         supplyChains: SUPPLY_CHAINS,
