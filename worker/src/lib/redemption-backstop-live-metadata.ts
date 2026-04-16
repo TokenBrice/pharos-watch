@@ -68,7 +68,7 @@ function coerceString(value: unknown): string | null {
   return typeof value === "string" && value.trim().length > 0 ? value : null;
 }
 
-export const REDEMPTION_CAPACITY_WARNING_EXCEPTIONS: Readonly<Partial<Record<string, Partial<Record<string, string>>>>> = {
+const REDEMPTION_CAPACITY_WARNING_EXCEPTIONS: Readonly<Partial<Record<string, Partial<Record<string, string>>>>> = {
   "gho-aave": {
     "aggregated-residual-issuance":
       "Using tracked live GSM backing as a lower-bound redemption capacity despite aggregated residual issuance outside configured GSM modules",
