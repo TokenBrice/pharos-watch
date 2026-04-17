@@ -412,6 +412,10 @@ export async function backfillAmounts(
     amountStatus = amount != null ? "resolved" : "provider_failed";
     if (amount != null) {
       const shouldSuppress = shouldSuppressAsMirrorZero(config.stablecoin, row.event_type, amount);
+      // Compute the target status as a local variable; bind it once. The SQL
+      // CASE-WHEN guard below ensures a row already marked
+      // `permanently_unavailable` is never downgraded by a later recovery pass.
+      const targetStatus = shouldSuppress ? "permanently_unavailable" : amountStatus;
       stmts.push(
         db.prepare(
           `UPDATE blacklist_events
@@ -419,7 +423,7 @@ export async function backfillAmounts(
                amount_native = ?,
                amount_usd_at_event = ?,
                amount_source = ?,
-               amount_status = ?,
+               amount_status = CASE WHEN amount_status = 'permanently_unavailable' THEN amount_status ELSE ? END,
                suppression_reason = COALESCE(suppression_reason, ?),
                contract_address = COALESCE(contract_address, ?),
                config_key = COALESCE(config_key, ?),
@@ -433,7 +437,7 @@ export async function backfillAmounts(
           amount,
           computeBlacklistAmountUsdAtEvent(config.stablecoin, amount, assetPriceUsd),
           amountSource,
-          amountStatus,
+          targetStatus,
           shouldSuppress ? "circle_mirror_zero_balance" : null,
           config.contractAddress,
           config.configKey,
