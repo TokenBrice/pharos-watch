@@ -214,10 +214,10 @@ export async function computeStablecoinScores(
     });
   }
 
-  // M3: Global protocol-level TVL cap: when reducing excess, chain TVLs are
+  // Global protocol-level TVL cap: when reducing excess, chain TVLs are
   // distributed proportionally rather than attributed to the chain with the
-  // most excess. This is a trade-off — exact chain attribution would require
-  // per-pool chain data which is not available in the global aggregate.
+  // most excess. Exact chain attribution would require per-pool chain data
+  // which is not available in the global aggregate.
   //
   // Clamp deduped protocol totals at DL protocol TVL.
   // After cross-stablecoin dedup, a protocol can still exceed its real TVL when
@@ -349,7 +349,7 @@ export async function computeDexPrices(
     // Look up primary price early — used for outlier filtering and deviation calc
     const primaryPrice = primaryPrices.get(id);
 
-    // H2: Filter extreme outliers relative to primary price before computing median.
+    // Filter extreme outliers relative to primary price before computing median.
     // When a source (e.g. CoinGecko aggregate) reports a price near peg for a severely
     // depegged stablecoin, its high TVL can dominate the TVL-weighted median.
     // Only apply when 3+ observations exist and majority by count agrees with primary.
@@ -365,7 +365,7 @@ export async function computeDexPrices(
       }
     }
 
-    // H1: Scale TVL weights by source confidence before computing median
+    // Scale TVL weights by source confidence before computing median
     const adjustedObs = medianInputObs.map((o) => ({
       ...o,
       tvl: o.tvl * dexPriceConfidenceForProtocol(o.protocol),

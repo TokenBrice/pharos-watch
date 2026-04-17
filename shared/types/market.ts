@@ -283,7 +283,7 @@ const DexLiquidityDataSchema = z.object({
       pairDiversity: z.number(),
     })
     .nullable(),
-  lockedLiquidityPct: z.number().nullable().optional(),
+  lockedLiquidityPct: z.number().nullable(),
   methodologyVersion: z.string(),
 });
 export type DexLiquidityData = z.infer<typeof DexLiquidityDataSchema>;

@@ -76,7 +76,7 @@ export interface DexPriceChallengerTableState {
   snapshotsTable: boolean;
 }
 
-export interface DexPriceChallengerSqlStatement {
+interface DexPriceChallengerSqlStatement {
   sql: string;
   binds: unknown[];
 }
