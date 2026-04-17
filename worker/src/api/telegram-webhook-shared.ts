@@ -89,6 +89,12 @@ export interface TelegramWebhookUpdate {
     };
     text?: string;
   };
+  callback_query?: {
+    id: string;
+    data?: string;
+    from?: { username?: string };
+    message?: { chat?: { id?: number }; message_id?: number };
+  };
 }
 
 export interface PendingDisambiguationRow {

@@ -61,6 +61,7 @@ import {
   validateGlobalSetCommand,
 } from "./telegram-webhook-store";
 import { withErrorHandler } from "../lib/api-utils";
+import { handleCallbackQuery } from "./telegram-webhook-callbacks";
 import { runCoinResolutionFlow } from "./telegram-webhook-resolution";
 
 export const handleTelegramWebhook = withErrorHandler(
@@ -108,6 +109,15 @@ export const handleTelegramWebhook = withErrorHandler(
       if (dedup.meta.changes === 0) {
         return ok();
       }
+    }
+
+    if (update.callback_query) {
+      try {
+        await handleCallbackQuery(db, botToken, update.callback_query);
+      } catch (err) {
+        console.error("[telegram-webhook] callback_query failed:", err);
+      }
+      return ok();
     }
 
     const chatId = update.message?.chat?.id?.toString();

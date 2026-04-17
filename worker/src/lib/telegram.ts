@@ -72,6 +72,7 @@ export async function postDigestToTelegram(
 export interface SendToChatOpts {
   disableWebPagePreview?: boolean;
   disableNotification?: boolean;
+  replyMarkup?: unknown;
 }
 
 export type TelegramSendErrorClass =
@@ -212,6 +213,7 @@ export async function sendToChat(
         parse_mode: "HTML",
         ...(opts?.disableWebPagePreview && { disable_web_page_preview: true }),
         ...(opts?.disableNotification && { disable_notification: true }),
+        ...(opts?.replyMarkup != null && { reply_markup: opts.replyMarkup }),
       }),
       signal: AbortSignal.timeout(10_000),
     });
@@ -246,6 +248,7 @@ export interface BatchMessage {
   chatId: string;
   html: string;
   disableNotification: boolean;
+  replyMarkup?: unknown;
 }
 
 export interface BatchResult {
@@ -275,6 +278,7 @@ export async function sendBatch(messages: BatchMessage[], botToken: string, batc
         const result = await sendToChat(msg.chatId, msg.html, botToken, {
           disableWebPagePreview: true,
           disableNotification: msg.disableNotification,
+          replyMarkup: msg.replyMarkup,
         });
         return { chatId: msg.chatId, ...result };
       }),
@@ -301,4 +305,30 @@ export async function sendBatch(messages: BatchMessage[], botToken: string, batc
     }
   }
   return results;
+}
+
+/**
+ * Answer a Telegram callback_query. Required to dismiss the spinner on the
+ * user's tapped button within a few seconds. Body is drained to stay under the
+ * Workers 6-connection cap.
+ */
+export async function answerCallbackQuery(
+  callbackQueryId: string,
+  botToken: string,
+  options: { text?: string; showAlert?: boolean } = {},
+): Promise<void> {
+  const res = await fetch(
+    `https://api.telegram.org/bot${botToken}/answerCallbackQuery`,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        callback_query_id: callbackQueryId,
+        text: options.text,
+        show_alert: options.showAlert ?? false,
+      }),
+      signal: AbortSignal.timeout(10_000),
+    },
+  );
+  await drainResponseBody(res);
 }
