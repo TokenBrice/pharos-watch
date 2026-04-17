@@ -17,10 +17,15 @@ Join <a href="https://t.me/pharoswatch">@pharoswatch</a> for Pharos updates and 
 <code>/subscribe dews depeg USDC BOLD</code>
 <code>/subscribe dews usd-top25</code>
 <code>/subscribe safety mcap-ge-1b</code>
-<code>/subscribe launch USDPT</code>
+<code>/subscribe launch USDPT</code>  ← pre-launch watch
 <code>/subscribe safety all</code>
 <code>/set USDC depeg-step 250</code>
-<code>/mute 22-07</code>
+<code>/mute 22-07</code>  ← quiet hours in UTC
+
+<b>Also useful</b>
+<code>/status USDC</code> — one-shot peg + DEWS + safety snapshot
+<code>/set all dews on</code> — global alerts across every tracked coin
+Inline buttons on each alert let you snooze 1h / 4h / 24h.
 
 Use /help for commands and /presets for preset watchlists.`;
 
