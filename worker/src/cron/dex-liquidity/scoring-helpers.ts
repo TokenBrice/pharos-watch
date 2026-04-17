@@ -5,6 +5,7 @@ import type {
   LiquiditySourceMix,
 } from "./types";
 import { isBlockedDexId } from "../../lib/dex-constants";
+import { clamp } from "@shared/lib/math";
 import { normalizeProtocol } from "./pool-helpers";
 
 function getPoolExtraNumber(
@@ -320,7 +321,7 @@ const COVERAGE_CONFIDENCE = {
 } as const;
 
 function clampConfidence(confidence: number): number {
-  return Math.max(0, Math.min(1, Number(confidence.toFixed(2))));
+  return clamp(Number(confidence.toFixed(2)), 0, 1);
 }
 
 export function classifyCoverage(input: {
