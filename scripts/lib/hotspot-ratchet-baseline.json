@@ -276,9 +276,9 @@
     "notes": "Post-score baselines, drift guards, and metadata assembly now live in dedicated helpers. Keep the entrypoint focused on phase order, abort boundaries, and persistence sequencing."
   },
   "worker/src/cron/sync-mint-burn.ts": {
-    "fileLines": 334,
-    "maxFunctionLines": 257,
-    "branchCount": 16,
+    "fileLines": 359,
+    "maxFunctionLines": 281,
+    "branchCount": 21,
     "disposition": "stabilized",
     "targetBudget": {
       "fileLines": 345,
