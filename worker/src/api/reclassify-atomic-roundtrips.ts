@@ -6,12 +6,29 @@ import { ROUNDTRIP_TOLERANCE_HAVING_SQL } from "../lib/mint-burn-pipeline/roundt
 import type { MintBurnAffectedHour } from "../lib/mint-burn-pipeline/types";
 
 const BATCH_SIZE = 1000;
+/**
+ * Default reclassify window. The `atomic_roundtrip` partition alone has >100k
+ * rows in production; scanning all of them with the tolerance HAVING clause
+ * exceeds D1's per-statement CPU budget. The `idx_mbe_flow_type_ts` index on
+ * `(flow_type, timestamp DESC)` lets the query prune when a timestamp cutoff
+ * is present. Callers can widen via `?since=0` at their own risk.
+ */
+const DEFAULT_SINCE_LOOKBACK_SEC = 90 * 24 * 3600;
 
 interface RoundtripDiscoveryRow {
   tx_hash: string;
   stablecoin_id: string;
   chain_id: string;
   timestamp: number;
+}
+
+function resolveSince(url: URL): number {
+  const raw = url.searchParams.get("since");
+  if (raw !== null) {
+    const parsed = Number.parseInt(raw, 10);
+    if (Number.isFinite(parsed) && parsed >= 0) return parsed;
+  }
+  return Math.floor(Date.now() / 1000) - DEFAULT_SINCE_LOOKBACK_SEC;
 }
 
 /**
@@ -21,29 +38,36 @@ interface RoundtripDiscoveryRow {
  *     contains both mints and burns whose totals match within tolerance.
  *   - Reverse: atomic_roundtrip → standard when legacy-tagged groups no longer
  *     satisfy the 0.5% amount-match tolerance introduced in Task 1.4.
+ *
+ * Both passes respect `?since=<unixSeconds>` (default: last 90 days). Pass
+ * `since=0` to sweep the entire table — expect D1 CPU limits on partitions
+ * with >30k rows.
+ *
  * Returns { done: true } when both passes land < BATCH_SIZE rows.
  */
 export async function handleReclassifyAtomicRoundtrips(
   db: D1Database,
-  _url: URL,
+  url: URL,
   trustedAdmin: boolean | undefined,
   request?: Request,
 ): Promise<Response> {
   const authErr = await requireAdmin(request, trustedAdmin);
   if (authErr) return authErr;
 
+  const since = resolveSince(url);
+
   // --- Forward pass: standard → atomic_roundtrip ---
   const { results: forwardTxs } = await db
     .prepare(
       `SELECT tx_hash, stablecoin_id, chain_id, MIN(timestamp) as timestamp
        FROM mint_burn_events
-       WHERE flow_type = 'standard'
+       WHERE flow_type = 'standard' AND timestamp >= ?
        GROUP BY tx_hash, stablecoin_id, chain_id
        HAVING COUNT(DISTINCT direction) > 1
        ORDER BY MIN(timestamp) ASC, stablecoin_id ASC, tx_hash ASC
        LIMIT ?`,
     )
-    .bind(BATCH_SIZE)
+    .bind(since, BATCH_SIZE)
     .all<RoundtripDiscoveryRow>();
 
   const affectedHours = new Map<string, MintBurnAffectedHour>();
@@ -70,7 +94,7 @@ export async function handleReclassifyAtomicRoundtrips(
     .prepare(
       `SELECT tx_hash, stablecoin_id, chain_id, MIN(timestamp) as timestamp
        FROM mint_burn_events
-       WHERE flow_type = 'atomic_roundtrip'
+       WHERE flow_type = 'atomic_roundtrip' AND timestamp >= ?
        GROUP BY tx_hash, stablecoin_id, chain_id
        HAVING SUM(CASE WHEN direction='mint' THEN amount ELSE 0 END) > 0
           AND SUM(CASE WHEN direction='burn' THEN amount ELSE 0 END) > 0
@@ -78,7 +102,7 @@ export async function handleReclassifyAtomicRoundtrips(
        ORDER BY MIN(timestamp) ASC, stablecoin_id ASC, tx_hash ASC
        LIMIT ?`,
     )
-    .bind(BATCH_SIZE)
+    .bind(since, BATCH_SIZE)
     .all<RoundtripDiscoveryRow>();
 
   let toStandard = 0;
@@ -100,6 +124,7 @@ export async function handleReclassifyAtomicRoundtrips(
 
   return jsonResponse({
     done: forwardTxs.length < BATCH_SIZE && reverseTxs.length < BATCH_SIZE,
+    since,
     // Legacy field: sum of both directions so callers can monitor any activity.
     updated: toRoundtrip + toStandard,
     toRoundtrip,
