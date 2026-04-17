@@ -46,6 +46,7 @@ Applied sequentially after the baseline (fresh setup) or after the previous indi
 | 0100     | `0100_blacklist_sync_state_dedup.sql`           | Delete legacy mixed-case `blacklist_sync_state` rows (keeps lowercase canonical keys)          |
 | 0101     | `0101_blacklist_reset_derived_amounts.sql`      | Reset 7,198 pre-v3.2 `derived` rows into the backfill pool for proper re-attribution           |
 | 0102     | `0102_blacklist_gnosis_cursor_reseed.sql`       | Reseed Gnosis BRZ cursor to startBlock-1 so next sync picks up previously-missed events        |
+| 0103     | `0103_blacklist_backfill_indexes.sql`           | Composite indexes for blacklist backfill + public API query paths                              |
 
 ## Retired Individual Migrations
 
