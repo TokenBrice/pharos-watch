@@ -764,6 +764,22 @@ const CONTRACT_CONFIG_SPECS: ContractEventConfigSpec[] = [
   { chain: ARBITRUM, stablecoinId: "buidl-blackrock", stablecoin: "BUIDL", startBlock: 270_969_308, events: SECURITIZE_SEIZE_EVENT_FAMILY.events },
   { chain: AVALANCHE, stablecoinId: "buidl-blackrock", stablecoin: "BUIDL", startBlock: 52_649_153, events: SECURITIZE_SEIZE_EVENT_FAMILY.events },
   { chain: POLYGON, stablecoinId: "buidl-blackrock", stablecoin: "BUIDL", startBlock: 63_877_025, events: SECURITIZE_SEIZE_EVENT_FAMILY.events },
+
+  // XUSD (StraitsX) — Ethereum + BSC, Circle FiatTokenProxy pattern emits
+  // Blacklisted/UnBlacklisted (USDC_EVENT_FAMILY). Implementation verified for
+  // both chains; BSC deploy block resolved via public RPC eth_getCode bisect
+  // (Etherscan v2 free plan does not support BSC getcontractcreation).
+  { chain: ETHEREUM, stablecoinId: "xusd-straitsx", stablecoin: "XUSD", startBlock: 19_132_912, events: USDC_EVENT_FAMILY.events },
+  { chain: BSC, stablecoinId: "xusd-straitsx", stablecoin: "XUSD", startBlock: 41_148_046, events: USDC_EVENT_FAMILY.events },
+
+  // XAUm (Matrixdock) — Ethereum + BSC. Implementation emits indexed
+  // BlockPlaced(address) / BlockReleased(address) with no DestroyedBlockedFunds,
+  // so USDT0_EVENT_FAMILY matches the two observed events (destroy topic is
+  // harmless when absent). Symbol override "XAUM" bypasses the case-sensitive
+  // symbol lookup (data corpus uses "XAUm"). BSC deploy block resolved via
+  // public RPC eth_getCode bisect.
+  { chain: ETHEREUM, stablecoinId: "xaum-matrixdock", stablecoin: "XAUM", startBlock: 20_624_233, events: USDT0_EVENT_FAMILY.events },
+  { chain: BSC, stablecoinId: "xaum-matrixdock", stablecoin: "XAUM", startBlock: 41_776_362, events: USDT0_EVENT_FAMILY.events },
 ];
 
 export const CONTRACT_CONFIGS: ContractEventConfig[] = CONTRACT_CONFIG_SPECS.map(
