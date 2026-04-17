@@ -25,8 +25,6 @@ vi.mock("../../lib/cex-tickers", () => ({
       }],
     },
   })),
-  isBinanceProviderBlocked: (diagnostics: Array<{ status: number | null }>) =>
-    diagnostics.length > 0 && diagnostics.every((diagnostic) => diagnostic.status === 403 || diagnostic.status === 451),
 }));
 
 vi.mock("../../lib/circuit-breaker", () => ({

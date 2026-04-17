@@ -13,6 +13,7 @@
 
 import { fetchEvmBlockNumber, fetchEvmBlockTimestamp, fetchEvmCallHexAtBlock } from "./evm-rpc";
 import type { ChainRpcConfig } from "./chain-registry";
+import type { FetcherOutcome } from "./fetcher-result";
 
 export interface CurvePoolConfig {
   stablecoinId: string;
@@ -45,7 +46,7 @@ export async function fetchCurveOnchainPrices(
   configs: CurvePoolConfig[],
   signal?: AbortSignal,
   chainRpcs?: Map<string, ChainRpcConfig>,
-): Promise<Map<string, number>> {
+): Promise<FetcherOutcome<Map<string, number>>> {
   // Validate: no chained hops (hop referencing another hop)
   const hopIds = new Set(configs.filter((c) => c.hop).map((c) => c.stablecoinId));
   for (const config of configs) {
@@ -58,8 +59,11 @@ export async function fetchCurveOnchainPrices(
 
   // Phase 1: Execute all RPC calls, store raw implied prices
   const rawPrices = new Map<string, number>();
+  let rpcAttempts = 0;
+  let rpcThrows = 0;
 
   for (const config of configs) {
+    rpcAttempts++;
     try {
       const inputAmount = BigInt(10) ** BigInt(config.inputDecimals); // 1 unit
       const selector = config.useUnderlying ? GET_DY_UNDERLYING_SELECTOR : GET_DY_SELECTOR;
@@ -89,6 +93,7 @@ export async function fetchCurveOnchainPrices(
     } catch (err) {
       if (signal?.aborted) throw err instanceof Error ? err : new Error(String(err));
       console.warn(`[curve-onchain] get_dy failed for ${config.stablecoinId}:`, err);
+      rpcThrows++;
     }
   }
 
@@ -111,7 +116,13 @@ export async function fetchCurveOnchainPrices(
     }
   }
 
-  return results;
+  if (rpcAttempts > 0 && rpcThrows === rpcAttempts) {
+    return { kind: "upstream-error", value: results, reason: "all Curve pool RPC calls threw" };
+  }
+  if (results.size === 0) {
+    return { kind: "no-data", value: results };
+  }
+  return { kind: "ok", value: results, partial: rpcThrows > 0 };
 }
 
 function encodeGetDy(selector: string, i: number, j: number, dx: bigint): string {

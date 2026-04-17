@@ -707,10 +707,10 @@ export async function fetchPrimaryPrices(
         CIRCUIT_SOURCE.CURVE_ONCHAIN,
         "Curve on-chain",
         async () => {
-          const prices = await fetchCurveOnchainPrices(CURVE_POOL_CONFIGS, signal, chainRpcs);
-          for (const [id, price] of prices) curvePrices.set(id, price);
-          if (prices.size > 0) curveObservedAt = Math.floor(Date.now() / 1000);
-          return prices.size > 0;
+          const outcome = await fetchCurveOnchainPrices(CURVE_POOL_CONFIGS, signal, chainRpcs);
+          for (const [id, price] of outcome.value) curvePrices.set(id, price);
+          if (outcome.value.size > 0) curveObservedAt = Math.floor(Date.now() / 1000);
+          return isSuccessfulOutcome(outcome);
         },
       ),
     );

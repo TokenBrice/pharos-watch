@@ -42,7 +42,7 @@ export const KRAKEN_KNOWN_SYMBOLS: readonly string[] = [...new Set(KRAKEN_MARKET
 export const BITSTAMP_KNOWN_SYMBOLS: readonly string[] = [...new Set(BITSTAMP_MARKETS.map((market) => market.symbol))].sort();
 export const COINBASE_KNOWN_SYMBOLS: readonly string[] = [...new Set(COINBASE_PRODUCTS.map((product) => product.symbol))].sort();
 
-export function isBinanceProviderBlocked(diagnostics: readonly PricingProviderAttemptDiagnostic[]): boolean {
+function isBinanceProviderBlocked(diagnostics: readonly PricingProviderAttemptDiagnostic[]): boolean {
   return diagnostics.length > 0 && diagnostics.every((diagnostic) => diagnostic.status === 403 || diagnostic.status === 451);
 }
 

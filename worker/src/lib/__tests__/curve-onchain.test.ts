@@ -25,9 +25,10 @@ describe("fetchCurveOnchainPrices", () => {
       outputDecimals: 6,
       chain: "ethereum",
     };
-    const results = await fetchCurveOnchainPrices([config]);
-    expect(results.size).toBe(1);
-    expect(results.get("usdt-tether")).toBeCloseTo(1.001, 3);
+    const outcome = await fetchCurveOnchainPrices([config]);
+    expect(outcome.kind).toBe("ok");
+    expect(outcome.value.size).toBe(1);
+    expect(outcome.value.get("usdt-tether")).toBeCloseTo(1.001, 3);
     expect(mockEvmCall).toHaveBeenCalledWith(
       "ethereum", config.poolAddress, expect.any(String), "latest", expect.any(Object),
     );
@@ -46,8 +47,8 @@ describe("fetchCurveOnchainPrices", () => {
       inputDecimals: 6, outputDecimals: 6,
       chain: "ethereum",
     };
-    const results = await fetchCurveOnchainPrices([config]);
-    expect(results.get("usdt-tether")).toBeCloseTo(0.95, 2);
+    const outcome = await fetchCurveOnchainPrices([config]);
+    expect(outcome.value.get("usdt-tether")).toBeCloseTo(0.95, 2);
   });
 
   it("computes correct implied price with different decimals (DAI 18 decimals)", async () => {
@@ -63,11 +64,11 @@ describe("fetchCurveOnchainPrices", () => {
       inputDecimals: 6, outputDecimals: 18,
       chain: "ethereum",
     };
-    const results = await fetchCurveOnchainPrices([config]);
-    expect(results.get("dai-makerdao")).toBeCloseTo(0.999, 3);
+    const outcome = await fetchCurveOnchainPrices([config]);
+    expect(outcome.value.get("dai-makerdao")).toBeCloseTo(0.999, 3);
   });
 
-  it("returns empty map when RPC returns null", async () => {
+  it("returns no-data outcome when RPC returns null for every pool", async () => {
     mockEvmCall.mockResolvedValue(null);
     const config: CurvePoolConfig = {
       stablecoinId: "usdt-tether",
@@ -76,8 +77,9 @@ describe("fetchCurveOnchainPrices", () => {
       inputDecimals: 6, outputDecimals: 6,
       chain: "ethereum",
     };
-    const results = await fetchCurveOnchainPrices([config]);
-    expect(results.size).toBe(0);
+    const outcome = await fetchCurveOnchainPrices([config]);
+    expect(outcome.kind).toBe("no-data");
+    expect(outcome.value.size).toBe(0);
   });
 
   it("uses get_dy_underlying selector when useUnderlying is true", async () => {
@@ -95,8 +97,8 @@ describe("fetchCurveOnchainPrices", () => {
       chain: "ethereum",
       useUnderlying: true,
     };
-    const results = await fetchCurveOnchainPrices([config]);
-    expect(results.get("lusd-liquity")).toBeCloseTo(1.001, 3);
+    const outcome = await fetchCurveOnchainPrices([config]);
+    expect(outcome.value.get("lusd-liquity")).toBeCloseTo(1.001, 3);
 
     // Verify the underlying selector was used, not get_dy
     const calldata = mockEvmCall.mock.calls[0][2] as string;
@@ -129,10 +131,10 @@ describe("fetchCurveOnchainPrices", () => {
       },
     ];
 
-    const results = await fetchCurveOnchainPrices(configs);
-    expect(results.get("crvusd-curve")).toBeCloseTo(1.001, 3);
+    const outcome = await fetchCurveOnchainPrices(configs);
+    expect(outcome.value.get("crvusd-curve")).toBeCloseTo(1.001, 3);
     const expectedGho = (1.0 / 0.998) * (1.0 / 0.999);
-    expect(results.get("gho-aave")).toBeCloseTo(expectedGho, 3);
+    expect(outcome.value.get("gho-aave")).toBeCloseTo(expectedGho, 3);
   });
 
   it("excludes hop coin when via-token RPC fails", async () => {
@@ -158,9 +160,9 @@ describe("fetchCurveOnchainPrices", () => {
       },
     ];
 
-    const results = await fetchCurveOnchainPrices(configs);
-    expect(results.has("crvusd-curve")).toBe(false);
-    expect(results.has("gho-aave")).toBe(false);
+    const outcome = await fetchCurveOnchainPrices(configs);
+    expect(outcome.value.has("crvusd-curve")).toBe(false);
+    expect(outcome.value.has("gho-aave")).toBe(false);
   });
 
   it("truncates oversized Vyper return data to first uint256 word", async () => {
@@ -183,8 +185,52 @@ describe("fetchCurveOnchainPrices", () => {
       chain: "ethereum",
       useUnderlying: true,
     };
-    const results = await fetchCurveOnchainPrices([config]);
-    expect(results.get("lusd-liquity")).toBeCloseTo(1.016, 2);
+    const outcome = await fetchCurveOnchainPrices([config]);
+    expect(outcome.value.get("lusd-liquity")).toBeCloseTo(1.016, 2);
+  });
+
+  it("returns upstream-error outcome when every RPC call throws", async () => {
+    mockEvmCall.mockRejectedValue(new Error("network down"));
+    const config: CurvePoolConfig = {
+      stablecoinId: "usdt-tether",
+      poolAddress: "0xbEbc44782C7dB0a1A60Cb6fe97d0b483032FF1C7",
+      inputIndex: 1, outputIndex: 2,
+      inputDecimals: 6, outputDecimals: 6,
+      chain: "ethereum",
+    };
+    const outcome = await fetchCurveOnchainPrices([config]);
+    expect(outcome.kind).toBe("upstream-error");
+    expect(outcome.value.size).toBe(0);
+  });
+
+  it("returns ok with partial=true when some pools throw but others succeed", async () => {
+    mockEvmCall
+      .mockResolvedValueOnce(("0x" + BigInt(999000).toString(16).padStart(64, "0")) as `0x${string}`)
+      .mockRejectedValueOnce(new Error("rpc broke"));
+
+    const configs: CurvePoolConfig[] = [
+      {
+        stablecoinId: "usdt-tether",
+        poolAddress: "0xbEbc44782C7dB0a1A60Cb6fe97d0b483032FF1C7",
+        inputIndex: 1, outputIndex: 2,
+        inputDecimals: 6, outputDecimals: 6,
+        chain: "ethereum",
+      },
+      {
+        stablecoinId: "usdc-usd-coin",
+        poolAddress: "0xbEbc44782C7dB0a1A60Cb6fe97d0b483032FF1C7",
+        inputIndex: 0, outputIndex: 1,
+        inputDecimals: 6, outputDecimals: 6,
+        chain: "ethereum",
+      },
+    ];
+    const outcome = await fetchCurveOnchainPrices(configs);
+    expect(outcome.kind).toBe("ok");
+    if (outcome.kind === "ok") {
+      expect(outcome.partial).toBe(true);
+    }
+    expect(outcome.value.size).toBe(1);
+    expect(outcome.value.get("usdt-tether")).toBeCloseTo(1.001, 3);
   });
 
   it("throws when a hop references another hop config", async () => {
