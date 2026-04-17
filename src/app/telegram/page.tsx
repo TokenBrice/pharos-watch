@@ -301,6 +301,62 @@ export default function TelegramPage() {
         </section>
 
         {/* ================================================================= */}
+        {/*  HOW IT WORKS (cadence, volume, privacy)                          */}
+        {/* ================================================================= */}
+        <section className="mt-12" id="how-it-works">
+          <h2 className="pharos-section-title">How It Works</h2>
+          <div className="mt-5 grid grid-cols-1 gap-4 sm:grid-cols-3">
+            <Card className="rounded-xl py-0">
+              <CardContent className="p-5">
+                <p className="text-sm font-semibold">Cadence</p>
+                <p className="mt-2 text-xs text-muted-foreground leading-relaxed">
+                  The dispatcher runs every 5 minutes. DEWS and depeg alerts arrive within one cycle.
+                  Safety grades shift once daily after the safety snapshot, and launch alerts fire
+                  within 5 minutes of a pre-launch asset going live.
+                </p>
+              </CardContent>
+            </Card>
+            <Card className="rounded-xl py-0">
+              <CardContent className="p-5">
+                <p className="text-sm font-semibold">Volume</p>
+                <p className="mt-2 text-xs text-muted-foreground leading-relaxed">
+                  Expect zero alerts on a calm day, a handful during volatility. Dipping back into and
+                  out of the same DEWS band in the same cycle is suppressed so you are not paged twice
+                  for the same event. Every alert includes snooze buttons (1h / 4h / 24h).
+                </p>
+              </CardContent>
+            </Card>
+            <Card className="rounded-xl py-0">
+              <CardContent className="p-5">
+                <p className="text-sm font-semibold">Privacy</p>
+                <p className="mt-2 text-xs text-muted-foreground leading-relaxed">
+                  We store your Telegram chat ID and the coins you follow — nothing else.
+                  No personal data beyond a username if you have one. Run{" "}
+                  <code className="rounded bg-muted px-1 py-0.5 text-[11px] font-mono">/unsubscribe all</code>{" "}
+                  at any time to clear your row.
+                </p>
+              </CardContent>
+            </Card>
+          </div>
+
+          <div className="mt-5 rounded-lg border border-border/60 bg-muted/30 p-4">
+            <p className="text-sm font-semibold">DEWS bands</p>
+            <p className="mt-1.5 text-xs text-muted-foreground leading-relaxed">
+              Pharos scores each coin on five bands. Alerts fire when a coin enters{" "}
+              <code className="rounded bg-muted px-1 py-0.5 text-[11px] font-mono">ALERT</code>,{" "}
+              <code className="rounded bg-muted px-1 py-0.5 text-[11px] font-mono">WARNING</code>, or{" "}
+              <code className="rounded bg-muted px-1 py-0.5 text-[11px] font-mono">DANGER</code>.
+              Use <code className="rounded bg-muted px-1 py-0.5 text-[11px] font-mono">/set USDT dews WARNING</code>{" "}
+              to raise the floor. See{" "}
+              <Link href="/methodology#pegscore-dews-methodology" className="underline underline-offset-4 hover:text-foreground transition-colors">
+                the DEWS methodology
+              </Link>{" "}
+              for scoring details.
+            </p>
+          </div>
+        </section>
+
+        {/* ================================================================= */}
         {/*  GETTING STARTED                                                  */}
         {/* ================================================================= */}
         <section className="mt-12" id="getting-started">
