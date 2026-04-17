@@ -164,6 +164,19 @@ export async function recordOutcomeDecision(
   await recordOutcome(db, source, outcome === "success", webhookUrl);
 }
 
+/**
+ * When there are no candidates to probe and the breaker is non-closed,
+ * record success so the breaker can transition toward closed on the next
+ * read. Mirrors the pattern used in the Jupiter pass so sources whose
+ * candidate set temporarily empties do not stay open forever.
+ */
+export async function recoverBreakerOnNoCandidate(db: D1Database, source: string, webhookUrl?: string | null): Promise<void> {
+  const record = await getCircuitRecord(db, source);
+  if (record.state !== "closed") {
+    await recordOutcome(db, source, true, webhookUrl);
+  }
+}
+
 /** Non-blocking circuit telemetry write for best-effort callers. */
 export async function recordOutcomeSafe(db: D1Database, source: string, success: boolean, webhookUrl?: string | null): Promise<void> {
   try {

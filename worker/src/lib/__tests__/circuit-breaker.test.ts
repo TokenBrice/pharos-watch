@@ -12,6 +12,7 @@ import {
   getCircuitRecord,
   shouldAttemptFetch,
   recordOutcome,
+  recoverBreakerOnNoCandidate,
   getCircuitStates,
   mapCronStatusToCircuitOutcome,
 } from "../circuit-breaker";
@@ -275,6 +276,41 @@ describe("circuit-breaker", () => {
   describe("Etherscan circuit source", () => {
     it("ETHERSCAN source constant exists", () => {
       expect(CIRCUIT_SOURCE.ETHERSCAN).toBe("etherscan");
+    });
+  });
+
+  // --- recoverBreakerOnNoCandidate ---
+
+  describe("recoverBreakerOnNoCandidate", () => {
+    it("records success when breaker is half-open so it can close on the next read", async () => {
+      const stored = makeRecord({ state: "half-open", consecutiveFailures: 3 });
+      const db = mockDbWithCircuit("src", stored);
+      await recoverBreakerOnNoCandidate(db, "src");
+      // A recovery success transition fires the "Circuit closed" alert.
+      expect(mockedAlert).toHaveBeenCalledWith(
+        null,
+        "Circuit closed: src",
+        expect.stringContaining("recovered"),
+      );
+    });
+
+    it("is a no-op when breaker is already closed", async () => {
+      const stored = makeRecord({ state: "closed" });
+      const db = mockDbWithCircuit("src", stored);
+      await recoverBreakerOnNoCandidate(db, "src");
+      expect(mockedAlert).not.toHaveBeenCalled();
+    });
+
+    it("records success when breaker is open (allowing recovery on next probe window)", async () => {
+      const now = Math.floor(Date.now() / 1000);
+      const stored = makeRecord({ state: "open", consecutiveFailures: 5, openedAt: now - 3600 });
+      const db = mockDbWithCircuit("src", stored);
+      await recoverBreakerOnNoCandidate(db, "src");
+      expect(mockedAlert).toHaveBeenCalledWith(
+        null,
+        "Circuit closed: src",
+        expect.stringContaining("recovered"),
+      );
     });
   });
 });

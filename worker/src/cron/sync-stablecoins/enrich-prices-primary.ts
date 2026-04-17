@@ -12,7 +12,7 @@ import { USER_AGENT, CIRCUIT_SOURCE, CURVE_ORACLE_MAX_STALENESS_SEC, DEX_FRESHNE
 import { CG_TICKER_COINS, fetchCgTickerPricesDetailed } from "../../lib/cg-ticker";
 import { fetchWithRetry } from "../../lib/fetch-retry";
 import { cgUrl, cgHeaders } from "../../lib/coingecko";
-import { shouldAttemptFetch, recordOutcome } from "../../lib/circuit-breaker";
+import { shouldAttemptFetch, recordOutcome, recoverBreakerOnNoCandidate } from "../../lib/circuit-breaker";
 import { throwIfAborted } from "../../lib/abort";
 import { fetchPythPrices } from "../../lib/pyth";
 import {
@@ -676,6 +676,19 @@ export async function fetchPrimaryPrices(
     );
   }
 
+  // Breaker-recovery path: when a provider has zero tracked candidates
+  // there is nothing to probe, so mirror the Jupiter pass and coax an
+  // open/half-open breaker toward closed instead of leaving it stuck.
+  if (krakenSymbols.length === 0) {
+    fetches.push(recoverBreakerOnNoCandidate(db, CIRCUIT_SOURCE.KRAKEN_PRICES));
+  }
+  if (!shouldFetchBitstamp) {
+    fetches.push(recoverBreakerOnNoCandidate(db, CIRCUIT_SOURCE.BITSTAMP_PRICES));
+  }
+  if (coinbaseSymbols.length === 0) {
+    fetches.push(recoverBreakerOnNoCandidate(db, CIRCUIT_SOURCE.COINBASE_PRICES));
+  }
+
   if (sourceAllowed.redstone && redstoneSymbols.length > 0) {
     fetches.push(
       runPrimaryProviderFetch(
@@ -697,6 +710,8 @@ export async function fetchPrimaryPrices(
         },
       ),
     );
+  } else if (redstoneSymbols.length === 0) {
+    fetches.push(recoverBreakerOnNoCandidate(db, CIRCUIT_SOURCE.REDSTONE_PRICES));
   }
 
   if (sourceAllowed.curve && CURVE_POOL_CONFIGS.length > 0) {
@@ -714,6 +729,8 @@ export async function fetchPrimaryPrices(
         },
       ),
     );
+  } else if (CURVE_POOL_CONFIGS.length === 0) {
+    fetches.push(recoverBreakerOnNoCandidate(db, CIRCUIT_SOURCE.CURVE_ONCHAIN));
   }
 
   if (sourceAllowed.curveOracle) {
