@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { fetchBlacklistEvents, fetchBlacklistSummary } from "../blacklist-api";
-import type { BlacklistEvent, BlacklistResponse, BlacklistSummaryResponse } from "@shared/types";
+import { BLACKLIST_STABLECOINS } from "@shared/types";
+import type { BlacklistEvent, BlacklistResponse, BlacklistStablecoin, BlacklistSummaryResponse } from "@shared/types";
 
 function makeEvent(id: number): BlacklistEvent {
   const hex = id.toString(16).padStart(64, "0");
@@ -92,6 +93,9 @@ describe("blacklist-api", () => {
         recentCount: 4,
         recentCount24h: 1,
         recoverableGapCount: 0,
+        perCoinBlacklistCounts: Object.fromEntries(
+          BLACKLIST_STABLECOINS.map((s) => [s, 0]),
+        ) as Record<BlacklistStablecoin, number>,
       },
       chart: [],
       chains: [{ id: "ethereum", name: "Ethereum" }],
