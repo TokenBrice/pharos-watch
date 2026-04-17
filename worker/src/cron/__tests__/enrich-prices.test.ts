@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, afterEach } from "vitest";
 import { isReasonablePrice, hasMissingPrice, PRICE_BOUNDS, enrichMissingPrices, fetchPrimaryPrices, applyResolvedPrice, applyPoolChallenge } from "../sync-stablecoins/enrich-prices";
+import { applyListAggregatorDowngrade } from "../sync-stablecoins/enrich-prices-primary";
 import type { PeggedAsset, PrimaryPriceResult, PriceValidationStats } from "../sync-stablecoins/enrich-prices";
 import { runCmcPass, runDexScreenerPass, runDlContractPasses, runJupiterPass } from "../sync-stablecoins/enrich-prices-passes";
 import { mockD1 } from "../../api/__tests__/helpers/mock-d1";
@@ -2303,5 +2304,68 @@ describe("applyPoolChallenge", () => {
     expect(downgrades).toBe(0);
     expect(results.get("ousg-ondo-finance")!.confidence).toBe("high");
     expect(results.get("ousg-ondo-finance")!.price).toBe(110.15);
+  });
+});
+
+describe("applyListAggregatorDowngrade", () => {
+  it("downgrades 2-source list-aggregator clusters (coingecko + defillama-list)", () => {
+    const results = new Map<string, PrimaryPriceResult>([
+      ["usdt-tether", {
+        price: 1.0, source: "coingecko+defillama-list",
+        confidence: "high", dlPrice: 1.0, cgPrice: 1.0,
+        candidateSources: ["coingecko", "defillama-list"],
+        agreeSources: ["coingecko", "defillama-list"],
+      }],
+    ]);
+    const stats: PriceValidationStats = { attempted: 1, high: 1, singleSource: 0, cgOnly: 0, low: 0 };
+    applyListAggregatorDowngrade(results, stats);
+    expect(results.get("usdt-tether")!.confidence).toBe("single-source");
+    expect(stats.high).toBe(0);
+    expect(stats.singleSource).toBe(1);
+  });
+
+  it("downgrades 2-source list-aggregator clusters even when detail endpoint is the second voice", () => {
+    const results = new Map<string, PrimaryPriceResult>([
+      ["usdt-tether", {
+        price: 1.0, source: "coingecko+defillama",
+        confidence: "high", dlPrice: 1.0, cgPrice: 1.0,
+        candidateSources: ["coingecko", "defillama"],
+        agreeSources: ["coingecko", "defillama"],
+      }],
+    ]);
+    const stats: PriceValidationStats = { attempted: 1, high: 1, singleSource: 0, cgOnly: 0, low: 0 };
+    applyListAggregatorDowngrade(results, stats);
+    expect(results.get("usdt-tether")!.confidence).toBe("single-source");
+    expect(stats.high).toBe(0);
+    expect(stats.singleSource).toBe(1);
+  });
+
+  it("does NOT downgrade when cluster includes a non-list-aggregator source (binance)", () => {
+    const results = new Map<string, PrimaryPriceResult>([
+      ["usdt-tether", {
+        price: 1.0, source: "binance+coingecko",
+        confidence: "high", dlPrice: 1.0, cgPrice: 1.0,
+        candidateSources: ["binance", "coingecko"],
+        agreeSources: ["binance", "coingecko"],
+      }],
+    ]);
+    const stats: PriceValidationStats = { attempted: 1, high: 1, singleSource: 0, cgOnly: 0, low: 0 };
+    applyListAggregatorDowngrade(results, stats);
+    expect(results.get("usdt-tether")!.confidence).toBe("high");
+    expect(stats.high).toBe(1);
+  });
+
+  it("does NOT downgrade 3-source list-aggregator clusters", () => {
+    const results = new Map<string, PrimaryPriceResult>([
+      ["usdt-tether", {
+        price: 1.0, source: "coingecko+defillama+defillama-list",
+        confidence: "high", dlPrice: 1.0, cgPrice: 1.0,
+        candidateSources: ["coingecko", "defillama", "defillama-list"],
+        agreeSources: ["coingecko", "defillama", "defillama-list"],
+      }],
+    ]);
+    const stats: PriceValidationStats = { attempted: 1, high: 1, singleSource: 0, cgOnly: 0, low: 0 };
+    applyListAggregatorDowngrade(results, stats);
+    expect(results.get("usdt-tether")!.confidence).toBe("high");
   });
 });

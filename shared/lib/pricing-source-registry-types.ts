@@ -37,6 +37,13 @@ export interface PricingSourceRegistryEntry {
   isSearchDerived: boolean;
   isProtocolOverride?: boolean;
   bypassesSoftValidationGuardrails?: boolean;
+  /**
+   * Marks a source as a list-style aggregator (e.g. CoinGecko list, DefiLlama list,
+   * DefiLlama detail endpoint). Two-source clusters composed entirely of list
+   * aggregators are downgraded to single-source in post-consensus hardening because
+   * both voices tend to re-export the same upstream list data.
+   */
+  isListAggregator?: boolean;
   capabilities?: PricingSourceCapabilities;
   defaultObservedAtMode: PriceObservedAtMode | null;
 }

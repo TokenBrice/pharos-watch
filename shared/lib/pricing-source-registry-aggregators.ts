@@ -10,6 +10,7 @@ export const PRICING_SOURCE_REGISTRY_AGGREGATORS = [
     maxTrustedAgeSec: 15 * 60,
     defaultWeight: 2,
     isGtProbeEligible: true,
+    isListAggregator: true,
     supportsUpstreamObservedAt: true,
     capabilities: {
       hasUpstreamTimestamp: true,
@@ -30,6 +31,7 @@ export const PRICING_SOURCE_REGISTRY_AGGREGATORS = [
     freshnessKind: "unknown",
     maxTrustedAgeSec: 15 * 60,
     defaultWeight: 1,
+    isListAggregator: true,
     defaultObservedAtMode: null,
   }),
   definePricingSource(PRICING_SOURCE_PRESETS.softAggregator, {
@@ -40,6 +42,7 @@ export const PRICING_SOURCE_REGISTRY_AGGREGATORS = [
     maxTrustedAgeSec: 15 * 60,
     defaultWeight: 1,
     isGtProbeEligible: true,
+    isListAggregator: true,
     defaultObservedAtMode: null,
   }),
   definePricingSource(PRICING_SOURCE_PRESETS.softAggregator, {

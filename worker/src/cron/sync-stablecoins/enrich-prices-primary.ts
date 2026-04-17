@@ -105,6 +105,29 @@ async function runPrimaryProviderFetch(
   }
 }
 
+/**
+ * Downgrades 2-source clusters whose members are all list-style aggregators
+ * (registry flag `isListAggregator`) from "high" to "single-source". Rationale:
+ * list aggregators tend to re-export the same upstream list data, so two voices
+ * from this family are not independent corroboration. Exported for unit testing.
+ */
+export function applyListAggregatorDowngrade(
+  results: Map<string, PrimaryPriceResult>,
+  stats: PriceValidationStats,
+): void {
+  for (const result of results.values()) {
+    if (result.confidence !== "high") continue;
+    if (result.agreeSources.length !== 2) continue;
+    const allListAggregator = result.agreeSources.every(
+      (source) => getPricingSourceRegistryEntry(source)?.isListAggregator === true,
+    );
+    if (!allListAggregator) continue;
+    result.confidence = "single-source";
+    stats.high--;
+    stats.singleSource++;
+  }
+}
+
 async function applyPrimaryPostConsensusHardening(params: {
   db: D1Database;
   candidates: PeggedAsset[];
@@ -113,17 +136,7 @@ async function applyPrimaryPostConsensusHardening(params: {
   nowSec: number;
   references?: PriceValidationReferences;
 }): Promise<void> {
-  for (const result of params.results.values()) {
-    if (
-      result.confidence === "high" &&
-      result.agreeSources.length === 2 &&
-      result.agreeSources.every((s) => s === "coingecko" || s === "defillama-list")
-    ) {
-      result.confidence = "single-source";
-      params.stats.high--;
-      params.stats.singleSource++;
-    }
-  }
+  applyListAggregatorDowngrade(params.results, params.stats);
 
   const poolChallengers = await loadDexPoolChallengers(
     params.db,
