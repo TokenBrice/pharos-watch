@@ -574,6 +574,22 @@ describe("syncMintBurn", () => {
     await expect(syncMintBurn(db, null)).rejects.toThrow("No ALCHEMY_API_KEY configured");
   });
 
+  it("invalidates mint-burn-flows cache rows after a successful run", async () => {
+    const db = makeDb();
+
+    const result = await syncMintBurn(db, "alchemy-key");
+
+    expect(result.status).toBe("ok");
+    const history = (db as ReturnType<typeof makeDb> & { getHistory(): Array<{ sql: string; binds: unknown[] }> }).getHistory();
+    const invalidation = history.find(
+      (entry) =>
+        entry.sql.includes("DELETE FROM cache")
+        && entry.binds[0] === "mint-burn-flows:"
+        && entry.binds[1] === "mint-burn-flows:\uffff",
+    );
+    expect(invalidation).toBeDefined();
+  });
+
   it("downgrades to degraded and flags metadata when recalcAffectedHours throws", async () => {
     const db = makeDb();
 
