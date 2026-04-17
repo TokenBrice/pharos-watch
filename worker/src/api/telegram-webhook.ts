@@ -142,7 +142,7 @@ export const handleTelegramWebhook = withErrorHandler(
         switch (parsedCommand.command) {
           case "/cancel":
             await clearPendingDisambiguation(db, chatId);
-            await reply("Pending selection cleared.");
+            await reply("Pending selection cancelled.");
             return ok();
           case "/presets":
             await reply(buildPresetCatalogMessage(listTelegramPresets()));

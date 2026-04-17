@@ -749,7 +749,7 @@ describe("handleTelegramWebhook", () => {
 
     const history = db.getHistory();
     expect(history.some((entry) => entry.sql.includes("DELETE FROM telegram_pending_disambiguation"))).toBe(true);
-    expect(sentMessageBody().text).toContain("Pending selection cleared");
+    expect(sentMessageBody().text).toContain("Pending selection cancelled");
   });
 
   it("unsubscribe all clears launch alert flags", async () => {
