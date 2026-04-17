@@ -301,7 +301,10 @@ export async function handleBackfillMintBurn(
       bridgeBurns,
       reviewBurns,
       // Legacy scalar retained for backward compat; prefer `reclassified.*` fields.
-      rowsReclassified: flowTypeChanges + burnTypeChanges,
+      // max() avoids double-counting rows that change both burn_type and
+      // flow_type in the same pass (e.g., bridge burns); the exact per-column
+      // counts live in `reclassified` below.
+      rowsReclassified: Math.max(flowTypeChanges, burnTypeChanges),
       reclassified: { flowTypeChanges, burnTypeChanges },
       budgetUsed: budget.count,
       budgetLimit: budget.limit,
