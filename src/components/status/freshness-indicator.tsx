@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { cn } from "@/lib/utils";
 
 interface FreshnessIndicatorProps {
@@ -21,15 +21,15 @@ export function FreshnessIndicator({ updatedAtMs, staleAfterMs, className }: Fre
   const [isStale, setIsStale] = useState(
     () => Math.max(0, Date.now() - updatedAtMs) > staleAfterMs,
   );
-  const lastLabelRef = useRef(label);
-  lastLabelRef.current = label;
 
   useEffect(() => {
     const recompute = () => {
       if (typeof document !== "undefined" && document.visibilityState === "hidden") return;
       const ageMs = Math.max(0, Date.now() - updatedAtMs);
-      const next = formatAge(ageMs);
-      if (next !== lastLabelRef.current) setLabel(next);
+      setLabel((prev) => {
+        const next = formatAge(ageMs);
+        return next === prev ? prev : next;
+      });
       setIsStale(ageMs > staleAfterMs);
     };
     recompute();
