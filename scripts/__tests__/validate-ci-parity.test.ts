@@ -74,9 +74,8 @@ describe("validate-ci parity", () => {
       resolve(process.cwd(), ".github/actions/setup-workspace/action.yml"),
       "utf8",
     );
-    const validateJob = extractJobBlock(workflow, "validate", "validate-node24");
-    const validateNode24Job = extractJobBlock(workflow, "validate-node24", "validate-node25");
-    const validateNode25Job = extractJobBlock(workflow, "validate-node25");
+    const validateJob = extractJobBlock(workflow, "validate", "validate-node25-compat");
+    const validateNode25CompatJob = extractJobBlock(workflow, "validate-node25-compat");
     const setupWorkspaceRunSteps = extractRunSteps(setupWorkspaceAction);
 
     expect([...setupWorkspaceRunSteps, ...extractRunSteps(validateJob)]).toEqual([
@@ -84,15 +83,7 @@ describe("validate-ci parity", () => {
       ...buildCiValidateStepPlan(),
     ]);
 
-    expect([...setupWorkspaceRunSteps, ...extractRunSteps(validateNode24Job)]).toEqual([
-      { cmd: "npm ci", condition: null },
-      { cmd: "npm run lint", condition: null },
-      { cmd: "npm run typecheck", condition: null },
-      { cmd: "npm run build", condition: null },
-      { cmd: "npm run test:critical-contracts", condition: null },
-    ]);
-
-    expect([...setupWorkspaceRunSteps, ...extractRunSteps(validateNode25Job)]).toEqual([
+    expect([...setupWorkspaceRunSteps, ...extractRunSteps(validateNode25CompatJob)]).toEqual([
       { cmd: "npm ci", condition: null },
       { cmd: "npm run lint", condition: null },
       { cmd: "npm run typecheck", condition: null },

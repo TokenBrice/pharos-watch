@@ -24,7 +24,7 @@ jobs:
           fetch-depth: 0
       - uses: ./.github/actions/setup-workspace
         with:
-          node-version: 22
+          node-version: 25
           cache-npm: "false"
           install-deps: "false"
       - id: classify

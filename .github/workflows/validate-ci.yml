@@ -32,7 +32,7 @@ jobs:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
       - uses: ./.github/actions/setup-workspace
         with:
-          node-version: 22.x
+          node-version: 25.x
           tooling-cache: "true"
       - run: npm run audit:deps
       - run: npm run audit:pricing-providers
@@ -67,21 +67,7 @@ jobs:
         run: cd worker && npx tsc --noEmit
       - if: ${{ inputs.worker_changed }}
         run: cd worker && npx tsc --noEmit -p tsconfig.scripts.json
-  validate-node24:
-    runs-on: ubuntu-latest
-    permissions:
-      contents: read
-    steps:
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
-      - uses: ./.github/actions/setup-workspace
-        with:
-          node-version: 24.x
-          tooling-cache: "true"
-      - run: npm run lint
-      - run: npm run typecheck
-      - run: npm run build
-      - run: npm run test:critical-contracts
-  validate-node25:
+  validate-node25-compat:
     runs-on: ubuntu-latest
     permissions:
       contents: read
