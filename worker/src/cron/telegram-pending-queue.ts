@@ -1,4 +1,5 @@
 import { sendToChat } from "../lib/telegram";
+import { SNOOZE_REPLY_MARKUP } from "../lib/telegram-alerts";
 
 // ---------- Constants ----------
 
@@ -104,6 +105,7 @@ export async function drainPendingQueue(
         const result = await sendToChat(row.chat_id, row.message_html, botToken, {
           disableWebPagePreview: true,
           disableNotification: row.disable_notification === 1,
+          replyMarkup: SNOOZE_REPLY_MARKUP,
         });
         return { id: row.id, chatId: row.chat_id, attempts: row.attempts, ...result };
       }),

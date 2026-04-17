@@ -1093,6 +1093,56 @@ describe("dispatchTelegramAlerts", () => {
     expect(metadata.eventsDetected.depegWorsening).toBe(0);
   });
 
+  it("attaches snooze inline keyboard to every fresh subscriber alert", async () => {
+    const now = Math.floor(Date.now() / 1000);
+
+    mockGetCache.mockImplementation(async (_db: unknown, key: string) => {
+      if (key === "alert:dews-snapshot") {
+        return { value: JSON.stringify({ "usdc-circle": "CALM" }), updatedAt: now - 60 };
+      }
+      if (key === "alert:depeg-snapshot") {
+        return { value: JSON.stringify({}), updatedAt: now - 60 };
+      }
+      if (key === "alert:safety-snapshot") {
+        return { value: JSON.stringify({}), updatedAt: now - 60 };
+      }
+      return null;
+    });
+
+    const db = mockD1([
+      { match: "WHERE alert_snooze_until_ts IS NOT NULL", rows: [] },
+      {
+        match: "FROM stress_signals",
+        rows: [
+          {
+            stablecoin_id: "usdc-circle",
+            score: 42,
+            band: "ALERT",
+            signals_json: JSON.stringify({ supply: { value: 45, available: true } }),
+          },
+        ],
+      },
+      { match: "FROM depeg_events WHERE ended_at IS NULL", rows: [] },
+      { match: "FROM safety_grade_history", rows: [] },
+      { match: "SELECT id, chat_id, message_html", rows: [] },
+      { match: "sub.alert_dews = 1", rows: [
+        { stablecoin_id: "usdc-circle", chat_id: "42", last_active_at: now },
+      ] },
+      { match: "WHERE global_alert_dews = 1", rows: [] },
+      { match: "WHERE global_alert_depeg = 1", rows: [] },
+      { match: "WHERE global_alert_safety = 1", rows: [] },
+      { match: "DELETE FROM telegram_pending_alerts WHERE created_at", rows: [] },
+    ]);
+
+    await dispatchTelegramAlerts(db, "bot-token");
+
+    // sendBatch is mocked at file scope — inspect the BatchMessage array for the
+    // per-message replyMarkup. The third positional is the batch size.
+    const lastCall = mockSendBatch.mock.calls.at(-1);
+    const messages = lastCall?.[0] as Array<{ replyMarkup?: { inline_keyboard?: Array<Array<{ callback_data?: string }>> } }>;
+    expect(messages?.[0]?.replyMarkup?.inline_keyboard?.[0]?.[0]?.callback_data).toBe("snooze:1h");
+  });
+
   it("skips a chat whose alert_snooze_until_ts is in the future and reports chatsSuppressedBySnooze", async () => {
     const now = Math.floor(Date.now() / 1000);
 

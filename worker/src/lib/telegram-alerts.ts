@@ -254,6 +254,14 @@ export interface SafetyChange {
   newScore: number | null;
 }
 
+export const SNOOZE_REPLY_MARKUP = {
+  inline_keyboard: [[
+    { text: "Snooze 1h", callback_data: "snooze:1h" },
+    { text: "4h", callback_data: "snooze:4h" },
+    { text: "24h", callback_data: "snooze:24h" },
+  ]],
+} as const;
+
 export function formatDewsLine(e: DewsChange): string {
   // DEWS sub-signal values are already 0-100 integers (see SignalResult in worker/src/lib/dews.ts).
   const signals = e.topSignals
