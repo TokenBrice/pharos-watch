@@ -383,6 +383,7 @@ Digest posting uses `TELEGRAM_CHAT_ID`; subscriber alerts use the chat IDs store
 ## Operational Notes
 
 - Run `scripts/register-telegram-webhook.sh` after rotating `TELEGRAM_BOT_TOKEN` or `TELEGRAM_WEBHOOK_SECRET`. The script now declares `allowed_updates = ["message", "callback_query"]` so Telegram only forwards the update types the bot handles.
+- Run `scripts/register-telegram-commands.sh` after adding, removing, or renaming any slash command in `HELP_MESSAGE` (`worker/src/api/telegram-webhook-shared.ts`). This updates the native Telegram autocomplete list users see when they type `/` in a chat with the bot (the Bot API's `setMyCommands` surface, independent of the webhook switch).
 - The webhook intentionally returns `200` on most malformed or unauthorized cases so Telegram does not keep retrying noisy payloads.
 - The dedicated 5-minute Telegram trigger now handles subscriber fan-out only.
 - The dispatcher consumes Bot API response bodies before returning, which matters under the Workers per-trigger connection cap.
