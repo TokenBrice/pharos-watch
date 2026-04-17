@@ -366,6 +366,7 @@ export const BLACKLIST_CHART_COLORS: Record<BlacklistStablecoin, string> = {
   XAUM: "#ca8a04",
   JPYC: "#ea580c",
   FRXUSD: "#f97316",
+  FIDD: "#166534",
 };
 
 // ---------------------------------------------------------------------------

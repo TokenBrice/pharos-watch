@@ -585,6 +585,31 @@ const NEUTRL_DENYLIST_FAMILY = defineEventFamily("neutrl-denylist", [
   },
 ]);
 
+// --- Fidelity Digital Dollar (FIDD) event definitions ---
+// Verified implementation ABI (0x8ae9cb3d9095da33555494110f567e3d974c6753,
+// behind ERC1967Proxy 0x7c135549504245b5eae64fc0e99fa5ebabb8e35d) emits
+// TransferRestrictionImposed(address indexed) / TransferRestrictionRemoved(
+// address indexed) — not the AccountRestricted / AccountUnrestricted names
+// anticipated in the plan. Address is indexed, so default topics[1] applies.
+
+const FIDELITY_RESTRICTED_TOPIC = "0x31180c9d9d89196003f30f7b6643004f76e5feb146dbf10ae71764a88cfed5ef"; // TransferRestrictionImposed(address)
+const FIDELITY_UNRESTRICTED_TOPIC = "0x1c425db0931b7efc6b31b2491db198b75f20cfd6885f51c35f5f2a5495ef4619"; // TransferRestrictionRemoved(address)
+
+const FIDELITY_RESTRICTION_FAMILY = defineEventFamily("fidelity-restriction", [
+  {
+    signature: "TransferRestrictionImposed(address)",
+    topicHash: FIDELITY_RESTRICTED_TOPIC,
+    eventType: "blacklist",
+    hasAmount: false,
+  },
+  {
+    signature: "TransferRestrictionRemoved(address)",
+    topicHash: FIDELITY_UNRESTRICTED_TOPIC,
+    eventType: "unblacklist",
+    hasAmount: false,
+  },
+]);
+
 // --- TrueUSD (TUSD) event definitions ---
 // Blacklisted(address indexed account, bool isBlacklisted) — single event for
 // both directions; the bool at data slot 0 disambiguates add vs remove via the
@@ -820,6 +845,12 @@ const CONTRACT_CONFIG_SPECS: ContractEventConfigSpec[] = [
   // 0x0000000048d2c8baf31742f6765383278bada4d5 which emits AccountFrozen /
   // AccountThawed with non-indexed address params (addressDataIndex: 0).
   { chain: ETHEREUM, stablecoinId: "frxusd-frax", stablecoin: "FRXUSD", startBlock: 21_543_360, events: FRAX_FREEZE_FAMILY.events },
+
+  // FIDD (Fidelity Digital Dollar) — Ethereum only. ERC1967 proxy delegates to
+  // 0x8ae9cb3d9095da33555494110f567e3d974c6753 which emits
+  // TransferRestrictionImposed / TransferRestrictionRemoved events (plan
+  // anticipated AccountRestricted / AccountUnrestricted names).
+  { chain: ETHEREUM, stablecoinId: "fidd-fidelity", stablecoin: "FIDD", startBlock: 16_991_820, events: FIDELITY_RESTRICTION_FAMILY.events },
 
   // BUIDL seize-only coverage (Securitize token family)
   { chain: ETHEREUM, stablecoinId: "buidl-blackrock", stablecoin: "BUIDL", startBlock: 19_343_293, events: SECURITIZE_SEIZE_EVENT_FAMILY.events },
