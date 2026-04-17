@@ -1,6 +1,30 @@
 # Blacklist Tracker Methodology — Version Timeline
 
-Internal changelog reconstructed from git history. Covers Blacklist Tracker `v1.0` through `v3.93` (2026-02-09 -> 2026-04-16).
+Internal changelog reconstructed from git history. Covers Blacklist Tracker `v1.0` through `v3.95` (2026-02-09 -> 2026-04-17).
+
+---
+
+## v3.95 — Tier-1 coverage expansion (2026-04-17)
+
+- **TUSD coverage** — Added new `TRUEUSD_EVENT_FAMILY` on Ethereum: single `Blacklisted(address,bool)` topic with direction resolved from the bool at data slot 0 via the new `BlacklistEventDef.eventTypeFromDataBoolIndex` extension, plus `DestroyedBlackFunds(address,uint256)` (reuses the USDT legacy destroy topic)
+- **NUSD coverage** — Added new `NEUTRL_DENYLIST_FAMILY` on Ethereum: `AddedToDenylist(address indexed)` / `RemovedFromDenylist(address indexed)`
+- **EURCV coverage** — Added new `SOCGEN_FREEZE_FAMILY` on Ethereum: batch `AddressesFrozen(address[])` / `AddressesUnFrozen(address[])` via the shared `addressArrayData` path
+- **USDA / USAT / AEUR coverage** — Reuse existing families: USDA uses USDT legacy, USAT uses USDT0, AEUR uses `DUAL_INDEX_FREEZE_EVENT_FAMILY` (Ethereum)
+- **XUSD / XAUm coverage** — Reuse existing families: XUSD uses the Circle USDC blacklist family on Ethereum + BSC, XAUm uses the USDT0 family on Ethereum + BSC
+- **JPYC coverage** — Added new `CENTRE_BLOCKLISTED_FAMILY` on Ethereum + Polygon: `Blocklisted(address indexed)` / `UnBlocklisted(address indexed)` (distinct spelling from USDC's `Blacklisted`/`UnBlacklisted`)
+- **FRXUSD coverage** — Added new `FRAX_FREEZE_FAMILY` on Ethereum: `AccountFrozen(address)` / `AccountThawed(address)` with non-indexed address resolved via `addressDataIndex=0`
+- **FIDD coverage** — Added new `FIDELITY_RESTRICTION_FAMILY` on Ethereum: `TransferRestrictionImposed(address indexed)` / `TransferRestrictionRemoved(address indexed)`
+- **Deferrals** — BSC / Avalanche / Base deployments for TUSD, USDA, AEUR, JPYC, AID, and TGBP are deferred pending Etherscan v2 free-tier contract-creation coverage for those chains (captured as inline `TODO: verify on <chain>` comments). apxUSD deferred because its verified ABI emits a single event without a direction discriminator.
+
+---
+
+## v3.94 — Correctness + efficiency + minor coverage gaps (2026-04-17)
+
+- **Phase 1 correctness** — Gnosis dRPC scan window capped at 9k blocks per request, dual-index freeze family split from WLFI destroy events (FDUSD / EURI / AEUR no longer carry `FrozenAccountDrained` / `FrozenFundsReallocated` topics they cannot emit), TronGrid failures now propagate to the per-config circuit breaker, EURC rows flagged as `circle_mirror_zero_balance` are stamped `amount_status='permanently_unavailable'`, batch `address[]` events apply a per-log row cap, Tron sync cursor initialises from `max(block_number)` for legacy configs that were left at 0
+- **Phase 2 migrations** — Five D1 migrations applied: 0100 reset derived amount rows, 0101 dedup mixed-case `blacklist_sync_state` keys, 0103 stamp EURC mirror-zero rows as `permanently_unavailable`, 0102 / 0104 adjust `blacklist_events` indexes and amount-status telemetry
+- **Phase 3 efficiency** — `/api/blacklist-summary` rewritten to aggregate quarterly chart points and per-coin counts in SQL; post-fetch counters inlined so summary-endpoint memory drops from ~5–10MB to a few KB per cache miss
+- **Phase 4 frontend polish** — Data-driven stats strip + amount-status badge, per-coin stat border rendered via inline style, CSV split into native / unit / USD / status columns, page-clamp + zero-total + filter-reset covered by tests
+- **Phase 5 minor coverage gaps** — Added Polygon USDQ, Arbitrum + Base AID, and Base + BSC + Polygon TGBP chain-coverage rows for existing coins
 
 ---
 
