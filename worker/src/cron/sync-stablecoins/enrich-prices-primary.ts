@@ -9,10 +9,9 @@ import {
   isSevereFixedPegDownside,
 } from "../../lib/price-validation";
 import { createValidationContextResolver, type ValidationContextResolver } from "./pricing";
-import { USER_AGENT, CIRCUIT_SOURCE, CURVE_ORACLE_MAX_STALENESS_SEC, DEX_FRESHNESS_SEC, POOL_CHALLENGE_MIN_TVL, getDepegThresholdBps } from "../../lib/constants";
+import { CIRCUIT_SOURCE, CURVE_ORACLE_MAX_STALENESS_SEC, DEX_FRESHNESS_SEC, POOL_CHALLENGE_MIN_TVL, getDepegThresholdBps } from "../../lib/constants";
 import { CG_TICKER_COINS, fetchCgTickerPricesDetailed } from "../../lib/cg-ticker";
-import { fetchWithRetry } from "../../lib/fetch-retry";
-import { cgUrl, cgHeaders } from "../../lib/coingecko";
+import { fetchCoingeckoSimplePrices } from "../../lib/coingecko-simple-price";
 import { shouldAttemptFetch, recordOutcome, recoverBreakerOnNoCandidate } from "../../lib/circuit-breaker";
 import { throwIfAborted } from "../../lib/abort";
 import { fetchPythPrices } from "../../lib/pyth";
@@ -47,11 +46,6 @@ import {
 import { aggregateProtocolPrices, computeWeightedMedianPrice } from "../../lib/dex-price-estimators";
 import type { PeggedAsset } from "./enrich-prices-shared";
 
-interface CoinGeckoSimplePriceValue {
-  usd?: number;
-  last_updated_at?: number;
-}
-
 export interface PrimaryPriceResult {
   price: number;
   source: string;
@@ -80,7 +74,6 @@ export interface PriceValidationStats {
 }
 
 const INVALID_GECKO_ID_SENTINEL = "wrong";
-const PRIMARY_CG_BATCH_SIZE = 250;
 
 function isUsableGeckoId(geckoId: unknown): geckoId is string {
   return typeof geckoId === "string" && geckoId.length > 0 && !geckoId.includes(INVALID_GECKO_ID_SENTINEL);
@@ -183,7 +176,6 @@ interface PrimaryPricePlan {
   dexRows: Awaited<ReturnType<typeof loadDexPriceRows>>;
   dexPriceSources: Awaited<ReturnType<typeof loadDexPriceSources>>;
   geckoIds: string[];
-  coingeckoMaxTrustedAgeSec: number;
   pythFeedIds: Map<string, string>;
   coinbaseSymbols: string[];
   krakenSymbols: string[];
@@ -267,7 +259,6 @@ async function buildPrimaryPricePlan(
       dexRows,
       dexPriceSources,
       geckoIds: [],
-      coingeckoMaxTrustedAgeSec: getPricingSourceRegistryEntry("coingecko")?.maxTrustedAgeSec ?? 15 * 60,
       pythFeedIds: new Map(),
       coinbaseSymbols: [],
       krakenSymbols: [],
@@ -335,7 +326,6 @@ async function buildPrimaryPricePlan(
   const krakenSymbols = candidateSymbolsUpper.filter((s) => krakenKnownSet.has(s));
   const shouldFetchBitstamp = candidateSymbolsUpper.some((symbol) => bitstampKnownSet.has(symbol));
   const redstoneSymbols = [...new Set(candidates.map((a) => a.symbol).filter((symbol) => redstoneSymbolSet.has(symbol)))];
-  const coingeckoMaxTrustedAgeSec = getPricingSourceRegistryEntry("coingecko")?.maxTrustedAgeSec ?? 15 * 60;
 
   return {
     candidates,
@@ -344,7 +334,6 @@ async function buildPrimaryPricePlan(
     dexRows,
     dexPriceSources,
     geckoIds,
-    coingeckoMaxTrustedAgeSec,
     pythFeedIds,
     coinbaseSymbols,
     krakenSymbols,
@@ -523,7 +512,6 @@ export async function fetchPrimaryPrices(
     dexRows,
     dexPriceSources,
     geckoIds,
-    coingeckoMaxTrustedAgeSec,
     pythFeedIds,
     coinbaseSymbols,
     krakenSymbols,
@@ -554,66 +542,37 @@ export async function fetchPrimaryPrices(
   const bitstampObservedAtBySymbol = new Map<string, number>();
   const coinbaseObservedAtBySymbol = new Map<string, number>();
   let curveOracleObservedAt: number | null = null;
-  let staleCgPriceRows = 0;
   const providerDiagnostics: PricingProviderAttemptDiagnostic[] = [];
 
   const fetches: Promise<void>[] = [];
 
   if (sourceAllowed.cg) {
     fetches.push(
-      (async () => {
-        try {
-          let hadBatchFailure = false;
-          for (let i = 0; i < geckoIds.length; i += PRIMARY_CG_BATCH_SIZE) {
-            throwIfAborted(signal);
-            const batch = geckoIds.slice(i, i + PRIMARY_CG_BATCH_SIZE);
-            const ids = batch.join(",");
-            const res = await fetchWithRetry(
-              cgUrl(`/simple/price?ids=${ids}&vs_currencies=usd&include_last_updated_at=true`, coingeckoApiKey ?? null),
-              {
-                headers: cgHeaders({ Accept: "application/json", "User-Agent": USER_AGENT }, coingeckoApiKey ?? null),
-                signal,
-              },
-            );
-            if (res?.ok) {
-              const data = (await res.json()) as Record<string, CoinGeckoSimplePriceValue>;
-              for (const [gId, val] of Object.entries(data)) {
-                if (val?.usd != null && val.usd > 0) {
-                  const upstreamObservedAt =
-                    typeof val.last_updated_at === "number" &&
-                    Number.isFinite(val.last_updated_at) &&
-                    val.last_updated_at > 0
-                      ? val.last_updated_at
-                      : null;
-                  if (
-                    upstreamObservedAt != null &&
-                    nowSec - upstreamObservedAt > coingeckoMaxTrustedAgeSec
-                  ) {
-                    staleCgPriceRows++;
-                    continue;
-                  }
-                  cgPrices.set(gId, val.usd);
-                  if (upstreamObservedAt != null) {
-                    cgObservedAtByGeckoId.set(gId, upstreamObservedAt);
-                    cgObservedAtModeByGeckoId.set(gId, "upstream");
-                  }
-                }
-              }
-              if (Object.keys(data).length > 0) {
-                cgObservedAt = Math.floor(Date.now() / 1000);
-              }
-            } else {
-              hadBatchFailure = true;
-              console.warn(`[primary-prices] CG price API returned ${res?.status ?? "no response"}`);
+      runPrimaryProviderFetch(
+        db,
+        signal,
+        CIRCUIT_SOURCE.CG_PRICES,
+        "CG price API",
+        async () => {
+          const outcome = await fetchCoingeckoSimplePrices(
+            geckoIds,
+            coingeckoApiKey ?? null,
+            signal,
+            nowSec,
+          );
+          for (const [gId, entry] of outcome.value) {
+            cgPrices.set(gId, entry.price);
+            if (entry.observedAt != null && entry.observedAtMode != null) {
+              cgObservedAtByGeckoId.set(gId, entry.observedAt);
+              cgObservedAtModeByGeckoId.set(gId, entry.observedAtMode);
             }
           }
-          await recordOutcome(db, CIRCUIT_SOURCE.CG_PRICES, !hadBatchFailure);
-        } catch (err) {
-          if (signal?.aborted) throw err instanceof Error ? err : new Error(String(err));
-          console.warn("[primary-prices] CG price API failed:", err);
-          await recordOutcome(db, CIRCUIT_SOURCE.CG_PRICES, false);
-        }
-      })(),
+          if (outcome.value.size > 0) {
+            cgObservedAt = Math.floor(Date.now() / 1000);
+          }
+          return isSuccessfulOutcome(outcome);
+        },
+      ),
     );
   }
 
@@ -795,11 +754,6 @@ export async function fetchPrimaryPrices(
 
   await Promise.all(fetches);
   throwIfAborted(signal);
-  if (staleCgPriceRows > 0) {
-    console.warn(
-      `[primary-prices] Dropped ${staleCgPriceRows} stale CoinGecko simple-price row(s) older than ${coingeckoMaxTrustedAgeSec}s`,
-    );
-  }
 
   buildPrimaryConsensusResults({
     candidates,
