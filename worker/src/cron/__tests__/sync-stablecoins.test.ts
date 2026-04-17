@@ -1757,6 +1757,62 @@ describe("syncStablecoins", () => {
     expect(normalized?.price).not.toBe(0.999);
   });
 
+  it("drops cached-replay price when source's maxTrustedAgeSec window elapsed even if within 6h global TTL", async () => {
+    const dlData = makeDlResponse(60);
+    dlData.peggedAssets[0] = {
+      ...dlData.peggedAssets[0],
+      id: "usdt-tether",
+      name: "Tether",
+      symbol: "USDT",
+      geckoId: "tether",
+      price: 0,
+      priceConfidence: null,
+      circulating: { peggedUSD: 100_000_000 },
+    } as unknown as (typeof dlData.peggedAssets)[0];
+
+    const nowSec = Math.floor(Date.now() / 1000);
+    const db = mockD1([
+      {
+        match: "SELECT asset_id, price, updated_at, source, confidence, observed_at, observed_at_mode, synced_at, agree_sources_json, consensus_sources_json FROM price_cache",
+        rows: [{
+          asset_id: "usdt-tether",
+          price: 0.999,
+          updated_at: nowSec - 1_800,
+          source: "coingecko",
+          confidence: "high",
+          observed_at: nowSec - 1_800,
+          observed_at_mode: "upstream",
+          synced_at: nowSec - 1_800,
+          agree_sources_json: "[\"coingecko\"]",
+          consensus_sources_json: "[\"coingecko\"]",
+        }],
+      },
+      { match: "cache", rows: [] },
+      { match: "supply_history", rows: [] },
+      { match: "circuit", rows: [] },
+      { match: "price_cache", rows: [] },
+    ]);
+
+    const validateSpy = vi.spyOn(apiUtils, "validatePayloadWithSchema");
+
+    mockFetch([
+      { match: "api.coingecko.com", body: {} },
+      { match: "stablecoins.llama.fi", body: dlData },
+      { match: "coins.llama.fi/prices", body: { coins: {} } },
+    ]);
+
+    const result = await syncStablecoins(db);
+
+    expect(result.itemCount).toBe(60);
+    const finalValidationCall = validateSpy.mock.calls.find(
+      (call) => call[2] === "sync-stablecoins:stablecoins",
+    );
+    const payload = finalValidationCall?.[1] as { peggedAssets: Array<Record<string, unknown>> } | undefined;
+    const normalized = payload?.peggedAssets.find((a) => a.id === "usdt-tether");
+    expect(normalized?.priceSource).not.toBe("cached");
+    expect(normalized?.price).not.toBe(0.999);
+  });
+
   it("allows deep downside prices in sync-time primary validation when FX cache is stale", async () => {
     const nowSec = Math.floor(Date.now() / 1000);
     const db = mockD1([

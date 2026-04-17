@@ -43,6 +43,7 @@ import {
 } from "./shared";
 import {
   countDepegAuthoritativeSources,
+  getPriceCacheMaxAgeSec,
   isReplaySafePriceSource,
   isSingleSourceDepegAuthoritative,
 } from "../../lib/pricing-source-policy";
@@ -325,7 +326,9 @@ export async function runPostEnrichmentPricePipeline(
     const priceCache = await getPriceCache(db);
     for (const asset of stillMissing) {
       const cached = priceCache.get(asset.id);
-      if (!cached || (now - cached.updatedAt) >= PRICE_CACHE_TTL) continue;
+      if (!cached) continue;
+      const maxAgeSec = getPriceCacheMaxAgeSec(cached.source, PRICE_CACHE_TTL);
+      if (now - cached.updatedAt >= maxAgeSec) continue;
       const cachedAgreeSources =
         cached.agreeSources && cached.agreeSources.length > 0
           ? cached.agreeSources
