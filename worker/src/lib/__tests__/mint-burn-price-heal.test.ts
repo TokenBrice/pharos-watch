@@ -52,8 +52,8 @@ describe("healNullPrices", () => {
     const db = mockDb(events);
     vi.mocked(getPriceCache).mockResolvedValueOnce(
       new Map([
-        ["usdc-circle", { price: 1.0, updatedAt: NOW }],
-        ["usdt-tether", { price: 0.999, updatedAt: NOW }],
+        ["usdc-circle", { price: 1.0, updatedAt: NOW, source: "binance" }],
+        ["usdt-tether", { price: 0.999, updatedAt: NOW, source: "binance" }],
       ]),
     );
     vi.mocked(batchExecute).mockResolvedValueOnce(2);
@@ -83,12 +83,35 @@ describe("healNullPrices", () => {
     ];
     const db = mockDb(events);
     vi.mocked(getPriceCache).mockResolvedValueOnce(
-      new Map([["usdc-circle", { price: 1.0, updatedAt: NOW }]]),
+      new Map([["usdc-circle", { price: 1.0, updatedAt: NOW, source: "binance" }]]),
     );
     vi.mocked(batchExecute).mockResolvedValueOnce(3);
 
     const result = await healNullPrices(db, NOW);
     expect(result.affectedHours.size).toBe(2);
+  });
+
+  it("skips heal when cached price source is not replay-safe", async () => {
+    const events = [
+      { id: "evt1", stablecoin_id: "usdc", chain_id: "ethereum", amount: 100, timestamp: NOW - 100 },
+    ];
+    const db = mockDb(events);
+    vi.mocked(getPriceCache).mockResolvedValueOnce(
+      new Map([
+        [
+          "usdc",
+          {
+            price: 1.01,
+            updatedAt: NOW - 200,
+            source: "coingecko-native-implied",
+          },
+        ],
+      ]),
+    );
+
+    const result = await healNullPrices(db, NOW);
+    expect(result.healed).toBe(0);
+    expect(batchExecute).not.toHaveBeenCalled();
   });
 
   it("queries recent NULL-price events in deterministic newest-first order", async () => {

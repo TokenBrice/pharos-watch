@@ -1,5 +1,6 @@
 import { batchExecute } from "../db";
 import { getPriceCache } from "../db-cache";
+import { isReplaySafePriceSource } from "../pricing-source-policy";
 import type { MintBurnAffectedHour } from "./types";
 
 const LOOKBACK_SEC = 48 * 3600; // 48 hours
@@ -66,8 +67,14 @@ export async function healNullPrices(
   // Load all prices via existing helper (reads price_cache table keyed by asset_id)
   const prices = await getPriceCache(db);
 
-  // Filter to events where we have a price
-  const healable = nullEvents.filter((event) => prices.has(event.stablecoin_id));
+  // Filter to events where we have a replay-safe cached price.
+  // Defense-in-depth: post-enrichment already filters the writer, but if that
+  // ever regresses the heal path refuses non-replay-safe rows.
+  const healable = nullEvents.filter((event) => {
+    const cached = prices.get(event.stablecoin_id);
+    if (!cached) return false;
+    return isReplaySafePriceSource(cached.source ?? null);
+  });
   if (healable.length === 0) {
     return { healed: 0, affectedHours: new Map() };
   }
