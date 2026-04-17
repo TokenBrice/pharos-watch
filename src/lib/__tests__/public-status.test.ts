@@ -6,6 +6,7 @@ import {
 } from "@shared/lib/public-health";
 import {
   getImpactedPublicSurfaces,
+  getPublicDivergenceNotice,
   getPublicMintBurnStatus,
   getPublicWorstCacheSummary,
 } from "@/lib/status/public-status";
@@ -124,5 +125,21 @@ describe("public status helpers", () => {
       "live-reserves:ousg-ondo": circuit,
       "live-reserves:mtbill-midas": circuit,
     })).toBe(0);
+  });
+});
+
+describe("getPublicDivergenceNotice", () => {
+  it("in-sync when equal", () => {
+    expect(getPublicDivergenceNotice("healthy", "healthy").kind).toBe("in-sync");
+    expect(getPublicDivergenceNotice("degraded", "degraded").kind).toBe("in-sync");
+  });
+  it("health-degraded-probes-ok when health > probes and probes healthy", () => {
+    expect(getPublicDivergenceNotice("degraded", "healthy").kind).toBe("health-degraded-probes-ok");
+  });
+  it("probes-degraded-health-ok in the inverse", () => {
+    expect(getPublicDivergenceNotice("healthy", "degraded").kind).toBe("probes-degraded-health-ok");
+  });
+  it("both-degraded-different-severity when both degraded but different", () => {
+    expect(getPublicDivergenceNotice("degraded", "stale").kind).toBe("both-degraded-different-severity");
   });
 });

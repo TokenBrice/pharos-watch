@@ -81,6 +81,38 @@ export function getPublicWorstCacheSummary(
   return { ratio, status, impactedCount };
 }
 
+export type PublicDivergenceNotice =
+  | { kind: "in-sync" }
+  | { kind: "health-degraded-probes-ok"; detail: string }
+  | { kind: "probes-degraded-health-ok"; detail: string }
+  | { kind: "both-degraded-different-severity"; detail: string };
+
+export function getPublicDivergenceNotice(
+  healthStatus: "healthy" | "degraded" | "stale",
+  probeStatus: "healthy" | "degraded" | "stale",
+): PublicDivergenceNotice {
+  const SEV = { healthy: 0, degraded: 1, stale: 2 } as const;
+  const h = SEV[healthStatus];
+  const p = SEV[probeStatus];
+  if (h === p) return { kind: "in-sync" };
+  if (h > 0 && p === 0) {
+    return {
+      kind: "health-degraded-probes-ok",
+      detail: `Health endpoint reports ${healthStatus}, but browser probes are green. A data-quality or ingestion issue likely, not an API outage.`,
+    };
+  }
+  if (p > 0 && h === 0) {
+    return {
+      kind: "probes-degraded-health-ok",
+      detail: `Browser probes report ${probeStatus}, but health endpoint is green. Your network path may be the issue; refresh or try another network.`,
+    };
+  }
+  return {
+    kind: "both-degraded-different-severity",
+    detail: `Health: ${healthStatus}. Probes: ${probeStatus}.`,
+  };
+}
+
 export function getImpactedPublicSurfaces(
   healthData: HealthResponse,
 ): PublicImpactedSurface[] {
