@@ -196,25 +196,47 @@ const VALID_DAILY_EXTENDED = [
   "Safety scores stayed A for USDT and USDC, leaving the daily note with a dry but restrained read. Nothing in the fixture should force panic, but the digest still has enough numbers to produce a publishable editorial paragraph set today. Next session will decide whether the USDT deviation widens; if it crosses 200 bps, the impact score moves the depeg from supporting context to lead.",
 ].join("\n\n");
 
-const ANTHROPIC_OK_RESPONSE = {
-  content: [
-    {
-      type: "text",
-      text: JSON.stringify({
-        title: "Calm Drift",
-        extended: VALID_DAILY_EXTENDED,
-        text: "USDT's fixture depeg outranked supply noise while PSI stayed at 91.2 BEDROCK.",
-        meta: {
-          leadSignalId: "depeg:usdt-tether:active",
-          lead: "depeg",
-          tone: "dry",
-          coins: ["USDT", "USDC"],
-          usedCandidateIds: ["depeg:usdt-tether:active"],
-        },
-      }),
+const ANTHROPIC_OK_TEXT = JSON.stringify({
+  title: "Calm Drift",
+  extended: VALID_DAILY_EXTENDED,
+  text: "USDT's fixture depeg outranked supply noise while PSI stayed at 91.2 BEDROCK.",
+  meta: {
+    leadSignalId: "depeg:usdt-tether:active",
+    lead: "depeg",
+    tone: "dry",
+    coins: ["USDT", "USDC"],
+    usedCandidateIds: ["depeg:usdt-tether:active"],
+  },
+});
+
+/**
+ * Build a canonical Anthropic SSE streaming Response body for `text` as a
+ * single text-delta. Matches what Anthropic actually emits when we set
+ * `stream: true` on the /v1/messages call. Used to mock fetchWithRetry
+ * responses in tests, since the production path now calls
+ * `accumulateAnthropicStream` on the response body rather than `response.json()`.
+ */
+function mockAnthropicStreamResponse(text: string): Response {
+  const events: Array<{ event: string; data: unknown }> = [
+    { event: "message_start", data: { type: "message_start", message: { id: "msg_test", role: "assistant", content: [] } } },
+    { event: "content_block_start", data: { type: "content_block_start", index: 0, content_block: { type: "text", text: "" } } },
+    { event: "content_block_delta", data: { type: "content_block_delta", index: 0, delta: { type: "text_delta", text } } },
+    { event: "content_block_stop", data: { type: "content_block_stop", index: 0 } },
+    { event: "message_delta", data: { type: "message_delta", delta: { stop_reason: "end_turn", stop_sequence: null } } },
+    { event: "message_stop", data: { type: "message_stop" } },
+  ];
+  const encoded = events
+    .map((ev) => `event: ${ev.event}\ndata: ${JSON.stringify(ev.data)}\n\n`)
+    .join("");
+  const encoder = new TextEncoder();
+  const stream = new ReadableStream<Uint8Array>({
+    start(controller) {
+      controller.enqueue(encoder.encode(encoded));
+      controller.close();
     },
-  ],
-};
+  });
+  return new Response(stream, { status: 200, headers: { "Content-Type": "text/event-stream" } });
+}
 
 const commitTelegramAppendices = vi.fn(async () => undefined);
 const rollbackTelegramAppendices = vi.fn(async () => undefined);
@@ -348,10 +370,7 @@ describe("generateDailyDigest", () => {
     });
 
     vi.mocked(fetchWithRetry).mockReset().mockImplementation(async () =>
-      new Response(JSON.stringify(ANTHROPIC_OK_RESPONSE), {
-        status: 200,
-        headers: { "Content-Type": "application/json" },
-      })
+      mockAnthropicStreamResponse(ANTHROPIC_OK_TEXT),
     );
 
     vi.mocked(postDigestTweet).mockReset().mockResolvedValue(undefined);
@@ -443,11 +462,14 @@ describe("generateDailyDigest", () => {
       output_config?: { effort: string };
       system: string;
       messages: { content: string }[];
+      stream?: boolean;
     };
     expect(anthropicBody.model).toBe("claude-opus-4-7");
     expect(anthropicBody.thinking).toEqual({ type: "adaptive" });
     expect(anthropicBody.output_config).toEqual({ effort: "max" });
     expect(anthropicBody.max_tokens).toBe(16000);
+    // Streaming keeps the CF subrequest alive while Opus 4.7 thinks for minutes.
+    expect(anthropicBody.stream).toBe(true);
     expect(anthropicBody.messages[0].content).toContain("Data quality notes:");
     expect(anthropicBody.messages[0].content).toContain("Editorial Candidates");
 
@@ -469,14 +491,7 @@ describe("generateDailyDigest", () => {
     const malformed = "```json\n{\"title\":\"Broken\", \"text\":\n```";
     const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
 
-    vi.mocked(fetchWithRetry).mockResolvedValueOnce(
-      new Response(
-        JSON.stringify({
-          content: [{ type: "text", text: malformed }],
-        }),
-        { status: 200, headers: { "Content-Type": "application/json" } },
-      ),
-    );
+    vi.mocked(fetchWithRetry).mockResolvedValueOnce(mockAnthropicStreamResponse(malformed));
 
     const db = mockD1(makeBaseTables());
     const result = await generateDailyDigest(db, "anthropic-key");
@@ -501,10 +516,7 @@ describe("generateDailyDigest", () => {
     // trigger a corrective retry via the raw-text-fallback quality issue.
     vi.mocked(fetchWithRetry).mockImplementationOnce(async () => {
       vi.setSystemTime(new Date(Date.now() + CORRECTIVE_RETRY_THRESHOLD_MS + 30_000));
-      return new Response(
-        JSON.stringify({ content: [{ type: "text", text: malformed }] }),
-        { status: 200, headers: { "Content-Type": "application/json" } },
-      );
+      return mockAnthropicStreamResponse(malformed);
     });
 
     const db = mockD1(makeBaseTables());
@@ -825,9 +837,7 @@ describe("generateDailyDigest", () => {
       }],
     };
 
-    vi.mocked(fetchWithRetry).mockResolvedValueOnce(
-      new Response(JSON.stringify(responseWithMeta), { status: 200, headers: { "Content-Type": "application/json" } }),
-    );
+    vi.mocked(fetchWithRetry).mockResolvedValueOnce(mockAnthropicStreamResponse(responseWithMeta.content[0].text));
 
     const db = mockD1(makeBaseTables());
     const result = await generateDailyDigest(db, "anthropic-key");
@@ -1200,7 +1210,7 @@ describe("totalMcapAth enrichment", () => {
       grades: [{ id: "usdt-tether", symbol: "USDT", grade: "A", score: 88, pegScore: 95, liqScore: 90 }],
     });
     vi.mocked(fetchWithRetry).mockImplementation(async () =>
-      new Response(JSON.stringify(ANTHROPIC_OK_RESPONSE), { status: 200, headers: { "Content-Type": "application/json" } })
+      mockAnthropicStreamResponse(ANTHROPIC_OK_TEXT)
     );
     vi.mocked(shouldAttemptFetch).mockResolvedValue(true);
 

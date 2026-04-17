@@ -32,25 +32,45 @@ function weeklyClaudeResponse(overrides: Partial<{
   extended: string;
   meta: Record<string, unknown>;
 }> = {}): Response {
-  return new Response(JSON.stringify({
-    content: [
-      {
-        type: "text",
-        text: JSON.stringify({
-          title: overrides.title ?? "Weekly Calm",
-          text: overrides.text ?? "PSI softened by 4 points while USDT stayed near peg and blacklist activity kept tapping the glass.",
-          extended: overrides.extended ?? VALID_WEEKLY_EXTENDED,
-          meta: overrides.meta ?? {
-            leadSignalId: "weekly:psi",
-            lead: "psi-regime",
-            tone: "dry",
-            coins: ["USDT", "USDC"],
-            usedCandidateIds: ["weekly:psi"],
-          },
-        }),
-      },
-    ],
-  }), { status: 200 });
+  const text = JSON.stringify({
+    title: overrides.title ?? "Weekly Calm",
+    text: overrides.text ?? "PSI softened by 4 points while USDT stayed near peg and blacklist activity kept tapping the glass.",
+    extended: overrides.extended ?? VALID_WEEKLY_EXTENDED,
+    meta: overrides.meta ?? {
+      leadSignalId: "weekly:psi",
+      lead: "psi-regime",
+      tone: "dry",
+      coins: ["USDT", "USDC"],
+      usedCandidateIds: ["weekly:psi"],
+    },
+  });
+  return mockAnthropicStreamResponse(text);
+}
+
+/**
+ * Build an Anthropic SSE streaming Response body for `text`, matching the
+ * production `stream: true` path in `requestDigestCopy`.
+ */
+function mockAnthropicStreamResponse(text: string): Response {
+  const events: Array<{ event: string; data: unknown }> = [
+    { event: "message_start", data: { type: "message_start", message: { id: "msg_test", role: "assistant", content: [] } } },
+    { event: "content_block_start", data: { type: "content_block_start", index: 0, content_block: { type: "text", text: "" } } },
+    { event: "content_block_delta", data: { type: "content_block_delta", index: 0, delta: { type: "text_delta", text } } },
+    { event: "content_block_stop", data: { type: "content_block_stop", index: 0 } },
+    { event: "message_delta", data: { type: "message_delta", delta: { stop_reason: "end_turn", stop_sequence: null } } },
+    { event: "message_stop", data: { type: "message_stop" } },
+  ];
+  const encoded = events
+    .map((ev) => `event: ${ev.event}\ndata: ${JSON.stringify(ev.data)}\n\n`)
+    .join("");
+  const encoder = new TextEncoder();
+  const stream = new ReadableStream<Uint8Array>({
+    start(controller) {
+      controller.enqueue(encoder.encode(encoded));
+      controller.close();
+    },
+  });
+  return new Response(stream, { status: 200, headers: { "Content-Type": "text/event-stream" } });
 }
 
 function buildDailyRows() {
@@ -184,14 +204,9 @@ describe("generateWeeklyRecap", () => {
   it("repairs non-JSON weekly output with a corrective retry", async () => {
     const db = mockD1(makeTables(), { requireMatch: true });
     vi.mocked(fetchWithRetry).mockResolvedValueOnce(
-      new Response(JSON.stringify({
-        content: [
-          {
-            type: "text",
-            text: "USDT stayed at 1.00 all week, blacklist pressure faded, and weekly flows stayed calm.",
-          },
-        ],
-      }), { status: 200 }),
+      mockAnthropicStreamResponse(
+        "USDT stayed at 1.00 all week, blacklist pressure faded, and weekly flows stayed calm.",
+      ),
     );
     vi.mocked(fetchWithRetry).mockImplementation(async () => weeklyClaudeResponse());
 

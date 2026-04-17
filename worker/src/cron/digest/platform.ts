@@ -12,6 +12,7 @@ import {
   parseDigestModelResponse,
   validateDigestModelOutput,
 } from "../daily-digest/response";
+import { accumulateAnthropicStream } from "./anthropic-stream";
 
 interface RequestDigestCopyOptions {
   db: D1Database;
@@ -102,6 +103,7 @@ export async function requestDigestCopy(
         "Content-Type": "application/json",
         "x-api-key": options.anthropicApiKey,
         "anthropic-version": "2023-06-01",
+        "Accept": "text/event-stream",
       },
       body: JSON.stringify({
         model: "claude-opus-4-7",
@@ -110,6 +112,12 @@ export async function requestDigestCopy(
         output_config: { effort: "max" },
         system: options.systemPrompt,
         messages: [{ role: "user", content: userPrompt }],
+        // Streaming is required on Cloudflare Workers: Opus 4.7 with adaptive
+        // thinking + max effort can think for minutes before emitting the
+        // first byte of a non-streaming response, and CF severs the subrequest
+        // after ~130s of inactivity. Streaming flushes headers + ping events
+        // immediately, keeping the subrequest alive.
+        stream: true,
       }),
       // Outer AbortSignal.timeout(ANTHROPIC_TIMEOUT_MS) is the binding cap for
       // total wall time across any retries; the inner fetch-retry timeoutMs is
@@ -129,15 +137,17 @@ export async function requestDigestCopy(
         `Claude API error ${response?.status ?? "null"}: ${typeof errorText === "string" ? errorText.slice(0, 500) : errorText}`,
       );
     }
-    await recordOutcomeSafe(options.db, CIRCUIT_SOURCE.ANTHROPIC, true);
 
-    const result = (await response.json()) as {
-      content?: { type: string; text: string }[];
-    };
-    const rawText = result.content?.[0]?.text ?? "";
-    if (!rawText) {
-      throw new Error("Claude API returned empty digest text");
+    // Record circuit-breaker outcome AFTER the stream resolves (success or
+    // failure), so a stream that errors mid-flight is counted as a failure.
+    let rawText: string;
+    try {
+      rawText = await accumulateAnthropicStream(response);
+    } catch (streamErr) {
+      await recordOutcomeSafe(options.db, CIRCUIT_SOURCE.ANTHROPIC, false);
+      throw streamErr;
     }
+    await recordOutcomeSafe(options.db, CIRCUIT_SOURCE.ANTHROPIC, true);
     return rawText;
   };
 
