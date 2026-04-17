@@ -235,12 +235,6 @@ export async function fetchBinancePricesDetailed(
   return { kind: "upstream-error", value: { prices: emptyPrices, diagnostics }, reason };
 }
 
-export async function fetchBinancePrices(
-  signal?: AbortSignal,
-): Promise<Map<string, number>> {
-  return (await fetchBinancePricesDetailed(signal)).value.prices;
-}
-
 export async function fetchKrakenPrices(
   symbols: string[],
   signal?: AbortSignal,
@@ -349,7 +343,7 @@ export async function fetchCoinbasePrices(
   let transportFailures = 0;
   let transportAttempts = 0;
 
-  for (const product of requestedProducts) {
+  await Promise.all(requestedProducts.map(async (product) => {
     transportAttempts++;
     try {
       const response = await fetchWithRetry(
@@ -364,7 +358,7 @@ export async function fetchCoinbasePrices(
       if (!response?.ok) {
         await cancelResponseBodyQuietly(response);
         transportFailures++;
-        continue;
+        return;
       }
 
       const payload = await response.json() as { bid?: string; ask?: string; price?: string; time?: string };
@@ -384,7 +378,7 @@ export async function fetchCoinbasePrices(
       console.warn(`[cex-coinbase] ${product.productId} fetch failed:`, err);
       transportFailures++;
     }
-  }
+  }));
 
   if (transportAttempts > 0 && transportFailures === transportAttempts) {
     return { kind: "upstream-error", value, reason: "all Coinbase product requests failed" };
@@ -392,5 +386,5 @@ export async function fetchCoinbasePrices(
   if (prices.size === 0) {
     return { kind: "no-data", value };
   }
-  return { kind: "ok", value, partial: transportFailures > 0 };
+  return { kind: "ok", value };
 }

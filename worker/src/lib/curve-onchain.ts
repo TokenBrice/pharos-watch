@@ -11,7 +11,7 @@
  * chain registry resolution and fallback RPCs.
  */
 
-import { fetchEvmBlockNumber, fetchEvmBlockTimestamp, fetchEvmCallHexAtBlock } from "./evm-rpc";
+import { fetchEvmBlockNumber, fetchEvmBlockTimestamp, fetchEvmCallHexAtBlock, fetchEvmUint256AtBlock } from "./evm-rpc";
 import type { ChainRpcConfig } from "./chain-registry";
 import type { FetcherOutcome } from "./fetcher-result";
 import { CURVE_ORACLE_MAX_STALENESS_SEC } from "./constants";
@@ -39,9 +39,9 @@ const GET_DY_UNDERLYING_SELECTOR = "0x07211ef7";
  * Fetch implied prices via Curve get_dy for a batch of pool configurations.
  * Uses fetchEvmCallHexAtBlock which resolves RPC URLs via chain-registry.ts.
  *
- * Two-phase processing:
- * Phase 1: Execute all RPC calls, store raw implied prices
- * Phase 2: Resolve hop dependencies, build final results
+ * Block number + timestamp are fetched once per distinct chain and all
+ * get_dy calls are pinned to that block, then hop dependencies are resolved
+ * in a second pass and the block timestamp is surfaced as upstream observedAt.
  */
 export interface CurveOnchainBatch {
   prices: Map<string, number>;
@@ -68,36 +68,35 @@ export async function fetchCurveOnchainPrices(
     observedAtByCoinId: new Map<string, number>(),
   };
 
-  // Phase 0: resolve block number + timestamp per distinct chain so calls are
-  // pinned to a single block and callers can enforce upstream freshness.
+  // Phase 0: resolve block number + timestamp per distinct chain in parallel
+  // so calls are pinned to a single block and callers can enforce upstream freshness.
   const chains = Array.from(new Set(configs.map((c) => c.chain)));
   const blockByChain = new Map<string, { blockNumber: number; blockTimestamp: number }>();
   const nowSec = Math.floor(Date.now() / 1000);
-  for (const chain of chains) {
-    const blockNumber = await fetchEvmBlockNumber(chain, { chainRpcs, signal });
-    if (blockNumber == null) {
+  type ChainResolution =
+    | { chain: string; blockNumber: number; blockTimestamp: number }
+    | { chain: string; error: string };
+  const chainResolutions: ChainResolution[] = await Promise.all(
+    chains.map(async (chain): Promise<ChainResolution> => {
+      const blockNumber = await fetchEvmBlockNumber(chain, { chainRpcs, signal });
+      if (blockNumber == null) return { chain, error: `eth_blockNumber unavailable for ${chain}` };
+      const blockTimestamp = await fetchEvmBlockTimestamp(chain, blockNumber, { chainRpcs, signal });
+      if (blockTimestamp == null) return { chain, error: `eth_getBlockByNumber timestamp unavailable for ${chain}` };
+      return { chain, blockNumber, blockTimestamp };
+    }),
+  );
+  for (const entry of chainResolutions) {
+    if ("error" in entry) {
+      return { kind: "upstream-error", value: emptyBatch, reason: entry.error };
+    }
+    if (nowSec - entry.blockTimestamp > CURVE_ORACLE_MAX_STALENESS_SEC) {
       return {
         kind: "upstream-error",
         value: emptyBatch,
-        reason: `eth_blockNumber unavailable for ${chain}`,
+        reason: `stale block on ${entry.chain}: ${nowSec - entry.blockTimestamp}s > ${CURVE_ORACLE_MAX_STALENESS_SEC}s`,
       };
     }
-    const blockTimestamp = await fetchEvmBlockTimestamp(chain, blockNumber, { chainRpcs, signal });
-    if (blockTimestamp == null) {
-      return {
-        kind: "upstream-error",
-        value: emptyBatch,
-        reason: `eth_getBlockByNumber unavailable for ${chain}`,
-      };
-    }
-    if (nowSec - blockTimestamp > CURVE_ORACLE_MAX_STALENESS_SEC) {
-      return {
-        kind: "upstream-error",
-        value: emptyBatch,
-        reason: `stale block on ${chain}: ${nowSec - blockTimestamp}s > ${CURVE_ORACLE_MAX_STALENESS_SEC}s`,
-      };
-    }
-    blockByChain.set(chain, { blockNumber, blockTimestamp });
+    blockByChain.set(entry.chain, { blockNumber: entry.blockNumber, blockTimestamp: entry.blockTimestamp });
   }
 
   // Phase 1: Execute all RPC calls at the pinned block, store raw implied prices
@@ -175,7 +174,7 @@ export async function fetchCurveOnchainPrices(
   if (prices.size === 0) {
     return { kind: "no-data", value };
   }
-  return { kind: "ok", value, partial: rpcThrows > 0 };
+  return { kind: "ok", value };
 }
 
 function encodeGetDy(selector: string, i: number, j: number, dx: bigint): string {
@@ -203,13 +202,12 @@ export async function fetchCurveOracleEma(
 ): Promise<{ price: number; blockNumber: number; blockTimestamp: number } | null> {
   const blockNumber = await fetchEvmBlockNumber(chainId, { chainRpcs, signal });
   if (blockNumber == null) return null;
-  const [callHex, blockTimestamp] = await Promise.all([
-    fetchEvmCallHexAtBlock(chainId, aggregator, selector, blockNumber, { chainRpcs, signal }),
+  const [raw, blockTimestamp] = await Promise.all([
+    fetchEvmUint256AtBlock(chainId, aggregator, selector, blockNumber, { chainRpcs, signal }),
     fetchEvmBlockTimestamp(chainId, blockNumber, { chainRpcs, signal }),
   ]);
-  if (!callHex || blockTimestamp == null) return null;
-  const word = callHex.startsWith("0x") ? callHex.slice(0, 66) : "0x" + callHex.slice(0, 64);
-  const price = Number(BigInt(word)) / 1e18;
+  if (raw == null || blockTimestamp == null) return null;
+  const price = Number(raw) / 1e18;
   if (!Number.isFinite(price) || price <= 0 || price >= 10) return null;
   return { price, blockNumber, blockTimestamp };
 }

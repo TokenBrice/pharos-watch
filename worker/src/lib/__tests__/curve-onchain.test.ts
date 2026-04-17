@@ -238,9 +238,6 @@ describe("fetchCurveOnchainPrices", () => {
     ];
     const outcome = await fetchCurveOnchainPrices(configs);
     expect(outcome.kind).toBe("ok");
-    if (outcome.kind === "ok") {
-      expect(outcome.partial).toBe(true);
-    }
     expect(outcome.value.prices.size).toBe(1);
     expect(outcome.value.prices.get("usdt-tether")).toBeCloseTo(1.001, 3);
   });

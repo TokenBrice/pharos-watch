@@ -224,7 +224,7 @@ export async function fetchRedstonePrices(
   if (results.size === 0) {
     return { kind: "no-data", value: results };
   }
-  return { kind: "ok", value: results, partial: transportFailures > 0 };
+  return { kind: "ok", value: results };
 }
 
 function errorMessage(err: unknown): string {

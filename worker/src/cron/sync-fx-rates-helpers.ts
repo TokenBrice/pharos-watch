@@ -4,6 +4,22 @@ import { fetchRealtimeFxRates } from "../lib/fx-realtime";
 import { fetchChainlinkReferenceQuoteSnapshot, type ChainlinkReferenceQuote } from "../lib/chainlink-feeds";
 import type { ChainRpcConfig } from "../lib/chain-registry";
 import { shouldAttemptFetch, recordOutcome } from "../lib/circuit-breaker";
+import { getCache, setCache } from "../lib/db-cache";
+
+const CHAINLINK_FAILING_RUNS_CACHE_KEY = "chainlink:failing-runs";
+
+async function loadChainlinkFailingRuns(db: D1Database): Promise<Record<string, number> | undefined> {
+  const cached = await getCache(db, CHAINLINK_FAILING_RUNS_CACHE_KEY);
+  if (!cached) return undefined;
+  try {
+    const parsed = JSON.parse(cached.value);
+    return typeof parsed === "object" && parsed != null && !Array.isArray(parsed)
+      ? (parsed as Record<string, number>)
+      : undefined;
+  } catch {
+    return undefined;
+  }
+}
 import type { MetalsResolution } from "../lib/fx-metals";
 import type { FxRateSourceMode, FxRateState, FxRateSyncMode, FxRatesMeta, FxSourceCadence } from "../lib/fx-rate-state";
 import { getFxSourceStatus } from "../lib/fx-rate-state";
@@ -643,6 +659,8 @@ export async function runChainlinkOverlay(
     return "unavailable";
   }
 
+  const previousFailingRuns = await loadChainlinkFailingRuns(db);
+
   try {
     const snapshot = await fetchChainlinkReferenceQuoteSnapshot(
       signal,
@@ -650,10 +668,14 @@ export async function runChainlinkOverlay(
       state.syncStartSec,
       drpcApiKey,
       etherscanApiKey,
+      previousFailingRuns,
     );
     const applied = state.applyChainlinkQuotes(snapshot.quotes);
     await runBestEffort("recordOutcome:chainlink-feeds", async () => {
       await recordOutcome(db, CIRCUIT_SOURCE.CHAINLINK_FEEDS, snapshot.quotes.size > 0);
+    });
+    await runBestEffort("setCache:chainlink-failing-runs", async () => {
+      await setCache(db, CHAINLINK_FAILING_RUNS_CACHE_KEY, JSON.stringify(snapshot.failingRuns));
     });
     return snapshot.quotes.size > 0
       ? (applied === snapshot.quotes.size ? "ok" : "partial")

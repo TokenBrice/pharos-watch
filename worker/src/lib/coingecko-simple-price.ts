@@ -1,14 +1,3 @@
-/**
- * CoinGecko /simple/price batch fetcher for the primary pricing pass.
- *
- * Batches the geckoIds into PRIMARY_CG_BATCH_SIZE chunks, parses the
- * upstream last_updated_at into an observedAt + "upstream" mode, and drops
- * rows whose upstream timestamp exceeds the coingecko registry-level max
- * trusted age. Entries without an upstream timestamp are returned with
- * `observedAt = null`/`observedAtMode = null` so the caller can stamp its
- * own local-fetch fallback.
- */
-
 import type { PriceObservedAtMode } from "@shared/types/core";
 import { getPricingSourceRegistryEntry } from "@shared/lib/pricing-source-registry";
 import type { FetcherOutcome } from "./fetcher-result";

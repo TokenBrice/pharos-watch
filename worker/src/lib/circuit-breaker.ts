@@ -167,8 +167,8 @@ export async function recordOutcomeDecision(
 /**
  * When there are no candidates to probe and the breaker is non-closed,
  * record success so the breaker can transition toward closed on the next
- * read. Mirrors the pattern used in the Jupiter pass so sources whose
- * candidate set temporarily empties do not stay open forever.
+ * read. Prevents sources whose candidate set temporarily empties from
+ * staying open indefinitely.
  */
 export async function recoverBreakerOnNoCandidate(db: D1Database, source: string, webhookUrl?: string | null): Promise<void> {
   const record = await getCircuitRecord(db, source);

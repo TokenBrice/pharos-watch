@@ -15,7 +15,6 @@ import {
   COINBASE_KNOWN_SYMBOLS,
   KRAKEN_KNOWN_SYMBOLS,
   fetchBinancePricesDetailed,
-  fetchBinancePrices,
   fetchBitstampPrices,
   fetchCoinbasePrices,
   fetchKrakenPrices,
@@ -26,7 +25,7 @@ import coinbaseTickerFixture from "./fixtures/coinbase-ticker.json";
 beforeEach(() => sleepWithSignalMock.mockClear());
 afterEach(() => vi.unstubAllGlobals());
 
-describe("fetchBinancePrices", () => {
+describe("fetchBinancePricesDetailed", () => {
   it("returns stablecoin/USD prices from ticker endpoint", async () => {
     vi.stubGlobal("fetch", vi.fn().mockResolvedValue({
       ok: true,
@@ -36,7 +35,7 @@ describe("fetchBinancePrices", () => {
         { symbol: "BTCUSD", price: "65000" },
       ]),
     }));
-    const results = await fetchBinancePrices();
+    const results = (await fetchBinancePricesDetailed()).value.prices;
     expect(results.get("USDT")).toBeCloseTo(0.9999, 4);
     expect(results.get("USDC")).toBeCloseTo(1.0001, 4);
     expect(results.has("BTC")).toBe(false);
@@ -45,7 +44,7 @@ describe("fetchBinancePrices", () => {
   it("returns empty map on failure", async () => {
     const fetchMock = vi.fn().mockResolvedValue(new Response("upstream unavailable", { status: 503 }));
     vi.stubGlobal("fetch", fetchMock);
-    const results = await fetchBinancePrices();
+    const results = (await fetchBinancePricesDetailed()).value.prices;
     expect(results.size).toBe(0);
     // One fetch per host (2 hosts). 5xx short-circuits to the next host
     // instead of retrying the same host.
@@ -60,7 +59,7 @@ describe("fetchBinancePrices", () => {
         { symbol: "ETHUSDT", price: "3500" },
       ]),
     }));
-    const results = await fetchBinancePrices();
+    const results = (await fetchBinancePricesDetailed()).value.prices;
     expect(results.size).toBe(0);
   });
 
@@ -257,7 +256,7 @@ describe("fetchCoinbasePrices", () => {
     expect(outcome.value.prices.size).toBe(0);
   });
 
-  it("returns ok outcome with partial=true when some products fail and others succeed", async () => {
+  it("returns ok outcome when some products fail and others succeed", async () => {
     vi.stubGlobal("fetch", vi.fn().mockImplementation((url: string) => {
       if (url.includes("/products/USDT-USD/ticker"))
         return Promise.resolve({ ok: true, json: () => Promise.resolve({ price: "0.9998" }) });
@@ -265,10 +264,8 @@ describe("fetchCoinbasePrices", () => {
     }));
     const outcome = await fetchCoinbasePrices(["USDT", "DAI"]);
     expect(outcome.kind).toBe("ok");
-    if (outcome.kind === "ok") {
-      expect(outcome.partial).toBe(true);
-    }
     expect(outcome.value.prices.get("USDT")).toBeCloseTo(0.9998, 4);
+    expect(outcome.value.prices.has("DAI")).toBe(false);
   });
 
   it("parses a real Coinbase USDT-USD ticker response (fixture)", async () => {
