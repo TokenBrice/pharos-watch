@@ -508,6 +508,29 @@ const SECURITIZE_SEIZE_EVENT_FAMILY = defineEventFamily("securitize-seize", [
   },
 ]);
 
+// --- Neutrl (NUSD) event definitions ---
+// Verified ABI on 0xe556aba6fe6036275ec1f87eda296be72c811bce emits separate
+// AddedToDenylist(address indexed) / RemovedFromDenylist(address indexed)
+// events — no bool discriminator, no amount payload.
+
+const NEUTRL_ADDED_TO_DENYLIST_TOPIC = "0x8d6233ac6005c4f3eaa99b3aebdbe7ad15476dd961858142c4080952392f979d"; // AddedToDenylist(address)
+const NEUTRL_REMOVED_FROM_DENYLIST_TOPIC = "0x29e32a16a9d465ee92796d9fc7e93d2a9ab78cdc803298df7ed84b52d19cd42f"; // RemovedFromDenylist(address)
+
+const NEUTRL_DENYLIST_FAMILY = defineEventFamily("neutrl-denylist", [
+  {
+    signature: "AddedToDenylist(address)",
+    topicHash: NEUTRL_ADDED_TO_DENYLIST_TOPIC,
+    eventType: "blacklist",
+    hasAmount: false,
+  },
+  {
+    signature: "RemovedFromDenylist(address)",
+    topicHash: NEUTRL_REMOVED_FROM_DENYLIST_TOPIC,
+    eventType: "unblacklist",
+    hasAmount: false,
+  },
+]);
+
 // --- TrueUSD (TUSD) event definitions ---
 // Blacklisted(address indexed account, bool isBlacklisted) — single event for
 // both directions; the bool at data slot 0 disambiguates add vs remove via the
@@ -677,6 +700,11 @@ const CONTRACT_CONFIG_SPECS: ContractEventConfigSpec[] = [
   // token without Blacklisted / DestroyedBlackFunds events — no blacklist pipeline to cover.
   // Optimism TUSD (L2StandardERC20 at 0xcb59a0a753fdb7491d5f3d794316f1ade197b21e) is a bridged
   // token without Blacklisted / DestroyedBlackFunds events — no blacklist pipeline to cover.
+
+  // NUSD (Neutrl) — Ethereum only. Verified ABI uses separate
+  // AddedToDenylist / RemovedFromDenylist events (not the DenyListUpdated
+  // bool pattern the plan anticipated), so the direction is driven by topic hash.
+  { chain: ETHEREUM, stablecoinId: "nusd-neutrl", stablecoin: "NUSD", startBlock: 23_495_846, events: NEUTRL_DENYLIST_FAMILY.events },
 
   // BUIDL seize-only coverage (Securitize token family)
   { chain: ETHEREUM, stablecoinId: "buidl-blackrock", stablecoin: "BUIDL", startBlock: 19_343_293, events: SECURITIZE_SEIZE_EVENT_FAMILY.events },

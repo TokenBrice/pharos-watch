@@ -357,6 +357,7 @@ export const BLACKLIST_CHART_COLORS: Record<BlacklistStablecoin, string> = {
   PAXG: "#eab308",
   XAUT: "#f59e0b",
   TUSD: "#0284c7",
+  NUSD: "#7c2d12",
 };
 
 // ---------------------------------------------------------------------------
