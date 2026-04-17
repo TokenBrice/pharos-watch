@@ -519,6 +519,32 @@ export default function TelegramPage() {
             </div>
           </div>
         </div>
+
+        <p className="mt-8 text-xs text-muted-foreground">
+          Want the methodology behind these alerts?{" "}
+          <Link href="/methodology" className="underline underline-offset-4 hover:text-foreground transition-colors">
+            Read the methodology page
+          </Link>{" "}
+          for DEWS, safety-grade, and depeg scoring details.
+        </p>
+
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{
+            __html: JSON.stringify({
+              "@context": "https://schema.org",
+              "@type": "SoftwareApplication",
+              name: "PharosWatchBot",
+              applicationCategory: "FinanceApplication",
+              operatingSystem: "Telegram",
+              offers: { "@type": "Offer", price: "0", priceCurrency: "USD" },
+              url: `${SITE_URL}/telegram/`,
+              description:
+                "Opt-in Telegram bot for stablecoin peg, DEWS, safety, and launch alerts.",
+              publisher: { "@type": "Organization", name: "Pharos Watch", url: SITE_URL },
+            }),
+          }}
+        />
       </div>
     </FeaturePageShell>
   );
