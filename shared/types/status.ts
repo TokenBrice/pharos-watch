@@ -13,6 +13,8 @@ export interface CacheStatus {
   sourceStatus?: "fresh" | "degraded" | "stale" | "none";
   warning?: string | null;
   consecutiveFallbackRuns?: number;
+  /** Human-friendly upstream provider (Binance, CoinGecko, DefiLlama, on-chain RPC, …). */
+  upstreamProvider?: string | null;
 }
 
 const CacheStatusSchema = z.object({
@@ -25,6 +27,7 @@ const CacheStatusSchema = z.object({
   sourceStatus: z.enum(["fresh", "degraded", "stale", "none"]).optional(),
   warning: z.string().nullable().optional(),
   consecutiveFallbackRuns: z.number().optional(),
+  upstreamProvider: z.string().nullable().optional(),
 });
 
 export interface CronRun {

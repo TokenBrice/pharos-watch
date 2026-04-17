@@ -80,6 +80,7 @@ export function CacheFreshnessTable({ caches }: CacheFreshnessTableProps) {
             target {formatElapsedSeconds(cache.maxAge)}
           </div>
         </td>
+        <td className="py-2 align-top text-xs">{cache.upstreamProvider ?? "—"}</td>
         <td className="py-2 align-top">
           <div>{cache.ageSeconds != null ? formatElapsedSeconds(cache.ageSeconds) : "—"}</div>
           <div className="mt-1 font-mono text-xs text-muted-foreground">
@@ -114,6 +115,7 @@ export function CacheFreshnessTable({ caches }: CacheFreshnessTableProps) {
     <thead>
       <tr className="border-b text-left text-muted-foreground">
         <th scope="col" className="pb-2 font-medium">Lane</th>
+        <th scope="col" className="pb-2 font-medium">Provider</th>
         <th scope="col" className="pb-2 font-medium">Cache</th>
         <th scope="col" className="pb-2 font-medium">Source</th>
         <th scope="col" className="pb-2 font-medium">Mode</th>

@@ -5,7 +5,8 @@ import {
   getPublicMintBurnStatus,
   maxPublicStatus,
 } from "@shared/lib/public-health";
-import type { HealthResponse } from "@shared/types/status";
+import { CACHE_UPSTREAM_PROVIDER } from "@shared/lib/status-metadata";
+import type { CacheStatus, HealthResponse } from "@shared/types/status";
 import { buildCacheStatuses, type CacheFreshnessDiagnostic, type CacheStatusFailure } from "./api-utils";
 import { queryBlacklistGapMetrics, type BlacklistGapMetrics } from "./blacklist-gaps";
 import {
@@ -244,7 +245,15 @@ export async function assessPublicHealth(
       }),
   ]);
 
-  const cacheImpactStatus = getOverallCacheImpactStatus(cacheAssessment.caches);
+  const cachesWithProvider: Record<string, CacheStatus> = {};
+  for (const [key, cache] of Object.entries(cacheAssessment.caches)) {
+    cachesWithProvider[key] = {
+      ...cache,
+      upstreamProvider: CACHE_UPSTREAM_PROVIDER[key] ?? null,
+    };
+  }
+
+  const cacheImpactStatus = getOverallCacheImpactStatus(cachesWithProvider);
   if (cacheAssessment.failures.length > 0) {
     warnings.push(
       `cache-freshness-query-failed: ${cacheAssessment.failures.map((failure) => failure.key).join(", ")}`,
@@ -288,7 +297,7 @@ export async function assessPublicHealth(
     dbHealthy: true,
     overallStatus,
     warnings,
-    caches: cacheAssessment.caches,
+    caches: cachesWithProvider,
     cacheImpactStatus,
     worstCacheRatio: Number.isFinite(cacheAssessment.worstRatio) ? cacheAssessment.worstRatio : 99,
     cacheFailures: cacheAssessment.failures,
