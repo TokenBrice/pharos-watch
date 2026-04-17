@@ -1,4 +1,4 @@
--- rollout-safety: backward-compatible (cursor value already at this block)
+-- rollout-safety: backward-compatible
 -- 0102: After migration 0100 removes duplicate mixed-case sync_state rows and
 -- Task 1.1 shrinks Gnosis scan windows to ≤9k blocks, ensure the Gnosis BRZ
 -- cursor points at startBlock-1 so the next hourly sync picks up the 2 missed

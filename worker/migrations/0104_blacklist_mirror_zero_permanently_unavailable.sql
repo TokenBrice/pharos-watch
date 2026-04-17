@@ -1,4 +1,4 @@
--- rollout-safety: backward-compatible (status change only, does not alter suppression filter)
+-- rollout-safety: backward-compatible
 -- 0104: Align existing EURC mirror-zero rows with new code semantics so they
 -- exit the recoverable-pending backfill pool.
 -- (Renumbered from planned 0103; slot 0099 was taken by admin_action_audit_log.)

@@ -1,4 +1,4 @@
--- rollout-safety: backward-compatible (reads merge both cases already)
+-- rollout-safety: backward-compatible
 -- 0100: Delete legacy mixed-case sync_state rows. The canonical write path
 -- lowercases config_key; any mixed-case row is unreachable by current code.
 -- (Renumbered from planned 0099; slot 0099 was taken by admin_action_audit_log

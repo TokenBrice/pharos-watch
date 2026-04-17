@@ -1,4 +1,4 @@
--- rollout-safety: backward-compatible (backfill will re-populate amounts)
+-- rollout-safety: backward-compatible
 -- 0101: Flush pre-v3.2 'derived' + orphan 'legacy_migration' rows into the
 -- backfill pool so they receive a proper historical_balance or
 -- current_balance_snapshot attribution. Tron rows go through

@@ -1,4 +1,4 @@
--- rollout-safety: backward-compatible (new indexes only)
+-- rollout-safety: backward-compatible
 -- 0103: Composite indexes for the hot paths:
 --   backfill selector: event_type + amount_status + timestamp DESC
 --   public API filter: stablecoin + chain_name + event_type + timestamp DESC
