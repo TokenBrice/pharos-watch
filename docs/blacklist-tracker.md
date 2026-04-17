@@ -1,6 +1,6 @@
 # Blacklist Tracker
 
-Multi-chain blacklist/freeze event tracker for stablecoins. Monitors on-chain events (blacklist, unblacklist, destroy/seize) across 54 contract configurations on 9 chains. Runs hourly, incrementally scanning from the last processed block or timestamp cursor.
+Multi-chain blacklist/freeze event tracker for stablecoins. Monitors on-chain events (blacklist, unblacklist, destroy/seize) across 71 contract configurations on 9 chains (35 tracked symbols; additional BSC / Avalanche / Base deployments for some tier-1 coins are deferred pending explorer-API coverage). Runs hourly, incrementally scanning from the last processed block or timestamp cursor.
 
 The tracker now has two distinct amount layers:
 

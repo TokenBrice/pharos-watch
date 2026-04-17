@@ -2714,7 +2714,7 @@ Post-merge, monitor via `cron_runs` table metadata for sync-blacklist:
 4. **Week 2:** verify new tier-1 symbols show their first events (TUSD on Ethereum historically had ~50 freeze events; should ingest within hours).
 
 Rollback plan:
-- D1 issues: `npx wrangler d1 time-travel restore stablecoin-db --bookmark=<baseline>`.
+- D1 issues: `npx wrangler d1 time-travel restore stablecoin-db --bookmark=00001b06-00014eb0-00005050-dd275c00bb858144ed8653f1c7eeed78` (pre-merge baseline captured 2026-04-18).
 - Worker issues: `npx wrangler rollback stablecoin-api`.
 - Per-coin issue in Phase 6: revert the specific spec entry + symbol + family.
 

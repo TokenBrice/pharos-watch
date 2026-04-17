@@ -20,11 +20,12 @@ Internal changelog reconstructed from git history. Covers Blacklist Tracker `v1.
 
 ## v3.94 — Correctness + efficiency + minor coverage gaps (2026-04-17)
 
-- **Phase 1 correctness** — Gnosis dRPC scan window capped at 9k blocks per request, dual-index freeze family split from WLFI destroy events (FDUSD / EURI / AEUR no longer carry `FrozenAccountDrained` / `FrozenFundsReallocated` topics they cannot emit), TronGrid failures now propagate to the per-config circuit breaker, EURC rows flagged as `circle_mirror_zero_balance` are stamped `amount_status='permanently_unavailable'`, batch `address[]` events apply a per-log row cap, Tron sync cursor initialises from `max(block_number)` for legacy configs that were left at 0
-- **Phase 2 migrations** — Five D1 migrations applied: 0100 reset derived amount rows, 0101 dedup mixed-case `blacklist_sync_state` keys, 0103 stamp EURC mirror-zero rows as `permanently_unavailable`, 0102 / 0104 adjust `blacklist_events` indexes and amount-status telemetry
+- **Phase 1 correctness** — Gnosis dRPC scan window capped at 9k blocks per request, dual-index freeze family split from WLFI destroy events (FDUSD / EURI / U no longer carry `FrozenAccountDrained` / `FrozenFundsReallocated` topics they cannot emit), TronGrid failures now propagate to the per-config circuit breaker, EURC rows flagged as `circle_mirror_zero_balance` are stamped `amount_status='permanently_unavailable'`, batch `address[]` events apply a per-log row cap, Tron sync cursor initialises from `lastTimestampMs` for empty configs instead of collapsing to 0
+- **Phase 2 migrations** — Five D1 migrations applied: 0100 dedup mixed-case `blacklist_sync_state` keys, 0101 reset pre-v3.2 `derived` amount rows into the backfill pool, 0102 reseed the Gnosis BRZ cursor to startBlock-1 so the fixed scanner begins a clean catch-up, 0103 add composite backfill + API-filter indexes on `blacklist_events`, 0104 stamp the 917 existing EURC mirror-zero rows as `permanently_unavailable`
 - **Phase 3 efficiency** — `/api/blacklist-summary` rewritten to aggregate quarterly chart points and per-coin counts in SQL; post-fetch counters inlined so summary-endpoint memory drops from ~5–10MB to a few KB per cache miss
 - **Phase 4 frontend polish** — Data-driven stats strip + amount-status badge, per-coin stat border rendered via inline style, CSV split into native / unit / USD / status columns, page-clamp + zero-total + filter-reset covered by tests
 - **Phase 5 minor coverage gaps** — Added Polygon USDQ, Arbitrum + Base AID, and Base + BSC + Polygon TGBP chain-coverage rows for existing coins
+- **Operational note** — Post-merge, Gnosis BRZ begins at block 33,257,602 and catches up via 9k-block windows, so the two known missed events (blocks 45,229,172 and 45,229,396) will arrive at the end of a ~1,400-run catch-up (approximately two months of hourly cron runs). This is expected and not a regression.
 
 ---
 

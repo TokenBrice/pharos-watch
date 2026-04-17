@@ -52,6 +52,23 @@ describe("fetchTronEventsIncremental error propagation", () => {
     expect(result.apiError).toBe(true);
   });
 
+  it("returns apiError=true when TronGrid payload fails Zod validation", async () => {
+    (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValue(
+      new Response(JSON.stringify({ data: "oops" }), { status: 200 }),
+    );
+    const result = await fetchTronEventsIncremental(
+      configStub,
+      null,
+      0,
+      Date.now() + 60_000,
+      createRateLimiter(3),
+      createBudget(100),
+      undefined,
+    );
+    expect(result.apiError).toBe(true);
+    expect(result.rows).toHaveLength(0);
+  });
+
   it("returns apiError=false on success", async () => {
     (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValue(
       new Response(JSON.stringify({ success: true, data: [] }), { status: 200 }),

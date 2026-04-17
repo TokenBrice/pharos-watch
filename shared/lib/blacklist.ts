@@ -15,8 +15,9 @@ const BLACKLIST_PRICE_ASSET_IDS: Partial<Record<BlacklistStablecoin, string>> = 
   BRZ: "brz-transfero",
   EURC: "eurc-circle",
   EURI: "euri-banking-circle",
-  TGBP: "tgbp-tokenised",
   EURCV: "eurcv-societe-generale-forge",
+  AEUR: "aeur-anchored-coins",
+  TGBP: "tgbp-tokenised",
   JPYC: "jpyc-jpyc",
 };
 
