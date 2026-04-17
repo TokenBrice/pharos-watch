@@ -467,7 +467,7 @@ describe("generateDailyDigest", () => {
     expect(anthropicBody.model).toBe("claude-opus-4-7");
     expect(anthropicBody.thinking).toEqual({ type: "adaptive" });
     expect(anthropicBody.output_config).toEqual({ effort: "max" });
-    expect(anthropicBody.max_tokens).toBe(16000);
+    expect(anthropicBody.max_tokens).toBe(32000);
     // Streaming keeps the CF subrequest alive while Opus 4.7 thinks for minutes.
     expect(anthropicBody.stream).toBe(true);
     expect(anthropicBody.messages[0].content).toContain("Data quality notes:");

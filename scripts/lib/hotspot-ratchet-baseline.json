@@ -228,8 +228,8 @@
     "notes": "Collector family is still broad but already partly modular. Defer deeper split until digest sourcing requirements stop moving."
   },
   "worker/src/cron/daily-digest.ts": {
-    "fileLines": 203,
-    "maxFunctionLines": 175,
+    "fileLines": 207,
+    "maxFunctionLines": 179,
     "branchCount": 17,
     "disposition": "stabilized",
     "targetBudget": {

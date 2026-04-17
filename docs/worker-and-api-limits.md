@@ -138,9 +138,9 @@ Current digest generation constraints that are actually encoded in repo code:
 - daily cron lease (wrapper timeout): `14 * 60_000 ms` (14 min), leaves ~2 min under Cloudflare's 15-min scheduled-event ceiling for D1 persistence, Telegram/Twitter delivery, and cron_runs logging
 - daily-digest heartbeat override: `heartbeatSec = 30`, `maxRenewFailures = 3` (see `worker/src/handlers/scheduled/context.ts` — default policy unchanged for other jobs)
 - weekly cron lease: `12 * 60_000 ms` (12 min)
-- max_tokens: `16000` daily, `20000` weekly
+- max_tokens: `32000` daily, `40000` weekly (bumped from 16k/20k on 2026-04-17 after production runs showed Opus 4.7 adaptive thinking consuming the entire token budget with `stop_reason=max_tokens` before any text block emitted)
 - cadence: daily scheduled run plus deferred manual admin trigger (see "Manual trigger runtime model" below)
-- cost envelope (approximate, assuming single-attempt runs): Opus 4.7 input ~$5/Mtok, output ~$25/Mtok. Daily worst-case at 16k tokens ≈ $1.20; weekly worst-case at 20k ≈ $1.50. Annualized ≈ $550 at cap. Actual usage is lower since adaptive thinking rarely exhausts the ceiling. Monitor `usage.output_tokens` on the first week post-deploy before revisiting.
+- cost envelope (approximate, assuming single-attempt runs): Opus 4.7 input ~$5/Mtok, output ~$25/Mtok. Daily worst-case at 32k tokens ≈ $2.40; weekly worst-case at 40k ≈ $3.00. Annualized ≈ $1100 at cap. Actual usage is typically much lower since most runs don't approach the cap; the ceiling exists to survive the occasional adaptive-thinking-heavy run. Monitor `usage.output_tokens` via the digest:last-trigger-result cache key or cron_runs metadata.
 
 ### Manual trigger runtime model
 

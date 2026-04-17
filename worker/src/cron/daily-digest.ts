@@ -88,7 +88,11 @@ export async function generateDailyDigest(
     anthropicApiKey,
     systemPrompt: SYSTEM_PROMPT,
     userPrompt: userPromptContent,
-    maxTokens: 16000,
+    // Opus 4.7 adaptive thinking + max effort spends a large fraction of the
+    // token budget on the (omitted) reasoning block; 16k was consumed entirely
+    // by thinking in production, leaving no text output. 32k gives the model
+    // enough headroom for its internal reasoning AND the final digest text.
+    maxTokens: 32000,
     signal,
     logPrefix: "daily-digest",
     validationProfile: {

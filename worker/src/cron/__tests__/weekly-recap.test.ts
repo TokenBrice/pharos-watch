@@ -192,7 +192,7 @@ describe("generateWeeklyRecap", () => {
     expect(weeklyBody.model).toBe("claude-opus-4-7");
     expect(weeklyBody.thinking).toEqual({ type: "adaptive" });
     expect(weeklyBody.output_config).toEqual({ effort: "max" });
-    expect(weeklyBody.max_tokens).toBe(20000);
+    expect(weeklyBody.max_tokens).toBe(40000);
 
     const weeklySystem = weeklyBody.system as string;
     expect(weeklySystem).toContain("forward-look");
