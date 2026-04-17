@@ -1,0 +1,68 @@
+// Bank Run Gauge mcap weighting: restrict a coin's gauge contribution to its
+// tracked-chain circulating supply rather than global peg-bucket total.
+//
+// This module imports the full MINT_BURN_CONFIGS registry intentionally; it
+// must NOT be imported from hot paths that should stay lightweight
+// (DEWS, daily digest). Those consumers should use mint-burn-canonical-chain
+// instead.
+
+import { MINT_BURN_CONFIGS } from "./mint-burn-contracts";
+import { sumPegBuckets } from "@shared/lib/supply";
+import {
+  canonicalizeChainCirculating,
+  type RawChainCirculating,
+} from "@shared/lib/chain-circulating";
+
+const TRACKED_CHAINS_BY_COIN: Map<string, string[]> = (() => {
+  const map = new Map<string, string[]>();
+  for (const c of MINT_BURN_CONFIGS) {
+    const set = new Set(map.get(c.stablecoinId) ?? []);
+    set.add(c.chain.chainId);
+    map.set(c.stablecoinId, [...set]);
+  }
+  return map;
+})();
+
+/** Chains we actively track in mint/burn ingestion for this stablecoin. */
+export function getMintBurnTrackedChains(stablecoinId: string): string[] {
+  return TRACKED_CHAINS_BY_COIN.get(stablecoinId) ?? [];
+}
+
+/**
+ * Returns the circulating-supply USD total restricted to chains we actively
+ * track in mint/burn ingestion, drawn from `chainCirculating[chainId].current`
+ * after normalizing raw (e.g. capitalized DL) keys to canonical chain ids.
+ *
+ * Fallback policy (in order):
+ *   1. If the coin has no tracked chains (legacy/future id) → `sumPegBuckets(circulating)`.
+ *   2. If the canonicalized chainCirculating has no tracked-chain entry →
+ *      `sumPegBuckets(circulating)` (keeps CG-fallback assets with empty
+ *      chainCirculating alive and tolerates current=null entries).
+ *   3. Otherwise sum `chainCirculating[chainId].current` across tracked chains.
+ *
+ * Note: `current = 0` is treated as real data (a tracked-chain entry exists
+ * and reports zero supply); it contributes 0 but does NOT trigger fallback.
+ */
+export function sumMcapForTrackedChains(
+  stablecoinId: string,
+  chainCirculating: RawChainCirculating | null | undefined,
+  circulating: Record<string, number> | undefined,
+): number {
+  const trackedChains = getMintBurnTrackedChains(stablecoinId);
+  if (trackedChains.length === 0) return sumPegBuckets(circulating);
+
+  const canonical = canonicalizeChainCirculating(chainCirculating);
+  if (canonical.size === 0) return sumPegBuckets(circulating);
+
+  let total = 0;
+  let anyFound = false;
+  for (const chainId of trackedChains) {
+    const entry = canonical.get(chainId);
+    if (entry) {
+      total += entry.current;
+      anyFound = true;
+    }
+  }
+  if (!anyFound) return sumPegBuckets(circulating);
+  return total;
+}

@@ -22,7 +22,7 @@ import {
 } from "../lib/mint-burn-scoring";
 import { loadStablecoinsCache } from "../lib/stablecoins-cache";
 import type { StablecoinData } from "@shared/types/market";
-import { sumMcapForTrackedChains } from "../lib/mint-burn-canonical-chain";
+import { sumMcapForTrackedChains } from "../lib/mint-burn-mcap-weighting";
 import { DAY_SECONDS } from "@shared/lib/time-constants";
 import {
   getNetFlowDirection24h,
