@@ -153,6 +153,12 @@ function primeHooks() {
 }
 
 describe("KpiBar copy (Task 1.1)", () => {
+  it("exposes a PEG STATUS methodology hint on the kicker (Task 1.3)", () => {
+    primeHooks();
+    const html = renderToStaticMarkup(<KpiBar />);
+    expect(html).toContain('data-testid="methodology-hint-pegStatus"');
+  });
+
   it("renders clarified KPI labels and unit microcopy", () => {
     primeHooks();
     const html = renderToStaticMarkup(<KpiBar />);

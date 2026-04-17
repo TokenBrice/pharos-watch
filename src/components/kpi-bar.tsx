@@ -92,7 +92,7 @@ function KpiCell({
   centered = false,
   className = "",
 }: {
-  label: string;
+  label: React.ReactNode;
   value: React.ReactNode;
   sublabel?: React.ReactNode;
   valueClassName?: string;
@@ -165,7 +165,7 @@ function KpiMiniTile({
 interface KpiMetricDefinition {
   key: string;
   mobileLabel: string;
-  desktopLabel: string;
+  desktopLabel: React.ReactNode;
   value: React.ReactNode;
   mobileMetaPrimary?: React.ReactNode;
   mobileMetaSecondary?: React.ReactNode;
@@ -442,7 +442,7 @@ export function KpiBar() {
     {
       key: "peg",
       mobileLabel: "Peg",
-      desktopLabel: "Peg Status",
+      desktopLabel: <MethodologyLabel topic="pegStatus">Peg Status</MethodologyLabel>,
       value: pegStatusDisplay,
       mobileMetaSecondary: mobileDewsMeta,
       desktopSublabel: desktopDewsSublabel,

@@ -56,6 +56,7 @@ export type MethodologyContextKey =
   | "medianDeviation"
   | "worstCurrentDeviation"
   | "pegScore"
+  | "pegStatus"
   | "dews"
   | "depegBps"
   | "liquidityScore"
@@ -188,6 +189,13 @@ export const METHODOLOGY_CONTEXT: Record<MethodologyContextKey, MethodologyConte
     title: "Peg Score",
     summary: "Historical 0-100 peg-behavior score built from time-at-peg, event severity, and active-depeg penalties.",
     detail: "Requires at least 30 tracking days. NAV tokens return NR because they are not meant to hold a fixed price.",
+    methodologyPath: "/methodology/#pegscore-dews-methodology",
+    versionLabel: DEPEG_DEWS_METHODOLOGY_VERSION_LABEL,
+    changelogPath: DEPEG_DEWS_METHODOLOGY_CHANGELOG_PATH,
+  },
+  pegStatus: {
+    title: "Peg Status",
+    summary: "Coins currently within peg band ÷ coins with a live peg check. DEWS risk counts shown below.",
     methodologyPath: "/methodology/#pegscore-dews-methodology",
     versionLabel: DEPEG_DEWS_METHODOLOGY_VERSION_LABEL,
     changelogPath: DEPEG_DEWS_METHODOLOGY_CHANGELOG_PATH,
