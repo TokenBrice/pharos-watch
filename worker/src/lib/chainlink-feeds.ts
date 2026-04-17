@@ -47,10 +47,16 @@ export interface ChainlinkReferenceQuoteSummary {
   fetchErrors: number;
 }
 
+export type ChainlinkFeedOutcome = "success" | "failure";
+
 export interface ChainlinkReferenceQuoteSnapshot {
   quotes: Map<string, ChainlinkReferenceQuote>;
   summary: ChainlinkReferenceQuoteSummary;
+  perFeedOutcomes: Record<string, ChainlinkFeedOutcome>;
+  failingRuns: Record<string, number>;
 }
+
+const FAILING_RUNS_WARN_THRESHOLD = 3;
 
 // Verified against official Chainlink feed pages on 2026-03-19.
 export const CHAINLINK_REFERENCE_FEEDS: readonly ChainlinkReferenceFeed[] = [
@@ -118,7 +124,6 @@ async function fetchChainlinkDrpcHex(
   const targets: DrpcRpcTarget[] = [
     drpcApiKey ? { label: "premium", url: `https://lb.drpc.live/${network}/${drpcApiKey}` } : null,
     DRPC_PUBLIC_RPC_URL[feed.chainId] ? { label: "public", url: DRPC_PUBLIC_RPC_URL[feed.chainId]! } : null,
-    drpcApiKey ? { label: "legacy", url: `https://lb.drpc.org/ogrpc?network=${network}&dkey=${drpcApiKey}` } : null,
   ].filter((value): value is DrpcRpcTarget => value != null);
 
   for (const target of targets) {
@@ -186,8 +191,16 @@ export async function fetchChainlinkReferenceQuotes(
   nowSec = Math.floor(Date.now() / 1000),
   drpcApiKey?: string | null,
   etherscanApiKey?: string | null,
+  previousFailingRuns?: Record<string, number>,
 ): Promise<Map<string, ChainlinkReferenceQuote>> {
-  const snapshot = await fetchChainlinkReferenceQuoteSnapshot(signal, chainRpcs, nowSec, drpcApiKey, etherscanApiKey);
+  const snapshot = await fetchChainlinkReferenceQuoteSnapshot(
+    signal,
+    chainRpcs,
+    nowSec,
+    drpcApiKey,
+    etherscanApiKey,
+    previousFailingRuns,
+  );
   return snapshot.quotes;
 }
 
@@ -197,6 +210,7 @@ export async function fetchChainlinkReferenceQuoteSnapshot(
   nowSec = Math.floor(Date.now() / 1000),
   drpcApiKey?: string | null,
   etherscanApiKey?: string | null,
+  previousFailingRuns?: Record<string, number>,
 ): Promise<ChainlinkReferenceQuoteSnapshot> {
   const quotes = new Map<string, ChainlinkReferenceQuote>();
   const summary: ChainlinkReferenceQuoteSummary = {
@@ -210,62 +224,72 @@ export async function fetchChainlinkReferenceQuoteSnapshot(
     invalidPrices: 0,
     fetchErrors: 0,
   };
+  const perFeedOutcomes: Record<string, ChainlinkFeedOutcome> = {};
 
   for (const feed of CHAINLINK_REFERENCE_FEEDS) {
+    let succeeded = false;
     try {
       const decimals = await fetchFeedDecimals(feed, signal, chainRpcs, drpcApiKey, etherscanApiKey);
       if (decimals == null) {
         summary.decimalsUnavailable++;
-        continue;
-      }
-      if (!Number.isFinite(decimals) || decimals < 0 || decimals > 36) {
+      } else if (!Number.isFinite(decimals) || decimals < 0 || decimals > 36) {
         summary.invalidDecimals++;
-        continue;
+      } else {
+        const roundHex = await fetchChainlinkFeedCallHex(
+          feed,
+          LATEST_ROUND_DATA_SELECTOR,
+          signal,
+          chainRpcs,
+          drpcApiKey,
+          etherscanApiKey,
+        );
+        if (!roundHex) {
+          summary.roundDataUnavailable++;
+        } else {
+          const { answer, updatedAt } = parseChainlinkLatestRoundData(roundHex);
+          if (answer <= 0n || updatedAt <= 0) {
+            summary.invalidAnswers++;
+          } else if ((nowSec - updatedAt) > feed.staleAfterSec) {
+            summary.staleQuotes++;
+          } else {
+            const price = Number(answer) / (10 ** decimals);
+            if (!Number.isFinite(price) || price <= 0) {
+              summary.invalidPrices++;
+            } else {
+              quotes.set(feed.pegKey, {
+                pegKey: feed.pegKey,
+                price,
+                updatedAt,
+                chainId: feed.chainId,
+                proxyAddress: feed.proxyAddress,
+              });
+              succeeded = true;
+            }
+          }
+        }
       }
-
-      const roundHex = await fetchChainlinkFeedCallHex(
-        feed,
-        LATEST_ROUND_DATA_SELECTOR,
-        signal,
-        chainRpcs,
-        drpcApiKey,
-        etherscanApiKey,
-      );
-      if (!roundHex) {
-        summary.roundDataUnavailable++;
-        continue;
-      }
-
-      const { answer, updatedAt } = parseChainlinkLatestRoundData(roundHex);
-      if (answer <= 0n || updatedAt <= 0) {
-        summary.invalidAnswers++;
-        continue;
-      }
-      if ((nowSec - updatedAt) > feed.staleAfterSec) {
-        summary.staleQuotes++;
-        continue;
-      }
-
-      const price = Number(answer) / (10 ** decimals);
-      if (!Number.isFinite(price) || price <= 0) {
-        summary.invalidPrices++;
-        continue;
-      }
-
-      quotes.set(feed.pegKey, {
-        pegKey: feed.pegKey,
-        price,
-        updatedAt,
-        chainId: feed.chainId,
-        proxyAddress: feed.proxyAddress,
-      });
     } catch (err) {
       summary.fetchErrors++;
       console.warn(`[chainlink-feeds] ${feed.pegKey} fetch failed:`, err);
     }
+
+    perFeedOutcomes[feed.pegKey] = succeeded ? "success" : "failure";
   }
 
   summary.usableQuotes = quotes.size;
+
+  const failingRuns: Record<string, number> = {};
+  for (const feed of CHAINLINK_REFERENCE_FEEDS) {
+    const outcome = perFeedOutcomes[feed.pegKey];
+    const priorCount = previousFailingRuns?.[feed.pegKey] ?? 0;
+    const nextCount = outcome === "success" ? 0 : priorCount + 1;
+    failingRuns[feed.pegKey] = nextCount;
+    if (nextCount > FAILING_RUNS_WARN_THRESHOLD) {
+      console.warn(
+        `[chainlink-feeds] ${feed.pegKey} has failed ${nextCount} consecutive runs`,
+      );
+    }
+  }
 
   if (summary.usableQuotes === 0) {
     console.warn(
@@ -277,5 +301,5 @@ export async function fetchChainlinkReferenceQuoteSnapshot(
     );
   }
 
-  return { quotes, summary };
+  return { quotes, summary, perFeedOutcomes, failingRuns };
 }

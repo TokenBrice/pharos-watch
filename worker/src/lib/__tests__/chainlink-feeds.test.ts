@@ -183,4 +183,84 @@ describe("fetchChainlinkReferenceQuotes", () => {
     expect(snapshot.summary.staleQuotes).toBe(1);
     expect(snapshot.summary.roundDataUnavailable).toBeGreaterThanOrEqual(1);
   });
+
+  it("skips the legacy dRPC endpoint after premium and public failures", async () => {
+    const eurFeed = CHAINLINK_REFERENCE_FEEDS.find((feed) => feed.pegKey === "peggedEUR");
+    expect(eurFeed).toBeDefined();
+
+    mockFetchJsonRpcHexAtUrl.mockResolvedValue(null);
+    mockFetchEvmCallHexAtBlock.mockResolvedValue(null);
+    mockFetchEtherscanProxyHex.mockResolvedValue(null);
+
+    await fetchChainlinkReferenceQuotes(undefined, undefined, 1_763_888_000, "drpc-key");
+
+    const calledUrls = mockFetchJsonRpcHexAtUrl.mock.calls.map(([url]) => String(url));
+    const eurCallsForDecimals = calledUrls.filter(
+      (url) => url.includes("drpc") && (url.includes("/base") || url.includes("network=base")),
+    );
+    expect(eurCallsForDecimals.some((url) => url.includes("lb.drpc.live/base/"))).toBe(true);
+    expect(eurCallsForDecimals.some((url) => url === "https://base.drpc.org")).toBe(true);
+    // Legacy ogrpc endpoint must no longer be attempted.
+    expect(eurCallsForDecimals.some((url) => url.includes("lb.drpc.org/ogrpc"))).toBe(false);
+  });
+
+  it("tracks per-feed outcomes and consecutive failing runs", async () => {
+    const eurFeed = CHAINLINK_REFERENCE_FEEDS.find((feed) => feed.pegKey === "peggedEUR");
+    expect(eurFeed).toBeDefined();
+
+    mockFetchEvmCallHexAtBlock.mockImplementation(async (_chainId, address, data) => {
+      if (address === eurFeed!.proxyAddress && data === "0x313ce567") {
+        return "0x0000000000000000000000000000000000000000000000000000000000000008";
+      }
+      if (address === eurFeed!.proxyAddress && data === "0xfeaf968c") {
+        return buildLatestRoundDataHex(115_820_000n, 1_763_887_900);
+      }
+      return null;
+    });
+
+    const priorFailingRuns: Record<string, number> = {
+      peggedEUR: 2,
+      peggedGBP: 0,
+    };
+    const snapshot = await fetchChainlinkReferenceQuoteSnapshot(
+      undefined,
+      undefined,
+      1_763_888_000,
+      undefined,
+      undefined,
+      priorFailingRuns,
+    );
+
+    expect(snapshot.perFeedOutcomes.peggedEUR).toBe("success");
+    expect(snapshot.perFeedOutcomes.peggedGBP).toBe("failure");
+    // Success resets counter to zero.
+    expect(snapshot.failingRuns.peggedEUR).toBe(0);
+    // Failure increments from prior.
+    expect(snapshot.failingRuns.peggedGBP).toBe(1);
+  });
+
+  it("logs a warning when a feed has been failing more than 3 consecutive runs", async () => {
+    mockFetchEvmCallHexAtBlock.mockResolvedValue(null);
+    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+
+    const priorFailingRuns: Record<string, number> = {
+      peggedEUR: 3,
+    };
+    const snapshot = await fetchChainlinkReferenceQuoteSnapshot(
+      undefined,
+      undefined,
+      1_763_888_000,
+      undefined,
+      undefined,
+      priorFailingRuns,
+    );
+
+    expect(snapshot.failingRuns.peggedEUR).toBe(4);
+    const warningLogged = warnSpy.mock.calls.some((args) => {
+      const msg = args.map((a) => String(a)).join(" ");
+      return msg.includes("peggedEUR") && msg.includes("4");
+    });
+    expect(warningLogged).toBe(true);
+    warnSpy.mockRestore();
+  });
 });
