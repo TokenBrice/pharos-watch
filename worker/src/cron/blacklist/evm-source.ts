@@ -69,13 +69,26 @@ function runtimeBudgetReached(deadlineMs: number): boolean {
   return Date.now() >= deadlineMs;
 }
 
+/** Maximum plausible size of an address[] batch event — well above any real
+ * AccountsBlocked or AddedToDenyList batch we've observed (real batches are
+ * small, typically <50 addresses). Guards against malformed or adversarial
+ * decode explosions. */
+const MAX_DECODED_ADDRESS_ARRAY = 500;
+
 function decodeAddressArrayData(data: string): string[] {
   try {
     const [addresses] = decodeAbiParameters(
       [{ type: "address[]" }],
       data as `0x${string}`,
     );
-    return [...addresses].map((address) => address.toLowerCase());
+    const result = [...addresses].map((a) => a.toLowerCase());
+    if (result.length > MAX_DECODED_ADDRESS_ARRAY) {
+      console.warn(
+        `[blacklist] address[] event decoded ${result.length} entries; truncating to ${MAX_DECODED_ADDRESS_ARRAY}`,
+      );
+      return result.slice(0, MAX_DECODED_ADDRESS_ARRAY);
+    }
+    return result;
   } catch (error) {
     console.warn("[blacklist] Failed to decode address[] event data:", error);
     return [];

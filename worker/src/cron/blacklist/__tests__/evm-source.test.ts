@@ -454,6 +454,28 @@ describe("parseEvmLogs branch coverage", () => {
     expect(rows).toHaveLength(0);
   });
 
+  it("caps decoded address[] event to MAX_DECODED_ADDRESS_ARRAY", () => {
+    const addresses = Array.from({ length: 1000 }, (_, i) =>
+      "0x" + (i + 1).toString(16).padStart(40, "0"),
+    );
+    const encoded = encodeAbiParameters(
+      [{ type: "address[]" }],
+      [addresses as `0x${string}`[]],
+    );
+    const rows = parseEvmLogs(USDTB_CONFIG, [
+      {
+        address: USDTB_CONFIG.contractAddress,
+        topics: ["0x5444f9841c04ce78987f28701fa07fc4c112840c1c8439e8f52bda50c3788a87"],
+        data: encoded,
+        blockNumber: "0x1",
+        transactionHash: "0xdead",
+        logIndex: "0x0",
+        timeStamp: "0x61000000",
+      },
+    ]);
+    expect(rows.length).toBe(500);
+  });
+
   it("decodes non-indexed address from data for USDT DestroyedBlackFunds", () => {
     const usdtConfig = CONTRACT_CONFIGS.find(
       (c) => c.stablecoinId === "usdt-tether" && c.chain.chainId === "ethereum",
