@@ -15,6 +15,8 @@ import {
   updateDiscrepancyObservation,
   writeStatusProbeRun,
 } from "../status-reliability";
+import { STATUS_DEGRADED_TO_STALE_THRESHOLD } from "../status-reliability-shared";
+import { decideNextStatus } from "../status-reliability-decision";
 import { makeStatefulDb } from "./_helpers/stateful-d1";
 
 function makeFailingDb(): D1Database {
@@ -421,5 +423,12 @@ describe("status-reliability", () => {
     expect(divergent.hasDivergence).toBe(true);
     expect(divergent.severityDelta).toBe(2);
     expect(divergent.details).toBe("status=stale, probe=healthy, probeAge=100s");
+  });
+
+  it("degraded → stale transition respects STATUS_DEGRADED_TO_STALE_THRESHOLD", () => {
+    const counterBelow = { healthy: 0, degraded: 0, stale: STATUS_DEGRADED_TO_STALE_THRESHOLD - 1 };
+    const counterAt = { healthy: 0, degraded: 0, stale: STATUS_DEGRADED_TO_STALE_THRESHOLD };
+    expect(decideNextStatus("degraded", "stale", counterBelow, 500, STATUS_HYSTERESIS).changed).toBe(false);
+    expect(decideNextStatus("degraded", "stale", counterAt, 500, STATUS_HYSTERESIS).changed).toBe(true);
   });
 });
