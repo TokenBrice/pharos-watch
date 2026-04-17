@@ -4,6 +4,7 @@ import { useMemo } from "react";
 import Link from "next/link";
 import { TrendingDown, TrendingUp } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
+import { MethodologyHint } from "@/components/methodology-hint";
 import { StablecoinLogo } from "@/components/stablecoin-logo";
 import { buildStablecoinUrl } from "@/lib/urls";
 import { formatPegDeviation } from "@shared/lib/format";
@@ -242,10 +243,18 @@ export function MarketHighlights({ data, logos, pegRates }: MarketHighlightsProp
   return (
     <div aria-label="Market highlights" className="pharos-card-shell overflow-hidden p-0 animate-in fade-in duration-300">
       {/* ── Header bar ── */}
-      <div className="flex items-center justify-between border-b border-border/60 bg-muted/20 px-4 py-3">
+      <div className="grid grid-cols-2 items-start gap-x-6 border-b border-border/60 bg-muted/20 px-4 py-3">
         <h2 className="sr-only">Market Highlights</h2>
-        <span className="pharos-kicker" aria-hidden="true">Biggest Depegs</span>
-        <span className="pharos-kicker" aria-hidden="true">Biggest Supply Changes 7D</span>
+        <div className="flex items-center gap-1.5">
+          <span className="pharos-kicker" aria-hidden="true">Biggest Depegs</span>
+          <MethodologyHint topic="depegBps" />
+        </div>
+        <div className="flex flex-col gap-0.5">
+          <span className="pharos-kicker" aria-hidden="true">Biggest 7-Day Supply Moves</span>
+          <span className="text-[11px] text-muted-foreground">
+            Green = supply expansion; red = supply contraction (not price change).
+          </span>
+        </div>
       </div>
 
       {/* ── Content ── */}

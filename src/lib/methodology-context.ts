@@ -57,6 +57,7 @@ export type MethodologyContextKey =
   | "worstCurrentDeviation"
   | "pegScore"
   | "dews"
+  | "depegBps"
   | "liquidityScore"
   | "effectiveTvl"
   | "dexVolVsAvg"
@@ -195,6 +196,13 @@ export const METHODOLOGY_CONTEXT: Record<MethodologyContextKey, MethodologyConte
     title: "DEWS",
     summary: "Forward-looking 0-100 stress score built from up to 8 signals and amplified when system-wide PSI is weak.",
     detail: "It is designed to warn before full depegs, not just describe the current price deviation.",
+    methodologyPath: "/methodology/#pegscore-dews-methodology",
+    versionLabel: DEPEG_DEWS_METHODOLOGY_VERSION_LABEL,
+    changelogPath: DEPEG_DEWS_METHODOLOGY_CHANGELOG_PATH,
+  },
+  depegBps: {
+    title: "Basis-Point Deviation",
+    summary: "bps = basis points. 100 bps = 1%. Values are the peak signed deviation from the target peg during the window.",
     methodologyPath: "/methodology/#pegscore-dews-methodology",
     versionLabel: DEPEG_DEWS_METHODOLOGY_VERSION_LABEL,
     changelogPath: DEPEG_DEWS_METHODOLOGY_CHANGELOG_PATH,
