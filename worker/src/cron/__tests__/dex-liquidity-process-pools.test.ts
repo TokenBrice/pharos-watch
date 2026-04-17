@@ -535,4 +535,123 @@ describe("processPoolMetrics", () => {
     expect(metrics.get("usdc-circle")?.topPools[0]?.project).toBe("orca");
     expect(metrics.get("usdt-tether")?.topPools[0]?.project).toBe("orca");
   });
+
+  it("Curve metapool dedup: uses metapoolAdjustedTvl not raw usdTotal for effective and protocol TVL", () => {
+    // F15 regression: a Curve metapool with basePoolAddress should surface
+    // usdTotalExcludingBasePool (60M) via metapoolAdjustedTvl in scoring paths,
+    // NOT the raw usdTotal (100M). Prevents base-pool TVL double-counting.
+    vi.spyOn(console, "log").mockImplementation(() => {});
+
+    const symbolToIds = new Map<string, string[]>([
+      ["USDC", ["usdc-circle"]],
+      ["USDT", ["usdt-tether"]],
+    ]);
+    const symbolToChainScopedIds = buildSymbolToChainScopedIds(symbolToIds, ["ethereum"]);
+    const chainAddressToId = new Map<string, string>([
+      ["ethereum:0xusdc", "usdc-circle"],
+      ["ethereum:0xusdt", "usdt-tether"],
+    ]);
+
+    const curvePoolMap = new Map<string, CurvePoolEntry>([
+      [
+        "ethereum:0xmetapool",
+        makeCurveEntry({
+          A: 100,
+          balanceRatio: 1,
+          registryId: "factory-meta",
+          isMetaPool: true,
+          tvl: 100_000_000, // raw usdTotal
+          metapoolAdjustedTvl: 60_000_000, // usdTotalExcludingBasePool
+          balanceDetails: [
+            { symbol: "USDC", balancePct: 50, isTracked: true },
+            { symbol: "USDT", balancePct: 50, isTracked: true },
+          ],
+        }),
+      ],
+    ]);
+
+    const metrics = processPoolMetrics(
+      [
+        makePool({
+          pool: "0xmetapool",
+          project: "curve",
+          symbol: "USDC-USDT",
+          tvlUsd: 100_000_000, // DL raw usdTotal includes base-pool TVL
+          underlyingTokens: ["0xusdc", "0xusdt"],
+          count: 5,
+        }),
+      ],
+      new Set(["curve"]),
+      symbolToIds,
+      symbolToChainScopedIds,
+      new Map(),
+      chainAddressToId,
+      curvePoolMap,
+      new Map(),
+      new Map(),
+      new Map(),
+    );
+
+    const usdc = metrics.get("usdc-circle");
+    expect(usdc).toBeDefined();
+    // totalTvlUsd (and protocolTvl) rebuilt from metapoolAdjustedTvl, not raw 100M
+    expect(usdc?.totalTvlUsd).toBe(60_000_000);
+    expect(usdc?.protocolTvl.curve).toBe(60_000_000);
+    // Top-pool row mirrors the metapool-adjusted TVL — not the raw $100M DL number
+    expect(usdc?.topPools[0]?.tvlUsd).toBe(60_000_000);
+  });
+
+  it("F18 balance ratio: pathological >1.0 ratio does not inflate quality via Math.pow", () => {
+    // Direct API balance ratios are normalized to [0, 1] before pow(1.5).
+    // This regression guards against a pool surfacing an out-of-range ratio
+    // that, via Math.pow(ratio, 1.5), would inflate qualityAdjustedTvl.
+    vi.spyOn(console, "log").mockImplementation(() => {});
+
+    const symbolToIds = new Map<string, string[]>([["USDC", ["usdc-circle"]]]);
+    const symbolToChainScopedIds = buildSymbolToChainScopedIds(symbolToIds, ["ethereum"]);
+    const chainAddressToId = new Map<string, string>([["ethereum:0xusdc", "usdc-circle"]]);
+
+    // Curve entry with balance ratio clamped at 1.0 (canonical). Same TVL both branches.
+    const curvePoolMap = new Map<string, CurvePoolEntry>([
+      [
+        "ethereum:0xclamped",
+        makeCurveEntry({
+          balanceRatio: 1.0,
+          tvl: 1_000_000,
+          metapoolAdjustedTvl: 1_000_000,
+          balanceDetails: [{ symbol: "USDC", balancePct: 100, isTracked: true }],
+        }),
+      ],
+    ]);
+
+    const metrics = processPoolMetrics(
+      [
+        makePool({
+          pool: "0xclamped",
+          project: "curve",
+          symbol: "USDC-USDC",
+          tvlUsd: 1_000_000,
+          underlyingTokens: ["0xusdc"],
+          count: 3,
+        }),
+      ],
+      new Set(["curve"]),
+      symbolToIds,
+      symbolToChainScopedIds,
+      new Map(),
+      chainAddressToId,
+      curvePoolMap,
+      new Map(),
+      new Map(),
+      new Map(),
+    );
+
+    const usdc = metrics.get("usdc-circle");
+    expect(usdc).toBeDefined();
+    // With ratio clamped to 1, balanceHealth = 1^1.5 = 1, so qualityAdjustedTvl
+    // cannot exceed the underlying poolTvl * mechanism multiplier.
+    // Curve stableswap A<500 mechanism = 0.85x, so qualityAdjustedTvl ≤ 850K.
+    expect(usdc?.qualityAdjustedTvl).toBeLessThanOrEqual(1_000_000);
+    expect(usdc?.effectiveTvl).toBeLessThanOrEqual(1_000_000);
+  });
 });

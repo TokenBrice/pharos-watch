@@ -6,6 +6,14 @@ import { VOLATILE_PAIR_QUALITY, SYMBOL_GOVERNANCE } from "./constants";
 import { DURABILITY_COMPONENT_WEIGHTS, LIQUIDITY_COMPONENT_WEIGHTS } from "./score-weights";
 import { buildChainAddressKey } from "./token-resolution";
 
+/**
+ * Pool Quality scoring thresholds (methodology v5.0+).
+ * Quality retention = qualityAdjustedTvl / totalTvlUsd, linearly rescaled
+ * from [15%, 80%] to [0, 100]. See docs/dex-liquidity.md#pool-quality-formula.
+ */
+const POOL_QUALITY_FLOOR_RATIO = 0.15;
+const POOL_QUALITY_WINDOW = 0.65; // 0.80 - 0.15
+
 /** Parse pool symbol string into constituent token symbols */
 export function parsePoolSymbols(symbol: string): string[] {
   // Handle known composite names first
@@ -117,7 +125,10 @@ export function computeLiquidityScore(
 
   // Component 3: Pool quality (20%) — quality retention ratio
   const qualityRetention = m.totalTvlUsd > 0 ? m.qualityAdjustedTvl / m.totalTvlUsd : 0;
-  const poolQuality = Math.min(100, Math.max(0, ((qualityRetention - 0.15) / 0.65) * 100));
+  const poolQuality = Math.min(
+    100,
+    Math.max(0, ((qualityRetention - POOL_QUALITY_FLOOR_RATIO) / POOL_QUALITY_WINDOW) * 100),
+  );
 
   // Component 4: Durability (20%) — passed in from durability computation
   const durability = durabilityScore;

@@ -66,16 +66,18 @@ export function getSlipstreamPoolFeeBps(poolFee: bigint): number | null {
 }
 
 /**
- * Convert a Uniswap V3-style sqrtPriceX96 (Q64.96) to the spot price of
- * token1 in units of token0, decimal-adjusted for display.
+ * Convert a Uniswap V3-style sqrtPriceX96 (Q64.96) to a decimal-adjusted
+ * spot price: the amount of token1 you receive per 1 token0 (in human
+ * decimal units). Equivalent to: given 1 unit of token0, how many token1.
+ * Consumers: `USD(token0) = spotPrice * USD(token1)`.
  *
- *   sqrtRatio         = actual_sqrt_price * 2^96
- *   spot_price_raw    = (sqrtRatio / 2^96)^2
- *   spot_price        = spot_price_raw * 10^(token0Decimals - token1Decimals)
+ *   sqrtRatio   = sqrt(reserve1_wei / reserve0_wei) * 2^96   (Uniswap V3 convention)
+ *   ratio_raw   = (sqrtRatio / 2^96)^2                         (reserve1_wei / reserve0_wei)
+ *   spotPrice   = ratio_raw * 10^(token0Decimals - token1Decimals)
  *
  * Uses BigInt for the squared intermediate to avoid precision loss on
  * sqrtRatio values above 2^53. Number(whole) only loses precision if the
- * raw price exceeds 2^53 (~9e15) — stablecoin-scale pairs never approach that.
+ * raw ratio exceeds 2^53 (~9e15) — stablecoin-scale pairs never approach that.
  */
 export function sqrtRatioToSpotPrice(
   sqrtRatio: bigint,

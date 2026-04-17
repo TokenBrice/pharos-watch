@@ -198,9 +198,12 @@ export function applyProtocolCaps(
       pool.tvlUsd = Math.round(pool.tvlUsd * scale);
       reducedTvlUsd += Math.max(0, previousTvl - pool.tvlUsd);
       if (pool.extra) {
-        const extra = pool.extra as Record<string, number | unknown>;
-        if (typeof extra.qualityAdjustedTvl === "number") extra.qualityAdjustedTvl = Math.round(extra.qualityAdjustedTvl * scale);
-        if (typeof extra.effectiveTvl === "number") extra.effectiveTvl = Math.round(extra.effectiveTvl * scale);
+        if (typeof pool.extra.qualityAdjustedTvl === "number") {
+          pool.extra.qualityAdjustedTvl = Math.round(pool.extra.qualityAdjustedTvl * scale);
+        }
+        if (typeof pool.extra.effectiveTvl === "number") {
+          pool.extra.effectiveTvl = Math.round(pool.extra.effectiveTvl * scale);
+        }
         const measurement = pool.extra.measurement ?? {};
         measurement.capped = true;
         pool.extra.measurement = measurement;
