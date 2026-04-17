@@ -17,7 +17,7 @@ import type {
 import type {
   MintBurnBridgeClassifiableRow,
   MintBurnTxContext,
-} from "./mint-burn-bridge-classifier";
+} from "./mint-burn-bridge-classifier-types";
 
 export function normalizeHexSet(values: string[]): Set<string> {
   const normalized = values
