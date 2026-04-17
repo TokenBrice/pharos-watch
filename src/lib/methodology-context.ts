@@ -59,6 +59,8 @@ export type MethodologyContextKey =
   | "dews"
   | "liquidityScore"
   | "effectiveTvl"
+  | "dexVolVsAvg"
+  | "turnover"
   | "pys"
   | "yieldStability"
   | "yieldWarnings"
@@ -209,6 +211,20 @@ export const METHODOLOGY_CONTEXT: Record<MethodologyContextKey, MethodologyConte
   effectiveTvl: {
     title: "Effective TVL",
     summary: "TVL adjusted for mechanism quality, balance health, and pair quality to estimate usable exit depth under stress.",
+    methodologyPath: "/methodology/#liquidity-methodology",
+    versionLabel: LIQUIDITY_METHODOLOGY_VERSION_LABEL,
+    changelogPath: LIQUIDITY_METHODOLOGY_CHANGELOG_PATH,
+  },
+  dexVolVsAvg: {
+    title: "DEX Volume vs 7-Day Average",
+    summary: "24h DEX volume vs trailing 7-day average.",
+    methodologyPath: "/methodology/#liquidity-methodology",
+    versionLabel: LIQUIDITY_METHODOLOGY_VERSION_LABEL,
+    changelogPath: LIQUIDITY_METHODOLOGY_CHANGELOG_PATH,
+  },
+  turnover: {
+    title: "Turnover",
+    summary: "Daily DEX volume ÷ total tracked market cap.",
     methodologyPath: "/methodology/#liquidity-methodology",
     versionLabel: LIQUIDITY_METHODOLOGY_VERSION_LABEL,
     changelogPath: LIQUIDITY_METHODOLOGY_CHANGELOG_PATH,

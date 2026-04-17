@@ -12,7 +12,6 @@ import { useEntranceSequence } from "@/hooks/use-entrance-sequence";
 import { QueryErrorNotice } from "@/components/query-error-notice";
 import { abbreviateNumberParts, formatCurrency, formatSignedCurrency, getNetColor } from "@shared/lib/format";
 import { PSI_BAND_CLASSES, type ConditionBand } from "@shared/lib/psi-colors";
-import { THREAT_BAND_COLORS, type ThreatBand } from "@shared/lib/classification";
 import {
   buildDewsBandCounts,
   buildDexSnapshot,
@@ -20,9 +19,9 @@ import {
   buildPsiSnapshot,
   buildStablecoinSnapshot,
 } from "@/components/kpi-bar-view-model";
+import { MethodologyLabel } from "@/components/methodology-hint";
 
 type TrendDirection = "up" | "down" | "flat";
-type ElevatedThreatBand = Extract<ThreatBand, "DANGER" | "ALERT" | "WARNING">;
 const SKELETON_CARDS = Array.from({ length: 4 }, (_, i) => i);
 const KPI_CHIP_BASE =
   "inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[11px] shadow-[inset_0_1px_0_oklch(1_0_0_/0.2)] transition-colors";
@@ -41,7 +40,7 @@ function trendTextClass(value: number): string {
   return "text-muted-foreground";
 }
 
-function TrendChip({ label, value, direction }: { label: string; value: string; direction: TrendDirection }) {
+function TrendChip({ label, value, direction }: { label: React.ReactNode; value: string; direction: TrendDirection }) {
   const toneClasses =
     direction === "up"
       ? "border-green-500/25 bg-green-500/10 text-green-700 dark:text-green-400"
@@ -64,7 +63,7 @@ function InfoChip({
   value,
   tone = "neutral",
 }: {
-  label: string;
+  label: React.ReactNode;
   value: string | number;
   tone?: "neutral" | "positive" | "negative" | "warning";
 }) {
@@ -81,16 +80,6 @@ function InfoChip({
     <span className={`${KPI_CHIP_BASE} ${toneClasses}`}>
       <span>{label}</span>
       <span className="font-mono tabular-nums">{value}</span>
-    </span>
-  );
-}
-
-function DewsBandChip({ band, count }: { band: ElevatedThreatBand; count: number }) {
-  const label = band === "DANGER" ? "CRITICAL" : band;
-  return (
-    <span className={`${KPI_CHIP_BASE} font-semibold ${THREAT_BAND_COLORS[band]}`}>
-      <span>{label}</span>
-      <span className="font-mono tabular-nums">{count}</span>
     </span>
   );
 }
@@ -403,51 +392,28 @@ export function KpiBar() {
     ? dewsBandCounts.danger === 0 && dewsBandCounts.warning === 0 && dewsBandCounts.alert === 0
     : false;
   const mobileDewsMeta = dewsBandCounts ? (
-    <>
-      <span className="text-foreground">DEWS:</span>
-      {dewsBandCounts.danger > 0 && (
-        <>
-          <span className="text-muted-foreground"> · </span>
-          <span className="text-red-700 dark:text-red-400">Critical {dewsBandCounts.danger}</span>
-        </>
-      )}
-      {dewsBandCounts.warning > 0 && (
-        <>
-          <span className="text-muted-foreground"> · </span>
-          <span className="text-amber-700 dark:text-amber-400">Warning {dewsBandCounts.warning}</span>
-        </>
-      )}
-      {dewsBandCounts.alert > 0 && (
-        <>
-          <span className="text-muted-foreground"> · </span>
-          <span className="text-amber-700 dark:text-amber-400">Alert {dewsBandCounts.alert}</span>
-        </>
-      )}
-      {allDewsCalm && (
-        <>
-          <span className="text-muted-foreground"> · </span>
-          <span className="text-muted-foreground">all calm</span>
-        </>
-      )}
-    </>
+    allDewsCalm ? (
+      <span className="text-muted-foreground">DEWS all calm</span>
+    ) : (
+      <span className="text-foreground">
+        DEWS {dewsBandCounts.danger + dewsBandCounts.warning + dewsBandCounts.alert} on alert
+      </span>
+    )
   ) : (
     <span className="text-muted-foreground">no DEWS</span>
   );
 
-  const desktopDewsSublabel = (
-    <>
-      <span className="pharos-kicker">DEWS:</span>
-      {dewsBandCounts?.danger ? <DewsBandChip band="DANGER" count={dewsBandCounts.danger} /> : null}
-      {dewsBandCounts?.warning ? <DewsBandChip band="WARNING" count={dewsBandCounts.warning} /> : null}
-      {dewsBandCounts?.alert ? <DewsBandChip band="ALERT" count={dewsBandCounts.alert} /> : null}
-      {dewsBandCounts ? (
-        allDewsCalm ? (
-          <span className="text-[11px] text-muted-foreground">all calm</span>
-        ) : null
-      ) : (
-        <span className="text-[11px] text-muted-foreground">no data</span>
-      )}
-    </>
+  const dewsElevatedCount = dewsBandCounts
+    ? dewsBandCounts.danger + dewsBandCounts.warning + dewsBandCounts.alert
+    : 0;
+  const desktopDewsSublabel = dewsBandCounts ? (
+    allDewsCalm ? (
+      <span className="text-[11px] text-muted-foreground">DEWS all calm</span>
+    ) : (
+      <span className="text-[11px] text-foreground">DEWS {dewsElevatedCount} on alert</span>
+    )
+  ) : (
+    <span className="text-[11px] text-muted-foreground">DEWS no data</span>
   );
 
   const metricDefinitions: KpiMetricDefinition[] = [
@@ -466,7 +432,7 @@ export function KpiBar() {
             direction={hasStablecoinsData ? trendDirection(mcapChange24hPct) : "flat"}
           />
           <InfoChip
-            label="USDT+USDC share"
+            label="USDT + USDC share"
             value={usdtShareDisplay}
             tone={hasStablecoinsData && usdtUsdcSharePct >= 65 ? "warning" : "neutral"}
           />
@@ -495,11 +461,11 @@ export function KpiBar() {
       desktopSublabel: (
         <>
           <TrendChip
-            label="vs 7d avg"
+            label={<MethodologyLabel topic="dexVolVsAvg">vs 7d avg</MethodologyLabel>}
             value={dexDeltaDisplay}
             direction={hasDexData ? trendDirection(volVs7dAvgPct) : "flat"}
           />
-          <InfoChip label="Turnover" value={turnoverDisplay} />
+          <InfoChip label={<MethodologyLabel topic="turnover">Turnover</MethodologyLabel>} value={turnoverDisplay} />
         </>
       ),
     },
@@ -509,7 +475,7 @@ export function KpiBar() {
       desktopLabel: "Net Mint/Burn Flow",
       value: netFlow24Display,
       mobileMetaPrimary: <span className={netFlow7Class}>7d {netFlow7Display}</span>,
-      desktopSublabel: <InfoChip label="7d total" value={netFlow7Display} tone={netFlow7Tone} />,
+      desktopSublabel: <InfoChip label="7d net" value={netFlow7Display} tone={netFlow7Tone} />,
       mobileValueClassName: netFlow24Class,
       desktopValueClassName: netFlow24Class,
     },
@@ -543,7 +509,7 @@ export function KpiBar() {
         >
           <PrimarySnapshotCard
             value={psiScoreDisplay}
-            band={hasPsiData ? `${psiBandDisplay} for ${psiDaysInBand}d` : ""}
+            band={hasPsiData ? `${psiBandDisplay} · ${psiDaysInBand}d in band` : ""}
             delta24h={psiDelta24hValue}
             delta7d={psiDelta7dValue}
             delta30d={psiDelta30dValue}
@@ -581,7 +547,7 @@ export function KpiBar() {
         >
           <PrimarySnapshotCard
             value={psiScoreDisplay}
-            band={hasPsiData ? `${psiBandDisplay} for ${psiDaysInBand}d` : ""}
+            band={hasPsiData ? `${psiBandDisplay} · ${psiDaysInBand}d in band` : ""}
             delta24h={psiDelta24hValue}
             delta7d={psiDelta7dValue}
             delta30d={psiDelta30dValue}
