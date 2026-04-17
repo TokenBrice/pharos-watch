@@ -20,11 +20,11 @@ import {
   COINBASE_KNOWN_SYMBOLS,
   KRAKEN_KNOWN_SYMBOLS,
   fetchBinancePricesDetailed,
-  isBinanceProviderBlocked,
   fetchBitstampPrices,
   fetchCoinbasePrices,
   fetchKrakenPrices,
 } from "../../lib/cex-tickers";
+import { isSuccessfulOutcome } from "../../lib/fetcher-result";
 import type { PricingProviderAttemptDiagnostic } from "../../lib/pricing-provider-diagnostics";
 import { fetchRedstonePrices, REDSTONE_TRACKED_SYMBOL_ALLOWLIST } from "../../lib/redstone";
 import { loadDexPriceRows, loadDexPoolChallengers, loadDexPriceSources } from "../../lib/depeg-helpers";
@@ -637,11 +637,12 @@ export async function fetchPrimaryPrices(
       (async () => {
         if (sourceAllowed.binance) {
           await runPrimaryProviderFetch(db, signal, CIRCUIT_SOURCE.BINANCE_PRICES, "Binance ticker", async () => {
-            const { prices, diagnostics } = await fetchBinancePricesDetailed(signal);
+            const outcome = await fetchBinancePricesDetailed(signal);
+            const { prices, diagnostics } = outcome.value;
             providerDiagnostics.push(...diagnostics);
             for (const [symbol, price] of prices) binancePrices.set(symbol, price);
             if (prices.size > 0) binanceObservedAt = Math.floor(Date.now() / 1000);
-            return prices.size > 0 || isBinanceProviderBlocked(diagnostics);
+            return isSuccessfulOutcome(outcome);
           });
         }
 

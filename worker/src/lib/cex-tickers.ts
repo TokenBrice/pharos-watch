@@ -21,6 +21,7 @@ import {
   readResponseSnippet,
   type PricingProviderAttemptDiagnostic,
 } from "./pricing-provider-diagnostics";
+import type { FetcherOutcome } from "./fetcher-result";
 
 const CEX_REQUEST_TIMEOUT_MS = 10_000;
 const CEX_REQUEST_RETRIES = 1;
@@ -207,22 +208,32 @@ async function fetchBinanceTickerUrl(
 
 export async function fetchBinancePricesDetailed(
   signal?: AbortSignal,
-): Promise<{ prices: Map<string, number>; diagnostics: PricingProviderAttemptDiagnostic[] }> {
+): Promise<FetcherOutcome<{ prices: Map<string, number>; diagnostics: PricingProviderAttemptDiagnostic[] }>> {
   const diagnostics: PricingProviderAttemptDiagnostic[] = [];
   for (const url of BINANCE_TICKER_URLS) {
     const { prices, diagnostic } = await fetchBinanceTickerUrl(url, signal);
     diagnostics.push(diagnostic);
     if (prices.size > 0) {
-      return { prices, diagnostics };
+      return { kind: "ok", value: { prices, diagnostics } };
     }
   }
-  return { prices: new Map(), diagnostics };
+  const emptyPrices = new Map<string, number>();
+  if (isBinanceProviderBlocked(diagnostics)) {
+    return { kind: "blocked", value: { prices: emptyPrices, diagnostics } };
+  }
+  const allOkTransport = diagnostics.every((d) => d.ok === true);
+  if (allOkTransport && diagnostics.length > 0) {
+    return { kind: "no-data", value: { prices: emptyPrices, diagnostics } };
+  }
+  const firstError = diagnostics.find((d) => d.errorMessage) ?? diagnostics.find((d) => !d.ok);
+  const reason = firstError?.errorMessage ?? (firstError?.status != null ? `HTTP ${firstError.status}` : "all Binance hosts failed");
+  return { kind: "upstream-error", value: { prices: emptyPrices, diagnostics }, reason };
 }
 
 export async function fetchBinancePrices(
   signal?: AbortSignal,
 ): Promise<Map<string, number>> {
-  return (await fetchBinancePricesDetailed(signal)).prices;
+  return (await fetchBinancePricesDetailed(signal)).value.prices;
 }
 
 export async function fetchKrakenPrices(

@@ -60,7 +60,7 @@ describe("fetchBinancePrices", () => {
       ]),
     }));
 
-    const { prices, diagnostics } = await fetchBinancePricesDetailed();
+    const { value: { prices, diagnostics } } = await fetchBinancePricesDetailed();
 
     expect(prices.size).toBe(0);
     expect(diagnostics[0]).toMatchObject({
@@ -82,7 +82,7 @@ describe("fetchBinancePrices", () => {
       text: () => Promise.resolve("blocked by upstream"),
     }));
 
-    const { prices, diagnostics } = await fetchBinancePricesDetailed();
+    const { value: { prices, diagnostics } } = await fetchBinancePricesDetailed();
 
     expect(prices.size).toBe(0);
     expect(diagnostics[0]).toMatchObject({
@@ -108,7 +108,7 @@ describe("fetchBinancePrices", () => {
       }));
     }));
 
-    const { prices, diagnostics } = await fetchBinancePricesDetailed();
+    const { value: { prices, diagnostics } } = await fetchBinancePricesDetailed();
 
     expect(prices.get("USDT")).toBeCloseTo(1.0002, 4);
     expect(prices.get("USDC")).toBeCloseTo(0.9999, 4);
@@ -120,6 +120,42 @@ describe("fetchBinancePrices", () => {
       success: true,
       matchedCount: 2,
     });
+  });
+
+  it("returns blocked outcome when every Binance host returns 403/451", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response("blocked", { status: 451 })));
+    const outcome = await fetchBinancePricesDetailed();
+    expect(outcome.kind).toBe("blocked");
+    expect(outcome.value.prices.size).toBe(0);
+    expect(outcome.value.diagnostics.every((d) => d.status === 451)).toBe(true);
+  });
+
+  it("returns upstream-error outcome when every Binance host throws", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockRejectedValue(new Error("network down")));
+    const outcome = await fetchBinancePricesDetailed();
+    expect(outcome.kind).toBe("upstream-error");
+  });
+
+  it("returns ok outcome when any host returns tracked prices", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: () => Promise.resolve([{ symbol: "USDTUSD", price: "1.0001" }]),
+    }));
+    const outcome = await fetchBinancePricesDetailed();
+    expect(outcome.kind).toBe("ok");
+    expect(outcome.value.prices.get("USDT")).toBeCloseTo(1.0001, 4);
+  });
+
+  it("returns no-data outcome when hosts return 200 but no tracked pairs", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: () => Promise.resolve([{ symbol: "BTCUSD", price: "65000" }]),
+    }));
+    const outcome = await fetchBinancePricesDetailed();
+    expect(outcome.kind).toBe("no-data");
+    expect(outcome.value.prices.size).toBe(0);
   });
 });
 

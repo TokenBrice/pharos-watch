@@ -11,16 +11,19 @@ vi.mock("../../lib/fetch-retry", () => ({
 vi.mock("../../lib/cex-tickers", () => ({
   fetchBinancePrices: vi.fn(async () => new Map<string, number>()),
   fetchBinancePricesDetailed: vi.fn(async () => ({
-    prices: new Map<string, number>(),
-    diagnostics: [{
-      source: "binance",
-      stage: "primary",
-      endpoint: "data-api.binance.vision/api/v3/ticker/price",
-      status: 200,
-      ok: true,
-      success: false,
-      matchedCount: 0,
-    }],
+    kind: "no-data",
+    value: {
+      prices: new Map<string, number>(),
+      diagnostics: [{
+        source: "binance",
+        stage: "primary",
+        endpoint: "data-api.binance.vision/api/v3/ticker/price",
+        status: 200,
+        ok: true,
+        success: false,
+        matchedCount: 0,
+      }],
+    },
   })),
   isBinanceProviderBlocked: (diagnostics: Array<{ status: number | null }>) =>
     diagnostics.length > 0 && diagnostics.every((diagnostic) => diagnostic.status === 403 || diagnostic.status === 451),
@@ -520,16 +523,19 @@ describe("confirmPendingDepegs", () => {
       label: "CEX quote",
       setup: async (nowSec: number): Promise<OppositeDirectionCase> => {
         vi.mocked(fetchBinancePricesDetailed).mockResolvedValueOnce({
-          prices: new Map([["USDT", 1.03]]),
-          diagnostics: [{
-            source: "binance",
-            stage: "primary",
-            endpoint: "data-api.binance.vision/api/v3/ticker/price",
-            status: 200,
-            ok: true,
-            success: true,
-            matchedCount: 1,
-          }],
+          kind: "ok",
+          value: {
+            prices: new Map([["USDT", 1.03]]),
+            diagnostics: [{
+              source: "binance",
+              stage: "primary",
+              endpoint: "data-api.binance.vision/api/v3/ticker/price",
+              status: 200,
+              ok: true,
+              success: true,
+              matchedCount: 1,
+            }],
+          },
         });
         return {
           pendingRows: [
@@ -856,16 +862,19 @@ describe("confirmPendingDepegs", () => {
     const nowSec = 1_700_000_000;
     vi.spyOn(Date, "now").mockReturnValue(nowSec * 1000);
     vi.mocked(fetchBinancePricesDetailed).mockResolvedValueOnce({
-      prices: new Map([["USDTUSDC", 0.9998]]),
-      diagnostics: [{
-        source: "binance",
-        stage: "primary",
-        endpoint: "data-api.binance.vision/api/v3/ticker/price",
-        status: 200,
-        ok: true,
-        success: true,
-        matchedCount: 1,
-      }],
+      kind: "ok",
+      value: {
+        prices: new Map([["USDTUSDC", 0.9998]]),
+        diagnostics: [{
+          source: "binance",
+          stage: "primary",
+          endpoint: "data-api.binance.vision/api/v3/ticker/price",
+          status: 200,
+          ok: true,
+          success: true,
+          matchedCount: 1,
+        }],
+      },
     });
 
     await confirmPendingDepegs(
@@ -896,25 +905,28 @@ describe("confirmPendingDepegs", () => {
     const nowSec = 1_700_000_000;
     vi.spyOn(Date, "now").mockReturnValue(nowSec * 1000);
     vi.mocked(fetchBinancePricesDetailed).mockResolvedValueOnce({
-      prices: new Map(),
-      diagnostics: [
-        {
-          source: "binance",
-          stage: "primary",
-          endpoint: "data-api.binance.vision/api/v3/ticker/price",
-          status: 403,
-          ok: false,
-          success: false,
-        },
-        {
-          source: "binance",
-          stage: "primary",
-          endpoint: "api.binance.com/api/v3/ticker/price",
-          status: 403,
-          ok: false,
-          success: false,
-        },
-      ],
+      kind: "blocked",
+      value: {
+        prices: new Map(),
+        diagnostics: [
+          {
+            source: "binance",
+            stage: "primary",
+            endpoint: "data-api.binance.vision/api/v3/ticker/price",
+            status: 403,
+            ok: false,
+            success: false,
+          },
+          {
+            source: "binance",
+            stage: "primary",
+            endpoint: "api.binance.com/api/v3/ticker/price",
+            status: 403,
+            ok: false,
+            success: false,
+          },
+        ],
+      },
     });
 
     const result = await confirmPendingDepegs(

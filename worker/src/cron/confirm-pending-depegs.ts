@@ -21,7 +21,8 @@ import { fetchWithRetry } from "../lib/fetch-retry";
 import { cgUrl, cgHeaders } from "../lib/coingecko";
 import { throwIfAborted } from "../lib/abort";
 import { recordOutcomeSafe, shouldAttemptFetch } from "../lib/circuit-breaker";
-import { fetchBinancePricesDetailed, isBinanceProviderBlocked } from "../lib/cex-tickers";
+import { fetchBinancePricesDetailed } from "../lib/cex-tickers";
+import { isSuccessfulOutcome } from "../lib/fetcher-result";
 import type { PricingProviderAttemptDiagnostic } from "../lib/pricing-provider-diagnostics";
 import {
   buildInsertDepegEventStmt,
@@ -114,13 +115,14 @@ export async function confirmPendingDepegs(
   if (cexAllowed) {
     throwIfAborted(signal);
     try {
-      const { prices, diagnostics } = await fetchBinancePricesDetailed(signal);
+      const outcome = await fetchBinancePricesDetailed(signal);
+      const { prices, diagnostics } = outcome.value;
       for (const diagnostic of diagnostics) {
         diagnostic.stage = "depeg-confirmation";
       }
       providerDiagnostics.push(...diagnostics);
       cexPrices = prices;
-      await recordOutcomeSafe(db, CIRCUIT_SOURCE.BINANCE_PRICES, cexPrices.size > 0 || isBinanceProviderBlocked(diagnostics));
+      await recordOutcomeSafe(db, CIRCUIT_SOURCE.BINANCE_PRICES, isSuccessfulOutcome(outcome));
     } catch (err) {
       if (signal?.aborted) throw err instanceof Error ? err : new Error(String(err));
       await recordOutcomeSafe(db, CIRCUIT_SOURCE.BINANCE_PRICES, false);
