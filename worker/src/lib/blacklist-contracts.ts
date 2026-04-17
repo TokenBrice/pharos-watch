@@ -584,6 +584,29 @@ const TRUEUSD_EVENT_FAMILY = defineEventFamily("trueusd-blacklist", [
   },
 ]);
 
+// --- JPYC (CENTRE-fork) event definitions ---
+// FiatTokenV1 implementation (ETH 0xafac17fc3936a29ca2d2787ced3c5d1c52007d2e, behind ERC1967Proxy)
+// emits Blocklisted(address indexed) / UnBlocklisted(address indexed) — distinct from USDC's
+// Blacklisted/UnBlacklisted (note the 'ock' vs 'ack' spelling difference) so the keccak differs.
+
+const JPYC_BLOCKLISTED_TOPIC = "0x917c251bb231c4b997a420bebe47edad5c20e70715da16c38e9b2e172e44ab92"; // Blocklisted(address)
+const JPYC_UNBLOCKLISTED_TOPIC = "0xbc3fe0fc667d12a7a22748747f024a7d971127ffc48f6622675d3e97a2591a51"; // UnBlocklisted(address)
+
+const CENTRE_BLOCKLISTED_FAMILY = defineEventFamily("centre-blocklisted", [
+  {
+    signature: "Blocklisted(address)",
+    topicHash: JPYC_BLOCKLISTED_TOPIC,
+    eventType: "blacklist",
+    hasAmount: false,
+  },
+  {
+    signature: "UnBlocklisted(address)",
+    topicHash: JPYC_UNBLOCKLISTED_TOPIC,
+    eventType: "unblacklist",
+    hasAmount: false,
+  },
+]);
+
 const BLACKLIST_STABLECOIN_SET = new Set<BlacklistStablecoin>(BLACKLIST_STABLECOINS);
 
 function resolveBlacklistStablecoinSymbol(
@@ -737,6 +760,15 @@ const CONTRACT_CONFIG_SPECS: ContractEventConfigSpec[] = [
   // AddressesFrozen/AddressesUnFrozen events. Reuses the addressArrayData path
   // already used by USDTB / AID / TGBP deny-list batches.
   { chain: ETHEREUM, stablecoinId: "eurcv-societe-generale-forge", stablecoin: "EURCV", startBlock: 18_427_793, events: SOCGEN_FREEZE_FAMILY.events },
+
+  // JPYC (JPY Coin — CENTRE fork) — Ethereum + Polygon. Implementation behind ERC1967Proxy
+  // emits Blocklisted(address indexed) / UnBlocklisted(address indexed). Polygon + ETH share
+  // the same proxy address 0xe7c3d8c9a439fede00d2600032d5db0be71c3c29. JPY-pegged; price is
+  // resolved via jpyc-jpyc entry in BLACKLIST_PRICE_ASSET_IDS.
+  { chain: ETHEREUM, stablecoinId: "jpyc-jpyc", stablecoin: "JPYC", startBlock: 22_622_960, events: CENTRE_BLOCKLISTED_FAMILY.events },
+  { chain: POLYGON, stablecoinId: "jpyc-jpyc", stablecoin: "JPYC", startBlock: 72_306_327, events: CENTRE_BLOCKLISTED_FAMILY.events },
+  // TODO: verify on avalanche (Etherscan v2 free plan does not support Avalanche getcontractcreation)
+  // { chain: AVALANCHE, stablecoinId: "jpyc-jpyc", stablecoin: "JPYC", startBlock: <deploy>, events: CENTRE_BLOCKLISTED_FAMILY.events },
 
   // BUIDL seize-only coverage (Securitize token family)
   { chain: ETHEREUM, stablecoinId: "buidl-blackrock", stablecoin: "BUIDL", startBlock: 19_343_293, events: SECURITIZE_SEIZE_EVENT_FAMILY.events },
