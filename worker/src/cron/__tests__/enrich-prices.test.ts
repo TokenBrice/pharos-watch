@@ -2305,6 +2305,142 @@ describe("applyPoolChallenge", () => {
     expect(results.get("ousg-ondo-finance")!.confidence).toBe("high");
     expect(results.get("ousg-ondo-finance")!.price).toBe(110.15);
   });
+
+  // --- Boundary tests: verify the peggedUSD 500 bps / non-USD peg-aware threshold is inclusive. ---
+  // Boundary check in applyPoolChallenge is `bps >= poolChallengeBps`, so a protocol median that
+  // produces a bps value at or above the threshold fires; strictly below does not.
+
+  it("fires at exactly the USD threshold (500 bps) — inclusive boundary", () => {
+    // price 0.9512 vs consensus 1.0 → bps = 0.0488 / 0.9756 * 10_000 ≈ 500.205 bps (≥500 → triggers).
+    const results = new Map<string, PrimaryPriceResult>([
+      ["dusd-test", {
+        price: 1.0, source: "coingecko+defillama-list",
+        confidence: "high", dlPrice: 1.0, cgPrice: 1.0,
+        candidateSources: ["coingecko", "defillama-list"],
+        agreeSources: ["coingecko", "defillama-list"],
+      }],
+    ]);
+    const pools = new Map([
+      ["dusd-test", [{ price: 0.9512, tvlUsd: 500_000, protocol: "curve", chain: "ethereum" }]],
+    ]);
+    const pegTypes = new Map<string, string | undefined>([["dusd-test", "peggedUSD"]]);
+    const stats = makeStats();
+
+    const downgrades = applyPoolChallenge(results, pools, pegTypes, stats);
+
+    expect(downgrades).toBe(1);
+    expect(results.get("dusd-test")!.confidence).toBe("low");
+    // Single protocol at boundary → confidence downgraded, price preserved.
+    expect(results.get("dusd-test")!.price).toBe(1.0);
+    expect(results.get("dusd-test")!.source).not.toBe("pool-tvl-weighted");
+  });
+
+  it("does NOT fire just below the USD threshold (~499 bps)", () => {
+    // price 0.9513 vs consensus 1.0 → bps ≈ 499.15 bps (<500 → no downgrade).
+    const results = new Map<string, PrimaryPriceResult>([
+      ["dusd-test", {
+        price: 1.0, source: "coingecko+defillama-list",
+        confidence: "high", dlPrice: 1.0, cgPrice: 1.0,
+        candidateSources: ["coingecko", "defillama-list"],
+        agreeSources: ["coingecko", "defillama-list"],
+      }],
+    ]);
+    const pools = new Map([
+      ["dusd-test", [{ price: 0.9513, tvlUsd: 500_000, protocol: "curve", chain: "ethereum" }]],
+    ]);
+    const pegTypes = new Map<string, string | undefined>([["dusd-test", "peggedUSD"]]);
+    const stats = makeStats();
+
+    const downgrades = applyPoolChallenge(results, pools, pegTypes, stats);
+
+    expect(downgrades).toBe(0);
+    expect(results.get("dusd-test")!.confidence).toBe("high");
+    expect(results.get("dusd-test")!.price).toBe(1.0);
+  });
+
+  it("fires at the non-USD peg-aware threshold (peggedJPY, 300 bps)", () => {
+    // peggedJPY → min(2 * 150, 500) = 300 bps. consensus 0.00682 vs pool 0.006618 → ≈300.64 bps.
+    const results = new Map<string, PrimaryPriceResult>([
+      ["jpyc-jpyc", {
+        price: 0.00682, source: "coingecko+defillama-list+dex-promoted",
+        confidence: "high", dlPrice: 0.00682, cgPrice: 0.00682,
+        candidateSources: ["coingecko", "defillama-list", "dex-promoted"],
+        agreeSources: ["coingecko", "defillama-list", "dex-promoted"],
+      }],
+    ]);
+    const pools = new Map([
+      ["jpyc-jpyc", [{ price: 0.006618, tvlUsd: 500_000, protocol: "uniswap", chain: "ethereum" }]],
+    ]);
+    const pegTypes = new Map<string, string | undefined>([["jpyc-jpyc", "peggedJPY"]]);
+    const stats = makeStats();
+
+    const downgrades = applyPoolChallenge(results, pools, pegTypes, stats);
+
+    expect(downgrades).toBe(1);
+    expect(results.get("jpyc-jpyc")!.confidence).toBe("low");
+    // Single protocol → price preserved.
+    expect(results.get("jpyc-jpyc")!.price).toBe(0.00682);
+    expect(results.get("jpyc-jpyc")!.source).not.toBe("pool-tvl-weighted");
+  });
+
+  it("replaces price when exactly 2 independent protocols hit the boundary", () => {
+    // Two protocols each at ~500 bps → divergingProtocolGroups.length >= 2 → TVL-weighted median.
+    const results = new Map<string, PrimaryPriceResult>([
+      ["dusd-test", {
+        price: 1.0, source: "coingecko+defillama-list",
+        confidence: "high", dlPrice: 1.0, cgPrice: 1.0,
+        candidateSources: ["coingecko", "defillama-list"],
+        agreeSources: ["coingecko", "defillama-list"],
+      }],
+    ]);
+    const pools = new Map([
+      ["dusd-test", [
+        { price: 0.9512, tvlUsd: 600_000, protocol: "curve", chain: "ethereum" },
+        { price: 0.9500, tvlUsd: 400_000, protocol: "uniswap", chain: "ethereum" },
+      ]],
+    ]);
+    const pegTypes = new Map<string, string | undefined>([["dusd-test", "peggedUSD"]]);
+    const stats = makeStats();
+
+    const downgrades = applyPoolChallenge(results, pools, pegTypes, stats);
+
+    expect(downgrades).toBe(1);
+    expect(results.get("dusd-test")!.confidence).toBe("low");
+    expect(results.get("dusd-test")!.source).toBe("pool-tvl-weighted");
+    // Weighted median across {0.9512 @ 600k, 0.95 @ 400k} → higher-weight point sorted first.
+    expect(results.get("dusd-test")!.price).toBeCloseTo(0.9512, 6);
+  });
+
+  it("propagates result.observedAt = min(poolObservedAts) after replacement", () => {
+    const results = new Map<string, PrimaryPriceResult>([
+      ["dusd-test", {
+        price: 1.0, source: "coingecko+defillama-list",
+        confidence: "high", dlPrice: 1.0, cgPrice: 1.0,
+        candidateSources: ["coingecko", "defillama-list"],
+        agreeSources: ["coingecko", "defillama-list"],
+        observedAt: 5_000,
+        observedAtMode: "upstream",
+      }],
+    ]);
+    const pools = new Map<string, Array<{ price: number; tvlUsd: number; protocol: string; chain: string; observedAt?: number }>>([
+      ["dusd-test", [
+        { price: 0.80, tvlUsd: 500_000, protocol: "curve", chain: "ethereum", observedAt: 1_200 },
+        { price: 0.82, tvlUsd: 300_000, protocol: "uniswap", chain: "ethereum", observedAt: 800 },
+      ]],
+    ]);
+    const pegTypes = new Map<string, string | undefined>([["dusd-test", "peggedUSD"]]);
+    const stats = makeStats();
+
+    applyPoolChallenge(results, pools, pegTypes, stats);
+
+    const updated = results.get("dusd-test")!;
+    expect(updated.source).toBe("pool-tvl-weighted");
+    // Top-level observedAt = min across diverging protocol groups' observedAts.
+    expect(updated.observedAt).toBe(800);
+    expect(updated.observedAtMode).toBe("local_fetch");
+    expect(updated.observedAtBySource).toEqual({ "pool-tvl-weighted": 800 });
+    expect(updated.observedAtModeBySource).toEqual({ "pool-tvl-weighted": "local_fetch" });
+  });
 });
 
 describe("applyListAggregatorDowngrade", () => {
