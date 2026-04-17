@@ -139,3 +139,15 @@ describe("detectAtomicRoundtrips — amount tolerance", () => {
     expect(rows.every((r) => r.flow_type === "atomic_roundtrip")).toBe(true);
   });
 });
+
+describe("detectAtomicRoundtrips — empty tx_hash guard", () => {
+  it("does not collide rows with missing tx_hash across different coins", () => {
+    // Without the guard, both would share key "-coin-a" / "-coin-b"; with the guard they skip entirely.
+    const rows = [
+      { ...mb("mint", "", 100, "a"), tx_hash: "", stablecoin_id: "coin-a" } as MintBurnRow,
+      { ...mb("burn", "", 100, "b"), tx_hash: "", stablecoin_id: "coin-a" } as MintBurnRow,
+    ];
+    detectAtomicRoundtrips(rows);
+    expect(rows.every((r) => r.flow_type === "standard")).toBe(true);
+  });
+});
