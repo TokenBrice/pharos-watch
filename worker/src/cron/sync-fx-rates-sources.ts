@@ -126,16 +126,10 @@ export async function loadFrankfurterPayload(
 }
 
 export async function loadSecondaryCurrencyCandidate(signal?: AbortSignal): Promise<SecondaryCurrencyCandidate | null> {
-  const primaryCandidate = await fetchSecondaryCurrencyCandidate(
-    "jsdelivr",
-    SECONDARY_FX_PRIMARY_URL,
-    signal,
-  );
-  const fallbackCandidate = await fetchSecondaryCurrencyCandidate(
-    "pages.dev",
-    SECONDARY_FX_FALLBACK_URL,
-    signal,
-  );
+  const [primaryCandidate, fallbackCandidate] = await Promise.all([
+    fetchSecondaryCurrencyCandidate("jsdelivr", SECONDARY_FX_PRIMARY_URL, signal),
+    fetchSecondaryCurrencyCandidate("pages.dev", SECONDARY_FX_FALLBACK_URL, signal),
+  ]);
 
   const secondaryCandidate = chooseSecondaryCurrencyCandidate(primaryCandidate, fallbackCandidate);
   if (

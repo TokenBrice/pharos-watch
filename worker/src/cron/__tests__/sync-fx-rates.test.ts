@@ -11,6 +11,7 @@ vi.mock("../../lib/fetch-retry", () => ({
 }));
 
 import { syncFxRates } from "../sync-fx-rates";
+import { loadSecondaryCurrencyCandidate } from "../sync-fx-rates-sources";
 
 function findCacheWrite(
   db: ReturnType<typeof mockD1>,
@@ -1462,5 +1463,35 @@ describe("syncFxRates", () => {
     };
     expect(recordedRecord.consecutiveFailures).toBe(1);
     expect(recordedRecord.lastFailureAt).toBeGreaterThan(0);
+  });
+
+  it("fires both secondary FX mirror fetches concurrently", async () => {
+    vi.useRealTimers();
+    const callStartedAt: Record<string, number> = {};
+    vi.stubGlobal("fetch", vi.fn(async (url: string) => {
+      if (url.includes("cdn.jsdelivr.net/npm/@fawazahmed0/currency-api")) {
+        callStartedAt.jsdelivr = performance.now();
+        await new Promise((resolve) => setTimeout(resolve, 50));
+        return new Response(
+          JSON.stringify({ date: "2025-06-15", usd: { cnh: 7.28, rub: 90, uah: 41, ars: 1400 } }),
+          { status: 200 },
+        );
+      }
+      if (url.includes("latest.currency-api.pages.dev")) {
+        callStartedAt.pagesDev = performance.now();
+        await new Promise((resolve) => setTimeout(resolve, 50));
+        return new Response(
+          JSON.stringify({ date: "2025-06-15", usd: { cnh: 7.28, rub: 90, uah: 41, ars: 1400 } }),
+          { status: 200 },
+        );
+      }
+      return new Response("not found", { status: 404 });
+    }));
+
+    await loadSecondaryCurrencyCandidate();
+
+    expect(callStartedAt.jsdelivr).toBeDefined();
+    expect(callStartedAt.pagesDev).toBeDefined();
+    expect(Math.abs(callStartedAt.jsdelivr - callStartedAt.pagesDev)).toBeLessThan(20);
   });
 });
