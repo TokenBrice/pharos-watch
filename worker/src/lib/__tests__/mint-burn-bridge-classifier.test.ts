@@ -12,7 +12,7 @@ import {
   type MintBurnContractConfig,
   type MintBurnLayerZeroOftBridgeDetectionConfig,
 } from "../mint-burn-contracts";
-import { ccipBridgeDetection } from "../mint-burn-contracts-helpers";
+import { ccipBridgeDetection, layerZeroOftBridgeDetection } from "../mint-burn-contracts-helpers";
 
 type CcipCoinCase = {
   stablecoinId: string;
@@ -462,5 +462,57 @@ describe("CCIP/CCTP classifier — bridge MINTS", () => {
     ]);
     classifyBridgeAwareBurnRows(rows, detection, ctx);
     expect(rows[0].flow_type).toBe("standard");
+  });
+});
+
+describe("LayerZero OFT classifier — endpoint-only signal", () => {
+  // Fixture references from agents/research/2026-04-08-usdai-mint-burn-bridge-investigation.md.
+  // `layerZeroOftBridgeDetection` takes ONLY `knownBridgeContractAddresses`; the emitter
+  // (LAYERZERO_ENDPOINT_V2), topics (PACKET_SENT/PACKET_DELIVERED), and selectors are
+  // hardcoded inside the helper. We use those canonical defaults here.
+  const ARB_LZ_ENDPOINT_V2 = "0x1a44076050125825900e736c501f859c50fe728c"; // same address shared across chains
+  const PACKET_DELIVERED_TOPIC = "0x1ab700d4ced0c005b164c0f789fd09fcbb0156d4c2041b8a3bfbcd961cd1567f";
+  const detection: MintBurnBridgeDetectionConfig = layerZeroOftBridgeDetection([
+    "0xffa10065ce1d1c42fabc46e06b84ed8ffeb4bae5", // USDai OAdapter (Arb)
+  ]);
+
+  it("tags a LayerZero-Executor-only mint when endpoint emits PacketDelivered (no OAdapter touch)", () => {
+    const rows = [row({ direction: "mint", tx_hash: "0xexec" })];
+    const ctx = new Map<string, MintBurnTxContext | null>([
+      ["0xexec", {
+        to: "0x31cae3b7fb82d847621859fb1585353c5720660d", // LayerZero Executor
+        inputSelector: "0x123456ab",
+        logTopics: [PACKET_DELIVERED_TOPIC],
+        logAddresses: [ARB_LZ_ENDPOINT_V2], // endpoint is in logs but OAdapter is NOT
+      }],
+    ]);
+    classifyBridgeAwareBurnRows(rows, detection, ctx);
+    expect(rows[0].flow_type).toBe("bridge_transfer");
+  });
+
+  // Documented tradeoff: the Arbitrum LayerZero endpoint is shared across many OFT
+  // deployments. A tx that emits PacketDelivered for ANY OFT will now pass fingerprintC.
+  // In the current pipeline the classifier is called with detection tied to a specific
+  // coin, so an unrelated OFT tx won't affect coins whose mint/burn rows are absent from
+  // that tx. The remaining risk is a shared tx where BOTH coins have rows — a mint of
+  // tracked coin A in the same tx as a bridge of coin B is (conservatively) now tagged.
+  // We accept this as a tradeoff for catching Executor-only mints; add a per-message
+  // recipient-address decode step if real fallout emerges.
+  it("tags a mint when LayerZero endpoint emits the signal (even without OAdapter touch)", () => {
+    // Second detection config using a DIFFERENT known bridge contract.
+    const otherOftDetection: MintBurnBridgeDetectionConfig = layerZeroOftBridgeDetection([
+      "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    ]);
+    const rows = [row({ direction: "mint", tx_hash: "0xsame" })];
+    const ctx = new Map<string, MintBurnTxContext | null>([
+      ["0xsame", {
+        to: "0x31cae3b7fb82d847621859fb1585353c5720660d",
+        inputSelector: "0x00000000",
+        logTopics: [PACKET_DELIVERED_TOPIC],
+        logAddresses: [ARB_LZ_ENDPOINT_V2],
+      }],
+    ]);
+    classifyBridgeAwareBurnRows(rows, otherOftDetection, ctx);
+    expect(rows[0].flow_type).toBe("bridge_transfer"); // documented tradeoff
   });
 });

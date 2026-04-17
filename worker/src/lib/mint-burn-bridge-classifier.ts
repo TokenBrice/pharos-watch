@@ -114,7 +114,14 @@ export function classifyBridgeAwareBurnRows(
       const hasExpectedEmitter = signalEmitterSet.size === 0 || hasSetIntersection(ctxAddresses, signalEmitterSet);
       const hasSignalSelector = Boolean(selector && selectorSet.has(selector));
 
-      if (touchesBridgeContract && ((hasSignalTopic && hasExpectedEmitter) || hasSignalSelector)) {
+      // Bridge fingerprint = ANY of:
+      //   (a) tx touches bridge contract AND has signal topic with expected emitter,
+      //   (b) tx touches bridge contract AND has known signal selector,
+      //   (c) endpoint signal topic emitted by expected emitter (catches Executor-only patterns).
+      const fingerprintA = touchesBridgeContract && hasSignalTopic && hasExpectedEmitter;
+      const fingerprintB = touchesBridgeContract && hasSignalSelector;
+      const fingerprintC = hasSignalTopic && hasExpectedEmitter && signalEmitterSet.size > 0;
+      if (fingerprintA || fingerprintB || fingerprintC) {
         markBridgeTransfer(txRows);
       }
     }
