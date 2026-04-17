@@ -169,12 +169,16 @@ export function parseEvmLogs(
   blockTimestamps?: Map<number, number>,
 ): BlacklistRow[] {
   const rows: BlacklistRow[] = [];
+  let droppedForTimestamp = 0;
   for (const log of logs) {
     const eventDef = getBlacklistEventByTopic(config, log.topics[0]);
     if (!eventDef) continue;
     const blockNumber = parseInt(log.blockNumber, 16);
     const timestamp = log.timeStamp ? parseInt(log.timeStamp, 16) : (blockTimestamps?.get(blockNumber) ?? Number.NaN);
-    if (isNaN(blockNumber) || isNaN(timestamp)) continue;
+    if (isNaN(blockNumber) || isNaN(timestamp)) {
+      droppedForTimestamp++;
+      continue;
+    }
 
     if (eventDef.addressArrayData) {
       const addresses = decodeAddressArrayData(log.data);
@@ -196,6 +200,11 @@ export function parseEvmLogs(
 
     const row = buildBlacklistRow(config, log, affectedAddress, amount, blockNumber, timestamp);
     if (row) rows.push(row);
+  }
+  if (droppedForTimestamp > 0) {
+    console.warn(
+      `[blacklist] parseEvmLogs for ${config.configKey}: dropped ${droppedForTimestamp} log(s) due to missing block/timestamp`,
+    );
   }
   return rows;
 }

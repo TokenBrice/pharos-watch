@@ -95,7 +95,7 @@ export async function fetchTronEventsIncremental(
   signal?: AbortSignal,
 ): Promise<{ rows: BlacklistRow[]; maxBlock: number; incomplete: boolean; apiError: boolean }> {
   const rows: BlacklistRow[] = [];
-  let maxBlock = 0;
+  let maxBlock = lastTimestampMs;
   let incomplete = false;
   let apiError = false;
   const headers: Record<string, string> = {};
