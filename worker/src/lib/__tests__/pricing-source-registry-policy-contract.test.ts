@@ -1,9 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { PRICING_SOURCE_REGISTRY } from "../pricing-source-registry";
+import { PRICING_SOURCE_REGISTRY } from "@shared/lib/pricing-source-registry";
 import {
   isPoolChallengeEligibleConsensus,
   isReplaySafePriceSource,
-} from "../../../worker/src/lib/pricing-source-policy";
+} from "../pricing-source-policy";
 
 /**
  * Contract: the pricing-source registry is the single source of truth for
