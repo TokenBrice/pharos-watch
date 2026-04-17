@@ -1,7 +1,14 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { mockD1, type MockD1Database } from "./helpers/mock-d1";
 import { makeApiRequest, makeApiUrl, stubCryptoForAuth } from "./helpers/auth";
-import { handleAuditDepegHistory } from "../audit-depeg-history";
+
+const fetchWithRetryMock = vi.fn();
+
+vi.mock("../../lib/fetch-retry", () => ({
+  fetchWithRetry: (...args: unknown[]) => fetchWithRetryMock(...args),
+}));
+
+import { auditEvents, handleAuditDepegHistory } from "../audit-depeg-history";
 
 stubCryptoForAuth();
 
@@ -342,5 +349,47 @@ describe("handleAuditDepegHistory method safety", () => {
     expect(
       db.getHistory().some((entry) => entry.sql.includes("UPDATE depeg_events SET recovery_price = NULL WHERE id = ?") && entry.binds[0] === 21),
     ).toBe(true);
+  });
+
+  it("does NOT delete a depeg event when CG prices fail live-pipeline validation", async () => {
+    fetchWithRetryMock.mockReset();
+    // Single CG price at $50 — far outside USD bounds [0.01, 1.19] so
+    // validatePriceCandidate must reject it. Without validation the raw
+    // deviation is enormous and the event would be classified "confirmed";
+    // with validation the filtered series is empty and we fall to "no_data".
+    fetchWithRetryMock.mockResolvedValue(
+      new Response(JSON.stringify({ prices: [[1_800_000_000_000, 50.0]] }), {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      }),
+    );
+    const event = {
+      id: 42,
+      stablecoin_id: "usdt-tether",
+      symbol: "USDT",
+      peg_type: "peggedUSD",
+      direction: "below",
+      peak_deviation_bps: -1500,
+      started_at: 1_800_000_000,
+      ended_at: 1_800_003_600,
+      start_price: 0.85,
+      peak_price: 0.85,
+      recovery_price: 0.999,
+      peg_reference: 1,
+      source: "live",
+    };
+    const db = mockD1([]);
+
+    const result = await auditEvents(db, {
+      events: [event],
+      minSupply: 0,
+      symbolFilter: null,
+      offset: 0,
+      limit: 10,
+      dryRun: true,
+    });
+
+    expect(result.deletedEvents).toHaveLength(0);
+    expect(result.rejectedByValidationCount ?? 0).toBeGreaterThan(0);
   });
 });

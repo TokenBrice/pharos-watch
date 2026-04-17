@@ -7,6 +7,11 @@ import { computeStabilityIndex } from "../lib/stability-index";
 import { batchExecute } from "../lib/db";
 import { fetchWithRetry } from "../lib/fetch-retry";
 import type { DepegRow } from "../lib/depeg-helpers";
+import {
+  buildPriceValidationContext,
+  loadPriceValidationReferences,
+  validatePriceCandidate,
+} from "../lib/price-validation";
 import { getPsiMethodologyVersionAt } from "@shared/lib/stability-index-version";
 import {
   buildStabilityInputForDay,
@@ -42,6 +47,7 @@ interface AuditResult {
   falsePositivesFound: number;
   deletedEvents: { id: number; symbol: string; startedAt: number; peakBps: number }[];
   daysRecomputed: number;
+  rejectedByValidationCount: number;
 }
 
 interface SyntheticSplitRepairSummary {
@@ -545,7 +551,14 @@ export async function auditEvents(
     falsePositivesFound: 0,
     deletedEvents: [],
     daysRecomputed: 0,
+    rejectedByValidationCount: 0,
   };
+
+  // Load FX references once so CG prices can be vetted with the same
+  // validation context the live pricing pipeline uses.
+  const validationReferences = paginatedEvents.length > 0
+    ? await loadPriceValidationReferences(db)
+    : undefined;
 
   const affectedDays = new Set<number>();
 
@@ -567,6 +580,10 @@ export async function auditEvents(
 
     const threshold = getDepegThresholdBps(event.peg_type);
     const falsePositiveBar = Math.round(threshold * DEPEG_SECONDARY_THRESHOLD_RATIO);
+    const validationContext = buildPriceValidationContext({
+      stablecoinId: event.stablecoin_id,
+      pegType: event.peg_type,
+    });
 
     // Fetch CoinGecko historical data for the event window
     // precision=full gives maximum decimal places — critical for stablecoin prices near $1.000
@@ -597,9 +614,26 @@ export async function auditEvents(
       }
 
       const cgData = (await cgRes.json()) as { prices?: [number, number][] };
-      const prices = cgData.prices ?? [];
+      const rawPrices = cgData.prices ?? [];
+      const validatedPrices = rawPrices.filter(([, cgPrice]) => {
+        if (typeof cgPrice !== "number" || !Number.isFinite(cgPrice) || cgPrice <= 0) {
+          result.rejectedByValidationCount++;
+          return false;
+        }
+        const verdict = validatePriceCandidate(
+          cgPrice,
+          validationContext,
+          "historical_backfill",
+          validationReferences,
+        );
+        if (!verdict.accepted) {
+          result.rejectedByValidationCount++;
+          return false;
+        }
+        return true;
+      });
 
-      if (prices.length === 0) {
+      if (validatedPrices.length === 0) {
         result.auditedEvents.push({
           id: event.id,
           symbol: event.symbol,
@@ -613,8 +647,7 @@ export async function auditEvents(
 
       // Find max deviation in CG data during the event window
       let maxCgBps = 0;
-      for (const [, cgPrice] of prices) {
-        if (cgPrice <= 0) continue;
+      for (const [, cgPrice] of validatedPrices) {
         const cgBps = Math.abs(Math.round((cgPrice / event.peg_reference - 1) * 10000));
         if (cgBps > maxCgBps) maxCgBps = cgBps;
       }
