@@ -19,14 +19,14 @@ import type {
   MintBurnTxContext,
 } from "./mint-burn-bridge-classifier-types";
 
-export function normalizeHexSet(values: string[]): Set<string> {
+function normalizeHexSet(values: string[]): Set<string> {
   const normalized = values
     .map((value) => value.trim().toLowerCase())
     .filter((value) => value.length > 0);
   return new Set(normalized);
 }
 
-export function normalizeSelector(value: string | null | undefined): string | null {
+function normalizeSelector(value: string | null | undefined): string | null {
   if (!value) return null;
   const normalized = value.toLowerCase();
   if (!normalized.startsWith("0x")) return null;
@@ -44,7 +44,7 @@ export function setDefaultClassification(row: MintBurnBridgeClassifiableRow): vo
   row.burn_review_reason = null;
 }
 
-export function markBridgeTransfer(rows: MintBurnBridgeClassifiableRow[]): void {
+function markBridgeTransfer(rows: MintBurnBridgeClassifiableRow[]): void {
   for (const row of rows) {
     row.flow_type = "bridge_transfer";
     if (row.direction === "burn") {
@@ -57,7 +57,7 @@ export function markBridgeTransfer(rows: MintBurnBridgeClassifiableRow[]): void 
   }
 }
 
-export function hasSetIntersection(left: Set<string>, right: Set<string>): boolean {
+function hasSetIntersection(left: Set<string>, right: Set<string>): boolean {
   for (const value of left) {
     if (right.has(value)) return true;
   }
