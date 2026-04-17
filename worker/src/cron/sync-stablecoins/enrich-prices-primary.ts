@@ -8,7 +8,7 @@ import {
   getReferencePriceForContext,
   isSevereFixedPegDownside,
 } from "../../lib/price-validation";
-import { USER_AGENT, CIRCUIT_SOURCE, DEX_FRESHNESS_SEC, POOL_CHALLENGE_MIN_TVL, getDepegThresholdBps } from "../../lib/constants";
+import { USER_AGENT, CIRCUIT_SOURCE, CURVE_ORACLE_MAX_STALENESS_SEC, DEX_FRESHNESS_SEC, POOL_CHALLENGE_MIN_TVL, getDepegThresholdBps } from "../../lib/constants";
 import { CG_TICKER_COINS, fetchCgTickerPricesDetailed } from "../../lib/cg-ticker";
 import { fetchWithRetry } from "../../lib/fetch-retry";
 import { cgUrl, cgHeaders } from "../../lib/coingecko";
@@ -29,10 +29,9 @@ import type { PricingProviderAttemptDiagnostic } from "../../lib/pricing-provide
 import { fetchRedstonePrices, REDSTONE_TRACKED_SYMBOL_ALLOWLIST } from "../../lib/redstone";
 import { loadDexPriceRows, loadDexPoolChallengers, loadDexPriceSources } from "../../lib/depeg-helpers";
 import { isTrustedDexPriceRow } from "../../lib/depeg-trust-policy";
-import { fetchCurveOnchainPrices } from "../../lib/curve-onchain";
+import { fetchCurveOnchainPrices, fetchCurveOracleEma } from "../../lib/curve-onchain";
 import { CURVE_POOL_CONFIGS } from "../../lib/curve-pool-configs";
 import { CRVUSD_PRICE_AGGREGATOR, CRVUSD_PRICE_SELECTOR } from "../../lib/authoritative-price-sources";
-import { fetchEvmCallHexAtBlock } from "../../lib/evm-rpc";
 import type { ChainRpcConfig } from "../../lib/chain-registry";
 import { computePriceConsensus, type SourcePrice } from "../../lib/price-consensus";
 import {
@@ -175,6 +174,7 @@ interface PrimaryPricePlan {
     coinbase: boolean;
     redstone: boolean;
     curve: boolean;
+    curveOracle: boolean;
   };
 }
 
@@ -258,6 +258,7 @@ async function buildPrimaryPricePlan(
         coinbase: false,
         redstone: false,
         curve: false,
+        curveOracle: false,
       },
     };
   }
@@ -272,6 +273,7 @@ async function buildPrimaryPricePlan(
     coinbaseAllowed,
     redstoneAllowed,
     curveAllowed,
+    curveOracleAllowed,
   ] = await Promise.all([
     shouldAttemptFetch(db, CIRCUIT_SOURCE.CG_PRICES),
     shouldAttemptFetch(db, CIRCUIT_SOURCE.CG_TICKER),
@@ -282,9 +284,10 @@ async function buildPrimaryPricePlan(
     shouldAttemptFetch(db, CIRCUIT_SOURCE.COINBASE_PRICES),
     shouldAttemptFetch(db, CIRCUIT_SOURCE.REDSTONE_PRICES),
     shouldAttemptFetch(db, CIRCUIT_SOURCE.CURVE_ONCHAIN),
+    shouldAttemptFetch(db, CIRCUIT_SOURCE.CURVE_ORACLE),
   ]);
 
-  if (!cgAllowed && !pythAllowed && !binanceAllowed && !krakenAllowed && !bitstampAllowed && !coinbaseAllowed && !redstoneAllowed && !curveAllowed) {
+  if (!cgAllowed && !pythAllowed && !binanceAllowed && !krakenAllowed && !bitstampAllowed && !coinbaseAllowed && !redstoneAllowed && !curveAllowed && !curveOracleAllowed) {
     console.warn("[primary-prices] All live primary fetch circuits are open; continuing with local DL/DEX inputs only");
   }
 
@@ -332,6 +335,7 @@ async function buildPrimaryPricePlan(
       coinbase: coinbaseAllowed,
       redstone: redstoneAllowed,
       curve: curveAllowed,
+      curveOracle: curveOracleAllowed,
     },
   };
 }
@@ -709,24 +713,31 @@ export async function fetchPrimaryPrices(
         },
       ),
     );
+  }
+
+  if (sourceAllowed.curveOracle) {
     fetches.push(
-      (async () => {
-        try {
-          const hex = await fetchEvmCallHexAtBlock(
-            "ethereum", CRVUSD_PRICE_AGGREGATOR, CRVUSD_PRICE_SELECTOR, "latest", { signal, chainRpcs },
+      runPrimaryProviderFetch(
+        db,
+        signal,
+        CIRCUIT_SOURCE.CURVE_ORACLE,
+        "crvUSD oracle",
+        async () => {
+          const quote = await fetchCurveOracleEma(
+            "ethereum",
+            CRVUSD_PRICE_AGGREGATOR,
+            CRVUSD_PRICE_SELECTOR,
+            chainRpcs ?? new Map(),
+            signal,
           );
-          if (hex) {
-            const price = Number(BigInt(hex)) / 1e18;
-            if (price > 0 && price < 10) {
-              curveOraclePrice = price;
-              curveOracleObservedAt = Math.floor(Date.now() / 1000);
-            }
-          }
-        } catch (err) {
-          if (signal?.aborted) throw err instanceof Error ? err : new Error(String(err));
-          console.warn("[primary-prices] crvUSD oracle failed:", err);
-        }
-      })(),
+          if (!quote) return false;
+          const now = Math.floor(Date.now() / 1000);
+          if (now - quote.blockTimestamp > CURVE_ORACLE_MAX_STALENESS_SEC) return false;
+          curveOraclePrice = quote.price;
+          curveOracleObservedAt = quote.blockTimestamp;
+          return true;
+        },
+      ),
     );
   }
 

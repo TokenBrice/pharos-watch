@@ -106,7 +106,9 @@ export const PRICING_SOURCE_REGISTRY_MARKET_FEEDS = [
     key: "curve-oracle",
     label: "Curve oracle",
     shortLabel: "Curve oracle",
-    maxTrustedAgeSec: 15 * 60,
+    maxTrustedAgeSec: 300,
     defaultWeight: 3,
+    freshnessKind: "upstream",
+    supportsUpstreamObservedAt: true,
   }),
 ] as const satisfies readonly PricingSourceRegistryEntry[];

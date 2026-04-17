@@ -11,7 +11,7 @@
  * chain registry resolution and fallback RPCs.
  */
 
-import { fetchEvmCallHexAtBlock } from "./evm-rpc";
+import { fetchEvmBlockNumber, fetchEvmBlockTimestamp, fetchEvmCallHexAtBlock } from "./evm-rpc";
 import type { ChainRpcConfig } from "./chain-registry";
 
 export interface CurvePoolConfig {
@@ -119,4 +119,33 @@ function encodeGetDy(selector: string, i: number, j: number, dx: bigint): string
   const jHex = BigInt(j).toString(16).padStart(64, "0");
   const dxHex = dx.toString(16).padStart(64, "0");
   return `${selector}${iHex}${jHex}${dxHex}`;
+}
+
+/**
+ * Fetch the Curve PriceAggregator EMA price stamped with the block number and
+ * block timestamp it was read at. The block timestamp lets callers enforce
+ * freshness against stale-replica RPCs (the aggregator's price is an EMA
+ * updated on each pool transaction, not a heartbeat oracle).
+ *
+ * Returns null if any RPC leg fails or the parsed price falls outside the
+ * sanity band `(0, 10)`.
+ */
+export async function fetchCurveOracleEma(
+  chainId: string,
+  aggregator: string,
+  selector: string,
+  chainRpcs: Map<string, ChainRpcConfig>,
+  signal?: AbortSignal,
+): Promise<{ price: number; blockNumber: number; blockTimestamp: number } | null> {
+  const blockNumber = await fetchEvmBlockNumber(chainId, { chainRpcs, signal });
+  if (blockNumber == null) return null;
+  const [callHex, blockTimestamp] = await Promise.all([
+    fetchEvmCallHexAtBlock(chainId, aggregator, selector, blockNumber, { chainRpcs, signal }),
+    fetchEvmBlockTimestamp(chainId, blockNumber, { chainRpcs, signal }),
+  ]);
+  if (!callHex || blockTimestamp == null) return null;
+  const word = callHex.startsWith("0x") ? callHex.slice(0, 66) : "0x" + callHex.slice(0, 64);
+  const price = Number(BigInt(word)) / 1e18;
+  if (!Number.isFinite(price) || price <= 0 || price >= 10) return null;
+  return { price, blockNumber, blockTimestamp };
 }

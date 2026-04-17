@@ -152,6 +152,7 @@ export const CIRCUIT_SOURCE = {
   COINBASE_PRICES: "coinbase-prices",
   REDSTONE_PRICES: "redstone-prices",
   CURVE_ONCHAIN: "curve-onchain",
+  CURVE_ORACLE: "curve-oracle",
   CURVE_LIQUIDITY_API: "curve-liquidity-api",
   FX_FRANKFURTER: "fx-frankfurter",
   FX_REALTIME: "fx-realtime",
@@ -180,6 +181,9 @@ export const KINESIS_KAG_HORIZON = "https://kag-mainnet.kinesisgroup.io";
 
 /** Minimum per-pool TVL for DEX pool challenge and pool-level depeg confirmation */
 export const POOL_CHALLENGE_MIN_TVL = 100_000; // $100K
+
+/** Maximum accepted block-timestamp staleness for the Curve PriceAggregator EMA oracle (seconds). */
+export const CURVE_ORACLE_MAX_STALENESS_SEC = 300;
 
 /** Minimum TVL for a GeckoTerminal pool to be used as a price cross-check */
 export const GT_PROBE_MIN_TVL_USD = 10_000;

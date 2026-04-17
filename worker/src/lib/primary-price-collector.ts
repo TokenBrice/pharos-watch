@@ -169,6 +169,7 @@ export function buildPrimarySourceCandidates(
       source: "curve-oracle",
       price: asset.id === "crvusd-curve" ? collected.curveOraclePrice : null,
       observedAt: collected.curveOracleObservedAt,
+      observedAtMode: "upstream",
     }),
   ].filter((source): source is SourcePrice => source != null);
   sources.push(...baseSources);
