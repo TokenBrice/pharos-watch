@@ -2281,4 +2281,27 @@ describe("applyPoolChallenge", () => {
     expect(updated!.observedAtBySource).toEqual({ "pool-tvl-weighted": 900 });
     expect(updated!.observedAtModeBySource).toEqual({ "pool-tvl-weighted": "local_fetch" });
   });
+
+  it("does NOT downgrade NAV tokens even when pool prices diverge", () => {
+    const results = new Map<string, PrimaryPriceResult>([
+      ["ousg-ondo-finance", {
+        price: 110.15, source: "coingecko+defillama-list",
+        confidence: "high", dlPrice: 110.15, cgPrice: 110.15,
+        candidateSources: ["coingecko", "defillama-list"],
+        agreeSources: ["coingecko", "defillama-list"],
+      }],
+    ]);
+    const pools = new Map([
+      ["ousg-ondo-finance", [{ price: 100.0, tvlUsd: 500_000, protocol: "curve", chain: "ethereum" }]],
+    ]);
+    const pegTypes = new Map<string, string | undefined>([["ousg-ondo-finance", undefined]]);
+    const navTokenAssetIds = new Set(["ousg-ondo-finance"]);
+    const stats: PriceValidationStats = { attempted: 1, high: 1, singleSource: 0, cgOnly: 0, low: 0 };
+
+    const downgrades = applyPoolChallenge(results, pools, pegTypes, stats, undefined, navTokenAssetIds);
+
+    expect(downgrades).toBe(0);
+    expect(results.get("ousg-ondo-finance")!.confidence).toBe("high");
+    expect(results.get("ousg-ondo-finance")!.price).toBe(110.15);
+  });
 });

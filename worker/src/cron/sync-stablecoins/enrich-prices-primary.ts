@@ -132,12 +132,16 @@ async function applyPrimaryPostConsensusHardening(params: {
     params.nowSec,
   );
   const assetPegTypes = new Map(params.candidates.map((a) => [a.id, a.pegType]));
+  const navTokenAssetIds = new Set(
+    params.candidates.filter((a) => a.navToken).map((a) => a.id),
+  );
   const poolChallengeDowngrades = applyPoolChallenge(
     params.results,
     poolChallengers,
     assetPegTypes,
     params.stats,
     params.references,
+    navTokenAssetIds,
   );
   if (poolChallengeDowngrades > 0) {
     console.log(`[primary-prices] Pool challenge hardened ${poolChallengeDowngrades} soft-only result(s)`);
@@ -827,10 +831,12 @@ export function applyPoolChallenge(
   assetPegTypes: Map<string, string | undefined>,
   stats: PriceValidationStats,
   references?: PriceValidationReferences,
+  navTokenAssetIds?: Set<string>,
 ): number {
   let downgrades = 0;
   for (const [assetId, result] of results) {
     if (result.confidence !== "high" && result.confidence !== "single-source" && result.confidence !== "low") continue;
+    if (navTokenAssetIds?.has(assetId)) continue;
     const challengeSources = result.confidence === "low" ? result.candidateSources : result.agreeSources;
     if (!isPoolChallengeEligibleConsensus(challengeSources)) continue;
 
