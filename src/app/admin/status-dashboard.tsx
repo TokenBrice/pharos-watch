@@ -327,7 +327,9 @@ export function StatusDashboard({ onSignOut }: { onSignOut: () => void }) {
                       {cause.runbookUrl && (
                         <a
                           href={cause.runbookUrl}
-                          className="pharos-focus-ring mt-2 inline-flex items-center gap-1 text-[11px] font-medium text-primary hover:underline"
+                          target="_blank"
+                          rel="noreferrer noopener"
+                          className="pharos-focus-ring mt-2 inline-flex items-center gap-1 text-[11px] font-medium text-primary underline underline-offset-2"
                         >
                           Runbook →
                         </a>

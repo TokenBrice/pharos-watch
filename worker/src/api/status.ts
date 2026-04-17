@@ -44,10 +44,17 @@ export function handleStatus(
       // race with the cron's own reconcile call. First-boot with empty table
       // returns a fallback state but does NOT persist — the next cron seeds.
       const resolvedState = state ?? buildFallbackStatusState(raw.rawOverallStatus, now);
+      // Distinguish three cases:
+      //  1. staleness present → use it (honest age reporting)
+      //  2. state absent on cold boot, no persistence issue → isStale: false
+      //  3. staleness query itself failed → surface isStale: true so clients
+      //     don't trust the fallback as fresh. The specific DB error is also
+      //     present in `sectionErrors.statusState`.
+      const statusStateReadFailed = persistenceIssues.some((issue) => issue.operation === "read-status-snapshot");
       const resolvedStaleness = staleness ?? {
-        ageSeconds: 0,
+        ageSeconds: statusStateReadFailed ? STATUS_SYSTEM_FRESHNESS_SEC + 1 : 0,
         maxAgeSec: STATUS_SYSTEM_FRESHNESS_SEC,
-        isStale: false,
+        isStale: statusStateReadFailed,
       };
 
       const effectiveOverallStatus = resolvedState.currentStatus;

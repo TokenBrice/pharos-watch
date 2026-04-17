@@ -17,8 +17,8 @@ The cached `/api/stablecoins` payload is either missing or older than its config
 ## Remediation
 
 - **Backfill prices:** Admin page → Recommended actions → `backfill-cg-prices`. Idempotent; reruns the pricing pipeline and writes the cache.
-- **Circuit breaker:** if a specific provider breaker is open, use the "Reset circuit breaker" button (Reliability section) to re-probe immediately.
-- **Cron lease:** if `sync-stablecoins` shows consecutive `skipped_locked` runs, use the "Reset lease" button on the cron card.
+- **Circuit breaker:** if a specific provider breaker is open, `POST /api/reset-circuit-breaker?circuit=<source>` (via curl with `X-Pharos-Admin: 1` + `Idempotency-Key`, or `wrangler`). Contextual UI button is a follow-up.
+- **Cron lease:** if `sync-stablecoins` shows consecutive `skipped_locked` runs, `POST /api/reset-cron-lease?job=sync-stablecoins`. Same auth pattern.
 
 ## Prevention
 

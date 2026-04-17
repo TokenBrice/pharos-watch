@@ -18,17 +18,24 @@ function formatRatio(value: number): string {
  * Operator-facing runbook URLs, keyed by StatusCause.code. Populated only
  * for the codes that have a documented runbook — the rest are deliberately
  * omitted so the UI can render the "Runbook →" link only when present.
+ *
+ * URLs point at the repo's `docs/runbooks/` folder on GitHub. These files
+ * are not served by Next.js, so a relative path like `/docs/runbooks/...`
+ * would 404 at `https://ops.pharos.watch/...`. The blob URL survives branch
+ * renames as long as `main` is the default.
  */
+const RUNBOOK_BASE = "https://github.com/TokenBrice/stablecoin-dashboard/blob/main/docs/runbooks";
+
 export const RUNBOOK_BY_CODE: Record<string, string> = {
-  db_unhealthy: "/docs/runbooks/db-connectivity",
-  data_quality_skipped_db_unhealthy: "/docs/runbooks/db-connectivity",
-  stablecoins_cache_unavailable: "/docs/runbooks/stablecoins-cache",
-  stablecoins_cache_degraded: "/docs/runbooks/stablecoins-cache",
-  blacklist_gaps_degraded: "/docs/runbooks/blacklist-sync",
-  blacklist_gaps_stale: "/docs/runbooks/blacklist-sync",
-  onchain_integrity_degraded: "/docs/runbooks/mint-burn-integrity",
-  onchain_integrity_stale: "/docs/runbooks/mint-burn-integrity",
-  onchain_monitor_unavailable: "/docs/runbooks/mint-burn-integrity",
+  db_unhealthy: `${RUNBOOK_BASE}/db-connectivity.md`,
+  data_quality_skipped_db_unhealthy: `${RUNBOOK_BASE}/db-connectivity.md`,
+  stablecoins_cache_unavailable: `${RUNBOOK_BASE}/stablecoins-cache.md`,
+  stablecoins_cache_degraded: `${RUNBOOK_BASE}/stablecoins-cache.md`,
+  blacklist_gaps_degraded: `${RUNBOOK_BASE}/blacklist-sync.md`,
+  blacklist_gaps_stale: `${RUNBOOK_BASE}/blacklist-sync.md`,
+  onchain_integrity_degraded: `${RUNBOOK_BASE}/mint-burn-integrity.md`,
+  onchain_integrity_stale: `${RUNBOOK_BASE}/mint-burn-integrity.md`,
+  onchain_monitor_unavailable: `${RUNBOOK_BASE}/mint-burn-integrity.md`,
 };
 
 /**

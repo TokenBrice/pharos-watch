@@ -660,6 +660,10 @@ const BASE_ENDPOINT_DEFINITIONS = [
     cacheBypass: true,
     probeGroup: "admin",
   },
+  // Operator controls that require context-specific query params (?job=,
+  // ?circuit=, ?leaseOwner=). Reachable via curl/wrangler or via a future
+  // contextual-button UI integration; no generic `statusPageAction` because
+  // AdminActionButton doesn't currently collect free-form query params.
   {
     key: "reset-cron-lease",
     path: API_PATHS.resetCronLease(),
@@ -668,12 +672,6 @@ const BASE_ENDPOINT_DEFINITIONS = [
     mutatingAdmin: true,
     cacheBypass: true,
     probeGroup: "manual",
-    statusPageAction: {
-      label: "Reset Cron Lease",
-      confirm: "Reset the cron lease for ?job=. The current lock holder will be orphaned.",
-      destructive: true,
-      method: "POST",
-    },
   },
   {
     key: "reset-circuit-breaker",
@@ -683,12 +681,6 @@ const BASE_ENDPOINT_DEFINITIONS = [
     mutatingAdmin: true,
     cacheBypass: true,
     probeGroup: "manual",
-    statusPageAction: {
-      label: "Reset Circuit Breaker",
-      confirm: "Reset the circuit breaker for ?circuit=. Clears cached state so the next call re-probes.",
-      destructive: true,
-      method: "POST",
-    },
   },
   {
     key: "kill-cron-in-flight",
@@ -698,12 +690,6 @@ const BASE_ENDPOINT_DEFINITIONS = [
     mutatingAdmin: true,
     cacheBypass: true,
     probeGroup: "manual",
-    statusPageAction: {
-      label: "Kill Cron In-Flight",
-      confirm: "Force-kill the in-flight run for ?job= (requires ?leaseOwner=). In-flight progress is lost.",
-      destructive: true,
-      method: "POST",
-    },
   },
   {
     key: "bulk-dismiss-discovery-candidates",
@@ -713,12 +699,6 @@ const BASE_ENDPOINT_DEFINITIONS = [
     mutatingAdmin: true,
     cacheBypass: true,
     probeGroup: "manual",
-    statusPageAction: {
-      label: "Bulk Dismiss Candidates",
-      confirm: "Dismiss all non-dismissed discovery candidates (requires ?all=true or ?ids=).",
-      destructive: true,
-      method: "POST",
-    },
   },
   {
     key: "status-probe-history",

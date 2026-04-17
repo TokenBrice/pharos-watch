@@ -10,7 +10,7 @@ describe("StatusCause.runbookUrl", () => {
       severity: "critical",
       message: "DB unhealthy",
     };
-    expect(withRunbook(cause).runbookUrl).toBe("/docs/runbooks/db-connectivity");
+    expect(withRunbook(cause).runbookUrl).toBe("https://github.com/TokenBrice/stablecoin-dashboard/blob/main/docs/runbooks/db-connectivity.md");
   });
 
   it("omits runbookUrl for codes without a documented runbook", () => {
@@ -35,14 +35,14 @@ describe("StatusCause.runbookUrl", () => {
     };
     const withUrl = withRunbook(cause);
     expect(withUrl).toMatchObject(cause);
-    expect(withUrl.runbookUrl).toBe("/docs/runbooks/stablecoins-cache");
+    expect(withUrl.runbookUrl).toBe("https://github.com/TokenBrice/stablecoin-dashboard/blob/main/docs/runbooks/stablecoins-cache.md");
   });
 
   it("covers all codes listed in RUNBOOK_BY_CODE with valid documented URLs", () => {
-    const expectedPrefix = "/docs/runbooks/";
     for (const [code, url] of Object.entries(RUNBOOK_BY_CODE)) {
       expect(code, `code must be non-empty`).toBeTruthy();
-      expect(url.startsWith(expectedPrefix), `url for ${code} must start with ${expectedPrefix}`).toBe(true);
+      expect(url.endsWith(".md"), `url for ${code} must end with .md`).toBe(true);
+      expect(/^https:\/\//.test(url), `url for ${code} must be absolute`).toBe(true);
     }
     // Sanity: at least 5 documented runbooks so the feature is meaningful.
     expect(Object.keys(RUNBOOK_BY_CODE).length).toBeGreaterThanOrEqual(5);

@@ -137,6 +137,7 @@ describe("api endpoint registry", () => {
       "/api/status-history?limit=10",
       "/api/debug-sync-state",
       "/api/discovery-candidates",
+      "/api/status-probe-history",
     ]);
 
     expect(getProbePaths("manual")).toEqual([
@@ -153,6 +154,10 @@ describe("api endpoint registry", () => {
       "/api/reclassify-atomic-roundtrips",
       "/api/audit-depeg-history?dry-run=true",
       "/api/backfill-dews",
+      "/api/reset-cron-lease",
+      "/api/reset-circuit-breaker",
+      "/api/kill-cron-in-flight",
+      "/api/bulk-dismiss-discovery-candidates",
     ]);
   });
 
