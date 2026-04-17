@@ -12,6 +12,121 @@ export function unixNow(): number {
   return Math.floor(Date.now() / 1000);
 }
 
+export interface UpsertSubscriberInput {
+  chatId: string;
+  username: string | null;
+  nowSec: number;
+  perCoinAlertBumps?: { dews?: 0 | 1; depeg?: 0 | 1; safety?: 0 | 1; launch?: 0 | 1 };
+  globalAlertBumps?: { dews?: 0 | 1; depeg?: 0 | 1; safety?: 0 | 1; launch?: 0 | 1 };
+  globalAlertOverrides?: { dews?: 0 | 1; depeg?: 0 | 1; safety?: 0 | 1; launch?: 0 | 1 };
+  quietHours?:
+    | { enabled: true; startHourUtc: number; endHourUtc: number }
+    | { enabled: false };
+}
+
+const ALERT_KEYS = ["dews", "depeg", "safety", "launch"] as const;
+type AlertKey = (typeof ALERT_KEYS)[number];
+
+/**
+ * Upserts a telegram_subscribers row. Any field left undefined preserves
+ * existing values on conflict and defaults to 0/NULL on initial insert.
+ *
+ * - `perCoinAlertBumps` / `globalAlertBumps` use MAX(...) so per-coin actions
+ *   never downgrade a flag.
+ * - `globalAlertOverrides` replaces the value (used by `/set all ... off`).
+ * - `quietHours` replaces unconditionally.
+ */
+export async function upsertSubscriberRow(
+  db: D1Database,
+  input: UpsertSubscriberInput,
+): Promise<void> {
+  const quietStart = input.quietHours?.enabled ? input.quietHours.startHourUtc : null;
+  const quietEnd = input.quietHours?.enabled ? input.quietHours.endHourUtc : null;
+  const quietEnabled = input.quietHours?.enabled ? 1 : 0;
+
+  const updates: string[] = [
+    "username = COALESCE(excluded.username, telegram_subscribers.username)",
+    "last_active_at = excluded.last_active_at",
+  ];
+
+  const perCoinRow = [0, 0, 0, 0];
+  if (input.perCoinAlertBumps) {
+    for (let i = 0; i < ALERT_KEYS.length; i += 1) {
+      const key = ALERT_KEYS[i];
+      const value = input.perCoinAlertBumps[key];
+      if (value != null) {
+        updates.push(
+          `alert_${key} = MAX(telegram_subscribers.alert_${key}, excluded.alert_${key})`,
+        );
+        perCoinRow[i] = value;
+      }
+    }
+  }
+
+  const globalRow = [0, 0, 0, 0];
+  if (input.globalAlertBumps) {
+    for (let i = 0; i < ALERT_KEYS.length; i += 1) {
+      const key = ALERT_KEYS[i];
+      const value = input.globalAlertBumps[key];
+      if (value != null) {
+        updates.push(
+          `global_alert_${key} = MAX(telegram_subscribers.global_alert_${key}, excluded.global_alert_${key})`,
+        );
+        globalRow[i] = value;
+      }
+    }
+  }
+  if (input.globalAlertOverrides) {
+    for (let i = 0; i < ALERT_KEYS.length; i += 1) {
+      const key: AlertKey = ALERT_KEYS[i];
+      const value = input.globalAlertOverrides[key];
+      if (value != null) {
+        updates.push(`global_alert_${key} = excluded.global_alert_${key}`);
+        globalRow[i] = value;
+      }
+    }
+  }
+
+  if (input.quietHours != null) {
+    updates.push(
+      "quiet_hours_enabled = excluded.quiet_hours_enabled",
+      "quiet_hours_start_utc = excluded.quiet_hours_start_utc",
+      "quiet_hours_end_utc = excluded.quiet_hours_end_utc",
+    );
+  }
+
+  await db
+    .prepare(`
+      INSERT INTO telegram_subscribers (
+        chat_id, username,
+        alert_dews, alert_depeg, alert_safety, alert_launch,
+        global_alert_dews, global_alert_depeg, global_alert_safety, global_alert_launch,
+        quiet_hours_enabled, quiet_hours_start_utc, quiet_hours_end_utc,
+        created_at, last_active_at
+      )
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      ON CONFLICT(chat_id) DO UPDATE SET ${updates.join(", ")}
+    `)
+    .bind(
+      input.chatId,
+      input.username,
+      perCoinRow[0],
+      perCoinRow[1],
+      perCoinRow[2],
+      perCoinRow[3],
+      globalRow[0],
+      globalRow[1],
+      globalRow[2],
+      globalRow[3],
+      quietEnabled,
+      quietStart,
+      quietEnd,
+      input.nowSec,
+      input.nowSec,
+    )
+    .run();
+}
+
 export async function persistPendingDisambiguation(
   db: D1Database,
   input: {
@@ -94,43 +209,17 @@ export async function upsertGlobalAlertTypes(
   username: string | null,
   alertTypes: Set<string>,
 ): Promise<void> {
-  const now = unixNow();
-  await db
-    .prepare(`
-      INSERT INTO telegram_subscribers (
-        chat_id,
-        username,
-        alert_dews,
-        alert_depeg,
-        alert_safety,
-        alert_launch,
-        global_alert_dews,
-        global_alert_depeg,
-        global_alert_safety,
-        global_alert_launch,
-        created_at,
-        last_active_at
-      )
-      VALUES (?, ?, 0, 0, 0, 0, ?, ?, ?, ?, ?, ?)
-      ON CONFLICT(chat_id) DO UPDATE SET
-        username = COALESCE(excluded.username, telegram_subscribers.username),
-        global_alert_dews = MAX(telegram_subscribers.global_alert_dews, excluded.global_alert_dews),
-        global_alert_depeg = MAX(telegram_subscribers.global_alert_depeg, excluded.global_alert_depeg),
-        global_alert_safety = MAX(telegram_subscribers.global_alert_safety, excluded.global_alert_safety),
-        global_alert_launch = MAX(telegram_subscribers.global_alert_launch, excluded.global_alert_launch),
-        last_active_at = excluded.last_active_at
-    `)
-    .bind(
-      chatId,
-      username,
-      alertTypes.has("dews") ? 1 : 0,
-      alertTypes.has("depeg") ? 1 : 0,
-      alertTypes.has("safety") ? 1 : 0,
-      alertTypes.has("launch") ? 1 : 0,
-      now,
-      now,
-    )
-    .run();
+  await upsertSubscriberRow(db, {
+    chatId,
+    username,
+    nowSec: unixNow(),
+    globalAlertBumps: {
+      dews: alertTypes.has("dews") ? 1 : 0,
+      depeg: alertTypes.has("depeg") ? 1 : 0,
+      safety: alertTypes.has("safety") ? 1 : 0,
+      launch: alertTypes.has("launch") ? 1 : 0,
+    },
+  });
 }
 
 export async function upsertSubscriberAndSubscriptions(
@@ -148,49 +237,26 @@ export async function upsertSubscriberAndSubscriptions(
   const alertLaunch = alertTypes.has("launch") ? 1 : 0;
   const uniqueStablecoinIds = Array.from(new Set(stablecoinIds));
 
+  // The subscriber row cannot share a batch with subscriptions because the helper
+  // uses a single .run(); run it first, then batch the subscriptions.
+  await upsertSubscriberRow(db, {
+    chatId,
+    username,
+    nowSec: now,
+    perCoinAlertBumps: {
+      dews: alertDews,
+      depeg: alertDepeg,
+      safety: alertSafety,
+      launch: alertLaunch,
+    },
+  });
+
   const statements: D1PreparedStatement[] = [];
   if (options?.clearPending) {
     statements.push(
       db.prepare("DELETE FROM telegram_pending_disambiguation WHERE chat_id = ?").bind(chatId),
     );
   }
-
-  statements.push(
-    db.prepare(`
-      INSERT INTO telegram_subscribers (
-        chat_id,
-        username,
-        alert_dews,
-        alert_depeg,
-        alert_safety,
-        alert_launch,
-        global_alert_dews,
-        global_alert_depeg,
-        global_alert_safety,
-        global_alert_launch,
-        created_at,
-        last_active_at
-      )
-      VALUES (?, ?, ?, ?, ?, ?, 0, 0, 0, 0, ?, ?)
-      ON CONFLICT(chat_id) DO UPDATE SET
-        username = COALESCE(excluded.username, telegram_subscribers.username),
-        alert_dews = MAX(telegram_subscribers.alert_dews, excluded.alert_dews),
-        alert_depeg = MAX(telegram_subscribers.alert_depeg, excluded.alert_depeg),
-        alert_safety = MAX(telegram_subscribers.alert_safety, excluded.alert_safety),
-        alert_launch = MAX(telegram_subscribers.alert_launch, excluded.alert_launch),
-        last_active_at = excluded.last_active_at
-    `).bind(
-      chatId,
-      username,
-      alertDews,
-      alertDepeg,
-      alertSafety,
-      alertLaunch,
-      now,
-      now,
-    ),
-  );
-
   for (const stablecoinId of uniqueStablecoinIds) {
     statements.push(
       db.prepare(`
@@ -211,8 +277,7 @@ export async function upsertSubscriberAndSubscriptions(
       `).bind(chatId, stablecoinId, alertDews, alertDepeg, alertSafety, alertLaunch),
     );
   }
-
-  await db.batch(statements);
+  if (statements.length > 0) await db.batch(statements);
 }
 
 export async function applySettingToSubscriptions(
@@ -223,49 +288,20 @@ export async function applySettingToSubscriptions(
   command: ParsedSetCommand,
 ): Promise<void> {
   const now = unixNow();
-  const statements: D1PreparedStatement[] = [
-    db.prepare(`
-      INSERT INTO telegram_subscribers (
-        chat_id,
-        username,
-        alert_dews,
-        alert_depeg,
-        alert_safety,
-        global_alert_dews,
-        global_alert_depeg,
-        global_alert_safety,
-        created_at,
-        last_active_at
-      )
-      VALUES (?, ?, 0, 0, 0, 0, 0, 0, ?, ?)
-      ON CONFLICT(chat_id) DO UPDATE SET
-        username = COALESCE(excluded.username, telegram_subscribers.username),
-        last_active_at = excluded.last_active_at
-    `).bind(chatId, username, now, now),
-  ];
+  const perCoinAlertBumps: UpsertSubscriberInput["perCoinAlertBumps"] = {};
+  if (command.setting === "dews" && command.enabled) perCoinAlertBumps.dews = 1;
+  if (command.setting === "depeg" && command.enabled) perCoinAlertBumps.depeg = 1;
+  if (command.setting === "depeg-step") perCoinAlertBumps.depeg = 1;
+  if (command.setting === "safety" && command.enabled) perCoinAlertBumps.safety = 1;
 
-  const enableGlobalTypes = new Set<string>();
-  if (command.setting === "dews" && command.enabled) enableGlobalTypes.add("dews");
-  if (command.setting === "depeg" && command.enabled) enableGlobalTypes.add("depeg");
-  if (command.setting === "depeg-step") enableGlobalTypes.add("depeg");
-  if (command.setting === "safety" && command.enabled) enableGlobalTypes.add("safety");
+  await upsertSubscriberRow(db, {
+    chatId,
+    username,
+    nowSec: now,
+    perCoinAlertBumps,
+  });
 
-  if (enableGlobalTypes.size > 0) {
-    statements.push(
-      db.prepare(
-        `UPDATE telegram_subscribers
-            SET alert_dews = MAX(alert_dews, ?),
-                alert_depeg = MAX(alert_depeg, ?),
-                alert_safety = MAX(alert_safety, ?)
-          WHERE chat_id = ?`,
-      ).bind(
-        enableGlobalTypes.has("dews") ? 1 : 0,
-        enableGlobalTypes.has("depeg") ? 1 : 0,
-        enableGlobalTypes.has("safety") ? 1 : 0,
-        chatId,
-      ),
-    );
-  }
+  const statements: D1PreparedStatement[] = [];
 
   for (const coin of coins) {
     switch (command.setting) {
@@ -324,7 +360,7 @@ export async function applySettingToSubscriptions(
     }
   }
 
-  await db.batch(statements);
+  if (statements.length > 0) await db.batch(statements);
 }
 
 export function validateGlobalSetCommand(command: ParsedSetCommand): string | null {
@@ -346,52 +382,17 @@ export async function applyGlobalSetting(
   username: string | null,
   command: ParsedSetCommand,
 ): Promise<void> {
-  const now = unixNow();
-  const current = await loadSubscriberByChat(db, chatId);
-  const next = {
-    dews: current?.global_alert_dews ?? 0,
-    depeg: current?.global_alert_depeg ?? 0,
-    safety: current?.global_alert_safety ?? 0,
-  };
-
-  switch (command.setting) {
-    case "dews":
-      next.dews = command.enabled ? 1 : 0;
-      break;
-    case "depeg":
-      next.depeg = command.enabled ? 1 : 0;
-      break;
-    case "safety":
-      next.safety = command.enabled ? 1 : 0;
-      break;
-    case "depeg-step":
-      throw new Error("Global depeg-step is not supported");
+  if (command.setting === "depeg-step") {
+    throw new Error("Global depeg-step is not supported");
   }
+  const override: 0 | 1 = command.enabled ? 1 : 0;
 
-  await db
-    .prepare(`
-      INSERT INTO telegram_subscribers (
-        chat_id,
-        username,
-        alert_dews,
-        alert_depeg,
-        alert_safety,
-        global_alert_dews,
-        global_alert_depeg,
-        global_alert_safety,
-        created_at,
-        last_active_at
-      )
-      VALUES (?, ?, 0, 0, 0, ?, ?, ?, ?, ?)
-      ON CONFLICT(chat_id) DO UPDATE SET
-        username = COALESCE(excluded.username, telegram_subscribers.username),
-        global_alert_dews = excluded.global_alert_dews,
-        global_alert_depeg = excluded.global_alert_depeg,
-        global_alert_safety = excluded.global_alert_safety,
-        last_active_at = excluded.last_active_at
-    `)
-    .bind(chatId, username, next.dews, next.depeg, next.safety, now, now)
-    .run();
+  await upsertSubscriberRow(db, {
+    chatId,
+    username,
+    nowSec: unixNow(),
+    globalAlertOverrides: { [command.setting]: override },
+  });
 }
 
 export async function removeSubscriptions(

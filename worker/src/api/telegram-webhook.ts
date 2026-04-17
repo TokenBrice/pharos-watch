@@ -55,6 +55,7 @@ import {
   unixNow,
   upsertGlobalAlertTypes,
   upsertSubscriberAndSubscriptions,
+  upsertSubscriberRow,
   validateGlobalSetCommand,
 } from "./telegram-webhook-store";
 import { withErrorHandler } from "../lib/api-utils";
@@ -519,29 +520,22 @@ async function handleMute(
     await replyToChat(chatId, escapeHtml(parsed.error), botToken);
     return;
   }
-
-  const now = unixNow();
-  await db
-    .prepare(
-      `INSERT INTO telegram_subscribers (
-         chat_id, username, alert_dews, alert_depeg, alert_safety, created_at, last_active_at,
-         quiet_hours_enabled, quiet_hours_start_utc, quiet_hours_end_utc
-       )
-       VALUES (?, ?, 0, 0, 0, ?, ?, 1, ?, ?)
-       ON CONFLICT(chat_id) DO UPDATE SET
-         username = COALESCE(excluded.username, telegram_subscribers.username),
-         last_active_at = excluded.last_active_at,
-         quiet_hours_enabled = 1,
-         quiet_hours_start_utc = excluded.quiet_hours_start_utc,
-         quiet_hours_end_utc = excluded.quiet_hours_end_utc`,
-    )
-    .bind(chatId, username, now, now, parsed.startHourUtc, parsed.endHourUtc)
-    .run();
-
+  await upsertSubscriberRow(db, {
+    chatId,
+    username,
+    nowSec: unixNow(),
+    quietHours: {
+      enabled: true,
+      startHourUtc: parsed.startHourUtc,
+      endHourUtc: parsed.endHourUtc,
+    },
+  });
   await replyToChat(
     chatId,
-    `Quiet hours enabled: ${formatQuietHours(parsed.startHourUtc, parsed.endHourUtc)} UTC.
-Messages will still arrive, but Telegram notifications will be silenced in that window.`,
+    escapeHtml(
+      `Quiet hours enabled: ${formatQuietHours(parsed.startHourUtc, parsed.endHourUtc)} UTC.\n` +
+        "Messages will still arrive, but Telegram notifications will be silenced in that window.",
+    ),
     botToken,
   );
 }
@@ -552,24 +546,12 @@ async function handleUnmuteHours(
   username: string | null,
   botToken: string,
 ): Promise<void> {
-  const now = unixNow();
-  await db
-    .prepare(
-      `INSERT INTO telegram_subscribers (
-         chat_id, username, alert_dews, alert_depeg, alert_safety, created_at, last_active_at,
-         quiet_hours_enabled, quiet_hours_start_utc, quiet_hours_end_utc
-       )
-       VALUES (?, ?, 0, 0, 0, ?, ?, 0, NULL, NULL)
-       ON CONFLICT(chat_id) DO UPDATE SET
-         username = COALESCE(excluded.username, telegram_subscribers.username),
-         last_active_at = excluded.last_active_at,
-         quiet_hours_enabled = 0,
-         quiet_hours_start_utc = NULL,
-         quiet_hours_end_utc = NULL`,
-    )
-    .bind(chatId, username, now, now)
-    .run();
-
+  await upsertSubscriberRow(db, {
+    chatId,
+    username,
+    nowSec: unixNow(),
+    quietHours: { enabled: false },
+  });
   await replyToChat(chatId, "Quiet hours disabled.", botToken);
 }
 
