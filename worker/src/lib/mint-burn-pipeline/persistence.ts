@@ -44,28 +44,40 @@ export async function insertMintBurnRows(
   return { inserted, ignored };
 }
 
+export interface ClassificationUpdateCounters {
+  flowTypeChanges: number;
+  burnTypeChanges: number;
+}
+
 export async function updateEventClassifications(
   db: D1Database,
   rows: MintBurnRow[],
-): Promise<number> {
-  const rowsNeedingUpdate = rows.filter((row) =>
-    row.direction === "burn" || row.flow_type !== "standard",
-  );
-  if (rowsNeedingUpdate.length === 0) return 0;
+): Promise<ClassificationUpdateCounters> {
+  // Split into two UPDATE passes so the operator response can report
+  // flow_type vs burn_type deltas independently. burn_type updates apply
+  // to every burn row (even standard flow), while flow_type updates only
+  // touch rows where the classifier produced a non-standard flow.
+  const burnRows = rows.filter((row) => row.direction === "burn");
+  const flowRows = rows.filter((row) => row.flow_type !== "standard");
 
-  const updateClassificationStmts = rowsNeedingUpdate.map((row) =>
+  const burnTypeStmts = burnRows.map((row) =>
     db.prepare(
       `UPDATE mint_burn_events
-       SET burn_type = ?, burn_review_reason = ?, flow_type = ?
+       SET burn_type = ?, burn_review_reason = ?
        WHERE id = ?`,
-    ).bind(
-      row.burn_type,
-      row.burn_review_reason,
-      row.flow_type,
-      row.id,
-    ),
+    ).bind(row.burn_type, row.burn_review_reason, row.id),
   );
-  return batchExecute(db, updateClassificationStmts);
+  const flowTypeStmts = flowRows.map((row) =>
+    db.prepare(
+      `UPDATE mint_burn_events
+       SET flow_type = ?
+       WHERE id = ?`,
+    ).bind(row.flow_type, row.id),
+  );
+
+  const burnTypeChanges = burnTypeStmts.length > 0 ? await batchExecute(db, burnTypeStmts) : 0;
+  const flowTypeChanges = flowTypeStmts.length > 0 ? await batchExecute(db, flowTypeStmts) : 0;
+  return { flowTypeChanges, burnTypeChanges };
 }
 
 export function collectAffectedHours(
@@ -155,7 +167,8 @@ export async function persistMintBurnRows(
 ): Promise<{
   inserted: number;
   ignored: number;
-  classificationRowsUpdated: number;
+  flowTypeChanges: number;
+  burnTypeChanges: number;
   roundtripsDetected: number;
 }> {
   const roundtripsDetected = detectAtomicRoundtrips(rows);
@@ -163,20 +176,23 @@ export async function persistMintBurnRows(
     return {
       inserted: 0,
       ignored: 0,
-      classificationRowsUpdated: 0,
+      flowTypeChanges: 0,
+      burnTypeChanges: 0,
       roundtripsDetected,
     };
   }
 
   const insertResult = await insertMintBurnRows(db, rows);
-  const classificationRowsUpdated = await updateEventClassifications(db, rows);
+  const { flowTypeChanges, burnTypeChanges } = await updateEventClassifications(db, rows);
+  const classificationRowsUpdated = flowTypeChanges + burnTypeChanges;
   if (affectedHours && (insertResult.inserted > 0 || classificationRowsUpdated > 0)) {
     collectAffectedHours(rows, affectedHours);
   }
   return {
     inserted: insertResult.inserted,
     ignored: insertResult.ignored,
-    classificationRowsUpdated,
+    flowTypeChanges,
+    burnTypeChanges,
     roundtripsDetected,
   };
 }

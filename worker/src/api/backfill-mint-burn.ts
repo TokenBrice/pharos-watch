@@ -176,6 +176,7 @@ export async function handleBackfillMintBurn(
         bridgeBurns: 0,
         reviewBurns: 0,
         rowsReclassified: 0,
+        reclassified: { flowTypeChanges: 0, burnTypeChanges: 0 },
         chunksProcessed: 0,
         budgetUsed: budget.count,
       });
@@ -195,7 +196,8 @@ export async function handleBackfillMintBurn(
     let effectiveBurns = 0;
     let bridgeBurns = 0;
     let reviewBurns = 0;
-    let rowsReclassified = 0;
+    let flowTypeChanges = 0;
+    let burnTypeChanges = 0;
     const txContextCache = new Map<string, MintBurnTxContext | null>();
 
     while (cursor <= toBlock && chunksProcessed < maxChunks && !budgetExhausted(budget)) {
@@ -269,7 +271,8 @@ export async function handleBackfillMintBurn(
       const persistResult = await persistMintBurnRows(db, allParsedRows, affectedHours);
       rowsInserted += persistResult.inserted;
       rowsIgnored += persistResult.ignored;
-      rowsReclassified += persistResult.classificationRowsUpdated;
+      flowTypeChanges += persistResult.flowTypeChanges;
+      burnTypeChanges += persistResult.burnTypeChanges;
 
       await recalcAffectedHours(db, affectedHours);
       await upsertMintBurnSyncState(db, configKey(config), scanTo, "monotonic-max");
@@ -297,7 +300,9 @@ export async function handleBackfillMintBurn(
       effectiveBurns,
       bridgeBurns,
       reviewBurns,
-      rowsReclassified,
+      // Legacy scalar retained for backward compat; prefer `reclassified.*` fields.
+      rowsReclassified: flowTypeChanges + burnTypeChanges,
+      reclassified: { flowTypeChanges, burnTypeChanges },
       budgetUsed: budget.count,
       budgetLimit: budget.limit,
     });
