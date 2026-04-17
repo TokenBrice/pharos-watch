@@ -442,6 +442,7 @@ export const BLACKLIST_STABLECOINS = [
   "USDP",
   "TUSD",
   "NUSD",
+  "EURCV",
 ] as const;
 
 export type BlacklistStablecoin = (typeof BLACKLIST_STABLECOINS)[number];

@@ -508,6 +508,32 @@ const SECURITIZE_SEIZE_EVENT_FAMILY = defineEventFamily("securitize-seize", [
   },
 ]);
 
+// --- Societe Generale Forge (EURCV) event definitions ---
+// Verified implementation ABI (0xf4ccc80c4b831a0d8d1414f2aca82a3d760ff05b,
+// behind ERC1967Proxy 0x5f7827fdeb7c20b443265fc2f40845b715385ff2) emits batch
+// AddressesFrozen(address[]) / AddressesUnFrozen(address[]) events (note the
+// capital F in UnFrozen — differs from the plan's assumed AddressesUnfrozen).
+
+const SOCGEN_ADDRESSES_FROZEN_TOPIC = "0x07381cac78ed3e2aa4d96e0d2c80e39d1c2fff09d8f6f079fa7249b553f45425"; // AddressesFrozen(address[])
+const SOCGEN_ADDRESSES_UNFROZEN_TOPIC = "0xb474664863a35c00b84f99fe9155ea67676b17495d6f9d6b0277787801f77a45"; // AddressesUnFrozen(address[])
+
+const SOCGEN_FREEZE_FAMILY = defineEventFamily("socgen-freeze", [
+  {
+    signature: "AddressesFrozen(address[])",
+    topicHash: SOCGEN_ADDRESSES_FROZEN_TOPIC,
+    eventType: "blacklist",
+    hasAmount: false,
+    addressArrayData: true,
+  },
+  {
+    signature: "AddressesUnFrozen(address[])",
+    topicHash: SOCGEN_ADDRESSES_UNFROZEN_TOPIC,
+    eventType: "unblacklist",
+    hasAmount: false,
+    addressArrayData: true,
+  },
+]);
+
 // --- Neutrl (NUSD) event definitions ---
 // Verified ABI on 0xe556aba6fe6036275ec1f87eda296be72c811bce emits separate
 // AddedToDenylist(address indexed) / RemovedFromDenylist(address indexed)
@@ -705,6 +731,12 @@ const CONTRACT_CONFIG_SPECS: ContractEventConfigSpec[] = [
   // AddedToDenylist / RemovedFromDenylist events (not the DenyListUpdated
   // bool pattern the plan anticipated), so the direction is driven by topic hash.
   { chain: ETHEREUM, stablecoinId: "nusd-neutrl", stablecoin: "NUSD", startBlock: 23_495_846, events: NEUTRL_DENYLIST_FAMILY.events },
+
+  // EURCV (Societe Generale Forge) — Ethereum only. ERC1967 proxy delegates to
+  // 0xf4ccc80c4b831a0d8d1414f2aca82a3d760ff05b which emits batch
+  // AddressesFrozen/AddressesUnFrozen events. Reuses the addressArrayData path
+  // already used by USDTB / AID / TGBP deny-list batches.
+  { chain: ETHEREUM, stablecoinId: "eurcv-societe-generale-forge", stablecoin: "EURCV", startBlock: 18_427_793, events: SOCGEN_FREEZE_FAMILY.events },
 
   // BUIDL seize-only coverage (Securitize token family)
   { chain: ETHEREUM, stablecoinId: "buidl-blackrock", stablecoin: "BUIDL", startBlock: 19_343_293, events: SECURITIZE_SEIZE_EVENT_FAMILY.events },

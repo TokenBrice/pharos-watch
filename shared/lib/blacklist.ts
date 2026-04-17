@@ -15,6 +15,7 @@ const BLACKLIST_PRICE_ASSET_IDS: Partial<Record<BlacklistStablecoin, string>> = 
   EURC: "eurc-circle",
   EURI: "euri-banking-circle",
   TGBP: "tgbp-tokenised",
+  EURCV: "eurcv-societe-generale-forge",
 };
 
 export function getBlacklistPriceAssetId(stablecoin: BlacklistStablecoin): string | null {
