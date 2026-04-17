@@ -86,8 +86,17 @@ export function BlacklistTable({
       { header: "Chain", accessor: (row) => row.chainName },
       { header: "Event", accessor: (row) => EVENT_LABELS[row.eventType] ?? row.eventType },
       { header: "Address", accessor: (row) => row.address },
-      { header: "Amount", accessor: (row) => formatBlacklistAmountCell(row) },
-      { header: "Amount USD At Event", accessor: (row) => row.amountUsdAtEvent },
+      {
+        header: "Amount (Native)",
+        accessor: (row) =>
+          row.amountNative == null
+            ? ""
+            : row.amountNative.toLocaleString(undefined, {
+                maximumFractionDigits: isGoldBlacklistStablecoin(row.stablecoin) ? 4 : 2,
+              }),
+      },
+      { header: "Amount Unit", accessor: (row) => row.stablecoin },
+      { header: "Amount (USD at event)", accessor: (row) => row.amountUsdAtEvent },
       { header: "Amount Status", accessor: (row) => row.amountStatus },
       { header: "Tx URL", accessor: (row) => row.explorerTxUrl },
     ], "pharos-freeze-events");
