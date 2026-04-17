@@ -4,9 +4,9 @@ Internal changelog reconstructed from git history. Covers Mint/Burn Flow `v1.0` 
 
 ---
 
-## Pending: v6.0 - Comprehensive mint/burn remediation (Effective: TBD)
+## v6.0 - Comprehensive mint/burn remediation (Apr 17, 2026)
 
-**Status:** shipped in code on branch `mint-burn-remediation-2026-04-17`; `MINT_BURN_FLOW_METHODOLOGY_VERSION_LABEL` remains at `v5.2` pending the post-deploy backfill playbook. Once the operator runs `/api/reclassify-atomic-roundtrips` (forward + reverse passes) and `/api/backfill-mint-burn` reclassification across historical data, the label will bump to `v6.0`.
+**Effective:** 2026-04-17 (effectiveAt `1776425040`). Shipped via merge of branch `mint-burn-remediation-2026-04-17`. Historical rows are reclassified progressively via the operator playbook (`/api/reclassify-atomic-roundtrips?stablecoinId=<id>` for partition-scoped reverse flips, `/api/backfill-mint-burn` for chunked bridge-mint replay).
 
 **Bridge classification**
 

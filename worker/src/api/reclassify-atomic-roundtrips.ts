@@ -31,6 +31,11 @@ function resolveSince(url: URL): number {
   return Math.floor(Date.now() / 1000) - DEFAULT_SINCE_LOOKBACK_SEC;
 }
 
+function resolveStablecoinId(url: URL): string | null {
+  const raw = url.searchParams.get("stablecoinId");
+  return raw && raw.trim().length > 0 ? raw.trim() : null;
+}
+
 /**
  * POST /api/reclassify-atomic-roundtrips (admin)
  * Retroactively re-tags mint_burn_events flow_type in two passes:
@@ -39,9 +44,15 @@ function resolveSince(url: URL): number {
  *   - Reverse: atomic_roundtrip → standard when legacy-tagged groups no longer
  *     satisfy the 0.5% amount-match tolerance introduced in Task 1.4.
  *
- * Both passes respect `?since=<unixSeconds>` (default: last 90 days). Pass
- * `since=0` to sweep the entire table — expect D1 CPU limits on partitions
- * with >30k rows.
+ * Both passes respect:
+ *   - `?since=<unixSeconds>` (default: last 90 days).
+ *   - `?stablecoinId=<id>` (optional): narrows both scans to one coin's rows.
+ *     Strongly recommended on production when the atomic_roundtrip partition
+ *     has >30k rows — per-coin queries stay within D1's per-statement CPU
+ *     budget even with the tolerance HAVING clause.
+ *
+ * Pass `since=0` to sweep the entire table (expect D1 CPU limits without
+ * the `stablecoinId` filter).
  *
  * Returns { done: true } when both passes land < BATCH_SIZE rows.
  */
@@ -55,19 +66,23 @@ export async function handleReclassifyAtomicRoundtrips(
   if (authErr) return authErr;
 
   const since = resolveSince(url);
+  const stablecoinId = resolveStablecoinId(url);
+  const coinFilterSql = stablecoinId ? " AND stablecoin_id = ?" : "";
+  const buildBindArgs = (base: (string | number)[]): (string | number)[] =>
+    stablecoinId ? [...base, stablecoinId] : base;
 
   // --- Forward pass: standard → atomic_roundtrip ---
   const { results: forwardTxs } = await db
     .prepare(
       `SELECT tx_hash, stablecoin_id, chain_id, MIN(timestamp) as timestamp
        FROM mint_burn_events
-       WHERE flow_type = 'standard' AND timestamp >= ?
+       WHERE flow_type = 'standard' AND timestamp >= ?${coinFilterSql}
        GROUP BY tx_hash, stablecoin_id, chain_id
        HAVING COUNT(DISTINCT direction) > 1
        ORDER BY MIN(timestamp) ASC, stablecoin_id ASC, tx_hash ASC
        LIMIT ?`,
     )
-    .bind(since, BATCH_SIZE)
+    .bind(...buildBindArgs([since]), BATCH_SIZE)
     .all<RoundtripDiscoveryRow>();
 
   const affectedHours = new Map<string, MintBurnAffectedHour>();
@@ -94,7 +109,7 @@ export async function handleReclassifyAtomicRoundtrips(
     .prepare(
       `SELECT tx_hash, stablecoin_id, chain_id, MIN(timestamp) as timestamp
        FROM mint_burn_events
-       WHERE flow_type = 'atomic_roundtrip' AND timestamp >= ?
+       WHERE flow_type = 'atomic_roundtrip' AND timestamp >= ?${coinFilterSql}
        GROUP BY tx_hash, stablecoin_id, chain_id
        HAVING SUM(CASE WHEN direction='mint' THEN amount ELSE 0 END) > 0
           AND SUM(CASE WHEN direction='burn' THEN amount ELSE 0 END) > 0
@@ -102,7 +117,7 @@ export async function handleReclassifyAtomicRoundtrips(
        ORDER BY MIN(timestamp) ASC, stablecoin_id ASC, tx_hash ASC
        LIMIT ?`,
     )
-    .bind(since, BATCH_SIZE)
+    .bind(...buildBindArgs([since]), BATCH_SIZE)
     .all<RoundtripDiscoveryRow>();
 
   let toStandard = 0;
@@ -125,6 +140,7 @@ export async function handleReclassifyAtomicRoundtrips(
   return jsonResponse({
     done: forwardTxs.length < BATCH_SIZE && reverseTxs.length < BATCH_SIZE,
     since,
+    stablecoinId,
     // Legacy field: sum of both directions so callers can monitor any activity.
     updated: toRoundtrip + toStandard,
     toRoundtrip,

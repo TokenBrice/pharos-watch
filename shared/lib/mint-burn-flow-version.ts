@@ -3,9 +3,27 @@ import {
 } from "./methodology-version";
 
 const mintBurnFlow = createMethodologyVersion({
-  currentVersion: "5.2",
+  currentVersion: "6.0",
   changelogPath: "/methodology/mint-burn-flow-changelog/",
   changelog: [
+  {
+    version: "6.0",
+    title: "Bridge classifier parity, LayerZero endpoint-only signal, canonical-chain gauge weighting",
+    date: "2026-04-17",
+    effectiveAt: 1776425040,
+    summary:
+      "Bridge classification now tags both mint and burn rows for CCIP/CCTP transactions, the LayerZero classifier recognizes endpoint-only fingerprints, and the Bank Run Gauge weights coins by their tracked-chain circulating supply rather than global supply. Atomic-roundtrip detection now requires mint/burn totals to match within 0.5%, and custom-event counterparty extraction supports unindexed address parameters.",
+    impact: [
+      "CCIP and CCTP bridge mints now tag as `flow_type='bridge_transfer'` (previously leaked into economic mint flow for USDC, EURC, USDO, USD1, avUSD, ZCHF)",
+      "LayerZero classifier accepts endpoint-emitter signal alone, catching Executor-only mint patterns previously missed on USDai-Arbitrum",
+      "Bank Run Gauge weights each coin's intensity by its circulating supply on tracked-chain scope only (e.g., USDC weighted by Ethereum supply, not global $36B+ total)",
+      "Atomic-roundtrip detection requires sum(mint) and sum(burn) to match within 0.5% — partial same-tx mix is preserved as economic flow rather than erased",
+      "Custom-event counterparty extraction now supports unindexed address parameters (reUSD `Deposited` user address no longer null)",
+      "Historical rows reclassified via `/api/backfill-mint-burn` replay and `/api/reclassify-atomic-roundtrips` after deploy",
+    ],
+    commits: [],
+    reconstructed: false,
+  },
   {
     version: "5.2",
     title: "GYD retirement from active mint/burn coverage",
