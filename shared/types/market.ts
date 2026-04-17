@@ -449,6 +449,7 @@ export const BLACKLIST_STABLECOINS = [
   "XUSD",
   "XAUM",
   "JPYC",
+  "FRXUSD",
 ] as const;
 
 export type BlacklistStablecoin = (typeof BLACKLIST_STABLECOINS)[number];

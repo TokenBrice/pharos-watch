@@ -379,6 +379,34 @@ const ACCOUNT_FREEZE_EVENT_FAMILY = defineEventFamily("account-freeze", [
   },
 ]);
 
+// --- FRXUSD (Frax USD) freeze event definitions ---
+// Verified ABI on implementation 0x0000000048d2c8baf31742f6765383278bada4d5
+// (behind TransparentUpgradeableProxy 0xcacd6fd266af91b8aed52accc382b4e165586e29)
+// emits AccountFrozen(address) / AccountThawed(address) — both with the address
+// param as NON-INDEXED (in data[0]). The AccountFrozen topic hash matches the
+// Agora AUSD family (same signature, indexed-ness does not affect keccak), but
+// the unfreeze event uses AccountThawed instead of AccountUnfrozen, so a
+// distinct topic constant is required.
+
+const ACCOUNT_THAWED_TOPIC = "0x74bb8c2778db9c683c274e7bfdcb56dba4f1c737411c8182363097eec281eea4"; // AccountThawed(address)
+
+const FRAX_FREEZE_FAMILY = defineEventFamily("frax-freeze", [
+  {
+    signature: "AccountFrozen(address)",
+    topicHash: ACCOUNT_FROZEN_TOPIC,
+    eventType: "blacklist",
+    hasAmount: false,
+    addressDataIndex: 0,
+  },
+  {
+    signature: "AccountThawed(address)",
+    topicHash: ACCOUNT_THAWED_TOPIC,
+    eventType: "unblacklist",
+    hasAmount: false,
+    addressDataIndex: 0,
+  },
+]);
+
 // --- MNEE freeze/confiscation event definitions ---
 
 const MNEE_FUNDS_CONFISCATED_TOPIC = "0x5a592536e075e29026312219123e24de374314962469686d4c992d3c7292c1b4"; // FundsConfiscated(address,uint256,address)
@@ -787,6 +815,11 @@ const CONTRACT_CONFIG_SPECS: ContractEventConfigSpec[] = [
   { chain: POLYGON, stablecoinId: "jpyc-jpyc", stablecoin: "JPYC", startBlock: 72_306_327, events: CENTRE_BLOCKLISTED_FAMILY.events },
   // TODO: verify on avalanche (Etherscan v2 free plan does not support Avalanche getcontractcreation)
   // { chain: AVALANCHE, stablecoinId: "jpyc-jpyc", stablecoin: "JPYC", startBlock: <deploy>, events: CENTRE_BLOCKLISTED_FAMILY.events },
+
+  // FRXUSD (Frax USD) — Ethereum only. TransparentUpgradeableProxy delegates to
+  // 0x0000000048d2c8baf31742f6765383278bada4d5 which emits AccountFrozen /
+  // AccountThawed with non-indexed address params (addressDataIndex: 0).
+  { chain: ETHEREUM, stablecoinId: "frxusd-frax", stablecoin: "FRXUSD", startBlock: 21_543_360, events: FRAX_FREEZE_FAMILY.events },
 
   // BUIDL seize-only coverage (Securitize token family)
   { chain: ETHEREUM, stablecoinId: "buidl-blackrock", stablecoin: "BUIDL", startBlock: 19_343_293, events: SECURITIZE_SEIZE_EVENT_FAMILY.events },
