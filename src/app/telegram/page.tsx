@@ -124,7 +124,7 @@ function TelegramLink({ href, children }: { href: string; children: React.ReactN
       href={href}
       target="_blank"
       rel="noopener noreferrer"
-      className="inline-flex items-center gap-1 text-foreground underline underline-offset-4 hover:text-sky-500 transition-colors"
+      className="inline-flex items-center gap-1 text-foreground underline underline-offset-4 hover:text-sky-600 dark:hover:text-sky-400 transition-colors"
     >
       {children}
       <ExternalLink className="h-3 w-3" aria-hidden="true" />
@@ -237,7 +237,7 @@ export default function TelegramPage() {
               <p className="mt-3 flex-1 text-xs text-muted-foreground leading-relaxed">
                 AI-written daily market recap every morning &mdash; peg deviations, supply shifts,
                 liquidity changes, and emerging trends.{" "}
-                <Link href="/digest" className="underline underline-offset-4 hover:text-sky-500 transition-colors">
+                <Link href="/digest" className="underline underline-offset-4 hover:text-sky-600 dark:hover:text-sky-400 transition-colors">
                   Browse archive &rarr;
                 </Link>
               </p>
