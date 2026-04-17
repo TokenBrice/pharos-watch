@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { cn } from "@/lib/utils";
 
 interface FreshnessIndicatorProps {
@@ -17,13 +17,31 @@ function formatAge(ageMs: number): string {
 }
 
 export function FreshnessIndicator({ updatedAtMs, staleAfterMs, className }: FreshnessIndicatorProps) {
-  const [now, setNow] = useState(() => Date.now());
+  const [label, setLabel] = useState(() => formatAge(Math.max(0, Date.now() - updatedAtMs)));
+  const [isStale, setIsStale] = useState(
+    () => Math.max(0, Date.now() - updatedAtMs) > staleAfterMs,
+  );
+  const lastLabelRef = useRef(label);
+  lastLabelRef.current = label;
+
   useEffect(() => {
-    const id = setInterval(() => setNow(Date.now()), 1000);
-    return () => clearInterval(id);
-  }, []);
-  const ageMs = Math.max(0, now - updatedAtMs);
-  const isStale = ageMs > staleAfterMs;
+    const recompute = () => {
+      if (typeof document !== "undefined" && document.visibilityState === "hidden") return;
+      const ageMs = Math.max(0, Date.now() - updatedAtMs);
+      const next = formatAge(ageMs);
+      if (next !== lastLabelRef.current) setLabel(next);
+      setIsStale(ageMs > staleAfterMs);
+    };
+    recompute();
+    const id = setInterval(recompute, 1000);
+    const onVisibility = () => { if (document.visibilityState === "visible") recompute(); };
+    document.addEventListener("visibilitychange", onVisibility);
+    return () => {
+      clearInterval(id);
+      document.removeEventListener("visibilitychange", onVisibility);
+    };
+  }, [updatedAtMs, staleAfterMs]);
+
   const absolute = updatedAtMs > 0
     ? new Date(updatedAtMs).toLocaleString(undefined, { timeZoneName: "long" })
     : "never";
@@ -44,7 +62,7 @@ export function FreshnessIndicator({ updatedAtMs, staleAfterMs, className }: Fre
         className={cn("h-1.5 w-1.5 rounded-full", isStale ? "bg-amber-400" : "bg-emerald-400")}
         aria-hidden="true"
       />
-      {formatAge(ageMs)}
+      {label}
     </span>
   );
 }

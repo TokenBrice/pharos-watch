@@ -14,9 +14,7 @@ const ADMIN_SHELL_PROPS = {
 };
 
 export default function StatusClient() {
-  // Host check is client-only (reads window.location.hostname). Server render
-  // returns null to avoid hydration mismatch; the effect resolves on first
-  // client render.
+  // null on SSR/first render; resolved once the effect runs on the client.
   const [opsUi, setOpsUi] = useState<boolean | null>(null);
   useEffect(() => {
     setOpsUi(isOpsUiHost());

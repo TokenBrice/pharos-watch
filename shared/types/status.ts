@@ -77,10 +77,8 @@ export interface StatusCause {
   value?: number;
   threshold?: number;
   /**
-   * Optional operator-facing runbook link. Populated for a curated set of
-   * well-understood cause codes (see RUNBOOK_BY_CODE in
-   * worker/src/lib/status/evaluation-causes.ts). Codes without a matching
-   * entry omit this field — UI renders the runbook link only when present.
+   * Optional operator-facing runbook link. Populated only for cause codes
+   * that have a documented runbook — UI renders the link only when present.
    */
   runbookUrl?: string;
 }
@@ -133,9 +131,9 @@ export interface StatusDiscrepancy {
   probeAgeSeconds: number | null;
   consecutiveDivergent: number;
   /**
-   * Machine-readable classification. UI and alert logic should branch on
-   * this enum rather than parsing `details`. Added 2026-04 to disambiguate
-   * "probe never ran" from "probe ran but disagrees" from "probe is stale".
+   * Machine-readable classification so UI and alert logic can branch without
+   * parsing `details`. Disambiguates "probe never ran" vs "probe ran but
+   * disagrees" vs "probe is stale".
    */
   discrepancyReason: StatusDiscrepancyReason;
 }

@@ -34,32 +34,3 @@ export async function logAdminAction(
     console.warn(`[admin-action-audit] write failed for action=${entry.action}:`, err);
   }
 }
-
-/**
- * Wrap an admin action to log both success (result: "ok") and error (result: "error")
- * outcomes. Existing handlers will be retrofitted to use this helper in a later phase.
- */
-export async function runWithAudit(
-  db: D1Database,
-  request: Request | undefined,
-  action: string,
-  target: string | null,
-  run: () => Promise<Response>,
-): Promise<Response> {
-  try {
-    const res = await run();
-    await logAdminAction(
-      db,
-      { action, target, result: res.ok ? "ok" : "error", httpStatus: res.status },
-      request,
-    );
-    return res;
-  } catch (err) {
-    await logAdminAction(
-      db,
-      { action, target, result: "error", details: { message: String(err) } },
-      request,
-    );
-    throw err;
-  }
-}

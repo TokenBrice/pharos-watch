@@ -1,5 +1,5 @@
 import { makeIdempotentAdminRoute } from "../lib/route-wrappers";
-import { jsonResponse } from "../lib/api-utils";
+import { errorResponse, jsonResponse } from "../lib/api-utils";
 import { CRON_JOB_DEFINITIONS } from "@shared/lib/cron-jobs";
 import { logAdminAction } from "../lib/admin-action-audit";
 
@@ -17,18 +17,9 @@ export const handleResetCronLease = makeIdempotentAdminRoute<AdminRouteContext>(
   "reset-cron-lease",
   async ({ db, url, request }) => {
     const job = url.searchParams.get("job")?.trim();
-    if (!job) {
-      return jsonResponse(
-        { error: "Missing required query param: job" },
-        { status: 400, noStore: true },
-      );
-    }
-    if (!VALID_JOB_IDS.has(job)) {
-      return jsonResponse(
-        { error: `Unknown cron job: ${job}` },
-        { status: 400, noStore: true },
-      );
-    }
+    if (!job) return errorResponse(400, "Missing required query param: job");
+    if (!VALID_JOB_IDS.has(job)) return errorResponse(400, `Unknown cron job: ${job}`);
+
     const result = await db.prepare("DELETE FROM cron_leases WHERE job = ?").bind(job).run();
     const cleared = result.meta?.changes ?? 0;
     await logAdminAction(

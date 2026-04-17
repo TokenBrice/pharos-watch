@@ -1,5 +1,5 @@
 import { makeIdempotentAdminRoute } from "../lib/route-wrappers";
-import { jsonResponse } from "../lib/api-utils";
+import { errorResponse, jsonResponse } from "../lib/api-utils";
 import { CIRCUIT_SOURCE } from "../lib/constants";
 import { logAdminAction } from "../lib/admin-action-audit";
 
@@ -17,23 +17,13 @@ export const handleResetCircuitBreaker = makeIdempotentAdminRoute<AdminRouteCont
   "reset-circuit-breaker",
   async ({ db, url, request }) => {
     const circuit = url.searchParams.get("circuit")?.trim();
-    if (!circuit) {
-      return jsonResponse(
-        { error: "Missing required query param: circuit" },
-        { status: 400, noStore: true },
-      );
-    }
-    if (!VALID_CIRCUITS.has(circuit)) {
-      return jsonResponse(
-        { error: `Unknown circuit: ${circuit}` },
-        { status: 400, noStore: true },
-      );
-    }
+    if (!circuit) return errorResponse(400, "Missing required query param: circuit");
+    if (!VALID_CIRCUITS.has(circuit)) return errorResponse(400, `Unknown circuit: ${circuit}`);
+
     // Breaker state is persisted in the `cache` table under "circuit:<source>"
-    // (see worker/src/lib/circuit-breaker.ts). Deleting the row forces the
-    // next call to re-probe with a closed breaker.
-    const cacheKey = `circuit:${circuit}`;
-    const result = await db.prepare("DELETE FROM cache WHERE key = ?").bind(cacheKey).run();
+    // (worker/src/lib/circuit-breaker.ts). Deleting the row forces the next
+    // call to re-probe with a closed breaker.
+    const result = await db.prepare("DELETE FROM cache WHERE key = ?").bind(`circuit:${circuit}`).run();
     const cleared = result.meta?.changes ?? 0;
     await logAdminAction(
       db,

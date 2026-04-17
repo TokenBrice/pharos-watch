@@ -1,5 +1,5 @@
 import { makeIdempotentAdminRoute } from "../lib/route-wrappers";
-import { jsonResponse } from "../lib/api-utils";
+import { errorResponse, jsonResponse } from "../lib/api-utils";
 import { logAdminAction } from "../lib/admin-action-audit";
 
 interface AdminRouteContext {
@@ -30,10 +30,7 @@ export const handleBulkDismissDiscoveryCandidates = makeIdempotentAdminRoute<Adm
     const all = url.searchParams.get("all") === "true";
     const ids = parseIds(url.searchParams.get("ids"));
     if (!all && !ids) {
-      return jsonResponse(
-        { error: "Missing required param: pass either ?all=true or ?ids=1,2,3" },
-        { status: 400, noStore: true },
-      );
+      return errorResponse(400, "Missing required param: pass either ?all=true or ?ids=1,2,3");
     }
 
     let dismissed = 0;

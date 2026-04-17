@@ -414,6 +414,7 @@ const TOP_CAUSE: StatusCause = {
 function makeModel() {
   return {
     allTransitions: [],
+    blockerCauses: [TOP_CAUSE],
     browserProbeSummary: {
       sampleCount: 1,
       passCount: 0,
@@ -462,7 +463,6 @@ function makeModel() {
       { id: "history", label: "History", kicker: "", title: "Timeline and recovery trail", description: "", accentClassName: "", value: "24h", summary: "History summary" },
     ],
     statusHoldingAge: 300,
-    topCauses: [TOP_CAUSE],
     healthDiffersFromStatus: false,
   };
 }
@@ -517,8 +517,10 @@ describe("admin status client", () => {
     });
 
     render(<StatusClient />);
+    // Advance enough to flush initial useEffects (ops-host gate, FreshnessIndicator
+    // label compute) without spinning the FreshnessIndicator's 1s interval forever.
     act(() => {
-      vi.runAllTimers();
+      vi.advanceTimersByTime(50);
     });
 
     expect(screen.getByText("Current incident picture")).toBeTruthy();

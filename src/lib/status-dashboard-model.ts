@@ -276,7 +276,6 @@ export function buildStatusDashboardData({
   const recommendedActions = deriveStatusActionRecommendations({ causes: data.causes, crons: data.crons });
   const blockerCauses = getBlockerCauses(data.causes);
   const watchCauses = getWatchCauses(data.causes);
-  const topCauses = blockerCauses.slice(0, 4);
   const overallCauseCount = blockerCauses.length;
   const watchCauseCount = watchCauses.length;
   const statusHoldingAge = Math.max(0, data.timestamp - data.state.lastChangedAt);
@@ -479,6 +478,5 @@ export function buildStatusDashboardData({
     runningCrons,
     sections,
     statusHoldingAge,
-    topCauses,
   };
 }

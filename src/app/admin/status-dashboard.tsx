@@ -1,14 +1,13 @@
 "use client";
 
 import { Fragment, useState, type ReactNode } from "react";
-import { FeaturePageShell } from "@/components/feature-page-shell";
 import { LongformScrollspyNav } from "@/components/longform-scrollspy-nav";
 import { formatElapsedSeconds } from "@shared/lib/format";
 import { FreshnessIndicator } from "@/components/status/freshness-indicator";
 import { RecommendedActionStrip } from "@/components/status/recommended-action-strip";
 import { RefreshCountdown } from "@/components/status/refresh-countdown";
 
-/** Mark data stale when older than 3 min (>3x the 60s refresh cadence). */
+/** Stale once data is older than 3× the 60s refresh cadence. */
 const ADMIN_STALE_AFTER_MS = 180_000;
 import { getTopFoldCopy, isRecoveryHold as isRecoveryHoldState } from "@/components/status/top-fold-copy";
 import { NoticeRail, SummaryBadge } from "@/components/status/page-primitives";
@@ -24,7 +23,7 @@ import {
 } from "@/lib/status-dashboard-model";
 import { cn } from "@/lib/utils";
 import { useAutoExpand } from "./use-auto-expand";
-import { SectionErrorBoundary } from "./section-error-boundary";
+import { SectionErrorBoundary } from "@/components/section-error-boundary";
 import { OverviewSection } from "./sections/overview-section";
 import { PipelineSection } from "./sections/pipeline-section";
 import { ReliabilitySection } from "./sections/reliability-section";
@@ -104,7 +103,6 @@ export function StatusDashboard({ onSignOut }: { onSignOut: () => void }) {
     runningCrons,
     sections,
     statusHoldingAge,
-    topCauses,
   } = model;
   const topFoldCopy = getTopFoldCopy(data.overallStatus, data.rawOverallStatus);
   const statusEvaluatedAt = data.state.lastEvaluatedAt;
@@ -128,7 +126,7 @@ export function StatusDashboard({ onSignOut }: { onSignOut: () => void }) {
 
   const sectionNodes: Record<DashboardSectionId, ReactNode> = {
     overview: (
-      <SectionErrorBoundary section="overview">
+      <SectionErrorBoundary name="overview">
         <OverviewSection
           data={data}
           handleRefresh={handleRefresh}
@@ -143,7 +141,7 @@ export function StatusDashboard({ onSignOut }: { onSignOut: () => void }) {
       </SectionErrorBoundary>
     ),
     pipeline: (
-      <SectionErrorBoundary section="pipeline">
+      <SectionErrorBoundary name="pipeline">
         <PipelineSection
           data={data}
           handleRefresh={handleRefresh}
@@ -151,7 +149,7 @@ export function StatusDashboard({ onSignOut }: { onSignOut: () => void }) {
       </SectionErrorBoundary>
     ),
     reliability: (
-      <SectionErrorBoundary section="reliability">
+      <SectionErrorBoundary name="reliability">
         <ReliabilitySection
           data={data}
           healthData={healthData}
@@ -167,7 +165,7 @@ export function StatusDashboard({ onSignOut }: { onSignOut: () => void }) {
       </SectionErrorBoundary>
     ),
     crons: (
-      <SectionErrorBoundary section="crons">
+      <SectionErrorBoundary name="crons">
         <CronsSection
           data={data}
           runningCrons={runningCrons}
@@ -179,7 +177,7 @@ export function StatusDashboard({ onSignOut }: { onSignOut: () => void }) {
       </SectionErrorBoundary>
     ),
     control: (
-      <SectionErrorBoundary section="control">
+      <SectionErrorBoundary name="control">
         <ControlSection
           data={data}
           handleRefresh={handleRefresh}
@@ -190,7 +188,7 @@ export function StatusDashboard({ onSignOut }: { onSignOut: () => void }) {
       </SectionErrorBoundary>
     ),
     history: (
-      <SectionErrorBoundary section="history">
+      <SectionErrorBoundary name="history">
         <HistorySection
           allTransitions={allTransitions}
           latestTransition={latestTransition}
@@ -220,7 +218,16 @@ export function StatusDashboard({ onSignOut }: { onSignOut: () => void }) {
                   overallTone.badgeClassName,
                 )}
               >
-                <span className={cn("h-2 w-2 rounded-full", overallTone.badgeClassName.includes("red") ? "bg-red-400" : overallTone.badgeClassName.includes("amber") ? "bg-amber-400" : "bg-emerald-400")} />
+                <span
+                  className={cn(
+                    "h-2 w-2 rounded-full",
+                    data.overallStatus === "stale"
+                      ? "bg-red-400"
+                      : data.overallStatus === "degraded"
+                        ? "bg-amber-400"
+                        : "bg-emerald-400",
+                  )}
+                />
                 {overallTone.label}
               </span>
               {isRecoveryHold && (
@@ -298,8 +305,8 @@ export function StatusDashboard({ onSignOut }: { onSignOut: () => void }) {
               </div>
 
               <div className="mt-3 space-y-2">
-                {topCauses.length > 0 ? (
-                  (isBlockersExpanded ? blockerCauses : topCauses.slice(0, 3)).map((cause) => (
+                {blockerCauses.length > 0 ? (
+                  (isBlockersExpanded ? blockerCauses : blockerCauses.slice(0, 3)).map((cause) => (
                     <div
                       key={`${cause.layer}-${cause.code}-${cause.message}`}
                       className="rounded-lg border border-border/60 bg-background/30 p-3"
@@ -382,6 +389,3 @@ export function StatusDashboard({ onSignOut }: { onSignOut: () => void }) {
     </div>
   );
 }
-
-// Re-export for test backwards compat and possible external consumers.
-export { FeaturePageShell };

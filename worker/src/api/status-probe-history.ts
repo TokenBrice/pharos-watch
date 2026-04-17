@@ -11,7 +11,9 @@ interface AdminRouteContext {
 
 const MAX_DAYS = 30;
 const DEFAULT_DAYS = 7;
-const ROW_LIMIT = 500;
+// Probes fire every 15 min → 96/day → 2880 rows in a full 30d window.
+// 3000 absorbs drift without aggregating. Admin-only, no cache-public pressure.
+const ROW_LIMIT = 3000;
 
 interface ProbeRunRow {
   created_at: number;

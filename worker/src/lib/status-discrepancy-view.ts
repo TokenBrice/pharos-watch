@@ -15,7 +15,6 @@ export function buildDiscrepancy(
   now: number,
   consecutiveDivergent: number,
 ): StatusDiscrepancy {
-  // Probe absent / never ran / unknown → "probe-missing".
   if (probe.status === "unknown" || probe.timestamp == null) {
     return {
       hasDivergence: false,
@@ -33,8 +32,6 @@ export function buildDiscrepancy(
   const statusSeverity = SEVERITY[overallStatus];
   const probeSeverity = SEVERITY[probe.status];
   const severityDelta = statusSeverity - probeSeverity;
-  // Reuse the same freshness window that gates hasDivergence, so the two
-  // fields stay in lockstep. See STATUS_SYSTEM_FRESHNESS_SEC import.
   const freshProbe = probeAgeSeconds <= STATUS_SYSTEM_FRESHNESS_SEC;
   const hasDivergence = freshProbe && Math.abs(severityDelta) >= 1;
 
