@@ -359,11 +359,15 @@ export const BLACKLIST_CHART_COLORS: Record<BlacklistStablecoin, string> = {
   TUSD: "#0284c7",
   NUSD: "#7c2d12",
   EURCV: "#1e3a8a",
+<<<<<<< HEAD
   USDA: "#15803d",
   USAT: "#a21caf",
   AEUR: "#1e40af",
   XUSD: "#0891b2",
   XAUM: "#ca8a04",
+=======
+  JPYC: "#ea580c",
+>>>>>>> p6-jpyc
 };
 
 // ---------------------------------------------------------------------------
