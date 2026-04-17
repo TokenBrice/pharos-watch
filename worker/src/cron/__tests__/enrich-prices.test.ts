@@ -1262,7 +1262,7 @@ describe("fetchPrimaryPrices", () => {
     expect(result!.price).toBe(0.549146);
   });
 
-  it("keeps promoted DEX protocol sources when a non-DEX source corroborates them", async () => {
+  it("suppresses promoted DEX protocol sources when only a soft aggregator corroborates (no hard source)", async () => {
     const assets: PeggedAsset[] = [
       { id: "usdc-circle", name: "USD Coin", symbol: "USDC", geckoId: "usd-coin", pegType: "peggedUSD", circulating: {} },
     ];
@@ -1299,10 +1299,9 @@ describe("fetchPrimaryPrices", () => {
 
     const result = results.get("usdc-circle");
     expect(result).toBeDefined();
-    expect(result!.candidateSources).toEqual(["coingecko", "balancer-dex"]);
-    expect(result!.confidence).toBe("high");
-    expect(result!.source).toBe("balancer-dex+coingecko");
-    expect(result!.price).toBe(1.0002);
+    // CG alone is a soft aggregator — not enough to corroborate the DEX source.
+    expect(result!.candidateSources).toEqual(["coingecko"]);
+    expect(result!.confidence).toBe("single-source");
   });
 
   it("downgrades CG+DL-only consensus to single-source (DESIGN-4)", async () => {

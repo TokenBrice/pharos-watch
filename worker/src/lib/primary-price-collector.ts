@@ -226,12 +226,20 @@ export function buildPrimarySourceCandidates(
     ));
 
   const hasPromotedDexProtocolSource = promotedDexProtocolSources.length > 0;
+  const hardTrustTiers = new Set(["hard_market", "hard_oracle", "hard_protocol"]);
+  const hasHardCorroborator = sources.some((source) => {
+    const tier = getPricingSourceRegistryEntry(source.source)?.trustTier;
+    return tier != null && hardTrustTiers.has(tier);
+  });
   const hasDexCorroboration =
     promotedDexProtocolSources.length > 1 ||
     sources.length === 0 ||
-    promotedDexProtocolSources.some((dexSource) =>
-      sources.some((source) => pricesAgreeWithinBps(dexSource.price, source.price, divergenceThresholdBps))
-    );
+    (hasHardCorroborator && promotedDexProtocolSources.some((dexSource) =>
+      sources.some((source) => {
+        const tier = getPricingSourceRegistryEntry(source.source)?.trustTier;
+        return tier != null && hardTrustTiers.has(tier) && pricesAgreeWithinBps(dexSource.price, source.price, divergenceThresholdBps);
+      })
+    ));
 
   if (hasPromotedDexProtocolSource && hasDexCorroboration) {
     sources.push(...promotedDexProtocolSources);
