@@ -22,6 +22,7 @@ import {
 } from "@/lib/status-dashboard-model";
 import { cn } from "@/lib/utils";
 import { useAutoExpand } from "./use-auto-expand";
+import { SectionErrorBoundary } from "./section-error-boundary";
 import { OverviewSection } from "./sections/overview-section";
 import { PipelineSection } from "./sections/pipeline-section";
 import { ReliabilitySection } from "./sections/reliability-section";
@@ -190,65 +191,77 @@ function StatusDashboard({ onSignOut }: { onSignOut: () => void }) {
 
   const sectionNodes: Record<DashboardSectionId, ReactNode> = {
     overview: (
-      <OverviewSection
-        data={data}
-        handleRefresh={handleRefresh}
-        overallTone={overallTone}
-        isDiagnosticsOpen={isDiagnosticsOpen}
-        setIsDiagnosticsOpen={setIsDiagnosticsOpen}
-        browserProbeSummary={browserProbeSummary}
-        querySyncs={querySyncs}
-        clientDataAgeSec={clientDataAgeSec}
-        clientDataStale={clientDataStale}
-      />
+      <SectionErrorBoundary section="overview">
+        <OverviewSection
+          data={data}
+          handleRefresh={handleRefresh}
+          overallTone={overallTone}
+          isDiagnosticsOpen={isDiagnosticsOpen}
+          setIsDiagnosticsOpen={setIsDiagnosticsOpen}
+          browserProbeSummary={browserProbeSummary}
+          querySyncs={querySyncs}
+          clientDataAgeSec={clientDataAgeSec}
+          clientDataStale={clientDataStale}
+        />
+      </SectionErrorBoundary>
     ),
     pipeline: (
-      <PipelineSection
-        data={data}
-        handleRefresh={handleRefresh}
-      />
+      <SectionErrorBoundary section="pipeline">
+        <PipelineSection
+          data={data}
+          handleRefresh={handleRefresh}
+        />
+      </SectionErrorBoundary>
     ),
     reliability: (
-      <ReliabilitySection
-        data={data}
-        healthData={healthData}
-        browserProbeSummary={browserProbeSummary}
-        isReliabilityOpen={isReliabilityOpen}
-        setIsReliabilityOpen={setIsReliabilityOpen}
-        probes={probes}
-        probesLoading={probesLoading}
-        requestSourceStats={requestSourceStats}
-        requestSourceError={requestSourceError instanceof Error ? requestSourceError.message : null}
-        requestSourceLoading={requestSourceLoading}
-      />
+      <SectionErrorBoundary section="reliability">
+        <ReliabilitySection
+          data={data}
+          healthData={healthData}
+          browserProbeSummary={browserProbeSummary}
+          isReliabilityOpen={isReliabilityOpen}
+          setIsReliabilityOpen={setIsReliabilityOpen}
+          probes={probes}
+          probesLoading={probesLoading}
+          requestSourceStats={requestSourceStats}
+          requestSourceError={requestSourceError instanceof Error ? requestSourceError.message : null}
+          requestSourceLoading={requestSourceLoading}
+        />
+      </SectionErrorBoundary>
     ),
     crons: (
-      <CronsSection
-        data={data}
-        runningCrons={runningCrons}
-        activeCronGroups={activeCronGroups}
-        healthyCronGroups={healthyCronGroups}
-        isHealthyCronGroupsOpen={isHealthyCronGroupsOpen}
-        setIsHealthyCronGroupsOpen={setIsHealthyCronGroupsOpen}
-      />
+      <SectionErrorBoundary section="crons">
+        <CronsSection
+          data={data}
+          runningCrons={runningCrons}
+          activeCronGroups={activeCronGroups}
+          healthyCronGroups={healthyCronGroups}
+          isHealthyCronGroupsOpen={isHealthyCronGroupsOpen}
+          setIsHealthyCronGroupsOpen={setIsHealthyCronGroupsOpen}
+        />
+      </SectionErrorBoundary>
     ),
     control: (
-      <ControlSection
-        data={data}
-        handleRefresh={handleRefresh}
-        recommendedActions={recommendedActions}
-        isTelegramOpen={isTelegramOpen}
-        setIsTelegramOpen={setIsTelegramOpen}
-      />
+      <SectionErrorBoundary section="control">
+        <ControlSection
+          data={data}
+          handleRefresh={handleRefresh}
+          recommendedActions={recommendedActions}
+          isTelegramOpen={isTelegramOpen}
+          setIsTelegramOpen={setIsTelegramOpen}
+        />
+      </SectionErrorBoundary>
     ),
     history: (
-      <HistorySection
-        allTransitions={allTransitions}
-        latestTransition={latestTransition}
-        historyWindow={historyWindow}
-        setHistoryWindow={setHistoryWindow}
-        historyLoading={historyLoading}
-      />
+      <SectionErrorBoundary section="history">
+        <HistorySection
+          allTransitions={allTransitions}
+          latestTransition={latestTransition}
+          historyWindow={historyWindow}
+          setHistoryWindow={setHistoryWindow}
+          historyLoading={historyLoading}
+        />
+      </SectionErrorBoundary>
     ),
   };
 
