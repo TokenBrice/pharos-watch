@@ -76,18 +76,19 @@ View on Pharos: pharos.watch/stablecoin/usdpt-western-union`,
 ] as const;
 
 const COMMANDS = [
-  { command: "/subscribe <types> all", description: "Enable alert types across all tracked stablecoins", example: "/subscribe depeg,safety all", common: true },
-  { command: "/subscribe <types> <targets>", description: "Enable alert types for coins or preset watchlists", example: "/subscribe dews,depeg USDT,USDC", common: true },
-  { command: "/presets", description: "Show preset watchlists like usd-top25 or mcap-ge-1b", example: "/presets", common: true },
-  { command: "/unsubscribe <targets>", description: "Remove specific coin subscriptions or preset-expanded coins", example: "/unsubscribe usd-top25", common: false },
-  { command: "/unsubscribe all", description: "Clear all per-coin and all-stablecoin subscriptions", example: null, common: false },
-  { command: "/set <ticker> <setting> <value>", description: "Tune per-coin thresholds and modes", example: "/set USDC depeg-step 250", common: false },
-  { command: "/set all <setting> <value>", description: "Turn global all-stablecoin alert types on or off", example: "/set all depeg off", common: false },
-  { command: "/mute <start>-<end>", description: "Silence Telegram notifications during UTC quiet hours", example: "/mute 22-07", common: false },
-  { command: "/unmutehours", description: "Disable quiet hours", example: null, common: false },
-  { command: "/list", description: "Show global alerts, subscribed coins, settings, and quiet hours", example: null, common: true },
-  { command: "/cancel", description: "Cancel a pending disambiguation prompt", example: null, common: false },
-  { command: "/help", description: "Show command reference", example: null, common: true },
+  { command: "/subscribe <types> all", description: "Enable alert types across all tracked stablecoins", example: "/subscribe depeg,safety all" },
+  { command: "/subscribe <types> <targets>", description: "Enable alert types for coins or preset watchlists", example: "/subscribe dews,depeg USDT,USDC" },
+  { command: "/status <ticker>", description: "Current peg, DEWS band, and safety grade for one coin — no subscription needed", example: "/status USDC" },
+  { command: "/presets", description: "Show preset watchlists like usd-top25 or mcap-ge-1b", example: "/presets" },
+  { command: "/unsubscribe <targets>", description: "Remove specific coin subscriptions or preset-expanded coins", example: "/unsubscribe usd-top25" },
+  { command: "/unsubscribe all", description: "Clear all per-coin and all-stablecoin subscriptions", example: null },
+  { command: "/set <ticker> <setting> <value>", description: "DEWS floor (WARNING/DANGER), safety direction (downgrade-only/upgrade-only), or depeg-step (100/250/500 bps)", example: "/set USDT dews WARNING" },
+  { command: "/set all <setting> <value>", description: "Toggle dews, depeg, safety, or launch across every tracked coin", example: "/set all depeg off" },
+  { command: "/mute <start>-<end>", description: "Silence Telegram notifications during UTC quiet hours", example: "/mute 22-07" },
+  { command: "/unmutehours", description: "Disable quiet hours", example: null },
+  { command: "/list", description: "Show global alerts, subscribed coins, settings, and quiet hours", example: null },
+  { command: "/cancel", description: "Cancel a pending disambiguation prompt", example: null },
+  { command: "/help", description: "Show command reference", example: null },
 ] as const;
 
 /* -------------------------------------------------------------------------- */
@@ -342,6 +343,14 @@ export default function TelegramPage() {
                   <div>
                     <code className="block rounded bg-muted px-2 py-1.5 text-xs font-mono">/subscribe launch USDPT</code>
                     <p className="mt-1 text-xs text-muted-foreground">Launch alerts for explicit pre-launch tickers or coin IDs</p>
+                  </div>
+                  <div>
+                    <code className="block rounded bg-muted px-2 py-1.5 text-xs font-mono">/set USDT dews WARNING</code>
+                    <p className="mt-1 text-xs text-muted-foreground">Only alert when DEWS reaches WARNING or DANGER</p>
+                  </div>
+                  <div>
+                    <code className="block rounded bg-muted px-2 py-1.5 text-xs font-mono">/set DAI safety downgrade-only</code>
+                    <p className="mt-1 text-xs text-muted-foreground">Silence upgrades; fire only on safety-grade regressions</p>
                   </div>
                   <div>
                     <code className="block rounded bg-muted px-2 py-1.5 text-xs font-mono">/set USDC depeg-step 250</code>
