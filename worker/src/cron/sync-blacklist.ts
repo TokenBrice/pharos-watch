@@ -205,7 +205,7 @@ export async function syncBlacklist(opts: SyncBlacklistOptions): Promise<SyncBla
       let result: {
         rows: BlacklistRow[];
         maxBlock: number;
-        apiError?: boolean;
+        apiError: boolean;           // required on both branches now
         chainHead?: number | null;
         usedRpcLogs?: boolean;
         scannedToBlock?: number | null;
@@ -223,6 +223,10 @@ export async function syncBlacklist(opts: SyncBlacklistOptions): Promise<SyncBla
           signal,
         );
         await recordOutcomeSafe(db, CIRCUIT_SOURCE.TRONGRID, !result.apiError);
+        if (result.apiError) {
+          apiErrors++;
+          recordApiErrorConfig(configKey, config.stablecoin, config.chain.chainId, "trongrid-failed");
+        }
 
         const processed = await processRowsAndAccumulatePostFetchRows(
           {

@@ -93,10 +93,11 @@ export async function fetchTronEventsIncremental(
   rateLimit: RateLimitedFetch,
   budget: SubrequestBudget,
   signal?: AbortSignal,
-): Promise<{ rows: BlacklistRow[]; maxBlock: number; incomplete: boolean }> {
+): Promise<{ rows: BlacklistRow[]; maxBlock: number; incomplete: boolean; apiError: boolean }> {
   const rows: BlacklistRow[] = [];
   let maxBlock = 0;
   let incomplete = false;
+  let apiError = false;
   const headers: Record<string, string> = {};
   if (apiKey) headers["TRON-PRO-API-KEY"] = apiKey;
 
@@ -127,18 +128,23 @@ export async function fetchTronEventsIncremental(
         if (!res) return null;
         if (!res.ok) {
           await cancelResponseBodyQuietly(res);
+          apiError = true;
           return null;
         }
         const raw = await res.json();
         const parsed = TronEventsResponseSchema.safeParse(raw);
         if (!parsed.success) {
           console.warn("[blacklist] TronGrid response validation failed:", parsed.error.message);
+          apiError = true;
           return null;
         }
         return parsed.data as TronEventsResponse;
       });
 
-      if (!json?.success || !Array.isArray(json.data)) break;
+      if (!json?.success || !Array.isArray(json.data)) {
+        apiError = true;
+        break;
+      }
 
       for (const evt of json.data) {
         const row = parseTronEvent(config, evt);
@@ -153,5 +159,5 @@ export async function fetchTronEventsIncremental(
     if (incomplete) break;
   }
 
-  return { rows, maxBlock, incomplete };
+  return { rows, maxBlock, incomplete, apiError };
 }
