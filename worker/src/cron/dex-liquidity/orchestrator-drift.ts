@@ -17,7 +17,7 @@ export function round4(value: number): number {
   return Math.round(value * 10_000) / 10_000;
 }
 
-export function pctDelta(current: number, previous: number): number | null {
+function pctDelta(current: number, previous: number): number | null {
   if (!Number.isFinite(current) || !Number.isFinite(previous) || previous === 0) return null;
   return round4((current - previous) / previous);
 }

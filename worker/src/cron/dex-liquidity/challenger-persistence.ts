@@ -6,9 +6,7 @@ export type {
   DexPriceChallengerTableState,
 } from "./challenger-publish";
 export {
-  getDexPriceChallengerPublicationStatements,
   detectDexPriceChallengerTableState,
-  buildDexPriceChallengerPublicationPlan,
   selectDexPriceChallengerRowsFromPools,
   publishDexPriceChallengerSnapshots,
 } from "./challenger-publish";

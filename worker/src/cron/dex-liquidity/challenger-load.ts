@@ -1,31 +1,16 @@
 import { detectDexPriceChallengerTableState } from "./challenger-publish";
 import { loadLegacyDexPoolChallengers } from "./challenger-legacy";
+import type {
+  DexPriceChallengerLoadRow,
+  DexPriceChallengerLoadDiagnostics,
+  DexPriceChallengerLoadResult,
+} from "./challenger-types";
 
-export interface DexPriceChallengerLoadRow {
-  stablecoinId: string;
-  poolId: string;
-  chain: string;
-  protocol: string;
-  sourceFamily: string;
-  priceUsd: number;
-  tvlUsd: number;
-  snapshotAt: number;
-  publishedAt: number;
-}
-
-export interface DexPriceChallengerLoadDiagnostics {
-  mode: "published" | "legacy" | "mixed" | "absent";
-  missingTables: boolean;
-  emptyPublishedCoins: string[];
-  incompletePublishedCoins: string[];
-  legacyFallbackCoins: string[];
-  staleSnapshotCoins: string[];
-}
-
-export interface DexPriceChallengerLoadResult {
-  challengersByStablecoin: Map<string, DexPriceChallengerLoadRow[]>;
-  diagnostics: DexPriceChallengerLoadDiagnostics;
-}
+export type {
+  DexPriceChallengerLoadRow,
+  DexPriceChallengerLoadDiagnostics,
+  DexPriceChallengerLoadResult,
+};
 
 export async function loadPublishedDexPoolChallengers(
   db: D1Database,

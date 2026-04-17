@@ -31,10 +31,6 @@
     "disposition": "queued-p4",
     "notes": "The command palette still combines indexing, keyboard handling, and rendering in one shell. Keep it waived until the navigation/search UI cleanup lane is scheduled."
   },
-  "worker/src/cron/dex-liquidity/challenger-persistence.ts": {
-    "disposition": "queued-p4",
-    "notes": "Discovery challenger persistence still combines selection, mutation planning, and writeback. Track it for a later persistence-policy split."
-  },
   "worker/src/lib/fx-rate-state.ts": {
     "disposition": "deferred",
     "notes": "FX fallback state handling has many branches but a wide caller surface. Defer refactoring until the next pricing/runtime state follow-up."
@@ -71,9 +67,17 @@
     "disposition": "deferred",
     "notes": "FX-rate helper orchestration remains a large policy surface after earlier trims. Defer another split until the next FX-state/runtime cleanup tranche."
   },
-  "worker/src/cron/dex-liquidity/orchestrator-metadata.ts": {
+  "worker/src/cron/dex-liquidity/orchestrator-analysis.ts": {
     "disposition": "queued-p4",
-    "notes": "DEX-liquidity metadata orchestration now sits in the candidate set after earlier splits. Track a later pass to separate derivation policy, summary shaping, and operator-facing metadata assembly."
+    "notes": "Post-scoring analysis was extracted out of orchestrator-metadata during the v5.5 split. `analyzeDexLiquidityPostScoring` is still a single large analyzer; a follow-up pass can separate coverage baseline, value baseline, and source-coverage shaping."
+  },
+  "src/lib/contagion-layout.ts": {
+    "disposition": "queued-p4",
+    "notes": "Contagion graph layout concentrates geometric placement, clustering, and rendering heuristics. Track for the broader frontend decomposition lane."
+  },
+  "src/app/status/client.tsx": {
+    "disposition": "queued-p4",
+    "notes": "Status page client centralizes the full operator-dashboard composition. Keep waived until the status route gets a dedicated UI decomposition pass."
   },
   "worker/src/cron/daily-digest/prompt.ts": {
     "disposition": "queued-p4",

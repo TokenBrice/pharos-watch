@@ -1,6 +1,6 @@
 import { decodeJsonString } from "../../lib/cache-json";
 import { logMalformedJsonPath } from "../../lib/json-decode-observability";
-import type { DexPriceChallengerLoadRow } from "./challenger-load";
+import type { DexPriceChallengerLoadRow } from "./challenger-types";
 
 interface LegacyDexPoolSource {
   protocol: string;
