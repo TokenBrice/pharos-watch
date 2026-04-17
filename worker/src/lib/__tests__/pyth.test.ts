@@ -1,7 +1,11 @@
 import { describe, it, expect, vi, afterEach } from "vitest";
 import { fetchPythPrices } from "../pyth";
+import pythHermesFixture from "./fixtures/pyth-hermes.json";
 
-afterEach(() => vi.unstubAllGlobals());
+afterEach(() => {
+  vi.unstubAllGlobals();
+  vi.useRealTimers();
+});
 
 describe("fetchPythPrices", () => {
   it("returns prices with confidence intervals for unprefixed Hermes feed ids", async () => {
@@ -105,5 +109,32 @@ describe("fetchPythPrices", () => {
     const feedIds = new Map([["usdt-tether", "0xabc"]]);
     const outcome = await fetchPythPrices(feedIds);
     expect(outcome.kind).toBe("upstream-error");
+  });
+
+  it("parses a real Hermes v2 USDT/USD response (fixture)", async () => {
+    // Fixture captured from
+    // https://hermes.pyth.network/v2/updates/price/latest?ids[]=<USDT/USD feed>.
+    // Verifies the live parsed-envelope shape is accepted by PythPriceFeedSchema
+    // and the price/conf BigInt + expo arithmetic works end-to-end.
+    const fixtureFeed = pythHermesFixture.parsed[0];
+    // Freeze time just after fixture's publish_time so the 300s staleness
+    // gate accepts the sample.
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date((fixtureFeed.price.publish_time + 10) * 1000));
+
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue({
+      ok: true,
+      json: () => Promise.resolve(pythHermesFixture),
+    }));
+
+    const feedIds = new Map([["usdt-tether", `0x${fixtureFeed.id}`]]);
+    const outcome = await fetchPythPrices(feedIds);
+
+    expect(outcome.kind).toBe("ok");
+    const result = outcome.value.get("usdt-tether")!;
+    const expectedPrice = Number(fixtureFeed.price.price) * Math.pow(10, fixtureFeed.price.expo);
+    expect(result.price).toBeCloseTo(expectedPrice, 6);
+    expect(result.publishTime).toBe(fixtureFeed.price.publish_time);
+    expect(result.confidenceBps).toBeGreaterThan(0);
   });
 });

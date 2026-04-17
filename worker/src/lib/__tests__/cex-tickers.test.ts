@@ -21,6 +21,7 @@ import {
   fetchKrakenPrices,
 } from "../cex-tickers";
 import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins";
+import coinbaseTickerFixture from "./fixtures/coinbase-ticker.json";
 
 beforeEach(() => sleepWithSignalMock.mockClear());
 afterEach(() => vi.unstubAllGlobals());
@@ -247,6 +248,26 @@ describe("fetchCoinbasePrices", () => {
       expect(outcome.partial).toBe(true);
     }
     expect(outcome.value.get("USDT")).toBeCloseTo(0.9998, 4);
+  });
+
+  it("parses a real Coinbase USDT-USD ticker response (fixture)", async () => {
+    // Fixture captured from https://api.exchange.coinbase.com/products/USDT-USD/ticker
+    // Verifies our parser survives the live response shape (bid/ask present;
+    // midpoint preferred over last-trade price).
+    vi.stubGlobal("fetch", vi.fn().mockImplementation((url: string) => {
+      if (url.includes("/products/USDT-USD/ticker")) {
+        return Promise.resolve({
+          ok: true,
+          json: () => Promise.resolve(coinbaseTickerFixture),
+        });
+      }
+      return Promise.resolve({ ok: false, status: 404 });
+    }));
+    const outcome = await fetchCoinbasePrices(["USDT"]);
+    expect(outcome.kind).toBe("ok");
+    const bid = Number(coinbaseTickerFixture.bid);
+    const ask = Number(coinbaseTickerFixture.ask);
+    expect(outcome.value.get("USDT")).toBeCloseTo((bid + ask) / 2, 6);
   });
 });
 
