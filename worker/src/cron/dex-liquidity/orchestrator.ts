@@ -180,7 +180,8 @@ interface DexLiquiditySourceState {
   fallbackSignals: string[];
 }
 
-interface DexLiquidityPoolState extends DexLiquidityFallbackPhase {
+interface DexLiquidityPoolState {
+  fallback: DexLiquidityFallbackPhase;
   metrics: Map<string, LiquidityMetrics>;
   knownPoolIndex: ReturnType<typeof buildKnownPoolAddresses>;
   stagedMergedCount: number;
@@ -371,6 +372,7 @@ async function buildDexLiquidityPoolState(
   });
 
   return {
+    fallback,
     metrics,
     knownPoolIndex,
     stagedMergedCount: staged.mergedCount,
@@ -379,7 +381,6 @@ async function buildDexLiquidityPoolState(
     stagedSkippedByUniqueDerivedIdentityCount: staged.skippedByUniqueDerivedIdentityCount,
     stagedSkippedByOptionalWildcardIdentityCount: staged.skippedByOptionalWildcardIdentityCount,
     stagedSkippedByAuthoritativeProtocolCount: staged.skippedByAuthoritativeProtocolCount,
-    ...fallback,
   };
 }
 
@@ -410,11 +411,11 @@ async function scoreDexLiquidityPoolState(
     diagnostics,
     stagedMergedCount: poolState.stagedMergedCount,
     stagedSkippedCount: poolState.stagedSkippedCount,
-    weakCoverageCoinsBeforeFallback: poolState.weakCoverageCoinsBeforeFallback,
-    coverageRecoveredCoins: poolState.coverageRecoveredCoins,
-    dsFallbackCoins: poolState.dsFallbackCoins,
-    cgTickerFallbackCoins: poolState.cgTickerFallbackCoins,
-    directCexOrderbookDepth: poolState.directCexOrderbookDepth,
+    weakCoverageCoinsBeforeFallback: poolState.fallback.weakCoverageCoinsBeforeFallback,
+    coverageRecoveredCoins: poolState.fallback.coverageRecoveredCoins,
+    dsFallbackCoins: poolState.fallback.dsFallbackCoins,
+    cgTickerFallbackCoins: poolState.fallback.cgTickerFallbackCoins,
+    directCexOrderbookDepth: poolState.fallback.directCexOrderbookDepth,
     dlYieldsAvailable: sourceState.dataSources.dlYieldsAvailable,
     dlProtocolsAvailable: sourceState.dataSources.dlProtocolsAvailable,
     criticalSourceFailures: sourceState.criticalSourceFailures,

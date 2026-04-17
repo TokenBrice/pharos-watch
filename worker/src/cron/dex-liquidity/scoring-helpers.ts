@@ -293,6 +293,36 @@ export function accumulateGlobalAggregate(
   return { totalTvl, totalVol24h, totalVol7d, poolCount };
 }
 
+/**
+ * Coverage-confidence blending weights. The baseline is a low-trust floor;
+ * bonuses reward protocol/source breadth and measured-vs-inferred TVL share;
+ * penalties dock synthetic or freshness-decayed TVL share.
+ */
+const COVERAGE_CONFIDENCE = {
+  baseline: 0.35,
+  protocolBonusPer: 0.05,
+  protocolBonusMax: 0.2,
+  sourceFamilyBonusPer: 0.05,
+  sourceFamilyBonusMax: 0.15,
+  balanceMeasuredMult: 0.1,
+  balanceMeasuredMax: 0.1,
+  organicMeasuredMult: 0.05,
+  organicMeasuredMax: 0.05,
+  priceMeasuredMult: 0.1,
+  priceMeasuredMax: 0.1,
+  syntheticPenaltyMult: 0.35,
+  syntheticPenaltyMax: 0.25,
+  decayedPenaltyMult: 0.2,
+  decayedPenaltyMax: 0.15,
+  primaryClassBonus: 0.15,
+  mixedClassBonus: 0.05,
+  fallbackClassPenalty: 0.05,
+} as const;
+
+function clampConfidence(confidence: number): number {
+  return Math.max(0, Math.min(1, Number(confidence.toFixed(2))));
+}
+
 export function classifyCoverage(input: {
   sourceMix: LiquiditySourceMix;
   totalTvlUsd: number;
@@ -324,33 +354,34 @@ export function classifyCoverage(input: {
 
   const primaryTvl = (sourceMix.dl?.tvlUsd ?? 0) + (sourceMix.direct_api?.tvlUsd ?? 0);
   const fallbackTvl = Math.max(0, totalTvlUsd - primaryTvl);
-  const balanceMeasuredShare = totalTvlUsd > 0 ? balanceMeasuredTvlUsd / totalTvlUsd : 0;
-  const organicMeasuredShare = totalTvlUsd > 0 ? organicMeasuredTvlUsd / totalTvlUsd : 0;
-  const syntheticShare = totalTvlUsd > 0 ? syntheticTvlUsd / totalTvlUsd : 0;
-  const decayedShare = totalTvlUsd > 0 ? decayedTvlUsd / totalTvlUsd : 0;
-  const measuredPriceShare = totalTvlUsd > 0 ? measuredPriceTvlUsd / totalTvlUsd : 0;
+  const balanceMeasuredShare = balanceMeasuredTvlUsd / totalTvlUsd;
+  const organicMeasuredShare = organicMeasuredTvlUsd / totalTvlUsd;
+  const syntheticShare = syntheticTvlUsd / totalTvlUsd;
+  const decayedShare = decayedTvlUsd / totalTvlUsd;
+  const measuredPriceShare = measuredPriceTvlUsd / totalTvlUsd;
 
-  let confidence = 0.35;
-  confidence += Math.min(0.2, protocolCount * 0.05);
-  confidence += Math.min(0.15, sourceFamilyCount * 0.05);
-  confidence += Math.min(0.1, balanceMeasuredShare * 0.1);
-  confidence += Math.min(0.05, organicMeasuredShare * 0.05);
-  confidence += Math.min(0.1, measuredPriceShare * 0.1);
-  confidence -= Math.min(0.25, syntheticShare * 0.35);
-  confidence -= Math.min(0.15, decayedShare * 0.2);
+  const C = COVERAGE_CONFIDENCE;
+  let confidence = C.baseline;
+  confidence += Math.min(C.protocolBonusMax, protocolCount * C.protocolBonusPer);
+  confidence += Math.min(C.sourceFamilyBonusMax, sourceFamilyCount * C.sourceFamilyBonusPer);
+  confidence += Math.min(C.balanceMeasuredMax, balanceMeasuredShare * C.balanceMeasuredMult);
+  confidence += Math.min(C.organicMeasuredMax, organicMeasuredShare * C.organicMeasuredMult);
+  confidence += Math.min(C.priceMeasuredMax, measuredPriceShare * C.priceMeasuredMult);
+  confidence -= Math.min(C.syntheticPenaltyMax, syntheticShare * C.syntheticPenaltyMult);
+  confidence -= Math.min(C.decayedPenaltyMax, decayedShare * C.decayedPenaltyMult);
 
   if (primaryTvl > 0 && fallbackTvl <= 0) {
-    confidence += 0.15;
-    return { coverageClass: "primary", coverageConfidence: Math.max(0, Math.min(1, Number(confidence.toFixed(2)))) };
+    confidence += C.primaryClassBonus;
+    return { coverageClass: "primary", coverageConfidence: clampConfidence(confidence) };
   }
   if (primaryTvl > 0 && fallbackTvl > 0) {
-    confidence += 0.05;
-    return { coverageClass: "mixed", coverageConfidence: Math.max(0, Math.min(1, Number(confidence.toFixed(2)))) };
+    confidence += C.mixedClassBonus;
+    return { coverageClass: "mixed", coverageConfidence: clampConfidence(confidence) };
   }
 
   return {
     coverageClass: "fallback",
-    coverageConfidence: Math.max(0, Math.min(1, Number((confidence - 0.05).toFixed(2)))),
+    coverageConfidence: clampConfidence(confidence - C.fallbackClassPenalty),
   };
 }
 
