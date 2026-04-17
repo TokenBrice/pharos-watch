@@ -6,8 +6,7 @@ import type {
   CanonicalDeduplicationResult,
 } from "./phase-helpers";
 import {
-  applyGtProbeResults,
-  applyPrimaryPriceResults,
+  applyConsensusResults,
   applyProtocolPriceOverrides,
   buildDlListPrices,
   buildPreviousTrustedPriceLookup,
@@ -186,13 +185,14 @@ export async function runStablecoinsPricingStage(
     options.chainRpcs,
     dlListPrices,
   );
-  applyPrimaryPriceResults({
+  applyConsensusResults({
     assets: options.assets,
     primaryPriceResults,
     previousTrustedPrices,
     validationContexts,
     validationReferences: options.validationReferences,
     syncStartSec: options.syncStartSec,
+    reason: "primary",
   });
   prevalidatePrices({
     assets: options.assets,
@@ -234,13 +234,14 @@ export async function runStablecoinsPricingStage(
       options.coingeckoApiKey,
     );
     if (gtProbe.updatedCount > 0) {
-      applyGtProbeResults({
+      applyConsensusResults({
         assets: options.assets,
         primaryPriceResults,
         previousTrustedPrices,
         validationContexts,
         validationReferences: options.validationReferences,
         syncStartSec: options.syncStartSec,
+        reason: "gt-probe",
       });
       console.log(`[sync-stablecoins] GT probe updated ${gtProbe.updatedCount} asset prices`);
     }

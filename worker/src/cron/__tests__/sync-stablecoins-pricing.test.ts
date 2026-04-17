@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { applyGtProbeResults, applyPrimaryPriceResults, createValidationContextResolver } from "../sync-stablecoins/pricing";
+import { applyConsensusResults, createValidationContextResolver } from "../sync-stablecoins/pricing";
 import { validatePrimaryPriceCandidate } from "../../lib/price-publish-policy";
 import type { PrimaryPriceResult } from "../sync-stablecoins/enrich-prices";
 import type { PeggedAsset } from "../sync-stablecoins/enrich-prices";
@@ -58,11 +58,12 @@ describe("pricing application helpers", () => {
       price: 1.003,
       source: "coingecko",
     });
-    applyPrimaryPriceResults({
+    applyConsensusResults({
       assets,
       primaryPriceResults: new Map([["usdt-tether", candidate]]),
       validationContexts: createValidationContextResolver(),
       syncStartSec: 1_800_000_000,
+      reason: "primary",
     });
 
     expect(assets[0].price).toBe(1.003);
@@ -82,11 +83,12 @@ describe("pricing application helpers", () => {
       }),
     ];
 
-    applyPrimaryPriceResults({
+    applyConsensusResults({
       assets,
       primaryPriceResults: new Map<string, PrimaryPriceResult>(),
       validationContexts: createValidationContextResolver(),
       syncStartSec: 1_800_000_000,
+      reason: "primary",
     });
 
     expect(assets[0].price).toBe(0.999);
@@ -103,11 +105,12 @@ describe("pricing application helpers", () => {
       candidateSources: ["coingecko"],
     });
 
-    applyGtProbeResults({
+    applyConsensusResults({
       assets,
       primaryPriceResults: new Map([["usdt-tether", candidate]]),
       validationContexts: createValidationContextResolver(),
       syncStartSec: 1_800_000_000,
+      reason: "gt-probe",
     });
 
     expect(assets[0].price).toBeUndefined();
@@ -123,11 +126,12 @@ describe("pricing application helpers", () => {
       candidateSources: ["coingecko", "geckoterminal"],
     });
 
-    applyGtProbeResults({
+    applyConsensusResults({
       assets,
       primaryPriceResults: new Map([["usdt-tether", candidate]]),
       validationContexts: createValidationContextResolver(),
       syncStartSec: 1_800_000_000,
+      reason: "gt-probe",
     });
 
     expect(assets[0].price).toBe(0.997);
@@ -161,11 +165,12 @@ describe("pricing application helpers", () => {
     });
     const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
 
-    applyGtProbeResults({
+    applyConsensusResults({
       assets,
       primaryPriceResults: new Map([["usdt-tether", candidate]]),
       validationContexts: createValidationContextResolver(),
       syncStartSec: 1_800_000_000,
+      reason: "gt-probe",
     });
 
     expect(assets[0].priceConfidence).toBe("low");
@@ -192,14 +197,15 @@ describe("pricing application helpers", () => {
       }),
     ];
 
-    applyPrimaryPriceResults({
+    applyConsensusResults({
       assets: primaryOnly,
       primaryPriceResults: new Map([["usdt-tether", makePriceResult({ price: 1.0 })]]),
       validationContexts: createValidationContextResolver(),
       syncStartSec: 1_800_000_000,
+      reason: "primary",
     });
 
-    applyGtProbeResults({
+    applyConsensusResults({
       assets: gtOnly,
       primaryPriceResults: new Map([["usdc-circle", makePriceResult({
         price: 1.0,
@@ -207,6 +213,7 @@ describe("pricing application helpers", () => {
       })]]),
       validationContexts: createValidationContextResolver(),
       syncStartSec: 1_800_000_000,
+      reason: "gt-probe",
     });
 
     expect(primaryOnly[0].supplySource).toBe("defillama");

@@ -156,32 +156,6 @@ function applyPrimaryCandidate(input: ApplyPrimaryCandidateInput): string | null
   return null;
 }
 
-interface ApplyPriceResultForAssetInput {
-  asset: PeggedAsset;
-  primaryPriceResult: PrimaryPriceResult | undefined;
-  previousTrustedPrice: PreviousTrustedPrice | null;
-  validationContext: PriceValidationContext;
-  validationReferences?: PriceValidationReferences;
-  syncStartSec: number;
-  rejectionLabel: string;
-  requiredCandidateSource?: string;
-  stampExistingWhenRejected?: boolean;
-  stampExistingWhenMissing?: boolean;
-}
-
-interface ApplyPriceResultsForAssetsInput {
-  assets: PeggedAsset[];
-  primaryPriceResults: Map<string, PrimaryPriceResult>;
-  previousTrustedPrices?: Map<string, PreviousTrustedPrice>;
-  validationContexts: ValidationContextResolver;
-  validationReferences?: PriceValidationReferences;
-  syncStartSec: number;
-  rejectionLabel: string;
-  requiredCandidateSource?: string;
-  stampExistingWhenRejected?: boolean;
-  stampExistingWhenMissing?: boolean;
-}
-
 function hasCurrentAssetPrice(asset: PeggedAsset): boolean {
   return asset.price != null && typeof asset.price === "number" && asset.price > 0;
 }
@@ -202,81 +176,6 @@ export function getPrimaryCandidatePricesForCurrentAsset(
   if (Math.abs(currentPrice - primaryPriceResult.price) > tolerance) return undefined;
 
   return primaryPriceResult.allPrices;
-}
-
-function applyPriceResultForAsset(input: ApplyPriceResultForAssetInput): void {
-  const {
-    asset,
-    primaryPriceResult,
-    previousTrustedPrice,
-    validationContext,
-    validationReferences,
-    syncStartSec,
-    rejectionLabel,
-    requiredCandidateSource,
-    stampExistingWhenRejected = false,
-    stampExistingWhenMissing = false,
-  } = input;
-
-  if (!primaryPriceResult) {
-    if (stampExistingWhenMissing && hasCurrentAssetPrice(asset)) {
-      stampExistingSingleSource(asset, syncStartSec);
-    }
-    return;
-  }
-
-  if (requiredCandidateSource && !primaryPriceResult.candidateSources.includes(requiredCandidateSource)) {
-    return;
-  }
-
-  const rejectionReason = applyPrimaryCandidate({
-    asset,
-    candidate: primaryPriceResult,
-    previousTrustedPrice,
-    validationContext,
-    validationReferences,
-    syncStartSec,
-  });
-  if (!rejectionReason) return;
-
-  console.warn(
-    `[sync-stablecoins] Rejected ${rejectionLabel} for ${asset.symbol} (id=${asset.id}): ` +
-      `$${primaryPriceResult.price} from ${primaryPriceResult.source} (${rejectionReason})`,
-  );
-
-  if (stampExistingWhenRejected && hasCurrentAssetPrice(asset)) {
-    stampExistingSingleSource(asset, syncStartSec);
-  }
-}
-
-function applyPriceResultsForAssets(input: ApplyPriceResultsForAssetsInput): void {
-  const {
-    assets,
-    primaryPriceResults,
-    previousTrustedPrices,
-    validationContexts,
-    validationReferences,
-    syncStartSec,
-    rejectionLabel,
-    requiredCandidateSource,
-    stampExistingWhenRejected = false,
-    stampExistingWhenMissing = false,
-  } = input;
-
-  for (const asset of assets) {
-    applyPriceResultForAsset({
-      asset,
-      primaryPriceResult: primaryPriceResults.get(asset.id),
-      previousTrustedPrice: previousTrustedPrices?.get(asset.id) ?? null,
-      validationContext: validationContexts.get(asset),
-      validationReferences,
-      syncStartSec,
-      rejectionLabel,
-      requiredCandidateSource,
-      stampExistingWhenRejected,
-      stampExistingWhenMissing,
-    });
-  }
 }
 
 export function buildPreviousTrustedPriceLookup(
@@ -363,42 +262,6 @@ export function buildPreviousTrustedPriceLookup(
   return lookup;
 }
 
-export function applyPrimaryPriceResults(input: {
-  assets: PeggedAsset[];
-  primaryPriceResults: Map<string, PrimaryPriceResult>;
-  previousTrustedPrices?: Map<string, PreviousTrustedPrice>;
-  validationContexts: ValidationContextResolver;
-  validationReferences?: PriceValidationReferences;
-  syncStartSec: number;
-}): void {
-  const {
-    assets,
-    primaryPriceResults,
-    previousTrustedPrices,
-    validationContexts,
-    validationReferences,
-    syncStartSec,
-  } = input;
-
-  applyPriceResultsForAssets({
-    assets,
-    primaryPriceResults,
-    previousTrustedPrices,
-    validationContexts,
-    validationReferences,
-    syncStartSec,
-    rejectionLabel: "primary consensus price",
-    stampExistingWhenRejected: true,
-    stampExistingWhenMissing: true,
-  });
-
-  for (const asset of assets) {
-    if (!asset.supplySource) {
-      asset.supplySource = "defillama";
-    }
-  }
-}
-
 export function prevalidatePrices(input: {
   assets: PeggedAsset[];
   primaryPriceResults?: Map<string, PrimaryPriceResult>;
@@ -437,13 +300,25 @@ export function prevalidatePrices(input: {
   }
 }
 
-export function applyGtProbeResults(input: {
+/**
+ * Applies primary consensus results or GT-probe re-run results to assets.
+ *
+ * Dispatches on `reason`:
+ * - `"primary"`: full primary pass. Stamps existing valid prices when no candidate or when
+ *   validation rejects. Defaults `supplySource` to `"defillama"` after processing.
+ * - `"gt-probe"`: only touches assets whose candidate set includes `"geckoterminal"`. Does
+ *   not stamp existing on reject/missing. When the GT-enriched candidate is rejected and the
+ *   pre-GT primary was single-source, downgrades confidence to `"low"` (Wave 3 Task 15):
+ *   the GT divergence is new soft evidence against the pre-GT price.
+ */
+export function applyConsensusResults(input: {
   assets: PeggedAsset[];
   primaryPriceResults: Map<string, PrimaryPriceResult>;
   previousTrustedPrices?: Map<string, PreviousTrustedPrice>;
   validationContexts: ValidationContextResolver;
   validationReferences?: PriceValidationReferences;
   syncStartSec: number;
+  reason: "primary" | "gt-probe";
 }): void {
   const {
     assets,
@@ -452,12 +327,24 @@ export function applyGtProbeResults(input: {
     validationContexts,
     validationReferences,
     syncStartSec,
+    reason,
   } = input;
+
+  const isGtProbe = reason === "gt-probe";
 
   for (const asset of assets) {
     const primaryPriceResult = primaryPriceResults.get(asset.id);
-    if (!primaryPriceResult) continue;
-    if (!primaryPriceResult.candidateSources.includes("geckoterminal")) continue;
+
+    if (!primaryPriceResult) {
+      if (!isGtProbe && hasCurrentAssetPrice(asset)) {
+        stampExistingSingleSource(asset, syncStartSec);
+      }
+      continue;
+    }
+
+    if (isGtProbe && !primaryPriceResult.candidateSources.includes("geckoterminal")) {
+      continue;
+    }
 
     const rejectionReason = applyPrimaryCandidate({
       asset,
@@ -469,21 +356,34 @@ export function applyGtProbeResults(input: {
     });
     if (!rejectionReason) continue;
 
+    const rejectionLabel = isGtProbe ? "GT-probed price" : "primary consensus price";
     console.warn(
-      `[sync-stablecoins] Rejected GT-probed price for ${asset.symbol} (id=${asset.id}): ` +
+      `[sync-stablecoins] Rejected ${rejectionLabel} for ${asset.symbol} (id=${asset.id}): ` +
         `$${primaryPriceResult.price} from ${primaryPriceResult.source} (${rejectionReason})`,
     );
 
-    // GT probe surfaced evidence that contradicts the pre-GT primary; validation rejected
-    // the GT-enriched candidate (e.g., temporal-jump). The pre-GT price remains on the
-    // asset, but its confidence is no longer defensible as single-source — the GT divergence
-    // is new soft evidence against the pre-GT price. Downgrade to low.
-    if (primaryPriceResult.confidence === "single-source") {
-      asset.priceConfidence = "low";
-      primaryPriceResult.confidence = "low";
-      console.warn(
-        `[sync-stablecoins] GT probe evidence rejected; downgrading ${asset.id} to low-confidence (reason=${rejectionReason})`,
-      );
+    if (isGtProbe) {
+      // GT probe surfaced evidence that contradicts the pre-GT primary; validation rejected
+      // the GT-enriched candidate (e.g., temporal-jump). The pre-GT price remains on the
+      // asset, but its confidence is no longer defensible as single-source — the GT divergence
+      // is new soft evidence against the pre-GT price. Downgrade to low.
+      if (primaryPriceResult.confidence === "single-source") {
+        asset.priceConfidence = "low";
+        primaryPriceResult.confidence = "low";
+        console.warn(
+          `[sync-stablecoins] GT probe evidence rejected; downgrading ${asset.id} to low-confidence (reason=${rejectionReason})`,
+        );
+      }
+    } else if (hasCurrentAssetPrice(asset)) {
+      stampExistingSingleSource(asset, syncStartSec);
+    }
+  }
+
+  if (!isGtProbe) {
+    for (const asset of assets) {
+      if (!asset.supplySource) {
+        asset.supplySource = "defillama";
+      }
     }
   }
 }
