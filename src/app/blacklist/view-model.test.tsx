@@ -188,4 +188,40 @@ describe("useBlacklistPageController", () => {
 
     vi.useRealTimers();
   });
+
+  it("clamps page to totalPages when navigating beyond bounds", () => {
+    currentSearch = "?page=99";
+    useBlacklistEventsPageMock.mockReturnValue({
+      data: { events: [], total: 25 },
+      isLoading: false,
+      error: null,
+      dataUpdatedAt: 456,
+      refetch: vi.fn(),
+      meta: { preset: "blacklist" },
+    });
+    const { result } = renderHook(() => useBlacklistPageController());
+    expect(result.current.clampedPage).toBe(1);
+  });
+
+  it("returns zero range bounds when total is 0", () => {
+    useBlacklistEventsPageMock.mockReturnValue({
+      data: { events: [], total: 0 },
+      isLoading: false,
+      error: null,
+      dataUpdatedAt: 456,
+      refetch: vi.fn(),
+      meta: { preset: "blacklist" },
+    });
+    const { result } = renderHook(() => useBlacklistPageController());
+    expect(result.current.rangeStart).toBe(0);
+    expect(result.current.rangeEnd).toBe(0);
+  });
+
+  it("resets page to 1 when applying a new filter", () => {
+    currentSearch = "?page=3";
+    const { result } = renderHook(() => useBlacklistPageController());
+    act(() => result.current.handleStablecoinChange("USDC"));
+    const nextParams = new URLSearchParams(currentSearch);
+    expect(nextParams.get("page")).toBeNull();
+  });
 });
