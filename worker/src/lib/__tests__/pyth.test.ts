@@ -19,10 +19,11 @@ describe("fetchPythPrices", () => {
     }));
 
     const feedIds = new Map([["usdt-tether", "0x2b89b9dc8fdf9f34709a5b106b472f0f39bb6ca9ce04b0fd7f2e971688e2e53b"]]);
-    const results = await fetchPythPrices(feedIds);
+    const outcome = await fetchPythPrices(feedIds);
 
-    expect(results.size).toBe(1);
-    const r = results.get("usdt-tether")!;
+    expect(outcome.kind).toBe("ok");
+    expect(outcome.value.size).toBe(1);
+    const r = outcome.value.get("usdt-tether")!;
     expect(r.price).toBeCloseTo(1.00013, 4);
     expect(r.confidenceBps).toBeGreaterThan(0);
     expect(r.publishTime).toBe(freshPublishTime);
@@ -43,18 +44,19 @@ describe("fetchPythPrices", () => {
     }));
 
     const feedIds = new Map([["usdt-tether", "0xabc"]]);
-    const results = await fetchPythPrices(feedIds);
+    const outcome = await fetchPythPrices(feedIds);
 
-    expect(results.size).toBe(0);
+    expect(outcome.value.size).toBe(0);
     expect(warnSpy).toHaveBeenCalledWith("[pyth] Requested 1 feeds but Hermes returned 0 usable results");
   });
 
-  it("returns empty map on API failure", async () => {
+  it("returns upstream-error outcome on API failure", async () => {
     const cancel = vi.fn().mockResolvedValue(undefined);
     vi.stubGlobal("fetch", vi.fn().mockResolvedValue({ ok: false, status: 503, body: { cancel } }));
     const feedIds = new Map([["usdt-tether", "0xabc"]]);
-    const results = await fetchPythPrices(feedIds);
-    expect(results.size).toBe(0);
+    const outcome = await fetchPythPrices(feedIds);
+    expect(outcome.kind).toBe("upstream-error");
+    expect(outcome.value.size).toBe(0);
     expect(cancel).toHaveBeenCalledTimes(2);
   });
 
@@ -68,8 +70,8 @@ describe("fetchPythPrices", () => {
       }),
     }));
     const feedIds = new Map([["broken-coin", "0xabc"]]);
-    const results = await fetchPythPrices(feedIds);
-    expect(results.size).toBe(0);
+    const outcome = await fetchPythPrices(feedIds);
+    expect(outcome.value.size).toBe(0);
   });
 
   it("rejects feeds older than PYTH_MAX_STALENESS_SEC (RISK-3)", async () => {
@@ -87,8 +89,21 @@ describe("fetchPythPrices", () => {
     }));
 
     const feedIds = new Map([["usdt-tether", "0x2b89b9dc8fdf9f34709a5b106b472f0f39bb6ca9ce04b0fd7f2e971688e2e53b"]]);
-    const results = await fetchPythPrices(feedIds);
+    const outcome = await fetchPythPrices(feedIds);
 
-    expect(results.size).toBe(0);
+    expect(outcome.value.size).toBe(0);
+  });
+
+  it("returns no-data outcome when feedIds is empty", async () => {
+    vi.stubGlobal("fetch", vi.fn());
+    const outcome = await fetchPythPrices(new Map());
+    expect(outcome.kind).toBe("no-data");
+  });
+
+  it("returns upstream-error outcome when fetch throws", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockRejectedValue(new Error("network down")));
+    const feedIds = new Map([["usdt-tether", "0xabc"]]);
+    const outcome = await fetchPythPrices(feedIds);
+    expect(outcome.kind).toBe("upstream-error");
   });
 });

@@ -618,15 +618,15 @@ export async function fetchPrimaryPrices(
         CIRCUIT_SOURCE.PYTH_PRICES,
         "Pyth Hermes API",
         async () => {
-          const results = await fetchPythPrices(pythFeedIds, signal);
-          for (const [coinId, result] of results) {
+          const outcome = await fetchPythPrices(pythFeedIds, signal);
+          for (const [coinId, result] of outcome.value) {
             pythPrices.set(coinId, {
               price: result.price,
               confidenceBps: result.confidenceBps,
               publishTime: result.publishTime,
             });
           }
-          return results.size > 0;
+          return isSuccessfulOutcome(outcome);
         },
       ),
     );
@@ -684,8 +684,8 @@ export async function fetchPrimaryPrices(
         CIRCUIT_SOURCE.REDSTONE_PRICES,
         "RedStone API",
         async () => {
-          const prices = await fetchRedstonePrices(redstoneSymbols, signal);
-          for (const [symbol, result] of prices) {
+          const outcome = await fetchRedstonePrices(redstoneSymbols, signal);
+          for (const [symbol, result] of outcome.value) {
             redstonePrices.set(symbol, {
               price: result.price,
               venueCount: result.venueCount,
@@ -693,7 +693,7 @@ export async function fetchPrimaryPrices(
               timestamp: result.timestamp,
             });
           }
-          return prices.size > 0;
+          return isSuccessfulOutcome(outcome);
         },
       ),
     );

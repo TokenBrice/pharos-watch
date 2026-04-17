@@ -3,6 +3,7 @@ import {
   REDSTONE_SYMBOL_CONFIG,
 } from "@shared/lib/pricing-provider-config";
 import { fetchWithRetry } from "./fetch-retry";
+import type { FetcherOutcome } from "./fetcher-result";
 
 export interface RedstoneResult {
   price: number;
@@ -61,9 +62,9 @@ function median(values: number[]): number {
 async function fetchRedstoneBatch(
   symbols: string[],
   signal?: AbortSignal,
-): Promise<Map<string, RedstoneResult>> {
+): Promise<{ results: Map<string, RedstoneResult>; transportOk: boolean }> {
   const results = new Map<string, RedstoneResult>();
-  if (symbols.length === 0) return results;
+  if (symbols.length === 0) return { results, transportOk: true };
 
   // Translate metadata symbols to RedStone API symbols and build reverse map
   const apiToMeta = new Map<string, string>();
@@ -83,7 +84,7 @@ async function fetchRedstoneBatch(
   );
   if (!res?.ok) {
     console.warn(`[redstone] API returned ${res?.status ?? "no response"} for batch: ${symbolsParam}`);
-    return results;
+    return { results, transportOk: false };
   }
 
   const data = (await res.json()) as Record<string, RedstoneEntry | RedstoneEntry[]>;
@@ -141,7 +142,7 @@ async function fetchRedstoneBatch(
     });
   }
 
-  return results;
+  return { results, transportOk: true };
 }
 
 /**
@@ -153,17 +154,21 @@ async function fetchRedstoneBatch(
 export async function fetchRedstonePrices(
   symbols: string[],
   signal?: AbortSignal,
-): Promise<Map<string, RedstoneResult>> {
+): Promise<FetcherOutcome<Map<string, RedstoneResult>>> {
   const results = new Map<string, RedstoneResult>();
   const requestedSymbols = normalizeSymbols(symbols);
-  if (requestedSymbols.length === 0) return results;
+  if (requestedSymbols.length === 0) return { kind: "no-data", value: results };
 
+  let transportAttempts = 0;
+  let transportFailures = 0;
   try {
     const missingSymbols: string[] = [];
 
     for (let i = 0; i < requestedSymbols.length; i += REDSTONE_BATCH_SIZE) {
       const batch = requestedSymbols.slice(i, i + REDSTONE_BATCH_SIZE);
-      const batchResults = await fetchRedstoneBatch(batch, signal);
+      transportAttempts++;
+      const { results: batchResults, transportOk } = await fetchRedstoneBatch(batch, signal);
+      if (!transportOk) transportFailures++;
       for (const [symbol, result] of batchResults) {
         results.set(symbol, result);
       }
@@ -177,7 +182,9 @@ export async function fetchRedstonePrices(
     let recoveredCount = 0;
     for (const symbol of missingSymbols) {
       if (results.has(symbol)) continue;
-      const retryResults = await fetchRedstoneBatch([symbol], signal);
+      transportAttempts++;
+      const { results: retryResults, transportOk } = await fetchRedstoneBatch([symbol], signal);
+      if (!transportOk) transportFailures++;
       const retryResult = retryResults.get(symbol);
       if (retryResult) {
         results.set(symbol, retryResult);
@@ -194,7 +201,18 @@ export async function fetchRedstonePrices(
   } catch (err) {
     if (signal?.aborted) throw err instanceof Error ? err : new Error(String(err));
     console.warn("[redstone] Fetch failed:", err);
+    return { kind: "upstream-error", value: results, reason: errorMessage(err) };
   }
 
-  return results;
+  if (transportAttempts > 0 && transportFailures === transportAttempts) {
+    return { kind: "upstream-error", value: results, reason: "all RedStone batches failed" };
+  }
+  if (results.size === 0) {
+    return { kind: "no-data", value: results };
+  }
+  return { kind: "ok", value: results, partial: transportFailures > 0 };
+}
+
+function errorMessage(err: unknown): string {
+  return err instanceof Error ? err.message : String(err);
 }

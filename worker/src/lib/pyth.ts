@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { fetchWithRetry } from "./fetch-retry";
 import { cancelResponseBodyQuietly } from "./response-body";
+import type { FetcherOutcome } from "./fetcher-result";
 
 const HERMES_BASE = "https://hermes.pyth.network";
 
@@ -37,14 +38,14 @@ const PythPriceFeedSchema = z.object({
  * Free public API, no auth required, 30 req/10s rate limit.
  *
  * @param feedIds Map of stablecoinId → Pyth price feed ID (hex)
- * @returns Map of stablecoinId → PythPriceResult
+ * @returns FetcherOutcome<Map<string, PythPriceResult>>
  */
 export async function fetchPythPrices(
   feedIds: Map<string, string>,
   signal?: AbortSignal,
-): Promise<Map<string, PythPriceResult>> {
+): Promise<FetcherOutcome<Map<string, PythPriceResult>>> {
   const results = new Map<string, PythPriceResult>();
-  if (feedIds.size === 0) return results;
+  if (feedIds.size === 0) return { kind: "no-data", value: results };
 
   // Reverse map: feedId → stablecoinId
   const reverseMap = new Map<string, string>();
@@ -63,7 +64,11 @@ export async function fetchPythPrices(
     if (!res?.ok) {
       await cancelResponseBodyQuietly(res);
       console.warn(`[pyth] Hermes API returned ${res?.status ?? "no response"}`);
-      return results;
+      return {
+        kind: "upstream-error",
+        value: results,
+        reason: `Hermes API returned ${res?.status ?? "no response"}`,
+      };
     }
 
     const data = PythPriceFeedSchema.parse(await res.json());
@@ -104,7 +109,14 @@ export async function fetchPythPrices(
   } catch (err) {
     if (signal?.aborted) throw err instanceof Error ? err : new Error(String(err));
     console.warn("[pyth] Fetch failed:", err);
+    return {
+      kind: "upstream-error",
+      value: results,
+      reason: err instanceof Error ? err.message : String(err),
+    };
   }
 
-  return results;
+  return results.size > 0
+    ? { kind: "ok", value: results }
+    : { kind: "no-data", value: results };
 }

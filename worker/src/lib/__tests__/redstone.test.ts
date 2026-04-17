@@ -19,9 +19,10 @@ describe("fetchRedstonePrices", () => {
       }), { status: 200 }),
     ));
 
-    const results = await fetchRedstonePrices(["USDT"]);
-    expect(results.size).toBe(1);
-    const r = results.get("USDT")!;
+    const outcome = await fetchRedstonePrices(["USDT"]);
+    expect(outcome.kind).toBe("ok");
+    expect(outcome.value.size).toBe(1);
+    const r = outcome.value.get("USDT")!;
     expect(r.price).toBeCloseTo(0.9998, 4);
     expect(r.venues.size).toBeGreaterThanOrEqual(3);
     expect(r.venueAgreementPct).toBeGreaterThan(0);
@@ -41,8 +42,8 @@ describe("fetchRedstonePrices", () => {
       }), { status: 200 }),
     ));
 
-    const results = await fetchRedstonePrices(["USDT"]);
-    const r = results.get("USDT")!;
+    const outcome = await fetchRedstonePrices(["USDT"]);
+    const r = outcome.value.get("USDT")!;
     expect(r.venueAgreementPct).toBeCloseTo(60, 0);
   });
 
@@ -62,9 +63,9 @@ describe("fetchRedstonePrices", () => {
       }), { status: 200 }),
     ));
 
-    const results = await fetchRedstonePrices(["USDe", "crvUSD"]);
-    expect(results.get("USDe")?.price).toBeCloseTo(1.0001, 4);
-    expect(results.get("crvUSD")?.price).toBeCloseTo(0.9996, 4);
+    const outcome = await fetchRedstonePrices(["USDe", "crvUSD"]);
+    expect(outcome.value.get("USDe")?.price).toBeCloseTo(1.0001, 4);
+    expect(outcome.value.get("crvUSD")?.price).toBeCloseTo(0.9996, 4);
   });
 
   it("retries missing batch symbols individually", async () => {
@@ -85,11 +86,11 @@ describe("fetchRedstonePrices", () => {
       }), { status: 200 }));
     vi.stubGlobal("fetch", fetchMock);
 
-    const results = await fetchRedstonePrices(["USDT", "USD1"]);
+    const outcome = await fetchRedstonePrices(["USDT", "USD1"]);
 
     expect(fetchMock).toHaveBeenCalledTimes(2);
-    expect(results.get("USDT")?.price).toBe(1);
-    expect(results.get("USD1")?.price).toBeCloseTo(0.9993, 4);
+    expect(outcome.value.get("USDT")?.price).toBe(1);
+    expect(outcome.value.get("USD1")?.price).toBeCloseTo(0.9993, 4);
   });
 
   it("filters out symbols that are outside the tracked RedStone allowlist", async () => {
@@ -98,14 +99,14 @@ describe("fetchRedstonePrices", () => {
     );
     vi.stubGlobal("fetch", fetchMock);
 
-    const results = await fetchRedstonePrices(["NOTREAL", REDSTONE_TRACKED_SYMBOL_ALLOWLIST[0]]);
+    const outcome = await fetchRedstonePrices(["NOTREAL", REDSTONE_TRACKED_SYMBOL_ALLOWLIST[0]]);
 
     expect(fetchMock).toHaveBeenCalledTimes(2);
     expect(fetchMock).not.toHaveBeenCalledWith(
       expect.stringContaining("NOTREAL"),
       expect.any(Object),
     );
-    expect(results.size).toBe(0);
+    expect(outcome.value.size).toBe(0);
   });
 
   it("rejects stale prices before they can enter consensus", async () => {
@@ -121,9 +122,9 @@ describe("fetchRedstonePrices", () => {
       }), { status: 200 }),
     ));
 
-    const results = await fetchRedstonePrices(["USDT"]);
+    const outcome = await fetchRedstonePrices(["USDT"]);
 
-    expect(results.size).toBe(0);
+    expect(outcome.value.size).toBe(0);
   });
 
   it("rejects entries that do not include a usable per-venue breakdown", async () => {
@@ -137,9 +138,37 @@ describe("fetchRedstonePrices", () => {
       }), { status: 200 }),
     ));
 
-    const results = await fetchRedstonePrices(["USDT"]);
+    const outcome = await fetchRedstonePrices(["USDT"]);
 
-    expect(results.size).toBe(0);
+    expect(outcome.value.size).toBe(0);
+  });
+
+  it("returns upstream-error outcome when every batch HTTP request fails", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response("server error", { status: 503 })));
+    const outcome = await fetchRedstonePrices(["USDT"]);
+    expect(outcome.kind).toBe("upstream-error");
+    expect(outcome.value.size).toBe(0);
+  });
+
+  it("returns no-data outcome when requested symbols are all outside the allowlist", async () => {
+    vi.stubGlobal("fetch", vi.fn());
+    const outcome = await fetchRedstonePrices(["NOTREAL"]);
+    expect(outcome.kind).toBe("no-data");
+  });
+
+  it("returns ok outcome when at least one price is returned", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(
+      new Response(JSON.stringify({
+        USDT: {
+          value: 0.9999,
+          source: { binance: 0.9999 },
+          timestamp: Date.now(),
+        },
+      }), { status: 200 }),
+    ));
+    const outcome = await fetchRedstonePrices(["USDT"]);
+    expect(outcome.kind).toBe("ok");
+    expect(outcome.value.get("USDT")?.price).toBeCloseTo(0.9999, 4);
   });
 });
 
