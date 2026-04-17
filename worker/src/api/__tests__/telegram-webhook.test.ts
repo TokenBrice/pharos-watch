@@ -774,4 +774,43 @@ describe("handleTelegramWebhook", () => {
     expect(res.status).toBe(200);
     expect(sentMessageBody().text).toContain("Something went wrong");
   });
+
+  it("/mute does not overwrite alert flags on ON CONFLICT", async () => {
+    const db = mockD1([
+      { match: "SELECT action_type, action_payload", rows: [], first: null },
+    ]);
+    const res = await handleTelegramWebhook(
+      db,
+      makeWebhookRequest(42, "/mute 22-07"),
+      "test-secret",
+      "bot-token",
+    );
+    expect(res.status).toBe(200);
+    const subscriberUpsert = db.getHistory().find((h) =>
+      /INSERT INTO telegram_subscribers/.test(h.sql) && /ON CONFLICT\(chat_id\)/.test(h.sql),
+    );
+    expect(subscriberUpsert).toBeDefined();
+    const updateClause = subscriberUpsert!.sql.split("DO UPDATE SET")[1] ?? "";
+    expect(updateClause).not.toMatch(/\balert_dews\s*=\s*excluded\.alert_dews\b/);
+    expect(updateClause).not.toMatch(/\balert_depeg\s*=\s*excluded\.alert_depeg\b/);
+    expect(updateClause).not.toMatch(/\balert_safety\s*=\s*excluded\.alert_safety\b/);
+    expect(updateClause).not.toMatch(/\balert_launch\s*=\s*excluded\.alert_launch\b/);
+    expect(updateClause).not.toMatch(/\bglobal_alert_safety\s*=\s*excluded\./);
+    expect(updateClause).toContain("quiet_hours_enabled = excluded.quiet_hours_enabled");
+  });
+
+  it("replies with retry message when preset resolution cache is missing", async () => {
+    const db = mockD1([
+      { match: "SELECT action_type, action_payload", rows: [], first: null },
+      { match: "FROM cache WHERE key = ?", matchBinds: ["stablecoins"], rows: [], first: null },
+    ]);
+    const res = await handleTelegramWebhook(
+      db,
+      makeWebhookRequest(42, "/subscribe dews usd-top25"),
+      "test-secret",
+      "bot-token",
+    );
+    expect(res.status).toBe(200);
+    expect(sentMessageBody().text).toContain("temporarily unavailable");
+  });
 });
