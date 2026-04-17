@@ -471,7 +471,7 @@ describe("LayerZero OFT classifier — endpoint-only signal", () => {
   // (LAYERZERO_ENDPOINT_V2), topics (PACKET_SENT/PACKET_DELIVERED), and selectors are
   // hardcoded inside the helper. We use those canonical defaults here.
   const ARB_LZ_ENDPOINT_V2 = "0x1a44076050125825900e736c501f859c50fe728c"; // same address shared across chains
-  const PACKET_DELIVERED_TOPIC = "0x1ab700d4ced0c005b164c0f789fd09fcbb0156d4c2041b8a3bfbcd961cd1567f";
+  const PACKET_DELIVERED_TOPIC = "0x3cd5e48f9730b129dc7550f0fcea9c767b7be37837cd10e55eb35f734f4bca04";
   const detection: MintBurnBridgeDetectionConfig = layerZeroOftBridgeDetection([
     "0xffa10065ce1d1c42fabc46e06b84ed8ffeb4bae5", // USDai OAdapter (Arb)
   ]);
