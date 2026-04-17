@@ -24,7 +24,7 @@ jobs:
           fetch-depth: 0
       - uses: ./.github/actions/setup-workspace
         with:
-          node-version: 22
+          node-version: 25
           cache-npm: "false"
           install-deps: "false"
       - id: classify
@@ -67,7 +67,7 @@ jobs:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
       - uses: ./.github/actions/setup-workspace
         with:
-          node-version: 22
+          node-version: 25
       - name: Capture current production version
         id: current-deployment
         run: |
@@ -126,7 +126,7 @@ jobs:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
       - uses: ./.github/actions/setup-workspace
         with:
-          node-version: 22
+          node-version: 25
       - name: Promote uploaded worker version to production
         env:
           WRANGLER_OUTPUT_FILE_PATH: /tmp/wrangler-output.jsonl
@@ -147,7 +147,7 @@ jobs:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
       - uses: ./.github/actions/setup-workspace
         with:
-          node-version: 22
+          node-version: 25
       - run: npm run test:smoke-api
         env:
           SMOKE_API_BASE: ${{ vars.SMOKE_API_BASE_URL || vars.API_BASE_URL }}
@@ -175,7 +175,7 @@ jobs:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
       - uses: ./.github/actions/setup-workspace
         with:
-          node-version: 22
+          node-version: 25
       - name: Roll back production worker to previous stable version
         run: >-
           cd worker
@@ -235,7 +235,7 @@ jobs:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
       - uses: ./.github/actions/setup-workspace
         with:
-          node-version: 22
+          node-version: 25
           cache-npm: "false"
           install-deps: "false"
       - run: npm run test:smoke-ui -- --url https://pharos.watch --mode live
@@ -268,7 +268,7 @@ jobs:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
       - uses: ./.github/actions/setup-workspace
         with:
-          node-version: 22
+          node-version: 25
           cache-npm: "false"
           install-deps: "false"
       - run: npm run test:smoke-ops
@@ -306,5 +306,5 @@ jobs:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
       - uses: ./.github/actions/setup-workspace
         with:
-          node-version: 22
+          node-version: 25
       - run: npm run test:smoke-transport

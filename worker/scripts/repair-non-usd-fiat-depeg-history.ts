@@ -4,7 +4,7 @@ import { execSync } from "child_process";
 import { existsSync, readFileSync, unlinkSync, writeFileSync } from "fs";
 import { tmpdir } from "os";
 import { join, resolve } from "path";
-import { fileURLToPath } from "url";
+import { fileURLToPath, URL } from "node:url";
 import { DAY_SECONDS } from "../../shared/lib/time-constants";
 import { derivePegRates } from "../../shared/lib/peg-rates";
 import { PSI_ELIGIBLE_META_BY_ID, PSI_ELIGIBLE_STABLECOINS } from "../../shared/lib/psi-eligible";
