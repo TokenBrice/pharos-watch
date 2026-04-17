@@ -12,11 +12,9 @@ export const CRON_TIMEOUT_MS: Record<string, number> = {
   "sync-blacklist": 12 * 60_000,
   "sync-mint-burn": 10 * 60_000,
   "sync-mint-burn-extended": 10 * 60_000,
-  // Digest jobs call Anthropic with a 300s per-request timeout and one
-  // corrective retry; worst-case request path ~600s. A 12-min lease
-  // leaves buffer for data collection, validation, and social delivery
-  // without overflowing the Cloudflare 15-min scheduled-event ceiling.
-  "daily-digest": 12 * 60_000,
+  // Daily digest uses a long Anthropic request budget, but still times out
+  // below Cloudflare's 15-min scheduled-event ceiling so failures are logged.
+  "daily-digest": 14 * 60_000 + 30_000,
   "weekly-recap": 12 * 60_000,
 };
 export const DEFAULT_CRON_TIMEOUT_MS = 5 * 60_000;

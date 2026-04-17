@@ -119,7 +119,7 @@ The same rule applies to Worker-side integration clients. Telegram delivery, X p
 | Live reserve adapter attempt        | `20_000 ms`                  | `worker/src/cron/sync-live-reserves.ts`                    |
 | Live reserve D1 finalize timeout    | `30_000 ms`                  | `worker/src/cron/sync-live-reserves-core.ts`               |
 | Blacklist explorer / RPC reads      | `15_000 ms`                  | `worker/src/lib/fetch-retry.ts` (default timeout)          |
-| Daily digest LLM call               | `300_000 ms`                 | `worker/src/lib/constants.ts`                              |
+| Daily digest LLM call               | `14 * 60_000 ms`             | `worker/src/lib/constants.ts`                              |
 
 ---
 
@@ -130,8 +130,9 @@ Current digest generation constraints that are actually encoded in repo code:
 - model: `claude-opus-4-7`
 - thinking: adaptive (`thinking.type = "adaptive"`)
 - reasoning effort: max (`output_config.effort = "max"`)
-- Anthropic per-request timeout: `300_000 ms` (5 min)
-- cron lease: `12 * 60_000 ms` (12 min) for both `daily-digest` and `weekly-recap`; allows the corrective retry path (~600s) to finish inside the lease with buffer for data collection and social delivery
+- Anthropic per-request timeout: `14 * 60_000 ms` (14 min)
+- daily cron lease: `14 * 60_000 + 30_000 ms` (14.5 min); keeps the wrapper below Cloudflare's 15-minute scheduled-trigger ceiling while leaving tail room for persistence and logging
+- weekly cron lease: `12 * 60_000 ms` (12 min)
 - max_tokens: `16000` daily, `20000` weekly
 - cadence: daily scheduled run plus manual admin trigger
 - cost envelope (approximate, assuming single-attempt runs): Opus 4.7 input ~$5/Mtok, output ~$25/Mtok. Daily worst-case at 16k tokens ≈ $1.20; weekly worst-case at 20k ≈ $1.50. Annualized ≈ $550 at cap. Actual usage is lower since adaptive thinking rarely exhausts the ceiling. Monitor `usage.output_tokens` on the first week post-deploy before revisiting.

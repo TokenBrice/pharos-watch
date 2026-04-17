@@ -193,10 +193,12 @@ export const GT_PROBE_MAX_RETRIES = 1;
 /** Shared wall-clock budget for the serialized GT probe pass inside sync-stablecoins. */
 export const GT_PROBE_RUN_BUDGET_MS = 3 * 60_000;
 
-/** Anthropic digest generation request timeout.
- *  Sized for Opus 4.7 max-effort adaptive thinking on digest-sized tasks.
+/**
+ * Anthropic digest generation request timeout.
+ * Sized close to the scheduled-event ceiling for expanded digest prompts,
+ * while leaving app-level cron timeout headroom for persistence and logging.
  */
-export const ANTHROPIC_TIMEOUT_MS = 300_000;
+export const ANTHROPIC_TIMEOUT_MS = 14 * 60_000;
 
 /** Extra retry headroom for transient Anthropic overload responses (529). */
 export const ANTHROPIC_MAX_RETRIES = 4;

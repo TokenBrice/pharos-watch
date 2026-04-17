@@ -623,7 +623,7 @@ Some long-running jobs also enforce their own earlier wall-clock guard so they c
 | `sync-mint-burn-extended` | 10 min  | Long-tail mint/burn lane with its own run-state                                                                                                                                                           |
 | `sync-yield-data`         | 10 min  | Multi-source yield data aggregation                                                                                                                                                                       |
 | `sync-yield-supplemental` | 12 min  | Supplemental yield source sync; runs less frequently but covers more sources per invocation                                                                                                               |
-| `daily-digest`            | 8 min   | LLM generation + distribution                                                                                                                                                                             |
+| `daily-digest`            | 14.5 min | Expanded LLM generation + persistence/distribution, still below the 15-minute scheduled-trigger ceiling                                                                                                  |
 
 Configuration: `CRON_TIMEOUT_MS` record in `worker/src/lib/cron-lease.ts`.
 
