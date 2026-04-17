@@ -23,6 +23,7 @@ export const CRON_SCHEDULES = {
   fourHourlyYieldSupplemental: "25 */4 * * *",
   fiveMinuteTelegramAlerts: "2,7,12,17,22,27,32,37,42,47,52,57 * * * *",
   digestTriggerPoll: "*/5 * * * *",
+  daily0300Utc: "0 3 * * *",
   daily0800Utc: "0 8 * * *",
   daily0805Utc: "5 8 * * *",
   monthlyYieldAudit: "0 6 1 * *",
@@ -46,6 +47,7 @@ const CRON_SCHEDULE_BUCKETS = {
   fourHourlyYieldSupplemental: { intervalSec: 4 * 3600, offsetSec: 25 * 60 },
   fiveMinuteTelegramAlerts: { intervalSec: 300, offsetSec: 2 * 60 },
   digestTriggerPoll: { intervalSec: 300, offsetSec: 0 },
+  daily0300Utc: { intervalSec: DAY_SECONDS, offsetSec: 3 * 3600 },
   daily0800Utc: { intervalSec: DAY_SECONDS, offsetSec: 8 * 3600 },
   daily0805Utc: { intervalSec: DAY_SECONDS, offsetSec: 8 * 3600 + 5 * 60 },
   monthlyYieldAudit: { intervalSec: 30 * 86400, offsetSec: 6 * 3600 },
@@ -419,6 +421,15 @@ const CRON_JOB_DEFINITIONS_BASE: readonly CronJobDefinition[] = [
     scheduleKey: "monthlyYieldAudit",
     triggerMode: "isolated",
     maxConnections: 1,
+  },
+  {
+    job: "prune-status-probe-runs",
+    label: "Status probe TTL prune",
+    group: "daily",
+    intervalSec: 86400,
+    scheduleKey: "daily0300Utc",
+    triggerMode: "isolated",
+    maxConnections: 0, // DB-only DELETE
   },
 ] as const;
 
