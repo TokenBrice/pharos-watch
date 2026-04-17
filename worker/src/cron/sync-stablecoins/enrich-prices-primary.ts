@@ -208,9 +208,9 @@ interface PrimaryConsensusQuoteMaps {
   krakenPrices: Map<string, number>;
   krakenObservedAt: number | null;
   bitstampPrices: Map<string, number>;
-  bitstampObservedAt: number | null;
+  bitstampObservedAtBySymbol: Map<string, number>;
   coinbasePrices: Map<string, number>;
-  coinbaseObservedAt: number | null;
+  coinbaseObservedAtBySymbol: Map<string, number>;
   redstonePrices: Map<string, { price: number; venueCount: number; venueAgreementPct: number; timestamp: number }>;
   curvePrices: Map<string, number>;
   curveObservedAt: number | null;
@@ -392,9 +392,9 @@ function buildPrimaryConsensusResults(params: {
       krakenPrice: params.quoteMaps.krakenPrices.get(asset.symbol.toUpperCase()) ?? null,
       krakenObservedAt: params.quoteMaps.krakenObservedAt,
       bitstampPrice: params.quoteMaps.bitstampPrices.get(asset.symbol.toUpperCase()) ?? null,
-      bitstampObservedAt: params.quoteMaps.bitstampObservedAt,
+      bitstampObservedAt: params.quoteMaps.bitstampObservedAtBySymbol.get(asset.symbol.toUpperCase()) ?? null,
       coinbasePrice: params.quoteMaps.coinbasePrices.get(asset.symbol.toUpperCase()) ?? null,
-      coinbaseObservedAt: params.quoteMaps.coinbaseObservedAt,
+      coinbaseObservedAt: params.quoteMaps.coinbaseObservedAtBySymbol.get(asset.symbol.toUpperCase()) ?? null,
       redstoneQuote: params.quoteMaps.redstonePrices.get(asset.symbol),
       curvePrice: params.quoteMaps.curvePrices.get(asset.id) ?? null,
       curveObservedAt: params.quoteMaps.curveObservedAt,
@@ -539,8 +539,8 @@ export async function fetchPrimaryPrices(
   let cgObservedAt: number | null = null;
   let binanceObservedAt: number | null = null;
   let krakenObservedAt: number | null = null;
-  let bitstampObservedAt: number | null = null;
-  let coinbaseObservedAt: number | null = null;
+  const bitstampObservedAtBySymbol = new Map<string, number>();
+  const coinbaseObservedAtBySymbol = new Map<string, number>();
   let curveObservedAt: number | null = null;
   let curveOracleObservedAt: number | null = null;
   let staleCgPriceRows = 0;
@@ -675,8 +675,10 @@ export async function fetchPrimaryPrices(
         if (sourceAllowed.bitstamp && shouldFetchBitstamp) {
           await runPrimaryProviderFetch(db, signal, CIRCUIT_SOURCE.BITSTAMP_PRICES, "Bitstamp ticker", async () => {
             const outcome = await fetchBitstampPrices(signal);
-            for (const [symbol, price] of outcome.value) bitstampPrices.set(symbol, price);
-            if (outcome.value.size > 0) bitstampObservedAt = Math.floor(Date.now() / 1000);
+            for (const [symbol, price] of outcome.value.prices) bitstampPrices.set(symbol, price);
+            for (const [symbol, observedAt] of outcome.value.observedAtBySymbol) {
+              bitstampObservedAtBySymbol.set(symbol, observedAt);
+            }
             return isSuccessfulOutcome(outcome);
           });
         }
@@ -684,8 +686,10 @@ export async function fetchPrimaryPrices(
         if (sourceAllowed.coinbase && coinbaseSymbols.length > 0) {
           await runPrimaryProviderFetch(db, signal, CIRCUIT_SOURCE.COINBASE_PRICES, "Coinbase ticker", async () => {
             const outcome = await fetchCoinbasePrices(coinbaseSymbols, signal);
-            for (const [symbol, price] of outcome.value) coinbasePrices.set(symbol, price);
-            if (outcome.value.size > 0) coinbaseObservedAt = Math.floor(Date.now() / 1000);
+            for (const [symbol, price] of outcome.value.prices) coinbasePrices.set(symbol, price);
+            for (const [symbol, observedAt] of outcome.value.observedAtBySymbol) {
+              coinbaseObservedAtBySymbol.set(symbol, observedAt);
+            }
             return isSuccessfulOutcome(outcome);
           });
         }
@@ -800,9 +804,9 @@ export async function fetchPrimaryPrices(
       krakenPrices,
       krakenObservedAt,
       bitstampPrices,
-      bitstampObservedAt,
+      bitstampObservedAtBySymbol,
       coinbasePrices,
-      coinbaseObservedAt,
+      coinbaseObservedAtBySymbol,
       redstonePrices,
       curvePrices,
       curveObservedAt,

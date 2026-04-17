@@ -70,6 +70,8 @@ function applyTickerRows<T>(
   getBid: (row: T) => string | number | null | undefined,
   getAsk: (row: T) => string | number | null | undefined,
   getLastTrade: (row: T) => string | number | null | undefined,
+  observedAtBySymbol?: Map<string, number>,
+  getObservedAt?: (row: T) => number | null,
 ): void {
   for (const row of rows) {
     const symbol = resolveSymbol(row);
@@ -80,8 +82,28 @@ function applyTickerRows<T>(
     const price = midpoint ?? lastTrade;
     if (price != null) {
       results.set(symbol, price);
+      if (observedAtBySymbol && getObservedAt) {
+        const observedAt = getObservedAt(row);
+        if (observedAt != null) {
+          observedAtBySymbol.set(symbol, observedAt);
+        }
+      }
     }
   }
+}
+
+function parseBitstampTimestamp(value: string | number | null | undefined): number | null {
+  if (value == null) return null;
+  const numeric = typeof value === "number" ? value : parseInt(String(value), 10);
+  return Number.isFinite(numeric) && numeric > 0 ? numeric : null;
+}
+
+function parseCoinbaseTime(value: string | null | undefined): number | null {
+  if (typeof value !== "string" || value.length === 0) return null;
+  const ms = Date.parse(value);
+  if (!Number.isFinite(ms)) return null;
+  const sec = Math.floor(ms / 1000);
+  return sec > 0 ? sec : null;
 }
 
 async function fetchCexJson<T>(
@@ -264,10 +286,17 @@ export async function fetchKrakenPrices(
     : { kind: "no-data", value: results };
 }
 
+export interface CexTickerBatch {
+  prices: Map<string, number>;
+  observedAtBySymbol: Map<string, number>;
+}
+
 export async function fetchBitstampPrices(
   signal?: AbortSignal,
-): Promise<FetcherOutcome<Map<string, number>>> {
-  const results = new Map<string, number>();
+): Promise<FetcherOutcome<CexTickerBatch>> {
+  const prices = new Map<string, number>();
+  const observedAtBySymbol = new Map<string, number>();
+  const value: CexTickerBatch = { prices, observedAtBySymbol };
 
   try {
     const { payload: tickers, transportOk } = await fetchCexJson<Array<{
@@ -276,17 +305,18 @@ export async function fetchBitstampPrices(
       bid?: string;
       ask?: string;
       last?: string;
+      timestamp?: string | number;
     }>>(
       "https://www.bitstamp.net/api/v2/ticker/",
       signal,
     );
     if (!transportOk || !tickers) {
-      return { kind: "upstream-error", value: results, reason: "Bitstamp ticker HTTP error" };
+      return { kind: "upstream-error", value, reason: "Bitstamp ticker HTTP error" };
     }
 
     applyTickerRows(
       tickers,
-      results,
+      prices,
       (ticker) => {
         const pair = ticker.pair ?? ticker.market;
         return pair ? BITSTAMP_PAIR_TO_SYMBOL.get(pair) : undefined;
@@ -294,23 +324,27 @@ export async function fetchBitstampPrices(
       (ticker) => ticker.bid,
       (ticker) => ticker.ask,
       (ticker) => ticker.last,
+      observedAtBySymbol,
+      (ticker) => parseBitstampTimestamp(ticker.timestamp),
     );
   } catch (err) {
     if (signal?.aborted) throw err instanceof Error ? err : new Error(String(err));
     console.warn("[cex-bitstamp] Fetch failed:", err);
-    return { kind: "upstream-error", value: results, reason: errorMessageFor(err) };
+    return { kind: "upstream-error", value, reason: errorMessageFor(err) };
   }
 
-  return results.size > 0
-    ? { kind: "ok", value: results }
-    : { kind: "no-data", value: results };
+  return prices.size > 0
+    ? { kind: "ok", value }
+    : { kind: "no-data", value };
 }
 
 export async function fetchCoinbasePrices(
   symbols: string[],
   signal?: AbortSignal,
-): Promise<FetcherOutcome<Map<string, number>>> {
-  const results = new Map<string, number>();
+): Promise<FetcherOutcome<CexTickerBatch>> {
+  const prices = new Map<string, number>();
+  const observedAtBySymbol = new Map<string, number>();
+  const value: CexTickerBatch = { prices, observedAtBySymbol };
   const requestedProducts = COINBASE_PRODUCTS.filter((product) => symbols.includes(product.symbol));
   let transportFailures = 0;
   let transportAttempts = 0;
@@ -333,12 +367,17 @@ export async function fetchCoinbasePrices(
         continue;
       }
 
-      const payload = await response.json() as { bid?: string; ask?: string; price?: string };
+      const payload = await response.json() as { bid?: string; ask?: string; price?: string; time?: string };
       const midpoint = midpointFromBidAsk(payload.bid, payload.ask);
       const lastTrade = parsePositiveNumber(payload.price);
       const price = midpoint ?? lastTrade;
       if (price != null) {
-        results.set(COINBASE_PRODUCT_TO_SYMBOL.get(product.productId) ?? product.symbol, price);
+        const symbol = COINBASE_PRODUCT_TO_SYMBOL.get(product.productId) ?? product.symbol;
+        prices.set(symbol, price);
+        const observedAt = parseCoinbaseTime(payload.time);
+        if (observedAt != null) {
+          observedAtBySymbol.set(symbol, observedAt);
+        }
       }
     } catch (err) {
       if (signal?.aborted) throw err instanceof Error ? err : new Error(String(err));
@@ -348,10 +387,10 @@ export async function fetchCoinbasePrices(
   }
 
   if (transportAttempts > 0 && transportFailures === transportAttempts) {
-    return { kind: "upstream-error", value: results, reason: "all Coinbase product requests failed" };
+    return { kind: "upstream-error", value, reason: "all Coinbase product requests failed" };
   }
-  if (results.size === 0) {
-    return { kind: "no-data", value: results };
+  if (prices.size === 0) {
+    return { kind: "no-data", value };
   }
-  return { kind: "ok", value: results, partial: transportFailures > 0 };
+  return { kind: "ok", value, partial: transportFailures > 0 };
 }

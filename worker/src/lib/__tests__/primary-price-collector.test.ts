@@ -73,4 +73,38 @@ describe("buildPrimarySourceCandidates", () => {
     expect(hasPromotedDexProtocolSource).toBe(true);
     expect(sources.some((s) => s.source === "balancer-dex")).toBe(true);
   });
+
+  it("stamps Bitstamp source with observedAtMode=\"upstream\" when upstream observed-at is supplied", () => {
+    const collected = makeCollected({
+      bitstampPrice: 0.9999,
+      bitstampObservedAt: 1_776_439_395,
+    });
+
+    const { sources } = buildPrimarySourceCandidates(
+      { id: "usdt-test", symbol: "USDT" },
+      collected,
+    );
+
+    const bitstamp = sources.find((s) => s.source === "bitstamp");
+    expect(bitstamp).toBeDefined();
+    expect(bitstamp?.observedAt).toBe(1_776_439_395);
+    expect(bitstamp?.observedAtMode).toBe("upstream");
+  });
+
+  it("stamps Coinbase source with observedAtMode=\"upstream\" when upstream observed-at is supplied", () => {
+    const collected = makeCollected({
+      coinbasePrice: 0.9998,
+      coinbaseObservedAt: 1_776_439_504,
+    });
+
+    const { sources } = buildPrimarySourceCandidates(
+      { id: "usdt-test", symbol: "USDT" },
+      collected,
+    );
+
+    const coinbase = sources.find((s) => s.source === "coinbase");
+    expect(coinbase).toBeDefined();
+    expect(coinbase?.observedAt).toBe(1_776_439_504);
+    expect(coinbase?.observedAtMode).toBe("upstream");
+  });
 });

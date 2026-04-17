@@ -210,9 +210,30 @@ describe("fetchCoinbasePrices", () => {
     }));
     const outcome = await fetchCoinbasePrices(["USDT", "DAI", "XYZFAKE"]);
     expect(outcome.kind).toBe("ok");
-    expect(outcome.value.get("USDT")).toBeCloseTo(0.9998, 4);
-    expect(outcome.value.get("DAI")).toBeCloseTo(1.0, 4);
-    expect(outcome.value.has("XYZFAKE")).toBe(false);
+    expect(outcome.value.prices.get("USDT")).toBeCloseTo(0.9998, 4);
+    expect(outcome.value.prices.get("DAI")).toBeCloseTo(1.0, 4);
+    expect(outcome.value.prices.has("XYZFAKE")).toBe(false);
+  });
+
+  it("exposes per-pair upstream observed-at derived from Coinbase `time` ISO string", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockImplementation((url: string) => {
+      if (url.includes("/products/USDT-USD/ticker")) {
+        return Promise.resolve({
+          ok: true,
+          json: () => Promise.resolve({
+            bid: "0.9997",
+            ask: "0.9999",
+            price: "0.9998",
+            time: "2026-04-17T15:05:04.183Z",
+          }),
+        });
+      }
+      return Promise.resolve({ ok: false, status: 404 });
+    }));
+    const outcome = await fetchCoinbasePrices(["USDT"]);
+    expect(outcome.kind).toBe("ok");
+    const expectedSec = Math.floor(Date.parse("2026-04-17T15:05:04.183Z") / 1000);
+    expect(outcome.value.observedAtBySymbol.get("USDT")).toBe(expectedSec);
   });
 
   it("cancels failed product responses and returns upstream-error outcome", async () => {
@@ -225,7 +246,7 @@ describe("fetchCoinbasePrices", () => {
     // Coinbase gives the breaker no reason to believe it's contributing — treat
     // as upstream-error so the breaker tracks consecutive failures.
     expect(outcome.kind).toBe("upstream-error");
-    expect(outcome.value.size).toBe(0);
+    expect(outcome.value.prices.size).toBe(0);
     expect(cancel).toHaveBeenCalledTimes(2);
   });
 
@@ -233,7 +254,7 @@ describe("fetchCoinbasePrices", () => {
     vi.stubGlobal("fetch", vi.fn().mockRejectedValue(new Error("network down")));
     const outcome = await fetchCoinbasePrices(["USDT"]);
     expect(outcome.kind).toBe("upstream-error");
-    expect(outcome.value.size).toBe(0);
+    expect(outcome.value.prices.size).toBe(0);
   });
 
   it("returns ok outcome with partial=true when some products fail and others succeed", async () => {
@@ -247,7 +268,7 @@ describe("fetchCoinbasePrices", () => {
     if (outcome.kind === "ok") {
       expect(outcome.partial).toBe(true);
     }
-    expect(outcome.value.get("USDT")).toBeCloseTo(0.9998, 4);
+    expect(outcome.value.prices.get("USDT")).toBeCloseTo(0.9998, 4);
   });
 
   it("parses a real Coinbase USDT-USD ticker response (fixture)", async () => {
@@ -267,7 +288,7 @@ describe("fetchCoinbasePrices", () => {
     expect(outcome.kind).toBe("ok");
     const bid = Number(coinbaseTickerFixture.bid);
     const ask = Number(coinbaseTickerFixture.ask);
-    expect(outcome.value.get("USDT")).toBeCloseTo((bid + ask) / 2, 6);
+    expect(outcome.value.prices.get("USDT")).toBeCloseTo((bid + ask) / 2, 6);
   });
 });
 
@@ -336,9 +357,24 @@ describe("fetchBitstampPrices", () => {
 
     const outcome = await fetchBitstampPrices();
     expect(outcome.kind).toBe("ok");
-    expect(outcome.value.get("USDT")).toBeCloseTo(1.0001, 4);
-    expect(outcome.value.get("USDC")).toBeCloseTo(0.9999, 4);
-    expect(outcome.value.has("BTC")).toBe(false);
+    expect(outcome.value.prices.get("USDT")).toBeCloseTo(1.0001, 4);
+    expect(outcome.value.prices.get("USDC")).toBeCloseTo(0.9999, 4);
+    expect(outcome.value.prices.has("BTC")).toBe(false);
+  });
+
+  it("exposes per-pair upstream observed-at derived from Bitstamp `timestamp` field", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue({
+      ok: true,
+      json: () => Promise.resolve([
+        { pair: "USDT/USD", market: "USDT/USD", last: "1.0001", timestamp: "1776439395" },
+        { pair: "USDC/USD", market: "USDC/USD", last: "0.9999", timestamp: "1776439400" },
+      ]),
+    }));
+
+    const outcome = await fetchBitstampPrices();
+    expect(outcome.kind).toBe("ok");
+    expect(outcome.value.observedAtBySymbol.get("USDT")).toBe(1776439395);
+    expect(outcome.value.observedAtBySymbol.get("USDC")).toBe(1776439400);
   });
 
   it("returns upstream-error when HTTP request fails", async () => {
@@ -348,7 +384,7 @@ describe("fetchBitstampPrices", () => {
     const outcome = await fetchBitstampPrices();
 
     expect(outcome.kind).toBe("upstream-error");
-    expect(outcome.value.size).toBe(0);
+    expect(outcome.value.prices.size).toBe(0);
     expect(cancel).toHaveBeenCalledTimes(2);
   });
 
