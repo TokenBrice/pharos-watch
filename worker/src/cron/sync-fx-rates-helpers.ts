@@ -567,6 +567,11 @@ export async function runOpenExchangeRatesOverlay(
     return "unavailable";
   }
 
+  if (!(await shouldAttemptFetch(db, CIRCUIT_SOURCE.FX_REALTIME))) {
+    console.warn("[sync-fx-rates] OXR real-time circuit open — skipping overlay");
+    return "unavailable";
+  }
+
   const OXR_LAST_ATTEMPT_KEY = "fx-oxr-last-attempt";
   const OXR_LAST_SUCCESS_KEY = "fx-oxr-last-success";
   const OXR_LEGACY_LAST_FETCH_KEY = "fx-oxr-last-fetch";
@@ -608,7 +613,7 @@ export async function runOpenExchangeRatesOverlay(
       `[sync-fx-rates] Applied ${realtimeApplied}/${realtimeFetch.rates.size} real-time FX rates`,
     );
     await runBestEffort("recordOutcome:fx-realtime", async () => {
-      await recordOutcome(db, CIRCUIT_SOURCE.FX_REALTIME, realtimeFetch.completed);
+      await recordOutcome(db, CIRCUIT_SOURCE.FX_REALTIME, realtimeFetch.rates.size > 0);
     });
     return realtimeFetch.rates.size > 0
       ? (realtimeApplied === realtimeFetch.rates.size ? "ok" : "partial")

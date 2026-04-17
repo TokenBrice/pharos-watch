@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { mockD1 } from "../../api/__tests__/helpers/mock-d1";
 import { mockFetch } from "../../api/__tests__/helpers/mock-fetch";
+import { CIRCUIT_SOURCE } from "../../lib/constants";
 
 // Stub fetchWithRetry to use our mocked global fetch
 vi.mock("../../lib/fetch-retry", () => ({
@@ -1308,5 +1309,158 @@ describe("syncFxRates", () => {
 
     const metadata = JSON.parse(result.metadata ?? "{}") as { sources?: { openExchangeRates?: string } };
     expect(metadata.sources?.openExchangeRates).toBe("unavailable");
+  });
+
+  it("skips the OXR fetch when the fx-realtime circuit breaker is open", async () => {
+    const nowSec = Math.floor(Date.now() / 1000);
+    mockFetch([
+      {
+        match: "frankfurter.dev",
+        body: {
+          base: "USD",
+          date: "2025-06-15",
+          rates: { EUR: 0.925, GBP: 0.79, CHF: 0.88, JPY: 149.5, BRL: 5.0, IDR: 15800, SGD: 1.35, TRY: 36, AUD: 1.55, ZAR: 18.3, CAD: 1.37, CNY: 7.25, PHP: 56, MXN: 17.2 },
+        },
+      },
+      {
+        match: "openexchangerates.org",
+        body: { error: "should not be called" },
+        status: 500,
+      },
+      {
+        match: "currency-api",
+        body: { usd: { cnh: 7.28, rub: 90, uah: 41, ars: 1400 } },
+      },
+      {
+        match: "gold-api.com/price/XAU",
+        body: { price: 2900 },
+      },
+      {
+        match: "gold-api.com/price/XAG",
+        body: { price: 32 },
+      },
+    ]);
+
+    const db = mockD1([
+      {
+        match: "SELECT value, updated_at FROM cache WHERE key = ?",
+        matchBinds: ["fx-rates"],
+        rows: [],
+        first: null,
+      },
+      {
+        match: "SELECT value, updated_at FROM cache WHERE key = ?",
+        matchBinds: ["fx-rates-meta"],
+        rows: [],
+        first: null,
+      },
+      {
+        match: "SELECT value, updated_at FROM cache WHERE key = ?",
+        matchBinds: [`circuit:${CIRCUIT_SOURCE.FX_REALTIME}`],
+        rows: [],
+        first: {
+          value: JSON.stringify({
+            state: "open",
+            consecutiveFailures: 3,
+            lastFailureAt: nowSec - 60,
+            lastSuccessAt: null,
+            openedAt: nowSec - 60,
+          }),
+          updated_at: nowSec - 60,
+        },
+      },
+      { match: "circuit", rows: [] },
+    ]);
+
+    const fetchSpy = vi.spyOn(globalThis, "fetch");
+    const result = await syncFxRates(db, undefined, "oxr-key");
+    expect(result.itemCount).toBeGreaterThan(0);
+
+    const oxrCalls = fetchSpy.mock.calls.filter(([url]) =>
+      typeof url === "string" && url.includes("openexchangerates.org"),
+    );
+    expect(oxrCalls).toHaveLength(0);
+
+    expect(findCacheWrite(db, "fx-oxr-last-attempt")).toBeUndefined();
+    expect(findCacheWrite(db, "fx-oxr-last-success")).toBeUndefined();
+
+    const metadata = JSON.parse(result.metadata ?? "{}") as { sources?: { openExchangeRates?: string } };
+    expect(metadata.sources?.openExchangeRates).toBe("unavailable");
+  });
+
+  it("records a breaker failure when OXR returns 200 with zero usable rates", async () => {
+    mockFetch([
+      {
+        match: "frankfurter.dev",
+        body: {
+          base: "USD",
+          date: "2025-06-15",
+          rates: { EUR: 0.925, GBP: 0.79, CHF: 0.88, JPY: 149.5, BRL: 5.0, IDR: 15800, SGD: 1.35, TRY: 36, AUD: 1.55, ZAR: 18.3, CAD: 1.37, CNY: 7.25, PHP: 56, MXN: 17.2 },
+        },
+      },
+      {
+        match: "openexchangerates.org",
+        body: {
+          rates: { EUR: 0.01, GBP: 0.01 },
+        },
+      },
+      {
+        match: "currency-api",
+        body: { usd: { cnh: 7.28, rub: 90, uah: 41, ars: 1400 } },
+      },
+      {
+        match: "gold-api.com/price/XAU",
+        body: { price: 2900 },
+      },
+      {
+        match: "gold-api.com/price/XAG",
+        body: { price: 32 },
+      },
+    ]);
+
+    const db = mockD1([
+      {
+        match: "SELECT value, updated_at FROM cache WHERE key = ?",
+        matchBinds: ["fx-rates"],
+        rows: [],
+        first: null,
+      },
+      {
+        match: "SELECT value, updated_at FROM cache WHERE key = ?",
+        matchBinds: ["fx-rates-meta"],
+        rows: [],
+        first: null,
+      },
+      {
+        match: "SELECT value FROM cache WHERE key = ?",
+        matchBinds: ["fx-oxr-last-attempt"],
+        rows: [],
+        first: null,
+      },
+      {
+        match: "SELECT value FROM cache WHERE key = ?",
+        matchBinds: ["fx-oxr-last-fetch"],
+        rows: [],
+        first: null,
+      },
+      { match: "circuit", rows: [] },
+    ]);
+
+    await syncFxRates(db, undefined, "oxr-key");
+
+    const realtimeCircuitWrite = db
+      .getHistory()
+      .find((entry) =>
+        entry.sql.includes("INSERT OR REPLACE INTO cache") &&
+        entry.binds[0] === `circuit:${CIRCUIT_SOURCE.FX_REALTIME}`,
+      );
+    expect(realtimeCircuitWrite).toBeDefined();
+    const recordedRecord = JSON.parse(String(realtimeCircuitWrite?.binds[1] ?? "{}")) as {
+      state: string;
+      consecutiveFailures: number;
+      lastFailureAt: number | null;
+    };
+    expect(recordedRecord.consecutiveFailures).toBe(1);
+    expect(recordedRecord.lastFailureAt).toBeGreaterThan(0);
   });
 });
