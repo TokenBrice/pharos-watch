@@ -605,12 +605,21 @@ const CONTRACT_CONFIG_SPECS: ContractEventConfigSpec[] = [
   { chain: ETHEREUM, stablecoinId: "euri-banking-circle", stablecoin: "EURI", startBlock: 20_217_556, events: DUAL_INDEX_FREEZE_EVENT_FAMILY.events },
   { chain: BSC, stablecoinId: "euri-banking-circle", stablecoin: "EURI", startBlock: 40_115_386, events: DUAL_INDEX_FREEZE_EVENT_FAMILY.events },
   { chain: ETHEREUM, stablecoinId: "usdq-quantoz", stablecoin: "USDQ", startBlock: 21_179_575, events: USDT0_EVENT_FAMILY.events },
+  { chain: POLYGON, stablecoinId: "usdq-quantoz", stablecoin: "USDQ", startBlock: 69_326_454, events: USDT0_EVENT_FAMILY.events },
   { chain: ETHEREUM, stablecoinId: "usdo-openeden", stablecoin: "USDO", startBlock: 20_833_910, events: ACCOUNT_BAN_EVENT_FAMILY.events },
   { chain: BASE, stablecoinId: "usdo-openeden", stablecoin: "USDO", startBlock: 25_154_101, events: ACCOUNT_BAN_EVENT_FAMILY.events },
   { chain: ETHEREUM, stablecoinId: "usdx-hex-trust", stablecoin: "USDX", startBlock: 21_062_695, events: ADDED_REMOVED_BLACKLIST_EVENT_FAMILY.events },
   { chain: ETHEREUM, stablecoinId: "aid-gaib", stablecoin: "AID", startBlock: 23_682_560, events: DENY_LIST_EVENT_FAMILY.events },
+  { chain: ARBITRUM, stablecoinId: "aid-gaib", stablecoin: "AID", startBlock: 394_608_077, events: DENY_LIST_EVENT_FAMILY.events },
+  // TODO: verify on base (Etherscan v2 free plan does not support Base getcontractcreation)
+  // { chain: BASE, stablecoinId: "aid-gaib", stablecoin: "AID", startBlock: <deploy>, events: DENY_LIST_EVENT_FAMILY.events },
   { chain: ETHEREUM, stablecoinId: "tgbp-tokenised", stablecoin: "TGBP", startBlock: 23_046_391, events: BANNED_EVENT_FAMILY.events },
   { chain: AVALANCHE, stablecoinId: "tgbp-tokenised", stablecoin: "TGBP", startBlock: 69_696_101, events: BANNED_EVENT_FAMILY.events },
+  { chain: POLYGON, stablecoinId: "tgbp-tokenised", stablecoin: "TGBP", startBlock: 74_668_755, events: BANNED_EVENT_FAMILY.events },
+  // TODO: verify on base (Etherscan v2 free plan does not support Base getcontractcreation)
+  // { chain: BASE, stablecoinId: "tgbp-tokenised", stablecoin: "TGBP", startBlock: <deploy>, events: BANNED_EVENT_FAMILY.events },
+  // TODO: verify on bsc (Etherscan v2 free plan does not support BSC getcontractcreation)
+  // { chain: BSC, stablecoinId: "tgbp-tokenised", stablecoin: "TGBP", startBlock: <deploy>, events: BANNED_EVENT_FAMILY.events },
 
   // USDP (Paxos Pax Dollar — same freeze pattern as PYUSD/USDG)
   { chain: ETHEREUM, stablecoinId: "usdp-paxos", stablecoin: "USDP", startBlock: 6_294_931, events: PYUSD_EVENT_FAMILY.events },
