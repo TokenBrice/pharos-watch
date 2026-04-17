@@ -87,7 +87,7 @@ function applyTickerRows<T>(
 async function fetchCexJson<T>(
   url: string,
   signal?: AbortSignal,
-): Promise<T | null> {
+): Promise<{ payload: T | null; transportOk: boolean }> {
   const response = await fetchWithRetry(
     url,
     {
@@ -99,9 +99,9 @@ async function fetchCexJson<T>(
   );
   if (!response?.ok) {
     await cancelResponseBodyQuietly(response);
-    return null;
+    return { payload: null, transportOk: false };
   }
-  return response.json() as Promise<T>;
+  return { payload: (await response.json()) as T, transportOk: true };
 }
 
 function getCexRetryDelayMs(response: Response, attempt: number): number | null {
@@ -239,25 +239,27 @@ export async function fetchBinancePrices(
 export async function fetchKrakenPrices(
   symbols: string[],
   signal?: AbortSignal,
-): Promise<Map<string, number>> {
+): Promise<FetcherOutcome<Map<string, number>>> {
   const results = new Map<string, number>();
   const requestedPairs = KRAKEN_MARKETS
     .filter((market) => symbols.includes(market.symbol))
     .map((market) => market.requestPair);
-  if (requestedPairs.length === 0) return results;
+  if (requestedPairs.length === 0) return { kind: "no-data", value: results };
 
   try {
-    const payload = await fetchCexJson<{
+    const { payload, transportOk } = await fetchCexJson<{
       error?: string[];
       result?: Record<string, { a?: string[]; b?: string[]; c?: string[] }>;
     }>(
       `https://api.kraken.com/0/public/Ticker?pair=${requestedPairs.join(",")}`,
       signal,
     );
-    if (!payload) return results;
+    if (!transportOk || !payload) {
+      return { kind: "upstream-error", value: results, reason: "Kraken ticker HTTP error" };
+    }
     if (Array.isArray(payload.error) && payload.error.length > 0) {
       console.warn(`[cex-kraken] API error: ${payload.error.join(", ")}`);
-      return results;
+      return { kind: "no-data", value: results };
     }
 
     applyTickerRows(
@@ -271,18 +273,21 @@ export async function fetchKrakenPrices(
   } catch (err) {
     if (signal?.aborted) throw err instanceof Error ? err : new Error(String(err));
     console.warn("[cex-kraken] Fetch failed:", err);
+    return { kind: "upstream-error", value: results, reason: errorMessageFor(err) };
   }
 
-  return results;
+  return results.size > 0
+    ? { kind: "ok", value: results }
+    : { kind: "no-data", value: results };
 }
 
 export async function fetchBitstampPrices(
   signal?: AbortSignal,
-): Promise<Map<string, number>> {
+): Promise<FetcherOutcome<Map<string, number>>> {
   const results = new Map<string, number>();
 
   try {
-    const tickers = await fetchCexJson<Array<{
+    const { payload: tickers, transportOk } = await fetchCexJson<Array<{
       pair?: string;
       market?: string;
       bid?: string;
@@ -292,7 +297,9 @@ export async function fetchBitstampPrices(
       "https://www.bitstamp.net/api/v2/ticker/",
       signal,
     );
-    if (!tickers) return results;
+    if (!transportOk || !tickers) {
+      return { kind: "upstream-error", value: results, reason: "Bitstamp ticker HTTP error" };
+    }
 
     applyTickerRows(
       tickers,
@@ -308,19 +315,25 @@ export async function fetchBitstampPrices(
   } catch (err) {
     if (signal?.aborted) throw err instanceof Error ? err : new Error(String(err));
     console.warn("[cex-bitstamp] Fetch failed:", err);
+    return { kind: "upstream-error", value: results, reason: errorMessageFor(err) };
   }
 
-  return results;
+  return results.size > 0
+    ? { kind: "ok", value: results }
+    : { kind: "no-data", value: results };
 }
 
 export async function fetchCoinbasePrices(
   symbols: string[],
   signal?: AbortSignal,
-): Promise<Map<string, number>> {
+): Promise<FetcherOutcome<Map<string, number>>> {
   const results = new Map<string, number>();
   const requestedProducts = COINBASE_PRODUCTS.filter((product) => symbols.includes(product.symbol));
+  let transportFailures = 0;
+  let transportAttempts = 0;
 
   for (const product of requestedProducts) {
+    transportAttempts++;
     try {
       const response = await fetchWithRetry(
         `${CEX_PROVIDER_AUDIT_CONFIG.coinbase.metadataUrl}/${product.productId}/ticker`,
@@ -333,6 +346,7 @@ export async function fetchCoinbasePrices(
       );
       if (!response?.ok) {
         await cancelResponseBodyQuietly(response);
+        transportFailures++;
         continue;
       }
 
@@ -346,8 +360,15 @@ export async function fetchCoinbasePrices(
     } catch (err) {
       if (signal?.aborted) throw err instanceof Error ? err : new Error(String(err));
       console.warn(`[cex-coinbase] ${product.productId} fetch failed:`, err);
+      transportFailures++;
     }
   }
 
-  return results;
+  if (transportAttempts > 0 && transportFailures === transportAttempts) {
+    return { kind: "upstream-error", value: results, reason: "all Coinbase product requests failed" };
+  }
+  if (results.size === 0) {
+    return { kind: "no-data", value: results };
+  }
+  return { kind: "ok", value: results, partial: transportFailures > 0 };
 }

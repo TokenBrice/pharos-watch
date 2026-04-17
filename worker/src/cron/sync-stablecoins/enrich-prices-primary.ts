@@ -648,28 +648,28 @@ export async function fetchPrimaryPrices(
 
         if (sourceAllowed.kraken && krakenSymbols.length > 0) {
           await runPrimaryProviderFetch(db, signal, CIRCUIT_SOURCE.KRAKEN_PRICES, "Kraken ticker", async () => {
-            const prices = await fetchKrakenPrices(krakenSymbols, signal);
-            for (const [symbol, price] of prices) krakenPrices.set(symbol, price);
-            if (prices.size > 0) krakenObservedAt = Math.floor(Date.now() / 1000);
-            return prices.size > 0;
+            const outcome = await fetchKrakenPrices(krakenSymbols, signal);
+            for (const [symbol, price] of outcome.value) krakenPrices.set(symbol, price);
+            if (outcome.value.size > 0) krakenObservedAt = Math.floor(Date.now() / 1000);
+            return isSuccessfulOutcome(outcome);
           });
         }
 
         if (sourceAllowed.bitstamp && shouldFetchBitstamp) {
           await runPrimaryProviderFetch(db, signal, CIRCUIT_SOURCE.BITSTAMP_PRICES, "Bitstamp ticker", async () => {
-            const prices = await fetchBitstampPrices(signal);
-            for (const [symbol, price] of prices) bitstampPrices.set(symbol, price);
-            if (prices.size > 0) bitstampObservedAt = Math.floor(Date.now() / 1000);
-            return prices.size > 0;
+            const outcome = await fetchBitstampPrices(signal);
+            for (const [symbol, price] of outcome.value) bitstampPrices.set(symbol, price);
+            if (outcome.value.size > 0) bitstampObservedAt = Math.floor(Date.now() / 1000);
+            return isSuccessfulOutcome(outcome);
           });
         }
 
         if (sourceAllowed.coinbase && coinbaseSymbols.length > 0) {
           await runPrimaryProviderFetch(db, signal, CIRCUIT_SOURCE.COINBASE_PRICES, "Coinbase ticker", async () => {
-            const prices = await fetchCoinbasePrices(coinbaseSymbols, signal);
-            for (const [symbol, price] of prices) coinbasePrices.set(symbol, price);
-            if (prices.size > 0) coinbaseObservedAt = Math.floor(Date.now() / 1000);
-            return prices.size > 0;
+            const outcome = await fetchCoinbasePrices(coinbaseSymbols, signal);
+            for (const [symbol, price] of outcome.value) coinbasePrices.set(symbol, price);
+            if (outcome.value.size > 0) coinbaseObservedAt = Math.floor(Date.now() / 1000);
+            return isSuccessfulOutcome(outcome);
           });
         }
       })(),

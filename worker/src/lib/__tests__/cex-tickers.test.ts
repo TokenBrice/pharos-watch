@@ -160,7 +160,7 @@ describe("fetchBinancePrices", () => {
 });
 
 describe("fetchCoinbasePrices", () => {
-  it("returns prices for listed stablecoin products", async () => {
+  it("returns ok outcome with prices for listed stablecoin products", async () => {
     vi.stubGlobal("fetch", vi.fn().mockImplementation((url: string) => {
       if (url.includes("/products/USDT-USD/ticker"))
         return Promise.resolve({ ok: true, json: () => Promise.resolve({ price: "0.9998" }) });
@@ -168,25 +168,51 @@ describe("fetchCoinbasePrices", () => {
         return Promise.resolve({ ok: true, json: () => Promise.resolve({ price: "1.0000" }) });
       return Promise.resolve({ ok: false, status: 404 });
     }));
-    const results = await fetchCoinbasePrices(["USDT", "DAI", "XYZFAKE"]);
-    expect(results.get("USDT")).toBeCloseTo(0.9998, 4);
-    expect(results.get("DAI")).toBeCloseTo(1.0, 4);
-    expect(results.has("XYZFAKE")).toBe(false);
+    const outcome = await fetchCoinbasePrices(["USDT", "DAI", "XYZFAKE"]);
+    expect(outcome.kind).toBe("ok");
+    expect(outcome.value.get("USDT")).toBeCloseTo(0.9998, 4);
+    expect(outcome.value.get("DAI")).toBeCloseTo(1.0, 4);
+    expect(outcome.value.has("XYZFAKE")).toBe(false);
   });
 
-  it("cancels failed product responses before continuing", async () => {
+  it("cancels failed product responses and returns upstream-error outcome", async () => {
     const cancel = vi.fn().mockResolvedValue(undefined);
     vi.stubGlobal("fetch", vi.fn().mockResolvedValue({ ok: false, status: 404, body: { cancel } }));
 
-    const results = await fetchCoinbasePrices(["USDT"]);
+    const outcome = await fetchCoinbasePrices(["USDT"]);
 
-    expect(results.size).toBe(0);
+    // When every product request fails (whether via throw or non-OK response),
+    // Coinbase gives the breaker no reason to believe it's contributing — treat
+    // as upstream-error so the breaker tracks consecutive failures.
+    expect(outcome.kind).toBe("upstream-error");
+    expect(outcome.value.size).toBe(0);
     expect(cancel).toHaveBeenCalledTimes(2);
+  });
+
+  it("returns upstream-error outcome when every product request throws", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockRejectedValue(new Error("network down")));
+    const outcome = await fetchCoinbasePrices(["USDT"]);
+    expect(outcome.kind).toBe("upstream-error");
+    expect(outcome.value.size).toBe(0);
+  });
+
+  it("returns ok outcome with partial=true when some products fail and others succeed", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockImplementation((url: string) => {
+      if (url.includes("/products/USDT-USD/ticker"))
+        return Promise.resolve({ ok: true, json: () => Promise.resolve({ price: "0.9998" }) });
+      return Promise.reject(new Error("network down"));
+    }));
+    const outcome = await fetchCoinbasePrices(["USDT", "DAI"]);
+    expect(outcome.kind).toBe("ok");
+    if (outcome.kind === "ok") {
+      expect(outcome.partial).toBe(true);
+    }
+    expect(outcome.value.get("USDT")).toBeCloseTo(0.9998, 4);
   });
 });
 
 describe("fetchKrakenPrices", () => {
-  it("maps returned pair keys to tracked symbols", async () => {
+  it("returns ok outcome mapping pair keys to tracked symbols", async () => {
     vi.stubGlobal("fetch", vi.fn().mockResolvedValue({
       ok: true,
       json: () => Promise.resolve({
@@ -200,36 +226,45 @@ describe("fetchKrakenPrices", () => {
       }),
     }));
 
-    const results = await fetchKrakenPrices(["USDT", "USDC", "DAI"]);
-    expect(results.get("USDT")).toBeCloseTo(1.0002, 4);
-    expect(results.get("USDC")).toBeCloseTo(0.9998, 4);
-    expect(results.get("DAI")).toBeCloseTo(1.0, 4);
-    expect(results.has("BTC")).toBe(false);
+    const outcome = await fetchKrakenPrices(["USDT", "USDC", "DAI"]);
+    expect(outcome.kind).toBe("ok");
+    expect(outcome.value.get("USDT")).toBeCloseTo(1.0002, 4);
+    expect(outcome.value.get("USDC")).toBeCloseTo(0.9998, 4);
+    expect(outcome.value.get("DAI")).toBeCloseTo(1.0, 4);
+    expect(outcome.value.has("BTC")).toBe(false);
   });
 
-  it("returns empty map when Kraken returns an API error", async () => {
+  it("returns no-data outcome when Kraken returns an API error", async () => {
     vi.stubGlobal("fetch", vi.fn().mockResolvedValue({
       ok: true,
       json: () => Promise.resolve({ error: ["EGeneral:Temporary lockout"], result: {} }),
     }));
 
-    const results = await fetchKrakenPrices(["USDT"]);
-    expect(results.size).toBe(0);
+    const outcome = await fetchKrakenPrices(["USDT"]);
+    expect(outcome.kind).toBe("no-data");
+    expect(outcome.value.size).toBe(0);
   });
 
-  it("cancels failed HTTP responses", async () => {
+  it("returns upstream-error when HTTP request fails", async () => {
     const cancel = vi.fn().mockResolvedValue(undefined);
     vi.stubGlobal("fetch", vi.fn().mockResolvedValue({ ok: false, status: 503, body: { cancel } }));
 
-    const results = await fetchKrakenPrices(["USDT"]);
+    const outcome = await fetchKrakenPrices(["USDT"]);
 
-    expect(results.size).toBe(0);
+    expect(outcome.kind).toBe("upstream-error");
+    expect(outcome.value.size).toBe(0);
     expect(cancel).toHaveBeenCalledTimes(2);
+  });
+
+  it("returns upstream-error when the fetch throws", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockRejectedValue(new Error("network down")));
+    const outcome = await fetchKrakenPrices(["USDT"]);
+    expect(outcome.kind).toBe("upstream-error");
   });
 });
 
 describe("fetchBitstampPrices", () => {
-  it("parses tracked stablecoin/USD pairs from the all-tickers endpoint", async () => {
+  it("returns ok outcome parsing tracked stablecoin/USD pairs", async () => {
     vi.stubGlobal("fetch", vi.fn().mockResolvedValue({
       ok: true,
       json: () => Promise.resolve([
@@ -239,20 +274,31 @@ describe("fetchBitstampPrices", () => {
       ]),
     }));
 
-    const results = await fetchBitstampPrices();
-    expect(results.get("USDT")).toBeCloseTo(1.0001, 4);
-    expect(results.get("USDC")).toBeCloseTo(0.9999, 4);
-    expect(results.has("BTC")).toBe(false);
+    const outcome = await fetchBitstampPrices();
+    expect(outcome.kind).toBe("ok");
+    expect(outcome.value.get("USDT")).toBeCloseTo(1.0001, 4);
+    expect(outcome.value.get("USDC")).toBeCloseTo(0.9999, 4);
+    expect(outcome.value.has("BTC")).toBe(false);
   });
 
-  it("cancels failed HTTP responses", async () => {
+  it("returns upstream-error when HTTP request fails", async () => {
     const cancel = vi.fn().mockResolvedValue(undefined);
     vi.stubGlobal("fetch", vi.fn().mockResolvedValue({ ok: false, status: 500, body: { cancel } }));
 
-    const results = await fetchBitstampPrices();
+    const outcome = await fetchBitstampPrices();
 
-    expect(results.size).toBe(0);
+    expect(outcome.kind).toBe("upstream-error");
+    expect(outcome.value.size).toBe(0);
     expect(cancel).toHaveBeenCalledTimes(2);
+  });
+
+  it("returns no-data outcome when response has no tracked pairs", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue({
+      ok: true,
+      json: () => Promise.resolve([{ pair: "BTC/USD", market: "BTC/USD", last: "65000" }]),
+    }));
+    const outcome = await fetchBitstampPrices();
+    expect(outcome.kind).toBe("no-data");
   });
 });
 
