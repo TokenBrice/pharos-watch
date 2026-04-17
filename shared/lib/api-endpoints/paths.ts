@@ -96,6 +96,7 @@ export const API_PATHS = {
   apiKeyDeactivate: (id: number) => `/api/api-keys/${id}/deactivate`,
   apiKeyRotate: (id: number) => `/api/api-keys/${id}/rotate`,
   triggerDigest: () => "/api/trigger-digest",
+  adminActionLog: () => "/api/admin-action-log",
   resetBlacklistSync: () => "/api/reset-blacklist-sync",
   debugSyncState: () => "/api/debug-sync-state",
   remediateBlacklistAmountGaps: () => "/api/remediate-blacklist-amount-gaps",

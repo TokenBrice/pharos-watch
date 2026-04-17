@@ -19,6 +19,7 @@ import { ENDPOINT_ASSERTIONS, assertPathCoverage } from "../../../scripts/smoke-
 describe("api endpoint registry", () => {
   it("keeps every endpoint path, probe path, and status action path explicitly covered", () => {
     const expectedPaths = [
+      "/api/admin-action-log",
       "/api/api-keys",
       "/api/api-keys/audit-log",
       "/api/audit-depeg-history",

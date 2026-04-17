@@ -436,6 +436,14 @@ const BASE_ENDPOINT_DEFINITIONS = [
     cacheBypass: true,
   },
   {
+    key: "admin-action-log",
+    path: API_PATHS.adminActionLog(),
+    methods: ["GET"],
+    adminRequired: true,
+    mutatingAdmin: false,
+    cacheBypass: true,
+  },
+  {
     key: "trigger-digest",
     path: API_PATHS.triggerDigest(),
     methods: ["POST"],
