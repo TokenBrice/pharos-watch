@@ -463,6 +463,75 @@ describe("handleMintBurnFlows contract tests", () => {
     expect(body.gauge.score).toBe(100);
   });
 
+  it("weights gauge mcap by canonical-chain circulating, not global supply", async () => {
+    const now = Math.floor(Date.now() / 1000);
+    const tenDaysAgoHour = Math.floor((now - 10 * 86400) / 3600) * 3600;
+    const tenDaysAgoDay = Math.floor(tenDaysAgoHour / 86400) * 86400;
+    // USDC with multi-chain chainCirculating: only ethereum (30B) should weight
+    // the gauge; solana (4B) must be excluded because it is untracked by mint-burn.
+    const multiChainCache = JSON.stringify({
+      peggedAssets: [
+        {
+          id: "usdc-circle",
+          symbol: "USDC",
+          circulating: { peggedUSD: 34_000_000_000 },
+          chainCirculating: {
+            ethereum: { current: 30_000_000_000, circulatingPrevDay: 30_000_000_000, circulatingPrevWeek: 30_000_000_000, circulatingPrevMonth: 30_000_000_000 },
+            solana:   { current: 4_000_000_000,  circulatingPrevDay: 4_000_000_000,  circulatingPrevWeek: 4_000_000_000,  circulatingPrevMonth: 4_000_000_000  },
+          },
+        },
+      ],
+    });
+
+    const multiChainDb = mockD1([
+      {
+        match: "SELECT stablecoin_id, chain_id, hour_ts, mint_count, burn_count",
+        rows: [
+          {
+            stablecoin_id: "usdc-circle",
+            chain_id: "ethereum",
+            hour_ts: now - 3600,
+            mint_count: 4,
+            burn_count: 1,
+            mint_volume_usd: 80_000_000,
+            burn_volume_usd: 20_000_000,
+            net_flow_usd: 60_000_000,
+          },
+        ],
+      },
+      {
+        match: "SUM(net_flow_usd) as net_flow_usd",
+        rows: [{ stablecoin_id: "usdc-circle", chain_id: "ethereum", net_flow_usd: 60_000_000 }],
+      },
+      {
+        match: "SUM(net_flow_usd) as daily_net",
+        rows: [
+          { stablecoin_id: "usdc-circle", chain_id: "ethereum", day_ts: tenDaysAgoDay, daily_net: 0, daily_abs: 100_000_000 },
+        ],
+      },
+      {
+        match: "MIN(hour_ts) as first_hour_ts",
+        rows: [{ stablecoin_id: "usdc-circle", chain_id: "ethereum", first_hour_ts: tenDaysAgoHour }],
+      },
+      { match: "mint_burn_events", rows: [] },
+      {
+        match: "cache",
+        rows: [{ key: "stablecoins", value: multiChainCache, updated_at: now }],
+        first: { key: "stablecoins", value: multiChainCache, updated_at: now },
+      },
+    ]);
+
+    const res = await handleMintBurnFlows(multiChainDb, new URL("https://x/api/mint-burn-flows"));
+    expect(res.status).toBe(200);
+
+    const body = MintBurnFlowsResponseSchema.parse(await res.json());
+    // Gauge mcap must sum only tracked-chain supply (ethereum = 30B), NOT the
+    // peg-bucket total (34B). This guards the Bank Run Gauge from over-weighting
+    // coins whose intensity is measured on one chain but whose supply lives on many.
+    expect(body.gauge.trackedMcapUsd).toBe(30_000_000_000);
+    expect(body.gauge.trackedMcapUsd).not.toBe(34_000_000_000);
+  });
+
   it("keeps negative net flow separate from positive pressure shift semantics", async () => {
     const now = Math.floor(Date.now() / 1000);
     const nowDay = Math.floor(now / 86400) * 86400;

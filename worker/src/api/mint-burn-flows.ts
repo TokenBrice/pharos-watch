@@ -22,7 +22,7 @@ import {
 } from "../lib/mint-burn-scoring";
 import { loadStablecoinsCache } from "../lib/stablecoins-cache";
 import type { StablecoinData } from "@shared/types/market";
-import { sumPegBuckets } from "@shared/lib/supply";
+import { sumMcapForTrackedChains } from "../lib/mint-burn-canonical-chain";
 import { DAY_SECONDS } from "@shared/lib/time-constants";
 import {
   getNetFlowDirection24h,
@@ -474,7 +474,9 @@ async function handleAggregate(db: D1Database, hours: number): Promise<Response>
       return errorResponse(503, "Stablecoins data not yet available");
     }
     for (const asset of stablecoinsCacheResult.payload.peggedAssets as StablecoinData[]) {
-      if (TRACKED_IDS.has(asset.id)) mcapById.set(asset.id, sumPegBuckets(asset.circulating));
+      if (TRACKED_IDS.has(asset.id)) {
+        mcapById.set(asset.id, sumMcapForTrackedChains(asset.id, asset.chainCirculating, asset.circulating));
+      }
     }
 
     const data = await fetchAggregateData(db, params);
