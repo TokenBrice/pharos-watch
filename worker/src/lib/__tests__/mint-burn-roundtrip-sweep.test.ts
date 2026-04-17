@@ -60,4 +60,24 @@ describe("sweepRecentRoundtrips", () => {
     const sql = prepare.mock.calls[0]?.[0] as string;
     expect(sql).toContain("ORDER BY MIN(timestamp) ASC, stablecoin_id ASC, tx_hash ASC");
   });
+
+  // Drift guard: the SQL HAVING clause must enforce the same 0.5% mint/burn
+  // amount tolerance as the in-memory detector. The constant lives in
+  // `roundtrip-detection.ts` (ROUNDTRIP_AMOUNT_TOLERANCE); SQL can't import it,
+  // so we assert the literal and the CASE-WHEN max pattern are present.
+  it("HAVING clause requires mint/burn totals match within the same 0.5% tolerance as the in-memory detector", async () => {
+    const prepare = vi.fn().mockReturnValue({
+      bind: vi.fn().mockReturnValue({
+        all: vi.fn().mockResolvedValue({ results: [] }),
+      }),
+    });
+    const db = { prepare } as unknown as D1Database;
+
+    await sweepRecentRoundtrips(db, 1700001000);
+
+    const sql = prepare.mock.calls[0]?.[0] as string;
+    expect(sql).toContain("0.005");
+    // Verifies the CASE WHEN max pattern (not scalar MAX(a,b))
+    expect(sql).toMatch(/CASE\s+WHEN[\s\S]+>=[\s\S]+THEN[\s\S]+ELSE[\s\S]+END/);
+  });
 });
