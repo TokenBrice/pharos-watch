@@ -872,6 +872,11 @@ export function applyPoolChallenge(
           result.candidateSources = [...new Set([...result.candidateSources, "pool-tvl-weighted"])];
           result.agreeSources = ["pool-tvl-weighted"];
           result.disagreeSources = result.candidateSources.filter((source) => source !== "pool-tvl-weighted");
+          result.allPrices = { "pool-tvl-weighted": replacementPrice };
+          result.observedAtBySource = {
+            "pool-tvl-weighted": poolObservedAts.length > 0 ? Math.min(...poolObservedAts) : result.observedAt ?? null,
+          };
+          result.observedAtModeBySource = { "pool-tvl-weighted": "local_fetch" };
         }
       }
     }

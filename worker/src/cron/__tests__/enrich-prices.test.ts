@@ -2158,4 +2158,45 @@ describe("applyPoolChallenge", () => {
 
     expect(downgrades).toBe(0); // binance is a hard source
   });
+
+  it("updates allPrices to reflect pool-tvl-weighted replacement source", () => {
+    const assetId = "usr-resolv";
+    const results = new Map<string, PrimaryPriceResult>();
+    results.set(assetId, {
+      price: 1.0, // near peg — will be replaced by depegged pools
+      source: "coingecko+defillama-list",
+      selectedSource: "coingecko",
+      priceEstimator: "selected_source",
+      confidence: "high",
+      dlPrice: 1.0,
+      cgPrice: 1.0,
+      candidateSources: ["coingecko", "defillama-list"],
+      agreeSources: ["coingecko", "defillama-list"],
+      disagreeSources: [],
+      allPrices: { coingecko: 1.0, "defillama-list": 1.0 },
+      observedAt: 1_000,
+      observedAtMode: "upstream",
+      observedAtBySource: { coingecko: 1_000, "defillama-list": 1_000 },
+      observedAtModeBySource: { coingecko: "upstream", "defillama-list": "upstream" },
+    });
+
+    const pools = new Map<string, Array<{ price: number; tvlUsd: number; protocol: string; chain: string; observedAt?: number }>>([
+      [assetId, [
+        { price: 0.8, tvlUsd: 2_000_000, protocol: "curve", chain: "ethereum", observedAt: 900 },
+        { price: 0.8, tvlUsd: 1_500_000, protocol: "uniswap", chain: "ethereum", observedAt: 950 },
+      ]],
+    ]);
+    const pegTypes = new Map<string, string | undefined>([[assetId, "peggedUSD"]]);
+    const stats = makeStats();
+
+    applyPoolChallenge(results, pools, pegTypes, stats);
+
+    const updated = results.get(assetId);
+    expect(updated).toBeDefined();
+    expect(updated!.price).toBeCloseTo(0.8, 5);
+    expect(updated!.source).toBe("pool-tvl-weighted");
+    expect(updated!.allPrices).toEqual({ "pool-tvl-weighted": updated!.price });
+    expect(updated!.observedAtBySource).toEqual({ "pool-tvl-weighted": 900 });
+    expect(updated!.observedAtModeBySource).toEqual({ "pool-tvl-weighted": "local_fetch" });
+  });
 });
