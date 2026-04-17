@@ -440,6 +440,17 @@ export const BLACKLIST_STABLECOINS = [
   "EURC",
   "BUIDL",
   "USDP",
+  "TUSD",
+  "NUSD",
+  "EURCV",
+  "USDA",
+  "USAT",
+  "AEUR",
+  "XUSD",
+  "XAUM",
+  "JPYC",
+  "FRXUSD",
+  "FIDD",
 ] as const;
 
 export type BlacklistStablecoin = (typeof BLACKLIST_STABLECOINS)[number];
@@ -536,6 +547,7 @@ const BlacklistSummaryStatsSchema = z.object({
   recentCount: z.number(),
   recentCount24h: z.number(),
   recoverableGapCount: z.number(),
+  perCoinBlacklistCounts: z.record(z.enum(BLACKLIST_STABLECOINS), z.number()),
 });
 
 const BlacklistChainOptionSchema = z.object({

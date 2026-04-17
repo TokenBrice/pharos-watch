@@ -1,6 +1,6 @@
 # Blacklist Tracker
 
-Multi-chain blacklist/freeze event tracker for stablecoins. Monitors on-chain events (blacklist, unblacklist, destroy/seize) across 54 contract configurations on 9 chains. Runs hourly, incrementally scanning from the last processed block or timestamp cursor.
+Multi-chain blacklist/freeze event tracker for stablecoins. Monitors on-chain events (blacklist, unblacklist, destroy/seize) across 71 contract configurations on 9 chains (35 tracked symbols; additional BSC / Avalanche / Base deployments for some tier-1 coins are deferred pending explorer-API coverage). Runs hourly, incrementally scanning from the last processed block or timestamp cursor.
 
 The tracker now has two distinct amount layers:
 
@@ -8,9 +8,9 @@ The tracker now has two distinct amount layers:
 - `blacklist_current_balances` stores persistent freeze-ledger snapshots used by the public frozen-total summary
 - the `/blacklist` status charts now support on-page drilldown into the matching stablecoin subset for each blacklistability bucket
 
-**Cron-backed sync coverage:** USDC, USDT, PAXG, XAUT, PYUSD, USD1, USDG, RLUSD, U, USDtb, A7A5, FDUSD, BRZ, AUSD, MNEE, EURI, USDQ, USDO, USDX, AID, TGBP, EURC, BUIDL, USDP.
+**Cron-backed sync coverage:** USDC, USDT, PAXG, XAUT, PYUSD, USD1, USDG, RLUSD, U, USDtb, A7A5, FDUSD, BRZ, AUSD, MNEE, EURI, USDQ, USDO, USDX, AID, TGBP, EURC, BUIDL, USDP, TUSD, NUSD, EURCV, USDA, USAT, AEUR, XUSD, XAUm, JPYC, FRXUSD, FIDD.
 
-**Live API/UI filter enum:** USDC, USDT, PAXG, XAUT, PYUSD, USD1, USDG, RLUSD, U, USDTB, A7A5, FDUSD, BRZ, AUSD, MNEE, EURI, USDQ, USDO, USDX, AID, TGBP, EURC, BUIDL, USDP via `BLACKLIST_STABLECOINS` in `shared/types/market.ts` (re-exported through `shared/types/index.ts`).
+**Live API/UI filter enum:** USDC, USDT, PAXG, XAUT, PYUSD, USD1, USDG, RLUSD, U, USDTB, A7A5, FDUSD, BRZ, AUSD, MNEE, EURI, USDQ, USDO, USDX, AID, TGBP, EURC, BUIDL, USDP, TUSD, NUSD, EURCV, USDA, USAT, AEUR, XUSD, XAUM, JPYC, FRXUSD, FIDD via `BLACKLIST_STABLECOINS` in `shared/types/market.ts` (re-exported through `shared/types/index.ts`).
 
 Implementation note: `EURC` is live-supported with mirror-zero suppression. Circle often mirrors the same blacklist action across both USDC and EURC; rows classified as zero-balance mirrors stay auditable in storage but are excluded from public `/blacklist` events, active records, and frozen-value aggregates.
 
@@ -428,6 +428,74 @@ OmnibusSeize(address indexed,address,uint256,string,uint8)
   hasAmount: true
 ```
 
+### Tier-1 Expansion Events (v3.95)
+
+```
+Blacklisted(address indexed,bool)
+  Topic: 0xcf3473b85df1594d47b6958f29a32bea0abff9dd68296f7bf33443646793cfd8
+  Address: indexed (topics[1])
+  Direction: bool at first 32-byte data slot (non-zero → blacklist, zero → unblacklist)
+  hasAmount: false
+  Note: TrueUSD uses a single topic for both directions; the bool is resolved via
+        BlacklistEventDef.eventTypeFromDataBoolIndex=0. DestroyedBlackFunds on
+        TUSD reuses the USDT legacy topic 0x61e6e66b0d6339b2980aecc6ccc0039736791f0ccde9ed512e789a7fbdd698c6.
+
+AddedToDenylist(address indexed)
+  Topic: 0x8d6233ac6005c4f3eaa99b3aebdbe7ad15476dd961858142c4080952392f979d
+  Address: indexed (topics[1])
+  hasAmount: false
+
+RemovedFromDenylist(address indexed)
+  Topic: 0x29e32a16a9d465ee92796d9fc7e93d2a9ab78cdc803298df7ed84b52d19cd42f
+  Address: indexed (topics[1])
+  hasAmount: false
+
+AddressesFrozen(address[])
+  Topic: 0x07381cac78ed3e2aa4d96e0d2c80e39d1c2fff09d8f6f079fa7249b553f45425
+  Address list: ABI-encoded dynamic address[] in data
+  hasAmount: false
+
+AddressesUnFrozen(address[])
+  Topic: 0xb474664863a35c00b84f99fe9155ea67676b17495d6f9d6b0277787801f77a45
+  Address list: ABI-encoded dynamic address[] in data
+  hasAmount: false
+
+Blocklisted(address indexed)
+  Topic: 0x917c251bb231c4b997a420bebe47edad5c20e70715da16c38e9b2e172e44ab92
+  Address: indexed (topics[1])
+  hasAmount: false
+  Note: CENTRE fork (JPYC). Distinct from USDC's Blacklisted/UnBlacklisted
+        (note the 'ock' vs 'ack' spelling).
+
+UnBlocklisted(address indexed)
+  Topic: 0xbc3fe0fc667d12a7a22748747f024a7d971127ffc48f6622675d3e97a2591a51
+  Address: indexed (topics[1])
+  hasAmount: false
+
+AccountFrozen(address)
+  Topic: 0x4f2a367e694e71282f29ab5eaa04c4c0be45ac5bf2ca74fb67068b98bdc2887d
+  Address: NOT indexed (first 32-byte data slot)
+  hasAmount: false
+  Note: FRXUSD reuses the AccountFrozen signature (same keccak as Agora AUSD's
+        indexed variant — indexed-ness does not affect the topic) but with a
+        NON-indexed address in data[0], resolved via addressDataIndex=0.
+
+AccountThawed(address)
+  Topic: 0x74bb8c2778db9c683c274e7bfdcb56dba4f1c737411c8182363097eec281eea4
+  Address: NOT indexed (first 32-byte data slot)
+  hasAmount: false
+
+TransferRestrictionImposed(address indexed)
+  Topic: 0x31180c9d9d89196003f30f7b6643004f76e5feb146dbf10ae71764a88cfed5ef
+  Address: indexed (topics[1])
+  hasAmount: false
+
+TransferRestrictionRemoved(address indexed)
+  Topic: 0x1c425db0931b7efc6b31b2491db198b75f20cfd6885f51c35f5f2a5495ef4619
+  Address: indexed (topics[1])
+  hasAmount: false
+```
+
 ---
 
 ## Database Schema
@@ -647,14 +715,14 @@ For destroy events, try fetching from transaction receipt first (`eth_getTransac
 | ------------ | ------ | ------- | -------------------------------------------------------------------- |
 | `limit`      | number | 1000    | Max results (1-1000; `0` maps to default `1000`)                     |
 | `offset`     | number | 0       | Pagination offset                                                    |
-| `stablecoin` | string | --      | Filter by name (`"USDC"`, `"USDT"`, `"PAXG"`, `"XAUT"`, `"PYUSD"`, `"USD1"`, `"USDG"`, `"RLUSD"`, `"U"`, `"USDTB"`, `"A7A5"`, `"FDUSD"`, `"BRZ"`, `"AUSD"`, `"EURI"`, `"USDQ"`, `"USDO"`, `"USDX"`, `"AID"`, `"TGBP"`, `"MNEE"`, `"EURC"`, `"BUIDL"`, `"USDP"`) |
+| `stablecoin` | string | --      | Filter by name (`"USDC"`, `"USDT"`, `"PAXG"`, `"XAUT"`, `"PYUSD"`, `"USD1"`, `"USDG"`, `"RLUSD"`, `"U"`, `"USDTB"`, `"A7A5"`, `"FDUSD"`, `"BRZ"`, `"AUSD"`, `"EURI"`, `"USDQ"`, `"USDO"`, `"USDX"`, `"AID"`, `"TGBP"`, `"MNEE"`, `"EURC"`, `"BUIDL"`, `"USDP"`, `"TUSD"`, `"NUSD"`, `"EURCV"`, `"USDA"`, `"USAT"`, `"AEUR"`, `"XUSD"`, `"XAUM"`, `"JPYC"`, `"FRXUSD"`, `"FIDD"`) |
 | `chain`      | string | --      | Filter by `chain_name`                                               |
 | `eventType`  | string | --      | Filter by `event_type` (`"blacklist"`, `"unblacklist"`, `"destroy"`) |
 | `q`          | string | --      | Case-insensitive address substring search                            |
 | `sortBy`     | string | date    | Sort field (`"date"`, `"stablecoin"`, `"chain"`, `"event"`)          |
 | `sortDirection` | string | desc | Sort direction (`"asc"`, `"desc"`)                                   |
 
-The handler now exposes only unsuppressed rows for the live-supported symbols: USDC, USDT, PAXG, XAUT, PYUSD, USD1, USDG, RLUSD, U, USDTB, A7A5, FDUSD, BRZ, AUSD, MNEE, EURI, USDQ, USDO, USDX, AID, TGBP, EURC, BUIDL, and USDP.
+The handler now exposes only unsuppressed rows for the live-supported symbols: USDC, USDT, PAXG, XAUT, PYUSD, USD1, USDG, RLUSD, U, USDTB, A7A5, FDUSD, BRZ, AUSD, MNEE, EURI, USDQ, USDO, USDX, AID, TGBP, EURC, BUIDL, USDP, TUSD, NUSD, EURCV, USDA, USAT, AEUR, XUSD, XAUM, JPYC, FRXUSD, and FIDD.
 
 **Response:**
 
@@ -822,7 +890,8 @@ Both endpoints now emit freshness headers from the same hourly `sync-blacklist` 
 17. **A7A5 is non-USD:** never treat native A7A5 units as USD; amount conversion depends on the `a7a5-old-vector` price-cache entry.
 18. **RLUSD clawback is not covered:** v3.8 tracks account pause/unpause only. Clawback support needs transaction-input classification because the verified ABI does not expose a dedicated clawback event.
 19. **MNEE has independent blacklist and freeze states:** v3.9 tracks MNEE freeze/unfreeze plus confiscation/burn events only. AccountBlacklisted/AccountDelisted need a future restriction-source key to avoid active-state collisions.
-20. **EURC/BRZ/EURI/TGBP are non-USD:** public USD values depend on price-cache conversion rather than native token units.
+20. **EURC/BRZ/EURI/TGBP/EURCV/JPYC are non-USD:** public USD values depend on price-cache conversion rather than native token units (EUR for EURC/EURI/EURCV, BRL for BRZ, GBP for TGBP, JPY for JPYC).
+21. **Gnosis dRPC free-tier caps log range at 10k blocks:** scan windows must stay at or below 9k blocks per request, otherwise `eth_getLogs` rejects the range and no events are returned.
 
 ---
 

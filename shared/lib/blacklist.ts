@@ -3,18 +3,22 @@ import type {
   BlacklistStablecoin,
 } from "../types/market";
 
-export function isGoldBlacklistStablecoin(symbol: string): symbol is "PAXG" | "XAUT" {
-  return symbol === "PAXG" || symbol === "XAUT";
+export function isGoldBlacklistStablecoin(symbol: string): symbol is "PAXG" | "XAUT" | "XAUM" {
+  return symbol === "PAXG" || symbol === "XAUT" || symbol === "XAUM";
 }
 
 const BLACKLIST_PRICE_ASSET_IDS: Partial<Record<BlacklistStablecoin, string>> = {
   PAXG: "paxg-paxos",
   XAUT: "xaut-tether",
+  XAUM: "xaum-matrixdock",
   A7A5: "a7a5-old-vector",
   BRZ: "brz-transfero",
   EURC: "eurc-circle",
   EURI: "euri-banking-circle",
+  EURCV: "eurcv-societe-generale-forge",
+  AEUR: "aeur-anchored-coins",
   TGBP: "tgbp-tokenised",
+  JPYC: "jpyc-jpyc",
 };
 
 export function getBlacklistPriceAssetId(stablecoin: BlacklistStablecoin): string | null {

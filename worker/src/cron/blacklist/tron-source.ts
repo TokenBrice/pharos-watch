@@ -1,4 +1,3 @@
-import type { BlacklistEventType } from "@shared/types/market";
 import { getBlacklistTrackerMethodologyVersionAt } from "@shared/lib/blacklist-tracker-version";
 import { computeBlacklistAmountUsdAtEvent } from "@shared/lib/blacklist";
 import { cancelResponseBodyQuietly } from "../../lib/response-body";
@@ -30,22 +29,14 @@ interface TronEventsResponse {
   success: boolean;
 }
 
-const TRON_EVENT_NAME_MAP: Record<string, BlacklistEventType> = {
-  AddedBlackList: "blacklist",
-  RemovedBlackList: "unblacklist",
-  DestroyedBlackFunds: "destroy",
-  Freeze: "blacklist",
-  Unfreeze: "unblacklist",
-};
-
 function runtimeBudgetReached(deadlineMs: number): boolean {
   return Date.now() >= deadlineMs;
 }
 
 export function parseTronEvent(config: ContractEventConfig, evt: TronEventResult): BlacklistRow | null {
   const eventDef = getBlacklistEventBySignature(config, evt.event_name);
-  const eventType = TRON_EVENT_NAME_MAP[evt.event_name];
-  if (!eventDef || !eventType) return null;
+  if (!eventDef) return null;
+  const eventType = eventDef.eventType;
 
   // Fallback chain: tronResultKey override → _user (modern Tether) → _blackListedUser (legacy) → positional "0"
   const affectedAddress = (eventDef.tronResultKey && evt.result[eventDef.tronResultKey])
@@ -102,10 +93,11 @@ export async function fetchTronEventsIncremental(
   rateLimit: RateLimitedFetch,
   budget: SubrequestBudget,
   signal?: AbortSignal,
-): Promise<{ rows: BlacklistRow[]; maxBlock: number; incomplete: boolean }> {
+): Promise<{ rows: BlacklistRow[]; maxBlock: number; incomplete: boolean; apiError: boolean }> {
   const rows: BlacklistRow[] = [];
-  let maxBlock = 0;
+  let maxBlock = lastTimestampMs;
   let incomplete = false;
+  let apiError = false;
   const headers: Record<string, string> = {};
   if (apiKey) headers["TRON-PRO-API-KEY"] = apiKey;
 
@@ -136,18 +128,23 @@ export async function fetchTronEventsIncremental(
         if (!res) return null;
         if (!res.ok) {
           await cancelResponseBodyQuietly(res);
+          apiError = true;
           return null;
         }
         const raw = await res.json();
         const parsed = TronEventsResponseSchema.safeParse(raw);
         if (!parsed.success) {
           console.warn("[blacklist] TronGrid response validation failed:", parsed.error.message);
+          apiError = true;
           return null;
         }
         return parsed.data as TronEventsResponse;
       });
 
-      if (!json?.success || !Array.isArray(json.data)) break;
+      if (!json?.success || !Array.isArray(json.data)) {
+        apiError = true;
+        break;
+      }
 
       for (const evt of json.data) {
         const row = parseTronEvent(config, evt);
@@ -162,5 +159,5 @@ export async function fetchTronEventsIncremental(
     if (incomplete) break;
   }
 
-  return { rows, maxBlock, incomplete };
+  return { rows, maxBlock, incomplete, apiError };
 }

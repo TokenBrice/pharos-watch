@@ -17,7 +17,7 @@ import { fetchEvmEventsIncremental } from "./blacklist/evm-source";
 import { fetchTronEventsIncremental } from "./blacklist/tron-source";
 import type { BlacklistRow } from "./blacklist/shared";
 import { backfillAmounts, backfillTronFromLedger } from "./blacklist/amount-recovery";
-import { processRowsAndAccumulatePostFetchRows } from "./blacklist/post-fetch-counters";
+import { processFetchedBlacklistRows } from "./blacklist/post-fetch";
 
 const EVM_SCANNED_TO_LATEST = 99999999;
 const SYNC_BLACKLIST_RUNTIME_BUDGET_MS = 7 * 60_000;
@@ -36,13 +36,14 @@ const TRON_SAFETY_MS = INDEXING_SAFETY_SEC * 1000;
 
 // Approximate block times (seconds) per EVM chain — used to compute safety margin in blocks.
 const EVM_BLOCK_TIME: Record<number, number> = {
-  1: 12, // Ethereum
+  1: 12,       // Ethereum
   42161: 0.25, // Arbitrum
-  8453: 2, // Base
-  10: 2, // Optimism
-  137: 2, // Polygon
-  43114: 2, // Avalanche
-  56: 3, // BSC
+  8453: 2,     // Base
+  10: 2,       // Optimism
+  137: 2,      // Polygon
+  43114: 2,    // Avalanche
+  56: 3,       // BSC
+  100: 5,      // Gnosis
 };
 
 function evmSafetyMarginBlocks(evmChainId: number): number {
@@ -204,7 +205,7 @@ export async function syncBlacklist(opts: SyncBlacklistOptions): Promise<SyncBla
       let result: {
         rows: BlacklistRow[];
         maxBlock: number;
-        apiError?: boolean;
+        apiError: boolean;           // required on both branches now
         chainHead?: number | null;
         usedRpcLogs?: boolean;
         scannedToBlock?: number | null;
@@ -222,26 +223,33 @@ export async function syncBlacklist(opts: SyncBlacklistOptions): Promise<SyncBla
           signal,
         );
         await recordOutcomeSafe(db, CIRCUIT_SOURCE.TRONGRID, !result.apiError);
+        if (result.apiError) {
+          apiErrors++;
+          recordApiErrorConfig(configKey, config.stablecoin, config.chain.chainId, "trongrid-failed");
+        }
 
-        const processed = await processRowsAndAccumulatePostFetchRows(
-          {
-            db,
-            config,
-            rows: result.rows,
-            chainLabel: "tron",
-            etherscanApiKey,
-            drpcApiKey,
-            trongridApiKey,
-            etherscanLimiter,
-            tronLimiter,
-            budget,
-            deadlineMs,
-            signal,
-            chainRpcs,
-          },
-          { enrichCounters, currentBalanceCacheCounters },
-        );
-        totalInsertedRows += processed;
+        const processed = await processFetchedBlacklistRows({
+          db,
+          config,
+          rows: result.rows,
+          chainLabel: "tron",
+          etherscanApiKey,
+          drpcApiKey,
+          trongridApiKey,
+          etherscanLimiter,
+          tronLimiter,
+          budget,
+          deadlineMs,
+          signal,
+          chainRpcs,
+        });
+        enrichCounters.attempted += processed.enrichCounters.attempted;
+        enrichCounters.succeeded += processed.enrichCounters.succeeded;
+        enrichCounters.failed += processed.enrichCounters.failed;
+        currentBalanceCacheCounters.updated += processed.currentBalanceCacheCounters.updated;
+        currentBalanceCacheCounters.deleted += processed.currentBalanceCacheCounters.deleted;
+        currentBalanceCacheCounters.failed += processed.currentBalanceCacheCounters.failed;
+        totalInsertedRows += processed.insertedRows;
 
         if (result.incomplete) {
           runtimeBudgetHit = true;
@@ -285,25 +293,28 @@ export async function syncBlacklist(opts: SyncBlacklistOptions): Promise<SyncBla
           rpcLogConfigs++;
         }
 
-        const processed = await processRowsAndAccumulatePostFetchRows(
-          {
-            db,
-            config,
-            rows: result.rows,
-            chainLabel: "evm",
-            etherscanApiKey,
-            drpcApiKey,
-            trongridApiKey,
-            etherscanLimiter,
-            tronLimiter,
-            budget,
-            deadlineMs,
-            signal,
-            chainRpcs,
-          },
-          { enrichCounters, currentBalanceCacheCounters },
-        );
-        totalInsertedRows += processed;
+        const processed = await processFetchedBlacklistRows({
+          db,
+          config,
+          rows: result.rows,
+          chainLabel: "evm",
+          etherscanApiKey,
+          drpcApiKey,
+          trongridApiKey,
+          etherscanLimiter,
+          tronLimiter,
+          budget,
+          deadlineMs,
+          signal,
+          chainRpcs,
+        });
+        enrichCounters.attempted += processed.enrichCounters.attempted;
+        enrichCounters.succeeded += processed.enrichCounters.succeeded;
+        enrichCounters.failed += processed.enrichCounters.failed;
+        currentBalanceCacheCounters.updated += processed.currentBalanceCacheCounters.updated;
+        currentBalanceCacheCounters.deleted += processed.currentBalanceCacheCounters.deleted;
+        currentBalanceCacheCounters.failed += processed.currentBalanceCacheCounters.failed;
+        totalInsertedRows += processed.insertedRows;
 
         let newBlock: number;
         if (result.incomplete) {

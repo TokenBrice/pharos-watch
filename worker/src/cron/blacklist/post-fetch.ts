@@ -105,6 +105,7 @@ export async function processFetchedBlacklistRows(
   for (const row of newRows) {
     if (shouldSuppressAsMirrorZero(row.stablecoin, row.event_type, row.amount_native)) {
       row.suppression_reason = "circle_mirror_zero_balance";
+      row.amount_status = "permanently_unavailable";
     }
   }
   console.log(

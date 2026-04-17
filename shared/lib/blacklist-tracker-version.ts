@@ -1,9 +1,53 @@
 import { createMethodologyVersion } from "./methodology-version";
 
 const blacklistTracker = createMethodologyVersion({
-  currentVersion: "3.93",
+  currentVersion: "3.95",
   changelogPath: "/methodology/blacklist-tracker-changelog/",
   changelog: [
+  {
+    version: "3.95",
+    title: "Tier-1 coverage expansion",
+    date: "2026-04-17",
+    effectiveAt: 1776466970, // 2026-04-17T00:00:00Z
+    summary:
+      "Adds eleven new tracked stablecoins across four new event families and six existing families. TUSD joins through a new TRUEUSD_EVENT_FAMILY that discriminates blacklist vs unblacklist via the bool at data slot 0 through the new BlacklistEventDef.eventTypeFromDataBoolIndex extension. JPYC adds CENTRE_BLOCKLISTED_FAMILY (Blocklisted/UnBlocklisted), FRXUSD adds FRAX_FREEZE_FAMILY (AccountFrozen/AccountThawed with non-indexed address), EURCV adds SOCGEN_FREEZE_FAMILY (batch AddressesFrozen/AddressesUnFrozen), NUSD adds NEUTRL_DENYLIST_FAMILY, and FIDD adds FIDELITY_RESTRICTION_FAMILY (TransferRestrictionImposed/Removed). USDA, USAT, AEUR, XUSD, and XAUM reuse existing families. Several BSC/Avalanche/Base deployments remain deferred pending block-explorer API access, and apxUSD is intentionally deferred because the verified ABI exposes no direction discriminator.",
+    impact: [
+      "Added TUSD on Ethereum (TRUEUSD_EVENT_FAMILY with bool-discriminator Blacklisted(address,bool) + DestroyedBlackFunds)",
+      "Added NUSD on Ethereum (NEUTRL_DENYLIST_FAMILY: AddedToDenylist / RemovedFromDenylist)",
+      "Added EURCV on Ethereum (SOCGEN_FREEZE_FAMILY: batch AddressesFrozen(address[]) / AddressesUnFrozen(address[]))",
+      "Added USDA on Ethereum reusing USDT legacy family; USAT on Ethereum reusing USDT0 family; AEUR on Ethereum reusing DUAL_INDEX_FREEZE family",
+      "Added XUSD on Ethereum + BSC reusing the Circle USDC blacklist family; XAUm on Ethereum + BSC reusing the USDT0 family",
+      "Added JPYC on Ethereum + Polygon (CENTRE_BLOCKLISTED_FAMILY: Blocklisted / UnBlocklisted)",
+      "Added FRXUSD on Ethereum (FRAX_FREEZE_FAMILY: AccountFrozen / AccountThawed with addressDataIndex=0)",
+      "Added FIDD on Ethereum (FIDELITY_RESTRICTION_FAMILY: TransferRestrictionImposed / TransferRestrictionRemoved)",
+      "BSC / Avalanche / Base deployments for TUSD, USDA, AEUR, JPYC, AID, TGBP deferred pending Etherscan v2 free-tier contract-creation coverage for those chains",
+      "apxUSD deferred: verified ABI emits a single event without a direction discriminator",
+    ],
+    commits: [],
+    reconstructed: false,
+  },
+  {
+    version: "3.94",
+    title: "Correctness + efficiency + minor coverage gaps",
+    date: "2026-04-17",
+    effectiveAt: 1776466970, // 2026-04-17T00:00:00Z
+    summary:
+      "Worker correctness fixes (Gnosis dRPC 9k-block scan cap, dual-index-freeze family split from WLFI destroy events, TronGrid failure propagation to the circuit breaker, EURC mirror-zero rows locked to permanently_unavailable, address[] expansion capped, Tron maxBlock cursor init), five D1 migrations (derived-row reset, sync_state dedup, EURC mirror-zero stamp, blacklist_events index adjustments, amount-status backfill), summary endpoint rewritten to aggregate in SQL with post-fetch counters inlined, frontend polish (data-driven stats strip, amount-status badge, per-coin stat border, CSV column split, page-clamp + filter-reset coverage), and minor chain-coverage additions (Polygon USDQ, Arbitrum + Base AID, Base + BSC + Polygon TGBP).",
+    impact: [
+      "Gnosis BRZ scans now stay within the dRPC free-tier 10k-block cap and drain the ~12.5M-block backlog that previously masked 2 missed events",
+      "FDUSD / EURI / AEUR configs use DUAL_INDEX_FREEZE_EVENT_FAMILY without inheriting WLFI FrozenAccountDrained / FrozenFundsReallocated topics they cannot emit",
+      "TronGrid outages now throw through the per-config circuit breaker instead of silently returning empty arrays",
+      "EURC rows flagged as circle_mirror_zero_balance are stamped amount_status='permanently_unavailable' and no longer re-enter the recoverable-pending backfill pool",
+      "Batch address[] events (USDtb, AID, EURCV) apply a per-log row cap so a single malformed payload cannot blow out the write batch",
+      "Tron sync cursor initialises from max(block_number) for legacy configs that were left at 0",
+      "Five D1 migrations applied: 0100 dedup mixed-case blacklist_sync_state keys, 0101 reset legacy derived amount rows, 0102 Gnosis BRZ cursor reseed, 0103 backfill + API composite indexes, 0104 stamp EURC mirror-zero rows as permanently_unavailable",
+      "/api/blacklist-summary aggregates quarterly chart points and per-coin counts in SQL, dropping summary-endpoint memory from ~5-10MB to a few KB per cache miss",
+      "Frontend: data-driven stats strip + amount-status badge, per-coin stat border rendered via inline style, CSV splits native / unit / USD / status columns, page-clamp + zero-total + filter-reset covered by tests",
+      "Seven new chain-coverage rows for existing coins: Polygon USDQ; Arbitrum + Base AID; Base + BSC + Polygon TGBP",
+    ],
+    commits: [],
+    reconstructed: false,
+  },
   {
     version: "3.93",
     title: "Backlog-safe scanner guardrails",

@@ -42,6 +42,12 @@ Applied sequentially after the baseline (fresh setup) or after the previous indi
 | 0096     | `0096_mint_burn_config_deferral.sql`            | Add mint/burn config deferral table to skip chronically failing configs for a 1h grace period  |
 | 0097     | `0097_mbe_flow_type_ts_index.sql`               | Add (flow_type, timestamp DESC) composite index to speed the atomic-roundtrip sweep query      |
 | 0098     | `0098_telegram_alert_snooze.sql`                | Add `alert_snooze_until_ts` to `telegram_subscribers` for per-chat temporary snooze from inline buttons |
+| 0099     | `0099_admin_action_audit_log.sql`               | Add admin action audit log table for tracking operator mutations                               |
+| 0100     | `0100_blacklist_sync_state_dedup.sql`           | Delete legacy mixed-case `blacklist_sync_state` rows (keeps lowercase canonical keys)          |
+| 0101     | `0101_blacklist_reset_derived_amounts.sql`      | Reset 7,198 pre-v3.2 `derived` rows into the backfill pool for proper re-attribution           |
+| 0102     | `0102_blacklist_gnosis_cursor_reseed.sql`       | Reseed Gnosis BRZ cursor to startBlock-1 so next sync picks up previously-missed events        |
+| 0103     | `0103_blacklist_backfill_indexes.sql`           | Composite indexes for blacklist backfill + public API query paths                              |
+| 0104     | `0104_blacklist_mirror_zero_permanently_unavailable.sql` | Stamp EURC mirror-zero rows as permanently_unavailable to exit backfill pool         |
 
 ## Retired Individual Migrations
 

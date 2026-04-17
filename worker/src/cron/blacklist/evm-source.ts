@@ -14,6 +14,7 @@ import {
   type BlacklistEventDef,
   type ContractEventConfig,
 } from "../../lib/blacklist-contracts";
+import type { BlacklistEventType } from "@shared/types/market";
 import { getChainRpc, type ChainRpcConfig } from "../../lib/chain-registry";
 import {
   budgetExhausted,
@@ -21,6 +22,7 @@ import {
   decodeUint256,
   decodeUint256AtSlot,
   fetchEvmLogsForTopic,
+  readDataWord,
   type EtherscanLogEntry,
   type RateLimitedFetch,
   type SubrequestBudget,
@@ -28,12 +30,14 @@ import {
 import { buildExplorerAddressUrl, buildExplorerTxUrl, type BlacklistRow } from "./shared";
 
 const RPC_LOG_SCAN_CHAIN_IDS = new Set(["base", "optimism", "avalanche", "bsc", "gnosis"]);
-const RPC_LOG_SCAN_WINDOWS: Record<string, { alchemy: number; fallback: number }> = {
-  base: { alchemy: 500_000, fallback: 50_000 },
-  optimism: { alchemy: 500_000, fallback: 50_000 },
+/** Per-chain `eth_getLogs` windows. Gnosis is capped at 9_000 because dRPC's free
+ *  tier rejects any range > 10_000 blocks (verified 2026-04-17). */
+export const RPC_LOG_SCAN_WINDOWS: Record<string, { alchemy: number; fallback: number }> = {
+  base:      { alchemy: 500_000, fallback: 50_000 },
+  optimism:  { alchemy: 500_000, fallback: 50_000 },
   avalanche: { alchemy: 250_000, fallback: 2_000 },
-  bsc: { alchemy: 250_000, fallback: 50_000 },
-  gnosis: { alchemy: 250_000, fallback: 50_000 },
+  bsc:       { alchemy: 250_000, fallback: 50_000 },
+  gnosis:    { alchemy: 9_000,   fallback: 9_000 },
 };
 
 type EvmLogLike = Pick<
@@ -67,13 +71,26 @@ function runtimeBudgetReached(deadlineMs: number): boolean {
   return Date.now() >= deadlineMs;
 }
 
+/** Maximum plausible size of an address[] batch event — well above any real
+ * AccountsBlocked or AddedToDenyList batch we've observed (real batches are
+ * small, typically <50 addresses). Guards against malformed or adversarial
+ * decode explosions. */
+const MAX_DECODED_ADDRESS_ARRAY = 500;
+
 function decodeAddressArrayData(data: string): string[] {
   try {
     const [addresses] = decodeAbiParameters(
       [{ type: "address[]" }],
       data as `0x${string}`,
     );
-    return [...addresses].map((address) => address.toLowerCase());
+    const result = [...addresses].map((a) => a.toLowerCase());
+    if (result.length > MAX_DECODED_ADDRESS_ARRAY) {
+      console.warn(
+        `[blacklist] address[] event decoded ${result.length} entries; truncating to ${MAX_DECODED_ADDRESS_ARRAY}`,
+      );
+      return result.slice(0, MAX_DECODED_ADDRESS_ARRAY);
+    }
+    return result;
   } catch (error) {
     console.warn("[blacklist] Failed to decode address[] event data:", error);
     return [];
@@ -81,9 +98,20 @@ function decodeAddressArrayData(data: string): string[] {
 }
 
 function decodeAddressAtDataSlot(data: string, slotIndex: number): string | null {
-  const cleaned = data.startsWith("0x") ? data.slice(2) : data;
-  const slot = cleaned.slice(slotIndex * 64, slotIndex * 64 + 64);
-  return slot.length >= 64 ? decodeAddress(slot) : null;
+  const word = readDataWord(data, slotIndex);
+  return word == null ? null : decodeAddress(word);
+}
+
+/** Reads a uint256/bool slot from event data and resolves a blacklist/unblacklist
+ *  direction. Returns `undefined` if the slot is missing/short so callers fall
+ *  back to the event definition's default eventType. */
+function resolveEventTypeFromDataBool(
+  data: string,
+  slotIndex: number,
+): BlacklistEventType | undefined {
+  const word = readDataWord(data, slotIndex);
+  if (word == null) return undefined;
+  return BigInt(word) !== 0n ? "blacklist" : "unblacklist";
 }
 
 function buildBlacklistRow(
@@ -94,17 +122,19 @@ function buildBlacklistRow(
   blockNumber: number,
   timestamp: number,
   rowSuffix = "",
+  eventTypeOverride?: BlacklistEventType,
 ): BlacklistRow | null {
   const eventDef = getBlacklistEventByTopic(config, log.topics[0]);
   if (!eventDef) return null;
   const methodologyVersion = getBlacklistTrackerMethodologyVersionAt(timestamp);
+  const eventType = eventTypeOverride ?? eventDef.eventType;
 
   return {
     id: `${config.chain.chainId}-${log.transactionHash}-${log.logIndex}${rowSuffix}`,
     stablecoin: config.stablecoin,
     chain_id: config.chain.chainId,
     chain_name: config.chain.chainName,
-    event_type: eventDef.eventType,
+    event_type: eventType,
     address: affectedAddress,
     amount_native: amount,
     amount_usd_at_event: computeBlacklistAmountUsdAtEvent(config.stablecoin, amount),
@@ -154,17 +184,26 @@ export function parseEvmLogs(
   blockTimestamps?: Map<number, number>,
 ): BlacklistRow[] {
   const rows: BlacklistRow[] = [];
+  let droppedForTimestamp = 0;
   for (const log of logs) {
     const eventDef = getBlacklistEventByTopic(config, log.topics[0]);
     if (!eventDef) continue;
     const blockNumber = parseInt(log.blockNumber, 16);
     const timestamp = log.timeStamp ? parseInt(log.timeStamp, 16) : (blockTimestamps?.get(blockNumber) ?? Number.NaN);
-    if (isNaN(blockNumber) || isNaN(timestamp)) continue;
+    if (isNaN(blockNumber) || isNaN(timestamp)) {
+      droppedForTimestamp++;
+      continue;
+    }
+
+    const eventTypeOverride =
+      typeof eventDef.eventTypeFromDataBoolIndex === "number"
+        ? resolveEventTypeFromDataBool(log.data, eventDef.eventTypeFromDataBoolIndex)
+        : undefined;
 
     if (eventDef.addressArrayData) {
       const addresses = decodeAddressArrayData(log.data);
       addresses.forEach((affectedAddress, index) => {
-        const row = buildBlacklistRow(config, log, affectedAddress, null, blockNumber, timestamp, `-${index}`);
+        const row = buildBlacklistRow(config, log, affectedAddress, null, blockNumber, timestamp, `-${index}`, eventTypeOverride);
         if (row) rows.push(row);
       });
       continue;
@@ -179,8 +218,13 @@ export function parseEvmLogs(
     const affectedAddress = forcedDataAddress ?? (addressFromTopic ? decodeAddress(log.topics[topicIdx]) : decodeAddress(log.data.slice(0, 66)));
     const amount = decodeEvmLogAmount(eventDef, log, config.decimals, addressFromTopic);
 
-    const row = buildBlacklistRow(config, log, affectedAddress, amount, blockNumber, timestamp);
+    const row = buildBlacklistRow(config, log, affectedAddress, amount, blockNumber, timestamp, "", eventTypeOverride);
     if (row) rows.push(row);
+  }
+  if (droppedForTimestamp > 0) {
+    console.warn(
+      `[blacklist] parseEvmLogs for ${config.configKey}: dropped ${droppedForTimestamp} log(s) due to missing block/timestamp`,
+    );
   }
   return rows;
 }
