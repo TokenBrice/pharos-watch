@@ -1138,7 +1138,8 @@ describe("dispatchTelegramAlerts", () => {
 
     // sendBatch is mocked at file scope — inspect the BatchMessage array for the
     // per-message replyMarkup. The third positional is the batch size.
-    const lastCall = mockSendBatch.mock.calls.at(-1);
+    const calls = mockSendBatch.mock.calls;
+    const lastCall = calls[calls.length - 1];
     const messages = lastCall?.[0] as Array<{ replyMarkup?: { inline_keyboard?: Array<Array<{ callback_data?: string }>> } }>;
     expect(messages?.[0]?.replyMarkup?.inline_keyboard?.[0]?.[0]?.callback_data).toBe("snooze:1h");
   });
