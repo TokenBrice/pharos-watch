@@ -74,7 +74,7 @@ const VALID_GLOBAL_ALERT_COLUMNS = new Set(Object.values(GLOBAL_ALERT_COLUMN_BY_
 
 type AlertType = keyof typeof ALERT_COLUMN_BY_TYPE;
 
-function emptyResult(snapshotSeeded: boolean): DispatchResult {
+function emptyResult(snapshotSeeded: boolean, chatsSuppressedBySnooze = 0): DispatchResult {
   return {
     eventsDetected: {
       dews: 0,
@@ -102,6 +102,7 @@ function emptyResult(snapshotSeeded: boolean): DispatchResult {
     freshSent: 0,
     freshRetryQueued: 0,
     freshPermanentFailures: 0,
+    chatsSuppressedBySnooze,
   };
 }
 
@@ -175,6 +176,7 @@ async function loadSubscriberRowsBatch(
     throw new Error(`Invalid alert subscription column for ${type}`);
   }
   const placeholders = stablecoinIds.map(() => "?").join(",");
+  const nowSec = Math.floor(Date.now() / 1000);
   const result = await db
     .prepare(
       // SAFETY: alertColumn comes from ALERT_COLUMN_BY_TYPE and is validated
@@ -191,9 +193,10 @@ async function loadSubscriberRowsBatch(
          FROM telegram_subscriptions sub
          JOIN telegram_subscribers u ON u.chat_id = sub.chat_id
         WHERE sub.stablecoin_id IN (${placeholders})
-          AND sub.${alertColumn} = 1`,
+          AND sub.${alertColumn} = 1
+          AND (u.alert_snooze_until_ts IS NULL OR u.alert_snooze_until_ts <= ?)`,
     )
-    .bind(...stablecoinIds)
+    .bind(...stablecoinIds, nowSec)
     .all<SubscriberRow & { stablecoin_id: string }>();
 
   const map = new Map<string, SubscriberRow[]>();
@@ -222,6 +225,7 @@ async function loadGlobalSubscriberRows(
   if (!VALID_GLOBAL_ALERT_COLUMNS.has(alertColumn)) {
     throw new Error(`Invalid global alert subscription column for ${type}`);
   }
+  const nowSec = Math.floor(Date.now() / 1000);
   const result = await db
     .prepare(
       // SAFETY: alertColumn comes from GLOBAL_ALERT_COLUMN_BY_TYPE and is
@@ -232,8 +236,10 @@ async function loadGlobalSubscriberRows(
               quiet_hours_start_utc,
               quiet_hours_end_utc
          FROM telegram_subscribers
-        WHERE ${alertColumn} = 1`,
+        WHERE ${alertColumn} = 1
+          AND (alert_snooze_until_ts IS NULL OR alert_snooze_until_ts <= ?)`,
     )
+    .bind(nowSec)
     .all<SubscriberRow>();
 
   return (result.results ?? []).map((row) => ({
@@ -260,6 +266,17 @@ export async function dispatchTelegramAlerts(
 
   try {
     throwIfAborted(signal);
+
+    // Snapshot snoozed chats once at the start of the run. The per-type SELECTs
+    // below use the same threshold, so counting here avoids union/dedupe work.
+    const snoozeNowSec = Math.floor(Date.now() / 1000);
+    const snoozedRows = await db
+      .prepare(
+        "SELECT chat_id FROM telegram_subscribers WHERE alert_snooze_until_ts IS NOT NULL AND alert_snooze_until_ts > ?",
+      )
+      .bind(snoozeNowSec)
+      .all<{ chat_id: string }>();
+    const chatsSuppressedBySnooze = (snoozedRows.results ?? []).length;
 
     const [dewsRows, activeDepegRows, safetyRows, dewsCache, dewsAlertableCache, depegCache, safetyCache] = await Promise.all([
       db
@@ -335,7 +352,7 @@ export async function dispatchTelegramAlerts(
     if (mustSeedSnapshots) {
       await writeSnapshots(db, currentSnapshots);
       await recordOutcome(db, CIRCUIT_SOURCE.TELEGRAM_API, true);
-      const result = emptyResult(true);
+      const result = emptyResult(true, chatsSuppressedBySnooze);
       return { itemCount: 0, metadata: JSON.stringify(result) };
     }
 
@@ -651,6 +668,7 @@ export async function dispatchTelegramAlerts(
       freshSent,
       freshRetryQueued,
       freshPermanentFailures,
+      chatsSuppressedBySnooze,
     };
 
     const attemptedMessages = result.pendingAttempted + result.freshAttempted;

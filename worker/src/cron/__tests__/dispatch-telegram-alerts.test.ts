@@ -154,15 +154,15 @@ describe("dispatchTelegramAlerts", () => {
       // Phase 1: pending queue drain (empty)
       { match: "SELECT id, chat_id, message_html", rows: [] },
       // Phase 3: batched subscriber lookups
-      { match: "sub.alert_dews = 1", matchBinds: ["usdc-circle"], rows: [{ stablecoin_id: "usdc-circle", chat_id: "12345", last_active_at: now }] },
+      { match: "sub.alert_dews = 1", matchBinds: ["usdc-circle", now], rows: [{ stablecoin_id: "usdc-circle", chat_id: "12345", last_active_at: now }] },
       {
         match: "sub.alert_depeg = 1",
-        matchBinds: ["usdc-circle"],
+        matchBinds: ["usdc-circle", now],
         rows: [{ stablecoin_id: "usdc-circle", chat_id: "12345", last_active_at: now }],
       },
       {
         match: "sub.alert_safety = 1",
-        matchBinds: ["usdc-circle"],
+        matchBinds: ["usdc-circle", now],
         rows: [{ stablecoin_id: "usdc-circle", chat_id: "12345", last_active_at: now }],
       },
       // Phase 6: cleanup expired pending
@@ -221,7 +221,7 @@ describe("dispatchTelegramAlerts", () => {
       { match: "FROM depeg_events WHERE ended_at IS NULL", rows: [] },
       { match: "FROM safety_grade_history", rows: [] },
       { match: "SELECT id, chat_id, message_html", rows: [] },
-      { match: "sub.alert_dews = 1", matchBinds: ["usdc-circle"], rows: [] },
+      { match: "sub.alert_dews = 1", matchBinds: ["usdc-circle", now], rows: [] },
       {
         match: "WHERE global_alert_dews = 1",
         rows: [{ chat_id: "777", last_active_at: now, quiet_hours_enabled: 0, quiet_hours_start_utc: null, quiet_hours_end_utc: null }],
@@ -354,7 +354,7 @@ describe("dispatchTelegramAlerts", () => {
       { match: "SELECT id, chat_id, message_html", rows: [] },
       {
         match: "sub.alert_dews = 1",
-        matchBinds: ["usdc-circle"],
+        matchBinds: ["usdc-circle", now],
         rows: [{ stablecoin_id: "usdc-circle", chat_id: "777", last_active_at: now, dews_min_band: "WARNING" }],
       },
       {
@@ -426,8 +426,9 @@ describe("dispatchTelegramAlerts", () => {
       // Phase 1: pending queue drain (empty)
       { match: "SELECT id, chat_id, message_html", rows: [] },
       {
+        // Timestamp bind is dynamic (Date.now() inside dispatcher) so matchBinds
+        // here is loose — SQL substring alone distinguishes the safety lookup.
         match: "sub.alert_safety = 1",
-        matchBinds: ["bold-liquity"],
         rows: [{ stablecoin_id: "bold-liquity", chat_id: "12345", last_active_at: now }],
       },
       // Phase 6: cleanup expired pending
@@ -639,7 +640,7 @@ describe("dispatchTelegramAlerts", () => {
       { match: "SELECT id, chat_id, message_html", rows: [] },
       {
         match: "sub.alert_dews = 1",
-        matchBinds: ["usdc-circle"],
+        matchBinds: ["usdc-circle", now],
         rows: [{ stablecoin_id: "usdc-circle", chat_id: "99999", last_active_at: now }],
       },
       { match: "UPDATE telegram_subscribers", rows: [] },
@@ -1014,7 +1015,7 @@ describe("dispatchTelegramAlerts", () => {
       { match: "FROM depeg_events WHERE ended_at IS NULL", rows: [] },
       { match: "FROM safety_grade_history", rows: [] },
       { match: "SELECT id, chat_id, message_html", rows: [] },
-      { match: "sub.alert_dews = 1", matchBinds: ["usdc-circle"], rows: [{ stablecoin_id: "usdc-circle", chat_id: "99999", last_active_at: now }] },
+      { match: "sub.alert_dews = 1", matchBinds: ["usdc-circle", now], rows: [{ stablecoin_id: "usdc-circle", chat_id: "99999", last_active_at: now }] },
       { match: "UPDATE telegram_subscribers", rows: [] },
       { match: "UPDATE telegram_subscriptions", rows: [] },
       { match: "DELETE FROM telegram_pending_alerts WHERE created_at", rows: [] },
@@ -1092,6 +1093,64 @@ describe("dispatchTelegramAlerts", () => {
     expect(metadata.eventsDetected.depegWorsening).toBe(0);
   });
 
+  it("skips a chat whose alert_snooze_until_ts is in the future and reports chatsSuppressedBySnooze", async () => {
+    const now = Math.floor(Date.now() / 1000);
+
+    mockGetCache.mockImplementation(async (_db: unknown, key: string) => {
+      if (key === "alert:dews-snapshot") {
+        return { value: JSON.stringify({ "usdc-circle": "CALM" }), updatedAt: now - 60 };
+      }
+      if (key === "alert:depeg-snapshot") {
+        return { value: JSON.stringify({}), updatedAt: now - 60 };
+      }
+      if (key === "alert:safety-snapshot") {
+        return { value: JSON.stringify({}), updatedAt: now - 60 };
+      }
+      return null;
+    });
+
+    // Chat A is snoozed; chat B is not. Only B should receive the DEWS alert.
+    const db = mockD1([
+      {
+        match: "WHERE alert_snooze_until_ts IS NOT NULL",
+        rows: [{ chat_id: "A" }],
+      },
+      {
+        match: "FROM stress_signals",
+        rows: [
+          {
+            stablecoin_id: "usdc-circle",
+            score: 42,
+            band: "ALERT",
+            signals_json: JSON.stringify({ supply: { value: 45, available: true } }),
+          },
+        ],
+      },
+      { match: "FROM depeg_events WHERE ended_at IS NULL", rows: [] },
+      { match: "FROM safety_grade_history", rows: [] },
+      { match: "SELECT id, chat_id, message_html", rows: [] },
+      { match: "sub.alert_dews = 1", matchBinds: ["usdc-circle", now], rows: [] },
+      {
+        match: "WHERE global_alert_dews = 1",
+        rows: [
+          { chat_id: "B", last_active_at: now, quiet_hours_enabled: 0, quiet_hours_start_utc: null, quiet_hours_end_utc: null },
+        ],
+      },
+      { match: "WHERE global_alert_depeg = 1", rows: [] },
+      { match: "WHERE global_alert_safety = 1", rows: [] },
+      { match: "DELETE FROM telegram_pending_alerts WHERE created_at", rows: [] },
+    ]);
+
+    const result = await dispatchTelegramAlerts(db, "bot-token");
+    const metadata = JSON.parse(result.metadata) as {
+      messagesSent: number;
+      chatsSuppressedBySnooze: number;
+    };
+
+    expect(metadata.messagesSent).toBe(1);
+    expect(metadata.chatsSuppressedBySnooze).toBe(1);
+  });
+
   it("deduplicates 403 cleanup for a chat hit across multiple alert types", async () => {
     const now = Math.floor(Date.now() / 1000);
 
@@ -1136,7 +1195,7 @@ describe("dispatchTelegramAlerts", () => {
       { match: "FROM depeg_events WHERE ended_at IS NULL", rows: [] },
       { match: "FROM safety_grade_history", rows: [] },
       { match: "SELECT id, chat_id, message_html", rows: [] },
-      { match: "sub.alert_dews = 1", matchBinds: ["usdc-circle"], rows: [] },
+      { match: "sub.alert_dews = 1", matchBinds: ["usdc-circle", now], rows: [] },
       {
         match: "WHERE global_alert_dews = 1",
         rows: [{ chat_id: "42", last_active_at: now, quiet_hours_enabled: 0, quiet_hours_start_utc: null, quiet_hours_end_utc: null }],

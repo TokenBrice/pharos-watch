@@ -51,6 +51,7 @@ export function parseTelegramDispatchCronMetadata(value: unknown): TelegramDispa
     pendingDropped: readMetadataNumber(record.pendingDropped),
     pendingEnqueued: readMetadataNumber(record.pendingEnqueued),
     pendingExpired: readMetadataNumber(record.pendingExpired),
+    chatsSuppressedBySnooze: readMetadataNumber(record.chatsSuppressedBySnooze),
     eventsDetected: eventsRecord
       ? {
           dews: readMetadataNumber(eventsRecord.dews),

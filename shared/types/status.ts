@@ -244,6 +244,7 @@ export interface TelegramDispatchCronResult {
   pendingDropped: number;
   pendingEnqueued: number;
   pendingExpired: number;
+  chatsSuppressedBySnooze: number;
   eventsDetected: TelegramDispatchEventsDetected;
 }
 
@@ -276,6 +277,7 @@ export interface TelegramDispatchCronMetadata {
   pendingDropped: number | null;
   pendingEnqueued: number | null;
   pendingExpired: number | null;
+  chatsSuppressedBySnooze: number | null;
   eventsDetected: ParsedTelegramDispatchEventsDetected | null;
 }
 

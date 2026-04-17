@@ -240,6 +240,7 @@ Filtering is subscription-aware:
 - Safety changes respect the coin's `safety_mode`
 - Depeg worsening follows the coin's `depeg_worsening_bps_step`
 - Quiet hours force `disable_notification = true`
+- Chats with `alert_snooze_until_ts > now` are fully skipped for the run. The count surfaces as `chatsSuppressedBySnooze` in dispatch metadata.
 
 When the same chat has both a global alert type and a per-coin subscription for the same alert type, the per-coin row wins. This lets coin-specific thresholds or modes override the global default.
 
