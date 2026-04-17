@@ -1,0 +1,245 @@
+import { detectDexPriceChallengerTableState } from "./challenger-publish";
+import { loadLegacyDexPoolChallengers } from "./challenger-legacy";
+
+export interface DexPriceChallengerLoadRow {
+  stablecoinId: string;
+  poolId: string;
+  chain: string;
+  protocol: string;
+  sourceFamily: string;
+  priceUsd: number;
+  tvlUsd: number;
+  snapshotAt: number;
+  publishedAt: number;
+}
+
+export interface DexPriceChallengerLoadDiagnostics {
+  mode: "published" | "legacy" | "mixed" | "absent";
+  missingTables: boolean;
+  emptyPublishedCoins: string[];
+  incompletePublishedCoins: string[];
+  legacyFallbackCoins: string[];
+  staleSnapshotCoins: string[];
+}
+
+export interface DexPriceChallengerLoadResult {
+  challengersByStablecoin: Map<string, DexPriceChallengerLoadRow[]>;
+  diagnostics: DexPriceChallengerLoadDiagnostics;
+}
+
+export async function loadPublishedDexPoolChallengers(
+  db: D1Database,
+  minPoolTvlUsd: number,
+  maxAgeSec: number,
+  nowSec: number,
+): Promise<DexPriceChallengerLoadResult> {
+  const state = await detectDexPriceChallengerTableState(db);
+  const legacy = await loadLegacyDexPoolChallengers(db, minPoolTvlUsd, maxAgeSec, nowSec);
+
+  if (!state.challengersTable || !state.snapshotsTable) {
+    return {
+      challengersByStablecoin: legacy.challengersByStablecoin,
+      diagnostics: {
+        mode:
+          legacy.topPoolCoins.size > 0 || legacy.fallbackCoins.size > 0
+            ? "legacy"
+            : "absent",
+        missingTables: true,
+        emptyPublishedCoins: [],
+        incompletePublishedCoins: [],
+        legacyFallbackCoins: [...new Set([...legacy.topPoolCoins, ...legacy.fallbackCoins])],
+        staleSnapshotCoins: [],
+      },
+    };
+  }
+
+  const challengersByStablecoin = new Map<string, DexPriceChallengerLoadRow[]>();
+  const emptyPublishedCoins: string[] = [];
+  const incompletePublishedCoins: string[] = [];
+  const staleSnapshotCoins: string[] = [];
+  const legacyFallbackCoins = new Set<string>();
+  const publishedCoins = new Set<string>();
+  const legacyUsedCoins = new Set<string>();
+
+  let snapshotRows: Array<{
+    stablecoin_id: string;
+    snapshot_at: number;
+    published_at: number;
+    has_rows: number;
+    source_coverage_complete: number;
+  }> = [];
+  try {
+    const snapshots = await db
+      .prepare(
+        `SELECT stablecoin_id, snapshot_at, published_at, has_rows, source_coverage_complete
+         FROM dex_price_challenger_snapshots
+         WHERE stablecoin_id != '__global__'`,
+      )
+      .all<{
+        stablecoin_id: string;
+        snapshot_at: number;
+        published_at: number;
+        has_rows: number;
+        source_coverage_complete: number;
+      }>();
+    snapshotRows = snapshots.results ?? [];
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    if (!msg.includes("no such table")) {
+      console.error("[challenger-persistence] Unexpected error loading challenger snapshots:", msg);
+    }
+    return {
+      challengersByStablecoin: legacy.challengersByStablecoin,
+      diagnostics: {
+        mode: legacy.challengersByStablecoin.size > 0 ? "legacy" : "absent",
+        missingTables: true,
+        emptyPublishedCoins: [],
+        incompletePublishedCoins: [],
+        legacyFallbackCoins: [...new Set([...legacy.topPoolCoins, ...legacy.fallbackCoins])],
+        staleSnapshotCoins: [],
+      },
+    };
+  }
+
+  const snapshotByCoin = new Map(snapshotRows.map((row) => [row.stablecoin_id, row]));
+
+  let challengerRows: Array<{
+    stablecoin_id: string;
+    snapshot_at: number;
+    pool_id: string;
+    chain: string;
+    protocol: string;
+    source_family: string;
+    price_usd: number;
+    tvl_usd: number;
+  }> = [];
+  try {
+    const challengers = await db
+      .prepare(
+        `SELECT stablecoin_id, snapshot_at, pool_id, chain, protocol, source_family, price_usd, tvl_usd
+         FROM dex_price_challengers
+         WHERE stablecoin_id != '__global__'`,
+      )
+      .all<{
+        stablecoin_id: string;
+        snapshot_at: number;
+        pool_id: string;
+        chain: string;
+        protocol: string;
+        source_family: string;
+        price_usd: number;
+        tvl_usd: number;
+      }>();
+    challengerRows = challengers.results ?? [];
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    if (!msg.includes("no such table")) {
+      console.error("[challenger-persistence] Unexpected error loading challenger rows:", msg);
+    }
+    return {
+      challengersByStablecoin: legacy.challengersByStablecoin,
+      diagnostics: {
+        mode: legacy.challengersByStablecoin.size > 0 ? "legacy" : "absent",
+        missingTables: true,
+        emptyPublishedCoins: [],
+        incompletePublishedCoins: [],
+        legacyFallbackCoins: [...new Set([...legacy.topPoolCoins, ...legacy.fallbackCoins])],
+        staleSnapshotCoins: [],
+      },
+    };
+  }
+
+  const rowsByCoinAndSnapshot = new Map<string, DexPriceChallengerLoadRow[]>();
+  for (const row of challengerRows) {
+    if (row.snapshot_at == null) continue;
+    const key = `${row.stablecoin_id}:${row.snapshot_at}`;
+    const existing = rowsByCoinAndSnapshot.get(key) ?? [];
+    existing.push({
+      stablecoinId: row.stablecoin_id,
+      poolId: row.pool_id,
+      chain: row.chain,
+      protocol: row.protocol,
+      sourceFamily: row.source_family,
+      priceUsd: row.price_usd,
+      tvlUsd: row.tvl_usd,
+      snapshotAt: row.snapshot_at,
+      publishedAt: snapshotByCoin.get(row.stablecoin_id)?.published_at ?? row.snapshot_at,
+    });
+    rowsByCoinAndSnapshot.set(key, existing);
+  }
+
+  for (const snapshot of snapshotRows) {
+    const ageSec = nowSec - snapshot.snapshot_at;
+    if (ageSec > maxAgeSec) {
+      staleSnapshotCoins.push(snapshot.stablecoin_id);
+      legacyFallbackCoins.add(snapshot.stablecoin_id);
+      continue;
+    }
+
+    if (!snapshot.source_coverage_complete) {
+      incompletePublishedCoins.push(snapshot.stablecoin_id);
+      legacyFallbackCoins.add(snapshot.stablecoin_id);
+      continue;
+    }
+
+    const key = `${snapshot.stablecoin_id}:${snapshot.snapshot_at}`;
+    const rows = rowsByCoinAndSnapshot.get(key) ?? [];
+
+    if (snapshot.has_rows === 0) {
+      challengersByStablecoin.set(snapshot.stablecoin_id, []);
+      publishedCoins.add(snapshot.stablecoin_id);
+      emptyPublishedCoins.push(snapshot.stablecoin_id);
+      continue;
+    }
+
+    if (rows.length > 0) {
+      challengersByStablecoin.set(
+        snapshot.stablecoin_id,
+        rows
+          .filter((row) => Number.isFinite(row.priceUsd) && row.priceUsd > 0 && Number.isFinite(row.tvlUsd) && row.tvlUsd >= minPoolTvlUsd)
+          .sort((a, b) => b.tvlUsd - a.tvlUsd || a.poolId.localeCompare(b.poolId)),
+      );
+      publishedCoins.add(snapshot.stablecoin_id);
+    } else {
+      legacyFallbackCoins.add(snapshot.stablecoin_id);
+    }
+  }
+
+  for (const coinId of [...legacy.topPoolCoins, ...legacy.fallbackCoins]) {
+    if (publishedCoins.has(coinId)) continue;
+    if (!legacyFallbackCoins.has(coinId) && snapshotByCoin.has(coinId)) continue;
+    const legacyRows = legacy.challengersByStablecoin.get(coinId);
+    if (legacyRows && legacyRows.length > 0) {
+      challengersByStablecoin.set(coinId, legacyRows);
+      legacyFallbackCoins.add(coinId);
+      legacyUsedCoins.add(coinId);
+    }
+  }
+
+  for (const coinId of legacy.challengersByStablecoin.keys()) {
+    if (challengersByStablecoin.has(coinId)) continue;
+    if (publishedCoins.has(coinId)) continue;
+    if (!snapshotByCoin.has(coinId)) {
+      challengersByStablecoin.set(coinId, legacy.challengersByStablecoin.get(coinId) ?? []);
+      legacyFallbackCoins.add(coinId);
+      legacyUsedCoins.add(coinId);
+    }
+  }
+
+  const hasPublished = publishedCoins.size > 0;
+  const hasLegacy = legacyUsedCoins.size > 0;
+  const mode: DexPriceChallengerLoadDiagnostics["mode"] =
+    hasPublished && hasLegacy ? "mixed" : hasPublished ? "published" : hasLegacy ? "legacy" : "absent";
+
+  return {
+    challengersByStablecoin,
+    diagnostics: {
+      mode,
+      missingTables: false,
+      emptyPublishedCoins,
+      incompletePublishedCoins,
+      legacyFallbackCoins: [...legacyFallbackCoins],
+      staleSnapshotCoins,
+    },
+  };
+}
