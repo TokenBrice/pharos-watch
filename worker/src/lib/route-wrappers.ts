@@ -1,6 +1,8 @@
 import { withAdmin } from "./auth";
 import { runIdempotentAdminAction } from "./idempotency";
-import { withErrorHandler } from "./api-utils";
+import { jsonResponse, withErrorHandler } from "./api-utils";
+
+const MUTATING_METHODS = new Set(["POST", "PUT", "PATCH", "DELETE"]);
 
 interface RouteWrapperContext {
   db: D1Database;
@@ -21,14 +23,24 @@ export function runAdminRoute(
   options: RunAdminRouteOptions,
   handler: () => Promise<Response>,
 ): Promise<Response> {
-  return withErrorHandler(options.endpoint, async () =>
-    withAdmin(options.request, () => {
+  return withErrorHandler(options.endpoint, async () => {
+    const method = options.request?.method?.toUpperCase() ?? "GET";
+    if (
+      MUTATING_METHODS.has(method) &&
+      options.request?.headers.get("X-Pharos-Admin") !== "1"
+    ) {
+      return jsonResponse(
+        { error: "Missing required X-Pharos-Admin header; refusing mutation." },
+        { status: 403, noStore: true },
+      );
+    }
+    return withAdmin(options.request, () => {
       if (options.action && options.db && options.shouldUseIdempotency !== false) {
         return runIdempotentAdminAction(options.db, options.action, options.request, handler);
       }
       return handler();
-    }, options.trustedAdmin),
-  )();
+    }, options.trustedAdmin);
+  })();
 }
 
 export function makeAdminRoute<TContext extends RouteWrapperContext>(

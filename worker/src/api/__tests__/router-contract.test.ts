@@ -61,7 +61,10 @@ describe("router contract: strict frontend paths are routable", () => {
     for (const endpoint of ENDPOINT_DEFINITIONS) {
       const path = endpoint.probePath ?? endpoint.path;
       for (const method of endpoint.methods) {
-        const request = new Request(`https://api.pharos.watch${path}`, { method });
+        const request = new Request(`https://api.pharos.watch${path}`, {
+          method,
+          headers: method === "POST" ? { "X-Pharos-Admin": "1" } : undefined,
+        });
         const expectedPublicStatuses =
           endpoint.path === "/api/telegram-webhook"
             ? [200, 400, 501, 502, 503]
@@ -141,7 +144,7 @@ describe("router contract: strict frontend paths are routable", () => {
     const postPath = "https://api.pharos.watch/api/discovery-candidates/42/dismiss";
     const postResult = await route(makeRouteCtx({
       url: new URL(postPath),
-      request: new Request(postPath, { method: "POST" }),
+      request: new Request(postPath, { method: "POST", headers: { "X-Pharos-Admin": "1" } }),
     }));
     expect(postResult).not.toBeNull();
     expect(postResult!.status).toBe(401);
@@ -158,7 +161,7 @@ describe("router contract: strict frontend paths are routable", () => {
     const postPath = "https://api.pharos.watch/api/api-keys/7/rotate";
     const postResult = await route(makeRouteCtx({
       url: new URL(postPath),
-      request: new Request(postPath, { method: "POST" }),
+      request: new Request(postPath, { method: "POST", headers: { "X-Pharos-Admin": "1" } }),
     }));
     expect(postResult).not.toBeNull();
     expect(postResult!.status).toBe(401);

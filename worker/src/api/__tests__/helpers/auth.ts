@@ -25,6 +25,13 @@ export function makeApiRequest(path: string, options: ApiRequestOptions = {}): R
     : normalizeApiPath(path);
   if (adminKey) {
     resolvedHeaders.set("Cf-Access-Authenticated-User-Email", "test-operator@pharos.watch");
+    // Admin mutations require the X-Pharos-Admin header (CSRF hardening).
+    const upper = method.toUpperCase();
+    if (upper === "POST" || upper === "PUT" || upper === "PATCH" || upper === "DELETE") {
+      if (!resolvedHeaders.has("X-Pharos-Admin")) {
+        resolvedHeaders.set("X-Pharos-Admin", "1");
+      }
+    }
   }
   return new Request(requestUrl, {
     method,

@@ -26,7 +26,7 @@ describe("admin-job helpers", () => {
       {
         request: new Request("https://api.pharos.watch/api/admin?dry-run=false", {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
+          headers: { "Content-Type": "application/json", "X-Pharos-Admin": "1" },
           body: JSON.stringify({ dryRun: true, configKey: " usdc " }),
         }),
         url: new URL("https://api.pharos.watch/api/admin?dry-run=false"),
@@ -48,7 +48,7 @@ describe("admin-job helpers", () => {
       {
         request: new Request("https://api.pharos.watch/api/admin", {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
+          headers: { "Content-Type": "application/json", "X-Pharos-Admin": "1" },
           body: "{",
         }),
         url: new URL("https://api.pharos.watch/api/admin"),

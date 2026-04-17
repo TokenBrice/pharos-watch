@@ -122,6 +122,7 @@ async function postAdminJson<T>(
     method: "POST",
     headers: {
       "Content-Type": "application/json",
+      "X-Pharos-Admin": "1",
     },
     body: body ? JSON.stringify(body) : undefined,
   });

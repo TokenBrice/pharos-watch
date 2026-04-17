@@ -47,6 +47,7 @@ describe("worker.fetch", () => {
     expect(res.status).toBe(204);
     expect(res.headers.get("Access-Control-Allow-Origin")).toBe("https://pharos.watch");
     expect(res.headers.get("Access-Control-Allow-Headers")).toContain("X-API-Key");
+    expect(res.headers.get("Access-Control-Allow-Headers")).toContain("X-Pharos-Admin");
     expect(cacheMatch).not.toHaveBeenCalled();
     expect(cachePut).not.toHaveBeenCalled();
   });

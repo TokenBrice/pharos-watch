@@ -58,6 +58,7 @@ export function DiscoveryCandidatesCard({
     try {
       const res = await fetch(buildRequestUrl(buildAdminApiPath(`/api/discovery-candidates/${id}/dismiss`)), {
         method: "POST",
+        headers: { "X-Pharos-Admin": "1" },
       });
       if (res.ok) {
         setDismissed((prev) => new Set([...prev, id]));

@@ -34,7 +34,10 @@ function makeCtx() {
 }
 
 function makeRequest(): Request {
-  return new Request("https://ops-api.pharos.watch/api/trigger-digest", { method: "POST" });
+  return new Request("https://ops-api.pharos.watch/api/trigger-digest", {
+    method: "POST",
+    headers: { "X-Pharos-Admin": "1" },
+  });
 }
 
 describe("trigger-digest route", () => {
