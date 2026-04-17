@@ -14,8 +14,34 @@ function formatRatio(value: number): string {
   return `${(value * 100).toFixed(2)}%`;
 }
 
+/**
+ * Operator-facing runbook URLs, keyed by StatusCause.code. Populated only
+ * for the codes that have a documented runbook — the rest are deliberately
+ * omitted so the UI can render the "Runbook →" link only when present.
+ */
+export const RUNBOOK_BY_CODE: Record<string, string> = {
+  db_unhealthy: "/docs/runbooks/db-connectivity",
+  data_quality_skipped_db_unhealthy: "/docs/runbooks/db-connectivity",
+  stablecoins_cache_unavailable: "/docs/runbooks/stablecoins-cache",
+  stablecoins_cache_degraded: "/docs/runbooks/stablecoins-cache",
+  blacklist_gaps_degraded: "/docs/runbooks/blacklist-sync",
+  blacklist_gaps_stale: "/docs/runbooks/blacklist-sync",
+  onchain_integrity_degraded: "/docs/runbooks/mint-burn-integrity",
+  onchain_integrity_stale: "/docs/runbooks/mint-burn-integrity",
+  onchain_monitor_unavailable: "/docs/runbooks/mint-burn-integrity",
+};
+
+/**
+ * Merges the matching runbook URL into a cause when one is documented.
+ * Returns the original cause if no runbook is registered for its code.
+ */
+export function withRunbook(cause: StatusCause): StatusCause {
+  const runbookUrl = RUNBOOK_BY_CODE[cause.code];
+  return runbookUrl ? { ...cause, runbookUrl } : cause;
+}
+
 function pushCause(bucket: StatusCause[], cause: StatusCause): void {
-  bucket.push(cause);
+  bucket.push(withRunbook(cause));
 }
 
 function sourceFailureMessage(source: DataQuality["sourceFailures"][number]["source"]): string {

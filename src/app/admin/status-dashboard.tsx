@@ -317,6 +317,14 @@ export function StatusDashboard({ onSignOut }: { onSignOut: () => void }) {
                         <span className="font-mono text-[11px] text-muted-foreground">{cause.code}</span>
                       </div>
                       <div className="mt-1.5 text-sm leading-relaxed text-foreground">{cause.message}</div>
+                      {cause.runbookUrl && (
+                        <a
+                          href={cause.runbookUrl}
+                          className="pharos-focus-ring mt-2 inline-flex items-center gap-1 text-[11px] font-medium text-primary hover:underline"
+                        >
+                          Runbook →
+                        </a>
+                      )}
                     </div>
                   ))
                 ) : (

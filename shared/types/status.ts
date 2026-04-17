@@ -76,6 +76,13 @@ export interface StatusCause {
   metric?: string;
   value?: number;
   threshold?: number;
+  /**
+   * Optional operator-facing runbook link. Populated for a curated set of
+   * well-understood cause codes (see RUNBOOK_BY_CODE in
+   * worker/src/lib/status/evaluation-causes.ts). Codes without a matching
+   * entry omit this field — UI renders the runbook link only when present.
+   */
+  runbookUrl?: string;
 }
 
 export interface StatusStateInfo {

@@ -25,6 +25,7 @@ import {
   buildAvailabilityCauses,
   buildDataQualityCauses,
   synthesizeOverallCauses,
+  withRunbook,
 } from "./status/evaluation-causes";
 import { loadCronHealth } from "./status/cron-health";
 import type { CacheFreshnessDiagnostic } from "./api-utils";
@@ -47,18 +48,18 @@ export interface RawStatusComputation {
 }
 
 function buildDbUnavailableRawStatus(): RawStatusComputation {
-  const availabilityCauses: StatusCause[] = [{
+  const availabilityCauses: StatusCause[] = [withRunbook({
     code: "db_unhealthy",
     layer: "availability",
     severity: "critical",
     message: "Primary database connectivity check failed; status is serving a degraded fallback snapshot.",
-  }];
-  const dataQualityCauses: StatusCause[] = [{
+  })];
+  const dataQualityCauses: StatusCause[] = [withRunbook({
     code: "data_quality_skipped_db_unhealthy",
     layer: "data-quality",
     severity: "warning",
     message: "Data-quality loaders were skipped because the primary database connectivity check failed.",
-  }];
+  })];
 
   return {
     dbHealthy: false,
