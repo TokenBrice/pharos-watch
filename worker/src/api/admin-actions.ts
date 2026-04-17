@@ -1,10 +1,7 @@
 import type { TelegramCreds } from "../lib/telegram";
-import { generateDailyDigest } from "../cron/daily-digest";
 import { makeAdminRoute, runAdminRoute } from "../lib/route-wrappers";
 import { runIdempotentAdminAction } from "../lib/idempotency";
-import { createLeaseOwner, runCronWithLease } from "../lib/cron-lease";
-import { logCronRun, type CronResult } from "../lib/cron-logger";
-import { normalizeCronMetadata } from "../lib/cron-metadata";
+import { setCache } from "../lib/db-cache";
 import { jsonResponse } from "../lib/api-utils";
 import { handleDismissCandidate } from "./discovery";
 
@@ -20,63 +17,34 @@ interface TriggerDigestRouteContext extends AdminRouteContext {
   telegramCreds?: TelegramCreds | null;
 }
 
-async function runManualDigestTrigger(
-  db: D1Database,
-  anthropicApiKey: string | null,
-  telegramCreds: TelegramCreds | null,
-  requestId: string,
-): Promise<void> {
-  const leaseOwner = createLeaseOwner("daily-digest");
-  await logCronRun(db, "daily-digest", async (signal): Promise<CronResult> => {
-    const lease = await runCronWithLease(
-      db,
-      "daily-digest",
-      ({ signal: leaseSignal }) => generateDailyDigest(db, anthropicApiKey, null, true, telegramCreds, leaseSignal),
-      { owner: leaseOwner, abortSignal: signal },
-    );
-
-    if (lease.status === "skipped_locked") {
-      return {
-        status: "skipped_locked",
-        metadata: normalizeCronMetadata(undefined, {
-          reason: "lease-locked",
-          trigger: "manual",
-          requestId,
-          leaseOwner: lease.leaseOwner,
-          renewFailures: lease.renewFailures,
-        }),
-      };
-    }
-
-    return {
-      ...(lease.result ?? {}),
-      metadata: normalizeCronMetadata(lease.result, {
-        trigger: "manual",
-        requestId,
-        leaseOwner: lease.leaseOwner,
-        renewFailures: lease.renewFailures,
-      }),
-    };
-  });
-}
+/**
+ * Cache key used by `digest-trigger-poll` to decide whether to run the digest
+ * out-of-band on its next scheduled tick. Plain JSON value, no TTL.
+ */
+export const DIGEST_FORCE_RUN_CACHE_KEY = "digest:force-run-request";
 
 export const handleTriggerDigest = makeAdminRoute(
   "route-trigger-digest",
-  async ({ db, execCtx, request, anthropicApiKey, telegramCreds }: TriggerDigestRouteContext) =>
+  async ({ db, request }: TriggerDigestRouteContext) =>
     runIdempotentAdminAction(db, "trigger-digest", request, async () => {
       const requestId = `manual-digest-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
-      execCtx.waitUntil(
-        runManualDigestTrigger(db, anthropicApiKey ?? null, telegramCreds ?? null, requestId)
-          .catch((err) => {
-            console.error(`[trigger-digest] Manual digest run failed (${requestId}):`, err);
-          }),
+      await setCache(
+        db,
+        DIGEST_FORCE_RUN_CACHE_KEY,
+        JSON.stringify({
+          requestedAt: Math.floor(Date.now() / 1000),
+          requestId,
+        }),
       );
-      return jsonResponse({
-        ok: true,
-        accepted: true,
-        requestId,
-        message: "Digest trigger accepted and running in the background.",
-      }, { status: 202, noStore: true });
+      return jsonResponse(
+        {
+          ok: true,
+          accepted: true,
+          requestId,
+          message: "Digest trigger queued; will execute on the next polling tick (≤5 min).",
+        },
+        { status: 202, noStore: true },
+      );
     }),
 );
 
