@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { mockD1 } from "../../../api/__tests__/helpers/mock-d1";
-import { analyzeDexLiquidityPostScoring, isDexLiquidityDegraded } from "../orchestrator-metadata";
+import { analyzeDexLiquidityPostScoring } from "../orchestrator-analysis";
+import { isDexLiquidityDegraded } from "../orchestrator-metadata";
 import type { FullScoreResult, GlobalAgg } from "../types";
 
 const BASE_SCORE_RESULT: FullScoreResult = {
