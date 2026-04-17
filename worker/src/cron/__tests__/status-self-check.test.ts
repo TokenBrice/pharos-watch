@@ -352,3 +352,103 @@ describe("runStatusSelfCheck", () => {
     await expect(isBootstrapCacheMiss(freshDb, "/api/peg-summary", 500)).resolves.toBe(false);
   });
 });
+
+describe("health probe semantic classification", () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    vi.stubGlobal("fetch", fetchMock);
+    evaluateStatusAndPersistMock.mockResolvedValue({
+      raw: { rawOverallStatus: "healthy", freshnessDiagnostics: [] as Array<Record<string, unknown>> },
+      effectiveStatus: "healthy",
+      persistenceSucceeded: true,
+    });
+    updateDiscrepancyObservationMock.mockResolvedValue({
+      consecutiveDivergent: 0,
+      lastAlertAt: null,
+      consecutiveProbeFailures: 0,
+      lastProbeAlertAt: null,
+      persistenceSucceeded: true,
+    });
+    buildDiscrepancyMock.mockImplementation(
+      (_status: unknown, _probe: unknown, _now: number, streak: number) => ({
+        hasDivergence: false,
+        severityDelta: 0,
+        statusSeverity: 0,
+        probeSeverity: 0,
+        details: "no-divergence",
+        probeAgeSeconds: 0,
+        consecutiveDivergent: streak,
+      }),
+    );
+  });
+
+  function buildHealthResponseWithBody(body: unknown): Response {
+    return new Response(typeof body === "string" ? body : JSON.stringify(body), {
+      status: 200,
+      headers: { "content-type": "application/json" },
+    });
+  }
+
+  function mockHealthBody(body: unknown): void {
+    fetchMock.mockImplementation(async (input: unknown) => {
+      let rawUrl = "https://api.pharos.watch";
+      if (typeof input === "string") {
+        rawUrl = input;
+      } else if (input instanceof URL) {
+        rawUrl = input.toString();
+      } else if (
+        input
+        && typeof input === "object"
+        && "url" in input
+        && typeof (input as { url: unknown }).url === "string"
+      ) {
+        rawUrl = (input as { url: string }).url;
+      }
+      const url = rawUrl.startsWith("http") ? new URL(rawUrl) : new URL(rawUrl, "https://api.pharos.watch");
+      if (url.pathname === "/api/health") {
+        return buildHealthResponseWithBody(body);
+      }
+      return new Response("{}", { status: 200 });
+    });
+  }
+
+  it("classifies invalid-health-payload (unparseable JSON) as stale semantic status", async () => {
+    mockHealthBody("not-json");
+
+    await runStatusSelfCheck({} as D1Database, "https://staging.api.pharos.watch");
+
+    const latestProbeWriteCall = writeStatusProbeRunMock.mock.calls[
+      writeStatusProbeRunMock.mock.calls.length - 1
+    ] as unknown[] | undefined;
+    const latestProbeWrite = latestProbeWriteCall?.[2] as { status?: string };
+    expect(latestProbeWrite.status).toBe("stale");
+  });
+
+  it("classifies invalid-health-status (unknown status value) as stale", async () => {
+    mockHealthBody({ status: "weird" });
+
+    await runStatusSelfCheck({} as D1Database, "https://staging.api.pharos.watch");
+
+    const latestProbeWriteCall = writeStatusProbeRunMock.mock.calls[
+      writeStatusProbeRunMock.mock.calls.length - 1
+    ] as unknown[] | undefined;
+    const latestProbeWrite = latestProbeWriteCall?.[2] as { status?: string };
+    expect(latestProbeWrite.status).toBe("stale");
+  });
+
+  it("forces overall probeStatus to at least stale when health endpoint semantically broken", async () => {
+    mockHealthBody("not-json");
+
+    const result = await runStatusSelfCheck(
+      {} as D1Database,
+      "https://staging.api.pharos.watch",
+    );
+    const metadata = JSON.parse(result.metadata ?? "{}") as Record<string, unknown>;
+    expect(metadata.probeStatus).not.toBe("healthy");
+    expect(metadata.probeStatus).toBe("stale");
+  });
+});

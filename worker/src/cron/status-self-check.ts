@@ -171,11 +171,13 @@ async function evaluateProbeResponse(
     return {
       ok: false,
       error: "invalid-health-status",
+      semanticStatus: "stale",
     };
   } catch { /* degraded: health endpoint returned unparseable JSON */
     return {
       ok: false,
       error: "invalid-health-payload",
+      semanticStatus: "stale",
     };
   }
 }
