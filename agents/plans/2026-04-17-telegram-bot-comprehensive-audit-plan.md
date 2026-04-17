@@ -31,7 +31,7 @@
 - `src/app/telegram/page.tsx` — add missing `/set` examples; "How it works" section; DEWS bands explainer; JSON-LD; fix hardcoded `hover:text-sky-500`; drop unused `common` field.
 
 ### Created
-- `worker/migrations/0073_telegram_alert_snooze.sql` — `ALTER TABLE telegram_subscribers ADD COLUMN alert_snooze_until_ts INTEGER`.
+- `worker/migrations/0098_telegram_alert_snooze.sql` — `ALTER TABLE telegram_subscribers ADD COLUMN alert_snooze_until_ts INTEGER`. (Latest existing migration in tree is `0097_mbe_flow_type_ts_index.sql`.)
 - `worker/src/api/telegram-webhook-callbacks.ts` — callback_query router.
 - `worker/src/api/telegram-webhook-status.ts` — `/status` command handler, data loader.
 - `worker/src/api/__tests__/telegram-webhook-callbacks.test.ts`
@@ -110,7 +110,7 @@ Expected: `Cannot find module` or `upsertSubscriberRow is not exported`.
 Insert at top of `worker/src/api/telegram-webhook-store.ts`, below the imports:
 
 ```typescript
-interface UpsertSubscriberInput {
+export interface UpsertSubscriberInput {
   chatId: string;
   username: string | null;
   nowSec: number;
@@ -617,7 +617,9 @@ it("treats direction reversal as resolve + new trigger (not worsening)", async (
     ] },
     { match: "FROM safety_grade_history", rows: [] },
     { match: "FROM telegram_subscriptions", rows: [] },
-    { match: "FROM telegram_subscribers", rows: [] }, // no global subscribers
+    // Task 14's top-of-dispatch snooze snapshot + per-type global subscribers.
+    { match: "WHERE alert_snooze_until_ts IS NOT NULL", rows: [] },
+    { match: "SELECT chat_id, last_active_at", rows: [] },
     { match: "FROM telegram_pending_alerts", rows: [] },
   ]);
 
@@ -666,7 +668,8 @@ it("alerts on UNKNOWN → grade transition when coin missing from snapshot", asy
       { stablecoin_id: "bold-liquity", grade: "B", prev_grade: "A", recorded_at: 1700000000, methodology_version: "v6.0" },
     ] },
     { match: "FROM telegram_subscriptions", rows: [] },
-    { match: "FROM telegram_subscribers", rows: [] },
+    { match: "WHERE alert_snooze_until_ts IS NOT NULL", rows: [] },
+    { match: "SELECT chat_id, last_active_at", rows: [] },
     { match: "FROM telegram_pending_alerts", rows: [] },
   ]);
 
@@ -697,7 +700,9 @@ it("deduplicates 403 cleanup for a chat hit by multiple chunks in one run", asyn
     { match: "FROM depeg_events WHERE ended_at IS NULL", rows: [] },
     { match: "FROM safety_grade_history", rows: [] },
     { match: "FROM telegram_subscriptions", rows: [] },
-    { match: "FROM telegram_subscribers WHERE global_alert_dews = 1", rows: [
+    // Top-of-dispatch snooze snapshot (Task 14) — empty so nobody is skipped.
+    { match: "WHERE alert_snooze_until_ts IS NOT NULL", rows: [] },
+    { match: "SELECT chat_id, last_active_at", rows: [
       { chat_id: "42", last_active_at: 0, quiet_hours_enabled: 0, quiet_hours_start_utc: null, quiet_hours_end_utc: null },
     ] },
     { match: "FROM telegram_pending_alerts", rows: [] },
@@ -1227,13 +1232,13 @@ git commit -m "feat(telegram-page): add How It Works section with cadence, volum
 Replace line 127 with:
 
 ```tsx
-      className="inline-flex items-center gap-1 text-foreground underline underline-offset-4 hover:text-sky-700 dark:hover:text-sky-400 transition-colors"
+      className="inline-flex items-center gap-1 text-foreground underline underline-offset-4 hover:text-sky-600 dark:hover:text-sky-400 transition-colors"
 ```
 
 - [ ] **Step 2: Update the inline `Browse archive →` link (line 240)**
 
 ```tsx
-                <Link href="/digest" className="underline underline-offset-4 hover:text-sky-700 dark:hover:text-sky-400 transition-colors">
+                <Link href="/digest" className="underline underline-offset-4 hover:text-sky-600 dark:hover:text-sky-400 transition-colors">
                   Browse archive &rarr;
                 </Link>
 ```
@@ -1305,12 +1310,12 @@ git commit -m "feat(telegram-page): JSON-LD SoftwareApplication schema + methodo
 ### Task 13: D1 migration for `alert_snooze_until_ts`
 
 **Files:**
-- Create: `worker/migrations/0073_telegram_alert_snooze.sql`
+- Create: `worker/migrations/0098_telegram_alert_snooze.sql`
 - Modify: `worker/migrations/MANIFEST.md`
 
 - [ ] **Step 1: Write the migration**
 
-Create `worker/migrations/0073_telegram_alert_snooze.sql`:
+Create `worker/migrations/0098_telegram_alert_snooze.sql`:
 
 ```sql
 -- rollout-safety: backward-compatible
@@ -1324,7 +1329,7 @@ ALTER TABLE telegram_subscribers ADD COLUMN alert_snooze_until_ts INTEGER;
 Add a row to `worker/migrations/MANIFEST.md`:
 
 ```markdown
-| 0073 | 2026-04-17 | telegram alert snooze | Adds `alert_snooze_until_ts` to `telegram_subscribers` for per-chat temporary snooze from inline-keyboard buttons. |
+| 0098 | 2026-04-17 | telegram alert snooze | Adds `alert_snooze_until_ts` to `telegram_subscribers` for per-chat temporary snooze from inline-keyboard buttons. |
 ```
 
 (Match the table format in the file.)
@@ -1335,7 +1340,7 @@ Add a row to `worker/migrations/MANIFEST.md`:
 cd worker && npx wrangler d1 migrations apply stablecoin-db --local && cd -
 ```
 
-Expected: 0073 reports applied.
+Expected: 0098 reports applied.
 
 - [ ] **Step 4: Update `SubscriberRow` type**
 
@@ -1354,8 +1359,8 @@ Also update the `SELECT` in `loadSubscriberByChat` (`telegram-webhook-store.ts:6
 - [ ] **Step 5: Commit**
 
 ```bash
-git add worker/migrations/0073_telegram_alert_snooze.sql worker/migrations/MANIFEST.md worker/src/api/telegram-webhook-shared.ts worker/src/api/telegram-webhook-store.ts
-git commit -m "feat(telegram): migration 0073 adds alert_snooze_until_ts column"
+git add worker/migrations/0098_telegram_alert_snooze.sql worker/migrations/MANIFEST.md worker/src/api/telegram-webhook-shared.ts worker/src/api/telegram-webhook-store.ts
+git commit -m "feat(telegram): migration 0098 adds alert_snooze_until_ts column"
 ```
 
 ---
@@ -1387,13 +1392,14 @@ it("skips a chat whose alert_snooze_until_ts is in the future", async () => {
     { match: "FROM depeg_events WHERE ended_at IS NULL", rows: [] },
     { match: "FROM safety_grade_history", rows: [] },
     { match: "FROM telegram_subscriptions", rows: [] },
-    // Global subscribers query: returns only chat B because A is snoozed.
-    // The SQL will include `alert_snooze_until_ts` in the WHERE clause after this task.
-    { match: "FROM telegram_subscribers", rows: [
+    // The top-of-dispatch snooze snapshot (the one-shot query added by this task).
+    // Matches by the unique substring: WHERE alert_snooze_until_ts IS NOT NULL.
+    { match: "WHERE alert_snooze_until_ts IS NOT NULL", rows: [{ chat_id: "A" }] },
+    // The per-type global subscriber SELECT now includes the snooze clause.
+    // Matches the chat_id + last_active_at projection plus the appended snooze filter.
+    { match: "SELECT chat_id, last_active_at", rows: [
       { chat_id: "B", last_active_at: now, quiet_hours_enabled: 0, quiet_hours_start_utc: null, quiet_hours_end_utc: null },
     ] },
-    // Baseline count query introduced by this task — returns the pre-filter cardinality.
-    { match: "SELECT COUNT(*) AS n FROM telegram_subscribers WHERE global_alert_dews", rows: [{ n: 2 }], first: { n: 2 } },
     { match: "FROM telegram_pending_alerts", rows: [] },
   ]);
 
@@ -1515,6 +1521,13 @@ git commit -m "feat(telegram): dispatcher honors alert_snooze_until_ts"
 
 ### Task 15: `/status <ticker>` command — data loader
 
+**Schema note:** There is no `safety_grade_current` or `price_snapshots` table. The real sources are:
+- `safety_grade_history` — query the latest row per coin with `ORDER BY recorded_at DESC LIMIT 1`
+- `price_cache` — `(asset_id, price, updated_at, ...)` — no peg reference stored; peg math is derived
+- `depeg_events` — full peg detail (`direction`, `deviation_bps`, `price`, `peg_reference`, `peak_deviation_bps`, `started_at`) for active events only
+
+The loader returns the active depeg row when present, otherwise just the current price from `price_cache`. It does NOT recompute peg reference in-line — if users want live deviation context on a stable coin, they tap the "View on Pharos" link.
+
 **Files:**
 - Create: `worker/src/api/telegram-webhook-status.ts`
 - Create: `worker/src/api/__tests__/telegram-webhook-status.test.ts`
@@ -1529,44 +1542,48 @@ import { mockD1 } from "./helpers/mock-d1";
 import { loadStatusForCoin } from "../telegram-webhook-status";
 
 describe("loadStatusForCoin", () => {
-  it("returns a complete status when every source has data", async () => {
+  it("returns DEWS + safety + depeg=stable when no active event", async () => {
     const db = mockD1([
       { match: "FROM stress_signals", rows: [{ band: "ALERT", score: 42, recorded_at: 1700000000 }] },
-      { match: "FROM safety_grade_current", rows: [{ grade: "B+", score: 66 }] },
+      { match: "FROM safety_grade_history", rows: [{ grade: "B+", score: 66, recorded_at: 1700000000 }] },
       { match: "FROM depeg_events WHERE stablecoin_id = ? AND ended_at IS NULL", rows: [] },
+      { match: "FROM price_cache WHERE asset_id = ?", rows: [{ price: 0.9997, updated_at: 1700000000 }] },
     ]);
-    const status = await loadStatusForCoin(db, "usdc-circle", {
-      price: 0.9988, pegReference: 1.0, bps: 12, direction: "below",
-    });
+    const status = await loadStatusForCoin(db, "usdc-circle");
     expect(status.dews?.band).toBe("ALERT");
     expect(status.safety?.grade).toBe("B+");
     expect(status.depeg.status).toBe("stable");
+    expect(status.priceUsd).toBeCloseTo(0.9997);
   });
 
-  it("flags active depeg events", async () => {
+  it("surfaces an active depeg event with direction and deviation", async () => {
     const db = mockD1([
       { match: "FROM stress_signals", rows: [{ band: "WATCH", score: 30, recorded_at: 1700000000 }] },
-      { match: "FROM safety_grade_current", rows: [{ grade: "A", score: 80 }] },
+      { match: "FROM safety_grade_history", rows: [{ grade: "A", score: 80, recorded_at: 1700000000 }] },
       { match: "FROM depeg_events WHERE stablecoin_id = ? AND ended_at IS NULL", rows: [
-        { id: 1, direction: "below", deviation_bps: 120, started_at: 1700000000 },
+        { direction: "below", peak_deviation_bps: 180, started_at: 1700000000, peg_reference: 1.0 },
       ] },
+      { match: "FROM price_cache WHERE asset_id = ?", rows: [{ price: 0.982, updated_at: 1700000500 }] },
     ]);
-    const status = await loadStatusForCoin(db, "usdc-circle", {
-      price: 0.988, pegReference: 1.0, bps: 120, direction: "below",
-    });
+    const status = await loadStatusForCoin(db, "usdc-circle");
     expect(status.depeg.status).toBe("active");
+    if (status.depeg.status === "active") {
+      expect(status.depeg.direction).toBe("below");
+      expect(status.depeg.peakDeviationBps).toBe(180);
+    }
   });
 
-  it("handles a missing safety row gracefully", async () => {
+  it("handles a fully unseeded coin gracefully (null everywhere)", async () => {
     const db = mockD1([
       { match: "FROM stress_signals", rows: [] },
-      { match: "FROM safety_grade_current", rows: [] },
+      { match: "FROM safety_grade_history", rows: [] },
       { match: "FROM depeg_events WHERE stablecoin_id = ? AND ended_at IS NULL", rows: [] },
+      { match: "FROM price_cache WHERE asset_id = ?", rows: [] },
     ]);
-    const status = await loadStatusForCoin(db, "newcoin-xyz", null);
+    const status = await loadStatusForCoin(db, "newcoin-xyz");
     expect(status.dews).toBeNull();
     expect(status.safety).toBeNull();
-    expect(status.peg).toBeNull();
+    expect(status.priceUsd).toBeNull();
     expect(status.depeg.status).toBe("stable");
   });
 });
@@ -1583,24 +1600,19 @@ npm test -- worker/src/api/__tests__/telegram-webhook-status.test.ts
 `worker/src/api/telegram-webhook-status.ts`:
 
 ```typescript
-export interface CoinPegInput {
-  price: number;
-  pegReference: number;
-  bps: number;
-  direction: "above" | "below";
-}
-
 export interface StatusForCoin {
   stablecoinId: string;
-  peg: CoinPegInput | null;
+  priceUsd: number | null;
+  priceUpdatedAt: number | null;
   dews: { band: string; score: number; recordedAt: number } | null;
-  safety: { grade: string; score: number | null } | null;
+  safety: { grade: string; score: number | null; recordedAt: number } | null;
   depeg:
     | { status: "stable" }
     | {
         status: "active";
         direction: "above" | "below";
-        deviationBps: number;
+        peakDeviationBps: number;
+        pegReference: number;
         startedAt: number;
       };
 }
@@ -1608,7 +1620,6 @@ export interface StatusForCoin {
 export async function loadStatusForCoin(
   db: D1Database,
   stablecoinId: string,
-  peg: CoinPegInput | null,
 ): Promise<StatusForCoin> {
   const dewsRow = await db
     .prepare(
@@ -1619,38 +1630,50 @@ export async function loadStatusForCoin(
 
   const safetyRow = await db
     .prepare(
-      "SELECT grade, score FROM safety_grade_current WHERE stablecoin_id = ?",
+      "SELECT grade, score, recorded_at FROM safety_grade_history WHERE stablecoin_id = ? ORDER BY recorded_at DESC LIMIT 1",
     )
     .bind(stablecoinId)
-    .first<{ grade: string; score: number | null }>();
+    .first<{ grade: string; score: number | null; recorded_at: number }>();
 
   const depegRow = await db
     .prepare(
-      "SELECT id, direction, deviation_bps, started_at FROM depeg_events WHERE stablecoin_id = ? AND ended_at IS NULL ORDER BY started_at DESC LIMIT 1",
+      "SELECT direction, peak_deviation_bps, peg_reference, started_at FROM depeg_events WHERE stablecoin_id = ? AND ended_at IS NULL ORDER BY started_at DESC LIMIT 1",
     )
     .bind(stablecoinId)
-    .first<{ id: number; direction: "above" | "below"; deviation_bps: number; started_at: number }>();
+    .first<{
+      direction: "above" | "below";
+      peak_deviation_bps: number;
+      peg_reference: number;
+      started_at: number;
+    }>();
+
+  const priceRow = await db
+    .prepare("SELECT price, updated_at FROM price_cache WHERE asset_id = ?")
+    .bind(stablecoinId)
+    .first<{ price: number; updated_at: number }>();
 
   return {
     stablecoinId,
-    peg,
+    priceUsd: priceRow?.price ?? null,
+    priceUpdatedAt: priceRow?.updated_at ?? null,
     dews: dewsRow
       ? { band: dewsRow.band, score: dewsRow.score, recordedAt: dewsRow.recorded_at }
       : null,
-    safety: safetyRow ? { grade: safetyRow.grade, score: safetyRow.score } : null,
+    safety: safetyRow
+      ? { grade: safetyRow.grade, score: safetyRow.score, recordedAt: safetyRow.recorded_at }
+      : null,
     depeg: depegRow
       ? {
           status: "active",
           direction: depegRow.direction,
-          deviationBps: depegRow.deviation_bps,
+          peakDeviationBps: depegRow.peak_deviation_bps,
+          pegReference: depegRow.peg_reference,
           startedAt: depegRow.started_at,
         }
       : { status: "stable" },
   };
 }
 ```
-
-(If the live schema has a different table for the "current" safety grade, e.g. `safety_grade_history` + a `MAX(recorded_at)` join, adapt the SQL. Confirm by running `grep -rn "safety_grade_current\|safety_grade_history" worker/src` before implementing.)
 
 - [ ] **Step 4: Run test — expect PASS**
 
@@ -1687,10 +1710,10 @@ Append to `worker/src/api/telegram-webhook-messages.ts`:
 import type { StatusForCoin } from "./telegram-webhook-status";
 
 export function buildStatusMessage(symbol: string, s: StatusForCoin): string {
-  const pegLine =
-    s.peg
-      ? `Peg: $${s.peg.price.toFixed(4)} (ref $${s.peg.pegReference.toFixed(2)}, ${s.peg.direction} by ${(s.peg.bps / 100).toFixed(1)}% / ${s.peg.bps} bps)`
-      : "Peg: no recent quote";
+  const priceLine =
+    s.priceUsd != null
+      ? `Price: $${s.priceUsd.toFixed(4)}`
+      : "Price: no recent quote";
   const dewsLine = s.dews
     ? `DEWS: ${s.dews.band} (score ${s.dews.score})`
     : "DEWS: no recent signal";
@@ -1699,11 +1722,11 @@ export function buildStatusMessage(symbol: string, s: StatusForCoin): string {
     : "Safety: UNKNOWN";
   const depegLine =
     s.depeg.status === "active"
-      ? `Depeg: ACTIVE (${s.depeg.direction} by ${(s.depeg.deviationBps / 100).toFixed(1)}%)`
+      ? `Depeg: ACTIVE — ${s.depeg.direction} peg, peak ${(s.depeg.peakDeviationBps / 100).toFixed(1)}%`
       : "Depeg: stable";
   const lines = [
     `<b>${escapeHtml(symbol)}</b>`,
-    pegLine,
+    priceLine,
     dewsLine,
     safetyLine,
     depegLine,
@@ -1723,7 +1746,7 @@ In `worker/src/api/telegram-webhook.ts`, add the switch case in the main command
           break;
 ```
 
-And implement `handleStatus` near the other handlers. The ambiguous-ticker case reuses the existing `runCoinResolutionFlow` but with a new action type `"status"` that short-circuits after resolution:
+And implement `handleStatus` near the other handlers:
 
 ```typescript
 async function handleStatus(
@@ -1743,41 +1766,25 @@ async function handleStatus(
     return;
   }
   if (resolution.status === "ambiguous") {
+    // /status is read-only — do not set pending disambiguation state.
+    // Present the candidate list so the user can re-run with a coin ID.
     await replyToChat(chatId, escapeHtml(formatDisambiguation(trimmed, resolution.matches)), botToken);
-    return; // /status does not set pending state; user re-runs with coin id
+    return;
   }
   const coin = resolution.matches[0];
-  const peg = await loadPegForCoin(db, coin.id); // helper from loadStatusForCoin's caller; see below
-  const status = await loadStatusForCoin(db, coin.id, peg);
+  const status = await loadStatusForCoin(db, coin.id);
   await replyToChat(chatId, buildStatusMessage(coin.symbol, status), botToken);
 }
 ```
 
-- [ ] **Step 4: Implement `loadPegForCoin`**
-
-Add to `worker/src/api/telegram-webhook-status.ts`:
+Add the imports at the top of `telegram-webhook.ts`:
 
 ```typescript
-export async function loadPegForCoin(
-  db: D1Database,
-  stablecoinId: string,
-): Promise<CoinPegInput | null> {
-  // Mirrors the shape used by depeg detection: latest price_snapshots row, referenced against peg.
-  const row = await db
-    .prepare(
-      "SELECT price, peg_reference, deviation_bps, direction FROM price_snapshots WHERE stablecoin_id = ? ORDER BY recorded_at DESC LIMIT 1",
-    )
-    .bind(stablecoinId)
-    .first<{ price: number; peg_reference: number; deviation_bps: number; direction: "above" | "below" }>();
-  return row
-    ? { price: row.price, pegReference: row.peg_reference, bps: row.deviation_bps, direction: row.direction }
-    : null;
-}
+import { loadStatusForCoin } from "./telegram-webhook-status";
+import { buildStatusMessage } from "./telegram-webhook-messages";
 ```
 
-(Before implementing, confirm the correct pricing source with `grep -rn "price_snapshots\|price_latest" worker/src/lib`. If the canonical live-price source differs, adapt the SQL to that source.)
-
-- [ ] **Step 5: Extend HELP_MESSAGE**
+- [ ] **Step 4: Extend HELP_MESSAGE**
 
 In `worker/src/api/telegram-webhook-shared.ts:27-63`, add before `/mute`:
 
@@ -1787,7 +1794,7 @@ Current peg, DEWS band, and safety grade for one coin — no subscription needed
 
 ```
 
-- [ ] **Step 6: Integration test for `/status`**
+- [ ] **Step 5: Integration test for `/status`**
 
 Append to `worker/src/api/__tests__/telegram-webhook.test.ts` (uses the file's existing `mockD1`, `makeWebhookRequest`, `handleTelegramWebhook`, and `sentMessageBody` helpers):
 
@@ -1798,11 +1805,11 @@ it("/status USDC replies with a compact card", async () => {
     { match: "FROM stress_signals", rows: [
       { band: "CALM", score: 15, recorded_at: 1700000000 },
     ] },
-    { match: "FROM safety_grade_current", rows: [
-      { grade: "A", score: 85 },
+    { match: "FROM safety_grade_history", rows: [
+      { grade: "A", score: 85, recorded_at: 1700000000 },
     ] },
-    { match: "FROM price_snapshots", rows: [
-      { price: 0.9999, peg_reference: 1.0, deviation_bps: 1, direction: "below" },
+    { match: "FROM price_cache WHERE asset_id = ?", rows: [
+      { price: 0.9999, updated_at: 1700000000 },
     ] },
     { match: "FROM depeg_events WHERE stablecoin_id = ? AND ended_at IS NULL", rows: [] },
   ]);
@@ -1818,10 +1825,11 @@ it("/status USDC replies with a compact card", async () => {
   expect(body).toContain("CALM");
   expect(body).toContain("Safety: A");
   expect(body).toContain("Depeg: stable");
+  expect(body).toContain("Price: $0.9999");
 });
 ```
 
-- [ ] **Step 7: Run all tests and commit**
+- [ ] **Step 6: Run all tests and commit**
 
 ```bash
 npm test -- worker
@@ -1861,9 +1869,50 @@ export interface TelegramWebhookUpdate {
 }
 ```
 
-- [ ] **Step 2: Add `answerCallbackQuery` + `reply_markup` support to `worker/src/lib/telegram.ts`**
+- [ ] **Step 2: Add `answerCallbackQuery` + thread `replyMarkup` through the existing send path**
 
-Add a new function:
+Existing shape confirmed by inspection (`worker/src/lib/telegram.ts:196-243, 245-269`):
+
+- `sendToChat(chatId, text, botToken, opts?: SendToChatOpts)` — `opts` has `disableWebPagePreview`, `disableNotification`, and similar toggles.
+- `BatchMessage { chatId, html, disableNotification }` — `sendBatch(messages, botToken, batchSize)` — third arg is the batch size.
+
+So: add `replyMarkup?: unknown` to `SendToChatOpts`, forward it to the `sendMessage` body, and extend `BatchMessage` with `replyMarkup?: unknown`. `sendBatch` passes the per-message markup to `sendToChat`.
+
+In `worker/src/lib/telegram.ts`, extend the `SendToChatOpts` interface (search for it near the top of the file). Adjust the body builder inside `sendToChat` to include `reply_markup` when present:
+
+```typescript
+body: JSON.stringify({
+  chat_id: chatId,
+  text,
+  parse_mode: "HTML",
+  ...(opts?.disableWebPagePreview && { disable_web_page_preview: true }),
+  ...(opts?.disableNotification && { disable_notification: true }),
+  ...(opts?.replyMarkup != null && { reply_markup: opts.replyMarkup }),
+}),
+```
+
+Extend `BatchMessage`:
+
+```typescript
+export interface BatchMessage {
+  chatId: string;
+  html: string;
+  disableNotification: boolean;
+  replyMarkup?: unknown;
+}
+```
+
+Update `sendBatch`'s inner call to thread the markup per message (line ~275):
+
+```typescript
+const result = await sendToChat(msg.chatId, msg.html, botToken, {
+  disableWebPagePreview: true,
+  disableNotification: msg.disableNotification,
+  replyMarkup: msg.replyMarkup,
+});
+```
+
+Add `answerCallbackQuery` at the bottom of the file:
 
 ```typescript
 export async function answerCallbackQuery(
@@ -1871,7 +1920,7 @@ export async function answerCallbackQuery(
   botToken: string,
   options: { text?: string; showAlert?: boolean } = {},
 ): Promise<void> {
-  await fetch(
+  const res = await fetch(
     `https://api.telegram.org/bot${botToken}/answerCallbackQuery`,
     {
       method: "POST",
@@ -1881,34 +1930,14 @@ export async function answerCallbackQuery(
         text: options.text,
         show_alert: options.showAlert ?? false,
       }),
+      signal: AbortSignal.timeout(10_000),
     },
-  ).then((r) => r.body?.cancel()); // consume body (Workers 6-connection cap)
+  );
+  await drainResponseBody(res);
 }
 ```
 
-If `sendToChat`/`sendBatch` currently does not accept `reply_markup`, extend the signature:
-
-```typescript
-export async function sendToChat(
-  chatId: string,
-  text: string,
-  botToken: string,
-  options: { disableNotification?: boolean; replyMarkup?: object } = {},
-): Promise<SendResult> {
-  // ...
-  body: JSON.stringify({
-    chat_id: chatId,
-    text,
-    parse_mode: "HTML",
-    disable_web_page_preview: true,
-    disable_notification: options.disableNotification ?? false,
-    reply_markup: options.replyMarkup,
-  }),
-  // ...
-}
-```
-
-(Match the existing shape exactly. Verify by reading `worker/src/lib/telegram.ts` before editing.)
+(Reuse the file's existing `drainResponseBody` helper — it is what every other send path calls to stay under the Workers 6-connection cap. Do NOT use `.then((r) => r.body?.cancel())` — `drainResponseBody` is canonical.)
 
 - [ ] **Step 3: Write the callback-router test**
 
@@ -2077,19 +2106,25 @@ export const SNOOZE_REPLY_MARKUP = {
 } as const;
 ```
 
-- [ ] **Step 2: Thread `replyMarkup: SNOOZE_REPLY_MARKUP` into fresh fan-out send calls**
+- [ ] **Step 2: Attach `replyMarkup` to each `BatchMessage` that goes to a subscriber**
 
-Find every `sendToChat(...)` / `sendBatch(...)` call in `worker/src/cron/dispatch-telegram-routing.ts` and `worker/src/cron/dispatch-telegram-alerts.ts` that is sending a subscriber alert (NOT the digest — only per-chat fan-out). Pass the markup:
+`sendBatch`'s third arg is `batchSize`, not an options object. The markup travels on each `BatchMessage` item instead. Find where `BatchMessage[]` arrays are constructed for fresh fan-out (likely inside `dispatch-telegram-routing.ts`'s `expandSubscriberChunks`-style helper and inside `telegram-pending-queue.ts`'s pending-drain builder) and set `replyMarkup: SNOOZE_REPLY_MARKUP` on each item:
 
 ```typescript
-await sendBatch(chunk, botToken, { replyMarkup: SNOOZE_REPLY_MARKUP, disableNotification: isQuietHours });
+const messages: BatchMessage[] = chunks.map((html) => ({
+  chatId: routed.chatId,
+  html,
+  disableNotification: routed.disableNotification,
+  replyMarkup: SNOOZE_REPLY_MARKUP,
+}));
+await sendBatch(messages, botToken, SEND_BATCH_SIZE);
 ```
 
 Do NOT add the markup to digest posting (`postDigestToTelegram`) — that's a channel post where users can't individually snooze.
 
-- [ ] **Step 3: Pending-queue drain**
+- [ ] **Step 3: Pending-queue drain carries markup too**
 
-In `worker/src/cron/telegram-pending-queue.ts` wherever the pending row is re-sent, pass the same markup. (The pending row only stores `message_html`; markup is applied at send time, not stored.)
+In `worker/src/cron/telegram-pending-queue.ts` wherever the pending row is re-sent, set `replyMarkup: SNOOZE_REPLY_MARKUP` on the `BatchMessage`. The pending D1 row only stores `message_html`; markup is applied at send time, not stored, so no schema change is needed.
 
 - [ ] **Step 4: Update test to assert the markup is included**
 
@@ -2107,7 +2142,8 @@ it("includes the snooze inline keyboard on subscriber alerts", async () => {
     { match: "FROM depeg_events WHERE ended_at IS NULL", rows: [] },
     { match: "FROM safety_grade_history", rows: [] },
     { match: "FROM telegram_subscriptions", rows: [] },
-    { match: "FROM telegram_subscribers", rows: [
+    { match: "WHERE alert_snooze_until_ts IS NOT NULL", rows: [] },
+    { match: "SELECT chat_id, last_active_at", rows: [
       { chat_id: "42", last_active_at: 0, quiet_hours_enabled: 0, quiet_hours_start_utc: null, quiet_hours_end_utc: null },
     ] },
     { match: "FROM telegram_pending_alerts", rows: [] },
@@ -2115,9 +2151,10 @@ it("includes the snooze inline keyboard on subscriber alerts", async () => {
 
   await dispatchTelegramAlerts(db, "bot-token");
 
-  // sendBatch is mocked at file scope; inspect its last call.
-  const [, , options] = mockSendBatch.mock.calls.at(-1) ?? [];
-  expect(options?.replyMarkup?.inline_keyboard?.[0]?.[0]?.callback_data).toBe("snooze:1h");
+  // sendBatch(messages, botToken, batchSize) — inspect the BatchMessage array
+  // to confirm per-message replyMarkup is set.
+  const [messages] = mockSendBatch.mock.calls.at(-1) ?? [];
+  expect(messages?.[0]?.replyMarkup?.inline_keyboard?.[0]?.[0]?.callback_data).toBe("snooze:1h");
 });
 ```
 
@@ -2271,7 +2308,7 @@ git commit -m "chore(plan): record post-deploy findings"
 | 1 | `npm test -- worker` passes; `cd worker && npx tsc --noEmit`; no user-visible change except `/cancel` wording and script output |
 | 2 | Snapshot tests updated; manual eyeball of one DEWS / depeg / safety alert in test chat |
 | 3 | `npm run dev` renders `/telegram` without console warnings; Lighthouse accessibility ≥ prior |
-| 4 | `/status USDC` returns a complete card; snooze buttons fire a callback and persist `alert_snooze_until_ts`; migration 0073 applied; dispatcher suppresses snoozed chats |
+| 4 | `/status USDC` returns a complete card; snooze buttons fire a callback and persist `alert_snooze_until_ts`; migration 0098 applied; dispatcher suppresses snoozed chats |
 
 ## Not in scope (reminder)
 
