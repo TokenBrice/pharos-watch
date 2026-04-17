@@ -569,7 +569,7 @@ Controlled ingestion backfill by explicit config/range/chunk, or by automatic co
 - Response includes a `reclassified` object exposing reclassification deltas for observability:
   - `reclassified.flowTypeChanges` — rows where `flow_type` flipped during this call (e.g. `standard → bridge_transfer` once the classifier saw a previously-unknown bridge signal).
   - `reclassified.burnTypeChanges` — rows where `burn_type` flipped (e.g. `review_required → bridge_burn`).
-  - `rowsReclassified` — legacy scalar retained for backward compatibility; computed as `max(flowTypeChanges, burnTypeChanges)` to avoid double-counting when the same row shifts both columns.
+  - `rowsReclassified` — legacy scalar retained for backward compatibility; the exact count of unique rows whose classification columns were rewritten during this chunk. Prefer the nested `reclassified.*` fields for per-column accounting.
 
 ### POST /api/reclassify-atomic-roundtrips (admin)
 
@@ -611,8 +611,8 @@ Retroactive cleanup endpoint for historical rows that predate shared roundtrip d
 | `nullPriceBacklogRecent` | number | Count of `amount_usd IS NULL` rows inside the 48h auto-heal window still awaiting price resolution |
 | `nullPriceBacklogHistorical` | number | Count of `amount_usd IS NULL` rows older than the auto-heal window (debt that `backfill-mint-burn-prices` must address) |
 | `roundtripsBacklogSaturated` | boolean | `true` when the cross-run roundtrip sweep hit its per-run limit and more candidate groups likely remain in the 48h window |
-| `subrequestBudgetUsed` | number | Alchemy subrequests consumed by this run |
-| `subrequestBudgetLimit` | number | Global subrequest budget for the run (default 200) |
+| `budgetUsed` | number | Alchemy subrequests consumed by this run (emitted via `withBudgetMetadata`) |
+| `budgetLimit` | number | Global subrequest budget for the run (default 200) |
 
 ---
 

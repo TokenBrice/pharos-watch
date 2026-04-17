@@ -43,12 +43,12 @@ Internal changelog reconstructed from git history. Covers Mint/Burn Flow `v1.0` 
 
 **Admin endpoints**
 
-- `/api/backfill-mint-burn` response now exposes `reclassified: { flowTypeChanges, burnTypeChanges }` deltas; the legacy `rowsReclassified` scalar is retained but de-duplicated via `max(flowTypeChanges, burnTypeChanges)`.
+- `/api/backfill-mint-burn` response now exposes `reclassified: { flowTypeChanges, burnTypeChanges }` deltas; the legacy `rowsReclassified` scalar is retained as the exact count of unique rows whose classification columns were rewritten in the chunk.
 - `/api/reclassify-atomic-roundtrips` now runs a reverse pass: groups tagged `atomic_roundtrip` that fail the 0.5% tolerance flip back to `flow_type='standard'`. Response exposes `toRoundtrip` (forward) and `toStandard` (reverse); `updated` remains as `toRoundtrip + toStandard` for back-compat.
 
 **Cron metadata observability**
 
-- New fields: `recalcFailed`, `recalcError`, `nullPriceBacklogRecent`, `nullPriceBacklogHistorical`, `roundtripsBacklogSaturated`, `subrequestBudgetUsed`, `subrequestBudgetLimit`.
+- New fields: `recalcFailed`, `recalcError`, `nullPriceBacklogRecent`, `nullPriceBacklogHistorical`, `roundtripsBacklogSaturated`. Subrequest budget is exposed as `budgetUsed` / `budgetLimit` via the shared `withBudgetMetadata` helper (same names every other cron already uses).
 
 **Migrations**
 
