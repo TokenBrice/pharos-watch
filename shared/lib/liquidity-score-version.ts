@@ -1,9 +1,24 @@
 import { createMethodologyVersion } from "./methodology-version";
 
 const liquidity = createMethodologyVersion({
-  currentVersion: "5.4",
+  currentVersion: "5.5",
   changelogPath: "/methodology/liquidity-score-changelog/",
   changelog: [
+    {
+      version: "5.5",
+      title: "Absolute TVL Depth fallback recalibration and Slipstream sqrt_ratio price",
+      date: "2026-04-17",
+      effectiveAt: 1776988800,
+      summary:
+        "Absolute TVL Depth fallback (used when circulatingUsd is unavailable) now shares the ratio formula's anchor via a $1B implied reference mcap. Aerodrome/Velodrome Slipstream price derivation now uses on-chain sqrt_ratio (Q64.96) instead of total-reserve ratios for concentrated liquidity pools.",
+      impact: [
+        "Absolute TVL Depth fallback: `20 * log10(tvl / 100_000) + 20` → `35 * log10(tvl / 700_000)`; coins without market cap data no longer gain ~24 points of unearned TVL Depth",
+        "Aerodrome/Velodrome Slipstream price observations now derive from on-chain sqrt_ratio instead of reserve ratios; concentrated liquidity pools no longer emit biased spot prices when one side lacks a tracked USD price",
+        "Slipstream pools where sqrt_ratio is unusable and one side has no tracked price are now dropped entirely (no reserve-ratio fallback derivation)",
+      ],
+      commits: [],
+      reconstructed: false,
+    },
     {
       version: "5.4",
       title: "Curve enrichment scoping and staged UUID dedupe",

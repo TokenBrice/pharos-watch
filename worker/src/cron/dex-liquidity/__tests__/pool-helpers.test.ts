@@ -47,6 +47,25 @@ describe("computeLiquidityScore", () => {
     expect(components.tvlDepth).toBeCloseTo(30, 0);
   });
 
+  it("fallback TVL Depth at $5M tracks the ratio formula at 0.5% of $1B", () => {
+    // v5.5 calibration: absolute fallback (no circulatingUsd) shares the
+    // ratio formula's anchor via a $1B implied reference mcap.
+    // At $5M TVL both branches should yield ~30.
+    const metricsBase = () => {
+      const m = initMetrics("test", "TEST");
+      m.effectiveTvl = 5_000_000;
+      m.totalTvlUsd = 5_000_000;
+      m.qualityAdjustedTvl = 5_000_000;
+      m.poolCount = 1;
+      return m;
+    };
+    const ratioBranch = computeLiquidityScore(metricsBase(), 50, 1_000_000_000);
+    const fallbackBranch = computeLiquidityScore(metricsBase(), 50, undefined);
+    expect(
+      Math.abs(ratioBranch.components.tvlDepth - fallbackBranch.components.tvlDepth),
+    ).toBeLessThan(2);
+  });
+
   it("zero volume → volumeActivity = 0", () => {
     // vtRatio = 0 / totalTvlUsd → volumeActivity = 0
     const m = initMetrics("test", "TEST");
@@ -104,7 +123,7 @@ describe("computeLiquidityScore", () => {
   });
 
   it("zero inputs (no circulatingUsd) → score 0", () => {
-    // effectiveTvl=0 → uses absolute fallback: 20*log10(1/100_000)+20 → very negative → clamped to 0
+    // effectiveTvl=0 → uses absolute fallback: 35*log10(1/700_000) → very negative → clamped to 0
     // all other components also 0 → total = 0
     const m = initMetrics("test", "TEST");
     const { score } = computeLiquidityScore(m, 0);

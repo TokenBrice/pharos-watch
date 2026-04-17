@@ -22,6 +22,7 @@ type SugarPool = {
   reserve0: bigint;
   token1: string;
   reserve1: bigint;
+  sqrt_ratio: bigint;
   pool_fee: bigint;
 };
 
@@ -48,6 +49,33 @@ function bigintToDecimal(value: bigint, decimals: number): number {
   const whole = value / divisor;
   const remainder = value % divisor;
   return Number(`${whole}.${remainder.toString().padStart(decimals, "0").slice(0, 12)}`);
+}
+
+/**
+ * Convert a Uniswap V3-style sqrtPriceX96 (Q64.96) to the spot price of
+ * token1 in units of token0, decimal-adjusted for display.
+ *
+ *   sqrtRatio         = actual_sqrt_price * 2^96
+ *   spot_price_raw    = (sqrtRatio / 2^96)^2
+ *   spot_price        = spot_price_raw * 10^(token0Decimals - token1Decimals)
+ *
+ * Uses BigInt for the squared intermediate to avoid precision loss on
+ * sqrtRatio values above 2^53. Number(whole) only loses precision if the
+ * raw price exceeds 2^53 (~9e15) — stablecoin-scale pairs never approach that.
+ */
+export function sqrtRatioToSpotPrice(
+  sqrtRatio: bigint,
+  token0Decimals: number,
+  token1Decimals: number,
+): number {
+  if (sqrtRatio <= 0n) return 0;
+  const squared = sqrtRatio * sqrtRatio;
+  const Q192 = 1n << 192n;
+  const whole = squared / Q192;
+  const remainder = squared % Q192;
+  const frac = (remainder << 32n) / Q192;
+  const priceRaw = Number(whole) + Number(frac) / Math.pow(2, 32);
+  return priceRaw * Math.pow(10, token0Decimals - token1Decimals);
 }
 
 function normalizeAddress(address: string): string {
@@ -164,16 +192,36 @@ export async function fetchSlipstreamPools(
         ? trackedStablecoinPrices.get(stable1.stablecoinId) ?? null
         : null;
 
+      // v5.5: derive spot price from on-chain sqrt_ratio (Q64.96), not reserve ratio.
+      // Concentrated-liquidity pools distribute reserves across ticks; reserve1/reserve0
+      // equals spot price only at full-range or perfectly balanced positions.
+      const spotPriceToken1InToken0 =
+        pool.sqrt_ratio > 0n
+          ? sqrtRatioToSpotPrice(pool.sqrt_ratio, token0.decimals, token1.decimals)
+          : null;
+      const finalSpotPrice =
+        spotPriceToken1InToken0 != null &&
+        Number.isFinite(spotPriceToken1InToken0) &&
+        spotPriceToken1InToken0 > 0
+          ? spotPriceToken1InToken0
+          : null;
+
+      // Missing-side price derivation uses spot price, not reserve ratio.
+      // 1 token0 = spotPrice token1 → USD(token0) = spotPrice * USD(token1)
       if ((token0PriceUsd == null || token0PriceUsd <= 0) && token1PriceUsd != null && token1PriceUsd > 0) {
-        token0PriceUsd = reserve1 > 0 ? (reserve1 * token1PriceUsd) / reserve0 : null;
+        token0PriceUsd = finalSpotPrice != null ? finalSpotPrice * token1PriceUsd : null;
       }
+      // 1 token1 = 1/spotPrice token0 → USD(token1) = USD(token0) / spotPrice
       if ((token1PriceUsd == null || token1PriceUsd <= 0) && token0PriceUsd != null && token0PriceUsd > 0) {
-        token1PriceUsd = reserve0 > 0 ? (reserve0 * token0PriceUsd) / reserve1 : null;
+        token1PriceUsd =
+          finalSpotPrice != null && finalSpotPrice > 0 ? token0PriceUsd / finalSpotPrice : null;
       }
 
-      const tvlUsd = (token0PriceUsd != null && token1PriceUsd != null)
-        ? reserve0 * token0PriceUsd + reserve1 * token1PriceUsd
-        : 0;
+      // Drop pool entirely when one side has no tracked price and sqrt_ratio is unusable.
+      // No reserve-ratio fallback derivation reaches downstream consumers.
+      if (token0PriceUsd == null || token1PriceUsd == null) continue;
+
+      const tvlUsd = reserve0 * token0PriceUsd + reserve1 * token1PriceUsd;
       if (!Number.isFinite(tvlUsd) || tvlUsd <= 0) continue;
 
       const feeBps = Number(pool.pool_fee);
@@ -196,7 +244,7 @@ export async function fetchSlipstreamPools(
             priceUsd: token1PriceUsd,
           },
         ],
-        price: reserve0 > 0 ? reserve1 / reserve0 : null,
+        price: finalSpotPrice,
         tvlUsd,
         volume24hUsd: 0,
         feeRate: normalizeFeeRateFromBps(feeBps),

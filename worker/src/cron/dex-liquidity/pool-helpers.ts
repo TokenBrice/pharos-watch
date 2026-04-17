@@ -104,8 +104,11 @@ export function computeLiquidityScore(
     const depthRatio = tvlInput / circulatingUsd;
     tvlDepth = Math.min(100, Math.max(0, 35 * Math.log10(depthRatio / 0.0007)));
   } else {
-    // Absolute fallback when market cap is unavailable
-    tvlDepth = Math.min(100, Math.max(0, 20 * Math.log10(Math.max(tvlInput, 1) / 100_000) + 20));
+    // v5.5 absolute fallback: uses a $1B implied reference mcap to reuse the
+    // ratio formula's anchor (0.07% depth = score 0). Equivalent to running
+    // the ratio branch with depthRatio = tvl / 1_000_000_000.
+    // Yields: $700K → 0, $5M → 30, $140M → 80, ~$500M → clamps at 100.
+    tvlDepth = Math.min(100, Math.max(0, 35 * Math.log10(Math.max(tvlInput, 1) / 700_000)));
   }
 
   // Component 2: Volume activity (20%) — log-scale

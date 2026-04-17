@@ -6,12 +6,39 @@ vi.mock("../../../lib/evm-rpc", () => ({
 }));
 
 import { fetchEvmCallHexAtBlock } from "../../../lib/evm-rpc";
-import { fetchSlipstreamPools } from "../fetch-slipstream";
+import { fetchSlipstreamPools, sqrtRatioToSpotPrice } from "../fetch-slipstream";
 
 const ABI = parseAbi([
   "function all(uint256 _limit, uint256 _offset) view returns ((address lp,string symbol,uint8 decimals,uint256 liquidity,int24 type,int24 tick,uint160 sqrt_ratio,address token0,uint256 reserve0,uint256 staked0,address token1,uint256 reserve1,uint256 staked1,address gauge,uint256 gauge_liquidity,bool gauge_alive,address fee,address bribe,address factory,uint256 emissions,address emissions_token,uint256 pool_fee,uint256 unstaked_fee,uint256 token0_fees,uint256 token1_fees,address nfpm,address alm,address root)[])",
   "function tokens(uint256 _limit, uint256 _offset, address _account, address[] _addresses) view returns ((address token_address,string symbol,uint8 decimals,uint256 account_balance,bool listed)[])",
 ]);
+
+describe("sqrtRatioToSpotPrice", () => {
+  it("returns 1.0 for a balanced sqrt price (Q96 == 2^96)", () => {
+    // sqrt(1) * 2^96 = 2^96 → price = 1.0 (same decimals)
+    const price = sqrtRatioToSpotPrice(1n << 96n, 6, 6);
+    expect(price).toBeCloseTo(1, 3);
+  });
+
+  it("handles decimal adjustment across token decimals", () => {
+    // Q96 balanced ratio with token0 6dec, token1 18dec:
+    // priceRaw = 1.0, decimals adjust = 10^(6 - 18) = 10^-12
+    const price = sqrtRatioToSpotPrice(1n << 96n, 6, 18);
+    expect(price).toBeCloseTo(1e-12, 15);
+  });
+
+  it("handles large sqrt ratios without overflow", () => {
+    // Uniswap V3 sqrtPriceX96 can reach ~2^160. Pick 2^140 as a well-above-safe-int test.
+    const price = sqrtRatioToSpotPrice(1n << 140n, 18, 18);
+    expect(Number.isFinite(price)).toBe(true);
+    expect(price).toBeGreaterThan(0);
+  });
+
+  it("returns 0 for zero or negative sqrt ratio", () => {
+    expect(sqrtRatioToSpotPrice(0n, 6, 6)).toBe(0);
+    expect(sqrtRatioToSpotPrice(-1n, 6, 6)).toBe(0);
+  });
+});
 
 describe("fetchSlipstreamPools", () => {
   beforeEach(() => {

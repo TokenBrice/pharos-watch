@@ -144,8 +144,9 @@ describe("dex-liquidity pool helpers", () => {
     const withoutMcap = computeLiquidityScore(m, 70);
 
     expect(withoutMcap.components.tvlDepth).not.toBe(withMcap.components.tvlDepth);
-    // Absolute: 20 * log10(10M / 100K) + 20 = 20 * 2 + 20 = 60
-    expect(withoutMcap.components.tvlDepth).toBe(60);
+    // v5.5 absolute fallback (parity with ratio at $1B reference mcap):
+    // 35 * log10(10M / 700_000) = 35 * log10(14.286) ≈ 35 * 1.155 ≈ 40.4 → 40
+    expect(withoutMcap.components.tvlDepth).toBe(40);
   });
 
   it("clamps pool quality retention to 0-100 range", () => {
