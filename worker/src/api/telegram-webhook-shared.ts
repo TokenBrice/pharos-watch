@@ -120,6 +120,7 @@ export interface SubscriberRow {
   quiet_hours_enabled: number | null;
   quiet_hours_start_utc: number | null;
   quiet_hours_end_utc: number | null;
+  alert_snooze_until_ts?: number | null;
 }
 
 export interface SubscriptionRow {

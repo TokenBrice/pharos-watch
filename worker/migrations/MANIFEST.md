@@ -41,6 +41,7 @@ Applied sequentially after the baseline (fresh setup) or after the previous indi
 | 0095     | `0095_blacklist_event_suppression.sql`          | Add blacklist event suppression metadata and clean zero-balance EURC mirror ledger rows        |
 | 0096     | `0096_mint_burn_config_deferral.sql`            | Add mint/burn config deferral table to skip chronically failing configs for a 1h grace period  |
 | 0097     | `0097_mbe_flow_type_ts_index.sql`               | Add (flow_type, timestamp DESC) composite index to speed the atomic-roundtrip sweep query      |
+| 0098     | `0098_telegram_alert_snooze.sql`                | Add `alert_snooze_until_ts` to `telegram_subscribers` for per-chat temporary snooze from inline buttons |
 
 ## Retired Individual Migrations
 

@@ -195,7 +195,8 @@ export async function loadSubscriberByChat(
          global_alert_launch,
          quiet_hours_enabled,
          quiet_hours_start_utc,
-         quiet_hours_end_utc
+         quiet_hours_end_utc,
+         alert_snooze_until_ts
        FROM telegram_subscribers
       WHERE chat_id = ?`,
     )
