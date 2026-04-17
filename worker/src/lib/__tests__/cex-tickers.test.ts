@@ -1,4 +1,14 @@
-import { describe, it, expect, vi, afterEach } from "vitest";
+import { describe, it, expect, vi, afterEach, beforeEach } from "vitest";
+
+const { sleepWithSignalMock } = vi.hoisted(() => ({
+  sleepWithSignalMock: vi.fn(async () => undefined),
+}));
+
+vi.mock("../abort", async () => {
+  const actual = await vi.importActual<typeof import("../abort")>("../abort");
+  return { ...actual, sleepWithSignal: sleepWithSignalMock };
+});
+
 import {
   BINANCE_KNOWN_SYMBOLS,
   BITSTAMP_KNOWN_SYMBOLS,
@@ -12,6 +22,7 @@ import {
 } from "../cex-tickers";
 import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins";
 
+beforeEach(() => sleepWithSignalMock.mockClear());
 afterEach(() => vi.unstubAllGlobals());
 
 describe("fetchBinancePrices", () => {
@@ -35,7 +46,9 @@ describe("fetchBinancePrices", () => {
     vi.stubGlobal("fetch", fetchMock);
     const results = await fetchBinancePrices();
     expect(results.size).toBe(0);
-    expect(fetchMock).toHaveBeenCalledTimes(4);
+    // One fetch per host (2 hosts). 5xx short-circuits to the next host
+    // instead of retrying the same host.
+    expect(fetchMock).toHaveBeenCalledTimes(2);
   });
 
   it("returns empty map when Binance returns no stablecoin pairs", async () => {
@@ -156,6 +169,32 @@ describe("fetchBinancePrices", () => {
     const outcome = await fetchBinancePricesDetailed();
     expect(outcome.kind).toBe("no-data");
     expect(outcome.value.prices.size).toBe(0);
+  });
+
+  it("jumps to the next host on 5xx without sleeping or retrying the same host", async () => {
+    const fetchMock = vi.fn().mockImplementation((url: string) => {
+      if (url.includes("data-api.binance.vision")) {
+        return Promise.resolve(new Response("upstream down", {
+          status: 503,
+          headers: { "Retry-After": "30" },
+        }));
+      }
+      return Promise.resolve(new Response(JSON.stringify([
+        { symbol: "USDTUSD", price: "1.0003" },
+      ]), { status: 200, headers: { "Content-Type": "application/json" } }));
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    const { value: { prices, diagnostics } } = await fetchBinancePricesDetailed();
+
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(fetchMock.mock.calls[0][0]).toContain("data-api.binance.vision");
+    expect(fetchMock.mock.calls[1][0]).toContain("api.binance.com");
+    expect(sleepWithSignalMock).not.toHaveBeenCalled();
+    expect(prices.get("USDT")).toBeCloseTo(1.0003, 4);
+    expect(diagnostics).toHaveLength(2);
+    expect(diagnostics[0]).toMatchObject({ status: 503, success: false });
+    expect(diagnostics[1]).toMatchObject({ status: 200, success: true });
   });
 });
 

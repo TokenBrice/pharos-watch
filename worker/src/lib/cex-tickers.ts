@@ -104,21 +104,6 @@ async function fetchCexJson<T>(
   return { payload: (await response.json()) as T, transportOk: true };
 }
 
-function getCexRetryDelayMs(response: Response, attempt: number): number | null {
-  if (response.status === 429) {
-    const retryAfter = response.headers.get("Retry-After");
-    const waitSec = retryAfter ? parseInt(retryAfter, 10) : 0;
-    return waitSec > 0 && waitSec <= 120 ? waitSec * 1000 : 5000;
-  }
-  if (response.status === 529) {
-    return Math.min(30_000, 5_000 * 2 ** attempt);
-  }
-  if (response.status >= 500) {
-    return 1000 * 2 ** attempt;
-  }
-  return null;
-}
-
 async function fetchBinanceTickerUrl(
   url: string,
   signal?: AbortSignal,
@@ -134,6 +119,9 @@ async function fetchBinanceTickerUrl(
     success: false,
   };
 
+  // On HTTP 5xx/429/403/451 we do NOT retry the same host — we return so the
+  // caller can jump to the next URL in the Binance cascade. Same-host retry is
+  // reserved for catchable network errors (fetch() throws).
   for (let attempt = 0; attempt <= CEX_REQUEST_RETRIES; attempt++) {
     throwIfAborted(signal);
     try {
@@ -157,11 +145,6 @@ async function fetchBinanceTickerUrl(
 
       if (!response.ok) {
         diagnostic.snippet = await readResponseSnippet(response);
-        const retryDelayMs = attempt < CEX_REQUEST_RETRIES ? getCexRetryDelayMs(response, attempt) : null;
-        if (retryDelayMs != null) {
-          await sleepWithSignal(retryDelayMs, signal);
-          continue;
-        }
         return { prices: results, diagnostic };
       }
 
