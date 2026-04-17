@@ -71,10 +71,6 @@
     "disposition": "queued-p4",
     "notes": "Config registry for all tracked stablecoins plus the v5.2 bridge-detection validator/audit block. Grew past the default file-size budget during mint-burn comprehensive remediation. Follow-up pass should extract the per-coin config array into a data-only module and keep only the schema + validator logic in this file."
   },
-  "src/lib/contagion-layout.ts": {
-    "disposition": "queued-p4",
-    "notes": "Contagion graph layout concentrates geometric placement, clustering, and rendering heuristics. Track for the broader frontend decomposition lane."
-  },
   "src/app/status/client.tsx": {
     "disposition": "queued-p4",
     "notes": "Status page client centralizes the full operator-dashboard composition. Keep waived until the status route gets a dedicated UI decomposition pass."
@@ -86,5 +82,13 @@
   "worker/src/cron/weekly-recap.ts": {
     "disposition": "queued-p4",
     "notes": "Weekly recap input assembly grew with week-over-week deltas, weekly signal leaderboards, and split parse-row plumbing. Keep waived until the digest prompt rewrite stabilizes; a follow-up pass should extract aggregation vs. prompt rendering into separate modules."
+  },
+  "worker/src/api/telegram-webhook.ts": {
+    "disposition": "queued-p4",
+    "notes": "Transport entrypoint grew with the /status handler and callback_query branch added in the 2026-04-17 audit remediation. The file is a thin ingress coordinator — parsing, persistence, and message templates already live in adjacent telegram-webhook-* modules. Defer further extraction until the bot surface stabilizes."
+  },
+  "src/app/telegram/page.tsx": {
+    "disposition": "queued-p4",
+    "notes": "Static product landing page grew with the How-It-Works section, DEWS bands explainer, and JSON-LD block added in the 2026-04-17 telegram bot comprehensive audit. All content is intentionally colocated. Defer decomposition until another product-page cleanup pass."
   }
 }

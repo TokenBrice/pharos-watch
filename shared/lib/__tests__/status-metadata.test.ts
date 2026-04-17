@@ -66,6 +66,7 @@ describe("status-metadata", () => {
       pendingDropped: 0,
       pendingEnqueued: 5,
       pendingExpired: 2,
+      chatsSuppressedBySnooze: null,
       eventsDetected: {
         dews: 2,
         depeg: 1,
