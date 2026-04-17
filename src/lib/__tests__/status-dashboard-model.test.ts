@@ -56,6 +56,7 @@ const BASE_STATUS: StatusResponse = {
     details: null,
     probeAgeSeconds: 0,
     consecutiveDivergent: 0,
+    discrepancyReason: "in-sync",
   },
   timeline: [],
   caches: {},

@@ -112,6 +112,8 @@ export interface StatusProbeSummary {
   p95LatencyMs: number | null;
 }
 
+export type StatusDiscrepancyReason = "in-sync" | "probe-stale" | "probe-disagrees" | "probe-missing";
+
 export interface StatusDiscrepancy {
   hasDivergence: boolean;
   severityDelta: number;
@@ -120,6 +122,12 @@ export interface StatusDiscrepancy {
   details: string | null;
   probeAgeSeconds: number | null;
   consecutiveDivergent: number;
+  /**
+   * Machine-readable classification. UI and alert logic should branch on
+   * this enum rather than parsing `details`. Added 2026-04 to disambiguate
+   * "probe never ran" from "probe ran but disagrees" from "probe is stale".
+   */
+  discrepancyReason: StatusDiscrepancyReason;
 }
 
 export interface StatusTransition {

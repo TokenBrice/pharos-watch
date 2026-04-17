@@ -1,5 +1,6 @@
 import type {
   StatusDiscrepancy,
+  StatusDiscrepancyReason,
   StatusProbeSummary,
 } from "@shared/types/status";
 import {
@@ -14,6 +15,7 @@ export function buildDiscrepancy(
   now: number,
   consecutiveDivergent: number,
 ): StatusDiscrepancy {
+  // Probe absent / never ran / unknown → "probe-missing".
   if (probe.status === "unknown" || probe.timestamp == null) {
     return {
       hasDivergence: false,
@@ -23,6 +25,7 @@ export function buildDiscrepancy(
       details: null,
       probeAgeSeconds: null,
       consecutiveDivergent,
+      discrepancyReason: "probe-missing",
     };
   }
 
@@ -30,8 +33,16 @@ export function buildDiscrepancy(
   const statusSeverity = SEVERITY[overallStatus];
   const probeSeverity = SEVERITY[probe.status];
   const severityDelta = statusSeverity - probeSeverity;
+  // Reuse the same freshness window that gates hasDivergence, so the two
+  // fields stay in lockstep. See STATUS_SYSTEM_FRESHNESS_SEC import.
   const freshProbe = probeAgeSeconds <= STATUS_SYSTEM_FRESHNESS_SEC;
   const hasDivergence = freshProbe && Math.abs(severityDelta) >= 1;
+
+  const discrepancyReason: StatusDiscrepancyReason = !freshProbe
+    ? "probe-stale"
+    : hasDivergence
+      ? "probe-disagrees"
+      : "in-sync";
 
   return {
     hasDivergence,
@@ -41,5 +52,6 @@ export function buildDiscrepancy(
     details: hasDivergence ? `status=${overallStatus}, probe=${probe.status}, probeAge=${probeAgeSeconds}s` : null,
     probeAgeSeconds,
     consecutiveDivergent,
+    discrepancyReason,
   };
 }

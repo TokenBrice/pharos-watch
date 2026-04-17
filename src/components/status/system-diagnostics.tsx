@@ -1,5 +1,19 @@
 import { Card, CardContent } from "@/components/ui/card";
 import { formatElapsedSeconds } from "@shared/lib/format";
+import type { StatusDiscrepancyReason } from "@shared/types/status";
+
+function discrepancyReasonLabel(reason: StatusDiscrepancyReason): string {
+  switch (reason) {
+    case "in-sync":
+      return "in sync";
+    case "probe-stale":
+      return "probe stale";
+    case "probe-disagrees":
+      return "probe disagrees";
+    case "probe-missing":
+      return "probe missing";
+  }
+}
 
 interface SystemDiagnosticsProps {
   state: {
@@ -35,6 +49,7 @@ interface SystemDiagnosticsProps {
     details: string | null;
     probeAgeSeconds: number | null;
     consecutiveDivergent: number;
+    discrepancyReason: StatusDiscrepancyReason;
   };
   browserProbe?: {
     sampleCount: number;
@@ -146,6 +161,7 @@ export function SystemDiagnostics({
           >
             {discrepancy.hasDivergence ? "detected" : "none"}
           </div>
+          <div className="text-xs text-muted-foreground">reason: {discrepancyReasonLabel(discrepancy.discrepancyReason)}</div>
           <div className="text-xs text-muted-foreground">streak: {discrepancy.consecutiveDivergent}</div>
           <div className="text-xs text-muted-foreground">
             delta {discrepancy.severityDelta} • probe age {discrepancy.probeAgeSeconds != null ? formatElapsedSeconds(discrepancy.probeAgeSeconds) : "—"}

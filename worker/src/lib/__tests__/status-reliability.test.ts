@@ -386,6 +386,7 @@ describe("status-reliability", () => {
       details: null,
       probeAgeSeconds: null,
       consecutiveDivergent: 2,
+      discrepancyReason: "probe-missing",
     });
 
     expect(
