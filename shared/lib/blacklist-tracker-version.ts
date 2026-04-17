@@ -40,7 +40,7 @@ const blacklistTracker = createMethodologyVersion({
       "EURC rows flagged as circle_mirror_zero_balance are stamped amount_status='permanently_unavailable' and no longer re-enter the recoverable-pending backfill pool",
       "Batch address[] events (USDtb, AID, EURCV) apply a per-log row cap so a single malformed payload cannot blow out the write batch",
       "Tron sync cursor initialises from max(block_number) for legacy configs that were left at 0",
-      "Five D1 migrations applied: 0100 reset derived amount rows, 0101 dedup mixed-case blacklist_sync_state keys, 0103 stamp EURC mirror-zero rows as permanently_unavailable, 0102 / 0104 adjust blacklist_events indexes and amount-status telemetry",
+      "Five D1 migrations applied: 0100 dedup mixed-case blacklist_sync_state keys, 0101 reset legacy derived amount rows, 0102 Gnosis BRZ cursor reseed, 0103 backfill + API composite indexes, 0104 stamp EURC mirror-zero rows as permanently_unavailable",
       "/api/blacklist-summary aggregates quarterly chart points and per-coin counts in SQL, dropping summary-endpoint memory from ~5-10MB to a few KB per cache miss",
       "Frontend: data-driven stats strip + amount-status badge, per-coin stat border rendered via inline style, CSV splits native / unit / USD / status columns, page-clamp + zero-total + filter-reset covered by tests",
       "Seven new chain-coverage rows for existing coins: Polygon USDQ; Arbitrum + Base AID; Base + BSC + Polygon TGBP",

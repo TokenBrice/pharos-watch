@@ -362,7 +362,7 @@ export const BLACKLIST_CHART_COLORS: Record<BlacklistStablecoin, string> = {
   USDA: "#15803d",
   USAT: "#a21caf",
   AEUR: "#1e40af",
-  XUSD: "#0891b2",
+  XUSD: "#0e7490",
   XAUM: "#ca8a04",
   JPYC: "#ea580c",
   FRXUSD: "#f97316",

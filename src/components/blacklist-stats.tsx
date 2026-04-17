@@ -10,10 +10,9 @@ import type { BlacklistStablecoin, BlacklistSummaryResponse } from "@shared/type
 interface BlacklistStatsProps {
   stats: BlacklistSummaryResponse["stats"] | undefined;
   isLoading: boolean;
-  showLegacyTriples?: boolean;
 }
 
-export function BlacklistStats({ stats, isLoading, showLegacyTriples = false }: BlacklistStatsProps) {
+export function BlacklistStats({ stats, isLoading }: BlacklistStatsProps) {
   const trackedAddressCount = stats?.trackedAddressCount ?? stats?.activeAddressCount ?? 0;
   const trackedAmountGapCount = stats?.trackedAmountGapCount ?? stats?.activeAmountGapCount ?? 0;
   const trackedFrozenTotal = stats?.trackedFrozenTotal ?? stats?.activeFrozenTotal ?? 0;
@@ -57,28 +56,6 @@ export function BlacklistStats({ stats, isLoading, showLegacyTriples = false }: 
         ))}
       </div>
       <div className="grid grid-cols-2 gap-3 sm:gap-5 lg:grid-cols-3">
-        {showLegacyTriples ? (
-          <>
-            <MetricStatCard
-              borderColorClass="border-l-blue-500"
-              title="USDC Blacklisted"
-              value={stats?.usdcBlacklisted ?? 0}
-              subtext="unique addresses"
-            />
-            <MetricStatCard
-              borderColorClass="border-l-cyan-500"
-              title="USDT Blacklisted"
-              value={stats?.usdtBlacklisted ?? 0}
-              subtext="unique addresses"
-            />
-            <MetricStatCard
-              borderColorClass="border-l-yellow-500"
-              title="Gold Frozen"
-              value={stats?.goldBlacklisted ?? 0}
-              subtext="PAXG / XAUT addresses"
-            />
-          </>
-        ) : null}
         <MetricStatCard
           borderColorClass="border-l-emerald-500"
           title="Freeze Ledger"
