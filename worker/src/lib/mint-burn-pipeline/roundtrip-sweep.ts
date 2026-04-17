@@ -23,12 +23,26 @@ export async function sweepRecentRoundtrips(
 ): Promise<RoundtripSweepResult> {
   const cutoff = nowSec - lookbackSec;
 
+  // The 0.005 literal below mirrors ROUNDTRIP_AMOUNT_TOLERANCE in
+  // roundtrip-detection.ts — that file is the source of truth. CASE...END is
+  // used instead of a two-arg MAX() to avoid SQLite scalar-variadic subtleties
+  // inside an aggregate HAVING context.
   const { results: candidates } = await db.prepare(
     `SELECT tx_hash, stablecoin_id, chain_id, MIN(timestamp) as min_ts
      FROM mint_burn_events
      WHERE flow_type = 'standard' AND timestamp >= ?
      GROUP BY tx_hash, stablecoin_id, chain_id
      HAVING COUNT(DISTINCT direction) > 1
+        AND ABS(SUM(CASE WHEN direction='mint' THEN amount ELSE 0 END)
+              - SUM(CASE WHEN direction='burn' THEN amount ELSE 0 END))
+            <= 0.005 * (
+                 CASE
+                   WHEN SUM(CASE WHEN direction='mint' THEN amount ELSE 0 END)
+                      >= SUM(CASE WHEN direction='burn' THEN amount ELSE 0 END)
+                   THEN SUM(CASE WHEN direction='mint' THEN amount ELSE 0 END)
+                   ELSE SUM(CASE WHEN direction='burn' THEN amount ELSE 0 END)
+                 END
+               )
      ORDER BY MIN(timestamp) ASC, stablecoin_id ASC, tx_hash ASC
      LIMIT ?`,
   ).bind(cutoff, SWEEP_LIMIT).all<{
