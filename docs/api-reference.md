@@ -224,6 +224,10 @@ Many router-dispatched mutating admin endpoints also support optional `Idempoten
 - `POST /api/reset-blacklist-sync`
 - `POST /api/remediate-blacklist-amount-gaps`
 - `POST /api/backfill-blacklist-current-balances`
+- `POST /api/reset-cron-lease`
+- `POST /api/reset-circuit-breaker`
+- `POST /api/kill-cron-in-flight`
+- `POST /api/bulk-dismiss-discovery-candidates`
 
 When an `Idempotency-Key` is supplied on one of those routes, successful responses echo `Idempotency-Key` plus `X-Idempotent-Replay`, and conflicting reuse returns `409`. If a handler throws and the worker can clear the pending reservation cleanly, the same key may be retried normally. If cleanup cannot be confirmed, the worker downgrades that key to a stored failure replay and repeats with the same key return a deterministic `500` replay with `X-Idempotent-Replay: true` until the reservation expires.
 
@@ -3200,3 +3204,105 @@ Dismisses a discovery candidate so it no longer appears in the active list. Dism
 ```
 
 **Error responses:** `404` if the candidate is not found or is already dismissed.
+
+### `POST /api/bulk-dismiss-discovery-candidates`
+
+Bulk-dismisses discovery candidates. Requires either `?all=true` or `?ids=<csv>`. Idempotent; skipping already-dismissed rows.
+
+**Authentication:** admin (`X-Pharos-Admin: 1` header required for mutations).
+
+**Response**
+
+```json
+{ "ok": true, "dismissed": 2 }
+```
+
+### `POST /api/reset-cron-lease`
+
+Deletes the `cron_leases` row for the named job so the next scheduled tick can claim it cleanly. Intended for recovering from orphaned locks (e.g., after a worker restart during a run). The cron job name is whitelisted against `CRON_JOB_DEFINITIONS`.
+
+**Authentication:** admin. **Required query:** `?job=<cron-id>`.
+
+**Response**
+
+```json
+{ "ok": true, "cleared": 1 }
+```
+
+**Error responses:** `400` if `job` is missing or not in the whitelist.
+
+### `POST /api/reset-circuit-breaker`
+
+Clears the cached state for a named circuit breaker so the next call re-probes with a closed breaker. The circuit name is whitelisted against `CIRCUIT_SOURCE`.
+
+**Authentication:** admin. **Required query:** `?circuit=<circuit-source>`.
+
+**Response**
+
+```json
+{ "ok": true, "cleared": 1 }
+```
+
+### `POST /api/kill-cron-in-flight`
+
+Force-terminates a stale in-flight cron run. Deletes both the `cron_leases` row and the `cron_run_progress` row, guarded by a `lease_owner` match to prevent racing a legitimate replacement.
+
+**Authentication:** admin. **Required query:** `?job=<cron-id>&leaseOwner=<owner>`.
+
+**Response**
+
+```json
+{ "ok": true, "leaseCleared": 1, "progressCleared": 1 }
+```
+
+**Error responses:** `400` if params missing or job unknown; `409` if `lease_owner` no longer matches (another run has taken over).
+
+### `GET /api/status-probe-history`
+
+Returns historical probe-run data for a single endpoint over the last N days (1-30). Reads from `status_probe_runs.details_json` to surface per-probe failure annotations.
+
+**Authentication:** admin. **Required query:** `?path=<probe-path>`. **Optional:** `?days=<1-30>` (default 7).
+
+**Response**
+
+```json
+{
+  "path": "/api/health",
+  "summary": { "windowDays": 7, "sampleCount": 672, "failCount": 3 },
+  "runs": [
+    {
+      "at": 1700000000,
+      "overallProbeStatus": "degraded",
+      "failed": true,
+      "httpStatus": 503,
+      "error": "bootstrap-cache-miss",
+      "latencyMs": 1200
+    }
+  ]
+}
+```
+
+### `GET /api/admin-action-log`
+
+Returns the last N admin mutation actions (action name, actor, target, result, HTTP status, details) for post-incident audit.
+
+**Authentication:** admin. **Optional query:** `?limit=<1-200>` (default 50).
+
+**Response**
+
+```json
+{
+  "entries": [
+    {
+      "id": 42,
+      "at": 1700000000,
+      "actor": "alice@pharos.watch",
+      "action": "reset-cron-lease",
+      "target": "sync-mint-burn",
+      "result": "ok",
+      "httpStatus": 200,
+      "details": { "cleared": 1 }
+    }
+  ]
+}
+```
