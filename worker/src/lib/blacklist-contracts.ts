@@ -508,6 +508,33 @@ const SECURITIZE_SEIZE_EVENT_FAMILY = defineEventFamily("securitize-seize", [
   },
 ]);
 
+// --- TrueUSD (TUSD) event definitions ---
+// Blacklisted(address indexed account, bool isBlacklisted) — single event for
+// both directions; the bool at data slot 0 disambiguates add vs remove via the
+// eventTypeFromDataBoolIndex hook.
+// DestroyedBlackFunds(address indexed _blackListedUser, uint256 _balance) —
+// same topic hash as the USDT legacy family (signature matches; indexed-ness
+// does not affect keccak); parser extracts the address from topics[1] when
+// topics.length > 1.
+
+const TRUEUSD_BLACKLISTED_TOPIC = "0xcf3473b85df1594d47b6958f29a32bea0abff9dd68296f7bf33443646793cfd8"; // Blacklisted(address,bool)
+
+const TRUEUSD_EVENT_FAMILY = defineEventFamily("trueusd-blacklist", [
+  {
+    signature: "Blacklisted(address,bool)",
+    topicHash: TRUEUSD_BLACKLISTED_TOPIC,
+    eventType: "blacklist", // fallback — actual direction resolved from bool slot
+    hasAmount: false,
+    eventTypeFromDataBoolIndex: 0,
+  },
+  {
+    signature: "DestroyedBlackFunds(address,uint256)",
+    topicHash: USDT_DESTROYED_FUNDS_TOPIC,
+    eventType: "destroy",
+    hasAmount: true,
+  },
+]);
+
 const BLACKLIST_STABLECOIN_SET = new Set<BlacklistStablecoin>(BLACKLIST_STABLECOINS);
 
 function resolveBlacklistStablecoinSymbol(
@@ -632,6 +659,24 @@ const CONTRACT_CONFIG_SPECS: ContractEventConfigSpec[] = [
   { chain: ETHEREUM, stablecoinId: "eurc-circle", startBlock: 14_807_227, events: USDC_EVENT_FAMILY.events },
   { chain: BASE, stablecoinId: "eurc-circle", startBlock: 15_107_859, events: USDC_EVENT_FAMILY.events },
   { chain: AVALANCHE, stablecoinId: "eurc-circle", startBlock: 26_857_185, events: USDC_EVENT_FAMILY.events },
+
+  // TUSD (TrueUSD) — Ethereum proxy implementation emits both Blacklisted(address,bool) and
+  // DestroyedBlackFunds(address,uint256). The ETH Blacklisted event indexes the account in
+  // topics[1] and carries the direction bool at data slot 0, resolved via
+  // eventTypeFromDataBoolIndex. DestroyedBlackFunds reuses USDT_DESTROYED_FUNDS_TOPIC.
+  { chain: ETHEREUM, stablecoinId: "tusd-trueusd", stablecoin: "TUSD", startBlock: 6_988_184, events: TRUEUSD_EVENT_FAMILY.events },
+  // TODO: verify on bsc (Etherscan v2 free plan does not support BSC getcontractcreation)
+  //       BSC TUSD is a proxy (0x40af3827f39d0eacbf4a168f8d4ee67c121d11c9); implementation
+  //       emits only Blacklisted(address,bool) with no DestroyedBlackFunds.
+  // { chain: BSC, stablecoinId: "tusd-trueusd", stablecoin: "TUSD", startBlock: <deploy>, events: TRUEUSD_EVENT_FAMILY.events },
+  // TODO: verify on avalanche (Etherscan v2 free plan does not support Avalanche getcontractcreation)
+  //       Avalanche TUSD is a proxy (0x1c20e891bab6b1727d14da358fae2984ed9b59eb); implementation
+  //       emits only Blacklisted(address,bool) with no DestroyedBlackFunds.
+  // { chain: AVALANCHE, stablecoinId: "tusd-trueusd", stablecoin: "TUSD", startBlock: <deploy>, events: TRUEUSD_EVENT_FAMILY.events },
+  // Polygon TUSD (UChildERC20Proxy at 0x2e1ad108ff1d8c782fcbbb89aad783ac49586756) is a bridged
+  // token without Blacklisted / DestroyedBlackFunds events — no blacklist pipeline to cover.
+  // Optimism TUSD (L2StandardERC20 at 0xcb59a0a753fdb7491d5f3d794316f1ade197b21e) is a bridged
+  // token without Blacklisted / DestroyedBlackFunds events — no blacklist pipeline to cover.
 
   // BUIDL seize-only coverage (Securitize token family)
   { chain: ETHEREUM, stablecoinId: "buidl-blackrock", stablecoin: "BUIDL", startBlock: 19_343_293, events: SECURITIZE_SEIZE_EVENT_FAMILY.events },
