@@ -2,12 +2,13 @@ import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins";
 import { getPricingSourceRegistryEntry } from "@shared/lib/pricing-source-registry";
 import { sumPegBuckets } from "@shared/lib/supply";
 import type { PriceConfidence, PriceObservedAtMode } from "@shared/types/core";
-import type { PriceValidationReferences } from "../../lib/price-validation";
+import type { PriceValidationContext, PriceValidationReferences } from "../../lib/price-validation";
 import {
   buildPriceValidationContext,
   getReferencePriceForContext,
   isSevereFixedPegDownside,
 } from "../../lib/price-validation";
+import { createValidationContextResolver, type ValidationContextResolver } from "./pricing";
 import { USER_AGENT, CIRCUIT_SOURCE, CURVE_ORACLE_MAX_STALENESS_SEC, DEX_FRESHNESS_SEC, POOL_CHALLENGE_MIN_TVL, getDepegThresholdBps } from "../../lib/constants";
 import { CG_TICKER_COINS, fetchCgTickerPricesDetailed } from "../../lib/cg-ticker";
 import { fetchWithRetry } from "../../lib/fetch-retry";
@@ -135,6 +136,7 @@ async function applyPrimaryPostConsensusHardening(params: {
   stats: PriceValidationStats;
   nowSec: number;
   references?: PriceValidationReferences;
+  validationContexts?: ValidationContextResolver;
 }): Promise<void> {
   applyListAggregatorDowngrade(params.results, params.stats);
 
@@ -148,6 +150,11 @@ async function applyPrimaryPostConsensusHardening(params: {
   const navTokenAssetIds = new Set(
     params.candidates.filter((a) => a.navToken).map((a) => a.id),
   );
+  const challengeValidationContexts = params.validationContexts
+    ? new Map(
+        params.candidates.map((asset) => [asset.id, params.validationContexts!.get(asset)]),
+      )
+    : undefined;
   const poolChallengeDowngrades = applyPoolChallenge(
     params.results,
     poolChallengers,
@@ -155,6 +162,7 @@ async function applyPrimaryPostConsensusHardening(params: {
     params.stats,
     params.references,
     navTokenAssetIds,
+    challengeValidationContexts,
   );
   if (poolChallengeDowngrades > 0) {
     console.log(`[primary-prices] Pool challenge hardened ${poolChallengeDowngrades} soft-only result(s)`);
@@ -367,6 +375,7 @@ function buildPrimaryConsensusResults(params: {
   resolveDlListQuote: (assetId: string) => DlListQuote | undefined;
   results: Map<string, PrimaryPriceResult>;
   stats: PriceValidationStats;
+  validationContexts?: ValidationContextResolver;
 }): void {
   const DIVERGENCE_THRESHOLD_BPS = 50;
 
@@ -419,7 +428,7 @@ function buildPrimaryConsensusResults(params: {
 
     params.stats.attempted++;
 
-    const context = buildPriceValidationContext({
+    const context = params.validationContexts?.get(asset) ?? buildPriceValidationContext({
       stablecoinId: String(asset.id),
       pegType: asset.pegType,
       navToken: asset.navToken,
@@ -485,6 +494,7 @@ export async function fetchPrimaryPrices(
   coingeckoApiKey?: string | null,
   chainRpcs?: Map<string, ChainRpcConfig>,
   dlListPrices?: Map<string, number | DlListQuote>,
+  validationContexts?: ValidationContextResolver,
 ): Promise<{
   results: Map<string, PrimaryPriceResult>;
   stats: PriceValidationStats;
@@ -504,6 +514,7 @@ export async function fetchPrimaryPrices(
     }
     return entry;
   };
+  const contexts = validationContexts ?? createValidationContextResolver();
   const results = new Map<string, PrimaryPriceResult>();
   const stats: PriceValidationStats = { attempted: 0, high: 0, singleSource: 0, cgOnly: 0, low: 0 };
   const plan = await buildPrimaryPricePlan(assets, db, dlListPrices);
@@ -821,9 +832,10 @@ export async function fetchPrimaryPrices(
     resolveDlListQuote,
     results,
     stats,
+    validationContexts: contexts,
   });
 
-  await applyPrimaryPostConsensusHardening({ db, candidates, results, stats, nowSec, references });
+  await applyPrimaryPostConsensusHardening({ db, candidates, results, stats, nowSec, references, validationContexts: contexts });
 
   if (dlListPrices) {
     const withDl = candidates.filter((a) => dlListPrices.has(a.id)).length;
@@ -851,6 +863,7 @@ export function applyPoolChallenge(
   stats: PriceValidationStats,
   references?: PriceValidationReferences,
   navTokenAssetIds?: Set<string>,
+  validationContexts?: Map<string, PriceValidationContext>,
 ): number {
   let downgrades = 0;
   for (const [assetId, result] of results) {
@@ -881,6 +894,7 @@ export function applyPoolChallenge(
       result,
       pegType,
       references,
+      validationContexts?.get(assetId),
     );
 
     // Evaluate divergence from one protocol-level price, not from any single pool.
@@ -943,8 +957,9 @@ function hasCorroboratedSevereDownsideCandidate(
   result: PrimaryPriceResult,
   pegType: string | undefined,
   references?: PriceValidationReferences,
+  cachedContext?: PriceValidationContext,
 ): boolean {
-  const context = buildPriceValidationContext({ stablecoinId: assetId, pegType });
+  const context = cachedContext ?? buildPriceValidationContext({ stablecoinId: assetId, pegType });
   if (!isSevereFixedPegDownside(result.price, context, references)) {
     return false;
   }
@@ -972,8 +987,10 @@ export async function runGtProbePass(
   signal?: AbortSignal,
   references?: PriceValidationReferences,
   coingeckoApiKey?: string | null,
+  validationContexts?: ValidationContextResolver,
 ): Promise<{ updatedCount: number; stats: import("../../lib/geckoterminal-price-probe").GtProbeStats }> {
   const { createEmptyGtProbeStats, probeGeckoTerminalPrices } = await import("../../lib/geckoterminal-price-probe");
+  const contexts = validationContexts ?? createValidationContextResolver();
 
   const singleSourceAssets: Array<{ id: string; price: number; priorityUsd: number }> = [];
   for (const asset of assets) {
@@ -1026,12 +1043,7 @@ export async function runGtProbePass(
     }
     sources.push(gtSource);
 
-    const context = buildPriceValidationContext({
-      stablecoinId: String(asset.id),
-      pegType: asset.pegType,
-      navToken: asset.navToken,
-      commodityOunces: asset.commodityOunces,
-    });
+    const context = contexts.get(asset);
     const pegRef = context.navToken ? null : getReferencePriceForContext(context, references);
     const consensus = computePriceConsensus(sources, pegRef, 50, {
       mode: context.navToken ? "nav" : "fixed",
