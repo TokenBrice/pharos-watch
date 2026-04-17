@@ -22,6 +22,7 @@ import {
   decodeUint256,
   decodeUint256AtSlot,
   fetchEvmLogsForTopic,
+  readDataWord,
   type EtherscanLogEntry,
   type RateLimitedFetch,
   type SubrequestBudget,
@@ -97,9 +98,8 @@ function decodeAddressArrayData(data: string): string[] {
 }
 
 function decodeAddressAtDataSlot(data: string, slotIndex: number): string | null {
-  const cleaned = data.startsWith("0x") ? data.slice(2) : data;
-  const slot = cleaned.slice(slotIndex * 64, slotIndex * 64 + 64);
-  return slot.length >= 64 ? decodeAddress(slot) : null;
+  const word = readDataWord(data, slotIndex);
+  return word == null ? null : decodeAddress(word);
 }
 
 /** Reads a uint256/bool slot from event data and resolves a blacklist/unblacklist
@@ -109,10 +109,9 @@ function resolveEventTypeFromDataBool(
   data: string,
   slotIndex: number,
 ): BlacklistEventType | undefined {
-  const cleaned = data.startsWith("0x") ? data.slice(2) : data;
-  const slot = cleaned.slice(slotIndex * 64, slotIndex * 64 + 64);
-  if (slot.length !== 64) return undefined;
-  return BigInt("0x" + slot) !== 0n ? "blacklist" : "unblacklist";
+  const word = readDataWord(data, slotIndex);
+  if (word == null) return undefined;
+  return BigInt(word) !== 0n ? "blacklist" : "unblacklist";
 }
 
 function buildBlacklistRow(
