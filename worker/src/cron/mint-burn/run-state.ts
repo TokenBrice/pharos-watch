@@ -86,3 +86,39 @@ export async function setMintBurnRunState(
     return false;
   }
 }
+
+const DEFERRAL_GRACE_SEC = 3600;
+const DEFERRAL_API_ERRORS_THRESHOLD = 5;
+const DEFERRAL_COVERAGE_THRESHOLD = 0.8;
+
+export async function loadDeferredConfigs(db: D1Database, nowSec: number): Promise<Set<string>> {
+  const rows = await db
+    .prepare("SELECT config_key FROM mint_burn_config_deferral WHERE deferred_until > ?")
+    .bind(nowSec)
+    .all<{ config_key: string }>();
+  return new Set(rows.results.map((r) => r.config_key));
+}
+
+export async function deferConfig(
+  db: D1Database,
+  configKey: string,
+  nowSec: number,
+  apiErrors: number,
+  coverage: number | null,
+  reason: string,
+): Promise<void> {
+  await db
+    .prepare(
+      `INSERT OR REPLACE INTO mint_burn_config_deferral
+         (config_key, deferred_until, reason, api_errors, coverage, created_at)
+         VALUES (?, ?, ?, ?, ?, ?)`,
+    )
+    .bind(configKey, nowSec + DEFERRAL_GRACE_SEC, reason, apiErrors, coverage, nowSec)
+    .run();
+}
+
+export function shouldDeferConfig(apiErrors: number, coverage: number | null): boolean {
+  if (apiErrors <= DEFERRAL_API_ERRORS_THRESHOLD) return false;
+  if (coverage == null) return true;
+  return coverage < DEFERRAL_COVERAGE_THRESHOLD;
+}

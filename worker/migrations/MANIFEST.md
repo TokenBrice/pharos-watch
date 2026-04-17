@@ -39,6 +39,7 @@ Applied sequentially after the baseline (fresh setup) or after the previous indi
 | 0093     | `0093_cleanup_legacy_mint_burn_sync_keys.sql`   | Remove legacy colon-delimited mint/burn sync-state keys after canonical key migration          |
 | 0094     | `0094_redemption_backstop_runs.sql`             | Add redemption backstop snapshot run manifest and row generation identifiers                   |
 | 0095     | `0095_blacklist_event_suppression.sql`          | Add blacklist event suppression metadata and clean zero-balance EURC mirror ledger rows        |
+| 0096     | `0096_mint_burn_config_deferral.sql`            | Add mint/burn config deferral table to skip chronically failing configs for a 1h grace period  |
 
 ## Retired Individual Migrations
 
