@@ -97,6 +97,23 @@ describe("accumulateAnthropicStream", () => {
     await expect(accumulateAnthropicStream(response)).rejects.toThrow(/empty/i);
   });
 
+  it("includes stopReason + event/delta histograms in empty-text error for diagnosability", async () => {
+    const response = sseResponse([
+      { event: "message_start", data: { type: "message_start", message: { id: "msg_mt" } } },
+      { event: "content_block_start", data: { type: "content_block_start", index: 0, content_block: { type: "thinking", thinking: "" } } },
+      { event: "content_block_delta", data: { type: "content_block_delta", index: 0, delta: { type: "thinking_delta", thinking: "reasoning..." } } },
+      { event: "content_block_stop", data: { type: "content_block_stop", index: 0 } },
+      { event: "message_delta", data: { type: "message_delta", delta: { stop_reason: "max_tokens" }, usage: { output_tokens: 15999 } } },
+      { event: "message_stop", data: { type: "message_stop" } },
+    ]);
+    const err = await accumulateAnthropicStream(response).catch((e: unknown) => e as Error);
+    expect(err).toBeInstanceOf(Error);
+    const msg = (err as Error).message;
+    expect(msg).toMatch(/stopReason=max_tokens/);
+    expect(msg).toMatch(/outputTokens=15999/);
+    expect(msg).toMatch(/thinking_delta/);
+  });
+
   it("throws when the response has no body", async () => {
     const bodiless = new Response(null, { status: 200 });
     await expect(accumulateAnthropicStream(bodiless)).rejects.toThrow(/body/i);

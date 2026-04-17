@@ -8,7 +8,10 @@
 //
 // This helper is intentionally tolerant of event types it does not recognize
 // (ping, message_start, etc.) and surfaces `error` events as thrown exceptions
-// so the caller can route to the circuit breaker.
+// so the caller can route to the circuit breaker. When the stream finishes
+// without producing any text, the error message includes stop_reason plus a
+// histogram of seen events and delta types so the failure is diagnosable
+// without wiring a second tail-log probe.
 
 interface AnthropicStreamErrorPayload {
   error?: { type?: string; message?: string };
@@ -16,6 +19,11 @@ interface AnthropicStreamErrorPayload {
 
 interface AnthropicContentBlockDelta {
   delta?: { type?: string; text?: string };
+}
+
+interface AnthropicMessageDelta {
+  delta?: { stop_reason?: string | null; stop_sequence?: string | null };
+  usage?: { output_tokens?: number };
 }
 
 export async function accumulateAnthropicStream(response: Response): Promise<string> {
@@ -29,6 +37,10 @@ export async function accumulateAnthropicStream(response: Response): Promise<str
   let buffer = "";
   let accumulated = "";
   let streamError: Error | null = null;
+  let stopReason: string | null = null;
+  let outputTokens: number | null = null;
+  const eventCounts: Record<string, number> = {};
+  const deltaTypeCounts: Record<string, number> = {};
 
   try {
     while (true) {
@@ -42,12 +54,20 @@ export async function accumulateAnthropicStream(response: Response): Promise<str
       while ((separatorIdx = buffer.indexOf("\n\n")) !== -1) {
         const frame = buffer.slice(0, separatorIdx);
         buffer = buffer.slice(separatorIdx + 2);
-        const delta = handleFrame(frame);
-        if (delta.error) {
-          streamError = delta.error;
+        const result = handleFrame(frame);
+        if (result.eventType) {
+          eventCounts[result.eventType] = (eventCounts[result.eventType] ?? 0) + 1;
+        }
+        if (result.deltaType) {
+          deltaTypeCounts[result.deltaType] = (deltaTypeCounts[result.deltaType] ?? 0) + 1;
+        }
+        if (result.stopReason) stopReason = result.stopReason;
+        if (result.outputTokens != null) outputTokens = result.outputTokens;
+        if (result.error) {
+          streamError = result.error;
           break;
         }
-        if (delta.text) accumulated += delta.text;
+        if (result.text) accumulated += result.text;
       }
       if (streamError) break;
       if (done) break;
@@ -63,7 +83,13 @@ export async function accumulateAnthropicStream(response: Response): Promise<str
   if (streamError) throw streamError;
 
   if (!accumulated) {
-    throw new Error("Anthropic stream: empty text content after message_stop");
+    const detail = [
+      `stopReason=${stopReason ?? "null"}`,
+      `outputTokens=${outputTokens ?? "null"}`,
+      `events=${JSON.stringify(eventCounts)}`,
+      `deltaTypes=${JSON.stringify(deltaTypeCounts)}`,
+    ].join(", ");
+    throw new Error(`Anthropic stream: empty text content after message_stop (${detail})`);
   }
   return accumulated;
 }
@@ -71,6 +97,10 @@ export async function accumulateAnthropicStream(response: Response): Promise<str
 interface FrameResult {
   text?: string;
   error?: Error;
+  eventType?: string;
+  deltaType?: string;
+  stopReason?: string;
+  outputTokens?: number;
 }
 
 function handleFrame(frame: string): FrameResult {
@@ -86,17 +116,32 @@ function handleFrame(frame: string): FrameResult {
   }
   if (!eventType || dataStr == null) return {};
 
+  const out: FrameResult = { eventType };
+
   if (eventType === "content_block_delta") {
     let parsed: AnthropicContentBlockDelta;
     try {
       parsed = JSON.parse(dataStr) as AnthropicContentBlockDelta;
     } catch {
-      return {};
+      return out;
     }
+    if (parsed.delta?.type) out.deltaType = parsed.delta.type;
     if (parsed.delta?.type === "text_delta" && typeof parsed.delta.text === "string") {
-      return { text: parsed.delta.text };
+      out.text = parsed.delta.text;
     }
-    return {};
+    return out;
+  }
+
+  if (eventType === "message_delta") {
+    let parsed: AnthropicMessageDelta;
+    try {
+      parsed = JSON.parse(dataStr) as AnthropicMessageDelta;
+    } catch {
+      return out;
+    }
+    if (parsed.delta?.stop_reason) out.stopReason = parsed.delta.stop_reason;
+    if (typeof parsed.usage?.output_tokens === "number") out.outputTokens = parsed.usage.output_tokens;
+    return out;
   }
 
   if (eventType === "error") {
@@ -104,12 +149,14 @@ function handleFrame(frame: string): FrameResult {
     try {
       parsed = JSON.parse(dataStr) as AnthropicStreamErrorPayload;
     } catch {
-      return { error: new Error("Anthropic stream error (unparseable payload)") };
+      out.error = new Error("Anthropic stream error (unparseable payload)");
+      return out;
     }
     const msg = parsed.error?.message ?? "unknown";
     const type = parsed.error?.type ?? "error";
-    return { error: new Error(`Anthropic stream error (${type}): ${msg}`) };
+    out.error = new Error(`Anthropic stream error (${type}): ${msg}`);
+    return out;
   }
 
-  return {};
+  return out;
 }
