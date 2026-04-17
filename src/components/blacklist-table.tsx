@@ -30,6 +30,13 @@ function formatBlacklistAmountCell(evt: BlacklistEvent): string {
 import { EVENT_BADGE_STYLES, EVENT_LABELS } from "@shared/lib/classification";
 import { getNextSortState, shouldToggleSortOnKeyDown } from "@/hooks/use-sort";
 
+const AMOUNT_STATUS_TOOLTIPS: Record<string, string> = {
+  recoverable_pending: "Amount not yet recovered from historical balance — backfill pass pending.",
+  provider_failed: "Amount recovery failed at the data provider; next backfill pass will retry.",
+  ambiguous: "Multiple candidate amounts; manual review required.",
+  permanently_unavailable: "Amount cannot be recovered (e.g., EURC mirror-zero or Tron legacy row).",
+};
+
 const SKELETON_ROWS = Array.from({ length: 10 }, (_, i) => i);
 
 interface BlacklistTableProps {
@@ -191,6 +198,14 @@ export function BlacklistTable({
                     Snapshot
                   </span>
                 ) : null}
+                {!["resolved", "permanently_unavailable"].includes(evt.amountStatus) && (
+                  <span
+                    className="ml-1 inline-flex items-center rounded border border-border px-1 py-0.5 text-[10px] uppercase tracking-wide text-muted-foreground"
+                    title={AMOUNT_STATUS_TOOLTIPS[evt.amountStatus]}
+                  >
+                    {evt.amountStatus.replace(/_/g, " ")}
+                  </span>
+                )}
               </TableCell>
               <TableCell className="hidden sm:table-cell text-center">
                 <a
