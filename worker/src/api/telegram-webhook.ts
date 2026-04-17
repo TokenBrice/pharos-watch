@@ -533,7 +533,7 @@ async function handleMute(
   await replyToChat(
     chatId,
     escapeHtml(
-      `Quiet hours enabled: ${formatQuietHours(parsed.startHourUtc, parsed.endHourUtc)} UTC.\n` +
+      `Quiet hours enabled: ${formatQuietHours(parsed.startHourUtc, parsed.endHourUtc)}.\n` +
         "Messages will still arrive, but Telegram notifications will be silenced in that window.",
     ),
     botToken,

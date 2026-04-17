@@ -100,7 +100,7 @@ export function buildGlobalAlertSummaryMessage(
     `All stablecoins: ${describeGlobalAlertSettings(subscriber)}`,
     `Quiet hours: ${
       subscriber?.quiet_hours_enabled
-        ? `${formatQuietHours(subscriber.quiet_hours_start_utc, subscriber.quiet_hours_end_utc)} UTC`
+        ? formatQuietHours(subscriber.quiet_hours_start_utc, subscriber.quiet_hours_end_utc)
         : "Off"
     }`,
   ].join("\n"));
@@ -118,7 +118,7 @@ export function buildListMessage(
     `All stablecoins: ${describeGlobalAlertSettings(subscriber)}`,
     `Quiet hours: ${
       subscriber?.quiet_hours_enabled
-        ? `${formatQuietHours(subscriber.quiet_hours_start_utc, subscriber.quiet_hours_end_utc)} UTC`
+        ? formatQuietHours(subscriber.quiet_hours_start_utc, subscriber.quiet_hours_end_utc)
         : "Off"
     }`,
     `Coins (${subscriptions.length}):`,
@@ -251,5 +251,6 @@ export function formatCoinLines(coins: ResolvedCoin[]): string {
 
 export function formatQuietHours(startHourUtc: number | null | undefined, endHourUtc: number | null | undefined): string {
   if (startHourUtc == null || endHourUtc == null) return "Off";
-  return `${String(startHourUtc).padStart(2, "0")}-${String(endHourUtc).padStart(2, "0")}`;
+  const pad = (h: number) => String(h).padStart(2, "0");
+  return `${pad(startHourUtc)}:00–${pad(endHourUtc)}:00 UTC`;
 }

@@ -454,7 +454,7 @@ describe("handleTelegramWebhook", () => {
 
     const text = sentMessageBody().text;
     expect(text).toContain("Quiet hours enabled");
-    expect(text).toContain("22-07");
+    expect(text).toContain("22:00–07:00 UTC");
   });
 
   it("finalizes pending disambiguation and continues remaining tickers", async () => {

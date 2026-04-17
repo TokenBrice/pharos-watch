@@ -119,9 +119,9 @@ describe("describeGlobalAlertSettings", () => {
 });
 
 describe("formatQuietHours", () => {
-  it("formats hours with zero-padding", () => {
-    expect(formatQuietHours(2, 7)).toBe("02-07");
-    expect(formatQuietHours(22, 7)).toBe("22-07");
+  it("formats hours as HH:00–HH:00 UTC", () => {
+    expect(formatQuietHours(2, 7)).toBe("02:00–07:00 UTC");
+    expect(formatQuietHours(22, 7)).toBe("22:00–07:00 UTC");
   });
 
   it("returns Off for null values", () => {
@@ -143,7 +143,7 @@ describe("buildListMessage", () => {
     };
     const msg = buildListMessage(sub, []);
     expect(msg).toContain("DEWS");
-    expect(msg).toContain("22-07");
+    expect(msg).toContain("22:00–07:00 UTC");
     expect(msg).toContain("Coins (0)");
   });
 });
