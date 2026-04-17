@@ -819,7 +819,7 @@ Confirm the existing `isCanonicalMintBurnPair` at `worker/src/lib/mint-burn-cano
 
 - [ ] **Step 2: Write failing helper test** at `worker/src/lib/__tests__/mint-burn-canonical-mcap.test.ts`
 
-The `StablecoinData.circulating` shape is `Record<string, number> | undefined` (verified at `shared/types/core.ts:520` — flat per-chain USD totals, NOT nested peg-bucket objects). `sumPegBuckets` at `shared/lib/supply.ts:9` sums the values of that record.
+**Data-shape note (CORRECTED 2026-04-17 during execution):** An earlier draft of this task assumed `StablecoinData.circulating` was keyed by chain id. In reality `circulating` is keyed by **peg bucket** (`peggedUSD`, `peggedEUR`, ...). Per-chain supply lives in `chainCirculating: Record<chainId, { current: number | null, ... }>`. The helper reads `chainCirculating[chainId].current` and falls back to `sumPegBuckets(circulating)` when per-chain data is missing (keeps CG-fallback assets alive).
 
 ```typescript
 import { describe, expect, it } from "vitest";
@@ -838,23 +838,30 @@ describe("getMintBurnTrackedChains", () => {
 });
 
 describe("sumMcapForTrackedChains", () => {
-  // Shape: Record<chainId, usdValue>. DefiLlama already converts to USD regardless of peg.
-  const circulating: Record<string, number> = {
-    ethereum: 32_000_000_000,
-    solana:   4_000_000_000,
-    base:     1_000_000_000,
+  const chainCirculating: Record<string, { current: number }> = {
+    ethereum: { current: 32_000_000_000 },
+    solana:   { current: 4_000_000_000 },
+    base:     { current: 1_000_000_000 },
   };
+  const peggedTotal: Record<string, number> = { peggedUSD: 37_000_000_000 };
+
   it("sums only tracked chains for USDC (ethereum-only today)", () => {
-    expect(sumMcapForTrackedChains("usdc-circle", circulating)).toBe(32_000_000_000);
+    expect(sumMcapForTrackedChains("usdc-circle", chainCirculating, peggedTotal)).toBe(32_000_000_000);
   });
-  it("returns 0 when no tracked-chain key is present in circulating", () => {
-    expect(sumMcapForTrackedChains("usdc-circle", { solana: 4e9 })).toBe(0);
+  it("falls back to peg-bucket total when chainCirculating has no tracked-chain key", () => {
+    expect(sumMcapForTrackedChains("usdc-circle", { solana: { current: 4e9 } }, peggedTotal)).toBe(37_000_000_000);
   });
-  it("falls back to global mcap (sumPegBuckets) for an untracked coin id", () => {
-    expect(sumMcapForTrackedChains("nonexistent", circulating)).toBe(37_000_000_000);
+  it("falls back to peg-bucket total when chainCirculating is undefined", () => {
+    expect(sumMcapForTrackedChains("usdc-circle", undefined, peggedTotal)).toBe(37_000_000_000);
   });
-  it("handles undefined circulating gracefully", () => {
-    expect(sumMcapForTrackedChains("usdc-circle", undefined)).toBe(0);
+  it("falls back to peg-bucket total when chainCirculating is empty (CG-fallback assets)", () => {
+    expect(sumMcapForTrackedChains("usdc-circle", {}, peggedTotal)).toBe(37_000_000_000);
+  });
+  it("returns sumPegBuckets(circulating) for an untracked coin id", () => {
+    expect(sumMcapForTrackedChains("nonexistent", chainCirculating, peggedTotal)).toBe(37_000_000_000);
+  });
+  it("returns 0 when both chainCirculating and circulating are undefined", () => {
+    expect(sumMcapForTrackedChains("usdc-circle", undefined, undefined)).toBe(0);
   });
 });
 ```
@@ -889,27 +896,35 @@ export function getMintBurnTrackedChains(stablecoinId: string): string[] {
 
 /**
  * Returns the circulating-supply USD total restricted to chains we actively
- * track in mint/burn ingestion. Used for gauge mcap weighting so a coin's
- * influence on the Bank Run Gauge matches the chain scope of its intensity input.
+ * track in mint/burn ingestion. Reads `chainCirculating[chainId].current`.
+ * Used for gauge mcap weighting so a coin's influence on the Bank Run Gauge
+ * matches the chain scope of its intensity input.
  *
- * Fallback policy:
- *   - If `circulating` is undefined → 0 (no data to weight against).
- *   - If the coin has no tracked chains (legacy/future id) → fall back to
- *     `sumPegBuckets(circulating)` so the gauge degrades to legacy behavior
- *     rather than zeroing a known coin out.
+ * Fallback policy (in order):
+ *   1. If the coin has no tracked chains (legacy/future id) → `sumPegBuckets(circulating)`.
+ *   2. If `chainCirculating` is missing/empty or has no tracked-chain data →
+ *      `sumPegBuckets(circulating)` (keeps CG-fallback assets with empty
+ *      chainCirculating alive).
+ *   3. Otherwise sum `chainCirculating[chainId].current` across tracked chains.
  */
 export function sumMcapForTrackedChains(
   stablecoinId: string,
+  chainCirculating: Record<string, { current?: number | null } | undefined> | undefined,
   circulating: Record<string, number> | undefined,
 ): number {
-  if (!circulating) return 0;
   const trackedChains = getMintBurnTrackedChains(stablecoinId);
   if (trackedChains.length === 0) return sumPegBuckets(circulating);
+
   let total = 0;
+  let anyFound = false;
   for (const chainId of trackedChains) {
-    const v = circulating[chainId];
-    if (typeof v === "number" && Number.isFinite(v)) total += v;
+    const v = chainCirculating?.[chainId]?.current;
+    if (typeof v === "number" && Number.isFinite(v)) {
+      total += v;
+      anyFound = true;
+    }
   }
+  if (!anyFound) return sumPegBuckets(circulating);
   return total;
 }
 ```
@@ -932,7 +947,7 @@ To:
 ```typescript
     for (const asset of stablecoinsCacheResult.payload.peggedAssets as StablecoinData[]) {
       if (TRACKED_IDS.has(asset.id)) {
-        mcapById.set(asset.id, sumMcapForTrackedChains(asset.id, asset.circulating));
+        mcapById.set(asset.id, sumMcapForTrackedChains(asset.id, asset.chainCirculating, asset.circulating));
       }
     }
 ```
