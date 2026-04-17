@@ -225,6 +225,8 @@ export async function syncMintBurn(
   const affectedHours = new Map<string, MintBurnAffectedHour>();
 
   let phaseResult!: MintBurnRunConfigPhaseResult;
+  let recalcFailed = false;
+  let recalcError: string | null = null;
   try {
     phaseResult = await runMintBurnConfigPhase({
       db,
@@ -248,8 +250,10 @@ export async function syncMintBurn(
     if (affectedHours.size > 0) {
       try {
         await recalcAffectedHours(db, affectedHours);
-      } catch (recalcError) {
-        console.error("[sync-mint-burn] recalcAffectedHours failed in finally block:", recalcError);
+      } catch (e) {
+        recalcFailed = true;
+        recalcError = e instanceof Error ? e.message : String(e);
+        console.error("[sync-mint-burn] recalcAffectedHours failed in finally block:", e);
       }
     }
   }
@@ -274,7 +278,7 @@ export async function syncMintBurn(
     },
   }, budget);
 
-  const { status, metadata } = await completeMintBurnRun({
+  const completion = await completeMintBurnRun({
     db,
     budget,
     lane,
@@ -308,6 +312,17 @@ export async function syncMintBurn(
     criticalContractsUnsatisfied,
     configBreakdown,
   });
+
+  let status = completion.status;
+  // Surface recalcAffectedHours failure in metadata and downgrade critical-lane
+  // runs so operators get a signal that hourly aggregates are stale.
+  if (recalcFailed && lane !== "extended" && status === "ok") {
+    status = "degraded";
+  }
+  const metaObj = JSON.parse(completion.metadata) as Record<string, unknown>;
+  metaObj.recalcFailed = recalcFailed;
+  if (recalcError) metaObj.recalcError = recalcError;
+  const metadata = JSON.stringify(metaObj);
 
   await reportCronProgress(reportProgress, {
     stage: "complete",

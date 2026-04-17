@@ -113,8 +113,17 @@ vi.mock("../../lib/db", async (importOriginal) => {
   };
 });
 
+vi.mock("../../lib/mint-burn-pipeline/persistence", async (importOriginal) => {
+  const orig = await importOriginal<typeof import("../../lib/mint-burn-pipeline/persistence")>();
+  return {
+    ...orig,
+    recalcAffectedHours: vi.fn(orig.recalcAffectedHours),
+  };
+});
+
 import { syncMintBurn } from "../sync-mint-burn";
 import { batchExecute } from "../../lib/db";
+import { recalcAffectedHours } from "../../lib/mint-burn-pipeline/persistence";
 // batchExecute stays in db.ts (core DB utility)
 import {
   fetchAlchemyLogs,
@@ -219,6 +228,7 @@ describe("syncMintBurn", () => {
     });
     vi.mocked(resolveBlockTimestamps).mockReset().mockResolvedValue(new Map());
     vi.mocked(batchExecute).mockReset().mockImplementation(async (_db, stmts) => stmts.length);
+    vi.mocked(recalcAffectedHours).mockReset().mockResolvedValue(undefined);
   });
 
   afterEach(() => {
@@ -562,5 +572,32 @@ describe("syncMintBurn", () => {
   it("rejects when ALCHEMY_API_KEY is missing", async () => {
     const db = makeDb();
     await expect(syncMintBurn(db, null)).rejects.toThrow("No ALCHEMY_API_KEY configured");
+  });
+
+  it("downgrades to degraded and flags metadata when recalcAffectedHours throws", async () => {
+    const db = makeDb();
+
+    vi.mocked(fetchAlchemyLogs)
+      .mockResolvedValueOnce({ logs: [makeMintLog()], complete: true, scannedToBlock: 22_000_000, calls: 1, maxDepth: 0 })
+      .mockResolvedValueOnce({ logs: [], complete: true, scannedToBlock: 22_000_000, calls: 1, maxDepth: 0 })
+      .mockResolvedValueOnce({ logs: [], complete: true, scannedToBlock: 22_000_000, calls: 1, maxDepth: 0 });
+
+    vi.mocked(resolveBlockTimestamps).mockResolvedValueOnce(new Map([[22_000_000, 1_718_650_752]]));
+    // Insert path must succeed so affectedHours gets populated before recalc runs.
+    vi.mocked(batchExecute)
+      .mockResolvedValueOnce(0)
+      .mockResolvedValueOnce(1)
+      .mockResolvedValueOnce(0);
+
+    vi.mocked(recalcAffectedHours).mockRejectedValueOnce(new Error("D1 timeout during hourly recalc"));
+
+    const result = await syncMintBurn(db, "alchemy-key");
+    const meta = JSON.parse(result.metadata);
+
+    expect(vi.mocked(recalcAffectedHours)).toHaveBeenCalledTimes(1);
+    expect(result.status).toBe("degraded");
+    expect(meta.recalcFailed).toBe(true);
+    expect(typeof meta.recalcError).toBe("string");
+    expect(meta.recalcError).toContain("D1 timeout during hourly recalc");
   });
 });
