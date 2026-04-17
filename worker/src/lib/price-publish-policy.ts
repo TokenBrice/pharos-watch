@@ -106,7 +106,7 @@ function allowsSevereDownsidePublication(input: PublishablePriceInput): boolean 
   return hasSevereDownsidePublicationCorroboration(input);
 }
 
-function shouldQuarantineTemporalJump(input: PublishablePriceInput): boolean {
+export function shouldQuarantineTemporalJump(input: PublishablePriceInput): boolean {
   if (!isFixedPegValidationContext(input.validationContext)) return false;
   const previousTrustedPrice = input.previousTrustedPrice?.price;
   if (previousTrustedPrice == null || !Number.isFinite(previousTrustedPrice) || previousTrustedPrice <= 0) {

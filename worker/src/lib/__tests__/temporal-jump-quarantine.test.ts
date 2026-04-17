@@ -1,0 +1,135 @@
+import { describe, expect, it } from "vitest";
+import { shouldQuarantineTemporalJump } from "../price-publish-policy";
+import type { PriceValidationContext } from "../price-validation";
+
+const USD_CONTEXT: PriceValidationContext = {
+  pegClass: "usd",
+  pegType: "peggedUSD",
+  navToken: false,
+  tracked: true,
+};
+
+describe("shouldQuarantineTemporalJump", () => {
+  it("returns false when confidence=high with an authoritative agreement source", () => {
+    // pyth is hardOracle → canBeDepegAuthoritative=true; confidence high bypasses
+    // quarantine despite a large 2100 bps move.
+    const quarantined = shouldQuarantineTemporalJump({
+      price: 0.79,
+      source: "pyth",
+      confidence: "high",
+      agreeSources: ["pyth"],
+      mode: "primary_authoritative",
+      validationContext: USD_CONTEXT,
+      previousTrustedPrice: {
+        price: 1.0,
+        source: "pyth",
+        confidence: "high",
+        observedAt: null,
+        agreeSources: ["pyth"],
+      },
+    });
+    expect(quarantined).toBe(false);
+  });
+
+  it("returns false for soft-guardrail-exempt sources (pool-tvl-weighted)", () => {
+    const quarantined = shouldQuarantineTemporalJump({
+      price: 0.60,
+      source: "pool-tvl-weighted",
+      confidence: "low",
+      agreeSources: ["pool-tvl-weighted"],
+      mode: "primary_authoritative",
+      validationContext: USD_CONTEXT,
+      previousTrustedPrice: {
+        price: 1.0,
+        source: "pyth",
+        confidence: "high",
+        observedAt: null,
+        agreeSources: ["pyth"],
+      },
+    });
+    expect(quarantined).toBe(false);
+  });
+
+  it("returns false for corroborated severe-downside (2+ candidate sources confirm)", () => {
+    const quarantined = shouldQuarantineTemporalJump({
+      price: 0.38,
+      source: "coingecko+defillama-list",
+      confidence: "low",
+      agreeSources: ["coingecko", "defillama-list"],
+      candidatePrices: { coingecko: 0.38, "defillama-list": 0.39 },
+      mode: "primary_authoritative",
+      validationContext: USD_CONTEXT,
+      previousTrustedPrice: {
+        price: 1.0,
+        source: "pyth",
+        confidence: "high",
+        observedAt: null,
+        agreeSources: ["pyth"],
+      },
+    });
+    // Both 0.38 and 0.39 are < 0.50 (severe) → 2+ severe corroboration → bypass quarantine.
+    expect(quarantined).toBe(false);
+  });
+
+  it("returns false when mid (price + previousTrustedPrice)/2 <= 0", () => {
+    // Negative candidate price makes mid <= 0 (defensive branch).
+    const quarantined = shouldQuarantineTemporalJump({
+      price: -2.0,
+      source: "coingecko",
+      confidence: "low",
+      agreeSources: ["coingecko"],
+      mode: "primary_authoritative",
+      validationContext: USD_CONTEXT,
+      previousTrustedPrice: {
+        price: 1.0,
+        source: "coingecko",
+        confidence: "low",
+        observedAt: null,
+        agreeSources: ["coingecko"],
+      },
+    });
+    expect(quarantined).toBe(false);
+  });
+
+  it("returns false when moveBps is below the 2000 bps threshold", () => {
+    // 1.0 → 0.9 = ~1053 bps, below 2000 threshold
+    const quarantined = shouldQuarantineTemporalJump({
+      price: 0.9,
+      source: "coingecko",
+      confidence: "low",
+      agreeSources: ["coingecko"],
+      mode: "primary_authoritative",
+      validationContext: USD_CONTEXT,
+      previousTrustedPrice: {
+        price: 1.0,
+        source: "coingecko",
+        confidence: "low",
+        observedAt: null,
+        agreeSources: ["coingecko"],
+      },
+    });
+    expect(quarantined).toBe(false);
+  });
+
+  it("returns true when moveBps is at/above the 2000 bps threshold and no bypass applies", () => {
+    // 1.0 → 0.78 = ~2472 bps, above 2000 threshold.
+    // Source is softAggregator (not authoritative), not guardrail-exempt, and 0.78 > 0.50
+    // (NOT severe downside), so no bypass should apply.
+    const quarantined = shouldQuarantineTemporalJump({
+      price: 0.78,
+      source: "coingecko",
+      confidence: "low",
+      agreeSources: ["coingecko"],
+      mode: "primary_authoritative",
+      validationContext: USD_CONTEXT,
+      previousTrustedPrice: {
+        price: 1.0,
+        source: "coingecko",
+        confidence: "low",
+        observedAt: null,
+        agreeSources: ["coingecko"],
+      },
+    });
+    expect(quarantined).toBe(true);
+  });
+});
