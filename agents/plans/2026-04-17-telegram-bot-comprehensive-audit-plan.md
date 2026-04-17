@@ -6,7 +6,7 @@
 
 **Architecture:**
 - **Hardening + copy + docs** are in-place edits. No behavior change where not explicitly called out.
-- **`/status`** reuses existing D1 reads (`stablecoins` cache, `stress_signals`, `safety_grade_current`/`history`, `depeg_events`) and the existing ticker-resolution flow. No new tables.
+- **`/status`** reuses existing D1 reads (`stress_signals`, `safety_grade_history`, `depeg_events`, `price_cache`) and the existing ticker-resolution flow. No new tables.
 - **Inline keyboards** are additive. A new `callback_query` branch in the webhook handles button taps. Snooze adds one nullable column to `telegram_subscribers`; the dispatcher checks it during subscriber filtering. Existing text commands remain canonical — buttons merely fire the same server-side primitives.
 
 **Tech Stack:** TypeScript, Cloudflare Workers + D1, Next.js 16 static export, Vitest.
@@ -611,9 +611,11 @@ it("treats direction reversal as resolve + new trigger (not worsening)", async (
     { match: "FROM depeg_events WHERE ended_at IS NULL", rows: [
       { id: 2, stablecoin_id: "usdc-circle", direction: "above", deviation_bps: 100, price: 1.01, peg_reference: 1.0, started_at: 1700001000 },
     ] },
-    // Resolved-event loader (closed-event lookup for id=1)
-    { match: "FROM depeg_events WHERE id IN", rows: [
-      { id: 1, stablecoin_id: "usdc-circle", direction: "below", peak_deviation_bps: 50, ended_at: 1700000500, recovery_price: 1.0, started_at: 1700000000 },
+    // Resolved-event loader: the real SQL selects
+    //   FROM depeg_events event JOIN (SELECT stablecoin_id, MAX(ended_at) ... FROM depeg_events WHERE ended_at IS NOT NULL ...)
+    // Match on the distinctive JOIN-subquery fragment.
+    { match: "FROM depeg_events event", rows: [
+      { stablecoin_id: "usdc-circle", symbol: "USDC", peak_deviation_bps: 50, started_at: 1700000000, ended_at: 1700000500, recovery_price: 1.0 },
     ] },
     { match: "FROM safety_grade_history", rows: [] },
     { match: "FROM telegram_subscriptions", rows: [] },
@@ -631,7 +633,7 @@ it("treats direction reversal as resolve + new trigger (not worsening)", async (
 });
 ```
 
-(Before committing, confirm the actual `match` substrings by reading the SQL in `dispatch-telegram-alerts.ts` — the dispatcher's SELECTs are long, and only a unique substring of each needs to match. For example, the closed-depeg loader uses `FROM depeg_events WHERE id IN`; verify the real clause and adjust.)
+(All fixture `match` substrings above are grounded against the real SQL: `stress_signals` rows via `"FROM stress_signals"` — line 268 of the dispatcher; active depegs via `"FROM depeg_events WHERE ended_at IS NULL"` — line 278; closed depegs via `"FROM depeg_events event"` — line 414; subscribers via the distinctive snippets added in Task 14.)
 
 - [ ] **Step 2: Run the test and confirm it passes**
 
@@ -716,18 +718,21 @@ it("deduplicates 403 cleanup for a chat hit by multiple chunks in one run", asyn
     }));
   });
 
-  // Spy on DELETE FROM telegram_subscriptions so we can count cleanup attempts.
+  // disableBlockedSubscriber (worker/src/cron/telegram-pending-queue.ts:30-64)
+  // emits two statements per call via db.batch: an UPDATE on telegram_subscribers
+  // zeroing all alert_* / global_alert_* flags, and an UPDATE on telegram_subscriptions
+  // zeroing the four alert_* flags. Count how many times each fires for chat 42.
   await dispatchTelegramAlerts(db, "bot-token");
-  const cleanupCalls = db.getHistory().filter((h) =>
-    /UPDATE telegram_subscribers.*(alert_dews|alert_launch|global_alert_dews)/.test(h.sql) ||
-    /DELETE FROM telegram_subscriptions/.test(h.sql),
+  const subscriberCleanups = db.getHistory().filter((h) =>
+    /UPDATE telegram_subscribers\s+SET alert_dews=0/.test(h.sql) && h.binds.includes("42"),
   );
-  const chat42Calls = cleanupCalls.filter((c) => c.binds.includes("42"));
-  expect(chat42Calls.length).toBeLessThanOrEqual(2); // one subscriber update + one subscriptions delete, max
+  const subscriptionCleanups = db.getHistory().filter((h) =>
+    /UPDATE telegram_subscriptions\s+SET alert_dews=0/.test(h.sql) && h.binds.includes("42"),
+  );
+  expect(subscriberCleanups).toHaveLength(1);
+  expect(subscriptionCleanups).toHaveLength(1);
 });
 ```
-
-(Read `disableBlockedSubscriber` in `worker/src/cron/telegram-pending-queue.ts` before writing the assertion, and tune the regex to match the actual SQL it emits. The assertion is: chat 42 should appear in the cleanup history at most once per SQL statement type, regardless of how many chunks were sent.)
 
 - [ ] **Step 5: Add `/mute preserves alert flags` webhook test**
 
