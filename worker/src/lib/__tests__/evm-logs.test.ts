@@ -7,6 +7,7 @@ import {
   budgetExhausted,
   createRateLimiter,
   fetchEvmLogsForTopics,
+  readDataWord,
 } from "../evm-logs";
 
 describe("buildTopicParams", () => {
@@ -82,6 +83,32 @@ describe("decodeAddress", () => {
   it("handles zero address (mint from)", () => {
     const topic = "0x0000000000000000000000000000000000000000000000000000000000000000";
     expect(decodeAddress(topic)).toBe("0x0000000000000000000000000000000000000000");
+  });
+});
+
+// --- readDataWord ---
+
+describe("readDataWord", () => {
+  const USER = "000000000000000000000000aaaa1111aaaa2222aaaa3333aaaa4444aaaa5555";
+  const TOKEN = "000000000000000000000000bbbb1111bbbb2222bbbb3333bbbb4444bbbb5555";
+  const AMOUNT = "0000000000000000000000000000000000000000000000000de0b6b3a7640000";
+
+  it("returns the slot-0 word with 0x prefix", () => {
+    expect(readDataWord("0x" + USER + TOKEN + AMOUNT, 0)).toBe("0x" + USER);
+  });
+  it("returns slot-1 when composed correctly", () => {
+    expect(readDataWord("0x" + USER + TOKEN + AMOUNT, 1)).toBe("0x" + TOKEN);
+  });
+  it("returns null when slot is out of range", () => {
+    expect(readDataWord("0x" + USER, 3)).toBeNull();
+  });
+  it("handles data without 0x prefix", () => {
+    expect(readDataWord(USER, 0)).toBe("0x" + USER);
+  });
+  it("composes with decodeAddress for unindexed-param extraction", () => {
+    expect(decodeAddress(readDataWord("0x" + USER + TOKEN, 0)!)).toBe(
+      "0xaaaa1111aaaa2222aaaa3333aaaa4444aaaa5555",
+    );
   });
 });
 

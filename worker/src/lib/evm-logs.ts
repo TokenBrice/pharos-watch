@@ -68,6 +68,18 @@ export function decodeUint256AtSlot(hexData: string, slotIndex: number, decimals
   return bigIntToDecimal(BigInt("0x" + slot), decimals);
 }
 
+/**
+ * Extract a 32-byte data word (hex string with 0x prefix) at slot index from
+ * ABI-encoded event data. Returns null when data is shorter than expected.
+ * Compose with `decodeAddress(...)` to extract unindexed address parameters.
+ */
+export function readDataWord(hexData: string, slotIndex: number): string | null {
+  const cleaned = hexData.startsWith("0x") ? hexData.slice(2) : hexData;
+  const start = slotIndex * 64;
+  if (cleaned.length < start + 64) return null;
+  return "0x" + cleaned.slice(start, start + 64);
+}
+
 // --- Chain head (current block number) ---
 
 export async function getEvmBlockNumber(

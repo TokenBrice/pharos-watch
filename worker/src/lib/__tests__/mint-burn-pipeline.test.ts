@@ -43,6 +43,7 @@ import { getAlchemyTransactionByHash, getAlchemyTransactionReceipt } from "../al
 import { classifyBridgeAwareBurnRows } from "../mint-burn-bridge-classifier";
 import { batchExecute } from "../db";
 import { classifyBridgeBurnRows } from "../mint-burn-pipeline/classification";
+import { parseMintBurnLogs } from "../mint-burn-pipeline/parse";
 import {
   collectAffectedHours,
   insertMintBurnRows,
@@ -766,5 +767,37 @@ describe("mint-burn shared pipeline modules", () => {
     await expect(readMintBurnSyncStateBatch(db, [config])).resolves.toEqual(new Map([
       ["ethereum-0xdac17f958d2ee523a2206206994597c13d831ec7", 22_345_678],
     ]));
+  });
+});
+
+const REUSD_DEPOSITED_TOPIC = "0xb4c03061fb5b7fed76389d5af8f2e0ddb09f8c70d1333abbb62582835e10accb";
+const USER_DATA = "000000000000000000000000aaaa1111aaaa2222aaaa3333aaaa4444aaaa5555";
+const TOKEN_DATA = "000000000000000000000000bbbb1111bbbb2222bbbb3333bbbb4444bbbb5555";
+const AMOUNT_DATA = "0000000000000000000000000000000000000000000000000de0b6b3a7640000"; // 1e18
+
+describe("parseMintBurnLogs — custom counterparty encoding", () => {
+  it("extracts counterparty from data slot when counterpartyEncoding is set", () => {
+    const config = {
+      chain: { chainId: "ethereum", explorerUrl: "https://etherscan.io" },
+      stablecoinId: "test", symbol: "TEST",
+      contractAddress: "0xc0", decimals: 18, dustThreshold: 0,
+      startBlock: 1, events: [],
+    } as any;
+    const eventDef = {
+      signature: "Deposited(address,address,uint256)",
+      topicHash: REUSD_DEPOSITED_TOPIC,
+      direction: "mint" as const,
+      amountEncoding: "nth-data-uint256" as const,
+      dataSlot: 2,
+      counterpartyEncoding: { source: "data" as const, slot: 0 },
+    };
+    const logs = [{
+      address: "0xc0",
+      topics: [REUSD_DEPOSITED_TOPIC],
+      data: "0x" + USER_DATA + TOKEN_DATA + AMOUNT_DATA,
+      blockNumber: "0x64", transactionHash: "0xtx", logIndex: "0x0",
+    }] as any;
+    const { rows } = parseMintBurnLogs(config, eventDef, logs, new Map([[100, 1700000000]]), new Map(), new Map(), 1700000100);
+    expect(rows[0].counterparty).toBe("0xaaaa1111aaaa2222aaaa3333aaaa4444aaaa5555");
   });
 });

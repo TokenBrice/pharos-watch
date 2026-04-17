@@ -688,6 +688,7 @@ const MINT_BURN_CONFIG_SPECS: MintBurnContractConfigSpec[] = [
       direction: "mint",
       amountEncoding: "nth-data-uint256",
       dataSlot: 2, // data = [user(32B), token(32B), amount(32B)]
+      counterpartyEncoding: { source: "data", slot: 0 }, // user (unindexed)
     }],
   },
   {

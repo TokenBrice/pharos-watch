@@ -45,6 +45,21 @@ export interface MintBurnEventDef {
     index: number;
     value: string;
   };
+  /**
+   * Override counterparty extraction. When omitted, defaults to:
+   *   mint  → topics[2] (Transfer recipient)
+   *   burn  → topics[1] (Transfer sender)
+   *
+   * Use this for non-Transfer custom events where the relevant address is
+   * unindexed (data) or located in a non-default topic slot.
+   *
+   * `source: "topic"` reads `log.topics[index]` (must be ≥1).
+   * `source: "data"` reads a 32-byte word from `log.data` at `slot * 32`
+   * (the address is the low-20 bytes of that word).
+   */
+  counterpartyEncoding?:
+    | { source: "topic"; index: number }
+    | { source: "data"; slot: number };
 }
 
 export interface MintBurnContractConfig {
