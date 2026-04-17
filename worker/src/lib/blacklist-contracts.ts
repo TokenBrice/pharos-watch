@@ -234,7 +234,7 @@ const USD1_UNFREEZE_TOPIC = "0x4f3ab9ff0cc4f039268532098e01239544b0420171876e368
 const WLFI_FROZEN_DRAINED_TOPIC = "0x76fa81ac53e82d7102caacc3866ae3ca5684caa4c24d995ff4d76ce8a10fbfef"; // FrozenAccountDrained(address,address,uint256)
 const WLFI_FROZEN_REALLOCATED_TOPIC = "0x10aa54b8d21641b161adf6251c11512c46fcf822feaf6f66057c006dc29def4a"; // FrozenFundsReallocated(address,address,address,uint256)
 
-const USD1_EVENT_FAMILY = defineEventFamily("wlfi-freeze", [
+const DUAL_INDEX_FREEZE_EVENT_FAMILY = defineEventFamily("dual-index-freeze", [
   {
     signature: "Freeze(address,address)",
     topicHash: USD1_FREEZE_TOPIC,
@@ -251,6 +251,11 @@ const USD1_EVENT_FAMILY = defineEventFamily("wlfi-freeze", [
     addressTopicIndex: 2,
     tronResultKey: "account",
   },
+]);
+
+/** WLFI-specific destroy events that live only on the USD1/U contracts, not on
+ * shared dual-index-freeze implementations (FDUSD, EURI). */
+const WLFI_FREEZE_DESTROY_EVENTS: readonly BlacklistEventDef[] = [
   {
     signature: "FrozenAccountDrained(address,address,uint256)",
     topicHash: WLFI_FROZEN_DRAINED_TOPIC,
@@ -269,6 +274,15 @@ const USD1_EVENT_FAMILY = defineEventFamily("wlfi-freeze", [
     amountDataIndex: 0,
     tronResultKey: "account",
   },
+];
+
+// USD1 (WLFI) is the sole consumer of the full freeze+destroy family. FDUSD,
+// EURI, and U reuse only the freeze half (DUAL_INDEX_FREEZE_EVENT_FAMILY)
+// because their implementations don't emit FrozenAccountDrained or
+// FrozenFundsReallocated.
+const USD1_EVENT_FAMILY = defineEventFamily("wlfi-freeze-and-destroy", [
+  ...DUAL_INDEX_FREEZE_EVENT_FAMILY.events,
+  ...WLFI_FREEZE_DESTROY_EVENTS,
 ]);
 
 // --- RLUSD event definitions (Ripple StablecoinUpgradeableV2 contract) ---
@@ -570,8 +584,8 @@ const CONTRACT_CONFIG_SPECS: ContractEventConfigSpec[] = [
   { chain: ETHEREUM, stablecoinId: "rlusd-ripple", startBlock: 20_492_031, events: RLUSD_EVENT_FAMILY.events },
 
   // U (United Stables — Ethereum + BSC, same dual-indexed freeze pattern as USD1)
-  { chain: ETHEREUM, stablecoinId: "u-united-stables", startBlock: 24_030_193, events: USD1_EVENT_FAMILY.events },
-  { chain: BSC, stablecoinId: "u-united-stables", startBlock: 71_922_111, events: USD1_EVENT_FAMILY.events },
+  { chain: ETHEREUM, stablecoinId: "u-united-stables", startBlock: 24_030_193, events: DUAL_INDEX_FREEZE_EVENT_FAMILY.events },
+  { chain: BSC, stablecoinId: "u-united-stables", startBlock: 71_922_111, events: DUAL_INDEX_FREEZE_EVENT_FAMILY.events },
 
   // USDtb (Ethena / Anchorage — Ethereum batch block/unblock events)
   { chain: ETHEREUM, stablecoinId: "usdtb-ethena", startBlock: 21_287_284, events: USDTB_EVENT_FAMILY.events },
@@ -580,16 +594,16 @@ const CONTRACT_CONFIG_SPECS: ContractEventConfigSpec[] = [
   { chain: ETHEREUM, stablecoinId: "a7a5-old-vector", startBlock: 22_080_045, events: A7A5_EVENT_FAMILY.events },
 
   // Wave 2A direct EVM coverage
-  { chain: ETHEREUM, stablecoinId: "fdusd-first-digital", stablecoin: "FDUSD", startBlock: 17_144_262, events: USD1_EVENT_FAMILY.events },
-  { chain: BSC, stablecoinId: "fdusd-first-digital", stablecoin: "FDUSD", startBlock: 27_850_220, events: USD1_EVENT_FAMILY.events },
-  { chain: ARBITRUM, stablecoinId: "fdusd-first-digital", stablecoin: "FDUSD", startBlock: 336_278_229, events: USD1_EVENT_FAMILY.events },
+  { chain: ETHEREUM, stablecoinId: "fdusd-first-digital", stablecoin: "FDUSD", startBlock: 17_144_262, events: DUAL_INDEX_FREEZE_EVENT_FAMILY.events },
+  { chain: BSC, stablecoinId: "fdusd-first-digital", stablecoin: "FDUSD", startBlock: 27_850_220, events: DUAL_INDEX_FREEZE_EVENT_FAMILY.events },
+  { chain: ARBITRUM, stablecoinId: "fdusd-first-digital", stablecoin: "FDUSD", startBlock: 336_278_229, events: DUAL_INDEX_FREEZE_EVENT_FAMILY.events },
   { chain: ETHEREUM, stablecoinId: "brz-transfero", stablecoin: "BRZ", startBlock: 17_517_084, events: USDC_EVENT_FAMILY.events },
   { chain: GNOSIS, stablecoinId: "brz-transfero", stablecoin: "BRZ", startBlock: 33_257_603, events: USDC_EVENT_FAMILY.events },
   { chain: ARBITRUM, stablecoinId: "ausd-agora", stablecoin: "AUSD", startBlock: 342_153_906, events: ACCOUNT_FREEZE_EVENT_FAMILY.events },
   { chain: BASE, stablecoinId: "ausd-agora", stablecoin: "AUSD", startBlock: 35_760_121, events: ACCOUNT_FREEZE_EVENT_FAMILY.events },
   { chain: ETHEREUM, stablecoinId: "mnee-mnee", stablecoin: "MNEE", startBlock: 19_482_225, events: MNEE_EVENT_FAMILY.events },
-  { chain: ETHEREUM, stablecoinId: "euri-banking-circle", stablecoin: "EURI", startBlock: 20_217_556, events: USD1_EVENT_FAMILY.events },
-  { chain: BSC, stablecoinId: "euri-banking-circle", stablecoin: "EURI", startBlock: 40_115_386, events: USD1_EVENT_FAMILY.events },
+  { chain: ETHEREUM, stablecoinId: "euri-banking-circle", stablecoin: "EURI", startBlock: 20_217_556, events: DUAL_INDEX_FREEZE_EVENT_FAMILY.events },
+  { chain: BSC, stablecoinId: "euri-banking-circle", stablecoin: "EURI", startBlock: 40_115_386, events: DUAL_INDEX_FREEZE_EVENT_FAMILY.events },
   { chain: ETHEREUM, stablecoinId: "usdq-quantoz", stablecoin: "USDQ", startBlock: 21_179_575, events: USDT0_EVENT_FAMILY.events },
   { chain: ETHEREUM, stablecoinId: "usdo-openeden", stablecoin: "USDO", startBlock: 20_833_910, events: ACCOUNT_BAN_EVENT_FAMILY.events },
   { chain: BASE, stablecoinId: "usdo-openeden", stablecoin: "USDO", startBlock: 25_154_101, events: ACCOUNT_BAN_EVENT_FAMILY.events },
