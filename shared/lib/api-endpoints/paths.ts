@@ -112,4 +112,14 @@ export const API_PATHS = {
   auditDepegHistoryDryRun: () => buildQueryPath("/api/audit-depeg-history", { "dry-run": true }),
   backfillDews: () => "/api/backfill-dews",
   discoveryCandidates: () => "/api/discovery-candidates",
+  resetCronLease: (params?: { job?: string }) =>
+    buildQueryPath("/api/reset-cron-lease", { job: params?.job }),
+  resetCircuitBreaker: (params?: { circuit?: string }) =>
+    buildQueryPath("/api/reset-circuit-breaker", { circuit: params?.circuit }),
+  killCronInFlight: (params?: { job?: string; leaseOwner?: string }) =>
+    buildQueryPath("/api/kill-cron-in-flight", { job: params?.job, leaseOwner: params?.leaseOwner }),
+  bulkDismissDiscoveryCandidates: (params?: { all?: boolean; ids?: string }) =>
+    buildQueryPath("/api/bulk-dismiss-discovery-candidates", { all: params?.all, ids: params?.ids }),
+  statusProbeHistory: (params?: { path?: string; days?: number }) =>
+    buildQueryPath("/api/status-probe-history", { path: params?.path, days: params?.days }),
 } as const;
