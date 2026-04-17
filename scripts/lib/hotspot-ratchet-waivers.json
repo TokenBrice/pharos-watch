@@ -67,9 +67,9 @@
     "disposition": "deferred",
     "notes": "FX-rate helper orchestration remains a large policy surface after earlier trims. Defer another split until the next FX-state/runtime cleanup tranche."
   },
-  "worker/src/cron/dex-liquidity/orchestrator-analysis.ts": {
+  "worker/src/lib/mint-burn-contracts.ts": {
     "disposition": "queued-p4",
-    "notes": "Post-scoring analysis was extracted out of orchestrator-metadata during the v5.5 split. `analyzeDexLiquidityPostScoring` is still a single large analyzer; a follow-up pass can separate coverage baseline, value baseline, and source-coverage shaping."
+    "notes": "Config registry for all tracked stablecoins plus the v5.2 bridge-detection validator/audit block. Grew past the default file-size budget during mint-burn comprehensive remediation. Follow-up pass should extract the per-coin config array into a data-only module and keep only the schema + validator logic in this file."
   },
   "src/lib/contagion-layout.ts": {
     "disposition": "queued-p4",
