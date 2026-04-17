@@ -36,13 +36,14 @@ const TRON_SAFETY_MS = INDEXING_SAFETY_SEC * 1000;
 
 // Approximate block times (seconds) per EVM chain — used to compute safety margin in blocks.
 const EVM_BLOCK_TIME: Record<number, number> = {
-  1: 12, // Ethereum
+  1: 12,       // Ethereum
   42161: 0.25, // Arbitrum
-  8453: 2, // Base
-  10: 2, // Optimism
-  137: 2, // Polygon
-  43114: 2, // Avalanche
-  56: 3, // BSC
+  8453: 2,     // Base
+  10: 2,       // Optimism
+  137: 2,      // Polygon
+  43114: 2,    // Avalanche
+  56: 3,       // BSC
+  100: 5,      // Gnosis
 };
 
 function evmSafetyMarginBlocks(evmChainId: number): number {

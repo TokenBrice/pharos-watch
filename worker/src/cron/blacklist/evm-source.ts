@@ -28,12 +28,14 @@ import {
 import { buildExplorerAddressUrl, buildExplorerTxUrl, type BlacklistRow } from "./shared";
 
 const RPC_LOG_SCAN_CHAIN_IDS = new Set(["base", "optimism", "avalanche", "bsc", "gnosis"]);
-const RPC_LOG_SCAN_WINDOWS: Record<string, { alchemy: number; fallback: number }> = {
-  base: { alchemy: 500_000, fallback: 50_000 },
-  optimism: { alchemy: 500_000, fallback: 50_000 },
+/** Per-chain `eth_getLogs` windows. Gnosis is capped at 9_000 because dRPC's free
+ *  tier rejects any range > 10_000 blocks (verified 2026-04-17). */
+export const RPC_LOG_SCAN_WINDOWS: Record<string, { alchemy: number; fallback: number }> = {
+  base:      { alchemy: 500_000, fallback: 50_000 },
+  optimism:  { alchemy: 500_000, fallback: 50_000 },
   avalanche: { alchemy: 250_000, fallback: 2_000 },
-  bsc: { alchemy: 250_000, fallback: 50_000 },
-  gnosis: { alchemy: 250_000, fallback: 50_000 },
+  bsc:       { alchemy: 250_000, fallback: 50_000 },
+  gnosis:    { alchemy: 9_000,   fallback: 9_000 },
 };
 
 type EvmLogLike = Pick<

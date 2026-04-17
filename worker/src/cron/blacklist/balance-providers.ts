@@ -24,6 +24,7 @@ const DRPC_NETWORK: Record<string, string> = {
   polygon: "polygon",
   avalanche: "avalanche",
   bsc: "bsc",
+  gnosis: "gnosis",
 };
 
 async function fetchEvmBalanceAtTag(
