@@ -706,6 +706,39 @@ const MINT_BURN_CONFIG_SPECS: MintBurnContractConfigSpec[] = [
   },
 ];
 
+const ADDRESS_RE = /^0x[0-9a-fA-F]{40}$/;
+const TOPIC_RE = /^0x[0-9a-fA-F]{64}$/;
+const SELECTOR_RE = /^0x[0-9a-fA-F]{8}$/;
+
+/**
+ * Validate the hex-string format of every address/topic/selector in a bridge
+ * detection config. Optional fields on non-discriminated protocol variants are
+ * accessed via `as any` because the keys differ per-protocol but we want a
+ * single uniform validation sweep.
+ */
+export function validateMintBurnBridgeDetection(d: MintBurnBridgeDetectionConfig): void {
+  const all: { kind: "address" | "topic" | "selector"; values: string[] }[] = [
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- discriminated-union: address fields differ per protocol; uniform sweep across all variants
+    { kind: "address", values: (d as any).knownBridgePoolAddresses ?? [] },
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- discriminated-union: see above
+    { kind: "address", values: (d as any).knownBridgeRouterAddresses ?? [] },
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- discriminated-union: see above
+    { kind: "address", values: (d as any).knownBridgeContractAddresses ?? [] },
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- discriminated-union: see above
+    { kind: "address", values: (d as any).bridgeSignalEmitterAddresses ?? [] },
+    { kind: "topic",   values: d.bridgeSignalTopics ?? [] },
+    { kind: "selector",values: d.bridgeSignalSelectors ?? [] },
+  ];
+  for (const { kind, values } of all) {
+    for (const v of values) {
+      const re = kind === "address" ? ADDRESS_RE : kind === "topic" ? TOPIC_RE : SELECTOR_RE;
+      if (!re.test(v)) {
+        throw new Error(`mint-burn bridge config: invalid ${kind} "${v}" for protocol ${d.protocol}`);
+      }
+    }
+  }
+}
+
 export const MINT_BURN_CONFIGS: MintBurnContractConfig[] = MINT_BURN_CONFIG_SPECS.map(
   resolveMintBurnContractConfig,
 );
