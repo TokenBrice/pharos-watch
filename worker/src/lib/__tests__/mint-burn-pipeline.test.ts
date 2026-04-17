@@ -390,6 +390,67 @@ describe("mint-burn shared pipeline modules", () => {
     expect(db).toBeDefined();
   });
 
+  it("fetches tx contexts with bounded concurrency", async () => {
+    let inflight = 0;
+    let peak = 0;
+    vi.mocked(getAlchemyTransactionByHash).mockImplementation(async (_url: string, txHash: string) => {
+      inflight++;
+      peak = Math.max(peak, inflight);
+      // Yield across two microtask ticks so the scheduler can start more workers
+      // up to the concurrency limit before any of them complete.
+      await new Promise<void>((resolve) => queueMicrotask(resolve));
+      await new Promise<void>((resolve) => queueMicrotask(resolve));
+      inflight--;
+      return { hash: txHash, to: "0xrouter", input: "0x96f4e9f9" };
+    });
+    vi.mocked(getAlchemyTransactionReceipt).mockImplementation(async (_url: string, txHash: string) => ({
+      transactionHash: txHash,
+      to: "0xrouter",
+      logs: [],
+    }));
+
+    const rows: MintBurnRow[] = Array.from({ length: 20 }, (_, index) =>
+      makeRow({ id: `burn-${index}`, direction: "burn", tx_hash: `0xtx-${index}` }),
+    );
+
+    await classifyBridgeBurnRows(
+      rows,
+      {
+        chain: {
+          chainId: "ethereum",
+          chainName: "Ethereum",
+          evmChainId: 1,
+          explorerUrl: "https://etherscan.io",
+          type: "evm",
+        },
+        stablecoinId: "usdt-tether",
+        symbol: "USDT",
+        contractAddress: "0xdac17f958d2ee523a2206206994597c13d831ec7",
+        decimals: 6,
+        dustThreshold: 10_000,
+        startBlock: 21_900_000,
+        adapterKind: "transfer-zero-address",
+        startBlockSource: "reviewed-contract-specific",
+        startBlockConfidence: "high",
+        events: [],
+        bridgeDetection: {
+          protocol: "ccip",
+          knownBridgePoolAddresses: ["0xpool"],
+          knownBridgeRouterAddresses: ["0xrouter"],
+          bridgeSignalTopics: ["0xtopic"],
+          bridgeSignalSelectors: ["0x96f4e9f9"],
+        },
+      },
+      "https://eth-mainnet.g.alchemy.com/v2/test-key",
+      { count: 0, limit: 200 },
+      new Map(),
+    );
+
+    // min(4, 20) = 4; bounded by TX_CONTEXT_CONCURRENCY in classification.ts
+    expect(peak).toBe(4);
+    expect(vi.mocked(getAlchemyTransactionByHash)).toHaveBeenCalledTimes(20);
+  });
+
   it("recomputes only affected hourly buckets", async () => {
     const db = makeDb();
     const rows = [

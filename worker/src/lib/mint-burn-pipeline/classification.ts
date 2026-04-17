@@ -20,6 +20,31 @@ import type {
   MintBurnRow,
 } from "./types";
 
+// Keep <= half of CF's 6-connection-per-trigger pool so other
+// ctx.waitUntil() work in the same cron trigger has headroom.
+const TX_CONTEXT_CONCURRENCY = 4;
+
+async function mapWithConcurrency<T, R>(
+  items: T[],
+  limit: number,
+  fn: (item: T) => Promise<R>,
+): Promise<R[]> {
+  const results: R[] = new Array(items.length);
+  let next = 0;
+  const workers = Array.from(
+    { length: Math.min(limit, items.length) },
+    async () => {
+      while (true) {
+        const i = next++;
+        if (i >= items.length) return;
+        results[i] = await fn(items[i]!);
+      }
+    },
+  );
+  await Promise.all(workers);
+  return results;
+}
+
 async function resolveTxContext(
   alchemyUrl: string,
   txHash: string,
@@ -64,16 +89,14 @@ export async function classifyBridgeBurnRows(
 
   const burnRows = rows.filter((row) => row.direction === "burn");
   const txHashes = [...new Set(rows.map((row) => row.tx_hash))];
+  const contexts = await mapWithConcurrency(
+    txHashes,
+    TX_CONTEXT_CONCURRENCY,
+    (txHash) => resolveTxContext(alchemyUrl, txHash, budget, txContextCache, signal),
+  );
   const txContextByHash = new Map<string, MintBurnTxContext | null>();
-  for (const txHash of txHashes) {
-    const context = await resolveTxContext(
-      alchemyUrl,
-      txHash,
-      budget,
-      txContextCache,
-      signal,
-    );
-    txContextByHash.set(txHash, context);
+  for (let i = 0; i < txHashes.length; i++) {
+    txContextByHash.set(txHashes[i]!, contexts[i]!);
   }
 
   classifyBridgeAwareBurnRows(rows, config.bridgeDetection, txContextByHash);
