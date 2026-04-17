@@ -105,8 +105,11 @@ export const PRICING_SOURCE_REGISTRY_MARKET_FEEDS = [
     key: "curve-onchain",
     label: "Curve on-chain",
     shortLabel: "Curve",
-    maxTrustedAgeSec: 15 * 60,
+    maxTrustedAgeSec: 300,
     defaultWeight: 3,
+    freshnessKind: "upstream",
+    supportsUpstreamObservedAt: true,
+    defaultObservedAtMode: "upstream",
   }),
   definePricingSource(PRICING_SOURCE_PRESETS.hardProtocol, {
     key: "curve-oracle",

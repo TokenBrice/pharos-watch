@@ -213,7 +213,7 @@ interface PrimaryConsensusQuoteMaps {
   coinbaseObservedAtBySymbol: Map<string, number>;
   redstonePrices: Map<string, { price: number; venueCount: number; venueAgreementPct: number; timestamp: number }>;
   curvePrices: Map<string, number>;
-  curveObservedAt: number | null;
+  curveObservedAtByCoinId: Map<string, number>;
   curveOraclePrice: number | null;
   curveOracleObservedAt: number | null;
 }
@@ -397,7 +397,7 @@ function buildPrimaryConsensusResults(params: {
       coinbaseObservedAt: params.quoteMaps.coinbaseObservedAtBySymbol.get(asset.symbol.toUpperCase()) ?? null,
       redstoneQuote: params.quoteMaps.redstonePrices.get(asset.symbol),
       curvePrice: params.quoteMaps.curvePrices.get(asset.id) ?? null,
-      curveObservedAt: params.quoteMaps.curveObservedAt,
+      curveObservedAt: params.quoteMaps.curveObservedAtByCoinId.get(asset.id) ?? null,
       curveOraclePrice: params.quoteMaps.curveOraclePrice,
       curveOracleObservedAt: params.quoteMaps.curveOracleObservedAt,
       protocolSources: params.dexPriceSources.get(asset.id),
@@ -533,6 +533,7 @@ export async function fetchPrimaryPrices(
   const coinbasePrices = new Map<string, number>();
   const redstonePrices = new Map<string, { price: number; venueCount: number; venueAgreementPct: number; timestamp: number }>();
   const curvePrices = new Map<string, number>();
+  const curveObservedAtByCoinId = new Map<string, number>();
   let curveOraclePrice: number | null = null;
   const cgTickerPrices = new Map<string, number>();
   let cgTickerObservedAt: number | null = null;
@@ -541,7 +542,6 @@ export async function fetchPrimaryPrices(
   let krakenObservedAt: number | null = null;
   const bitstampObservedAtBySymbol = new Map<string, number>();
   const coinbaseObservedAtBySymbol = new Map<string, number>();
-  let curveObservedAt: number | null = null;
   let curveOracleObservedAt: number | null = null;
   let staleCgPriceRows = 0;
   const providerDiagnostics: PricingProviderAttemptDiagnostic[] = [];
@@ -744,8 +744,10 @@ export async function fetchPrimaryPrices(
         "Curve on-chain",
         async () => {
           const outcome = await fetchCurveOnchainPrices(CURVE_POOL_CONFIGS, signal, chainRpcs);
-          for (const [id, price] of outcome.value) curvePrices.set(id, price);
-          if (outcome.value.size > 0) curveObservedAt = Math.floor(Date.now() / 1000);
+          for (const [id, price] of outcome.value.prices) curvePrices.set(id, price);
+          for (const [id, observedAt] of outcome.value.observedAtByCoinId) {
+            curveObservedAtByCoinId.set(id, observedAt);
+          }
           return isSuccessfulOutcome(outcome);
         },
       ),
@@ -809,7 +811,7 @@ export async function fetchPrimaryPrices(
       coinbaseObservedAtBySymbol,
       redstonePrices,
       curvePrices,
-      curveObservedAt,
+      curveObservedAtByCoinId,
       curveOraclePrice,
       curveOracleObservedAt,
     },

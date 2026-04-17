@@ -14,6 +14,7 @@
 import { fetchEvmBlockNumber, fetchEvmBlockTimestamp, fetchEvmCallHexAtBlock } from "./evm-rpc";
 import type { ChainRpcConfig } from "./chain-registry";
 import type { FetcherOutcome } from "./fetcher-result";
+import { CURVE_ORACLE_MAX_STALENESS_SEC } from "./constants";
 
 export interface CurvePoolConfig {
   stablecoinId: string;
@@ -42,11 +43,16 @@ const GET_DY_UNDERLYING_SELECTOR = "0x07211ef7";
  * Phase 1: Execute all RPC calls, store raw implied prices
  * Phase 2: Resolve hop dependencies, build final results
  */
+export interface CurveOnchainBatch {
+  prices: Map<string, number>;
+  observedAtByCoinId: Map<string, number>;
+}
+
 export async function fetchCurveOnchainPrices(
   configs: CurvePoolConfig[],
   signal?: AbortSignal,
   chainRpcs?: Map<string, ChainRpcConfig>,
-): Promise<FetcherOutcome<Map<string, number>>> {
+): Promise<FetcherOutcome<CurveOnchainBatch>> {
   // Validate: no chained hops (hop referencing another hop)
   const hopIds = new Set(configs.filter((c) => c.hop).map((c) => c.stablecoinId));
   for (const config of configs) {
@@ -57,7 +63,44 @@ export async function fetchCurveOnchainPrices(
     }
   }
 
-  // Phase 1: Execute all RPC calls, store raw implied prices
+  const emptyBatch: CurveOnchainBatch = {
+    prices: new Map<string, number>(),
+    observedAtByCoinId: new Map<string, number>(),
+  };
+
+  // Phase 0: resolve block number + timestamp per distinct chain so calls are
+  // pinned to a single block and callers can enforce upstream freshness.
+  const chains = Array.from(new Set(configs.map((c) => c.chain)));
+  const blockByChain = new Map<string, { blockNumber: number; blockTimestamp: number }>();
+  const nowSec = Math.floor(Date.now() / 1000);
+  for (const chain of chains) {
+    const blockNumber = await fetchEvmBlockNumber(chain, { chainRpcs, signal });
+    if (blockNumber == null) {
+      return {
+        kind: "upstream-error",
+        value: emptyBatch,
+        reason: `eth_blockNumber unavailable for ${chain}`,
+      };
+    }
+    const blockTimestamp = await fetchEvmBlockTimestamp(chain, blockNumber, { chainRpcs, signal });
+    if (blockTimestamp == null) {
+      return {
+        kind: "upstream-error",
+        value: emptyBatch,
+        reason: `eth_getBlockByNumber unavailable for ${chain}`,
+      };
+    }
+    if (nowSec - blockTimestamp > CURVE_ORACLE_MAX_STALENESS_SEC) {
+      return {
+        kind: "upstream-error",
+        value: emptyBatch,
+        reason: `stale block on ${chain}: ${nowSec - blockTimestamp}s > ${CURVE_ORACLE_MAX_STALENESS_SEC}s`,
+      };
+    }
+    blockByChain.set(chain, { blockNumber, blockTimestamp });
+  }
+
+  // Phase 1: Execute all RPC calls at the pinned block, store raw implied prices
   const rawPrices = new Map<string, number>();
   let rpcAttempts = 0;
   let rpcThrows = 0;
@@ -71,8 +114,10 @@ export async function fetchCurveOnchainPrices(
 
       // Metapool get_dy_underlying makes cross-pool calls requiring more gas
       const gas = config.useUnderlying ? "0x7A120" : undefined; // 500K gas
+      const block = blockByChain.get(config.chain);
+      if (!block) continue; // unreachable: chains is built from configs
       const resultHex = await fetchEvmCallHexAtBlock(
-        config.chain, config.poolAddress, calldata, "latest", { signal, gas, chainRpcs },
+        config.chain, config.poolAddress, calldata, block.blockNumber, { signal, gas, chainRpcs },
       );
       if (!resultHex) continue;
 
@@ -97,32 +142,40 @@ export async function fetchCurveOnchainPrices(
     }
   }
 
-  // Phase 2: Resolve hop prices, build final results
-  const results = new Map<string, number>();
+  // Phase 2: Resolve hop prices, build final results stamped with the pool's
+  // chain-block timestamp.
+  const prices = new Map<string, number>();
+  const observedAtByCoinId = new Map<string, number>();
 
   for (const config of configs) {
     const raw = rawPrices.get(config.stablecoinId);
     if (raw == null) continue;
+    const block = blockByChain.get(config.chain);
+    if (!block) continue;
 
     if (config.hop) {
       const viaPrice = rawPrices.get(config.hop.viaStablecoinId);
       if (viaPrice == null) continue; // dependency missing
       const finalPrice = raw * viaPrice;
       if (finalPrice > 0 && finalPrice < 10_000) {
-        results.set(config.stablecoinId, finalPrice);
+        prices.set(config.stablecoinId, finalPrice);
+        observedAtByCoinId.set(config.stablecoinId, block.blockTimestamp);
       }
     } else {
-      results.set(config.stablecoinId, raw);
+      prices.set(config.stablecoinId, raw);
+      observedAtByCoinId.set(config.stablecoinId, block.blockTimestamp);
     }
   }
 
+  const value: CurveOnchainBatch = { prices, observedAtByCoinId };
+
   if (rpcAttempts > 0 && rpcThrows === rpcAttempts) {
-    return { kind: "upstream-error", value: results, reason: "all Curve pool RPC calls threw" };
+    return { kind: "upstream-error", value, reason: "all Curve pool RPC calls threw" };
   }
-  if (results.size === 0) {
-    return { kind: "no-data", value: results };
+  if (prices.size === 0) {
+    return { kind: "no-data", value };
   }
-  return { kind: "ok", value: results, partial: rpcThrows > 0 };
+  return { kind: "ok", value, partial: rpcThrows > 0 };
 }
 
 function encodeGetDy(selector: string, i: number, j: number, dx: bigint): string {
