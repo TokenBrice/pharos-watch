@@ -23,10 +23,6 @@ const CAP_GET_BURN_AMOUNT_SELECTOR = "0xb7c4a6bf"; // getBurnAmount(address,uint
 const IUSD_RECEIPT_TO_ASSET_SELECTOR = "0xf308cf65"; // receiptToAsset(uint256)
 const IUSD_INFINIFI_REDEEM_CONTROLLER = "0xCb1747E89a43DEdcF4A2b831a0D94859EFeC7601";
 
-// crvUSD PriceAggregator — exported for use as a regular consensus source
-export const CRVUSD_PRICE_AGGREGATOR = "0xe5Afcf332a5457E8FafCD668BcE3dF953762Dfe7";
-export const CRVUSD_PRICE_SELECTOR = "0xa035b1fe"; // price() — returns crvUSD price in USD scaled by 1e18
-
 const CAP_SAMPLE_SUPPLY_FRACTION = 0.01;
 const CAP_SAMPLE_NOTIONAL_MIN_USD = 1_000;
 const CAP_SAMPLE_NOTIONAL_MAX_USD = 1_000_000;

@@ -1,5 +1,6 @@
 import type { PriceObservedAtMode } from "@shared/types/core";
 import { getPricingSourceRegistryEntry } from "@shared/lib/pricing-source-registry";
+import { DIVERGENCE_THRESHOLD_BPS } from "@shared/lib/pricing-pipeline-constants";
 import type { SourcePrice } from "./price-consensus";
 
 interface PrimaryPriceAssetLike {
@@ -119,7 +120,7 @@ export function buildPrimarySourceCandidates(
   collected: PrimaryCollectedQuotes,
   options?: { divergenceThresholdBps?: number },
 ): PrimarySourceBuildResult {
-  const divergenceThresholdBps = options?.divergenceThresholdBps ?? 50;
+  const divergenceThresholdBps = options?.divergenceThresholdBps ?? DIVERGENCE_THRESHOLD_BPS;
   const sources: SourcePrice[] = [];
 
   const baseSources = [

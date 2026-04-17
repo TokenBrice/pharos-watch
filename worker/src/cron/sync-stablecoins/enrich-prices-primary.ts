@@ -31,9 +31,15 @@ import { loadDexPriceRows, loadDexPoolChallengers, loadDexPriceSources } from ".
 import { isTrustedDexPriceRow } from "../../lib/depeg-trust-policy";
 import { fetchCurveOnchainPrices, fetchCurveOracleEma } from "../../lib/curve-onchain";
 import { CURVE_POOL_CONFIGS } from "../../lib/curve-pool-configs";
-import { CRVUSD_PRICE_AGGREGATOR, CRVUSD_PRICE_SELECTOR } from "../../lib/authoritative-price-sources";
 import type { ChainRpcConfig } from "../../lib/chain-registry";
 import { computePriceConsensus, type SourcePrice } from "../../lib/price-consensus";
+import { DIVERGENCE_THRESHOLD_BPS } from "@shared/lib/pricing-pipeline-constants";
+
+// crvUSD PriceAggregator contract. Consulted as a regular primary-consensus
+// source by the Curve oracle fetch path; kept local because the caller is
+// the only remaining consumer of these hex constants.
+const CRVUSD_PRICE_AGGREGATOR = "0xe5Afcf332a5457E8FafCD668BcE3dF953762Dfe7";
+const CRVUSD_PRICE_SELECTOR = "0xa035b1fe"; // price() — returns crvUSD price in USD scaled by 1e18
 import {
   isGtProbeEligibleSingleSource,
   isPoolChallengeEligibleConsensus,
@@ -62,7 +68,6 @@ export interface PrimaryPriceResult {
   observedAtMode?: PriceObservedAtMode | null;
   observedAtBySource?: Record<string, number | null>;
   observedAtModeBySource?: Record<string, PriceObservedAtMode | null>;
-  softOnly?: boolean;
 }
 
 export interface PriceValidationStats {
@@ -159,13 +164,6 @@ async function applyPrimaryPostConsensusHardening(params: {
   );
   if (poolChallengeDowngrades > 0) {
     console.log(`[primary-prices] Pool challenge hardened ${poolChallengeDowngrades} soft-only result(s)`);
-  }
-
-  for (const result of params.results.values()) {
-    const challengeSources = result.confidence === "low" ? result.candidateSources : result.agreeSources;
-    if (isPoolChallengeEligibleConsensus(challengeSources)) {
-      result.softOnly = true;
-    }
   }
 }
 
@@ -366,8 +364,6 @@ function buildPrimaryConsensusResults(params: {
   stats: PriceValidationStats;
   validationContexts?: ValidationContextResolver;
 }): void {
-  const DIVERGENCE_THRESHOLD_BPS = 50;
-
   for (const asset of params.candidates) {
     const gId = isUsableGeckoId(asset.geckoId) ? asset.geckoId : null;
     const cg = gId ? (params.quoteMaps.cgPrices.get(gId) ?? null) : null;
@@ -999,7 +995,7 @@ export async function runGtProbePass(
 
     const context = contexts.get(asset);
     const pegRef = context.navToken ? null : getReferencePriceForContext(context, references);
-    const consensus = computePriceConsensus(sources, pegRef, 50, {
+    const consensus = computePriceConsensus(sources, pegRef, DIVERGENCE_THRESHOLD_BPS, {
       mode: context.navToken ? "nav" : "fixed",
     });
 
