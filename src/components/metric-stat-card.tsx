@@ -5,6 +5,8 @@ import { cn } from "@/lib/utils";
 interface MetricStatCardProps {
   title: ReactNode;
   borderColorClass: string;
+  /** When set, renders the left border via inline style (for non-Tailwind hex colors). */
+  borderColorHex?: string;
   value?: ReactNode;
   subtext?: ReactNode;
   headerRight?: ReactNode;
@@ -23,6 +25,7 @@ const SUBTEXT_CLASS = "text-xs text-muted-foreground";
 export function MetricStatCard({
   title,
   borderColorClass,
+  borderColorHex,
   value,
   subtext,
   headerRight,
@@ -38,7 +41,10 @@ export function MetricStatCard({
   const hasCustomContent = children !== undefined && children !== null;
 
   return (
-    <Card className={cn("@container rounded-xl border-l-[3px]", borderColorClass, className)}>
+    <Card
+      className={cn("@container rounded-xl border-l-[3px]", borderColorClass, className)}
+      style={borderColorHex ? { borderLeftColor: borderColorHex } : undefined}
+    >
       <CardHeader className="pb-1">
         {headerRight ? (
           <div className="flex items-center justify-between gap-2">

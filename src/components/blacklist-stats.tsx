@@ -48,7 +48,8 @@ export function BlacklistStats({ stats, isLoading, showLegacyTriples = false }: 
         {topByCount.map(([coin, count]) => (
           <MetricStatCard
             key={coin}
-            borderColorClass={BLACKLIST_CHART_COLORS[coin] ?? "border-border"}
+            borderColorClass="border-border"
+            borderColorHex={BLACKLIST_CHART_COLORS[coin]}
             title={`${coin} Blacklisted`}
             value={count}
             subtext="unique events"
