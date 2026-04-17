@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { fetchRedstonePrices, REDSTONE_TRACKED_SYMBOL_ALLOWLIST } from "../redstone";
 import { TRACKED_STABLECOINS } from "@shared/lib/stablecoins";
+import redstoneBatchFixture from "./fixtures/redstone-batch.json";
 
 afterEach(() => {
   vi.useRealTimers();
@@ -171,6 +172,26 @@ describe("fetchRedstonePrices", () => {
     expect(outcome.value.get("USDT")?.price).toBeCloseTo(0.9999, 4);
   });
 
+  it("selects the newest entry by timestamp when array responses are returned", async () => {
+    const now = Date.now();
+    const olderTimestamp = now - 60_000;
+    const newerTimestamp = now;
+
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(
+      new Response(JSON.stringify({
+        USDT: [
+          { value: 0.5, source: { binance: 0.5 }, timestamp: olderTimestamp },
+          { value: 1.0, source: { binance: 1.0 }, timestamp: newerTimestamp },
+        ],
+      }), { status: 200 }),
+    ));
+
+    const outcome = await fetchRedstonePrices(["USDT"]);
+
+    expect(outcome.value.get("USDT")?.price).toBe(1.0);
+    expect(outcome.value.get("USDT")?.timestamp).toBe(Math.floor(newerTimestamp / 1000));
+  });
+
   it("bounds solo-retry budget to 5 requests when many batch symbols drop", async () => {
     const tenSymbols = REDSTONE_TRACKED_SYMBOL_ALLOWLIST.slice(0, 10);
     expect(tenSymbols.length).toBe(10);
@@ -184,6 +205,30 @@ describe("fetchRedstonePrices", () => {
 
     // 1 batch fetch + at most 5 solo retries = 6 total fetch calls.
     expect(fetchMock).toHaveBeenCalledTimes(6);
+  });
+
+  it("parses a real RedStone /prices USDT response (fixture)", async () => {
+    // Fixture captured from
+    // https://api.redstone.finance/prices?provider=redstone-primary-prod&symbols=USDT
+    // Verifies the live object-per-symbol payload shape is accepted and the
+    // per-venue breakdown is preserved.
+    const fixtureTimestampMs = redstoneBatchFixture.USDT.timestamp;
+    // Freeze time just after fixture's timestamp so the 300s staleness gate
+    // accepts the sample.
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date(fixtureTimestampMs + 10_000));
+
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(
+      new Response(JSON.stringify(redstoneBatchFixture), { status: 200 }),
+    ));
+
+    const outcome = await fetchRedstonePrices(["USDT"]);
+
+    expect(outcome.kind).toBe("ok");
+    const result = outcome.value.get("USDT")!;
+    expect(result.price).toBeCloseTo(redstoneBatchFixture.USDT.value, 6);
+    expect(result.venues.size).toBe(Object.keys(redstoneBatchFixture.USDT.source).length);
+    expect(result.timestamp).toBe(Math.floor(fixtureTimestampMs / 1000));
   });
 });
 

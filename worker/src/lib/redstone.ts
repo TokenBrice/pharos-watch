@@ -50,7 +50,14 @@ function normalizeSymbols(symbols: string[]): string[] {
 
 function normalizeEntry(entry: RedstoneEntry | RedstoneEntry[] | undefined): RedstoneEntry | null {
   if (entry == null) return null;
-  if (Array.isArray(entry)) return entry[0] ?? null;
+  if (Array.isArray(entry)) {
+    if (entry.length === 0) return null;
+    // The live RedStone /prices endpoint currently returns one object per
+    // symbol. The schema still permits arrays for future provider modes;
+    // if arrays ever arrive, pick the entry with the largest timestamp so
+    // downstream staleness checks see the freshest sample.
+    return [...entry].sort((a, b) => (b.timestamp ?? 0) - (a.timestamp ?? 0))[0] ?? null;
+  }
   return entry;
 }
 
