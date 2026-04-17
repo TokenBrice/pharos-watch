@@ -37,6 +37,10 @@ export interface BlacklistEventDef {
   amountTopicIndex?: number;   // EVM: which topics[] slot holds an indexed uint256 amount
   amountDataIndex?: number;    // EVM: which 32-byte data slot holds a non-indexed uint256 amount
   tronResultKey?: string;      // Tron: which result key holds the affected address
+  /** When set, the uint8/bool at this 32-byte data slot decides whether this
+   *  event means 'blacklist' (non-zero) or 'unblacklist' (zero). Overrides
+   *  `eventType` for the produced row. */
+  eventTypeFromDataBoolIndex?: number;
 }
 
 export interface BlacklistEventFamily {

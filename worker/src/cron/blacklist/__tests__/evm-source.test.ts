@@ -476,6 +476,78 @@ describe("parseEvmLogs branch coverage", () => {
     expect(rows.length).toBe(500);
   });
 
+  it("resolves eventType from data bool slot (bool=true => blacklist)", () => {
+    const tusdBlacklistedTopic = "0xcf3473b85df1594d47b6958f29a32bea0abff9dd68296f7bf33443646793cfd8";
+    const account = "0x0000000000000000000000001111111111111111111111111111111111111111";
+    const config: ContractEventConfig = {
+      configKey: "ethereum-0x0000000000085d4780b73119b644ae5ecd22b376",
+      chain: { chainId: "ethereum", chainName: "Ethereum", evmChainId: 1, explorerUrl: "https://etherscan.io", type: "evm" },
+      stablecoinId: "tusd-trueusd",
+      stablecoin: "USDC", // placeholder — we only care about event_type resolution here
+      contractAddress: "0x0000000000085d4780b73119b644ae5ecd22b376",
+      decimals: 18,
+      events: [
+        {
+          signature: "Blacklisted(address,bool)",
+          topicHash: tusdBlacklistedTopic,
+          eventType: "blacklist",
+          hasAmount: false,
+          eventTypeFromDataBoolIndex: 0,
+        },
+      ],
+    };
+    const rows = parseEvmLogs(config, [
+      {
+        address: config.contractAddress,
+        topics: [tusdBlacklistedTopic, account],
+        data: "0x" + "01".padStart(64, "0"),
+        blockNumber: "0x1",
+        transactionHash: "0xtusd-on",
+        logIndex: "0x0",
+        timeStamp: "0x61000000",
+      },
+    ]);
+    expect(rows).toHaveLength(1);
+    expect(rows[0].event_type).toBe("blacklist");
+    expect(rows[0].address).toBe("0x1111111111111111111111111111111111111111");
+  });
+
+  it("resolves eventType from data bool slot (bool=false => unblacklist)", () => {
+    const tusdBlacklistedTopic = "0xcf3473b85df1594d47b6958f29a32bea0abff9dd68296f7bf33443646793cfd8";
+    const account = "0x0000000000000000000000002222222222222222222222222222222222222222";
+    const config: ContractEventConfig = {
+      configKey: "ethereum-0x0000000000085d4780b73119b644ae5ecd22b376",
+      chain: { chainId: "ethereum", chainName: "Ethereum", evmChainId: 1, explorerUrl: "https://etherscan.io", type: "evm" },
+      stablecoinId: "tusd-trueusd",
+      stablecoin: "USDC", // placeholder — we only care about event_type resolution here
+      contractAddress: "0x0000000000085d4780b73119b644ae5ecd22b376",
+      decimals: 18,
+      events: [
+        {
+          signature: "Blacklisted(address,bool)",
+          topicHash: tusdBlacklistedTopic,
+          eventType: "blacklist",
+          hasAmount: false,
+          eventTypeFromDataBoolIndex: 0,
+        },
+      ],
+    };
+    const rows = parseEvmLogs(config, [
+      {
+        address: config.contractAddress,
+        topics: [tusdBlacklistedTopic, account],
+        data: "0x" + "00".repeat(32),
+        blockNumber: "0x1",
+        transactionHash: "0xtusd-off",
+        logIndex: "0x0",
+        timeStamp: "0x61000000",
+      },
+    ]);
+    expect(rows).toHaveLength(1);
+    expect(rows[0].event_type).toBe("unblacklist");
+    expect(rows[0].address).toBe("0x2222222222222222222222222222222222222222");
+  });
+
   it("decodes non-indexed address from data for USDT DestroyedBlackFunds", () => {
     const usdtConfig = CONTRACT_CONFIGS.find(
       (c) => c.stablecoinId === "usdt-tether" && c.chain.chainId === "ethereum",

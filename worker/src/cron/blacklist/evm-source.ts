@@ -14,6 +14,7 @@ import {
   type BlacklistEventDef,
   type ContractEventConfig,
 } from "../../lib/blacklist-contracts";
+import type { BlacklistEventType } from "@shared/types/market";
 import { getChainRpc, type ChainRpcConfig } from "../../lib/chain-registry";
 import {
   budgetExhausted,
@@ -101,6 +102,19 @@ function decodeAddressAtDataSlot(data: string, slotIndex: number): string | null
   return slot.length >= 64 ? decodeAddress(slot) : null;
 }
 
+/** Reads a uint256/bool slot from event data and resolves a blacklist/unblacklist
+ *  direction. Returns `undefined` if the slot is missing/short so callers fall
+ *  back to the event definition's default eventType. */
+function resolveEventTypeFromDataBool(
+  data: string,
+  slotIndex: number,
+): BlacklistEventType | undefined {
+  const cleaned = data.startsWith("0x") ? data.slice(2) : data;
+  const slot = cleaned.slice(slotIndex * 64, slotIndex * 64 + 64);
+  if (slot.length !== 64) return undefined;
+  return BigInt("0x" + slot) !== 0n ? "blacklist" : "unblacklist";
+}
+
 function buildBlacklistRow(
   config: ContractEventConfig,
   log: EvmLogLike,
@@ -109,17 +123,19 @@ function buildBlacklistRow(
   blockNumber: number,
   timestamp: number,
   rowSuffix = "",
+  eventTypeOverride?: BlacklistEventType,
 ): BlacklistRow | null {
   const eventDef = getBlacklistEventByTopic(config, log.topics[0]);
   if (!eventDef) return null;
   const methodologyVersion = getBlacklistTrackerMethodologyVersionAt(timestamp);
+  const eventType = eventTypeOverride ?? eventDef.eventType;
 
   return {
     id: `${config.chain.chainId}-${log.transactionHash}-${log.logIndex}${rowSuffix}`,
     stablecoin: config.stablecoin,
     chain_id: config.chain.chainId,
     chain_name: config.chain.chainName,
-    event_type: eventDef.eventType,
+    event_type: eventType,
     address: affectedAddress,
     amount_native: amount,
     amount_usd_at_event: computeBlacklistAmountUsdAtEvent(config.stablecoin, amount),
@@ -180,10 +196,15 @@ export function parseEvmLogs(
       continue;
     }
 
+    const eventTypeOverride =
+      typeof eventDef.eventTypeFromDataBoolIndex === "number"
+        ? resolveEventTypeFromDataBool(log.data, eventDef.eventTypeFromDataBoolIndex)
+        : undefined;
+
     if (eventDef.addressArrayData) {
       const addresses = decodeAddressArrayData(log.data);
       addresses.forEach((affectedAddress, index) => {
-        const row = buildBlacklistRow(config, log, affectedAddress, null, blockNumber, timestamp, `-${index}`);
+        const row = buildBlacklistRow(config, log, affectedAddress, null, blockNumber, timestamp, `-${index}`, eventTypeOverride);
         if (row) rows.push(row);
       });
       continue;
@@ -198,7 +219,7 @@ export function parseEvmLogs(
     const affectedAddress = forcedDataAddress ?? (addressFromTopic ? decodeAddress(log.topics[topicIdx]) : decodeAddress(log.data.slice(0, 66)));
     const amount = decodeEvmLogAmount(eventDef, log, config.decimals, addressFromTopic);
 
-    const row = buildBlacklistRow(config, log, affectedAddress, amount, blockNumber, timestamp);
+    const row = buildBlacklistRow(config, log, affectedAddress, amount, blockNumber, timestamp, "", eventTypeOverride);
     if (row) rows.push(row);
   }
   if (droppedForTimestamp > 0) {
