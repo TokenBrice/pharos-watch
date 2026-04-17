@@ -1,6 +1,26 @@
 # Pricing Pipeline Methodology - Version Timeline
 
-Internal changelog reconstructed from the machine-readable methodology version source. Covers Pricing Pipeline `v1.0` through `v4.38` (2026-02-01 -> 2026-04-15).
+Internal changelog reconstructed from the machine-readable methodology version source. Covers Pricing Pipeline `v1.0` through `v5.0` (2026-02-01 -> 2026-04-17).
+
+---
+
+## v5.0 - Pricing pipeline comprehensive hardening (Apr 17, 2026)
+
+**Commit:** `unreleased`
+
+- Pool challenge replacement now updates `allPrices` so severe-downside corroboration carry-through uses the replacement source instead of stale pre-replacement candidates
+- `curve-oracle` now enforces a 5-minute on-chain staleness guard using the aggregator block timestamp and records against its own dedicated circuit breaker
+- `curve-onchain`, Bitstamp, and Coinbase now publish upstream-observed freshness provenance rather than stamping rows as local-fetch time
+- NAV tokens are excluded from pool-challenge downgrade and replacement because their wide clustering threshold makes pool-level divergence a poor signal
+- Cluster tiebreak now prefers hard-tier clusters over equal-weight soft-tier clusters before falling through to spread and peg-proximity rules
+- Two-source clusters composed only of list-style aggregators (CoinGecko, DefiLlama, DefiLlama-list) are now downgraded to `single-source` regardless of which two combine, closing the CoinGecko + DefiLlama-detail tautology in addition to the previously-downgraded CG + DL-list combination
+- Replay cache now enforces per-source max trusted age alongside the composite 6-hour cap so replay cannot keep a source active beyond its native freshness window
+- DefiLlama `/coins` contract-price fallback and DexScreener dex-liquidity / dex-discovery fallbacks now gate on and record against their own dedicated circuit breakers instead of reusing unrelated breaker state
+- A single promoted DEX protocol now requires hard-source corroboration to enter primary consensus, preventing a lone DEX print from self-confirming
+- Binance short-circuits to the secondary host on HTTP 5xx / 429 responses instead of retrying the first host, shortening outage detection latency
+- RedStone solo-retry is bounded to 5 requests per run and spaced to respect the Worker's per-trigger connection budget
+- GT-probe evidence rejection now downgrades the pre-GT primary to low-confidence when divergence was significant, rather than silently discarding the probe
+- Provider diagnostics and GT-probe statistics are now surfaced on `/api/status` for operator visibility into the same fields `sync-stablecoins` already persists
 
 ---
 

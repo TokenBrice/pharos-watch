@@ -46,10 +46,13 @@ export function PricingPipelineMethodologySection() {
           only when large DEX pools from at least two independent protocols diverge from soft consensus, with divergence
           evaluated from one TVL-weighted median per protocol so a single rogue pool cannot make an otherwise agreeing
           protocol count as corroborating disagreement, including
-          DEX-inclusive soft clusters unless an exempt hard source is present. Corroborated severe downside from multiple
-          candidate sources including a depeg-authoritative source can be downgraded by pool challenge, but its price is
-          preserved and the same evidence satisfies the temporal-jump guard. Dead blocked DEX slugs such as Bunni are
-          excluded upstream and never qualify as challenger or DEX-bridge inputs.
+          DEX-inclusive soft clusters unless an exempt hard source is present. NAV tokens are excluded because their
+          wide clustering threshold makes pool-level divergence a poor signal for redeemable-at-NAV assets. When the guard
+          replaces a price, the replacement is now also reflected in the per-source candidate list so downstream
+          corroboration continuity uses the replacement mark rather than the superseded candidate. Corroborated severe
+          downside from multiple candidate sources including a depeg-authoritative source can be downgraded by pool
+          challenge, but its price is preserved and the same evidence satisfies the temporal-jump guard. Dead blocked DEX
+          slugs such as Bunni are excluded upstream and never qualify as challenger or DEX-bridge inputs.
         </p>
 
         <p>
@@ -70,7 +73,11 @@ export function PricingPipelineMethodologySection() {
           depeg-authoritative when its freshness is source-native rather than inferred from local collection time. The
           source registry now also records each provider&apos;s freshness kind, maximum trusted age, and whether it truly
           supports upstream timestamps. CoinGecko simple-price rows use upstream <code className="mx-1 text-xs">last_updated_at</code>
-          when it is present and are rejected when that upstream timestamp is outside the trusted freshness window.
+          when it is present and are rejected when that upstream timestamp is outside the trusted freshness window. Bitstamp,
+          Coinbase, and Curve on-chain reads now publish upstream-observed freshness provenance rather than stamping rows
+          at local fetch time, and the <code className="mx-1 text-xs">crvUSD</code> Curve oracle feed enforces a 5-minute
+          on-chain staleness guard using the aggregator block timestamp and records against its own dedicated circuit
+          breaker. Replay cache now enforces each source&apos;s native max trusted age alongside the composite 6-hour cap.
         </p>
 
         <p>
@@ -94,14 +101,23 @@ export function PricingPipelineMethodologySection() {
           <strong className="text-foreground">Enrichment &amp; confidence.</strong>{" "}
           A 5-pass enrichment pipeline fills gaps for long-tail coins. Each asset is tagged with a confidence level so
           downstream systems can react to data quality, and severe fixed-peg downside publication now requires corroboration
-          unless it comes from an explicit protocol redemption or pool-challenge replacement mark. Corroborating candidate
-          prices now stay attached through later validation when the selected primary result is unchanged, so a real severe
-          depeg is not cleared as a single-source mark. When a confirmed severe depeg briefly loses corroboration, the
-          pipeline preserves trusted continuity from fresh replay-safe{" "}
+          unless it comes from an explicit protocol redemption or pool-challenge replacement mark. Two-source clusters
+          composed only of list-style aggregators (CoinGecko, DefiLlama, DefiLlama-list) are now downgraded to
+          single-source regardless of which two combine, closing the CoinGecko + DefiLlama-detail tautology alongside the
+          existing CG + DL-list downgrade. Cluster tiebreak also prefers hard-tier clusters over equal-weight soft-tier
+          clusters before falling through to spread and peg-proximity rules, and a lone promoted DEX protocol now
+          requires hard-source corroboration before entering primary consensus. Corroborating candidate prices now stay
+          attached through later validation when the selected primary result is unchanged, so a real severe depeg is not
+          cleared as a single-source mark. When a confirmed severe depeg briefly loses corroboration, the pipeline
+          preserves trusted continuity from fresh replay-safe{" "}
           <code className="mx-1 text-xs">price_cache</code> rows instead of letting the asset flap to{" "}
           <code className="mx-1 text-xs">N/A</code>. DefiLlama contract fallbacks must now pass the same peg-aware
           plausibility gates before they can resolve an asset, and DexScreener symbol search is reserved for addressless
-          assets rather than downgrading exact-token candidates to symbol-only identity.
+          assets rather than downgrading exact-token candidates to symbol-only identity. DefiLlama{" "}
+          <code className="mx-1 text-xs">/coins</code> contract-price fallback and DexScreener dex-liquidity and
+          dex-discovery paths now record against their own dedicated circuit breakers instead of reusing unrelated
+          breaker state, and the same provider diagnostics and GeckoTerminal probe statistics collected during each run
+          are now surfaced on <code className="mx-1 text-xs">/api/status</code> for operator visibility.
         </p>
         <MethodologyFacts
           facts={[

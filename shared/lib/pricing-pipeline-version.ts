@@ -3,9 +3,34 @@ import {
 } from "./methodology-version";
 
 const pricing = createMethodologyVersion({
-  currentVersion: "4.38",
+  currentVersion: "5.0",
   changelogPath: "/methodology/pricing-pipeline-changelog/",
   changelog: [
+    {
+      version: "5.0",
+      title: "Pricing pipeline comprehensive hardening",
+      date: "2026-04-17",
+      effectiveAt: 1776442299,
+      summary:
+        "Closed consistency gaps in pool-challenge replacement, tightened breaker discipline across all pricing fetchers, promoted Bitstamp/Coinbase/Curve to upstream-timestamped freshness, and exposed provider diagnostics on the operator status surface.",
+      impact: [
+        "Pool challenge replacement now updates allPrices so severe-downside corroboration carry-through uses the replacement source",
+        "curve-oracle now enforces a 5-minute on-chain staleness guard using block timestamp and has its own circuit breaker",
+        "curve-onchain and Bitstamp / Coinbase now publish upstream-observed freshness instead of local-fetch",
+        "NAV tokens are no longer subject to pool-challenge downgrade / replacement",
+        "Cluster tiebreak now prefers hard-tier clusters over equal-weight soft-tier clusters before spread / peg proximity",
+        "Two-source clusters composed only of list-style aggregators (coingecko, defillama, defillama-list) are now downgraded to single-source regardless of which two combine, closing the CG+defillama-detail tautology",
+        "Replay cache enforces per-source max trusted age in addition to the composite 6-hour cap",
+        "DefiLlama /coins contract-price fallback and DexScreener dex-liquidity / dex-discovery fallbacks now gate on and record against their own circuit breakers",
+        "Single promoted DEX protocol now requires hard-source corroboration to enter primary consensus",
+        "Binance short-circuits to the secondary host on HTTP 5xx / 429 instead of retrying the first host",
+        "RedStone solo-retry is bounded to 5 requests per run and spaced to respect Worker connection budget",
+        "GT-probe evidence rejection downgrades the pre-GT primary to low-confidence when divergence was significant",
+        "Provider diagnostics and GT-probe statistics are now surfaced on /api/status for operator visibility",
+      ],
+      commits: [],
+      reconstructed: false,
+    },
     {
       version: "4.38",
       title: "Corroborated severe-depeg pool challenge protection",
