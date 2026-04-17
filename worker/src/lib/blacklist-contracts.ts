@@ -738,6 +738,25 @@ const CONTRACT_CONFIG_SPECS: ContractEventConfigSpec[] = [
   // already used by USDTB / AID / TGBP deny-list batches.
   { chain: ETHEREUM, stablecoinId: "eurcv-societe-generale-forge", stablecoin: "EURCV", startBlock: 18_427_793, events: SOCGEN_FREEZE_FAMILY.events },
 
+  // USDA (Avalon) — Ethereum implementation emits legacy Tether events
+  // (AddedBlackList / RemovedBlackList / DestroyedBlackFunds), same family as
+  // USDT legacy. BSC deferred pending block-explorer API access.
+  { chain: ETHEREUM, stablecoinId: "usda-avalon", stablecoin: "USDA", startBlock: 21_108_194, events: USDT_EVENT_FAMILY.events },
+  // TODO: verify on bsc (Etherscan v2 free plan does not support BSC getcontractcreation)
+  // { chain: BSC, stablecoinId: "usda-avalon", stablecoin: "USDA", startBlock: <deploy>, events: USDT_EVENT_FAMILY.events },
+
+  // USAT (Tether USAT) — Ethereum proxy (impl 0x8b98bcd9b1f8ae112fb2b58b45c3bc9a75cc4d0e)
+  // emits BlockPlaced / BlockReleased / DestroyedBlockedFunds with indexed address,
+  // identical to the USDT0 family used by XAUT and USDQ.
+  { chain: ETHEREUM, stablecoinId: "usat-tether", stablecoin: "USAT", startBlock: 23_998_151, events: USDT0_EVENT_FAMILY.events },
+
+  // AEUR (Anchored Coins) — Ethereum reuses the dual-indexed Freeze / Unfreeze
+  // family (address in topics[2]) already covered for FDUSD / EURI / U.
+  // BSC deferred pending block-explorer API access.
+  { chain: ETHEREUM, stablecoinId: "aeur-anchored-coins", stablecoin: "AEUR", startBlock: 17_731_536, events: DUAL_INDEX_FREEZE_EVENT_FAMILY.events },
+  // TODO: verify on bsc (Etherscan v2 free plan does not support BSC getcontractcreation)
+  // { chain: BSC, stablecoinId: "aeur-anchored-coins", stablecoin: "AEUR", startBlock: <deploy>, events: DUAL_INDEX_FREEZE_EVENT_FAMILY.events },
+
   // BUIDL seize-only coverage (Securitize token family)
   { chain: ETHEREUM, stablecoinId: "buidl-blackrock", stablecoin: "BUIDL", startBlock: 19_343_293, events: SECURITIZE_SEIZE_EVENT_FAMILY.events },
   { chain: BSC, stablecoinId: "buidl-blackrock", stablecoin: "BUIDL", startBlock: 63_931_579, events: SECURITIZE_SEIZE_EVENT_FAMILY.events },
