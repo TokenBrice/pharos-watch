@@ -264,8 +264,8 @@
     "notes": "Pool scoring and heuristic normalization still live in one large module. Split score families and reusable transforms before adding more model inputs."
   },
   "worker/src/cron/dex-liquidity/orchestrator.ts": {
-    "fileLines": 558,
-    "maxFunctionLines": 87,
+    "fileLines": 559,
+    "maxFunctionLines": 88,
     "branchCount": 19,
     "disposition": "stabilized",
     "targetBudget": {
@@ -274,6 +274,18 @@
       "branchCount": 15
     },
     "notes": "Post-score baselines, drift guards, and metadata assembly now live in dedicated helpers. Keep the entrypoint focused on phase order, abort boundaries, and persistence sequencing."
+  },
+  "worker/src/cron/dex-liquidity/orchestrator-analysis.ts": {
+    "fileLines": 634,
+    "maxFunctionLines": 362,
+    "branchCount": 41,
+    "disposition": "queued-p4",
+    "targetBudget": {
+      "fileLines": 500,
+      "maxFunctionLines": 200,
+      "branchCount": 40
+    },
+    "notes": "Extracted from orchestrator-metadata during the Wave 4 liquidity split. Drift detection, score-family analysis, and alert assembly still live in one pipeline function; split into drift/analysis/alerting before adding more signal types."
   },
   "worker/src/cron/sync-mint-burn.ts": {
     "fileLines": 359,

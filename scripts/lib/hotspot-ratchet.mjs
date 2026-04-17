@@ -26,6 +26,7 @@ export const TARGET_FILES = [
   "worker/src/cron/dispatch-telegram-alerts.ts",
   "worker/src/cron/dex-liquidity/scoring.ts",
   "worker/src/cron/dex-liquidity/orchestrator.ts",
+  "worker/src/cron/dex-liquidity/orchestrator-analysis.ts",
   "worker/src/cron/sync-mint-burn.ts",
   "worker/src/cron/sync-live-reserves.ts",
   "worker/src/cron/compute-dews.ts",
