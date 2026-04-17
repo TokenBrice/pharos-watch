@@ -2,8 +2,8 @@
  * Data loader for the `/status <ticker>` command.
  *
  * Sources:
- * - `stress_signals`          latest DEWS band + score per coin
- * - `safety_grade_history`    latest safety grade per coin
+ * - `stress_signals`          latest DEWS band + score per coin (timestamp column: `computed_at`)
+ * - `safety_grade_history`    latest safety grade per coin (timestamp column: `recorded_at`)
  * - `depeg_events`            only rows with `ended_at IS NULL` (an active event)
  * - `price_cache`             latest cached price by `asset_id = stablecoin_id`
  *
@@ -15,7 +15,7 @@ export interface StatusForCoin {
   stablecoinId: string;
   priceUsd: number | null;
   priceUpdatedAt: number | null;
-  dews: { band: string; score: number; recordedAt: number } | null;
+  dews: { band: string; score: number; computedAt: number } | null;
   safety: { grade: string; score: number | null; recordedAt: number } | null;
   depeg:
     | { status: "stable" }
@@ -35,10 +35,10 @@ export async function loadStatusForCoin(
   const [dewsRow, safetyRow, depegRow, priceRow] = await Promise.all([
     db
       .prepare(
-        "SELECT band, score, recorded_at FROM stress_signals WHERE stablecoin_id = ? ORDER BY recorded_at DESC LIMIT 1",
+        "SELECT band, score, computed_at FROM stress_signals WHERE stablecoin_id = ? ORDER BY computed_at DESC LIMIT 1",
       )
       .bind(stablecoinId)
-      .first<{ band: string; score: number; recorded_at: number }>(),
+      .first<{ band: string; score: number; computed_at: number }>(),
     db
       .prepare(
         "SELECT grade, score, recorded_at FROM safety_grade_history WHERE stablecoin_id = ? ORDER BY recorded_at DESC LIMIT 1",
@@ -67,7 +67,7 @@ export async function loadStatusForCoin(
     priceUsd: priceRow?.price ?? null,
     priceUpdatedAt: priceRow?.updated_at ?? null,
     dews: dewsRow
-      ? { band: dewsRow.band, score: dewsRow.score, recordedAt: dewsRow.recorded_at }
+      ? { band: dewsRow.band, score: dewsRow.score, computedAt: dewsRow.computed_at }
       : null,
     safety: safetyRow
       ? { grade: safetyRow.grade, score: safetyRow.score, recordedAt: safetyRow.recorded_at }

@@ -803,7 +803,7 @@ describe("handleTelegramWebhook", () => {
     const db = mockD1([
       { match: "SELECT action_type, action_payload", rows: [], first: null },
       { match: "FROM stress_signals", rows: [
-        { band: "CALM", score: 15, recorded_at: 1700000000 },
+        { band: "CALM", score: 15, computed_at: 1700000000 },
       ] },
       { match: "FROM safety_grade_history", rows: [
         { grade: "A", score: 85, recorded_at: 1700000000 },
