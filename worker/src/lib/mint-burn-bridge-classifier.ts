@@ -128,64 +128,48 @@ export function classifyBridgeAwareBurnRows(
   const selectorSet = normalizeHexSet(detection.bridgeSignalSelectors);
 
   for (const [txHash, txRows] of rowsByTx) {
-    const burnRows = txRows.filter((row) => row.direction === "burn");
-    if (burnRows.length === 0) continue;
-
     const ctx = txContextByHash.get(txHash) ?? null;
+
+    // Compute per-burn pool flags (used for legacy review-required path)
+    const burnRows = txRows.filter((row) => row.direction === "burn");
     const knownPoolFlags = burnRows.map((row) =>
       row.counterparty ? poolSet.has(row.counterparty.toLowerCase()) : false,
     );
-    const hasKnownPoolBurn = knownPoolFlags.some(Boolean);
 
     if (!ctx) {
+      // No tx context: keep legacy review-required for known-pool burns; mints stay standard
       for (let i = 0; i < burnRows.length; i++) {
         const row = burnRows[i];
         if (knownPoolFlags[i]) {
           row.burn_type = "review_required";
           row.burn_review_reason = "tx-context-unavailable";
-        } else {
-          row.burn_type = "effective_burn";
-          row.burn_review_reason = null;
         }
       }
       continue;
     }
 
     const ctxTopics = normalizeHexSet(ctx.logTopics);
-    const hasBridgeTopic = [...ctxTopics].some((topic) => topicSet.has(topic));
+    const hasBridgeTopic = hasSetIntersection(ctxTopics, topicSet);
     const selector = normalizeSelector(ctx.inputSelector);
     const to = ctx.to?.toLowerCase() ?? null;
-    const hasRouterSelector = Boolean(
-      to &&
-      selector &&
-      routerSet.has(to) &&
-      selectorSet.has(selector),
-    );
+    const hasRouterSelector = Boolean(to && selector && routerSet.has(to) && selectorSet.has(selector));
     const hasBridgeSignal = hasBridgeTopic || hasRouterSelector;
 
+    // NEW: if a tx has a bridge signal, tag every row in the tx (mints + burns)
+    // as bridge_transfer. This catches isolated bridge mints (destination chain)
+    // that have no burn pool counterparty.
+    if (hasBridgeSignal) {
+      markBridgeTransfer(txRows);
+      continue;
+    }
+
+    // Legacy path for txs without bridge signal but with known-pool burn counterparty
     for (let i = 0; i < burnRows.length; i++) {
       const row = burnRows[i];
-      const fromKnownPool = knownPoolFlags[i];
-
-      if (fromKnownPool && hasBridgeSignal) {
-        markBridgeTransfer([row]);
-        continue;
-      }
-
-      if (fromKnownPool && !hasBridgeSignal) {
+      if (knownPoolFlags[i]) {
         row.burn_type = "review_required";
         row.burn_review_reason = "known-bridge-pool-without-bridge-signal";
-        continue;
       }
-
-      if (!fromKnownPool && hasBridgeSignal && !hasKnownPoolBurn) {
-        row.burn_type = "review_required";
-        row.burn_review_reason = "bridge-signal-with-unknown-pool";
-        continue;
-      }
-
-      row.burn_type = "effective_burn";
-      row.burn_review_reason = null;
     }
   }
 }
