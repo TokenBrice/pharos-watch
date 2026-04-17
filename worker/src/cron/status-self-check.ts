@@ -2,6 +2,7 @@ import type { CronResult } from "../lib/cron-logger";
 import { sendAlert } from "../lib/alerts";
 import { createTimeoutSignal } from "@shared/lib/timeout-signal";
 import { API_ORIGIN, resolveOrigin } from "@shared/lib/runtime-origins";
+import { STATUS_PROBE_THRESHOLDS } from "@shared/lib/status-thresholds";
 import { cancelResponseBodyQuietly } from "../lib/response-body";
 
 import { getProbePaths } from "@shared/lib/api-endpoints";
@@ -120,10 +121,12 @@ function getSlowestProbes(probes: ProbeResult[], limit = 3): Array<{
     }));
 }
 
-function classifyProbeStatus(sampleCount: number, failCount: number, p95LatencyMs: number): StatusLevel {
+export function classifyProbeStatus(sampleCount: number, failCount: number, p95LatencyMs: number): StatusLevel {
   if (sampleCount === 0) return "stale";
-  if (failCount <= 1 && p95LatencyMs <= 5000) return "healthy";
-  if (failCount <= Math.max(1, Math.floor(sampleCount * 0.1)) && p95LatencyMs <= 8000) return "degraded";
+  const { healthyMaxFailCount, healthyP95MaxMs, degradedMaxFailRatio, degradedP95MaxMs } = STATUS_PROBE_THRESHOLDS;
+  if (failCount <= healthyMaxFailCount && p95LatencyMs <= healthyP95MaxMs) return "healthy";
+  const degradedFailCap = Math.max(healthyMaxFailCount, Math.floor(sampleCount * degradedMaxFailRatio));
+  if (failCount <= degradedFailCap && p95LatencyMs <= degradedP95MaxMs) return "degraded";
   return "stale";
 }
 
@@ -171,11 +174,13 @@ async function evaluateProbeResponse(
     return {
       ok: false,
       error: "invalid-health-status",
+      semanticStatus: "stale",
     };
   } catch { /* degraded: health endpoint returned unparseable JSON */
     return {
       ok: false,
       error: "invalid-health-payload",
+      semanticStatus: "stale",
     };
   }
 }

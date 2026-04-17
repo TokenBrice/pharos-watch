@@ -75,6 +75,18 @@ export const STATUS_CACHE_RATIO_THRESHOLDS = {
   stale: 12,
 } as const;
 
+// --- Probe classification thresholds (browser & self-check probe runs) ---
+export const STATUS_PROBE_THRESHOLDS = {
+  /** p95 latency (ms) at or below which probes are classified healthy (given fail cap). */
+  healthyP95MaxMs: 5000,
+  /** p95 latency (ms) at or below which probes are classified degraded (given fail ratio cap). */
+  degradedP95MaxMs: 8000,
+  /** Max failures tolerated for "healthy" classification (absolute). */
+  healthyMaxFailCount: 1,
+  /** Max fail ratio tolerated for "degraded" classification (fraction of sample). */
+  degradedMaxFailRatio: 0.1,
+} as const;
+
 // --- Price source confidence severity bands (UI visual indicators) ---
 export const STATUS_PRICE_CONFIDENCE_BANDS = {
   highPctGreen: 85,

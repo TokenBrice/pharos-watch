@@ -24,6 +24,15 @@ export const STATUS_SYSTEM_FRESHNESS_SEC = 1800;
 export const STATUS_DISCREPANCY_ALERT_STREAK = 2;
 export const STATUS_DISCREPANCY_ALERT_COOLDOWN_SEC = 1800;
 
+/**
+ * Consecutive-stale readings required to transition degraded → stale.
+ * Intentionally stricter than `STATUS_HYSTERESIS.escalateToStale` (the
+ * healthy → stale path). Rationale: once the system has already acknowledged
+ * degradation, we want two consecutive stale samples before escalating,
+ * preventing flap-through from a single noisy probe.
+ */
+export const STATUS_DEGRADED_TO_STALE_THRESHOLD = 2 as const;
+
 const LOGGED_STATUS_PERSISTENCE_FAILURES = new Set<string>();
 
 export interface StatusPersistenceIssue {

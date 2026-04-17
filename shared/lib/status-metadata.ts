@@ -1,5 +1,23 @@
 import type { TelegramDispatchCronMetadata } from "../types/status";
 
+/**
+ * Maps each tracked cache key to the primary upstream provider whose outage
+ * would most directly affect that cache. Used to annotate the public cache
+ * freshness table so "DefiLlama is down → these caches drift" is a one-glance
+ * read. Keep aligned with `CACHE_FRESHNESS_THRESHOLDS` in
+ * `worker/src/lib/constants.ts`.
+ */
+export const CACHE_UPSTREAM_PROVIDER: Record<string, string> = {
+  stablecoins: "DefiLlama",
+  "stablecoin-charts": "DefiLlama",
+  "usds-status": "Etherscan",
+  "fx-rates": "Frankfurter",
+  "bluechip-ratings": "Bluechip",
+  "dex-liquidity": "DefiLlama",
+  "yield-data": "DefiLlama",
+  dews: "Internal compute",
+};
+
 export function readMetadataRecord(value: unknown): Record<string, unknown> | null {
   return value && typeof value === "object" && !Array.isArray(value)
     ? (value as Record<string, unknown>)

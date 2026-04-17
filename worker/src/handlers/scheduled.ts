@@ -15,6 +15,7 @@ import { runHourlyYieldSlot } from "./scheduled/hourly-yield";
 import { runYieldSupplementalSlot } from "./scheduled/yield-supplemental";
 import { runFiveMinuteTelegramSlot } from "./scheduled/five-minute-telegram";
 import { runDigestTriggerPollSlot } from "./scheduled/digest-trigger-poll";
+import { runDaily0300Slot } from "./scheduled/daily-0300";
 import { runDaily0800Slot } from "./scheduled/daily-0800";
 import { runDaily0805Slot } from "./scheduled/daily-0805";
 import { runMonthlyYieldAuditSlot } from "./scheduled/monthly-yield-audit";
@@ -34,6 +35,7 @@ const SLOT_RUNNER_BY_KEY = {
   fourHourlyYieldSupplemental: runYieldSupplementalSlot,
   fiveMinuteTelegramAlerts: runFiveMinuteTelegramSlot,
   digestTriggerPoll: runDigestTriggerPollSlot,
+  daily0300Utc: runDaily0300Slot,
   daily0800Utc: runDaily0800Slot,
   daily0805Utc: runDaily0805Slot,
   monthlyYieldAudit: runMonthlyYieldAuditSlot,

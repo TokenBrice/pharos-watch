@@ -14,8 +14,41 @@ function formatRatio(value: number): string {
   return `${(value * 100).toFixed(2)}%`;
 }
 
+/**
+ * Operator-facing runbook URLs, keyed by StatusCause.code. Populated only
+ * for the codes that have a documented runbook — the rest are deliberately
+ * omitted so the UI can render the "Runbook →" link only when present.
+ *
+ * URLs point at the repo's `docs/runbooks/` folder on GitHub. These files
+ * are not served by Next.js, so a relative path like `/docs/runbooks/...`
+ * would 404 at `https://ops.pharos.watch/...`. The blob URL survives branch
+ * renames as long as `main` is the default.
+ */
+const RUNBOOK_BASE = "https://github.com/TokenBrice/stablecoin-dashboard/blob/main/docs/runbooks";
+
+export const RUNBOOK_BY_CODE: Record<string, string> = {
+  db_unhealthy: `${RUNBOOK_BASE}/db-connectivity.md`,
+  data_quality_skipped_db_unhealthy: `${RUNBOOK_BASE}/db-connectivity.md`,
+  stablecoins_cache_unavailable: `${RUNBOOK_BASE}/stablecoins-cache.md`,
+  stablecoins_cache_degraded: `${RUNBOOK_BASE}/stablecoins-cache.md`,
+  blacklist_gaps_degraded: `${RUNBOOK_BASE}/blacklist-sync.md`,
+  blacklist_gaps_stale: `${RUNBOOK_BASE}/blacklist-sync.md`,
+  onchain_integrity_degraded: `${RUNBOOK_BASE}/mint-burn-integrity.md`,
+  onchain_integrity_stale: `${RUNBOOK_BASE}/mint-burn-integrity.md`,
+  onchain_monitor_unavailable: `${RUNBOOK_BASE}/mint-burn-integrity.md`,
+};
+
+/**
+ * Merges the matching runbook URL into a cause when one is documented.
+ * Returns the original cause if no runbook is registered for its code.
+ */
+export function withRunbook(cause: StatusCause): StatusCause {
+  const runbookUrl = RUNBOOK_BY_CODE[cause.code];
+  return runbookUrl ? { ...cause, runbookUrl } : cause;
+}
+
 function pushCause(bucket: StatusCause[], cause: StatusCause): void {
-  bucket.push(cause);
+  bucket.push(withRunbook(cause));
 }
 
 function sourceFailureMessage(source: DataQuality["sourceFailures"][number]["source"]): string {

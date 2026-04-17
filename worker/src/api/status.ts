@@ -6,7 +6,6 @@ import {
   getLatestStatusProbe,
   getStatusStateSnapshot,
   listRecentStatusTransitions,
-  reconcileStatusState,
   STATUS_SYSTEM_FRESHNESS_SEC,
   summarizeStatusPersistenceIssues,
   type StatusPersistenceIssue,
@@ -38,26 +37,27 @@ export function handleStatus(
         persistenceIssues.push(issue);
       };
 
-      let { state, staleness } = await getStatusStateSnapshot(db, now, collectPersistenceIssue);
+      const { state, staleness } = await getStatusStateSnapshot(db, now, collectPersistenceIssue);
+      // Intentionally read-only: the cron (status-self-check, */15 min) is the
+      // sole writer. If the snapshot is stale or absent, we return it as-is
+      // with `staleness.isStale` reflecting the lag. This removes the prior
+      // race with the cron's own reconcile call. First-boot with empty table
+      // returns a fallback state but does NOT persist — the next cron seeds.
+      const resolvedState = state ?? buildFallbackStatusState(raw.rawOverallStatus, now);
+      // Distinguish three cases:
+      //  1. staleness present → use it (honest age reporting)
+      //  2. state absent on cold boot, no persistence issue → isStale: false
+      //  3. staleness query itself failed → surface isStale: true so clients
+      //     don't trust the fallback as fresh. The specific DB error is also
+      //     present in `sectionErrors.statusState`.
+      const statusStateReadFailed = persistenceIssues.some((issue) => issue.operation === "read-status-snapshot");
+      const resolvedStaleness = staleness ?? {
+        ageSeconds: statusStateReadFailed ? STATUS_SYSTEM_FRESHNESS_SEC + 1 : 0,
+        maxAgeSec: STATUS_SYSTEM_FRESHNESS_SEC,
+        isStale: statusStateReadFailed,
+      };
 
-      if (!state || staleness?.isStale) {
-        const seeded = await reconcileStatusState(
-          db,
-          now,
-          raw.rawOverallStatus,
-          raw.confidence,
-          raw.causes.overall,
-          collectPersistenceIssue,
-        );
-        state = seeded.state;
-        staleness = {
-          ageSeconds: 0,
-          maxAgeSec: STATUS_SYSTEM_FRESHNESS_SEC,
-          isStale: false,
-        };
-      }
-
-      const effectiveOverallStatus = state?.currentStatus ?? raw.rawOverallStatus;
+      const effectiveOverallStatus = resolvedState.currentStatus;
       const probe = await getLatestStatusProbe(db, collectPersistenceIssue);
       const discrepancyStreak = await getDiscrepancyStreak(db, collectPersistenceIssue);
       const discrepancy = buildDiscrepancy(effectiveOverallStatus, probe, now, discrepancyStreak);
@@ -80,12 +80,8 @@ export function handleStatus(
         overallStatus: effectiveOverallStatus,
         confidence: raw.confidence,
         causes: raw.causes,
-        state: state ?? buildFallbackStatusState(raw.rawOverallStatus, now),
-        staleness: staleness ?? {
-          ageSeconds: 0,
-          maxAgeSec: STATUS_SYSTEM_FRESHNESS_SEC,
-          isStale: false,
-        },
+        state: resolvedState,
+        staleness: resolvedStaleness,
         probe,
         discrepancy,
         timeline,

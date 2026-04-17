@@ -1,3 +1,5 @@
+import { STATUS_DEGRADED_TO_STALE_THRESHOLD } from "./status-reliability-shared";
+
 type StatusLevel = "healthy" | "degraded" | "stale";
 
 interface StatusHysteresisPolicy {
@@ -22,7 +24,7 @@ export function decideNextStatus(
   if (current === "healthy" && raw === "degraded" && counters.degraded >= policy.escalateToDegraded) {
     return { next: "degraded", changed: true, reason: "raw-degraded-consecutive-threshold" };
   }
-  if (current === "degraded" && raw === "stale" && counters.stale >= 2) {
+  if (current === "degraded" && raw === "stale" && counters.stale >= STATUS_DEGRADED_TO_STALE_THRESHOLD) {
     return { next: "stale", changed: true, reason: "raw-stale-consecutive-threshold" };
   }
   if (

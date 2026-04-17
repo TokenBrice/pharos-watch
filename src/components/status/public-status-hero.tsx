@@ -2,9 +2,13 @@
 
 import type { HealthResponse } from "@shared/types";
 import { RefreshCountdown } from "@/components/status/refresh-countdown";
+import { FreshnessIndicator } from "@/components/status/freshness-indicator";
 import { formatTimestampMs, formatTimestampSeconds, getStatusTone } from "@/lib/status-dashboard-model";
 import { getPublicMintBurnStatus } from "@/lib/status/public-status";
 import { cn } from "@/lib/utils";
+
+/** Mark data stale when older than 3 min (>3x our 60s refresh cadence). */
+const PUBLIC_HERO_STALE_AFTER_MS = 180_000;
 
 interface PublicProbeSummary {
   sampleCount: number;
@@ -144,6 +148,7 @@ export function PublicStatusHero({
               <span className={cn("rounded-full border px-3 py-1 text-[11px] font-medium", statusTone.badgeClassName)}>
                 {statusTone.label}
               </span>
+              <FreshnessIndicator updatedAtMs={lastUpdated} staleAfterMs={PUBLIC_HERO_STALE_AFTER_MS} />
               {healthData.warnings.length > 0 && (
                 <span className="flex items-center gap-1.5 text-[11px] text-slate-500 dark:text-white/60">
                   <span className={cn("h-2 w-2 rounded-full", hero.accentDot)} />

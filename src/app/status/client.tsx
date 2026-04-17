@@ -18,6 +18,7 @@ import { usePublicStatusHistory } from "@/hooks/use-public-status-history";
 import { buildBrowserProbeSummary, formatTimestampSeconds, getStatusTone } from "@/lib/status-dashboard-model";
 import {
   getImpactedPublicSurfaces,
+  getPublicDivergenceNotice,
   getPublicMintBurnStatus,
   getPublicWorstCacheSummary,
 } from "@/lib/status/public-status";
@@ -152,6 +153,9 @@ export default function StatusClient() {
     });
     const blacklistWindowHours = Math.max(1, Math.round(healthData.blacklist.recentWindowSec / 3600));
     const telegramSummary = healthData.telegramSummary ?? null;
+    const divergence = probeSummary
+      ? getPublicDivergenceNotice(healthData.status, probeSummary.status)
+      : { kind: "in-sync" as const };
 
     content = (
       <div className="space-y-6">
@@ -174,6 +178,12 @@ export default function StatusClient() {
         />
 
         <NoticeRail notices={notices} />
+
+        {divergence.kind !== "in-sync" && (
+          <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 p-4 text-sm text-amber-900 dark:text-amber-200">
+            {divergence.detail}
+          </div>
+        )}
 
         <StatusSection
           id="overview"

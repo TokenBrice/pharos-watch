@@ -13,6 +13,8 @@ export interface CacheStatus {
   sourceStatus?: "fresh" | "degraded" | "stale" | "none";
   warning?: string | null;
   consecutiveFallbackRuns?: number;
+  /** Human-friendly upstream provider (Binance, CoinGecko, DefiLlama, on-chain RPC, …). */
+  upstreamProvider?: string | null;
 }
 
 const CacheStatusSchema = z.object({
@@ -25,6 +27,7 @@ const CacheStatusSchema = z.object({
   sourceStatus: z.enum(["fresh", "degraded", "stale", "none"]).optional(),
   warning: z.string().nullable().optional(),
   consecutiveFallbackRuns: z.number().optional(),
+  upstreamProvider: z.string().nullable().optional(),
 });
 
 export interface CronRun {
@@ -73,6 +76,11 @@ export interface StatusCause {
   metric?: string;
   value?: number;
   threshold?: number;
+  /**
+   * Optional operator-facing runbook link. Populated only for cause codes
+   * that have a documented runbook — UI renders the link only when present.
+   */
+  runbookUrl?: string;
 }
 
 export interface StatusStateInfo {
@@ -112,6 +120,8 @@ export interface StatusProbeSummary {
   p95LatencyMs: number | null;
 }
 
+export type StatusDiscrepancyReason = "in-sync" | "probe-stale" | "probe-disagrees" | "probe-missing";
+
 export interface StatusDiscrepancy {
   hasDivergence: boolean;
   severityDelta: number;
@@ -120,6 +130,12 @@ export interface StatusDiscrepancy {
   details: string | null;
   probeAgeSeconds: number | null;
   consecutiveDivergent: number;
+  /**
+   * Machine-readable classification so UI and alert logic can branch without
+   * parsing `details`. Disambiguates "probe never ran" vs "probe ran but
+   * disagrees" vs "probe is stale".
+   */
+  discrepancyReason: StatusDiscrepancyReason;
 }
 
 export interface StatusTransition {

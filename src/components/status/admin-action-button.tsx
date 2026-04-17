@@ -54,6 +54,7 @@ export function AdminActionButton({
           : action.path;
 
       const headers = new Headers();
+      headers.set("X-Pharos-Admin", "1");
       headers.set(
         "Idempotency-Key",
         typeof crypto !== "undefined" && typeof crypto.randomUUID === "function"

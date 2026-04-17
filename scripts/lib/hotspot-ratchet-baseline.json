@@ -396,8 +396,8 @@
     "notes": "This is now a facade over the live-reserve read/write/view modules. Keep new behavior in the helper family rather than regrowing the public barrel."
   },
   "worker/src/lib/status-evaluation.ts": {
-    "fileLines": 260,
-    "maxFunctionLines": 127,
+    "fileLines": 266,
+    "maxFunctionLines": 132,
     "branchCount": 2,
     "disposition": "stabilized",
     "targetBudget": {

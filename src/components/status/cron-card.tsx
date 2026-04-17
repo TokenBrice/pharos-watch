@@ -2,6 +2,7 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { getStatusCronDisplay } from "@/lib/status/cron-config";
 import { summarizeCronMetadata } from "./cron-metadata-summary";
+import { CronInFlightProgress } from "./cron-in-flight-progress";
 import { formatElapsedSeconds } from "@shared/lib/format";
 import { formatLatency, formatInterval } from "./format";
 import { CRON_STATUS_COLORS } from "@shared/lib/classification";
@@ -72,6 +73,13 @@ function InFlightDisplay({ inFlight, nowSeconds }: { inFlight: InFlightData; now
           </span>
         )}
       </div>
+      {inFlight.itemsDone != null && inFlight.itemsTotal != null && (
+        <CronInFlightProgress
+          itemsDone={inFlight.itemsDone}
+          itemsTotal={inFlight.itemsTotal}
+          stale={inFlight.stale}
+        />
+      )}
       {inFlight.message && <div>{inFlight.message}</div>}
       {inFlight.metadata && Object.keys(inFlight.metadata).length > 0 && (
         <details className="text-xs">

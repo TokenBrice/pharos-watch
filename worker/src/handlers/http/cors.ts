@@ -25,7 +25,7 @@ export function resolveCorsOrigin(request: Request, configured: string): string 
 function corsHeaders(origin: string | null): Record<string, string> {
   const headers: Record<string, string> = {
     "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
-    "Access-Control-Allow-Headers": "Content-Type, Idempotency-Key, X-API-Key",
+    "Access-Control-Allow-Headers": "Content-Type, Idempotency-Key, X-API-Key, X-Pharos-Admin",
     "Access-Control-Expose-Headers": "X-Data-Age, Warning",
     "Access-Control-Max-Age": "86400",
     Vary: "Origin",

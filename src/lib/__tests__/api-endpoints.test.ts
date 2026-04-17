@@ -19,6 +19,7 @@ import { ENDPOINT_ASSERTIONS, assertPathCoverage } from "../../../scripts/smoke-
 describe("api endpoint registry", () => {
   it("keeps every endpoint path, probe path, and status action path explicitly covered", () => {
     const expectedPaths = [
+      "/api/admin-action-log",
       "/api/api-keys",
       "/api/api-keys/audit-log",
       "/api/audit-depeg-history",
@@ -34,6 +35,7 @@ describe("api endpoint registry", () => {
       "/api/blacklist",
       "/api/blacklist-summary",
       "/api/bluechip-ratings",
+      "/api/bulk-dismiss-discovery-candidates",
       "/api/chains",
       "/api/daily-digest",
       "/api/debug-sync-state",
@@ -46,6 +48,7 @@ describe("api endpoint registry", () => {
       "/api/discovery-candidates",
       "/api/feedback",
       "/api/health",
+      "/api/kill-cron-in-flight",
       "/api/mint-burn-events",
       "/api/mint-burn-events?stablecoin=usdt-tether",
       "/api/mint-burn-flows",
@@ -59,6 +62,8 @@ describe("api endpoint registry", () => {
       "/api/report-cards",
       "/api/request-source-stats",
       "/api/reset-blacklist-sync",
+      "/api/reset-circuit-breaker",
+      "/api/reset-cron-lease",
       "/api/safety-score-history",
       "/api/safety-score-history?stablecoin=usdt-tether",
       "/api/stability-index",
@@ -71,6 +76,7 @@ describe("api endpoint registry", () => {
       "/api/status",
       "/api/status-history",
       "/api/status-history?limit=10",
+      "/api/status-probe-history",
       "/api/stress-signals",
       "/api/supply-history",
       "/api/supply-history?stablecoin=usdt-tether",
@@ -131,6 +137,7 @@ describe("api endpoint registry", () => {
       "/api/status-history?limit=10",
       "/api/debug-sync-state",
       "/api/discovery-candidates",
+      "/api/status-probe-history",
     ]);
 
     expect(getProbePaths("manual")).toEqual([
@@ -147,6 +154,10 @@ describe("api endpoint registry", () => {
       "/api/reclassify-atomic-roundtrips",
       "/api/audit-depeg-history?dry-run=true",
       "/api/backfill-dews",
+      "/api/reset-cron-lease",
+      "/api/reset-circuit-breaker",
+      "/api/kill-cron-in-flight",
+      "/api/bulk-dismiss-discovery-candidates",
     ]);
   });
 

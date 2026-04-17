@@ -1,5 +1,6 @@
 import type {
   StatusDiscrepancy,
+  StatusDiscrepancyReason,
   StatusProbeSummary,
 } from "@shared/types/status";
 import {
@@ -23,6 +24,7 @@ export function buildDiscrepancy(
       details: null,
       probeAgeSeconds: null,
       consecutiveDivergent,
+      discrepancyReason: "probe-missing",
     };
   }
 
@@ -33,6 +35,12 @@ export function buildDiscrepancy(
   const freshProbe = probeAgeSeconds <= STATUS_SYSTEM_FRESHNESS_SEC;
   const hasDivergence = freshProbe && Math.abs(severityDelta) >= 1;
 
+  const discrepancyReason: StatusDiscrepancyReason = !freshProbe
+    ? "probe-stale"
+    : hasDivergence
+      ? "probe-disagrees"
+      : "in-sync";
+
   return {
     hasDivergence,
     severityDelta,
@@ -41,5 +49,6 @@ export function buildDiscrepancy(
     details: hasDivergence ? `status=${overallStatus}, probe=${probe.status}, probeAge=${probeAgeSeconds}s` : null,
     probeAgeSeconds,
     consecutiveDivergent,
+    discrepancyReason,
   };
 }

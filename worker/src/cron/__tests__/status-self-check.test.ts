@@ -82,7 +82,8 @@ vi.mock("@shared/lib/api-endpoints", () => ({
   },
 }));
 
-const { runStatusSelfCheck, isBootstrapCacheMiss } = await import("../status-self-check");
+const { runStatusSelfCheck, isBootstrapCacheMiss, classifyProbeStatus } = await import("../status-self-check");
+const { STATUS_PROBE_THRESHOLDS } = await import("@shared/lib/status-thresholds");
 
 describe("runStatusSelfCheck", () => {
   afterEach(() => {
@@ -350,5 +351,138 @@ describe("runStatusSelfCheck", () => {
     await expect(isBootstrapCacheMiss(freshDb, "/api/usds-status", 503)).resolves.toBe(true);
     await expect(isBootstrapCacheMiss(establishedDb, "/api/usds-status", 503)).resolves.toBe(false);
     await expect(isBootstrapCacheMiss(freshDb, "/api/peg-summary", 500)).resolves.toBe(false);
+  });
+});
+
+describe("health probe semantic classification", () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    vi.stubGlobal("fetch", fetchMock);
+    evaluateStatusAndPersistMock.mockResolvedValue({
+      raw: { rawOverallStatus: "healthy", freshnessDiagnostics: [] as Array<Record<string, unknown>> },
+      effectiveStatus: "healthy",
+      persistenceSucceeded: true,
+    });
+    updateDiscrepancyObservationMock.mockResolvedValue({
+      consecutiveDivergent: 0,
+      lastAlertAt: null,
+      consecutiveProbeFailures: 0,
+      lastProbeAlertAt: null,
+      persistenceSucceeded: true,
+    });
+    buildDiscrepancyMock.mockImplementation(
+      (_status: unknown, _probe: unknown, _now: number, streak: number) => ({
+        hasDivergence: false,
+        severityDelta: 0,
+        statusSeverity: 0,
+        probeSeverity: 0,
+        details: "no-divergence",
+        probeAgeSeconds: 0,
+        consecutiveDivergent: streak,
+      }),
+    );
+  });
+
+  function buildHealthResponseWithBody(body: unknown): Response {
+    return new Response(typeof body === "string" ? body : JSON.stringify(body), {
+      status: 200,
+      headers: { "content-type": "application/json" },
+    });
+  }
+
+  function mockHealthBody(body: unknown): void {
+    fetchMock.mockImplementation(async (input: unknown) => {
+      let rawUrl = "https://api.pharos.watch";
+      if (typeof input === "string") {
+        rawUrl = input;
+      } else if (input instanceof URL) {
+        rawUrl = input.toString();
+      } else if (
+        input
+        && typeof input === "object"
+        && "url" in input
+        && typeof (input as { url: unknown }).url === "string"
+      ) {
+        rawUrl = (input as { url: string }).url;
+      }
+      const url = rawUrl.startsWith("http") ? new URL(rawUrl) : new URL(rawUrl, "https://api.pharos.watch");
+      if (url.pathname === "/api/health") {
+        return buildHealthResponseWithBody(body);
+      }
+      return new Response("{}", { status: 200 });
+    });
+  }
+
+  it("classifies invalid-health-payload (unparseable JSON) as stale semantic status", async () => {
+    mockHealthBody("not-json");
+
+    await runStatusSelfCheck({} as D1Database, "https://staging.api.pharos.watch");
+
+    const latestProbeWriteCall = writeStatusProbeRunMock.mock.calls[
+      writeStatusProbeRunMock.mock.calls.length - 1
+    ] as unknown[] | undefined;
+    const latestProbeWrite = latestProbeWriteCall?.[2] as { status?: string };
+    expect(latestProbeWrite.status).toBe("stale");
+  });
+
+  it("classifies invalid-health-status (unknown status value) as stale", async () => {
+    mockHealthBody({ status: "weird" });
+
+    await runStatusSelfCheck({} as D1Database, "https://staging.api.pharos.watch");
+
+    const latestProbeWriteCall = writeStatusProbeRunMock.mock.calls[
+      writeStatusProbeRunMock.mock.calls.length - 1
+    ] as unknown[] | undefined;
+    const latestProbeWrite = latestProbeWriteCall?.[2] as { status?: string };
+    expect(latestProbeWrite.status).toBe("stale");
+  });
+
+  it("forces overall probeStatus to at least stale when health endpoint semantically broken", async () => {
+    mockHealthBody("not-json");
+
+    const result = await runStatusSelfCheck(
+      {} as D1Database,
+      "https://staging.api.pharos.watch",
+    );
+    const metadata = JSON.parse(result.metadata ?? "{}") as Record<string, unknown>;
+    expect(metadata.probeStatus).not.toBe("healthy");
+    expect(metadata.probeStatus).toBe("stale");
+  });
+});
+
+describe("classifyProbeStatus reflects STATUS_PROBE_THRESHOLDS", () => {
+  it("returns stale when sampleCount is 0", () => {
+    expect(classifyProbeStatus(0, 0, 0)).toBe("stale");
+  });
+
+  it("returns healthy when fails <= healthyMaxFailCount and p95 <= healthyP95MaxMs", () => {
+    const { healthyMaxFailCount, healthyP95MaxMs } = STATUS_PROBE_THRESHOLDS;
+    expect(classifyProbeStatus(10, healthyMaxFailCount, healthyP95MaxMs)).toBe("healthy");
+    expect(classifyProbeStatus(10, 0, healthyP95MaxMs)).toBe("healthy");
+  });
+
+  it("downgrades to degraded when p95 crosses healthyP95MaxMs", () => {
+    const { healthyP95MaxMs, degradedP95MaxMs } = STATUS_PROBE_THRESHOLDS;
+    expect(classifyProbeStatus(10, 0, healthyP95MaxMs + 1)).toBe("degraded");
+    expect(classifyProbeStatus(10, 0, degradedP95MaxMs)).toBe("degraded");
+  });
+
+  it("returns stale when p95 exceeds degradedP95MaxMs", () => {
+    const { degradedP95MaxMs } = STATUS_PROBE_THRESHOLDS;
+    expect(classifyProbeStatus(10, 0, degradedP95MaxMs + 1)).toBe("stale");
+  });
+
+  it("uses degradedMaxFailRatio to cap degraded classification", () => {
+    const { degradedMaxFailRatio, healthyP95MaxMs, degradedP95MaxMs } = STATUS_PROBE_THRESHOLDS;
+    const sampleCount = 20;
+    const degradedFailCap = Math.floor(sampleCount * degradedMaxFailRatio);
+    // At the cap with p95 in degraded band -> degraded
+    expect(classifyProbeStatus(sampleCount, degradedFailCap, degradedP95MaxMs)).toBe("degraded");
+    // One over the cap -> stale
+    expect(classifyProbeStatus(sampleCount, degradedFailCap + 1, healthyP95MaxMs)).toBe("stale");
   });
 });
