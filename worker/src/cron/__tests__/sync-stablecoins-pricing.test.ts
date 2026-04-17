@@ -134,6 +134,52 @@ describe("pricing application helpers", () => {
     expect(assets[0].priceSource).toBe("coingecko");
   });
 
+  it("downgrades pre-GT single-source asset to low confidence when GT-probe evidence is rejected", () => {
+    // Pre-GT primary pass set this asset to "single-source" with a soft price.
+    const assets = [
+      makeAsset({
+        id: "usdt-tether",
+        price: 1.001,
+        priceSource: "coingecko",
+        priceConfidence: "single-source",
+      }),
+    ];
+    // After runGtProbePass mutation: GT probe diverged, resulting consensus is still
+    // single-source (GT did not join the sole cluster). validatePrimaryPriceCandidate
+    // rejects the GT-enriched candidate (e.g., temporal-jump).
+    const candidate = makePriceResult({
+      price: 1.08,
+      source: "coingecko",
+      confidence: "single-source",
+      candidateSources: ["coingecko", "geckoterminal"],
+      agreeSources: ["coingecko"],
+    });
+
+    validatePrimaryPriceCandidateMock.mockReturnValue({
+      accepted: false,
+      reason: "temporal-jump-quarantine",
+    });
+    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+
+    applyGtProbeResults({
+      assets,
+      primaryPriceResults: new Map([["usdt-tether", candidate]]),
+      validationContexts: createValidationContextResolver(),
+      syncStartSec: 1_800_000_000,
+    });
+
+    expect(assets[0].priceConfidence).toBe("low");
+    // The GT-rejected price is not applied — pre-GT price stays.
+    expect(assets[0].price).toBe(1.001);
+    expect(assets[0].priceSource).toBe("coingecko");
+    const warned = warnSpy.mock.calls.some((args) => {
+      const msg = args.map((a) => String(a)).join(" ");
+      return msg.includes("GT probe evidence rejected") && msg.includes("usdt-tether");
+    });
+    expect(warned).toBe(true);
+    warnSpy.mockRestore();
+  });
+
   it("only primary pass defaults supply source", () => {
     const primaryOnly = [
       makeAsset({

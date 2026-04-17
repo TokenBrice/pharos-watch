@@ -454,16 +454,38 @@ export function applyGtProbeResults(input: {
     syncStartSec,
   } = input;
 
-  applyPriceResultsForAssets({
-    assets,
-    primaryPriceResults,
-    previousTrustedPrices,
-    validationContexts,
-    validationReferences,
-    syncStartSec,
-    rejectionLabel: "GT-probed price",
-    requiredCandidateSource: "geckoterminal",
-  });
+  for (const asset of assets) {
+    const primaryPriceResult = primaryPriceResults.get(asset.id);
+    if (!primaryPriceResult) continue;
+    if (!primaryPriceResult.candidateSources.includes("geckoterminal")) continue;
+
+    const rejectionReason = applyPrimaryCandidate({
+      asset,
+      candidate: primaryPriceResult,
+      previousTrustedPrice: previousTrustedPrices?.get(asset.id) ?? null,
+      validationContext: validationContexts.get(asset),
+      validationReferences,
+      syncStartSec,
+    });
+    if (!rejectionReason) continue;
+
+    console.warn(
+      `[sync-stablecoins] Rejected GT-probed price for ${asset.symbol} (id=${asset.id}): ` +
+        `$${primaryPriceResult.price} from ${primaryPriceResult.source} (${rejectionReason})`,
+    );
+
+    // GT probe surfaced evidence that contradicts the pre-GT primary; validation rejected
+    // the GT-enriched candidate (e.g., temporal-jump). The pre-GT price remains on the
+    // asset, but its confidence is no longer defensible as single-source — the GT divergence
+    // is new soft evidence against the pre-GT price. Downgrade to low.
+    if (primaryPriceResult.confidence === "single-source") {
+      asset.priceConfidence = "low";
+      primaryPriceResult.confidence = "low";
+      console.warn(
+        `[sync-stablecoins] GT probe evidence rejected; downgrading ${asset.id} to low-confidence (reason=${rejectionReason})`,
+      );
+    }
+  }
 }
 
 export function applyProtocolPriceOverrides(input: {
