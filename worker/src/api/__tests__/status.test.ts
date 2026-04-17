@@ -2612,4 +2612,85 @@ describe("handleStatus", () => {
       expect(body.summary.transitionsLast24h).toBe(0);
     });
   });
+
+  // -------------------------------------------------------------------------
+  // Task 2: handleStatus must be read-only w.r.t. status_state. The cron
+  // (status-self-check, */15 min) is the sole writer. The API used to call
+  // reconcileStatusState whenever staleness.isStale was true, racing with the
+  // cron's own reconcile and dropping transitions.
+  // -------------------------------------------------------------------------
+  describe("handleStatus — read-only w.r.t. status_state", () => {
+    function buildBaseStatusTables(
+      now: number,
+      stateRow: Record<string, unknown> | null,
+    ) {
+      const stablecoinsCache = JSON.stringify({
+        peggedAssets: [
+          { id: "usdt-tether", symbol: "USDT", price: 1, circulating: { peggedUSD: 100_000_000 } },
+        ],
+      });
+      return [
+        { match: "cache WHERE key IN", rows: [makeCacheRow("stablecoins")] },
+        { match: "dex_liquidity", rows: [], first: { age: 300 } },
+        { match: "yield_data", rows: [], first: { age: 300 } },
+        { match: "stress_signals", rows: [], first: { age: 300 } },
+        { match: "cron_runs", rows: [makeCronRow("sync-stablecoins", "ok", 30)] },
+        { match: "cache", rows: [], first: { value: stablecoinsCache, updated_at: now - 60 } },
+        { match: "blacklist_events", rows: [], first: { total: 0, missing: 0, missing_recent: 0 } },
+        { match: "depeg_events", rows: [], first: { cnt: 0 } },
+        { match: "onchain_supply WHERE updated_at", rows: [], first: { cnt: 0 } },
+        { match: "onchain_supply WHERE updated_at >", rows: [] },
+        { match: "FROM discovery_candidates WHERE dismissed = 0", rows: [] },
+        { match: "FROM status_state", rows: [], first: stateRow },
+      ];
+    }
+
+    it("does not write status_state when snapshot is stale", async () => {
+      const now = Math.floor(Date.now() / 1000);
+      // Snapshot age > STATUS_SYSTEM_FRESHNESS_SEC (1800s) → stale.
+      const staleStateRow = {
+        scope: "global",
+        current_status: "healthy",
+        raw_status: "healthy",
+        last_evaluated_at: now - 3600,
+        last_changed_at: now - 3600,
+        consecutive_healthy: 5,
+        consecutive_degraded: 0,
+        consecutive_stale: 0,
+        confidence: 0.9,
+        causes_json: "[]",
+      };
+      const db = mockD1(buildBaseStatusTables(now, staleStateRow));
+      const request = makeApiRequest("/api/status", { adminKey: "secret-key" });
+      const res = await handleStatus(db, true, request);
+      expect(res.status).toBe(200);
+
+      const writes = db.getHistory().filter((entry) =>
+        /INSERT INTO status_state|UPDATE status_state|INSERT INTO status_transitions/i.test(entry.sql),
+      );
+      expect(writes).toEqual([]);
+
+      const body = (await res.json()) as { staleness: { isStale: boolean } };
+      expect(body.staleness.isStale).toBe(true);
+    });
+
+    it("returns fallback state when snapshot is absent (first boot), without writing", async () => {
+      const now = Math.floor(Date.now() / 1000);
+      const db = mockD1(buildBaseStatusTables(now, null));
+      const request = makeApiRequest("/api/status", { adminKey: "secret-key" });
+      const res = await handleStatus(db, true, request);
+      expect(res.status).toBe(200);
+
+      const writes = db.getHistory().filter((entry) =>
+        /INSERT INTO status_state|UPDATE status_state|INSERT INTO status_transitions/i.test(entry.sql),
+      );
+      expect(writes).toEqual([]);
+
+      const body = (await res.json()) as {
+        state: { currentStatus: string };
+        staleness: { isStale: boolean };
+      };
+      expect(["healthy", "degraded", "stale"]).toContain(body.state.currentStatus);
+    });
+  });
 });
