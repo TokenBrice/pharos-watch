@@ -1,6 +1,18 @@
 import { describe, expect, it } from "vitest";
-import { detectAtomicRoundtrips } from "../mint-burn-pipeline/roundtrip-detection";
+import { detectAtomicRoundtrips, ROUNDTRIP_AMOUNT_TOLERANCE } from "../mint-burn-pipeline/roundtrip-detection";
 import type { MintBurnRow } from "../mint-burn-pipeline/types";
+
+// Drift guard: both `worker/src/lib/mint-burn-pipeline/roundtrip-sweep.ts` and
+// `worker/src/api/reclassify-atomic-roundtrips.ts` hardcode the 0.005 literal
+// inside their SQL HAVING clauses because SQL cannot interpolate TS constants.
+// Any change to ROUNDTRIP_AMOUNT_TOLERANCE must update those SQL sites too.
+// This CI-time assertion catches the drift before deploy; runtime module-load
+// throws were rejected for blast radius.
+describe("ROUNDTRIP_AMOUNT_TOLERANCE drift guard", () => {
+  it("matches the hardcoded SQL literal in roundtrip-sweep.ts and reclassify-atomic-roundtrips.ts", () => {
+    expect(ROUNDTRIP_AMOUNT_TOLERANCE).toBe(0.005);
+  });
+});
 
 function makeRow(overrides: Partial<MintBurnRow>): MintBurnRow {
   return {

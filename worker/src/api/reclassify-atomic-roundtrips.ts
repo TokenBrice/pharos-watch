@@ -4,16 +4,11 @@ import { batchExecute } from "../lib/db";
 import { recalcAffectedHours } from "../lib/mint-burn-pipeline/persistence";
 import type { MintBurnAffectedHour } from "../lib/mint-burn-pipeline/types";
 // The reverse-pass SQL HAVING clause below hardcodes 0.005 because SQL cannot
-// interpolate TS constants. Keep it in lock-step with ROUNDTRIP_AMOUNT_TOLERANCE
-// in lib/mint-burn-pipeline/roundtrip-detection.ts — this import acts as a
-// compile-time reminder.
-import { ROUNDTRIP_AMOUNT_TOLERANCE } from "../lib/mint-burn-pipeline/roundtrip-detection";
-
-if (ROUNDTRIP_AMOUNT_TOLERANCE !== 0.005) {
-  throw new Error(
-    `ROUNDTRIP_AMOUNT_TOLERANCE (${ROUNDTRIP_AMOUNT_TOLERANCE}) drifted from reverse-pass SQL literal 0.005`,
-  );
-}
+// interpolate TS constants. `roundtrip-sweep.ts` has the same literal. The
+// drift guard is a unit test at
+// `worker/src/lib/__tests__/mint-burn-roundtrip.test.ts` — it asserts the TS
+// constant matches 0.005 at CI time, keeping blast radius out of the Worker
+// cold-start path.
 
 const BATCH_SIZE = 1000;
 
