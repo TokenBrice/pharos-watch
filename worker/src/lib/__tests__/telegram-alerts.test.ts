@@ -5,6 +5,7 @@ import {
   parseSubscribeArgs,
   validateSubscribeArgs,
   formatDisambiguation,
+  formatDewsLine,
   parseDisambiguationReply,
   formatConsolidatedMessage,
   splitMessage,
@@ -354,6 +355,36 @@ describe("formatConsolidatedMessage", () => {
       launch: [],
     });
     expect(msg).toContain('href="https://pharos.watch"');
+  });
+});
+
+describe("formatDewsLine", () => {
+  it("renders DEWS sub-signal values as percentages", () => {
+    const line = formatDewsLine({
+      stablecoinId: "usdt-tether",
+      symbol: "USDT",
+      oldBand: "WATCH",
+      newBand: "ALERT",
+      score: 42,
+      topSignals: [
+        { name: "pool_balance_drift", value: 61 },
+        { name: "supply_velocity", value: 48 },
+      ],
+    });
+    expect(line).toContain("pool_balance_drift (61%)");
+    expect(line).toContain("supply_velocity (48%)");
+  });
+
+  it("omits the Top signals line when no signals are available", () => {
+    const line = formatDewsLine({
+      stablecoinId: "usdt-tether",
+      symbol: "USDT",
+      oldBand: "WATCH",
+      newBand: "ALERT",
+      score: 42,
+      topSignals: [],
+    });
+    expect(line).not.toContain("Top signals");
   });
 });
 

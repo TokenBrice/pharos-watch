@@ -255,9 +255,10 @@ export interface SafetyChange {
 }
 
 export function formatDewsLine(e: DewsChange): string {
+  // DEWS sub-signal values are already 0-100 integers (see SignalResult in worker/src/lib/dews.ts).
   const signals = e.topSignals
     .slice(0, 2)
-    .map((s) => `${s.name} (${s.value})`)
+    .map((s) => `${s.name} (${Math.round(s.value)}%)`)
     .join(", ");
   return `<b>${escapeHtml(e.symbol)}</b> — ${e.oldBand} → ${e.newBand} (score: ${e.score})${signals ? `\nTop signals: ${signals}` : ""}`;
 }
