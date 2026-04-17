@@ -269,6 +269,19 @@ function clusterSpreadBps(cluster: SourcePrice[]): number {
 }
 
 /**
+ * Ranks a cluster by its strongest trust tier. Higher rank wins the tiebreak.
+ * - 2: any member is hard_market, hard_oracle, or hard_protocol
+ * - 0: all members are soft_aggregator or soft_dex
+ * - 1: mixed (e.g. fallback_search only, or soft + fallback_search)
+ */
+function clusterTierRank(cluster: SourcePrice[]): number {
+  const tiers = cluster.map((m) => getPricingSourceRegistryEntry(m.source)?.trustTier ?? "soft_aggregator");
+  const anyHard = tiers.some((t) => t === "hard_market" || t === "hard_oracle" || t === "hard_protocol");
+  const allSoft = tiers.every((t) => t === "soft_aggregator" || t === "soft_dex");
+  return anyHard ? 2 : allSoft ? 0 : 1;
+}
+
+/**
  * Selects the winning cluster from all maximal cliques by a priority cascade:
  * largest size → highest total weight → tightest price spread → closest median
  * to `pegRef` → alphabetical source label tiebreak.
@@ -287,6 +300,12 @@ function pickBestCluster(clusters: SourcePrice[][], pegRef: number | null): Sour
     const bestWeight = clusterTotalWeight(best);
     if (candidateWeight !== bestWeight) {
       return candidateWeight > bestWeight ? candidate : best;
+    }
+
+    const candidateTierRank = clusterTierRank(candidate);
+    const bestTierRank = clusterTierRank(best);
+    if (candidateTierRank !== bestTierRank) {
+      return candidateTierRank > bestTierRank ? candidate : best;
     }
 
     const candidateSpread = clusterSpreadBps(candidate);

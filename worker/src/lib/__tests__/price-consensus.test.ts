@@ -86,6 +86,22 @@ describe("computePriceConsensus", () => {
     expect(result!.price).toBe(0.9942);
   });
 
+  it("prefers hard-tier cluster over equal-size-equal-weight soft cluster", () => {
+    // Two clusters of exactly size 2 and total weight 3 each:
+    //   soft: coingecko(w=2)+defillama-list(w=1)  at 1.000
+    //   hard: pyth(w=2)+binance(w=1)              at 0.992
+    // Equal size AND equal weight → tiebreak: hard tier wins.
+    const softA: SourcePrice = { source: "coingecko", price: 1.000, weight: 2 };
+    const softB: SourcePrice = { source: "defillama-list", price: 1.000, weight: 1 };
+    const hardA: SourcePrice = { source: "pyth", price: 0.992, weight: 2 };
+    const hardB: SourcePrice = { source: "binance", price: 0.992, weight: 1 };
+    const consensus = computePriceConsensus([softA, softB, hardA, hardB], 1.0, 50, { mode: "fixed" });
+    expect(consensus!.agreeSources.sort()).toEqual(["binance", "pyth"]);
+    expect(consensus!.agreeSources).not.toContain("coingecko");
+    expect(consensus!.agreeSources).not.toContain("defillama-list");
+    expect(consensus!.price).toBeCloseTo(0.992, 5);
+  });
+
   it("prefers higher-weight source when multiple agree", () => {
     const sources: SourcePrice[] = [
       { source: "coingecko", price: 1.0001, weight: 1 },
