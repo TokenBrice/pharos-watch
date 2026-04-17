@@ -5,6 +5,14 @@ import { fetchChainlinkReferenceQuoteSnapshot, type ChainlinkReferenceQuote } fr
 import type { ChainRpcConfig } from "../lib/chain-registry";
 import { shouldAttemptFetch, recordOutcome } from "../lib/circuit-breaker";
 import { getCache, setCache } from "../lib/db-cache";
+import type { MetalsResolution } from "../lib/fx-metals";
+import type { FxRateSourceMode, FxRateState, FxRateSyncMode, FxRatesMeta, FxSourceCadence } from "../lib/fx-rate-state";
+import { getFxSourceStatus } from "../lib/fx-rate-state";
+import {
+  applyRealtimeOverlaySourceMetadata,
+  canCarryForwardFxRates,
+  inheritFxSourceMetadata,
+} from "../lib/fx-source-metadata";
 
 const CHAINLINK_FAILING_RUNS_CACHE_KEY = "chainlink:failing-runs";
 
@@ -20,14 +28,6 @@ async function loadChainlinkFailingRuns(db: D1Database): Promise<Record<string, 
     return undefined;
   }
 }
-import type { MetalsResolution } from "../lib/fx-metals";
-import type { FxRateSourceMode, FxRateState, FxRateSyncMode, FxRatesMeta, FxSourceCadence } from "../lib/fx-rate-state";
-import { getFxSourceStatus } from "../lib/fx-rate-state";
-import {
-  applyRealtimeOverlaySourceMetadata,
-  canCarryForwardFxRates,
-  inheritFxSourceMetadata,
-} from "../lib/fx-source-metadata";
 
 export interface SecondaryCurrencyPayload {
   date?: string;

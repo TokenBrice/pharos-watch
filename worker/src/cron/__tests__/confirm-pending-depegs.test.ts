@@ -9,7 +9,6 @@ vi.mock("../../lib/fetch-retry", () => ({
 }));
 
 vi.mock("../../lib/cex-tickers", () => ({
-  fetchBinancePrices: vi.fn(async () => new Map<string, number>()),
   fetchBinancePricesDetailed: vi.fn(async () => ({
     kind: "no-data",
     value: {
