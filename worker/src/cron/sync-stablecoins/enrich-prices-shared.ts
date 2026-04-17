@@ -1,5 +1,23 @@
 import type { PriceConfidence, PriceObservedAtMode } from "@shared/types/core";
 
+export interface PrimaryPriceResult {
+  price: number;
+  source: string;
+  selectedSource?: string;
+  priceEstimator?: "selected_source" | "cluster_median";
+  confidence: PriceConfidence;
+  dlPrice: number | null;
+  cgPrice: number | null;
+  candidateSources: string[];
+  agreeSources: string[];
+  disagreeSources?: string[];
+  allPrices?: Record<string, number>;
+  observedAt?: number | null;
+  observedAtMode?: PriceObservedAtMode | null;
+  observedAtBySource?: Record<string, number | null>;
+  observedAtModeBySource?: Record<string, PriceObservedAtMode | null>;
+}
+
 export interface PeggedAsset {
   id: string;
   name: string;

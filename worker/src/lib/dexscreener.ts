@@ -78,19 +78,10 @@ export function getDsTrackedTokenPriceUsd(
 
 /**
  * Fetch all pools for a token on a specific chain from DexScreener.
- * Returns an array of pairs, or empty if the request fails.
+ * Returns `{ ok, pairs }` so callers can distinguish "no pools" (200 with empty
+ * array) from "fetch failed" (timeout, non-OK status, parse error) for circuit
+ * breaker accounting.
  */
-export async function fetchDsTokenPools(
-  chain: string,
-  tokenAddress: string,
-  signal?: AbortSignal,
-  timeoutMs = 10_000,
-  maxRetries = 2,
-): Promise<DsPair[]> {
-  const result = await fetchDsTokenPoolsWithStatus(chain, tokenAddress, signal, timeoutMs, maxRetries);
-  return result.pairs;
-}
-
 export async function fetchDsTokenPoolsWithStatus(
   chain: string,
   tokenAddress: string,

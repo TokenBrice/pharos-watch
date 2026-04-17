@@ -1,7 +1,7 @@
 import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins";
 import { getPricingSourceRegistryEntry } from "@shared/lib/pricing-source-registry";
 import { sumPegBuckets } from "@shared/lib/supply";
-import type { PriceConfidence, PriceObservedAtMode } from "@shared/types/core";
+import type { PriceObservedAtMode } from "@shared/types/core";
 import type { PriceValidationContext, PriceValidationReferences } from "../../lib/price-validation";
 import {
   buildPriceValidationContext,
@@ -50,25 +50,9 @@ import {
   type PrimaryCollectedQuotes,
 } from "../../lib/primary-price-collector";
 import { aggregateProtocolPrices, computeWeightedMedianPrice } from "../../lib/dex-price-estimators";
-import type { PeggedAsset } from "./enrich-prices-shared";
+import type { PeggedAsset, PrimaryPriceResult } from "./enrich-prices-shared";
 
-export interface PrimaryPriceResult {
-  price: number;
-  source: string;
-  selectedSource?: string;
-  priceEstimator?: "selected_source" | "cluster_median";
-  confidence: PriceConfidence;
-  dlPrice: number | null;
-  cgPrice: number | null;
-  candidateSources: string[];
-  agreeSources: string[];
-  disagreeSources?: string[];
-  allPrices?: Record<string, number>;
-  observedAt?: number | null;
-  observedAtMode?: PriceObservedAtMode | null;
-  observedAtBySource?: Record<string, number | null>;
-  observedAtModeBySource?: Record<string, PriceObservedAtMode | null>;
-}
+export type { PrimaryPriceResult };
 
 export interface PriceValidationStats {
   attempted: number;

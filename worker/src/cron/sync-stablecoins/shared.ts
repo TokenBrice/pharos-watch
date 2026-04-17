@@ -3,7 +3,7 @@ import type { PriceSourceHealth } from "@shared/types/status";
 import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins";
 import { setCacheIfNewer, getCache, getPriceCache, type PriceCacheEntry } from "../../lib/db-cache";
 import type { CronResult } from "../../lib/cron-logger";
-import type { PeggedAsset } from "./enrich-prices";
+import type { PeggedAsset } from "./enrich-prices-shared";
 import type { PriceValidationReferences } from "../../lib/price-validation";
 import { loadFxRateState, getFxReferenceTypeFromState } from "../../lib/fx-rate-state";
 

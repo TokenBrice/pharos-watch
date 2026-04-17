@@ -3,7 +3,7 @@ import {
   type PriceValidationContext,
   type PriceValidationReferences,
 } from "../../lib/price-validation";
-import type { PeggedAsset, PrimaryPriceResult } from "./enrich-prices";
+import type { PeggedAsset, PrimaryPriceResult } from "./enrich-prices-shared";
 import { clearPriceMetadata, stampPriceMetadata } from "./shared";
 import { classifyPrimaryDepegTrust } from "../../lib/depeg-trust-policy";
 import type { PriceCacheEntry } from "../../lib/db-cache";
