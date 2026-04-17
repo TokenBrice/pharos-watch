@@ -642,6 +642,18 @@ describe("syncMintBurn", () => {
     expect(meta.atomicRoundtripsDetected).toBe(2);
   });
 
+  it("emits subrequestBudgetUsed and subrequestBudgetLimit in metadata", async () => {
+    const db = makeDb();
+
+    const result = await syncMintBurn(db, "alchemy-key");
+    const meta = JSON.parse(result.metadata);
+
+    expect(meta.subrequestBudgetLimit).toBe(200);
+    expect(typeof meta.subrequestBudgetUsed).toBe("number");
+    expect(meta.subrequestBudgetUsed).toBeGreaterThanOrEqual(0);
+    expect(meta.subrequestBudgetUsed).toBeLessThanOrEqual(meta.subrequestBudgetLimit);
+  });
+
   it("downgrades to degraded and flags metadata when recalcAffectedHours throws", async () => {
     const db = makeDb();
 

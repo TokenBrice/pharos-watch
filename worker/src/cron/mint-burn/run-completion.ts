@@ -126,6 +126,8 @@ export async function completeMintBurnRun(input: {
   const metadata = withBudgetMetadata(input.budget, {
     lane: input.lane,
     jobName: input.jobName,
+    subrequestBudgetUsed: input.budget.count,
+    subrequestBudgetLimit: input.budget.limit,
     chainHead: compatibilityChainHead || null,
     chainHeads: Object.fromEntries(input.chainHeads),
     rowsRead: input.rowsRead,
