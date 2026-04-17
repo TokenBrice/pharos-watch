@@ -1,3 +1,4 @@
+import { invalidateMintBurnFlowCaches } from "../api/mint-burn-flows-shared";
 import {
   createBudget,
 } from "../lib/evm-logs";
@@ -132,6 +133,8 @@ export async function syncMintBurn(
     const metadata = JSON.stringify({
       lane,
       jobName,
+      budgetUsed: budget.count,
+      budgetLimit: budget.limit,
       rowsRead: 0,
       rowsParsed: 0,
       rowsInserted: 0,
@@ -225,6 +228,8 @@ export async function syncMintBurn(
   const affectedHours = new Map<string, MintBurnAffectedHour>();
 
   let phaseResult!: MintBurnRunConfigPhaseResult;
+  let recalcFailed = false;
+  let recalcError: string | null = null;
   try {
     phaseResult = await runMintBurnConfigPhase({
       db,
@@ -248,8 +253,10 @@ export async function syncMintBurn(
     if (affectedHours.size > 0) {
       try {
         await recalcAffectedHours(db, affectedHours);
-      } catch (recalcError) {
-        console.error("[sync-mint-burn] recalcAffectedHours failed in finally block:", recalcError);
+      } catch (e) {
+        recalcFailed = true;
+        recalcError = e instanceof Error ? e.message : String(e);
+        console.error("[sync-mint-burn] recalcAffectedHours failed in finally block:", e);
       }
     }
   }
@@ -274,7 +281,7 @@ export async function syncMintBurn(
     },
   }, budget);
 
-  const { status, metadata } = await completeMintBurnRun({
+  const completion = await completeMintBurnRun({
     db,
     budget,
     lane,
@@ -309,6 +316,16 @@ export async function syncMintBurn(
     configBreakdown,
   });
 
+  let status = completion.status;
+  // Surface recalcAffectedHours failure in metadata and downgrade critical-lane
+  // runs so operators get a signal that hourly aggregates are stale.
+  if (recalcFailed && lane !== "extended" && status === "ok") {
+    status = "degraded";
+  }
+  completion.metadata.recalcFailed = recalcFailed;
+  if (recalcError) completion.metadata.recalcError = recalcError;
+  const metadata = JSON.stringify(completion.metadata);
+
   await reportCronProgress(reportProgress, {
     stage: "complete",
     itemsDone: configs.length,
@@ -324,6 +341,14 @@ export async function syncMintBurn(
   }, budget);
 
   console.log(`[sync-mint-burn] Completed with ${budget.count}/${budget.limit} subrequests (${status})`);
+
+  if (status === "ok" || status === "degraded") {
+    try {
+      await invalidateMintBurnFlowCaches(db);
+    } catch (e) {
+      console.warn("[sync-mint-burn] cache invalidation failed:", e);
+    }
+  }
 
   return {
     itemCount: rowsInserted,

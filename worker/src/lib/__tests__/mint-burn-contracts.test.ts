@@ -5,6 +5,7 @@ import {
   buildMintBurnScope,
   getMintBurnConfigsForStablecoin,
   MINT_BURN_CONFIGS,
+  validateMintBurnBridgeDetection,
 } from "../mint-burn-contracts";
 
 const REUSD_DEPOSITED_TOPIC = "0x8752a472e571a816aea92eec8dae9baf628e840f4929fbcc2d155e6233ff68a7";
@@ -454,5 +455,38 @@ describe("mint-burn-contracts provenance metadata", () => {
     expect(cfg?.adapterKind).toBe("custom-events");
     expect(cfg?.startBlockSource).toBe("reviewed-contract-specific");
     expect(cfg?.startBlockConfidence).toBe("high");
+  });
+});
+
+describe("validateMintBurnBridgeDetection", () => {
+  it("accepts a well-formed config", () => {
+    expect(() => validateMintBurnBridgeDetection({
+      protocol: "ccip",
+      knownBridgePoolAddresses: ["0x80226fc0ee2b096224eeac085bb9a8cba1146f7d"],
+      knownBridgeRouterAddresses: ["0x80226fc0ee2b096224eeac085bb9a8cba1146f7d"],
+      bridgeSignalTopics: ["0xd0c3c799bf9e2639de44391e7f524d229b2b55f5b1ea94b2bf7da42f7243dddd"],
+      bridgeSignalSelectors: ["0x96f4e9f9"],
+    })).not.toThrow();
+  });
+  it("rejects malformed address (no 0x)", () => {
+    expect(() => validateMintBurnBridgeDetection({
+      protocol: "ccip",
+      knownBridgePoolAddresses: ["80226fc0ee2b096224eeac085bb9a8cba1146f7d"],
+      knownBridgeRouterAddresses: [], bridgeSignalTopics: [], bridgeSignalSelectors: [],
+    })).toThrow(/address/i);
+  });
+  it("rejects topic of wrong length", () => {
+    expect(() => validateMintBurnBridgeDetection({
+      protocol: "ccip",
+      knownBridgePoolAddresses: [], knownBridgeRouterAddresses: [],
+      bridgeSignalTopics: ["0xdeadbeef"], bridgeSignalSelectors: [],
+    })).toThrow(/topic/i);
+  });
+  it("rejects selector of wrong length", () => {
+    expect(() => validateMintBurnBridgeDetection({
+      protocol: "ccip",
+      knownBridgePoolAddresses: [], knownBridgeRouterAddresses: [],
+      bridgeSignalTopics: [], bridgeSignalSelectors: ["0xabcd"],
+    })).toThrow(/selector/i);
   });
 });

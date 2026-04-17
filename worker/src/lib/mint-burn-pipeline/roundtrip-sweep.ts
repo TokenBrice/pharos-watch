@@ -1,5 +1,6 @@
 import { batchExecute } from "../db";
-import { recalcAffectedHours } from "./persistence";
+import { collectAffectedHours, recalcAffectedHours } from "./persistence";
+import { ROUNDTRIP_TOLERANCE_HAVING_SQL } from "./roundtrip-detection";
 import type { MintBurnAffectedHour } from "./types";
 
 const SWEEP_LOOKBACK_SEC = 7 * 24 * 3600; // 7 days; capped by SWEEP_LIMIT per run
@@ -8,6 +9,7 @@ const SWEEP_LIMIT = 200; // keep it lightweight per cron run
 export interface RoundtripSweepResult {
   reclassified: number;
   affectedHours: Map<string, MintBurnAffectedHour>;
+  saturated: boolean;
 }
 
 /**
@@ -24,38 +26,31 @@ export async function sweepRecentRoundtrips(
   const cutoff = nowSec - lookbackSec;
 
   const { results: candidates } = await db.prepare(
-    `SELECT tx_hash, stablecoin_id, chain_id, MIN(timestamp) as min_ts
+    `SELECT tx_hash, stablecoin_id, chain_id, MIN(timestamp) as timestamp
      FROM mint_burn_events
      WHERE flow_type = 'standard' AND timestamp >= ?
      GROUP BY tx_hash, stablecoin_id, chain_id
      HAVING COUNT(DISTINCT direction) > 1
+        AND ${ROUNDTRIP_TOLERANCE_HAVING_SQL}
      ORDER BY MIN(timestamp) ASC, stablecoin_id ASC, tx_hash ASC
      LIMIT ?`,
   ).bind(cutoff, SWEEP_LIMIT).all<{
     tx_hash: string;
     stablecoin_id: string;
     chain_id: string;
-    min_ts: number;
+    timestamp: number;
   }>();
 
   if (candidates.length === 0) {
-    return { reclassified: 0, affectedHours: new Map() };
+    return { reclassified: 0, affectedHours: new Map(), saturated: false };
   }
 
-  if (candidates.length === SWEEP_LIMIT) {
+  const saturated = candidates.length === SWEEP_LIMIT;
+  if (saturated) {
     console.warn(`[roundtrip-sweep] Hit limit (${SWEEP_LIMIT}), backlog may remain`);
   }
 
-  const affectedHours = new Map<string, MintBurnAffectedHour>();
-  for (const row of candidates) {
-    const hourTs = Math.floor(row.min_ts / 3600) * 3600;
-    const key = `${row.stablecoin_id}-${row.chain_id}-${hourTs}`;
-    affectedHours.set(key, {
-      stablecoinId: row.stablecoin_id,
-      chainId: row.chain_id,
-      hourTs,
-    });
-  }
+  const affectedHours = collectAffectedHours(candidates);
 
   const updateStmts = candidates.map((row) =>
     db.prepare(
@@ -70,5 +65,5 @@ export async function sweepRecentRoundtrips(
     await recalcAffectedHours(db, affectedHours);
   }
 
-  return { reclassified, affectedHours };
+  return { reclassified, affectedHours, saturated };
 }

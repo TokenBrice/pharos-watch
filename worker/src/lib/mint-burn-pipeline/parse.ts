@@ -1,5 +1,5 @@
 import type { AlchemyLogEntry } from "../alchemy-logs";
-import { decodeAddress, decodeUint256AtSlot } from "../evm-logs";
+import { decodeAddress, decodeUint256AtSlot, readDataWord } from "../evm-logs";
 import type { MintBurnContractConfig, MintBurnEventDef } from "../mint-burn-contracts";
 import { findMintBurnHistoricalPrice } from "./context";
 import type { MintBurnPriceHistoryPoint, MintBurnRow } from "./types";
@@ -68,8 +68,20 @@ export function parseMintBurnLogs(
     }
 
     const id = `${config.chain.chainId}-${log.transactionHash}-${logIndex}`;
-    const counterpartyTopic = direction === "mint" ? log.topics[2] : log.topics[1];
-    const counterparty = counterpartyTopic ? decodeAddress(counterpartyTopic) : null;
+    let counterparty: string | null = null;
+    if (eventDef.counterpartyEncoding) {
+      const enc = eventDef.counterpartyEncoding;
+      if (enc.source === "topic") {
+        const word = log.topics[enc.index];
+        counterparty = word ? decodeAddress(word) : null;
+      } else {
+        const word = readDataWord(log.data, enc.slot);
+        counterparty = word ? decodeAddress(word) : null;
+      }
+    } else {
+      const counterpartyTopic = direction === "mint" ? log.topics[2] : log.topics[1];
+      counterparty = counterpartyTopic ? decodeAddress(counterpartyTopic) : null;
+    }
 
     const eventPrice = resolveEventPrice(
       config.stablecoinId,

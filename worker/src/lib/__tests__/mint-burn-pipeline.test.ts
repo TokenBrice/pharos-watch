@@ -43,6 +43,7 @@ import { getAlchemyTransactionByHash, getAlchemyTransactionReceipt } from "../al
 import { classifyBridgeAwareBurnRows } from "../mint-burn-bridge-classifier";
 import { batchExecute } from "../db";
 import { classifyBridgeBurnRows } from "../mint-burn-pipeline/classification";
+import { parseMintBurnLogs } from "../mint-burn-pipeline/parse";
 import {
   collectAffectedHours,
   insertMintBurnRows,
@@ -57,6 +58,8 @@ import {
   upsertMintBurnSyncState,
 } from "../mint-burn-pipeline/sync-state";
 import type { MintBurnRow } from "../mint-burn-pipeline/types";
+import type { MintBurnContractConfig, MintBurnEventDef } from "../mint-burn-contracts";
+import type { AlchemyLogEntry } from "../alchemy-logs";
 
 function makeDb(): D1Database {
   return {
@@ -299,7 +302,8 @@ describe("mint-burn shared pipeline modules", () => {
     );
 
     expect(result.inserted).toBe(0);
-    expect(result.classificationRowsUpdated).toBe(0);
+    expect(result.flowTypeChanges).toBe(0);
+    expect(result.burnTypeChanges).toBe(0);
     expect(affectedHours.size).toBe(0);
   });
 
@@ -384,6 +388,67 @@ describe("mint-burn shared pipeline modules", () => {
     expect(vi.mocked(getAlchemyTransactionReceipt)).toHaveBeenCalledTimes(4);
     expect(vi.mocked(classifyBridgeAwareBurnRows)).toHaveBeenCalledTimes(1);
     expect(db).toBeDefined();
+  });
+
+  it("fetches tx contexts with bounded concurrency", async () => {
+    let inflight = 0;
+    let peak = 0;
+    vi.mocked(getAlchemyTransactionByHash).mockImplementation(async (_url: string, txHash: string) => {
+      inflight++;
+      peak = Math.max(peak, inflight);
+      // Yield across two microtask ticks so the scheduler can start more workers
+      // up to the concurrency limit before any of them complete.
+      await new Promise<void>((resolve) => queueMicrotask(resolve));
+      await new Promise<void>((resolve) => queueMicrotask(resolve));
+      inflight--;
+      return { hash: txHash, to: "0xrouter", input: "0x96f4e9f9" };
+    });
+    vi.mocked(getAlchemyTransactionReceipt).mockImplementation(async (_url: string, txHash: string) => ({
+      transactionHash: txHash,
+      to: "0xrouter",
+      logs: [],
+    }));
+
+    const rows: MintBurnRow[] = Array.from({ length: 20 }, (_, index) =>
+      makeRow({ id: `burn-${index}`, direction: "burn", tx_hash: `0xtx-${index}` }),
+    );
+
+    await classifyBridgeBurnRows(
+      rows,
+      {
+        chain: {
+          chainId: "ethereum",
+          chainName: "Ethereum",
+          evmChainId: 1,
+          explorerUrl: "https://etherscan.io",
+          type: "evm",
+        },
+        stablecoinId: "usdt-tether",
+        symbol: "USDT",
+        contractAddress: "0xdac17f958d2ee523a2206206994597c13d831ec7",
+        decimals: 6,
+        dustThreshold: 10_000,
+        startBlock: 21_900_000,
+        adapterKind: "transfer-zero-address",
+        startBlockSource: "reviewed-contract-specific",
+        startBlockConfidence: "high",
+        events: [],
+        bridgeDetection: {
+          protocol: "ccip",
+          knownBridgePoolAddresses: ["0xpool"],
+          knownBridgeRouterAddresses: ["0xrouter"],
+          bridgeSignalTopics: ["0xtopic"],
+          bridgeSignalSelectors: ["0x96f4e9f9"],
+        },
+      },
+      "https://eth-mainnet.g.alchemy.com/v2/test-key",
+      { count: 0, limit: 200 },
+      new Map(),
+    );
+
+    // min(4, 20) = 4; bounded by TX_CONTEXT_CONCURRENCY in classification.ts
+    expect(peak).toBe(4);
+    expect(vi.mocked(getAlchemyTransactionByHash)).toHaveBeenCalledTimes(20);
   });
 
   it("recomputes only affected hourly buckets", async () => {
@@ -604,6 +669,8 @@ describe("mint-burn shared pipeline modules", () => {
 
   it("updates classification rows for burns and non-standard mints", async () => {
     const db = makeDb();
+    // Single batchExecute call: 3 rows (2 burns + 1 non-standard mint).
+    // The standard-flow mint row is filtered out (no classification change needed).
     vi.mocked(batchExecute).mockResolvedValueOnce(3);
 
     const rows = [
@@ -613,11 +680,13 @@ describe("mint-burn shared pipeline modules", () => {
       makeRow({ id: "burn-2", direction: "burn", burn_type: "bridge_burn" }),
     ];
 
-    const updated = await updateEventClassifications(db, rows);
-    expect(updated).toBe(3);
+    const { flowTypeChanges, burnTypeChanges, rowsUpdated } = await updateEventClassifications(db, rows);
+    expect(burnTypeChanges).toBe(2);
+    expect(flowTypeChanges).toBe(1);
+    expect(rowsUpdated).toBe(3);
     expect(vi.mocked(batchExecute)).toHaveBeenCalledTimes(1);
-    const firstCall = vi.mocked(batchExecute).mock.calls[0];
-    expect(firstCall[1]).toHaveLength(3);
+    const [[, stmts]] = vi.mocked(batchExecute).mock.calls;
+    expect(stmts).toHaveLength(3);
   });
 
   it("uses monotonic sync-state upsert mode for backfill semantics", async () => {
@@ -766,5 +835,61 @@ describe("mint-burn shared pipeline modules", () => {
     await expect(readMintBurnSyncStateBatch(db, [config])).resolves.toEqual(new Map([
       ["ethereum-0xdac17f958d2ee523a2206206994597c13d831ec7", 22_345_678],
     ]));
+  });
+});
+
+// Fake topic hash: parseMintBurnLogs does not validate log.topics[0] against
+// eventDef.topicHash (topic filtering happens upstream in the fetch layer), so the
+// value is inert for this test. Using a visibly-fake placeholder to avoid seeding
+// a wrong-but-real-looking constant.
+const FAKE_TOPIC = "0x" + "0".repeat(64);
+const USER_DATA = "000000000000000000000000aaaa1111aaaa2222aaaa3333aaaa4444aaaa5555";
+const TOKEN_DATA = "000000000000000000000000bbbb1111bbbb2222bbbb3333bbbb4444bbbb5555";
+const AMOUNT_DATA = "0000000000000000000000000000000000000000000000000de0b6b3a7640000"; // 1e18
+
+describe("parseMintBurnLogs — custom counterparty encoding", () => {
+  it("extracts counterparty from data slot when counterpartyEncoding is set", () => {
+    const config: MintBurnContractConfig = {
+      chain: { chainId: "ethereum", explorerUrl: "https://etherscan.io" } as MintBurnContractConfig["chain"],
+      stablecoinId: "test",
+      symbol: "TEST",
+      contractAddress: "0xc0",
+      decimals: 18,
+      dustThreshold: 0,
+      startBlock: 1,
+      events: [],
+      adapterKind: "custom-events",
+      startBlockSource: "test-fixture",
+      startBlockConfidence: "high",
+    };
+    const eventDef: MintBurnEventDef = {
+      signature: "Deposited(address,address,uint256)",
+      topicHash: FAKE_TOPIC,
+      direction: "mint",
+      amountEncoding: "nth-data-uint256",
+      dataSlot: 2,
+      counterpartyEncoding: { source: "data", slot: 0 },
+    };
+    const logs: AlchemyLogEntry[] = [{
+      address: "0xc0",
+      topics: [FAKE_TOPIC],
+      data: "0x" + USER_DATA + TOKEN_DATA + AMOUNT_DATA,
+      blockNumber: "0x64",
+      transactionHash: "0xtx",
+      logIndex: "0x0",
+      blockHash: "0xhash",
+      transactionIndex: "0x0",
+      removed: false,
+    }];
+    const { rows } = parseMintBurnLogs(
+      config,
+      eventDef,
+      logs,
+      new Map([[100, 1700000000]]),
+      new Map(),
+      new Map(),
+      1700000100,
+    );
+    expect(rows[0].counterparty).toBe("0xaaaa1111aaaa2222aaaa3333aaaa4444aaaa5555");
   });
 });

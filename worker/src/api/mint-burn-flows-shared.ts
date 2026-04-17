@@ -573,3 +573,20 @@ export function buildCoinCoverageMap(
 export async function readCachedFlow(db: D1Database, key: string): Promise<{ value: string; updatedAt: number } | null> {
   return getCache(db, key);
 }
+
+/**
+ * Purge all cached mint-burn-flows API responses. Called from the cron at end
+ * of a successful run so the next API call recomputes against fresh events.
+ *
+ * Range predicate (not LIKE) because the `cache` table's PRIMARY KEY on `key`
+ * supports guaranteed index-range scans; LIKE 'prefix%' falls back to a full
+ * scan on SQLite in some configurations.
+ */
+export async function invalidateMintBurnFlowCaches(db: D1Database): Promise<void> {
+  // Prefix matches every key FLOW_CACHE_PREFIX writes (see line 51); `\uffff`
+  // is the largest UTF-16 code unit and safely bounds any future suffix.
+  await db
+    .prepare("DELETE FROM cache WHERE key >= ? AND key < ?")
+    .bind(`${FLOW_CACHE_PREFIX}:`, `${FLOW_CACHE_PREFIX}:\uffff`)
+    .run();
+}

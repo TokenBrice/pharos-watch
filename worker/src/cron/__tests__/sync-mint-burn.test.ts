@@ -113,8 +113,28 @@ vi.mock("../../lib/db", async (importOriginal) => {
   };
 });
 
+vi.mock("../../lib/mint-burn-pipeline/persistence", async (importOriginal) => {
+  const orig = await importOriginal<typeof import("../../lib/mint-burn-pipeline/persistence")>();
+  return {
+    ...orig,
+    recalcAffectedHours: vi.fn(orig.recalcAffectedHours),
+  };
+});
+
+vi.mock("../../lib/mint-burn-pipeline/price-heal", () => ({
+  getNullPriceBacklog: vi.fn(async () => ({ recent: 0, historical: 0 })),
+  healNullPrices: vi.fn(async () => ({ healed: 0, affectedHours: new Map() })),
+}));
+
+vi.mock("../../lib/mint-burn-pipeline/roundtrip-sweep", () => ({
+  sweepRecentRoundtrips: vi.fn(async () => ({ reclassified: 0, affectedHours: new Map(), saturated: false })),
+}));
+
 import { syncMintBurn } from "../sync-mint-burn";
 import { batchExecute } from "../../lib/db";
+import { recalcAffectedHours } from "../../lib/mint-burn-pipeline/persistence";
+import { getNullPriceBacklog, healNullPrices } from "../../lib/mint-burn-pipeline/price-heal";
+import { sweepRecentRoundtrips } from "../../lib/mint-burn-pipeline/roundtrip-sweep";
 // batchExecute stays in db.ts (core DB utility)
 import {
   fetchAlchemyLogs,
@@ -219,6 +239,10 @@ describe("syncMintBurn", () => {
     });
     vi.mocked(resolveBlockTimestamps).mockReset().mockResolvedValue(new Map());
     vi.mocked(batchExecute).mockReset().mockImplementation(async (_db, stmts) => stmts.length);
+    vi.mocked(recalcAffectedHours).mockReset().mockResolvedValue(undefined);
+    vi.mocked(getNullPriceBacklog).mockReset().mockResolvedValue({ recent: 0, historical: 0 });
+    vi.mocked(healNullPrices).mockReset().mockResolvedValue({ healed: 0, affectedHours: new Map() });
+    vi.mocked(sweepRecentRoundtrips).mockReset().mockResolvedValue({ reclassified: 0, affectedHours: new Map(), saturated: false });
   });
 
   afterEach(() => {
@@ -562,5 +586,98 @@ describe("syncMintBurn", () => {
   it("rejects when ALCHEMY_API_KEY is missing", async () => {
     const db = makeDb();
     await expect(syncMintBurn(db, null)).rejects.toThrow("No ALCHEMY_API_KEY configured");
+  });
+
+  it("invalidates mint-burn-flows cache rows after a successful run", async () => {
+    const db = makeDb();
+
+    const result = await syncMintBurn(db, "alchemy-key");
+
+    expect(result.status).toBe("ok");
+    const history = (db as ReturnType<typeof makeDb> & { getHistory(): Array<{ sql: string; binds: unknown[] }> }).getHistory();
+    const invalidation = history.find(
+      (entry) =>
+        entry.sql.includes("DELETE FROM cache")
+        && entry.binds[0] === "mint-burn-flows:v3:"
+        && entry.binds[1] === "mint-burn-flows:v3:\uffff",
+    );
+    expect(invalidation).toBeDefined();
+  });
+
+  it("emits nullPriceBacklog and roundtripsBacklogSaturated in metadata", async () => {
+    const db = makeDb();
+
+    vi.mocked(getNullPriceBacklog).mockResolvedValueOnce({ recent: 12, historical: 45 });
+    vi.mocked(sweepRecentRoundtrips).mockResolvedValueOnce({
+      reclassified: 200,
+      affectedHours: new Map(),
+      saturated: true,
+    });
+
+    vi.mocked(fetchAlchemyLogs)
+      .mockResolvedValueOnce({
+        logs: [makeMintLog({ txHash: "0xroundtrip", logIndex: 0 })],
+        complete: true,
+        scannedToBlock: 22_000_000,
+        calls: 1,
+        maxDepth: 0,
+      })
+      .mockResolvedValueOnce({
+        logs: [makeBurnLog({ txHash: "0xroundtrip", logIndex: 1 })],
+        complete: true,
+        scannedToBlock: 22_000_000,
+        calls: 1,
+        maxDepth: 0,
+      })
+      .mockResolvedValueOnce({ logs: [], complete: true, scannedToBlock: 22_000_000, calls: 1, maxDepth: 0 });
+
+    vi.mocked(resolveBlockTimestamps).mockResolvedValueOnce(new Map([[22_000_000, 1_718_650_752]]));
+
+    const result = await syncMintBurn(db, "alchemy-key");
+    const meta = JSON.parse(result.metadata);
+
+    expect(meta.nullPriceBacklogRecent).toBe(12);
+    expect(meta.nullPriceBacklogHistorical).toBe(45);
+    expect(meta.roundtripsBacklogSaturated).toBe(true);
+    expect(meta.atomicRoundtripsDetected).toBe(2);
+  });
+
+  it("emits budgetUsed and budgetLimit in metadata via withBudgetMetadata", async () => {
+    const db = makeDb();
+
+    const result = await syncMintBurn(db, "alchemy-key");
+    const meta = JSON.parse(result.metadata);
+
+    expect(meta.budgetLimit).toBe(200);
+    expect(typeof meta.budgetUsed).toBe("number");
+    expect(meta.budgetUsed).toBeGreaterThanOrEqual(0);
+    expect(meta.budgetUsed).toBeLessThanOrEqual(meta.budgetLimit);
+  });
+
+  it("downgrades to degraded and flags metadata when recalcAffectedHours throws", async () => {
+    const db = makeDb();
+
+    vi.mocked(fetchAlchemyLogs)
+      .mockResolvedValueOnce({ logs: [makeMintLog()], complete: true, scannedToBlock: 22_000_000, calls: 1, maxDepth: 0 })
+      .mockResolvedValueOnce({ logs: [], complete: true, scannedToBlock: 22_000_000, calls: 1, maxDepth: 0 })
+      .mockResolvedValueOnce({ logs: [], complete: true, scannedToBlock: 22_000_000, calls: 1, maxDepth: 0 });
+
+    vi.mocked(resolveBlockTimestamps).mockResolvedValueOnce(new Map([[22_000_000, 1_718_650_752]]));
+    // Insert path must succeed so affectedHours gets populated before recalc runs.
+    vi.mocked(batchExecute)
+      .mockResolvedValueOnce(0)
+      .mockResolvedValueOnce(1)
+      .mockResolvedValueOnce(0);
+
+    vi.mocked(recalcAffectedHours).mockRejectedValueOnce(new Error("D1 timeout during hourly recalc"));
+
+    const result = await syncMintBurn(db, "alchemy-key");
+    const meta = JSON.parse(result.metadata);
+
+    expect(vi.mocked(recalcAffectedHours)).toHaveBeenCalledTimes(1);
+    expect(result.status).toBe("degraded");
+    expect(meta.recalcFailed).toBe(true);
+    expect(typeof meta.recalcError).toBe("string");
+    expect(meta.recalcError).toContain("D1 timeout during hourly recalc");
   });
 });

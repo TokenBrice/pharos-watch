@@ -5,7 +5,14 @@ import { budgetExhausted } from "../../lib/evm-logs";
 import { mintBurnConfigKey, upsertMintBurnSyncState } from "../../lib/mint-burn-pipeline/sync-state";
 import type { MintBurnAffectedHour, MintBurnPriceContext } from "../../lib/mint-burn-pipeline/types";
 import type { MintBurnContractConfig, MintBurnTier } from "../../lib/mint-burn-contracts";
+import { deferConfig, loadDeferredConfigs, shouldDeferConfig } from "./run-state";
 import { syncMintBurnConfig, type MintBurnConfigSummary } from "./sync-config";
+
+function configCoverageRatio(summary: MintBurnConfigSummary): number | null {
+  if (summary.eventCoverage.length === 0) return null;
+  const okCount = summary.eventCoverage.filter((c) => c.status === "ok").length;
+  return okCount / summary.eventCoverage.length;
+}
 
 export function configKey(config: MintBurnContractConfig): string {
   return mintBurnConfigKey(config);
@@ -76,6 +83,9 @@ export async function runMintBurnConfigPhase(input: {
   const configBreakdown: MintBurnConfigSummary[] = [];
   const affectedHours = input.affectedHours;
 
+  const nowSec = Math.floor(Date.now() / 1000);
+  const deferredKeys = await loadDeferredConfigs(input.db, nowSec);
+
   for (let i = 0; i < input.configs.length; i++) {
     if (input.signal?.aborted) {
       throw input.signal.reason instanceof Error ? input.signal.reason : new Error("sync-mint-burn aborted");
@@ -135,6 +145,13 @@ export async function runMintBurnConfigPhase(input: {
       }
       configBreakdown.push(summary);
     };
+
+    if (deferredKeys.has(key)) {
+      summary.skippedReason = "deferred";
+      contractsSkipped++;
+      finalizeSummary();
+      continue;
+    }
 
     if (budgetExhausted(input.budget)) {
       summary.skippedReason = "global-budget-exhausted";
@@ -224,6 +241,25 @@ export async function runMintBurnConfigPhase(input: {
       `${summary.rowsInserted} inserted, ${summary.rowsIgnored} ignored, ` +
       `scan ${fromBlock}-${summary.scanTo ?? scanTo}, advancedTo=${summary.advancedTo ?? "none"}`,
     );
+
+    const configCoverage = configCoverageRatio(summary);
+    if (shouldDeferConfig(result.apiErrors, configCoverage)) {
+      try {
+        await deferConfig(
+          input.db,
+          key,
+          nowSec,
+          result.apiErrors,
+          configCoverage,
+          "api-errors-and-low-coverage",
+        );
+      } catch (error) {
+        console.warn(
+          `[sync-mint-burn] Failed to record deferral for ${key}:`,
+          error,
+        );
+      }
+    }
 
     finalizeSummary(
       summary.advanceReason === "full-success-events" || summary.advanceReason === "full-success-empty"

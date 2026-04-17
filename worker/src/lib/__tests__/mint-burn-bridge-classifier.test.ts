@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   classifyBridgeAwareBurnRows,
   type MintBurnBridgeClassifiableRow,
+  type MintBurnTxContext,
 } from "../mint-burn-bridge-classifier";
 import {
   MINT_BURN_CONFIGS,
@@ -11,6 +12,7 @@ import {
   type MintBurnContractConfig,
   type MintBurnLayerZeroOftBridgeDetectionConfig,
 } from "../mint-burn-contracts";
+import { ccipBridgeDetection, layerZeroOftBridgeDetection } from "../mint-burn-contracts-helpers";
 
 type CcipCoinCase = {
   stablecoinId: string;
@@ -206,7 +208,7 @@ describe("classifyBridgeAwareBurnRows", () => {
       expect(row.burn_review_reason).toBe("known-bridge-pool-without-bridge-signal");
     });
 
-    it(`[${coin.symbol}] flags bridge signal with unknown pool as review_required`, () => {
+    it(`[${coin.symbol}] tags bridge signal with unknown pool as bridge_transfer (aggressive: bridge tx = bridge rows)`, () => {
       const row = makeBurnRow({
         tx_hash: `0xunknown-pool-${coin.stablecoinId}`,
         counterparty: "0x9999000000000000000000000000000000000000",
@@ -215,8 +217,9 @@ describe("classifyBridgeAwareBurnRows", () => {
 
       classifyBridgeAwareBurnRows([row], coin.detection, contexts);
 
-      expect(row.burn_type).toBe("review_required");
-      expect(row.burn_review_reason).toBe("bridge-signal-with-unknown-pool");
+      expect(row.flow_type).toBe("bridge_transfer");
+      expect(row.burn_type).toBe("bridge_burn");
+      expect(row.burn_review_reason).toBeNull();
     });
 
     it(`[${coin.symbol}] treats null tx context as review_required (Alchemy lookup failure)`, () => {
@@ -296,7 +299,7 @@ describe("classifyBridgeAwareBurnRows", () => {
       expect(row.burn_review_reason).toBe("known-bridge-pool-without-bridge-signal");
     });
 
-    it(`[${cctpCoin.symbol}] flags bridge signal with unknown pool as review_required`, () => {
+    it(`[${cctpCoin.symbol}] tags bridge signal with unknown pool as bridge_transfer (aggressive: bridge tx = bridge rows)`, () => {
       const row = makeBurnRow({
         tx_hash: `0xunknown-pool-${cctpCoin.stablecoinId}`,
         counterparty: "0x9999000000000000000000000000000000000000",
@@ -305,8 +308,9 @@ describe("classifyBridgeAwareBurnRows", () => {
 
       classifyBridgeAwareBurnRows([row], cctpCoin.detection, contexts);
 
-      expect(row.burn_type).toBe("review_required");
-      expect(row.burn_review_reason).toBe("bridge-signal-with-unknown-pool");
+      expect(row.flow_type).toBe("bridge_transfer");
+      expect(row.burn_type).toBe("bridge_burn");
+      expect(row.burn_review_reason).toBeNull();
     });
 
     it(`[${cctpCoin.symbol}] treats null tx context as review_required (Alchemy lookup failure)`, () => {
@@ -403,4 +407,112 @@ describe("classifyBridgeAwareBurnRows", () => {
       expect(mintRow.flow_type).toBe("bridge_transfer");
     });
   }
+});
+
+const CCIP_ROUTER = "0x80226fc0ee2b096224eeac085bb9a8cba1146f7d";
+const CCIP_SEND_REQUESTED_TOPIC = "0xd0c3c799bf9e2639de44391e7f524d229b2b55f5b1ea94b2bf7da42f7243dddd";
+const CCIP_SEND_SELECTOR = "0x96f4e9f9";
+
+function row(overrides: Partial<MintBurnBridgeClassifiableRow> = {}): MintBurnBridgeClassifiableRow {
+  return {
+    id: "id-1", tx_hash: "0xtx1", direction: "mint",
+    flow_type: "standard", counterparty: null, burn_type: null, burn_review_reason: null,
+    ...overrides,
+  };
+}
+
+describe("CCIP/CCTP classifier — bridge MINTS", () => {
+  // CCIP pool address for ZCHF (per mint-burn-contracts.ts:200). Using a real
+  // CCIP pool, not the CCTP TokenMinterV2, so the test stays semantically scoped.
+  const CCIP_POOL_ZCHF = "0x9359cd75549dae00cdd8d22297bc9b13fbbe4b79";
+  const detection = ccipBridgeDetection([CCIP_POOL_ZCHF]);
+
+  it("tags an isolated CCIP bridge mint (no burn in same tx) as bridge_transfer", () => {
+    const rows = [row({ direction: "mint", tx_hash: "0xa" })];
+    const ctx = new Map<string, MintBurnTxContext | null>([
+      ["0xa", {
+        to: CCIP_ROUTER,
+        inputSelector: CCIP_SEND_SELECTOR,
+        logTopics: [CCIP_SEND_REQUESTED_TOPIC],
+        logAddresses: [CCIP_ROUTER],
+      }],
+    ]);
+    classifyBridgeAwareBurnRows(rows, detection, ctx);
+    expect(rows[0].flow_type).toBe("bridge_transfer");
+  });
+
+  it("tags both mint and burn when both share a CCIP bridge tx", () => {
+    const rows = [
+      row({ direction: "mint", tx_hash: "0xb", id: "id-2" }),
+      row({ direction: "burn", tx_hash: "0xb", id: "id-3", counterparty: CCIP_POOL_ZCHF }),
+    ];
+    const ctx = new Map<string, MintBurnTxContext | null>([
+      ["0xb", { to: CCIP_ROUTER, inputSelector: CCIP_SEND_SELECTOR, logTopics: [CCIP_SEND_REQUESTED_TOPIC], logAddresses: [CCIP_ROUTER] }],
+    ]);
+    classifyBridgeAwareBurnRows(rows, detection, ctx);
+    expect(rows[0].flow_type).toBe("bridge_transfer");
+    expect(rows[1].flow_type).toBe("bridge_transfer");
+    expect(rows[1].burn_type).toBe("bridge_burn");
+  });
+
+  it("does not tag a standard mint with no bridge signal", () => {
+    const rows = [row({ direction: "mint", tx_hash: "0xc" })];
+    const ctx = new Map<string, MintBurnTxContext | null>([
+      ["0xc", { to: "0x1234", inputSelector: "0xabcd", logTopics: [], logAddresses: [] }],
+    ]);
+    classifyBridgeAwareBurnRows(rows, detection, ctx);
+    expect(rows[0].flow_type).toBe("standard");
+  });
+});
+
+describe("LayerZero OFT classifier — endpoint-only signal", () => {
+  // Fixture references from agents/research/2026-04-08-usdai-mint-burn-bridge-investigation.md.
+  // `layerZeroOftBridgeDetection` takes ONLY `knownBridgeContractAddresses`; the emitter
+  // (LAYERZERO_ENDPOINT_V2), topics (PACKET_SENT/PACKET_DELIVERED), and selectors are
+  // hardcoded inside the helper. We use those canonical defaults here.
+  const ARB_LZ_ENDPOINT_V2 = "0x1a44076050125825900e736c501f859c50fe728c"; // same address shared across chains
+  const PACKET_DELIVERED_TOPIC = "0x3cd5e48f9730b129dc7550f0fcea9c767b7be37837cd10e55eb35f734f4bca04";
+  const detection: MintBurnBridgeDetectionConfig = layerZeroOftBridgeDetection([
+    "0xffa10065ce1d1c42fabc46e06b84ed8ffeb4bae5", // USDai OAdapter (Arb)
+  ]);
+
+  it("tags a LayerZero-Executor-only mint when endpoint emits PacketDelivered (no OAdapter touch)", () => {
+    const rows = [row({ direction: "mint", tx_hash: "0xexec" })];
+    const ctx = new Map<string, MintBurnTxContext | null>([
+      ["0xexec", {
+        to: "0x31cae3b7fb82d847621859fb1585353c5720660d", // LayerZero Executor
+        inputSelector: "0x123456ab",
+        logTopics: [PACKET_DELIVERED_TOPIC],
+        logAddresses: [ARB_LZ_ENDPOINT_V2], // endpoint is in logs but OAdapter is NOT
+      }],
+    ]);
+    classifyBridgeAwareBurnRows(rows, detection, ctx);
+    expect(rows[0].flow_type).toBe("bridge_transfer");
+  });
+
+  // Documented tradeoff: the Arbitrum LayerZero endpoint is shared across many OFT
+  // deployments. A tx that emits PacketDelivered for ANY OFT will now pass fingerprintC.
+  // In the current pipeline the classifier is called with detection tied to a specific
+  // coin, so an unrelated OFT tx won't affect coins whose mint/burn rows are absent from
+  // that tx. The remaining risk is a shared tx where BOTH coins have rows — a mint of
+  // tracked coin A in the same tx as a bridge of coin B is (conservatively) now tagged.
+  // We accept this as a tradeoff for catching Executor-only mints; add a per-message
+  // recipient-address decode step if real fallout emerges.
+  it("tags a mint when LayerZero endpoint emits the signal (even without OAdapter touch)", () => {
+    // Second detection config using a DIFFERENT known bridge contract.
+    const otherOftDetection: MintBurnBridgeDetectionConfig = layerZeroOftBridgeDetection([
+      "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    ]);
+    const rows = [row({ direction: "mint", tx_hash: "0xsame" })];
+    const ctx = new Map<string, MintBurnTxContext | null>([
+      ["0xsame", {
+        to: "0x31cae3b7fb82d847621859fb1585353c5720660d",
+        inputSelector: "0x00000000",
+        logTopics: [PACKET_DELIVERED_TOPIC],
+        logAddresses: [ARB_LZ_ENDPOINT_V2],
+      }],
+    ]);
+    classifyBridgeAwareBurnRows(rows, otherOftDetection, ctx);
+    expect(rows[0].flow_type).toBe("bridge_transfer"); // documented tradeoff
+  });
 });

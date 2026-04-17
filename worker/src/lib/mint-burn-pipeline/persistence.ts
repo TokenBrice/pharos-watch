@@ -44,32 +44,50 @@ export async function insertMintBurnRows(
   return { inserted, ignored };
 }
 
+export interface ClassificationUpdateCounters {
+  flowTypeChanges: number;
+  burnTypeChanges: number;
+  rowsUpdated: number;
+}
+
 export async function updateEventClassifications(
   db: D1Database,
   rows: MintBurnRow[],
-): Promise<number> {
-  const rowsNeedingUpdate = rows.filter((row) =>
-    row.direction === "burn" || row.flow_type !== "standard",
+): Promise<ClassificationUpdateCounters> {
+  // Any burn row gets its classification written unconditionally; mint rows
+  // only participate when the classifier produced a non-standard flow_type.
+  const needsUpdate = rows.filter(
+    (row) => row.direction === "burn" || row.flow_type !== "standard",
   );
-  if (rowsNeedingUpdate.length === 0) return 0;
+  if (needsUpdate.length === 0) {
+    return { flowTypeChanges: 0, burnTypeChanges: 0, rowsUpdated: 0 };
+  }
 
-  const updateClassificationStmts = rowsNeedingUpdate.map((row) =>
+  const stmts = needsUpdate.map((row) =>
     db.prepare(
       `UPDATE mint_burn_events
        SET burn_type = ?, burn_review_reason = ?, flow_type = ?
        WHERE id = ?`,
-    ).bind(
-      row.burn_type,
-      row.burn_review_reason,
-      row.flow_type,
-      row.id,
-    ),
+    ).bind(row.burn_type, row.burn_review_reason, row.flow_type, row.id),
   );
-  return batchExecute(db, updateClassificationStmts);
+  const rowsUpdated = await batchExecute(db, stmts);
+
+  // Per-column counters derived from classifier output rather than D1
+  // meta.changes so a row that changed both columns counts once per column
+  // without double-counting in the union (`rowsUpdated`).
+  const burnTypeChanges = needsUpdate.filter((r) => r.direction === "burn").length;
+  const flowTypeChanges = needsUpdate.filter((r) => r.flow_type !== "standard").length;
+  return { flowTypeChanges, burnTypeChanges, rowsUpdated };
 }
 
-export function collectAffectedHours(
-  rows: MintBurnRow[],
+interface AffectedHourCandidate {
+  stablecoin_id: string;
+  chain_id: string;
+  timestamp: number;
+}
+
+export function collectAffectedHours<T extends AffectedHourCandidate>(
+  rows: T[],
   seed?: Map<string, MintBurnAffectedHour>,
 ): Map<string, MintBurnAffectedHour> {
   const affectedHours = seed ?? new Map<string, MintBurnAffectedHour>();
@@ -155,7 +173,9 @@ export async function persistMintBurnRows(
 ): Promise<{
   inserted: number;
   ignored: number;
-  classificationRowsUpdated: number;
+  flowTypeChanges: number;
+  burnTypeChanges: number;
+  rowsUpdated: number;
   roundtripsDetected: number;
 }> {
   const roundtripsDetected = detectAtomicRoundtrips(rows);
@@ -163,20 +183,24 @@ export async function persistMintBurnRows(
     return {
       inserted: 0,
       ignored: 0,
-      classificationRowsUpdated: 0,
+      flowTypeChanges: 0,
+      burnTypeChanges: 0,
+      rowsUpdated: 0,
       roundtripsDetected,
     };
   }
 
   const insertResult = await insertMintBurnRows(db, rows);
-  const classificationRowsUpdated = await updateEventClassifications(db, rows);
-  if (affectedHours && (insertResult.inserted > 0 || classificationRowsUpdated > 0)) {
+  const { flowTypeChanges, burnTypeChanges, rowsUpdated } = await updateEventClassifications(db, rows);
+  if (affectedHours && (insertResult.inserted > 0 || rowsUpdated > 0)) {
     collectAffectedHours(rows, affectedHours);
   }
   return {
     inserted: insertResult.inserted,
     ignored: insertResult.ignored,
-    classificationRowsUpdated,
+    flowTypeChanges,
+    burnTypeChanges,
+    rowsUpdated,
     roundtripsDetected,
   };
 }

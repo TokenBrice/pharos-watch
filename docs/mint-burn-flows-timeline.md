@@ -1,6 +1,63 @@
 # Mint/Burn Flow Methodology - Version Timeline
 
-Internal changelog reconstructed from git history. Covers Mint/Burn Flow `v1.0` through `v5.2` (2026-03-01 -> 2026-04-14).
+Internal changelog reconstructed from git history. Covers Mint/Burn Flow `v1.0` through `v5.2` (2026-03-01 -> 2026-04-14), plus a forward-going **Pending: v6.0** section for changes shipped but not yet version-labeled.
+
+---
+
+## Pending: v6.0 - Comprehensive mint/burn remediation (Effective: TBD)
+
+**Status:** shipped in code on branch `mint-burn-remediation-2026-04-17`; `MINT_BURN_FLOW_METHODOLOGY_VERSION_LABEL` remains at `v5.2` pending the post-deploy backfill playbook. Once the operator runs `/api/reclassify-atomic-roundtrips` (forward + reverse passes) and `/api/backfill-mint-burn` reclassification across historical data, the label will bump to `v6.0`.
+
+**Bridge classification**
+
+- CCIP/CCTP classifier now tags bridge **mints** as `flow_type='bridge_transfer'` (previously only burns were tagged). Affects USDO, USD1, avUSD, ZCHF (CCIP) and USDC, EURC (CCTP).
+- LayerZero OFT classifier now accepts an endpoint-only signal (`fingerprintC`: `hasSignalTopic && hasExpectedEmitter && signalEmitterSet.size > 0`), catching LayerZero-Executor-only mints that previously slipped through. Known shared-endpoint false-positive risk is accepted.
+- Removed the `bridge-signal-with-unknown-pool` review path: rows with a bridge signal are now tagged `bridge_transfer` regardless of whether the pool address is known.
+- Bridge-detection configs are validated at module load (`validateMintBurnBridgeDetection`) in audit-and-log mode; a follow-up commit will escalate to throw-on-error after two clean cron cycles.
+- Classifier module split: dispatcher in `mint-burn-bridge-classifier.ts`, per-protocol helpers in `mint-burn-bridge-classifier-protocols.ts`, shared types in `mint-burn-bridge-classifier-types.ts` (leaf module, breaks import cycle).
+
+**Counterparty extraction**
+
+- `MintBurnEventDef` gained a `counterpartyEncoding` override supporting unindexed `data` slots and non-default topic slots via the new `readDataWord` helper in `worker/src/lib/evm-logs.ts`.
+- reUSD `Deposited` events (all params unindexed) now correctly populate counterparty via `{ source: "data", slot: 0 }`; they previously resolved to `null`.
+
+**Atomic roundtrip detection**
+
+- Added 0.5% amount tolerance (`ROUNDTRIP_AMOUNT_TOLERANCE = 0.005`): a group only tags as `atomic_roundtrip` when `|sum(mint) - sum(burn)| ≤ 0.005 × max(mintSum, burnSum)`. Partial same-tx groups (e.g. mint 100 / burn 50) are no longer mis-tagged.
+- In-memory detector defensively skips rows with an empty `tx_hash`.
+- Cross-run sweep HAVING clause mirrors the tolerance using the `CASE WHEN a >= b THEN a ELSE b END` pattern (SQLite has no two-arg `MAX`).
+- Drift-guard unit test asserts `ROUNDTRIP_AMOUNT_TOLERANCE === 0.005` so TS/SQL literal drift is caught.
+
+**Bank Run Gauge (mcap weighting)**
+
+- Coin weight is now the coin's canonical tracked-chain circulating supply, sourced from `chainCirculating[chainId].current` and normalized by `canonicalizeChainCirculating` (handles DefiLlama's capitalized keys).
+- New helpers: `getMintBurnTrackedChains(stablecoinId)` and `sumMcapForTrackedChains(...)` in `worker/src/lib/mint-burn-mcap-weighting.ts`.
+- Fallback to `sumPegBuckets(circulating)` preserved for coins with no tracked chains, empty `chainCirculating`, or missing tracked-chain entries (CG-fallback assets remain represented).
+
+**Ingestion orchestrator**
+
+- Config deferral: configs that exit a run with `apiErrors > 5` AND `coverage < 0.8` are inserted into `mint_burn_config_deferral` with a 1-hour grace period; subsequent runs skip them (protects healthy configs from budget starvation).
+- Recalc-failure propagation: `recalcAffectedHours` failures now downgrade the critical lane `ok → degraded` and surface `recalcFailed` + `recalcError` in cron metadata (previously silently logged).
+- Cache invalidation: on successful runs (`ok` / `degraded`), `mint-burn-flows:*` rows are purged from the shared `cache` table via a PK-range predicate.
+- Bounded-concurrency tx-context fetch: `runWithConcurrencyLimit(..., 4, ...)` replaces the serial `resolveTxContext` loop, leaving 2 connections of headroom in Cloudflare's per-trigger 6-connection pool.
+
+**Admin endpoints**
+
+- `/api/backfill-mint-burn` response now exposes `reclassified: { flowTypeChanges, burnTypeChanges }` deltas; the legacy `rowsReclassified` scalar is retained as the exact count of unique rows whose classification columns were rewritten in the chunk.
+- `/api/reclassify-atomic-roundtrips` now runs a reverse pass: groups tagged `atomic_roundtrip` that fail the 0.5% tolerance flip back to `flow_type='standard'`. Response exposes `toRoundtrip` (forward) and `toStandard` (reverse); `updated` remains as `toRoundtrip + toStandard` for back-compat.
+
+**Cron metadata observability**
+
+- New fields: `recalcFailed`, `recalcError`, `nullPriceBacklogRecent`, `nullPriceBacklogHistorical`, `roundtripsBacklogSaturated`. Subrequest budget is exposed as `budgetUsed` / `budgetLimit` via the shared `withBudgetMetadata` helper (same names every other cron already uses).
+
+**Migrations**
+
+- `0096_mint_burn_config_deferral.sql` — deferral table plus `idx_mbcd_until` index.
+- `0097_mbe_flow_type_ts_index.sql` — composite `idx_mbe_flow_type_ts` index on `mint_burn_events(flow_type, timestamp DESC)` to speed up the roundtrip sweep and future flow_type-filtered queries.
+
+**Multi-chain invariants**
+
+- Added `worker/src/cron/__tests__/sync-mint-burn-multichain.test.ts` to lock the post-Arbitrum chain-generic ingestion path. No source-level ETH/Arb hardcodes remain in orchestration; legitimate hardcodes (USDT Issue/Redeem, reUSD events, back-compat shims) are documented inline.
 
 ---
 
