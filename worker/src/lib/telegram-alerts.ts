@@ -265,7 +265,7 @@ export function formatDewsLine(e: DewsChange): string {
 
 export function formatDepegTriggeredLine(e: DepegAlertPayload): string {
   const pct = (e.deviationBps / 100).toFixed(1);
-  return `<b>${escapeHtml(e.symbol)}</b> — ${e.direction} peg\nDeviation: ${pct}% (${e.deviationBps} bps)\nPrice: $${e.price.toFixed(4)} (peg: $${e.pegReference.toFixed(2)})`;
+  return `<b>${escapeHtml(e.symbol)}</b> — ${e.direction} peg by ${pct}% (${e.deviationBps} bps)\nPrice: $${e.price.toFixed(4)} (peg: $${e.pegReference.toFixed(2)})`;
 }
 
 export function formatDepegResolvedLine(e: DepegResolved): string {
@@ -276,7 +276,12 @@ export function formatDepegResolvedLine(e: DepegResolved): string {
 }
 
 export function formatDepegWorseningLine(e: DepegWorsening): string {
-  return `<b>${escapeHtml(e.symbol)}</b> — ${e.direction} peg worsening\nDeviation: ${(e.previousDeviationBps / 100).toFixed(1)}% → ${(e.currentDeviationBps / 100).toFixed(1)}%\nPrice: $${e.price.toFixed(4)} (peg: $${e.pegReference.toFixed(2)})`;
+  const prev = (e.previousDeviationBps / 100).toFixed(1);
+  const curr = (e.currentDeviationBps / 100).toFixed(1);
+  const deltaBps = e.currentDeviationBps - e.previousDeviationBps;
+  const deltaPct = (deltaBps / 100).toFixed(1);
+  const deltaStr = deltaBps >= 0 ? `+${deltaPct}%` : `${deltaPct}%`;
+  return `<b>${escapeHtml(e.symbol)}</b> — ${e.direction} peg worsening\nDeviation: ${prev}% → ${curr}% (${deltaStr})\nPrice: $${e.price.toFixed(4)} (peg: $${e.pegReference.toFixed(2)})`;
 }
 
 export function formatSafetyLine(e: SafetyChange): string {

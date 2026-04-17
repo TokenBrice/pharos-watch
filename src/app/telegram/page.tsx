@@ -44,8 +44,7 @@ View on Pharos: pharos.watch/stablecoin/usdt-tether`,
     tagline: "trigger, worsening milestones, and resolution with price context",
     content: `Depeg Detected
 
-USDC — below peg
-Deviation: 1.1% (112 bps)
+USDC — below peg by 1.1% (112 bps)
 Price: $0.9888 (peg: $1.00)
 
 View on Pharos: pharos.watch/stablecoin/usdc-circle`,
