@@ -245,6 +245,111 @@ describe("handleStatus", () => {
     expect(["healthy", "degraded", "stale"]).toContain(body.overallStatus);
   });
 
+  it("surfaces providerDiagnostics and gtProbe from sync-stablecoins metadata", async () => {
+    const now = Math.floor(Date.now() / 1000);
+    const stablecoinsCache = JSON.stringify({
+      peggedAssets: [{ id: "usdt-tether", symbol: "USDT", price: 1.0, circulating: { peggedUSD: 100_000_000 } }],
+    });
+
+    const db = mockD1([
+      {
+        match: "cache WHERE key IN",
+        rows: [makeCacheRow("stablecoins"), makeCacheRow("stablecoin-charts")],
+      },
+      { match: "dex_liquidity", rows: [], first: { age: 300 } },
+      { match: "yield_data", rows: [], first: { age: 300 } },
+      { match: "stress_signals", rows: [], first: { age: 300 } },
+      {
+        match: "cron_runs",
+        rows: [
+          {
+            ...makeCronRow("sync-stablecoins"),
+            metadata: JSON.stringify({
+              providerDiagnostics: [
+                {
+                  source: "binance",
+                  stage: "primary",
+                  endpoint: "api.binance.com/api/v3/ticker/price",
+                  status: 403,
+                  ok: false,
+                  success: false,
+                  errorClass: "HTTPError",
+                  errorMessage: "Request blocked",
+                  snippet: "Service unavailable from restricted location",
+                },
+                {
+                  source: "jupiter",
+                  stage: "primary",
+                  endpoint: "price.jup.ag/v6/price",
+                  status: 200,
+                  ok: true,
+                  success: true,
+                  candidateCount: 5,
+                  matchedCount: 3,
+                },
+              ],
+              gtProbe: {
+                updatedCount: 2,
+                probed: 4,
+                pricesObtained: 3,
+                divergences500bps: 1,
+                skippedLowTvl: 0,
+                lookupMisses: 1,
+                upstreamErrors: 0,
+                publicFallbacks: 0,
+                budgetExhausted: false,
+                budgetSkipped: 0,
+                transports: {
+                  coingeckoOnchain: { attempted: 4, priced: 3, lookupMisses: 1, upstreamErrors: 0 },
+                  geckoTerminalPublic: { attempted: 0, priced: 0, lookupMisses: 0, upstreamErrors: 0 },
+                },
+              },
+            }),
+          },
+          makeCronRow("sync-stablecoin-charts"),
+          makeCronRow("sync-blacklist"),
+        ],
+      },
+      {
+        match: "FROM discovery_candidates WHERE dismissed = 0",
+        rows: [],
+      },
+      {
+        match: "cache",
+        rows: [],
+        first: { value: stablecoinsCache, updated_at: now - 60 },
+      },
+      { match: "blacklist_events", rows: [], first: { total: 10, missing: 2 } },
+      { match: "depeg_events", rows: [], first: { cnt: 0 } },
+      { match: "onchain_supply WHERE updated_at", rows: [], first: { cnt: 0 } },
+      { match: "onchain_supply WHERE updated_at >", rows: [] },
+    ]);
+
+    const request = makeApiRequest("/api/status", { adminKey: "secret-key" });
+    const res = await handleStatus(db, true, request);
+
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as {
+      priceProviderDiagnostics: Array<Record<string, unknown>> | null;
+      gtProbe: Record<string, unknown> | null;
+    };
+
+    expect(body).toHaveProperty("priceProviderDiagnostics");
+    expect(body).toHaveProperty("gtProbe");
+    expect(body.priceProviderDiagnostics).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ source: "binance", endpoint: expect.any(String), status: 403 }),
+      ]),
+    );
+    expect(body.gtProbe).toEqual(
+      expect.objectContaining({
+        updatedCount: expect.any(Number),
+        budgetExhausted: expect.any(Boolean),
+        transports: expect.any(Object),
+      }),
+    );
+  });
+
   it("treats cron history query failure as unknown telemetry instead of stale cron health", async () => {
     const now = Math.floor(Date.now() / 1000);
     const stablecoinsCache = JSON.stringify({

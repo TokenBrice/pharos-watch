@@ -463,6 +463,17 @@ export interface StatusResponse {
   };
   liquidityHealth: LiquidityHealth | null;
   priceSourceHealth: PriceSourceHealth | null;
+  /**
+   * Most recent per-provider attempt diagnostics (Binance, Jupiter, …) as persisted
+   * to `cron_runs.metadata.providerDiagnostics` by the sync-stablecoins cron. Kept
+   * permissively typed because origin shape evolves with the pricing pipeline.
+   */
+  priceProviderDiagnostics: Array<Record<string, unknown>> | null;
+  /**
+   * Most recent GeckoTerminal probe run stats as persisted to `cron_runs.metadata.gtProbe`.
+   * Kept permissively typed for the same reason as `priceProviderDiagnostics`.
+   */
+  gtProbe: Record<string, unknown> | null;
   coingeckoPriceDiff: CoinGeckoPriceDiff | null;
   d1Usage: D1UsageSummary | null;
   discoveryCandidates: DiscoveryCandidate[] | null;

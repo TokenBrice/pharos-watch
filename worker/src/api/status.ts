@@ -103,6 +103,8 @@ export function handleStatus(
         reserveComposition: raw.reserveComposition,
         liquidityHealth: supplements.liquidityHealth,
         priceSourceHealth: supplements.priceSourceHealth,
+        priceProviderDiagnostics: supplements.priceProviderDiagnostics,
+        gtProbe: supplements.gtProbe,
         coingeckoPriceDiff: supplements.coingeckoPriceDiff,
         d1Usage: supplements.d1Usage,
         discoveryCandidates: supplements.discoveryCandidates,

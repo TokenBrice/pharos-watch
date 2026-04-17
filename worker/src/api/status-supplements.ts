@@ -61,6 +61,8 @@ function sectionError(code: string, message?: string): StatusSectionError {
 export interface StatusSupplements {
   liquidityHealth: LiquidityHealth | null;
   priceSourceHealth: PriceSourceHealth | null;
+  priceProviderDiagnostics: Array<Record<string, unknown>> | null;
+  gtProbe: Record<string, unknown> | null;
   coingeckoPriceDiff: CoinGeckoPriceDiff | null;
   d1Usage: D1UsageSummary | null;
   cacheBlobSizes?: Record<string, number>;
@@ -245,11 +247,21 @@ export async function loadStatusSupplements(
   }
 
   let priceSourceHealth: PriceSourceHealth | null = null;
+  let priceProviderDiagnostics: Array<Record<string, unknown>> | null = null;
+  let gtProbe: Record<string, unknown> | null = null;
   try {
     const syncStablecoinsCron = crons["sync-stablecoins"];
     const metadata = syncStablecoinsCron?.lastRun?.metadata;
     if (metadata?.priceSourceHealth) {
       priceSourceHealth = metadata.priceSourceHealth as PriceSourceHealth;
+    }
+    if (Array.isArray(metadata?.providerDiagnostics)) {
+      priceProviderDiagnostics = metadata.providerDiagnostics.filter(
+        (entry): entry is Record<string, unknown> => typeof entry === "object" && entry != null,
+      );
+    }
+    if (metadata?.gtProbe && typeof metadata.gtProbe === "object") {
+      gtProbe = metadata.gtProbe as Record<string, unknown>;
     }
   } catch (err) {
     console.warn("[status] Price source health extraction failed:", err);
@@ -353,6 +365,8 @@ export async function loadStatusSupplements(
   return {
     liquidityHealth,
     priceSourceHealth,
+    priceProviderDiagnostics,
+    gtProbe,
     coingeckoPriceDiff,
     d1Usage,
     cacheBlobSizes,
