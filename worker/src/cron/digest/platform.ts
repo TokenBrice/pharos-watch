@@ -4,7 +4,7 @@ import type {
   DigestValidationProfile,
 } from "../daily-digest/response";
 import { fetchWithRetry } from "../../lib/fetch-retry";
-import { ANTHROPIC_MAX_RETRIES, ANTHROPIC_TIMEOUT_MS, CIRCUIT_SOURCE } from "../../lib/constants";
+import { ANTHROPIC_TIMEOUT_MS, CIRCUIT_SOURCE } from "../../lib/constants";
 import { recordOutcomeSafe, shouldAttemptFetch } from "../../lib/circuit-breaker";
 import {
   formatDigestValidationIssues,
@@ -57,6 +57,22 @@ interface RunDigestChannelDeliveryOptions<TCreds> {
   deliver: (creds: TCreds) => Promise<string | void>;
 }
 
+/** Fraction of ANTHROPIC_TIMEOUT_MS after which the corrective retry is skipped. */
+const CORRECTIVE_RETRY_BUDGET_FRACTION = 0.5;
+
+/**
+ * Per-attempt fetch timeout for the digest call, shorter than ANTHROPIC_TIMEOUT_MS
+ * so a single stalled attempt cannot consume the whole outer budget.
+ */
+const DIGEST_FETCH_PER_ATTEMPT_TIMEOUT_MS = 11 * 60_000;
+
+/**
+ * Retry depth for the digest call. Smaller than ANTHROPIC_MAX_RETRIES because
+ * the outer AbortSignal caps total wall time at ANTHROPIC_TIMEOUT_MS anyway,
+ * and extra retries only stack 529 backoff delays inside that budget.
+ */
+const DIGEST_FETCH_MAX_RETRIES = 2;
+
 export async function requestDigestCopy(
   options: RequestDigestCopyOptions,
 ): Promise<RequestDigestCopyResult> {
@@ -74,6 +90,8 @@ export async function requestDigestCopy(
       hasBlockingQualityIssues: false,
     };
   }
+
+  const started = Date.now();
 
   const requestClaude = async (userPrompt: string): Promise<string> => {
     const response = await fetchWithRetry(
@@ -93,12 +111,15 @@ export async function requestDigestCopy(
         system: options.systemPrompt,
         messages: [{ role: "user", content: userPrompt }],
       }),
+      // Outer AbortSignal.timeout(ANTHROPIC_TIMEOUT_MS) is the binding cap for
+      // total wall time across any retries; the inner fetch-retry timeoutMs is
+      // a per-attempt safety net.
       signal: options.signal
         ? AbortSignal.any([options.signal, AbortSignal.timeout(ANTHROPIC_TIMEOUT_MS)])
         : AbortSignal.timeout(ANTHROPIC_TIMEOUT_MS),
     },
-    ANTHROPIC_MAX_RETRIES,
-    { timeoutMs: ANTHROPIC_TIMEOUT_MS },
+    DIGEST_FETCH_MAX_RETRIES,
+    { timeoutMs: DIGEST_FETCH_PER_ATTEMPT_TIMEOUT_MS },
     );
 
     if (!response || !response.ok) {
@@ -127,21 +148,29 @@ export async function requestDigestCopy(
     : [];
 
   if (qualityIssues.length > 0) {
-    console.warn(
-      `[${options.logPrefix}] Digest quality checks failed, retrying once: ${formatDigestValidationIssues(qualityIssues)}`,
-    );
-    prompt = [
-      options.userPrompt,
-      "",
-      "REVISION REQUIRED:",
-      "Your previous response failed these quality checks:",
-      formatDigestValidationIssues(qualityIssues),
-      "Return ONLY corrected JSON with the same schema. Do not add markdown fences or commentary.",
-    ].join("\n");
-    parsed = parseDigestModelResponse(await requestClaude(prompt), options.parseOptions);
-    qualityIssues = options.validationProfile
-      ? validateDigestModelOutput(parsed, options.validationProfile)
-      : [];
+    const elapsedMs = Date.now() - started;
+    const budgetMs = ANTHROPIC_TIMEOUT_MS * CORRECTIVE_RETRY_BUDGET_FRACTION;
+    if (elapsedMs >= budgetMs) {
+      console.warn(
+        `[${options.logPrefix}] Digest quality checks failed but skipping corrective retry: elapsed ${elapsedMs}ms >= ${budgetMs}ms (${CORRECTIVE_RETRY_BUDGET_FRACTION * 100}% of budget). Issues: ${formatDigestValidationIssues(qualityIssues)}`,
+      );
+    } else {
+      console.warn(
+        `[${options.logPrefix}] Digest quality checks failed, retrying once (elapsed ${elapsedMs}ms): ${formatDigestValidationIssues(qualityIssues)}`,
+      );
+      prompt = [
+        options.userPrompt,
+        "",
+        "REVISION REQUIRED:",
+        "Your previous response failed these quality checks:",
+        formatDigestValidationIssues(qualityIssues),
+        "Return ONLY corrected JSON with the same schema. Do not add markdown fences or commentary.",
+      ].join("\n");
+      parsed = parseDigestModelResponse(await requestClaude(prompt), options.parseOptions);
+      qualityIssues = options.validationProfile
+        ? validateDigestModelOutput(parsed, options.validationProfile)
+        : [];
+    }
   }
 
   if (parsed.usedRawTextFallback) {

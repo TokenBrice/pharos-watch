@@ -18,7 +18,6 @@ import { generateWeeklyRecap } from "../weekly-recap";
 import { fetchWithRetry } from "../../lib/fetch-retry";
 import { postDigestToTelegram } from "../../lib/telegram";
 import { shouldAttemptFetch } from "../../lib/circuit-breaker";
-import { ANTHROPIC_MAX_RETRIES, ANTHROPIC_TIMEOUT_MS } from "../../lib/constants";
 
 const VALID_WEEKLY_EXTENDED = [
   "PSI opened the trailing edition window at 90 and closed at 86, never leaving BEDROCK but losing four points across five daily notes. USDT stayed near 1.00 in every fixture row, which makes the week's story less about a broken peg and more about calm data refusing to become a headline. The recap should notice the drift without inventing a crisis.",
@@ -159,8 +158,8 @@ describe("generateWeeklyRecap", () => {
     expect(fetchWithRetry).toHaveBeenCalledWith(
       "https://api.anthropic.com/v1/messages",
       expect.any(Object),
-      ANTHROPIC_MAX_RETRIES,
-      { timeoutMs: ANTHROPIC_TIMEOUT_MS },
+      2,
+      { timeoutMs: 11 * 60_000 },
     );
 
     const weeklyBody = JSON.parse(String(vi.mocked(fetchWithRetry).mock.calls[0]?.[1]?.body)) as {
