@@ -1143,7 +1143,7 @@ describe("dispatchTelegramAlerts", () => {
     expect(messages?.[0]?.replyMarkup?.inline_keyboard?.[0]?.[0]?.callback_data).toBe("snooze:1h");
   });
 
-  it("skips a chat whose alert_snooze_until_ts is in the future and reports chatsSuppressedBySnooze", async () => {
+  it("skips a chat whose alert_snooze_until_ts is in the future and reports chatsWithActiveSnooze", async () => {
     const now = Math.floor(Date.now() / 1000);
 
     mockGetCache.mockImplementation(async (_db: unknown, key: string) => {
@@ -1194,11 +1194,11 @@ describe("dispatchTelegramAlerts", () => {
     const result = await dispatchTelegramAlerts(db, "bot-token");
     const metadata = JSON.parse(result.metadata) as {
       messagesSent: number;
-      chatsSuppressedBySnooze: number;
+      chatsWithActiveSnooze: number;
     };
 
     expect(metadata.messagesSent).toBe(1);
-    expect(metadata.chatsSuppressedBySnooze).toBe(1);
+    expect(metadata.chatsWithActiveSnooze).toBe(1);
   });
 
   it("deduplicates 403 cleanup for a chat hit across multiple alert types", async () => {

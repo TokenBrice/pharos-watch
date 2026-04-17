@@ -45,8 +45,8 @@ View on Pharos: pharos.watch/stablecoin/usdt-tether`,
     tagline: "trigger, worsening milestones, and resolution with price context",
     content: `Depeg Detected
 
-USDC — below peg by 1.1% (112 bps)
-Price: $0.9888 (peg: $1.00)
+USDC — below peg by 1.2% (120 bps)
+Price: $0.988 (peg: $1.00)
 
 View on Pharos: pharos.watch/stablecoin/usdc-circle`,
     time: "09:43",
@@ -113,7 +113,7 @@ function AlertBubble({ content, time }: { content: string; time: string }) {
         {content}
       </div>
       <div className="mt-2 flex justify-end">
-        <span className="text-[10px] text-white/50">{time}</span>
+        <span className="text-[10px] text-white/70">{time}</span>
       </div>
     </div>
   );
@@ -217,7 +217,7 @@ export default function TelegramPage() {
               <Button size="sm" asChild className="mt-3 w-full gap-2">
                 <a href="https://t.me/PharosWatchBot" target="_blank" rel="noopener noreferrer">
                   Start Bot
-                  <ExternalLink className="h-3 w-3" />
+                  <ExternalLink className="h-3 w-3" aria-hidden="true" />
                 </a>
               </Button>
             </CardContent>
@@ -245,7 +245,7 @@ export default function TelegramPage() {
               <Button variant="outline" size="sm" asChild className="mt-3 w-full gap-2">
                 <a href="https://t.me/pharoswatch" target="_blank" rel="noopener noreferrer">
                   Join Channel
-                  <ExternalLink className="h-3 w-3" />
+                  <ExternalLink className="h-3 w-3" aria-hidden="true" />
                 </a>
               </Button>
             </CardContent>
@@ -270,7 +270,7 @@ export default function TelegramPage() {
               <Button variant="outline" size="sm" asChild className="mt-3 w-full gap-2">
                 <a href="https://t.me/pharoswatchers" target="_blank" rel="noopener noreferrer">
                   Join Community
-                  <ExternalLink className="h-3 w-3" />
+                  <ExternalLink className="h-3 w-3" aria-hidden="true" />
                 </a>
               </Button>
             </CardContent>
@@ -321,9 +321,10 @@ export default function TelegramPage() {
               <CardContent className="p-5">
                 <p className="text-sm font-semibold">Volume</p>
                 <p className="mt-2 text-xs text-muted-foreground leading-relaxed">
-                  Expect zero alerts on a calm day, a handful during volatility. Dipping back into and
-                  out of the same DEWS band in the same cycle is suppressed so you are not paged twice
-                  for the same event. Every alert includes snooze buttons (1h / 4h / 24h).
+                  Expect zero alerts on a calm day, a handful during volatility. Repeated
+                  transitions to the same DEWS band are deduped against the last alertable
+                  snapshot, so you are not paged twice for the same state. Every alert
+                  includes snooze buttons (1h / 4h / 24h).
                 </p>
               </CardContent>
             </Card>
@@ -492,7 +493,7 @@ export default function TelegramPage() {
         <div className="mt-12 pharos-card-shell border-t-2 border-t-sky-500/40 p-6 dark:border-t-sky-400/30 sm:p-8">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
             <div className="space-y-1">
-              <h3 className="text-lg font-semibold">{COIN_COUNT} pegs. Zero blind spots.</h3>
+              <h2 id="start-bot-cta" className="text-lg font-semibold">{COIN_COUNT} pegs. Zero blind spots.</h2>
               <p className="text-sm text-muted-foreground">
                 Start @PharosWatchBot for instant alerts and launch notices, join @pharoswatch for the daily digest,
                 or drop into @pharoswatchers for the live community feed.
@@ -540,8 +541,17 @@ export default function TelegramPage() {
               operatingSystem: "Telegram",
               offers: { "@type": "Offer", price: "0", priceCurrency: "USD" },
               url: `${SITE_URL}/telegram/`,
+              installUrl: "https://t.me/PharosWatchBot",
               description:
                 "Opt-in Telegram bot for stablecoin peg, DEWS, safety, and launch alerts.",
+              featureList: [
+                "Depeg alerts (triggered, worsening milestones, resolved)",
+                "DEWS threat-band alerts (ALERT, WARNING, DANGER)",
+                "Safety grade change alerts",
+                "Pre-launch stablecoin launch alerts",
+                "Per-coin thresholds and quiet hours",
+                "Inline snooze (1h / 4h / 24h)",
+              ],
               publisher: { "@type": "Organization", name: "Pharos Watch", url: SITE_URL },
             }),
           }}

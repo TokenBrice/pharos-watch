@@ -74,7 +74,7 @@ const VALID_GLOBAL_ALERT_COLUMNS = new Set(Object.values(GLOBAL_ALERT_COLUMN_BY_
 
 type AlertType = keyof typeof ALERT_COLUMN_BY_TYPE;
 
-function emptyResult(snapshotSeeded: boolean, chatsSuppressedBySnooze = 0): DispatchResult {
+function emptyResult(snapshotSeeded: boolean, chatsWithActiveSnooze = 0): DispatchResult {
   return {
     eventsDetected: {
       dews: 0,
@@ -102,7 +102,7 @@ function emptyResult(snapshotSeeded: boolean, chatsSuppressedBySnooze = 0): Disp
     freshSent: 0,
     freshRetryQueued: 0,
     freshPermanentFailures: 0,
-    chatsSuppressedBySnooze,
+    chatsWithActiveSnooze,
   };
 }
 
@@ -276,7 +276,7 @@ export async function dispatchTelegramAlerts(
       )
       .bind(snoozeNowSec)
       .all<{ chat_id: string }>();
-    const chatsSuppressedBySnooze = (snoozedRows.results ?? []).length;
+    const chatsWithActiveSnooze = (snoozedRows.results ?? []).length;
 
     const [dewsRows, activeDepegRows, safetyRows, dewsCache, dewsAlertableCache, depegCache, safetyCache] = await Promise.all([
       db
@@ -352,7 +352,7 @@ export async function dispatchTelegramAlerts(
     if (mustSeedSnapshots) {
       await writeSnapshots(db, currentSnapshots);
       await recordOutcome(db, CIRCUIT_SOURCE.TELEGRAM_API, true);
-      const result = emptyResult(true, chatsSuppressedBySnooze);
+      const result = emptyResult(true, chatsWithActiveSnooze);
       return { itemCount: 0, metadata: JSON.stringify(result) };
     }
 
@@ -668,7 +668,7 @@ export async function dispatchTelegramAlerts(
       freshSent,
       freshRetryQueued,
       freshPermanentFailures,
-      chatsSuppressedBySnooze,
+      chatsWithActiveSnooze,
     };
 
     const attemptedMessages = result.pendingAttempted + result.freshAttempted;

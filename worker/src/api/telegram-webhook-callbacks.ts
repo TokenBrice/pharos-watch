@@ -49,11 +49,12 @@ export async function handleCallbackQuery(
     const until = now + SNOOZE_SECONDS[arg];
     const username = cb.from?.username ?? null;
 
-    // Single INSERT ... ON CONFLICT: stamps the snooze column on both new rows
-    // and existing rows, collapsing what used to be an upsert + UPDATE pair.
-    // DB write and ack run concurrently since they address different services.
-    await Promise.all([
-      db
+    // Sequence DB write BEFORE the ack so the toast reflects actual outcome.
+    // A concurrent Promise.all would leave the ack in-flight if the write
+    // rejects, and the Workers runtime can cancel the pending fetch once the
+    // handler throws, producing silent snooze failures from the user's POV.
+    try {
+      await db
         .prepare(
           `INSERT INTO telegram_subscribers (
              chat_id, username,
@@ -70,11 +71,17 @@ export async function handleCallbackQuery(
              last_active_at = excluded.last_active_at`,
         )
         .bind(chatId, username, until, now, now)
-        .run(),
-      answerCallbackQuery(cb.id, botToken, {
-        text: `Snoozed for ${arg}. Use /list to verify or tap a longer window.`,
-      }),
-    ]);
+        .run();
+    } catch (err) {
+      console.error("[telegram-webhook] snooze write failed:", err);
+      await answerCallbackQuery(cb.id, botToken, {
+        text: "Could not save snooze. Please try again.",
+      });
+      return;
+    }
+    await answerCallbackQuery(cb.id, botToken, {
+      text: `Snoozed for ${arg}. Use /list to verify or tap a longer window.`,
+    });
     return;
   }
 

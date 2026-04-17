@@ -40,6 +40,15 @@ export async function upsertSubscriberRow(
   db: D1Database,
   input: UpsertSubscriberInput,
 ): Promise<void> {
+  if (input.globalAlertBumps && input.globalAlertOverrides) {
+    // SQLite applies the UPDATE SET clauses left-to-right, so combining both
+    // would silently let the override win for any shared column. Forbid it so
+    // future callers cannot accidentally rely on evaluation order.
+    throw new Error(
+      "upsertSubscriberRow: globalAlertBumps and globalAlertOverrides cannot be combined",
+    );
+  }
+
   const quietStart = input.quietHours?.enabled ? input.quietHours.startHourUtc : null;
   const quietEnd = input.quietHours?.enabled ? input.quietHours.endHourUtc : null;
   const quietEnabled = input.quietHours?.enabled ? 1 : 0;
