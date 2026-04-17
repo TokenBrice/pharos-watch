@@ -53,6 +53,9 @@ Examples:
 <code>/set DAI safety downgrade-only</code>
 <code>/set USDC depeg-step 250</code>
 
+<code>/status &lt;ticker&gt;</code>
+Current peg, DEWS band, and safety grade for one coin — no subscription needed
+
 <code>/mute 22-07</code>
 Quiet hours in UTC (notifications silenced, messages still delivered)
 

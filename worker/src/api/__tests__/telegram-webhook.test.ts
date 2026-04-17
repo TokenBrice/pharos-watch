@@ -799,6 +799,35 @@ describe("handleTelegramWebhook", () => {
     expect(updateClause).toContain("quiet_hours_enabled = excluded.quiet_hours_enabled");
   });
 
+  it("/status USDC replies with a compact card", async () => {
+    const db = mockD1([
+      { match: "SELECT action_type, action_payload", rows: [], first: null },
+      { match: "FROM stress_signals", rows: [
+        { band: "CALM", score: 15, recorded_at: 1700000000 },
+      ] },
+      { match: "FROM safety_grade_history", rows: [
+        { grade: "A", score: 85, recorded_at: 1700000000 },
+      ] },
+      { match: "FROM depeg_events WHERE stablecoin_id = ? AND ended_at IS NULL", rows: [] },
+      { match: "FROM price_cache WHERE asset_id = ?", rows: [
+        { price: 0.9999, updated_at: 1700000000 },
+      ] },
+    ]);
+    const res = await handleTelegramWebhook(
+      db,
+      makeWebhookRequest(1, "/status USDC"),
+      "test-secret",
+      "bot-token",
+    );
+    expect(res.status).toBe(200);
+    const body = sentMessageBody().text;
+    expect(body).toContain("USDC");
+    expect(body).toContain("CALM");
+    expect(body).toContain("Safety: A");
+    expect(body).toContain("Depeg: stable");
+    expect(body).toContain("Price: $0.9999");
+  });
+
   it("replies with retry message when preset resolution cache is missing", async () => {
     const db = mockD1([
       { match: "SELECT action_type, action_payload", rows: [], first: null },

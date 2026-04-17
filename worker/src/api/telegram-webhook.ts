@@ -34,10 +34,12 @@ import {
   buildPresetSubscriptionSummaryMessage,
   buildPresetUnavailableMessage,
   buildPresetUnsubscribeSummaryMessage,
+  buildStatusMessage,
   buildSubscriptionSummaryMessage,
   buildUnsubscribeSuccessMessage,
   formatQuietHours,
 } from "./telegram-webhook-messages";
+import { loadStatusForCoin } from "./telegram-webhook-status";
 import {
   dedupeCoins,
   parseCommand,
@@ -153,6 +155,9 @@ export const handleTelegramWebhook = withErrorHandler(
           case "/list":
             await handleList(db, chatId, botToken);
             return ok();
+          case "/status":
+            await handleStatus(db, chatId, parsedCommand.args, botToken);
+            return ok();
           case "/start":
             await reply(START_MESSAGE);
             return ok();
@@ -185,6 +190,9 @@ ${escapeHtml(formatDisambiguation(pendingAction.ambiguousTicker, pendingAction.c
           break;
         case "/list":
           await handleList(db, chatId, botToken);
+          break;
+        case "/status":
+          await handleStatus(db, chatId, parsedCommand.args, botToken);
           break;
         case "/subscribe":
           await handleSubscribe(db, chatId, username, parsedCommand.args, botToken);
@@ -237,6 +245,33 @@ async function handleList(db: D1Database, chatId: string, botToken: string): Pro
 
   const message = buildListMessage(subscriber, rows);
   await replyToChat(chatId, message, botToken);
+}
+
+async function handleStatus(
+  db: D1Database,
+  chatId: string,
+  args: string,
+  botToken: string,
+): Promise<void> {
+  const trimmed = args.trim();
+  if (!trimmed) {
+    await replyToChat(chatId, "Usage: /status &lt;ticker&gt;", botToken);
+    return;
+  }
+  const resolution = resolveTicker(trimmed);
+  if (resolution.status === "not_found") {
+    await replyToChat(chatId, buildNotFoundMessage(trimmed, resolution.suggestion), botToken);
+    return;
+  }
+  if (resolution.status === "ambiguous") {
+    // /status is read-only — do not set pending disambiguation state.
+    // Present the candidate list so the user can re-run with an exact coin ID.
+    await replyToChat(chatId, escapeHtml(formatDisambiguation(trimmed, resolution.matches)), botToken);
+    return;
+  }
+  const coin = resolution.matches[0];
+  const status = await loadStatusForCoin(db, coin.id);
+  await replyToChat(chatId, buildStatusMessage(coin.symbol, status), botToken);
 }
 
 interface TelegramActionContext {

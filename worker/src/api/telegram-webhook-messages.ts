@@ -6,6 +6,7 @@ import type {
 } from "../lib/telegram-presets";
 import type { SubscriberRow, SubscriptionRow } from "./telegram-webhook-shared";
 import { STABLECOIN_BY_ID } from "./telegram-webhook-shared";
+import type { StatusForCoin } from "./telegram-webhook-status";
 
 export function buildNotFoundMessage(ticker: string, suggestion?: ResolvedCoin): string {
   const lines = [`Ticker or preset "${ticker}" not found.`];
@@ -253,4 +254,30 @@ export function formatQuietHours(startHourUtc: number | null | undefined, endHou
   if (startHourUtc == null || endHourUtc == null) return "Off";
   const pad = (h: number) => String(h).padStart(2, "0");
   return `${pad(startHourUtc)}:00–${pad(endHourUtc)}:00 UTC`;
+}
+
+export function buildStatusMessage(symbol: string, s: StatusForCoin): string {
+  const priceLine =
+    s.priceUsd != null
+      ? `Price: $${s.priceUsd.toFixed(4)}`
+      : "Price: no recent quote";
+  const dewsLine = s.dews
+    ? `DEWS: ${s.dews.band} (score ${s.dews.score})`
+    : "DEWS: no recent signal";
+  const safetyLine = s.safety
+    ? `Safety: ${s.safety.grade}${s.safety.score != null ? ` (${s.safety.score})` : ""}`
+    : "Safety: UNKNOWN";
+  const depegLine =
+    s.depeg.status === "active"
+      ? `Depeg: ACTIVE — ${s.depeg.direction} peg, peak ${(s.depeg.peakDeviationBps / 100).toFixed(1)}%`
+      : "Depeg: stable";
+  const lines = [
+    `<b>${escapeHtml(symbol)}</b>`,
+    priceLine,
+    dewsLine,
+    safetyLine,
+    depegLine,
+    `<a href="https://pharos.watch/stablecoin/${s.stablecoinId}">View on Pharos</a>`,
+  ];
+  return lines.join("\n");
 }
