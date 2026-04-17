@@ -167,7 +167,6 @@ export const CIRCUIT_SOURCE = {
   PANCAKESWAP_API: "pancakeswap-api",
   AERODROME_SLIPSTREAM_API: "aerodrome-slipstream-api",
   VELODROME_SLIPSTREAM_API: "velodrome-slipstream-api",
-  DRPC: "drpc",
   TRONGRID: "trongrid",
   ANTHROPIC: "anthropic-api",
   BLUECHIP: "bluechip-api",
