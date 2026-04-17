@@ -114,6 +114,33 @@ describe("healNullPrices", () => {
     expect(batchExecute).not.toHaveBeenCalled();
   });
 
+  it("defense-in-depth: skips heal when price_cache row source is dexscreener-search", async () => {
+    // Even if a rogue dexscreener-search row ever landed in price_cache (the
+    // post-enrichment writer filter would normally exclude it), the heal path
+    // must refuse it because the registry marks search-derived sources as
+    // non-replay-safe. This test complements Task 5's writer-side filter.
+    const events = [
+      { id: "evt1", stablecoin_id: "usdc", chain_id: "ethereum", amount: 100, timestamp: NOW - 100 },
+    ];
+    const db = mockDb(events);
+    vi.mocked(getPriceCache).mockResolvedValueOnce(
+      new Map([
+        [
+          "usdc",
+          {
+            price: 1.0,
+            updatedAt: NOW - 200,
+            source: "dexscreener-search",
+          },
+        ],
+      ]),
+    );
+
+    const result = await healNullPrices(db, NOW);
+    expect(result.healed).toBe(0);
+    expect(batchExecute).not.toHaveBeenCalled();
+  });
+
   it("queries recent NULL-price events in deterministic newest-first order", async () => {
     const prepare = vi.fn().mockReturnValue({
       bind: vi.fn().mockReturnValue({
