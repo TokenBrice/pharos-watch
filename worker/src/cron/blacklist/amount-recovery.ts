@@ -412,8 +412,7 @@ export async function backfillAmounts(
     amountStatus = amount != null ? "resolved" : "provider_failed";
     if (amount != null) {
       const shouldSuppress = shouldSuppressAsMirrorZero(config.stablecoin, row.event_type, amount);
-      // Compute the target status as a local variable; bind it once. The SQL
-      // CASE-WHEN guard below ensures a row already marked
+      // The SQL CASE-WHEN guard below ensures a row already marked
       // `permanently_unavailable` is never downgraded by a later recovery pass.
       const targetStatus = shouldSuppress ? "permanently_unavailable" : amountStatus;
       stmts.push(

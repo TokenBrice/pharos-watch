@@ -697,6 +697,21 @@ function resolveBlacklistContractConfig(
 
 // --- Contract addresses per chain ---
 
+/**
+ * Deferred-chain note (referenced inline as "deferred — see consolidated
+ * contract-creation note").
+ *
+ * Cause: Etherscan v2 free-tier `getcontractcreation` is only available for
+ * Ethereum; it 400s on BSC, Avalanche, and Base. Without a verifiable deploy
+ * block we can't bootstrap a bounded incremental sync on those chains.
+ *
+ * Workaround when we do add a deferred chain: use the chain's native explorer
+ * (Blockscout / BscScan / Snowtrace / BaseScan) or a public-RPC `eth_getCode`
+ * bisect to resolve the deploy block — the XUSD + XAUm BSC entries landed that
+ * way in Task 6.4.
+ *
+ * Follow-up: tracked in GitHub issue TBD.
+ */
 const CONTRACT_CONFIG_SPECS: ContractEventConfigSpec[] = [
   // USDC
   { chain: ETHEREUM, stablecoinId: "usdc-circle", events: USDC_EVENT_FAMILY.events },
@@ -767,15 +782,11 @@ const CONTRACT_CONFIG_SPECS: ContractEventConfigSpec[] = [
   { chain: ETHEREUM, stablecoinId: "usdx-hex-trust", stablecoin: "USDX", startBlock: 21_062_695, events: ADDED_REMOVED_BLACKLIST_EVENT_FAMILY.events },
   { chain: ETHEREUM, stablecoinId: "aid-gaib", stablecoin: "AID", startBlock: 23_682_560, events: DENY_LIST_EVENT_FAMILY.events },
   { chain: ARBITRUM, stablecoinId: "aid-gaib", stablecoin: "AID", startBlock: 394_608_077, events: DENY_LIST_EVENT_FAMILY.events },
-  // TODO: verify on base (Etherscan v2 free plan does not support Base getcontractcreation)
-  // { chain: BASE, stablecoinId: "aid-gaib", stablecoin: "AID", startBlock: <deploy>, events: DENY_LIST_EVENT_FAMILY.events },
+  // AID on Base: deferred — see consolidated contract-creation note.
   { chain: ETHEREUM, stablecoinId: "tgbp-tokenised", stablecoin: "TGBP", startBlock: 23_046_391, events: BANNED_EVENT_FAMILY.events },
   { chain: AVALANCHE, stablecoinId: "tgbp-tokenised", stablecoin: "TGBP", startBlock: 69_696_101, events: BANNED_EVENT_FAMILY.events },
   { chain: POLYGON, stablecoinId: "tgbp-tokenised", stablecoin: "TGBP", startBlock: 74_668_755, events: BANNED_EVENT_FAMILY.events },
-  // TODO: verify on base (Etherscan v2 free plan does not support Base getcontractcreation)
-  // { chain: BASE, stablecoinId: "tgbp-tokenised", stablecoin: "TGBP", startBlock: <deploy>, events: BANNED_EVENT_FAMILY.events },
-  // TODO: verify on bsc (Etherscan v2 free plan does not support BSC getcontractcreation)
-  // { chain: BSC, stablecoinId: "tgbp-tokenised", stablecoin: "TGBP", startBlock: <deploy>, events: BANNED_EVENT_FAMILY.events },
+  // TGBP on Base + BSC: deferred — see consolidated contract-creation note.
 
   // USDP (Paxos Pax Dollar — same freeze pattern as PYUSD/USDG)
   { chain: ETHEREUM, stablecoinId: "usdp-paxos", stablecoin: "USDP", startBlock: 6_294_931, events: PYUSD_EVENT_FAMILY.events },
@@ -790,14 +801,10 @@ const CONTRACT_CONFIG_SPECS: ContractEventConfigSpec[] = [
   // topics[1] and carries the direction bool at data slot 0, resolved via
   // eventTypeFromDataBoolIndex. DestroyedBlackFunds reuses USDT_DESTROYED_FUNDS_TOPIC.
   { chain: ETHEREUM, stablecoinId: "tusd-trueusd", stablecoin: "TUSD", startBlock: 6_988_184, events: TRUEUSD_EVENT_FAMILY.events },
-  // TODO: verify on bsc (Etherscan v2 free plan does not support BSC getcontractcreation)
-  //       BSC TUSD is a proxy (0x40af3827f39d0eacbf4a168f8d4ee67c121d11c9); implementation
-  //       emits only Blacklisted(address,bool) with no DestroyedBlackFunds.
-  // { chain: BSC, stablecoinId: "tusd-trueusd", stablecoin: "TUSD", startBlock: <deploy>, events: TRUEUSD_EVENT_FAMILY.events },
-  // TODO: verify on avalanche (Etherscan v2 free plan does not support Avalanche getcontractcreation)
-  //       Avalanche TUSD is a proxy (0x1c20e891bab6b1727d14da358fae2984ed9b59eb); implementation
-  //       emits only Blacklisted(address,bool) with no DestroyedBlackFunds.
-  // { chain: AVALANCHE, stablecoinId: "tusd-trueusd", stablecoin: "TUSD", startBlock: <deploy>, events: TRUEUSD_EVENT_FAMILY.events },
+  // TUSD on BSC + Avalanche: deferred — see consolidated contract-creation note.
+  //   BSC proxy 0x40af3827f39d0eacbf4a168f8d4ee67c121d11c9 and Avalanche proxy
+  //   0x1c20e891bab6b1727d14da358fae2984ed9b59eb both emit Blacklisted(address,bool)
+  //   only (no DestroyedBlackFunds).
   // Polygon TUSD (UChildERC20Proxy at 0x2e1ad108ff1d8c782fcbbb89aad783ac49586756) is a bridged
   // token without Blacklisted / DestroyedBlackFunds events — no blacklist pipeline to cover.
   // Optimism TUSD (L2StandardERC20 at 0xcb59a0a753fdb7491d5f3d794316f1ade197b21e) is a bridged
@@ -816,10 +823,9 @@ const CONTRACT_CONFIG_SPECS: ContractEventConfigSpec[] = [
 
   // USDA (Avalon) — Ethereum implementation emits legacy Tether events
   // (AddedBlackList / RemovedBlackList / DestroyedBlackFunds), same family as
-  // USDT legacy. BSC deferred pending block-explorer API access.
+  // USDT legacy.
   { chain: ETHEREUM, stablecoinId: "usda-avalon", stablecoin: "USDA", startBlock: 21_108_194, events: USDT_EVENT_FAMILY.events },
-  // TODO: verify on bsc (Etherscan v2 free plan does not support BSC getcontractcreation)
-  // { chain: BSC, stablecoinId: "usda-avalon", stablecoin: "USDA", startBlock: <deploy>, events: USDT_EVENT_FAMILY.events },
+  // USDA on BSC: deferred — see consolidated contract-creation note.
 
   // USAT (Tether USAT) — Ethereum proxy (impl 0x8b98bcd9b1f8ae112fb2b58b45c3bc9a75cc4d0e)
   // emits BlockPlaced / BlockReleased / DestroyedBlockedFunds with indexed address,
@@ -828,18 +834,15 @@ const CONTRACT_CONFIG_SPECS: ContractEventConfigSpec[] = [
 
   // AEUR (Anchored Coins) — Ethereum reuses the dual-indexed Freeze / Unfreeze
   // family (address in topics[2]) already covered for FDUSD / EURI / U.
-  // BSC deferred pending block-explorer API access.
   { chain: ETHEREUM, stablecoinId: "aeur-anchored-coins", stablecoin: "AEUR", startBlock: 17_731_536, events: DUAL_INDEX_FREEZE_EVENT_FAMILY.events },
-  // TODO: verify on bsc (Etherscan v2 free plan does not support BSC getcontractcreation)
-  // { chain: BSC, stablecoinId: "aeur-anchored-coins", stablecoin: "AEUR", startBlock: <deploy>, events: DUAL_INDEX_FREEZE_EVENT_FAMILY.events },
+  // AEUR on BSC: deferred — see consolidated contract-creation note.
 
   // JPYC (JPY Coin — CENTRE fork) — Ethereum + Polygon. Implementation behind ERC1967Proxy
   // emits Blocklisted(address indexed) / UnBlocklisted(address indexed). JPY-pegged; price is
   // resolved via jpyc-jpyc entry in BLACKLIST_PRICE_ASSET_IDS.
   { chain: ETHEREUM, stablecoinId: "jpyc-jpyc", stablecoin: "JPYC", startBlock: 22_622_960, events: CENTRE_BLOCKLISTED_FAMILY.events },
   { chain: POLYGON, stablecoinId: "jpyc-jpyc", stablecoin: "JPYC", startBlock: 72_306_327, events: CENTRE_BLOCKLISTED_FAMILY.events },
-  // TODO: verify on avalanche (Etherscan v2 free plan does not support Avalanche getcontractcreation)
-  // { chain: AVALANCHE, stablecoinId: "jpyc-jpyc", stablecoin: "JPYC", startBlock: <deploy>, events: CENTRE_BLOCKLISTED_FAMILY.events },
+  // JPYC on Avalanche: deferred — see consolidated contract-creation note.
 
   // FRXUSD (Frax USD) — Ethereum only. TransparentUpgradeableProxy delegates to
   // 0x0000000048d2c8baf31742f6765383278bada4d5 which emits AccountFrozen /
