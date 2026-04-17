@@ -49,7 +49,7 @@ The Telegram subscriber, disambiguation, and overflow-queue tables are part of `
 
 | Table | Purpose | Key fields |
 |-------|---------|------------|
-| `telegram_subscribers` | Per-chat state and defaults | `chat_id`, `username`, legacy default flags, `global_alert_dews`, `global_alert_depeg`, `global_alert_safety`, `global_alert_launch`, `quiet_hours_enabled`, `quiet_hours_start_utc`, `quiet_hours_end_utc`, `created_at`, `last_active_at` |
+| `telegram_subscribers` | Per-chat state and defaults | `chat_id`, `username`, legacy default flags, `global_alert_dews`, `global_alert_depeg`, `global_alert_safety`, `global_alert_launch`, `quiet_hours_enabled`, `quiet_hours_start_utc`, `quiet_hours_end_utc`, `alert_snooze_until_ts`, `created_at`, `last_active_at` |
 | `telegram_subscriptions` | Per-chat per-coin alert preferences | composite PK `chat_id, stablecoin_id`, `alert_dews`, `alert_depeg`, `alert_safety`, `alert_launch`, `dews_min_band`, `safety_mode`, `depeg_worsening_bps_step` |
 | `telegram_pending_disambiguation` | Short-lived state for ambiguous ticker replies | `chat_id`, `action_type`, `action_payload`, `resolved_ids`, `ambiguous_ticker`, `candidates`, `remaining_tickers`, `expires_at` |
 | `telegram_pending_alerts` | Overflow delivery queue | `id`, `chat_id`, `message_html`, `disable_notification`, `created_at`, `attempts` |
@@ -84,6 +84,26 @@ Telegram secret rotation uses a short overlap window:
 
 Receiver behavior accepts either current or previous secret during the overlap window. Registration and reconciliation always send only the current `TELEGRAM_WEBHOOK_SECRET`.
 
+## Inline Keyboards (Callback Queries)
+
+Every subscriber alert sent from the dispatcher carries an inline keyboard
+`[Snooze 1h | 4h | 24h]`. Tapping a button yields a Telegram `callback_query`
+update, routed to `worker/src/api/telegram-webhook-callbacks.ts`. The handler
+writes `alert_snooze_until_ts = unixepoch() + <seconds>` and answers the
+callback with a short confirmation toast.
+
+The callback data format is `action:arg` (≤64 bytes, the Bot API limit).
+Current actions:
+
+- `snooze:1h | 4h | 24h`
+
+Unknown action codes receive a silent ack; they are not treated as errors so
+the bot stays forward-compatible with future keyboards.
+
+Registration script `scripts/register-telegram-webhook.sh` declares
+`allowed_updates = ["message", "callback_query"]` so Telegram forwards only
+update types the bot handles.
+
 ## Webhook Command Flow
 
 `worker/src/api/telegram-webhook.ts` now acts as a thin ingress coordinator. Command parsing, message formatting, and D1 persistence live in the adjacent `telegram-webhook-*` helper modules so command behavior can be tested without editing the transport entrypoint.
@@ -98,6 +118,7 @@ The webhook validates the configured secret from `X-Telegram-Bot-Api-Secret-Toke
 | `/help` | Sends command reference |
 | `/presets` | Returns the preset watchlist catalog plus subscribe and unsubscribe examples |
 | `/list` | Returns enabled alert types plus subscribed coins for the chat |
+| `/status <ticker>` | Returns a compact snapshot: current price, DEWS band, safety grade, and active-depeg state for the given coin. No subscription required. |
 | `/subscribe <types> <targets>` | Enables one or more alert types and subscribes the chat to one or more explicit coins or preset watchlists |
 | `/subscribe <types> all` | Enables one or more alert types across all tracked stablecoins |
 | `/unsubscribe <targets>` | Removes explicit coin subscriptions and can also remove the coins covered by a preset watchlist |
@@ -361,7 +382,7 @@ Digest posting uses `TELEGRAM_CHAT_ID`; subscriber alerts use the chat IDs store
 
 ## Operational Notes
 
-- Run `scripts/register-telegram-webhook.sh` after rotating `TELEGRAM_BOT_TOKEN` or `TELEGRAM_WEBHOOK_SECRET`.
+- Run `scripts/register-telegram-webhook.sh` after rotating `TELEGRAM_BOT_TOKEN` or `TELEGRAM_WEBHOOK_SECRET`. The script now declares `allowed_updates = ["message", "callback_query"]` so Telegram only forwards the update types the bot handles.
 - The webhook intentionally returns `200` on most malformed or unauthorized cases so Telegram does not keep retrying noisy payloads.
 - The dedicated 5-minute Telegram trigger now handles subscriber fan-out only.
 - The dispatcher consumes Bot API response bodies before returning, which matters under the Workers per-trigger connection cap.
