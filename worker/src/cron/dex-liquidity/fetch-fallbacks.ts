@@ -1,10 +1,11 @@
 import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins";
 import { DAY_SECONDS } from "@shared/lib/time-constants";
 import { fetchWithRetry } from "../../lib/fetch-retry";
-import { USER_AGENT, DEX_PRICE_OBSERVATION_MIN_TVL_USD } from "../../lib/constants";
+import { USER_AGENT, DEX_PRICE_OBSERVATION_MIN_TVL_USD, CIRCUIT_SOURCE } from "../../lib/constants";
 import { cgUrl, cgHeaders } from "../../lib/coingecko";
 import type { PriceValidationReferences } from "../../lib/price-validation";
-import { fetchDsTokenPools, dsRateLimit, DS_CHAIN_MAP, getDsTrackedTokenPriceUsd } from "../../lib/dexscreener";
+import { fetchDsTokenPoolsWithStatus, dsRateLimit, DS_CHAIN_MAP, getDsTrackedTokenPriceUsd } from "../../lib/dexscreener";
+import { shouldAttemptFetch, recordOutcome } from "../../lib/circuit-breaker";
 import { QUALITY_MULTIPLIERS, GT_DEX_QUALITY } from "../../lib/dex-constants";
 import { sleepWithSignal, throwIfAborted } from "../../lib/abort";
 import type { LiquidityMetrics, DexPriceObs, GtNewPool, CgTicker } from "./types";
@@ -72,6 +73,7 @@ export function getFallbackTargets(
 
 /** DexScreener fallback: fetch pools for tracked stablecoins with missing pool or price coverage. */
 export async function fetchDsFallbackPools(
+  db: D1Database,
   metrics: Map<string, LiquidityMetrics>,
   priceObservations: Map<string, DexPriceObs[]>,
   knownPoolIndex: KnownPoolIdentityIndex,
@@ -92,6 +94,11 @@ export async function fetchDsFallbackPools(
 
   if (targetCoins.length === 0) {
     console.log("[dex-liquidity] DexScreener fallback: no missing-coverage coins, skipping");
+    return { newPools, priceObs };
+  }
+
+  if (!(await shouldAttemptFetch(db, CIRCUIT_SOURCE.DEXSCREENER_PRICES))) {
+    console.log("[dex-liquidity] DexScreener fallback: circuit breaker open, skipping");
     return { newPools, priceObs };
   }
 
@@ -119,14 +126,18 @@ export async function fetchDsFallbackPools(
       if (requests > 0) await dsRateLimit(signal);
       requests++;
 
-      let pairs: Awaited<ReturnType<typeof fetchDsTokenPools>>;
+      let result: Awaited<ReturnType<typeof fetchDsTokenPoolsWithStatus>>;
       try {
-        pairs = await fetchDsTokenPools(contract.chain, contract.address, signal);
+        result = await fetchDsTokenPoolsWithStatus(contract.chain, contract.address, signal);
       } catch (err) {
         if (signal?.aborted) throw err;
         console.warn(`[dex-liquidity] DexScreener fallback error for ${meta.symbol} on ${contract.chain}:`, err);
+        await recordOutcome(db, CIRCUIT_SOURCE.DEXSCREENER_PRICES, false);
         continue;
       }
+      await recordOutcome(db, CIRCUIT_SOURCE.DEXSCREENER_PRICES, result.ok);
+      if (!result.ok) continue;
+      const pairs = result.pairs;
       if (pairs.length === 0) continue;
 
       for (const pair of pairs) {

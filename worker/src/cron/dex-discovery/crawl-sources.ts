@@ -2,7 +2,8 @@ import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins";
 import type { ContractDeployment } from "@shared/types/core";
 import { sleepWithSignal, throwIfAborted } from "../../lib/abort";
 import { RATE_LIMITS } from "../../lib/rate-limit";
-import { dsRateLimit, fetchDsTokenPools, getDsTrackedTokenPriceUsd } from "../../lib/dexscreener";
+import { dsRateLimit, fetchDsTokenPoolsWithStatus, getDsTrackedTokenPriceUsd } from "../../lib/dexscreener";
+import { shouldAttemptFetch, recordOutcome } from "../../lib/circuit-breaker";
 import { CHAIN_REGISTRY, CG_CHAIN_MAP, GT_CHAIN_MAP, DS_CHAIN_MAP } from "../../lib/chain-registry";
 import { normalizeProtocol, getGtDexQuality } from "../dex-liquidity/pool-helpers";
 import { crawlTokenPools, type CrawlToken } from "../dex-liquidity/crawl-helpers";
@@ -13,7 +14,7 @@ import { QUALITY_MULTIPLIERS } from "../../lib/dex-constants";
 import { fetchCgTokenPools } from "../../lib/coingecko-onchain";
 import { cgHeaders, cgUrl } from "../../lib/coingecko";
 import { fetchWithRetry } from "../../lib/fetch-retry";
-import { USER_AGENT, DEX_PRICE_OBSERVATION_MIN_TVL_USD } from "../../lib/constants";
+import { USER_AGENT, DEX_PRICE_OBSERVATION_MIN_TVL_USD, CIRCUIT_SOURCE } from "../../lib/constants";
 import type { PriceValidationReferences } from "../../lib/price-validation";
 import { isPlausibleDexObservationPrice } from "../dex-liquidity/price-sanity";
 import type { GtPool, DexPriceObs, GtNewPool, CgTicker } from "../dex-liquidity/types";
@@ -57,6 +58,7 @@ export interface CrawlResult {
 }
 
 export async function crawlCoin(
+  db: D1Database,
   stablecoinId: string,
   coinTargets: ContractDeployment[],
   cgApiKey: string | null,
@@ -323,7 +325,7 @@ export async function crawlCoin(
   const dsTargets =
     pools.length === 0 ? coinTargets.map(({ chain, address }) => [chain, address] as const) : uncoveredChains;
 
-  if (dsTargets.length > 0 && !timeExceeded()) {
+  if (dsTargets.length > 0 && !timeExceeded() && await shouldAttemptFetch(db, CIRCUIT_SOURCE.DEXSCREENER_PRICES)) {
     let dsRequests = 0;
 
     for (const [chain, address] of dsTargets) {
@@ -337,13 +339,16 @@ export async function crawlCoin(
       dsRequests++;
 
       try {
-        const pairs = await fetchDsTokenPools(
+        const result = await fetchDsTokenPoolsWithStatus(
           chain,
           address,
           buildStageSignal(signal, deadlineMs, DISCOVERY_STAGE_TIMEOUT_MS.dexscreener),
           DISCOVERY_STAGE_TIMEOUT_MS.dexscreener,
           0,
         );
+        await recordOutcome(db, CIRCUIT_SOURCE.DEXSCREENER_PRICES, result.ok);
+        if (!result.ok) continue;
+        const pairs = result.pairs;
         if (pairs.length === 0) continue;
 
         for (const pair of pairs) {
@@ -420,6 +425,7 @@ export async function crawlCoin(
       } catch (err) {
         if (signal?.aborted) throw err;
         console.warn(`[dex-discovery] dexscreener error for ${chain}:${address}`, err);
+        await recordOutcome(db, CIRCUIT_SOURCE.DEXSCREENER_PRICES, false);
       }
     }
   }

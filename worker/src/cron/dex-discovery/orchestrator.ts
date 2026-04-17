@@ -213,6 +213,7 @@ export async function syncDexDiscovery(
       try {
         const coinDeadline = Math.min(deadlineMs, Date.now() + DEX_DISCOVERY_PER_COIN_BUDGET_MS);
         const result = await crawlCoin(
+          db,
           candidate.stablecoinId,
           candidate.targets,
           cgApiKey,

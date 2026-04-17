@@ -362,6 +362,7 @@ async function buildDexLiquidityPoolState(
   mergeDexPriceObservationMap(sourceState.priceObservations, staged.priceObservations);
 
   const fallback = await runFallbackCrawlerPhase({
+    db: ctx.db,
     metrics,
     priceObservations: sourceState.priceObservations,
     knownPoolIndex,

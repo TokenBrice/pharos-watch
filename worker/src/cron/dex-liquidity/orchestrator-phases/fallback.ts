@@ -17,6 +17,7 @@ export interface FallbackCrawlerPhaseResult {
 }
 
 export async function runFallbackCrawlerPhase(params: {
+  db: D1Database;
   metrics: Map<string, LiquidityMetrics>;
   priceObservations: Map<string, DexPriceObs[]>;
   knownPoolIndex: KnownPoolIdentityIndex;
@@ -37,6 +38,7 @@ export async function runFallbackCrawlerPhase(params: {
 
   try {
     const dsFallback = await fetchDsFallbackPools(
+      params.db,
       params.metrics,
       params.priceObservations,
       params.knownPoolIndex,
