@@ -1,6 +1,6 @@
 "use client";
 
-import { Fragment, type ReactNode } from "react";
+import { Fragment, useState, type ReactNode } from "react";
 import { FeaturePageShell } from "@/components/feature-page-shell";
 import { LongformScrollspyNav } from "@/components/longform-scrollspy-nav";
 import { formatElapsedSeconds } from "@shared/lib/format";
@@ -9,6 +9,7 @@ import { RefreshCountdown } from "@/components/status/refresh-countdown";
 import { getTopFoldCopy, isRecoveryHold as isRecoveryHoldState } from "@/components/status/top-fold-copy";
 import { NoticeRail, SummaryBadge } from "@/components/status/page-primitives";
 import { Button } from "@/components/ui/button";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { useStatusDashboardModel } from "@/hooks/use-status-dashboard-model";
 import {
   type DashboardSectionId,
@@ -58,6 +59,7 @@ export function StatusDashboard({ onSignOut }: { onSignOut: () => void }) {
   const [isReliabilityOpen, setIsReliabilityOpen] = useAutoExpand(reliabilitySignal);
   const [isTelegramOpen, setIsTelegramOpen] = useAutoExpand(telegramSignal);
   const [isHealthyCronGroupsOpen, setIsHealthyCronGroupsOpen] = useAutoExpand(false);
+  const [isBlockersExpanded, setIsBlockersExpanded] = useState(false);
 
   if (isLoading) {
     return (
@@ -83,6 +85,7 @@ export function StatusDashboard({ onSignOut }: { onSignOut: () => void }) {
 
   const {
     allTransitions,
+    blockerCauses,
     browserProbeSummary,
     clientDataAgeSec,
     clientDataStale,
@@ -217,9 +220,18 @@ export function StatusDashboard({ onSignOut }: { onSignOut: () => void }) {
                 {overallTone.label}
               </span>
               {isRecoveryHold && (
-                <span className="rounded-full border border-amber-500/30 bg-amber-500/10 px-2.5 py-1 text-[11px] font-medium text-amber-700 dark:text-amber-300">
-                  recovery hold — raw {data.rawOverallStatus}
-                </span>
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <span className="cursor-help rounded-full border border-amber-500/30 bg-amber-500/10 px-2.5 py-1 text-[11px] font-medium text-amber-700 dark:text-amber-300">
+                        recovery hold — raw {data.rawOverallStatus}
+                      </span>
+                    </TooltipTrigger>
+                    <TooltipContent className="max-w-xs">
+                      The state machine is holding at a higher severity than the raw signal so that improvements must hold for {data.state.minDwellSec}s before the overall status is downgraded. Prevents flap.
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
               )}
               <span className="text-sm text-muted-foreground">
                 {topFoldCopy.eyebrow} · holding {formatElapsedSeconds(statusHoldingAge)}
@@ -270,13 +282,19 @@ export function StatusDashboard({ onSignOut }: { onSignOut: () => void }) {
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <h3 className="text-sm font-semibold text-foreground">Current Blockers</h3>
                 <span className="text-[11px] text-muted-foreground">
-                  {topCauses.length > 0 ? `${Math.min(topCauses.length, 3)} immediate` : watchCauseCount > 0 ? "watch-only" : "clear"}
+                  {overallCauseCount > 0
+                    ? isBlockersExpanded
+                      ? `${overallCauseCount} shown`
+                      : `${Math.min(overallCauseCount, 3)} of ${overallCauseCount}`
+                    : watchCauseCount > 0
+                      ? "watch-only"
+                      : "clear"}
                 </span>
               </div>
 
               <div className="mt-3 space-y-2">
                 {topCauses.length > 0 ? (
-                  topCauses.slice(0, 3).map((cause) => (
+                  (isBlockersExpanded ? blockerCauses : topCauses.slice(0, 3)).map((cause) => (
                     <div
                       key={`${cause.layer}-${cause.code}-${cause.message}`}
                       className="rounded-lg border border-border/60 bg-background/30 p-3"
@@ -302,6 +320,15 @@ export function StatusDashboard({ onSignOut }: { onSignOut: () => void }) {
                       ? `No active blockers. ${watchCauseCount} watch item(s) remain.`
                       : "No active blockers."}
                   </div>
+                )}
+                {overallCauseCount > 3 && (
+                  <button
+                    type="button"
+                    onClick={() => setIsBlockersExpanded((v) => !v)}
+                    className="pharos-focus-ring mt-1 inline-flex items-center gap-1 rounded-md px-2 py-1 text-[11px] font-medium text-muted-foreground hover:text-foreground"
+                  >
+                    {isBlockersExpanded ? "Show top 3" : `+${overallCauseCount - 3} more`}
+                  </button>
                 )}
               </div>
 

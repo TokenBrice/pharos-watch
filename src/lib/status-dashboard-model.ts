@@ -461,6 +461,7 @@ export function buildStatusDashboardData({
 
   return {
     allTransitions,
+    blockerCauses,
     browserProbeSummary,
     clientDataAgeSec,
     clientDataStale,

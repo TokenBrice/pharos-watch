@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { type ReactNode, useSyncExternalStore } from "react";
+import { type ReactNode, useEffect, useState } from "react";
 import { FeaturePageShell } from "@/components/feature-page-shell";
 import { isOpsUiHost } from "@/lib/admin-access";
 import { StatusDashboard } from "./status-dashboard";
@@ -14,11 +14,13 @@ const ADMIN_SHELL_PROPS = {
 };
 
 export default function StatusClient() {
-  const opsUi = useSyncExternalStore(
-    () => () => undefined,
-    () => isOpsUiHost(),
-    () => null,
-  );
+  // Host check is client-only (reads window.location.hostname). Server render
+  // returns null to avoid hydration mismatch; the effect resolves on first
+  // client render.
+  const [opsUi, setOpsUi] = useState<boolean | null>(null);
+  useEffect(() => {
+    setOpsUi(isOpsUiHost());
+  }, []);
   const handleOpsSignOut = () => {
     window.location.assign("/cdn-cgi/access/logout");
   };
