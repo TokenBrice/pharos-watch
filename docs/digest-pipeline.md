@@ -73,7 +73,7 @@ The digest's Flight-to-Quality collector now uses `buildFlightToQualityClassific
 
 - **Model:** `claude-opus-4-7` via `https://api.anthropic.com/v1/messages`, with adaptive thinking (`thinking.type = "adaptive"`) and max reasoning effort (`output_config.effort = "max"`)
 - **Reasoning:** adaptive thinking is on by default with omitted display; no `budget_tokens` is needed (and is rejected on Opus 4.7). Sampling parameters (`temperature` / `top_p` / `top_k`) are not sent (also rejected on Opus 4.7).
-- **Timeout:** 300 seconds (Opus 4.7 max-effort adaptive thinking can run 30–120s of model-side think time for a digest-sized task; the cron runs at 08:05 UTC with no downstream time pressure)
+- **Timeout:** 14 minutes for the Anthropic request. The daily digest cron wrapper allows 14.5 minutes total, which stays below Cloudflare's 15-minute scheduled-trigger wall-clock ceiling while leaving tail room for persistence, logging, and channel delivery.
 - **Max tokens:** 16000 daily, 20000 weekly (max_tokens covers thinking + output; sized for max-effort headroom)
 - **Overload retries:** Anthropic `529 Overloaded` responses now back off exponentially (`5s`, `10s`, `20s`, `30s`) before the digest gives up
 - **Voice:** sardonic financial columnist — dry, precise, no emojis, no exclamation marks, with a compact few-shot EXEMPLAR embedded in the system prompt to anchor voice and structure
@@ -142,7 +142,7 @@ Read endpoints are public, but they do not all share the same cache profile: `GE
 | `GET /api/digest-archive` | All digests, newest first (up to 365) |
 | `GET /api/digest-snapshot?date=YYYY-MM-DD` | Input data + depeg/blacklist context for a daily digest date — used by SSG detail pages; cached as archive data (`s-maxage=86400, max-age=3600`) |
 | `GET /api/digest-snapshot?date=YYYY-MM-DD-weekly` | Input data for a weekly recap slug; the handler strips `-weekly` for date parsing and returns the weekly snapshot when that digest row exists |
-| `POST /api/trigger-digest` *(admin)* | Queue a background force-regeneration run and post to all distribution channels; requires Access service-token headers on `ops-api.pharos.watch` |
+| `POST /api/trigger-digest` *(admin)* | **Deferred**: writes a `digest:force-run-request` flag into the D1 `cache` table and returns 202. A dedicated `*/5 * * * *` polling cron (`digestTriggerPoll`) runs the digest under scheduled-event wall-clock (up to 15 min) and persists outcome to `digest:last-trigger-result`. Expected latency: ≤ 5 min. Requires Access service-token headers on `ops-api.pharos.watch`. See [`worker-and-api-limits.md`](./worker-and-api-limits.md#manual-trigger-runtime-model) for the rationale. |
 
 ---
 
@@ -259,7 +259,7 @@ Requires >=5 current-week daily digests to proceed. Prior-week coverage below 5 
 ### LLM call
 
 - **Model:** `claude-opus-4-7` with adaptive thinking + max effort (identical contract to the daily digest)
-- **Timeout:** 300 seconds
+- **Timeout:** shared 14-minute Anthropic request cap; the scheduled weekly wrapper still has a 12-minute cron lease, so the lease can abort first on slow Monday recap runs
 - **max_tokens:** 20000
 - **Voice:** Same sardonic columnist, but synthesizing rather than reporting; rewritten system prompt adds arc framing, forward-look mandate on the last paragraph, tic list, and explicit week-over-week references
 - **Structure:** 4-6 paragraphs, 250-400 words: week's headline, dominant story, counter-narrative, supply/capital flows, optional structural observation

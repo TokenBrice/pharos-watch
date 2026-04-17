@@ -1,5 +1,16 @@
 import type { CronScheduleKey } from "@shared/lib/cron-jobs";
-import { createLeaseOwner, runCronWithLease } from "../../lib/cron-lease";
+import { createLeaseOwner, runCronWithLease, type CronLeaseOptions } from "../../lib/cron-lease";
+
+/**
+ * Per-job overrides for cron lease behavior. Jobs not listed use the default
+ * policy in `runCronWithLease` (heartbeatSec = ttlSec/3, maxRenewFailures = 2).
+ * `daily-digest` needs tighter heartbeat + more retry tolerance because its
+ * LLM call runs for 10+ minutes and the default 5-min heartbeat cadence would
+ * only fire 2–3 times, giving poor lease-loss detection.
+ */
+const PER_JOB_LEASE_OPTIONS: Record<string, Pick<CronLeaseOptions, "heartbeatSec" | "maxRenewFailures">> = {
+  "daily-digest": { heartbeatSec: 30, maxRenewFailures: 3 },
+};
 import { logCronRun, type CronProgressReporter, type CronResult } from "../../lib/cron-logger";
 import { sendAlert, normalizeWebhookUrl } from "../../lib/alerts";
 import { normalizeCgApiKey } from "../../lib/coingecko";
@@ -106,6 +117,7 @@ export function createScheduledRuntimeContext(
           },
         });
         const leaseOwner = createLeaseOwner(job);
+        const perJobLeaseOptions = PER_JOB_LEASE_OPTIONS[job] ?? {};
         const lease = await runCronWithLease(db, job, async ({ signal: leaseSignal }) => {
           await reportProgress({
             stage: "lease-acquired",
@@ -117,7 +129,7 @@ export function createScheduledRuntimeContext(
             },
           });
           return fn(leaseSignal, reportProgress);
-        }, { owner: leaseOwner, abortSignal: signal });
+        }, { owner: leaseOwner, abortSignal: signal, ...perJobLeaseOptions });
 
         if (lease.status === "skipped_locked") {
           await reportProgress({

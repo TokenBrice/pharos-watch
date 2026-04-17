@@ -147,7 +147,7 @@ import {
   validateDigestModelOutput,
   type ParsedDigestResponse,
 } from "../daily-digest/response";
-import { ANTHROPIC_MAX_RETRIES, ANTHROPIC_TIMEOUT_MS } from "../../lib/constants";
+import { ANTHROPIC_TIMEOUT_MS } from "../../lib/constants";
 import {
   collectPsiContributors,
   collectYieldAnomalies,
@@ -429,8 +429,12 @@ describe("generateDailyDigest", () => {
         method: "POST",
         headers: expect.objectContaining({ "x-api-key": "anthropic-key" }),
       }),
-      ANTHROPIC_MAX_RETRIES,
-      { timeoutMs: ANTHROPIC_TIMEOUT_MS },
+      // Digest-specific retry cap + per-attempt timeout. The outer
+      // AbortSignal.timeout(ANTHROPIC_TIMEOUT_MS) caps total wall time; these
+      // inner values bound individual attempts so a stalled retry cannot
+      // consume the whole budget.
+      2,
+      { timeoutMs: 11 * 60_000 },
     );
     const anthropicBody = JSON.parse(String(vi.mocked(fetchWithRetry).mock.calls[0]?.[1]?.body)) as {
       model: string;
@@ -485,6 +489,34 @@ describe("generateDailyDigest", () => {
     expect(warnSpy).toHaveBeenCalledWith(
       expect.stringContaining("[daily-digest] Failed to parse digest model response"),
     );
+  });
+
+  it("skips the corrective retry when first-pass elapsed exceeds 50% of the Anthropic budget", async () => {
+    const malformed = "```json\n{\"title\":\"Broken\", \"text\":\n```";
+    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+    const CORRECTIVE_RETRY_THRESHOLD_MS = ANTHROPIC_TIMEOUT_MS * 0.5;
+
+    // Mock the first-pass fetch to advance fake time past 50% of the outer
+    // Anthropic budget before returning a response that would otherwise
+    // trigger a corrective retry via the raw-text-fallback quality issue.
+    vi.mocked(fetchWithRetry).mockImplementationOnce(async () => {
+      vi.setSystemTime(new Date(Date.now() + CORRECTIVE_RETRY_THRESHOLD_MS + 30_000));
+      return new Response(
+        JSON.stringify({ content: [{ type: "text", text: malformed }] }),
+        { status: 200, headers: { "Content-Type": "application/json" } },
+      );
+    });
+
+    const db = mockD1(makeBaseTables());
+    await generateDailyDigest(db, "anthropic-key");
+
+    // Only one Anthropic call — the corrective retry is skipped because
+    // elapsed >= 50% of the budget, leaving no safe headroom for a second call.
+    expect(fetchWithRetry).toHaveBeenCalledTimes(1);
+    expect(warnSpy).toHaveBeenCalledWith(
+      expect.stringContaining("skipping corrective retry"),
+    );
+    warnSpy.mockRestore();
   });
 
   it("skips generation when a recent valid digest already exists", async () => {

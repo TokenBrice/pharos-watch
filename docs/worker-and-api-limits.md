@@ -37,7 +37,7 @@ It intentionally does **not** treat vendor pricing-plan quotas as source of trut
 | Constraint                       | Current repo value                              | Source                                                        | Notes                                                                                                                                                        |
 | -------------------------------- | ----------------------------------------------- | ------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | Worker CPU budget per invocation | `30000` ms                                      | `worker/wrangler.toml`                                        | Hard repo-configured CPU cap via `[limits].cpu_ms`                                                                                                           |
-| Cron expressions / trigger slots | `14`                                            | `worker/wrangler.toml`, `shared/lib/cron-jobs.ts`, `shared/lib/scheduled-runner-registry.ts` | Public status tooling groups around these trigger slots; the shared runner registry is the dispatch authority checked by `npm run check:cron-sync`; `check:cron-connections` models chained jobs with `connectionGroup` metadata |
+| Cron expressions / trigger slots | `15`                                            | `worker/wrangler.toml`, `shared/lib/cron-jobs.ts`, `shared/lib/scheduled-runner-registry.ts` | Public status tooling groups around these trigger slots; the shared runner registry is the dispatch authority checked by `npm run check:cron-sync`; `check:cron-connections` models chained jobs with `connectionGroup` metadata |
 | Status-tracked cron jobs         | `29`                                            | `shared/lib/cron-jobs.ts`                                     | These are the jobs expected by `/api/status`                                                                                                                 |
 | Runtime jobs actually scheduled  | `29`                                            | `shared/lib/cron-jobs.ts`                                     | Runtime scheduling now matches the shared status metadata set; cemetery/tracking appendices are folded into daily digest delivery instead of a separate cron |
 | Public API limiter               | `300 requests / 60 seconds` per IP hash         | `worker/src/handlers/http/gates.ts`, `worker/src/lib/rate-limit.ts` | Legacy limiter for exempt public routes and protected routes when API-key auth is not satisfied/enforced; enforced through D1-backed `public_api_rate_limit`; after `3` consecutive D1 limiter failures, the worker enters a bounded `503` emergency block with `Retry-After: 60` |
@@ -119,7 +119,8 @@ The same rule applies to Worker-side integration clients. Telegram delivery, X p
 | Live reserve adapter attempt        | `20_000 ms`                  | `worker/src/cron/sync-live-reserves.ts`                    |
 | Live reserve D1 finalize timeout    | `30_000 ms`                  | `worker/src/cron/sync-live-reserves-core.ts`               |
 | Blacklist explorer / RPC reads      | `15_000 ms`                  | `worker/src/lib/fetch-retry.ts` (default timeout)          |
-| Daily digest LLM call               | `300_000 ms`                 | `worker/src/lib/constants.ts`                              |
+| Daily digest LLM call (outer)       | `12 * 60_000 ms`             | `worker/src/lib/constants.ts`                              |
+| Daily digest per-attempt fetch      | `11 * 60_000 ms`             | `worker/src/cron/digest/platform.ts` (`DIGEST_FETCH_PER_ATTEMPT_TIMEOUT_MS`) |
 
 ---
 
@@ -130,13 +131,26 @@ Current digest generation constraints that are actually encoded in repo code:
 - model: `claude-opus-4-7`
 - thinking: adaptive (`thinking.type = "adaptive"`)
 - reasoning effort: max (`output_config.effort = "max"`)
-- Anthropic per-request timeout: `300_000 ms` (5 min)
-- cron lease: `12 * 60_000 ms` (12 min) for both `daily-digest` and `weekly-recap`; allows the corrective retry path (~600s) to finish inside the lease with buffer for data collection and social delivery
+- Anthropic outer timeout: `12 * 60_000 ms` (12 min), bound by `AbortSignal.timeout(ANTHROPIC_TIMEOUT_MS)` in `platform.ts`
+- per-attempt fetch timeout: `11 * 60_000 ms` (11 min), local to `requestDigestCopy`; safety net so a single stalled attempt cannot consume the outer budget
+- retry depth for the digest Anthropic call: `2` (max 3 attempts); the outer `AbortSignal` caps total wall time regardless
+- corrective retry skip: if first-pass elapsed `>= 50%` of the outer budget (6 min), the in-process retry after quality failures is skipped; the parse is accepted with `qualityIssues` flagged `degraded`
+- daily cron lease (wrapper timeout): `14 * 60_000 ms` (14 min), leaves ~2 min under Cloudflare's 15-min scheduled-event ceiling for D1 persistence, Telegram/Twitter delivery, and cron_runs logging
+- daily-digest heartbeat override: `heartbeatSec = 30`, `maxRenewFailures = 3` (see `worker/src/handlers/scheduled/context.ts` — default policy unchanged for other jobs)
+- weekly cron lease: `12 * 60_000 ms` (12 min)
 - max_tokens: `16000` daily, `20000` weekly
-- cadence: daily scheduled run plus manual admin trigger
+- cadence: daily scheduled run plus deferred manual admin trigger (see "Manual trigger runtime model" below)
 - cost envelope (approximate, assuming single-attempt runs): Opus 4.7 input ~$5/Mtok, output ~$25/Mtok. Daily worst-case at 16k tokens ≈ $1.20; weekly worst-case at 20k ≈ $1.50. Annualized ≈ $550 at cap. Actual usage is lower since adaptive thinking rarely exhausts the ceiling. Monitor `usage.output_tokens` on the first week post-deploy before revisiting.
 
-Source: `worker/src/lib/constants.ts` (Anthropic timeout/retries), `worker/src/lib/cron-lease.ts` (`CRON_TIMEOUT_MS` per-job lease budget), `worker/src/cron/digest/platform.ts` (model/thinking/effort), `worker/src/cron/daily-digest.ts` and `worker/src/cron/weekly-recap.ts` (max_tokens)
+### Manual trigger runtime model
+
+`POST /api/trigger-digest` does **not** execute the digest synchronously. It writes a `digest:force-run-request` flag into the `cache` D1 table and returns 202. A dedicated `*/5 * * * *` cron slot (`digestTriggerPoll`) reads the flag on its next tick and runs the digest under scheduled-event wall-clock (15 min). Outcome is persisted to `digest:last-trigger-result` for ops-UI visibility.
+
+This two-step model exists because Cloudflare Workers terminate HTTP-triggered `ctx.waitUntil()` callbacks after ~30 seconds of tail work once the response is sent to the client — an Opus 4.7 digest run takes 5–10 min, so `waitUntil`-based execution dies silently without writing a `cron_runs` row or a digest. Per Cloudflare's documented semantics: *"When the client disconnects, all tasks associated with that request are canceled. Use `event.waitUntil()` to delay cancellation for another 30 seconds."* That extension is not enough for a digest run. Scheduled events have no such tail cap — they get the full 15-minute wall-clock.
+
+Source: `worker/src/api/admin-actions.ts` (enqueue-only HTTP handler), `worker/src/handlers/scheduled/digest-trigger-poll.ts` (polling consumer).
+
+Source: `worker/src/lib/constants.ts` (Anthropic timeout/retries), `worker/src/lib/cron-lease.ts` (`CRON_TIMEOUT_MS` per-job lease budget), `worker/src/cron/digest/platform.ts` (model/thinking/effort, per-attempt timeout, corrective-retry skip), `worker/src/cron/daily-digest.ts` and `worker/src/cron/weekly-recap.ts` (max_tokens), `worker/src/handlers/scheduled/context.ts` (`PER_JOB_LEASE_OPTIONS` heartbeat override)
 
 This doc deliberately does not restate Anthropic account-tier RPM / token-plan numbers because those are not repo-enforced.
 

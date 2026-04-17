@@ -1,42 +1,18 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-const routeMocks = vi.hoisted(() => ({
-  generateDailyDigest: vi.fn(async () => ({ status: "ok", itemCount: 1, metadata: "{}" })),
-  logCronRun: vi.fn(async (
-    _db: D1Database,
-    _job: string,
-    fn: (signal: AbortSignal) => Promise<unknown>,
-  ) => fn(new AbortController().signal)),
-  runCronWithLease: vi.fn(async (
-    _db: D1Database,
-    _job: string,
-    fn: (ctx: { leaseOwner: string; signal: AbortSignal }) => Promise<unknown>,
-  ) => ({
-    status: "ok",
-    leaseOwner: "manual-lease",
-    renewFailures: 0,
-    result: await fn({ leaseOwner: "manual-lease", signal: new AbortController().signal }),
-  })),
+const dbCacheMocks = vi.hoisted(() => ({
+  setCache: vi.fn(async () => {}),
+  getCache: vi.fn(async () => null),
+  deleteCache: vi.fn(async () => {}),
 }));
 
-vi.mock("../cron/daily-digest", () => ({
-  generateDailyDigest: routeMocks.generateDailyDigest,
-}));
-
-vi.mock("../lib/cron-logger", async (importOriginal) => {
-  const original = await importOriginal<typeof import("../lib/cron-logger")>();
+vi.mock("../lib/db-cache", async (importOriginal) => {
+  const original = await importOriginal<typeof import("../lib/db-cache")>();
   return {
     ...original,
-    logCronRun: routeMocks.logCronRun,
-  };
-});
-
-vi.mock("../lib/cron-lease", async (importOriginal) => {
-  const original = await importOriginal<typeof import("../lib/cron-lease")>();
-  return {
-    ...original,
-    createLeaseOwner: vi.fn(() => "manual-lease"),
-    runCronWithLease: routeMocks.runCronWithLease,
+    setCache: dbCacheMocks.setCache,
+    getCache: dbCacheMocks.getCache,
+    deleteCache: dbCacheMocks.deleteCache,
   };
 });
 
@@ -57,26 +33,24 @@ function makeCtx() {
   };
 }
 
+function makeRequest(): Request {
+  return new Request("https://ops-api.pharos.watch/api/trigger-digest", { method: "POST" });
+}
+
 describe("trigger-digest route", () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
 
-  it("returns 202 and runs the digest in waitUntil under the daily-digest lease", async () => {
-    let resolveDigest!: (value: { status: "ok"; itemCount: number; metadata: string }) => void;
-    routeMocks.generateDailyDigest.mockImplementationOnce(
-      () =>
-        new Promise((resolve) => {
-          resolveDigest = resolve as typeof resolveDigest;
-        }),
-    );
-
-    const request = new Request("https://ops-api.pharos.watch/api/trigger-digest", { method: "POST" });
+  it("writes the force-run cache key and returns 202 without long-running waitUntil", async () => {
+    const request = makeRequest();
+    // Idempotency-Key is optional; absent header makes the handler run
+    // directly via runIdempotentAdminAction's no-key shortcut.
     const url = new URL(request.url);
     const routeDependencies = getRouteDependencies(url);
     expect(routeDependencies).not.toBeNull();
 
-    const { ctx, waits } = makeCtx();
+    const { ctx } = makeCtx();
     const response = await route(
       buildRouteContext({
         request,
@@ -96,38 +70,20 @@ describe("trigger-digest route", () => {
 
     expect(response).not.toBeNull();
     expect(response?.status).toBe(202);
-    expect(await response?.json()).toEqual(
-      expect.objectContaining({
-        ok: true,
-        accepted: true,
-        requestId: expect.any(String),
-      }),
-    );
-    expect(ctx.waitUntil).toHaveBeenCalledTimes(1);
-    expect(routeMocks.logCronRun).toHaveBeenCalledWith(
-      expect.anything(),
-      "daily-digest",
-      expect.any(Function),
-    );
-    expect(routeMocks.runCronWithLease).toHaveBeenCalledWith(
-      expect.anything(),
-      "daily-digest",
-      expect.any(Function),
-      expect.objectContaining({
-        owner: "manual-lease",
-        abortSignal: expect.any(AbortSignal),
-      }),
-    );
+    const body = (await response?.json()) as { ok: boolean; accepted: boolean; requestId: string };
+    expect(body.ok).toBe(true);
+    expect(body.accepted).toBe(true);
+    expect(body.requestId).toMatch(/^manual-digest-\d+-[a-z0-9]{1,8}$/);
 
-    resolveDigest({ status: "ok", itemCount: 1, metadata: "{}" });
-    await Promise.all(waits);
-    expect(routeMocks.generateDailyDigest).toHaveBeenCalledWith(
-      expect.anything(),
-      "anthropic-key",
-      null,
-      true,
-      { botToken: "bot-token", chatId: "@pharoswatch" },
-      expect.any(AbortSignal),
-    );
+    expect(dbCacheMocks.setCache).toHaveBeenCalledTimes(1);
+    const setCacheArgs = dbCacheMocks.setCache.mock.calls[0] as unknown[];
+    expect(setCacheArgs[1]).toBe("digest:force-run-request");
+    const persistedValue = JSON.parse(setCacheArgs[2] as string) as { requestId: string; requestedAt: number };
+    expect(persistedValue.requestId).toBe(body.requestId);
+    expect(typeof persistedValue.requestedAt).toBe("number");
+
+    // waitUntil is not used for digest execution anymore.
+    expect(ctx.waitUntil).not.toHaveBeenCalled();
   });
+
 });
