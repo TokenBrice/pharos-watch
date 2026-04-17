@@ -30,6 +30,18 @@ const STAGING_DELETE_TTL_SEC = 172800; // 48h
 const STAGING_RAW_JSON_TTL_SEC = 21600; // 6h
 const RUN_SEQ_KEY = "discovery_run_seq";
 
+// Canonical pool_id shapes observed in dex_pool_staging:
+//   "chain:0xhex"                 (EVM, lowercased)
+//   "chain:base58MixedCase"       (Solana et al)
+//   "orderbook:exchangeId:coinId" (synthetic CG-tickers rows)
+// Left side (chain slug) is lowercase. Right side tolerates mixed case for
+// base58 addresses and the extra coin segment for orderbook rows.
+const POOL_ID_REGEX = /^[a-z0-9-]+:[A-Za-z0-9][A-Za-z0-9:_.-]*$/;
+
+export function isValidStagedPoolId(poolId: string): boolean {
+  return POOL_ID_REGEX.test(poolId);
+}
+
 /**
  * Upsert discovered pools into dex_pool_staging.
  * Preserves initial discovery timestamp on re-discovery by updating conflicting rows in place.
@@ -38,8 +50,17 @@ const RUN_SEQ_KEY = "discovery_run_seq";
 export async function upsertStagedPools(db: D1Database, pools: StagedPool[]): Promise<void> {
   if (pools.length === 0) return;
 
-  for (let i = 0; i < pools.length; i += STAGING_BATCH_SIZE) {
-    const chunk = pools.slice(i, i + STAGING_BATCH_SIZE);
+  const validPools = pools.filter((pool) => {
+    if (isValidStagedPoolId(pool.poolId)) return true;
+    console.warn(
+      `[dex-discovery] rejected malformed pool_id: ${JSON.stringify(pool.poolId)} (stablecoin=${pool.stablecoinId})`,
+    );
+    return false;
+  });
+  if (validPools.length === 0) return;
+
+  for (let i = 0; i < validPools.length; i += STAGING_BATCH_SIZE) {
+    const chunk = validPools.slice(i, i + STAGING_BATCH_SIZE);
     const stmts = chunk.map((pool) =>
       db
         .prepare(STAGING_UPSERT_SQL)

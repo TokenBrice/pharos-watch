@@ -6,7 +6,7 @@ vi.mock("../../../lib/evm-rpc", () => ({
 }));
 
 import { fetchEvmCallHexAtBlock } from "../../../lib/evm-rpc";
-import { fetchSlipstreamPools, sqrtRatioToSpotPrice } from "../fetch-slipstream";
+import { fetchSlipstreamPools, sqrtRatioToSpotPrice, getSlipstreamPoolFeeBps } from "../fetch-slipstream";
 
 const ABI = parseAbi([
   "function all(uint256 _limit, uint256 _offset) view returns ((address lp,string symbol,uint8 decimals,uint256 liquidity,int24 type,int24 tick,uint160 sqrt_ratio,address token0,uint256 reserve0,uint256 staked0,address token1,uint256 reserve1,uint256 staked1,address gauge,uint256 gauge_liquidity,bool gauge_alive,address fee,address bribe,address factory,uint256 emissions,address emissions_token,uint256 pool_fee,uint256 unstaked_fee,uint256 token0_fees,uint256 token1_fees,address nfpm,address alm,address root)[])",
@@ -37,6 +37,23 @@ describe("sqrtRatioToSpotPrice", () => {
   it("returns 0 for zero or negative sqrt ratio", () => {
     expect(sqrtRatioToSpotPrice(0n, 6, 6)).toBe(0);
     expect(sqrtRatioToSpotPrice(-1n, 6, 6)).toBe(0);
+  });
+});
+
+describe("getSlipstreamPoolFeeBps", () => {
+  it("returns the numeric bps for valid values", () => {
+    expect(getSlipstreamPoolFeeBps(1n)).toBe(1);
+    expect(getSlipstreamPoolFeeBps(5n)).toBe(5);
+    expect(getSlipstreamPoolFeeBps(30n)).toBe(30);
+    expect(getSlipstreamPoolFeeBps(100n)).toBe(100);
+    expect(getSlipstreamPoolFeeBps(10_000n)).toBe(10_000);
+  });
+
+  it("returns null for out-of-range values", () => {
+    expect(getSlipstreamPoolFeeBps(0n)).toBe(null);
+    expect(getSlipstreamPoolFeeBps(-1n)).toBe(null);
+    expect(getSlipstreamPoolFeeBps(10_001n)).toBe(null);
+    expect(getSlipstreamPoolFeeBps(20_000n)).toBe(null);
   });
 });
 

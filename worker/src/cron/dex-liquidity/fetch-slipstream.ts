@@ -52,6 +52,20 @@ function bigintToDecimal(value: bigint, decimals: number): number {
 }
 
 /**
+ * Sugar's `pool_fee` is a raw basis-point integer. Observed values on
+ * Aerodrome/Velodrome live pools: 1, 5, 30, 100 bps (0.01%-1.00%).
+ * Anything outside [1, 10000] bps indicates either a pool misconfiguration
+ * or a Sugar ABI change; log and drop to the generic-fee fallback bucket.
+ */
+export function getSlipstreamPoolFeeBps(poolFee: bigint): number | null {
+  const asNumber = Number(poolFee);
+  if (!Number.isFinite(asNumber) || asNumber < 1 || asNumber > 10_000) {
+    return null;
+  }
+  return asNumber;
+}
+
+/**
  * Convert a Uniswap V3-style sqrtPriceX96 (Q64.96) to the spot price of
  * token1 in units of token0, decimal-adjusted for display.
  *
@@ -224,12 +238,18 @@ export async function fetchSlipstreamPools(
       const tvlUsd = reserve0 * token0PriceUsd + reserve1 * token1PriceUsd;
       if (!Number.isFinite(tvlUsd) || tvlUsd <= 0) continue;
 
-      const feeBps = Number(pool.pool_fee);
+      const feeBps = getSlipstreamPoolFeeBps(pool.pool_fee);
+      if (feeBps == null) {
+        console.warn(
+          `[fetch-slipstream] ${protocol} pool ${pool.lp}: unexpected pool_fee ${pool.pool_fee}`,
+        );
+      }
+      const effectiveFeeBps = feeBps ?? 30;
       pools.push({
         source: protocol,
         chain: config.chain,
         poolAddress: pool.lp,
-        poolType: classifyClPoolType(protocol, feeBps),
+        poolType: classifyClPoolType(protocol, effectiveFeeBps),
         tokens: [
           {
             address: token0.token_address,
@@ -247,7 +267,7 @@ export async function fetchSlipstreamPools(
         price: finalSpotPrice,
         tvlUsd,
         volume24hUsd: 0,
-        feeRate: normalizeFeeRateFromBps(feeBps),
+        feeRate: normalizeFeeRateFromBps(effectiveFeeBps),
         balances: [reserve0, reserve1],
       });
     }

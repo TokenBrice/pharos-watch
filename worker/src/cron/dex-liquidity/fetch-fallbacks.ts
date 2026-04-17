@@ -107,6 +107,8 @@ export async function fetchDsFallbackPools(
       return { newPools, priceObs };
     }
 
+    let malformedCount = 0;
+
     for (const contract of getTrackedContracts(meta)) {
       if (!DS_CHAIN_MAP[contract.chain]) continue;
       if (deadlineMs && Date.now() >= deadlineMs) {
@@ -128,8 +130,11 @@ export async function fetchDsFallbackPools(
       if (pairs.length === 0) continue;
 
       for (const pair of pairs) {
-        // Guard against malformed DexScreener responses (missing token fields)
-        if (!pair?.baseToken?.address || !pair?.quoteToken?.address || !pair?.pairAddress) continue;
+        // Guard against malformed DexScreener responses (missing required token fields)
+        if (!pair?.baseToken?.address || !pair?.quoteToken?.address || !pair?.pairAddress) {
+          malformedCount++;
+          continue;
+        }
         if (!pair.dexId) continue;
 
         // Quality gates
@@ -224,6 +229,10 @@ export async function fetchDsFallbackPools(
           },
         });
       }
+    }
+
+    if (malformedCount > 0) {
+      console.warn(`[fetch-fallbacks] DexScreener: ${malformedCount} malformed pairs for ${meta.id}`);
     }
   }
 
