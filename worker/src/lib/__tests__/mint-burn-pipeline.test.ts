@@ -58,6 +58,8 @@ import {
   upsertMintBurnSyncState,
 } from "../mint-burn-pipeline/sync-state";
 import type { MintBurnRow } from "../mint-burn-pipeline/types";
+import type { MintBurnContractConfig, MintBurnEventDef } from "../mint-burn-contracts";
+import type { AlchemyLogEntry } from "../alchemy-logs";
 
 function makeDb(): D1Database {
   return {
@@ -770,34 +772,58 @@ describe("mint-burn shared pipeline modules", () => {
   });
 });
 
-const REUSD_DEPOSITED_TOPIC = "0xb4c03061fb5b7fed76389d5af8f2e0ddb09f8c70d1333abbb62582835e10accb";
+// Fake topic hash: parseMintBurnLogs does not validate log.topics[0] against
+// eventDef.topicHash (topic filtering happens upstream in the fetch layer), so the
+// value is inert for this test. Using a visibly-fake placeholder to avoid seeding
+// a wrong-but-real-looking constant.
+const FAKE_TOPIC = "0x" + "0".repeat(64);
 const USER_DATA = "000000000000000000000000aaaa1111aaaa2222aaaa3333aaaa4444aaaa5555";
 const TOKEN_DATA = "000000000000000000000000bbbb1111bbbb2222bbbb3333bbbb4444bbbb5555";
 const AMOUNT_DATA = "0000000000000000000000000000000000000000000000000de0b6b3a7640000"; // 1e18
 
 describe("parseMintBurnLogs — custom counterparty encoding", () => {
   it("extracts counterparty from data slot when counterpartyEncoding is set", () => {
-    const config = {
-      chain: { chainId: "ethereum", explorerUrl: "https://etherscan.io" },
-      stablecoinId: "test", symbol: "TEST",
-      contractAddress: "0xc0", decimals: 18, dustThreshold: 0,
-      startBlock: 1, events: [],
-    } as any;
-    const eventDef = {
-      signature: "Deposited(address,address,uint256)",
-      topicHash: REUSD_DEPOSITED_TOPIC,
-      direction: "mint" as const,
-      amountEncoding: "nth-data-uint256" as const,
-      dataSlot: 2,
-      counterpartyEncoding: { source: "data" as const, slot: 0 },
+    const config: MintBurnContractConfig = {
+      chain: { chainId: "ethereum", explorerUrl: "https://etherscan.io" } as MintBurnContractConfig["chain"],
+      stablecoinId: "test",
+      symbol: "TEST",
+      contractAddress: "0xc0",
+      decimals: 18,
+      dustThreshold: 0,
+      startBlock: 1,
+      events: [],
+      adapterKind: "custom-events",
+      startBlockSource: "test-fixture",
+      startBlockConfidence: "high",
     };
-    const logs = [{
+    const eventDef: MintBurnEventDef = {
+      signature: "Deposited(address,address,uint256)",
+      topicHash: FAKE_TOPIC,
+      direction: "mint",
+      amountEncoding: "nth-data-uint256",
+      dataSlot: 2,
+      counterpartyEncoding: { source: "data", slot: 0 },
+    };
+    const logs: AlchemyLogEntry[] = [{
       address: "0xc0",
-      topics: [REUSD_DEPOSITED_TOPIC],
+      topics: [FAKE_TOPIC],
       data: "0x" + USER_DATA + TOKEN_DATA + AMOUNT_DATA,
-      blockNumber: "0x64", transactionHash: "0xtx", logIndex: "0x0",
-    }] as any;
-    const { rows } = parseMintBurnLogs(config, eventDef, logs, new Map([[100, 1700000000]]), new Map(), new Map(), 1700000100);
+      blockNumber: "0x64",
+      transactionHash: "0xtx",
+      logIndex: "0x0",
+      blockHash: "0xhash",
+      transactionIndex: "0x0",
+      removed: false,
+    }];
+    const { rows } = parseMintBurnLogs(
+      config,
+      eventDef,
+      logs,
+      new Map([[100, 1700000000]]),
+      new Map(),
+      new Map(),
+      1700000100,
+    );
     expect(rows[0].counterparty).toBe("0xaaaa1111aaaa2222aaaa3333aaaa4444aaaa5555");
   });
 });
