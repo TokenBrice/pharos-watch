@@ -82,7 +82,8 @@ vi.mock("@shared/lib/api-endpoints", () => ({
   },
 }));
 
-const { runStatusSelfCheck, isBootstrapCacheMiss } = await import("../status-self-check");
+const { runStatusSelfCheck, isBootstrapCacheMiss, classifyProbeStatus } = await import("../status-self-check");
+const { STATUS_PROBE_THRESHOLDS } = await import("@shared/lib/status-thresholds");
 
 describe("runStatusSelfCheck", () => {
   afterEach(() => {
@@ -450,5 +451,38 @@ describe("health probe semantic classification", () => {
     const metadata = JSON.parse(result.metadata ?? "{}") as Record<string, unknown>;
     expect(metadata.probeStatus).not.toBe("healthy");
     expect(metadata.probeStatus).toBe("stale");
+  });
+});
+
+describe("classifyProbeStatus reflects STATUS_PROBE_THRESHOLDS", () => {
+  it("returns stale when sampleCount is 0", () => {
+    expect(classifyProbeStatus(0, 0, 0)).toBe("stale");
+  });
+
+  it("returns healthy when fails <= healthyMaxFailCount and p95 <= healthyP95MaxMs", () => {
+    const { healthyMaxFailCount, healthyP95MaxMs } = STATUS_PROBE_THRESHOLDS;
+    expect(classifyProbeStatus(10, healthyMaxFailCount, healthyP95MaxMs)).toBe("healthy");
+    expect(classifyProbeStatus(10, 0, healthyP95MaxMs)).toBe("healthy");
+  });
+
+  it("downgrades to degraded when p95 crosses healthyP95MaxMs", () => {
+    const { healthyP95MaxMs, degradedP95MaxMs } = STATUS_PROBE_THRESHOLDS;
+    expect(classifyProbeStatus(10, 0, healthyP95MaxMs + 1)).toBe("degraded");
+    expect(classifyProbeStatus(10, 0, degradedP95MaxMs)).toBe("degraded");
+  });
+
+  it("returns stale when p95 exceeds degradedP95MaxMs", () => {
+    const { degradedP95MaxMs } = STATUS_PROBE_THRESHOLDS;
+    expect(classifyProbeStatus(10, 0, degradedP95MaxMs + 1)).toBe("stale");
+  });
+
+  it("uses degradedMaxFailRatio to cap degraded classification", () => {
+    const { degradedMaxFailRatio, healthyP95MaxMs, degradedP95MaxMs } = STATUS_PROBE_THRESHOLDS;
+    const sampleCount = 20;
+    const degradedFailCap = Math.floor(sampleCount * degradedMaxFailRatio);
+    // At the cap with p95 in degraded band -> degraded
+    expect(classifyProbeStatus(sampleCount, degradedFailCap, degradedP95MaxMs)).toBe("degraded");
+    // One over the cap -> stale
+    expect(classifyProbeStatus(sampleCount, degradedFailCap + 1, healthyP95MaxMs)).toBe("stale");
   });
 });
