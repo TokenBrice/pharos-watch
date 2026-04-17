@@ -30,7 +30,6 @@ import {
 export const handleBlacklistSummary = withErrorHandler(
   "blacklist-summary",
   async (db: D1Database): Promise<Response> => {
-    // 1) Per-coin blacklist-event counts (public only = suppression_reason IS NULL)
     const perCoinResult = await db
       .prepare(
         `SELECT stablecoin, event_type, COUNT(*) AS n, SUM(COALESCE(amount_usd_at_event, 0)) AS usd_sum
@@ -40,9 +39,9 @@ export const handleBlacklistSummary = withErrorHandler(
       )
       .all<{ stablecoin: string; event_type: string; n: number; usd_sum: number }>();
 
-    // 2) Latest event per (stablecoin, chain_id, LOWER(address)) — drives both
-    //    net-frozen semantics AND activeRecords construction. D1 supports
-    //    SQLite >= 3.25 window functions (ROW_NUMBER ... OVER PARTITION BY).
+    // D1 supports SQLite >= 3.25 window functions (ROW_NUMBER OVER PARTITION BY).
+    // Latest event per (stablecoin, chain_id, LOWER(address)) drives both net-
+    // frozen semantics AND activeRecords construction.
     const latestByAddrResult = await db
       .prepare(
         `WITH ranked AS (
@@ -70,49 +69,34 @@ export const handleBlacklistSummary = withErrorHandler(
     // buildBlacklistQuarterlyChartFromSnapshots) see a canonical BlacklistEvent.
     const latestByAddr: BlacklistEvent[] = (latestByAddrResult.results ?? []).map(mapBlacklistEventRow);
 
-    // 3) frozenAddresses - preserve NET semantics (blacklist events whose LATEST
-    //    action is still 'blacklist'). Do NOT use a DISTINCT-ever-blacklisted
-    //    count; that silently inflates the metric.
+    // Preserve NET semantics: addresses whose LATEST action is still 'blacklist'.
+    // A DISTINCT-ever-blacklisted count would silently inflate the metric.
     const frozenAddresses = latestByAddr.filter((e) => e.eventType === "blacklist").length;
 
-    // 4) recoverableGapCount - required by BlacklistSummaryStatsSchema.
-    const recoverableGapResult = await db
-      .prepare(
-        `SELECT COUNT(*) AS n FROM blacklist_events
-         WHERE suppression_reason IS NULL
-           AND amount_status IN ('recoverable_pending','provider_failed','ambiguous')`,
-      )
-      .first<{ n: number }>();
-
-    // 5) Total row count (events)
-    const totalResult = await db
-      .prepare(`SELECT COUNT(*) AS n FROM blacklist_events WHERE suppression_reason IS NULL`)
-      .first<{ n: number }>();
-
-    // 6) Latest public event timestamp (freshness)
-    const latestTsRow = await db
-      .prepare(`SELECT MAX(timestamp) AS t FROM blacklist_events WHERE suppression_reason IS NULL`)
-      .first<{ t: number | null }>();
-    const latestTs = latestTsRow?.t ?? Math.floor(Date.now() / 1000);
-
-    // 7) Recent counts
+    // Collapse total / max(timestamp) / recoverable-gap / recent-30d / recent-24h
+    // into a single aggregate pass so we don't hit the public-events table five
+    // separate times under the WHERE suppression_reason IS NULL predicate.
     const now = Math.floor(Date.now() / 1000);
-    const recent30dRow = await db
-      .prepare(`SELECT COUNT(*) AS n FROM blacklist_events WHERE suppression_reason IS NULL AND timestamp >= ?`)
-      .bind(now - 30 * 86400)
-      .first<{ n: number }>();
-    const recent24hRow = await db
-      .prepare(`SELECT COUNT(*) AS n FROM blacklist_events WHERE suppression_reason IS NULL AND timestamp >= ?`)
-      .bind(now - 86400)
-      .first<{ n: number }>();
+    const aggregateRow = await db
+      .prepare(
+        `SELECT
+           COUNT(*) AS total,
+           MAX(timestamp) AS max_ts,
+           SUM(CASE WHEN amount_status IN ('recoverable_pending','provider_failed','ambiguous') THEN 1 ELSE 0 END) AS recoverable_gap,
+           SUM(CASE WHEN timestamp >= ? THEN 1 ELSE 0 END) AS recent_30d,
+           SUM(CASE WHEN timestamp >= ? THEN 1 ELSE 0 END) AS recent_24h
+         FROM blacklist_events
+         WHERE suppression_reason IS NULL`,
+      )
+      .bind(now - 30 * 86400, now - 86400)
+      .first<{ total: number; max_ts: number | null; recoverable_gap: number; recent_30d: number; recent_24h: number }>();
+    const latestTs = aggregateRow?.max_ts ?? Math.floor(Date.now() / 1000);
 
-    // 8) Current-balances snapshot-derived stats
     const currentBalances = await loadBlacklistCurrentBalanceMap(db);
     const activeRecords = buildBlacklistActiveRecords(latestByAddr, currentBalances);
     const activeStats = computeBlacklistActiveSummaryStats(activeRecords);
     const trackedStats = computeBlacklistTrackedSummaryStats(currentBalances);
 
-    // 9) Build per-coin counts (all BLACKLIST_STABLECOINS keys present; 0 by default)
     const perCoinBlacklistCounts = Object.fromEntries(
       BLACKLIST_STABLECOINS.map((s) => [s, 0]),
     ) as Record<BlacklistStablecoin, number>;
@@ -148,22 +132,22 @@ export const handleBlacklistSummary = withErrorHandler(
           usdcBlacklisted,
           usdtBlacklisted,
           goldBlacklisted,
-          frozenAddresses,                         // NET, not distinct-ever
+          frozenAddresses, // NET, not distinct-ever
           destroyedTotal,
-          recentCount: recent30dRow?.n ?? 0,       // required
-          recentCount24h: recent24hRow?.n ?? 0,    // required
-          recoverableGapCount: recoverableGapResult?.n ?? 0, // required
+          recentCount: aggregateRow?.recent_30d ?? 0,
+          recentCount24h: aggregateRow?.recent_24h ?? 0,
+          recoverableGapCount: aggregateRow?.recoverable_gap ?? 0,
           activeAddressCount: activeStats.activeAddressCount,
           activeFrozenTotal: activeStats.activeFrozenTotal,
           activeAmountGapCount: activeStats.activeAmountGapCount,
           trackedAddressCount: trackedStats.trackedAddressCount,
           trackedFrozenTotal: trackedStats.trackedFrozenTotal,
           trackedAmountGapCount: trackedStats.trackedAmountGapCount,
-          perCoinBlacklistCounts,                  // required (see SF-10)
+          perCoinBlacklistCounts,
         },
         chart,
         chains: chainOptions,
-        totalEvents: totalResult?.n ?? 0,
+        totalEvents: aggregateRow?.total ?? 0,
         methodology: buildMethodologyEnvelope({
           version: BLACKLIST_TRACKER_METHODOLOGY_VERSION,
           versionLabel: BLACKLIST_TRACKER_METHODOLOGY_VERSION_LABEL,
