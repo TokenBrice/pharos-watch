@@ -44,6 +44,7 @@ Applied sequentially after the baseline (fresh setup) or after the previous indi
 | 0098     | `0098_telegram_alert_snooze.sql`                | Add `alert_snooze_until_ts` to `telegram_subscribers` for per-chat temporary snooze from inline buttons |
 | 0099     | `0099_admin_action_audit_log.sql`               | Add admin action audit log table for tracking operator mutations                               |
 | 0100     | `0100_blacklist_sync_state_dedup.sql`           | Delete legacy mixed-case `blacklist_sync_state` rows (keeps lowercase canonical keys)          |
+| 0101     | `0101_blacklist_reset_derived_amounts.sql`      | Reset 7,198 pre-v3.2 `derived` rows into the backfill pool for proper re-attribution           |
 
 ## Retired Individual Migrations
 
