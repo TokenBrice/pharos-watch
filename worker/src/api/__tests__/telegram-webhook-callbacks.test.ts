@@ -11,7 +11,7 @@ beforeEach(() => {
 });
 
 describe("handleCallbackQuery", () => {
-  it("snooze:1h sets alert_snooze_until_ts ~1h in the future", async () => {
+  it("snooze:1h stamps alert_snooze_until_ts ~1h in the future in a single INSERT", async () => {
     const before = Math.floor(Date.now() / 1000);
     const db = mockD1([]);
     await handleCallbackQuery(db, "fake-token", {
@@ -21,13 +21,15 @@ describe("handleCallbackQuery", () => {
       message: { chat: { id: 42 }, message_id: 999 },
     });
 
-    // Should have run an UPSERT then an UPDATE on telegram_subscribers.
+    // One INSERT ... ON CONFLICT with the snooze timestamp bound in position 3.
     const history = db.getHistory();
-    const upsert = history.find((h) => /INSERT INTO telegram_subscribers/.test(h.sql));
+    const upsert = history.find(
+      (h) =>
+        /INSERT INTO telegram_subscribers/.test(h.sql) &&
+        /alert_snooze_until_ts = excluded\.alert_snooze_until_ts/.test(h.sql),
+    );
     expect(upsert).toBeDefined();
-    const update = history.find((h) => /alert_snooze_until_ts = \?/.test(h.sql));
-    expect(update).toBeDefined();
-    const until = Number(update!.binds[0]);
+    const until = Number(upsert!.binds[2]);
     expect(until).toBeGreaterThanOrEqual(before + 3599);
     expect(until).toBeLessThanOrEqual(before + 3700);
 

@@ -32,36 +32,35 @@ export async function loadStatusForCoin(
   db: D1Database,
   stablecoinId: string,
 ): Promise<StatusForCoin> {
-  const dewsRow = await db
-    .prepare(
-      "SELECT band, score, recorded_at FROM stress_signals WHERE stablecoin_id = ? ORDER BY recorded_at DESC LIMIT 1",
-    )
-    .bind(stablecoinId)
-    .first<{ band: string; score: number; recorded_at: number }>();
-
-  const safetyRow = await db
-    .prepare(
-      "SELECT grade, score, recorded_at FROM safety_grade_history WHERE stablecoin_id = ? ORDER BY recorded_at DESC LIMIT 1",
-    )
-    .bind(stablecoinId)
-    .first<{ grade: string; score: number | null; recorded_at: number }>();
-
-  const depegRow = await db
-    .prepare(
-      "SELECT direction, peak_deviation_bps, peg_reference, started_at FROM depeg_events WHERE stablecoin_id = ? AND ended_at IS NULL ORDER BY started_at DESC LIMIT 1",
-    )
-    .bind(stablecoinId)
-    .first<{
-      direction: "above" | "below";
-      peak_deviation_bps: number;
-      peg_reference: number;
-      started_at: number;
-    }>();
-
-  const priceRow = await db
-    .prepare("SELECT price, updated_at FROM price_cache WHERE asset_id = ?")
-    .bind(stablecoinId)
-    .first<{ price: number; updated_at: number }>();
+  const [dewsRow, safetyRow, depegRow, priceRow] = await Promise.all([
+    db
+      .prepare(
+        "SELECT band, score, recorded_at FROM stress_signals WHERE stablecoin_id = ? ORDER BY recorded_at DESC LIMIT 1",
+      )
+      .bind(stablecoinId)
+      .first<{ band: string; score: number; recorded_at: number }>(),
+    db
+      .prepare(
+        "SELECT grade, score, recorded_at FROM safety_grade_history WHERE stablecoin_id = ? ORDER BY recorded_at DESC LIMIT 1",
+      )
+      .bind(stablecoinId)
+      .first<{ grade: string; score: number | null; recorded_at: number }>(),
+    db
+      .prepare(
+        "SELECT direction, peak_deviation_bps, peg_reference, started_at FROM depeg_events WHERE stablecoin_id = ? AND ended_at IS NULL ORDER BY started_at DESC LIMIT 1",
+      )
+      .bind(stablecoinId)
+      .first<{
+        direction: "above" | "below";
+        peak_deviation_bps: number;
+        peg_reference: number;
+        started_at: number;
+      }>(),
+    db
+      .prepare("SELECT price, updated_at FROM price_cache WHERE asset_id = ?")
+      .bind(stablecoinId)
+      .first<{ price: number; updated_at: number }>(),
+  ]);
 
   return {
     stablecoinId,

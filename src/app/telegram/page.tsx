@@ -7,6 +7,7 @@ import { FeaturePageShell } from "@/components/feature-page-shell";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { buildPageMetadata } from "@/lib/page-metadata";
+import { safeJsonLd } from "@/lib/json-ld";
 import { SITE_ORIGIN as SITE_URL } from "@shared/lib/runtime-origins";
 import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins";
 import { TelegramPulseStrip } from "./telegram-pulse-strip";
@@ -531,7 +532,7 @@ export default function TelegramPage() {
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{
-            __html: JSON.stringify({
+            __html: safeJsonLd({
               "@context": "https://schema.org",
               "@type": "SoftwareApplication",
               name: "PharosWatchBot",
