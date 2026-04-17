@@ -1,0 +1,54 @@
+// @vitest-environment jsdom
+
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import { cleanup, render, screen, act } from "@testing-library/react";
+import { FreshnessIndicator } from "../freshness-indicator";
+
+beforeEach(() => {
+  vi.useFakeTimers();
+});
+
+afterEach(() => {
+  vi.useRealTimers();
+  cleanup();
+});
+
+describe("FreshnessIndicator", () => {
+  it("renders 'just now' when updatedAt is within 5s", () => {
+    vi.setSystemTime(new Date(1_700_000_000_000));
+    render(<FreshnessIndicator updatedAtMs={1_700_000_000_000 - 2000} staleAfterMs={120_000} />);
+    expect(screen.getByText(/just now/i)).toBeDefined();
+  });
+
+  it("renders 'Xs ago' between 5s and 60s", () => {
+    vi.setSystemTime(new Date(1_700_000_000_000));
+    render(<FreshnessIndicator updatedAtMs={1_700_000_000_000 - 42_000} staleAfterMs={120_000} />);
+    expect(screen.getByText(/42s ago/i)).toBeDefined();
+  });
+
+  it("renders 'Xm ago' above 60s", () => {
+    vi.setSystemTime(new Date(1_700_000_000_000));
+    render(<FreshnessIndicator updatedAtMs={1_700_000_000_000 - 180_000} staleAfterMs={120_000} />);
+    expect(screen.getByText(/3m ago/i)).toBeDefined();
+  });
+
+  it("marks stale when age exceeds staleAfterMs", () => {
+    vi.setSystemTime(new Date(1_700_000_000_000));
+    render(<FreshnessIndicator updatedAtMs={1_700_000_000_000 - 180_000} staleAfterMs={120_000} />);
+    expect(screen.getByRole("status").getAttribute("data-stale")).toBe("true");
+  });
+
+  it("does NOT mark stale when within window", () => {
+    vi.setSystemTime(new Date(1_700_000_000_000));
+    render(<FreshnessIndicator updatedAtMs={1_700_000_000_000 - 30_000} staleAfterMs={120_000} />);
+    expect(screen.getByRole("status").getAttribute("data-stale")).toBe("false");
+  });
+
+  it("increments age via internal timer", () => {
+    vi.setSystemTime(new Date(1_700_000_000_000));
+    render(<FreshnessIndicator updatedAtMs={1_700_000_000_000 - 30_000} staleAfterMs={120_000} />);
+    expect(screen.getByText(/30s ago/i)).toBeDefined();
+    act(() => { vi.advanceTimersByTime(5000); });
+    expect(screen.getByText(/35s ago/i)).toBeDefined();
+  });
+});

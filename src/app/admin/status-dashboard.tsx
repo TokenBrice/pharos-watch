@@ -4,8 +4,12 @@ import { Fragment, useState, type ReactNode } from "react";
 import { FeaturePageShell } from "@/components/feature-page-shell";
 import { LongformScrollspyNav } from "@/components/longform-scrollspy-nav";
 import { formatElapsedSeconds } from "@shared/lib/format";
+import { FreshnessIndicator } from "@/components/status/freshness-indicator";
 import { RecommendedActionStrip } from "@/components/status/recommended-action-strip";
 import { RefreshCountdown } from "@/components/status/refresh-countdown";
+
+/** Mark data stale when older than 3 min (>3x the 60s refresh cadence). */
+const ADMIN_STALE_AFTER_MS = 180_000;
 import { getTopFoldCopy, isRecoveryHold as isRecoveryHoldState } from "@/components/status/top-fold-copy";
 import { NoticeRail, SummaryBadge } from "@/components/status/page-primitives";
 import { Button } from "@/components/ui/button";
@@ -238,6 +242,7 @@ export function StatusDashboard({ onSignOut }: { onSignOut: () => void }) {
               </span>
             </div>
             <div className="flex flex-wrap items-center gap-2">
+              <FreshnessIndicator updatedAtMs={lastUpdated} staleAfterMs={ADMIN_STALE_AFTER_MS} />
               <RefreshCountdown key={lastUpdated} onRefresh={handleRefresh} />
               <Button variant="outline" size="sm" onClick={onSignOut}>
                 Sign out
