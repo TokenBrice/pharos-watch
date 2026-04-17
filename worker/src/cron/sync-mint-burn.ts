@@ -133,8 +133,8 @@ export async function syncMintBurn(
     const metadata = JSON.stringify({
       lane,
       jobName,
-      subrequestBudgetUsed: budget.count,
-      subrequestBudgetLimit: budget.limit,
+      budgetUsed: budget.count,
+      budgetLimit: budget.limit,
       rowsRead: 0,
       rowsParsed: 0,
       rowsInserted: 0,

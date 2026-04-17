@@ -47,41 +47,47 @@ export async function insertMintBurnRows(
 export interface ClassificationUpdateCounters {
   flowTypeChanges: number;
   burnTypeChanges: number;
+  rowsUpdated: number;
 }
 
 export async function updateEventClassifications(
   db: D1Database,
   rows: MintBurnRow[],
 ): Promise<ClassificationUpdateCounters> {
-  // Split into two UPDATE passes so the operator response can report
-  // flow_type vs burn_type deltas independently. burn_type updates apply
-  // to every burn row (even standard flow), while flow_type updates only
-  // touch rows where the classifier produced a non-standard flow.
-  const burnRows = rows.filter((row) => row.direction === "burn");
-  const flowRows = rows.filter((row) => row.flow_type !== "standard");
+  // Any burn row gets its classification written unconditionally; mint rows
+  // only participate when the classifier produced a non-standard flow_type.
+  const needsUpdate = rows.filter(
+    (row) => row.direction === "burn" || row.flow_type !== "standard",
+  );
+  if (needsUpdate.length === 0) {
+    return { flowTypeChanges: 0, burnTypeChanges: 0, rowsUpdated: 0 };
+  }
 
-  const burnTypeStmts = burnRows.map((row) =>
+  const stmts = needsUpdate.map((row) =>
     db.prepare(
       `UPDATE mint_burn_events
-       SET burn_type = ?, burn_review_reason = ?
+       SET burn_type = ?, burn_review_reason = ?, flow_type = ?
        WHERE id = ?`,
-    ).bind(row.burn_type, row.burn_review_reason, row.id),
+    ).bind(row.burn_type, row.burn_review_reason, row.flow_type, row.id),
   );
-  const flowTypeStmts = flowRows.map((row) =>
-    db.prepare(
-      `UPDATE mint_burn_events
-       SET flow_type = ?
-       WHERE id = ?`,
-    ).bind(row.flow_type, row.id),
-  );
+  const rowsUpdated = await batchExecute(db, stmts);
 
-  const burnTypeChanges = burnTypeStmts.length > 0 ? await batchExecute(db, burnTypeStmts) : 0;
-  const flowTypeChanges = flowTypeStmts.length > 0 ? await batchExecute(db, flowTypeStmts) : 0;
-  return { flowTypeChanges, burnTypeChanges };
+  // Per-column counters derived from classifier output rather than D1
+  // meta.changes so a row that changed both columns counts once per column
+  // without double-counting in the union (`rowsUpdated`).
+  const burnTypeChanges = needsUpdate.filter((r) => r.direction === "burn").length;
+  const flowTypeChanges = needsUpdate.filter((r) => r.flow_type !== "standard").length;
+  return { flowTypeChanges, burnTypeChanges, rowsUpdated };
 }
 
-export function collectAffectedHours(
-  rows: MintBurnRow[],
+interface AffectedHourCandidate {
+  stablecoin_id: string;
+  chain_id: string;
+  timestamp: number;
+}
+
+export function collectAffectedHours<T extends AffectedHourCandidate>(
+  rows: T[],
   seed?: Map<string, MintBurnAffectedHour>,
 ): Map<string, MintBurnAffectedHour> {
   const affectedHours = seed ?? new Map<string, MintBurnAffectedHour>();
@@ -169,6 +175,7 @@ export async function persistMintBurnRows(
   ignored: number;
   flowTypeChanges: number;
   burnTypeChanges: number;
+  rowsUpdated: number;
   roundtripsDetected: number;
 }> {
   const roundtripsDetected = detectAtomicRoundtrips(rows);
@@ -178,14 +185,14 @@ export async function persistMintBurnRows(
       ignored: 0,
       flowTypeChanges: 0,
       burnTypeChanges: 0,
+      rowsUpdated: 0,
       roundtripsDetected,
     };
   }
 
   const insertResult = await insertMintBurnRows(db, rows);
-  const { flowTypeChanges, burnTypeChanges } = await updateEventClassifications(db, rows);
-  const classificationRowsUpdated = flowTypeChanges + burnTypeChanges;
-  if (affectedHours && (insertResult.inserted > 0 || classificationRowsUpdated > 0)) {
+  const { flowTypeChanges, burnTypeChanges, rowsUpdated } = await updateEventClassifications(db, rows);
+  if (affectedHours && (insertResult.inserted > 0 || rowsUpdated > 0)) {
     collectAffectedHours(rows, affectedHours);
   }
   return {
@@ -193,6 +200,7 @@ export async function persistMintBurnRows(
     ignored: insertResult.ignored,
     flowTypeChanges,
     burnTypeChanges,
+    rowsUpdated,
     roundtripsDetected,
   };
 }

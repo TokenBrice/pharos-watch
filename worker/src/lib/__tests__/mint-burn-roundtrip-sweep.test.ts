@@ -5,9 +5,13 @@ vi.mock("../db", () => ({
   batchExecute: vi.fn().mockResolvedValue(0),
 }));
 
-vi.mock("../mint-burn-pipeline/persistence", () => ({
-  recalcAffectedHours: vi.fn().mockResolvedValue(undefined),
-}));
+vi.mock("../mint-burn-pipeline/persistence", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("../mint-burn-pipeline/persistence")>();
+  return {
+    ...actual,
+    recalcAffectedHours: vi.fn().mockResolvedValue(undefined),
+  };
+});
 
 describe("sweepRecentRoundtrips", () => {
   it("returns 0 when no cross-run roundtrips exist", async () => {

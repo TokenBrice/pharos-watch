@@ -583,8 +583,10 @@ export async function readCachedFlow(db: D1Database, key: string): Promise<{ val
  * scan on SQLite in some configurations.
  */
 export async function invalidateMintBurnFlowCaches(db: D1Database): Promise<void> {
+  // Prefix matches every key FLOW_CACHE_PREFIX writes (see line 51); `\uffff`
+  // is the largest UTF-16 code unit and safely bounds any future suffix.
   await db
     .prepare("DELETE FROM cache WHERE key >= ? AND key < ?")
-    .bind("mint-burn-flows:", "mint-burn-flows:\uffff")
+    .bind(`${FLOW_CACHE_PREFIX}:`, `${FLOW_CACHE_PREFIX}:\uffff`)
     .run();
 }

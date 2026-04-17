@@ -4,6 +4,29 @@ import type { MintBurnRow } from "./types";
 export const ROUNDTRIP_AMOUNT_TOLERANCE = 0.005; // 0.5%
 
 /**
+ * SQL HAVING fragment that mirrors `detectAtomicRoundtrips` for GROUP BY queries
+ * over `mint_burn_events`. Interpolate directly (no bind placeholders) after a
+ * `HAVING COUNT(DISTINCT direction) > 1 AND …` or similar.
+ *
+ * `CASE WHEN a >= b THEN a ELSE b END` is used in place of `MAX(a, b)` because
+ * SQLite's scalar-variadic `MAX()` is unreliable inside aggregate HAVING on
+ * older D1 builds. The literal `0.005` is deliberately interpolated from
+ * `ROUNDTRIP_AMOUNT_TOLERANCE` so a change here propagates to both SQL sites.
+ */
+export const ROUNDTRIP_TOLERANCE_HAVING_SQL = `
+  ABS(SUM(CASE WHEN direction='mint' THEN amount ELSE 0 END)
+    - SUM(CASE WHEN direction='burn' THEN amount ELSE 0 END))
+  <= ${ROUNDTRIP_AMOUNT_TOLERANCE} * (
+       CASE
+         WHEN SUM(CASE WHEN direction='mint' THEN amount ELSE 0 END)
+            >= SUM(CASE WHEN direction='burn' THEN amount ELSE 0 END)
+         THEN SUM(CASE WHEN direction='mint' THEN amount ELSE 0 END)
+         ELSE SUM(CASE WHEN direction='burn' THEN amount ELSE 0 END)
+       END
+     )
+`;
+
+/**
  * Detect atomic roundtrips: transactions whose mint and burn totals (per stablecoin)
  * round-trip within `ROUNDTRIP_AMOUNT_TOLERANCE`. Mutates rows in place to set
  * `flow_type = "atomic_roundtrip"`. Rows missing tx_hash are skipped (defensive

@@ -370,11 +370,12 @@ describe("handleBackfillMintBurn", () => {
 
     expect(body.reclassified).toBeDefined();
     expect(body.reclassified.flowTypeChanges).toBeGreaterThanOrEqual(1);
-    // The mint row whose flow_type flipped to bridge_transfer should trigger
-    // the flow_type UPDATE path and an hourly recalc for its hour bucket.
-    expect(flowTypeUpdates.length).toBeGreaterThanOrEqual(1);
+    // Mint-only fixture: no burns should be counted on the burn column, even
+    // though the unified UPDATE writes `burn_type = NULL` unconditionally.
+    expect(body.reclassified.burnTypeChanges).toBe(0);
+    // The classifier output ("bridge_transfer") must reach the UPDATE, and the
+    // affected hour bucket must be queued for recalculation.
     expect(flowTypeUpdates.some((u) => u.binds.includes("bridge_transfer"))).toBe(true);
-    expect(burnTypeUpdates.length).toBe(0); // mint row only — no burn_type change
     expect(hourlyRecalcs.length).toBeGreaterThanOrEqual(1);
   });
 });

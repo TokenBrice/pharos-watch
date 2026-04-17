@@ -598,8 +598,8 @@ describe("syncMintBurn", () => {
     const invalidation = history.find(
       (entry) =>
         entry.sql.includes("DELETE FROM cache")
-        && entry.binds[0] === "mint-burn-flows:"
-        && entry.binds[1] === "mint-burn-flows:\uffff",
+        && entry.binds[0] === "mint-burn-flows:v3:"
+        && entry.binds[1] === "mint-burn-flows:v3:\uffff",
     );
     expect(invalidation).toBeDefined();
   });
@@ -642,16 +642,16 @@ describe("syncMintBurn", () => {
     expect(meta.atomicRoundtripsDetected).toBe(2);
   });
 
-  it("emits subrequestBudgetUsed and subrequestBudgetLimit in metadata", async () => {
+  it("emits budgetUsed and budgetLimit in metadata via withBudgetMetadata", async () => {
     const db = makeDb();
 
     const result = await syncMintBurn(db, "alchemy-key");
     const meta = JSON.parse(result.metadata);
 
-    expect(meta.subrequestBudgetLimit).toBe(200);
-    expect(typeof meta.subrequestBudgetUsed).toBe("number");
-    expect(meta.subrequestBudgetUsed).toBeGreaterThanOrEqual(0);
-    expect(meta.subrequestBudgetUsed).toBeLessThanOrEqual(meta.subrequestBudgetLimit);
+    expect(meta.budgetLimit).toBe(200);
+    expect(typeof meta.budgetUsed).toBe("number");
+    expect(meta.budgetUsed).toBeGreaterThanOrEqual(0);
+    expect(meta.budgetUsed).toBeLessThanOrEqual(meta.budgetLimit);
   });
 
   it("downgrades to degraded and flags metadata when recalcAffectedHours throws", async () => {

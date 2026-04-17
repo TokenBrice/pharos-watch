@@ -1,43 +1,29 @@
 /**
  * Mint/Burn Bridge Classifier — Pure Logic
  *
- * Classifies mint/burn events as economic flow, bridge transfers, or review
- * rows based on contract-level bridge detection config. Pure function:
- * no I/O, no DB access.
+ * Thin dispatcher that applies the default classification and forwards to the
+ * right per-protocol helper in `./mint-burn-bridge-classifier-protocols.ts`.
+ * Shared types live in `./mint-burn-bridge-classifier-types.ts` (re-exported
+ * here so existing import paths keep working).
  *
- * Per-protocol logic lives in `./mint-burn-bridge-classifier-protocols.ts`;
- * this module is a thin dispatcher that applies the default classification
- * and forwards to the right helper.
- *
+ * Pure function: no I/O, no DB access.
  * Async orchestration wrapper: ../mint-burn-pipeline/classification.ts
  */
+import type { MintBurnBridgeDetectionConfig } from "./mint-burn-contracts";
 import type {
-  MintBurnBridgeDetectionConfig,
-  MintBurnType,
-} from "./mint-burn-contracts";
-import type { MintBurnFlowType } from "./mint-burn-pipeline/types";
+  MintBurnBridgeClassifiableRow,
+  MintBurnTxContext,
+} from "./mint-burn-bridge-classifier-types";
 import {
   classifyLayerZeroOft,
   classifyPoolBridge,
   setDefaultClassification,
 } from "./mint-burn-bridge-classifier-protocols";
 
-export interface MintBurnTxContext {
-  to: string | null;
-  inputSelector: string | null;
-  logTopics: string[];
-  logAddresses: string[];
-}
-
-export interface MintBurnBridgeClassifiableRow {
-  id: string;
-  tx_hash: string;
-  direction: "mint" | "burn";
-  flow_type: MintBurnFlowType;
-  counterparty: string | null;
-  burn_type: MintBurnType | null;
-  burn_review_reason: string | null;
-}
+export type {
+  MintBurnBridgeClassifiableRow,
+  MintBurnTxContext,
+} from "./mint-burn-bridge-classifier-types";
 
 export function classifyBridgeAwareBurnRows(
   rows: MintBurnBridgeClassifiableRow[],

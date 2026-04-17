@@ -1,14 +1,9 @@
 import { requireAdmin } from "../lib/auth";
 import { jsonResponse } from "../lib/api-utils";
 import { batchExecute } from "../lib/db";
-import { recalcAffectedHours } from "../lib/mint-burn-pipeline/persistence";
+import { collectAffectedHours, recalcAffectedHours } from "../lib/mint-burn-pipeline/persistence";
+import { ROUNDTRIP_TOLERANCE_HAVING_SQL } from "../lib/mint-burn-pipeline/roundtrip-detection";
 import type { MintBurnAffectedHour } from "../lib/mint-burn-pipeline/types";
-// The reverse-pass SQL HAVING clause below hardcodes 0.005 because SQL cannot
-// interpolate TS constants. `roundtrip-sweep.ts` has the same literal. The
-// drift guard is a unit test at
-// `worker/src/lib/__tests__/mint-burn-roundtrip.test.ts` — it asserts the TS
-// constant matches 0.005 at CI time, keeping blast radius out of the Worker
-// cold-start path.
 
 const BATCH_SIZE = 1000;
 
@@ -16,24 +11,7 @@ interface RoundtripDiscoveryRow {
   tx_hash: string;
   stablecoin_id: string;
   chain_id: string;
-  min_ts: number;
-}
-
-function collectAffectedHours(
-  rows: RoundtripDiscoveryRow[],
-  seed?: Map<string, MintBurnAffectedHour>,
-): Map<string, MintBurnAffectedHour> {
-  const affectedHours = seed ?? new Map<string, MintBurnAffectedHour>();
-  for (const row of rows) {
-    const hourTs = Math.floor(row.min_ts / 3600) * 3600;
-    const key = `${row.stablecoin_id}-${row.chain_id}-${hourTs}`;
-    affectedHours.set(key, {
-      stablecoinId: row.stablecoin_id,
-      chainId: row.chain_id,
-      hourTs,
-    });
-  }
-  return affectedHours;
+  timestamp: number;
 }
 
 /**
@@ -57,9 +35,7 @@ export async function handleReclassifyAtomicRoundtrips(
   // --- Forward pass: standard → atomic_roundtrip ---
   const { results: forwardTxs } = await db
     .prepare(
-      `SELECT tx_hash, stablecoin_id, chain_id,
-              MIN(timestamp) as min_ts,
-              COUNT(*) as cnt
+      `SELECT tx_hash, stablecoin_id, chain_id, MIN(timestamp) as timestamp
        FROM mint_burn_events
        WHERE flow_type = 'standard'
        GROUP BY tx_hash, stablecoin_id, chain_id
@@ -68,7 +44,7 @@ export async function handleReclassifyAtomicRoundtrips(
        LIMIT ?`,
     )
     .bind(BATCH_SIZE)
-    .all<RoundtripDiscoveryRow & { cnt: number }>();
+    .all<RoundtripDiscoveryRow>();
 
   const affectedHours = new Map<string, MintBurnAffectedHour>();
   let toRoundtrip = 0;
@@ -87,27 +63,23 @@ export async function handleReclassifyAtomicRoundtrips(
   }
 
   // --- Reverse pass: atomic_roundtrip → standard for tolerance-violating groups.
-  // The HAVING clause mirrors ROUNDTRIP_AMOUNT_TOLERANCE (0.5%) from
-  // roundtrip-detection.ts: groups whose mint/burn totals diverge by more than
-  // 0.5% of the larger side no longer qualify as atomic roundtrips.
+  // The HAVING fragment is the inverse of ROUNDTRIP_TOLERANCE_HAVING_SQL — a
+  // group survives the filter only when mint and burn sides are both non-zero
+  // AND the two totals diverge by more than the shared 0.5% tolerance.
   const { results: reverseTxs } = await db
     .prepare(
-      `SELECT tx_hash, stablecoin_id, chain_id,
-              MIN(timestamp) as min_ts,
-              SUM(CASE WHEN direction='mint' THEN amount ELSE 0 END) AS mint_amt,
-              SUM(CASE WHEN direction='burn' THEN amount ELSE 0 END) AS burn_amt
+      `SELECT tx_hash, stablecoin_id, chain_id, MIN(timestamp) as timestamp
        FROM mint_burn_events
        WHERE flow_type = 'atomic_roundtrip'
        GROUP BY tx_hash, stablecoin_id, chain_id
-       HAVING mint_amt > 0 AND burn_amt > 0
-         AND ABS(mint_amt - burn_amt) > 0.005 * (
-           CASE WHEN mint_amt >= burn_amt THEN mint_amt ELSE burn_amt END
-         )
+       HAVING SUM(CASE WHEN direction='mint' THEN amount ELSE 0 END) > 0
+          AND SUM(CASE WHEN direction='burn' THEN amount ELSE 0 END) > 0
+          AND NOT (${ROUNDTRIP_TOLERANCE_HAVING_SQL})
        ORDER BY MIN(timestamp) ASC, stablecoin_id ASC, tx_hash ASC
        LIMIT ?`,
     )
     .bind(BATCH_SIZE)
-    .all<RoundtripDiscoveryRow & { mint_amt: number; burn_amt: number }>();
+    .all<RoundtripDiscoveryRow>();
 
   let toStandard = 0;
   if (reverseTxs.length > 0) {

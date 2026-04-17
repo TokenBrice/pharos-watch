@@ -198,6 +198,7 @@ export async function handleBackfillMintBurn(
     let reviewBurns = 0;
     let flowTypeChanges = 0;
     let burnTypeChanges = 0;
+    let rowsReclassifiedUnique = 0;
     const txContextCache = new Map<string, MintBurnTxContext | null>();
 
     while (cursor <= toBlock && chunksProcessed < maxChunks && !budgetExhausted(budget)) {
@@ -273,6 +274,7 @@ export async function handleBackfillMintBurn(
       rowsIgnored += persistResult.ignored;
       flowTypeChanges += persistResult.flowTypeChanges;
       burnTypeChanges += persistResult.burnTypeChanges;
+      rowsReclassifiedUnique += persistResult.rowsUpdated;
 
       await recalcAffectedHours(db, affectedHours);
       await upsertMintBurnSyncState(db, configKey(config), scanTo, "monotonic-max");
@@ -300,11 +302,9 @@ export async function handleBackfillMintBurn(
       effectiveBurns,
       bridgeBurns,
       reviewBurns,
-      // Legacy scalar retained for backward compat; prefer `reclassified.*` fields.
-      // max() avoids double-counting rows that change both burn_type and
-      // flow_type in the same pass (e.g., bridge burns); the exact per-column
-      // counts live in `reclassified` below.
-      rowsReclassified: Math.max(flowTypeChanges, burnTypeChanges),
+      // Legacy scalar: unique rows that had any classification column rewritten.
+      // Exact per-column counts live in `reclassified` below.
+      rowsReclassified: rowsReclassifiedUnique,
       reclassified: { flowTypeChanges, burnTypeChanges },
       budgetUsed: budget.count,
       budgetLimit: budget.limit,

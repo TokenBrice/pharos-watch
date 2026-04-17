@@ -3,9 +3,13 @@ import { handleReclassifyAtomicRoundtrips } from "../reclassify-atomic-roundtrip
 import { mockD1 } from "./helpers/mock-d1";
 import { recalcAffectedHours } from "../../lib/mint-burn-pipeline/persistence";
 
-vi.mock("../../lib/mint-burn-pipeline/persistence", () => ({
-  recalcAffectedHours: vi.fn().mockResolvedValue(undefined),
-}));
+vi.mock("../../lib/mint-burn-pipeline/persistence", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("../../lib/mint-burn-pipeline/persistence")>();
+  return {
+    ...actual,
+    recalcAffectedHours: vi.fn().mockResolvedValue(undefined),
+  };
+});
 
 describe("reclassify-atomic-roundtrips", () => {
   it("returns done:true when no roundtrips found", async () => {

@@ -669,11 +669,9 @@ describe("mint-burn shared pipeline modules", () => {
 
   it("updates classification rows for burns and non-standard mints", async () => {
     const db = makeDb();
-    // Two batchExecute calls: one for burn_type (2 burn rows),
-    // one for flow_type (1 non-standard mint).
-    vi.mocked(batchExecute)
-      .mockResolvedValueOnce(2) // burn_type pass
-      .mockResolvedValueOnce(1); // flow_type pass
+    // Single batchExecute call: 3 rows (2 burns + 1 non-standard mint).
+    // The standard-flow mint row is filtered out (no classification change needed).
+    vi.mocked(batchExecute).mockResolvedValueOnce(3);
 
     const rows = [
       makeRow({ id: "mint-1", direction: "mint" }),
@@ -682,13 +680,13 @@ describe("mint-burn shared pipeline modules", () => {
       makeRow({ id: "burn-2", direction: "burn", burn_type: "bridge_burn" }),
     ];
 
-    const { flowTypeChanges, burnTypeChanges } = await updateEventClassifications(db, rows);
+    const { flowTypeChanges, burnTypeChanges, rowsUpdated } = await updateEventClassifications(db, rows);
     expect(burnTypeChanges).toBe(2);
     expect(flowTypeChanges).toBe(1);
-    expect(vi.mocked(batchExecute)).toHaveBeenCalledTimes(2);
-    const [burnCall, flowCall] = vi.mocked(batchExecute).mock.calls;
-    expect(burnCall[1]).toHaveLength(2);
-    expect(flowCall[1]).toHaveLength(1);
+    expect(rowsUpdated).toBe(3);
+    expect(vi.mocked(batchExecute)).toHaveBeenCalledTimes(1);
+    const [[, stmts]] = vi.mocked(batchExecute).mock.calls;
+    expect(stmts).toHaveLength(3);
   });
 
   it("uses monotonic sync-state upsert mode for backfill semantics", async () => {

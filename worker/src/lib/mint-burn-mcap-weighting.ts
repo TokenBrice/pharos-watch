@@ -13,19 +13,23 @@ import {
   type RawChainCirculating,
 } from "@shared/lib/chain-circulating";
 
-const TRACKED_CHAINS_BY_COIN: Map<string, string[]> = (() => {
-  const map = new Map<string, string[]>();
+const TRACKED_CHAINS_BY_COIN: Map<string, Set<string>> = (() => {
+  const map = new Map<string, Set<string>>();
   for (const c of MINT_BURN_CONFIGS) {
-    const set = new Set(map.get(c.stablecoinId) ?? []);
-    set.add(c.chain.chainId);
-    map.set(c.stablecoinId, [...set]);
+    let chains = map.get(c.stablecoinId);
+    if (!chains) {
+      chains = new Set<string>();
+      map.set(c.stablecoinId, chains);
+    }
+    chains.add(c.chain.chainId);
   }
   return map;
 })();
 
 /** Chains we actively track in mint/burn ingestion for this stablecoin. */
 export function getMintBurnTrackedChains(stablecoinId: string): string[] {
-  return TRACKED_CHAINS_BY_COIN.get(stablecoinId) ?? [];
+  const chains = TRACKED_CHAINS_BY_COIN.get(stablecoinId);
+  return chains ? [...chains] : [];
 }
 
 /**
