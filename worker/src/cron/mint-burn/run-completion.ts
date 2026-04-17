@@ -41,7 +41,7 @@ export async function completeMintBurnRun(input: {
   criticalContractsSatisfied: number;
   criticalContractsUnsatisfied: number;
   configBreakdown: MintBurnConfigSummary[];
-}): Promise<{ status: SyncMintBurnStatus; metadata: string }> {
+}): Promise<{ status: SyncMintBurnStatus; metadata: Record<string, unknown> }> {
   const laggingConfigs = input.configs
     .map((config) => {
       const key = mintBurnConfigKey(config);
@@ -106,10 +106,12 @@ export async function completeMintBurnRun(input: {
   }
 
   let roundtripSweepCount = 0;
+  let roundtripsBacklogSaturated = false;
   if (status !== "error") {
     try {
       const sweepResult = await sweepRecentRoundtrips(input.db, nowSec);
       roundtripSweepCount = sweepResult.reclassified;
+      roundtripsBacklogSaturated = sweepResult.saturated;
       if (roundtripSweepCount > 0) {
         console.log(`[sync-mint-burn] Roundtrip sweep reclassified ${roundtripSweepCount} rows`);
       }
@@ -121,7 +123,7 @@ export async function completeMintBurnRun(input: {
   const compatibilityChainHead = input.chainHeads.get("ethereum")
     ?? Math.max(0, ...input.chainHeads.values());
 
-  const metadata = JSON.stringify(withBudgetMetadata(input.budget, {
+  const metadata = withBudgetMetadata(input.budget, {
     lane: input.lane,
     jobName: input.jobName,
     chainHead: compatibilityChainHead || null,
@@ -165,8 +167,11 @@ export async function completeMintBurnRun(input: {
     runStatePersistenceFailed,
     nullPricesHealed,
     nullPriceBacklog,
+    nullPriceBacklogRecent: nullPriceBacklog.recent,
+    nullPriceBacklogHistorical: nullPriceBacklog.historical,
     roundtripSweepCount,
-  }));
+    roundtripsBacklogSaturated,
+  });
 
   return { status, metadata };
 }

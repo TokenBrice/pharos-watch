@@ -8,6 +8,7 @@ const SWEEP_LIMIT = 200; // keep it lightweight per cron run
 export interface RoundtripSweepResult {
   reclassified: number;
   affectedHours: Map<string, MintBurnAffectedHour>;
+  saturated: boolean;
 }
 
 /**
@@ -53,10 +54,11 @@ export async function sweepRecentRoundtrips(
   }>();
 
   if (candidates.length === 0) {
-    return { reclassified: 0, affectedHours: new Map() };
+    return { reclassified: 0, affectedHours: new Map(), saturated: false };
   }
 
-  if (candidates.length === SWEEP_LIMIT) {
+  const saturated = candidates.length === SWEEP_LIMIT;
+  if (saturated) {
     console.warn(`[roundtrip-sweep] Hit limit (${SWEEP_LIMIT}), backlog may remain`);
   }
 
@@ -84,5 +86,5 @@ export async function sweepRecentRoundtrips(
     await recalcAffectedHours(db, affectedHours);
   }
 
-  return { reclassified, affectedHours };
+  return { reclassified, affectedHours, saturated };
 }

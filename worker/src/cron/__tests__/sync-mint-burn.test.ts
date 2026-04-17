@@ -121,9 +121,20 @@ vi.mock("../../lib/mint-burn-pipeline/persistence", async (importOriginal) => {
   };
 });
 
+vi.mock("../../lib/mint-burn-pipeline/price-heal", () => ({
+  getNullPriceBacklog: vi.fn(async () => ({ recent: 0, historical: 0 })),
+  healNullPrices: vi.fn(async () => ({ healed: 0, affectedHours: new Map() })),
+}));
+
+vi.mock("../../lib/mint-burn-pipeline/roundtrip-sweep", () => ({
+  sweepRecentRoundtrips: vi.fn(async () => ({ reclassified: 0, affectedHours: new Map(), saturated: false })),
+}));
+
 import { syncMintBurn } from "../sync-mint-burn";
 import { batchExecute } from "../../lib/db";
 import { recalcAffectedHours } from "../../lib/mint-burn-pipeline/persistence";
+import { getNullPriceBacklog, healNullPrices } from "../../lib/mint-burn-pipeline/price-heal";
+import { sweepRecentRoundtrips } from "../../lib/mint-burn-pipeline/roundtrip-sweep";
 // batchExecute stays in db.ts (core DB utility)
 import {
   fetchAlchemyLogs,
@@ -229,6 +240,9 @@ describe("syncMintBurn", () => {
     vi.mocked(resolveBlockTimestamps).mockReset().mockResolvedValue(new Map());
     vi.mocked(batchExecute).mockReset().mockImplementation(async (_db, stmts) => stmts.length);
     vi.mocked(recalcAffectedHours).mockReset().mockResolvedValue(undefined);
+    vi.mocked(getNullPriceBacklog).mockReset().mockResolvedValue({ recent: 0, historical: 0 });
+    vi.mocked(healNullPrices).mockReset().mockResolvedValue({ healed: 0, affectedHours: new Map() });
+    vi.mocked(sweepRecentRoundtrips).mockReset().mockResolvedValue({ reclassified: 0, affectedHours: new Map(), saturated: false });
   });
 
   afterEach(() => {
@@ -588,6 +602,44 @@ describe("syncMintBurn", () => {
         && entry.binds[1] === "mint-burn-flows:\uffff",
     );
     expect(invalidation).toBeDefined();
+  });
+
+  it("emits nullPriceBacklog and roundtripsBacklogSaturated in metadata", async () => {
+    const db = makeDb();
+
+    vi.mocked(getNullPriceBacklog).mockResolvedValueOnce({ recent: 12, historical: 45 });
+    vi.mocked(sweepRecentRoundtrips).mockResolvedValueOnce({
+      reclassified: 200,
+      affectedHours: new Map(),
+      saturated: true,
+    });
+
+    vi.mocked(fetchAlchemyLogs)
+      .mockResolvedValueOnce({
+        logs: [makeMintLog({ txHash: "0xroundtrip", logIndex: 0 })],
+        complete: true,
+        scannedToBlock: 22_000_000,
+        calls: 1,
+        maxDepth: 0,
+      })
+      .mockResolvedValueOnce({
+        logs: [makeBurnLog({ txHash: "0xroundtrip", logIndex: 1 })],
+        complete: true,
+        scannedToBlock: 22_000_000,
+        calls: 1,
+        maxDepth: 0,
+      })
+      .mockResolvedValueOnce({ logs: [], complete: true, scannedToBlock: 22_000_000, calls: 1, maxDepth: 0 });
+
+    vi.mocked(resolveBlockTimestamps).mockResolvedValueOnce(new Map([[22_000_000, 1_718_650_752]]));
+
+    const result = await syncMintBurn(db, "alchemy-key");
+    const meta = JSON.parse(result.metadata);
+
+    expect(meta.nullPriceBacklogRecent).toBe(12);
+    expect(meta.nullPriceBacklogHistorical).toBe(45);
+    expect(meta.roundtripsBacklogSaturated).toBe(true);
+    expect(meta.atomicRoundtripsDetected).toBe(2);
   });
 
   it("downgrades to degraded and flags metadata when recalcAffectedHours throws", async () => {

@@ -320,10 +320,9 @@ export async function syncMintBurn(
   if (recalcFailed && lane !== "extended" && status === "ok") {
     status = "degraded";
   }
-  const metaObj = JSON.parse(completion.metadata) as Record<string, unknown>;
-  metaObj.recalcFailed = recalcFailed;
-  if (recalcError) metaObj.recalcError = recalcError;
-  const metadata = JSON.stringify(metaObj);
+  completion.metadata.recalcFailed = recalcFailed;
+  if (recalcError) completion.metadata.recalcError = recalcError;
+  const metadata = JSON.stringify(completion.metadata);
 
   await reportCronProgress(reportProgress, {
     stage: "complete",
