@@ -1,8 +1,9 @@
 import { ACTIVE_META_BY_ID } from "@shared/lib/stablecoins";
 import { resolveChainId } from "@shared/lib/chains";
-import { DEFILLAMA_COINS } from "../../lib/constants";
+import { CIRCUIT_SOURCE, DEFILLAMA_COINS } from "../../lib/constants";
 import { fetchWithRetry } from "../../lib/fetch-retry";
 import { throwIfAborted } from "../../lib/abort";
+import { recordOutcome, shouldAttemptFetch } from "../../lib/circuit-breaker";
 import { DLPriceResponseSchema } from "../../lib/schemas";
 import {
   applyResolvedPrice,
@@ -48,13 +49,21 @@ async function fetchPriceMapByIds(
   ids: string[],
   source: string,
   signal?: AbortSignal,
+  db?: D1Database,
 ): Promise<Map<string, number> | null> {
   if (ids.length === 0) return new Map();
+
+  if (db && !(await shouldAttemptFetch(db, CIRCUIT_SOURCE.DL_COINS))) {
+    return new Map();
+  }
 
   const res = await fetchWithRetry(
     `${DEFILLAMA_COINS}/prices/current/${ids.join(",")}`,
     signal ? { signal } : undefined,
   );
+  if (db) {
+    await recordOutcome(db, CIRCUIT_SOURCE.DL_COINS, res?.ok === true);
+  }
   if (!res?.ok) {
     return null;
   }
@@ -125,6 +134,7 @@ export async function runDlContractPasses(
   assets: PeggedAsset[],
   fxRates: Record<string, number> | undefined,
   signal?: AbortSignal,
+  db?: D1Database,
 ): Promise<DlContractPassResult> {
   let pass1Count = 0;
   let pass1bCount = 0;
@@ -146,6 +156,7 @@ export async function runDlContractPasses(
         withAddress.map((lookup) => lookup.coinId),
         "DefiLlama coins API (pass 1)",
         signal,
+        db,
       );
       if (pass1Prices) {
         const resolved = new Set<number>();
@@ -179,6 +190,7 @@ export async function runDlContractPasses(
           altLookups.map((lookup) => lookup.coinId),
           "DefiLlama coins API (pass 1b)",
           signal,
+          db,
         );
         if (pass1bPrices) {
           const resolved = new Set<number>();

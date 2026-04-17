@@ -33,8 +33,8 @@ interface EnrichmentPassDefinition {
 const FALLBACK_PRICE_PASSES: readonly EnrichmentPassDefinition[] = [
   {
     label: "DefiLlama contracts",
-    run: async ({ assets, fxRates, signal }) => {
-      const result = await runDlContractPasses(assets, fxRates, signal);
+    run: async ({ assets, fxRates, db, signal }) => {
+      const result = await runDlContractPasses(assets, fxRates, signal, db);
       return {
         counts: {
           pass1: result.pass1,

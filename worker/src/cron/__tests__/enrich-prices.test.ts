@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, afterEach } from "vitest";
 import { isReasonablePrice, hasMissingPrice, PRICE_BOUNDS, enrichMissingPrices, fetchPrimaryPrices, applyResolvedPrice, applyPoolChallenge } from "../sync-stablecoins/enrich-prices";
 import type { PeggedAsset, PrimaryPriceResult, PriceValidationStats } from "../sync-stablecoins/enrich-prices";
-import { runCmcPass, runDexScreenerPass, runJupiterPass } from "../sync-stablecoins/enrich-prices-passes";
+import { runCmcPass, runDexScreenerPass, runDlContractPasses, runJupiterPass } from "../sync-stablecoins/enrich-prices-passes";
 import { mockD1 } from "../../api/__tests__/helpers/mock-d1";
 import { mockFetch } from "../../api/__tests__/helpers/mock-fetch";
 import { CIRCUIT_SOURCE } from "../../lib/constants";
@@ -1098,6 +1098,89 @@ describe("enrichMissingPrices", () => {
 
     expect(result.resolved).toBe(0);
     expect(fetchSpy).not.toHaveBeenCalled();
+  });
+
+  it("skips DL /coins fetch when the defillama-coins breaker is open", async () => {
+    const nowSec = Math.floor(Date.now() / 1000);
+    const db = mockD1([
+      {
+        match: "SELECT value, updated_at FROM cache WHERE key = ?",
+        matchBinds: [`circuit:${CIRCUIT_SOURCE.DL_COINS}`],
+        rows: [],
+        first: {
+          value: JSON.stringify({
+            state: "open",
+            consecutiveFailures: 3,
+            lastFailureAt: nowSec - 60,
+            lastSuccessAt: null,
+            openedAt: nowSec - 60,
+          }),
+          updated_at: nowSec - 60,
+        },
+      },
+    ]);
+
+    const assets: PeggedAsset[] = [
+      {
+        id: "usdt-tether",
+        name: "Tether",
+        symbol: "USDT",
+        price: 0,
+        address: "0xdac17f958d2ee523a2206206994597c13d831ec7",
+        pegType: "peggedUSD",
+        circulating: {},
+      },
+    ];
+
+    const fetchSpy = vi.fn();
+    vi.stubGlobal("fetch", fetchSpy);
+
+    const result = await runDlContractPasses(assets, undefined, undefined, db);
+
+    expect(result.resolved).toBe(0);
+    expect(fetchSpy).not.toHaveBeenCalled();
+  });
+
+  it("records a defillama-coins breaker failure when DL /coins returns 500", { timeout: 15_000 }, async () => {
+    const db = mockD1([
+      {
+        match: "SELECT value, updated_at FROM cache WHERE key = ?",
+        matchBinds: [`circuit:${CIRCUIT_SOURCE.DL_COINS}`],
+        rows: [],
+        first: null,
+      },
+    ]);
+
+    const assets: PeggedAsset[] = [
+      {
+        id: "usdt-tether",
+        name: "Tether",
+        symbol: "USDT",
+        price: 0,
+        address: "0xdac17f958d2ee523a2206206994597c13d831ec7",
+        pegType: "peggedUSD",
+        circulating: {},
+      },
+    ];
+
+    const fetchSpy = vi.fn(async () => new Response("upstream error", { status: 500 }));
+    vi.stubGlobal("fetch", fetchSpy);
+
+    const result = await runDlContractPasses(assets, undefined, undefined, db);
+
+    expect(result.resolved).toBe(0);
+    expect(fetchSpy).toHaveBeenCalled();
+
+    const circuitWrites = db
+      .getHistory()
+      .filter((entry) => entry.sql.includes("INSERT OR REPLACE INTO cache"))
+      .filter((entry) => String(entry.binds[0]) === `circuit:${CIRCUIT_SOURCE.DL_COINS}`);
+
+    expect(circuitWrites.length).toBeGreaterThan(0);
+    const lastWrite = circuitWrites[circuitWrites.length - 1];
+    const record = JSON.parse(String(lastWrite.binds[1]));
+    expect(record.consecutiveFailures).toBeGreaterThan(0);
+    expect(record.lastFailureAt).not.toBeNull();
   });
 });
 
