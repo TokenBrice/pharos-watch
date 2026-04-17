@@ -72,9 +72,10 @@ When an asset still has no usable current price after validation and fallback re
 When multiple clusters have the same size, the winner is chosen deterministically by:
 
 1. larger total cluster weight
-2. tighter internal spread
-3. proximity to peg reference (when available)
-4. stable alphabetical source label as the final tie-break
+2. stronger trust tier (any hard-tier member > mixed > all soft) — prevents a tight soft cluster from beating an equal-weight hard cluster on proximity alone
+3. tighter internal spread
+4. proximity to peg reference (when available)
+5. stable alphabetical source label as the final tie-break
 
 Source labels list all agreeing sources alphabetically:
 
@@ -101,10 +102,12 @@ guardrail for unrelated fallback or stale prices.
 
 ### Pool Challenge (Soft-Source Guard)
 
-After consensus, weak soft-source results where all relevant sources are **pool-challenge eligible** are challenged against current individual priced pools from the published challenger snapshot (`dex_price_challenger_snapshots` + `dex_price_challengers`) that meet the live $100K TVL minimum and are fresh within `DEX_FRESHNESS_SEC`. Eligible source families include CoinGecko, DefiLlama-list, `dex-promoted`, and promoted protocol-level DEX sources (`fluid-dex`, `balancer-dex`, `raydium-dex`, `orca-dex`) as long as no exempt hard source is present. The divergence threshold is **peg-type-aware**: 500 bps for USD pegs, `min(2× depeg threshold, 500)` for non-USD pegs (e.g., 300 bps for JPY/EUR). If ANY qualifying pool diverges from the weak result beyond the threshold:
+After consensus, weak soft-source results where all relevant sources are **pool-challenge eligible** are challenged against current individual priced pools from the published challenger snapshot (`dex_price_challenger_snapshots` + `dex_price_challengers`) that meet the live $100K TVL minimum and are fresh within `DEX_FRESHNESS_SEC`. Eligible source families include CoinGecko, DefiLlama-list, `dex-promoted`, and promoted protocol-level DEX sources (`fluid-dex`, `balancer-dex`, `raydium-dex`, `orca-dex`) as long as no exempt hard source is present. NAV tokens are excluded from the pool challenge entirely: their fair value is their published NAV and the peg-aware divergence threshold does not map to a meaningful DEX-liquidity check, so diverging pools cannot downgrade or replace a NAV price. The divergence threshold is **peg-type-aware**: 500 bps for USD pegs, `min(2× depeg threshold, 500)` for non-USD pegs (e.g., 300 bps for JPY/EUR). If ANY qualifying pool diverges from the weak result beyond the threshold:
 
 1. Confidence is always downgraded to `low`.
 2. The price is **replaced** only when diverging protocol-level challenger prices span **≥2 independent protocols** — a single protocol's pools may share data-quality issues (vault-token counterparties, misconfigured pairs), and one rogue pool inside an otherwise agreeing protocol does not make that protocol count as corroborating disagreement. When replacement fires, Pharos first collapses each protocol to a TVL-weighted median price, then evaluates divergence and the final replacement from those protocol medians. When only one protocol diverges, the original price is preserved but confidence stays `low`.
+
+When pool-challenge replacement fires, the selected primary result is rewritten in lockstep so downstream carry-through sees the new source: `allPrices`, `observedAtBySource`, and `observedAtModeBySource` are collapsed to a single `pool-tvl-weighted` entry, the replacement `observedAt` is the minimum of the contributing pools' observed-at timestamps (with mode `local_fetch`), and `agreeSources` / `candidateSources` / `disagreeSources` are updated to match. This keeps `hasCorroboratedSevereDownsideCandidate` and the primary-candidate carry-through lane from reading stale pre-replacement sources during later validation passes.
 
 If the selected primary price is a severe fixed-peg downside and at least two live candidate sources independently
 corroborate that downside, including at least one depeg-authoritative source such as Pyth, pool challenge can still
@@ -156,6 +159,8 @@ Several live providers need normalization before their prices can safely enter c
 - **Circuit-breaker accounting:** for Pyth and RedStone, a transport-successful request that returns zero usable prices is still recorded as an unsuccessful outcome for breaker state. This avoids treating empty responses as healthy data.
 - **CoinGecko ticker breaker semantics:** `worker/src/lib/cg-ticker.ts` still rejects stale or otherwise unusable Kinesis ticker rows for price publication, but the `coingecko-ticker` circuit breaker now tracks endpoint availability rather than row freshness. A successful `/coins/{id}/tickers` response with only stale/unusable USD rows no longer opens the source breaker; only transport failures or non-OK responses count as breaker failures.
 - **Curve on-chain sanity bound:** Implied prices from `get_dy` calls are capped at `< 10,000` (to accommodate commodity tokens like PAXG/XAUT at ~$2,900).
+- **Curve oracle staleness guard:** The `curve-oracle` voice (crvUSD `PriceAggregator.price()` EMA) is fetched against a resolved block number and its block timestamp is used to stamp `observedAt`. Reads with a block timestamp older than 5 minutes (`CURVE_ORACLE_MAX_STALENESS_SEC = 300`) are rejected before entering primary consensus, so a stale-replica RPC cannot single-source publish an EMA read minutes behind chain head. `curve-oracle` now uses its own `CIRCUIT_SOURCE.CURVE_ORACLE` breaker separately from the per-pool `curve-onchain` breaker, so an aggregator outage does not suppress per-pool Curve reads and vice versa.
+- **Binance host cascade:** Binance ticker fetches no longer retry the same host on server-side failures. On HTTP 5xx, 429, or Worker-side 403/451, the fetcher short-circuits to the next host (`data-api.binance.vision` → `api.binance.com`) instead of consuming the Retry-After budget against a host that is already failing. Intra-host retries are reserved for transient network exceptions where the host itself has not answered.
 - **Direct-API DEX bridge:** per-protocol DEX prices are aggregated before they enter primary consensus, so one Fluid/Balancer/Raydium/Orca/Meteora/PancakeSwap/Slipstream protocol can contribute at most one elevated source per asset.
 - **DEX bridge overlap guard:** when a promoted per-protocol DEX bridge source exists for an asset, the overlapping `dex-promoted` aggregate is withheld so the same bridge observation family cannot self-confirm.
 - **Promoted DEX corroboration gate:** a lone promoted DEX protocol is only admitted into primary consensus when it agrees with another promoted DEX protocol, agrees with a non-DEX source within the live threshold, or no non-DEX source exists for that asset.
@@ -218,6 +223,8 @@ Assets still missing prices after primary consensus run through `enrichMissingPr
 4. **Pass 3:** Jupiter Price API for tracked Solana mints — liquidity-gated and still subject to peg-aware validation
 5. **Pass 4:** DexScreener exact token-address pool lookup when chain+address are available. Unique-symbol search is now reserved for addressless assets only; if an exact target exists and fails, Pharos does not downgrade to symbol-only identity under the same request budget. The pass now walks the full sorted missing set and stops after 10 actual DexScreener requests, so skipped high-rank non-unique rows cannot crowd out later exact-target or unique-symbol candidates. The exact token lookup lane and the symbol-search lane now keep separate circuit-breaker state: `dexscreener-prices` tracks `/tokens/v1/{chain}/{address}`, while `dexscreener-search` tracks the last-resort `/latest/dex/search` path so a flaky search endpoint cannot suppress otherwise healthy exact-address recovery.
 
+The DefiLlama `/coins` contract-address fallback and the DexScreener lookups used outside primary consensus (the `dex-liquidity` and `dex-discovery` crawls) now gate on and record against their own circuit breakers. `CIRCUIT_SOURCE.DL_COINS` wraps the `coins.llama.fi/prices/current/...` path so a DL regional outage opens the breaker instead of hammering the host, and the same `dexscreener-prices` / `dexscreener-search` breakers are consulted from the liquidity and discovery paths so a persistent DexScreener failure cannot keep retrying across cron surfaces.
+
 Operationally, missing-price enrichment runs before the slower GeckoTerminal soft-source cross-check so recovery of unpriced assets stays on the critical path; the GT probe still reruns consensus later for weak CG / DL-list outcomes, self-stops once its 3-minute budget is exhausted, and protocol overrides still apply after that probe.
 
 Provider attempt diagnostics for Binance and Jupiter are persisted into `sync-stablecoins` cron metadata. Those diagnostics include the sanitized endpoint, HTTP status when available, candidate/response/match counts, and short non-OK snippets so operators can distinguish provider transport failures from successful responses that simply carry no usable tracked prices.
@@ -273,6 +280,8 @@ The final cached price can carry one of four confidence states:
 
 Downstream consumers use these tags for display, depeg confirmation, and risk handling.
 
+When the GeckoTerminal probe produces a re-run consensus that the post-consensus validation lane rejects (e.g., because the GT-enriched price would trigger temporal-jump quarantine), Pharos still treats the GT divergence evidence as material: a pre-GT `single-source` primary is downgraded to `low`-confidence rather than kept at its pre-probe confidence, so the run does not discard the evidence that the soft single-source publication differed meaningfully from the probed DEX pool. The pre-GT source/price are preserved; only the confidence tag is adjusted.
+
 ---
 
 ## Update Rules
@@ -300,6 +309,7 @@ When changing live pricing behavior, update all relevant surfaces in the same ch
 | `worker/src/lib/pyth.ts` | Pyth Hermes integration and feed-ID normalization |
 | `worker/src/lib/redstone.ts` | Exact-case RedStone allowlist, batching, and retry behavior |
 | `worker/src/lib/cex-tickers.ts` | Binance, Kraken, Bitstamp, and Coinbase price fetchers |
+| `worker/src/lib/fetcher-result.ts` | `FetcherOutcome<T>` result type shared by CEX / oracle fetchers for uniform circuit-breaker accounting |
 | `worker/src/lib/chainlink-feeds.ts` | Curated Chainlink FX / commodity reference-feed reads |
 | `worker/src/lib/curve-onchain.ts` | Curve on-chain price reads |
 | `worker/src/lib/price-validation.ts` | Peg-aware reasonableness validation |
