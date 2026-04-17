@@ -67,9 +67,9 @@ const CORRECTIVE_RETRY_BUDGET_FRACTION = 0.5;
 const DIGEST_FETCH_PER_ATTEMPT_TIMEOUT_MS = 11 * 60_000;
 
 /**
- * Retry depth for the digest call. Smaller than ANTHROPIC_MAX_RETRIES because
- * the outer AbortSignal caps total wall time at ANTHROPIC_TIMEOUT_MS anyway,
- * and extra retries only stack 529 backoff delays inside that budget.
+ * Retry depth for the digest Anthropic call. Kept small because the outer
+ * AbortSignal caps total wall time at ANTHROPIC_TIMEOUT_MS anyway, and extra
+ * retries only stack 529 backoff delays inside that budget.
  */
 const DIGEST_FETCH_MAX_RETRIES = 2;
 
