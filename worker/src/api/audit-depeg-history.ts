@@ -466,190 +466,221 @@ export async function handleAuditDepegHistory(
         return jsonResponse(result);
       }
 
-      // Build supply lookup only when min-supply > 0
-      let getSupplyAtTime: ((coinId: string, ts: number) => number) | null = null;
-      if (minSupply > 0) {
-        const supplyRows = await db
-          .prepare("SELECT stablecoin_id, snapshot_date, circulating_usd FROM supply_history ORDER BY snapshot_date")
-          .all<{ stablecoin_id: string; snapshot_date: number; circulating_usd: number }>();
-        const supplyByCoin = new Map<string, { date: number; supply: number }[]>();
-        for (const r of supplyRows.results ?? []) {
-          const list = supplyByCoin.get(r.stablecoin_id) ?? [];
-          list.push({ date: r.snapshot_date, supply: r.circulating_usd });
-          supplyByCoin.set(r.stablecoin_id, list);
-        }
-
-        getSupplyAtTime = (coinId: string, ts: number): number => {
-          const snaps = supplyByCoin.get(coinId);
-          if (!snaps || snaps.length === 0) return 0;
-          let best = snaps[0];
-          for (const s of snaps) {
-            if (Math.abs(s.date - ts) < Math.abs(best.date - ts)) best = s;
-            if (s.date > ts) break;
-          }
-          return Math.abs(best.date - ts) <= 30 * DAY_SECONDS ? best.supply : 0;
-        };
-      }
-
-      // Apply filters: symbol, min-supply, geckoId presence
-      const filtered = events.filter((e) => {
-        if (symbolFilter && e.symbol.toUpperCase() !== symbolFilter) return false;
-        if (minSupply > 0 && getSupplyAtTime) {
-          if (getSupplyAtTime(e.stablecoin_id, e.started_at) < minSupply) return false;
-        }
-        return true;
-      });
-
-      const paginatedEvents = filtered.slice(offset, offset + limit);
-
-      const result: AuditResult = {
-        totalMatching: filtered.length,
+      const result = await auditEvents(db, {
+        events,
+        minSupply,
+        symbolFilter,
         offset,
         limit,
         dryRun,
-        auditedEvents: [],
-        falsePositivesFound: 0,
-        deletedEvents: [],
-        daysRecomputed: 0,
-      };
-
-      const affectedDays = new Set<number>();
-
-      for (const event of paginatedEvents) {
-        const meta = TRACKED_META_BY_ID.get(event.stablecoin_id);
-        const geckoId = meta?.geckoId;
-
-        if (!geckoId) {
-          result.auditedEvents.push({
-            id: event.id,
-            symbol: event.symbol,
-            startedAt: event.started_at,
-            peakBps: event.peak_deviation_bps,
-            cgMaxBps: null,
-            verdict: "skipped",
-          });
-          continue;
-        }
-
-        const threshold = getDepegThresholdBps(event.peg_type);
-        const falsePositiveBar = Math.round(threshold * DEPEG_SECONDARY_THRESHOLD_RATIO);
-
-        // Fetch CoinGecko historical data for the event window
-        // precision=full gives maximum decimal places — critical for stablecoin prices near $1.000
-        const from = event.started_at - 3600;
-        const to = (event.ended_at ?? event.started_at) + 3600;
-
-        try {
-          // Analyst plan: 500 req/min. 200ms delay ≈ 300 req/min with headroom.
-          await new Promise((r) => setTimeout(r, 200));
-
-          const cgEndpoint = cgUrl(
-            `/coins/${geckoId}/market_chart/range?vs_currency=usd&from=${from}&to=${to}&precision=full`,
-          );
-          const cgFetchHeaders = cgHeaders({ Accept: "application/json", "User-Agent": USER_AGENT });
-          const cgRes = await fetchWithRetry(cgEndpoint, { headers: cgFetchHeaders }, 1);
-
-          if (!cgRes?.ok) {
-            console.warn(`[audit] CG fetch failed for ${event.symbol} (${geckoId}): ${cgRes?.status ?? "no response"}`);
-            result.auditedEvents.push({
-              id: event.id,
-              symbol: event.symbol,
-              startedAt: event.started_at,
-              peakBps: event.peak_deviation_bps,
-              cgMaxBps: null,
-              verdict: "error",
-            });
-            continue;
-          }
-
-          const cgData = (await cgRes.json()) as { prices?: [number, number][] };
-          const prices = cgData.prices ?? [];
-
-          if (prices.length === 0) {
-            result.auditedEvents.push({
-              id: event.id,
-              symbol: event.symbol,
-              startedAt: event.started_at,
-              peakBps: event.peak_deviation_bps,
-              cgMaxBps: null,
-              verdict: "no_data",
-            });
-            continue;
-          }
-
-          // Find max deviation in CG data during the event window
-          let maxCgBps = 0;
-          for (const [, cgPrice] of prices) {
-            if (cgPrice <= 0) continue;
-            const cgBps = Math.abs(Math.round((cgPrice / event.peg_reference - 1) * 10000));
-            if (cgBps > maxCgBps) maxCgBps = cgBps;
-          }
-
-          if (maxCgBps < falsePositiveBar) {
-            // CoinGecko never confirmed this deviation — false positive
-            result.falsePositivesFound++;
-            result.auditedEvents.push({
-              id: event.id,
-              symbol: event.symbol,
-              startedAt: event.started_at,
-              peakBps: event.peak_deviation_bps,
-              cgMaxBps: maxCgBps,
-              verdict: "false_positive",
-            });
-
-            if (!dryRun) {
-              await db.prepare("DELETE FROM depeg_events WHERE id = ?").bind(event.id).run();
-              result.deletedEvents.push({
-                id: event.id,
-                symbol: event.symbol,
-                startedAt: event.started_at,
-                peakBps: event.peak_deviation_bps,
-              });
-
-              // Track affected days for stability index recomputation
-              const startDay = Math.floor(event.started_at / DAY_SECONDS) * DAY_SECONDS;
-              const endDay = Math.floor((event.ended_at ?? event.started_at) / DAY_SECONDS) * DAY_SECONDS;
-              for (let d = startDay; d <= endDay; d += DAY_SECONDS) {
-                affectedDays.add(d);
-              }
-
-              console.log(
-                `[audit] Deleted false positive: ${event.symbol} id=${event.id} peak=${event.peak_deviation_bps}bps, CG max=${maxCgBps}bps`,
-              );
-            }
-          } else {
-            // CoinGecko confirms the deviation — keep the event
-            result.auditedEvents.push({
-              id: event.id,
-              symbol: event.symbol,
-              startedAt: event.started_at,
-              peakBps: event.peak_deviation_bps,
-              cgMaxBps: maxCgBps,
-              verdict: "confirmed",
-            });
-          }
-        } catch (err) {
-          console.warn(`[audit] Error auditing ${event.symbol}:`, err);
-          result.auditedEvents.push({
-            id: event.id,
-            symbol: event.symbol,
-            startedAt: event.started_at,
-            peakBps: event.peak_deviation_bps,
-            cgMaxBps: null,
-            verdict: "error",
-          });
-        }
-      }
-
-      // Recompute stability index for affected days
-      if (affectedDays.size > 0) {
-        result.daysRecomputed = await recomputeStabilityDays(db, affectedDays);
-      }
+      });
 
       return jsonResponse(result);
     },
     trustedAdmin,
   );
+}
+
+export interface AuditEventsOptions {
+  events: DepegRow[];
+  minSupply: number;
+  symbolFilter: string | null;
+  offset: number;
+  limit: number;
+  dryRun: boolean;
+}
+
+/**
+ * @internal exported for tests. Runs the standard CG-backed audit loop against
+ * a pre-loaded set of closed depeg events.
+ */
+export async function auditEvents(
+  db: D1Database,
+  options: AuditEventsOptions,
+): Promise<AuditResult> {
+  const { events, minSupply, symbolFilter, offset, limit, dryRun } = options;
+
+  // Build supply lookup only when min-supply > 0
+  let getSupplyAtTime: ((coinId: string, ts: number) => number) | null = null;
+  if (minSupply > 0) {
+    const supplyRows = await db
+      .prepare("SELECT stablecoin_id, snapshot_date, circulating_usd FROM supply_history ORDER BY snapshot_date")
+      .all<{ stablecoin_id: string; snapshot_date: number; circulating_usd: number }>();
+    const supplyByCoin = new Map<string, { date: number; supply: number }[]>();
+    for (const r of supplyRows.results ?? []) {
+      const list = supplyByCoin.get(r.stablecoin_id) ?? [];
+      list.push({ date: r.snapshot_date, supply: r.circulating_usd });
+      supplyByCoin.set(r.stablecoin_id, list);
+    }
+
+    getSupplyAtTime = (coinId: string, ts: number): number => {
+      const snaps = supplyByCoin.get(coinId);
+      if (!snaps || snaps.length === 0) return 0;
+      let best = snaps[0];
+      for (const s of snaps) {
+        if (Math.abs(s.date - ts) < Math.abs(best.date - ts)) best = s;
+        if (s.date > ts) break;
+      }
+      return Math.abs(best.date - ts) <= 30 * DAY_SECONDS ? best.supply : 0;
+    };
+  }
+
+  // Apply filters: symbol, min-supply, geckoId presence
+  const filtered = events.filter((e) => {
+    if (symbolFilter && e.symbol.toUpperCase() !== symbolFilter) return false;
+    if (minSupply > 0 && getSupplyAtTime) {
+      if (getSupplyAtTime(e.stablecoin_id, e.started_at) < minSupply) return false;
+    }
+    return true;
+  });
+
+  const paginatedEvents = filtered.slice(offset, offset + limit);
+
+  const result: AuditResult = {
+    totalMatching: filtered.length,
+    offset,
+    limit,
+    dryRun,
+    auditedEvents: [],
+    falsePositivesFound: 0,
+    deletedEvents: [],
+    daysRecomputed: 0,
+  };
+
+  const affectedDays = new Set<number>();
+
+  for (const event of paginatedEvents) {
+    const meta = TRACKED_META_BY_ID.get(event.stablecoin_id);
+    const geckoId = meta?.geckoId;
+
+    if (!geckoId) {
+      result.auditedEvents.push({
+        id: event.id,
+        symbol: event.symbol,
+        startedAt: event.started_at,
+        peakBps: event.peak_deviation_bps,
+        cgMaxBps: null,
+        verdict: "skipped",
+      });
+      continue;
+    }
+
+    const threshold = getDepegThresholdBps(event.peg_type);
+    const falsePositiveBar = Math.round(threshold * DEPEG_SECONDARY_THRESHOLD_RATIO);
+
+    // Fetch CoinGecko historical data for the event window
+    // precision=full gives maximum decimal places — critical for stablecoin prices near $1.000
+    const from = event.started_at - 3600;
+    const to = (event.ended_at ?? event.started_at) + 3600;
+
+    try {
+      // Analyst plan: 500 req/min. 200ms delay ≈ 300 req/min with headroom.
+      await new Promise((r) => setTimeout(r, 200));
+
+      const cgEndpoint = cgUrl(
+        `/coins/${geckoId}/market_chart/range?vs_currency=usd&from=${from}&to=${to}&precision=full`,
+      );
+      const cgFetchHeaders = cgHeaders({ Accept: "application/json", "User-Agent": USER_AGENT });
+      const cgRes = await fetchWithRetry(cgEndpoint, { headers: cgFetchHeaders }, 1);
+
+      if (!cgRes?.ok) {
+        console.warn(`[audit] CG fetch failed for ${event.symbol} (${geckoId}): ${cgRes?.status ?? "no response"}`);
+        result.auditedEvents.push({
+          id: event.id,
+          symbol: event.symbol,
+          startedAt: event.started_at,
+          peakBps: event.peak_deviation_bps,
+          cgMaxBps: null,
+          verdict: "error",
+        });
+        continue;
+      }
+
+      const cgData = (await cgRes.json()) as { prices?: [number, number][] };
+      const prices = cgData.prices ?? [];
+
+      if (prices.length === 0) {
+        result.auditedEvents.push({
+          id: event.id,
+          symbol: event.symbol,
+          startedAt: event.started_at,
+          peakBps: event.peak_deviation_bps,
+          cgMaxBps: null,
+          verdict: "no_data",
+        });
+        continue;
+      }
+
+      // Find max deviation in CG data during the event window
+      let maxCgBps = 0;
+      for (const [, cgPrice] of prices) {
+        if (cgPrice <= 0) continue;
+        const cgBps = Math.abs(Math.round((cgPrice / event.peg_reference - 1) * 10000));
+        if (cgBps > maxCgBps) maxCgBps = cgBps;
+      }
+
+      if (maxCgBps < falsePositiveBar) {
+        // CoinGecko never confirmed this deviation — false positive
+        result.falsePositivesFound++;
+        result.auditedEvents.push({
+          id: event.id,
+          symbol: event.symbol,
+          startedAt: event.started_at,
+          peakBps: event.peak_deviation_bps,
+          cgMaxBps: maxCgBps,
+          verdict: "false_positive",
+        });
+
+        if (!dryRun) {
+          await db.prepare("DELETE FROM depeg_events WHERE id = ?").bind(event.id).run();
+          result.deletedEvents.push({
+            id: event.id,
+            symbol: event.symbol,
+            startedAt: event.started_at,
+            peakBps: event.peak_deviation_bps,
+          });
+
+          // Track affected days for stability index recomputation
+          const startDay = Math.floor(event.started_at / DAY_SECONDS) * DAY_SECONDS;
+          const endDay = Math.floor((event.ended_at ?? event.started_at) / DAY_SECONDS) * DAY_SECONDS;
+          for (let d = startDay; d <= endDay; d += DAY_SECONDS) {
+            affectedDays.add(d);
+          }
+
+          console.log(
+            `[audit] Deleted false positive: ${event.symbol} id=${event.id} peak=${event.peak_deviation_bps}bps, CG max=${maxCgBps}bps`,
+          );
+        }
+      } else {
+        // CoinGecko confirms the deviation — keep the event
+        result.auditedEvents.push({
+          id: event.id,
+          symbol: event.symbol,
+          startedAt: event.started_at,
+          peakBps: event.peak_deviation_bps,
+          cgMaxBps: maxCgBps,
+          verdict: "confirmed",
+        });
+      }
+    } catch (err) {
+      console.warn(`[audit] Error auditing ${event.symbol}:`, err);
+      result.auditedEvents.push({
+        id: event.id,
+        symbol: event.symbol,
+        startedAt: event.started_at,
+        peakBps: event.peak_deviation_bps,
+        cgMaxBps: null,
+        verdict: "error",
+      });
+    }
+  }
+
+  // Recompute stability index for affected days
+  if (affectedDays.size > 0) {
+    result.daysRecomputed = await recomputeStabilityDays(db, affectedDays);
+  }
+
+  return result;
 }
 
 /** Recompute stability index for a set of affected days after event deletions */
