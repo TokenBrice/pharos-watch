@@ -136,6 +136,17 @@ export async function computeRawStatus(db: D1Database, now: number): Promise<Raw
     return buildDbUnavailableRawStatus();
   }
 
+  // Four independent loads run in parallel. D1's per-request concurrency is
+  // effectively unconstrained up to the Worker CPU budget; the 6-connection
+  // ctx.waitUntil pool documented in CLAUDE.md does not apply here because
+  // none of these calls are scheduled via waitUntil.
+  const [cronHealth, dataQuality, supplements, transitionsLast24h] = await Promise.all([
+    loadCronHealth(db, now),
+    getDataQuality(db, now, { blacklistMetrics: publicHealth.blacklistMetrics }),
+    loadSupplementalStatusSections(db, now),
+    countRecentStatusTransitions(db, now),
+  ]);
+
   const {
     crons,
     unhealthyCrons,
@@ -147,18 +158,14 @@ export async function computeRawStatus(db: D1Database, now: number): Promise<Raw
     availabilityImpactingConsecutiveCronErrors,
     cronHistoryQueryFailed,
     cronProgressQueryFailed,
-  } = await loadCronHealth(db, now);
-
-  const dataQuality = await getDataQuality(db, now, {
-    blacklistMetrics: publicHealth.blacklistMetrics,
-  });
+  } = cronHealth;
   const {
     sectionErrors,
     telegramBot,
     datasetFreshness,
     reserveComposition,
     reserveCompositionQueryFailed,
-  } = await loadSupplementalStatusSections(db, now);
+  } = supplements;
   const {
     missingPriceRatio,
     blacklistMissingRatio,
@@ -221,8 +228,6 @@ export async function computeRawStatus(db: D1Database, now: number): Promise<Raw
     missingPriceRatio,
     onchainMonitoringActive: hasActiveOnchainMonitor,
   });
-
-  const transitionsLast24h = await countRecentStatusTransitions(db, now);
 
   return {
     dbHealthy: true,
