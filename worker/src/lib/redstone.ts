@@ -2,6 +2,7 @@ import {
   REDSTONE_PROVIDER_AUDIT_CONFIG,
   REDSTONE_SYMBOL_CONFIG,
 } from "@shared/lib/pricing-provider-config";
+import { sleepWithSignal } from "./abort";
 import { fetchWithRetry } from "./fetch-retry";
 import type { FetcherOutcome } from "./fetcher-result";
 
@@ -22,6 +23,8 @@ interface RedstoneEntry {
 const REDSTONE_BATCH_SIZE = 10;
 const REDSTONE_REQUEST_TIMEOUT_MS = 7_500;
 const REDSTONE_MAX_STALENESS_SEC = 300;
+const REDSTONE_RETRY_BUDGET = 5;
+const REDSTONE_RETRY_SLEEP_MS = 100;
 
 const REDSTONE_META_TO_API_SYMBOL = new Map<string, string>(
   REDSTONE_SYMBOL_CONFIG.map((entry) => [entry.metaSymbol, entry.apiSymbol] as const),
@@ -180,8 +183,12 @@ export async function fetchRedstonePrices(
     }
 
     let recoveredCount = 0;
+    let retries = 0;
     for (const symbol of missingSymbols) {
       if (results.has(symbol)) continue;
+      if (retries >= REDSTONE_RETRY_BUDGET) break;
+      retries++;
+      await sleepWithSignal(REDSTONE_RETRY_SLEEP_MS, signal);
       transportAttempts++;
       const { results: retryResults, transportOk } = await fetchRedstoneBatch([symbol], signal);
       if (!transportOk) transportFailures++;

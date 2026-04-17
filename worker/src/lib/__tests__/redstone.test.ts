@@ -110,7 +110,7 @@ describe("fetchRedstonePrices", () => {
   });
 
   it("rejects stale prices before they can enter consensus", async () => {
-    vi.useFakeTimers();
+    vi.useFakeTimers({ shouldAdvanceTime: true });
     vi.setSystemTime(new Date("2026-03-19T12:00:00Z"));
     vi.stubGlobal("fetch", vi.fn().mockResolvedValue(
       new Response(JSON.stringify({
@@ -169,6 +169,21 @@ describe("fetchRedstonePrices", () => {
     const outcome = await fetchRedstonePrices(["USDT"]);
     expect(outcome.kind).toBe("ok");
     expect(outcome.value.get("USDT")?.price).toBeCloseTo(0.9999, 4);
+  });
+
+  it("bounds solo-retry budget to 5 requests when many batch symbols drop", async () => {
+    const tenSymbols = REDSTONE_TRACKED_SYMBOL_ALLOWLIST.slice(0, 10);
+    expect(tenSymbols.length).toBe(10);
+
+    const fetchMock = vi.fn().mockImplementation(() =>
+      Promise.resolve(new Response(JSON.stringify({}), { status: 200 })),
+    );
+    vi.stubGlobal("fetch", fetchMock);
+
+    await fetchRedstonePrices([...tenSymbols]);
+
+    // 1 batch fetch + at most 5 solo retries = 6 total fetch calls.
+    expect(fetchMock).toHaveBeenCalledTimes(6);
   });
 });
 
