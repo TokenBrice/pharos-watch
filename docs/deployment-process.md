@@ -85,7 +85,7 @@ Defined across:
 
 - `.github/workflows/validate-ci.yml` for the shared validate gate
 - `.github/workflows/dependency-audit.yml` for the scheduled full dependency audit
-- `.github/workflows/pull-request-checks.yml` for pull-request validation on `main`
+- `.github/workflows/pull-request-checks.yml` for pull-request validation on `main`, including a pinned gitleaks scan (`v8.30.0`, SHA256-verified) over the PR commit range (`--log-opts="--no-merges <base>..<head>"`); full-history scans still run weekly via `.github/workflows/secret-scan.yml`
 - `.github/workflows/deploy-cloudflare.yml` for push/manual production deploys that reuse the same validate gate
 - `.github/workflows/pages-prepare.yml` for the reusable Pages build + local smoke path
 - `.github/workflows/pages-publish.yml` for the reusable Pages publish + live smoke path
