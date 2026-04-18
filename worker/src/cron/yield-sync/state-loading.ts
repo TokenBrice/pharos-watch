@@ -1,7 +1,10 @@
 import { getCirculatingRaw } from "@shared/lib/supply";
 import type { YieldBenchmarkMeta, YieldSourceInputMeta } from "@shared/types/yield";
 import { getCache, setCacheIfNewer } from "../../lib/db-cache";
-import { computeSafetyScoresSnapshot } from "../../lib/safety-scores";
+import {
+  computeSafetyScoresSnapshot,
+  type SafetyScoresResultMap,
+} from "../../lib/safety-scores";
 import type { ChainRpcConfig } from "../../lib/chain-registry";
 import type { CronStageContext } from "../shared/stage-contracts";
 import { ON_CHAIN_RATE_CONFIGS } from "../yield-config";
@@ -48,15 +51,7 @@ export interface YieldSyncLoadedState {
   riskFreeRates: Awaited<ReturnType<typeof loadRiskFreeRateRegistry>>;
   riskFreeRateMeta: YieldBenchmarkMeta;
   stablecoinSupplyById: Map<string, number>;
-  safetySnapshot: {
-    kind: "ok" | "degraded";
-    mode: "map";
-    reason?: string;
-    coveredCount: number;
-    trackedCount: number;
-    coverageRatio: number;
-    scores: Map<string, { score: number; grade: string }>;
-  };
+  safetySnapshot: SafetyScoresResultMap;
   safetyScores: Map<string, { score: number; grade: string }>;
   safetyCoverageRatio: number;
   safetySnapshotDegraded: boolean;
