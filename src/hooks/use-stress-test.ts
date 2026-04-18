@@ -71,10 +71,10 @@ for (const coin of ACTIVE_STABLECOINS) {
 // ---------------------------------------------------------------------------
 
 /**
- * Convert a target grade to a numeric score (midpoint of grade range).
- * For example: D has range 50-59, midpoint = 55.
- * F has range 0-49, midpoint = 25.
- * A+ has range 97-100, midpoint = 99 (capped at 100).
+ * Convert a target grade to a numeric score (midpoint of that grade's range).
+ * The range is derived from GRADE_THRESHOLDS, so this tracks methodology bumps
+ * automatically. For example with v7.07 thresholds: D (40-49, midpoint 44),
+ * A+ (87-100, midpoint 93).
  */
 function gradeToScore(grade: ReportCardGrade): number {
   if (grade === "NR") return 0;
