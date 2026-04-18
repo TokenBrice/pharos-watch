@@ -287,6 +287,47 @@ When `SITE_API_SHARED_SECRET` changes, use a 24-hour overlap window:
 
 Pages proxy code and smoke tooling continue emitting only the current secret throughout the rotation.
 
+### 9. Maintain the WAF rate-limiting rule
+
+Zone-level rate-limiting rule `api-rate-limit-ip` deflects volumetric floods at the Cloudflare edge, before any Worker or D1 write happens. It complements — does not replace — `public_api_rate_limit` and `api_key_rate_limit` in the Worker.
+
+Parameters of record:
+
+- Match:
+
+  ```
+  (http.host eq "api.pharos.watch"
+    and starts_with(http.request.uri.path, "/api/")
+    and not cf.bot_management.verified_bot)
+  ```
+
+- Threshold: `120` requests / `10` seconds per `IP` characteristic
+- Action: `Block` for `10` seconds
+- Placement: First (evaluates before any other security rule)
+
+Why the expression is tuned this way:
+
+- **Host scope** — `api.pharos.watch` only, not `site-api.pharos.watch` or `ops-api.pharos.watch`. Browser reads to `site-api` arrive via the same-origin Pages Functions proxy (`functions/_site-data/[[path]].ts`), which routes through Cloudflare's internal network; a single colo IP proxying many users could plausibly trip a per-IP limit under load. `site-api` is already gated by `SITE_API_SHARED_SECRET` and `ops-api` by Cloudflare Access, so neither benefits from an additional volumetric filter in front of its own auth layer. The public anonymous surface — `api.pharos.watch` — is where the flood risk actually lives.
+- **Path filter** — `starts_with(http.request.uri.path, "/api/")` narrows the match to the legitimate API surface; stray requests to other paths on the host are left to default handling.
+- **Verified bot carve-out** — `not cf.bot_management.verified_bot` exempts Cloudflare's verified-bot list (Google, Bing, Anthropic/ClaudeBot, etc.) so legitimate crawlers never trip the limit. The field is available on all plans.
+
+To edit, disable, or add an exception:
+
+- Cloudflare dashboard → zone `pharos.watch` → Security → WAF → Rate limiting rules → `api-rate-limit-ip`.
+- Toggle the rule off for a temporary disable; delete to remove entirely.
+- To add an IP exception (e.g. office egress, CI runner), extend the Match expression with `and not (ip.src in { <cidr> })`.
+
+Rule id and verification:
+
+- The rule id appears in the rule list and in the rule detail page URL in the dashboard. Record it when the rule is created or edited.
+- Rule matches appear under Security → Events filtered by `Rule ID = <rule-id>`. If the filter page is empty during normal traffic, the rule is live but not matching (that is the expected steady state).
+- No repo smoke covers this rule — it is a zone-side safety net, not a contract. Watch the Events page after each deploy for false positives.
+
+Operational notes:
+
+- The Worker-side public-API limiter (see `docs/worker-infrastructure.md` → Public API Auth and Rate Limiting and the Edge Cache Strategy subsection) remains in force for per-key accuracy and persists across colos. The WAF rule is a coarser, zone-side floor sitting in front of it.
+- Cloudflare plan quotas (number of active rate-limiting rules, minimum counting periods, available match fields) vary by plan and change over time. Verify the current plan comparison page before adding a second rule.
+
 ---
 
 ## Recommended Cloudflare Values
