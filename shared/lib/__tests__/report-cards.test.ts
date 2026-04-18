@@ -691,7 +691,6 @@ describe("computeStressedGrades", () => {
       navToken: false,
       collateralFromLive: false,
     },
-    dependencies: overrides.dependencies,
     isDefunct: overrides.isDefunct ?? false,
   });
 

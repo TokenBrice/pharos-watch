@@ -379,14 +379,14 @@ export function ReportCardDetail({ card, liquidityComponents }: ReportCardDetail
         </div>
 
         {/* Dependency callout */}
-        {card.dependencies && card.dependencies.length > 0 && (
+        {card.rawInputs.dependencies.length > 0 && (
           <div className="rounded-lg border border-blue-500/20 bg-blue-500/5 px-4 py-3">
             <p className="mb-2 text-sm font-medium text-blue-700 dark:text-blue-400">
               Dependencies
             </p>
             <p className="text-sm text-muted-foreground">
               This stablecoin has exposure to{" "}
-              {card.dependencies.map((dep, i) => {
+              {card.rawInputs.dependencies.map((dep, i) => {
                 const depMeta = TRACKED_STABLECOINS.find(
                   (s) => s.id === dep.id,
                 );

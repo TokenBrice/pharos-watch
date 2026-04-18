@@ -124,7 +124,6 @@ export const ReportCardSchema = z.object({
   }),
   ratedDimensions: z.number(),
   rawInputs: RawDimensionInputsSchema,
-  dependencies: z.array(DependencyWeightSchema).optional(),
   isDefunct: z.boolean(),
 });
 
@@ -132,7 +131,6 @@ export interface ReportCard extends z.infer<typeof ReportCardSchema> {
   overallGrade: ReportCardGrade;
   dimensions: Record<DimensionKey, ReportCardDimension>;
   rawInputs: RawDimensionInputs;
-  dependencies?: DependencyWeight[];
 }
 
 const ReportCardsMethodologySchema = z.object({

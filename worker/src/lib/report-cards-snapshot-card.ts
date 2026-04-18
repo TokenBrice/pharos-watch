@@ -172,7 +172,6 @@ function computeReportCard(input: ComputeCardInput): ReportCard {
     dimensions,
     ratedDimensions: overall.ratedDimensions,
     rawInputs,
-    ...(deps.length > 0 ? { dependencies: deps } : {}),
     isDefunct: false,
   };
 }
