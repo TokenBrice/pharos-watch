@@ -15,13 +15,14 @@ import {
   PEG_LABELS_SHORT,
   THREAT_BAND_COLORS,
   THREAT_BAND_LABELS,
+  THREAT_BAND_TEXT_COLORS,
   isThreatBand,
 } from "@shared/lib/classification";
 import { getInfrastructureLabel } from "@shared/lib/infrastructure";
 import type { Infrastructure } from "@shared/types";
 import { buildLiveCompareUrl, getPrimaryStaticComparisonPageForCoin } from "@/lib/compare-pages";
 import { buildBackingTaxonomyUrl, buildGovernanceTaxonomyUrl } from "@/lib/stablecoin-taxonomy";
-import { PEG_SLUGS } from "@/lib/peg-landing";
+import { buildPegLandingUrl } from "@/lib/peg-landing";
 import {
   formatCurrency,
   formatNativePrice,
@@ -73,9 +74,8 @@ interface HeroCardProps {
   onOpenFeedback: () => void;
 }
 
-// Compact metric chip for tertiary metrics. Empty state value is the em dash
-// "—"; we mark it with aria-label so screen readers announce missing data
-// instead of literally reading the glyph.
+// Em-dash values get an aria-label so screen readers say "data unavailable"
+// instead of reading the glyph.
 function MetricChip({
   label,
   value,
@@ -223,8 +223,7 @@ function HeroTertiaryMetrics({
 }
 
 function HeroClassificationLine({ coin }: { coin: StablecoinMeta }) {
-  const pegSlug = PEG_SLUGS[coin.flags.pegCurrency];
-  const pegHref = pegSlug ? `/stablecoins/${pegSlug}/` : null;
+  const pegHref = buildPegLandingUrl(coin.flags.pegCurrency);
   const governanceHref = buildGovernanceTaxonomyUrl(coin.flags.governance);
   const backingHref = buildBackingTaxonomyUrl(coin.flags.backing);
   const governanceLabel = GOVERNANCE_LABELS[coin.flags.governance] ?? coin.flags.governance;
@@ -252,14 +251,6 @@ function HeroClassificationLine({ coin }: { coin: StablecoinMeta }) {
     </p>
   );
 }
-
-const THREAT_BAND_TEXT_COLORS = {
-  CALM: "text-green-700 dark:text-green-400",
-  WATCH: "text-teal-700 dark:text-teal-400",
-  ALERT: "text-yellow-700 dark:text-yellow-400",
-  WARNING: "text-orange-700 dark:text-orange-400",
-  DANGER: "text-red-700 dark:text-red-400",
-} as const;
 
 function HeroSignalsRail({
   reportCard,
@@ -539,7 +530,7 @@ export function HeroCard({
             : "text-muted-foreground",
     };
   })();
-  const dewsDisplay: { value: React.ReactNode; sub: string | undefined; color: string } = (() => {
+  const dewsDisplay: { value: React.ReactNode; sub?: string; color: string } = (() => {
     if (!stressSignal || !isThreatBand(stressSignal.band)) {
       return { value: "—", sub: undefined, color: "text-muted-foreground" };
     }
@@ -588,10 +579,7 @@ export function HeroCard({
       ? `Below ${formatCurrency(DEPEG_EVENT_MIN_SUPPLY_USD)} live-event floor. Deviation is shown, but event history may stay empty.`
       : null;
 
-  // Severity-ordered: forward-looking stress signals first (DEWS, Freezable),
-  // then performance metrics (Peg, Liquidity), then yield context, then the
-  // rare performance-vs-USD chip. The CHAINS count stays in the dedicated
-  // trailing slot rendered by HeroTertiaryMetrics.
+  // Severity-ordered: stress signals first so risk surfaces before data.
   const tertiaryMetrics: TertiaryMetricConfig[] = [
     {
       key: "dews",
@@ -846,10 +834,6 @@ export function HeroCard({
               </div>
             </div>
 
-            {/* Right Column - Hero Signals Rail
-                Replaces the former SafetyGradeHero duplicate: the Safety Score
-                card lives below under #report-card. Mobile still surfaces the
-                grade via SafetyGradeHero since the card is far down scroll. */}
             <div className="w-56 shrink-0">
               <HeroSignalsRail
                 reportCard={reportCard}

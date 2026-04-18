@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { formatDataHealthTimestamp } from "@/lib/data-health";
 import { ArrowDownRight, ArrowUpRight, Minus } from "lucide-react";
 import { useDexLiquidity, usePegSummary, useStabilityIndex, useStressSignals } from "@/hooks/api-hooks";
 import { Card } from "@/components/ui/card";
@@ -10,7 +11,7 @@ import { useMintBurnFlows } from "@/hooks/use-mint-burn-flows";
 import { useCountUp } from "@/hooks/use-count-up";
 import { useEntranceSequence } from "@/hooks/use-entrance-sequence";
 import { QueryErrorNotice } from "@/components/query-error-notice";
-import { abbreviateNumberParts, formatCurrency, formatSignedCurrency, getNetColor } from "@shared/lib/format";
+import { abbreviateNumberParts, formatCurrency, formatSignedCurrency, getNetColor, timeAgo } from "@shared/lib/format";
 import { PSI_BAND_CLASSES, type ConditionBand } from "@shared/lib/psi-colors";
 import {
   buildDewsBandCounts,
@@ -389,11 +390,11 @@ export function KpiBar() {
   const psiDelta7dValue = psiDelta7d !== null ? `${psiDelta7d >= 0 ? "+" : ""}${psiDelta7d.toFixed(1)}` : null;
   const psiDelta30dValue = psiDelta30d !== null ? `${psiDelta30d >= 0 ? "+" : ""}${psiDelta30d.toFixed(1)}` : null;
 
-  const allDewsCalm = dewsBandCounts
-    ? dewsBandCounts.danger === 0 && dewsBandCounts.warning === 0 && dewsBandCounts.alert === 0
-    : false;
-  // Severity-driven text color: danger > warning > alert > calm.
-  // Uses the same semantic tokens the DEWS radar consumes so the pill stays in lockstep with band language.
+  const dewsElevatedCount = dewsBandCounts
+    ? dewsBandCounts.danger + dewsBandCounts.warning + dewsBandCounts.alert
+    : 0;
+  const allDewsCalm = !!dewsBandCounts && dewsElevatedCount === 0;
+  // Severity tokens mirror the DEWS radar so the snapshot pill stays in lockstep with band language.
   const dewsSeverityClass = !dewsBandCounts
     ? "text-muted-foreground"
     : dewsBandCounts.danger > 0
@@ -408,16 +409,13 @@ export function KpiBar() {
       <span className="text-muted-foreground">DEWS all calm</span>
     ) : (
       <span className={dewsSeverityClass}>
-        DEWS {dewsBandCounts.danger + dewsBandCounts.warning + dewsBandCounts.alert} on alert
+        DEWS {dewsElevatedCount} on alert
       </span>
     )
   ) : (
     <span className="text-muted-foreground">no DEWS</span>
   );
 
-  const dewsElevatedCount = dewsBandCounts
-    ? dewsBandCounts.danger + dewsBandCounts.warning + dewsBandCounts.alert
-    : 0;
   const desktopDewsSublabel = dewsBandCounts ? (
     allDewsCalm ? (
       <span className="text-[11px] text-muted-foreground">DEWS all calm</span>
@@ -494,7 +492,7 @@ export function KpiBar() {
   ];
 
   return (
-    <div className="space-y-1">
+    <>
     <Card aria-label="Market snapshot" className="pharos-card-shell overflow-hidden p-0">
       <div className="flex items-center justify-between border-b border-border/60 bg-muted/20 px-4 py-2.5">
         <p className="pharos-kicker">Market Snapshot</p>
@@ -590,26 +588,29 @@ export function KpiBar() {
       </div>
     </Card>
     {lastUpdatedAt > 0 ? (
-      <p className="px-1 text-[11px] text-muted-foreground">
+      <p className="mt-1 px-1 text-[11px] text-muted-foreground">
         Last refreshed · <RelativeAge timestamp={lastUpdatedAt} /> ·{" "}
         <time dateTime={new Date(lastUpdatedAt).toISOString()}>
-          {new Date(lastUpdatedAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+          {formatDataHealthTimestamp(lastUpdatedAt)}
         </time>
       </p>
     ) : null}
-    </div>
+    </>
   );
 }
 
 function RelativeAge({ timestamp }: { timestamp: number }) {
-  const [now, setNow] = useState(() => Date.now());
+  // Tick once per minute so output changes at each minute boundary instead of
+  // re-rendering twice per minute for identical text.
+  const [, setTickMinute] = useState(() => Math.floor(Date.now() / 60_000));
   useEffect(() => {
-    const id = window.setInterval(() => setNow(Date.now()), 30_000);
+    const id = window.setInterval(() => {
+      setTickMinute((prev) => {
+        const next = Math.floor(Date.now() / 60_000);
+        return next === prev ? prev : next;
+      });
+    }, 30_000);
     return () => window.clearInterval(id);
   }, []);
-  const seconds = Math.max(0, Math.floor((now - timestamp) / 1000));
-  if (seconds < 60) return <>just now</>;
-  if (seconds < 3600) return <>{Math.floor(seconds / 60)}m ago</>;
-  if (seconds < 86400) return <>{Math.floor(seconds / 3600)}h ago</>;
-  return <>{Math.floor(seconds / 86400)}d ago</>;
+  return <>{timeAgo(Math.floor(timestamp / 1000))}</>;
 }

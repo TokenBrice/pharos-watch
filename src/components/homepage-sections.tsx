@@ -6,12 +6,7 @@ import { Button } from "@/components/ui/button";
 import { openCommandPalette } from "@/lib/command-palette";
 import { useStartHereCallout } from "@/hooks/use-start-here-callout";
 
-/**
- * First-session-only wrapper so page.tsx can place the callout in the
- * shared flex container with <KpiBar /> and reorder them via CSS at
- * breakpoints without touching the rest of HomepageClient.
- */
-export function HomepageStartHereCalloutSlot() {
+export function HomepageStartHereCallout() {
   const { isReady, shouldShow, retireCallout } = useStartHereCallout();
   if (!isReady || !shouldShow) return null;
   return <StartHereCallout onOpenStartHere={retireCallout} />;

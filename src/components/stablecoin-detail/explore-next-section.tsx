@@ -87,8 +87,7 @@ export function ExploreNextSection({
       </div>
 
       <div className="grid gap-4 lg:grid-cols-[minmax(0,0.55fr)_minmax(0,0.45fr)] xl:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_minmax(0,1fr)]">
-        {/* Order at <lg: Compare first, then Taxonomy, Trackers, Related so
-            the highest-value peer path leads the stack on narrow screens. */}
+        {/* Compare leads on narrow screens (highest-value peer path). */}
         <div className="pharos-card-shell space-y-3 p-4 order-1 lg:order-2 xl:order-3">
           {staticComparisonPages.length > 0 ? (
             <>

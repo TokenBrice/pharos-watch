@@ -83,19 +83,18 @@ const SafetyScoreHistorySection = dynamic(
   },
 );
 
-const BASE_DETAIL_SECTIONS = [
-  { id: "report-card", label: "Safety" },
-  { id: "overview", label: "Overview" },
-  { id: "chart", label: "Market" },
-  { id: "liquidity", label: "Liquidity" },
-  { id: "history", label: "History" },
-];
-
-const YIELD_SECTION = { id: "yield", label: "Yield" };
-const FLOWS_SECTION = { id: "flows", label: "Flows" };
-const RESERVES_SECTION = { id: "reserves", label: "Reserves" };
-const PRICE_SECTION = { id: "price", label: "Price" };
-const EXPLORE_SECTION = { id: "explore-next", label: "Explore" };
+const DETAIL_SECTION_DEFS = {
+  safety: { id: "report-card", label: "Safety" },
+  overview: { id: "overview", label: "Overview" },
+  price: { id: "price", label: "Price" },
+  reserves: { id: "reserves", label: "Reserves" },
+  market: { id: "chart", label: "Market" },
+  yield: { id: "yield", label: "Yield" },
+  liquidity: { id: "liquidity", label: "Liquidity" },
+  flows: { id: "flows", label: "Flows" },
+  history: { id: "history", label: "History" },
+  explore: { id: "explore-next", label: "Explore" },
+} as const;
 
 function DetailLoadingShell({ coin, logoSrc }: { coin: StablecoinMeta; logoSrc?: string }) {
   return (
@@ -186,22 +185,20 @@ export default function StablecoinDetailClient({ id, summary, coin, logoSrc }: S
     );
   }
 
-  // Scrollspy pill array — conditional on data presence. Section ids are
-  // verified against the actual <section id=...> elements below and in the
-  // subcomponents (flows-section, overview-section, explore-next-section).
   const hasPriceTransparency =
     !!viewModel.coinData && (viewModel.coinData.price != null || !!viewModel.dexPriceCheck);
+  const s = DETAIL_SECTION_DEFS;
   const detailSections = [
-    BASE_DETAIL_SECTIONS[0], // Safety
-    BASE_DETAIL_SECTIONS[1], // Overview
-    ...(hasPriceTransparency ? [PRICE_SECTION] : []),
-    ...(viewModel.reserves ? [RESERVES_SECTION] : []),
-    BASE_DETAIL_SECTIONS[2], // Market
-    ...(viewModel.hasYieldSection ? [YIELD_SECTION] : []),
-    BASE_DETAIL_SECTIONS[3], // Liquidity
-    ...(viewModel.hasFlows ? [FLOWS_SECTION] : []),
-    BASE_DETAIL_SECTIONS[4], // History
-    EXPLORE_SECTION,
+    s.safety,
+    s.overview,
+    ...(hasPriceTransparency ? [s.price] : []),
+    ...(viewModel.reserves ? [s.reserves] : []),
+    s.market,
+    ...(viewModel.hasYieldSection ? [s.yield] : []),
+    s.liquidity,
+    ...(viewModel.hasFlows ? [s.flows] : []),
+    s.history,
+    s.explore,
   ];
 
   return (

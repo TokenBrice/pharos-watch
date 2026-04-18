@@ -306,9 +306,7 @@ export function FlowSummaryCard({ stablecoinId }: FlowSummaryCardProps) {
                   {formatSignedCurrency(longNetFlow)}
                 </p>
               </div>
-              {/* Only render the fixed 30d/90d tiles when the coin's custom
-                  timeframe isn't already showing those exact windows, otherwise
-                  we surface the same metric twice. */}
+              {/* Skip fixed tiles whose window matches the coin's custom short/long. */}
               {timeframe.shortHours !== THIRTY_DAYS_HOURS && timeframe.longHours !== THIRTY_DAYS_HOURS && (
                 <div className="space-y-1 rounded-lg border border-border/60 bg-background/30 p-3">
                   <p className="text-[11px] uppercase tracking-wide text-muted-foreground">
