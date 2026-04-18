@@ -56,13 +56,11 @@ describe("FundingKpiRow", () => {
 });
 
 describe("CostBreakdown", () => {
-  it("renders team and infra groups and total", () => {
+  it("renders team and infra groups, total, and derived founder subsidy", () => {
     render(
       <CostBreakdown
         items={COSTS}
         currentCommunityUsd={300}
-        currentFounderUsd={1240}
-        lifetimeFounderUsd={3000}
         lastReviewedAt={1744934400}
       />,
     );
@@ -70,9 +68,8 @@ describe("CostBreakdown", () => {
     expect(screen.getByText("Infrastructure")).toBeTruthy();
     expect(screen.getByText("Ike")).toBeTruthy();
     expect(screen.getByText(/1,540/)).toBeTruthy(); // total
-    // Footer exposes community + founder split explicitly
-    expect(screen.getByText(/This month: \$300 community/)).toBeTruthy();
-    expect(screen.getByText(/Lifetime founder subsidy: \$3,000/)).toBeTruthy();
+    // Founder subsidy is derived: max(0, total - community) = 1540 - 300 = 1240
+    expect(screen.getByText(/This month: \$300 community · \$1,240 founder subsidy/)).toBeTruthy();
   });
 });
 

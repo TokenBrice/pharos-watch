@@ -52,8 +52,6 @@ export default function FundingPage() {
           <CostBreakdown
             items={costs.items}
             currentCommunityUsd={summary.currentMonthCommunityUsd}
-            currentFounderUsd={summary.currentMonthFounderUsd}
-            lifetimeFounderUsd={summary.lifetimeFounderUsd}
             lastReviewedAt={costs.last_reviewed_at}
           />
           <DonorList donations={donations.donations} lastUpdatedAt={donations.last_updated_at} />
