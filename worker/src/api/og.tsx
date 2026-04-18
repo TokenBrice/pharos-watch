@@ -280,9 +280,7 @@ async function handleSafetyScoresOg(db: D1Database): Promise<Response> {
   let ratedCount = 0;
   let totalCoins = ACTIVE_IDS.size;
 
-  // For top/bottom performers and trend
   const allScores: Array<{ symbol: string; grade: string; score: number }> = [];
-  let weekAgoScore: number | null = null;
 
   const reportCardCache = await loadReportCardCache(db);
   if (reportCardCache.kind === "ok") {
@@ -311,10 +309,6 @@ async function handleSafetyScoresOg(db: D1Database): Promise<Response> {
         }
       }
     }
-    
-    // Get week-ago pulse score for trend (approximate from snapshots if available)
-    // For now, use a simple approximation or set to null
-    weekAgoScore = null;
   }
 
   if (hasUsableStablecoinsPayload(stablecoinsPayload)) {
@@ -329,9 +323,6 @@ async function handleSafetyScoresOg(db: D1Database): Promise<Response> {
   const topPerformers = sortedByScore.slice(0, 3);
   const bottomPerformers = sortedByScore.slice(-3).reverse();
 
-  // Calculate trend (week over week change)
-  const trend = weekAgoScore !== null ? ((avgScore - weekAgoScore) / weekAgoScore) * 100 : null;
-
   const data: SafetyScoresCardData = {
     gradeDistribution,
     pulseGrade,
@@ -340,7 +331,7 @@ async function handleSafetyScoresOg(db: D1Database): Promise<Response> {
     totalCoins,
     topPerformers,
     bottomPerformers,
-    trend,
+    trend: null,
     lastUpdated: new Date().toISOString().slice(0, 16).replace("T", " ") + " UTC",
   };
 
