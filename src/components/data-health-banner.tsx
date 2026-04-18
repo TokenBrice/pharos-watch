@@ -72,10 +72,9 @@ export function DataHealthBanner({ entries, showFreshTimestamp = false }: DataHe
     >
       <p className="font-medium">{title}</p>
       <p className="mt-1">{message}</p>
-      <div className="mt-1.5 text-xs opacity-85">
-        <span>Affected: {affected}.</span>
-        {lastSuccessfulText ? <span> {lastSuccessfulText}.</span> : null}
-      </div>
+      {lastSuccessfulText ? (
+        <p className="mt-1.5 text-xs opacity-85">{lastSuccessfulText}.</p>
+      ) : null}
     </div>
   );
 }

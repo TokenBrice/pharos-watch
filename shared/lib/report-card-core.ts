@@ -26,7 +26,7 @@ export const DIMENSION_SHORT_LABELS: Record<DimensionKey, string> = {
   pegStability: "Peg",
   liquidity: "Exit",
   resilience: "Resil.",
-  decentralization: "Decen.",
+  decentralization: "Decent.",
   dependencyRisk: "Dep.",
 };
 
