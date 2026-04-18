@@ -277,7 +277,14 @@ function computePoolSignal(input: DEWSInput): SignalResult {
 function computeLiquiditySignal(input: DEWSInput): SignalResult {
   const { liquidityScore, liquidityScore7dAgo, tvlCurrent, tvl7dAgo } = input;
 
-  if (liquidityScore === null) {
+  const scoreDeltaComputable =
+    liquidityScore !== null &&
+    liquidityScore7dAgo !== null &&
+    liquidityScore7dAgo > 0;
+  const tvlDeltaComputable =
+    tvlCurrent !== null && tvl7dAgo !== null && tvl7dAgo > 0;
+
+  if (liquidityScore === null || (!scoreDeltaComputable && !tvlDeltaComputable)) {
     return { value: 0, available: false };
   }
 

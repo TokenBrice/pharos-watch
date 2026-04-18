@@ -402,4 +402,28 @@ describe("computeDEWS", () => {
     // With smoothing toward a lower previous value, the pool signal should be less
     expect(withSmoothing.signals.pool.value).toBeLessThan(withoutSmoothing.signals.pool.value);
   });
+
+  it("marks liquidity signal unavailable when liquidityScore7dAgo is null and tvl delta cannot be computed", () => {
+    const result = computeDEWS(
+      baseInput({
+        liquidityScore: 72,
+        liquidityScore7dAgo: null,
+        tvlCurrent: null,
+        tvl7dAgo: null,
+      }),
+    );
+    expect(result?.signals.liq.available).toBe(false);
+  });
+
+  it("keeps liquidity signal available when only one of the two 7d anchors is present", () => {
+    const result = computeDEWS(
+      baseInput({
+        liquidityScore: 72,
+        liquidityScore7dAgo: null,
+        tvlCurrent: 1e9,
+        tvl7dAgo: 1.5e9,
+      }),
+    );
+    expect(result?.signals.liq.available).toBe(true);
+  });
 });
