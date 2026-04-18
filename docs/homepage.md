@@ -140,20 +140,24 @@ The `/start/` route is documented in [Start Page](./start-page.md).
 
 ## Section Order
 
-`HomepageClient` renders sections in this order:
+Above the fold (`src/app/page.tsx`):
+
+1. `SiteHeader`
+2. `HomepageStartHereCalloutSlot` (first-session only) + `KpiBar` share a flex container with CSS `order` classes so the callout sits **above** the KPI bar at `<lg` widths and **below** it at `lg+`. Returning-visitor order (no callout) is unchanged.
+
+Under the fold (`HomepageClient`):
 
 1. `QueryErrorNotice`
 2. `StaleDataBanner`
-3. `StartHereCallout` when `useStartHereCallout()` says it should show
-4. `MarketHighlights`
-5. `Key Stablecoin Data` section
-6. `DailyDigest` in `preview` mode
-7. `UpcomingStablecoinsSection` (includes a `Launch alerts` promo link to `/telegram/#getting-started` plus `View all` to `/upcoming`)
-8. `Core Monitoring` band
-9. `Research Surfaces` band
-10. Bottom summary / last-updated footer copy
+3. `MarketHighlights`
+4. `Key Stablecoin Data` section
+5. `DailyDigest` in `preview` mode (prefixed with a short orientation caption)
+6. `UpcomingStablecoinsSection` (includes a `Launch alerts` promo link to `/telegram/#getting-started` plus `View all` to `/upcoming`)
+7. `Core Monitoring` band
+8. `Research Surfaces` band
+9. Bottom summary / last-updated footer copy
 
-The destination route for item 7 is documented in [Upcoming Page](./upcoming-page.md).
+The destination route for item 6 is documented in [Upcoming Page](./upcoming-page.md).
 
 ### Key Stablecoin Data
 
@@ -178,12 +182,15 @@ This band contains:
 
 This band contains:
 
-- `CategoryStats`
-- `TotalMcapChart`
-- `PegDiversityChart`
-- `NonUsdShareChart`
+- `CategoryStats` (full-width)
+- `TotalMcapChart` (full-width)
+- `PegDiversityChart` and `NonUsdShareChart` side-by-side in a 2-col grid at `lg+`; stacked below `lg`.
 
 All four components are wrapped in individual `SectionErrorBoundary` instances.
+
+### Market Snapshot freshness
+
+`KpiBar` surfaces a `Last refreshed · <relative age> · <absolute time>` line below the Market Snapshot card. The timestamp is read from the shared TanStack Query `dataUpdatedAt` for the stablecoins and PSI queries (whichever is newer). The relative age updates on a 30-second interval.
 
 ---
 
