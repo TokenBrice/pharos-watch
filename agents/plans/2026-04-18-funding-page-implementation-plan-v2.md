@@ -99,9 +99,10 @@ export interface CostsFile {
  * - `kind: "community"` is everything else (default).
  *
  * `usd_at_receipt` is computed once at insertion time — no historical-price
- * pipeline. Stablecoin donations are priced at $1. ETH / native-asset
- * donations are priced at the CoinGecko spot at the time the row is added,
- * with the skill recording which source was used in `price_note`.
+ * pipeline at runtime. Stablecoin donations are priced at $1. ETH and other
+ * native / whitelisted assets are priced via the CoinGecko `/coins/{id}/history`
+ * endpoint for the transfer's UTC block date, with the skill recording the
+ * source in `price_note`.
  */
 export interface Donation {
   chain: FundingChain;
@@ -113,7 +114,7 @@ export interface Donation {
   asset_symbol: string; // 'ETH', 'USDC', 'xDAI', ...
   amount_decimal: number;
   usd_at_receipt: number;
-  price_note: string; // 'stablecoin-1-to-1' | 'coingecko-spot-YYYY-MM-DD' | 'manual'
+  price_note: string; // 'stablecoin-1-to-1' | 'coingecko-historical-YYYY-MM-DD' | 'manual-<source>'
 }
 
 export interface DonationsFile {
