@@ -201,7 +201,10 @@ export async function loadDewsSourceState(options: LoadDewsSourceStateOptions): 
           if (!isRecord(parsed)) {
             return { ok: false, reason: "invalid-shape" as const };
           }
-          return { ok: true, payload: parsed };
+          // v5.95: new rows have shape { signals, amplifiers }; legacy rows
+          // had the flat signals map at the top level. Support both forever.
+          const signalsPayload = isRecord(parsed.signals) ? parsed.signals : parsed;
+          return { ok: true, payload: signalsPayload };
         },
       });
       if (!decoded.ok) {

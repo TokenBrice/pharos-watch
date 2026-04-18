@@ -51,6 +51,14 @@ export interface DewsComputedRow {
   score: number;
   band: string;
   signals: Record<string, unknown>;
+  amplifiers: { psi: number; contagion: number };
+}
+
+export interface ContagionAmplifiers {
+  /** Amplifier per pegType, defaults to 1.0 when no contagion detected. */
+  byPegType: Record<string, number>;
+  /** Coins whose first-pass DANGER/WARNING band contributed. */
+  triggeringIds: string[];
 }
 
 export interface DewsSourceState {

@@ -86,6 +86,7 @@ vi.mock("../../lib/dews", () => ({
     score: 12,
     band: "CALM",
     signals: {},
+    amplifiers: { psi: 1, contagion: 1 },
   })),
 }));
 
