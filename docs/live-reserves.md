@@ -463,7 +463,7 @@ Adapter helpers now live in a small helper family, with `worker/src/cron/reserve
 | `shared/types/live-reserves.ts`                 | `LiveReservesConfig`, `StablecoinReservesResponse`, sync-state types                             |
 | `shared/lib/live-reserve-adapters.ts`           | Shared adapter registry, source/evidence classes, validation policy, and config schemas          |
 | `shared/lib/stablecoins/index.ts`               | Loader for per-coin `liveReservesConfig` declarations backed by `shared/data/stablecoins/*.json` |
-| `worker/src/cron/sync-live-reserves.ts`         | Hourly sync orchestration and cron result statuses                                               |
+| `worker/src/cron/sync-live-reserves.ts`         | 4-hourly sync orchestration and cron result statuses                                             |
 | `worker/src/cron/reserve-adapters/index.ts`     | Adapter registry                                                                                 |
 | `worker/src/cron/reserve-adapters/helpers.ts`   | Shared adapter fetch / normalization helpers                                                     |
 | `worker/src/lib/live-reserves-store.ts`         | Public facade over the live-reserve store helpers                                                |

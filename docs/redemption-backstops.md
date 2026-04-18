@@ -326,7 +326,7 @@ There is currently no dedicated list page or standalone public methodology secti
 | `shared/lib/redemption-backstop-scoring.ts`                     | Component scores, route caps, and effective-exit blend             |
 | `shared/lib/redemption-backstop-version.ts`                     | Methodology version metadata                                       |
 | `shared/types/redemption.ts`                                    | Shared API schemas and TypeScript contracts                        |
-| `worker/src/cron/sync-redemption-backstops.ts`                  | Hourly snapshot sync                                               |
+| `worker/src/cron/sync-redemption-backstops.ts`                  | 4-hourly snapshot sync                                             |
 | `worker/src/lib/redemption-backstop-sources.ts`                 | Runtime resolver for capacity, costs, docs, and scoring inputs     |
 | `worker/src/lib/redemption-backstops-store.ts`                  | D1 storage helpers and API payload builder                         |
 | `worker/src/api/redemption-backstops.ts`                        | Public API handler                                                 |

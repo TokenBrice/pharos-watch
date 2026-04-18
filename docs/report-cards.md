@@ -56,7 +56,7 @@ Current-version note: v7.06 keeps the stronger peg treatment introduced in v6.93
 - Low-confidence redemption routes stay visible in the dimension detail, but they do not improve the Safety Score liquidity score
 - Formula-based routes with live on-chain fee telemetry can use the current redemption fee bps for cost scoring while remaining labeled as formula models
 - When DEX liquidity is stale, report cards do not reuse it for effective-exit scoring; the dimension falls back to redemption-only or `NR`
-- When the current redemption-backstop snapshot is stale or missing (defined here as missing or older than twice the hourly redemption sync cadence), report cards suppress redemption inputs for Safety Score liquidity; the dimension falls back to fresh DEX liquidity or `NR`
+- When the current redemption-backstop snapshot is stale or missing (defined here as missing or older than twice the 4-hourly redemption sync cadence), report cards suppress redemption inputs for Safety Score liquidity; the dimension falls back to fresh DEX liquidity or `NR`
 - If the DEX liquidity snapshot is temporarily unavailable at read time, `/api/report-cards` degrades in place the same way: liquidity inputs are suppressed for that snapshot instead of failing the whole response
 - If a redemption route is configured but currently unrated, the dimension stays `NR` without pretending the route is absent; the detail string calls out the configured-but-unrated state explicitly
 - High concentration (HHI > 0.5) remains descriptive context, not an extra penalty
@@ -126,7 +126,7 @@ A delta alert fires when the independent live-derived score diverges from curate
 signaling that curated metadata (and potentially the governance classification) may
 need human review.
 
-Delta alerts are fired from the hourly reserve sync cron via `checkCollateralDrift()`.
+Delta alerts are fired from the 4-hourly reserve sync cron via `checkCollateralDrift()`.
 Drift data is also included in the report-cards snapshot as `collateralDriftCoins` for
 `/status` visibility. Coins using curated fallback (no fresh independent live data) are tracked as
 `liveToFallbackCoins` in the snapshot metadata.
