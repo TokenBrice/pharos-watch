@@ -751,7 +751,7 @@ Results are ordered by `startedAt` descending (most recent first).
 | `recoveryPrice`    | `number \| null`       | Price at recovery                                                                             |
 | `pegReference`     | `number`               | Reference peg value used (USD)                                                                |
 | `source`           | `"live" \| "backfill"` | Detection method                                                                              |
-| `confirmationSources` | `string \| null`    | Composite provenance tag recorded when a pending depeg was promoted. Components (joined with `+`): the off-chain source label (e.g. `coingecko`, `defillama`), `DEX`, `CEX`, `Pool`. Example: `"DEX+CEX"` or `"coingecko+Pool"`. `null` for events that bypassed the pending lane (small-cap authoritative direct-insert and historical backfill rows). |
+| `confirmationSources` | `string \| null`    | Composite provenance tag recorded when a pending depeg was promoted. Components (joined with `+`): the off-chain source label (`CoinGecko`, `DefiLlama`, or `NativePeg(<currency>)`), `DEX`, `CEX`, `Pool`. Example: `"DEX+CEX"` or `"CoinGecko+Pool"`. `null` for events that bypassed the pending lane (small-cap authoritative direct-insert and historical backfill rows). |
 | `pendingReason`    | `string \| null`       | Composite reason the incident entered the pending lane, e.g. `"large-cap"`, `"low-confidence"`, `"large-cap+low-confidence"`, `"extreme-move"`. `null` when the event did not enter pending. |
 
 **`methodology`**

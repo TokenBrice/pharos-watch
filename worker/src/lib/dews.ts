@@ -13,9 +13,7 @@ import {
   DEWS_SIGNAL_WEIGHTS,
   DEWS_THREAT_BANDS,
 } from "@shared/lib/dews-config";
-
-/** Upper cap on the cross-asset contagion amplifier (mirrors worker constant). */
-const CONTAGION_AMPLIFIER_CAP = 1.2;
+import { CONTAGION_AMPLIFIER_CAP } from "./constants";
 
 // ---------------------------------------------------------------------------
 // Types

@@ -1259,6 +1259,49 @@ describe("confirmPendingDepegs", () => {
       expect(summary).toMatch(/status=contradict/);
     });
 
+    it("reports poolStatus='confirm' with highTvl=true when a single qualifying pool has TVL >= $5M", async () => {
+      const nowSec = 1_700_000_000;
+      vi.spyOn(Date, "now").mockReturnValue(nowSec * 1000);
+      const pendingRows: PendingRow[] = [makePendingRow({
+        id: 82,
+        stablecoin_id: "usdt-tether",
+        symbol: "USDT",
+        direction: "below",
+        first_seen_bps: -200,
+        first_seen_at: nowSec - DEPEG_PENDING_MIN_AGE_SEC - 60,
+        first_price: 0.98,
+        peg_reference: 1,
+      })];
+      // Single pool, same-direction deviation 200bps > 50bps bar, TVL $6M > $5M high-TVL threshold.
+      // Below POOL_CHALLENGE_CONFIRM_MIN=2 count, but high-TVL short-circuits to confirm.
+      const dexRows = [
+        {
+          stablecoin_id: "usdt-tether",
+          dex_price_usd: 0.98,
+          updated_at: nowSec - 30,
+          source_pool_count: 1,
+          source_total_tvl: 6_000_000,
+          price_sources_json: JSON.stringify([
+            { price: 0.98, tvl: 6_000_000, protocol: "curve", chain: "ethereum" },
+          ]),
+        },
+      ];
+      const logs = captureLogs();
+
+      await confirmPendingDepegs(
+        makeDb({ pendingRows, dexRows }),
+        [
+          makeAsset({ id: "usdt-tether", symbol: "USDT", geckoId: undefined, price: 0.98 }),
+          ...makeNeutralUsdAssets(),
+        ],
+      );
+
+      const summary = logs.find((l) => /pool summary: .* status=(confirm|recover|contradict|insufficient)/.test(l));
+      expect(summary).toBeTruthy();
+      expect(summary).toMatch(/status=confirm/);
+      expect(summary).toMatch(/highTvl=true/);
+    });
+
     it("reports poolStatus='recover' only when every qualifying pool is under the secondary bar", async () => {
       const nowSec = 1_700_000_000;
       vi.spyOn(Date, "now").mockReturnValue(nowSec * 1000);

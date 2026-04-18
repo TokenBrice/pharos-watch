@@ -329,13 +329,16 @@ export async function confirmPendingDepegs(
           poolRecoverCount += 1;
         }
       }
+      // Priority ladder: confirm > contradict > recover > insufficient.
+      // Tie-break: any confirm below the promotion bar cancels both contradict
+      // and recover (treated as mixed evidence -> insufficient).
       if (poolHighTvlConfirm || poolConfirmCount >= POOL_CHALLENGE_CONFIRM_MIN) {
         poolStatus = "confirm";
       } else if (poolContradictCount > 0 && poolConfirmCount === 0) {
         poolStatus = "contradict";
       } else if (poolRecoverCount > 0 && poolConfirmCount === 0 && poolContradictCount === 0) {
         poolStatus = "recover";
-      } // else: remains "insufficient" — at least one pool was confirm but not enough
+      }
       console.log(
         `[depeg-confirm] ${row.symbol} pool summary: ${pools.length} pools checked, ` +
         `confirm=${poolConfirmCount} (highTvl=${poolHighTvlConfirm}), contradict=${poolContradictCount}, ` +
