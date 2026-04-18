@@ -22,6 +22,7 @@ export async function rollbackPagesDeployment({
       "Content-Type": "application/json",
     },
     body: "{}",
+    signal: AbortSignal.timeout(30_000),
   });
 
   const text = await response.text();

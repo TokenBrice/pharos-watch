@@ -92,5 +92,7 @@ jobs:
       - uses: ./.github/actions/setup-workspace
         with:
           node-version: 25
+          cache-npm: "false"
+          install-deps: "false"
       - name: Roll back Pages production to previous successful deployment
         run: node scripts/rollback-pages-deployment.mjs

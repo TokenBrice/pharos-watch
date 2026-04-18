@@ -42,6 +42,9 @@ describe("rollbackPagesDeployment", () => {
     ).rejects.toThrow(/404/);
   });
 
+  // Cloudflare's API can return HTTP 200 with `success: false` when the
+  // deployment is structurally ineligible for rollback (e.g., already-rolled-back
+  // target). Surface this as an error even though the status is OK.
   it("throws when the response JSON indicates success=false even with a 200 status", async () => {
     const fetchMock = vi.fn().mockResolvedValue(
       new Response(JSON.stringify({ success: false, errors: [{ message: "deployment is not eligible for rollback" }] }), { status: 200 }),
