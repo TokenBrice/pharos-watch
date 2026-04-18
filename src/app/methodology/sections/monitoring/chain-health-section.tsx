@@ -35,7 +35,7 @@ export function ChainHealthMethodologySection() {
               <MethodologyFacts
                 facts={[
                   { label: "Score range", value: "0–100 (null when safety-score coverage < 50%)" },
-                  { label: "Refresh cadence", value: "Every stablecoins cache refresh (~10 min)" },
+                  { label: "Refresh cadence", value: "15-minute stablecoins cache cadence; `/api/chains` freshness budget is 1800 seconds" },
                   { label: "Dependencies", value: "DefiLlama supply, Pharos Safety Scores, peg rates" },
                 ]}
               />

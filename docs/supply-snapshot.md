@@ -1,8 +1,8 @@
 # Supply Snapshot Pipeline
 
-Daily market cap snapshot pipeline. Captures each PSI-eligible stablecoin's circulating supply (in USD) once per day from cached DefiLlama data and stores it in D1 for historical charting.
+Daily market cap snapshot pipeline. Captures each PSI-eligible stablecoin's circulating supply (in USD) once per day from the strict cached `stablecoins` payload and stores it in D1 for historical charting.
 
-The snapshot does **not** call on-chain RPCs --- it relies entirely on DefiLlama's aggregated supply data cached by the 15-minute `syncStablecoins()` cron.
+The snapshot does **not** call upstream APIs or on-chain RPCs. DefiLlama remains the primary source for regular assets, but the cached payload can include CoinGecko gap-fill rows, DefiLlama history gap-fill rows, commodity/CoinGecko supplemental rows, and on-chain-total-supply supplemental rows assembled by the 15-minute `syncStablecoins()` cron.
 
 ---
 
@@ -247,7 +247,7 @@ All cron runs are logged to the `cron_runs` table (7-day retention).
 
 ## Key Constraints
 
-1. Depends entirely on DefiLlama data (no on-chain verification)
+1. Depends entirely on the strict cached `stablecoins` payload; the snapshot job itself performs no upstream API or RPC reads
 2. Price may be `null` if DL price data is unavailable
 3. One snapshot per UTC day (no intraday data)
 4. Strict cache loading means malformed or legacy array payloads fail closed instead of snapshotting partial data

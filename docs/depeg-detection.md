@@ -38,7 +38,9 @@ CREATE TABLE IF NOT EXISTS depeg_events (
   peak_price REAL,
   recovery_price REAL,
   peg_reference REAL NOT NULL,
-  source TEXT NOT NULL DEFAULT 'live'   -- "live" | "backfill"
+  source TEXT NOT NULL DEFAULT 'live',  -- "live" | "backfill"
+  confirmation_sources TEXT,            -- JSON/provenance for promoted pending rows
+  pending_reason TEXT                   -- reason flags carried from depeg_pending
 );
 
 CREATE INDEX idx_depeg_stablecoin ON depeg_events(stablecoin_id);
@@ -65,13 +67,19 @@ CREATE TABLE IF NOT EXISTS depeg_pending (
   first_seen_at INTEGER NOT NULL,
   first_price REAL NOT NULL,
   peg_reference REAL NOT NULL,
-  reason TEXT NOT NULL DEFAULT 'large-cap' -- "large-cap" | "low-confidence" | "extreme-move"
+  reason TEXT NOT NULL DEFAULT 'large-cap', -- "large-cap" | "low-confidence" | "extreme-move" or "+"-joined flags
+  last_seen_bps INTEGER,
+  last_seen_at INTEGER,
+  last_price REAL,
+  peak_seen_bps INTEGER,
+  peak_price REAL,
+  updated_at INTEGER
 );
 
 CREATE UNIQUE INDEX idx_depeg_pending_coin ON depeg_pending(stablecoin_id);
 ```
 
-One row per coin maximum. Holds depeg candidates awaiting multi-source confirmation. Migration `0061` adds the `reason` column so operators can distinguish large-cap confirmations from ambiguous-price and extreme-move confirmations.
+One row per coin maximum. Holds depeg candidates awaiting multi-source confirmation. Migration `0061` adds the `reason` column so operators can distinguish large-cap confirmations from ambiguous-price and extreme-move confirmations. Migration `0091` adds last-seen and peak-seen tracking columns so pending rows preserve current and worst observed evidence while they await promotion or expiry. Migration `0105` adds `confirmation_sources` and `pending_reason` to promoted `depeg_events` rows for ex-post provenance.
 
 ### Migration 0016
 

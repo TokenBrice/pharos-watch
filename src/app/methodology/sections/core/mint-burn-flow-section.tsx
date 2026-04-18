@@ -182,7 +182,7 @@ export function MintBurnFlowMethodologySection() {
                   <h3 className="text-foreground font-medium">Pressure Shift vs 30D</h3>
                   <p>
                     This is the existing Flow Intensity formula under clearer naming. It measures how far current 24-hour
-                    flow pressure deviates from the coin&apos;s own trailing 30 fully closed daily Ethereum baseline.
+                    flow pressure deviates from the coin&apos;s own trailing 30 fully closed daily configured issuance-chain baseline.
                   </p>
                   <p className="font-mono text-xs border border-l-[3px] border-l-amber-500 border-border/60 bg-muted/50 rounded-lg px-4 py-3">
                     denominator = max(baselineDailyAbs &times; 0.3, $1M)
@@ -194,7 +194,7 @@ export function MintBurnFlowMethodologySection() {
                   <ul className="list-disc list-inside space-y-1">
                     <li>
                       <span className="text-foreground">Baseline period</span> &mdash; trailing 30 fully closed UTC days of
-                      Ethereum daily net flows and absolute volumes, excluding the current partial day
+                      configured issuance-chain daily net flows and absolute volumes, excluding the current partial day
                     </li>
                     <li>
                       <span className="text-foreground">Minimum data</span> &mdash; requires 7 days of history; returns null
@@ -224,7 +224,8 @@ export function MintBurnFlowMethodologySection() {
                   <h3 className="text-foreground font-medium">Bank Run Gauge</h3>
                   <p>
                     Market-cap-weighted composite of all tracked coins&apos; pressure-shift values, producing a single
-                    ecosystem-wide Ethereum flow-pressure reading. The gauge score maps to one of seven condition bands:
+                    ecosystem-wide configured issuance-chain flow-pressure reading. Gauge weights use each coin&apos;s
+                    canonical tracked-chain circulating supply. The gauge score maps to one of seven condition bands:
                   </p>
                   <div className="overflow-x-auto">
                     <table className="w-full text-sm">

@@ -45,7 +45,7 @@ The delivery system is worker-owned. The frontend exposes a static `/telegram/` 
 
 ## D1 Schema
 
-The Telegram subscriber, disambiguation, and overflow-queue tables are part of `worker/migrations/0000_baseline.sql`. [`worker/migrations/MANIFEST.md`](../worker/migrations/MANIFEST.md) records the pre-squash lineage, including the historical migrations that introduced the subscriber, overflow-queue, and global-alert columns:
+The Telegram subscriber, disambiguation, and overflow-queue tables are part of `worker/migrations/0000_baseline.sql`. The baseline includes the core tables and legacy alert/global fields through `global_alert_safety`; launch-alert columns are added by `worker/migrations/0072_telegram_launch_alerts.sql`, and `alert_snooze_until_ts` is added by `worker/migrations/0098_telegram_alert_snooze.sql`. [`worker/migrations/MANIFEST.md`](../worker/migrations/MANIFEST.md) records the pre-squash lineage.
 
 | Table | Purpose | Key fields |
 |-------|---------|------------|
@@ -385,5 +385,5 @@ Digest posting uses `TELEGRAM_CHAT_ID`; subscriber alerts use the chat IDs store
 - Run `scripts/register-telegram-webhook.sh` after rotating `TELEGRAM_BOT_TOKEN` or `TELEGRAM_WEBHOOK_SECRET`. The script now declares `allowed_updates = ["message", "callback_query"]` so Telegram only forwards the update types the bot handles.
 - Run `scripts/register-telegram-commands.sh` after adding, removing, or renaming any slash command in `HELP_MESSAGE` (`worker/src/api/telegram-webhook-shared.ts`). This updates the native Telegram autocomplete list users see when they type `/` in a chat with the bot (the Bot API's `setMyCommands` surface, independent of the webhook switch).
 - The webhook intentionally returns `200` on most malformed or unauthorized cases so Telegram does not keep retrying noisy payloads.
-- The dedicated 5-minute Telegram trigger now handles subscriber fan-out only.
+- The dedicated 5-minute Telegram trigger reconciles webhook registration first, then runs subscriber alert fan-out through `dispatch-telegram-alerts`.
 - The dispatcher consumes Bot API response bodies before returning, which matters under the Workers per-trigger connection cap.

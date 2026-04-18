@@ -9,7 +9,7 @@ Dedicated documentation for the live reserve-composition subsystem that powers `
 - **Cron:** `sync-live-reserves` (`worker/src/cron/sync-live-reserves.ts`)
 - **Schedule:** `11 */4 * * *` (every 4 hours at :11 UTC)
 - **Shared 4-hourly lane:** after live reserve sync, the same slot runs redemption backstop sync, Kinesis supply sync, and collateral-drift checks / alerts (`worker/src/handlers/scheduled/hourly-live-reserves.ts`)
-- **Current coverage:** 147 live-enabled stablecoins across 44 registered adapters
+- **Current coverage:** 147 live-enabled stablecoins across 44 registered adapters; 43 adapter keys are currently configured by `shared/data/stablecoins/*.json`
 - **Storage:** `reserve_composition`, `reserve_composition_history`, `reserve_sync_state`, `reserve_sync_attempt_history`
 - **API:** `GET /api/stablecoin-reserves/:id`
 - **Frontend consumers:** `useStablecoinReserves()`, stablecoin detail view model, `/status` reserve-sync health
@@ -48,7 +48,7 @@ The shared registry in `shared/lib/live-reserve-adapters.ts` defines two importa
 
 - `dynamic-mix`: independently measured reserve compositions. These can be `independent` evidence for scoring when the sync state is clean.
 - `validated-static`: live validation/probe adapters over curated/static slices. These remain authoritative for the reserve detail API, but they are tagged `static-validated` and do not count as independent live collateral inputs for report-card scoring.
-- `single-bucket`: one-slice live proofs/attestations. Some are true independent evidence (`chainlink-nav`, `chainlink-por`, `erc4626-single-asset`, `btcfi`, `liquity-v1`, `sgforge-coinvertible`), while weak liveness-only probes such as `single-asset` and coarse issuer attestation summaries such as `tether` are tagged `weak-live-probe`.
+- `single-bucket`: one-slice live proofs/attestations. Some are true independent evidence (`btcfi`, `chainlink-nav`, `chainlink-por`, `erc4626-single-asset`, `liquity-v1`, `sgforge-coinvertible`, `superstate-liquidity`, `usd1-bundle-oracle`), while weak liveness-only probes such as `single-asset` and coarse issuer attestation summaries such as `tether` are tagged `weak-live-probe`.
 - `independent`: scoring-eligible live evidence when the snapshot is fresh, authoritative, and the most recent sync status is `ok`.
 - `static-validated`, `weak-live-probe`: detail/status-visible evidence classes that never override curated collateral scoring.
 - `source-invariant`: opt-in within-run result sharing for adapters whose returned payload is coin-invariant. All other adapters run per coin even when configs look similar.
@@ -346,12 +346,14 @@ This table reflects the adapter keys currently configured in `shared/data/stable
 
 | Adapter                    | Primary input               | Semantics                            | Configured coins |
 | -------------------------- | --------------------------- | ------------------------------------ | ---------------- |
+| `abracadabra`              | `http-json`                 | `protocol-reserve`                   | 1                |
 | `accountable`              | `http-json`                 | `collateral-mix` / `protocol-reserve` | 7               |
 | `anzen-usdz`               | `onchain-evm`              | `single-asset`                       | 1                |
 | `asymmetry`                | `http-json`                 | `collateral-mix`                     | 1                |
 | `btcfi`                    | `http-json`                 | `collateral-mix`                     | 1                |
+| `buck-io-transparency`     | `http-json`                 | `attestation-mix`                    | 1                |
 | `cap-vault`                | `onchain-evm`               | `protocol-reserve`                   | 1                |
-| `chainlink-nav`            | `onchain-evm`               | `single-asset`                       | 5                |
+| `chainlink-nav`            | `onchain-evm`               | `single-asset`                       | 6                |
 | `chainlink-por`            | `onchain-evm`               | `attestation-mix`                    | 1                |
 | `circle-transparency`      | `http-html`                 | `attestation-mix`                    | 2                |
 | `collateral-positions-api` | `http-json`                 | `collateral-mix`                     | 2                |
@@ -369,15 +371,16 @@ This table reflects the adapter keys currently configured in `shared/data/stable
 | `infinifi`                 | `http-json`                 | `collateral-mix`                     | 1                |
 | `jupusd`                   | `http-json`                 | `collateral-mix`                     | 1                |
 | `liquity-v1`               | `onchain-evm`               | `single-asset`                       | 1                |
-| `liquity-v2-branches`      | `onchain-evm`               | `collateral-mix`                     | 4                |
-| `m0`                       | `http-json`                 | `protocol-reserve`                   | 9                |
+| `liquity-v2-branches`      | `onchain-evm`               | `collateral-mix`                     | 6                |
+| `lista`                    | `http-json`                 | `protocol-reserve`                   | 1                |
+| `m0`                       | `http-json`                 | `protocol-reserve`                   | 10               |
 | `mento`                    | `http-html`                 | `collateral-mix`                     | 2                |
 | `openeden-usdo`            | `http-json`                 | `collateral-mix`                     | 1                |
 | `re-metrics`               | `http-html`                 | `collateral-mix`                     | 1                |
 | `reservoir`                | `http-json`                 | `protocol-reserve`                   | 1                |
 | `river-protocol-info`      | `http-json`                 | `protocol-reserve`                   | 1                |
 | `sgforge-coinvertible`     | `http-html`                 | `attestation-mix`                    | 1                |
-| `single-asset`             | `http-json` / `onchain-evm` | `single-asset`                       | 43               |
+| `single-asset`             | `http-json` / `onchain-evm` | `single-asset`                       | 42               |
 | `sky-makercore`            | `http-json`                 | `collateral-mix`                     | 2                |
 | `solstice-attestation`     | `http-json`                 | `protocol-reserve`                   | 1                |
 | `superstate-liquidity`     | `onchain-evm` + `http-json` | `single-asset`                       | 1                |
@@ -385,6 +388,7 @@ This table reflects the adapter keys currently configured in `shared/data/stable
 | `usdai-proof-of-reserves`  | `http-json`                 | `collateral-mix`                     | 1                |
 | `usd1-bundle-oracle`       | `onchain-evm`               | `single-asset`                       | 1                |
 | `usdd-data-platform`       | `http-json`                 | `collateral-mix`                     | 1                |
+| `usdh-native-markets`      | `http-json`                 | `collateral-mix`                     | 1                |
 
 `collateral-positions-api` can now optionally attach direct redemption-capacity telemetry alongside the collateral mix when a reviewed bridge-backed stable exit exists. `zchf-frankencoin` uses this path to publish the current VCHF StablecoinBridge inventory as `immediateRedeemableUsd` for redemption-backstop modeling without changing the reserve-slice composition itself.
 

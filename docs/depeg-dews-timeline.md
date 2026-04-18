@@ -8,7 +8,7 @@ Internal changelog reconstructed from git history. Covers `v1.0` through `v5.95`
 **Commit:** `unreleased`
 
 - DEWS now applies a bounded per-peg-type contagion amplifier (max `1.2x`) derived from the same cycle's first-pass `DANGER` / `WARNING` bands, stacked on top of the existing systemic PSI amplifier
-- A tracked stablecoin entering `DANGER` or `WARNING` now raises other same-peg-type coins' scores by up to 20%; different peg types do not share contagion risk
+- A tracked stablecoin entering `DANGER` or `WARNING` now raises other same-peg-type coins' scores by up to 15% under the current bump constants (`1.15x` / `1.08x`); the defensive hard cap remains 20%
 - First-pass coins that themselves are `DANGER` / `WARNING` do not contagion-amplify themselves
 - The amplifier is clamped and explainable (no learned weights) and is surfaced on `/api/stress-signals` as `amplifiers.contagion`
 

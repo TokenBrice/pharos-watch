@@ -52,7 +52,7 @@ When an asset still has no usable current price after validation and fallback re
 | Balancer DEX (via `dex_prices`) | 3 | `worker/src/lib/depeg-helpers.ts` | One aggregated Balancer price per asset from `price_sources_json`; admitted only when corroborated or when no non-DEX voices exist |
 | Raydium DEX (via `dex_prices`) | 2 | `worker/src/lib/depeg-helpers.ts` | One aggregated Raydium price per asset from `price_sources_json`; admitted only when corroborated or when no non-DEX voices exist |
 | Orca DEX (via `dex_prices`) | 2 | `worker/src/lib/depeg-helpers.ts` | One aggregated Orca price per asset from `price_sources_json`; admitted only when corroborated or when no non-DEX voices exist |
-| Meteora / PancakeSwap / Slipstream DEX (via `dex_prices`) | 2-3 | `worker/src/lib/depeg-helpers.ts` | Additional per-protocol DEX bridge sources from Meteora, PancakeSwap, Aerodrome Slipstream, and Velodrome Slipstream; still admitted only when corroborated or when no non-DEX voices exist |
+| Meteora / PancakeSwap / Slipstream DEX (via `dex_prices`) | — | `worker/src/lib/depeg-helpers.ts` | Feed DEX liquidity and challenger observations today. They are not primary-consensus protocol bridge sources unless matching `*-dex` registry keys are added. |
 | GeckoTerminal pool probe | 1 | `worker/src/lib/geckoterminal-price-probe.ts` | Pool-level cross-check for weak CoinGecko / DL-list soft-source outcomes |
 
 > **Historical note (v2.0→v2.1):** The DL coins API (`coins.llama.fi/prices/current/coingecko:{id}`) was removed from primary consensus because it returned CoinGecko-sourced data, creating illusory two-source agreement. It is still used in fallback enrichment via contract-address queries.

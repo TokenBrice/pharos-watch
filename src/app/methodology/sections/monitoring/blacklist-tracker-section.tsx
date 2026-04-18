@@ -23,8 +23,10 @@ export function BlacklistTrackerMethodologySection() {
           >
               <p>
                 The Blacklist Tracker monitors issuer intervention events across USDC, USDT, PAXG, XAUT, PYUSD, USD1,
-                USDG, RLUSD, U, USDtb, A7A5, FDUSD, BRZ, AUSD, MNEE, EURI, USDQ, USDO, USDX, AID, TGBP, EURC, and BUIDL contracts, including blacklist, unblacklist, block/unblock, account
-                pause/unpause, and destroy/wipe actions across supported EVM and Tron networks.
+                USDG, RLUSD, U, USDtb, A7A5, FDUSD, BRZ, AUSD, MNEE, EURI, USDQ, USDO, USDX, AID, TGBP,
+                EURC, BUIDL, USDP, TUSD, NUSD, EURCV, USDA, USAT, AEUR, XUSD, XAUm, JPYC, FRXUSD, and
+                FIDD contracts, including blacklist, unblacklist, block/unblock, account pause/unpause, and
+                destroy/wipe actions across supported EVM and Tron networks.
               </p>
               <p>
                 Methodology revisions document changes to event coverage, cross-chain decoding behavior, cursor safety
@@ -35,10 +37,10 @@ export function BlacklistTrackerMethodologySection() {
               </p>
               <MethodologyFacts
                 facts={[
-                  { label: "Data sources", value: "Etherscan event logs (EVM) + Tronscan (Tron)" },
+                  { label: "Data sources", value: "Etherscan v2, chain RPC / dRPC log scans, and TronGrid" },
                   { label: "Tracked events", value: "Freeze, Unfreeze, Wipe (AddedBlackList, RemovedBlackList, DestroyedBlackFunds)" },
                   { label: "Chains", value: "Ethereum, Tron, + supported EVM L2s" },
-                  { label: "Update frequency", value: "30-minute cron + backlog reconciliation" },
+                  { label: "Update frequency", value: "Every 6 hours (`3 */6 * * *`) + backlog reconciliation" },
                 ]}
               />
               <div className="rounded-lg border border-border/60 bg-muted/20 p-4 space-y-2">
@@ -60,9 +62,9 @@ export function BlacklistTrackerMethodologySection() {
               </WorkedExample>
               <MethodologyDetails summary="Technical details: freeze ledger reconciliation">
                 <div className="space-y-3">
-                  <p>The blacklist tracker maintains a reconciled freeze ledger that merges event-driven updates with periodic full-state snapshots. Each cron run processes new events since the last indexed block, then reconciles against the cumulative ledger.</p>
+                  <p>The blacklist tracker stores event-time rows separately from a persistent freeze-ledger snapshot. Each cron run processes new events since the last indexed block; new blacklist rows refresh current balances, while later unblacklist events do not delete historical ledger rows.</p>
                   <p>Backlog sync handles gaps from missed cron runs or RPC failures by replaying events from the last confirmed cursor. Tron events use a separate ingestion path due to the TRC-20 event format differences.</p>
-                  <p>The public-facing freeze totals combine per-chain counts into a single figure. When the tracker detects an Unfreeze or DestroyedBlackFunds event, it decrements the affected chain&rsquo;s count and recalculates the aggregate.</p>
+                  <p>The public-facing freeze totals combine per-chain counts into a single figure. Destroy/seize events can overwrite the stored amount when they provide better seized-value evidence, and the public summary reads the persistent ledger rather than treating unfreeze rows as historical deletion.</p>
                 </div>
               </MethodologyDetails>
           </MethodologySectionShell>

@@ -18,8 +18,9 @@ Each API response includes a `methodology` envelope with `version`, `changelogPa
 
 ```
 base  = sum(W_i * S_i) / sum(W_i)          # available signals only
-amp   = PSI < 75 ? 1 + ((75 - PSI) / 75) * 0.3 : 1.0
-DEWS  = round(clamp(0, 100, base * amp))
+psiAmp = PSI < 75 ? 1 + ((75 - PSI) / 75) * 0.3 : 1.0
+contagionAmp = same-peg first-pass bump, currently 1.15 for DANGER or 1.08 for WARNING, clamped to 1.2
+DEWS = round(clamp(0, 100, base * psiAmp * contagionAmp))
 ```
 
 Only signals where `available = true` participate. Weights are redistributed proportionally across available signals.

@@ -755,11 +755,11 @@ The handler now exposes only unsuppressed rows for the live-supported symbols: U
   "methodology": {
     "version": "3.9",
     "versionLabel": "v3.9",
-    "currentVersion": "3.9",
-    "currentVersionLabel": "v3.9",
+    "currentVersion": "3.96",
+    "currentVersionLabel": "v3.96",
     "changelogPath": "/methodology/blacklist-tracker-changelog/",
     "asOf": 1704067200,
-    "isCurrent": true
+    "isCurrent": false
   }
 }
 ```

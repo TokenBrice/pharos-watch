@@ -1,6 +1,6 @@
 # Digest Pipeline
 
-Daily AI-generated stablecoin market recap, distributed to the web, Twitter, and Telegram.
+Daily AI-generated stablecoin market recap, distributed to the web and Telegram. The Twitter helper exists, but the current scheduled and manual-trigger digest paths pass `twitterCreds = null`, so Twitter posting is not wired into runtime digest delivery today.
 
 ---
 
@@ -10,7 +10,7 @@ The digest pipeline has four layers:
 
 1. **Generation** — a Cloudflare Worker cron collects market data and calls Claude to produce a short editorial recap
 2. **Storage** — the result is persisted to D1 (`daily_digest` table)
-3. **Distribution** — posted to Twitter and Telegram immediately after generation
+3. **Distribution** — posted to Telegram immediately after generation and stored for web/API consumption
 4. **Frontend** — served via public API endpoints, displayed on the homepage and a dedicated archive
 
 Daily and weekly generation now share a common worker substrate in `worker/src/cron/digest/platform.ts` for the Anthropic request/parse path, `daily_digest` row insertion, and circuit-aware delivery wrappers. The daily and weekly jobs still own their distinct input-building and prompt logic.
@@ -73,9 +73,9 @@ The digest's Flight-to-Quality collector now uses `buildFlightToQualityClassific
 
 - **Model:** `claude-opus-4-7` via `https://api.anthropic.com/v1/messages`, with adaptive thinking (`thinking.type = "adaptive"`) and `xhigh` reasoning effort (`output_config.effort = "xhigh"`)
 - **Reasoning:** adaptive thinking is on by default with omitted display; no `budget_tokens` is needed (and is rejected on Opus 4.7). Sampling parameters (`temperature` / `top_p` / `top_k`) are not sent (also rejected on Opus 4.7). `xhigh` is Opus 4.7's recommended level for complex editorial work; `max` was dropped on 2026-04-18 after a second runaway-thinking failure (`stopReason=max_tokens, outputTokens=32000`, only a `signature_delta` emitted) — `max` has no constraint on thinking depth.
-- **Timeout:** 14 minutes for the Anthropic request. The daily digest cron wrapper allows 14.5 minutes total, which stays below Cloudflare's 15-minute scheduled-trigger wall-clock ceiling while leaving tail room for persistence, logging, and channel delivery.
+- **Timeout:** 12-minute Anthropic outer timeout with an 11-minute per-attempt fetch timeout. The daily digest cron wrapper allows 14 minutes total, which stays below Cloudflare's 15-minute scheduled-trigger wall-clock ceiling while leaving tail room for persistence, logging, and channel delivery.
 - **Max tokens:** 64000 daily, 64000 weekly (max_tokens covers thinking + output). Anthropic's documented floor for Opus 4.7 at xhigh/max effort. Earlier bumps to 16k → 32k at `effort: "max"` both hit `stop_reason=max_tokens` with no text emitted; the root-cause fix on 2026-04-18 was lowering effort to `xhigh` and raising the ceiling per Anthropic's guidance in one change.
-- **Overload retries:** Anthropic `529 Overloaded` responses now back off exponentially (`5s`, `10s`, `20s`, `30s`) before the digest gives up
+- **Overload retries:** Anthropic `529 Overloaded` responses retry at most 2 times (3 attempts total), bounded by the 12-minute outer timeout
 - **Voice:** sardonic financial columnist — dry, precise, no emojis, no exclamation marks, with a compact few-shot EXEMPLAR embedded in the system prompt to anchor voice and structure
 - **Priority rule:** lead from the highest-impact unsuppressed editorial candidate. Raw evidence sections are supporting material, not the lead-selection source.
 - **Momentum candidates:** a separate in-prompt block surfaces candidates with `novelty ∈ {new, accelerating, reversal}` so the model has explicit forward-watch material upstream of the regex-based forward-look validator.
@@ -94,7 +94,7 @@ The digest's Flight-to-Quality collector now uses `buildFlightToQualityClassific
 
 ### Failure handling
 
-If JSON parsing or quality validation fails, the worker sends one corrective retry to Opus with the failed checks. If the retry still has hard quality issues, the digest row is stored as degraded for operator inspection, but Twitter and Telegram delivery are skipped as `quality-gate`.
+If JSON parsing or quality validation fails, the worker sends one corrective retry to Opus with the failed checks. If the retry still has hard quality issues, the digest row is stored as degraded for operator inspection, but external delivery is skipped as `quality-gate`.
 
 Digest generation now fails closed on stablecoins-cache availability: if the cached stablecoin payload is missing, malformed, or otherwise non-`ok`, the cron returns `status: "degraded"` and skips regeneration instead of synthesizing a false zero-mcap digest.
 
@@ -148,7 +148,7 @@ Read endpoints are public, but they do not all share the same cache profile: `GE
 
 ## Distribution
 
-After the digest is stored in D1, it is posted to external channels. Both integrations are **non-fatal**: a delivery failure logs a warning but never prevents the digest from being stored.
+After the digest is stored in D1, it is posted to the configured Telegram channel. Delivery is **non-fatal**: a delivery failure logs a warning but never prevents the digest from being stored.
 
 ### Twitter
 
@@ -167,7 +167,7 @@ After the digest is stored in D1, it is posted to external channels. Both integr
 | `TWITTER_ACCESS_TOKEN` | OAuth access token |
 | `TWITTER_ACCESS_TOKEN_SECRET` | OAuth access token secret |
 
-If any of the four are absent, Twitter posting is skipped silently.
+If any of the four are absent, Twitter posting is skipped silently. Current scheduled and manual-trigger digest paths pass `twitterCreds = null`, so this helper is available but not active in runtime digest delivery.
 
 ### Telegram
 
@@ -355,7 +355,7 @@ This keeps the Pages build itself network-independent once the digest snapshot h
 | `TELEGRAM_BOT_TOKEN` | Secret | No | Telegram bot token from @BotFather |
 | `TELEGRAM_CHAT_ID` | Secret | No | Telegram channel username or numeric ID |
 
-Without `ANTHROPIC_API_KEY`, generation is skipped entirely. Twitter and Telegram are both optional — the digest is always stored regardless.
+Without `ANTHROPIC_API_KEY`, generation is skipped entirely. Telegram delivery is optional — the digest is always stored regardless.
 
 ---
 
