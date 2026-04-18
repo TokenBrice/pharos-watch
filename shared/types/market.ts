@@ -548,6 +548,7 @@ const BlacklistSummaryStatsSchema = z.object({
   recentCount24h: z.number(),
   recoverableGapCount: z.number(),
   perCoinBlacklistCounts: z.record(z.enum(BLACKLIST_STABLECOINS), z.number()),
+  perCoinTotalEvents: z.record(z.enum(BLACKLIST_STABLECOINS), z.number()),
 });
 
 const BlacklistChainOptionSchema = z.object({

@@ -96,6 +96,9 @@ describe("blacklist-api", () => {
         perCoinBlacklistCounts: Object.fromEntries(
           BLACKLIST_STABLECOINS.map((s) => [s, 0]),
         ) as Record<BlacklistStablecoin, number>,
+        perCoinTotalEvents: Object.fromEntries(
+          BLACKLIST_STABLECOINS.map((s) => [s, 0]),
+        ) as Record<BlacklistStablecoin, number>,
       },
       chart: [],
       chains: [{ id: "ethereum", name: "Ethereum" }],

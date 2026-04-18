@@ -155,6 +155,7 @@ describe("handleBlacklistSummary", () => {
         usdtBlacklisted: number;
         destroyedTotal: number;
         perCoinBlacklistCounts: Record<string, number>;
+        perCoinTotalEvents: Record<string, number>;
         recoverableGapCount: number;
         recentCount: number;
         recentCount24h: number;
@@ -164,6 +165,9 @@ describe("handleBlacklistSummary", () => {
     expect(json.stats.usdtBlacklisted).toBe(0); // only destroy, not blacklist
     expect(json.stats.destroyedTotal).toBe(500);
     expect(json.stats.perCoinBlacklistCounts.USDC).toBe(1);
+    expect(json.stats.perCoinTotalEvents.USDC).toBe(2); // blacklist + unblacklist
+    expect(json.stats.perCoinTotalEvents.USDT).toBe(1); // destroy-only still counts
+    expect(json.stats.perCoinTotalEvents.PAXG).toBe(0); // coin with no events stays 0
     expect(json.stats.recoverableGapCount).toBeDefined();
     expect(json.stats.recentCount).toBeDefined();
     expect(json.stats.recentCount24h).toBeDefined();

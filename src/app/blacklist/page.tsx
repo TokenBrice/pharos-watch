@@ -104,6 +104,7 @@ function BlacklistPageInner() {
           stablecoinFilter={stablecoinFilter}
           chainFilter={chainFilter}
           eventTypeFilter={eventTypeFilter}
+          perCoinTotalEvents={summary?.stats.perCoinTotalEvents}
           onStablecoinChange={handleStablecoinChange}
           onChainChange={handleChainChange}
           onEventTypeChange={handleEventTypeChange}

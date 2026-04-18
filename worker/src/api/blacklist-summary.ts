@@ -100,13 +100,17 @@ export const handleBlacklistSummary = withErrorHandler(
     const perCoinBlacklistCounts = Object.fromEntries(
       BLACKLIST_STABLECOINS.map((s) => [s, 0]),
     ) as Record<BlacklistStablecoin, number>;
+    const perCoinTotalEvents = Object.fromEntries(
+      BLACKLIST_STABLECOINS.map((s) => [s, 0]),
+    ) as Record<BlacklistStablecoin, number>;
     let destroyedTotal = 0;
     const blacklistBySymbol = new Map<string, number>();
     for (const row of perCoinResult.results ?? []) {
+      if (!BLACKLIST_STABLECOINS.includes(row.stablecoin as BlacklistStablecoin)) continue;
+      const symbol = row.stablecoin as BlacklistStablecoin;
+      perCoinTotalEvents[symbol] += row.n;
       if (row.event_type === "blacklist") {
-        if (BLACKLIST_STABLECOINS.includes(row.stablecoin as BlacklistStablecoin)) {
-          perCoinBlacklistCounts[row.stablecoin as BlacklistStablecoin] = row.n;
-        }
+        perCoinBlacklistCounts[symbol] = row.n;
         blacklistBySymbol.set(row.stablecoin, row.n);
       }
       if (row.event_type === "destroy") destroyedTotal += row.usd_sum ?? 0;
@@ -144,6 +148,7 @@ export const handleBlacklistSummary = withErrorHandler(
           trackedFrozenTotal: trackedStats.trackedFrozenTotal,
           trackedAmountGapCount: trackedStats.trackedAmountGapCount,
           perCoinBlacklistCounts,
+          perCoinTotalEvents,
         },
         chart,
         chains: chainOptions,
