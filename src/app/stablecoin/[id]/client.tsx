@@ -92,6 +92,10 @@ const BASE_DETAIL_SECTIONS = [
 ];
 
 const YIELD_SECTION = { id: "yield", label: "Yield" };
+const FLOWS_SECTION = { id: "flows", label: "Flows" };
+const RESERVES_SECTION = { id: "reserves", label: "Reserves" };
+const PRICE_SECTION = { id: "price", label: "Price" };
+const EXPLORE_SECTION = { id: "explore-next", label: "Explore" };
 
 function DetailLoadingShell({ coin, logoSrc }: { coin: StablecoinMeta; logoSrc?: string }) {
   return (
@@ -182,9 +186,23 @@ export default function StablecoinDetailClient({ id, summary, coin, logoSrc }: S
     );
   }
 
-  const detailSections = viewModel.hasYieldSection
-    ? [...BASE_DETAIL_SECTIONS.slice(0, 3), YIELD_SECTION, ...BASE_DETAIL_SECTIONS.slice(3)]
-    : BASE_DETAIL_SECTIONS;
+  // Scrollspy pill array — conditional on data presence. Section ids are
+  // verified against the actual <section id=...> elements below and in the
+  // subcomponents (flows-section, overview-section, explore-next-section).
+  const hasPriceTransparency =
+    !!viewModel.coinData && (viewModel.coinData.price != null || !!viewModel.dexPriceCheck);
+  const detailSections = [
+    BASE_DETAIL_SECTIONS[0], // Safety
+    BASE_DETAIL_SECTIONS[1], // Overview
+    ...(hasPriceTransparency ? [PRICE_SECTION] : []),
+    ...(viewModel.reserves ? [RESERVES_SECTION] : []),
+    BASE_DETAIL_SECTIONS[2], // Market
+    ...(viewModel.hasYieldSection ? [YIELD_SECTION] : []),
+    BASE_DETAIL_SECTIONS[3], // Liquidity
+    ...(viewModel.hasFlows ? [FLOWS_SECTION] : []),
+    BASE_DETAIL_SECTIONS[4], // History
+    EXPLORE_SECTION,
+  ];
 
   return (
     <div>

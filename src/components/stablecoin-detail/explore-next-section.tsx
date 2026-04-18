@@ -76,7 +76,7 @@ export function ExploreNextSection({
   }
 
   return (
-    <section className="mt-8 -mx-4 rounded-2xl bg-muted/15 px-4 py-6 sm:-mx-6 sm:px-6 space-y-4" aria-labelledby="explore-next-heading">
+    <section id="explore-next" className="mt-8 -mx-4 rounded-2xl bg-muted/15 px-4 py-6 sm:-mx-6 sm:px-6 space-y-4" aria-labelledby="explore-next-heading">
       <div className="space-y-1.5">
         <h2 id="explore-next-heading" className={DETAIL_SECTION_TITLE_CLASS}>
           Explore Next
