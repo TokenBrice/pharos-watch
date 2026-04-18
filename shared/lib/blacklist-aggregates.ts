@@ -10,7 +10,7 @@ function quarterToSortKey(timestamp: number): number {
   return d.getUTCFullYear() * 4 + Math.floor(d.getUTCMonth() / 3);
 }
 
-function sortKeyToLabel(sortKey: number): string {
+export function sortKeyToLabel(sortKey: number): string {
   const year = Math.floor(sortKey / 4);
   const q = (sortKey % 4) + 1;
   return `Q${q} '${(year % 100).toString().padStart(2, "0")}`;

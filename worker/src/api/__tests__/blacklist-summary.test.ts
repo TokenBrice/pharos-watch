@@ -65,6 +65,15 @@ describe("handleBlacklistSummary", () => {
           },
         ],
       },
+      {
+        match: "quarter_sort_key",
+        // Timestamp 1_777_000_000 (USDT blacklist event) → bucket 8105 (Q2 2026).
+        // See shared/lib/blacklist-aggregates.ts quarterToSortKey: year*4 + floor(month/3).
+        rows: [
+          { stablecoin: "USDT", quarter_sort_key: 8105, event_type: "blacklist", n: 1 },
+          { stablecoin: "USDC", quarter_sort_key: 8105, event_type: "destroy", n: 1 },
+        ],
+      },
       { match: "cron_runs", rows: [], first: { started_at: 1_777_000_200 } },
     ]);
 
@@ -80,6 +89,10 @@ describe("handleBlacklistSummary", () => {
         activeFrozenTotal: number;
         trackedAddressCount: number;
         trackedFrozenTotal: number;
+        perCoinFrozenAddressCount: Record<string, number>;
+        perCoinFrozenTotal: Record<string, number>;
+        perCoinDestroyedTotal: Record<string, number>;
+        perCoinQuarterlyEventTypes: Record<string, Array<{ quarter: string; blacklist: number; unblacklist: number; destroy: number }>>;
       };
       chart: Array<{ total: number }>;
       chains: Array<{ id: string; name: string }>;
@@ -97,6 +110,16 @@ describe("handleBlacklistSummary", () => {
     expect(body.chart[0]?.total).toBe(1250);
     expect(body.chains.some((chain) => chain.id === "ethereum")).toBe(true);
     expect(body.chains.some((chain) => chain.id === "base")).toBe(true);
+    // Per-coin detail fields surfaced for the detail-page block.
+    expect(body.stats.perCoinFrozenAddressCount.USDT).toBe(1);
+    expect(body.stats.perCoinFrozenAddressCount.USDC).toBe(0);
+    expect(body.stats.perCoinFrozenTotal.USDT).toBe(1250);
+    expect(body.stats.perCoinFrozenTotal.USDC).toBe(0);
+    expect(body.stats.perCoinDestroyedTotal.USDC).toBe(500);
+    expect(body.stats.perCoinDestroyedTotal.USDT).toBe(0);
+    expect(body.stats.perCoinQuarterlyEventTypes.USDT).toHaveLength(1);
+    expect(body.stats.perCoinQuarterlyEventTypes.USDT[0]).toMatchObject({ blacklist: 1, unblacklist: 0, destroy: 0 });
+    expect(body.stats.perCoinQuarterlyEventTypes.USDC[0]).toMatchObject({ blacklist: 0, unblacklist: 0, destroy: 1 });
   });
 
   it("derives perCoinBlacklistCounts and preserves required stats", async () => {
@@ -145,6 +168,7 @@ describe("handleBlacklistSummary", () => {
         first: { total: 3, max_ts: 1_700_200_000, recoverable_gap: 0, recent_30d: 0, recent_24h: 0 },
       },
       { match: "FROM blacklist_current_balances", rows: [] },
+      { match: "quarter_sort_key", rows: [] },
       { match: "cron_runs", rows: [], first: { started_at: null } },
     ]);
 
@@ -186,16 +210,29 @@ describe("handleBlacklistSummary", () => {
         first: { total: 0, max_ts: null, recoverable_gap: 0, recent_30d: 0, recent_24h: 0 },
       },
       { match: "FROM blacklist_current_balances", rows: [] },
+      { match: "quarter_sort_key", rows: [] },
       { match: "cron_runs", rows: [], first: { started_at: null } },
     ]);
 
     const res = await handleBlacklistSummary(db);
     const json = await res.json() as {
-      stats: { frozenAddresses: number };
+      stats: {
+        frozenAddresses: number;
+        perCoinFrozenAddressCount: Record<string, number>;
+        perCoinFrozenTotal: Record<string, number>;
+        perCoinDestroyedTotal: Record<string, number>;
+        perCoinQuarterlyEventTypes: Record<string, unknown[]>;
+      };
       totalEvents: number;
     };
     expect(json.stats.frozenAddresses).toBe(0);
     expect(json.totalEvents).toBe(0);
+    // Empty corpus → every coin returns 0 / [] (not undefined), so clients
+    // don't need presence checks.
+    expect(json.stats.perCoinFrozenAddressCount.USDC).toBe(0);
+    expect(json.stats.perCoinFrozenTotal.USDC).toBe(0);
+    expect(json.stats.perCoinDestroyedTotal.USDC).toBe(0);
+    expect(json.stats.perCoinQuarterlyEventTypes.USDC).toEqual([]);
   });
 
   it("preserves net-frozen semantics for frozenAddresses", async () => {

@@ -17,9 +17,13 @@ import { loadBlacklistCurrentBalanceMap } from "../lib/blacklist-current-balance
 import {
   BLACKLIST_STABLECOINS,
   type BlacklistEvent,
+  type BlacklistQuarterlyEventTypePoint,
   type BlacklistStablecoin,
 } from "@shared/types/market";
-import { buildBlacklistQuarterlyChartFromSnapshots } from "@shared/lib/blacklist-aggregates";
+import {
+  buildBlacklistQuarterlyChartFromSnapshots,
+  sortKeyToLabel,
+} from "@shared/lib/blacklist-aggregates";
 import { mapBlacklistEventRow, type BlacklistEventRow } from "../lib/blacklist-api";
 import {
   buildBlacklistActiveRecords,
@@ -38,6 +42,24 @@ export const handleBlacklistSummary = withErrorHandler(
          GROUP BY stablecoin, event_type`,
       )
       .all<{ stablecoin: string; event_type: string; n: number; usd_sum: number }>();
+
+    // Per-coin, per-quarter, per-event-type counts for the stablecoin detail
+    // page chart. Bucketing matches the JS helper in
+    // shared/lib/blacklist-aggregates.ts (year*4 + floor(month/3)) so labels
+    // align with the main-page chart.
+    const perCoinQuarterlyResult = await db
+      .prepare(
+        `SELECT
+           stablecoin,
+           (CAST(strftime('%Y', datetime(timestamp, 'unixepoch')) AS INTEGER) * 4 +
+            CAST((CAST(strftime('%m', datetime(timestamp, 'unixepoch')) AS INTEGER) - 1) / 3 AS INTEGER)) AS quarter_sort_key,
+           event_type,
+           COUNT(*) AS n
+         FROM blacklist_events
+         WHERE suppression_reason IS NULL
+         GROUP BY stablecoin, quarter_sort_key, event_type`,
+      )
+      .all<{ stablecoin: string; quarter_sort_key: number; event_type: string; n: number }>();
 
     // D1 supports SQLite >= 3.25 window functions (ROW_NUMBER OVER PARTITION BY).
     // Latest event per (stablecoin, chain_id, LOWER(address)) drives both net-
@@ -120,6 +142,69 @@ export const handleBlacklistSummary = withErrorHandler(
     const usdtBlacklisted = blacklistBySymbol.get("USDT") ?? 0;
     const goldBlacklisted = (blacklistBySymbol.get("PAXG") ?? 0) + (blacklistBySymbol.get("XAUT") ?? 0);
 
+    // ---------------- Per-coin detail fields (detail-page block) ----------------
+
+    const perCoinFrozenAddressCount = Object.fromEntries(
+      BLACKLIST_STABLECOINS.map((s) => [s, 0]),
+    ) as Record<BlacklistStablecoin, number>;
+    for (const row of latestByAddr) {
+      if (row.eventType !== "blacklist") continue;
+      if (!BLACKLIST_STABLECOINS.includes(row.stablecoin as BlacklistStablecoin)) continue;
+      perCoinFrozenAddressCount[row.stablecoin as BlacklistStablecoin] += 1;
+    }
+
+    const perCoinFrozenTotal = Object.fromEntries(
+      BLACKLIST_STABLECOINS.map((s) => [s, 0]),
+    ) as Record<BlacklistStablecoin, number>;
+    for (const snapshot of currentBalances.values()) {
+      if (snapshot.amountUsd == null || snapshot.amountUsd <= 0) continue;
+      if (!BLACKLIST_STABLECOINS.includes(snapshot.stablecoin as BlacklistStablecoin)) continue;
+      perCoinFrozenTotal[snapshot.stablecoin as BlacklistStablecoin] += snapshot.amountUsd;
+    }
+
+    const perCoinDestroyedTotal = Object.fromEntries(
+      BLACKLIST_STABLECOINS.map((s) => [s, 0]),
+    ) as Record<BlacklistStablecoin, number>;
+    for (const row of perCoinResult.results ?? []) {
+      if (row.event_type !== "destroy") continue;
+      if (!BLACKLIST_STABLECOINS.includes(row.stablecoin as BlacklistStablecoin)) continue;
+      perCoinDestroyedTotal[row.stablecoin as BlacklistStablecoin] += row.usd_sum ?? 0;
+    }
+
+    // Build per-coin quarterly event-type arrays. Missing quarters between a
+    // coin's first and last event are zero-filled so bars render contiguously,
+    // matching buildBlacklistQuarterlyChartFromSnapshots.
+    const perCoinQuarterlyEventTypes = Object.fromEntries(
+      BLACKLIST_STABLECOINS.map((s) => [s, [] as BlacklistQuarterlyEventTypePoint[]]),
+    ) as Record<BlacklistStablecoin, BlacklistQuarterlyEventTypePoint[]>;
+    const perCoinBucketMap = new Map<
+      BlacklistStablecoin,
+      Map<number, { blacklist: number; unblacklist: number; destroy: number }>
+    >();
+    for (const row of perCoinQuarterlyResult.results ?? []) {
+      if (!BLACKLIST_STABLECOINS.includes(row.stablecoin as BlacklistStablecoin)) continue;
+      const symbol = row.stablecoin as BlacklistStablecoin;
+      const coinBuckets = perCoinBucketMap.get(symbol) ?? new Map();
+      const bucket = coinBuckets.get(row.quarter_sort_key) ?? { blacklist: 0, unblacklist: 0, destroy: 0 };
+      if (row.event_type === "blacklist") bucket.blacklist += row.n;
+      else if (row.event_type === "unblacklist") bucket.unblacklist += row.n;
+      else if (row.event_type === "destroy") bucket.destroy += row.n;
+      coinBuckets.set(row.quarter_sort_key, bucket);
+      perCoinBucketMap.set(symbol, coinBuckets);
+    }
+    for (const [symbol, buckets] of perCoinBucketMap.entries()) {
+      const sortKeys = [...buckets.keys()].sort((a, b) => a - b);
+      if (sortKeys.length === 0) continue;
+      const minKey = sortKeys[0]!;
+      const maxKey = sortKeys[sortKeys.length - 1]!;
+      const points: BlacklistQuarterlyEventTypePoint[] = [];
+      for (let k = minKey; k <= maxKey; k++) {
+        const b = buckets.get(k) ?? { blacklist: 0, unblacklist: 0, destroy: 0 };
+        points.push({ quarter: sortKeyToLabel(k), ...b });
+      }
+      perCoinQuarterlyEventTypes[symbol] = points;
+    }
+
     const chart = buildBlacklistQuarterlyChartFromSnapshots(currentBalances, latestByAddr);
 
     const chainOptions = [
@@ -149,6 +234,10 @@ export const handleBlacklistSummary = withErrorHandler(
           trackedAmountGapCount: trackedStats.trackedAmountGapCount,
           perCoinBlacklistCounts,
           perCoinTotalEvents,
+          perCoinFrozenAddressCount,
+          perCoinFrozenTotal,
+          perCoinDestroyedTotal,
+          perCoinQuarterlyEventTypes,
         },
         chart,
         chains: chainOptions,
