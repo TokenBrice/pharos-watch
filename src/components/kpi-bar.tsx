@@ -394,15 +394,16 @@ export function KpiBar() {
     ? dewsBandCounts.danger + dewsBandCounts.warning + dewsBandCounts.alert
     : 0;
   const allDewsCalm = !!dewsBandCounts && dewsElevatedCount === 0;
-  // Severity tokens mirror the DEWS radar so the snapshot pill stays in lockstep with band language.
+  // Uses the project's mandated text-*-700 dark:text-*-400 pairing per
+  // docs/design-tokens.md so the pill passes AA contrast in both themes.
   const dewsSeverityClass = !dewsBandCounts
     ? "text-muted-foreground"
     : dewsBandCounts.danger > 0
-      ? "text-[color:var(--dews-danger)]"
+      ? "text-red-700 dark:text-red-400"
       : dewsBandCounts.warning > 0
-        ? "text-[color:var(--dews-warning)]"
+        ? "text-orange-700 dark:text-orange-400"
         : dewsBandCounts.alert > 0
-          ? "text-[color:var(--dews-alert)]"
+          ? "text-yellow-700 dark:text-yellow-400"
           : "text-muted-foreground";
   const mobileDewsMeta = dewsBandCounts ? (
     allDewsCalm ? (

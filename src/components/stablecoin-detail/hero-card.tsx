@@ -74,8 +74,6 @@ interface HeroCardProps {
   onOpenFeedback: () => void;
 }
 
-// Em-dash values get an aria-label so screen readers say "data unavailable"
-// instead of reading the glyph.
 function MetricChip({
   label,
   value,
@@ -90,15 +88,15 @@ function MetricChip({
   accentClass?: string;
 }) {
   const isEmpty = value === "—";
+  // When empty, hide the em-dash from AT so the chip announces its label +
+  // "data unavailable" rather than literally reading the glyph.
   return (
     <div className={`flex items-center gap-2 rounded-lg border border-border/40 bg-background/40 px-2.5 py-1.5 ${accentClass ?? ""}`}>
       <span className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">{label}</span>
-      <span
-        className={`text-base font-bold font-mono ${colorClass}`}
-        aria-label={isEmpty ? "Data unavailable" : undefined}
-      >
+      <span className={`text-base font-bold font-mono ${colorClass}`} aria-hidden={isEmpty ? "true" : undefined}>
         {value}
       </span>
+      {isEmpty && <span className="sr-only">data unavailable</span>}
       {subValue && <span className="text-xs text-muted-foreground">{subValue}</span>}
     </div>
   );
@@ -235,14 +233,14 @@ function HeroClassificationLine({ coin }: { coin: StablecoinMeta }) {
 
   return (
     <p className="flex flex-wrap items-center gap-1.5">
-      <Link href={governanceHref} className={pillClass}>
+      <Link href={governanceHref} className={pillClass} aria-label={`Browse ${governanceLabel} stablecoins`}>
         {governanceLabel}
       </Link>
-      <Link href={backingHref} className={pillClass}>
+      <Link href={backingHref} className={pillClass} aria-label={`Browse ${backingLabel} stablecoins`}>
         {backingLabel}
       </Link>
       {pegHref ? (
-        <Link href={pegHref} className={pillClass}>
+        <Link href={pegHref} className={pillClass} aria-label={`Browse ${pegLabel} stablecoins`}>
           {pegLabel}
         </Link>
       ) : (
@@ -310,7 +308,10 @@ function HeroSignalsRail({
       primary: dewsBand ?? "—",
       secondary: dewsScore != null ? `${Math.round(dewsScore)}/100` : null,
       href: "#report-card",
-      colorClass: "text-foreground",
+      colorClass:
+        stressSignal && isThreatBand(stressSignal.band)
+          ? THREAT_BAND_TEXT_COLORS[stressSignal.band]
+          : "text-muted-foreground",
     },
   ];
 
@@ -330,9 +331,11 @@ function HeroSignalsRail({
           <span className="flex items-baseline gap-1.5">
             <span
               className={`font-mono tabular-nums ${idx === 0 ? "text-base font-extrabold" : "text-sm font-semibold"} ${item.colorClass}`}
+              aria-hidden={item.primary === "—" ? "true" : undefined}
             >
               {item.primary}
             </span>
+            {item.primary === "—" && <span className="sr-only">data unavailable</span>}
             {item.secondary ? (
               <span className="font-mono text-[10px] text-muted-foreground">{item.secondary}</span>
             ) : null}
@@ -845,9 +848,10 @@ export function HeroCard({
             </div>
           </div>
 
-          {/* Tertiary Metrics */}
+          {/* Tertiary Metrics — DEWS and Liquidity live in the HeroSignalsRail
+              above on desktop, drop them here to avoid the doubled read. */}
           <HeroTertiaryMetrics
-            metrics={tertiaryMetrics}
+            metrics={tertiaryMetrics.filter((m) => m.key !== "dews" && m.key !== "liquidity")}
             chainCount={chainCount}
             infrastructures={infrastructures}
             earlyPegScore={earlyPegScore}

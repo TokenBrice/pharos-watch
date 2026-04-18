@@ -191,8 +191,10 @@ export default function StablecoinDetailClient({ id, summary, coin, logoSrc }: S
   const detailSections = [
     s.safety,
     s.overview,
-    ...(hasPriceTransparency ? [s.price] : []),
+    // Reserves renders in the left column of OverviewSection and on mobile
+    // stacks above Price, so the pill order tracks that scroll order.
     ...(viewModel.reserves ? [s.reserves] : []),
+    ...(hasPriceTransparency ? [s.price] : []),
     s.market,
     ...(viewModel.hasYieldSection ? [s.yield] : []),
     s.liquidity,
