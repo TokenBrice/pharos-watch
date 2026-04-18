@@ -419,7 +419,7 @@ export function KpiBar() {
   const metricDefinitions: KpiMetricDefinition[] = [
     {
       key: "mcap",
-      mobileLabel: "Mcap",
+      mobileLabel: "Market Cap",
       desktopLabel: "Total Stablecoin Mcap",
       value: mcapDisplay,
       mobileMetaPrimary: <span className={mcapColorClass}>24h {mcapChange24Display}</span>,
@@ -449,12 +449,12 @@ export function KpiBar() {
     },
     {
       key: "dex-vol",
-      mobileLabel: "DEX Vol",
+      mobileLabel: "DEX Volume",
       desktopLabel: "Tracked 24H DEX Vol",
       value: dexVolDisplay,
       mobileMetaPrimary: (
         <span className={hasDexData ? trendTextClass(volVs7dAvgPct) : "text-muted-foreground"}>
-          vs 7d avg {dexDeltaDisplay}
+          vs 7d average {dexDeltaDisplay}
         </span>
       ),
       mobileMetaSecondary: <span className="text-muted-foreground">Turnover {turnoverDisplay}</span>,

@@ -159,6 +159,16 @@ describe("KpiBar copy (Task 1.1)", () => {
     expect(html).toContain('data-testid="methodology-hint-pegStatus"');
   });
 
+  it("expands mobile abbreviations on the homepage top fold (Task 1.7)", () => {
+    primeHooks();
+    const html = renderToStaticMarkup(<KpiBar />);
+    // Mobile mini-tile kickers should use full words.
+    expect(html).toContain("Market Cap");
+    expect(html).toContain("DEX Volume");
+    expect(html).not.toMatch(/tracking-\[0\.08em\]">Mcap</);
+    expect(html).not.toMatch(/tracking-\[0\.08em\]">DEX Vol</);
+  });
+
   it("renders clarified KPI labels and unit microcopy", () => {
     primeHooks();
     const html = renderToStaticMarkup(<KpiBar />);
