@@ -338,7 +338,7 @@ describe("buildReportCardsSnapshot", () => {
     expect(card?.dimensions.liquidity.score).toBe(29);
   });
 
-  it("keeps redemption backstop rows through normal hourly cron lag", async () => {
+  it("keeps redemption backstop rows through normal 4-hourly cron lag", async () => {
     const cacheValue = JSON.stringify({
       peggedAssets: [makeAsset({ id: "cusd-cap", symbol: "CUSD" })],
     });
