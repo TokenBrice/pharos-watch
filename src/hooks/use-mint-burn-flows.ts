@@ -4,7 +4,7 @@ import { useMemo } from "react";
 import { API_PATHS } from "@shared/lib/api-endpoints";
 import { API_FRESHNESS_MAX_AGE_SEC } from "@shared/lib/api-freshness";
 import { useApiQueryWithMeta } from "./use-api-query";
-import { CRON_20MIN } from "@/lib/cron-intervals";
+import { CRON_MINT_BURN } from "@/lib/cron-intervals";
 import {
   MintBurnFlowsResponseSchema,
   MintBurnPerCoinResponseSchema,
@@ -86,7 +86,7 @@ export function useMintBurnFlows(hours = 24) {
   const query = useApiQueryWithMeta<MintBurnFlowsResponse>(
     ["mint-burn-flows", "all", hours],
     API_PATHS.mintBurnFlows(hours !== 24 ? { hours } : undefined),
-    CRON_20MIN,
+    CRON_MINT_BURN,
     { schema: MintBurnFlowsResponseSchema, metaMaxAgeSec: MINT_BURN_META_MAX_AGE_SEC },
   );
   const normalizedData = useMemo(
@@ -108,7 +108,7 @@ export function useMintBurnFlowsCoin(
   return useApiQueryWithMeta<MintBurnPerCoinResponse>(
     ["mint-burn-flows", stablecoinId, hours],
     API_PATHS.mintBurnFlows({ stablecoin: stablecoinId, hours: hours !== 24 ? hours : undefined }),
-    CRON_20MIN,
+    CRON_MINT_BURN,
     {
       enabled: !!stablecoinId && (opts?.enabled ?? true),
       schema: MintBurnPerCoinResponseSchema,
@@ -146,7 +146,7 @@ export function useMintBurnEvents(
       opts?.offset ?? 0,
     ],
     API_PATHS.mintBurnEvents(queryParams),
-    CRON_20MIN,
+    CRON_MINT_BURN,
     {
       schema: MintBurnEventsResponseSchema,
       metaMaxAgeSec: API_FRESHNESS_MAX_AGE_SEC.mintBurnEvents,

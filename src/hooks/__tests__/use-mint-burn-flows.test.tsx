@@ -90,7 +90,7 @@ describe("useMintBurnFlows", () => {
         50,
       ],
       "/api/mint-burn-events?stablecoin=usdc-circle&direction=mint&burnType=effective_burn&scope=counted&limit=25&offset=50",
-      20 * 60 * 1000,
+      30 * 60 * 1000,
       expect.objectContaining({
         metaMaxAgeSec: expect.any(Number),
       }),

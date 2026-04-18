@@ -12,7 +12,7 @@ import {
 import { useStablecoins } from "@/hooks/use-stablecoins";
 import { useMintBurnFlows } from "@/hooks/use-mint-burn-flows";
 import { apiFetch } from "@/lib/api";
-import { CRON_1H, CRON_20MIN } from "@/lib/cron-intervals";
+import { CRON_1H, CRON_MINT_BURN } from "@/lib/cron-intervals";
 import { COMPARE_COLORS } from "@/lib/compare-config";
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins";
 import {
@@ -117,8 +117,8 @@ export function useCompareDataModel({
         API_PATHS.mintBurnFlows({ stablecoin: id, hours: flowHours }),
         MintBurnPerCoinResponseSchema,
       ),
-      staleTime: CRON_20MIN,
-      refetchInterval: 2 * CRON_20MIN,
+      staleTime: CRON_MINT_BURN,
+      refetchInterval: 2 * CRON_MINT_BURN,
       enabled: !!id,
     })),
   });

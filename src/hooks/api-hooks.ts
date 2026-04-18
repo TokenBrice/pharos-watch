@@ -42,7 +42,7 @@ import {
   useApiQuery,
   useApiQueryWithMeta,
 } from "./use-api-query";
-import { CRON_1H, CRON_1MIN, CRON_15MIN, CRON_24H, CRON_30MIN, CRON_YIELD } from "@/lib/cron-intervals";
+import { CRON_1H, CRON_1MIN, CRON_15MIN, CRON_24H, CRON_30MIN, CRON_RESERVE_SYNC, CRON_YIELD } from "@/lib/cron-intervals";
 
 const YIELD_META_MAX_AGE_SEC = CRON_YIELD / 1000;
 
@@ -141,7 +141,7 @@ export function useRedemptionBackstops() {
   return useApiQueryWithMeta<RedemptionBackstopsResponse>(
     ["redemption-backstops"],
     API_PATHS.redemptionBackstops(),
-    CRON_1H,
+    CRON_RESERVE_SYNC,
     {
       schema: RedemptionBackstopsResponseSchema,
       metaMaxAgeSec: API_FRESHNESS_MAX_AGE_SEC.redemptionBackstops,

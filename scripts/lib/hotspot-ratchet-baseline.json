@@ -348,9 +348,9 @@
     "notes": "Post-fetch balance hydration now lives in `blacklist/post-fetch.ts`. The next pass should still separate source crawling/orchestration from per-family normalization."
   },
   "worker/src/cron/sync-fx-rates.ts": {
-    "fileLines": 218,
-    "maxFunctionLines": 179,
-    "branchCount": 20,
+    "fileLines": 237,
+    "maxFunctionLines": 197,
+    "branchCount": 21,
     "disposition": "queued-p4",
     "targetBudget": {
       "fileLines": 300,

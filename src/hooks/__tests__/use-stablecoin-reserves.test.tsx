@@ -64,8 +64,9 @@ describe("useStablecoinReserves", () => {
 
     expect(options.enabled).toBe(true);
     expect(options.retry).toBe(1);
-    expect(options.staleTime({ state: { data: { mode: "live" } } })).toBe(60 * 60 * 1000);
-    expect(options.refetchInterval({ state: { data: { mode: "live" } } })).toBe(2 * 60 * 60 * 1000);
+    // Reserve-sync cron cadence is 4h; staleTime = cadence, refetchInterval = 2× cadence.
+    expect(options.staleTime({ state: { data: { mode: "live" } } })).toBe(4 * 60 * 60 * 1000);
+    expect(options.refetchInterval({ state: { data: { mode: "live" } } })).toBe(2 * 4 * 60 * 60 * 1000);
     expect(options.staleTime({ state: { data: { mode: "fallback" } } })).toBe(60 * 1000);
     expect(options.refetchInterval({ state: { data: { mode: "fallback" } } })).toBe(2 * 60 * 1000);
   });
