@@ -278,13 +278,18 @@ async function handleSafetyScoresOg(db: D1Database): Promise<Response> {
 
   let pulseScore = 0;
   let ratedCount = 0;
-  let totalCoins = ACTIVE_IDS.size;
-
   const allScores: Array<{ symbol: string; grade: string; score: number }> = [];
+
+  const symbolById = new Map<string, string>();
+  if (hasUsableStablecoinsPayload(stablecoinsPayload)) {
+    for (const asset of stablecoinsPayload.payload.peggedAssets) {
+      symbolById.set(asset.id, asset.symbol);
+    }
+  }
+  const totalCoins = symbolById.size > 0 ? symbolById.size : ACTIVE_IDS.size;
 
   const reportCardCache = await loadReportCardCache(db);
   if (reportCardCache.kind === "ok") {
-    // Get current scores
     for (const [id, entry] of Object.entries(reportCardCache.payload.scores)) {
       const grade = entry.grade;
       if (grade in gradeDistribution) {
@@ -295,24 +300,12 @@ async function handleSafetyScoresOg(db: D1Database): Promise<Response> {
       if (entry.grade !== "NR") {
         pulseScore += entry.score;
         ratedCount++;
-        
-        // Build list for top/bottom performers
-        const meta = stablecoinsPayload.kind === "ok" 
-          ? stablecoinsPayload.payload.peggedAssets.find(a => a.id === id)
-          : undefined;
-        if (meta) {
-          allScores.push({
-            symbol: meta.symbol,
-            grade,
-            score: entry.score,
-          });
+        const symbol = symbolById.get(id);
+        if (symbol) {
+          allScores.push({ symbol, grade, score: entry.score });
         }
       }
     }
-  }
-
-  if (hasUsableStablecoinsPayload(stablecoinsPayload)) {
-    totalCoins = stablecoinsPayload.payload.peggedAssets.length;
   }
 
   const avgScore = ratedCount > 0 ? pulseScore / ratedCount : 0;
