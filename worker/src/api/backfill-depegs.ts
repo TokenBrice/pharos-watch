@@ -33,6 +33,7 @@ import {
 import {
   buildBackfillDeleteStmt,
   parseOptionalDayWindow,
+  type BackfillReplayWindow,
 } from "./backfill-depegs-window";
 import {
   parseSupplyData,
@@ -59,6 +60,58 @@ interface PreparedBackfillCoin {
   meta: StablecoinMeta;
   geckoId?: string;
   supplyByDate: SupplySnapshot[];
+}
+
+export async function applyBackfillEvents(
+  db: D1Database,
+  meta: { id: string; symbol: string },
+  events: Array<{
+    pegType: string;
+    direction: string;
+    peakDeviationBps: number;
+    startedAt: number;
+    endedAt: number | null;
+    startPrice: number;
+    peakPrice: number;
+    recoveryPrice: number | null;
+    pegRef: number;
+  }>,
+  replayWindow: BackfillReplayWindow | null,
+): Promise<void> {
+  const deleteStmt = buildBackfillDeleteStmt(db, meta.id, replayWindow);
+  if (events.length === 0) {
+    await db.batch([deleteStmt]);
+    return;
+  }
+  const insertStmts = events.map((e) =>
+    db
+      .prepare(
+        `INSERT INTO depeg_events (stablecoin_id, symbol, peg_type, direction, peak_deviation_bps, started_at, ended_at, start_price, peak_price, recovery_price, peg_reference, source)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'backfill')`,
+      )
+      .bind(
+        meta.id,
+        meta.symbol,
+        e.pegType,
+        e.direction,
+        e.peakDeviationBps,
+        e.startedAt,
+        e.endedAt,
+        e.startPrice,
+        e.peakPrice,
+        e.recoveryPrice,
+        e.pegRef,
+      ),
+  );
+  // First batch: delete + first chunk of inserts so partial crashes cannot leave the coin event-less.
+  // D1 limits each batch to 100 statements. Reserve one slot for the delete so the first batch
+  // never exceeds the limit; remaining inserts ship in full BATCH_CHUNK_SIZE (100) batches.
+  const firstChunkSize = Math.min(insertStmts.length, BATCH_CHUNK_SIZE - 1);
+  await db.batch([deleteStmt, ...insertStmts.slice(0, firstChunkSize)]);
+  for (let i = firstChunkSize; i < insertStmts.length; i += BATCH_CHUNK_SIZE) {
+    const chunk = insertStmts.slice(i, i + BATCH_CHUNK_SIZE);
+    await db.batch(chunk);
+  }
 }
 
 export async function handleBackfillDepegs(
@@ -333,37 +386,25 @@ export async function handleBackfillDepegs(
 
           // Only replace backfill-sourced events; preserve live-cron-detected events
           // (live cron catches brief intraday depegs that daily backfill data misses).
-          const deleteStmt = buildBackfillDeleteStmt(db, meta.id, replayWindow);
-          if (events.length > 0) {
-            const insertStmts = events.map((e) =>
-              db
-                .prepare(
-                  `INSERT INTO depeg_events (stablecoin_id, symbol, peg_type, direction, peak_deviation_bps, started_at, ended_at, start_price, peak_price, recovery_price, peg_reference, source)
-             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'backfill')`,
-                )
-                .bind(
-                  meta.id,
-                  meta.symbol,
-                  e.pegType,
-                  e.direction,
-                  e.peakDeviationBps,
-                  e.startedAt,
-                  e.endedAt,
-                  e.startPrice,
-                  e.peakPrice,
-                  e.recoveryPrice,
-                  e.pegRef,
-                ),
-            );
-            await db.batch([deleteStmt]);
-            for (let i = 0; i < insertStmts.length; i += BATCH_CHUNK_SIZE) {
-              const chunk = insertStmts.slice(i, i + BATCH_CHUNK_SIZE);
-              await db.batch(chunk);
-            }
-            totalEvents += events.length;
-          } else {
-            await deleteStmt.run();
+          if (events.length === 0) {
+            // Explicitly preserve existing rows when replay window yields nothing.
+            // Upstream caller already handled the `events === null` (no-trusted-source) branch.
+            totalEvents += 0;
+            continue;
           }
+          const replayEvents = events.map((e) => ({
+            pegType: e.pegType,
+            direction: e.direction,
+            peakDeviationBps: e.peakDeviationBps,
+            startedAt: e.startedAt,
+            endedAt: e.endedAt,
+            startPrice: e.startPrice,
+            peakPrice: e.peakPrice,
+            recoveryPrice: e.recoveryPrice,
+            pegRef: e.pegRef,
+          }));
+          await applyBackfillEvents(db, { id: meta.id, symbol: meta.symbol }, replayEvents, replayWindow);
+          totalEvents += events.length;
         } catch (err) {
           errors.push(`${meta.symbol}: ${err}`);
         }
