@@ -1,6 +1,7 @@
 import type { CronResult } from "../lib/cron-logger";
 import { RUB_FALLBACK, CIRCUIT_SOURCE } from "../lib/constants";
 import { shouldAttemptFetch, recordOutcome } from "../lib/circuit-breaker";
+import { getCache, setCache } from "../lib/db-cache";
 import type { ChainRpcConfig } from "../lib/chain-registry";
 import { loadFxRateState, persistFxRateState } from "../lib/fx-rate-state";
 import {
@@ -44,6 +45,23 @@ export async function syncFxRates(
   drpcApiKey?: string | null, etherscanApiKey?: string | null,
 ): Promise<CronResult> {
   const syncStartSec = Math.floor(Date.now() / 1000);
+
+  // FX rates rarely move meaningfully in 15 min. The quarter-hourly slot keeps
+  // firing every 15 min because sync-stablecoins needs it; FX is gated here so
+  // it only does work every 30 min, halving Frankfurter/fawazahmed0/OXR calls
+  // and the Chainlink RPC overlay.
+  const COOLDOWN_SEC = 30 * 60;
+  const lastWrite = await getCache(db, "sync-fx-rates:last-write");
+  if (lastWrite && syncStartSec - lastWrite.updatedAt < COOLDOWN_SEC) {
+    return {
+      itemCount: 0,
+      metadata: JSON.stringify({
+        reason: "cooldown_active",
+        lastWriteAgeSec: syncStartSec - lastWrite.updatedAt,
+      }),
+    };
+  }
+
   const runBestEffort = async (label: string, fn: () => Promise<void>) => {
     try {
       await fn();
@@ -203,6 +221,7 @@ export async function syncFxRates(
 
     const meta = syncState.buildPersistedMeta();
     await persistFxRateState(db, syncState.usableRates, meta, syncStartSec);
+    await setCache(db, "sync-fx-rates:last-write", "1");
     console.log(`[sync-fx-rates] Cached FX rates: ${JSON.stringify(syncState.usableRates)}`);
     const metadata = syncState.buildResultMetadata(Object.values(SECONDARY_FX_CURRENCY_TO_PEG));
     return {

@@ -166,7 +166,7 @@ const CRON_JOB_DEFINITIONS_BASE: readonly CronJobDefinition[] = [
     job: "sync-fx-rates",
     label: "FX rates",
     group: "quarter-hourly",
-    intervalSec: 900,
+    intervalSec: 1800, // Trigger fires every 15 min alongside sync-stablecoins, but internal cooldown gates actual writes to every 30 min.
     scheduleKey: "quarterHourly",
     triggerMode: "shared",
     maxConnections: 2, // Frankfurter/secondary sequential, gold + silver in parallel, Chainlink overlay sequential
