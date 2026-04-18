@@ -61,9 +61,9 @@ Endpoints backed by the cron cache include these additional headers:
 | Header       | Description                                                                           |
 | ------------ | ------------------------------------------------------------------------------------- |
 | `X-Data-Age` | Seconds elapsed since the cron last wrote this data to D1                             |
-| `Warning`    | Freshness warning (`110`) when cached data is older than the endpoint max age, plus endpoint-specific advisory warnings (`199`) on a few compute-on-read routes |
+| `Warning`    | Freshness warning (`110`) when cached data is older than the generic freshness runway, plus endpoint-specific advisory warnings (`199`) on a few compute-on-read routes |
 
-When a cache-backed response is stale (`X-Data-Age > max age`), the worker also downgrades `Cache-Control` to `no-store` for that response so edge/browser caches do not keep serving a stale payload after the underlying cron data recovers. Some routes also use `Warning` for dependency or quality advisories even when the age is still fresh; clients should treat body `_meta.status` as authoritative when it exists.
+Generic freshness status is `fresh` through `8x maxAge`, `degraded` through `12x maxAge`, then `stale`. Generic freshness headers emit `Warning` and downgrade `Cache-Control` to `no-store` after `age > 8x maxAge` so edge/browser caches do not keep serving an old payload after the underlying cron data recovers. Some routes also use `Warning` for dependency or quality advisories even when the age is still inside that runway; clients should treat body `_meta.status` as authoritative when it exists.
 
 ---
 
@@ -87,14 +87,16 @@ Endpoints that emit `_meta` into plain-object (non-array) response bodies do so 
 | ------------ | -------- | ----------------------------------------------------------------------------------------- |
 | `updatedAt`  | `number` | Unix epoch seconds when the cron last wrote this data to D1                               |
 | `ageSeconds` | `number` | `floor(now / 1000) - updatedAt`                                                           |
-| `status`     | `string` | `"fresh"` (age/max <= 1.0), `"degraded"` (1.0 < ratio <= 1.5), or `"stale"` (ratio > 1.5) |
+| `status`     | `string` | `"fresh"` (age/max <= 8.0), `"degraded"` (8.0 < ratio <= 12.0), or `"stale"` (ratio > 12.0) |
+
+Route-specific manual `_meta` injectors can be stricter. `GET /api/chains` uses its 1800-second budget directly (`fresh <= 1x`, `degraded <= 2x`, then `stale`) and switches its response to `no-store` whenever the chain snapshot is not fresh.
 
 **Endpoints with `_meta`:**
 
 | Endpoint                     | Max Age (sec) | Source                                       |
 | ---------------------------- | ------------- | -------------------------------------------- |
 | `GET /api/stablecoins`       | 600           | `createCacheHandler`                         |
-| `GET /api/chains`            | 600           | `worker/src/api/chains.ts`                  |
+| `GET /api/chains`            | 1800          | `worker/src/api/chains.ts`                  |
 | `GET /api/bluechip-ratings`  | 43200         | `createCacheHandler`                         |
 | `GET /api/usds-status`       | 86400         | `createCacheHandler`                         |
 | `GET /api/yield-rankings`    | 3600          | Manual injection after live safety hydration |
@@ -107,7 +109,7 @@ The frontend `apiFetchWithMeta()` helper (in `src/lib/api.ts`) reads `_meta` fro
 
 ## Cache-Control Profiles
 
-These profiles apply while the dataset is within its endpoint freshness budget. Once a cache-backed response becomes stale, the worker overrides that response to `Cache-Control: no-store` until a fresh response is generated.
+These profiles apply while the dataset is within its generic freshness runway. Once a cache-backed response exceeds `8x` its endpoint max age, the worker overrides that response to `Cache-Control: no-store` until a fresh response is generated.
 
 | Profile  | `Cache-Control`                      | Used by                                                                                                                                                                                                                                                                              |
 | -------- | ------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
@@ -117,7 +119,7 @@ These profiles apply while the dataset is within its endpoint freshness budget. 
 | per-coin | `public, s-maxage=300, max-age=10`   | stablecoin/:id (cache-aside with 5-min per-coin TTL in D1)                                                                                                                                                                                                                           |
 | slow     | `public, s-maxage=3600, max-age=300` | supply-history, dex-liquidity-history, bluechip-ratings, yield-history, safety-score-history, non-usd-share                                                                                                                                                                         |
 | archive  | `public, s-maxage=86400, max-age=3600` | digest-snapshot                                                                                                                                                                                                                                                                     |
-| no-store | `no-store`                           | health plus admin GET routes after router override (`status`, `status-history`, `request-source-stats`, `debug-sync-state`, `backfill-dews`, `backfill-dews?repair=...&dry-run=true`, `audit-depeg-history?dry-run=true`, `discovery-candidates`) |
+| no-store | `no-store`                           | health plus all admin GET routes after router override (`status`, `status-history`, `request-source-stats`, API key inventory/audit routes, `admin-action-log`, `debug-sync-state`, `backfill-dews`, `backfill-dews?repair=...&dry-run=true`, `audit-depeg-history?dry-run=true`, `discovery-candidates`, `status-probe-history`) |
 
 `POST /api/feedback`, `POST /api/telegram-webhook`, and admin POST endpoints bypass edge caching because they are non-GET request paths. They are not part of a cacheable `Cache-Control` profile and do not currently rely on an emitted `Cache-Control: no-store` header.
 
@@ -146,7 +148,7 @@ Client best practices:
 
 ## Rate Limits
 
-All public API endpoints enforce rate limiting to ensure fair usage.
+Public API traffic enforces rate limiting to ensure fair usage. The Telegram webhook is exempt from the public IP limiter because Telegram sends from fixed infrastructure and is authenticated separately with `X-Telegram-Bot-Api-Secret-Token`; valid API-key traffic uses the per-key limiter instead of the IP limiter.
 
 ### Global Limit
 
@@ -159,21 +161,22 @@ When a limit is exceeded, the API returns `429 Too Many Requests`:
 
 ```json
 {
-  "error": "rate_limit_exceeded",
-  "retryAfter": 12
+  "error": "Rate limit exceeded"
 }
 ```
 
+Rate-limited responses include the retry delay in the HTTP `Retry-After` header when the worker can compute one.
+
 ### Retry Guidance
 
-- Respect the `retryAfter` field (seconds until the window resets)
+- Respect the `Retry-After` header when present
 - Add random jitter (0–2 seconds) to avoid thundering-herd retries
 - Use exponential backoff for sustained 429 responses
 - Combine with the polling cadences in the section above to stay well under limits
 
 ## Error Response Conventions
 
-All error responses use `{ "error": "message" }` JSON format.
+JSON API handlers use `{ "error": "message" }` JSON format. `GET /api/og/*` can return `text/plain` errors for unknown image routes, missing data, or render failures.
 
 | Status | Meaning               | When                                                                                                                                                                                                     |
 | ------ | --------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -199,13 +202,15 @@ HTTP method allowance is defined centrally in `shared/lib/api-endpoints/` and en
 - `POST` is accepted on `/api/api-keys/:id/update`, `/api/api-keys/:id/deactivate`, and `/api/api-keys/:id/rotate`.
 - `/api/audit-depeg-history` allows `GET` only with `?dry-run=true`; otherwise it is `POST`-only.
 - `/api/backfill-dews` allows `GET` for the historical backtest and for `repair=...&dry-run=true` previews; mutating repair runs are `POST`-only.
-- Unknown `POST` paths return `405` with `Allow: GET`; unsupported verbs return `405` with `Allow: GET, POST`.
+- Unknown paths return `404`; known paths with disallowed methods return `405` with `Allow`. Unsupported verbs on known endpoint families return `405` with `Allow: GET, POST`.
 
 The same shared endpoint descriptors now also carry static worker dependency-hydration hints consumed by `worker/src/routes/registry.ts`, where the worker binds shared endpoint keys directly to handlers through a single static route-definition list. That keeps endpoint metadata, router behavior, method guards, admin status-page actions, and worker-side static route wiring aligned from one source of truth plus one worker binding table.
 
 ## Admin Auth And Idempotency
 
 Admin endpoints are authenticated only on the `ops-api.pharos.watch` host. Cloudflare Access must authenticate the caller first, then inject `Cf-Access-Jwt-Assertion` for the worker. `worker/src/lib/auth.ts` verifies that JWT against the configured Access audience (`CF_ACCESS_OPS_API_AUD`) and team domain (`CF_ACCESS_TEAM_DOMAIN`) via `shared/lib/cloudflare-access-jwt.ts`, including signature, `aud`, `exp`, and `iss` checks. Browser operators should use `https://ops.pharos.watch/admin/`, which talks to same-origin `/api/admin/*` Pages Functions routes behind Cloudflare Access; the Pages proxy verifies the inbound UI Access token against `CF_ACCESS_TEAM_DOMAIN` + `CF_ACCESS_OPS_UI_AUD`, accepting the token from `Cf-Access-Jwt-Assertion` when Cloudflare forwards it or from the same-origin `cf-access-token` / `CF_Authorization` carrier when the browser is operating off an existing Access session. Mutating requests still require same-origin `Origin`.
+
+Mutating admin calls also require `X-Pharos-Admin: 1` after Cloudflare Access authentication. Browser proxy calls forward that header from the operator UI and additionally require same-origin `Origin`; direct `ops-api` automation must send the header along with the Access service-token credentials.
 
 The website-internal read lane is separate from Cloudflare Access. `site-api.pharos.watch` accepts only allowlisted `GET` public-read paths and requires `X-Pharos-Site-Proxy-Secret`, which the Pages `/_site-data/*` proxy injects server-to-server from `SITE_API_SHARED_SECRET`. Production Pages hosts must configure `SITE_API_ORIGIN=https://site-api.pharos.watch` and fail closed when that binding is missing; preview and local rehearsal may intentionally point the same lane at `api.pharos.watch` while testing. Public browser traffic must not call `site-api.pharos.watch` directly.
 
@@ -270,6 +275,7 @@ Full stablecoin list with current supply, price, chain breakdown, and FX rates. 
 | `pegMechanism`         | `string`                           | `"fiat-backed"`, `"crypto-backed-algorithmic"`, etc.                                                                                              |
 | `priceSource`          | `string`                           | Source label for the current price (`"defillama-list"`, `"coingecko"`, composite agreement labels such as `"binance+coingecko+kraken"`, `"geckoterminal"`, `"protocol-redeem"`, `"dexscreener"`, etc.). For high-confidence consensus this label can describe the full agreeing cluster even when the published price is the cluster median rather than one member's raw mark. When no usable current price survives validation, the cache keeps `price = null` and serializes `priceSource = "missing"` for contract stability. |
 | `priceConfidence`      | `string \| null`                   | Price confidence level: `"high"` (cross-validated agreement), `"single-source"`, `"low"` (sources diverge), `"fallback"` (enrichment pipeline)    |
+| `priceUpdatedAt`       | `number \| null`                   | Compatibility timestamp for the current price; mirrors the effective observation time when available                                                 |
 | `priceObservedAt`      | `number \| null`                   | Unix seconds for the effective observation time attached to the selected source price; interpret alongside `priceObservedAtMode`                   |
 | `priceObservedAtMode`  | `"upstream" \| "local_fetch" \| "unknown" \| null` | Whether `priceObservedAt` came from source-native freshness metadata, local fetch time, or legacy/unknown provenance                              |
 | `priceSyncedAt`        | `number \| null`                   | Unix seconds when Pharos selected and wrote the current price during the sync                                                                   |
@@ -282,6 +288,7 @@ Full stablecoin list with current supply, price, chain breakdown, and FX rates. 
 | `chainCirculating`     | `Record<string, ChainCirculating>` | Per-chain breakdown. For `"coingecko-gap-fill"` and `"defillama-history-gap-fill"` assets this remains DefiLlama-led unless the missing total can be allocated safely to one tracked chain, so the per-chain sum may be a lower bound on total supply. |
 | `chains`               | `string[]`                         | List of chain names where the token is deployed                                                                                                   |
 | `consensusSources`     | `string[]`                         | Source names that returned a valid price for this coin during the sync cycle. Defaults to `[]` when absent.                                        |
+| `agreeSources`         | `string[] \| undefined`            | Compatibility alias for agreeing/current price sources when present                                                                                |
 
 **`ChainCirculating`**
 
@@ -396,6 +403,8 @@ Returns historical non-USD stablecoin market share data from `supply_history`, s
 | ------ | -------- | ------- | -------------- | ------------------------------------- |
 | `days` | `number` | `1825`  | min 30, max 1825 | Lookback window in days             |
 
+Unlike most numeric-query handlers, this endpoint defaults malformed `days` values to `1825` and clamps out-of-range values into `30..1825` instead of returning `400`.
+
 **Response:** `Array<{ date, commodityShare, fiatNonUsdShare, commodity, fiatNonUsd, total }>`
 
 | Field              | Type     | Description                                      |
@@ -502,7 +511,8 @@ Returns the resolved reserve presentation for a stablecoin with `liveReservesCon
 **Cache:** dynamic
 
 - Live snapshots: slow (`public, s-maxage=3600, max-age=300`)
-- Bootstrap / fallback / stale presentations: shorter (`public, s-maxage=300, max-age=60`) so pre-sync fallback responses do not stay pinned at the edge after the first successful live sync
+- `live-stale` snapshots: `public, s-maxage=1800, max-age=120`
+- Bootstrap / fallback / unavailable presentations: shorter (`public, s-maxage=300, max-age=60`) so pre-sync fallback responses do not stay pinned at the edge after the first successful live sync
 
 **Response (200):**
 
@@ -581,7 +591,7 @@ Freeze, blacklist, block/unblock, account-pause, and token-destruction events cu
 
 | Param        | Type      | Default | Description                                                    |
 | ------------ | --------- | ------- | -------------------------------------------------------------- |
-| `stablecoin` | `string`  | —       | Filter by token symbol: `USDC`, `USDT`, `PAXG`, `XAUT`, `PYUSD`, `USD1` |
+| `stablecoin` | `string`  | —       | Filter by token symbol from the full `BLACKLIST_STABLECOINS` set (`USDC`, `USDT`, `PAXG`, `XAUT`, `PYUSD`, `USD1`, `USDG`, `RLUSD`, `U`, `USDTB`, `A7A5`, `FDUSD`, `BRZ`, `AUSD`, `MNEE`, `EURI`, `USDQ`, `USDO`, `USDX`, `AID`, `TGBP`, `EURC`, `BUIDL`, `USDP`, `TUSD`, `NUSD`, `EURCV`, `USDA`, `USAT`, `AEUR`, `XUSD`, `XAUM`, `JPYC`, `FRXUSD`, `FIDD`) |
 | `chain`      | `string`  | —       | Filter by chain name (e.g. `Ethereum`, `Tron`)                 |
 | `eventType`  | `string`  | —       | Filter by type: `blacklist`, `unblacklist`, `destroy`          |
 | `q`          | `string`  | —       | Case-insensitive address substring search                      |
@@ -599,8 +609,8 @@ Freeze, blacklist, block/unblock, account-pause, and token-destruction events cu
   "methodology": {
     "version": "3.9",
     "versionLabel": "v3.9",
-    "currentVersion": "3.9",
-    "currentVersionLabel": "v3.9",
+    "currentVersion": "3.96",
+    "currentVersionLabel": "v3.96",
     "changelogPath": "/methodology/blacklist-tracker-changelog/",
     "asOf": 1772606400,
     "isCurrent": true
@@ -698,8 +708,8 @@ The four `perCoin*` maps power the per-coin "Blacklist Activity" block on stable
   "methodology": {
     "version": "3.9",
     "versionLabel": "v3.9",
-    "currentVersion": "3.9",
-    "currentVersionLabel": "v3.9",
+    "currentVersion": "3.96",
+    "currentVersionLabel": "v3.96",
     "changelogPath": "/methodology/blacklist-tracker-changelog/",
     "asOf": 1772606400,
     "isCurrent": true
@@ -833,6 +843,7 @@ Composite peg scores and aggregate statistics for tracked stablecoins. Scores ar
 | `methodologyVersion`  | `string`                                                   | Methodology version attributed to this coin snapshot                                                                                                                |
 | `dexPriceCheck`       | `DexPriceCheck \| null`                                    | Optional cross-validation against DEX price (shown when coin supply is at or above the live depeg-event floor, DEX data is ≤ 60 minutes old, and aggregate source TVL is ≥ $250K) |
 | `consensusSources`    | `string[]`                                                 | Source names that returned a valid price for this coin. Defaults to `[]` when absent.                                                                               |
+| `agreeSources`        | `string[] \| undefined`                                    | Compatibility alias for agreeing/current price sources when present                                                                                                |
 
 **`DexPriceCheck`**
 
@@ -933,12 +944,13 @@ DEX liquidity scores, pool breakdowns, source-confidence metadata, and on-chain 
 
 **Freshness note:** In addition to stale-data warnings, this endpoint can also emit a `Warning` header when the latest `sync-dex-liquidity` run finished in `degraded` or `error` state and the API is serving the last successful dataset.
 
-**Response:** Object keyed by Pharos stablecoin ID.
+**Response:** Object keyed by Pharos stablecoin ID plus a `__global__` aggregate sentinel row.
 
 ```json
 {
   "usdt-tether": DexLiquidityData,
-  "usdc-circle": DexLiquidityData
+  "usdc-circle": DexLiquidityData,
+  "__global__": DexLiquidityData
 }
 ```
 
@@ -1522,7 +1534,7 @@ Stablecoin risk grade cards with dimension-level scores. Output includes 5 dimen
     "edges": [{ "from": "usde-ethena", "to": "usdc-circle", "weight": 0.9, "type": "collateral" }, ...]
   },
   "methodology": {
-    "version": "7.06",
+    "version": "7.07",
     "weights": { "pegStability": 0, "liquidity": 0.30, "resilience": 0.20, "decentralization": 0.15, "dependencyRisk": 0.25 },
     "pegMultiplierExponent": 0.4,
     "activeDepegSeveritySource": "open-event-peak",
@@ -1639,11 +1651,17 @@ Rows written by the current worker are grouped by a completed snapshot run manif
       "feeModelKind": "undisclosed-reviewed",
       "modelConfidence": "low",
       "updatedAt": 1773350400,
-      "methodologyVersion": "3.97"
+      "methodologyVersion": "3.98"
     }
   },
   "methodology": {
-    "version": "3.97",
+    "version": "3.98",
+    "versionLabel": "v3.98",
+    "currentVersion": "3.98",
+    "currentVersionLabel": "v3.98",
+    "changelogPath": "/methodology/#safety-scores-methodology",
+    "asOf": 1773350400,
+    "isCurrent": true,
     "componentWeights": {
       "access": 0.2,
       "settlement": 0.15,
@@ -2312,6 +2330,7 @@ Telegram Bot API webhook endpoint. Receives user messages, processes bot command
 - `/set all <setting> <value>` — Toggle global all-stablecoin alert types
 - `/mute <start>-<end>` — Enable UTC quiet hours
 - `/unmutehours` — Disable quiet hours
+- `/status <ticker>` — Read-only per-coin status summary
 - `/cancel` — Cancel a pending disambiguation flow
 - `/list` — Show current subscriptions, per-coin settings, and quiet hours
 - `/help` — Command reference
@@ -3039,7 +3058,7 @@ When a repair group ends in a live row, the live tail is kept as the canonical r
 
 ### `POST /api/trigger-digest`
 
-Queues a background daily-digest regeneration, bypassing the normal 1-hour dedup check. Routed through `worker/src/router.ts`.
+Queues a deferred daily-digest regeneration, bypassing the normal 1-hour dedup check. The HTTP handler writes a `digest:force-run-request` flag into the D1 `cache` table and returns `202`; the dedicated `*/5 * * * *` digest-trigger poll slot runs the digest on the next tick under the scheduled-event wall-clock and the existing `daily-digest` lease.
 
 
 **Response**

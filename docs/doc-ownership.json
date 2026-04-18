@@ -28,6 +28,12 @@
       "notes": ["Trigger slots, connection budgets, and status tracking are coupled."]
     },
     {
+      "name": "status-and-runbooks",
+      "sources": ["worker/src/lib/status/**", "worker/src/lib/status-evaluation.ts", "worker/src/lib/public-health-assessment.ts", "src/lib/status/**", "src/lib/status-dashboard-model.ts", "docs/runbooks/**"],
+      "docs": ["docs/status-dashboard.md", "docs/runbooks/*.md", "docs/worker-infrastructure.md"],
+      "notes": ["Status causes, recommended actions, public-health floors, and runbooks should be updated together."]
+    },
+    {
       "name": "d1-migrations",
       "sources": ["worker/migrations/**", "worker/src/lib/db*.ts", "worker/src/lib/*store*.ts", "worker/src/api/backfill-*.ts"],
       "docs": ["docs/worker-infrastructure.md", "docs/deployment-process.md", "worker/migrations/MANIFEST.md"],

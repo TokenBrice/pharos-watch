@@ -24,9 +24,9 @@ The page exists to give external integrators one public URL that explains:
 1. which Pharos host they should call
 2. when an API key is required
 3. how the public, internal site, and ops/admin lanes differ
-4. the full endpoint contract already maintained in `docs/api-reference.md`
+4. the public/reference endpoint contract already maintained in `docs/api-reference.md`
 
-This page is presentation and navigation around the canonical contract, not a second hand-maintained API spec.
+This page is presentation and navigation around the canonical contract, not a second hand-maintained API spec. Admin sections remain in `docs/api-reference.md` for maintainers but are hidden from `/about/api/`.
 
 ---
 
@@ -47,7 +47,7 @@ The route renders:
    - `Ops lane`
 4. A `Need A Key?` notice that sends users to the Pharos Telegram channel and tells them to include intended usage, endpoints, cadence, and expected volume when requesting a key
 5. A `Before You Call The API` section rendered from the intro portion of `docs/api-reference.md`
-6. A top-level scrollspy rail driven by H2 sections from the markdown doc
+6. A top-level scrollspy rail driven by the rendered H2 sections from the markdown doc, excluding the hidden admin auth/idempotency and admin endpoint sections
 7. Per-section endpoint indexes when a section contains H3 endpoint subsections
 
 ---

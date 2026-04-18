@@ -139,12 +139,13 @@ Worker cron refactors should place reusable stage contracts under `worker/src/cr
   - `/methodology/` and `/methodology/*-changelog/`
   - `/about/api/`
   - `/changelog/`
-  - major feature pages with standalone static copy (`/start/`, `/upcoming/`, `/blacklist/`, `/depeg/`, `/liquidity/`, `/safety-scores/`, `/stability-index/`, `/yield/`, `/flows/`, `/dependency-map/`, `/cemetery/`, `/telegram/`, `/about/`, `/privacy/`)
+  - major feature pages with standalone static copy (`/start/`, `/upcoming/`, `/blacklist/`, `/depeg/`, `/liquidity/`, `/safety-scores/`, `/stability-index/`, `/yield/`, `/flows/`, `/dependency-map/`, `/cemetery/`, `/telegram/`, `/status/`, `/about/`, `/privacy/`)
 - Tool roots intentionally marked `noindex,follow`:
   - `/compare/`
   - `/portfolio/`
+- Stealth/noindex public routes:
+  - `/funding/` (`noindex,nofollow`; static JSON-backed funding ledger, intentionally absent from sitemap/nav in v1)
 - Private operator routes marked `noindex,nofollow`:
-  - `/status/`
   - `/admin/`
 - Crawlable server-rendered link hubs now live on the digest archive, safety scores, liquidity, taxonomy landing pages, and stablecoin detail pages. These hubs are part of the static export and are what `npm run seo:check` validates for orphan routes, sitemap coverage, and click depth.
 

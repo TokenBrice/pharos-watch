@@ -157,6 +157,25 @@ Deploy sequence in `.github/workflows/deploy-cloudflare.yml`:
 
 Separate from the deploy path, `.github/workflows/dependency-audit.yml` runs `npm audit --audit-level=high` on the full lockfile weekly and on manual dispatch so devDependency advisories are surfaced without turning them into a blocking production deploy gate.
 
+## GitHub Deploy Inputs
+
+Repository secrets required by the production deploy path:
+
+- `CLOUDFLARE_API_TOKEN`
+- `CLOUDFLARE_ACCOUNT_ID`
+- `SMOKE_API_KEY`
+- `DIGEST_API_KEY`
+- `SITE_API_SHARED_SECRET`
+- `OPS_SMOKE_CF_ACCESS_CLIENT_ID`
+- `OPS_SMOKE_CF_ACCESS_CLIENT_SECRET`
+
+Repository variables:
+
+- Required: `API_BASE_URL`
+- Optional: `SMOKE_API_BASE_URL`, `SMOKE_OPS_UI_URL`, `SMOKE_OPS_API_BASE`, `NEXT_PUBLIC_GA_ID`
+
+`SMOKE_API_KEY` is required under the checked-in production Worker config because `PUBLIC_API_AUTH_MODE = "enforce"` protects non-exempt public API routes.
+
 ## Dependency Refresh Cadence
 
 Use dependency maintenance as a dedicated routine, not as incidental churn inside larger refactors.

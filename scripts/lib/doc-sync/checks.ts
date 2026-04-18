@@ -40,6 +40,7 @@ import {
   DEPEG_THRESHOLD_BPS,
   DEPEG_THRESHOLD_BPS_NON_USD,
 } from "../../../shared/lib/depeg-config";
+import { API_FRESHNESS_MAX_AGE_SEC } from "../../../shared/lib/api-freshness";
 import { THREAT_BAND_HEX } from "../../../shared/lib/classification";
 import { CRON_SCHEDULES } from "../../../shared/lib/cron-jobs";
 import {
@@ -322,7 +323,13 @@ function checkChainsApiDoc(failures: Failure[]): void {
   );
 
   const chainsMetaRow = requireTableRow(doc, file, "`GET /api/chains`");
-  expectNumber(failures, file, "/api/chains freshness max age", getFirstNumberFromText(chainsMetaRow[0]), 600);
+  expectNumber(
+    failures,
+    file,
+    "/api/chains freshness max age",
+    getFirstNumberFromText(chainsMetaRow[0]),
+    API_FRESHNESS_MAX_AGE_SEC.chains,
+  );
   expectEqual(
     failures,
     file,

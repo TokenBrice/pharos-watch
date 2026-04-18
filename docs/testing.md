@@ -168,10 +168,16 @@ This arrangement keeps pull-request validation full-strength, makes deploy-path 
 
 Current GitHub repository secrets required by the deploy path:
 
+- `CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID` for Worker/Pages deploy and rollback helpers
 - `SMOKE_API_KEY` for preview and production `smoke-api`
 - `DIGEST_API_KEY` for Pages digest sync against protected public API routes
 - `SITE_API_SHARED_SECRET` for local artifact smoke through `/_site-data/*`
 - `OPS_SMOKE_CF_ACCESS_CLIENT_ID` and `OPS_SMOKE_CF_ACCESS_CLIENT_SECRET` for `smoke-ops`
+
+Current GitHub repository variables used by the deploy path:
+
+- `API_BASE_URL` (required)
+- `SMOKE_API_BASE_URL`, `SMOKE_OPS_UI_URL`, `SMOKE_OPS_API_BASE`, and `NEXT_PUBLIC_GA_ID` (optional)
 
 Cloudflare Access ownership split:
 

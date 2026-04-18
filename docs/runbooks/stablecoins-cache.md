@@ -16,11 +16,12 @@ The cached `/api/stablecoins` payload is either missing or older than its config
 
 ## Remediation
 
-- **Backfill prices:** Admin page → Recommended actions → `backfill-cg-prices`. Idempotent; reruns the pricing pipeline and writes the cache.
+- **Historical price backfill:** `backfill-cg-prices` repairs historical `supply_history` price rows; it does not republish the `stablecoins` cache.
+- **Republish cache:** inspect `sync-stablecoins`, clear a stuck lease or provider breaker when applicable, then let the next quarter-hourly run publish the cache. Use `backfill-cg-prices` only when the incident also points at missing historical CoinGecko prices.
 - **Circuit breaker:** if a specific provider breaker is open, `POST /api/reset-circuit-breaker?circuit=<source>` (via curl with `X-Pharos-Admin: 1` + `Idempotency-Key`, or `wrangler`). Contextual UI button is a follow-up.
 - **Cron lease:** if `sync-stablecoins` shows consecutive `skipped_locked` runs, `POST /api/reset-cron-lease?job=sync-stablecoins`. Same auth pattern.
 
 ## Prevention
 
 - The cache TTL and fallback mode are configured in the sync-stablecoins cron. Do not tune these without understanding the `status-thresholds` coupling.
-- The recommended-actions panel surfaces `backfill-cg-prices` automatically when a degraded/unavailable cause is active; prefer that over manual curl.
+- The recommended-actions panel surfaces context-specific recovery actions; prefer those over manual curl.

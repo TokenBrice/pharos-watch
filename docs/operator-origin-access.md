@@ -60,22 +60,19 @@ Actively used by the current Pages Functions host gate / admin proxy:
 
 - `OPS_UI_ORIGIN`
 - `OPS_API_ORIGIN`
+- `CF_ACCESS_OPS_UI_AUD` — required by the Pages admin proxy to verify the inbound ops UI Access JWT with `CF_ACCESS_TEAM_DOMAIN`
 
 Consumed by the Worker's admin auth layer (`worker/src/lib/auth.ts`) for Access JWT verification:
 
 - `CF_ACCESS_TEAM_DOMAIN` — used to construct the JWKS URL for JWT signature verification
 - `CF_ACCESS_OPS_API_AUD` — verified against the JWT `aud` claim to confirm the token was issued for the ops-api Access application
 
-Reserved but not yet consumed:
-
-- `CF_ACCESS_OPS_UI_AUD`
-
 Canonical runtime groupings now live in code:
 
 - Worker: `worker/src/lib/env.ts` (`WORKER_REQUIRED_ENV_KEYS`, `WORKER_OPTIONAL_ENV_KEYS`, `WORKER_RESERVED_ENV_KEYS`, `WORKER_ACTIVE_ENV_KEYS`)
 - Pages Functions: `functions/lib/ops-env.ts` (`PAGES_FUNCTIONS_REQUIRED_ENV_KEYS`, `PAGES_FUNCTIONS_OPTIONAL_ENV_KEYS`, `PAGES_FUNCTIONS_RESERVED_ENV_KEYS`, `PAGES_FUNCTIONS_ACTIVE_ENV_KEYS`)
 
-Use those exports as the source of truth when auditing Cloudflare bindings before deploy. The same binding name can be reserved on one runtime and active on the other; for example `OPS_API_ORIGIN` is worker-reserved but Pages-active.
+Use those exports as the source of truth when auditing Cloudflare bindings before deploy. The same binding name can be reserved on one runtime and active on the other; for example `OPS_API_ORIGIN` and `CF_ACCESS_OPS_UI_AUD` are worker-reserved but Pages-active.
 
 ---
 
@@ -99,7 +96,7 @@ The current proxy now fails closed on its own trust boundary:
 - HTTP method rules are enforced by `validateEndpointMethod()`, so the proxy returns `405` with `Allow` when a caller uses the wrong verb for an otherwise valid admin route.
 - The proxy verifies the inbound UI Access token before the upstream fetch. Missing or invalid Access token evidence (`Cf-Access-Jwt-Assertion`, `cf-access-token`, or `CF_Authorization`) returns `401`.
 - Mutating requests (`POST`, `PUT`, `PATCH`, `DELETE`) must include a same-origin `Origin` header matching `OPS_UI_ORIGIN`; missing or foreign origins return `403`.
-- The proxy forwards only `Accept`, `Content-Type`, and `Idempotency-Key` from the browser request. It adds `CF-Access-Client-Id` and `CF-Access-Client-Secret` from Pages env itself; browser callers never supply those directly.
+- The proxy forwards only `Accept`, `Content-Type`, `Idempotency-Key`, and `X-Pharos-Admin` from the browser request. It adds `CF-Access-Client-Id` and `CF-Access-Client-Secret` from Pages env itself; browser callers never supply those directly.
 - The proxy reflects only a narrow response-header set back to the browser: `Allow`, `Cache-Control`, `Content-Type`, `Idempotency-Key`, `Warning`, `X-Data-Age`, and `X-Idempotent-Replay`.
 - Failure policy is explicit:
   - `404` for non-ops origins or non-allowlisted paths

@@ -32,7 +32,7 @@ This map links each major Pharos data domain from upstream source to frontend co
 
 Cron schedules are declared in `worker/wrangler.toml` and orchestrated by `worker/src/handlers/scheduled.ts`:
 
-- `*/15 * * * *`: sync-fx-rates (cooldown-gated to 30 min) first, then sync-stablecoins (including depeg detection + pending confirmation), then downstream-safe snapshot-supply retry / snapshot-chain-supply
+- `*/15 * * * *`: sync-fx-rates (cooldown-gated to 30 min) first, then sync-stablecoins (including depeg detection + pending confirmation), then downstream-safe snapshot-supply retry / snapshot-chain-supply / report-card cache publish
 - `9,24,39,54 * * * *`: isolated status self-check
 - `3 */6 * * *`: blacklist sync (every 6h)
 - `4,34 * * * *`: mint/burn critical lane (every 30 minutes)
@@ -43,6 +43,7 @@ Cron schedules are declared in `worker/wrangler.toml` and orchestrated by `worke
 - `25 */4 * * *`: supplemental yield-source refresh
 - `11 */4 * * *`: live reserve sync, then redemption backstop sync, then Kinesis supply sync, then collateral-drift checks/alerts (every 4h)
 - `2,7,12,17,22,27,32,37,42,47,52,57 * * * *`: Telegram subscriber alerts (DEWS, depeg, safety, and launch promotions)
+- `*/5 * * * *`: manual digest trigger poll (`POST /api/trigger-digest` flag consumer)
 - `0 3 * * *`: status-probe TTL prune + cron-history TTL prune (daily housekeeping)
 - `0 8 * * *`: safety-grade snapshot, T-bill rate, PSI daily snapshot, USDS status
 - `5 8 * * *`: bluechip sync, daily digest, weekly recap (Mondays), discovery scan (Mondays)

@@ -1,6 +1,6 @@
 # Worker Infrastructure
 
-Cloudflare Worker serving the Pharos API. Handles HTTP routing, edge caching, CORS, admin auth, and 30 scheduled runtime jobs across 14 cron expressions / trigger slots. `CRON_INTERVALS` / `/api/status` track the same 30 jobs; cemetery and tracking appendices are now folded into daily digest delivery instead of a separate cron.
+Cloudflare Worker serving the Pharos API. Handles HTTP routing, edge caching, CORS, admin auth, and 31 status-tracked scheduled runtime jobs across 16 cron expressions / runner slots. `CRON_INTERVALS` / `/api/status` track the 31 `CRON_JOB_DEFINITIONS` jobs; the separate `*/5 * * * *` digest-trigger poll slot executes manual digest requests under the `daily-digest` lease rather than registering as its own status job.
 
 Execution note: the `snapshot-supply` retry path runs on the `*/15 * * * *` trigger only after a downstream-safe `sync-stablecoins` cache write.
 
@@ -59,7 +59,7 @@ The paired Pages Functions contracts live in `functions/lib/ops-env.ts` and `fun
 | `OPS_UI_ORIGIN`                  | string     | No                                                 | Reserved on the worker runtime for cross-runtime alignment. The value is active on Pages Functions host gating (`https://ops.pharos.watch`)                                |
 | `OPS_API_ORIGIN`                 | string     | No                                                 | Reserved on the worker runtime for cross-runtime alignment. The value is active on Pages Functions proxying (`https://ops-api.pharos.watch`)                               |
 | `CF_ACCESS_TEAM_DOMAIN`          | string     | No                                                 | Cloudflare Access team domain used by worker-side JWT verification for `ops-api.pharos.watch` admin requests. Must be configured together with `CF_ACCESS_OPS_API_AUD` for admin Access verification. |
-| `CF_ACCESS_OPS_UI_AUD`           | string     | No                                                 | Reserved on the worker runtime today; active only in the Pages contract once Pages-side UI JWT validation is introduced                                                    |
+| `CF_ACCESS_OPS_UI_AUD`           | string     | No                                                 | Reserved on the worker runtime; active and required in the Pages Functions contract for `/api/admin/*` UI JWT validation                                                    |
 | `CF_ACCESS_OPS_API_AUD`          | string     | No                                                 | Cloudflare Access audience used by `worker/src/lib/auth.ts` to verify `Cf-Access-Jwt-Assertion` on `ops-api.pharos.watch` admin requests                                   |
 | `ETHERSCAN_API_KEY`              | string     | No                                                 | Blacklist sync, USDS status                                                                                                                                                |
 | `TRONGRID_API_KEY`               | string     | No                                                 | Blacklist sync (Tron chain)                                                                                                                                                |
@@ -77,10 +77,10 @@ The paired Pages Functions contracts live in `functions/lib/ops-env.ts` and `fun
 | `GITHUB_PAT`                     | string     | No (worker contract); Yes for feedback submissions | Feedback → GitHub Issues                                                                                                                                                   |
 | `FEEDBACK_IP_SALT`               | string     | No (worker contract); Yes for feedback submissions | Rate limit IP hashing for `POST /api/feedback`                                                                                                                             |
 | `PUBLIC_API_RATE_LIMIT_SALT`     | string     | Yes for deployed public API traffic                | Dedicated salt for hashed public API rate limiting. Public `/api/*` traffic returns `503` until this binding is configured.                                                |
-| `TWITTER_API_KEY`                | string     | No                                                 | Digest → Twitter (OAuth consumer key)                                                                                                                                      |
-| `TWITTER_API_SECRET`             | string     | No                                                 | Digest → Twitter (OAuth consumer secret)                                                                                                                                   |
-| `TWITTER_ACCESS_TOKEN`           | string     | No                                                 | Digest → Twitter (access token)                                                                                                                                            |
-| `TWITTER_ACCESS_TOKEN_SECRET`    | string     | No                                                 | Digest → Twitter (access token secret)                                                                                                                                     |
+| `TWITTER_API_KEY`                | string     | No                                                 | Twitter helper credentials; current scheduled digest delivery passes `twitterCreds = null`                                                                                 |
+| `TWITTER_API_SECRET`             | string     | No                                                 | Twitter helper credentials; current scheduled digest delivery passes `twitterCreds = null`                                                                                 |
+| `TWITTER_ACCESS_TOKEN`           | string     | No                                                 | Twitter helper credentials; current scheduled digest delivery passes `twitterCreds = null`                                                                                 |
+| `TWITTER_ACCESS_TOKEN_SECRET`    | string     | No                                                 | Twitter helper credentials; current scheduled digest delivery passes `twitterCreds = null`                                                                                 |
 | `TELEGRAM_BOT_TOKEN`             | string     | No                                                 | Digest → Telegram, bot chat replies, subscriber alert dispatch                                                                                                             |
 | `TELEGRAM_CHAT_ID`               | string     | No                                                 | Digest channel posts and cemetery announcements                                                                                                                            |
 | `TELEGRAM_WEBHOOK_SECRET`        | string     | No                                                 | Telegram webhook secret validation via `X-Telegram-Bot-Api-Secret-Token`; registration and reconciliation emit this current secret                                          |
@@ -176,10 +176,10 @@ Applied to every response via `addCorsHeaders()`:
 
 | Header                          | Value                                                                                           |
 | ------------------------------- | ----------------------------------------------------------------------------------------------- |
-| `Access-Control-Allow-Origin`   | matching request origin from the `CORS_ORIGIN` allowlist, otherwise the first configured origin |
+| `Access-Control-Allow-Origin`   | matching request origin from the `CORS_ORIGIN` allowlist; omitted for foreign origins; first configured origin when the request has no `Origin` |
 | `Vary`                          | `Origin`                                                                                        |
 | `Access-Control-Allow-Methods`  | `GET, POST, OPTIONS`                                                                            |
-| `Access-Control-Allow-Headers`  | `Content-Type, Idempotency-Key, X-API-Key`                                                      |
+| `Access-Control-Allow-Headers`  | `Content-Type, Idempotency-Key, X-API-Key, X-Pharos-Admin`                                      |
 | `Access-Control-Expose-Headers` | `X-Data-Age, Warning`                                                                           |
 | `Access-Control-Max-Age`        | `86400`                                                                                         |
 | `X-Content-Type-Options`        | `nosniff`                                                                                       |
@@ -209,7 +209,7 @@ The Worker uses `caches.default` (Cloudflare's per-colo edge cache) to cache GET
 | Per-coin | `public, s-maxage=300, max-age=10`     | stablecoin detail (`/api/stablecoin/:id`)                                                                                                                          |
 | Standard | `public, s-maxage=300, max-age=60`     | stablecoin-charts, redemption-backstops, usds-status, daily-digest, digest-archive, report-cards, stability-index, yield-rankings, mint-burn-flows, stress-signals |
 | Custom   | `public, s-maxage=300, max-age=300`    | dex-liquidity                                                                                                                                                      |
-| Slow     | `public, s-maxage=3600, max-age=300`   | supply-history, bluechip-ratings, dex-liquidity-history, yield-history, safety-score-history                                                                       |
+| Slow     | `public, s-maxage=3600, max-age=300`   | supply-history, bluechip-ratings, dex-liquidity-history, yield-history, safety-score-history, non-usd-share                                                        |
 | Archive  | `public, s-maxage=86400, max-age=3600` | digest-snapshot                                                                                                                                                    |
 
 Admin `GET` routes are also forced to `Cache-Control: no-store` by `addAdminGetNoStoreHeader()` in `worker/src/router.ts`.
@@ -282,6 +282,10 @@ These router-dispatched admin routes honor an optional `Idempotency-Key` header:
 - `POST /api/reset-blacklist-sync`
 - `POST /api/remediate-blacklist-amount-gaps`
 - `POST /api/backfill-blacklist-current-balances`
+- `POST /api/reset-cron-lease`
+- `POST /api/reset-circuit-breaker`
+- `POST /api/kill-cron-in-flight`
+- `POST /api/bulk-dismiss-discovery-candidates`
 
 The worker fingerprints method + path + sorted query + body for a given action key. Replays return the stored response with `X-Idempotent-Replay: true`; conflicting reuse returns `409`. When handler execution throws, the worker first tries to clear the pending reservation so the same key can be retried normally. If that cleanup cannot be confirmed, it stores a deterministic failure replay for that key and subsequent repeats return a replayed `500` response until the reservation expires.
 
@@ -316,7 +320,7 @@ Most module-level mutable state was eliminated in the parameter-passing refactor
 
 ## Cron Scheduling
 
-This worker declares 14 cron expressions in `worker/wrangler.toml`. Fetch-heavy lanes are split across separate trigger slots so they do not compete with the quarter-hourly core pipeline for the Workers per-trigger 6-connection fetch pool.
+This worker declares 16 cron expressions in `worker/wrangler.toml`. Fetch-heavy lanes are split across separate trigger slots so they do not compete with the quarter-hourly core pipeline for the Workers per-trigger 6-connection fetch pool.
 
 ### `worker/wrangler.toml` Triggers
 
@@ -449,7 +453,15 @@ This offset schedule exists so long-tail mint/burn backfill pressure cannot star
 
 Dedicated trigger for Telegram work. Isolated from the quarter-hourly pipeline so subscriber fan-out gets its own 6-connection pool and CPU budget. Subscriber fan-out uses up to 5 of 6 available connections for parallel `sendBatch()` sends. Up to 200 subscriber message attempts per run; overflow and retryable fresh-send failures are enqueued to `telegram_pending_alerts` in D1 for subsequent runs.
 
-### Trigger 12: `0 8 * * *` (daily at 08:00 UTC — snapshots & lightweight fetchers)
+### Trigger 12: `*/5 * * * *` (manual digest trigger poll)
+
+| Job surface | Function | File | Documentation |
+| ----------- | -------- | ---- | ------------- |
+| `daily-digest` lease consumer | `runDigestTriggerPollSlot()` | `worker/src/handlers/scheduled/digest-trigger-poll.ts` | [Digest Pipeline](./digest-pipeline.md) |
+
+This slot polls the `digest:force-run-request` cache key written by `POST /api/trigger-digest`. When a request is pending, it runs `generateDailyDigest(..., force=true, twitterCreds=null, ...)` under the existing `daily-digest` lease, clears or preserves the flag according to the lease outcome, and writes `digest:last-trigger-result` for the ops UI. It is a runner slot, not a separate status-tracked cron job.
+
+### Trigger 13: `0 8 * * *` (daily at 08:00 UTC — snapshots & lightweight fetchers)
 
 | Job                             | Function                       | File                                               | Documentation                                    |
 | ------------------------------- | ------------------------------ | -------------------------------------------------- | ------------------------------------------------ |
@@ -461,7 +473,7 @@ Dedicated trigger for Telegram work. Isolated from the quarter-hourly pipeline s
 
 **Connection budget:** 3 snapshot jobs are D1-only (0 external connections). `fetch-tbill-rate` (ECB/FRED/Treasury/SIX benchmark fetches, still serialized inside one job) and `sync-usds-status` (Etherscan) are chained sequentially on the external-fetch branch to keep this trigger conservative on connection use. A failed `fetch-tbill-rate` run no longer suppresses `sync-usds-status`; peak external usage is 1 connection.
 
-### Trigger 13: `5 8 * * *` (daily at 08:05 UTC — heavy external fetchers)
+### Trigger 14: `5 8 * * *` (daily at 08:05 UTC — heavy external fetchers)
 
 | Job              | Function                | File                                | Documentation                           |
 | ---------------- | ----------------------- | ----------------------------------- | --------------------------------------- |
@@ -470,15 +482,24 @@ Dedicated trigger for Telegram work. Isolated from the quarter-hourly pipeline s
 | `weekly-recap`   | `generateWeeklyRecap()` | `worker/src/cron/weekly-recap.ts`   | [Digest Pipeline](./digest-pipeline.md) |
 | `discovery-scan` | `runDiscoveryScan()`    | `worker/src/cron/discovery-scan.ts` | [Data Pipeline](./data-pipeline.md)     |
 
-**Connection budget:** `sync-bluechip` (3 parallel batch connections), `daily-digest` / `weekly-recap` (1 long-lived Anthropic API call at a time because the recap is chained after the daily digest), and `discovery-scan` (1 CoinGecko call) use ≤5 concurrent external connections. The 5-minute offset from Trigger 12 ensures PSI snapshot data is available for the daily digest without an explicit chain dependency. `weekly-recap` and `discovery-scan` both run Monday-only and return immediately on other days. Reliability is now failure-contained at the job level for this slot: a thrown `sync-bluechip`, `daily-digest`, `weekly-recap`, or `discovery-scan` run is recorded independently and no longer aborts the rest of the 08:05 lane before the remaining jobs can settle.
+**Connection budget:** `sync-bluechip` (3 parallel batch connections), `daily-digest` / `weekly-recap` (1 long-lived Anthropic API call at a time because the recap is chained after the daily digest), and `discovery-scan` (1 CoinGecko call) use ≤5 concurrent external connections. The 5-minute offset from Trigger 13 ensures PSI snapshot data is available for the daily digest without an explicit chain dependency. `weekly-recap` and `discovery-scan` both run Monday-only and return immediately on other days. Reliability is now failure-contained at the job level for this slot: a thrown `sync-bluechip`, `daily-digest`, `weekly-recap`, or `discovery-scan` run is recorded independently and no longer aborts the rest of the 08:05 lane before the remaining jobs can settle.
 
-### Trigger 14: `0 6 1 * *` (monthly at 06:00 UTC on the 1st)
+### Trigger 15: `0 6 1 * *` (monthly at 06:00 UTC on the 1st)
 
 | Job                    | Function                  | File                                                   | Documentation                                 |
 | ---------------------- | ------------------------- | ------------------------------------------------------ | --------------------------------------------- |
 | `yield-coverage-audit` | `runYieldCoverageAudit()` | `worker/src/handlers/scheduled/monthly-yield-audit.ts` | [Yield Intelligence](./yield-intelligence.md) |
 
 Runs once a month on the 1st at 06:00 UTC. Scans unmatched high-TVL DeFiLlama pools and flags missing protocols as high-confidence or review-needed expansion candidates.
+
+### Trigger 16: `0 3 * * *` (daily at 03:00 UTC — TTL pruning)
+
+| Job                       | Function                    | File                                             | Documentation            |
+| ------------------------- | --------------------------- | ------------------------------------------------ | ------------------------ |
+| `prune-status-probe-runs` | `runPruneStatusProbeRuns()` | `worker/src/cron/prune-status-probe-runs.ts`     | [Status Dashboard](./status-dashboard.md) |
+| `prune-cron-history`      | `runPruneCronHistory()`     | `worker/src/cron/prune-cron-history.ts`          | This doc                 |
+
+DB-only housekeeping slot. `prune-status-probe-runs` enforces the status-probe retention window, while `prune-cron-history` deletes `cron_runs` rows older than 7 days and `cron_slot_executions` rows older than 14 days.
 
 ### Cron Slot Capacity and Connection Pool Budget
 
@@ -499,16 +520,17 @@ Workers enforce a **6 concurrent fetch connections** limit per cron trigger invo
 | 9       | `20 * * * *`       |                                      1 (core yield publisher)                                      |    5     |
 | 10      | `25 */4 * * *`     |                                  5 (supplemental yield families)                                   |    1     |
 | 11      | `2,7,...,57 * * * *` |                        5 (Telegram alert dispatcher batches sends in groups of 5)                  |    1     |
-| 12      | `0 8 * * *`        |                 1 (benchmark feeds -> USDS Etherscan reads are chained serially)                   |    5     |
-| 13      | `5 8 * * *`        |                     5 (Bluechip batch of 3 + Anthropic + CoinGecko; digest/recap chained)          |    1     |
-| 14      | `0 6 1 * *`        |                                      1 (DeFiLlama yield scan)                                      |    5     |
-| 15      | `0 3 * * *`        |                     0 (prune-status-probe-runs + prune-cron-history; both DB-only)                 |    6     |
+| 12      | `*/5 * * * *`      |                                      1 (manual digest poll uses daily-digest lease only when flagged) |    5     |
+| 13      | `0 8 * * *`        |                 1 (benchmark feeds -> USDS Etherscan reads are chained serially)                   |    5     |
+| 14      | `5 8 * * *`        |                     5 (Bluechip batch of 3 + Anthropic + CoinGecko; digest/recap chained)          |    1     |
+| 15      | `0 6 1 * *`        |                                      1 (DeFiLlama yield scan)                                      |    5     |
+| 16      | `0 3 * * *`        |                     0 (prune-status-probe-runs + prune-cron-history; both DB-only)                 |    6     |
 
 **Policy for new jobs:**
 
 - Jobs requiring <=1 external connection may share any slot with headroom >=2.
 - Jobs requiring >2 concurrent connections should get a dedicated trigger slot.
-- Never add a fetching job to a slot with headroom <=1 (Triggers 10, 11, and 13 are effectively full).
+- Never add a fetching job to a slot with headroom <=1 (Triggers 10, 11, and 14 are effectively full).
 
 ### Cron Error Handling Policy
 
@@ -560,7 +582,7 @@ async function logCronRun(
   fn: (signal: AbortSignal, reportProgress: CronProgressReporter) => Promise<CronResult | void>,
   alertFn?: (title: string, message: string) => Promise<unknown> | void,
   options?: { slotStartedAt?: number | null },
-): Promise<void>;
+): Promise<CronResult | void>;
 ```
 
 **Behavior:**
@@ -573,7 +595,8 @@ async function logCronRun(
 - On lease contention: inserts row with `status='skipped_locked'` and lease metadata
 - On error: inserts row with `status='error'` and error message, calls `sendAlert()`, re-throws
 - On completion/error of a progress-reporting job: clears the corresponding `cron_run_progress` row
-- After each run: prunes rows older than 7 days (`started_at < now - 604800`); if prune fails, falls back to keeping only the top 5000 rows by rowid DESC
+- Returns the job's `CronResult` when the handler provides one
+- History pruning is handled by the daily `prune-cron-history` job on `0 3 * * *`, not by `logCronRun()` inline. That job deletes `cron_runs` rows older than 7 days and `cron_slot_executions` rows older than 14 days.
 
 **Schema:** `cron_runs(job, started_at, duration_ms, status, item_count, metadata, error, slot_started_at)`
 
@@ -625,7 +648,7 @@ Some long-running jobs also enforce their own earlier wall-clock guard so they c
 | `sync-mint-burn-extended` | 10 min  | Long-tail mint/burn lane with its own run-state                                                                                                                                                           |
 | `sync-yield-data`         | 10 min  | Multi-source yield data aggregation                                                                                                                                                                       |
 | `sync-yield-supplemental` | 12 min  | Supplemental yield source sync; runs less frequently but covers more sources per invocation                                                                                                               |
-| `daily-digest`            | 14.5 min | Expanded LLM generation + persistence/distribution, still below the 15-minute scheduled-trigger ceiling                                                                                                  |
+| `daily-digest`            | 14 min  | Expanded LLM generation + persistence/distribution, still below the 15-minute scheduled-trigger ceiling                                                                                                   |
 
 Configuration: `CRON_TIMEOUT_MS` record in `worker/src/lib/cron-lease.ts`.
 
@@ -657,7 +680,6 @@ Sources tracked (defined in `CIRCUIT_SOURCE` in `worker/src/lib/constants.ts`):
 | `TREASURY_RATES`                     | `treasury-rates`              | `fetch-tbill-rate`                                                                                                        |
 | `ETHERSCAN`                          | `etherscan`                   | `sync-blacklist`                                                                                                          |
 | `TRONGRID`                           | `trongrid`                    | `sync-blacklist` (Tron chains)                                                                                            |
-| `DRPC`                               | `drpc`                        | Blacklist balance enrichment (L2 archive reads)                                                                           |
 | `ALCHEMY`                            | `alchemy`                     | `sync-mint-burn`                                                                                                          |
 | `PYTH_PRICES`                        | `pyth-prices`                 | `enrich-prices` primary consensus                                                                                         |
 | `BINANCE_PRICES`                     | `binance-prices`              | `enrich-prices` primary consensus                                                                                         |
@@ -666,6 +688,7 @@ Sources tracked (defined in `CIRCUIT_SOURCE` in `worker/src/lib/constants.ts`):
 | `COINBASE_PRICES`                    | `coinbase-prices`             | `enrich-prices` primary consensus                                                                                         |
 | `REDSTONE_PRICES`                    | `redstone-prices`             | `enrich-prices` primary consensus                                                                                         |
 | `CURVE_ONCHAIN`                      | `curve-onchain`               | `enrich-prices` primary consensus                                                                                         |
+| `CURVE_ORACLE`                       | `curve-oracle`                | `enrich-prices` crvUSD Curve oracle consensus                                                                             |
 | `CURVE_LIQUIDITY_API`                | `curve-liquidity-api`         | `sync-dex-liquidity` (Curve pool liquidity fetch)                                                                         |
 | `FX_FRANKFURTER`                     | `fx-frankfurter`              | `sync-fx-rates` primary Frankfurter API circuit breaker                                                                   |
 | `FX_REALTIME`                        | `fx-realtime`                 | `sync-fx-rates` real-time FX cross-validation                                                                             |
@@ -681,18 +704,21 @@ Sources tracked (defined in `CIRCUIT_SOURCE` in `worker/src/lib/constants.ts`):
 | `AERODROME_SLIPSTREAM_API`           | `aerodrome-slipstream-api`    | `sync-dex-liquidity` direct Aerodrome Slipstream fetcher                                                                  |
 | `VELODROME_SLIPSTREAM_API`           | `velodrome-slipstream-api`    | `sync-dex-liquidity` direct Velodrome Slipstream fetcher                                                                  |
 | `CG_TICKER`                          | `coingecko-ticker`            | `enrich-prices` primary consensus (curated ticker corroboration)                                                          |
-| `TWITTER_API`                        | `twitter-api`                 | `daily-digest` social posting                                                                                             |
-| `TELEGRAM_API`                       | `telegram-api`                | `daily-digest` social posting, `dispatch-telegram-alerts` subscriber fan-out                                              |
+| `TWITTER_API`                        | `twitter-api`                 | Twitter helper (not wired into current scheduled digest delivery)                                                         |
+| `TELEGRAM_API`                       | `telegram-api`                | `daily-digest` Telegram posting, `dispatch-telegram-alerts` subscriber fan-out                                            |
 | `ANTHROPIC`                          | `anthropic-api`               | `daily-digest` LLM generation                                                                                             |
 | `BLUECHIP`                           | `bluechip-api`                | `sync-bluechip` safety rating fetch                                                                                       |
 | `KINESIS_KAU`                        | `kinesis-kau-horizon`         | `sync-kinesis-supply` KAU chain circulation fetch                                                                         |
 | `KINESIS_KAG`                        | `kinesis-kag-horizon`         | `sync-kinesis-supply` KAG chain circulation fetch                                                                         |
+| `COINGECKO_CONFIRM`                  | `coingecko-confirm`           | pending depeg confirmation                                                                                                |
+| `DEFILLAMA_CONFIRM`                  | `defillama-confirm`           | pending depeg confirmation                                                                                                |
 | Dynamic `live-reserves:<scope>` keys | e.g. `live-reserves:infinifi` | `sync-live-reserves` per configured breaker scope; some adapters also opt into source-invariant within-run result sharing |
 
 Primary-oracle implementation notes:
 
 - `PYTH_PRICES` only counts as a healthy outcome when at least one requested feed resolves into a usable price; Hermes feed IDs are normalized by lowercasing and stripping an optional leading `0x`.
 - `REDSTONE_PRICES` only counts as healthy when it returns at least one usable symbol. The worker queries an exact-case tracked-symbol allowlist in sequential batches of 10 and retries batch-dropped symbols individually once.
+- dRPC is an upstream RPC provider for some blacklist balance reads, but it is not a `CIRCUIT_SOURCE` key today.
 - Scheduled handlers that write breaker state from cron outcomes now treat `degraded` and `skipped_locked` as neutral by default; only explicit `ok` heals a breaker and only thrown/error outcomes count as failures unless a source-specific handler opts into stricter semantics.
 
 ---
@@ -1074,7 +1100,7 @@ Health freshness checks for mint/burn major symbols and scheduler stale alerts u
 
 ### GET /api/status
 
-Returns raw and effective status, recent `cron_runs`, active `cron_run_progress` rows, data-quality metrics, state-machine metadata, synthetic probe summary, and transition timeline. Tracks 29 cron jobs across 14 triggers via `CRON_INTERVALS` in `shared/lib/cron-jobs.ts`:
+Returns raw and effective status, recent `cron_runs`, active `cron_run_progress` rows, data-quality metrics, state-machine metadata, synthetic probe summary, and transition timeline. Tracks 31 cron jobs across 16 runner slots via `CRON_INTERVALS` and `CRON_JOB_DEFINITIONS` in `shared/lib/cron-jobs.ts`. The `*/5 * * * *` digest-trigger poll slot is not listed as a separate job because it runs work under the existing `daily-digest` lease only when a manual trigger flag is pending:
 
 | Job                             | Interval         | Trigger                                           |
 | ------------------------------- | ---------------- | ------------------------------------------------- |
@@ -1193,4 +1219,4 @@ Admin timeline feed for machine consumers. Returns persisted status state, statu
 
 The D1 migration tree was squashed on 2026-03-25. `worker/migrations/0000_baseline.sql` now represents historical migrations `0001` through `0071`, and fresh databases apply that baseline before the remaining checked-in incremental migrations (`0072+`).
 
-Normal production deploy still applies D1 migrations before the new worker binary is live. Because of that ordering, the default path only supports backward-compatible migrations: new migration files starting at `0072` must include `-- rollout-safety: backward-compatible` and avoid destructive table/column drop-or-rename patterns. Any destructive cleanup needs a separate coordinated rollout after the new worker code is already serving. See also [`worker/migrations/MANIFEST.md`](../worker/migrations/MANIFEST.md) for the rollback runbook, the baseline lineage, and the enforced rollout-safety contract.
+Normal production deploy still applies D1 migrations before the new worker binary is live. Because of that ordering, the default path only supports backward-compatible migrations: new migration files starting at `0071` must include `-- rollout-safety: backward-compatible` and avoid destructive table/column drop-or-rename patterns. Any destructive cleanup needs a separate coordinated rollout after the new worker code is already serving. See also [`worker/migrations/MANIFEST.md`](../worker/migrations/MANIFEST.md) for the rollback runbook, the baseline lineage, and the enforced rollout-safety contract.
