@@ -64,6 +64,42 @@ function formatMetric(key: string, val: unknown): string {
   return String(val);
 }
 
+interface DEWSFiringSignal {
+  value: number;
+  available: boolean;
+}
+
+export function DEWSFiringList({ signals }: { signals: Record<string, DEWSFiringSignal> }) {
+  const firing = Object.entries(signals)
+    .filter(([, s]) => s.available && s.value > 0)
+    .sort((a, b) => b[1].value - a[1].value)
+    .slice(0, 5);
+
+  return (
+    <div className="space-y-1">
+      <h4 className="text-[11px] uppercase tracking-[0.12em] text-muted-foreground/60">
+        Signals firing
+      </h4>
+      {firing.length === 0 ? (
+        <p className="text-xs text-muted-foreground">No stress signals firing</p>
+      ) : (
+        firing.map(([key, s]) => (
+          <div
+            key={key}
+            data-testid="dews-firing-signal"
+            className="flex items-center justify-between text-xs"
+          >
+            <span className="font-mono text-foreground">{key}</span>
+            <span className="font-mono tabular-nums text-muted-foreground">
+              {Math.round(s.value)}
+            </span>
+          </div>
+        ))
+      )}
+    </div>
+  );
+}
+
 interface DEWSDetailProps {
   stablecoinId: string;
 }
@@ -227,6 +263,8 @@ export function DEWSDetail({ stablecoinId }: DEWSDetailProps) {
             {unavailableSignalNames.join(", ")} — not applicable
           </p>
         )}
+
+        <DEWSFiringList signals={signals} />
 
         {/* History chart */}
         {chartData.length > 1 && (
