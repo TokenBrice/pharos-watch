@@ -204,9 +204,11 @@ export async function confirmPendingDepegs(
 
     // 3. Fetch CoinGecko spot price
     let offchainStatus: ReturnType<typeof classifyDirectionalSignal> = "insufficient";
+    let offchainSourceLabel: string | null = null;
     const geckoId = meta?.geckoId;
     if (nativeSignal != null) {
       offchainStatus = classifyDirectionalSignal(nativeSignal, secondaryBar, pendingState.direction);
+      offchainSourceLabel = `NativePeg(${nativePegQuote?.pegCurrency ?? meta?.flags.pegCurrency ?? "native"})`;
       console.log(
         `[depeg-confirm] ${row.symbol} direct ${nativePegQuote?.pegCurrency ?? meta?.flags.pegCurrency ?? "native"} check: ` +
         `price=${nativePegQuote?.price ?? "n/a"}, deviation=${nativeSignal.absBps}bps, ` +
@@ -248,6 +250,7 @@ export async function confirmPendingDepegs(
             if (offchainPrice && offchainPrice > 0) {
               const offchainSignal = deriveDepegSignal(offchainPrice, row.peg_reference);
               offchainStatus = classifyDirectionalSignal(offchainSignal, secondaryBar, pendingState.direction);
+              offchainSourceLabel = offchainLabel;
               console.log(
                 `[depeg-confirm] ${row.symbol} ${offchainLabel} check: price=$${offchainPrice}, deviation=${offchainSignal?.absBps ?? "n/a"}bps, ` +
                 `bar=${secondaryBar}bps, status=${offchainStatus}`
@@ -367,6 +370,12 @@ export async function confirmPendingDepegs(
         peakDeviationBps === currentDirectionalSignal?.bps
           ? authoritativePrice ?? pendingState.peakPrice
           : pendingState.peakPrice;
+      const confirmedBy = [
+        offchainStatus === "confirm" ? offchainSourceLabel : null,
+        dexStatus === "confirm" ? "DEX" : null,
+        cexStatus === "confirm" ? "CEX" : null,
+        poolStatus === "confirm" ? "Pool" : null,
+      ].filter(Boolean).join("+");
       const event: DepegEvent = {
         id: 0,
         stablecoinId: row.stablecoin_id,
@@ -381,8 +390,8 @@ export async function confirmPendingDepegs(
         recoveryPrice: null,
         pegReference: row.peg_reference,
         source: "live",
-        confirmationSources: null,
-        pendingReason: null,
+        confirmationSources: confirmedBy || null,
+        pendingReason: pendingState.reason,
       };
 
       stmts.push(
@@ -390,14 +399,8 @@ export async function confirmPendingDepegs(
         db.prepare("DELETE FROM depeg_pending WHERE id = ?").bind(row.id),
       );
 
-      const confirmedBy = [
-        offchainStatus === "confirm" ? (asset?.priceSource?.startsWith("coingecko") ? "DefiLlama" : "CoinGecko") : null,
-        dexStatus === "confirm" ? "DEX" : null,
-        cexStatus === "confirm" ? "CEX" : null,
-        poolStatus === "confirm" ? "Pool" : null,
-      ].filter(Boolean).join("+");
       console.log(
-        `[depeg-confirm] PROMOTED ${row.symbol}: ${pendingState.firstSeenBps}bps confirmed by ${confirmedBy}${pendingState.reason ? ` (${pendingState.reason})` : ""}`
+        `[depeg-confirm] PROMOTED ${row.symbol}: ${pendingState.firstSeenBps}bps confirmed by ${confirmedBy || "(none)"}${pendingState.reason ? ` (${pendingState.reason})` : ""}`
       );
     } else if (
       (offchainStatus === "recover" || offchainStatus === "contradict")

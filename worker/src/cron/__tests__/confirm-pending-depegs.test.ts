@@ -407,8 +407,8 @@ describe("confirmPendingDepegs", () => {
       0.975,
       0.95,
       1,
-      null,
-      null,
+      "CoinGecko",
+      "large-cap",
     ]);
     expect(inserts[1]?.boundValues).toEqual([
       "usdc-circle",
@@ -420,8 +420,8 @@ describe("confirmPendingDepegs", () => {
       0.98,
       0.94,
       1,
-      null,
-      null,
+      "DEX",
+      "large-cap",
     ]);
     expect(deletes).toEqual([10, 11, 12, 13]);
   });
@@ -691,8 +691,8 @@ describe("confirmPendingDepegs", () => {
       0.976,
       0.976,
       1,
-      null,
-      null,
+      "DefiLlama",
+      "large-cap",
     ]);
     expect(deletes).toEqual([31]);
   });
@@ -742,8 +742,8 @@ describe("confirmPendingDepegs", () => {
       0.98,
       0.96,
       1,
-      null,
-      null,
+      "CoinGecko",
+      "large-cap",
     ]);
   });
 
@@ -1334,5 +1334,55 @@ describe("confirmPendingDepegs", () => {
     ).rejects.toThrow("network aborted");
 
     expect(batchExecute).not.toHaveBeenCalled();
+  });
+
+  it("promoted event carries confirmationSources and pendingReason", async () => {
+    const nowSec = 1_700_000_000;
+    vi.spyOn(Date, "now").mockReturnValue(nowSec * 1000);
+    vi.spyOn(console, "log").mockImplementation(() => {});
+
+    await confirmPendingDepegs(
+      makeDb({
+        pendingRows: [
+          makePendingRow({
+            id: 90,
+            stablecoin_id: "usdt-tether",
+            symbol: "USDT",
+            direction: "below",
+            first_seen_bps: -200,
+            first_seen_at: nowSec - DEPEG_PENDING_MIN_AGE_SEC - 60,
+            first_price: 0.98,
+            peg_reference: 1,
+            reason: "large-cap",
+          }),
+        ],
+        dexRows: [
+          {
+            stablecoin_id: "usdt-tether",
+            dex_price_usd: 0.988,
+            updated_at: nowSec - 30,
+            source_pool_count: 3,
+            source_total_tvl: 5_000_000,
+          },
+        ],
+      }),
+      [
+        makeAsset({ id: "usdt-tether", symbol: "USDT", geckoId: undefined, price: 0.985 }),
+        ...makeNeutralUsdAssets(),
+      ],
+    );
+
+    expect(batchExecute).toHaveBeenCalledTimes(1);
+    const [, statements] = vi.mocked(batchExecute).mock.calls[0]!;
+    const prepared = statements as PreparedStatementWithMeta[];
+    const inserts = prepared.filter((stmt) => stmt.sql.startsWith("INSERT INTO depeg_events"));
+    expect(inserts).toHaveLength(1);
+    // buildInsertDepegEventStmt bind order:
+    // [0]=stablecoinId, [1]=symbol, [2]=pegType, [3]=direction, [4]=peakBps,
+    // [5]=startedAt, [6]=startPrice, [7]=peakPrice, [8]=pegReference,
+    // [9]=confirmationSources, [10]=pendingReason
+    const bound = inserts[0]!.boundValues;
+    expect(bound[9]).toMatch(/DEX/);
+    expect(bound[10]).toBe("large-cap");
   });
 });
