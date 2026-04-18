@@ -65,6 +65,9 @@ export type MethodologyContextKey =
   | "effectiveTvl"
   | "dexVolVsAvg"
   | "turnover"
+  | "totalStablecoinMcap"
+  | "trackedDexVol"
+  | "netMintBurnFlow"
   | "pys"
   | "yieldStability"
   | "yieldWarnings"
@@ -262,6 +265,23 @@ export const METHODOLOGY_CONTEXT: Record<MethodologyContextKey, MethodologyConte
     methodologyPath: "/methodology/#liquidity-methodology",
     versionLabel: LIQUIDITY_METHODOLOGY_VERSION_LABEL,
     changelogPath: LIQUIDITY_METHODOLOGY_CHANGELOG_PATH,
+  },
+  totalStablecoinMcap: {
+    title: "Total Stablecoin Market Cap",
+    summary: "Sum of circulating supply × peg-reference price across all tracked coins. Updates every 15 minutes.",
+    methodologyPath: "/methodology/",
+  },
+  trackedDexVol: {
+    title: "Tracked 24h DEX Volume",
+    summary: "Sum of AMM volume across tracked coins, restricted to the pool set Pharos covers for liquidity scoring.",
+    methodologyPath: "/methodology/#liquidity-methodology",
+    versionLabel: LIQUIDITY_METHODOLOGY_VERSION_LABEL,
+    changelogPath: LIQUIDITY_METHODOLOGY_CHANGELOG_PATH,
+  },
+  netMintBurnFlow: {
+    title: "Net Mint/Burn Flow",
+    summary: "Net on-chain mint/burn across tracked coins in the last 24h. Positive = expansion, negative = contraction. Excludes atomic round-trips.",
+    methodologyPath: "/methodology/#mint-burn-flow-methodology",
   },
   pys: {
     title: "PYS",

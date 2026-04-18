@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { ArrowDownRight, ArrowUpRight, Minus } from "lucide-react";
 import { useDexLiquidity, usePegSummary, useStabilityIndex, useStressSignals } from "@/hooks/api-hooks";
 import { Card } from "@/components/ui/card";
@@ -243,7 +243,7 @@ function PrimarySnapshotCard({
             </p>
           </div>
         </div>
-        <div className="flex shrink-0 flex-col items-end justify-center gap-2 min-[1024px]:max-[1599px]:hidden">
+        <div className="flex shrink-0 flex-col items-end justify-center gap-2">
           <div className="flex flex-col items-end gap-2">
             <span
               className={`${SNAPSHOT_PILL_BASE} whitespace-nowrap`}
@@ -278,6 +278,7 @@ export function KpiBar() {
   const { data: stressData, isLoading: stressLoading, error: stressError } = useStressSignals();
   const primaryError = stablecoinsQuery.error || psiQuery.error || pegError || dexError || flowError || stressError;
   const hasPrimaryData = !!psiData || !!stablecoinsData;
+  const lastUpdatedAt = Math.max(stablecoinsQuery.dataUpdatedAt ?? 0, psiQuery.dataUpdatedAt ?? 0);
 
   const { totalMcap, mcapChange24hPct, mcapChange7dPct, usdtUsdcSharePct } = useMemo(
     () => buildStablecoinSnapshot(stablecoinsData),
@@ -391,11 +392,22 @@ export function KpiBar() {
   const allDewsCalm = dewsBandCounts
     ? dewsBandCounts.danger === 0 && dewsBandCounts.warning === 0 && dewsBandCounts.alert === 0
     : false;
+  // Severity-driven text color: danger > warning > alert > calm.
+  // Uses the same semantic tokens the DEWS radar consumes so the pill stays in lockstep with band language.
+  const dewsSeverityClass = !dewsBandCounts
+    ? "text-muted-foreground"
+    : dewsBandCounts.danger > 0
+      ? "text-[color:var(--dews-danger)]"
+      : dewsBandCounts.warning > 0
+        ? "text-[color:var(--dews-warning)]"
+        : dewsBandCounts.alert > 0
+          ? "text-[color:var(--dews-alert)]"
+          : "text-muted-foreground";
   const mobileDewsMeta = dewsBandCounts ? (
     allDewsCalm ? (
       <span className="text-muted-foreground">DEWS all calm</span>
     ) : (
-      <span className="text-foreground">
+      <span className={dewsSeverityClass}>
         DEWS {dewsBandCounts.danger + dewsBandCounts.warning + dewsBandCounts.alert} on alert
       </span>
     )
@@ -410,7 +422,7 @@ export function KpiBar() {
     allDewsCalm ? (
       <span className="text-[11px] text-muted-foreground">DEWS all calm</span>
     ) : (
-      <span className="text-[11px] text-foreground">DEWS {dewsElevatedCount} on alert</span>
+      <span className={`text-[11px] ${dewsSeverityClass}`}>DEWS {dewsElevatedCount} on alert</span>
     )
   ) : (
     <span className="text-[11px] text-muted-foreground">DEWS no data</span>
@@ -420,7 +432,7 @@ export function KpiBar() {
     {
       key: "mcap",
       mobileLabel: "Market Cap",
-      desktopLabel: "Total Stablecoin Mcap",
+      desktopLabel: <MethodologyLabel topic="totalStablecoinMcap">Total Stablecoin Mcap</MethodologyLabel>,
       value: mcapDisplay,
       mobileMetaPrimary: <span className={mcapColorClass}>24h {mcapChange24Display}</span>,
       mobileMetaSecondary: <span className={mcap7ColorClass}>7d {mcapChange7Display}</span>,
@@ -450,7 +462,7 @@ export function KpiBar() {
     {
       key: "dex-vol",
       mobileLabel: "DEX Volume",
-      desktopLabel: "Tracked 24H DEX Vol",
+      desktopLabel: <MethodologyLabel topic="trackedDexVol">Tracked 24H DEX Vol</MethodologyLabel>,
       value: dexVolDisplay,
       mobileMetaPrimary: (
         <span className={hasDexData ? trendTextClass(volVs7dAvgPct) : "text-muted-foreground"}>
@@ -472,7 +484,7 @@ export function KpiBar() {
     {
       key: "net-flow",
       mobileLabel: "Net Flow",
-      desktopLabel: "Net Mint/Burn Flow",
+      desktopLabel: <MethodologyLabel topic="netMintBurnFlow">Net Mint/Burn Flow</MethodologyLabel>,
       value: netFlow24Display,
       mobileMetaPrimary: <span className={netFlow7Class}>7d {netFlow7Display}</span>,
       desktopSublabel: <InfoChip label="7d net" value={netFlow7Display} tone={netFlow7Tone} />,
@@ -482,6 +494,7 @@ export function KpiBar() {
   ];
 
   return (
+    <div className="space-y-1">
     <Card aria-label="Market snapshot" className="pharos-card-shell overflow-hidden p-0">
       <div className="flex items-center justify-between border-b border-border/60 bg-muted/20 px-4 py-2.5">
         <p className="pharos-kicker">Market Snapshot</p>
@@ -576,5 +589,27 @@ export function KpiBar() {
         ))}
       </div>
     </Card>
+    {lastUpdatedAt > 0 ? (
+      <p className="px-1 text-[11px] text-muted-foreground">
+        Last refreshed · <RelativeAge timestamp={lastUpdatedAt} /> ·{" "}
+        <time dateTime={new Date(lastUpdatedAt).toISOString()}>
+          {new Date(lastUpdatedAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+        </time>
+      </p>
+    ) : null}
+    </div>
   );
+}
+
+function RelativeAge({ timestamp }: { timestamp: number }) {
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => {
+    const id = window.setInterval(() => setNow(Date.now()), 30_000);
+    return () => window.clearInterval(id);
+  }, []);
+  const seconds = Math.max(0, Math.floor((now - timestamp) / 1000));
+  if (seconds < 60) return <>just now</>;
+  if (seconds < 3600) return <>{Math.floor(seconds / 60)}m ago</>;
+  if (seconds < 86400) return <>{Math.floor(seconds / 3600)}h ago</>;
+  return <>{Math.floor(seconds / 86400)}d ago</>;
 }
