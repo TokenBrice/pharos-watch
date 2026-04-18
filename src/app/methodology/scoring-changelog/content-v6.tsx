@@ -1,11 +1,11 @@
 import { VersionCard, getScoringEntry } from "./content-shared";
-import { ScoringChangelogV706Entry, ScoringChangelogV705Entry, ScoringChangelogV704Entry, ScoringChangelogV70Entry, ScoringChangelogV699Entry, ScoringChangelogV698Entry, ScoringChangelogV697Entry, ScoringChangelogV696Entry, ScoringChangelogV695Entry, ScoringChangelogV691Entry, ScoringChangelogV692Entry, ScoringChangelogV693Entry, ScoringChangelogV694Entry } from "./content-v7-0";
+import { ScoringChangelogV707Entry, ScoringChangelogV706Entry, ScoringChangelogV705Entry, ScoringChangelogV704Entry, ScoringChangelogV70Entry, ScoringChangelogV699Entry, ScoringChangelogV698Entry, ScoringChangelogV697Entry, ScoringChangelogV696Entry, ScoringChangelogV695Entry, ScoringChangelogV691Entry, ScoringChangelogV692Entry, ScoringChangelogV693Entry, ScoringChangelogV694Entry } from "./content-v7-0";
 import { ScoringChangelogV69Entry } from "./content-v6-9";
 
 export function ScoringChangelogV6Entries() {
   return (
     <>
-            <ScoringChangelogV706Entry /><ScoringChangelogV705Entry /><ScoringChangelogV704Entry /><ScoringChangelogV70Entry /><ScoringChangelogV699Entry /><ScoringChangelogV698Entry /><ScoringChangelogV697Entry /><ScoringChangelogV696Entry /><ScoringChangelogV695Entry />
+            <ScoringChangelogV707Entry /><ScoringChangelogV706Entry /><ScoringChangelogV705Entry /><ScoringChangelogV704Entry /><ScoringChangelogV70Entry /><ScoringChangelogV699Entry /><ScoringChangelogV698Entry /><ScoringChangelogV697Entry /><ScoringChangelogV696Entry /><ScoringChangelogV695Entry />
 
             <ScoringChangelogV694Entry />
 

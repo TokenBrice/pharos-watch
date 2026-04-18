@@ -1,9 +1,24 @@
 import type { MethodologyVersionConfig } from "./methodology-version";
 
 export const SAFETY_SCORE_VERSION_CONFIG: MethodologyVersionConfig = {
-  currentVersion: "7.06",
+  currentVersion: "7.07",
   changelogPath: "/methodology/scoring-changelog/",
   changelog: [
+    {
+      version: "7.07",
+      title: "Stale DEX liquidity stays usable for Exit scoring",
+      date: "2026-04-18",
+      effectiveAt: 1776527157,
+      summary:
+        "Liquidity / Exit and the redemption-backstop snapshot both now reuse the last-known DEX liquidity score when its freshness runway has elapsed, instead of suppressing it and cascading documented offchain-issuer routes (USDC, USDP, USDT, GUSD, …) to NR on routine sync-dex-liquidity cron lag.",
+      impact: [
+        "Reverses the v6.1 rule that stripped stale DEX liquidity out of `effectiveExitScore`; the score is now computed from the last-known DEX snapshot regardless of age, and staleness is surfaced only via `liquidityStale` and `inputFreshness.dexLiquidity.stale`",
+        "`/api/redemption-backstops.effectiveExitScore` stays populated during stale windows under the same freshness policy as the report-card path, instead of diverging to `null`; the redemption-backstop cron still marks its run `degraded` and emits `metadata.liquidityStale = true` for operational visibility when upstream DEX input is stale. Note that the cron field remains a raw best-path blend and still differs numerically from the report-card `dimensions.liquidity.score`, which applies Safety Score eligibility gates on top",
+        "Absent DEX snapshots (loader rejects or empty table) still produce `liquidityScore = null` and trigger the documented offchain-issuer primary-market-floor exclusion as before; the rule only distinguishes between 'present but old' and 'truly missing'",
+      ],
+      commits: [],
+      reconstructed: false,
+    },
     {
       version: "7.06",
       title: "GHO residual decomposition",

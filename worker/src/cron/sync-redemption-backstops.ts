@@ -1,5 +1,6 @@
 import { getConfiguredRedemptionBackstopIds, getRedemptionBackstopConfig } from "@shared/lib/redemption-backstops";
 import { REDEMPTION_SEVERE_ACTIVE_DEPEG_BPS } from "@shared/lib/report-card-active-depeg";
+import { CRON_INTERVALS } from "@shared/lib/cron-jobs";
 import type { CronResult } from "../lib/cron-logger";
 import { batchExecute } from "../lib/db";
 import { loadDexLiquiditySnapshot } from "../lib/dex-liquidity";
@@ -17,6 +18,8 @@ import {
 import { hasUsableStablecoinsPayload, loadStablecoinsCache } from "../lib/stablecoins-cache";
 
 const MISSING_CAPACITY_OK_RATIO = 0.01;
+
+const DEX_LIQUIDITY_FRESHNESS_SEC = CRON_INTERVALS["sync-dex-liquidity"] * 2;
 
 function getAllowedMissingCapacityCount(configuredCount: number): number {
   if (configuredCount <= 0) return 0;
@@ -68,10 +71,14 @@ export async function syncRedemptionBackstops(db: D1Database, signal: AbortSigna
     formatRouteAvailabilityReviewedAt(now),
   );
 
+  // Staleness is tracked for operational visibility (degraded-run signal +
+  // metadata) but no longer suppresses effectiveExitScore. Aligns with the
+  // report-card path, which also uses the last-known DEX score when stale —
+  // see `worker/src/lib/report-cards-snapshot-card.ts`.
   let liquidityStale = false;
   if (latestUpdatedAt != null) {
     const ageSec = now - latestUpdatedAt;
-    if (ageSec > 3600) {
+    if (ageSec > DEX_LIQUIDITY_FRESHNESS_SEC) {
       console.warn(`[sync-redemption-backstops] Liquidity data is stale (age: ${ageSec}s)`);
       liquidityStale = true;
     }
@@ -94,7 +101,6 @@ export async function syncRedemptionBackstops(db: D1Database, signal: AbortSigna
       if (asset) {
         resolved = await resolveRedemptionBackstopEntry(db, asset, dexLiquidityScore, now, {
           reserveSnapshotMetadata: reserveSnapshotMetadataById.get(stablecoinId) ?? null,
-          suppressEffectiveExitScore: liquidityStale,
           routeAvailability,
         });
       } else {
@@ -102,7 +108,6 @@ export async function syncRedemptionBackstops(db: D1Database, signal: AbortSigna
         if (config) {
           resolved = await buildRedemptionBackstopEntry(db, stablecoinId, config, null, dexLiquidityScore, now, {
             reserveSnapshotMetadata: reserveSnapshotMetadataById.get(stablecoinId) ?? null,
-            suppressEffectiveExitScore: liquidityStale,
             routeAvailability,
           });
         }

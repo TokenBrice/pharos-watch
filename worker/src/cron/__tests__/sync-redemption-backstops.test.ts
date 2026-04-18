@@ -386,7 +386,7 @@ describe("syncRedemptionBackstops", () => {
       null,
       47,
       expect.any(Number),
-      { reserveSnapshotMetadata: null, suppressEffectiveExitScore: false, routeAvailability: null },
+      { reserveSnapshotMetadata: null, routeAvailability: null },
     );
     expect(upsertRedemptionBackstopSnapshotsMock).toHaveBeenCalledWith(
       expect.anything(),
@@ -585,7 +585,10 @@ describe("syncRedemptionBackstops", () => {
     expect(metadata.failedIds).toEqual(["iusd-infinifi"]);
   });
 
-  it("marks the run degraded and suppresses effective-exit snapshot scoring when DEX liquidity is stale", async () => {
+  it("marks the run degraded but keeps computing effective-exit scores from stale-but-present DEX data", async () => {
+    // Staleness is now an operational signal (degraded-run + metadata) but no
+    // longer suppresses effectiveExitScore. Matches the report-cards path,
+    // which also uses the last-known DEX score when stale.
     const staleNow = Math.floor(Date.now() / 1000);
     loadDexLiquiditySnapshotMock.mockResolvedValue({
       map: {
@@ -604,7 +607,7 @@ describe("syncRedemptionBackstops", () => {
       expect.objectContaining({ id: "cusd-cap" }),
       29,
       expect.any(Number),
-      expect.objectContaining({ suppressEffectiveExitScore: true }),
+      expect.not.objectContaining({ suppressEffectiveExitScore: expect.anything() }),
     );
 
     const metadata = JSON.parse(result.metadata ?? "{}") as Record<string, unknown>;

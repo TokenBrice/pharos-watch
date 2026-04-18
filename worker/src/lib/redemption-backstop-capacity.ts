@@ -36,7 +36,6 @@ export interface CapacityResolution {
 
 export interface RedemptionBackstopBuildOptions {
   reserveSnapshotMetadata?: ReserveSnapshotMetadataRecord | null;
-  suppressEffectiveExitScore?: boolean;
   routeAvailability?: RedemptionRouteAvailability | null;
 }
 

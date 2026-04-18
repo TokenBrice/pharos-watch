@@ -167,7 +167,7 @@ export async function buildRedemptionBackstopEntry(
   }
 
   const effectiveExitScore =
-    resolutionState === "resolved" && !options.suppressEffectiveExitScore
+    resolutionState === "resolved"
       ? computeEffectiveExitScore(dexLiquidityScore, score)
       : null;
   const capacityBasis = resolveCapacityBasis(config.routeFamily, config.capacityModel, capacity.capacityConfidence);

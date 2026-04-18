@@ -1,6 +1,17 @@
 # Report Cards Scoring — Version Timeline
 
-Internal changelog reconstructed from git history plus the live version metadata source. Covers v1.0 through v7.06 (2026-02-25 → 2026-04-16).
+Internal changelog reconstructed from git history plus the live version metadata source. Covers v1.0 through v7.07 (2026-02-25 → 2026-04-18).
+
+## v7.07 — Stale DEX liquidity stays usable for Exit scoring (2026-04-18)
+
+Liquidity / Exit and the redemption-backstop snapshot both now reuse the last-known DEX liquidity score when its freshness runway has elapsed, instead of suppressing it:
+
+- Reverses v6.1's rule that stripped stale DEX liquidity out of `effectiveExitScore`; the score is now computed from the last-known DEX snapshot regardless of age
+- Staleness is surfaced only via `liquidityStale` and `inputFreshness.dexLiquidity.stale` on `/api/report-cards`, so UI can warn on age without losing the dimension
+- `/api/redemption-backstops.effectiveExitScore` stays populated during stale windows under the same freshness policy instead of diverging to `null`; the cron field remains a raw best-path blend and still differs numerically from the report-card `dimensions.liquidity.score`, which applies Safety Score eligibility gates on top
+- The redemption-backstop cron still marks its run `degraded` and sets `metadata.liquidityStale = true` when upstream DEX input is past the runway, preserving operational visibility
+- Absent DEX snapshots (loader rejects or empty table) still produce `liquidityScore = null` and trigger the documented offchain-issuer primary-market-floor exclusion as before; the rule only distinguishes between "present but old" and "truly missing"
+- Motivated by recent cron cadence reductions shifting the effective `sync-dex-liquidity` refresh window well past the previous 1h freshness runway and cascading documented offchain-issuer routes (USDC, USDP, USDT, GUSD, …) to `NR` on routine sync lag
 
 ## v7.06 — GHO residual decomposition (2026-04-16)
 

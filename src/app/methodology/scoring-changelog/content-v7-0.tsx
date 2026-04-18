@@ -1,5 +1,43 @@
 import { VersionCard, getScoringEntry } from "./content-shared";
 
+export function ScoringChangelogV707Entry() {
+  return (
+    <VersionCard
+      entry={getScoringEntry("7.07")}
+      accent="border-l-emerald-500"
+    >
+      <p>
+        Liquidity / Exit and the redemption-backstop snapshot now reuse the last-known DEX liquidity score when
+        its freshness runway has elapsed, instead of suppressing it and cascading documented offchain-issuer
+        routes (USDC, USDP, USDT, GUSD, …) to NR on routine sync-dex-liquidity cron lag.
+      </p>
+      <ul className="list-disc list-inside space-y-1">
+        <li>
+          Reverses v6.1&apos;s rule that stripped stale DEX liquidity out of{" "}
+          <code className="text-xs bg-muted px-1 py-0.5 rounded">effectiveExitScore</code>; staleness is surfaced
+          via <code className="text-xs bg-muted px-1 py-0.5 rounded">liquidityStale</code> and{" "}
+          <code className="text-xs bg-muted px-1 py-0.5 rounded">inputFreshness.dexLiquidity.stale</code> so
+          consumers can warn on age without losing the dimension.
+        </li>
+        <li>
+          <code className="text-xs bg-muted px-1 py-0.5 rounded">/api/redemption-backstops.effectiveExitScore</code>{" "}
+          stays aligned with the report-card computation during stale windows instead of diverging to{" "}
+          <code className="text-xs bg-muted px-1 py-0.5 rounded">null</code>; the redemption-backstop cron still
+          marks its run <code className="text-xs bg-muted px-1 py-0.5 rounded">degraded</code> and sets{" "}
+          <code className="text-xs bg-muted px-1 py-0.5 rounded">metadata.liquidityStale = true</code> for
+          operational visibility.
+        </li>
+        <li>
+          Absent DEX snapshots (loader rejects or empty table) still produce{" "}
+          <code className="text-xs bg-muted px-1 py-0.5 rounded">liquidityScore = null</code> and trigger the
+          documented offchain-issuer primary-market-floor exclusion; the rule now distinguishes &quot;present but
+          old&quot; from &quot;truly missing.&quot;
+        </li>
+      </ul>
+    </VersionCard>
+  );
+}
+
 export function ScoringChangelogV706Entry() {
   return (
     <VersionCard
