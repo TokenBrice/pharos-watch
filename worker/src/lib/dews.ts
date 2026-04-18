@@ -90,12 +90,19 @@ export interface DEWSInput {
   // Smoothing (optional — previous reading for averaging)
   prevPoolValue?: number;
   prevDivergValue?: number;
+  /**
+   * Pre-computed contagion amplifier >= 1.0 derived from other stablecoins'
+   * first-pass DEWS bands. 1.0 means no contagion; 1.15 = +15%. Caller must
+   * clamp to [1.0, 1.2]; computeDEWS also clamps defensively.
+   */
+  contagionAmplifier?: number;
 }
 
 export interface DEWSResult {
   score: number;
   band: ThreatBand;
   signals: Record<string, SignalResult>;
+  amplifiers: { psi: number; contagion: number };
 }
 
 // ---------------------------------------------------------------------------
@@ -602,16 +609,23 @@ export function computeDEWS(input: DEWSInput): DEWSResult | null {
     return null;
   }
 
-  // Systemic backdrop: amplify individual stress when market is under pressure
-  let amplifiedScore = weightedSum / totalWeight;
-  if (input.psiScore !== null && input.psiScore < 75) {
-    // PSI < 75 (below STEADY) = market stress
-    // At PSI 75: no amplification. At PSI 40: 15% amplification. At PSI 0: 30% amplification.
-    const amplifier = 1 + Math.max(0, (75 - input.psiScore) / 75) * 0.3;
-    amplifiedScore *= amplifier;
-  }
+  // Systemic backdrop: amplify individual stress when market is under pressure.
+  // PSI < 75 (below STEADY) = market stress.
+  // At PSI 75: no amplification. At PSI 40: 15% amplification. At PSI 0: 30% amplification.
+  const psiAmplifier = input.psiScore !== null && input.psiScore < 75
+    ? 1 + Math.max(0, (75 - input.psiScore) / 75) * 0.3
+    : 1;
+  // Cross-asset contagion: pre-computed amplifier from a two-pass scoring loop,
+  // clamped defensively here.
+  const contagionAmplifier = Math.min(Math.max(input.contagionAmplifier ?? 1, 1), 1.2);
+  const amplifiedScore = (weightedSum / totalWeight) * psiAmplifier * contagionAmplifier;
   const score = Math.round(clamp(amplifiedScore, 0, 100));
   const band = getThreatBand(score);
 
-  return { score, band, signals };
+  return {
+    score,
+    band,
+    signals,
+    amplifiers: { psi: psiAmplifier, contagion: contagionAmplifier },
+  };
 }
