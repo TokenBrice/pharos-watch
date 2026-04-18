@@ -23,7 +23,7 @@ export interface ComputeSafetyScoresOptions {
   outputMode?: "map" | "full-grades";
 }
 
-type SafetyScoresResultMap = {
+export type SafetyScoresResultMap = {
   kind: "ok" | "degraded";
   mode: "map";
   reason?: string;
@@ -33,7 +33,7 @@ type SafetyScoresResultMap = {
   scores: Map<string, SafetyResult>;
 };
 
-type SafetyScoresResultFull = {
+export type SafetyScoresResultFull = {
   kind: "ok" | "degraded";
   mode: "full-grades";
   reason?: string;
