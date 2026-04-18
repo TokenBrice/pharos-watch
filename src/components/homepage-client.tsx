@@ -8,7 +8,6 @@ import { useDexLiquidity, usePegSummary, useReportCards, useStressSignals } from
 import { useStablecoins } from "@/hooks/use-stablecoins";
 import { useLogos } from "@/hooks/use-logos";
 import { useHomepageFilters, FILTER_GROUPS } from "@/hooks/use-homepage-filters";
-import { useStartHereCallout } from "@/hooks/use-start-here-callout";
 import { useDataAnnounce } from "@/hooks/use-data-announce";
 import { DataLiveRegion } from "@/components/data-live-region";
 import { MarketHighlights } from "@/components/market-highlights";
@@ -18,7 +17,7 @@ import { FilterBar } from "@/components/filter-bar";
 import { SectionErrorBoundary } from "@/components/section-error-boundary";
 import { SectionSkeleton, ChartSkeleton } from "@/components/homepage-skeletons";
 import { PegBrowseStrip } from "@/components/peg-distribution-grid";
-import { StartHereCallout, HomepageSectionBand } from "@/components/homepage-sections";
+import { HomepageSectionBand } from "@/components/homepage-sections";
 import { Button } from "@/components/ui/button";
 import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins";
 import { UpcomingStablecoinsSection } from "@/components/upcoming-stablecoins-section";
@@ -88,7 +87,6 @@ function getHomepageFilterLabel(tag: keyof typeof FILTER_TAG_LABELS) {
 }
 
 export function HomepageClient() {
-  const { isReady: startHereReady, shouldShow: shouldShowStartHereCallout, retireCallout } = useStartHereCallout();
   const [showFilters, setShowFilters] = useState(false);
   const { data, isLoading, error: pricesError, dataUpdatedAt, refetch: refetchPrices, meta: pricesMeta } = useStablecoins();
   const { data: logos } = useLogos();
@@ -173,8 +171,6 @@ export function HomepageClient() {
           },
         ]}
       />
-
-      {startHereReady && shouldShowStartHereCallout ? <StartHereCallout onOpenStartHere={retireCallout} /> : null}
 
       <SectionErrorBoundary name="highlights">
         <MarketHighlights data={data?.peggedAssets} logos={logos} pegRates={pegRates} />

@@ -3,6 +3,7 @@ import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins";
 import { PEG_CURRENCY_COUNT } from "@shared/lib/classification";
 import { CHAIN_META } from "@shared/lib/chains";
 import { HomepageClient } from "@/components/homepage-client";
+import { HomepageStartHereCalloutSlot } from "@/components/homepage-sections";
 import { KpiBar } from "@/components/kpi-bar";
 import { SiteHeader } from "@/components/site-header";
 import { safeJsonLd } from "@/lib/json-ld";
@@ -56,7 +57,14 @@ export default function HomePage() {
       />
       <div className="space-y-3">
         <SiteHeader total={total} pegCount={PEG_CURRENCY_COUNT} chainCount={Object.keys(CHAIN_META).length} />
-        <KpiBar />
+        <div className="flex flex-col gap-3 lg:contents">
+          <div className="order-1 empty:hidden lg:order-2">
+            <HomepageStartHereCalloutSlot />
+          </div>
+          <div className="order-2 lg:order-1">
+            <KpiBar />
+          </div>
+        </div>
       </div>
       <HomepageClient />
     </div>

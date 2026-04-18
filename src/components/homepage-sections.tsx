@@ -4,6 +4,18 @@ import Link from "next/link";
 import { ArrowRight, Compass, Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { openCommandPalette } from "@/lib/command-palette";
+import { useStartHereCallout } from "@/hooks/use-start-here-callout";
+
+/**
+ * First-session-only wrapper so page.tsx can place the callout in the
+ * shared flex container with <KpiBar /> and reorder them via CSS at
+ * breakpoints without touching the rest of HomepageClient.
+ */
+export function HomepageStartHereCalloutSlot() {
+  const { isReady, shouldShow, retireCallout } = useStartHereCallout();
+  if (!isReady || !shouldShow) return null;
+  return <StartHereCallout onOpenStartHere={retireCallout} />;
+}
 
 export function StartHereCallout({ onOpenStartHere }: { onOpenStartHere: () => void }) {
   return (
@@ -22,7 +34,7 @@ export function StartHereCallout({ onOpenStartHere }: { onOpenStartHere: () => v
               Start with the route that matches your job, not the full feature list.
             </h2>
             <p className="text-sm leading-relaxed text-muted-foreground">
-              The /start/ page explains what the core signals mean and points you to the right surface for market
+              The Start page takes 2 minutes and routes you to the right surface for what you need: market
               monitoring, single-coin research, yield, comparison, or alerts.
             </p>
           </div>
