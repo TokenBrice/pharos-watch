@@ -208,7 +208,7 @@ Age checks:
 
 - Loads qualifying individual DEX pool challengers from the published challenger snapshot tables via `loadDexPoolChallengers(...)`
 - Uses the same freshness / minimum-TVL guardrail family as the depeg helper layer
-- Counts as confirmation only when **any** qualifying pool diverges by at least `secondaryBar` in the same direction as the pending incident
+- Counts as confirmation only when **at least two** qualifying pools diverge by `secondaryBar` in the same direction, **or** a single qualifying pool with `>= $5M` TVL does so. A single thin pool can no longer promote a pending depeg on its own.
 - Non-fatal: missing challenger tables or incomplete published snapshots fall back through the helper's legacy path and still yield `null`/`false` safely
 
 ### Decision Matrix
@@ -218,7 +218,7 @@ Age checks:
 | true | any | any | any | any | PROMOTE to `depeg_events` |
 | any | true | any | any | any | PROMOTE to `depeg_events` |
 | any | any | true | any | any | PROMOTE to `depeg_events` |
-| any | any | any | true | any | PROMOTE to `depeg_events` |
+| any | any | any | true | any | PROMOTE to `depeg_events` (pool-only path requires 2 pools or one pool with `>= $5M` TVL) |
 | false | any | false | any | true | REJECT (off-chain and aggregate DEX both oppose the pending direction) |
 | false | any | null | false/null | true | REJECT (directional contradiction with no same-direction rescue signal) |
 | null | null | false | false/null | true | REJECT (available secondary evidence points the other way) |
@@ -229,6 +229,8 @@ Promotion inserts into `depeg_events` with `started_at` = original `first_seen_a
 ## Historical Backfill Validation
 
 Historical backfills in `worker/src/api/backfill-depegs.ts` do **not** reuse the exact same guard as live DEX or fallback enrichment, but they now consult the same authoritative-price provider registry as live sync before falling back to market history.
+
+Backfill rewrites are atomic: the delete of prior `source='backfill'` rows and the insert of replacement rows now share a single D1 `batch()` call, so a worker interruption mid-rewrite can no longer leave a coin with zero depeg rows.
 
 Supported non-USD fiat backfills now prefer direct CoinGecko native-fiat history first and compare that series against the native `1.0` peg. In that native-fiat mode, replay uses daily points plus a two-point confirmation window across 36 hours before opening a normal event, while still preserving extreme single-point crashes of `>= 5000 bps`. Only when that native history is unavailable does the replay fall back to USD-denominated CoinGecko/DefiLlama history plus the historical FX reference.
 

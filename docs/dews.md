@@ -6,7 +6,7 @@ Per-coin, forward-looking stress score (0-100) estimating depeg probability. Com
 
 DEWS shares its methodology versioning with the Depeg Tracker pipeline. Both are tracked together in `shared/lib/depeg-dews-version.ts`.
 
-- **Current methodology version:** `v5.93`
+- **Current methodology version:** `v5.94`
 - **Public changelog page:** `/methodology/depeg-changelog/`
 - **Canonical source:** `shared/lib/depeg-dews-version.ts`
 
@@ -87,6 +87,7 @@ Smoothed with previous reading when available.
 - **Score erosion anchors:** `[0%, 0] → [5%, 15] → [15%, 40] → [30%, 70] → [50%, 100]`
 - **TVL erosion anchors:** `[0%, 0] → [10%, 15] → [25%, 40] → [50%, 70] → [75%, 100]`
 - 50/50 blend
+- **Fail-closed:** both 7-day anchors (score erosion **and** TVL erosion) must be available. If either anchor is missing the sub-signal is marked unavailable and its weight is redistributed, instead of silently contributing `0` stress.
 
 ### S_price — Price Confidence Degradation
 
@@ -159,6 +160,8 @@ Score = `min(100, sum of active signal points)`.
 **Cron name:** `compute-dews`
 
 **Run health semantics:** DEWS records upstream read problems as structured cron metadata (`sourceFailures`, `sourceCoverage`, `validationFailures`). The cron returns `status: "degraded"` when non-bootstrap source dependencies fail. Bootstrap grace is now a one-time state transition, tracked by the `dews:bootstrap-complete` cache sentinel after the first successful publication. Before that first success, only explicitly optional missing tables are tagged `bootstrapAllowed=true`; once the sentinel exists, those same failures degrade the run normally. Fresh `dex_liquidity` is now treated as a core dependency, and rows older than 2 hours block publication as a hard source-freshness failure.
+
+**Off-chain confirmation resilience:** CoinGecko and DefiLlama confirmation fetches used by the pending-depeg pipeline are wrapped in a circuit breaker. A sustained provider outage trips the breaker and short-circuits subsequent confirmation lookups until it resets, so a single upstream failure no longer hammers the endpoint for 45 minutes per pending row.
 
 **Data flow:**
 

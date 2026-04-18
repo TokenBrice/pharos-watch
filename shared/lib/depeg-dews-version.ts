@@ -1,9 +1,26 @@
 import { createMethodologyVersion } from "./methodology-version";
 
 const depegDews = createMethodologyVersion({
-  currentVersion: "5.93",
+  currentVersion: "5.94",
   changelogPath: "/methodology/depeg-changelog/",
   changelog: [
+    {
+      version: "5.94",
+      title: "Pool-confirmation hardening, backfill atomicity, confirmation-provenance surfacing",
+      date: "2026-04-18",
+      effectiveAt: 1776470400,
+      summary:
+        "Pool-only pending promotion now requires 2 pools or >= $5M TVL; backfill delete+insert share a batch; off-chain confirmation is circuit-breaker-guarded; promoted depeg events now persist confirmation_sources and pending_reason.",
+      impact: [
+        "Single-pool manipulation can no longer unilaterally promote a pending depeg (bar = 2 pools OR one pool with >= $5M TVL)",
+        "A worker interruption during backfill no longer leaves a coin with zero depeg rows",
+        "A CoinGecko/DefiLlama outage no longer hammers the endpoint for 45 min per pending row",
+        "Promoted events carry confirmation_sources (e.g. 'DEX+CEX') and pending_reason (e.g. 'large-cap+low-confidence') for ex-post diagnostics",
+        "DEWS liquidity sub-signal fails closed when both 7-day anchors are missing instead of silently contributing 0",
+      ],
+      commits: [],
+      reconstructed: false,
+    },
     {
       version: "5.93",
       title: "Blacklist signal coverage follows direct EVM wave",
