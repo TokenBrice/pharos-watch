@@ -12,7 +12,7 @@ export const API_FRESHNESS_MAX_AGE_SEC = {
   depegEvents: 900,
   stressSignals: 1800,
   reportCards: 900,
-  redemptionBackstops: 3600,
+  redemptionBackstops: CRON_INTERVALS["sync-redemption-backstops"] * 2,
   mintBurnFlows: CRON_INTERVALS["sync-mint-burn"] * 2,
   mintBurnEvents: 900,
   blacklist: CRON_INTERVALS["sync-blacklist"],
