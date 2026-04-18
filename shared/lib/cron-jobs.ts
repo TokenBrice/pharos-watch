@@ -13,7 +13,7 @@ export type CronGroupKey =
 export const CRON_SCHEDULES = {
   quarterHourly: "*/15 * * * *",
   statusSelfCheckOffset: "9,24,39,54 * * * *",
-  hourlyBlacklist: "3 * * * *",
+  sixHourlyBlacklist: "3 */6 * * *",
   twentyMinuteMintBurn: "4,24,44 * * * *",
   thirtyMinuteDexDiscovery: "6,36 * * * *",
   twentyMinuteExtendedOffset: "13,33,53 * * * *",
@@ -37,7 +37,7 @@ export type CronStatusImpact = "critical" | "watch";
 const CRON_SCHEDULE_BUCKETS = {
   quarterHourly: { intervalSec: 900, offsetSec: 0 },
   statusSelfCheckOffset: { intervalSec: 900, offsetSec: 9 * 60 },
-  hourlyBlacklist: { intervalSec: 3600, offsetSec: 3 * 60 },
+  sixHourlyBlacklist: { intervalSec: 6 * 3600, offsetSec: 3 * 60 },
   twentyMinuteMintBurn: { intervalSec: 1200, offsetSec: 4 * 60 },
   thirtyMinuteDexDiscovery: { intervalSec: 1800, offsetSec: 6 * 60 },
   twentyMinuteExtendedOffset: { intervalSec: 1200, offsetSec: 13 * 60 },
@@ -213,9 +213,9 @@ const CRON_JOB_DEFINITIONS_BASE: readonly CronJobDefinition[] = [
   {
     job: "sync-blacklist",
     label: "Blacklist sync",
-    group: "hourly",
-    intervalSec: 3600,
-    scheduleKey: "hourlyBlacklist",
+    group: "multi-hourly",
+    intervalSec: 6 * 3600,
+    scheduleKey: "sixHourlyBlacklist",
     triggerMode: "isolated",
     maxConnections: 1, // Rate-limited sequential Etherscan/TronGrid/RPC calls
   },

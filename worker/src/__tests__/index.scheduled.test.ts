@@ -584,7 +584,7 @@ describe("worker.scheduled", () => {
     expect(cronMocks.syncStablecoinCharts).not.toHaveBeenCalled();
   });
 
-  it("runs only blacklist on the dedicated hourly :03 trigger", async () => {
+  it("runs only blacklist on the dedicated 6-hourly :03 trigger", async () => {
     const { ctx, waits } = makeCtx();
     const env = {
       DB: {} as D1Database,
@@ -592,7 +592,7 @@ describe("worker.scheduled", () => {
     } as const;
 
     await worker.scheduled(
-      { cron: "3 * * * *" } as ScheduledEvent,
+      { cron: "3 */6 * * *" } as ScheduledEvent,
       env as never,
       ctx,
     );

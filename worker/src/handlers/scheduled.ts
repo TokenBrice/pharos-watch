@@ -5,7 +5,7 @@ import { runScheduledSlotWithFence } from "../lib/cron-lease";
 import { createScheduledRuntimeContext, type ScheduledRuntimeContext } from "./scheduled/context";
 import { runQuarterHourlySlot } from "./scheduled/quarter-hourly";
 import { runStatusSelfCheckSlot } from "./scheduled/status-self-check";
-import { runHourlyBlacklistSlot } from "./scheduled/hourly-blacklist";
+import { runSixHourlyBlacklistSlot } from "./scheduled/hourly-blacklist";
 import { runTwentyMinuteMintBurnCriticalSlot } from "./scheduled/twenty-minute-mint-burn-critical";
 import { runThirtyMinuteDexDiscoverySlot } from "./scheduled/thirty-minute-dex-discovery";
 import { runTwentyMinuteMintBurnExtendedSlot } from "./scheduled/twenty-minute-mint-burn-extended";
@@ -25,7 +25,7 @@ type SlotRunner = (runtime: ScheduledRuntimeContext) => Promise<void> | void;
 const SLOT_RUNNER_BY_KEY = {
   quarterHourly: runQuarterHourlySlot,
   statusSelfCheckOffset: runStatusSelfCheckSlot,
-  hourlyBlacklist: runHourlyBlacklistSlot,
+  sixHourlyBlacklist: runSixHourlyBlacklistSlot,
   twentyMinuteMintBurn: runTwentyMinuteMintBurnCriticalSlot,
   thirtyMinuteDexDiscovery: runThirtyMinuteDexDiscoverySlot,
   twentyMinuteExtendedOffset: runTwentyMinuteMintBurnExtendedSlot,
