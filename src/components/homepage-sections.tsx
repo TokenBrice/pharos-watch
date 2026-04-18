@@ -17,7 +17,7 @@ export function HomepageStartHereCalloutSlot() {
   return <StartHereCallout onOpenStartHere={retireCallout} />;
 }
 
-export function StartHereCallout({ onOpenStartHere }: { onOpenStartHere: () => void }) {
+function StartHereCallout({ onOpenStartHere }: { onOpenStartHere: () => void }) {
   return (
     <section
       className="pharos-card-shell overflow-hidden border border-border/40 px-4 py-4 sm:px-5"
