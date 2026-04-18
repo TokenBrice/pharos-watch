@@ -63,7 +63,7 @@ export function CemeteryClient() {
             <CardTitle as="h2" className="pharos-kicker">
               The Cemetery
             </CardTitle>
-            <CardDescription className="max-w-2xl leading-relaxed">
+            <CardDescription className="leading-relaxed">
               {sortMode === "newest"
                 ? "Newest graves surface first. Year bands preserve the archive without breaking the field into separate buckets."
                 : "Oldest graves surface first. Year bands keep the memorial chronological without breaking the field into separate buckets."}
