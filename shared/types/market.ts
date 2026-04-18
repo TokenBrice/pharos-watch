@@ -576,10 +576,16 @@ const SignalDetailSchema = z
   })
   .passthrough();
 
+const AmplifiersSchema = z.object({
+  psi: z.number(),
+  contagion: z.number(),
+});
+
 const StressSignalEntrySchema = z.object({
   score: z.number(),
   band: z.string(),
   signals: z.record(z.string(), SignalDetailSchema),
+  amplifiers: AmplifiersSchema.optional(),
   computedAt: z.number(),
   methodologyVersion: z.string(),
 });
@@ -588,6 +594,7 @@ export interface StressSignalEntry {
   score: number;
   band: string;
   signals: Record<string, { value: number; available: boolean; [key: string]: unknown }>;
+  amplifiers?: { psi: number; contagion: number };
   computedAt: number;
   methodologyVersion: string;
 }
@@ -613,6 +620,7 @@ const StressSignalHistoryEntrySchema = z.object({
   score: z.number(),
   band: z.string(),
   signals: z.record(z.string(), SignalDetailSchema),
+  amplifiers: AmplifiersSchema.optional(),
   methodologyVersion: z.string(),
 });
 
@@ -630,6 +638,7 @@ export interface StressSignalDetailResponse {
     score: number;
     band: string;
     signals: Record<string, { value: number; available: boolean; [key: string]: unknown }>;
+    amplifiers?: { psi: number; contagion: number };
     methodologyVersion: string;
   }[];
   methodology: DepegDewsMethodology;

@@ -19,6 +19,40 @@ import {
 import { toMethodologyVersionLabel } from "@shared/lib/methodology-version";
 import { ACTIVE_IDS } from "@shared/lib/stablecoins";
 
+const DEFAULT_AMPLIFIERS = { psi: 1, contagion: 1 };
+
+/**
+ * Unwrap a parsed signals_json blob into { signals, amplifiers }.
+ *
+ * v5.95+ rows persist `{ signals: {...}, amplifiers: { psi, contagion } }`.
+ * Legacy rows persist the flat signals map at the top level with no amplifiers.
+ * Legacy rows default to `{ psi: 1, contagion: 1 }` (no amplification).
+ */
+function unwrapSignalsJson(parsed: Record<string, unknown> | null): {
+  signals: Record<string, unknown>;
+  amplifiers: { psi: number; contagion: number };
+} | null {
+  if (!parsed) return null;
+  const maybeWrapped = parsed as { signals?: unknown; amplifiers?: unknown };
+  const isWrapped =
+    maybeWrapped.signals != null &&
+    typeof maybeWrapped.signals === "object" &&
+    !Array.isArray(maybeWrapped.signals);
+  const signals = isWrapped
+    ? (maybeWrapped.signals as Record<string, unknown>)
+    : parsed;
+  const rawAmplifiers = isWrapped ? maybeWrapped.amplifiers : null;
+  const amp =
+    rawAmplifiers && typeof rawAmplifiers === "object" && !Array.isArray(rawAmplifiers)
+      ? (rawAmplifiers as { psi?: unknown; contagion?: unknown })
+      : null;
+  const amplifiers = {
+    psi: typeof amp?.psi === "number" ? amp.psi : DEFAULT_AMPLIFIERS.psi,
+    contagion: typeof amp?.contagion === "number" ? amp.contagion : DEFAULT_AMPLIFIERS.contagion,
+  };
+  return { signals, amplifiers };
+}
+
 export const handleStressSignals = withErrorHandler(
   "stress-signals",
   async (db: D1Database, url: URL): Promise<Response> => {
@@ -76,14 +110,16 @@ export const handleStressSignals = withErrorHandler(
       const computedAt = latest?.computed_at ?? Math.floor(Date.now() / 1000);
       const methodologyVersion = getDepegDewsMethodologyVersionAt(computedAt);
       let malformedRows = 0;
-      const currentSignals = latest
+      const currentParsed = latest
         ? safeJsonParse<Record<string, unknown> | null>(latest.signals_json, null)
         : null;
-      if (latest && currentSignals == null) malformedRows++;
+      const currentUnwrapped = unwrapSignalsJson(currentParsed);
+      if (latest && currentUnwrapped == null) malformedRows++;
 
       const historyRows = history.results.map((r) => {
-        const parsedSignals = safeJsonParse<Record<string, unknown> | null>(r.signals_json, null);
-        if (parsedSignals == null) {
+        const parsed = safeJsonParse<Record<string, unknown> | null>(r.signals_json, null);
+        const unwrapped = unwrapSignalsJson(parsed);
+        if (unwrapped == null) {
           malformedRows++;
           return null;
         }
@@ -91,17 +127,19 @@ export const handleStressSignals = withErrorHandler(
           date: r.snapshot_date,
           score: r.score,
           band: r.band,
-          signals: parsedSignals,
+          signals: unwrapped.signals,
+          amplifiers: unwrapped.amplifiers,
           methodologyVersion: getDepegDewsMethodologyVersionAt(r.snapshot_date),
         };
       }).filter((row): row is NonNullable<typeof row> => row !== null);
 
       return jsonResponse({
-        current: latest && currentSignals
+        current: latest && currentUnwrapped
           ? {
               score: latest.score,
               band: latest.band,
-              signals: currentSignals,
+              signals: currentUnwrapped.signals,
+              amplifiers: currentUnwrapped.amplifiers,
               computedAt: latest.computed_at,
               methodologyVersion: getDepegDewsMethodologyVersionAt(latest.computed_at),
             }
@@ -147,8 +185,9 @@ export const handleStressSignals = withErrorHandler(
       if (!ACTIVE_IDS.has(row.stablecoin_id)) {
         continue;
       }
-      const parsedSignals = safeJsonParse<Record<string, unknown> | null>(row.signals_json, null);
-      if (parsedSignals == null) {
+      const parsed = safeJsonParse<Record<string, unknown> | null>(row.signals_json, null);
+      const unwrapped = unwrapSignalsJson(parsed);
+      if (unwrapped == null) {
         malformedRows++;
         continue;
       }
@@ -156,7 +195,8 @@ export const handleStressSignals = withErrorHandler(
       signals[row.stablecoin_id] = {
         score: row.score,
         band: row.band,
-        signals: parsedSignals,
+        signals: unwrapped.signals,
+        amplifiers: unwrapped.amplifiers,
         computedAt: row.computed_at,
         methodologyVersion,
       };
