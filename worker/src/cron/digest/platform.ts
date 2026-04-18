@@ -109,14 +109,18 @@ export async function requestDigestCopy(
         model: "claude-opus-4-7",
         max_tokens: options.maxTokens,
         thinking: { type: "adaptive" },
-        output_config: { effort: "max" },
+        // `max` has no constraint on thinking depth and caused runaway adaptive
+        // thinking to consume the entire max_tokens budget (16k, then 32k)
+        // before any text block started. `xhigh` is Opus 4.7's recommended level
+        // for complex editorial work and the default in Claude Code.
+        output_config: { effort: "xhigh" },
         system: options.systemPrompt,
         messages: [{ role: "user", content: userPrompt }],
         // Streaming is required on Cloudflare Workers: Opus 4.7 with adaptive
-        // thinking + max effort can think for minutes before emitting the
-        // first byte of a non-streaming response, and CF severs the subrequest
-        // after ~130s of inactivity. Streaming flushes headers + ping events
-        // immediately, keeping the subrequest alive.
+        // thinking can think for minutes before emitting the first byte of a
+        // non-streaming response, and CF severs the subrequest after ~130s of
+        // inactivity. Streaming flushes headers + ping events immediately,
+        // keeping the subrequest alive.
         stream: true,
       }),
       // Outer AbortSignal.timeout(ANTHROPIC_TIMEOUT_MS) is the binding cap for

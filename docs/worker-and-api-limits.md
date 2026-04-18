@@ -131,7 +131,7 @@ Current digest generation constraints that are actually encoded in repo code:
 
 - model: `claude-opus-4-7`
 - thinking: adaptive (`thinking.type = "adaptive"`)
-- reasoning effort: max (`output_config.effort = "max"`)
+- reasoning effort: xhigh (`output_config.effort = "xhigh"`) — dropped from `max` on 2026-04-18 after runaway-thinking exhausted `max_tokens` twice (`stopReason=max_tokens` with only a `signature_delta` at both 16k and 32k). `max` has no constraint on thinking depth on Opus 4.7; `xhigh` is Anthropic's recommended level for complex editorial work and Claude Code's own default.
 - Anthropic outer timeout: `12 * 60_000 ms` (12 min), bound by `AbortSignal.timeout(ANTHROPIC_TIMEOUT_MS)` in `platform.ts`
 - per-attempt fetch timeout: `11 * 60_000 ms` (11 min), local to `requestDigestCopy`; safety net so a single stalled attempt cannot consume the outer budget
 - retry depth for the digest Anthropic call: `2` (max 3 attempts); the outer `AbortSignal` caps total wall time regardless
@@ -139,9 +139,9 @@ Current digest generation constraints that are actually encoded in repo code:
 - daily cron lease (wrapper timeout): `14 * 60_000 ms` (14 min), leaves ~2 min under Cloudflare's 15-min scheduled-event ceiling for D1 persistence, Telegram/Twitter delivery, and cron_runs logging
 - daily-digest heartbeat override: `heartbeatSec = 30`, `maxRenewFailures = 3` (see `worker/src/handlers/scheduled/context.ts` — default policy unchanged for other jobs)
 - weekly cron lease: `12 * 60_000 ms` (12 min)
-- max_tokens: `32000` daily, `40000` weekly (bumped from 16k/20k on 2026-04-17 after production runs showed Opus 4.7 adaptive thinking consuming the entire token budget with `stop_reason=max_tokens` before any text block emitted)
+- max_tokens: `64000` daily, `64000` weekly — Anthropic's documented floor for Opus 4.7 at `xhigh`/`max` effort with adaptive thinking. Earlier settings of 16k → 32k at `effort: "max"` both hit `stop_reason=max_tokens` with no text emitted; the root-cause fix on 2026-04-18 lowered effort to `xhigh` and raised the ceiling to 64k in one change.
 - cadence: daily scheduled run plus deferred manual admin trigger (see "Manual trigger runtime model" below)
-- cost envelope (approximate, assuming single-attempt runs): Opus 4.7 input ~$5/Mtok, output ~$25/Mtok. Daily worst-case at 32k tokens ≈ $2.40; weekly worst-case at 40k ≈ $3.00. Annualized ≈ $1100 at cap. Actual usage is typically much lower since most runs don't approach the cap; the ceiling exists to survive the occasional adaptive-thinking-heavy run. Monitor `usage.output_tokens` via the digest:last-trigger-result cache key or cron_runs metadata.
+- cost envelope (approximate, assuming single-attempt runs): Opus 4.7 input ~$5/Mtok, output ~$25/Mtok. Daily worst-case at 64k tokens ≈ $4.80; weekly worst-case at 64k ≈ $4.80. Annualized ≈ $2000 at cap. Actual usage is typically much lower since most runs don't approach the cap; the ceiling exists to survive adaptive-thinking-heavy runs. Monitor `usage.output_tokens` via the digest:last-trigger-result cache key or cron_runs metadata.
 
 ### Manual trigger runtime model
 

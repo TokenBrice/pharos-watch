@@ -568,10 +568,9 @@ export async function generateWeeklyRecap(
     anthropicApiKey,
     systemPrompt: WEEKLY_SYSTEM_PROMPT,
     userPrompt,
-    // Adaptive thinking + max effort needs headroom beyond the 20k original;
-    // daily was bumped to 32k after 16k was consumed entirely by thinking.
-    // Weekly prompts carry more context so use 40k.
-    maxTokens: 40000,
+    // Matches daily-digest's 64k floor for Opus 4.7 adaptive thinking at
+    // xhigh effort — same runaway-thinking failure mode would apply here.
+    maxTokens: 64000,
     signal,
     logPrefix: "weekly-recap",
     parseOptions: {

@@ -88,11 +88,11 @@ export async function generateDailyDigest(
     anthropicApiKey,
     systemPrompt: SYSTEM_PROMPT,
     userPrompt: userPromptContent,
-    // Opus 4.7 adaptive thinking + max effort spends a large fraction of the
-    // token budget on the (omitted) reasoning block; 16k was consumed entirely
-    // by thinking in production, leaving no text output. 32k gives the model
-    // enough headroom for its internal reasoning AND the final digest text.
-    maxTokens: 32000,
+    // Anthropic's documented floor for Opus 4.7 adaptive thinking at xhigh/max
+    // effort. 16k and 32k both exited with stop_reason=max_tokens and only a
+    // signature_delta — thinking consumed the whole budget before any text
+    // block started. See digest/platform.ts for the effort rationale.
+    maxTokens: 64000,
     signal,
     logPrefix: "daily-digest",
     validationProfile: {

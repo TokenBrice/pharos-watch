@@ -71,10 +71,10 @@ The digest's Flight-to-Quality collector now uses `buildFlightToQualityClassific
 
 ### LLM call
 
-- **Model:** `claude-opus-4-7` via `https://api.anthropic.com/v1/messages`, with adaptive thinking (`thinking.type = "adaptive"`) and max reasoning effort (`output_config.effort = "max"`)
-- **Reasoning:** adaptive thinking is on by default with omitted display; no `budget_tokens` is needed (and is rejected on Opus 4.7). Sampling parameters (`temperature` / `top_p` / `top_k`) are not sent (also rejected on Opus 4.7).
+- **Model:** `claude-opus-4-7` via `https://api.anthropic.com/v1/messages`, with adaptive thinking (`thinking.type = "adaptive"`) and `xhigh` reasoning effort (`output_config.effort = "xhigh"`)
+- **Reasoning:** adaptive thinking is on by default with omitted display; no `budget_tokens` is needed (and is rejected on Opus 4.7). Sampling parameters (`temperature` / `top_p` / `top_k`) are not sent (also rejected on Opus 4.7). `xhigh` is Opus 4.7's recommended level for complex editorial work; `max` was dropped on 2026-04-18 after a second runaway-thinking failure (`stopReason=max_tokens, outputTokens=32000`, only a `signature_delta` emitted) — `max` has no constraint on thinking depth.
 - **Timeout:** 14 minutes for the Anthropic request. The daily digest cron wrapper allows 14.5 minutes total, which stays below Cloudflare's 15-minute scheduled-trigger wall-clock ceiling while leaving tail room for persistence, logging, and channel delivery.
-- **Max tokens:** 32000 daily, 40000 weekly (max_tokens covers thinking + output; sized for max-effort headroom. Originally 16k/20k but production showed adaptive thinking consuming the entire budget on its own — see digest:last-trigger-result with `stopReason=max_tokens, outputTokens=16000` on 2026-04-17)
+- **Max tokens:** 64000 daily, 64000 weekly (max_tokens covers thinking + output). Anthropic's documented floor for Opus 4.7 at xhigh/max effort. Earlier bumps to 16k → 32k at `effort: "max"` both hit `stop_reason=max_tokens` with no text emitted; the root-cause fix on 2026-04-18 was lowering effort to `xhigh` and raising the ceiling per Anthropic's guidance in one change.
 - **Overload retries:** Anthropic `529 Overloaded` responses now back off exponentially (`5s`, `10s`, `20s`, `30s`) before the digest gives up
 - **Voice:** sardonic financial columnist — dry, precise, no emojis, no exclamation marks, with a compact few-shot EXEMPLAR embedded in the system prompt to anchor voice and structure
 - **Priority rule:** lead from the highest-impact unsuppressed editorial candidate. Raw evidence sections are supporting material, not the lead-selection source.
@@ -258,9 +258,9 @@ Requires >=5 current-week daily digests to proceed. Prior-week coverage below 5 
 
 ### LLM call
 
-- **Model:** `claude-opus-4-7` with adaptive thinking + max effort (identical contract to the daily digest)
+- **Model:** `claude-opus-4-7` with adaptive thinking + `xhigh` effort (identical contract to the daily digest)
 - **Timeout:** shared 14-minute Anthropic request cap; the scheduled weekly wrapper still has a 12-minute cron lease, so the lease can abort first on slow Monday recap runs
-- **max_tokens:** 40000
+- **max_tokens:** 64000
 - **Voice:** Same sardonic columnist, but synthesizing rather than reporting; rewritten system prompt adds arc framing, forward-look mandate on the last paragraph, tic list, and explicit week-over-week references
 - **Structure:** 4-6 paragraphs, 250-400 words: week's headline, dominant story, counter-narrative, supply/capital flows, optional structural observation
 - **Artifact policy:** Same suppression principle as daily. Weekly recaps separate repeated active observations from unique signals so chronic conditions are not counted as fresh events.
