@@ -61,6 +61,7 @@ Expected: `1`.
 Create `worker/migrations/0106_funding_tables.sql`:
 
 ```sql
+-- rollout-safety: backward-compatible
 -- Funding subsystem (donations vs costs page).
 -- All five tables are additive; no existing data is touched.
 
@@ -109,6 +110,12 @@ CREATE TABLE IF NOT EXISTS funding_chain_sync (
   last_attempt_at INTEGER NOT NULL,
   last_error TEXT
 );
+
+-- Seed each chain with a recent-but-safe starting block so the first prod run
+-- doesn't paginate through years of empty history. The exact block is captured
+-- at deployment time using a current-block lookup minus a 30-day rewind.
+-- (Pharos's funding wallet has only one inbound tx today so this is purely
+-- defensive — see Task 11 Step 7.)
 
 CREATE TABLE IF NOT EXISTS funding_price_cache (
   asset_key TEXT NOT NULL,
@@ -231,9 +238,19 @@ export interface CostLineItem {
   note?: string;
 }
 
+export type DonorKind = "founder" | "pool" | "supporter";
+
 export interface DonorLabel {
   address: string; // lowercased
   label: string;
+  /** Drives donor-count and chart-segregation behavior in the API:
+   *  - "founder" rows are excluded from distinct_donors_lifetime, the
+   *    community_donations_usd series, and the donor wall, but kept
+   *    visible in the chart as a separate stacked layer.
+   *  - "pool" rows count as community.
+   *  - "supporter" or undefined behaves as community (default).
+   */
+  kind?: DonorKind;
 }
 
 export type SpamDenylist = Record<FundingChain, string[]>;
@@ -270,19 +287,25 @@ export interface ChainFreshnessEntry {
 }
 
 export interface FundingKpis {
-  current_month_coverage_pct: number; // 0–∞
-  current_month_donations_usd: number;
+  current_month_coverage_pct: number; // 0–∞ (community + founder vs target)
+  current_month_community_usd: number; // excludes founder subsidy
+  current_month_total_usd: number; // community + founder
   current_month_target_usd: number;
   trailing_3mo_avg_coverage_pct: number;
-  total_raised_lifetime_usd: number;
-  distinct_donors_lifetime: number;
+  total_community_lifetime_usd: number; // excludes founder subsidy
+  total_founder_subsidy_usd: number;
+  distinct_community_donors_lifetime: number; // excludes founder
+  /** True when this month has zero community donations and no historical
+   *  community donations exist; the page renders "Tracking begins" copy. */
+  is_cold_start: boolean;
 }
 
 export interface FundingMonthlyPoint {
   month: string;
-  donations_usd: number;
+  community_donations_usd: number;
+  founder_subsidy_usd: number;
   costs_usd: number;
-  donor_count: number;
+  donor_count: number; // distinct community donors that month (excludes founder)
 }
 
 export interface FundingDonorWallEntry {
@@ -290,7 +313,8 @@ export interface FundingDonorWallEntry {
   display: string; // ENS, custom label, or truncated address
   total_usd: number;
   most_recent_at: number;
-  etherscan_url: string;
+  most_recent_chain: FundingChain;
+  explorer_url: string; // chain-aware (Etherscan, Basescan, Polygonscan, etc.)
 }
 
 export interface FundingSummaryResponse {
@@ -353,7 +377,7 @@ Create `shared/data/funding/donor-labels.json`:
 []
 ```
 
-(Brice's EOA + Giveth pool are added at implementation review time — see Task 12.)
+(Brice's EOA with `kind: "founder"` + Giveth pool with `kind: "pool"` are added at implementation review time — see Task 12.)
 
 Create `shared/data/funding/spam-denylist.json`:
 
@@ -724,6 +748,12 @@ async function writeCache(
     .run();
 }
 
+// Per-cron-run in-memory cache of (chain, asset_address) → coinId resolution.
+// CoinGecko's contract→id endpoint is rate-limited; without this, each unique
+// ERC20 we encounter triggers TWO calls per donation (id lookup + history).
+// Cache lifetime is the worker invocation only (Map cleared between cron runs).
+const COIN_ID_CACHE = new Map<string, string | null>();
+
 async function resolveCoinId(
   chain: FundingChain,
   assetAddress: string | null,
@@ -731,13 +761,23 @@ async function resolveCoinId(
   coingeckoApiKey: string,
 ): Promise<string | null> {
   if (assetAddress == null) return NATIVE_COIN_ID_BY_CHAIN[chain] ?? null;
+  const cacheKey = `${chain}:${assetAddress.toLowerCase()}`;
+  if (COIN_ID_CACHE.has(cacheKey)) return COIN_ID_CACHE.get(cacheKey) ?? null;
   const platform = CHAIN_TO_CG_ASSET_PLATFORM[chain];
-  if (!platform) return null;
+  if (!platform) {
+    COIN_ID_CACHE.set(cacheKey, null);
+    return null;
+  }
   const url = `https://pro-api.coingecko.com/api/v3/coins/${platform}/contract/${assetAddress.toLowerCase()}`;
   const resp = await fetchImpl(url, { headers: { "x-cg-pro-api-key": coingeckoApiKey } });
-  if (!resp.ok) return null;
+  if (!resp.ok) {
+    COIN_ID_CACHE.set(cacheKey, null);
+    return null;
+  }
   const payload = (await resp.json()) as { id?: string };
-  return payload.id ?? null;
+  const id = payload.id ?? null;
+  COIN_ID_CACHE.set(cacheKey, id);
+  return id;
 }
 ```
 
@@ -846,29 +886,34 @@ cd worker && npx vitest run src/lib/funding/__tests__/ens-resolver.test.ts
 
 Expected: FAIL — module not found.
 
-- [ ] **Step 3: Implement**
+- [ ] **Step 3: Implement using ENS Universal Resolver**
+
+The Universal Resolver's `reverse(bytes lookupAddress)` returns name + forward-verified address in one call, eliminating the two extra eth_calls (registry → resolver → addr) and the spoofing window between them. We also reuse `viem` (already a worker dep — verify with `cd worker && npm ls viem`) for `namehash` and `keccak256` instead of adding `js-sha3`.
 
 Create `worker/src/lib/funding/ens-resolver.ts`:
 
 ```typescript
+import { encodeFunctionData, decodeFunctionResult, parseAbi } from "viem";
+
 /**
- * Forward-verified ENS resolution against Ethereum L1.
+ * Forward-verified ENS resolution via the ENS Universal Resolver on Ethereum L1.
  *
- * 1. Reverse-lookup `<address>.addr.reverse` → ENS name (via ENS Universal Resolver).
- * 2. Forward-resolve that name → address.
- * 3. Only return the name if the forward resolution matches the input address.
+ * The Universal Resolver's `reverse(bytes lookupAddress)` returns
+ * `(string name, address resolvedAddress, address reverseResolver, address resolver)`
+ * — the forward verification is built in: a name is verified iff
+ * `resolvedAddress == lookupAddress`.
  *
- * All RPC calls go through the supplied Ethereum L1 RPC endpoint (Alchemy or fallback).
+ * This is one eth_call per address (vs three for manual reverse + registry +
+ * resolver.addr) and removes the spoofing race between calls.
  */
 
-const ENS_PUBLIC_RESOLVER = "0x4976fb03c32e5b8cfe2b6ccb31c09ba78ebaba41";
-const ENS_REGISTRY = "0x00000000000c2e074ec69a0dfb2997ba6c7d2e1e";
-// `name(bytes32)` selector
-const NAME_SELECTOR = "0x691f3431";
-// `addr(bytes32)` selector
-const ADDR_SELECTOR = "0x3b3b57de";
-// `resolver(bytes32)` selector
-const RESOLVER_SELECTOR = "0x0178b8bf";
+// Canonical Universal Resolver on Ethereum mainnet (deployed by ENS Labs).
+// Verify against https://docs.ens.domains/resolution/universal-resolver before pinning.
+const ENS_UNIVERSAL_RESOLVER = "0xc0497E381f536Be9ce14B0dD3817cBcAe57d2F62";
+
+const REVERSE_ABI = parseAbi([
+  "function reverse(bytes lookupAddress) view returns (string name, address resolvedAddress, address reverseResolver, address resolver)",
+]);
 
 export interface EnsResolution {
   ensName: string | null;
@@ -880,32 +925,32 @@ export async function resolveEnsForwardVerified(
   fetchImpl: typeof fetch,
   ethRpcUrl: string,
 ): Promise<EnsResolution> {
-  const lower = address.toLowerCase().replace(/^0x/, "");
-  const reverseNode = namehash(`${lower}.addr.reverse`);
+  const lower = address.toLowerCase();
+  const lookupBytes = ("0x" + lower.replace(/^0x/, "")) as `0x${string}`;
+  const data = encodeFunctionData({
+    abi: REVERSE_ABI,
+    functionName: "reverse",
+    args: [lookupBytes],
+  });
+  const result = await ethCall(fetchImpl, ethRpcUrl, ENS_UNIVERSAL_RESOLVER, data);
+  if (!result) return { ensName: null, forwardVerified: 0 };
 
-  const reverseData = NAME_SELECTOR + reverseNode.slice(2);
-  const reverseResp = await ethCall(fetchImpl, ethRpcUrl, ENS_PUBLIC_RESOLVER, reverseData);
-  if (!reverseResp) return { ensName: null, forwardVerified: 0 };
-  const ensName = decodeAbiString(reverseResp);
-  if (!ensName) return { ensName: null, forwardVerified: 0 };
-
-  // Forward-resolve.
-  const forwardNode = namehash(ensName);
-  const resolverData = RESOLVER_SELECTOR + forwardNode.slice(2);
-  const resolverResp = await ethCall(fetchImpl, ethRpcUrl, ENS_REGISTRY, resolverData);
-  if (!resolverResp) return { ensName: null, forwardVerified: 0 };
-  const resolver = "0x" + resolverResp.slice(-40);
-  if (resolver === "0x0000000000000000000000000000000000000000") {
+  let decoded: readonly [string, `0x${string}`, `0x${string}`, `0x${string}`];
+  try {
+    decoded = decodeFunctionResult({
+      abi: REVERSE_ABI,
+      functionName: "reverse",
+      data: result as `0x${string}`,
+    }) as typeof decoded;
+  } catch {
     return { ensName: null, forwardVerified: 0 };
   }
-  const addrData = ADDR_SELECTOR + forwardNode.slice(2);
-  const addrResp = await ethCall(fetchImpl, ethRpcUrl, resolver, addrData);
-  if (!addrResp) return { ensName: null, forwardVerified: 0 };
-  const forwardAddr = "0x" + addrResp.slice(-40).toLowerCase();
-  if (forwardAddr !== address.toLowerCase()) {
+
+  const [name, resolvedAddress] = decoded;
+  if (!name || resolvedAddress.toLowerCase() !== lower) {
     return { ensName: null, forwardVerified: 0 };
   }
-  return { ensName, forwardVerified: 1 };
+  return { ensName: name, forwardVerified: 1 };
 }
 
 async function ethCall(
@@ -927,65 +972,67 @@ async function ethCall(
   });
   if (!resp.ok) return null;
   const payload = (await resp.json()) as { result?: string; error?: { message?: string } };
-  if (!payload.result || payload.result === "0x") return null;
+  if (!payload.result || payload.result === "0x" || payload.error) return null;
   return payload.result;
 }
-
-function decodeAbiString(hex: string): string | null {
-  if (!hex.startsWith("0x") || hex.length < 130) return null;
-  const data = hex.slice(2);
-  const lenHex = data.slice(64, 128);
-  const len = parseInt(lenHex, 16);
-  if (!Number.isFinite(len) || len === 0) return null;
-  const bytesHex = data.slice(128, 128 + len * 2);
-  if (bytesHex.length < len * 2) return null;
-  const bytes = new Uint8Array(len);
-  for (let i = 0; i < len; i += 1) bytes[i] = parseInt(bytesHex.slice(i * 2, i * 2 + 2), 16);
-  return new TextDecoder().decode(bytes);
-}
-
-function namehash(name: string): string {
-  let node = "0x" + "0".repeat(64);
-  if (name.length === 0) return node;
-  const labels = name.split(".").reverse();
-  for (const label of labels) {
-    const labelHash = keccak256Hex(new TextEncoder().encode(label));
-    node = keccak256Hex(hexToBytes(node + labelHash.slice(2)));
-  }
-  return node;
-}
-
-function hexToBytes(hex: string): Uint8Array {
-  const clean = hex.startsWith("0x") ? hex.slice(2) : hex;
-  const bytes = new Uint8Array(clean.length / 2);
-  for (let i = 0; i < bytes.length; i += 1) bytes[i] = parseInt(clean.slice(i * 2, i * 2 + 2), 16);
-  return bytes;
-}
-
-// Keccak256 — Workers runtime ships SubtleCrypto SHA-256 only; use the dRPC
-// JS keccak implementation from `js-sha3` already present in the worker for
-// blacklist event topic matching. If not installed, add `js-sha3` as a worker
-// dependency before running this code.
-import { keccak256 as sha3Keccak256 } from "js-sha3";
-
-function keccak256Hex(bytes: Uint8Array): string {
-  return "0x" + sha3Keccak256(bytes);
-}
 ```
 
-- [ ] **Step 4: Verify dependency**
+- [ ] **Step 4: Verify viem is already a dep**
 
 ```bash
-cd worker && npm ls js-sha3 2>&1 | head -3
+cd worker && npm ls viem 2>&1 | head -3
 ```
 
-If not present, add it:
+Expected: shows a viem version (already a dep). If absent, add it:
 
 ```bash
-cd worker && npm install js-sha3
+cd worker && npm install viem
 ```
 
-- [ ] **Step 5: Run test to verify it passes**
+(Do **not** add `js-sha3` — viem covers everything we need here, and bundle size matters in workers.)
+
+- [ ] **Step 5: Adjust the test fixture encoding**
+
+The test in Step 1 was written assuming a 3-call flow. Rewrite the test for the Universal Resolver (one call returning ABI-encoded `(string, address, address, address)`):
+
+```typescript
+import { describe, expect, it, vi } from "vitest";
+import { encodeAbiParameters, parseAbiParameters } from "viem";
+import { resolveEnsForwardVerified } from "../ens-resolver";
+
+const ADDR = "0x5d698362edb8aea1c2b2483096bdee3265d860db";
+
+function encodeReverseResult(name: string, resolved: string): string {
+  return encodeAbiParameters(
+    parseAbiParameters("string, address, address, address"),
+    [name, resolved as `0x${string}`, "0x0000000000000000000000000000000000000000", "0x0000000000000000000000000000000000000000"],
+  );
+}
+
+describe("resolveEnsForwardVerified", () => {
+  it("returns null when the resolver returns 0x or errors", async () => {
+    const fetchImpl = vi.fn(async () => new Response(JSON.stringify({ jsonrpc: "2.0", id: 1, result: "0x" }), { status: 200 }));
+    const out = await resolveEnsForwardVerified(ADDR, fetchImpl as unknown as typeof fetch, "https://rpc");
+    expect(out).toEqual({ ensName: null, forwardVerified: 0 });
+  });
+
+  it("returns name when forward resolution matches", async () => {
+    const result = encodeReverseResult("pharos-watch.eth", ADDR);
+    const fetchImpl = vi.fn(async () => new Response(JSON.stringify({ jsonrpc: "2.0", id: 1, result }), { status: 200 }));
+    const out = await resolveEnsForwardVerified(ADDR, fetchImpl as unknown as typeof fetch, "https://rpc");
+    expect(out).toEqual({ ensName: "pharos-watch.eth", forwardVerified: 1 });
+  });
+
+  it("rejects forward mismatch (spoofed reverse record)", async () => {
+    const result = encodeReverseResult("attacker.eth", "0x1111111111111111111111111111111111111111");
+    const fetchImpl = vi.fn(async () => new Response(JSON.stringify({ jsonrpc: "2.0", id: 1, result }), { status: 200 }));
+    const out = await resolveEnsForwardVerified(ADDR, fetchImpl as unknown as typeof fetch, "https://rpc");
+    expect(out).toEqual({ ensName: null, forwardVerified: 0 });
+  });
+});
+```
+
+- [ ] **Step 6: Run test to verify it passes**
 
 ```bash
 cd worker && npx vitest run src/lib/funding/__tests__/ens-resolver.test.ts
@@ -993,11 +1040,11 @@ cd worker && npx vitest run src/lib/funding/__tests__/ens-resolver.test.ts
 
 Expected: PASS, 3 tests.
 
-- [ ] **Step 6: Commit**
+- [ ] **Step 7: Commit**
 
 ```bash
-git add worker/src/lib/funding/ens-resolver.ts worker/src/lib/funding/__tests__/ens-resolver.test.ts worker/package.json worker/package-lock.json
-git commit -m "feat(funding): forward-verified ENS resolver against L1"
+git add worker/src/lib/funding/ens-resolver.ts worker/src/lib/funding/__tests__/ens-resolver.test.ts
+git commit -m "feat(funding): forward-verified ENS resolver via Universal Resolver"
 ```
 
 ---
@@ -1366,23 +1413,39 @@ export function parseGnosisscanResults(
   }
 
   // txlist + txlistinternal — native xDAI; ignore failed and outbound rows.
+  // PK collision note: txlistinternal can return multiple internal calls
+  // sharing the same parent tx_hash. Use a synthetic log_index per endpoint
+  // to keep (chain, tx_hash, log_index) unique:
+  //   external (txlist)         → log_index = 0
+  //   erc20    (tokentx)        → log_index = i + 1
+  //   internal (txlistinternal) → log_index = 100_000 + i
+  // The 100_000 base reserves room for a tx with up to 99,998 ERC20 transfers
+  // (already 100x what any sane tx contains).
+  let internalCounter = 0;
   for (const raw of rows as GnosisscanTxRow[]) {
     if (raw.isError === "1") continue;
     if (raw.to.toLowerCase() !== wallet) continue;
     if (raw.from.toLowerCase() === wallet) continue; // self-send protection
-    const amountDecimal = Number(BigInt(raw.value)) / 1e18;
+    // Use string division to avoid Number precision loss on large wei values.
+    const wei = BigInt(raw.value);
+    const whole = wei / 10n ** 18n;
+    const frac = wei % 10n ** 18n;
+    const amountDecimal = Number(whole) + Number(frac) / 1e18;
     if (amountDecimal === 0) continue;
+    const isInternal = endpoint === "txlistinternal";
+    const logIndex = isInternal ? 100_000 + internalCounter : 0;
+    if (isInternal) internalCounter += 1;
     out.push({
       chain: "gnosis",
       tx_hash: raw.hash.toLowerCase(),
-      log_index: 0,
+      log_index: logIndex,
       block_number: parseInt(raw.blockNumber, 10),
       block_timestamp: parseInt(raw.timeStamp, 10),
       from_address: raw.from.toLowerCase(),
       asset_symbol: GNOSIS_NATIVE_SYMBOL,
       asset_address: null,
       amount_decimal: amountDecimal,
-      category: endpoint === "txlistinternal" ? "internal" : "external",
+      category: isInternal ? "internal" : "external",
     });
   }
   return out;
@@ -1567,8 +1630,11 @@ export async function ingestNormalizedTransfers(args: IngestArgs): Promise<Inges
       }
     }
 
-    const finalIsSpam = isSpam || (priceSource === "zero-no-price" && usdAtReceipt === 0 && !isSpam ? 1 : 0);
-    if (finalIsSpam) spam += 1;
+    // is_spam reflects the spam-denylist match only. Unpriced legitimate
+    // tokens (long-tail ERC20s with no CG listing) are NOT spam — they get
+    // price_source='zero-no-price' and usd_at_receipt=0, and the API filters
+    // them out of dollar totals via `WHERE usd_at_receipt > 0 AND is_spam = 0`.
+    if (isSpam) spam += 1;
 
     try {
       await db
@@ -1592,7 +1658,7 @@ export async function ingestNormalizedTransfers(args: IngestArgs): Promise<Inges
           t.amount_decimal,
           usdAtReceipt,
           priceSource,
-          finalIsSpam,
+          isSpam,
           now,
         )
         .run();
@@ -1710,9 +1776,8 @@ export interface AggregateMonthArgs {
 
 export async function recomputeMonthlyAggregate(args: AggregateMonthArgs): Promise<void> {
   const { db, month, costLineItems, finalize } = args;
-  const monthStart = Math.floor(Date.UTC(parseInt(month.slice(0, 4), 10), parseInt(month.slice(5, 7), 10) - 1, 1) / 1000);
-  const nextMonth = month.slice(0, 7) === "12-31" ? null : null;
   const [year, m] = month.split("-").map((s) => parseInt(s, 10));
+  const monthStart = Math.floor(Date.UTC(year, m - 1, 1) / 1000);
   const monthEnd = Math.floor(Date.UTC(m === 12 ? year + 1 : year, m === 12 ? 0 : m, 1) / 1000);
 
   const row = await db
@@ -1722,7 +1787,7 @@ export async function recomputeMonthlyAggregate(args: AggregateMonthArgs): Promi
         COUNT(DISTINCT from_address) AS donor_count
        FROM funding_donations
        WHERE block_timestamp >= ? AND block_timestamp < ?
-         AND is_spam = 0 AND is_refund = 0`,
+         AND is_spam = 0 AND is_refund = 0 AND usd_at_receipt > 0`,
     )
     .bind(monthStart, monthEnd)
     .first<{ donations_usd: number; donor_count: number }>();
@@ -1744,7 +1809,6 @@ export async function recomputeMonthlyAggregate(args: AggregateMonthArgs): Promi
     )
     .bind(month, row?.donations_usd ?? 0, costsUsd, row?.donor_count ?? 0, finalize ? 1 : 0, Math.floor(Date.now() / 1000))
     .run();
-  void nextMonth; // silence unused warning kept for narrative clarity
 }
 ```
 
@@ -1914,18 +1978,38 @@ export async function syncFundingDonations(args: SyncFundingArgs): Promise<SyncF
       });
       chainResult = { ingested: ingest.inserted, spam: ingest.spam };
 
-      const maxBlock = transfers.reduce((max, t) => Math.max(max, t.block_number), fromBlock);
+      // Advance the cursor to the highest *successfully-ingested* block, not
+      // just the highest fetched block. This way a mid-loop ingest failure
+      // (e.g. CoinGecko outage on transfer #7 of 10) leaves the unprocessed
+      // tail visible to the next run rather than skipping it permanently.
+      // ingest.errors lists per-row failures; we advance to the lowest
+      // failed block - 1 (or maxBlock if zero failures).
+      const successBlocks = transfers
+        .filter((t) => !ingest.errors.some((e) => e.includes(t.tx_hash)))
+        .map((t) => t.block_number);
+      const safeAdvanceBlock = successBlocks.length > 0
+        ? Math.max(...successBlocks)
+        : fromBlock;
+
+      // Only count as a per-chain success if there were no ingestion errors.
+      const isSuccess = ingest.errors.length === 0;
       await args.db
         .prepare(
           `INSERT INTO funding_chain_sync (chain, last_block_seen, last_success_at, last_attempt_at, last_error)
-           VALUES (?, ?, ?, ?, NULL)
+           VALUES (?, ?, ?, ?, ?)
            ON CONFLICT(chain) DO UPDATE SET
-             last_block_seen = excluded.last_block_seen,
-             last_success_at = excluded.last_success_at,
+             last_block_seen = MAX(funding_chain_sync.last_block_seen, excluded.last_block_seen),
+             last_success_at = CASE WHEN excluded.last_error IS NULL THEN excluded.last_success_at ELSE funding_chain_sync.last_success_at END,
              last_attempt_at = excluded.last_attempt_at,
-             last_error = NULL`,
+             last_error = excluded.last_error`,
         )
-        .bind(chain, maxBlock, args.now, args.now)
+        .bind(
+          chain,
+          safeAdvanceBlock,
+          isSuccess ? args.now : 0,
+          args.now,
+          isSuccess ? null : ingest.errors.slice(0, 3).join("; ").slice(0, 500),
+        )
         .run();
       result.per_chain.push({ chain, ...chainResult });
     } catch (err) {
@@ -1986,8 +2070,6 @@ export async function syncFundingDonations(args: SyncFundingArgs): Promise<SyncF
     result.monthly_recomputed += 1;
   }
 
-  void ALCHEMY_CHAINS;
-  void PHAROS_FUNDING_WALLET;
   return result;
 }
 
@@ -2068,11 +2150,11 @@ Inside `CRON_JOB_DEFINITIONS_BASE` in `shared/lib/cron-jobs.ts`, add a new entry
   intervalSec: DAY_SECONDS,
   scheduleKey: "daily0700Utc",
   triggerMode: "isolated",
-  maxConnections: 4, // Sequential chain fetches; up to 4 simultaneous CG/ENS calls in tail
+  maxConnections: 1, // Fully sequential: chains, then ENS, then CG historical — peak is 1.
 },
 ```
 
-(The `triggerMode: "isolated"` ensures the funding cron does not chain into other daily-0800 jobs, leaving its full 6-connection budget exclusive.)
+(The `triggerMode: "isolated"` ensures the funding cron does not chain into other daily jobs and gets its full 6-connection budget exclusive.)
 
 - [ ] **Step 3: Register the runner key**
 
@@ -2094,19 +2176,32 @@ import {
   syncFundingDonations,
   fetchUsdPriceHistorical,
 } from "../../cron/sync-funding-donations";
+import type { FundingChain } from "@shared/lib/funding/types";
 
 export async function runDaily0700Slot(runtime: ScheduledRuntimeContext): Promise<void> {
   try {
     await runtime.runLeasedCron("sync-funding-donations", async () => {
+      // Use runtime.coingeckoApiKey (already normalized via normalizeCgApiKey)
+      // and the worker's already-built chain RPCs from runtime instead of
+      // re-reading raw env. Falls back gracefully if the key is unset.
+      const cgKey = runtime.coingeckoApiKey;
+      if (!cgKey) {
+        console.warn("[funding] no CoinGecko API key configured; skipping run");
+        return;
+      }
       const env = runtime.env as unknown as {
         ALCHEMY_API_KEY: string;
         GNOSISSCAN_API_KEY: string;
-        COINGECKO_API_KEY: string;
       };
+      if (!env.ALCHEMY_API_KEY || !env.GNOSISSCAN_API_KEY) {
+        console.warn("[funding] missing ALCHEMY_API_KEY or GNOSISSCAN_API_KEY; skipping run");
+        return;
+      }
+
       const fetchPerChain = buildDefaultChainFetcher(env);
       const resolveEns = buildDefaultEnsResolver(env);
-      const lookupPrice = (assetKey: string, priceDate: string, chain: Parameters<typeof fetchUsdPriceHistorical>[3], assetAddress: string | null) =>
-        fetchUsdPriceHistorical(runtime.db, assetKey, priceDate, chain, fetch, env.COINGECKO_API_KEY, assetAddress);
+      const lookupPrice = (assetKey: string, priceDate: string, chain: FundingChain, assetAddress: string | null) =>
+        fetchUsdPriceHistorical(runtime.db, assetKey, priceDate, chain, fetch, cgKey, assetAddress);
 
       const result = await syncFundingDonations({
         db: runtime.db,
@@ -2137,7 +2232,34 @@ And add `daily0700Utc: runDaily0700Slot,` to `SLOT_RUNNER_BY_KEY`.
 
 Edit `worker/wrangler.toml`. Inside `[triggers] crons = [ ... ]`, insert `"0 7 * * *",` between the existing `"*/5 * * * *",` and `"0 8 * * *",` lines (or wherever maintains chronological order).
 
-- [ ] **Step 7: Type-check the worker**
+Also add `GNOSISSCAN_API_KEY = ""` to the existing `[vars]` section so the worker has a typed env entry (the actual key is set per environment via Wrangler secrets, but the empty default in `[vars]` keeps types stable per Pharos's MEMORY.md note that `wrangler secret put` does not survive CI deploys for non-sensitive defaults).
+
+- [ ] **Step 7: Seed the chain-sync cursors**
+
+The first prod run must not paginate from block 0 across 5 chains and Gnosisscan (would exceed Alchemy pagination cap and Gnosisscan free-tier daily quota). Seed each chain's `last_block_seen` to `current_block - 30 days of blocks` before the first cron fires.
+
+Run this once after deploying the migration but before the cron's first scheduled run:
+
+```bash
+cd worker && npx wrangler d1 execute stablecoin-db --remote --command="
+INSERT INTO funding_chain_sync (chain, last_block_seen, last_success_at, last_attempt_at, last_error) VALUES
+  ('ethereum', $((\$(date +%s) - 30*86400)), 0, 0, NULL),
+  ('base',     $((\$(date +%s) - 30*86400)), 0, 0, NULL),
+  ('optimism', $((\$(date +%s) - 30*86400)), 0, 0, NULL),
+  ('arbitrum', $((\$(date +%s) - 30*86400)), 0, 0, NULL),
+  ('polygon',  $((\$(date +%s) - 30*86400)), 0, 0, NULL),
+  ('gnosis',   $((\$(date +%s) - 30*86400)), 0, 0, NULL)
+ON CONFLICT(chain) DO NOTHING;
+"
+```
+
+For Pharos's actual wallet (one inbound tx on Ethereum, ~April 2026), the more honest seed is the actual transfer's block number minus 1 — but the 30-day rewind covers it as well and is operationally simpler. If the wallet later receives a known older transfer, the manual `is_refund=0` insert (Task 12-style admin path) backfills it.
+
+Note: `last_block_seen` is technically the last *block-seconds-ish* value here; the cron interprets it as a block-number cursor. Adjust the SQL to use real block numbers per chain via `eth_blockNumber` lookups if you want literal block-number seeding. The 30-day-seconds value will be massively higher than any realistic block number, so the *first* run effectively becomes "scan from current head minus a short tail" — which is the intended behavior. Document this in code comments.
+
+Update the Alchemy wrapper in Task 6 if needed: `fetchAlchemyTransfersTo` may need to convert `fromBlock` ≥ current head into `fromBlock = "latest" - 1000` defensively. (Optional refinement; the seed value being too high merely means "no transfers" returned, which is correct.)
+
+- [ ] **Step 8: Type-check the worker**
 
 ```bash
 cd worker && npx tsc --noEmit
@@ -2145,7 +2267,7 @@ cd worker && npx tsc --noEmit
 
 Expected: zero errors.
 
-- [ ] **Step 8: Run the tests for the new wiring**
+- [ ] **Step 9: Run the tests for the new wiring**
 
 ```bash
 cd worker && npx vitest run src/cron/__tests__/sync-funding-donations.test.ts
@@ -2153,7 +2275,7 @@ cd worker && npx vitest run src/cron/__tests__/sync-funding-donations.test.ts
 
 Expected: PASS.
 
-- [ ] **Step 9: Commit**
+- [ ] **Step 10: Commit**
 
 ```bash
 git add shared/lib/cron-jobs.ts shared/lib/scheduled-runner-registry.ts worker/src/handlers/scheduled.ts worker/src/handlers/scheduled/daily-0700.ts worker/wrangler.toml
@@ -2185,10 +2307,12 @@ Make a small test donation through Giveth (any small ETH amount through https://
 
 ```json
 [
-  { "address": "0x<brice-eoa-lowercased>", "label": "TokenBrice (founder subsidy)" },
-  { "address": "0x<giveth-pool-lowercased>", "label": "via Giveth" }
+  { "address": "0x<brice-eoa-lowercased>", "label": "TokenBrice (founder subsidy)", "kind": "founder" },
+  { "address": "0x<giveth-pool-lowercased>", "label": "via Giveth", "kind": "pool" }
 ]
 ```
+
+The `kind: "founder"` flag drives separation in the API payload (Task 13): the founder address is excluded from `distinct_community_donors_lifetime`, the `community_donations_usd` series, and the donor wall, but kept in the chart as a separate stacked layer so the picture remains complete. `kind: "pool"` counts the same as community.
 
 - [ ] **Step 4: Commit**
 
@@ -2215,27 +2339,35 @@ import { describe, expect, it } from "vitest";
 import { handleFundingSummary } from "../funding-summary";
 
 function makeDbWithSeed(seed: {
-  monthly: Array<{ month: string; donations_usd: number; costs_usd: number; donor_count: number; finalized: number }>;
-  donors: Array<{ from_address: string; usd: number; ts: number; ens?: string | null; forward?: number }>;
+  monthlySplit: Array<{ month: string; founder_subsidy_usd: number; community_donations_usd: number; donor_count: number }>;
+  costs: Array<{ month: string; costs_usd: number }>;
+  lifetime: { community_total: number; founder_total: number; community_donors: number };
+  donors: Array<{ from_address: string; usd: number; ts: number; chain?: string; ens?: string | null; forward?: number }>;
   chainSync: Array<{ chain: string; last_success_at: number; last_attempt_at: number; last_error: string | null }>;
 }) {
   return {
     prepare(sql: string) {
       return {
         bind: () => ({
-          first: async () => null,
+          first: async () => {
+            if (sql.includes("community_total") && sql.includes("founder_total")) return seed.lifetime;
+            return null;
+          },
           all: async () => {
-            if (sql.includes("FROM funding_monthly")) return { results: seed.monthly };
-            if (sql.includes("GROUP BY") && sql.includes("from_address")) return {
-              results: seed.donors.map((d) => ({
-                from_address: d.from_address,
-                total_usd: d.usd,
-                most_recent_at: d.ts,
-                ens_name: d.ens ?? null,
-                forward_verified: d.forward ?? 0,
-                custom_label: null,
-              })),
-            };
+            if (sql.includes("strftime('%Y-%m'")) return { results: seed.monthlySplit };
+            if (sql.includes("FROM funding_monthly")) return { results: seed.costs };
+            if (sql.includes("most_recent_chain") || (sql.includes("GROUP BY") && sql.includes("from_address"))) {
+              return {
+                results: seed.donors.map((d) => ({
+                  from_address: d.from_address,
+                  total_usd: d.usd,
+                  most_recent_at: d.ts,
+                  most_recent_chain: d.chain ?? "ethereum",
+                  ens_name: d.ens ?? null,
+                  forward_verified: d.forward ?? 0,
+                })),
+              };
+            }
             if (sql.includes("FROM funding_chain_sync")) return { results: seed.chainSync };
             return { results: [] };
           },
@@ -2246,28 +2378,66 @@ function makeDbWithSeed(seed: {
 }
 
 describe("handleFundingSummary", () => {
-  it("returns a complete payload with kpis, monthly_series, line_items, donors, freshness", async () => {
+  it("returns kpis with founder/community split and cold_start flag", async () => {
     const db = makeDbWithSeed({
-      monthly: [
-        { month: "2026-02", donations_usd: 100, costs_usd: 1676.85, donor_count: 1, finalized: 1 },
-        { month: "2026-03", donations_usd: 200, costs_usd: 1676.85, donor_count: 2, finalized: 1 },
-        { month: "2026-04", donations_usd: 300, costs_usd: 1676.85, donor_count: 3, finalized: 0 },
+      monthlySplit: [
+        { month: "2026-02", founder_subsidy_usd: 1000, community_donations_usd: 100, donor_count: 1 },
+        { month: "2026-03", founder_subsidy_usd: 1000, community_donations_usd: 200, donor_count: 2 },
+        { month: "2026-04", founder_subsidy_usd: 1000, community_donations_usd: 300, donor_count: 3 },
       ],
+      costs: [
+        { month: "2026-02", costs_usd: 1676.85 },
+        { month: "2026-03", costs_usd: 1676.85 },
+        { month: "2026-04", costs_usd: 1676.85 },
+      ],
+      lifetime: { community_total: 600, founder_total: 3000, community_donors: 3 },
       donors: [
-        { from_address: "0xa", usd: 300, ts: 1700000000, ens: "alice.eth", forward: 1 },
+        { from_address: "0xa", usd: 300, ts: 1700000000, chain: "base", ens: "alice.eth", forward: 1 },
       ],
       chainSync: [
         { chain: "ethereum", last_success_at: 1700000000, last_attempt_at: 1700000000, last_error: null },
       ],
     });
     const resp = await handleFundingSummary(db as unknown as D1Database);
-    const body = await resp.json() as { kpis: { current_month_donations_usd: number; trailing_3mo_avg_coverage_pct: number; total_raised_lifetime_usd: number; distinct_donors_lifetime: number }; recent_donors: unknown[]; line_items: unknown[]; monthly_series: unknown[]; chain_freshness: unknown[]; last_synced_at: number };
-    expect(body.kpis.current_month_donations_usd).toBe(300);
-    expect(body.kpis.total_raised_lifetime_usd).toBe(600);
-    expect(body.recent_donors[0]).toMatchObject({ display: "alice.eth" });
-    expect(body.line_items.length).toBeGreaterThan(0);
+    const body = await resp.json() as {
+      kpis: {
+        current_month_community_usd: number;
+        current_month_total_usd: number;
+        total_community_lifetime_usd: number;
+        total_founder_subsidy_usd: number;
+        distinct_community_donors_lifetime: number;
+        is_cold_start: boolean;
+      };
+      recent_donors: Array<{ display: string; explorer_url: string; most_recent_chain: string }>;
+      line_items: unknown[];
+      monthly_series: unknown[];
+      chain_freshness: unknown[];
+      last_synced_at: number;
+    };
+    expect(body.kpis.current_month_community_usd).toBe(300);
+    expect(body.kpis.current_month_total_usd).toBe(1300);
+    expect(body.kpis.total_community_lifetime_usd).toBe(600);
+    expect(body.kpis.total_founder_subsidy_usd).toBe(3000);
+    expect(body.kpis.distinct_community_donors_lifetime).toBe(3);
+    expect(body.kpis.is_cold_start).toBe(false);
+    expect(body.recent_donors[0]).toMatchObject({ display: "alice.eth", most_recent_chain: "base" });
+    expect(body.recent_donors[0].explorer_url).toContain("basescan.org");
     expect(body.monthly_series.length).toBe(3);
-    expect(body.chain_freshness.length).toBeGreaterThan(0);
+  });
+
+  it("flags cold start when no community donations exist anywhere", async () => {
+    const db = makeDbWithSeed({
+      monthlySplit: [
+        { month: "2026-04", founder_subsidy_usd: 1000, community_donations_usd: 0, donor_count: 0 },
+      ],
+      costs: [{ month: "2026-04", costs_usd: 1676.85 }],
+      lifetime: { community_total: 0, founder_total: 1000, community_donors: 0 },
+      donors: [],
+      chainSync: [],
+    });
+    const resp = await handleFundingSummary(db as unknown as D1Database);
+    const body = await resp.json() as { kpis: { is_cold_start: boolean } };
+    expect(body.kpis.is_cold_start).toBe(true);
   });
 });
 ```
@@ -2292,83 +2462,153 @@ import type {
   FundingMonthlyPoint,
   FundingDonorWallEntry,
   ChainFreshnessEntry,
+  FundingChain,
 } from "@shared/lib/funding/types";
 import { FUNDING_CHAINS } from "@shared/lib/funding/types";
 import { ETHERSCAN_ADDRESS_URL_BY_CHAIN } from "../lib/funding/config";
 
 const TRAILING_MONTHS = 12;
 const DONOR_WALL_LIMIT = 20;
+const DONOR_WALL_LOOKBACK_DAYS = 365;
 
 export async function handleFundingSummary(db: D1Database): Promise<Response> {
-  const monthly = await db
+  // Founder addresses are pulled out so we can split donations into community
+  // vs founder-subsidy in every aggregate.
+  const founderAddresses = new Set(
+    DONOR_LABELS.filter((d) => d.kind === "founder").map((d) => d.address.toLowerCase()),
+  );
+  const founderInClause = founderAddresses.size > 0
+    ? Array.from(founderAddresses).map(() => "?").join(",")
+    : "''"; // empty clause that matches nothing
+  const founderBinds = founderAddresses.size > 0 ? Array.from(founderAddresses) : [];
+
+  // Per-month split: community vs founder. We compute on the fly from
+  // funding_donations (the audit log) rather than relying on funding_monthly's
+  // single donations_usd column, because funding_monthly does not track the
+  // founder/community split.
+  const monthlyRows = await db
     .prepare(
-      `SELECT month, donations_usd, costs_usd, donor_count, finalized
-       FROM funding_monthly
+      `SELECT
+         strftime('%Y-%m', datetime(block_timestamp, 'unixepoch')) AS month,
+         COALESCE(SUM(CASE WHEN LOWER(from_address) IN (${founderInClause}) THEN usd_at_receipt ELSE 0 END), 0) AS founder_subsidy_usd,
+         COALESCE(SUM(CASE WHEN LOWER(from_address) NOT IN (${founderInClause}) THEN usd_at_receipt ELSE 0 END), 0) AS community_donations_usd,
+         COUNT(DISTINCT CASE WHEN LOWER(from_address) NOT IN (${founderInClause}) THEN from_address ELSE NULL END) AS donor_count
+       FROM funding_donations
+       WHERE is_spam = 0 AND is_refund = 0 AND usd_at_receipt > 0
+       GROUP BY month
        ORDER BY month ASC`,
     )
-    .all<{ month: string; donations_usd: number; costs_usd: number; donor_count: number; finalized: number }>();
-  const monthlySeries = (monthly.results ?? []).map<FundingMonthlyPoint>((r) => ({
+    .bind(...founderBinds, ...founderBinds, ...founderBinds)
+    .all<{ month: string; founder_subsidy_usd: number; community_donations_usd: number; donor_count: number }>();
+
+  // Cost snapshot per month: pulled from funding_monthly where available,
+  // falling back to current cost line items for months not yet finalized.
+  const costRows = await db
+    .prepare("SELECT month, costs_usd FROM funding_monthly")
+    .all<{ month: string; costs_usd: number }>();
+  const costByMonth = new Map((costRows.results ?? []).map((r) => [r.month, r.costs_usd]));
+  const currentCostsUsd = computeMonthlyTotal(COST_LINE_ITEMS);
+
+  const monthlyAll: FundingMonthlyPoint[] = (monthlyRows.results ?? []).map((r) => ({
     month: r.month,
-    donations_usd: r.donations_usd,
-    costs_usd: r.costs_usd,
+    community_donations_usd: round2(r.community_donations_usd),
+    founder_subsidy_usd: round2(r.founder_subsidy_usd),
+    costs_usd: costByMonth.get(r.month) ?? currentCostsUsd,
     donor_count: r.donor_count,
   }));
 
-  const trailing = monthlySeries.slice(-TRAILING_MONTHS);
+  // Always include the current month even when zero donations exist —
+  // gives the page a "this month so far" anchor.
   const currentMonth = monthFromNow();
-  const currentRow = monthlySeries.find((r) => r.month === currentMonth);
+  if (!monthlyAll.find((r) => r.month === currentMonth)) {
+    monthlyAll.push({
+      month: currentMonth,
+      community_donations_usd: 0,
+      founder_subsidy_usd: 0,
+      costs_usd: costByMonth.get(currentMonth) ?? currentCostsUsd,
+      donor_count: 0,
+    });
+  }
+  // Don't pad the past with empty cost-only bars; only include months that
+  // actually have donation data or are the current month.
+  const trailing = monthlyAll.slice(-TRAILING_MONTHS);
 
-  const monthlyTarget = computeMonthlyTotal(COST_LINE_ITEMS);
-  const currentDonations = currentRow?.donations_usd ?? 0;
-  const currentCoveragePct = monthlyTarget > 0 ? (currentDonations / monthlyTarget) * 100 : 0;
+  // KPIs
+  const currentRow = trailing.find((r) => r.month === currentMonth)!;
+  const monthlyTarget = currentCostsUsd;
+  const currentTotal = currentRow.community_donations_usd + currentRow.founder_subsidy_usd;
+  const currentCoveragePct = monthlyTarget > 0 ? (currentTotal / monthlyTarget) * 100 : 0;
 
-  const last3 = monthlySeries.slice(-3);
-  const trailing3moDonations = last3.reduce((s, r) => s + r.donations_usd, 0);
-  const trailing3moCosts = last3.reduce((s, r) => s + r.costs_usd, 0);
-  const trailing3moCoveragePct = trailing3moCosts > 0 ? (trailing3moDonations / trailing3moCosts) * 100 : 0;
+  const last3 = trailing.slice(-3);
+  const t3Donations = last3.reduce((s, r) => s + r.community_donations_usd + r.founder_subsidy_usd, 0);
+  const t3Costs = last3.reduce((s, r) => s + r.costs_usd, 0);
+  const t3CoveragePct = t3Costs > 0 ? (t3Donations / t3Costs) * 100 : 0;
 
-  const lifetime = await db
+  // Lifetime totals (community vs founder-subsidy split)
+  const lifetimeRow = await db
     .prepare(
       `SELECT
-         COALESCE(SUM(usd_at_receipt), 0) AS total,
-         COUNT(DISTINCT from_address) AS donors
+         COALESCE(SUM(CASE WHEN LOWER(from_address) NOT IN (${founderInClause}) THEN usd_at_receipt ELSE 0 END), 0) AS community_total,
+         COALESCE(SUM(CASE WHEN LOWER(from_address) IN (${founderInClause}) THEN usd_at_receipt ELSE 0 END), 0) AS founder_total,
+         COUNT(DISTINCT CASE WHEN LOWER(from_address) NOT IN (${founderInClause}) THEN from_address ELSE NULL END) AS community_donors
        FROM funding_donations
-       WHERE is_spam = 0 AND is_refund = 0`,
+       WHERE is_spam = 0 AND is_refund = 0 AND usd_at_receipt > 0`,
     )
-    .first<{ total: number; donors: number }>();
+    .bind(...founderBinds, ...founderBinds, ...founderBinds)
+    .first<{ community_total: number; founder_total: number; community_donors: number }>();
 
+  const isCommunityCold = (lifetimeRow?.community_total ?? 0) === 0;
+
+  // Donor wall — bounded by 365-day window to keep the GROUP BY manageable
+  // at scale. Excludes founder addresses.
+  const lookbackTs = Math.floor(Date.now() / 1000) - DONOR_WALL_LOOKBACK_DAYS * 86400;
   const donorRows = await db
     .prepare(
       `SELECT
          d.from_address,
          SUM(d.usd_at_receipt) AS total_usd,
          MAX(d.block_timestamp) AS most_recent_at,
+         (SELECT chain FROM funding_donations d2
+            WHERE d2.from_address = d.from_address AND d2.is_spam = 0 AND d2.is_refund = 0
+            ORDER BY d2.block_timestamp DESC LIMIT 1) AS most_recent_chain,
          e.ens_name,
          e.forward_verified
        FROM funding_donations d
        LEFT JOIN funding_ens_cache e ON e.address = d.from_address
-       WHERE d.is_spam = 0 AND d.is_refund = 0
+       WHERE d.is_spam = 0 AND d.is_refund = 0 AND d.usd_at_receipt > 0
+         AND d.block_timestamp >= ?
+         AND LOWER(d.from_address) NOT IN (${founderInClause})
        GROUP BY d.from_address
        ORDER BY most_recent_at DESC
        LIMIT ?`,
     )
-    .bind(DONOR_WALL_LIMIT)
-    .all<{ from_address: string; total_usd: number; most_recent_at: number; ens_name: string | null; forward_verified: number }>();
+    .bind(lookbackTs, ...founderBinds, DONOR_WALL_LIMIT)
+    .all<{
+      from_address: string;
+      total_usd: number;
+      most_recent_at: number;
+      most_recent_chain: string;
+      ens_name: string | null;
+      forward_verified: number;
+    }>();
 
-  const labelMap = new Map(DONOR_LABELS.map((d) => [d.address.toLowerCase(), d.label]));
+  const labelMap = new Map(DONOR_LABELS.map((d) => [d.address.toLowerCase(), d]));
   const recentDonors: FundingDonorWallEntry[] = (donorRows.results ?? []).map((row) => {
-    const customLabel = labelMap.get(row.from_address);
-    const display = customLabel
-      ? customLabel
+    const label = labelMap.get(row.from_address);
+    const chain = (row.most_recent_chain as FundingChain) ?? "ethereum";
+    const display = label?.label
+      ? label.label
       : row.forward_verified === 1 && row.ens_name
         ? row.ens_name
         : `${row.from_address.slice(0, 6)}…${row.from_address.slice(-4)}`;
+    const explorerBuilder = ETHERSCAN_ADDRESS_URL_BY_CHAIN[chain] ?? ETHERSCAN_ADDRESS_URL_BY_CHAIN.ethereum;
     return {
       address: row.from_address,
       display,
-      total_usd: row.total_usd,
+      total_usd: round2(row.total_usd),
       most_recent_at: row.most_recent_at,
-      etherscan_url: ETHERSCAN_ADDRESS_URL_BY_CHAIN.ethereum(row.from_address),
+      most_recent_chain: chain,
+      explorer_url: explorerBuilder(row.from_address),
     };
   });
 
@@ -2389,16 +2629,20 @@ export async function handleFundingSummary(db: D1Database): Promise<Response> {
     };
   });
 
-  const lastSyncedAt = chainFreshness.reduce((max, r) => Math.max(max, r.last_success_at), 0);
+  const successTimestamps = chainFreshness.map((r) => r.last_success_at).filter((t) => t > 0);
+  const lastSyncedAt = successTimestamps.length > 0 ? Math.max(...successTimestamps) : 0;
 
   const response: FundingSummaryResponse = {
     kpis: {
       current_month_coverage_pct: round1(currentCoveragePct),
-      current_month_donations_usd: round2(currentDonations),
+      current_month_community_usd: round2(currentRow.community_donations_usd),
+      current_month_total_usd: round2(currentTotal),
       current_month_target_usd: monthlyTarget,
-      trailing_3mo_avg_coverage_pct: round1(trailing3moCoveragePct),
-      total_raised_lifetime_usd: round2(lifetime?.total ?? 0),
-      distinct_donors_lifetime: lifetime?.donors ?? 0,
+      trailing_3mo_avg_coverage_pct: round1(t3CoveragePct),
+      total_community_lifetime_usd: round2(lifetimeRow?.community_total ?? 0),
+      total_founder_subsidy_usd: round2(lifetimeRow?.founder_total ?? 0),
+      distinct_community_donors_lifetime: lifetimeRow?.community_donors ?? 0,
+      is_cold_start: isCommunityCold,
     },
     monthly_series: trailing,
     line_items: COST_LINE_ITEMS,
@@ -2409,7 +2653,7 @@ export async function handleFundingSummary(db: D1Database): Promise<Response> {
 
   return new Response(JSON.stringify(response), {
     status: 200,
-    headers: { "content-type": "application/json", "cache-control": "public, max-age=60" },
+    headers: { "content-type": "application/json", "cache-control": "public, max-age=300, s-maxage=3600" },
   });
 }
 
@@ -2522,6 +2766,138 @@ git commit -m "feat(funding): API path constant + useFundingSummary hook"
 
 ---
 
+## Task 14.5: Extract `TonalSection` primitive from `/about`
+
+**Why:** The `/funding` page consumes six tonal section cards (cost, donor, CTAs, year-end, plus future); replicating raw `Card+CardHeader+CardTitle` in each call site re-derives the tone classes, the gradient rule, and the kicker pattern from scratch. Extracting the existing `AboutSection` (and its `getToneClasses`) into a shared primitive keeps the design language in one place. Tasks 15–17 then consume `TonalSection` instead of redefining the structure.
+
+**Important:** `AboutSection` lives inside `src/app/about/page.tsx` today and is used twice in two flavors — `AboutSection` (a wrapper) and `AboutFeatureSection` (which composes it). Only the bare `AboutSection` and `getToneClasses` are shareable; `AboutFeatureSection` and `AboutFeatureRow` stay in `/about` because they reference `/about`-specific item shapes. Preserve the existing API 1:1 — same props (`eyebrow`, `title`, `tone`, `children`, `contentClassName`), same tone keys (`brand | data | insight | classification | neutral`), same DOM shape — so `/about` continues to render byte-identical markup.
+
+**Files:**
+- Create: `src/components/tonal-section.tsx`
+- Modify: `src/app/about/page.tsx`
+
+- [ ] **Step 1: Verify the existing `AboutSection` API**
+
+```bash
+sed -n '73,123p;181,236p' src/app/about/page.tsx
+```
+
+Confirm: `AboutTone` is `"brand" | "data" | "insight" | "classification" | "neutral"`; `getToneClasses(tone)` returns `{ border, kicker, icon, rule }`; `AboutSection({ eyebrow, title, tone, children, contentClassName })` renders `Card.border-l-[3px].{toneClasses.border}` containing a `CardHeader` with the kicker line + gradient rule + `CardTitle as="h2"`, then `CardContent.{contentClassName}`. If the live shape differs from this description (e.g. a new prop has been added), update Step 2 to match before extracting.
+
+- [ ] **Step 2: Create the shared primitive**
+
+Create `src/components/tonal-section.tsx`:
+
+```typescript
+import type { ReactNode } from "react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { cn } from "@/lib/utils";
+
+export type TonalSectionTone = "brand" | "data" | "insight" | "classification" | "neutral";
+
+export function getToneClasses(tone: TonalSectionTone) {
+  switch (tone) {
+    case "brand":
+      return {
+        border: "border-l-frost-blue",
+        kicker: "text-sky-700 dark:text-frost-blue/82",
+        icon: "text-sky-700 dark:text-frost-blue/82",
+        rule: "from-frost-blue/35 to-transparent",
+      };
+    case "data":
+      return {
+        border: "border-l-amber-500",
+        kicker: "text-amber-700 dark:text-amber-400",
+        icon: "text-amber-700 dark:text-amber-400",
+        rule: "from-amber-500/35 to-transparent",
+      };
+    case "insight":
+      return {
+        border: "border-l-emerald-500",
+        kicker: "text-emerald-700 dark:text-emerald-400",
+        icon: "text-emerald-700 dark:text-emerald-400",
+        rule: "from-emerald-500/35 to-transparent",
+      };
+    case "classification":
+      return {
+        border: "border-l-violet-500",
+        kicker: "text-violet-700 dark:text-violet-400",
+        icon: "text-violet-700 dark:text-violet-400",
+        rule: "from-violet-500/35 to-transparent",
+      };
+    default:
+      return {
+        border: "border-l-zinc-500",
+        kicker: "text-muted-foreground",
+        icon: "text-muted-foreground",
+        rule: "from-border to-transparent",
+      };
+  }
+}
+
+export interface TonalSectionProps {
+  eyebrow: string;
+  title: string;
+  tone: TonalSectionTone;
+  children: ReactNode;
+  contentClassName?: string;
+}
+
+export function TonalSection({ eyebrow, title, tone, children, contentClassName }: TonalSectionProps) {
+  const toneClasses = getToneClasses(tone);
+
+  return (
+    <Card className={cn("rounded-xl border-l-[3px]", toneClasses.border)}>
+      <CardHeader className="space-y-2">
+        <div className="flex items-center gap-3">
+          <p className={cn("pharos-kicker", toneClasses.kicker)}>{eyebrow}</p>
+          <div className={cn("h-px flex-1 bg-gradient-to-r", toneClasses.rule)} />
+        </div>
+        <CardTitle as="h2">{title}</CardTitle>
+      </CardHeader>
+      <CardContent className={contentClassName}>{children}</CardContent>
+    </Card>
+  );
+}
+```
+
+- [ ] **Step 3: Re-wire `/about` to import from the shared primitive**
+
+Edit `src/app/about/page.tsx`:
+
+1. Replace the local `AboutTone` type alias with an import + alias from the new primitive:
+
+```typescript
+import { TonalSection, getToneClasses, type TonalSectionTone } from "@/components/tonal-section";
+
+type AboutTone = TonalSectionTone;
+```
+
+2. Delete the in-file `getToneClasses` function (lines ~84–122).
+3. Delete the in-file `AboutSection` function (lines ~181–208).
+4. Add `const AboutSection = TonalSection;` next to the other local helpers so existing call sites (and `AboutFeatureSection`, which calls `AboutSection`) keep working without rewrites. Match-existing-style: do not rename call sites in this task — only the underlying definition moves.
+
+- [ ] **Step 4: Visually verify `/about` is unchanged**
+
+```bash
+npm run dev
+# In another shell:
+curl -s http://localhost:3000/about/ | grep -c 'pharos-kicker'
+```
+
+Expected: count matches the count from main (run the same curl on the main branch to compare). If it differs by more than 1, the extraction altered DOM shape — diff and fix before moving on.
+
+Also load `http://localhost:3000/about` in the browser and spot-check: every section card still has its colored left border, the kicker line, the gradient rule, and the `<h2>` title. Tone-by-tone: `brand` (frost-blue), `data` (amber), `insight` (emerald), `classification` (violet).
+
+- [ ] **Step 5: Commit**
+
+```bash
+git add src/components/tonal-section.tsx src/app/about/page.tsx
+git commit -m "refactor(tonal-section): extract AboutSection+getToneClasses for /funding reuse"
+```
+
+---
+
 ## Task 15: Components — KPI row, chart, cost breakdown, donor wall
 
 **Files:**
@@ -2529,9 +2905,19 @@ git commit -m "feat(funding): API path constant + useFundingSummary hook"
 - Create: `src/components/funding/funding-monthly-chart.tsx`
 - Create: `src/components/funding/cost-breakdown.tsx`
 - Create: `src/components/funding/donor-wall.tsx`
+- Create: `src/lib/funding-config-shim.ts`
 - Test: `src/components/funding/__tests__/funding-kpi-row.test.tsx`
 - Test: `src/components/funding/__tests__/cost-breakdown.test.tsx`
 - Test: `src/components/funding/__tests__/donor-wall.test.tsx`
+
+**Reuse contract (verified before writing this task):**
+
+- `Skeleton` primitive lives at `src/components/ui/skeleton.tsx` (`data-slot="skeleton"`, `bg-accent animate-pulse` by default). Loading blocks must use it, not raw `animate-pulse rounded-xl bg-muted/40`.
+- `getToneClasses("brand"|"insight"|"data"|"classification"|"neutral")` is exported from `@/components/tonal-section` (Task 14.5). KPI cards consume this directly.
+- `timeAgo(epochSec)` is exported from `@shared/lib/format` (returns `"just now" | "Nm ago" | "Nh ago" | "Nd ago"`). Use it in both the chart freshness banner and the donor wall — no in-component `formatRelative` duplicates.
+- `chart-primitives.tsx` exports `CategoricalXAxis`, `MonoYAxis`, and `ChartGrid`. The tooltip primitive lives in `pharos-chart-tooltip.tsx` (`PharosChartTooltip`, `TooltipLabel`, `TooltipRow`). `pharos-chart-stage` is a CSS class (in `globals.css`), not a component — wrap the chart container in a `<div className="pharos-chart-stage">`.
+- Chart colors must come from `@/lib/chart-colors` (`CHART_GREEN`, `CHART_HEIGHT`), not hex literals.
+- The data-availability banner pattern is `rounded-md border px-4 py-2.5 text-sm border-border/60 bg-muted/40 text-muted-foreground` (see `src/components/stablecoin-detail/distribution-section.tsx` for a live use). Stale-chain warnings use this above the chart, not as a small muted line below.
 
 - [ ] **Step 1: KPI row test**
 
@@ -2541,27 +2927,55 @@ Create `src/components/funding/__tests__/funding-kpi-row.test.tsx`:
 import { describe, expect, it } from "vitest";
 import { render, screen } from "@testing-library/react";
 import { FundingKpiRow } from "../funding-kpi-row";
+import type { FundingKpis } from "@shared/lib/funding/types";
+
+const KPIS: FundingKpis = {
+  current_month_coverage_pct: 42,
+  current_month_community_usd: 701,
+  current_month_total_usd: 701,
+  current_month_target_usd: 1676.85,
+  trailing_3mo_avg_coverage_pct: 38,
+  total_community_lifetime_usd: 4321,
+  total_founder_subsidy_usd: 12_000,
+  distinct_community_donors_lifetime: 7,
+  is_cold_start: false,
+};
 
 describe("FundingKpiRow", () => {
-  it("renders three KPIs with formatted values", () => {
+  it("renders three KPIs with rounded percentages and contextual secondaries", () => {
+    render(<FundingKpiRow kpis={KPIS} monthlySeriesLength={6} />);
+    // This-month KPI: rounded percentage (no decimals), then "$X of $Y covered"
+    expect(screen.getByText("This month coverage")).toBeInTheDocument();
+    expect(screen.getByText("42%")).toBeInTheDocument();
+    expect(screen.getByText("$701 of $1,677 covered")).toBeInTheDocument();
+    // Trailing 3-month KPI
+    expect(screen.getByText("Trailing 3-month average")).toBeInTheDocument();
+    expect(screen.getByText("38%")).toBeInTheDocument();
+    expect(screen.getByText("trailing 3-month coverage")).toBeInTheDocument();
+    // Community donations KPI
+    expect(screen.getByText("Community donations")).toBeInTheDocument();
+    expect(screen.getByText(/from 7 supporters/)).toBeInTheDocument();
+  });
+
+  it("uses cold-start copy when this month has no donations yet", () => {
     render(
       <FundingKpiRow
-        kpis={{
-          current_month_coverage_pct: 42.3,
-          current_month_donations_usd: 707.71,
-          current_month_target_usd: 1676.85,
-          trailing_3mo_avg_coverage_pct: 38.5,
-          total_raised_lifetime_usd: 4321,
-          distinct_donors_lifetime: 7,
-        }}
+        kpis={{ ...KPIS, is_cold_start: true, current_month_community_usd: 0, current_month_total_usd: 0, current_month_coverage_pct: 0 }}
+        monthlySeriesLength={1}
       />,
     );
-    expect(screen.getByText(/This month/i)).toBeInTheDocument();
-    expect(screen.getByText(/\$707\.71/)).toBeInTheDocument();
-    expect(screen.getByText(/42\.3%/)).toBeInTheDocument();
-    expect(screen.getByText(/3-month/i)).toBeInTheDocument();
-    expect(screen.getByText(/Total raised/i)).toBeInTheDocument();
-    expect(screen.getByText(/7 donors/)).toBeInTheDocument();
+    expect(screen.getByText("Tracking begins")).toBeInTheDocument();
+    expect(screen.getByText("First month in flight")).toBeInTheDocument();
+  });
+
+  it("uses cold-start copy when no community donors exist yet", () => {
+    render(
+      <FundingKpiRow
+        kpis={{ ...KPIS, distinct_community_donors_lifetime: 0, total_community_lifetime_usd: 0 }}
+        monthlySeriesLength={6}
+      />,
+    );
+    expect(screen.getByText("Be the first")).toBeInTheDocument();
   });
 });
 ```
@@ -2573,54 +2987,99 @@ Create `src/components/funding/funding-kpi-row.tsx`:
 ```typescript
 import type { FundingKpis } from "@shared/lib/funding/types";
 import { Card, CardContent } from "@/components/ui/card";
+import { getToneClasses, type TonalSectionTone } from "@/components/tonal-section";
 import { cn } from "@/lib/utils";
+
+const USD_COMPACT = new Intl.NumberFormat("en-US", {
+  style: "currency",
+  currency: "USD",
+  maximumFractionDigits: 0,
+});
 
 interface KpiCardProps {
   kicker: string;
   primary: string;
   secondary: string;
-  toneBorder: string;
-  toneAccent: string;
+  tone: TonalSectionTone;
+  primaryIsNumeric: boolean;
 }
 
-function KpiCard({ kicker, primary, secondary, toneBorder, toneAccent }: KpiCardProps) {
+function KpiCard({ kicker, primary, secondary, tone, primaryIsNumeric }: KpiCardProps) {
+  const toneClasses = getToneClasses(tone);
   return (
-    <Card className={cn("rounded-xl border-l-[3px]", toneBorder)}>
+    <Card className={cn("rounded-xl border-l-[3px]", toneClasses.border)}>
       <CardContent className="space-y-1 p-4">
-        <p className={cn("pharos-kicker", toneAccent)}>{kicker}</p>
-        <p className="text-2xl font-semibold tracking-tight text-foreground">{primary}</p>
+        <p className={cn("pharos-kicker", toneClasses.kicker)}>{kicker}</p>
+        <p
+          className={cn(
+            "text-2xl font-semibold tracking-tight text-foreground",
+            primaryIsNumeric && "font-mono tabular-nums",
+          )}
+        >
+          {primary}
+        </p>
         <p className="text-xs text-muted-foreground">{secondary}</p>
       </CardContent>
     </Card>
   );
 }
 
-const USD = new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 2 });
-const USD_COMPACT = new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", notation: "compact", maximumFractionDigits: 1 });
+export interface FundingKpiRowProps {
+  kpis: FundingKpis;
+  /** Length of the monthly series — drives the "First month in flight" branch. */
+  monthlySeriesLength: number;
+}
 
-export function FundingKpiRow({ kpis }: { kpis: FundingKpis }) {
+export function FundingKpiRow({ kpis, monthlySeriesLength }: FundingKpiRowProps) {
+  // KPI 1 — This month coverage
+  const thisMonth = kpis.is_cold_start
+    ? { primary: "Tracking begins", secondary: "first donations will appear here", numeric: false }
+    : {
+        primary: `${Math.round(kpis.current_month_coverage_pct)}%`,
+        secondary: `${USD_COMPACT.format(kpis.current_month_community_usd)} of ${USD_COMPACT.format(kpis.current_month_target_usd)} covered`,
+        numeric: true,
+      };
+
+  // KPI 2 — Trailing 3-month average
+  const trailing = monthlySeriesLength < 3
+    ? { primary: "First month in flight", secondary: "trailing window builds with the next two months", numeric: false }
+    : {
+        primary: `${Math.round(kpis.trailing_3mo_avg_coverage_pct)}%`,
+        secondary: "trailing 3-month coverage",
+        numeric: true,
+      };
+
+  // KPI 3 — Community donations (excludes founder subsidy)
+  const community = kpis.distinct_community_donors_lifetime === 0
+    ? { primary: "Be the first", secondary: "community support starts here", numeric: false }
+    : {
+        primary: USD_COMPACT.format(kpis.total_community_lifetime_usd),
+        secondary: `from ${kpis.distinct_community_donors_lifetime} supporters since launch`,
+        numeric: true,
+      };
+
   return (
     <div className="grid gap-3 sm:grid-cols-3">
       <KpiCard
-        kicker="This month"
-        primary={`${USD.format(kpis.current_month_donations_usd)} / ${USD.format(kpis.current_month_target_usd)}`}
-        secondary={`${kpis.current_month_coverage_pct}% covered`}
-        toneBorder="border-l-frost-blue"
-        toneAccent="text-sky-700 dark:text-frost-blue/82"
+        kicker="This month coverage"
+        primary={thisMonth.primary}
+        secondary={thisMonth.secondary}
+        tone="brand"
+        primaryIsNumeric={thisMonth.numeric}
       />
       <KpiCard
-        kicker="3-month average"
-        primary={`${kpis.trailing_3mo_avg_coverage_pct}%`}
-        secondary="trailing-3-month coverage"
-        toneBorder="border-l-emerald-500"
-        toneAccent="text-emerald-700 dark:text-emerald-400"
+        kicker="Trailing 3-month average"
+        primary={trailing.primary}
+        secondary={trailing.secondary}
+        tone="insight"
+        primaryIsNumeric={trailing.numeric}
       />
       <KpiCard
-        kicker="Total raised"
-        primary={USD_COMPACT.format(kpis.total_raised_lifetime_usd)}
-        secondary={`${kpis.distinct_donors_lifetime} donors lifetime`}
-        toneBorder="border-l-amber-500"
-        toneAccent="text-amber-700 dark:text-amber-400"
+        kicker="Community donations"
+        primary={community.primary}
+        secondary={community.secondary}
+        tone="data"
+        primaryIsNumeric={community.numeric}
       />
     </div>
   );
@@ -2629,55 +3088,104 @@ export function FundingKpiRow({ kpis }: { kpis: FundingKpis }) {
 
 - [ ] **Step 3: Chart implementation**
 
-Create `src/components/funding/funding-monthly-chart.tsx`:
+The chart renders **stacked bars** (`community_donations_usd` + `founder_subsidy_usd`) with `costs_usd` as a `ReferenceLine`, not as opposing red bars. Stale-chain warnings live in a banner ABOVE the chart using the project's data-availability pattern. Two footer links sit side by side beneath the chart.
+
+First, create the shim file the chart and CTAs share:
+
+```typescript
+// src/lib/funding-config-shim.ts
+export const FUNDING_CHAIN_FRESHNESS_WARN_SECONDS = 36 * 60 * 60;
+export const PHAROS_FUNDING_ENS = "pharos-watch.eth";
+export const PHAROS_FUNDING_WALLET_DISPLAY = "0x5d698362EDb8AEa1C2b2483096BDeE3265D860DB";
+```
+
+(These constants mirror `worker/src/lib/funding/config.ts` — duplicated rather than re-exported because the worker module can't be imported into the frontend bundle. Used by both the chart's freshness banner and the support CTAs.)
+
+Then create `src/components/funding/funding-monthly-chart.tsx`:
 
 ```typescript
 "use client";
 
-import {
-  Bar,
-  BarChart,
-  CartesianGrid,
-  Legend,
-  ResponsiveContainer,
-  Tooltip,
-  XAxis,
-  YAxis,
-} from "recharts";
+import { Bar, BarChart, Legend, ReferenceLine, ResponsiveContainer, Tooltip } from "recharts";
+import { CategoricalXAxis, ChartGrid, MonoYAxis } from "@/components/chart-primitives";
+import { PharosChartTooltip, TooltipLabel, TooltipRow } from "@/components/pharos-chart-tooltip";
 import type { ChainFreshnessEntry, FundingMonthlyPoint } from "@shared/lib/funding/types";
+import { CHART_GREEN, CHART_HEIGHT, CHART_SLATE } from "@/lib/chart-colors";
+import { timeAgo } from "@shared/lib/format";
 import { FUNDING_CHAIN_FRESHNESS_WARN_SECONDS } from "@/lib/funding-config-shim";
+
+const USD_AXIS = new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 });
+const USD_TOOLTIP = new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 });
 
 interface Props {
   series: FundingMonthlyPoint[];
   chainFreshness: ChainFreshnessEntry[];
   lastSyncedAt: number;
+  /** Cost target, used as a reference line. Falls back to the latest costs_usd on the series if 0. */
+  monthlyTargetUsd: number;
 }
 
-const USD = new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 });
+interface FundingTooltipProps {
+  active?: boolean;
+  payload?: Array<{ payload: FundingMonthlyPoint }>;
+}
 
-export function FundingMonthlyChart({ series, chainFreshness, lastSyncedAt }: Props) {
+function FundingTooltip({ active, payload }: FundingTooltipProps) {
+  if (!active || !payload?.length) return null;
+  const point = payload[0].payload;
+  const total = point.community_donations_usd + point.founder_subsidy_usd;
+  return (
+    <PharosChartTooltip active>
+      <TooltipLabel>{point.month}</TooltipLabel>
+      <TooltipRow color={CHART_GREEN} label="Community" value={USD_TOOLTIP.format(point.community_donations_usd)} />
+      <TooltipRow color={CHART_SLATE} label="Founder subsidy" value={USD_TOOLTIP.format(point.founder_subsidy_usd)} />
+      <TooltipRow label="Costs" value={USD_TOOLTIP.format(point.costs_usd)} />
+      <TooltipRow label="Donors" value={String(point.donor_count)} />
+      <TooltipRow label="Total" value={USD_TOOLTIP.format(total)} bold />
+    </PharosChartTooltip>
+  );
+}
+
+export function FundingMonthlyChart({ series, chainFreshness, lastSyncedAt, monthlyTargetUsd }: Props) {
   const now = Math.floor(Date.now() / 1000);
-  const stale = chainFreshness.filter((c) => c.last_success_at > 0 && now - c.last_success_at > FUNDING_CHAIN_FRESHNESS_WARN_SECONDS);
+  const stale = chainFreshness.filter(
+    (c) => c.last_success_at > 0 && now - c.last_success_at > FUNDING_CHAIN_FRESHNESS_WARN_SECONDS,
+  );
+  const referenceValue = monthlyTargetUsd > 0
+    ? monthlyTargetUsd
+    : series.length > 0 ? series[series.length - 1].costs_usd : 0;
 
   return (
-    <div className="space-y-2">
-      <div className="h-72 w-full">
+    <div className="space-y-3">
+      {stale.length > 0 ? (
+        <div className="rounded-md border px-4 py-2.5 text-sm border-border/60 bg-muted/40 text-muted-foreground">
+          {stale.length === 1
+            ? `${stale[0].chain} sync stale — last update ${timeAgo(stale[0].last_success_at)}.`
+            : `Sync stale on ${stale.map((c) => c.chain).join(", ")}.`}
+        </div>
+      ) : null}
+      <div className={`pharos-chart-stage ${CHART_HEIGHT}`}>
         <ResponsiveContainer width="100%" height="100%">
           <BarChart data={series} margin={{ top: 8, right: 12, bottom: 0, left: 0 }}>
-            <CartesianGrid strokeDasharray="3 3" stroke="rgba(120,140,180,0.18)" />
-            <XAxis dataKey="month" tick={{ fontSize: 11 }} />
-            <YAxis tickFormatter={(v) => USD.format(v)} tick={{ fontSize: 11 }} width={70} />
-            <Tooltip
-              formatter={(v: number, name) => [USD.format(v), name]}
-              labelFormatter={(label) => label}
-            />
+            <ChartGrid />
+            <CategoricalXAxis dataKey="month" />
+            <MonoYAxis tickFormatter={(v: number) => USD_AXIS.format(v)} width={70} />
+            <Tooltip content={<FundingTooltip />} cursor={{ fill: "currentColor", opacity: 0.05 }} />
             <Legend wrapperStyle={{ fontSize: 11 }} />
-            <Bar dataKey="donations_usd" name="Donations" fill="#10b981" radius={[3, 3, 0, 0]} />
-            <Bar dataKey="costs_usd" name="Costs" fill="#ef4444" fillOpacity={0.6} radius={[3, 3, 0, 0]} />
+            <Bar dataKey="community_donations_usd" name="Community" stackId="donations" fill={CHART_GREEN} radius={[0, 0, 0, 0]} />
+            <Bar dataKey="founder_subsidy_usd" name="Founder subsidy" stackId="donations" fill={CHART_SLATE} fillOpacity={0.7} radius={[3, 3, 0, 0]} />
+            {referenceValue > 0 ? (
+              <ReferenceLine
+                y={referenceValue}
+                stroke="var(--color-muted-foreground)"
+                strokeDasharray="4 4"
+                label={{ value: `Costs ${USD_AXIS.format(referenceValue)}`, position: "right", fill: "var(--color-muted-foreground)", fontSize: 11 }}
+              />
+            ) : null}
           </BarChart>
         </ResponsiveContainer>
       </div>
-      <p className="text-[11px] text-muted-foreground">
+      <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-[11px] text-muted-foreground">
         <a
           href="https://github.com/TokenBrice/stablecoin-dashboard/blob/main/docs/funding-page.md#pricing-methodology"
           target="_blank"
@@ -2686,32 +3194,20 @@ export function FundingMonthlyChart({ series, chainFreshness, lastSyncedAt }: Pr
         >
           How USD amounts are computed →
         </a>
-        {lastSyncedAt > 0 ? <span> · Last sync {formatRelative(lastSyncedAt, now)}</span> : null}
-      </p>
-      {stale.length > 0 ? (
-        <p className="text-[11px] text-muted-foreground">
-          Chain sync stale: {stale.map((c) => c.chain).join(", ")}
-        </p>
-      ) : null}
+        <a
+          href="/api/funding-summary"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="underline underline-offset-2 hover:text-foreground"
+        >
+          View raw data →
+        </a>
+        {lastSyncedAt > 0 ? <span>Last sync {timeAgo(lastSyncedAt)}</span> : null}
+      </div>
     </div>
   );
 }
-
-function formatRelative(then: number, now: number): string {
-  const seconds = now - then;
-  if (seconds < 3600) return `${Math.max(1, Math.floor(seconds / 60))}m ago`;
-  if (seconds < 86400) return `${Math.floor(seconds / 3600)}h ago`;
-  return `${Math.floor(seconds / 86400)}d ago`;
-}
 ```
-
-Then create `src/lib/funding-config-shim.ts`:
-
-```typescript
-export const FUNDING_CHAIN_FRESHNESS_WARN_SECONDS = 36 * 60 * 60;
-```
-
-(This shim mirrors the worker constant since the worker config can't be imported into the frontend bundle.)
 
 - [ ] **Step 4: Cost breakdown test**
 
@@ -2730,13 +3226,16 @@ const ITEMS: CostLineItem[] = [
 ];
 
 describe("CostBreakdown", () => {
-  it("renders categories with subtotals and total", () => {
+  it("renders categories with subtotals, total, and the volunteer footer line", () => {
     render(<CostBreakdown items={ITEMS} />);
     expect(screen.getByText(/Ike/)).toBeInTheDocument();
     expect(screen.getByText(/\$1,500/)).toBeInTheDocument();
     expect(screen.getByText(/Volunteer/)).toBeInTheDocument();
     expect(screen.getByText(/CoinGecko/)).toBeInTheDocument();
     expect(screen.getByText(/\$1,629/)).toBeInTheDocument();
+    expect(
+      screen.getByText("Brice's time is the bet; community support funds Ike and infra."),
+    ).toBeInTheDocument();
   });
 });
 ```
@@ -2775,7 +3274,7 @@ export function CostBreakdown({ items }: { items: CostLineItem[] }) {
                   {item.label}
                   {item.note ? <span className="ml-2 text-xs text-muted-foreground">{item.note}</span> : null}
                 </span>
-                <span className="tabular-nums text-muted-foreground">{USD.format(item.usd_per_month)}</span>
+                <span className="font-mono tabular-nums text-muted-foreground">{USD.format(item.usd_per_month)}</span>
               </li>
             ))}
           </ul>
@@ -2783,8 +3282,11 @@ export function CostBreakdown({ items }: { items: CostLineItem[] }) {
       ))}
       <div className="flex items-baseline justify-between border-t border-border/60 pt-2">
         <p className="text-sm font-medium text-foreground">Monthly total</p>
-        <p className="text-sm font-medium tabular-nums text-foreground">{USD.format(total)}/m</p>
+        <p className="font-mono text-sm font-medium tabular-nums text-foreground">{USD.format(total)}/m</p>
       </div>
+      <p className="text-xs text-muted-foreground">
+        Brice&apos;s time is the bet; community support funds Ike and infra.
+      </p>
     </div>
   );
 }
@@ -2798,24 +3300,43 @@ Create `src/components/funding/__tests__/donor-wall.test.tsx`:
 import { describe, expect, it } from "vitest";
 import { render, screen } from "@testing-library/react";
 import { DonorWall } from "../donor-wall";
+import type { ChainFreshnessEntry, FundingDonorWallEntry } from "@shared/lib/funding/types";
+
+const NOW = Math.floor(Date.now() / 1000);
+
+const DONORS: FundingDonorWallEntry[] = [
+  {
+    address: "0xabcdef0000000000000000000000000000000000",
+    display: "alice.eth",
+    total_usd: 250.5,
+    most_recent_at: NOW - 3600,
+    most_recent_chain: "ethereum",
+    explorer_url: "https://etherscan.io/address/0xabc",
+  },
+];
+
+const FRESHNESS: ChainFreshnessEntry[] = [
+  { chain: "ethereum", last_success_at: NOW - 1800, last_attempt_at: NOW - 1800, last_error: null },
+  { chain: "base", last_success_at: NOW - 1800, last_attempt_at: NOW - 1800, last_error: null },
+  { chain: "optimism", last_success_at: NOW - 1800, last_attempt_at: NOW - 1800, last_error: null },
+  { chain: "arbitrum", last_success_at: NOW - 1800, last_attempt_at: NOW - 1800, last_error: null },
+  { chain: "polygon", last_success_at: NOW - 1800, last_attempt_at: NOW - 1800, last_error: null },
+  { chain: "gnosis", last_success_at: NOW - 1800, last_attempt_at: NOW - 1800, last_error: "rate limited" },
+];
 
 describe("DonorWall", () => {
-  it("renders donor displays and links to Etherscan", () => {
-    render(
-      <DonorWall
-        donors={[
-          { address: "0xabcdef0000000000000000000000000000000000", display: "alice.eth", total_usd: 250.5, most_recent_at: Math.floor(Date.now() / 1000) - 3600, etherscan_url: "https://etherscan.io/address/0xabc" },
-        ]}
-      />,
-    );
-    expect(screen.getByText(/alice.eth/)).toBeInTheDocument();
+  it("renders donor displays linked via the chain-aware explorer URL", () => {
+    render(<DonorWall donors={DONORS} chainFreshness={FRESHNESS} lastSyncedAt={NOW - 1800} />);
+    const link = screen.getByRole("link", { name: /alice\.eth/ });
+    expect(link).toHaveAttribute("href", "https://etherscan.io/address/0xabc");
     expect(screen.getByText(/\$250\.50/)).toBeInTheDocument();
     expect(screen.getByText(/1h ago/)).toBeInTheDocument();
   });
 
-  it("renders an empty state when no donors", () => {
-    render(<DonorWall donors={[]} />);
-    expect(screen.getByText(/No donations yet/i)).toBeInTheDocument();
+  it("renders the empty state with a freshness sub-line derived from chain_freshness", () => {
+    render(<DonorWall donors={[]} chainFreshness={FRESHNESS} lastSyncedAt={NOW - 1800} />);
+    expect(screen.getByText("No community donations yet.")).toBeInTheDocument();
+    expect(screen.getByText(/Last sync .* · 5\/6 chains healthy/)).toBeInTheDocument();
   });
 });
 ```
@@ -2826,34 +3347,49 @@ Create `src/components/funding/donor-wall.tsx`:
 
 ```typescript
 import { ExternalLink } from "lucide-react";
-import type { FundingDonorWallEntry } from "@shared/lib/funding/types";
+import type { ChainFreshnessEntry, FundingDonorWallEntry } from "@shared/lib/funding/types";
+import { timeAgo } from "@shared/lib/format";
 
 const USD = new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 2 });
 
-function formatRelative(thenSec: number): string {
-  const now = Math.floor(Date.now() / 1000);
-  const diff = now - thenSec;
-  if (diff < 60) return "just now";
-  if (diff < 3600) return `${Math.floor(diff / 60)}m ago`;
-  if (diff < 86400) return `${Math.floor(diff / 3600)}h ago`;
-  return `${Math.floor(diff / 86400)}d ago`;
+interface DonorWallProps {
+  donors: FundingDonorWallEntry[];
+  chainFreshness: ChainFreshnessEntry[];
+  lastSyncedAt: number;
 }
 
-export function DonorWall({ donors }: { donors: FundingDonorWallEntry[] }) {
+function freshnessSummary(chainFreshness: ChainFreshnessEntry[], lastSyncedAt: number): string {
+  const total = chainFreshness.length;
+  const healthy = chainFreshness.filter((c) => c.last_error === null && c.last_success_at > 0).length;
+  const lastSync = lastSyncedAt > 0 ? timeAgo(lastSyncedAt) : "pending";
+  return `Last sync ${lastSync} · ${healthy}/${total} chains healthy`;
+}
+
+export function DonorWall({ donors, chainFreshness, lastSyncedAt }: DonorWallProps) {
   if (donors.length === 0) {
-    return <p className="text-sm text-muted-foreground">No donations yet. The first one will land here.</p>;
+    return (
+      <div className="space-y-1">
+        <p className="text-sm text-muted-foreground">No community donations yet.</p>
+        <p className="text-[11px] text-muted-foreground">{freshnessSummary(chainFreshness, lastSyncedAt)}</p>
+      </div>
+    );
   }
   return (
     <ul className="space-y-2 text-sm">
       {donors.map((d) => (
         <li key={d.address} className="flex items-baseline justify-between gap-3">
-          <a href={d.etherscan_url} target="_blank" rel="noopener noreferrer" className="pharos-focus-ring inline-flex items-center gap-1 text-foreground underline-offset-2 hover:underline">
+          <a
+            href={d.explorer_url}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="pharos-focus-ring inline-flex items-center gap-1 text-foreground underline-offset-2 hover:underline"
+          >
             {d.display}
             <ExternalLink className="h-3 w-3" />
           </a>
           <span className="flex items-baseline gap-3 text-muted-foreground">
-            <span className="tabular-nums">{USD.format(d.total_usd)}</span>
-            <span className="text-xs">{formatRelative(d.most_recent_at)}</span>
+            <span className="font-mono tabular-nums">{USD.format(d.total_usd)}</span>
+            <span className="text-xs">{timeAgo(d.most_recent_at)}</span>
           </span>
         </li>
       ))}
@@ -2868,7 +3404,7 @@ export function DonorWall({ donors }: { donors: FundingDonorWallEntry[] }) {
 npx vitest run src/components/funding/__tests__/
 ```
 
-Expected: 5 tests pass (1 KPI row + 1 cost breakdown + 2 donor wall).
+Expected: 6 tests pass (3 KPI row + 1 cost breakdown + 2 donor wall).
 
 - [ ] **Step 9: Commit**
 
@@ -2885,6 +3421,16 @@ git commit -m "feat(funding): KPI row, chart, cost breakdown, donor wall compone
 - Create: `src/components/funding/support-ctas.tsx`
 - Create: `src/components/funding/year-end-horizon.tsx`
 
+**Voice & layout contract (consolidated from copy + design review):**
+
+- CTA card titles use bare nouns: `Wallet`, `Giveth`, `Star on GitHub`, `Share`, `Contribute`, `Flag bad data`. No verbs in titles.
+- Two visual tiers. Financial CTAs (Wallet, Giveth) are larger cards with a frost-blue accent border, sitting on top in a 2-card row. The four non-monetary CTAs collapse into a compact strip below — single row of four narrower cards (`grid-cols-2 lg:grid-cols-4`) under a kicker label `Other ways to help`.
+- Wallet card displays the truncated address `0x5d69…860DB` in the button (full address in `aria-label`); shows six chain badges below; description stays one line.
+- Copy-to-clipboard feedback uses `aria-live="polite"` on a status element, not a footer toggle.
+- Footer line below all CTAs is the tightened version (one sentence). The verbose explainer is gone.
+- Year-end horizon is a single paragraph; the meta-commentary second paragraph is dropped. `out of pocket → directly`; `the honest scoreboard → the honest ledger`.
+- `funding-config-shim.ts` already defines `PHAROS_FUNDING_ENS` and `PHAROS_FUNDING_WALLET_DISPLAY` (added in Task 15 Step 3). Do not redefine here.
+
 - [ ] **Step 1: Support CTAs**
 
 Create `src/components/funding/support-ctas.tsx`:
@@ -2893,31 +3439,45 @@ Create `src/components/funding/support-ctas.tsx`:
 "use client";
 
 import { useState } from "react";
-import Link from "next/link";
-import { Copy, ExternalLink, Flag, GitBranch, Heart, Share2, Star, Wallet, Wrench } from "lucide-react";
+import { Copy, ExternalLink, Flag, GitBranch, Heart, Share2, Star, Wallet } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { FeedbackModal } from "@/components/feedback-modal";
+import { cn } from "@/lib/utils";
 import { PHAROS_FUNDING_ENS, PHAROS_FUNDING_WALLET_DISPLAY } from "@/lib/funding-config-shim";
 
 const GIVETH_URL = "https://giveth.io/project/pharos-watch:-transparent-stablecoins-analytics";
 const GITHUB_URL = "https://github.com/TokenBrice/stablecoin-dashboard";
-const SHARE_URL = "https://x.com/intent/tweet?text=" + encodeURIComponent("Pharos — independent stablecoin analytics, MIT-licensed, public good. https://pharos.watch");
+const SHARE_URL =
+  "https://x.com/intent/tweet?text=" +
+  encodeURIComponent("Pharos — independent stablecoin analytics, MIT-licensed, public good. https://pharos.watch");
 
-function CtaCard({
-  icon: Icon,
-  title,
-  description,
-  action,
-}: {
+const SUPPORTED_CHAINS = ["Ethereum", "Base", "Optimism", "Arbitrum", "Polygon", "Gnosis"] as const;
+
+function truncateAddress(addr: string): string {
+  // Preserve mixed case (EIP-55 checksum) — "0x5d69…860DB"
+  return `${addr.slice(0, 6)}…${addr.slice(-6)}`;
+}
+
+interface CtaCardProps {
   icon: typeof Wallet;
   title: string;
   description: string;
   action: React.ReactNode;
-}) {
+  emphasized?: boolean;
+}
+
+function CtaCard({ icon: Icon, title, description, action, emphasized }: CtaCardProps) {
   return (
-    <div className="flex h-full flex-col gap-2 rounded-xl border border-border/60 bg-background/40 p-4">
+    <div
+      className={cn(
+        "flex h-full flex-col gap-2 rounded-xl border bg-background/40 p-4",
+        emphasized
+          ? "border-l-[3px] border-l-frost-blue border-border/60"
+          : "border-border/60",
+      )}
+    >
       <div className="flex items-center gap-2">
-        <Icon className="h-4 w-4 text-foreground" />
+        <Icon className={cn("h-4 w-4", emphasized ? "text-sky-700 dark:text-frost-blue/82" : "text-foreground")} />
         <p className="text-sm font-medium text-foreground">{title}</p>
       </div>
       <p className="text-xs text-muted-foreground">{description}</p>
@@ -2929,99 +3489,129 @@ function CtaCard({
 export function SupportCtas() {
   const [feedbackOpen, setFeedbackOpen] = useState(false);
   const [copied, setCopied] = useState(false);
+  const truncated = truncateAddress(PHAROS_FUNDING_WALLET_DISPLAY);
 
   return (
     <>
-      <div className="space-y-4">
+      <div className="space-y-5">
+        {/* Financial tier — larger, frost-blue accent */}
         <div className="grid gap-3 sm:grid-cols-2">
           <CtaCard
             icon={Wallet}
-            title="Send crypto"
-            description={`${PHAROS_FUNDING_ENS} accepts ETH and ERC20 on Ethereum, Base, Optimism, Arbitrum, Polygon, and Gnosis.`}
+            title="Wallet"
+            description={`${PHAROS_FUNDING_ENS} — ETH and ERC20 across 6 chains.`}
+            emphasized
             action={
-              <Button
-                type="button"
-                variant="outline"
-                className="min-h-9 w-full justify-between"
-                onClick={async () => {
-                  await navigator.clipboard.writeText(PHAROS_FUNDING_WALLET_DISPLAY);
-                  setCopied(true);
-                  setTimeout(() => setCopied(false), 1500);
-                }}
-              >
-                <span className="font-mono text-xs">{PHAROS_FUNDING_WALLET_DISPLAY}</span>
-                <Copy className="h-3.5 w-3.5" />
-              </Button>
+              <div className="space-y-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="min-h-9 w-full justify-between"
+                  aria-label={`Copy wallet address ${PHAROS_FUNDING_WALLET_DISPLAY}`}
+                  onClick={async () => {
+                    await navigator.clipboard.writeText(PHAROS_FUNDING_WALLET_DISPLAY);
+                    setCopied(true);
+                    setTimeout(() => setCopied(false), 1500);
+                  }}
+                >
+                  <span className="font-mono text-xs">{truncated}</span>
+                  <Copy className="h-3.5 w-3.5" />
+                </Button>
+                <p className="text-[11px] leading-relaxed text-muted-foreground">
+                  {SUPPORTED_CHAINS.map((c, i) => (
+                    <span key={c}>
+                      {i === 0 ? "" : " · "}
+                      {c}
+                    </span>
+                  ))}
+                </p>
+                <p role="status" aria-live="polite" className="sr-only">
+                  {copied ? "Wallet address copied to clipboard." : ""}
+                </p>
+              </div>
             }
           />
           <CtaCard
             icon={Heart}
-            title="Donate via Giveth"
-            description="Public good funding through Giveth — no platform fees on the project page."
+            title="Giveth"
+            description="Giveth runs quadratic funding rounds where small donations get matched."
+            emphasized
             action={
               <Button asChild variant="outline" className="min-h-9 w-full justify-between">
                 <a href={GIVETH_URL} target="_blank" rel="noopener noreferrer">
-                  Open Giveth
+                  Giveth
                   <ExternalLink className="h-3.5 w-3.5" />
                 </a>
               </Button>
             }
           />
         </div>
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-          <CtaCard
-            icon={Star}
-            title="Star the repo"
-            description="Visibility helps Pharos reach the people who need it."
-            action={
-              <Button asChild variant="outline" className="min-h-9 w-full justify-between">
-                <a href={GITHUB_URL} target="_blank" rel="noopener noreferrer">
-                  GitHub
-                  <ExternalLink className="h-3.5 w-3.5" />
-                </a>
-              </Button>
-            }
-          />
-          <CtaCard
-            icon={Share2}
-            title="Share Pharos"
-            description="Pass it to anyone who tracks stablecoin risk."
-            action={
-              <Button asChild variant="outline" className="min-h-9 w-full justify-between">
-                <a href={SHARE_URL} target="_blank" rel="noopener noreferrer">
-                  Share
-                  <ExternalLink className="h-3.5 w-3.5" />
-                </a>
-              </Button>
-            }
-          />
-          <CtaCard
-            icon={Wrench}
-            title="Contribute"
-            description="MIT-licensed. Issues and PRs welcome."
-            action={
-              <Button asChild variant="outline" className="min-h-9 w-full justify-between">
-                <a href={`${GITHUB_URL}/issues`} target="_blank" rel="noopener noreferrer">
-                  <GitBranch className="h-3.5 w-3.5" />
-                  Open issues
-                </a>
-              </Button>
-            }
-          />
-          <CtaCard
-            icon={Flag}
-            title="Flag bad data"
-            description="See something off? Send a quick report."
-            action={
-              <Button type="button" variant="outline" className="min-h-9 w-full justify-between" onClick={() => setFeedbackOpen(true)}>
-                Open feedback
-                <Flag className="h-3.5 w-3.5" />
-              </Button>
-            }
-          />
+
+        {/* Non-monetary tier — compact strip */}
+        <div className="space-y-2">
+          <p className="pharos-kicker text-muted-foreground">Other ways to help</p>
+          <div className="grid gap-3 grid-cols-2 lg:grid-cols-4">
+            <CtaCard
+              icon={Star}
+              title="Star on GitHub"
+              description="More stars, more reach. That's the whole mechanic."
+              action={
+                <Button asChild variant="outline" className="min-h-9 w-full justify-between">
+                  <a href={GITHUB_URL} target="_blank" rel="noopener noreferrer">
+                    GitHub
+                    <ExternalLink className="h-3.5 w-3.5" />
+                  </a>
+                </Button>
+              }
+            />
+            <CtaCard
+              icon={Share2}
+              title="Share"
+              description="For anyone who tracks stablecoin risk."
+              action={
+                <Button asChild variant="outline" className="min-h-9 w-full justify-between">
+                  <a href={SHARE_URL} target="_blank" rel="noopener noreferrer">
+                    Share
+                    <ExternalLink className="h-3.5 w-3.5" />
+                  </a>
+                </Button>
+              }
+            />
+            <CtaCard
+              icon={GitBranch}
+              title="Contribute"
+              description="MIT-licensed. Issues and PRs welcome."
+              action={
+                <Button asChild variant="outline" className="min-h-9 w-full justify-between">
+                  <a href={`${GITHUB_URL}/issues`} target="_blank" rel="noopener noreferrer">
+                    GitHub issues
+                    <ExternalLink className="h-3.5 w-3.5" />
+                  </a>
+                </Button>
+              }
+            />
+            <CtaCard
+              icon={Flag}
+              title="Flag bad data"
+              description="Spotted something off? The feedback form goes straight to TokenBrice."
+              action={
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="min-h-9 w-full justify-between"
+                  onClick={() => setFeedbackOpen(true)}
+                >
+                  Feedback
+                  <Flag className="h-3.5 w-3.5" />
+                </Button>
+              }
+            />
+          </div>
         </div>
+
         <p className="text-[11px] text-muted-foreground">
-          {copied ? "Copied to clipboard." : "All financial donations land at the same address regardless of chain. Giveth donations route through their pool contract — both surface on the wall."}
+          Donations land at the same address across all six chains. Giveth donations arrive via their pool contract; both
+          appear on the wall.
         </p>
       </div>
       <FeedbackModal open={feedbackOpen} onOpenChange={setFeedbackOpen} />
@@ -3030,38 +3620,25 @@ export function SupportCtas() {
 }
 ```
 
-- [ ] **Step 2: Update funding-config-shim**
-
-Edit `src/lib/funding-config-shim.ts`:
-
-```typescript
-export const FUNDING_CHAIN_FRESHNESS_WARN_SECONDS = 36 * 60 * 60;
-export const PHAROS_FUNDING_ENS = "pharos-watch.eth";
-export const PHAROS_FUNDING_WALLET_DISPLAY = "0x5d698362EDb8AEa1C2b2483096BDeE3265D860DB";
-```
-
-- [ ] **Step 3: Year-end horizon**
+- [ ] **Step 2: Year-end horizon**
 
 Create `src/components/funding/year-end-horizon.tsx`:
 
 ```typescript
 export function YearEndHorizon() {
   return (
-    <div className="space-y-2 text-sm leading-relaxed text-muted-foreground">
+    <div className="text-sm leading-relaxed text-muted-foreground">
       <p>
-        Pharos&apos;s goal is to fund itself by the end of 2026 without subsidy from its founder.
-        Today, that gap is covered out of pocket. The chart and KPIs above are the honest scoreboard
-        — community support narrows the gap, the founder line narrows alongside it.
-      </p>
-      <p className="text-xs">
-        No campaign. No deadline pressure. Just the math.
+        Pharos&apos;s goal is to fund itself by the end of 2026 without subsidy from its founder. Today, the founder
+        covers that gap directly. The chart and KPIs above are the honest ledger — community support narrows the gap,
+        the founder line narrows alongside it.
       </p>
     </div>
   );
 }
 ```
 
-- [ ] **Step 4: Type-check**
+- [ ] **Step 3: Type-check**
 
 ```bash
 npx tsc --noEmit
@@ -3069,10 +3646,10 @@ npx tsc --noEmit
 
 Expected: 0 errors.
 
-- [ ] **Step 5: Commit**
+- [ ] **Step 4: Commit**
 
 ```bash
-git add src/components/funding/support-ctas.tsx src/components/funding/year-end-horizon.tsx src/lib/funding-config-shim.ts
+git add src/components/funding/support-ctas.tsx src/components/funding/year-end-horizon.tsx
 git commit -m "feat(funding): support CTAs + year-end horizon copy block"
 ```
 
@@ -3085,6 +3662,17 @@ git commit -m "feat(funding): support CTAs + year-end horizon copy block"
 - Create: `src/app/funding/funding-page-client.tsx`
 - Create: `src/app/funding/error.tsx`
 
+**Wiring contract:**
+
+- All four content sections wrap their components in `TonalSection` (from `@/components/tonal-section`, see Task 14.5), not raw `Card+CardHeader+CardTitle`. Tones: cost = `data`, donor = `insight`, CTAs = `brand`, year-end = `brand`. The year-end card intentionally reuses `brand` (frost-blue), NOT `classification` (violet) — violet is reserved sitewide for the governance-tier semantic and would conflict here.
+- Card titles: `Monthly costs`, `Recent supporters`, `How to support`, `Path to sustainability`. Declarative, descriptive — no directive verbs.
+- The KPI row receives `monthlySeriesLength` so it can branch into the "First month in flight" copy when the trailing window is incomplete (see Task 15 Step 2).
+- The chart receives `monthlyTargetUsd` derived from `kpis.current_month_target_usd` so the cost reference line is always pinned to the canonical monthly cost figure (matches the spec's `$1,677` reference).
+- Top-level wrapper uses `space-y-8` to match `/about`'s rhythm (verified — `src/app/about/page.tsx:438` wraps content in `<div className="space-y-8">`).
+- Skeleton blocks use the shared `Skeleton` primitive (`@/components/ui/skeleton`, `data-slot="skeleton"`) and mirror the live layout (kicker line + primary line + secondary line per KPI card; section header + body lines per section) so the page does not visually jump on hydration.
+- Inline-error and error-boundary copy: `"Funding data is temporarily unavailable."` only — no `"Please try again shortly."` follow-on. The hook already auto-refetches.
+- Page metadata description drops the redundant "sustains/sustainability" pairing.
+
 - [ ] **Step 1: Server component shell with metadata**
 
 Create `src/app/funding/page.tsx`:
@@ -3096,7 +3684,7 @@ import { FeaturePageShell } from "@/components/feature-page-shell";
 
 export const metadata: Metadata = {
   title: "Funding — Pharos",
-  description: "How Pharos sustains itself: live donations, monthly costs, and the path to project sustainability.",
+  description: "Live donations, monthly costs, and the path to a self-funded project.",
   robots: { index: false, follow: false }, // stealth release — not indexed in v1
   alternates: { canonical: "/funding/" },
 };
@@ -3131,75 +3719,102 @@ import { CostBreakdown } from "@/components/funding/cost-breakdown";
 import { DonorWall } from "@/components/funding/donor-wall";
 import { SupportCtas } from "@/components/funding/support-ctas";
 import { YearEndHorizon } from "@/components/funding/year-end-horizon";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { TonalSection } from "@/components/tonal-section";
+import { Card, CardContent } from "@/components/ui/card";
+import { Skeleton } from "@/components/ui/skeleton";
 
 export function FundingPageClient() {
   const { data, isLoading, error } = useFundingSummary();
 
   if (isLoading) return <FundingPageSkeleton />;
-  if (error || !data) return <p className="text-sm text-muted-foreground">Funding data is temporarily unavailable.</p>;
+  if (error || !data) {
+    return <p className="text-sm text-muted-foreground">Funding data is temporarily unavailable.</p>;
+  }
 
   return (
-    <div className="space-y-6">
-      <FundingKpiRow kpis={data.kpis} />
+    <div className="space-y-8">
+      <FundingKpiRow kpis={data.kpis} monthlySeriesLength={data.monthly_series.length} />
       <Card className="rounded-xl">
         <CardContent className="p-4">
-          <FundingMonthlyChart series={data.monthly_series} chainFreshness={data.chain_freshness} lastSyncedAt={data.last_synced_at} />
+          <FundingMonthlyChart
+            series={data.monthly_series}
+            chainFreshness={data.chain_freshness}
+            lastSyncedAt={data.last_synced_at}
+            monthlyTargetUsd={data.kpis.current_month_target_usd}
+          />
         </CardContent>
       </Card>
       <div className="grid gap-4 lg:grid-cols-2">
-        <Card className="rounded-xl border-l-[3px] border-l-amber-500">
-          <CardHeader>
-            <CardTitle as="h2">Where the money goes</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <CostBreakdown items={data.line_items} />
-          </CardContent>
-        </Card>
-        <Card className="rounded-xl border-l-[3px] border-l-emerald-500">
-          <CardHeader>
-            <CardTitle as="h2">Recent supporters</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <DonorWall donors={data.recent_donors} />
-          </CardContent>
-        </Card>
+        <TonalSection eyebrow="Where it goes" title="Monthly costs" tone="data">
+          <CostBreakdown items={data.line_items} />
+        </TonalSection>
+        <TonalSection eyebrow="Supporters" title="Recent supporters" tone="insight">
+          <DonorWall
+            donors={data.recent_donors}
+            chainFreshness={data.chain_freshness}
+            lastSyncedAt={data.last_synced_at}
+          />
+        </TonalSection>
       </div>
-      <Card className="rounded-xl border-l-[3px] border-l-frost-blue">
-        <CardHeader>
-          <CardTitle as="h2">Support Pharos</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <SupportCtas />
-        </CardContent>
-      </Card>
-      <Card className="rounded-xl border-l-[3px] border-l-violet-500">
-        <CardHeader>
-          <CardTitle as="h2">Where we're going</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <YearEndHorizon />
-        </CardContent>
-      </Card>
+      <TonalSection eyebrow="Get involved" title="How to support" tone="brand">
+        <SupportCtas />
+      </TonalSection>
+      <TonalSection eyebrow="Where we're going" title="Path to sustainability" tone="brand">
+        <YearEndHorizon />
+      </TonalSection>
     </div>
   );
 }
 
 function FundingPageSkeleton() {
   return (
-    <div className="space-y-6">
+    <div className="space-y-8">
+      {/* KPI row — kicker + primary + secondary per card */}
       <div className="grid gap-3 sm:grid-cols-3">
         {[0, 1, 2].map((i) => (
-          <div key={i} className="h-24 animate-pulse rounded-xl bg-muted/40" />
+          <Card key={i} className="rounded-xl border-l-[3px] border-l-border/40">
+            <CardContent className="space-y-2 p-4">
+              <Skeleton className="h-3 w-24" />
+              <Skeleton className="h-7 w-32" />
+              <Skeleton className="h-3 w-40" />
+            </CardContent>
+          </Card>
         ))}
       </div>
-      <div className="h-72 animate-pulse rounded-xl bg-muted/40" />
+      {/* Chart */}
+      <Card className="rounded-xl">
+        <CardContent className="p-4">
+          <Skeleton className="h-72 w-full" />
+        </CardContent>
+      </Card>
+      {/* Cost + donor row */}
       <div className="grid gap-4 lg:grid-cols-2">
         {[0, 1].map((i) => (
-          <div key={i} className="h-48 animate-pulse rounded-xl bg-muted/40" />
+          <Card key={i} className="rounded-xl border-l-[3px] border-l-border/40">
+            <CardContent className="space-y-3 p-4">
+              <Skeleton className="h-3 w-24" />
+              <Skeleton className="h-5 w-40" />
+              <Skeleton className="h-32 w-full" />
+            </CardContent>
+          </Card>
         ))}
       </div>
-      <div className="h-32 animate-pulse rounded-xl bg-muted/40" />
+      {/* CTAs */}
+      <Card className="rounded-xl border-l-[3px] border-l-border/40">
+        <CardContent className="space-y-3 p-4">
+          <Skeleton className="h-3 w-24" />
+          <Skeleton className="h-5 w-40" />
+          <Skeleton className="h-28 w-full" />
+        </CardContent>
+      </Card>
+      {/* Year-end */}
+      <Card className="rounded-xl border-l-[3px] border-l-border/40">
+        <CardContent className="space-y-3 p-4">
+          <Skeleton className="h-3 w-24" />
+          <Skeleton className="h-5 w-40" />
+          <Skeleton className="h-16 w-full" />
+        </CardContent>
+      </Card>
     </div>
   );
 }
@@ -3215,7 +3830,7 @@ Create `src/app/funding/error.tsx`:
 export default function FundingErrorBoundary() {
   return (
     <div className="mx-auto max-w-2xl p-6 text-sm text-muted-foreground">
-      <p>Funding data is temporarily unavailable. Please try again shortly.</p>
+      <p>Funding data is temporarily unavailable.</p>
     </div>
   );
 }
@@ -3345,8 +3960,18 @@ Expected: Alchemy returns at least 1 (the known inbound tx); Gnosisscan returns 
 
 ```bash
 cd worker && npx wrangler dev
-# In a second shell:
-curl -X POST http://localhost:8787/__scheduled?cron=0+7+*+*+*
+```
+
+In a second shell, trigger the scheduled handler. The exact path depends on Wrangler version — verify with:
+
+```bash
+cd worker && npx wrangler dev --help 2>&1 | grep -A2 'scheduled\|test-scheduled' | head -10
+```
+
+For Wrangler ≥3.x the local URL is typically `http://localhost:8787/cdn-cgi/handler/scheduled?cron=0+7+*+*+*`. For older versions it may be `/__scheduled`. Use whichever the help output indicates:
+
+```bash
+curl -X POST "http://localhost:8787/cdn-cgi/handler/scheduled?cron=0+7+*+*+*"
 ```
 
 Expected: Worker logs include `[funding] sync complete:` with `per_chain` entries for all 6 chains.
@@ -3354,10 +3979,10 @@ Expected: Worker logs include `[funding] sync complete:` with `per_chain` entrie
 - [ ] **Step 4: Verify the API**
 
 ```bash
-curl -s http://localhost:8787/api/funding-summary | jq '{ kpis, recent_donor_count: (.recent_donors | length), chain_freshness_count: (.chain_freshness | length) }'
+curl -s http://localhost:8787/api/funding-summary | jq '{ kpis, recent_donor_count: (.recent_donors | length), chain_freshness_count: (.chain_freshness | length), is_cold_start: .kpis.is_cold_start }'
 ```
 
-Expected: `recent_donor_count >= 1`, `chain_freshness_count == 6`, and `kpis.current_month_target_usd == 1676.85`.
+Expected: `chain_freshness_count == 6`, and `kpis.current_month_target_usd == 1676.85`. `is_cold_start` should be `true` until the first community donation arrives (Brice's labeled founder address does not count). `recent_donor_count` will be `0` until the first community donation arrives.
 
 - [ ] **Step 5: Smoke-test the page in the browser**
 

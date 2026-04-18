@@ -186,15 +186,16 @@ CREATE TABLE funding_price_cache (
 ]
 ```
 
-`shared/data/funding/donor-labels.json` — explicit labels for known senders (founder subsidy, Giveth pool, etc.):
+`shared/data/funding/donor-labels.json` — explicit labels and roles for known senders (founder subsidy, Giveth pool, etc.):
 
 ```json
 [
-  { "address": "0xYourEOA...lowercased", "label": "TokenBrice (founder subsidy)" }
+  { "address": "0xYourEOA...lowercased", "label": "TokenBrice (founder subsidy)", "kind": "founder" },
+  { "address": "0xGivethPool...lowercased", "label": "via Giveth", "kind": "pool" }
 ]
 ```
 
-(Giveth pool address added after on-chain confirmation during implementation.)
+The `kind` field drives separation in the API: `"founder"` is excluded from the `distinct_donors_lifetime` count and the `community_donations_usd` series, but kept in the chart as a separate stacked layer. `"pool"` (Giveth) counts as community. Unspecified donors are treated as community by default. (Giveth pool address added after on-chain confirmation during implementation.)
 
 `shared/data/funding/spam-denylist.json` — known spam ERC20 contracts per chain:
 
@@ -234,20 +235,35 @@ FeaturePageShell
   children:
     <FundingKpiRow />                         (3 cards, side-by-side)
       • This month coverage    (tone: brand)
-        "$X / $1,677 covered (Y%)"
+        Primary: "Y%"  Secondary: "$X of $1,677 covered"
+        (Cold-start branch: when no donations this month yet,
+         primary becomes "Tracking begins", secondary explains.)
       • Trailing 3-month avg   (tone: insight)
-        "Trending at Y% covered (3-mo avg)"
-      • Total raised lifetime  (tone: data)
-        "$X.X k from N donors"
+        Primary: "Y%"  Secondary: "trailing 3-month coverage"
+        (Cold-start branch: "First month in flight" when <3 months exist.)
+      • Community donations    (tone: data)
+        Primary: "$X.X k"  Secondary: "from N supporters since launch"
+        (Excludes founder subsidy. Cold-start branch: "Be the first.")
 
-    <FundingMonthlyChart />                    (full width, Recharts BarChart)
-      • Paired bars per month: donations (green) vs costs (red)
-      • Trailing 12 months, sliding window
-      • Tooltip: month detail + donor count
-      • Footnote beneath chart: "How USD amounts are computed →"
-        links to docs/funding-page.md#pricing-methodology
+    <FundingMonthlyChart />                    (full width, Recharts)
+      • Stacked bars per month:
+          - community_donations_usd (emerald, foreground)
+          - founder_subsidy_usd (muted gray, stacked on top)
+        with costs_usd as a horizontal reference line at $1,677,
+        not as an opposing red bar.
+      • Trailing 12 months, sliding window. Months with zero data
+        before the cron's first successful run are omitted; the
+        x-axis starts at the first month with any cost or donation.
+      • Tooltip: month detail + donor count + founder/community split.
+      • Footnote beneath chart:
+          "How USD amounts are computed →" (links to methodology)
+          "View raw data →" (links to /api/funding-summary)
       • If any chain in chain_freshness is older than 36h, render a
-        small muted note (e.g. "Gnosis sync stale — last update 2d ago")
+        muted banner ABOVE the chart (data-availability pattern):
+        "Gnosis sync stale — last update 2d ago".
+      • Reuses chart-primitives.tsx (CategoricalXAxis, MonoYAxis,
+        PharosChartTooltip, pharos-chart-stage); colors come from
+        chart tokens, not hex literals.
 
     <CostBreakdown />  |  <DonorWall />        (two-column)
       Cost panel (tone: data):
@@ -255,41 +271,49 @@ FeaturePageShell
         • Total: "$1,676.85/m"
         • Volunteer note for Brice's $0 row
       Donor wall (tone: insight):
-        • Top 20 most recent (non-spam) donors
+        • Top 20 most recent community donors (excludes founder
+          subsidy from the wall; founder line surfaces only in the
+          chart and a small note in CostBreakdown footer)
         • Display: ENS name (if forward-verified) OR truncated 0xabcd…1234
         • Custom labels from donor-labels.json applied
-        • USD amount + relative time + Etherscan link
+        • USD amount + relative time + chain-aware explorer link
+        • Empty state: "No community donations yet." plus a subtle
+          freshness line ("Last sync: Xh ago · 6/6 chains healthy").
 
     <SupportCtas />                            (full width, AboutSection tone: brand)
-      Six CTAs grouped into two rows for visual hierarchy:
-        Financial (top row, 2 cards):
-          • Wallet:  pharos-watch.eth + copy button + "ETH and ERC20 on 6 chains"
-          • Giveth:  external link to the project (URL stripped of ?apcid)
-        Non-monetary (bottom row, 4 cards):
-          • Star on GitHub:  link to repo
-          • Share Pharos:  pre-filled X share intent
-          • Contribute:  link to GitHub issues
-          • Flag bad data:  opens existing <FeedbackModal />
+      Two visually distinct tiers:
+        Financial (top, larger cards with frost-blue accent):
+          • Wallet:  pharos-watch.eth + copy button + 6-chain badges
+          • Giveth:  external link with one-line "what is Giveth"
+        Other ways to help (compact strip):
+          • Star on GitHub
+          • Share Pharos
+          • Contribute (open issues)
+          • Flag bad data (opens <FeedbackModal />)
 
-    <YearEndHorizon />                         (closing AboutSection, tone: classification)
-      "Goal: sustainable funding by Dec 2026.
-       Today, Brice covers the gap monthly. The aim is to retire
-       that line by year-end through community support."
+    <YearEndHorizon />                         (closing AboutSection, tone: brand)
+      Single paragraph, no meta-commentary:
+      "Pharos's goal is to fund itself by the end of 2026 without
+       subsidy from its founder. Today, the founder covers that
+       gap directly. The chart and KPIs above are the honest ledger
+       — community support narrows the gap, the founder line
+       narrows alongside it."
 ```
 
 **Component reuse:**
 - `FeaturePageShell` (existing)
-- `AboutSection` (existing — extract to a generic `<TonalSection>` only if /funding ends up reusing it heavily)
+- `AboutSection` (existing — extract to a generic `<TonalSection>` in `src/components/tonal-section.tsx` since /funding uses six tonal section cards; this is the kind of focused refactor that pays for itself, per design.context "follow existing patterns")
 - `<FeedbackModal />` and existing feedback-button infrastructure (existing)
-- Recharts primitives from `chart-primitives.tsx` (existing)
-- Skeleton primitives (existing)
-- Tone classes from `getToneClasses()` (existing)
+- `chart-primitives.tsx` (`CategoricalXAxis`, `MonoYAxis`, `PharosChartTooltip`, `pharos-chart-stage`) — required, no hand-rolled axes
+- `Skeleton` primitive (`data-slot="skeleton"`), not raw `animate-pulse`
+- `getToneClasses()` from `/about` (or extracted alongside `TonalSection`) — KPI cards must consume this, not hand-typed tone classes
+- `timeAgo()` from `@shared/lib/format` — no in-component formatRelative duplicates
 - Lucide icons (no emoji): `Wallet`, `Heart`, `Star`, `Share2`, `Wrench`, `Flag`
 
 **Loading & empty states:**
-- Loading: skeleton bars for chart, skeleton rows for donor wall, skeleton blocks for KPIs
-- Empty current month ("no donations yet this month"): muted neutral copy, not an alarm
-- Sparse history (1-2 months only): chart still renders, copy explains the page is new
+- Loading: `Skeleton` primitive blocks mirroring the live layout (kicker line + primary line + secondary line) so the page does not jump on hydration
+- Empty current month: cold-start KPI branch (above) handles it; donor wall shows "No community donations yet." plus freshness line
+- Sparse history (<3 months): KPI cold-start branches replace metrics with "Tracking begins" copy; chart starts at the first non-empty month rather than padding the past with empty bars
 
 ## Edge cases & operational details
 
@@ -300,7 +324,9 @@ FeaturePageShell
 | Giveth payout flow | Confirmed during implementation: identify the Giveth payout contract address, label its sends as "via Giveth" through `donor-labels.json` so the wall doesn't show "0xGivethContract" repeatedly. |
 | Refunds / outbound returns | Manual `is_refund=1` flag on the donation row (admin operation, no automated detection). Excluded from totals when set. |
 | Same address donating multiple times | Donor wall coalesces by `from_address` (sum, latest timestamp). Distinct-donor count uses `COUNT(DISTINCT from_address)`. |
-| Token with no CoinGecko historical price | Fall back to current spot price; tag `price_source='coingecko-spot-fallback'`. If still no price, set `usd_at_receipt=0` and `is_spam=1`. |
+| Token with no CoinGecko historical price | Fall back to current spot price; tag `price_source='coingecko-spot-fallback'`. If still no price, set `usd_at_receipt=0` and `price_source='zero-no-price'`; **do not** flag as spam (an unknown long-tail token is not spam — exclude from totals via `usd_at_receipt > 0` filter instead). |
+| Founder subsidy attribution | Donor labels carry a `kind` field. Rows whose sender matches a `kind: "founder"` label are excluded from `distinct_donors_lifetime`, `community_donations_usd`, and the donor wall, but are included in the chart as a separate stacked series so the total picture remains honest. |
+| Verifiability affordance | The page exposes a "View raw data →" link to `/api/funding-summary` directly beneath the chart so any reader can recompute the math from the JSON. The methodology footnote sits beside it and links to the GitHub view of `docs/funding-page.md`. |
 | Pricing methodology | Pinned in *Pricing methodology* under Architecture. Daily UTC close via `/coins/{id}/history`; intraday volatility not captured; disclosed on the page via methodology footnote. |
 | Per-chain sync failure | Recorded in `funding_chain_sync.last_error`; cron continues to next chain. `chain_freshness` in API payload exposes staleness; page renders a muted note when any chain is >36h stale. |
 | ENS spoofing | Only display ENS when `forward_verified=1`. |
@@ -344,13 +370,24 @@ Per CLAUDE.md operating rules:
 - `docs/scripts.md` — if any new admin scripts are added (e.g. mark-refund), document them
 - `src/app/about/page.tsx` — add "Funding" to the data sources / pages list (`AboutFeatureRow`) **only after the stealth-release validation period**, not in v1
 
+## Stealth → promotion criteria
+
+V1 ships `noindex` and unlinked. Promotion (nav entry, footer link, removing `noindex`, optionally announcing on the existing /about page and via @PharosWatch) is gated by these objective criteria, not vibes:
+
+- **Pipeline integrity**: 14 consecutive successful daily cron runs across all 6 chains (`chain_freshness.last_success_at` within 36h for every chain), zero `INSERT OR IGNORE` collisions surfaced in logs, monthly aggregate matches a manual recompute of the underlying donations.
+- **Public-readable JSON**: `/api/funding-summary` validated against the Zod schema returned without errors for 7 consecutive days.
+- **No false-positive spam flags**: a manual review of the `funding_donations` table confirms no legitimate donation was incorrectly marked `is_spam=1`.
+- **Brice's labeled subsidy correctly excluded**: API confirms `distinct_community_donors_lifetime` does NOT count the founder address.
+
+When all four are met (~3 weeks after deploy assuming nominal operation), promotion is a single follow-up PR: `AboutFeatureRow` entry + footer link + `metadata.robots` removal.
+
 ## Open questions / deferred
 
 - Brice's EOA address for `donor-labels.json` — confirmed at implementation time
 - Giveth payout contract address per chain — confirmed at implementation time by inspecting one Giveth donation
 - Initial spam-token denylist seed entries — left empty in v1; populated as observed
-- Navigation entry to `/funding/` — deferred until after stealth-release validation
-- A "support Pharos" footer link — deferred to the same validation milestone
+- Navigation entry, footer link, and `noindex` removal — deferred until the promotion criteria above are met
+- Recurring crypto subscriptions (Hypersub/Drips), paid API tier, sponsor-a-line-item — explicitly out of scope per Q1/Q3/Q7 brainstorming decisions
 
 ## Success criteria
 
