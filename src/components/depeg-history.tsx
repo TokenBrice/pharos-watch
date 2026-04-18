@@ -236,12 +236,12 @@ function DepegRow({ event, pegCurrency }: { event: DepegEvent; pegCurrency: stri
           {event.direction === "below" ? "Below" : "Above"}
         </Badge>
         {event.pendingReason ? (
-          <span data-testid="event-pending-reason" className="ml-2 rounded bg-[var(--surface-subtle)] px-1.5 py-0.5 text-[10px] font-medium uppercase text-[var(--ink-500)]">
+          <span data-testid="event-pending-reason" className="ml-2 rounded bg-muted px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
             {event.pendingReason}
           </span>
         ) : null}
         {event.confirmationSources ? (
-          <span data-testid="event-confirmed-by" className="ml-1 rounded bg-[var(--surface-subtle)] px-1.5 py-0.5 text-[10px] font-medium uppercase text-[var(--ink-500)]">
+          <span data-testid="event-confirmed-by" className="ml-1 rounded bg-muted px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
             ✓ {event.confirmationSources}
           </span>
         ) : null}

@@ -118,12 +118,12 @@ export function DepegFeed({ events, logos, hasMore = false, isLoadingMore = fals
                       {evt.direction}
                     </Badge>
                     {evt.pendingReason ? (
-                      <span data-testid="event-pending-reason" className="rounded bg-[var(--surface-subtle)] px-1.5 py-0.5 text-[10px] font-medium uppercase text-[var(--ink-500)]">
+                      <span data-testid="event-pending-reason" className="rounded bg-muted px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
                         {evt.pendingReason}
                       </span>
                     ) : null}
                     {evt.confirmationSources ? (
-                      <span data-testid="event-confirmed-by" className="rounded bg-[var(--surface-subtle)] px-1.5 py-0.5 text-[10px] font-medium uppercase text-[var(--ink-500)]">
+                      <span data-testid="event-confirmed-by" className="rounded bg-muted px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
                         ✓ {evt.confirmationSources}
                       </span>
                     ) : null}
