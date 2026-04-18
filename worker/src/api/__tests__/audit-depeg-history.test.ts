@@ -377,6 +377,8 @@ describe("handleAuditDepegHistory method safety", () => {
       recovery_price: 0.999,
       peg_reference: 1,
       source: "live",
+      confirmation_sources: null,
+      pending_reason: null,
     };
     const db = mockD1([]);
 

@@ -9,6 +9,8 @@ import {
   CIRCUIT_SOURCE,
   DEX_FRESHNESS_SEC,
   POOL_CHALLENGE_MIN_TVL,
+  POOL_CHALLENGE_CONFIRM_MIN,
+  POOL_CHALLENGE_HIGH_TVL_USD,
 } from "../lib/constants";
 
 const CoinGeckoPriceSchema = z.record(z.string(), z.object({ usd: z.number().optional() }));
@@ -28,6 +30,7 @@ import {
   buildInsertDepegEventStmt,
   loadDexPriceRows,
   loadDexPoolChallengers,
+  parsePendingReason,
 } from "../lib/depeg-helpers";
 import {
   classifyPrimaryDepegTrust,
@@ -130,6 +133,12 @@ export async function confirmPendingDepegs(
     }
   }
 
+  // Pre-flight circuit-breaker checks: evaluate once instead of per pending row.
+  const [coingeckoAllowed, defillamaAllowed] = await Promise.all([
+    shouldAttemptFetch(db, CIRCUIT_SOURCE.COINGECKO_CONFIRM),
+    shouldAttemptFetch(db, CIRCUIT_SOURCE.DEFILLAMA_CONFIRM),
+  ]);
+
   // Collect all mutation statements and execute as a batch at the end
   const stmts: D1PreparedStatement[] = [];
 
@@ -202,9 +211,11 @@ export async function confirmPendingDepegs(
 
     // 3. Fetch CoinGecko spot price
     let offchainStatus: ReturnType<typeof classifyDirectionalSignal> = "insufficient";
+    let offchainSourceLabel: string | null = null;
     const geckoId = meta?.geckoId;
     if (nativeSignal != null) {
       offchainStatus = classifyDirectionalSignal(nativeSignal, secondaryBar, pendingState.direction);
+      offchainSourceLabel = `NativePeg(${nativePegQuote?.pegCurrency ?? meta?.flags.pegCurrency ?? "native"})`;
       console.log(
         `[depeg-confirm] ${row.symbol} direct ${nativePegQuote?.pegCurrency ?? meta?.flags.pegCurrency ?? "native"} check: ` +
         `price=${nativePegQuote?.price ?? "n/a"}, deviation=${nativeSignal.absBps}bps, ` +
@@ -215,41 +226,54 @@ export async function confirmPendingDepegs(
       const useDefiLlamaSecondary =
         primarySource != null && primarySource.startsWith("coingecko");
       const offchainLabel = useDefiLlamaSecondary ? "DefiLlama" : "CoinGecko";
-      try {
-        const offchainRes = await fetchWithRetry(
-          useDefiLlamaSecondary
-            ? `${DEFILLAMA_COINS}/prices/current/coingecko:${geckoId}`
-            : cgUrl(`/simple/price?ids=${geckoId}&vs_currencies=usd`, coingeckoApiKey ?? null),
-          useDefiLlamaSecondary
-            ? { headers: { "User-Agent": USER_AGENT }, signal }
-            : {
-                headers: cgHeaders({ Accept: "application/json", "User-Agent": USER_AGENT }, coingeckoApiKey ?? null),
-                signal,
-              },
-          1, // single retry
-        );
-        if (offchainRes?.ok) {
-          let offchainPrice: number | undefined;
-          if (useDefiLlamaSecondary) {
-            const parsed = DefiLlamaPriceSchema.safeParse(await offchainRes.json());
-            offchainPrice = parsed.success ? parsed.data.coins?.[`coingecko:${geckoId}`]?.price : undefined;
-          } else {
-            const parsed = CoinGeckoPriceSchema.safeParse(await offchainRes.json());
-            offchainPrice = parsed.success ? parsed.data[geckoId]?.usd : undefined;
-          }
+      const circuitKey = useDefiLlamaSecondary
+        ? CIRCUIT_SOURCE.DEFILLAMA_CONFIRM
+        : CIRCUIT_SOURCE.COINGECKO_CONFIRM;
+      const offchainAllowed = useDefiLlamaSecondary ? defillamaAllowed : coingeckoAllowed;
+      if (offchainAllowed) {
+        try {
+          const offchainRes = await fetchWithRetry(
+            useDefiLlamaSecondary
+              ? `${DEFILLAMA_COINS}/prices/current/coingecko:${geckoId}`
+              : cgUrl(`/simple/price?ids=${geckoId}&vs_currencies=usd`, coingeckoApiKey ?? null),
+            useDefiLlamaSecondary
+              ? { headers: { "User-Agent": USER_AGENT }, signal }
+              : {
+                  headers: cgHeaders({ Accept: "application/json", "User-Agent": USER_AGENT }, coingeckoApiKey ?? null),
+                  signal,
+                },
+            1, // single retry
+          );
+          if (offchainRes?.ok) {
+            let offchainPrice: number | undefined;
+            if (useDefiLlamaSecondary) {
+              const parsed = DefiLlamaPriceSchema.safeParse(await offchainRes.json());
+              offchainPrice = parsed.success ? parsed.data.coins?.[`coingecko:${geckoId}`]?.price : undefined;
+            } else {
+              const parsed = CoinGeckoPriceSchema.safeParse(await offchainRes.json());
+              offchainPrice = parsed.success ? parsed.data[geckoId]?.usd : undefined;
+            }
 
-          if (offchainPrice && offchainPrice > 0) {
-            const offchainSignal = deriveDepegSignal(offchainPrice, row.peg_reference);
-            offchainStatus = classifyDirectionalSignal(offchainSignal, secondaryBar, pendingState.direction);
-            console.log(
-              `[depeg-confirm] ${row.symbol} ${offchainLabel} check: price=$${offchainPrice}, deviation=${offchainSignal?.absBps ?? "n/a"}bps, ` +
-              `bar=${secondaryBar}bps, status=${offchainStatus}`
-            );
+            if (offchainPrice && offchainPrice > 0) {
+              const offchainSignal = deriveDepegSignal(offchainPrice, row.peg_reference);
+              offchainStatus = classifyDirectionalSignal(offchainSignal, secondaryBar, pendingState.direction);
+              offchainSourceLabel = offchainLabel;
+              console.log(
+                `[depeg-confirm] ${row.symbol} ${offchainLabel} check: price=$${offchainPrice}, deviation=${offchainSignal?.absBps ?? "n/a"}bps, ` +
+                `bar=${secondaryBar}bps, status=${offchainStatus}`
+              );
+            }
+            await recordOutcomeSafe(db, circuitKey, true);
+          } else {
+            await recordOutcomeSafe(db, circuitKey, false);
           }
+        } catch (err) {
+          if (signal?.aborted) throw err instanceof Error ? err : new Error(String(err));
+          await recordOutcomeSafe(db, circuitKey, false);
+          console.warn(`[depeg-confirm] ${offchainLabel} fetch failed for ${row.symbol}:`, err);
         }
-      } catch (err) {
-        if (signal?.aborted) throw err instanceof Error ? err : new Error(String(err));
-        console.warn(`[depeg-confirm] ${offchainLabel} fetch failed for ${row.symbol}:`, err);
+      } else {
+        console.log(`[depeg-confirm] ${row.symbol} ${offchainLabel} skipped: circuit open`);
       }
     }
 
@@ -281,26 +305,45 @@ export async function confirmPendingDepegs(
 
     // 4c. Individual DEX pool check
     let poolStatus: ReturnType<typeof classifyDirectionalSignal> = "insufficient";
+    let poolConfirmCount = 0;
+    let poolContradictCount = 0;
+    let poolRecoverCount = 0;
+    let poolHighTvlConfirm = false;
     const pools = poolChallengers.get(row.stablecoin_id);
     if (pools?.length) {
       for (const pool of pools) {
         const poolSignal = deriveDepegSignal(pool.price, row.peg_reference);
         const currentPoolStatus = classifyDirectionalSignal(poolSignal, secondaryBar, pendingState.direction);
         if (currentPoolStatus === "confirm") {
-          poolStatus = "confirm";
+          poolConfirmCount += 1;
+          if (pool.tvlUsd >= POOL_CHALLENGE_HIGH_TVL_USD) {
+            poolHighTvlConfirm = true;
+          }
           console.log(
-            `[depeg-confirm] ${row.symbol} pool check: price=$${pool.price} (${pool.protocol}/${pool.chain}), ` +
-            `deviation=${poolSignal?.absBps ?? "n/a"}bps, bar=${secondaryBar}bps, status=confirm`,
+            `[depeg-confirm] ${row.symbol} pool confirm: price=$${pool.price} (${pool.protocol}/${pool.chain}, ` +
+            `$${(pool.tvlUsd / 1e6).toFixed(1)}M TVL), deviation=${poolSignal?.absBps ?? "n/a"}bps`,
           );
-          break;
+        } else if (currentPoolStatus === "contradict") {
+          poolContradictCount += 1;
+        } else if (currentPoolStatus === "recover") {
+          poolRecoverCount += 1;
         }
       }
-      if (poolStatus !== "confirm") {
+      // Priority ladder: confirm > contradict > recover > insufficient.
+      // Tie-break: any confirm below the promotion bar cancels both contradict
+      // and recover (treated as mixed evidence -> insufficient).
+      if (poolHighTvlConfirm || poolConfirmCount >= POOL_CHALLENGE_CONFIRM_MIN) {
+        poolStatus = "confirm";
+      } else if (poolContradictCount > 0 && poolConfirmCount === 0) {
+        poolStatus = "contradict";
+      } else if (poolRecoverCount > 0 && poolConfirmCount === 0 && poolContradictCount === 0) {
         poolStatus = "recover";
-        console.log(
-          `[depeg-confirm] ${row.symbol} pool check: ${pools.length} pools, none diverge ≥${secondaryBar}bps`,
-        );
       }
+      console.log(
+        `[depeg-confirm] ${row.symbol} pool summary: ${pools.length} pools checked, ` +
+        `confirm=${poolConfirmCount} (highTvl=${poolHighTvlConfirm}), contradict=${poolContradictCount}, ` +
+        `recover=${poolRecoverCount}, bar=${secondaryBar}bps, status=${poolStatus}`,
+      );
     }
 
     // 5. Decision
@@ -313,7 +356,7 @@ export async function confirmPendingDepegs(
       dexStatus === "confirm" ||
       cexStatus === "confirm" ||
       poolStatus === "confirm";
-    if (hasHardConfirmation || (offchainStatus === "confirm" && pendingState.reason !== "low-confidence")) {
+    if (hasHardConfirmation || (offchainStatus === "confirm" && !parsePendingReason(pendingState.reason).has("low-confidence"))) {
       // At least one secondary source confirms -- promote to real event (INSERT + DELETE atomically)
       const authoritativePrice =
         asset != null &&
@@ -337,6 +380,12 @@ export async function confirmPendingDepegs(
         peakDeviationBps === currentDirectionalSignal?.bps
           ? authoritativePrice ?? pendingState.peakPrice
           : pendingState.peakPrice;
+      const confirmedBy = [
+        offchainStatus === "confirm" ? offchainSourceLabel : null,
+        dexStatus === "confirm" ? "DEX" : null,
+        cexStatus === "confirm" ? "CEX" : null,
+        poolStatus === "confirm" ? "Pool" : null,
+      ].filter(Boolean).join("+");
       const event: DepegEvent = {
         id: 0,
         stablecoinId: row.stablecoin_id,
@@ -351,6 +400,8 @@ export async function confirmPendingDepegs(
         recoveryPrice: null,
         pegReference: row.peg_reference,
         source: "live",
+        confirmationSources: confirmedBy || null,
+        pendingReason: pendingState.reason,
       };
 
       stmts.push(
@@ -358,14 +409,8 @@ export async function confirmPendingDepegs(
         db.prepare("DELETE FROM depeg_pending WHERE id = ?").bind(row.id),
       );
 
-      const confirmedBy = [
-        offchainStatus === "confirm" ? (asset?.priceSource?.startsWith("coingecko") ? "DefiLlama" : "CoinGecko") : null,
-        dexStatus === "confirm" ? "DEX" : null,
-        cexStatus === "confirm" ? "CEX" : null,
-        poolStatus === "confirm" ? "Pool" : null,
-      ].filter(Boolean).join("+");
       console.log(
-        `[depeg-confirm] PROMOTED ${row.symbol}: ${pendingState.firstSeenBps}bps confirmed by ${confirmedBy}${pendingState.reason ? ` (${pendingState.reason})` : ""}`
+        `[depeg-confirm] PROMOTED ${row.symbol}: ${pendingState.firstSeenBps}bps confirmed by ${confirmedBy || "(none)"}${pendingState.reason ? ` (${pendingState.reason})` : ""}`
       );
     } else if (
       (offchainStatus === "recover" || offchainStatus === "contradict")

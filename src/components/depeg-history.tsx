@@ -3,6 +3,7 @@
 import { useMemo } from "react";
 import { useInfiniteDepegEvents } from "@/hooks/use-depeg-events";
 import { useTablePagination } from "@/hooks/use-table-pagination";
+import { DepegProvenanceBadges } from "@/components/depeg-provenance-badges";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { DataTableShell, type DataTableColumn } from "@/components/data-table-shell";
@@ -235,6 +236,11 @@ function DepegRow({ event, pegCurrency }: { event: DepegEvent; pegCurrency: stri
         >
           {event.direction === "below" ? "Below" : "Above"}
         </Badge>
+        <DepegProvenanceBadges
+          pendingReason={event.pendingReason}
+          confirmationSources={event.confirmationSources}
+          reasonLeadingClass="ml-2"
+        />
       </TableCell>
       <TableCell className={`text-right font-mono tabular-nums text-sm ${devColor}`}>
         {event.peakDeviationBps > 0 ? "+" : ""}

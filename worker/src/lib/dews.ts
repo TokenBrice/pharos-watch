@@ -13,6 +13,7 @@ import {
   DEWS_SIGNAL_WEIGHTS,
   DEWS_THREAT_BANDS,
 } from "@shared/lib/dews-config";
+import { CONTAGION_AMPLIFIER_CAP } from "./constants";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -90,12 +91,19 @@ export interface DEWSInput {
   // Smoothing (optional — previous reading for averaging)
   prevPoolValue?: number;
   prevDivergValue?: number;
+  /**
+   * Pre-computed contagion amplifier >= 1.0 derived from other stablecoins'
+   * first-pass DEWS bands. 1.0 means no contagion; 1.15 = +15%. Caller must
+   * clamp to [1.0, 1.2]; computeDEWS also clamps defensively.
+   */
+  contagionAmplifier?: number;
 }
 
 export interface DEWSResult {
   score: number;
   band: ThreatBand;
   signals: Record<string, SignalResult>;
+  amplifiers: { psi: number; contagion: number };
 }
 
 // ---------------------------------------------------------------------------
@@ -277,7 +285,14 @@ function computePoolSignal(input: DEWSInput): SignalResult {
 function computeLiquiditySignal(input: DEWSInput): SignalResult {
   const { liquidityScore, liquidityScore7dAgo, tvlCurrent, tvl7dAgo } = input;
 
-  if (liquidityScore === null) {
+  const scoreDeltaComputable =
+    liquidityScore !== null &&
+    liquidityScore7dAgo !== null &&
+    liquidityScore7dAgo > 0;
+  const tvlDeltaComputable =
+    tvlCurrent !== null && tvl7dAgo !== null && tvl7dAgo > 0;
+
+  if (liquidityScore === null || (!scoreDeltaComputable && !tvlDeltaComputable)) {
     return { value: 0, available: false };
   }
 
@@ -595,16 +610,21 @@ export function computeDEWS(input: DEWSInput): DEWSResult | null {
     return null;
   }
 
-  // Systemic backdrop: amplify individual stress when market is under pressure
-  let amplifiedScore = weightedSum / totalWeight;
-  if (input.psiScore !== null && input.psiScore < 75) {
-    // PSI < 75 (below STEADY) = market stress
-    // At PSI 75: no amplification. At PSI 40: 15% amplification. At PSI 0: 30% amplification.
-    const amplifier = 1 + Math.max(0, (75 - input.psiScore) / 75) * 0.3;
-    amplifiedScore *= amplifier;
-  }
+  // Systemic backdrop: amplify individual stress when market is under pressure.
+  // PSI < 75 (below STEADY) = market stress.
+  // At PSI 75: no amplification. At PSI 40: 15% amplification. At PSI 0: 30% amplification.
+  const psiAmplifier = input.psiScore !== null && input.psiScore < 75
+    ? 1 + Math.max(0, (75 - input.psiScore) / 75) * 0.3
+    : 1;
+  const contagionAmplifier = clamp(input.contagionAmplifier ?? 1, 1, CONTAGION_AMPLIFIER_CAP);
+  const amplifiedScore = (weightedSum / totalWeight) * psiAmplifier * contagionAmplifier;
   const score = Math.round(clamp(amplifiedScore, 0, 100));
   const band = getThreatBand(score);
 
-  return { score, band, signals };
+  return {
+    score,
+    band,
+    signals,
+    amplifiers: { psi: psiAmplifier, contagion: contagionAmplifier },
+  };
 }

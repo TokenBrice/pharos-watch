@@ -190,6 +190,32 @@ describe("extractTopSignals", () => {
     });
     expect(extractTopSignals(json)).toEqual([{ name: "volatility", value: 0.5 }]);
   });
+
+  it("unwraps the v5.95 wrapped shape { signals, amplifiers } before extracting", () => {
+    const json = JSON.stringify({
+      signals: {
+        liquidity: { value: 0.8, available: true },
+        volatility: { value: 0.5, available: true },
+        reserves: { value: 0.9, available: true },
+      },
+      amplifiers: { psi: 1.08, contagion: 1.15 },
+    });
+    // Same top-2 as the flat legacy shape — the amplifiers envelope is stripped.
+    expect(extractTopSignals(json)).toEqual([
+      { name: "reserves", value: 0.9 },
+      { name: "liquidity", value: 0.8 },
+    ]);
+  });
+
+  it("produces identical output for flat and wrapped shapes of the same signals", () => {
+    const payload = {
+      liquidity: { value: 0.8, available: true },
+      volatility: { value: 0.5, available: true },
+    };
+    const flat = JSON.stringify(payload);
+    const wrapped = JSON.stringify({ signals: payload, amplifiers: { psi: 1, contagion: 1 } });
+    expect(extractTopSignals(flat)).toEqual(extractTopSignals(wrapped));
+  });
 });
 
 describe("isSafetyDeescalation", () => {

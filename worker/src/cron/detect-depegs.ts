@@ -10,6 +10,8 @@ import { batchExecute } from "../lib/db";
 import { throwIfAborted } from "../lib/abort";
 import {
   buildInsertDepegEventStmt,
+  buildPendingReason,
+  isExtremeMovePending,
   loadDexPoolChallengers,
   loadDexPriceRows,
   loadDexPriceSources,
@@ -17,6 +19,7 @@ import {
   type DexPriceRow,
   type DexPoolSource,
   type PendingDepegReason,
+  type PendingDepegReasonFlag,
 } from "../lib/depeg-helpers";
 import {
   classifyPrimaryDepegTrust,
@@ -232,7 +235,7 @@ function handleNewDepeg(ctx: LoopContext): D1PreparedStatement[] | null {
   }
 
   if (requiresConfirmation) {
-    if (pendingReason === "extreme-move" && dexSupportsDirection) {
+    if (isExtremeMovePending(pendingReason) && dexSupportsDirection) {
       stmts.push(buildInsertDepegEventStmt(db, buildLiveEvent(direction, bps, ctx.price, pegRef)));
     } else {
       stmts.push(buildInsertPendingStmt(direction, bps, ctx.price, pegRef, pendingReason));
@@ -469,12 +472,12 @@ export async function detectDepegEvents(
     const primarySupportsRecovery =
       primaryTrust === "authoritative" ||
       hasFreshMultiSourcePrimaryAgreement(asset, now);
-    const pendingReason: PendingDepegReason =
-      absBps >= DEPEG_EXTREME_MOVE_BPS
-        ? "extreme-move"
-        : primaryTrust === "confirm_required"
-          ? "low-confidence"
-          : "large-cap";
+    const reasonFlags: PendingDepegReasonFlag[] = [];
+    if (absBps >= DEPEG_EXTREME_MOVE_BPS) reasonFlags.push("extreme-move");
+    if (supply >= DEPEG_CONFIRMATION_SUPPLY_THRESHOLD) reasonFlags.push("large-cap");
+    if (primaryTrust === "confirm_required") reasonFlags.push("low-confidence");
+    if (reasonFlags.length === 0) reasonFlags.push("large-cap"); // defensive — requiresConfirmation is true so at least one reason must apply
+    const pendingReason: PendingDepegReason = buildPendingReason(reasonFlags);
     const nativeSupportsPrimaryDirection =
       nativeSignal != null &&
       signalCrossesThreshold(nativeSignal, threshold) &&
@@ -538,6 +541,8 @@ export async function detectDepegEvents(
       recoveryPrice: null,
       pegReference,
       source: "live",
+      confirmationSources: null,
+      pendingReason: null,
     });
 
     const buildInsertPendingStmt = (

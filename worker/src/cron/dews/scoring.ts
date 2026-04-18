@@ -4,13 +4,19 @@ import { PSI_ELIGIBLE_STABLECOINS } from "@shared/lib/psi-eligible";
 import { BLACKLIST_STABLECOINS } from "@shared/types/market";
 import { getPegReference } from "@shared/lib/peg-rates";
 import { computeDEWS } from "../../lib/dews";
-import type { DEWSInput, PoolEntry } from "../../lib/dews";
+import type { DEWSInput, DEWSResult, PoolEntry } from "../../lib/dews";
 import type {
+  ContagionAmplifiers,
   DewsScoringResult,
   DewsScoringState,
   PersistedJsonDecodeReason,
 } from "./contracts";
 import { decodeJsonString } from "../../lib/cache-json";
+import {
+  CONTAGION_BUMP_DANGER,
+  CONTAGION_BUMP_WARNING,
+  CONTAGION_AMPLIFIER_CAP,
+} from "../../lib/constants";
 
 const RawPoolDataSchema = z.object({
   tvlUsd: z.number().default(0),
@@ -84,6 +90,7 @@ export function buildDewsScoringResult(options: BuildDewsScoringResultOptions): 
   let insufficientDataCount = 0;
   const noCurrentSupplyIds: string[] = [];
 
+  const scored: Array<{ meta: typeof PSI_ELIGIBLE_STABLECOINS[number]; input: DEWSInput; firstPass: DEWSResult }> = [];
   for (const meta of PSI_ELIGIBLE_STABLECOINS) {
     if (meta.flags?.navToken) continue;
 
@@ -147,19 +154,49 @@ export function buildDewsScoringResult(options: BuildDewsScoringResultOptions): 
       psiScore: sourceState.latestPsiScore,
       prevPoolValue: (prev?.pool as { value?: number })?.value,
       prevDivergValue: (prev?.diverg as { value?: number })?.value,
+      contagionAmplifier: 1,
     };
 
-    const result = computeDEWS(input);
-    if (!result) {
+    const firstPass = computeDEWS(input);
+    if (!firstPass) {
       insufficientDataCount++;
       continue;
     }
+    scored.push({ meta, input, firstPass });
+  }
 
+  const amplifiers: ContagionAmplifiers = { byPegType: {}, triggeringIds: [] };
+  for (const { input, firstPass } of scored) {
+    const bump =
+      firstPass.band === "DANGER" ? CONTAGION_BUMP_DANGER :
+      firstPass.band === "WARNING" ? CONTAGION_BUMP_WARNING :
+      1;
+    if (bump <= 1) continue;
+    const current = amplifiers.byPegType[input.pegType] ?? 1;
+    if (bump > current) {
+      amplifiers.byPegType[input.pegType] = Math.min(bump, CONTAGION_AMPLIFIER_CAP);
+    }
+    amplifiers.triggeringIds.push(input.stablecoinId);
+  }
+
+  // A first-pass DANGER/WARNING coin keeps its first-pass result (contagion = 1)
+  // so it never amplifies itself.
+  for (const { meta, input, firstPass } of scored) {
+    const contagion = amplifiers.byPegType[input.pegType] ?? 1;
+    const applicable = contagion > 1 && firstPass.band !== "DANGER" && firstPass.band !== "WARNING";
+    const finalResult = applicable
+      ? computeDEWS({ ...input, contagionAmplifier: contagion })
+      : firstPass;
+    if (!finalResult) {
+      insufficientDataCount++;
+      continue;
+    }
     results.push({
       stablecoinId: meta.id,
-      score: result.score,
-      band: result.band,
-      signals: result.signals,
+      score: finalResult.score,
+      band: finalResult.band,
+      signals: finalResult.signals,
+      amplifiers: finalResult.amplifiers,
     });
   }
 

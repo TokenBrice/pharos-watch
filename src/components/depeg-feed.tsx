@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { usePrefetchStablecoin } from "@/hooks/use-prefetch-stablecoin";
+import { DepegProvenanceBadges } from "@/components/depeg-provenance-badges";
 import { buildStablecoinUrl } from "@/lib/urls";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -117,6 +118,10 @@ export function DepegFeed({ events, logos, hasMore = false, isLoadingMore = fals
                     >
                       {evt.direction}
                     </Badge>
+                    <DepegProvenanceBadges
+                      pendingReason={evt.pendingReason}
+                      confirmationSources={evt.confirmationSources}
+                    />
                     {isOngoing && (
                       <span className="flex items-center gap-1 text-xs text-red-700 dark:text-red-400 font-medium">
                         <span className="relative flex h-2 w-2">

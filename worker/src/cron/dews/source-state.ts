@@ -1,4 +1,5 @@
 import { DAY_SECONDS } from "@shared/lib/time-constants";
+import { unwrapStressSignalsEnvelope } from "@shared/lib/stress-signals-envelope";
 import { decodeJsonString } from "../../lib/cache-json";
 import { isTrustedDexPriceRow } from "../../lib/depeg-trust-policy";
 import { isCanonicalMintBurnPair } from "../../lib/mint-burn-canonical-chain";
@@ -34,10 +35,6 @@ interface LoadDewsSourceStateOptions {
     reason: PersistedJsonDecodeReason;
     degradesRun: boolean;
   }) => void;
-}
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null;
 }
 
 function isMissingTableError(error: unknown): boolean {
@@ -198,10 +195,11 @@ export async function loadDewsSourceState(options: LoadDewsSourceStateOptions): 
         missingReason: "missing",
         parseErrorReason: "json-parse-failed",
         normalize: (parsed) => {
-          if (!isRecord(parsed)) {
+          const unwrapped = unwrapStressSignalsEnvelope(parsed);
+          if (unwrapped == null) {
             return { ok: false, reason: "invalid-shape" as const };
           }
-          return { ok: true, payload: parsed };
+          return { ok: true, payload: unwrapped.signals };
         },
       });
       if (!decoded.ok) {

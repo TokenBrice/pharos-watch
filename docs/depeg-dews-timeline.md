@@ -1,6 +1,27 @@
 # Depeg Tracker + DEWS Methodology — Version Timeline
 
-Internal changelog reconstructed from git history. Covers `v1.0` through `v5.93` (2026-02-18 -> 2026-04-15).
+Internal changelog reconstructed from git history. Covers `v1.0` through `v5.95` (2026-02-18 -> 2026-04-18).
+
+---
+## v5.95 — Cross-asset contagion amplifier (Apr 18, 2026)
+
+**Commit:** `unreleased`
+
+- DEWS now applies a bounded per-peg-type contagion amplifier (max `1.2x`) derived from the same cycle's first-pass `DANGER` / `WARNING` bands, stacked on top of the existing systemic PSI amplifier
+- A tracked stablecoin entering `DANGER` or `WARNING` now raises other same-peg-type coins' scores by up to 20%; different peg types do not share contagion risk
+- First-pass coins that themselves are `DANGER` / `WARNING` do not contagion-amplify themselves
+- The amplifier is clamped and explainable (no learned weights) and is surfaced on `/api/stress-signals` as `amplifiers.contagion`
+
+---
+## v5.94 — Pool-confirmation hardening, backfill atomicity, confirmation-provenance surfacing (Apr 18, 2026)
+
+**Commit:** `unreleased`
+
+- Pool-only pending promotion now requires 2 pools or a single pool with `>= $5M` TVL; single-pool manipulation can no longer unilaterally promote a pending depeg
+- Historical backfill delete+insert share a single D1 batch, so a worker interruption during backfill no longer leaves a coin with zero depeg rows
+- Off-chain (CoinGecko/DefiLlama) confirmation fetches are now circuit-breaker-guarded, so a provider outage no longer hammers the endpoint for 45 min per pending row
+- Promoted depeg events now persist `confirmation_sources` (e.g. `"DEX+CEX"`) and `pending_reason` (e.g. `"large-cap+low-confidence"`) for ex-post diagnostics
+- DEWS liquidity sub-signal fails closed when both 7-day anchors (score erosion and TVL erosion) are missing instead of silently contributing `0`
 
 ---
 ## v5.93 — Blacklist signal coverage follows direct EVM wave (Apr 15, 2026)

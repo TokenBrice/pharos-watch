@@ -21,6 +21,8 @@ export interface DepegRow {
   recovery_price: number | null;
   peg_reference: number;
   source: string;
+  confirmation_sources: string | null;
+  pending_reason: string | null;
 }
 
 export interface DexPriceRow {
@@ -32,7 +34,35 @@ export interface DexPriceRow {
   updated_at: number;
 }
 
-export type PendingDepegReason = "large-cap" | "low-confidence" | "extreme-move";
+export type PendingDepegReasonFlag = "large-cap" | "low-confidence" | "extreme-move";
+/**
+ * Stored reason is a "+"-joined list of flags in canonical order:
+ * extreme-move > large-cap > low-confidence.
+ * Examples: "large-cap", "large-cap+low-confidence", "extreme-move".
+ */
+export type PendingDepegReason = string;
+
+const REASON_ORDER: PendingDepegReasonFlag[] = ["extreme-move", "large-cap", "low-confidence"];
+
+export function buildPendingReason(flags: Iterable<PendingDepegReasonFlag>): PendingDepegReason {
+  const set = new Set(flags);
+  return REASON_ORDER.filter((f) => set.has(f)).join("+");
+}
+
+export function parsePendingReason(reason: PendingDepegReason | null | undefined): Set<PendingDepegReasonFlag> {
+  const result = new Set<PendingDepegReasonFlag>();
+  if (!reason) return result;
+  for (const part of reason.split("+")) {
+    if (part === "large-cap" || part === "low-confidence" || part === "extreme-move") {
+      result.add(part);
+    }
+  }
+  return result;
+}
+
+export function isExtremeMovePending(reason: PendingDepegReason | null | undefined): boolean {
+  return parsePendingReason(reason).has("extreme-move");
+}
 
 export async function loadDexPriceRows(db: D1Database): Promise<Map<string, DexPriceRow>> {
   try {
@@ -176,8 +206,8 @@ export function buildInsertDepegEventStmt(
 ): D1PreparedStatement {
   return db
     .prepare(
-      `INSERT INTO depeg_events (stablecoin_id, symbol, peg_type, direction, peak_deviation_bps, started_at, start_price, peak_price, peg_reference, source)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'live')`,
+      `INSERT INTO depeg_events (stablecoin_id, symbol, peg_type, direction, peak_deviation_bps, started_at, start_price, peak_price, peg_reference, source, confirmation_sources, pending_reason)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'live', ?, ?)`,
     )
     .bind(
       event.stablecoinId,
@@ -189,6 +219,8 @@ export function buildInsertDepegEventStmt(
       event.startPrice,
       event.peakPrice ?? event.startPrice,
       event.pegReference,
+      event.confirmationSources ?? null,
+      event.pendingReason ?? null,
     );
 }
 
@@ -217,5 +249,7 @@ export function rowToDepegEvent(row: DepegRow): DepegEvent {
     recoveryPrice: row.recovery_price,
     pegReference: row.peg_reference,
     source: VALID_SOURCES.has(row.source) ? row.source as "live" | "backfill" : "live",
+    confirmationSources: row.confirmation_sources ?? null,
+    pendingReason: row.pending_reason ?? null,
   };
 }

@@ -6,6 +6,8 @@ import {
   jsonResponse,
   resolveOrReject,
 } from "../lib/api-utils";
+import { BACKTEST_ANCHORS } from "../lib/backtest-anchors";
+import { BACKTEST_LOOKBACK_DAYS } from "../lib/constants";
 import { getCache } from "../lib/db-cache";
 import { computeDEWS } from "../lib/dews";
 import type { DEWSInput } from "../lib/dews";
@@ -473,6 +475,54 @@ async function handleHistoricalBacktest(db: D1Database): Promise<Response> {
   });
 }
 
+interface BacktestMetricsPerAnchor {
+  stablecoinId: string;
+  onsetAt: number;
+  detected: boolean;
+  leadTimeDays: number | null;
+  firstAlertBand: string | null;
+}
+
+async function handleBacktestMetrics(db: D1Database): Promise<Response> {
+  const perAnchor = await Promise.all(
+    BACKTEST_ANCHORS.map(async (anchor): Promise<BacktestMetricsPerAnchor> => {
+      const windowStart = anchor.onsetAt - BACKTEST_LOOKBACK_DAYS * DAY_SECONDS;
+      const row = await db
+        .prepare(
+          "SELECT snapshot_date, band FROM stress_signal_history WHERE stablecoin_id = ? AND snapshot_date >= ? AND snapshot_date <= ? AND band IN ('ALERT', 'WARNING', 'DANGER') ORDER BY snapshot_date ASC LIMIT 1",
+        )
+        .bind(anchor.stablecoinId, windowStart, anchor.onsetAt)
+        .first<{ snapshot_date: number; band: string }>();
+
+      const detected = row != null;
+      return {
+        stablecoinId: anchor.stablecoinId,
+        onsetAt: anchor.onsetAt,
+        detected,
+        leadTimeDays: detected ? (anchor.onsetAt - row!.snapshot_date) / DAY_SECONDS : null,
+        firstAlertBand: row?.band ?? null,
+      };
+    }),
+  );
+
+  const detected = perAnchor.filter((entry) => entry.detected);
+  const leadTimes = detected
+    .map((entry) => entry.leadTimeDays!)
+    .sort((a, b) => a - b);
+  const percentile = (q: number): number | null =>
+    leadTimes.length === 0
+      ? null
+      : leadTimes[Math.min(leadTimes.length - 1, Math.floor(q * leadTimes.length))];
+
+  return jsonResponse({
+    detectionRate: BACKTEST_ANCHORS.length === 0 ? 0 : detected.length / BACKTEST_ANCHORS.length,
+    leadTimeDaysP50: percentile(0.5),
+    leadTimeDaysP90: percentile(0.9),
+    granularity: "daily",
+    perAnchor,
+  });
+}
+
 export function handleBackfillDEWS(
   db: D1Database,
   url: URL,
@@ -488,6 +538,7 @@ export function handleBackfillDEWS(
     async () => {
       const method = request?.method ?? "GET";
       const dryRun = url.searchParams.get("dry-run") === "true";
+      const mode = url.searchParams.get("mode");
       const repairModeRaw = url.searchParams.get("repair");
       const repairMode = parseRepairMode(repairModeRaw);
 
@@ -496,6 +547,9 @@ export function handleBackfillDEWS(
       }
 
       if (method === "GET") {
+        if (mode === "backtest-metrics") {
+          return handleBacktestMetrics(db);
+        }
         if (repairMode) {
           if (!dryRun) {
             return new Response(

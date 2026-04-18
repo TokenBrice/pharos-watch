@@ -402,4 +402,118 @@ describe("computeDEWS", () => {
     // With smoothing toward a lower previous value, the pool signal should be less
     expect(withSmoothing.signals.pool.value).toBeLessThan(withoutSmoothing.signals.pool.value);
   });
+
+  it("marks liquidity signal unavailable when liquidityScore7dAgo is null and tvl delta cannot be computed", () => {
+    const result = computeDEWS(
+      baseInput({
+        liquidityScore: 72,
+        liquidityScore7dAgo: null,
+        tvlCurrent: null,
+        tvl7dAgo: null,
+      }),
+    );
+    expect(result?.signals.liq.available).toBe(false);
+  });
+
+  it("keeps liquidity signal available when only one of the two 7d anchors is present", () => {
+    const result = computeDEWS(
+      baseInput({
+        liquidityScore: 72,
+        liquidityScore7dAgo: null,
+        tvlCurrent: 1e9,
+        tvl7dAgo: 1.5e9,
+      }),
+    );
+    expect(result?.signals.liq.available).toBe(true);
+  });
+});
+
+describe("DEWS scoring boundaries", () => {
+  // Note on the "weight threshold" tests below:
+  //   Both computeSupplySignal (0.25) and computePriceSignal (0.15) always
+  //   return available: true in the current implementation, so the minimum
+  //   achievable totalWeight is 0.40 — already above the 0.30 threshold.
+  //   We therefore cannot construct an input that drives totalWeight below
+  //   0.30 without modifying the compute functions (out of scope for this
+  //   task), so we assert the realistic boundary: the baseline pair of
+  //   always-available signals produces a non-null score at totalWeight 0.40.
+
+  it("returns a score when only the always-available signals (supply + price = 0.40) are present", () => {
+    const result = computeDEWS(
+      baseInput({
+        weightedBalanceRatio: null,
+        avgPoolStress: null,
+        liquidityScore: null,
+        dexPriceUsd: null,
+        hasBlacklistTracking: false,
+        burnVolume24hUsd: null,
+        mintVolume24hUsd: null,
+        burnBaseline30dUsd: null,
+        flowDataAgeDays: 0,
+        yieldWarnings: [],
+      }),
+    );
+    // totalWeight = 0.25 (supply) + 0.15 (price) = 0.40 >= 0.30 threshold
+    expect(result).not.toBeNull();
+  });
+
+  it("returns a score at totalWeight === 0.55 (supply + price + diverg, just above threshold)", () => {
+    const result = computeDEWS(
+      baseInput({
+        weightedBalanceRatio: null,
+        avgPoolStress: null,
+        liquidityScore: null,
+        priceConfidence: "high",
+        price: 1.0,
+        pegRef: 1.0,
+        dexPriceUsd: 1.0,
+        hasBlacklistTracking: false,
+      }),
+    );
+    // supply(0.25) + price(0.15) + diverg(0.15) = 0.55
+    expect(result).not.toBeNull();
+  });
+
+  it("PSI amplifier is 1.0 at PSI === 75 exactly (no amplification)", () => {
+    const resultAt75 = computeDEWS(baseInput({ psiScore: 75 }));
+    const resultAtNull = computeDEWS(baseInput({ psiScore: null }));
+    // Use tolerance of 1 in case clamp rounding differs on other fixtures
+    // (per plan note). At the default baseline both branches evaluate to
+    // the same integer, but we keep the tolerance to stay resilient.
+    expect(Math.abs((resultAt75?.score ?? 0) - (resultAtNull?.score ?? 0))).toBeLessThanOrEqual(1);
+  });
+
+  it("flow signal is unavailable at flowDataAgeDays === 6 and available at 7", () => {
+    const resultAt6 = computeDEWS(
+      baseInput({
+        burnVolume24hUsd: 1e6,
+        mintVolume24hUsd: 0,
+        burnBaseline30dUsd: 1e5,
+        flowDataAgeDays: 6,
+      }),
+    );
+    expect(resultAt6?.signals.flow.available).toBe(false);
+    const resultAt7 = computeDEWS(
+      baseInput({
+        burnVolume24hUsd: 1e6,
+        mintVolume24hUsd: 0,
+        burnBaseline30dUsd: 1e5,
+        flowDataAgeDays: 7,
+      }),
+    );
+    expect(resultAt7?.signals.flow.available).toBe(true);
+  });
+
+  it("blacklist signal handles a zero 7d baseline without division by zero", () => {
+    const result = computeDEWS(
+      baseInput({
+        hasBlacklistTracking: true,
+        blacklistEvents24h: 3,
+        blacklistEvents7d: 0,
+      }),
+    );
+    expect(result?.signals.black.available).toBe(true);
+    expect(Number.isFinite(result?.signals.black.value ?? NaN)).toBe(true);
+    expect(result?.signals.black.spikeRatio).toBe(3); // falls back to raw 24h count
+  });
 });

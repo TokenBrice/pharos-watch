@@ -173,6 +173,8 @@ export const CIRCUIT_SOURCE = {
   CG_TICKER: "coingecko-ticker",
   KINESIS_KAU: "kinesis-kau-horizon",
   KINESIS_KAG: "kinesis-kag-horizon",
+  COINGECKO_CONFIRM: "coingecko-confirm",
+  DEFILLAMA_CONFIRM: "defillama-confirm",
 } as const;
 
 export const KINESIS_KAU_HORIZON = "https://kau-mainnet.kinesisgroup.io";
@@ -180,6 +182,24 @@ export const KINESIS_KAG_HORIZON = "https://kag-mainnet.kinesisgroup.io";
 
 /** Minimum per-pool TVL for DEX pool challenge and pool-level depeg confirmation */
 export const POOL_CHALLENGE_MIN_TVL = 100_000; // $100K
+
+/** Number of qualifying pools that must agree to promote a pending depeg via pool-only confirmation. */
+export const POOL_CHALLENGE_CONFIRM_MIN = 2;
+
+/** Single-pool TVL above which pool-only confirmation can promote with a single pool. */
+export const POOL_CHALLENGE_HIGH_TVL_USD = 5_000_000; // $5M
+
+/** Cross-asset contagion amplifier applied to a same-peg-type coin when another is DANGER. */
+export const CONTAGION_BUMP_DANGER = 1.15;
+
+/** Cross-asset contagion amplifier applied to a same-peg-type coin when another is WARNING. */
+export const CONTAGION_BUMP_WARNING = 1.08;
+
+/** Upper cap on the cross-asset contagion amplifier (applied after bump selection). */
+export const CONTAGION_AMPLIFIER_CAP = 1.2;
+
+/** Days of stress_signal_history examined before each backtest anchor's onset. */
+export const BACKTEST_LOOKBACK_DAYS = 14;
 
 /** Maximum accepted block-timestamp staleness for the Curve PriceAggregator EMA oracle (seconds). */
 export const CURVE_ORACLE_MAX_STALENESS_SEC = 300;

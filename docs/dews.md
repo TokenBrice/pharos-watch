@@ -6,7 +6,7 @@ Per-coin, forward-looking stress score (0-100) estimating depeg probability. Com
 
 DEWS shares its methodology versioning with the Depeg Tracker pipeline. Both are tracked together in `shared/lib/depeg-dews-version.ts`.
 
-- **Current methodology version:** `v5.93`
+- **Current methodology version:** `v5.95`
 - **Public changelog page:** `/methodology/depeg-changelog/`
 - **Canonical source:** `shared/lib/depeg-dews-version.ts`
 
@@ -27,6 +27,8 @@ Only signals where `available = true` participate. Weights are redistributed pro
 **Minimum signal requirement:** At least 2 available signal sources (total weight >= 0.30). If weight is below 0.30, `computeDEWS()` returns `null` (insufficient data) instead of emitting `0/CALM`.
 
 **Systemic backdrop amplifier:** When PSI drops below 75 (STEADY band), individual DEWS scores are amplified by up to 30%. At PSI=40, amplification is ~14%. At PSI=0, amplification is 30%. This reflects that individual coin stress is more dangerous during systemic instability.
+
+**Contagion Amplifier:** On top of the PSI amplifier, DEWS applies a bounded per-peg-type contagion amplifier derived from the same cycle's first-pass results. If any tracked stablecoin's first-pass band is `DANGER` (bump `1.15x`) or `WARNING` (bump `1.08x`), the other coins sharing its `pegType` are re-scored with that multiplier — the amplifier takes the largest qualifying bump, not a sum, so multiple DANGER coins on one peg type still cap at `1.15x`. The hard defensive cap is `1.2x` (`CONTAGION_AMPLIFIER_CAP`) for future bump values; different peg types do not share contagion risk. A coin that is itself `DANGER` or `WARNING` on the first pass does **not** contagion-amplify itself — its first-pass result carries forward unchanged. The resulting per-coin amplifier is surfaced on `/api/stress-signals` as `amplifiers.contagion` (default `1.0` when no contagion is detected or for legacy cached rows).
 
 ---
 
@@ -87,6 +89,7 @@ Smoothed with previous reading when available.
 - **Score erosion anchors:** `[0%, 0] → [5%, 15] → [15%, 40] → [30%, 70] → [50%, 100]`
 - **TVL erosion anchors:** `[0%, 0] → [10%, 15] → [25%, 40] → [50%, 70] → [75%, 100]`
 - 50/50 blend
+- **Fail-closed:** both 7-day anchors (score erosion **and** TVL erosion) must be available. If either anchor is missing the sub-signal is marked unavailable and its weight is redistributed, instead of silently contributing `0` stress.
 
 ### S_price — Price Confidence Degradation
 
@@ -160,6 +163,8 @@ Score = `min(100, sum of active signal points)`.
 
 **Run health semantics:** DEWS records upstream read problems as structured cron metadata (`sourceFailures`, `sourceCoverage`, `validationFailures`). The cron returns `status: "degraded"` when non-bootstrap source dependencies fail. Bootstrap grace is now a one-time state transition, tracked by the `dews:bootstrap-complete` cache sentinel after the first successful publication. Before that first success, only explicitly optional missing tables are tagged `bootstrapAllowed=true`; once the sentinel exists, those same failures degrade the run normally. Fresh `dex_liquidity` is now treated as a core dependency, and rows older than 2 hours block publication as a hard source-freshness failure.
 
+**Off-chain confirmation resilience:** CoinGecko and DefiLlama confirmation fetches used by the pending-depeg pipeline are wrapped in a circuit breaker. A sustained provider outage trips the breaker and short-circuits subsequent confirmation lookups until it resets, so a single upstream failure no longer hammers the endpoint for 45 minutes per pending row.
+
 **Data flow:**
 
 1. Read stablecoins cache, derive peg rates with cached `fxFallbackRates` for thin non-USD groups
@@ -187,13 +192,13 @@ When a coin has insufficient data in a cycle (`computeDEWS() === null`), that ru
 ```json
 {
   "signals": {
-    "usdt-tether": { "score": 5, "band": "CALM", "signals": { ... }, "computedAt": 1740000000, "methodologyVersion": "5.93" },
+    "usdt-tether": { "score": 5, "band": "CALM", "signals": { ... }, "computedAt": 1740000000, "methodologyVersion": "5.95" },
     ...
   },
   "updatedAt": 1740000000,
   "oldestComputedAt": 1740000000,
   "malformedRows": 0,
-  "methodology": { "version": "5.93", "versionLabel": "...", "currentVersion": "5.93", "currentVersionLabel": "...", "changelogPath": "/methodology/depeg-changelog/", "asOf": 1740000000 }
+  "methodology": { "version": "5.95", "versionLabel": "...", "currentVersion": "5.95", "currentVersionLabel": "...", "changelogPath": "/methodology/depeg-changelog/", "asOf": 1740000000 }
 }
 ```
 
@@ -205,13 +210,13 @@ Unknown IDs and tracked-but-non-active IDs both return `404` (`Stablecoin not tr
 
 ```json
 {
-  "current": { "score": 5, "band": "CALM", "signals": { ... }, "computedAt": 1740000000, "methodologyVersion": "5.93" },
+  "current": { "score": 5, "band": "CALM", "signals": { ... }, "computedAt": 1740000000, "methodologyVersion": "5.95" },
   "history": [
-    { "date": 1739900000, "score": 3, "band": "CALM", "signals": { ... }, "methodologyVersion": "5.93" },
+    { "date": 1739900000, "score": 3, "band": "CALM", "signals": { ... }, "methodologyVersion": "5.95" },
     ...
   ],
   "malformedRows": 0,
-  "methodology": { "version": "5.93", "versionLabel": "...", "currentVersion": "5.93", "currentVersionLabel": "...", "changelogPath": "/methodology/depeg-changelog/", "asOf": 1740000000 }
+  "methodology": { "version": "5.95", "versionLabel": "...", "currentVersion": "5.95", "currentVersionLabel": "...", "changelogPath": "/methodology/depeg-changelog/", "asOf": 1740000000 }
 }
 ```
 

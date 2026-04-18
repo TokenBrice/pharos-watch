@@ -76,7 +76,13 @@ export async function persistDewsResults(params: {
         .prepare(
           "INSERT OR REPLACE INTO stress_signals (stablecoin_id, computed_at, score, band, signals_json) VALUES (?, ?, ?, ?, ?)",
         )
-        .bind(result.stablecoinId, params.nowSec, result.score, result.band, JSON.stringify(result.signals)),
+        .bind(
+          result.stablecoinId,
+          params.nowSec,
+          result.score,
+          result.band,
+          JSON.stringify({ signals: result.signals, amplifiers: result.amplifiers }),
+        ),
     );
     await batchExecute(params.db, stmts);
   }
@@ -101,7 +107,13 @@ export async function persistDewsResults(params: {
         .prepare(
           "INSERT OR REPLACE INTO stress_signal_history (stablecoin_id, snapshot_date, score, band, signals_json) VALUES (?, ?, ?, ?, ?)",
         )
-        .bind(result.stablecoinId, todayMidnight, result.score, result.band, JSON.stringify(result.signals)),
+        .bind(
+          result.stablecoinId,
+          todayMidnight,
+          result.score,
+          result.band,
+          JSON.stringify({ signals: result.signals, amplifiers: result.amplifiers }),
+        ),
     );
     await batchExecute(params.db, histStmts);
     console.log(

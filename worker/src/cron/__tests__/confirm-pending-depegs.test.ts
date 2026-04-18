@@ -37,7 +37,7 @@ vi.mock("../../lib/native-peg-quotes", () => ({
 
 import { batchExecute } from "../../lib/db";
 import { fetchBinancePricesDetailed } from "../../lib/cex-tickers";
-import { recordOutcomeSafe } from "../../lib/circuit-breaker";
+import { recordOutcomeSafe, shouldAttemptFetch } from "../../lib/circuit-breaker";
 import { fetchWithRetry } from "../../lib/fetch-retry";
 import { fetchCurrentNativePegQuotes } from "../../lib/native-peg-quotes";
 import {
@@ -180,6 +180,7 @@ describe("confirmPendingDepegs", () => {
     vi.restoreAllMocks();
     vi.clearAllMocks();
     vi.mocked(fetchCurrentNativePegQuotes).mockReset().mockResolvedValue(new Map());
+    vi.mocked(shouldAttemptFetch).mockReset().mockResolvedValue(true);
   });
 
   it("returns early when there are no pending rows", async () => {
@@ -406,6 +407,8 @@ describe("confirmPendingDepegs", () => {
       0.975,
       0.95,
       1,
+      "CoinGecko",
+      "large-cap",
     ]);
     expect(inserts[1]?.boundValues).toEqual([
       "usdc-circle",
@@ -417,6 +420,8 @@ describe("confirmPendingDepegs", () => {
       0.98,
       0.94,
       1,
+      "DEX",
+      "large-cap",
     ]);
     expect(deletes).toEqual([10, 11, 12, 13]);
   });
@@ -686,6 +691,8 @@ describe("confirmPendingDepegs", () => {
       0.976,
       0.976,
       1,
+      "DefiLlama",
+      "large-cap",
     ]);
     expect(deletes).toEqual([31]);
   });
@@ -735,6 +742,8 @@ describe("confirmPendingDepegs", () => {
       0.98,
       0.96,
       1,
+      "CoinGecko",
+      "large-cap",
     ]);
   });
 
@@ -895,6 +904,96 @@ describe("confirmPendingDepegs", () => {
       expect.anything(),
       CIRCUIT_SOURCE.BINANCE_PRICES,
       true,
+    );
+  });
+
+  it("skips off-chain fetch when the CoinGecko circuit breaker is open", async () => {
+    const nowSec = 1_700_000_000;
+    vi.spyOn(Date, "now").mockReturnValue(nowSec * 1000);
+    vi.spyOn(console, "log").mockImplementation(() => {});
+
+    vi.mocked(shouldAttemptFetch).mockImplementation(
+      async (_db, source) => source !== CIRCUIT_SOURCE.COINGECKO_CONFIRM,
+    );
+    vi.mocked(fetchWithRetry).mockReset();
+
+    await confirmPendingDepegs(
+      makeDb({
+        pendingRows: [
+          makePendingRow({
+            id: 90,
+            stablecoin_id: "usdt-tether",
+            symbol: "USDT",
+            first_seen_bps: -240,
+            first_seen_at: nowSec - DEPEG_PENDING_MIN_AGE_SEC - 60,
+            first_price: 0.976,
+            reason: "large-cap",
+          }),
+        ],
+      }),
+      [
+        makeAuthoritativeUsdAsset(nowSec, {
+          id: "usdt-tether",
+          symbol: "USDT",
+          geckoId: "tether",
+          price: 0.94,
+        }),
+        ...makeNeutralUsdAssets(),
+      ],
+    );
+
+    // No CoinGecko URL fetched
+    const fetchSpy = vi.mocked(fetchWithRetry);
+    expect(
+      fetchSpy.mock.calls.find(
+        ([url]) => typeof url === "string" && url.includes("/simple/price"),
+      ),
+    ).toBeUndefined();
+    // Circuit-breaker skip path must also NOT record a false outcome — only real fetch attempts do.
+    expect(vi.mocked(recordOutcomeSafe)).not.toHaveBeenCalledWith(
+      expect.anything(),
+      CIRCUIT_SOURCE.COINGECKO_CONFIRM,
+      false,
+    );
+  });
+
+  it("records CoinGecko outcome to circuit breaker on fetch failure", async () => {
+    const nowSec = 1_700_000_000;
+    vi.spyOn(Date, "now").mockReturnValue(nowSec * 1000);
+    vi.spyOn(console, "warn").mockImplementation(() => {});
+    vi.spyOn(console, "log").mockImplementation(() => {});
+
+    vi.mocked(fetchWithRetry).mockRejectedValueOnce(new Error("timeout"));
+
+    await confirmPendingDepegs(
+      makeDb({
+        pendingRows: [
+          makePendingRow({
+            id: 91,
+            stablecoin_id: "usdt-tether",
+            symbol: "USDT",
+            first_seen_bps: -240,
+            first_seen_at: nowSec - DEPEG_PENDING_MIN_AGE_SEC - 60,
+            first_price: 0.976,
+            reason: "large-cap",
+          }),
+        ],
+      }),
+      [
+        makeAuthoritativeUsdAsset(nowSec, {
+          id: "usdt-tether",
+          symbol: "USDT",
+          geckoId: "tether",
+          price: 0.94,
+        }),
+        ...makeNeutralUsdAssets(),
+      ],
+    );
+
+    expect(recordOutcomeSafe).toHaveBeenCalledWith(
+      expect.anything(),
+      CIRCUIT_SOURCE.COINGECKO_CONFIRM,
+      false,
     );
   });
 
@@ -1105,6 +1204,147 @@ describe("confirmPendingDepegs", () => {
     expect(inserts).toHaveLength(0);
   });
 
+  describe("pool challenger status classification", () => {
+    // Inline captureLogs equivalent: collect console.log output into an array so
+    // tests can assert on the "[depeg-confirm] ... pool summary: ... status=..."
+    // log line emitted by the pool-challenger loop.
+    function captureLogs(): string[] {
+      const logs: string[] = [];
+      vi.spyOn(console, "log").mockImplementation((...args: unknown[]) => {
+        logs.push(args.map((a) => (typeof a === "string" ? a : JSON.stringify(a))).join(" "));
+      });
+      return logs;
+    }
+
+    it("reports poolStatus='contradict' when at least one qualifying pool is opposite-direction above bar", async () => {
+      const nowSec = 1_700_000_000;
+      vi.spyOn(Date, "now").mockReturnValue(nowSec * 1000);
+      const pendingRows: PendingRow[] = [makePendingRow({
+        id: 80,
+        stablecoin_id: "usdt-tether",
+        symbol: "USDT",
+        direction: "below",
+        first_seen_bps: -200,
+        first_seen_at: nowSec - DEPEG_PENDING_MIN_AGE_SEC - 60,
+        first_price: 0.98,
+        peg_reference: 1,
+      })];
+      // Pool 1: same-direction (below) but deviation 30 bps < 50 bps secondary bar => "recover"
+      // Pool 2: opposite-direction (above) deviation 120 bps > 50 bps bar           => "contradict"
+      const dexRows = [
+        {
+          stablecoin_id: "usdt-tether",
+          dex_price_usd: 1.0, // neutral DEX signal -> "recover"
+          updated_at: nowSec - 30,
+          source_pool_count: 4,
+          source_total_tvl: 4_000_000,
+          price_sources_json: JSON.stringify([
+            { price: 0.997, tvl: 5_000_000, protocol: "curve", chain: "ethereum" },
+            { price: 1.012, tvl: 5_000_000, protocol: "uniswap", chain: "ethereum" },
+          ]),
+        },
+      ];
+      const logs = captureLogs();
+
+      await confirmPendingDepegs(
+        makeDb({ pendingRows, dexRows }),
+        [
+          makeAsset({ id: "usdt-tether", symbol: "USDT", geckoId: undefined, price: 0.98 }),
+          ...makeNeutralUsdAssets(),
+        ],
+      );
+
+      const summary = logs.find((l) => /pool summary: .* status=(confirm|recover|contradict|insufficient)/.test(l));
+      expect(summary).toBeTruthy();
+      expect(summary).toMatch(/status=contradict/);
+    });
+
+    it("reports poolStatus='confirm' with highTvl=true when a single qualifying pool has TVL >= $5M", async () => {
+      const nowSec = 1_700_000_000;
+      vi.spyOn(Date, "now").mockReturnValue(nowSec * 1000);
+      const pendingRows: PendingRow[] = [makePendingRow({
+        id: 82,
+        stablecoin_id: "usdt-tether",
+        symbol: "USDT",
+        direction: "below",
+        first_seen_bps: -200,
+        first_seen_at: nowSec - DEPEG_PENDING_MIN_AGE_SEC - 60,
+        first_price: 0.98,
+        peg_reference: 1,
+      })];
+      // Single pool, same-direction deviation 200bps > 50bps bar, TVL $6M > $5M high-TVL threshold.
+      // Below POOL_CHALLENGE_CONFIRM_MIN=2 count, but high-TVL short-circuits to confirm.
+      const dexRows = [
+        {
+          stablecoin_id: "usdt-tether",
+          dex_price_usd: 0.98,
+          updated_at: nowSec - 30,
+          source_pool_count: 1,
+          source_total_tvl: 6_000_000,
+          price_sources_json: JSON.stringify([
+            { price: 0.98, tvl: 6_000_000, protocol: "curve", chain: "ethereum" },
+          ]),
+        },
+      ];
+      const logs = captureLogs();
+
+      await confirmPendingDepegs(
+        makeDb({ pendingRows, dexRows }),
+        [
+          makeAsset({ id: "usdt-tether", symbol: "USDT", geckoId: undefined, price: 0.98 }),
+          ...makeNeutralUsdAssets(),
+        ],
+      );
+
+      const summary = logs.find((l) => /pool summary: .* status=(confirm|recover|contradict|insufficient)/.test(l));
+      expect(summary).toBeTruthy();
+      expect(summary).toMatch(/status=confirm/);
+      expect(summary).toMatch(/highTvl=true/);
+    });
+
+    it("reports poolStatus='recover' only when every qualifying pool is under the secondary bar", async () => {
+      const nowSec = 1_700_000_000;
+      vi.spyOn(Date, "now").mockReturnValue(nowSec * 1000);
+      const pendingBelow: PendingRow = makePendingRow({
+        id: 81,
+        stablecoin_id: "usdt-tether",
+        symbol: "USDT",
+        direction: "below",
+        first_seen_bps: -200,
+        first_seen_at: nowSec - DEPEG_PENDING_MIN_AGE_SEC - 60,
+        first_price: 0.98,
+        peg_reference: 1,
+      });
+      const dexRows = [
+        {
+          stablecoin_id: "usdt-tether",
+          dex_price_usd: 1.0,
+          updated_at: nowSec - 30,
+          source_pool_count: 4,
+          source_total_tvl: 4_000_000,
+          price_sources_json: JSON.stringify([
+            { price: 0.998, tvl: 5_000_000, protocol: "curve", chain: "ethereum" },
+            { price: 0.999, tvl: 5_000_000, protocol: "uniswap", chain: "ethereum" },
+          ]),
+        },
+      ];
+      const logs = captureLogs();
+
+      await confirmPendingDepegs(
+        makeDb({ pendingRows: [pendingBelow], dexRows }),
+        [
+          makeAsset({ id: "usdt-tether", symbol: "USDT", geckoId: undefined, price: 0.98 }),
+          ...makeNeutralUsdAssets(),
+        ],
+      );
+
+      const summary = logs.find((l) => /pool summary: .* status=(confirm|recover|contradict|insufficient)/.test(l));
+      expect(summary).toBeTruthy();
+      expect(summary).toMatch(/status=recover/);
+      expect(summary).not.toMatch(/status=contradict/);
+    });
+  });
+
   it("rethrows abort-related failures from secondary fetches", async () => {
     const nowSec = 1_700_000_000;
     vi.spyOn(Date, "now").mockReturnValue(nowSec * 1000);
@@ -1137,5 +1377,55 @@ describe("confirmPendingDepegs", () => {
     ).rejects.toThrow("network aborted");
 
     expect(batchExecute).not.toHaveBeenCalled();
+  });
+
+  it("promoted event carries confirmationSources and pendingReason", async () => {
+    const nowSec = 1_700_000_000;
+    vi.spyOn(Date, "now").mockReturnValue(nowSec * 1000);
+    vi.spyOn(console, "log").mockImplementation(() => {});
+
+    await confirmPendingDepegs(
+      makeDb({
+        pendingRows: [
+          makePendingRow({
+            id: 90,
+            stablecoin_id: "usdt-tether",
+            symbol: "USDT",
+            direction: "below",
+            first_seen_bps: -200,
+            first_seen_at: nowSec - DEPEG_PENDING_MIN_AGE_SEC - 60,
+            first_price: 0.98,
+            peg_reference: 1,
+            reason: "large-cap",
+          }),
+        ],
+        dexRows: [
+          {
+            stablecoin_id: "usdt-tether",
+            dex_price_usd: 0.988,
+            updated_at: nowSec - 30,
+            source_pool_count: 3,
+            source_total_tvl: 5_000_000,
+          },
+        ],
+      }),
+      [
+        makeAsset({ id: "usdt-tether", symbol: "USDT", geckoId: undefined, price: 0.985 }),
+        ...makeNeutralUsdAssets(),
+      ],
+    );
+
+    expect(batchExecute).toHaveBeenCalledTimes(1);
+    const [, statements] = vi.mocked(batchExecute).mock.calls[0]!;
+    const prepared = statements as PreparedStatementWithMeta[];
+    const inserts = prepared.filter((stmt) => stmt.sql.startsWith("INSERT INTO depeg_events"));
+    expect(inserts).toHaveLength(1);
+    // buildInsertDepegEventStmt bind order:
+    // [0]=stablecoinId, [1]=symbol, [2]=pegType, [3]=direction, [4]=peakBps,
+    // [5]=startedAt, [6]=startPrice, [7]=peakPrice, [8]=pegReference,
+    // [9]=confirmationSources, [10]=pendingReason
+    const bound = inserts[0]!.boundValues;
+    expect(bound[9]).toMatch(/DEX/);
+    expect(bound[10]).toBe("large-cap");
   });
 });

@@ -23,6 +23,8 @@ function makeEvent(overrides: Partial<DepegEvent> & Pick<DepegEvent, "startedAt"
     pegReference: 1.0,
     source: "live",
     endedAt: null,
+    confirmationSources: null,
+    pendingReason: null,
     ...overrides,
   };
 }

@@ -8,6 +8,15 @@ import {
   type CollectorContext,
   type SafetyScoresResult,
 } from "./collectors-shared";
+import { unwrapStressSignalsEnvelope } from "@shared/lib/stress-signals-envelope";
+
+function parseStressSignalsMap(
+  signalsJson: string,
+): Record<string, { value: number; available: boolean }> {
+  const parsed = JSON.parse(signalsJson) as unknown;
+  const unwrapped = unwrapStressSignalsEnvelope(parsed);
+  return (unwrapped?.signals ?? {}) as Record<string, { value: number; available: boolean }>;
+}
 
 export async function collectSafetyScores(
   ctx: CollectorContext,
@@ -142,7 +151,7 @@ export async function collectDewsStress(
 
         let topDriver = "unknown";
         try {
-          const signals = JSON.parse(today.signals_json) as Record<string, { value: number; available: boolean }>;
+          const signals = parseStressSignalsMap(today.signals_json);
           let maxVal = -1;
           for (const [key, signal] of Object.entries(signals)) {
             if (signal.available && signal.value > maxVal) {
@@ -175,7 +184,7 @@ export async function collectDewsStress(
 
           let topSignals: { name: string; value: number }[] = [];
           try {
-            const signals = JSON.parse(row.signals_json) as Record<string, { value: number; available: boolean }>;
+            const signals = parseStressSignalsMap(row.signals_json);
             topSignals = Object.entries(signals)
               .filter(([, signal]) => signal.available && signal.value > 0)
               .sort(([, a], [, b]) => b.value - a.value)
