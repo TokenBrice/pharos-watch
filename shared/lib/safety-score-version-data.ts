@@ -41,10 +41,10 @@ export const SAFETY_SCORE_VERSION_CONFIG: MethodologyVersionConfig = {
       date: "2026-04-15",
       effectiveAt: 1776283200,
       summary:
-        "Liquidity / Exit now keeps current redemption backstops through normal hourly cron lag instead of self-suppressing immediately after one hour.",
+        "Liquidity / Exit now keeps current redemption backstops through normal 4-hourly cron lag instead of self-suppressing immediately after one sync interval.",
       impact: [
-        "Report-card redemption freshness now follows a 2x hourly sync runway before suppressing redemption inputs",
-        "Resolved medium- and high-confidence immediate-bounded redemption backstops can continue to improve Liquidity / Exit between normal hourly syncs",
+        "Report-card redemption freshness now follows a 2x 4-hourly sync runway before suppressing redemption inputs",
+        "Resolved medium- and high-confidence immediate-bounded redemption backstops can continue to improve Liquidity / Exit between normal 4-hourly syncs",
         "Missing, materially stale, low-confidence, impaired, eventual-only, and severe-depeg-ineligible routes remain excluded from Safety Score liquidity uplift",
       ],
       commits: [],
