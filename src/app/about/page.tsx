@@ -427,7 +427,7 @@ export default function AboutPage() {
                 {
                   question: "Where does Pharos get its data?",
                   answer:
-                    "Pharos aggregates data from DefiLlama, CoinGecko, on-chain RPC nodes, block explorers (Etherscan, Tronscan), protocol-native APIs, and curated sources like Bluechip. Details on all data sources are available on the About page.",
+                    "Pharos aggregates data from DefiLlama, CoinGecko, on-chain RPC nodes, Etherscan, TronGrid, protocol-native APIs, and curated sources like Bluechip. Details on all data sources are available on the About page.",
                 },
               ]),
             ),

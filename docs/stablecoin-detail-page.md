@@ -52,6 +52,9 @@ The hook currently wires these sources:
 - `useDexLiquidity()` for liquidity score and DEX context
 - `useReportCards()` for the main Safety Score card
 - `useRedemptionBackstops()` for modeled redemption routes
+- `useYieldRankings()` for yield-row availability and detail context
+- `useStressSignals()` for DEWS detail context
+- `useBlacklistSummary()` for blacklist-support and summary badges
 - `useMintBurnFlows()` for flow-surface availability checks
 - `useStablecoinReserves(id, enabled)` for live reserve presentation when `coin.liveReservesConfig` exists
 
@@ -66,7 +69,7 @@ The builder returns one of four states:
 - `not-found`
 - `ready`
 
-`ready` contains the fully derived detail payload: supply numbers, peg reference context, deviation metrics, derived non-USD/commodity `performanceVsUsd1y` when enough priced history exists, report card, liquidity row, redemption backstop, reserve presentation, supply history, stale-query inputs, and convenience flags like `isNavToken`, `hasFlows`, and `usesFallbackPegRate`.
+`ready` contains the fully derived detail payload: supply numbers, peg reference context, deviation metrics, derived non-USD/commodity `performanceVsUsd1y` when enough priced history exists, report card, liquidity row, redemption backstop, reserve presentation, supply history, yield ranking, DEWS stress signal, blacklist-support state, stale-query inputs, and convenience flags like `isNavToken`, `hasYieldSection`, `hasFlows`, and `hasBlacklist`.
 
 The client `loading` state now mirrors the server fallback more closely: it keeps the coin identity, classification line, and dossier framing visible instead of dropping back to anonymous skeleton blocks.
 
@@ -90,14 +93,15 @@ The client `loading` state now mirrors the server fallback more closely: it keep
 12. `DistributionSection`
 13. `DexLiquidityCard`
 14. `FlowsSection`
-15. `DepegHistory` (suppressed for NAV tokens)
-16. `FeedbackModal`
+15. `BlacklistSection` when the coin is supported by the blacklist tracker
+16. `DepegHistory` (suppressed for NAV tokens)
+17. `FeedbackModal`
 
 The server shell then appends `ExploreNextSection` after the client-rendered analytics stack.
 
 ### Rail vs section rules
 
-- `LongformScrollspyNav` pill order mirrors the actual render order top-to-bottom: `report-card` (Safety), `overview`, optional `price`, optional `reserves`, `chart` (Market), optional `yield`, `liquidity`, optional `flows`, `history`, `explore-next`. Optional pills appear only when their source data is present (`hasPriceTransparency`, `reserves != null`, `hasYieldSection`, `hasFlows`).
+- `LongformScrollspyNav` pill order mirrors the actual render order top-to-bottom: `report-card` (Safety), `overview`, optional `reserves`, optional `price`, `chart` (Market), optional `yield`, `liquidity`, optional `flows`, optional `blacklist`, `history`, `explore-next`. Optional pills appear only when their source data is present (`reserves != null`, `hasPriceTransparency`, `hasYieldSection`, `hasFlows`, `hasBlacklist`).
 - Section ids are stable; do not rename them. In particular: the Safety pill still targets `#report-card`, and the Market pill still targets `#chart`.
 - `CollateralUsageSection` renders inline within the overview zone and is not a top-level scrollspy entry.
 - `DistributionSection` renders after the chart, outside the top-level rail.
@@ -193,15 +197,16 @@ That shared retry is used by the page-level error surfaces.
 | `HeroCard`                  | Price, supply deltas, peg metrics, liquidity headline, top-level blacklist / excess-yield / DEWS badges, optional `1Y vs USD` context for eligible non-USD and commodity pegs, feedback entrypoint, and first-touch methodology hints for Peg Score / Liquidity                                                                                                                             |
 | `ReportCardDetail`          | Overall Safety Score plus radar/dimension detail, contextual methodology hints, and a methodology footer line                                                                                                                                                                                                                                                                               |
 | `SafetyScoreHistorySection` | Grade-transition timeline                                                                                                                                                                                                                                                                                                                                                                   |
-| `OverviewSection`           | AI summary, reserve treemap, reserve/live-fallback notices, redemption-backstop card with explicit fixed or documented variable fee messaging, eventual-only vs immediate-capacity messaging, reviewed source context, and resolution / confidence state when the route is configured but currently unrated, DEWS detail, and the nested `price-transparency` anchor when price data exists |
+| `OverviewSection`           | AI summary, reserve treemap, reserve/live-fallback notices, redemption-backstop card with explicit fixed or documented variable fee messaging, eventual-only vs immediate-capacity messaging, reviewed source context, and resolution / confidence state when the route is configured but currently unrated, DEWS detail, and the nested `price` anchor when price data exists |
 | `CoinNotices`               | Coin-specific warnings/info blocks from metadata                                                                                                                                                                                                                                                                                                                                            |
 | `KeyInfoCard`               | Classification, collateral, peg mechanism, links, proof-of-reserves, jurisdiction                                                                                                                                                                                                                                                                                                           |
 | `McapChart`                 | Historical supply / market-cap chart                                                                                                                                                                                                                                                                                                                                                        |
 | `DistributionSection`       | Holder and supply distribution view after market history                                                                                                                                                                                                                                                                                                                                    |
-| `PriceTransparencyCard`     | Current price, source label, confidence badge, update recency, and a table of all known price sources with their status (Used/Available/No data). It is rendered inside `OverviewSection` under the `price-transparency` anchor. When protocol-redeem overrides are active, all market sources show "Not applicable". DEX Price Check section renders when `dexPriceCheck` data exists      |
+| `PriceTransparencyCard`     | Current price, source label, confidence badge, update recency, and a table of all known price sources with their status (Used/Available/No data). It is rendered inside `OverviewSection` under `<section id="price" aria-label="Price transparency">`. When protocol-redeem overrides are active, all market sources show "Not applicable". DEX Price Check section renders when `dexPriceCheck` data exists      |
 | `YieldDetailSection`        | Yield rankings row, clickable source links, warnings, history chart, alt-source/provenance detail, and contextual PYS / Stability help. Renders for statically yield-bearing coins and for non-yield-bearing coins that currently have a published yield ranking (for example auto-discovered lending coverage).                                                                            |
 | `DexLiquidityCard`          | Liquidity score, top pools, DEX-implied price context, and contextual methodology hints / footer links. For `unobserved` rows it now shows an explicit no-direct-market state and an unobserved-history panel instead of hiding history entirely.                                                                                                                                       |
 | `FlowsSection`              | Per-coin mint/burn summary plus the separate `flow-history` event-feed section, with contextual Pressure Shift help on the summary card; rendered below liquidity and outside the top-level scrollspy rail                                                                                                                                                                                  |
+| `BlacklistSection`          | Per-coin blacklist/freeze support summary and event context when the coin is in the blacklist tracker support set                                                                                                                                                                                                                                                                          |
 | `DepegHistory`              | Historical depeg timeline for non-NAV assets                                                                                                                                                                                                                                                                                                                                                |
 | `ExploreNextSection`        | Related stablecoins, compare pages, and taxonomy/deeper-navigation links                                                                                                                                                                                                                                                                                                                    |
 

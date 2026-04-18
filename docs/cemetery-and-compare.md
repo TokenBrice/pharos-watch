@@ -87,7 +87,7 @@ Primary files:
 - Query param `range` stores the market-cap chart window. Accepted values are `7d`, `30d`, `90d`, `1y`, and `all`; `all` is the default and is cleared from the URL instead of persisted.
 - Static comparison landing pages are generated from `STATIC_COMPARISON_PAGES` in `src/lib/compare-pages.ts` and live at `/compare/<left-id>-vs-<right-id>/`.
 
-Selected state is normalized back to canonical IDs in the URL to avoid duplicate-symbol collisions and preserve shareable links.
+Legacy coin tokens are resolved to canonical IDs in component state. The URL is rewritten with canonical IDs only when the user changes the selection or applies a preset; legacy `coins` params are not automatically rewritten on initial load.
 
 ### Data dependencies
 

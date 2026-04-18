@@ -125,8 +125,8 @@ If a feature gains richer user-facing states, update both `src/lib/coverage.ts` 
 
 - The feature snapshot comes first and answers the breadth question before the page shifts into per-coin inspection.
 - Search filters by name and ticker.
-- Quick filters narrow the table to one major feature slice (`Redemption`, `Live reserves`, `Yield`, `Flows`, `Blacklist`).
-- The `Live reserves` quick filter is intentionally strict: it matches only rows whose reserve badge state is true `Live`, not `Curated-Validated` or `Proof`.
+- Quick filters are grouped as tier filters (`All coins`, `Fully available`, `Fully headline`), feature filters (`Redemption`, `Yield`, `Reserves`, `Flows`, `Blacklist`), and gap filters (`No Safety`, `No DEX`, `No Reserves`, `Weak price`, `No Flows`, `No Dependency`).
+- The `Reserves` quick filter is intentionally strict: it matches only rows where `statuses.reserves.kind === "live"`, the score-grade live reserve state, not `Curated-Validated` or `Proof`.
 - Default sort is descending live market cap.
 - On small screens, the matrix adapts into scan-first per-coin cards that preview the highest-signal statuses and expand for the remaining states.
 - From `md` upward, the full comparison table renders with the first column sticky.

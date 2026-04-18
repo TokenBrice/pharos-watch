@@ -42,6 +42,7 @@ Application source-of-truth docs live in `/docs/` and [../README.md](../README.m
 - [cemetery-and-compare.md](./cemetery-and-compare.md) - `/cemetery/` and `/compare/` data and URL contracts
 - [dependency-map.md](./dependency-map.md) - dependency-graph construction, rendering, and interaction model
 - [coverage-page.md](./coverage-page.md) - `/coverage/` matrix contract, source mapping, and update rules
+- [funding-page.md](./funding-page.md) - `/funding/` noindex public funding ledger contract and static JSON data model
 - [portfolio-page.md](./portfolio-page.md) - `/portfolio/` route shell, local persistence, and report-card dependency contract
 - [privacy-page.md](./privacy-page.md) - `/privacy/` longform policy surface, metadata, and footer integration
 - [status-dashboard.md](./status-dashboard.md) - `/status/` public health surface plus `/admin/` operator dashboard contract
@@ -68,6 +69,7 @@ Some public routes are documented by feature docs or the architecture doc rather
 | `/digest/` | [digest-pipeline.md](./digest-pipeline.md) |
 | `/digest/[date]/` | [digest-pipeline.md](./digest-pipeline.md) |
 | `/flows/` | [mint-burn-flows.md](./mint-burn-flows.md) |
+| `/funding/` | [funding-page.md](./funding-page.md) |
 | `/liquidity/` | [dex-liquidity.md](./dex-liquidity.md) |
 | `/methodology/` | [methodology-page.md](./methodology-page.md) |
 | `/portfolio/` | [portfolio-page.md](./portfolio-page.md) |

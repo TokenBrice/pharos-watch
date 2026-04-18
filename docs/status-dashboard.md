@@ -105,7 +105,7 @@ The active frontend operator mode is now:
   - Strips `/api/admin` and forwards to `ops-api.pharos.watch` with `CF-Access-Client-Id` / `CF-Access-Client-Secret`
   - Allows only admin routes and shared dynamic-admin matches from `shared/lib/api-endpoints/`
   - Verifies the operator's UI Access token against `CF_ACCESS_TEAM_DOMAIN` + `CF_ACCESS_OPS_UI_AUD`, accepting either `Cf-Access-Jwt-Assertion` or a same-origin `cf-access-token` / `CF_Authorization` session token when the assertion header is absent
-  - Forwards only `Accept`, `Content-Type`, and `Idempotency-Key` from the browser request; browser callers never send Access service-token headers directly
+  - Forwards only `Accept`, `Content-Type`, `Idempotency-Key`, and `X-Pharos-Admin` from the browser request; browser callers never send Access service-token headers directly
   - Reflects a narrowed response-header set (`Allow`, `Cache-Control`, `Content-Type`, `Idempotency-Key`, `Warning`, `X-Data-Age`, `X-Idempotent-Replay`) back into the app shell
   - Converts upstream timeouts into operator-visible `504` JSON errors; non-timeout fetch failures and Access redirect responses still return `502`
 - `src/hooks/use-status-dashboard-model.ts`
@@ -132,13 +132,13 @@ The active frontend operator mode is now:
   - Job-specific metadata summaries are resolved through `src/components/status/cron-metadata-summary.ts` instead of a long inline `if` chain inside `cron-card.tsx`
 - The client now groups widgets into six operational lanes instead of one flat vertical list:
   - `Overview`: incident detail first, with the state-machine / probe diagnostics moved behind a secondary disclosure block
-  - `Actions`: manual response tools promoted upward when recommendations exist; Telegram delivery telemetry is now secondary and collapsible
+  - `Actions`: manual response tools pinned at the end of the lane stack; recommended actions are promoted separately in the top fold
   - `Pipeline`: data-quality threshold board, price-source health, CoinGecko price drift watchlist, liquidity health, pipeline freshness, admin-only D1 storage/usage telemetry, live reserve sync health, mint/burn reconciliation, metadata-integrity watchlists (`reserveDrift`, `classificationWarnings`), and discovery backlog
   - Mint/burn reconciliation now defaults to the six highest-severity rows and exposes the long insufficient-source tail behind a `See all` disclosure button
   - `Reliability`: browser probes, circuit breakers, public-health divergence callouts, total site-vs-external demand attribution (Pages delivery split, worker-lane load, top route groups, recent buckets), keyed API-key load, and cache freshness; manual action routes are no longer rendered as default `Not probed` noise
   - `Cron Lanes`: grouped cron-card clusters with trigger-theme wrappers; unhealthy/degraded groups sort first and fully healthy groups collapse by default
   - `History`: filtered incident timeline windows
-- Lane order below `Overview` is no longer fixed; `Actions`, `Pipeline`, `Cron Lanes`, and `Reliability` are ranked from current incident severity so the scroll order tapers from urgent action into broader telemetry.
+- Lane order is fixed at the boundaries and ranked in the middle: `Overview` is always first, `Pipeline`, `Cron Lanes`, and `Reliability` are ranked from current incident severity, then `History` and `Actions` are pinned after those lanes.
 - Runtime warnings (`client stale`, `/api/health` divergence, hook fetch failures) are collapsed into a shared notice rail above the sticky lane nav instead of rendering as separate free-floating banners.
 
 ### Endpoint groups

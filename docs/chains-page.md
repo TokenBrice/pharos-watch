@@ -69,12 +69,13 @@ Default sort is `totalUsd desc`.
 `src/app/chains/[chain]/client.tsx` uses `useChainProfileData(chainId)` and renders, in order:
 
 1. `QueryErrorNotice` (inline banner when error + stale data)
-2. hero card with supply, global share, 24h/7d/30d change (all with dark-mode colors via `trendColor()`), health badge, and `dark:invert` logo support
-3. Chain Health breakdown card — weight labels derived dynamically from exported constants in `chain-health.ts`
-4. stablecoin composition treemap — rendered only when the chain summary snapshot and stablecoins snapshot match exactly; adaptive 2/3/4-column layout with 1-3 rows, optional `Others` aggregation when the chain has more coins than display cells, and dominant span only when a coin exceeds 35% share in a 3+ column layout
-5. backing-type breakdown — rendered only when the route is on a coordinated snapshot; unclassified coins shown as "Other" (zinc-colored) bucket
-6. full stablecoin table with a screen-reader-only `<caption>` — rendered only when the route is on a coordinated snapshot
-7. skeleton loading states (hero + health + composition blocks)
+2. `StaleDataBanner` when coordinated chain/stablecoin snapshots are stale or mismatched
+3. hero card with supply, global share, 24h/7d/30d change (all with dark-mode colors via `trendColor()`), health badge, and `dark:invert` logo support
+4. Chain Health breakdown card — weight labels derived dynamically from exported constants in `chain-health.ts`
+5. stablecoin composition treemap — rendered only when the chain summary snapshot and stablecoins snapshot match exactly; adaptive 2/3/4-column layout with 1-3 rows, optional `Others` aggregation when the chain has more coins than display cells, and dominant span only when a coin exceeds 35% share in a 3+ column layout
+6. backing-type breakdown — rendered only when the route is on a coordinated snapshot; unclassified coins shown as "Other" (zinc-colored) bucket; filter buttons update the stablecoin table by backing type
+7. full stablecoin table with a screen-reader-only `<caption>` — rendered only when the route is on a coordinated snapshot
+8. skeleton loading states (hero + health + composition blocks)
 
 `useChainProfileData()` coordinates `GET /api/chains` and `GET /api/stablecoins` for the route. It renders the summary chain card as soon as the chain snapshot exists, but it keeps the composition/backing/table sections hidden until both snapshots share the same `updatedAt` value and the stablecoins snapshot has authoritative freshness metadata. The route surfaces explicit notices for the three non-happy states: missing detailed stablecoin data, mismatched snapshots, and missing freshness metadata.
 
