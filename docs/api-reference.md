@@ -721,10 +721,10 @@ Peg deviation events (≥ 100 bps for USD-pegged, ≥ 150 bps for non-USD pegs).
   "events": [DepegEvent, ...],
   "total": 4080,
   "methodology": {
-    "version": "5.93",
-    "versionLabel": "v5.93",
-    "currentVersion": "5.93",
-    "currentVersionLabel": "v5.93",
+    "version": "5.95",
+    "versionLabel": "v5.95",
+    "currentVersion": "5.95",
+    "currentVersionLabel": "v5.95",
     "changelogPath": "/methodology/depeg-changelog/",
     "asOf": 1772606400,
     "isCurrent": true
@@ -751,6 +751,8 @@ Results are ordered by `startedAt` descending (most recent first).
 | `recoveryPrice`    | `number \| null`       | Price at recovery                                                                             |
 | `pegReference`     | `number`               | Reference peg value used (USD)                                                                |
 | `source`           | `"live" \| "backfill"` | Detection method                                                                              |
+| `confirmationSources` | `string \| null`    | Composite provenance tag recorded when a pending depeg was promoted. Components (joined with `+`): the off-chain source label (e.g. `coingecko`, `defillama`), `DEX`, `CEX`, `Pool`. Example: `"DEX+CEX"` or `"coingecko+Pool"`. `null` for events that bypassed the pending lane (small-cap authoritative direct-insert and historical backfill rows). |
+| `pendingReason`    | `string \| null`       | Composite reason the incident entered the pending lane, e.g. `"large-cap"`, `"low-confidence"`, `"large-cap+low-confidence"`, `"extreme-move"`. `null` when the event did not enter pending. |
 
 **`methodology`**
 
@@ -779,10 +781,10 @@ Composite peg scores and aggregate statistics for tracked stablecoins. Scores ar
   "coins": [PegSummaryCoin, ...],
   "summary": PegSummaryStats,
   "methodology": {
-    "version": "5.93",
-    "versionLabel": "v5.93",
-    "currentVersion": "5.93",
-    "currentVersionLabel": "v5.93",
+    "version": "5.95",
+    "versionLabel": "v5.95",
+    "currentVersion": "5.95",
+    "currentVersionLabel": "v5.95",
     "changelogPath": "/methodology/depeg-changelog/",
     "asOf": 1772606400,
     "isCurrent": true
@@ -2148,18 +2150,19 @@ Aggregate responses are filtered to active tracked stablecoin IDs only, even if 
         "supply": { "value": 2, "available": true },
         "price": { "value": 1, "available": true }
       },
+      "amplifiers": { "psi": 1, "contagion": 1 },
       "computedAt": 1740000000,
-      "methodologyVersion": "5.93"
+      "methodologyVersion": "5.95"
     }
   },
   "updatedAt": 1740000000,
   "oldestComputedAt": 1740000000,
   "malformedRows": 0,
   "methodology": {
-    "version": "5.93",
-    "versionLabel": "v5.93",
-    "currentVersion": "5.93",
-    "currentVersionLabel": "v5.93",
+    "version": "5.95",
+    "versionLabel": "v5.95",
+    "currentVersion": "5.95",
+    "currentVersionLabel": "v5.95",
     "changelogPath": "/methodology/depeg-changelog/",
     "asOf": 1740000000,
     "isCurrent": true
@@ -2178,8 +2181,9 @@ Aggregate responses are filtered to active tracked stablecoin IDs only, even if 
       "supply": { "value": 2, "available": true },
       "price": { "value": 1, "available": true }
     },
+    "amplifiers": { "psi": 1, "contagion": 1 },
     "computedAt": 1740000000,
-    "methodologyVersion": "5.93"
+    "methodologyVersion": "5.95"
   },
   "history": [
     {
@@ -2190,15 +2194,16 @@ Aggregate responses are filtered to active tracked stablecoin IDs only, even if 
         "supply": { "value": 1, "available": true },
         "price": { "value": 1, "available": true }
       },
-      "methodologyVersion": "5.93"
+      "amplifiers": { "psi": 1, "contagion": 1 },
+      "methodologyVersion": "5.95"
     }
   ],
   "malformedRows": 0,
   "methodology": {
-    "version": "5.93",
-    "versionLabel": "v5.93",
-    "currentVersion": "5.93",
-    "currentVersionLabel": "v5.93",
+    "version": "5.95",
+    "versionLabel": "v5.95",
+    "currentVersion": "5.95",
+    "currentVersionLabel": "v5.95",
     "changelogPath": "/methodology/depeg-changelog/",
     "asOf": 1740000000,
     "isCurrent": true
@@ -2209,6 +2214,8 @@ Aggregate responses are filtered to active tracked stablecoin IDs only, even if 
 **`malformedRows`** — count of DB rows with unparseable JSON signal data (expected 0 under normal operation)
 
 **`oldestComputedAt`** — aggregate mode only; oldest returned current row and the timestamp used for response freshness headers
+
+**`amplifiers`** — clamped multipliers that were applied on top of the base weighted score. `psi` is the systemic PSI amplifier (range `[1.0, 1.3]`); `contagion` is the per-peg-type cross-asset amplifier (range `[1.0, 1.2]`). Both default to `1.0` for legacy cached rows written before v5.95.
 
 **`methodology`** — same fields and semantics as `/api/depeg-events`
 
@@ -2865,6 +2872,51 @@ Cron `sync-mint-burn` automatically heals recent NULL-price events within a 48-h
 
 Validates DEWS against historical depeg events. Reports true-positive rate and average lead time.
 
+### `GET /api/backfill-dews?mode=backtest-metrics`
+
+Backtest harness that replays DEWS over a curated set of historical depeg onsets (the `BACKTEST_ANCHORS` fixture). Reports detection rate and lead-time percentiles sourced from `stress_signal_history` daily snapshots.
+
+**Authentication:** admin only (same Cloudflare Access gate as the rest of `/api/backfill-dews`).
+
+**Granularity:** `"daily"`. The harness reads `stress_signal_history` rows (one snapshot per UTC day) over a 14-day window ending at each anchor's `onsetAt` and looks for the first `ALERT` / `WARNING` / `DANGER` band inside that window.
+
+**Response**
+
+```json
+{
+  "detectionRate": 0.75,
+  "leadTimeDaysP50": 4,
+  "leadTimeDaysP90": 11,
+  "granularity": "daily",
+  "perAnchor": [
+    {
+      "stablecoinId": "usdc-circle",
+      "onsetAt": 1679400000,
+      "detected": true,
+      "leadTimeDays": 2,
+      "firstAlertBand": "WARNING"
+    }
+  ]
+}
+```
+
+| Field             | Type                     | Description                                                                                      |
+| ----------------- | ------------------------ | ------------------------------------------------------------------------------------------------ |
+| `detectionRate`   | `number`                 | Fraction of anchors where DEWS surfaced at least `ALERT` before `onsetAt` (`0` if no anchors)     |
+| `leadTimeDaysP50` | `number \| null`         | 50th-percentile lead time in days across detected anchors; `null` when no anchors were detected   |
+| `leadTimeDaysP90` | `number \| null`         | 90th-percentile lead time in days across detected anchors; `null` when no anchors were detected   |
+| `granularity`     | `"daily"`                | Snapshot granularity used to compute lead time                                                    |
+| `perAnchor`       | `BacktestMetricsPerAnchor[]` | One entry per anchor in the fixture (see below)                                               |
+
+**`BacktestMetricsPerAnchor`**
+
+| Field             | Type                                        | Description                                                                         |
+| ----------------- | ------------------------------------------- | ----------------------------------------------------------------------------------- |
+| `stablecoinId`    | `string`                                    | Pharos stablecoin ID of the anchor                                                  |
+| `onsetAt`         | `number`                                    | Unix seconds of the curated depeg onset                                             |
+| `detected`        | `boolean`                                   | Whether DEWS reached at least `ALERT` within the 14-day pre-onset window            |
+| `leadTimeDays`    | `number \| null`                            | Days between the first elevated band and `onsetAt`; `null` if `detected=false`      |
+| `firstAlertBand`  | `"ALERT" \| "WARNING" \| "DANGER" \| null` | Band of the first elevated snapshot inside the window; `null` if `detected=false`   |
 
 ### `GET /api/backfill-dews?repair=refresh-current&dry-run=true`
 
