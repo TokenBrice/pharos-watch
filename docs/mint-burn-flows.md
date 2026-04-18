@@ -635,9 +635,9 @@ Three sections:
 
 | Hook | Endpoint | Stale Time | Notes |
 |------|----------|-----------|-------|
-| `useMintBurnFlows(hours?)` | `/api/mint-burn-flows` | `CRON_20MIN` | Aggregate mode, no coin filter |
-| `useMintBurnFlowsCoin(id, hours?)` | `/api/mint-burn-flows?stablecoin=` | `CRON_20MIN` | Per-coin mode, enabled only when ID truthy |
-| `useMintBurnEvents(id, opts?)` | `/api/mint-burn-events?stablecoin=` | `CRON_20MIN` | Paginated event feed |
+| `useMintBurnFlows(hours?)` | `/api/mint-burn-flows` | `CRON_MINT_BURN` | Aggregate mode, no coin filter |
+| `useMintBurnFlowsCoin(id, hours?)` | `/api/mint-burn-flows?stablecoin=` | `CRON_MINT_BURN` | Per-coin mode, enabled only when ID truthy |
+| `useMintBurnEvents(id, opts?)` | `/api/mint-burn-events?stablecoin=` | `CRON_MINT_BURN` | Paginated event feed |
 
 All hooks use Zod schema validation for aggregate and per-coin responses (`MintBurnFlowsResponseSchema`, `MintBurnPerCoinResponseSchema`).
 

@@ -171,7 +171,7 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `src/lib/contagion-layout.ts` - CORE_LANE_HALF_WIDTH, CORE_LANE_MARGIN, CORE_PAIR_X_JITTER, CORE_PAIR_Y_OFFSET, CORE_RING_RADIUS_X, CORE_RING_RADIUS_Y
 - `src/lib/coverage-page-config.ts` - AUTHORITATIVE_ACCENT, CoverageFilterKey, CoverageSortKey, FEATURE_ACCENT_CLASSES, FEATURE_ICON, FILTER_OPTIONS
 - `src/lib/coverage.ts` - COVERAGE_BADGE_TONE_CLASS, COVERAGE_FEATURES, CoverageFeatureDefinition, CoverageFeatureKey, CoverageFeatureSummary, CoverageRow
-- `src/lib/cron-intervals.ts` - CRON_15MIN, CRON_1H, CRON_1MIN, CRON_20MIN, CRON_24H, CRON_30MIN
+- `src/lib/cron-intervals.ts` - CRON_15MIN, CRON_1H, CRON_1MIN, CRON_24H, CRON_30MIN, CRON_BLACKLIST, CRON_MINT_BURN, CRON_RESERVE_SYNC, CRON_YIELD
 - `src/lib/csv-export.ts` - downloadCsv
 - `src/lib/data-health-config.ts` - DATA_HEALTH_PRESETS
 - `src/lib/data-health.ts` - DataHealthInfo, deriveDataHealth, formatDataHealthTimestamp, mergeHealthStates
@@ -350,17 +350,17 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `worker/src/handlers/scheduled/daily-0805.ts` - runDaily0805Slot
 - `worker/src/handlers/scheduled/five-minute-telegram.ts` - runFiveMinuteTelegramSlot
 - `worker/src/handlers/scheduled/half-hourly.ts` - runHalfHourlySlot
-- `worker/src/handlers/scheduled/hourly-blacklist.ts` - runHourlyBlacklistSlot
-- `worker/src/handlers/scheduled/hourly-live-reserves.ts` - runHourlyReserveSyncSlot
+- `worker/src/handlers/scheduled/hourly-blacklist.ts` - runSixHourlyBlacklistSlot
+- `worker/src/handlers/scheduled/hourly-live-reserves.ts` - runFourHourlyReserveSyncSlot
 - `worker/src/handlers/scheduled/hourly-yield.ts` - runHourlyYieldSlot
 - `worker/src/handlers/scheduled/mint-burn-slot.ts` - runMintBurnSlot
 - `worker/src/handlers/scheduled/monthly-yield-audit.ts` - runMonthlyYieldAuditSlot
 - `worker/src/handlers/scheduled/quarter-hourly.ts` - runQuarterHourlySlot
 - `worker/src/handlers/scheduled/run-best-effort-job.ts` - runBestEffortScheduledJob
 - `worker/src/handlers/scheduled/status-self-check.ts` - runStatusSelfCheckSlot
-- `worker/src/handlers/scheduled/thirty-minute-dex-discovery.ts` - runThirtyMinuteDexDiscoverySlot
-- `worker/src/handlers/scheduled/twenty-minute-mint-burn-critical.ts` - runTwentyMinuteMintBurnCriticalSlot
-- `worker/src/handlers/scheduled/twenty-minute-mint-burn-extended.ts` - runTwentyMinuteMintBurnExtendedSlot
+- `worker/src/handlers/scheduled/thirty-minute-dex-discovery.ts` - runTwoHourlyDexDiscoverySlot
+- `worker/src/handlers/scheduled/twenty-minute-mint-burn-critical.ts` - runHalfHourlyMintBurnCriticalSlot
+- `worker/src/handlers/scheduled/twenty-minute-mint-burn-extended.ts` - runHalfHourlyMintBurnExtendedSlot
 - `worker/src/handlers/scheduled/yield-supplemental.ts` - runYieldSupplementalSlot
 
 ## Worker API

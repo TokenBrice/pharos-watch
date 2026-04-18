@@ -1494,4 +1494,27 @@ describe("syncFxRates", () => {
     expect(callStartedAt.pagesDev).toBeDefined();
     expect(Math.abs(callStartedAt.jsdelivr - callStartedAt.pagesDev)).toBeLessThan(20);
   });
+
+  it("returns cooldown_active and skips all outbound fetches when last-write marker is <30 min old", async () => {
+    const nowSec = Math.floor(Date.now() / 1000);
+    const fetchMock = vi.fn();
+    vi.stubGlobal("fetch", fetchMock);
+    const db = mockD1([
+      {
+        match: "SELECT value, updated_at FROM cache WHERE key = ?",
+        matchBinds: ["sync-fx-rates:last-write"],
+        rows: [{ key: "sync-fx-rates:last-write", value: "1", updated_at: nowSec - 600 }],
+        first: { key: "sync-fx-rates:last-write", value: "1", updated_at: nowSec - 600 },
+      },
+    ]);
+
+    const result = await syncFxRates(db);
+
+    expect(result.itemCount).toBe(0);
+    expect(result.metadata).toBeDefined();
+    const metadata = JSON.parse(result.metadata!) as { reason: string; lastWriteAgeSec: number };
+    expect(metadata.reason).toBe("cooldown_active");
+    expect(metadata.lastWriteAgeSec).toBe(600);
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
 });

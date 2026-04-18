@@ -177,4 +177,34 @@ describe("logCronRun", () => {
     await timeoutExpectation;
     vi.useRealTimers();
   });
+
+  it("does not DELETE from cron_runs on successful completion (prune moved to daily cron)", async () => {
+    const sqlStatements: string[] = [];
+    const recordingDb = {
+      prepare: (sql: string) => {
+        sqlStatements.push(sql);
+        return {
+          bind: () => ({
+            run: async () => ({ success: true, meta: { changes: 1 } }),
+            all: async () => ({ results: [], success: true, meta: {} }),
+            first: async () => null,
+          }),
+          run: async () => ({ success: true, meta: { changes: 1 } }),
+          all: async () => ({ results: [], success: true, meta: {} }),
+          first: async () => null,
+        };
+      },
+      batch: async () => [],
+      exec: async () => ({ count: 0, duration: 0 }),
+      dump: async () => new ArrayBuffer(0),
+    } as unknown as D1Database;
+
+    const result = await logCronRun(recordingDb, "test-job", async () => ({ itemCount: 1 }));
+    expect(result).toMatchObject({ itemCount: 1 });
+
+    const deletes = sqlStatements.filter((sql) => /DELETE\s+FROM\s+cron_runs/i.test(sql));
+    const inserts = sqlStatements.filter((sql) => /INSERT\s+INTO\s+cron_runs/i.test(sql));
+    expect(deletes).toHaveLength(0);
+    expect(inserts).toHaveLength(1);
+  });
 });

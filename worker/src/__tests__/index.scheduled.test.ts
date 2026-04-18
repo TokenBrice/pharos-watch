@@ -670,7 +670,7 @@ describe("worker.scheduled", () => {
     expect(cronMocks.computeAndStoreDEWS).not.toHaveBeenCalled();
   });
 
-  it("runs the extended mint/burn lane on the offset 20-min slot", async () => {
+  it("runs the extended mint/burn lane on the offset 30-min slot", async () => {
     const { ctx, waits } = makeCtx();
     const env = {
       DB: {} as D1Database,

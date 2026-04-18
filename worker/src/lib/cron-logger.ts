@@ -80,7 +80,7 @@ async function clearCronProgress(db: D1Database, job: string): Promise<void> {
 /**
  * Wraps a cron job function with execution logging and an AbortController timeout.
  * Logs start time, duration, status, and optional item count to cron_runs table.
- * Prunes rows older than 7 days after each insert.
+ * TTL pruning for cron_runs is owned by the daily `prune-cron-history` cron.
  */
 export async function logCronRun(
   db: D1Database,

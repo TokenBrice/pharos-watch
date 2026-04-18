@@ -121,4 +121,26 @@ describe("runPruneCronHistory", () => {
     expect(metadata.cutoffCronRunsSec).toBeCloseTo(now - ONE_WEEK_SEC, -2);
     expect(metadata.cutoffSlotExecutionsSec).toBeCloseTo(now - TWO_WEEKS_SEC, -2);
   });
+
+  it("returns ok with zero counts when no rows are past either cutoff", async () => {
+    const { db, cronRuns, slotExecs } = createStubDb();
+    const now = Math.floor(Date.now() / 1000);
+    // Only fresh rows — neither DELETE should match anything.
+    cronRuns.push({ job: "sync-stablecoins", started_at: now - 3600 });
+    slotExecs.push({ slot_key: "quarterHourly", slot_started_at: now - 3600 });
+
+    const result = await runPruneCronHistory(db);
+
+    expect(result.status).toBe("ok");
+    expect(result.itemCount).toBe(0);
+    const metadata = JSON.parse(result.metadata!) as {
+      cronRunsDeleted: number;
+      slotExecutionsDeleted: number;
+    };
+    expect(metadata.cronRunsDeleted).toBe(0);
+    expect(metadata.slotExecutionsDeleted).toBe(0);
+    // Fresh rows must survive.
+    expect(cronRuns).toHaveLength(1);
+    expect(slotExecs).toHaveLength(1);
+  });
 });
