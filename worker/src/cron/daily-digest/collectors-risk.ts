@@ -9,6 +9,25 @@ import {
   type SafetyScoresResult,
 } from "./collectors-shared";
 
+/**
+ * Parse a `stress_signals.signals_json` blob into the inner per-signal map.
+ *
+ * v5.95+ rows wrap signals as `{ signals: {...}, amplifiers: {...} }`.
+ * Legacy rows store the flat map at the top level. Always prefer the wrapped
+ * shape; fall back to the parsed root for legacy rows.
+ */
+function parseStressSignalsMap(
+  signalsJson: string,
+): Record<string, { value: number; available: boolean }> {
+  const parsed = JSON.parse(signalsJson) as Record<string, unknown>;
+  const wrapped = (parsed as { signals?: unknown }).signals;
+  const map =
+    wrapped != null && typeof wrapped === "object" && !Array.isArray(wrapped)
+      ? wrapped
+      : parsed;
+  return map as Record<string, { value: number; available: boolean }>;
+}
+
 export async function collectSafetyScores(
   ctx: CollectorContext,
   mentionedSymbols: Set<string>,
@@ -142,7 +161,7 @@ export async function collectDewsStress(
 
         let topDriver = "unknown";
         try {
-          const signals = JSON.parse(today.signals_json) as Record<string, { value: number; available: boolean }>;
+          const signals = parseStressSignalsMap(today.signals_json);
           let maxVal = -1;
           for (const [key, signal] of Object.entries(signals)) {
             if (signal.available && signal.value > maxVal) {
@@ -175,7 +194,7 @@ export async function collectDewsStress(
 
           let topSignals: { name: string; value: number }[] = [];
           try {
-            const signals = JSON.parse(row.signals_json) as Record<string, { value: number; available: boolean }>;
+            const signals = parseStressSignalsMap(row.signals_json);
             topSignals = Object.entries(signals)
               .filter(([, signal]) => signal.available && signal.value > 0)
               .sort(([, a], [, b]) => b.value - a.value)

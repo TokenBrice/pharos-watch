@@ -161,7 +161,15 @@ export function extractTopSignals(signalsJson: string | null): Array<{ name: str
     const parsed = JSON.parse(signalsJson) as Record<string, unknown> | null;
     if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) return [];
 
-    return Object.entries(parsed)
+    // v5.95+ rows wrap signals under a `signals` key alongside `amplifiers`.
+    // Legacy rows carry the flat signals map at the top level. Prefer wrapped.
+    const wrapped = (parsed as { signals?: unknown }).signals;
+    const signalsMap =
+      wrapped != null && typeof wrapped === "object" && !Array.isArray(wrapped)
+        ? (wrapped as Record<string, unknown>)
+        : parsed;
+
+    return Object.entries(signalsMap)
       .flatMap(([name, raw]) => {
         if (!raw || typeof raw !== "object" || Array.isArray(raw)) return [];
         const entry = raw as { value?: unknown; available?: unknown };

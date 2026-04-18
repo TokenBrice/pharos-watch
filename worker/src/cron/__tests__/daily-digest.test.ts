@@ -1843,4 +1843,88 @@ describe("collectDewsStress — topSignals enrichment", () => {
     expect(result!.elevatedCoins.length).toBe(1);
     expect(result!.elevatedCoins[0].topSignals).toEqual([]);
   });
+
+  it("unwraps the v5.95 wrapped { signals, amplifiers } shape for elevatedCoins and bandChanges", async () => {
+    const wrappedJson = JSON.stringify({
+      signals: {
+        supply: { value: 30, available: true },
+        pool: { value: 80, available: true },
+        liq: { value: 45, available: true },
+      },
+      amplifiers: { psi: 1.08, contagion: 1.15 },
+    });
+    const db = mockD1([
+      {
+        match: "FROM stress_signals",
+        rows: [
+          {
+            stablecoin_id: "usdt-tether",
+            score: 65,
+            band: "ALERT",
+            signals_json: wrappedJson,
+          },
+        ],
+      },
+      {
+        match: "FROM stress_signal_history WHERE snapshot_date = ?",
+        rows: [{ stablecoin_id: "usdt-tether", score: 25, band: "WATCH" }],
+      },
+    ]);
+
+    const ctx = makeCollectorCtx(db);
+    const result = await collectDewsStress(ctx);
+
+    expect(result).toBeDefined();
+    // bandChanges must recover the top driver from the nested signals map.
+    expect(result!.bandChanges.length).toBe(1);
+    expect(result!.bandChanges[0].topDriver).toBe("pool balance drift");
+    // elevatedCoins must surface non-empty topSignals — previously the Object.entries
+    // iteration hit {signals,amplifiers} and filtered everything out.
+    const elevated = result!.elevatedCoins[0];
+    expect(elevated.topSignals!.length).toBe(3);
+    expect(elevated.topSignals![0].name).toBe("pool balance drift");
+  });
+
+  it("produces identical elevatedCoins.topSignals for flat and wrapped shapes of the same signals", async () => {
+    const signalsPayload = {
+      supply: { value: 30, available: true },
+      pool: { value: 80, available: true },
+      liq: { value: 45, available: true },
+    };
+    const flatDb = mockD1([
+      {
+        match: "FROM stress_signals",
+        rows: [
+          {
+            stablecoin_id: "usdt-tether",
+            score: 65,
+            band: "ALERT",
+            signals_json: JSON.stringify(signalsPayload),
+          },
+        ],
+      },
+      { match: "FROM stress_signal_history WHERE snapshot_date = ?", rows: [] },
+    ]);
+    const wrappedDb = mockD1([
+      {
+        match: "FROM stress_signals",
+        rows: [
+          {
+            stablecoin_id: "usdt-tether",
+            score: 65,
+            band: "ALERT",
+            signals_json: JSON.stringify({
+              signals: signalsPayload,
+              amplifiers: { psi: 1, contagion: 1 },
+            }),
+          },
+        ],
+      },
+      { match: "FROM stress_signal_history WHERE snapshot_date = ?", rows: [] },
+    ]);
+
+    const flat = await collectDewsStress(makeCollectorCtx(flatDb));
+    const wrapped = await collectDewsStress(makeCollectorCtx(wrappedDb));
+    expect(wrapped!.elevatedCoins[0].topSignals).toEqual(flat!.elevatedCoins[0].topSignals);
+  });
 });
