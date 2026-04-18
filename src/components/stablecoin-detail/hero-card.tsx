@@ -19,6 +19,8 @@ import {
 import { getInfrastructureLabel } from "@shared/lib/infrastructure";
 import type { Infrastructure } from "@shared/types";
 import { buildLiveCompareUrl, getPrimaryStaticComparisonPageForCoin } from "@/lib/compare-pages";
+import { buildBackingTaxonomyUrl, buildGovernanceTaxonomyUrl } from "@/lib/stablecoin-taxonomy";
+import { PEG_SLUGS } from "@/lib/peg-landing";
 import {
   formatCurrency,
   formatNativePrice,
@@ -70,7 +72,9 @@ interface HeroCardProps {
   onOpenFeedback: () => void;
 }
 
-// Compact metric chip for tertiary metrics
+// Compact metric chip for tertiary metrics. Empty state value is the em dash
+// "—"; we mark it with aria-label so screen readers announce missing data
+// instead of literally reading the glyph.
 function MetricChip({
   label,
   value,
@@ -84,10 +88,16 @@ function MetricChip({
   colorClass?: string;
   accentClass?: string;
 }) {
+  const isEmpty = value === "—";
   return (
     <div className={`flex items-center gap-2 rounded-lg border border-border/40 bg-background/40 px-2.5 py-1.5 ${accentClass ?? ""}`}>
       <span className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">{label}</span>
-      <span className={`text-base font-bold font-mono ${colorClass}`}>{value}</span>
+      <span
+        className={`text-base font-bold font-mono ${colorClass}`}
+        aria-label={isEmpty ? "Data unavailable" : undefined}
+      >
+        {value}
+      </span>
       {subValue && <span className="text-xs text-muted-foreground">{subValue}</span>}
     </div>
   );
@@ -212,13 +222,32 @@ function HeroTertiaryMetrics({
 }
 
 function HeroClassificationLine({ coin }: { coin: StablecoinMeta }) {
+  const pegSlug = PEG_SLUGS[coin.flags.pegCurrency];
+  const pegHref = pegSlug ? `/stablecoins/${pegSlug}/` : null;
+  const governanceHref = buildGovernanceTaxonomyUrl(coin.flags.governance);
+  const backingHref = buildBackingTaxonomyUrl(coin.flags.backing);
+  const governanceLabel = GOVERNANCE_LABELS[coin.flags.governance] ?? coin.flags.governance;
+  const backingLabel = BACKING_LABELS[coin.flags.backing] ?? coin.flags.backing;
+  const pegLabel = PEG_LABELS_SHORT[coin.flags.pegCurrency] ?? coin.flags.pegCurrency;
+
+  const pillClass =
+    "pharos-focus-ring inline-flex items-center rounded-full border border-border/50 bg-background/60 px-2 py-0.5 text-xs text-muted-foreground transition-colors hover:border-border hover:text-foreground";
+
   return (
-    <p className="text-xs text-muted-foreground">
-      {GOVERNANCE_LABELS[coin.flags.governance] ?? coin.flags.governance}
-      {" · "}
-      {BACKING_LABELS[coin.flags.backing] ?? coin.flags.backing}
-      {" · "}
-      {PEG_LABELS_SHORT[coin.flags.pegCurrency] ?? coin.flags.pegCurrency}
+    <p className="flex flex-wrap items-center gap-1.5">
+      <Link href={governanceHref} className={pillClass}>
+        {governanceLabel}
+      </Link>
+      <Link href={backingHref} className={pillClass}>
+        {backingLabel}
+      </Link>
+      {pegHref ? (
+        <Link href={pegHref} className={pillClass}>
+          {pegLabel}
+        </Link>
+      ) : (
+        <span className={pillClass}>{pegLabel}</span>
+      )}
     </p>
   );
 }
@@ -230,6 +259,97 @@ const THREAT_BAND_TEXT_COLORS = {
   WARNING: "text-orange-700 dark:text-orange-400",
   DANGER: "text-red-700 dark:text-red-400",
 } as const;
+
+function HeroSignalsRail({
+  reportCard,
+  pegScoreResult,
+  liquidityData,
+  stressSignal,
+  isNavToken,
+}: {
+  reportCard: ReportCard | null;
+  pegScoreResult: PegSummaryCoin | null;
+  liquidityData: DexLiquidityData | undefined;
+  stressSignal: StressSignalEntry | null;
+  isNavToken: boolean;
+}) {
+  const safetyGrade = reportCard?.overallGrade ?? "—";
+  const safetyScore = reportCard?.overallScore ?? null;
+  const pegScore = !isNavToken ? pegScoreResult?.pegScore ?? null : null;
+  const liquidityScore = liquidityData?.liquidityScore ?? null;
+  const dewsBand = stressSignal && isThreatBand(stressSignal.band) ? THREAT_BAND_LABELS[stressSignal.band] : null;
+  const dewsScore = stressSignal?.score ?? null;
+
+  const items: Array<{
+    key: string;
+    label: string;
+    primary: string;
+    secondary: string | null;
+    href: string;
+    colorClass: string;
+  }> = [
+    {
+      key: "safety",
+      label: "Safety",
+      primary: safetyGrade,
+      secondary: safetyScore != null ? `${safetyScore}/100` : null,
+      href: "#report-card",
+      colorClass: reportCard?.overallGrade ? REPORT_CARD_GRADE_COLORS[reportCard.overallGrade] : "text-muted-foreground",
+    },
+    {
+      key: "peg",
+      label: "Peg",
+      primary: pegScore != null ? String(pegScore) : isNavToken ? "NAV" : "—",
+      secondary: null,
+      href: "#report-card",
+      colorClass: pegScore != null ? pegScoreColor(pegScore) : "text-muted-foreground",
+    },
+    {
+      key: "liquidity",
+      label: "Liquidity",
+      primary: liquidityScore != null ? String(Math.round(liquidityScore)) : "—",
+      secondary: liquidityData?.poolCount != null ? `${liquidityData.poolCount} pools` : null,
+      href: "#liquidity",
+      colorClass: liquidityScore != null ? getScoreColor(liquidityScore) : "text-muted-foreground",
+    },
+    {
+      key: "dews",
+      label: "DEWS",
+      primary: dewsBand ?? "—",
+      secondary: dewsScore != null ? `${Math.round(dewsScore)}/100` : null,
+      href: "#report-card",
+      colorClass: "text-foreground",
+    },
+  ];
+
+  return (
+    <nav aria-label="Hero signals" className="flex flex-col gap-1.5">
+      {items.map((item, idx) => (
+        <Link
+          key={item.key}
+          href={item.href}
+          className={`pharos-focus-ring group flex items-baseline justify-between gap-3 rounded-lg border border-border/60 bg-background/45 px-3 py-2 transition-colors hover:border-border hover:bg-background/70 ${
+            idx === 0 ? "py-2.5" : ""
+          }`}
+        >
+          <span className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
+            {item.label}
+          </span>
+          <span className="flex items-baseline gap-1.5">
+            <span
+              className={`font-mono tabular-nums ${idx === 0 ? "text-base font-extrabold" : "text-sm font-semibold"} ${item.colorClass}`}
+            >
+              {item.primary}
+            </span>
+            {item.secondary ? (
+              <span className="font-mono text-[10px] text-muted-foreground">{item.secondary}</span>
+            ) : null}
+          </span>
+        </Link>
+      ))}
+    </nav>
+  );
+}
 
 function SafetyGradeHero({
   reportCard,
@@ -467,7 +587,27 @@ export function HeroCard({
       ? `Below ${formatCurrency(DEPEG_EVENT_MIN_SUPPLY_USD)} live-event floor. Deviation is shown, but event history may stay empty.`
       : null;
 
+  // Severity-ordered: forward-looking stress signals first (DEWS, Freezable),
+  // then performance metrics (Peg, Liquidity), then yield context, then the
+  // rare performance-vs-USD chip. The CHAINS count stays in the dedicated
+  // trailing slot rendered by HeroTertiaryMetrics.
   const tertiaryMetrics: TertiaryMetricConfig[] = [
+    {
+      key: "dews",
+      label: <MethodologyLabel topic="dewsBand">DEWS</MethodologyLabel>,
+      value: dewsDisplay.value,
+      subValue: dewsDisplay.sub,
+      colorClass: dewsDisplay.color,
+      accentClass: dewsAccent,
+    },
+    {
+      key: "blacklistable",
+      label: <MethodologyLabel topic="freezable">Freezable</MethodologyLabel>,
+      value: blacklistDisplay.value,
+      subValue: blacklistDisplay.sub,
+      colorClass: blacklistDisplay.color,
+      accentClass: blacklistAccent,
+    },
     {
       key: "peg-score",
       label: <MethodologyLabel topic="pegScore">Peg Score</MethodologyLabel>,
@@ -487,14 +627,6 @@ export function HeroCard({
       accentClass: liqAccent,
     },
     {
-      key: "blacklistable",
-      label: <MethodologyLabel topic="freezable">Freezable</MethodologyLabel>,
-      value: blacklistDisplay.value,
-      subValue: blacklistDisplay.sub,
-      colorClass: blacklistDisplay.color,
-      accentClass: blacklistAccent,
-    },
-    {
       key: "excess-yield",
       label: <MethodologyLabel topic="pys">Excess Yield</MethodologyLabel>,
       value: excessYieldDisplay.value,
@@ -509,14 +641,6 @@ export function HeroCard({
           colorClass: performanceVsUsdDisplay.color,
         }]
       : []),
-    {
-      key: "dews",
-      label: <MethodologyLabel topic="dewsBand">DEWS</MethodologyLabel>,
-      value: dewsDisplay.value,
-      subValue: dewsDisplay.sub,
-      colorClass: dewsDisplay.color,
-      accentClass: dewsAccent,
-    },
   ];
 
   return (
@@ -728,9 +852,18 @@ export function HeroCard({
               </div>
             </div>
 
-            {/* Right Column - Safety Grade */}
-            <div className="w-52 shrink-0">
-              <SafetyGradeHero reportCard={reportCard} />
+            {/* Right Column - Hero Signals Rail
+                Replaces the former SafetyGradeHero duplicate: the Safety Score
+                card lives below under #report-card. Mobile still surfaces the
+                grade via SafetyGradeHero since the card is far down scroll. */}
+            <div className="w-56 shrink-0">
+              <HeroSignalsRail
+                reportCard={reportCard}
+                pegScoreResult={pegScoreResult}
+                liquidityData={liquidityData}
+                stressSignal={stressSignal}
+                isNavToken={isNavToken}
+              />
             </div>
           </div>
 
