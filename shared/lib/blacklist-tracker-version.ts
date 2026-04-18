@@ -1,9 +1,24 @@
 import { createMethodologyVersion } from "./methodology-version";
 
 const blacklistTracker = createMethodologyVersion({
-  currentVersion: "3.95",
+  currentVersion: "3.96",
   changelogPath: "/methodology/blacklist-tracker-changelog/",
   changelog: [
+  {
+    version: "3.96",
+    title: "Gentle amount-gap recovery acceleration",
+    date: "2026-04-18",
+    effectiveAt: 1776502800, // 2026-04-18T09:00:00Z
+    summary:
+      "Unblocks the EVM amount recovery lane by excluding Tron rows that are owned by the separate Tron ledger mirror, and raises the hourly recovery cap from 50 to 100 rows while staying inside the existing sync cadence, D1 batch helper, rate limiters, and 900-subrequest run budget.",
+    impact: [
+      "EVM historical amount gaps no longer wait behind recent Tron pending rows in the per-row recovery selection",
+      "Hourly amount recovery now processes up to 100 rows per sync-blacklist run instead of 50",
+      "The acceleration remains bounded by the existing 7-minute sync runtime budget, 900-subrequest cap, and shared D1 batch chunking",
+    ],
+    commits: [],
+    reconstructed: false,
+  },
   {
     version: "3.95",
     title: "Tier-1 coverage expansion",

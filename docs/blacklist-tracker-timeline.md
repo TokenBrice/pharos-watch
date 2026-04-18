@@ -1,6 +1,14 @@
 # Blacklist Tracker Methodology — Version Timeline
 
-Internal changelog reconstructed from git history. Covers Blacklist Tracker `v1.0` through `v3.95` (2026-02-09 -> 2026-04-17).
+Internal changelog reconstructed from git history. Covers Blacklist Tracker `v1.0` through `v3.96` (2026-02-09 -> 2026-04-18).
+
+---
+
+## v3.96 — Gentle amount-gap recovery acceleration (2026-04-18)
+
+- **EVM recovery lane unblocked** — The per-row amount recovery pass now excludes Tron rows, which are owned by the separate Tron ledger mirror, so recent Tron pending rows no longer prevent the EVM backlog from draining
+- **Conservative batch increase** — The hourly amount-recovery cap increased from 50 to 100 rows per `sync-blacklist` run, keeping writes inside one shared D1 batch chunk and under the existing 900-subrequest sync budget
+- **Operational validation** — The first post-fix production run drained historical EVM amount gaps without new API errors; the higher cap is intended to accelerate cleanup while preserving the existing cron cadence, lease, rate limiters, and subrequest ceiling
 
 ---
 

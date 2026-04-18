@@ -111,5 +111,6 @@ describe("backfillAmounts", () => {
 
     const select = db.getHistory().find((entry) => entry.sql.includes("FROM blacklist_events"));
     expect(select?.sql).toContain("AND chain_id != 'tron'");
+    expect(select?.binds).toEqual([100]);
   });
 });

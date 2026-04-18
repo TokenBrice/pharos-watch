@@ -27,7 +27,9 @@ import { fetchEvmTokenBalance } from "../blacklist/balance-providers";
 import type { BlacklistRow } from "../blacklist/shared";
 import type { ChainRpcConfig } from "../../lib/chain-registry";
 
-const BACKFILL_BATCH_SIZE = 50;
+// Conservative hourly recovery cap: one D1 batch chunk and well below the
+// sync-blacklist 900-subrequest run budget observed in production.
+const BACKFILL_BATCH_SIZE = 100;
 const ERC20_TRANSFER_TOPIC = "0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef";
 const ZERO_ADDRESS_TOPIC = "0x0000000000000000000000000000000000000000000000000000000000000000";
 
