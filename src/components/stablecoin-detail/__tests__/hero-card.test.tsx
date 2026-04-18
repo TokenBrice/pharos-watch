@@ -246,7 +246,11 @@ describe("HeroCard", () => {
     expect(html).toContain("Report issue");
     expect(html).toContain("Active depeg");
     expect(html).toContain("Liquidity");
-    expect(html).toContain("Blacklistable");
+    // Task 1.6: "Blacklistable" hero chip is relabelled "Freezable"
+    expect(html).toContain("Freezable");
+    expect(html).not.toContain(">Blacklistable<");
+    // Freezable hint is attached via the methodology-hint trigger.
+    expect(html).toContain('data-testid="methodology-hint-freezable"');
     expect(html).toContain("Excess Yield");
     expect(html).toContain("+0.85%");
     expect(html).not.toContain("1Y vs USD");
@@ -299,7 +303,7 @@ describe("HeroCard", () => {
       />,
     );
 
-    expect(html).toContain("Blacklistable");
+    expect(html).toContain("Freezable");
     expect(html).toContain("Upstream");
     expect(html).not.toContain("No issuer controls");
   });

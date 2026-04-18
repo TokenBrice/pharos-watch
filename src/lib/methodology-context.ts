@@ -48,6 +48,7 @@ export type MethodologyContextKey =
   | "psiTrend"
   | "safetyScore"
   | "resilience"
+  | "freezable"
   | "dependencyRisk"
   | "redemptionBackstop"
   | "effectiveExit"
@@ -128,6 +129,14 @@ export const METHODOLOGY_CONTEXT: Record<MethodologyContextKey, MethodologyConte
     title: "Resilience",
     summary: "Three-factor score for collateral quality, custody model, and blacklist capability.",
     detail: "Chain infrastructure is not scored here. It now lives in Decentralization to avoid double-counting.",
+    methodologyPath: "/methodology/#safety-scores-methodology",
+    versionLabel: SAFETY_SCORE_VERSION_LABEL,
+    changelogPath: SAFETY_SCORE_METHODOLOGY_CHANGELOG_PATH,
+  },
+  freezable: {
+    title: "Freezable",
+    summary:
+      "The issuer can freeze tokens in any wallet via on-contract admin functions. This is a trust/centralization risk, not an instant harm.",
     methodologyPath: "/methodology/#safety-scores-methodology",
     versionLabel: SAFETY_SCORE_VERSION_LABEL,
     changelogPath: SAFETY_SCORE_METHODOLOGY_CHANGELOG_PATH,

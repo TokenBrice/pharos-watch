@@ -488,7 +488,7 @@ export function HeroCard({
     },
     {
       key: "blacklistable",
-      label: "Blacklistable",
+      label: <MethodologyLabel topic="freezable">Freezable</MethodologyLabel>,
       value: blacklistDisplay.value,
       subValue: blacklistDisplay.sub,
       colorClass: blacklistDisplay.color,
