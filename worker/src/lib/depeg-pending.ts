@@ -93,6 +93,8 @@ export function normalizePendingDepegRow(row: PendingDepegRow): PendingDepegStat
     peakSeenBps,
     peakPrice,
     pegReference: row.peg_reference,
+    // Reason is stored as a "+"-joined composite of flags (see PendingDepegReason).
+    // Legacy rows without a reason column fall back to the historical "large-cap" default.
     reason: row.reason ?? "large-cap",
   };
 }

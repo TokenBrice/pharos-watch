@@ -34,7 +34,35 @@ export interface DexPriceRow {
   updated_at: number;
 }
 
-export type PendingDepegReason = "large-cap" | "low-confidence" | "extreme-move";
+export type PendingDepegReasonFlag = "large-cap" | "low-confidence" | "extreme-move";
+/**
+ * Stored reason is a "+"-joined list of flags in canonical order:
+ * extreme-move > large-cap > low-confidence.
+ * Examples: "large-cap", "large-cap+low-confidence", "extreme-move".
+ */
+export type PendingDepegReason = string;
+
+const REASON_ORDER: PendingDepegReasonFlag[] = ["extreme-move", "large-cap", "low-confidence"];
+
+export function buildPendingReason(flags: Iterable<PendingDepegReasonFlag>): PendingDepegReason {
+  const set = new Set(flags);
+  return REASON_ORDER.filter((f) => set.has(f)).join("+");
+}
+
+export function parsePendingReason(reason: PendingDepegReason | null | undefined): Set<PendingDepegReasonFlag> {
+  const result = new Set<PendingDepegReasonFlag>();
+  if (!reason) return result;
+  for (const part of reason.split("+")) {
+    if (part === "large-cap" || part === "low-confidence" || part === "extreme-move") {
+      result.add(part);
+    }
+  }
+  return result;
+}
+
+export function isExtremeMovePending(reason: PendingDepegReason | null | undefined): boolean {
+  return parsePendingReason(reason).has("extreme-move");
+}
 
 export async function loadDexPriceRows(db: D1Database): Promise<Map<string, DexPriceRow>> {
   try {

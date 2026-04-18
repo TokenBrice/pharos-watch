@@ -30,6 +30,7 @@ import {
   buildInsertDepegEventStmt,
   loadDexPriceRows,
   loadDexPoolChallengers,
+  parsePendingReason,
 } from "../lib/depeg-helpers";
 import {
   classifyPrimaryDepegTrust,
@@ -346,7 +347,7 @@ export async function confirmPendingDepegs(
       dexStatus === "confirm" ||
       cexStatus === "confirm" ||
       poolStatus === "confirm";
-    if (hasHardConfirmation || (offchainStatus === "confirm" && pendingState.reason !== "low-confidence")) {
+    if (hasHardConfirmation || (offchainStatus === "confirm" && !parsePendingReason(pendingState.reason).has("low-confidence"))) {
       // At least one secondary source confirms -- promote to real event (INSERT + DELETE atomically)
       const authoritativePrice =
         asset != null &&

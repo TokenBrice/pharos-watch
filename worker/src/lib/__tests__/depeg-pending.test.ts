@@ -3,6 +3,34 @@ import {
   buildUpsertPendingDepegStmt,
   normalizePendingDepegRow,
 } from "../depeg-pending";
+import {
+  buildPendingReason,
+  isExtremeMovePending,
+  parsePendingReason,
+} from "../depeg-helpers";
+
+describe("pending reason helpers", () => {
+  it("buildPendingReason orders flags canonically", () => {
+    expect(buildPendingReason(["large-cap", "low-confidence"])).toBe("large-cap+low-confidence");
+    expect(buildPendingReason(["low-confidence", "large-cap", "extreme-move"])).toBe("extreme-move+large-cap+low-confidence");
+    expect(buildPendingReason(["extreme-move"])).toBe("extreme-move");
+  });
+
+  it("parsePendingReason round-trips composite strings", () => {
+    const parsed = parsePendingReason("large-cap+low-confidence");
+    expect(parsed.has("large-cap")).toBe(true);
+    expect(parsed.has("low-confidence")).toBe(true);
+    expect(parsePendingReason(null).size).toBe(0);
+    expect(parsePendingReason("garbage").size).toBe(0);
+  });
+
+  it("isExtremeMovePending detects composite reasons", () => {
+    expect(isExtremeMovePending("extreme-move")).toBe(true);
+    expect(isExtremeMovePending("extreme-move+large-cap")).toBe(true);
+    expect(isExtremeMovePending("large-cap+low-confidence")).toBe(false);
+    expect(isExtremeMovePending(null)).toBe(false);
+  });
+});
 
 describe("normalizePendingDepegRow", () => {
   it("falls back cleanly for legacy rows without additive state columns", () => {
