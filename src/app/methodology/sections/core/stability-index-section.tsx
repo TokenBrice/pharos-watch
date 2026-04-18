@@ -45,12 +45,12 @@ export function StabilityIndexMethodologySection() {
                 <h3 className="text-foreground font-medium">Preconditions &amp; Failure Modes</h3>
                 <MethodologyFacts
                   facts={[
-                    { label: "Minimum data", value: "Scorer accepts empty depeg sets, but the cron requires total market cap > 0 and an available active-depeg input query" },
-                    { label: "Required sources", value: "Market-cap totals + active depeg inputs (current stablecoins price, or recent replay-safe price_cache fallback for already-open depegs; DEWS breadth optional)" },
+                    { label: "Minimum data", value: "Scorer accepts empty depeg and empty DEWS-stress row sets, but the cron requires total market cap > 0 plus readable active-depeg and DEWS input queries" },
+                    { label: "Required sources", value: "Market-cap totals, active depeg inputs (current stablecoins price, or recent replay-safe price_cache fallback for already-open depegs), and a readable DEWS stress-signals table" },
                     {
                       label: "Failure behavior",
                       value:
-                        "Returns null when market-cap input is missing/<=0; the cron also skips publication when active-depeg inputs are unavailable, and the API serves the last valid value",
+                        "Returns null when market-cap input is missing/<=0; the cron also skips publication when active-depeg or DEWS inputs are unavailable, and the API serves the last valid value",
                     },
                     {
                       label: "Historical replay",

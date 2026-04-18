@@ -195,6 +195,10 @@ This keeps wrapper pools like `fxSAVE` and `msY` eligible even when DeFiLlama ma
 | GAIB AID (353)        | sAID    | GAIB AID staking            |
 | Parallel USDp         | sUSDp   | Parallel savings wrapper    |
 | dUSD (dTRINITY)       | sdUSD   | dTRINITY dStake vault       |
+| Flying Tulip ftUSD    | sftUSD  | Flying Tulip staking        |
+| Hermetica USDh        | sUSDh   | Hermetica staking wrapper   |
+| Cap cUSD              | stCUSD  | Cap savings wrapper         |
+| Saturn USDat          | sUSDat  | Saturn staking vault        |
 
 APY, base/reward split, pool TVL, and pool UUID are all taken directly from the DL response.
 
@@ -208,11 +212,15 @@ This tier can also carry explicit wrapper-over-wrapper native sources when the u
 
 Published lending-opportunity suggestions also apply an explicit venue exclusion for Resolv / `USR`, `stUSR`, and `wstUSR`-linked markets. They now also require observable venue TVL and must clear a size floor equal to the higher of the existing absolute floor and `0.1%` of the tracked stablecoin's current supply. These filters are scoped to the suggestion layer for base assets such as USDC or USDT; they do not remove native tracked yield assets from the broader methodology inventory.
 
-**Current adapter:**
+**Current tracked optional adapters:**
 
 | Coin ID | Source | Endpoint |
 | ------- | ------ | -------- |
+| `crvusd-curve` | `Curve Savings crvUSD current-rate` | on-chain scrvUSD Yearn V3 profit-unlock reader |
 | `usbd-bima` | `BIMA savings (sUSBD)` | `https://bima.money/api/earn/pools?network=Ethereum&user=0x0000000000000000000000000000000000000000` |
+| `usyc-hashnote` | `Hashnote USYC` | Hashnote protocol API |
+| `usdy-ondo-finance` | `Ondo USDY oracle` | on-chain Ondo oracle with historical anchor rows |
+| `lusd-liquity` | `B.Protocol LQTY-only source` | B.Protocol / Liquity on-chain reader |
 
 The BIMA adapter uses the protocol's published Ethereum earn feed, selects the USBD savings row, maps `amountTVL` to `sourceTvlUsd`, and uses the higher of `unboostedAPR` / `boostedAPR` as the current APY. Low-signal rows with negligible TVL or effectively zero APR are dropped instead of being published as meaningful yield. These rows are source-keyed as `protocol-api:bima-susbd` and participate in the same confidence-weighted arbitration as other curated sources.
 

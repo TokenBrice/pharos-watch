@@ -66,7 +66,7 @@ These are wired into the GitHub Actions CI workflows (`.github/workflows/validat
 - `generate-redirects.ts` via the `prebuild` hook that runs automatically before `npm run build`
 - `generate-sitemap-dates.ts` via the same `prebuild` hook, immediately after `generate-redirects.ts`
 - `check-seo-static.mjs` via `npm run seo:check`
-- `classify-deploy-changes.mjs` via the `detect-changes` job in `.github/workflows/deploy-cloudflare.yml`
+- `classify-deploy-changes.mjs` via the `detect-changes` jobs in `.github/workflows/deploy-cloudflare.yml` and `.github/workflows/pull-request-checks.yml`
 - `serve-static-export.mjs` via `npm run serve:static-export` in the pre-deploy `smoke-ui` job inside `.github/workflows/pages-prepare.yml`
 - `smoke-api.mjs` via `npm run test:smoke-api`
 - `smoke-ops.mjs` via `npm run test:smoke-ops`
@@ -102,7 +102,7 @@ These are wired into the GitHub Actions CI workflows (`.github/workflows/validat
 
 ### `backfill-gold-depegs.sh`
 
-- Uses Access service-token auth via `OPS_API_SERVICE_TOKEN_ID` + `OPS_API_SERVICE_TOKEN_SECRET`.
+- Uses Access service-token auth via `OPS_API_SERVICE_TOKEN_ID` + `OPS_API_SERVICE_TOKEN_SECRET` and sends `X-Pharos-Admin: 1` for the mutating admin request.
 - Defaults `WORKER_URL` to `https://ops-api.pharos.watch`.
 - Uses `POST` requests (admin mutating endpoint contract).
 - Backfills the tracked gold stablecoins configured in the script (`xaut-tether`, `paxg-paxos`, `kau-kinesis`, `xaum-matrixdock`, `cgo-comtech`, `dgld-gold-token-sa`, `pgold-pleasing`, `ggbr-goldfish-gold`).
@@ -114,7 +114,7 @@ These are wired into the GitHub Actions CI workflows (`.github/workflows/validat
 
 ### `worker/scripts/repair-non-usd-fiat-depeg-history.ts`
 
-- Uses the prod D1 database directly through Wrangler plus Access-protected ops endpoints for PSI recomputation.
+- Uses the prod D1 database directly through Wrangler plus Access-protected ops endpoints for PSI recomputation. Mutating ops endpoint calls send Cloudflare Access service-token headers plus `X-Pharos-Admin: 1`.
 - `--dry-run` compares stored `source='backfill'` rows against the current replay policy without mutating production.
 - Replays each target from its full historical supply or curated launch-date anchor rather than from the currently stored backfill-event window, which avoids split/merge oscillation on sparse non-USD histories.
 - `--existing-window` is the explicit fallback for timeout-prone assets: it constrains replay to the currently stored backfill window plus a 30-day pad on each side.
@@ -161,10 +161,10 @@ These are wired into the GitHub Actions CI workflows (`.github/workflows/validat
 
 ### `classify-deploy-changes.mjs`
 
-- Used only by the deploy workflow’s `detect-changes` job.
+- Used by the deploy and pull-request `detect-changes` jobs. On PRs, the workflow sets `DEPLOY_EVENT_NAME=push` with PR base/head SHAs so the same deploy-surface classifier controls conditional Pages build/SEO and Worker typechecks.
 - On `push`, diffs `DEPLOY_BASE_SHA..DEPLOY_HEAD_SHA` and emits `deploy_required`, `worker_changed`, and `pages_changed`.
-- `worker_changed` turns on worker deploy/API smoke when worker/shared runtime, Worker operational scripts, or worker-deploy/validate infra paths changed.
-- `pages_changed` turns on Pages build/browser-smoke/deploy when the diff touches any Pages-impacting path (`src/`, `shared/`, `functions/`, `public/`, `data/`, selected build/config scripts, Pages/deploy workflow files, or shared validate/guardrail infrastructure).
+- `worker_changed` turns on worker deploy/API smoke when the diff touches worker/shared runtime, package/deploy infra, `.github/actions/`, `scripts/lib/`, shared guardrail scripts, worker operational scripts, or worker-specific checks/smokes.
+- `pages_changed` turns on Pages build/browser-smoke/deploy when the diff touches Pages runtime paths, package/deploy infra, `.github/actions/`, `scripts/lib/`, shared guardrail scripts, Pages workflow files, or selected build/static-export scripts.
 - `deploy_required=false` lets the push workflow skip the heavy deploy path entirely for docs-only or other non-deploy diffs.
 - On `workflow_dispatch`, forces the full deploy path for safety.
 

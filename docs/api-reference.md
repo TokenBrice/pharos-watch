@@ -23,7 +23,7 @@ Unless a route is explicitly called out below as exempt, requests to `https://ap
 - header: `X-API-Key: ph_live_<16 hex prefix>_<32 char base64url secret>`
 - example shape: `ph_live_0123456789abcdef_abcdefghijklmnopqrstuvwxyzABCDEF`
 
-Routes on `https://api.pharos.watch` that do not require `X-API-Key` are limited to:
+Public, non-admin routes on `https://api.pharos.watch` that do not require `X-API-Key` are limited to:
 
 - `GET /api/health`
 - `GET /api/og/*`
@@ -31,6 +31,8 @@ Routes on `https://api.pharos.watch` that do not require `X-API-Key` are limited
 - `POST /api/telegram-webhook`
 
 `POST /api/telegram-webhook` is externally reachable but not anonymous: it requires `X-Telegram-Bot-Api-Secret-Token` instead of `X-API-Key`.
+
+Admin/operator routes are also outside the public API-key gate, but they remain Cloudflare-Access-gated and are supported only through `ops-api.pharos.watch` or the `ops.pharos.watch/api/admin/*` Pages proxy.
 
 The worker stores only the key prefix plus a peppered HMAC of the secret portion. Admin callers create, rotate, and deactivate keys through the operator lane (`ops.pharos.watch` / `ops-api.pharos.watch`); plaintext tokens are returned only once at creation/rotation time.
 
@@ -180,13 +182,15 @@ JSON API handlers use `{ "error": "message" }` JSON format. `GET /api/og/*` can 
 
 | Status | Meaning               | When                                                                                                                                                                                                     |
 | ------ | --------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 400    | Bad Request           | Invalid query parameter syntax (missing required parameter, invalid enum value, malformed numeric input, or out-of-range numeric/filter values rejected instead of being clamped or coerced silently)    |
+| 400    | Bad Request           | Missing required parameters, invalid enum values, malformed numeric input, or out-of-range numeric/filter values on handlers that opt into rejection (`rangePolicy: "reject"`). Some endpoints intentionally clamp or default selected numeric params; endpoint sections call this out where it is part of the contract. |
 | 401    | Unauthorized          | Protected public endpoint called without a valid `X-API-Key`, or admin endpoint called without a valid `ops-api` Access JWT (typically obtained through Cloudflare Access user login or service-token auth) |
+| 403    | Forbidden             | Disallowed CORS preflight from a foreign `Origin`, Pages ops proxy mutating request without a matching same-origin `Origin`, or mutating admin request missing `X-Pharos-Admin: 1` |
 | 404    | Not Found             | Unknown stablecoin ID or missing resource                                                                                                                                                                |
 | 429    | Too Many Requests     | Rate limit exceeded (global public API limiter or feedback-specific limiter)                                                                                                                             |
 | 500    | Internal Server Error | Unhandled exception (caught by `withErrorHandler`)                                                                                                                                                       |
-| 502    | Bad Gateway           | Upstream (DefiLlama / CoinGecko) fetch failed                                                                                                                                                            |
+| 502    | Bad Gateway           | Upstream fetch failed (external data provider or Pages proxy upstream), or the ops proxy received a Cloudflare Access login redirect from `ops-api` |
 | 503    | Service Unavailable   | Cache-passthrough endpoint where cache has never been populated, where the cached payload is corrupt / rejected by validation, or `MAINTENANCE_MODE=true` (global kill switch via `wrangler secret put`) |
+| 504    | Gateway Timeout       | Pages `/_site-data/*` or `/api/admin/*` proxy timed out waiting for its Worker upstream (10 s default; 20 s for ops `/api/status` and `/api/status-history`) |
 
 **Rule:** Cache-passthrough handlers return **503** when data hasn't been populated yet or when the stored cache payload is malformed and rejected at read time. Query handlers that find no matching rows return **200** with empty results (e.g., `{ events: [], total: 0 }`). When `MAINTENANCE_MODE` is set to `"true"`, all non-`OPTIONS` requests immediately return `503` with `{ "error": "maintenance", "message": "..." }` — used during DB migrations. `OPTIONS` CORS preflights are handled before the maintenance gate.
 
@@ -257,7 +261,8 @@ Full stablecoin list with current supply, price, chain breakdown, and FX rates. 
 ```json
 {
   "peggedAssets": [StablecoinData, ...],
-  "fxFallbackRates": { "peggedEUR": 1.082, "peggedGBP": 1.26 }
+  "fxFallbackRates": { "peggedEUR": 1.082, "peggedGBP": 1.26 },
+  "_meta": { "updatedAt": 1710500000, "ageSeconds": 42, "status": "fresh" }
 }
 ```
 
@@ -884,7 +889,8 @@ Sky/USDS protocol status — whether the freeze module is currently active.
 {
   "freezeActive": false,
   "implementationAddress": "0x1923dfee706a8e78157416c29cbccfde7cdf4102",
-  "lastChecked": 1771809338
+  "lastChecked": 1771809338,
+  "_meta": { "updatedAt": 1710500000, "ageSeconds": 42, "status": "fresh" }
 }
 ```
 
@@ -902,12 +908,13 @@ Safety ratings from [bluechip.org](https://bluechip.org) for covered stablecoins
 
 **Cache:** slow — `X-Data-Age` and `Warning` headers included.
 
-**Response:** Object keyed by Pharos stablecoin ID.
+**Response:** Object keyed by Pharos stablecoin ID, plus top-level `_meta` freshness metadata.
 
 ```json
 {
   "usdt-tether": BluechipRating,
-  "usdc-circle": BluechipRating
+  "usdc-circle": BluechipRating,
+  "_meta": { "updatedAt": 1710500000, "ageSeconds": 42, "status": "fresh" }
 }
 ```
 
@@ -1514,6 +1521,8 @@ Dynamic Open Graph PNG images used by share buttons and page metadata.
 
 - `404` for unknown coin IDs or unknown OG routes
 - `503` when required cached data is not yet available
+- `400` for malformed URI encoding in `/api/og/stablecoin/:id`
+- `500` with `text/plain` body when OG image rendering fails
 
 `/api/og/stablecoin/:id` accepts tracked public stablecoin IDs only. The renderer assembles each card from cached stablecoin, DEWS, PSI, report-card, depeg, liquidity, and mint/burn data on the worker.
 
@@ -1822,7 +1831,8 @@ Cache-backed yield rankings written by the `sync-yield-data` cron. The endpoint 
     },
     "dlPools": { "mode": "dex-cache", "ageSeconds": 240, "poolCount": 812 },
     "safetySnapshot": { "kind": "ok", "coverageRatio": 0.98 }
-  }
+  },
+  "_meta": { "updatedAt": 1710500000, "ageSeconds": 42, "status": "fresh" }
 }
 ```
 
@@ -2700,6 +2710,8 @@ The top-line `external` bucket is `api.pharos.watch` traffic not classified as s
 | `routeLimit` | `integer` | `20`    | Max per-route rows returned in the route breakdown |
 | `apiKeyLimit` | `integer` | `25`   | Max per-key rows returned in the keyed public-API breakdown |
 
+Malformed numeric params return `400`; out-of-range numeric params are clamped to the documented bounds.
+
 **Response shape:** `ApiRequestAttributionResponse` (defined in `shared/types/index.ts`)
 
 `ApiRequestAttributionResponse` includes:
@@ -3073,7 +3085,7 @@ Queues a deferred daily-digest regeneration, bypassing the normal 1-hour dedup c
 
 **Status:** `202 Accepted`
 
-The worker enqueues the digest run in `waitUntil()` and returns immediately so the Access-gated ops proxy does not need to hold the HTTP request open for the full Anthropic generation window. The background run is still logged against the `daily-digest` cron history, including manual `skipped_locked` outcomes when another digest run already holds the lease.
+The worker no longer uses HTTP `waitUntil()` for this action. It enqueues the request in D1 and returns immediately so the Access-gated ops proxy does not need to hold the HTTP request open for the full Anthropic generation window. The scheduled poll logs the eventual run against the `daily-digest` cron history, including manual `skipped_locked` outcomes when another digest run already holds the lease.
 
 Unhandled pre-enqueue failures are wrapped by the shared error handler and return `500` with `{ "error": "Internal Server Error" }`.
 
@@ -3344,6 +3356,8 @@ Returns historical probe-run data for a single endpoint over the last N days (1-
 
 **Authentication:** admin. **Required query:** `?path=<probe-path>`. **Optional:** `?days=<1-30>` (default 7).
 
+Malformed `days` defaults to `7`; out-of-range `days` is clamped to `1..30`.
+
 **Response**
 
 ```json
@@ -3368,6 +3382,8 @@ Returns historical probe-run data for a single endpoint over the last N days (1-
 Returns the last N admin mutation actions (action name, actor, target, result, HTTP status, details) for post-incident audit.
 
 **Authentication:** admin. **Optional query:** `?limit=<1-200>` (default 50).
+
+Malformed `limit` defaults to `50`; out-of-range `limit` is clamped to `1..200`.
 
 **Response**
 

@@ -12,7 +12,7 @@ const depegDews = createMethodologyVersion({
       summary:
         "DEWS now applies a bounded per-peg-type contagion amplifier (max 1.2x) derived from the same cycle's first-pass DANGER/WARNING bands, on top of the existing systemic PSI amplifier.",
       impact: [
-        "A tracked stablecoin entering DANGER/WARNING now raises other same-peg-type coins' scores by up to 20%",
+        "A tracked stablecoin entering DANGER/WARNING now raises other same-peg-type coins by up to 15% under current constants (1.15x / 1.08x); the amplifier is defensively capped at 20%",
         "First-pass coins that themselves are DANGER/WARNING do not contagion-amplify themselves",
         "Amplifier is clamped, explainable (no learned weights), and surfaced on /api/stress-signals as amplifiers.contagion",
       ],

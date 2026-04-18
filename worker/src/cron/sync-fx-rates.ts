@@ -34,7 +34,7 @@ import {
  * Frankfurter/ECB does not publish them all directly.
  * Supported Chainlink feeds overlay the reference cache for a curated subset
  * of fiat and commodity pegs when the on-chain quotes are fresh and plausible.
- * Runs every 15 minutes.
+ * Triggered every 15 minutes, with an internal 30-minute write/fetch cooldown.
  */
 
 export async function syncFxRates(

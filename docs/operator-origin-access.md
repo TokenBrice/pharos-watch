@@ -70,9 +70,11 @@ Consumed by the Worker's admin auth layer (`worker/src/lib/auth.ts`) for Access 
 Canonical runtime groupings now live in code:
 
 - Worker: `worker/src/lib/env.ts` (`WORKER_REQUIRED_ENV_KEYS`, `WORKER_OPTIONAL_ENV_KEYS`, `WORKER_RESERVED_ENV_KEYS`, `WORKER_ACTIVE_ENV_KEYS`)
-- Pages Functions: `functions/lib/ops-env.ts` (`PAGES_FUNCTIONS_REQUIRED_ENV_KEYS`, `PAGES_FUNCTIONS_OPTIONAL_ENV_KEYS`, `PAGES_FUNCTIONS_RESERVED_ENV_KEYS`, `PAGES_FUNCTIONS_ACTIVE_ENV_KEYS`)
+- Pages Functions: `functions/lib/ops-env.ts` (`PAGES_FUNCTIONS_*`) and `functions/lib/site-api-env.ts` (`SITE_DATA_FUNCTIONS_*`)
 
 Use those exports as the source of truth when auditing Cloudflare bindings before deploy. The same binding name can be reserved on one runtime and active on the other; for example `OPS_API_ORIGIN` and `CF_ACCESS_OPS_UI_AUD` are worker-reserved but Pages-active.
+
+For `/_site-data/*`, configure `SITE_API_SHARED_SECRET`; production Pages hosts also require `SITE_API_ORIGIN=https://site-api.pharos.watch`. Bind `DB` to the shared D1 database for durable site-data attribution telemetry.
 
 ---
 
@@ -116,10 +118,17 @@ Required active bindings:
 - `CF_ACCESS_TEAM_DOMAIN`
 - `CF_ACCESS_OPS_UI_AUD`
 
+For the site-data proxy:
+
+- `SITE_API_SHARED_SECRET`
+- `SITE_API_ORIGIN=https://site-api.pharos.watch` on production Pages hosts
+- `DB` for durable site-data attribution telemetry
+
 Optional active overrides (the proxy has production defaults for these already):
 
 - `OPS_UI_ORIGIN`
 - `OPS_API_ORIGIN`
+- `SITE_ORIGIN`
 
 Reserved but currently unused by the Pages proxy/runtime:
 

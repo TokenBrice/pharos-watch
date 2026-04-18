@@ -64,11 +64,11 @@ For deployment/worktree operating procedure (including the local merge gate befo
    - `npm run coverage:critical`
    - `cd worker && npx tsc --noEmit` when `worker_changed=true`
    - `cd worker && npx tsc --noEmit -p tsconfig.scripts.json` when `worker_changed=true`
-3. `detect-changes` (push/manual deploy workflow only):
+3. `detect-changes` (push/manual deploy workflow; same classifier also runs in pull-request checks):
    - Diffs `github.event.before...github.sha` on `push`
    - Emits `deploy_required`, `worker_changed`, and `pages_changed`
-   - Marks worker/API deploy work as required only when the push touches worker/shared runtime or worker-deploy infra files
-   - Marks Pages deploy work as required only when the push touches Pages-impacting paths (`src/`, `shared/`, `functions/`, `public/`, `data/`, selected build/config scripts, or Pages/deploy workflow files)
+   - Marks worker/API deploy work as required when the diff touches worker/shared runtime, package/deploy infra, `.github/actions/`, `scripts/lib/`, shared guardrail scripts, worker operational scripts, or worker-specific checks/smokes
+   - Marks Pages deploy work as required when the diff touches Pages runtime paths, package/deploy infra, `.github/actions/`, `scripts/lib/`, shared guardrail scripts, Pages workflow files, or selected build/static-export scripts
    - Skips the heavy deploy workflow entirely when neither Pages nor worker deploy surfaces changed
    - Forces the full path on `workflow_dispatch`
 4. `upload-worker-version` (needs `validate` and `detect-changes`):

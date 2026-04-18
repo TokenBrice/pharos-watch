@@ -202,6 +202,7 @@ Each dispatch run loads:
   - `alert:dews-alertable-snapshot`
   - `alert:depeg-snapshot`
   - `alert:safety-snapshot`
+  - `alert:launch-snapshot`
 
 When `alert:dews-alertable-snapshot` is absent (for example, immediately after deploy), the dispatcher rebuilds it from the raw DEWS snapshot so the rollout does not require a noisy cold start.
 
@@ -209,9 +210,9 @@ Snapshots older than `24 hours` are treated as stale and are reseeded before any
 
 ### First-Run / Stale-Snapshot Behavior
 
-If the raw DEWS/depeg/safety snapshots are missing, unparsable, or older than 24 hours, or if an existing `alert:dews-alertable-snapshot` is stale:
+If the raw DEWS/depeg/safety/launch snapshots are missing, unparsable, or older than 24 hours, or if an existing `alert:dews-alertable-snapshot` is stale:
 
-1. Current DEWS/depeg/safety state is written back to all four snapshot cache keys.
+1. Current DEWS/depeg/safety/launch state is written back to the snapshot cache keys.
 2. No subscriber messages are sent for that run.
 3. The cron returns metadata with `snapshotSeeded: true`.
 
@@ -226,6 +227,7 @@ This prevents a cold start from blasting subscribers with every current conditio
 - Depeg worsening milestones by comparing current active event severity to the prior snapshot
 - Depeg resolutions by checking which prior active depegs disappeared and then loading the corresponding closed event rows
 - Safety-grade changes by comparing each coin's latest `safety_grade_history` row to the prior snapshot
+- Launch promotions by comparing the current launch snapshot to `alert:launch-snapshot`
 - Methodology-version-only safety regrades are suppressed from user alerts
 
 If the cached safety snapshot is missing a coin, the dispatcher suppresses the alert unless that coin's latest grade-change row is newer than the cached snapshot timestamp. This avoids false `UNKNOWN → grade` alerts when repairing older partial snapshots or when a newly tracked coin gets its first seed row.

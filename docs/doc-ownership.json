@@ -42,8 +42,8 @@
     {
       "name": "frontend-routes",
       "sources": ["src/app/**", "src/components/**", "src/hooks/**", "src/lib/page-metadata.ts", "src/app/sitemap.ts", "src/app/robots.ts"],
-      "docs": ["docs/architecture.md", "docs/homepage.md", "docs/start-page.md", "docs/stablecoin-detail-page.md", "docs/chains-page.md", "docs/coverage-page.md", "docs/status-dashboard.md"],
-      "notes": ["Use route-specific docs from docs/README.md when the touched page has a dedicated contract."]
+      "docs": ["docs/README.md", "docs/architecture.md", "docs/homepage.md", "docs/start-page.md", "docs/stablecoin-detail-page.md", "docs/chains-page.md", "docs/coverage-page.md", "docs/status-dashboard.md"],
+      "notes": ["Start with docs/README.md Public Route Coverage to select the route-specific contract; the listed docs are high-churn examples, not the full route-doc set."]
     },
     {
       "name": "design-system",
@@ -54,7 +54,7 @@
     {
       "name": "methodology",
       "sources": ["shared/lib/*-version.ts", "shared/lib/report-card*.ts", "shared/lib/peg-score.ts", "shared/lib/dews-config.ts", "shared/lib/liquidity-score-weights.ts", "worker/src/lib/stability-index.ts", "worker/src/lib/mint-burn-scoring.ts", "worker/src/lib/dews.ts", "src/app/methodology/**"],
-      "docs": ["docs/methodology-page.md", "docs/report-cards.md", "docs/depeg-detection.md", "docs/dews.md", "docs/dex-liquidity.md", "docs/stability-index.md", "docs/mint-burn-flows.md", "docs/yield-intelligence.md"],
+      "docs": ["docs/methodology-page.md", "docs/report-cards.md", "docs/report-cards-timeline.md", "docs/depeg-detection.md", "docs/dews.md", "docs/depeg-dews-timeline.md", "docs/dex-liquidity.md", "docs/liquidity-score-timeline.md", "docs/stability-index.md", "docs/stability-index-timeline.md", "docs/mint-burn-flows.md", "docs/mint-burn-flows-timeline.md", "docs/yield-intelligence.md", "docs/yield-intelligence-timeline.md", "docs/pricing-pipeline.md", "docs/pricing-pipeline-timeline.md", "docs/blacklist-tracker.md", "docs/blacklist-tracker-timeline.md", "docs/chain-health-timeline.md"],
       "notes": ["Also update the relevant timeline doc for versioned methodology changes."]
     },
     {

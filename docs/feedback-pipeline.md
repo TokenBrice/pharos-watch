@@ -127,6 +127,28 @@ Implemented in D1 via the `feedback_rate_limit` table. Logic:
 **D1 schema** (now part of `worker/migrations/0000_baseline.sql`; see `worker/migrations/MANIFEST.md` for the pre-squash lineage):
 
 ```sql
+CREATE TABLE IF NOT EXISTS feedback_submissions (
+  submission_id TEXT PRIMARY KEY,
+  created_at INTEGER NOT NULL,
+  submitted_at INTEGER,
+  status TEXT NOT NULL,
+  feedback_type TEXT NOT NULL,
+  title TEXT,
+  description TEXT NOT NULL,
+  expected_value TEXT,
+  stablecoin_id TEXT,
+  stablecoin_name TEXT,
+  page_url TEXT NOT NULL,
+  peg_value TEXT,
+  contact_consent INTEGER NOT NULL DEFAULT 0,
+  contact_channel TEXT,
+  contact_handle TEXT,
+  github_target_kind TEXT,
+  github_target_number INTEGER,
+  github_target_url TEXT,
+  last_error TEXT
+);
+
 CREATE TABLE IF NOT EXISTS feedback_rate_limit (
   ip_hash      TEXT    NOT NULL,
   submitted_at INTEGER NOT NULL   -- Unix timestamp (seconds)
@@ -135,6 +157,8 @@ CREATE TABLE IF NOT EXISTS feedback_rate_limit (
 CREATE INDEX IF NOT EXISTS idx_feedback_rate_limit_ip
   ON feedback_rate_limit(ip_hash, submitted_at);
 ```
+
+`feedback_submissions` is retained in the schema as durable storage for the feedback domain, but the current runtime path creates the GitHub issue directly and does not yet persist one row per submission there.
 
 #### Auto-verification (data corrections)
 

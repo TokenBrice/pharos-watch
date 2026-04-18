@@ -123,14 +123,15 @@ If a feature gains richer user-facing states, update both `src/lib/coverage.ts` 
 
 ## UX Contract
 
-- The feature snapshot comes first and answers the breadth question before the page shifts into per-coin inspection.
+- The feature snapshot comes first and answers the breadth question before the page shifts into source context and per-coin inspection.
+- The pricing-source card renders after the feature snapshot when consensus-source data is available.
 - Search filters by name and ticker.
 - Quick filters are grouped as tier filters (`All coins`, `Fully available`, `Fully headline`), feature filters (`Redemption`, `Yield`, `Reserves`, `Flows`, `Blacklist`), and gap filters (`No Safety`, `No DEX`, `No Reserves`, `Weak price`, `No Flows`, `No Dependency`).
 - The `Reserves` quick filter is intentionally strict: it matches only rows where `statuses.reserves.kind === "live"`, the score-grade live reserve state, not `Curated-Validated` or `Proof`.
 - Default sort is descending live market cap.
 - On small screens, the matrix adapts into scan-first per-coin cards that preview the highest-signal statuses and expand for the remaining states.
 - From `md` upward, the full comparison table renders with the first column sticky.
-- The per-coin matrix comes second and is explicitly positioned as the asset-level drill-down surface.
+- The per-coin matrix renders after the pricing-source card and is explicitly positioned as the asset-level drill-down surface.
 - A compact `CoverageLensSummary` block sits above the matrix to show the active search/filter lens and the tracked market-cap share currently in view.
 - The status legend remains an inline disclosure above the matrix; there is no separate full-page explainer block.
 - Shared stale-data banners surface freshness problems from the stablecoins, peg-summary, dex-liquidity, redemption-backstops, yield-rankings, mint-burn-flows, and report-cards queries without collapsing the structural coverage view.

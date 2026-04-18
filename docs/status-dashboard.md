@@ -43,13 +43,13 @@ The active frontend operator mode is now:
 - Ops proxy route: `functions/api/admin/[[path]].ts`
 - Pure derived-data helpers: `src/lib/status-dashboard-model.ts`
 - Decomposed UI components: `src/components/status/*`
-- The `/admin/` page shell adds a command-center top fold above the widget stack:
-  - a compact triage utility bar for refresh/auth state (`RefreshCountdown`, sign-out, state-evaluation/status-payload/per-lane fetch chips, and a sync-floor age chip based on the oldest critical query)
-  - consolidated overall-status hero (`StatusBanner`) + a short blocker-first watchlist
-  - when hysteresis is still holding `overallStatus` above `rawOverallStatus`, the hero switches into recovery-hold copy instead of reusing the active-incident stale headline
-  - a promoted `Recommended now` action strip derived from blocking causes and availability-impacting cron lanes only
-  - a `Follow this order` lane list that mirrors the priority-ranked section order
-  - a sticky `LongformScrollspyNav` rail for section-level navigation while scrolling
+- The `/admin/` page shell adds a command-center top fold above the lane stack:
+  - a compact triage header with overall status, recovery-hold chip when applicable, holding age, `FreshnessIndicator`, `RefreshCountdown`, and sign-out
+  - blocker, cron-error, public-health, watch, reserve-drift, and classification-warning summary badges
+  - a current-blockers card capped to the top three blockers until expanded
+  - a promoted `Recommended Now` action strip derived from blocking causes and unhealthy cron lanes
+  - a `NoticeRail` below the top fold for client-stale, public-health divergence, and hook fetch failures
+  - a sticky `LongformScrollspyNav` rail labeled `Jump to Lane`, driven by the ranked `sections` model
 - `/admin/` disables indexing (`robots: { index: false, follow: false }`)
 - `/status/` stays read-only, uses only public read endpoints, and is public/indexable through its route metadata and sitemap entry
 - The public `/status/` top fold now keeps browser-sync metadata inside a dedicated `Live watch` side panel instead of the page-title row, so the page title stays stable at narrow and medium widths
@@ -61,9 +61,9 @@ The active frontend operator mode is now:
     - a live-watch side panel for health sample time, public-query sync floor, browser probe summary, circuit-breaker posture, refresh control, and operator-handoff note
 - `src/components/status/uptime-bar.tsx`
   - Renders the fixed 30-day public `Status runway` with explicit labeling (`Last 30d`) so the hero summary keeps a stable scope even while the transition table is filtered
-- The public `Overview` lane now uses flatter signal cards for mint/burn sync, blacklist ingestion, and a dedicated impacted-surfaces card that translates raw health flags into the public routes most likely to mislead readers
+- The public `Overview` lane uses flatter signal cards for mint/burn sync, blacklist ingestion, optional Telegram bot health, and impacted public surfaces
 - The public blacklist-ingestion card keeps historical low-ratio amount gaps visible, but only recent or threshold-crossing gaps inherit warning/stale treatment; this matches the shared blacklist gap thresholds instead of flagging any non-zero backlog as degraded
-- Public cache freshness tables still show the shared cache-age ratio bands (`>1.5x` degraded, `>2.0x` stale), but the hero and impacted-surface callouts now follow the full shared cache-impact floor: missing cache rows remain stale, and source-freshness or repeated cached-fallback mode can degrade/stale a lane even when the age ratio is still inside target
+- Public cache freshness tables show the shared cache-age ratio bands (`>8x` degraded, `>12x` stale), while the hero and impacted-surface callouts follow the full shared cache-impact floor: missing cache rows remain stale, and source-freshness or repeated cached-fallback mode can degrade/stale a lane even when the age ratio is still inside target
 - The public mint/burn card, hero tile, and impacted-surface callout now follow the same backend lane contract as `/api/health`: sync freshness is primary, but a fresh cache still degrades publicly when the critical mint/burn lane's latest run is unhealthy
 - The public circuit-breaker hero tile, reliability summary badge, and public breaker table use the same public-impact circuit key filter as `/api/health`: `live-reserves:*` and `dexscreener-search` breaker states remain available in the raw health payload and admin reliability view, but they do not make the public `/status/` surface report an open public-impact breaker
 - Public `Overview` and `Reliability` lane shells use theme-aware tinted gradients with elevated inner cards so light mode keeps the same hierarchy without inheriting the dark-only monitor slabs
@@ -471,6 +471,7 @@ Status-page manual actions are router-dispatched from shared endpoint metadata (
 - `POST /api/reset-blacklist-sync`
 - `GET /api/debug-sync-state`
 - `POST /api/remediate-blacklist-amount-gaps`
+- `POST /api/backfill-blacklist-current-balances`
 - `POST /api/backfill-depegs`
 - `POST /api/backfill-supply-history`
 - `POST /api/backfill-cg-prices`

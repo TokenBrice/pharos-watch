@@ -18,8 +18,8 @@ The cached `/api/stablecoins` payload is either missing or older than its config
 
 - **Historical price backfill:** `backfill-cg-prices` repairs historical `supply_history` price rows; it does not republish the `stablecoins` cache.
 - **Republish cache:** inspect `sync-stablecoins`, clear a stuck lease or provider breaker when applicable, then let the next quarter-hourly run publish the cache. Use `backfill-cg-prices` only when the incident also points at missing historical CoinGecko prices.
-- **Circuit breaker:** if a specific provider breaker is open, `POST /api/reset-circuit-breaker?circuit=<source>` (via curl with `X-Pharos-Admin: 1` + `Idempotency-Key`, or `wrangler`). Contextual UI button is a follow-up.
-- **Cron lease:** if `sync-stablecoins` shows consecutive `skipped_locked` runs, `POST /api/reset-cron-lease?job=sync-stablecoins`. Same auth pattern.
+- **Circuit breaker:** if a provider breaker is open, call `POST https://ops-api.pharos.watch/api/reset-circuit-breaker?circuit=<source>` with `CF-Access-Client-Id`, `CF-Access-Client-Secret`, `X-Pharos-Admin: 1`, and an `Idempotency-Key`.
+- **Cron lease:** if `sync-stablecoins` shows consecutive `skipped_locked` runs, call `POST https://ops-api.pharos.watch/api/reset-cron-lease?job=sync-stablecoins` with the same Access service-token + `X-Pharos-Admin` + `Idempotency-Key` pattern.
 
 ## Prevention
 

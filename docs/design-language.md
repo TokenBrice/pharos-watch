@@ -21,7 +21,7 @@ Light mode keeps the same hierarchy as dark mode, but status/accent text is cali
 
 ### Typography carve-out
 
-Newsreader serif is reserved for the Daily Digest editorial surfaces: the `/digest/**` route and the homepage `DailyDigest` preview card. The detail-page `AiSummary` component uses Georgia serif (`font-serif`) for its AI-authored narrative paragraph — this is a second intentional carve-out. Every other dashboard panel on Pharos — including the homepage Market Snapshot, Core Monitoring band, Research Surfaces band, and all stablecoin-detail cards — uses Geist Sans at all weights. Do not introduce new serif usage outside these two carve-outs; a Vitest repo-level invariant in `src/lib/__tests__/design-invariants.test.ts` guards against silent drift.
+Newsreader serif is reserved for the Daily Digest editorial surfaces: the `/digest/**` route and the homepage `DailyDigest` preview card. The detail-page `AiSummary` component uses Georgia serif (`font-serif`) for its AI-authored narrative paragraph — this is a second intentional carve-out. Every other dashboard panel on Pharos — including the homepage Market Snapshot, Core Monitoring band, Research Surfaces band, and all stablecoin-detail cards — uses Geist Sans at all weights. Do not introduce new serif usage outside these two carve-outs; a Vitest invariant in `src/lib/__tests__/design-invariants.test.ts` currently guards component-level drift under `src/components/**`, while route-level files still require manual review.
 
 ### Masthead tagline
 
@@ -31,9 +31,9 @@ The `SiteHeader` tagline reads `Chart your route through the stablecoin market �
 
 On `lg+`, the detail hero's right column surfaces a four-pill `HeroSignalsRail` (Safety / Peg / Liquidity / DEWS) that quick-jumps to `#report-card` and `#liquidity`. It replaces the duplicated `SafetyGradeHero` block that used to sit opposite the Safety Score card. Mobile (`<lg`) continues to render `SafetyGradeHero` because the Safety Score card is far down scroll on narrow screens.
 
-### Shared Breadcrumb
+### Breadcrumbs
 
-`src/components/breadcrumb.tsx` is the shared breadcrumb primitive. Every deep route (stablecoin detail, peg/governance/backing landing pages, chain pages, `/start/`, etc.) should use it. Props: `items: { label: string; href?: string }[]`. The last entry is the current page and renders with `aria-current="page"`; earlier entries render as links.
+`src/components/breadcrumb.tsx` is the shared breadcrumb primitive for bespoke deep-route surfaces such as stablecoin detail. Most feature and taxonomy routes use `FeaturePageShell`, which renders its own `Dashboard / current page` breadcrumb plus `BreadcrumbJsonLd` from `breadcrumbName` and `path`. For new standard feature pages, prefer `FeaturePageShell`; for bespoke deep routes, use `Breadcrumb` directly or consolidate the two renderers first.
 
 ---
 
@@ -158,7 +158,7 @@ The digest feature employs a dual-font hierarchy that evokes newspaper headlines
 | **Body copy** | `Courier New` italic | Raw urgency — telegrams, terminals, raw intel |
 | **Metadata** | `Courier New` upright | Systematic precision — timestamps, edition numbers |
 
-This pairing creates a "broadsheet newspaper" aesthetic that signals both authority (through refined serif titles) and real-time urgency (through monospace body text). It is an **intentional design exception** — the only surface in Pharos that does not use Geist Sans/Mono for text.
+This pairing creates a "broadsheet newspaper" aesthetic that signals both authority and real-time urgency. It is one of two intentional non-Geist text treatments in Pharos, alongside the stablecoin-detail `AiSummary` Georgia serif paragraph.
 
 **Implementation**: Import styles from `@/lib/digest`:
 - `EDITORIAL_BODY_STYLE` — Courier italic for prose
@@ -169,11 +169,11 @@ This pairing creates a "broadsheet newspaper" aesthetic that signals both author
 The Stablecoin Cemetery (`/cemetery/`) employs a **unique memorial aesthetic** that is intentionally divergent from standard Pharos UI patterns:
 
 - **Tombstone visualizations**: Custom SVG-based tombstones with varying shapes (arch, hammer, cross), sizes (by peak market cap), and weathering effects (by age)
-- **Hardcoded dark palette**: Uses explicit `slate`, `stone`, and `zinc` colors for artistic atmosphere — not theme-adaptive
+- **Theme-aware memorial palette**: Uses bespoke stone/zinc accents and cause colors for the memorial atmosphere, while tombstone SVGs and cards still adapt through semantic CSS variables and light/dark Tailwind classes
 - **Cause-of-death color system**: Algorithmic failure (red), counterparty failure (amber), liquidity drain (orange), regulatory (blue), abandoned (zinc)
 - **Interactive memorial**: "Press F to pay respects" with persistent flower accumulation
 
-This is a **one-off artistic treatment** — the patterns are not intended for reuse on other pages. The hardcoded colors and bespoke components serve the specific narrative of memorializing failed stablecoins.
+This is a **one-off artistic treatment** — the patterns are not intended for reuse on other pages. The bespoke memorial colors and components serve the specific narrative of memorializing failed stablecoins.
 
 ---
 

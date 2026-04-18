@@ -19,6 +19,7 @@ if [[ -n "${OPS_API_SERVICE_TOKEN_ID:-}" && -n "${OPS_API_SERVICE_TOKEN_SECRET:-
   AUTH_HEADERS+=(
     -H "CF-Access-Client-Id: $OPS_API_SERVICE_TOKEN_ID"
     -H "CF-Access-Client-Secret: $OPS_API_SERVICE_TOKEN_SECRET"
+    -H "X-Pharos-Admin: 1"
   )
 fi
 

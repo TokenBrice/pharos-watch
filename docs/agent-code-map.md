@@ -86,7 +86,7 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `src/app/upcoming/page.tsx` - route /upcoming; default:UpcomingPage, metadata
 - `src/app/yield/client.tsx` - YieldClient
 - `src/app/yield/error.tsx`
-- ... 1 more files omitted; use `rg --files src/app` for the full list.
+- `src/app/yield/page.tsx` - route /yield; metadata
 
 ## Frontend hooks
 

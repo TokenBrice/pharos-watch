@@ -26,7 +26,9 @@ Market-cap map construction lives in `src/app/dependency-map/client.tsx` and use
 Graph construction logic lives in `src/lib/contagion-layout.ts` (called via `useMemo` from `ContagionGraph`):
 
 - Filters out `isDefunct` report cards.
-- Builds a live dependency edge set from `ACTIVE_STABLECOINS` via `buildDependencyGraphEdges()` + `filterDependencyGraphEdgesToLive()` from `@shared/lib/dependency-graph` (live source and live target only).
+- Uses `reportData.dependencyGraph?.edges` from `/api/report-cards` as the primary live dependency edge source, then filters to live source/target IDs with `filterDependencyGraphEdgesToLive()`.
+- `buildGraphData()` falls back to `buildDependencyGraphEdges(ACTIVE_STABLECOINS)` only when no `dependencyEdges` prop is provided.
+- The mobile hub summary is built from `reportData.dependencyGraph?.edges ?? []` and does not use the static fallback.
 - Removes coins with no incoming and no outgoing live dependency edges.
 - Sorts remaining coins by market cap descending.
 - Takes top `MAX_NODES = 50`, then iteratively prunes coins that are isolated inside the displayed subset and backfills from lower-ranked candidates.

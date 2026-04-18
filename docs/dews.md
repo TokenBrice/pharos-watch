@@ -90,7 +90,7 @@ Smoothed with previous reading when available.
 - **Score erosion anchors:** `[0%, 0] → [5%, 15] → [15%, 40] → [30%, 70] → [50%, 100]`
 - **TVL erosion anchors:** `[0%, 0] → [10%, 15] → [25%, 40] → [50%, 70] → [75%, 100]`
 - 50/50 blend
-- **Fail-closed:** both 7-day anchors (score erosion **and** TVL erosion) must be available. If either anchor is missing the sub-signal is marked unavailable and its weight is redistributed, instead of silently contributing `0` stress.
+- **Fail-closed:** current liquidity score is required, and at least one of the score or TVL 7-day anchors must be available. If both anchors are missing, the sub-signal is unavailable; if one anchor is missing, that side contributes 0 to the 50/50 blend.
 
 ### S_price — Price Confidence Degradation
 

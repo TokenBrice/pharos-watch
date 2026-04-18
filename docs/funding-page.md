@@ -1,6 +1,6 @@
 # Funding page
 
-Public ledger of Pharos's running costs and the donations that cover them. Stealth-released — `robots: noindex` and no navigation entry in v1.
+Public ledger of Pharos's running costs and the donations that cover them. Stealth-released — route metadata is `robots: { index: false, follow: false }` (`noindex,nofollow`), canonical `/funding/`, and the route has no sitemap or navigation entry in v1.
 
 ## Data model
 
@@ -28,7 +28,7 @@ If donation volume grows to the point where hand-curation becomes painful, promo
 
 ## Voice
 
-Match `/about`: honest, plain, concrete. No urgency, no banners, no modals. See the design spec at `agents/plans/2026-04-18-funding-page-design.md` for voice substitutions and the "nouns not verbs in card titles" rule.
+Match `/about`: honest, plain, concrete. No urgency, no banners, no modals. Keep card titles noun-led and avoid fundraising pressure copy.
 
 ## Related files
 

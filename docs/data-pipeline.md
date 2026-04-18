@@ -173,12 +173,12 @@ The sync pipeline includes multiple layers of validation to prevent bad data fro
 
 ### Why gold-api.com?
 
-The previous source (DefiLlama's `coingecko:gold` / `coingecko:silver` coins API) silently returns empty data, producing garbage peg references and phantom trillion-BPS depegs in backfilled events. gold-api.com requires no API key, and the worker only performs two live spot requests per 15-minute sync run.
+The previous source (DefiLlama's `coingecko:gold` / `coingecko:silver` coins API) silently returns empty data, producing garbage peg references and phantom trillion-BPS depegs in backfilled events. gold-api.com requires no API key, and the worker only performs two live spot requests when the 30-minute `sync-fx-rates` cooldown allows upstream work.
 
 ### Live Sync (sync-fx-rates.ts)
 
 - **Endpoint**: `GET https://api.gold-api.com/price/XAU` (gold), `GET https://api.gold-api.com/price/XAG` (silver)
-- **Request volume**: 2 requests per 15-minute cron run (gold + silver), with no repo-level rate limiter.
+- **Request volume**: 2 requests per cooldown-eligible `sync-fx-rates` run (gold + silver), with no repo-level rate limiter; the quarter-hourly trigger is internally gated to upstream work every 30 minutes.
 - **Validation**: Same `isValidRate()` bounds + delta checks as FX rates (gold: $500-$10,000/oz, silver: $5-$500/oz, max 20% change from previous value).
 - **Fallback**: If the gold-api.com live fetch fails, `sync-fx-rates.ts` now derives a fresh commodity reference from the just-written `stablecoins` cache (peer median across tracked gold tokens; single tracked silver token for silver) before inheriting the previous cached metal rate. This keeps `/api/health` anchored to an actually fresh commodity reference when the anonymous metals endpoint is blocked from Workers.
 
@@ -199,7 +199,7 @@ For fiat FX, Frankfurter remains the preferred ECB-backed source for the busines
 
 ### Budget
 
-The live `/price/` endpoint requires no API key and is called every 15-minute sync run (2 requests: gold + silver), ~5,760/month. Backfills source commodity history from CoinGecko market-chart data (via existing CoinGecko integration), so there is no separate gold-api.com historical-request budget.
+The live `/price/` endpoint requires no API key and is called only on cooldown-eligible `sync-fx-rates` runs (2 requests: gold + silver), roughly 2,880 requests/month. Backfills source commodity history from CoinGecko market-chart data (via existing CoinGecko integration), so there is no separate gold-api.com historical-request budget.
 
 ## Stability Index (PSI) Computation
 

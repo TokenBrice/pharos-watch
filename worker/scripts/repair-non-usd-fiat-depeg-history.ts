@@ -230,8 +230,11 @@ async function fetchOpsJson<T>(path: string, init?: RequestInit): Promise<T> {
   const headers = new Headers(init?.headers ?? {});
   headers.set("CF-Access-Client-Id", id);
   headers.set("CF-Access-Client-Secret", secret);
-  if (init?.method && init.method !== "GET" && !headers.has("Content-Type")) {
-    headers.set("Content-Type", "application/json");
+  if (init?.method && init.method !== "GET") {
+    headers.set("X-Pharos-Admin", "1");
+    if (!headers.has("Content-Type")) {
+      headers.set("Content-Type", "application/json");
+    }
   }
 
   const response = await fetch(`${OPS_API_BASE}${path}`, {

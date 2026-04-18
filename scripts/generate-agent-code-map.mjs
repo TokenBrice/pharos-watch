@@ -9,7 +9,7 @@ const SOURCE_EXTENSIONS = new Set([".ts", ".tsx", ".js", ".mjs", ".json", ".css"
 const SKIP_PARTS = new Set(["node_modules", ".next", "out", "coverage", ".git", ".wrangler", ".cache"]);
 
 const SECTIONS = [
-  { title: "Frontend routes", root: "src/app", maxFiles: 80, include: (file) => /\/(page|client|layout|error|not-found|robots|sitemap)\.(tsx|ts)$/.test(file) },
+  { title: "Frontend routes", root: "src/app", maxFiles: 120, include: (file) => /\/(page|client|layout|error|not-found|robots|sitemap)\.(tsx|ts)$/.test(file) },
   { title: "Frontend hooks", root: "src/hooks", maxFiles: 50, include: sourceFile },
   { title: "Frontend library", root: "src/lib", maxFiles: 50, include: sourceFile },
   { title: "Key components", root: "src/components", maxFiles: 40, include: (file) => sourceFile(file) && !file.includes("/ui/") },

@@ -8,8 +8,8 @@ Four-step computation:
 
 1. **Base score**: weighted average of 4 base dimensions (each 0-100). NR dimensions have their weight redistributed proportionally among rated ones. Requires at least 2 rated base dimensions; otherwise overall = NR.
 2. **Peg multiplier**: `final = base × (pegScore / 100) ^ 0.40`. Coins with good pegs (90+) barely affected (~4% penalty). Coins with broken pegs get sharply penalized (pegScore 10 -> 60% penalty). pegScore = NR (pure NAV tokens with no configured peg reference) -> multiplier 1.0 (no penalty). pegScore = 0 -> multiplier 0.
-3. **Active depeg cap**: coins with a severe ongoing depeg are hard-capped regardless of base score. `activeDepegBps` is the open event's absolute peak deviation, not the latest spot deviation. Active depegs >= 2500 bps (25%+) cap at F (39), >= 1000 bps (10%+) cap at D (49).
-4. **No-liquidity penalty**: `final × 0.9` when the Liquidity / Exit dimension is NR (no DEX or redemption-backstop signal at all). No free pass — as coverage matures, absence of any exit signal is increasingly suspicious. Implemented via `NO_LIQUIDITY_PENALTY = 0.9` in `report-cards.ts`.
+3. **No-liquidity penalty**: `final × 0.9` when the Liquidity / Exit dimension is NR (no DEX or redemption-backstop signal at all). No free pass — as coverage matures, absence of any exit signal is increasingly suspicious. Implemented via `NO_LIQUIDITY_PENALTY = 0.9` in `shared/lib/report-card-core.ts`.
+4. **Active depeg cap**: coins with a severe ongoing depeg are hard-capped after the no-liquidity penalty. `activeDepegBps` is the open event's absolute peak deviation, not the latest spot deviation. Active depegs >= 2500 bps (25%+) cap at F (39), >= 1000 bps (10%+) cap at D (49).
 
 Cemetery coins get a permanent F.
 

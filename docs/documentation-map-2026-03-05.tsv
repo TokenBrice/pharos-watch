@@ -1,5 +1,5 @@
 path	format	description	status	note
-docs/documentation-map-2026-03-05.tsv	tsv	Legacy-named documentation surface map	current	Filename retained from the 2026-03-05 docs reorganization; this file is a high-level map, not an exhaustive inventory, and is refreshed during later audit passes.
+docs/documentation-map-2026-03-05.tsv	tsv	Legacy-named non-canonical documentation surface map	reference	Filename retained from the 2026-03-05 docs reorganization; audit aid only. Use docs/README.md and README.md as canonical; this file is not exhaustive and should not drive ownership or route coverage decisions.
 README.md	md	Repo overview and top-level entry point	current	Canonical repo-adjacent doc outside `/docs/`; covers setup, architecture summary, and deploy overview.
 docs/README.md	md	Documentation index	current	Canonical index into the `/docs/` corpus.
 docs/	dir	Canonical product and system docs	current	Active Pharos documentation corpus.

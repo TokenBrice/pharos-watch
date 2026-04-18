@@ -285,7 +285,7 @@ While event is open:
   - Direction change with authoritative or DEX-confirmed input: close old, open new
   - Direction change with `confirm_required` input: close old, insert replacement pending candidate
   - Trusted DEX disagreement on the same side is logged, but does not by itself close the event
-  - Price recovers below threshold: close with recovery_price
+  - Price recovers below threshold: close only when the primary recovery is authoritative, or when trusted aggregate DEX recovery has enough protocol corroboration and no challenger veto; otherwise keep the event open
 
 Orphan cleanup:
   - Open event not processed in current run: close with recovery_price=NULL

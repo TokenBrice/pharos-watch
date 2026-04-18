@@ -179,7 +179,7 @@ Cron result statuses:
 
 Per-coin warnings still matter operationally, but they affect `reserve_sync_state.last_status` for that coin (`degraded`) and the cron metadata warning list, not the run-level `CronResult.status`.
 
-The cron loop is sequential. This is deliberate: reserve adapters can hit multiple heterogeneous sources, and the isolated hourly trigger keeps connection pressure predictable. Each adapter attempt also receives a per-attempt I/O limiter with a peak of 2 outbound HTTP/RPC operations, so internally parallel adapters such as GHO, Cap, Anzen, and crvUSD cannot consume the whole six-connection trigger pool. The leased wrapper now gives `sync-live-reserves` an explicit 12-minute wall-clock budget, and the cron itself reports `setup`, `syncing`, and `finalizing` progress stages so `/status` can show which coin is currently in flight. Within a run, fetched results are only reused when the adapter registry marks the adapter as `source-invariant` (currently `m0`, `mento`, and `sky-makercore`); coin-aware adapters such as `frax` never share cached results across coins. At the end of each run, the cron also removes stale operational artifacts for coins that are no longer live-enabled: orphaned `reserve_sync_state` rows and stale `cache.key = 'circuit:live-reserves:*'` entries are deleted so `/status` and `/api/health` stop surfacing removed reserve sources as active incidents after coverage changes.
+The cron loop is sequential. This is deliberate: reserve adapters can hit multiple heterogeneous sources, and the isolated 4-hourly trigger keeps connection pressure predictable. Each adapter attempt also receives a per-attempt I/O limiter with a peak of 2 outbound HTTP/RPC operations, so internally parallel adapters such as GHO, Cap, Anzen, and crvUSD cannot consume the whole six-connection trigger pool. The leased wrapper now gives `sync-live-reserves` an explicit 12-minute wall-clock budget, and the cron itself reports `setup`, `syncing`, and `finalizing` progress stages so `/status` can show which coin is currently in flight. Within a run, fetched results are only reused when the adapter registry marks the adapter as `source-invariant` (currently `m0`, `mento`, and `sky-makercore`); coin-aware adapters such as `frax` never share cached results across coins. At the end of each run, the cron also removes stale operational artifacts for coins that are no longer live-enabled: orphaned `reserve_sync_state` rows and stale `cache.key = 'circuit:live-reserves:*'` entries are deleted so `/status` and `/api/health` stop surfacing removed reserve sources as active incidents after coverage changes.
 
 ---
 
@@ -286,7 +286,8 @@ Cache control:
 | Response mode                              | Cache-Control                        |
 | ------------------------------------------ | ------------------------------------ |
 | `live`                                     | `public, s-maxage=3600, max-age=300` |
-| `live-stale`, fallback / unavailable modes | `public, s-maxage=300, max-age=60`   |
+| `live-stale`                               | `public, s-maxage=1800, max-age=120` |
+| fallback / unavailable modes               | `public, s-maxage=300, max-age=60`   |
 
 The optional `provenance` object is present only when the response is serving an authoritative `live` or `live-stale` snapshot:
 

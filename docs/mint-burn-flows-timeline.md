@@ -1,6 +1,6 @@
 # Mint/Burn Flow Methodology - Version Timeline
 
-Internal changelog reconstructed from git history. Covers Mint/Burn Flow `v1.0` through `v5.2` (2026-03-01 -> 2026-04-14), plus a forward-going **Pending: v6.0** section for changes shipped but not yet version-labeled.
+Internal changelog reconstructed from git history. Covers Mint/Burn Flow `v1.0` through `v6.0` (2026-03-01 -> 2026-04-17).
 
 ---
 
