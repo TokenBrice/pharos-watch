@@ -35,10 +35,5 @@ describe("MarketHighlights copy (Task 1.2)", () => {
 
     // MethodologyHint attached to the depeg kicker
     expect(html).toContain('data-testid="methodology-hint-depegBps"');
-
-    // Caption under the supply-mover kicker
-    expect(html).toContain(
-      "Green = supply expansion; red = supply contraction (not price change).",
-    );
   });
 });

@@ -249,12 +249,7 @@ export function MarketHighlights({ data, logos, pegRates }: MarketHighlightsProp
           <span className="pharos-kicker" aria-hidden="true">Biggest Depegs</span>
           <MethodologyHint topic="depegBps" />
         </div>
-        <div className="flex flex-col gap-0.5">
-          <span className="pharos-kicker" aria-hidden="true">Biggest 7-Day Supply Moves</span>
-          <span className="text-[11px] text-muted-foreground">
-            Green = supply expansion; red = supply contraction (not price change).
-          </span>
-        </div>
+        <span className="pharos-kicker" aria-hidden="true">Biggest 7-Day Supply Moves</span>
       </div>
 
       {/* ── Content ── */}
