@@ -16,38 +16,43 @@ export interface BacktestAnchor {
  * Each anchor must be independently verifiable against the depeg_events table
  * at https://api.pharos.watch/api/depeg-events?stablecoin=<id>.
  *
- * Keep the list small (< 15) and only include events that have a clear,
- * undisputed onset and resolution — noisy micro-depegs belong in the live
- * pipeline, not the backtest fixture.
+ * Scope: only DEWS-era events (post-2026-03-01 when DEWS v4.0 launched) are
+ * included so the backtest harness has stress_signal_history rows to compare
+ * against. Pre-DEWS events (USDC SVB 2023, historical USDT stress) remain
+ * relevant history but cannot score precision/recall without DEWS coverage.
+ *
+ * Keep the list small (< 15). Only include events with a clear onset,
+ * resolution, and >= 200 bps peak magnitude — noisy micro-depegs belong in
+ * the live pipeline, not the backtest fixture.
  */
 export const BACKTEST_ANCHORS: readonly BacktestAnchor[] = Object.freeze([
   {
-    stablecoinId: "usdc-usd-coin",
-    onsetAt: 1678492800, // 2023-03-11
-    resolvedAt: 1678752000, // 2023-03-14
-    peakAbsBps: 1200,
-    description: "USDC Silicon Valley Bank exposure",
+    stablecoinId: "usdx-hex-trust",
+    onsetAt: 1772493358, // 2026-03-02 23:15:58 UTC
+    resolvedAt: 1772506873, // 2026-03-03 03:01:13 UTC
+    peakAbsBps: 3101,
+    description: "USDX severe early-March stress (-3101 bps)",
   },
   {
-    stablecoinId: "usdt-tether",
-    onsetAt: 1697544000, // 2023-10-17 (illustrative; confirm against history)
-    resolvedAt: 1697632800,
-    peakAbsBps: 140,
-    description: "USDT CEX imbalance, late 2023",
+    stablecoinId: "meusd-mezo",
+    onsetAt: 1773291658, // 2026-03-12 05:00:58 UTC
+    resolvedAt: 1773294353, // 2026-03-12 05:45:53 UTC
+    peakAbsBps: 296,
+    description: "MEUSD mid-March brief depeg (-296 bps)",
   },
   {
-    stablecoinId: "fdusd-first-digital-usd",
-    onsetAt: 1730332800, // 2024-10-31 (illustrative; confirm)
-    resolvedAt: 1730419200,
-    peakAbsBps: 250,
-    description: "FDUSD Binance custody wobble",
+    stablecoinId: "uty-xsy",
+    onsetAt: 1775963092, // 2026-04-12 03:04:52 UTC
+    resolvedAt: 1775981076, // 2026-04-12 08:04:36 UTC
+    peakAbsBps: 287,
+    description: "UTY mid-April upward deviation (+287 bps)",
   },
   {
-    stablecoinId: "busd-binance-usd",
-    onsetAt: 1707782400, // 2024-02-13 wind-down residual
-    resolvedAt: null,
-    peakAbsBps: 180,
-    description: "BUSD wind-down residual",
+    stablecoinId: "meusd-mezo",
+    onsetAt: 1776124175, // 2026-04-13 23:49:35 UTC
+    resolvedAt: 1776281649, // 2026-04-15 19:34:09 UTC
+    peakAbsBps: 591,
+    description: "MEUSD April sustained depeg (+591 bps)",
   },
 ]);
 
@@ -55,5 +60,9 @@ export const BACKTEST_ANCHORS: readonly BacktestAnchor[] = Object.freeze([
  * Flip to `true` once every BACKTEST_ANCHORS entry has been verified against the live
  * /api/depeg-events response. Leaving this false causes the test below to fail, blocking a
  * merge of placeholder timestamps.
+ *
+ * Verified on 2026-04-18 via `api.pharos.watch/api/depeg-events?stablecoin=<id>&limit=100`
+ * using PHAROS_API_KEY auth. All four onset/resolved pairs and peakAbsBps values match the
+ * live stored rows within rounding.
  */
-export const BACKTEST_ANCHORS_VERIFIED = false;
+export const BACKTEST_ANCHORS_VERIFIED = true;
