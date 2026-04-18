@@ -7,7 +7,7 @@ import { runQuarterHourlySlot } from "./scheduled/quarter-hourly";
 import { runStatusSelfCheckSlot } from "./scheduled/status-self-check";
 import { runSixHourlyBlacklistSlot } from "./scheduled/hourly-blacklist";
 import { runHalfHourlyMintBurnCriticalSlot } from "./scheduled/twenty-minute-mint-burn-critical";
-import { runThirtyMinuteDexDiscoverySlot } from "./scheduled/thirty-minute-dex-discovery";
+import { runTwoHourlyDexDiscoverySlot } from "./scheduled/thirty-minute-dex-discovery";
 import { runHalfHourlyMintBurnExtendedSlot } from "./scheduled/twenty-minute-mint-burn-extended";
 import { runHalfHourlySlot } from "./scheduled/half-hourly";
 import { runFourHourlyReserveSyncSlot } from "./scheduled/hourly-live-reserves";
@@ -27,7 +27,7 @@ const SLOT_RUNNER_BY_KEY = {
   statusSelfCheckOffset: runStatusSelfCheckSlot,
   sixHourlyBlacklist: runSixHourlyBlacklistSlot,
   halfHourlyMintBurnCritical: runHalfHourlyMintBurnCriticalSlot,
-  thirtyMinuteDexDiscovery: runThirtyMinuteDexDiscoverySlot,
+  twoHourlyDexDiscovery: runTwoHourlyDexDiscoverySlot,
   halfHourlyMintBurnExtended: runHalfHourlyMintBurnExtendedSlot,
   halfHourlyOffset: runHalfHourlySlot,
   fourHourlyReserveSync: runFourHourlyReserveSyncSlot,

@@ -5,7 +5,7 @@ export const SCHEDULED_RUNNER_KEYS_BY_SCHEDULE = {
   [CRON_SCHEDULES.statusSelfCheckOffset]: "statusSelfCheckOffset",
   [CRON_SCHEDULES.sixHourlyBlacklist]: "sixHourlyBlacklist",
   [CRON_SCHEDULES.halfHourlyMintBurnCritical]: "halfHourlyMintBurnCritical",
-  [CRON_SCHEDULES.thirtyMinuteDexDiscovery]: "thirtyMinuteDexDiscovery",
+  [CRON_SCHEDULES.twoHourlyDexDiscovery]: "twoHourlyDexDiscovery",
   [CRON_SCHEDULES.halfHourlyMintBurnExtended]: "halfHourlyMintBurnExtended",
   [CRON_SCHEDULES.halfHourlyOffset]: "halfHourlyOffset",
   [CRON_SCHEDULES.fourHourlyReserveSync]: "fourHourlyReserveSync",

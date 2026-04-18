@@ -5,9 +5,9 @@ import { CRON_GROUPS, CRON_JOB_DEFINITIONS } from "@shared/lib/cron-jobs";
 describe("status cron config", () => {
   it("maps the split DEX pipeline onto separate cron groups", () => {
     expect(getStatusCronDisplay("sync-dex-discovery")).toEqual({
-      group: "half-hourly",
+      group: "multi-hourly",
       label: "DEX pool discovery",
-      schedule: "6,36 * * * *",
+      schedule: "6 */2 * * *",
       triggerMode: "isolated",
     });
     expect(getStatusCronDisplay("sync-dex-liquidity")).toEqual({
