@@ -1,24 +1,9 @@
+// Single umbrella command that fans out the prebuild audits, typecheck, lint,
+// and check:* guardrails across available CPU cores via npm-run-all2. Keeping
+// this as a one-entry list preserves the parity contract and the merge-gate
+// dry-run summary while still dropping ~60-90s off the sequential runtime.
 export const COMMON_VALIDATE_PREBUILD_COMMANDS = [
-  "npm run audit:deps",
-  "npm run audit:pricing-providers",
-  "npm run lint",
-  "npm run typecheck",
-  "npm run check:worker-boundary",
-  "npm run check:shared-cycles",
-  "npm run check:migrations",
-  "npm run check:cron-sync",
-  "npm run check:cron-connections",
-  "npm run check:doc-counts",
-  "npm run check:verified-doc-links",
-  "npm run check:doc-source-paths",
-  "npm run check:doc-sync",
-  "npm run check:env-contract",
-  "npm run check:duplicate-exports",
-  "npm run check:redemption-backstops",
-  "npm run check:unused-code",
-  "npm run check:hotspot-ratchet",
-  "npm run check:sql-safety",
-  "npm run check:stablecoin-data",
+  "npm run validate:prebuild",
 ];
 
 export const PAGES_VALIDATE_COMMANDS = [

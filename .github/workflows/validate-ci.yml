@@ -34,26 +34,7 @@ jobs:
         with:
           node-version: 25.x
           tooling-cache: "true"
-      - run: npm run audit:deps
-      - run: npm run audit:pricing-providers
-      - run: npm run lint
-      - run: npm run typecheck
-      - run: npm run check:worker-boundary
-      - run: npm run check:shared-cycles
-      - run: npm run check:migrations
-      - run: npm run check:cron-sync
-      - run: npm run check:cron-connections
-      - run: npm run check:doc-counts
-      - run: npm run check:verified-doc-links
-      - run: npm run check:doc-source-paths
-      - run: npm run check:doc-sync
-      - run: npm run check:env-contract
-      - run: npm run check:duplicate-exports
-      - run: npm run check:redemption-backstops
-      - run: npm run check:unused-code
-      - run: npm run check:hotspot-ratchet
-      - run: npm run check:sql-safety
-      - run: npm run check:stablecoin-data
+      - run: npm run validate:prebuild
       - if: ${{ inputs.pages_changed }}
         run: npm run build
       - if: ${{ inputs.pages_changed }}
