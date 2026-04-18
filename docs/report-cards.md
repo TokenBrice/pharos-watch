@@ -103,7 +103,7 @@ Three reserve-related labels mean different things:
 | Redemption telemetry | A live reserve adapter emitted current redemption capacity, fee, freshness, or route status | Can feed Redemption Backstop capacity or fee scoring; does not automatically change collateral quality |
 
 For coins with live reserve sync (`liveReservesConfig`), the collateral quality score
-can use the hourly live snapshot from `reserve_composition` instead of curated
+can use the 4-hourly live snapshot from `reserve_composition` instead of curated
 `StablecoinMeta.reserves`, but only when the snapshot is both authoritative and
 independent:
 

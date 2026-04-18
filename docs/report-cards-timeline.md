@@ -22,10 +22,10 @@ Liquidity / Exit now recognizes documented offchain issuer redemption as a secon
 
 ## v7.04 — Redemption freshness runway (2026-04-15)
 
-Liquidity / Exit now keeps redemption backstop inputs through normal hourly sync lag:
+Liquidity / Exit now keeps redemption backstop inputs through normal 4-hourly sync lag:
 
-- Report-card redemption freshness now uses a 2x hourly sync runway before suppressing redemption inputs
-- Resolved medium- and high-confidence immediate-bounded redemption backstops continue to improve Liquidity / Exit between normal hourly redemption runs
+- Report-card redemption freshness now uses a 2x 4-hourly sync runway before suppressing redemption inputs
+- Resolved medium- and high-confidence immediate-bounded redemption backstops continue to improve Liquidity / Exit between normal 4-hourly redemption runs
 - Missing, materially stale, low-confidence, impaired, eventual-only, and severe-depeg-ineligible routes still fail closed
 
 ## v7.03 — USTB live liquidity capacity (2026-04-15)
