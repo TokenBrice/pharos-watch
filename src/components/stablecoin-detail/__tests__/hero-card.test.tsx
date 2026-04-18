@@ -26,7 +26,13 @@ vi.mock("@/components/stablecoin-logo", () => ({
 }));
 
 vi.mock("@/components/methodology-hint", () => ({
-  MethodologyLabel: ({ children }: { children: React.ReactNode }) => <span>{children}</span>,
+  MethodologyHint: ({ topic }: { topic: string }) => <span data-testid={`methodology-hint-${topic}`} />,
+  MethodologyLabel: ({ children, topic }: { children: React.ReactNode; topic: string }) => (
+    <span>
+      <span>{children}</span>
+      <span data-testid={`methodology-hint-${topic}`} />
+    </span>
+  ),
 }));
 
 const coin: StablecoinMeta = {
@@ -246,6 +252,11 @@ describe("HeroCard", () => {
     expect(html).not.toContain("1Y vs USD");
     expect(html).toContain("DEWS");
     expect(html).toContain("Watch");
+    // Task 1.5: DEWS band is now a Badge with the band's semantic color token,
+    // the score keeps mono numeric rendering below/beside the badge.
+    expect(html).toContain("31/100");
+    // Band-specific methodology hint is rendered next to the DEWS label.
+    expect(html).toContain('data-testid="methodology-hint-dewsBand"');
     expect(html).not.toContain("Issuer controls");
     expect(html).toContain("Compare");
   });

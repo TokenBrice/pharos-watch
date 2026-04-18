@@ -12,6 +12,7 @@ import {
   BACKING_LABELS,
   GOVERNANCE_LABELS,
   PEG_LABELS_SHORT,
+  THREAT_BAND_COLORS,
   THREAT_BAND_LABELS,
   isThreatBand,
 } from "@shared/lib/classification";
@@ -78,7 +79,7 @@ function MetricChip({
   accentClass,
 }: {
   label: React.ReactNode;
-  value: string | number;
+  value: React.ReactNode;
   subValue?: string;
   colorClass?: string;
   accentClass?: string;
@@ -140,7 +141,7 @@ interface TertiaryMetricConfig {
   key: string;
   label: React.ReactNode;
   mobileLabel?: React.ReactNode;
-  value: string | number;
+  value: React.ReactNode;
   subValue?: string;
   colorClass?: string;
   /** Optional border-l accent class for risk-flagged chips (e.g. "border-l-2 border-l-red-500") */
@@ -417,12 +418,19 @@ export function HeroCard({
             : "text-muted-foreground",
     };
   })();
-  const dewsDisplay = (() => {
+  const dewsDisplay: { value: React.ReactNode; sub: string | undefined; color: string } = (() => {
     if (!stressSignal || !isThreatBand(stressSignal.band)) {
       return { value: "—", sub: undefined, color: "text-muted-foreground" };
     }
     return {
-      value: THREAT_BAND_LABELS[stressSignal.band],
+      value: (
+        <Badge
+          variant="outline"
+          className={`px-2 py-0.5 text-xs font-semibold tracking-tight ${THREAT_BAND_COLORS[stressSignal.band]}`}
+        >
+          {THREAT_BAND_LABELS[stressSignal.band]}
+        </Badge>
+      ),
       sub: `${Math.round(stressSignal.score)}/100`,
       color: THREAT_BAND_TEXT_COLORS[stressSignal.band],
     };
@@ -503,7 +511,7 @@ export function HeroCard({
       : []),
     {
       key: "dews",
-      label: <MethodologyLabel topic="dews">DEWS</MethodologyLabel>,
+      label: <MethodologyLabel topic="dewsBand">DEWS</MethodologyLabel>,
       value: dewsDisplay.value,
       subValue: dewsDisplay.sub,
       colorClass: dewsDisplay.color,

@@ -58,6 +58,7 @@ export type MethodologyContextKey =
   | "pegScore"
   | "pegStatus"
   | "dews"
+  | "dewsBand"
   | "depegBps"
   | "liquidityScore"
   | "effectiveTvl"
@@ -204,6 +205,14 @@ export const METHODOLOGY_CONTEXT: Record<MethodologyContextKey, MethodologyConte
     title: "DEWS",
     summary: "Forward-looking 0-100 stress score built from up to 8 signals and amplified when system-wide PSI is weak.",
     detail: "It is designed to warn before full depegs, not just describe the current price deviation.",
+    methodologyPath: "/methodology/#pegscore-dews-methodology",
+    versionLabel: DEPEG_DEWS_METHODOLOGY_VERSION_LABEL,
+    changelogPath: DEPEG_DEWS_METHODOLOGY_CHANGELOG_PATH,
+  },
+  dewsBand: {
+    title: "DEWS Band",
+    summary:
+      "DEWS (Depeg Early Warning System) band. The numeric value is the normalized stress score; the band labels the zone (Calm < Watch < Alert < Warning < Danger).",
     methodologyPath: "/methodology/#pegscore-dews-methodology",
     versionLabel: DEPEG_DEWS_METHODOLOGY_VERSION_LABEL,
     changelogPath: DEPEG_DEWS_METHODOLOGY_CHANGELOG_PATH,
