@@ -52,6 +52,12 @@ export function pegCoinCount(peg: PegCurrency): number {
   return ACTIVE_STABLECOINS.filter((c) => c.flags.pegCurrency === peg).length;
 }
 
+/** Peg landing-page URL, or null when the peg has no landing page yet. */
+export function buildPegLandingUrl(peg: PegCurrency): string | null {
+  const slug = PEG_SLUGS[peg];
+  return slug ? `/stablecoins/${slug}/` : null;
+}
+
 // ---------------------------------------------------------------------------
 // SEO intro paragraphs
 // ---------------------------------------------------------------------------

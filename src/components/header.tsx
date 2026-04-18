@@ -54,9 +54,14 @@ export function Header() {
   return (
     <header className="md:hidden sticky top-[3px] z-50 border-b border-border/80 bg-background" style={{ boxShadow: "var(--elevation-rest)" }}>
       <div className="container mx-auto flex h-14 items-center justify-between px-4">
-        <Link href="/" className="pharos-focus-ring flex items-center gap-3 rounded-md font-semibold">
+        <Link href="/" className="pharos-focus-ring flex items-center gap-2.5 rounded-md font-semibold">
           <PharosLogo size={32} priority />
-          <span className="text-[1.05rem] font-mono uppercase tracking-[0.18em]">PHAROS</span>
+          <span className="flex flex-col leading-tight">
+            <span className="text-[1.05rem] font-mono uppercase tracking-[0.18em]">PHAROS</span>
+            <span className="text-[10px] font-mono lowercase tracking-[0.08em] text-muted-foreground/80">
+              live stablecoin signals
+            </span>
+          </span>
         </Link>
 
         <Sheet open={open} onOpenChange={setOpen}>

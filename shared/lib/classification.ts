@@ -403,6 +403,14 @@ export const THREAT_BAND_COLORS: Record<ThreatBand, string> = {
   DANGER: "bg-red-500/10 text-red-700 dark:text-red-400 border-red-500/20",
 };
 
+export const THREAT_BAND_TEXT_COLORS: Record<ThreatBand, string> = {
+  CALM: "text-green-700 dark:text-green-400",
+  WATCH: "text-teal-700 dark:text-teal-400",
+  ALERT: "text-yellow-700 dark:text-yellow-400",
+  WARNING: "text-orange-700 dark:text-orange-400",
+  DANGER: "text-red-700 dark:text-red-400",
+};
+
 export const THREAT_BAND_HEX: Record<ThreatBand, string> = {
   CALM: "#22c55e",
   WATCH: "#14b8a6",

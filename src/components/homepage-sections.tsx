@@ -4,8 +4,15 @@ import Link from "next/link";
 import { ArrowRight, Compass, Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { openCommandPalette } from "@/lib/command-palette";
+import { useStartHereCallout } from "@/hooks/use-start-here-callout";
 
-export function StartHereCallout({ onOpenStartHere }: { onOpenStartHere: () => void }) {
+export function HomepageStartHereCallout() {
+  const { isReady, shouldShow, retireCallout } = useStartHereCallout();
+  if (!isReady || !shouldShow) return null;
+  return <StartHereCallout onOpenStartHere={retireCallout} />;
+}
+
+function StartHereCallout({ onOpenStartHere }: { onOpenStartHere: () => void }) {
   return (
     <section
       className="pharos-card-shell overflow-hidden border border-border/40 px-4 py-4 sm:px-5"
@@ -22,7 +29,7 @@ export function StartHereCallout({ onOpenStartHere }: { onOpenStartHere: () => v
               Start with the route that matches your job, not the full feature list.
             </h2>
             <p className="text-sm leading-relaxed text-muted-foreground">
-              The /start/ page explains what the core signals mean and points you to the right surface for market
+              The Start page takes 2 minutes and routes you to the right surface for what you need: market
               monitoring, single-coin research, yield, comparison, or alerts.
             </p>
           </div>

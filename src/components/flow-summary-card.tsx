@@ -26,6 +26,7 @@ import {
   getMintBurnSummaryTimeframe,
   getNetFlowForHours,
 } from "@/lib/mint-burn-timeframes";
+import { THIRTY_DAYS_HOURS, NINETY_DAYS_HOURS } from "@/lib/constants";
 import {
   buildFlowSummaryNarrative,
   getFlowDirectionUi,
@@ -305,32 +306,37 @@ export function FlowSummaryCard({ stablecoinId }: FlowSummaryCardProps) {
                   {formatSignedCurrency(longNetFlow)}
                 </p>
               </div>
-              <div className="space-y-1 rounded-lg border border-border/60 bg-background/30 p-3">
-                <p className="text-[11px] uppercase tracking-wide text-muted-foreground">
-                  Net 30d
-                </p>
-                <p
-                  className={cn(
-                    "font-mono tabular-nums text-sm font-semibold",
-                    getNetColor(coin.netFlow30dUsd),
-                  )}
-                >
-                  {formatSignedCurrency(coin.netFlow30dUsd)}
-                </p>
-              </div>
-              <div className="space-y-1 rounded-lg border border-border/60 bg-background/30 p-3">
-                <p className="text-[11px] uppercase tracking-wide text-muted-foreground">
-                  Net 90d
-                </p>
-                <p
-                  className={cn(
-                    "font-mono tabular-nums text-sm font-semibold",
-                    getNetColor(coin.netFlow90dUsd),
-                  )}
-                >
-                  {formatSignedCurrency(coin.netFlow90dUsd)}
-                </p>
-              </div>
+              {/* Skip fixed tiles whose window matches the coin's custom short/long. */}
+              {timeframe.shortHours !== THIRTY_DAYS_HOURS && timeframe.longHours !== THIRTY_DAYS_HOURS && (
+                <div className="space-y-1 rounded-lg border border-border/60 bg-background/30 p-3">
+                  <p className="text-[11px] uppercase tracking-wide text-muted-foreground">
+                    Net 30d
+                  </p>
+                  <p
+                    className={cn(
+                      "font-mono tabular-nums text-sm font-semibold",
+                      getNetColor(coin.netFlow30dUsd),
+                    )}
+                  >
+                    {formatSignedCurrency(coin.netFlow30dUsd)}
+                  </p>
+                </div>
+              )}
+              {timeframe.shortHours !== NINETY_DAYS_HOURS && timeframe.longHours !== NINETY_DAYS_HOURS && (
+                <div className="space-y-1 rounded-lg border border-border/60 bg-background/30 p-3">
+                  <p className="text-[11px] uppercase tracking-wide text-muted-foreground">
+                    Net 90d
+                  </p>
+                  <p
+                    className={cn(
+                      "font-mono tabular-nums text-sm font-semibold",
+                      getNetColor(coin.netFlow90dUsd),
+                    )}
+                  >
+                    {formatSignedCurrency(coin.netFlow90dUsd)}
+                  </p>
+                </div>
+              )}
             </div>
           </div>
         </div>

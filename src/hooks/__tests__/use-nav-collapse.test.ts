@@ -42,15 +42,18 @@ beforeEach(() => {
 describe("getExpandedState", () => {
   it("returns defaults when localStorage is empty", () => {
     const state = getExpandedState();
-    expect(state["data"]).toBe(false);
+    // TRACK group (data) defaults to expanded so the highest-traffic data
+    // routes are one click away on first render; tools and info stay
+    // collapsed.
+    expect(state["data"]).toBe(true);
     expect(state["tools"]).toBe(false);
     expect(state["info"]).toBe(false);
   });
 
   it("merges persisted state over defaults", () => {
-    mockStorage.setItem(STORAGE_KEY, JSON.stringify({ data: true }));
+    mockStorage.setItem(STORAGE_KEY, JSON.stringify({ data: false }));
     const state = getExpandedState();
-    expect(state["data"]).toBe(true);     // overridden
+    expect(state["data"]).toBe(false);    // overridden
     expect(state["tools"]).toBe(false);   // default
     expect(state["info"]).toBe(false);    // default
   });
@@ -58,7 +61,7 @@ describe("getExpandedState", () => {
   it("handles corrupted localStorage gracefully", () => {
     mockStorage.setItem(STORAGE_KEY, "not-json");
     const state = getExpandedState();
-    expect(state["data"]).toBe(false); // falls back to defaults
+    expect(state["data"]).toBe(true); // falls back to defaults
     expect(state["tools"]).toBe(false);
     expect(state["info"]).toBe(false);
   });
@@ -79,14 +82,18 @@ describe("useNavCollapse", () => {
   }
 
   it("renders the hydration pass from defaults before applying localStorage state", async () => {
-    mockStorage.setItem(STORAGE_KEY, JSON.stringify({ data: true }));
+    // Defaults now expand the data group, so the server pass should reflect
+    // that baseline regardless of the persisted state that will later hydrate.
+    mockStorage.setItem(STORAGE_KEY, JSON.stringify({ data: false }));
 
-    expect(renderToString(createElement(NavCollapseProbe))).toContain('data-expanded="false"');
+    expect(renderToString(createElement(NavCollapseProbe))).toContain('data-expanded="true"');
 
     const { result } = renderHook(() => useNavCollapse());
 
+    // After client hydration, the persisted override (false) should win over
+    // the default (true).
     await waitFor(() => {
-      expect(result.current.isExpanded("data")).toBe(true);
+      expect(result.current.isExpanded("data")).toBe(false);
     });
   });
 });

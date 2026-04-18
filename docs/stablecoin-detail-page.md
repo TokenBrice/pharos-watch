@@ -97,22 +97,39 @@ The server shell then appends `ExploreNextSection` after the client-rendered ana
 
 ### Rail vs section rules
 
-- `LongformScrollspyNav` does not mirror every rendered section. Its top-level entries are `report-card`, `overview`, `chart`, optional `yield`, `liquidity`, and `history` (defined in `BASE_DETAIL_SECTIONS` + conditional `YIELD_SECTION` splice).
-- `DistributionSection` renders after the chart, but it is not a top-level scrollspy entry.
-- `CollateralUsageSection` renders only when at least one other tracked stablecoin derives a dependency on the current coin, and it is also outside the top-level rail.
-- `FlowsSection` renders after liquidity, outside the top-level rail. When flow coverage exists it owns both `#flows` and `#flow-history`.
-- `PriceTransparencyCard` lives inside `OverviewSection` under the nested `price-transparency` anchor and is hidden when `coinData.price == null`.
+- `LongformScrollspyNav` pill order mirrors the actual render order top-to-bottom: `report-card` (Safety), `overview`, optional `price`, optional `reserves`, `chart` (Market), optional `yield`, `liquidity`, optional `flows`, `history`, `explore-next`. Optional pills appear only when their source data is present (`hasPriceTransparency`, `reserves != null`, `hasYieldSection`, `hasFlows`).
+- Section ids are stable; do not rename them. In particular: the Safety pill still targets `#report-card`, and the Market pill still targets `#chart`.
+- `CollateralUsageSection` renders inline within the overview zone and is not a top-level scrollspy entry.
+- `DistributionSection` renders after the chart, outside the top-level rail.
 - `DepegHistory` is omitted for NAV tokens.
 - `YieldDetailSection` decides its own empty/loading/null behavior from the cached yield rankings plus static coin metadata. Non-yield-bearing coins can still render the section when the yield stack publishes a live lending-opportunity or curated ranking row for that asset.
+
+### Hero signals rail (desktop) / SafetyGradeHero (mobile)
+
+On `lg+` the hero's right column renders `HeroSignalsRail` — a four-pill stack (Safety / Peg / Liquidity / DEWS) that jumps to `#report-card` (for Safety, Peg, and DEWS) or `#liquidity`. This replaces the former desktop `SafetyGradeHero` duplicate that sat opposite the Safety Score card. On `<lg` the hero still renders `SafetyGradeHero` because the Safety Score card is far down the scroll on narrow screens.
+
+Hero signal chips below the identity block are severity-ordered: `DEWS`, `Freezable`, `Peg`, `Liquidity`, `Excess Yield`, optional `1Y vs USD`, `Chains`. The chip previously labelled `BLACKLISTABLE` now reads `Freezable` (industry term; methodology docs still use "Blacklistable" as the canonical methodology label).
+
+### Classification taxonomy pills
+
+Below the identity block, the classification line renders three small focus-ringed taxonomy pills (governance / backing / peg) that each route to `buildGovernanceTaxonomyUrl(coin.flags.governance)`, `buildBackingTaxonomyUrl(coin.flags.backing)`, and `/stablecoins/${PEG_SLUGS[coin.flags.pegCurrency]}/` respectively. No handwritten slugs.
 
 ### Price Transparency Card
 
 - **Component:** `PriceTransparencyCard` (`src/components/stablecoin-detail/price-transparency-card.tsx`)
 - **Data:** `coinData.price`, `coinData.priceSource`, `coinData.priceConfidence`, `coinData.priceUpdatedAt` from stablecoins API; `consensusSources` and `dexPriceCheck` from peg-summary API
-- **Scrollspy ID:** `price-transparency` (label: "Price Sources")
+- **Scrollspy ID:** `price` (label: "Price"); replaces the former `price-transparency` id
 - **Mount point:** nested inside `OverviewSection` (`src/components/stablecoin-detail/overview-section.tsx`)
 - **Hidden when:** `coinData.price == null`
 - Shows current price, source label, confidence badge, update recency, and a table of all known price sources with their status (Used/Available/No data). When protocol-redeem overrides are active, all market sources show "Not applicable". DEX Price Check section renders when `dexPriceCheck` data exists.
+
+### Reserves anchor
+
+When reserves render, the treemap block is wrapped in `<section id="reserves">` so the scrollspy's Reserves pill scrolls to it.
+
+### Explore Next anchor
+
+`ExploreNextSection` wraps itself in `<section id="explore-next">` so the scrollspy's terminal Explore pill is reachable. Layout rebalanced to three equal columns at `xl+` (Taxonomy | Trackers | Compare+Related), two columns at `lg`, stacked below `lg` in order Compare → Taxonomy → Trackers → Related. Per-pair compare affordance now primaries `Open comparison` (filled button) with a secondary `Read the one-page brief` text link. Related pills cap at 4 entries with a `See all peers →` overflow pill when more exist.
 
 ---
 

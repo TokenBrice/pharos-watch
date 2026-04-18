@@ -283,14 +283,14 @@ export function OverviewSection({
     <div className="flex flex-col gap-6">
       {hasDews && <DEWSDetail stablecoinId={stablecoinId} />}
       {hasPriceTransparency && coinData && (
-        <div id="price-transparency">
+        <section id="price" aria-label="Price transparency">
           <PriceTransparencyCard
             coinData={coinData}
             consensusSources={consensusSources ?? []}
             agreeSources={agreeSources ?? []}
             dexPriceCheck={dexPriceCheck}
           />
-        </div>
+        </section>
       )}
     </div>
   ) : null;
@@ -319,7 +319,7 @@ export function OverviewSection({
               </div>
             ) : null}
             {reserves && (
-              <div>
+              <section id="reserves" aria-label="Reserve composition">
                 <ReserveTreemap
                   reserves={reserves.reserves}
                   badge={reserves.displayBadge}
@@ -347,7 +347,7 @@ export function OverviewSection({
                     Operator note: {reserves.sync.warnings.join("; ")}
                   </div>
                 )}
-              </div>
+              </section>
             )}
             {redemptionBackstop ? (
               <RedemptionBackstopCard entry={redemptionBackstop} />

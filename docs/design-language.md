@@ -19,6 +19,22 @@ The default theme class on load is `dark`, with a user toggle for light mode.
 
 Light mode keeps the same hierarchy as dark mode, but status/accent text is calibrated one step darker to preserve readability on pale surfaces (typical pattern: `text-*-700 dark:text-*-400`).
 
+### Typography carve-out
+
+Newsreader serif is reserved for the Daily Digest editorial surfaces: the `/digest/**` route and the homepage `DailyDigest` preview card. The detail-page `AiSummary` component uses Georgia serif (`font-serif`) for its AI-authored narrative paragraph — this is a second intentional carve-out. Every other dashboard panel on Pharos — including the homepage Market Snapshot, Core Monitoring band, Research Surfaces band, and all stablecoin-detail cards — uses Geist Sans at all weights. Do not introduce new serif usage outside these two carve-outs; a Vitest repo-level invariant in `src/lib/__tests__/design-invariants.test.ts` guards against silent drift.
+
+### Masthead tagline
+
+The `SiteHeader` tagline reads `Chart your route through the stablecoin market — live peg, safety, liquidity, and dependency signals on every tracked coin.` It is exposed from `md` upward (not `lg+`-only as before), with `line-clamp-2` at `md`–`lg` widths and `line-clamp-none` at `lg+`. Mobile (`<md`) keeps the compact wordmark + stat-pill card.
+
+### Hero signals rail (stablecoin detail)
+
+On `lg+`, the detail hero's right column surfaces a four-pill `HeroSignalsRail` (Safety / Peg / Liquidity / DEWS) that quick-jumps to `#report-card` and `#liquidity`. It replaces the duplicated `SafetyGradeHero` block that used to sit opposite the Safety Score card. Mobile (`<lg`) continues to render `SafetyGradeHero` because the Safety Score card is far down scroll on narrow screens.
+
+### Shared Breadcrumb
+
+`src/components/breadcrumb.tsx` is the shared breadcrumb primitive. Every deep route (stablecoin detail, peg/governance/backing landing pages, chain pages, `/start/`, etc.) should use it. Props: `items: { label: string; href?: string }[]`. The last entry is the current page and renders with `aria-current="page"`; earlier entries render as links.
+
 ---
 
 ## Global App Shell

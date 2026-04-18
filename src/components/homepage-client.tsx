@@ -8,7 +8,6 @@ import { useDexLiquidity, usePegSummary, useReportCards, useStressSignals } from
 import { useStablecoins } from "@/hooks/use-stablecoins";
 import { useLogos } from "@/hooks/use-logos";
 import { useHomepageFilters, FILTER_GROUPS } from "@/hooks/use-homepage-filters";
-import { useStartHereCallout } from "@/hooks/use-start-here-callout";
 import { useDataAnnounce } from "@/hooks/use-data-announce";
 import { DataLiveRegion } from "@/components/data-live-region";
 import { MarketHighlights } from "@/components/market-highlights";
@@ -18,7 +17,7 @@ import { FilterBar } from "@/components/filter-bar";
 import { SectionErrorBoundary } from "@/components/section-error-boundary";
 import { SectionSkeleton, ChartSkeleton } from "@/components/homepage-skeletons";
 import { PegBrowseStrip } from "@/components/peg-distribution-grid";
-import { StartHereCallout, HomepageSectionBand } from "@/components/homepage-sections";
+import { HomepageSectionBand } from "@/components/homepage-sections";
 import { Button } from "@/components/ui/button";
 import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins";
 import { UpcomingStablecoinsSection } from "@/components/upcoming-stablecoins-section";
@@ -88,7 +87,6 @@ function getHomepageFilterLabel(tag: keyof typeof FILTER_TAG_LABELS) {
 }
 
 export function HomepageClient() {
-  const { isReady: startHereReady, shouldShow: shouldShowStartHereCallout, retireCallout } = useStartHereCallout();
   const [showFilters, setShowFilters] = useState(false);
   const { data, isLoading, error: pricesError, dataUpdatedAt, refetch: refetchPrices, meta: pricesMeta } = useStablecoins();
   const { data: logos } = useLogos();
@@ -174,8 +172,6 @@ export function HomepageClient() {
         ]}
       />
 
-      {startHereReady && shouldShowStartHereCallout ? <StartHereCallout onOpenStartHere={retireCallout} /> : null}
-
       <SectionErrorBoundary name="highlights">
         <MarketHighlights data={data?.peggedAssets} logos={logos} pegRates={pegRates} />
       </SectionErrorBoundary>
@@ -191,7 +187,7 @@ export function HomepageClient() {
             {/* Active filter chips now shown inline in the table toolbar */}
           </div>
           <PegBrowseStrip pegs={ACTIVE_PEGS} pegCoinCount={pegCoinCount} />
-          <div className="mt-4">
+          <div className="mt-8">
           <StablecoinTable
             data={data?.peggedAssets}
             isLoading={isLoading}
@@ -252,7 +248,12 @@ export function HomepageClient() {
       </SectionErrorBoundary>
 
       <SectionErrorBoundary name="digest">
-        <DailyDigest variant="preview" />
+        <div className="space-y-2">
+          <p className="pharos-meta text-muted-foreground/80">
+            A short editorial summary Pharos publishes daily on the state of the market.
+          </p>
+          <DailyDigest variant="preview" />
+        </div>
       </SectionErrorBoundary>
 
       <SectionErrorBoundary name="upcoming-stablecoins">
@@ -359,13 +360,15 @@ export function HomepageClient() {
           <TotalMcapChart />
         </SectionErrorBoundary>
 
-        <SectionErrorBoundary name="peg-diversity">
-          <PegDiversityChart />
-        </SectionErrorBoundary>
+        <div className="grid grid-cols-1 gap-6 lg:grid-cols-2 lg:items-start">
+          <SectionErrorBoundary name="peg-diversity">
+            <PegDiversityChart />
+          </SectionErrorBoundary>
 
-        <SectionErrorBoundary name="non-usd-share">
-          <NonUsdShareChart />
-        </SectionErrorBoundary>
+          <SectionErrorBoundary name="non-usd-share">
+            <NonUsdShareChart />
+          </SectionErrorBoundary>
+        </div>
       </section>
 
       <section aria-label="About Pharos" className="space-y-2 border-t border-border/50 pt-6">

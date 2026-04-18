@@ -1,6 +1,7 @@
 "use client";
 
-import { useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { formatDataHealthTimestamp } from "@/lib/data-health";
 import { ArrowDownRight, ArrowUpRight, Minus } from "lucide-react";
 import { useDexLiquidity, usePegSummary, useStabilityIndex, useStressSignals } from "@/hooks/api-hooks";
 import { Card } from "@/components/ui/card";
@@ -10,9 +11,8 @@ import { useMintBurnFlows } from "@/hooks/use-mint-burn-flows";
 import { useCountUp } from "@/hooks/use-count-up";
 import { useEntranceSequence } from "@/hooks/use-entrance-sequence";
 import { QueryErrorNotice } from "@/components/query-error-notice";
-import { abbreviateNumberParts, formatCurrency, formatSignedCurrency, getNetColor } from "@shared/lib/format";
+import { abbreviateNumberParts, formatCurrency, formatSignedCurrency, getNetColor, timeAgo } from "@shared/lib/format";
 import { PSI_BAND_CLASSES, type ConditionBand } from "@shared/lib/psi-colors";
-import { THREAT_BAND_COLORS, type ThreatBand } from "@shared/lib/classification";
 import {
   buildDewsBandCounts,
   buildDexSnapshot,
@@ -20,9 +20,9 @@ import {
   buildPsiSnapshot,
   buildStablecoinSnapshot,
 } from "@/components/kpi-bar-view-model";
+import { MethodologyLabel } from "@/components/methodology-hint";
 
 type TrendDirection = "up" | "down" | "flat";
-type ElevatedThreatBand = Extract<ThreatBand, "DANGER" | "ALERT" | "WARNING">;
 const SKELETON_CARDS = Array.from({ length: 4 }, (_, i) => i);
 const KPI_CHIP_BASE =
   "inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[11px] shadow-[inset_0_1px_0_oklch(1_0_0_/0.2)] transition-colors";
@@ -41,7 +41,7 @@ function trendTextClass(value: number): string {
   return "text-muted-foreground";
 }
 
-function TrendChip({ label, value, direction }: { label: string; value: string; direction: TrendDirection }) {
+function TrendChip({ label, value, direction }: { label: React.ReactNode; value: string; direction: TrendDirection }) {
   const toneClasses =
     direction === "up"
       ? "border-green-500/25 bg-green-500/10 text-green-700 dark:text-green-400"
@@ -64,7 +64,7 @@ function InfoChip({
   value,
   tone = "neutral",
 }: {
-  label: string;
+  label: React.ReactNode;
   value: string | number;
   tone?: "neutral" | "positive" | "negative" | "warning";
 }) {
@@ -85,16 +85,6 @@ function InfoChip({
   );
 }
 
-function DewsBandChip({ band, count }: { band: ElevatedThreatBand; count: number }) {
-  const label = band === "DANGER" ? "CRITICAL" : band;
-  return (
-    <span className={`${KPI_CHIP_BASE} font-semibold ${THREAT_BAND_COLORS[band]}`}>
-      <span>{label}</span>
-      <span className="font-mono tabular-nums">{count}</span>
-    </span>
-  );
-}
-
 function KpiCell({
   label,
   value,
@@ -103,7 +93,7 @@ function KpiCell({
   centered = false,
   className = "",
 }: {
-  label: string;
+  label: React.ReactNode;
   value: React.ReactNode;
   sublabel?: React.ReactNode;
   valueClassName?: string;
@@ -176,7 +166,7 @@ function KpiMiniTile({
 interface KpiMetricDefinition {
   key: string;
   mobileLabel: string;
-  desktopLabel: string;
+  desktopLabel: React.ReactNode;
   value: React.ReactNode;
   mobileMetaPrimary?: React.ReactNode;
   mobileMetaSecondary?: React.ReactNode;
@@ -254,7 +244,7 @@ function PrimarySnapshotCard({
             </p>
           </div>
         </div>
-        <div className="flex shrink-0 flex-col items-end justify-center gap-2 min-[1024px]:max-[1599px]:hidden">
+        <div className="flex shrink-0 flex-col items-end justify-center gap-2">
           <div className="flex flex-col items-end gap-2">
             <span
               className={`${SNAPSHOT_PILL_BASE} whitespace-nowrap`}
@@ -289,6 +279,7 @@ export function KpiBar() {
   const { data: stressData, isLoading: stressLoading, error: stressError } = useStressSignals();
   const primaryError = stablecoinsQuery.error || psiQuery.error || pegError || dexError || flowError || stressError;
   const hasPrimaryData = !!psiData || !!stablecoinsData;
+  const lastUpdatedAt = Math.max(stablecoinsQuery.dataUpdatedAt ?? 0, psiQuery.dataUpdatedAt ?? 0);
 
   const { totalMcap, mcapChange24hPct, mcapChange7dPct, usdtUsdcSharePct } = useMemo(
     () => buildStablecoinSnapshot(stablecoinsData),
@@ -378,7 +369,7 @@ export function KpiBar() {
             ))}
           </div>
         </div>
-        <div className="hidden grid-cols-[minmax(0,1.1fr)_repeat(4,minmax(0,0.92fr))] divide-x divide-border/50 lg:grid">
+        <div className="hidden grid-cols-[minmax(0,1.1fr)_repeat(4,minmax(0,0.92fr))] divide-x divide-border/30 lg:grid items-stretch">
           <div className="px-4 py-3">
             <Skeleton className="h-3 w-28" />
             <Skeleton className="mt-3 h-14 w-32" />
@@ -399,62 +390,48 @@ export function KpiBar() {
   const psiDelta7dValue = psiDelta7d !== null ? `${psiDelta7d >= 0 ? "+" : ""}${psiDelta7d.toFixed(1)}` : null;
   const psiDelta30dValue = psiDelta30d !== null ? `${psiDelta30d >= 0 ? "+" : ""}${psiDelta30d.toFixed(1)}` : null;
 
-  const allDewsCalm = dewsBandCounts
-    ? dewsBandCounts.danger === 0 && dewsBandCounts.warning === 0 && dewsBandCounts.alert === 0
-    : false;
+  const dewsElevatedCount = dewsBandCounts
+    ? dewsBandCounts.danger + dewsBandCounts.warning + dewsBandCounts.alert
+    : 0;
+  const allDewsCalm = !!dewsBandCounts && dewsElevatedCount === 0;
+  // Uses the project's mandated text-*-700 dark:text-*-400 pairing per
+  // docs/design-tokens.md so the pill passes AA contrast in both themes.
+  const dewsSeverityClass = !dewsBandCounts
+    ? "text-muted-foreground"
+    : dewsBandCounts.danger > 0
+      ? "text-red-700 dark:text-red-400"
+      : dewsBandCounts.warning > 0
+        ? "text-orange-700 dark:text-orange-400"
+        : dewsBandCounts.alert > 0
+          ? "text-yellow-700 dark:text-yellow-400"
+          : "text-muted-foreground";
   const mobileDewsMeta = dewsBandCounts ? (
-    <>
-      <span className="text-foreground">DEWS:</span>
-      {dewsBandCounts.danger > 0 && (
-        <>
-          <span className="text-muted-foreground"> · </span>
-          <span className="text-red-700 dark:text-red-400">Critical {dewsBandCounts.danger}</span>
-        </>
-      )}
-      {dewsBandCounts.warning > 0 && (
-        <>
-          <span className="text-muted-foreground"> · </span>
-          <span className="text-amber-700 dark:text-amber-400">Warning {dewsBandCounts.warning}</span>
-        </>
-      )}
-      {dewsBandCounts.alert > 0 && (
-        <>
-          <span className="text-muted-foreground"> · </span>
-          <span className="text-amber-700 dark:text-amber-400">Alert {dewsBandCounts.alert}</span>
-        </>
-      )}
-      {allDewsCalm && (
-        <>
-          <span className="text-muted-foreground"> · </span>
-          <span className="text-muted-foreground">all calm</span>
-        </>
-      )}
-    </>
+    allDewsCalm ? (
+      <span className="text-muted-foreground">DEWS all calm</span>
+    ) : (
+      <span className={dewsSeverityClass}>
+        DEWS {dewsElevatedCount} on alert
+      </span>
+    )
   ) : (
     <span className="text-muted-foreground">no DEWS</span>
   );
 
-  const desktopDewsSublabel = (
-    <>
-      <span className="pharos-kicker">DEWS:</span>
-      {dewsBandCounts?.danger ? <DewsBandChip band="DANGER" count={dewsBandCounts.danger} /> : null}
-      {dewsBandCounts?.warning ? <DewsBandChip band="WARNING" count={dewsBandCounts.warning} /> : null}
-      {dewsBandCounts?.alert ? <DewsBandChip band="ALERT" count={dewsBandCounts.alert} /> : null}
-      {dewsBandCounts ? (
-        allDewsCalm ? (
-          <span className="text-[11px] text-muted-foreground">all calm</span>
-        ) : null
-      ) : (
-        <span className="text-[11px] text-muted-foreground">no data</span>
-      )}
-    </>
+  const desktopDewsSublabel = dewsBandCounts ? (
+    allDewsCalm ? (
+      <span className="text-[11px] text-muted-foreground">DEWS all calm</span>
+    ) : (
+      <span className={`text-[11px] ${dewsSeverityClass}`}>DEWS {dewsElevatedCount} on alert</span>
+    )
+  ) : (
+    <span className="text-[11px] text-muted-foreground">DEWS no data</span>
   );
 
   const metricDefinitions: KpiMetricDefinition[] = [
     {
       key: "mcap",
-      mobileLabel: "Mcap",
-      desktopLabel: "Total Stablecoin Mcap",
+      mobileLabel: "Market Cap",
+      desktopLabel: <MethodologyLabel topic="totalStablecoinMcap">Total Stablecoin Mcap</MethodologyLabel>,
       value: mcapDisplay,
       mobileMetaPrimary: <span className={mcapColorClass}>24h {mcapChange24Display}</span>,
       mobileMetaSecondary: <span className={mcap7ColorClass}>7d {mcapChange7Display}</span>,
@@ -466,7 +443,7 @@ export function KpiBar() {
             direction={hasStablecoinsData ? trendDirection(mcapChange24hPct) : "flat"}
           />
           <InfoChip
-            label="USDT+USDC share"
+            label="USDT + USDC share"
             value={usdtShareDisplay}
             tone={hasStablecoinsData && usdtUsdcSharePct >= 65 ? "warning" : "neutral"}
           />
@@ -476,46 +453,47 @@ export function KpiBar() {
     {
       key: "peg",
       mobileLabel: "Peg",
-      desktopLabel: "Peg Status",
+      desktopLabel: <MethodologyLabel topic="pegStatus">Peg Status</MethodologyLabel>,
       value: pegStatusDisplay,
       mobileMetaSecondary: mobileDewsMeta,
       desktopSublabel: desktopDewsSublabel,
     },
     {
       key: "dex-vol",
-      mobileLabel: "DEX Vol",
-      desktopLabel: "Tracked 24H DEX Vol",
+      mobileLabel: "DEX Volume",
+      desktopLabel: <MethodologyLabel topic="trackedDexVol">Tracked 24H DEX Vol</MethodologyLabel>,
       value: dexVolDisplay,
       mobileMetaPrimary: (
         <span className={hasDexData ? trendTextClass(volVs7dAvgPct) : "text-muted-foreground"}>
-          vs 7d avg {dexDeltaDisplay}
+          vs 7d average {dexDeltaDisplay}
         </span>
       ),
       mobileMetaSecondary: <span className="text-muted-foreground">Turnover {turnoverDisplay}</span>,
       desktopSublabel: (
         <>
           <TrendChip
-            label="vs 7d avg"
+            label={<MethodologyLabel topic="dexVolVsAvg">vs 7d avg</MethodologyLabel>}
             value={dexDeltaDisplay}
             direction={hasDexData ? trendDirection(volVs7dAvgPct) : "flat"}
           />
-          <InfoChip label="Turnover" value={turnoverDisplay} />
+          <InfoChip label={<MethodologyLabel topic="turnover">Turnover</MethodologyLabel>} value={turnoverDisplay} />
         </>
       ),
     },
     {
       key: "net-flow",
       mobileLabel: "Net Flow",
-      desktopLabel: "Net Mint/Burn Flow",
+      desktopLabel: <MethodologyLabel topic="netMintBurnFlow">Net Mint/Burn Flow</MethodologyLabel>,
       value: netFlow24Display,
       mobileMetaPrimary: <span className={netFlow7Class}>7d {netFlow7Display}</span>,
-      desktopSublabel: <InfoChip label="7d total" value={netFlow7Display} tone={netFlow7Tone} />,
+      desktopSublabel: <InfoChip label="7d net" value={netFlow7Display} tone={netFlow7Tone} />,
       mobileValueClassName: netFlow24Class,
       desktopValueClassName: netFlow24Class,
     },
   ];
 
   return (
+    <>
     <Card aria-label="Market snapshot" className="pharos-card-shell overflow-hidden p-0">
       <div className="flex items-center justify-between border-b border-border/60 bg-muted/20 px-4 py-2.5">
         <p className="pharos-kicker">Market Snapshot</p>
@@ -543,7 +521,7 @@ export function KpiBar() {
         >
           <PrimarySnapshotCard
             value={psiScoreDisplay}
-            band={hasPsiData ? `${psiBandDisplay} for ${psiDaysInBand}d` : ""}
+            band={hasPsiData ? `${psiBandDisplay} · ${psiDaysInBand}d in band` : ""}
             delta24h={psiDelta24hValue}
             delta7d={psiDelta7dValue}
             delta30d={psiDelta30dValue}
@@ -571,7 +549,7 @@ export function KpiBar() {
         </div>
       </div>
 
-      <div className="hidden grid-cols-[minmax(0,1.1fr)_repeat(4,minmax(0,0.92fr))] divide-x divide-border/50 lg:grid">
+      <div className="hidden grid-cols-[minmax(0,1.1fr)_repeat(4,minmax(0,0.92fr))] divide-x divide-border/30 lg:grid items-stretch">
         <div
           className="px-4 py-3"
           style={{
@@ -581,7 +559,7 @@ export function KpiBar() {
         >
           <PrimarySnapshotCard
             value={psiScoreDisplay}
-            band={hasPsiData ? `${psiBandDisplay} for ${psiDaysInBand}d` : ""}
+            band={hasPsiData ? `${psiBandDisplay} · ${psiDaysInBand}d in band` : ""}
             delta24h={psiDelta24hValue}
             delta7d={psiDelta7dValue}
             delta30d={psiDelta30dValue}
@@ -610,5 +588,30 @@ export function KpiBar() {
         ))}
       </div>
     </Card>
+    {lastUpdatedAt > 0 ? (
+      <p className="mt-1 px-1 text-[11px] text-muted-foreground">
+        Last refreshed · <RelativeAge timestamp={lastUpdatedAt} /> ·{" "}
+        <time dateTime={new Date(lastUpdatedAt).toISOString()}>
+          {formatDataHealthTimestamp(lastUpdatedAt)}
+        </time>
+      </p>
+    ) : null}
+    </>
   );
+}
+
+function RelativeAge({ timestamp }: { timestamp: number }) {
+  // Tick once per minute so output changes at each minute boundary instead of
+  // re-rendering twice per minute for identical text.
+  const [, setTickMinute] = useState(() => Math.floor(Date.now() / 60_000));
+  useEffect(() => {
+    const id = window.setInterval(() => {
+      setTickMinute((prev) => {
+        const next = Math.floor(Date.now() / 60_000);
+        return next === prev ? prev : next;
+      });
+    }, 30_000);
+    return () => window.clearInterval(id);
+  }, []);
+  return <>{timeAgo(Math.floor(timestamp / 1000))}</>;
 }

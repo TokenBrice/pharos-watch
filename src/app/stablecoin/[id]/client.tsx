@@ -83,15 +83,18 @@ const SafetyScoreHistorySection = dynamic(
   },
 );
 
-const BASE_DETAIL_SECTIONS = [
-  { id: "report-card", label: "Safety" },
-  { id: "overview", label: "Overview" },
-  { id: "chart", label: "Market" },
-  { id: "liquidity", label: "Liquidity" },
-  { id: "history", label: "History" },
-];
-
-const YIELD_SECTION = { id: "yield", label: "Yield" };
+const DETAIL_SECTION_DEFS = {
+  safety: { id: "report-card", label: "Safety" },
+  overview: { id: "overview", label: "Overview" },
+  price: { id: "price", label: "Price" },
+  reserves: { id: "reserves", label: "Reserves" },
+  market: { id: "chart", label: "Market" },
+  yield: { id: "yield", label: "Yield" },
+  liquidity: { id: "liquidity", label: "Liquidity" },
+  flows: { id: "flows", label: "Flows" },
+  history: { id: "history", label: "History" },
+  explore: { id: "explore-next", label: "Explore" },
+} as const;
 
 function DetailLoadingShell({ coin, logoSrc }: { coin: StablecoinMeta; logoSrc?: string }) {
   return (
@@ -182,9 +185,23 @@ export default function StablecoinDetailClient({ id, summary, coin, logoSrc }: S
     );
   }
 
-  const detailSections = viewModel.hasYieldSection
-    ? [...BASE_DETAIL_SECTIONS.slice(0, 3), YIELD_SECTION, ...BASE_DETAIL_SECTIONS.slice(3)]
-    : BASE_DETAIL_SECTIONS;
+  const hasPriceTransparency =
+    !!viewModel.coinData && (viewModel.coinData.price != null || !!viewModel.dexPriceCheck);
+  const s = DETAIL_SECTION_DEFS;
+  const detailSections = [
+    s.safety,
+    s.overview,
+    // Reserves renders in the left column of OverviewSection and on mobile
+    // stacks above Price, so the pill order tracks that scroll order.
+    ...(viewModel.reserves ? [s.reserves] : []),
+    ...(hasPriceTransparency ? [s.price] : []),
+    s.market,
+    ...(viewModel.hasYieldSection ? [s.yield] : []),
+    s.liquidity,
+    ...(viewModel.hasFlows ? [s.flows] : []),
+    s.history,
+    s.explore,
+  ];
 
   return (
     <div>

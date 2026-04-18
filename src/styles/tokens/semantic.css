@@ -205,9 +205,11 @@
   --surface-onboarding-gradient: linear-gradient(135deg, oklch(0.21 0.03 250 / 0.92), oklch(0.16 0.02 250 / 0.98));
 
   /* ── Homepage Zone Surfaces (Dark) ──────────────────────────── */
-  --surface-zone-monitoring: oklch(0.19 0.012 250 / 0.45);
-  --surface-zone-research:  oklch(0.175 0.008 255 / 0.40);
-  --zone-divider:           oklch(1 0 0 / 0.10);
+  /* Bumped alpha (0.45 -> 0.65, 0.40 -> 0.55) for stronger separation
+     from the page background in dark mode without changing hue. */
+  --surface-zone-monitoring: oklch(0.19 0.012 250 / 0.65);
+  --surface-zone-research:  oklch(0.175 0.008 255 / 0.55);
+  --zone-divider:           oklch(1 0 0 / 0.14);
 
   /* ── Risk Alert States (Dark) ─────────────────────────────────── */
   --risk-alert-border: var(--p-amber-400);

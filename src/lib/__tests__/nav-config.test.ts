@@ -8,10 +8,13 @@ describe("nav-config", () => {
       "/stability-index",
       "/safety-scores",
       "/yield",
-      "/telegram",
     ]);
 
-    expect(PRIMARY_NAV_ITEMS.find((item) => item.href === "/telegram")?.label).toBe("Telegram");
+    // Telegram moved out of the primary block; it lives in the TRACK data
+    // group alongside Upcoming.
+    expect(PRIMARY_NAV_ITEMS.find((item) => item.href === "/telegram")).toBeUndefined();
+    const dataGroup = NAV_GROUPS.find((group) => group.key === "data");
+    expect(dataGroup?.items.some((item) => item.href === "/telegram")).toBe(true);
   });
 
   it("keeps Digest in Analyze, renames the remaining nav sections, and excludes legacy Risk Lab grouping", () => {
