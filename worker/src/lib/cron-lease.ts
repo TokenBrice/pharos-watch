@@ -103,7 +103,6 @@ export function createLeaseOwner(job: string): string {
 
 const SLOT_EXECUTION_RUNNING_STALE_SEC = 20 * 60;
 const SLOT_EXECUTION_HEARTBEAT_SEC = 30;
-const SLOT_EXECUTION_RETENTION_SEC = 14 * 24 * 60 * 60;
 
 type SlotExecutionRow = {
   state: string;
@@ -253,16 +252,6 @@ async function finishScheduledSlotExecution(
   );
 }
 
-async function pruneScheduledSlotExecutions(db: D1Database): Promise<void> {
-  const cutoffSec = Math.floor(Date.now() / 1000) - SLOT_EXECUTION_RETENTION_SEC;
-  await runWithOverloadRetry(() =>
-    db
-      .prepare("DELETE FROM cron_slot_executions WHERE slot_started_at < ?")
-      .bind(cutoffSec)
-      .run(),
-  );
-}
-
 export async function runScheduledSlotWithFence(
   db: D1Database,
   slotKey: string,
@@ -322,9 +311,6 @@ export async function runScheduledSlotWithFence(
     throw err;
   } finally {
     clearInterval(timer);
-    void pruneScheduledSlotExecutions(db).catch((err) => {
-      console.warn("[cron-slot] Failed to prune old slot execution rows:", err);
-    });
   }
 }
 
