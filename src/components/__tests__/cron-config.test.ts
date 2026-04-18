@@ -27,11 +27,11 @@ describe("status cron config", () => {
     });
   });
 
-  it("maps live reserve sync to the dedicated hourly slot", () => {
+  it("maps live reserve sync to the dedicated 4-hourly slot", () => {
     expect(getStatusCronDisplay("sync-live-reserves")).toEqual({
-      group: "hourly",
+      group: "multi-hourly",
       label: "Live reserve sync",
-      schedule: "11 * * * *",
+      schedule: "11 */4 * * *",
       triggerMode: "shared",
     });
   });

@@ -8,7 +8,7 @@ export const SCHEDULED_RUNNER_KEYS_BY_SCHEDULE = {
   [CRON_SCHEDULES.thirtyMinuteDexDiscovery]: "thirtyMinuteDexDiscovery",
   [CRON_SCHEDULES.twentyMinuteExtendedOffset]: "twentyMinuteExtendedOffset",
   [CRON_SCHEDULES.halfHourlyOffset]: "halfHourlyOffset",
-  [CRON_SCHEDULES.hourlyReserveSync]: "hourlyReserveSync",
+  [CRON_SCHEDULES.fourHourlyReserveSync]: "fourHourlyReserveSync",
   [CRON_SCHEDULES.hourlyYieldSync]: "hourlyYieldSync",
   [CRON_SCHEDULES.fourHourlyYieldSupplemental]: "fourHourlyYieldSupplemental",
   [CRON_SCHEDULES.fiveMinuteTelegramAlerts]: "fiveMinuteTelegramAlerts",

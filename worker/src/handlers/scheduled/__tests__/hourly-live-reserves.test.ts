@@ -1,5 +1,5 @@
 import { describe, expect, it, vi, afterEach, beforeEach } from "vitest";
-import { runHourlyReserveSyncSlot } from "../hourly-live-reserves";
+import { runFourHourlyReserveSyncSlot } from "../hourly-live-reserves";
 import type { ScheduledRuntimeContext } from "../context";
 
 vi.mock("../../../cron/sync-live-reserves", () => ({
@@ -27,7 +27,7 @@ import { syncKinesisSupply } from "../../../cron/sync-kinesis-supply";
 import { checkCollateralDrift } from "../../../lib/collateral-drift";
 import { getMaxSyncAge } from "../../../lib/live-reserves-store";
 
-describe("runHourlyReserveSyncSlot", () => {
+describe("runFourHourlyReserveSyncSlot", () => {
   let runLeasedCron: ReturnType<typeof vi.fn>;
   let errorSpy: ReturnType<typeof vi.spyOn>;
 
@@ -74,7 +74,7 @@ describe("runHourlyReserveSyncSlot", () => {
   it("runs kinesis supply and drift check even when sync-live-reserves throws", async () => {
     vi.mocked(syncLiveReserves).mockRejectedValue(new Error("sync blew up"));
 
-    await runHourlyReserveSyncSlot(buildRuntime());
+    await runFourHourlyReserveSyncSlot(buildRuntime());
 
     expect(syncLiveReserves).toHaveBeenCalledTimes(1);
     expect(syncRedemptionBackstops).toHaveBeenCalledTimes(1);
@@ -90,7 +90,7 @@ describe("runHourlyReserveSyncSlot", () => {
     vi.mocked(syncRedemptionBackstops).mockRejectedValue(new Error("rb blew up"));
     vi.mocked(syncKinesisSupply).mockRejectedValue(new Error("ks blew up"));
 
-    await runHourlyReserveSyncSlot(buildRuntime());
+    await runFourHourlyReserveSyncSlot(buildRuntime());
 
     expect(checkCollateralDrift).toHaveBeenCalledTimes(1);
     expect(errorSpy).toHaveBeenCalledWith(
@@ -106,7 +106,7 @@ describe("runHourlyReserveSyncSlot", () => {
   it("swallows drift check errors and logs them", async () => {
     vi.mocked(checkCollateralDrift).mockRejectedValue(new Error("drift blew up"));
 
-    await expect(runHourlyReserveSyncSlot(buildRuntime())).resolves.toBeUndefined();
+    await expect(runFourHourlyReserveSyncSlot(buildRuntime())).resolves.toBeUndefined();
     expect(errorSpy).toHaveBeenCalledWith(
       expect.stringContaining("Drift check failed"),
       expect.any(Error),

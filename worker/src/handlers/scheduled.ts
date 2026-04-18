@@ -10,7 +10,7 @@ import { runTwentyMinuteMintBurnCriticalSlot } from "./scheduled/twenty-minute-m
 import { runThirtyMinuteDexDiscoverySlot } from "./scheduled/thirty-minute-dex-discovery";
 import { runTwentyMinuteMintBurnExtendedSlot } from "./scheduled/twenty-minute-mint-burn-extended";
 import { runHalfHourlySlot } from "./scheduled/half-hourly";
-import { runHourlyReserveSyncSlot } from "./scheduled/hourly-live-reserves";
+import { runFourHourlyReserveSyncSlot } from "./scheduled/hourly-live-reserves";
 import { runHourlyYieldSlot } from "./scheduled/hourly-yield";
 import { runYieldSupplementalSlot } from "./scheduled/yield-supplemental";
 import { runFiveMinuteTelegramSlot } from "./scheduled/five-minute-telegram";
@@ -30,7 +30,7 @@ const SLOT_RUNNER_BY_KEY = {
   thirtyMinuteDexDiscovery: runThirtyMinuteDexDiscoverySlot,
   twentyMinuteExtendedOffset: runTwentyMinuteMintBurnExtendedSlot,
   halfHourlyOffset: runHalfHourlySlot,
-  hourlyReserveSync: runHourlyReserveSyncSlot,
+  fourHourlyReserveSync: runFourHourlyReserveSyncSlot,
   hourlyYieldSync: runHourlyYieldSlot,
   fourHourlyYieldSupplemental: runYieldSupplementalSlot,
   fiveMinuteTelegramAlerts: runFiveMinuteTelegramSlot,

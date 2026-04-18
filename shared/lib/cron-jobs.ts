@@ -18,7 +18,7 @@ export const CRON_SCHEDULES = {
   thirtyMinuteDexDiscovery: "6,36 * * * *",
   twentyMinuteExtendedOffset: "13,33,53 * * * *",
   halfHourlyOffset: "10,40 * * * *",
-  hourlyReserveSync: "11 * * * *",
+  fourHourlyReserveSync: "11 */4 * * *",
   hourlyYieldSync: "20 * * * *",
   fourHourlyYieldSupplemental: "25 */4 * * *",
   fiveMinuteTelegramAlerts: "2,7,12,17,22,27,32,37,42,47,52,57 * * * *",
@@ -42,7 +42,7 @@ const CRON_SCHEDULE_BUCKETS = {
   thirtyMinuteDexDiscovery: { intervalSec: 1800, offsetSec: 6 * 60 },
   twentyMinuteExtendedOffset: { intervalSec: 1200, offsetSec: 13 * 60 },
   halfHourlyOffset: { intervalSec: 1800, offsetSec: 10 * 60 },
-  hourlyReserveSync: { intervalSec: 3600, offsetSec: 11 * 60 },
+  fourHourlyReserveSync: { intervalSec: 4 * 3600, offsetSec: 11 * 60 },
   hourlyYieldSync: { intervalSec: 3600, offsetSec: 20 * 60 },
   fourHourlyYieldSupplemental: { intervalSec: 4 * 3600, offsetSec: 25 * 60 },
   fiveMinuteTelegramAlerts: { intervalSec: 300, offsetSec: 2 * 60 },
@@ -348,9 +348,9 @@ const CRON_JOB_DEFINITIONS_BASE: readonly CronJobDefinition[] = [
   {
     job: "sync-live-reserves",
     label: "Live reserve sync",
-    group: "hourly",
-    intervalSec: 3600,
-    scheduleKey: "hourlyReserveSync",
+    group: "multi-hourly",
+    intervalSec: 4 * 3600,
+    scheduleKey: "fourHourlyReserveSync",
     triggerMode: "shared",
     maxConnections: 2, // Sequential per-coin loop with per-adapter I/O limited to 2
     connectionGroup: "reserve-sync-chain",
@@ -358,9 +358,9 @@ const CRON_JOB_DEFINITIONS_BASE: readonly CronJobDefinition[] = [
   {
     job: "sync-redemption-backstops",
     label: "Redemption backstops",
-    group: "hourly",
-    intervalSec: 3600,
-    scheduleKey: "hourlyReserveSync",
+    group: "multi-hourly",
+    intervalSec: 4 * 3600,
+    scheduleKey: "fourHourlyReserveSync",
     triggerMode: "shared",
     maxConnections: 0, // DB-only computation from cached stablecoins + liquidity data
     connectionGroup: "reserve-sync-chain",
@@ -368,9 +368,9 @@ const CRON_JOB_DEFINITIONS_BASE: readonly CronJobDefinition[] = [
   {
     job: "sync-kinesis-supply",
     label: "Kinesis supply",
-    group: "hourly",
-    intervalSec: 3600,
-    scheduleKey: "hourlyReserveSync",
+    group: "multi-hourly",
+    intervalSec: 4 * 3600,
+    scheduleKey: "fourHourlyReserveSync",
     triggerMode: "shared",
     maxConnections: 1, // 2 sequential Kinesis Horizon fetches (KAU + KAG)
     connectionGroup: "reserve-sync-chain",

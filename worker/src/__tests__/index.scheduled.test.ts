@@ -561,7 +561,7 @@ describe("worker.scheduled", () => {
     expect(cronMocks.runDiscoveryScan).toHaveBeenCalledTimes(1);
   });
 
-  it("runs live reserve sync on the dedicated hourly trigger", async () => {
+  it("runs live reserve sync on the dedicated 4-hourly trigger", async () => {
     const { ctx, waits } = makeCtx();
     const env = {
       DB: {} as D1Database,
@@ -571,7 +571,7 @@ describe("worker.scheduled", () => {
     } as const;
 
     await worker.scheduled(
-      { cron: "11 * * * *" } as ScheduledEvent,
+      { cron: "11 */4 * * *" } as ScheduledEvent,
       env as never,
       ctx,
     );

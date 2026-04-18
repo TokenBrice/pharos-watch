@@ -1,5 +1,5 @@
 /**
- * Hourly reserve-sync trigger (11 * * * *):
+ * Four-hourly reserve-sync trigger (11 * / 4 * * *):
  *   sync-live-reserves (2) → sync-redemption-backstops (0) → sync-kinesis-supply (1) → collateral drift check (0)
  *
  * Reserve adapters run sequentially; backstops are DB-only.
@@ -17,7 +17,7 @@ import type { ScheduledRuntimeContext } from "./context";
 const PERSISTENTLY_STALE_ALERT_COUNT_THRESHOLD = 3;
 const PERSISTENTLY_STALE_ALERT_MAX_AGE_SEC = 21 * DAY_SECONDS;
 
-export async function runHourlyReserveSyncSlot(runtime: ScheduledRuntimeContext): Promise<void> {
+export async function runFourHourlyReserveSyncSlot(runtime: ScheduledRuntimeContext): Promise<void> {
   try {
     await runtime.runLeasedCron("sync-live-reserves", (signal, reportProgress) =>
       syncLiveReserves(runtime.db, signal, {
@@ -64,7 +64,9 @@ export async function runHourlyReserveSyncSlot(runtime: ScheduledRuntimeContext)
     }
 
     const maxAge = await getMaxSyncAge(runtime.db);
-    if (maxAge > 6 * 3600) {
+    // Alert after ~3 missed 4-hourly runs, matching the "several missed runs"
+    // posture the previous 6h threshold gave at the prior hourly cadence.
+    if (maxAge > 12 * 3600) {
       sendAlert(
         runtime.alertWebhookUrl,
         "Live reserve sync stale",
