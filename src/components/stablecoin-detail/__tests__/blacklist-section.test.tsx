@@ -62,10 +62,18 @@ describe("BlacklistSection", () => {
     expect(container.firstChild).toBeNull();
   });
 
-  it("renders the Blacklist Activity heading when a supported coin has events", () => {
+  it("renders the Blacklist Activity heading and all three stat titles on the happy path", () => {
     vi.mocked(useBlacklistSummary).mockReturnValue(summaryStub());
-    const { getByText } = render(<BlacklistSection stablecoinId="usdc-circle" symbol="USDC" />);
+    const { getByText, getAllByText } = render(
+      <BlacklistSection stablecoinId="usdc-circle" symbol="USDC" />,
+    );
     expect(getByText(/Blacklist Activity/i)).toBeTruthy();
+    expect(getByText(/Frozen addresses/i)).toBeTruthy();
+    expect(getByText(/Frozen total/i)).toBeTruthy();
+    // Chart legend also contains "Destroy" (event-type series). The stat card
+    // label "Destroyed" is specifically the past-tense form, so match exactly.
+    expect(getAllByText(/Destroyed/).length).toBeGreaterThan(0);
+    expect(getByText(/Recent Blacklist Events/i)).toBeTruthy();
   });
 
   it("returns null when the summary errors (silent failure)", () => {

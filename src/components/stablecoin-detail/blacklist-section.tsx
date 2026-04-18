@@ -37,7 +37,7 @@ export function BlacklistSection({ symbol }: BlacklistSectionProps) {
           {isLoading || !summary ? (
             <div className="space-y-4">
               <BlacklistDetailStats symbol={symbol} stats={undefined} isLoading />
-              <Skeleton className="h-[220px] w-full rounded-xl" />
+              <Skeleton className="h-[220px] w-full rounded-xl sm:h-[260px]" />
             </div>
           ) : (
             <div className="space-y-4">

@@ -284,4 +284,108 @@ describe("handleBlacklistSummary", () => {
     const json = await res.json() as { stats: { frozenAddresses: number } };
     expect(json.stats.frozenAddresses).toBe(1);
   });
+
+  it("surfaces destroy-only coins without a freeze-ledger snapshot", async () => {
+    // USDT destroy events on Tron typically don't produce a persistent
+    // blacklist_current_balances row. The per-coin aggregations must still
+    // report destroyedTotal and populate the quarterly chart.
+    const db = mockD1([
+      {
+        match: "GROUP BY stablecoin, event_type",
+        rows: [
+          { stablecoin: "USDT", event_type: "destroy", n: 2, usd_sum: 750 },
+        ],
+      },
+      {
+        match: "WITH ranked AS",
+        rows: [
+          makeBlacklistRow({
+            id: "bl-usdt-d1",
+            stablecoin: "USDT",
+            chain_id: "tron",
+            chain_name: "Tron",
+            event_type: "destroy",
+            address: "TR1",
+            timestamp: 1_777_000_000,
+          }),
+          makeBlacklistRow({
+            id: "bl-usdt-d2",
+            stablecoin: "USDT",
+            chain_id: "tron",
+            chain_name: "Tron",
+            event_type: "destroy",
+            address: "TR2",
+            timestamp: 1_777_000_100,
+          }),
+        ],
+      },
+      {
+        match: "COUNT(*) AS total",
+        rows: [],
+        first: { total: 2, max_ts: 1_777_000_100, recoverable_gap: 0, recent_30d: 0, recent_24h: 0 },
+      },
+      { match: "FROM blacklist_current_balances", rows: [] },
+      {
+        match: "quarter_sort_key",
+        rows: [{ stablecoin: "USDT", quarter_sort_key: 8105, event_type: "destroy", n: 2 }],
+      },
+      { match: "cron_runs", rows: [], first: { started_at: null } },
+    ]);
+
+    const res = await handleBlacklistSummary(db);
+    const json = await res.json() as {
+      stats: {
+        perCoinFrozenAddressCount: Record<string, number>;
+        perCoinFrozenTotal: Record<string, number>;
+        perCoinDestroyedTotal: Record<string, number>;
+        perCoinQuarterlyEventTypes: Record<string, Array<{ quarter: string; blacklist: number; unblacklist: number; destroy: number }>>;
+      };
+    };
+    expect(json.stats.perCoinFrozenAddressCount.USDT).toBe(0);
+    expect(json.stats.perCoinFrozenTotal.USDT).toBe(0);
+    expect(json.stats.perCoinDestroyedTotal.USDT).toBe(750);
+    expect(json.stats.perCoinQuarterlyEventTypes.USDT).toHaveLength(1);
+    expect(json.stats.perCoinQuarterlyEventTypes.USDT[0]).toMatchObject({ blacklist: 0, unblacklist: 0, destroy: 2 });
+  });
+
+  it("zero-fills missing quarters between a coin's earliest and latest event", async () => {
+    // USDC has events in Q1 '26 (bucket 8104) and Q3 '26 (bucket 8106), but
+    // nothing in Q2. The handler must emit three contiguous quarter points
+    // with the middle bucket zeroed out.
+    const db = mockD1([
+      {
+        match: "GROUP BY stablecoin, event_type",
+        rows: [
+          { stablecoin: "USDC", event_type: "blacklist", n: 3, usd_sum: 0 },
+        ],
+      },
+      { match: "WITH ranked AS", rows: [] },
+      {
+        match: "COUNT(*) AS total",
+        rows: [],
+        first: { total: 3, max_ts: 1_777_000_000, recoverable_gap: 0, recent_30d: 0, recent_24h: 0 },
+      },
+      { match: "FROM blacklist_current_balances", rows: [] },
+      {
+        match: "quarter_sort_key",
+        rows: [
+          { stablecoin: "USDC", quarter_sort_key: 8104, event_type: "blacklist", n: 1 },
+          { stablecoin: "USDC", quarter_sort_key: 8106, event_type: "blacklist", n: 2 },
+        ],
+      },
+      { match: "cron_runs", rows: [], first: { started_at: null } },
+    ]);
+
+    const res = await handleBlacklistSummary(db);
+    const json = await res.json() as {
+      stats: {
+        perCoinQuarterlyEventTypes: Record<string, Array<{ quarter: string; blacklist: number; unblacklist: number; destroy: number }>>;
+      };
+    };
+    const points = json.stats.perCoinQuarterlyEventTypes.USDC;
+    expect(points).toHaveLength(3);
+    expect(points[0]).toMatchObject({ blacklist: 1, unblacklist: 0, destroy: 0 });
+    expect(points[1]).toMatchObject({ blacklist: 0, unblacklist: 0, destroy: 0 });
+    expect(points[2]).toMatchObject({ blacklist: 2, unblacklist: 0, destroy: 0 });
+  });
 });

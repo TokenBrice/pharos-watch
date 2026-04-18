@@ -46,7 +46,18 @@ export function BlacklistDetailChart({ data, isLoading }: BlacklistDetailChartPr
   }
 
   if (chartData.length === 0) {
-    return null;
+    return (
+      <Card className="rounded-xl animate-in fade-in duration-300">
+        <CardHeader>
+          <CardTitle as="h3" className="pharos-kicker">Events per Quarter</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <p className="text-xs text-muted-foreground">
+            Insufficient data for the quarterly view on this asset yet.
+          </p>
+        </CardContent>
+      </Card>
+    );
   }
 
   return (
