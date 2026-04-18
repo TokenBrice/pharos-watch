@@ -35,9 +35,22 @@ jobs:
           const fs = require("node:fs");
           const entries = JSON.parse(fs.readFileSync("/tmp/wrangler-pages-deployments.json", "utf8"));
           const current = Array.isArray(entries) && entries.length > 0 ? entries[0] : null;
-          const id = current && typeof current.Id === "string" ? current.Id : "";
+          const rawId = current?.Id ?? current?.id ?? current?.deployment_id ?? "";
+          const id = typeof rawId === "string" ? rawId : "";
+          if (!id && current) {
+            console.warn("[capture] wrangler entry lacked a recognized deployment id field; keys:", Object.keys(current).join(","));
+          }
           process.stdout.write(`deployment_id=${id}\n`);
           NODE
+      - if: ${{ steps.capture.outcome == 'failure' || steps.capture.outputs.deployment_id == '' }}
+        name: Warn that automated rollback is disabled for this deploy
+        run: |
+          {
+            echo "## ⚠️ Automated Pages rollback DISABLED for this deploy"
+            echo ""
+            echo "The \`capture\` step could not record the previous production Pages deployment id."
+            echo "If post-deploy smoke fails, roll back manually via the Cloudflare Pages dashboard."
+          } >> "$GITHUB_STEP_SUMMARY"
       - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
         with:
           name: ${{ inputs.artifact_name }}
