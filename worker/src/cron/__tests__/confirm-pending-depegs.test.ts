@@ -37,7 +37,7 @@ vi.mock("../../lib/native-peg-quotes", () => ({
 
 import { batchExecute } from "../../lib/db";
 import { fetchBinancePricesDetailed } from "../../lib/cex-tickers";
-import { recordOutcomeSafe } from "../../lib/circuit-breaker";
+import { recordOutcomeSafe, shouldAttemptFetch } from "../../lib/circuit-breaker";
 import { fetchWithRetry } from "../../lib/fetch-retry";
 import { fetchCurrentNativePegQuotes } from "../../lib/native-peg-quotes";
 import {
@@ -180,6 +180,7 @@ describe("confirmPendingDepegs", () => {
     vi.restoreAllMocks();
     vi.clearAllMocks();
     vi.mocked(fetchCurrentNativePegQuotes).mockReset().mockResolvedValue(new Map());
+    vi.mocked(shouldAttemptFetch).mockReset().mockResolvedValue(true);
   });
 
   it("returns early when there are no pending rows", async () => {
@@ -895,6 +896,96 @@ describe("confirmPendingDepegs", () => {
       expect.anything(),
       CIRCUIT_SOURCE.BINANCE_PRICES,
       true,
+    );
+  });
+
+  it("skips off-chain fetch when the CoinGecko circuit breaker is open", async () => {
+    const nowSec = 1_700_000_000;
+    vi.spyOn(Date, "now").mockReturnValue(nowSec * 1000);
+    vi.spyOn(console, "log").mockImplementation(() => {});
+
+    vi.mocked(shouldAttemptFetch).mockImplementation(
+      async (_db, source) => source !== CIRCUIT_SOURCE.COINGECKO_CONFIRM,
+    );
+    vi.mocked(fetchWithRetry).mockReset();
+
+    await confirmPendingDepegs(
+      makeDb({
+        pendingRows: [
+          makePendingRow({
+            id: 90,
+            stablecoin_id: "usdt-tether",
+            symbol: "USDT",
+            first_seen_bps: -240,
+            first_seen_at: nowSec - DEPEG_PENDING_MIN_AGE_SEC - 60,
+            first_price: 0.976,
+            reason: "large-cap",
+          }),
+        ],
+      }),
+      [
+        makeAuthoritativeUsdAsset(nowSec, {
+          id: "usdt-tether",
+          symbol: "USDT",
+          geckoId: "tether",
+          price: 0.94,
+        }),
+        ...makeNeutralUsdAssets(),
+      ],
+    );
+
+    // No CoinGecko URL fetched
+    const fetchSpy = vi.mocked(fetchWithRetry);
+    expect(
+      fetchSpy.mock.calls.find(
+        ([url]) => typeof url === "string" && url.includes("/simple/price"),
+      ),
+    ).toBeUndefined();
+    // Circuit-breaker skip path must also NOT record a false outcome — only real fetch attempts do.
+    expect(vi.mocked(recordOutcomeSafe)).not.toHaveBeenCalledWith(
+      expect.anything(),
+      CIRCUIT_SOURCE.COINGECKO_CONFIRM,
+      false,
+    );
+  });
+
+  it("records CoinGecko outcome to circuit breaker on fetch failure", async () => {
+    const nowSec = 1_700_000_000;
+    vi.spyOn(Date, "now").mockReturnValue(nowSec * 1000);
+    vi.spyOn(console, "warn").mockImplementation(() => {});
+    vi.spyOn(console, "log").mockImplementation(() => {});
+
+    vi.mocked(fetchWithRetry).mockRejectedValueOnce(new Error("timeout"));
+
+    await confirmPendingDepegs(
+      makeDb({
+        pendingRows: [
+          makePendingRow({
+            id: 91,
+            stablecoin_id: "usdt-tether",
+            symbol: "USDT",
+            first_seen_bps: -240,
+            first_seen_at: nowSec - DEPEG_PENDING_MIN_AGE_SEC - 60,
+            first_price: 0.976,
+            reason: "large-cap",
+          }),
+        ],
+      }),
+      [
+        makeAuthoritativeUsdAsset(nowSec, {
+          id: "usdt-tether",
+          symbol: "USDT",
+          geckoId: "tether",
+          price: 0.94,
+        }),
+        ...makeNeutralUsdAssets(),
+      ],
+    );
+
+    expect(recordOutcomeSafe).toHaveBeenCalledWith(
+      expect.anything(),
+      CIRCUIT_SOURCE.COINGECKO_CONFIRM,
+      false,
     );
   });
 

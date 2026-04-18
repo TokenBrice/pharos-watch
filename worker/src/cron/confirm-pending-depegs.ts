@@ -217,41 +217,53 @@ export async function confirmPendingDepegs(
       const useDefiLlamaSecondary =
         primarySource != null && primarySource.startsWith("coingecko");
       const offchainLabel = useDefiLlamaSecondary ? "DefiLlama" : "CoinGecko";
-      try {
-        const offchainRes = await fetchWithRetry(
-          useDefiLlamaSecondary
-            ? `${DEFILLAMA_COINS}/prices/current/coingecko:${geckoId}`
-            : cgUrl(`/simple/price?ids=${geckoId}&vs_currencies=usd`, coingeckoApiKey ?? null),
-          useDefiLlamaSecondary
-            ? { headers: { "User-Agent": USER_AGENT }, signal }
-            : {
-                headers: cgHeaders({ Accept: "application/json", "User-Agent": USER_AGENT }, coingeckoApiKey ?? null),
-                signal,
-              },
-          1, // single retry
-        );
-        if (offchainRes?.ok) {
-          let offchainPrice: number | undefined;
-          if (useDefiLlamaSecondary) {
-            const parsed = DefiLlamaPriceSchema.safeParse(await offchainRes.json());
-            offchainPrice = parsed.success ? parsed.data.coins?.[`coingecko:${geckoId}`]?.price : undefined;
-          } else {
-            const parsed = CoinGeckoPriceSchema.safeParse(await offchainRes.json());
-            offchainPrice = parsed.success ? parsed.data[geckoId]?.usd : undefined;
-          }
+      const circuitKey = useDefiLlamaSecondary
+        ? CIRCUIT_SOURCE.DEFILLAMA_CONFIRM
+        : CIRCUIT_SOURCE.COINGECKO_CONFIRM;
+      const offchainAllowed = await shouldAttemptFetch(db, circuitKey);
+      if (offchainAllowed) {
+        try {
+          const offchainRes = await fetchWithRetry(
+            useDefiLlamaSecondary
+              ? `${DEFILLAMA_COINS}/prices/current/coingecko:${geckoId}`
+              : cgUrl(`/simple/price?ids=${geckoId}&vs_currencies=usd`, coingeckoApiKey ?? null),
+            useDefiLlamaSecondary
+              ? { headers: { "User-Agent": USER_AGENT }, signal }
+              : {
+                  headers: cgHeaders({ Accept: "application/json", "User-Agent": USER_AGENT }, coingeckoApiKey ?? null),
+                  signal,
+                },
+            1, // single retry
+          );
+          if (offchainRes?.ok) {
+            let offchainPrice: number | undefined;
+            if (useDefiLlamaSecondary) {
+              const parsed = DefiLlamaPriceSchema.safeParse(await offchainRes.json());
+              offchainPrice = parsed.success ? parsed.data.coins?.[`coingecko:${geckoId}`]?.price : undefined;
+            } else {
+              const parsed = CoinGeckoPriceSchema.safeParse(await offchainRes.json());
+              offchainPrice = parsed.success ? parsed.data[geckoId]?.usd : undefined;
+            }
 
-          if (offchainPrice && offchainPrice > 0) {
-            const offchainSignal = deriveDepegSignal(offchainPrice, row.peg_reference);
-            offchainStatus = classifyDirectionalSignal(offchainSignal, secondaryBar, pendingState.direction);
-            console.log(
-              `[depeg-confirm] ${row.symbol} ${offchainLabel} check: price=$${offchainPrice}, deviation=${offchainSignal?.absBps ?? "n/a"}bps, ` +
-              `bar=${secondaryBar}bps, status=${offchainStatus}`
-            );
+            if (offchainPrice && offchainPrice > 0) {
+              const offchainSignal = deriveDepegSignal(offchainPrice, row.peg_reference);
+              offchainStatus = classifyDirectionalSignal(offchainSignal, secondaryBar, pendingState.direction);
+              console.log(
+                `[depeg-confirm] ${row.symbol} ${offchainLabel} check: price=$${offchainPrice}, deviation=${offchainSignal?.absBps ?? "n/a"}bps, ` +
+                `bar=${secondaryBar}bps, status=${offchainStatus}`
+              );
+            }
+            await recordOutcomeSafe(db, circuitKey, true);
+          } else {
+            await recordOutcomeSafe(db, circuitKey, false);
           }
+        } catch (err) {
+          if (signal?.aborted) throw err instanceof Error ? err : new Error(String(err));
+          await recordOutcomeSafe(db, circuitKey, false);
+          console.warn(`[depeg-confirm] ${offchainLabel} fetch failed for ${row.symbol}:`, err);
         }
-      } catch (err) {
-        if (signal?.aborted) throw err instanceof Error ? err : new Error(String(err));
-        console.warn(`[depeg-confirm] ${offchainLabel} fetch failed for ${row.symbol}:`, err);
+      } else {
+        console.log(`[depeg-confirm] ${row.symbol} ${offchainLabel} skipped: circuit open`);
       }
     }
 

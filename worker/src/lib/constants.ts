@@ -173,6 +173,8 @@ export const CIRCUIT_SOURCE = {
   CG_TICKER: "coingecko-ticker",
   KINESIS_KAU: "kinesis-kau-horizon",
   KINESIS_KAG: "kinesis-kag-horizon",
+  COINGECKO_CONFIRM: "coingecko-confirm",
+  DEFILLAMA_CONFIRM: "defillama-confirm",
 } as const;
 
 export const KINESIS_KAU_HORIZON = "https://kau-mainnet.kinesisgroup.io";
