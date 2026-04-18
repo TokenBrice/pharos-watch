@@ -1,6 +1,16 @@
 # Depeg Tracker + DEWS Methodology — Version Timeline
 
-Internal changelog reconstructed from git history. Covers `v1.0` through `v5.94` (2026-02-18 -> 2026-04-18).
+Internal changelog reconstructed from git history. Covers `v1.0` through `v5.95` (2026-02-18 -> 2026-04-18).
+
+---
+## v5.95 — Cross-asset contagion amplifier (Apr 18, 2026)
+
+**Commit:** `unreleased`
+
+- DEWS now applies a bounded per-peg-type contagion amplifier (max `1.2x`) derived from the same cycle's first-pass `DANGER` / `WARNING` bands, stacked on top of the existing systemic PSI amplifier
+- A tracked stablecoin entering `DANGER` or `WARNING` now raises other same-peg-type coins' scores by up to 20%; different peg types do not share contagion risk
+- First-pass coins that themselves are `DANGER` / `WARNING` do not contagion-amplify themselves
+- The amplifier is clamped and explainable (no learned weights) and is surfaced on `/api/stress-signals` as `amplifiers.contagion`
 
 ---
 ## v5.94 — Pool-confirmation hardening, backfill atomicity, confirmation-provenance surfacing (Apr 18, 2026)
