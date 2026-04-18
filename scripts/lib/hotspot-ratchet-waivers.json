@@ -51,10 +51,6 @@
     "disposition": "deferred",
     "notes": "Status metadata summarization has grown with the ops dashboard. Defer structural cleanup until the status surface settles after the current parallel work."
   },
-  "src/components/status/api-keys-panel.tsx": {
-    "disposition": "queued-p4",
-    "notes": "API-key management still combines list rendering, form validation, create/update/rotate/deactivate flows, and per-row edit state. Keep waived for a focused ops-admin UI decomposition pass."
-  },
   "src/components/dex-liquidity-card.tsx": {
     "disposition": "queued-p4",
     "notes": "The DEX liquidity detail card still mixes summary copy, top-pool rendering, and history presentation in one shell. Track it for the next frontend hotspot pass rather than folding a larger decomposition into this pricing/liquidity fix."
@@ -90,5 +86,9 @@
   "src/app/telegram/page.tsx": {
     "disposition": "queued-p4",
     "notes": "Static product landing page grew with the How-It-Works section, DEWS bands explainer, and JSON-LD block added in the 2026-04-17 telegram bot comprehensive audit. All content is intentionally colocated. Defer decomposition until another product-page cleanup pass."
+  },
+  "worker/src/cron/confirm-pending-depegs.ts": {
+    "disposition": "queued-p4",
+    "notes": "Grew during the 2026-04-18 depeg+DEWS hardening wave with pool-status count classification, circuit-breaker guards, offchainSourceLabel tracking, and composite pending-reason parsing. The main confirmPendingDepegs function is now the obvious split candidate — per-row evaluation (primary/native/off-chain/DEX/CEX/pool collection) should extract into buildConfirmationPlan; the decision matrix should extract into evaluatePromotionDecision. Follow-up in the next /simplify pass."
   }
 }
