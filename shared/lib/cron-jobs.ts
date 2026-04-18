@@ -431,6 +431,15 @@ const CRON_JOB_DEFINITIONS_BASE: readonly CronJobDefinition[] = [
     triggerMode: "isolated",
     maxConnections: 0, // DB-only DELETE
   },
+  {
+    job: "prune-cron-history",
+    label: "Cron history TTL prune",
+    group: "daily",
+    intervalSec: 86400,
+    scheduleKey: "daily0300Utc",
+    triggerMode: "isolated",
+    maxConnections: 0, // DB-only DELETE of cron_runs + cron_slot_executions
+  },
 ] as const;
 
 export const CRON_JOB_DEFINITIONS: readonly CronJobMeta[] = CRON_JOB_DEFINITIONS_BASE.map((definition) => ({
