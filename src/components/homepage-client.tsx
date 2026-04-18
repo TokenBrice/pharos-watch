@@ -187,7 +187,7 @@ export function HomepageClient() {
             {/* Active filter chips now shown inline in the table toolbar */}
           </div>
           <PegBrowseStrip pegs={ACTIVE_PEGS} pegCoinCount={pegCoinCount} />
-          <div className="mt-4">
+          <div className="mt-8">
           <StablecoinTable
             data={data?.peggedAssets}
             isLoading={isLoading}
@@ -248,7 +248,12 @@ export function HomepageClient() {
       </SectionErrorBoundary>
 
       <SectionErrorBoundary name="digest">
-        <DailyDigest variant="preview" />
+        <div className="space-y-2">
+          <p className="pharos-meta text-muted-foreground/80">
+            A short editorial summary Pharos publishes daily on the state of the market.
+          </p>
+          <DailyDigest variant="preview" />
+        </div>
       </SectionErrorBoundary>
 
       <SectionErrorBoundary name="upcoming-stablecoins">
@@ -355,13 +360,15 @@ export function HomepageClient() {
           <TotalMcapChart />
         </SectionErrorBoundary>
 
-        <SectionErrorBoundary name="peg-diversity">
-          <PegDiversityChart />
-        </SectionErrorBoundary>
+        <div className="grid grid-cols-1 gap-6 lg:grid-cols-2 lg:items-start">
+          <SectionErrorBoundary name="peg-diversity">
+            <PegDiversityChart />
+          </SectionErrorBoundary>
 
-        <SectionErrorBoundary name="non-usd-share">
-          <NonUsdShareChart />
-        </SectionErrorBoundary>
+          <SectionErrorBoundary name="non-usd-share">
+            <NonUsdShareChart />
+          </SectionErrorBoundary>
+        </div>
       </section>
 
       <section aria-label="About Pharos" className="space-y-2 border-t border-border/50 pt-6">

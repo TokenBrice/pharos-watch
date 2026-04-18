@@ -187,11 +187,11 @@ export function UpcomingStablecoinsSection({ logos }: Props) {
   return (
     <section aria-labelledby="upcoming-heading" className="mt-8 space-y-5 border-t border-border/40 pt-6">
       <div className="space-y-1.5">
-        <p className="pharos-kicker">Upcoming Stablecoins</p>
+        <p className="pharos-kicker">Watchlist · Pre-launch</p>
         <div className="space-y-1">
           <div className="flex items-baseline justify-between gap-4">
             <h2 id="upcoming-heading" className="text-2xl font-semibold tracking-tight text-foreground">
-              {PRE_LAUNCH_STABLECOINS.length} stablecoins on the horizon
+              {PRE_LAUNCH_STABLECOINS.length} coins to watch before they ship
             </h2>
             <div className="flex shrink-0 items-center gap-3 text-sm">
               <Link
@@ -206,8 +206,7 @@ export function UpcomingStablecoinsSection({ logos }: Props) {
             </div>
           </div>
           <p className="text-sm text-muted-foreground">
-            Pre-launch projects tracked by Pharos. Hover a coin for details, or open the full profile for a copy-ready
-            exact Telegram launch command.
+            Hover for details. Open a profile for the exact Telegram launch-alert command.
           </p>
         </div>
       </div>
