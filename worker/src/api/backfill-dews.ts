@@ -6,6 +6,7 @@ import {
   jsonResponse,
   resolveOrReject,
 } from "../lib/api-utils";
+import { BACKTEST_ANCHORS } from "../lib/backtest-anchors";
 import { getCache } from "../lib/db-cache";
 import { computeDEWS } from "../lib/dews";
 import type { DEWSInput } from "../lib/dews";
@@ -473,6 +474,62 @@ async function handleHistoricalBacktest(db: D1Database): Promise<Response> {
   });
 }
 
+interface BacktestMetricsPerAnchor {
+  stablecoinId: string;
+  onsetAt: number;
+  detected: boolean;
+  leadTimeDays: number | null;
+  firstAlertBand: string | null;
+}
+
+async function handleBacktestMetrics(db: D1Database): Promise<Response> {
+  const perAnchor: BacktestMetricsPerAnchor[] = [];
+  for (const anchor of BACKTEST_ANCHORS) {
+    const windowStart = anchor.onsetAt - 14 * DAY_SECONDS;
+    const rows = await db
+      .prepare(
+        "SELECT snapshot_date, band FROM stress_signal_history WHERE stablecoin_id = ? AND snapshot_date >= ? AND snapshot_date <= ? ORDER BY snapshot_date ASC",
+      )
+      .bind(anchor.stablecoinId, windowStart, anchor.onsetAt)
+      .all<{ snapshot_date: number; band: string }>();
+
+    let firstAlertAt: number | null = null;
+    let firstAlertBand: string | null = null;
+    for (const row of rows.results ?? []) {
+      if (row.band === "ALERT" || row.band === "WARNING" || row.band === "DANGER") {
+        firstAlertAt = row.snapshot_date;
+        firstAlertBand = row.band;
+        break;
+      }
+    }
+    const detected = firstAlertAt !== null;
+    perAnchor.push({
+      stablecoinId: anchor.stablecoinId,
+      onsetAt: anchor.onsetAt,
+      detected,
+      leadTimeDays: detected ? (anchor.onsetAt - firstAlertAt!) / DAY_SECONDS : null,
+      firstAlertBand,
+    });
+  }
+
+  const detected = perAnchor.filter((entry) => entry.detected);
+  const leadTimes = detected
+    .map((entry) => entry.leadTimeDays!)
+    .sort((a, b) => a - b);
+  const percentile = (q: number): number | null =>
+    leadTimes.length === 0
+      ? null
+      : leadTimes[Math.min(leadTimes.length - 1, Math.floor(q * leadTimes.length))];
+
+  return jsonResponse({
+    detectionRate: BACKTEST_ANCHORS.length === 0 ? 0 : detected.length / BACKTEST_ANCHORS.length,
+    leadTimeDaysP50: percentile(0.5),
+    leadTimeDaysP90: percentile(0.9),
+    granularity: "daily",
+    perAnchor,
+  });
+}
+
 export function handleBackfillDEWS(
   db: D1Database,
   url: URL,
@@ -488,6 +545,7 @@ export function handleBackfillDEWS(
     async () => {
       const method = request?.method ?? "GET";
       const dryRun = url.searchParams.get("dry-run") === "true";
+      const mode = url.searchParams.get("mode");
       const repairModeRaw = url.searchParams.get("repair");
       const repairMode = parseRepairMode(repairModeRaw);
 
@@ -496,6 +554,9 @@ export function handleBackfillDEWS(
       }
 
       if (method === "GET") {
+        if (mode === "backtest-metrics") {
+          return handleBacktestMetrics(db);
+        }
         if (repairMode) {
           if (!dryRun) {
             return new Response(
