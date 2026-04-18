@@ -1093,7 +1093,9 @@ describe("handleMintBurnFlows contract tests", () => {
     vi.setSystemTime(new Date("2026-03-11T12:00:00Z"));
 
     const now = Math.floor(Date.now() / 1000);
-    const fiftyMinutesAgo = now - 50 * 60;
+    // 75 min old → ratio 1.25 vs the 60-min SLA (MAX_AGE = 2× 30-min lane),
+    // firmly inside the "degraded" band (1.0 < ratio ≤ 1.5) and outside "fresh".
+    const seventyFiveMinutesAgo = now - 75 * 60;
     const tenDaysAgoHour = Math.floor((now - 10 * 86400) / 3600) * 3600;
     const tenDaysAgoDay = Math.floor(tenDaysAgoHour / 86400) * 86400;
     const cache = JSON.stringify({
@@ -1133,13 +1135,13 @@ describe("handleMintBurnFlows contract tests", () => {
       },
       {
         match: "SELECT started_at, status, metadata",
-        rows: [{ started_at: fiftyMinutesAgo, status: "ok", metadata: JSON.stringify({ chainHead: 22_345_999 }) }],
-        first: { started_at: fiftyMinutesAgo, status: "ok", metadata: JSON.stringify({ chainHead: 22_345_999 }) },
+        rows: [{ started_at: seventyFiveMinutesAgo, status: "ok", metadata: JSON.stringify({ chainHead: 22_345_999 }) }],
+        first: { started_at: seventyFiveMinutesAgo, status: "ok", metadata: JSON.stringify({ chainHead: 22_345_999 }) },
       },
       {
         match: "MAX(started_at) as started_at FROM cron_runs WHERE job = ? AND status = 'ok'",
-        rows: [{ started_at: fiftyMinutesAgo }],
-        first: { started_at: fiftyMinutesAgo },
+        rows: [{ started_at: seventyFiveMinutesAgo }],
+        first: { started_at: seventyFiveMinutesAgo },
       },
       {
         match: "cache",
@@ -1154,9 +1156,9 @@ describe("handleMintBurnFlows contract tests", () => {
     const body = MintBurnFlowsResponseSchema.parse(await res.json());
     const sync = body.sync!;
     expect(sync.freshnessStatus).toBe("degraded");
-    expect(sync.warning).toBe("Mint/burn sync freshness is degraded versus the 20-minute cron cadence.");
+    expect(sync.warning).toBe("Mint/burn sync freshness is degraded versus the 30-minute cron cadence.");
     expect(res.headers.get("Warning")).toBeNull();
-    expect(res.headers.get("X-Data-Age")).toBe(String(50 * 60));
+    expect(res.headers.get("X-Data-Age")).toBe(String(75 * 60));
   });
 
   it("combines degraded freshness with the lookup fallback warning when cron freshness lookup fails", async () => {
@@ -1164,7 +1166,9 @@ describe("handleMintBurnFlows contract tests", () => {
     vi.setSystemTime(new Date("2026-03-11T12:00:00Z"));
 
     const now = Math.floor(Date.now() / 1000);
-    const fiftyMinutesAgo = now - 50 * 60;
+    // 75 min old → ratio 1.25 vs the 60-min SLA; see the previous test for the
+    // rationale behind the band math.
+    const seventyFiveMinutesAgo = now - 75 * 60;
     const tenDaysAgoHour = Math.floor((now - 10 * 86400) / 3600) * 3600;
     const tenDaysAgoDay = Math.floor(tenDaysAgoHour / 86400) * 86400;
     const cache = JSON.stringify({
@@ -1204,8 +1208,8 @@ describe("handleMintBurnFlows contract tests", () => {
       },
       {
         match: "SELECT started_at, status, metadata",
-        rows: [{ started_at: fiftyMinutesAgo, status: "ok", metadata: JSON.stringify({ chainHead: 22_345_999 }) }],
-        first: { started_at: fiftyMinutesAgo, status: "ok", metadata: JSON.stringify({ chainHead: 22_345_999 }) },
+        rows: [{ started_at: seventyFiveMinutesAgo, status: "ok", metadata: JSON.stringify({ chainHead: 22_345_999 }) }],
+        first: { started_at: seventyFiveMinutesAgo, status: "ok", metadata: JSON.stringify({ chainHead: 22_345_999 }) },
       },
       {
         match: "MAX(started_at) as started_at FROM cron_runs WHERE job = ? AND status = 'ok'",
@@ -1226,6 +1230,6 @@ describe("handleMintBurnFlows contract tests", () => {
     expect(body.sync?.freshnessStatus).toBe("degraded");
     expect(body.sync?.warning).toContain("Mint/burn sync freshness is degraded");
     expect(body.sync?.warning).toContain("freshness lookup failed");
-    expect(res.headers.get("X-Data-Age")).toBe(String(50 * 60));
+    expect(res.headers.get("X-Data-Age")).toBe(String(75 * 60));
   });
 });

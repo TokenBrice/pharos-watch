@@ -69,9 +69,9 @@ describe("status cron config", () => {
     });
   });
 
-  it("keeps the 20-minute slot description aligned with isolated on-chain triggers", () => {
-    expect(CRON_GROUPS.find((group) => group.key === "twenty-minute")?.description).toContain(
-      "isolated trigger",
+  it("keeps the 30-minute slot description aligned with isolated mint/burn triggers", () => {
+    expect(CRON_GROUPS.find((group) => group.key === "half-hourly")?.description).toContain(
+      "isolated 30-min triggers",
     );
   });
 

@@ -3,7 +3,6 @@ import { DAY_SECONDS } from "./time-constants";
 export type CronGroupKey =
   | "quarter-hourly"
   | "five-minute"
-  | "twenty-minute"
   | "half-hourly"
   | "hourly"
   | "multi-hourly"
@@ -14,9 +13,9 @@ export const CRON_SCHEDULES = {
   quarterHourly: "*/15 * * * *",
   statusSelfCheckOffset: "9,24,39,54 * * * *",
   sixHourlyBlacklist: "3 */6 * * *",
-  twentyMinuteMintBurn: "4,24,44 * * * *",
+  halfHourlyMintBurnCritical: "4,34 * * * *",
   thirtyMinuteDexDiscovery: "6,36 * * * *",
-  twentyMinuteExtendedOffset: "13,33,53 * * * *",
+  halfHourlyMintBurnExtended: "13,43 * * * *",
   halfHourlyOffset: "10,40 * * * *",
   fourHourlyReserveSync: "11 */4 * * *",
   hourlyYieldSync: "20 * * * *",
@@ -38,9 +37,9 @@ const CRON_SCHEDULE_BUCKETS = {
   quarterHourly: { intervalSec: 900, offsetSec: 0 },
   statusSelfCheckOffset: { intervalSec: 900, offsetSec: 9 * 60 },
   sixHourlyBlacklist: { intervalSec: 6 * 3600, offsetSec: 3 * 60 },
-  twentyMinuteMintBurn: { intervalSec: 1200, offsetSec: 4 * 60 },
+  halfHourlyMintBurnCritical: { intervalSec: 1800, offsetSec: 4 * 60 },
   thirtyMinuteDexDiscovery: { intervalSec: 1800, offsetSec: 6 * 60 },
-  twentyMinuteExtendedOffset: { intervalSec: 1200, offsetSec: 13 * 60 },
+  halfHourlyMintBurnExtended: { intervalSec: 1800, offsetSec: 13 * 60 },
   halfHourlyOffset: { intervalSec: 1800, offsetSec: 10 * 60 },
   fourHourlyReserveSync: { intervalSec: 4 * 3600, offsetSec: 11 * 60 },
   hourlyYieldSync: { intervalSec: 3600, offsetSec: 20 * 60 },
@@ -104,16 +103,10 @@ export const CRON_GROUPS: readonly CronGroupDefinition[] = [
     description: "Telegram alert dispatch with a dedicated connection pool and pending-queue drain.",
   },
   {
-    key: "twenty-minute",
-    title: "20-minute slot",
-    badge: "~20 min",
-    description: "On-chain mint/burn intake jobs shown together by cadence, each on its own isolated trigger.",
-  },
-  {
     key: "half-hourly",
     title: "30-minute slot",
     badge: "~30 min",
-    description: "Stablecoin charts, DEX discovery/liquidity, DEWS, and PSI refresh.",
+    description: "Stablecoin charts, DEX liquidity, DEWS, PSI refresh, and the two mint/burn lanes on isolated 30-min triggers.",
   },
   {
     key: "hourly",
@@ -222,18 +215,18 @@ const CRON_JOB_DEFINITIONS_BASE: readonly CronJobDefinition[] = [
   {
     job: "sync-mint-burn",
     label: "Mint/burn critical",
-    group: "twenty-minute",
-    intervalSec: 1200,
-    scheduleKey: "twentyMinuteMintBurn",
+    group: "half-hourly",
+    intervalSec: 1800,
+    scheduleKey: "halfHourlyMintBurnCritical",
     triggerMode: "isolated",
     maxConnections: 1, // Sequential Alchemy eth_getLogs + eth_getBlockByNumber calls
   },
   {
     job: "sync-mint-burn-extended",
     label: "Mint/burn extended",
-    group: "twenty-minute",
-    intervalSec: 1200,
-    scheduleKey: "twentyMinuteExtendedOffset",
+    group: "half-hourly",
+    intervalSec: 1800,
+    scheduleKey: "halfHourlyMintBurnExtended",
     triggerMode: "isolated",
     maxConnections: 1, // Sequential Alchemy eth_getLogs + eth_getBlockByNumber calls
   },

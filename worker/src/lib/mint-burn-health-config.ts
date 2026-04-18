@@ -12,7 +12,7 @@ const MINT_BURN_MAJOR_SYMBOLS = [
 const MINT_BURN_STALE_WARN_SEC = 6 * 3600;
 const MINT_BURN_STALE_CRIT_SEC = 24 * 3600;
 const MINT_BURN_ALERT_COOLDOWN_SEC = 3600;
-const MINT_BURN_CRITICAL_LANE_INTERVAL_SEC = 20 * 60;
+const MINT_BURN_CRITICAL_LANE_INTERVAL_SEC = 30 * 60;
 
 export const MINT_BURN_PUBLIC_FRESHNESS_MAX_AGE_SEC = MINT_BURN_CRITICAL_LANE_INTERVAL_SEC * 2;
 
@@ -90,9 +90,9 @@ export function buildMintBurnSyncHealth(
   } else if (latestRunStatus === "degraded") {
     warning = "Critical mint/burn lane is running in degraded mode; coverage may be partial.";
   } else if (freshnessStatus === "stale") {
-    warning = "Mint/burn sync freshness is stale versus the 20-minute cron cadence.";
+    warning = "Mint/burn sync freshness is stale versus the 30-minute cron cadence.";
   } else if (freshnessStatus === "degraded") {
-    warning = "Mint/burn sync freshness is degraded versus the 20-minute cron cadence.";
+    warning = "Mint/burn sync freshness is degraded versus the 30-minute cron cadence.";
   }
 
   return {

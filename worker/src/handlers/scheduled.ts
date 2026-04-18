@@ -6,9 +6,9 @@ import { createScheduledRuntimeContext, type ScheduledRuntimeContext } from "./s
 import { runQuarterHourlySlot } from "./scheduled/quarter-hourly";
 import { runStatusSelfCheckSlot } from "./scheduled/status-self-check";
 import { runSixHourlyBlacklistSlot } from "./scheduled/hourly-blacklist";
-import { runTwentyMinuteMintBurnCriticalSlot } from "./scheduled/twenty-minute-mint-burn-critical";
+import { runHalfHourlyMintBurnCriticalSlot } from "./scheduled/twenty-minute-mint-burn-critical";
 import { runThirtyMinuteDexDiscoverySlot } from "./scheduled/thirty-minute-dex-discovery";
-import { runTwentyMinuteMintBurnExtendedSlot } from "./scheduled/twenty-minute-mint-burn-extended";
+import { runHalfHourlyMintBurnExtendedSlot } from "./scheduled/twenty-minute-mint-burn-extended";
 import { runHalfHourlySlot } from "./scheduled/half-hourly";
 import { runFourHourlyReserveSyncSlot } from "./scheduled/hourly-live-reserves";
 import { runHourlyYieldSlot } from "./scheduled/hourly-yield";
@@ -26,9 +26,9 @@ const SLOT_RUNNER_BY_KEY = {
   quarterHourly: runQuarterHourlySlot,
   statusSelfCheckOffset: runStatusSelfCheckSlot,
   sixHourlyBlacklist: runSixHourlyBlacklistSlot,
-  twentyMinuteMintBurn: runTwentyMinuteMintBurnCriticalSlot,
+  halfHourlyMintBurnCritical: runHalfHourlyMintBurnCriticalSlot,
   thirtyMinuteDexDiscovery: runThirtyMinuteDexDiscoverySlot,
-  twentyMinuteExtendedOffset: runTwentyMinuteMintBurnExtendedSlot,
+  halfHourlyMintBurnExtended: runHalfHourlyMintBurnExtendedSlot,
   halfHourlyOffset: runHalfHourlySlot,
   fourHourlyReserveSync: runFourHourlyReserveSyncSlot,
   hourlyYieldSync: runHourlyYieldSlot,

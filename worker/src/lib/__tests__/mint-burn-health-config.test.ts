@@ -22,21 +22,22 @@ describe("resolveMintBurnFreshnessConfig", () => {
 });
 
 describe("computeMintBurnSyncFreshnessStatus", () => {
-  // MINT_BURN_PUBLIC_FRESHNESS_MAX_AGE_SEC = 40 * 60 = 2400
-  const MAX_AGE = 2400;
+  // MINT_BURN_PUBLIC_FRESHNESS_MAX_AGE_SEC = 60 * 60 = 3600 after the critical
+  // lane moved from 20-min to 30-min cadence; the SLA is derived as 2× interval.
+  const MAX_AGE = 3600;
 
   it("returns fresh when age ratio <= 1.0", () => {
-    expect(computeMintBurnSyncFreshnessStatus(10000, 10000 - 1200)).toBe("fresh");
+    expect(computeMintBurnSyncFreshnessStatus(10000, 10000 - 1800)).toBe("fresh");
     expect(computeMintBurnSyncFreshnessStatus(10000, 10000 - MAX_AGE)).toBe("fresh");
   });
 
   it("returns degraded when age ratio <= 1.5", () => {
-    expect(computeMintBurnSyncFreshnessStatus(10000, 10000 - 2880)).toBe("degraded");
-    expect(computeMintBurnSyncFreshnessStatus(10000, 10000 - 3600)).toBe("degraded");
+    expect(computeMintBurnSyncFreshnessStatus(10000, 10000 - 4200)).toBe("degraded");
+    expect(computeMintBurnSyncFreshnessStatus(10000, 10000 - 5400)).toBe("degraded");
   });
 
   it("returns stale when age ratio > 1.5", () => {
-    expect(computeMintBurnSyncFreshnessStatus(10000, 10000 - 4800)).toBe("stale");
+    expect(computeMintBurnSyncFreshnessStatus(10000, 10000 - 7200)).toBe("stale");
   });
 
   it("returns stale when lastSuccessfulSyncAt is null", () => {

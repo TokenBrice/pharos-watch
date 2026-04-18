@@ -613,7 +613,7 @@ describe("worker.scheduled", () => {
     } as const;
 
     await worker.scheduled(
-      { cron: "4,24,44 * * * *" } as ScheduledEvent,
+      { cron: "4,34 * * * *" } as ScheduledEvent,
       env as never,
       ctx,
     );
@@ -679,7 +679,7 @@ describe("worker.scheduled", () => {
     } as const;
 
     await worker.scheduled(
-      { cron: "13,33,53 * * * *" } as ScheduledEvent,
+      { cron: "13,43 * * * *" } as ScheduledEvent,
       env as never,
       ctx,
     );

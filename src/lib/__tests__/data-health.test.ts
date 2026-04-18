@@ -134,7 +134,7 @@ describe("deriveDataHealth", () => {
     const health = deriveDataHealth({
       label: "Mint/Burn Flows",
       dataUpdatedAt: updatedAtMs,
-      staleTime: 40 * 60_000,
+      staleTime: 60 * 60_000,
       error: new Error("network"),
       hasData: true,
       meta: {
