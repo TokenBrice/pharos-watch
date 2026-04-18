@@ -15,6 +15,7 @@ import { ACTIVE_IDS, TRACKED_META_BY_ID } from "@shared/lib/stablecoins";
 import { hasUsableStablecoinsPayload, loadStablecoinsCache } from "../lib/stablecoins-cache";
 import { loadReportCardCache } from "../lib/report-card-cache";
 import { derivePegAnalyticsSnapshot } from "../lib/peg-analytics";
+import { scoreToGrade } from "@shared/lib/report-cards";
 
 // ---------------------------------------------------------------------------
 // WASM singleton initialization (yoga for satori + resvg for SVG→PNG)
@@ -293,7 +294,7 @@ async function handleSafetyScoresOg(db: D1Database): Promise<Response> {
       } else {
         gradeDistribution["NR"]++;
       }
-      if (entry.score > 0) {
+      if (entry.grade !== "NR") {
         pulseScore += entry.score;
         ratedCount++;
         
@@ -321,20 +322,7 @@ async function handleSafetyScoresOg(db: D1Database): Promise<Response> {
   }
 
   const avgScore = ratedCount > 0 ? pulseScore / ratedCount : 0;
-  const pulseGrade =
-    avgScore >= 90
-      ? "A+"
-      : avgScore >= 80
-        ? "A"
-        : avgScore >= 70
-          ? "B+"
-          : avgScore >= 60
-            ? "B"
-            : avgScore >= 50
-              ? "C"
-              : avgScore >= 40
-                ? "D"
-                : "F";
+  const pulseGrade = ratedCount > 0 ? scoreToGrade(Math.round(avgScore)) : "NR";
 
   // Sort for top/bottom performers
   const sortedByScore = [...allScores].sort((a, b) => b.score - a.score);
