@@ -1,4 +1,3 @@
-import { SECONDS } from "./time-constants";
 import { CRON_TIMEOUT_MS, CronTimeoutError, DEFAULT_CRON_TIMEOUT_MS, runWithOverloadRetry } from "./cron-lease";
 
 // --- Cron run logging types ---
@@ -185,24 +184,7 @@ export async function logCronRun(
         console.warn(`[db] Failed to clear cron progress for ${job}:`, err);
       }
     }
-    // Prune rows older than 7 days (runs on both success and error paths)
-    try {
-      await db
-        .prepare("DELETE FROM cron_runs WHERE started_at < ?")
-        .bind(Math.floor(Date.now() / 1000) - SECONDS.ONE_WEEK)
-        .run();
-    } catch (pruneErr) {
-      console.error("[db] Failed to prune old cron runs:", pruneErr);
-      try {
-        await db
-          .prepare(
-            "DELETE FROM cron_runs WHERE rowid NOT IN (SELECT rowid FROM cron_runs ORDER BY started_at DESC LIMIT 5000)",
-          )
-          .run();
-      } catch (e2) {
-        console.error("[db] Safety valve prune also failed:", e2);
-      }
-    }
+    // TTL pruning is owned by the daily `prune-cron-history` cron (03:00 UTC).
   }
   return resolvedResult;
 }
