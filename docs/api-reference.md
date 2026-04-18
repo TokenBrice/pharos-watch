@@ -575,7 +575,7 @@ Freeze, blacklist, block/unblock, account-pause, and token-destruction events cu
 
 **Cache:** realtime
 
-**Freshness note:** `X-Data-Age` / `Warning` track the latest successful hourly `sync-blacklist` writer timestamp. Public freshness stays `fresh` through that hourly budget and only degrades once the scheduled blacklist sync is actually late.
+**Freshness note:** `X-Data-Age` / `Warning` track the latest successful 6-hourly `sync-blacklist` writer timestamp. Public freshness stays `fresh` through that 6-hour budget and only degrades once the scheduled blacklist sync is actually late.
 
 **Query parameters**
 
@@ -655,7 +655,7 @@ Server-side aggregates for the Blacklist Tracker overview cards, chart, and filt
 
 **Cache:** realtime
 
-**Freshness note:** Shares the same hourly freshness headers as `GET /api/blacklist`, keyed to the latest successful `sync-blacklist` write rather than the request time of the summary endpoint itself.
+**Freshness note:** Shares the same 6-hourly freshness headers as `GET /api/blacklist`, keyed to the latest successful `sync-blacklist` write rather than the request time of the summary endpoint itself.
 
 **Response**
 
@@ -1304,7 +1304,7 @@ Worker health check. Reports cache freshness, blacklist integrity, mint/burn fre
 | `mintBurn.staleMajorSymbols`         | `string[]`                         | Legacy advisory list. Always empty on the budget-capped health path because per-symbol stale checks are intentionally not scanned from D1.                                                                                                                                                                                                                                                                                                                                                                           |
 | `mintBurn.sync`                      | `object`                           | Critical-lane sync freshness summary used for public health evaluation                                                                                                                                                                                                                                                                                                                                                                                                                                               |
 | `mintBurn.sync.lastSuccessfulSyncAt` | `number \| null`                   | Unix seconds of the latest successful `sync-mint-burn` run                                                                                                                                                                                                                                                                                                                                                                                                                                                           |
-| `mintBurn.sync.freshnessStatus`      | `"fresh" \| "degraded" \| "stale"` | Public freshness state keyed to the 20-minute critical-lane cadence (`fresh <= 40m`, `degraded <= 60m`, `stale > 60m`)                                                                                                                                                                                                                                                                                                                                                                                               |
+| `mintBurn.sync.freshnessStatus`      | `"fresh" \| "degraded" \| "stale"` | Public freshness state keyed to the 30-minute critical-lane cadence (`fresh <= 60m`, `degraded <= 90m`, `stale > 90m`)                                                                                                                                                                                                                                                                                                                                                                                               |
 | `mintBurn.sync.warning`              | `string \| null`                   | Human-readable warning when the critical lane is stale, degraded, or errored                                                                                                                                                                                                                                                                                                                                                                                                                                         |
 | `mintBurn.sync.criticalLaneHealthy`  | `boolean`                          | `true` when the latest critical-lane run is `ok`, `degraded`, or `skipped_locked`                                                                                                                                                                                                                                                                                                                                                                                                                                    |
 | `circuits`                           | `Record<string, CircuitRecord>`    | Per-source circuit breaker states. Keys include `defillama-stablecoins`, `defillama-stablecoin-detail`, `defillama-coins`, `defillama-yields`, `defillama-protocols`, `coingecko-prices`, `coingecko-detail-platforms`, `coingecko-mcap`, `coingecko-discovery`, `coinmarketcap-prices`, `dexscreener-prices`, `dexscreener-search`, `treasury-rates`, `etherscan`, `alchemy`, `twitter-api`, `telegram-api`, `pyth-prices`, `binance-prices`, `coinbase-prices`, `redstone-prices`, `curve-onchain`, `curve-liquidity-api`, `fx-realtime` |
@@ -1942,7 +1942,7 @@ Historical yield data for a single stablecoin. If a stored `warning_signals` pay
 
 ### `GET /api/mint-burn-flows`
 
-Mint/burn flow data across tracked stablecoins — aggregate gauge score, per-coin net-flow + pressure-shift signals, and hourly timeseries. Updated every 20 minutes by the sync cron.
+Mint/burn flow data across tracked stablecoins — aggregate gauge score, per-coin net-flow + pressure-shift signals, and hourly timeseries. Updated every 30 minutes by the sync cron.
 
 **Cache:** standard
 

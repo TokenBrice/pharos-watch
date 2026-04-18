@@ -1,6 +1,6 @@
 # Mint/Burn Flow Tracker
 
-On-chain mint and burn event tracker for stablecoins on their **configured issuance chains** via Alchemy JSON-RPC. Detects Transfer events (and USDT-specific Issue/Redeem events), aggregates them into hourly flow buckets, exposes per-coin raw `Net Flow` plus baseline-relative `Pressure Shift vs 30D`, computes a market-cap-weighted Bank Run Gauge, and flags flight-to-quality signals. Live ingestion now runs in two lanes: a critical 20-minute lane for major coverage and an offset extended 20-minute lane for long-tail backlog drain.
+On-chain mint and burn event tracker for stablecoins on their **configured issuance chains** via Alchemy JSON-RPC. Detects Transfer events (and USDT-specific Issue/Redeem events), aggregates them into hourly flow buckets, exposes per-coin raw `Net Flow` plus baseline-relative `Pressure Shift vs 30D`, computes a market-cap-weighted Bank Run Gauge, and flags flight-to-quality signals. Live ingestion runs in two lanes: a critical 30-minute lane for major coverage and an offset extended 30-minute lane for long-tail backlog drain.
 
 Product scope note: the public `/flows` page now surfaces the configured issuance scope plus per-coin `coverage` metadata so partial history or lagging sync states are visible to users instead of implied as complete market-wide coverage. Current production scope is Ethereum for most tracked assets, with USDai tracked on native Arbitrum as its canonical issuance/redemption chain.
 
@@ -11,7 +11,7 @@ Operational freshness configuration is shared via `worker/src/lib/mint-burn-heal
 
 Scheduled/http handlers apply env overrides on top of these defaults (`worker/src/handlers/scheduled.ts`, `worker/src/handlers/http.ts`). Public `/api/health` now keys mint/burn freshness to the critical-lane sync timestamp / run status (the same semantics exposed by `/api/mint-burn-flows`) so quiet majors do not falsely mark the health surface stale just because no new events occurred.
 
-Public `/api/mint-burn-flows` freshness metadata and the `/flows` page intentionally allow one missed 20-minute critical-lane slot before warning. User-facing freshness is `fresh <= 40m`, `degraded <= 60m`, `stale > 60m`, which keeps the public warning surface aligned with `/status` cron-health grace windows instead of flagging a single late slot as an incident.
+Public `/api/mint-burn-flows` freshness metadata and the `/flows` page intentionally allow one missed 30-minute critical-lane slot before warning. User-facing freshness is `fresh <= 60m`, `degraded <= 90m`, `stale > 90m`, which keeps the public warning surface aligned with `/status` cron-health grace windows instead of flagging a single late slot as an incident.
 
 ---
 
@@ -27,9 +27,9 @@ Public `/api/mint-burn-flows` freshness metadata and the `/flows` page intention
 
 ## Cron Schedule
 
-- **Critical lane pattern:** `4,24,44 * * * *` (every 20 minutes, offset at :04/:24/:44)
-- **Extended lane pattern:** `13,33,53 * * * *` (every 20 minutes, offset at :13/:33/:53 — 9 minutes after critical lane starts)
-- **Trigger mode:** isolated. `sync-blacklist` runs on its own dedicated hourly trigger (`3 * * * *`); `sync-dex-discovery` runs on a dedicated 30-minute trigger (`6,36 * * * *`).
+- **Critical lane pattern:** `4,34 * * * *` (every 30 minutes, offset at :04/:34)
+- **Extended lane pattern:** `13,43 * * * *` (every 30 minutes, offset at :13/:43 — 9 minutes after critical lane starts)
+- **Trigger mode:** isolated. `sync-blacklist` runs on its own dedicated 6-hourly trigger (`3 */6 * * *`); `sync-dex-discovery` runs on a dedicated 2-hourly trigger (`6 */2 * * *`).
 - **Function:** `syncMintBurn(db, alchemyApiKey, { lane, jobName, ... })`
 - **Provider:** Alchemy JSON-RPC
 - **File:** `worker/src/cron/sync-mint-burn.ts`
@@ -41,7 +41,7 @@ Lane policy:
 - `sync-mint-burn` = critical lane. Uses the existing job id so freshness alerts and API freshness remain keyed to the major-symbol path.
 - `sync-mint-burn-extended` = extended lane. Uses its own `mint_burn_run_state.job` key and warning-only coverage semantics so long-tail backlog churn does not escalate the critical lane to `error`.
 
-UI note: when `/flows` receives a mint/burn-specific `sync.warning`, it renders that targeted banner and suppresses the generic stale-data banner for the same query so users do not see duplicate amber warnings describing the same freshness condition. Cached fallback API responses now preserve only freshness-derived headers; a transient live-query failure no longer emits an extra generic `Warning` while the cached dataset is still inside the public 40-minute freshness window.
+UI note: when `/flows` receives a mint/burn-specific `sync.warning`, it renders that targeted banner and suppresses the generic stale-data banner for the same query so users do not see duplicate amber warnings describing the same freshness condition. Cached fallback API responses now preserve only freshness-derived headers; a transient live-query failure no longer emits an extra generic `Warning` while the cached dataset is still inside the public 60-minute freshness window.
 
 ---
 
@@ -514,7 +514,7 @@ Returns 404 if the stablecoin ID is not in the tracked set.
 
 Contract note: aggregate `hours` only changes `hourly[]`. Coin-level `netFlow24hUsd`, mint/burn 24h volumes, counts, and pressure state remain fixed to the canonical 24-hour window.
 
-**Cache:** `CACHE_PROFILES.standard` (~20-minute freshness keyed to successful critical-lane syncs)
+**Cache:** `CACHE_PROFILES.standard` (~30-minute freshness keyed to successful critical-lane syncs)
 
 ### GET /api/mint-burn-events
 

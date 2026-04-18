@@ -1,6 +1,6 @@
 # Worker Infrastructure
 
-Cloudflare Worker serving the Pharos API. Handles HTTP routing, edge caching, CORS, admin auth, and 29 scheduled runtime jobs across 14 cron expressions / trigger slots. `CRON_INTERVALS` / `/api/status` track the same 29 jobs; cemetery and tracking appendices are now folded into daily digest delivery instead of a separate cron.
+Cloudflare Worker serving the Pharos API. Handles HTTP routing, edge caching, CORS, admin auth, and 30 scheduled runtime jobs across 14 cron expressions / trigger slots. `CRON_INTERVALS` / `/api/status` track the same 30 jobs; cemetery and tracking appendices are now folded into daily digest delivery instead of a separate cron.
 
 Execution note: the `snapshot-supply` retry path runs on the `*/15 * * * *` trigger only after a downstream-safe `sync-stablecoins` cache write.
 
@@ -325,18 +325,20 @@ This worker declares 14 cron expressions in `worker/wrangler.toml`. Fetch-heavy 
 crons = [
   "*/15 * * * *",
   "9,24,39,54 * * * *",
-  "3 * * * *",
-  "4,24,44 * * * *",
-  "6,36 * * * *",
-  "13,33,53 * * * *",
+  "3 */6 * * *",
+  "4,34 * * * *",
+  "6 */2 * * *",
+  "13,43 * * * *",
   "10,40 * * * *",
-  "11 * * * *",
+  "11 */4 * * *",
   "20 * * * *",
   "25 */4 * * *",
   "2,7,12,17,22,27,32,37,42,47,52,57 * * * *",
+  "*/5 * * * *",
   "0 8 * * *",
   "5 8 * * *",
   "0 6 1 * *",
+  "0 3 * * *",
 ]
 ```
 
@@ -356,7 +358,7 @@ crons = [
 - `capabilities.stablecoinsCache`
 - `capabilities.depegPipeline`
 
-`snapshot-supply` retry requires the stablecoins-cache capability. Both `snapshot-supply` and `snapshot-chain-supply` enforce a 1-hour cooldown via a `cache` table key (`snapshot-supply:last-write` / `snapshot-chain-supply:last-write`) to prevent redundant DB writes when triggered on the quarter-hourly slot. `publish-report-card-cache` also requires the stablecoins-cache capability and refreshes the shared Safety Score cache used by Chain Health without relying on the yield cron. `stability-index` and `compute-dews` were moved to the half-hourly trigger (Trigger 7) to halve their run frequency. `sync-dex-liquidity` still refreshes every 30 minutes, while `sync-yield-data` now publishes on its own hourly post-DEX trigger.
+`snapshot-supply` retry requires the stablecoins-cache capability. Both `snapshot-supply` and `snapshot-chain-supply` enforce a 20-hour cooldown via a `cache` table key (`snapshot-supply:last-write` / `snapshot-chain-supply:last-write`) so the quarter-hourly slot produces at most one UTC-day-keyed snapshot write per day. `publish-report-card-cache` also requires the stablecoins-cache capability and refreshes the shared Safety Score cache used by Chain Health without relying on the yield cron. `stability-index` and `compute-dews` were moved to the half-hourly trigger (Trigger 7) to halve their run frequency. `sync-dex-liquidity` still refreshes every 30 minutes, while `sync-yield-data` now publishes on its own hourly post-DEX trigger.
 
 **Inline staleness alert:** After sync-stablecoins completes, if the `stablecoins` cache is older than 1800 seconds (30 min), `sendAlert()` fires a webhook notification. This is a health check — not a cron job itself.
 
@@ -368,38 +370,37 @@ crons = [
 
 Dedicated quarter-hourly offset trigger for public/admin status probes. It runs at :09/:24/:39/:54 so real-HTTP probes do not compete with the heavier quarter-hourly stablecoin pricing slot.
 
-### Trigger 3: `3 * * * *` (blacklist — dedicated hourly)
+### Trigger 3: `3 */6 * * *` (blacklist — dedicated, every 6h)
 
 | Job              | Function          | File                                | Documentation                               |
 | ---------------- | ----------------- | ----------------------------------- | ------------------------------------------- |
 | `sync-blacklist` | `syncBlacklist()` | `worker/src/cron/sync-blacklist.ts` | [Blacklist Tracker](./blacklist-tracker.md) |
 
-Dedicated hourly trigger for blacklist sync (reduced from every 20 minutes — blacklist events are infrequent enough that hourly cadence is sufficient). Uses Etherscan for supported chains, chain RPC log scans (Alchemy/public fallback) for Base/Optimism/Avalanche/BSC, dRPC for historical L2 balance reads, and TronGrid for Tron (with TronGrid circuit breaker gating). Gets its own 6-connection pool and CPU budget.
+Dedicated 6-hourly trigger for blacklist sync. Blacklist events are infrequent enough (~1–3 per week network-wide across the tracked issuer set) that 6h cadence is sufficient; the cursor advancement logic in `sync-blacklist.ts` is resilient to missed runs. Uses Etherscan for supported chains, chain RPC log scans (Alchemy/public fallback) for Base/Optimism/Avalanche/BSC, dRPC for historical L2 balance reads, and TronGrid for Tron (with TronGrid circuit breaker gating). Gets its own 6-connection pool and CPU budget.
 
-### Trigger 4: `4,24,44 * * * *` (mint/burn critical — dedicated)
+### Trigger 4: `4,34 * * * *` (mint/burn critical — dedicated, every 30 min)
 
 | Job              | Function                       | File                                | Documentation    |
 | ---------------- | ------------------------------ | ----------------------------------- | ---------------- |
 | `sync-mint-burn` | `syncMintBurn()` critical lane | `worker/src/cron/sync-mint-burn.ts` | This doc (below) |
 
-Dedicated trigger for the critical mint/burn lane. Uses Alchemy JSON-RPC plus the Alchemy circuit breaker. Offset by 1 minute from blacklist to stagger Worker cold starts.
+Dedicated trigger for the critical mint/burn lane. Uses Alchemy JSON-RPC plus the Alchemy circuit breaker. Moved from 20-minute to 30-minute cadence alongside the extended lane. `MINT_BURN_CRITICAL_LANE_INTERVAL_SEC` (in `worker/src/lib/mint-burn-health-config.ts`) anchors the public freshness SLA (`MAX_AGE = interval × 2`), which is therefore 60 minutes — still well inside the 6h operator-alert threshold.
 
-### Trigger 5: `6,36 * * * *` (DEX discovery — dedicated, every 30 minutes)
+### Trigger 5: `6 */2 * * *` (DEX discovery — dedicated, every 2h)
 
 | Job                  | Function             | File                                            | Documentation                             |
 | -------------------- | -------------------- | ----------------------------------------------- | ----------------------------------------- |
 | `sync-dex-discovery` | `syncDexDiscovery()` | `worker/src/cron/dex-discovery/orchestrator.ts` | [DEX Liquidity Score](./dex-liquidity.md) |
 
-Dedicated trigger for DEX pool discovery. Uses strictly sequential fetches (1 connection at a time) from CoinGecko/GeckoTerminal/DexScreener. Stages pools for later merge by `sync-dex-liquidity`.
-The lane is best-effort by design: a 12-minute shared budget plus 25-second per-coin cap force partial `degraded` completion before the Worker nears its platform wall-clock ceiling.
+Dedicated 2-hourly trigger for DEX pool discovery. Uses strictly sequential fetches (1 connection at a time) from CoinGecko/GeckoTerminal/DexScreener. Stages pools for later merge by `sync-dex-liquidity`. Pool discovery is slow-moving (new pools appear with new deployments, not intraday) and the orchestrator already tiers work across runs; 2h cadence keeps Tier-1 coins ≤2h stale while halving GT/CG/DS crawl traffic relative to the previous 30-min cadence. The lane is best-effort by design: a 12-minute shared budget plus 25-second per-coin cap force partial `degraded` completion before the Worker nears its platform wall-clock ceiling.
 
-### Trigger 6: `13,33,53 * * * *` (every 20 minutes, offset at :13/:33/:53)
+### Trigger 6: `13,43 * * * *` (mint/burn extended — dedicated, every 30 min)
 
 | Job                       | Function                       | File                                | Documentation    |
 | ------------------------- | ------------------------------ | ----------------------------------- | ---------------- |
 | `sync-mint-burn-extended` | `syncMintBurn()` extended lane | `worker/src/cron/sync-mint-burn.ts` | This doc (below) |
 
-This offset schedule exists so long-tail mint/burn backfill pressure cannot starve the critical lane. It uses a separate `mint_burn_run_state.job` key (`sync-mint-burn-extended`) and warning-only coverage semantics.
+This offset schedule exists so long-tail mint/burn backfill pressure cannot starve the critical lane (which runs at `4,34`, staggered 9 minutes earlier). It uses a separate `mint_burn_run_state.job` key (`sync-mint-burn-extended`) and warning-only coverage semantics. Moved from 20-minute to 30-minute cadence in the same change that bumped the critical lane.
 
 ### Trigger 7: `10,40 * * * *` (every 30 minutes, at :10/:40)
 
@@ -414,7 +415,7 @@ This offset schedule exists so long-tail mint/burn backfill pressure cannot star
 
 `sync-dex-liquidity` metadata now tracks both row coverage and value coverage. In addition to `currentCoverage` / `previousCoverage`, the cron records `currentGlobalTvl`, `previousGlobalTvl`, top-10 covered TVL, row/value guard flags, current/previous coverage-class distribution, and persistence diagnostics (`placeholderRowsWritten`, orphan-row cleanup status, historical snapshot write status). `/status` surfaces the coverage slice through the Liquidity Health card, while the raw cron metadata keeps the persistence diagnostics available for operator debugging.
 
-### Trigger 8: `11 * * * *` (hourly at :11 — reserve + redemption lane)
+### Trigger 8: `11 */4 * * *` (every 4h at :11 — reserve + redemption lane)
 
 | Job                         | Function                    | File                                           | Documentation                                     |
 | --------------------------- | --------------------------- | ---------------------------------------------- | ------------------------------------------------- |
@@ -422,7 +423,7 @@ This offset schedule exists so long-tail mint/burn backfill pressure cannot star
 | `sync-redemption-backstops` | `syncRedemptionBackstops()` | `worker/src/cron/sync-redemption-backstops.ts` | [Redemption Backstops](./redemption-backstops.md) |
 | `sync-kinesis-supply`       | `syncKinesisSupply()`       | `worker/src/cron/sync-kinesis-supply.ts`       | This doc (below)                                  |
 
-**Connection budget:** dedicated hourly trigger for reserve and redemption tuning. Jobs run sequentially so live reserve adapters finish before redemption backstop sync consumes reserve metadata. Kinesis supply sync adds 2 sequential HTTP fetches (1 connection peak).
+**Connection budget:** dedicated 4-hourly trigger for reserve and redemption tuning. Jobs run sequentially so live reserve adapters finish before redemption backstop sync consumes reserve metadata. Kinesis supply sync adds 2 sequential HTTP fetches (1 connection peak). Moved from hourly to 4-hourly because most reserve attestations (Chainlink PoR, Ethena, Tether transparency, etc.) update daily or weekly — hourly polling was wasted RPC + HTTP traffic. The slot-level "Live reserve sync stale" alert threshold in `worker/src/handlers/scheduled/hourly-live-reserves.ts` is 12h (≥ 3 missed runs); `LIVE_RESERVE_FRESHNESS_SEC = 48h` at the API layer keeps consumer-facing "fresh" classification unaffected.
 
 ### Trigger 9: `20 * * * *` (hourly at :20 — core yield publication)
 
@@ -489,18 +490,19 @@ Workers enforce a **6 concurrent fetch connections** limit per cron trigger invo
 | ------- | ------------------ | :------------------------------------------------------------------------------------------------: | :------: |
 | 1       | `*/15 * * * *`     |       3 (sync-fx-rates -> sync-stablecoins -> DB-only snapshot/report-card jobs are chained)       |    3     |
 | 2       | `9,24,39,54 * * * *` |                                     1 (status self-check probes)                                  |    5     |
-| 3       | `3 * * * *`        |                                  1 (rate-limited sequential blacklist scans)                       |    5     |
-| 4       | `4,24,44 * * * *`  |                                        1 (Alchemy JSON-RPC)                                        |    5     |
-| 5       | `6,36 * * * *`     |                                  1 (sequential CG/GT/DexScreener)                                  |    5     |
-| 6       | `13,33,53 * * * *` |                                1 (Alchemy JSON-RPC, extended lane)                                 |    5     |
+| 3       | `3 */6 * * *`      |                                  1 (rate-limited sequential blacklist scans)                       |    5     |
+| 4       | `4,34 * * * *`     |                                        1 (Alchemy JSON-RPC)                                        |    5     |
+| 5       | `6 */2 * * *`      |                                  1 (sequential CG/GT/DexScreener)                                  |    5     |
+| 6       | `13,43 * * * *`    |                                1 (Alchemy JSON-RPC, extended lane)                                 |    5     |
 | 7       | `10,40 * * * *`    |                 4 (charts -> DEX liquidity -> compute-dews(0) -> stability-index(0) are chained)   |    2     |
-| 8       | `11 * * * *`       |                2 (reserve adapters + Kinesis are sequential; redemption is DB-only)                |    4     |
+| 8       | `11 */4 * * *`     |                2 (reserve adapters + Kinesis are sequential; redemption is DB-only)                |    4     |
 | 9       | `20 * * * *`       |                                      1 (core yield publisher)                                      |    5     |
 | 10      | `25 */4 * * *`     |                                  5 (supplemental yield families)                                   |    1     |
 | 11      | `2,7,...,57 * * * *` |                        5 (Telegram alert dispatcher batches sends in groups of 5)                  |    1     |
 | 12      | `0 8 * * *`        |                 1 (benchmark feeds -> USDS Etherscan reads are chained serially)                   |    5     |
 | 13      | `5 8 * * *`        |                     5 (Bluechip batch of 3 + Anthropic + CoinGecko; digest/recap chained)          |    1     |
 | 14      | `0 6 1 * *`        |                                      1 (DeFiLlama yield scan)                                      |    5     |
+| 15      | `0 3 * * *`        |                     0 (prune-status-probe-runs + prune-cron-history; both DB-only)                 |    6     |
 
 **Policy for new jobs:**
 
@@ -900,7 +902,7 @@ The three crons below were previously only listed by filename in [Architecture](
 ### sync-live-reserves
 
 **File:** `worker/src/cron/sync-live-reserves.ts`
-**Schedule:** `11 * * * *` (hourly at :11 UTC)
+**Schedule:** `11 */4 * * *` (every 4 hours at :11 UTC)
 **Data source:** Protocol-specific reserve APIs and on-chain vault/accounting reads via adapter registry (`worker/src/cron/reserve-adapters/`)
 
 **Purpose:** Syncs live reserve composition from protocol data APIs into the `reserve_composition` D1 table and records per-coin operational state in `reserve_sync_state`. Each coin with `liveReservesConfig` declares an adapter, semantics, source inputs, and optional breaker scope. The shared adapter registry also classifies reserve shape (`sourceModel`) and evidence strength (`evidenceClass`). The cron iterates configured coins sequentially, delegates each coin to a single execution helper (breaker decision, adapter/fallback execution, validation, finalize), only reuses fetched results for adapters explicitly marked `source-invariant`, and persists both successful snapshots and failed/degraded sync state. Warning-bearing snapshots remain visible on reserve detail/status surfaces, but report-card collateral passthrough only consumes fresh authoritative `independent` evidence whose latest sync state is `ok`. For the full adapter/config/API contract, see [live-reserves.md](./live-reserves.md).
@@ -981,7 +983,7 @@ Only coins with `liveReservesConfig` set in their metadata appear in this table.
 ### sync-redemption-backstops
 
 **File:** `worker/src/cron/sync-redemption-backstops.ts`  
-**Schedule:** `11 * * * *` (hourly at :11 UTC, immediately after `sync-live-reserves`)  
+**Schedule:** `11 */4 * * *` (every 4 hours at :11 UTC, immediately after `sync-live-reserves`)  
 **Data source:** Stablecoins cache, DEX liquidity snapshot, redemption-backstop config registry, and live reserve-sync metadata where available
 
 **Purpose:** Builds the current `redemption_backstop` dataset for redeemable assets and writes daily rows to `redemption_backstop_history`. This sync is deliberately separate from report-card generation so redeemability remains a first-class worker dataset with its own cron visibility, API surface, and methodology versioning.
@@ -997,7 +999,7 @@ Cron result status is thresholded rather than all-or-nothing:
 ### sync-kinesis-supply
 
 **File:** `worker/src/cron/sync-kinesis-supply.ts`
-**Schedule:** `11 * * * *` (hourly at :11 UTC, after `sync-redemption-backstops`)
+**Schedule:** `11 */4 * * *` (every 4 hours at :11 UTC, after `sync-redemption-backstops`)
 **Data source:** Kinesis Horizon `/coin_in_circulation` endpoint (KAU and KAG chains)
 
 **Purpose:** Fetches circulation, cumulative mint, and cumulative redemption totals from the two Kinesis Stellar-fork blockchains. Writes circulation to the `onchain_supply` table for independent supply verification against DefiLlama/CoinGecko. Caches full totals in the `cache` table under `kinesis-kinesis-kau-totals` / `kinesis-kinesis-kag-totals` for future flow-delta computation.
@@ -1078,32 +1080,34 @@ Returns raw and effective status, recent `cron_runs`, active `cron_run_progress`
 | ------------------------------- | ---------------- | ------------------------------------------------- |
 | `sync-stablecoins`              | 900s (15min)     | `*/15 * * * *`                                    |
 | `sync-stablecoin-charts`        | 3,600s (1h)      | `10,40 * * * *` (1h cooldown)                     |
-| `sync-fx-rates`                 | 900s (15min)     | `*/15 * * * *`                                    |
+| `sync-fx-rates`                 | 1,800s (30min)   | `*/15 * * * *` (30-min cooldown)                  |
 | `stability-index`               | 1,800s (30min)   | `10,40 * * * *`                                   |
 | `compute-dews`                  | 1,800s (30min)   | `10,40 * * * *`                                   |
 | `status-self-check`             | 900s (15min)     | `9,24,39,54 * * * *`                              |
 | `dispatch-telegram-alerts`      | 300s (5min)      | `2,7,12,17,22,27,32,37,42,47,52,57 * * * *`       |
-| `sync-blacklist`                | 3,600s (1h)      | `3 * * * *`                                       |
-| `sync-mint-burn`                | 1,200s (20min)   | `4,24,44 * * * *`                                 |
-| `sync-dex-discovery`            | 1,800s (30min)   | `6,36 * * * *`                                    |
-| `sync-mint-burn-extended`       | 1,200s (20min)   | `13,33,53 * * * *`                                |
+| `sync-blacklist`                | 21,600s (6h)     | `3 */6 * * *`                                     |
+| `sync-mint-burn`                | 1,800s (30min)   | `4,34 * * * *`                                    |
+| `sync-dex-discovery`            | 7,200s (2h)      | `6 */2 * * *`                                     |
+| `sync-mint-burn-extended`       | 1,800s (30min)   | `13,43 * * * *`                                   |
 | `sync-dex-liquidity`            | 1,800s (30min)   | `10,40 * * * *`                                   |
 | `sync-yield-data`               | 3,600s (1h)      | `20 * * * *`                                      |
 | `sync-yield-supplemental`       | 14,400s (4h)     | `25 */4 * * *`                                    |
-| `snapshot-supply`               | 86,400s (24h)    | `*/15 * * * *` (primary) / `0 8 * * *` (fallback) |
-| `snapshot-chain-supply`         | 86,400s (24h)    | `*/15 * * * *`                                    |
+| `snapshot-supply`               | 86,400s (24h)    | `*/15 * * * *` (20h cooldown) / `0 8 * * *` (fallback) |
+| `snapshot-chain-supply`         | 86,400s (24h)    | `*/15 * * * *` (20h cooldown)                     |
 | `publish-report-card-cache`     | 900s (15min)     | `*/15 * * * *`                                    |
 | `snapshot-safety-grade-history` | 86,400s (24h)    | `0 8 * * *`                                       |
 | `fetch-tbill-rate`              | 86,400s (24h)    | `0 8 * * *`                                       |
 | `snapshot-psi`                  | 86,400s (24h)    | `0 8 * * *`                                       |
 | `sync-usds-status`              | 86,400s (24h)    | `0 8 * * *`                                       |
-| `sync-live-reserves`            | 3,600s (1h)      | `11 * * * *`                                      |
-| `sync-redemption-backstops`     | 3,600s (1h)      | `11 * * * *`                                      |
-| `sync-kinesis-supply`           | 3,600s (1h)      | `11 * * * *`                                      |
+| `sync-live-reserves`            | 14,400s (4h)     | `11 */4 * * *`                                    |
+| `sync-redemption-backstops`     | 14,400s (4h)     | `11 */4 * * *`                                    |
+| `sync-kinesis-supply`           | 14,400s (4h)     | `11 */4 * * *`                                    |
 | `sync-bluechip`                 | 86,400s (24h)    | `5 8 * * *`                                       |
 | `daily-digest`                  | 86,400s (24h)    | `5 8 * * *`                                       |
 | `weekly-recap`                  | 604,800s (7d)    | `5 8 * * *`                                       |
 | `discovery-scan`                | 604,800s (7d)    | `5 8 * * *` (Monday-only)                         |
+| `prune-status-probe-runs`       | 86,400s (24h)    | `0 3 * * *`                                       |
+| `prune-cron-history`            | 86,400s (24h)    | `0 3 * * *`                                       |
 | `yield-coverage-audit`          | 2,592,000s (30d) | `0 6 1 * *`                                       |
 
 A job is marked "unhealthy" if its last run had `status='error'` or if the last run started more than 2× its expected interval ago. `/api/status` now also exposes `crons[*].inFlight` while a long-running leased job is active, including `stage`, `itemsDone/itemsTotal`, the last heartbeat timestamp, and a `stale` flag when the active-progress row stops updating. Only progress rows backed by a still-active matching lease are surfaced this way.

@@ -7,8 +7,8 @@ Dedicated documentation for the live reserve-composition subsystem that powers `
 ## Overview
 
 - **Cron:** `sync-live-reserves` (`worker/src/cron/sync-live-reserves.ts`)
-- **Schedule:** `11 * * * *` (hourly at :11 UTC)
-- **Shared hourly lane:** after live reserve sync, the same slot runs redemption backstop sync, Kinesis supply sync, and collateral-drift checks / alerts (`worker/src/handlers/scheduled/hourly-live-reserves.ts`)
+- **Schedule:** `11 */4 * * *` (every 4 hours at :11 UTC)
+- **Shared 4-hourly lane:** after live reserve sync, the same slot runs redemption backstop sync, Kinesis supply sync, and collateral-drift checks / alerts (`worker/src/handlers/scheduled/hourly-live-reserves.ts`)
 - **Current coverage:** 147 live-enabled stablecoins across 44 registered adapters
 - **Storage:** `reserve_composition`, `reserve_composition_history`, `reserve_sync_state`, `reserve_sync_attempt_history`
 - **API:** `GET /api/stablecoin-reserves/:id`
@@ -129,7 +129,7 @@ Warnings now carry both a display `severity` and an execution `effect`:
 
 ## Cron Behavior
 
-`runHourlyReserveSyncSlot()` in `worker/src/handlers/scheduled/hourly-live-reserves.ts` runs the reserve cron on its own trigger so reserve-adapter fetches do not compete with the 30-minute scoring lane or the daily 08:00 jobs.
+`runFourHourlyReserveSyncSlot()` in `worker/src/handlers/scheduled/hourly-live-reserves.ts` runs the reserve cron on its own 4-hourly trigger so reserve-adapter fetches do not compete with the 30-minute scoring lane or the daily 08:00 jobs.
 
 `syncLiveReserves()`:
 
@@ -201,7 +201,7 @@ Latest successful live snapshot per live-enabled coin.
 
 ### `reserve_composition_history`
 
-Append-only history of successful live snapshots. Every successful upsert also inserts a history row carrying the same slices, metadata, warnings, and adapter classification fields as the latest-snapshot table. The hourly reserve cron prunes rows older than 90 days.
+Append-only history of successful live snapshots. Every successful upsert also inserts a history row carrying the same slices, metadata, warnings, and adapter classification fields as the latest-snapshot table. The 4-hourly reserve cron prunes rows older than 90 days.
 
 ### `reserve_sync_state`
 
@@ -222,7 +222,7 @@ Per-coin operational state for the most recent attempt.
 
 ### `reserve_sync_attempt_history`
 
-Append-only history of all reserve-sync attempts, including `ok`, `degraded`, `error`, and `skipped` outcomes with their warnings, error message, and attempt-scoped metadata. The hourly reserve cron prunes rows older than 90 days.
+Append-only history of all reserve-sync attempts, including `ok`, `degraded`, `error`, and `skipped` outcomes with their warnings, error message, and attempt-scoped metadata. The 4-hourly reserve cron prunes rows older than 90 days.
 
 Freshness and consistency rules now live across the `worker/src/lib/live-reserves-store*.ts` helper family, with `worker/src/lib/live-reserves-store.ts` kept as the public facade:
 

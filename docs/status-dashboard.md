@@ -122,9 +122,9 @@ The active frontend operator mode is now:
 - Cron cards are grouped by trigger slot on the page:
   - 15-minute core ingestion / score recompute
   - 5-minute Telegram dispatch lane for subscriber alerts
-  - 20-minute on-chain intake jobs shown together, but labeled as isolated triggers (`sync-mint-burn`, `sync-mint-burn-extended`); `sync-dex-discovery` is in the half-hourly group on its own dedicated 30-minute trigger
+  - 30-minute on-chain intake jobs (`sync-mint-burn` on `4,34`, `sync-mint-burn-extended` on `13,43`) shown together in the half-hourly group but labeled as isolated triggers
   - 30-minute charts / liquidity / DEWS / PSI jobs
-  - hourly blacklist / reserve / redemption / yield lane (`sync-blacklist`, `sync-live-reserves`, `sync-redemption-backstops`, `sync-yield-data`)
+  - hourly core yield publisher (`sync-yield-data`); `sync-blacklist` is on a dedicated 6-hourly trigger, and the reserve + redemption + Kinesis lane is on a dedicated 4-hourly trigger; `sync-dex-discovery` is on a dedicated 2-hourly trigger
   - daily snapshot / digest / coverage-discovery jobs
   - Cards use operator-friendly labels but keep raw job ids visible in monospace for log lookup, plus the exact cron expression and whether the trigger is shared vs isolated
   - When a leased job is still running, cards surface `running` / `running-stale` state from `crons[*].inFlight`

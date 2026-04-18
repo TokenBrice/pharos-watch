@@ -37,7 +37,7 @@ The snapshot does **not** call on-chain RPCs --- it relies entirely on DefiLlama
    - Build `INSERT OR REPLACE` statement
 7. Check the cooldown guard:
    - read cache key `snapshot-supply:last-write`
-   - if the previous successful write is < 1 hour old, skip with `reason: "cooldown_active"`
+   - if the previous successful write is < 20 hours old, skip with `reason: "cooldown_active"` (one snapshot per UTC day; 20h tolerates clock drift without skipping a day)
 8. Data quality check: warn if fewer than 80% of expected coins have valid data
 9. Execute all statements via `batchExecute()` (batch size = 100, D1 limit)
 10. If zero rows were prepared, return cron `status: "degraded"` with `reason: "all_coins_zero_supply"`
@@ -236,7 +236,7 @@ The compare data model fetches per-coin `/api/supply-history` series directly th
 |-----------|----------|
 | `loadStablecoinsCache()` returns `kind !== "ok"` | Return degraded with the loader reason (`missing-cache`, `json-parse-failed`, `invalid-payload-shape`, `missing-pegged-assets`, or `legacy-array-not-allowed`) |
 | Cache > 20 min old | Return degraded (`reason: "cache_stale"`) |
-| Successful write < 1 hour ago | Skip write (`reason: "cooldown_active"`) |
+| Successful write < 20 hours ago | Skip write (`reason: "cooldown_active"`) |
 | 0 prepared rows (all tracked coins missing/zero supply) | Return degraded (`reason: "all_coins_zero_supply"`) |
 | < 80% of tracked coins have valid data | Log warning, continue |
 | `batchExecute()` exception | Propagate to `logCronRun` error handler |
@@ -253,7 +253,7 @@ All cron runs are logged to the `cron_runs` table (7-day retention).
 4. Strict cache loading means malformed or legacy array payloads fail closed instead of snapshotting partial data
 5. DefiLlama-backed non-USD backfills require historical prices for native-to-USD conversion
 6. Daily cron and admin backfill both use `INSERT OR REPLACE` for idempotent re-runs
-7. The write path is intentionally throttled by a 1-hour cooldown cache key even though the cron is chained to more frequent lanes
+7. The write path is intentionally throttled by a 20-hour cooldown cache key (one snapshot per UTC day) even though the cron is chained to the 15-minute lane
 8. `supply_history` is kept as an archive for downstream historical replays such as PSI backfills; recover older gaps with the admin backfill when needed
 
 ---

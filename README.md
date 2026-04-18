@@ -218,17 +218,18 @@ Runtime host split:
 
 ```
 Cloudflare Worker (API layer)
-  ├── Cron: */15 * * * *                        → sync stablecoins (includes depeg detection + confirmation) + downstream-safe snapshot-supply retry + snapshot-chain-supply + FX rates
+  ├── Cron: */15 * * * *                        → sync stablecoins (includes depeg detection + confirmation) + downstream-safe snapshot-supply retry + snapshot-chain-supply + FX rates (cooldown-gated to 30 min)
   ├── Cron: 9,24,39,54 * * * *                  → status self-check
-  ├── Cron: 3 * * * *                           → blacklist sync
-  ├── Cron: 4,24,44 * * * *                     → mint/burn critical lane
-  ├── Cron: 6,36 * * * *                         → DEX discovery staging (30 min)
-  ├── Cron: 13,33,53 * * * *                    → mint/burn extended lane
+  ├── Cron: 3 */6 * * *                         → blacklist sync (every 6h)
+  ├── Cron: 4,34 * * * *                        → mint/burn critical lane (every 30 min)
+  ├── Cron: 6 */2 * * *                         → DEX discovery staging (every 2h)
+  ├── Cron: 13,43 * * * *                       → mint/burn extended lane (every 30 min)
   ├── Cron: 10,40 * * * *                       → stablecoin charts + DEX liquidity + DEWS + PSI
-  ├── Cron: 11 * * * *                          → live reserve sync + redemption backstop snapshots + Kinesis supply + collateral drift check
+  ├── Cron: 11 */4 * * *                        → live reserve sync + redemption backstop snapshots + Kinesis supply + collateral drift check (every 4h)
   ├── Cron: 20 * * * *                          → yield sync
   ├── Cron: 25 */4 * * *                        → supplemental yield sync
   ├── Cron: 2,7,12,17,22,27,32,37,42,47,52,57 * * * * → Telegram subscriber alerts
+  ├── Cron: 0 3 * * *                           → status-probe TTL prune + cron-history TTL prune
   ├── Cron: 0 8 * * *                           → supply snapshot + safety-grade snapshot + T-bill rate + PSI daily snapshot + USDS status
   ├── Cron: 5 8 * * *                           → Bluechip sync + daily digest + weekly recap (Mondays) + discovery scan (Mondays)
   └── Cron: 0 6 1 * *                           → monthly yield coverage audit
