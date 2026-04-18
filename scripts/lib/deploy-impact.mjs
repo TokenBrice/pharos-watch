@@ -47,6 +47,7 @@ const FULL_DEPLOY_GUARDRAIL_EXACT_PATHS = new Set([
   "scripts/check-verified-doc-links.mjs",
   "scripts/check-worker-import-boundary.mjs",
   "scripts/check-worker-migrations.mjs",
+  "scripts/rollback-pages-deployment.mjs",
   "scripts/smoke-api.mjs",
   "scripts/smoke-ops.mjs",
   "scripts/smoke-transport.mjs",

@@ -138,8 +138,9 @@ Deploy sequence in `.github/workflows/deploy-cloudflare.yml`:
    - waits for `pages-prepare`
    - also waits for `smoke-api` only when worker/API work was also required for the push
    - executes the publish Pages path:
-     - `deploy-pages` publishes the already verified artifact through Wrangler with the existing retry loop
+     - `deploy-pages` first captures the current Cloudflare Pages production deployment id (via `wrangler pages deployment list --project-name=stablecoin-dashboard --environment=production --json`) as a best-effort step (continue-on-error), emits it as the `previous_deployment_id` job output, then publishes the already verified artifact through Wrangler with the existing retry loop
      - `smoke-ui-live` then runs `npm run test:smoke-ui -- --url https://pharos.watch --mode live` against the real public host, including the same homepage shell/static-payload GA snippet check when configured
+     - `rollback-pages` calls the Cloudflare Pages rollback REST API via `scripts/rollback-pages-deployment.mjs` when `deploy-pages` succeeded but `smoke-ui-live` failed and `previous_deployment_id` is non-empty, restoring the previously live Pages production deployment; the overall workflow still surfaces as failed so the incident is visible
 9. `smoke-ui-live`
    - worker-only deploy path that runs `npm run test:smoke-ui -- --url https://pharos.watch --mode live`
    - verifies the live Pages frontend still works against the newly deployed worker/API when no static rebuild is needed, including the expected GA snippet when configured
