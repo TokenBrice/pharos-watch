@@ -268,13 +268,13 @@ export async function backfillAmounts(
               amount_source
       FROM blacklist_events
        WHERE event_type IN ('blacklist', 'unblacklist', 'destroy')
+         AND chain_id != 'tron'
          AND (
                amount_status IN ('recoverable_pending', 'provider_failed', 'ambiguous')
                OR (
                  amount_source = 'derived'
                  AND amount_native = 0
                  AND amount_status = 'resolved'
-                 AND chain_id != 'tron'
                )
              )
        ORDER BY

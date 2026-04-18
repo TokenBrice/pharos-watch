@@ -119,3 +119,7 @@ d1-backup-*.sql
 worker/d1-backup-*.sql
 
 output/playwright/
+
+# playwright
+.playwright-mcp
+.playwright-cli

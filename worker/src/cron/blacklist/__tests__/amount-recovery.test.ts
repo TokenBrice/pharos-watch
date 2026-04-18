@@ -1,8 +1,9 @@
 import { describe, expect, it } from "vitest";
+import { mockD1 } from "../../../api/__tests__/helpers/mock-d1";
 import { createBudget } from "../../../lib/evm-logs";
 import type { ContractEventConfig } from "../../../lib/blacklist-contracts";
 import type { BlacklistRow } from "../shared";
-import { enrichRowBalances } from "../amount-recovery";
+import { backfillAmounts, enrichRowBalances } from "../amount-recovery";
 import { shouldSuppressAsMirrorZero } from "../shared";
 
 const a7a5Config: ContractEventConfig = {
@@ -92,5 +93,23 @@ describe("enrichRowBalances", () => {
 
     expect(counters).toEqual({ attempted: 0, succeeded: 0, failed: 0 });
     expect(rows[0]?.amount_usd_at_event).toBe(1.5375);
+  });
+});
+
+describe("backfillAmounts", () => {
+  it("does not let Tron rows block the per-row EVM recovery pass", async () => {
+    const db = mockD1([{ match: "FROM blacklist_events", rows: [] }], { requireMatch: true });
+
+    await backfillAmounts(
+      db,
+      null,
+      null,
+      async (fn) => fn(),
+      createBudget(5),
+      Date.now() + 10_000,
+    );
+
+    const select = db.getHistory().find((entry) => entry.sql.includes("FROM blacklist_events"));
+    expect(select?.sql).toContain("AND chain_id != 'tron'");
   });
 });
