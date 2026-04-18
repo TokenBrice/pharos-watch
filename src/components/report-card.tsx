@@ -148,13 +148,6 @@ function DimensionRow({ dimKey, dim, card, liquidityComponents }: DimensionRowPr
         </div>
       </div>
 
-      {/* Peg stability cap warning - always visible */}
-      {dimKey === "pegStability" && dim.detail.includes("capped at C") && (
-        <p className="ml-4 mt-1 text-xs text-amber-700 dark:text-amber-400">
-          Capped — active depeg in progress
-        </p>
-      )}
-
       {/* Expanded Details */}
       {expanded && hasDetails && (
         <div id={detailsId} className="mt-2 ml-4 space-y-2 animate-in slide-in-from-top-1 duration-200">
