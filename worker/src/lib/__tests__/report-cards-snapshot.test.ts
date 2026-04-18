@@ -479,6 +479,74 @@ describe("buildReportCardsSnapshot", () => {
     expect(card?.dimensions.liquidity.detail).toContain("primary-market route requires DEX liquidity floor");
   });
 
+  it("keeps documented offchain-issuer routes scored when DEX liquidity is stale-but-present", async () => {
+    // Regression: when the sync-dex-liquidity cron lags past its freshness
+    // runway (e.g. slot contention on the shared half-hourly trigger), the
+    // snapshot previously suppressed DEX data entirely, which cascaded every
+    // documented offchain-issuer eventual route (USDC, USDP, USDT, GUSD, ...)
+    // to NR via the "primary-market route requires DEX liquidity floor"
+    // exclusion. Stale-but-present DEX scores should keep flowing through so
+    // those CeFi rails stay graded; staleness is surfaced via inputFreshness.
+    const cacheValue = JSON.stringify({
+      peggedAssets: [makeAsset({ id: "cusd-cap", symbol: "CUSD" })],
+    });
+    const staleDexUpdatedAt = nowSec - CRON_INTERVALS["sync-dex-liquidity"] * 2 - 1;
+    const db = mockD1([
+      {
+        match: "cache",
+        rows: [
+          { key: "stablecoins", value: cacheValue, updated_at: nowSec },
+          { key: "bluechip-ratings", value: "{}", updated_at: nowSec },
+        ],
+        first: { key: "stablecoins", value: cacheValue, updated_at: nowSec },
+      },
+      {
+        match: "dex_liquidity",
+        rows: [
+          {
+            stablecoin_id: "cusd-cap",
+            liquidity_score: 29,
+            concentration_hhi: 1,
+            pool_count: 1,
+            chain_count: 1,
+            updated_at: staleDexUpdatedAt,
+          },
+        ],
+      },
+      { match: "depeg_events", rows: [] },
+      { match: "supply_history", rows: [] },
+    ]);
+    loadRedemptionBackstopSnapshotMock.mockResolvedValueOnce({
+      map: {
+        "cusd-cap": makeRedemptionEntry({
+          score: 65,
+          routeFamily: "offchain-issuer",
+          accessModel: "issuer-api",
+          settlementModel: "same-day",
+          executionModel: "rules-based-nav",
+          outputAssetType: "stable-single",
+          capacitySemantics: "eventual-only",
+          capacityConfidence: "documented-bound",
+          immediateCapacityUsd: null,
+          immediateCapacityRatio: null,
+        }),
+      },
+      latestUpdatedAt: nowSec,
+    });
+
+    const snapshot = await buildReportCardsSnapshot(db);
+    const card = snapshot.cards.find((entry) => entry.id === "cusd-cap");
+
+    expect(snapshot.liquidityStale).toBe(true);
+    expect(snapshot.inputFreshness.dexLiquidity.stale).toBe(true);
+    expect(card?.rawInputs.liquidityScore).toBe(29);
+    expect(card?.rawInputs.redemptionUsedForLiquidity).toBe(true);
+    expect(card?.rawInputs.effectiveExitScore).toBe(32);
+    expect(card?.dimensions.liquidity.grade).not.toBe("NR");
+    expect(card?.dimensions.liquidity.score).toBe(32);
+    expect(card?.dimensions.liquidity.detail).toContain("primary-market exit bonus only");
+  });
+
   it("keeps severe-depeg redemption eligibility aligned with scoreLiquidity rules", async () => {
     const cacheValue = JSON.stringify({
       peggedAssets: [makeAsset({ id: "cusd-cap", symbol: "CUSD" })],

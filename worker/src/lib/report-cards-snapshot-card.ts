@@ -39,7 +39,6 @@ export interface ComputeCardInput {
   overallScores: Map<string, number>;
   blacklistStatus: BlacklistStatus;
   liveReserveMap: Map<string, ReserveSlice[]>;
-  liquidityStale: boolean;
 }
 
 export interface BuildLiveReportCardsInput {
@@ -50,7 +49,6 @@ export interface BuildLiveReportCardsInput {
   bluechipMap: Record<string, BluechipRating>;
   resolvedBlacklistStatuses: Map<string, BlacklistStatus>;
   liveReserveMap: Map<string, ReserveSlice[]>;
-  liquidityStale: boolean;
 }
 
 function resolvePegInput(
@@ -98,11 +96,16 @@ function computeReportCard(input: ComputeCardInput): ReportCard {
     overallScores,
     blacklistStatus,
     liveReserveMap,
-    liquidityStale,
   } = input;
   const resolvedPeg = resolvePegInput(meta, pegDataById);
   const peg = resolvedPeg.peg;
-  const liq = liquidityStale ? undefined : dexLiqMap[meta.id];
+  // Use the last-known DEX snapshot even if the upstream freshness window has
+  // elapsed. Staleness is surfaced via `inputFreshness.dexLiquidity.stale` and
+  // the top-level `liquidityStale` flag; we no longer cascade to NR when the
+  // cron lags, which otherwise pushes documented offchain-issuer routes (USDC,
+  // USDP, USDT, ...) through the "primary-market route requires DEX liquidity
+  // floor" exclusion on routine delays.
+  const liq = dexLiqMap[meta.id];
   const redemption = redemptionBackstopMap[meta.id];
   const rating = bluechipMap[meta.id];
   const activeDepegBps = peg?.activeDepeg
@@ -190,7 +193,6 @@ export function buildLiveReportCards(input: BuildLiveReportCardsInput): ReportCa
       overallScores,
       blacklistStatus: input.resolvedBlacklistStatuses.get(meta.id) ?? false,
       liveReserveMap: input.liveReserveMap,
-      liquidityStale: input.liquidityStale,
     });
     liveCards.push(card);
     if (card.overallScore !== null) {

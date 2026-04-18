@@ -105,7 +105,6 @@ export async function buildReportCardsSnapshot(db: D1Database): Promise<ReportCa
     bluechipMap,
     resolvedBlacklistStatuses,
     liveReserveMap,
-    liquidityStale,
   });
 
   const {
