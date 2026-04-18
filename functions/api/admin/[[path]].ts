@@ -22,6 +22,10 @@ const FORWARDED_REQUEST_HEADERS = [
   "Accept",
   "Content-Type",
   "Idempotency-Key",
+  // Required by the Worker's CSRF gate on mutating admin routes; the browser
+  // sends it (see src/components/status/admin-action-button.tsx) but the
+  // default Pages proxy only forwards an explicit allow-list.
+  "X-Pharos-Admin",
 ] as const;
 const FORWARDED_RESPONSE_HEADERS = [
   "Allow",
