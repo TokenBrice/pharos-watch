@@ -1105,6 +1105,104 @@ describe("confirmPendingDepegs", () => {
     expect(inserts).toHaveLength(0);
   });
 
+  describe("pool challenger status classification", () => {
+    // Inline captureLogs equivalent: collect console.log output into an array so
+    // tests can assert on the "[depeg-confirm] ... pool summary: ... status=..."
+    // log line emitted by the pool-challenger loop.
+    function captureLogs(): string[] {
+      const logs: string[] = [];
+      vi.spyOn(console, "log").mockImplementation((...args: unknown[]) => {
+        logs.push(args.map((a) => (typeof a === "string" ? a : JSON.stringify(a))).join(" "));
+      });
+      return logs;
+    }
+
+    it("reports poolStatus='contradict' when at least one qualifying pool is opposite-direction above bar", async () => {
+      const nowSec = 1_700_000_000;
+      vi.spyOn(Date, "now").mockReturnValue(nowSec * 1000);
+      const pendingRows: PendingRow[] = [makePendingRow({
+        id: 80,
+        stablecoin_id: "usdt-tether",
+        symbol: "USDT",
+        direction: "below",
+        first_seen_bps: -200,
+        first_seen_at: nowSec - DEPEG_PENDING_MIN_AGE_SEC - 60,
+        first_price: 0.98,
+        peg_reference: 1,
+      })];
+      // Pool 1: same-direction (below) but deviation 30 bps < 50 bps secondary bar => "recover"
+      // Pool 2: opposite-direction (above) deviation 120 bps > 50 bps bar           => "contradict"
+      const dexRows = [
+        {
+          stablecoin_id: "usdt-tether",
+          dex_price_usd: 1.0, // neutral DEX signal -> "recover"
+          updated_at: nowSec - 30,
+          source_pool_count: 4,
+          source_total_tvl: 4_000_000,
+          price_sources_json: JSON.stringify([
+            { price: 0.997, tvl: 5_000_000, protocol: "curve", chain: "ethereum" },
+            { price: 1.012, tvl: 5_000_000, protocol: "uniswap", chain: "ethereum" },
+          ]),
+        },
+      ];
+      const logs = captureLogs();
+
+      await confirmPendingDepegs(
+        makeDb({ pendingRows, dexRows }),
+        [
+          makeAsset({ id: "usdt-tether", symbol: "USDT", geckoId: undefined, price: 0.98 }),
+          ...makeNeutralUsdAssets(),
+        ],
+      );
+
+      const summary = logs.find((l) => /pool summary: .* status=(confirm|recover|contradict|insufficient)/.test(l));
+      expect(summary).toBeTruthy();
+      expect(summary).toMatch(/status=contradict/);
+    });
+
+    it("reports poolStatus='recover' only when every qualifying pool is under the secondary bar", async () => {
+      const nowSec = 1_700_000_000;
+      vi.spyOn(Date, "now").mockReturnValue(nowSec * 1000);
+      const pendingBelow: PendingRow = makePendingRow({
+        id: 81,
+        stablecoin_id: "usdt-tether",
+        symbol: "USDT",
+        direction: "below",
+        first_seen_bps: -200,
+        first_seen_at: nowSec - DEPEG_PENDING_MIN_AGE_SEC - 60,
+        first_price: 0.98,
+        peg_reference: 1,
+      });
+      const dexRows = [
+        {
+          stablecoin_id: "usdt-tether",
+          dex_price_usd: 1.0,
+          updated_at: nowSec - 30,
+          source_pool_count: 4,
+          source_total_tvl: 4_000_000,
+          price_sources_json: JSON.stringify([
+            { price: 0.998, tvl: 5_000_000, protocol: "curve", chain: "ethereum" },
+            { price: 0.999, tvl: 5_000_000, protocol: "uniswap", chain: "ethereum" },
+          ]),
+        },
+      ];
+      const logs = captureLogs();
+
+      await confirmPendingDepegs(
+        makeDb({ pendingRows: [pendingBelow], dexRows }),
+        [
+          makeAsset({ id: "usdt-tether", symbol: "USDT", geckoId: undefined, price: 0.98 }),
+          ...makeNeutralUsdAssets(),
+        ],
+      );
+
+      const summary = logs.find((l) => /pool summary: .* status=(confirm|recover|contradict|insufficient)/.test(l));
+      expect(summary).toBeTruthy();
+      expect(summary).toMatch(/status=recover/);
+      expect(summary).not.toMatch(/status=contradict/);
+    });
+  });
+
   it("rethrows abort-related failures from secondary fetches", async () => {
     const nowSec = 1_700_000_000;
     vi.spyOn(Date, "now").mockReturnValue(nowSec * 1000);

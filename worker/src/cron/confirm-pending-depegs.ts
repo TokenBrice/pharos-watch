@@ -9,6 +9,8 @@ import {
   CIRCUIT_SOURCE,
   DEX_FRESHNESS_SEC,
   POOL_CHALLENGE_MIN_TVL,
+  POOL_CHALLENGE_CONFIRM_MIN,
+  POOL_CHALLENGE_HIGH_TVL_USD,
 } from "../lib/constants";
 
 const CoinGeckoPriceSchema = z.record(z.string(), z.object({ usd: z.number().optional() }));
@@ -281,26 +283,42 @@ export async function confirmPendingDepegs(
 
     // 4c. Individual DEX pool check
     let poolStatus: ReturnType<typeof classifyDirectionalSignal> = "insufficient";
+    let poolConfirmCount = 0;
+    let poolContradictCount = 0;
+    let poolRecoverCount = 0;
+    let poolHighTvlConfirm = false;
     const pools = poolChallengers.get(row.stablecoin_id);
     if (pools?.length) {
       for (const pool of pools) {
         const poolSignal = deriveDepegSignal(pool.price, row.peg_reference);
         const currentPoolStatus = classifyDirectionalSignal(poolSignal, secondaryBar, pendingState.direction);
         if (currentPoolStatus === "confirm") {
-          poolStatus = "confirm";
+          poolConfirmCount += 1;
+          if (pool.tvlUsd >= POOL_CHALLENGE_HIGH_TVL_USD) {
+            poolHighTvlConfirm = true;
+          }
           console.log(
-            `[depeg-confirm] ${row.symbol} pool check: price=$${pool.price} (${pool.protocol}/${pool.chain}), ` +
-            `deviation=${poolSignal?.absBps ?? "n/a"}bps, bar=${secondaryBar}bps, status=confirm`,
+            `[depeg-confirm] ${row.symbol} pool confirm: price=$${pool.price} (${pool.protocol}/${pool.chain}, ` +
+            `$${(pool.tvlUsd / 1e6).toFixed(1)}M TVL), deviation=${poolSignal?.absBps ?? "n/a"}bps`,
           );
-          break;
+        } else if (currentPoolStatus === "contradict") {
+          poolContradictCount += 1;
+        } else if (currentPoolStatus === "recover") {
+          poolRecoverCount += 1;
         }
       }
-      if (poolStatus !== "confirm") {
+      if (poolHighTvlConfirm || poolConfirmCount >= POOL_CHALLENGE_CONFIRM_MIN) {
+        poolStatus = "confirm";
+      } else if (poolContradictCount > 0 && poolConfirmCount === 0) {
+        poolStatus = "contradict";
+      } else if (poolRecoverCount > 0 && poolConfirmCount === 0 && poolContradictCount === 0) {
         poolStatus = "recover";
-        console.log(
-          `[depeg-confirm] ${row.symbol} pool check: ${pools.length} pools, none diverge ≥${secondaryBar}bps`,
-        );
-      }
+      } // else: remains "insufficient" — at least one pool was confirm but not enough
+      console.log(
+        `[depeg-confirm] ${row.symbol} pool summary: ${pools.length} pools checked, ` +
+        `confirm=${poolConfirmCount} (highTvl=${poolHighTvlConfirm}), contradict=${poolContradictCount}, ` +
+        `recover=${poolRecoverCount}, bar=${secondaryBar}bps, status=${poolStatus}`,
+      );
     }
 
     // 5. Decision
