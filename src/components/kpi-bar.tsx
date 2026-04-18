@@ -367,7 +367,7 @@ export function KpiBar() {
             ))}
           </div>
         </div>
-        <div className="hidden grid-cols-[minmax(0,1.1fr)_repeat(4,minmax(0,0.92fr))] divide-x divide-border/50 lg:grid">
+        <div className="hidden grid-cols-[minmax(0,1.1fr)_repeat(4,minmax(0,0.92fr))] divide-x divide-border/30 lg:grid items-stretch">
           <div className="px-4 py-3">
             <Skeleton className="h-3 w-28" />
             <Skeleton className="mt-3 h-14 w-32" />
@@ -537,7 +537,7 @@ export function KpiBar() {
         </div>
       </div>
 
-      <div className="hidden grid-cols-[minmax(0,1.1fr)_repeat(4,minmax(0,0.92fr))] divide-x divide-border/50 lg:grid">
+      <div className="hidden grid-cols-[minmax(0,1.1fr)_repeat(4,minmax(0,0.92fr))] divide-x divide-border/30 lg:grid items-stretch">
         <div
           className="px-4 py-3"
           style={{
