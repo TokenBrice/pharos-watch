@@ -4,6 +4,7 @@ import Link from "next/link";
 import { ArrowLeftRight, Flag } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { BluechipHeaderBadge } from "@/components/bluechip-header-badge";
+import { Breadcrumb } from "@/components/breadcrumb";
 import { PegGauge } from "@/components/peg-gauge";
 import { ShareButton } from "@/components/share-button";
 import { StablecoinLogo } from "@/components/stablecoin-logo";
@@ -647,15 +648,8 @@ export function HeroCard({
     <Card className="rounded-xl gap-0">
       {/* Header */}
       <div className="flex flex-wrap items-center justify-between gap-2 px-4 sm:px-5 pt-3 pb-2.5 border-b border-border/30">
-        <nav aria-label="Breadcrumb" className="flex items-center gap-1.5 text-sm text-muted-foreground">
-          <Link href="/" className="pharos-focus-ring rounded-sm transition-colors hover:text-foreground">
-            Dashboard
-          </Link>
-          <span>/</span>
-          <span className="text-foreground" aria-current="page">
-            {coin.name}
-          </span>
-        </nav>
+        <Breadcrumb items={[{ label: "Dashboard", href: "/" }, { label: coin.name }]} />
+
         <div className="flex items-center gap-1.5">
           <button
             onClick={onOpenFeedback}

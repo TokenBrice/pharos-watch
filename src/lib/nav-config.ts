@@ -53,7 +53,6 @@ export const PRIMARY_NAV_ITEMS: NavItem[] = [
   { href: "/stability-index", label: "Stability Index", icon: LighthouseIcon, description: "Market-regime read for the stablecoin system" },
   { href: "/safety-scores", label: "Safety Scores", icon: FlaskConical, description: "Cross-market safety grades and contagion scenarios" },
   { href: "/yield", label: "Risk-Adjusted Yield", icon: TrendingUp, description: "Yield ranked after adjusting for stablecoin risk" },
-  { href: "/telegram", label: "Telegram", icon: Send, description: "Push alerts for depegs, DEWS shifts, and the daily digest" },
 ];
 
 export const NAV_GROUPS: NavGroup[] = [
@@ -67,6 +66,7 @@ export const NAV_GROUPS: NavGroup[] = [
       { href: "/flows", label: "Mint/Burn Flows", icon: ArrowUpDown, description: "Configured issuance-chain mint and burn pressure" },
       { href: "/blacklist", label: "Blacklist", icon: ShieldBan, description: "Freeze activity and issuer control events" },
       { href: "/upcoming", label: "Upcoming", icon: Rocket, description: "Pre-launch stablecoins and launch-watch context" },
+      { href: "/telegram", label: "Telegram", icon: Send, description: "Push alerts for depegs, DEWS shifts, and the daily digest" },
       { href: "/cemetery", label: "Cemetery", icon: Skull, description: "Failed stablecoins and the lessons they left behind" },
     ],
   },
@@ -95,7 +95,7 @@ export const NAV_GROUPS: NavGroup[] = [
 ];
 
 export const DEFAULT_EXPANDED: Record<string, boolean> = {
-  data: false,
+  data: true,
   tools: false,
   info: false,
 };

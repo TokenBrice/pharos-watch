@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
-import { Moon, Sun, FileText, Coins, Clock, Trash2, Search } from "lucide-react";
+import { Moon, Sun, FileText, Coins, Clock, Trash2, Search, Copy, BookOpen, Newspaper, KeyRound } from "lucide-react";
 import { TRACKED_STABLECOINS } from "@shared/lib/stablecoins";
 import { NAV_ITEMS, BOTTOM_NAV_ITEMS } from "@/lib/nav-config";
 import { useLogos } from "@/hooks/use-logos";
@@ -187,27 +187,84 @@ export function CommandPalette() {
     }
 
     // Actions
-    if (
-      fuzzyMatch(q, "toggle dark light mode theme") ||
-      fuzzyMatch(q, "dark") ||
-      fuzzyMatch(q, "light") ||
-      fuzzyMatch(q, "theme")
-    ) {
-      items.push({
+    const actions: Array<{
+      id: string;
+      label: string;
+      sublabel: string;
+      keywords: string;
+      icon: React.ReactNode;
+      onSelect: () => void;
+    }> = [
+      {
         id: "action-theme",
         label: isDark ? "Switch to light mode" : "Switch to dark mode",
         sublabel: "Toggle dark/light theme",
-        section: "Actions",
-        icon: isDark ? (
-          <Sun className="h-4 w-4" />
-        ) : (
-          <Moon className="h-4 w-4" />
-        ),
+        keywords: "toggle dark light mode theme",
+        icon: isDark ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />,
         onSelect: () => {
           toggleTheme();
           closePalette();
         },
-      });
+      },
+      {
+        id: "action-copy-url",
+        label: "Copy current URL",
+        sublabel: "Copies the current page URL to your clipboard",
+        keywords: "copy url link share clipboard",
+        icon: <Copy className="h-4 w-4" />,
+        onSelect: () => {
+          if (typeof window !== "undefined" && navigator.clipboard) {
+            void navigator.clipboard.writeText(window.location.href);
+          }
+          closePalette();
+        },
+      },
+      {
+        id: "action-open-digest",
+        label: "Open today's digest",
+        sublabel: "Daily editorial recap of the stablecoin market",
+        keywords: "digest daily editorial newsletter summary",
+        icon: <Newspaper className="h-4 w-4" />,
+        onSelect: () => {
+          router.push("/digest/");
+          closePalette();
+        },
+      },
+      {
+        id: "action-open-methodology",
+        label: "Open methodology",
+        sublabel: "Reference manual for formulas, thresholds, and changelogs",
+        keywords: "methodology reference formulas",
+        icon: <BookOpen className="h-4 w-4" />,
+        onSelect: () => {
+          router.push("/methodology/");
+          closePalette();
+        },
+      },
+      {
+        id: "action-open-api-docs",
+        label: "Open API docs",
+        sublabel: "Auth model, key requirement, and full endpoint reference",
+        keywords: "api docs endpoint reference keys",
+        icon: <KeyRound className="h-4 w-4" />,
+        onSelect: () => {
+          router.push("/about/api/");
+          closePalette();
+        },
+      },
+    ];
+
+    for (const action of actions) {
+      if (!q || fuzzyMatch(q, action.label) || fuzzyMatch(q, action.keywords)) {
+        items.push({
+          id: action.id,
+          label: action.label,
+          sublabel: action.sublabel,
+          section: "Actions",
+          icon: action.icon,
+          onSelect: action.onSelect,
+        });
+      }
     }
 
     return items;
