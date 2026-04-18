@@ -86,64 +86,46 @@ export function ExploreNextSection({
         </p>
       </div>
 
-      <div className="grid gap-4 xl:grid-cols-[minmax(0,1.1fr)_minmax(0,0.9fr)]">
-        <div className="pharos-card-shell space-y-4 p-4">
-          <div className="grid gap-4 lg:grid-cols-2">
-            <div className="space-y-2">
-              <p className="pharos-kicker">Taxonomy</p>
-              <div className="grid gap-2">
-                {taxonomyLinks.map((link) => (
-                  <ExploreLink key={link.href} href={link.href} label={link.label} />
-                ))}
-              </div>
-            </div>
-            <div className="space-y-2">
-              <p className="pharos-kicker">Trackers</p>
-              <div className="grid gap-2">
-                {trackerLinks.map((link) => (
-                  <ExploreLink key={link.href} href={link.href} label={link.label} />
-                ))}
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div className="grid gap-4">
+      <div className="grid gap-4 lg:grid-cols-[minmax(0,0.55fr)_minmax(0,0.45fr)] xl:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_minmax(0,1fr)]">
+        {/* Order at <lg: Compare first, then Taxonomy, Trackers, Related so
+            the highest-value peer path leads the stack on narrow screens. */}
+        <div className="pharos-card-shell space-y-3 p-4 order-1 lg:order-2 xl:order-3">
           {staticComparisonPages.length > 0 ? (
-            <div className="pharos-card-shell space-y-3 p-4">
+            <>
               <p className="pharos-kicker">Compare From Here</p>
-              <div className="grid gap-2 sm:grid-cols-2">
+              <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-1">
                 {staticComparisonPages.map((page) => (
                   <div
                     key={page.href}
                     className="rounded-2xl border border-border/60 bg-background/50 px-3 py-3"
                   >
                     <p className="text-sm font-medium text-foreground">{page.shortTitle}</p>
-                    <div className="mt-2 flex flex-wrap gap-2">
-                      <Link
-                        href={page.href}
-                        className="pharos-focus-ring inline-flex min-h-11 items-center rounded-full border border-border/60 bg-background px-3 py-2 text-xs font-medium text-foreground transition-colors hover:border-foreground/20 hover:bg-accent"
-                      >
-                        Review brief
-                      </Link>
+                    <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-2">
                       <Link
                         href={buildLiveCompareUrl([page.leftId, page.rightId])}
-                        className="pharos-focus-ring inline-flex min-h-11 items-center rounded-full border border-border/60 bg-background px-3 py-2 text-xs font-medium text-foreground transition-colors hover:border-foreground/20 hover:bg-accent"
+                        className="pharos-focus-ring inline-flex min-h-11 items-center gap-1 rounded-full bg-primary px-3 py-2 text-xs font-semibold text-primary-foreground transition-colors hover:bg-primary/90"
                       >
-                        Open live compare
+                        Open comparison
+                        <ArrowRight className="h-3 w-3" />
+                      </Link>
+                      <Link
+                        href={page.href}
+                        className="pharos-focus-ring text-xs font-medium text-muted-foreground underline-offset-4 transition-colors hover:text-foreground hover:underline"
+                      >
+                        Read the one-page brief
                       </Link>
                     </div>
                   </div>
                 ))}
               </div>
-            </div>
+            </>
           ) : null}
 
           {related.length > 0 ? (
-            <div className="pharos-card-shell space-y-3 p-4">
+            <div className={staticComparisonPages.length > 0 ? "mt-4 border-t border-border/40 pt-3" : undefined}>
               <p className="pharos-kicker">Related Stablecoins</p>
-              <div className="flex flex-wrap gap-2">
-                {related.map((coinMeta) => (
+              <div className="mt-2 flex flex-wrap items-center gap-2">
+                {related.slice(0, 4).map((coinMeta) => (
                   <Link
                     key={coinMeta.id}
                     href={buildStablecoinUrl(coinMeta.id)}
@@ -153,9 +135,36 @@ export function ExploreNextSection({
                     <span className="font-mono text-xs font-medium">{coinMeta.symbol}</span>
                   </Link>
                 ))}
+                {related.length > 4 ? (
+                  <Link
+                    href={PEG_SLUGS[coin.flags.pegCurrency] ? `/stablecoins/${PEG_SLUGS[coin.flags.pegCurrency]}/` : "/"}
+                    className="pharos-focus-ring inline-flex min-h-11 items-center gap-1 rounded-full border border-dashed border-border/60 px-3 py-2 text-xs font-medium text-muted-foreground transition-colors hover:border-foreground/20 hover:text-foreground"
+                  >
+                    See all peers
+                    <ArrowRight className="h-3 w-3" />
+                  </Link>
+                ) : null}
               </div>
             </div>
           ) : null}
+        </div>
+
+        <div className="pharos-card-shell space-y-3 p-4 order-2 lg:order-1 xl:order-1">
+          <p className="pharos-kicker">Taxonomy</p>
+          <div className="grid gap-2">
+            {taxonomyLinks.map((link) => (
+              <ExploreLink key={link.href} href={link.href} label={link.label} />
+            ))}
+          </div>
+        </div>
+
+        <div className="pharos-card-shell space-y-3 p-4 order-3 lg:order-1 xl:order-2">
+          <p className="pharos-kicker">Trackers</p>
+          <div className="grid gap-2">
+            {trackerLinks.map((link) => (
+              <ExploreLink key={link.href} href={link.href} label={link.label} />
+            ))}
+          </div>
         </div>
       </div>
     </section>
