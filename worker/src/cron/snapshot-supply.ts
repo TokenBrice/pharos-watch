@@ -38,7 +38,11 @@ export async function snapshotSupply(db: D1Database, _signal?: AbortSignal): Pro
     console.warn(`[snapshot-supply] Cache is ${cacheAge}s old (>600s), proceeding with degraded freshness`);
   }
 
-  const COOLDOWN_SEC = 3600;
+  // One snapshot per UTC day. Use 20h (not 24h) so we tolerate daylight/leap-second
+  // drift without skipping a day. The cron fires every 15 min on the quarter-hourly
+  // lane; 23 of 24 previous runs within a day would otherwise overwrite the same
+  // INSERT OR REPLACE row keyed on snapshot_date.
+  const COOLDOWN_SEC = 20 * 3600;
   const lastWrite = await getCache(db, "snapshot-supply:last-write");
   if (lastWrite && (Math.floor(Date.now() / 1000) - lastWrite.updatedAt) < COOLDOWN_SEC) {
     return { itemCount: 0, metadata: JSON.stringify({ reason: "cooldown_active", lastWriteAgeSec: Math.floor(Date.now() / 1000) - lastWrite.updatedAt }) };

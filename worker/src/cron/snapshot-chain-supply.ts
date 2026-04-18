@@ -22,7 +22,8 @@ export async function snapshotChainSupply(db: D1Database, signal?: AbortSignal):
     return { status: "degraded", itemCount: 0, metadata: JSON.stringify({ reason: "cache_stale", cacheAgeSec: cacheAge }) };
   }
 
-  const COOLDOWN_SEC = 3600;
+  // One snapshot per UTC day. See snapshot-supply.ts for the rationale.
+  const COOLDOWN_SEC = 20 * 3600;
   const lastWrite = await getCache(db, "snapshot-chain-supply:last-write");
   if (lastWrite && (Math.floor(Date.now() / 1000) - lastWrite.updatedAt) < COOLDOWN_SEC) {
     return { itemCount: 0, metadata: JSON.stringify({ reason: "cooldown_active", lastWriteAgeSec: Math.floor(Date.now() / 1000) - lastWrite.updatedAt }) };
