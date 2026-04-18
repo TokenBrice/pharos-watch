@@ -99,6 +99,18 @@ describe("blacklist-api", () => {
         perCoinTotalEvents: Object.fromEntries(
           BLACKLIST_STABLECOINS.map((s) => [s, 0]),
         ) as Record<BlacklistStablecoin, number>,
+        perCoinFrozenAddressCount: Object.fromEntries(
+          BLACKLIST_STABLECOINS.map((s) => [s, 0]),
+        ) as Record<BlacklistStablecoin, number>,
+        perCoinFrozenTotal: Object.fromEntries(
+          BLACKLIST_STABLECOINS.map((s) => [s, 0]),
+        ) as Record<BlacklistStablecoin, number>,
+        perCoinDestroyedTotal: Object.fromEntries(
+          BLACKLIST_STABLECOINS.map((s) => [s, 0]),
+        ) as Record<BlacklistStablecoin, number>,
+        perCoinQuarterlyEventTypes: Object.fromEntries(
+          BLACKLIST_STABLECOINS.map((s) => [s, []]),
+        ) as Record<BlacklistStablecoin, Array<{ quarter: string; blacklist: number; unblacklist: number; destroy: number }>>,
       },
       chart: [],
       chains: [{ id: "ethereum", name: "Ethereum" }],

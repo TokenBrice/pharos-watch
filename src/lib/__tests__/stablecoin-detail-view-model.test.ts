@@ -58,6 +58,7 @@ describe("stablecoin detail view-model builder", () => {
         hourly: [],
       } as never,
       isFlowsLoading: false,
+      isBlacklistLoading: false,
       nowMs: 1_700_000_000_000,
     });
 
@@ -146,6 +147,7 @@ describe("stablecoin detail view-model builder", () => {
       } as never,
       flowsData: undefined,
       isFlowsLoading: false,
+      isBlacklistLoading: false,
     });
 
     expect(viewModel.status).toBe("ready");
@@ -229,6 +231,7 @@ describe("stablecoin detail view-model builder", () => {
       } as never,
       flowsData: undefined,
       isFlowsLoading: false,
+      isBlacklistLoading: false,
     });
 
     expect(viewModel.status).toBe("ready");
@@ -287,6 +290,7 @@ describe("stablecoin detail view-model builder", () => {
       reportCardsError: null,
       flowsData: undefined,
       isFlowsLoading: false,
+      isBlacklistLoading: false,
       nowMs: nowSec * 1000,
     });
 
@@ -345,6 +349,7 @@ describe("stablecoin detail view-model builder", () => {
       reportCardsError: null,
       flowsData: undefined,
       isFlowsLoading: false,
+      isBlacklistLoading: false,
       nowMs: nowSec * 1000,
     });
 
@@ -382,6 +387,7 @@ describe("stablecoin detail view-model builder", () => {
       reportCardsError: null,
       flowsData: undefined,
       isFlowsLoading: false,
+      isBlacklistLoading: false,
     });
 
     expect(viewModel.status).toBe("not-found");
@@ -430,6 +436,7 @@ describe("stablecoin detail view-model builder", () => {
       reportCardsError: null,
       flowsData: undefined,
       isFlowsLoading: false,
+      isBlacklistLoading: false,
       liveReserves: null,
       liveReserveError: new Error("reserve api failed"),
       nowMs: 1_700_000_000_000,

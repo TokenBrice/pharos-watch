@@ -1,5 +1,6 @@
 import type { SupplyHistoryPoint } from "@/hooks/use-stablecoins";
 import type {
+  BlacklistSummaryResponse,
   DexLiquidityData,
   PegSummaryCoin,
   ReportCard,
@@ -16,6 +17,7 @@ import type {
   YieldRanking,
   YieldRankingsResponse,
 } from "@shared/types";
+import { BLACKLIST_STABLECOINS, type BlacklistStablecoin } from "@shared/types";
 import {
   getCirculatingRaw,
   getPrevDayRawOrNull,
@@ -85,6 +87,7 @@ interface StablecoinDetailReadyViewModel extends BaseViewModel {
   stressSignal: StressSignalEntry | null;
   redemptionBackstop: RedemptionBackstopEntry | undefined;
   hasFlows: boolean;
+  hasBlacklist: boolean;
   supplyHistory: SupplyHistoryPoint[];
   earliestTrackingDate: number | null;
   reserves: ReserveResult | null;
@@ -140,6 +143,8 @@ interface BuildStablecoinDetailViewModelParams {
   stressSignalsData?: StressSignalsAllResponse;
   flowsData?: MintBurnFlowsResponse;
   isFlowsLoading: boolean;
+  blacklistSummary?: BlacklistSummaryResponse;
+  isBlacklistLoading: boolean;
   liveReserves?: ReserveResult | null;
   liveReserveError?: unknown | null;
   nowMs?: number;
@@ -227,6 +232,8 @@ export function buildStablecoinDetailViewModel({
   stressSignalsData,
   flowsData,
   isFlowsLoading,
+  blacklistSummary,
+  isBlacklistLoading,
   liveReserves = null,
   liveReserveError = null,
   nowMs = Date.now(),
@@ -281,6 +288,12 @@ export function buildStablecoinDetailViewModel({
   const hasFlows =
     isFlowsLoading
     || !!flowsData?.coins.find((entry) => entry.stablecoinId === id);
+  const isBlacklistSupported = (BLACKLIST_STABLECOINS as readonly string[]).includes(coin.symbol);
+  const hasBlacklist =
+    isBlacklistSupported &&
+    (isBlacklistLoading ||
+      (!!blacklistSummary &&
+        (blacklistSummary.stats.perCoinTotalEvents[coin.symbol as BlacklistStablecoin] ?? 0) > 0));
 
   return {
     status: "ready",
@@ -311,6 +324,7 @@ export function buildStablecoinDetailViewModel({
     stressSignal,
     redemptionBackstop,
     hasFlows,
+    hasBlacklist,
     supplyHistory: resolvedSupplyHistory,
     earliestTrackingDate,
     reserves,

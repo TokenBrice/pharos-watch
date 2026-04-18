@@ -12,6 +12,7 @@ import {
 import { useSupplyHistory, useStablecoins } from "@/hooks/use-stablecoins";
 import { useMintBurnFlows } from "@/hooks/use-mint-burn-flows";
 import { useStablecoinReserves } from "@/hooks/use-stablecoin-reserves";
+import { useBlacklistSummary } from "@/hooks/use-blacklist-events";
 import {
   buildStablecoinDetailViewModel,
   type StablecoinDetailSummary,
@@ -80,6 +81,7 @@ export function useStablecoinDetailViewModel({
   const { data: yieldRankingsData } = useYieldRankings();
   const { data: stressSignalsData } = useStressSignals();
   const { data: flowsData, isLoading: isFlowsLoading } = useMintBurnFlows();
+  const { data: blacklistSummary, isLoading: isBlacklistLoading } = useBlacklistSummary();
   const liveReserves = useStablecoinReserves(id, !!coin.liveReservesConfig);
 
   const handleRetryAll = useCallback(() => {
@@ -140,6 +142,8 @@ export function useStablecoinDetailViewModel({
     stressSignalsData,
     flowsData,
     isFlowsLoading,
+    blacklistSummary,
+    isBlacklistLoading,
     liveReserves: liveReserves.reserveResult,
     liveReserveError: liveReserves.error,
   });

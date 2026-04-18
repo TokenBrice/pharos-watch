@@ -26,7 +26,7 @@ import { deriveDependencies } from "@shared/lib/reserve-templates";
 import { GOVERNANCE_LABELS } from "@shared/lib/classification";
 import { buildLiveCompareUrl, getPrimaryStaticComparisonPageForCoin } from "@/lib/compare-pages";
 import { buildGovernanceTaxonomyUrl } from "@/lib/stablecoin-taxonomy";
-import type { StablecoinMeta } from "@shared/types";
+import type { BlacklistStablecoin, StablecoinMeta } from "@shared/types";
 
 function DetailSectionSkeleton({ className }: { className: string }) {
   return <Skeleton className={className} />;
@@ -44,6 +44,10 @@ const DepegHistory = dynamic(
 );
 
 const FlowsSection = dynamic(() => import("@/components/stablecoin-detail/flows-section").then((mod) => mod.FlowsSection), {
+  loading: () => <DetailSectionSkeleton className="h-[320px] w-full rounded-xl" />,
+});
+
+const BlacklistSection = dynamic(() => import("@/components/stablecoin-detail/blacklist-section").then((mod) => mod.BlacklistSection), {
   loading: () => <DetailSectionSkeleton className="h-[320px] w-full rounded-xl" />,
 });
 
@@ -92,6 +96,7 @@ const DETAIL_SECTION_DEFS = {
   yield: { id: "yield", label: "Yield" },
   liquidity: { id: "liquidity", label: "Liquidity" },
   flows: { id: "flows", label: "Flows" },
+  blacklist: { id: "blacklist", label: "Blacklist" },
   history: { id: "history", label: "History" },
   explore: { id: "explore-next", label: "Explore" },
 } as const;
@@ -199,6 +204,7 @@ export default function StablecoinDetailClient({ id, summary, coin, logoSrc }: S
     ...(viewModel.hasYieldSection ? [s.yield] : []),
     s.liquidity,
     ...(viewModel.hasFlows ? [s.flows] : []),
+    ...(viewModel.hasBlacklist ? [s.blacklist] : []),
     s.history,
     s.explore,
   ];
@@ -335,6 +341,15 @@ export default function StablecoinDetailClient({ id, summary, coin, logoSrc }: S
         </section>
 
         <FlowsSection stablecoinId={viewModel.id} hasFlows={viewModel.hasFlows} />
+
+        {viewModel.hasBlacklist && (
+          <SectionErrorBoundary name="blacklist">
+            <BlacklistSection
+              stablecoinId={viewModel.id}
+              symbol={viewModel.coin.symbol as BlacklistStablecoin}
+            />
+          </SectionErrorBoundary>
+        )}
       </div>
 
       {/* ── History zone ── */}
