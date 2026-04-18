@@ -1,4 +1,17 @@
 {
-  "last_updated_at": 1776510574,
-  "donations": []
+  "last_updated_at": 1776513600,
+  "donations": [
+    {
+      "chain": "ethereum",
+      "tx_hash": "0xc310bc94c763f00c939aefba0094e012892b45e688954283199264d37cdb8786",
+      "block_timestamp": 1776072647,
+      "from_address": "0xaa7a9d80971e58641442774c373c94aafee87d66",
+      "display": "tokenbrice.eth",
+      "kind": "community",
+      "asset_symbol": "ETH",
+      "amount_decimal": 0.1,
+      "usd_at_receipt": 219.22,
+      "price_note": "coingecko-historical-2026-04-13"
+    }
+  ]
 }
