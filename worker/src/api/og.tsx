@@ -267,7 +267,10 @@ async function handleStablecoinOg(db: D1Database, coinId: string): Promise<Respo
 // ---------------------------------------------------------------------------
 
 async function handleSafetyScoresOg(db: D1Database): Promise<Response> {
-  const stablecoinsPayload = await loadStablecoinsCache(db, { mode: "strict", allowLegacyArray: false });
+  const [stablecoinsPayload, reportCardCache] = await Promise.all([
+    loadStablecoinsCache(db, { mode: "strict", allowLegacyArray: false }),
+    loadReportCardCache(db),
+  ]);
 
   const gradeDistribution: Record<string, number> = {
     "A+": 0, A: 0, "A-": 0,
@@ -281,14 +284,14 @@ async function handleSafetyScoresOg(db: D1Database): Promise<Response> {
   const allScores: Array<{ symbol: string; grade: string; score: number }> = [];
 
   const symbolById = new Map<string, string>();
-  if (hasUsableStablecoinsPayload(stablecoinsPayload)) {
+  const payloadUsable = hasUsableStablecoinsPayload(stablecoinsPayload);
+  if (payloadUsable) {
     for (const asset of stablecoinsPayload.payload.peggedAssets) {
       symbolById.set(asset.id, asset.symbol);
     }
   }
-  const totalCoins = symbolById.size > 0 ? symbolById.size : ACTIVE_IDS.size;
+  const totalCoins = payloadUsable ? stablecoinsPayload.payload.peggedAssets.length : ACTIVE_IDS.size;
 
-  const reportCardCache = await loadReportCardCache(db);
   if (reportCardCache.kind === "ok") {
     for (const [id, entry] of Object.entries(reportCardCache.payload.scores)) {
       const grade = entry.grade;
@@ -311,10 +314,9 @@ async function handleSafetyScoresOg(db: D1Database): Promise<Response> {
   const avgScore = ratedCount > 0 ? pulseScore / ratedCount : 0;
   const pulseGrade = ratedCount > 0 ? scoreToGrade(Math.round(avgScore)) : "NR";
 
-  // Sort for top/bottom performers
-  const sortedByScore = [...allScores].sort((a, b) => b.score - a.score);
-  const topPerformers = sortedByScore.slice(0, 3);
-  const bottomPerformers = sortedByScore.slice(-3).reverse();
+  allScores.sort((a, b) => b.score - a.score);
+  const topPerformers = allScores.slice(0, 3);
+  const bottomPerformers = allScores.slice(-3).reverse();
 
   const data: SafetyScoresCardData = {
     gradeDistribution,

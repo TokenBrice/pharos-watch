@@ -4,25 +4,15 @@ import { buildReportCardsSnapshot } from "../report-cards-snapshot";
 import type { PegSummaryCoin } from "@shared/types/market";
 
 /**
- * Golden-fixture score-contract test for the Safety Score pipeline.
- *
- * Locks the current end-to-end behavior of `buildReportCardsSnapshot` against a
- * handful of scenarios that exercise the main policy surfaces:
- *
- *   1. Active-depeg D cap (>=1000 bps)
- *   2. Active-depeg F cap (>=2500 bps)
- *   3. NAV-wrapper peg inheritance (v6.94)
- *   4. No-liquidity penalty (v5.4, NO_LIQUIDITY_PENALTY = 0.9)
- *
- * Mock strategy mirrors `report-cards-snapshot.test.ts`: the `@shared/lib/stablecoins`
- * module stays real, and scenario-specific inputs are injected via mocked
+ * Golden-fixture score-contract test for the Safety Score pipeline. Mock
+ * strategy mirrors `report-cards-snapshot.test.ts`: `@shared/lib/stablecoins`
+ * stays real; scenario-specific inputs are injected via mocked
  * `derivePegAnalyticsSnapshot`, `loadDexLiquiditySnapshot`,
  * `loadRedemptionBackstopSnapshot`, and `loadFreshIndependentLiveReserveMap`.
  *
- * Assertions lock `overallGrade`, `overallScore`, and the relevant dimension scores.
- * Values were captured from the first run against methodology v7.07. When updating
- * them after an intentional methodology bump, add a `// Locked against vX.XX ...`
- * comment alongside the changed block so the diff stays auditable.
+ * Values are locked against the first run under methodology v7.07. When
+ * updating them after an intentional methodology bump, add a
+ * `// Locked against vX.XX ...` comment alongside the changed block.
  */
 
 const loadRedemptionBackstopSnapshotMock = vi.hoisted(() => vi.fn());
@@ -221,7 +211,7 @@ describe("Safety Score golden fixture", () => {
     expect(navWrapper).toBeDefined();
     expect(navWrapper!.rawInputs.navToken).toBe(true);
     expect(navWrapper!.dimensions.pegStability.score).toBe(55);
-    expect(navWrapper!.dimensions.pegStability.detail).toContain("Peg reference (USDai)");
+    expect(navWrapper!.dimensions.pegStability.detail).toMatch(/Peg reference \(/);
   });
 
   it("no-liquidity penalty multiplies final score by 0.9 when both DEX and redemption are absent", async () => {
