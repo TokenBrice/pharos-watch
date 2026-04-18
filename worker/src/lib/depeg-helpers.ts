@@ -21,6 +21,8 @@ export interface DepegRow {
   recovery_price: number | null;
   peg_reference: number;
   source: string;
+  confirmation_sources: string | null;
+  pending_reason: string | null;
 }
 
 export interface DexPriceRow {
@@ -176,8 +178,8 @@ export function buildInsertDepegEventStmt(
 ): D1PreparedStatement {
   return db
     .prepare(
-      `INSERT INTO depeg_events (stablecoin_id, symbol, peg_type, direction, peak_deviation_bps, started_at, start_price, peak_price, peg_reference, source)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'live')`,
+      `INSERT INTO depeg_events (stablecoin_id, symbol, peg_type, direction, peak_deviation_bps, started_at, start_price, peak_price, peg_reference, source, confirmation_sources, pending_reason)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'live', ?, ?)`,
     )
     .bind(
       event.stablecoinId,
@@ -189,6 +191,8 @@ export function buildInsertDepegEventStmt(
       event.startPrice,
       event.peakPrice ?? event.startPrice,
       event.pegReference,
+      event.confirmationSources ?? null,
+      event.pendingReason ?? null,
     );
 }
 
@@ -217,5 +221,7 @@ export function rowToDepegEvent(row: DepegRow): DepegEvent {
     recoveryPrice: row.recovery_price,
     pegReference: row.peg_reference,
     source: VALID_SOURCES.has(row.source) ? row.source as "live" | "backfill" : "live",
+    confirmationSources: row.confirmation_sources ?? null,
+    pendingReason: row.pending_reason ?? null,
   };
 }

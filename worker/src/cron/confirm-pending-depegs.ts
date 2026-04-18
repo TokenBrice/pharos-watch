@@ -381,6 +381,8 @@ export async function confirmPendingDepegs(
         recoveryPrice: null,
         pegReference: row.peg_reference,
         source: "live",
+        confirmationSources: null,
+        pendingReason: null,
       };
 
       stmts.push(

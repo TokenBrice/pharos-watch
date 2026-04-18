@@ -407,6 +407,8 @@ describe("confirmPendingDepegs", () => {
       0.975,
       0.95,
       1,
+      null,
+      null,
     ]);
     expect(inserts[1]?.boundValues).toEqual([
       "usdc-circle",
@@ -418,6 +420,8 @@ describe("confirmPendingDepegs", () => {
       0.98,
       0.94,
       1,
+      null,
+      null,
     ]);
     expect(deletes).toEqual([10, 11, 12, 13]);
   });
@@ -687,6 +691,8 @@ describe("confirmPendingDepegs", () => {
       0.976,
       0.976,
       1,
+      null,
+      null,
     ]);
     expect(deletes).toEqual([31]);
   });
@@ -736,6 +742,8 @@ describe("confirmPendingDepegs", () => {
       0.98,
       0.96,
       1,
+      null,
+      null,
     ]);
   });
 

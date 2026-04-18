@@ -20,6 +20,8 @@ function makeDepegEvent(overrides: Partial<DepegEvent> & Pick<DepegEvent, "start
     pegReference: 1,
     source: "live",
     endedAt: null,
+    confirmationSources: null,
+    pendingReason: null,
     ...overrides,
   };
 }

@@ -328,6 +328,8 @@ export interface DepegEvent {
   recoveryPrice: number | null;
   pegReference: number;
   source: "live" | "backfill";
+  confirmationSources: string | null;
+  pendingReason: string | null;
 }
 
 const DepegEventSchema = z.object({
@@ -344,6 +346,8 @@ const DepegEventSchema = z.object({
   recoveryPrice: z.number().nullable(),
   pegReference: z.number(),
   source: z.enum(["live", "backfill"]),
+  confirmationSources: z.string().nullable().optional().default(null),
+  pendingReason: z.string().nullable().optional().default(null),
 });
 
 export const DepegEventsResponseSchema = z.object({

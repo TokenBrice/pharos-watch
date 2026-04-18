@@ -4,6 +4,7 @@ import {
   hasFreshMultiSourcePrimaryAgreement,
   isAuthoritativeDepegPegReference,
 } from "../depeg-trust-policy";
+import { buildInsertDepegEventStmt, rowToDepegEvent } from "../depeg-helpers";
 
 describe("classifyPrimaryDepegTrust", () => {
   const nowSec = 1_700_000_000;
@@ -174,5 +175,55 @@ describe("isAuthoritativeDepegPegReference", () => {
       pegRateSource: "median",
       pegRateContributorCount: 1,
     })).toBe(true);
+  });
+});
+
+describe("buildInsertDepegEventStmt + rowToDepegEvent provenance", () => {
+  it("buildInsertDepegEventStmt binds confirmation_sources and pending_reason", () => {
+    const bindCalls: unknown[][] = [];
+    const db = {
+      prepare(_sql: string) {
+        return { bind(...args: unknown[]) { bindCalls.push(args); return this; } } as unknown as D1PreparedStatement;
+      },
+    } as unknown as D1Database;
+    buildInsertDepegEventStmt(db, {
+      id: 0,
+      stablecoinId: "usdt-tether",
+      symbol: "USDT",
+      pegType: "peggedUSD",
+      direction: "below",
+      peakDeviationBps: -200,
+      startedAt: 1000,
+      endedAt: null,
+      startPrice: 0.98,
+      peakPrice: 0.97,
+      recoveryPrice: null,
+      pegReference: 1,
+      source: "live",
+      confirmationSources: "DEX+CEX",
+      pendingReason: "large-cap",
+    });
+    expect(bindCalls[0]).toContain("DEX+CEX");
+    expect(bindCalls[0]).toContain("large-cap");
+  });
+
+  it("rowToDepegEvent exposes confirmation_sources and pending_reason (null-safe)", () => {
+    const event = rowToDepegEvent({
+      id: 1, stablecoin_id: "usdt-tether", symbol: "USDT", peg_type: "peggedUSD",
+      direction: "below", peak_deviation_bps: -120, started_at: 100, ended_at: null,
+      start_price: 0.988, peak_price: 0.985, recovery_price: null, peg_reference: 1, source: "live",
+      confirmation_sources: "Pool", pending_reason: "large-cap+low-confidence",
+    });
+    expect(event.confirmationSources).toBe("Pool");
+    expect(event.pendingReason).toBe("large-cap+low-confidence");
+
+    const legacy = rowToDepegEvent({
+      id: 2, stablecoin_id: "usdt-tether", symbol: "USDT", peg_type: "peggedUSD",
+      direction: "below", peak_deviation_bps: -120, started_at: 100, ended_at: null,
+      start_price: 0.988, peak_price: 0.985, recovery_price: null, peg_reference: 1, source: "live",
+      confirmation_sources: null, pending_reason: null,
+    });
+    expect(legacy.confirmationSources).toBeNull();
+    expect(legacy.pendingReason).toBeNull();
   });
 });

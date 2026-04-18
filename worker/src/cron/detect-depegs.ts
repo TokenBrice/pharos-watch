@@ -538,6 +538,8 @@ export async function detectDepegEvents(
       recoveryPrice: null,
       pegReference,
       source: "live",
+      confirmationSources: null,
+      pendingReason: null,
     });
 
     const buildInsertPendingStmt = (
