@@ -13,7 +13,7 @@ import {
 } from "@shared/lib/safety-score-version";
 
 const reportCardsDescription =
-  "Transparent stablecoin safety grades and contagion simulation. Five dimensions combined into a single letter grade, plus simulate what happens when a major stablecoin fails.";
+  "Transparent stablecoin safety grades and contagion simulation. Four weighted base dimensions plus a peg-stability multiplier map into one letter grade, with stress tests for major stablecoin failures.";
 
 export const metadata = buildPageMetadata({
   title: "Safety Scores: Stablecoin Safety Grades",
@@ -26,7 +26,7 @@ const FAQ_ITEMS = [
   {
     question: "How are stablecoin safety grades calculated?",
     answer:
-      "Each stablecoin is scored across five dimensions: peg stability (historical deviation and depeg events), liquidity depth (DEX pool size, volume, and protocol diversity), resilience (collateral quality, custody model, and blacklist capability), decentralization (governance type and chain infrastructure), and dependency risk (exposure to upstream stablecoins). Dimension scores are weighted and combined into a composite 0–100 score, then mapped to a letter grade from A+ to F.",
+      "Each stablecoin is scored across four weighted base dimensions: liquidity depth (DEX pool size, volume, protocol diversity, and redemption backstops), resilience (collateral quality, custody model, and blacklist capability), decentralization (governance type and chain infrastructure), and dependency risk (exposure to upstream stablecoins). Peg stability is displayed as its own dimension, but it enters the final score as a multiplier after the base dimensions are combined. The resulting 0–100 score maps to a letter grade from A+ to F.",
   },
   {
     question: "What does the contagion simulation show?",
@@ -36,7 +36,7 @@ const FAQ_ITEMS = [
   {
     question: "How often do safety grades change?",
     answer:
-      "Grades are recomputed every cron cycle (roughly every 30 minutes) as new data arrives. In practice, most grades are stable day-to-day. Significant shifts happen when peg deviations spike, liquidity pools drain, or governance changes are enacted. You can set up Telegram alerts to get notified the moment a grade changes.",
+      "Visible Safety Scores data is built by /api/report-cards with a 15-minute freshness/cache budget. In practice, most grades are stable day-to-day. Significant shifts happen when peg deviations spike, liquidity pools drain, or governance changes are enacted. A separate report-card cache lane publishes every 15 minutes for downstream read paths, while Telegram safety-change alerts are driven by the daily safety-grade history snapshot.",
   },
   {
     question: "What should I do with this information?",
@@ -46,7 +46,7 @@ const FAQ_ITEMS = [
   {
     question: "Why do most stablecoins receive a C grade?",
     answer:
-      "A C grade (score 50\u201364) is the statistical center of the grading distribution. It means the coin meets baseline requirements but has meaningful weaknesses in at least one dimension \u2014 typically limited liquidity, moderate dependency risk, or weaker decentralization. Only coins that excel across all five dimensions reach A or B territory.",
+      "A C grade (score 50\u201364) is the statistical center of the grading distribution. It means the coin meets baseline requirements but has meaningful weaknesses in at least one area \u2014 typically limited liquidity, moderate dependency risk, or weaker decentralization. Only coins that excel across the weighted base dimensions and maintain strong peg behavior reach A or B territory.",
   },
 ] as const satisfies readonly FaqItem[];
 

@@ -332,10 +332,10 @@ export default function TelegramPage() {
               <CardContent className="p-5">
                 <p className="text-sm font-semibold">Privacy</p>
                 <p className="mt-2 text-xs text-muted-foreground leading-relaxed">
-                  We store your Telegram chat ID and the coins you follow — nothing else.
-                  No personal data beyond a username if you have one. Run{" "}
+                  We store your Telegram chat ID, optional username, followed coins, alert settings, quiet hours, snooze
+                  state, and short-lived command/alert queue metadata. Run{" "}
                   <code className="rounded bg-muted px-1 py-0.5 text-[11px] font-mono">/unsubscribe all</code>{" "}
-                  at any time to clear your row.
+                  at any time to remove coin subscriptions and disable alert flags.
                 </p>
               </CardContent>
             </Card>

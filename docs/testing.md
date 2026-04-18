@@ -48,7 +48,7 @@ When `SMOKE_UI_EXPECT_GA_ID` is set, `npm run test:smoke-ui` also verifies that 
 
 ## CI Pipeline
 
-Defined across `.github/workflows/validate-ci.yml`, `.github/workflows/pull-request-checks.yml`, `.github/workflows/deploy-cloudflare.yml`, `.github/workflows/pages-prepare.yml`, `.github/workflows/pages-publish.yml`, `.github/workflows/pages-release.yml`, `.github/workflows/rebuild-pages.yml`, and `.github/workflows/codeql.yml`.
+Defined across `.github/workflows/validate-ci.yml`, `.github/workflows/pull-request-checks.yml`, `.github/workflows/deploy-cloudflare.yml`, `.github/workflows/pages-prepare.yml`, `.github/workflows/pages-publish.yml`, `.github/workflows/pages-release.yml`, `.github/workflows/rebuild-pages.yml`, `.github/workflows/codeql.yml`, `.github/workflows/dependency-audit.yml`, and `.github/workflows/secret-scan.yml`.
 
 For deployment/worktree operating procedure (including the local merge gate before every push), see [Deployment Process](./deployment-process.md).
 
@@ -56,6 +56,7 @@ For deployment/worktree operating procedure (including the local merge gate befo
    - runs the shared `validate` gate on `pull_request` to `main`
    - classifies the PR diff with `scripts/classify-deploy-changes.mjs`, then passes `pages_changed` and `worker_changed` into the reusable workflow
    - still runs the shared non-deploy guardrails and tests on every PR, while Pages build/SEO and worker typecheck follow the same deploy-surface flags used by the push deploy workflow
+   - runs a pinned gitleaks commit-range scan for pull-request secret detection
    - uses the PR base SHA for the critical-coverage ratchet diff
 2. `validate` (runs before any deployment):
    - runs the shared validate pre-build command set from `scripts/lib/validate-contract.mjs`: dependency/pricing audits, lint/typecheck, import boundaries, cycles, migrations, cron checks, docs checks, env checks, duplicate/export/registry guards, unused-code/hotspot/sql/stablecoin-data checks
@@ -483,7 +484,7 @@ Useful env controls:
 - `CRITICAL_COVERAGE_BASELINE_FILE`
 - Per-file overrides: `CRITICAL_COVERAGE_THRESHOLD_ALERTS`, `CRITICAL_COVERAGE_THRESHOLD_AUTH`, `CRITICAL_COVERAGE_THRESHOLD_EVM_RPC`, `CRITICAL_COVERAGE_THRESHOLD_STABLECOINS_CACHE`, `CRITICAL_COVERAGE_THRESHOLD_SAFETY_SCORES`, `CRITICAL_COVERAGE_THRESHOLD_SCHEDULED`, `CRITICAL_COVERAGE_THRESHOLD_DAILY_DIGEST`, `CRITICAL_COVERAGE_THRESHOLD_STABLECOIN_DETAIL`, `CRITICAL_COVERAGE_THRESHOLD_DISCOVERY`, `CRITICAL_COVERAGE_THRESHOLD_HEALTH`, `CRITICAL_COVERAGE_THRESHOLD_STATUS`, `CRITICAL_COVERAGE_THRESHOLD_DEX_ORCHESTRATOR`
 
-Current critical file set:
+Current unique critical file set (`CRITICAL_FILES` in `scripts/lib/critical-coverage.mjs`):
 
 - `src/lib/api.ts`
 - `worker/src/lib/api-cache-read.ts`
@@ -492,6 +493,7 @@ Current critical file set:
 - `worker/src/lib/api-pagination.ts`
 - `worker/src/lib/api-params.ts`
 - `worker/src/lib/api-response.ts`
+- `worker/src/lib/alerts.ts`
 - `worker/src/lib/auth.ts`
 - `worker/src/lib/evm-rpc.ts`
 - `worker/src/lib/stablecoins-cache.ts`
@@ -508,18 +510,8 @@ Current critical file set:
 - `worker/src/api/stress-signals.ts`
 - `worker/src/api/mint-burn-flows.ts`
 - `worker/src/api/status.ts`
-- `worker/src/lib/alerts.ts` _(explicit threshold: 80% lines)_
-- `worker/src/lib/auth.ts` _(explicit threshold: 70% lines)_
-- `worker/src/lib/evm-rpc.ts` _(explicit threshold: 70% lines)_
-- `worker/src/lib/stablecoins-cache.ts` _(explicit threshold: 50% lines)_
-- `worker/src/lib/safety-scores.ts` _(explicit threshold: 40% lines)_
-- `worker/src/handlers/scheduled.ts` _(explicit threshold: 40% lines)_
-- `worker/src/cron/daily-digest.ts` _(explicit threshold: 40% lines)_
-- `worker/src/api/discovery.ts` _(explicit threshold: 70% lines)_
-- `worker/src/api/health.ts` _(explicit threshold: 60% lines)_
-- `worker/src/api/status.ts` _(explicit threshold: 40% lines)_
-- `worker/src/api/stablecoin-detail.ts` _(explicit threshold: 30% lines)_
-- `worker/src/cron/dex-liquidity/orchestrator.ts` _(explicit threshold: 55% lines — above the global CI threshold, overridden per-file)_
+
+Selected files have explicit threshold overrides in `scripts/check-critical-coverage.mjs`; keep that map as the source of truth instead of duplicating override values in prose.
 
 ### Critical Test Suites
 
@@ -627,9 +619,15 @@ describe("syncFxRates", () => {
 
 ### Zod Runtime Validation
 
-Schema validation in hooks is done via `useApiQuery(..., { schema })`. Current schema-validated response paths include:
+Schema validation in hooks is done via `useApiQuery(..., { schema })` / `useApiQueryWithMeta(..., { schema })`. Current schema-validated response paths include:
 
 - `StablecoinListResponseSchema`
+- `SupplyHistoryResponseSchema`
+- `StablecoinDetailHistoryResponseSchema`
+- `HealthResponseSchema`
+- `BluechipRatingsMapSchema`
+- `BlacklistResponseSchema`
+- `BlacklistSummaryResponseSchema`
 - `DepegEventsResponseSchema`
 - `PegSummaryResponseSchema`
 - `DexLiquidityMapSchema`
@@ -642,6 +640,10 @@ Schema validation in hooks is done via `useApiQuery(..., { schema })`. Current s
 - `MintBurnEventsResponseSchema`
 - `StressSignalsAllResponseSchema`
 - `StressSignalDetailResponseSchema`
+- `YieldHistoryResponseSchema`
+- `YieldRankingsResponseSchema`
+
+Use `rg "schema:" src/hooks src/lib` for the live callsite set before adding or auditing endpoint validation.
 
 When a schema is provided, frontend API helpers now validate in `strict` mode by default and throw on schema mismatch. Use `contractMode: "warn"` only for explicitly degraded surfaces where returning raw data is acceptable.
 

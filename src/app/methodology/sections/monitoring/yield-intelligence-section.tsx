@@ -53,7 +53,7 @@ export function YieldIntelligenceMethodologySection() {
                     {
                       label: "Minimum data",
                       value:
-                        "Need one resolved APY source; deterministic exchange-rate sources additionally need prior source-specific history",
+                        "Need one resolved APY source; deterministic exchange-rate rows can publish from current state, but need prior source-specific history for a nonzero exchange-rate-derived APY",
                     },
                     {
                       label: "Required sources",
@@ -224,10 +224,10 @@ export function YieldIntelligenceMethodologySection() {
                 <div className="space-y-2">
                   <h3 className="text-foreground font-medium">NAV Token Handling</h3>
                   <p>
-                    NAV-appreciating tokens (e.g.&nbsp;sDAI, wUSDM, BUIDL) are not covered by the report card
-                    framework&apos;s safety grading &mdash; they receive a default safety baseline of 40 (NR). Their PYS is
-                    therefore derived primarily from APY magnitude and variance rather than a full safety assessment. As the
-                    grading framework expands to cover NAV tokens, their PYS will become more nuanced.
+                    NAV-appreciating tokens (e.g.&nbsp;sDAI, wUSDM, BUIDL) use live report-card scores when the safety
+                    framework has enough data for them, including NAV-aware report-card coverage. The default safety baseline
+                    of 40 (NR) is only a missing-safety fallback, so a NAV token&apos;s PYS can still reflect a full safety
+                    assessment when report-card hydration succeeds.
                   </p>
                 </div>
                 {/* Limitations */}

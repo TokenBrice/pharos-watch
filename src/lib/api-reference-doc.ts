@@ -66,7 +66,7 @@ function slugifyHeading(value: string) {
 function isTableSeparatorLine(line: string) {
   const trimmed = line.trim();
   if (!trimmed.startsWith("|")) return false;
-  const cells = splitTableRow(trimmed);
+  const cells = splitPlainTableRow(trimmed);
   if (cells.length === 0) return false;
   return cells.every((cell) => /^:?-+:?$/.test(cell.replace(/\s+/g, "")));
 }
@@ -84,6 +84,40 @@ function isSubsectionLine(line: string) {
 }
 
 function splitTableRow(line: string) {
+  const cells: string[] = [];
+  let current = "";
+  let escaped = false;
+
+  for (const char of line.trim().replace(/^\|/, "").replace(/\|$/, "")) {
+    if (escaped) {
+      current += char;
+      escaped = false;
+      continue;
+    }
+
+    if (char === "\\") {
+      escaped = true;
+      continue;
+    }
+
+    if (char === "|") {
+      cells.push(current.trim());
+      current = "";
+      continue;
+    }
+
+    current += char;
+  }
+
+  if (escaped) {
+    current += "\\";
+  }
+
+  cells.push(current.trim());
+  return cells;
+}
+
+function splitPlainTableRow(line: string) {
   return line
     .trim()
     .replace(/^\|/, "")

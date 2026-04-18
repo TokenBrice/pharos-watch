@@ -163,7 +163,7 @@ export const COVERAGE_FEATURES: readonly CoverageFeatureDefinition[] = [
     key: "flows",
     label: "Flows",
     shortLabel: "Flows",
-    description: "Ethereum mint/burn flow tracking and coverage state.",
+    description: "Configured issuance-chain mint/burn flow tracking and coverage state.",
     href: "/flows/",
   },
   {
@@ -328,7 +328,7 @@ const FLOW_STATUS_PRESETS = {
     tone: "emerald",
     available: true,
     sortRank: 4,
-    detail: "Ethereum mint/burn tracking has full 30-day baseline coverage.",
+    detail: "Configured issuance-chain mint/burn tracking has full 30-day baseline coverage.",
   },
   "partial-history": {
     kind: "partial-history",
@@ -336,7 +336,7 @@ const FLOW_STATUS_PRESETS = {
     tone: "sky",
     available: true,
     sortRank: 3,
-    detail: "Ethereum mint/burn tracking exists, but the full history window is not yet complete.",
+    detail: "Configured issuance-chain mint/burn tracking exists, but the full history window is not yet complete.",
   },
   lagging: {
     kind: "lagging",
@@ -344,7 +344,7 @@ const FLOW_STATUS_PRESETS = {
     tone: "amber",
     available: true,
     sortRank: 2,
-    detail: "Ethereum mint/burn tracking exists, but sync progress is currently lagging.",
+    detail: "Configured issuance-chain mint/burn tracking exists, but sync progress is currently lagging.",
   },
   bootstrapping: {
     kind: "bootstrapping",
@@ -352,7 +352,7 @@ const FLOW_STATUS_PRESETS = {
     tone: "violet",
     available: true,
     sortRank: 1,
-    detail: "Ethereum mint/burn tracking is configured, but coverage is still bootstrapping.",
+    detail: "Configured issuance-chain mint/burn tracking is configured, but coverage is still bootstrapping.",
     spokenLabel: "Bootstrapping",
   },
   disabled: {
@@ -369,7 +369,7 @@ const FLOW_STATUS_PRESETS = {
     tone: "slate",
     available: false,
     sortRank: 0,
-    detail: "No Ethereum mint/burn flow tracking is currently configured.",
+    detail: "No issuance-chain mint/burn flow tracking is currently configured.",
     spokenLabel: "Not tracked",
   },
 } satisfies Record<string, CoverageStatusPreset>;

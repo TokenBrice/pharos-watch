@@ -6,7 +6,7 @@
     {
       "name": "stablecoin-metadata",
       "sources": ["shared/data/stablecoins/**", "shared/lib/stablecoins/**", "shared/lib/stablecoin-id-registry.ts", "shared/lib/shadow-stablecoins.ts"],
-      "docs": ["docs/classification.md", "docs/shadow-stablecoins.md", "docs/about-page.md", "README.md"],
+      "docs": ["docs/stablecoin-data.md", "docs/classification.md", "docs/shadow-stablecoins.md", "docs/about-page.md", "README.md"],
       "notes": ["Update methodology docs only when scoring or classification semantics change."]
     },
     {
@@ -18,7 +18,7 @@
     {
       "name": "api-surface",
       "sources": ["shared/lib/api-endpoints/**", "worker/src/routes/**", "worker/src/router.ts", "worker/src/api/**", "src/hooks/api-hooks.ts", "src/lib/api.ts"],
-      "docs": ["docs/api-reference.md", "docs/architecture.md", "docs/data-flow-map.md", "docs/worker-infrastructure.md"],
+      "docs": ["docs/api-endpoint-authoring.md", "docs/api-reference.md", "docs/architecture.md", "docs/data-flow-map.md", "docs/worker-infrastructure.md"],
       "notes": ["Route flags, auth lanes, cache profiles, and site-data allowlists should stay in sync with endpoint behavior."]
     },
     {
