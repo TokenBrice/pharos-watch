@@ -20,11 +20,16 @@ export const metadata: Metadata = {
   alternates: { canonical: "/funding/" },
 };
 
+// Build-time timestamp anchors "this month" for the KPI split. Static export
+// means this reflects the last deploy, not the visitor's clock. Monthly
+// boundaries can be up to ~7 days stale (funding-update skill cadence);
+// acceptable for a stealth-released page with weekly redeploys.
+const BUILD_TIMESTAMP_SEC = Math.floor(Date.now() / 1000);
+
 export default function FundingPage() {
   const costs = costsData as CostsFile;
   const donations = donationsData as DonationsFile;
-  const now = Math.floor(Date.now() / 1000);
-  const summary = summarizeDonations(donations.donations, now);
+  const summary = summarizeDonations(donations.donations, BUILD_TIMESTAMP_SEC);
   const monthlyTargetUsd = computeCostsTotal(costs.items);
 
   return (

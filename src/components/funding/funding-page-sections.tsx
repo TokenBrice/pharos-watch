@@ -298,7 +298,7 @@ export function SupportCtas() {
           <p className="text-xs text-muted-foreground leading-relaxed">
             Easiest: wallet — same address on every chain. Cheapest gas: Base or Gnosis.
             Via Giveth: supports their public-goods pool; donations arrive at the wallet and appear on the wall as a
-            single "via Giveth" entry.
+            single &ldquo;via Giveth&rdquo; entry.
           </p>
           <div className="space-y-2">
             <p className="pharos-kicker text-muted-foreground">Other ways to help</p>
@@ -380,7 +380,7 @@ export function YearEndHorizon() {
   return (
     <Card className={cn("rounded-xl border-l-[3px]", toneBorder("brand"))}>
       <CardHeader className="space-y-1">
-        <p className={cn("pharos-kicker", toneKicker("brand"))}>Where we're going</p>
+        <p className={cn("pharos-kicker", toneKicker("brand"))}>Where we&apos;re going</p>
         <CardTitle as="h2">Path to sustainability</CardTitle>
       </CardHeader>
       <CardContent className="space-y-3 text-sm leading-relaxed text-muted-foreground">
