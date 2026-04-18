@@ -59,12 +59,12 @@ export function ScoringChangelogV704Entry() {
       accent="border-l-emerald-500"
     >
       <p>
-        Redemption backstops now stay eligible through normal hourly sync lag instead of dropping
-        out of Liquidity / Exit as soon as the previous snapshot crosses one hour old.
+        Redemption backstops now stay eligible through normal 4-hourly sync lag instead of dropping
+        out of Liquidity / Exit as soon as the previous snapshot crosses one sync interval old.
       </p>
       <ul className="list-disc list-inside space-y-1">
         <li>
-          Report-card redemption freshness now uses a two-run runway for the hourly redemption sync.
+          Report-card redemption freshness now uses a two-run runway for the 4-hourly redemption sync.
         </li>
         <li>
           Medium- and high-confidence immediate-bounded redemption routes continue to improve Liquidity / Exit

@@ -1,6 +1,6 @@
 # Blacklist Tracker
 
-Multi-chain blacklist/freeze event tracker for stablecoins. Monitors on-chain events (blacklist, unblacklist, destroy/seize) across 71 contract configurations on 9 chains (35 tracked symbols; additional BSC / Avalanche / Base deployments for some tier-1 coins are deferred pending explorer-API coverage). Runs hourly, incrementally scanning from the last processed block or timestamp cursor.
+Multi-chain blacklist/freeze event tracker for stablecoins. Monitors on-chain events (blacklist, unblacklist, destroy/seize) across 71 contract configurations on 9 chains (35 tracked symbols; additional BSC / Avalanche / Base deployments for some tier-1 coins are deferred pending explorer-API coverage). Runs every 6 hours, incrementally scanning from the last processed block or timestamp cursor.
 
 The tracker now has two distinct amount layers:
 
@@ -18,10 +18,10 @@ Implementation note: `EURC` is live-supported with mirror-zero suppression. Circ
 
 ## Cron Schedule
 
-- **Pattern:** `3 * * * *` (hourly at :03)
+- **Pattern:** `3 */6 * * *` (every 6 hours at :03)
 - **Function:** `syncBlacklist(opts: SyncBlacklistOptions)`
 - **File:** `worker/src/cron/sync-blacklist.ts`
-- **Caller contract:** the hourly handler passes `db`, provider keys, `chainRpcs`, optional abort signal, and cron progress hooks via `SyncBlacklistOptions`
+- **Caller contract:** the 6-hourly handler passes `db`, provider keys, `chainRpcs`, optional abort signal, and cron progress hooks via `SyncBlacklistOptions`
 - **Returns:** `{ itemCount, metadata: JSON { rowsWritten, eventsFetched, contractsSkipped, apiErrors, apiErrorConfigs, zeroCursorConfigCount, zeroCursorConfigs, rpcLogConfigs, apiErrorClasses, budgetUsed, budgetLimit, runtimeBudgetReached, runtimeBudgetMs } }`
 
 `itemCount` now reflects the number of rows actually inserted into `blacklist_events`. `metadata.eventsFetched` tracks fetched/parsed rows before `INSERT OR IGNORE` deduplication, which is useful when diagnosing repeated rescans.
@@ -827,7 +827,7 @@ All blacklist admin endpoints are routed in `worker/src/routes/registry.ts` and 
 **Cache:** `staleTime: 60 min`, `refetchInterval: 120 min`
 
 The summary hook loads aggregate cards/chart/filter metadata from the dedicated summary endpoint. The page hook fetches only the currently requested table slice, including server-side filtering, sorting, search, and pagination.
-Both endpoints now emit freshness headers from the same hourly `sync-blacklist` writer timestamp, so the shared stale-data banner does not warn before the next scheduled blacklist run is actually late.
+Both endpoints now emit freshness headers from the same 6-hourly `sync-blacklist` writer timestamp, so the shared stale-data banner does not warn before the next scheduled blacklist run is actually late.
 
 ### Page: /blacklist
 

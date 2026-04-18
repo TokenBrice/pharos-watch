@@ -295,7 +295,7 @@ The sync inserts a `running` row before writing current/history rows and marks i
 
 **File:** `worker/src/api/redemption-backstops.ts`
 
-- Returns `503` with `{ "error": "Data not yet available" }` until at least one hourly sync has written rows
+- Returns `503` with `{ "error": "Data not yet available" }` until at least one 4-hourly sync has written rows
 - Returns `503` with `{ "error": "Redemption backstop snapshot unavailable" }` when the current snapshot cannot be read cleanly from D1
 - Otherwise returns the current map plus methodology metadata from `buildRedemptionBackstopsSnapshot(db)`, with `methodology.version` attributed from the latest completed run or latest stored snapshot row and `currentVersion` preserved as the live code version
 - Cache profile: `standard` (`public, s-maxage=300, max-age=60`) with freshness headers based on `updatedAt`
