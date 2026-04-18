@@ -185,3 +185,9 @@ The worker codebase deliberately uses `!= null` (loose equality) as the standard
 ## TypeScript Target Constraints
 
 Both the root tsconfig and worker tsconfig target ES2022. Shared modules in `shared/lib/` compile under both configs and may use ES2022 features (nullish assignment `??=`, logical assignment `||=`, `Array.at()`, top-level `await`, etc.) but must remain runtime-neutral — no DOM APIs, no Node-only APIs, no Cloudflare-only APIs.
+
+---
+
+## Funding page
+
+The `/funding` route is a static page backed by two hand-maintained JSON files in `shared/data/funding/` (costs and donations). No cron, no D1, no API endpoint. Donations are appended to `donations.json` via the `funding-update` Claude skill on a weekly cadence — the skill researches inbound transfers to `pharos-watch.eth` across six chains (Ethereum/Base/Optimism/Arbitrum/Polygon via Alchemy `alchemy_getAssetTransfers`, Gnosis via Gnosisscan REST), prices each donation in USD at receipt via CoinGecko `/coins/{id}/history`, forward-verifies ENS, and writes after explicit user approval. See `docs/funding-page.md` for the data model and the rationale for the intentionally-simple architecture.
