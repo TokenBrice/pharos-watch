@@ -133,6 +133,12 @@ export async function confirmPendingDepegs(
     }
   }
 
+  // Pre-flight circuit-breaker checks: evaluate once instead of per pending row.
+  const [coingeckoAllowed, defillamaAllowed] = await Promise.all([
+    shouldAttemptFetch(db, CIRCUIT_SOURCE.COINGECKO_CONFIRM),
+    shouldAttemptFetch(db, CIRCUIT_SOURCE.DEFILLAMA_CONFIRM),
+  ]);
+
   // Collect all mutation statements and execute as a batch at the end
   const stmts: D1PreparedStatement[] = [];
 
@@ -223,7 +229,7 @@ export async function confirmPendingDepegs(
       const circuitKey = useDefiLlamaSecondary
         ? CIRCUIT_SOURCE.DEFILLAMA_CONFIRM
         : CIRCUIT_SOURCE.COINGECKO_CONFIRM;
-      const offchainAllowed = await shouldAttemptFetch(db, circuitKey);
+      const offchainAllowed = useDefiLlamaSecondary ? defillamaAllowed : coingeckoAllowed;
       if (offchainAllowed) {
         try {
           const offchainRes = await fetchWithRetry(

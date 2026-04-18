@@ -1,4 +1,5 @@
 import { DAY_SECONDS } from "@shared/lib/time-constants";
+import { unwrapStressSignalsEnvelope } from "@shared/lib/stress-signals-envelope";
 import { decodeJsonString } from "../../lib/cache-json";
 import { isTrustedDexPriceRow } from "../../lib/depeg-trust-policy";
 import { isCanonicalMintBurnPair } from "../../lib/mint-burn-canonical-chain";
@@ -198,13 +199,11 @@ export async function loadDewsSourceState(options: LoadDewsSourceStateOptions): 
         missingReason: "missing",
         parseErrorReason: "json-parse-failed",
         normalize: (parsed) => {
-          if (!isRecord(parsed)) {
+          const unwrapped = unwrapStressSignalsEnvelope(parsed);
+          if (unwrapped == null) {
             return { ok: false, reason: "invalid-shape" as const };
           }
-          // v5.95: new rows have shape { signals, amplifiers }; legacy rows
-          // had the flat signals map at the top level. Support both forever.
-          const signalsPayload = isRecord(parsed.signals) ? parsed.signals : parsed;
-          return { ok: true, payload: signalsPayload };
+          return { ok: true, payload: unwrapped.signals };
         },
       });
       if (!decoded.ok) {

@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { usePrefetchStablecoin } from "@/hooks/use-prefetch-stablecoin";
+import { DepegProvenanceBadges } from "@/components/depeg-provenance-badges";
 import { buildStablecoinUrl } from "@/lib/urls";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -117,16 +118,10 @@ export function DepegFeed({ events, logos, hasMore = false, isLoadingMore = fals
                     >
                       {evt.direction}
                     </Badge>
-                    {evt.pendingReason ? (
-                      <span data-testid="event-pending-reason" className="rounded bg-muted px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
-                        {evt.pendingReason}
-                      </span>
-                    ) : null}
-                    {evt.confirmationSources ? (
-                      <span data-testid="event-confirmed-by" className="rounded bg-muted px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
-                        ✓ {evt.confirmationSources}
-                      </span>
-                    ) : null}
+                    <DepegProvenanceBadges
+                      pendingReason={evt.pendingReason}
+                      confirmationSources={evt.confirmationSources}
+                    />
                     {isOngoing && (
                       <span className="flex items-center gap-1 text-xs text-red-700 dark:text-red-400 font-medium">
                         <span className="relative flex h-2 w-2">

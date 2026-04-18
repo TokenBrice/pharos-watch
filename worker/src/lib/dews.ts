@@ -14,6 +14,9 @@ import {
   DEWS_THREAT_BANDS,
 } from "@shared/lib/dews-config";
 
+/** Upper cap on the cross-asset contagion amplifier (mirrors worker constant). */
+const CONTAGION_AMPLIFIER_CAP = 1.2;
+
 // ---------------------------------------------------------------------------
 // Types
 // ---------------------------------------------------------------------------
@@ -615,9 +618,7 @@ export function computeDEWS(input: DEWSInput): DEWSResult | null {
   const psiAmplifier = input.psiScore !== null && input.psiScore < 75
     ? 1 + Math.max(0, (75 - input.psiScore) / 75) * 0.3
     : 1;
-  // Cross-asset contagion: pre-computed amplifier from a two-pass scoring loop,
-  // clamped defensively here.
-  const contagionAmplifier = Math.min(Math.max(input.contagionAmplifier ?? 1, 1), 1.2);
+  const contagionAmplifier = clamp(input.contagionAmplifier ?? 1, 1, CONTAGION_AMPLIFIER_CAP);
   const amplifiedScore = (weightedSum / totalWeight) * psiAmplifier * contagionAmplifier;
   const score = Math.round(clamp(amplifiedScore, 0, 100));
   const band = getThreatBand(score);

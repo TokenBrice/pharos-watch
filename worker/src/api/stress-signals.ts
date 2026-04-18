@@ -18,40 +18,7 @@ import {
 } from "@shared/lib/depeg-dews-version";
 import { toMethodologyVersionLabel } from "@shared/lib/methodology-version";
 import { ACTIVE_IDS } from "@shared/lib/stablecoins";
-
-const DEFAULT_AMPLIFIERS = { psi: 1, contagion: 1 };
-
-/**
- * Unwrap a parsed signals_json blob into { signals, amplifiers }.
- *
- * v5.95+ rows persist `{ signals: {...}, amplifiers: { psi, contagion } }`.
- * Legacy rows persist the flat signals map at the top level with no amplifiers.
- * Legacy rows default to `{ psi: 1, contagion: 1 }` (no amplification).
- */
-function unwrapSignalsJson(parsed: Record<string, unknown> | null): {
-  signals: Record<string, unknown>;
-  amplifiers: { psi: number; contagion: number };
-} | null {
-  if (!parsed) return null;
-  const maybeWrapped = parsed as { signals?: unknown; amplifiers?: unknown };
-  const isWrapped =
-    maybeWrapped.signals != null &&
-    typeof maybeWrapped.signals === "object" &&
-    !Array.isArray(maybeWrapped.signals);
-  const signals = isWrapped
-    ? (maybeWrapped.signals as Record<string, unknown>)
-    : parsed;
-  const rawAmplifiers = isWrapped ? maybeWrapped.amplifiers : null;
-  const amp =
-    rawAmplifiers && typeof rawAmplifiers === "object" && !Array.isArray(rawAmplifiers)
-      ? (rawAmplifiers as { psi?: unknown; contagion?: unknown })
-      : null;
-  const amplifiers = {
-    psi: typeof amp?.psi === "number" ? amp.psi : DEFAULT_AMPLIFIERS.psi,
-    contagion: typeof amp?.contagion === "number" ? amp.contagion : DEFAULT_AMPLIFIERS.contagion,
-  };
-  return { signals, amplifiers };
-}
+import { unwrapStressSignalsEnvelope } from "@shared/lib/stress-signals-envelope";
 
 export const handleStressSignals = withErrorHandler(
   "stress-signals",
@@ -113,12 +80,12 @@ export const handleStressSignals = withErrorHandler(
       const currentParsed = latest
         ? safeJsonParse<Record<string, unknown> | null>(latest.signals_json, null)
         : null;
-      const currentUnwrapped = unwrapSignalsJson(currentParsed);
+      const currentUnwrapped = unwrapStressSignalsEnvelope(currentParsed);
       if (latest && currentUnwrapped == null) malformedRows++;
 
       const historyRows = history.results.map((r) => {
         const parsed = safeJsonParse<Record<string, unknown> | null>(r.signals_json, null);
-        const unwrapped = unwrapSignalsJson(parsed);
+        const unwrapped = unwrapStressSignalsEnvelope(parsed);
         if (unwrapped == null) {
           malformedRows++;
           return null;
@@ -186,7 +153,7 @@ export const handleStressSignals = withErrorHandler(
         continue;
       }
       const parsed = safeJsonParse<Record<string, unknown> | null>(row.signals_json, null);
-      const unwrapped = unwrapSignalsJson(parsed);
+      const unwrapped = unwrapStressSignalsEnvelope(parsed);
       if (unwrapped == null) {
         malformedRows++;
         continue;

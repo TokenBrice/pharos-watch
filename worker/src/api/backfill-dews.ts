@@ -7,6 +7,7 @@ import {
   resolveOrReject,
 } from "../lib/api-utils";
 import { BACKTEST_ANCHORS } from "../lib/backtest-anchors";
+import { BACKTEST_LOOKBACK_DAYS } from "../lib/constants";
 import { getCache } from "../lib/db-cache";
 import { computeDEWS } from "../lib/dews";
 import type { DEWSInput } from "../lib/dews";
@@ -483,34 +484,26 @@ interface BacktestMetricsPerAnchor {
 }
 
 async function handleBacktestMetrics(db: D1Database): Promise<Response> {
-  const perAnchor: BacktestMetricsPerAnchor[] = [];
-  for (const anchor of BACKTEST_ANCHORS) {
-    const windowStart = anchor.onsetAt - 14 * DAY_SECONDS;
-    const rows = await db
-      .prepare(
-        "SELECT snapshot_date, band FROM stress_signal_history WHERE stablecoin_id = ? AND snapshot_date >= ? AND snapshot_date <= ? ORDER BY snapshot_date ASC",
-      )
-      .bind(anchor.stablecoinId, windowStart, anchor.onsetAt)
-      .all<{ snapshot_date: number; band: string }>();
+  const perAnchor = await Promise.all(
+    BACKTEST_ANCHORS.map(async (anchor): Promise<BacktestMetricsPerAnchor> => {
+      const windowStart = anchor.onsetAt - BACKTEST_LOOKBACK_DAYS * DAY_SECONDS;
+      const row = await db
+        .prepare(
+          "SELECT snapshot_date, band FROM stress_signal_history WHERE stablecoin_id = ? AND snapshot_date >= ? AND snapshot_date <= ? AND band IN ('ALERT', 'WARNING', 'DANGER') ORDER BY snapshot_date ASC LIMIT 1",
+        )
+        .bind(anchor.stablecoinId, windowStart, anchor.onsetAt)
+        .first<{ snapshot_date: number; band: string }>();
 
-    let firstAlertAt: number | null = null;
-    let firstAlertBand: string | null = null;
-    for (const row of rows.results ?? []) {
-      if (row.band === "ALERT" || row.band === "WARNING" || row.band === "DANGER") {
-        firstAlertAt = row.snapshot_date;
-        firstAlertBand = row.band;
-        break;
-      }
-    }
-    const detected = firstAlertAt !== null;
-    perAnchor.push({
-      stablecoinId: anchor.stablecoinId,
-      onsetAt: anchor.onsetAt,
-      detected,
-      leadTimeDays: detected ? (anchor.onsetAt - firstAlertAt!) / DAY_SECONDS : null,
-      firstAlertBand,
-    });
-  }
+      const detected = row != null;
+      return {
+        stablecoinId: anchor.stablecoinId,
+        onsetAt: anchor.onsetAt,
+        detected,
+        leadTimeDays: detected ? (anchor.onsetAt - row!.snapshot_date) / DAY_SECONDS : null,
+        firstAlertBand: row?.band ?? null,
+      };
+    }),
+  );
 
   const detected = perAnchor.filter((entry) => entry.detected);
   const leadTimes = detected

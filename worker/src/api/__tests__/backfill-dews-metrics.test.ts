@@ -10,9 +10,9 @@ const DAY = 86_400;
 
 describe("GET /api/backfill-dews?mode=backtest-metrics", () => {
   it("returns detection rate, lead time percentiles (days), and per-anchor detail", async () => {
-    // Seed canned stress_signal_history rows for each anchor. The first anchor
-    // (USDC-SVB) gets an ALERT 3 days before onset; the second (USDT) gets an
-    // ALERT 5 days before onset. Remaining anchors get no rows (undetected).
+    // Seed canned stress_signal_history rows for each anchor. The SQL already
+    // pushes `band IN ('ALERT','WARNING','DANGER')` + LIMIT 1 into D1, so the
+    // mock supplies the single row the real database would return.
     const [usdcAnchor, usdtAnchor] = BACKTEST_ANCHORS;
     const db = mockD1([
       {
@@ -23,9 +23,7 @@ describe("GET /api/backfill-dews?mode=backtest-metrics", () => {
           usdcAnchor.onsetAt,
         ],
         rows: [
-          { snapshot_date: usdcAnchor.onsetAt - 6 * DAY, band: "WATCH" },
           { snapshot_date: usdcAnchor.onsetAt - 3 * DAY, band: "ALERT" },
-          { snapshot_date: usdcAnchor.onsetAt - 1 * DAY, band: "WARNING" },
         ],
       },
       {
@@ -36,7 +34,6 @@ describe("GET /api/backfill-dews?mode=backtest-metrics", () => {
           usdtAnchor.onsetAt,
         ],
         rows: [
-          { snapshot_date: usdtAnchor.onsetAt - 10 * DAY, band: "CALM" },
           { snapshot_date: usdtAnchor.onsetAt - 5 * DAY, band: "ALERT" },
         ],
       },

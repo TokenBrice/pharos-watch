@@ -189,6 +189,18 @@ export const POOL_CHALLENGE_CONFIRM_MIN = 2;
 /** Single-pool TVL above which pool-only confirmation can promote with a single pool. */
 export const POOL_CHALLENGE_HIGH_TVL_USD = 5_000_000; // $5M
 
+/** Cross-asset contagion amplifier applied to a same-peg-type coin when another is DANGER. */
+export const CONTAGION_BUMP_DANGER = 1.15;
+
+/** Cross-asset contagion amplifier applied to a same-peg-type coin when another is WARNING. */
+export const CONTAGION_BUMP_WARNING = 1.08;
+
+/** Upper cap on the cross-asset contagion amplifier (applied after bump selection). */
+export const CONTAGION_AMPLIFIER_CAP = 1.2;
+
+/** Days of stress_signal_history examined before each backtest anchor's onset. */
+export const BACKTEST_LOOKBACK_DAYS = 14;
+
 /** Maximum accepted block-timestamp staleness for the Curve PriceAggregator EMA oracle (seconds). */
 export const CURVE_ORACLE_MAX_STALENESS_SEC = 300;
 

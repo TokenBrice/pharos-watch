@@ -8,24 +8,14 @@ import {
   type CollectorContext,
   type SafetyScoresResult,
 } from "./collectors-shared";
+import { unwrapStressSignalsEnvelope } from "@shared/lib/stress-signals-envelope";
 
-/**
- * Parse a `stress_signals.signals_json` blob into the inner per-signal map.
- *
- * v5.95+ rows wrap signals as `{ signals: {...}, amplifiers: {...} }`.
- * Legacy rows store the flat map at the top level. Always prefer the wrapped
- * shape; fall back to the parsed root for legacy rows.
- */
 function parseStressSignalsMap(
   signalsJson: string,
 ): Record<string, { value: number; available: boolean }> {
-  const parsed = JSON.parse(signalsJson) as Record<string, unknown>;
-  const wrapped = (parsed as { signals?: unknown }).signals;
-  const map =
-    wrapped != null && typeof wrapped === "object" && !Array.isArray(wrapped)
-      ? wrapped
-      : parsed;
-  return map as Record<string, { value: number; available: boolean }>;
+  const parsed = JSON.parse(signalsJson) as unknown;
+  const unwrapped = unwrapStressSignalsEnvelope(parsed);
+  return (unwrapped?.signals ?? {}) as Record<string, { value: number; available: boolean }>;
 }
 
 export async function collectSafetyScores(

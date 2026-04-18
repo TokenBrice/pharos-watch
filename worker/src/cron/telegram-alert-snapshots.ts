@@ -1,6 +1,7 @@
 import { isDewsAlertable, type DepegAlertPayload } from "../lib/telegram-alerts";
 import { setCache } from "../lib/db-cache";
 import { DAY_SECONDS } from "@shared/lib/time-constants";
+import { unwrapStressSignalsEnvelope } from "@shared/lib/stress-signals-envelope";
 
 // ---------- Constants ----------
 
@@ -158,18 +159,9 @@ export function buildSafetySnapshot(rows: SafetyRow[]): SafetySnapshot {
 export function extractTopSignals(signalsJson: string | null): Array<{ name: string; value: number }> {
   if (!signalsJson) return [];
   try {
-    const parsed = JSON.parse(signalsJson) as Record<string, unknown> | null;
-    if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) return [];
-
-    // v5.95+ rows wrap signals under a `signals` key alongside `amplifiers`.
-    // Legacy rows carry the flat signals map at the top level. Prefer wrapped.
-    const wrapped = (parsed as { signals?: unknown }).signals;
-    const signalsMap =
-      wrapped != null && typeof wrapped === "object" && !Array.isArray(wrapped)
-        ? (wrapped as Record<string, unknown>)
-        : parsed;
-
-    return Object.entries(signalsMap)
+    const unwrapped = unwrapStressSignalsEnvelope(JSON.parse(signalsJson));
+    if (unwrapped == null) return [];
+    return Object.entries(unwrapped.signals)
       .flatMap(([name, raw]) => {
         if (!raw || typeof raw !== "object" || Array.isArray(raw)) return [];
         const entry = raw as { value?: unknown; available?: unknown };

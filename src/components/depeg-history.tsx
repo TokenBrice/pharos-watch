@@ -3,6 +3,7 @@
 import { useMemo } from "react";
 import { useInfiniteDepegEvents } from "@/hooks/use-depeg-events";
 import { useTablePagination } from "@/hooks/use-table-pagination";
+import { DepegProvenanceBadges } from "@/components/depeg-provenance-badges";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { DataTableShell, type DataTableColumn } from "@/components/data-table-shell";
@@ -235,16 +236,11 @@ function DepegRow({ event, pegCurrency }: { event: DepegEvent; pegCurrency: stri
         >
           {event.direction === "below" ? "Below" : "Above"}
         </Badge>
-        {event.pendingReason ? (
-          <span data-testid="event-pending-reason" className="ml-2 rounded bg-muted px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
-            {event.pendingReason}
-          </span>
-        ) : null}
-        {event.confirmationSources ? (
-          <span data-testid="event-confirmed-by" className="ml-1 rounded bg-muted px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
-            ✓ {event.confirmationSources}
-          </span>
-        ) : null}
+        <DepegProvenanceBadges
+          pendingReason={event.pendingReason}
+          confirmationSources={event.confirmationSources}
+          reasonLeadingClass="ml-2"
+        />
       </TableCell>
       <TableCell className={`text-right font-mono tabular-nums text-sm ${devColor}`}>
         {event.peakDeviationBps > 0 ? "+" : ""}

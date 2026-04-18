@@ -12,11 +12,11 @@ import type {
   PersistedJsonDecodeReason,
 } from "./contracts";
 import { decodeJsonString } from "../../lib/cache-json";
-
-// Cross-asset contagion amplifier bumps (v5.95). Cap enforced at 1.2.
-const CONTAGION_BUMP_DANGER = 1.15;
-const CONTAGION_BUMP_WARNING = 1.08;
-const CONTAGION_CAP = 1.2;
+import {
+  CONTAGION_BUMP_DANGER,
+  CONTAGION_BUMP_WARNING,
+  CONTAGION_AMPLIFIER_CAP,
+} from "../../lib/constants";
 
 const RawPoolDataSchema = z.object({
   tvlUsd: z.number().default(0),
@@ -90,9 +90,6 @@ export function buildDewsScoringResult(options: BuildDewsScoringResultOptions): 
   let insufficientDataCount = 0;
   const noCurrentSupplyIds: string[] = [];
 
-  // Pass 1: assemble DEWSInput for each eligible coin and compute baseline DEWS
-  // with contagionAmplifier = 1. Track results by id so pass 2 can detect
-  // same-peg-type DANGER/WARNING coins and amplify accordingly.
   const scored: Array<{ meta: typeof PSI_ELIGIBLE_STABLECOINS[number]; input: DEWSInput; firstPass: DEWSResult }> = [];
   for (const meta of PSI_ELIGIBLE_STABLECOINS) {
     if (meta.flags?.navToken) continue;
@@ -168,8 +165,6 @@ export function buildDewsScoringResult(options: BuildDewsScoringResultOptions): 
     scored.push({ meta, input, firstPass });
   }
 
-  // Derive per-pegType contagion amplifier (v5.95). A DANGER-band coin bumps
-  // its peg type by +15%; WARNING by +8%. Cap per peg type at 1.2.
   const amplifiers: ContagionAmplifiers = { byPegType: {}, triggeringIds: [] };
   for (const { input, firstPass } of scored) {
     const bump =
@@ -179,14 +174,13 @@ export function buildDewsScoringResult(options: BuildDewsScoringResultOptions): 
     if (bump <= 1) continue;
     const current = amplifiers.byPegType[input.pegType] ?? 1;
     if (bump > current) {
-      amplifiers.byPegType[input.pegType] = Math.min(bump, CONTAGION_CAP);
+      amplifiers.byPegType[input.pegType] = Math.min(bump, CONTAGION_AMPLIFIER_CAP);
     }
     amplifiers.triggeringIds.push(input.stablecoinId);
   }
 
-  // Pass 2: re-score with peg-type amplifier, with self-exclusion. A coin
-  // whose own first-pass band is DANGER or WARNING keeps its first-pass
-  // result unchanged (contagion = 1) so it never amplifies itself.
+  // A first-pass DANGER/WARNING coin keeps its first-pass result (contagion = 1)
+  // so it never amplifies itself.
   for (const { meta, input, firstPass } of scored) {
     const contagion = amplifiers.byPegType[input.pegType] ?? 1;
     const applicable = contagion > 1 && firstPass.band !== "DANGER" && firstPass.band !== "WARNING";
