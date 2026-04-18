@@ -653,6 +653,8 @@ Server-side aggregates for the Blacklist Tracker overview cards, chart, and filt
 
 `stats.destroyedTotal` remains an event-history total. `stats.activeFrozenTotal` reflects Pharos' local active blacklist state machine. `stats.trackedFrozenTotal` is the persistent freeze-ledger total sourced from `blacklist_current_balances`, including reconciled historical bootstrap rows where later seizures or unblacklists would otherwise hide the frozen amount. `stats.recentCount` covers the last 30 days, while `stats.recentCount24h` is the last-24-hours subset used by chrome-level monitoring surfaces. The `chart` now uses that same freeze ledger and attributes each tracked balance back to its latest recorded blacklist quarter, so the quarterly buckets explain the `trackedFrozenTotal` headline rather than raw event-time intake.
 
+The four `perCoin*` maps power the per-coin "Blacklist Activity" block on stablecoin detail pages. `perCoinFrozenAddressCount` counts addresses whose latest event is `blacklist` (net-frozen). `perCoinFrozenTotal` sums `blacklist_current_balances.balance_usd` per coin. `perCoinDestroyedTotal` sums `amount_usd_at_event` over `destroy` events per coin. `perCoinQuarterlyEventTypes` contains each coin's quarterly breakdown of event-type counts, zero-filled between the coin's first and last event quarters so bars render contiguously. All per-coin aggregations exclude rows where `suppression_reason` is set (e.g. EURC mirror zero-balance entries).
+
 **Cache:** realtime
 
 **Freshness note:** Shares the same 6-hourly freshness headers as `GET /api/blacklist`, keyed to the latest successful `sync-blacklist` write rather than the request time of the summary endpoint itself.
@@ -675,7 +677,15 @@ Server-side aggregates for the Blacklist Tracker overview cards, chart, and filt
     "trackedAmountGapCount": 0,
     "recentCount": 42,
     "recentCount24h": 3,
-    "recoverableGapCount": 17
+    "recoverableGapCount": 17,
+    "perCoinBlacklistCounts": { "USDC": 1204, "USDT": 3881 },
+    "perCoinTotalEvents": { "USDC": 1210, "USDT": 3945 },
+    "perCoinFrozenAddressCount": { "USDC": 1151, "USDT": 3794 },
+    "perCoinFrozenTotal": { "USDC": 143000000, "USDT": 1800000000 },
+    "perCoinDestroyedTotal": { "USDC": 0, "USDT": 158900000 },
+    "perCoinQuarterlyEventTypes": {
+      "USDC": [{ "quarter": "Q1 '26", "blacklist": 42, "unblacklist": 0, "destroy": 1 }]
+    }
   },
   "chart": [
     { "quarter": "Q1 '24", "USDT": 1200000, "USDC": 850000, "PAXG": 0, "XAUT": 0, "total": 2050000 }

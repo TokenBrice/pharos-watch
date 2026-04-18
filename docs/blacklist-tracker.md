@@ -856,6 +856,23 @@ Both endpoints now emit freshness headers from the same 6-hourly `sync-blacklist
 | UsdsStatusCard    | Monitors USDS for freeze capability (currently none)                  |
 | EurcBlacklistCard | Explains EURC/USDC simultaneous freezes and zero-balance EURC entries |
 
+### Detail-page block
+
+Stablecoin detail pages (`/stablecoin/<id>`) render a `BlacklistSection` immediately after the Mint & Burn Flow History when both conditions hold:
+
+1. The coin's symbol is in `BLACKLIST_STABLECOINS` (`shared/types/market.ts`).
+2. `summary.stats.perCoinTotalEvents[symbol] > 0` (real, non-suppressed events exist).
+
+The block consists of:
+
+- **BlacklistDetailStats** — three `MetricStatCard`s showing `perCoinFrozenAddressCount`, `perCoinFrozenTotal` (USD), and `perCoinDestroyedTotal` (USD).
+- **BlacklistDetailChart** — quarterly stacked bars with three event-type series (blacklist / unblacklist / destroy), driven by `perCoinQuarterlyEventTypes[symbol]`.
+- **BlacklistDetailEventFeed** — latest 10 events for the coin via `useBlacklistEventsPage({ stablecoin: symbol, limit: 10, offset: 0 })`, with a "See all events →" footer link to `/blacklist?stablecoin=<symbol>`.
+
+Source files: `src/components/stablecoin-detail/blacklist-section.tsx`, `blacklist-detail-stats.tsx`, `blacklist-detail-chart.tsx`, `blacklist-detail-event-feed.tsx`.
+
+Gating is driven by the view model (`src/lib/stablecoin-detail-view-model.ts` → `hasBlacklist`) so the scrollspy nav omits the "Blacklist" pill when the block is absent. Coins with events but no freeze-ledger snapshot rows render `0` / `$0` for the two freeze metrics — honest about what is measured today.
+
 ---
 
 ## Environment Variables
