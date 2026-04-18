@@ -74,21 +74,12 @@ describe("validate-ci parity", () => {
       resolve(process.cwd(), ".github/actions/setup-workspace/action.yml"),
       "utf8",
     );
-    const validateJob = extractJobBlock(workflow, "validate", "validate-node25-compat");
-    const validateNode25CompatJob = extractJobBlock(workflow, "validate-node25-compat");
+    const validateJob = extractJobBlock(workflow, "validate");
     const setupWorkspaceRunSteps = extractRunSteps(setupWorkspaceAction);
 
     expect([...setupWorkspaceRunSteps, ...extractRunSteps(validateJob)]).toEqual([
       { cmd: "npm ci", condition: null },
       ...buildCiValidateStepPlan(),
-    ]);
-
-    expect([...setupWorkspaceRunSteps, ...extractRunSteps(validateNode25CompatJob)]).toEqual([
-      { cmd: "npm ci", condition: null },
-      { cmd: "npm run lint", condition: null },
-      { cmd: "npm run typecheck", condition: null },
-      { cmd: "npm run build", condition: null },
-      { cmd: "npm run test:critical-contracts", condition: null },
     ]);
   });
 });

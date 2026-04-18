@@ -106,7 +106,6 @@ Deploy sequence in `.github/workflows/deploy-cloudflare.yml`:
    - includes `npm run build` + `npm run seo:check` only when `pages_changed=true`
    - includes `cd worker && npx tsc --noEmit` and `cd worker && npx tsc --noEmit -p tsconfig.scripts.json` only when `worker_changed=true`
    - pull requests call the same reusable workflow with diff-derived `pages_changed` and `worker_changed` inputs, so PR Pages build/SEO and worker typecheck coverage follows the deploy-surface classifier while the shared non-deploy guardrails and tests still run on every PR
-   - the parallel `validate-node25-compat` job also runs `npm run build` and `npm run test:critical-contracts`
 3. `no-deploy-required`
    - runs only when `deploy_required=false`
    - records an explicit no-op outcome for docs-only or other non-deploy pushes to `main`
