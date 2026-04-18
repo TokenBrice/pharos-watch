@@ -47,7 +47,7 @@ function isAllZeroSha(ref) {
 function getChangedFilesFromGit(ref) {
   if (!ref || isAllZeroSha(ref)) return [];
   try {
-    const raw = execSync(`git diff --name-only ${ref}..HEAD`, { encoding: "utf8" });
+    const raw = execSync(`git diff --name-only ${ref}...HEAD`, { encoding: "utf8" });
     return raw
       .split(/\r?\n/g)
       .map((line) => normalizePath(line.trim()))

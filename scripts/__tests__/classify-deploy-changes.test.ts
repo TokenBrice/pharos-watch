@@ -183,4 +183,21 @@ describe("classifyDeployChanges", () => {
     expect(result.pagesChanged).toBe(false);
     expect(result.changedFiles).toEqual(["docs/testing.md", "agents/plans/notes.md"]);
   });
+
+  it("uses three-dot diff syntax so merge-base is the comparison point", () => {
+    const received: string[] = [];
+    const exec = (cmd: string) => {
+      received.push(cmd);
+      return "src/app/page.tsx\n";
+    };
+
+    classifyDeployChanges({
+      baseSha: "aaa",
+      eventName: "push",
+      exec,
+      headSha: "bbb",
+    });
+
+    expect(received).toEqual(["git diff --name-only aaa...bbb"]);
+  });
 });

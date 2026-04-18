@@ -95,7 +95,7 @@ Defined across:
 Deploy sequence in `.github/workflows/deploy-cloudflare.yml`:
 
 1. `detect-changes`
-   - diffs `github.event.before..github.sha` on `push`
+   - diffs `github.event.before...github.sha` on `push` (three-dot, merge-base-resolved; identical to two-dot on push-to-main but robust if the base is ever not a strict ancestor)
    - emits `deploy_required`, `worker_changed`, and `pages_changed`
    - decides separately whether worker/API deploy work and Pages deploy work are actually required for that push
    - treats Pages release workflow changes (`.github/workflows/pages-prepare.yml`, `.github/workflows/pages-publish.yml`, `.github/workflows/pages-release.yml`, `.github/workflows/rebuild-pages.yml`) as Pages-impacting so workflow-only changes still rehearse the Pages path

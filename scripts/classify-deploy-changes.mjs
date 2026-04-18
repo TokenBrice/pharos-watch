@@ -48,14 +48,14 @@ export function classifyDeployChanges({
 
   let changedFiles = [];
   try {
-    const raw = exec(`git diff --name-only ${baseSha}..${headSha}`, { encoding: "utf8" });
+    const raw = exec(`git diff --name-only ${baseSha}...${headSha}`, { encoding: "utf8" });
     changedFiles = normalizeChangedFiles(raw);
   } catch {
     return {
       changedFiles: [],
       deployRequired: true,
       pagesChanged: true,
-      reason: `Failed to diff ${baseSha}..${headSha}; falling back to full deploy path`,
+      reason: `Failed to diff ${baseSha}...${headSha}; falling back to full deploy path`,
       workerChanged: true,
     };
   }
