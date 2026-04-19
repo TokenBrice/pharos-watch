@@ -1,5 +1,3 @@
-/* eslint-disable security/detect-non-literal-fs-filename -- repo-local build script reads checked-in data and writes a deterministic public asset. */
-
 import { readFileSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
