@@ -129,10 +129,11 @@ Behavioral contract: [Homepage](./homepage.md)
 
 ### Stablecoin Detail (Special)
 
-Detail pages include an `sr-only` `h1` and visually foreground the coin name with:
+Active detail pages include a server-rendered static identity strip before the client `Suspense` boundary:
 
-- Mobile `h2`: `text-2xl font-black tracking-tighter`
-- Desktop `h2`: `text-3xl font-black tracking-tighter`
+- Static strip visible `h1`: `text-2xl font-extrabold tracking-tighter`
+- Client HeroCard mobile `h2`: `text-2xl font-black tracking-tighter`
+- Client HeroCard desktop `h2`: `text-3xl font-black tracking-tighter`
 - Section and block titles across the detail route use `text-lg font-semibold tracking-tight`
 - Detail metadata badges that qualify a section title (for example liquidity source coverage) sit inline with the title instead of dropping onto a separate row
 - The `Contract Addresses` block shows a one-row, six-item preview on mobile with a `Show all` toggle; `sm+` continues to show the full icon grid

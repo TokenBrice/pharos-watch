@@ -87,9 +87,13 @@ Some public routes are documented by feature docs or the architecture doc rather
 | `/stability-index/` | [stability-index.md](./stability-index.md) |
 | `/start/` | [start-page.md](./start-page.md) |
 | `/status/` | [status-dashboard.md](./status-dashboard.md) |
+| `/stablecoins/` | [architecture.md](./architecture.md), [classification.md](./classification.md) |
 | `/stablecoins/[peg]/` | [architecture.md](./architecture.md), [classification.md](./classification.md) |
+| `/stablecoins/backing/` | [architecture.md](./architecture.md), [classification.md](./classification.md) |
 | `/stablecoins/backing/[backing]/` | [architecture.md](./architecture.md), [classification.md](./classification.md) |
+| `/stablecoins/governance/` | [architecture.md](./architecture.md), [classification.md](./classification.md) |
 | `/stablecoins/governance/[governance]/` | [architecture.md](./architecture.md), [classification.md](./classification.md) |
+| `/stablecoins/infrastructure/` | [architecture.md](./architecture.md), [classification.md](./classification.md) |
 | `/stablecoins/infrastructure/[infrastructure]/` | [architecture.md](./architecture.md), [classification.md](./classification.md) |
 | `/telegram/` | [telegram-alerts.md](./telegram-alerts.md) |
 | `/upcoming/` | [upcoming-page.md](./upcoming-page.md) |

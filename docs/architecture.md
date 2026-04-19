@@ -130,10 +130,11 @@ Worker cron refactors should place reusable stage contracts under `worker/src/cr
   - `/coverage/`
   - `/chains/` and `/chains/[chain]/`
   - `/stablecoin/[id]/`
+  - `/stablecoins/`
   - `/stablecoins/[peg]/`
-  - `/stablecoins/governance/[governance]/`
-  - `/stablecoins/backing/[backing]/`
-  - `/stablecoins/infrastructure/[infrastructure]/`
+  - `/stablecoins/governance/` and `/stablecoins/governance/[governance]/`
+  - `/stablecoins/backing/` and `/stablecoins/backing/[backing]/`
+  - `/stablecoins/infrastructure/` and `/stablecoins/infrastructure/[infrastructure]/`
   - `/compare/[slug]/`
   - `/digest/` and `/digest/[date]/`
   - `/methodology/` and `/methodology/*-changelog/`
@@ -147,6 +148,7 @@ Worker cron refactors should place reusable stage contracts under `worker/src/cr
   - `/funding/` (`noindex,nofollow`; static JSON-backed funding ledger, intentionally absent from sitemap/nav in v1)
 - Private operator routes marked `noindex,nofollow`:
   - `/admin/`
+  - `/api/admin/`
 - Crawlable server-rendered link hubs now live on the digest archive, safety scores, liquidity, taxonomy landing pages, and stablecoin detail pages. These hubs are part of the static export and are what `npm run seo:check` validates for orphan routes, sitemap coverage, and click depth.
 
 ### Runtime host and env rules
@@ -161,9 +163,9 @@ Worker cron refactors should place reusable stage contracts under `worker/src/cr
 ### Metadata and crawl ownership
 
 - `src/lib/page-metadata.ts` is the shared helper for per-route canonical metadata, Open Graph images, Twitter cards, and sentence-aware description trimming.
-- `src/app/layout.tsx` owns the sitewide metadata baseline, icons, `api.pharos.watch` preconnect, and root JSON-LD (`WebSite`, `Organization`, `WebApplication`, `SearchAction`).
-- `src/app/sitemap.ts` owns sitemap output for indexable routes plus the current noindex `/portfolio/` tool URL. `/compare/`, `/funding/`, and `/admin/` are omitted; `/compare/[slug]/` static comparison pages are included. `LAST_EDITED` dates are auto-generated from git history during prebuild (`scripts/generate-sitemap-dates.ts`) and written to a generated JSON file (gitignored).
-- `src/app/robots.ts` publishes the global crawl policy (`allow: /`) and the sitemap location.
+- `src/app/layout.tsx` owns the sitewide metadata baseline, icons, `api.pharos.watch` preconnect, and root JSON-LD (`WebSite`, `Organization`, `WebApplication`) with stable `#website`, `#organization`, and `#webapp` anchors. It intentionally does not emit `SearchAction` until the site has a real query handler.
+- `src/app/sitemap.ts` owns sitemap output for indexable routes. `/compare/`, `/portfolio/`, `/funding/`, and `/admin/` are omitted; `/compare/[slug]/` static comparison pages are included. `LAST_EDITED` dates are auto-generated from git history during prebuild (`scripts/generate-sitemap-dates.ts`) and written to a generated JSON file (gitignored).
+- `src/app/robots.ts` publishes an allow-all crawl policy, explicit AI crawler allow groups, disallows for operator surfaces (`/admin`, `/admin/`, `/api/admin`, `/api/admin/`), and the sitemap location.
 
 ---
 
