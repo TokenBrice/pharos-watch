@@ -464,7 +464,7 @@ const pricing = createMethodologyVersion({
       version: "3.3",
       title: "Source-aware trust, observed-time freshness, and weak-price jump quarantine",
       date: "2026-03-22",
-      effectiveAt: 1774230000,
+      effectiveAt: 1774137600,
       summary:
         "Centralized pricing-source trust policy, preserved true source-observation timestamps through consensus and replay, " +
         "and hardened publication/depeg behavior so weak soft-source moves cannot silently become downstream-authoritative or self-reinforce through the DEX bridge.",
@@ -661,7 +661,7 @@ const pricing = createMethodologyVersion({
     version: "2.2",
     title: "Pool confirmation fix, peg-type-aware challenge, source quality gating",
     date: "2026-03-17",
-    effectiveAt: 1773897600,
+    effectiveAt: 1773705600,
     summary:
       "Fixed critical depeg detection gap where pool-challenge-driven depegs could never be confirmed. " +
       "Made pool challenge threshold peg-type-aware. Added Pyth confidence and RedStone venue agreement gating. " +
@@ -683,7 +683,7 @@ const pricing = createMethodologyVersion({
     version: "2.1",
     title: "Consensus honesty — independent DL list price, GeckoTerminal probe, pool challenge",
     date: "2026-03-16",
-    effectiveAt: 1773811200,
+    effectiveAt: 1773619200,
     summary:
       "Replaced the DL coins API (which mirrored CoinGecko data, creating illusory 2-source agreement) with the independent DL stablecoins list price. Added GeckoTerminal pool-level cross-check for single-source CG-only assets. Added pool challenge guard that downgrades confidence and replaces price with TVL-weighted pool average when large DEX pools diverge from soft-only consensus.",
     impact: [
@@ -702,7 +702,7 @@ const pricing = createMethodologyVersion({
     version: "2.0",
     title: "Multi-source consensus with oracle, CEX, and on-chain pricing",
     date: "2026-03-14",
-    effectiveAt: 1773619200,
+    effectiveAt: 1773446400,
     summary:
       "Upgraded from 2-source cross-validation (CG+DL) to an 8-source weighted consensus system. Added Pyth, Binance, Coinbase, RedStone oracles, Curve on-chain pricing, and promoted DEX price observations to primary voices. N-source clustering replaces simple comparison.",
     impact: [

@@ -19,7 +19,7 @@
 - **Version metadata:** per-system version modules in `shared/lib/*-version.ts`, mostly built on top of `shared/lib/methodology-version.ts`
 - **Public changelog routes:** pricing pipeline, stability index, scoring, liquidity score, mint/burn flow, yield, depeg, blacklist tracker, and chain health all live under `src/app/methodology/*-changelog/page.tsx`
 - **Changelog wrappers:** most changelog routes use `src/app/methodology/changelog-route-factory.tsx`; the shared shell is `src/components/methodology-changelog-page.tsx`
-- **Scoring changelog special case:** `src/app/methodology/scoring-changelog/page.tsx` still owns the route wiring and local nav metadata, while `src/app/methodology/scoring-changelog/content.tsx` composes the authored version cards from `content-v6.tsx`, `content-v5.tsx`, `content-legacy.tsx`, and `content-summary.tsx`
+- **Scoring changelog special case:** `src/app/methodology/scoring-changelog/page.tsx` still owns the route wiring and local nav metadata, while `src/app/methodology/scoring-changelog/content.tsx` composes the authored version cards from `content-v7-0.tsx`, `content-v6-9.tsx`, `content-v6.tsx`, `content-v5.tsx`, `content-legacy.tsx`, and `content-summary.tsx`
 - **Cross-app methodology links:** `src/lib/methodology-context.ts` hard-codes methodology anchors and imports shared changelog-path constants from `shared/lib/*-version.ts`; `src/components/methodology-hint.tsx` renders those resolved links for cards/tooltips across the app
 
 ---
@@ -78,7 +78,7 @@ If the pricing pipeline's source roster or live-price selection semantics change
 For the safety-score changelog specifically, update both:
 
 1. `shared/lib/safety-score-version.ts` for shared route metadata / navigation versions.
-2. `src/app/methodology/scoring-changelog/content.tsx` plus the split `content-v6.tsx`, `content-v5.tsx`, `content-legacy.tsx`, and `content-summary.tsx` modules for the authored long-form version cards and reference tables.
+2. `src/app/methodology/scoring-changelog/content.tsx` plus the split `content-v7-0.tsx`, `content-v6-9.tsx`, `content-v6.tsx`, `content-v5.tsx`, `content-legacy.tsx`, and `content-summary.tsx` modules for the authored long-form version cards and reference tables.
 
 ---
 

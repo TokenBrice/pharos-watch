@@ -23,7 +23,7 @@ const psi = createMethodologyVersion({
     version: "3.1",
     title: "Open-depeg replay-price fallback",
     date: "2026-03-23",
-    effectiveAt: 1774221219,
+    effectiveAt: 1774224000,
     summary:
       "Active depegs now stay in PSI when the current stablecoins snapshot temporarily loses a usable price but a recent replay-safe price-cache entry still exists.",
     impact: [

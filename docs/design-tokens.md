@@ -16,7 +16,7 @@ Pharos uses a 3-layer design token architecture that separates raw values from m
 
 ### Layer 1: Primitives (`src/styles/tokens/primitives.css`)
 
-Raw values with no semantic meaning. Never reference directly in components.
+Raw values with no semantic meaning. Do not reference directly in components unless a documented local visualization intentionally needs a primitive ramp before a semantic token exists.
 
 - **Color scales** — 9 hue families (neutral, blue, green, teal, amber, orange, red, purple, pink) plus the dedicated `--p-frost-blue` brand accent; scale stops run 50–900 in OKLch (neutral and red extend to 950; neutral has additional 850/925/975 stops)
 - **Spacing** — 4px-grid scale from `--p-space-0` to `--p-space-20`
@@ -56,14 +56,14 @@ Purpose-driven aliases that map primitives to meaning. These switch between ligh
 
 #### Hex Companion Variables
 
-Recharts (and other SVG/canvas libraries) require literal hex color strings — CSS `var()` doesn't work in SVG attributes rendered by React. For every semantic color used in charts, there's a `-hex` companion:
+Recharts (and other SVG/canvas libraries) require literal hex color strings — CSS `var()` doesn't work in SVG attributes rendered by React. Selected semantic status/chart colors have `-hex` companions when CSS and JS both need the same token:
 
 ```css
 --psi-bedrock: var(--p-green-500); /* CSS usage */
 --psi-bedrock-hex: #22c55e; /* JS/Recharts usage */
 ```
 
-The JS-side token maps in `chart-colors.ts` and `severity-colors.ts` use the same hex values.
+The JS-side token maps in `chart-colors.ts` and `severity-colors.ts` use those same hex values where CSS companions exist. `chart-colors.ts` also exports palette, risk, signal, and brand colors that are JS-only and do not have one CSS companion per export.
 
 ### Layer 3: Component Tokens (in `semantic.css`)
 
@@ -116,7 +116,7 @@ These maps use the same hex values as the `--*-hex` CSS custom properties in `se
 
 ### Don't
 
-- Reference primitives (`--p-blue-500`) directly in components
+- Reference primitives (`--p-blue-500`) directly in components, except for documented local visualizations that intentionally need a primitive ramp before a semantic token exists
 - Hardcode hex values in chart components — use the JS token maps
 - Edit shadcn/ui primitives in `src/components/ui/` to use tokens
 - Define one-off color variables in individual component files

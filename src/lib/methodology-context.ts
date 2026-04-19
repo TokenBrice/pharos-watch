@@ -201,7 +201,7 @@ export const METHODOLOGY_CONTEXT: Record<MethodologyContextKey, MethodologyConte
   pegScore: {
     title: "Peg Score",
     summary: "Historical 0-100 peg-behavior score built from time-at-peg, event severity, and active-depeg penalties.",
-    detail: "Requires at least 30 tracking days. NAV tokens return NR because they are not meant to hold a fixed price.",
+    detail: "Requires at least 7 tracking days; 7-30 day scores are marked early. NAV tokens return NR because they are not meant to hold a fixed price.",
     methodologyPath: "/methodology/#pegscore-dews-methodology",
     versionLabel: DEPEG_DEWS_METHODOLOGY_VERSION_LABEL,
     changelogPath: DEPEG_DEWS_METHODOLOGY_CHANGELOG_PATH,

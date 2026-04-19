@@ -7,7 +7,7 @@ Triggered by `StatusCause.code`:
 
 ## Symptom
 
-On-chain supply divergence exceeds the configured ratio, or the mint/burn monitor is unavailable. Either a sync cron has stalled or the reconciliation is flagging material drift.
+On-chain supply divergence exceeds the configured ratio, or the global on-chain supply monitor is unavailable. Mint/burn reconciliation can also flag material drift for assets in `MINT_BURN_CONFIGS`, but that is a separate coverage surface from `onchain_monitor_unavailable`.
 
 ## First checks
 
@@ -19,9 +19,9 @@ On-chain supply divergence exceeds the configured ratio, or the mint/burn monito
 
 - **Backfill mint/burn events:** Admin page → Recommended actions → `backfill-mint-burn`. Idempotent.
 - **Backfill mint/burn prices:** if divergence is USD-side, `backfill-mint-burn-prices` repopulates price columns.
-- **Monitor unavailable:** usually indicates the cron is mid-deploy or the underlying query is hitting D1 per-statement limits. Check the cron's recent runs for `error` status and error messages.
+- **On-chain monitor unavailable:** usually indicates the recent `onchain_supply` monitor rows are missing or unreadable globally. Check the relevant supply-monitoring cron/status sections before treating it as a mint/burn config issue.
 
 ## Prevention
 
-- Token identity comes from shared stablecoin metadata, but tracker-specific config lives in `worker/src/lib/mint-burn-contracts.ts` and lane state in `worker/src/cron/mint-burn/run-state.ts`. Adding a new coin without its mint/burn contract config produces `onchain_monitor_unavailable` for that coin only.
+- Token identity comes from shared stablecoin metadata, but tracker-specific config lives in `worker/src/lib/mint-burn-contracts.ts` and lane state in `worker/src/cron/mint-burn/run-state.ts`. Adding a new coin without mint/burn contract config keeps it outside mint/burn reconciliation and backfill scope; it does not emit a per-coin `onchain_monitor_unavailable`.
 - Divergence thresholds live in `shared/lib/status-thresholds.ts` — do not loosen them without a documented investigation.

@@ -637,7 +637,7 @@ Freeze, blacklist, block/unblock, account-pause, and token-destruction events fo
 | `address`            | `string`         | Affected address (EVM `0x…` or Tron `T…`)                                               |
 | `amountNative`       | `number \| null` | Canonical token-native amount recovered from event data or historical balance lookup      |
 | `amountUsdAtEvent`   | `number \| null` | Event-time USD value when Pharos can justify one                                          |
-| `amountSource`       | `string`         | `event`, `historical_balance`, `derived`, or `unavailable`                                |
+| `amountSource`       | `string`         | `event`, `historical_balance`, `current_balance_snapshot`, `derived`, `legacy_migration`, or `unavailable` |
 | `amountStatus`       | `string`         | `resolved`, `recoverable_pending`, `permanently_unavailable`, `provider_failed`, `ambiguous` |
 | `txHash`             | `string`         | Transaction hash                                                                        |
 | `blockNumber`        | `number`         | Block number                                                                            |
@@ -647,6 +647,7 @@ Freeze, blacklist, block/unblock, account-pause, and token-destruction events fo
 | `configKey`          | `string \| null` | Internal tracker config identity (`{chainId}-{contract}`)                               |
 | `eventSignature`     | `string \| null` | Human-readable event signature/name when known                                          |
 | `eventTopic0`        | `string \| null` | Raw EVM topic0 when applicable                                                          |
+| `suppressionReason`  | `string \| null` | Reason a row is excluded from public aggregates/event surfaces, when applicable          |
 | `explorerTxUrl`      | `string`         | Block explorer URL for the transaction                                                  |
 | `explorerAddressUrl` | `string`         | Block explorer URL for the address                                                      |
 
@@ -1595,13 +1596,13 @@ For peg handling, `rawInputs.pegScore` is the effective peg input used by report
 | `symbol`          | `string`                               | Ticker                                                                              |
 | `overallGrade`    | `string`                               | Letter grade: `"A+"` through `"F"`, or `"NR"`                                       |
 | `overallScore`    | `number \| null`                       | Weighted score 0–100. `null` for unrated coins                                      |
+| `baseScore`       | `number \| null`                       | Pre-peg-multiplier/no-liquidity/active-depeg-cap score after base dimension blending |
 | `dimensions`      | `Record<DimensionKey, DimensionScore>` | Per-dimension grade, score, and detail text                                         |
 | `ratedDimensions` | `number`                               | Number of dimensions with data (max 5)                                              |
-| `dependencies`    | `DependencyWeight[] \| undefined`      | Upstream stablecoin dependencies with collateral weights (for CeFi-Dependent coins) |
 | `rawInputs`       | `RawDimensionInputs`                   | Raw scoring inputs for client-side grade recomputation (stress testing)             |
 | `isDefunct`       | `boolean`                              | `true` for cemetery coins (permanent F grade)                                       |
 
-**`DependencyWeight`**: `{ id: string, weight: number }` — upstream stablecoin ID + fraction of collateral from that source (0–1). Weights sum to ≤ 1.0; the remainder represents non-stablecoin collateral.
+**`DependencyWeight`**: `{ id: string, weight: number, type?: DependencyType }` — upstream stablecoin ID + fraction of collateral from that source (0–1), with optional dependency category. Weights sum to ≤ 1.0; the remainder represents non-stablecoin collateral.
 
 **`RawDimensionInputs`**
 
@@ -1631,8 +1632,11 @@ For peg handling, `rawInputs.pegScore` is the effective peg input used by report
 | `governanceQuality`                | `GovernanceQuality`                             |
 | `dependencies`                     | `DependencyWeight[]`                            |
 | `navToken`                         | `boolean`                                       |
+| `collateralFromLive`               | `boolean`                                       |
 
 `rawInputs.canBeBlacklisted` is the canonical resolved blacklist status used by report-card-backed product surfaces. It can therefore differ from the raw `StablecoinMeta.canBeBlacklisted` override field, which only carries manual metadata and never stores computed `"inherited"` values.
+
+`rawInputs.collateralFromLive` is true when score-grade live reserve data drove collateral scoring for the card.
 
 **Dimensions:** `pegStability`, `liquidity`, `resilience`, `decentralization`, `dependencyRisk`
 

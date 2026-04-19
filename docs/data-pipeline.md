@@ -86,7 +86,7 @@ Primary pricing also includes a few source-specific normalization rules that are
 - **RedStone** uses exact-case tracked symbols only. The worker filters requests through `REDSTONE_TRACKED_SYMBOL_ALLOWLIST`, sends them in sequential batches of 10, and retries any batch-dropped symbol individually once.
 - **RedStone admission** now requires at least 2 venues and at least 60% venue agreement before the quote can enter primary consensus.
 - **Breaker accounting for sparse responses** is data-aware: Pyth and RedStone only count as successful breaker outcomes when they return at least one usable price, not merely a 200 transport response.
-- **CEX freshness semantics** are explicit: Binance/Kraken/Bitstamp/Coinbase still use local-fetch observation times in the current implementation, with registry metadata recording whether the feed is last-trade-only or exposes bid/ask-style spot data.
+- **CEX freshness semantics** are explicit: Binance and Kraken use local-fetch observation times; Bitstamp and Coinbase publish upstream-observed timestamps when the upstream response provides them. Registry metadata records whether each feed is last-trade-only or exposes bid/ask-style spot data.
 
 These rules live in `worker/src/lib/pyth.ts`, `worker/src/lib/redstone.ts`, and the `worker/src/cron/sync-stablecoins/enrich-prices-primary.ts` module.
 

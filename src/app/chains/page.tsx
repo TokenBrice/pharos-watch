@@ -19,7 +19,7 @@ export const metadata: Metadata = buildPageMetadata({
 const CHAINS_FAQ_JSON_LD = buildFaqJsonLd([
   {
     question: "What is the Chain Health Score?",
-    answer: "The Chain Health Score is a composite rating (0–100) that evaluates a blockchain's stablecoin ecosystem across five dimensions: stablecoin quality (market cap and safety grades), chain environment (settlement finality, uptime, and decentralization), concentration risk (supply distribution across coins), peg stability (aggregate deviation from target prices), and backing diversity (collateral types and governance models).",
+    answer: "The Chain Health Score is a composite rating (0–100) that evaluates a blockchain's stablecoin ecosystem across five dimensions: stablecoin quality (supply-weighted Safety Scores), chain environment (resilience tier), concentration risk (supply distribution across coins), peg stability (supply-weighted proximity to target prices), and backing diversity (RWA-backed vs crypto-backed supply mix).",
   },
   {
     question: "Which chains have the most stablecoin supply?",

@@ -218,9 +218,9 @@ Published lending-opportunity suggestions also apply an explicit venue exclusion
 | ------- | ------ | -------- |
 | `crvusd-curve` | `Curve Savings crvUSD current-rate` | on-chain scrvUSD Yearn V3 profit-unlock reader |
 | `usbd-bima` | `BIMA savings (sUSBD)` | `https://bima.money/api/earn/pools?network=Ethereum&user=0x0000000000000000000000000000000000000000` |
+| `lusd-liquity` | `B.Protocol LQTY-only source` | deterministic on-chain LQTY-only source reader |
 | `usyc-hashnote` | `Hashnote USYC` | Hashnote protocol API |
 | `usdy-ondo-finance` | `Ondo USDY oracle` | on-chain Ondo oracle with historical anchor rows |
-| `lusd-liquity` | `B.Protocol LQTY-only source` | B.Protocol / Liquity on-chain reader |
 
 The BIMA adapter uses the protocol's published Ethereum earn feed, selects the USBD savings row, maps `amountTVL` to `sourceTvlUsd`, and uses the higher of `unboostedAPR` / `boostedAPR` as the current APY. Low-signal rows with negligible TVL or effectively zero APR are dropped instead of being published as meaningful yield. These rows are source-keyed as `protocol-api:bima-susbd` and participate in the same confidence-weighted arbitration as other curated sources.
 
@@ -351,7 +351,7 @@ Yield Intelligence now uses a small benchmark registry instead of a single globa
 
 | Key | Label | Primary source | Notes |
 | --- | ----- | -------------- | ----- |
-| `USD` | USD 3M T-Bill | FRED `DGS3MO` | Default benchmark and backward-compatible top-level `riskFreeRate` |
+| `USD` | USD 3M T-Bill | FRED `DGS3MO`, then Treasury.gov yield curve XML | Default benchmark and backward-compatible top-level `riskFreeRate`; Treasury.gov is used as a fallback when FRED is unavailable |
 | `EUR` | EUR 3M compounded €STR | ECB Data API (`EST/B.EU000A2QQF32.CR`) | Native benchmark for EUR pegs; retained-last-market fallback covers feed outages |
 | `CHF` | CHF 3M compounded SARON | SIX delayed `SAR3MC` download | Public feed is delayed by one business day; not labeled as a proxy |
 
@@ -359,6 +359,7 @@ Yield Intelligence now uses a small benchmark registry instead of a single globa
 
 ```text
 https://fred.stlouisfed.org/graph/fredgraph.csv?id=DGS3MO
+https://home.treasury.gov/resource-center/data-chart-center/interest-rates/pages/xml?data=daily_treasury_yield_curve
 https://data-api.ecb.europa.eu/service/data/EST/B.EU000A2QQF32.CR?lastNObservations=5&format=csvdata
 https://indexdata.six-group.com/pro/oauth/token
 https://indexdata.six-group.com/pro/api/report-download
@@ -785,6 +786,7 @@ The control row exposes four fixed lookback presets (`7d`, `30d`, `90d`, `1y`) p
 | ------------------------------- | ----------------------------------------------------------- | ------------------------------------------------ |
 | `RISK_FREE_RATE_FALLBACK`       | 3.75                                                        | Fallback T-bill rate (%)                         |
 | `FRED_TBILL_CSV_URL`            | `https://fred.stlouisfed.org/graph/fredgraph.csv?id=DGS3MO` | FRED daily 3-month Treasury yield series         |
+| `TREASURY_YIELD_XML_URL`        | `https://home.treasury.gov/resource-center/data-chart-center/interest-rates/pages/xml?data=daily_treasury_yield_curve` | Treasury.gov daily yield curve XML fallback for USD 3M |
 | `ECB_ESTR_3M_CSV_URL`           | `https://data-api.ecb.europa.eu/service/data/EST/B.EU000A2QQF32.CR?lastNObservations=5&format=csvdata` | Official ECB 3M compounded €STR feed |
 | `SIX_OAUTH_TOKEN_URL`           | `https://indexdata.six-group.com/pro/oauth/token` | Public SIX guest OAuth endpoint for delayed downloads |
 | `SIX_REPORT_DOWNLOAD_URL`       | `https://indexdata.six-group.com/pro/api/report-download` | SIX download broker for delayed public report files |

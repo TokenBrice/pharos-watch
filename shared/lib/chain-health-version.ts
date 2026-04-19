@@ -23,7 +23,7 @@ const chainHealth = createMethodologyVersion({
       version: "1.1",
       title: "Chain environment factor and weight rebalance",
       date: "2026-03-16",
-      effectiveAt: 1742148000,
+      effectiveAt: 1773619200,
       summary:
         "Added a fifth health factor — Chain Environment — that rates chain infrastructure quality via a resilience tier system. Rebalanced weights to reduce backing diversity influence and give chain quality 20% of the composite.",
       impact: [
@@ -41,7 +41,7 @@ const chainHealth = createMethodologyVersion({
       version: "1.0",
       title: "Initial Chain Health Score release",
       date: "2026-03-16",
-      effectiveAt: 1742130000,
+      effectiveAt: 1773619200,
       summary:
         "Launched per-chain health scoring with four factors: quality (35%), concentration (25%), peg stability (25%), and backing diversity (15%). Exposed via /api/chains and the /chains/ leaderboard.",
       impact: [

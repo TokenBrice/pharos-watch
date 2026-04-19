@@ -41,3 +41,12 @@ Machine checks before edits:
 - `npm run check:doc-counts`: passed
 - `npm run check:doc-source-paths`: passed
 - `npm run check:verified-doc-links`: passed
+
+Loop 2 verification findings applied:
+
+- `shared/lib/*version*.ts`: normalized methodology `effectiveAt` values so UTC date resolution matches the displayed changelog `date` fields.
+- `src/app/chains/page.tsx` and `src/lib/methodology-context.ts`: corrected Chain Health FAQ inputs and Peg Score minimum-history hint.
+- `.env.example`, `README.md`, `src/app/about/page.tsx`, `docs/data-flow-map.md`, `docs/data-pipeline.md`, and `docs/yield-intelligence.md`: corrected API-base comments, source rosters, CEX freshness semantics, DEX transport classification, Treasury.gov benchmark fallback, and deterministic on-chain yield reader coverage.
+- `docs/worker-infrastructure.md`, `docs/design-tokens.md`, and runbooks: removed stale live-reserve adapter enumeration, narrowed chart-token companion claims, documented primitive-token exceptions, and split stablecoins-cache/on-chain monitor symptoms from unrelated stale or mint/burn states.
+- `docs/api-reference.md`: added blacklist amount-source enum values and suppression reason, corrected report-card `baseScore`/dependency/raw-input fields, and documented `collateralFromLive`.
+- `README.md`: marked `api_request_source_stats` as legacy/schema-retained and added the transport-smoke deployment gate.

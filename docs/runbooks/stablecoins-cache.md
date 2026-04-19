@@ -6,7 +6,7 @@ Triggered by `StatusCause.code`:
 
 ## Symptom
 
-The cached `/api/stablecoins` payload is either missing or older than its configured max-age. Depending on mode, `/api/stablecoins` may be serving a stale snapshot or a 503.
+The cached `/api/stablecoins` payload is missing, malformed, has the wrong object shape, or is still in a legacy array shape that strict readers reject. Depending on mode, `/api/stablecoins` may return `503` rather than serving a payload. Age-only incidents are handled by cache freshness / public-health causes, not by `stablecoins_cache_unavailable` or `stablecoins_cache_degraded`.
 
 ## First checks
 

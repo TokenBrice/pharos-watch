@@ -8,7 +8,7 @@ const liquidity = createMethodologyVersion({
       version: "5.5",
       title: "Absolute TVL Depth fallback recalibration and Slipstream sqrt_ratio price",
       date: "2026-04-17",
-      effectiveAt: 1776988800,
+      effectiveAt: 1776384000,
       summary:
         "Absolute TVL Depth fallback (used when circulatingUsd is unavailable) now shares the ratio formula's anchor via a $1B implied reference mcap. Aerodrome/Velodrome Slipstream price derivation now uses on-chain sqrt_ratio (Q64.96) instead of total-reserve ratios for concentrated liquidity pools.",
       impact: [
@@ -83,7 +83,7 @@ const liquidity = createMethodologyVersion({
       version: "5.0",
       title: "Size-aware scoring: relative TVL depth, recalibrated volume, quality retention",
       date: "2026-04-05",
-      effectiveAt: 1743847200,
+      effectiveAt: 1775347200,
       summary:
         "All scoring dimensions are now size-independent. TVL Depth measures effective TVL relative to market cap instead of absolute dollar value. Volume Activity has a recalibrated curve with a realistic ceiling (tops out at ~32% V/T instead of ~500%). Pool Quality measures venue quality retention ratio (qualityAdjustedTvl / totalTvl, rescaled) instead of absolute quality-adjusted TVL. Weights rebalanced to 30/20/20/20/10.",
       impact: [
@@ -197,7 +197,7 @@ const liquidity = createMethodologyVersion({
       version: "4.3",
       title: "Fluid DexReservesResolver balance integration",
       date: "2026-03-18",
-      effectiveAt: 1773882000,
+      effectiveAt: 1773792000,
       summary:
         "Fluid pools on Ethereum, Arbitrum, Base, and Polygon now read balances and fee detail from the official " +
         "DexReservesResolver instead of staying on neutral placeholders.",
@@ -214,7 +214,7 @@ const liquidity = createMethodologyVersion({
       version: "4.2",
       title: "Measured direct-API balance health and normalized pool-detail metadata",
       date: "2026-03-18",
-      effectiveAt: 1773879300,
+      effectiveAt: 1773792000,
       summary:
         "Balancer, Raydium, and Orca direct-API pools now preserve measured balance and fee metadata through scoring " +
         "instead of merging with neutral placeholders. Pool-detail fee tiers are normalized to basis points for all sources.",

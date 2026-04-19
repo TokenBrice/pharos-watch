@@ -55,12 +55,12 @@ All external API calls and on-chain contract reads go through the Cloudflare Wor
 | [DefiLlama Yields](https://defillama.com/yields)                        | DEX pool TVL, volume, and composition for liquidity scoring                                                | 30 min                            |
 | [DefiLlama Protocols](https://api.llama.fi/protocols)                   | Protocol TVL context used by DEX liquidity scoring and fallback coverage checks                            | 30 min                            |
 | [Curve Finance API](https://api.curve.finance/)                         | Pool A-factors, per-token balances, implied prices                                                         | 30 min                            |
-| [The Graph](https://thegraph.com/)                                      | Uniswap V3 (4 chains) + Aerodrome (Base) subgraphs for fee tiers and implied prices                        | 30 min                            |
+| [The Graph](https://thegraph.com/)                                      | Uniswap V3, Aerodrome, and PancakeSwap V3 subgraphs for fee tiers, volume, and implied prices              | 30 min                            |
 | [CoinGecko Onchain](https://docs.coingecko.com/reference/top-pools-contract-address) | Discovery-stage DEX pool crawl, locked liquidity %, fee tiers, balance approximation                       | 2h discovery lane                 |
 | [GeckoTerminal](https://www.geckoterminal.com/)                         | Fallback DEX pool crawl for GT-only chains or no-CoinGecko-key runs                                        | 2h discovery lane                 |
 | [DexScreener](https://dexscreener.com/)                                 | Discovery fallback, DEX-implied price fallback, and last-resort price enrichment                           | Varies by pipeline (15 min / 30 min / 2h) |
 | [Jupiter Price API](https://developers.jup.ag/docs/price)               | Solana-specific fallback price enrichment for tracked mint addresses                                       | 15 min (as fallback)              |
-| Direct DEX APIs (Fluid, Balancer, Raydium, Orca, Meteora, PancakeSwap, Aerodrome Slipstream, Velodrome Slipstream) | Direct pool/liquidity reads that supplement DefiLlama, Curve, Graph, and crawl-based DEX coverage         | 30 min                            |
+| Direct DEX APIs, subgraphs, and view contracts (Fluid, Balancer, Raydium, Orca, Meteora, PancakeSwap V3, Aerodrome Slipstream, Velodrome Slipstream) | Protocol-native APIs, The Graph subgraphs, and Sugar/view-contract reads that supplement DefiLlama, Curve, and crawl-based DEX coverage | 30 min |
 | [CoinGecko](https://www.coingecko.com/)                                 | Gold/silver/fiat token supply (not in DefiLlama), fallback price enrichment                                | 15 min (as fallback)              |
 | [CoinMarketCap](https://coinmarketcap.com/)                             | Fallback price enrichment for assets with CMC slugs                                                        | 15 min (rate-limited to 1/hour)   |
 | Direct protocol redemption contract reads                               | Authoritative redeem prices for selected wrapper assets such as Cap cUSD and infiniFi iUSD                | 15 min                            |
@@ -73,7 +73,7 @@ All external API calls and on-chain contract reads go through the Cloudflare Wor
 | [fawazahmed0/currency-api](https://github.com/fawazahmed0/currency-api) | Secondary live FX mirror for CNH, RUB, UAH, and ARS, plus full-set fallback coverage when Frankfurter fails | 30 min cooldown inside 15-min slot |
 | [ExchangeRate-API](https://www.exchangerate-api.com/)                   | Tertiary live full-set FX fallback when both Frankfurter and the secondary FX mirrors are unavailable      | 30 min cooldown inside 15-min slot |
 | [gold-api.com](https://gold-api.com/)                                   | Gold and silver spot prices for commodity-pegged stablecoin peg validation                                 | 30 min cooldown inside 15-min slot |
-| [FRED (St. Louis Fed)](https://fred.stlouisfed.org/series/DGS3MO) / ECB Data API / SIX delayed SARON guest access | USD, EUR, and CHF benchmark rates for yield benchmarking (`excessYield`)                                   | Daily                             |
+| [FRED (St. Louis Fed)](https://fred.stlouisfed.org/series/DGS3MO) / Treasury.gov yield curve XML / ECB Data API / SIX delayed SARON guest access | USD, EUR, and CHF benchmark rates for yield benchmarking (`excessYield`), with Treasury.gov as the USD fallback | Daily                             |
 | [Bluechip](https://bluechip.org/)                                       | Independent stablecoin safety ratings (SMIDGE framework)                                                   | Daily                             |
 | [Anthropic](https://anthropic.com/)                                     | AI-generated daily market digest                                                                           | Daily                             |
 
@@ -300,7 +300,7 @@ Cloudflare D1 (SQLite database)
   ├── api_key_rate_limit   → per-key rate-limit state for authenticated API consumers
   ├── api_key_audit_log    → audit trail for API key lifecycle events
   ├── api_key_request_stats → per-key request-volume tracking
-  ├── api_request_source_stats → per-source API request attribution counters
+  ├── api_request_source_stats → legacy/schema-retained source stats table; runtime attribution writes moved to consumer/key/site-data stats
   ├── api_request_consumer_stats → per-consumer API request attribution counters
   ├── site_data_request_stats → site-data proxy request attribution counters
   └── kv_config            → general key-value config store for runtime settings
@@ -343,6 +343,7 @@ For mint/burn ingestion diagnostics and recovery, use [docs/runbooks/mint-burn-i
 6. **Pages publish path:** after `pages-prepare` and, when worker/API changed, after production API smoke passes, publish the already verified artifact with `npx --no-install wrangler pages deploy out` (with retry in CI), then smoke the real `https://pharos.watch` host
 7. **Worker-only live UI smoke:** worker-only deploys still smoke `https://pharos.watch` against the new worker/API when the static export was unchanged
 8. **Post-deploy ops smoke:** `npm run test:smoke-ops` runs after `pages-publish` on Pages-including deploys, or after `smoke-api` + `smoke-ui-live` on worker-only deploys
+9. **Transport smoke:** `npm run test:smoke-transport` verifies production transport behavior after main deploys and after scheduled/manual Pages rebuilds
 
 Required GitHub secrets: `CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ACCOUNT_ID`, `SMOKE_API_KEY`, `DIGEST_API_KEY`, `SITE_API_SHARED_SECRET`, `OPS_SMOKE_CF_ACCESS_CLIENT_ID`, and `OPS_SMOKE_CF_ACCESS_CLIENT_SECRET`
 Required GitHub variable: `API_BASE_URL`

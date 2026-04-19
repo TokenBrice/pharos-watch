@@ -234,7 +234,7 @@ const redemptionBackstop = createMethodologyVersion({
       version: "3.2",
       title: "USD.AI redemption rail wording correction",
       date: "2026-04-03",
-      effectiveAt: 1775167200,
+      effectiveAt: 1775174400,
       summary:
         "USD.AI's reviewed redemption route now explicitly reflects the live PYUSD-only base-token rail instead of broader multi-stable wording inherited from older docs phrasing.",
       impact: [
@@ -249,7 +249,7 @@ const redemptionBackstop = createMethodologyVersion({
       version: "3.1",
       title: "Live-capacity truth-boundary hardening and registry cleanup",
       date: "2026-03-30",
-      effectiveAt: 1774821600,
+      effectiveAt: 1774828800,
       summary:
         "Reserve-backed redemption routes now use stricter live-metadata eligibility, explicit live-direct vs live-proxy confidence, and reviewed source-link guardrails.",
       impact: [
@@ -324,7 +324,7 @@ const redemptionBackstop = createMethodologyVersion({
       version: "2.6",
       title: "Moderate-effort redemption confidence tranche",
       date: "2026-03-23",
-      effectiveAt: 1774314000,
+      effectiveAt: 1774224000,
       summary:
         "A moderate-effort tranche reviews a final group of already-modeled lower-confidence routes where Pharos now has stronger primary redemption semantics, but not yet protocol-native live instant-buffer telemetry across the full set.",
       impact: [
@@ -549,7 +549,7 @@ const redemptionBackstop = createMethodologyVersion({
       version: "1.1",
       title: "Fee-source coverage expansion",
       date: "2026-03-20",
-      effectiveAt: 1773961200,
+      effectiveAt: 1773964800,
       summary:
         "Expanded redemption-fee coverage with docs-backed fixed fees, conditional fee descriptions, and clearer handling of issuer routes without a single public fee schedule.",
       impact: [

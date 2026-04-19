@@ -39,7 +39,7 @@ export const SAFETY_SCORE_VERSION_CONFIG: MethodologyVersionConfig = {
       version: "7.05",
       title: "Primary-market exit bonus",
       date: "2026-04-16",
-      effectiveAt: 1776293280,
+      effectiveAt: 1776297600,
       summary:
         "Liquidity / Exit now lets documented offchain issuer redemption add a DEX-gated primary-market exit bonus without treating eventual redemption as a standalone liquidity substitute.",
       impact: [
@@ -223,7 +223,7 @@ export const SAFETY_SCORE_VERSION_CONFIG: MethodologyVersionConfig = {
       version: "6.93",
       title: "Steeper peg multiplier + active depeg grade cap",
       date: "2026-04-05",
-      effectiveAt: 1775433600,
+      effectiveAt: 1775347200,
       summary:
         "Peg multiplier exponent raised from 0.2 to 0.4 so peg stability impacts grades more meaningfully. Active depegs above 1000 bps now cap the overall score at D; above 2500 bps caps at F.",
       impact: [
@@ -404,7 +404,7 @@ export const SAFETY_SCORE_VERSION_CONFIG: MethodologyVersionConfig = {
       version: "6.0",
       title: "Custody model tiers, mature-alt-l1, 2-factor Resilience",
       date: "2026-03-21",
-      effectiveAt: 1742515200,
+      effectiveAt: 1774051200,
       summary:
         "Four structural changes: 6-tier custody model replaces 3-tier, new mature-alt-l1 chain tier for Solana/BNB, Resilience becomes 2-factor (blacklist descriptive only), 5-band chain penalty with wrapper exemption.",
       impact: [
@@ -422,7 +422,7 @@ export const SAFETY_SCORE_VERSION_CONFIG: MethodologyVersionConfig = {
       version: "5.9",
       title: "Classification corrections: centralized-custody DeFi coins",
       date: "2026-03-20",
-      effectiveAt: 1742428800,
+      effectiveAt: 1773964800,
       summary:
         "Three DeFi-classified coins with >50% centralized custody exposure reclassified to centralized-dependent based on live reserve data.",
       impact: [
