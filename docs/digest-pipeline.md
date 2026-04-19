@@ -46,7 +46,7 @@ The cron assembles a `DigestInputData` object from the collector set below befor
 | Blacklist activity | `blacklist_events` (rolling last 24h) | Event count, total USD affected; threshold: ≥2 events OR ≥$10M single; zero-value bursts are artifact-risk candidates |
 | Supply velocity | top 10 coins by mcap | 1d vs 7d changes; signals: "reversed", "accelerating", "decelerating" with material daily/weekly thresholds |
 | Safety scores | computed real-time | Report card grades for mentioned coins + 2 "tension" coins (high peg score but low overall grade — structurally fragile despite stable peg) |
-| Resolved depegs | `depeg_events` (last 48h) | Filters: peak >200 bps AND mcap >$50M; top 3 by peak deviation |
+| Resolved depegs | `depeg_events` (last 48h) | Filters: peak >100 bps AND mcap >$20M; top 5 by impact score |
 | Mint-burn flows | `mint_burn_hourly` | Bank Run Gauge (mcap-weighted composite), Flight-to-Quality (safe-haven vs risky net flows via `buildFlightToQualityClassification()`), top pressure coins (\|FIS\| > 20), top 3 chains by absolute 24h net flow |
 | Total mcap ATH | derived from `daily_digest` archive (`json_extract` on stored `totalMcapUsd`) | Anchors current total mcap against its Digest-window ATH value and date |
 | DEWS stress | `stress_signals` + `stress_signal_history` | Band distribution (CALM/WATCH/ALERT/WARNING/DANGER), band changes crossing WATCH/ALERT boundary, elevated coins (ALERT+ with mcap >$10M) |
@@ -378,7 +378,7 @@ Without `ANTHROPIC_API_KEY`, generation is skipped entirely. Telegram delivery i
 | `worker/migrations/0000_baseline.sql` | Baseline `daily_digest` schema, including the historical title/extended/meta additions |
 | `src/components/daily-digest.tsx` | Broadsheet component (shared: homepage + archive page) |
 | `src/components/digest-archive-client.tsx` | Archive page: broadsheet + wire table with month picker |
-| `src/components/digest-snapshot.tsx` | Date-specific data cards (8 categories) |
+| `src/components/digest-snapshot.tsx` | Date-specific data cards (up to 10 categories) |
 | `src/app/digest/page.tsx` | Archive page route shell (static export) |
 | `src/app/digest/[date]/page.tsx` | Detail page (SSG, JSON-LD, prev/next nav) |
 | `src/hooks/api-hooks.ts` | TanStack Query hook exports for `useDailyDigest()`, `useDigestArchive()`, and `useDigestSnapshot()` |

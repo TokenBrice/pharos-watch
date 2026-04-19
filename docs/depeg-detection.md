@@ -339,7 +339,7 @@ Query params:
 
 Response:
 
-```json
+```text
 {
   "events": [{ "...DepegEvent fields..." }],
   "total": 42,

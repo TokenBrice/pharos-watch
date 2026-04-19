@@ -409,7 +409,7 @@ The UI uses that block plus `crons["dispatch-telegram-alerts"].lastRun.metadata`
 The cron metadata now includes:
 
 - `probeMode` / `probeBaseUrl`
-- `bootstrapMissCount`
+- Bootstrap misses are persisted in `status_probe_runs.details.bootstrapMisses`; they are not returned as a top-level cron metadata field.
 - `freshnessDiagnostics` when raw status had to fall back from a freshness sentinel to table or cron evidence
 - `latencySummary` (`minMs`, `medianMs`, `p95Ms`, `maxMs`)
 - `slowestProbes` (top slow endpoints for the run)
@@ -440,7 +440,7 @@ Source: `src/hooks/use-endpoint-probes.ts`
 - Parallel probing with `Promise.all`
 - Admin probe paths are now same-origin `/api/admin/*` calls on the ops host
 - The dashboard labels these as **browser-origin probes** to distinguish them from the worker-origin `status-self-check` synthetic probe stored in `/api/status`
-- Parameterized routes should probe `probePath` values from registry (for example `/api/mint-burn-events?stablecoin=usdt-tether`) to avoid expected `400` validation responses. `GET /api/status-probe-history` currently requires a `path` query and should be queried manually until a stable canary `probePath` is configured.
+- Parameterized routes should probe `probePath` values from registry (for example `/api/mint-burn-events?stablecoin=usdt-tether`) to avoid expected `400` validation responses. `GET /api/status-probe-history` is currently still included in the admin probe group without its required `path` query, so it can produce an expected `400` until a stable canary `probePath` such as `/api/status-probe-history?path=/api/health` is configured or the route is removed from automatic probe coverage.
 - The stablecoin-detail probe also uses a curated canary `probePath` rather than the heaviest history payload, so route-health checks are less sensitive to oversized per-coin datasets.
 - Routes without a stable canary URL are intentionally excluded from automatic probe coverage. `GET /api/digest-snapshot` is omitted because it requires a valid `date` that must map to a real stored digest.
 - Returned result shape: `{ path, status, latencyMs, error? }`

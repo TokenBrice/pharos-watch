@@ -101,7 +101,7 @@ Route-specific manual `_meta` injectors can be stricter. `GET /api/chains` uses 
 | ---------------------------- | ------------- | -------------------------------------------- |
 | `GET /api/stablecoins`       | 600           | `createCacheHandler`                         |
 | `GET /api/chains`            | 1800          | `worker/src/api/chains.ts`                  |
-| `GET /api/bluechip-ratings`  | 43200         | `createCacheHandler`                         |
+| `GET /api/bluechip-ratings`  | 43200         | Custom cache reader in `worker/src/api/cache-handlers.ts` |
 | `GET /api/usds-status`       | 86400         | `createCacheHandler`                         |
 | `GET /api/yield-rankings`    | 3600          | Manual injection after live safety hydration |
 
@@ -161,7 +161,7 @@ Public API traffic enforces rate limiting to ensure fair usage. The Telegram web
 | Per IP (unauthenticated) | 300 requests | 60 seconds |
 | Per API key | Varies (default 120) | 60 seconds |
 
-When a limit is exceeded, the API returns `429 Too Many Requests`:
+When the public IP limiter or per-key public API limiter is exceeded, the API returns `429 Too Many Requests`:
 
 ```json
 {
@@ -170,6 +170,8 @@ When a limit is exceeded, the API returns `429 Too Many Requests`:
 ```
 
 Rate-limited responses include the retry delay in the HTTP `Retry-After` header when the worker can compute one.
+
+`POST /api/feedback` also has a form-specific limiter. Its `429` body is `{ "error": "Too many submissions. Please wait a few minutes." }`, and it should be handled as a local submission throttle rather than as a public API quota response.
 
 If global public-IP limiter bookkeeping fails repeatedly, the worker fails closed after 3 consecutive limiter errors and returns `503 Service Unavailable` with `{ "error": "Public API temporarily unavailable" }` plus `Retry-After: 60`. Treat this as an emergency limiter-health condition, not as successful quota exhaustion. API-key traffic uses a separate per-key limiter; quota overages return `429` with `Retry-After` when available, and dependency failures do not use the same 3-strike public-IP emergency state unless the implementation changes.
 
@@ -190,7 +192,7 @@ JSON API handlers use `{ "error": "message" }` JSON format. `GET /api/og/*` retu
 | 401    | Unauthorized          | Protected public endpoint called without a valid `X-API-Key`, or admin endpoint called without a valid `ops-api` Access JWT (typically obtained through Cloudflare Access user login or service-token auth) |
 | 403    | Forbidden             | Disallowed CORS preflight from a foreign `Origin`, Pages ops proxy mutating request without a matching same-origin `Origin`, or mutating admin request missing `X-Pharos-Admin: 1` |
 | 404    | Not Found             | Unknown stablecoin ID or missing resource                                                                                                                                                                |
-| 429    | Too Many Requests     | Rate limit exceeded (global public API limiter or feedback-specific limiter)                                                                                                                             |
+| 429    | Too Many Requests     | Rate limit exceeded (global public IP limiter, per-key public API limiter, or feedback-specific limiter; feedback uses its own message body)                                                               |
 | 500    | Internal Server Error | Unhandled exception (caught by `withErrorHandler`)                                                                                                                                                       |
 | 502    | Bad Gateway           | Upstream fetch failed (external data provider or Pages proxy upstream), or the ops proxy received a Cloudflare Access login redirect from `ops-api` |
 | 503    | Service Unavailable   | Cache-passthrough endpoint where cache has never been populated, cached payload is corrupt / rejected by validation, limiter storage fails closed after repeated D1 errors, or `MAINTENANCE_MODE=true` (global kill switch via `wrangler secret put`) |

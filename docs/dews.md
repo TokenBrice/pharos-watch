@@ -190,7 +190,7 @@ Score = `min(100, sum of active signal points)`.
 
 When a coin has insufficient data in a cycle (`computeDEWS() === null`), that run skips writes for the coin, so this endpoint continues serving the last valid cached row.
 
-```json
+```text
 {
   "signals": {
     "usdt-tether": { "score": 5, "band": "CALM", "signals": { ... }, "computedAt": 1740000000, "methodologyVersion": "5.95" },
@@ -209,7 +209,7 @@ When a coin has insufficient data in a cycle (`computeDEWS() === null`), that ru
 
 Unknown IDs return `404` with `Unknown stablecoin`; tracked-but-non-active IDs return `404` with `Stablecoin not tracked`.
 
-```json
+```text
 {
   "current": { "score": 5, "band": "CALM", "signals": { ... }, "computedAt": 1740000000, "methodologyVersion": "5.95" },
   "history": [

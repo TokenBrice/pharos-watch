@@ -113,9 +113,9 @@ The same rule applies to Worker-side integration clients. Telegram delivery, X p
 
 | Area                                | Current timeout              | Source                                            |
 | ----------------------------------- | ---------------------------- | ------------------------------------------------- |
-| CoinMarketCap price fallback        | `10_000 ms`                  | `worker/src/cron/sync-stablecoins/enrich-prices-passes.ts` |
-| Jupiter price fallback              | `5_000 ms`                   | `worker/src/cron/sync-stablecoins/enrich-prices-passes.ts` |
-| DexScreener price fallback requests | up to `5_000 ms` per request | `worker/src/cron/sync-stablecoins/enrich-prices-passes.ts` |
+| CoinMarketCap price fallback        | `10_000 ms`                  | `worker/src/cron/sync-stablecoins/enrich-prices-cmc-pass.ts` |
+| Jupiter price fallback              | `5_000 ms`                   | `worker/src/cron/sync-stablecoins/enrich-prices-jupiter-pass.ts` |
+| DexScreener price fallback requests | up to `5_000 ms` per request | `worker/src/cron/sync-stablecoins/enrich-prices-dexscreener-pass.ts` |
 | Ops admin status proxy reads       | `20_000 ms` for `/api/status` and `/api/status-history` | `functions/api/admin/[[path]].ts` |
 | Live reserve adapter attempt        | `20_000 ms`                  | `worker/src/cron/sync-live-reserves.ts`                    |
 | Live reserve D1 finalize timeout    | `30_000 ms`                  | `worker/src/cron/sync-live-reserves-core.ts`               |

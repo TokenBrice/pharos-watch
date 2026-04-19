@@ -110,7 +110,7 @@ The registry lives in `worker/src/lib/authoritative-price-sources.ts` and suppor
 
 ### Enrichment Pipeline
 
-`enrichMissingPrices()` in `worker/src/cron/sync-stablecoins/enrich-prices-passes.ts` now runs an ordered fallback-pass manifest for assets still missing prices after primary fetch. The sequence is unchanged, but the orchestration is centralized in one pass list instead of one ad hoc block per provider:
+`enrichMissingPrices()` in `worker/src/cron/sync-stablecoins/enrich-prices.ts` now delegates to the ordered fallback-pass manifest in `worker/src/cron/sync-stablecoins/enrich-prices-fallback.ts` for assets still missing prices after primary fetch. The sequence is unchanged, but the orchestration is centralized in one pass list instead of one ad hoc block per provider:
 
 1. **Pass 1:** Canonical tracked contract identity -> DefiLlama coins API, but only quotes that pass peg-aware validation can claim the asset
 2. **Pass 1b:** Tracked alternate deployment fallback (tries exact tracked deployment ids via DefiLlama coins API under the same validation gate)
