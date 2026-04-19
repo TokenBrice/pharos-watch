@@ -11,6 +11,7 @@ import { buildStablecoinUrl } from "@/lib/urls";
 import { SITE_ORIGIN as SITE_URL } from "@shared/lib/runtime-origins";
 import { GOVERNANCE_LABELS, BACKING_LABELS, PEG_LABELS_SHORT } from "@shared/lib/classification";
 import { StablecoinDetailLoadingShell } from "@/components/stablecoin-detail/loading-shell";
+import { StaticHeroStrip } from "@/components/stablecoin-detail/static-hero-strip";
 import { Skeleton } from "@/components/ui/skeleton";
 import StablecoinDetailClient from "./client";
 import { ExploreNextSection } from "@/components/stablecoin-detail/explore-next-section";
@@ -113,9 +114,7 @@ export default async function StablecoinDetailPage({ params }: { params: Promise
 
   return (
     <>
-      <h1 className="sr-only">
-        {coin.name} ({coin.symbol}) stablecoin analytics
-      </h1>
+      <StaticHeroStrip coin={coin} logoSrc={logosById[coin.id]} />
       <Suspense fallback={
         <DetailPageShellFallback coin={coin} logoSrc={logosById[coin.id]} />
       }>
@@ -145,6 +144,7 @@ export default async function StablecoinDetailPage({ params }: { params: Promise
           __html: safeJsonLd({
             "@context": "https://schema.org",
             "@type": "Dataset",
+            "@id": `${SITE_URL}${buildStablecoinUrl(id)}#dataset`,
             name: `${coin.name} Stablecoin Analytics`,
             description: `Live analytics for ${coin.name} (${coin.symbol}). ${GOVERNANCE_LABELS[coin.flags.governance] ?? coin.flags.governance} stablecoin, ${BACKING_LABELS[coin.flags.backing] ?? coin.flags.backing}, pegged to ${PEG_LABELS_SHORT[coin.flags.pegCurrency] ?? coin.flags.pegCurrency}. Price, market cap, supply trends, chain distribution, peg score, and depeg history.`,
             url: `${SITE_URL}${buildStablecoinUrl(id)}`,
@@ -153,6 +153,7 @@ export default async function StablecoinDetailPage({ params }: { params: Promise
               name: "Pharos",
               url: SITE_URL,
             },
+            publisher: { "@id": `${SITE_URL}#organization` },
             isAccessibleForFree: true,
             license: "https://creativecommons.org/licenses/by/4.0/",
             keywords: [
@@ -164,6 +165,34 @@ export default async function StablecoinDetailPage({ params }: { params: Promise
               PEG_LABELS_SHORT[coin.flags.pegCurrency] ?? coin.flags.pegCurrency,
               "analytics",
               "peg tracking",
+            ],
+            identifier: [
+              ...(coin.geckoId ? [{ "@type": "PropertyValue", propertyID: "geckoId", value: coin.geckoId }] : []),
+              ...(coin.contracts ?? []).map((contract) => ({
+                "@type": "PropertyValue",
+                propertyID: `contract:${contract.chain}`,
+                value: contract.address,
+              })),
+            ],
+            variableMeasured: [
+              { "@type": "PropertyValue", name: "price", unitText: "USD" },
+              { "@type": "PropertyValue", name: "marketCap", unitText: "USD" },
+              { "@type": "PropertyValue", name: "circulatingSupply", unitText: coin.symbol },
+              { "@type": "PropertyValue", name: "pegScore", minValue: 0, maxValue: 100 },
+              { "@type": "PropertyValue", name: "dewsScore", minValue: 0, maxValue: 100 },
+              { "@type": "PropertyValue", name: "safetyGrade" },
+            ],
+            dateModified: new Date().toISOString(),
+            spatialCoverage: { "@type": "Place", name: "Global" },
+            measurementTechnique:
+              "Aggregated supply and price from DefiLlama, CoinGecko, GeckoTerminal, Pyth, Chainlink and on-chain RPCs; normalized in a Cloudflare Worker pipeline.",
+            distribution: [
+              {
+                "@type": "DataDownload",
+                name: `${coin.name} detail JSON`,
+                encodingFormat: "application/json",
+                contentUrl: `${SITE_URL}/_site-data/stablecoin/${id}`,
+              },
             ],
           }),
         }}
