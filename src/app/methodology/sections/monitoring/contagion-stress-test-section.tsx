@@ -4,7 +4,7 @@ import {
   MethodologySectionShell,
   WorkedExample,
 } from "../../methodology-shared";
-
+export const CONTENT_MARKDOWN = `## Contagion Stress Test\n\nThe contagion stress test models how failure in one stablecoin can propagate through collateral, wrapper, and mechanism dependencies. It asks which assets would inherit stress if a major stablecoin, reserve asset, or shared mechanism became impaired.\n\nDependency weights are curated from explicit metadata, reserve slices, wrapper relationships, and known mechanism links. The model distinguishes direct collateral exposure from looser operational dependency so a small wrapper link does not receive the same treatment as a majority reserve dependency.\n\nThe result is used in report cards, comparison context, and systemic-risk views to identify hidden concentration that is not visible from market capitalization alone.\n`;
 export function ContagionStressTestMethodologySection() {
   return (
           <MethodologySectionShell

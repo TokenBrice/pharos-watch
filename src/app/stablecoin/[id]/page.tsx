@@ -11,6 +11,7 @@ import { buildStablecoinUrl } from "@/lib/urls";
 import { SITE_ORIGIN as SITE_URL } from "@shared/lib/runtime-origins";
 import { GOVERNANCE_LABELS, BACKING_LABELS, PEG_LABELS_SHORT } from "@shared/lib/classification";
 import { StablecoinDetailLoadingShell } from "@/components/stablecoin-detail/loading-shell";
+import { StaticHeroStrip } from "@/components/stablecoin-detail/static-hero-strip";
 import { Skeleton } from "@/components/ui/skeleton";
 import StablecoinDetailClient from "./client";
 import { ExploreNextSection } from "@/components/stablecoin-detail/explore-next-section";
@@ -19,15 +20,6 @@ import aiSummaries from "../../../../data/ai-summaries.json";
 import { logosById } from "@/lib/logos";
 
 const typedSummaries = aiSummaries as Record<string, { title: string; text: string; updatedAt: string }>;
-
-function formatSummaryUpdatedAt(updatedAt: string): string {
-  return new Date(`${updatedAt}T00:00:00Z`).toLocaleDateString("en-US", {
-    month: "long",
-    day: "numeric",
-    year: "numeric",
-    timeZone: "UTC",
-  });
-}
 
 function DetailPageShellFallback({
   coin,
@@ -120,20 +112,15 @@ export default async function StablecoinDetailPage({ params }: { params: Promise
   const related = getRelatedStablecoins(coin, { candidates: ACTIVE_STABLECOINS });
   const staticComparisonPages = getStaticComparisonPagesForCoin(id);
   const summary = typedSummaries[id] ?? null;
-  const summaryDateline = summary ? formatSummaryUpdatedAt(summary.updatedAt) : null;
+  const datasetSameAs = [
+    coin.geckoId ? `https://www.coingecko.com/en/coins/${coin.geckoId}` : null,
+    coin.llamaId ? `https://defillama.com/stablecoin/${coin.llamaId}` : null,
+    ...(coin.links?.map((link) => link.url) ?? []),
+  ].filter((url): url is string => Boolean(url));
 
   return (
     <>
-      <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
-        <h1 className="text-2xl font-extrabold tracking-tighter text-foreground">
-          {coin.name} ({coin.symbol}) stablecoin analytics
-        </h1>
-        {summary && summaryDateline ? (
-          <time className="text-xs text-muted-foreground" dateTime={summary.updatedAt}>
-            Updated {summaryDateline}
-          </time>
-        ) : null}
-      </div>
+      <StaticHeroStrip coin={coin} />
       <Suspense fallback={
         <DetailPageShellFallback coin={coin} logoSrc={logosById[coin.id]} />
       }>
@@ -167,11 +154,9 @@ export default async function StablecoinDetailPage({ params }: { params: Promise
             name: `${coin.name} Stablecoin Analytics`,
             description: `Live analytics for ${coin.name} (${coin.symbol}). ${GOVERNANCE_LABELS[coin.flags.governance] ?? coin.flags.governance} stablecoin, ${BACKING_LABELS[coin.flags.backing] ?? coin.flags.backing}, pegged to ${PEG_LABELS_SHORT[coin.flags.pegCurrency] ?? coin.flags.pegCurrency}. Price, market cap, supply trends, chain distribution, peg score, and depeg history.`,
             url: `${SITE_URL}${buildStablecoinUrl(id)}`,
-            creator: {
-              "@type": "Organization",
-              name: "Pharos",
-              url: SITE_URL,
-            },
+            ...(datasetSameAs.length > 0 ? { sameAs: datasetSameAs } : {}),
+            creator: { "@id": `${SITE_URL}#organization` },
+            ...(coin.proofOfReserves?.url ? { citation: [coin.proofOfReserves.url] } : {}),
             publisher: { "@id": `${SITE_URL}#organization` },
             isAccessibleForFree: true,
             license: "https://creativecommons.org/licenses/by/4.0/",

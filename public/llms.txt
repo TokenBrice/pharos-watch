@@ -45,6 +45,10 @@
 
 - [Documentation Archive](https://pharos.watch/docs/): Architecture, methodology, and design documentation.
 - [API Reference](https://pharos.watch/docs/api-reference/): HTTP contracts, authentication notes, and response conventions.
+- [Architecture](https://pharos.watch/docs/architecture/): Route map, API surfaces, runtime rules, and SEO ownership.
+- [Data Flow Map](https://pharos.watch/docs/data-flow-map/): End-to-end source-to-UI flows for each major data domain.
+- [Data Pipeline](https://pharos.watch/docs/data-pipeline/): Price enrichment, integrity guardrails, and sync behavior.
+- [Worker and API Limits](https://pharos.watch/docs/worker-and-api-limits/): Repo-enforced runtime limits, cron budgets, and polling guidance.
 - [Classification](https://pharos.watch/docs/classification/): Classification system, peg handling, and commodity treatment.
 - [Pricing Pipeline](https://pharos.watch/docs/pricing-pipeline/): Live-price consensus, overrides, and fallback enrichment.
 - [Depeg Detection](https://pharos.watch/docs/depeg-detection/): Two-stage detection, confirmation, and peg score inputs.

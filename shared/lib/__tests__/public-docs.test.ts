@@ -14,7 +14,7 @@ const DOCS_DIR = join(dirname(fileURLToPath(import.meta.url)), "..", "..", "..",
 
 describe("PUBLIC_DOCS registry", () => {
   it("contains the reviewed initial public set", () => {
-    expect(PUBLIC_DOCS.length).toBe(16);
+    expect(PUBLIC_DOCS.length).toBe(20);
   });
 
   it("points every entry at an existing single-file markdown source", () => {
@@ -48,7 +48,7 @@ describe("PUBLIC_DOCS registry", () => {
       const body = readFileSync(join(DOCS_DIR, doc.source), "utf-8");
       const rendered = preparePublicDocMarkdown(body, { absoluteLinks: true, source: doc.source });
       expect(rendered).not.toMatch(/\]\((?:\.\.?\/|[^:/)#]+\.md)/);
-      expect(rendered).not.toMatch(/agents\/|AGENTS\.md|\.claude|TODO|FIXME/);
+      expect(rendered).not.toMatch(/agents\/|AGENTS\.md|\.claude|TODO|FIXME|runbook/i);
       if (doc.source === "api-reference.md") {
         expect(rendered).not.toContain("## Admin Auth And Idempotency");
         expect(rendered).toContain("## Public Endpoints");

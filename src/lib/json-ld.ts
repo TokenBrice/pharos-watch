@@ -39,6 +39,7 @@ export const PHAROS_ORG_NODE = {
     "https://t.me/pharoswatch",
     "https://t.me/PharosWatchBot",
     "https://t.me/pharoswatchers",
+    "https://farcaster.xyz/tokenbrice",
   ],
   founder: { "@id": `${SITE_URL}#person-tokenbrice` },
 } as const;

@@ -10,7 +10,7 @@ import {
   MethodologySectionShell,
   WorkedExample,
 } from "../../methodology-shared";
-
+export const CONTENT_MARKDOWN = `## Yield Intelligence\n\nYield Intelligence resolves stablecoin yield from direct on-chain reads, curated pools, protocol APIs, price-derived NAV movement, and rate-derived sources. The pipeline prefers precise sources and only uses fallback tiers when identity and exposure remain unambiguous.\n\nPharos computes effective yield by comparing APY against the relevant cash or peg benchmark, then combines yield efficiency with sustainability to produce a Pharos Yield Score (PYS). High APY is not automatically good: unstable rates, weak safety scores, low TVL, or ambiguous exposure reduce the recommendation quality.\n\nWarnings explain why a venue is risky, missing, stale, or benchmark-adjusted so yield pages do not promote fragile opportunities as clean income.\n`;
 export function YieldIntelligenceMethodologySection() {
   return (
           <MethodologySectionShell

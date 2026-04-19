@@ -21,6 +21,8 @@ import digests from "../../data/digests.json";
 import { PUBLIC_DOCS } from "../../shared/lib/public-docs";
 import { TRACKED_STABLECOINS } from "../../shared/lib/stablecoins";
 
+const FIXTURES = join(__dirname, "fixtures", "markdown");
+
 describe("writeMarkdownRoute", () => {
   let tmpDir: string;
 
@@ -70,6 +72,23 @@ describe("methodology markdown", () => {
     expect(md).toMatch(/^---\ntitle: "Safety Scores Changelog/);
     expect(md).toMatch(/## v\d+\.\d+/);
     expect(md).toContain('canonical: "https://pharos.watch/methodology/scoring-changelog/"');
+  });
+});
+
+describe("markdown snapshot fixtures", () => {
+  it("methodology index matches fixture", () => {
+    const expected = readFileSync(join(FIXTURES, "methodology-index.md"), "utf-8");
+    expect(buildMethodologyIndexMarkdown()).toBe(expected);
+  });
+
+  it("changelog index matches fixture", () => {
+    const expected = readFileSync(join(FIXTURES, "changelog-index.md"), "utf-8");
+    expect(renderChangelogIndex()).toBe(expected);
+  });
+
+  it("stablecoin usdt-tether matches fixture", () => {
+    const expected = readFileSync(join(FIXTURES, "stablecoin-usdt-tether.md"), "utf-8");
+    expect(renderStablecoinDetail("usdt-tether")).toBe(expected);
   });
 });
 

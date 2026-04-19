@@ -35,7 +35,7 @@ Public `/api/mint-burn-flows` freshness metadata and the `/flows` page intention
 - **File:** `worker/src/cron/sync-mint-burn.ts`
 - **Registration:** cron declared in `worker/wrangler.toml`, executed via `worker/src/handlers/scheduled.ts`
 - **Returns:** `{ itemCount, status, metadata }` where `itemCount = rowsInserted` (not parsed rows). Metadata includes `lane`, `jobName`, `nullPricesHealed`, and per-config coverage-frontier diagnostics when scans are partial.
-- **Operator runbook:** `agents/process/mint-burn-ingestion.md`
+- **Operator notes:** internal ingestion process notes are kept outside the public documentation archive.
 
 Lane policy:
 - `sync-mint-burn` = critical lane. Uses the existing job id so freshness alerts and API freshness remain keyed to the major-symbol path.

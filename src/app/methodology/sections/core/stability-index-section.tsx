@@ -10,7 +10,7 @@ import {
   MethodologySectionShell,
   WorkedExample,
 } from "../../methodology-shared";
-
+export const CONTENT_MARKDOWN = `## Stability Index Methodology\n\nThe Pharos Stability Index (PSI) compresses market-wide stablecoin stress into a 0-100 condition score. It starts at 100, subtracts penalties for severity, breadth, stress breadth, and trend, then maps the result into condition bands from BEDROCK to MELTDOWN.\n\nSeverity captures how bad current deviations are. Breadth captures how many assets are involved. Stress breadth captures how many stablecoins are elevated in DEWS. Trend captures whether the system is getting better or worse over the current window.\n\nPSI is deliberately conservative: one small depeg should not move the entire market condition, but simultaneous broad stress should pull the index down even if no single coin dominates the tape.\n`;
 export function StabilityIndexMethodologySection() {
   return (
           <MethodologySectionShell

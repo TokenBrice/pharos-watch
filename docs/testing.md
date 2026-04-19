@@ -44,6 +44,8 @@ npm run test:smoke-transport # HTTP->HTTPS edge redirect smoke for api.pharos.wa
 npm run test:smoke-ui -- --url https://pharos.watch --mode live # Browser-level UI smoke check; local mode runs the full overflow sweep, live mode runs a narrower canary smoke
 ```
 
+Markdown variants for `/methodology/`, `/changelog/`, and stablecoin detail pages have checked-in fixture snapshots under `scripts/__tests__/fixtures/markdown/`. When an intentional visible copy or renderer change updates those outputs, run `npm run build` or `npx tsx scripts/generate-markdown-exports.ts`, copy the matching `out/**/index.md` file over its fixture, and commit the fixture in the same change as the JSX or renderer edit.
+
 When `SMOKE_UI_EXPECT_GA_ID` is set, `npm run test:smoke-ui` also verifies that the homepage artifact includes the expected GA script tag and `gtag('config', ...)` initialization before it runs the browser checks. The config init may live in the root static RSC payload (`/index.txt`) on newer Next.js static exports rather than directly in `index.html`.
 
 ## CI Pipeline
