@@ -1,0 +1,1419 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Pharos API",
+    "version": "1.0.0",
+    "description": "Stablecoin analytics API for peg monitoring, liquidity, risk, blacklist events, mint/burn flows, yield, chains, and market-structure data. Protected public routes require X-API-Key. Request access in the Pharos Telegram channel with intended endpoints, cadence, and expected volume.",
+    "contact": {
+      "name": "Pharos",
+      "url": "https://pharos.watch/about/api/",
+      "email": "admin@pharos.watch"
+    },
+    "license": {
+      "name": "MIT",
+      "url": "https://github.com/TokenBrice/stablecoin-dashboard/blob/main/LICENSE"
+    }
+  },
+  "externalDocs": {
+    "description": "Full Pharos API reference",
+    "url": "https://pharos.watch/about/api/"
+  },
+  "servers": [
+    {
+      "url": "https://api.pharos.watch",
+      "description": "Public integration API"
+    }
+  ],
+  "security": [
+    {
+      "ApiKeyAuth": []
+    }
+  ],
+  "tags": [
+    {
+      "name": "Health"
+    },
+    {
+      "name": "Stablecoins"
+    },
+    {
+      "name": "Peg Monitoring"
+    },
+    {
+      "name": "Liquidity"
+    },
+    {
+      "name": "Risk"
+    },
+    {
+      "name": "Blacklist"
+    },
+    {
+      "name": "Flows"
+    },
+    {
+      "name": "Yield"
+    },
+    {
+      "name": "Chains"
+    },
+    {
+      "name": "Market Structure"
+    },
+    {
+      "name": "History"
+    },
+    {
+      "name": "Digest"
+    },
+    {
+      "name": "Status"
+    },
+    {
+      "name": "Reserves"
+    }
+  ],
+  "paths": {
+    "/api/health": {
+      "get": {
+        "tags": [
+          "Health"
+        ],
+        "summary": "Health check",
+        "description": "No-key health check for the public API host.",
+        "operationId": "health",
+        "security": [],
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Successful response. See the public API reference for endpoint-specific payload fields.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JsonValue"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request"
+          },
+          "401": {
+            "description": "Missing or invalid API key"
+          },
+          "429": {
+            "description": "Rate limit exceeded"
+          },
+          "503": {
+            "description": "Service unavailable or cache not populated"
+          }
+        }
+      }
+    },
+    "/api/stablecoins": {
+      "get": {
+        "tags": [
+          "Stablecoins"
+        ],
+        "summary": "List stablecoins",
+        "description": "Current stablecoin list with supply, price, peg, chain distribution, and freshness headers.",
+        "operationId": "stablecoins",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Successful response. See the public API reference for endpoint-specific payload fields.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JsonValue"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request"
+          },
+          "401": {
+            "description": "Missing or invalid API key"
+          },
+          "429": {
+            "description": "Rate limit exceeded"
+          },
+          "503": {
+            "description": "Service unavailable or cache not populated"
+          }
+        }
+      }
+    },
+    "/api/stablecoin/{stablecoinId}": {
+      "get": {
+        "tags": [
+          "Stablecoins"
+        ],
+        "summary": "Stablecoin detail",
+        "description": "Full per-coin analytics dossier for a canonical Pharos stablecoin ID.",
+        "operationId": "stablecoinStablecoinId",
+        "parameters": [
+          {
+            "name": "stablecoinId",
+            "in": "path",
+            "required": true,
+            "description": "Canonical Pharos stablecoin ID, for example `usdt-tether` or `usdc-circle`.",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful response. See the public API reference for endpoint-specific payload fields.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JsonValue"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request"
+          },
+          "401": {
+            "description": "Missing or invalid API key"
+          },
+          "429": {
+            "description": "Rate limit exceeded"
+          },
+          "503": {
+            "description": "Service unavailable or cache not populated"
+          }
+        }
+      }
+    },
+    "/api/stablecoin-summary/{stablecoinId}": {
+      "get": {
+        "tags": [
+          "Stablecoins"
+        ],
+        "summary": "Stablecoin summary",
+        "description": "Lightweight per-coin price and aggregate supply snapshot.",
+        "operationId": "stablecoinSummaryStablecoinId",
+        "parameters": [
+          {
+            "name": "stablecoinId",
+            "in": "path",
+            "required": true,
+            "description": "Canonical Pharos stablecoin ID, for example `usdt-tether` or `usdc-circle`.",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful response. See the public API reference for endpoint-specific payload fields.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JsonValue"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request"
+          },
+          "401": {
+            "description": "Missing or invalid API key"
+          },
+          "429": {
+            "description": "Rate limit exceeded"
+          },
+          "503": {
+            "description": "Service unavailable or cache not populated"
+          }
+        }
+      }
+    },
+    "/api/stablecoin-reserves/{stablecoinId}": {
+      "get": {
+        "tags": [
+          "Stablecoins",
+          "Reserves"
+        ],
+        "summary": "Stablecoin reserves",
+        "description": "Live or fallback reserve composition where Pharos has reserve coverage.",
+        "operationId": "stablecoinReservesStablecoinId",
+        "parameters": [
+          {
+            "name": "stablecoinId",
+            "in": "path",
+            "required": true,
+            "description": "Canonical Pharos stablecoin ID, for example `usdt-tether` or `usdc-circle`.",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful response. See the public API reference for endpoint-specific payload fields.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JsonValue"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request"
+          },
+          "401": {
+            "description": "Missing or invalid API key"
+          },
+          "429": {
+            "description": "Rate limit exceeded"
+          },
+          "503": {
+            "description": "Service unavailable or cache not populated"
+          }
+        }
+      }
+    },
+    "/api/stablecoin-charts": {
+      "get": {
+        "tags": [
+          "Stablecoins",
+          "History"
+        ],
+        "summary": "Stablecoin charts",
+        "description": "Historical total supply chart data.",
+        "operationId": "stablecoinCharts",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Successful response. See the public API reference for endpoint-specific payload fields.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JsonValue"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request"
+          },
+          "401": {
+            "description": "Missing or invalid API key"
+          },
+          "429": {
+            "description": "Rate limit exceeded"
+          },
+          "503": {
+            "description": "Service unavailable or cache not populated"
+          }
+        }
+      }
+    },
+    "/api/peg-summary": {
+      "get": {
+        "tags": [
+          "Peg Monitoring"
+        ],
+        "summary": "Peg summary",
+        "description": "Per-coin peg scores plus aggregate peg-monitoring summary.",
+        "operationId": "pegSummary",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Successful response. See the public API reference for endpoint-specific payload fields.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JsonValue"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request"
+          },
+          "401": {
+            "description": "Missing or invalid API key"
+          },
+          "429": {
+            "description": "Rate limit exceeded"
+          },
+          "503": {
+            "description": "Service unavailable or cache not populated"
+          }
+        }
+      }
+    },
+    "/api/depeg-events": {
+      "get": {
+        "tags": [
+          "Peg Monitoring"
+        ],
+        "summary": "Depeg events",
+        "description": "Historical and active depeg events, filterable by stablecoin.",
+        "operationId": "depegEvents",
+        "parameters": [
+          {
+            "name": "stablecoin",
+            "in": "query",
+            "required": false,
+            "description": "Optional canonical Pharos stablecoin ID filter.",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "description": "Maximum number of records to return.",
+            "schema": {
+              "type": "integer",
+              "minimum": 1
+            }
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "required": false,
+            "description": "Pagination offset.",
+            "schema": {
+              "type": "integer",
+              "minimum": 0
+            }
+          },
+          {
+            "name": "active",
+            "in": "query",
+            "required": false,
+            "description": "When true, returns active depeg events only.",
+            "schema": {
+              "type": "boolean"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful response. See the public API reference for endpoint-specific payload fields.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JsonValue"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request"
+          },
+          "401": {
+            "description": "Missing or invalid API key"
+          },
+          "429": {
+            "description": "Rate limit exceeded"
+          },
+          "503": {
+            "description": "Service unavailable or cache not populated"
+          }
+        }
+      }
+    },
+    "/api/dex-liquidity": {
+      "get": {
+        "tags": [
+          "Liquidity"
+        ],
+        "summary": "DEX liquidity",
+        "description": "DEX liquidity scores, top pools, chain/protocol breakdowns, and quality metadata.",
+        "operationId": "dexLiquidity",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Successful response. See the public API reference for endpoint-specific payload fields.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JsonValue"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request"
+          },
+          "401": {
+            "description": "Missing or invalid API key"
+          },
+          "429": {
+            "description": "Rate limit exceeded"
+          },
+          "503": {
+            "description": "Service unavailable or cache not populated"
+          }
+        }
+      }
+    },
+    "/api/dex-liquidity-history": {
+      "get": {
+        "tags": [
+          "Liquidity",
+          "History"
+        ],
+        "summary": "DEX liquidity history",
+        "description": "Historical liquidity-score data for a stablecoin.",
+        "operationId": "dexLiquidityHistory",
+        "parameters": [
+          {
+            "name": "stablecoin",
+            "in": "query",
+            "required": false,
+            "description": "Optional canonical Pharos stablecoin ID filter.",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "days",
+            "in": "query",
+            "required": false,
+            "description": "Historical lookback window in days. Endpoint-specific bounds may apply.",
+            "schema": {
+              "type": "integer",
+              "minimum": 1
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful response. See the public API reference for endpoint-specific payload fields.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JsonValue"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request"
+          },
+          "401": {
+            "description": "Missing or invalid API key"
+          },
+          "429": {
+            "description": "Rate limit exceeded"
+          },
+          "503": {
+            "description": "Service unavailable or cache not populated"
+          }
+        }
+      }
+    },
+    "/api/report-cards": {
+      "get": {
+        "tags": [
+          "Risk"
+        ],
+        "summary": "Report cards",
+        "description": "Safety report-card snapshot across liquidity, resilience, decentralization, dependency, and peg stability.",
+        "operationId": "reportCards",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Successful response. See the public API reference for endpoint-specific payload fields.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JsonValue"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request"
+          },
+          "401": {
+            "description": "Missing or invalid API key"
+          },
+          "429": {
+            "description": "Rate limit exceeded"
+          },
+          "503": {
+            "description": "Service unavailable or cache not populated"
+          }
+        }
+      }
+    },
+    "/api/redemption-backstops": {
+      "get": {
+        "tags": [
+          "Risk",
+          "Reserves"
+        ],
+        "summary": "Redemption backstops",
+        "description": "Modeled issuer/protocol redemption routes and effective-exit scoring for configured assets.",
+        "operationId": "redemptionBackstops",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Successful response. See the public API reference for endpoint-specific payload fields.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JsonValue"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request"
+          },
+          "401": {
+            "description": "Missing or invalid API key"
+          },
+          "429": {
+            "description": "Rate limit exceeded"
+          },
+          "503": {
+            "description": "Service unavailable or cache not populated"
+          }
+        }
+      }
+    },
+    "/api/stress-signals": {
+      "get": {
+        "tags": [
+          "Risk",
+          "Peg Monitoring"
+        ],
+        "summary": "Stress signals",
+        "description": "DEWS-style stress signals for the stablecoin universe or one selected asset.",
+        "operationId": "stressSignals",
+        "parameters": [
+          {
+            "name": "stablecoin",
+            "in": "query",
+            "required": false,
+            "description": "Optional canonical Pharos stablecoin ID filter.",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "days",
+            "in": "query",
+            "required": false,
+            "description": "Historical lookback window in days. Endpoint-specific bounds may apply.",
+            "schema": {
+              "type": "integer",
+              "minimum": 1
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful response. See the public API reference for endpoint-specific payload fields.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JsonValue"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request"
+          },
+          "401": {
+            "description": "Missing or invalid API key"
+          },
+          "429": {
+            "description": "Rate limit exceeded"
+          },
+          "503": {
+            "description": "Service unavailable or cache not populated"
+          }
+        }
+      }
+    },
+    "/api/stability-index": {
+      "get": {
+        "tags": [
+          "Risk"
+        ],
+        "summary": "Pharos Stability Index",
+        "description": "Latest Pharos Stability Index with optional detail payload and history.",
+        "operationId": "stabilityIndex",
+        "parameters": [
+          {
+            "name": "detail",
+            "in": "query",
+            "required": false,
+            "description": "When true, includes detailed input components.",
+            "schema": {
+              "type": "boolean"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful response. See the public API reference for endpoint-specific payload fields.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JsonValue"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request"
+          },
+          "401": {
+            "description": "Missing or invalid API key"
+          },
+          "429": {
+            "description": "Rate limit exceeded"
+          },
+          "503": {
+            "description": "Service unavailable or cache not populated"
+          }
+        }
+      }
+    },
+    "/api/blacklist": {
+      "get": {
+        "tags": [
+          "Blacklist"
+        ],
+        "summary": "Blacklist events",
+        "description": "Freeze and blacklist events with optional stablecoin/chain filters.",
+        "operationId": "blacklist",
+        "parameters": [
+          {
+            "name": "stablecoin",
+            "in": "query",
+            "required": false,
+            "description": "Optional canonical Pharos stablecoin ID filter.",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "chain",
+            "in": "query",
+            "required": false,
+            "description": "Optional chain filter.",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful response. See the public API reference for endpoint-specific payload fields.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JsonValue"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request"
+          },
+          "401": {
+            "description": "Missing or invalid API key"
+          },
+          "429": {
+            "description": "Rate limit exceeded"
+          },
+          "503": {
+            "description": "Service unavailable or cache not populated"
+          }
+        }
+      }
+    },
+    "/api/blacklist-summary": {
+      "get": {
+        "tags": [
+          "Blacklist"
+        ],
+        "summary": "Blacklist summary",
+        "description": "Blacklist summary statistics, chart data, and chain options.",
+        "operationId": "blacklistSummary",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Successful response. See the public API reference for endpoint-specific payload fields.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JsonValue"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request"
+          },
+          "401": {
+            "description": "Missing or invalid API key"
+          },
+          "429": {
+            "description": "Rate limit exceeded"
+          },
+          "503": {
+            "description": "Service unavailable or cache not populated"
+          }
+        }
+      }
+    },
+    "/api/mint-burn-flows": {
+      "get": {
+        "tags": [
+          "Flows"
+        ],
+        "summary": "Mint and burn flows",
+        "description": "Mint/burn flow aggregates for the selected window.",
+        "operationId": "mintBurnFlows",
+        "parameters": [
+          {
+            "name": "stablecoin",
+            "in": "query",
+            "required": false,
+            "description": "Optional canonical Pharos stablecoin ID filter.",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "days",
+            "in": "query",
+            "required": false,
+            "description": "Historical lookback window in days. Endpoint-specific bounds may apply.",
+            "schema": {
+              "type": "integer",
+              "minimum": 1
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful response. See the public API reference for endpoint-specific payload fields.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JsonValue"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request"
+          },
+          "401": {
+            "description": "Missing or invalid API key"
+          },
+          "429": {
+            "description": "Rate limit exceeded"
+          },
+          "503": {
+            "description": "Service unavailable or cache not populated"
+          }
+        }
+      }
+    },
+    "/api/mint-burn-events": {
+      "get": {
+        "tags": [
+          "Flows"
+        ],
+        "summary": "Mint and burn events",
+        "description": "Individual mint/burn events for supported stablecoins.",
+        "operationId": "mintBurnEvents",
+        "parameters": [
+          {
+            "name": "stablecoin",
+            "in": "query",
+            "required": false,
+            "description": "Optional canonical Pharos stablecoin ID filter.",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "description": "Maximum number of records to return.",
+            "schema": {
+              "type": "integer",
+              "minimum": 1
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful response. See the public API reference for endpoint-specific payload fields.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JsonValue"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request"
+          },
+          "401": {
+            "description": "Missing or invalid API key"
+          },
+          "429": {
+            "description": "Rate limit exceeded"
+          },
+          "503": {
+            "description": "Service unavailable or cache not populated"
+          }
+        }
+      }
+    },
+    "/api/yield-rankings": {
+      "get": {
+        "tags": [
+          "Yield"
+        ],
+        "summary": "Yield rankings",
+        "description": "Yield-bearing stablecoin rankings with safety and benchmark-aware context.",
+        "operationId": "yieldRankings",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Successful response. See the public API reference for endpoint-specific payload fields.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JsonValue"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request"
+          },
+          "401": {
+            "description": "Missing or invalid API key"
+          },
+          "429": {
+            "description": "Rate limit exceeded"
+          },
+          "503": {
+            "description": "Service unavailable or cache not populated"
+          }
+        }
+      }
+    },
+    "/api/yield-history": {
+      "get": {
+        "tags": [
+          "Yield",
+          "History"
+        ],
+        "summary": "Yield history",
+        "description": "Historical yield observations for a stablecoin.",
+        "operationId": "yieldHistory",
+        "parameters": [
+          {
+            "name": "stablecoin",
+            "in": "query",
+            "required": false,
+            "description": "Optional canonical Pharos stablecoin ID filter.",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "days",
+            "in": "query",
+            "required": false,
+            "description": "Historical lookback window in days. Endpoint-specific bounds may apply.",
+            "schema": {
+              "type": "integer",
+              "minimum": 1
+            }
+          },
+          {
+            "name": "mode",
+            "in": "query",
+            "required": false,
+            "description": "Optional yield mode filter.",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "sourceKey",
+            "in": "query",
+            "required": false,
+            "description": "Optional source key filter.",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful response. See the public API reference for endpoint-specific payload fields.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JsonValue"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request"
+          },
+          "401": {
+            "description": "Missing or invalid API key"
+          },
+          "429": {
+            "description": "Rate limit exceeded"
+          },
+          "503": {
+            "description": "Service unavailable or cache not populated"
+          }
+        }
+      }
+    },
+    "/api/chains": {
+      "get": {
+        "tags": [
+          "Chains"
+        ],
+        "summary": "Chains",
+        "description": "Chain-level stablecoin aggregates with Chain Health Scores.",
+        "operationId": "chains",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Successful response. See the public API reference for endpoint-specific payload fields.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JsonValue"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request"
+          },
+          "401": {
+            "description": "Missing or invalid API key"
+          },
+          "429": {
+            "description": "Rate limit exceeded"
+          },
+          "503": {
+            "description": "Service unavailable or cache not populated"
+          }
+        }
+      }
+    },
+    "/api/non-usd-share": {
+      "get": {
+        "tags": [
+          "Market Structure",
+          "History"
+        ],
+        "summary": "Non-USD share",
+        "description": "Historical non-USD peg share series for market-structure views.",
+        "operationId": "nonUsdShare",
+        "parameters": [
+          {
+            "name": "days",
+            "in": "query",
+            "required": false,
+            "description": "Historical lookback window in days. Endpoint-specific bounds may apply.",
+            "schema": {
+              "type": "integer",
+              "minimum": 1
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful response. See the public API reference for endpoint-specific payload fields.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JsonValue"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request"
+          },
+          "401": {
+            "description": "Missing or invalid API key"
+          },
+          "429": {
+            "description": "Rate limit exceeded"
+          },
+          "503": {
+            "description": "Service unavailable or cache not populated"
+          }
+        }
+      }
+    },
+    "/api/supply-history": {
+      "get": {
+        "tags": [
+          "History"
+        ],
+        "summary": "Supply history",
+        "description": "Historical supply series for a stablecoin.",
+        "operationId": "supplyHistory",
+        "parameters": [
+          {
+            "name": "stablecoin",
+            "in": "query",
+            "required": false,
+            "description": "Optional canonical Pharos stablecoin ID filter.",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "days",
+            "in": "query",
+            "required": false,
+            "description": "Historical lookback window in days. Endpoint-specific bounds may apply.",
+            "schema": {
+              "type": "integer",
+              "minimum": 1
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful response. See the public API reference for endpoint-specific payload fields.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JsonValue"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request"
+          },
+          "401": {
+            "description": "Missing or invalid API key"
+          },
+          "429": {
+            "description": "Rate limit exceeded"
+          },
+          "503": {
+            "description": "Service unavailable or cache not populated"
+          }
+        }
+      }
+    },
+    "/api/safety-score-history": {
+      "get": {
+        "tags": [
+          "Risk",
+          "History"
+        ],
+        "summary": "Safety score history",
+        "description": "Long-range safety-score history for a stablecoin.",
+        "operationId": "safetyScoreHistory",
+        "parameters": [
+          {
+            "name": "stablecoin",
+            "in": "query",
+            "required": false,
+            "description": "Optional canonical Pharos stablecoin ID filter.",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "days",
+            "in": "query",
+            "required": false,
+            "description": "Historical lookback window in days. Endpoint-specific bounds may apply.",
+            "schema": {
+              "type": "integer",
+              "minimum": 1
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful response. See the public API reference for endpoint-specific payload fields.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JsonValue"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request"
+          },
+          "401": {
+            "description": "Missing or invalid API key"
+          },
+          "429": {
+            "description": "Rate limit exceeded"
+          },
+          "503": {
+            "description": "Service unavailable or cache not populated"
+          }
+        }
+      }
+    },
+    "/api/daily-digest": {
+      "get": {
+        "tags": [
+          "Digest"
+        ],
+        "summary": "Daily digest",
+        "description": "Latest AI-generated stablecoin market digest.",
+        "operationId": "dailyDigest",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Successful response. See the public API reference for endpoint-specific payload fields.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JsonValue"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request"
+          },
+          "401": {
+            "description": "Missing or invalid API key"
+          },
+          "429": {
+            "description": "Rate limit exceeded"
+          },
+          "503": {
+            "description": "Service unavailable or cache not populated"
+          }
+        }
+      }
+    },
+    "/api/digest-archive": {
+      "get": {
+        "tags": [
+          "Digest"
+        ],
+        "summary": "Digest archive",
+        "description": "Archive of daily and weekly digests.",
+        "operationId": "digestArchive",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Successful response. See the public API reference for endpoint-specific payload fields.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JsonValue"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request"
+          },
+          "401": {
+            "description": "Missing or invalid API key"
+          },
+          "429": {
+            "description": "Rate limit exceeded"
+          },
+          "503": {
+            "description": "Service unavailable or cache not populated"
+          }
+        }
+      }
+    },
+    "/api/digest-snapshot": {
+      "get": {
+        "tags": [
+          "Digest"
+        ],
+        "summary": "Digest snapshot",
+        "description": "Build-time digest context snapshot for a specific digest date.",
+        "operationId": "digestSnapshot",
+        "parameters": [
+          {
+            "name": "date",
+            "in": "query",
+            "required": true,
+            "description": "Digest date slug, for example `2026-03-16`.",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful response. See the public API reference for endpoint-specific payload fields.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JsonValue"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request"
+          },
+          "401": {
+            "description": "Missing or invalid API key"
+          },
+          "429": {
+            "description": "Rate limit exceeded"
+          },
+          "503": {
+            "description": "Service unavailable or cache not populated"
+          }
+        }
+      }
+    },
+    "/api/public-status-history": {
+      "get": {
+        "tags": [
+          "Status"
+        ],
+        "summary": "Public status history",
+        "description": "Public status timeline for the Pharos system.",
+        "operationId": "publicStatusHistory",
+        "parameters": [
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "description": "Maximum number of records to return.",
+            "schema": {
+              "type": "integer",
+              "minimum": 1
+            }
+          },
+          {
+            "name": "window",
+            "in": "query",
+            "required": false,
+            "description": "Status history window.",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "24h",
+                "7d",
+                "30d"
+              ]
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful response. See the public API reference for endpoint-specific payload fields.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JsonValue"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request"
+          },
+          "401": {
+            "description": "Missing or invalid API key"
+          },
+          "429": {
+            "description": "Rate limit exceeded"
+          },
+          "503": {
+            "description": "Service unavailable or cache not populated"
+          }
+        }
+      }
+    },
+    "/api/telegram-pulse": {
+      "get": {
+        "tags": [
+          "Status"
+        ],
+        "summary": "Telegram pulse",
+        "description": "Lightweight public telemetry for Telegram alert surfaces.",
+        "operationId": "telegramPulse",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Successful response. See the public API reference for endpoint-specific payload fields.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JsonValue"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request"
+          },
+          "401": {
+            "description": "Missing or invalid API key"
+          },
+          "429": {
+            "description": "Rate limit exceeded"
+          },
+          "503": {
+            "description": "Service unavailable or cache not populated"
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "ApiKeyAuth": {
+        "type": "apiKey",
+        "in": "header",
+        "name": "X-API-Key",
+        "description": "Required for protected public routes on https://api.pharos.watch."
+      }
+    },
+    "schemas": {
+      "JsonValue": {
+        "description": "Endpoint-specific JSON response. See https://pharos.watch/about/api/ for detailed contracts."
+      }
+    }
+  }
+}

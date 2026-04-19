@@ -1,0 +1,762 @@
+{
+  "info": {
+    "name": "Pharos API",
+    "description": "Postman collection for the Pharos stablecoin analytics API. Protected public routes require an X-API-Key on https://api.pharos.watch. Request a key in the Pharos Telegram channel and include intended endpoints, cadence, and volume. Static website datasets do not require a key.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "auth": {
+    "type": "apikey",
+    "apikey": [
+      {
+        "key": "key",
+        "value": "X-API-Key",
+        "type": "string"
+      },
+      {
+        "key": "value",
+        "value": "{{apiKey}}",
+        "type": "string"
+      },
+      {
+        "key": "in",
+        "value": "header",
+        "type": "string"
+      }
+    ]
+  },
+  "variable": [
+    {
+      "key": "apiBaseUrl",
+      "value": "https://api.pharos.watch"
+    },
+    {
+      "key": "siteBaseUrl",
+      "value": "https://pharos.watch"
+    },
+    {
+      "key": "stablecoinId",
+      "value": "usdt-tether"
+    },
+    {
+      "key": "reserveStablecoinId",
+      "value": "usdc-circle"
+    },
+    {
+      "key": "days",
+      "value": "90"
+    },
+    {
+      "key": "limit",
+      "value": "50"
+    },
+    {
+      "key": "digestDate",
+      "value": "2026-03-16"
+    }
+  ],
+  "item": [
+    {
+      "name": "Getting started",
+      "description": "Basic canaries and high-level market reads.",
+      "item": [
+        {
+          "name": "Health check",
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{apiBaseUrl}}/api/health",
+              "host": [
+                "{{apiBaseUrl}}"
+              ],
+              "path": [
+                "api",
+                "health"
+              ]
+            },
+            "description": "No-key health check for the public API host."
+          },
+          "response": []
+        },
+        {
+          "name": "Stablecoins list",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{apiBaseUrl}}/api/stablecoins",
+              "host": [
+                "{{apiBaseUrl}}"
+              ],
+              "path": [
+                "api",
+                "stablecoins"
+              ]
+            },
+            "description": "Current stablecoin list with supply, price, peg, chain distribution, and freshness headers."
+          },
+          "response": []
+        },
+        {
+          "name": "Stablecoin detail",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{apiBaseUrl}}/api/stablecoin/{{stablecoinId}}",
+              "host": [
+                "{{apiBaseUrl}}"
+              ],
+              "path": [
+                "api",
+                "stablecoin",
+                "{{stablecoinId}}"
+              ]
+            },
+            "description": "Full per-coin analytics dossier for a canonical Pharos stablecoin ID."
+          },
+          "response": []
+        },
+        {
+          "name": "Stablecoin summary",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{apiBaseUrl}}/api/stablecoin-summary/{{stablecoinId}}",
+              "host": [
+                "{{apiBaseUrl}}"
+              ],
+              "path": [
+                "api",
+                "stablecoin-summary",
+                "{{stablecoinId}}"
+              ]
+            },
+            "description": "Lightweight per-coin price and aggregate supply snapshot."
+          },
+          "response": []
+        },
+        {
+          "name": "Stablecoin reserves",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{apiBaseUrl}}/api/stablecoin-reserves/{{reserveStablecoinId}}",
+              "host": [
+                "{{apiBaseUrl}}"
+              ],
+              "path": [
+                "api",
+                "stablecoin-reserves",
+                "{{reserveStablecoinId}}"
+              ]
+            },
+            "description": "Live or fallback reserve composition where Pharos has reserve coverage."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Risk and market structure",
+      "description": "Stablecoin risk, peg, liquidity, flow, and dependency data.",
+      "item": [
+        {
+          "name": "Peg summary",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{apiBaseUrl}}/api/peg-summary",
+              "host": [
+                "{{apiBaseUrl}}"
+              ],
+              "path": [
+                "api",
+                "peg-summary"
+              ]
+            },
+            "description": "Per-coin peg scores plus aggregate peg-monitoring summary."
+          },
+          "response": []
+        },
+        {
+          "name": "Depeg events",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{apiBaseUrl}}/api/depeg-events?stablecoin=%7B%7BstablecoinId%7D%7D&limit=%7B%7Blimit%7D%7D&offset=0",
+              "host": [
+                "{{apiBaseUrl}}"
+              ],
+              "path": [
+                "api",
+                "depeg-events"
+              ],
+              "query": [
+                {
+                  "key": "stablecoin",
+                  "value": "{{stablecoinId}}"
+                },
+                {
+                  "key": "limit",
+                  "value": "{{limit}}"
+                },
+                {
+                  "key": "offset",
+                  "value": "0"
+                }
+              ]
+            },
+            "description": "Historical and active depeg events, filterable by stablecoin."
+          },
+          "response": []
+        },
+        {
+          "name": "DEX liquidity",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{apiBaseUrl}}/api/dex-liquidity",
+              "host": [
+                "{{apiBaseUrl}}"
+              ],
+              "path": [
+                "api",
+                "dex-liquidity"
+              ]
+            },
+            "description": "DEX liquidity scores, top pools, chain/protocol breakdowns, and quality metadata."
+          },
+          "response": []
+        },
+        {
+          "name": "Report cards",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{apiBaseUrl}}/api/report-cards",
+              "host": [
+                "{{apiBaseUrl}}"
+              ],
+              "path": [
+                "api",
+                "report-cards"
+              ]
+            },
+            "description": "Safety report-card snapshot across liquidity, resilience, decentralization, dependency, and peg stability."
+          },
+          "response": []
+        },
+        {
+          "name": "Redemption backstops",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{apiBaseUrl}}/api/redemption-backstops",
+              "host": [
+                "{{apiBaseUrl}}"
+              ],
+              "path": [
+                "api",
+                "redemption-backstops"
+              ]
+            },
+            "description": "Modeled issuer/protocol redemption routes and effective-exit scoring for configured assets."
+          },
+          "response": []
+        },
+        {
+          "name": "Stress signals",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{apiBaseUrl}}/api/stress-signals?stablecoin=%7B%7BstablecoinId%7D%7D&days=%7B%7Bdays%7D%7D",
+              "host": [
+                "{{apiBaseUrl}}"
+              ],
+              "path": [
+                "api",
+                "stress-signals"
+              ],
+              "query": [
+                {
+                  "key": "stablecoin",
+                  "value": "{{stablecoinId}}"
+                },
+                {
+                  "key": "days",
+                  "value": "{{days}}"
+                }
+              ]
+            },
+            "description": "DEWS-style stress signals for the stablecoin universe or one selected asset."
+          },
+          "response": []
+        },
+        {
+          "name": "Stability index",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{apiBaseUrl}}/api/stability-index?detail=true",
+              "host": [
+                "{{apiBaseUrl}}"
+              ],
+              "path": [
+                "api",
+                "stability-index"
+              ],
+              "query": [
+                {
+                  "key": "detail",
+                  "value": "true"
+                }
+              ]
+            },
+            "description": "Latest Pharos Stability Index with detail payload and history."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Flows, blacklist, yield, and chains",
+      "description": "Operational and market-structure surfaces beyond price and peg data.",
+      "item": [
+        {
+          "name": "Blacklist events",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{apiBaseUrl}}/api/blacklist?stablecoin=%7B%7BstablecoinId%7D%7D",
+              "host": [
+                "{{apiBaseUrl}}"
+              ],
+              "path": [
+                "api",
+                "blacklist"
+              ],
+              "query": [
+                {
+                  "key": "stablecoin",
+                  "value": "{{stablecoinId}}"
+                }
+              ]
+            },
+            "description": "Freeze and blacklist events with optional stablecoin/chain filters."
+          },
+          "response": []
+        },
+        {
+          "name": "Blacklist summary",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{apiBaseUrl}}/api/blacklist-summary",
+              "host": [
+                "{{apiBaseUrl}}"
+              ],
+              "path": [
+                "api",
+                "blacklist-summary"
+              ]
+            },
+            "description": "Blacklist summary statistics, chart data, and chain options."
+          },
+          "response": []
+        },
+        {
+          "name": "Mint and burn flows",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{apiBaseUrl}}/api/mint-burn-flows?stablecoin=%7B%7BstablecoinId%7D%7D&hours=168",
+              "host": [
+                "{{apiBaseUrl}}"
+              ],
+              "path": [
+                "api",
+                "mint-burn-flows"
+              ],
+              "query": [
+                {
+                  "key": "stablecoin",
+                  "value": "{{stablecoinId}}"
+                },
+                {
+                  "key": "hours",
+                  "value": "168"
+                }
+              ]
+            },
+            "description": "Mint/burn flow aggregates for the selected window."
+          },
+          "response": []
+        },
+        {
+          "name": "Mint and burn events",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{apiBaseUrl}}/api/mint-burn-events?stablecoin=%7B%7BstablecoinId%7D%7D&limit=%7B%7Blimit%7D%7D",
+              "host": [
+                "{{apiBaseUrl}}"
+              ],
+              "path": [
+                "api",
+                "mint-burn-events"
+              ],
+              "query": [
+                {
+                  "key": "stablecoin",
+                  "value": "{{stablecoinId}}"
+                },
+                {
+                  "key": "limit",
+                  "value": "{{limit}}"
+                }
+              ]
+            },
+            "description": "Individual mint/burn events for supported stablecoins."
+          },
+          "response": []
+        },
+        {
+          "name": "Yield rankings",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{apiBaseUrl}}/api/yield-rankings",
+              "host": [
+                "{{apiBaseUrl}}"
+              ],
+              "path": [
+                "api",
+                "yield-rankings"
+              ]
+            },
+            "description": "Yield-bearing stablecoin rankings with safety and benchmark-aware context."
+          },
+          "response": []
+        },
+        {
+          "name": "Chains",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{apiBaseUrl}}/api/chains",
+              "host": [
+                "{{apiBaseUrl}}"
+              ],
+              "path": [
+                "api",
+                "chains"
+              ]
+            },
+            "description": "Chain-level stablecoin aggregates with Chain Health Scores."
+          },
+          "response": []
+        },
+        {
+          "name": "Non-USD share",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{apiBaseUrl}}/api/non-usd-share?days=%7B%7Bdays%7D%7D",
+              "host": [
+                "{{apiBaseUrl}}"
+              ],
+              "path": [
+                "api",
+                "non-usd-share"
+              ],
+              "query": [
+                {
+                  "key": "days",
+                  "value": "{{days}}"
+                }
+              ]
+            },
+            "description": "Historical non-USD peg share series for market-structure views."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Historical data",
+      "description": "Per-asset and archive endpoints that should be polled less frequently.",
+      "item": [
+        {
+          "name": "Supply history",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{apiBaseUrl}}/api/supply-history?stablecoin=%7B%7BstablecoinId%7D%7D&days=365",
+              "host": [
+                "{{apiBaseUrl}}"
+              ],
+              "path": [
+                "api",
+                "supply-history"
+              ],
+              "query": [
+                {
+                  "key": "stablecoin",
+                  "value": "{{stablecoinId}}"
+                },
+                {
+                  "key": "days",
+                  "value": "365"
+                }
+              ]
+            },
+            "description": "Historical supply series for a stablecoin."
+          },
+          "response": []
+        },
+        {
+          "name": "DEX liquidity history",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{apiBaseUrl}}/api/dex-liquidity-history?stablecoin=%7B%7BstablecoinId%7D%7D&days=%7B%7Bdays%7D%7D",
+              "host": [
+                "{{apiBaseUrl}}"
+              ],
+              "path": [
+                "api",
+                "dex-liquidity-history"
+              ],
+              "query": [
+                {
+                  "key": "stablecoin",
+                  "value": "{{stablecoinId}}"
+                },
+                {
+                  "key": "days",
+                  "value": "{{days}}"
+                }
+              ]
+            },
+            "description": "Historical liquidity-score data for a stablecoin."
+          },
+          "response": []
+        },
+        {
+          "name": "Yield history",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{apiBaseUrl}}/api/yield-history?stablecoin=%7B%7BstablecoinId%7D%7D&days=%7B%7Bdays%7D%7D",
+              "host": [
+                "{{apiBaseUrl}}"
+              ],
+              "path": [
+                "api",
+                "yield-history"
+              ],
+              "query": [
+                {
+                  "key": "stablecoin",
+                  "value": "{{stablecoinId}}"
+                },
+                {
+                  "key": "days",
+                  "value": "{{days}}"
+                }
+              ]
+            },
+            "description": "Historical yield observations for a stablecoin."
+          },
+          "response": []
+        },
+        {
+          "name": "Safety score history",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{apiBaseUrl}}/api/safety-score-history?stablecoin=%7B%7BstablecoinId%7D%7D&days=3650",
+              "host": [
+                "{{apiBaseUrl}}"
+              ],
+              "path": [
+                "api",
+                "safety-score-history"
+              ],
+              "query": [
+                {
+                  "key": "stablecoin",
+                  "value": "{{stablecoinId}}"
+                },
+                {
+                  "key": "days",
+                  "value": "3650"
+                }
+              ]
+            },
+            "description": "Long-range safety-score history for a stablecoin."
+          },
+          "response": []
+        },
+        {
+          "name": "Daily digest",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{apiBaseUrl}}/api/daily-digest",
+              "host": [
+                "{{apiBaseUrl}}"
+              ],
+              "path": [
+                "api",
+                "daily-digest"
+              ]
+            },
+            "description": "Latest AI-generated market digest."
+          },
+          "response": []
+        },
+        {
+          "name": "Digest archive",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{apiBaseUrl}}/api/digest-archive",
+              "host": [
+                "{{apiBaseUrl}}"
+              ],
+              "path": [
+                "api",
+                "digest-archive"
+              ]
+            },
+            "description": "Archive of daily and weekly digests."
+          },
+          "response": []
+        },
+        {
+          "name": "Digest snapshot",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{apiBaseUrl}}/api/digest-snapshot?date=%7B%7BdigestDate%7D%7D",
+              "host": [
+                "{{apiBaseUrl}}"
+              ],
+              "path": [
+                "api",
+                "digest-snapshot"
+              ],
+              "query": [
+                {
+                  "key": "date",
+                  "value": "{{digestDate}}"
+                }
+              ]
+            },
+            "description": "Build-time digest context snapshot for a specific digest date."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Static datasets",
+      "description": "Website-hosted public datasets. These do not require a Pharos API key.",
+      "item": [
+        {
+          "name": "Stablecoin Cemetery dataset - JSON",
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{siteBaseUrl}}/datasets/stablecoin-cemetery.json",
+              "host": [
+                "{{siteBaseUrl}}"
+              ],
+              "path": [
+                "datasets",
+                "stablecoin-cemetery.json"
+              ]
+            },
+            "description": "Citation-ready JSON export of failed, abandoned, depegged, and discontinued stablecoins."
+          },
+          "response": []
+        },
+        {
+          "name": "Stablecoin Cemetery dataset - CSV",
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{siteBaseUrl}}/datasets/stablecoin-cemetery.csv",
+              "host": [
+                "{{siteBaseUrl}}"
+              ],
+              "path": [
+                "datasets",
+                "stablecoin-cemetery.csv"
+              ]
+            },
+            "description": "Tabular CSV export of the Stablecoin Cemetery dataset."
+          },
+          "response": []
+        },
+        {
+          "name": "LLM index",
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{siteBaseUrl}}/llms.txt",
+              "host": [
+                "{{siteBaseUrl}}"
+              ],
+              "path": [
+                "llms.txt"
+              ]
+            },
+            "description": "LLM-facing route and documentation index for Pharos."
+          },
+          "response": []
+        }
+      ]
+    }
+  ]
+}

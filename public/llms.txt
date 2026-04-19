@@ -36,6 +36,9 @@
 ## API
 
 - [API Reference](https://pharos.watch/about/api/): Public and ops lanes, auth model, endpoint catalogue.
+- [OpenAPI spec](https://pharos.watch/openapi.json): Machine-readable OpenAPI 3.1 endpoint catalogue for the Pharos API.
+- [Postman collection](https://pharos.watch/postman/pharos-api.postman_collection.json): Importable Pharos API collection for external integrations.
+- [Postman environment](https://pharos.watch/postman/pharos-api.postman_environment.json): Production environment template with API key placeholder.
 - [About](https://pharos.watch/about/): Project context and data sources.
 
 ## Changelog

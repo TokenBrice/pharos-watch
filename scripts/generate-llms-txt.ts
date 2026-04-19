@@ -113,6 +113,21 @@ const methodologyLinks = [
 
 const apiLinks = [
   ["API Reference", absolute("/about/api/"), "Public and ops lanes, auth model, endpoint catalogue."],
+  [
+    "OpenAPI spec",
+    absolute("/openapi.json"),
+    "Machine-readable OpenAPI 3.1 endpoint catalogue for the Pharos API.",
+  ],
+  [
+    "Postman collection",
+    absolute("/postman/pharos-api.postman_collection.json"),
+    "Importable Pharos API collection for external integrations.",
+  ],
+  [
+    "Postman environment",
+    absolute("/postman/pharos-api.postman_environment.json"),
+    "Production environment template with API key placeholder.",
+  ],
   ["About", absolute("/about/"), "Project context and data sources."],
 ] as const;
 

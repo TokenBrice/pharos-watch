@@ -16,6 +16,8 @@ The runtime now uses three HTTP lanes:
 
 Static dataset exports are served from the public website, not from the Worker API, and do not require `X-API-Key`. The Stablecoin Cemetery export is available as JSON at `https://pharos.watch/datasets/stablecoin-cemetery.json` and CSV at `https://pharos.watch/datasets/stablecoin-cemetery.csv`.
 
+Machine-readable integration artifacts are also served from the public website for onboarding. The OpenAPI endpoint catalogue is available at `https://pharos.watch/openapi.json`, and Postman artifacts are available at `https://pharos.watch/postman/pharos-api.postman_collection.json` plus `https://pharos.watch/postman/pharos-api.postman_environment.json`. Import both Postman files, then replace the environment `apiKey` placeholder with a real `X-API-Key`.
+
 Browser consumers should use same-origin `/_site-data/*` via the frontend helpers in `src/lib/api.ts`. In production, that Pages proxy targets `https://site-api.pharos.watch` through `SITE_API_ORIGIN`. Direct integrations, CI smoke, and build-time sync scripts should target `https://api.pharos.watch`.
 
 The direct Worker cache profiles below describe responses from `api.pharos.watch` / `site-api.pharos.watch`. The Pages `/_site-data/*` proxy adds a separate same-origin Cache API layer for successful responses without `Set-Cookie`; this can cache even a direct Worker route whose own profile is `no-store`, such as `/api/health`.

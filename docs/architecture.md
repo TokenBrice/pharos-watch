@@ -123,6 +123,8 @@ Shared runtime host/origin defaults live in `shared/lib/runtime-origins.json` an
 
 The Stablecoin Cemetery public dataset export is static Pages data, not a Worker API route. `scripts/generate-cemetery-dataset.ts` reads `shared/data/dead-stablecoins.json` and writes `public/datasets/stablecoin-cemetery.json` plus `public/datasets/stablecoin-cemetery.csv` during `prebuild`; `npm run check:cemetery-dataset` guards drift in CI.
 
+The API integration artifacts follow the same static-export pattern. `scripts/generate-postman-collection.ts` writes `public/postman/pharos-api.postman_collection.json` plus `public/postman/pharos-api.postman_environment.json`, and `scripts/generate-openapi-spec.ts` writes `public/openapi.json` during `prebuild`; `npm run check:postman` and `npm run check:openapi` guard drift.
+
 Worker cron refactors should place reusable stage contracts under `worker/src/cron/shared/`. The seed contract layer in `worker/src/cron/shared/stage-contracts.ts` defines the shared vocabulary for stage progress, abort results, and handoff context so large cron decompositions do not each invent incompatible result shapes.
 
 ## Frontend Runtime And SEO Surface

@@ -320,6 +320,30 @@ export default async function AboutApiPage() {
                 </Link>
                 .
               </p>
+              <p className="max-w-3xl text-sm leading-relaxed text-muted-foreground">
+                Prefer machine-readable tooling? Download the{" "}
+                <a
+                  href="/openapi.json"
+                  className="pharos-focus-ring rounded-sm underline underline-offset-4 hover:text-foreground"
+                >
+                  OpenAPI spec
+                </a>
+                , or import the{" "}
+                <a
+                  href="/postman/pharos-api.postman_collection.json"
+                  className="pharos-focus-ring rounded-sm underline underline-offset-4 hover:text-foreground"
+                >
+                  Pharos API collection
+                </a>{" "}
+                with the{" "}
+                <a
+                  href="/postman/pharos-api.postman_environment.json"
+                  className="pharos-focus-ring rounded-sm underline underline-offset-4 hover:text-foreground"
+                >
+                  production environment template
+                </a>
+                .
+              </p>
             </div>
           </div>
 
