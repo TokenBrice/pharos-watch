@@ -11,13 +11,13 @@ Triggered by `StatusCause.code`:
 ## First checks
 
 1. **Cloudflare D1 dashboard:** confirm the `stablecoin-db` database is reachable and not in maintenance.
-2. **Recent deploys:** `wrangler deployments list` — did a new Worker version ship with a migration that's still applying? Migrations apply *before* the Worker is live, so a hang here is rare but possible for very large backfills.
+2. **Recent deploys:** `cd worker && npx --no-install wrangler deployments list` — did a new Worker version ship with a migration that's still applying? Migrations apply *before* the Worker is live, so a hang here is rare but possible for very large backfills.
 3. **D1 region:** check for regional outages at https://www.cloudflarestatus.com/.
 
 ## Remediation
 
-- If the database is reachable but the Worker can't see it, the binding may have drifted. Re-check `worker/wrangler.toml` → `[[d1_databases]]` block for correct `database_id`. A `wrangler deploy` with a corrected binding restores connectivity.
-- If a migration is mid-apply, wait it out. Check `wrangler d1 migrations list stablecoin-db` to confirm state.
+- If the database is reachable but the Worker can't see it, the binding may have drifted. Re-check `worker/wrangler.toml` → `[[d1_databases]]` block for correct `database_id`. Use the standard production deploy workflow, or an equivalent Worker Versions upload/preview-smoke/promote sequence, after correcting the binding.
+- If a migration is mid-apply, wait it out. Check `cd worker && npx --no-install wrangler d1 migrations list stablecoin-db --remote` to confirm state.
 - If a transient network issue, the next `status-self-check` cron (every 15 min) will self-clear. No manual action needed once connectivity recovers.
 
 ## Prevention

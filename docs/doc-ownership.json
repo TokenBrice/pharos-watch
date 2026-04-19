@@ -18,13 +18,13 @@
     {
       "name": "api-surface",
       "sources": ["shared/lib/api-endpoints/**", "worker/src/routes/**", "worker/src/router.ts", "worker/src/api/**", "src/hooks/api-hooks.ts", "src/lib/api.ts"],
-      "docs": ["docs/api-endpoint-authoring.md", "docs/api-reference.md", "docs/architecture.md", "docs/data-flow-map.md", "docs/worker-infrastructure.md"],
+      "docs": ["docs/api-endpoint-authoring.md", "docs/api-reference.md", "docs/architecture.md", "docs/data-flow-map.md", "docs/worker-infrastructure.md", "docs/digest-pipeline.md", "docs/supply-snapshot.md"],
       "notes": ["Route flags, auth lanes, cache profiles, and site-data allowlists should stay in sync with endpoint behavior."]
     },
     {
       "name": "worker-cron",
       "sources": ["shared/lib/cron-jobs.ts", "shared/lib/scheduled-runner-registry.ts", "worker/wrangler.toml", "worker/src/handlers/scheduled/**", "worker/src/cron/**"],
-      "docs": ["docs/worker-infrastructure.md", "docs/worker-and-api-limits.md", "docs/data-flow-map.md", "docs/deployment-process.md"],
+      "docs": ["docs/worker-infrastructure.md", "docs/worker-and-api-limits.md", "docs/data-flow-map.md", "docs/deployment-process.md", "docs/digest-pipeline.md", "docs/supply-snapshot.md"],
       "notes": ["Trigger slots, connection budgets, and status tracking are coupled."]
     },
     {
@@ -66,7 +66,7 @@
     {
       "name": "validation-and-ci",
       "sources": ["scripts/**", ".github/workflows/**", "package.json", "worker/package.json"],
-      "docs": ["docs/testing.md", "docs/deployment-process.md", "docs/scripts.md"],
+      "docs": ["docs/testing.md", "docs/deployment-process.md", "docs/scripts.md", "docs/digest-pipeline.md"],
       "notes": ["Keep script inventory and CI descriptions aligned with behavior changes."]
     }
   ]

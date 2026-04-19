@@ -19,7 +19,7 @@ Pharos uses a 3-layer design token architecture that separates raw values from m
 Raw values with no semantic meaning. Do not reference directly in components unless a documented local visualization intentionally needs a primitive ramp before a semantic token exists.
 
 - **Color scales** — 9 hue families (neutral, blue, green, teal, amber, orange, red, purple, pink) plus the dedicated `--p-frost-blue` brand accent; scale stops run 50–900 in OKLch (neutral and red extend to 950; neutral has additional 850/925/975 stops)
-- **Spacing** — 4px-grid scale from `--p-space-0` to `--p-space-20`
+- **Spacing** — 4px-based scale from `--p-space-0` to `--p-space-20`, with `--p-space-0-5` (2px) and `--p-space-1-5` (6px) half steps for tight UI alignment
 - **Typography** — Font sizes (`--p-text-xs` to `--p-text-5xl`), line heights, tracking
 - **Radius** — `--p-radius-none` to `--p-radius-full`
 
@@ -103,7 +103,7 @@ For colors needed at JS runtime (Recharts, canvas, dynamic styles):
 | `src/lib/chart-colors.ts`    | `CHART_PALETTE`, `CHART_BLUE`, `CHART_GREEN`, `CHART_ORANGE`, `CHART_CYAN`, `CHART_RED`, `CHART_SLATE`, `CHART_AMBER`, `CHART_HEIGHT`, `RECHARTS_TOOLTIP_STYLES` | Shared chart fill/stroke colors, chart-height utility, and tooltip styles (also has module-private `TOKEN` map) |
 | `src/lib/severity-colors.ts` | `deviationColorHex()`, `deviationColorClass()`, tier helpers                | Peg-deviation and score-tier helpers (text classes are light/dark aware) |
 
-These maps use the same hex values as the `--*-hex` CSS custom properties in `semantic.css`.
+These maps use the same hex values as the `--*-hex` CSS custom properties in `semantic.css` where CSS companions exist. Some runtime-only exports, such as threat bands, signal colors, and brand helpers, live only in the JS maps.
 
 ## Usage Guidelines
 
@@ -116,7 +116,7 @@ These maps use the same hex values as the `--*-hex` CSS custom properties in `se
 
 ### Don't
 
-- Reference primitives (`--p-blue-500`) directly in components, except for documented local visualizations that intentionally need a primitive ramp before a semantic token exists
+- Reference primitives (`--p-blue-500`) directly in components, except for documented local visualizations that intentionally need a primitive ramp before a semantic token exists. Current exceptions include the PSI lead card's red/amber primitive ramp in `src/components/kpi-bar.tsx`.
 - Hardcode hex values in chart components — use the JS token maps
 - Edit shadcn/ui primitives in `src/components/ui/` to use tokens
 - Define one-off color variables in individual component files

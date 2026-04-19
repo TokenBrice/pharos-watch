@@ -317,7 +317,7 @@ The wire table shows each digest as a compact row: **date** (monospace, e.g. "27
 
 Daily detail pages use slugs like `/digest/2026-03-24/`. Weekly recap pages use `/digest/2026-03-24-weekly/`; the archive client builds those slugs from `digestType === "weekly"` and the snapshot API accepts the matching `?date=YYYY-MM-DD-weekly` query. The snapshot API filters target rows by requested type, so daily and weekly rows generated on the same UTC date cannot shadow each other.
 
-Each detail page shows the short summary intro (`text`) followed by every extended editorial paragraph plus 8 contextual data cards (Market Snapshot, Stability Index, Supply Mover, Active Depegs, Blacklist Activity, Safety Scores, Supply Velocity, Resolved Depegs). Includes JSON-LD Article structured data and prev/next navigation.
+Each detail page shows the short summary intro (`text`) followed by every extended editorial paragraph plus up to 10 data-dependent contextual cards (Market Snapshot, Stability Index, Supply Mover, Active Depegs, Blacklist Activity, Safety Scores, Yield Anomalies, DEX Liquidity Shifts, Supply Velocity, Resolved Depegs). Includes JSON-LD Article structured data and prev/next navigation.
 
 ---
 
@@ -326,7 +326,7 @@ Each detail page shows the short summary intro (`text`) followed by every extend
 **Script:** `scripts/sync-digests.ts`
 **Command:** `npm run sync:digests`
 
-Fetches `GET /api/digest-archive` from an explicit API source, transforms it to the `data/digests.json` format (`date`, `title`, `text`, `extended`, `generatedAt`), and writes the file. The script accepts `--api-url` or `DIGEST_API_URL`, and falls back to `SMOKE_API_BASE` / `API_BASE_URL` when those are already set.
+Fetches `GET /api/digest-archive` from an explicit API source, transforms it to the `data/digests.json` format (`date`, `digestType`, `editionNumber`, `title`, `text`, `extended`, `generatedAt`), and writes the file. Weekly entries use a `YYYY-MM-DD-weekly` date slug so they cannot shadow daily entries for the same UTC day. The script accepts `--api-url` or `DIGEST_API_URL`, optional `--output`, forwards `DIGEST_API_KEY` when set, and falls back to `SMOKE_API_BASE` / `API_BASE_URL` when those are already set.
 
 For local/manual use, point it at the intended environment explicitly:
 

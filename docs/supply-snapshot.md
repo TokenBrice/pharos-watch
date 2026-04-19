@@ -183,7 +183,7 @@ ORDER BY snapshot_date ASC
 
 ### GET /api/stablecoin/{id} (detail --- supply_history fallback)
 
-For CoinGecko-only coins, commodity tokens (gold/silver), or any coin where external detail APIs return empty or stale history, the detail endpoint falls back to the `supply_history` table and reconstructs the `DetailToken` format. CoinGecko-derived history is treated as stale when its newest point is more than 72 hours behind wall clock time, which prevents per-coin charts from freezing on an old market-cap series when D1 already has fresher daily snapshots.
+For CoinGecko-only coins and commodity tokens (gold/silver), empty or stale external detail history falls back to the `supply_history` table and reconstructs the `DetailToken` format. DefiLlama-backed detail falls back to `supply_history` on upstream failure, circuit-open, parse-error, or exception paths; it does not currently use the empty/stale-history fallback unless the DefiLlama handler is extended. CoinGecko-derived history is treated as stale when its newest point is more than 72 hours behind wall clock time, which prevents per-coin charts from freezing on an old market-cap series when D1 already has fresher daily snapshots.
 
 ### POST /api/backfill-supply-history (admin)
 

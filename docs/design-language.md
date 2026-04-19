@@ -91,7 +91,8 @@ Most routes use:
 - Wrapper: `space-y-6`
 - Title block: `space-y-2.5`
 - Breadcrumb: `flex items-center gap-1.5 text-xs text-muted-foreground sm:text-sm`
-- Title row: `flex max-w-full flex-wrap items-start gap-x-3 gap-y-2`
+- Title row outer layer: `flex max-w-full flex-wrap items-start justify-between gap-x-3 gap-y-3`
+- Title row inner text/action layer: `flex max-w-4xl flex-wrap items-center gap-x-3 gap-y-2`
 
 ### Longform Pages
 
@@ -108,9 +109,9 @@ Behavioral contract: [Start Page](./start-page.md)
 
 - Wrapper: `mx-auto max-w-6xl space-y-8`
 - Hero shell: large rounded plotting-board surface with editorial onboarding copy on the left and a route board on the right
-- Route board: staggered CTA cards over subtle route-trace lines, with the dominant top and bottom routes spanning two columns on `sm+`
+- Route board: uniform goal cards in `sm:grid-cols-2 xl:grid-cols-3`
 - Mobile top fold compresses the hero copy so the first route card stays visible above the fold
-- Desktop hero keeps the route board on the right while the left column stacks headline, utility band, and a 2x2 fact grid beneath
+- Desktop hero keeps the route board on the right while the left column stacks headline copy and `HeroEscapeHatch`
 - Desktop support content under the headline now stays in a clean vertical stack: CTA row first, then experienced-user note, signal brief, and route-planner note
 - Follow-up sections use glossary cards, flattened feature-atlas groups, and shortcut cards instead of one long prose stream
 
@@ -120,17 +121,18 @@ Home keeps a single `sr-only` page `h1` for semantics and uses a non-heading top
 
 Behavioral contract: [Homepage](./homepage.md)
 
-- Desktop masthead strip: `pharos-card-shell hidden lg:flex ... px-5 py-5`
+- Tablet + desktop masthead strip: `pharos-card-shell hidden md:flex ... px-5 py-5`
 - Start Here onboarding callout: large CTA card appears only during a browser's first homepage session and retires once `/start/` has been opened, so repeat visitors drop straight into live data
 - Snapshot shell: PSI-dominant first card + four supporting desktop KPI panels; mobile and tablet collapse to a 2x2 compact tile grid that includes net mint/burn flow
-- Snapshot PSI lead card hides the `Live market health`, `24h`, and `7d` pills from the desktop switch (`lg`, `1024px`) through `1599px` to protect the score/band lockup; outside that band it keeps the full desktop treatment
+- Snapshot PSI lead card always renders the three compact delta pills (`24h`, `7d`, `30d`) beside the score/band lockup
 - Digest preview: broadsheet split with a mono masthead, hairline `Executive Summary` label, newspaper-style `Newsreader` title on the left, and the lead paragraph plus CTA rail on the right at desktop
 
 ### Stablecoin Detail (Special)
 
 Detail pages include an `sr-only` `h1` and visually foreground the coin name with:
 
-- `h2`: `text-2xl font-extrabold tracking-tighter`
+- Mobile `h2`: `text-2xl font-black tracking-tighter`
+- Desktop `h2`: `text-3xl font-black tracking-tighter`
 - Section and block titles across the detail route use `text-lg font-semibold tracking-tight`
 - Detail metadata badges that qualify a section title (for example liquidity source coverage) sit inline with the title instead of dropping onto a separate row
 - The `Contract Addresses` block shows a one-row, six-item preview on mobile with a `Show all` toggle; `sm+` continues to show the full icon grid
@@ -187,7 +189,7 @@ This is a **one-off artistic treatment** — the patterns are not intended for r
 | Shared page title utility | `pharos-page-title`                                                                           |
 | Digest article title      | Newsreader via `digestDisplay.className`, `text-[clamp(2.2rem,5vw,3.5rem)]`, `font-semibold`, `leading-[0.92]`, `tracking-[-0.04em]` |
 | Homepage digest hero      | `Newsreader`, `font-semibold`, `text-[clamp(2.8rem,6vw,5rem)]`, `leading-[0.88]`, `tracking-[-0.045em]` |
-| Home logotype label       | `text-[1.02rem] font-mono font-semibold uppercase tracking-[0.16em]`                         |
+| Home logotype label       | `text-[1.06rem] font-mono font-semibold uppercase tracking-[0.16em]`                         |
 | Primary section heading   | `leading-none font-semibold`                                                                 |
 | Secondary section heading | `text-lg font-semibold` or `text-lg font-semibold tracking-tight`                            |
 | Table/section kicker      | `text-[12px] sm:text-[11px] font-semibold uppercase tracking-[0.12em] text-muted-foreground` |
@@ -202,7 +204,7 @@ This is a **one-off artistic treatment** — the patterns are not intended for r
 | Small metadata     | `text-xs text-muted-foreground`                |
 | Shared metadata    | `pharos-meta`                                 |
 | Card micro-labels  | `text-xs uppercase tracking-wide`              |
-| Footer disclaimer  | `text-center text-xs text-muted-foreground/60` |
+| Footer legal group | `flex flex-wrap items-center gap-x-4 gap-y-2 text-xs text-muted-foreground` |
 
 ### Numeric Language
 
@@ -226,7 +228,7 @@ Numbers are consistently mono/tabular where precision matters:
 
 - KPI grid (dense analytics): `grid grid-cols-2 gap-3 sm:gap-5 lg:grid-cols-5`
 - Home feature grid: `grid grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-5`
-- Home snapshot desktop partition: `hidden lg:grid grid-cols-[minmax(0,1.1fr)_repeat(4,minmax(0,0.92fr))] divide-x divide-border/50`
+- Home snapshot desktop partition: `hidden lg:grid grid-cols-[minmax(0,1.1fr)_repeat(4,minmax(0,0.92fr))] divide-x divide-border/30`
 
 ### Chip/Pill Layout
 
@@ -367,10 +369,10 @@ Tracked token logos now render inside a shared neutral container:
 ### Feature Status Badges
 
 - **Mature**: emerald badge (`bg-emerald-500/15 ... border-emerald-500/30`)
-- **Experimental**: amber badge (`bg-amber-500/15 ... border-amber-500/30`)
+- **Beta**: amber badge (`bg-amber-500/15 ... border-amber-500/30`); both `beta` and the `experimental` alias render the `Beta` label
 - **Testing in Prod**: orange badge (`bg-orange-500/15 ... border-orange-500/30`)
 - Status text should follow light/dark pairing (`text-*-700 dark:text-*-400`) instead of fixed `text-*-300/400` tones.
-- Badge copy is now terse (`Mature`, `Experimental`, `Testing in Prod`) instead of repeating “Feature Status”.
+- Badge copy is now terse (`Mature`, `Beta`, `Testing in Prod`) instead of repeating “Feature Status”.
 
 ### Version Badge
 

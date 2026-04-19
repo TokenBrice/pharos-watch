@@ -16,6 +16,8 @@ The runtime now uses three HTTP lanes:
 
 Browser consumers should use same-origin `/_site-data/*` via the frontend helpers in `src/lib/api.ts`. In production, that Pages proxy targets `https://site-api.pharos.watch` through `SITE_API_ORIGIN`. Direct integrations, CI smoke, and build-time sync scripts should target `https://api.pharos.watch`.
 
+The direct Worker cache profiles below describe responses from `api.pharos.watch` / `site-api.pharos.watch`. The Pages `/_site-data/*` proxy adds a separate same-origin Cache API layer for successful responses without `Set-Cookie`; this can cache even a direct Worker route whose own profile is `no-store`, such as `/api/health`.
+
 ## Public API Auth
 
 Unless a route is explicitly called out below as exempt, requests to `https://api.pharos.watch` must send:
@@ -169,7 +171,7 @@ When a limit is exceeded, the API returns `429 Too Many Requests`:
 
 Rate-limited responses include the retry delay in the HTTP `Retry-After` header when the worker can compute one.
 
-If D1-backed limiter bookkeeping fails repeatedly, the worker fails closed after 3 consecutive limiter errors and returns `503 Service Unavailable` with `{ "error": "Public API temporarily unavailable" }` plus `Retry-After: 60`. Treat this as an emergency limiter-health condition, not as successful quota exhaustion.
+If global public-IP limiter bookkeeping fails repeatedly, the worker fails closed after 3 consecutive limiter errors and returns `503 Service Unavailable` with `{ "error": "Public API temporarily unavailable" }` plus `Retry-After: 60`. Treat this as an emergency limiter-health condition, not as successful quota exhaustion. API-key traffic uses a separate per-key limiter; quota overages return `429` with `Retry-After` when available, and dependency failures do not use the same 3-strike public-IP emergency state unless the implementation changes.
 
 ### Retry Guidance
 
@@ -260,7 +262,7 @@ Full stablecoin list with current supply, price, chain breakdown, and FX rates. 
 
 **Response**
 
-```json
+```text
 {
   "peggedAssets": [StablecoinData, ...],
   "fxFallbackRates": { "peggedEUR": 1.082, "peggedGBP": 1.26 },
@@ -323,7 +325,7 @@ All upstream calls use `fetchWithRetry` with explicit per-request timeouts; on u
 
 **Response**
 
-```json
+```text
 {
   "tokens": [TokenPoint, ...]
 }
@@ -442,7 +444,7 @@ Returns chain-level stablecoin aggregates with Chain Health Scores. Computed on-
 
 **Response (`ChainsResponse`):**
 
-```json
+```text
 {
   "_meta": {
     "updatedAt": 1710500000,
@@ -609,7 +611,7 @@ Freeze, blacklist, block/unblock, account-pause, and token-destruction events fo
 
 **Response**
 
-```json
+```text
 {
   "events": [BlacklistEvent, ...],
   "total": 13422,
@@ -744,7 +746,7 @@ Peg deviation events (≥ 100 bps for USD-pegged, ≥ 150 bps for non-USD pegs).
 
 **Response**
 
-```json
+```text
 {
   "events": [DepegEvent, ...],
   "total": 4080,
@@ -804,7 +806,7 @@ Composite peg scores and aggregate statistics for tracked stablecoins. Scores ar
 
 **Response**
 
-```json
+```text
 {
   "coins": [PegSummaryCoin, ...],
   "summary": PegSummaryStats,
@@ -913,7 +915,7 @@ Safety ratings from [bluechip.org](https://bluechip.org) for covered stablecoins
 
 **Response:** Object keyed by Pharos stablecoin ID, plus top-level `_meta` freshness metadata.
 
-```json
+```text
 {
   "usdt-tether": BluechipRating,
   "usdc-circle": BluechipRating,
@@ -956,7 +958,7 @@ DEX liquidity scores, pool breakdowns, source-confidence metadata, and on-chain 
 
 **Response:** Object keyed by Pharos stablecoin ID plus a `__global__` aggregate sentinel row.
 
-```json
+```text
 {
   "usdt-tether": DexLiquidityData,
   "usdc-circle": DexLiquidityData,
@@ -1222,7 +1224,7 @@ Contextual data snapshot for a specific digest date — includes the digest's in
 
 **Response**
 
-```json
+```text
 {
   "date": "2026-02-27",
   "inputData": { "totalMcapUsd": 230000000000, "mcap7dDelta": 0.012, ... },
@@ -1552,7 +1554,7 @@ Stablecoin risk grade cards with dimension-level scores. Output includes 5 dimen
 
 **Response**
 
-```json
+```text
 {
   "cards": [ReportCard, ...],
   "dependencyGraph": {
@@ -1828,7 +1830,7 @@ Cache-backed yield rankings written by the `sync-yield-data` cron. The endpoint 
 
 **Response**
 
-```json
+```text
 {
   "rankings": [YieldRanking, ...],
   "riskFreeRate": 4.25,
@@ -1934,7 +1936,7 @@ Historical yield data for a single stablecoin. If a stored `warning_signals` pay
 
 **Response**
 
-```json
+```text
 {
   "current": {
     "date": 1772000000,
@@ -2014,7 +2016,7 @@ Mint/burn flow data across tracked stablecoins — aggregate gauge score, per-co
 
 **Response (aggregate mode — no `stablecoin` param)**
 
-```json
+```text
 {
   "gauge": {
     "score": 2.3,
@@ -2094,7 +2096,7 @@ Mint/burn flow data across tracked stablecoins — aggregate gauge score, per-co
 
 Returns per-chain breakdown and hourly timeseries for a single coin. Returns `404` if the stablecoin is not tracked for mint/burn flows.
 
-```json
+```text
 {
   "stablecoinId": "usdt-tether",
   "symbol": "USDT",
@@ -2140,7 +2142,7 @@ Paginated list of individual mint/burn events for a specific stablecoin. Events 
 
 **Response**
 
-```json
+```text
 {
   "events": [MintBurnEvent, ...],
   "total": 1234
@@ -2388,7 +2390,7 @@ Full admin dashboard: cron run history, cache freshness for all keys, data quali
 
 **Response shape:** `StatusResponse` (defined in `shared/types/index.ts`). The JSON below is illustrative rather than exhaustive; the canonical field list lives in `shared/types/status.ts` and currently includes diagnostics such as `summary.transitionsLast24h`, `priceProviderDiagnostics`, `gtProbe`, `cacheBlobSizes`, `reserveDrift`, `classificationWarnings`, and `reserveComposition.persistentlyStaleIndependentCoins`.
 
-```json
+```text
 {
   "timestamp": 1771856453,
   "dbHealthy": true,
@@ -3289,7 +3291,7 @@ Malformed `limit` / `offset` values return `400` instead of silently defaulting.
 
 **Response**
 
-```json
+```text
 {
   "candidates": [DiscoveryCandidate, ...],
   "total": 12

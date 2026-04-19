@@ -531,7 +531,7 @@ The `*/5 * * * *` digest-trigger poll slot exists in the scheduled runner regist
 
 - Jobs requiring <=1 external connection may share any slot with headroom >=2.
 - Jobs requiring >2 concurrent connections should get a dedicated trigger slot.
-- Never add a fetching job to a slot with headroom <=1 (budget rows 10, 11, and 14 are effectively full).
+- Never add a fetching job to a slot with headroom <=1 (budget rows 10, 11, and 13 are effectively full).
 
 ### Cron Error Handling Policy
 

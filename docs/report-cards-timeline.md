@@ -223,11 +223,11 @@ New types: `ChainRisk`, `CollateralQuality`, `CustodyModel`. Defaults inferred f
 |-----|-----------|------------|------------------|----------|
 | 25% | 20%      | 20%        | 10%              | 25%      |
 
-### v3.1 — Chain-risk penalty bump (Feb 26)
+### v3.0 note — Chain-risk penalty bump (Feb 26)
 
 **Commit:** `69ea4c9`
 
-Formal version bump recognizing the steeper chain-risk penalties already applied (stage1-l2 −15, established-alt-l1 −50, unproven −65).
+Unversioned note for the steeper chain-risk penalties already applied inside the v3.0 era (stage1-l2 −15, established-alt-l1 −50, unproven −65). This was not a machine-readable methodology version in `shared/lib/safety-score-version-data.ts`.
 
 ### v3.2 — Dependency type ceilings (Feb 27)
 

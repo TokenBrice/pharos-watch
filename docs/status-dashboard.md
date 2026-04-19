@@ -63,7 +63,7 @@ The active frontend operator mode is now:
   - Renders the fixed 30-day public `Status runway` with explicit labeling (`Last 30d`) so the hero summary keeps a stable scope even while the transition table is filtered
 - The public `Overview` lane uses flatter signal cards for mint/burn sync, blacklist ingestion, optional Telegram bot health, and impacted public surfaces
 - The public blacklist-ingestion card keeps historical low-ratio amount gaps visible, but only recent or threshold-crossing gaps inherit warning/stale treatment; this matches the shared blacklist gap thresholds instead of flagging any non-zero backlog as degraded
-- Public cache freshness tables show the shared cache-age ratio bands (`>8x` degraded, `>12x` stale), while the hero and impacted-surface callouts follow the full shared cache-impact floor: missing cache rows remain stale, and source-freshness or repeated cached-fallback mode can degrade/stale a lane even when the age ratio is still inside target
+- Public cache freshness tables show the shared cache-age ratio bands (`>8x` degraded, `>12x` stale), while the hero and impacted-surface callouts follow the full shared cache-impact floor: missing cache rows and stale source evidence remain stale, and cached-fallback mode degrades a lane even when the age ratio is still inside target. Degraded FX source freshness can still appear as an admin `/api/status` warning cause without becoming a public impacted-surface callout by itself.
 - The public mint/burn card, hero tile, and impacted-surface callout now follow the same backend lane contract as `/api/health`: sync freshness is primary, but a fresh cache still degrades publicly when the critical mint/burn lane's latest run is unhealthy
 - The public circuit-breaker hero tile, reliability summary badge, and public breaker table use the same public-impact circuit key filter as `/api/health`: `live-reserves:*` and `dexscreener-search` breaker states remain available in the raw health payload and admin reliability view, but they do not make the public `/status/` surface report an open public-impact breaker
 - Public `Overview` and `Reliability` lane shells use theme-aware tinted gradients with elevated inner cards so light mode keeps the same hierarchy without inheriting the dark-only monitor slabs
@@ -395,11 +395,11 @@ The UI uses that block plus `crons["dispatch-telegram-alerts"].lastRun.metadata`
 
 `status-self-check` runs on its own isolated `9,24,39,54 * * * *` lane and:
 
-1. Probes critical public/admin read endpoints using a hybrid strategy:
-   - default production origin (`https://api.pharos.watch`): router-dispatched internal `GET` requests to avoid Cloudflare custom-domain self-fetch `522` false negatives while still exercising the real handler/auth path
+1. Probes critical public reads and selected admin read endpoints using a hybrid strategy:
+   - default production origin (`https://api.pharos.watch`): router-dispatched internal `GET` requests to avoid Cloudflare custom-domain self-fetch `522` false negatives while still exercising handler routing and dependency hydration. These internal probes bypass the Worker HTTP access gate, public rate-limit gate, and edge-cache path.
    - explicit non-default `SELF_URL`: real HTTPS `fetch()` probes with a 10s timeout per endpoint
    - internal-router timings reflect uncached worker handler execution, not browser-visible edge-cache latency
-   - `/api/health` and `/api/status` are parsed semantically: a `200` response with body `status/overallStatus: degraded|stale` downgrades the synthetic probe instead of counting as healthy-on-transport
+   - `/api/health` is parsed semantically: a `200` response with body `status: degraded|stale` downgrades the synthetic probe instead of counting as healthy-on-transport. `/api/status` is not probed by this synthetic endpoint loop; it is evaluated separately through `evaluateStatusAndPersist()`.
    - cache-backed bootstrap probes (`/api/usds-status`, `/api/bluechip-ratings`, `/api/yield-rankings`) are treated as bootstrap misses rather than hard failures only while their producing cron has never recorded a run
 2. Persists probe aggregate to `status_probe_runs`.
 3. Reconciles raw status into persisted effective state.
@@ -436,11 +436,11 @@ Response includes:
 
 Source: `src/hooks/use-endpoint-probes.ts`
 
-- Probe timeout: 5s for public endpoints, 20s for admin endpoints to match the extended ops status-proxy budget
+- Probe timeout: 5s for public endpoints and 20s for browser admin probes. The Pages ops proxy upstream budget is 20s only for `/api/status` and `/api/status-history`; other admin proxy paths can return `504` after the default 10s upstream timeout.
 - Parallel probing with `Promise.all`
 - Admin probe paths are now same-origin `/api/admin/*` calls on the ops host
 - The dashboard labels these as **browser-origin probes** to distinguish them from the worker-origin `status-self-check` synthetic probe stored in `/api/status`
-- Parameterized routes probe `probePath` values from registry (for example `/api/mint-burn-events?stablecoin=usdt-tether`) to avoid expected `400` validation responses.
+- Parameterized routes should probe `probePath` values from registry (for example `/api/mint-burn-events?stablecoin=usdt-tether`) to avoid expected `400` validation responses. `GET /api/status-probe-history` currently requires a `path` query and should be queried manually until a stable canary `probePath` is configured.
 - The stablecoin-detail probe also uses a curated canary `probePath` rather than the heaviest history payload, so route-health checks are less sensitive to oversized per-coin datasets.
 - Routes without a stable canary URL are intentionally excluded from automatic probe coverage. `GET /api/digest-snapshot` is omitted because it requires a valid `date` that must map to a real stored digest.
 - Returned result shape: `{ path, status, latencyMs, error? }`

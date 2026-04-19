@@ -119,6 +119,62 @@ export function ScoringChangelogV704Entry() {
   );
 }
 
+export function ScoringChangelogV703Entry() {
+  return (
+    <VersionCard
+      entry={getScoringEntry("7.03")}
+      accent="border-l-emerald-500"
+    >
+      <p>
+        USTB can now use Superstate&apos;s current liquidity telemetry while keeping NAV/AUM separate from
+        immediate exit capacity.
+      </p>
+      <ul className="list-disc list-inside space-y-1">
+        <li>Current Circle USD and USDC RedemptionIdle balances bound USTB redemption capacity.</li>
+        <li>The on-chain NAV oracle remains reserve evidence, not immediate liquidity.</li>
+        <li>Malformed or unavailable liquidity telemetry fails closed instead of falling back to NAV/AUM.</li>
+      </ul>
+    </VersionCard>
+  );
+}
+
+export function ScoringChangelogV702Entry() {
+  return (
+    <VersionCard
+      entry={getScoringEntry("7.02")}
+      accent="border-l-emerald-500"
+    >
+      <p>
+        frxUSD now uses fresh Frax balance-sheet redemption capacity with route-status and capacity-ratio
+        fail-closed guards.
+      </p>
+      <ul className="list-disc list-inside space-y-1">
+        <li>frxUSD no longer relies on a static full-supply eventual redemption model.</li>
+        <li>Live route-status telemetry can suppress redemption uplift when a route is paused, degraded, or cohort-limited.</li>
+        <li>Nested capacity amounts no longer reuse flat reserve-composition ratios as supply-relative capacity ratios.</li>
+      </ul>
+    </VersionCard>
+  );
+}
+
+export function ScoringChangelogV701Entry() {
+  return (
+    <VersionCard
+      entry={getScoringEntry("7.01")}
+      accent="border-l-emerald-500"
+    >
+      <p>
+        Liquidity / Exit now distinguishes standalone redemption-route quality from Safety Score-eligible exit capacity.
+      </p>
+      <ul className="list-disc list-inside space-y-1">
+        <li>Eventual-only redemption routes remain visible but no longer uplift Liquidity / Exit by themselves.</li>
+        <li>Queue-like routes can contribute when resolved and current, with their contribution capped before blending.</li>
+        <li>Immediate-bounded, live-direct, and validated-live routes continue to improve the dimension when fresh and unimpaired.</li>
+      </ul>
+    </VersionCard>
+  );
+}
+
 export function ScoringChangelogV70Entry() {
   return (
     <VersionCard

@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { renderToStaticMarkup } from "react-dom/server";
+import { SAFETY_SCORE_CHANGELOG } from "@shared/lib/safety-score-version";
 import { ScoringChangelogContent, scoringAnchorId } from "./content";
 
 describe("ScoringChangelogContent", () => {
@@ -17,5 +18,13 @@ describe("ScoringChangelogContent", () => {
     expect(html).toContain("Quick Reference");
     expect(html).toContain("Weight evolution");
     expect(html).toContain("Grade threshold evolution");
+  });
+
+  it("renders every machine-readable safety score changelog version", () => {
+    const html = renderToStaticMarkup(<ScoringChangelogContent />);
+
+    for (const entry of SAFETY_SCORE_CHANGELOG) {
+      expect(html).toContain(`id="${scoringAnchorId(`v${entry.version}`)}"`);
+    }
   });
 });

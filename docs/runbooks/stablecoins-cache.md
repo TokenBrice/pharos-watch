@@ -24,4 +24,4 @@ The cached `/api/stablecoins` payload is missing, malformed, has the wrong objec
 ## Prevention
 
 - The cache TTL and fallback mode are configured in the sync-stablecoins cron. Do not tune these without understanding the `status-thresholds` coupling.
-- The recommended-actions panel surfaces context-specific recovery actions; prefer those over manual curl.
+- For stablecoins-cache incidents, do not prefer the current recommended action unless missing historical CoinGecko prices are also implicated. Primary recovery is to inspect `sync-stablecoins`, clear a relevant lease or breaker when applicable, and let the next quarter-hourly publish run rebuild the cache.
