@@ -118,10 +118,12 @@ describe("changelog and digest markdown", () => {
 
 describe("docs markdown", () => {
   it("prepends front matter to public docs", () => {
-    const md = renderDocMarkdown(PUBLIC_DOCS[0]);
-    expect(md).toMatch(/^---\ntitle: "Architecture/);
-    expect(md).toContain('canonical: "https://pharos.watch/docs/architecture/"');
-    expect(md).toContain("# Architecture");
+    const apiDoc = PUBLIC_DOCS.find((doc) => doc.slug === "api-reference");
+    expect(apiDoc).toBeDefined();
+    const md = renderDocMarkdown(apiDoc!);
+    expect(md).toMatch(/^---\ntitle: "API Reference/);
+    expect(md).toContain('canonical: "https://pharos.watch/docs/api-reference/"');
+    expect(md).toContain("# Pharos API Reference");
   });
 
   it("renders the docs index with one route per public doc plus index", () => {

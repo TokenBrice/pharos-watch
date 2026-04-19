@@ -38,7 +38,7 @@ Colocated at `out/<route-path>/index.md`. Must run **`postbuild`** — `next bui
 Existing functions: `functions/admin/[[path]].ts`, `functions/_site-data/[[path]].ts`, `functions/api/admin/...`. New top-level `functions/_middleware.ts` runs on every request, must `next(request)` to chain; must NOT touch `/admin/*`, `/_site-data/*`, `/api/*`.
 
 **4. MDX library.**
-`next-mdx-remote@^6` RSC variant (`next-mdx-remote/rsc`). Verified on 2026-04-19 with `npm view next-mdx-remote version exports peerDependencies`: latest is `6.0.0`, exports `./rsc`, and peers on `react >=16`. Add `remark-gfm`, `rehype-slug`, and `rehype-autolink-headings` in Feature B.
+Implementation note: the docs route uses `react-markdown` with `remark-gfm`, `rehype-slug`, and `rehype-autolink-headings`. `next-mdx-remote/rsc` was rejected during implementation because `docs/api-reference.md` contains Markdown table text with raw angle-bracket syntax that MDX treats as JSX.
 
 **5. Docs `dateModified`.**
 `scripts/generate-docs-metadata.ts` runs during `prebuild` and writes `src/generated/docs-metadata.json`, which is gitignored like `sitemap-dates.json`. Add a tracked `src/generated/docs-metadata.json.d.ts`. Use `execFileSync("git", [...])`, not shell-interpolated `execSync`; both `dateModified` and `dateCreated` hard-fail on missing git history (do not fall back to `new Date()`).
@@ -47,7 +47,7 @@ Existing functions: `functions/admin/[[path]].ts`, `functions/_site-data/[[path]
 Adapter imports each section's `CONTENT_MARKDOWN` export (new; Task A.3 adds them) and stringifies in the same order as `src/app/methodology/sections/core-sections.tsx` and `monitoring-sections.tsx`. **11 narrative sections total**: 6 core (`core-sections-pricing.tsx`, safety, liquidity, stability index, infrastructure, mint/burn flow) + 5 monitoring. `liquidity-technical-details.tsx` is a fragment embedded inside `liquidity-section.tsx` — do not add a standalone `CONTENT_MARKDOWN` there; fold its prose into liquidity's constant. Snapshot tests in Task A.11 guard representative outputs.
 
 **7. Which docs are public?**
-A curated allowlist in `shared/lib/public-docs.ts`. Non-public docs are not force-excluded — they are simply not listed. The initial list is **20 docs** (see Task B.1), and every allowlisted doc must pass public-link and source-path safety tests before `/docs/*` ships. Agent-authored working notes (`agents/**`, `docs/agent-*.md`, `docs/doc-ownership.json`, `docs/documentation-map-*.tsv`) stay repo-internal.
+A curated allowlist in `shared/lib/public-docs.ts`. Non-public docs are not force-excluded — they are simply not listed. The implemented initial list is **16 docs** (see Task B.1), and every allowlisted doc must pass public-link and source-path safety tests before `/docs/*` ships. Agent-authored working notes (`agents/**`, `docs/agent-*.md`, `docs/doc-ownership.json`, `docs/documentation-map-*.tsv`) stay repo-internal.
 
 **8. Will `Vary: Accept` fragment the CDN cache?**
 No. Current Cloudflare cache docs say Cloudflare does **not** consider arbitrary `Vary` values in caching decisions, except documented special cases such as `Accept-Encoding` and configured Vary-for-images behavior (`https://developers.cloudflare.com/cache/concepts/cache-control/#other`, verified 2026-04-19). Therefore this plan must not rely on two automatic CDN entries for the same URL. Middleware still emits `Vary: Accept`, but for all route classes that can negotiate markdown it also sets `Cloudflare-CDN-Cache-Control: no-store` (and `CDN-Cache-Control: no-store`) so the CDN cannot cache the wrong variant. Future optimization, out of scope here: add an account-level Cache Rule/custom cache key that varies on a normalized markdown-vs-html header.
@@ -1496,15 +1496,11 @@ Ships second. Target: days 6-10. **Begin only after Feature A is merged.**
 - Create: `shared/lib/__tests__/public-docs.test.ts`.
 - Modify: allowlisted `docs/*.md` only as needed to remove or rewrite non-public relative links flagged by the test.
 
-**Initial allowlist (20 docs):**
+**Initial allowlist (16 docs):**
 
 | Source | Public slug | Group |
 |---|---|---|
-| `docs/architecture.md` | `architecture` | system |
 | `docs/api-reference.md` | `api-reference` | system |
-| `docs/data-flow-map.md` | `data-flow-map` | system |
-| `docs/data-pipeline.md` | `data-pipeline` | system |
-| `docs/worker-and-api-limits.md` | `worker-and-api-limits` | system |
 | `docs/classification.md` | `classification` | methodology |
 | `docs/pricing-pipeline.md` | `pricing-pipeline` | methodology |
 | `docs/depeg-detection.md` | `depeg-detection` | methodology |
@@ -1806,7 +1802,7 @@ npm run build
 cat src/generated/docs-metadata.json | head
 ```
 
-Expected: JSON with 20 entries, each with `dateModified` and `dateCreated`.
+Expected: JSON with 16 entries, each with `dateModified` and `dateCreated`.
 
 - [ ] **Step 6: Commit**
 
@@ -1978,7 +1974,7 @@ Expected: both exit 0.
 npm run build
 ```
 
-Expected: 20 new pages under `out/docs/<slug>/index.html`, each with exactly one `<h1>` from `FeaturePageShell`. If `next-mdx-remote/rsc` fails under `output: "export"`, do not switch to unsanitized `dangerouslySetInnerHTML`; re-plan a Markdown-only renderer with explicit sanitization.
+Expected: 16 new pages under `out/docs/<slug>/index.html`, each with exactly one `<h1>` from `FeaturePageShell`.
 
 - [ ] **Step 4: Spot check**
 
@@ -2266,7 +2262,7 @@ npm run build
 grep -c "docs/" out/sitemap.xml
 ```
 
-Expected: grep returns at least 21 (index + 20 docs).
+Expected: grep returns at least 17 (index + 16 docs).
 
 - [ ] **Step 4: Commit**
 
@@ -2383,11 +2379,11 @@ Expected: exit 0.
 ## Task B.11: Feature B PR
 
 - [ ] **Step 1: Push branch, open PR with:**
-  - Summary: 20 public-safe docs now public at `/docs/<slug>/`, served as HTML or markdown depending on Accept header.
+  - Summary: 16 public-safe docs now public at `/docs/<slug>/`, served as HTML or markdown depending on Accept header.
   - Test plan:
     - `curl -s https://preview-url/docs/architecture/` — HTML
     - `curl -s -H "Accept: text/markdown" https://preview-url/docs/architecture/` — markdown
-    - Visit `/docs/` in a browser — index lists 20 docs grouped into 3 sections
+    - Visit `/docs/` in a browser — index lists 16 docs grouped into 3 sections
   - Rollback: revert the PR; the sitemap regenerates without `/docs/*`.
 
 - [ ] **Step 2: Wait for CI green; squash merge.**
@@ -2403,9 +2399,9 @@ Expected: exit 0.
 - [ ] Markdown-negotiated route responses include `Cloudflare-CDN-Cache-Control: no-store` or equivalent CDN no-store evidence
 - [ ] `curl -sI -H "Accept: text/markdown;q=0" https://pharos.watch/stablecoin/usdt-tether/` returns HTML, not markdown
 - [ ] `curl -sI -H "Accept: */*" https://pharos.watch/stablecoin/usdt-tether/` returns HTML, not markdown
-- [ ] Browser load of `https://pharos.watch/docs/` lists 20 docs in 3 groups
+- [ ] Browser load of `https://pharos.watch/docs/` lists 16 docs in 3 groups
 - [ ] Browser load of `https://pharos.watch/docs/architecture/` shows Pharos chrome + rendered architecture doc
-- [ ] `https://pharos.watch/sitemap.xml` contains `/docs/` and at least 20 `/docs/<slug>/` entries
+- [ ] `https://pharos.watch/sitemap.xml` contains `/docs/` and at least 16 `/docs/<slug>/` entries
 - [ ] `https://pharos.watch/llms.txt` includes a `## Docs` section
 - [ ] `npm run test:merge-gate` passes locally against the merged main
 - [ ] `curl -s -H "Accept: text/markdown" -A "ChatGPT-User" https://pharos.watch/docs/architecture/` returns markdown (simulates a real AI crawler)

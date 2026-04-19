@@ -16,38 +16,10 @@ export interface PublicDoc {
 
 export const PUBLIC_DOCS: readonly PublicDoc[] = [
   {
-    source: "architecture.md",
-    slug: "architecture",
-    title: "Architecture",
-    summary: "Curated file tree, API inventory, and SEO surface.",
-    group: "system",
-  },
-  {
     source: "api-reference.md",
     slug: "api-reference",
     title: "API Reference",
     summary: "HTTP contracts, authentication notes, and response conventions.",
-    group: "system",
-  },
-  {
-    source: "data-flow-map.md",
-    slug: "data-flow-map",
-    title: "Data Flow Map",
-    summary: "External source to cron, D1, API, hook, and page mapping.",
-    group: "system",
-  },
-  {
-    source: "data-pipeline.md",
-    slug: "data-pipeline",
-    title: "Data Pipeline",
-    summary: "Stablecoin sync, price enrichment, FX and metal rates.",
-    group: "system",
-  },
-  {
-    source: "worker-and-api-limits.md",
-    slug: "worker-and-api-limits",
-    title: "Worker and API Limits",
-    summary: "Runtime budgets, throttle constants, and provider assumptions.",
     group: "system",
   },
   {
