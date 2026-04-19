@@ -1,5 +1,4 @@
 import type { Metadata } from "next";
-import { BreadcrumbJsonLd } from "@/components/breadcrumb-json-ld";
 import { SITE_ORIGIN as SITE_URL } from "@shared/lib/runtime-origins";
 
 export const metadata: Metadata = {
@@ -28,12 +27,6 @@ export default function BlacklistLayout({
 }) {
   return (
     <>
-      <BreadcrumbJsonLd
-        items={[
-          { name: "Home", url: "/" },
-          { name: "Blacklist Tracker", url: "/blacklist/" },
-        ]}
-      />
       {children}
     </>
   );
