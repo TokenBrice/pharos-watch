@@ -6,59 +6,29 @@
 
 **Architecture:** Surgical per-page edits on top of existing helpers (`safeJsonLd`, `buildFaqJsonLd`, `FaqSection`, `BreadcrumbJsonLd`, `buildStablecoinUrl`, `SITE_ORIGIN`). One new build script under `scripts/` (pattern copied from `scripts/generate-sitemap-dates.ts`) to emit `public/llms.txt` in the `prebuild` hook. One new exported constant `PHAROS_ORG_NODE` + `PHAROS_PERSON_TOKENBRICE_NODE` in `src/lib/json-ld.ts` for reuse across pages (Article.author, Article.publisher, Organization.founder, WebApplication.creator). No shared abstractions beyond these. Schema is inline `<script type="application/ld+json">` blocks identical in pattern to what already ships on `/methodology` and `/cemetery`.
 
-**Tech Stack:** Next.js 16 static export, TypeScript, Tailwind (static classes only), tsx scripts, Schema.org JSON-LD, Cloudflare Pages `_headers`, pngquant or sharp (external CLI, not a dep) for the one OG shrink.
-
 **Out of this plan (deferred):**
-- Week 1 items (shipped separately before this plan starts): soft-404 on unknown `/stablecoin/[id]`, breadcrumb N-level fix, Dataset enrichment, Organization `@id`, AI-robots rules (GPTBot / ClaudeBot / etc.), title fixes, orphan route cleanup.
-- Week 3–4 items: markdown content negotiation (`Accept: text/markdown`) and `/docs/*` routes.
-- Task 5 from the original scope (dynamic-import `html-to-image`) — **already done** in `src/lib/chart-export.ts:7`; all consumers (`src/components/total-mcap-chart.tsx:8`, `src/components/psi-history-chart.tsx:8`) route through that helper. No work required. Task 5 is retained only as a verification step (confirm no new direct static imports creep in; confirm first-load JS hasn't regressed).
+- Week 1 items (separate plan): soft-404, breadcrumb N-level, Dataset enrichment, Organization `@id`, AI-robots rules, title fixes, orphan route cleanup.
+- Week 3–4 items: markdown content negotiation + `/docs/*` routes.
+- `html-to-image` dynamic import — already done in `src/lib/chart-export.ts:7`; no work required.
 
 ---
 
 ## Prerequisites
 
-- [ ] Week 1 plan (2026-04-??-seo-week1-*.md) has merged to main. Specifically, the Week 1 PR is expected to add `@id: ${SITE_URL}#organization` to the `Organization` node in `src/app/layout.tsx:143-156`, which Task 10 of this plan references when building the shared Person and when linking Article.author / Article.publisher back to the Organization.
-- [ ] **If Week 1 didn't land the Organization `@id`** — Task 10 below still adds it defensively (one-line additive change in `src/app/layout.tsx`). Do not remove or renumber existing Organization properties; just add `"@id": \`${SITE_URL}#organization\``. If Week 1 already added it, that step is a no-op.
-- [ ] `npm install` has run and `npm run build` completes clean on `main` before branching.
+- [ ] Week 1 merged. Task 10 below still adds Organization `@id` defensively if missing (additive, no-op if already present).
+- [ ] `npm install` + `npm run build` clean on `main` before branching.
 
 ---
 
-## File Structure
+## Commit order (strict)
 
-Changes span 3 categories: build-time generation, schema additions, and small header/image fixes. No new shared abstractions beyond the two Person/Org JSON-LD node constants in `src/lib/json-ld.ts`.
-
-**Created:**
-- `scripts/generate-llms-txt.ts` — prebuild generator; emits `public/llms.txt`.
-- `public/llms.txt` — committed to git (mirrors how `src/generated/sitemap-dates.json` is committed via `scripts/generate-sitemap-dates.ts`, though note: this is in `public/` not `src/generated/` because llms.txt must live at site root). **Decision:** generate and commit so the file is present in static export without the prebuild needing to succeed on every pull — matches existing convention used by the `_redirects` generator (`scripts/generate-redirects.ts`).
-
-**Modified (schema / H1 / dateline):**
-- `src/app/page.tsx` — promote H1; ItemList wrap; add `image` to ListItems; rename ItemList title.
-- `src/app/stablecoin/[id]/page.tsx:116-118` — remove sr-only H1 (hero becomes the real H1; see `src/components/stablecoin-detail/hero-card.tsx:668,769`).
-- `src/components/stablecoin-detail/hero-card.tsx` — change two `<h2>` → `<h1>` (mobile layout line 668; desktop layout line 769).
-- `src/components/pre-launch-detail.tsx` — delete sr-only H1 (lines 282-284); change `<h2>` at line 315 → `<h1>` with classes preserved (pinned option A, 2026-04-19).
-- `src/app/methodology/page.tsx` — add TechArticle alongside existing FAQPage.
-- `src/components/methodology-changelog-page.tsx` — add TechArticle JSON-LD driven by `entries[0].date` / `effectiveAt`.
-- `src/app/changelog/page.tsx` — add ItemList of Article, datePublished per entry.
-- `src/app/digest/page.tsx` — add ItemList + CollectionPage JSON-LD.
-- `src/app/cemetery/page.tsx:50-63` — add `url`; wrap list in CollectionPage.
-- `src/app/upcoming/page.tsx` — add ItemList + CollectionPage JSON-LD.
-- `src/components/stablecoin-taxonomy-shell.tsx:46-63` — wrap ItemList in CollectionPage + `about: DefinedTerm`.
-- `src/app/about/api/page.tsx:249-262` — add FAQPage alongside existing BreadcrumbList.
-- `src/app/telegram/page.tsx` — add FAQPage + HowTo; reuse shared Person.
-- `src/components/ai-summary.tsx:11-23` — full ISO date + `<time dateTime>` wrapper.
-- `src/components/funding/funding-page-sections.tsx:143-146` — same dateline treatment (flagged for review only; confirm before editing).
-- `src/app/layout.tsx:143-175` — add Organization `@id` (if not present from Week 1), reference shared Person constant.
-- `src/lib/json-ld.ts` — export `PHAROS_ORG_NODE` and `PHAROS_PERSON_TOKENBRICE_NODE` constants.
-- `src/app/robots.ts` — add `llms.txt` reference as a second directive (decision: include `Allow: /llms.txt` explicitly; the llms.txt spec says nothing about robots, but being explicit costs nothing). Actually **do not add** — the default `Allow: /` already covers it; leave robots.ts alone.
-- `public/_headers` — add `Cache-Control: public, max-age=3600` for `/llms.txt`; add HTML routes `Cache-Control: public, max-age=0, s-maxage=300, stale-while-revalidate=86400`.
-- `package.json:16` — extend the `prebuild` script to call the new llms.txt generator.
-- `public/og-start.png` — shrunk in place (not a code change; binary swap).
+**Task 10 (shared `PHAROS_ORG_NODE` / `PHAROS_PERSON_TOKENBRICE_NODE` constants) MUST land before Tasks 6, 7, 8, 9** — they reference `${SITE_URL}#organization` and `${SITE_URL}#person-tokenbrice` by `@id`. Suggested order: 1 → 10 → 2 → 3 → 4 → 6 → 7 → 8 → 9 → 11.
 
 ---
 
 ## Task Breakdown
 
-Each task below has: Goal, Files touched, Implementation notes, Verification, Risk flags, Effort (S=<2h / M=2–6h / L=>6h).
+Each task: Goal, Files, Steps, Verification, Risks, Effort (S=<2h / M=2–6h / L=>6h).
 
 ---
 
@@ -74,9 +44,11 @@ Each task below has: Goal, Files touched, Implementation notes, Verification, Ri
 
 - [ ] **Step 1: Draft `scripts/generate-llms-txt.ts`**
 
-Copy `scripts/generate-sitemap-dates.ts` as a starting point. The generator reads:
-- `shared/lib/stablecoins` → `ACTIVE_STABLECOINS` (name, symbol, id). Resolve via relative path from the script (use `../shared/lib/stablecoins`).
-- `shared/lib/runtime-origins` → `SITE_ORIGIN`.
+Copy `scripts/generate-sitemap-dates.ts` as a starting point. **Use relative imports only** — `tsx` run from the CLI does not resolve `@/` or `@shared/` path aliases without extra setup, and existing `scripts/*.ts` use relative paths:
+
+- `import { ACTIVE_STABLECOINS } from "../shared/lib/stablecoins";`
+- `import { SITE_ORIGIN } from "../shared/lib/runtime-origins";`
+- `import { PEG_LABELS_SHORT } from "../shared/lib/classification";`
 
 Output structure (llmstxt.org spec: H1, blockquote summary, H2 sections with `- [Title](url): description` bullets):
 
@@ -133,7 +105,7 @@ Output structure (llmstxt.org spec: H1, blockquote summary, H2 sections with `- 
 (Auto-generated from `ACTIVE_STABLECOINS`, one line per coin:
 `- [Name (SYMBOL)](https://pharos.watch/stablecoin/{id}/): {governance} stablecoin {backing-phrase} pegged to {pegLabel}.`
 
-Use the same `GOVERNANCE_METADATA_PHRASES` / `BACKING_METADATA_PHRASES` pattern already present in `src/lib/page-metadata.ts:18-28`, but **redefine inline** in the script — do not import from `src/` because this script must stay build-time-only and cannot pull React. The shared source for peg labels is `@shared/lib/classification`'s `PEG_LABELS_SHORT`; importable from a tsx script since it's pure TS.)
+Use the same `GOVERNANCE_METADATA_PHRASES` / `BACKING_METADATA_PHRASES` pattern from `src/lib/page-metadata.ts:18-28` — **redefine inline** (do not import from `src/`; scripts stay build-time-only and cannot pull React). `PEG_LABELS_SHORT` is importable from `../shared/lib/classification` (relative path).)
 ```
 
 **Decisions locked in this step:**
@@ -193,63 +165,26 @@ Verify:
 - Modify: `src/components/site-header.tsx:64,86` (`<p>Pharos</p>` → `<h1>Pharos</h1>`, classes preserved)
 - Modify: `src/app/page.tsx:44` (remove sr-only H1)
 
-- [ ] **Step 1: Detail page — promote hero name**
+- [ ] **Step 1: Active detail + pre-launch**
 
-The hero renders the coin name twice (one per mobile/desktop layout, Tailwind hides one with `hidden lg:block` / `lg:hidden`). Both exist in the same rendered HTML tree and both currently use `<h2>`. Change both to `<h1>`. The hero already has the richest visible heading text (`{coin.name}`). Remove the sr-only H1 in `src/app/stablecoin/[id]/page.tsx:116-118`.
+Grep to confirm current line numbers (hero-card h2s may have shifted). Then:
+- `src/components/stablecoin-detail/hero-card.tsx` — change two `<h2>{coin.name}</h2>` (mobile + desktop responsive twins) → `<h1>`, preserve all classes verbatim.
+- `src/app/stablecoin/[id]/page.tsx` — delete the sr-only `<h1>` block (currently at ~line 116-118).
+- `src/components/pre-launch-detail.tsx:282-284` — delete sr-only H1.
+- `src/components/pre-launch-detail.tsx:315` — change `<h2 className="break-words text-2xl font-extrabold tracking-tight sm:text-3xl">{coin.name}</h2>` → `<h1>` with identical classes.
 
-**Pre-launch path — PINNED option A (2026-04-19):** `src/components/pre-launch-detail.tsx` currently has an sr-only `<h1>` at lines 282-284 and a visible `<h2>{coin.name}</h2>` at line 315. Removing the sr-only H1 in `src/app/stablecoin/[id]/page.tsx:116-118` would leave pre-launch pages with zero H1. Apply the same treatment as the active-coin hero:
+- [ ] **Step 2: Homepage + site header**
 
-- Delete `src/components/pre-launch-detail.tsx:282-284` (the sr-only H1 block)
-- Change `src/components/pre-launch-detail.tsx:315` from `<h2 className="break-words text-2xl font-extrabold tracking-tight sm:text-3xl">{coin.name}</h2>` to `<h1 className="break-words text-2xl font-extrabold tracking-tight sm:text-3xl">{coin.name}</h1>` (preserve all Tailwind classes verbatim)
+Class strings at lines 64 and 86 of `src/components/site-header.tsx` **differ** — do not homogenize:
+- L64 (mobile): `<p className="text-sm font-mono font-semibold uppercase tracking-[0.14em] text-foreground">Pharos</p>` → `<h1>` with identical classes.
+- L86 (desktop): `<p className="text-[1.06rem] font-mono font-semibold uppercase tracking-[0.16em] text-foreground">Pharos</p>` → `<h1>` with identical classes.
+- `src/app/page.tsx:44` — delete sr-only H1.
 
-Result: one visible H1 with coin name; consistent with active-coin pattern. "Pre-Launch Stablecoin" keyword remains visible on the page via the existing `<LaunchPhaseBadge>` nearby, so no keyword loss. The considered alternative (option B — append "— Pre-Launch Stablecoin" as visible text in the H1) was rejected as redundant with the phase badge.
+- [ ] **Step 3: Verify**
 
-- [ ] **Step 2: Homepage — PINNED option 1 (surgical)**
+`npm run test:merge-gate`. Also `grep -c '<h1' out/index.html` ≥ 1 and `grep -c '<h1' out/stablecoin/usdt-tether/index.html` ≥ 1.
 
-**PINNED 2026-04-19 — user selected option 1.** Do not implement option 2 without explicit re-approval.
-
-`src/components/site-header.tsx` renders "Pharos" as `<p>` (lines 64, 86). Change both to `<h1>`, preserving existing Tailwind classes verbatim. Zero visual change. For reference only, the alternative was:
-
-1. **[PINNED] Lower-risk:** Change line 64 (mobile) and line 86 (desktop) `<p className="... text-foreground">Pharos</p>` to `<h1 className="...">Pharos</h1>`. Matches semantic intent (page-defining heading), visual styling unchanged if Tailwind classes are preserved.
-2. **Higher-value:** Add a visually present "Pharos Stablecoin Dashboard" heading above the KPI bar (new markup in `src/app/page.tsx`). Better for SEO (richer keywords) but introduces new UI affordance and needs design review.
-
-**Choose option 1** for a surgical change. Keep existing Tailwind classes verbatim. Remove `src/app/page.tsx:44`'s sr-only H1. One H1 per page (the site header renders once; no risk of duplicates because mobile/desktop versions are Tailwind-hidden siblings — browsers still parse both, which means **both must become H1**, same as the detail-page approach).
-
-**A11y test:** Manually run an axe or Lighthouse a11y pass on `/` and `/stablecoin/usdt-tether/` after change, or run existing design-invariants tests (`src/lib/__tests__/design-invariants.test.ts` is present — confirm it covers heading levels; add a test if not).
-
-- [ ] **Step 3: Verify with a unit test if one doesn't already exist**
-
-Grep for an existing invariant:
-
-```bash
-# grep for "h1" in src/lib/__tests__/design-invariants.test.ts
-```
-
-If a heading-level test does not exist, add one:
-
-```ts
-// src/lib/__tests__/design-invariants.test.ts (append)
-import { render } from "@testing-library/react";
-import HomePage from "@/app/page";
-// ...
-it("home page renders exactly one h1", () => {
-  const { container } = render(<HomePage />);
-  // Both mobile and desktop SiteHeader render -> two h1s is acceptable for
-  // responsive hidden-twin patterns. Assert exactly two h1s matching "Pharos".
-  const h1s = container.querySelectorAll("h1");
-  expect(h1s.length).toBeGreaterThanOrEqual(1);
-  for (const h1 of h1s) expect(h1.textContent).toMatch(/Pharos/);
-});
-```
-
-(The test tolerates one-or-two because of the hidden-twin layout. If axe / Lighthouse later flags two H1s as problematic, wrap one in `aria-hidden="true"` — the browser parses both but screen readers ignore the hidden one.)
-
-- [ ] **Step 4: Run `npm test` and `npm run build`**
-
-Expected: all green. Build output contains one or two `<h1>` tags per indexed page.
-
-**Risks:**
-- **Duplicate H1 from hidden responsive twins** is the only real concern. Rich Results Test and most LLM crawlers treat the first H1 as definitive; multiple H1s are allowed in HTML5 but some SEO tools flag them. Accept the tradeoff (existing responsive-twin pattern is not worth rewriting) and document in the commit.
+**Risks:** Responsive-twin duplicate H1s are HTML5-valid but flagged by some SEO linters. Document in commit; add `aria-hidden="true"` to the hidden twin only if a linter complains post-deploy.
 
 **Effort:** M (2–3h)
 
@@ -303,11 +238,9 @@ month: "short", year: "numeric"  (multiline)
 
 Only two hits: `src/components/ai-summary.tsx` (handled above) and `src/components/funding/funding-page-sections.tsx:143-146` ("Reviewed" date on cost card).
 
-- [ ] **Step 3: Decide on funding page**
+- [ ] **Step 3: Funding page**
 
-The funding "Reviewed Mar 2026"-style dateline is a visible UI element that crawlers will index. Apply the same treatment: change to a `<time dateTime="YYYY-MM">` wrapper with a full-date visible label. `lastReviewedAt` in that component is already a unix timestamp, so `new Date(lastReviewedAt * 1000).toISOString().slice(0, 10)` gives the `YYYY-MM-DD` for the `dateTime` attr.
-
-**Skip if ambiguous.** This is a judgment call — if the surrounding UI has a "reviewed this month" meaning (vs. specific day), month+year precision is fine and should still be machine-readable: `dateTime="2026-03"` is valid ISO.
+Apply the same treatment at `src/components/funding/funding-page-sections.tsx:143-146`: wrap the "Reviewed" dateline in `<time dateTime={new Date(lastReviewedAt * 1000).toISOString().slice(0, 7)}>` (month precision — valid ISO; matches the existing "Reviewed Mar 2026" display granularity).
 
 - [ ] **Step 4: Verify**
 
@@ -335,22 +268,9 @@ Expect at least one match per stablecoin detail page (the AI summary is rendered
 **Files:**
 - Modify (binary): `public/og-start.png`
 
-- [ ] **Step 1: Audit current OG image sizes (already done in planning)**
+Only `og-start.png` (554 KB) exceeds the 300 KB budget; all other 19 `og-*.png` files are 60–198 KB.
 
-Confirmed during planning:
-- `og-start.png`: 554 KB (over budget)
-- All other 19 `og-*.png` files: 60–198 KB (within budget; none >300 KB).
-
-Only one asset needs shrinking. No audit expansion required.
-
-- [ ] **Step 2: Choose tooling**
-
-Three options, in preference order:
-1. `pngquant --quality=70-90 --output public/og-start.png.new public/og-start.png` (uses existing system tool; already available on Arch based on repo conventions).
-2. `sharp` via a one-off tsx script (adds a devDep — avoid unless #1 unavailable).
-3. Manual re-export from design source (slowest, highest quality).
-
-- [ ] **Step 3: Shrink in place and verify**
+- [ ] **Step 1: Shrink in place and verify**
 
 ```bash
 pngquant --quality=70-90 --force --output /tmp/og-start.png /home/ahirice/Documents/git/stablecoin-dashboard/public/og-start.png
@@ -359,72 +279,7 @@ ls -la /tmp/og-start.png
 cp /tmp/og-start.png /home/ahirice/Documents/git/stablecoin-dashboard/public/og-start.png
 ```
 
-- [ ] **Step 4: Visual diff**
-
-Open side-by-side preview (any image viewer) to confirm quality is preserved at OG-card scale (Twitter/X / Open Graph viewers render the image at ≤1200×628 CSS pixels — lossy quantization is invisible at that size).
-
-- [ ] **Step 5: Confirm build still finds it**
-
-```bash
-npm run build
-ls -la out/og-start.png
-```
-
-Should be ≤200 KB. Cache headers in `public/_headers` already cover `/og-image.png`; `og-start.png` inherits the default CSP-allowed caching.
-
-**Risks:**
-- Gradient banding in OG images can become visible after quantization. Mitigation: try `--quality=80-95` first; fall back to 70-90 only if the 80-95 output still exceeds budget.
-
-**Effort:** S (<1h)
-
----
-
-### Task 5: Verify `html-to-image` dynamic import (already done)
-
-**Goal:** Confirm the dependency is still dynamically imported and first-load JS hasn't regressed; add a lint-level guard if practical.
-
-**Files:**
-- Verify: `src/lib/chart-export.ts:7`
-- Verify: `src/components/total-mcap-chart.tsx:8`, `src/components/psi-history-chart.tsx:8`
-- No code change expected.
-
-- [ ] **Step 1: Confirm status**
-
-Grep done during planning:
-
-```
-html-to-image
-```
-
-Single hit in `src/lib/chart-export.ts:7` as `await import("html-to-image")`. Both consumer components import only from `@/lib/chart-export`, never directly from `html-to-image`.
-
-- [ ] **Step 2: Optional guard**
-
-Add a micro-test or ESLint `no-restricted-imports` rule blocking direct `html-to-image` imports outside `src/lib/chart-export.ts`:
-
-```jsonc
-// eslint.config.ts (if the repo has ESLint flat config) — append
-{
-  files: ["src/**/*.{ts,tsx}"],
-  rules: {
-    "no-restricted-imports": ["error", {
-      paths: [{ name: "html-to-image", message: "Import from @/lib/chart-export instead to keep the module dynamic." }],
-    }],
-  },
-}
-```
-
-**Decision:** skip the ESLint rule unless the repo's `eslint.config` already uses `no-restricted-imports`. Adding new lint rules is out of the surgical scope. Rely on code review.
-
-- [ ] **Step 3: Build + bundle-size check**
-
-```bash
-npm run build
-# Capture first-load JS for a reference route:
-grep -E "First Load JS|\\/(page|stablecoin|methodology)/" .next/build-manifest.json | head -30 || true
-```
-
-More concretely, `next build` prints a table of route sizes. Compare against a pre-change baseline if one exists; otherwise, record this run's numbers as the baseline.
+- [ ] **Step 2: Verify** — `ls -la public/og-start.png` shows ≤200 KB. View at 1200×628 scale to confirm no banding.
 
 **Effort:** S (<1h)
 
@@ -442,7 +297,9 @@ More concretely, `next build` prints a table of route sizes. Compare against a p
 
 - [ ] **Step 1: Methodology hub**
 
-In `src/app/methodology/page.tsx`, after the existing FAQPage script block (line 43-65), insert a second `<script type="application/ld+json">` with:
+Extend the existing import in `src/app/methodology/page.tsx` to include `SAFETY_SCORE_CHANGELOG` (currently only `SAFETY_SCORE_VERSION_LABEL` is imported). `SAFETY_SCORE_CHANGELOG` is newest-first, so `.at(-1)` = oldest (v1.0 release, `"2026-02-25"`).
+
+After the existing FAQPage script block, insert a second `<script type="application/ld+json">` via `safeJsonLd`:
 
 ```ts
 {
@@ -450,8 +307,7 @@ In `src/app/methodology/page.tsx`, after the existing FAQPage script block (line
   "@type": "TechArticle",
   headline: "Methodology: How Pharos Grades Stablecoins",
   description: "Full methodology behind Pharos safety grades, peg scores, liquidity scores, and contagion stress tests.",
-  // datePublished: SAFETY_SCORE_CHANGELOG oldest entry date (or a curated constant — TokenBrice-authored methodology v1.0 date)
-  datePublished: "2025-10-01", // PLACEHOLDER — resolve: check `SAFETY_SCORE_CHANGELOG.at(-1)?.date` at build time
+  datePublished: SAFETY_SCORE_CHANGELOG.at(-1)!.date,
   dateModified: SAFETY_SCORE_CHANGELOG[0].date,
   author: { "@id": `${SITE_URL}#person-tokenbrice` },
   publisher: { "@id": `${SITE_URL}#organization` },
@@ -460,8 +316,6 @@ In `src/app/methodology/page.tsx`, after the existing FAQPage script block (line
   keywords: ["stablecoin methodology", "safety score", "PegScore", "DEWS", "PSI", "liquidity score"],
 }
 ```
-
-**Resolve the `datePublished`:** grep `SAFETY_SCORE_CHANGELOG` for the oldest entry (`safety-score-version-data.ts` has v1.0 at the tail of the array). Wire `datePublished: SAFETY_SCORE_CHANGELOG.at(-1)!.date`.
 
 - [ ] **Step 2: Shared methodology changelog pages**
 
@@ -531,7 +385,7 @@ Edit `src/app/changelog/page.tsx`. Before line 23's `FeaturePageShell`, add:
 />
 ```
 
-(The per-week anchor `#week-...` is cosmetic; the changelog index does not have per-week subroutes today. Using a fragment URL is standards-valid for ListItem.item.url.)
+Also edit `src/app/changelog/page.tsx:69` to add `id={\`week-${entry.dateRange.to}\`}` on the `<li>` so the ListItem.url fragments resolve to a real anchor.
 
 Add imports to `src/app/changelog/page.tsx`:
 ```tsx
@@ -557,8 +411,8 @@ Expected `@type` set per page:
 Spot-check one page in Google Rich Results Test after staging deploy.
 
 **Risks:**
-- Schema.org wants `Article.datePublished` to be ISO 8601. Both sources (`entry.date` = `YYYY-MM-DD` string, and `dateRange.to` = `YYYY-MM-DD`) are already ISO-prefixes; keep as `YYYY-MM-DD` for `TechArticle`, expand to `YYYY-MM-DDT00:00:00Z` for `Article` if Rich Results flags validation. Test both forms.
-- The methodology hub `datePublished` resolution relies on `SAFETY_SCORE_CHANGELOG.at(-1)` being the oldest (ascending vs. descending order in the source). Check ordering before committing — the observed pattern is **newest-first** (v7.07, v7.06, v7.05...) so `entries.at(-1)` = oldest = v1.0-era date.
+- `YYYY-MM-DD` is valid ISO 8601 for Schema.org. Use `YYYY-MM-DDT00:00:00Z` only if Rich Results Test flags a specific entry.
+- **Depends on Task 10** — `${SITE_URL}#organization` and `${SITE_URL}#person-tokenbrice` must be emitted first.
 
 **Effort:** M (3–4h)
 
@@ -609,10 +463,10 @@ safeJsonLd([
     name: "Top 20 Stablecoins by Market Cap",
     description: `Top 20 of ${total} stablecoins tracked by Pharos.`,
     numberOfItems: itemListCount,
-    itemListElement: itemListElements.map((item, i) => ({
-      ...item,
-      image: logosById[ACTIVE_STABLECOINS[i].id] ? `${SITE_URL}${logosById[ACTIVE_STABLECOINS[i].id]}` : undefined,
-    })).filter(Boolean),
+    itemListElement: itemListElements.map((item, i) => {
+      const logo = logosById[ACTIVE_STABLECOINS[i].id];
+      return logo ? { ...item, image: `${SITE_URL}${logo}` } : item;
+    }),
   },
 ])
 ```
@@ -621,20 +475,9 @@ safeJsonLd([
 
 - [ ] **Step 2: Cemetery page**
 
-Edit `src/app/cemetery/page.tsx:47-64`. Two changes:
+Cemetery coins (`DEAD_STABLECOINS`) have no detail routes. Omit `url` on each ListItem (Schema.org does not require it; fabricating or linking off-site is worse).
 
-1. Add `url` to each ListItem — Cemetery coins do NOT have detail pages by default; they are in `DEAD_STABLECOINS`. Verify:
-
-```bash
-# Check if cemetery coins have detail routes:
-ls /home/ahirice/Documents/git/stablecoin-dashboard/src/app/cemetery/[id]/ 2>/dev/null
-```
-
-If there's a `/cemetery/[id]/` or `/stablecoin/[id]/` route that matches, use `buildStablecoinUrl(coin.id)` or a cemetery-specific URL. If not, drop the `url` field — Schema.org does not require it on ListItem, and fabricating a URL is worse than omitting.
-
-**Decision point:** grep first; if no detail route exists, leave `url` omitted. The original Week 2 scope says "add `url: buildStablecoinUrl(coin.id)` if coin has a detail page, otherwise external link" — prefer omission over external link because external links would fragment the Schema.org graph and point crawlers off-site.
-
-2. Wrap in CollectionPage (identical pattern to homepage):
+Wrap in CollectionPage (identical pattern to homepage):
 
 ```ts
 safeJsonLd([
@@ -701,17 +544,7 @@ import { SITE_ORIGIN as SITE_URL } from "@shared/lib/runtime-origins";
 
 - [ ] **Step 4: Taxonomy pages**
 
-Edit `src/components/stablecoin-taxonomy-shell.tsx:46-63`. Replace the single ItemList block with:
-
-```tsx
-{
-  const inferredKind: "governance" | "backing" | "infrastructure" | null = /* derive from href prefix, e.g. "/stablecoins/cefi/" => "governance". Or surface as a prop. */ null;
-  // Simpler: add a new optional `aboutTerm?: { name: string; description: string }` prop and thread through from each caller.
-  return null;
-}
-```
-
-**Actually, don't add complexity.** Just emit CollectionPage + ItemList without DefinedTerm, since the taxonomy shell already has a short `description` and `intro` string. Optional `about: DefinedTerm` can come later. Keep this change surgical:
+Edit `src/components/stablecoin-taxonomy-shell.tsx:46-63`. Replace the single ItemList block with a CollectionPage + ItemList pair (keep hard-coded `https://pharos.watch` to match existing file style — do not refactor to SITE_URL in this PR):
 
 ```tsx
 safeJsonLd([
@@ -741,7 +574,6 @@ safeJsonLd([
 ])
 ```
 
-`about: DefinedTerm` is deferred to a later pass when the taxonomy data is formally extended with a glossary-backed term definition — Week 2 ships the CollectionPage wrap only.
 
 - [ ] **Step 5: Verify**
 
@@ -774,7 +606,9 @@ Each should show `CollectionPage` and `ItemList`.
 
 - [ ] **Step 1: `/about/api/` page**
 
-The page's "Need A Key" section (lines 327-351) and "Quick Facts" (lines 290-303) are not strict FAQs — they're instructions and reference material. Rather than forcing a shape, extract the content as FAQ items where it reads as Q/A:
+**Add imports to `src/app/about/api/page.tsx`:** `import { buildFaqJsonLd, type FaqItem } from "@/lib/faq";` (`safeJsonLd` is already imported.)
+
+Extract Q/A content from the "Need A Key" + "Quick Facts" sections as FAQ items:
 
 ```ts
 // Add above the return block in src/app/about/api/page.tsx
@@ -816,16 +650,11 @@ Wrap in JSON-LD. Replace the existing single `<script type="application/ld+json"
 />
 ```
 
-**Decision:** do NOT render the FAQ as visible UI on `/about/api/`. The page already has the information in its existing layout; a second visible FAQ block would duplicate content. JSON-LD only. (Google's Rich Results guidance tolerates FAQ JSON-LD without a 1:1 visible Q/A on technical-reference pages, though policies shift; verify with Rich Results Test after deploy and roll back if a warning appears.)
+JSON-LD only, no visible UI block — the Q/A content already exists in the page's layout; a duplicate visible FAQ would be redundant.
 
 - [ ] **Step 2: `/telegram/` page**
 
-The telegram page has FAQ-shaped content scattered through feature sections. Options:
-
-1. Pull explanatory paragraphs from the page into a compact `FaqSection` rendered at the bottom, with `includeJsonLd={true}`. Reuses the existing `FaqSection` component. **Preferred.**
-2. Emit FAQPage JSON-LD without visible UI (same compromise as `/about/api/` above). **Less preferred** — the telegram page has room for a visible FAQ block.
-
-Go with option 1. Add a `TELEGRAM_FAQ: FaqItem[]` constant with 4–6 items drawn from existing copy:
+Add a `TELEGRAM_FAQ: FaqItem[]` constant with 4–6 items (below), then render `<FaqSection items={TELEGRAM_FAQ} includeJsonLd />` near the bottom of the page:
 
 ```ts
 const TELEGRAM_FAQ: FaqItem[] = [
@@ -886,7 +715,7 @@ Already mapped during planning:
 
 - [ ] **Step 2: Add HowTo JSON-LD**
 
-In `src/app/telegram/page.tsx`, add a new `<script type="application/ld+json">` block near the existing JSON-LD (there's already `Organization` + `WebApplication`-ish markup on the page — grep for the existing script tag to find the location):
+`src/app/telegram/page.tsx` currently imports `safeJsonLd` but emits no JSON-LD. Insert a new `<script type="application/ld+json">` block inside the returned JSX (inside `FeaturePageShell` or immediately after the page `<div>` wrapper so it lands in the static HTML):
 
 ```tsx
 <script
@@ -1039,11 +868,7 @@ grep -c 'person-tokenbrice' out/methodology/index.html
 
 Spot-check in Google Rich Results Test.
 
-**Risks:**
-- Adding standalone Person node to every page increases HTML bytes by ~400 bytes gzipped. Acceptable.
-- All 3 Person `sameAs` URLs user-confirmed; no 404 risk.
-
-**Effort:** M (2–3h including handle verification)
+**Effort:** M (2–3h)
 
 ---
 
@@ -1054,40 +879,25 @@ Spot-check in Google Rich Results Test.
 **Files:**
 - Modify: `public/_headers`
 
-- [ ] **Step 1: Append to `public/_headers`**
+- [ ] **Step 1: Edit `public/_headers`**
+
+`public/_headers` already has a broad `/*` stanza with security headers (CSP, X-Frame-Options, HSTS, etc.). **Cloudflare Pages `_headers` does NOT merge duplicate path blocks — the last matching block wins.** Do not add a second `/*` block; append `Cache-Control` into the existing `/*` stanza. Add the `/og-*.png` override as a new stanza placed **above** `/*` (more-specific first).
+
+Final `_headers` layout:
 
 ```
-/*.html
-  Cache-Control: public, max-age=0, s-maxage=300, stale-while-revalidate=86400
+# (existing specific rules unchanged)
+/favicon.ico
+  Cache-Control: public, max-age=604800, immutable
+# ...other existing overrides...
 
-/
-  Cache-Control: public, max-age=0, s-maxage=300, stale-while-revalidate=86400
-```
-
-**Check Cloudflare Pages semantics:** `/*.html` targets the .html files served at nested routes; the root `/` line catches the homepage. Pages serves trailing-slash routes as directory `index.html` — confirm the pattern matches. If `/*.html` doesn't match directory-index serving, switch to `/*` with a narrower header:
-
-```
-# Safer fallback
-/*
-  Cache-Control: public, max-age=0, s-maxage=300, stale-while-revalidate=86400
-```
-
-BUT `/*` would also affect `.png`, `.txt`, etc. The correct Cloudflare Pages pattern for HTML-only is tricky because there's no content-type filter in `_headers`. Two options:
-
-1. **Narrow by path:** list each top-level path explicitly (`/`, `/stablecoin/*`, `/methodology/*`, etc.).
-2. **Broad wildcard + override:** `/*` with the 5min header, then override static-asset paths with longer caches (`_next/static/*` already overridden, `/favicon*` already overridden, add `og-*.png` etc.).
-
-**Decision:** go with option 2. The existing `_headers` already has overrides for favicons, `_next/static/*`, and `og-image.png`. Extend the overrides to cover the full OG image set, then add a broad `/*` header:
-
-```
 /og-*.png
   Cache-Control: public, max-age=86400
 
 /*
+  # (existing security headers retained: CSP, X-Frame-Options, HSTS, etc.)
   Cache-Control: public, max-age=0, s-maxage=300, stale-while-revalidate=86400
 ```
-
-Order matters in `_headers`: more-specific rules must appear before less-specific. Preserve the existing ordering; add `/og-*.png` above `/*`, add `/*` at the bottom (after all specific rules).
 
 - [ ] **Step 2: Verify on preview deploy**
 
@@ -1105,10 +915,6 @@ Expected:
 - Favicon: `public, max-age=604800, immutable` (unchanged)
 - OG PNG: `public, max-age=86400`
 
-- [ ] **Step 3: Do NOT deploy to prod until preview passes**
-
-If preview shows `Cache-Control` not applied or applied incorrectly, roll back the `_headers` change and investigate. Cloudflare Pages has documented quirks around `_headers` pattern matching — worst case the matching is per-file-extension and not path-level, which needs a different approach (response Transform Rules at the zone level).
-
 **Risks:**
 - **This is the riskiest task in the plan.** Incorrect cache semantics can serve stale KPI data to real users. Mitigations:
   - Preview-first (don't skip).
@@ -1117,14 +923,6 @@ If preview shows `Cache-Control` not applied or applied incorrectly, roll back t
 - If Pages' `_headers` pattern matching is whitespace-sensitive or ordering-sensitive, the override may fail silently. Plan for a rollback commit.
 
 **Effort:** M (2–4h with preview validation)
-
----
-
-### Task 12: Cemetery ListItem `url` (already folded into Task 7)
-
-**Goal:** De-duplicate with Task 7. No independent work — Task 7 Step 2 handles it.
-
-- [ ] **Already covered.** Skip in commit sequencing.
 
 ---
 
@@ -1155,18 +953,16 @@ This task does NOT rewrite copy. It's verification-only. If any cohort's copy fe
 
 ## Commit Strategy
 
-Recommend **per-theme commits, single PR**. The tasks fall into five themes; each gets its own commit with a clear subject line. Single PR keeps Week 2 atomic for review.
+Per-theme commits, single PR. **Task 10 must commit before Tasks 6, 7, 8, 9** (they reference its `@id` constants).
 
 1. `feat(seo): add llms.txt prebuild generator + header` — Task 1.
-2. `feat(seo): promote visible H1 on home + detail + hero card` — Task 2.
-3. `feat(seo): full-date ISO datelines on ai-summary + funding card` — Task 3.
-4. `chore(assets): shrink og-start.png from 554KB to under 200KB` — Task 4.
-5. `feat(seo): TechArticle + ItemList + CollectionPage schema on methodology / changelog / list pages` — Tasks 6, 7.
-6. `feat(seo): FAQPage + HowTo schema on /about/api + /telegram` — Tasks 8, 9.
-7. `feat(seo): shared Pharos Person + Organization JSON-LD nodes` — Task 10.
+2. `feat(seo): shared Pharos Person + Organization JSON-LD nodes` — Task 10.
+3. `feat(seo): promote visible H1 on home + detail + hero card` — Task 2.
+4. `feat(seo): full-date ISO datelines on ai-summary + funding card` — Task 3.
+5. `chore(assets): shrink og-start.png from 554KB to under 200KB` — Task 4.
+6. `feat(seo): TechArticle + ItemList + CollectionPage schema on methodology / changelog / list pages` — Tasks 6, 7.
+7. `feat(seo): FAQPage + HowTo schema on /about/api + /telegram` — Tasks 8, 9.
 8. `chore(infra): HTML Cache-Control headers for Pages` — Task 11.
-9. (Task 5 verification) — may fold into commit 2 or land as a trailing check commit.
-10. (Task 13 review) — no commit; notes-only.
 
 Reviewer can verify each theme independently. If any theme fails review, drop its commits and re-land the others.
 
