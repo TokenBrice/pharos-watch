@@ -1,61 +1,129 @@
-# SEO Week 2 — llms.txt + Schema Coverage Expansion
+# SEO Week 2 - llms.txt + Schema Coverage Expansion
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+Status: verified and amended on 2026-04-19 after independent gpt-5.4 xhigh review.
 
-**Goal:** Ship the second of three SEO/LLM-indexability deliverables: publish a build-generated `/llms.txt`, promote a real visible H1 on home + detail pages, add structured-data (Article / CollectionPage / FAQPage / HowTo / Person) coverage to pages currently missing it, and close the remaining quick wins (full-date datelines, oversized OG shrink, taxonomy editorial review, HTML Cache-Control).
+Audit note: `agents/audits/2026-04-19-seo-week2-plan-verification.md`
 
-**Architecture:** Surgical per-page edits on top of existing helpers (`safeJsonLd`, `buildFaqJsonLd`, `FaqSection`, `BreadcrumbJsonLd`, `buildStablecoinUrl`, `SITE_ORIGIN`). One new build script under `scripts/` (pattern copied from `scripts/generate-sitemap-dates.ts`) to emit `public/llms.txt` in the `prebuild` hook. One new exported constant `PHAROS_ORG_NODE` + `PHAROS_PERSON_TOKENBRICE_NODE` in `src/lib/json-ld.ts` for reuse across pages (Article.author, Article.publisher, Organization.founder, WebApplication.creator). No shared abstractions beyond these. Schema is inline `<script type="application/ld+json">` blocks identical in pattern to what already ships on `/methodology` and `/cemetery`.
+## Goal
 
-**Out of this plan (deferred):**
-- Week 1 items (separate plan): soft-404, breadcrumb N-level, Dataset enrichment, Organization `@id`, AI-robots rules, title fixes, orphan route cleanup.
-- Week 3–4 items: markdown content negotiation + `/docs/*` routes.
-- `html-to-image` dynamic import — already done in `src/lib/chart-export.ts:7`; no work required.
+Ship the second SEO/LLM-indexability tranche safely:
 
----
+- generate and publish `/llms.txt`
+- keep exactly one visible H1 on the homepage and stablecoin detail pages
+- expand valid, visible-content-aligned JSON-LD coverage
+- shrink the oversized `/og-start.png`
+- add explicit HTML cache headers without corrupting static asset cache headers
+- document the build/SEO/header behavior changes
 
-## Prerequisites
+This is a static Next.js export to Cloudflare Pages. Changes must stay surgical and match existing route/component patterns.
 
-- [ ] Week 1 merged. Task 10 below still adds Organization `@id` defensively if missing (additive, no-op if already present).
-- [ ] `npm install` + `npm run build` clean on `main` before branching.
+## Assumptions
 
----
+- Current `main` worktree is the source of truth.
+- Week 1 may already have added some root JSON-LD IDs. If so, keep the existing IDs and do not duplicate graph nodes.
+- `npm run build` runs `prebuild`, so generated `src/generated/sitemap-dates.json` exists during Next build.
+- `llms.txt` is a community proposal and inference aid. It is not a Google ranking directive, not a robots replacement, and not a sitemap replacement.
+- Google Rich Results Test is not a complete validator for generic Schema.org nodes. Use it only for Google-supported result types; use local parsing and Schema.org Validator for generic graph validity.
 
-## Commit order (strict)
+## Non-Negotiable Invariants
 
-**Task 10 (shared `PHAROS_ORG_NODE` / `PHAROS_PERSON_TOKENBRICE_NODE` constants) MUST land before Tasks 6, 7, 8, 9** — they reference `${SITE_URL}#organization` and `${SITE_URL}#person-tokenbrice` by `@id`. Suggested order: 1 → 10 → 2 → 3 → 4 → 6 → 7 → 8 → 9 → 11.
+- Built indexable HTML pages must have exactly one raw `<h1>` tag. `aria-hidden` does not matter to `scripts/check-seo-static.mjs`.
+- Do not emit `SearchAction` / `potentialAction` until the site has a real query handler.
+- Do not create duplicate or comma-joined `Cache-Control` values in Cloudflare Pages `_headers`.
+- Generated `public/llms.txt` must not drift from `scripts/generate-llms-txt.ts`.
+- Do not remove existing verified Organization `sameAs` links unless explicitly documented.
+- Do not mark up FAQ content unless the same questions and answers are visible on the page.
 
----
+## Required Docs To Read First
 
-## Task Breakdown
+- `docs/architecture.md`
+- `docs/testing.md`
+- `docs/scripts.md`
+- `docs/homepage.md`
+- `docs/stablecoin-detail-page.md`
+- Route docs for pages touched below if they exist.
 
-Each task: Goal, Files, Steps, Verification, Risks, Effort (S=<2h / M=2–6h / L=>6h).
+## Task Order
 
----
+Recommended order:
 
-### Task 1: Ship `public/llms.txt` via prebuild generator
+1. Task 1 - generate `/llms.txt`
+2. Task 2 - shared Organization/Person JSON-LD nodes
+3. Task 3 - H1 fixes
+4. Task 4 - full-date `<time>` datelines
+5. Task 5 - shrink `og-start.png`
+6. Task 6 - Article/ItemList/CollectionPage schema
+7. Task 7 - FAQPage/HowTo schema, with visible FAQ content
+8. Task 8 - Cloudflare Pages `_headers`
+9. Task 9 - taxonomy copy verification
+10. Task 10 - docs and final verification
 
-**Goal:** Produce a valid llmstxt.org-spec file at `public/llms.txt` generated from `ACTIVE_STABLECOINS` and a small hand-curated top-level menu, wired into `prebuild` alongside the existing `generate-sitemap-dates.ts` / `generate-redirects.ts`.
+Task 2 must land before Tasks 6 and 7 because those schema nodes reference `#organization`, `#website`, and `#person-tokenbrice`.
 
-**Files:**
-- Create: `scripts/generate-llms-txt.ts`
-- Modify: `package.json:16` (prebuild)
-- Modify: `public/_headers` (append `/llms.txt` Cache-Control stanza)
-- Create: `public/llms.txt` (generator output, committed)
+## Task 1: Generate `public/llms.txt`
 
-- [ ] **Step 1: Draft `scripts/generate-llms-txt.ts`**
+### Goal
 
-Copy `scripts/generate-sitemap-dates.ts` as a starting point. **Use relative imports only** — `tsx` run from the CLI does not resolve `@/` or `@shared/` path aliases without extra setup, and existing `scripts/*.ts` use relative paths:
+Create a deterministic `/llms.txt` file generated during `prebuild` from checked-in data and curated route lists.
 
-- `import { ACTIVE_STABLECOINS } from "../shared/lib/stablecoins";`
-- `import { SITE_ORIGIN } from "../shared/lib/runtime-origins";`
-- `import { PEG_LABELS_SHORT } from "../shared/lib/classification";`
+### Files
 
-Output structure (llmstxt.org spec: H1, blockquote summary, H2 sections with `- [Title](url): description` bullets):
+- Create `scripts/generate-llms-txt.ts`
+- Modify `package.json`
+- Modify `public/_headers`
+- Create generated output `public/llms.txt`
+- Update docs in Task 10
 
-```markdown
+### Implementation
+
+Create `scripts/generate-llms-txt.ts`.
+
+Use relative imports only. Do not import from `src/` or use `@/` aliases from this script.
+
+Required data:
+
+```ts
+import { readFileSync, writeFileSync } from "node:fs";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
+import { PEG_LABELS_SHORT } from "../shared/lib/classification";
+import { DEAD_STABLECOINS } from "../shared/lib/dead-stablecoins";
+import { SITE_ORIGIN } from "../shared/lib/runtime-origins";
+import { ACTIVE_STABLECOINS } from "../shared/lib/stablecoins";
+import type { BackingType, GovernanceType } from "../shared/types";
+```
+
+Read `data/digests.json` with `readFileSync` and a small local type. Do not import UI digest helpers from `src/`.
+
+Use inline metadata phrases copied from `src/lib/page-metadata.ts`, because scripts must not import frontend modules:
+
+```ts
+const GOVERNANCE_METADATA_PHRASES: Record<GovernanceType, string> = {
+  centralized: "centralized",
+  "centralized-dependent": "CeFi-dependent",
+  decentralized: "decentralized",
+};
+
+const BACKING_METADATA_PHRASES: Record<BackingType, string> = {
+  "rwa-backed": "backed by real-world assets",
+  "crypto-backed": "collateralized by crypto assets",
+  algorithmic: "algorithmic stablecoin",
+};
+```
+
+Add helpers:
+
+- `absolute(path: string): string`
+- `stablecoinPath(id: string): string` using `/stablecoin/${encodeURIComponent(id)}/`
+- `escapeMarkdown(text: string): string` for `[` `]` and line breaks
+- `descriptionForStablecoin(coin)` using governance/backing/peg labels
+
+Output format:
+
+```md
 # Pharos
 
-> Pharos tracks {N} stablecoins across major chains with depeg alerts, liquidity scores, on-chain safety signals, dependency-risk scoring, and report-card-style risk summaries. Data refreshes multiple times per day from the Pharos Cloudflare Worker API.
+> Pharos tracks {N} active stablecoins across major chains with depeg alerts, liquidity scores, on-chain safety signals, dependency-risk scoring, and report-card-style risk summaries. Data refreshes multiple times per day from the Pharos Cloudflare Worker API.
 
 ## Core Data
 
@@ -88,7 +156,7 @@ Output structure (llmstxt.org spec: H1, blockquote summary, H2 sections with `- 
 
 ## API
 
-- [API Reference](https://pharos.watch/about/api/): Public + ops lanes, auth model, endpoint catalogue.
+- [API Reference](https://pharos.watch/about/api/): Public and ops lanes, auth model, endpoint catalogue.
 - [About](https://pharos.watch/about/): Project context and data sources.
 
 ## Changelog
@@ -98,119 +166,248 @@ Output structure (llmstxt.org spec: H1, blockquote summary, H2 sections with `- 
 
 ## Digest
 
-(Auto-generated list of the most recent {K=20} entries from `data/digests.json`, linking to `/digest/{date}/`.)
+- [Digest title](https://pharos.watch/digest/YYYY-MM-DD/): Digest short text.
 
 ## Stablecoins Index
 
-(Auto-generated from `ACTIVE_STABLECOINS`, one line per coin:
-`- [Name (SYMBOL)](https://pharos.watch/stablecoin/{id}/): {governance} stablecoin {backing-phrase} pegged to {pegLabel}.`
-
-Use the same `GOVERNANCE_METADATA_PHRASES` / `BACKING_METADATA_PHRASES` pattern from `src/lib/page-metadata.ts:18-28` — **redefine inline** (do not import from `src/`; scripts stay build-time-only and cannot pull React). `PEG_LABELS_SHORT` is importable from `../shared/lib/classification` (relative path).)
+- [Name (SYMBOL)](https://pharos.watch/stablecoin/{id}/): {governance} stablecoin {backing phrase} pegged to {pegLabel}.
 ```
 
-**Decisions locked in this step:**
-- Do **not** list every methodology sub-page as separate entries beyond the changelog list above — that would duplicate content the methodology hub already indexes.
-- Do **not** include comparison pages or taxonomy pages in the stablecoins index (they are category hubs, not the primary data surface; llms.txt should point at the most authoritative entry per topic).
-- The `{K}` digest count is 20. More risks bloating the file.
+Rules:
 
-- [ ] **Step 2: Wire into prebuild**
+- Include the newest 20 digest entries from `data/digests.json`; sort by `generatedAt` descending if available, otherwise keep file order.
+- Include all `ACTIVE_STABLECOINS` in existing deterministic order.
+- Do not list every methodology subsection beyond the changelog list.
+- Do not include comparison pages or taxonomy pages in the stablecoin index.
+- All URLs must be absolute and use `SITE_ORIGIN`.
+- Keep output under 100 KB.
 
-Edit `package.json:16`:
+Wire `package.json`:
 
-```jsonc
-// before
-"prebuild": "tsx scripts/generate-redirects.ts && tsx scripts/generate-sitemap-dates.ts",
-// after
-"prebuild": "tsx scripts/generate-redirects.ts && tsx scripts/generate-sitemap-dates.ts && tsx scripts/generate-llms-txt.ts",
+```json
+"prebuild": "tsx scripts/generate-redirects.ts && tsx scripts/generate-sitemap-dates.ts && tsx scripts/generate-llms-txt.ts"
 ```
 
-- [ ] **Step 3: Add `/llms.txt` cache header**
+Add a `/llms.txt` block to `public/_headers`. Include `! Cache-Control` now so Task 8's broad HTML cache rule cannot later combine with it:
 
-Edit `public/_headers`. Append at end:
-
-```
+```text
 /llms.txt
+  ! Cache-Control
   Cache-Control: public, max-age=3600
   Content-Type: text/plain; charset=utf-8
 ```
 
-(Cloudflare Pages already sets `text/plain` for .txt by default, but being explicit defends against future default changes.)
+### Verification
 
-- [ ] **Step 4: Run `npm run prebuild` and commit the produced `public/llms.txt`**
+```bash
+npm run prebuild
+test -f public/llms.txt
+head -5 public/llms.txt
+wc -c public/llms.txt
+grep -q '^# Pharos$' public/llms.txt
+grep -q 'https://pharos.watch/stablecoin/usdt-tether/' public/llms.txt
+git ls-files --error-unmatch public/llms.txt
+git diff --exit-code -- public/llms.txt
+```
 
-Verify:
-- File exists at `public/llms.txt` and begins with `# Pharos`.
-- Byte count is <100 KB (191 coins × ~150 bytes ≈ 30 KB, total file well under budget).
-- All URLs are absolute `https://pharos.watch/...`.
-- `curl -I https://pharos.watch/llms.txt` after deploy returns 200 (post-deploy check, not blocking).
+Post-deploy:
 
-**Risks:**
-- Upstream tooling discovering `llms.txt` may expect stable content — deterministic generation is important. Sort `ACTIVE_STABLECOINS` by the same order as `TRACKED_STABLECOINS` (already deterministic) or by descending market cap (requires a data fetch, which is out of scope — use the existing deterministic source order).
-- Script must not introduce a runtime dep on React / Next. Import only from `shared/lib/*`.
+```bash
+curl -Is https://pharos.watch/llms.txt | tr -d '\r' | grep -iE '^(http|content-type|cache-control):'
+curl -s https://pharos.watch/llms.txt | head -5
+```
 
-**Effort:** M (2–4h)
+## Task 2: Shared Person + Organization JSON-LD Nodes
 
----
+### Goal
 
-### Task 2: Promote visible H1 on homepage + detail pages
+Create canonical Organization and Person graph nodes in `src/lib/json-ld.ts`, then reuse them in the root layout while preserving the existing root graph contract.
 
-**Goal:** Replace `<h1 class="sr-only">` with a real visible H1 on detail and home pages without breaking a11y.
+### Files
 
-**Files:**
-- Modify: `src/app/stablecoin/[id]/page.tsx:116-118` (remove sr-only H1 block)
-- Modify: `src/components/stablecoin-detail/hero-card.tsx:668` (mobile `<h2>` → `<h1>`)
-- Modify: `src/components/stablecoin-detail/hero-card.tsx:769` (desktop `<h2>` → `<h1>`)
-- Modify: `src/components/pre-launch-detail.tsx:282-284` (delete sr-only H1 block)
-- Modify: `src/components/pre-launch-detail.tsx:315` (`<h2>` → `<h1>`, classes preserved)
-- Modify: `src/components/site-header.tsx:64,86` (`<p>Pharos</p>` → `<h1>Pharos</h1>`, classes preserved)
-- Modify: `src/app/page.tsx:44` (remove sr-only H1)
+- Modify `src/lib/json-ld.ts`
+- Modify `src/app/layout.tsx`
+- Update docs in Task 10
 
-- [ ] **Step 1: Active detail + pre-launch**
+### Implementation
 
-Grep to confirm current line numbers (hero-card h2s may have shifted). Then:
-- `src/components/stablecoin-detail/hero-card.tsx` — change two `<h2>{coin.name}</h2>` (mobile + desktop responsive twins) → `<h1>`, preserve all classes verbatim.
-- `src/app/stablecoin/[id]/page.tsx` — delete the sr-only `<h1>` block (currently at ~line 116-118).
-- `src/components/pre-launch-detail.tsx:282-284` — delete sr-only H1.
-- `src/components/pre-launch-detail.tsx:315` — change `<h2 className="break-words text-2xl font-extrabold tracking-tight sm:text-3xl">{coin.name}</h2>` → `<h1>` with identical classes.
+In `src/lib/json-ld.ts`, add the import at the top:
 
-- [ ] **Step 2: Homepage + site header**
+```ts
+import { SITE_ORIGIN as SITE_URL } from "@shared/lib/runtime-origins";
+```
 
-Class strings at lines 64 and 86 of `src/components/site-header.tsx` **differ** — do not homogenize:
-- L64 (mobile): `<p className="text-sm font-mono font-semibold uppercase tracking-[0.14em] text-foreground">Pharos</p>` → `<h1>` with identical classes.
-- L86 (desktop): `<p className="text-[1.06rem] font-mono font-semibold uppercase tracking-[0.16em] text-foreground">Pharos</p>` → `<h1>` with identical classes.
-- `src/app/page.tsx:44` — delete sr-only H1.
+Keep `safeJsonLd` unchanged. Add:
 
-- [ ] **Step 3: Verify**
+```ts
+const PHAROS_SITE_DESCRIPTION =
+  "Pharos tracks stablecoins across major chains with depeg alerts, liquidity scores, on-chain safety signals, dependency-risk scoring, and report-card-style risk summaries.";
 
-`npm run test:merge-gate`. Also `grep -c '<h1' out/index.html` ≥ 1 and `grep -c '<h1' out/stablecoin/usdt-tether/index.html` ≥ 1.
+export const PHAROS_PERSON_TOKENBRICE_NODE = {
+  "@type": "Person",
+  "@id": `${SITE_URL}#person-tokenbrice`,
+  name: "TokenBrice",
+  url: "https://tokenbrice.xyz",
+  image: `${SITE_URL}/tokenbrice.png`,
+  sameAs: [
+    "https://x.com/TokenBrice",
+    "https://github.com/TokenBrice",
+    "https://farcaster.xyz/tokenbrice",
+  ],
+  knowsAbout: ["stablecoins", "DeFi risk", "tokenomics", "pegged assets", "on-chain analytics"],
+  affiliation: { "@id": `${SITE_URL}#organization` },
+} as const;
 
-**Risks:** Responsive-twin duplicate H1s are HTML5-valid but flagged by some SEO linters. Document in commit; add `aria-hidden="true"` to the hidden twin only if a linter complains post-deploy.
+export const PHAROS_ORG_NODE = {
+  "@type": "Organization",
+  "@id": `${SITE_URL}#organization`,
+  name: "Pharos",
+  url: SITE_URL,
+  logo: `${SITE_URL}/pharos-icon.png`,
+  description: PHAROS_SITE_DESCRIPTION,
+  sameAs: [
+    "https://x.com/PharosWatch",
+    "https://github.com/TokenBrice/stablecoin-dashboard",
+    "https://t.me/pharoswatch",
+    "https://t.me/PharosWatchBot",
+    "https://t.me/pharoswatchers",
+  ],
+  founder: { "@id": `${SITE_URL}#person-tokenbrice` },
+} as const;
+```
 
-**Effort:** M (2–3h)
+In `src/app/layout.tsx`:
 
----
+- import the constants from `@/lib/json-ld`
+- preserve `WebSite.@id`, `WebSite.inLanguage`, and `WebApplication.@id`
+- do not add `potentialAction`
+- emit a standalone Person node
+- set `WebApplication.creator` to an `@id` reference for `${SITE_URL}#person-tokenbrice`
+- preserve Organization Telegram `sameAs` entries from the existing layout
 
-### Task 3: Full ISO date + `<time dateTime>` on ai-summary (and funding cost card)
-
-**Goal:** Emit machine-readable dates on all visible "as-of" timestamps that crawlers index.
-
-**Files:**
-- Modify: `src/components/ai-summary.tsx:11-23`
-- Modify: `src/components/funding/funding-page-sections.tsx:143-146` (flagged for review)
-
-- [ ] **Step 1: Update `ai-summary.tsx`**
-
-Replace lines 11-14 with a full ISO date in `dateTime` and a human-readable full date in visible text:
+Expected root JSON-LD shape:
 
 ```tsx
-// before
-const dateline = new Date(updatedAt + "T00:00:00").toLocaleString("en-US", {
-  month: "short",
-  year: "numeric",
-});
-// after
-const isoDate = updatedAt; // assume YYYY-MM-DD input format; no timezone info needed
-const dateline = new Date(updatedAt + "T00:00:00Z").toLocaleDateString("en-US", {
+safeJsonLd([
+  {
+    "@context": "https://schema.org",
+    "@type": "WebSite",
+    "@id": `${SITE_URL}#website`,
+    name: "Pharos",
+    url: SITE_URL,
+    description: siteDescription,
+    inLanguage: "en",
+  },
+  {
+    "@context": "https://schema.org",
+    ...PHAROS_ORG_NODE,
+    description: siteDescription,
+  },
+  {
+    "@context": "https://schema.org",
+    ...PHAROS_PERSON_TOKENBRICE_NODE,
+  },
+  {
+    "@context": "https://schema.org",
+    "@type": "WebApplication",
+    "@id": `${SITE_URL}#webapp`,
+    name: "Pharos",
+    url: SITE_URL,
+    applicationCategory: "FinanceApplication",
+    operatingSystem: "Web",
+    description: siteDescription,
+    offers: { "@type": "Offer", price: "0", priceCurrency: "USD" },
+    creator: { "@id": `${SITE_URL}#person-tokenbrice` },
+  },
+])
+```
+
+### Verification
+
+```bash
+npm run build
+grep -q '#website' out/index.html
+grep -q '#webapp' out/index.html
+grep -q 'person-tokenbrice' out/index.html
+! grep -q 'SearchAction' out/index.html
+! grep -q 'search_term_string' out/index.html
+```
+
+Use substring greps such as `person-tokenbrice`; `safeJsonLd` escapes `/`, so raw `https://...` greps can false-negative.
+
+## Task 3: Exactly One Visible H1 On Home + Detail Pages
+
+### Goal
+
+Replace sr-only-only H1 usage with visible H1s while preserving the repo invariant of exactly one raw H1 per indexable built page.
+
+### Files
+
+- Modify `src/app/page.tsx`
+- Modify `src/components/site-header.tsx` only if needed to avoid duplicate visible title copy
+- Modify `src/components/pre-launch-detail.tsx`
+- Do not modify active-detail `src/components/stablecoin-detail/hero-card.tsx` headings
+- Update `docs/homepage.md` in Task 10
+
+### Implementation
+
+Active stablecoin detail pages:
+
+- No H1 change is needed.
+- Keep `src/components/stablecoin-detail/static-hero-strip.tsx` as the canonical visible H1.
+- Do not promote mobile/desktop H2 headings in `hero-card.tsx`.
+
+Pre-launch stablecoin detail pages:
+
+- In `src/components/pre-launch-detail.tsx`, delete the sr-only H1 block.
+- Change the visible coin title from H2 to H1 with identical classes.
+
+Homepage:
+
+- Remove the sr-only H1 in `src/app/page.tsx`.
+- Render exactly one visible H1 in the built HTML.
+- Do not implement this by changing both responsive `SiteHeader` branches to H1.
+
+Safe homepage implementation options:
+
+1. Preferred: refactor `SiteHeader` so the `Pharos` title is rendered once as an H1 outside its mobile/desktop responsive duplicate branches, while branch-specific labels remain `span`/`p` or are removed.
+2. Acceptable: render a single visible H1 from `src/app/page.tsx` before `SiteHeader`, and keep the existing `SiteHeader` labels as non-heading text.
+
+The implementation agent should choose the least visually disruptive option after inspecting `SiteHeader`. The raw built HTML must contain exactly one `<h1>` on `/`.
+
+### Verification
+
+```bash
+npm run build
+count_h1() { grep -Eo '<h1([[:space:]>])' "$1" | wc -l | tr -d ' '; }
+test "$(count_h1 out/index.html)" -eq 1
+test "$(count_h1 out/stablecoin/usdt-tether/index.html)" -eq 1
+test "$(count_h1 out/stablecoin/usdpt-western-union/index.html)" -eq 1
+npm run seo:check
+```
+
+If `usdpt-western-union` is no longer a pre-launch ID, choose any current pre-launch page from `PRE_LAUNCH_STABLECOINS`.
+
+## Task 4: Machine-Readable Datelines
+
+### Goal
+
+Use `<time datetime="...">` for visible as-of/reviewed labels that crawlers index.
+
+### Files
+
+- Modify `src/components/ai-summary.tsx`
+- Modify `src/components/funding/funding-page-sections.tsx`
+
+### Implementation
+
+In `src/components/ai-summary.tsx`, current `updatedAt` is `YYYY-MM-DD`.
+
+Use UTC display:
+
+```tsx
+const isoDate = updatedAt;
+const dateline = new Date(`${updatedAt}T00:00:00Z`).toLocaleDateString("en-US", {
   month: "long",
   day: "numeric",
   year: "numeric",
@@ -218,7 +415,7 @@ const dateline = new Date(updatedAt + "T00:00:00Z").toLocaleDateString("en-US", 
 });
 ```
 
-And in the return block, wrap the dateline in `<time>`:
+Render:
 
 ```tsx
 <time className="text-xs text-muted-foreground whitespace-nowrap" dateTime={isoDate}>
@@ -226,89 +423,124 @@ And in the return block, wrap the dateline in `<time>`:
 </time>
 ```
 
-Replacing the existing `<span>`. Preserve all other styling.
+For `src/components/funding/funding-page-sections.tsx`:
 
-- [ ] **Step 2: Grep for sibling formatters**
+- The route is `noindex`, but the visible "Costs last reviewed" label should still be semantic.
+- Keep visible month/year granularity.
+- Derive the month in UTC from `lastReviewedAt`.
+- Render a `<time>` with `dateTime` as `YYYY-MM`.
 
-Run the exact search that was run during planning:
+Example:
 
+```tsx
+const reviewedDateObject = new Date(lastReviewedAt * 1000);
+const reviewedDateTime = reviewedDateObject.toISOString().slice(0, 7);
+const reviewedDate = reviewedDateObject.toLocaleDateString("en-US", {
+  month: "short",
+  year: "numeric",
+  timeZone: "UTC",
+});
 ```
-month: "short", year: "numeric"  (multiline)
+
+Then:
+
+```tsx
+Costs last reviewed: <time dateTime={reviewedDateTime}>{reviewedDate}</time>.
 ```
 
-Only two hits: `src/components/ai-summary.tsx` (handled above) and `src/components/funding/funding-page-sections.tsx:143-146` ("Reviewed" date on cost card).
-
-- [ ] **Step 3: Funding page**
-
-Apply the same treatment at `src/components/funding/funding-page-sections.tsx:143-146`: wrap the "Reviewed" dateline in `<time dateTime={new Date(lastReviewedAt * 1000).toISOString().slice(0, 7)}>` (month precision — valid ISO; matches the existing "Reviewed Mar 2026" display granularity).
-
-- [ ] **Step 4: Verify**
+### Verification
 
 ```bash
 npm run lint
 npm test
+npm run build
+grep -E '<time[^>]*datetime=' out/stablecoin/usdt-tether/index.html
+grep -E '<time[^>]*datetime=' out/funding/index.html || true
 ```
 
-Grep the built output for `<time dateTime=`:
+React SSR may render `dateTime` as lowercase `datetime`; use lowercase-aware HTML checks.
+
+## Task 5: Shrink `og-start.png`
+
+### Goal
+
+Reduce `public/og-start.png` from about 542 KB to under 200 KB without visible social-card degradation.
+
+This reduces crawler/social-card bandwidth. It does not materially affect first meaningful paint because the OG image is metadata, not render-blocking content.
+
+### Files
+
+- Modify binary `public/og-start.png`
+
+### Implementation
+
+`pngquant` is installed in the current environment.
 
 ```bash
-npm run build && grep -c "<time dateTime" out/stablecoin/*/index.html | head
+pngquant --quality=70-90 --force --output /tmp/og-start.png public/og-start.png
+ls -lh /tmp/og-start.png
 ```
 
-Expect at least one match per stablecoin detail page (the AI summary is rendered via `overview-section.tsx`). If zero, the dateline didn't make it into the static export — investigate Suspense boundaries.
-
-**Effort:** S (<1h)
-
----
-
-### Task 4: Shrink `og-start.png` from 554 KB to <200 KB
-
-**Goal:** Match the size budget of other OG images; improve first-meaningful-paint on `/start/` and reduce crawler bandwidth.
-
-**Files:**
-- Modify (binary): `public/og-start.png`
-
-Only `og-start.png` (554 KB) exceeds the 300 KB budget; all other 19 `og-*.png` files are 60–198 KB.
-
-- [ ] **Step 1: Shrink in place and verify**
+If the output is under 200 KB and visually acceptable, replace the file:
 
 ```bash
-pngquant --quality=70-90 --force --output /tmp/og-start.png /home/ahirice/Documents/git/stablecoin-dashboard/public/og-start.png
-ls -la /tmp/og-start.png
-# If <200KB and visually acceptable, swap:
-cp /tmp/og-start.png /home/ahirice/Documents/git/stablecoin-dashboard/public/og-start.png
+cp /tmp/og-start.png public/og-start.png
 ```
 
-- [ ] **Step 2: Verify** — `ls -la public/og-start.png` shows ≤200 KB. View at 1200×628 scale to confirm no banding.
+Use an image viewer at 1200 x 628 scale to check for banding.
 
-**Effort:** S (<1h)
+### Verification
 
----
+```bash
+test "$(wc -c < public/og-start.png)" -le 204800
+ls -lh public/og-start.png
+```
 
-### Task 6: Add `TechArticle` schema to methodology + changelog pages
+## Task 6: Article, CollectionPage, and ItemList Schema
 
-**Goal:** Every long-form editorial methodology page emits Article/TechArticle JSON-LD so LLM summarisers can attribute, date, and compare versions.
+### Goal
 
-**Files:**
-- Modify: `src/app/methodology/page.tsx` (add TechArticle alongside existing FAQPage)
-- Modify: `src/components/methodology-changelog-page.tsx` (emit TechArticle JSON-LD using `entries[0]` for latest `datePublished` / `dateModified`)
-- Modify: `src/app/changelog/page.tsx` (emit ItemList of Article)
-- Modify: `src/app/digest/page.tsx` (add CollectionPage — handled in Task 7)
+Add useful JSON-LD to editorial/list pages without claiming unsupported Google rich-result behavior.
 
-- [ ] **Step 1: Methodology hub**
+### Files
 
-Extend the existing import in `src/app/methodology/page.tsx` to include `SAFETY_SCORE_CHANGELOG` (currently only `SAFETY_SCORE_VERSION_LABEL` is imported). `SAFETY_SCORE_CHANGELOG` is newest-first, so `.at(-1)` = oldest (v1.0 release, `"2026-02-25"`).
+- Modify `src/app/methodology/page.tsx`
+- Modify `src/components/methodology-changelog-page.tsx`
+- Modify `src/app/changelog/page.tsx`
+- Modify `src/app/digest/page.tsx`
+- Modify `src/app/page.tsx`
+- Modify `src/app/cemetery/page.tsx`
+- Modify `src/app/upcoming/page.tsx`
+- Modify `src/components/stablecoin-taxonomy-shell.tsx`
 
-After the existing FAQPage script block, insert a second `<script type="application/ld+json">` via `safeJsonLd`:
+### Shared schema rules
+
+- Use `Article` for Google-friendly article parsing. If technical semantics are useful, add `additionalType: "https://schema.org/TechArticle"`.
+- Use timezone-bearing ISO strings for article dates when dates are emitted.
+- Do not invent dates. If a route-level first-published date is not verified, omit `datePublished`.
+- For page graphs, use `isPartOf` pointing at `${SITE_URL}#website`, not `#organization`.
+- Prefer `ListItem.item` as a `WebPage` or `Thing` object.
+- Use `author` and `publisher` `@id` references for `${SITE_URL}#person-tokenbrice` and `${SITE_URL}#organization` after Task 2.
+
+### Methodology hub
+
+In `src/app/methodology/page.tsx`:
+
+- keep the existing FAQPage script
+- add a second JSON-LD script for `Article`
+- do not use only `SAFETY_SCORE_CHANGELOG` as a page-level publication model unless the implementation adds a verified page-level date
+- it is acceptable to omit `datePublished`
+- for `dateModified`, prefer generated `sitemapDates["/methodology/"]` if imported, otherwise omit it
+
+Example shape:
 
 ```ts
 {
   "@context": "https://schema.org",
-  "@type": "TechArticle",
+  "@type": "Article",
+  additionalType: "https://schema.org/TechArticle",
   headline: "Methodology: How Pharos Grades Stablecoins",
   description: "Full methodology behind Pharos safety grades, peg scores, liquidity scores, and contagion stress tests.",
-  datePublished: SAFETY_SCORE_CHANGELOG.at(-1)!.date,
-  dateModified: SAFETY_SCORE_CHANGELOG[0].date,
   author: { "@id": `${SITE_URL}#person-tokenbrice` },
   publisher: { "@id": `${SITE_URL}#organization` },
   image: `${SITE_URL}/og-methodology.png`,
@@ -317,301 +549,257 @@ After the existing FAQPage script block, insert a second `<script type="applicat
 }
 ```
 
-- [ ] **Step 2: Shared methodology changelog pages**
+### Methodology changelog pages
 
-Edit `src/components/methodology-changelog-page.tsx`. After the `BreadcrumbJsonLd` at line 48, add a new JSON-LD block using `entries[0]` / `entries.at(-1)`:
+In `src/components/methodology-changelog-page.tsx`, add one script after `BreadcrumbJsonLd` when `entries.length > 0`.
 
-```tsx
-{entries.length > 0 && (
-  <script
-    type="application/ld+json"
-    dangerouslySetInnerHTML={{
-      __html: safeJsonLd({
-        "@context": "https://schema.org",
-        "@type": "TechArticle",
-        headline: `${title} — Version History`,
-        description: typeof lead === "string" ? lead : `Version history for ${title}.`,
-        datePublished: entries.at(-1)!.date,
-        dateModified: entries[0].date,
-        author: { "@id": `${SITE_URL}#person-tokenbrice` },
-        publisher: { "@id": `${SITE_URL}#organization` },
-        image: `${SITE_URL}/og-card.png`,
-        mainEntityOfPage: `${SITE_URL}${path}`,
-      }),
-    }}
-  />
-)}
-```
+Imports:
 
-Add imports:
 ```tsx
 import { safeJsonLd } from "@/lib/json-ld";
 import { SITE_ORIGIN as SITE_URL } from "@shared/lib/runtime-origins";
 ```
 
-**Note:** `lead` is `ReactNode`, not always string. If not string, fall back to `${breadcrumbName} version history for Pharos.`.
-
-This one edit covers all 9 changelog subpages (`pricing-pipeline`, `scoring`, `liquidity-score`, `stability-index`, `chain-health`, `depeg`, `yield`, `blacklist-tracker`, `mint-burn-flow`).
-
-- [ ] **Step 3: Weekly changelog index**
-
-Edit `src/app/changelog/page.tsx`. Before line 23's `FeaturePageShell`, add:
+Use:
 
 ```tsx
-<script
-  type="application/ld+json"
-  dangerouslySetInnerHTML={{
-    __html: safeJsonLd({
-      "@context": "https://schema.org",
-      "@type": "ItemList",
-      name: "Pharos Changelog",
-      description: "Weekly release notes for Pharos.",
-      numberOfItems: changelogs.length,
-      itemListElement: changelogs.map((entry, i) => ({
-        "@type": "ListItem",
-        position: i + 1,
-        item: {
-          "@type": "Article",
-          headline: entry.headline ?? `Changelog — Week of ${entry.dateRange.to}`,
-          datePublished: new Date(entry.dateRange.to + "T00:00:00Z").toISOString(),
-          description: entry.summary.map((s) => s.label).slice(0, 3).join("; "),
-          author: { "@id": `${SITE_URL}#person-tokenbrice` },
-          publisher: { "@id": `${SITE_URL}#organization` },
-          url: `${SITE_URL}/changelog/#week-${entry.dateRange.to}`,
-        },
-      })),
-    }),
-  }}
-/>
+const articleDescription =
+  typeof lead === "string" ? lead : `${breadcrumbName} version history for Pharos.`;
 ```
 
-Also edit `src/app/changelog/page.tsx:69` to add `id={\`week-${entry.dateRange.to}\`}` on the `<li>` so the ListItem.url fragments resolve to a real anchor.
+Schema:
 
-Add imports to `src/app/changelog/page.tsx`:
 ```tsx
-import { safeJsonLd } from "@/lib/json-ld";
-import { SITE_ORIGIN as SITE_URL } from "@shared/lib/runtime-origins";
+{
+  "@context": "https://schema.org",
+  "@type": "Article",
+  additionalType: "https://schema.org/TechArticle",
+  headline: `${title} - Version History`,
+  description: articleDescription,
+  datePublished: `${entries.at(-1)!.date}T00:00:00Z`,
+  dateModified: `${entries[0].date}T00:00:00Z`,
+  author: { "@id": `${SITE_URL}#person-tokenbrice` },
+  publisher: { "@id": `${SITE_URL}#organization` },
+  image: `${SITE_URL}/og-card.png`,
+  mainEntityOfPage: `${SITE_URL}${path}`,
+}
 ```
 
-- [ ] **Step 4: Verify schema**
+This covers all methodology changelog subpages that use the shared component.
 
-```bash
-npm run build
-# Open each output:
-cat out/methodology/index.html | grep -o '"@type":"[^"]*"' | sort -u
-cat out/methodology/scoring-changelog/index.html | grep -o '"@type":"[^"]*"' | sort -u
-cat out/changelog/index.html | grep -o '"@type":"[^"]*"' | sort -u
-```
+### Changelog index
 
-Expected `@type` set per page:
-- `/methodology/`: BreadcrumbList, FAQPage, TechArticle, Question, Answer.
-- `/methodology/*-changelog/`: BreadcrumbList, TechArticle.
-- `/changelog/`: ItemList, Article (×N), BreadcrumbList.
+In `src/app/changelog/page.tsx`:
 
-Spot-check one page in Google Rich Results Test after staging deploy.
+- import `safeJsonLd`
+- import `SITE_ORIGIN as SITE_URL`
+- use `FeaturePageShell`'s `preface` prop for the JSON-LD script, or wrap sibling elements in a fragment
+- add an `id` of `week-${entry.dateRange.to}` to each changelog `<li>` that receives a schema URL fragment
 
-**Risks:**
-- `YYYY-MM-DD` is valid ISO 8601 for Schema.org. Use `YYYY-MM-DDT00:00:00Z` only if Rich Results Test flags a specific entry.
-- **Depends on Task 10** — `${SITE_URL}#organization` and `${SITE_URL}#person-tokenbrice` must be emitted first.
-
-**Effort:** M (3–4h)
-
----
-
-### Task 7: `CollectionPage` + `ItemList` wrappers on list pages
-
-**Goal:** List pages emit CollectionPage + ItemList pair; each ListItem gets a `url` (and `image` where applicable).
-
-**Files:**
-- Modify: `src/app/page.tsx:33-56` (rename + `image` + CollectionPage wrap)
-- Modify: `src/app/cemetery/page.tsx:42-64` (add `url`, wrap in CollectionPage)
-- Modify: `src/app/upcoming/page.tsx` (add ItemList + CollectionPage; currently has none)
-- Modify: `src/components/stablecoin-taxonomy-shell.tsx:46-63` (wrap in CollectionPage + `about: DefinedTerm`)
-
-- [ ] **Step 1: Homepage**
-
-Edit `src/app/page.tsx`. Two changes:
-
-1. Rename the ItemList title to match the 20-item truncation:
+Use an `ItemList` with `Article` children:
 
 ```ts
-// before (line 51)
-name: "Top Tracked Stablecoins",
-// after
-name: "Top 20 Stablecoins by Market Cap",
+{
+  "@context": "https://schema.org",
+  "@type": "ItemList",
+  name: "Pharos Changelog",
+  description: "Weekly release notes for Pharos.",
+  numberOfItems: changelogs.length,
+  itemListElement: changelogs.map((entry, i) => ({
+    "@type": "ListItem",
+    position: i + 1,
+    item: {
+      "@type": "Article",
+      headline: entry.headline ?? `Changelog - Week of ${entry.dateRange.to}`,
+      datePublished: `${entry.dateRange.to}T00:00:00Z`,
+      description: entry.summary.map((s) => s.label).slice(0, 3).join("; "),
+      author: { "@id": `${SITE_URL}#person-tokenbrice` },
+      publisher: { "@id": `${SITE_URL}#organization` },
+      url: `${SITE_URL}/changelog/#week-${entry.dateRange.to}`,
+      mainEntityOfPage: `${SITE_URL}/changelog/#week-${entry.dateRange.to}`,
+    },
+  })),
+}
 ```
 
-2. Optionally add an `image` per ListItem. Logo URLs live in `src/lib/logos.ts` via `logosById`. Check the format — if logo URLs are paths or full URLs, use the full URL (`${SITE_URL}${logosById[coin.id]}` if path).
+### Digest archive
 
-3. Wrap the ItemList in a CollectionPage envelope. Replace the current single `{"@type": "ItemList", ...}` block with an array of two nodes (CollectionPage + ItemList):
+In `src/app/digest/page.tsx`, add a `CollectionPage` + `ItemList` graph via `FeaturePageShell`'s `preface` prop.
+
+Use the existing `digests` import. Each ListItem should point to the corresponding digest detail route.
 
 ```ts
 safeJsonLd([
   {
     "@context": "https://schema.org",
     "@type": "CollectionPage",
-    name: "Pharos — Stablecoin Analytics Dashboard",
-    description: `${total} stablecoins tracked by Pharos across every major chain.`,
-    url: SITE_URL,
-    mainEntity: { "@id": `${SITE_URL}#homepage-itemlist` },
-    isPartOf: { "@id": `${SITE_URL}#organization` },
+    "@id": `${SITE_URL}/digest/#collection`,
+    name: "Daily Digest Archive",
+    description: "Every Pharos stablecoin recap, newest first.",
+    url: `${SITE_URL}/digest/`,
+    mainEntity: { "@id": `${SITE_URL}/digest/#itemlist` },
+    isPartOf: { "@id": `${SITE_URL}#website` },
   },
   {
     "@context": "https://schema.org",
     "@type": "ItemList",
-    "@id": `${SITE_URL}#homepage-itemlist`,
-    name: "Top 20 Stablecoins by Market Cap",
-    description: `Top 20 of ${total} stablecoins tracked by Pharos.`,
-    numberOfItems: itemListCount,
-    itemListElement: itemListElements.map((item, i) => {
-      const logo = logosById[ACTIVE_STABLECOINS[i].id];
-      return logo ? { ...item, image: `${SITE_URL}${logo}` } : item;
-    }),
-  },
-])
-```
-
-(`safeJsonLd` already accepts arrays per its type signature in `src/lib/json-ld.ts:2`.)
-
-- [ ] **Step 2: Cemetery page**
-
-Cemetery coins (`DEAD_STABLECOINS`) have no detail routes. Omit `url` on each ListItem (Schema.org does not require it; fabricating or linking off-site is worse).
-
-Wrap in CollectionPage (identical pattern to homepage):
-
-```ts
-safeJsonLd([
-  {
-    "@context": "https://schema.org",
-    "@type": "CollectionPage",
-    name: "Stablecoin Cemetery",
-    description: `${DEAD_STABLECOINS.length} defunct stablecoins documented.`,
-    url: `${SITE_URL}/cemetery/`,
-    mainEntity: { "@id": `${SITE_URL}/cemetery/#itemlist` },
-    isPartOf: { "@id": `${SITE_URL}#organization` },
-  },
-  {
-    "@context": "https://schema.org",
-    "@type": "ItemList",
-    "@id": `${SITE_URL}/cemetery/#itemlist`,
-    name: "Stablecoin Cemetery",
-    // ... existing fields
-  },
-])
-```
-
-- [ ] **Step 3: Upcoming page**
-
-Edit `src/app/upcoming/page.tsx`. Currently emits zero JSON-LD beyond what `FeaturePageShell` provides. Pre-launch coins have detail pages (`src/app/stablecoin/[id]/page.tsx:100-108` handles them). Add a new JSON-LD block before `<FeaturePageShell>`:
-
-```tsx
-<script
-  type="application/ld+json"
-  dangerouslySetInnerHTML={{
-    __html: safeJsonLd([
-      {
-        "@context": "https://schema.org",
-        "@type": "CollectionPage",
-        name: "Upcoming Stablecoins",
-        description: `${PRE_LAUNCH_STABLECOINS.length} pre-launch stablecoins tracked by Pharos.`,
-        url: `${SITE_URL}/upcoming/`,
-        mainEntity: { "@id": `${SITE_URL}/upcoming/#itemlist` },
-        isPartOf: { "@id": `${SITE_URL}#organization` },
-      },
-      {
-        "@context": "https://schema.org",
-        "@type": "ItemList",
-        "@id": `${SITE_URL}/upcoming/#itemlist`,
-        name: "Upcoming Stablecoins",
-        numberOfItems: PRE_LAUNCH_STABLECOINS.length,
-        itemListElement: PRE_LAUNCH_STABLECOINS.map((coin, i) => ({
-          "@type": "ListItem",
-          position: i + 1,
-          name: `${coin.name} (${coin.symbol})`,
-          url: `${SITE_URL}${buildStablecoinUrl(coin.id)}`,
-        })),
-      },
-    ]),
-  }}
-/>
-```
-
-Add imports:
-```tsx
-import { safeJsonLd } from "@/lib/json-ld";
-import { SITE_ORIGIN as SITE_URL } from "@shared/lib/runtime-origins";
-```
-
-- [ ] **Step 4: Taxonomy pages**
-
-Edit `src/components/stablecoin-taxonomy-shell.tsx:46-63`. Replace the single ItemList block with a CollectionPage + ItemList pair (keep hard-coded `https://pharos.watch` to match existing file style — do not refactor to SITE_URL in this PR):
-
-```tsx
-safeJsonLd([
-  {
-    "@context": "https://schema.org",
-    "@type": "CollectionPage",
-    name: title,
-    description,
-    url: `https://pharos.watch${href}`,
-    mainEntity: { "@id": `https://pharos.watch${href}#itemlist` },
-    isPartOf: { "@id": `https://pharos.watch#organization` },
-  },
-  {
-    "@context": "https://schema.org",
-    "@type": "ItemList",
-    "@id": `https://pharos.watch${href}#itemlist`,
-    name: title,
-    description,
-    numberOfItems: coins.length,
-    itemListElement: coins.map((coin, index) => ({
+    "@id": `${SITE_URL}/digest/#itemlist`,
+    name: "Pharos Digest Archive",
+    numberOfItems: digestEntries.length,
+    itemListElement: digestEntries.map((entry, index) => ({
       "@type": "ListItem",
       position: index + 1,
-      name: `${coin.name} (${coin.symbol})`,
-      url: `https://pharos.watch${buildStablecoinUrl(coin.id)}`,
+      item: {
+        "@type": "WebPage",
+        "@id": `${SITE_URL}/digest/${entry.date}/`,
+        name: entry.title,
+        url: `${SITE_URL}/digest/${entry.date}/`,
+        description: entry.text,
+      },
     })),
   },
 ])
 ```
 
+Use a local typed `digestEntries` constant so TypeScript knows `date`, `title`, and `text` exist.
 
-- [ ] **Step 5: Verify**
+### Homepage
+
+In `src/app/page.tsx`, replace the current single `ItemList` JSON-LD object with a `CollectionPage` + `ItemList` array.
+
+Rules:
+
+- Keep the list to the top 20 active stablecoins.
+- Name it `"Top 20 Stablecoins by Market Cap"`.
+- Use `CollectionPage.isPartOf` -> `#website`.
+- Add logo image URLs only when `logosById[coin.id]` exists.
+- Use `ListItem.item` as a WebPage.
+
+Example:
+
+```ts
+safeJsonLd([
+  {
+    "@context": "https://schema.org",
+    "@type": "CollectionPage",
+    "@id": `${SITE_URL}/#collection`,
+    name: "Pharos - Stablecoin Analytics Dashboard",
+    description: `${total} active stablecoins tracked by Pharos across every major chain.`,
+    url: SITE_URL,
+    mainEntity: { "@id": `${SITE_URL}/#homepage-itemlist` },
+    isPartOf: { "@id": `${SITE_URL}#website` },
+  },
+  {
+    "@context": "https://schema.org",
+    "@type": "ItemList",
+    "@id": `${SITE_URL}/#homepage-itemlist`,
+    name: "Top 20 Stablecoins by Market Cap",
+    description: `Top 20 of ${total} active stablecoins tracked by Pharos.`,
+    numberOfItems: itemListElements.length,
+    itemListElement: itemListElements,
+  },
+])
+```
+
+### Cemetery
+
+In `src/app/cemetery/page.tsx`, wrap the current ItemList in a `CollectionPage` + `ItemList` array.
+
+Dead coins do not have detail routes. Do not fabricate internal URLs. Use `Thing` items:
+
+```ts
+item: {
+  "@type": "Thing",
+  name: `${coin.name} (${coin.symbol})`,
+  description: coin.obituary,
+}
+```
+
+Keep the existing `FaqSection` and its JSON-LD.
+
+### Upcoming
+
+In `src/app/upcoming/page.tsx`, add `CollectionPage` + `ItemList` via `FeaturePageShell`'s `preface` prop.
+
+Pre-launch coins do have detail routes, so use `WebPage` items with URLs from `buildStablecoinUrl(coin.id)`.
+
+Add imports:
+
+```tsx
+import { safeJsonLd } from "@/lib/json-ld";
+import { SITE_ORIGIN as SITE_URL } from "@shared/lib/runtime-origins";
+```
+
+### Taxonomy pages
+
+In `src/components/stablecoin-taxonomy-shell.tsx`, replace the single ItemList with `CollectionPage` + `ItemList`.
+
+Add `SITE_ORIGIN as SITE_URL` and stop hard-coding `https://pharos.watch` if you touch these schema URLs.
+
+Include an `about` `DefinedTerm` node on the `CollectionPage`:
+
+```ts
+about: {
+  "@type": "DefinedTerm",
+  name: title,
+  termCode: String(filterTag),
+  inDefinedTermSet: `${SITE_URL}/stablecoins/${kind}/`,
+}
+```
+
+Use:
+
+```ts
+isPartOf: { "@id": `${SITE_URL}#website` }
+```
+
+### Verification
 
 ```bash
 npm run build
-# Spot-check each modified list page:
-for p in "" "cemetery/" "upcoming/" "stablecoins/cefi/" "stablecoins/rwa/"; do
+npm run seo:check
+
+for p in "" "cemetery/" "upcoming/" "digest/" "changelog/" "methodology/" "methodology/scoring-changelog/" "stablecoins/governance/cefi/" "stablecoins/backing/rwa/" "stablecoins/infrastructure/m0/"; do
   echo "--- $p ---"
   grep -o '"@type":"[^"]*"' "out/${p}index.html" | sort -u
 done
 ```
 
-Each should show `CollectionPage` and `ItemList`.
+Expected:
 
-**Risks:**
-- Duplicate `@id` across pages if the "#organization" pattern gets used and Week 1 adds a *different* organization `@id`. Coordinate with Week 1 reviewer.
+- `/` includes `CollectionPage`, `ItemList`, root `Organization`, `Person`, `WebApplication`, `WebSite`.
+- `/methodology/` includes `Article` and `FAQPage`.
+- `/methodology/*-changelog/` includes `Article` and `BreadcrumbList`.
+- `/changelog/` includes `ItemList` and `Article`.
+- `/digest/`, `/cemetery/`, `/upcoming/`, and taxonomy pages include `CollectionPage` and `ItemList`.
 
-**Effort:** M (3–5h, most of that is verification and coordinating with Week 1's Organization `@id`)
+For generic Schema.org validation, use Schema.org Validator or a local parser. Do not rely on Google Rich Results Test for generic `CollectionPage`/`ItemList`.
 
----
+## Task 7: FAQPage and HowTo Schema With Visible Content
 
-### Task 8: `FAQPage` schema on latent-FAQ pages
+### Goal
 
-**Goal:** Pages with Q/A-shaped content but no FAQPage markup get that markup.
+Add FAQ/HowTo schema only where visible content matches the marked-up content.
 
-**Files:**
-- Modify: `src/app/about/api/page.tsx:249-262` (augment existing BreadcrumbList with FAQPage)
-- Modify: `src/app/telegram/page.tsx` (new FAQ section + FAQPage markup)
-- Verify: `src/app/start/page.tsx` — **no FAQ**; skip.
+### Files
 
-- [ ] **Step 1: `/about/api/` page**
+- Modify `src/app/about/api/page.tsx`
+- Modify `src/app/telegram/page.tsx`
 
-**Add imports to `src/app/about/api/page.tsx`:** `import { buildFaqJsonLd, type FaqItem } from "@/lib/faq";` (`safeJsonLd` is already imported.)
+### `/about/api/`
 
-Extract Q/A content from the "Need A Key" + "Quick Facts" sections as FAQ items:
+Add a visible FAQ section. Do not add JSON-LD-only FAQ markup.
+
+Imports:
+
+```tsx
+import { FaqSection } from "@/components/faq-section";
+import type { FaqItem } from "@/lib/faq";
+```
+
+Add above the component:
 
 ```ts
-// Add above the return block in src/app/about/api/page.tsx
 const ABOUT_API_FAQ: FaqItem[] = [
   {
     question: "How do I get a Pharos API key?",
@@ -619,7 +807,7 @@ const ABOUT_API_FAQ: FaqItem[] = [
   },
   {
     question: "Do I need an API key for every endpoint?",
-    answer: "No. Health checks, OG images, the feedback endpoint, and the Telegram webhook do not require an X-API-Key. All other protected public routes on https://api.pharos.watch require X-API-Key, and return 401 without it.",
+    answer: "No. Health checks, OG images, the feedback endpoint, and the Telegram webhook do not require an X-API-Key. All other protected public routes on https://api.pharos.watch require X-API-Key and return 401 without it.",
   },
   {
     question: "What is the difference between the public API lane and the website lane?",
@@ -627,34 +815,31 @@ const ABOUT_API_FAQ: FaqItem[] = [
   },
   {
     question: "How is admin auth handled?",
-    answer: "Admin routes live behind Cloudflare Access on ops.pharos.watch and ops-api.pharos.watch. They do not use public API keys; access is granted via the Pharos Cloudflare Access team domain.",
+    answer: "Admin routes live behind Cloudflare Access on ops.pharos.watch and ops-api.pharos.watch. They do not use public API keys; access is granted through the Pharos Cloudflare Access team domain.",
   },
 ];
 ```
 
-Wrap in JSON-LD. Replace the existing single `<script type="application/ld+json">` block with an array containing the existing BreadcrumbList AND `buildFaqJsonLd(ABOUT_API_FAQ)`:
+Render near the "Need A Key" and quick-facts area:
 
 ```tsx
-<script
-  type="application/ld+json"
-  dangerouslySetInnerHTML={{
-    __html: safeJsonLd([
-      {
-        "@context": "https://schema.org",
-        "@type": "BreadcrumbList",
-        itemListElement: [ /* unchanged */ ],
-      },
-      buildFaqJsonLd(ABOUT_API_FAQ),
-    ]),
-  }}
-/>
+<FaqSection items={ABOUT_API_FAQ} includeJsonLd />
 ```
 
-JSON-LD only, no visible UI block — the Q/A content already exists in the page's layout; a duplicate visible FAQ would be redundant.
+Keep the existing BreadcrumbList script separate.
 
-- [ ] **Step 2: `/telegram/` page**
+### `/telegram/` FAQ
 
-Add a `TELEGRAM_FAQ: FaqItem[]` constant with 4–6 items (below), then render `<FaqSection items={TELEGRAM_FAQ} includeJsonLd />` near the bottom of the page:
+`src/app/telegram/page.tsx` already emits `SoftwareApplication` JSON-LD. Preserve it.
+
+Add imports:
+
+```tsx
+import { FaqSection } from "@/components/faq-section";
+import type { FaqItem } from "@/lib/faq";
+```
+
+Add:
 
 ```ts
 const TELEGRAM_FAQ: FaqItem[] = [
@@ -664,7 +849,7 @@ const TELEGRAM_FAQ: FaqItem[] = [
   },
   {
     question: "Can I get alerts for all tracked stablecoins at once?",
-    answer: "Yes. Send /subscribe <type> all — for example, /subscribe depeg all — to subscribe to an alert type across every tracked stablecoin.",
+    answer: "Yes. Send /subscribe <type> all, for example /subscribe depeg all, to subscribe to an alert type across every tracked stablecoin.",
   },
   {
     question: "How do I silence Telegram notifications during certain hours?",
@@ -681,41 +866,21 @@ const TELEGRAM_FAQ: FaqItem[] = [
 ];
 ```
 
-Render `<FaqSection items={TELEGRAM_FAQ} includeJsonLd />` near the bottom of the page (after the Commands section or before the footer).
+Render `<FaqSection items={TELEGRAM_FAQ} includeJsonLd />` near the bottom, before the final CTA.
 
-- [ ] **Step 3: `/start/` page**
+### `/telegram/` HowTo
 
-Investigated during planning. The page is a glossary + routing map (definition lists, atlas groups), not latent FAQ. Skip.
+HowTo no longer has Google rich-result value. If kept, it is generic Schema.org / LLM-readable markup.
 
-- [ ] **Step 4: Verify**
+Add a separate HowTo JSON-LD script without removing the existing `SoftwareApplication` script.
 
-```bash
-npm run build
-grep -o '"@type":"FAQPage"' out/about/api/index.html out/telegram/index.html
-# Expect one match in each.
-```
+Rules:
 
-**Effort:** M (2–3h)
+- Do not add `supply: []`.
+- Step text must match visible "Getting Started" content.
+- Use page-fragment URLs, not only external Telegram URLs.
 
----
-
-### Task 9: `HowTo` schema on `/telegram`
-
-**Goal:** The three-step "Getting Started" block becomes a first-class HowTo in schema.
-
-**Files:**
-- Modify: `src/app/telegram/page.tsx` (add one JSON-LD block)
-
-- [ ] **Step 1: Identify the three steps**
-
-Already mapped during planning:
-- Step 1 (line 367-375): Open @PharosWatchBot and send `/start`.
-- Step 2 (line 376-423): Subscribe and tune with commands (multiple sub-commands — represent as a single HowToStep with an itemListElement inside, OR as three sub-steps. Keep simple: one HowToStep with a descriptive text).
-- Step 3 (line 424-434): Done — alerts arrive automatically. Use /list to inspect.
-
-- [ ] **Step 2: Add HowTo JSON-LD**
-
-`src/app/telegram/page.tsx` currently imports `safeJsonLd` but emits no JSON-LD. Insert a new `<script type="application/ld+json">` block inside the returned JSX (inside `FeaturePageShell` or immediately after the page `<div>` wrapper so it lands in the static HTML):
+Example:
 
 ```tsx
 <script
@@ -727,27 +892,28 @@ Already mapped during planning:
       name: "Set up Pharos stablecoin alerts on Telegram",
       description: "Subscribe to depeg, DEWS threat-level, safety-grade, and launch alerts for tracked stablecoins from the Pharos Telegram bot.",
       totalTime: "PT2M",
-      supply: [],
       tool: [{ "@type": "HowToTool", name: "Telegram" }],
       step: [
         {
           "@type": "HowToStep",
           position: 1,
           name: "Open @PharosWatchBot",
-          text: "Open @PharosWatchBot in Telegram and send /start to register your chat.",
-          url: "https://t.me/PharosWatchBot",
+          text: "Open @PharosWatchBot in Telegram and send /start.",
+          url: `${SITE_URL}/telegram/#getting-started`,
         },
         {
           "@type": "HowToStep",
           position: 2,
           name: "Subscribe and tune",
-          text: "Send /subscribe <alert-types> <targets> to pick what you want. For example: /subscribe dews,depeg USDT,USDC. Use /presets for curated watchlists, /set to tune thresholds, and /mute for quiet hours.",
+          text: "Subscribe and tune with commands like /subscribe dews,depeg USDT,USDC, /presets, /set USDT dews WARNING, and /mute 22-07.",
+          url: `${SITE_URL}/telegram/#getting-started`,
         },
         {
           "@type": "HowToStep",
           position: 3,
-          name: "Review and iterate",
-          text: "Alerts now arrive automatically when conditions change. Use /list to inspect subscriptions, /presets to discover watchlists, and /unsubscribe to remove any.",
+          name: "Review active subscriptions",
+          text: "Alerts arrive automatically when conditions change. Use /list to check active subscriptions and /presets to discover preset watchlists from inside Telegram.",
+          url: `${SITE_URL}/telegram/#getting-started`,
         },
       ],
     }),
@@ -755,272 +921,296 @@ Already mapped during planning:
 />
 ```
 
-- [ ] **Step 3: Verify**
+Optional cleanup after Task 2:
+
+- Change `SoftwareApplication.publisher` to an `@id` reference for `${SITE_URL}#organization`.
+
+### Verification
 
 ```bash
 npm run build
+grep -o '"@type":"FAQPage"' out/about/api/index.html out/telegram/index.html
 grep -o '"@type":"HowTo"' out/telegram/index.html
-# Expect 1.
+grep -o '"@type":"SoftwareApplication"' out/telegram/index.html
 ```
 
-**Effort:** S (<1h)
+Do not list HowTo as a Google Rich Results Test requirement.
 
----
+## Task 8: Cloudflare Pages HTML Cache Headers
 
-### Task 10: Shared Person + Organization constants
+### Goal
 
-**Goal:** One canonical Person (TokenBrice) and Organization (Pharos) node referenced by `@id` from Article.author, WebApplication.creator, and Organization.founder. Single source of truth in `src/lib/json-ld.ts`.
+Serve HTML routes with:
 
-**Files:**
-- Modify: `src/lib/json-ld.ts` (export `PHAROS_ORG_NODE` and `PHAROS_PERSON_TOKENBRICE_NODE`)
-- Modify: `src/app/layout.tsx:130-177` (reference the constants; add `@id` to Org if Week 1 didn't)
-- Optional follow-up (not in this task): wire up Article.author in Tasks 6 to reference `{"@id": "${SITE_URL}#person-tokenbrice"}` instead of duplicating the Person object inline — already accounted for in Task 6's schema templates.
-
-- [ ] **Step 1: Extend `src/lib/json-ld.ts`**
-
-Append to the existing file:
-
-```ts
-import { SITE_ORIGIN as SITE_URL } from "@shared/lib/runtime-origins";
-
-export const PHAROS_PERSON_TOKENBRICE_NODE = {
-  "@type": "Person",
-  "@id": `${SITE_URL}#person-tokenbrice`,
-  name: "TokenBrice",
-  url: "https://tokenbrice.xyz",
-  image: `${SITE_URL}/tokenbrice.png`,
-  sameAs: [
-    "https://x.com/TokenBrice",
-    "https://github.com/TokenBrice",
-    "https://farcaster.xyz/tokenbrice", // Farcaster — user-confirmed 2026-04-19
-  ],
-  knowsAbout: ["stablecoins", "DeFi risk", "tokenomics", "pegged assets", "on-chain analytics"],
-  affiliation: { "@id": `${SITE_URL}#organization` },
-} as const;
-
-const PHAROS_SITE_DESCRIPTION =
-  "Pharos tracks stablecoins across major chains with depeg alerts, liquidity scores, on-chain safety signals, dependency-risk scoring, and report-card-style risk summaries.";
-
-export const PHAROS_ORG_NODE = {
-  "@type": "Organization",
-  "@id": `${SITE_URL}#organization`,
-  name: "Pharos",
-  url: SITE_URL,
-  logo: `${SITE_URL}/pharos-icon.png`,
-  description: PHAROS_SITE_DESCRIPTION,
-  sameAs: ["https://x.com/PharosWatch", "https://github.com/TokenBrice/stablecoin-dashboard"],
-  founder: { "@id": `${SITE_URL}#person-tokenbrice` },
-} as const;
+```text
+Cache-Control: public, max-age=0, s-maxage=300, stale-while-revalidate=86400
 ```
 
-**Note:** All 3 `sameAs` URLs are user-confirmed as of 2026-04-19. No Mirror handle exists — deliberately omitted.
+without corrupting cache headers for static assets, `llms.txt`, or `_next/static/*`.
 
-- [ ] **Step 2: Refactor `src/app/layout.tsx`**
+### Files
 
-Replace the inline Organization + the WebApplication.creator Person inline objects with references to the constants:
+- Modify `public/_headers`
 
-```tsx
-// imports (add):
-import { PHAROS_ORG_NODE, PHAROS_PERSON_TOKENBRICE_NODE } from "@/lib/json-ld";
+### Important Cloudflare Pages Semantics
 
-// Replace lines 143-175 (the Organization and WebApplication nodes):
-__html: safeJsonLd([
-  {
-    "@context": "https://schema.org",
-    "@type": "WebSite",
-    name: "Pharos",
-    url: SITE_URL,
-    description: siteDescription,
-    potentialAction: {
-      "@type": "SearchAction",
-      target: `${SITE_URL}/?q={search_term_string}`,
-      "query-input": "required name=search_term_string",
-    },
-  },
-  { "@context": "https://schema.org", ...PHAROS_ORG_NODE },
-  { "@context": "https://schema.org", ...PHAROS_PERSON_TOKENBRICE_NODE },
-  {
-    "@context": "https://schema.org",
-    "@type": "WebApplication",
-    name: "Pharos",
-    url: SITE_URL,
-    applicationCategory: "FinanceApplication",
-    operatingSystem: "Web",
-    description: siteDescription,
-    offers: { "@type": "Offer", price: "0", priceCurrency: "USD" },
-    creator: { "@id": `${SITE_URL}#person-tokenbrice` },
-  },
-]),
-```
+Cloudflare Pages `_headers` rules inherit across all matching rules. If the same header is applied twice, values are joined with a comma. Therefore:
 
-**Note on `@id` + `@context`:** Schema.org tooling accepts a node with both `@id` and `@context` at the top level and resolves references across nodes in the same graph. Emitting the Person as a standalone top-level node (not just nested inside Org.founder) makes Article.author references resolve cleanly.
+- Do not rely on "last matching block wins".
+- Do not add a second `/*` block.
+- Any specific non-HTML path that sets `Cache-Control` must detach the broad `/*` Cache-Control first with `! Cache-Control`.
 
-- [ ] **Step 3: Verify**
+### Implementation
 
-```bash
-npm run build
-# Global Person @id appears in the layout:
-grep -c '"@id":"https://pharos.watch#person-tokenbrice"' out/index.html
-# And is referenced, not duplicated, on detail + methodology pages:
-grep -c 'person-tokenbrice' out/stablecoin/usdt-tether/index.html
-grep -c 'person-tokenbrice' out/methodology/index.html
-```
+Keep existing security headers in the single `/*` block and add:
 
-Spot-check in Google Rich Results Test.
-
-**Effort:** M (2–3h)
-
----
-
-### Task 11: HTML `Cache-Control` header
-
-**Goal:** HTML routes get `public, max-age=0, s-maxage=300, stale-while-revalidate=86400` — browsers always revalidate, CF edge caches for 5 minutes, serves stale up to 24h during revalidation.
-
-**Files:**
-- Modify: `public/_headers`
-
-- [ ] **Step 1: Edit `public/_headers`**
-
-`public/_headers` already has a broad `/*` stanza with security headers (CSP, X-Frame-Options, HSTS, etc.). **Cloudflare Pages `_headers` does NOT merge duplicate path blocks — the last matching block wins.** Do not add a second `/*` block; append `Cache-Control` into the existing `/*` stanza. Add the `/og-*.png` override as a new stanza placed **above** `/*` (more-specific first).
-
-Final `_headers` layout:
-
-```
-# (existing specific rules unchanged)
-/favicon.ico
-  Cache-Control: public, max-age=604800, immutable
-# ...other existing overrides...
-
-/og-*.png
-  Cache-Control: public, max-age=86400
-
-/*
-  # (existing security headers retained: CSP, X-Frame-Options, HSTS, etc.)
+```text
   Cache-Control: public, max-age=0, s-maxage=300, stale-while-revalidate=86400
 ```
 
-- [ ] **Step 2: Verify on preview deploy**
+For every static override block that should not inherit the HTML cache header, add `! Cache-Control` immediately before the path's replacement value.
 
-After deploying to a Pages preview URL:
+Final shape:
+
+```text
+/funding/*
+  X-Robots-Tag: noindex, nofollow
+
+/portfolio/*
+  X-Robots-Tag: noindex, follow
+
+/compare/
+  X-Robots-Tag: noindex, follow
+
+/*
+  X-Content-Type-Options: nosniff
+  X-Frame-Options: DENY
+  Referrer-Policy: strict-origin-when-cross-origin
+  Permissions-Policy: camera=(), microphone=(), geolocation=(), payment=(), usb=(), interest-cohort=()
+  Strict-Transport-Security: max-age=31536000; includeSubDomains; preload
+  Content-Security-Policy: ...
+  Cache-Control: public, max-age=0, s-maxage=300, stale-while-revalidate=86400
+
+/favicon.ico
+  ! Cache-Control
+  Cache-Control: public, max-age=604800, immutable
+
+/favicon.svg
+  ! Cache-Control
+  Cache-Control: public, max-age=604800, immutable
+
+/apple-touch-icon.png
+  ! Cache-Control
+  Cache-Control: public, max-age=604800, immutable
+
+/llms.txt
+  ! Cache-Control
+  Cache-Control: public, max-age=3600
+  Content-Type: text/plain; charset=utf-8
+
+/og-*.png
+  ! Cache-Control
+  Cache-Control: public, max-age=86400
+
+/_next/static/*
+  ! Cache-Control
+  Cache-Control: public, max-age=31536000, immutable
+```
+
+Replace the existing `/og-image.png` block with `/og-*.png`; do not keep both.
+
+### Verification
+
+Local build:
 
 ```bash
-curl -I https://<preview>.pages.dev/ | grep -i cache-control
-curl -I https://<preview>.pages.dev/stablecoin/usdt-tether/ | grep -i cache-control
-curl -I https://<preview>.pages.dev/favicon.ico | grep -i cache-control
-curl -I https://<preview>.pages.dev/og-card.png | grep -i cache-control
+npm run build
+npm run seo:check
+```
+
+Preview deploy checks, with exact single `Cache-Control` values:
+
+```bash
+BASE=https://<preview>.pages.dev
+for path in / /stablecoin/usdt-tether/ /llms.txt /favicon.ico /og-start.png /_next/static/REPLACE_WITH_REAL_ASSET; do
+  echo "--- $path"
+  curl -Is "$BASE$path" | tr -d '\r' | grep -iE '^(http|cache-control|content-type|cf-cache-status|age|etag):'
+done
 ```
 
 Expected:
+
 - HTML routes: `public, max-age=0, s-maxage=300, stale-while-revalidate=86400`
-- Favicon: `public, max-age=604800, immutable` (unchanged)
-- OG PNG: `public, max-age=86400`
+- `/llms.txt`: `public, max-age=3600`
+- favicon files: `public, max-age=604800, immutable`
+- OG PNGs: `public, max-age=86400`
+- `_next/static/*`: `public, max-age=31536000, immutable`
+- no comma-joined `Cache-Control` values
 
-**Risks:**
-- **This is the riskiest task in the plan.** Incorrect cache semantics can serve stale KPI data to real users. Mitigations:
-  - Preview-first (don't skip).
-  - Keep `s-maxage=300` conservative (5 minutes).
-  - `stale-while-revalidate=86400` means users get stale data for up to 24h while CF fetches fresh — acceptable for site-chrome HTML that doesn't embed live KPIs (KPIs load client-side via TanStack Query hitting the Worker API).
-- If Pages' `_headers` pattern matching is whitespace-sensitive or ordering-sensitive, the override may fail silently. Plan for a rollback commit.
-
-**Effort:** M (2–4h with preview validation)
-
----
-
-### Task 13: Taxonomy editorial uniqueness verification
-
-**Goal:** Confirm each cohort page's intro/description is distinct enough to avoid duplicate-content penalties.
-
-**Files:**
-- Review only: `src/lib/stablecoin-taxonomy.ts:36-80` (GOVERNANCE_CONTENT), analogous BACKING_CONTENT (already inspected during planning — lines 33-91 cover both), and the INFRASTRUCTURE content block (not inspected yet — find it).
-
-- [ ] **Step 1: Find infrastructure content**
+Also verify a Pages Function response is not governed by `_headers`:
 
 ```bash
-# grep for INFRASTRUCTURE_CONTENT in src/lib/stablecoin-taxonomy.ts
+curl -Is "$BASE/_site-data/health" | tr -d '\r' | grep -iE '^(http|cache-control|cf-cache-status|age|etag):' || true
 ```
 
-- [ ] **Step 2: Read all three content blocks**
+Rollback:
 
-Flag any cohort whose `intro` + `description` overlaps >60% with another cohort's copy (rough eyeball; don't build a similarity tool).
+- Revert the `_headers` commit.
+- Purge Cloudflare Pages cache from the dashboard or with the available Cloudflare tooling.
+- Re-check production headers after purge.
 
-- [ ] **Step 3: File a follow-up issue if any cohort fails the bar**
+## Task 9: Taxonomy Editorial Uniqueness Verification
 
-This task does NOT rewrite copy. It's verification-only. If any cohort's copy feels generic, write a single paragraph in the plan's completion notes listing the cohort + a one-sentence suggested differentiator. The rewrite itself is a separate scoped copy-edit PR.
+### Goal
 
-**Effort:** S (<1h — read-only)
+Confirm taxonomy page copy is distinct enough to avoid thin duplicate-content patterns.
 
----
+### Files
+
+- Review only: `src/lib/stablecoin-taxonomy.ts`
+
+### Implementation
+
+Read:
+
+- `GOVERNANCE_CONTENT`
+- `BACKING_CONTENT`
+- `INFRASTRUCTURE_CONTENT`
+
+Flag any cohort whose `intro` + `description` overlaps another cohort by rough eyeball more than about 60%.
+
+Current audit found the taxonomy copy distinct enough. If that remains true, add a short completion note in the implementation summary. Do not rewrite copy in this PR unless a concrete issue is found.
+
+## Task 10: Docs, Plan Hygiene, and Final Verification
+
+### Docs to update
+
+At minimum:
+
+- `docs/scripts.md`
+  - Add `scripts/generate-llms-txt.ts`.
+  - Add it to the CI-critical `prebuild` hook list.
+- `docs/architecture.md`
+  - Mention `/llms.txt` in the frontend/SEO surface.
+  - Preserve the note that root JSON-LD has no `SearchAction`.
+  - Mention the root Organization/Person/WebSite/WebApplication graph IDs if not already current.
+- `docs/homepage.md`
+  - Update route-shape/top-fold H1 and JSON-LD description.
+
+Also update route-specific docs when changed behavior/schema is documented there:
+
+- methodology
+- digest
+- cemetery
+- upcoming
+- telegram
+- API page
+
+Do not update methodology version/timeline docs; this PR changes metadata/schema, not scoring methodology.
+
+### Final local verification
+
+Run in this order:
+
+```bash
+npm run lint
+npm test
+npm run build
+npm run seo:check
+npm run test:merge-gate
+```
+
+`npm run test:merge-gate` may run Worker checks because this plan edits `package.json`, `public/`, `src/`, `shared` consumers, and docs. The deploy-impact classifier treats `package.json` as full deploy infrastructure.
+
+### Targeted checks
+
+```bash
+# Generated llms.txt exists and is current.
+npm run prebuild
+git ls-files --error-unmatch public/llms.txt
+git diff --exit-code -- public/llms.txt
+head -5 public/llms.txt
+wc -c public/llms.txt
+
+# H1 invariant.
+npm run build
+count_h1() { grep -Eo '<h1([[:space:]>])' "$1" | wc -l | tr -d ' '; }
+test "$(count_h1 out/index.html)" -eq 1
+test "$(count_h1 out/stablecoin/usdt-tether/index.html)" -eq 1
+
+# Root JSON-LD invariant.
+grep -q '#website' out/index.html
+grep -q '#webapp' out/index.html
+grep -q '#organization' out/index.html
+grep -q 'person-tokenbrice' out/index.html
+! grep -q 'SearchAction' out/index.html
+! grep -q 'search_term_string' out/index.html
+
+# Time tags.
+grep -E '<time[^>]*datetime=' out/stablecoin/usdt-tether/index.html
+
+# Schema families.
+for p in "" "cemetery/" "upcoming/" "digest/" "changelog/" "methodology/" "methodology/scoring-changelog/" "about/api/" "telegram/" "stablecoins/governance/cefi/" "stablecoins/backing/rwa/" "stablecoins/infrastructure/m0/"; do
+  echo "--- $p ---"
+  grep -o '"@type":"[^"]*"' "out/${p}index.html" | sort -u
+done
+
+# OG budget.
+test "$(wc -c < public/og-start.png)" -le 204800
+```
+
+### Preview/prod verification
+
+After preview deploy:
+
+- Run the Task 8 curl checks against the preview URL.
+- Run Schema.org Validator on one page per schema family:
+  - `/`
+  - `/methodology/`
+  - `/methodology/scoring-changelog/`
+  - `/changelog/`
+  - `/digest/`
+  - `/cemetery/`
+  - `/upcoming/`
+  - `/about/api/`
+  - `/telegram/`
+- Use Google Rich Results Test only for Google-supported features. Do not expect generic `CollectionPage`, `ItemList`, `Person`, `WebSite`, or `HowTo` reporting.
+
+After production deploy:
+
+- Re-run `curl -Is https://pharos.watch/...` header checks for `/`, `/stablecoin/usdt-tether/`, `/llms.txt`, `/favicon.ico`, and `/og-start.png`.
+- Confirm `/llms.txt` starts with `# Pharos`.
+- Confirm no duplicate `Cache-Control` values.
 
 ## Commit Strategy
 
-Per-theme commits, single PR. **Task 10 must commit before Tasks 6, 7, 8, 9** (they reference its `@id` constants).
+Use theme commits so risky work can be reverted independently:
 
-1. `feat(seo): add llms.txt prebuild generator + header` — Task 1.
-2. `feat(seo): shared Pharos Person + Organization JSON-LD nodes` — Task 10.
-3. `feat(seo): promote visible H1 on home + detail + hero card` — Task 2.
-4. `feat(seo): full-date ISO datelines on ai-summary + funding card` — Task 3.
-5. `chore(assets): shrink og-start.png from 554KB to under 200KB` — Task 4.
-6. `feat(seo): TechArticle + ItemList + CollectionPage schema on methodology / changelog / list pages` — Tasks 6, 7.
-7. `feat(seo): FAQPage + HowTo schema on /about/api + /telegram` — Tasks 8, 9.
-8. `chore(infra): HTML Cache-Control headers for Pages` — Task 11.
+1. `feat(seo): add generated llms.txt`
+2. `feat(seo): canonicalize root json-ld identity nodes`
+3. `feat(seo): expose single visible h1 on key routes`
+4. `feat(seo): add semantic datelines`
+5. `chore(assets): shrink start og image`
+6. `feat(seo): expand article and collection schema`
+7. `feat(seo): add visible faq and telegram setup schema`
+8. `chore(infra): set pages html cache headers`
+9. `docs(seo): document llms schema and header changes`
 
-Reviewer can verify each theme independently. If any theme fails review, drop its commits and re-land the others.
+Task 2 must precede Tasks 6 and 7.
 
----
+## Rollback Notes
 
-## Final Verification Checklist
+High-risk rollback:
 
-Run in the listed order from the repo root:
+- Task 8 `_headers`: revert that commit, purge Cloudflare Pages cache, redeploy, and verify production headers.
 
-- [ ] `npm run lint` — zero warnings.
-- [ ] `npm test` — all green (includes design-invariants and JSON-LD smoke tests if any exist).
-- [ ] `npm run build` — completes without warnings; `out/` generated.
-- [ ] `npm run seo:check` — existing SEO static checker passes.
-- [ ] `npm run test:merge-gate` — pre-push gate passes.
-- [ ] Manually validate 1 page per schema family in [Google Rich Results Test](https://search.google.com/test/rich-results) (post-preview-deploy):
-  - `/` → CollectionPage, ItemList, Organization, Person, WebApplication, WebSite.
-  - `/stablecoin/usdt-tether/` → Dataset, BreadcrumbList, Organization (via layout).
-  - `/methodology/` → TechArticle, FAQPage, Organization.
-  - `/methodology/scoring-changelog/` → TechArticle, BreadcrumbList.
-  - `/changelog/` → ItemList with Article children, BreadcrumbList.
-  - `/cemetery/` → CollectionPage, ItemList, FAQPage.
-  - `/upcoming/` → CollectionPage, ItemList.
-  - `/about/api/` → FAQPage, BreadcrumbList.
-  - `/telegram/` → FAQPage, HowTo.
-- [ ] `curl -I https://<preview>.pages.dev/llms.txt` → 200 + correct Content-Type + Cache-Control.
-- [ ] `curl https://<preview>.pages.dev/llms.txt | head -5` → starts with `# Pharos`.
-- [ ] `curl -I https://<preview>.pages.dev/` → HTML Cache-Control applied per Task 11.
-- [ ] Bundle-size check: compare `next build` route-size table vs. pre-change baseline; first-load JS on detail pages should be within ±5% (no regression from Task 5 verification; no regression from schema additions which add only string literals).
-- [ ] `ls -la public/og-start.png` → <200 KB.
-- [ ] Preview deploy visual smoke: open `/start`, `/methodology/`, `/cemetery/` in a browser; no visual regression.
+Medium-risk rollback:
 
----
+- Task 3 H1: revert the H1 commit if `seo:check` or visual smoke fails.
+- Task 2 root JSON-LD: revert if graph validation finds duplicate/conflicting IDs.
 
-## Risks + Rollback
+Low-risk rollback:
 
-**High-risk tasks:**
-- **Task 11 (HTML Cache-Control)** — staleness bugs on prod. Rollback: revert `public/_headers` commit; re-deploy. CF Pages serves from edge cache, so rollback latency is 1–2 minutes until the edge expires; `wrangler pages deployment tail` or the Pages dashboard's "purge cache" button accelerates.
-- **Task 10 (shared Person)** — all `sameAs` URLs user-confirmed 2026-04-19. No fabrication risk.
+- Tasks 1, 4, 5, 6, 7, 9, and docs are additive or single-surface changes.
 
-**Medium-risk:**
-- **Task 1 (llms.txt)** — if a downstream LLM crawler is already caching a hypothetical stub, replacing it could cause a brief "new file" re-crawl. Low-impact.
-- **Task 2 (H1 promotion)** — duplicate H1 on responsive-twin layouts is allowed by HTML5 but flagged by some SEO linters. Mitigation: document the pattern in the commit; add `aria-hidden` to the hidden twin if needed.
-
-**Low-risk:**
-- Tasks 3, 4, 5, 6, 7, 8, 9, 12, 13 — additive, reversible, one commit = one rollback.
-
-**Global rollback:** if the whole PR needs reverting, `git revert` each theme commit in reverse order. No data migration or CI state to unwind.
-
----
-
-## Success Criteria
-
-1. `/llms.txt` is live at `https://pharos.watch/llms.txt`, returns 200 with correct Content-Type, begins with `# Pharos`, and includes every active stablecoin with a descriptive one-liner.
-2. Every indexable page has exactly one (or two, in responsive-twin cases) visible `<h1>`, none of them `.sr-only`.
-3. Every methodology, changelog, digest-archive, cemetery, upcoming, and homepage emits a full JSON-LD graph (CollectionPage / ItemList / TechArticle / FAQPage / HowTo / Organization / Person) that passes Google Rich Results Test without errors.
-4. Shared `PHAROS_ORG_NODE` and `PHAROS_PERSON_TOKENBRICE_NODE` exist in `src/lib/json-ld.ts` and are referenced by `@id` across at least 3 pages.
-5. `og-start.png` is <200 KB.
-6. Visible "Updated {date}" labels use `<time dateTime="YYYY-MM-DD">` on `ai-summary.tsx`.
-7. HTML routes on Cloudflare Pages serve with `Cache-Control: public, max-age=0, s-maxage=300, stale-while-revalidate=86400`.
-8. `npm run test:merge-gate` passes.
-9. First-load JS on the detail page has not regressed (tolerance ±5%).
+No data migrations are involved.
