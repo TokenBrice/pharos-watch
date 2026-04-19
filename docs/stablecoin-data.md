@@ -9,6 +9,7 @@ Stablecoin metadata is the checked-in source of truth for the asset universe. Us
 | Active + pre-launch metadata shards | `shared/data/stablecoins/usd-major.json`, `shared/data/stablecoins/usd-minor.json`, `shared/data/stablecoins/non-usd.json`, `shared/data/stablecoins/commodity.json`, `shared/data/stablecoins/pre-launch.json` |
 | Canonical display/order list | `shared/data/stablecoins/canonical-order.json` |
 | Loader and active/pre-launch splits | `shared/lib/stablecoins/index.ts` |
+| Defunct/cemetery metadata | `shared/data/dead-stablecoins.json`, loaded separately by `shared/lib/dead-stablecoins.ts` |
 | Runtime schema | `shared/lib/stablecoins/schema.ts` |
 | Canonical ID resolver | `shared/lib/stablecoin-id-registry.ts` |
 | PSI-only shadow assets | `shared/lib/shadow-stablecoins.ts` |
@@ -45,7 +46,7 @@ If the change affects page counts, feature coverage, reserve coverage, source fa
 Common admission fields:
 
 - `llamaId` / DefiLlama-backed assets
-- `detailProvider` + `geckoId` for CoinGecko-only or commodity assets
+- `detailProvider: "coingecko"` plus either `geckoId` or a supported on-chain total-supply contract; commodity assets still require `geckoId`
 - verified `contracts` for chain-level coverage and explorer links
 - `status: "pre-launch"` for assets that should not enter active public surfaces yet
 

@@ -73,6 +73,7 @@ These are the canonical source of truth for route destinations, copy, and groupi
 2. `How to read Pharos` glossary section
 3. `Feature atlas` section
 4. `Power moves` shortcuts section
+5. Closing CTA with `Open the dashboard` and `Browse the directory` links
 
 ### Hero route deck
 

@@ -73,7 +73,7 @@ Each cached map value is a `BluechipRating`:
 - Uses the `slow` cache profile (`public, s-maxage=3600, max-age=300`).
 - Applies freshness headers with a 43,200-second stale threshold.
 - Returns a top-level object keyed by canonical Pharos stablecoin ID.
-- Because the handler uses `createCacheHandler()`, plain-object responses also include `_meta = { updatedAt, ageSeconds, status }` freshness metadata.
+- The handler is a custom cache reader that appends `_meta = { updatedAt, ageSeconds, status }` to the plain-object response after reading the cached Bluechip payload.
 
 See [API Reference](./api-reference.md) for the exact response shape.
 

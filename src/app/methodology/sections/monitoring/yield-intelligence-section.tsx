@@ -197,7 +197,7 @@ export function YieldIntelligenceMethodologySection() {
                     <br />
                     sustainability = max(0.3, 1.0 &minus; apyVarianceScore)
                     <br />
-                    PYS = min(100, yieldEfficiency &times; sustainability &times; scalingFactor)
+                    PYS = round(min(100, yieldEfficiency &times; sustainability &times; scalingFactor))
                   </p>
                   <ul className="list-disc list-inside space-y-1">
                     <li>

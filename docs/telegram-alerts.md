@@ -146,7 +146,7 @@ Preset watchlists are a v1 convenience layer on top of the existing per-coin sub
 - `/subscribe ... <preset>` expands the preset into normal `telegram_subscriptions` rows; v1 does not add a separate smart-subscription table
 - `/unsubscribe <preset>` resolves the same alias and deletes those matching per-coin rows for the chat
 - `/list` only shows the resulting coin rows; preset membership is not stored separately after expansion
-- `launch` does not accept presets; launch alerts still require explicit ticker or coin-id targets
+- `launch` does not accept presets; launch alerts support explicit ticker/coin-id targets and the special `all` target
 - Preset resolution fails closed when the stablecoins cache is unavailable; the bot returns a temporary retry message instead of subscribing stale or incomplete cohorts
 
 Additional alert controls:
@@ -334,7 +334,7 @@ When tracked coverage changed, the digest gains a `Tracking Changes` section spl
 
 ## Admin Visibility
 
-`GET /api/status` now exposes a `telegramBot` block for the private `/status` dashboard. It aggregates:
+`GET /api/status` now exposes a `telegramBot` block for the Access-gated `/admin/` dashboard. It aggregates:
 
 - total known chats in `telegram_subscribers`
 - alert-enabled chats vs deliverable chats (per-coin follows and global all-stablecoin follows both count)

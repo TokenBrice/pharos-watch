@@ -50,7 +50,8 @@ Current-version note: v7.07 reverses v6.1's stale-DEX suppression: Liquidity / E
 - `effectiveExitScore` uses a best-path model:
   - `effectiveExitScore = round(min(100, max(liquidityScore, redemptionBackstopScore) + min(liquidityScore, redemptionBackstopScore) × 0.10))`
 - If only DEX liquidity exists, `effectiveExitScore = liquidityScore`
-- If only redemption exists, `effectiveExitScore = redemptionBackstopScore` (route family caps are the guardrails — offchain-issuer ≤ 65, queue-redeem ≤ 70)
+- If only eligible immediate/live/queue-style redemption exists, `effectiveExitScore = redemptionBackstopScore` (route family caps are the guardrails, including queue-redeem <= 70)
+- Documented offchain-issuer eventual exits do not replace missing DEX liquidity; they can only add the primary-market exit bonus when DEX liquidity is already present.
 - Redemption uplift is only used when the redemption route is resolved, above the low-confidence / heuristic tier, and not currently impaired by route-availability evidence
 - Eventual-only redemption routes remain visible in the dimension detail. They do not replace missing DEX liquidity, but documented-bound offchain issuer routes can add a capped primary-market exit bonus when DEX liquidity is already available
 - Queue-like redemption routes can improve Liquidity / Exit when resolved and current, but their redemption contribution is capped before the best-path blend so delayed exits cannot behave like instant liquidity
@@ -81,12 +82,12 @@ For tokenized RWA collateral, the custody model follows the ultimate reserve/leg
 
 Blacklist capability is reported descriptively only and does not affect the Resilience score.
 
-| Value                       | Score | Condition                                                             |
-| --------------------------- | ----- | --------------------------------------------------------------------- |
-| Yes                         | 33    | `canBeBlacklisted: true` (explicit) or `governance === "centralized"` |
-| Possible                    | 66    | Explicit `canBeBlacklisted: "possible"` override, sub-majority reserve exposure to blacklistable/custodial assets, or reserve-rail text that clearly implies CEX/custody freeze exposure |
-| Upstream                    | 66    | >50% of reserves are directly tied to explicitly blacklistable or already-blacklistable upstream assets (resolved transitively) |
-| No                          | 100   | None of the above                                                     |
+| Value                       | Condition                                                             |
+| --------------------------- | --------------------------------------------------------------------- |
+| Yes                         | `canBeBlacklisted: true` (explicit) or `governance === "centralized"` |
+| Possible                    | Explicit `canBeBlacklisted: "possible"` override, sub-majority reserve exposure to blacklistable/custodial assets, or reserve-rail text that clearly implies CEX/custody freeze exposure |
+| Upstream                    | >50% of reserves are directly tied to explicitly blacklistable or already-blacklistable upstream assets (resolved transitively) |
+| No                          | None of the above                                                     |
 
 `"inherited"` is a **computed** value only — it never appears as a manual override in stablecoin metadata. The `canBeBlacklisted` field in `StablecoinMeta` only accepts `boolean | "possible"`. The inherited tier is derived at scoring time when reserve compositions show that a majority of a coin's reserves are either explicitly marked blacklistable or backed by upstream assets that are themselves blacklistable. Coins with reserve-side blacklist clues below that majority threshold now resolve to `"possible"` rather than incorrectly falling through to `"no"`.
 

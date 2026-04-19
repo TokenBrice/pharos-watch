@@ -484,7 +484,7 @@ Useful env controls:
 - `CRITICAL_COVERAGE_BASELINE_FILE`
 - Per-file overrides: `CRITICAL_COVERAGE_THRESHOLD_ALERTS`, `CRITICAL_COVERAGE_THRESHOLD_AUTH`, `CRITICAL_COVERAGE_THRESHOLD_EVM_RPC`, `CRITICAL_COVERAGE_THRESHOLD_STABLECOINS_CACHE`, `CRITICAL_COVERAGE_THRESHOLD_SAFETY_SCORES`, `CRITICAL_COVERAGE_THRESHOLD_SCHEDULED`, `CRITICAL_COVERAGE_THRESHOLD_DAILY_DIGEST`, `CRITICAL_COVERAGE_THRESHOLD_STABLECOIN_DETAIL`, `CRITICAL_COVERAGE_THRESHOLD_DISCOVERY`, `CRITICAL_COVERAGE_THRESHOLD_HEALTH`, `CRITICAL_COVERAGE_THRESHOLD_STATUS`, `CRITICAL_COVERAGE_THRESHOLD_DEX_ORCHESTRATOR`
 
-Current unique critical file set (`CRITICAL_FILES` in `scripts/lib/critical-coverage.mjs`):
+Current critical file set (`CRITICAL_FILES` in `scripts/lib/critical-coverage.mjs`):
 
 - `src/lib/api.ts`
 - `worker/src/lib/api-cache-read.ts`
@@ -512,13 +512,6 @@ Current unique critical file set (`CRITICAL_FILES` in `scripts/lib/critical-cove
 - `worker/src/api/status.ts`
 - `worker/src/api/stablecoin-detail.ts`
 - `worker/src/cron/dex-liquidity/orchestrator.ts`
-- `worker/src/api/health.ts`
-- `worker/src/api/peg-summary.ts`
-- `worker/src/api/report-cards.ts`
-- `worker/src/api/dex-liquidity.ts`
-- `worker/src/api/stress-signals.ts`
-- `worker/src/api/mint-burn-flows.ts`
-- `worker/src/api/status.ts`
 
 Selected files have explicit threshold overrides in `scripts/check-critical-coverage.mjs`; keep that map as the source of truth instead of duplicating override values in prose.
 

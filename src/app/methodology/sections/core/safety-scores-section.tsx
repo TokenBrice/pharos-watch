@@ -217,9 +217,7 @@ export function SafetyScoresMethodologySection() {
                     effectiveExit = min(100, max(dex, redemption) + min(dex, redemption) &times; 0.10)
                   </p>
                   <p>
-                    If only DEX liquidity exists, it is used directly. If only a redemption backstop exists, its score
-                    is used directly &mdash; route family caps (offchain-issuer &le; 65, queue-redeem &le; 70) and component scoring
-                    remain the guardrails against inflation.
+                    If only DEX liquidity exists, it is used directly. Eligible immediate, live, or queue-style redemption can stand alone when DEX liquidity is absent, with route family caps and component scoring as guardrails. Documented offchain issuer routes with eventual-only capacity do not replace missing DEX liquidity; they can only add the primary-market bonus when DEX liquidity already exists.
                   </p>
                   <p>
                     Redemption backstops are scored across access, settlement, execution certainty, capacity, output-asset quality, and cost. Low-confidence redemption routes stay visible on the site but do not uplift the Safety Score liquidity dimension. Documented offchain issuer exits with eventual-only capacity can add a primary-market bonus only when DEX liquidity already exists; they do not replace missing DEX liquidity. Severe active depegs also disable static or non-live-direct redemption uplift unless current live-open redemption evidence exists. Last-known DEX inputs still feed effective-exit scoring when the liquidity cron is stale, with staleness surfaced through <code className="text-xs">liquidityStale</code> / <code className="text-xs">inputFreshness.dexLiquidity.stale</code>. Materially stale or missing redemption snapshots are suppressed from Safety Score liquidity; normal 4-hourly redemption-sync lag remains inside the scoring freshness runway. Redemption metadata emitted by a live reserve adapter ages out with the reserve snapshot; if it is stale or degraded, the route stays visible but does not score as current capacity.
@@ -343,13 +341,11 @@ export function SafetyScoresMethodologySection() {
                 <div className="space-y-2">
                   <h3 className="text-foreground font-medium">Dependency Risk Scoring</h3>
                   <p>
-                    Two-phase computation ensures upstream scores are available before dependent coins are graded. Phase 1
-                    grades independent coins (centralized &amp; decentralized), then Phase 2 grades CeFi-Dependent coins
-                    using Phase 1 results.
+                    Dependency scoring runs after upstream report cards are available and uses a topological order across the active dependency graph, so transitive stablecoin exposure is scored from upstreams before downstream coins are finalized.
                   </p>
                   <ul className="list-disc list-inside space-y-1">
                     <li>
-                      <span className="text-foreground">Non-dependent coins</span> &mdash; score 95 (no upstream risk)
+                      <span className="text-foreground">Self-backed coins</span> &mdash; score by governance baseline: decentralized&nbsp;90, centralized-dependent&nbsp;75, centralized&nbsp;95
                     </li>
                     <li>
                       <span className="text-foreground">With mapped dependencies</span> &mdash; blended score: each

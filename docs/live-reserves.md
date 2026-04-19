@@ -198,6 +198,7 @@ Latest successful live snapshot per live-enabled coin.
 | `metadata`                                        | Snapshot-scoped adapter telemetry (freshness, redeemable capacity, live fee, disclosure totals, etc.) |
 | `warning_count` / `warnings`                      | Warning summary persisted alongside the successful snapshot                                           |
 | `adapter_source_model` / `adapter_evidence_class` | Registry-derived classification copied onto the snapshot row for authoritative reads                  |
+| `attempt_id`                                      | Attempt-fencing identifier for the successful snapshot when the writer stamped one                    |
 
 ### `reserve_composition_history`
 
@@ -219,6 +220,7 @@ Per-coin operational state for the most recent attempt.
 | `warnings`          | JSON-serialized warning objects                                                                                                           |
 | `last_error`        | Latest failure message, if any                                                                                                            |
 | `metadata`          | Attempt-scoped operational metadata only (for example skip/failure reasons or warning-effect counts), not authoritative reserve telemetry |
+| `last_attempt_id` / `pending_attempt_id` / `last_success_attempt_id` | Attempt-fencing identifiers used to reject orphaned or partially written live snapshots |
 
 ### `reserve_sync_attempt_history`
 
@@ -227,10 +229,11 @@ Append-only history of all reserve-sync attempts, including `ok`, `degraded`, `e
 Freshness and consistency rules now live across the `worker/src/lib/live-reserves-store*.ts` helper family, with `worker/src/lib/live-reserves-store.ts` kept as the public facade:
 
 - `LIVE_RESERVE_FRESHNESS_SEC = 172800` (48 hours)
-- A live snapshot only counts as consistent when `reserve_sync_state.last_success_at === reserve_composition.fetched_at`
+- A live snapshot only counts as consistent when `reserve_sync_state.last_success_at === reserve_composition.fetched_at` and, when attempt IDs are stamped, `reserve_sync_state.last_success_attempt_id === reserve_composition.attempt_id`
 - Stored snapshots are parsed strictly: unreadable JSON, invalid payloads, empty slice arrays, invalid slices, or materially invalid sums are rejected instead of being partially served
-- `loadFreshAuthoritativeReserveSnapshots()` is the canonical resolver used by `GET /api/stablecoin-reserves/:id` and reserve-sync status surfaces
-- `loadFreshIndependentLiveReserveMap()` further filters authoritative snapshots to `evidenceClass = independent`, `reserve_sync_state.last_status = "ok"`, **and** scoring-eligible freshness evidence. In practice that means the snapshot must either carry a verified `sourceTimestamp` path or explicitly mark freshness as `not-applicable` / `verified`; `freshnessMode = "unverified"` no longer qualifies for collateral passthrough.
+- `resolveReserveResult()` is the canonical detail/API resolver used by `GET /api/stablecoin-reserves/:id`
+- `computeReserveCompositionOverview()` is the status-summary resolver used by `/api/status` and `/admin/`
+- `loadFreshIndependentLiveReserveMap()` further filters authoritative snapshots to `evidenceClass = independent`, `reserve_sync_state.last_status = "ok"`, **and** scoring-eligible freshness evidence for report-card/scoring consumers. In practice that means the snapshot must either carry a verified `sourceTimestamp` path or explicitly mark freshness as `not-applicable` / `verified`; `freshnessMode = "unverified"` no longer qualifies for collateral passthrough.
 - `getLatestSuccessfulReserveSnapshotMetadata()` is the canonical accessor for downstream consumers that need snapshot telemetry such as redeemable capacity or live redemption fees
 - failed `reserve_sync_state` / `reserve_sync_attempt_history` rows now also retain `metadata.failureCategory` so parser drift, network issues, upstream HTTP failures, validation failures, and storage write failures are distinguishable without log grep
 - authoritative `live` / `live-stale` API responses now also carry a `provenance` envelope plus a separate `displayBadge` so the frontend can distinguish true live feeds from curated-validated and proof-style reserve views
@@ -248,6 +251,7 @@ Freshness and consistency rules now live across the `worker/src/lib/live-reserve
 - `independentFreshUnverified`
 - `staticValidatedFresh`
 - `weakProbeFresh`
+- `persistentlyStaleIndependentCoins` (independent feeds older than the persistent-staleness window that can escalate status beyond normal short-lived lag)
 - `writeTimeoutUncertain`
 - `lastSuccessAt`
 - `oldestFreshAgeSec`
@@ -334,9 +338,9 @@ When a coin has `mode="live"`, the response is edge-cached for 1 hour (`s-maxage
 - The `sync` object in the cached response will show the **previous** sync state, not the current failure
 - Operators querying the public API will not see the error status until the edge cache expires
 
-**For real-time monitoring**, use the auth-gated `/status` endpoint, which is never edge-cached and always reflects current D1 state.
+**For real-time monitoring**, use the Access-gated admin surface (`/admin/`, backed by admin-only `GET /api/status`), which is never edge-cached and always reflects current D1 state.
 
-Fallback/degraded responses use a shorter edge cache (`s-maxage=300`, 5 minutes), so status transitions from fallback modes propagate faster.
+Fallback, template-fallback, and unavailable responses use a shorter edge cache (`s-maxage=300`, 5 minutes), so status transitions from fallback modes propagate faster. `live-stale` responses use an intermediate cache (`s-maxage=1800`, 30 minutes); fully live responses use `s-maxage=3600` (1 hour).
 
 ---
 
@@ -445,7 +449,7 @@ Adapter helpers now live in a small helper family, with `worker/src/cron/reserve
 
 ## Frontend Consumers
 
-- `src/hooks/use-stablecoin-reserves.ts` uses mode-aware polling: `live` responses keep `staleTime = 1 hour` / `refetchInterval = 2 hours`, while stale or fallback modes tighten to `1 minute` / `2 minutes` so the UI re-checks recovery faster
+- `src/hooks/use-stablecoin-reserves.ts` uses mode-aware polling: `live` responses follow the 4-hour reserve producer cadence (`staleTime = 4 hours` / `refetchInterval = 8 hours`), while stale or fallback modes tighten to `1 minute` / `2 minutes` so the UI re-checks recovery faster
 - `src/hooks/use-stablecoin-detail-view-model.ts` injects the reserve result into the detail-page view model
 - `src/lib/coverage.ts` uses the adapter badge taxonomy in `shared/lib/live-reserve-display.ts` so `/coverage` distinguishes true `Live` reserve feeds from `Curated-Validated` and `Proof` reserve-sync paths
 - `worker/src/api/status.ts` uses `computeReserveCompositionOverview()` to surface reserve-sync health on `/status`

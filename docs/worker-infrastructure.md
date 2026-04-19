@@ -507,8 +507,8 @@ Workers enforce a **6 concurrent fetch connections** limit per cron trigger invo
 
 `npm run check:cron-connections` reads `shared/lib/cron-jobs.ts` and sums peak `connectionGroup` usage, so sequential chains count by their maximum in-chain fetch width rather than by adding every chained job together.
 
-| Trigger | Cron Expression    |                                Max Concurrent External Connections                                 | Headroom |
-| ------- | ------------------ | :------------------------------------------------------------------------------------------------: | :------: |
+| Budget row | Cron Expression    |                                Max Concurrent External Connections                                 | Headroom |
+| ---------- | ------------------ | :------------------------------------------------------------------------------------------------: | :------: |
 | 1       | `*/15 * * * *`     |       3 (sync-fx-rates -> sync-stablecoins -> DB-only snapshot/report-card jobs are chained)       |    3     |
 | 2       | `9,24,39,54 * * * *` |                                     1 (status self-check probes)                                  |    5     |
 | 3       | `3 */6 * * *`      |                                  1 (rate-limited sequential blacklist scans)                       |    5     |
@@ -531,7 +531,7 @@ The `*/5 * * * *` digest-trigger poll slot exists in the scheduled runner regist
 
 - Jobs requiring <=1 external connection may share any slot with headroom >=2.
 - Jobs requiring >2 concurrent connections should get a dedicated trigger slot.
-- Never add a fetching job to a slot with headroom <=1 (Triggers 10, 11, and 14 are effectively full).
+- Never add a fetching job to a slot with headroom <=1 (budget rows 10, 11, and 14 are effectively full).
 
 ### Cron Error Handling Policy
 
@@ -640,7 +640,7 @@ Some long-running jobs also enforce their own earlier wall-clock guard so they c
 | Job                       | Timeout | Reason                                                                                                                                                                                                    |
 | ------------------------- | ------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Default                   | 5 min   | Standard jobs complete in <60s                                                                                                                                                                            |
-| `sync-stablecoins`        | 8 min   | Core quarter-hour pipeline entrypoint now includes dual-primary pricing, supplemental overlays, multi-pass enrichment, and depeg processing; explicit headroom avoids timing out on bounded fallback work |
+| `sync-stablecoins`        | 8 min   | Core quarter-hour pipeline entrypoint now includes N-source weighted primary pricing, supplemental overlays, multi-pass enrichment, and depeg processing; explicit headroom avoids timing out on bounded fallback work |
 | `sync-dex-liquidity`      | 13 min  | 150+ pool crawl, with headroom below the platform wall-clock limit                                                                                                                                        |
 | `sync-dex-discovery`      | 13 min  | Multi-source pool staging with explicit 12-minute self-budget so the wrapper still has headroom to log a controlled degraded/error result                                                                 |
 | `sync-blacklist`          | 12 min  | Multi-chain scan + balance enrichment; isolated trigger allows extended runtime                                                                                                                           |
@@ -656,7 +656,7 @@ Configuration: `CRON_TIMEOUT_MS` record in `worker/src/lib/cron-lease.ts`.
 
 ### Circuit Breakers
 
-All external data sources are protected by per-source circuit breakers (`worker/src/lib/circuit-breaker.ts`). State is persisted in the D1 `cache` table under keys like `circuit:defillama-stablecoins`.
+Most high-risk external integrations are protected by per-source circuit breakers (`worker/src/lib/circuit-breaker.ts`). State is persisted in the D1 `cache` table under keys like `circuit:defillama-stablecoins`. Bounded low-volume fallbacks such as gold-api.com metal spot quotes, the secondary FX mirror, and ExchangeRate-API daily reference snapshots use explicit retry/timeout/cooldown behavior but are not currently circuit-gated.
 
 - **Open threshold**: 3 consecutive failures
 - **Probe interval**: 30 minutes (one request allowed to test recovery)
@@ -751,7 +751,7 @@ Auto-detects webhook format from URL:
 
 ## Shared Database Helpers
 
-**File:** `worker/src/lib/db.ts`
+**Files:** `worker/src/lib/db.ts` for generic D1 helpers and `worker/src/lib/db-cache.ts` for cache-table helpers (`getCache`, `setCache`, `setCacheIfNewer`, `getPriceCache`, `savePriceCache`).
 
 ### Cache Table
 
@@ -943,6 +943,8 @@ The three crons below were previously only listed by filename in [Architecture](
 | `slices`        | TEXT    | JSON-serialized `ReserveSlice[]`      |
 | `fetched_at`    | INTEGER | Unix seconds of last successful sync  |
 | `source`        | TEXT    | Adapter key used (e.g., `"infinifi"`) |
+| `metadata` / warning fields / adapter classification | TEXT / INTEGER | Snapshot telemetry, warning summary, and source-model/evidence-class columns |
+| `attempt_id` | TEXT | Attempt-fencing identifier for rejecting orphaned partial writes |
 
 Only coins with `liveReservesConfig` set in their metadata appear in this table. One row per coin (latest snapshot only). A row is only considered an authoritative live snapshot when it matches the coin’s `reserve_sync_state.last_success_at`.
 
@@ -960,6 +962,7 @@ Only coins with `liveReservesConfig` set in their metadata appear in this table.
 | `warnings`          | TEXT    | JSON-serialized warning objects                     |
 | `last_error`        | TEXT    | Last failure message, if any                        |
 | `metadata`          | TEXT    | Adapter-specific operational metadata               |
+| `last_attempt_id` / `pending_attempt_id` / `last_success_attempt_id` | TEXT | Attempt-fencing identifiers for correlating sync state with composition rows |
 
 **Registered adapters:**
 

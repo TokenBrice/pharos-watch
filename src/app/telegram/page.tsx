@@ -84,7 +84,7 @@ const COMMANDS = [
   { command: "/unsubscribe <targets>", description: "Remove specific coin subscriptions or preset-expanded coins", example: "/unsubscribe usd-top25" },
   { command: "/unsubscribe all", description: "Clear all per-coin and all-stablecoin subscriptions", example: null },
   { command: "/set <ticker> <setting> <value>", description: "DEWS floor (WARNING/DANGER), safety direction (downgrade-only/upgrade-only), or depeg-step (100/250/500 bps)", example: "/set USDT dews WARNING" },
-  { command: "/set all <setting> <value>", description: "Toggle dews, depeg, safety, or launch across every tracked coin", example: "/set all depeg off" },
+  { command: "/set all <setting> <value>", description: "Toggle dews, depeg, or safety across every tracked coin", example: "/set all depeg off" },
   { command: "/mute <start>-<end>", description: "Silence Telegram notifications during UTC quiet hours", example: "/mute 22-07" },
   { command: "/unmutehours", description: "Disable quiet hours", example: null },
   { command: "/list", description: "Show global alerts, subscribed coins, settings, and quiet hours", example: null },

@@ -109,7 +109,7 @@ A shadcn `Dialog` with three feedback modes selected via a segmented tab control
 | `description` | 10–2000 characters after trim |
 | `title` | 3–100 characters after trim; required for `bug` / `feature-request` |
 | `pageUrl` | Must start with `"/"` |
-| `contactHandle` | Optional; 2–100 characters after trim |
+| `contactHandle` | Optional; server accepts up to 100 characters after trim. The browser form also enforces a 2-character minimum before submission. |
 | `stablecoinId` | Checked with `resolveStablecoinId(...)`; unknown values return `400 Invalid stablecoinId` |
 | `website` | Non-empty → silent 200 OK, no GitHub call |
 

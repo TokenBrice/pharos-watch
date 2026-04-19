@@ -206,7 +206,7 @@ Computed from the shared public-health floor plus availability-impacting cron av
 - `stale` if any of:
   - any shared cache impact is `stale`
   - the public mint/burn lane is `stale`
-  - any `statusImpact="critical"` cron lastRun status is `error`
+  - any availability-critical cron has two or more consecutive failed runs
   - `availabilityImpactingUnhealthyCrons >= 2`
 - `degraded` if any of:
   - any shared cache impact is `degraded`
@@ -317,7 +317,7 @@ Availability escalation on cron errors follows a transient-vs-sustained split:
 - **Two or more consecutive** failed runs on the same critical cron escalate to `stale` via `summary.availabilityImpactingConsecutiveCronErrors > 0`.
 - Multiple critical crons simultaneously unhealthy (`summary.availabilityImpactingUnhealthyCrons >= 2`) also escalate to `stale`.
 - Cache-age stale (`worstCacheRatio > STATUS_CACHE_RATIO_THRESHOLDS.stale`) and the `publicAvailabilityFloor` (circuit outages, mint/burn sync stale) paths remain unchanged.
-- `reserveComposition`: live reserve sync coverage summary (`configuredCoins`, `freshCoins`, `staleCoins`, `missingCoins`, `degradedCoins`, `errorCoins`, `corruptCoins`, `independentFreshEligible`, `independentFreshUnverified`, `staticValidatedFresh`, `weakProbeFresh`, `writeTimeoutUncertain`, `lastSuccessAt`, `oldestFreshAgeSec`, `status`, `freshCoverageRatio`, `authoritativeFreshCoverageRatio`)
+- `reserveComposition`: live reserve sync coverage summary (`configuredCoins`, `freshCoins`, `staleCoins`, `missingCoins`, `degradedCoins`, `errorCoins`, `corruptCoins`, `independentFreshEligible`, `independentFreshUnverified`, `staticValidatedFresh`, `weakProbeFresh`, `persistentlyStaleIndependentCoins`, `writeTimeoutUncertain`, `lastSuccessAt`, `oldestFreshAgeSec`, `status`, `freshCoverageRatio`, `authoritativeFreshCoverageRatio`)
 - `coingeckoPriceDiff`: admin-only live CoinGecko comparison summary for active tracked assets with `geckoId`, including the compare count, mismatch count, threshold, and the flagged rows where the Pharos reported price is more than 5% away from CoinGecko spot
 - `d1Usage`: admin-only live D1 database telemetry (`databaseSizeBytes`, `numTables`, `readReplicationMode`, `readQueries24h`, `writeQueries24h`, `rowsRead24h`, `rowsWritten24h`) sourced from Cloudflare's D1 control-plane and analytics APIs when the dedicated worker bindings are configured
 - `reserveDrift`: optional array of coins where the independent live-derived collateral quality score diverges from curated by more than 15 points (`coinId`, `liveCollateralScore`, `curatedCollateralScore`, `delta`), sorted by delta descending. Omitted when no drift exceeds the threshold.
@@ -513,7 +513,7 @@ Renders in the Admin Pipeline lane immediately after the quality threshold board
 
 - **Confidence tiles** — colored metric tiles for `High`, `Single-source`, `Low`, `Fallback`, and `Missing` counts
 - **Source breakdown line** — which price sources contributed to the current sync, including protocol redemption quotes when they override thin market pricing
-- **Divergences list** — collapsible list of assets where dual-primary sources disagreed by more than 50 bps
+- **Missing tile** — count of assets whose current price source is `missing`
 - **Last sync age** — how old the price-health snapshot is
 
 Data is sourced from `sync-stablecoins` cron metadata stored in the most recent `cron_runs` row — no extra DB query required.

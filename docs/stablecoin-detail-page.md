@@ -124,7 +124,7 @@ Below the identity block, the classification line renders three small focus-ring
 - **Data:** `coinData.price`, `coinData.priceSource`, `coinData.priceConfidence`, `coinData.priceUpdatedAt` from stablecoins API; `consensusSources` and `dexPriceCheck` from peg-summary API
 - **Scrollspy ID:** `price` (label: "Price"); replaces the former `price-transparency` id
 - **Mount point:** nested inside `OverviewSection` (`src/components/stablecoin-detail/overview-section.tsx`)
-- **Hidden when:** `coinData.price == null`
+- **Hidden when:** there is no `coinData`, or both `coinData.price == null` and no `dexPriceCheck`
 - Shows current price, source label, confidence badge, update recency, and a table of all known price sources with their status (Used/Available/No data). When protocol-redeem overrides are active, all market sources show "Not applicable". DEX Price Check section renders when `dexPriceCheck` data exists.
 
 ### Reserves anchor
@@ -133,7 +133,7 @@ When reserves render, the treemap block is wrapped in `<section id="reserves">` 
 
 ### Explore Next anchor
 
-`ExploreNextSection` wraps itself in `<section id="explore-next">` so the scrollspy's terminal Explore pill is reachable. Layout rebalanced to three equal columns at `xl+` (Taxonomy | Trackers | Compare+Related), two columns at `lg`, stacked below `lg` in order Compare → Taxonomy → Trackers → Related. Per-pair compare affordance now primaries `Open comparison` (filled button) with a secondary `Read the one-page brief` text link. Related pills cap at 4 entries with a `See all peers →` overflow pill when more exist.
+`ExploreNextSection` wraps itself in `<section id="explore-next">` so the scrollspy's terminal Explore pill is reachable. Layout rebalanced to three equal columns at `xl+` (Taxonomy | Trackers | Compare+Related), two columns at `lg`, stacked below `lg` in order Compare+Related -> Taxonomy -> Trackers. Per-pair compare affordance now primaries `Open comparison` (filled button) with a secondary `Read the one-page brief` text link. Related pills cap at 4 entries with a `See all peers ->` overflow pill when more exist.
 
 ---
 

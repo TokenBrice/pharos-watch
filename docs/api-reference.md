@@ -103,7 +103,7 @@ Route-specific manual `_meta` injectors can be stricter. `GET /api/chains` uses 
 | `GET /api/usds-status`       | 86400         | `createCacheHandler`                         |
 | `GET /api/yield-rankings`    | 3600          | Manual injection after live safety hydration |
 
-Array-typed responses (e.g., endpoints returning a JSON array at the top level) receive only the HTTP headers (`X-Data-Age`, `Warning`) and do not include `_meta`.
+Array-typed responses (e.g., endpoints returning a JSON array at the top level) do not include `_meta`. They receive `X-Data-Age` / `Warning` only when their handler wires freshness metadata explicitly; history endpoints such as supply history, DEX liquidity history, and non-USD share currently expose cache headers but no freshness headers.
 
 The frontend `apiFetchWithMeta()` helper (in `src/lib/api.ts`) reads `_meta` from the response body when present, falling back to the `X-Data-Age` header for endpoints that do not include it.
 
@@ -115,7 +115,7 @@ These profiles apply while the dataset is within its generic freshness runway. O
 
 | Profile  | `Cache-Control`                      | Used by                                                                                                                                                                                                                                                                              |
 | -------- | ------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| realtime | `public, s-maxage=60, max-age=10`    | stablecoins, stablecoin-summary, blacklist, depeg-events, peg-summary, mint-burn-events, chains                                                                                                                                                                                      |
+| realtime | `public, s-maxage=60, max-age=10`    | stablecoins, stablecoin-summary, blacklist, blacklist-summary, depeg-events, peg-summary, mint-burn-events, chains                                                                                                                                                                    |
 | standard | `public, s-maxage=300, max-age=60`   | stablecoin-charts, redemption-backstops, usds-status, daily-digest, digest-archive, report-cards, stability-index, yield-rankings, mint-burn-flows, stress-signals                                                                                                                   |
 | custom   | `public, s-maxage=300, max-age=300`  | dex-liquidity (browser-side max-age extended to match CDN TTL)                                                                                                                                                                                                                       |
 | per-coin | `public, s-maxage=300, max-age=10`   | stablecoin/:id (cache-aside with 5-min per-coin TTL in D1)                                                                                                                                                                                                                           |
@@ -143,7 +143,7 @@ Recommended minimum polling cadence for external integrations:
 Client best practices:
 
 - Add interval jitter (`±10%`) to avoid synchronized bursts.
-- Read `X-Data-Age` + `Warning` for freshness/stale decisions.
+- Read `X-Data-Age` + `Warning` for freshness/stale decisions when those optional headers are present.
 - Back off exponentially on `429` and `5xx` responses.
 
 ---
@@ -308,7 +308,7 @@ Full stablecoin list with current supply, price, chain breakdown, and FX rates. 
 }
 ```
 
-> All `circulating` values are already in USD (the list endpoint does not return native-currency values for non-USD pegs). Do not multiply by price.
+All `circulating` values are already in USD (the list endpoint does not return native-currency values for non-USD pegs). Do not multiply by price.
 
 ---
 
@@ -1824,7 +1824,7 @@ Cache-backed yield rankings written by the `sync-yield-data` cron. The endpoint 
 
 **Cache:** standard — `X-Data-Age` and `Warning` headers included. Freshness threshold: 3600 s (1 hour, aligned to the hourly `sync-yield-data` publisher).
 
-**Error responses:** `503` when the cached rankings payload is missing or malformed.
+**Error responses:** `503` when the cached rankings payload is missing or unparseable JSON. If a parseable payload fails the live schema validation path, the handler logs the validation issue and still serves the cached object with `_meta`, without live safety hydration.
 
 **Response**
 
@@ -2386,7 +2386,7 @@ Full admin dashboard: cron run history, cache freshness for all keys, data quali
 - Browser: `https://ops.pharos.watch/admin/` -> same-origin `/api/admin/status`
 - CLI: `CF-Access-Client-Id: <id>` and `CF-Access-Client-Secret: <secret>` against `https://ops-api.pharos.watch/api/status`
 
-**Response shape:** `StatusResponse` (defined in `shared/types/index.ts`)
+**Response shape:** `StatusResponse` (defined in `shared/types/index.ts`). The JSON below is illustrative rather than exhaustive; the canonical field list lives in `shared/types/status.ts` and currently includes diagnostics such as `summary.transitionsLast24h`, `priceProviderDiagnostics`, `gtProbe`, `cacheBlobSizes`, `reserveDrift`, `classificationWarnings`, and `reserveComposition.persistentlyStaleIndependentCoins`.
 
 ```json
 {
@@ -2726,8 +2726,8 @@ The top-line `external` bucket is `api.pharos.watch` traffic not classified as s
 | ------------ | --------- | ------- | ----------- |
 | `hours`      | `integer` | `24`    | Window size in hours (`1`–`840`, currently 35 days) |
 | `bucketSec`  | `integer` | `3600`  | Time-bucket rollup size in seconds (`60`–`86400`) |
-| `routeLimit` | `integer` | `20`    | Max per-route rows returned in the route breakdown |
-| `apiKeyLimit` | `integer` | `25`   | Max per-key rows returned in the keyed public-API breakdown |
+| `routeLimit` | `integer` | `20`    | Max per-route rows returned in the route breakdown (`1`-`100`) |
+| `apiKeyLimit` | `integer` | `25`   | Max per-key rows returned in the keyed public-API breakdown (`1`-`100`) |
 
 Malformed numeric params return `400`; out-of-range numeric params are clamped to the documented bounds.
 

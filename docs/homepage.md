@@ -35,7 +35,7 @@ The visible top fold is split across three independently composed surfaces:
 
 - `SiteHeader` on `lg+`
 - `KpiBar` across breakpoints
-- the optional Start Here callout inside `HomepageClient`
+- the optional `HomepageStartHereCallout`, rendered by `src/app/page.tsx` between `SiteHeader` and `KpiBar`
 
 The page keeps the only semantic `h1` visually hidden. The visible masthead is intentionally a dashboard surface, not a hero-heading block.
 
@@ -60,7 +60,6 @@ Derived helpers:
 
 - `buildHomepageViewModel(...)` in `src/components/homepage-client-view-model.ts` (calls `derivePegRates(...)` for non-USD peg display context)
 - `useHomepageFilters()` for URL-backed table filters
-- `useStartHereCallout()` for first-session onboarding behavior
 
 Page-level shared error and freshness surfaces:
 

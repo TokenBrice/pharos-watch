@@ -38,7 +38,7 @@ When an asset still has no usable current price after validation and fallback re
 |--------|--------|-----------------|-------|
 | CoinGecko `/simple/price` | 2 | built-in fetch path | Primary market-data voice; uses upstream `last_updated_at` freshness when available and drops stale rows outside the trusted age window |
 | CoinGecko ticker | 2 | `worker/src/lib/cg-ticker.ts` | Exchange-ticker corroboration path for the curated tracked subset |
-| DefiLlama stablecoins list | 1 | Typed quote extracted from DL stablecoins endpoint | Independent DL aggregation with explicit observed-time provenance |
+| DefiLlama stablecoins list | 1 | Typed quote extracted from DL stablecoins endpoint | Independent DL aggregation; carries observed-time metadata when available, otherwise the observation mode is `unknown` |
 | Pyth Hermes | 2 | `worker/src/lib/pyth.ts` | Oracle input with confidence intervals |
 | Binance spot | 2 | `worker/src/lib/cex-tickers.ts` | Batch venue input |
 | Kraken spot | 2 | `worker/src/lib/cex-tickers.ts` | Explicit-pair venue input with alias-safe symbol mapping |

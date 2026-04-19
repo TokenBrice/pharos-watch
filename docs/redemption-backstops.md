@@ -49,7 +49,7 @@ Status semantics:
 - `degraded` when at least one row is written but any configured route fails, is missing from cache, hits a non-`missing-capacity`/non-`impaired` unresolved state, the `missing-capacity` tail exceeds that tolerance budget, or the reused DEX liquidity snapshot is stale
 - `error` when zero routes resolve to a usable scored row because of route failures, cache misses, or blocking unresolved states
 
-Cron metadata includes `synced`, `resolved`, `unresolved`, `unresolvedMissingCapacity`, `unresolvedCritical`, `availabilityDegraded`, `missingCapacityOkThreshold`, `coverageRatio`, `failed`, `configured`, `dynamic`, `estimated`, `static`, and `liquidityStale`, plus `failedIds`, `availabilityDegradedIds`, or `missingFromCache` when relevant. `availabilityDegraded`/`availabilityDegradedIds` are row-level route-availability signals and do not by themselves degrade the cron run.
+Cron metadata includes `synced`, `resolved`, `unresolved`, `unresolvedMissingCapacity`, `unresolvedCritical`, `availabilityDegraded`, `missingCapacityOkThreshold`, `coverageRatio`, `failed`, `configured`, `dynamic`, `estimated`, `static`, `liquidityStale`, and `severeActiveDepegThresholdBps`, plus `failedIds`, `availabilityDegradedIds`, or `missingFromCache` when relevant. `availabilityDegraded`/`availabilityDegradedIds` are row-level route-availability signals and do not by themselves degrade the cron run.
 
 ---
 
@@ -87,7 +87,8 @@ An optional per-config `totalScoreCap` can apply an additional `config-cap`.
 
 - If both exist: `min(100, max(dexLiquidity, redemptionScore) + min(dexLiquidity, redemptionScore) × 0.10)`
 - If only DEX liquidity exists: passthrough DEX liquidity
-- If only redemption exists: passthrough redemption score (route family caps are the guardrails)
+- If only eligible immediate/live/queue-style redemption exists: passthrough redemption score (route family caps are the guardrails)
+- Documented offchain-issuer eventual exits do not replace missing DEX liquidity; they can only add the report-card primary-market exit bonus when DEX liquidity is already present
 - If neither exists: `null`
 
 The redemption-backstop cron materializes `effectiveExitScore` on every resolved row using the last-known DEX liquidity input, even when that input is stale relative to the `CRON_INTERVALS["sync-dex-liquidity"] * 2` freshness budget. Stale DEX input still marks the cron run `degraded` and flips `metadata.liquidityStale = true` for operational visibility. Report cards then apply their own confidence and availability gating on top, so stale redemption snapshots and low-confidence redemption routes stay visible on redemption surfaces but do not uplift Safety Score liquidity. Documented offchain issuer routes with eventual-only capacity can add only the report-card primary-market exit bonus when DEX liquidity is already available; they do not replace missing DEX liquidity.

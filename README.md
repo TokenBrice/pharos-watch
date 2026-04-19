@@ -113,7 +113,7 @@ curl "http://localhost:8787/__scheduled?cron=*/15+*+*+*+*"
 **Frontend-only (`npm run dev`)**
 Use one of these paths:
 
-- Leave `NEXT_PUBLIC_API_BASE` empty and set `SITE_API_SHARED_SECRET` in `.env.local`; `npm run dev` starts `scripts/dev-api-proxy.mjs` so same-origin `/_site-data/*` reads authenticate against the site-data lane.
+- Leave `NEXT_PUBLIC_API_BASE` empty and set `SITE_API_SHARED_SECRET` in `.env.local`; `npm run dev` starts `scripts/dev-api-proxy.mjs` so local same-origin `/api/*` reads are rewritten through the dev proxy and authenticate against the site-data lane.
 - Set `NEXT_PUBLIC_API_BASE=http://localhost:8787` when you are also running a configured local Worker with `cd worker && npx wrangler dev`.
 
 **Worker-only (`cd worker && npx wrangler dev`)**
@@ -324,7 +324,7 @@ The data pipeline includes multiple guardrails designed for research-grade accur
 - **Freshness header** — `/api/stablecoins` returns `X-Data-Age` so consumers can detect stale data
 - **Atomic backfill** — depeg event backfills use transactional batch operations to prevent data loss on worker crashes
 - **Retry logic** — the shared `fetchWithRetry()` helper provides exponential backoff with opt-in 404 passthrough, while some provider integrations use bespoke timeout/retry handling when batching or raw upstream semantics require it
-- **Circuit breakers** — per-source circuit breakers (3-strike open, 30-min probe) prevent hammering downed APIs; dual-primary price validation cross-checks DefiLlama and CoinGecko within 50 bps and now chooses the peg-closer candidate for fixed non-NAV pegs when sources diverge; CoinGecko supply fallback activates when DefiLlama is unavailable
+- **Circuit breakers** — per-source circuit breakers (3-strike open, 30-min probe) prevent hammering many degraded upstreams; N-source weighted primary consensus cross-checks market, oracle, exchange, and on-chain voices and now chooses the peg-closer candidate for fixed non-NAV pegs when sources diverge; CoinGecko supply fallback activates when DefiLlama is unavailable
 - **Mint/burn reliability controls** — rotating config scheduling, per-chain request quotas, adaptive `eth_getLogs` range splitting, timestamp caching, degraded-run escalation, and admin-controlled chunked backfill (`/api/backfill-mint-burn`)
 
 ## Deployment

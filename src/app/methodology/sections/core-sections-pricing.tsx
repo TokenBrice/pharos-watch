@@ -131,7 +131,7 @@ export function PricingPipelineMethodologySection() {
           <MethodologyFacts
             facts={[
               { label: "Minimum data", value: "At least 1 source must return a price; consensus requires 2+ for high confidence" },
-              { label: "Circuit breakers", value: "Each source has its own breaker: opens after 3 failures, probes every 30 min" },
+              { label: "Circuit breakers", value: "Most live upstream families are breaker-gated: opens after 3 failures, probes every 30 min" },
               {
                 label: "Failure behavior",
                 value: "Degraded sources are excluded from consensus; enrichment pipeline fills remaining gaps; stale cache used as last resort",
@@ -253,7 +253,7 @@ export function PricingPipelineMethodologySection() {
               <li><span className="text-foreground font-medium">cUSD (Cap):</span> <code className="text-xs">getBurnAmount()</code> &mdash; cUSD &rarr; USDC redemption rate</li>
               <li><span className="text-foreground font-medium">iUSD (infiniFi):</span> <code className="text-xs">receiptToAsset()</code> &mdash; iUSD &rarr; USDC redemption rate</li>
               <li><span className="text-foreground font-medium">USDai:</span> inherits tracked <code className="text-xs">PYUSD</code> pricing because base USDAI is treated as an instantly redeemable PYUSD wrapper</li>
-              <li><span className="text-foreground font-medium">USDK / XO:</span> inherit tracked <code className="text-xs">wM</code> pricing because Pharos treats them as instantly redeemable M0 extension units rather than free-floating market-priced assets</li>
+              <li><span className="text-foreground font-medium">USDK / XO / USDnr:</span> inherit tracked <code className="text-xs">wM</code> pricing because Pharos treats them as instantly redeemable M0 extension units rather than free-floating market-priced assets</li>
               <li><span className="text-foreground font-medium">crvUSD (Curve):</span> <code className="text-xs">PriceAggregator.price()</code> enters primary consensus as a live market voice, not a protocol override</li>
             </ul>
             <p>These overrides set <code className="text-xs">priceSource = &quot;protocol-redeem&quot;</code> and <code className="text-xs">priceConfidence = &quot;high&quot;</code> when the quote validates against peg bounds, and they are applied after the GeckoTerminal probe so later market checks cannot overwrite them.</p>
@@ -283,7 +283,7 @@ export function PricingPipelineMethodologySection() {
                   </tr>
                 </thead>
                 <tbody className="divide-y">
-                  <tr className="hover:bg-muted/40 transition-colors"><td className="py-2 pr-4 text-green-700 dark:text-green-400 font-medium">high</td><td className="py-2 pr-4">Independent agreeing cluster survives list-aggregator downgrade and pool challenge</td><td className="py-2">Published as the agreeing cluster median; full trust for depeg detection and scoring</td></tr>
+                  <tr className="hover:bg-muted/40 transition-colors"><td className="py-2 pr-4 text-green-700 dark:text-green-400 font-medium">high</td><td className="py-2 pr-4">Independent agreeing cluster survives list-aggregator downgrade and pool challenge</td><td className="py-2">Published as the agreeing cluster median; depeg detection still checks authoritative-source trust before skipping confirmation</td></tr>
                   <tr className="hover:bg-muted/40 transition-colors"><td className="py-2 pr-4 text-yellow-700 dark:text-yellow-400 font-medium">single-source</td><td className="py-2 pr-4">One usable source, or a non-independent list-aggregator cluster treated as one source</td><td className="py-2">Depeg detection requires pending confirmation</td></tr>
                   <tr className="hover:bg-muted/40 transition-colors"><td className="py-2 pr-4 text-orange-700 dark:text-orange-400 font-medium">low</td><td className="py-2 pr-4">Sources disagree beyond threshold, or pool challenge fired</td><td className="py-2">Pool challenge: TVL-weighted pool price used; otherwise closest to peg reference; depeg requires confirmation</td></tr>
                   <tr className="hover:bg-muted/40 transition-colors"><td className="py-2 pr-4 text-red-700 dark:text-red-400 font-medium">fallback</td><td className="py-2 pr-4">All primary sources down; enrichment or cache used</td><td className="py-2">Depeg mutations blocked; stale banner shown on frontend</td></tr>

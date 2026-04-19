@@ -83,7 +83,7 @@ Primary files:
 - Query param `coins` accepts:
   - canonical ticker-issuer IDs (primary format, e.g. `usdt-tether`)
   - legacy DefiLlama / historical IDs that still resolve through the shared ID registry
-  - lowercase symbols only when the symbol resolves uniquely; ambiguous symbols are rejected instead of guessing
+  - case-insensitive ticker symbols only when the symbol resolves uniquely; ambiguous symbols are rejected instead of guessing
 - Query param `range` stores the market-cap chart window. Accepted values are `7d`, `30d`, `90d`, `1y`, and `all`; `all` is the default and is cleared from the URL instead of persisted.
 - Static comparison landing pages are generated from `STATIC_COMPARISON_PAGES` in `src/lib/compare-pages.ts` and live at `/compare/<left-id>-vs-<right-id>/`.
 
@@ -127,4 +127,4 @@ That pattern is used in both the stacked mobile cards and the desktop comparison
 - Both pages are part of static export and rely on client-side fetches where applicable.
 - Cemetery reliability depends on repository data curation (`shared/data/dead-stablecoins.json` via `shared/lib/dead-stablecoins.ts`).
 - Cemetery Telegram notifications depend on the daily Telegram digest post plus `TELEGRAM_BOT_TOKEN` and `TELEGRAM_CHAT_ID`; additions are detected from the repo dataset, not from a separate API feed.
-- Compare reliability depends on six independent API datasets plus per-coin supply-history and flow queries; partial failures are surfaced via query error/stale-data UI components.
+- Compare reliability depends on six independent API datasets plus per-coin supply-history and flow queries. The global stale/error UI covers stablecoins, peg summary, bluechip ratings, DEX liquidity, and report cards. The shared mint/burn dataset is consumed as data-only in the compare model; per-coin flow panels degrade by omission unless all selected flow queries fail, in which case the page shows a flow-specific error notice.

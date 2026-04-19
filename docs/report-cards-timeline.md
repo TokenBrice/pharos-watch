@@ -72,6 +72,23 @@ Additional proof-style reserve feeds now use independent timestamped sources ins
 - USD1 now uses its Chainlink bundle oracle for timestamped reserve size and live supply comparison
 - AUSD and DGLD remain outside live collateral passthrough for now because their discovered feeds do not currently provide payload-native freshness inside the live gate
 
+## v6.99 — Asymmetry USDaf live reserve freshness promotion (2026-04-15)
+
+USDaf's Asymmetry reserve feed now preserves the protocol API timestamp and normalizes branch symbols before risk classification:
+
+- The Asymmetry adapter emits verified source freshness from the protocol API timestamp when available
+- Branch-name normalization prevents casing-only symbols such as `wBTC` from degrading the feed as unknown exposure
+- The global live collateral gate remains unchanged: only independent ok-status snapshots with scoring-eligible freshness can drive report-card collateral scoring
+
+## v6.98 — Timestamp-backed reserve feeds restored to collateral passthrough (2026-04-15)
+
+Several live reserve adapters now consume source timestamps already exposed by their upstream dashboards or disclosure pages:
+
+- Circle, M0, Mento, and USD.AI reserve adapters emit verified freshness when their upstream source exposes a usable disclosure or update timestamp
+- Yuzu and Re Protocol reserve feeds have explicit mappings for newly observed buckets/tokens, preventing clean fresh feeds from being degraded as unknown exposure
+- OpenEden reserve sync sends browser-style origin hints to reduce upstream transport failures while preserving verified timestamp validation
+- Feeds that still lack trustworthy source freshness remain detail-visible only; the report-card live collateral gate still requires independent evidence, ok sync status, and verified or not-applicable freshness
+
 ## v6.97 — Active-depeg cap source and stale redemption gating (2026-04-15)
 
 Safety Score active-depeg handling and report-card input freshness were tightened:
@@ -546,7 +563,7 @@ Weights and grade thresholds are unchanged from v6.0.
 | v4.0        | multiplier | 25%            | —       | 25%        | 10%              | 30%      |
 | v4.1        | multiplier | 30%            | —       | 20%        | 15%              | 25%      |
 | v5.0–5.8    | multiplier | 30%            | —       | 20%        | 15%              | 25%      |
-| **v6.0–6.92** | **multiplier** | **30%**  | **—**   | **20%**    | **15%**          | **25%**  |
+| **v6.0-v7.07** | **multiplier** | **30%** | **—** | **20%** | **15%** | **25%** |
 
 ## Quick Reference: Grade Thresholds
 
