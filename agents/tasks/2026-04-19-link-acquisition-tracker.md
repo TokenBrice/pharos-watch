@@ -78,14 +78,10 @@
 - [blocked] Postman API Network publishing
   - Status: collection/environment files are ready.
   - Action: requires Postman account/workspace ownership.
-- [~] APIs.guru
-  - Needs the newly added `https://pharos.watch/openapi.json` to deploy first.
-  - Submission fields after deploy:
-    - Definition official: `Official`
-    - API name: `Pharos API`
-    - Definition URL: `https://pharos.watch/openapi.json`
-    - Logo URL: `https://pharos.watch/pharos-icon.png`
-    - Category: `Open Data` or `Financial`
+- [x] APIs.guru
+  - Web form was broken because its RawGit submit helper returns 404.
+  - Opened direct repo issue instead: https://github.com/APIs-guru/openapi-directory/issues/2431
+  - Definition URL: `https://pharos.watch/openapi.json`
 - [ ] PublicAPIs.io
   - Lower authority than APIs.guru/Postman; can submit after API positioning is settled.
 - [blocked] RapidAPI
