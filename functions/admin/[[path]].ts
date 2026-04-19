@@ -7,6 +7,12 @@ interface AdminHostGateEnv {
   OPS_UI_ORIGIN?: string;
 }
 
+function withNoindex(response: Response): Response {
+  const wrapped = new Response(response.body, response);
+  wrapped.headers.set("X-Robots-Tag", "noindex, nofollow");
+  return wrapped;
+}
+
 export const onRequest = async ({ request, env }: { request: Request; env: AdminHostGateEnv }) => {
   const rejected = rejectIfNotOpsUiOrigin(request, env, () => new Response("Not found", {
       status: 404,
@@ -20,5 +26,5 @@ export const onRequest = async ({ request, env }: { request: Request; env: Admin
     return rejected;
   }
 
-  return env.ASSETS.fetch(request);
+  return withNoindex(await env.ASSETS.fetch(request));
 };

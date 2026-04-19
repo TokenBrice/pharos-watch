@@ -56,6 +56,7 @@ describe("ops admin proxy", () => {
     });
 
     expect(response.status).toBe(404);
+    expect(response.headers.get("X-Robots-Tag")).toBe("noindex, nofollow");
   });
 
   it("rejects non-allowlisted admin paths", async () => {
@@ -79,6 +80,7 @@ describe("ops admin proxy", () => {
     });
 
     expect(response.status).toBe(401);
+    expect(response.headers.get("X-Robots-Tag")).toBe("noindex, nofollow");
     expect(await response.json()).toEqual({ error: "Unauthorized" });
     expect(fetchSpy).not.toHaveBeenCalled();
   });
@@ -113,6 +115,7 @@ describe("ops admin proxy", () => {
     });
 
     expect(response.status).toBe(200);
+    expect(response.headers.get("X-Robots-Tag")).toBe("noindex, nofollow");
     expect(verifyAccessJwt).toHaveBeenCalledWith({
       token: "valid-ui-jwt",
       aud: "ui-aud",
@@ -137,6 +140,7 @@ describe("ops admin proxy", () => {
     });
 
     expect(response.status).toBe(405);
+    expect(response.headers.get("X-Robots-Tag")).toBe("noindex, nofollow");
     expect(response.headers.get("Allow")).toContain("POST");
     expect(fetchSpy).not.toHaveBeenCalled();
   });

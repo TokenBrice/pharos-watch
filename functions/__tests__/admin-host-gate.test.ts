@@ -12,6 +12,7 @@ describe("admin host gate", () => {
     });
 
     expect(response.status).toBe(404);
+    expect(response.headers.get("X-Robots-Tag")).toBe("noindex, nofollow");
   });
 
   it("serves the asset on the configured ops host", async () => {
@@ -25,6 +26,7 @@ describe("admin host gate", () => {
     });
 
     expect(response.status).toBe(200);
+    expect(response.headers.get("X-Robots-Tag")).toBe("noindex, nofollow");
     expect(await response.text()).toBe("ok");
     expect(assetsFetch).toHaveBeenCalledTimes(1);
   });

@@ -84,6 +84,12 @@ function buildProxyResponse(upstreamResponse: Response, method: string): Respons
   });
 }
 
+function withNoindex(response: Response): Response {
+  const wrapped = new Response(response.body, response);
+  wrapped.headers.set("X-Robots-Tag", "noindex, nofollow");
+  return wrapped;
+}
+
 function getCookieValue(cookieHeader: string | null, name: string): string | null {
   if (!cookieHeader) {
     return null;
@@ -147,7 +153,7 @@ export const onRequest = async (context: OpsAdminProxyContext): Promise<Response
   const requestUrl = new URL(request.url);
   const rejected = rejectIfNotOpsUiOrigin(request, env, () => jsonError(404, "Not found"));
   if (rejected) {
-    return rejected;
+    return withNoindex(rejected);
   }
 
   for (const issue of validatePagesOpsProxyEnv(env)) {
@@ -156,7 +162,7 @@ export const onRequest = async (context: OpsAdminProxyContext): Promise<Response
 
   const upstreamPath = resolveUpstreamPath(params);
   if (!upstreamPath || !isAllowedAdminPath(upstreamPath)) {
-    return jsonError(404, "Not found");
+    return withNoindex(jsonError(404, "Not found"));
   }
 
   const upstreamUrl = new URL(`${upstreamPath}${requestUrl.search}`, resolveOpsApiOrigin(env));
@@ -164,22 +170,22 @@ export const onRequest = async (context: OpsAdminProxyContext): Promise<Response
   if (methodValidation) {
     const response = jsonError(405, methodValidation.message);
     response.headers.set("Allow", methodValidation.allowedMethods.join(", "));
-    return response;
+    return withNoindex(response);
   }
 
   const authError = await requireValidOpsUiJwt(request, env);
   if (authError) {
-    return authError;
+    return withNoindex(authError);
   }
 
   const originError = requireSameOriginForMutatingRequest(request, env);
   if (originError) {
-    return originError;
+    return withNoindex(originError);
   }
 
   const upstreamHeaders = buildUpstreamHeaders(request, env);
   if (upstreamHeaders instanceof Response) {
-    return upstreamHeaders;
+    return withNoindex(upstreamHeaders);
   }
 
   const upstreamResult = await fetchUpstreamProxy(request, {
@@ -194,7 +200,7 @@ export const onRequest = async (context: OpsAdminProxyContext): Promise<Response
     fetchFailedMessage: "Operator API upstream fetch failed",
   });
   if (!upstreamResult.ok) {
-    return upstreamResult.response;
+    return withNoindex(upstreamResult.response);
   }
 
   const redirectLocation = upstreamResult.response.headers.get("Location");
@@ -203,8 +209,8 @@ export const onRequest = async (context: OpsAdminProxyContext): Promise<Response
     upstreamResult.response.status < 400 &&
     redirectLocation?.includes(".cloudflareaccess.com")
   ) {
-    return jsonError(502, "Operator API upstream auth failed");
+    return withNoindex(jsonError(502, "Operator API upstream auth failed"));
   }
 
-  return buildProxyResponse(upstreamResult.response, request.method);
+  return withNoindex(buildProxyResponse(upstreamResult.response, request.method));
 };
