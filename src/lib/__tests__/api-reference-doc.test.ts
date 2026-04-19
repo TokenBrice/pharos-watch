@@ -20,4 +20,24 @@ describe("loadApiReferenceDocument", () => {
     expect(publicEndpoints?.subsections.length).toBeGreaterThan(10);
     expect(publicEndpoints?.subsections[0]?.title).toBe("`GET /api/stablecoins`");
   });
+
+  it("keeps escaped pipe unions inside one table cell", async () => {
+    const document = await loadApiReferenceDocument();
+    const stablecoins = document.sections
+      .find((section) => section.title === "Public Endpoints")
+      ?.subsections.find((section) => section.title === "`GET /api/stablecoins`");
+    const stablecoinDataTable = stablecoins?.blocks.find(
+      (block) => block.type === "table" && block.rows.some((row) => row[0] === "`geckoId`"),
+    );
+
+    expect(stablecoinDataTable?.type).toBe("table");
+    if (stablecoinDataTable?.type !== "table") return;
+
+    const geckoIdRow = stablecoinDataTable.rows.find((row) => row[0] === "`geckoId`");
+    expect(geckoIdRow).toEqual([
+      "`geckoId`",
+      "`string | null`",
+      "CoinGecko ID (normalized output key; upstream DefiLlama uses `gecko_id`)",
+    ]);
+  });
 });

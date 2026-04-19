@@ -82,7 +82,7 @@ export function MintBurnFlowMethodologySection() {
                   {/* Aggregation */}
                   <div className="rounded-lg border p-3 text-center flex-1 flex flex-col justify-center">
                     <p className="text-foreground font-medium">Hourly Buckets</p>
-                    <p className="text-xs text-muted-foreground mt-0.5">Trailing 30 closed daily Ethereum buckets</p>
+                    <p className="text-xs text-muted-foreground mt-0.5">Trailing 30 closed daily issuance-chain buckets</p>
                   </div>
                   <div className="flex items-center text-muted-foreground text-xl font-bold">&rarr;</div>
                   <div className="flex flex-col gap-2 flex-1">
@@ -124,7 +124,7 @@ export function MintBurnFlowMethodologySection() {
                   <div className="text-muted-foreground text-xl font-bold">&darr;</div>
                   <div className="w-full rounded-lg border p-3 text-center">
                     <p className="text-foreground font-medium">Hourly Buckets</p>
-                    <p className="text-xs text-muted-foreground mt-0.5">Trailing 30 closed daily Ethereum buckets</p>
+                    <p className="text-xs text-muted-foreground mt-0.5">Trailing 30 closed daily issuance-chain buckets</p>
                   </div>
                   <div className="text-muted-foreground text-xl font-bold">&darr;</div>
                   <div className="grid w-full gap-2">
@@ -284,14 +284,14 @@ export function MintBurnFlowMethodologySection() {
                 <div className="space-y-2">
                   <h3 className="text-foreground font-medium">Flight-to-Quality Detection</h3>
                   <p>
-                    Detects capital rotation from risky to safe-haven stablecoins &mdash; a pattern typically seen during
-                    market stress when holders move funds from algorithmic or less-established coins into fully-backed
-                    centralized stablecoins.
+                    Detects capital rotation from lower-scored to higher-scored tracked mint/burn stablecoins &mdash; a
+                    pattern typically seen during market stress when holders move funds out of weaker assets and into
+                    stronger safety-score cohorts.
                   </p>
                   <ul className="list-disc list-inside space-y-1">
                     <li>
-                      <span className="text-foreground">Safe classification</span> &mdash; centralized governance with
-                      real-world-asset backing (USDT, USDC, FDUSD, PYUSD)
+                      <span className="text-foreground">Safe classification</span> &mdash; tracked mint/burn coins with report-card score &ge;65;
+                      risky coins are tracked mint/burn coins with score &lt;50. Classification is unavailable when the report-card cache is unavailable or stale
                     </li>
                     <li>
                       <span className="text-foreground">Dual threshold</span> &mdash; active when risky coins have &gt;$100M

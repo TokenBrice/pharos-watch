@@ -207,7 +207,7 @@ When a coin has insufficient data in a cycle (`computeDEWS() === null`), that ru
 
 **Single coin:** `?stablecoin=usdt-tether&days=30` (default 30, min 1, max 365) — Returns latest + daily history.
 
-Unknown IDs and tracked-but-non-active IDs both return `404` (`Stablecoin not tracked`).
+Unknown IDs return `404` with `Unknown stablecoin`; tracked-but-non-active IDs return `404` with `Stablecoin not tracked`.
 
 ```json
 {

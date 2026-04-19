@@ -31,8 +31,9 @@ export default function PrivacyPage() {
         <div className="rounded-[1.35rem] border border-border/60 bg-card/70 px-5 py-4 shadow-[0_14px_32px_oklch(0_0_0_/0.1)]">
           <p className="pharos-kicker">Policy Summary</p>
           <p className="mt-2 text-sm text-foreground">
-            Pharos does not ask for accounts or wallet connections. Portfolio data stays in your browser, analytics are
-            anonymized when enabled, and support requests route through the feedback/contact channels listed below.
+            Pharos does not ask for accounts or wallet connections. Portfolio data is stored locally by default, share
+            links encode holdings in the URL, analytics are anonymized when enabled, and support requests route through
+            the feedback/contact channels listed below.
           </p>
         </div>
 
@@ -42,8 +43,9 @@ export default function PrivacyPage() {
             When a Google Analytics 4 (GA4) measurement ID is configured for the current deployment, Pharos collects
             anonymized usage analytics such as page views, session duration, approximate geographic region, device or
             browser type, and a small set of product-interaction events. If you choose to share a Telegram or X handle
-            in the feedback form, we store that handle privately for follow-up on that submission. We do not otherwise
-            collect personally identifiable information (PII).
+            in the feedback form, that handle is included in the GitHub issue created for the submission. Telegram alert
+            subscriptions store chat ID, optional username, followed coins, alert settings, quiet hours, snooze state,
+            and short-lived pending-command or pending-alert metadata.
           </p>
         </section>
 
@@ -70,8 +72,10 @@ export default function PrivacyPage() {
           <h2 className="text-lg font-semibold text-foreground">Data Retention</h2>
           <p>
             When GA4 is enabled, analytics data is retained for 14 months per Google&apos;s default settings. We do not
-            maintain user-account databases. Feedback submissions, including optional follow-up contact details when you
-            provide them, are retained in our operational database for product support and issue tracking.
+            maintain user-account databases. Feedback submissions are sent to GitHub Issues for product support and issue
+            tracking; optional follow-up contact details are included there when you provide them. The worker stores
+            rate-limit metadata for feedback abuse prevention. A legacy `feedback_submissions` table exists in the D1
+            schema, but the current submission path does not write to it.
           </p>
         </section>
 

@@ -169,6 +169,8 @@ When a limit is exceeded, the API returns `429 Too Many Requests`:
 
 Rate-limited responses include the retry delay in the HTTP `Retry-After` header when the worker can compute one.
 
+If D1-backed limiter bookkeeping fails repeatedly, the worker fails closed after 3 consecutive limiter errors and returns `503 Service Unavailable` with `{ "error": "Public API temporarily unavailable" }` plus `Retry-After: 60`. Treat this as an emergency limiter-health condition, not as successful quota exhaustion.
+
 ### Retry Guidance
 
 - Respect the `Retry-After` header when present
@@ -178,7 +180,7 @@ Rate-limited responses include the retry delay in the HTTP `Retry-After` header 
 
 ## Error Response Conventions
 
-JSON API handlers use `{ "error": "message" }` JSON format. `GET /api/og/*` can return `text/plain` errors for unknown image routes, missing data, or render failures.
+JSON API handlers use `{ "error": "message" }` JSON format. `GET /api/og/*` returns `image/png` on success; unknown OG route patterns return the normal JSON error body, while OG data/render failures inside known image routes can return `text/plain`.
 
 | Status | Meaning               | When                                                                                                                                                                                                     |
 | ------ | --------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -189,7 +191,7 @@ JSON API handlers use `{ "error": "message" }` JSON format. `GET /api/og/*` can 
 | 429    | Too Many Requests     | Rate limit exceeded (global public API limiter or feedback-specific limiter)                                                                                                                             |
 | 500    | Internal Server Error | Unhandled exception (caught by `withErrorHandler`)                                                                                                                                                       |
 | 502    | Bad Gateway           | Upstream fetch failed (external data provider or Pages proxy upstream), or the ops proxy received a Cloudflare Access login redirect from `ops-api` |
-| 503    | Service Unavailable   | Cache-passthrough endpoint where cache has never been populated, where the cached payload is corrupt / rejected by validation, or `MAINTENANCE_MODE=true` (global kill switch via `wrangler secret put`) |
+| 503    | Service Unavailable   | Cache-passthrough endpoint where cache has never been populated, cached payload is corrupt / rejected by validation, limiter storage fails closed after repeated D1 errors, or `MAINTENANCE_MODE=true` (global kill switch via `wrangler secret put`) |
 | 504    | Gateway Timeout       | Pages `/_site-data/*` or `/api/admin/*` proxy timed out waiting for its Worker upstream (10 s default; 20 s for ops `/api/status` and `/api/status-history`) |
 
 **Rule:** Cache-passthrough handlers return **503** when data hasn't been populated yet or when the stored cache payload is malformed and rejected at read time. Query handlers that find no matching rows return **200** with empty results (e.g., `{ events: [], total: 0 }`). When `MAINTENANCE_MODE` is set to `"true"`, all non-`OPTIONS` requests immediately return `503` with `{ "error": "maintenance", "message": "..." }` — used during DB migrations. `OPTIONS` CORS preflights are handled before the maintenance gate.
@@ -206,7 +208,7 @@ HTTP method allowance is defined centrally in `shared/lib/api-endpoints/` and en
 - `POST` is accepted on `/api/api-keys/:id/update`, `/api/api-keys/:id/deactivate`, and `/api/api-keys/:id/rotate`.
 - `/api/audit-depeg-history` allows `GET` only with `?dry-run=true`; otherwise it is `POST`-only.
 - `/api/backfill-dews` allows `GET` for the historical backtest and for `repair=...&dry-run=true` previews; mutating repair runs are `POST`-only.
-- Unknown paths return `404`; known paths with disallowed methods return `405` with `Allow`. Unsupported verbs on known endpoint families return `405` with `Allow: GET, POST`.
+- Unmatched unknown paths return `404` before method validation. Once a static or dynamic route family is registered, known paths with disallowed methods return `405` with `Allow`; unsupported verbs on known endpoint families return `405` with `Allow: GET, POST`.
 
 The same shared endpoint descriptors now also carry static worker dependency-hydration hints consumed by `worker/src/routes/registry.ts`, where the worker binds shared endpoint keys directly to handlers through a single static route-definition list. That keeps endpoint metadata, router behavior, method guards, admin status-page actions, and worker-side static route wiring aligned from one source of truth plus one worker binding table.
 
@@ -216,7 +218,7 @@ Admin endpoints are authenticated only on the `ops-api.pharos.watch` host. Cloud
 
 Mutating admin calls also require `X-Pharos-Admin: 1` after Cloudflare Access authentication. Browser proxy calls forward that header from the operator UI and additionally require same-origin `Origin`; direct `ops-api` automation must send the header along with the Access service-token credentials.
 
-The website-internal read lane is separate from Cloudflare Access. `site-api.pharos.watch` accepts only allowlisted `GET` public-read paths and requires `X-Pharos-Site-Proxy-Secret`, which the Pages `/_site-data/*` proxy injects server-to-server from `SITE_API_SHARED_SECRET`. Production Pages hosts must configure `SITE_API_ORIGIN=https://site-api.pharos.watch` and fail closed when that binding is missing; preview and local rehearsal may intentionally point the same lane at `api.pharos.watch` while testing. Public browser traffic must not call `site-api.pharos.watch` directly.
+The website-internal read lane is separate from Cloudflare Access. `site-api.pharos.watch` accepts only allowlisted `GET` public-read paths and requires `X-Pharos-Site-Proxy-Secret`, which the Pages `/_site-data/*` proxy injects server-to-server from `SITE_API_SHARED_SECRET`. Production Pages hosts must configure `SITE_API_ORIGIN=https://site-api.pharos.watch` and fail closed when that binding is missing. Preview and local rehearsal may intentionally point the same lane at `api.pharos.watch` only when public API auth is disabled/report-only, when targeting a Worker preview URL that accepts the site-data secret, or when the local proxy also forwards a valid API key. Public browser traffic must not call `site-api.pharos.watch` directly.
 
 Many router-dispatched mutating admin endpoints also support optional `Idempotency-Key` handling. Current idempotent routes are:
 
@@ -408,7 +410,7 @@ Returns historical non-USD stablecoin market share data from `supply_history`, s
 | ------ | -------- | ------- | -------------- | ------------------------------------- |
 | `days` | `number` | `1825`  | min 30, max 1825 | Lookback window in days             |
 
-Unlike most numeric-query handlers, this endpoint defaults malformed `days` values to `1825` and clamps out-of-range values into `30..1825` instead of returning `400`.
+Unlike most numeric-query handlers, this endpoint defaults missing or malformed `days` values to `1825` and clamps most out-of-range values into `30..1825` instead of returning `400`. Current parser quirk: `days=0` is treated like a missing value and returns the default `1825` rather than the minimum `30`.
 
 **Response:** `Array<{ date, commodityShare, fiatNonUsdShare, commodity, fiatNonUsd, total }>`
 
@@ -586,7 +588,7 @@ Aggregate historical supply chart data across all stablecoins, broken down by pe
 
 ### `GET /api/blacklist`
 
-Freeze, blacklist, block/unblock, account-pause, and token-destruction events currently ingested for USDC, USDT, PAXG, XAUT, PYUSD, USD1, USDG, RLUSD, U, USDTB, A7A5, FDUSD, BRZ, AUSD, MNEE, EURI, USDQ, USDO, USDX, AID, TGBP, EURC, and BUIDL. EURC mirror-zero rows are preserved with suppression metadata and excluded from public aggregates. Data is sourced from on-chain logs via Etherscan, Tron, and EVM RPCs.
+Freeze, blacklist, block/unblock, account-pause, and token-destruction events for symbols in the shared `BLACKLIST_STABLECOINS` set. EURC mirror-zero rows are preserved with suppression metadata and excluded from public aggregates. Data is sourced from on-chain logs via Etherscan, Tron, and EVM RPCs.
 
 **Cache:** realtime
 
@@ -596,7 +598,7 @@ Freeze, blacklist, block/unblock, account-pause, and token-destruction events cu
 
 | Param        | Type      | Default | Description                                                    |
 | ------------ | --------- | ------- | -------------------------------------------------------------- |
-| `stablecoin` | `string`  | —       | Filter by token symbol from the full `BLACKLIST_STABLECOINS` set (`USDC`, `USDT`, `PAXG`, `XAUT`, `PYUSD`, `USD1`, `USDG`, `RLUSD`, `U`, `USDTB`, `A7A5`, `FDUSD`, `BRZ`, `AUSD`, `MNEE`, `EURI`, `USDQ`, `USDO`, `USDX`, `AID`, `TGBP`, `EURC`, `BUIDL`, `USDP`, `TUSD`, `NUSD`, `EURCV`, `USDA`, `USAT`, `AEUR`, `XUSD`, `XAUM`, `JPYC`, `FRXUSD`, `FIDD`) |
+| `stablecoin` | `string`  | —       | Filter by token symbol from the full `BLACKLIST_STABLECOINS` set in `shared/types/market.ts` |
 | `chain`      | `string`  | —       | Filter by chain name (e.g. `Ethereum`, `Tron`)                 |
 | `eventType`  | `string`  | —       | Filter by type: `blacklist`, `unblacklist`, `destroy`          |
 | `q`          | `string`  | —       | Case-insensitive address substring search                      |
@@ -990,7 +992,7 @@ DEX liquidity scores, pool breakdowns, source-confidence metadata, and on-chain 
 | `weightedBalanceRatio`  | `number \| null`                                                 | TVL-weighted balance ratio across pools                                                                                                              |
 | `organicFraction`       | `number \| null`                                                 | Fraction of TVL from organic (non-incentivized) pools                                                                                                |
 | `durabilityScore`       | `number \| null`                                                 | Score for pool maturity and reliability                                                                                                              |
-| `coverageClass`         | `"primary" \| "mixed" \| "fallback" \| "legacy" \| "unobserved"` | Coverage-confidence classification for the retained pool set; `primary` includes pure `dl` and pure `direct_api` rows                                |
+| `coverageClass`         | `"primary" \| "mixed" \| "fallback" \| "legacy" \| "unobserved" \| null` | Coverage-confidence classification for the retained pool set; `primary` includes pure `dl` and pure `direct_api` rows. The `__global__` aggregate sentinel uses `null`. |
 | `coverageConfidence`    | `number`                                                         | Evidence-weighted confidence (`0-1`) derived from retained-pool breadth, measured TVL share, and synthetic/decayed dependence                         |
 | `liquidityEvidenceClass`| `"unobserved" \| "measured" \| "partial_measured" \| "observed_unmeasured"` | Explicit classification of whether liquidity is balance-measured versus only observed from TVL / price evidence                          |
 | `hasMeasuredLiquidityEvidence` | `boolean`                                                | Whether any retained liquidity evidence for the row includes measured pool balances                                                                   |
@@ -1519,7 +1521,7 @@ Dynamic Open Graph PNG images used by share buttons and page metadata.
 
 **Error cases**
 
-- `404` for unknown coin IDs or unknown OG routes
+- `404` with `text/plain` for unknown coin IDs inside `/api/og/stablecoin/:id`; unknown OG route patterns return the standard JSON `{ "error": "Unknown OG route" }`
 - `503` when required cached data is not yet available
 - `400` for malformed URI encoding in `/api/og/stablecoin/:id`
 - `500` with `text/plain` body when OG image rendering fails
@@ -2163,7 +2165,7 @@ Returns Depeg Early Warning Score (DEWS) data for active tracked stablecoins.
 
 **Single coin:** Add `?stablecoin=ID&days=30` for latest + daily history.
 
-`stablecoin` must be an active tracked Pharos stablecoin ID. Unknown IDs and tracked-but-non-active IDs return `404` with `{ "error": "Stablecoin not tracked" }`.
+`stablecoin` must be an active tracked Pharos stablecoin ID. Unknown IDs return `404` with `{ "error": "Unknown stablecoin" }`; tracked-but-non-active IDs return `404` with `{ "error": "Stablecoin not tracked" }`.
 
 **Cache:** standard (`public, s-maxage=300, max-age=60`)
 
@@ -2269,7 +2271,7 @@ Public feedback ingestion endpoint used by the in-app feedback modal. Validates 
 
 **Rate limits**
 
-- Global public API limiter: D1-backed per-IP-hash limiter (`300 requests / 60 seconds`) for non-admin requests. If the distributed limiter path fails, the worker logs the failure and allows the request instead of switching to an isolate-local fallback limiter.
+- Global public API limiter: D1-backed per-IP-hash limiter (`300 requests / 60 seconds`) for non-admin requests. If the distributed limiter path fails, the worker fails open for the first two consecutive storage failures, then returns `503` with `Retry-After: 60` until limiter storage recovers or the emergency counter decays.
 - Feedback endpoint limiter: `3 submissions / 10 minutes` per salted IP hash in D1.
 
 **Request body**
@@ -2671,7 +2673,7 @@ Ratio-based on-chain status thresholds apply only when `dataQuality.onchainSuppl
 
 `discoveryCandidates` exposes the current untracked-coverage backlog from `discovery_candidates`, ordered by market cap for the `/status` operator workflow.
 
-`mintBurnReconciliation` compares 24h Ethereum mint/burn net flow (`mint_burn_hourly`) against the cached stablecoins payload's Ethereum chain-supply delta (`chainCirculating.ethereum.current - circulatingPrevDay`). It is intended for operator diagnostics, not public scoring.
+`mintBurnReconciliation` compares 24h configured canonical issuance-chain mint/burn net flow (`mint_burn_hourly`) against the cached stablecoins payload's matching chain-supply delta. It is intended for operator diagnostics, not public scoring.
 
 ### `GET /api/status-history`
 
@@ -3005,13 +3007,23 @@ If `configKey` is omitted, the worker auto-selects one tracked config using a cr
 
 Retroactively tags same-transaction mint+burn pairs for the same stablecoin as `flow_type='atomic_roundtrip'` and recalculates the affected hourly buckets.
 
+**Query parameters**
+
+| Param          | Type      | Default                     | Description |
+| -------------- | --------- | --------------------------- | ----------- |
+| `since`        | `integer` | `now - 90 days`             | Unix seconds cutoff for both forward and reverse scans; `0` requests a full-table sweep and may exceed D1 CPU limits without `stablecoinId` |
+| `stablecoinId` | `string`  | —                           | Optional Pharos stablecoin ID filter applied to both scans |
 
 **Response**
 
 ```json
 {
   "done": false,
+  "since": 1765218367,
+  "stablecoinId": "usdt-tether",
   "updated": 428,
+  "toRoundtrip": 420,
+  "toStandard": 8,
   "hoursRecalculated": 31,
   "batchSize": 1000
 }
@@ -3129,7 +3141,7 @@ Admin-only bounded remediation endpoint for recoverable blacklist rows.
 **Inputs**
 
 - `chainId?: string`
-- `stablecoin?: "USDC" | "USDT" | "PAXG" | "XAUT" | "PYUSD" | "USD1"`
+- `stablecoin?: BlacklistStablecoin` from the shared `BLACKLIST_STABLECOINS` set
 - `limit?: number` default `25`, max `200`
 - `dryRun?: boolean` default `true`
 - `onlyMissingProvenance?: boolean` default `true`
@@ -3180,7 +3192,7 @@ Admin-only one-shot backfill endpoint for `blacklist_current_balances`, intended
 
 | Param | Type | Default | Description |
 | ----- | ---- | ------- | ----------- |
-| `stablecoin` | `string` | — | Optional uppercase symbol filter (`USDC`, `USDT`, `PAXG`, `XAUT`, `PYUSD`, `USD1`) |
+| `stablecoin` | `string` | — | Optional uppercase symbol filter; matches any configured blacklist-contract stablecoin symbol |
 | `chainId` | `string` | — | Optional chain filter matching the blacklist contract config `chainId` |
 | `limit` | `integer` | `500` | Max blacklist-event rows to load per matching config (max `2000`) |
 | `dryRun` | `"true"` | — | Preview the active-blacklisted candidate count without writing cache rows |

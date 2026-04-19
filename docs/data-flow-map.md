@@ -25,12 +25,12 @@ This map links each major Pharos data domain from upstream source to frontend co
 | Daily digest | Anthropic Claude + PSI snapshot context | `worker/src/cron/daily-digest.ts` | `daily_digest` + static build sync to `data/digests.json` | `GET /api/daily-digest`, `GET /api/digest-archive`, `GET /api/digest-snapshot` | `useDailyDigest`, `useDigestArchive`, `useDigestSnapshot` | Digest page + archive |
 | Report cards + dependency graph | Peg summary + DEX liquidity + redemption backstops + bluechip + stablecoin metadata/dependencies | `worker/src/api/report-cards.ts` compute on read | cache-driven upstream + in-memory compute | `GET /api/report-cards` | `useReportCards` | Safety Scores, Portfolio, Dependency Map, homepage safety snapshot |
 | Status reliability | Real-HTTP self probes + status synthesis | `worker/src/cron/status-self-check.ts`, `worker/src/api/status.ts`, `worker/src/api/public-status-history.ts` | `status_state`, `status_transitions`, `status_probe_runs`, `status_discrepancy_state` | Public: `GET /api/health`, `GET /api/public-status-history`; admin: `GET /api/status`, `GET /api/status-history` | Public: `useHealth`, `usePublicEndpointProbes`, `usePublicStatusHistory`; admin: `useStatus`, `useEndpointProbes`, `useStatusHistory` | `/status` public health board, `/admin` operator dashboard |
-| Coverage discovery | CoinGecko category API, DL stablecoins residuals | `worker/src/cron/discovery-scan.ts` (weekly, Monday-only), `worker/src/cron/sync-stablecoins/intake.ts` (DL residuals) | `discovery_candidates` | `GET /api/discovery-candidates`, `POST /api/discovery-candidates/:id/dismiss` | — (admin only) | `/status` admin page |
+| Coverage discovery | CoinGecko category API, DL stablecoins residuals | `worker/src/cron/discovery-scan.ts` (weekly, Monday-only), `worker/src/cron/sync-stablecoins/intake.ts` (DL residuals) | `discovery_candidates` | `GET /api/status` (`discoveryCandidates` field), plus direct admin `GET /api/discovery-candidates` / `POST /api/discovery-candidates/:id/dismiss` | — (admin only) | `/admin/` operator dashboard, Pipeline section |
 | Chain analytics | Stablecoins cache `chainCirculating` (already aggregated by DefiLlama), report card cache (safety scores for quality sub-factor) | `worker/src/api/chains.ts` (compute on read from stablecoins + report-card D1 caches and emit freshness metadata); `worker/src/cron/snapshot-chain-supply.ts` writes daily totals to D1 | Live leaderboard: computed on-the-fly from D1 caches with `_meta` freshness; history: `chain_supply_history` | `GET /api/chains` | `useChains`, `useChainProfileData`, `useChainStablecoins` | `/chains/` leaderboard, `/chains/[chain]/` profile pages |
 
 ## Scheduling Backbone
 
-Cron schedules are declared in `worker/wrangler.toml` and orchestrated by `worker/src/handlers/scheduled.ts`:
+Cron schedules are declared in `worker/wrangler.toml`, mirrored in `shared/lib/cron-jobs.ts`, and orchestrated by `worker/src/handlers/scheduled.ts`. `docs/worker-infrastructure.md` is the maintained schedule reference; this section is a compact flow map.
 
 - `*/15 * * * *`: sync-fx-rates (cooldown-gated to 30 min) first, then sync-stablecoins (including depeg detection + pending confirmation), then downstream-safe snapshot-supply retry / snapshot-chain-supply / report-card cache publish
 - `9,24,39,54 * * * *`: isolated status self-check
@@ -45,7 +45,7 @@ Cron schedules are declared in `worker/wrangler.toml` and orchestrated by `worke
 - `2,7,12,17,22,27,32,37,42,47,52,57 * * * *`: Telegram subscriber alerts (DEWS, depeg, safety, and launch promotions)
 - `*/5 * * * *`: manual digest trigger poll (`POST /api/trigger-digest` flag consumer)
 - `0 3 * * *`: status-probe TTL prune + cron-history TTL prune (daily housekeeping)
-- `0 8 * * *`: safety-grade snapshot, T-bill rate, PSI daily snapshot, USDS status
+- `0 8 * * *`: snapshot-supply fallback, safety-grade snapshot, T-bill rate, PSI daily snapshot, USDS status
 - `5 8 * * *`: bluechip sync, daily digest, weekly recap (Mondays), discovery scan (Mondays)
 - `0 6 1 * *`: monthly yield coverage audit
 

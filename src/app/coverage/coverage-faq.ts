@@ -1,7 +1,7 @@
 export const COVERAGE_FAQ_ITEMS = [
   {
     q: "What features does Pharos track for each stablecoin?",
-    a: "Pharos tracks nine core features per stablecoin: depeg monitoring with real-time price deviation alerts, DEX liquidity scoring across Curve, Uniswap, and other venues, reserve transparency views, modeled redemption backstop routes, yield intelligence for yield-bearing designs, Ethereum mint/burn flow monitoring, blacklist event tracking for freeze-capable assets, dependency map visibility for collateral relationships, and safety grade report cards across five risk dimensions.",
+    a: "Pharos tracks nine core features per stablecoin: depeg monitoring with real-time price deviation alerts, DEX liquidity scoring across Curve, Uniswap, and other venues, reserve transparency views, modeled redemption backstop routes, yield intelligence for yield-bearing designs, configured issuance-chain mint/burn flow monitoring, blacklist event tracking for freeze-capable assets, dependency map visibility for collateral relationships, and safety grade report cards across four weighted base dimensions plus peg-stability gating.",
   },
   {
     q: "Why do some stablecoins have incomplete coverage?",
@@ -9,6 +9,6 @@ export const COVERAGE_FAQ_ITEMS = [
   },
   {
     q: "How often is coverage data updated?",
-    a: "Prices and peg scores refresh every 15 minutes. DEX liquidity, DEWS stress signals, and PSI refresh every 30 minutes. Yield rankings refresh hourly, with slower supplemental source families updated every four hours. Mint/burn flows refresh every 30 minutes, blacklist events refresh every six hours, redemption backstop snapshots refresh every four hours, and safety grades plus reserve attestations typically update daily. The coverage matrix itself reflects the current availability state and updates as new data sources come online or existing ones expand.",
+    a: "Prices and peg scores refresh every 15 minutes. Safety score caches publish every 15 minutes, while daily safety-grade history powers historical snapshots and safety-change alerts. DEX liquidity, DEWS stress signals, PSI, and mint/burn flows refresh every 30 minutes. Yield rankings refresh hourly, with slower supplemental source families updated every four hours. Blacklist events refresh every six hours, and live reserve plus redemption backstop snapshots refresh every four hours. The coverage matrix reflects the current availability state and updates as new data sources come online or existing ones expand.",
   },
 ] as const;

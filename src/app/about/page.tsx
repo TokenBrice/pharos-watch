@@ -50,7 +50,7 @@ const DATA_SOURCE_GROUPS = [
   {
     label: "On-chain Reads & Events",
     sources:
-      "Etherscan v2 (freeze events), TronGrid, Alchemy, dRPC, selected public chain RPCs (including EVM RPCs for Ethereum mint/burn flows, direct Liquity/B.Protocol branch debt reads, and Frankencoin's ZCHF -> VCHF StablecoinBridge balance probe, plus Solana mainnet RPC reads for tracked mint-supply validation), and reconciled freeze-ledger bootstrap rows from kyc.rip / stables.rip for major ETH and TRON blacklist coverage, and M0 GraphQL subgraph for Infrastructure tagging",
+      "Etherscan v2 (freeze events), TronGrid, Alchemy, dRPC, selected public chain RPCs (including EVM RPCs for configured mint/burn flows, direct Liquity/B.Protocol branch debt reads, and Frankencoin's ZCHF -> VCHF StablecoinBridge balance probe, plus Solana mainnet RPC reads for tracked mint-supply validation), and reconciled freeze-ledger bootstrap rows from kyc.rip / stables.rip for major ETH and TRON blacklist coverage, and M0 GraphQL subgraph for Infrastructure tagging",
   },
   {
     label: "Ratings & Reference",
@@ -317,7 +317,7 @@ export default function AboutPage() {
     {
       title: "Mint and burn flows",
       description:
-        "Ethereum mint and burn monitoring via Alchemy JSON-RPC, including the Bank Run Gauge and flight-to-quality detection.",
+        "Configured issuance-chain mint and burn monitoring via Alchemy JSON-RPC, including the Bank Run Gauge and flight-to-quality detection.",
       icon: Flame,
       href: "/flows/",
       linkLabel: "Open flow tracker",
@@ -417,7 +417,7 @@ export default function AboutPage() {
                 },
                 {
                   question: "What does Pharos track?",
-                  answer: `Pharos tracks ${ACTIVE_STABLECOINS.length} stablecoins across every major chain, classified by governance, backing, and peg currency. It documents ${DEAD_STABLECOINS.length} dead stablecoins in the cemetery, monitors issuer freeze and blacklist events on-chain for supported centralized stablecoins, provides composite peg scores with depeg detection and heatmaps, integrates independent Bluechip SMIDGE safety ratings, scores DEX liquidity depth 0–100 across decentralized exchanges, computes a 30-minute Pharos Stability Index for ecosystem health, and issues report cards grading each stablecoin across 5 dimensions, including an exit-liquidity dimension that now blends DEX liquidity with protocol or issuer redemption backstops when a direct exit path exists.`,
+                  answer: `Pharos tracks ${ACTIVE_STABLECOINS.length} stablecoins across every major chain, classified by governance, backing, and peg currency. It documents ${DEAD_STABLECOINS.length} dead stablecoins in the cemetery, monitors issuer freeze and blacklist events on-chain for supported centralized stablecoins, provides composite peg scores with depeg detection and heatmaps, integrates independent Bluechip SMIDGE safety ratings, scores DEX liquidity depth 0-100 across decentralized exchanges, computes a 30-minute Pharos Stability Index for ecosystem health, and issues report cards from four weighted base dimensions plus a peg-stability multiplier, including an exit-liquidity input that blends DEX liquidity with protocol or issuer redemption backstops when a direct exit path exists.`,
                 },
                 {
                   question: "How does Pharos classify stablecoins?",
@@ -675,8 +675,8 @@ export default function AboutPage() {
                   <div className="space-y-1">
                     <p className="text-sm font-medium text-foreground">Cloudflare Worker + D1</p>
                     <p>
-                      Staggered quarter-hourly, half-hourly, hourly, and daily cron jobs normalize the data and cache
-                      the results for the public API.
+                      Staggered 5-minute, 15-minute, 30-minute, hourly, multi-hour, daily, and monthly lanes normalize
+                      the data and cache the results for the public API.
                     </p>
                   </div>
                 </li>

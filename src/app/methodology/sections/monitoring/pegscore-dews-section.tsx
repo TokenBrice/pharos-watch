@@ -100,7 +100,7 @@ export function PegScoreDewsMethodologySection() {
                     },
                     {
                       label: "Failure behavior",
-                      value: "PegScore can be null; DEWS returns null when signal coverage is below threshold, and the cron degrades/no-writes when core source reads fail or dex liquidity is stale",
+                      value: "PegScore can be null; DEWS returns null when signal coverage is below threshold; stablecoins-cache failure aborts writes, while other source failures or stale DEX liquidity publish partial rows and mark the cron degraded",
                     },
                   ]}
                 />
@@ -255,9 +255,9 @@ export function PegScoreDewsMethodologySection() {
                     redistributed proportionally across available signals.
                   </p>
                   <p>
-                    Bootstrap tolerance is one-time only. Missing optional tables can be ignored before the first
-                    successful publication, but once DEWS has published, stale or missing core liquidity inputs block fresh
-                    writes instead of being treated as startup noise.
+                    Bootstrap tolerance is one-time only. Missing optional tables can be ignored before the first successful
+                    publication. After that, stale or missing core liquidity inputs are recorded as source failures. The cron
+                    still writes rows that meet signal coverage, then marks the run degraded instead of treating the missing input as startup noise.
                   </p>
                 </div>
 

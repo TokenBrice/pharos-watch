@@ -67,7 +67,7 @@ All external API calls and on-chain contract reads go through the Cloudflare Wor
 | Protocol reserve APIs, dashboards, and on-chain accounting reads        | Live reserve composition for live-enabled assets                                                           | Every 4h                          |
 | [Etherscan v2](https://etherscan.io/)                                   | Explorer-backed EVM freeze/blacklist/seize event scans for supported issuer-intervention configs           | Every 6h                          |
 | [TronGrid](https://www.trongrid.io/)                                    | Supported Tron blacklist/freeze events and freeze-ledger balance reads                                     | Every 6h                          |
-| [dRPC](https://drpc.org/) / [Alchemy](https://www.alchemy.com/)         | RPC reads for blacklist balance enrichment (dRPC/Alchemy) and Ethereum mint/burn event ingestion (Alchemy) | 6h / 30 min                       |
+| [dRPC](https://drpc.org/) / [Alchemy](https://www.alchemy.com/)         | RPC reads for blacklist balance enrichment (dRPC/Alchemy) and configured issuance-chain mint/burn event ingestion (Alchemy) | 6h / 30 min                       |
 | [api.frankfurter.dev](https://api.frankfurter.dev/v1/latest)           | ECB FX rates for EUR, GBP, CHF, BRL, JPY, IDR, SGD, TRY, AUD, ZAR, CAD, CNY, PHP, MXN                      | 30 min cooldown inside 15-min slot |
 | [Open Exchange Rates](https://openexchangerates.org/)                   | Real-time FX cross-validation overlay for supported fiat pegs when `OPENEXCHANGERATES_API_KEY` is set      | 30 min FX lane, additionally rate-limited to ~55 min |
 | [fawazahmed0/currency-api](https://github.com/fawazahmed0/currency-api) | Secondary live FX mirror for CNH, RUB, UAH, and ARS, plus full-set fallback coverage when Frankfurter fails | 30 min cooldown inside 15-min slot |
@@ -93,7 +93,7 @@ npm install
 NEXT_PUBLIC_API_BASE=http://localhost:8787 npm run dev
 ```
 
-`NEXT_PUBLIC_API_BASE` is mainly a local-dev override for `next dev` against `wrangler dev`. When it is unset, browser reads on `pharos.watch`, `ops.pharos.watch`, and `*.stablecoin-dashboard.pages.dev` go through same-origin `/_site-data/*`. Production Pages hosts (`pharos.watch`, `ops.pharos.watch`) require `SITE_API_ORIGIN` and proxy that lane with `SITE_API_SHARED_SECRET` to the dedicated `site-api` origin; preview/local hosts may still fall back to `https://api.pharos.watch` for rehearsal when `SITE_API_ORIGIN` is intentionally unset. Direct browser calls still use `https://api.pharos.watch` only for exempt public routes such as feedback submission and OG image fetches. Local static smoke/proxy setups can keep `NEXT_PUBLIC_API_BASE` empty. `NEXT_PUBLIC_GA_ID` is optional and only injects GA4 when set at build time.
+`NEXT_PUBLIC_API_BASE` is mainly a local-dev override for `next dev` against `wrangler dev`. When it is unset, browser reads on `pharos.watch`, `ops.pharos.watch`, and `*.stablecoin-dashboard.pages.dev` go through same-origin `/_site-data/*`. Production Pages hosts (`pharos.watch`, `ops.pharos.watch`) require `SITE_API_ORIGIN` and proxy that lane with `SITE_API_SHARED_SECRET` to the dedicated `site-api` origin; preview/local hosts may still fall back to `https://api.pharos.watch` for rehearsal when `SITE_API_ORIGIN` is intentionally unset. That public-API fallback only works for protected reads when auth is disabled/report-only or when the proxy also supplies a valid API key; production `api.pharos.watch` enforces `X-API-Key`. Direct browser calls still use `https://api.pharos.watch` only for exempt public routes such as feedback submission and OG image fetches. Local static smoke/proxy setups can keep `NEXT_PUBLIC_API_BASE` empty. `NEXT_PUBLIC_GA_ID` is optional and only injects GA4 when set at build time.
 
 ### Worker API
 
@@ -111,7 +111,10 @@ curl "http://localhost:8787/__scheduled?cron=*/15+*+*+*+*"
 ### Local Development Setup
 
 **Frontend-only (`npm run dev`)**
-Minimum: `NEXT_PUBLIC_API_BASE` -- point to production (`https://api.pharos.watch`) or local worker (`http://localhost:8787`).
+Use one of these paths:
+
+- Leave `NEXT_PUBLIC_API_BASE` empty and set `SITE_API_SHARED_SECRET` in `.env.local`; `npm run dev` starts `scripts/dev-api-proxy.mjs` so same-origin `/_site-data/*` reads authenticate against the site-data lane.
+- Set `NEXT_PUBLIC_API_BASE=http://localhost:8787` when you are also running a configured local Worker with `cd worker && npx wrangler dev`.
 
 **Worker-only (`cd worker && npx wrangler dev`)**
 Requires D1 bindings and external API keys. See `worker/src/lib/env.ts` for the full binding contract and `.env.example` for all keys.
@@ -142,6 +145,7 @@ src/                              Frontend (Next.js static export)
 │   ├── dependency-map/           Collateral dependency graph visualization
 │   ├── digest/                   AI-generated daily market digest (+ digest/[date]/)
 │   ├── flows/                    Mint/burn flow tracker
+│   ├── funding/                  Static public-good funding ledger
 │   ├── liquidity/                DEX liquidity scores and pool breakdown
 │   ├── methodology/              Detailed methodology + changelog routes
 │   ├── portfolio/                Portfolio stress testing & upstream exposure
@@ -160,13 +164,13 @@ src/                              Frontend (Next.js static export)
 │   ├── telegram/                 Telegram alerts + digest landing page
 │   ├── yield/                    Yield intelligence leaderboard
 │   ├── changelog/                Weekly release notes
-│   └── about/                    About / product overview
+│   └── about/                    About / product overview (+ about/api/ reference)
 ├── components/                   UI components (table, charts, cards, shared sort-icon, time-range-buttons)
 ├── hooks/                        Data fetching hooks (TanStack Query) + shared UI hooks (useSort, useUrlFilters, useTimeRangeFilter)
 └── lib/                          Frontend-only utilities (API client, charts/colors, metadata, UI helpers)
 
 functions/                        Cloudflare Pages Functions for same-origin website/ops proxying
-├── _site-data/[[path]].ts        Same-origin website data proxy; production hosts require `SITE_API_ORIGIN`, preview/local hosts may use the public-API fallback
+├── _site-data/[[path]].ts        Same-origin website data proxy; production hosts require `SITE_API_ORIGIN`, preview/local public-API fallback needs exempt/auth-off/API-key-forwarding setup
 ├── admin/[[path]].ts             Host gate for `/admin/` on `ops.pharos.watch`
 ├── api/admin/[[path]].ts         Same-origin admin proxy from `ops.pharos.watch` to `ops-api.pharos.watch`
 ├── lib/ops-env.ts                Shared Pages Functions env contract for ops-host gating and admin proxying
@@ -212,7 +216,7 @@ Current source-of-truth product docs live in `/docs/` and this README. `/agents/
 Runtime host split:
 
 - website UI: `https://pharos.watch`
-- website data lane: same-origin `/_site-data/*` -> `SITE_API_ORIGIN` on production hosts; preview/local rehearsal may fall back to `https://api.pharos.watch`
+- website data lane: same-origin `/_site-data/*` -> `SITE_API_ORIGIN` on production hosts; preview/local rehearsal may fall back to `https://api.pharos.watch` only for exempt/auth-off/API-key-forwarding scenarios
 - external integration API: `https://api.pharos.watch`
 - operator UI/API: `https://ops.pharos.watch` / `https://ops-api.pharos.watch`
 
@@ -287,7 +291,7 @@ Cloudflare D1 (SQLite database)
   ├── cron_slot_executions → cron slot execution deduplication tracking
   ├── daily_digest         → AI-generated daily market summaries
   ├── admin_idempotency_keys → idempotency keys for admin mutations
-  ├── feedback_submissions → durable feedback submission log
+  ├── feedback_submissions → legacy/schema-retained feedback table; current submissions go directly to GitHub Issues
   ├── feedback_rate_limit  → IP-based rate limiting for feedback submissions
   ├── public_api_rate_limit → Distributed per-minute buckets for non-admin public API traffic
   ├── api_keys             → API key registrations for authenticated public API access

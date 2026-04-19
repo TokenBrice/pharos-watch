@@ -1,0 +1,59 @@
+# Stablecoin Data Registry
+
+Stablecoin metadata is the checked-in source of truth for the asset universe. Use this document when adding, removing, or correcting a stablecoin entry.
+
+## Source Files
+
+| Surface | Source |
+| --- | --- |
+| Active + pre-launch metadata shards | `shared/data/stablecoins/usd-major.json`, `shared/data/stablecoins/usd-minor.json`, `shared/data/stablecoins/non-usd.json`, `shared/data/stablecoins/commodity.json`, `shared/data/stablecoins/pre-launch.json` |
+| Canonical display/order list | `shared/data/stablecoins/canonical-order.json` |
+| Loader and active/pre-launch splits | `shared/lib/stablecoins/index.ts` |
+| Runtime schema | `shared/lib/stablecoins/schema.ts` |
+| Canonical ID resolver | `shared/lib/stablecoin-id-registry.ts` |
+| PSI-only shadow assets | `shared/lib/shadow-stablecoins.ts` |
+| Local metadata gotchas | `shared/data/stablecoins/AGENTS.md` |
+
+`ACTIVE_STABLECOINS` excludes pre-launch entries. PSI-only shadow assets are intentionally outside the public tracked registry and exist only for historical PSI replay.
+
+## Editing Rules
+
+- Keep IDs canonical and stable: lowercase `ticker-issuer` format, aligned with `shared/lib/stablecoin-id-registry.ts`.
+- Add the entry to exactly one metadata shard, then update `canonical-order.json`.
+- Preserve existing supply policy. Primary supply comes from DefiLlama through the existing fallback path; do not add manual, on-chain, CMC, or DEX supply overrides.
+- Contract metadata belongs under each coin's `contracts` array. Use verified chain IDs and decimals from source metadata or explorers before adding them.
+- Use `liveReservesConfig`, `yieldConfig`, and other feature configs only when the relevant pipeline already supports that source family.
+- Pre-launch assets stay in `pre-launch.json` until they have enough live metadata for active public surfaces.
+- Shadow assets belong only in `shared/lib/shadow-stablecoins.ts`, not in the main JSON shards.
+
+## Required Checks
+
+Run these after metadata edits:
+
+```bash
+npm run check:stablecoin-data
+npm run check:doc-counts
+npm test -- shared/lib/__tests__/stablecoin-id-registry.test.ts
+```
+
+If the change affects page counts, feature coverage, reserve coverage, source families, or public methodology behavior, also update the matching route/feature docs from `docs/README.md`.
+
+## Cache Admission
+
+`scripts/check-stablecoin-data.ts` validates schema shape, canonical-order consistency, and whether active assets have a static path into `/api/stablecoins` cache admission. If that check fails, fix metadata or pipeline support rather than bypassing the guard.
+
+Common admission fields:
+
+- `llamaId` / DefiLlama-backed assets
+- `detailProvider` + `geckoId` for CoinGecko-only or commodity assets
+- verified `contracts` for chain-level coverage and explorer links
+- `status: "pre-launch"` for assets that should not enter active public surfaces yet
+
+## Documentation Touchpoints
+
+- Classification or taxonomy changes: `docs/classification.md`
+- Public source roster changes: `docs/about-page.md` and `src/app/about/page.tsx`
+- Reserve config changes: `docs/live-reserves.md`
+- Redemption-route changes: `docs/redemption-backstops.md`
+- Yield config changes: `docs/yield-intelligence.md`
+- API shape changes caused by metadata fields: `docs/api-reference.md`

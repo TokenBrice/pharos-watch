@@ -101,7 +101,8 @@ export function MintBurnReconciliationCard({
         <div className="flex flex-wrap items-start justify-between gap-3 rounded-[1rem] border border-border/60 bg-background/35 px-4 py-3">
           <div className="space-y-1">
             <p className="text-xs text-muted-foreground">
-              Compares 24h Ethereum mint/burn net flow against the stablecoins cache&apos;s Ethereum chain-supply delta.
+              Compares 24h configured canonical issuance-chain mint/burn net flow against the stablecoins cache&apos;s
+              matching chain-supply delta.
               Critical: {`>$${(STATUS_RECONCILIATION_THRESHOLDS.criticalAbsoluteUsd / 1e6).toFixed(0)}M or >${(STATUS_RECONCILIATION_THRESHOLDS.criticalRatio * 100).toFixed(0)}%`}.
               Warn: {`>$${(STATUS_RECONCILIATION_THRESHOLDS.warnAbsoluteUsd / 1e6).toFixed(0)}M or >${(STATUS_RECONCILIATION_THRESHOLDS.warnRatio * 100).toFixed(0)}%`}.
             </p>

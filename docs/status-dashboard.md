@@ -188,7 +188,7 @@ Related extracted loaders:
 
 Operational nuance: a fresh recovery attempt should not keep `/status` degraded purely because the most recent completed run failed. When a leased cron is actively running and its heartbeat is fresh, availability treats that lane as live again while still preserving the previous completed run in card history.
 
-Mint/burn public freshness now uses the same grace window before warning: `/api/mint-burn-flows` and `/flows` stay `fresh` through `2 * expectedIntervalSec` for the critical lane (`40m` at the current cadence), then degrade/stale afterward. `/api/status` now reuses that same public-health floor for availability once the critical lane has emitted real sync telemetry, so admin and public surfaces no longer drift on fresh-but-degraded mint/burn runs.
+Mint/burn public freshness now uses the same grace window before warning: `/api/mint-burn-flows` and `/flows` stay `fresh` through `2 * expectedIntervalSec` for the critical lane (`60m` at the current cadence), then degrade/stale afterward. `/api/status` now reuses that same public-health floor for availability once the critical lane has emitted real sync telemetry, so admin and public surfaces no longer drift on fresh-but-degraded mint/burn runs.
 
 For the split DEX pipeline:
 
@@ -503,7 +503,7 @@ Mutating admin paths are protected by method guardrails:
 
 **Component:** `DiscoveryCandidatesCard` (`src/components/status/discovery-candidates.tsx`)
 
-Renders after the Admin Actions section. Shows stablecoins tracked by CoinGecko or DefiLlama that Pharos does not yet monitor. Each row displays symbol, name, a source badge (`CG` / `DL` / `Both`), market cap, days seen, and a dismiss button. Admin auth is required for the dismiss action (`POST /api/discovery-candidates/:id/dismiss`). Data is sourced from `GET /api/discovery-candidates` (admin endpoint, active candidates only).
+Renders in the Admin Pipeline section after the mint/burn reconciliation and metadata integrity cards. Shows stablecoins tracked by CoinGecko or DefiLlama that Pharos does not yet monitor. Each row displays symbol, name, a source badge (`CG` / `DL` / `Both`), market cap, days seen, and a dismiss button. Admin auth is required for the dismiss action (`POST /api/discovery-candidates/:id/dismiss`). The card is fed by `GET /api/status` via its embedded `discoveryCandidates` supplement, which reads active candidates directly from D1; `GET /api/discovery-candidates` remains available as a direct admin endpoint for focused candidate inspection.
 
 ## Price Source Health Card
 
@@ -558,8 +558,8 @@ Data is sourced from the admin-only `GET /api/status` payload. The worker supple
 
 Renders after the Liquidity Health section. It compares:
 
-- 24h Ethereum mint/burn net flow from `mint_burn_hourly`
-- 24h Ethereum chain-supply delta from the cached stablecoins payload's `chainCirculating.ethereum.current - circulatingPrevDay`
+- 24h configured canonical issuance-chain mint/burn net flow from `mint_burn_hourly`
+- 24h matching chain-supply delta from the cached stablecoins payload's `chainCirculating[canonicalChainId].current - circulatingPrevDay`
 
 Each row shows:
 

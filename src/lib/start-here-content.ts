@@ -184,7 +184,7 @@ export const START_HERE_ATLAS: readonly StartHereAtlasGroup[] = [
       },
       {
         title: "Stability Index",
-        description: "Market-wide stress trend and risk condition bands, updated every 15 minutes.",
+        description: "Market-wide stress trend and risk condition bands, updated every 30 minutes.",
         href: "/stability-index/",
         icon: Compass,
       },

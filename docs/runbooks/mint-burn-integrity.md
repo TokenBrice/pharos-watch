@@ -23,5 +23,5 @@ On-chain supply divergence exceeds the configured ratio, or the mint/burn monito
 
 ## Prevention
 
-- The mint/burn pipeline is config-driven (`shared/lib/stablecoins/`). Adding a new coin without its adapter produces `onchain_monitor_unavailable` for that coin only.
+- Token identity comes from shared stablecoin metadata, but tracker-specific config lives in `worker/src/lib/mint-burn-contracts.ts` and lane state in `worker/src/cron/mint-burn/run-state.ts`. Adding a new coin without its mint/burn contract config produces `onchain_monitor_unavailable` for that coin only.
 - Divergence thresholds live in `shared/lib/status-thresholds.ts` — do not loosen them without a documented investigation.

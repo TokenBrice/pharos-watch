@@ -22,12 +22,20 @@ Application source-of-truth docs live in `/docs/` and [../README.md](../README.m
 - [operator-origin-access.md](./operator-origin-access.md) - operator-only origin prep, Access setup runbook, and verification steps
 - [worker-and-api-limits.md](./worker-and-api-limits.md) - repo-enforced runtime budgets, throttle constants, and external-provider assumptions to re-check before shipping worker changes
 - [data-flow-map.md](./data-flow-map.md) - external source -> cron -> D1 -> API -> hook -> page mapping
+- [api-endpoint-authoring.md](./api-endpoint-authoring.md) - shared endpoint registry, route-binding, auth/cache/site-data, hook, and test checklist
 - [doc-ownership.json](./doc-ownership.json) - advisory source-glob to documentation-update map for agents and reviewers
 - [live-reserves.md](./live-reserves.md) - live reserve-sync config, adapter registry, storage, API modes, and frontend/status consumers
 - [data-pipeline.md](./data-pipeline.md) - stablecoin sync, price enrichment, FX/metal rates, and integrity guardrails
 - [deployment-process.md](./deployment-process.md) - production deploy workflow and merge-gate policy
 - [testing.md](./testing.md) - lint/test/coverage workflow and test inventory
 - [scripts.md](./scripts.md) - operational and CI helper script inventory
+
+## Runbooks
+
+- [runbooks/blacklist-sync.md](./runbooks/blacklist-sync.md) - blacklist sync incidents, stale windows, and remediation entrypoints
+- [runbooks/db-connectivity.md](./runbooks/db-connectivity.md) - D1/connectivity outage triage and recovery checks
+- [runbooks/mint-burn-integrity.md](./runbooks/mint-burn-integrity.md) - mint/burn divergence, stale coverage, and repair actions
+- [runbooks/stablecoins-cache.md](./runbooks/stablecoins-cache.md) - stablecoins cache availability, provider breaker, and lease recovery
 
 ## Route And Page Contracts
 
@@ -123,6 +131,7 @@ These are public sub-pages of `/methodology/`. Use the route map below when you 
 ## Feature And Methodology Docs
 
 - [classification.md](./classification.md) - classification system, peg handling, and commodity/non-DL coin treatment
+- [stablecoin-data.md](./stablecoin-data.md) - stablecoin metadata registry files, editing rules, cache-admission checks, and doc touchpoints
 - [pricing-pipeline.md](./pricing-pipeline.md) - live-price consensus, authoritative overrides, source normalization, and fallback enrichment
 - [bluechip-ratings.md](./bluechip-ratings.md) - Bluechip sync coverage, cache shape, and frontend consumers
 - [depeg-detection.md](./depeg-detection.md) - two-stage depeg detection, confirmation, event lifecycle, and peg score inputs
