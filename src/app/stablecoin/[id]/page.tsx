@@ -11,7 +11,6 @@ import { buildStablecoinUrl } from "@/lib/urls";
 import { SITE_ORIGIN as SITE_URL } from "@shared/lib/runtime-origins";
 import { GOVERNANCE_LABELS, BACKING_LABELS, PEG_LABELS_SHORT } from "@shared/lib/classification";
 import { StablecoinDetailLoadingShell } from "@/components/stablecoin-detail/loading-shell";
-import { StaticHeroStrip } from "@/components/stablecoin-detail/static-hero-strip";
 import { Skeleton } from "@/components/ui/skeleton";
 import StablecoinDetailClient from "./client";
 import { ExploreNextSection } from "@/components/stablecoin-detail/explore-next-section";
@@ -114,7 +113,9 @@ export default async function StablecoinDetailPage({ params }: { params: Promise
 
   return (
     <>
-      <StaticHeroStrip coin={coin} logoSrc={logosById[coin.id]} />
+      <h1 className="sr-only">
+        {coin.name} ({coin.symbol}) stablecoin analytics
+      </h1>
       <Suspense fallback={
         <DetailPageShellFallback coin={coin} logoSrc={logosById[coin.id]} />
       }>

@@ -242,7 +242,7 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `src/components/create-page-error.tsx` - createPageError
 - `src/components/daily-digest.tsx` - DailyDigest, DigestFullDisplay
 - `src/components/data-health-banner.tsx` - DataHealthBanner
-- ... 193 more files omitted; use `rg --files src/components` for the full list.
+- ... 192 more files omitted; use `rg --files src/components` for the full list.
 
 ## Pages Functions
 

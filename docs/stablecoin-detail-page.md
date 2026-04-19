@@ -17,7 +17,7 @@ Route contract for `/stablecoin/[id]/`, the central per-asset analytics surface.
 - builds metadata through `buildStablecoinDetailMetadata(...)`
 - injects static logo data from `data/logos.json`
 - injects static AI summaries from `data/ai-summaries.json`
-- renders a server-side `StaticHeroStrip` before the active-page `Suspense` boundary so initial HTML includes visible coin identity, classification links, and the metadata description
+- renders a server-side `sr-only` `h1` for active pages so the initial HTML keeps one stable page heading without duplicating the visible client hero
 - keeps a visible dossier-style `Suspense` fallback with coin identity, classification, section rail placeholders, and score-card scaffolding while the full client boots
 - renders `ExploreNextSection` after the interactive client
 - emits N-level `BreadcrumbJsonLd` plus a Dataset JSON-LD payload for active assets

@@ -129,9 +129,9 @@ Behavioral contract: [Homepage](./homepage.md)
 
 ### Stablecoin Detail (Special)
 
-Active detail pages include a server-rendered static identity strip before the client `Suspense` boundary:
+Active detail pages keep one server-rendered semantic `h1` for crawlers and assistive tech, while the visible identity lives in the client hero:
 
-- Static strip visible `h1`: `text-2xl font-extrabold tracking-tighter`
+- Server `h1`: `sr-only`
 - Client HeroCard mobile `h2`: `text-2xl font-black tracking-tighter`
 - Client HeroCard desktop `h2`: `text-3xl font-black tracking-tighter`
 - Section and block titles across the detail route use `text-lg font-semibold tracking-tight`
