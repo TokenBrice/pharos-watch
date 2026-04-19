@@ -54,6 +54,8 @@ describe("hasPagesDeployImpact", () => {
     expect(hasPagesDeployImpact([".github/workflows/pages-release.yml"])).toBe(true);
     expect(hasPagesDeployImpact([".github/workflows/rebuild-pages.yml"])).toBe(true);
     expect(hasPagesDeployImpact(["scripts/generate-llms-txt.ts"])).toBe(true);
+    expect(hasPagesDeployImpact(["scripts/generate-docs-metadata.ts"])).toBe(true);
+    expect(hasPagesDeployImpact(["scripts/generate-markdown-exports.ts"])).toBe(true);
   });
 });
 

@@ -5,6 +5,7 @@ import { PEG_LABELS_SHORT } from "../shared/lib/classification";
 import { DEAD_STABLECOINS } from "../shared/lib/dead-stablecoins";
 import { SITE_ORIGIN } from "../shared/lib/runtime-origins";
 import { ACTIVE_STABLECOINS } from "../shared/lib/stablecoins";
+import { PUBLIC_DOCS } from "../shared/lib/public-docs";
 import type { BackingType, GovernanceType, StablecoinMeta } from "../shared/types";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -110,6 +111,11 @@ const changelogLinks = [
   ["Daily Digest Archive", absolute("/digest/"), "Daily market recaps."],
 ] as const;
 
+const docsLinks = [
+  ["Documentation Archive", absolute("/docs/"), "Architecture, methodology, and design documentation."],
+  ...PUBLIC_DOCS.map((doc) => [doc.title, absolute(`/docs/${doc.slug}/`), doc.summary] as const),
+] as const;
+
 function renderLinkList(links: readonly (readonly [string, string, string])[]): string[] {
   return links.map(([title, url, description]) => {
     const suffix = description ? `: ${description}` : "";
@@ -139,6 +145,12 @@ function render(): string {
     "## Changelog",
     "",
     ...renderLinkList(changelogLinks),
+    "",
+    "## Docs",
+    "",
+    ...renderLinkList(docsLinks),
+    "",
+    "Docs support `Accept: text/markdown` content negotiation for agent consumption.",
     "",
     "## Digest",
     "",

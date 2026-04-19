@@ -41,6 +41,32 @@
 - [Weekly Changelog](https://pharos.watch/changelog/): Release notes.
 - [Daily Digest Archive](https://pharos.watch/digest/): Daily market recaps.
 
+## Docs
+
+- [Documentation Archive](https://pharos.watch/docs/): Architecture, methodology, and design documentation.
+- [Architecture](https://pharos.watch/docs/architecture/): Curated file tree, API inventory, and SEO surface.
+- [API Reference](https://pharos.watch/docs/api-reference/): HTTP contracts, authentication notes, and response conventions.
+- [Data Flow Map](https://pharos.watch/docs/data-flow-map/): External source to cron, D1, API, hook, and page mapping.
+- [Data Pipeline](https://pharos.watch/docs/data-pipeline/): Stablecoin sync, price enrichment, FX and metal rates.
+- [Worker and API Limits](https://pharos.watch/docs/worker-and-api-limits/): Runtime budgets, throttle constants, and provider assumptions.
+- [Classification](https://pharos.watch/docs/classification/): Classification system, peg handling, and commodity treatment.
+- [Pricing Pipeline](https://pharos.watch/docs/pricing-pipeline/): Live-price consensus, overrides, and fallback enrichment.
+- [Depeg Detection](https://pharos.watch/docs/depeg-detection/): Two-stage detection, confirmation, and peg score inputs.
+- [DEWS](https://pharos.watch/docs/dews/): DEWS formula, sub-signals, bands, and API contract.
+- [DEX Liquidity](https://pharos.watch/docs/dex-liquidity/): Liquidity score, discovery pipeline, and cross-validation.
+- [Pharos Stability Index](https://pharos.watch/docs/stability-index/): PSI formula, bands, storage, and API surface.
+- [Report Cards](https://pharos.watch/docs/report-cards/): Report-card scoring, portfolio analyzer, and stress test.
+- [Redemption Backstops](https://pharos.watch/docs/redemption-backstops/): Redemption routes, effective-exit scoring, and storage.
+- [Chain Health](https://pharos.watch/docs/chain-health/): Chain Health Score inputs, formula, factors, and bands.
+- [Mint Burn Flows](https://pharos.watch/docs/mint-burn-flows/): Mint/burn ingestion, scoring, and admin backfills.
+- [Yield Intelligence](https://pharos.watch/docs/yield-intelligence/): APY resolution, PYS scoring, and warning signals.
+- [Shadow Stablecoins](https://pharos.watch/docs/shadow-stablecoins/): PSI-only shadow asset boundary and UI exclusion rules.
+- [Design Context](https://pharos.watch/docs/design-context/): User, brand, and product-direction baseline.
+- [Design Language](https://pharos.watch/docs/design-language/): Live UI patterns, typography, spacing, and responsive rules.
+- [Design Tokens](https://pharos.watch/docs/design-tokens/): Token layers and CSS variable architecture.
+
+Docs support `Accept: text/markdown` content negotiation for agent consumption.
+
 ## Digest
 
 - [USDC's Record Hid the Rot](https://pharos.watch/digest/2026-03-16-weekly/): USDC hit a $79.22B ATH while 84 depeg events and 222 blacklists piled up beneath a BEDROCK PSI that never flinched.

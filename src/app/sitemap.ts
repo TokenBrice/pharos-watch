@@ -6,8 +6,10 @@ import { ACTIVE_PEGS, PEG_SLUGS } from "@/lib/peg-landing";
 import { ALL_STABLECOIN_TAXONOMY_PAGES } from "@/lib/stablecoin-taxonomy";
 import { buildStablecoinUrl } from "@/lib/urls";
 import { SITE_ORIGIN as SITE_URL } from "@shared/lib/runtime-origins";
+import { PUBLIC_DOCS } from "@shared/lib/public-docs";
 import digests from "../../data/digests.json";
 import sitemapDates from "@/generated/sitemap-dates.json";
+import docsMetadata from "@/generated/docs-metadata.json";
 
 export const dynamic = "force-static";
 
@@ -285,5 +287,34 @@ export default function sitemap(): MetadataRoute.Sitemap {
     priority: 0.6,
   }));
 
-  return [...staticPages, ...stablecoinPages, ...chainPages, ...pegPages, ...taxonomyPages, ...comparisonPages, ...digestPages];
+  const docsIndex: MetadataRoute.Sitemap = [
+    {
+      url: `${SITE_URL}/docs/`,
+      lastModified: now,
+      changeFrequency: "monthly",
+      priority: 0.6,
+    },
+  ];
+
+  const docsPages: MetadataRoute.Sitemap = PUBLIC_DOCS.map((doc) => {
+    const meta = (docsMetadata as Record<string, { dateModified: string }>)[doc.slug];
+    return {
+      url: `${SITE_URL}/docs/${doc.slug}/`,
+      lastModified: meta ? new Date(meta.dateModified) : now,
+      changeFrequency: "monthly" as const,
+      priority: 0.5,
+    };
+  });
+
+  return [
+    ...staticPages,
+    ...stablecoinPages,
+    ...chainPages,
+    ...pegPages,
+    ...taxonomyPages,
+    ...comparisonPages,
+    ...digestPages,
+    ...docsIndex,
+    ...docsPages,
+  ];
 }

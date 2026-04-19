@@ -11,6 +11,17 @@ import {
   WorkedExample,
 } from "../methodology-shared";
 
+export const CONTENT_MARKDOWN = `## Pricing Pipeline Methodology
+
+Every score Pharos computes starts with a price. The pricing pipeline collects live quotes from aggregators, exchanges, oracles, on-chain pools, protocol redemption feeds, FX references, and enrichment fallbacks.
+
+Pharos clusters sources by pairwise agreement, publishes the highest-confidence median, and keeps source provenance attached so downstream depeg, safety, liquidity, and PSI calculations can reason about data quality. Soft consensus can be challenged by large DEX pools, while protocol redemption prices override market data only for assets where the redemption path is the more authoritative mark.
+
+Freshness is explicit. Upstream-observed timestamps are preferred over local collection time, stale sources are excluded or downgraded, and replay-safe cache continuity is used only when it preserves a confirmed signal without inventing a new one.
+
+Fallback enrichment is bounded. CoinMarketCap, Jupiter, DexScreener, and other late-stage sources fill gaps for long-tail assets, but each pass has request budgets, circuit breakers, and plausibility checks so weak prices cannot silently become high-confidence consensus.
+`;
+
 export function PricingPipelineMethodologySection() {
   return (
     <MethodologySectionShell

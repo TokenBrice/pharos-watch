@@ -1,0 +1,32 @@
+{
+  "version": 1,
+  "include": [
+    "/methodology",
+    "/methodology/*",
+    "/stablecoin/*",
+    "/changelog",
+    "/changelog/*",
+    "/digest/*",
+    "/docs",
+    "/docs/*",
+    "/_site-data/*",
+    "/admin",
+    "/admin/*",
+    "/api/admin/*"
+  ],
+  "exclude": [
+    "/_next/*",
+    "/favicon.ico",
+    "/favicon.svg",
+    "/apple-touch-icon.png",
+    "/logos/*",
+    "/chains/*",
+    "/dexes/*",
+    "/featured/*",
+    "/fonts/*",
+    "/og-*.png",
+    "/llms.txt",
+    "/sitemap.xml",
+    "/robots.txt"
+  ]
+}
