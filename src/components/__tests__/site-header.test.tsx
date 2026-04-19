@@ -52,10 +52,18 @@ describe("SiteHeader", () => {
     const html = renderToStaticMarkup(
       <SiteHeader total={180} pegCount={19} chainCount={96} />,
     );
-    // Desktop/tablet block uses md:flex, not lg:flex
-    expect(html).toMatch(/class="pharos-card-shell hidden md:flex/);
-    // Mobile block uses md:hidden, not lg:hidden
-    expect(html).toMatch(/class="pharos-card-shell[^"]*md:hidden/);
+    expect(html).toMatch(/class="pharos-card-shell[^"]*md:flex-row/);
+    expect(html).toMatch(/class="hidden[^"]*md:block/);
+    expect(html).toMatch(/class="ml-auto[^"]*md:hidden/);
+    expect(html).toMatch(/class="hidden[^"]*md:grid/);
+  });
+
+  it("keeps a single raw h1 across responsive header layouts", () => {
+    mockStable();
+    const html = renderToStaticMarkup(
+      <SiteHeader total={180} pegCount={19} chainCount={96} />,
+    );
+    expect(html.match(/<h1\b/g)).toHaveLength(1);
   });
 
   it("keeps stat pills and softens the unit labels to muted-foreground/70", () => {
