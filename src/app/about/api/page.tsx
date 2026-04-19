@@ -3,8 +3,10 @@ import Link from "next/link";
 import { Globe, KeyRound, ShieldCheck } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { CopyButton } from "@/components/copy-button";
+import { FaqSection } from "@/components/faq-section";
 import { ApiReferenceLayout } from "@/components/api-reference-layout";
 import type { SidebarSection } from "@/components/api-reference-sidebar";
+import type { FaqItem } from "@/lib/faq";
 import { safeJsonLd } from "@/lib/json-ld";
 import { buildPageMetadata } from "@/lib/page-metadata";
 import { loadApiReferenceDocument, type MarkdownBlock, type ApiReferenceSection } from "@/lib/api-reference-doc";
@@ -39,6 +41,29 @@ const HERO_LANES = [
       "Admin routes live behind Cloudflare Access on `ops.pharos.watch` and `ops-api.pharos.watch`. They do not use public API keys.",
   },
 ] as const;
+
+const ABOUT_API_FAQ: FaqItem[] = [
+  {
+    question: "How do I get a Pharos API key?",
+    answer:
+      "Join the Pharos Telegram channel (https://t.me/pharoswatch) and request one. Include your intended usage: what you are building, which endpoints you plan to call, approximate polling cadence, and expected request volume.",
+  },
+  {
+    question: "Do I need an API key for every endpoint?",
+    answer:
+      "No. Health checks, OG images, the feedback endpoint, and the Telegram webhook do not require an X-API-Key. All other protected public routes on https://api.pharos.watch require X-API-Key and return 401 without it.",
+  },
+  {
+    question: "What is the difference between the public API lane and the website lane?",
+    answer:
+      "The public lane is https://api.pharos.watch and is for external integrations. The website lane is same-origin /_site-data/* on pharos.watch, used only by the Pharos web app itself. External consumers should call the public lane directly.",
+  },
+  {
+    question: "How is admin auth handled?",
+    answer:
+      "Admin routes live behind Cloudflare Access on ops.pharos.watch and ops-api.pharos.watch. They do not use public API keys; access is granted through the Pharos Cloudflare Access team domain.",
+  },
+];
 
 function stripMarkdownHeadingFormatting(text: string) {
   return text.replaceAll("`", "");
@@ -349,6 +374,8 @@ export default async function AboutApiPage() {
           </p>
         </div>
       </section>
+
+      <FaqSection items={ABOUT_API_FAQ} title="API Access FAQ" includeJsonLd />
 
       {document.introBlocks.length > 0 ? (
         <section className="rounded-[1.5rem] border border-border/60 bg-card/70 px-4 py-5 shadow-[0_18px_40px_oklch(0_0_0_/0.08)] sm:px-5 sm:py-6">

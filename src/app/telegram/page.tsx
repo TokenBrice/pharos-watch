@@ -4,8 +4,10 @@ import Link from "next/link";
 import Image from "next/image";
 import { ExternalLink, Bot, Users, Megaphone, ChevronDown } from "lucide-react";
 import { FeaturePageShell } from "@/components/feature-page-shell";
+import { FaqSection } from "@/components/faq-section";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import type { FaqItem } from "@/lib/faq";
 import { buildPageMetadata } from "@/lib/page-metadata";
 import { safeJsonLd } from "@/lib/json-ld";
 import { SITE_ORIGIN as SITE_URL } from "@shared/lib/runtime-origins";
@@ -91,6 +93,34 @@ const COMMANDS = [
   { command: "/cancel", description: "Cancel a pending disambiguation prompt", example: null },
   { command: "/help", description: "Show command reference", example: null },
 ] as const;
+
+const TELEGRAM_FAQ: FaqItem[] = [
+  {
+    question: "What alerts does Pharos send on Telegram?",
+    answer:
+      "DEWS threat-level band crossings, depeg detections and worsening milestones, safety-grade changes, and launch promotions for pre-launch assets when they go live.",
+  },
+  {
+    question: "Can I get alerts for all tracked stablecoins at once?",
+    answer:
+      "Yes. Send /subscribe <type> all, for example /subscribe depeg all, to subscribe to an alert type across every tracked stablecoin.",
+  },
+  {
+    question: "How do I silence Telegram notifications during certain hours?",
+    answer:
+      "Use /mute <start>-<end> with UTC hours. For example, /mute 22-07 silences alerts between 10pm and 7am UTC. Use /unmutehours to disable quiet hours.",
+  },
+  {
+    question: "What are preset watchlists?",
+    answer:
+      "Presets are curated coin lists like usd-top25 or mcap-ge-1b. Subscribing to a preset expands to the current list of coins it contains. Send /presets in Telegram to browse them interactively.",
+  },
+  {
+    question: "How do I unsubscribe?",
+    answer:
+      "Send /unsubscribe <targets> to remove specific coin subscriptions, or /unsubscribe all to clear every subscription and disable all alert flags.",
+  },
+];
 
 /* -------------------------------------------------------------------------- */
 /*  Subcomponents                                                             */
@@ -488,6 +518,13 @@ export default function TelegramPage() {
         </section>
 
         {/* ================================================================= */}
+        {/*  FAQ                                                              */}
+        {/* ================================================================= */}
+        <div className="mt-12">
+          <FaqSection items={TELEGRAM_FAQ} includeJsonLd />
+        </div>
+
+        {/* ================================================================= */}
         {/*  FINAL CTA                                                        */}
         {/* ================================================================= */}
         <div className="mt-12 pharos-card-shell border-t-2 border-t-sky-500/40 p-6 dark:border-t-sky-400/30 sm:p-8">
@@ -533,27 +570,63 @@ export default function TelegramPage() {
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{
-            __html: safeJsonLd({
-              "@context": "https://schema.org",
-              "@type": "SoftwareApplication",
-              name: "PharosWatchBot",
-              applicationCategory: "FinanceApplication",
-              operatingSystem: "Telegram",
-              offers: { "@type": "Offer", price: "0", priceCurrency: "USD" },
-              url: `${SITE_URL}/telegram/`,
-              installUrl: "https://t.me/PharosWatchBot",
-              description:
-                "Opt-in Telegram bot for stablecoin peg, DEWS, safety, and launch alerts.",
-              featureList: [
-                "Depeg alerts (triggered, worsening milestones, resolved)",
-                "DEWS threat-band alerts (ALERT, WARNING, DANGER)",
-                "Safety grade change alerts",
-                "Pre-launch stablecoin launch alerts",
-                "Per-coin thresholds and quiet hours",
-                "Inline snooze (1h / 4h / 24h)",
-              ],
-              publisher: { "@type": "Organization", name: "Pharos Watch", url: SITE_URL },
-            }),
+            __html: safeJsonLd([
+              {
+                "@context": "https://schema.org",
+                "@type": "HowTo",
+                name: "Set up Pharos stablecoin alerts on Telegram",
+                description:
+                  "Subscribe to depeg, DEWS threat-level, safety-grade, and launch alerts for tracked stablecoins from the Pharos Telegram bot.",
+                totalTime: "PT2M",
+                tool: [{ "@type": "HowToTool", name: "Telegram" }],
+                step: [
+                  {
+                    "@type": "HowToStep",
+                    position: 1,
+                    name: "Open @PharosWatchBot",
+                    text: "Open @PharosWatchBot in Telegram and send /start.",
+                    url: `${SITE_URL}/telegram/#getting-started`,
+                  },
+                  {
+                    "@type": "HowToStep",
+                    position: 2,
+                    name: "Subscribe and tune",
+                    text:
+                      "Subscribe and tune with commands like /subscribe dews,depeg USDT,USDC, /presets, /set USDT dews WARNING, and /mute 22-07.",
+                    url: `${SITE_URL}/telegram/#getting-started`,
+                  },
+                  {
+                    "@type": "HowToStep",
+                    position: 3,
+                    name: "Review active subscriptions",
+                    text:
+                      "Alerts arrive automatically when conditions change. Use /list to check active subscriptions and /presets to discover preset watchlists from inside Telegram.",
+                    url: `${SITE_URL}/telegram/#getting-started`,
+                  },
+                ],
+              },
+              {
+                "@context": "https://schema.org",
+                "@type": "SoftwareApplication",
+                name: "PharosWatchBot",
+                applicationCategory: "FinanceApplication",
+                operatingSystem: "Telegram",
+                offers: { "@type": "Offer", price: "0", priceCurrency: "USD" },
+                url: `${SITE_URL}/telegram/`,
+                installUrl: "https://t.me/PharosWatchBot",
+                description:
+                  "Opt-in Telegram bot for stablecoin peg, DEWS, safety, and launch alerts.",
+                featureList: [
+                  "Depeg alerts (triggered, worsening milestones, resolved)",
+                  "DEWS threat-band alerts (ALERT, WARNING, DANGER)",
+                  "Safety grade change alerts",
+                  "Pre-launch stablecoin launch alerts",
+                  "Per-coin thresholds and quiet hours",
+                  "Inline snooze (1h / 4h / 24h)",
+                ],
+                publisher: { "@id": `${SITE_URL}#organization` },
+              },
+            ]),
           }}
         />
       </div>
