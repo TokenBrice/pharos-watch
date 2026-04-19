@@ -47,7 +47,9 @@ export function prefersMarkdown(accept: string | null): boolean {
   if (!Number.isFinite(markdownQ)) return false;
 
   const htmlQ = Math.max(
-    ...entries.filter((entry) => entry.type === "text/html").map((entry) => entry.q),
+    ...entries
+      .filter((entry) => entry.type === "text/html" || entry.type === "text/*" || entry.type === "*/*")
+      .map((entry) => entry.q),
     -Infinity,
   );
   const htmlEffective = Number.isFinite(htmlQ) ? htmlQ : -Infinity;

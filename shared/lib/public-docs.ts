@@ -202,7 +202,16 @@ function redactPublicDocSource(markdown: string, source?: string): string {
     .replace(/agents\/[^\s)`]+/g, "internal working notes")
     .replace(/AGENTS\.md/g, "agent instructions");
   if (source !== "api-reference.md") return withoutAgentPaths;
-  return withoutAgentPaths.split(/^## Admin Auth And Idempotency$/m)[0]?.trimEnd() ?? withoutAgentPaths;
+  const adminAuthIndex = withoutAgentPaths.indexOf("\n## Admin Auth And Idempotency");
+  const publicEndpointsIndex = withoutAgentPaths.indexOf("\n## Public Endpoints");
+  const withoutAdminAuth =
+    adminAuthIndex >= 0 && publicEndpointsIndex > adminAuthIndex
+      ? `${withoutAgentPaths.slice(0, adminAuthIndex)}\n${withoutAgentPaths.slice(publicEndpointsIndex)}`
+      : withoutAgentPaths;
+  const adminEndpointsIndex = withoutAdminAuth.indexOf("\n## Admin Endpoints");
+  return adminEndpointsIndex >= 0
+    ? withoutAdminAuth.slice(0, adminEndpointsIndex).trimEnd()
+    : withoutAdminAuth;
 }
 
 export function preparePublicDocMarkdown(

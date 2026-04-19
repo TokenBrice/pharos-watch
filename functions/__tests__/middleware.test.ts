@@ -33,6 +33,8 @@ describe("prefersMarkdown", () => {
     ["text/markdown", true],
     ["text/x-markdown; Q = 0.8, text/html; q=0.4", true],
     ["text/html,text/markdown;q=0.5", false],
+    ["*/*;q=1, text/markdown;q=0.2", false],
+    ["text/*;q=0.8, text/markdown;q=0.4", false],
     ["text/markdown;q=0", false],
     ["text/html;q=0,text/markdown;q=0", false],
     ["*/*", false],

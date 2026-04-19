@@ -51,6 +51,9 @@ describe("PUBLIC_DOCS registry", () => {
       expect(rendered).not.toMatch(/agents\/|AGENTS\.md|\.claude|TODO|FIXME/);
       if (doc.source === "api-reference.md") {
         expect(rendered).not.toContain("## Admin Auth And Idempotency");
+        expect(rendered).toContain("## Public Endpoints");
+        expect(rendered).toContain("### `GET /api/stablecoins`");
+        expect(rendered).not.toContain("## Admin Endpoints");
       }
     }
   });
