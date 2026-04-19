@@ -63,6 +63,11 @@
   - PR: https://github.com/larsulbricht/awesome-digital-assets/pull/8
 - [x] DeFi Developer Road Map
   - PR: https://github.com/OffcierCia/DeFi-Developer-Road-Map/pull/137
+- [x] moov-io awesome-fintech
+  - PR: https://github.com/moov-io/awesome-fintech/pull/60
+- [x] Stablecoin Insider
+  - Submitted public Typeform with `admin@pharos.watch`.
+  - Caveat: form only allowed broad interest selection; selected `Something Else` rather than paid/sponsored options.
 
 ## Remaining Owner-Action Opportunities
 
@@ -90,13 +95,15 @@
 - [blocked] Bluechip outreach
   - Status: skipped by owner for now.
   - Potential later action: ask for a neutral use-case/resource mention because Pharos surfaces Bluechip safety ratings.
-- [ ] CoinGecko case study / API spotlight
-  - Pitch Pharos as a public-good stablecoin dashboard using CoinGecko / GeckoTerminal data.
+- [blocked] CoinGecko case study / API spotlight
+  - Status: support form blocked by Cloudflare security verification in automation browser.
+  - Action: owner can submit manually via `https://support.coingecko.com/hc/en-us/requests/new`.
 - [blocked] DefiLlama docs/example
   - Status: skipped by owner for now.
   - Potential later action: propose a technical example or docs mention around stablecoin API consumption without pushing a promotional link.
-- [ ] Stablecoin Insider / Stablecoin Standard
-  - Pitch a data-driven note using the Stablecoin Cemetery dataset.
+- [blocked] Stablecoin Standard
+  - Status: public contact form rejected automated submission with `Captcha validation failed`.
+  - Action: owner can submit manually at `https://www.stablecoinstandard.com/contact` or email `hello@stablecoinstandard.com`.
 - [ ] Academic and policy-resource outreach
   - Share Cemetery dataset with stablecoin researchers and policy-resource curators.
 
