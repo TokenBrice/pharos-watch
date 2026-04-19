@@ -4,7 +4,9 @@ import { Bell } from "lucide-react";
 import { FeaturePageShell } from "@/components/feature-page-shell";
 import { CalloutBanner } from "@/components/callout-banner";
 import { CopyButton } from "@/components/copy-button";
+import { safeJsonLd } from "@/lib/json-ld";
 import { buildPageMetadata } from "@/lib/page-metadata";
+import { SITE_ORIGIN as SITE_URL } from "@shared/lib/runtime-origins";
 import { PRE_LAUNCH_STABLECOINS } from "@shared/lib/stablecoins";
 import { buildStablecoinUrl } from "@/lib/urls";
 import { UpcomingClient } from "@/components/upcoming-client";
@@ -24,6 +26,46 @@ export default function UpcomingPage() {
       breadcrumbName="Upcoming Stablecoins"
       path="/upcoming/"
       title="Upcoming Stablecoins"
+      preface={(
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{
+            __html: safeJsonLd([
+              {
+                "@context": "https://schema.org",
+                "@type": "CollectionPage",
+                "@id": `${SITE_URL}/upcoming/#collection`,
+                name: "Upcoming Stablecoins",
+                description: `${PRE_LAUNCH_STABLECOINS.length} pre-launch stablecoins tracked by Pharos.`,
+                url: `${SITE_URL}/upcoming/`,
+                mainEntity: { "@id": `${SITE_URL}/upcoming/#itemlist` },
+                isPartOf: { "@id": `${SITE_URL}#website` },
+              },
+              {
+                "@context": "https://schema.org",
+                "@type": "ItemList",
+                "@id": `${SITE_URL}/upcoming/#itemlist`,
+                name: "Upcoming Stablecoins",
+                numberOfItems: PRE_LAUNCH_STABLECOINS.length,
+                itemListElement: PRE_LAUNCH_STABLECOINS.map((coin, i) => {
+                  const url = `${SITE_URL}${buildStablecoinUrl(coin.id)}`;
+
+                  return {
+                    "@type": "ListItem",
+                    position: i + 1,
+                    item: {
+                      "@type": "WebPage",
+                      "@id": url,
+                      name: `${coin.name} (${coin.symbol})`,
+                      url,
+                    },
+                  };
+                }),
+              },
+            ]),
+          }}
+        />
+      )}
       leadParagraphs={[
         "Track upcoming launches before they enter the live stablecoin universe, then open any coin for the full pre-launch dossier.",
       ]}

@@ -4,8 +4,10 @@ import Link from "next/link";
 import { FeaturePageShell } from "@/components/feature-page-shell";
 import { ChangelogEntryCard } from "@/components/changelog-entry-card";
 import { ChangelogWeekNav } from "@/components/changelog-week-nav";
+import { safeJsonLd } from "@/lib/json-ld";
 import { buildPageMetadata } from "@/lib/page-metadata";
 import { changelogs } from "@/data/changelogs";
+import { SITE_ORIGIN as SITE_URL } from "@shared/lib/runtime-origins";
 
 export const metadata: Metadata = buildPageMetadata({
   title: "Changelog: What's New on Pharos",
@@ -19,6 +21,27 @@ export default function ChangelogPage() {
     changelogs.map((e) => new Date(e.dateRange.to + "T00:00:00").getFullYear()),
   );
   const multiYear = years.size > 1;
+  const changelogJsonLd = safeJsonLd({
+    "@context": "https://schema.org",
+    "@type": "ItemList",
+    name: "Pharos Changelog",
+    description: "Weekly release notes for Pharos.",
+    numberOfItems: changelogs.length,
+    itemListElement: changelogs.map((entry, i) => ({
+      "@type": "ListItem",
+      position: i + 1,
+      item: {
+        "@type": "Article",
+        headline: entry.headline ?? `Changelog - Week of ${entry.dateRange.to}`,
+        datePublished: `${entry.dateRange.to}T00:00:00Z`,
+        description: entry.summary.map((s) => s.label).slice(0, 3).join("; "),
+        author: { "@id": `${SITE_URL}#person-tokenbrice` },
+        publisher: { "@id": `${SITE_URL}#organization` },
+        url: `${SITE_URL}/changelog/#week-${entry.dateRange.to}`,
+        mainEntityOfPage: `${SITE_URL}/changelog/#week-${entry.dateRange.to}`,
+      },
+    })),
+  });
 
   return (
     <FeaturePageShell
@@ -27,6 +50,12 @@ export default function ChangelogPage() {
       title="Changelog"
       variant="longform"
       containerClassName="mx-auto max-w-3xl"
+      preface={(
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: changelogJsonLd }}
+        />
+      )}
       leadParagraphs={[
         <>
           Weekly release notes. Follow{" "}
@@ -66,6 +95,7 @@ export default function ChangelogPage() {
                 </li>
               )}
               <li
+                id={`week-${entry.dateRange.to}`}
                 className={`relative pl-8 ${showYearDivider ? "mt-4" : i > 0 ? "mt-14" : ""}`}
               >
                 <div

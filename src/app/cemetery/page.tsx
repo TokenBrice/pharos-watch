@@ -52,19 +52,35 @@ export default function CemeteryPage() {
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{
-          __html: safeJsonLd({
-            "@context": "https://schema.org",
-            "@type": "ItemList",
-            name: "Stablecoin Cemetery",
-            description: `${DEAD_STABLECOINS.length} defunct, depegged, and discontinued stablecoins documented with cause of death and obituaries.`,
-            numberOfItems: DEAD_STABLECOINS.length,
-            itemListElement: schemaCoins.map((coin, i) => ({
-              "@type": "ListItem",
-              position: i + 1,
-              name: `${coin.name} (${coin.symbol})`,
-              description: coin.obituary,
-            })),
-          }),
+          __html: safeJsonLd([
+            {
+              "@context": "https://schema.org",
+              "@type": "CollectionPage",
+              "@id": `${SITE_URL}/cemetery/#collection`,
+              name: "Stablecoin Cemetery",
+              description: `${DEAD_STABLECOINS.length} defunct stablecoins documented.`,
+              url: `${SITE_URL}/cemetery/`,
+              mainEntity: { "@id": `${SITE_URL}/cemetery/#itemlist` },
+              isPartOf: { "@id": `${SITE_URL}#website` },
+            },
+            {
+              "@context": "https://schema.org",
+              "@type": "ItemList",
+              "@id": `${SITE_URL}/cemetery/#itemlist`,
+              name: "Stablecoin Cemetery",
+              description: `${DEAD_STABLECOINS.length} defunct, depegged, and discontinued stablecoins documented with cause of death and obituaries.`,
+              numberOfItems: DEAD_STABLECOINS.length,
+              itemListElement: schemaCoins.map((coin, i) => ({
+                "@type": "ListItem",
+                position: i + 1,
+                item: {
+                  "@type": "Thing",
+                  name: `${coin.name} (${coin.symbol})`,
+                  description: coin.obituary,
+                },
+              })),
+            },
+          ]),
         }}
       />
       <div className="space-y-2">

@@ -68,6 +68,24 @@ export default function MethodologyPage() {
           ])),
         }}
       />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{
+          __html: safeJsonLd({
+            "@context": "https://schema.org",
+            "@type": "Article",
+            additionalType: "https://schema.org/TechArticle",
+            headline: "Methodology: How Pharos Grades Stablecoins",
+            description:
+              "Full methodology behind Pharos safety grades, peg scores, liquidity scores, and contagion stress tests.",
+            author: { "@id": `${SITE_URL}#person-tokenbrice` },
+            publisher: { "@id": `${SITE_URL}#organization` },
+            image: `${SITE_URL}/og-methodology.png`,
+            mainEntityOfPage: `${SITE_URL}/methodology/`,
+            keywords: ["stablecoin methodology", "safety score", "PegScore", "DEWS", "PSI", "liquidity score"],
+          }),
+        }}
+      />
 
       {/* Breadcrumb + heading */}
       <div className="space-y-3">

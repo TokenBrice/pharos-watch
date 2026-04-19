@@ -32,6 +32,8 @@ export function StablecoinTaxonomyPage({ page }: StablecoinTaxonomyPageProps) {
       shortLabel={page.shortLabel}
       coins={page.coins}
       directoryDescription={`Browse the current ${page.coins.length} tracked stablecoin${page.coins.length !== 1 ? "s" : ""} in this taxonomy before opening the live table.`}
+      definedTermCode={String(page.filterTag)}
+      definedTermSetHref={`/stablecoins/${page.kind}/`}
       relatedPages={relatedPages}
     >
       <StablecoinFilteredTable activeFilters={[page.filterTag]} />

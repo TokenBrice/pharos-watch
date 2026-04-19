@@ -4,6 +4,7 @@ import type { BreadcrumbItem } from "@/components/breadcrumb-json-ld";
 import { safeJsonLd } from "@/lib/json-ld";
 import { buildStablecoinUrl } from "@/lib/urls";
 import type { StablecoinMeta } from "@shared/types";
+import { SITE_ORIGIN as SITE_URL } from "@shared/lib/runtime-origins";
 
 interface StablecoinTaxonomyShellProps {
   title: string;
@@ -13,6 +14,8 @@ interface StablecoinTaxonomyShellProps {
   shortLabel: string;
   coins: StablecoinMeta[];
   directoryDescription: string;
+  definedTermCode?: string;
+  definedTermSetHref?: string;
   breadcrumbItems?: BreadcrumbItem[];
   relatedPages?: ReadonlyArray<{
     href: string;
@@ -32,6 +35,8 @@ export function StablecoinTaxonomyShell({
   shortLabel,
   coins,
   directoryDescription,
+  definedTermCode,
+  definedTermSetHref,
   breadcrumbItems,
   relatedPages = [],
   children,
@@ -50,19 +55,50 @@ export function StablecoinTaxonomyShell({
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{
-            __html: safeJsonLd({
-              "@context": "https://schema.org",
-              "@type": "ItemList",
-              name: title,
-              description,
-              numberOfItems: coins.length,
-              itemListElement: coins.map((coin, index) => ({
-                "@type": "ListItem",
-                position: index + 1,
-                name: `${coin.name} (${coin.symbol})`,
-                url: `https://pharos.watch${buildStablecoinUrl(coin.id)}`,
-              })),
-            }),
+            __html: safeJsonLd([
+              {
+                "@context": "https://schema.org",
+                "@type": "CollectionPage",
+                "@id": `${SITE_URL}${href}#collection`,
+                name: title,
+                description,
+                url: `${SITE_URL}${href}`,
+                mainEntity: { "@id": `${SITE_URL}${href}#itemlist` },
+                isPartOf: { "@id": `${SITE_URL}#website` },
+                ...(definedTermCode && definedTermSetHref
+                  ? {
+                      about: {
+                        "@type": "DefinedTerm",
+                        name: title,
+                        termCode: definedTermCode,
+                        inDefinedTermSet: `${SITE_URL}${definedTermSetHref}`,
+                      },
+                    }
+                  : {}),
+              },
+              {
+                "@context": "https://schema.org",
+                "@type": "ItemList",
+                "@id": `${SITE_URL}${href}#itemlist`,
+                name: title,
+                description,
+                numberOfItems: coins.length,
+                itemListElement: coins.map((coin, index) => {
+                  const url = `${SITE_URL}${buildStablecoinUrl(coin.id)}`;
+
+                  return {
+                    "@type": "ListItem",
+                    position: index + 1,
+                    item: {
+                      "@type": "WebPage",
+                      "@id": url,
+                      name: `${coin.name} (${coin.symbol})`,
+                      url,
+                    },
+                  };
+                }),
+              },
+            ]),
           }}
         />
       )}

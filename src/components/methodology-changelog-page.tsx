@@ -2,6 +2,8 @@ import Link from "next/link";
 import { BreadcrumbJsonLd } from "@/components/breadcrumb-json-ld";
 import { LongformScrollspyNav } from "@/components/longform-scrollspy-nav";
 import { MethodologyVersionCard, type MethodologyChangelogEntry } from "@/components/methodology-version-card";
+import { safeJsonLd } from "@/lib/json-ld";
+import { SITE_ORIGIN as SITE_URL } from "@shared/lib/runtime-origins";
 
 interface MethodologyChangelogPageProps {
   breadcrumbName: string;
@@ -42,6 +44,8 @@ export function MethodologyChangelogPage({
 
   const navSections = sections ?? derivedSections;
   const latestEntry = entries[0];
+  const articleDescription =
+    typeof lead === "string" ? lead : `${breadcrumbName} version history for Pharos.`;
 
   return (
     <div className="mx-auto w-full max-w-5xl space-y-8">
@@ -52,6 +56,26 @@ export function MethodologyChangelogPage({
           { name: breadcrumbName, url: path },
         ]}
       />
+      {entries.length > 0 && (
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{
+            __html: safeJsonLd({
+              "@context": "https://schema.org",
+              "@type": "Article",
+              additionalType: "https://schema.org/TechArticle",
+              headline: `${title} - Version History`,
+              description: articleDescription,
+              datePublished: `${entries.at(-1)!.date}T00:00:00Z`,
+              dateModified: `${entries[0].date}T00:00:00Z`,
+              author: { "@id": `${SITE_URL}#person-tokenbrice` },
+              publisher: { "@id": `${SITE_URL}#organization` },
+              image: `${SITE_URL}/og-card.png`,
+              mainEntityOfPage: `${SITE_URL}${path}`,
+            }),
+          }}
+        />
+      )}
 
       <div className="space-y-3">
         <nav aria-label="Breadcrumb" className="flex items-center gap-1.5 text-sm text-muted-foreground">

@@ -9,6 +9,7 @@ import { SiteHeader } from "@/components/site-header";
 import { safeJsonLd } from "@/lib/json-ld";
 import { SITE_ORIGIN as SITE_URL } from "@shared/lib/runtime-origins";
 import { buildStablecoinUrl } from "@/lib/urls";
+import { logosById } from "@/lib/logos";
 
 export const metadata: Metadata = {
   title: {
@@ -33,12 +34,22 @@ export default function HomePage() {
   const total = ACTIVE_STABLECOINS.length;
 
   // Top 20 stablecoins for ItemList schema
-  const itemListElements = ACTIVE_STABLECOINS.slice(0, 20).map((coin, i) => ({
-    "@type": "ListItem" as const,
-    position: i + 1,
-    name: `${coin.name} (${coin.symbol})`,
-    url: `${SITE_URL}${buildStablecoinUrl(coin.id)}`,
-  }));
+  const itemListElements = ACTIVE_STABLECOINS.slice(0, 20).map((coin, i) => {
+    const logo = logosById[coin.id];
+    const url = `${SITE_URL}${buildStablecoinUrl(coin.id)}`;
+
+    return {
+      "@type": "ListItem" as const,
+      position: i + 1,
+      item: {
+        "@type": "WebPage",
+        "@id": url,
+        name: `${coin.name} (${coin.symbol})`,
+        url,
+        ...(logo ? { image: `${SITE_URL}${logo}` } : {}),
+      },
+    };
+  });
   const itemListCount = itemListElements.length;
 
   return (
@@ -46,14 +57,27 @@ export default function HomePage() {
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{
-          __html: safeJsonLd({
-            "@context": "https://schema.org",
-            "@type": "ItemList",
-            name: "Top Tracked Stablecoins",
-            description: `${total} stablecoins tracked by Pharos across every major chain.`,
-            numberOfItems: itemListCount,
-            itemListElement: itemListElements,
-          }),
+          __html: safeJsonLd([
+            {
+              "@context": "https://schema.org",
+              "@type": "CollectionPage",
+              "@id": `${SITE_URL}/#collection`,
+              name: "Pharos - Stablecoin Analytics Dashboard",
+              description: `${total} active stablecoins tracked by Pharos across every major chain.`,
+              url: SITE_URL,
+              mainEntity: { "@id": `${SITE_URL}/#homepage-itemlist` },
+              isPartOf: { "@id": `${SITE_URL}#website` },
+            },
+            {
+              "@context": "https://schema.org",
+              "@type": "ItemList",
+              "@id": `${SITE_URL}/#homepage-itemlist`,
+              name: "Top 20 Stablecoins by Market Cap",
+              description: `Top 20 of ${total} active stablecoins tracked by Pharos.`,
+              numberOfItems: itemListCount,
+              itemListElement: itemListElements,
+            },
+          ]),
         }}
       />
       <div className="space-y-3">

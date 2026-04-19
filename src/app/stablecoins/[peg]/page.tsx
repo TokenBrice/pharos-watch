@@ -39,6 +39,8 @@ export default async function PegLandingPage({
       shortLabel={page.shortLabel}
       coins={page.coins}
       directoryDescription={`Browse all ${page.coins.length} tracked ${page.shortLabel} stablecoins before opening the live table.`}
+      definedTermCode={String(page.value)}
+      definedTermSetHref="/stablecoins/"
       relatedPages={ALL_STABLECOIN_TAXONOMY_PAGES.slice(0, 6)}
     >
       <PegLandingClient pegCurrency={page.value} />
