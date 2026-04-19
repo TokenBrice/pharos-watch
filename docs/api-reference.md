@@ -14,6 +14,8 @@ The runtime now uses three HTTP lanes:
 - `https://site-api.pharos.watch` is the website-internal Worker host. It accepts only allowlisted `GET` reads plus `X-Pharos-Site-Proxy-Secret`.
 - `/_site-data/*` is the same-origin Pages Functions proxy used by browsers on `pharos.watch`, `ops.pharos.watch`, and Pages preview hosts.
 
+Static dataset exports are served from the public website, not from the Worker API, and do not require `X-API-Key`. The Stablecoin Cemetery export is available as JSON at `https://pharos.watch/datasets/stablecoin-cemetery.json` and CSV at `https://pharos.watch/datasets/stablecoin-cemetery.csv`.
+
 Browser consumers should use same-origin `/_site-data/*` via the frontend helpers in `src/lib/api.ts`. In production, that Pages proxy targets `https://site-api.pharos.watch` through `SITE_API_ORIGIN`. Direct integrations, CI smoke, and build-time sync scripts should target `https://api.pharos.watch`.
 
 The direct Worker cache profiles below describe responses from `api.pharos.watch` / `site-api.pharos.watch`. The Pages `/_site-data/*` proxy adds a separate same-origin Cache API layer for successful responses without `Set-Cookie`; this can cache even a direct Worker route whose own profile is `no-store`, such as `/api/health`.

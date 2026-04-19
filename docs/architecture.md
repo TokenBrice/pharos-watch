@@ -121,6 +121,8 @@ rg --files src shared worker scripts data functions
 
 Shared runtime host/origin defaults live in `shared/lib/runtime-origins.json` and `shared/lib/runtime-origins.ts`. Frontend API-base inference, `/_site-data/*` Pages Functions, ops-host Pages Functions, worker self/probe URLs, and local static-export tooling should consume that shared source instead of embedding production origins ad hoc.
 
+The Stablecoin Cemetery public dataset export is static Pages data, not a Worker API route. `scripts/generate-cemetery-dataset.ts` reads `shared/data/dead-stablecoins.json` and writes `public/datasets/stablecoin-cemetery.json` plus `public/datasets/stablecoin-cemetery.csv` during `prebuild`; `npm run check:cemetery-dataset` guards drift in CI.
+
 Worker cron refactors should place reusable stage contracts under `worker/src/cron/shared/`. The seed contract layer in `worker/src/cron/shared/stage-contracts.ts` defines the shared vocabulary for stage progress, abort results, and handoff context so large cron decompositions do not each invent incompatible result shapes.
 
 ## Frontend Runtime And SEO Surface

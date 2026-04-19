@@ -18,6 +18,9 @@ Primary files:
 - `src/components/cemetery-charts.tsx`
 - `shared/lib/dead-stablecoins.ts`
 - `shared/data/dead-stablecoins.json`
+- `scripts/generate-cemetery-dataset.ts`
+- `public/datasets/stablecoin-cemetery.json`
+- `public/datasets/stablecoin-cemetery.csv`
 
 ### Data model
 
@@ -31,6 +34,17 @@ Each entry follows `DeadStablecoin` (`shared/types/index.ts`) with fields such a
 - optional `contracts` — array of `{ chain, address }` for block-explorer links in the autopsy view
 
 Cause metadata (labels + colors) is centralized in `CAUSE_META` / `CAUSE_HEX`.
+
+### Public dataset export
+
+`scripts/generate-cemetery-dataset.ts` publishes the curated cemetery dataset to static export files:
+
+- `/datasets/stablecoin-cemetery.json`
+- `/datasets/stablecoin-cemetery.csv`
+
+The JSON export includes schema metadata, field descriptions, source-data path, canonical cemetery URL, source labels/URLs per row, and known historical token contracts when available. The CSV export mirrors the same row set with contracts flattened as `chain:address` pairs. Both exports are deterministic and sorted newest-failure first for citation/research reuse. `npm run prebuild` regenerates them, and `npm run check:cemetery-dataset` fails when checked-in public exports drift from `shared/data/dead-stablecoins.json`.
+
+The `/cemetery/` page links directly to both exports from the route header so researchers and journalists can cite/download the dataset without inspecting the repository.
 
 ### Telegram channel notifications
 

@@ -36,6 +36,16 @@
   Cache-Control: public, max-age=3600
   Content-Type: text/plain; charset=utf-8
 
+/datasets/*.json
+  ! Cache-Control
+  Cache-Control: public, max-age=3600
+  Content-Type: application/json; charset=utf-8
+
+/datasets/*.csv
+  ! Cache-Control
+  Cache-Control: public, max-age=3600
+  Content-Type: text/csv; charset=utf-8
+
 /og-*.png
   ! Cache-Control
   Cache-Control: public, max-age=86400

@@ -16,6 +16,8 @@
 - [Dependency Map](https://pharos.watch/dependency-map/): Inter-stablecoin dependency graph.
 - [Coverage](https://pharos.watch/coverage/): What Pharos tracks and what it does not.
 - [Cemetery](https://pharos.watch/cemetery/): 88 defunct stablecoins and their causes of death.
+- [Stablecoin Cemetery dataset (JSON)](https://pharos.watch/datasets/stablecoin-cemetery.json): Citation-ready dataset of failed, discontinued, and abandoned stablecoins.
+- [Stablecoin Cemetery dataset (CSV)](https://pharos.watch/datasets/stablecoin-cemetery.csv): Tabular export of the Stablecoin Cemetery dataset.
 - [Upcoming](https://pharos.watch/upcoming/): Pre-launch stablecoins Pharos is tracking.
 
 ## Methodology

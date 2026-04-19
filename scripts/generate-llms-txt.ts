@@ -85,6 +85,16 @@ const coreDataLinks = [
     absolute("/cemetery/"),
     `${DEAD_STABLECOINS.length} defunct stablecoins and their causes of death.`,
   ],
+  [
+    "Stablecoin Cemetery dataset (JSON)",
+    absolute("/datasets/stablecoin-cemetery.json"),
+    "Citation-ready dataset of failed, discontinued, and abandoned stablecoins.",
+  ],
+  [
+    "Stablecoin Cemetery dataset (CSV)",
+    absolute("/datasets/stablecoin-cemetery.csv"),
+    "Tabular export of the Stablecoin Cemetery dataset.",
+  ],
   ["Upcoming", absolute("/upcoming/"), "Pre-launch stablecoins Pharos is tracking."],
 ] as const;
 

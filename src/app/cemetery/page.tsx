@@ -94,6 +94,17 @@ export default function CemeteryPage() {
           Defunct, depegged, and discontinued. Newest graves surface first, and the biggest collapses stand tallest.{" "}
           <span className="hidden md:inline">Press F on hover to pay respects.</span>
         </p>
+        <p className="text-sm text-muted-foreground">
+          Download the citation-ready dataset as{" "}
+          <a className="pharos-focus-ring text-foreground underline-offset-4 hover:underline" href="/datasets/stablecoin-cemetery.json">
+            JSON
+          </a>{" "}
+          or{" "}
+          <a className="pharos-focus-ring text-foreground underline-offset-4 hover:underline" href="/datasets/stablecoin-cemetery.csv">
+            CSV
+          </a>
+          .
+        </p>
       </div>
 
       <CemeteryClient />

@@ -1,0 +1,2124 @@
+{
+  "schemaVersion": "1.0",
+  "name": "Pharos Stablecoin Cemetery Dataset",
+  "description": "Curated dataset of defunct, depegged, discontinued, and abandoned stablecoins documented by Pharos.",
+  "license": "MIT",
+  "canonicalUrl": "https://pharos.watch/cemetery/",
+  "jsonUrl": "https://pharos.watch/datasets/stablecoin-cemetery.json",
+  "csvUrl": "https://pharos.watch/datasets/stablecoin-cemetery.csv",
+  "sourceDataPath": "shared/data/dead-stablecoins.json",
+  "sourceChecksum": "sha256:41cadbc52523da7c50c86000ff48761b561d5addc1b18d6ad00f5f457f750984",
+  "recordsOrderedBy": "deathDate descending, then peakMcapUsd descending, then symbol ascending",
+  "rowCount": 88,
+  "limitations": [
+    "Death dates are month-level unless a row explicitly uses a day-level date.",
+    "Peak market capitalization is optional and may be absent when no reliable public figure was curated.",
+    "Each row includes one primary source link; the export is an incident index, not a complete bibliography."
+  ],
+  "fields": {
+    "id": "Stable export row identifier derived from symbol, name, and deathDate.",
+    "name": "Stablecoin or protocol display name.",
+    "symbol": "Primary stablecoin ticker or display symbol.",
+    "llamaId": "Optional DefiLlama stablecoin identifier when historically available.",
+    "logoUrl": "Optional Pharos-hosted cemetery logo URL.",
+    "pegCurrency": "Target peg currency or asset.",
+    "causeOfDeath": "Machine-readable Pharos cause category.",
+    "causeLabel": "Human-readable Pharos cause category.",
+    "deathDate": "Month or date when the stablecoin failed, was discontinued, or entered terminal decline.",
+    "deathDatePrecision": "Precision of deathDate: day, month, year, or unknown.",
+    "peakMcapUsd": "Approximate peak market capitalization in USD when known.",
+    "epitaph": "Short editorial summary used by the Pharos Cemetery UI.",
+    "obituary": "Curated explanation of the failure mode.",
+    "sourceUrl": "Primary source URL for the cemetery entry.",
+    "sourceLabel": "Primary source label for the cemetery entry.",
+    "contracts": "Known historical token contracts when available.",
+    "pharosUrl": "Canonical Pharos Cemetery page for the dataset."
+  },
+  "rows": [
+    {
+      "id": "eura-angle-eura-2026-03",
+      "name": "Angle EURA",
+      "symbol": "EURA",
+      "llamaId": null,
+      "logoUrl": "https://pharos.watch/logos/cemetery/eura.png",
+      "pegCurrency": "EUR",
+      "causeOfDeath": "abandoned",
+      "causeLabel": "Abandoned",
+      "deathDate": "2026-03",
+      "deathDatePrecision": "month",
+      "peakMcapUsd": 200000000,
+      "epitaph": "DeFi's first Euro, last out",
+      "obituary": "Launched in late 2021 as agEUR — the first fully decentralized euro stablecoin — it briefly held the #1 spot among euro stablecoins with over 180 million tokens in circulation (~$200M). Tether's EURT overtook it in January 2022, and four years of slow erosion followed. A rebrand to EURA in March 2024 barely registered. By the time the team called it, EURA had fallen 98% to under $4M, ranking 10th among euro stablecoins. AIP-112 passed with just four voters — one casting 98% of the votes — a final measure of how few were still watching. The Angle team has moved on to Merkl, their DeFi incentive platform. Holders can redeem 1:1 for EURC until March 1, 2027.",
+      "sourceUrl": "https://www.dlnews.com/articles/markets/angle-to-shutter-euro-stablecoin-eura/",
+      "sourceLabel": "DL News",
+      "contracts": [
+        {
+          "chain": "ethereum",
+          "address": "0x1a7e4e63778b4f12a199c062f3efdd288afcbce8"
+        }
+      ],
+      "pharosUrl": "https://pharos.watch/cemetery/"
+    },
+    {
+      "id": "usda-angle-usda-2026-03",
+      "name": "Angle USDA",
+      "symbol": "USDA",
+      "llamaId": null,
+      "logoUrl": "https://pharos.watch/logos/cemetery/usda-angle.png",
+      "pegCurrency": "USD",
+      "causeOfDeath": "abandoned",
+      "causeLabel": "Abandoned",
+      "deathDate": "2026-03",
+      "deathDatePrecision": "month",
+      "peakMcapUsd": null,
+      "epitaph": "Late arrival, early exit",
+      "obituary": "Launched in April 2024 as Angle's yield-bearing USD stablecoin — backed by T-bills and DeFi lending — USDA arrived just as yield-bearing stablecoins became a commodity. It never found meaningful adoption. Wound down alongside EURA via AIP-112 in March 2026; holders can redeem 1:1 for USDC through the Angle Transmuter until March 1, 2027.",
+      "sourceUrl": "https://blockonomi.com/angle-protocol-winds-down-eura-and-usda-stablecoins-after-community-governance-vote/",
+      "sourceLabel": "Blockonomi",
+      "contracts": [
+        {
+          "chain": "ethereum",
+          "address": "0x0000206329b97db379d5e1bf586bbdb969c63274"
+        }
+      ],
+      "pharosUrl": "https://pharos.watch/cemetery/"
+    },
+    {
+      "id": "gyd-gyroscope-gyd-2026-02",
+      "name": "Gyroscope GYD",
+      "symbol": "GYD",
+      "llamaId": "185",
+      "logoUrl": "https://pharos.watch/logos/cemetery/gyd.png",
+      "pegCurrency": "USD",
+      "causeOfDeath": "counterparty-failure",
+      "causeLabel": "Counterparty Failure",
+      "deathDate": "2026-02",
+      "deathDatePrecision": "month",
+      "peakMcapUsd": 26793861,
+      "epitaph": "Gyro stopped spinning",
+      "obituary": "Gyroscope's cross-chain GYD contract was exploited at the end of January 2026. The team told users not to interact with GYD, paused Gyro liquidity pools containing the token, and later offered a settlement to recover enough ETH to make users whole. The recovery never materialized publicly: Ethereum transfers stopped on January 31, Etherscan now reports 0 circulating GYD and $0 circulating market cap, CoinGecko no longer resolves the token through its API, and the remaining Balancer pools are one-sided GYD with zero volume.",
+      "sourceUrl": "https://x.com/GyroStable/status/2017546048114250219",
+      "sourceLabel": "Gyroscope",
+      "contracts": [
+        {
+          "chain": "ethereum",
+          "address": "0xe07f9d810a48ab5c3c914ba3ca53af14e4491e8a"
+        },
+        {
+          "chain": "polygon",
+          "address": "0xca5d8f8a8d49439357d3cf46ca2e720702f132b8"
+        }
+      ],
+      "pharosUrl": "https://pharos.watch/cemetery/"
+    },
+    {
+      "id": "cnht-tether-cnh-2026-02",
+      "name": "Tether CNH",
+      "symbol": "CNHT",
+      "llamaId": null,
+      "logoUrl": "https://pharos.watch/logos/cemetery/cnht.png",
+      "pegCurrency": "CNH",
+      "causeOfDeath": "abandoned",
+      "causeLabel": "Abandoned",
+      "deathDate": "2026-02",
+      "deathDatePrecision": "month",
+      "peakMcapUsd": 2970000,
+      "epitaph": "Low demand, long goodbye",
+      "obituary": "Tether's offshore yuan experiment never became more than a footnote beside USD₮. On February 20, 2026, Tether stopped all new CNH₮ issuance and put the token on a one-year redemption clock, citing low interest, limited sustained demand, and the operational burden of keeping it alive. CNH₮ was supposed to give crypto a yuan rail; instead it spent most of its life as a thinly used side product. Holders can still redeem until February 20, 2027, but the decision itself was the death certificate.",
+      "sourceUrl": "https://tether.io/news/tether-updates-users-on-a-strategic-transition-for-cnht-to-better-support-community-driven-product-focus/",
+      "sourceLabel": "Tether",
+      "contracts": [
+        {
+          "chain": "ethereum",
+          "address": "0x6e109e9dd7fa1a58bc3eff667e8e41fc3cc07aef"
+        }
+      ],
+      "pharosUrl": "https://pharos.watch/cemetery/"
+    },
+    {
+      "id": "pusd-palm-usd-2026-01",
+      "name": "Palm USD",
+      "symbol": "PUSD",
+      "llamaId": null,
+      "logoUrl": "https://pharos.watch/logos/cemetery/pusd-palm.png",
+      "pegCurrency": "USD",
+      "causeOfDeath": "liquidity-drain",
+      "causeLabel": "Liquidity Drain",
+      "deathDate": "2026-01",
+      "deathDatePrecision": "month",
+      "peakMcapUsd": 26000000,
+      "epitaph": "$2.8B promised. $81K left",
+      "obituary": "Palm USD promised to bridge Islamic finance and crypto with a Shariah-compliant, un-freezeable stablecoin backed by Gulf currencies. Despite announcing a $2.8B purchase agreement, actual circulating supply briefly touched $26M before collapsing to $81K. The billions sit perpetually 'unreleased.'",
+      "sourceUrl": "https://www.theblock.co/press-releases/378989/palm-usd-launches-pusd-a-global-free-stablecoin-backed-by-aed-and-sar",
+      "sourceLabel": "The Block",
+      "contracts": [
+        {
+          "chain": "ethereum",
+          "address": "0xFAF0cEe6B20e2Aaa4B80748a6AF4CD89609a3d78"
+        }
+      ],
+      "pharosUrl": "https://pharos.watch/cemetery/"
+    },
+    {
+      "id": "d-saga-dollar-2026-01",
+      "name": "Saga Dollar",
+      "symbol": "D",
+      "llamaId": "308",
+      "logoUrl": "https://pharos.watch/logos/cemetery/saga-dollar.svg",
+      "pegCurrency": "USD",
+      "causeOfDeath": "counterparty-failure",
+      "causeLabel": "Counterparty Failure",
+      "deathDate": "2026-01",
+      "deathDatePrecision": "month",
+      "peakMcapUsd": 6040000,
+      "epitaph": "IBC minted, IBC drained",
+      "obituary": "Saga Dollar was the native stablecoin of the SagaEVM chainlet, a Cosmos SDK-based L1 app-chain. On January 21, 2026, an attacker deployed malicious contracts that abused IBC mechanisms to mint tokens out of thin air, draining nearly $7M in USDC, yUSD, ETH, and tBTC to Ethereum mainnet. The chain was halted at block 6,593,800. Saga Dollar depegged to $0.75, and the sibling stablecoins Mustang and Colt were also wiped out. The exploit did not involve a consensus breach — just a creative reading of IBC semantics.",
+      "sourceUrl": "https://cointelegraph.com/news/saga-pauses-sagaevm-after-7m-exploit",
+      "sourceLabel": "CoinTelegraph",
+      "contracts": [],
+      "pharosUrl": "https://pharos.watch/cemetery/"
+    },
+    {
+      "id": "syusd-synnax-stablecoin-2026-01",
+      "name": "Synnax Stablecoin",
+      "symbol": "syUSD",
+      "llamaId": "236",
+      "logoUrl": "https://pharos.watch/logos/cemetery/syusd.png",
+      "pegCurrency": "USD",
+      "causeOfDeath": "counterparty-failure",
+      "causeLabel": "Counterparty Failure",
+      "deathDate": "2026-01",
+      "deathDatePrecision": "month",
+      "peakMcapUsd": 3900000,
+      "epitaph": "Flash-loaned into irrelevance",
+      "obituary": "Synnax launched as the first SEI-backed stablecoin on the Sei network, allowing users to mint syUSD against SEI collateral. On January 9, 2026, an attacker exploited the protocol via a flash loan, borrowing approximately 1.96 million WSEI (~$240K) from the Synnax contract without repayment. The protocol migrated to a new contract but never recovered — trading volume dropped to $15/day and supply continued bleeding from its $3.9M peak. DefiLlama marks it dead from January 15, 2026.",
+      "sourceUrl": "https://www.techflowpost.com/en-US/newsletter/110877",
+      "sourceLabel": "TechFlow (BlockSec Alert)",
+      "contracts": [
+        {
+          "chain": "sei",
+          "address": "0x059A6b0bA116c63191182a0956cF697d0d2213eC"
+        }
+      ],
+      "pharosUrl": "https://pharos.watch/cemetery/"
+    },
+    {
+      "id": "usdl-lift-dollar-2025-12",
+      "name": "Lift Dollar",
+      "symbol": "USDL",
+      "llamaId": "244",
+      "logoUrl": "https://pharos.watch/logos/cemetery/usdl.png",
+      "pegCurrency": "USD",
+      "causeOfDeath": "abandoned",
+      "causeLabel": "Abandoned",
+      "deathDate": "2025-12",
+      "deathDatePrecision": "month",
+      "peakMcapUsd": 128760000,
+      "epitaph": "Yield-bearing prototype, sunset for USDG",
+      "obituary": "Paxos International launched Lift Dollar in 2024 as a yield-bearing stablecoin regulated by ADGM (Abu Dhabi), distributing daily yield via rebase from T-bill reserves. It peaked at $128.7M on Ethereum before Paxos decided to consolidate around USDG and the Global Dollar Network. Minting ceased October 8, 2025; rebasing stopped December 8, 2025; remaining balances were auto-converted to USDG. A clean, regulated wind-down — no depeg, no drama, just strategic prioritization.",
+      "sourceUrl": "https://www.paxos.com/newsroom/winding-down-usdl-lift-dollar",
+      "sourceLabel": "Paxos Newsroom",
+      "contracts": [
+        {
+          "chain": "ethereum",
+          "address": "0xbdc7c08592ee4aa51d06c27ee23d5087d65adbcd"
+        }
+      ],
+      "pharosUrl": "https://pharos.watch/cemetery/"
+    },
+    {
+      "id": "uspd-us-permissionless-dollar-2025-12",
+      "name": "US Permissionless Dollar",
+      "symbol": "USPD",
+      "llamaId": "315",
+      "logoUrl": "https://pharos.watch/logos/cemetery/uspd.png",
+      "pegCurrency": "USD",
+      "causeOfDeath": "counterparty-failure",
+      "causeLabel": "Counterparty Failure",
+      "deathDate": "2025-12",
+      "deathDatePrecision": "month",
+      "peakMcapUsd": 480000,
+      "epitaph": "Proxy had one too many hands",
+      "obituary": "Over-collateralized stETH-backed CDP exploited via a CPIMP (Clandestine Proxy In the Middle of Proxy) attack on December 4, 2025, allowing the attacker to mint ~98M fraudulent USPD tokens and drain ~237 stETH. Legitimate supply never exceeded $500K; V2 was announced but never launched.",
+      "sourceUrl": "https://en.cryptonomist.ch/2025/12/05/uspd-stablecoin-proxy-attack/",
+      "sourceLabel": "Cryptonomist",
+      "contracts": [
+        {
+          "chain": "ethereum",
+          "address": "0x476ef9ac6D8673E220d0E8BC0a810C2Dc6A2AA84"
+        }
+      ],
+      "pharosUrl": "https://pharos.watch/cemetery/"
+    },
+    {
+      "id": "deusd-elixir-deusd-2025-11",
+      "name": "Elixir deUSD",
+      "symbol": "DEUSD",
+      "llamaId": null,
+      "logoUrl": "https://pharos.watch/logos/cemetery/deusd.png",
+      "pegCurrency": "USD",
+      "causeOfDeath": "counterparty-failure",
+      "causeLabel": "Counterparty Failure",
+      "deathDate": "2025-11",
+      "deathDatePrecision": "month",
+      "peakMcapUsd": 301727222,
+      "epitaph": "97% gone overnight",
+      "obituary": "Lost 97% of value overnight when counterparty Stream Finance disclosed a $93M loss, wiping out 65% of deUSD's collateral.",
+      "sourceUrl": "https://beincrypto.com/elixir-deusd-stablecoin-collapse-stream-finance-loss/",
+      "sourceLabel": "BeInCrypto",
+      "contracts": [
+        {
+          "chain": "ethereum",
+          "address": "0x15700b564ca08d9439c58ca5053166e8317aa138"
+        }
+      ],
+      "pharosUrl": "https://pharos.watch/cemetery/"
+    },
+    {
+      "id": "xusd-stream-finance-xusd-2025-11",
+      "name": "Stream Finance xUSD",
+      "symbol": "xUSD",
+      "llamaId": null,
+      "logoUrl": "https://pharos.watch/logos/cemetery/xusd.png",
+      "pegCurrency": "USD",
+      "causeOfDeath": "counterparty-failure",
+      "causeLabel": "Counterparty Failure",
+      "deathDate": "2025-11",
+      "deathDatePrecision": "month",
+      "peakMcapUsd": 160000000,
+      "epitaph": "$93M loss broke three coins",
+      "obituary": "Yield-bearing stablecoin that collapsed when an external fund manager disclosed a $93M loss. xUSD plunged 77% from $1 to $0.26, freezing ~$160M in user deposits. The collapse exposed $285M in interconnected DeFi debt and caused cascading contagion that also toppled deUSD and Stables Labs USDX.",
+      "sourceUrl": "https://finance.yahoo.com/news/stream-finance-loses-93-million-225557903.html",
+      "sourceLabel": "Yahoo Finance",
+      "contracts": [
+        {
+          "chain": "ethereum",
+          "address": "0xe2fc85bfb48c4cf147921fbe110cf92ef9f26f94"
+        }
+      ],
+      "pharosUrl": "https://pharos.watch/cemetery/"
+    },
+    {
+      "id": "yu-yu-2025-11",
+      "name": "YU",
+      "symbol": "YU",
+      "llamaId": "268",
+      "logoUrl": "https://pharos.watch/logos/cemetery/yu.png",
+      "pegCurrency": "USD",
+      "causeOfDeath": "counterparty-failure",
+      "causeLabel": "Counterparty Failure",
+      "deathDate": "2025-11",
+      "deathDatePrecision": "month",
+      "peakMcapUsd": 153465803,
+      "epitaph": "Survived once. Not twice",
+      "obituary": "Yala's BTC-backed stablecoin survived its first death in September 2025 when a security breach minted 120 million unauthorized YU tokens, draining $7.6M. The team injected $5.5M and clawed back the peg. Two months later, runaway borrowing drained all liquidity pools and YU collapsed again to $0.44. This time, nobody came to resuscitate.",
+      "sourceUrl": "https://unchainedcrypto.com/yala-protocols-bitcoin-stablecoin-depegs/",
+      "sourceLabel": "Unchained",
+      "contracts": [
+        {
+          "chain": "ethereum",
+          "address": "0xE868084cf08F3c3db11f4B73a95473762d9463f7"
+        }
+      ],
+      "pharosUrl": "https://pharos.watch/cemetery/"
+    },
+    {
+      "id": "usdx-stables-labs-usdx-2025-11",
+      "name": "Stables Labs USDX",
+      "symbol": "USDX",
+      "llamaId": null,
+      "logoUrl": "https://pharos.watch/logos/cemetery/usdx-stableslabs.png",
+      "pegCurrency": "USD",
+      "causeOfDeath": "counterparty-failure",
+      "causeLabel": "Counterparty Failure",
+      "deathDate": "2025-11",
+      "deathDatePrecision": "month",
+      "peakMcapUsd": 125000000,
+      "epitaph": "Founder drained the pool",
+      "obituary": "Synthetic USD backed by delta-neutral positions across exchanges. A Balancer V2 security flaw drained $1M, then contagion from Stream Finance's $93M loss accelerated a full collapse. USDX crashed 64% to $0.35 as founder Flex Yang's wallet was linked to addresses draining liquidity. Now trades at $0.01–0.04 with Discord shut down.",
+      "sourceUrl": "https://www.theblock.co/post/377917/synthetic-stablecoin-usdx-depegs-pancakeswap-lista",
+      "sourceLabel": "The Block",
+      "contracts": [
+        {
+          "chain": "bsc",
+          "address": "0xf3527ef8de265eaa3716fb312c12847bfba66cef"
+        }
+      ],
+      "pharosUrl": "https://pharos.watch/cemetery/"
+    },
+    {
+      "id": "lvlusd-level-usd-2025-10",
+      "name": "Level USD",
+      "symbol": "LVLUSD",
+      "llamaId": null,
+      "logoUrl": "https://pharos.watch/logos/cemetery/lvlusd.png",
+      "pegCurrency": "USD",
+      "causeOfDeath": "abandoned",
+      "causeLabel": "Abandoned",
+      "deathDate": "2025-10",
+      "deathDatePrecision": "month",
+      "peakMcapUsd": 185007045,
+      "epitaph": "Team acqui-hired away",
+      "obituary": "The Level team was acqui-hired by another DeFi protocol and announced the sunsetting of lvlUSD. Users could unstake and redeem with cooldown periods reduced to 2 seconds.",
+      "sourceUrl": "https://level-money.gitbook.io/level-documentation",
+      "sourceLabel": "Level Docs",
+      "contracts": [
+        {
+          "chain": "ethereum",
+          "address": "0x7c1156e515aa1a2e851674120074968c905aaf37"
+        }
+      ],
+      "pharosUrl": "https://pharos.watch/cemetery/"
+    },
+    {
+      "id": "usdl-lift-dollar-2025-10",
+      "name": "Lift Dollar",
+      "symbol": "USDL",
+      "llamaId": null,
+      "logoUrl": "https://pharos.watch/logos/cemetery/usdl.png",
+      "pegCurrency": "USD",
+      "causeOfDeath": "abandoned",
+      "causeLabel": "Abandoned",
+      "deathDate": "2025-10",
+      "deathDatePrecision": "month",
+      "peakMcapUsd": 148588007,
+      "epitaph": "Consolidated into USDG",
+      "obituary": "Paxos wound down Lift Dollar to focus on larger-scale institutional products. Minting ended October 2025 and remaining USDL was converted to USDG (Paxos's new stablecoin).",
+      "sourceUrl": "https://www.paxos.com/newsroom/winding-down-usdl-lift-dollar",
+      "sourceLabel": "Paxos",
+      "contracts": [
+        {
+          "chain": "ethereum",
+          "address": "0xbdc7c08592ee4aa51d06c27ee23d5087d65adbcd"
+        }
+      ],
+      "pharosUrl": "https://pharos.watch/cemetery/"
+    },
+    {
+      "id": "csusdl-coinshift-csusdl-2025-10",
+      "name": "Coinshift csUSDL",
+      "symbol": "csUSDL",
+      "llamaId": null,
+      "logoUrl": "https://pharos.watch/logos/cemetery/csusdl.png",
+      "pegCurrency": "USD",
+      "causeOfDeath": "counterparty-failure",
+      "causeLabel": "Counterparty Failure",
+      "deathDate": "2025-10",
+      "deathDatePrecision": "month",
+      "peakMcapUsd": 142014760,
+      "epitaph": "Coinshift shifted away",
+      "obituary": "A yield-bearing wrapper around Paxos's USDL via Morpho Blue, killed by Paxos's decision to wind down USDL. Coinshift stopped accepting new deposits and raised borrow rates to close positions.",
+      "sourceUrl": "https://forum.morpho.org/t/notice-of-usdl-winddown/2062",
+      "sourceLabel": "Morpho Forum",
+      "contracts": [
+        {
+          "chain": "ethereum",
+          "address": "0xbEeFc011e94f43b8B7b455eBaB290C7Ab4E216f1"
+        }
+      ],
+      "pharosUrl": "https://pharos.watch/cemetery/"
+    },
+    {
+      "id": "pinto-pinto-2025-10",
+      "name": "Pinto",
+      "symbol": "PINTO",
+      "llamaId": null,
+      "logoUrl": "https://pharos.watch/logos/cemetery/pinto.png",
+      "pegCurrency": "USD",
+      "causeOfDeath": "algorithmic-failure",
+      "causeLabel": "Algorithmic Failure",
+      "deathDate": "2025-10",
+      "deathDatePrecision": "month",
+      "peakMcapUsd": 13100000,
+      "epitaph": "Same algorithm, same end",
+      "obituary": "Beanstalk's first fork tried to give the credit-based stablecoin model a clean shot on Base, free from the governance exploit that killed the original. Without collateral backing and with insufficient demand for protocol debt, the price slid relentlessly from $1 to $0.11, proving the flaw was in the design, not the implementation.",
+      "sourceUrl": "https://www.coingecko.com/en/coins/pinto",
+      "sourceLabel": "CoinGecko",
+      "contracts": [
+        {
+          "chain": "base",
+          "address": "0xb170000aeefa790fa61d6e837d1035906839a3c8"
+        }
+      ],
+      "pharosUrl": "https://pharos.watch/cemetery/"
+    },
+    {
+      "id": "usdm-mountain-protocol-usdm-2025-08",
+      "name": "Mountain Protocol USDM",
+      "symbol": "USDM",
+      "llamaId": "132",
+      "logoUrl": "https://pharos.watch/logos/cemetery/usdm-mountain.png",
+      "pegCurrency": "USD",
+      "causeOfDeath": "abandoned",
+      "causeLabel": "Abandoned",
+      "deathDate": "2025-08",
+      "deathDatePrecision": "month",
+      "peakMcapUsd": 154580000,
+      "epitaph": "Acquired into oblivion",
+      "obituary": "Mountain Protocol USDM was a regulated, yield-bearing stablecoin backed by U.S. Treasuries, earning an S&P stability assessment and peaking at $154.6M across Ethereum and Optimism. Anchorage Digital acquired Mountain Protocol in May 2025 and immediately began a three-phase wind-down: minting ceased May 12, yield dropped to zero June 11, and primary market redemption closed August 22. Remaining USDM was deposited into a Uniswap USDC pool for secondary market exit. The team and tech were absorbed; the stablecoin was not.",
+      "sourceUrl": "https://docs.mountainprotocol.com/wind-down-documentation/usdm-wind-down-overview",
+      "sourceLabel": "Mountain Protocol Docs",
+      "contracts": [
+        {
+          "chain": "ethereum",
+          "address": "0x59d9356e565ab3a36dd77763fc0d87feaf85508c"
+        }
+      ],
+      "pharosUrl": "https://pharos.watch/cemetery/"
+    },
+    {
+      "id": "usdj-just-usdj-2025-08",
+      "name": "JUST USDJ",
+      "symbol": "USDJ",
+      "llamaId": null,
+      "logoUrl": "https://pharos.watch/logos/cemetery/usdj.png",
+      "pegCurrency": "USD",
+      "causeOfDeath": "abandoned",
+      "causeLabel": "Abandoned",
+      "deathDate": "2025-08",
+      "deathDatePrecision": "month",
+      "peakMcapUsd": 121275798,
+      "epitaph": "Replaced by decree",
+      "obituary": "TRON's legacy decentralized stablecoin was deliberately sunset as the ecosystem shifted to USDD. CDP functions ended August 2025, and 95% of supply was redeemed at a fixed rate of 1 USDJ = 1.5532 TRX.",
+      "sourceUrl": "https://en.cryptonomist.ch/2025/11/18/usdj-stablecoin-retirement-tron/",
+      "sourceLabel": "Cryptonomist",
+      "contracts": [
+        {
+          "chain": "tron",
+          "address": "TMwFHYXLJaRUPeW6421aqXL4ZEzPRFGkGT"
+        }
+      ],
+      "pharosUrl": "https://pharos.watch/cemetery/"
+    },
+    {
+      "id": "float-float-protocol-2025-07",
+      "name": "Float Protocol",
+      "symbol": "FLOAT",
+      "llamaId": null,
+      "logoUrl": "https://pharos.watch/logos/cemetery/float.png",
+      "pegCurrency": "USD",
+      "causeOfDeath": "abandoned",
+      "causeLabel": "Abandoned",
+      "deathDate": "2025-07",
+      "deathDatePrecision": "month",
+      "peakMcapUsd": 4950000,
+      "epitaph": "The golden ratio experiment",
+      "obituary": "Float Protocol launched in 2021 with an ambitious vision: a floating-rate stablecoin backed by ETH, with a target price initialized at $1.618 (the golden ratio). Supply expanded and contracted via Dutch auctions using ETH and the BANK governance token. The protocol peaked at ~$5M market cap but never gained meaningful adoption. By 2025, the anonymous team had vanished, the website went dark, GitHub fell dormant, and supply froze at ~$654K. The contracts remain on Ethereum — an immutable monument to the idea that stability doesn't require a peg.",
+      "sourceUrl": "https://web.archive.org/web/2021*/floatprotocol.com",
+      "sourceLabel": "Wayback Machine",
+      "contracts": [
+        {
+          "chain": "ethereum",
+          "address": "0xb05097849bca421a3f51b249ba6cca4af4b97cb9"
+        }
+      ],
+      "pharosUrl": "https://pharos.watch/cemetery/"
+    },
+    {
+      "id": "usdl-liquid-loans-usdl-2025-06",
+      "name": "Liquid Loans USDL",
+      "symbol": "USDL",
+      "llamaId": "152",
+      "logoUrl": "https://pharos.watch/logos/cemetery/liquid-loans-usdl.png",
+      "pegCurrency": "USD",
+      "causeOfDeath": "liquidity-drain",
+      "causeLabel": "Liquidity Drain",
+      "deathDate": "2025-06",
+      "deathDatePrecision": "month",
+      "peakMcapUsd": 32700000,
+      "epitaph": "PulseChain sank",
+      "obituary": "A Liquity V1 fork on PulseChain where users minted USDL against PLS collateral at 110% minimum ratio. As PulseChain's ecosystem collapsed with PLS price down over 90%, USDL supply followed — from $33M peak to $3.4M. The immutable contracts still technically work, but with PulseChain abandoned by mainstream DeFi, nobody is using them.",
+      "sourceUrl": "https://defillama.com/stablecoin/liquid-loans-usdl",
+      "sourceLabel": "DefiLlama",
+      "contracts": [],
+      "pharosUrl": "https://pharos.watch/cemetery/"
+    },
+    {
+      "id": "dyad-dyad-v2-2025-06",
+      "name": "DYAD v2",
+      "symbol": "DYAD",
+      "llamaId": "207",
+      "logoUrl": "https://pharos.watch/logos/cemetery/dyad.png",
+      "pegCurrency": "USD",
+      "causeOfDeath": "liquidity-drain",
+      "causeLabel": "Liquidity Drain",
+      "deathDate": "2025-06",
+      "deathDatePrecision": "month",
+      "peakMcapUsd": 20114876,
+      "epitaph": "Kerosene burned out",
+      "obituary": "DYAD's novel Kerosene-token model for overcollateralized CDPs failed to sustain interest. Supply declined from $20M peak to near zero despite continued GitHub activity.",
+      "sourceUrl": "https://defillama.com/stablecoin/dyad",
+      "sourceLabel": "DefiLlama",
+      "contracts": [
+        {
+          "chain": "ethereum",
+          "address": "0xfd03723a9a3abe0562451496a9a394d2c4bad4ab"
+        }
+      ],
+      "pharosUrl": "https://pharos.watch/cemetery/"
+    },
+    {
+      "id": "mod-move-dollar-2025-06",
+      "name": "Move Dollar",
+      "symbol": "MOD",
+      "llamaId": null,
+      "logoUrl": "https://pharos.watch/logos/cemetery/mod.png",
+      "pegCurrency": "USD",
+      "causeOfDeath": "liquidity-drain",
+      "causeLabel": "Liquidity Drain",
+      "deathDate": "2025-06",
+      "deathDatePrecision": "month",
+      "peakMcapUsd": 19484463,
+      "epitaph": "USDC came to Aptos",
+      "obituary": "Thala Labs' stablecoin on Aptos declined from $19M to near zero. Despite a $25.5M exploit in Nov 2024 (funds recovered), MOD simply failed to compete as USDT/USDC expanded on Aptos.",
+      "sourceUrl": "https://www.coingecko.com/en/coins/move-dollar",
+      "sourceLabel": "CoinGecko",
+      "contracts": [
+        {
+          "chain": "aptos",
+          "address": "0x6f986d146e4a90b828d8c12c14b6f4e003fdff11a8eecceceb63744363eaac01::mod_coin::MOD"
+        }
+      ],
+      "pharosUrl": "https://pharos.watch/cemetery/"
+    },
+    {
+      "id": "zusd-gmo-zusd-2025-06",
+      "name": "GMO ZUSD",
+      "symbol": "ZUSD",
+      "llamaId": null,
+      "logoUrl": "https://pharos.watch/logos/cemetery/zusd.png",
+      "pegCurrency": "USD",
+      "causeOfDeath": "liquidity-drain",
+      "causeLabel": "Liquidity Drain",
+      "deathDate": "2025-06",
+      "deathDatePrecision": "month",
+      "peakMcapUsd": 19075074,
+      "epitaph": "Zero users, zero supply",
+      "obituary": "GMO Trust's NYDFS-regulated stablecoin failed to gain market share despite expansions to Solana and Bitstamp listing. Supply dwindled to essentially zero while GMO's JPY stablecoin (GYEN) continues.",
+      "sourceUrl": "https://www.coingecko.com/en/coins/zusd",
+      "sourceLabel": "CoinGecko",
+      "contracts": [
+        {
+          "chain": "ethereum",
+          "address": "0xc56c2b7e71b54d38aab6d52e94a04cbfa8f604fa"
+        }
+      ],
+      "pharosUrl": "https://pharos.watch/cemetery/"
+    },
+    {
+      "id": "grai-gravita-grai-2025-06",
+      "name": "Gravita GRAI",
+      "symbol": "GRAI",
+      "llamaId": null,
+      "logoUrl": "https://pharos.watch/logos/cemetery/grai.png",
+      "pegCurrency": "USD",
+      "causeOfDeath": "liquidity-drain",
+      "causeLabel": "Liquidity Drain",
+      "deathDate": "2025-06",
+      "deathDatePrecision": "month",
+      "peakMcapUsd": 15428881,
+      "epitaph": "Free wasn't enough",
+      "obituary": "Gravita Protocol's interest-free borrowing model against LSTs failed to maintain adoption as competitors offered better terms. Supply dropped from $15M to near zero.",
+      "sourceUrl": "https://defillama.com/stablecoin/grai",
+      "sourceLabel": "DefiLlama",
+      "contracts": [
+        {
+          "chain": "ethereum",
+          "address": "0x15f74458aE0bFdAA1a96CA1aa779D715Cc1Eefe4"
+        }
+      ],
+      "pharosUrl": "https://pharos.watch/cemetery/"
+    },
+    {
+      "id": "hyusd-high-yield-usd-2025-06",
+      "name": "High Yield USD",
+      "symbol": "HYUSD",
+      "llamaId": null,
+      "logoUrl": "https://pharos.watch/logos/cemetery/hyusd.png",
+      "pegCurrency": "USD",
+      "causeOfDeath": "liquidity-drain",
+      "causeLabel": "Liquidity Drain",
+      "deathDate": "2025-06",
+      "deathDatePrecision": "month",
+      "peakMcapUsd": 11268731,
+      "epitaph": "Higher yields beckoned",
+      "obituary": "An RToken built on Reserve Protocol for yield-bearing exposure on Base. The Reserve platform thrives, but this individual RToken lost adoption as users moved to higher-yield alternatives.",
+      "sourceUrl": "https://defillama.com/stablecoin/high-yield-usd",
+      "sourceLabel": "DefiLlama",
+      "contracts": [
+        {
+          "chain": "ethereum",
+          "address": "0xacdf0dba4b9839b96221a8487e9ca660a48212be"
+        }
+      ],
+      "pharosUrl": "https://pharos.watch/cemetery/"
+    },
+    {
+      "id": "usdm-mountain-protocol-usd-2025-05",
+      "name": "Mountain Protocol USD",
+      "symbol": "USDM",
+      "llamaId": "132",
+      "logoUrl": "https://pharos.watch/logos/cemetery/usdm-mountain.png",
+      "pegCurrency": "USD",
+      "causeOfDeath": "abandoned",
+      "causeLabel": "Abandoned",
+      "deathDate": "2025-05",
+      "deathDatePrecision": "month",
+      "peakMcapUsd": 157210136,
+      "epitaph": "Team took the exit",
+      "obituary": "Mountain Protocol's yield-bearing USDM was the regulated darling of the T-bill stablecoin wave — licensed in Bermuda, rebasing daily, deployed across eight chains. It peaked at $157M in March 2024, then bled for a year as the yield-bearing stablecoin market became a knife fight. When Anchorage Digital came shopping for talent and licenses in May 2025, the team took the exit: minting off, rewards zeroed, and the remaining tokens dumped into a Uniswap pool for whoever was left holding them.",
+      "sourceUrl": "https://cointelegraph.com/news/anchorage-digital-acquires-stablecoin-issuer-mountain-protocol",
+      "sourceLabel": "CoinTelegraph",
+      "contracts": [
+        {
+          "chain": "ethereum",
+          "address": "0x59d9356e565ab3a36dd77763fc0d87feaf85508c"
+        }
+      ],
+      "pharosUrl": "https://pharos.watch/cemetery/"
+    },
+    {
+      "id": "euroe-euroe-2025-05",
+      "name": "EUROe",
+      "symbol": "EUROe",
+      "llamaId": "98",
+      "logoUrl": "https://pharos.watch/logos/cemetery/euroe.png",
+      "pegCurrency": "EUR",
+      "causeOfDeath": "abandoned",
+      "causeLabel": "Abandoned",
+      "deathDate": "2025-05",
+      "deathDatePrecision": "month",
+      "peakMcapUsd": 1750000,
+      "epitaph": "Membrane dissolved",
+      "obituary": "Membrane Finance built one of Europe's first MiCA-compliant euro stablecoins — regulated by FIN-FSA in Finland, backed 1:1 with ring-fenced euro reserves, audited by KPMG. It never broke $2M in circulation. Paxos acquired Membrane in January 2025 to gain EU regulatory access, then announced a full wind-down of EUROe two months later to focus on bringing the Global Dollar (USDG) to Europe instead. Holders were urged to redeem; the contracts quietly went dark.",
+      "sourceUrl": "https://www.euroe.com/blog/paxos",
+      "sourceLabel": "EUROe Blog",
+      "contracts": [
+        {
+          "chain": "ethereum",
+          "address": "0x820802Fa8a99901F52e39acD21177b0BE6EE2974"
+        }
+      ],
+      "pharosUrl": "https://pharos.watch/cemetery/"
+    },
+    {
+      "id": "l-bold-legacy-bold-2025-02",
+      "name": "Legacy BOLD",
+      "symbol": "L-BOLD",
+      "llamaId": null,
+      "logoUrl": "https://pharos.watch/logos/cemetery/lbold.png",
+      "pegCurrency": "USD",
+      "causeOfDeath": "abandoned",
+      "causeLabel": "Abandoned",
+      "deathDate": "2025-02",
+      "deathDatePrecision": "month",
+      "peakMcapUsd": 34600000,
+      "epitaph": "Immutable. Unfixable",
+      "obituary": "The first casualty of Liquity's own immutability principle. Legacy BOLD launched as the flagship of Liquity V2 — overcollateralized, decentralized, and permanently unchangeable. A Stability Pool vulnerability surfaced weeks after launch. The contracts couldn't be patched, so the team redeployed everything from scratch.",
+      "sourceUrl": "https://www.liquity.org/blog/liquity-v2-redeployment",
+      "sourceLabel": "Liquity Blog",
+      "contracts": [
+        {
+          "chain": "ethereum",
+          "address": "0xb01dd87b29d187f3e3a4bf6cdaebfb97f3d9ab98"
+        }
+      ],
+      "pharosUrl": "https://pharos.watch/cemetery/"
+    },
+    {
+      "id": "usd-usd-2025-01",
+      "name": "USD+",
+      "symbol": "USD+",
+      "llamaId": null,
+      "logoUrl": "https://pharos.watch/logos/cemetery/usd-plus.png",
+      "pegCurrency": "USD",
+      "causeOfDeath": "abandoned",
+      "causeLabel": "Abandoned",
+      "deathDate": "2025-01",
+      "deathDatePrecision": "month",
+      "peakMcapUsd": 73665779,
+      "epitaph": "Quietly wound down",
+      "obituary": "Overnight Finance quietly wound down operations, leaving USD+ without active management or yield strategies.",
+      "sourceUrl": "https://overnight.fi/",
+      "sourceLabel": "Overnight.fi",
+      "contracts": [
+        {
+          "chain": "polygon",
+          "address": "0x236eec6359fb44cce8f97e99387aa7f8cd5cde1f"
+        }
+      ],
+      "pharosUrl": "https://pharos.watch/cemetery/"
+    },
+    {
+      "id": "usdv-verified-usd-2024-12",
+      "name": "Verified USD",
+      "symbol": "USDV",
+      "llamaId": null,
+      "logoUrl": "https://pharos.watch/logos/cemetery/usdv.png",
+      "pegCurrency": "USD",
+      "causeOfDeath": "abandoned",
+      "causeLabel": "Abandoned",
+      "deathDate": "2024-12",
+      "deathDatePrecision": "month",
+      "peakMcapUsd": 26330184,
+      "epitaph": "Verified, then voided",
+      "obituary": "The Verified USD Foundation ceased support on December 31, 2024 and began removing all tokens from circulation. Backed by tokenized T-bills via Matrixport's STBT, the omnichain stablecoin never gained sufficient traction.",
+      "sourceUrl": "https://docs.usdv.money/docs",
+      "sourceLabel": "USDV Docs",
+      "contracts": [
+        {
+          "chain": "ethereum",
+          "address": "0x0e573ce2736dd9637a0b21058352e1667925c7a8"
+        }
+      ],
+      "pharosUrl": "https://pharos.watch/cemetery/"
+    },
+    {
+      "id": "dai-overnight-dai-2024-12",
+      "name": "Overnight DAI+",
+      "symbol": "DAI+",
+      "llamaId": null,
+      "logoUrl": "https://pharos.watch/logos/cemetery/dai-plus.png",
+      "pegCurrency": "USD",
+      "causeOfDeath": "liquidity-drain",
+      "causeLabel": "Liquidity Drain",
+      "deathDate": "2024-12",
+      "deathDatePrecision": "month",
+      "peakMcapUsd": 14696384,
+      "epitaph": "Overnight went dark",
+      "obituary": "Overnight Finance's yield-bearing DAI wrapper declined from $15M to near zero as the broader protocol wound down. CoinGecko reports circulating supply at zero.",
+      "sourceUrl": "https://defillama.com/stablecoin/dai+",
+      "sourceLabel": "DefiLlama",
+      "contracts": [
+        {
+          "chain": "optimism",
+          "address": "0x970d50d09f3a656b43e11b0d45241a84e3a6e011"
+        }
+      ],
+      "pharosUrl": "https://pharos.watch/cemetery/"
+    },
+    {
+      "id": "eurt-euro-tether-2024-11",
+      "name": "Euro Tether",
+      "symbol": "EURT",
+      "llamaId": null,
+      "logoUrl": "https://pharos.watch/logos/cemetery/eurt.png",
+      "pegCurrency": "EUR",
+      "causeOfDeath": "regulatory",
+      "causeLabel": "Regulatory",
+      "deathDate": "2024-11",
+      "deathDatePrecision": "month",
+      "peakMcapUsd": 324057865,
+      "epitaph": "MiCA made it untenable",
+      "obituary": "Peacefully retired by Tether as MiCA regulations made EU stablecoin issuance untenable. Holders given one year to redeem.",
+      "sourceUrl": "https://cointelegraph.com/news/tether-discontinues-euro-eurt-stablecoin",
+      "sourceLabel": "CoinTelegraph",
+      "contracts": [
+        {
+          "chain": "ethereum",
+          "address": "0xc581b735a1688071a1746c968e0798d642ede491"
+        }
+      ],
+      "pharosUrl": "https://pharos.watch/cemetery/"
+    },
+    {
+      "id": "mkusd-prisma-mkusd-2024-11",
+      "name": "Prisma mkUSD",
+      "symbol": "mkUSD",
+      "llamaId": null,
+      "logoUrl": "https://pharos.watch/logos/cemetery/mkusd.png",
+      "pegCurrency": "USD",
+      "causeOfDeath": "liquidity-drain",
+      "causeLabel": "Liquidity Drain",
+      "deathDate": "2024-11",
+      "deathDatePrecision": "month",
+      "peakMcapUsd": 184697162,
+      "epitaph": "Exploited. Never recovered",
+      "obituary": "After an $11.6M exploit in March 2024, Prisma Finance never recovered. Governance approved PIP-46 to decommission the protocol, reducing the debt ceiling to zero and introducing a PSM for orderly wind-down.",
+      "sourceUrl": "https://wavey.info/posts/2025/decomissioning-prisma-finance/",
+      "sourceLabel": "Wavey",
+      "contracts": [
+        {
+          "chain": "ethereum",
+          "address": "0x4591dbff62656e7859afe5e45f6f47d3669fbb28"
+        }
+      ],
+      "pharosUrl": "https://pharos.watch/cemetery/"
+    },
+    {
+      "id": "ultra-prismalrt-ultra-2024-11",
+      "name": "PrismaLRT ULTRA",
+      "symbol": "ULTRA",
+      "llamaId": null,
+      "logoUrl": "https://pharos.watch/logos/cemetery/ultra.png",
+      "pegCurrency": "USD",
+      "causeOfDeath": "liquidity-drain",
+      "causeLabel": "Liquidity Drain",
+      "deathDate": "2024-11",
+      "deathDatePrecision": "month",
+      "peakMcapUsd": 22649284,
+      "epitaph": "Fell with Prisma",
+      "obituary": "Prisma's LRT-backed stablecoin was decommissioned alongside mkUSD after the March 2024 exploit. A stability pool bug discovered during wind-down allowed one user to drain ~14 ETH.",
+      "sourceUrl": "https://wavey.info/posts/2025/decomissioning-prisma-finance/",
+      "sourceLabel": "Wavey",
+      "contracts": [
+        {
+          "chain": "ethereum",
+          "address": "0x35282d87011f87508d457f08252bc5bfa52e10a0"
+        }
+      ],
+      "pharosUrl": "https://pharos.watch/cemetery/"
+    },
+    {
+      "id": "bob-zkbob-bob-2024-10",
+      "name": "zkBob BOB",
+      "symbol": "BOB",
+      "llamaId": null,
+      "logoUrl": "https://pharos.watch/logos/cemetery/bob.png",
+      "pegCurrency": "USD",
+      "causeOfDeath": "abandoned",
+      "causeLabel": "Abandoned",
+      "deathDate": "2024-10",
+      "deathDatePrecision": "month",
+      "peakMcapUsd": 16000251,
+      "epitaph": "Too private to notice",
+      "obituary": "zkBob's privacy-focused stablecoin was deliberately sunset as the protocol switched to USDC, USDT, and ETH. The team noted BOB \"did not receive enough consumer usage to justify ongoing support.\"",
+      "sourceUrl": "https://blog.zkbob.com/tron-pool-closes-october-29-2024/",
+      "sourceLabel": "zkBob Blog",
+      "contracts": [
+        {
+          "chain": "polygon",
+          "address": "0xb0b195aefa3650a6908f15cdac7d92f8a5791b0b"
+        }
+      ],
+      "pharosUrl": "https://pharos.watch/cemetery/"
+    },
+    {
+      "id": "par-parallel-2024-09",
+      "name": "Parallel",
+      "symbol": "PAR",
+      "llamaId": "56",
+      "logoUrl": "https://pharos.watch/logos/cemetery/par.png",
+      "pegCurrency": "EUR",
+      "causeOfDeath": "abandoned",
+      "causeLabel": "Abandoned",
+      "deathDate": "2024-09",
+      "deathDatePrecision": "month",
+      "peakMcapUsd": 25000000,
+      "epitaph": "Mimo went quiet",
+      "obituary": "Born from the ashes of TenX, Mimo Protocol launched PAR as one of the first decentralized Euro stablecoins in early 2021, peaking at $25M during DeFi summer. But the euro-pegged CDP model never found product-market fit, and the team quietly pivoted to KUMA Protocol, tokenizing Swiss government bonds instead of minting synthetic euros. By late 2024, PAR's supply had cratered 90%, the governance forum went dark, and the MIMO token flatlined at $0.003 with zero daily volume.",
+      "sourceUrl": "https://decrypt.co/146349/mimo-dao-launches-interest-paying-stablecoins-through-kuma-protocol",
+      "sourceLabel": "Decrypt",
+      "contracts": [
+        {
+          "chain": "ethereum",
+          "address": "0x68037790a0229e9ce6eaa8a99ea92964106c4703"
+        }
+      ],
+      "pharosUrl": "https://pharos.watch/cemetery/"
+    },
+    {
+      "id": "uxd-uxd-stablecoin-2024-08",
+      "name": "UXD Stablecoin",
+      "symbol": "UXD",
+      "llamaId": null,
+      "logoUrl": "https://pharos.watch/logos/cemetery/uxd.png",
+      "pegCurrency": "USD",
+      "causeOfDeath": "abandoned",
+      "causeLabel": "Abandoned",
+      "deathDate": "2024-08",
+      "deathDatePrecision": "month",
+      "peakMcapUsd": 41817136,
+      "epitaph": "Delta-neutral theory",
+      "obituary": "UXD Protocol's delta-neutral stablecoin on Solana survived the Mango Markets exploit but couldn't attract users. The team admitted the model \"isn't exciting enough for DeFi users\" and the DAO voted to sunset.",
+      "sourceUrl": "https://www.dlnews.com/articles/defi/solana-stablecoin-uxd-protocol-with-75m-usd-tvl-shuts-down/",
+      "sourceLabel": "DL News",
+      "contracts": [
+        {
+          "chain": "solana",
+          "address": "7kbnvuGBxxj8AG9qp8Scn56muWGaRaFqxg1FsRp3PaFT"
+        }
+      ],
+      "pharosUrl": "https://pharos.watch/cemetery/"
+    },
+    {
+      "id": "seur-synthetix-seur-2024-07",
+      "name": "Synthetix sEUR",
+      "symbol": "sEUR",
+      "llamaId": null,
+      "logoUrl": "https://pharos.watch/logos/cemetery/seur.png",
+      "pegCurrency": "EUR",
+      "causeOfDeath": "abandoned",
+      "causeLabel": "Abandoned",
+      "deathDate": "2024-07",
+      "deathDatePrecision": "month",
+      "peakMcapUsd": 166837992,
+      "epitaph": "Deprecated for V3",
+      "obituary": "Synthetix deprecated all non-USD spot synths on Ethereum mainnet as part of the V3 migration. sEUR holders who didn't swap in time could only redeem via the L1 redeemer contract at a discounted rate.",
+      "sourceUrl": "https://blog.synthetix.io/legacy-spot-synth-exchange-deprecation-migration/",
+      "sourceLabel": "Synthetix Blog",
+      "contracts": [
+        {
+          "chain": "ethereum",
+          "address": "0xd71ecff9342a5ced620049e616c5035f1db98620"
+        }
+      ],
+      "pharosUrl": "https://pharos.watch/cemetery/"
+    },
+    {
+      "id": "uno-nostra-uno-2024-07",
+      "name": "Nostra UNO",
+      "symbol": "UNO",
+      "llamaId": "177",
+      "logoUrl": "https://pharos.watch/logos/cemetery/uno.png",
+      "pegCurrency": "USD",
+      "causeOfDeath": "abandoned",
+      "causeLabel": "Abandoned",
+      "deathDate": "2024-07",
+      "deathDatePrecision": "month",
+      "peakMcapUsd": 472000,
+      "epitaph": "Last place",
+      "obituary": "Nostra's grand ambition to build Starknet's first native stablecoin launched with $472K of hope in April 2024 — and proceeded to lose 96% of its supply in a slow, silent hemorrhage. Initially pitched as an overcollateralized crypto stablecoin, then quietly rebranded to fiat-backed (1:1 USDC), UNO found itself answering a question nobody on Starknet was asking: why hold a wrapper when you can just hold USDC? Nostra pivoted to its NSTR governance token and scrubbed UNO from the main site.",
+      "sourceUrl": "https://defillama.com/stablecoin/uno",
+      "sourceLabel": "DefiLlama",
+      "contracts": [
+        {
+          "chain": "starknet",
+          "address": "0x719b5092403233201aa822ce928bd4b551d0cdb071a724edd7dc5e5f57b7f34"
+        }
+      ],
+      "pharosUrl": "https://pharos.watch/cemetery/"
+    },
+    {
+      "id": "eusd-lybra-eusd-2024-06",
+      "name": "Lybra eUSD",
+      "symbol": "eUSD",
+      "llamaId": null,
+      "logoUrl": "https://pharos.watch/logos/cemetery/eusd.png",
+      "pegCurrency": "USD",
+      "causeOfDeath": "abandoned",
+      "causeLabel": "Abandoned",
+      "deathDate": "2024-06",
+      "deathDatePrecision": "month",
+      "peakMcapUsd": 128139157,
+      "epitaph": "Yield compressed to zero",
+      "obituary": "Lybra Finance V2's LST-backed yield-bearing stablecoin peaked at $128M. After mining incentives ended in June 2024 and development stalled, supply collapsed. The protocol is technically live but abandoned by its team.",
+      "sourceUrl": "https://beincrypto.com/lybra-finance-lbr-defi-fall/",
+      "sourceLabel": "BeInCrypto",
+      "contracts": [
+        {
+          "chain": "ethereum",
+          "address": "0xdf3ac4f479375802A821f7b7b46Cd7eB5e4262cc"
+        }
+      ],
+      "pharosUrl": "https://pharos.watch/cemetery/"
+    },
+    {
+      "id": "note-note-2024-06",
+      "name": "NOTE",
+      "symbol": "NOTE",
+      "llamaId": "78",
+      "logoUrl": "https://pharos.watch/logos/cemetery/note.png",
+      "pegCurrency": "USD",
+      "causeOfDeath": "liquidity-drain",
+      "causeLabel": "Liquidity Drain",
+      "deathDate": "2024-06",
+      "deathDatePrecision": "month",
+      "peakMcapUsd": 48800000,
+      "epitaph": "Canto's ghost town",
+      "obituary": "Native overcollateralized stablecoin of the Canto L1 blockchain. Canto launched with 'free public infrastructure' DeFi primitives in late 2022, briefly attracting $300M TVL. As the chain's ecosystem collapsed, NOTE's supply fell 97% from $49M to $1.3M. The chain itself is essentially abandoned.",
+      "sourceUrl": "https://defillama.com/stablecoin/note",
+      "sourceLabel": "DefiLlama",
+      "contracts": [],
+      "pharosUrl": "https://pharos.watch/cemetery/"
+    },
+    {
+      "id": "peusd-lybra-peusd-2024-06",
+      "name": "Lybra peUSD",
+      "symbol": "peUSD",
+      "llamaId": null,
+      "logoUrl": "https://pharos.watch/logos/cemetery/peusd.png",
+      "pegCurrency": "USD",
+      "causeOfDeath": "abandoned",
+      "causeLabel": "Abandoned",
+      "deathDate": "2024-06",
+      "deathDatePrecision": "month",
+      "peakMcapUsd": 43983623,
+      "epitaph": "Omnichain to no-chain",
+      "obituary": "Lybra's omnichain version of eUSD, designed for cross-chain use. Died alongside eUSD V2 when the team abandoned the protocol.",
+      "sourceUrl": "https://beincrypto.com/lybra-finance-lbr-defi-fall/",
+      "sourceLabel": "BeInCrypto",
+      "contracts": [
+        {
+          "chain": "ethereum",
+          "address": "0xD585aaafA2B58b1CD75092B51aDe9Fa4Ce52F247"
+        }
+      ],
+      "pharosUrl": "https://pharos.watch/cemetery/"
+    },
+    {
+      "id": "star-preon-star-2024-06",
+      "name": "Preon STAR",
+      "symbol": "STAR",
+      "llamaId": null,
+      "logoUrl": "https://pharos.watch/logos/cemetery/star.png",
+      "pegCurrency": "USD",
+      "causeOfDeath": "abandoned",
+      "causeLabel": "Abandoned",
+      "deathDate": "2024-06",
+      "deathDatePrecision": "month",
+      "peakMcapUsd": 32136242,
+      "epitaph": "Faded without a word",
+      "obituary": "Preon Finance's stablecoin quietly died as the Sphere ecosystem faded. No shutdown announcement was made; supply simply declined from $32M to near zero.",
+      "sourceUrl": "https://defillama.com/protocol/preon-finance",
+      "sourceLabel": "DefiLlama",
+      "contracts": [
+        {
+          "chain": "polygon",
+          "address": "0xC19669A405067927865B40Ea045a2baabbbe57f5"
+        }
+      ],
+      "pharosUrl": "https://pharos.watch/cemetery/"
+    },
+    {
+      "id": "pusd-jpeg-d-pusd-2024-06",
+      "name": "JPEG'd PUSd",
+      "symbol": "PUSD",
+      "llamaId": null,
+      "logoUrl": "https://pharos.watch/logos/cemetery/pusd.jpg",
+      "pegCurrency": "USD",
+      "causeOfDeath": "liquidity-drain",
+      "causeLabel": "Liquidity Drain",
+      "deathDate": "2024-06",
+      "deathDatePrecision": "month",
+      "peakMcapUsd": 13967554,
+      "epitaph": "NFT floor pulled out",
+      "obituary": "JPEG'd's stablecoin minted against NFT collateral declined alongside the broader NFT market collapse. The protocol token stopped trading and the project was effectively abandoned.",
+      "sourceUrl": "https://defillama.com/protocol/jpegd",
+      "sourceLabel": "DefiLlama",
+      "contracts": [
+        {
+          "chain": "ethereum",
+          "address": "0x466a756E9A7401B5e2444a3fCB3c2C12FBEa0a54"
+        }
+      ],
+      "pharosUrl": "https://pharos.watch/cemetery/"
+    },
+    {
+      "id": "ush-hedge-usd-2024-06",
+      "name": "Hedge USD",
+      "symbol": "USH",
+      "llamaId": null,
+      "logoUrl": "https://pharos.watch/logos/cemetery/ush.png",
+      "pegCurrency": "USD",
+      "causeOfDeath": "liquidity-drain",
+      "causeLabel": "Liquidity Drain",
+      "deathDate": "2024-06",
+      "deathDatePrecision": "month",
+      "peakMcapUsd": 11297476,
+      "epitaph": "Couldn't hedge this",
+      "obituary": "Despite $3.7M in seed funding from Pantera and Solana Ventures, Hedge Protocol's stablecoin on Solana failed to gain traction in a competitive DeFi landscape. Supply dwindled from $11M to near zero.",
+      "sourceUrl": "https://defillama.com/stablecoin/hedge-usd",
+      "sourceLabel": "DefiLlama",
+      "contracts": [
+        {
+          "chain": "solana",
+          "address": "9iLH8T7zoWhY7sBmj1WK9ENbWdS1nL8n9wAxaeRitTa6"
+        }
+      ],
+      "pharosUrl": "https://pharos.watch/cemetery/"
+    },
+    {
+      "id": "cash-stabl-fi-cash-2024-06",
+      "name": "Stabl.fi Cash",
+      "symbol": "CASH",
+      "llamaId": "99",
+      "logoUrl": "https://pharos.watch/logos/cemetery/cash-stablfi.png",
+      "pegCurrency": "USD",
+      "causeOfDeath": "abandoned",
+      "causeLabel": "Abandoned",
+      "deathDate": "2024-06",
+      "deathDatePrecision": "month",
+      "peakMcapUsd": 8990683,
+      "epitaph": "Empire of dead links",
+      "obituary": "Stabl.fi's CASH was the native stablecoin of an ambitious Polygon DeFi empire spanning Satin Exchange, Retro DEX, and more. When Satin's launch imploded on day one, the ecosystem was rebranded around Retro — a Thena fork that briefly hit $18.8M TVL before bleeding out. The team's last blog post in February 2024 acknowledged 'adoption has been fairly low and TVL has bled,' then went silent. The website, docs, and dreams of a cross-chain yield-bearing indexcoin now all return connection refused.",
+      "sourceUrl": "https://defillama.com/stablecoin/stabl.fi-cash",
+      "sourceLabel": "DefiLlama",
+      "contracts": [
+        {
+          "chain": "polygon",
+          "address": "0x80487b4f8f70e793a81a42367c225ee0b94315df"
+        }
+      ],
+      "pharosUrl": "https://pharos.watch/cemetery/"
+    },
+    {
+      "id": "dyadv1-dyad-v1-2024-06",
+      "name": "DYAD v1",
+      "symbol": "DYADv1",
+      "llamaId": null,
+      "logoUrl": "https://pharos.watch/logos/cemetery/dyad.png",
+      "pegCurrency": "USD",
+      "causeOfDeath": "abandoned",
+      "causeLabel": "Abandoned",
+      "deathDate": "2024-06",
+      "deathDatePrecision": "month",
+      "peakMcapUsd": 600000,
+      "epitaph": "Too immutable to evolve",
+      "obituary": "The original DYAD stablecoin launched in December 2023 as an overcollateralized CDP with an immutable contract design. When the team needed to add flash-loan protection and the XP/Kerosene incentive mechanism, v1's immutability made upgrades impossible. In June 2024 they deployed an entirely new v2 contract set — a bold-style migration that left v1 holders to manually migrate their collateral. The 600K DYAD minted on v1 was never formally redeemed; the contracts simply went silent.",
+      "sourceUrl": "https://github.com/code-423n4/2024-04-dyad",
+      "sourceLabel": "Code4rena Audit",
+      "contracts": [
+        {
+          "chain": "ethereum",
+          "address": "0x305b58c5f6b5b6606fb13edd11fbdd5e532d5a26"
+        }
+      ],
+      "pharosUrl": "https://pharos.watch/cemetery/"
+    },
+    {
+      "id": "bean-bean-2024-05",
+      "name": "Bean",
+      "symbol": "BEAN",
+      "llamaId": "67",
+      "logoUrl": "https://pharos.watch/logos/cemetery/bean.png",
+      "pegCurrency": "USD",
+      "causeOfDeath": "algorithmic-failure",
+      "causeLabel": "Algorithmic Failure",
+      "deathDate": "2024-05",
+      "deathDatePrecision": "month",
+      "peakMcapUsd": 50493989,
+      "epitaph": "Second planting failed too",
+      "obituary": "The original Beanstalk was drained of $182M in a flash-loan governance attack in April 2022. Undeterred, the team relaunched on Arbitrum with a credit-based model where soil demand and adjustable interest rates (Temperature) were supposed to keep BEAN at $1. It didn't. BEAN slipped below peg in mid-2024 and never came back, proving the design flaw was in the algorithm, not the security. Even Pinto, the community fork that tried the same model on Base, met the same fate.",
+      "sourceUrl": "https://defillama.com/stablecoin/bean",
+      "sourceLabel": "DefiLlama",
+      "contracts": [
+        {
+          "chain": "ethereum",
+          "address": "0xBEA0000029AD1c77D3d5D23Ba2D8893dB9d1Efab"
+        }
+      ],
+      "pharosUrl": "https://pharos.watch/cemetery/"
+    },
+    {
+      "id": "rai-rai-reflex-index-2024-02",
+      "name": "Rai Reflex Index",
+      "symbol": "RAI",
+      "llamaId": null,
+      "logoUrl": "https://pharos.watch/logos/cemetery/rai.png",
+      "pegCurrency": "VAR",
+      "causeOfDeath": "abandoned",
+      "causeLabel": "Abandoned",
+      "deathDate": "2024-02",
+      "deathDatePrecision": "month",
+      "peakMcapUsd": 48700000,
+      "epitaph": "Too pure for this world",
+      "obituary": "The idealist's stablecoin: RAI rejected the dollar peg, embraced 'ungovernance,' and floated freely on pure math and ETH collateral. The team achieved their goal of removing all human governance, then did what the protocol couldn't: moved on to build HAI on Optimism.",
+      "sourceUrl": "https://www.dlnews.com/articles/defi/defi-developer-ameen-soleimani-back-with-new-stablecoin-hai/",
+      "sourceLabel": "DL News",
+      "contracts": [
+        {
+          "chain": "ethereum",
+          "address": "0x03ab458634910AaD20eF5f1C8ee96F1D6ac54919"
+        }
+      ],
+      "pharosUrl": "https://pharos.watch/cemetery/"
+    },
+    {
+      "id": "yusd-yusd-stablecoin-2023-12",
+      "name": "YUSD Stablecoin",
+      "symbol": "YUSD",
+      "llamaId": "13",
+      "logoUrl": "https://pharos.watch/logos/cemetery/yusd.png",
+      "pegCurrency": "USD",
+      "causeOfDeath": "abandoned",
+      "causeLabel": "Abandoned",
+      "deathDate": "2023-12",
+      "deathDatePrecision": "month",
+      "peakMcapUsd": 296400000,
+      "epitaph": "Yielded to reality",
+      "obituary": "Yeti Finance's cross-margin lending protocol on Avalanche allowed borrowing YUSD at 0% interest against diverse collateral. After declining TVL and concentration among few users, the team announced dissolution in December 2023, raising interest rates to encourage position closure and returning 90% of treasury to YETI holders.",
+      "sourceUrl": "https://crypto-economy.com/yeti-finance-announces-its-dissolution-here-the-reasons/",
+      "sourceLabel": "Crypto Economy",
+      "contracts": [
+        {
+          "chain": "avalanche",
+          "address": "0x111111111111ed1D73f860F57b2798b683f2d325"
+        }
+      ],
+      "pharosUrl": "https://pharos.watch/cemetery/"
+    },
+    {
+      "id": "ibeur-iron-bank-euro-2023-12",
+      "name": "Iron Bank EURO",
+      "symbol": "IBEUR",
+      "llamaId": null,
+      "logoUrl": "https://pharos.watch/logos/cemetery/ibeur.png",
+      "pegCurrency": "EUR",
+      "causeOfDeath": "liquidity-drain",
+      "causeLabel": "Liquidity Drain",
+      "deathDate": "2023-12",
+      "deathDatePrecision": "month",
+      "peakMcapUsd": 50369497,
+      "epitaph": "Iron Bank froze solid",
+      "obituary": "Liquidity pools drained after Iron Bank's lending markets froze, leaving no clear path to repeg. Still trades at a fraction of face value.",
+      "sourceUrl": "https://www.coindesk.com/business/2023/12/19/crashed-stablecoin-iron-bank-euro-ibeur-lacks-clear-repeg-path",
+      "sourceLabel": "CoinDesk",
+      "contracts": [
+        {
+          "chain": "ethereum",
+          "address": "0x96E61422b6A9bA0e068B6c5ADd4fFaBC6a4aae27"
+        }
+      ],
+      "pharosUrl": "https://pharos.watch/cemetery/"
+    },
+    {
+      "id": "r-raft-r-2023-11",
+      "name": "Raft R",
+      "symbol": "R",
+      "llamaId": "115",
+      "logoUrl": "https://pharos.watch/logos/cemetery/r-raft.png",
+      "pegCurrency": "USD",
+      "causeOfDeath": "counterparty-failure",
+      "causeLabel": "Counterparty Failure",
+      "deathDate": "2023-11",
+      "deathDatePrecision": "month",
+      "peakMcapUsd": 32900000,
+      "epitaph": "Adrift",
+      "obituary": "Allowed minting R stablecoin against wstETH and rETH collateral. A smart contract exploit drained $3.3M in ETH — though the hacker lost money due to a slippage error, netting only ~$1.6M. Raft halted minting, offered a 42% recovery plan, and was abandoned.",
+      "sourceUrl": "https://rekt.news/raft-rekt/",
+      "sourceLabel": "Rekt News",
+      "contracts": [
+        {
+          "chain": "ethereum",
+          "address": "0x183015a9bA6fF60230fdEaDc3F43b3D788b13e21"
+        }
+      ],
+      "pharosUrl": "https://pharos.watch/cemetery/"
+    },
+    {
+      "id": "usdr-real-usd-2023-10",
+      "name": "Real USD",
+      "symbol": "USDR",
+      "llamaId": "85",
+      "logoUrl": "https://pharos.watch/logos/cemetery/usdr.png",
+      "pegCurrency": "USD",
+      "causeOfDeath": "liquidity-drain",
+      "causeLabel": "Liquidity Drain",
+      "deathDate": "2023-10",
+      "deathDatePrecision": "month",
+      "peakMcapUsd": 71020513,
+      "epitaph": "Real estate illiquid",
+      "obituary": "Tangible's grand experiment in real estate-backed stablecoins ended exactly how skeptics predicted: with a classic bank run on illiquid assets. USDR promised 16% yields backed by UK rental properties, but when the $6M DAI cushion was drained in a single week, holders discovered that tokenized houses cannot be liquidated at 3 AM on a Wednesday. The team candidly admitted there were 'too many attack vectors in the design.'",
+      "sourceUrl": "https://www.coindesk.com/markets/2023/10/11/real-estate-backed-stablecoin-usdr-de-pegs-after-treasury-was-drained-of-liquid-assets",
+      "sourceLabel": "CoinDesk",
+      "contracts": [
+        {
+          "chain": "polygon",
+          "address": "0x40379a439D4F6795B6fc9aa5687dB461677A2dBa"
+        }
+      ],
+      "pharosUrl": "https://pharos.watch/cemetery/"
+    },
+    {
+      "id": "vst-vesta-stable-2023-09",
+      "name": "Vesta Stable",
+      "symbol": "VST",
+      "llamaId": null,
+      "logoUrl": "https://pharos.watch/logos/cemetery/vst.png",
+      "pegCurrency": "USD",
+      "causeOfDeath": "abandoned",
+      "causeLabel": "Abandoned",
+      "deathDate": "2023-09",
+      "deathDatePrecision": "month",
+      "peakMcapUsd": 32044597,
+      "epitaph": "Cultural differences",
+      "obituary": "Vesta Finance dissolved after founders proposed to exit citing \"cultural differences.\" Community voted 96% for dissolution; VSTA holders received pro-rata treasury redemptions in USDC and ARB.",
+      "sourceUrl": "https://golden.com/wiki/Vesta_Finance-EKWBMZW",
+      "sourceLabel": "Golden",
+      "contracts": [
+        {
+          "chain": "arbitrum",
+          "address": "0x64343594Ab9b56e99087BfA6F2335Db24c2d1F17"
+        }
+      ],
+      "pharosUrl": "https://pharos.watch/cemetery/"
+    },
+    {
+      "id": "tor-tor-2023-07",
+      "name": "TOR",
+      "symbol": "TOR",
+      "llamaId": null,
+      "logoUrl": "https://pharos.watch/logos/cemetery/tor.png",
+      "pegCurrency": "USD",
+      "causeOfDeath": "counterparty-failure",
+      "causeLabel": "Counterparty Failure",
+      "deathDate": "2023-07",
+      "deathDatePrecision": "month",
+      "peakMcapUsd": 342945973,
+      "epitaph": "Multichain took it down",
+      "obituary": "Hector Network's stablecoin collapsed after the Multichain bridge exploit wiped out $8M of treasury assets. The DAO voted to liquidate the remaining $16M treasury, ending a project already plagued by allegations that the team squandered $100M+ in funds.",
+      "sourceUrl": "https://www.coindesk.com/business/2023/07/17/hector-network-votes-to-liquidate-16m-treasury-following-multichain-fantom-losses",
+      "sourceLabel": "CoinDesk",
+      "contracts": [
+        {
+          "chain": "fantom",
+          "address": "0x74e23df9110aa9ea0b6ff2faee01e740ca1c642e"
+        }
+      ],
+      "pharosUrl": "https://pharos.watch/cemetery/"
+    },
+    {
+      "id": "usdc-m-multichain-usdc-2023-07",
+      "name": "Multichain USDC",
+      "symbol": "USDC.m",
+      "llamaId": null,
+      "logoUrl": "https://pharos.watch/logos/cemetery/usdc-multichain.png",
+      "pegCurrency": "USD",
+      "causeOfDeath": "counterparty-failure",
+      "causeLabel": "Counterparty Failure",
+      "deathDate": "2023-07",
+      "deathDatePrecision": "month",
+      "peakMcapUsd": 180000000,
+      "epitaph": "CEO arrested. Bridge burned",
+      "obituary": "Bridge-wrapped USDC on Fantom became worthless overnight when the Multichain bridge collapsed after the CEO was arrested by Chinese authorities. ~$180M in 'USDC' was revealed to be backed by nothing as the team lost access to MPC servers. Circle froze $63M, and Fantom's entire DeFi ecosystem was devastated.",
+      "sourceUrl": "https://www.coindesk.com/business/2023/07/06/multichain-bridges-experience-unannounced-outflows-of-over-130m-in-crypto",
+      "sourceLabel": "CoinDesk",
+      "contracts": [
+        {
+          "chain": "fantom",
+          "address": "0x04068da6c83afcfa0e13ba15a6696662335d5b75"
+        }
+      ],
+      "pharosUrl": "https://pharos.watch/cemetery/"
+    },
+    {
+      "id": "pai-parrot-usd-2023-07",
+      "name": "Parrot USD",
+      "symbol": "PAI",
+      "llamaId": null,
+      "logoUrl": "https://pharos.watch/logos/cemetery/pai.png",
+      "pegCurrency": "USD",
+      "causeOfDeath": "abandoned",
+      "causeLabel": "Abandoned",
+      "deathDate": "2023-07",
+      "deathDatePrecision": "month",
+      "peakMcapUsd": 23100000,
+      "epitaph": "$85M in. A dime back",
+      "obituary": "Parrot Protocol raised $85M during Solana's DeFi summer, backed by Alameda Research. Two years and one FTX collapse later, the team held a governance vote to liquidate the $74M treasury and go tokenless. The vote passed 99.8% — allegedly stuffed with insider wallets — and IDO investors got back a dime on the dollar.",
+      "sourceUrl": "https://www.coindesk.com/markets/2023/07/21/defi-project-parrot-puts-fate-of-over-70m-treasury-prt-token-to-vote",
+      "sourceLabel": "CoinDesk",
+      "contracts": [
+        {
+          "chain": "solana",
+          "address": "Ea5SjE2Y6yvCeW5dYTn7PYMuW5ikXkvbGdcmSnXeaLjS"
+        }
+      ],
+      "pharosUrl": "https://pharos.watch/cemetery/"
+    },
+    {
+      "id": "ausd-acala-usd-2023-07",
+      "name": "Acala USD",
+      "symbol": "aUSD",
+      "llamaId": null,
+      "logoUrl": "https://pharos.watch/logos/cemetery/ausd.png",
+      "pegCurrency": "USD",
+      "causeOfDeath": "algorithmic-failure",
+      "causeLabel": "Algorithmic Failure",
+      "deathDate": "2023-07",
+      "deathDatePrecision": "month",
+      "peakMcapUsd": 11088350,
+      "epitaph": "One exploit. 1.28B minted",
+      "obituary": "Acala's aUSD lost its peg after a catastrophic exploit in August 2022 minted 1.28 billion unauthorized tokens. Converted to aSEED in July 2023, ceasing to function as a stablecoin.",
+      "sourceUrl": "https://www.coindesk.com/tech/2022/08/15/acalas-stablecoin-falls-99-percent-after-hackers-issue-13-billion-tokens/",
+      "sourceLabel": "CoinDesk",
+      "contracts": [],
+      "pharosUrl": "https://pharos.watch/cemetery/"
+    },
+    {
+      "id": "fiat-fiat-i-2023-07",
+      "name": "FIAT I",
+      "symbol": "FIAT",
+      "llamaId": "61",
+      "logoUrl": "https://pharos.watch/logos/cemetery/fiat.png",
+      "pegCurrency": "USD",
+      "causeOfDeath": "abandoned",
+      "causeLabel": "Abandoned",
+      "deathDate": "2023-07",
+      "deathDatePrecision": "month",
+      "peakMcapUsd": 1866269,
+      "epitaph": "SEC killed the parent",
+      "obituary": "FIAT DAO created a clever primitive: mint a dollar-pegged stablecoin against fixed-income assets like Notional fCash and Sense Principal Tokens. But the protocol barely reached $2M before its parent entity merged with BarnBridge — right before the SEC came knocking. When BarnBridge halted all operations in July 2023, FIAT was left orphaned with $7,600 of permanently stuck tokens and a domain that no longer resolves.",
+      "sourceUrl": "https://blockworks.co/news/barnbridge-sec-dao",
+      "sourceLabel": "Blockworks",
+      "contracts": [
+        {
+          "chain": "ethereum",
+          "address": "0x586Aa273F262909EEF8fA02d90Ab65F5015e0516"
+        }
+      ],
+      "pharosUrl": "https://pharos.watch/cemetery/"
+    },
+    {
+      "id": "usdp-usdp-stablecoin-2023-06",
+      "name": "USDP Stablecoin",
+      "symbol": "USDP",
+      "llamaId": null,
+      "logoUrl": "https://pharos.watch/logos/cemetery/usdp.png",
+      "pegCurrency": "USD",
+      "causeOfDeath": "liquidity-drain",
+      "causeLabel": "Liquidity Drain",
+      "deathDate": "2023-06",
+      "deathDatePrecision": "month",
+      "peakMcapUsd": 279700000,
+      "epitaph": "Paxos stole the ticker",
+      "obituary": "Unit Protocol's USDP accepted everything from Yearn vaults to SushiSwap LP tokens as collateral — a collateral buffet that attracted nearly $280M. But quantity of options couldn't substitute for quality of demand, and when Paxos swooped in with its own 'USDP' ticker, the identity crisis accelerated the decline. Supply withered to under $10K.",
+      "sourceUrl": "https://defillama.com/stablecoin/usdp-stablecoin",
+      "sourceLabel": "DefiLlama",
+      "contracts": [
+        {
+          "chain": "ethereum",
+          "address": "0x1456688345527be1f37e9e627da0837d6f08c925"
+        }
+      ],
+      "pharosUrl": "https://pharos.watch/cemetery/"
+    },
+    {
+      "id": "usdk-usdk-2023-06",
+      "name": "USDK",
+      "symbol": "USDK",
+      "llamaId": null,
+      "logoUrl": "https://pharos.watch/logos/cemetery/usdk.png",
+      "pegCurrency": "USD",
+      "causeOfDeath": "counterparty-failure",
+      "causeLabel": "Counterparty Failure",
+      "deathDate": "2023-06",
+      "deathDatePrecision": "month",
+      "peakMcapUsd": 42500000,
+      "epitaph": "Prime Trust was neither",
+      "obituary": "USDK did everything right on paper: regulated US trust company, ERC-20 standard, clean audits. But its custodian Prime Trust was secretly gambling client funds on algorithmic stablecoins. When Prime Trust collapsed into receivership — revealed to be $82M short on customer fiat — USDK's 'fully backed' promise became just another line in a bankruptcy filing.",
+      "sourceUrl": "https://www.coindesk.com/policy/2023/06/27/nevada-places-crypto-custodian-prime-trust-into-receivership",
+      "sourceLabel": "CoinDesk",
+      "contracts": [
+        {
+          "chain": "ethereum",
+          "address": "0x1c48f86ae57291f7686349f12601910bd8d470bb"
+        }
+      ],
+      "pharosUrl": "https://pharos.watch/cemetery/"
+    },
+    {
+      "id": "usdi-interest-protocol-2023-06",
+      "name": "Interest Protocol",
+      "symbol": "USDI",
+      "llamaId": "76",
+      "logoUrl": "https://pharos.watch/logos/cemetery/usdi.png",
+      "pegCurrency": "USD",
+      "causeOfDeath": "abandoned",
+      "causeLabel": "Abandoned",
+      "deathDate": "2023-06",
+      "deathDatePrecision": "month",
+      "peakMcapUsd": 8434873,
+      "epitaph": "Too niche to survive",
+      "obituary": "GFX Labs' fractional reserve experiment promised to be Ethereum's answer to traditional banking — mint USDi by depositing USDC, earn rebasing yield from borrowers. Launched with Chainlink oracles and a $2.5M seed round, USDi briefly touched $8.4M before the bear market crushed demand for yet another USDC wrapper. The team quietly pivoted to DAO governance consulting and DEX development, leaving USDi to wither to under $20K.",
+      "sourceUrl": "https://defillama.com/stablecoin/interest-protocol",
+      "sourceLabel": "DefiLlama",
+      "contracts": [],
+      "pharosUrl": "https://pharos.watch/cemetery/"
+    },
+    {
+      "id": "musd-mstable-usd-2023-04",
+      "name": "mStable USD",
+      "symbol": "MUSD",
+      "llamaId": null,
+      "logoUrl": "https://pharos.watch/logos/cemetery/musd.png",
+      "pegCurrency": "USD",
+      "causeOfDeath": "abandoned",
+      "causeLabel": "Abandoned",
+      "deathDate": "2023-04",
+      "deathDatePrecision": "month",
+      "peakMcapUsd": 171000000,
+      "epitaph": "mStable unstable",
+      "obituary": "mStable dreamed of unifying the fragmented stablecoin landscape — one meta-stablecoin to swap them all, with built-in yield. It touched $171M, but frictionless stablecoin swaps couldn't compete with DEX aggregators and simple USDC. When the co-founder walked away in early 2023, the DAO chose an honorable death: acquisition by dHedge.",
+      "sourceUrl": "https://www.coindesk.com/business/2023/03/15/defi-exchange-mstable-mulls-over-acquisition-merger-offers",
+      "sourceLabel": "CoinDesk",
+      "contracts": [
+        {
+          "chain": "ethereum",
+          "address": "0xe2f2a5c287993345a840db3b0845fbc70f5935a5"
+        }
+      ],
+      "pharosUrl": "https://pharos.watch/cemetery/"
+    },
+    {
+      "id": "rsv-reserve-2023-03",
+      "name": "Reserve",
+      "symbol": "RSV",
+      "llamaId": null,
+      "logoUrl": "https://pharos.watch/logos/cemetery/rsv.png",
+      "pegCurrency": "USD",
+      "causeOfDeath": "abandoned",
+      "causeLabel": "Abandoned",
+      "deathDate": "2023-03",
+      "deathDatePrecision": "month",
+      "peakMcapUsd": 29016644,
+      "epitaph": "Reserved for history",
+      "obituary": "Reserve's prototype stablecoin was deprecated when the protocol launched its RToken system. eUSD (Electronic Dollar) replaced RSV in the LATAM-focused Reserve app.",
+      "sourceUrl": "https://fortune.com/crypto/2023/07/03/sam-altman-stablecoin-reserve-venezuela-ofac/",
+      "sourceLabel": "Fortune Crypto",
+      "contracts": [
+        {
+          "chain": "ethereum",
+          "address": "0x196f4727526ea7fb1e17b2071b3d8eaa38486988"
+        }
+      ],
+      "pharosUrl": "https://pharos.watch/cemetery/"
+    },
+    {
+      "id": "busd-binance-usd-2023-02",
+      "name": "Binance USD",
+      "symbol": "BUSD",
+      "llamaId": null,
+      "logoUrl": "https://pharos.watch/logos/cemetery/busd.png",
+      "pegCurrency": "USD",
+      "causeOfDeath": "regulatory",
+      "causeLabel": "Regulatory",
+      "deathDate": "2023-02",
+      "deathDatePrecision": "month",
+      "peakMcapUsd": 23462869722,
+      "epitaph": "Killed by decree",
+      "obituary": "Once the third-largest stablecoin at $23.5B. The NYDFS ordered issuer Paxos to stop minting, while the SEC signaled intent to sue. Binance ceased support in Dec 2023, auto-converting remaining balances to FDUSD.",
+      "sourceUrl": "https://www.coindesk.com/business/2023/02/13/paxos-to-stop-minting-stablecoin-busd-following-regulatory-action",
+      "sourceLabel": "CoinDesk",
+      "contracts": [
+        {
+          "chain": "ethereum",
+          "address": "0x4fabb145d64652a948d72533023f6e7a623c7c53"
+        },
+        {
+          "chain": "bsc",
+          "address": "0xe9e7cea3dedca5984780bafc599bd69add087d56"
+        }
+      ],
+      "pharosUrl": "https://pharos.watch/cemetery/"
+    },
+    {
+      "id": "usp-usp-stablecoin-2023-02",
+      "name": "USP Stablecoin",
+      "symbol": "USP",
+      "llamaId": "97",
+      "logoUrl": "https://pharos.watch/logos/cemetery/usp.png",
+      "pegCurrency": "USD",
+      "causeOfDeath": "counterparty-failure",
+      "causeLabel": "Counterparty Failure",
+      "deathDate": "2023-02",
+      "deathDatePrecision": "month",
+      "peakMcapUsd": 30000000,
+      "epitaph": "Flash loan, lights out",
+      "obituary": "Platypus Finance's stablecoin was backed by LP tokens from its stableswap pools. A flash loan exploit in February 2023 drained $8.5M, collapsing USP's peg. The protocol never recovered and ceased operations.",
+      "sourceUrl": "https://rekt.news/platypus-rekt/",
+      "sourceLabel": "Rekt News",
+      "contracts": [
+        {
+          "chain": "avalanche",
+          "address": "0xdaCDe03d7Ab4D81fEDdc3a20fAA89aBAc9072CE2"
+        }
+      ],
+      "pharosUrl": "https://pharos.watch/cemetery/"
+    },
+    {
+      "id": "usds-sperax-usd-2023-02",
+      "name": "Sperax USD",
+      "symbol": "USDs",
+      "llamaId": null,
+      "logoUrl": "https://pharos.watch/logos/cemetery/usds-sperax.png",
+      "pegCurrency": "USD",
+      "causeOfDeath": "liquidity-drain",
+      "causeLabel": "Liquidity Drain",
+      "deathDate": "2023-02",
+      "deathDatePrecision": "month",
+      "peakMcapUsd": 25100000,
+      "epitaph": "9.7B minted from thin air",
+      "obituary": "Sperax promised auto-yield just from holding its stablecoin on Arbitrum — no staking required. Then a rebasing bug let someone mint 9.7 billion tokens out of thin air. The funds came back, but user trust didn't. Backed by Alameda at peak hubris, USDs survived its exploit only to bleed out slowly.",
+      "sourceUrl": "https://crypto.news/sperax-usd-stablecoin-reportedly-hacked-for-250000/",
+      "sourceLabel": "Crypto News",
+      "contracts": [
+        {
+          "chain": "arbitrum",
+          "address": "0xd74f5255d557944cf7dd0e45ff521520002d5748"
+        }
+      ],
+      "pharosUrl": "https://pharos.watch/cemetery/"
+    },
+    {
+      "id": "husd-husd-2022-10",
+      "name": "HUSD",
+      "symbol": "HUSD",
+      "llamaId": null,
+      "logoUrl": "https://pharos.watch/logos/cemetery/husd.jpg",
+      "pegCurrency": "USD",
+      "causeOfDeath": "counterparty-failure",
+      "causeLabel": "Counterparty Failure",
+      "deathDate": "2022-10",
+      "deathDatePrecision": "month",
+      "peakMcapUsd": 393463176,
+      "epitaph": "Trusted the wrong custodian",
+      "obituary": "A fiat-backed stablecoin tied to the Huobi ecosystem. When Justin Sun acquired Huobi and replaced it with USDD, HUSD was delisted with no redemption path. Crashed to $0.28.",
+      "sourceUrl": "https://www.coindesk.com/business/2022/10/31/after-huobi-delisting-stablecoin-husd-falls-72-from-dollar-peg",
+      "sourceLabel": "CoinDesk",
+      "contracts": [
+        {
+          "chain": "ethereum",
+          "address": "0xdf574c24545e5ffecb9a659c229253d4111d87e1"
+        }
+      ],
+      "pharosUrl": "https://pharos.watch/cemetery/"
+    },
+    {
+      "id": "usn-usn-2022-10",
+      "name": "USN",
+      "symbol": "USN",
+      "llamaId": "54",
+      "logoUrl": "https://pharos.watch/logos/cemetery/usn.png",
+      "pegCurrency": "USD",
+      "causeOfDeath": "algorithmic-failure",
+      "causeLabel": "Algorithmic Failure",
+      "deathDate": "2022-10",
+      "deathDatePrecision": "month",
+      "peakMcapUsd": 136700000,
+      "epitaph": "Double-minted. $40M short",
+      "obituary": "NEAR Protocol's native algorithmic stablecoin launched in April 2022. After UST's collapse, it was hastily converted to USDT-backed, but a double-minting bug left it $40M undercollateralized. The NEAR Foundation formally shut it down in October 2022 with a $40M 'USN Protection Programme.' Remaining ~$38M sits unredeemed.",
+      "sourceUrl": "https://www.coindesk.com/markets/2022/10/24/near-foundation-urges-wind-down-of-usn-stablecoin-sets-aside-40m",
+      "sourceLabel": "CoinDesk",
+      "contracts": [
+        {
+          "chain": "near",
+          "address": "usn"
+        }
+      ],
+      "pharosUrl": "https://pharos.watch/cemetery/"
+    },
+    {
+      "id": "usds-spiceusd-2022-09",
+      "name": "SpiceUSD",
+      "symbol": "USDS",
+      "llamaId": "31",
+      "logoUrl": "https://pharos.watch/logos/cemetery/usds-spiceusd.png",
+      "pegCurrency": "USD",
+      "causeOfDeath": "algorithmic-failure",
+      "causeLabel": "Algorithmic Failure",
+      "deathDate": "2022-09",
+      "deathDatePrecision": "month",
+      "peakMcapUsd": 18000000,
+      "epitaph": "Lost its flavor",
+      "obituary": "A partially algorithmic stablecoin on Avalanche from the Spice Trade DEX ecosystem. Launched in May 2022 into the post-UST wreckage, it never gained meaningful adoption. The peg broke almost immediately, sliding to $0.07, and the anonymous team abandoned the project. $18M in ghost supply sits unredeemable on Avalanche.",
+      "sourceUrl": "https://www.coingecko.com/en/coins/spiceusd",
+      "sourceLabel": "CoinGecko",
+      "contracts": [
+        {
+          "chain": "arbitrum",
+          "address": "0xd74f5255d557944cf7dd0e45ff521520002d5748"
+        }
+      ],
+      "pharosUrl": "https://pharos.watch/cemetery/"
+    },
+    {
+      "id": "fei-fei-usd-2022-08",
+      "name": "Fei USD",
+      "symbol": "FEI",
+      "llamaId": null,
+      "logoUrl": "https://pharos.watch/logos/cemetery/fei.png",
+      "pegCurrency": "USD",
+      "causeOfDeath": "abandoned",
+      "causeLabel": "Abandoned",
+      "deathDate": "2022-08",
+      "deathDatePrecision": "month",
+      "peakMcapUsd": 2336281370,
+      "epitaph": "Built different. Died the same",
+      "obituary": "Raised $1.3B in ETH at launch, but Tribe DAO voted to wind down citing mounting technical, financial, and regulatory risks. An $80M hack of merged Rari/Fuse lending markets sealed its fate. Holders redeemed 1:1 for DAI.",
+      "sourceUrl": "https://www.axios.com/2022/08/25/algorithmic-stablecoin-tribedao-fei",
+      "sourceLabel": "Axios",
+      "contracts": [
+        {
+          "chain": "ethereum",
+          "address": "0x956f47f50a910163d8bf957cf5846d573e7f87ca"
+        }
+      ],
+      "pharosUrl": "https://pharos.watch/cemetery/"
+    },
+    {
+      "id": "volt-volt-protocol-2022-08",
+      "name": "VOLT Protocol",
+      "symbol": "VOLT",
+      "llamaId": null,
+      "logoUrl": "https://pharos.watch/logos/cemetery/volt.png",
+      "pegCurrency": "VAR",
+      "causeOfDeath": "counterparty-failure",
+      "causeLabel": "Counterparty Failure",
+      "deathDate": "2022-08",
+      "deathDatePrecision": "month",
+      "peakMcapUsd": 20100000,
+      "epitaph": "Inflation-proof wasn't",
+      "obituary": "The first CPI-pegged stablecoin promised inflation protection via yields from Rari Fuse lending markets. When the $80M Fuse exploit wiped out those markets, VOLT lost its yield engine. The Tribe DAO dissolution four months later removed the last collateral backstop; the team pivoted to Ethereum Credit Guild.",
+      "sourceUrl": "https://decrypt.co/97365/volt-protocol-raises-2-million-inflation-resistant-stablecoin",
+      "sourceLabel": "Decrypt",
+      "contracts": [
+        {
+          "chain": "ethereum",
+          "address": "0x559ebc30b0e58a45cc9ff573f77ef1e5eb1b3e18"
+        }
+      ],
+      "pharosUrl": "https://pharos.watch/cemetery/"
+    },
+    {
+      "id": "flexusd-flexusd-2022-06",
+      "name": "flexUSD",
+      "symbol": "FLEXUSD",
+      "llamaId": null,
+      "logoUrl": "https://pharos.watch/logos/cemetery/flexusd.png",
+      "pegCurrency": "USD",
+      "causeOfDeath": "counterparty-failure",
+      "causeLabel": "Counterparty Failure",
+      "deathDate": "2022-06",
+      "deathDatePrecision": "month",
+      "peakMcapUsd": 196400000,
+      "epitaph": "CoinFLEX went rigid",
+      "obituary": "CoinFLEX's interest-bearing stablecoin promised yields up to 114% APY from its futures lending market. When Roger Ver's account blew an $84M hole in the exchange, flexUSD holders discovered 'interest-bearing' also meant 'loss-bearing.' The exchange froze all redemptions, rebranded into OPNX with Three Arrows Capital's founders, and that venture also collapsed. 166M flexUSD tokens sit unredeemable at $0.08.",
+      "sourceUrl": "https://techstory.in/coinflexs-flexusd-is-the-new-entrant-in-the-club-of-failed-stablecoins/",
+      "sourceLabel": "TechStory",
+      "contracts": [
+        {
+          "chain": "ethereum",
+          "address": "0xa774FFB4AF6B0A91331C084E1aebAE6Ad535e6F3"
+        }
+      ],
+      "pharosUrl": "https://pharos.watch/cemetery/"
+    },
+    {
+      "id": "usdx-kava-usdx-2022-06",
+      "name": "Kava USDX",
+      "symbol": "USDX",
+      "llamaId": "42",
+      "logoUrl": "https://pharos.watch/logos/cemetery/usdx-kava.png",
+      "pegCurrency": "USD",
+      "causeOfDeath": "liquidity-drain",
+      "causeLabel": "Liquidity Drain",
+      "deathDate": "2022-06",
+      "deathDatePrecision": "month",
+      "peakMcapUsd": 176147186,
+      "epitaph": "Kava moved on",
+      "obituary": "Kava's flagship stablecoin was the crown jewel of the first cross-chain DeFi hub — mint USDX by depositing BTC, XRP, BNB, or KAVA into CDPs on Cosmos. It peaked at $176M in April 2022, then UST's implosion exposed a fatal flaw: USDX had accepted UST as collateral. The peg cracked to $0.55 and never healed. Kava Labs quietly pivoted to AI infrastructure and 'DeCloud' ambitions, leaving USDX to bleed over three years to $11M, trading at $0.44.",
+      "sourceUrl": "https://www.theblock.co/post/146802/kava-networks-usdx-tumbles-to-0-65-as-yet-another-stablecoin-depegs",
+      "sourceLabel": "The Block",
+      "contracts": [],
+      "pharosUrl": "https://pharos.watch/cemetery/"
+    },
+    {
+      "id": "fusd-fantom-usd-2022-06",
+      "name": "Fantom USD",
+      "symbol": "FUSD",
+      "llamaId": "63",
+      "logoUrl": "https://pharos.watch/logos/cemetery/fusd.png",
+      "pegCurrency": "USD",
+      "causeOfDeath": "algorithmic-failure",
+      "causeLabel": "Algorithmic Failure",
+      "deathDate": "2022-06",
+      "deathDatePrecision": "month",
+      "peakMcapUsd": 61000000,
+      "epitaph": "Chained to a falling chain",
+      "obituary": "Fantom's native overcollateralized stablecoin required 300-500% FTM collateral ratios, but collapsed alongside the broader DeFi crisis in 2022. Traders exploited the gap between its market price and collateral value, devastating protocols like Scream. The peg broke to $0.50-$0.70 and never recovered, sliding to under $0.10. With the Fantom network itself migrating to Sonic, fUSD became a zombie token — still in wallets, but functionally dead.",
+      "sourceUrl": "https://www.reddit.com/r/FantomFoundation/comments/vl97k6/what_has_happened_to_fantom/",
+      "sourceLabel": "Reddit",
+      "contracts": [
+        {
+          "chain": "fantom",
+          "address": "0xAd84341756Bf337f5a0164515b1f6F993D194E1f"
+        }
+      ],
+      "pharosUrl": "https://pharos.watch/cemetery/"
+    },
+    {
+      "id": "ust-terrausd-2022-05",
+      "name": "TerraUSD",
+      "symbol": "UST",
+      "llamaId": "3",
+      "logoUrl": "https://pharos.watch/logos/cemetery/ust.png",
+      "pegCurrency": "USD",
+      "causeOfDeath": "algorithmic-failure",
+      "causeLabel": "Algorithmic Failure",
+      "deathDate": "2022-05",
+      "deathDatePrecision": "month",
+      "peakMcapUsd": 18770471902,
+      "epitaph": "Too big to fail. Too flawed to live",
+      "obituary": "The largest stablecoin collapse in history. UST's algorithmic peg relied on minting/burning LUNA, but a coordinated sell-off triggered a death spiral that vaporized $40B in combined value within days. Anchor's unsustainable 20% yield had concentrated 70% of supply in a single venue.",
+      "sourceUrl": "https://www.coindesk.com/tech/2022/05/11/usts-do-kwon-was-behind-earlier-failed-stablecoin-ex-terra-colleagues-say",
+      "sourceLabel": "CoinDesk",
+      "contracts": [
+        {
+          "chain": "ethereum",
+          "address": "0xa47c8bf37f92aBed4A126BDA807A7b7498661acD"
+        }
+      ],
+      "pharosUrl": "https://pharos.watch/cemetery/"
+    },
+    {
+      "id": "krt-terrakrw-2022-05",
+      "name": "TerraKRW",
+      "symbol": "KRT",
+      "llamaId": null,
+      "logoUrl": "https://pharos.watch/logos/cemetery/krt.png",
+      "pegCurrency": "OTHER",
+      "causeOfDeath": "algorithmic-failure",
+      "causeLabel": "Algorithmic Failure",
+      "deathDate": "2022-05",
+      "deathDatePrecision": "month",
+      "peakMcapUsd": 80000000,
+      "epitaph": "Swept away with Terra",
+      "obituary": "The most-used non-USD stablecoin in the Terra ecosystem, powering real Korean e-commerce payments via the CHAI app with millions of transactions. Destroyed alongside UST and LUNA in the May 2022 death spiral — all Terra stablecoins died simultaneously, but KRT was the only alternative peg with meaningful market cap.",
+      "sourceUrl": "https://en.wikipedia.org/wiki/Terra_(blockchain)",
+      "sourceLabel": "Wikipedia",
+      "contracts": [
+        {
+          "chain": "ethereum",
+          "address": "0xcAAfF72A8CbBfc5Cf343BA4e26f65a257065bFF1"
+        }
+      ],
+      "pharosUrl": "https://pharos.watch/cemetery/"
+    },
+    {
+      "id": "dei-dei-2022-05",
+      "name": "DEI",
+      "symbol": "DEI",
+      "llamaId": null,
+      "logoUrl": "https://pharos.watch/logos/cemetery/dei.png",
+      "pegCurrency": "USD",
+      "causeOfDeath": "algorithmic-failure",
+      "causeLabel": "Algorithmic Failure",
+      "deathDate": "2022-05",
+      "deathDatePrecision": "month",
+      "peakMcapUsd": 62000000,
+      "epitaph": "Collateral damage",
+      "obituary": "An algorithmic stablecoin on Fantom hit by flash loan exploits totaling $16M, then finished off by contagion from UST's collapse. A further hack in May 2023 delivered the final blow.",
+      "sourceUrl": "https://www.coindesk.com/markets/2022/05/16/fantom-stablecoin-dei-becomes-latest-to-lose-dollar-peg",
+      "sourceLabel": "CoinDesk",
+      "contracts": [
+        {
+          "chain": "fantom",
+          "address": "0xDE12c7959E1a72bbe8a5f7A1dc8f8EeF9Ab011B3"
+        }
+      ],
+      "pharosUrl": "https://pharos.watch/cemetery/"
+    },
+    {
+      "id": "usdn-neutrino-usd-2022-04",
+      "name": "Neutrino USD",
+      "symbol": "USDN",
+      "llamaId": null,
+      "logoUrl": "https://pharos.watch/logos/cemetery/usdn.png",
+      "pegCurrency": "USD",
+      "causeOfDeath": "algorithmic-failure",
+      "causeLabel": "Algorithmic Failure",
+      "deathDate": "2022-04",
+      "deathDatePrecision": "month",
+      "peakMcapUsd": 1023616756,
+      "epitaph": "Waves crashed",
+      "obituary": "Succumbed to an algorithmic death spiral after WAVES price manipulation destabilized collateral backing. Rebranded to XTN, now trading at $0.02.",
+      "sourceUrl": "https://cointelegraph.com/news/neutrino-dollar-breaks-peg-falls-to-0-82-amid-waves-price-manipulation-accusations",
+      "sourceLabel": "CoinTelegraph",
+      "contracts": [
+        {
+          "chain": "ethereum",
+          "address": "0x674C6Ad92Fd080e4004b2312b45f796a192D27a0"
+        }
+      ],
+      "pharosUrl": "https://pharos.watch/cemetery/"
+    },
+    {
+      "id": "bean-beanstalk-v1-2022-04",
+      "name": "Beanstalk v1",
+      "symbol": "BEAN",
+      "llamaId": null,
+      "logoUrl": "https://pharos.watch/logos/cemetery/bean.png",
+      "pegCurrency": "USD",
+      "causeOfDeath": "algorithmic-failure",
+      "causeLabel": "Algorithmic Failure",
+      "deathDate": "2022-04",
+      "deathDatePrecision": "month",
+      "peakMcapUsd": 100000000,
+      "epitaph": "Beanstalk got cut down",
+      "obituary": "The original Beanstalk deployment grew to $100M and $144M in liquidity before a flash-loan governance attack drained $182M. The attacker flash-loaned $1B+ to gain 79% governance power and passed a malicious proposal in a single transaction. BEAN crashed from $1 to $0.09. The protocol was 'Replanted' with new contracts four months later.",
+      "sourceUrl": "https://www.coindesk.com/tech/2022/04/17/attacker-drains-182m-from-beanstalk-stablecoin-protocol",
+      "sourceLabel": "CoinDesk",
+      "contracts": [
+        {
+          "chain": "ethereum",
+          "address": "0xDC59ac4FeFa32293A95889Dc396682858d52e5Db"
+        }
+      ],
+      "pharosUrl": "https://pharos.watch/cemetery/"
+    },
+    {
+      "id": "cash-cashio-dollar-2022-03",
+      "name": "Cashio Dollar",
+      "symbol": "CASH",
+      "llamaId": null,
+      "logoUrl": "https://pharos.watch/logos/cemetery/cash-cashio.png",
+      "pegCurrency": "USD",
+      "causeOfDeath": "algorithmic-failure",
+      "causeLabel": "Algorithmic Failure",
+      "deathDate": "2022-03",
+      "deathDatePrecision": "month",
+      "peakMcapUsd": 52000000,
+      "epitaph": "Infinite mint, instant death",
+      "obituary": "Missing validation code on Solana allowed an attacker to mint 2 billion CASH using a fake worthless token as collateral, draining $52M. CASH crashed from $1 to $0.00005 in minutes. The unaudited contract was a sitting duck. The hacker, Shakeeb Ahmed, was later caught and sentenced by the DOJ.",
+      "sourceUrl": "https://www.coindesk.com/tech/2022/03/23/stablecoin-cashio-suffers-infinite-glitch-exploit-tvl-drops-by-28m",
+      "sourceLabel": "CoinDesk",
+      "contracts": [
+        {
+          "chain": "solana",
+          "address": "CASHVDm2wsJXfhj6VWxb7GiMdoLc17Du7paH4bNr5woT"
+        }
+      ],
+      "pharosUrl": "https://pharos.watch/cemetery/"
+    },
+    {
+      "id": "vai-vai-2021-09",
+      "name": "Vai",
+      "symbol": "VAI",
+      "llamaId": null,
+      "logoUrl": "https://pharos.watch/logos/cemetery/vai.png",
+      "pegCurrency": "USD",
+      "causeOfDeath": "liquidity-drain",
+      "causeLabel": "Liquidity Drain",
+      "deathDate": "2021-09",
+      "deathDatePrecision": "month",
+      "peakMcapUsd": 318800000,
+      "epitaph": "Venus couldn't save it",
+      "obituary": "Venus Protocol's synthetic stablecoin on BSC was minted freely during DeFi summer 2021 — too freely. A $77M bad-debt crisis cratered confidence, VAI shed its peg to $0.74, and minting was paused. Supply collapsed 99% from $300M+ to under $3M.",
+      "sourceUrl": "https://cointelegraph.com/news/these-are-the-least-stable-stablecoins-not-named-terrausd",
+      "sourceLabel": "CoinTelegraph",
+      "contracts": [
+        {
+          "chain": "bsc",
+          "address": "0x4BD17003473389A42DAF6a0a729f6Fdb328BbBd7"
+        }
+      ],
+      "pharosUrl": "https://pharos.watch/cemetery/"
+    },
+    {
+      "id": "iron-iron-2021-06",
+      "name": "IRON",
+      "symbol": "IRON",
+      "llamaId": null,
+      "logoUrl": "https://pharos.watch/logos/cemetery/iron.png",
+      "pegCurrency": "USD",
+      "causeOfDeath": "algorithmic-failure",
+      "causeLabel": "Algorithmic Failure",
+      "deathDate": "2021-06",
+      "deathDatePrecision": "month",
+      "peakMcapUsd": 800000000,
+      "epitaph": "Crypto's first bank run",
+      "obituary": "Dubbed crypto's \"first large-scale bank run.\" IRON was partially collateralized (75% USDC, 25% TITAN token). When whales dumped TITAN at its peak, a flawed redemption mechanism sent TITAN from $65 to zero in hours, dragging IRON down with it.",
+      "sourceUrl": "https://www.coindesk.com/markets/2021/06/17/in-token-crash-postmortem-iron-finance-says-it-suffered-cryptos-first-large-scale-bank-run",
+      "sourceLabel": "CoinDesk",
+      "contracts": [
+        {
+          "chain": "polygon",
+          "address": "0xD86b5923F3AD7b585eD81B448170ae026c65ae9a"
+        }
+      ],
+      "pharosUrl": "https://pharos.watch/cemetery/"
+    },
+    {
+      "id": "esd-empty-set-dollar-2021-01",
+      "name": "Empty Set Dollar",
+      "symbol": "ESD",
+      "llamaId": null,
+      "logoUrl": "https://pharos.watch/logos/cemetery/esd.png",
+      "pegCurrency": "USD",
+      "causeOfDeath": "algorithmic-failure",
+      "causeLabel": "Algorithmic Failure",
+      "deathDate": "2021-01",
+      "deathDatePrecision": "month",
+      "peakMcapUsd": 550000000,
+      "epitaph": "The coupon experiment",
+      "obituary": "Pioneered the \"seigniorage shares\" model in DeFi. When ESD traded below $1, users could buy coupons (burning ESD) in hopes of future redemption at a profit. The mechanism worked during expansion but collapsed when confidence evaporated — coupons expired worthless, and ESD fell to $0.01.",
+      "sourceUrl": "https://thedailyeconomy.org/article/algorithmic-stablecoins/",
+      "sourceLabel": "The Daily Economy",
+      "contracts": [
+        {
+          "chain": "ethereum",
+          "address": "0x36F3FD68E7325a35EB768F1AedaAe9EA0689d723"
+        }
+      ],
+      "pharosUrl": "https://pharos.watch/cemetery/"
+    },
+    {
+      "id": "dsd-dynamic-set-dollar-2021-01",
+      "name": "Dynamic Set Dollar",
+      "symbol": "DSD",
+      "llamaId": null,
+      "logoUrl": "https://pharos.watch/logos/cemetery/dsd.png",
+      "pegCurrency": "USD",
+      "causeOfDeath": "algorithmic-failure",
+      "causeLabel": "Algorithmic Failure",
+      "deathDate": "2021-01",
+      "deathDatePrecision": "month",
+      "peakMcapUsd": 300000000,
+      "epitaph": "Forked ESD. Same fate",
+      "obituary": "A fork of ESD with faster epoch cycles (2 hours vs 8 hours), designed to stabilize more quickly. Instead, the shorter cycles amplified volatility. DSD spiked to $3 during expansion then collapsed to $0.24 in the same month, proving that faster reflexivity cuts both ways.",
+      "sourceUrl": "https://cointelegraph.com/news/dynamic-set-dollar-faces-massive-test-as-stablecoin-falls-as-low-as-27",
+      "sourceLabel": "CoinTelegraph",
+      "contracts": [
+        {
+          "chain": "ethereum",
+          "address": "0xBD2F0Cd039E0BFcf88901C98c0bFAc5ab27566e3"
+        }
+      ],
+      "pharosUrl": "https://pharos.watch/cemetery/"
+    },
+    {
+      "id": "bac-basis-cash-2021-01",
+      "name": "Basis Cash",
+      "symbol": "BAC",
+      "llamaId": null,
+      "logoUrl": "https://pharos.watch/logos/cemetery/bac.png",
+      "pegCurrency": "USD",
+      "causeOfDeath": "algorithmic-failure",
+      "causeLabel": "Algorithmic Failure",
+      "deathDate": "2021-01",
+      "deathDatePrecision": "month",
+      "peakMcapUsd": 91119238,
+      "epitaph": "The theory was elegant",
+      "obituary": "An anonymous fork of the Basis design, BAC lost its peg within weeks of launch. Later revealed to be co-founded by Do Kwon under a pseudonym -- who learned nothing before building the even more catastrophic TerraUSD.",
+      "sourceUrl": "https://protos.com/basis-cash-the-failed-algorithmic-stablecoin-do-kwon-didnt-learn-from",
+      "sourceLabel": "Protos",
+      "contracts": [
+        {
+          "chain": "ethereum",
+          "address": "0x3449FC1Cd036255BA1EB19d65fF4BA2b8903A69a"
+        }
+      ],
+      "pharosUrl": "https://pharos.watch/cemetery/"
+    },
+    {
+      "id": "usnbt-nubits-2018-03",
+      "name": "NuBits",
+      "symbol": "USNBT",
+      "llamaId": null,
+      "logoUrl": "https://pharos.watch/logos/cemetery/nubits.png",
+      "pegCurrency": "USD",
+      "causeOfDeath": "algorithmic-failure",
+      "causeLabel": "Algorithmic Failure",
+      "deathDate": "2018-03",
+      "deathDatePrecision": "month",
+      "peakMcapUsd": null,
+      "epitaph": "The first to try",
+      "obituary": "One of the first stablecoins ever created (2014), NuBits held its peg for two years before collapsing when holders dumped it to chase Bitcoin gains. A pioneering cautionary tale about algorithmic pegs backed by volatile assets. (Excluded from timeline view due to early date.)",
+      "sourceUrl": "https://medium.com/reserve-currency/the-end-of-a-stablecoin-the-case-of-nubits-dd1f0fb427a9",
+      "sourceLabel": "Reserve Research",
+      "contracts": [],
+      "pharosUrl": "https://pharos.watch/cemetery/"
+    }
+  ]
+}
