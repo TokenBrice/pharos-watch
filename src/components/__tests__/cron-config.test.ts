@@ -69,10 +69,32 @@ describe("status cron config", () => {
     });
   });
 
-  it("keeps the 30-minute slot description aligned with isolated mint/burn triggers", () => {
+  it("keeps cron group copy aligned with mixed trigger cadences", () => {
     expect(CRON_GROUPS.find((group) => group.key === "half-hourly")?.description).toContain(
-      "isolated 30-min triggers",
+      "Shared chart, PSI, DEWS, and DEX scoring lane plus isolated mint/burn",
     );
+    expect(CRON_GROUPS.find((group) => group.key === "hourly")?.description).toContain(
+      "core yield publication",
+    );
+    const multiHourly = CRON_GROUPS.find((group) => group.key === "multi-hourly");
+    expect(multiHourly?.badge).toBe("2-6h");
+    expect(multiHourly?.description).toContain("6-hour critical blacklist sync");
+    const daily = CRON_GROUPS.find((group) => group.key === "daily");
+    expect(daily?.badge).toBe("daily");
+    expect(daily?.description).toContain("03:00 retention pruning");
+  });
+
+  it("pins reduced-frequency cron intervals used by status", () => {
+    const intervals = Object.fromEntries(CRON_JOB_DEFINITIONS.map((cron) => [cron.job, cron.intervalSec]));
+    expect(intervals["sync-blacklist"]).toBe(6 * 3600);
+    expect(intervals["sync-dex-discovery"]).toBe(2 * 3600);
+    expect(intervals["sync-live-reserves"]).toBe(4 * 3600);
+    expect(intervals["sync-redemption-backstops"]).toBe(4 * 3600);
+    expect(intervals["sync-kinesis-supply"]).toBe(4 * 3600);
+    expect(intervals["sync-yield-data"]).toBe(3600);
+    expect(intervals["sync-yield-supplemental"]).toBe(4 * 3600);
+    expect(intervals["prune-status-probe-runs"]).toBe(86400);
+    expect(intervals["prune-cron-history"]).toBe(86400);
   });
 
   it("provides display metadata for every known cron job", () => {

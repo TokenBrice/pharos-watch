@@ -1,4 +1,4 @@
-import { SECONDS } from "./time-constants";
+import { CACHE_AVAILABILITY_MAX_AGE_SEC } from "@shared/lib/api-freshness";
 import {
   DEPEG_THRESHOLD_BPS,
   DEPEG_THRESHOLD_BPS_NON_USD,
@@ -78,16 +78,7 @@ export const CACHE_PROFILES = {
 } as const;
 
 /** Maximum cache age (in seconds) per cache key — used by both /health and /status endpoints */
-export const CACHE_FRESHNESS_THRESHOLDS: Record<string, number> = {
-  stablecoins: 600,
-  "stablecoin-charts": 3600,
-  "usds-status": SECONDS.ONE_DAY,
-  "fx-rates": SECONDS.THIRTY_MINUTES,
-  "bluechip-ratings": SECONDS.ONE_DAY,
-  "dex-liquidity": SECONDS.TWELVE_HOURS,
-  "yield-data": SECONDS.ONE_HOUR,
-  dews: SECONDS.THIRTY_MINUTES,
-};
+export const CACHE_FRESHNESS_THRESHOLDS: Record<string, number> = CACHE_AVAILABILITY_MAX_AGE_SEC;
 
 // --- Depeg multi-source confirmation (>$1B coins) ---
 

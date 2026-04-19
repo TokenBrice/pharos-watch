@@ -616,8 +616,8 @@ Freeze, blacklist, block/unblock, account-pause, and token-destruction events fo
   "methodology": {
     "version": "3.9",
     "versionLabel": "v3.9",
-    "currentVersion": "3.96",
-    "currentVersionLabel": "v3.96",
+    "currentVersion": "3.97",
+    "currentVersionLabel": "v3.97",
     "changelogPath": "/methodology/blacklist-tracker-changelog/",
     "asOf": 1772606400,
     "isCurrent": true
@@ -715,8 +715,8 @@ The four `perCoin*` maps power the per-coin "Blacklist Activity" block on stable
   "methodology": {
     "version": "3.9",
     "versionLabel": "v3.9",
-    "currentVersion": "3.96",
-    "currentVersionLabel": "v3.96",
+    "currentVersion": "3.97",
+    "currentVersionLabel": "v3.97",
     "changelogPath": "/methodology/blacklist-tracker-changelog/",
     "asOf": 1772606400,
     "isCurrent": true
@@ -1247,6 +1247,8 @@ Contextual data snapshot for a specific digest date — includes the digest's in
 
 Worker health check. Reports cache freshness, blacklist integrity, mint/burn freshness, and circuit-breaker states. Not served from Cloudflare edge cache (`no-store`).
 
+Cache freshness in `/api/health` separates producer cadence, endpoint freshness, and availability impact. `caches[*].maxAge` is the availability budget used by `/api/health`, `/api/status`, and the public/admin status pages. `endpointMaxAge` is the endpoint freshness basis used for `_meta`, `X-Data-Age`, and the generic freshness warning runway when it differs. `producerIntervalSec` is the expected writer cadence.
+
 **Authentication:** exempt
 
 **Response**
@@ -1257,13 +1259,17 @@ Worker health check. Reports cache freshness, blacklist integrity, mint/burn fre
   "timestamp": 1771856453,
   "warnings": [],
   "caches": {
-    "stablecoins": { "ageSeconds": 323, "maxAge": 600, "healthy": true },
-    "stablecoin-charts": { "ageSeconds": 323, "maxAge": 3600, "healthy": true },
-    "usds-status": { "ageSeconds": 47118, "maxAge": 86400, "healthy": true },
+    "stablecoins": { "ageSeconds": 323, "maxAge": 600, "healthy": true, "producerJob": "sync-stablecoins", "producerIntervalSec": 900, "endpointMaxAge": 600, "availabilityMaxAge": 600 },
+    "stablecoin-charts": { "ageSeconds": 323, "maxAge": 3600, "healthy": true, "producerJob": "sync-stablecoin-charts", "producerIntervalSec": 3600, "endpointMaxAge": 3600, "availabilityMaxAge": 3600 },
+    "usds-status": { "ageSeconds": 47118, "maxAge": 86400, "healthy": true, "producerJob": "sync-usds-status", "producerIntervalSec": 86400, "endpointMaxAge": 86400, "availabilityMaxAge": 86400 },
     "fx-rates": {
       "ageSeconds": 1223,
       "maxAge": 1800,
       "healthy": true,
+      "producerJob": "sync-fx-rates",
+      "producerIntervalSec": 1800,
+      "endpointMaxAge": 1800,
+      "availabilityMaxAge": 1800,
       "mode": "live",
       "sourceUpdatedAt": 1771855200,
       "sourceAgeSeconds": 323,
@@ -1271,10 +1277,10 @@ Worker health check. Reports cache freshness, blacklist integrity, mint/burn fre
       "warning": null,
       "consecutiveFallbackRuns": 0
     },
-    "bluechip-ratings": { "ageSeconds": 22815, "maxAge": 86400, "healthy": true },
-    "dex-liquidity": { "ageSeconds": 290, "maxAge": 43200, "healthy": true },
-    "yield-data": { "ageSeconds": 820, "maxAge": 3600, "healthy": true },
-    "dews": { "ageSeconds": 240, "maxAge": 1800, "healthy": true }
+    "bluechip-ratings": { "ageSeconds": 22815, "maxAge": 86400, "healthy": true, "producerJob": "sync-bluechip", "producerIntervalSec": 86400, "endpointMaxAge": 43200, "availabilityMaxAge": 86400 },
+    "dex-liquidity": { "ageSeconds": 290, "maxAge": 43200, "healthy": true, "producerJob": "sync-dex-liquidity", "producerIntervalSec": 1800, "endpointMaxAge": 3600, "availabilityMaxAge": 43200 },
+    "yield-data": { "ageSeconds": 820, "maxAge": 3600, "healthy": true, "producerJob": "sync-yield-data", "producerIntervalSec": 3600, "endpointMaxAge": 3600, "availabilityMaxAge": 3600 },
+    "dews": { "ageSeconds": 240, "maxAge": 1800, "healthy": true, "producerJob": "compute-dews", "producerIntervalSec": 1800, "endpointMaxAge": 1800, "availabilityMaxAge": 1800 }
   },
   "blacklist": {
     "totalEvents": 13422,
@@ -1345,8 +1351,14 @@ Worker health check. Reports cache freshness, blacklist integrity, mint/burn fre
 | Field                     | Type                                         | Description                                                                                  |
 | ------------------------- | -------------------------------------------- | -------------------------------------------------------------------------------------------- |
 | `ageSeconds`              | `number \| null`                             | Seconds since last cron update; `null` if never populated                                    |
-| `maxAge`                  | `number`                                     | Expected max-age in seconds for this cache key                                               |
-| `healthy`                 | `boolean`                                    | `true` when `ageSeconds / maxAge ≤ 1.5`                                                      |
+| `maxAge`                  | `number`                                     | Availability budget in seconds for this cache key; same value as `availabilityMaxAge` for current workers |
+| `healthy`                 | `boolean`                                    | `true` when `ageSeconds / maxAge ≤ 12.0`; status-page bands use `>8.0x` for degraded and `>12.0x` for stale |
+| `producerJob`             | `string \| null \| undefined`                | Cron job that produces the cache freshness signal                                            |
+| `producerIntervalSec`     | `number \| null \| undefined`                | Expected producer cadence in seconds                                                        |
+| `endpointMaxAge`          | `number \| null \| undefined`                | Endpoint freshness basis used by `_meta`, `X-Data-Age`, and generic freshness warning runway when available |
+| `availabilityMaxAge`      | `number \| null \| undefined`                | Availability budget used by `/api/health`, `/api/status`, and status-page cache ratios       |
+| `endpointBudgetReason`    | `string \| null \| undefined`                | Short explanation when endpoint freshness differs from producer cadence or availability budget |
+| `availabilityBudgetReason` | `string \| null \| undefined`               | Short explanation for the availability budget                                                |
 | `mode`                    | `"live" \| "cached-fallback" \| undefined`   | FX cache only: whether the latest usable sync came from a live fetch or cached fallback      |
 | `sourceUpdatedAt`         | `number \| null \| undefined`                | FX cache only: Unix seconds for the source currently driving `sourceStatus`                  |
 | `sourceAgeSeconds`        | `number \| null \| undefined`                | FX cache only: age of the source currently driving `sourceStatus`                            |
@@ -1355,6 +1367,7 @@ Worker health check. Reports cache freshness, blacklist integrity, mint/burn fre
 | `consecutiveFallbackRuns` | `number \| undefined`                        | FX cache only: number of back-to-back cached-fallback runs                                   |
 
 The `/status/` page consumes the richer blacklist fields directly so it can distinguish long-tail historical cleanup from fresh incoming amount gaps.
+Blacklist amount-gap severity is intentionally tolerant of isolated parser/provider misses: data-quality degrades when the missing-amount ratio reaches 1% or when at least 5 recent events are missing amounts, and becomes stale at 2% or at 25 recent missing events.
 
 `dex-liquidity`, `yield-data`, and `dews` now compute freshness from producer-owned cache sentinels first (`freshness:dex-liquidity`, `freshness:yield-data`, `freshness:dews`). If a sentinel is missing, the worker temporarily falls back to the legacy table query; if the freshness diagnostic still fails, it can fall back again to the latest successful producer cron timestamp and emits a warning/info cause instead of treating the diagnostic miss itself as public `stale`.
 
@@ -2167,7 +2180,7 @@ Returns Depeg Early Warning Score (DEWS) data for active tracked stablecoins.
 
 `stablecoin` must be an active tracked Pharos stablecoin ID. Unknown IDs return `404` with `{ "error": "Unknown stablecoin" }`; tracked-but-non-active IDs return `404` with `{ "error": "Stablecoin not tracked" }`.
 
-**Cache:** standard (`public, s-maxage=300, max-age=60`)
+**Cache:** standard (`public, s-maxage=300, max-age=60`). Freshness threshold: 1800 s (30 minutes, aligned to `compute-dews`).
 
 **Query parameters**
 
@@ -3097,7 +3110,7 @@ Queues a deferred daily-digest regeneration, bypassing the normal 1-hour dedup c
 
 **Status:** `202 Accepted`
 
-The worker no longer uses HTTP `waitUntil()` for this action. It enqueues the request in D1 and returns immediately so the Access-gated ops proxy does not need to hold the HTTP request open for the full Anthropic generation window. The scheduled poll logs the eventual run against the `daily-digest` cron history, including manual `skipped_locked` outcomes when another digest run already holds the lease.
+The worker no longer uses HTTP `waitUntil()` for this action. It enqueues the request in D1 and returns immediately so the Access-gated ops proxy does not need to hold the HTTP request open for the full Anthropic generation window. The scheduled poll logs the eventual run against the `daily-digest` cron history and persists a compact `digest:last-trigger-result` cache entry for D1 inspection/future UI surfacing, including manual `skipped_locked` outcomes when another digest run already holds the lease. The current admin panel shows the enqueue result from the browser session; it does not yet render the persisted poll outcome.
 
 Unhandled pre-enqueue failures are wrapped by the shared error handler and return `500` with `{ "error": "Internal Server Error" }`.
 

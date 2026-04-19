@@ -1,4 +1,5 @@
 import type { StablecoinData } from "@shared/types/market";
+import { API_FRESHNESS_MAX_AGE_SEC } from "@shared/lib/api-freshness";
 import {
   addFreshnessHeaders,
   errorResponse,
@@ -52,5 +53,5 @@ export const handleStablecoinSummary = withErrorHandler("stablecoin-summary", as
     updatedAt: stablecoinsCache.updatedAt,
   }, addFreshnessHeaders({
     "Cache-Control": CACHE_PROFILES.realtime,
-  }, stablecoinsCache.updatedAt, 600));
+  }, stablecoinsCache.updatedAt, API_FRESHNESS_MAX_AGE_SEC.stablecoins));
 });

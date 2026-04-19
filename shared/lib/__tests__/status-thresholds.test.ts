@@ -13,10 +13,17 @@ describe("getBlacklistGapStatus", () => {
     })).toBe("healthy");
   });
 
-  it("returns degraded when recent blacklist gaps exist", () => {
+  it("stays healthy for isolated recent blacklist gaps below the degraded floor", () => {
     expect(getBlacklistGapStatus({
       missingRatio: 0.005,
       recentMissingAmounts: 1,
+    })).toBe("healthy");
+  });
+
+  it("returns degraded when recent blacklist gaps cross the degraded floor", () => {
+    expect(getBlacklistGapStatus({
+      missingRatio: 0.005,
+      recentMissingAmounts: 5,
     })).toBe("degraded");
   });
 

@@ -249,7 +249,11 @@ export function StatusDashboard({ onSignOut }: { onSignOut: () => void }) {
               </span>
             </div>
             <div className="flex flex-wrap items-center gap-2">
-              <FreshnessIndicator updatedAtMs={lastUpdated} staleAfterMs={ADMIN_STALE_AFTER_MS} />
+              <FreshnessIndicator
+                updatedAtMs={lastUpdated}
+                staleAfterMs={ADMIN_STALE_AFTER_MS}
+                labelPrefix="Dashboard fetch"
+              />
               <RefreshCountdown key={lastUpdated} onRefresh={handleRefresh} />
               <Button variant="outline" size="sm" onClick={onSignOut}>
                 Sign out

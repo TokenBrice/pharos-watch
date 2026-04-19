@@ -240,7 +240,7 @@ Computed from missing prices + blacklist gaps + on-chain supply monitor, with be
 - `degraded` if any of:
   - stablecoins cache is degraded but still usable (`dataQuality.stablecoinsCacheStatus === "degraded"`, currently legacy-array payloads only)
   - `missingPriceRatio > 0.18`
-  - `blacklistRecentMissingAmounts > 0` (last 24h)
+  - `blacklistRecentMissingAmounts >= 5` (last 24h)
   - `blacklistMissingRatio >= 0.01` (1%)
   - `onchainStaleRatio >= 0.1` when `onchainSupplyTrackedCoins >= 10`
   - `onchainDivergenceRatio >= 0.1` when `onchainSupplyTrackedCoins >= 10`

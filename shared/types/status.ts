@@ -5,8 +5,15 @@ import type { PriceSourceHealthBucketKey } from "../lib/pricing-sources";
 
 export interface CacheStatus {
   ageSeconds: number | null;
+  /** Availability budget used by /api/health and /api/status ratio bands. */
   maxAge: number;
   healthy: boolean;
+  producerJob?: string | null;
+  producerIntervalSec?: number | null;
+  endpointMaxAge?: number | null;
+  availabilityMaxAge?: number | null;
+  endpointBudgetReason?: string | null;
+  availabilityBudgetReason?: string | null;
   mode?: "live" | "cached-fallback";
   sourceUpdatedAt?: number | null;
   sourceAgeSeconds?: number | null;
@@ -21,6 +28,12 @@ const CacheStatusSchema = z.object({
   ageSeconds: z.number().nullable(),
   maxAge: z.number(),
   healthy: z.boolean(),
+  producerJob: z.string().nullable().optional(),
+  producerIntervalSec: z.number().nullable().optional(),
+  endpointMaxAge: z.number().nullable().optional(),
+  availabilityMaxAge: z.number().nullable().optional(),
+  endpointBudgetReason: z.string().nullable().optional(),
+  availabilityBudgetReason: z.string().nullable().optional(),
   mode: z.enum(["live", "cached-fallback"]).optional(),
   sourceUpdatedAt: z.number().nullable().optional(),
   sourceAgeSeconds: z.number().nullable().optional(),
@@ -650,5 +663,5 @@ export interface EndpointProbeResult {
   error?: string;
   semanticStatus?: "healthy" | "degraded" | "stale";
   semanticDetail?: string | null;
-  semanticScope?: "health" | "status";
+  semanticScope?: "health" | "status" | "freshness";
 }

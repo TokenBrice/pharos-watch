@@ -1,19 +1,32 @@
-export const FRESHNESS_SENTINEL_CONFIGS = {
-  "dex-liquidity": {
-    cacheKey: "freshness:dex-liquidity",
-    producerJob: "sync-dex-liquidity",
-  },
-  "yield-data": {
-    cacheKey: "freshness:yield-data",
-    producerJob: "sync-yield-data",
-  },
-  dews: {
-    cacheKey: "freshness:dews",
-    producerJob: "compute-dews",
-  },
-} as const;
+import {
+  FRESHNESS_SENTINEL_CACHE_KEYS,
+  getCacheFreshnessLane,
+} from "@shared/lib/api-freshness";
 
-export type FreshnessSentinelBackedCacheKey = keyof typeof FRESHNESS_SENTINEL_CONFIGS;
+export type FreshnessSentinelBackedCacheKey = (typeof FRESHNESS_SENTINEL_CACHE_KEYS)[number];
+
+function buildFreshnessSentinelConfigs(): Record<
+  FreshnessSentinelBackedCacheKey,
+  { cacheKey: string; producerJob: string }
+> {
+  return Object.fromEntries(
+    FRESHNESS_SENTINEL_CACHE_KEYS.map((cacheKey) => {
+      const lane = getCacheFreshnessLane(cacheKey);
+      if (!lane?.freshnessSentinelKey) {
+        throw new Error(`Missing freshness sentinel config for ${cacheKey}`);
+      }
+      return [
+        cacheKey,
+        {
+          cacheKey: lane.freshnessSentinelKey,
+          producerJob: lane.producerJob,
+        },
+      ];
+    }),
+  ) as Record<FreshnessSentinelBackedCacheKey, { cacheKey: string; producerJob: string }>;
+}
+
+export const FRESHNESS_SENTINEL_CONFIGS = buildFreshnessSentinelConfigs();
 
 export function getFreshnessSentinelCacheKey(key: FreshnessSentinelBackedCacheKey): string {
   return FRESHNESS_SENTINEL_CONFIGS[key].cacheKey;

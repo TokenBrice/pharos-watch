@@ -1,5 +1,6 @@
 import { derivePegRates, getPegReference } from "@shared/lib/peg-rates";
 import { DAY_SECONDS } from "@shared/lib/time-constants";
+import { API_FRESHNESS_MAX_AGE_SEC } from "@shared/lib/api-freshness";
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins";
 import type { StablecoinData } from "@shared/types/market";
 import { sumPegBuckets } from "@shared/lib/supply";
@@ -301,5 +302,5 @@ export const handlePegSummary = withErrorHandler("peg-summary", async (db: D1Dat
     }),
   }, addFreshnessHeaders({
     "Cache-Control": CACHE_PROFILES.realtime,
-  }, stablecoinsCache.updatedAt, 900));
+  }, stablecoinsCache.updatedAt, API_FRESHNESS_MAX_AGE_SEC.pegSummary));
 });

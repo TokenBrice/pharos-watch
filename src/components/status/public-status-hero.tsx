@@ -148,7 +148,11 @@ export function PublicStatusHero({
               <span className={cn("rounded-full border px-3 py-1 text-[11px] font-medium", statusTone.badgeClassName)}>
                 {statusTone.label}
               </span>
-              <FreshnessIndicator updatedAtMs={lastUpdated} staleAfterMs={PUBLIC_HERO_STALE_AFTER_MS} />
+              <FreshnessIndicator
+                updatedAtMs={lastUpdated}
+                staleAfterMs={PUBLIC_HERO_STALE_AFTER_MS}
+                labelPrefix="Dashboard fetch"
+              />
               {healthData.warnings.length > 0 && (
                 <span className="flex items-center gap-1.5 text-[11px] text-slate-500 dark:text-white/60">
                   <span className={cn("h-2 w-2 rounded-full", hero.accentDot)} />

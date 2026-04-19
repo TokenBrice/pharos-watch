@@ -100,7 +100,7 @@ export function deriveDataQualityStatus(input: {
     ? "stale"
     : input.dataQuality.stablecoinsCacheStatus === "degraded" ||
         input.missingPriceRatio > STATUS_MISSING_PRICE_THRESHOLDS.ratioDegraded ||
-        input.blacklistRecentMissing > 0 ||
+        input.blacklistRecentMissing >= STATUS_BLACKLIST_THRESHOLDS.missingRecentDegraded ||
         input.blacklistMissingRatio >= STATUS_BLACKLIST_THRESHOLDS.missingRatioDegraded ||
         input.onchainAssessment.status === "degraded" ||
         input.reserveCompositionStatus === "degraded"

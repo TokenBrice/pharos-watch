@@ -9,6 +9,7 @@ import {
   fetchPaginatedEvents,
 } from "../lib/api-utils";
 import { CACHE_PROFILES } from "../lib/constants";
+import { API_FRESHNESS_MAX_AGE_SEC } from "@shared/lib/api-freshness";
 import {
   DEPEG_DEWS_METHODOLOGY_CHANGELOG_PATH,
   DEPEG_DEWS_METHODOLOGY_VERSION,
@@ -71,6 +72,6 @@ export const handleDepegEvents = withErrorHandler("depeg-events", async (db: D1D
   }, {
     cacheControl: CACHE_PROFILES.realtime,
     updatedAt: freshnessTs,
-    maxAgeSec: 900,
+    maxAgeSec: API_FRESHNESS_MAX_AGE_SEC.depegEvents,
   });
 });

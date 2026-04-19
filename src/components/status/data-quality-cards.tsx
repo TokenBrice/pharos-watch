@@ -80,12 +80,14 @@ export function DataQualityCards({ dq }: DataQualityCardsProps) {
       value: blacklistQueryFailed ? "ERR" : dq.blacklistMissingAmounts,
       detail: blacklistQueryFailed
         ? `query failed: ${dq.sourceFailures.find((failure) => failure.source === "blacklist-gaps")?.message ?? "blacklist gaps unavailable"}`
-        : `${dq.blacklistMissingAmounts}/${dq.blacklistTotal} (${(dq.blacklistMissingRatio * 100).toFixed(2)}%) · recent ${dq.blacklistRecentMissingAmounts}/${Math.round(dq.blacklistRecentWindowSec / HOUR_SECONDS)}h · warn >=${(STATUS_BLACKLIST_THRESHOLDS.missingRatioDegraded * 100).toFixed(1)}%, stale >=${(STATUS_BLACKLIST_THRESHOLDS.missingRatioStale * 100).toFixed(0)}%`,
+        : `${dq.blacklistMissingAmounts}/${dq.blacklistTotal} (${(dq.blacklistMissingRatio * 100).toFixed(2)}%) · recent ${dq.blacklistRecentMissingAmounts}/${Math.round(dq.blacklistRecentWindowSec / HOUR_SECONDS)}h · warn >=${(STATUS_BLACKLIST_THRESHOLDS.missingRatioDegraded * 100).toFixed(1)}% or ${STATUS_BLACKLIST_THRESHOLDS.missingRecentDegraded} recent, stale >=${(STATUS_BLACKLIST_THRESHOLDS.missingRatioStale * 100).toFixed(0)}% or ${STATUS_BLACKLIST_THRESHOLDS.missingRecentStale} recent`,
       severity: blacklistQueryFailed
         ? "amber"
         : dq.blacklistMissingRatio >= STATUS_BLACKLIST_THRESHOLDS.missingRatioStale
+          || dq.blacklistRecentMissingAmounts >= STATUS_BLACKLIST_THRESHOLDS.missingRecentStale
         ? "red"
-        : dq.blacklistRecentMissingAmounts > 0 || dq.blacklistMissingRatio >= STATUS_BLACKLIST_THRESHOLDS.missingRatioDegraded
+        : dq.blacklistRecentMissingAmounts >= STATUS_BLACKLIST_THRESHOLDS.missingRecentDegraded
+          || dq.blacklistMissingRatio >= STATUS_BLACKLIST_THRESHOLDS.missingRatioDegraded
           ? "amber"
           : "green",
     },

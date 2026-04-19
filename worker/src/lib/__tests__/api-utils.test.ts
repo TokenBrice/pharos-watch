@@ -662,8 +662,26 @@ describe("buildCacheStatuses", () => {
     const { caches, diagnostics } = await buildCacheStatuses(db, nowSec);
 
     expect(caches["dex-liquidity"]?.ageSeconds).toBe(120);
+    expect(caches["dex-liquidity"]).toMatchObject({
+      producerJob: "sync-dex-liquidity",
+      producerIntervalSec: 1800,
+      endpointMaxAge: 3600,
+      availabilityMaxAge: 43200,
+    });
     expect(caches["yield-data"]?.ageSeconds).toBe(180);
+    expect(caches["yield-data"]).toMatchObject({
+      producerJob: "sync-yield-data",
+      producerIntervalSec: 3600,
+      endpointMaxAge: 3600,
+      availabilityMaxAge: 3600,
+    });
     expect(caches.dews?.ageSeconds).toBe(240);
+    expect(caches.dews).toMatchObject({
+      producerJob: "compute-dews",
+      producerIntervalSec: 1800,
+      endpointMaxAge: 1800,
+      availabilityMaxAge: 1800,
+    });
     expect(diagnostics).toEqual([]);
     expect(seenSql.some((sql) => sql.includes("FROM dex_liquidity"))).toBe(false);
     expect(seenSql.some((sql) => sql.includes("FROM yield_data"))).toBe(false);

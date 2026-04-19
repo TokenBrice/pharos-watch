@@ -40,7 +40,11 @@ import {
   DEPEG_THRESHOLD_BPS,
   DEPEG_THRESHOLD_BPS_NON_USD,
 } from "../../../shared/lib/depeg-config";
-import { API_FRESHNESS_MAX_AGE_SEC } from "../../../shared/lib/api-freshness";
+import { STATUS_BLACKLIST_THRESHOLDS } from "../../../shared/lib/status-thresholds";
+import {
+  API_FRESHNESS_MAX_AGE_SEC,
+  CACHE_FRESHNESS_LANES,
+} from "../../../shared/lib/api-freshness";
 import { THREAT_BAND_HEX } from "../../../shared/lib/classification";
 import { CRON_SCHEDULES } from "../../../shared/lib/cron-jobs";
 import {
@@ -339,6 +343,84 @@ function checkChainsApiDoc(failures: Failure[]): void {
   );
 }
 
+function getCacheExampleNumber(doc: string, cacheKey: string, field: string): number | null {
+  const cacheIndex = doc.indexOf(`"${cacheKey}"`);
+  if (cacheIndex < 0) return null;
+  const cacheSnippet = doc.slice(cacheIndex, cacheIndex + 1000);
+  const fieldIndex = cacheSnippet.indexOf(`"${field}"`);
+  if (fieldIndex < 0) return null;
+  const match = cacheSnippet.slice(fieldIndex).match(/:\s*(\d+)/);
+  return match?.[1] ? Number(match[1]) : null;
+}
+
+function checkApiFreshnessDoc(failures: Failure[]): void {
+  const file = "docs/api-reference.md";
+  const doc = read(file);
+  const metaRows = [
+    { row: "`GET /api/stablecoins`", expected: API_FRESHNESS_MAX_AGE_SEC.stablecoins },
+    { row: "`GET /api/bluechip-ratings`", expected: API_FRESHNESS_MAX_AGE_SEC.bluechip },
+    { row: "`GET /api/usds-status`", expected: API_FRESHNESS_MAX_AGE_SEC.usdsStatus },
+    { row: "`GET /api/yield-rankings`", expected: API_FRESHNESS_MAX_AGE_SEC.yieldRankings },
+  ];
+
+  for (const check of metaRows) {
+    const row = requireTableRow(doc, file, check.row);
+    expectNumber(failures, file, `${check.row} _meta max age`, getFirstNumberFromText(row[0]), check.expected);
+  }
+
+  const stressSignalsLine = findLineValue(doc, /GET \/api\/stress-signals[\s\S]*?Freshness threshold: ([0-9_]+) s/);
+  expectNumber(
+    failures,
+    file,
+    "/api/stress-signals freshness threshold",
+    stressSignalsLine == null ? null : Number(stressSignalsLine.replace(/_/g, "")),
+    API_FRESHNESS_MAX_AGE_SEC.stressSignals,
+  );
+
+  for (const lane of Object.values(CACHE_FRESHNESS_LANES)) {
+    expectNumber(
+      failures,
+      file,
+      `${lane.cacheKey} health maxAge`,
+      getCacheExampleNumber(doc, lane.cacheKey, "maxAge"),
+      lane.availabilityMaxAgeSec,
+    );
+    expectNumber(
+      failures,
+      file,
+      `${lane.cacheKey} health endpointMaxAge`,
+      getCacheExampleNumber(doc, lane.cacheKey, "endpointMaxAge"),
+      lane.endpointMaxAgeSec,
+    );
+    expectNumber(
+      failures,
+      file,
+      `${lane.cacheKey} health producerIntervalSec`,
+      getCacheExampleNumber(doc, lane.cacheKey, "producerIntervalSec"),
+      lane.producerIntervalSec,
+    );
+  }
+}
+
+function checkStatusDashboardDoc(failures: Failure[]): void {
+  const file = "docs/status-dashboard.md";
+  const doc = read(file);
+  const dataQualityStart = doc.indexOf("### Data quality status");
+  const dataQualitySection = dataQualityStart >= 0 ? doc.slice(dataQualityStart) : "";
+  const degradedStart = dataQualitySection.indexOf("- `degraded` if any of:");
+  const degradedSection = degradedStart >= 0
+    ? dataQualitySection.slice(degradedStart, degradedStart + 1200)
+    : "";
+  const degradedRecentLine = findLineValue(degradedSection, /`blacklistRecentMissingAmounts >= ([0-9_]+)` \(last 24h\)/);
+  expectNumber(
+    failures,
+    file,
+    "blacklist recent degraded threshold",
+    degradedRecentLine == null ? null : Number(degradedRecentLine.replace(/_/g, "")),
+    STATUS_BLACKLIST_THRESHOLDS.missingRecentDegraded,
+  );
+}
+
 function checkChainsPageDoc(failures: Failure[]): void {
   const file = "docs/chains-page.md";
   const doc = read(file);
@@ -418,6 +500,8 @@ export function runDocSyncChecks(): Failure[] {
   checkDewsDoc(failures);
   checkLiquidityDoc(failures);
   checkWorkerLimitsDoc(failures);
+  checkApiFreshnessDoc(failures);
+  checkStatusDashboardDoc(failures);
   checkChainsApiDoc(failures);
   checkChainsPageDoc(failures);
   checkRedemptionBackstopsDoc(failures);

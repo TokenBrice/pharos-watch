@@ -707,7 +707,7 @@ For destroy events, try fetching from transaction receipt first (`eth_getTransac
 ### GET /api/blacklist
 
 **File:** `worker/src/api/blacklist.ts`
-**Cache:** realtime profile (`s-maxage=60`, `max-age=10`). Freshness headers with 900s TTL.
+**Cache:** realtime profile (`s-maxage=60`, `max-age=10`). Freshness headers follow the 6-hourly `sync-blacklist` writer timestamp.
 
 **Query parameters:**
 
@@ -755,8 +755,8 @@ The handler now exposes only unsuppressed rows for the live-supported symbols: U
   "methodology": {
     "version": "3.9",
     "versionLabel": "v3.9",
-    "currentVersion": "3.96",
-    "currentVersionLabel": "v3.96",
+    "currentVersion": "3.97",
+    "currentVersionLabel": "v3.97",
     "changelogPath": "/methodology/blacklist-tracker-changelog/",
     "asOf": 1704067200,
     "isCurrent": false
@@ -767,7 +767,7 @@ The handler now exposes only unsuppressed rows for the live-supported symbols: U
 ### GET /api/blacklist-summary
 
 **File:** `worker/src/api/blacklist-summary.ts`
-**Cache:** realtime profile (`s-maxage=60`, `max-age=10`). Freshness headers with 900s TTL.
+**Cache:** realtime profile (`s-maxage=60`, `max-age=10`). Freshness headers follow the 6-hourly `sync-blacklist` writer timestamp.
 
 Returns server-side aggregate stats, quarterly chart buckets, supported chain filters, and total event count for the blacklist UI.
 

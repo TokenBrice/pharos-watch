@@ -70,6 +70,41 @@ describe("DataQualityCards", () => {
     expect(html).toContain("informational only; active depegs do not change /status health");
   });
 
+  it("does not warn on one recent blacklist amount gap below the count floor", () => {
+    const html = renderToStaticMarkup(
+      <DataQualityCards
+        dq={{
+          nowSeconds: 1_772_100_000,
+          stablecoinsCacheStatus: "ok",
+          stablecoinsCacheReason: null,
+          blacklistGapStatus: "ok",
+          activeDepegStatus: "ok",
+          onchainSupplyQueryStatus: "ok",
+          sourceFailures: [],
+          totalStablecoins: 156,
+          missingPrices: 0,
+          blacklistMissingAmounts: 1,
+          blacklistRecentMissingAmounts: 1,
+          blacklistRecentWindowSec: 86_400,
+          blacklistMissingRatio: 1 / 16_000,
+          blacklistTotal: 16_000,
+          onchainSupplyDivergences: 0,
+          onchainDivergenceRatio: 0,
+          onchainSupplyMonitoring: "active",
+          onchainSupplyLatestAt: 1_772_099_000,
+          onchainSupplyTrackedCoins: 12,
+          activeDepegs: 0,
+          staleOnchainSupply: 0,
+          onchainStaleRatio: 0,
+        }}
+      />,
+    );
+
+    expect(html).toContain("recent 1/24h");
+    expect(html).not.toContain("text-amber-600");
+    expect(html).not.toContain("text-red-600");
+  });
+
   it("treats low-sample on-chain ratios as informational instead of status-severity colors", () => {
     const html = renderToStaticMarkup(
       <DataQualityCards

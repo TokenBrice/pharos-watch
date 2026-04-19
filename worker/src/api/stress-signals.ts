@@ -9,6 +9,7 @@ import {
   buildMethodologyEnvelope,
 } from "../lib/api-utils";
 import { DAY_SECONDS } from "@shared/lib/time-constants";
+import { API_FRESHNESS_MAX_AGE_SEC } from "@shared/lib/api-freshness";
 import { CACHE_PROFILES } from "../lib/constants";
 import {
   DEPEG_DEWS_METHODOLOGY_CHANGELOG_PATH,
@@ -123,7 +124,7 @@ export const handleStressSignals = withErrorHandler(
         }),
       }, addFreshnessHeaders({
         "Cache-Control": CACHE_PROFILES.standard,
-      }, computedAt, 900));
+      }, computedAt, API_FRESHNESS_MAX_AGE_SEC.stressSignals));
     }
 
     // All coins: latest valid row per coin.
@@ -186,6 +187,6 @@ export const handleStressSignals = withErrorHandler(
       asOf,
     }) }, addFreshnessHeaders({
       "Cache-Control": CACHE_PROFILES.standard,
-    }, freshnessAsOf, 900));
+    }, freshnessAsOf, API_FRESHNESS_MAX_AGE_SEC.stressSignals));
   },
 );

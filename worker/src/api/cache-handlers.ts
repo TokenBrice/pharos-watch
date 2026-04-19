@@ -1,8 +1,8 @@
 import type { ReportCard } from "@shared/types/report-cards";
 import { CRON_INTERVALS } from "@shared/lib/cron-jobs";
+import { API_FRESHNESS_MAX_AGE_SEC } from "@shared/lib/api-freshness";
 import { YieldRankingsResponseSchema, type YieldRanking, type YieldRankingsResponse } from "@shared/types/yield";
 import { BluechipRatingsMapSchema } from "@shared/types/market";
-import { DAY_SECONDS } from "@shared/lib/time-constants";
 import { computePYS, yieldStabilityToApyVarianceScore } from "@shared/lib/yield-scoring";
 import {
   addFreshnessHeaders,
@@ -18,9 +18,19 @@ import { CACHE_PROFILES, DEFAULT_SAFETY_SCORE } from "../lib/constants";
 import { getCache } from "../lib/db-cache";
 import { buildReportCardsSnapshot } from "../lib/report-cards-snapshot";
 
-export const handleStablecoins = createCacheHandler("stablecoins", "stablecoins", CACHE_PROFILES.realtime, 600);
+export const handleStablecoins = createCacheHandler(
+  "stablecoins",
+  "stablecoins",
+  CACHE_PROFILES.realtime,
+  API_FRESHNESS_MAX_AGE_SEC.stablecoins,
+);
 
-export const handleStablecoinCharts = createCacheHandler("stablecoin-charts", "stablecoin-charts", CACHE_PROFILES.standard, 3600);
+export const handleStablecoinCharts = createCacheHandler(
+  "stablecoin-charts",
+  "stablecoin-charts",
+  CACHE_PROFILES.standard,
+  API_FRESHNESS_MAX_AGE_SEC.stablecoinCharts,
+);
 
 export const handleBluechipRatings = withErrorHandler(
   "bluechip-ratings",
@@ -33,7 +43,7 @@ export const handleBluechipRatings = withErrorHandler(
     const headers = addFreshnessHeaders({
       "Content-Type": "application/json",
       "Cache-Control": CACHE_PROFILES.slow,
-    }, cached.updatedAt, 43200);
+    }, cached.updatedAt, API_FRESHNESS_MAX_AGE_SEC.bluechip);
 
     const parsed = readCachedJsonOr503<unknown>("bluechip-ratings", "bluechip-ratings", cached);
     if (!parsed.ok) {
@@ -51,13 +61,18 @@ export const handleBluechipRatings = withErrorHandler(
 
     const body = {
       ...validation.data,
-      _meta: buildFreshnessMeta(cached.updatedAt, 43200),
+      _meta: buildFreshnessMeta(cached.updatedAt, API_FRESHNESS_MAX_AGE_SEC.bluechip),
     };
     return jsonResponse(body, headers);
   },
 );
 
-export const handleUsdsStatus = createCacheHandler("usds-status", "usds-status", CACHE_PROFILES.standard, DAY_SECONDS);
+export const handleUsdsStatus = createCacheHandler(
+  "usds-status",
+  "usds-status",
+  CACHE_PROFILES.standard,
+  API_FRESHNESS_MAX_AGE_SEC.usdsStatus,
+);
 
 const YIELD_RANKINGS_MAX_AGE_SEC = CRON_INTERVALS["sync-yield-data"];
 

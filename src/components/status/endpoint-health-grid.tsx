@@ -58,12 +58,12 @@ export function EndpointHealthGrid({
         <p className="text-xs text-muted-foreground">
           {description ??
             (isAdminView
-              ? "Browser-origin probe loop from this admin session. `/api/health` and `/api/status` are interpreted semantically, not just by transport reachability."
-              : "Browser-origin probe loop from this session against the public API surface.")}
+              ? "Browser-origin probe loop from this admin session. `/api/health`, `/api/status`, and freshness Warning headers are interpreted semantically; other 2xx probes are transport checks."
+              : "Browser-origin probe loop from this session against the public API surface. Freshness Warning headers are interpreted as data-health signals; other 2xx probes are transport checks.")}
         </p>
         <p className="text-xs text-muted-foreground">
           {probeList.length > 0
-            ? `${passCount}/${probeList.length} semantically healthy, ${degradedCount} degraded, ${staleCount} stale or unreachable.`
+            ? `${passCount}/${probeList.length} healthy or reachable, ${degradedCount} degraded, ${staleCount} stale or unreachable.`
             : "No browser probe samples yet."}{" "}
           {summaryText}
         </p>

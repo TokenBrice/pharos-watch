@@ -65,6 +65,52 @@ function isSemanticStatus(value: unknown): value is NonNullable<EndpointProbeRes
   return value === "healthy" || value === "degraded" || value === "stale";
 }
 
+const SEMANTIC_STATUS_RANK: Record<NonNullable<EndpointProbeResult["semanticStatus"]>, number> = {
+  healthy: 0,
+  degraded: 1,
+  stale: 2,
+};
+
+function extractFreshnessWarningSemantics(response: Response): Partial<EndpointProbeResult> | null {
+  const warning = typeof response.headers?.get === "function"
+    ? response.headers.get("Warning")
+    : null;
+  if (!warning) return null;
+  const isFreshnessWarning =
+    /(?:^|,\s*)110\b/.test(warning) ||
+    /Response is (?:degraded|stale)/i.test(warning);
+  if (!isFreshnessWarning) return null;
+
+  const explicitStatus = /Response is stale/i.test(warning)
+    ? "stale"
+    : /Response is degraded/i.test(warning)
+      ? "degraded"
+      : null;
+
+  return {
+    semanticStatus: explicitStatus ?? "stale",
+    semanticScope: "freshness",
+    semanticDetail: warning,
+  };
+}
+
+function mergeSemanticFields(
+  primary: Partial<EndpointProbeResult> | undefined,
+  freshness: Partial<EndpointProbeResult> | null,
+): Partial<EndpointProbeResult> | undefined {
+  if (!freshness?.semanticStatus) return primary;
+  if (!primary?.semanticStatus) return freshness;
+  const primaryRank = SEMANTIC_STATUS_RANK[primary.semanticStatus];
+  const freshnessRank = SEMANTIC_STATUS_RANK[freshness.semanticStatus];
+  if (freshnessRank > primaryRank) {
+    return freshness;
+  }
+  return {
+    ...primary,
+    semanticDetail: primary.semanticDetail ?? freshness.semanticDetail,
+  };
+}
+
 async function discardResponseBody(response: Response): Promise<void> {
   if (!response.body) return;
   try {
@@ -189,6 +235,7 @@ async function probeEndpoint(
       // Cancel unread bodies so one browser session does not strand slots across repeated runs.
       await discardResponseBody(res);
     }
+    semanticFields = mergeSemanticFields(semanticFields, extractFreshnessWarningSemantics(res));
 
     return { path, status: res.status, latencyMs, ...semanticFields };
   } catch (err) {

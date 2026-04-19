@@ -1,6 +1,7 @@
 import { buildInClause } from "./db";
 import { CACHE_FRESHNESS_THRESHOLDS } from "./constants";
 import { FRESHNESS_RATIOS, STATUS_CACHE_RATIO_THRESHOLDS } from "@shared/lib/status-thresholds";
+import { getCacheFreshnessLane } from "@shared/lib/api-freshness";
 import type { CacheStatus } from "@shared/types/status";
 import { buildFxCacheStatus, getFxRatesMetaKey, hydrateFxRateState } from "./fx-rate-state";
 import {
@@ -358,9 +359,23 @@ export async function buildCacheStatuses(
         ? "stale"
         : worstRatio > STATUS_CACHE_RATIO_THRESHOLDS.degraded
           ? "degraded"
-          : statusFloor;
+      : statusFloor;
   } else if (worstRatio > STATUS_CACHE_RATIO_THRESHOLDS.stale) {
     statusFloor = "stale";
+  }
+
+  for (const [key, cache] of Object.entries(caches)) {
+    const lane = getCacheFreshnessLane(key);
+    if (!lane) continue;
+    caches[key] = {
+      ...cache,
+      producerJob: lane.producerJob,
+      producerIntervalSec: lane.producerIntervalSec,
+      endpointMaxAge: lane.endpointMaxAgeSec,
+      availabilityMaxAge: lane.availabilityMaxAgeSec,
+      endpointBudgetReason: lane.endpointBudgetReason,
+      availabilityBudgetReason: lane.availabilityBudgetReason,
+    };
   }
 
   return { caches, worstRatio, failures, diagnostics, statusFloor, warnings };

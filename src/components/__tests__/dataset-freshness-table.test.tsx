@@ -7,6 +7,10 @@ import { DatasetFreshnessTable } from "@/components/status/dataset-freshness-tab
 describe("DatasetFreshnessTable", () => {
   it("uses writer-oriented copy and discovery expectations", () => {
     const nowSeconds = 2_000_000;
+    const getDomainRow = (label: string) =>
+      screen.getAllByText(label)
+        .find((element) => element.closest("td")?.cellIndex === 0)
+        ?.closest("tr") ?? null;
 
     render(
       <DatasetFreshnessTable
@@ -28,9 +32,26 @@ describe("DatasetFreshnessTable", () => {
 
     expect(screen.getByText("Pipeline Freshness")).toBeTruthy();
     expect(screen.getByText(/last successful writer evaluation per domain/i)).toBeTruthy();
+    expect(screen.getByText(/Cadence is the writer schedule/i)).toBeTruthy();
 
-    const discoveryRow = screen.getByText("Coverage discovery").closest("tr");
+    const discoveryRow = getDomainRow("Coverage discovery");
     expect(discoveryRow).not.toBeNull();
+    expect(within(discoveryRow as HTMLTableRowElement).getByText("7d")).toBeTruthy();
     expect(within(discoveryRow as HTMLTableRowElement).getByText("14d")).toBeTruthy();
+
+    const blacklistRow = getDomainRow("Blacklist sync");
+    expect(blacklistRow).not.toBeNull();
+    expect(within(blacklistRow as HTMLTableRowElement).getByText("6h")).toBeTruthy();
+    expect(within(blacklistRow as HTMLTableRowElement).getByText("12h")).toBeTruthy();
+
+    const dewsRow = getDomainRow("DEWS signals");
+    expect(dewsRow).not.toBeNull();
+    expect(within(dewsRow as HTMLTableRowElement).getByText("30m")).toBeTruthy();
+    expect(within(dewsRow as HTMLTableRowElement).getByText("1h")).toBeTruthy();
+
+    const yieldRow = getDomainRow("Yield data");
+    expect(yieldRow).not.toBeNull();
+    expect(within(yieldRow as HTMLTableRowElement).getByText("1h")).toBeTruthy();
+    expect(within(yieldRow as HTMLTableRowElement).getByText("2h")).toBeTruthy();
   });
 });

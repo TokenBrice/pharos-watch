@@ -57,6 +57,48 @@ describe("collectEndpointProbes", () => {
     expect(result[0]).toEqual(expect.objectContaining({ path: adminPath, status: 200 }));
   });
 
+  it("classifies freshness Warning headers on 200 responses as data-health signals", async () => {
+    vi.spyOn(globalThis, "fetch").mockResolvedValue(
+      new Response("{}", {
+        status: 200,
+        headers: {
+          Warning: '110 - "Response is stale (7200s old, max 900s)"',
+        },
+      }),
+    );
+
+    const result = await collectEndpointProbes(["/api/stress-signals"]);
+
+    expect(result[0]).toEqual(expect.objectContaining({
+      path: "/api/stress-signals",
+      status: 200,
+      semanticStatus: "stale",
+      semanticScope: "freshness",
+      semanticDetail: '110 - "Response is stale (7200s old, max 900s)"',
+    }));
+  });
+
+  it("preserves degraded freshness Warning severity on 200 responses", async () => {
+    vi.spyOn(globalThis, "fetch").mockResolvedValue(
+      new Response("{}", {
+        status: 200,
+        headers: {
+          Warning: '110 - "Response is degraded (3600s old, max 1800s)"',
+        },
+      }),
+    );
+
+    const result = await collectEndpointProbes(["/api/chains"]);
+
+    expect(result[0]).toEqual(expect.objectContaining({
+      path: "/api/chains",
+      status: 200,
+      semanticStatus: "degraded",
+      semanticScope: "freshness",
+      semanticDetail: '110 - "Response is degraded (3600s old, max 1800s)"',
+    }));
+  });
+
   it("limits concurrent browser probes to avoid transport saturation", async () => {
     const paths = Array.from(
       { length: ENDPOINT_PROBE_CONCURRENCY + 2 },

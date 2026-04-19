@@ -41,6 +41,14 @@ function getExpectedFreshnessSec(owners: readonly string[]): number | null {
   return Math.min(...intervals) * 2;
 }
 
+function getCadenceSec(owners: readonly string[]): number | null {
+  const intervals = owners
+    .map((owner) => getCronJobMeta(owner)?.intervalSec)
+    .filter((interval): interval is number => interval != null);
+  if (intervals.length === 0) return null;
+  return Math.min(...intervals);
+}
+
 // Band heuristics: "on time" = age ≤ 4× expected (2× intervalSec),
 // "aging" = 4× expected < age ≤ 6× expected, "late" = age > 6× expected.
 // Thresholds are intentionally generous — only flag truly overdue pipelines.
@@ -92,6 +100,7 @@ export function DatasetFreshnessTable({
     const meta = DATASET_META[key];
     const updatedAt = datasetFreshness[key];
     const ageSeconds = updatedAt != null ? Math.max(0, nowSeconds - updatedAt) : null;
+    const cadenceSec = getCadenceSec(meta.expectedOwners ?? meta.owners);
     const expectedFreshnessSec = getExpectedFreshnessSec(meta.expectedOwners ?? meta.owners);
     const owners = meta.owners.map((owner) => getCronJobMeta(owner)?.label ?? owner).join(", ");
 
@@ -101,6 +110,7 @@ export function DatasetFreshnessTable({
       updatedAt,
       ageSeconds,
       owners,
+      cadenceSec,
       expectedFreshnessSec,
       band: getBand(ageSeconds, expectedFreshnessSec),
     };
@@ -113,8 +123,9 @@ export function DatasetFreshnessTable({
       </CardHeader>
       <CardContent>
         <div className="mb-3 text-xs text-muted-foreground">
-          Informational view of the last successful writer evaluation per domain. Event-backed domains stay fresh during
-          quiet periods because this table follows the writer, not the most recent emitted event.
+          Informational view of the last successful writer evaluation per domain. Cadence is the writer schedule;
+          grace basis is the reference window for this table, with green status held through 4x that basis and late
+          after 6x so quiet event-backed domains follow writer health rather than the most recent emitted event.
         </div>
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
@@ -130,7 +141,10 @@ export function DatasetFreshnessTable({
                   Age
                 </th>
                 <th scope="col" className="pb-2 font-medium">
-                  Expected
+                  Cadence
+                </th>
+                <th scope="col" className="pb-2 font-medium">
+                  Grace Basis
                 </th>
                 <th scope="col" className="pb-2 font-medium">
                   Writers
@@ -148,6 +162,9 @@ export function DatasetFreshnessTable({
                     {row.updatedAt ? new Date(row.updatedAt * 1000).toLocaleString() : "—"}
                   </td>
                   <td className="py-2">{row.ageSeconds != null ? formatElapsedSeconds(row.ageSeconds) : "—"}</td>
+                  <td className="py-2">
+                    {row.cadenceSec != null ? formatElapsedSeconds(row.cadenceSec) : "—"}
+                  </td>
                   <td className="py-2">
                     {row.expectedFreshnessSec != null ? formatElapsedSeconds(row.expectedFreshnessSec) : "—"}
                   </td>

@@ -10,6 +10,7 @@ import {
   getLatestSuccessfulCronTimestamp,
   fetchPaginatedEvents,
 } from "../lib/api-utils";
+import { API_FRESHNESS_MAX_AGE_SEC } from "@shared/lib/api-freshness";
 import { CACHE_PROFILES } from "../lib/constants";
 import { getMintBurnConfigsForStablecoin } from "../lib/mint-burn-contracts";
 import { buildInClause } from "../lib/db";
@@ -149,6 +150,6 @@ export const handleMintBurnEvents = withErrorHandler(
 
     return jsonResponse({ events, total }, addFreshnessHeaders({
       "Cache-Control": CACHE_PROFILES.realtime,
-    }, freshnessTs, 900));
+    }, freshnessTs, API_FRESHNESS_MAX_AGE_SEC.mintBurnEvents));
   },
 );

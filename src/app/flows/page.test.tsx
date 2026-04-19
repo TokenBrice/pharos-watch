@@ -85,7 +85,7 @@ describe("FlowsPage", () => {
   });
 
   it("suppresses the generic stale-data banner when a specific sync warning is present", () => {
-    const syncWarning = "Mint/burn sync freshness is degraded versus the 20-minute cron cadence.";
+    const syncWarning = "Mint/burn sync freshness is degraded versus the 30-minute cron cadence.";
 
     mockUseMintBurnFlows.mockImplementation((hours = 24) => {
       if (hours === 168) {

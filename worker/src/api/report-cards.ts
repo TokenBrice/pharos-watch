@@ -1,4 +1,5 @@
 import { withErrorHandler, errorResponse, jsonFreshResponse } from "../lib/api-utils";
+import { API_FRESHNESS_MAX_AGE_SEC } from "@shared/lib/api-freshness";
 import { CACHE_PROFILES } from "../lib/constants";
 import {
   buildReportCardsSnapshot,
@@ -19,6 +20,6 @@ export const handleReportCards = withErrorHandler("report-cards", async (db: D1D
   return jsonFreshResponse(snapshot, {
     cacheControl: CACHE_PROFILES.standard,
     updatedAt: snapshot.updatedAt,
-    maxAgeSec: 900,
+    maxAgeSec: API_FRESHNESS_MAX_AGE_SEC.reportCards,
   });
 });

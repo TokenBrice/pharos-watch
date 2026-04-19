@@ -1,4 +1,4 @@
-import { STATUS_CACHE_RATIO_THRESHOLDS } from "@shared/lib/status-thresholds";
+import { FRESHNESS_RATIOS, STATUS_CACHE_RATIO_THRESHOLDS } from "@shared/lib/status-thresholds";
 import type { CacheStatus } from "@shared/types";
 import { formatElapsedSeconds } from "@shared/lib/format";
 import { getCacheFreshnessRatio, getCacheFreshnessStatus } from "@shared/lib/cache-health";
@@ -53,6 +53,13 @@ export function CacheFreshnessTable({ caches }: CacheFreshnessTableProps) {
     return `${cache.sourceStatus} · ${formatElapsedSeconds(cache.sourceAgeSeconds)}`;
   };
 
+  const describeProducer = (cache: CacheStatus): string => {
+    const interval = cache.producerIntervalSec != null
+      ? `every ${formatElapsedSeconds(cache.producerIntervalSec)}`
+      : null;
+    return [cache.producerJob, interval].filter(Boolean).join(" · ") || "—";
+  };
+
   const unhealthy = sorted.filter(([, cache]) => {
     const status = getCacheFreshnessStatus(cache);
     return status === "stale" || status === "degraded";
@@ -65,8 +72,11 @@ export function CacheFreshnessTable({ caches }: CacheFreshnessTableProps) {
   const renderRow = ([key, cache]: [string, CacheStatus]) => {
     const band = describeBand(cache);
     const modeLabel = cache.mode ?? "live";
+    const budgetsDiffer = cache.endpointMaxAge != null && cache.endpointMaxAge !== (cache.availabilityMaxAge ?? cache.maxAge);
     const noteParts = [
       cache.warning,
+      budgetsDiffer ? cache.endpointBudgetReason : null,
+      budgetsDiffer ? cache.availabilityBudgetReason : null,
       cache.consecutiveFallbackRuns != null && cache.consecutiveFallbackRuns > 0
         ? `${cache.consecutiveFallbackRuns} fallback run(s)`
         : null,
@@ -77,15 +87,29 @@ export function CacheFreshnessTable({ caches }: CacheFreshnessTableProps) {
         <td className="py-2 align-top">
           <div className="font-mono text-xs">{key}</div>
           <div className="mt-1 text-[11px] text-muted-foreground">
-            target {formatElapsedSeconds(cache.maxAge)}
+            availability budget {formatElapsedSeconds(cache.availabilityMaxAge ?? cache.maxAge)}
           </div>
         </td>
         <td className="py-2 align-top text-xs">{cache.upstreamProvider ?? "—"}</td>
+        <td className="py-2 align-top text-xs">{describeProducer(cache)}</td>
         <td className="py-2 align-top">
           <div>{cache.ageSeconds != null ? formatElapsedSeconds(cache.ageSeconds) : "—"}</div>
           <div className="mt-1 font-mono text-xs text-muted-foreground">
             {band.ratio != null ? `${band.ratio.toFixed(2)}x` : "—"}
           </div>
+        </td>
+        <td className="py-2 align-top text-xs">
+          {cache.endpointMaxAge != null ? `basis ${formatElapsedSeconds(cache.endpointMaxAge)}` : "—"}
+          {cache.endpointMaxAge != null ? (
+            <div className="mt-1 text-[11px] leading-relaxed text-muted-foreground">
+              warning after {formatElapsedSeconds(cache.endpointMaxAge * FRESHNESS_RATIOS.FRESH)}
+            </div>
+          ) : null}
+          {budgetsDiffer ? (
+            <div className="mt-1 text-[11px] leading-relaxed text-muted-foreground">
+              endpoint basis differs from availability budget
+            </div>
+          ) : null}
         </td>
         <td className="py-2 align-top">{describeSource(cache)}</td>
         <td className="py-2 align-top">
@@ -114,10 +138,12 @@ export function CacheFreshnessTable({ caches }: CacheFreshnessTableProps) {
   const tableHead = (
     <thead>
       <tr className="border-b text-left text-muted-foreground">
-        <th scope="col" className="pb-2 font-medium">Lane</th>
-        <th scope="col" className="pb-2 font-medium">Provider</th>
-        <th scope="col" className="pb-2 font-medium">Cache</th>
-        <th scope="col" className="pb-2 font-medium">Source</th>
+                <th scope="col" className="pb-2 font-medium">Lane</th>
+                <th scope="col" className="pb-2 font-medium">Provider</th>
+                <th scope="col" className="pb-2 font-medium">Producer</th>
+                <th scope="col" className="pb-2 font-medium">Cache</th>
+                <th scope="col" className="pb-2 font-medium">Endpoint Basis</th>
+                <th scope="col" className="pb-2 font-medium">Source</th>
         <th scope="col" className="pb-2 font-medium">Mode</th>
         <th scope="col" className="pb-2 font-medium">Band</th>
         <th scope="col" className="pb-2 font-medium">Actionable Note</th>
@@ -130,7 +156,7 @@ export function CacheFreshnessTable({ caches }: CacheFreshnessTableProps) {
       <h3 className="text-base font-semibold tracking-tight text-foreground">Cache Freshness</h3>
       <div className="mt-4">
         <div className="mb-3 text-xs text-muted-foreground">
-          Availability uses cache ratio thresholds of {">"}{STATUS_CACHE_RATIO_THRESHOLDS.degraded.toFixed(2)}x (degraded) and {">"}{STATUS_CACHE_RATIO_THRESHOLDS.stale.toFixed(2)}x (stale).
+          Availability uses ratio thresholds of {">"}{STATUS_CACHE_RATIO_THRESHOLDS.degraded.toFixed(2)}x (degraded) and {">"}{STATUS_CACHE_RATIO_THRESHOLDS.stale.toFixed(2)}x (stale) against each lane availability budget. Endpoint basis is the max-age used by `X-Data-Age` / `_meta`; generic freshness `Warning` starts after {FRESHNESS_RATIOS.FRESH.toFixed(0)}x that basis.
         </div>
         <div className="overflow-x-auto">
           {unhealthy.length > 0 && (

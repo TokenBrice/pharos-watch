@@ -240,7 +240,7 @@ export default function StatusClient() {
                   </div>
                 </div>
                 <div className="rounded-lg border border-border/40 bg-background/60 p-3 dark:bg-background/20">
-                  <div className="text-xs uppercase tracking-[0.18em] text-muted-foreground">Latest Hourly Sample</div>
+                  <div className="text-xs uppercase tracking-[0.18em] text-muted-foreground">Latest Hourly Rollup</div>
                   <div className="mt-2 font-mono text-sm text-foreground">
                     {formatTimestampSeconds(healthData.mintBurn.latestHourlyTs)}
                   </div>
@@ -274,10 +274,10 @@ export default function StatusClient() {
                 <div className="text-xs uppercase tracking-[0.18em] text-muted-foreground">Public Health Interpretation</div>
                 <div className="mt-2 leading-relaxed text-foreground">
                   {healthData.blacklist.missingAmounts > 0
-                    ? healthData.blacklist.recentMissingAmounts > 0
-                      ? `${healthData.blacklist.recentMissingAmounts} recent blacklist event(s) in the last ${blacklistWindowHours}h are still missing amounts.`
-                      : blacklistStatus === "healthy"
-                        ? `${healthData.blacklist.missingAmounts} blacklist event(s) are still missing amounts, but they are historical and below the public warning threshold.`
+                    ? blacklistStatus === "healthy"
+                      ? `${healthData.blacklist.missingAmounts} blacklist event(s) are still missing amounts, but they are below the public warning threshold${healthData.blacklist.recentMissingAmounts > 0 ? ` (${healthData.blacklist.recentMissingAmounts} recent in the last ${blacklistWindowHours}h)` : ""}.`
+                      : healthData.blacklist.recentMissingAmounts > 0
+                        ? `${healthData.blacklist.recentMissingAmounts} recent blacklist event(s) in the last ${blacklistWindowHours}h are still missing amounts.`
                         : `${healthData.blacklist.missingAmounts} blacklist event(s) are still missing amounts, but no new gaps were recorded in the last ${blacklistWindowHours}h.`
                     : "No current blacklist amount gaps are affecting the public health signal."}
                 </div>
@@ -387,7 +387,7 @@ export default function StatusClient() {
               probes={probes}
               isLoading={probesLoading}
               groups={["public"]}
-              description="Browser-origin probe loop from this public session. It covers only public canary routes."
+              description="Browser-origin probe loop from this public session. It covers public canary routes; freshness Warning headers are treated as data-health signals."
               footnote="Admin and manual action paths are intentionally excluded from the public probe board."
             />
             <CircuitBreakerTable circuits={publicImpactCircuits} />

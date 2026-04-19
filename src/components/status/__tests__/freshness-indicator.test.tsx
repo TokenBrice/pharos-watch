@@ -51,4 +51,16 @@ describe("FreshnessIndicator", () => {
     act(() => { vi.advanceTimersByTime(5000); });
     expect(screen.getByText(/35s ago/i)).toBeDefined();
   });
+
+  it("can label browser/dashboard fetch freshness explicitly", () => {
+    vi.setSystemTime(new Date(1_700_000_000_000));
+    render(
+      <FreshnessIndicator
+        updatedAtMs={1_700_000_000_000 - 30_000}
+        staleAfterMs={120_000}
+        labelPrefix="Dashboard fetch"
+      />,
+    );
+    expect(screen.getByText(/Dashboard fetch: 30s ago/i)).toBeDefined();
+  });
 });

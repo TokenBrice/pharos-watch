@@ -301,7 +301,7 @@ describe("handleStressSignals contract tests", () => {
   it("uses the oldest returned aggregate row for freshness headers", async () => {
     const requestNowSec = Math.floor(Date.now() / 1000);
     const freshComputedAt = requestNowSec - 60;
-    const staleComputedAt = requestNowSec - 8_000;
+    const staleComputedAt = requestNowSec - 15_000;
     const db = mockD1([
       {
         match: "stress_signals",
@@ -333,7 +333,32 @@ describe("handleStressSignals contract tests", () => {
     };
     expect(body.updatedAt).toBe(freshComputedAt);
     expect(body.oldestComputedAt).toBe(staleComputedAt);
-    expect(Number(res.headers.get("X-Data-Age"))).toBeGreaterThanOrEqual(8_000);
+    expect(Number(res.headers.get("X-Data-Age"))).toBeGreaterThanOrEqual(15_000);
     expect(res.headers.get("Warning")).toContain("Response is stale");
+  });
+
+  it("does not warn on DEWS aggregate data that is inside the 30-minute cadence runway", async () => {
+    const requestNowSec = Math.floor(Date.now() / 1000);
+    const oldestComputedAt = requestNowSec - 7_400;
+    const db = mockD1([
+      {
+        match: "stress_signals",
+        rows: [
+          {
+            stablecoin_id: "usdt-tether",
+            score: 12,
+            band: "CALM",
+            signals_json: signalsJson,
+            computed_at: oldestComputedAt,
+          },
+        ],
+      },
+    ]);
+
+    const res = await handleStressSignals(db, new URL("https://x/api/stress-signals"));
+
+    expect(res.status).toBe(200);
+    expect(Number(res.headers.get("X-Data-Age"))).toBeGreaterThanOrEqual(7_400);
+    expect(res.headers.get("Warning")).toBeNull();
   });
 });

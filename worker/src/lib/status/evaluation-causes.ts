@@ -433,7 +433,7 @@ export function buildDataQualityCauses(input: {
       threshold: STATUS_BLACKLIST_THRESHOLDS.missingRatioStale,
     });
   } else if (
-    input.blacklistRecentMissing > 0 ||
+    input.blacklistRecentMissing >= STATUS_BLACKLIST_THRESHOLDS.missingRecentDegraded ||
     input.blacklistMissingRatio >= STATUS_BLACKLIST_THRESHOLDS.missingRatioDegraded
   ) {
     pushCause(dataQualityCauses, {

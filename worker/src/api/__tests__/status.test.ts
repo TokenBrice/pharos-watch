@@ -1189,6 +1189,12 @@ describe("handleStatus", () => {
     expect(syncStablecoins).toHaveProperty("lastRun");
     expect(syncStablecoins).toHaveProperty("healthy");
     expect(syncStablecoins).toHaveProperty("expectedIntervalSec");
+    expect(body.crons["sync-blacklist"]?.expectedIntervalSec).toBe(6 * 3600);
+    expect(body.crons["sync-dex-discovery"]?.expectedIntervalSec).toBe(2 * 3600);
+    expect(body.crons["sync-live-reserves"]?.expectedIntervalSec).toBe(4 * 3600);
+    expect(body.crons["sync-yield-data"]?.expectedIntervalSec).toBe(3600);
+    expect(body.crons["sync-yield-supplemental"]?.expectedIntervalSec).toBe(4 * 3600);
+    expect(body.crons["prune-status-probe-runs"]?.expectedIntervalSec).toBe(86400);
   });
 
   it("includes in-flight cron progress when a leased job is still running", async () => {
@@ -2164,6 +2170,41 @@ describe("handleStatus", () => {
 
     expect(body.dataQuality.blacklistMissingRatio).toBeCloseTo(0.002, 6);
     expect(body.dataQuality.blacklistRecentMissingAmounts).toBe(0);
+    expect(body.dataQualityStatus).toBe("healthy");
+  });
+
+  it("keeps data quality healthy for an isolated recent blacklist amount gap", async () => {
+    const now = Math.floor(Date.now() / 1000);
+    const stablecoinsCache = JSON.stringify({
+      peggedAssets: [{ id: "usdt-tether", symbol: "USDT", price: 1.0, circulating: { peggedUSD: 100_000_000 } }],
+    });
+    const db = mockD1([
+      { match: "cache WHERE key IN", rows: [makeCacheRow("stablecoins")] },
+      { match: "dex_liquidity", rows: [], first: { age: 60 } },
+      { match: "yield_data", rows: [], first: { age: 60 } },
+      { match: "stress_signals", rows: [], first: { age: 60 } },
+      { match: "cron_runs", rows: [makeCronRow("sync-stablecoins", "ok", 30)] },
+      {
+        match: "cache",
+        rows: [],
+        first: { value: stablecoinsCache, updated_at: now - 60 },
+      },
+      { match: "blacklist_events", rows: [], first: { total: 16000, missing: 1, missing_recent: 1 } },
+      { match: "depeg_events", rows: [], first: { cnt: 0 } },
+      { match: "MAX(updated_at) as latest", rows: [], first: { latest: now - 5 * 86400, tracked: 12 } },
+    ]);
+
+    const request = makeApiRequest("/api/status", { adminKey: "secret-key" });
+    const res = await handleStatus(db, true, request);
+    const body = (await res.json()) as {
+      dataQualityStatus: string;
+      causes: { dataQuality: Array<{ code: string }> };
+      dataQuality: { blacklistMissingRatio: number; blacklistRecentMissingAmounts: number };
+    };
+
+    expect(body.dataQuality.blacklistMissingRatio).toBeCloseTo(1 / 16000, 8);
+    expect(body.dataQuality.blacklistRecentMissingAmounts).toBe(1);
+    expect(body.causes.dataQuality.some((cause) => cause.code === "blacklist_gaps_degraded")).toBe(false);
     expect(body.dataQualityStatus).toBe("healthy");
   });
 

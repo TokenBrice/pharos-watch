@@ -1,19 +1,34 @@
 import { createMethodologyVersion } from "./methodology-version";
 
 const blacklistTracker = createMethodologyVersion({
-  currentVersion: "3.96",
+  currentVersion: "3.97",
   changelogPath: "/methodology/blacklist-tracker-changelog/",
   changelog: [
+  {
+    version: "3.97",
+    title: "Status amount-gap tolerance",
+    date: "2026-04-19",
+    effectiveAt: 1776556800, // 2026-04-19T00:00:00Z
+    summary:
+      "Keeps isolated recent blacklist amount gaps below the incident threshold so a single unresolved provider/parser miss among thousands of events remains visible in diagnostics without degrading `/status` or `/admin` health.",
+    impact: [
+      "Recent amount gaps now need at least 5 rows in the 24-hour monitoring window before data quality degrades",
+      "The stale threshold remains unchanged at 25 recent gaps or a 2% missing-amount ratio",
+      "The ratio-based degraded threshold remains 1%, so broad amount-attribution failures still surface promptly",
+    ],
+    commits: [],
+    reconstructed: false,
+  },
   {
     version: "3.96",
     title: "Gentle amount-gap recovery acceleration",
     date: "2026-04-18",
     effectiveAt: 1776502800, // 2026-04-18T09:00:00Z
     summary:
-      "Unblocks the EVM amount recovery lane by excluding Tron rows that are owned by the separate Tron ledger mirror, and raises the hourly recovery cap from 50 to 100 rows while staying inside the existing sync cadence, D1 batch helper, rate limiters, and 900-subrequest run budget.",
+      "Unblocks the EVM amount recovery lane by excluding Tron rows that are owned by the separate Tron ledger mirror, and raises the per-run recovery cap from 50 to 100 rows while staying inside the 6-hour sync cadence, D1 batch helper, rate limiters, and 900-subrequest run budget.",
     impact: [
       "EVM historical amount gaps no longer wait behind recent Tron pending rows in the per-row recovery selection",
-      "Hourly amount recovery now processes up to 100 rows per sync-blacklist run instead of 50",
+      "Amount recovery now processes up to 100 rows per 6-hour sync-blacklist run instead of 50",
       "The acceleration remains bounded by the existing 7-minute sync runtime budget, 900-subrequest cap, and shared D1 batch chunking",
     ],
     commits: [],
