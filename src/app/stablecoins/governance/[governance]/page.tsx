@@ -19,7 +19,7 @@ export async function generateMetadata({
     params,
     "governance",
     GOVERNANCE_TAXONOMY_PAGE_BY_SLUG,
-    "Governance Type Not Found | Pharos",
+    "Governance Type Not Found",
   );
 }
 

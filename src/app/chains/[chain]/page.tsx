@@ -18,7 +18,7 @@ export async function generateMetadata({
   const meta = CHAIN_META[chain];
   if (!meta) {
     return {
-      title: "Chain Not Found | Pharos",
+      title: "Chain Not Found",
       robots: { index: false },
     };
   }

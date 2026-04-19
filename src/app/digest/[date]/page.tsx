@@ -45,7 +45,7 @@ export async function generateMetadata({ params }: { params: Promise<{ date: str
   const digest = digestByDate.get(date);
   if (!digest) {
     return {
-      title: "Digest Not Found | Pharos",
+      title: "Digest Not Found",
       robots: { index: false },
     };
   }

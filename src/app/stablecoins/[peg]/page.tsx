@@ -14,7 +14,7 @@ export async function generateMetadata({
 }: {
   params: Promise<{ peg: string }>;
 }) {
-  return buildSlugPageMetadata(params, "peg", PEG_TAXONOMY_PAGE_BY_SLUG, "Peg Currency Not Found | Pharos");
+  return buildSlugPageMetadata(params, "peg", PEG_TAXONOMY_PAGE_BY_SLUG, "Peg Currency Not Found");
 }
 
 export default async function PegLandingPage({

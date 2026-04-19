@@ -21,7 +21,7 @@ export async function generateMetadata({
 }: {
   params: Promise<{ slug: string }>;
 }) {
-  return buildSlugPageMetadata(params, "slug", STATIC_COMPARISON_PAGE_BY_SLUG, "Comparison Not Found | Pharos");
+  return buildSlugPageMetadata(params, "slug", STATIC_COMPARISON_PAGE_BY_SLUG, "Comparison Not Found");
 }
 
 export default async function StaticComparisonPage({

@@ -10,7 +10,7 @@ import { ChainsLeaderboardClient } from "./client";
 import { FeaturePageShell } from "@/components/feature-page-shell";
 
 export const metadata: Metadata = buildPageMetadata({
-  title: "Chains",
+  title: "Stablecoin Distribution by Chain",
   description: "Ranking blockchain networks by stablecoin supply, health score, and composition. Explore per-chain stablecoin analytics on Pharos.",
   canonical: "/chains/",
   ogImage: `${SITE_URL}/og-chains.png`,

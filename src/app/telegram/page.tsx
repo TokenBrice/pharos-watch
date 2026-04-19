@@ -13,7 +13,7 @@ import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins";
 import { TelegramPulseStrip } from "./telegram-pulse-strip";
 
 export const metadata: Metadata = buildPageMetadata({
-  title: "Telegram Alerts & Digest: Stablecoin Notifications on Telegram",
+  title: "Stablecoin Telegram Alerts & Daily Digest",
   description:
     "Set up Telegram alerts for specific stablecoins, preset watchlists, or all tracked stablecoins by alert type: depeg events, depeg worsening, DEWS threat level changes, safety grade shifts, and launch promotions for pre-launch assets. Plus get the Pharos digest straight in Telegram.",
   canonical: "/telegram/",

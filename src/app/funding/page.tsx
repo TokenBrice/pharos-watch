@@ -14,7 +14,7 @@ import donationsData from "@shared/data/funding/donations.json";
 import type { CostsFile, DonationsFile } from "@shared/lib/funding/types";
 
 export const metadata: Metadata = {
-  title: "Funding — Pharos",
+  title: "Funding",
   description: "On-chain donations, running costs, and Pharos's path to being fully community-funded.",
   robots: { index: false, follow: false }, // stealth release — not indexed in v1
   alternates: { canonical: "/funding/" },

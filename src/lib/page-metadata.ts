@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { PEG_LABELS_SHORT } from "@shared/lib/classification";
+import { BACKING_BADGE_STYLES, PEG_LABELS_SHORT } from "@shared/lib/classification";
 import { API_ORIGIN } from "@shared/lib/runtime-origins";
 import type { BackingType, StablecoinMeta } from "@shared/types";
 import { getResolvedBlacklistStatus } from "@/lib/blacklist-status";
@@ -123,8 +123,12 @@ export function buildStablecoinDetailDescription(coin: StablecoinMeta): string {
 }
 
 export function buildStablecoinDetailMetadata(coin: StablecoinMeta): Metadata {
+  const backingLabel = BACKING_BADGE_STYLES[coin.flags.backing]?.label ?? "";
+  const title = backingLabel
+    ? `${coin.name} (${coin.symbol}) — ${backingLabel} Stablecoin Analytics`
+    : `${coin.name} (${coin.symbol}) Stablecoin Analytics`;
   return buildPageMetadata({
-    title: `${coin.name} (${coin.symbol}) Stablecoin Analytics`,
+    title,
     description: buildStablecoinDetailDescription(coin),
     canonical: buildStablecoinUrl(coin.id),
     ogImage: buildApiOgImageUrl(`/api/og/stablecoin/${coin.id}`),

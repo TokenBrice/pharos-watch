@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins";
+import { ACTIVE_STABLECOINS, TRACKED_STABLECOINS } from "@shared/lib/stablecoins";
 import { PEG_CURRENCY_COUNT } from "@shared/lib/classification";
 import { CHAIN_META } from "@shared/lib/chains";
 import { HomepageClient } from "@/components/homepage-client";
@@ -11,14 +11,16 @@ import { SITE_ORIGIN as SITE_URL } from "@shared/lib/runtime-origins";
 import { buildStablecoinUrl } from "@/lib/urls";
 
 export const metadata: Metadata = {
-  title: "Pharos - Stablecoin Analytics Dashboard",
+  title: {
+    absolute: `Stablecoin Analytics Dashboard — Track ${TRACKED_STABLECOINS.length} Coins | Pharos`,
+  },
   description:
     "Pharos tracks stablecoins across major chains with depeg alerts, liquidity scores, on-chain safety signals, dependency risk scoring, and report-card style risk summaries.",
   alternates: {
     canonical: "/",
   },
   openGraph: {
-    title: "Pharos - Stablecoin Analytics Dashboard",
+    title: `Stablecoin Analytics Dashboard — Track ${TRACKED_STABLECOINS.length} Coins | Pharos`,
     description:
       "Pharos tracks stablecoins across major chains with depeg alerts, liquidity scores, on-chain safety signals, dependency risk scoring, and report-card style risk summaries.",
     url: "/",

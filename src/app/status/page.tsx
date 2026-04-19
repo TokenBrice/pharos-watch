@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import StatusClient from "./client";
 
 export const metadata: Metadata = {
-  title: "System Status | Pharos",
+  title: "System Status",
   description: "Public Pharos system health, cache freshness, and endpoint availability.",
   alternates: { canonical: "/status/" },
   openGraph: {

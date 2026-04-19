@@ -14,7 +14,7 @@ const yieldBearingCount = YIELD_BEARING_STABLECOINS.length;
 const desc = `Risk-adjusted yield rankings for ${yieldBearingCount} yield-bearing stablecoins plus curated lending opportunities. Compare APY, safety grades, freshness, the Pharos Yield Score, and peg-scoped yield universes including non-USD markets.`;
 
 export const metadata = buildPageMetadata({
-  title: "Yield Intelligence",
+  title: "Stablecoin Yield Intelligence",
   description: desc,
   canonical: "/yield/",
   ogImage: `${SITE_URL}/og-yield.png`,

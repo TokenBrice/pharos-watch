@@ -15,7 +15,7 @@ export async function generateMetadata({
 }: {
   params: Promise<{ backing: string }>;
 }) {
-  return buildSlugPageMetadata(params, "backing", BACKING_TAXONOMY_PAGE_BY_SLUG, "Backing Type Not Found | Pharos");
+  return buildSlugPageMetadata(params, "backing", BACKING_TAXONOMY_PAGE_BY_SLUG, "Backing Type Not Found");
 }
 
 export default async function BackingTaxonomyPage({

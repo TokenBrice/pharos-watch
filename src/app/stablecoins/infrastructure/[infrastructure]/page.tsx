@@ -15,7 +15,7 @@ export async function generateMetadata({
 }: {
   params: Promise<{ infrastructure: string }>;
 }) {
-  return buildSlugPageMetadata(params, "infrastructure", INFRASTRUCTURE_TAXONOMY_PAGE_BY_SLUG, "Infrastructure Cohort Not Found | Pharos");
+  return buildSlugPageMetadata(params, "infrastructure", INFRASTRUCTURE_TAXONOMY_PAGE_BY_SLUG, "Infrastructure Cohort Not Found");
 }
 
 export default async function InfrastructureTaxonomyRoute({

@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import AdminClient from "./client";
 
 export const metadata: Metadata = {
-  title: "Operator Admin | Pharos",
+  title: "Operator Admin",
   description: "Access-protected operator control panel for Pharos.",
   alternates: { canonical: "/admin/" },
   robots: { index: false, follow: false },
