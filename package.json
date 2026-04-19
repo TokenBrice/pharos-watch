@@ -13,7 +13,7 @@
     "dev": "node --env-file-if-exists=.env.local scripts/dev-api-proxy.mjs & next dev",
     "dev:next": "next dev",
     "dev:proxy": "node --env-file-if-exists=.env.local scripts/dev-api-proxy.mjs",
-    "prebuild": "tsx scripts/generate-redirects.ts && tsx scripts/generate-sitemap-dates.ts",
+    "prebuild": "tsx scripts/generate-redirects.ts && tsx scripts/generate-sitemap-dates.ts && tsx scripts/generate-llms-txt.ts",
     "build": "next build",
     "start": "next start",
     "lint": "eslint . --cache --cache-strategy content --cache-location .cache/eslint/ --max-warnings=0",

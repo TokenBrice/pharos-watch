@@ -1,0 +1,162 @@
+/* eslint-disable security/detect-non-literal-fs-filename -- repo-local build script reads checked-in data and writes a deterministic public asset. */
+
+import { readFileSync, writeFileSync } from "node:fs";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
+import { PEG_LABELS_SHORT } from "../shared/lib/classification";
+import { DEAD_STABLECOINS } from "../shared/lib/dead-stablecoins";
+import { SITE_ORIGIN } from "../shared/lib/runtime-origins";
+import { ACTIVE_STABLECOINS } from "../shared/lib/stablecoins";
+import type { BackingType, GovernanceType, StablecoinMeta } from "../shared/types";
+
+const __dirname = dirname(fileURLToPath(import.meta.url));
+const DIGESTS_PATH = join(__dirname, "../data/digests.json");
+const OUTPUT_PATH = join(__dirname, "../public/llms.txt");
+const DIGEST_LIMIT = 20;
+
+const GOVERNANCE_METADATA_PHRASES: Record<GovernanceType, string> = {
+  centralized: "centralized",
+  "centralized-dependent": "CeFi-dependent",
+  decentralized: "decentralized",
+};
+
+const BACKING_METADATA_PHRASES: Record<BackingType, string> = {
+  "rwa-backed": "backed by real-world assets",
+  "crypto-backed": "collateralized by crypto assets",
+  algorithmic: "algorithmic stablecoin",
+};
+
+interface DigestEntry {
+  date: string;
+  title: string;
+  text: string;
+  generatedAt?: number;
+}
+
+function absolute(path: string): string {
+  return `${SITE_ORIGIN}${path.startsWith("/") ? path : `/${path}`}`;
+}
+
+function stablecoinPath(id: string): string {
+  return `/stablecoin/${encodeURIComponent(id)}/`;
+}
+
+function escapeMarkdown(text: string): string {
+  return text
+    .replaceAll("\\", "\\\\")
+    .replaceAll("[", "\\[")
+    .replaceAll("]", "\\]")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function stablecoinDescription(coin: StablecoinMeta): string {
+  const governance = GOVERNANCE_METADATA_PHRASES[coin.flags.governance] ?? coin.flags.governance;
+  const backing = BACKING_METADATA_PHRASES[coin.flags.backing] ?? coin.flags.backing;
+  const peg = PEG_LABELS_SHORT[coin.flags.pegCurrency] ?? coin.flags.pegCurrency;
+
+  return `${governance} stablecoin ${backing} pegged to ${peg}.`;
+}
+
+function loadDigests(): DigestEntry[] {
+  const raw = readFileSync(DIGESTS_PATH, "utf8");
+  const parsed = JSON.parse(raw) as DigestEntry[];
+
+  return parsed
+    .filter((entry) => entry.date && entry.title && entry.text)
+    .sort((left, right) => (right.generatedAt ?? 0) - (left.generatedAt ?? 0))
+    .slice(0, DIGEST_LIMIT);
+}
+
+const coreDataLinks = [
+  ["Dashboard homepage", absolute("/"), "Market overview with KPI bar, peg-score heatmap, and stablecoin list."],
+  ["Safety Scores", absolute("/safety-scores/"), "Weighted Liquidity / Resilience / Decentralization / Dependency + peg-stability multiplier, A+ to F."],
+  ["Pharos Stability Index", absolute("/stability-index/"), "Aggregate market-stability gauge with history chart."],
+  ["DEWS (Depeg Early Warning System)", absolute("/depeg/"), "Active depegs, watch-list, and historical DEWS bands."],
+  ["Liquidity", absolute("/liquidity/"), "DEX liquidity scores, pool counts, TVL depth."],
+  ["Yield", absolute("/yield/"), "Yield-bearing stablecoin intelligence."],
+  ["Chains", absolute("/chains/"), "Per-chain stablecoin distribution and health."],
+  ["Flows", absolute("/flows/"), "Mint/burn flow dashboards."],
+  ["Blacklist Tracker", absolute("/blacklist/"), "Issuer freeze events and exposure."],
+  ["Dependency Map", absolute("/dependency-map/"), "Inter-stablecoin dependency graph."],
+  ["Coverage", absolute("/coverage/"), "What Pharos tracks and what it does not."],
+  [
+    "Cemetery",
+    absolute("/cemetery/"),
+    `${DEAD_STABLECOINS.length} defunct stablecoins and their causes of death.`,
+  ],
+  ["Upcoming", absolute("/upcoming/"), "Pre-launch stablecoins Pharos is tracking."],
+] as const;
+
+const methodologyLinks = [
+  ["Methodology Hub", absolute("/methodology/"), "Full scoring model for safety, peg, liquidity, yield, contagion."],
+  ["Safety Scores Changelog", absolute("/methodology/scoring-changelog/"), "Every weight change since v1.0."],
+  ["Depeg + DEWS Changelog", absolute("/methodology/depeg-changelog/"), ""],
+  ["Liquidity Score Changelog", absolute("/methodology/liquidity-score-changelog/"), ""],
+  ["Stability Index Changelog", absolute("/methodology/stability-index-changelog/"), ""],
+  ["Chain Health Changelog", absolute("/methodology/chain-health-changelog/"), ""],
+  ["Yield Intelligence Changelog", absolute("/methodology/yield-changelog/"), ""],
+  ["Blacklist Tracker Changelog", absolute("/methodology/blacklist-tracker-changelog/"), ""],
+  ["Mint/Burn Flow Changelog", absolute("/methodology/mint-burn-flow-changelog/"), ""],
+  ["Pricing Pipeline Changelog", absolute("/methodology/pricing-pipeline-changelog/"), ""],
+] as const;
+
+const apiLinks = [
+  ["API Reference", absolute("/about/api/"), "Public and ops lanes, auth model, endpoint catalogue."],
+  ["About", absolute("/about/"), "Project context and data sources."],
+] as const;
+
+const changelogLinks = [
+  ["Weekly Changelog", absolute("/changelog/"), "Release notes."],
+  ["Daily Digest Archive", absolute("/digest/"), "Daily market recaps."],
+] as const;
+
+function renderLinkList(links: readonly (readonly [string, string, string])[]): string[] {
+  return links.map(([title, url, description]) => {
+    const suffix = description ? `: ${description}` : "";
+    return `- [${escapeMarkdown(title)}](${url})${suffix}`;
+  });
+}
+
+function render(): string {
+  const digests = loadDigests();
+  const lines: string[] = [
+    "# Pharos",
+    "",
+    `> Pharos tracks ${ACTIVE_STABLECOINS.length} active stablecoins across major chains with depeg alerts, liquidity scores, on-chain safety signals, dependency-risk scoring, and report-card-style risk summaries. Data refreshes multiple times per day from the Pharos Cloudflare Worker API.`,
+    "",
+    "## Core Data",
+    "",
+    ...renderLinkList(coreDataLinks),
+    "",
+    "## Methodology",
+    "",
+    ...renderLinkList(methodologyLinks),
+    "",
+    "## API",
+    "",
+    ...renderLinkList(apiLinks),
+    "",
+    "## Changelog",
+    "",
+    ...renderLinkList(changelogLinks),
+    "",
+    "## Digest",
+    "",
+    ...digests.map((entry) => (
+      `- [${escapeMarkdown(entry.title)}](${absolute(`/digest/${entry.date}/`)}): ${escapeMarkdown(entry.text)}`
+    )),
+    "",
+    "## Stablecoins Index",
+    "",
+    ...ACTIVE_STABLECOINS.map((coin) => (
+      `- [${escapeMarkdown(`${coin.name} (${coin.symbol})`)}](${absolute(stablecoinPath(coin.id))}): ${stablecoinDescription(coin)}`
+    )),
+    "",
+  ];
+
+  return lines.join("\n");
+}
+
+writeFileSync(OUTPUT_PATH, render(), "utf8");
+console.log(`Generated llms.txt for ${ACTIVE_STABLECOINS.length} active stablecoins`);
