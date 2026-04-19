@@ -33,7 +33,7 @@ On `lg+`, the detail hero's right column surfaces a four-pill `HeroSignalsRail` 
 
 ### Breadcrumbs
 
-`src/components/breadcrumb.tsx` is the shared breadcrumb primitive for bespoke deep-route surfaces such as stablecoin detail. Most feature and taxonomy routes use `FeaturePageShell`, which renders its own `Dashboard / current page` breadcrumb plus `BreadcrumbJsonLd` from `breadcrumbName` and `path`. For new standard feature pages, prefer `FeaturePageShell`; for bespoke deep routes, use `Breadcrumb` directly or consolidate the two renderers first.
+`src/components/breadcrumb.tsx` is the shared visual breadcrumb primitive for bespoke deep-route surfaces such as stablecoin detail. Most feature and taxonomy routes use `FeaturePageShell`, which renders its own `Dashboard / current page` breadcrumb and emits `BreadcrumbJsonLd` from either the default `breadcrumbName`/`path` pair or an explicit `breadcrumbItems` override for N-level routes. For new standard feature pages, prefer `FeaturePageShell`; for bespoke deep routes, use `Breadcrumb` directly or consolidate the two renderers first.
 
 ---
 

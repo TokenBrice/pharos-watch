@@ -76,8 +76,12 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `src/app/stablecoins/[peg]/error.tsx`
 - `src/app/stablecoins/[peg]/page.tsx` - route /stablecoins/[peg]; default:PegLandingPage, generateMetadata, generateStaticParams
 - `src/app/stablecoins/backing/[backing]/page.tsx` - route /stablecoins/backing/[backing]; default:BackingTaxonomyPage, generateMetadata, generateStaticParams
+- `src/app/stablecoins/backing/page.tsx` - route /stablecoins/backing; default:StablecoinBackingHubPage, metadata
 - `src/app/stablecoins/governance/[governance]/page.tsx` - route /stablecoins/governance/[governance]; default:GovernanceTaxonomyPage, generateMetadata, generateStaticParams
+- `src/app/stablecoins/governance/page.tsx` - route /stablecoins/governance; default:StablecoinGovernanceHubPage, metadata
 - `src/app/stablecoins/infrastructure/[infrastructure]/page.tsx` - route /stablecoins/infrastructure/[infrastructure]; default:InfrastructureTaxonomyRoute, generateMetadata, generateStaticParams
+- `src/app/stablecoins/infrastructure/page.tsx` - route /stablecoins/infrastructure; default:StablecoinInfrastructureHubPage, metadata
+- `src/app/stablecoins/page.tsx` - route /stablecoins; default:StablecoinsHubPage, metadata
 - `src/app/start/page.tsx` - route /start; default:StartPage, metadata
 - `src/app/status/client.tsx` - default:StatusClient
 - `src/app/status/error.tsx`
@@ -211,7 +215,7 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `src/components/blacklist-status-drilldown.tsx` - BlacklistStatusDrilldown
 - `src/components/blacklist-table.tsx` - BlacklistTable
 - `src/components/bluechip-header-badge.tsx` - BluechipHeaderBadge
-- `src/components/breadcrumb-json-ld.tsx` - BreadcrumbJsonLd
+- `src/components/breadcrumb-json-ld.tsx` - BreadcrumbItem, BreadcrumbJsonLd
 - `src/components/breadcrumb.tsx` - Breadcrumb, BreadcrumbItem
 - `src/components/callout-banner.tsx` - CalloutBanner
 - `src/components/category-stats.tsx` - CategoryStats
@@ -238,7 +242,7 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `src/components/create-page-error.tsx` - createPageError
 - `src/components/daily-digest.tsx` - DailyDigest, DigestFullDisplay
 - `src/components/data-health-banner.tsx` - DataHealthBanner
-- ... 192 more files omitted; use `rg --files src/components` for the full list.
+- ... 193 more files omitted; use `rg --files src/components` for the full list.
 
 ## Pages Functions
 
@@ -319,10 +323,10 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 
 ## Stablecoin data
 
-- `shared/data/stablecoins/canonical-order.json` - 190 entries
+- `shared/data/stablecoins/canonical-order.json` - 191 entries
 - `shared/data/stablecoins/commodity.json` - 9 entries
 - `shared/data/stablecoins/non-usd.json` - 38 entries
-- `shared/data/stablecoins/pre-launch.json` - 10 entries
+- `shared/data/stablecoins/pre-launch.json` - 11 entries
 - `shared/data/stablecoins/usd-major.json` - 29 entries
 - `shared/data/stablecoins/usd-minor.json` - 104 entries
 
