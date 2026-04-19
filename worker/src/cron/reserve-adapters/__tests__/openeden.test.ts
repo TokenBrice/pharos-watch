@@ -31,6 +31,32 @@ describe("adaptOpenEdenUsdo", () => {
     });
   });
 
+  it("includes pendingUsdc in component-total validation", () => {
+    // Regression: OpenEden added a pendingUsdc field (USDC from user
+    // subscriptions awaiting T-Bill conversion) that contributes to
+    // reserveAssetsInUsd. Without this field in the component sum the
+    // 1% tolerance check throws for live payloads where pending
+    // subscriptions are non-zero. Values mirror the 2026-04-19 live
+    // production payload shape: pendingUsdc accounts for ~1.76% of
+    // reserveAssetsInUsd, which previously tripped the validation.
+    expect(() =>
+      adaptOpenEdenUsdo({
+        date: "2026-04-19T00:00:00.000Z",
+        usdoAmount: 44_085_617.15,
+        totalTbillAmountInUsd: 38_824_683.87,
+        usdcAmount: 411_606.20,
+        rlusdAmount: 4_000_200,
+        buidlAmount: 3_219_897.49,
+        vbillAmount: 1_763_678.75,
+        usycAmountInUsd: 0,
+        benjiAmount: 0,
+        pendingUsdc: 864_831.69,
+        reserveAssetsInUsd: 49_084_898.00,
+        ratio: 111.3399,
+      }),
+    ).not.toThrow();
+  });
+
   it("includes the RLUSD component in component-total validation and slices", () => {
     const result = adaptOpenEdenUsdo({
       date: "2026-03-25T08:00:17.600Z",

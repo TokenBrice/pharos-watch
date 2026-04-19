@@ -20,6 +20,10 @@ interface OpenEdenReserveCompositionResponse {
   vbillAmount: number;
   usycAmountInUsd: number;
   benjiAmount: number;
+  // USDC from user subscriptions awaiting T-Bill conversion; part of
+  // reserveAssetsInUsd but locked in the subscription pipeline, so it
+  // is excluded from immediate-redemption capacity.
+  pendingUsdc?: number;
   reserveAssetsInUsd: number;
   ratio: number;
 }
@@ -38,7 +42,8 @@ function adaptOpenEdenReserveComposition(payload: OpenEdenReserveCompositionResp
     + payload.buidlAmount
     + payload.vbillAmount
     + payload.usycAmountInUsd
-    + payload.benjiAmount;
+    + payload.benjiAmount
+    + (payload.pendingUsdc ?? 0);
   if (
     payload.reserveAssetsInUsd > 0
     && Math.abs(componentTotal - payload.reserveAssetsInUsd) / payload.reserveAssetsInUsd > 0.01
