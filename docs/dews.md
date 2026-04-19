@@ -158,7 +158,7 @@ Score = `min(100, sum of active signal points)`.
 
 ### Cron Schedule
 
-**Trigger:** `10,40 * * * *` — chained after `sync-dex-liquidity` on the shared half-hourly lane
+**Trigger:** `26,56 * * * *` — DB-only DEWS/PSI lane. It runs after the normal `10,40 * * * *` DEX-liquidity slot, but it is a separate scheduled invocation so a DEX-liquidity CPU overrun cannot prevent DEWS publication.
 
 **Cron name:** `compute-dews`
 

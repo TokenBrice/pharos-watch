@@ -228,7 +228,8 @@ Cloudflare Worker (API layer)
   ├── Cron: 4,34 * * * *                        → mint/burn critical lane (every 30 min)
   ├── Cron: 6 */2 * * *                         → DEX discovery staging (every 2h)
   ├── Cron: 13,43 * * * *                       → mint/burn extended lane (every 30 min)
-  ├── Cron: 10,40 * * * *                       → stablecoin charts + DEX liquidity + DEWS + PSI
+  ├── Cron: 10,40 * * * *                       → stablecoin charts + DEX liquidity
+  ├── Cron: 26,56 * * * *                       → DEWS + PSI DB-only compute
   ├── Cron: 11 */4 * * *                        → live reserve sync + redemption backstop snapshots + Kinesis supply + collateral drift check (every 4h)
   ├── Cron: 20 * * * *                          → yield sync
   ├── Cron: 25 */4 * * *                        → supplemental yield sync

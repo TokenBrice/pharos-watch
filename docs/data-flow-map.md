@@ -39,7 +39,8 @@ Cron schedules are declared in `worker/wrangler.toml`, mirrored in `shared/lib/c
 - `4,34 * * * *`: mint/burn critical lane (every 30 minutes)
 - `6 */2 * * *`: DEX discovery staging (every 2h)
 - `13,43 * * * *`: mint/burn extended lane (every 30 minutes)
-- `10,40 * * * *`: stablecoin charts, then DEX liquidity, then DEWS, then PSI
+- `10,40 * * * *`: stablecoin charts, then DEX liquidity
+- `26,56 * * * *`: DEWS, then PSI on the DB-only decoupled lane
 - `20 * * * *`: core yield publication
 - `25 */4 * * *`: supplemental yield-source refresh
 - `11 */4 * * *`: live reserve sync, then redemption backstop sync, then Kinesis supply sync, then collateral-drift checks/alerts (every 4h)

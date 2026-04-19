@@ -4,7 +4,7 @@ This note supplements [`docs/yield-intelligence.md`](./yield-intelligence.md) wi
 
 ## Slot Context
 
-- `sync-yield-data` now runs on a dedicated hourly trigger at `20 * * * *`, after the `10,40 * * * *` charts / DEX / DEWS / PSI lane has already had 10 minutes to settle.
+- `sync-yield-data` now runs on a dedicated hourly trigger at `20 * * * *`, after the `10,40 * * * *` charts / DEX lane has had time to settle. It does not depend on the separate `26,56 * * * *` DEWS / PSI lane.
 - `sync-yield-supplemental` runs on its own slower `25 */4 * * *` trigger and feeds a cache snapshot that the hourly publisher consumes.
 - The hourly publisher is now the freshness path for `yield-rankings`; optional upstream families are deliberately kept off that path.
 

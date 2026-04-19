@@ -1,6 +1,6 @@
 # Worker Infrastructure
 
-Cloudflare Worker serving the Pharos API. Handles HTTP routing, edge caching, CORS, admin auth, and 31 status-tracked scheduled runtime jobs across 16 cron expressions / runner slots. `CRON_INTERVALS` / `/api/status` track the 31 `CRON_JOB_DEFINITIONS` jobs; the separate `*/5 * * * *` digest-trigger poll slot executes manual digest requests under the `daily-digest` lease rather than registering as its own status job.
+Cloudflare Worker serving the Pharos API. Handles HTTP routing, edge caching, CORS, admin auth, and 31 status-tracked scheduled runtime jobs across 17 cron expressions / runner slots. `CRON_INTERVALS` / `/api/status` track the 31 `CRON_JOB_DEFINITIONS` jobs across 16 job-bearing slots; the separate `*/5 * * * *` digest-trigger poll slot executes manual digest requests under the `daily-digest` lease rather than registering as its own status job.
 
 Execution note: the `snapshot-supply` retry path runs on the `*/15 * * * *` trigger only after a downstream-safe `sync-stablecoins` cache write.
 
@@ -320,7 +320,7 @@ Most module-level mutable state was eliminated in the parameter-passing refactor
 
 ## Cron Scheduling
 
-This worker declares 16 cron expressions in `worker/wrangler.toml`. Fetch-heavy lanes are split across separate trigger slots so they do not compete with the quarter-hourly core pipeline for the Workers per-trigger 6-connection fetch pool.
+This worker declares 17 cron expressions in `worker/wrangler.toml`. Fetch-heavy lanes are split across separate trigger slots so they do not compete with the quarter-hourly core pipeline for the Workers per-trigger 6-connection fetch pool or share CPU budget with DB-only availability jobs.
 
 ### `worker/wrangler.toml` Triggers
 
@@ -334,6 +334,7 @@ crons = [
   "6 */2 * * *",
   "13,43 * * * *",
   "10,40 * * * *",
+  "26,56 * * * *",
   "11 */4 * * *",
   "20 * * * *",
   "25 */4 * * *",
@@ -362,7 +363,7 @@ crons = [
 - `capabilities.stablecoinsCache`
 - `capabilities.depegPipeline`
 
-`snapshot-supply` retry requires the stablecoins-cache capability. Both `snapshot-supply` and `snapshot-chain-supply` enforce a 20-hour cooldown via a `cache` table key (`snapshot-supply:last-write` / `snapshot-chain-supply:last-write`) so the quarter-hourly slot produces at most one UTC-day-keyed snapshot write per day. `publish-report-card-cache` also requires the stablecoins-cache capability and refreshes the shared Safety Score cache used by Chain Health without relying on the yield cron. `stability-index` and `compute-dews` were moved to the half-hourly trigger (Trigger 7) to halve their run frequency. `sync-dex-liquidity` still refreshes every 30 minutes, while `sync-yield-data` now publishes on its own hourly post-DEX trigger.
+`snapshot-supply` retry requires the stablecoins-cache capability. Both `snapshot-supply` and `snapshot-chain-supply` enforce a 20-hour cooldown via a `cache` table key (`snapshot-supply:last-write` / `snapshot-chain-supply:last-write`) so the quarter-hourly slot produces at most one UTC-day-keyed snapshot write per day. `publish-report-card-cache` also requires the stablecoins-cache capability and refreshes the shared Safety Score cache used by Chain Health without relying on the yield cron. `stability-index` and `compute-dews` run on the decoupled half-hourly DB-only trigger (Trigger 8). `sync-dex-liquidity` still refreshes every 30 minutes, while `sync-yield-data` now publishes on its own hourly post-DEX trigger.
 
 **Inline staleness alert:** After sync-stablecoins completes, if the `stablecoins` cache is older than 1800 seconds (30 min), `sendAlert()` fires a webhook notification. This is a health check — not a cron job itself.
 
@@ -412,14 +413,21 @@ This offset schedule exists so long-tail mint/burn backfill pressure cannot star
 | ------------------------ | --------------------------------- | ----------------------------------------------- | ---------------------------------------------- |
 | `sync-stablecoin-charts` | `syncStablecoinCharts()`          | `worker/src/cron/sync-stablecoin-charts.ts`     | This doc (below)                               |
 | `sync-dex-liquidity`     | `syncDexLiquidity()`              | `worker/src/cron/dex-liquidity/orchestrator.ts` | [DEX Liquidity Score](./dex-liquidity.md)      |
-| `compute-dews`           | `computeAndStoreDEWS()`           | `worker/src/cron/compute-dews.ts`               | [DEWS](./dews.md)                              |
-| `stability-index`        | `computeAndStoreStabilityIndex()` | `worker/src/cron/stability-index.ts`            | [Pharos Stability Index](./stability-index.md) |
 
-**Execution model:** The slot runs in the same sequential order for connection control: charts → dex-liquidity → compute-dews → stability-index. Charts is a single lightweight DL fetch (~2s) that completes quickly and frees the pool. `compute-dews` and `stability-index` are DB-only (0 external connections) and benefit from running after dex-liquidity provides fresh liquidity scores. `sync-stablecoin-charts` enforces a 1-hour cooldown via `stablecoin-charts:last-write` — on the alternate 30-min run, it returns immediately with `cooldown_active`. The reliability change is failure containment: `sync-dex-liquidity` no longer suppresses downstream DEWS / PSI execution for the whole slot when it throws. Downstream jobs still run and make their own degraded/no-write decisions against the latest available tables. `compute-dews` also now treats malformed persisted `stress_signals` and `yield_data.warning_signals` rows as degraded input coverage instead of a validation-only footnote, so operators can see corrupt carry-forward state in cron metadata before it silently distorts the next run. The slot shares the Workers 6-connection limit, so fetch-heavy additions must account for total in-slot concurrency. `sync-dex-liquidity` still stages its protocol-native DEX fetchers only after Curve and subgraph enrichment have consumed their response bodies, and the newer Meteora / PancakeSwap / Slipstream lanes follow the same sequencing rule rather than overlapping the earlier fetch-heavy phase. UniV3 subgraph queries continue to run in parallel across chains for reduced wall-clock time.
+**Execution model:** The slot runs in sequential order for connection control: charts → dex-liquidity. Charts is a single lightweight DL fetch (~2s) that completes quickly and frees the pool. `sync-stablecoin-charts` enforces a 1-hour cooldown via `stablecoin-charts:last-write` — on the alternate 30-min run, it returns immediately with `cooldown_active`. The slot shares the Workers 6-connection limit and the configured CPU budget, so fetch-heavy or CPU-heavy additions must account for total in-slot pressure. `sync-dex-liquidity` still stages its protocol-native DEX fetchers only after Curve and subgraph enrichment have consumed their response bodies, and the newer Meteora / PancakeSwap / Slipstream lanes follow the same sequencing rule rather than overlapping the earlier fetch-heavy phase. UniV3 subgraph queries continue to run in parallel across chains for reduced wall-clock time. DEWS and PSI were moved to Trigger 8 so a platform-level DEX-liquidity CPU kill cannot starve the DB-only publication jobs.
 
 `sync-dex-liquidity` metadata now tracks both row coverage and value coverage. In addition to `currentCoverage` / `previousCoverage`, the cron records `currentGlobalTvl`, `previousGlobalTvl`, top-10 covered TVL, row/value guard flags, current/previous coverage-class distribution, and persistence diagnostics (`placeholderRowsWritten`, orphan-row cleanup status, historical snapshot write status). `/status` surfaces the coverage slice through the Liquidity Health card, while the raw cron metadata keeps the persistence diagnostics available for operator debugging.
 
-### Trigger 8: `11 */4 * * *` (every 4h at :11 — reserve + redemption lane)
+### Trigger 8: `26,56 * * * *` (DEWS / PSI — DB-only, every 30 min)
+
+| Job               | Function                          | File                                 | Documentation                                  |
+| ----------------- | --------------------------------- | ------------------------------------ | ---------------------------------------------- |
+| `compute-dews`    | `computeAndStoreDEWS()`           | `worker/src/cron/compute-dews.ts`    | [DEWS](./dews.md)                              |
+| `stability-index` | `computeAndStoreStabilityIndex()` | `worker/src/cron/stability-index.ts` | [Pharos Stability Index](./stability-index.md) |
+
+**Execution model:** The slot runs `compute-dews` then `stability-index` as DB-only jobs. It is offset sixteen minutes after the `10,40` DEX-liquidity slot so normal DEX runs can publish fresh liquidity inputs first, but it remains a separate scheduled invocation. If DEX-liquidity overruns CPU budget or is killed by the platform, this slot still runs against the last available tables and records any stale DEX-liquidity input as degraded source coverage in DEWS metadata.
+
+### Trigger 9: `11 */4 * * *` (every 4h at :11 — reserve + redemption lane)
 
 | Job                         | Function                    | File                                           | Documentation                                     |
 | --------------------------- | --------------------------- | ---------------------------------------------- | ------------------------------------------------- |
@@ -429,7 +437,7 @@ This offset schedule exists so long-tail mint/burn backfill pressure cannot star
 
 **Connection budget:** dedicated 4-hourly trigger for reserve and redemption tuning. Jobs run sequentially so live reserve adapters finish before redemption backstop sync consumes reserve metadata. Kinesis supply sync adds 2 sequential HTTP fetches (1 connection peak). Moved from hourly to 4-hourly because most reserve attestations (Chainlink PoR, Ethena, Tether transparency, etc.) update daily or weekly — hourly polling was wasted RPC + HTTP traffic. The slot-level "Live reserve sync stale" alert threshold in `worker/src/handlers/scheduled/hourly-live-reserves.ts` is 12h (≥ 3 missed runs); `LIVE_RESERVE_FRESHNESS_SEC = 48h` at the API layer keeps consumer-facing "fresh" classification unaffected.
 
-### Trigger 9: `20 * * * *` (hourly at :20 — core yield publication)
+### Trigger 10: `20 * * * *` (hourly at :20 — core yield publication)
 
 | Job               | Function          | File                                                                  | Documentation                                 |
 | ----------------- | ----------------- | --------------------------------------------------------------------- | --------------------------------------------- |
@@ -437,7 +445,7 @@ This offset schedule exists so long-tail mint/burn backfill pressure cannot star
 
 **Connection budget:** dedicated hourly trigger for the core publisher. The job consumes cached DEX pools plus the cached supplemental yield snapshot, keeps deterministic on-chain reads to a single in-flight lane, and is allowed a larger app-level timeout because it no longer shares the half-hourly slot.
 
-### Trigger 10: `25 */4 * * *` (every 4 hours at :25 — yield supplemental lane)
+### Trigger 11: `25 */4 * * *` (every 4 hours at :25 — yield supplemental lane)
 
 | Job                       | Function                  | File                                         | Documentation                                 |
 | ------------------------- | ------------------------- | -------------------------------------------- | --------------------------------------------- |
@@ -445,7 +453,7 @@ This offset schedule exists so long-tail mint/burn backfill pressure cannot star
 
 **Connection budget:** dedicated multi-hour trigger for the heavier optional yield families (Morpho, Pendle, Yearn/Kong, Beefy, Compound V3, Aave V3). It writes a cache snapshot that the hourly publisher consumes, so protocol-API stalls reduce optional coverage instead of blocking `yield-rankings`.
 
-### Trigger 11: `2,7,12,17,22,27,32,37,42,47,52,57 * * * *` (Telegram dispatch — dedicated, every 5 min)
+### Trigger 12: `2,7,12,17,22,27,32,37,42,47,52,57 * * * *` (Telegram dispatch — dedicated, every 5 min)
 
 | Job                        | Function                   | File                                          | Documentation                              |
 | -------------------------- | -------------------------- | --------------------------------------------- | ------------------------------------------ |
@@ -453,7 +461,7 @@ This offset schedule exists so long-tail mint/burn backfill pressure cannot star
 
 Dedicated trigger for Telegram work. Isolated from the quarter-hourly pipeline so subscriber fan-out gets its own 6-connection pool and CPU budget. Subscriber fan-out uses up to 5 of 6 available connections for parallel `sendBatch()` sends. Up to 200 subscriber message attempts per run; overflow and retryable fresh-send failures are enqueued to `telegram_pending_alerts` in D1 for subsequent runs.
 
-### Trigger 12: `*/5 * * * *` (manual digest trigger poll)
+### Trigger 13: `*/5 * * * *` (manual digest trigger poll)
 
 | Job surface | Function | File | Documentation |
 | ----------- | -------- | ---- | ------------- |
@@ -461,7 +469,7 @@ Dedicated trigger for Telegram work. Isolated from the quarter-hourly pipeline s
 
 This slot polls the `digest:force-run-request` cache key written by `POST /api/trigger-digest`. When a request is pending, it runs `generateDailyDigest(..., force=true, twitterCreds=null, ...)` under the existing `daily-digest` lease, clears or preserves the flag according to the lease outcome, and writes `digest:last-trigger-result` for the ops UI. It is a runner slot, not a separate status-tracked cron job.
 
-### Trigger 13: `0 8 * * *` (daily at 08:00 UTC — snapshots & lightweight fetchers)
+### Trigger 14: `0 8 * * *` (daily at 08:00 UTC — snapshots & lightweight fetchers)
 
 | Job                             | Function                       | File                                               | Documentation                                    |
 | ------------------------------- | ------------------------------ | -------------------------------------------------- | ------------------------------------------------ |
@@ -473,7 +481,7 @@ This slot polls the `digest:force-run-request` cache key written by `POST /api/t
 
 **Connection budget:** 3 snapshot jobs are D1-only (0 external connections). `fetch-tbill-rate` (ECB/FRED/Treasury/SIX benchmark fetches, still serialized inside one job) and `sync-usds-status` (Etherscan) are chained sequentially on the external-fetch branch to keep this trigger conservative on connection use. A failed `fetch-tbill-rate` run no longer suppresses `sync-usds-status`; peak external usage is 1 connection.
 
-### Trigger 14: `5 8 * * *` (daily at 08:05 UTC — heavy external fetchers)
+### Trigger 15: `5 8 * * *` (daily at 08:05 UTC — heavy external fetchers)
 
 | Job              | Function                | File                                | Documentation                           |
 | ---------------- | ----------------------- | ----------------------------------- | --------------------------------------- |
@@ -482,9 +490,9 @@ This slot polls the `digest:force-run-request` cache key written by `POST /api/t
 | `weekly-recap`   | `generateWeeklyRecap()` | `worker/src/cron/weekly-recap.ts`   | [Digest Pipeline](./digest-pipeline.md) |
 | `discovery-scan` | `runDiscoveryScan()`    | `worker/src/cron/discovery-scan.ts` | [Data Pipeline](./data-pipeline.md)     |
 
-**Connection budget:** `sync-bluechip` (3 parallel batch connections), `daily-digest` / `weekly-recap` (1 long-lived Anthropic API call at a time because the recap is chained after the daily digest), and `discovery-scan` (1 CoinGecko call) use ≤5 concurrent external connections. The 5-minute offset from Trigger 13 ensures PSI snapshot data is available for the daily digest without an explicit chain dependency. `weekly-recap` and `discovery-scan` both run Monday-only and return immediately on other days. Reliability is now failure-contained at the job level for this slot: a thrown `sync-bluechip`, `daily-digest`, `weekly-recap`, or `discovery-scan` run is recorded independently and no longer aborts the rest of the 08:05 lane before the remaining jobs can settle.
+**Connection budget:** `sync-bluechip` (3 parallel batch connections), `daily-digest` / `weekly-recap` (1 long-lived Anthropic API call at a time because the recap is chained after the daily digest), and `discovery-scan` (1 CoinGecko call) use ≤5 concurrent external connections. The 5-minute offset from Trigger 14 ensures PSI snapshot data is available for the daily digest without an explicit chain dependency. `weekly-recap` and `discovery-scan` both run Monday-only and return immediately on other days. Reliability is now failure-contained at the job level for this slot: a thrown `sync-bluechip`, `daily-digest`, `weekly-recap`, or `discovery-scan` run is recorded independently and no longer aborts the rest of the 08:05 lane before the remaining jobs can settle.
 
-### Trigger 15: `0 6 1 * *` (monthly at 06:00 UTC on the 1st)
+### Trigger 16: `0 6 1 * *` (monthly at 06:00 UTC on the 1st)
 
 | Job                    | Function                  | File                                                   | Documentation                                 |
 | ---------------------- | ------------------------- | ------------------------------------------------------ | --------------------------------------------- |
@@ -492,7 +500,7 @@ This slot polls the `digest:force-run-request` cache key written by `POST /api/t
 
 Runs once a month on the 1st at 06:00 UTC. Scans unmatched high-TVL DeFiLlama pools and flags missing protocols as high-confidence or review-needed expansion candidates.
 
-### Trigger 16: `0 3 * * *` (daily at 03:00 UTC — TTL pruning)
+### Trigger 17: `0 3 * * *` (daily at 03:00 UTC — TTL pruning)
 
 | Job                       | Function                    | File                                             | Documentation            |
 | ------------------------- | --------------------------- | ------------------------------------------------ | ------------------------ |
@@ -515,15 +523,16 @@ Workers enforce a **6 concurrent fetch connections** limit per cron trigger invo
 | 4       | `4,34 * * * *`     |                                        1 (Alchemy JSON-RPC)                                        |    5     |
 | 5       | `6 */2 * * *`      |                                  1 (sequential CG/GT/DexScreener)                                  |    5     |
 | 6       | `13,43 * * * *`    |                                1 (Alchemy JSON-RPC, extended lane)                                 |    5     |
-| 7       | `10,40 * * * *`    |                 4 (charts -> DEX liquidity -> compute-dews(0) -> stability-index(0) are chained)   |    2     |
-| 8       | `11 */4 * * *`     |                2 (reserve adapters + Kinesis are sequential; redemption is DB-only)                |    4     |
-| 9       | `20 * * * *`       |                                      1 (core yield publisher)                                      |    5     |
-| 10      | `25 */4 * * *`     |                                  5 (supplemental yield families)                                   |    1     |
-| 11      | `2,7,...,57 * * * *` |                        5 (Telegram alert dispatcher batches sends in groups of 5)                  |    1     |
-| 12      | `0 8 * * *`        |                 1 (benchmark feeds -> USDS Etherscan reads are chained serially)                   |    5     |
-| 13      | `5 8 * * *`        |                     5 (Bluechip batch of 3 + Anthropic + CoinGecko; digest/recap chained)          |    1     |
-| 14      | `0 6 1 * *`        |                                      1 (DeFiLlama yield scan)                                      |    5     |
-| 15      | `0 3 * * *`        |                     0 (prune-status-probe-runs + prune-cron-history; both DB-only)                 |    6     |
+| 7       | `10,40 * * * *`    |                                  4 (charts -> DEX liquidity are chained)                           |    2     |
+| 8       | `26,56 * * * *`    |                                  0 (DEWS -> PSI; both DB-only)                                     |    6     |
+| 9       | `11 */4 * * *`     |                2 (reserve adapters + Kinesis are sequential; redemption is DB-only)                |    4     |
+| 10      | `20 * * * *`       |                                      1 (core yield publisher)                                      |    5     |
+| 11      | `25 */4 * * *`     |                                  5 (supplemental yield families)                                   |    1     |
+| 12      | `2,7,...,57 * * * *` |                        5 (Telegram alert dispatcher batches sends in groups of 5)                  |    1     |
+| 13      | `0 8 * * *`        |                 1 (benchmark feeds -> USDS Etherscan reads are chained serially)                   |    5     |
+| 14      | `5 8 * * *`        |                     5 (Bluechip batch of 3 + Anthropic + CoinGecko; digest/recap chained)          |    1     |
+| 15      | `0 6 1 * *`        |                                      1 (DeFiLlama yield scan)                                      |    5     |
+| 16      | `0 3 * * *`        |                     0 (prune-status-probe-runs + prune-cron-history; both DB-only)                 |    6     |
 
 The `*/5 * * * *` digest-trigger poll slot exists in the scheduled runner registry, but it is not represented in `CRON_JOB_DEFINITIONS` and is not part of the enforced `check:cron-connections` budget table today. It performs a lightweight D1 poll and only enqueues the normal digest job path when a manual trigger is pending.
 
@@ -1078,15 +1087,15 @@ Health freshness checks for mint/burn major symbols and scheduler stale alerts u
 
 ### GET /api/status
 
-Returns raw and effective status, recent `cron_runs`, active `cron_run_progress` rows, data-quality metrics, state-machine metadata, synthetic probe summary, and transition timeline. Tracks 31 cron jobs across 16 runner slots via `CRON_INTERVALS` and `CRON_JOB_DEFINITIONS` in `shared/lib/cron-jobs.ts`. The `*/5 * * * *` digest-trigger poll slot is not listed as a separate job because it runs work under the existing `daily-digest` lease only when a manual trigger flag is pending:
+Returns raw and effective status, recent `cron_runs`, active `cron_run_progress` rows, data-quality metrics, state-machine metadata, synthetic probe summary, and transition timeline. Tracks 31 cron jobs across 16 job-bearing runner slots via `CRON_INTERVALS` and `CRON_JOB_DEFINITIONS` in `shared/lib/cron-jobs.ts`. The `*/5 * * * *` digest-trigger poll slot is not listed as a separate job because it runs work under the existing `daily-digest` lease only when a manual trigger flag is pending:
 
 | Job                             | Interval         | Trigger                                           |
 | ------------------------------- | ---------------- | ------------------------------------------------- |
 | `sync-stablecoins`              | 900s (15min)     | `*/15 * * * *`                                    |
 | `sync-stablecoin-charts`        | 3,600s (1h)      | `10,40 * * * *` (1h cooldown)                     |
 | `sync-fx-rates`                 | 1,800s (30min)   | `*/15 * * * *` (30-min cooldown)                  |
-| `stability-index`               | 1,800s (30min)   | `10,40 * * * *`                                   |
-| `compute-dews`                  | 1,800s (30min)   | `10,40 * * * *`                                   |
+| `stability-index`               | 1,800s (30min)   | `26,56 * * * *`                                   |
+| `compute-dews`                  | 1,800s (30min)   | `26,56 * * * *`                                   |
 | `status-self-check`             | 900s (15min)     | `9,24,39,54 * * * *`                              |
 | `dispatch-telegram-alerts`      | 300s (5min)      | `2,7,12,17,22,27,32,37,42,47,52,57 * * * *`       |
 | `sync-blacklist`                | 21,600s (6h)     | `3 */6 * * *`                                     |
@@ -1153,7 +1162,7 @@ Admin timeline feed for machine consumers. Returns persisted status state, statu
 | `worker/src/handlers/http/edge-cache.ts`           | Edge cache match/store policy for cacheable GET requests                                                                                                              |
 | `worker/src/handlers/scheduled.ts`                 | Thin cron entrypoint: env-aware init + cron-expression-to-slot-runner dispatch                                                                                        |
 | `worker/src/handlers/scheduled/context.ts`         | Shared scheduled runtime context: lease-aware `runLeasedCron`, slot config, stablecoins capability parsing                                                            |
-| `worker/src/handlers/scheduled/*.ts`               | Per-trigger slot runners (quarter-hourly, isolated 30-min mint/burn lanes, half-hourly charts/DEX liquidity/DEWS/PSI, 2-hourly DEX discovery, 6-hourly blacklist, 4-hourly reserve slot, Telegram, and daily slots) |
+| `worker/src/handlers/scheduled/*.ts`               | Per-trigger slot runners (quarter-hourly, isolated 30-min mint/burn lanes, half-hourly charts/DEX liquidity, decoupled DEWS/PSI, 2-hourly DEX discovery, 6-hourly blacklist, 4-hourly reserve slot, Telegram, and daily slots) |
 | `worker/src/lib/env.ts`                            | Worker Env interface + `parseCsvEnv()` helper for CSV-based runtime overrides                                                                                         |
 | `worker/wrangler.toml`                             | Deployment config: custom domain, cron triggers, D1 binding, vars                                                                                                     |
 | `worker/src/lib/db.ts`                             | Database helpers: `batchExecute`, block tracking                                                                                                                      |
