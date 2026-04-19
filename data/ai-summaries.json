@@ -1,9 +1,4 @@
 {
-  "355": {
-    "title": "The Circle Spinout Nobody Googles",
-    "text": "OpenTrade was spun out from Circle, which is why its vault contracts run on Circle's own open-source Perimeter Protocol — an origin that lends credibility and implies institutional DNA without requiring Circle's blessing. XMMF holds Fidelity's USD Money Market Fund through a Cayman SPC with J.P. Morgan as both custodian and broker, which is institutional plumbing worthy of a product ten times its $39 million size. Avalanche hosts roughly three-quarters of supply, an unusual distribution for an EVM-native product, explained by early partnerships with Avalanche-native institutional DeFi integrations. With no CoinGecko listing and no DefiLlama stablecoin coverage, XMMF exists almost entirely within the authenticated OpenTrade dashboard and a handful of Avalanche protocols — the tokenized equivalent of a well-run operation that has no particular interest in being discovered.",
-    "updatedAt": "2026-03-23"
-  },
   "usdt-tether": {
     "title": "The Gravity Well",
     "text": "At $184.4 billion across 107 chains, Tether is less a stablecoin and more the de facto monetary base of crypto -- a position reinforced by $2.5 billion in DEX TVL spread across 1,771 pools with the lowest concentration risk of any stablecoin in the dashboard. The reserve composition has matured to 63% T-bills and 10% overnight repos, though the 9% in gold, 9% in secured loans, and 4% in Bitcoin give USDT a reserve profile that looks more like a sovereign wealth fund than a payments instrument. The B safety grade at 70 captures the paradox: overwhelming market presence and near-perfect peg stability held back by centralized governance from El Salvador and a redemption path that runs through Tether's own API with undisclosed minimums. The 248 lifetime depeg events with a worst deviation of nearly 25% below peg are relics of earlier eras, but they remain on the permanent record of an issuer whose transparency evolution from opacity to BDO Italia attestations has been reluctant at every step.",
@@ -94,11 +89,6 @@
     "text": "Celo Euro shares the same Mento reserve as cUSD — 56% sUSDS, 22% EURC, 12% CELO, and smaller positions in various stablecoins and ETH — at approximately 136% overcollateralization, stabilized via the BiPoolManager virtual AMM with oracle-enforced EUR rates. The algorithmic classification and diversified reserve composition mean cEUR inherits both the strengths (on-chain transparency, overcollateralization) and weaknesses (crypto collateral volatility, thin secondary markets) of the Mento system. Deployed on Celo (now an Ethereum L2) with real-time on-chain reserve verification, cEUR exists primarily to serve Celo's vision of region-specific stablecoins for mobile payments rather than DeFi composability. In the euro stablecoin race dominated by Circle's EURC and MiCA-licensed competitors, cEUR's niche is geographic rather than regulatory.",
     "updatedAt": "2026-03-23"
   },
-  "eura-angle": {
-    "title": "Angle's DeFi Euro",
-    "text": "Angle Protocol's EURA is one of the few crypto-backed euro stablecoins in a market dominated by RWA-backed MiCA-licensed issuers — an overcollateralized design with centralized-dependent governance that provides community involvement within practical guardrails. In the euro stablecoin race where Circle's EURC, SocGen's EURCV, and Banking Circle's EURI compete on regulatory credentials, EURA competes on DeFi composability and the absence of bank dependencies. For DeFi purists who want a euro without institutional custody chains, EURA is one of the few options on the menu, though the thin liquidity and modest market cap reflect the challenge of building a crypto-backed euro stablecoin when the regulated alternatives keep multiplying.",
-    "updatedAt": "2026-03-23"
-  },
   "fpi-frax": {
     "title": "CPI on a Blockchain",
     "text": "Frax Price Index does not peg to a dollar — it pegs to purchasing power, with a redemption price that ratchets upward every second at the trailing 12-month CPI-U rate via Chainlink oracle. At $1.14 and $97M circulating, it is both a stablecoin and an inflation derivative, backed entirely by FRAX reserves and AMO-generated yield. The C+ safety grade reflects the recursive dependency: FPI's collateral quality is only as good as FRAX itself, which carries its own C grade and 817 depeg events. Four DEX pools with an 11 liquidity score and 0.55 HHI concentration make this one of the least liquid stablecoins tracked on Pharos. A clever idea trapped in a thin market with a single-issuer dependency chain.",
@@ -112,11 +102,6 @@
   "lisusd-lista": {
     "title": "BNB Chain's CDP Bet",
     "text": "Lista DAO's lisUSD transplants the MakerDAO CDP playbook to BNB Chain with a collateral mix that is 60% BNB ecosystem assets — 35% native BNB and 25% slisBNB (Lista's own LST) — plus 15% Binance-wrapped ETH and 10% BTCB, with a PSM accepting USDT, USDC, and FDUSD for peg stability. The 387 depeg events including one that cratered nearly 6,000 basis points below peg make lisUSD one of the most frequently depegged CDPs at scale, though the 85-rated PSM backstop with permissionless atomic settlement provides the structural floor. Deployed only on BSC with alt-LST collateral quality and no jurisdiction or proof of reserves disclosed, lisUSD's safety profile depends entirely on BNB's price stability and the PSM's capacity to absorb redemption pressure. Whether lisUSD can grow beyond Binance-subsidized adoption remains the central question — a CDP whose collateral and distribution both flow through a single ecosystem.",
-    "updatedAt": "2026-03-23"
-  },
-  "euroe-membrane": {
-    "title": "Paxos's EU Passport",
-    "text": "EUROe started as a Finnish EMI-regulated euro stablecoin from Membrane Finance, KPMG-audited and quietly competent. Then Paxos acquired Membrane Finance specifically to gain MiCA compliance across 30 European countries — making EUROe less a standalone product and more Paxos's entry ticket to the EU market. Its future depends entirely on whether Paxos decides to scale EUROe as-is or rebrand it into its broader institutional stablecoin platform alongside USDP, PYUSD, and USDG. The acquisition playbook is familiar: buy a compliant shell, inherit the license, deploy institutional capital — a strategy that worked for Binance with BUSD until it didn't.",
     "updatedAt": "2026-03-23"
   },
   "eure-monerium": {
@@ -222,11 +207,6 @@
   "usbd-bima": {
     "title": "BTC Collateral, CDP Ambitions",
     "text": "Bima's USBD puts Bitcoin liquid staking derivatives into Liquity-style vaults at 150% minimum collateral ratio, with permissionless redemption for $1 of BTC-denominated collateral and a PSM offering near-1:1 stablecoin swaps -- a sound architecture undermined by the quality of what sits inside. The NR safety grade, zero DEX liquidity, no observable price feed, and DEWS Alert at 38 paint the picture of a protocol that has not yet achieved escape velocity at $7.5M in stagnant supply across seven chains. The collateral is classified as alt-LST/bridged/mixed and rated high risk -- meaning this is not plain BTC backing but a chain of wrappers and restaking derivatives where each layer adds trust assumptions the Liquity mechanics were designed to avoid. The 83-rated permissionless redemption backstop is structurally strong on paper, but with zero secondary market and flatlined supply, the practical exit for most holders remains an open question.",
-    "updatedAt": "2026-04-13"
-  },
-  "gyd-gyroscope": {
-    "title": "Paranoid Design, Broken Peg",
-    "text": "Gyroscope GYD was engineered for resilience — a diversified reserve of 40% sDAI, 30% USDC, 15% LUSD, and 15% crvUSD, with a primary-market AMM that algorithmically reprices redemptions during crises to preserve solvency. The theory was elegant. The reality is a D safety grade, a WARNING-band stress signal at 57, and a current price of $0.848 — a 15% deviation from peg that makes most stablecoins' depeg events look like rounding errors. The 111 depeg events include a worst deviation of 2,553 bps below peg, suggesting the PAMM's crisis pricing mechanism did exactly what it was designed to do: protect solvency by making redemption punitive. Ten DEX pools with 0.87 HHI concentration at $27M circulating means the paranoid design thesis was right about one thing — the exit doors are indeed too narrow.",
     "updatedAt": "2026-04-13"
   },
   "isc-international-stable-currency": {
@@ -689,11 +669,6 @@
     "text": "Matrixdock's XAUm is backed by LBMA-certified 99.99% gold bars at Brink's and Malca-Amit in Singapore and Hong Kong, Bureau Veritas audited, with institutional-regulated custody and a minimum redemption of 32.148 XAUm (1 kg) restricted to KYC'd accredited investors. The Asia-Pacific custody thesis — Singapore and Hong Kong vaults rather than London or Switzerland — is a deliberate choice targeting institutions that prefer regional domicile for their gold exposure. Deployed on Ethereum and BSC, XAUm remains a modest share of the tokenized gold market, but the partnership with Bhutan's Gelephu Mindfulness City for sovereign gold tokenization signals ambitions beyond retail. Whether institutions actually prefer Asia-domiciled custody over the London and Swiss vaults that XAUT and PAXG offer remains the strategic bet.",
     "updatedAt": "2026-03-23"
   },
-  "gold-vro": {
-    "title": "Gold in the Free Ports",
-    "text": "VeraOne stores its gold in the Geneva Free Ports — the same duty-free Swiss storage complex favored by art collectors and sovereign wealth funds — which gives VRO perhaps the most interesting custody story in tokenized gold and absolutely none of the liquidity to match. At $48 million market cap with minimal trading volume, it's a micro-cap gold gram token that proves having premium vault infrastructure doesn't automatically attract premium capital. The 1 VRO = 1 gram denomination makes it accessible on paper, but without meaningful exchange listings or DeFi integrations, accessibility remains theoretical.",
-    "updatedAt": "2026-03-23"
-  },
   "cgo-comtech": {
     "title": "DMCC-Stamped Bullion",
     "text": "ComTech Gold's CGO is backed 1:1 by 24-karat 999.9% physical gold at 1 gram per token in Transguard vaults under the Emirates Group umbrella, DMCC endorsed, with individually serialized bars registered on DMCC Tradeflow and institutional-regulated custody under DAFZA jurisdiction. The redemption-via-app workflow with minimum 10-gram delivery is the most retail-friendly physical gold offramp in the tokenized gold market, leveraging Dubai's regulatory clarity on tokenized commodities that is genuinely ahead of most jurisdictions. Without tracked on-chain contracts, CGO exists primarily within the ComTech ecosystem rather than DeFi, and none of the UAE pedigree has translated into meaningful global adoption. Impeccable local credentials, negligible global presence — proving once again that regulatory clarity alone doesn't create liquidity.",
@@ -752,11 +727,6 @@
   "ousg-ondo-finance": {
     "title": "The Hundred-Dollar Stablecoin",
     "text": "OUSG has grown past $700 million — 85% backed by BlackRock's BUIDL with 12% in BlackRock's FedFund and a 3% USDC liquidity buffer, making Ondo I LP BlackRock's largest single on-chain client and OUSG essentially a first-class derivative of BlackRock's tokenized money market presence. At over $114 per token with NAV appreciating daily, it is the least dollar-like entry on any stablecoin dashboard, which is why Ondo maintains rOUSG — a rebasing sibling that stays at $1 while OUSG accumulates. The SEC investigation closure in November 2025 without charges removed the key regulatory overhang, and the instant T+0 mint/redemption via OUSGInstantManager against USDC through BUIDL on-chain liquidity makes OUSG's exit infrastructure better than most tokenized funds. Restricted to U.S. Qualified Purchasers with on-chain KYC enforcement — tokens literally cannot transfer to non-whitelisted addresses — OUSG is less a stablecoin and more a tokenized mutual fund that borrowed the infrastructure.",
-    "updatedAt": "2026-03-23"
-  },
-  "cg-uscc": {
-    "title": "The Basis Trade, Institutionalized",
-    "text": "Calling USCC an RWA fund is technically accurate and culturally misleading — roughly half the portfolio consists of crypto cash-and-carry trades running long BTC, ETH, SOL, and XRP spot against short futures, with T-bills and Superstate's own USTB providing the buffer. The structure targets T-bill-plus returns without directional crypto exposure, a delta-neutral thesis compelling enough that Aave V3 absorbed $123 million of it as collateral and Sky (MakerDAO) allocated another $100 million. Whether the basis trade delivers consistent premium over T-bills depends on futures markets staying in contango — which tends to be true in bull markets and suspiciously fragile when it matters most. USCC is Superstate's more interesting product: less obvious than a T-bill fund, and less obvious about what its risk profile actually looks like during a crypto deleveraging event.",
     "updatedAt": "2026-03-23"
   },
   "mtbill-midas": {

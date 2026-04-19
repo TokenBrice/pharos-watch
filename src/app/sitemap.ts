@@ -70,12 +70,6 @@ export default function sitemap(): MetadataRoute.Sitemap {
       priority: 0.8,
     },
     {
-      url: `${SITE_URL}/portfolio/`,
-      lastModified: lastEdited("/portfolio/"),
-      changeFrequency: "daily",
-      priority: 0.7,
-    },
-    {
       url: `${SITE_URL}/upcoming/`,
       lastModified: lastEdited("/upcoming/"),
       changeFrequency: "daily",
