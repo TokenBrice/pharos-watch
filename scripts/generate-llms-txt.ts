@@ -11,6 +11,7 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 const DIGESTS_PATH = join(__dirname, "../data/digests.json");
 const OUTPUT_PATH = join(__dirname, "../public/llms.txt");
 const DIGEST_LIMIT = 20;
+const CHECK_MODE = process.argv.includes("--check");
 
 const GOVERNANCE_METADATA_PHRASES: Record<GovernanceType, string> = {
   centralized: "centralized",
@@ -156,5 +157,16 @@ function render(): string {
   return lines.join("\n");
 }
 
-writeFileSync(OUTPUT_PATH, render(), "utf8");
-console.log(`Generated llms.txt for ${ACTIVE_STABLECOINS.length} active stablecoins`);
+const output = render();
+
+if (CHECK_MODE) {
+  const current = readFileSync(OUTPUT_PATH, "utf8");
+  if (current !== output) {
+    console.error("public/llms.txt is out of date. Run `npm run prebuild` and commit the generated file.");
+    process.exit(1);
+  }
+  console.log("public/llms.txt is current");
+} else {
+  writeFileSync(OUTPUT_PATH, output, "utf8");
+  console.log(`Generated llms.txt for ${ACTIVE_STABLECOINS.length} active stablecoins`);
+}

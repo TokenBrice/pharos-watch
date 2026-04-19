@@ -20,6 +20,15 @@ import { logosById } from "@/lib/logos";
 
 const typedSummaries = aiSummaries as Record<string, { title: string; text: string; updatedAt: string }>;
 
+function formatSummaryUpdatedAt(updatedAt: string): string {
+  return new Date(`${updatedAt}T00:00:00Z`).toLocaleDateString("en-US", {
+    month: "long",
+    day: "numeric",
+    year: "numeric",
+    timeZone: "UTC",
+  });
+}
+
 function DetailPageShellFallback({
   coin,
   logoSrc,
@@ -110,16 +119,25 @@ export default async function StablecoinDetailPage({ params }: { params: Promise
 
   const related = getRelatedStablecoins(coin, { candidates: ACTIVE_STABLECOINS });
   const staticComparisonPages = getStaticComparisonPagesForCoin(id);
+  const summary = typedSummaries[id] ?? null;
+  const summaryDateline = summary ? formatSummaryUpdatedAt(summary.updatedAt) : null;
 
   return (
     <>
-      <h1 className="sr-only">
-        {coin.name} ({coin.symbol}) stablecoin analytics
-      </h1>
+      <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
+        <h1 className="text-2xl font-extrabold tracking-tighter text-foreground">
+          {coin.name} ({coin.symbol}) stablecoin analytics
+        </h1>
+        {summary && summaryDateline ? (
+          <time className="text-xs text-muted-foreground" dateTime={summary.updatedAt}>
+            Updated {summaryDateline}
+          </time>
+        ) : null}
+      </div>
       <Suspense fallback={
         <DetailPageShellFallback coin={coin} logoSrc={logosById[coin.id]} />
       }>
-        <StablecoinDetailClient id={id} summary={typedSummaries[id] ?? null} coin={coin} logoSrc={logosById[coin.id]} />
+        <StablecoinDetailClient id={id} summary={summary} coin={coin} logoSrc={logosById[coin.id]} />
       </Suspense>
       <ExploreNextSection
         coin={coin}
