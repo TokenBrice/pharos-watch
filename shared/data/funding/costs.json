@@ -7,6 +7,7 @@
     { "label": "Alchemy", "category": "infra", "usd_per_month": 40, "note": "Pay-as-you-go, ~$40 typical" },
     { "label": "Claude API", "category": "infra", "usd_per_month": 30, "note": "Daily digest generation" },
     { "label": "Cloudflare Workers", "category": "infra", "usd_per_month": 5, "note": "Paid plan" },
-    { "label": "Domain registration", "category": "infra", "usd_per_month": 2.85, "note": "pharos.watch, annualized" }
+    { "label": "Domain registration", "category": "infra", "usd_per_month": 2.85, "note": "pharos.watch, annualized" },
+    { "label": "X Premium", "category": "infra", "usd_per_month": 2.16, "note": "€2/month, for @pharos_watch" }
   ]
 }
