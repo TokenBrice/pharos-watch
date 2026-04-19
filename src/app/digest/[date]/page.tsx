@@ -61,10 +61,10 @@ export async function generateMetadata({ params }: { params: Promise<{ date: str
       url: `/digest/${digest.date}/`,
       type: "article",
       publishedTime: new Date(digest.generatedAt * 1000).toISOString(),
-      images: [{ url: "/og-card.png", width: 1200, height: 628 }],
+      images: [{ url: "/og-digest.png", width: 1200, height: 628 }],
     },
     twitter: {
-      images: [{ url: "/og-card.png", width: 1200, height: 628 }],
+      images: [{ url: "/og-digest.png", width: 1200, height: 628 }],
     },
   };
 }
@@ -102,7 +102,9 @@ export default async function DigestDetailPage({ params }: { params: Promise<{ d
             "@context": "https://schema.org",
             "@type": "Article",
             headline: `${digest.title} (${formatted})`,
+            image: [`${SITE_URL}/og-digest.png`],
             datePublished: new Date(digest.generatedAt * 1000).toISOString(),
+            dateModified: new Date(digest.generatedAt * 1000).toISOString(),
             description: summarizeText(digest.text, 160),
             author: {
               "@type": "Organization",
