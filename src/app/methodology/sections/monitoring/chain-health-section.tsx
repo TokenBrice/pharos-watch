@@ -9,15 +9,6 @@ import {
   WorkedExample,
 } from "../../methodology-shared";
 
-export const CONTENT_MARKDOWN = `## Chain Health Score
-
-Chain Health Score evaluates how healthy each chain's stablecoin stack is. It combines stablecoin supply, diversification, safety-grade mix, dependency concentration, issuer concentration, and stress signals.
-
-The score is computed from current stablecoin and report-card data rather than a separate opaque dataset. A chain with large supply but one dominant issuer, weak collateral quality, or broad stress can score below a smaller but more diversified chain.
-
-Chain Health is intended as market-structure context: it helps users understand whether a chain's stablecoin liquidity is deep, resilient, and diversified enough to support activity during stress.
-`;
-
 export function ChainHealthMethodologySection() {
   return (
           <MethodologySectionShell

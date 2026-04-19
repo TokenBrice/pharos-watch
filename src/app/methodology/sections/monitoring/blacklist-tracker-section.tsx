@@ -9,15 +9,6 @@ import {
   WorkedExample,
 } from "../../methodology-shared";
 
-export const CONTENT_MARKDOWN = `## Blacklist Tracker Methodology
-
-The blacklist tracker monitors issuer-controlled freeze, blocklist, account-pause, and token-destruction events across supported centralized stablecoin contracts.
-
-Events are normalized by chain, stablecoin, action type, native amount, USD amount, and amount-status provenance. Recoverable amount gaps are queued for repair, while permanently unavailable rows remain auditable without polluting public aggregates.
-
-Blacklist exposure feeds report-card dependency and resilience review because the ability to freeze or destroy balances is a material operational risk even when the peg is stable.
-`;
-
 export function BlacklistTrackerMethodologySection() {
   return (
           <MethodologySectionShell
