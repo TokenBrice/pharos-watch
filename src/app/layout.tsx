@@ -9,7 +9,7 @@ import { ScrollToTop } from "@/components/scroll-to-top";
 import { FeedbackButton } from "@/components/feedback-button";
 import { MobileUtilityDock } from "@/components/mobile-utility-dock";
 import { RegimeBar } from "@/components/regime-bar";
-import { safeJsonLd } from "@/lib/json-ld";
+import { PHAROS_ORG_NODE, PHAROS_PERSON_TOKENBRICE_NODE, safeJsonLd } from "@/lib/json-ld";
 import { API_ORIGIN as API_URL, SITE_ORIGIN as SITE_URL } from "@shared/lib/runtime-origins";
 import { geistMono, geistSans } from "@/lib/fonts";
 import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins";
@@ -139,25 +139,12 @@ export default function RootLayout({
               },
               {
                 "@context": "https://schema.org",
-                "@type": "Organization",
-                "@id": `${SITE_URL}#organization`,
-                name: "Pharos",
-                url: SITE_URL,
-                logo: `${SITE_URL}/pharos-icon.png`,
+                ...PHAROS_ORG_NODE,
                 description: siteDescription,
-                sameAs: [
-                  "https://x.com/PharosWatch",
-                  "https://github.com/TokenBrice/stablecoin-dashboard",
-                  "https://t.me/pharoswatch",
-                  "https://t.me/PharosWatchBot",
-                  "https://t.me/pharoswatchers",
-                ],
-                founder: {
-                  "@type": "Person",
-                  name: "TokenBrice",
-                  url: "https://tokenbrice.xyz",
-                  sameAs: ["https://farcaster.xyz/tokenbrice"],
-                },
+              },
+              {
+                "@context": "https://schema.org",
+                ...PHAROS_PERSON_TOKENBRICE_NODE,
               },
               {
                 "@context": "https://schema.org",
@@ -173,11 +160,7 @@ export default function RootLayout({
                   price: "0",
                   priceCurrency: "USD",
                 },
-                creator: {
-                  "@type": "Person",
-                  name: "TokenBrice",
-                  url: "https://tokenbrice.xyz",
-                },
+                creator: { "@id": `${SITE_URL}#person-tokenbrice` },
               },
             ]),
           }}
