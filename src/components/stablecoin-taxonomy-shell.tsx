@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { FeaturePageShell } from "@/components/feature-page-shell";
+import type { BreadcrumbItem } from "@/components/breadcrumb-json-ld";
 import { safeJsonLd } from "@/lib/json-ld";
 import { buildStablecoinUrl } from "@/lib/urls";
 import type { StablecoinMeta } from "@shared/types";
@@ -12,6 +13,7 @@ interface StablecoinTaxonomyShellProps {
   shortLabel: string;
   coins: StablecoinMeta[];
   directoryDescription: string;
+  breadcrumbItems?: BreadcrumbItem[];
   relatedPages?: ReadonlyArray<{
     href: string;
     title: string;
@@ -30,6 +32,7 @@ export function StablecoinTaxonomyShell({
   shortLabel,
   coins,
   directoryDescription,
+  breadcrumbItems,
   relatedPages = [],
   children,
 }: StablecoinTaxonomyShellProps) {
@@ -40,6 +43,7 @@ export function StablecoinTaxonomyShell({
     <FeaturePageShell
       breadcrumbName={title}
       path={href}
+      breadcrumbItems={breadcrumbItems}
       title={title}
       leadParagraphs={[intro]}
       preface={(

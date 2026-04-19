@@ -132,7 +132,13 @@ export default async function StablecoinDetailPage({ params }: { params: Promise
         }))}
         logos={logosById}
       />
-      <BreadcrumbJsonLd name={`${coin.name} (${coin.symbol})`} path={buildStablecoinUrl(id)} />
+      <BreadcrumbJsonLd
+        items={[
+          { name: "Home", url: "/" },
+          { name: "Stablecoins", url: "/stablecoins/" },
+          { name: `${coin.name} (${coin.symbol})`, url: buildStablecoinUrl(id) },
+        ]}
+      />
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{

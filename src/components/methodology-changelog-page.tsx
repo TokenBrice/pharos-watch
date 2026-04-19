@@ -45,7 +45,13 @@ export function MethodologyChangelogPage({
 
   return (
     <div className="mx-auto w-full max-w-5xl space-y-8">
-      <BreadcrumbJsonLd name={breadcrumbName} path={path} />
+      <BreadcrumbJsonLd
+        items={[
+          { name: "Home", url: "/" },
+          { name: "Methodology", url: "/methodology/" },
+          { name: breadcrumbName, url: path },
+        ]}
+      />
 
       <div className="space-y-3">
         <nav aria-label="Breadcrumb" className="flex items-center gap-1.5 text-sm text-muted-foreground">

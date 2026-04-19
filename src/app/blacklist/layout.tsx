@@ -28,7 +28,12 @@ export default function BlacklistLayout({
 }) {
   return (
     <>
-      <BreadcrumbJsonLd name="Blacklist Tracker" path="/blacklist/" />
+      <BreadcrumbJsonLd
+        items={[
+          { name: "Home", url: "/" },
+          { name: "Blacklist Tracker", url: "/blacklist/" },
+        ]}
+      />
       {children}
     </>
   );

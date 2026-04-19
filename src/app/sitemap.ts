@@ -208,6 +208,30 @@ export default function sitemap(): MetadataRoute.Sitemap {
       priority: 0.5,
     },
     {
+      url: `${SITE_URL}/stablecoins/`,
+      lastModified: lastEdited("/stablecoins/"),
+      changeFrequency: "weekly",
+      priority: 0.7,
+    },
+    {
+      url: `${SITE_URL}/stablecoins/backing/`,
+      lastModified: lastEdited("/stablecoins/backing/"),
+      changeFrequency: "weekly",
+      priority: 0.6,
+    },
+    {
+      url: `${SITE_URL}/stablecoins/governance/`,
+      lastModified: lastEdited("/stablecoins/governance/"),
+      changeFrequency: "weekly",
+      priority: 0.6,
+    },
+    {
+      url: `${SITE_URL}/stablecoins/infrastructure/`,
+      lastModified: lastEdited("/stablecoins/infrastructure/"),
+      changeFrequency: "weekly",
+      priority: 0.6,
+    },
+    {
       url: `${SITE_URL}/privacy/`,
       lastModified: lastEdited("/privacy/"),
       changeFrequency: "yearly",

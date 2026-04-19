@@ -29,6 +29,11 @@ export default async function PegLandingPage({
     <StablecoinTaxonomyShell
       title={page.title}
       href={page.href}
+      breadcrumbItems={[
+        { name: "Home", url: "/" },
+        { name: "Stablecoins", url: "/stablecoins/" },
+        { name: page.title, url: page.href },
+      ]}
       description={page.description}
       intro={page.intro}
       shortLabel={page.shortLabel}

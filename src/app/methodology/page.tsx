@@ -39,7 +39,12 @@ export const metadata: Metadata = {
 export default function MethodologyPage() {
   return (
     <div className="mx-auto w-full max-w-[76rem] space-y-8">
-      <BreadcrumbJsonLd name="Methodology" path="/methodology/" />
+      <BreadcrumbJsonLd
+        items={[
+          { name: "Home", url: "/" },
+          { name: "Methodology", url: "/methodology/" },
+        ]}
+      />
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{

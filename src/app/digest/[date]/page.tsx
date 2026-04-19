@@ -88,7 +88,13 @@ export default async function DigestDetailPage({ params }: { params: Promise<{ d
 
   return (
     <div className="mx-auto max-w-4xl space-y-6">
-      <BreadcrumbJsonLd name={`${isWeekly ? "Weekly Recap" : "Daily Digest"}: ${formatted}`} path={`/digest/${digest.date}/`} />
+      <BreadcrumbJsonLd
+        items={[
+          { name: "Home", url: "/" },
+          { name: "Digest", url: "/digest/" },
+          { name: `${isWeekly ? "Weekly Recap" : "Daily Digest"}: ${formatted}`, url: `/digest/${digest.date}/` },
+        ]}
+      />
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{

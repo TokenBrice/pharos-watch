@@ -58,6 +58,11 @@ export default async function StaticComparisonPage({
     <FeaturePageShell
       breadcrumbName={page.shortTitle}
       path={page.href}
+      breadcrumbItems={[
+        { name: "Home", url: "/" },
+        { name: "Compare", url: "/compare/" },
+        { name: page.shortTitle, url: page.href },
+      ]}
       title={`${page.left.name} (${page.left.symbol}) vs ${page.right.name} (${page.right.symbol})`}
       leadParagraphs={[page.intro]}
     >

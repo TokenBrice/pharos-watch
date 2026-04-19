@@ -10,11 +10,23 @@ interface StablecoinTaxonomyPageProps {
 
 export function StablecoinTaxonomyPage({ page }: StablecoinTaxonomyPageProps) {
   const relatedPages = ALL_STABLECOIN_TAXONOMY_PAGES.filter((candidate) => candidate.href !== page.href).slice(0, 6);
+  const parentName =
+    page.kind === "backing"
+      ? "Backing"
+      : page.kind === "governance"
+        ? "Governance"
+        : "Infrastructure";
 
   return (
     <StablecoinTaxonomyShell
       title={page.title}
       href={page.href}
+      breadcrumbItems={[
+        { name: "Home", url: "/" },
+        { name: "Stablecoins", url: "/stablecoins/" },
+        { name: parentName, url: `/stablecoins/${page.kind}/` },
+        { name: page.title, url: page.href },
+      ]}
       description={page.description}
       intro={page.intro}
       shortLabel={page.shortLabel}

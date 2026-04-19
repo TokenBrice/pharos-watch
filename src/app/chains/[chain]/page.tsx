@@ -39,12 +39,17 @@ export default async function ChainProfilePage({
   if (!meta) notFound();
 
   return (
-    <FeaturePageShell
-      breadcrumbName={meta.name}
-      breadcrumbLabel={meta.name}
-      path={`/chains/${chain}/`}
-      title={`${meta.name} Stablecoins`}
-    >
+      <FeaturePageShell
+        breadcrumbName={meta.name}
+        breadcrumbLabel={meta.name}
+        path={`/chains/${chain}/`}
+        breadcrumbItems={[
+          { name: "Home", url: "/" },
+          { name: "Chains", url: "/chains/" },
+          { name: meta.name, url: `/chains/${chain}/` },
+        ]}
+        title={`${meta.name} Stablecoins`}
+      >
       <ChainProfileClient chainId={chain} />
     </FeaturePageShell>
   );

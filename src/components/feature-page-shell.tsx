@@ -1,11 +1,12 @@
 import Link from "next/link";
-import { BreadcrumbJsonLd } from "@/components/breadcrumb-json-ld";
+import { BreadcrumbJsonLd, type BreadcrumbItem } from "@/components/breadcrumb-json-ld";
 import { FeatureStatusBadge, type FeatureStatus } from "@/components/feature-status-badge";
 import { cn } from "@/lib/utils";
 
 export interface FeaturePageShellProps {
   breadcrumbName: string;
   path: string;
+  breadcrumbItems?: BreadcrumbItem[];
   title: string;
   variant?: "standard" | "longform" | "auth-gated";
   containerClassName?: string;
@@ -28,6 +29,7 @@ export interface FeaturePageShellProps {
 export function FeaturePageShell({
   breadcrumbName,
   path,
+  breadcrumbItems,
   title,
   variant = "standard",
   containerClassName,
@@ -49,7 +51,14 @@ export function FeaturePageShell({
 
   return (
     <div className={cn(variantClassName, containerClassName)}>
-      <BreadcrumbJsonLd name={breadcrumbName} path={path} />
+      <BreadcrumbJsonLd
+        items={
+          breadcrumbItems ?? [
+            { name: "Home", url: "/" },
+            { name: breadcrumbName, url: path },
+          ]
+        }
+      />
       {preface}
       <div className="space-y-2.5">
         <nav aria-label="Breadcrumb" className="flex items-center gap-1.5 text-xs text-muted-foreground sm:text-sm">

@@ -43,7 +43,12 @@ export default function CemeteryPage() {
 
   return (
     <div className="space-y-6">
-      <BreadcrumbJsonLd name="Stablecoin Cemetery" path="/cemetery/" />
+      <BreadcrumbJsonLd
+        items={[
+          { name: "Home", url: "/" },
+          { name: "Stablecoin Cemetery", url: "/cemetery/" },
+        ]}
+      />
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{

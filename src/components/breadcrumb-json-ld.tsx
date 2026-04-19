@@ -1,6 +1,13 @@
 import { safeJsonLd } from "@/lib/json-ld";
+import { SITE_ORIGIN as SITE_URL } from "@shared/lib/runtime-origins";
 
-export function BreadcrumbJsonLd({ name, path }: { name: string; path: string }) {
+export interface BreadcrumbItem {
+  name: string;
+  /** Site-relative path starting with "/", e.g. "/chains/". */
+  url: string;
+}
+
+export function BreadcrumbJsonLd({ items }: { items: BreadcrumbItem[] }) {
   return (
     <script
       type="application/ld+json"
@@ -8,10 +15,12 @@ export function BreadcrumbJsonLd({ name, path }: { name: string; path: string })
         __html: safeJsonLd({
           "@context": "https://schema.org",
           "@type": "BreadcrumbList",
-          itemListElement: [
-            { "@type": "ListItem", position: 1, name: "Home", item: "https://pharos.watch" },
-            { "@type": "ListItem", position: 2, name, item: `https://pharos.watch${path}` },
-          ],
+          itemListElement: items.map((item, index) => ({
+            "@type": "ListItem",
+            position: index + 1,
+            name: item.name,
+            item: `${SITE_URL}${item.url}`,
+          })),
         }),
       }}
     />

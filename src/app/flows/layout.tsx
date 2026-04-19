@@ -30,7 +30,12 @@ export default function FlowsLayout({
 }) {
   return (
     <>
-      <BreadcrumbJsonLd name="Mint/Burn Flows" path="/flows/" />
+      <BreadcrumbJsonLd
+        items={[
+          { name: "Home", url: "/" },
+          { name: "Mint/Burn Flows", url: "/flows/" },
+        ]}
+      />
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{
