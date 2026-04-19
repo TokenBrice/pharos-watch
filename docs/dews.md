@@ -101,7 +101,7 @@ Maps `priceConfidence` field: high=0, single-source=25, low=60, fallback=80, nul
 
 Max of: primary deviation from peg, DEX deviation from peg, cross-source spread (all in bps).
 
-- DEX input comes only from `dex_prices` rows refreshed within the last 60 minutes **and** backed by at least `$1M` of aggregate source TVL, matching the live depeg trust floor
+- DEX input comes only from `dex_prices` rows refreshed within the live depeg trust window (`DEX_FRESHNESS_SEC = 2100`, currently 35 minutes) **and** backed by at least `$1M` of aggregate source TVL, matching the live depeg trust floor
 - **Anchors:** `[0bps, 0] → [25bps, 10] → [50bps, 25] → [75bps, 50] → [100bps, 75] → [200bps, 90] → [500bps, 100]`
 - **Non-USD peg dampening:** `value *= 0.7`
 - Smoothed with previous reading.
@@ -110,7 +110,7 @@ Historical `stress_signal_history` rows do not retain the underlying DEX trust m
 
 ### S_black — Blacklist Activity
 
-Only for blacklist-tracked coins (currently USDC, USDT, PAXG, XAUT, PYUSD, USD1, USDG, RLUSD, U, USDTB, A7A5, FDUSD, BRZ, AUSD, MNEE, EURI, USDQ, USDO, USDX, AID, TGBP, EURC, and BUIDL). Coverage is derived from the shared supported blacklist symbol set, so DEWS stays aligned with the live blacklist tracker instead of maintaining a separate coin list. Uses 24h event count with spike detection relative to 7d daily average.
+Only for symbols in the shared `BLACKLIST_STABLECOINS` set (`shared/types/market.ts`). Coverage is derived from the same supported blacklist symbol set as the live blacklist tracker instead of maintaining a separate DEWS-local coin list. Uses 24h event count with spike detection relative to 7d daily average.
 
 ### S_flow — Mint/Burn Flow
 
@@ -162,7 +162,7 @@ Score = `min(100, sum of active signal points)`.
 
 **Cron name:** `compute-dews`
 
-**Run health semantics:** DEWS records upstream read problems as structured cron metadata (`sourceFailures`, `sourceCoverage`, `validationFailures`). The cron returns `status: "degraded"` when non-bootstrap source dependencies fail. Bootstrap grace is now a one-time state transition, tracked by the `dews:bootstrap-complete` cache sentinel after the first successful publication. Before that first success, only explicitly optional missing tables are tagged `bootstrapAllowed=true`; once the sentinel exists, those same failures degrade the run normally. Fresh `dex_liquidity` is now treated as a core dependency, and rows older than 2 hours block publication as a hard source-freshness failure.
+**Run health semantics:** DEWS records upstream read problems as structured cron metadata (`sourceFailures`, `sourceCoverage`, `validationFailures`). The cron returns `status: "degraded"` when non-bootstrap source dependencies fail. Bootstrap grace is now a one-time state transition, tracked by the `dews:bootstrap-complete` cache sentinel after the first successful publication. Before that first success, only explicitly optional missing tables are tagged `bootstrapAllowed=true`; once the sentinel exists, those same failures degrade the run normally. Stale `dex_liquidity` is treated as a core dependency failure and is recorded in metadata, but rows that meet signal-coverage requirements are still persisted.
 
 **Off-chain confirmation resilience:** CoinGecko and DefiLlama confirmation fetches used by the pending-depeg pipeline are wrapped in a circuit breaker. A sustained provider outage trips the breaker and short-circuits subsequent confirmation lookups until it resets, so a single upstream failure no longer hammers the endpoint for 45 minutes per pending row.
 

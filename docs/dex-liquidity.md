@@ -370,10 +370,10 @@ Every source family now uses the same minimum liquidity rule for DEX prices: a p
 **Confirmation gate in `detectDepegEvents()`:**
 
 - When primary price shows depeg (>=100bps), check DEX price
-- Only **trusted** DEX rows are used for depeg suppression/confirmation: freshness `<20 min` and aggregate source TVL `>= $1M`
+- Only **trusted** DEX rows are used for depeg suppression/confirmation: freshness within `DEX_FRESHNESS_SEC` (currently 35 minutes) and aggregate source TVL `>= $1M`
 - If a trusted DEX price shows coin at peg (<100bps): **suppress** new depeg event (likely false positive)
 - If DEX unavailable, stale, or confirms depeg: open event normally
-- Only affects **opening new** events — existing event updates/closures unchanged
+- DEX evidence participates in new-event suppression, pending/extreme confirmation, same-direction peak support, and corroborated recovery paths; existing events are not auto-closed by a single contradictory DEX row
 - ~80-100 stablecoins covered by multi-source observations; remainder fall through to primary-only detection
 
 **API exposure:**

@@ -25,7 +25,7 @@ npm run check:verified-doc-links # Verify all markdown links in verified docs re
 npm run check:doc-source-paths # Verify backtick source-path references in README.md and docs/** resolve to files/directories
 npm run check:doc-sync # Verify exact methodology versions, thresholds, weights, and enforced limits stay aligned with code and canonical version labels
 npm run check:env-contract # Verify documented env bindings match the worker Env interface
-npm run check:duplicate-exports # Detect duplicate named exports across modules
+npm run check:duplicate-exports # Detect duplicate export declarations within individual files
 npm run check:sql-safety # Static analysis of D1 SQL patterns for safety issues
 npm run check:stablecoin-data # Validate stablecoin JSON data files against schema
 npm run check:redemption-backstops # Validate redemption backstop configs for completeness
@@ -499,10 +499,19 @@ Current unique critical file set (`CRITICAL_FILES` in `scripts/lib/critical-cove
 - `worker/src/lib/stablecoins-cache.ts`
 - `worker/src/lib/safety-scores.ts`
 - `worker/src/handlers/scheduled.ts`
+- `worker/src/api/health.ts`
 - `worker/src/cron/sync-stablecoins.ts`
 - `worker/src/cron/daily-digest.ts`
 - `worker/src/cron/sync-yield-data.ts`
 - `worker/src/api/discovery.ts`
+- `worker/src/api/peg-summary.ts`
+- `worker/src/api/report-cards.ts`
+- `worker/src/api/dex-liquidity.ts`
+- `worker/src/api/stress-signals.ts`
+- `worker/src/api/mint-burn-flows.ts`
+- `worker/src/api/status.ts`
+- `worker/src/api/stablecoin-detail.ts`
+- `worker/src/cron/dex-liquidity/orchestrator.ts`
 - `worker/src/api/health.ts`
 - `worker/src/api/peg-summary.ts`
 - `worker/src/api/report-cards.ts`

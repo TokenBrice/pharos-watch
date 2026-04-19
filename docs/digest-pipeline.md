@@ -35,7 +35,7 @@ Each digest has four fields produced by the LLM:
 
 ### Data collection
 
-The cron assembles a `DigestInputData` object from 16 sources before calling the LLM:
+The cron assembles a `DigestInputData` object from the collector set below before calling the LLM:
 
 | Category | Source | Key signals |
 |----------|--------|-------------|
@@ -218,13 +218,13 @@ If either is absent, Telegram posting is skipped silently.
 
 ### Distribution status logging
 
-Both statuses are returned in the cron result metadata and the admin trigger response:
+Daily and weekly channel outcomes are returned in scheduled-run cron metadata. `POST /api/trigger-digest` does not run delivery inline anymore; it enqueues a force-run request and returns `202` with `{ ok, accepted, requestId, message }`, then the 5-minute digest-trigger poll writes the eventual result to cron history and the `digest:last-trigger-result` cache entry.
 
 ```json
 { "metadata": "243 chars, tweet: ok, telegram: ok" }
 ```
 
-Possible values per channel: `"no-creds"`, `"ok"`, `"failed: <truncated error>"`.
+Possible channel values include `"no-creds"`, `"ok"`, `"failed: <truncated error>"`, `"skipped: circuit-open"`, `"skipped: quality-gate"`, `"skipped: already-sent"`, and successful appendixed delivery strings such as `ok+appendix(...)`.
 
 ---
 
@@ -259,7 +259,7 @@ Requires >=5 current-week daily digests to proceed. Prior-week coverage below 5 
 ### LLM call
 
 - **Model:** `claude-opus-4-7` with adaptive thinking + `xhigh` effort (identical contract to the daily digest)
-- **Timeout:** shared 14-minute Anthropic request cap; the scheduled weekly wrapper still has a 12-minute cron lease, so the lease can abort first on slow Monday recap runs
+- **Timeout:** shared 12-minute Anthropic request cap; the scheduled weekly wrapper also has a 12-minute cron lease, so the lease can abort slow Monday recap runs
 - **max_tokens:** 64000
 - **Voice:** Same sardonic columnist, but synthesizing rather than reporting; rewritten system prompt adds arc framing, forward-look mandate on the last paragraph, tic list, and explicit week-over-week references
 - **Structure:** 4-6 paragraphs, 250-400 words: week's headline, dominant story, counter-narrative, supply/capital flows, optional structural observation

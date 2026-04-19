@@ -67,8 +67,8 @@ Some public routes are documented by feature docs or the architecture doc rather
 | `/blacklist/` | [blacklist-tracker.md](./blacklist-tracker.md) |
 | `/cemetery/` | [cemetery-and-compare.md](./cemetery-and-compare.md) |
 | `/changelog/` | [architecture.md](./architecture.md) |
-| `/chains/` | [chains-page.md](./chains-page.md), [api-reference.md](./api-reference.md) |
-| `/chains/[chain]/` | [chains-page.md](./chains-page.md), [api-reference.md](./api-reference.md) |
+| `/chains/` | [chains-page.md](./chains-page.md), [chain-health.md](./chain-health.md), [api-reference.md](./api-reference.md) |
+| `/chains/[chain]/` | [chains-page.md](./chains-page.md), [chain-health.md](./chain-health.md), [api-reference.md](./api-reference.md) |
 | `/compare/` | [cemetery-and-compare.md](./cemetery-and-compare.md) |
 | `/compare/[slug]/` | [cemetery-and-compare.md](./cemetery-and-compare.md) |
 | `/coverage/` | [coverage-page.md](./coverage-page.md) |
@@ -149,6 +149,7 @@ These are public sub-pages of `/methodology/`. Use the route map below when you 
 - [feedback-pipeline.md](./feedback-pipeline.md) - feedback widget, POST contract, rate limiting, and GitHub routing
 - [telegram-alerts.md](./telegram-alerts.md) - Telegram webhook commands, subscription tables, and alert dispatch rules
 - [shadow-stablecoins.md](./shadow-stablecoins.md) - PSI-only shadow asset boundary and UI exclusion rules
+- [chain-health.md](./chain-health.md) - Chain Health Score inputs, formula, factors, bands, and update contract
 
 ## Design References
 

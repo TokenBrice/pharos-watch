@@ -51,12 +51,12 @@ Cron schedules are declared in `worker/wrangler.toml`, mirrored in `shared/lib/c
 
 ## Freshness Contract (Frontend)
 
-All API hooks that use `useApiQuery` follow:
+API hooks that use `useApiQuery` follow the interval supplied by their caller:
 
-- `staleTime = cron interval`
-- `refetchInterval = 2 * cron interval`
+- `staleTime = interval`
+- `refetchInterval = 2 * interval`
 
-Defined centrally in `src/hooks/use-api-query.ts`.
+Defined centrally in `src/hooks/use-api-query.ts`. Cron-backed hooks should pass the producer cadence unless a documented route-specific exception applies. Current exceptions include `/api/health` (1-minute diagnostic polling, not cron-backed) and `/api/usds-status` (15-minute UI polling over a daily source snapshot).
 
 ## Notes
 

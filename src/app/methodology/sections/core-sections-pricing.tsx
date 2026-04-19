@@ -32,11 +32,11 @@ export function PricingPipelineMethodologySection() {
         <p>
           <strong className="text-foreground">Source diversity.</strong>{" "}
           Kraken and Bitstamp extend the direct venue set. Fresh RedStone prices need timestamped multi-venue breakdowns.
-          The protocol-level DEX bridge now spans Fluid, Balancer, Raydium, Orca, Meteora, PancakeSwap, Aerodrome
-          Slipstream, and Velodrome Slipstream. DEX bridge identity is canonical-only at runtime, so addressed unknown
-          tokens are dropped instead of being reinterpreted by symbol, promoted protocol DEX prices only enter consensus
-          when they are corroborated or no non-DEX voices exist, and direct-API quote legs prefer tracked live stablecoin
-          prices instead of unconditional{" "}
+          The primary promoted DEX bridge now spans Fluid, Balancer, Raydium, and Orca, while the broader direct DEX
+          source set feeds liquidity and challenger observations. DEX bridge identity is canonical-only at runtime, so
+          addressed unknown tokens are dropped instead of being reinterpreted by symbol, promoted protocol DEX prices
+          only enter consensus when they are corroborated or no non-DEX voices exist, and direct-API quote legs prefer
+          tracked live stablecoin prices instead of unconditional{" "}
           <code className="mx-1 text-xs">$1</code> symbol assumptions.
         </p>
 
@@ -235,7 +235,7 @@ export function PricingPipelineMethodologySection() {
             <ol className="list-decimal list-inside space-y-1">
               <li>Collect all source prices with non-failed circuit breakers</li>
               <li>Find the largest fully pairwise cluster of sources that agree within <code className="text-xs">50 bps</code> (fixed pegs) or <code className="text-xs">500 bps</code> (NAV tokens)</li>
-              <li>Break equal-size clusters by total weight, then tighter spread, then peg proximity when available</li>
+              <li>Break equal-size clusters by total weight, then stronger trust tier, then tighter spread, then peg proximity when available</li>
               <li>If the winning cluster has 2+ members, publish its median price and separately keep the best cluster member for provenance</li>
               <li>Choose that internal selected source by weight, then trust tier, then peg proximity, then source key</li>
               <li>If no cluster of 2+ forms, fixed pegs stay on fixed-peg rules and fall back to the best trusted single source</li>

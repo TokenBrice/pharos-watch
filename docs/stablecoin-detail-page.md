@@ -58,7 +58,7 @@ The hook currently wires these sources:
 - `useMintBurnFlows()` for flow-surface availability checks
 - `useStablecoinReserves(id, enabled)` for live reserve presentation when `coin.liveReservesConfig` exists
 
-`useInfiniteDepegEvents()` is intentionally separate from the main view model and is mounted in the client only when the coin is not a NAV token.
+`useInfiniteDepegEvents()` is intentionally separate from the main view model. The hook is called unconditionally to preserve React hook order, but both `enabled` and `autoLoadAll` are true only when the detail view is ready and the coin is not a NAV token.
 
 ### Returned states
 
@@ -93,7 +93,7 @@ The client `loading` state now mirrors the server fallback more closely: it keep
 12. `DistributionSection`
 13. `DexLiquidityCard`
 14. `FlowsSection`
-15. `BlacklistSection` when the coin is supported by the blacklist tracker
+15. `BlacklistSection` while blacklist summary data is still loading for a supported symbol, or after load only when that supported symbol has recorded blacklist events
 16. `DepegHistory` (suppressed for NAV tokens)
 17. `FeedbackModal`
 

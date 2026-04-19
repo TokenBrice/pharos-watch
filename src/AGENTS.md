@@ -14,7 +14,7 @@ Applies to `src/**`.
 - Tailwind classes must be static strings.
 - Do not edit `src/components/ui/**` shadcn primitives unless explicitly required.
 - API reads should go through shared hooks and `src/lib/api.ts` instead of direct provider calls.
-- Hook timing rule: `staleTime = cron interval`, `refetchInterval = 2 * cron interval`.
+- Hook timing rule: cron-backed hooks should normally use `staleTime = producer interval`, `refetchInterval = 2 * producer interval`; document intentional exceptions such as health/status probes or faster UI polling over slow snapshots.
 - Keep frontend-only utilities under `src/lib/**`; runtime-neutral logic belongs in `shared/lib/**`.
 
 ## Common Checks

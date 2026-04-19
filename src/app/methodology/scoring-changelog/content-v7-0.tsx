@@ -21,11 +21,13 @@ export function ScoringChangelogV707Entry() {
         </li>
         <li>
           <code className="text-xs bg-muted px-1 py-0.5 rounded">/api/redemption-backstops.effectiveExitScore</code>{" "}
-          stays aligned with the report-card computation during stale windows instead of diverging to{" "}
-          <code className="text-xs bg-muted px-1 py-0.5 rounded">null</code>; the redemption-backstop cron still
-          marks its run <code className="text-xs bg-muted px-1 py-0.5 rounded">degraded</code> and sets{" "}
-          <code className="text-xs bg-muted px-1 py-0.5 rounded">metadata.liquidityStale = true</code> for
-          operational visibility.
+          stays aligned with the stale-DEX freshness policy during stale windows instead of diverging to{" "}
+          <code className="text-xs bg-muted px-1 py-0.5 rounded">null</code>, but it remains the raw best-path exit
+          blend and can still differ numerically from report-card liquidity after Safety Score eligibility gates apply.
+          The redemption-backstop cron still marks its run{" "}
+          <code className="text-xs bg-muted px-1 py-0.5 rounded">degraded</code> and sets{" "}
+          <code className="text-xs bg-muted px-1 py-0.5 rounded">metadata.liquidityStale = true</code> for operational
+          visibility.
         </li>
         <li>
           Absent DEX snapshots (loader rejects or empty table) still produce{" "}

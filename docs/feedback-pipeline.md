@@ -210,11 +210,11 @@ For non-USD pegs, the worker now derives `pegReference` from the tracked peg typ
 - Auto-verification snapshot (data corrections only)
 - Footer: `*Submitted via Pharos feedback widget*`
 
-User-supplied strings are only partially normalized before the GitHub write:
+User-supplied strings are normalized before the GitHub write:
 
 - `stablecoinName` and `pageUrl` have newlines stripped and length caps applied in `worker/src/api/feedback/format.ts`
 - issue titles are length-validated by the request schema / handler rules
-- `description` and `expectedValue` are otherwise preserved verbatim in the body after request validation
+- `description` and `expectedValue` are trimmed, CRLF/NUL-normalized, `@` mentions are defanged as `@ `, and long backtick runs are escaped before the values are placed in fenced text blocks
 
 #### Responses
 

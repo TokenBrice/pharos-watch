@@ -201,8 +201,8 @@ Age checks:
 
 **CEX ticker check:**
 
-- Fetches Binance spot ticker for the coin's symbol (e.g., `USDTUSDC`) as an additional secondary confirmation source
-- Only attempted for coins with known Binance trading pairs
+- Fetches the configured Binance USD-pair batch (currently `USDTUSD` and `USDCUSD`) as an additional secondary confirmation source, then looks up the pending coin by symbol
+- Only attempted for symbols present in the configured Binance market set
 - Counts as confirmation only when deviation >= `secondaryBar` and points in the same direction as the pending incident
 - Non-fatal: if the Binance fetch fails, the CEX agreement remains `null`
 
@@ -223,10 +223,11 @@ Age checks:
 
 | Same-direction off-chain | Same-direction CEX | Same-direction DEX | Same-direction pool | Contradiction seen | Action |
 |--------------------------|-------------------|--------------------|---------------------|--------------------|--------|
-| true | any | any | any | any | PROMOTE to `depeg_events` |
+| true | any | any | any | any | PROMOTE to `depeg_events`, except low-confidence rows still need CEX, aggregate DEX, or pool confirmation |
 | any | true | any | any | any | PROMOTE to `depeg_events` |
 | any | any | true | any | any | PROMOTE to `depeg_events` |
 | any | any | any | true | any | PROMOTE to `depeg_events` (pool-only path requires 2 pools or one pool with `>= $5M` TVL) |
+| true | false/null | false/null | false/null | any | Keep pending when reason includes `low-confidence`; low-confidence rows need a hard secondary source (CEX, aggregate DEX, or pool challenger) |
 | false | any | false | any | true | REJECT (off-chain and aggregate DEX both oppose the pending direction) |
 | false | any | null | false/null | true | REJECT (directional contradiction with no same-direction rescue signal) |
 | null | null | false | false/null | true | REJECT (available secondary evidence points the other way) |
@@ -277,6 +278,8 @@ Price crosses threshold
                                               depeg_events    expiry, or decisive disagreement
                                                                -> delete pending
 
+Low-confidence pending rows are stricter: off-chain agreement alone does not promote them; they need CEX, aggregate DEX, or pool-challenger confirmation.
+
 Special case:
   - Extreme move + trusted DEX in the same direction can promote immediately without waiting for the pending retry
 
@@ -288,7 +291,8 @@ While event is open:
   - Price recovers below threshold: close only when the primary recovery is authoritative, or when trusted aggregate DEX recovery has enough protocol corroboration and no challenger veto; otherwise keep the event open
 
 Orphan cleanup:
-  - Open event not processed in current run: close with recovery_price=NULL
+  - Open event for a coin no longer tracked by Pharos: close with recovery_price=NULL
+  - Open event for a tracked coin not observed in the current run: keep open to avoid false recoveries during upstream gaps
 ```
 
 ## Types
@@ -330,7 +334,7 @@ Query params:
 |-------|------|---------|-------------|
 | `stablecoin` | string | -- | Filter by `stablecoin_id` |
 | `active` | string | -- | If `"true"`, only events where `ended_at IS NULL` |
-| `limit` | number | 100 | Max results (clamped 1--1000) |
+| `limit` | number | 100 | Max results; out-of-range values outside `1..1000` are rejected |
 | `offset` | number | 0 | Pagination offset |
 
 Response:

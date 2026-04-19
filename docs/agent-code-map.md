@@ -260,7 +260,7 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `shared/lib/api-endpoints/paths.ts` - API_PATHS, buildQueryPath
 - `shared/lib/api-endpoints/status.ts` - getStatusPageActions
 - `shared/lib/api-endpoints/validation.ts` - getProbePaths, getPublicApiAccess, getSiteDataAccess, isAdminPath, isMutatingAdminGetAllowed, isProtectedPublicApiPath
-- `shared/lib/api-freshness.ts` - API_FRESHNESS_MAX_AGE_SEC
+- `shared/lib/api-freshness.ts` - API_FRESHNESS_MAX_AGE_SEC, CACHE_AVAILABILITY_MAX_AGE_SEC, CACHE_FRESHNESS_LANES, CacheFreshnessLaneConfig, CacheFreshnessLaneKey, FRESHNESS_SENTINEL_CACHE_KEYS
 - `shared/lib/blacklist-active-records.ts` - BlacklistActiveRecord, BlacklistActiveSummaryStats, BlacklistCurrentBalanceSnapshot, BlacklistTrackedSummaryStats, buildBlacklistActiveRecords, computeBlacklistActiveSummaryStats
 - `shared/lib/blacklist-aggregates.ts` - BlacklistChartPoint, buildBlacklistQuarterlyChartFromSnapshots, sortKeyToLabel
 - `shared/lib/blacklist-tracker-version.ts` - BLACKLIST_TRACKER_METHODOLOGY_CHANGELOG, BLACKLIST_TRACKER_METHODOLOGY_CHANGELOG_PATH, BLACKLIST_TRACKER_METHODOLOGY_VERSION, BLACKLIST_TRACKER_METHODOLOGY_VERSION_LABEL, getBlacklistTrackerMethodologyVersionAt

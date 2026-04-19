@@ -520,11 +520,12 @@ Workers enforce a **6 concurrent fetch connections** limit per cron trigger invo
 | 9       | `20 * * * *`       |                                      1 (core yield publisher)                                      |    5     |
 | 10      | `25 */4 * * *`     |                                  5 (supplemental yield families)                                   |    1     |
 | 11      | `2,7,...,57 * * * *` |                        5 (Telegram alert dispatcher batches sends in groups of 5)                  |    1     |
-| 12      | `*/5 * * * *`      |                                      1 (manual digest poll uses daily-digest lease only when flagged) |    5     |
-| 13      | `0 8 * * *`        |                 1 (benchmark feeds -> USDS Etherscan reads are chained serially)                   |    5     |
-| 14      | `5 8 * * *`        |                     5 (Bluechip batch of 3 + Anthropic + CoinGecko; digest/recap chained)          |    1     |
-| 15      | `0 6 1 * *`        |                                      1 (DeFiLlama yield scan)                                      |    5     |
-| 16      | `0 3 * * *`        |                     0 (prune-status-probe-runs + prune-cron-history; both DB-only)                 |    6     |
+| 12      | `0 8 * * *`        |                 1 (benchmark feeds -> USDS Etherscan reads are chained serially)                   |    5     |
+| 13      | `5 8 * * *`        |                     5 (Bluechip batch of 3 + Anthropic + CoinGecko; digest/recap chained)          |    1     |
+| 14      | `0 6 1 * *`        |                                      1 (DeFiLlama yield scan)                                      |    5     |
+| 15      | `0 3 * * *`        |                     0 (prune-status-probe-runs + prune-cron-history; both DB-only)                 |    6     |
+
+The `*/5 * * * *` digest-trigger poll slot exists in the scheduled runner registry, but it is not represented in `CRON_JOB_DEFINITIONS` and is not part of the enforced `check:cron-connections` budget table today. It performs a lightweight D1 poll and only enqueues the normal digest job path when a manual trigger is pending.
 
 **Policy for new jobs:**
 
@@ -643,6 +644,7 @@ Some long-running jobs also enforce their own earlier wall-clock guard so they c
 | `sync-dex-liquidity`      | 13 min  | 150+ pool crawl, with headroom below the platform wall-clock limit                                                                                                                                        |
 | `sync-dex-discovery`      | 13 min  | Multi-source pool staging with explicit 12-minute self-budget so the wrapper still has headroom to log a controlled degraded/error result                                                                 |
 | `sync-blacklist`          | 12 min  | Multi-chain scan + balance enrichment; isolated trigger allows extended runtime                                                                                                                           |
+| `weekly-recap`            | 12 min  | Weekly Anthropic recap, chained after the daily digest on Mondays                                                                                                                                         |
 | `sync-live-reserves`      | 12 min  | Multi-adapter reserve fetching with per-adapter timeouts                                                                                                                                                  |
 | `sync-mint-burn`          | 10 min  | Multi-contract EVM log scan; isolated trigger allows extended runtime                                                                                                                                     |
 | `sync-mint-burn-extended` | 10 min  | Long-tail mint/burn lane with its own run-state                                                                                                                                                           |
@@ -789,10 +791,10 @@ async function batchExecute(
   db: D1Database,
   stmts: D1PreparedStatement[],
   chunkSize = 100, // D1_BATCH_SIZE
-): Promise<void>;
+): Promise<number>;
 ```
 
-Chunks statements into batches of 100 (D1's batch limit) and executes sequentially.
+Chunks statements into batches of 100 (D1's batch limit), executes sequentially, and returns the summed D1 `meta.changes` count across all batched statements.
 
 ### Cron Lease Primitives (Phase C)
 

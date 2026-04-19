@@ -54,7 +54,7 @@ export default function MethodologyPage() {
             },
             {
               question: "How does Pharos measure DEX liquidity?",
-              answer: "The liquidity score is a composite 0–100 metric combining TVL depth (30%), volume activity (20%), pool quality (20%), durability (20%), and pair diversity (10%). Volume uses log-scale scoring. Pool quality is adjusted for mechanism type, balance health, and pair quality.",
+              answer: "The liquidity score is a composite 0–100 metric combining TVL depth (30%), volume activity (20%), pool quality (20%), durability (20%), and pair diversity (10%). Volume uses log-scale scoring. Pool quality is adjusted for mechanism type and balance health; pair quality affects effective TVL depth.",
             },
             {
               question: "How does Pharos confirm depegs and maintain DEWS history?",

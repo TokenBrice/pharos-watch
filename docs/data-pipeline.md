@@ -99,12 +99,12 @@ The registry lives in `worker/src/lib/authoritative-price-sources.ts` and suppor
 - **Live override** — used by `syncStablecoins()` to replace the current cached price
 - **Historical replay** — used by `backfill-depegs.ts` so historical rebuilds can consult the same authoritative provider instead of drifting back to CoinGecko/DefiLlama for those assets
 
-- **Current scope:** `cusd-cap`, `iusd-infinifi`, `usdai-usd-ai`, `usdk-kast`, `xo-exodus` (crvUSD was migrated out of the authoritative override registry and into primary consensus as a `curve-oracle` source at weight 3; see [Pricing Pipeline](./pricing-pipeline.md))
+- **Current scope:** `cusd-cap`, `iusd-infinifi`, `usdai-usd-ai`, `usdk-kast`, `xo-exodus`, `usdnr-nerona` (crvUSD was migrated out of the authoritative override registry and into primary consensus as a `curve-oracle` source at weight 3; see [Pricing Pipeline](./pricing-pipeline.md))
 - **Source:** either direct Ethereum `eth_call` redemption quotes or tracked-base inheritance when a redeemable wrapper should shadow another tracked asset:
   - Cap `getBurnAmount(address,uint256)` for `cUSD -> USDC`
   - infiniFi `RedeemController.receiptToAsset(uint256)` for `iUSD -> USDC`
   - USDAI inherits the tracked `PYUSD` live price and historical market replay because the base token is treated as an instantly redeemable PYUSD wrapper rather than a free-floating market-priced asset
-  - USDK and XO inherit the tracked `wM` live price and historical market replay because Pharos models them as M0 extension units rather than as independently discovered secondary-market price surfaces
+  - USDK, XO, and USDnr inherit the tracked `wM` live price and historical market replay because Pharos models them as M0 extension units rather than as independently discovered secondary-market price surfaces
 - **Reason:** CG/DL can overweight thin secondary-market liquidity for wrapper-style assets whose real executable value is set by direct protocol redemption or by an instantly redeemable base asset
 - **Result:** the final cached asset keeps `priceSource = "protocol-redeem"` and `priceConfidence = "high"` when the quote validates against peg bounds
 
@@ -220,7 +220,7 @@ This prevents false positive depeg events for systemically important stablecoins
 
 ## Stale Data Monitoring (Frontend)
 
-The `StaleDataBanner` component (`src/components/stale-data-banner.tsx`) warns users when data from any critical query exceeds 2x its `staleTime`. When a hook uses `apiFetchWithMeta()`, backend freshness metadata (`X-Data-Age`, stale `Warning`) takes precedence over browser fetch time so a fresh client refetch cannot mask stale server data. Each page monitors all TanStack Query hooks that feed its content:
+The `StaleDataBanner` component (`src/components/stale-data-banner.tsx`) warns users when data from any critical query is degraded or stale. Frontend freshness uses the shared `FRESHNESS_RATIOS` thresholds from `shared/lib/status-thresholds.ts`: fresh through `8x staleTime`, degraded through `12x staleTime`, then stale. When a hook uses `apiFetchWithMeta()`, backend freshness metadata (`_meta.status`, `X-Data-Age`, stale `Warning`) takes precedence over browser fetch time so a fresh client refetch cannot mask stale server data. Each page monitors all TanStack Query hooks that feed its content:
 
 | Page                  | Queries monitored                                   | staleTime constants                                                |
 | --------------------- | --------------------------------------------------- | ------------------------------------------------------------------ |
@@ -237,7 +237,7 @@ The `StaleDataBanner` component (`src/components/stale-data-banner.tsx`) warns u
 
 Constants defined in `src/lib/cron-intervals.ts`: `CRON_1MIN` (1 min), `CRON_15MIN` (15 min, stablecoins list), `CRON_30MIN` (30 min, DEX liquidity), `CRON_MINT_BURN` (30 min, mint/burn), `CRON_YIELD` (1 hour, yield rankings), `CRON_1H` (1 hour, generic budget), `CRON_RESERVE_SYNC` (4 hours, live reserves + redemption backstops), `CRON_BLACKLIST` (6 hours), `CRON_24H` (24 hours).
 
-The `staleTime` value for each query matches the cron interval of the backend job that produces the data. TanStack Query's `refetchInterval` is always 2x the `staleTime`. The banner triggers at 2x `staleTime` (i.e., 4x the cron interval), but hook-level freshness metadata can mark data degraded/stale sooner when the worker explicitly reports old cache age or stale-table warnings.
+The `staleTime` value for each query matches the cron interval of the backend job that produces the data. TanStack Query's `refetchInterval` is always 2x the `staleTime`. Local browser age becomes degraded after `8x staleTime` and stale after `12x staleTime`, while hook-level freshness metadata can mark data degraded/stale sooner when the worker explicitly reports old cache age or stale-table warnings.
 
 ## Blacklist Sync State Semantics
 

@@ -147,7 +147,7 @@ Internal changelog reconstructed from git history. Covers `v1.0` through `v5.95`
 
 - DEWS bootstrap grace is now a one-time state transition, persisted via a dedicated `dews:bootstrap-complete` sentinel after the first successful publication
 - Only explicitly optional missing tables are bootstrap-allowed before that first success; core dependencies no longer inherit stablecoins-cache freshness as a proxy for readiness
-- `dex_liquidity` freshness is now enforced as a hard publication prerequisite, with rows older than 2 hours degrading the run and blocking writes
+- `dex_liquidity` freshness is now enforced as a core source-health prerequisite; stale rows degrade the run and are recorded in metadata, but DEWS rows that meet signal coverage are still written
 
 ---
 

@@ -48,7 +48,8 @@ Status semantics are intentionally user-facing:
 - `Safety Score`: `Rated` or `NR`
 - `DEX Price`: `Primary`, `Mixed`, `Fallback`, `Legacy`, `NR`, or `Unknown`
 - `Reserve View`: `Score-grade`, `Configured`, `Checking`, `Curated-Validated`, `Proof`, `Curated`, `Estimated`, or `None`
-- `Redemption Backstop`: `Issuer`, `PSM`, `Queue`, `Collat.`, `Stable`, `Basket`, `Heur.`, `Config.`, or `—`
+- query-backed columns can also emit `Data n/a` while an upstream dataset is unavailable
+- `Redemption Backstop`: `Issuer`, `PSM`, `Queue`, `Collat.`, `Stable`, `Basket`, `Heur.`, `Config.`, `Impaired`, `Data n/a`, or `—`
 - `Yield`: `Ranked` or `—`
 - `Flows`: `Full`, `Partial`, `Lagging`, `Bootstr.` , `Disabled`, or `—`
 - `Blacklist`: `Tracked` or `—`
@@ -70,7 +71,7 @@ The page deliberately mixes structural coverage and live dataset coverage. The i
 | `Yield`               | `useYieldRankings().data.rankings[].id`                                                                                    | Coverage reflects current inclusion in the yield rankings, not theoretical yield-bearing eligibility.                                                                                                                                                |
 | `Flows`               | `useMintBurnFlows().data.coins[].coverage.status`                                                                          | Mirrors the configured issuance-chain mint/burn coverage state exposed on `/flows`.                                                                                                                                                                  |
 | `Blacklist`           | `BLACKLIST_STABLECOINS` from `@shared/types` for row tracking state, plus resolved `rawInputs.canBeBlacklisted` / `getTrackedBlacklistStatus()` for snapshot eligibility | Structural support flag, matching the shared filter enum used by the blacklist route and worker handlers. The feature snapshot denominator is scoped to coins whose resolved blacklist status is direct `true`; `possible`, `inherited`, and non-blacklistable assets remain visible in the matrix but do not count as uncovered blacklist-tracker opportunities. |
-| `Dependency Map`      | `useReportCards().data.cards` filtered to live cards, then `deriveDependencies(meta)` from `@shared/lib/reserve-templates` | This mirrors the live dependency-edge derivation used by `src/app/dependency-map/client.tsx`.                                                                                                                                                        |
+| `Dependency Map`      | `useReportCards().data.dependencyGraph.edges`, falling back to `buildDependencyGraphEdges(ACTIVE_STABLECOINS)` when the live graph is absent | Edges are filtered through `filterDependencyGraphEdgesToLive(...)` with live report-card IDs, then collected with `collectDependencyGraphIds(...)`. This mirrors the live dependency graph rather than deriving visibility directly from static reserve templates. |
 
 Additional page-level sources:
 

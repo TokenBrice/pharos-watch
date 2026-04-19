@@ -143,7 +143,10 @@ The `/start/` route is documented in [Start Page](./start-page.md).
 Above the fold (`src/app/page.tsx`):
 
 1. `SiteHeader`
-2. `HomepageStartHereCallout` (first-session only) + `KpiBar` share a flex container with CSS `order` classes so the callout sits **above** the KPI bar at `<lg` widths and **below** it at `lg+`. Returning-visitor order (no callout) is unchanged.
+2. `HomepageStartHereCallout` (first-session only)
+3. `KpiBar`
+
+The callout and KPI bar share a `flex flex-col gap-3 lg:contents` wrapper. Because the wrapper becomes `display: contents` at `lg+`, the DOM order remains the effective order at every breakpoint: first-session visitors see the callout before the KPI bar, and returning visitors see the KPI bar directly under the header.
 
 Under the fold (`HomepageClient`):
 

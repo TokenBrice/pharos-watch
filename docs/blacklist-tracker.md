@@ -552,13 +552,13 @@ CREATE INDEX idx_blacklist_events_suppression_reason ON blacklist_events(suppres
 
 - `amount_native` is the canonical token-native quantity for the event
 - `amount_usd_at_event` is populated only when Pharos can justify an event-time USD valuation
-- `amount_source` records where the value came from (`event`, `historical_balance`, `derived`, `unavailable`)
+- `amount_source` records where the value came from (`event`, `historical_balance`, `current_balance_snapshot`, `derived`, `legacy_migration`, `unavailable`)
 - `amount_status` records whether the amount is resolved, recoverable, or intentionally unavailable
 - `amount_attempt_count` records how many historical-recovery attempts Pharos has made for the row
 - `amount_last_attempted_at`, `amount_last_error_class`, and `amount_last_provider` are operator diagnostics for unresolved rows
 - `suppression_reason` records auditable rows excluded from public aggregate/event surfaces; currently `circle_mirror_zero_balance` for EURC rows that mirror Circle actions without frozen EURC value
 
-`amount_source='derived'` is now treated as a legacy migration artifact, not an active ingestion mode. Older Tron blacklist/unblacklist rows that still carried current-state-derived values are reset so event rows no longer claim unsupported historical precision.
+`amount_source='current_balance_snapshot'` is written when Tron rows are reconciled from the freeze-ledger mirror in `blacklist_current_balances`. `amount_source='derived'` and `amount_source='legacy_migration'` are treated as legacy migration artifacts, not active ingestion modes. Older Tron blacklist/unblacklist rows that still carried current-state-derived values are reset so event rows no longer claim unsupported historical precision.
 
 ### blacklist_current_balances table
 
@@ -627,9 +627,9 @@ For RPC log-scan chains (Base, Optimism, Avalanche, BSC), partial `eth_getLogs` 
 ### Execution Order (each cron cycle)
 
 1. **Backfill** (runs FIRST to prioritize budget)
-   - Targets rows with NULL amount only
+   - Targets non-Tron rows with recoverable/provider/ambiguous amount statuses, plus legacy derived-zero rows that were reset into the recovery pool
    - Orders newest rows first so fresh gaps clear before archival backlog
-   - Batch size: 50 rows per cycle
+   - Batch size: 100 rows per cycle
    - Confirmed zero balances are treated as complete and are not retried
    - Fetches historical balances via RPC or API
 
@@ -677,6 +677,7 @@ Per-chain block margins (`INDEXING_SAFETY_SEC / blockTime`):
 | Polygon   | 450                    | 2s         |
 | Avalanche | 450                    | 2s         |
 | BSC       | 300                    | 3s         |
+| Gnosis    | 180                    | 5s         |
 
 ---
 

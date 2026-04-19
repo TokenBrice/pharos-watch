@@ -8,7 +8,8 @@ docs/start-page.md	md	Start Here route contract	current	Documents `/start/` onbo
 docs/telegram-alerts.md	md	Telegram alert subscriptions and dispatch	current	Dedicated doc for webhook commands, D1 tables, snapshot diffing, and bot operations.
 worker/migrations/MANIFEST.md	md	D1 migration manifest	current	Repo-adjacent operational reference for checked-in migration history and known duplicate-prefix anomalies.
 shared/data/stablecoins/PROVENANCE_NOTES.md	md	Stablecoin registry provenance notes	current	Archival provenance reference; preserved comments still use historical pre-JSON file names and line anchors.
-agents/process/	dir	Operator runbooks	current	Runbooks remain outside `docs/`.
+docs/runbooks/	dir	Operator runbooks	current	Canonical operator runbooks live under `docs/runbooks/`.
+agents/process/	dir	Agent process docs	current	Recurring agent procedures and process notes; not canonical operator runbooks.
 agents/audits/	dir	Audit reports and forensic writeups	current	Audit artifacts live here instead of `docs/`.
 agents/plans/historical/	dir	Historical plans and design records	current	Non-canonical planning/history archive.
 agents/tasks/	dir	Task trackers and execution boards	current	Execution trackers remain outside `docs/`.

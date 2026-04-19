@@ -202,17 +202,16 @@ Each dispatch run loads:
   - `alert:dews-alertable-snapshot`
   - `alert:depeg-snapshot`
   - `alert:safety-snapshot`
-  - `alert:launch-snapshot`
 
 When `alert:dews-alertable-snapshot` is absent (for example, immediately after deploy), the dispatcher rebuilds it from the raw DEWS snapshot so the rollout does not require a noisy cold start.
 
-Snapshots older than `24 hours` are treated as stale and are reseeded before any alerts are sent.
+DEWS, depeg, and safety snapshots older than `24 hours` are treated as stale and are reseeded before any alerts are sent. Launch promotions use a separate best-effort `alert:launch-snapshot` read later in the run; a missing or malformed launch snapshot falls back to an empty prior set and does not trigger the stale-snapshot seed gate.
 
 ### First-Run / Stale-Snapshot Behavior
 
-If the raw DEWS/depeg/safety/launch snapshots are missing, unparsable, or older than 24 hours, or if an existing `alert:dews-alertable-snapshot` is stale:
+If the raw DEWS/depeg/safety snapshots are missing, unparsable, or older than 24 hours, or if an existing `alert:dews-alertable-snapshot` is stale:
 
-1. Current DEWS/depeg/safety/launch state is written back to the snapshot cache keys.
+1. Current DEWS/depeg/safety state is written back to the snapshot cache keys, along with the current launch snapshot for later best-effort launch promotion checks.
 2. No subscriber messages are sent for that run.
 3. The cron returns metadata with `snapshotSeeded: true`.
 

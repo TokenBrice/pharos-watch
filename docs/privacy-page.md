@@ -44,6 +44,7 @@ The current policy copy covers:
 5. Cloudflare Pages / Workers hosting and Google Analytics as third-party services
 6. support contact via `@PharosWatch` and the About page
 7. optional Telegram/X handles submitted through the feedback form appear publicly on the GitHub issue created for your submission
+8. Telegram alert subscriptions store chat ID, optional username, followed coins, alert settings, quiet hours, snooze state, and short-lived pending-command or pending-alert metadata
 
 Portfolio holdings are explicitly described as browser-local only, which matches the `/portfolio/` implementation. The page now also notes that any delegated feedback contact handle will be visible in the GitHub issues that Pharos creates.
 

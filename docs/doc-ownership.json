@@ -54,7 +54,7 @@
     {
       "name": "methodology",
       "sources": ["shared/lib/*-version.ts", "shared/lib/report-card*.ts", "shared/lib/peg-score.ts", "shared/lib/dews-config.ts", "shared/lib/liquidity-score-weights.ts", "worker/src/lib/stability-index.ts", "worker/src/lib/mint-burn-scoring.ts", "worker/src/lib/dews.ts", "src/app/methodology/**"],
-      "docs": ["docs/methodology-page.md", "docs/report-cards.md", "docs/report-cards-timeline.md", "docs/depeg-detection.md", "docs/dews.md", "docs/depeg-dews-timeline.md", "docs/dex-liquidity.md", "docs/liquidity-score-timeline.md", "docs/stability-index.md", "docs/stability-index-timeline.md", "docs/mint-burn-flows.md", "docs/mint-burn-flows-timeline.md", "docs/yield-intelligence.md", "docs/yield-intelligence-timeline.md", "docs/pricing-pipeline.md", "docs/pricing-pipeline-timeline.md", "docs/blacklist-tracker.md", "docs/blacklist-tracker-timeline.md", "docs/chain-health-timeline.md"],
+      "docs": ["docs/methodology-page.md", "docs/report-cards.md", "docs/report-cards-timeline.md", "docs/depeg-detection.md", "docs/dews.md", "docs/depeg-dews-timeline.md", "docs/dex-liquidity.md", "docs/liquidity-score-timeline.md", "docs/stability-index.md", "docs/stability-index-timeline.md", "docs/mint-burn-flows.md", "docs/mint-burn-flows-timeline.md", "docs/yield-intelligence.md", "docs/yield-intelligence-timeline.md", "docs/pricing-pipeline.md", "docs/pricing-pipeline-timeline.md", "docs/blacklist-tracker.md", "docs/blacklist-tracker-timeline.md", "docs/chain-health.md", "docs/chain-health-timeline.md"],
       "notes": ["Also update the relevant timeline doc for versioned methodology changes."]
     },
     {

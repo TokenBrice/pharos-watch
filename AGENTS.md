@@ -74,8 +74,8 @@ Fix failures locally before pushing. The merge gate skips cleanly for non-deploy
 - Use `getCirculatingRaw()` from `shared/lib/supply.ts`; DefiLlama list `circulating` values are already USD-denominated.
 - Do not multiply DefiLlama list-endpoint supply values by price. The detail endpoint differs for non-USD pegs.
 - Do not add manual/on-chain/CMC/DEX supply overrides. Primary supply is DefiLlama, with the existing fallback path only.
-- `@shared/*` maps to `shared/*`; always import via `@shared/lib/...`.
+- `@shared/*` maps to `shared/*`; use `@shared/lib/...` for shared runtime logic and `@shared/types...` for shared type/schema modules. Avoid relative cross-boundary imports.
 - Root TS config excludes `worker/` to avoid D1 type conflicts. Shared runtime-neutral logic belongs in `shared/lib/`.
-- Hook timing rule: `staleTime = cron interval`, `refetchInterval = 2x cron interval`.
+- Hook timing rule: cron-backed hooks should normally use `staleTime = producer interval`, `refetchInterval = 2x producer interval`; document intentional exceptions such as health/status probes or faster UI polling over slow snapshots.
 - Worker cron jobs share Cloudflare's per-trigger 6-connection pool across all `ctx.waitUntil()` work; consume response bodies before opening more fetches.
 - Standard deploy applies D1 migrations before the new Worker is live. New migrations must stay backward-compatible; destructive cleanup needs a separate coordinated rollout.

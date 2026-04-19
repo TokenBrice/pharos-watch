@@ -24,7 +24,7 @@ Use this checklist when adding or changing a Worker API endpoint. The route regi
 3. Bind the endpoint key to a handler in the appropriate `worker/src/routes/*-routes.ts` file, or add a dynamic route only when the path family cannot be represented as a static endpoint.
 4. Keep handler code under `worker/src/api/` and return through shared response helpers (`jsonResponse`, `errorResponse`, cache helpers) so status codes, CORS, and freshness behavior remain consistent.
 5. If the endpoint reads cache data, decide whether it should emit `_meta`, `X-Data-Age`, and `Warning` through `createCacheHandler()` or route-specific freshness injection.
-6. If the frontend consumes the endpoint, add a typed hook and schema validation where nested response data is accessed. Follow the polling rule: `staleTime = cron interval`, `refetchInterval = 2x cron interval`.
+6. If the frontend consumes the endpoint, add a typed hook and schema validation where nested response data is accessed. For cron-backed data, default to `staleTime = producer interval` and `refetchInterval = 2x producer interval`; document intentional exceptions such as health/status probes or faster UI polling over slow snapshots.
 7. Update `docs/api-reference.md` with methods, auth lane, parameters, cache profile, response shape, and error bodies.
 8. Add or update handler tests in `worker/src/api/__tests__/`. For critical endpoints, include the relevant suite in `npm run test:critical-contracts` only when it belongs on the critical path.
 

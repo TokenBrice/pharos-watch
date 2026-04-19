@@ -270,6 +270,7 @@ Cloudflare D1 (SQLite database)
   ├── mint_burn_hourly     → hourly mint/burn aggregates (~630K rows)
   ├── mint_burn_sync_state → per-config incremental sync progress
   ├── mint_burn_run_state  → round-robin scheduling state
+  ├── mint_burn_config_deferral → temporary per-config deferral after repeated API errors
   ├── yield_data           → per-source yield snapshots (multi-source keyed)
   ├── yield_history        → per-source historical yield timeseries
   ├── telegram_subscribers → Telegram bot subscriber registrations
@@ -291,6 +292,7 @@ Cloudflare D1 (SQLite database)
   ├── cron_slot_executions → cron slot execution deduplication tracking
   ├── daily_digest         → AI-generated daily market summaries
   ├── admin_idempotency_keys → idempotency keys for admin mutations
+  ├── admin_action_audit   → audited operator/admin mutation outcomes
   ├── feedback_submissions → legacy/schema-retained feedback table; current submissions go directly to GitHub Issues
   ├── feedback_rate_limit  → IP-based rate limiting for feedback submissions
   ├── public_api_rate_limit → Distributed per-minute buckets for non-admin public API traffic
@@ -347,7 +349,7 @@ Required GitHub variable: `API_BASE_URL`
 Optional GitHub variable: `SMOKE_API_BASE_URL` (recommended when smoke-testing a dedicated API host)
 Optional GitHub variables: `SMOKE_OPS_UI_URL`, `SMOKE_OPS_API_BASE`, `NEXT_PUBLIC_GA_ID`
 
-Worker secrets (set via `wrangler secret put`): `ETHERSCAN_API_KEY`, `TRONGRID_API_KEY`, `DRPC_API_KEY`, `ALCHEMY_API_KEY`, `GRAPH_API_KEY`, `CMC_API_KEY`, `COINGECKO_API_KEY`, `OPENEXCHANGERATES_API_KEY`, `ANTHROPIC_API_KEY`, `ALERT_WEBHOOK_URL`, `TWITTER_API_KEY`, `TWITTER_API_SECRET`, `TWITTER_ACCESS_TOKEN`, `TWITTER_ACCESS_TOKEN_SECRET`, `TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_ID`, `TELEGRAM_WEBHOOK_SECRET`, `GITHUB_PAT`, `FEEDBACK_IP_SALT`, `PUBLIC_API_RATE_LIMIT_SALT`, `SITE_API_SHARED_SECRET`, `API_KEY_HASH_PEPPER`, `CLOUDFLARE_D1_STATUS_API_TOKEN`
+Worker secrets (set via `wrangler secret put`): `ETHERSCAN_API_KEY`, `TRONGRID_API_KEY`, `DRPC_API_KEY`, `ALCHEMY_API_KEY`, `GRAPH_API_KEY`, `CMC_API_KEY`, `COINGECKO_API_KEY`, `OPENEXCHANGERATES_API_KEY`, `ANTHROPIC_API_KEY`, `ALERT_WEBHOOK_URL`, `TWITTER_API_KEY`, `TWITTER_API_SECRET`, `TWITTER_ACCESS_TOKEN`, `TWITTER_ACCESS_TOKEN_SECRET`, `TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_ID`, `TELEGRAM_WEBHOOK_SECRET`, `TELEGRAM_WEBHOOK_SECRET_PREVIOUS`, `GITHUB_PAT`, `FEEDBACK_IP_SALT`, `PUBLIC_API_RATE_LIMIT_SALT`, `SITE_API_SHARED_SECRET`, `SITE_API_SHARED_SECRET_PREVIOUS`, `API_KEY_HASH_PEPPER`, `API_KEY_HASH_PEPPER_PREVIOUS`, `CLOUDFLARE_D1_STATUS_API_TOKEN`
 
 `PUBLIC_API_RATE_LIMIT_SALT` is required for deployed public API traffic. If it is unset, the worker logs a configuration error and returns `503` for non-admin public `/api/*` requests instead of falling back to a built-in salt.
 

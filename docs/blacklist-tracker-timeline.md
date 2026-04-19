@@ -41,7 +41,7 @@ Internal changelog reconstructed from git history. Covers Blacklist Tracker `v1.
 - **Phase 3 efficiency** — `/api/blacklist-summary` rewritten to aggregate quarterly chart points and per-coin counts in SQL; post-fetch counters inlined so summary-endpoint memory drops from ~5–10MB to a few KB per cache miss
 - **Phase 4 frontend polish** — Data-driven stats strip + amount-status badge, per-coin stat border rendered via inline style, CSV split into native / unit / USD / status columns, page-clamp + zero-total + filter-reset covered by tests
 - **Phase 5 minor coverage gaps** — Added Polygon USDQ, Arbitrum + Base AID, and Base + BSC + Polygon TGBP chain-coverage rows for existing coins
-- **Operational note** — Post-merge, Gnosis BRZ begins at block 33,257,602 and catches up via 9k-block windows, so the two known missed events (blocks 45,229,172 and 45,229,396) will arrive at the end of a ~1,400-run catch-up (approximately two months of hourly cron runs). This is expected and not a regression.
+- **Operational note** — Post-merge, Gnosis BRZ begins at block 33,257,602 and catches up via 9k-block windows, so the two known missed events (blocks 45,229,172 and 45,229,396) will arrive near the end of a ~1,400-run catch-up on the 6-hour blacklist cadence. This is expected and not a regression.
 
 ---
 
