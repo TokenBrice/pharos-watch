@@ -13,8 +13,8 @@ Route contract for `/`, the main Pharos dashboard.
 
 The route does not use `FeaturePageShell`. Instead, the server page renders:
 
-1. An `sr-only` `h1`
-2. An `ItemList` JSON-LD payload for the top 20 active stablecoins
+1. A visible `h1` in `SiteHeader` (exactly one raw `<h1>` in built HTML)
+2. `CollectionPage` + `ItemList` JSON-LD payloads for the top 20 active stablecoins
 3. `SiteHeader`
 4. `KpiBar`
 5. `HomepageClient`
@@ -37,7 +37,7 @@ The visible top fold is split across three independently composed surfaces:
 - `KpiBar` across breakpoints
 - the optional `HomepageStartHereCallout`, rendered by `src/app/page.tsx` between `SiteHeader` and `KpiBar`
 
-The page keeps the only semantic `h1` visually hidden. The visible masthead is intentionally a dashboard surface, not a hero-heading block.
+`SiteHeader` owns the visible `h1` and keeps one raw heading across breakpoints. Mobile and desktop masthead layouts may duplicate metric groups, but they must not duplicate the page-level heading because `npm run seo:check` requires exactly one `<h1>` on every indexable page.
 
 ---
 

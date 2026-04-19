@@ -115,7 +115,7 @@ rg --files src shared worker scripts data functions
 | Worker scheduled runtime | `shared/lib/cron-jobs.ts`, `shared/lib/scheduled-runner-registry.ts`, `worker/src/handlers/scheduled/**`, `worker/src/cron/**` | Cron schedules, slot dispatch, leases, progress, domain ingestion/scoring jobs, and reserve adapters (44 adapters). Connection budgets for the 15 job-bearing/status-tracked trigger groups in `CRON_JOB_DEFINITIONS` are enforced by `npm run check:cron-connections`; the manual digest-trigger poll slot is scheduled separately and currently documented outside that enforced budget table. |
 | Worker support libraries | `worker/src/lib/**` | D1 helpers, auth, rate limits, circuit breakers, fetch/RPC helpers, stores, scoring support, request attribution, and runtime credentials. |
 | Pages Functions | `functions/**` | Same-origin site-data and ops proxy surfaces for Cloudflare Pages. Host/origin behavior is documented in [Worker Infrastructure](./worker-infrastructure.md) and [Operator Origin Access](./operator-origin-access.md). |
-| Static/generated data | `data/**`, `public/**`, `src/generated/**` | Build-time digest data, logos, redirects, public assets, and generated sitemap dates. |
+| Static/generated data | `data/**`, `public/**`, `src/generated/**` | Build-time digest data, logos, redirects, public assets, generated `/llms.txt`, and generated sitemap dates. |
 | Operational scripts | `scripts/**`, `worker/scripts/**` | CI guardrails, smoke tests, static export serving, data refresh helpers, and worker-bound maintenance tools. See [Scripts](./scripts.md). |
 | D1 migrations | `worker/migrations/**` | Backward-compatible migration tree plus baseline lineage in `worker/migrations/MANIFEST.md`. Standard deploy applies migrations before worker promotion. |
 
@@ -150,6 +150,8 @@ Worker cron refactors should place reusable stage contracts under `worker/src/cr
   - `/admin/`
   - `/api/admin/`
 - Crawlable server-rendered link hubs now live on the digest archive, safety scores, liquidity, taxonomy landing pages, and stablecoin detail pages. These hubs are part of the static export and are what `npm run seo:check` validates for orphan routes, sitemap coverage, and click depth.
+- `/llms.txt` is generated during `prebuild` from checked-in route/data sources as a curated LLM-facing index. It is a community proposal/inference aid, not a robots or sitemap replacement.
+- Cloudflare Pages static headers live in `public/_headers`. HTML routes use `Cache-Control: public, max-age=0, s-maxage=300, stale-while-revalidate=86400`; static assets with their own cache policy detach the broad rule with `! Cache-Control` so Pages does not comma-join duplicate values.
 
 ### Runtime host and env rules
 
@@ -163,7 +165,7 @@ Worker cron refactors should place reusable stage contracts under `worker/src/cr
 ### Metadata and crawl ownership
 
 - `src/lib/page-metadata.ts` is the shared helper for per-route canonical metadata, Open Graph images, Twitter cards, and sentence-aware description trimming.
-- `src/app/layout.tsx` owns the sitewide metadata baseline, icons, `api.pharos.watch` preconnect, and root JSON-LD (`WebSite`, `Organization`, `WebApplication`) with stable `#website`, `#organization`, and `#webapp` anchors. It intentionally does not emit `SearchAction` until the site has a real query handler.
+- `src/app/layout.tsx` owns the sitewide metadata baseline, icons, `api.pharos.watch` preconnect, and root JSON-LD (`WebSite`, `Organization`, `Person`, `WebApplication`) with stable `#website`, `#organization`, `#person-tokenbrice`, and `#webapp` anchors. It intentionally does not emit `SearchAction` until the site has a real query handler.
 - `src/app/sitemap.ts` owns sitemap output for indexable routes. `/compare/`, `/portfolio/`, `/funding/`, and `/admin/` are omitted; `/compare/[slug]/` static comparison pages are included. `LAST_EDITED` dates are auto-generated from git history during prebuild (`scripts/generate-sitemap-dates.ts`) and written to a generated JSON file (gitignored).
 - `src/app/robots.ts` publishes an allow-all crawl policy, explicit AI crawler allow groups, disallows for operator surfaces (`/admin`, `/admin/`, `/api/admin`, `/api/admin/`), and the sitemap location.
 

@@ -14,23 +14,29 @@
   Permissions-Policy: camera=(), microphone=(), geolocation=(), payment=(), usb=(), interest-cohort=()
   Strict-Transport-Security: max-age=31536000; includeSubDomains; preload
   Content-Security-Policy: default-src 'self'; script-src 'self' 'unsafe-inline' https://www.googletagmanager.com https://static.cloudflareinsights.com; style-src 'self' 'unsafe-inline'; img-src 'self' https://coin-images.coingecko.com https://*.google-analytics.com https://pbs.twimg.com https://abs.twimg.com data:; connect-src 'self' https://api.pharos.watch https://*.google-analytics.com https://*.analytics.google.com https://*.googletagmanager.com; font-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'
+  Cache-Control: public, max-age=0, s-maxage=300, stale-while-revalidate=86400
 
 /favicon.ico
+  ! Cache-Control
   Cache-Control: public, max-age=604800, immutable
 
 /favicon.svg
+  ! Cache-Control
   Cache-Control: public, max-age=604800, immutable
 
 /apple-touch-icon.png
+  ! Cache-Control
   Cache-Control: public, max-age=604800, immutable
-
-/og-image.png
-  Cache-Control: public, max-age=86400
 
 /llms.txt
   ! Cache-Control
   Cache-Control: public, max-age=3600
   Content-Type: text/plain; charset=utf-8
 
+/og-*.png
+  ! Cache-Control
+  Cache-Control: public, max-age=86400
+
 /_next/static/*
+  ! Cache-Control
   Cache-Control: public, max-age=31536000, immutable

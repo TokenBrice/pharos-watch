@@ -42,6 +42,7 @@ The delivery system is worker-owned. The frontend exposes a static `/telegram/` 
 - Covers the public `@pharoswatch` digest channel, the `@pharoswatchers` community channel, and the `@PharosWatchBot` subscription bot
 - Reads `GET /api/telegram-pulse` for the lightweight watcher/subscription pulse strip
 - Does not call the webhook or any other mutating bot API; it links users to Telegram plus the on-site digest archive
+- Renders a visible FAQ section with matching `FAQPage` JSON-LD, plus `HowTo` and `SoftwareApplication` JSON-LD for the bot setup flow
 
 ## D1 Schema
 

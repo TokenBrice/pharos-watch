@@ -32,6 +32,7 @@ If the ID is tracked but `coin.status === "pre-launch"`, the server route return
 
 In addition to the pre-launch dossier sections (banner, timeline, milestones, featured content, and metadata), it now includes a launch-alert CTA that:
 
+- owns the page's visible `h1` for pre-launch assets, while active assets get their visible `h1` from `StaticHeroStrip`
 - promotes `@PharosWatchBot`
 - renders the exact command users can copy and paste for that asset
 - uses `/subscribe launch <coin.id>` so the copied command is deterministic even when a ticker is ambiguous

@@ -102,6 +102,7 @@ The route now promotes the Telegram launch-alert workflow in two layers:
 - The route is indexable.
 - `src/app/sitemap.ts` includes `/upcoming/` in the static sitemap output.
 - `src/app/upcoming/page.tsx` renders an `sr-only` nav containing links for every `PRE_LAUNCH_STABLECOIN`, so the page remains crawlable even though the visible card grid is client-rendered.
+- The page emits `CollectionPage` and `ItemList` JSON-LD for the current pre-launch detail routes.
 
 This route is also referenced from the homepage through `UpcomingStablecoinsSection`.
 

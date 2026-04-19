@@ -307,6 +307,8 @@ The archive page has two zones:
 
 The wire table shows each digest as a compact row: **date** (monospace, e.g. "27 FEB"), **title**, **PSI badge** (pill colored by condition band), and **total market cap**. A month picker dropdown filters the table by month. PSI and mcap data are served from the enriched archive API response (`psiScore`, `psiBand`, `totalMcapUsd` — parsed from the stored `input_data` JSON).
 
+The archive route also emits server-rendered digest links for crawlability plus `CollectionPage` / `ItemList` JSON-LD over the checked-in `data/digests.json` entries. Detail pages remain the canonical `Article` surfaces for individual digests.
+
 ### Detail pages
 
 **Route:** `/digest/[date]/`

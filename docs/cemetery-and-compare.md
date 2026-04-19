@@ -75,6 +75,7 @@ Primary files:
 - `src/app/compare/page.tsx` is the live comparison entry point. It uses `buildPageMetadata(...)` with canonical `/compare/`, serves through `createClientFeaturePage(...)`, and is intentionally `robots: { index: false, follow: true }`.
 - `src/app/compare/[slug]/page.tsx` is the indexable static comparison surface. It statically generates params from `STATIC_COMPARISON_PAGES`, builds per-page metadata from each page descriptor, and calls `notFound()` for unknown slugs.
 - Static comparison URLs follow `/compare/<left-id>-vs-<right-id>/`, with metadata/title/description derived from `src/lib/compare-pages.ts`.
+- `src/app/cemetery/page.tsx` emits `CollectionPage` and `ItemList` JSON-LD for the defunct-stablecoin archive. Dead coins intentionally use `Thing` items rather than fabricated internal detail URLs.
 
 ### Selection and URL contract
 

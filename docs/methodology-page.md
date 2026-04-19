@@ -1,12 +1,12 @@
 # Methodology Page Contract
 
-`/methodology` (`src/app/methodology/page.tsx`) is the canonical long-form explainer page for Pharos scoring systems. The route shell still owns metadata, breadcrumb/FAQ structured data, and the reader-guide hero chrome, while `src/app/methodology/methodology-sections.tsx` now composes the authored long-form section groups from `src/app/methodology/sections/*.tsx`.
+`/methodology` (`src/app/methodology/page.tsx`) is the canonical long-form explainer page for Pharos scoring systems. The route shell still owns metadata, breadcrumb/FAQ/Article structured data, and the reader-guide hero chrome, while `src/app/methodology/methodology-sections.tsx` now composes the authored long-form section groups from `src/app/methodology/sections/*.tsx`.
 
 ---
 
 ## Route & Structure
 
-- **Route shell:** `src/app/methodology/page.tsx` (metadata, breadcrumb JSON-LD, FAQ JSON-LD, hero/reader-guide shell)
+- **Route shell:** `src/app/methodology/page.tsx` (metadata, breadcrumb JSON-LD, FAQ JSON-LD, Article JSON-LD, hero/reader-guide shell)
 - **Shared helpers + section metadata:** `src/app/methodology/methodology-shared.tsx`
 - **Section composition module:** `src/app/methodology/methodology-sections.tsx`
 - **Section composition shells:** `src/app/methodology/sections/core-sections.tsx`, `src/app/methodology/sections/core-sections-pricing.tsx`, and `src/app/methodology/sections/monitoring-sections.tsx`
