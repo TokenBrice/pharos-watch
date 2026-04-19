@@ -8,9 +8,12 @@ interface AiSummaryProps {
 }
 
 export function AiSummary({ title, text, updatedAt }: AiSummaryProps) {
-  const dateline = new Date(updatedAt + "T00:00:00").toLocaleString("en-US", {
-    month: "short",
+  const isoDate = updatedAt;
+  const dateline = new Date(`${updatedAt}T00:00:00Z`).toLocaleDateString("en-US", {
+    month: "long",
+    day: "numeric",
     year: "numeric",
+    timeZone: "UTC",
   });
 
   return (
@@ -18,9 +21,9 @@ export function AiSummary({ title, text, updatedAt }: AiSummaryProps) {
       <CardHeader>
         <div className="flex items-center justify-between gap-2">
           <CardTitle as="h2" className={DETAIL_SECTION_TITLE_CLASS}>{title}</CardTitle>
-          <span className="text-xs text-muted-foreground whitespace-nowrap">
+          <time className="text-xs text-muted-foreground whitespace-nowrap" dateTime={isoDate}>
             Updated {dateline}
-          </span>
+          </time>
         </div>
       </CardHeader>
       <CardContent>

@@ -43,7 +43,6 @@ export default function HomePage() {
 
   return (
     <div className="space-y-6">
-      <h1 className="sr-only">Pharos — Stablecoin Analytics Dashboard</h1>
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{

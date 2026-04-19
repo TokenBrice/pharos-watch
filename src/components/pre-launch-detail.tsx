@@ -62,6 +62,15 @@ function extractTweetId(url: string): string | null {
   return match ? match[1] : null;
 }
 
+function formatSummaryUpdatedAt(updatedAt: string): string {
+  return new Date(`${updatedAt}T00:00:00Z`).toLocaleDateString("en-US", {
+    month: "long",
+    day: "numeric",
+    year: "numeric",
+    timeZone: "UTC",
+  });
+}
+
 // ---------------------------------------------------------------------------
 // Sub-components
 // ---------------------------------------------------------------------------
@@ -208,6 +217,7 @@ export function PreLaunchDetail({ coin, logoSrc, summary, logos }: PreLaunchDeta
   const chains = coin.contracts?.map((c) => c.chain) ?? [];
   const uniqueChains = [...new Set(chains)];
   const launchAlertCommand = `/subscribe launch ${coin.id}`;
+  const summaryDateline = summary ? formatSummaryUpdatedAt(summary.updatedAt) : null;
 
   // Build jurisdiction display with regulator if available
   const jurisdictionDisplay = coin.jurisdiction?.regulator
@@ -278,11 +288,6 @@ export function PreLaunchDetail({ coin, logoSrc, summary, logos }: PreLaunchDeta
 
   return (
     <div className="space-y-8">
-      {/* Screen-reader-only page title */}
-      <h1 className="sr-only">
-        {coin.name} ({coin.symbol}) — Pre-Launch Stablecoin
-      </h1>
-
       {/* ── Back Navigation ───────────────────────────────────────── */}
       <nav aria-label="Breadcrumb">
         <Link
@@ -312,7 +317,7 @@ export function PreLaunchDetail({ coin, logoSrc, summary, logos }: PreLaunchDeta
       <header className="flex items-start gap-4">
         <StablecoinLogo src={logoSrc} name={coin.name} size={48} />
         <div className="min-w-0 space-y-1">
-          <h2 className="break-words text-2xl font-extrabold tracking-tight sm:text-3xl">{coin.name}</h2>
+          <h1 className="break-words text-2xl font-extrabold tracking-tight sm:text-3xl">{coin.name}</h1>
           <p className="font-mono text-sm text-muted-foreground">{coin.symbol}</p>
         </div>
       </header>
@@ -396,7 +401,9 @@ export function PreLaunchDetail({ coin, logoSrc, summary, logos }: PreLaunchDeta
         <section className="pharos-card-shell space-y-2 p-4 sm:p-5">
           <h3 className="text-lg font-semibold tracking-tight">{summary.title}</h3>
           <p className="text-sm leading-relaxed text-muted-foreground">{summary.text}</p>
-          <p className="text-[11px] text-muted-foreground/60">Updated {summary.updatedAt}</p>
+          <p className="text-[11px] text-muted-foreground/60">
+            Updated <time dateTime={summary.updatedAt}>{summaryDateline}</time>
+          </p>
         </section>
       )}
 

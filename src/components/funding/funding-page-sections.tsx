@@ -140,9 +140,12 @@ export function CostBreakdown({
   // whatever isn't covered. "Fully subsidized" when community contributions
   // are zero.
   const currentFounderUsd = Math.max(0, total - currentCommunityUsd);
-  const reviewedDate = new Date(lastReviewedAt * 1000).toLocaleDateString("en-US", {
+  const reviewedDateObject = new Date(lastReviewedAt * 1000);
+  const reviewedDateTime = reviewedDateObject.toISOString().slice(0, 7);
+  const reviewedDate = reviewedDateObject.toLocaleDateString("en-US", {
     month: "short",
     year: "numeric",
+    timeZone: "UTC",
   });
 
   return (
@@ -181,7 +184,9 @@ export function CostBreakdown({
             This month: {USD_COMPACT.format(currentCommunityUsd)} community ·{" "}
             {USD_COMPACT.format(currentFounderUsd)} founder subsidy.
           </p>
-          <p>Costs last reviewed: {reviewedDate}.</p>
+          <p>
+            Costs last reviewed: <time dateTime={reviewedDateTime}>{reviewedDate}</time>.
+          </p>
         </div>
       </CardContent>
     </Card>
