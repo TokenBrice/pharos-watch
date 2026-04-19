@@ -158,9 +158,9 @@ export const PUBLIC_DOCS: readonly PublicDoc[] = [
 ] as const;
 
 export const PUBLIC_DOC_BY_SLUG = new Map(PUBLIC_DOCS.map((doc) => [doc.slug, doc]));
-export const PUBLIC_DOC_BY_SOURCE = new Map(PUBLIC_DOCS.map((doc) => [doc.source, doc]));
+const PUBLIC_DOC_BY_SOURCE = new Map(PUBLIC_DOCS.map((doc) => [doc.source, doc]));
 
-export function stripLeadingMarkdownH1(source: string): string {
+function stripLeadingMarkdownH1(source: string): string {
   if (!source.startsWith("# ")) return source;
   const firstLineBreak = source.indexOf("\n");
   if (firstLineBreak === -1) return "";
@@ -185,7 +185,7 @@ export function resolvePublicDocHref(
   return absolute ? `https://pharos.watch${path}` : path;
 }
 
-export function rewritePublicDocLinks(
+function rewritePublicDocLinks(
   markdown: string,
   { absolute = false }: { absolute?: boolean } = {},
 ): string {
