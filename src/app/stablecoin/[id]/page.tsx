@@ -148,6 +148,7 @@ export default async function StablecoinDetailPage({ params }: { params: Promise
               url: SITE_URL,
             },
             isAccessibleForFree: true,
+            license: "https://creativecommons.org/licenses/by/4.0/",
             keywords: [
               coin.symbol,
               coin.name,
