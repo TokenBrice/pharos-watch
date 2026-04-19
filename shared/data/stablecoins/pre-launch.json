@@ -294,7 +294,7 @@
     "announcedDate": "2025-09",
     "expectedLaunchDate": "2026-Q4",
     "launchPhase": "announced",
-    "launchPhaseDetail": "12-bank consortium (incl. ING, UniCredit, BNP Paribas, BBVA, CaixaBank); EMI license application with Dutch Central Bank reportedly in final stages; advanced exchange/market-maker discussions (Bit2Me named); CEO warns of 'digital dollarization' risk; launching on Ethereum (primary), Polygon, Base with permissioned KYC layer",
+    "launchPhaseDetail": "12-bank consortium (incl. ING, UniCredit, BNP Paribas, BBVA, CaixaBank); French Finance Minister Lescure publicly endorses project at Paris crypto conference (Apr 17) — sharp reversal from previous administration's hostility; EMI license application with Dutch Central Bank reportedly in final stages; advanced exchange/market-maker discussions (Bit2Me named); launching on Ethereum (primary), Polygon, Base with permissioned KYC layer",
     "featuredContent": [
       {
         "type": "article",
@@ -310,6 +310,13 @@
         "title": "BNP Paribas joins European consortium to launch euro-backed stablecoin",
         "description": "12 European banks — including ING, UniCredit, BNP Paribas, CaixaBank, and BBVA — unite under Qivalis for a MiCA-compliant euro stablecoin targeting H2 2026.",
         "source": "BNP Paribas"
+      },
+      {
+        "type": "article",
+        "url": "https://www.coindesk.com/policy/2026/04/17/french-government-pivots-from-slamming-privately-issued-stablecoins-to-supporting-them",
+        "title": "France's finance minister calls for more euro stablecoins, expresses Qivalis support",
+        "description": "Roland Lescure reverses Paris's prior hostility to private stablecoins, specifically backing Qivalis and urging EU banks to accelerate tokenized deposits.",
+        "source": "CoinDesk"
       }
     ],
     "milestones": [
@@ -339,6 +346,13 @@
         "title": "CEO warns of 'digital dollarization' without euro stablecoin infrastructure",
         "description": "Jan-Oliver Sell highlights euro's 0.2% on-chain share; EMI license described as in final stages; positions Qivalis as euro infrastructure layer, not just a token.",
         "sourceUrl": "https://www.coindesk.com/business/2026/03/31/europe-faces-digital-dollarization-without-a-euro-stablecoin-of-its-own-warns-qivalis-ceo"
+      },
+      {
+        "date": "2026-04-17",
+        "type": "regulatory",
+        "title": "French Finance Minister Lescure publicly endorses Qivalis and euro stablecoins",
+        "description": "At a Paris crypto conference, Lescure called current euro stablecoin volumes 'not satisfactory' and urged EU banks to accelerate tokenized deposits — a sharp reversal from predecessor Bruno Le Maire's stance that private stablecoins had 'no place on European soil'.",
+        "sourceUrl": "https://www.coindesk.com/policy/2026/04/17/french-government-pivots-from-slamming-privately-issued-stablecoins-to-supporting-them"
       }
     ]
   },
@@ -383,6 +397,14 @@
         "title": "pUSD: No Counterparty, No Ceiling",
         "description": "How pUSD delivers counterparty-free yield that scales alongside protocol adoption and the developing ecosystem supporting it.",
         "image": "/featured/polaris-pusd-no-counterparty.png",
+        "source": "Polaris Finance Blog"
+      },
+      {
+        "type": "blog",
+        "url": "https://polarisfinance.io/blog/polaris-flows/",
+        "title": "Sustaining the Ecosystem: pETH & pUSD Flows",
+        "description": "Polaris replaces emission-based incentives with an autonomous protocol-revenue distribution mechanism that flows to participants based on their asset holdings — no governance-driven allocation, no bribery.",
+        "image": "/featured/polaris-flows-cover.png",
         "source": "Polaris Finance Blog"
       }
     ],
