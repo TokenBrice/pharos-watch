@@ -73,6 +73,7 @@ const PAGES_CHANGE_EXACT_PATHS = new Set([
   "next.config.ts",
   "postcss.config.mjs",
   "scripts/check-seo-static.mjs",
+  "scripts/generate-llms-txt.ts",
   "scripts/generate-redirects.ts",
   "scripts/serve-static-export.mjs",
   "scripts/smoke-ui.mjs",
