@@ -130,10 +130,6 @@ Optional active overrides (the proxy has production defaults for these already):
 - `OPS_API_ORIGIN`
 - `SITE_ORIGIN`
 
-Reserved but currently unused by the Pages proxy/runtime:
-
-- `CF_ACCESS_OPS_API_AUD`
-
 Set the required Pages bindings before deploying the ops-host frontend, otherwise `/api/admin/*` will fail closed with a configuration error.
 
 ---

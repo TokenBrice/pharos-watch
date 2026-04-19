@@ -199,7 +199,7 @@ const yieldMethodology = createMethodologyVersion({
     version: "6.2",
     title: "Source-Cadence-Aware Freshness Warnings",
     date: "2026-03-26",
-    effectiveAt: 1774483200,
+    effectiveAt: 1774483209,
     summary:
       "Read-time `data-stale` warnings now respect the cadence of the underlying source family, so daily price-derived rows are not marked stale by the hourly publisher threshold.",
     impact: [
@@ -215,7 +215,7 @@ const yieldMethodology = createMethodologyVersion({
     version: "6.1",
     title: "3M Risk-Free Benchmarks For EUR And CHF",
     date: "2026-03-26",
-    effectiveAt: 1774483200,
+    effectiveAt: 1774483208,
     summary:
       "Yield Intelligence now benchmarks EUR pegs against 3-month compounded €STR and CHF pegs against 3-month compounded SARON instead of using overnight €STR and a CHF policy-rate proxy.",
     impact: [
@@ -231,7 +231,7 @@ const yieldMethodology = createMethodologyVersion({
     version: "6.0",
     title: "Asset-Scoped Supplemental Identity and Actionable Coverage Audits",
     date: "2026-03-26",
-    effectiveAt: 1774483200,
+    effectiveAt: 1774483207,
     summary:
       "Supplemental protocol families now keep asset-scoped source identity instead of collapsing same-chain markets together, and the monthly coverage audit now measures the real exact-pool DL surface rather than only the native static map.",
     impact: [
@@ -247,7 +247,7 @@ const yieldMethodology = createMethodologyVersion({
     version: "5.9",
     title: "Cadence-Aligned Data-Stale Warnings",
     date: "2026-03-26",
-    effectiveAt: 1774483200,
+    effectiveAt: 1774483206,
     summary:
       "The read-time `data-stale` warning now follows the shared hourly `sync-yield-data` cadence instead of a leftover fixed 90-minute threshold from the old half-hourly lane.",
     impact: [
@@ -263,7 +263,7 @@ const yieldMethodology = createMethodologyVersion({
     version: "5.8",
     title: "First-Party EUR Benchmarks and Resilient CHF Parsing",
     date: "2026-03-26",
-    effectiveAt: 1774483200,
+    effectiveAt: 1774483205,
     summary:
       "Yield benchmark fetching now sources EUR €STR from the ECB's official data API with the FRED mirror as fallback, and the CHF proxy parser now tolerates the SNB's current HTML structure instead of depending on one plain-text sentence layout.",
     impact: [
@@ -279,7 +279,7 @@ const yieldMethodology = createMethodologyVersion({
     version: "5.7",
     title: "Safety-Reweighted PYS Curve and Shared Scoring Hydration",
     date: "2026-03-26",
-    effectiveAt: 1774483200,
+    effectiveAt: 1774483204,
     summary:
       "Pharos Yield Score now uses a steeper safety penalty curve so risky names need much larger yield spreads to outrank safe ones, and the scaling factor was retuned to keep the score range readable.",
     impact: [
@@ -295,7 +295,7 @@ const yieldMethodology = createMethodologyVersion({
     version: "5.6",
     title: "Currency-Aware Benchmarks For Excess Yield",
     date: "2026-03-26",
-    effectiveAt: 1774483200,
+    effectiveAt: 1774483203,
     summary:
       "Yield Intelligence now resolves row-level benchmark context by peg currency, using USD T-bills by default, EUR €STR when available, and a CHF SNB policy-rate proxy for Swiss-franc pegs.",
     impact: [
@@ -312,7 +312,7 @@ const yieldMethodology = createMethodologyVersion({
     version: "5.5",
     title: "Non-USD Yield Scoping and Exact-Pool Commodity Overrides",
     date: "2026-03-26",
-    effectiveAt: 1774483200,
+    effectiveAt: 1774483202,
     summary:
       "Yield Intelligence now exposes a shareable non-USD ranking scope on `/yield`, and commodity coverage can use curated exact-pool DeFiLlama venues without relaxing the generic gold/silver discovery guardrails.",
     impact: [
@@ -328,7 +328,7 @@ const yieldMethodology = createMethodologyVersion({
     version: "5.4",
     title: "Address-First Identity, Explicit Coverage, and Publish-Consistent History",
     date: "2026-03-26",
-    effectiveAt: 1774483200,
+    effectiveAt: 1774483201,
     summary:
       "Yield resolution now matches by chain and address before symbol fallbacks, every yield-bearing asset has explicit manifest coverage or an intentional gap, and published history is bounded to the latest rankings snapshot.",
     impact: [
@@ -381,7 +381,7 @@ const yieldMethodology = createMethodologyVersion({
     version: "5.1",
     title: "Protocol-native BIMA savings fallback for USBD",
     date: "2026-03-24",
-    effectiveAt: 1774310400,
+    effectiveAt: 1774310402,
     summary:
       "USBD now resolves through BIMA's public earn API when DeFiLlama has no usable sUSBD wrapper pool, closing the remaining native-yield coverage gap without introducing a hand-set rate.",
     impact: [
@@ -396,7 +396,7 @@ const yieldMethodology = createMethodologyVersion({
     version: "5.0",
     title: "Richer freshness provenance and curated lending source links",
     date: "2026-03-24",
-    effectiveAt: 1774310400,
+    effectiveAt: 1774310401,
     summary:
       "Yield rankings provenance now carries source-observation and comparison-anchor timing for derived sources, and the lending allowlist now has curated source-link coverage for all supported protocols.",
     impact: [

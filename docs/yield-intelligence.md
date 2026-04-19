@@ -359,7 +359,7 @@ Yield Intelligence now uses a small benchmark registry instead of a single globa
 
 ```text
 https://fred.stlouisfed.org/graph/fredgraph.csv?id=DGS3MO
-https://home.treasury.gov/resource-center/data-chart-center/interest-rates/pages/xml?data=daily_treasury_yield_curve
+https://home.treasury.gov/sites/default/files/interest-rates/yield.xml
 https://data-api.ecb.europa.eu/service/data/EST/B.EU000A2QQF32.CR?lastNObservations=5&format=csvdata
 https://indexdata.six-group.com/pro/oauth/token
 https://indexdata.six-group.com/pro/api/report-download
@@ -547,7 +547,7 @@ It fetches those families, serializes the resolved candidate set into a cache sn
 
 Fetches the benchmark registry used by Yield Intelligence:
 
-- USD 3M Treasury yield from FRED `DGS3MO`
+- USD 3M Treasury yield from FRED `DGS3MO`, falling back to Treasury.gov yield XML when FRED is unavailable
 - EUR 3M compounded €STR from the ECB Data API (`EST/B.EU000A2QQF32.CR`)
 - CHF 3M compounded SARON (`SAR3MC`) from SIX's delayed public download, fetched through the guest OAuth + report-download flow used by their public site
 
@@ -786,7 +786,7 @@ The control row exposes four fixed lookback presets (`7d`, `30d`, `90d`, `1y`) p
 | ------------------------------- | ----------------------------------------------------------- | ------------------------------------------------ |
 | `RISK_FREE_RATE_FALLBACK`       | 3.75                                                        | Fallback T-bill rate (%)                         |
 | `FRED_TBILL_CSV_URL`            | `https://fred.stlouisfed.org/graph/fredgraph.csv?id=DGS3MO` | FRED daily 3-month Treasury yield series         |
-| `TREASURY_YIELD_XML_URL`        | `https://home.treasury.gov/resource-center/data-chart-center/interest-rates/pages/xml?data=daily_treasury_yield_curve` | Treasury.gov daily yield curve XML fallback for USD 3M |
+| `TREASURY_YIELD_XML_URL`        | `https://home.treasury.gov/sites/default/files/interest-rates/yield.xml` | Treasury.gov daily yield curve XML fallback for USD 3M |
 | `ECB_ESTR_3M_CSV_URL`           | `https://data-api.ecb.europa.eu/service/data/EST/B.EU000A2QQF32.CR?lastNObservations=5&format=csvdata` | Official ECB 3M compounded €STR feed |
 | `SIX_OAUTH_TOKEN_URL`           | `https://indexdata.six-group.com/pro/oauth/token` | Public SIX guest OAuth endpoint for delayed downloads |
 | `SIX_REPORT_DOWNLOAD_URL`       | `https://indexdata.six-group.com/pro/api/report-download` | SIX download broker for delayed public report files |

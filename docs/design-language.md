@@ -143,7 +143,7 @@ This is intentionally denser than standard feature pages.
 
 Digest entries use a distinctive **"intelligence briefing"** editorial aesthetic that deliberately departs from the standard Geist-based UI:
 
-- `h1`: `text-3xl font-extrabold tracking-tighter`
+- `h1`: Newsreader display face via `digestDisplay.className` with `text-[clamp(2.2rem,5vw,3.5rem)] font-semibold leading-[0.92] tracking-[-0.04em]`
 - Executive summary card ahead of body copy
 - Editorial prose constrained to `max-w-[68ch]`
 - Homepage digest preview switches to a split desktop layout so the title block and italic executive-summary paragraph can use the full container width; dedicated digest pages keep the `max-w-[68ch]` editorial measure.
@@ -185,7 +185,7 @@ This is a **one-off artistic treatment** — the patterns are not intended for r
 | ------------------------- | -------------------------------------------------------------------------------------------- |
 | Standard page title       | `min-w-0 text-3xl sm:text-4xl font-extrabold tracking-tight leading-[1.05]`                  |
 | Shared page title utility | `pharos-page-title`                                                                           |
-| Digest article title      | `text-3xl font-extrabold tracking-tighter`                                                   |
+| Digest article title      | Newsreader via `digestDisplay.className`, `text-[clamp(2.2rem,5vw,3.5rem)]`, `font-semibold`, `leading-[0.92]`, `tracking-[-0.04em]` |
 | Homepage digest hero      | `Newsreader`, `font-semibold`, `text-[clamp(2.8rem,6vw,5rem)]`, `leading-[0.88]`, `tracking-[-0.045em]` |
 | Home logotype label       | `text-[1.02rem] font-mono font-semibold uppercase tracking-[0.16em]`                         |
 | Primary section heading   | `leading-none font-semibold`                                                                 |

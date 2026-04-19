@@ -647,7 +647,7 @@ Freeze, blacklist, block/unblock, account-pause, and token-destruction events fo
 | `configKey`          | `string \| null` | Internal tracker config identity (`{chainId}-{contract}`)                               |
 | `eventSignature`     | `string \| null` | Human-readable event signature/name when known                                          |
 | `eventTopic0`        | `string \| null` | Raw EVM topic0 when applicable                                                          |
-| `suppressionReason`  | `string \| null` | Reason a row is excluded from public aggregates/event surfaces, when applicable          |
+| `suppressionReason`  | `string \| null` | Always `null` or absent on public rows because `/api/blacklist` filters `suppression_reason IS NULL`; non-null reasons are retained only on internal/audit DB rows excluded from public aggregates/events          |
 | `explorerTxUrl`      | `string`         | Block explorer URL for the transaction                                                  |
 | `explorerAddressUrl` | `string`         | Block explorer URL for the address                                                      |
 

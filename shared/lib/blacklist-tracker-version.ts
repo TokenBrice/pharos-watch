@@ -38,7 +38,7 @@ const blacklistTracker = createMethodologyVersion({
     version: "3.95",
     title: "Tier-1 coverage expansion",
     date: "2026-04-17",
-    effectiveAt: 1776466970, // 2026-04-17T00:00:00Z
+    effectiveAt: 1776466971, // 2026-04-17T00:00:00Z
     summary:
       "Adds eleven new tracked stablecoins across four new event families and six existing families. TUSD joins through a new TRUEUSD_EVENT_FAMILY that discriminates blacklist vs unblacklist via the bool at data slot 0 through the new BlacklistEventDef.eventTypeFromDataBoolIndex extension. JPYC adds CENTRE_BLOCKLISTED_FAMILY (Blocklisted/UnBlocklisted), FRXUSD adds FRAX_FREEZE_FAMILY (AccountFrozen/AccountThawed with non-indexed address), EURCV adds SOCGEN_FREEZE_FAMILY (batch AddressesFrozen/AddressesUnFrozen), NUSD adds NEUTRL_DENYLIST_FAMILY, and FIDD adds FIDELITY_RESTRICTION_FAMILY (TransferRestrictionImposed/Removed). USDA, USAT, AEUR, XUSD, and XAUM reuse existing families. Several BSC/Avalanche/Base deployments remain deferred pending block-explorer API access, and apxUSD is intentionally deferred because the verified ABI exposes no direction discriminator.",
     impact: [
@@ -82,7 +82,7 @@ const blacklistTracker = createMethodologyVersion({
     version: "3.93",
     title: "Backlog-safe scanner guardrails",
     date: "2026-04-16",
-    effectiveAt: 1776297600, // 2026-04-16T00:00:00Z
+    effectiveAt: 1776297602, // 2026-04-16T00:00:00Z
     summary:
       "Keeps EVM sync cursors pinned when the subrequest budget is exhausted before every configured event topic is scanned, marks budget-exhausted runs as degraded, and lowers the duplicate-row check chunk below D1's practical SQL-variable ceiling.",
     impact: [
@@ -97,7 +97,7 @@ const blacklistTracker = createMethodologyVersion({
     version: "3.92",
     title: "Amount attribution: Tron ledger mirror + derived-zero recovery",
     date: "2026-04-16",
-    effectiveAt: 1776297600, // 2026-04-16T00:00:00Z
+    effectiveAt: 1776297601, // 2026-04-16T00:00:00Z
     summary:
       "Introduces current_balance_snapshot amount source for Tron freeze-ledger mirroring, widens backfill to include legacy derived-zero EVM rows, and adds provenance badge for snapshot-sourced amounts.",
     impact: [
@@ -127,7 +127,7 @@ const blacklistTracker = createMethodologyVersion({
     version: "3.9",
     title: "Direct EVM coverage wave",
     date: "2026-04-15",
-    effectiveAt: 1776211200, // 2026-04-15T00:00:00Z
+    effectiveAt: 1776211201, // 2026-04-15T00:00:00Z
     summary:
       "Adds direct EVM blacklist/freeze coverage for FDUSD, BRZ, AUSD, MNEE, EURI, USDQ, USDO, USDX, AID, TGBP, and EURC, plus BUIDL seize-only tracking. Introduces indexed amount-topic parsing, explicit data-slot extraction for omnibus seize events, EURC mirror-zero suppression, and expanded non-USD valuation.",
     impact: [

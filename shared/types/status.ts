@@ -486,7 +486,7 @@ export interface StatusResponse {
     /**
      * Count of rows inserted into `status_transitions` in the last 24 hours.
      * A defensive observability signal added in Workstream 5 of
-     * agents/plans/2026-04-13-status-stability-hardening-plan.md so operators
+     * agents/plans/historical/2026-04-13-status-stability-hardening-plan.md so operators
      * can spot new flapping lanes as thresholds drift without spelunking
      * the transitions table. Under normal operation this should be ≤ 2.
      */

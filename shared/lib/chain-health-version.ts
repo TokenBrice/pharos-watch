@@ -23,7 +23,7 @@ const chainHealth = createMethodologyVersion({
       version: "1.1",
       title: "Chain environment factor and weight rebalance",
       date: "2026-03-16",
-      effectiveAt: 1773619200,
+      effectiveAt: 1773619201,
       summary:
         "Added a fifth health factor — Chain Environment — that rates chain infrastructure quality via a resilience tier system. Rebalanced weights to reduce backing diversity influence and give chain quality 20% of the composite.",
       impact: [

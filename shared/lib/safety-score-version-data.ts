@@ -283,7 +283,7 @@ export const SAFETY_SCORE_VERSION_CONFIG: MethodologyVersionConfig = {
       version: "6.8",
       title: "On-chain reserve freshness alignment",
       date: "2026-03-25",
-      effectiveAt: 1774396800,
+      effectiveAt: 1774396801,
       summary:
         "Direct latest-state reserve adapters now explicitly mark on-chain freshness as not-applicable, allowing clean independent branch-balance snapshots to participate in collateral-quality passthrough again.",
       impact: [
@@ -495,7 +495,7 @@ export const SAFETY_SCORE_VERSION_CONFIG: MethodologyVersionConfig = {
       version: "5.4",
       title: "No-liquidity penalty",
       date: "2026-02-28",
-      effectiveAt: 1772236800,
+      effectiveAt: 1772236804,
       summary:
         "When Liquidity is NR (no DEX data), overall score receives a 10% penalty instead of redistributing weight.",
       impact: [
@@ -508,7 +508,7 @@ export const SAFETY_SCORE_VERSION_CONFIG: MethodologyVersionConfig = {
       version: "5.3",
       title: "Remove chain infra from Resilience",
       date: "2026-02-28",
-      effectiveAt: 1772236800,
+      effectiveAt: 1772236803,
       summary:
         "Chain infra double-counting fixed: removed from Resilience sub-factors, now exclusively in Decentralization.",
       impact: [
@@ -521,7 +521,7 @@ export const SAFETY_SCORE_VERSION_CONFIG: MethodologyVersionConfig = {
       version: "5.2",
       title: "Immutable-code governance tier",
       date: "2026-02-28",
-      effectiveAt: 1772236800,
+      effectiveAt: 1772236802,
       summary:
         "Added immutable-code as highest GovernanceQuality tier (score 100) for protocols with no admin keys or upgrade path.",
       impact: [
@@ -534,7 +534,7 @@ export const SAFETY_SCORE_VERSION_CONFIG: MethodologyVersionConfig = {
       version: "5.1",
       title: "Regulated-entity tier + blacklist softening",
       date: "2026-02-28",
-      effectiveAt: 1772236800,
+      effectiveAt: 1772236801,
       summary:
         "Blacklist scores softened (blacklistable 0->33) and regulated-entity governance tier added for licensed issuers.",
       impact: [
@@ -564,7 +564,7 @@ export const SAFETY_SCORE_VERSION_CONFIG: MethodologyVersionConfig = {
       version: "4.1",
       title: "Liquidity weight increase + reclassifications",
       date: "2026-02-27",
-      effectiveAt: 1772150400,
+      effectiveAt: 1772150403,
       summary:
         "Liquidity weight raised to 30% as the most defining stablecoin attribute. Five coins reclassified to decentralized.",
       impact: [
@@ -578,7 +578,7 @@ export const SAFETY_SCORE_VERSION_CONFIG: MethodologyVersionConfig = {
       version: "4.0",
       title: "Peg stability becomes a multiplier",
       date: "2026-02-27",
-      effectiveAt: 1772150400,
+      effectiveAt: 1772150402,
       summary:
         "Biggest structural change: peg stability removed from weighted dimensions and applied as a post-hoc power-curve multiplier.",
       impact: [
@@ -592,7 +592,7 @@ export const SAFETY_SCORE_VERSION_CONFIG: MethodologyVersionConfig = {
       version: "3.3",
       title: "Reserve-derived collateral quality",
       date: "2026-02-27",
-      effectiveAt: 1772150400,
+      effectiveAt: 1772150401,
       summary:
         "For coins with curated reserves arrays, collateral quality is now a weighted average of reserve risk tiers instead of an enum fallback.",
       impact: [
@@ -619,7 +619,7 @@ export const SAFETY_SCORE_VERSION_CONFIG: MethodologyVersionConfig = {
       version: "3.0",
       title: "Resilience 4-factor model",
       date: "2026-02-26",
-      effectiveAt: 1772064000,
+      effectiveAt: 1772064001,
       summary:
         "Complete Resilience redesign from 2 factors to 4 equal sub-factors: chain risk, collateral quality, custody model, blacklist capability.",
       impact: [

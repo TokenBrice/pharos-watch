@@ -6,10 +6,10 @@ Public ledger of Pharos's running costs and the donations that cover them. Steal
 
 Two hand-maintained JSON files:
 
-- `shared/data/funding/costs.json` — monthly cost line items. Owned by @TokenBrice; reviewed on the 1st of each month. `last_reviewed_at` (UTC unix seconds) is surfaced on the page footer so readers see freshness.
+- `shared/data/funding/costs.json` — monthly cost line items. Owned by @TokenBrice; reviewed on the 1st of each month. `last_reviewed_at` (UTC unix seconds) is surfaced in the Monthly costs card footer/details text so readers see freshness.
 - `shared/data/funding/donations.json` — every inbound donation, one row each. Populated via the `funding-update` Claude skill on a ~weekly cadence.
 
-Row shape for donations is defined in `shared/lib/funding/types.ts` (`Donation`). Each row carries `usd_at_receipt` priced at the transfer's block date, a `kind` field (`founder | pool | community`), and a `display` field with either a forward-verified ENS name or a human label.
+Row shape for donations is defined in `shared/lib/funding/types.ts` (`Donation`). Each row carries `usd_at_receipt` priced at the transfer's block date, a `kind` field (`founder | pool | community`), and a `display` field with a forward-verified ENS name, custom/human label, or truncated-address fallback.
 
 ## Intentional simplifications
 

@@ -40,7 +40,7 @@ const depegDews = createMethodologyVersion({
       version: "5.93",
       title: "Blacklist signal coverage follows direct EVM wave",
       date: "2026-04-15",
-      effectiveAt: 1776211200,
+      effectiveAt: 1776211201,
       summary:
         "DEWS blacklist-activity input now follows the direct EVM blacklist tracker expansion, adding supported event-count stress signals for FDUSD, BRZ, AUSD, MNEE, EURI, USDQ, USDO, USDX, AID, TGBP, EURC, and BUIDL where those assets are otherwise DEWS-eligible.",
       impact: [

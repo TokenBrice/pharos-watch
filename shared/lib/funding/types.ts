@@ -22,7 +22,7 @@ export interface CostLineItem {
 }
 
 export interface CostsFile {
-  /** UTC unix seconds of the last review. Surfaced on the page footer. */
+  /** UTC unix seconds of the last review. Surfaced in the Monthly costs card details. */
   last_reviewed_at: number;
   items: CostLineItem[];
 }

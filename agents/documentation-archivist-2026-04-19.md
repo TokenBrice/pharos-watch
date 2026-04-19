@@ -50,3 +50,11 @@ Loop 2 verification findings applied:
 - `docs/worker-infrastructure.md`, `docs/design-tokens.md`, and runbooks: removed stale live-reserve adapter enumeration, narrowed chart-token companion claims, documented primitive-token exceptions, and split stablecoins-cache/on-chain monitor symptoms from unrelated stale or mint/burn states.
 - `docs/api-reference.md`: added blacklist amount-source enum values and suppression reason, corrected report-card `baseScore`/dependency/raw-input fields, and documented `collateralFromLive`.
 - `README.md`: marked `api_request_source_stats` as legacy/schema-retained and added the transport-smoke deployment gate.
+
+Loop 3 verification findings applied:
+
+- `shared/lib/*version*.ts`: preserved date-correct, monotonic intra-day `effectiveAt` windows so same-day methodology releases remain reachable.
+- `docs/api-reference.md`: clarified that public blacklist rows filter out non-null `suppressionReason`.
+- `docs/yield-intelligence.md`: corrected the Treasury.gov XML URL and added the FRED-to-Treasury fallback to the benchmark cron description.
+- `docs/scripts.md`, `docs/design-language.md`, `docs/status-dashboard.md`, `docs/operator-origin-access.md`, and `docs/funding-page.md`: corrected deploy diff notation, digest title typography, Price Source Health placement, Pages proxy env bindings, funding display fallback, and cost-review placement.
+- Shared code comments in status/funding types were updated where they pointed to stale plan paths or stale UI placement.

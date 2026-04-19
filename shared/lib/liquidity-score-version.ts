@@ -197,7 +197,7 @@ const liquidity = createMethodologyVersion({
       version: "4.3",
       title: "Fluid DexReservesResolver balance integration",
       date: "2026-03-18",
-      effectiveAt: 1773792000,
+      effectiveAt: 1773792001,
       summary:
         "Fluid pools on Ethereum, Arbitrum, Base, and Polygon now read balances and fee detail from the official " +
         "DexReservesResolver instead of staying on neutral placeholders.",
