@@ -54,12 +54,6 @@ export const entry: ChangelogEntry = {
         "Daily digest streams from Opus 4.7 with week-over-week deltas, Momentum Candidates, forward-look cue, and opening/tone guards. Telegram adds /status <ticker>, snooze inline keyboard, and worsening-delta depeg triggers.",
     },
     {
-      label: "/funding transparency page",
-      tag: "feature",
-      description:
-        "New public /funding route surfaces founder subsidy, ops costs, donor list, X/Telegram CTAs, horizon, and FAQ. Weekly funding-update skill appends donations. Ops-proxy forwards X-Pharos-Admin on admin mutations.",
-    },
-    {
       label: "Detail-page UX remediation",
       tag: "design",
       description:
