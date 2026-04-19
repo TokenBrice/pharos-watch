@@ -207,7 +207,7 @@ describe("worker.scheduled", () => {
     expect(cronMocks.snapshotSupply).toHaveBeenCalledTimes(1);
     expect(cronMocks.publishReportCardCache).toHaveBeenCalledTimes(1);
     expect(cronMocks.syncFxRates).toHaveBeenCalledTimes(1);
-    // stability-index and compute-dews now on the half-hourly trigger
+    // stability-index and compute-dews run on the decoupled DEWS/PSI trigger
     expect(cronMocks.computeAndStoreStabilityIndex).not.toHaveBeenCalled();
     expect(cronMocks.computeAndStoreDEWS).not.toHaveBeenCalled();
     expect(cronMocks.runStatusSelfCheck).not.toHaveBeenCalled();
@@ -422,7 +422,7 @@ describe("worker.scheduled", () => {
     expect(cronMocks.publishReportCardCache).toHaveBeenCalledTimes(1);
   });
 
-  it("runs charts → dex → dews → psi on the 30-min cron", async () => {
+  it("runs charts → dex on the 30-min cron", async () => {
     const { ctx, waits } = makeCtx();
     const env = {
       DB: {} as D1Database,
@@ -438,21 +438,39 @@ describe("worker.scheduled", () => {
 
     expect(cronMocks.syncStablecoinCharts).toHaveBeenCalledTimes(1);
     expect(cronMocks.syncDexLiquidity).toHaveBeenCalledTimes(1);
-    expect(cronMocks.computeAndStoreDEWS).toHaveBeenCalledTimes(1);
-    expect(cronMocks.computeAndStoreStabilityIndex).toHaveBeenCalledTimes(1);
+    expect(cronMocks.computeAndStoreDEWS).not.toHaveBeenCalled();
+    expect(cronMocks.computeAndStoreStabilityIndex).not.toHaveBeenCalled();
     expect(cronMocks.syncYieldData).not.toHaveBeenCalled();
     expect(cronMocks.syncDexLiquidity.mock.invocationCallOrder[0]).toBeGreaterThan(
       cronMocks.syncStablecoinCharts.mock.invocationCallOrder[0],
     );
-    expect(cronMocks.computeAndStoreDEWS.mock.invocationCallOrder[0]).toBeGreaterThan(
-      cronMocks.syncDexLiquidity.mock.invocationCallOrder[0],
+  });
+
+  it("runs dews → psi on the decoupled DB-only trigger", async () => {
+    const { ctx, waits } = makeCtx();
+    const env = {
+      DB: {} as D1Database,
+      CORS_ORIGIN: "https://pharos.watch",
+    } as const;
+
+    await worker.scheduled(
+      { cron: "26,56 * * * *" } as ScheduledEvent,
+      env as never,
+      ctx,
     );
+    await Promise.all(waits);
+
+    expect(cronMocks.syncStablecoinCharts).not.toHaveBeenCalled();
+    expect(cronMocks.syncDexLiquidity).not.toHaveBeenCalled();
+    expect(cronMocks.computeAndStoreDEWS).toHaveBeenCalledTimes(1);
+    expect(cronMocks.computeAndStoreStabilityIndex).toHaveBeenCalledTimes(1);
+    expect(cronMocks.syncYieldData).not.toHaveBeenCalled();
     expect(cronMocks.computeAndStoreStabilityIndex.mock.invocationCallOrder[0]).toBeGreaterThan(
       cronMocks.computeAndStoreDEWS.mock.invocationCallOrder[0],
     );
   });
 
-  it("continues half-hourly downstream jobs when sync-dex-liquidity throws", async () => {
+  it("contains sync-dex-liquidity failures within the 30-min cron", async () => {
     cronMocks.syncDexLiquidity.mockRejectedValueOnce(new Error("dex failed"));
 
     const { ctx, waits } = makeCtx();
@@ -469,8 +487,8 @@ describe("worker.scheduled", () => {
     await Promise.all(waits);
 
     expect(cronMocks.syncDexLiquidity).toHaveBeenCalledTimes(1);
-    expect(cronMocks.computeAndStoreDEWS).toHaveBeenCalledTimes(1);
-    expect(cronMocks.computeAndStoreStabilityIndex).toHaveBeenCalledTimes(1);
+    expect(cronMocks.computeAndStoreDEWS).not.toHaveBeenCalled();
+    expect(cronMocks.computeAndStoreStabilityIndex).not.toHaveBeenCalled();
     expect(cronMocks.syncYieldData).not.toHaveBeenCalled();
   });
 

@@ -27,6 +27,21 @@ describe("status cron config", () => {
     });
   });
 
+  it("maps DEWS and PSI to the decoupled DB-only half-hourly slot", () => {
+    expect(getStatusCronDisplay("compute-dews")).toEqual({
+      group: "half-hourly",
+      label: "DEWS compute",
+      schedule: "26,56 * * * *",
+      triggerMode: "shared",
+    });
+    expect(getStatusCronDisplay("stability-index")).toEqual({
+      group: "half-hourly",
+      label: "PSI compute",
+      schedule: "26,56 * * * *",
+      triggerMode: "shared",
+    });
+  });
+
   it("maps live reserve sync to the dedicated 4-hourly slot", () => {
     expect(getStatusCronDisplay("sync-live-reserves")).toEqual({
       group: "multi-hourly",
@@ -71,7 +86,7 @@ describe("status cron config", () => {
 
   it("keeps cron group copy aligned with mixed trigger cadences", () => {
     expect(CRON_GROUPS.find((group) => group.key === "half-hourly")?.description).toContain(
-      "Shared chart, PSI, DEWS, and DEX scoring lane plus isolated mint/burn",
+      "DEX scoring and decoupled DEWS/PSI lanes plus isolated mint/burn",
     );
     expect(CRON_GROUPS.find((group) => group.key === "hourly")?.description).toContain(
       "core yield publication",

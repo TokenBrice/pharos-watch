@@ -232,7 +232,7 @@ export async function buildDailyDigestInput(db: D1Database): Promise<DailyDigest
             dates: [todayTs, yesterdayTs, todayTs - 7 * SECONDS.ONE_DAY],
           },
           psi: {
-            label: latestSample ? "latest 15-minute sample with daily snapshot fallback" : "latest daily snapshot fallback",
+            label: latestSample ? "latest 30-minute sample with daily snapshot fallback" : "latest daily snapshot fallback",
             sampleAt: latestSample?.stored_at ?? null,
             dailySnapshotAt: latestDaily?.stored_at ?? null,
           },
