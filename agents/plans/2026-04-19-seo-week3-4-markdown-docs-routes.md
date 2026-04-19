@@ -4,14 +4,12 @@
 
 **Goal:** Ship the "AI-agent accessibility" release. Two features: (A) RFC 7231 content negotiation so AI agents that send `Accept: text/markdown` receive a pre-rendered `.md` variant of high-value routes with `Vary: Accept` for cache correctness; (B) expose the repo's 40+ canonical docs in `docs/` as first-class public pages under `/docs/*`, rendered with Pharos chrome and proper JSON-LD.
 
-**Architecture:** A single build-time markdown generator (`scripts/generate-markdown-exports.ts`) runs as part of `prebuild` and writes colocated `<route>/index.md` files into the static export at the same paths as HTML `index.html`. A new Cloudflare Pages Function (`functions/_middleware.ts`) inspects GET requests, serves the colocated `.md` variant when `Accept: text/markdown` is present, and attaches `Vary: Accept` to every response. For Feature B, a dynamic `/docs/[slug]/` route uses `generateStaticParams` + `next-mdx-remote/rsc` to render selected `docs/*.md` files with the existing `FeaturePageShell` and emits `TechArticle` + `BreadcrumbList` JSON-LD; a curated allowlist lives in `shared/lib/public-docs.ts` so the same list drives `generateStaticParams`, the sitemap, `llms.txt`, and the docs index page.
+**Architecture:** Build-time markdown generator (`scripts/generate-markdown-exports.ts`) runs as `postbuild` (not `prebuild` — `next build` with `output: "export"` wipes `out/` each run) and writes colocated `<route>/index.md` files alongside `index.html`. Cloudflare Pages Function `functions/_middleware.ts` negotiates `Accept: text/markdown` and attaches `Vary: Accept`. Feature B: dynamic `/docs/[slug]/` route via `generateStaticParams` + `next-mdx-remote/rsc`, with curated allowlist in `shared/lib/public-docs.ts` driving `generateStaticParams`, sitemap, `llms.txt`, and docs index.
 
-**Tech Stack:** Next.js 16 static export, Cloudflare Pages Functions, TypeScript, `tsx` for build scripts, `next-mdx-remote` (RSC variant), `remark-gfm`, `vitest`.
+**Prerequisites:**
 
-**Prerequisites (Weeks 1-2 must be shipped):**
-
-- **Week 1** must have landed `BreadcrumbJsonLd` N-level support. Current `src/components/breadcrumb-json-ld.tsx` only emits a 2-item list (Home → {name}). Feature B needs `Home → Docs → {doc}`, i.e. the 3-item form. If Week 1 did not extend `BreadcrumbJsonLd`, Task B.6 cannot proceed without reopening that scope. **Blocker check at start of Feature B.**
-- **Week 2** must have shipped `public/llms.txt`. Task B.9 appends a `## Docs` section to it. If `public/llms.txt` does not exist, fall through to creating it inline — but that was the Week 2 deliverable and should already be there.
+- **Week 1** `BreadcrumbJsonLd` N-level support has landed (verified: current component takes `items: Array<{name, url}>`). No action.
+- **Week 2** `public/llms.txt` — if shipped, Task B.9 Step 2 appends `## Docs` section. If not yet shipped, defer B.9 Step 2 only; all other Feature B tasks proceed.
 
 **Out of Scope (future plans, do NOT touch here):**
 
@@ -30,23 +28,23 @@
 
 Every decision below was made explicitly rather than left open. Deviation requires re-planning.
 
-**1. Where does the build-time markdown generator live?**
-`scripts/generate-markdown-exports.ts`. It sits next to `generate-redirects.ts` and `generate-sitemap-dates.ts` and is wired into the existing `prebuild` npm script. Rationale: the two existing generators already set the pattern; nothing here justifies a new directory.
+**1. Generator location.**
+`scripts/generate-markdown-exports.ts`, alongside `generate-redirects.ts` / `generate-sitemap-dates.ts`.
 
-**2. Where do `.md` variants land in the static export?**
-Colocated at `out/<route-path>/index.md`, mirroring the HTML structure (`out/<route-path>/index.html`). Rationale: this lets the Pages Function serve the variant by rewriting the URL to `/<path>/index.md` with zero path translation, and it makes Cloudflare's asset handler discover the file without extra routing rules. The alternative — a parallel `out/_markdown/...` tree — would require path remapping in the middleware and was rejected.
+**2. `.md` emission path.**
+Colocated at `out/<route-path>/index.md`. Must run **`postbuild`** — `next build` wipes `out/` each run.
 
-**3. Does the Pages Function middleware interact with existing Pages Functions?**
-Yes. Existing functions are path-specific: `functions/admin/[[path]].ts`, `functions/_site-data/[[path]].ts`, `functions/api/admin/...`. A new top-level `functions/_middleware.ts` runs on **every** request (Cloudflare's `_middleware.ts` convention). It must call `next(request)` to chain through to the asset handler / sibling functions except when it is directly serving a `.md` variant. The middleware must NOT touch `/admin/*`, `/_site-data/*`, `/api/*` — it short-circuits for those prefixes. Reference: `functions/admin/[[path]].ts` and `functions/_site-data/[[path]].ts`.
+**3. Middleware + existing Functions.**
+Existing functions: `functions/admin/[[path]].ts`, `functions/_site-data/[[path]].ts`, `functions/api/admin/...`. New top-level `functions/_middleware.ts` runs on every request, must `next(request)` to chain; must NOT touch `/admin/*`, `/_site-data/*`, `/api/*`.
 
-**4. MDX library choice for `/docs/*` rendering.**
-`next-mdx-remote@^5` with the RSC server export (`next-mdx-remote/rsc`). Rationale: the codebase has **no** existing MDX dep; this package is the smallest addition that works with Next 16 React Server Components and produces static output under `output: "export"`. `@mdx-js/react` is rejected because it requires webpack loader config that conflicts with `next.config.ts` simplicity. `remark-gfm` is added for GitHub-flavored markdown (tables in the docs).
+**4. MDX library.**
+`next-mdx-remote@^5` RSC variant (`next-mdx-remote/rsc`). No existing MDX dep. Add `remark-gfm` for GFM tables.
 
-**5. How to get `dateModified` for docs.**
-Use `git log -1 --format=%aI -- <path>` at build time, executed inside `scripts/generate-markdown-exports.ts` and threaded into `src/generated/docs-metadata.json`. Mirrors the exact pattern in `scripts/generate-sitemap-dates.ts:12-14`. Front-matter parsing is rejected — would require authors to keep it updated.
+**5. Docs `dateModified`.**
+`git log -1 --format=%aI -- <path>` at build time, written to `src/generated/docs-metadata.json`. Mirrors `scripts/generate-sitemap-dates.ts:12-14`. **Hard-fail on error** (do not silently fall back to `new Date()` — that produces misleading metadata).
 
-**6. Methodology pages: parallel `.md` authoring vs. render-to-markdown?**
-**Render-to-markdown** from the TSX source via a small adapter. The methodology pages (`src/app/methodology/sections/core/*.tsx` and `src/app/methodology/sections/monitoring/*.tsx`) import static text, version constants, and factual content. The adapter in `scripts/lib/methodology-to-markdown.ts` imports each section's `MethodologyTextContent` export (new Task A.3 adds these exports) and stringifies to markdown. Parallel authoring was considered and rejected: 11 methodology routes × ongoing edits = perpetual drift, and the existing `content-*.tsx` files already split out narrative content from presentation, which makes extraction tractable. Snapshot tests (Task A.11) guard against silent drift.
+**6. Methodology: render-to-markdown.**
+Adapter imports each section's `CONTENT_MARKDOWN` export (new; Task A.3 adds them) and stringifies. **10 narrative sections total** (6 core + 5 monitoring, minus `liquidity-technical-details.tsx` which is a fragment embedded inside `liquidity-section.tsx` — do not add a standalone `CONTENT_MARKDOWN` there). Snapshot tests in Task A.11 guard against drift.
 
 **7. Which docs are public?**
 A curated allowlist in `shared/lib/public-docs.ts`. Non-public docs are not force-excluded — they are simply not listed. The initial list is **24 docs** (see Task B.1). Agent-authored working notes (`agents/**`, `docs/agent-*.md`, `docs/doc-ownership.json`, `docs/documentation-map-*.tsv`) stay repo-internal.
@@ -62,48 +60,9 @@ Hardcoded allowlist of route **class prefixes** at the top of `functions/_middle
 
 ---
 
-## File Structure (locked in before task breakdown)
+## Phasing
 
-### New files
-- `scripts/generate-markdown-exports.ts` — build-time generator, runs in `prebuild`.
-- `scripts/lib/methodology-to-markdown.ts` — adapter that stringifies methodology section content.
-- `scripts/lib/markdown-renderers.ts` — per-route-class renderers (stablecoin, digest, changelog, methodology, docs).
-- `scripts/__tests__/generate-markdown-exports.test.ts` — unit tests + snapshot fixtures for the generator.
-- `scripts/__tests__/fixtures/markdown/` — snapshot fixtures for generated markdown.
-- `functions/_middleware.ts` — top-level Pages middleware for `Accept: text/markdown` negotiation and `Vary: Accept`.
-- `functions/__tests__/middleware.test.ts` — unit test for middleware behavior.
-- `src/app/docs/page.tsx` — docs index listing all public docs grouped by section.
-- `src/app/docs/[slug]/page.tsx` — dynamic doc route rendering a single markdown file.
-- `shared/lib/public-docs.ts` — curated allowlist + grouping metadata (runtime-neutral so sitemap + generator + index page share one source).
-- `shared/lib/__tests__/public-docs.test.ts` — asserts every listed doc exists on disk and the slug matches.
-- `src/generated/docs-metadata.json` — per-doc `dateModified`, written by the generator.
-
-### Modified files
-- `package.json` — extend `prebuild`; add `next-mdx-remote`, `remark-gfm` deps.
-- `next.config.ts` — no change unless we hit static export issues with `next-mdx-remote` (contingency only; see Task B.5).
-- `src/app/sitemap.ts` — add docs routes via `PUBLIC_DOCS` import.
-- `src/app/methodology/sections/core/*.tsx` + `src/app/methodology/sections/monitoring/*.tsx` — extract `CONTENT_MARKDOWN` constants (one per section) so the adapter can import them without rendering JSX.
-- `public/llms.txt` — append `## Docs` section.
-- `src/app/about/api/page.tsx` — add paragraph pointing to `/docs/api-reference/` and documenting the `Accept: text/markdown` protocol.
-- `src/app/about/page.tsx` — add one link to `/docs/`.
-- `docs/architecture.md` — add a section documenting both features.
-- `docs/README.md` — add a pointer that these docs are now served at `/docs/`.
-- `public/_headers` — no change (middleware sets `Vary: Accept` dynamically, which is correct; static headers don't apply to dynamic responses).
-- `scripts/lib/deploy-impact.mjs` — add `scripts/generate-markdown-exports.ts`, `scripts/lib/methodology-to-markdown.ts`, `scripts/lib/markdown-renderers.ts`, `functions/_middleware.ts`, `src/app/docs/**`, `shared/lib/public-docs.ts` to the pages-deploy trigger globs (verify the file first — it may already cover `scripts/**` and `functions/**`).
-- `scripts/check-seo-static.mjs` — no modification, but the `check:doc-source-paths` and `check:verified-doc-links` scripts will need to be consulted to ensure the docs routes don't trip them.
-
----
-
-## Phasing Recommendation
-
-Feature A first, Feature B second, each as its own PR. Rationale:
-
-- **Feature A is independent**: the generator + middleware ship even if no docs go public. Most of its value — markdown for stablecoin/methodology/changelog/digest — can land alone and immediately start capturing AI traffic.
-- **Feature B depends on Feature A** only for the **negotiation middleware** (so `/docs/architecture` also serves markdown on `Accept: text/markdown`). The MDX rendering and routing don't need Feature A.
-- Staging reduces the blast radius of a potential middleware regression. If A deploys badly, B never gets blocked by it.
-- Target: A ships in the first week (easy path), B ships in the second week.
-
-**Commit strategy:** **Two PRs**, one per feature. Inside each PR, commit after every task (TDD loop: failing test → minimal implementation → passing test → commit). Do not amend.
+Two PRs — Feature A first (week 1), Feature B second (week 2). Feature A is independent and immediately captures AI traffic; Feature B only depends on A's middleware. Commit after every task within each PR; do not amend.
 
 ---
 
@@ -113,10 +72,10 @@ Ships first. Target: days 1-5.
 
 ## Task A.1: Dependency and scaffolding
 
-**Goal:** Install deps, create empty generator script, wire into `prebuild`.
+**Goal:** Install deps, create empty generator script, wire into `postbuild`.
 
 **Files:**
-- Modify: `package.json` — add `remark-gfm` (dev), extend `prebuild` script.
+- Modify: `package.json` — add `remark-gfm` (dev), add `postbuild` script.
 - Create: `scripts/generate-markdown-exports.ts` (empty skeleton).
 - Create: `scripts/lib/markdown-renderers.ts` (empty skeleton).
 
@@ -174,18 +133,21 @@ export function renderChangelogIndex(entries: readonly ChangelogEntry[]): string
 }
 ```
 
-- [ ] **Step 4: Wire into `prebuild`**
+- [ ] **Step 4: Wire into `postbuild`**
 
 Modify `package.json` line 16:
 
 Before:
 ```json
 "prebuild": "tsx scripts/generate-redirects.ts && tsx scripts/generate-sitemap-dates.ts",
+"build": "next build",
 ```
 
 After:
 ```json
-"prebuild": "tsx scripts/generate-redirects.ts && tsx scripts/generate-sitemap-dates.ts && tsx scripts/generate-markdown-exports.ts",
+"prebuild": "tsx scripts/generate-redirects.ts && tsx scripts/generate-sitemap-dates.ts",
+"build": "next build",
+"postbuild": "tsx scripts/generate-markdown-exports.ts",
 ```
 
 - [ ] **Step 5: Run `npm run build` to confirm nothing breaks**
@@ -200,7 +162,7 @@ Expected: successful build, `generate-markdown-exports: no routes wired yet` app
 
 ```bash
 git add package.json package-lock.json scripts/generate-markdown-exports.ts scripts/lib/markdown-renderers.ts
-git commit -m "scaffold(md): add prebuild markdown generator stub"
+git commit -m "scaffold(md): add postbuild markdown generator stub"
 ```
 
 ## Task A.2: Generator infrastructure — write route to colocated `.md`
@@ -314,11 +276,12 @@ git commit -m "feat(md-gen): add writeMarkdownRoute with traversal guards"
 
 ## Task A.3: Extract methodology section text content to stringifiable constants
 
-**Goal:** Each of the 11 methodology sections (6 core + 5 monitoring) needs a `CONTENT_MARKDOWN` constant export so the adapter can stringify without rendering React. This is surgical — we do not rewrite the sections, just add a sibling export.
+**Goal:** 10 methodology narrative sections (5 core + 5 monitoring) each get a `CONTENT_MARKDOWN` constant export so the adapter can stringify without rendering React. Surgical — add a sibling export; do not rewrite JSX.
 
 **Files:**
-- Modify: `src/app/methodology/sections/core/safety-scores-section.tsx`, `liquidity-section.tsx`, `stability-index-section.tsx`, `infrastructure-section.tsx`, `mint-burn-flow-section.tsx`, `liquidity-technical-details.tsx`.
+- Modify: `src/app/methodology/sections/core/safety-scores-section.tsx`, `liquidity-section.tsx`, `stability-index-section.tsx`, `infrastructure-section.tsx`, `mint-burn-flow-section.tsx`.
 - Modify: `src/app/methodology/sections/monitoring/pegscore-dews-section.tsx`, `chain-health-section.tsx`, `blacklist-tracker-section.tsx`, `contagion-stress-test-section.tsx`, `yield-intelligence-section.tsx`.
+- **Do NOT** add `CONTENT_MARKDOWN` to `liquidity-technical-details.tsx` — it's a fragment embedded in `liquidity-section.tsx`; fold its prose into `liquidity-section`'s constant.
 
 - [ ] **Step 1: Read every section file and identify the narrative text**
 
@@ -330,20 +293,20 @@ Open each file and locate the `<p>...</p>` narrative paragraphs inside `Methodol
 
 - [ ] **Step 2: For each section file, add a `CONTENT_MARKDOWN` export**
 
-For example, in `src/app/methodology/sections/core/safety-scores-section.tsx`, add at the top (after imports, before the component):
+Section files use `<p>` prose interleaved with `MethodologyFacts`, `WorkedExample`, `MethodologyDetails` components — this is NOT a mechanical copy. Author each `CONTENT_MARKDOWN` by hand as the markdown equivalent of the rendered output (~30 lines per section). Conversions: `<code>X</code>` → `` `X` ``, `<strong>X</strong>` → `**X**`, `<a href=Y>X</a>` → `[X](Y)`, paragraph breaks as blank lines, fact tables as markdown tables.
+
+Example in `src/app/methodology/sections/core/safety-scores-section.tsx` (add after imports, before the component):
 
 ```ts
 export const CONTENT_MARKDOWN = `## Safety Scores Grading Methodology
 
-Pharos synthesizes multiple data signals into a single transparent grade per stablecoin. The overall score is computed in two steps: first, a weighted average of four base dimensions (exit liquidity, resilience, decentralization, dependency risk), then a peg stability multiplier that penalizes coins with poor pegs while barely affecting well-pegged ones. The exit-liquidity dimension blends raw DEX liquidity with redemption-backstop adjustments when a usable route exists.
-
-(...continue with all narrative prose from this section, Markdown-escaped, preserving paragraph breaks as blank lines...)
+Pharos synthesizes multiple data signals into a single transparent grade per stablecoin. The overall score is computed in two steps: first, a weighted average of four base dimensions (exit liquidity, resilience, decentralization, dependency risk), then a peg stability multiplier that penalizes coins with poor pegs while barely affecting well-pegged ones.
 `;
 ```
 
-Do **not** remove the inline JSX — keep the rendered page identical. The constant is in addition to the JSX. The authoritative source is the rendered text; if the JSX changes, you must update the constant in the same commit (Task A.11 snapshot tests enforce this).
+Keep the JSX unchanged — the constant is additive. Snapshot tests (Task A.11) enforce drift prevention between constant and rendered text.
 
-Repeat for each of the 11 section files. Use the section's existing `id` / `title` props as the heading.
+Repeat for each of the 10 section files. Use the section's existing `id` / `title` props as the heading.
 
 - [ ] **Step 3: Type-check**
 
@@ -694,7 +657,8 @@ export function renderStablecoinDetail(id: string): string {
 }
 
 export function* iterateStablecoinRoutes(): Generator<MarkdownRoute> {
-  for (const [id] of TRACKED_META_BY_ID.entries()) {
+  for (const [id, coin] of TRACKED_META_BY_ID.entries()) {
+    if (coin.status === "pre-launch") continue; // Pre-launch coins have no API endpoint; skip markdown emission.
     yield {
       path: `/stablecoin/${id}/`,
       body: renderStablecoinDetail(id),
@@ -1174,7 +1138,10 @@ export const onRequest = async (ctx: MiddlewareContext): Promise<Response> => {
     if (mdResponse.ok) {
       const headers = new Headers(mdResponse.headers);
       headers.set("Content-Type", "text/markdown; charset=utf-8");
-      headers.set("Vary", "Accept");
+      const existingVary = headers.get("Vary");
+      if (!existingVary?.toLowerCase().includes("accept")) {
+        headers.set("Vary", existingVary ? `${existingVary}, Accept` : "Accept");
+      }
       return new Response(mdResponse.body, {
         status: mdResponse.status,
         statusText: mdResponse.statusText,
@@ -1187,8 +1154,6 @@ export const onRequest = async (ctx: MiddlewareContext): Promise<Response> => {
   return withVaryAccept(fallback);
 };
 ```
-
-Note: In the test harness, `ctx.env.ASSETS.fetch` is called with a Request; the real Cloudflare runtime also accepts this signature. If the test fixture's `next` pattern does not match the prod `env.ASSETS.fetch`, the middleware still uses `env.ASSETS.fetch` for the `.md` probe.
 
 - [ ] **Step 4: Run tests to see them pass**
 
@@ -1396,7 +1361,7 @@ git commit -m "docs: explain markdown content negotiation"
   - Summary of content-negotiation feature (3 sentences max)
   - List of route classes covered
   - Test plan: curl examples from Task A.10
-  - Rollback plan: delete `functions/_middleware.ts` and revert `prebuild` change.
+  - Rollback plan: delete `functions/_middleware.ts` and revert `postbuild` change.
 
 - [ ] **Step 2: Wait for CI green, merge squash.**
 
@@ -1631,14 +1596,14 @@ interface DocMetadata {
 }
 
 function getGitDate(filePath: string, flag: "%aI" | "%ai"): string {
-  try {
-    return (
-      execSync(`git log -1 --format=${flag} -- "${filePath}"`, { encoding: "utf-8" }).trim() ||
-      new Date().toISOString()
-    );
-  } catch {
-    return new Date().toISOString();
+  // Hard-fail: silent fallback to new Date() produces misleading metadata.
+  const output = execSync(`git log -1 --format=${flag} -- "${filePath}"`, {
+    encoding: "utf-8",
+  }).trim();
+  if (!output) {
+    throw new Error(`[docs-metadata] no git history for ${filePath} — add & commit the doc before building.`);
   }
+  return output;
 }
 
 function generateDocsMetadata(): void {
@@ -1792,7 +1757,14 @@ export default async function DocPage({
 }
 ```
 
-**Note: Breadcrumb depth** — this uses the existing 2-level `BreadcrumbJsonLd`. If Week 1 shipped the N-level extension, swap in the N-level call: `<BreadcrumbJsonLd items={[{ name: "Docs", path: "/docs/" }, { name: doc.title, path: \`/docs/\${slug}/\` }]} />`. Check `src/components/breadcrumb-json-ld.tsx` before committing. Default to 2-level if the N-level API is not present (which is a mild degradation but not a blocker).
+**Breadcrumb:** current `BreadcrumbJsonLd` takes `items: Array<{name, url}>` (N-level signature; Week 1 landed). Use:
+```tsx
+<BreadcrumbJsonLd items={[
+  { name: "Home", url: "/" },
+  { name: "Docs", url: "/docs/" },
+  { name: doc.title, url: `/docs/${slug}/` },
+]} />
+```
 
 - [ ] **Step 2: Type-check**
 
@@ -1808,7 +1780,7 @@ Expected: exit 0.
 npm run build
 ```
 
-Expected: 24 new pages under `out/docs/<slug>/index.html`. If build fails because `next-mdx-remote/rsc` does not emit as static HTML under `output: "export"`, fall back to parsing with `remark` + `remark-html` server-side and injecting the resulting HTML via `dangerouslySetInnerHTML`. See Task B.5 for the contingency.
+Expected: 24 new pages under `out/docs/<slug>/index.html`. If build fails under `output: "export"`, fall back to the `remark` pipeline: `unified().use(remarkParse).use(remarkGfm).use(remarkRehype).use(rehypeStringify).process(source)` → inject via `dangerouslySetInnerHTML`. ~30 min refactor; no additional deps beyond what's already installed in B.2.
 
 - [ ] **Step 4: Spot check**
 
@@ -1823,64 +1795,6 @@ Expected: Pharos chrome + rendered architecture content.
 ```bash
 git add src/app/docs/[slug]/page.tsx
 git commit -m "feat(docs): add /docs/[slug]/ dynamic route"
-```
-
-## Task B.5: Contingency — MDX static-export fallback
-
-**Goal:** Only execute if Task B.4 `npm run build` fails because `next-mdx-remote/rsc` emits dynamic output that `output: "export"` rejects.
-
-**Files (if executed):**
-- Replace `MDXRemote` usage with a server-side `remark`/`remark-html` pipeline.
-
-- [ ] **Step 1: Install fallback deps**
-
-```bash
-npm install --save remark remark-html
-```
-
-- [ ] **Step 2: Refactor**
-
-Replace the `<MDXRemote ... />` block in `src/app/docs/[slug]/page.tsx` with:
-
-```tsx
-import { unified } from "unified";
-import remarkParse from "remark-parse";
-import remarkGfm from "remark-gfm";
-import remarkRehype from "remark-rehype";
-import rehypeSlug from "rehype-slug";
-import rehypeAutolinkHeadings from "rehype-autolink-headings";
-import rehypeStringify from "rehype-stringify";
-
-// ... inside DocPage, replace MDXRemote block with:
-const html = String(
-  await unified()
-    .use(remarkParse)
-    .use(remarkGfm)
-    .use(remarkRehype)
-    .use(rehypeSlug)
-    .use(rehypeAutolinkHeadings, { behavior: "wrap" })
-    .use(rehypeStringify)
-    .process(source),
-);
-// ...
-<article className="prose prose-invert max-w-none" dangerouslySetInnerHTML={{ __html: html }} />
-```
-
-This processes markdown → HTML entirely at build time, which is compatible with `output: "export"`.
-
-- [ ] **Step 3: Rebuild and retest**
-
-```bash
-npm run build
-```
-
-Expected: success. If this also fails, escalate: the issue is elsewhere.
-
-- [ ] **Step 4: Commit (only if needed)**
-
-```bash
-git add package.json package-lock.json src/app/docs/[slug]/page.tsx
-git commit -m "fix(docs): use remark pipeline for static-export compatibility"
 ```
 
 ## Task B.6: Docs index page — `/docs/`
@@ -2024,12 +1938,13 @@ export function renderDocMarkdown(doc: PublicDoc): string {
 }
 
 export function* iterateDocRoutes(): Generator<MarkdownRoute> {
-  const { PUBLIC_DOCS } = require("../../shared/lib/public-docs");
   for (const doc of PUBLIC_DOCS) {
     yield { path: `/docs/${doc.slug}/`, body: renderDocMarkdown(doc) };
   }
 }
 ```
+
+(Hoist `import { PUBLIC_DOCS } from "../../shared/lib/public-docs";` to the top of the file — do not use `require` inline, the rest of the file is ESM.)
 
 - [ ] **Step 4: Wire into generator**
 
@@ -2130,15 +2045,15 @@ git commit -m "feat(sitemap): include /docs/* routes"
 - Modify: `src/app/about/page.tsx`.
 - Modify: `src/app/about/api/page.tsx`.
 
-- [ ] **Step 1: Confirm llms.txt exists**
+- [ ] **Step 1: Check for llms.txt**
 
 ```bash
 test -f public/llms.txt && echo "present" || echo "missing"
 ```
 
-If missing, the Week 2 deliverable wasn't shipped — **stop and escalate to the user** before continuing.
+If missing, skip Step 2 (Week 2 not yet shipped). The `## Docs` append lands in a follow-up commit after Week 2 merges. Steps 3-4 below proceed normally.
 
-- [ ] **Step 2: Append Docs section to llms.txt**
+- [ ] **Step 2: Append Docs section to llms.txt** (only if Step 1 returned "present")
 
 Add to `public/llms.txt`:
 
@@ -2249,40 +2164,14 @@ Mitigation: snapshot tests in Task A.11 catch unintentional changes to USDT, met
 **Risk 2: Cloudflare Pages middleware hits CPU/size limits.**
 Pages Functions free tier: 10 ms CPU, 100 MB memory, 25 MB response. Our middleware does an extra `env.ASSETS.fetch()` for markdown requests only — this adds <1 ms. Response size for the largest markdown variant (`docs/yield-intelligence.md`, 894 lines) is ~30 KB — well under 25 MB. No issue expected. If a limit fires, disable middleware by removing the file (rollback is a single commit).
 
-**Risk 3: `Vary: Accept` fragments the CDN cache.**
-Acknowledged in Architecture Decision #8. Doubling the cache entries for five route classes is acceptable. If cache hit rate collapses unexpectedly, the middleware change is reverted.
+**Risk 3: Docs contain internal references.**
+Pre-scrub: before adding any doc to `PUBLIC_DOCS`, run `grep -n "agents/\|AGENTS\.md\|TODO\|FIXME" docs/<file>` and rewrite hits or exclude the doc. Known hits at plan-write time: `docs/architecture.md`, `docs/mint-burn-flows.md` reference `/agents/`. Resolve before B.4 merges.
 
-**Risk 4: Docs contain internal references (agents, audits, methodology branch names).**
-Mitigation: the curated allowlist in `shared/lib/public-docs.ts` explicitly excludes `agent-*`, `*-page.md`, `runbooks/*`, and working notes. Each allowlisted doc was skimmed for `/agents/` and related internal references — any hits should be resolved before merge. If a post-merge review reveals an internal reference in a public doc, remove that doc from `PUBLIC_DOCS` (the build + sitemap auto-update on next deploy).
-
-**Risk 5: `next-mdx-remote/rsc` does not emit under `output: "export"`.**
-Task B.5 is the pre-scoped contingency: switch to a pure `remark → rehype → HTML` pipeline. ~30 minutes of work.
-
-**Risk 6: The methodology section refactor (Task A.3) breaks existing tests.**
-The refactor only **adds** a new export; existing JSX is untouched. If a test regression appears, it is a real bug in the extracted text — fix the constant, don't fix the test.
-
-**Risk 7: `Accept` header parser incorrectly prefers markdown over HTML for regular browsers.**
-Mitigation: the `prefersMarkdown` function in `functions/_middleware.ts` only returns `true` when markdown's q-value is ≥ HTML's. Chrome/Safari/Firefox all send `Accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8`, which has no `text/markdown` at all, so `prefersMarkdown` returns `false`. Manually verified by Task A.9 test case.
+**Risk 4: `next-mdx-remote/rsc` does not emit under `output: "export"`.**
+Fallback: switch `MDXRemote` for the `unified()` + `remark-parse` + `remark-rehype` + `rehype-stringify` pipeline rendered server-side and injected via `dangerouslySetInnerHTML`. ~30 min.
 
 **Rollback plan (both features):**
 
-- Feature A: delete `functions/_middleware.ts` + revert `prebuild` line in `package.json`. Cache entries with `Vary: Accept` will expire naturally (or purge via `wrangler cache purge`).
+- Feature A: delete `functions/_middleware.ts` + revert `postbuild` line in `package.json`. Cache entries with `Vary: Accept` will expire naturally (or purge via `wrangler cache purge`).
 - Feature B: revert the Feature B PR. `PUBLIC_DOCS` is removed, sitemap regenerates, and `/docs/*` returns 404.
 
----
-
-# Success Criteria
-
-- 4+ route classes serve valid markdown on `Accept: text/markdown`: methodology (10 routes), stablecoin (191), changelog (1), digest (~6), docs (24). **Target: all 5.**
-- 20+ docs publicly browseable at `/docs/<slug>/`. **Target: 24.**
-- A dual curl test (AI crawler UA + markdown Accept) returns markdown, confirming the full agent access path works.
-
----
-
-# Open Questions (surface to user before starting; do not guess)
-
-1. **Breadcrumb depth (Task B.4):** confirm Week 1 actually shipped N-level `BreadcrumbJsonLd`. If not, ship the docs route with 2-level breadcrumb (mild degradation) or wait for Week 1 to complete.
-2. **`public/llms.txt` presence (Task B.9):** confirm Week 2 shipped this file. If not, stop Feature B until it does.
-3. **Allowlist curation edge cases:** should `*-page.md` route-contract docs be public? Default: exclude. If user wants them public, add to `PUBLIC_DOCS`.
-4. **Footer / primary nav link to `/docs/`:** this plan routes `/docs/` via `about/` only. Flagging because adding a footer link is a design decision; default: no footer change until product says otherwise.
-5. **`api-endpoint-authoring.md` is borderline operational.** Listed as system group but mostly useful for contributors. Default: include. User can strike if desired.
