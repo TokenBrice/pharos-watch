@@ -309,6 +309,17 @@ export default async function AboutApiPage() {
                 In production, protected public routes require <code className="rounded bg-muted px-1.5 py-0.5 font-mono text-[0.92em] text-foreground">X-API-Key</code>.
                 The website itself does not use that lane directly; it talks to the internal site-data proxy instead.
               </p>
+              <p className="max-w-3xl text-sm leading-relaxed text-muted-foreground">
+                For implementation context beyond the HTTP contract, read the{" "}
+                <Link href="/docs/api-reference/" className="pharos-focus-ring rounded-sm underline underline-offset-4 hover:text-foreground">
+                  public API reference doc
+                </Link>{" "}
+                and the broader{" "}
+                <Link href="/docs/" className="pharos-focus-ring rounded-sm underline underline-offset-4 hover:text-foreground">
+                  documentation archive
+                </Link>
+                .
+              </p>
             </div>
           </div>
 

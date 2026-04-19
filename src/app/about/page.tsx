@@ -460,6 +460,13 @@ export default function AboutPage() {
             </Link>{" "}
             and make the most of it!
           </p>
+          <p>
+            For architecture, methodology, and design references, use the{" "}
+            <Link href="/docs/" className={INLINE_EXTERNAL_LINK_CLASS}>
+              documentation archive
+            </Link>
+            .
+          </p>
         </AboutSection>
 
         <AboutSection
