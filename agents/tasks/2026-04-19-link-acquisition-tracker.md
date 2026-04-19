@@ -87,8 +87,9 @@
 - [blocked] RapidAPI
   - Status: not a passive directory; it is a marketplace/provider gateway listing.
   - Action: defer unless Pharos intentionally wants a RapidAPI provider account, RapidAPI gateway setup, pricing/free-plan decisions, and API key handling through RapidAPI.
-- [ ] Bluechip outreach
-  - Ask for a neutral use-case/partner mention because Pharos surfaces Bluechip safety ratings.
+- [blocked] Bluechip outreach
+  - Status: skipped by owner for now.
+  - Potential later action: ask for a neutral use-case/resource mention because Pharos surfaces Bluechip safety ratings.
 - [ ] CoinGecko case study / API spotlight
   - Pitch Pharos as a public-good stablecoin dashboard using CoinGecko / GeckoTerminal data.
 - [blocked] DefiLlama docs/example
