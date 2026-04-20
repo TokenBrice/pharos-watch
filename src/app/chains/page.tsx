@@ -23,7 +23,7 @@ const CHAINS_FAQ_JSON_LD = buildFaqJsonLd([
   },
   {
     question: "Which chains have the most stablecoin supply?",
-    answer: "Ethereum dominates stablecoin supply, followed by Tron, BSC, Solana, and Arbitrum. However, supply alone doesn't tell the full story—concentration risk and backing diversity also matter. A chain with slightly lower total supply but better distribution across high-quality, diverse stablecoins may have a higher Chain Health Score.",
+    answer: "The leaderboard ranks chains by the latest stablecoin supply snapshot, but supply alone doesn't tell the full story. Concentration risk and backing diversity also matter: a chain with slightly lower total supply but better distribution across high-quality, diverse stablecoins may have a higher Chain Health Score.",
   },
 ]);
 

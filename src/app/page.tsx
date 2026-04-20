@@ -16,14 +16,14 @@ export const metadata: Metadata = {
     absolute: `Stablecoin Analytics Dashboard — Track ${TRACKED_STABLECOINS.length} Coins | Pharos`,
   },
   description:
-    "Pharos tracks stablecoins across major chains with depeg alerts, liquidity scores, on-chain safety signals, dependency risk scoring, and report-card style risk summaries.",
+    "Pharos tracks stablecoins across supported chains with depeg alerts, liquidity scores, on-chain safety signals, dependency risk scoring, and report-card style risk summaries.",
   alternates: {
     canonical: "/",
   },
   openGraph: {
     title: `Stablecoin Analytics Dashboard — Track ${TRACKED_STABLECOINS.length} Coins | Pharos`,
     description:
-      "Pharos tracks stablecoins across major chains with depeg alerts, liquidity scores, on-chain safety signals, dependency risk scoring, and report-card style risk summaries.",
+      "Pharos tracks stablecoins across supported chains with depeg alerts, liquidity scores, on-chain safety signals, dependency risk scoring, and report-card style risk summaries.",
     url: "/",
     type: "website",
     images: [{ url: "/og-card.png", width: 1200, height: 628 }],
@@ -63,7 +63,7 @@ export default function HomePage() {
               "@type": "CollectionPage",
               "@id": `${SITE_URL}/#collection`,
               name: "Pharos - Stablecoin Analytics Dashboard",
-              description: `${total} active stablecoins tracked by Pharos across every major chain.`,
+              description: `${total} active stablecoins tracked by Pharos across supported chains.`,
               url: SITE_URL,
               mainEntity: { "@id": `${SITE_URL}/#homepage-itemlist` },
               isPartOf: { "@id": `${SITE_URL}#website` },

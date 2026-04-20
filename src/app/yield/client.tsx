@@ -233,6 +233,12 @@ export function YieldClient() {
       />
       <StaleDataBanner queries={[{ preset: "yieldRankings", dataUpdatedAt, error, hasData: !!data, meta }]} />
 
+      <p className="text-sm text-muted-foreground">
+        Latest yield snapshot covers{" "}
+        <span className="font-mono font-medium tabular-nums text-foreground">{rankings.length}</span>{" "}
+        stablecoins with native yield, lending, or rate-derived opportunities.
+      </p>
+
       {data?.provenance ? (
         <details className="group rounded-xl border border-border/70 bg-card/80 text-sm">
           <summary className="flex cursor-pointer list-none flex-wrap items-center gap-2 px-4 py-3 text-xs font-medium text-muted-foreground select-none [&::-webkit-details-marker]:hidden">

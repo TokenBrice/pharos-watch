@@ -24,7 +24,7 @@ export function YieldIntelligenceMethodologySection() {
             changelogClassName="hover:text-violet-700 dark:text-violet-400"
           >
               <p>
-                Pharos tracks yield-bearing stablecoins and computes a risk-adjusted ranking via the Pharos Yield Score (PYS). Core rankings publish hourly using a source-aware APY resolution strategy, while slower
+                Pharos tracks native stablecoin yield plus selected lending opportunities and computes a risk-adjusted ranking via the Pharos Yield Score (PYS). Core rankings publish hourly using a source-aware APY resolution strategy, while slower
                 supplemental-source families refresh on a separate four-hour lane. Alternative sources are retained when
                 multiple valid yield paths exist, address-first identity is used before symbol fallback, curated
                 exact-pool overrides can cover named non-stablecoin venues, confidence-weighted arbitration selects

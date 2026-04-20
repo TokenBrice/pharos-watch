@@ -9,7 +9,7 @@ export function safeJsonLd(data: Record<string, unknown> | Record<string, unknow
 }
 
 const PHAROS_SITE_DESCRIPTION =
-  "Pharos tracks stablecoins across major chains with depeg alerts, liquidity scores, on-chain safety signals, dependency-risk scoring, and report-card-style risk summaries.";
+  "Pharos tracks stablecoins across supported chains with depeg alerts, liquidity scores, on-chain safety signals, dependency-risk scoring, and report-card-style risk summaries.";
 
 export const PHAROS_PERSON_TOKENBRICE_NODE = {
   "@type": "Person",

@@ -256,7 +256,7 @@ export default function AboutPage() {
   const trackedFeatures: AboutFeatureItem[] = [
     {
       title: `${ACTIVE_STABLECOINS.length} stablecoins`,
-      description: "Coverage across every major chain, classified by governance, backing, and peg currency.",
+      description: "Coverage across supported chains, classified by governance, backing, and peg currency.",
       icon: BarChart3,
     },
     {
@@ -278,7 +278,7 @@ export default function AboutPage() {
     {
       title: "Blacklist Tracker",
       description:
-        "Tracks issuer-intervention events (freeze, unfreeze, wipe) across supported EVM and Tron networks, with a reconciled freeze ledger for major blacklist totals.",
+        "Tracks issuer-intervention events (freeze, unfreeze, pause, block, and wipe) across supported contracts and chains, with chain-specific amount provenance where available.",
       icon: ShieldAlert,
       href: "/blacklist/",
       linkLabel: "Open blacklist tracker",
@@ -389,7 +389,7 @@ export default function AboutPage() {
     {
       title: "Risk-Adjusted Yield",
       description:
-        "Yield opportunities scored against protocol safety, so high APY from risky vaults is flagged rather than promoted.",
+        "Yield opportunities scored against stablecoin safety, benchmark context, source freshness, and APY consistency.",
       icon: TrendingUp,
       href: "/yield/",
     },
@@ -417,7 +417,7 @@ export default function AboutPage() {
                 },
                 {
                   question: "What does Pharos track?",
-                  answer: `Pharos tracks ${ACTIVE_STABLECOINS.length} stablecoins across every major chain, classified by governance, backing, and peg currency. It documents ${DEAD_STABLECOINS.length} dead stablecoins in the cemetery, monitors issuer freeze and blacklist events on-chain for supported centralized stablecoins, provides composite peg scores with depeg detection and heatmaps, integrates independent Bluechip SMIDGE safety ratings, scores DEX liquidity depth 0-100 across decentralized exchanges, computes a 30-minute Pharos Stability Index for ecosystem health, and issues report cards from four weighted base dimensions plus a peg-stability multiplier, including an exit-liquidity input that blends DEX liquidity with protocol or issuer redemption backstops when a direct exit path exists.`,
+                  answer: `Pharos tracks ${ACTIVE_STABLECOINS.length} active stablecoins across supported chains, classified by governance, backing, and peg currency. It documents ${DEAD_STABLECOINS.length} dead stablecoins in the cemetery, monitors issuer freeze and blacklist events on-chain for supported centralized stablecoins, provides composite peg scores with depeg detection and heatmaps, integrates independent Bluechip SMIDGE safety ratings, scores DEX liquidity depth 0-100 across decentralized exchanges, computes a 30-minute Pharos Stability Index for ecosystem health, and issues report cards from four weighted base dimensions plus a peg-stability multiplier, including an exit-liquidity input that blends DEX liquidity with protocol or issuer redemption backstops when a direct exit path exists.`,
                 },
                 {
                   question: "How does Pharos classify stablecoins?",
@@ -445,12 +445,11 @@ export default function AboutPage() {
           <p>
             Stablecoins are the backbone of on-chain finance, yet the data to evaluate them is scattered, inconsistent,
             or buried behind paywalls. Pharos changes that. It tracks {ACTIVE_STABLECOINS.length} live stablecoins,{" "}
-            {PRE_LAUNCH_STABLECOINS.length} upcoming launches, and {DEAD_STABLECOINS.length} dead ones across every
-            major chain, scoring each on peg integrity, liquidity depth, resilience, and contagion risk. Real-time depeg
-            detection, freeze monitoring, safety grades, mint-and-burn flow analysis, and a 30-minute ecosystem-wide
-            stability index give you the full picture before a crisis makes the headlines. You can also plug in your own
-            holdings to see your effective stablecoin exposure, concentration risks, and blended safety profile in one
-            view.
+            {PRE_LAUNCH_STABLECOINS.length} upcoming launches, and {DEAD_STABLECOINS.length} dead ones, then scores the
+            live universe on peg integrity, liquidity depth, resilience, and contagion risk. Real-time depeg detection,
+            freeze monitoring, safety grades, mint-and-burn flow analysis, and a 30-minute ecosystem-wide stability
+            index give you the full picture before a crisis makes the headlines. You can also plug in your own holdings
+            to see your effective stablecoin exposure, concentration risks, and blended safety profile in one view.
           </p>
           <p>
             Pharos is a public good, a resource. It&apos;s a mission-driven project made to elevate the understanding of

@@ -4,14 +4,14 @@ import { SITE_ORIGIN as SITE_URL } from "@shared/lib/runtime-origins";
 export const metadata: Metadata = {
   title: "Blacklist Tracker",
   description:
-    "Track issuer freezes, blocks, pauses, blacklist events, and token wipes across supported stablecoin contracts.",
+    "Track issuer freezes, unfreezes, blocks, pauses, denylist changes, and token wipes across supported stablecoin contracts and chains.",
   alternates: {
     canonical: "/blacklist/",
   },
   openGraph: {
     title: "Blacklist Tracker",
     description:
-      "Track issuer freezes, blocks, pauses, blacklist events, and token wipes across supported stablecoin contracts.",
+      "Track issuer freezes, unfreezes, blocks, pauses, denylist changes, and token wipes across supported stablecoin contracts and chains.",
     url: "/blacklist/",
     images: [{ url: `${SITE_URL}/og-blacklist.png`, width: 1200, height: 628 }],
   },

@@ -70,8 +70,8 @@ function BlacklistPageInner() {
         changelogPath: BLACKLIST_TRACKER_METHODOLOGY_CHANGELOG_PATH,
       }}
       leadParagraphs={[
-        "Who got frozen. When. Why it matters.",
-        "Centralized stablecoin issuers like Circle and Tether can freeze or destroy tokens at any address. This tracker documents every on-chain blacklist, unblacklist, and destroy event, giving you a transparent record of issuer intervention across Ethereum and Tron.",
+        "Issuer intervention, from freeze to wipe.",
+        "Circle, Tether, Paxos, and other centralized issuers can freeze, unblock, pause, or destroy balances when their contracts give them that control. This tracker records those on-chain actions across supported contracts and chains so you can see which addresses were affected, when it happened, and how much value was involved.",
       ]}
     >
       <QueryErrorNotice

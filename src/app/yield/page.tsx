@@ -1,4 +1,3 @@
-import { YIELD_BEARING_STABLECOINS } from "@shared/lib/tracked-stablecoin-utils";
 import { Skeleton } from "@/components/ui/skeleton";
 import { createClientFeaturePage } from "@/lib/client-feature-page";
 import { buildPageMetadata } from "@/lib/page-metadata";
@@ -10,8 +9,7 @@ import {
 import { safeJsonLd } from "@/lib/json-ld";
 import { buildFaqJsonLd } from "@/lib/faq";
 
-const yieldBearingCount = YIELD_BEARING_STABLECOINS.length;
-const desc = `Risk-adjusted yield rankings for ${yieldBearingCount} yield-bearing stablecoins plus curated lending opportunities. Compare APY, safety grades, freshness, the Pharos Yield Score, and peg-scoped yield universes including non-USD markets.`;
+const desc = "Risk-adjusted stablecoin yield rankings across native yield, lending venues, rate-derived sources, and curated opportunities. Compare APY, safety grades, freshness, benchmarks, and the Pharos Yield Score.";
 
 export const metadata = buildPageMetadata({
   title: "Stablecoin Yield Intelligence",
@@ -54,8 +52,8 @@ export default createClientFeaturePage({
       />
     ),
     leadParagraphs: [
-      `Risk-adjusted yield rankings for ${yieldBearingCount} yield-bearing stablecoins plus curated lending opportunities. Compare APY, safety grades, freshness, and the Pharos Yield Score (PYS).`,
-      "Use the peg scope controls to isolate non-USD yield markets as a single view or drill into specific peg targets such as EUR, CHF, SGD, MXN, and gold.",
+      "Risk-adjusted yield rankings across native yield, lending venues, rate-derived sources, and curated opportunities. Compare APY, safety grades, source freshness, benchmarks, and the Pharos Yield Score (PYS).",
+      "Use the peg scope controls to compare USD, non-USD, and commodity yield markets without mixing benchmark contexts.",
     ],
   },
 });
