@@ -1,7 +1,7 @@
 export const COVERAGE_FAQ_ITEMS = [
   {
     q: "What features does Pharos track for each stablecoin?",
-    a: "Pharos tracks nine core features per stablecoin: depeg monitoring with real-time price deviation alerts, DEX liquidity scoring across Curve, Uniswap, and other venues, reserve transparency views, modeled redemption backstop routes, yield intelligence across native yield and selected lending venues, configured issuance-chain mint/burn flow monitoring, blacklist event tracking for freeze-capable assets, dependency map visibility for collateral relationships, and safety grade report cards across four weighted base dimensions plus peg-stability gating.",
+    a: "Pharos tracks nine core features per stablecoin: depeg monitoring with real-time price deviation alerts, DEX liquidity scoring across Curve, Uniswap, and other venues, reserve transparency views, modeled redemption backstop routes, yield intelligence across native yield and selected lending venues, configured issuance-chain mint/burn flow monitoring, blacklist event tracking for freeze-capable assets, dependency map visibility for collateral relationships, and safety grade report cards across five weighted base dimensions plus peg-stability gating.",
   },
   {
     q: "Why do some stablecoins have incomplete coverage?",

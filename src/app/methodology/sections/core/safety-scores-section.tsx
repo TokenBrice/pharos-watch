@@ -25,8 +25,8 @@ export function SafetyScoresMethodologySection() {
           >
               <p>
                 Pharos synthesizes multiple data signals into a single transparent grade per stablecoin. The overall score
-                is computed in two steps: first, a weighted average of four base dimensions (exit liquidity, resilience,
-                decentralization, dependency risk), then a peg stability multiplier that penalizes coins with poor pegs
+                is computed in two steps: first, a weighted average of five base dimensions (exit liquidity, resilience,
+                decentralization, dependency risk, peg stability), then a peg stability multiplier that penalizes coins with poor pegs
                 while barely affecting well-pegged ones. The exit-liquidity dimension blends raw DEX liquidity with
                 redemption-backstop quality only when the route has usable current evidence. Reserve data is a separate
                 resilience input: live reserve sync can improve collateral quality only when the latest snapshot is fresh,

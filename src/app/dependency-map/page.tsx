@@ -22,7 +22,8 @@ export default createClientFeaturePage({
     title: "Dependency Map",
     statusBadge: { status: "experimental" },
     leadParagraphs: [
-      "Collateral dependencies between up to 50 dependency-linked stablecoins by market cap. Node size reflects market cap; lines show how one stablecoin relies on another as collateral. Drag nodes to explore.",
+      "See hidden systemic risk: the live graph of who backs whom.",
+      "Stablecoins that look safe in isolation can collapse when their collateral fails. This graph maps transitive collateral dependencies across the ecosystem. Drag nodes to trace exposure chains — then take the insight to the Safety Scores contagion simulator to model the cascade.",
     ],
   },
 });

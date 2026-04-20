@@ -52,8 +52,8 @@ export default createClientFeaturePage({
       />
     ),
     leadParagraphs: [
-      "Risk-adjusted yield rankings across native yield, lending venues, rate-derived sources, and curated opportunities. Compare APY, safety grades, source freshness, benchmarks, and the Pharos Yield Score (PYS).",
-      "Use the peg scope controls to compare USD, non-USD, and commodity yield markets without mixing benchmark contexts.",
+      "Yield ranked against safety and real-world benchmarks — not just raw APY.",
+      "The Pharos Yield Score (PYS) balances 30-day APY against safety grades, benchmark spread, and sustainability. A 15% APY on a D-grade stablecoin scores lower than 5% on an A-grade. Benchmarks include USD T-bill, EUR €STR, and CHF SARON rates so you know whether a yield premium is genuine or just risk compensation.",
     ],
   },
 });

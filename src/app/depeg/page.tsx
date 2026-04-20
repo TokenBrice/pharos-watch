@@ -57,7 +57,8 @@ export default createClientFeaturePage({
       />
     ),
     leadParagraphs: [
-      `Use this as the live incident board for peg stress across ${ACTIVE_STABLECOINS.length} stablecoins: active deviations, DEWS early warnings, heatmaps, and depeg history in one surface.`,
+      "A forward-looking incident board — not just price deviations, but early warning signals before the depeg happens.",
+      `DEWS scans 8 sub-signals every 30 minutes across ${ACTIVE_STABLECOINS.length} stablecoins — supply velocity, pool drift, liquidity erosion, price confidence, cross-source divergence, blacklist activity, mint/burn flow, and yield anomaly — to flag stress before it hits the price. When systemic risk rises, the radar sweeps faster.`,
     ],
   },
   beforeClient: (

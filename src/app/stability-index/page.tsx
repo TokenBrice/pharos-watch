@@ -49,8 +49,8 @@ export default createClientFeaturePage({
       changelogPath: PSI_METHODOLOGY_CHANGELOG_PATH,
     },
     leadParagraphs: [
-      "Read the market regime first, then drill into the component drivers and historical shock points that pushed the stablecoin market there.",
-      "PSI is a composite 0–100 market-health score built from peg deviation severity, depeg breadth, DEWS stress breadth, and 7-day market-cap trend. The six condition bands turn that composite into a usable regime read rather than a raw number.",
+      "A VIX for stablecoins: read the market regime before you trade.",
+      "PSI combines peg deviation severity, depeg breadth, DEWS stress breadth, and market-cap trend into a single 0–100 score. Mega-cap depegs are weighted disproportionately using log₂ amplifiers, and chronic zombie events depreciate over time so the index reflects real systemic risk, not noise.",
     ],
   },
   afterClient: <FaqSection items={FAQ_ITEMS} includeJsonLd />,
