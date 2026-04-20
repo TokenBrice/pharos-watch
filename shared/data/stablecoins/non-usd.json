@@ -266,7 +266,11 @@
     ],
     "custodyModel": "institutional-regulated",
     "reserves": [
-      { "name": "BRL cash at authorized Brazilian financial institution", "pct": 100, "risk": "low" }
+      {
+        "name": "BRL cash at authorized Brazilian financial institution",
+        "pct": 100,
+        "risk": "low"
+      }
     ],
     "liveReservesConfig": {
       "adapter": "single-asset",
@@ -880,7 +884,11 @@
     "deploymentModel": "native-multichain",
     "custodyModel": "institutional-regulated",
     "reserves": [
-      { "name": "Euro balances at licensed EU institutions", "pct": 100, "risk": "very-low" }
+      {
+        "name": "Euro balances at licensed EU institutions",
+        "pct": 100,
+        "risk": "very-low"
+      }
     ],
     "liveReservesConfig": {
       "adapter": "single-asset",
@@ -971,7 +979,11 @@
     ],
     "custodyModel": "institutional-regulated",
     "reserves": [
-      { "name": "SGD at Tier-1 banks (DBS, Standard Chartered)", "pct": 100, "risk": "very-low" }
+      {
+        "name": "SGD at Tier-1 banks (DBS, Standard Chartered)",
+        "pct": 100,
+        "risk": "very-low"
+      }
     ],
     "liveReservesConfig": {
       "adapter": "single-asset",
@@ -1050,7 +1062,11 @@
     ],
     "custodyModel": "institutional-regulated",
     "reserves": [
-      { "name": "JPY in FDIC-insured institutions or T-bills (\u22643 months)", "pct": 100, "risk": "very-low" }
+      {
+        "name": "JPY in FDIC-insured institutions or T-bills (≤3 months)",
+        "pct": 100,
+        "risk": "very-low"
+      }
     ],
     "liveReservesConfig": {
       "adapter": "single-asset",
@@ -1139,7 +1155,11 @@
     ],
     "custodyModel": "institutional-regulated",
     "reserves": [
-      { "name": "AUD cash & Treasury bills at ADIs", "pct": 100, "risk": "very-low" }
+      {
+        "name": "AUD cash & Treasury bills at ADIs",
+        "pct": 100,
+        "risk": "very-low"
+      }
     ],
     "liveReservesConfig": {
       "adapter": "single-asset",
@@ -1160,6 +1180,113 @@
       "params": {
         "label": "AUD bank deposits",
         "risk": "very-low"
+      }
+    }
+  },
+  {
+    "id": "audm-macropod",
+    "name": "Macropod",
+    "symbol": "AUDM",
+    "flags": {
+      "backing": "rwa-backed",
+      "pegCurrency": "AUD",
+      "governance": "centralized",
+      "yieldBearing": false,
+      "rwa": true,
+      "navToken": false
+    },
+    "collateral": "Australian dollar cash held in segregated AUDM Trust reserve accounts at regulated Australian ADIs, currently Westpac Banking Corporation and Australian Settlements Ltd trading as Banking Circle",
+    "pegMechanism": "Approved Macropod clients deposit AUD into the reserve to mint AUDM and return AUDM to Macropod for 1:1 AUD redemption by bank transfer, subject to onboarding, KYC/AML, sanctions, and compliance checks",
+    "llamaId": "334",
+    "detailProvider": "defillama",
+    "geckoId": "macropod",
+    "cmcSlug": "macropod",
+    "proofOfReserves": {
+      "type": "self-reported",
+      "url": "https://www.macropod.com/transparency/reserves",
+      "provider": "Macropod"
+    },
+    "links": [
+      {
+        "label": "Website",
+        "url": "https://www.macropod.com/product/audm"
+      },
+      {
+        "label": "Twitter",
+        "url": "https://x.com/Macropod_AU"
+      },
+      {
+        "label": "Docs",
+        "url": "https://docs.macropod.com/"
+      },
+      {
+        "label": "Proof of Reserve",
+        "url": "https://www.macropod.com/transparency/reserves"
+      },
+      {
+        "label": "Legal",
+        "url": "https://www.macropod.com/transparency/legal"
+      }
+    ],
+    "jurisdiction": {
+      "country": "Australia",
+      "regulator": "ASIC / AUSTRAC",
+      "license": "AFSL 566313; AUSTRAC DCE100887005-001"
+    },
+    "contracts": [
+      {
+        "chain": "ethereum",
+        "address": "0x081599e4936d12c46bd48913b2329115cd26cbdd",
+        "decimals": 18
+      },
+      {
+        "chain": "solana",
+        "address": "CiYXBwHPrdNkMtxR8YEWKv78K6bQjFoEWhPQrZqEmubi",
+        "decimals": 6
+      },
+      {
+        "chain": "redbelly",
+        "address": "0x081599e4936d12c46bd48913b2329115cd26cbdd",
+        "decimals": 18
+      }
+    ],
+    "canBeBlacklisted": true,
+    "chainTier": "ethereum",
+    "deploymentModel": "native-multichain",
+    "collateralQuality": "rwa",
+    "custodyModel": "institutional-regulated",
+    "governanceQuality": "regulated-entity",
+    "reserves": [
+      {
+        "name": "Westpac Banking Corporation AUD reserve account",
+        "pct": 91.96,
+        "risk": "very-low"
+      },
+      {
+        "name": "Australian Settlements Ltd / Banking Circle AUD reserve account",
+        "pct": 8.04,
+        "risk": "very-low"
+      }
+    ],
+    "liveReservesConfig": {
+      "adapter": "curated-validated",
+      "version": 1,
+      "semantics": "attestation-mix",
+      "breakerScope": "audm-macropod",
+      "display": {
+        "url": "https://www.macropod.com/transparency/reserves",
+        "label": "Macropod reserves"
+      },
+      "inputs": {
+        "primary": {
+          "kind": "onchain-evm",
+          "chain": "ethereum",
+          "rpcMode": "public-rpc"
+        }
+      },
+      "params": {
+        "rpcUrl": "https://ethereum-rpc.publicnode.com",
+        "fallbackRpcUrl": "https://eth.llamarpc.com"
       }
     }
   },
@@ -1217,7 +1344,11 @@
     ],
     "custodyModel": "institutional-regulated",
     "reserves": [
-      { "name": "JPY deposits & Japanese government bonds", "pct": 100, "risk": "very-low" }
+      {
+        "name": "JPY deposits & Japanese government bonds",
+        "pct": 100,
+        "risk": "very-low"
+      }
     ],
     "liveReservesConfig": {
       "adapter": "single-asset",
@@ -2243,7 +2374,11 @@
     ],
     "custodyModel": "institutional-regulated",
     "reserves": [
-      { "name": "CHF bank deposits (CRR credit institutions, EU)", "pct": 100, "risk": "very-low" }
+      {
+        "name": "CHF bank deposits (CRR credit institutions, EU)",
+        "pct": 100,
+        "risk": "very-low"
+      }
     ],
     "liveReservesConfig": {
       "adapter": "single-asset",
@@ -2332,7 +2467,11 @@
     ],
     "custodyModel": "institutional-regulated",
     "reserves": [
-      { "name": "CHF 1:1 reserves (Areva audited)", "pct": 100, "risk": "very-low" }
+      {
+        "name": "CHF 1:1 reserves (Areva audited)",
+        "pct": 100,
+        "risk": "very-low"
+      }
     ],
     "liveReservesConfig": {
       "adapter": "single-asset",
@@ -2406,7 +2545,11 @@
     ],
     "custodyModel": "institutional-regulated",
     "reserves": [
-      { "name": "GBP deposits, Switzerland/Liechtenstein (Areva audited)", "pct": 100, "risk": "very-low" }
+      {
+        "name": "GBP deposits, Switzerland/Liechtenstein (Areva audited)",
+        "pct": 100,
+        "risk": "very-low"
+      }
     ],
     "liveReservesConfig": {
       "adapter": "single-asset",
@@ -2495,7 +2638,11 @@
     ],
     "custodyModel": "institutional-regulated",
     "reserves": [
-      { "name": "GBP & UK gilts, custodied by Enumis", "pct": 100, "risk": "very-low" }
+      {
+        "name": "GBP & UK gilts, custodied by Enumis",
+        "pct": 100,
+        "risk": "very-low"
+      }
     ],
     "liveReservesConfig": {
       "adapter": "single-asset",
@@ -2582,7 +2729,11 @@
     ],
     "custodyModel": "institutional-regulated",
     "reserves": [
-      { "name": "ZAR treasury at Old Mutual Wealth (Kempen audited)", "pct": 100, "risk": "low" }
+      {
+        "name": "ZAR treasury at Old Mutual Wealth (Kempen audited)",
+        "pct": 100,
+        "risk": "low"
+      }
     ],
     "liveReservesConfig": {
       "adapter": "single-asset",
@@ -2739,7 +2890,11 @@
     ],
     "custodyModel": "institutional-regulated",
     "reserves": [
-      { "name": "CAD & short-term securities in segregated trust", "pct": 100, "risk": "very-low" }
+      {
+        "name": "CAD & short-term securities in segregated trust",
+        "pct": 100,
+        "risk": "very-low"
+      }
     ],
     "liveReservesConfig": {
       "adapter": "single-asset",
@@ -2967,18 +3122,43 @@
       "provider": "Avenia"
     },
     "links": [
-      { "label": "Website", "url": "https://avenia.io/brla" },
-      { "label": "Twitter", "url": "https://x.com/BRLAdigital" },
-      { "label": "GitHub", "url": "https://github.com/Ada-Capital" }
+      {
+        "label": "Website",
+        "url": "https://avenia.io/brla"
+      },
+      {
+        "label": "Twitter",
+        "url": "https://x.com/BRLAdigital"
+      },
+      {
+        "label": "GitHub",
+        "url": "https://github.com/Ada-Capital"
+      }
     ],
     "jurisdiction": {
       "country": "Brazil"
     },
     "contracts": [
-      { "chain": "polygon", "address": "0xe6a537a407488807f0bbeb0038b79004f19dddfb", "decimals": 18 },
-      { "chain": "gnosis", "address": "0xfecb3f7c54e2caae9dc6ac9060a822d47e053760", "decimals": 18 },
-      { "chain": "celo", "address": "0xfecb3f7c54e2caae9dc6ac9060a822d47e053760", "decimals": 18 },
-      { "chain": "moonbeam", "address": "0xfeb25f3fddad13f82c4d6dbc1481516f62236429", "decimals": 18 }
+      {
+        "chain": "polygon",
+        "address": "0xe6a537a407488807f0bbeb0038b79004f19dddfb",
+        "decimals": 18
+      },
+      {
+        "chain": "gnosis",
+        "address": "0xfecb3f7c54e2caae9dc6ac9060a822d47e053760",
+        "decimals": 18
+      },
+      {
+        "chain": "celo",
+        "address": "0xfecb3f7c54e2caae9dc6ac9060a822d47e053760",
+        "decimals": 18
+      },
+      {
+        "chain": "moonbeam",
+        "address": "0xfeb25f3fddad13f82c4d6dbc1481516f62236429",
+        "decimals": 18
+      }
     ],
     "canBeBlacklisted": true,
     "deploymentModel": "native-multichain",
@@ -2986,8 +3166,111 @@
     "collateralQuality": "rwa",
     "governanceQuality": "single-entity",
     "reserves": [
-      { "name": "Brazilian government bonds and BRL cash in regulated custody", "pct": 100, "risk": "low" }
+      {
+        "name": "Brazilian government bonds and BRL cash in regulated custody",
+        "pct": 100,
+        "risk": "low"
+      }
     ]
+  },
+  {
+    "id": "brlv-crown",
+    "name": "Crown BRLV",
+    "symbol": "BRLV",
+    "flags": {
+      "backing": "rwa-backed",
+      "pegCurrency": "BRL",
+      "governance": "centralized",
+      "yieldBearing": false,
+      "rwa": false,
+      "navToken": false
+    },
+    "collateral": "Brazilian federal government bonds, Tesouro Selic-linked ETFs, and de minimis cash/equivalents held in legally segregated, bankruptcy-remote reserve custody through Crown's guarantor/security-agent structure",
+    "pegMechanism": "KYC-gated primary-market mint and redemption at 1 BRL per BRLV through Crown; reserves are pledged to BRLV holders through a Brazilian security-agent and fiduciary-assignment structure, while secondary-market price can deviate",
+    "detailProvider": "coingecko",
+    "geckoId": "crown-brlv",
+    "proofOfReserves": {
+      "type": "independent-audit",
+      "url": "https://crown-brlv.com/en/transparency/",
+      "provider": "Fact Finance"
+    },
+    "links": [
+      {
+        "label": "Website",
+        "url": "https://www.crown-brlv.com/en/"
+      },
+      {
+        "label": "Twitter",
+        "url": "https://x.com/CrownBRLV"
+      },
+      {
+        "label": "Docs",
+        "url": "https://crown-2b36dce9.mintlify.app/whitepaper"
+      },
+      {
+        "label": "Proof of Reserve",
+        "url": "https://crown-brlv.com/en/transparency/"
+      }
+    ],
+    "jurisdiction": {
+      "country": "Brazil",
+      "regulator": "Banco Central do Brasil"
+    },
+    "contracts": [
+      {
+        "chain": "base",
+        "address": "0xd2047ebdb205ee6862b69ae9fb3501652cc97d36",
+        "decimals": 18
+      },
+      {
+        "chain": "ethereum",
+        "address": "0xd7ca0e2c36d647446b782d1b72308e598373e2f5",
+        "decimals": 18
+      }
+    ],
+    "canBeBlacklisted": true,
+    "chainTier": "stage1-l2",
+    "deploymentModel": "native-multichain",
+    "collateralQuality": "rwa",
+    "custodyModel": "institutional-regulated",
+    "governanceQuality": "single-entity",
+    "reserves": [
+      {
+        "name": "Brazilian Treasury bonds",
+        "pct": 99.9597,
+        "risk": "low"
+      },
+      {
+        "name": "ETFs linked to Tesouro Selic",
+        "pct": 0.0371,
+        "risk": "low"
+      },
+      {
+        "name": "Cash and equivalents",
+        "pct": 0.0032,
+        "risk": "low"
+      }
+    ],
+    "liveReservesConfig": {
+      "adapter": "curated-validated",
+      "version": 1,
+      "semantics": "attestation-mix",
+      "breakerScope": "brlv-crown",
+      "display": {
+        "url": "https://crown-brlv.com/en/transparency/",
+        "label": "Crown BRLV Transparency"
+      },
+      "inputs": {
+        "primary": {
+          "kind": "onchain-evm",
+          "chain": "base",
+          "rpcMode": "public-rpc"
+        }
+      },
+      "params": {
+        "rpcUrl": "https://mainnet.base.org"
+      }
+    }
   },
   {
     "id": "silk-shade-protocol",
@@ -3007,13 +3290,29 @@
     "detailProvider": "defillama",
     "geckoId": "silk-bcec1136-561c-4706-a42c-8b67d0d7f7d2",
     "links": [
-      { "label": "Website", "url": "https://app.shadeprotocol.io" },
-      { "label": "Twitter", "url": "https://x.com/Shade_Protocol" },
-      { "label": "Docs", "url": "https://docs.shadeprotocol.io/shade-protocol/" },
-      { "label": "GitHub", "url": "https://github.com/securesecrets/shade" }
+      {
+        "label": "Website",
+        "url": "https://app.shadeprotocol.io"
+      },
+      {
+        "label": "Twitter",
+        "url": "https://x.com/Shade_Protocol"
+      },
+      {
+        "label": "Docs",
+        "url": "https://docs.shadeprotocol.io/shade-protocol/"
+      },
+      {
+        "label": "GitHub",
+        "url": "https://github.com/securesecrets/shade"
+      }
     ],
     "contracts": [
-      { "chain": "secret", "address": "secret1fl449muk5yq8dlad7a22nje4p5d2pnsgymhjfd", "decimals": 6 }
+      {
+        "chain": "secret",
+        "address": "secret1fl449muk5yq8dlad7a22nje4p5d2pnsgymhjfd",
+        "decimals": 6
+      }
     ],
     "canBeBlacklisted": false,
     "chainTier": "unproven",
@@ -3022,9 +3321,22 @@
     "collateralQuality": "alt-lst-bridged-or-mixed",
     "governanceQuality": "dao-governance",
     "reserves": [
-      { "name": "Overcollateralized vault collateral (ATOM, SCRT, stablecoins)", "pct": 70, "risk": "medium" },
-      { "name": "Stablecoin redemption pools (USDC, other stables)", "pct": 20, "risk": "low", "coinId": "usdc-circle" },
-      { "name": "SHD governance token (bounded minting backing)", "pct": 10, "risk": "high" }
+      {
+        "name": "Overcollateralized vault collateral (ATOM, SCRT, stablecoins)",
+        "pct": 70,
+        "risk": "medium"
+      },
+      {
+        "name": "Stablecoin redemption pools (USDC, other stables)",
+        "pct": 20,
+        "risk": "low",
+        "coinId": "usdc-circle"
+      },
+      {
+        "name": "SHD governance token (bounded minting backing)",
+        "pct": 10,
+        "risk": "high"
+      }
     ]
   },
   {
@@ -3044,22 +3356,63 @@
     "detailProvider": "coingecko",
     "geckoId": "idrx",
     "links": [
-      { "label": "Website", "url": "https://idrx.co/" },
-      { "label": "Docs", "url": "https://docs.idrx.co/" },
-      { "label": "Twitter", "url": "https://x.com/idrx_co" }
+      {
+        "label": "Website",
+        "url": "https://idrx.co/"
+      },
+      {
+        "label": "Docs",
+        "url": "https://docs.idrx.co/"
+      },
+      {
+        "label": "Twitter",
+        "url": "https://x.com/idrx_co"
+      }
     ],
     "jurisdiction": {
       "country": "Indonesia"
     },
     "contracts": [
-      { "chain": "polygon", "address": "0x649a2da7b28e0d54c13d5eff95d3a660652742cc", "decimals": 2 },
-      { "chain": "base", "address": "0x18bc5bcc660cf2b9ce3cd51a404afe1a0cbd3c22", "decimals": 2 },
-      { "chain": "bsc", "address": "0x649a2da7b28e0d54c13d5eff95d3a660652742cc", "decimals": 2 },
-      { "chain": "klaytn", "address": "0x18bc5bcc660cf2b9ce3cd51a404afe1a0cbd3c22", "decimals": 2 },
-      { "chain": "gnosis", "address": "0x18bc5bcc660cf2b9ce3cd51a404afe1a0cbd3c22", "decimals": 2 },
-      { "chain": "etherlink", "address": "0x18bc5bcc660cf2b9ce3cd51a404afe1a0cbd3c22", "decimals": 2 },
-      { "chain": "worldchain", "address": "0x18bc5bcc660cf2b9ce3cd51a404afe1a0cbd3c22", "decimals": 2 },
-      { "chain": "solana", "address": "idrxZcP8xiKkYk6XGD4uz1dxEYCWSgKDHqgjsBbwDur", "decimals": 2 }
+      {
+        "chain": "polygon",
+        "address": "0x649a2da7b28e0d54c13d5eff95d3a660652742cc",
+        "decimals": 2
+      },
+      {
+        "chain": "base",
+        "address": "0x18bc5bcc660cf2b9ce3cd51a404afe1a0cbd3c22",
+        "decimals": 2
+      },
+      {
+        "chain": "bsc",
+        "address": "0x649a2da7b28e0d54c13d5eff95d3a660652742cc",
+        "decimals": 2
+      },
+      {
+        "chain": "klaytn",
+        "address": "0x18bc5bcc660cf2b9ce3cd51a404afe1a0cbd3c22",
+        "decimals": 2
+      },
+      {
+        "chain": "gnosis",
+        "address": "0x18bc5bcc660cf2b9ce3cd51a404afe1a0cbd3c22",
+        "decimals": 2
+      },
+      {
+        "chain": "etherlink",
+        "address": "0x18bc5bcc660cf2b9ce3cd51a404afe1a0cbd3c22",
+        "decimals": 2
+      },
+      {
+        "chain": "worldchain",
+        "address": "0x18bc5bcc660cf2b9ce3cd51a404afe1a0cbd3c22",
+        "decimals": 2
+      },
+      {
+        "chain": "solana",
+        "address": "idrxZcP8xiKkYk6XGD4uz1dxEYCWSgKDHqgjsBbwDur",
+        "decimals": 2
+      }
     ],
     "canBeBlacklisted": true,
     "deploymentModel": "native-multichain",
@@ -3067,7 +3420,11 @@
     "collateralQuality": "rwa",
     "governanceQuality": "single-entity",
     "reserves": [
-      { "name": "IDR fiat reserves and government bonds", "pct": 100, "risk": "low" }
+      {
+        "name": "IDR fiat reserves and government bonds",
+        "pct": 100,
+        "risk": "low"
+      }
     ]
   },
   {
@@ -3091,20 +3448,48 @@
       "url": "https://mxnb.mx/transparency"
     },
     "links": [
-      { "label": "Website", "url": "https://mxnb.mx/" },
-      { "label": "Twitter", "url": "https://x.com/mxnb_token" },
-      { "label": "Docs", "url": "https://docs.bitso.com/juno" },
-      { "label": "Transparency", "url": "https://mxnb.mx/transparency" }
+      {
+        "label": "Website",
+        "url": "https://mxnb.mx/"
+      },
+      {
+        "label": "Twitter",
+        "url": "https://x.com/mxnb_token"
+      },
+      {
+        "label": "Docs",
+        "url": "https://docs.bitso.com/juno"
+      },
+      {
+        "label": "Transparency",
+        "url": "https://mxnb.mx/transparency"
+      }
     ],
     "jurisdiction": {
       "country": "Mexico",
       "regulator": "CNBV"
     },
     "contracts": [
-      { "chain": "ethereum", "address": "0xf197ffc28c23e0309b5559e7a166f2c6164c80aa", "decimals": 6 },
-      { "chain": "polygon", "address": "0xf197ffc28c23e0309b5559e7a166f2c6164c80aa", "decimals": 6 },
-      { "chain": "arbitrum", "address": "0xf197ffc28c23e0309b5559e7a166f2c6164c80aa", "decimals": 6 },
-      { "chain": "avalanche", "address": "0xf197ffc28c23e0309b5559e7a166f2c6164c80aa", "decimals": 6 }
+      {
+        "chain": "ethereum",
+        "address": "0xf197ffc28c23e0309b5559e7a166f2c6164c80aa",
+        "decimals": 6
+      },
+      {
+        "chain": "polygon",
+        "address": "0xf197ffc28c23e0309b5559e7a166f2c6164c80aa",
+        "decimals": 6
+      },
+      {
+        "chain": "arbitrum",
+        "address": "0xf197ffc28c23e0309b5559e7a166f2c6164c80aa",
+        "decimals": 6
+      },
+      {
+        "chain": "avalanche",
+        "address": "0xf197ffc28c23e0309b5559e7a166f2c6164c80aa",
+        "decimals": 6
+      }
     ],
     "canBeBlacklisted": true,
     "deploymentModel": "native-multichain",
@@ -3112,7 +3497,11 @@
     "collateralQuality": "rwa",
     "governanceQuality": "regulated-entity",
     "reserves": [
-      { "name": "MXN fiat reserves and cash-equivalents at Mexican financial institutions", "pct": 100, "risk": "low" }
+      {
+        "name": "MXN fiat reserves and cash-equivalents at Mexican financial institutions",
+        "pct": 100,
+        "risk": "low"
+      }
     ]
   },
   {
@@ -3133,21 +3522,43 @@
     "detailProvider": "defillama",
     "geckoId": "convertible-jpy-token",
     "links": [
-      { "label": "Website", "url": "https://app.yamato.fi/" },
-      { "label": "Twitter", "url": "https://x.com/YamatoProtocol" },
-      { "label": "Docs", "url": "https://docs.yamato.fi/v/en" },
-      { "label": "GitHub", "url": "https://github.com/DeFiGeek-Community/yamato" }
+      {
+        "label": "Website",
+        "url": "https://app.yamato.fi/"
+      },
+      {
+        "label": "Twitter",
+        "url": "https://x.com/YamatoProtocol"
+      },
+      {
+        "label": "Docs",
+        "url": "https://docs.yamato.fi/v/en"
+      },
+      {
+        "label": "GitHub",
+        "url": "https://github.com/DeFiGeek-Community/yamato"
+      }
     ],
     "contracts": [
-      { "chain": "ethereum", "address": "0x1cfa5641c01406ab8ac350ded7d735ec41298372", "decimals": 18 }
+      {
+        "chain": "ethereum",
+        "address": "0x1cfa5641c01406ab8ac350ded7d735ec41298372",
+        "decimals": 18
+      }
     ],
     "canBeBlacklisted": false,
     "deploymentModel": "single-chain",
     "custodyModel": "onchain",
     "governanceQuality": "dao-governance",
-    "infrastructures": ["liquity-v1"],
+    "infrastructures": [
+      "liquity-v1"
+    ],
     "reserves": [
-      { "name": "ETH", "pct": 100, "risk": "very-low" }
+      {
+        "name": "ETH",
+        "pct": 100,
+        "risk": "very-low"
+      }
     ]
   }
 ]

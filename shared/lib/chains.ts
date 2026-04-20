@@ -33,6 +33,7 @@ export const CHAIN_META: Record<string, ChainMeta> = {
   megaeth:   { name: "MegaETH",   explorerUrl: "https://megaexplorer.xyz",          evmChainId: 6342,  type: "evm",  logoPath: "/chains/megaeth.png", darkInvert: true },
   monad:     { name: "Monad",     explorerUrl: "https://explorer.monad.xyz",       evmChainId: 143,   type: "evm",  logoPath: "/chains/monad.png"     },
   xdc:       { name: "XDC Network",explorerUrl: "https://xdcscan.io",             evmChainId: 50,    type: "evm",  logoPath: "/chains/xdc.png"       },
+  redbelly:  { name: "Redbelly Network",explorerUrl: "https://redbelly.routescan.io", evmChainId: 151, type: "evm", logoPath: "/chains/redbelly.svg" },
   mantle:    { name: "Mantle",    explorerUrl: "https://mantlescan.xyz",           evmChainId: 5000,  type: "evm",  logoPath: "/chains/mantle.png"    },
   linea:     { name: "Linea",    explorerUrl: "https://lineascan.build",           evmChainId: 59144, type: "evm",  logoPath: "/chains/linea.png"     },
   scroll:    { name: "Scroll",   explorerUrl: "https://scrollscan.com",            evmChainId: 534352,type: "evm",  logoPath: "/chains/scroll.png"    },
@@ -117,6 +118,7 @@ const CHAIN_ALIASES: Record<string, string> = {
   "Bsquared": "bsquared",
   "Kaia": "klaytn",  // Klaytn rebranded to Kaia
   "Secret": "secret",
+  "Redbelly": "redbelly",
 };
 
 /**

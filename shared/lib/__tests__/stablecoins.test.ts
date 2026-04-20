@@ -49,11 +49,11 @@ describe("tracked stablecoin metadata", () => {
     const canonicalOrder = parseCanonicalOrderAsset(canonicalOrderAsset, "canonical-order");
 
     expect(usdMajor).toHaveLength(29);
-    expect(usdMinor).toHaveLength(104);
-    expect(nonUsd).toHaveLength(38);
+    expect(usdMinor).toHaveLength(108);
+    expect(nonUsd).toHaveLength(40);
     expect(commodity).toHaveLength(9);
     expect(preLaunch).toHaveLength(11);
-    expect(canonicalOrder).toHaveLength(191);
+    expect(canonicalOrder).toHaveLength(197);
     expect(usdMajor.length + usdMinor.length + nonUsd.length + commodity.length + preLaunch.length).toBe(canonicalOrder.length);
     expect(parseDeadStablecoinAssets(deadStablecoinAsset, "dead-stablecoins")).toHaveLength(88);
   });
@@ -84,8 +84,8 @@ describe("tracked stablecoin metadata", () => {
   });
 
   it("keeps active and pre-launch partitions unchanged after the JSON migration", () => {
-    expect(TRACKED_STABLECOINS).toHaveLength(191);
-    expect(ACTIVE_STABLECOINS).toHaveLength(180);
+    expect(TRACKED_STABLECOINS).toHaveLength(197);
+    expect(ACTIVE_STABLECOINS).toHaveLength(186);
     expect(PRE_LAUNCH_STABLECOINS.map((coin) => coin.id)).toEqual([
       "usdpt-western-union",
       "roughrider-bnd",
@@ -283,15 +283,18 @@ describe("tracked stablecoin metadata", () => {
           return [`${coin.id}:primary:${primary.kind}`];
         }
 
+        const expectedChain = primary.kind === "onchain-solana"
+          ? "solana"
+          : primary.chain;
         const hasMatchingContract = coin.contracts?.some(
-          (contract) => contract.chain === (primary.kind === "onchain-solana" ? "solana" : primary.chain)
+          (contract) => contract.chain === expectedChain
             && (
               primary.kind === "onchain-solana"
                 ? contract.address.length > 0
                 : contract.address.startsWith("0x")
             ),
         ) ?? false;
-        const contractKey = primary.kind === "onchain-solana" ? "solana" : primary.chain;
+        const contractKey = expectedChain;
         return hasMatchingContract ? [] : [`${coin.id}:contract:${contractKey}`];
       });
 

@@ -27,10 +27,10 @@ export const entry: ChangelogEntry = {
       href: "/methodology/mint-burn-flow-changelog/",
     },
     {
-      label: "Redemption backstops v3.98",
+      label: "Redemption backstops v3.99",
       tag: "coverage",
       description:
-        "14+ new issuer configs (BRLA, USDAT, BUCK, USDH, Silk, wM, ftUSD, USDz, USDSC, USDM, dEURO, CJPY, and more), capacity clamping to supply, fee-score breakpoints, and documented fail-closed fallbacks for falcon/frxusd.",
+        "Adds the flat/RWA issuer batch (USDon, USDsui, BRLV, USDGLO, AUDM, Alloy aUSDT) on top of the prior route expansion, capacity clamping to supply, fee-score breakpoints, and documented fail-closed fallbacks for falcon/frxusd.",
       href: "/methodology/",
     },
     {

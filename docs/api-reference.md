@@ -1687,14 +1687,14 @@ Rows written by the current worker are grouped by a completed snapshot run manif
       "feeModelKind": "undisclosed-reviewed",
       "modelConfidence": "low",
       "updatedAt": 1773350400,
-      "methodologyVersion": "3.98"
+      "methodologyVersion": "3.99"
     }
   },
   "methodology": {
-    "version": "3.98",
-    "versionLabel": "v3.98",
-    "currentVersion": "3.98",
-    "currentVersionLabel": "v3.98",
+    "version": "3.99",
+    "versionLabel": "v3.99",
+    "currentVersion": "3.99",
+    "currentVersionLabel": "v3.99",
     "changelogPath": "/methodology/#safety-scores-methodology",
     "asOf": 1773350400,
     "isCurrent": true,

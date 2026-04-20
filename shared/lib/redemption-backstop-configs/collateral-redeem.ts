@@ -104,6 +104,25 @@ export const COLLATERAL_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackst
     outputAssetType: "mixed-collateral",
     costModel: documentedVariableFee(LIQUITY_STYLE_REDEMPTION_FEE, "formula"),
   },
+  "ausdt-tether-alloy": {
+    ...collateralRedeemBase,
+    ...documentedBoundSupplyFull("2026-04-20"),
+    accessModel: "whitelisted-onchain",
+    outputAssetType: "bluechip-collateral",
+    costModel: fixedFee(
+      25,
+      "Alloy CMPVault MINT_OPENING_RETURN_FEE() returns 0xfa, which is 25 bps on the contract's 1e5 fee scale; docs identify this parameter as the return fee",
+    ),
+    docs: [
+      sourceRef("Alloy vault docs", "https://docs.alloy.tether.to/alloy-by-tether/alloy-by-tether-vaults", ["route", "capacity"]),
+      sourceRef("Alloy aUSDT mint docs", "https://docs.alloy.tether.to/alloy-by-tether/alloy-by-tether-vaults/ausdmnt", ["route", "fees"]),
+      sourceRef("Alloy Ethereum deployments", "https://dev.alloy.tether.to/deployments/ethereum-mainnet", ["capacity"]),
+    ],
+    notes: [
+      "A holder needs Alloy verification and usable CMP collateral access to exercise the onchain return path; route scoring reflects whitelisted collateral redemption rather than public fiat redemption",
+      "Live reserve sync reads the current XAUT vault balance and aUSDT total supply, but current redemption capacity is still modeled as documented eventual system redeemability until Alloy exposes per-account/current redeemable-capacity telemetry",
+    ],
+  },
   "ebusd-ebisu": {
     ...collateralRedeemBase,
     ...reviewedDirectRedemptionSupplyFull,

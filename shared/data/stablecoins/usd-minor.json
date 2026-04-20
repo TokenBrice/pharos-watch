@@ -772,7 +772,9 @@
     "chainTier": "unproven",
     "deploymentModel": "third-party-bridge",
     "collateralQuality": "alt-lst-bridged-or-mixed",
-    "infrastructures": ["liquity-v1"],
+    "infrastructures": [
+      "liquity-v1"
+    ],
     "reserves": [
       {
         "name": "BTC (overcollateralized CDP)",
@@ -2362,6 +2364,105 @@
     }
   },
   {
+    "id": "usdon-ondo",
+    "name": "Ondo U.S. Dollar Token",
+    "symbol": "USDon",
+    "flags": {
+      "backing": "rwa-backed",
+      "pegCurrency": "USD",
+      "governance": "centralized",
+      "yieldBearing": false,
+      "rwa": true,
+      "navToken": false
+    },
+    "collateral": "U.S. dollar cash or cash equivalents held in Ondo Global Markets brokerage accounts at regulated U.S. custodial broker-dealers",
+    "pegMechanism": "USDon is used as the native settlement stablecoin for Ondo Global Markets; USDC can be swapped 1:1 into USDon for purchases, and tokenized-asset redemptions can settle to USDon or to USDC when swapper liquidity is available",
+    "detailProvider": "coingecko",
+    "geckoId": "ondo-u-s-dollar-token",
+    "cmcSlug": "us-dollar-tokenized-currency-ondo",
+    "proofOfReserves": {
+      "type": "independent-audit",
+      "url": "https://docs.ondo.finance/ondo-global-markets/trust-and-transparency",
+      "provider": "Ankura Trust Company daily verification"
+    },
+    "links": [
+      {
+        "label": "Website",
+        "url": "https://app.ondo.finance/"
+      },
+      {
+        "label": "Twitter",
+        "url": "https://x.com/ondofinance"
+      },
+      {
+        "label": "Docs",
+        "url": "https://docs.ondo.finance/ondo-global-markets/available-assets"
+      },
+      {
+        "label": "Contracts",
+        "url": "https://docs.ondo.finance/addresses"
+      },
+      {
+        "label": "Proof of Reserve",
+        "url": "https://docs.ondo.finance/ondo-global-markets/trust-and-transparency"
+      }
+    ],
+    "jurisdiction": {
+      "country": "British Virgin Islands",
+      "license": "Ondo Global Markets SPV; Regulation S restrictions"
+    },
+    "contracts": [
+      {
+        "chain": "ethereum",
+        "address": "0xace8e719899f6e91831b18ae746c9a965c2119f1",
+        "decimals": 18
+      },
+      {
+        "chain": "bsc",
+        "address": "0x1f8955e640cbd9abc3c3bb408c9e2e1f5f20dfe6",
+        "decimals": 18
+      },
+      {
+        "chain": "solana",
+        "address": "ZPFtoCe7WWqG4N3ZFRccS8T9SMBeHsd1Vmgv2i7ondo",
+        "decimals": 9
+      }
+    ],
+    "canBeBlacklisted": true,
+    "deploymentModel": "native-multichain",
+    "collateralQuality": "rwa",
+    "custodyModel": "institutional-regulated",
+    "governanceQuality": "single-entity",
+    "reserves": [
+      {
+        "name": "U.S. dollar cash and cash equivalents in Global Markets brokerage accounts",
+        "pct": 100,
+        "risk": "very-low"
+      }
+    ],
+    "liveReservesConfig": {
+      "adapter": "curated-validated",
+      "version": 1,
+      "semantics": "attestation-mix",
+      "breakerScope": "usdon-ondo",
+      "display": {
+        "url": "https://docs.ondo.finance/ondo-global-markets/trust-and-transparency",
+        "label": "Ondo Global Markets"
+      },
+      "inputs": {
+        "primary": {
+          "kind": "onchain-evm",
+          "chain": "ethereum",
+          "rpcMode": "public-rpc"
+        }
+      },
+      "params": {
+        "rpcUrl": "https://ethereum-rpc.publicnode.com",
+        "fallbackRpcUrl": "https://eth.llamarpc.com"
+      }
+    }
+  },
+  {
     "id": "cgusd-cygnus-finance",
     "name": "Cygnus Finance Global USD",
     "symbol": "cgUSD",
@@ -2802,6 +2903,72 @@
     }
   },
   {
+    "id": "usdsui-sui",
+    "name": "Sui Dollar",
+    "symbol": "USDsui",
+    "flags": {
+      "backing": "rwa-backed",
+      "pegCurrency": "USD",
+      "governance": "centralized",
+      "yieldBearing": false,
+      "rwa": false,
+      "navToken": false
+    },
+    "collateral": "Bridge Open Issuance USD reserves backed at least 1:1 by equivalent fiat value, including short-dated U.S. Treasuries, overnight Treasury repos, government money-market funds, and cash in segregated bankruptcy-remote accounts",
+    "pegMechanism": "Bridge Open Issuance mint and burn rail: Bridge mints USDsui when fiat or supported crypto/stablecoin deposits are allocated to reserves, and burns USDsui on redemption before releasing equivalent fiat value or supported stablecoin output",
+    "llamaId": "373",
+    "detailProvider": "defillama",
+    "geckoId": "usdsui",
+    "pythFeedId": "0xd510fcdb3a63f35d3bb118d5db3afc5815a3f13bc55d48abb893b63f0315902a",
+    "links": [
+      {
+        "label": "Sui Launch",
+        "url": "https://blog.sui.io/sui-dollar-launch-bridge/"
+      },
+      {
+        "label": "Bridge",
+        "url": "https://www.bridge.xyz/"
+      },
+      {
+        "label": "Bridge Issuance Docs",
+        "url": "https://apidocs.bridge.xyz/platform/issuance/overview"
+      },
+      {
+        "label": "Reserve Docs",
+        "url": "https://apidocs.bridge.xyz/platform/issuance/reserve-management"
+      },
+      {
+        "label": "Twitter",
+        "url": "https://x.com/SuiNetwork"
+      }
+    ],
+    "jurisdiction": {
+      "country": "United States",
+      "regulator": "FinCEN / state MTL authorities",
+      "license": "Money Services Business (NMLS #2450917)"
+    },
+    "contracts": [
+      {
+        "chain": "sui",
+        "address": "0x44f838219cf67b058f3b37907b655f226153c18e33dfcd0da559a844fea9b1c1::usdsui::USDSUI",
+        "decimals": 6
+      }
+    ],
+    "canBeBlacklisted": true,
+    "chainTier": "established-alt-l1",
+    "deploymentModel": "single-chain",
+    "collateralQuality": "rwa",
+    "custodyModel": "institutional-regulated",
+    "governanceQuality": "regulated-entity",
+    "reserves": [
+      {
+        "name": "Bridge USD reserves (short-dated Treasuries, Treasury repos, government MMFs, and cash)",
+        "pct": 100,
+        "risk": "very-low"
+      }
+    ]
+  },
+  {
     "id": "usdx-hex-trust",
     "name": "Hex Trust USDX",
     "symbol": "USDX",
@@ -2971,6 +3138,117 @@
     }
   },
   {
+    "id": "ausdt-tether-alloy",
+    "name": "Alloy Tether",
+    "symbol": "aUSD₮",
+    "flags": {
+      "backing": "rwa-backed",
+      "pegCurrency": "USD",
+      "governance": "centralized",
+      "yieldBearing": false,
+      "rwa": true,
+      "navToken": false
+    },
+    "collateral": "Overcollateralized Tether Gold (XAUT) deposited into the Alloy by Tether Ethereum vault; XAUT represents physical gold stored in Swiss vaults",
+    "pegMechanism": "KYC-verified, whitelisted users mint aUSDT by depositing Ethereum XAUT into Alloy vaults, with positions limited by a 75% maximum mint-to-value ratio. Users return aUSDT to withdraw XAUT collateral, and whitelisted liquidators can repay aUSDT against undercollateralized positions.",
+    "detailProvider": "coingecko",
+    "geckoId": "alloy-tether",
+    "proofOfReserves": {
+      "type": "real-time",
+      "url": "https://docs.alloy.tether.to/alloy-by-tether/alloy-by-tether-vaults",
+      "provider": "Alloy by Tether Ethereum Vault"
+    },
+    "links": [
+      {
+        "label": "Website",
+        "url": "https://alloy.tether.to/en/"
+      },
+      {
+        "label": "Twitter",
+        "url": "https://x.com/Alloy_tether"
+      },
+      {
+        "label": "Docs",
+        "url": "https://docs.alloy.tether.to/"
+      },
+      {
+        "label": "App",
+        "url": "https://alloy.tether.to/en/app/"
+      },
+      {
+        "label": "Contracts",
+        "url": "https://dev.alloy.tether.to/deployments/ethereum-mainnet"
+      },
+      {
+        "label": "CNAD Registration",
+        "url": "https://cnad.gob.sv/first-registered-stablecoin-issued-and-regulated-in-el-salvador/"
+      }
+    ],
+    "jurisdiction": {
+      "country": "El Salvador",
+      "regulator": "CNAD",
+      "license": "Stablecoin Issuer and DASP registrations"
+    },
+    "contracts": [
+      {
+        "chain": "ethereum",
+        "address": "0x9eead9ce15383caeed975427340b3a369410cfbf",
+        "decimals": 6
+      }
+    ],
+    "canBeBlacklisted": true,
+    "chainTier": "ethereum",
+    "deploymentModel": "single-chain",
+    "collateralQuality": "rwa",
+    "custodyModel": "institutional-regulated",
+    "governanceQuality": "regulated-entity",
+    "reserves": [
+      {
+        "name": "Tether Gold (XAUT) collateral in Alloy vault",
+        "pct": 100,
+        "risk": "medium",
+        "coinId": "xaut-tether",
+        "depType": "collateral",
+        "blacklistable": true
+      }
+    ],
+    "liveReservesConfig": {
+      "adapter": "evm-branch-balances",
+      "version": 1,
+      "semantics": "collateral-mix",
+      "breakerScope": "ausdt-tether-alloy",
+      "display": {
+        "url": "https://dev.alloy.tether.to/deployments/ethereum-mainnet",
+        "label": "Alloy CMPVault"
+      },
+      "inputs": {
+        "primary": {
+          "kind": "onchain-evm",
+          "chain": "ethereum",
+          "rpcMode": "public-rpc"
+        }
+      },
+      "params": {
+        "rpcUrl": "https://ethereum-rpc.publicnode.com",
+        "fallbackRpcUrl": "https://eth.llamarpc.com",
+        "branches": [
+          {
+            "name": "XAUT collateral",
+            "holder": "0x4c1ec3d1519225f36958408fdd33a0d5ba1f2fa7",
+            "token": {
+              "chain": "ethereum",
+              "address": "0x68749665ff8d2d112fa859aa293f07a622782f38",
+              "decimals": 6
+            },
+            "risk": "medium",
+            "coinId": "xaut-tether",
+            "depType": "collateral"
+          }
+        ]
+      }
+    }
+  },
+  {
     "id": "musd-metamask",
     "name": "Metamask USD",
     "symbol": "MUSD",
@@ -2982,7 +3260,9 @@
       "rwa": false,
       "navToken": false
     },
-    "infrastructures": ["m0"],
+    "infrastructures": [
+      "m0"
+    ],
     "collateral": "Cash and short-term U.S. Treasury securities held in bankruptcy-remote custody, issued by Bridge (a Stripe company) using the M0 protocol",
     "pegMechanism": "1:1 mint and redemption via Bridge using M0 protocol infrastructure; reserves continuously validated on-chain by independent validators; arbitrage corrects price drift; monthly public attestations",
     "llamaId": "313",
@@ -3314,7 +3594,9 @@
     ],
     "deploymentModel": "third-party-bridge",
     "governanceQuality": "immutable-code",
-    "infrastructures": ["liquity-v2"],
+    "infrastructures": [
+      "liquity-v2"
+    ],
     "reserves": [
       {
         "name": "wstETH (Lido)",
@@ -3523,7 +3805,9 @@
     ],
     "deploymentModel": "canonical-bridge",
     "governanceQuality": "immutable-code",
-    "infrastructures": ["liquity-v1"],
+    "infrastructures": [
+      "liquity-v1"
+    ],
     "reserves": [
       {
         "name": "ETH",
@@ -3649,7 +3933,9 @@
       "rwa": false,
       "navToken": false
     },
-    "infrastructures": ["m0"],
+    "infrastructures": [
+      "m0"
+    ],
     "collateral": "Short-term U.S. Treasury Bills held in bankruptcy-remote SPVs via M0 Protocol; over 100% collateral coverage maintained by M0 Minters (including Superstate and MXON); collateral verified daily on-chain",
     "pegMechanism": "Rebasing yield-bearing stablecoin; USDN is collateralized by M0's $M token on Ethereum via M0's Portal bridge (Wormhole NTT); the Noble chain module tracks each holder's principal against the latest rebasing multiplier from M0 on Ethereum, accruing T-bill yield directly to USDN balances; users mint/redeem via USDC through the Noble Express app",
     "llamaId": "282",
@@ -4440,7 +4726,9 @@
     ],
     "chainTier": "unproven",
     "collateralQuality": "exotic",
-    "infrastructures": ["liquity-v2"],
+    "infrastructures": [
+      "liquity-v2"
+    ],
     "reserves": [
       {
         "name": "iBGT (Infrared liquid staked BGT)",
@@ -4756,7 +5044,9 @@
     ],
     "chainTier": "unproven",
     "collateralQuality": "alt-lst-bridged-or-mixed",
-    "infrastructures": ["liquity-v1"],
+    "infrastructures": [
+      "liquity-v1"
+    ],
     "reserves": [
       {
         "name": "Bitcoin (BTC) — native and wrapped variants (tBTC, WBTC, SolvBTC, cbBTC)",
@@ -5017,7 +5307,9 @@
     ],
     "collateralQuality": "alt-lst-bridged-or-mixed",
     "governanceQuality": "immutable-code",
-    "infrastructures": ["liquity-v2"],
+    "infrastructures": [
+      "liquity-v2"
+    ],
     "reserves": [
       {
         "name": "ysyBOLD (Yearn savings BOLD)",
@@ -5120,7 +5412,9 @@
     "chainTier": "stage1-l2",
     "collateralQuality": "alt-lst-bridged-or-mixed",
     "governanceQuality": "immutable-code",
-    "infrastructures": ["liquity-v2"],
+    "infrastructures": [
+      "liquity-v2"
+    ],
     "reserves": [
       {
         "name": "tBTC",
@@ -5297,7 +5591,9 @@
     "chainTier": "unproven",
     "collateralQuality": "alt-lst-bridged-or-mixed",
     "governanceQuality": "immutable-code",
-    "infrastructures": ["liquity-v2"],
+    "infrastructures": [
+      "liquity-v2"
+    ],
     "reserves": [
       {
         "name": "wETH",
@@ -5427,7 +5723,9 @@
     ],
     "collateralQuality": "alt-lst-bridged-or-mixed",
     "governanceQuality": "immutable-code",
-    "infrastructures": ["liquity-v2"],
+    "infrastructures": [
+      "liquity-v2"
+    ],
     "liveReservesConfig": {
       "adapter": "liquity-v2-branches",
       "version": 1,
@@ -5546,7 +5844,9 @@
     ],
     "deploymentModel": "native-multichain",
     "collateralQuality": "alt-lst-bridged-or-mixed",
-    "infrastructures": ["liquity-v2"],
+    "infrastructures": [
+      "liquity-v2"
+    ],
     "reserves": [
       {
         "name": "sUSDe (Ethena savings)",
@@ -6345,7 +6645,9 @@
     ],
     "chainTier": "unproven",
     "collateralQuality": "alt-lst-bridged-or-mixed",
-    "infrastructures": ["liquity-v2"],
+    "infrastructures": [
+      "liquity-v2"
+    ],
     "reserves": [
       {
         "name": "HYPE / kHYPE / wstHYPE (Hyperliquid native + LSTs)",
@@ -7417,7 +7719,9 @@
     ],
     "chainTier": "unproven",
     "collateralQuality": "alt-lst-bridged-or-mixed",
-    "infrastructures": ["liquity-v1"],
+    "infrastructures": [
+      "liquity-v1"
+    ],
     "reserves": [
       {
         "name": "BTC / WBTC / BTCB / cbBTC (overcollateralized CDP vaults)",
@@ -7507,7 +7811,9 @@
     "collateralQuality": "alt-lst-bridged-or-mixed",
     "custodyModel": "onchain",
     "governanceQuality": "dao-governance",
-    "infrastructures": ["liquity-v1"],
+    "infrastructures": [
+      "liquity-v1"
+    ],
     "reserves": [
       {
         "name": "Bitcoin LSTs / LRTs and approved BTC wrappers",
@@ -7802,7 +8108,7 @@
     "dependencies": [
       {
         "id": "frxusd-frax",
-        "weight": 1.0,
+        "weight": 1,
         "type": "wrapper"
       }
     ],
@@ -9158,6 +9464,129 @@
     }
   },
   {
+    "id": "usdglo-glo",
+    "name": "Glo Dollar",
+    "symbol": "USDGLO",
+    "flags": {
+      "backing": "rwa-backed",
+      "pegCurrency": "USD",
+      "governance": "centralized",
+      "yieldBearing": false,
+      "rwa": false,
+      "navToken": false
+    },
+    "collateral": "Cash, cash equivalents, and U.S. government-backed debt held by Brale in segregated, unencumbered accounts",
+    "pegMechanism": "Brale-issued fiat-backed stablecoin redeemable 1:1 for USD or USDC by eligible Brale customers; Brale manages reserves and liquidity for redemption obligations",
+    "llamaId": "155",
+    "detailProvider": "defillama",
+    "geckoId": "glo-dollar",
+    "cmcSlug": "glo-dollar",
+    "proofOfReserves": {
+      "type": "self-reported",
+      "url": "https://brale.xyz/stablecoins/USDGLO",
+      "provider": "Brale"
+    },
+    "links": [
+      {
+        "label": "Website",
+        "url": "https://www.glodollar.org/"
+      },
+      {
+        "label": "Twitter",
+        "url": "https://x.com/glodollar"
+      },
+      {
+        "label": "Docs",
+        "url": "https://www.glodollar.org/articles/smart-contract-addresses"
+      },
+      {
+        "label": "Proof of Reserve",
+        "url": "https://brale.xyz/stablecoins/USDGLO"
+      }
+    ],
+    "jurisdiction": {
+      "country": "United States",
+      "regulator": "FinCEN / state money transmitter regulators",
+      "license": "Money Services Business / Money Transmitter, NMLS ID #2376957"
+    },
+    "contracts": [
+      {
+        "chain": "ethereum",
+        "address": "0x4f604735c1cf31399c6e711d5962b2b3e0225ad3",
+        "decimals": 18
+      },
+      {
+        "chain": "celo",
+        "address": "0x4f604735c1cf31399c6e711d5962b2b3e0225ad3",
+        "decimals": 18
+      },
+      {
+        "chain": "optimism",
+        "address": "0x4f604735c1cf31399c6e711d5962b2b3e0225ad3",
+        "decimals": 18
+      },
+      {
+        "chain": "base",
+        "address": "0x4f604735c1cf31399c6e711d5962b2b3e0225ad3",
+        "decimals": 18
+      },
+      {
+        "chain": "polygon",
+        "address": "0x4f604735c1cf31399c6e711d5962b2b3e0225ad3",
+        "decimals": 18
+      },
+      {
+        "chain": "arbitrum",
+        "address": "0x4f604735c1cf31399c6e711d5962b2b3e0225ad3",
+        "decimals": 18
+      },
+      {
+        "chain": "stellar",
+        "address": "USDGLO-GBBS25EGYQPGEZCGCFBKG4OAGFXU6DSOQBGTHELLJT3HZXZJ34HWS6XV",
+        "decimals": 7
+      }
+    ],
+    "canBeBlacklisted": true,
+    "chainTier": "ethereum",
+    "deploymentModel": "native-multichain",
+    "collateralQuality": "rwa",
+    "custodyModel": "institutional-regulated",
+    "governanceQuality": "regulated-entity",
+    "reserves": [
+      {
+        "name": "Cash and cash equivalents",
+        "pct": 62.79,
+        "risk": "very-low"
+      },
+      {
+        "name": "U.S. government-backed debt",
+        "pct": 37.21,
+        "risk": "very-low"
+      }
+    ],
+    "liveReservesConfig": {
+      "adapter": "curated-validated",
+      "version": 1,
+      "semantics": "attestation-mix",
+      "breakerScope": "usdglo-glo",
+      "display": {
+        "url": "https://brale.xyz/stablecoins/USDGLO",
+        "label": "Brale USDGLO"
+      },
+      "inputs": {
+        "primary": {
+          "kind": "onchain-evm",
+          "chain": "ethereum",
+          "rpcMode": "public-rpc"
+        }
+      },
+      "params": {
+        "rpcUrl": "https://ethereum-rpc.publicnode.com",
+        "fallbackRpcUrl": "https://eth.llamarpc.com"
+      }
+    }
+  },
+  {
     "id": "ftusd-flying-tulip",
     "name": "Flying Tulip USD",
     "symbol": "ftUSD",
@@ -9369,7 +9798,9 @@
       "rwa": true,
       "navToken": false
     },
-    "infrastructures": ["m0"],
+    "infrastructures": [
+      "m0"
+    ],
     "collateral": "Short-term U.S. Treasury bills held in bankruptcy-remote SPVs via M0 Protocol's permissioned Minter infrastructure; M0 Validators independently attest collateral sufficiency on-chain before minting",
     "pegMechanism": "1:1 wrapper around M (M0) token — USDSC is minted by wrapping M via the Soneium-native UsdscToken contract; underlying M is backed by T-bill collateral attested by M0 Validators; redemption unwinds the wrapper back to M",
     "detailProvider": "coingecko",
@@ -9415,7 +9846,7 @@
     "dependencies": [
       {
         "id": "m-m0",
-        "weight": 1.0,
+        "weight": 1,
         "type": "wrapper"
       }
     ],
@@ -9455,7 +9886,9 @@
       "rwa": true,
       "navToken": false
     },
-    "infrastructures": ["m0"],
+    "infrastructures": [
+      "m0"
+    ],
     "collateral": "Short-term U.S. Treasury bills and cash, held for the benefit of token holders via M0 Protocol's bankruptcy-remote SPV structure; issued by MoonPay under U.S. Money Transmitter Licenses across 49 states (excl. New York)",
     "pegMechanism": "1:1 fiat-backed mint and redemption via MoonPay using M0 Protocol infrastructure; reserves cryptographically attested on-chain by independent M0 Validators before minting; fiat on/off ramp via Visa, Mastercard, Apple Pay, Google Pay, and PayPal through MoonPay's 30M+ verified user base",
     "llamaId": "350",
@@ -9515,7 +9948,7 @@
     "dependencies": [
       {
         "id": "m-m0",
-        "weight": 1.0,
+        "weight": 1,
         "type": "mechanism"
       }
     ],
@@ -9548,7 +9981,9 @@
       "rwa": true,
       "navToken": false
     },
-    "infrastructures": ["m0"],
+    "infrastructures": [
+      "m0"
+    ],
     "collateral": "100% backed by M (M0 Protocol's tokenized short-term U.S. Treasury bills) at launch — capital is held directly in the USDat smart contract and verifiable on-chain; protocol roadmap allows reserves to shift toward digital credit instruments (e.g. Strategy STRC preferred equity) over time",
     "pegMechanism": "Permissioned 1:1 mint by depositing USDC via the M0 Swap Facility (Uniswap V3 1bps tier) which routes through wM; redemption returns USDC by unwrapping USDat back to wM and burning the USDat. Only KYC-onboarded addresses can mint, redeem, or hold USDat; geofenced away from US, EEA, and OFAC-sanctioned jurisdictions",
     "detailProvider": "coingecko",
@@ -9599,7 +10034,7 @@
     "dependencies": [
       {
         "id": "m-m0",
-        "weight": 1.0,
+        "weight": 1,
         "type": "wrapper"
       }
     ],
@@ -9643,7 +10078,9 @@
       "rwa": true,
       "navToken": false
     },
-    "infrastructures": ["m0"],
+    "infrastructures": [
+      "m0"
+    ],
     "collateral": "Underlying M (M0 Protocol) is backed 100% by short-term U.S. Treasury bills (30–90 day WAM) held in bankruptcy-remote SPVs by permissioned Minters; M0 Validators independently attest collateral sufficiency on-chain before any M can be minted, and wM holds M 1:1 inside the Wrapped M Token contract",
     "pegMechanism": "Non-rebasing 1:1 ERC-20 wrapper around M: anyone can call wrap() to deposit M and mint wM, or unwrap() to redeem wM back to M at any time without fees or queues; wM holders are non-earning by default, so yield accrued by the underlying M is redirected via TTG-approved earner accounts and the claimExcess() mechanism to ecosystem yield recipients (downstream M0 extensions and apps), leaving wM as a flat USD-denominated unit",
     "detailProvider": "coingecko",
@@ -9654,19 +10091,47 @@
       "provider": "M0 Protocol (on-chain Validator attestations)"
     },
     "links": [
-      { "label": "Website", "url": "https://www.m0.org/" },
-      { "label": "Twitter", "url": "https://x.com/m0foundation" },
-      { "label": "Docs", "url": "https://docs.m0.org/" },
-      { "label": "Dashboard", "url": "https://dashboard.m0.org/extensions/wm" }
+      {
+        "label": "Website",
+        "url": "https://www.m0.org/"
+      },
+      {
+        "label": "Twitter",
+        "url": "https://x.com/m0foundation"
+      },
+      {
+        "label": "Docs",
+        "url": "https://docs.m0.org/"
+      },
+      {
+        "label": "Dashboard",
+        "url": "https://dashboard.m0.org/extensions/wm"
+      }
     ],
     "jurisdiction": {
       "country": "Switzerland"
     },
     "contracts": [
-      { "chain": "ethereum", "address": "0x437cc33344a0b27a429f795ff6b469c72698b291", "decimals": 6 },
-      { "chain": "arbitrum", "address": "0x437cc33344a0b27a429f795ff6b469c72698b291", "decimals": 6 },
-      { "chain": "plume", "address": "0x437cc33344a0b27a429f795ff6b469c72698b291", "decimals": 6 },
-      { "chain": "solana", "address": "mzeroXDoBpRVhnEXBra27qzAMdxgpWVY3DzQW7xMVJp", "decimals": 6 }
+      {
+        "chain": "ethereum",
+        "address": "0x437cc33344a0b27a429f795ff6b469c72698b291",
+        "decimals": 6
+      },
+      {
+        "chain": "arbitrum",
+        "address": "0x437cc33344a0b27a429f795ff6b469c72698b291",
+        "decimals": 6
+      },
+      {
+        "chain": "plume",
+        "address": "0x437cc33344a0b27a429f795ff6b469c72698b291",
+        "decimals": 6
+      },
+      {
+        "chain": "solana",
+        "address": "mzeroXDoBpRVhnEXBra27qzAMdxgpWVY3DzQW7xMVJp",
+        "decimals": 6
+      }
     ],
     "canBeBlacklisted": true,
     "collateralQuality": "rwa",
@@ -9674,10 +10139,18 @@
     "governanceQuality": "wrapper",
     "deploymentModel": "third-party-bridge",
     "dependencies": [
-      { "id": "m-m0", "weight": 1.0, "type": "wrapper" }
+      {
+        "id": "m-m0",
+        "weight": 1,
+        "type": "wrapper"
+      }
     ],
     "reserves": [
-      { "name": "Short-term U.S. Treasury Bills (via M0 Protocol)", "pct": 100, "risk": "very-low" }
+      {
+        "name": "Short-term U.S. Treasury Bills (via M0 Protocol)",
+        "pct": 100,
+        "risk": "very-low"
+      }
     ],
     "liveReservesConfig": {
       "adapter": "m0",
@@ -9708,7 +10181,9 @@
       "rwa": true,
       "navToken": false
     },
-    "infrastructures": ["m0"],
+    "infrastructures": [
+      "m0"
+    ],
     "collateral": "Backed 1:1 by M (M0 Protocol's tokenized short-term U.S. Treasury bills, routed through USTB / Superstate Short Duration U.S. Government Securities Fund); per the M0 dashboard the wrapper holds ~$50.25M of USTB-collateralised M against ~$50M USDnr in circulation, with the surplus held in a Stability Reserve buffer. Reserves sit in M0 SPVs managed by the M0 Minter (MXON)",
     "pegMechanism": "Permissioned 1:1 wrapper around M0's $M token: USDnr is minted by Nerona by depositing/wrapping $M (sourced from MXON, the legal Minter on the M0 network) and burned 1:1 against $M on redemption. T-bill yield earned by the underlying M accrues to the M0 reserve / Nerona — USDnr holders receive no rebase or NAV growth themselves. Mint/redeem is gated to permissioned, KYC-onboarded clients of Nerona's private wealth platform",
     "detailProvider": "coingecko",
@@ -9718,12 +10193,25 @@
       "provider": "M0 Protocol"
     },
     "links": [
-      { "label": "Website", "url": "https://www.nerona.xyz/" },
-      { "label": "M0 Dashboard", "url": "https://dashboard.m0.org/stablecoins/usdnr" },
-      { "label": "M0 Docs", "url": "https://docs.m0.org/" }
+      {
+        "label": "Website",
+        "url": "https://www.nerona.xyz/"
+      },
+      {
+        "label": "M0 Dashboard",
+        "url": "https://dashboard.m0.org/stablecoins/usdnr"
+      },
+      {
+        "label": "M0 Docs",
+        "url": "https://docs.m0.org/"
+      }
     ],
     "contracts": [
-      { "chain": "ethereum", "address": "0xd48e565561416de59da1050ed70b8d75e8ef28f9", "decimals": 6 }
+      {
+        "chain": "ethereum",
+        "address": "0xd48e565561416de59da1050ed70b8d75e8ef28f9",
+        "decimals": 6
+      }
     ],
     "canBeBlacklisted": "possible",
     "collateralQuality": "rwa",
@@ -9732,11 +10220,23 @@
     "deploymentModel": "single-chain",
     "chainTier": "ethereum",
     "dependencies": [
-      { "id": "m-m0", "weight": 1.0, "type": "wrapper" }
+      {
+        "id": "m-m0",
+        "weight": 1,
+        "type": "wrapper"
+      }
     ],
     "reserves": [
-      { "name": "Short-term U.S. Treasury Bills (via USTB / M0 Protocol)", "pct": 99, "risk": "very-low" },
-      { "name": "Stability Reserve buffer", "pct": 1, "risk": "very-low" }
+      {
+        "name": "Short-term U.S. Treasury Bills (via USTB / M0 Protocol)",
+        "pct": 99,
+        "risk": "very-low"
+      },
+      {
+        "name": "Stability Reserve buffer",
+        "pct": 1,
+        "risk": "very-low"
+      }
     ],
     "liveReservesConfig": {
       "adapter": "m0",
@@ -9767,7 +10267,9 @@
       "rwa": true,
       "navToken": false
     },
-    "infrastructures": ["m0"],
+    "infrastructures": [
+      "m0"
+    ],
     "collateral": "Short-term U.S. Treasury bills held via M0 Protocol's permissioned Minter infrastructure in bankruptcy-remote SPVs; collateral sufficiency cryptographically attested on-chain by independent M0 Validators before USDK mints are authorized. Yield generated by the underlying M token is retained by KAST as fee revenue rather than passed to USDK holders (a separate token, USDKy, exists for yield-seeking users)",
     "pegMechanism": "1:1 wrapper around M (M0) on Solana — KAST mints USDK by depositing/wrapping M into the USDK SPL Token-2022 mint, and unwraps back to M for redemption; user-facing fiat on/off-ramp and redemption are mediated by the KAST app via licensed partners (Tazapay, BitGo, Fireblocks). The Token-2022 mint has transfer hooks and confidential-transfer extensions with authority held by KAST",
     "detailProvider": "coingecko",
@@ -9777,16 +10279,29 @@
       "provider": "M0 Protocol (on-chain Validator attestations)"
     },
     "links": [
-      { "label": "Website", "url": "https://kast.xyz/" },
-      { "label": "Twitter", "url": "https://x.com/KASTxyz" },
-      { "label": "M0 Dashboard", "url": "https://dashboard.m0.org/" }
+      {
+        "label": "Website",
+        "url": "https://kast.xyz/"
+      },
+      {
+        "label": "Twitter",
+        "url": "https://x.com/KASTxyz"
+      },
+      {
+        "label": "M0 Dashboard",
+        "url": "https://dashboard.m0.org/"
+      }
     ],
     "jurisdiction": {
       "country": "Union of Comoros",
       "regulator": "Anjouan Offshore Finance Authority"
     },
     "contracts": [
-      { "chain": "solana", "address": "usdkbee86pkLyRmxfFCdkyySpxRb5ndCxVsK2BkRXwX", "decimals": 6 }
+      {
+        "chain": "solana",
+        "address": "usdkbee86pkLyRmxfFCdkyySpxRb5ndCxVsK2BkRXwX",
+        "decimals": 6
+      }
     ],
     "canBeBlacklisted": true,
     "collateralQuality": "rwa",
@@ -9794,10 +10309,18 @@
     "governanceQuality": "single-entity",
     "deploymentModel": "single-chain",
     "dependencies": [
-      { "id": "m-m0", "weight": 1.0, "type": "wrapper" }
+      {
+        "id": "m-m0",
+        "weight": 1,
+        "type": "wrapper"
+      }
     ],
     "reserves": [
-      { "name": "Short-term U.S. Treasury Bills (via M0 Protocol)", "pct": 100, "risk": "very-low" }
+      {
+        "name": "Short-term U.S. Treasury Bills (via M0 Protocol)",
+        "pct": 100,
+        "risk": "very-low"
+      }
     ],
     "liveReservesConfig": {
       "adapter": "m0",
@@ -9828,7 +10351,9 @@
       "rwa": true,
       "navToken": false
     },
-    "infrastructures": ["m0"],
+    "infrastructures": [
+      "m0"
+    ],
     "collateral": "Fully reserved 1:1 by U.S. dollar deposits and short-term U.S. Treasury bills held for the benefit of token holders via M0 Protocol's bankruptcy-remote SPV structure; reserves issued and managed by MoonPay under U.S. Money Transmitter Licenses; native M0 yield is retained by MoonPay/Exodus rather than passed through to XO holders",
     "pegMechanism": "1:1 fiat-backed mint and redemption operated by MoonPay via M0 Protocol infrastructure on Solana; collateral cryptographically attested on-chain by independent M0 Validators before minting; consumer access is gated through the Exodus self-custodial wallet and Exodus Pay app, with on/off ramps via MoonPay's payment rails (cards, Apple/Google Pay, PayPal); the Solana SPL Token-2022 mint includes pausable, permanent-delegate, and transfer-hook controls held by MoonPay",
     "detailProvider": "coingecko",
@@ -9839,17 +10364,33 @@
       "provider": "M0 Protocol"
     },
     "links": [
-      { "label": "Website", "url": "https://www.exodus.com/" },
-      { "label": "Press Release", "url": "https://www.exodus.com/investors/news-events/press-releases/detail/95/exodus-moonpay-and-m0-unveil-a-new-digital-dollar-for-everyday-payments" },
-      { "label": "Twitter", "url": "https://x.com/exodus" },
-      { "label": "M0 Dashboard", "url": "https://dashboard.m0.org/stablecoins" }
+      {
+        "label": "Website",
+        "url": "https://www.exodus.com/"
+      },
+      {
+        "label": "Press Release",
+        "url": "https://www.exodus.com/investors/news-events/press-releases/detail/95/exodus-moonpay-and-m0-unveil-a-new-digital-dollar-for-everyday-payments"
+      },
+      {
+        "label": "Twitter",
+        "url": "https://x.com/exodus"
+      },
+      {
+        "label": "M0 Dashboard",
+        "url": "https://dashboard.m0.org/stablecoins"
+      }
     ],
     "jurisdiction": {
       "country": "United States",
       "license": "MoonPay Money Transmitter Licenses (49 states), New York BitLicense, New York Trust Charter"
     },
     "contracts": [
-      { "chain": "solana", "address": "xoUSDq85Rjsb6SbUwJyreFgeWQvxdkT7R3c3g7s6p5Y", "decimals": 6 }
+      {
+        "chain": "solana",
+        "address": "xoUSDq85Rjsb6SbUwJyreFgeWQvxdkT7R3c3g7s6p5Y",
+        "decimals": 6
+      }
     ],
     "canBeBlacklisted": true,
     "collateralQuality": "rwa",
@@ -9857,11 +10398,23 @@
     "governanceQuality": "regulated-entity",
     "deploymentModel": "single-chain",
     "dependencies": [
-      { "id": "m-m0", "weight": 1.0, "type": "mechanism" }
+      {
+        "id": "m-m0",
+        "weight": 1,
+        "type": "mechanism"
+      }
     ],
     "reserves": [
-      { "name": "Short-term U.S. Treasury Bills (via M0 SPVs)", "pct": 85, "risk": "very-low" },
-      { "name": "Cash and cash equivalents", "pct": 15, "risk": "very-low" }
+      {
+        "name": "Short-term U.S. Treasury Bills (via M0 SPVs)",
+        "pct": 85,
+        "risk": "very-low"
+      },
+      {
+        "name": "Cash and cash equivalents",
+        "pct": 15,
+        "risk": "very-low"
+      }
     ],
     "liveReservesConfig": {
       "adapter": "m0",

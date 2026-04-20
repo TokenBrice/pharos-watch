@@ -953,5 +953,35 @@
     "title": "13 Million Users, One Brand Ban Away",
     "text": "Revolut got its full UK banking licence on March 11 after a 20-month mobilisation — and promptly confirmed its proposed GBP stablecoin would NOT be issued from the new banking entity. Bank of England rules prohibit a UK bank and its affiliated group from issuing stablecoins across different subsidiaries, so issuance falls back to Revolut Ltd, the e-money entity. That structural wrinkle is the smaller of Revolut's UK regulatory headaches. At the House of Lords on March 25, Head of UK Policy Rory Tanner told peers the UK is 'already behind' the US and EU — and flagged the BoE's proposed ban on 'branded' stablecoins as a commercial blocker (the issuer couldn't put its own name on the token). Priority use case per Tanner: the UK→India remittance corridor, the seventh-largest in the world, not retail payments. The FCA sandbox cohort Revolut joined on Feb 25 is testing phase only; the full UK authorisation regime doesn't activate until October 2027, and the BoE's proposed 40% unremunerated-reserve requirement plus £20,000 individual-holder cap describe a commercial model that UK legal analysts call structurally unviable. Revolut's real asset isn't the token — it's 13 million UK users who already open the app daily. Whether that distribution survives the BoE rulebook is the actual question.",
     "updatedAt": "2026-04-19"
+  },
+  "ausdt-tether-alloy": {
+    "title": "Gold Collateral, Dollar Target",
+    "text": "Alloy Tether turns Tether Gold into a dollar-tracking credit instrument: verified users deposit XAUT into an Ethereum vault, mint aUSDT against a 75% mint-to-value ceiling, and return aUSDT plus fees to withdraw collateral. That gives Pharos a clean on-chain reserve view because the XAUT backing sits in the CMPVault, but it also means aUSDT inherits Tether Gold custody, gold-price volatility, whitelist access, and liquidation mechanics. The peg is not a bank-account promise; it is an overcollateralized gold position engineered to trade near one dollar.",
+    "updatedAt": "2026-04-20"
+  },
+  "usdsui-sui": {
+    "title": "Sui Gets Its Native Dollar",
+    "text": "USDsui is the Sui ecosystem dollar issued through Bridge, Stripe's stablecoin infrastructure arm. The asset gives Sui a native fiat-backed stablecoin rather than another bridged dollar, with DefiLlama exposing supply and price data for live peg monitoring. The reserve model is conventional Bridge Open Issuance: cash, short-dated Treasuries, repos, and government money-market funds support mint and redemption. Pharos tracks the runtime supply and peg through DefiLlama while keeping reserve composition curated until Bridge exposes a USDsui-specific public reserve feed or Sui supply probe suitable for live reserve sync.",
+    "updatedAt": "2026-04-20"
+  },
+  "brlv-crown": {
+    "title": "Brazilian Bonds On Chain",
+    "text": "Crown BRLV is a Brazilian real stablecoin backed by federal government bonds pledged for token holders through a security-agent structure. That is a cleaner reserve story than most emerging-market fiat coins: the backing is local sovereign debt rather than offshore dollar liquidity, and the legal structure is designed to keep reserve claims separate from Crown itself. The risks are equally specific: BRL liquidity, Brazilian sovereign-rate volatility, and KYC-gated redemption. Pharos tracks the BRL peg directly while treating reserves as curated-validated evidence until Crown's reserve page proves machine-readable enough for a dedicated adapter.",
+    "updatedAt": "2026-04-20"
+  },
+  "usdglo-glo": {
+    "title": "Public-Goods Float",
+    "text": "Glo Dollar is a Brale-issued U.S. dollar stablecoin whose reserve yield funds public-goods causes rather than flowing back to token holders or exchange partners. The mechanics are familiar: cash, cash equivalents, and short-duration U.S. government-backed debt, monthly attestations, and 1:1 mint and redemption through Brale. The differentiation is distribution and mission, not financial engineering. At small supply, USDGLO matters to Pharos because it already appears inside other reserve stacks such as Mento, making explicit tracking useful for dependency analysis even before it becomes a large standalone market.",
+    "updatedAt": "2026-04-20"
+  },
+  "usdon-ondo": {
+    "title": "Ondo Settlement Cash",
+    "text": "USDon is the dollar settlement token inside Ondo Global Markets, backed 1:1 by U.S. dollars in brokerage accounts and used to move between cash and tokenized assets. It is closer to platform settlement cash than a standalone retail stablecoin, which shapes the risk model: institutional rails, access restrictions, and dependence on Ondo's Global Markets structure. CoinGecko provides the runtime price and market-cap path, while Pharos models reserves as brokerage-account cash and redemption as a whitelisted platform route until Ondo exposes a dedicated public liquidity or reserve feed.",
+    "updatedAt": "2026-04-20"
+  },
+  "audm-macropod": {
+    "title": "Australia's New On-Chain Dollar",
+    "text": "Macropod AUDM brings an Australian-dollar unit into the active Pharos set with DefiLlama supply, CoinGecko pricing, Ethereum and Solana contracts, and issuer documentation describing segregated AUD reserve accounts at Australian ADIs. The product is straightforward: approved Macropod clients can mint and redeem through the platform, with current reserves split mostly between Westpac and Banking Circle Australia. The main constraints are scale and disclosure cadence. Pharos can monitor the AUD peg immediately and validate live token supply, while a monthly-report adapter would be needed for stronger reserve automation.",
+    "updatedAt": "2026-04-20"
   }
 }

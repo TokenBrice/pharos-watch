@@ -323,12 +323,12 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 
 ## Stablecoin data
 
-- `shared/data/stablecoins/canonical-order.json` - 191 entries
+- `shared/data/stablecoins/canonical-order.json` - 197 entries
 - `shared/data/stablecoins/commodity.json` - 9 entries
-- `shared/data/stablecoins/non-usd.json` - 38 entries
+- `shared/data/stablecoins/non-usd.json` - 40 entries
 - `shared/data/stablecoins/pre-launch.json` - 11 entries
 - `shared/data/stablecoins/usd-major.json` - 29 entries
-- `shared/data/stablecoins/usd-minor.json` - 104 entries
+- `shared/data/stablecoins/usd-minor.json` - 108 entries
 
 ## Worker routing
 

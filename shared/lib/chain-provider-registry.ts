@@ -26,6 +26,7 @@ export const CHAIN_REGISTRY: Record<string, ChainEntry> = {
   solana: { coingecko: "solana", dexscreener: "solana", geckoTerminal: "solana" },
   berachain: { coingecko: "berachain", dexscreener: "berachain", geckoTerminal: "berachain" },
   sui: { coingecko: "sui-network", dexscreener: "sui", geckoTerminal: "sui-network" },
+  redbelly: { coingecko: "redbelly-network" },
   rootstock: { coingecko: "rootstock" },
   plasma: { dexscreener: "plasma", geckoTerminal: "plasma" },
   sonic: { dexscreener: "sonic", geckoTerminal: "sonic" },

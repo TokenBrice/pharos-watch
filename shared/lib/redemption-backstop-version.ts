@@ -1,9 +1,24 @@
 import { createMethodologyVersion, toMethodologyVersionLabel } from "./methodology-version";
 
 const redemptionBackstop = createMethodologyVersion({
-  currentVersion: "3.98",
+  currentVersion: "3.99",
   changelogPath: "/methodology/#safety-scores-methodology",
   changelog: [
+    {
+      version: "3.99",
+      title: "Flat/RWA issuer coverage expansion",
+      date: "2026-04-20",
+      effectiveAt: 1776643200,
+      summary:
+        "Six newly tracked flat/RWA issuer assets join modeled redemption coverage, including whitelisted collateral redemption for Alloy aUSDT and five documented issuer routes.",
+      impact: [
+        "USDon, USDsui, BRLV, USDGLO, and AUDM now publish documented-bound offchain-issuer redemption routes with reviewed source links and access/settlement caveats",
+        "Alloy aUSDT now publishes a whitelisted collateral-redemption route into XAUT, while live reserve sync reads its Ethereum vault XAUT balance and aUSDT supply for reserve visibility",
+        "Jiritsu JUSD remains excluded because the priced CoinGecko/CMC JUSD asset resolves to a different token and the official Jiritsu token lacks a usable price/depeg source",
+      ],
+      commits: [],
+      reconstructed: false,
+    },
     {
       version: "3.98",
       title: "Capacity-over-supply clamp, coverage expansion, and runtime hardening",

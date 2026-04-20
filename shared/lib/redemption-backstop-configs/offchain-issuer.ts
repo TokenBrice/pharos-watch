@@ -139,6 +139,89 @@ export const OFFCHAIN_ISSUER_BACKSTOP_CONFIGS: Record<string, RedemptionBackstop
     ...reviewedDirectRedemptionSupplyFull,
     costModel: documentedVariableFee("Redeemable 1:1 less fees; public fee schedule not disclosed"),
   },
+  "usdon-ondo": {
+    ...issuerBase,
+    ...documentedBoundSupplyFull("2026-04-20"),
+    routeStatus: "open",
+    costModel: documentedVariableFee(
+      "Ondo Global Markets docs describe 1:1 USDC <-> USDon platform conversion when swapper liquidity is available; public materials reviewed do not publish a standalone fixed USDon redemption fee",
+    ),
+    docs: [
+      sourceRef("Ondo available assets", "https://docs.ondo.finance/ondo-global-markets/available-assets", ["route", "capacity"]),
+      sourceRef("Ondo investing and redeeming", "https://docs.ondo.finance/ondo-global-markets/investing-and-redeeming", ["route", "settlement"]),
+      sourceRef("Ondo trust and transparency", "https://docs.ondo.finance/ondo-global-markets/trust-and-transparency", ["capacity"]),
+    ],
+    notes: [
+      "Modeled as a whitelisted Ondo Global Markets settlement-cash route; current instant USDC output can depend on swapper liquidity, so this remains documented-bound eventual capacity rather than live immediate liquidity",
+    ],
+  },
+  "usdsui-sui": {
+    ...issuerBase,
+    ...documentedBoundSupplyFull("2026-04-20"),
+    settlementModel: "days",
+    costModel: documentedVariableFee(
+      "Bridge Open Issuance docs describe mint/burn rails and reserve redemption; public materials reviewed do not publish a USDsui-specific fixed redemption fee schedule",
+    ),
+    docs: [
+      sourceRef("Sui Dollar launch", "https://blog.sui.io/sui-dollar-launch-bridge/", ["route"]),
+      sourceRef("Bridge issuance overview", "https://apidocs.bridge.xyz/platform/issuance/overview", ["route", "capacity"]),
+      sourceRef("Bridge reserve management", "https://apidocs.bridge.xyz/platform/issuance/reserve-management", ["capacity"]),
+    ],
+    notes: [
+      "Bridge reserve docs describe API-gated issuer redemption and reserve management; Pharos models current support as documented eventual primary-market redeemability, not an independently measured instant buffer",
+    ],
+  },
+  "brlv-crown": {
+    ...issuerBase,
+    ...documentedBoundSupplyFull("2026-04-20"),
+    settlementModel: "days",
+    routeStatus: "open",
+    costModel: documentedVariableFee(
+      "Crown terms describe standard and instant BRL redemption routes, but public materials reviewed do not expose a machine-readable fixed fee schedule",
+    ),
+    docs: [
+      sourceRef("Crown BRLV website", "https://www.crown-brlv.com/en/", ["route"]),
+      sourceRef("Crown BRLV transparency", "https://crown-brlv.com/en/transparency/", ["capacity"]),
+      sourceRef("Crown BRLV whitepaper", "https://crown-2b36dce9.mintlify.app/whitepaper", ["route", "capacity"]),
+    ],
+    notes: [
+      "Modeled against documented BRL issuer redemption for approved users; standard settlement can extend to T+3, so the route remains offchain-issuer rather than instant stablecoin swap capacity",
+    ],
+  },
+  "usdglo-glo": {
+    ...issuerBase,
+    ...documentedBoundSupplyFull("2026-04-20"),
+    routeStatus: "open",
+    costModel: documentedVariableFee(
+      "Brale pricing includes 1:1 stablecoin swaps for platform users; bank payout rails can still carry fixed processing fees",
+    ),
+    docs: [
+      sourceRef("Glo Dollar contracts and reserves", "https://www.glodollar.org/articles/smart-contract-addresses", ["route", "capacity"]),
+      sourceRef("Brale USDGLO", "https://brale.xyz/stablecoins/USDGLO", ["capacity"]),
+      sourceRef("Brale pricing", "https://brale.xyz/pricing", ["fees"]),
+    ],
+    notes: [
+      "USDGLO uses Brale issuer rails; Pharos treats this as documented full-supply eventual redeemability rather than measured immediate redemption capacity",
+    ],
+  },
+  "audm-macropod": {
+    ...issuerBase,
+    ...documentedBoundSupplyFull("2026-04-20"),
+    settlementModel: "days",
+    routeStatus: "open",
+    costModel: fixedFee(
+      0,
+      "Macropod states it charges no fee to purchase or redeem AUDM; non-NPP bank/payment fees and gas may still apply",
+    ),
+    docs: [
+      sourceRef("AUDM product", "https://www.macropod.com/product/audm", ["route", "capacity"]),
+      sourceRef("AUDM reserves", "https://www.macropod.com/transparency/reserves", ["capacity"]),
+      sourceRef("AUDM legal", "https://www.macropod.com/transparency/legal", ["route", "fees", "access"]),
+    ],
+    notes: [
+      "Macropod legal materials describe AUD bank-account redemption for approved clients; manual processing can use best efforts for next-business-day ADI instruction when instant rails are unavailable",
+    ],
+  },
   "eurc-circle": {
     ...issuerBase,
     ...reviewedDirectRedemptionSupplyFull,
