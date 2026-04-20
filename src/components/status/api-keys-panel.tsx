@@ -2,6 +2,11 @@
 
 import { useMemo, useState } from "react";
 import { formatElapsedSeconds } from "@shared/lib/format";
+import {
+  API_KEY_DEFAULT_RATE_LIMIT_PER_MINUTE,
+  API_KEY_MAX_RATE_LIMIT_PER_MINUTE,
+  API_KEY_MIN_RATE_LIMIT_PER_MINUTE,
+} from "@shared/lib/ops-limits";
 import { WEEK_SECONDS } from "@shared/lib/time-constants";
 import type {
   ApiKeyCreateResponse,
@@ -31,8 +36,7 @@ type CreateExpiryMode = "default" | "custom" | "non-expiring";
 
 const EMPTY_KEYS: readonly ApiKeySummary[] = [];
 const API_KEY_EXPIRING_SOON_WINDOW_SEC = WEEK_SECONDS;
-const API_KEY_MIN_RATE_LIMIT_PER_MINUTE = 1;
-const API_KEY_MAX_RATE_LIMIT_PER_MINUTE = 10_000;
+const API_KEY_DEFAULT_RATE_LIMIT_INPUT = String(API_KEY_DEFAULT_RATE_LIMIT_PER_MINUTE);
 
 function buildEditableState(key: ApiKeySummary): EditableKeyState {
   return {
@@ -151,7 +155,7 @@ export function ApiKeysPanel() {
   const [createOwnerEmail, setCreateOwnerEmail] = useState("");
   const [createTier, setCreateTier] = useState("standard");
   const [createTrafficClass, setCreateTrafficClass] = useState<ApiKeyTrafficClass>("external");
-  const [createRateLimit, setCreateRateLimit] = useState("120");
+  const [createRateLimit, setCreateRateLimit] = useState(API_KEY_DEFAULT_RATE_LIMIT_INPUT);
   const [createExpiryMode, setCreateExpiryMode] = useState<CreateExpiryMode>("default");
   const [createExpiresAtInput, setCreateExpiresAtInput] = useState("");
   const [drafts, setDrafts] = useState<Record<number, EditableKeyState>>({});
@@ -214,7 +218,7 @@ export function ApiKeysPanel() {
       setCreateOwnerEmail("");
       setCreateTier("standard");
       setCreateTrafficClass("external");
-      setCreateRateLimit("120");
+      setCreateRateLimit(API_KEY_DEFAULT_RATE_LIMIT_INPUT);
       setCreateExpiryMode("default");
       setCreateExpiresAtInput("");
       await refetch();

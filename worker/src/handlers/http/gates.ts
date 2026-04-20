@@ -1,4 +1,5 @@
 import { isSiteDataAllowedPath, getPublicApiAccess } from "@shared/lib/api-endpoints";
+import { API_KEY_DEPENDENCY_RETRY_AFTER_SEC } from "@shared/lib/ops-limits";
 import { SITE_API_HOSTNAME } from "@shared/lib/runtime-origins";
 import { errorResponse } from "../../lib/api-utils";
 import {
@@ -25,6 +26,12 @@ import {
 import type { Env } from "../../lib/env";
 
 const LOGGED_ENV_ISSUES = new Set<string>();
+
+function publicApiUnavailableResponse(): Response {
+  return errorResponse(503, "Public API temporarily unavailable", {
+    retryAfterSec: API_KEY_DEPENDENCY_RETRY_AFTER_SEC,
+  });
+}
 
 export function warnWorkerEnvIssuesOnce(env: Env): void {
   for (const issue of validateWorkerEnvContract(env)) {
@@ -100,15 +107,25 @@ export async function evaluateAccessGate(
       env.API_KEY_HASH_PEPPER_PREVIOUS,
     );
     if (apiKeyAuth.kind === "valid") {
-      const rateLimitResponse = await checkApiKeyRateLimit(
-        env.DB,
-        apiKeyAuth.key.id,
-        apiKeyAuth.key.rateLimitPerMinute,
-      );
+      let rateLimitResponse: Response | null;
+      try {
+        rateLimitResponse = await checkApiKeyRateLimit(
+          env.DB,
+          apiKeyAuth.key.id,
+          apiKeyAuth.key.rateLimitPerMinute,
+        );
+      } catch (err) {
+        console.warn("[public-api-auth] API key rate-limit dependency unavailable:", err);
+        return { isAdmin, isSiteProxy: false, apiKey: null, requestLane: "public-api", response: publicApiUnavailableResponse() };
+      }
       if (rateLimitResponse) {
         return { isAdmin, isSiteProxy: false, apiKey: apiKeyAuth.key, requestLane: "public-api", response: rateLimitResponse };
       }
-      await recordApiKeyUsage(env.DB, apiKeyAuth.key, url.pathname);
+      try {
+        await recordApiKeyUsage(env.DB, apiKeyAuth.key, url.pathname);
+      } catch (err) {
+        console.warn("[public-api-auth] Failed to record API key usage:", err);
+      }
       return { isAdmin, isSiteProxy: false, apiKey: apiKeyAuth.key, requestLane: "public-api", response: null };
     }
 
@@ -119,7 +136,7 @@ export async function evaluateAccessGate(
           isSiteProxy: false,
           apiKey: null,
           requestLane: "public-api",
-          response: errorResponse(503, "Public API temporarily unavailable"),
+          response: publicApiUnavailableResponse(),
         };
       }
       if (authMode === "report-only") {
@@ -137,7 +154,7 @@ export async function evaluateAccessGate(
       isSiteProxy: false,
       apiKey: null,
       requestLane: "public-api",
-      response: errorResponse(503, "Public API temporarily unavailable"),
+      response: publicApiUnavailableResponse(),
     };
   }
   const response = await checkPublicApiRateLimit(

@@ -535,6 +535,61 @@ describe("api key helpers", () => {
     expect(rehashQuery?.binds[0]).toBe(await hmacSha256Hex(newPepper, secret));
   });
 
+  it("returns unavailable when API key lookup storage fails", async () => {
+    const db = mockD1([
+      {
+        match: "FROM api_keys",
+        matchBinds: ["0123456789abcdef"],
+        rows: [],
+        throwError: new Error("lookup failed"),
+      },
+    ], { requireMatch: true });
+
+    await expect(
+      authenticateApiKey(db, "ph_live_0123456789abcdef_abcdefghijklmnopqrstuvwxyzABCDEF", "pepper"),
+    ).resolves.toEqual({ kind: "unavailable" });
+  });
+
+  it("returns unavailable when previous-pepper rehash storage fails", async () => {
+    const oldPepper = "old-pepper";
+    const newPepper = "new-pepper";
+    const secret = "abcdefghijklmnopqrstuvwxyzABCDEF";
+    const oldSecretHash = await hmacSha256Hex(oldPepper, secret);
+    const prefix = "0123456789abcdef";
+    const db = mockD1([
+      {
+        match: "FROM api_keys",
+        matchBinds: [prefix],
+        rows: [{
+          id: 7,
+          key_prefix: prefix,
+          secret_hash: oldSecretHash,
+          name: "Legacy",
+          owner_email: null,
+          tier: "standard",
+          traffic_class: "external",
+          rate_limit_per_minute: 120,
+          is_active: 1,
+          expires_at: null,
+          created_at: 1,
+          updated_at: 1,
+          last_used_at: null,
+          last_used_route: null,
+          pepper_version: 1,
+        }],
+      },
+      {
+        match: "UPDATE api_keys SET secret_hash",
+        rows: [],
+        throwError: new Error("rehash failed"),
+      },
+    ], { requireMatch: true });
+
+    await expect(
+      authenticateApiKey(db, `ph_live_${prefix}_${secret}`, newPepper, oldPepper, 1_000),
+    ).resolves.toEqual({ kind: "unavailable" });
+  });
+
   it("records an audit log entry when creating a key", async () => {
     const db = mockD1([
       {

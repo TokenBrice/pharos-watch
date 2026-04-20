@@ -177,7 +177,7 @@ Rate-limited responses include the retry delay in the HTTP `Retry-After` header 
 
 `POST /api/feedback` also has a form-specific limiter. Its `429` body is `{ "error": "Too many submissions. Please wait a few minutes." }`, and it should be handled as a local submission throttle rather than as a public API quota response.
 
-If global public-IP limiter bookkeeping fails repeatedly, the worker fails closed after 3 consecutive limiter errors and returns `503 Service Unavailable` with `{ "error": "Public API temporarily unavailable" }` plus `Retry-After: 60`. Treat this as an emergency limiter-health condition, not as successful quota exhaustion. API-key traffic uses a separate per-key limiter; quota overages return `429` with `Retry-After` when available, and dependency failures do not use the same 3-strike public-IP emergency state unless the implementation changes.
+If global public-IP limiter bookkeeping fails repeatedly, the worker fails closed after 3 consecutive limiter errors and returns `503 Service Unavailable` with `{ "error": "Public API temporarily unavailable" }` plus `Retry-After: 60`. Treat this as an emergency limiter-health condition, not as successful quota exhaustion. API-key traffic uses a separate per-key limiter; quota overages return `429` with `Retry-After` when available. API-key authentication and per-key limiter storage failures fail closed immediately with `503 Service Unavailable`, `{ "error": "Public API temporarily unavailable" }`, and `Retry-After: 60`. Best-effort API-key usage timestamp updates do not fail otherwise successful reads.
 
 ### Retry Guidance
 

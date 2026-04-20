@@ -4,6 +4,12 @@ import type {
   ApiKeyTrafficClass,
   ApiKeyUpdateRequest,
 } from "@shared/types";
+import {
+  API_KEY_DEFAULT_EXPIRY_SEC,
+  API_KEY_DEFAULT_RATE_LIMIT_PER_MINUTE,
+  API_KEY_MAX_RATE_LIMIT_PER_MINUTE,
+  API_KEY_MIN_RATE_LIMIT_PER_MINUTE,
+} from "@shared/lib/ops-limits";
 import { errorResponse } from "./api-utils";
 import { IsolateLocalState } from "./isolate-local-state";
 
@@ -11,14 +17,10 @@ const API_KEY_PREFIX_BYTES = 8;
 const API_KEY_SECRET_BYTES = 24;
 const API_KEY_TOKEN_PREFIX = "ph_live";
 export const API_KEY_TOKEN_PATTERN = /^ph_live_([0-9a-f]{16})_([A-Za-z0-9_-]{32})$/;
-const API_KEY_DEFAULT_RATE_LIMIT_PER_MINUTE = 120;
-const API_KEY_MIN_RATE_LIMIT_PER_MINUTE = 1;
-const API_KEY_MAX_RATE_LIMIT_PER_MINUTE = 10_000;
 const API_KEY_NAME_MAX_LENGTH = 80;
 const API_KEY_OWNER_EMAIL_MAX_LENGTH = 200;
 const API_KEY_TIER_MAX_LENGTH = 40;
 const API_KEY_TRAFFIC_CLASS_DEFAULT: ApiKeyTrafficClass = "external";
-const API_KEY_DEFAULT_EXPIRY_SEC = 90 * 24 * 60 * 60;
 const API_KEY_CACHE_TTL_MS = 5_000;
 const API_KEY_USAGE_UPDATE_WINDOW_SEC = 120;
 const API_KEY_RATE_LIMIT_PRUNE_WINDOW_MULTIPLIER = 10;

@@ -17,6 +17,7 @@ It intentionally does **not** treat vendor pricing-plan quotas as source of trut
 - `worker/wrangler.toml`
 - `shared/lib/cron-jobs.ts`
 - `worker/src/lib/rate-limit.ts`
+- `shared/lib/ops-limits.ts`
 - `worker/src/lib/api-keys.ts`
 - `worker/src/lib/circuit-breaker.ts`
 - `worker/src/handlers/http/gates.ts`
@@ -41,7 +42,7 @@ It intentionally does **not** treat vendor pricing-plan quotas as source of trut
 | Status-tracked cron jobs         | `31`                                            | `shared/lib/cron-jobs.ts`                                     | These are the jobs expected by `/api/status`                                                                                                                 |
 | Runtime jobs actually scheduled  | `31`                                            | `shared/lib/cron-jobs.ts`, `shared/lib/scheduled-runner-registry.ts` | Runtime scheduling matches the shared status metadata set. The additional `*/5 * * * *` digest-trigger poll is a runner slot that executes pending manual requests under the existing `daily-digest` lease, not a separate status job. |
 | Public API limiter               | `300 requests / 60 seconds` per IP hash         | `worker/src/handlers/http/gates.ts`, `worker/src/lib/rate-limit.ts` | Legacy limiter for exempt public routes and protected routes when API-key auth is not satisfied/enforced; enforced through D1-backed `public_api_rate_limit`; after `3` consecutive D1 limiter failures, the worker enters a bounded `503` emergency block with `Retry-After: 60` |
-| API key default limiter          | `120 requests / 60 seconds` per key             | `worker/src/lib/api-keys.ts`                                   | Protected public routes with a valid `X-API-Key` use the D1-backed `api_key_rate_limit` table; per-key overrides are stored in `api_keys.rate_limit_per_minute`            |
+| API key default limiter          | `120 requests / 60 seconds` per key             | `shared/lib/ops-limits.ts`, `worker/src/lib/api-keys.ts`        | Protected public routes with a valid `X-API-Key` use the D1-backed `api_key_rate_limit` table; per-key overrides are stored in `api_keys.rate_limit_per_minute`. API-key auth/limiter dependency failures fail closed with `503` and `Retry-After: 60`; last-used metadata writes are best-effort. |
 | Feedback limiter                 | `3 submissions / 10 minutes` per salted IP hash | `worker/src/api/feedback.ts`, `worker/src/lib/rate-limit.ts`  | Separate from the general public API limiter                                                                                                                 |
 | Request attribution telemetry retention | `35 days`                                 | `worker/src/lib/request-source-attribution.ts`, `functions/lib/request-attribution.ts` | Total site-vs-external demand, worker-lane load, and per-key public-API load buckets in `api_request_consumer_stats` / `site_data_request_stats` / `api_key_request_stats` are pruned opportunistically |
 

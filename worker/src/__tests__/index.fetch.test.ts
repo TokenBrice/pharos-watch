@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import worker from "../index";
 import { mockD1 } from "../api/__tests__/helpers/mock-d1";
 import { hmacSha256Hex, makeExecutionContext } from "../api/__tests__/helpers/auth";
+import { resetApiKeyStateForTests } from "../lib/api-keys";
 import { resetRateLimitStateForTests } from "../lib/rate-limit";
 import { resetRequestAttributionStateForTests } from "../lib/request-source-attribution";
 import { PHAROS_WEB_ACCEPT_MARKER } from "@shared/lib/request-source-marker";
@@ -21,6 +22,7 @@ describe("worker.fetch", () => {
   const cachePut = vi.fn(async () => undefined);
 
   beforeEach(() => {
+    resetApiKeyStateForTests();
     resetRateLimitStateForTests();
     resetRequestAttributionStateForTests();
     vi.restoreAllMocks();
@@ -660,5 +662,267 @@ describe("worker.fetch", () => {
     expect(history.some((entry) => entry.sql.includes("INSERT INTO api_key_rate_limit"))).toBe(true);
     expect(history.some((entry) => entry.sql.includes("INSERT INTO api_key_request_stats") && entry.binds[0] === 7)).toBe(true);
     expect(history.some((entry) => entry.sql.includes("public_api_rate_limit"))).toBe(false);
+  });
+
+  it("returns 503 when API key lookup storage fails", async () => {
+    const env = makeEnv({
+      PUBLIC_API_AUTH_MODE: "enforce",
+      API_KEY_HASH_PEPPER: "pepper",
+      DB: mockD1([
+        {
+          match: "FROM api_keys",
+          matchBinds: ["0123456789abcdef"],
+          rows: [],
+          throwError: new Error("api key lookup unavailable"),
+        },
+        {
+          match: "INSERT INTO api_request_consumer_stats",
+          rows: [],
+          runMeta: { changes: 1 },
+        },
+        {
+          match: "DELETE FROM api_request_consumer_stats",
+          rows: [],
+          runMeta: { changes: 0 },
+        },
+        {
+          match: "DELETE FROM api_key_request_stats",
+          rows: [],
+          runMeta: { changes: 0 },
+        },
+      ], { requireMatch: true }),
+    });
+    const { ctx, waits } = makeExecutionContext();
+
+    const res = await worker.fetch(
+      new Request("https://api.pharos.watch/api/stablecoins", {
+        headers: { "X-API-Key": "ph_live_0123456789abcdef_abcdefghijklmnopqrstuvwxyzABCDEF" },
+      }),
+      env as never,
+      ctx,
+    );
+    await Promise.all(waits);
+
+    expect(res.status).toBe(503);
+    expect(res.headers.get("Retry-After")).toBe("60");
+    await expect(res.json()).resolves.toEqual({ error: "Public API temporarily unavailable" });
+  });
+
+  it("returns 503 when API key rate-limit storage fails", async () => {
+    const pepper = "pepper";
+    const secret = "abcdefghijklmnopqrstuvwxyzABCDEF";
+    const secretHash = await hmacSha256Hex(pepper, secret);
+    const env = makeEnv({
+      PUBLIC_API_AUTH_MODE: "enforce",
+      API_KEY_HASH_PEPPER: pepper,
+      DB: mockD1([
+        {
+          match: "FROM api_keys",
+          matchBinds: ["0123456789abcdef"],
+          rows: [{
+            id: 7,
+            key_prefix: "0123456789abcdef",
+            secret_hash: secretHash,
+            name: "Smoke",
+            owner_email: null,
+            tier: "standard",
+            traffic_class: "external",
+            rate_limit_per_minute: 120,
+            is_active: 1,
+            expires_at: null,
+            created_at: 1,
+            updated_at: 1,
+            last_used_at: null,
+            last_used_route: null,
+          }],
+        },
+        {
+          match: "INSERT INTO api_key_rate_limit",
+          rows: [],
+          throwError: new Error("api key limiter unavailable"),
+        },
+        {
+          match: "INSERT INTO api_request_consumer_stats",
+          rows: [],
+          runMeta: { changes: 1 },
+        },
+        {
+          match: "DELETE FROM api_request_consumer_stats",
+          rows: [],
+          runMeta: { changes: 0 },
+        },
+        {
+          match: "DELETE FROM api_key_request_stats",
+          rows: [],
+          runMeta: { changes: 0 },
+        },
+      ], { requireMatch: true }),
+    });
+    const { ctx, waits } = makeExecutionContext();
+
+    const res = await worker.fetch(
+      new Request("https://api.pharos.watch/api/stablecoins", {
+        headers: { "X-API-Key": "ph_live_0123456789abcdef_abcdefghijklmnopqrstuvwxyzABCDEF" },
+      }),
+      env as never,
+      ctx,
+    );
+    await Promise.all(waits);
+
+    expect(res.status).toBe(503);
+    expect(res.headers.get("Retry-After")).toBe("60");
+    await expect(res.json()).resolves.toEqual({ error: "Public API temporarily unavailable" });
+  });
+
+  it("returns 503 when previous-pepper migration storage fails", async () => {
+    const oldPepper = "old-pepper";
+    const newPepper = "new-pepper";
+    const secret = "abcdefghijklmnopqrstuvwxyzABCDEF";
+    const oldSecretHash = await hmacSha256Hex(oldPepper, secret);
+    const env = makeEnv({
+      PUBLIC_API_AUTH_MODE: "enforce",
+      API_KEY_HASH_PEPPER: newPepper,
+      API_KEY_HASH_PEPPER_PREVIOUS: oldPepper,
+      DB: mockD1([
+        {
+          match: "FROM api_keys",
+          matchBinds: ["0123456789abcdef"],
+          rows: [{
+            id: 7,
+            key_prefix: "0123456789abcdef",
+            secret_hash: oldSecretHash,
+            name: "Legacy",
+            owner_email: null,
+            tier: "standard",
+            traffic_class: "external",
+            rate_limit_per_minute: 120,
+            is_active: 1,
+            expires_at: null,
+            created_at: 1,
+            updated_at: 1,
+            last_used_at: null,
+            last_used_route: null,
+          }],
+        },
+        {
+          match: "UPDATE api_keys SET secret_hash",
+          rows: [],
+          throwError: new Error("pepper migration failed"),
+        },
+        {
+          match: "INSERT INTO api_request_consumer_stats",
+          rows: [],
+          runMeta: { changes: 1 },
+        },
+        {
+          match: "DELETE FROM api_request_consumer_stats",
+          rows: [],
+          runMeta: { changes: 0 },
+        },
+        {
+          match: "DELETE FROM api_key_request_stats",
+          rows: [],
+          runMeta: { changes: 0 },
+        },
+      ], { requireMatch: true }),
+    });
+    const { ctx, waits } = makeExecutionContext();
+
+    const res = await worker.fetch(
+      new Request("https://api.pharos.watch/api/stablecoins", {
+        headers: { "X-API-Key": "ph_live_0123456789abcdef_abcdefghijklmnopqrstuvwxyzABCDEF" },
+      }),
+      env as never,
+      ctx,
+    );
+    await Promise.all(waits);
+
+    expect(res.status).toBe(503);
+    expect(res.headers.get("Retry-After")).toBe("60");
+    await expect(res.json()).resolves.toEqual({ error: "Public API temporarily unavailable" });
+  });
+
+  it("serves protected reads when last-used metadata storage fails", async () => {
+    cacheMatch.mockResolvedValueOnce(new Response(JSON.stringify({ cached: true }), {
+      status: 200,
+      headers: { "Content-Type": "application/json" },
+    }));
+    const pepper = "pepper";
+    const secret = "abcdefghijklmnopqrstuvwxyzABCDEF";
+    const secretHash = await hmacSha256Hex(pepper, secret);
+    const env = makeEnv({
+      PUBLIC_API_AUTH_MODE: "enforce",
+      API_KEY_HASH_PEPPER: pepper,
+      DB: mockD1([
+        {
+          match: "FROM api_keys",
+          matchBinds: ["0123456789abcdef"],
+          rows: [{
+            id: 7,
+            key_prefix: "0123456789abcdef",
+            secret_hash: secretHash,
+            name: "Smoke",
+            owner_email: null,
+            tier: "standard",
+            traffic_class: "external",
+            rate_limit_per_minute: 120,
+            is_active: 1,
+            expires_at: null,
+            created_at: 1,
+            updated_at: 1,
+            last_used_at: null,
+            last_used_route: null,
+          }],
+        },
+        {
+          match: "INSERT INTO api_key_rate_limit",
+          rows: [],
+          first: { count: 1 },
+        },
+        {
+          match: "UPDATE api_keys SET last_used_at = ?, last_used_route = ? WHERE id = ?",
+          rows: [],
+          throwError: new Error("usage write failed"),
+        },
+        {
+          match: "DELETE FROM api_key_rate_limit",
+          rows: [],
+          runMeta: { changes: 0 },
+        },
+        {
+          match: "INSERT INTO api_request_consumer_stats",
+          rows: [],
+          runMeta: { changes: 1 },
+        },
+        {
+          match: "INSERT INTO api_key_request_stats",
+          rows: [],
+          runMeta: { changes: 1 },
+        },
+        {
+          match: "DELETE FROM api_request_consumer_stats",
+          rows: [],
+          runMeta: { changes: 0 },
+        },
+        {
+          match: "DELETE FROM api_key_request_stats",
+          rows: [],
+          runMeta: { changes: 0 },
+        },
+      ], { requireMatch: true }),
+    });
+    const { ctx, waits } = makeExecutionContext();
+
+    const res = await worker.fetch(
+      new Request("https://api.pharos.watch/api/stablecoins", {
+        headers: { "X-API-Key": "ph_live_0123456789abcdef_abcdefghijklmnopqrstuvwxyzABCDEF" },
+      }),
+      env as never,
+      ctx,
+    );
+    await Promise.all(waits);
+
+    expect(res.status).toBe(200);
+    await expect(res.json()).resolves.toEqual({ cached: true });
   });
 });

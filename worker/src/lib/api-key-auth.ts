@@ -46,38 +46,44 @@ export async function authenticateApiKey(
     return { kind: "unavailable" };
   }
 
-  const row = await lookupApiKeyByPrefix(db, parsed.prefix);
-  if (!row || row.is_active !== 1) {
-    return { kind: "invalid" };
-  }
-  if (row.expires_at != null && row.expires_at <= nowSec) {
-    return { kind: "invalid" };
-  }
+  try {
+    const row = await lookupApiKeyByPrefix(db, parsed.prefix);
+    if (!row || row.is_active !== 1) {
+      return { kind: "invalid" };
+    }
+    if (row.expires_at != null && row.expires_at <= nowSec) {
+      return { kind: "invalid" };
+    }
 
-  const expectedHash = await hmacSha256Hex(effectivePepper, parsed.secret);
-  if (await timingSafeCompare(expectedHash, row.secret_hash)) {
-    return {
-      kind: "valid",
-      key: mapRowToAuthenticatedKey(row),
-    };
-  }
-
-  const effectivePreviousPepper = pepperPrevious?.trim();
-  if (effectivePreviousPepper) {
-    const previousHash = await hmacSha256Hex(effectivePreviousPepper, parsed.secret);
-    if (await timingSafeCompare(previousHash, row.secret_hash)) {
-      await db.prepare(
-        "UPDATE api_keys SET secret_hash = ?, pepper_version = pepper_version + 1, updated_at = ? WHERE id = ?",
-      )
-        .bind(expectedHash, nowSec, row.id)
-        .run();
-      clearApiKeyCache(parsed.prefix);
+    const expectedHash = await hmacSha256Hex(effectivePepper, parsed.secret);
+    if (await timingSafeCompare(expectedHash, row.secret_hash)) {
       return {
         kind: "valid",
         key: mapRowToAuthenticatedKey(row),
       };
     }
-  }
 
-  return { kind: "invalid" };
+    const effectivePreviousPepper = pepperPrevious?.trim();
+    if (effectivePreviousPepper) {
+      const previousHash = await hmacSha256Hex(effectivePreviousPepper, parsed.secret);
+      if (await timingSafeCompare(previousHash, row.secret_hash)) {
+        await db.prepare(
+          "UPDATE api_keys SET secret_hash = ?, pepper_version = pepper_version + 1, updated_at = ? WHERE id = ?",
+        )
+          .bind(expectedHash, nowSec, row.id)
+          .run();
+        clearApiKeyCache(parsed.prefix);
+        return {
+          kind: "valid",
+          key: mapRowToAuthenticatedKey(row),
+        };
+      }
+    }
+
+    return { kind: "invalid" };
+  } catch (err) {
+    console.warn("[api-keys] API key authentication dependency unavailable:", err);
+    clearApiKeyCache(parsed.prefix);
+    return { kind: "unavailable" };
+  }
 }
