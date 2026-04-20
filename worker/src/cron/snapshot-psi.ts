@@ -1,5 +1,5 @@
 import type { CronResult } from "../lib/cron-logger";
-import { throwIfAborted } from "../lib/abort";
+import { rethrowIfAborted, throwIfAborted } from "../lib/abort";
 import { DAY_SECONDS } from "@shared/lib/time-constants";
 import { getConditionBand } from "../lib/stability-index";
 import { PSI_METHODOLOGY_VERSION } from "@shared/lib/stability-index-version";
@@ -40,6 +40,7 @@ export async function snapshotPsiDaily(db: D1Database, signal?: AbortSignal): Pr
       .all<{ methodology_version: string; cnt: number }>();
     throwIfAborted(signal);
   } catch (err) {
+    rethrowIfAborted(err, signal);
     console.error("[snapshot-psi] DB query failed:", err);
     return { status: "degraded", itemCount: 0, metadata: JSON.stringify({ reason: "db_query_failed", error: String(err).slice(0, 200) }) };
   }

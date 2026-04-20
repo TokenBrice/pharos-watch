@@ -58,6 +58,7 @@ export function scanCronAbortContract(roots = DEFAULT_ROOTS, cwd = process.cwd()
         const trimmed = line.trim();
         const dropsSignal =
           /\brunLeasedCron\([^,\n]+,\s*\(\s*\)\s*=>/.test(trimmed) ||
+          /\brunBestEffortScheduledJob\([^,\n]+,[^,\n]+,[^,\n]+,\s*\(\s*\)\s*=>/.test(trimmed) ||
           /\b_signal\b.*AbortSignal/.test(trimmed);
         if (!dropsSignal || isWaived(waivers, rel, trimmed)) continue;
         violations.push({ file: rel, line: index + 1, text: trimmed });

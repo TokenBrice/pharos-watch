@@ -76,8 +76,10 @@ describe("hasDeployImpact", () => {
       ".github/actions/setup-workspace/action.yml",
       "scripts/check-cron-abort-contract.mjs",
       "scripts/check-cron-connection-budget.ts",
+      "scripts/check-doc-source-paths.mjs",
       "scripts/check-env-contract.mjs",
       "scripts/check-sql-interpolation-safety.mjs",
+      "scripts/generate-cemetery-dataset.ts",
       "scripts/test-merge-gate.mjs",
     ];
 

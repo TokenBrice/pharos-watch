@@ -1,5 +1,7 @@
 import { describe, expect, it } from "vitest";
-import { enrichRowBalances } from "../amount-recovery";
+import { backfillAmounts, enrichRowBalances } from "../amount-recovery";
+import { shouldSuppressAsMirrorZero } from "../shared";
+import { mockD1 } from "../../../api/__tests__/helpers/mock-d1";
 import type { BlacklistRow } from "../shared";
 import { chainConfig, type ContractEventConfig } from "../../../lib/blacklist-contracts";
 
@@ -40,6 +42,26 @@ function makeRow(overrides: Partial<BlacklistRow> = {}): BlacklistRow {
 }
 
 describe("enrichRowBalances", () => {
+  it("keeps EURC mirror-zero suppression explicit", () => {
+    expect(shouldSuppressAsMirrorZero("EURC", "blacklist", 0)).toBe(true);
+    expect(shouldSuppressAsMirrorZero("EURC", "destroy", 0)).toBe(false);
+    expect(shouldSuppressAsMirrorZero("USDC", "blacklist", 0)).toBe(false);
+  });
+
+  it("excludes Tron rows from the EVM recovery query", async () => {
+    const db = mockD1([
+      {
+        match: "FROM blacklist_events",
+        rows: [],
+      },
+    ]);
+    const limiter = async <T>(fn: () => Promise<T>) => fn();
+
+    await backfillAmounts(db, null, null, limiter, { count: 0, limit: 1 }, Date.now() + 10_000);
+
+    expect(db.getHistory()[0]?.sql).toContain("AND chain_id != 'tron'");
+  });
+
   it("values rows that already have native amounts without provider calls", async () => {
     const rows = [makeRow({ amount_native: 12.5 })];
     const limiter = async () => {

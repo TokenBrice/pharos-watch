@@ -2,7 +2,7 @@ import { batchExecute } from "../lib/db";
 import { PSI_ELIGIBLE_STABLECOINS } from "@shared/lib/psi-eligible";
 import { sumPegBuckets } from "@shared/lib/supply";
 import type { CronResult } from "../lib/cron-logger";
-import { throwIfAborted } from "../lib/abort";
+import { rethrowIfAborted, throwIfAborted } from "../lib/abort";
 import { loadStablecoinsCache } from "../lib/stablecoins-cache";
 import { getCache, setCache } from "../lib/db-cache";
 
@@ -86,6 +86,7 @@ export async function snapshotSupply(db: D1Database, signal?: AbortSignal): Prom
       throwIfAborted(signal);
       await setCache(db, "snapshot-supply:last-write", JSON.stringify({ snapshotDate }));
     } catch (err) {
+      rethrowIfAborted(err, signal);
       console.error("[snapshot-supply] batchExecute failed:", err);
       return { status: "degraded", itemCount: 0, metadata: JSON.stringify({ reason: "db_write_failed", error: String(err).slice(0, 200) }) };
     }
