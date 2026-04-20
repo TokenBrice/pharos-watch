@@ -506,6 +506,20 @@ export function ReportCardsClient() {
       coreSettlementProfiles,
     });
   }, [displayCards, gradeFilter, sortKey, mcapMap, coreSettlementProfiles]);
+  const renderMiniCard = (card: ReportCard, index: number) => (
+    <LazyCard key={card.id}>
+      <ReportCardMini
+        card={card}
+        logo={logos?.[card.id]}
+        isSimulated={affectedIds.has(card.id)}
+        isSimulating={isSimulating}
+        originalGrade={originalCardMap.get(card.id)?.overallGrade}
+        originalScore={originalCardMap.get(card.id)?.overallScore}
+        coreSettlement={coreSettlementProfiles.has(card.id)}
+        animIndex={index % 5}
+      />
+    </LazyCard>
+  );
 
   // Loading state
   if (isLoadingCards) {
@@ -706,40 +720,14 @@ export function ReportCardsClient() {
           {groupReportCardsByGrade(filteredCards).map((group) => (
             <Fragment key={group.grade}>
               <GradeSectionHeader grade={group.grade} count={group.cards.length} />
-              {group.cards.map((card, i) => (
-                <LazyCard key={card.id}>
-                  <ReportCardMini
-                    card={card}
-                    logo={logos?.[card.id]}
-                    isSimulated={affectedIds.has(card.id)}
-                    isSimulating={isSimulating}
-                    originalGrade={originalCardMap.get(card.id)?.overallGrade}
-                    originalScore={originalCardMap.get(card.id)?.overallScore}
-                    coreSettlement={coreSettlementProfiles.has(card.id)}
-                    animIndex={i % 5}
-                  />
-                </LazyCard>
-              ))}
+              {group.cards.map(renderMiniCard)}
             </Fragment>
           ))}
         </div>
       ) : (
         /* Flat grid (filtered or simulating) */
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3">
-          {filteredCards.map((card, i) => (
-            <LazyCard key={card.id}>
-              <ReportCardMini
-                card={card}
-                logo={logos?.[card.id]}
-                isSimulated={affectedIds.has(card.id)}
-                isSimulating={isSimulating}
-                originalGrade={originalCardMap.get(card.id)?.overallGrade}
-                originalScore={originalCardMap.get(card.id)?.overallScore}
-                coreSettlement={coreSettlementProfiles.has(card.id)}
-                animIndex={i % 5}
-              />
-            </LazyCard>
-          ))}
+          {filteredCards.map(renderMiniCard)}
         </div>
       )}
     </div>

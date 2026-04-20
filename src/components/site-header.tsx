@@ -17,6 +17,24 @@ const METRIC_PILL_CLASS =
   "inline-flex items-center rounded-full border px-2.5 py-1 font-mono tabular-nums text-muted-foreground" +
   " border-[var(--control-pill-border)] bg-[var(--control-pill-bg)] shadow-[inset_0_1px_0_oklch(1_0_0_/0.08)]";
 
+interface MetricPill {
+  value: string;
+  label: string;
+}
+
+function MetricPills({ metrics }: { metrics: MetricPill[] }) {
+  return (
+    <>
+      {metrics.map((metric) => (
+        <span key={metric.label} className={METRIC_PILL_CLASS}>
+          <span className="text-foreground">{metric.value}</span>
+          <span className="ml-1 text-muted-foreground/70">{metric.label}</span>
+        </span>
+      ))}
+    </>
+  );
+}
+
 export function SiteHeader({ total, pegCount, chainCount }: SiteHeaderProps) {
   const { data: health } = useHealth();
   const { data: dexMap } = useDexLiquidity();
@@ -55,6 +73,14 @@ export function SiteHeader({ total, pegCount, chainCount }: SiteHeaderProps) {
     }
     return count;
   }, [stablecoinsData, total]);
+  const headlineMetrics = useMemo(
+    () => [
+      { value: formatCompactCount(liveTrackedCount), label: "coins" },
+      { value: formatCompactCount(pegCount), label: "pegs" },
+      { value: formatCompactCount(chainCount), label: "chains" },
+    ],
+    [chainCount, liveTrackedCount, pegCount],
+  );
 
   return (
     <div className="pharos-card-shell flex flex-col gap-3 px-4 py-3 md:flex-row md:items-end md:justify-between md:gap-6 md:px-5 md:py-5">
@@ -74,35 +100,13 @@ export function SiteHeader({ total, pegCount, chainCount }: SiteHeaderProps) {
           </p>
         </div>
         <div className="ml-auto flex flex-wrap gap-1.5 text-[11px] md:hidden">
-          <span className={METRIC_PILL_CLASS}>
-            <span className="text-foreground">{formatCompactCount(liveTrackedCount)}</span>
-            <span className="ml-1 text-muted-foreground/70">coins</span>
-          </span>
-          <span className={METRIC_PILL_CLASS}>
-            <span className="text-foreground">{formatCompactCount(pegCount)}</span>
-            <span className="ml-1 text-muted-foreground/70">pegs</span>
-          </span>
-          <span className={METRIC_PILL_CLASS}>
-            <span className="text-foreground">{formatCompactCount(chainCount)}</span>
-            <span className="ml-1 text-muted-foreground/70">chains</span>
-          </span>
+          <MetricPills metrics={headlineMetrics} />
         </div>
       </div>
 
       <div className="hidden gap-2 text-[11px] md:grid">
         <div className="flex flex-wrap justify-end gap-2">
-          <span className={METRIC_PILL_CLASS}>
-            <span className="text-foreground">{formatCompactCount(liveTrackedCount)}</span>
-            <span className="ml-1 text-muted-foreground/70">coins</span>
-          </span>
-          <span className={METRIC_PILL_CLASS}>
-            <span className="text-foreground">{formatCompactCount(pegCount)}</span>
-            <span className="ml-1 text-muted-foreground/70">pegs</span>
-          </span>
-          <span className={METRIC_PILL_CLASS}>
-            <span className="text-foreground">{formatCompactCount(chainCount)}</span>
-            <span className="ml-1 text-muted-foreground/70">chains</span>
-          </span>
+          <MetricPills metrics={headlineMetrics} />
         </div>
         <div className="hidden flex-wrap justify-end gap-2 2xl:flex">
           {trackedStats.map((stat) => (
