@@ -5,7 +5,7 @@ on:
   workflow_dispatch:
 
 concurrency:
-  group: production-deploy-${{ github.ref }}
+  group: production-deploy
   cancel-in-progress: false
 
 permissions:
