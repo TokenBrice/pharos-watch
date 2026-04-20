@@ -98,6 +98,15 @@ export async function syncBlacklist(opts: SyncBlacklistOptions): Promise<SyncBla
     }
     return cache;
   };
+  const recordProcessedRows = (processed: Awaited<ReturnType<typeof processFetchedBlacklistRows>>): void => {
+    enrichCounters.attempted += processed.enrichCounters.attempted;
+    enrichCounters.succeeded += processed.enrichCounters.succeeded;
+    enrichCounters.failed += processed.enrichCounters.failed;
+    currentBalanceCacheCounters.updated += processed.currentBalanceCacheCounters.updated;
+    currentBalanceCacheCounters.deleted += processed.currentBalanceCacheCounters.deleted;
+    currentBalanceCacheCounters.failed += processed.currentBalanceCacheCounters.failed;
+    totalInsertedRows += processed.insertedRows;
+  };
 
   const configStates = await Promise.all(
     CONTRACT_CONFIGS.map(async (config) => {
@@ -243,13 +252,7 @@ export async function syncBlacklist(opts: SyncBlacklistOptions): Promise<SyncBla
           signal,
           chainRpcs,
         });
-        enrichCounters.attempted += processed.enrichCounters.attempted;
-        enrichCounters.succeeded += processed.enrichCounters.succeeded;
-        enrichCounters.failed += processed.enrichCounters.failed;
-        currentBalanceCacheCounters.updated += processed.currentBalanceCacheCounters.updated;
-        currentBalanceCacheCounters.deleted += processed.currentBalanceCacheCounters.deleted;
-        currentBalanceCacheCounters.failed += processed.currentBalanceCacheCounters.failed;
-        totalInsertedRows += processed.insertedRows;
+        recordProcessedRows(processed);
 
         if (result.incomplete) {
           runtimeBudgetHit = true;
@@ -308,13 +311,7 @@ export async function syncBlacklist(opts: SyncBlacklistOptions): Promise<SyncBla
           signal,
           chainRpcs,
         });
-        enrichCounters.attempted += processed.enrichCounters.attempted;
-        enrichCounters.succeeded += processed.enrichCounters.succeeded;
-        enrichCounters.failed += processed.enrichCounters.failed;
-        currentBalanceCacheCounters.updated += processed.currentBalanceCacheCounters.updated;
-        currentBalanceCacheCounters.deleted += processed.currentBalanceCacheCounters.deleted;
-        currentBalanceCacheCounters.failed += processed.currentBalanceCacheCounters.failed;
-        totalInsertedRows += processed.insertedRows;
+        recordProcessedRows(processed);
 
         let newBlock: number;
         if (result.incomplete) {
