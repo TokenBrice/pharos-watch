@@ -17,7 +17,7 @@ Route contract for `/stablecoin/[id]/`, the central per-asset analytics surface.
 - builds metadata through `buildStablecoinDetailMetadata(...)`
 - injects static logo data from `data/logos.json`
 - injects static AI summaries from `data/ai-summaries.json`
-- renders a visible server-side `h1` plus the AI-summary `<time>` dateline for active pages before the client detail island mounts
+- renders one server-side `sr-only` `h1` for active pages before the client detail island mounts; the visible identity remains inside the client hero, while descriptions live in metadata and Dataset JSON-LD
 - keeps a visible dossier-style `Suspense` fallback with coin identity, classification, section rail placeholders, and score-card scaffolding while the full client boots
 - renders `ExploreNextSection` after the interactive client
 - emits N-level `BreadcrumbJsonLd` plus a Dataset JSON-LD payload for active assets
@@ -32,7 +32,7 @@ If the ID is tracked but `coin.status === "pre-launch"`, the server route return
 
 In addition to the pre-launch dossier sections (banner, timeline, milestones, featured content, and metadata), it now includes a launch-alert CTA that:
 
-- owns the page's visible `h1` for pre-launch assets, while active assets get their visible server-rendered `h1` and AI-summary dateline from `src/app/stablecoin/[id]/page.tsx` before the client detail island mounts
+- owns the page's visible `h1` for pre-launch assets; active assets use an `sr-only` server-rendered `h1` and keep the visible identity in the client hero
 - promotes `@PharosWatchBot`
 - renders the exact command users can copy and paste for that asset
 - uses `/subscribe launch <coin.id>` so the copied command is deterministic even when a ticker is ambiguous
