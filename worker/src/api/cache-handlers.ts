@@ -178,14 +178,16 @@ export const handleYieldRankings = withErrorHandler(
       "yield-rankings:cache-read",
     );
 
-    if (validation.ok) {
-      try {
-        const snapshot = await buildReportCardsSnapshot(db);
-        body = hydrateYieldRankingsWithLiveSafety(validation.data, snapshot.cards);
-      } catch (err) {
-        console.warn("[yield-rankings] Live safety hydration failed:", err instanceof Error ? err.message : err);
-        body = validation.data;
-      }
+    if (!validation.ok) {
+      return errorResponse(503, "Cached yield-rankings payload is malformed");
+    }
+
+    try {
+      const snapshot = await buildReportCardsSnapshot(db);
+      body = hydrateYieldRankingsWithLiveSafety(validation.data, snapshot.cards);
+    } catch (err) {
+      console.warn("[yield-rankings] Live safety hydration failed:", err instanceof Error ? err.message : err);
+      body = validation.data;
     }
 
     if (body && typeof body === "object" && !Array.isArray(body)) {

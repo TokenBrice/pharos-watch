@@ -53,6 +53,36 @@ describe("normalizeTopPools", () => {
     const result = normalizeTopPools(json);
     expect(result[0]).not.toHaveProperty("extra");
   });
+
+  it("returns an empty array for non-array JSON payloads", () => {
+    expect(normalizeTopPools("{}")).toEqual([]);
+    expect(normalizeTopPools("null")).toEqual([]);
+  });
+
+  it("skips primitive, null, and array entries without throwing", () => {
+    const result = normalizeTopPools(JSON.stringify([
+      null,
+      1,
+      "bad",
+      ["not-a-pool"],
+      { project: "curve", chain: "Ethereum", tvlUsd: 200_000, source: "dl" },
+    ]));
+
+    expect(result).toEqual([{
+      project: "curve",
+      chain: "Ethereum",
+      tvlUsd: 200_000,
+      source: "dl",
+    }]);
+  });
+
+  it("omits malformed extra values", () => {
+    const json = JSON.stringify([
+      { project: "curve", chain: "Ethereum", tvlUsd: 200_000, source: "dl", extra: ["bad"] },
+    ]);
+    const result = normalizeTopPools(json);
+    expect(result[0]).not.toHaveProperty("extra");
+  });
 });
 
 describe("selectTrendBaseline", () => {

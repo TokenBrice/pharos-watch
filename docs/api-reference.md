@@ -1832,7 +1832,7 @@ Cache-backed yield rankings written by the `sync-yield-data` cron. The endpoint 
 
 **Cache:** standard — `X-Data-Age` and `Warning` headers included. Freshness threshold: 3600 s (1 hour, aligned to the hourly `sync-yield-data` publisher).
 
-**Error responses:** `503` when the cached rankings payload is missing or unparseable JSON. If a parseable payload fails the live schema validation path, the handler logs the validation issue and still serves the cached object with `_meta`, without live safety hydration.
+**Error responses:** `503` when the cached rankings payload is missing, unparseable JSON, or parseable JSON that fails the `YieldRankingsResponseSchema` cache-read validation. Schema-invalid cached objects are not served because the endpoint cannot safely hydrate or trust their row shape.
 
 **Response**
 

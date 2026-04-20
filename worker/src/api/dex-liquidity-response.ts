@@ -100,21 +100,27 @@ const ALLOWED_EXTRA_KEYS = new Set<string>([
 ]);
 
 export function normalizeTopPools(json: string | null): DexLiquidityPoolResponse[] {
-  const parsed = safeJsonParse<DexLiquidityPoolResponse[]>(json, []);
-  return parsed.map((pool) => {
-    const cleaned = pickAllowedKeys(pool as Record<string, unknown>, ALLOWED_POOL_KEYS);
-    if (pool.extra && typeof pool.extra === "object") {
-      cleaned.extra = pickAllowedKeys(pool.extra as Record<string, unknown>, ALLOWED_EXTRA_KEYS);
+  const parsed = safeJsonParse<unknown>(json, []);
+  if (!Array.isArray(parsed)) return [];
+
+  const pools: DexLiquidityPoolResponse[] = [];
+  for (const pool of parsed) {
+    if (!pool || typeof pool !== "object" || Array.isArray(pool)) continue;
+    const poolRecord = pool as Record<string, unknown>;
+    const cleaned = pickAllowedKeys(poolRecord, ALLOWED_POOL_KEYS);
+    if (poolRecord.extra && typeof poolRecord.extra === "object" && !Array.isArray(poolRecord.extra)) {
+      cleaned.extra = pickAllowedKeys(poolRecord.extra as Record<string, unknown>, ALLOWED_EXTRA_KEYS);
     }
-    const normalizedSource = normalizePoolSource(pool.source);
+    const normalizedSource = normalizePoolSource(poolRecord.source);
     if (normalizedSource != null) {
       cleaned.source = normalizedSource;
     } else {
-      console.info("[dex-liquidity] Unknown pool source:", pool.source);
+      console.info("[dex-liquidity] Unknown pool source:", poolRecord.source);
       delete cleaned.source;
     }
-    return cleaned as DexLiquidityPoolResponse;
-  });
+    pools.push(cleaned as DexLiquidityPoolResponse);
+  }
+  return pools;
 }
 
 // M7: Wide tolerance windows (24h for 24h baseline, 48h for 7d baseline) handle

@@ -268,6 +268,22 @@ describe("handleYieldRankings", () => {
     expect(buildReportCardsSnapshotMock).not.toHaveBeenCalled();
   });
 
+  it("returns 503 when cached rankings JSON fails schema validation", async () => {
+    const updatedAt = Math.floor(Date.now() / 1000) - 30;
+    const db = makeCacheDb({
+      rankings: "not-an-array",
+      updatedAt,
+    }, updatedAt);
+
+    const res = await handleYieldRankings(db);
+
+    expect(res.status).toBe(503);
+    await expect(res.json()).resolves.toEqual({
+      error: "Cached yield-rankings payload is malformed",
+    });
+    expect(buildReportCardsSnapshotMock).not.toHaveBeenCalled();
+  });
+
   it("keeps hourly rankings fresh for snapshots that are under one hour old", async () => {
     const updatedAt = Math.floor(Date.now() / 1000) - 3_500;
     const db = makeCacheDb({
