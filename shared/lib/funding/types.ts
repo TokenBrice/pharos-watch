@@ -30,9 +30,9 @@ export interface CostsFile {
 /**
  * One donation row. Written by the funding-update skill or by hand.
  *
- * - `kind: "founder"` rows are excluded from the community lifetime total,
- *   excluded from the donor list, but visible in the cost-breakdown footer
- *   as "founder subsidy this month / lifetime".
+ * - `kind: "founder"` rows are excluded from the community lifetime total
+ *   and donor list. The public cost-breakdown footer derives the open
+ *   monthly funding gap from costs minus community support.
  * - `kind: "pool"` (e.g. Giveth payout contract) counts as community;
  *   `display` should read "via Giveth" rather than the raw contract address.
  * - `kind: "community"` is everything else (default).

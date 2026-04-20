@@ -18,6 +18,8 @@ const GITHUB_URL = "https://github.com/TokenBrice/stablecoin-dashboard";
 const TWITTER_URL = "https://x.com/PharosWatch";
 const TELEGRAM_GROUP_URL = "https://t.me/pharoswatchers";
 const SUPPORTED_CHAINS: FundingChain[] = ["ethereum", "base", "optimism", "arbitrum", "polygon", "gnosis"];
+const PHAROS_SHARE_MESSAGE =
+  "Stablecoin risk data should be public infrastructure, not a private terminal. Pharos tracks 190+ stablecoins with peg, safety, liquidity, depeg, blacklist, flow, yield, and dependency signals. MIT-licensed, practitioner-built, free to use. Help keep it open: https://pharos.watch";
 
 // Brand-marked icons matching the footer (lucide has no X/Telegram icons).
 function XIcon({ className }: { className?: string }) {
@@ -47,18 +49,26 @@ const USD_COMPACT = new Intl.NumberFormat("en-US", {
 type Tone = "brand" | "data" | "insight" | "neutral";
 function toneBorder(tone: Tone): string {
   switch (tone) {
-    case "brand": return "border-l-frost-blue";
-    case "data": return "border-l-amber-500";
-    case "insight": return "border-l-emerald-500";
-    default: return "border-l-zinc-500";
+    case "brand":
+      return "border-l-frost-blue";
+    case "data":
+      return "border-l-amber-500";
+    case "insight":
+      return "border-l-emerald-500";
+    default:
+      return "border-l-zinc-500";
   }
 }
 function toneKicker(tone: Tone): string {
   switch (tone) {
-    case "brand": return "text-sky-700 dark:text-frost-blue/82";
-    case "data": return "text-amber-700 dark:text-amber-400";
-    case "insight": return "text-emerald-700 dark:text-emerald-400";
-    default: return "text-muted-foreground";
+    case "brand":
+      return "text-sky-700 dark:text-frost-blue/82";
+    case "data":
+      return "text-amber-700 dark:text-amber-400";
+    case "insight":
+      return "text-emerald-700 dark:text-emerald-400";
+    default:
+      return "text-muted-foreground";
   }
 }
 
@@ -70,51 +80,109 @@ export interface FundingKpiRowProps {
 }
 
 export function FundingKpiRow({ summary, monthlyTargetUsd }: FundingKpiRowProps) {
-  const coveragePct = monthlyTargetUsd > 0
-    ? Math.round((summary.currentMonthCommunityUsd / monthlyTargetUsd) * 100)
-    : 0;
+  const rawCoveragePct = monthlyTargetUsd > 0 ? (summary.currentMonthCommunityUsd / monthlyTargetUsd) * 100 : 0;
+  const coveragePct = Math.round(rawCoveragePct);
+  const progressPct = Math.max(0, Math.min(100, rawCoveragePct));
+  const ariaCoveragePct = Math.round(progressPct);
+  const ariaCoverageText =
+    summary.lifetimeCommunityUsd === 0
+      ? "Tracking begins; no community donations recorded yet"
+      : `${coveragePct}% covered this month`;
+  const remainingUsd = Math.max(0, monthlyTargetUsd - summary.currentMonthCommunityUsd);
 
-  const thisMonth = summary.lifetimeCommunityUsd === 0
-    ? { primary: "Tracking begins", secondary: "first community donations will appear here" }
-    : {
-        primary: `${coveragePct}%`,
-        secondary: `${USD_COMPACT.format(summary.currentMonthCommunityUsd)} of ${USD_COMPACT.format(monthlyTargetUsd)} covered`,
-      };
+  const thisMonth =
+    summary.lifetimeCommunityUsd === 0
+      ? { primary: "Tracking begins", secondary: "first community donations will appear here" }
+      : {
+          primary: `${coveragePct}%`,
+          secondary: `${USD_COMPACT.format(summary.currentMonthCommunityUsd)} of ${USD_COMPACT.format(monthlyTargetUsd)} covered`,
+        };
 
-  const community = summary.lifetimeCommunityDonorCount === 0
-    ? { primary: "Be the first", secondary: "community support starts here" }
-    : {
-        primary: USD_COMPACT.format(summary.lifetimeCommunityUsd),
-        secondary: `from ${summary.lifetimeCommunityDonorCount} supporters since launch`,
-      };
+  const community =
+    summary.lifetimeCommunityDonorCount === 0
+      ? { primary: "Be the first", secondary: "community support starts here" }
+      : {
+          primary: USD_COMPACT.format(summary.lifetimeCommunityUsd),
+          secondary: `from ${summary.lifetimeCommunityDonorCount} supporters since launch`,
+        };
 
   return (
-    <div className="grid gap-3 sm:grid-cols-2">
-      <KpiCard kicker="This month coverage" primary={thisMonth.primary} secondary={thisMonth.secondary} tone="brand" />
-      <KpiCard kicker="Community support" primary={community.primary} secondary={community.secondary} tone="insight" />
-    </div>
+    <Card className={cn("rounded-lg border-l-[3px]", toneBorder("brand"))}>
+      <CardContent className="space-y-5 p-4 sm:p-5">
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+          <div className="min-w-0 space-y-1.5">
+            <p className={cn("pharos-kicker", toneKicker("brand"))}>This month coverage</p>
+            <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
+              <p className="font-mono text-3xl font-semibold tracking-tight text-foreground tabular-nums">
+                {thisMonth.primary}
+              </p>
+              <p className="text-sm text-muted-foreground">{thisMonth.secondary}</p>
+            </div>
+          </div>
+          <div className="grid gap-3 sm:grid-cols-2 lg:min-w-[28rem]">
+            <FundingMiniStat
+              label="Community support"
+              value={community.primary}
+              detail={community.secondary}
+              tone="insight"
+            />
+            <FundingMiniStat
+              label="Best long-term help"
+              value="Recurring Giveth"
+              detail="predictable support for the public site"
+              tone="brand"
+            />
+          </div>
+        </div>
+
+        <div className="space-y-2">
+          <div className="flex items-center justify-between text-xs text-muted-foreground">
+            <span>{USD_COMPACT.format(summary.currentMonthCommunityUsd)} covered</span>
+            <span>Monthly goal: {USD_COMPACT.format(monthlyTargetUsd)}</span>
+          </div>
+          <div
+            className="relative h-2 w-full overflow-hidden rounded-full bg-muted/40"
+            role="progressbar"
+            aria-valuenow={ariaCoveragePct}
+            aria-valuemin={0}
+            aria-valuemax={100}
+            aria-label="Monthly funding coverage"
+            aria-valuetext={ariaCoverageText}
+          >
+            <div
+              className="absolute inset-y-0 left-0 rounded-full bg-frost-blue/75"
+              style={{ width: `${progressPct}%` }}
+            />
+            {progressPct > 2 && progressPct < 98 ? (
+              <div
+                className="absolute top-1/2 h-3 w-0.5 -translate-y-1/2 rounded-full bg-foreground"
+                style={{ left: `${progressPct}%` }}
+                title="Covered so far"
+              />
+            ) : null}
+          </div>
+          <div className="flex items-center justify-between text-xs text-muted-foreground">
+            <span>Supporter-funded this month</span>
+            <span>{remainingUsd > 0 ? `${USD_COMPACT.format(remainingUsd)} still open` : "Monthly costs covered"}</span>
+          </div>
+        </div>
+
+        <p className="text-sm leading-relaxed text-muted-foreground">
+          Donations keep Pharos freely accessible to all, so stablecoin users, analysts, and builders can check
+          high-quality analytics and risk analysis without a private terminal or paywall.
+        </p>
+      </CardContent>
+    </Card>
   );
 }
 
-function KpiCard({
-  kicker,
-  primary,
-  secondary,
-  tone,
-}: {
-  kicker: string;
-  primary: string;
-  secondary: string;
-  tone: Tone;
-}) {
+function FundingMiniStat({ label, value, detail, tone }: { label: string; value: string; detail: string; tone: Tone }) {
   return (
-    <Card className={cn("rounded-xl border-l-[3px]", toneBorder(tone))}>
-      <CardContent className="space-y-1 p-4">
-        <p className={cn("pharos-kicker", toneKicker(tone))}>{kicker}</p>
-        <p className="text-2xl font-semibold tracking-tight text-foreground font-mono tabular-nums">{primary}</p>
-        <p className="text-xs text-muted-foreground">{secondary}</p>
-      </CardContent>
-    </Card>
+    <div className="rounded-lg border border-border/60 bg-background/40 px-3 py-2.5">
+      <p className={cn("pharos-kicker", toneKicker(tone))}>{label}</p>
+      <p className="font-mono text-lg font-semibold tracking-tight text-foreground tabular-nums">{value}</p>
+      <p className="text-xs text-muted-foreground">{detail}</p>
+    </div>
   );
 }
 
@@ -128,18 +196,10 @@ export interface CostBreakdownProps {
   lastReviewedAt: number;
 }
 
-export function CostBreakdown({
-  items,
-  currentCommunityUsd,
-  lastReviewedAt,
-}: CostBreakdownProps) {
+export function CostBreakdown({ items, currentCommunityUsd, lastReviewedAt }: CostBreakdownProps) {
   const groups = groupCostsByCategory(items);
   const total = groups.reduce((s, g) => s + g.subtotal, 0);
-  // Founder subsidy is derived from the gap between total monthly costs and
-  // what the community has covered this month — Brice implicitly absorbs
-  // whatever isn't covered. "Fully subsidized" when community contributions
-  // are zero.
-  const currentFounderUsd = Math.max(0, total - currentCommunityUsd);
+  const currentFundingGapUsd = Math.max(0, total - currentCommunityUsd);
   const reviewedDateObject = new Date(lastReviewedAt * 1000);
   const reviewedDateTime = reviewedDateObject.toISOString().slice(0, 7);
   const reviewedDate = reviewedDateObject.toLocaleDateString("en-US", {
@@ -149,7 +209,7 @@ export function CostBreakdown({
   });
 
   return (
-    <Card className={cn("rounded-xl border-l-[3px]", toneBorder("data"))}>
+    <Card className={cn("rounded-lg border-l-[3px]", toneBorder("data"))}>
       <CardHeader className="space-y-1">
         <p className={cn("pharos-kicker", toneKicker("data"))}>Where it goes</p>
         <CardTitle as="h2">Monthly costs</CardTitle>
@@ -182,7 +242,7 @@ export function CostBreakdown({
         <div className="space-y-0.5 text-xs text-muted-foreground">
           <p>
             This month: {USD_COMPACT.format(currentCommunityUsd)} community ·{" "}
-            {USD_COMPACT.format(currentFounderUsd)} founder subsidy.
+            {currentFundingGapUsd > 0 ? `${USD_COMPACT.format(currentFundingGapUsd)} still open.` : "costs covered."}
           </p>
           <p>
             Costs last reviewed: <time dateTime={reviewedDateTime}>{reviewedDate}</time>.
@@ -203,16 +263,15 @@ export interface DonorListProps {
 }
 
 export function DonorList({ donations, lastUpdatedAt, limit = 20 }: DonorListProps) {
-  const community = donations
-    .filter((d) => d.kind !== "founder")
-    .sort((a, b) => b.block_timestamp - a.block_timestamp);
+  const community = donations.filter((d) => d.kind !== "founder").sort((a, b) => b.block_timestamp - a.block_timestamp);
   const visible = community.slice(0, limit);
-  const lastUpdatedLabel = lastUpdatedAt > 0
-    ? new Date(lastUpdatedAt * 1000).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })
-    : null;
+  const lastUpdatedLabel =
+    lastUpdatedAt > 0
+      ? new Date(lastUpdatedAt * 1000).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })
+      : null;
 
   return (
-    <Card className={cn("rounded-xl border-l-[3px]", toneBorder("insight"))}>
+    <Card className={cn("rounded-lg border-l-[3px]", toneBorder("insight"))}>
       <CardHeader className="space-y-1">
         <p className={cn("pharos-kicker", toneKicker("insight"))}>Supporters</p>
         <CardTitle as="h2">Recent supporters</CardTitle>
@@ -253,9 +312,7 @@ export function DonorList({ donations, lastUpdatedAt, limit = 20 }: DonorListPro
             Showing most recent {limit} of {community.length} supporters.
           </p>
         ) : null}
-        {lastUpdatedLabel ? (
-          <p className="text-xs text-muted-foreground">Last refresh: {lastUpdatedLabel}.</p>
-        ) : null}
+        {lastUpdatedLabel ? <p className="text-xs text-muted-foreground">Last refresh: {lastUpdatedLabel}.</p> : null}
       </CardContent>
     </Card>
   );
@@ -266,7 +323,7 @@ export function DonorList({ donations, lastUpdatedAt, limit = 20 }: DonorListPro
 export function SupportCtas() {
   return (
     <section id="how-to-support">
-      <Card className={cn("rounded-xl border-l-[3px]", toneBorder("brand"))}>
+      <Card className={cn("rounded-lg border-l-[3px]", toneBorder("brand"))}>
         <CardHeader className="space-y-1">
           <p className={cn("pharos-kicker", toneKicker("brand"))}>Get involved</p>
           <CardTitle as="h2">How to support</CardTitle>
@@ -274,10 +331,23 @@ export function SupportCtas() {
         <CardContent className="space-y-6">
           <div className="grid gap-3 sm:grid-cols-2">
             <CtaCard
+              icon={Heart}
+              title="Recurring via Giveth"
+              description="The best long-term support: set a recurring donation so Pharos has predictable runway while the website stays free for everyone."
+              emphasized
+              action={
+                <Button asChild variant="outline" className="min-h-9 w-full justify-between">
+                  <a href={GIVETH_URL} target="_blank" rel="noopener noreferrer">
+                    Set up Giveth support
+                    <ExternalLink className="h-3.5 w-3.5" />
+                  </a>
+                </Button>
+              }
+            />
+            <CtaCard
               icon={Wallet}
               title="Wallet"
               description={`${PHAROS_FUNDING_ENS} resolves to the same address on every supported chain. ETH, stablecoins, and other ERC-20s accepted.`}
-              emphasized
               action={
                 <div className="space-y-2">
                   <div className="flex items-center gap-2 rounded-md border border-border/60 bg-background px-3 py-1.5">
@@ -303,25 +373,11 @@ export function SupportCtas() {
                 </div>
               }
             />
-            <CtaCard
-              icon={Heart}
-              title="Giveth"
-              description="A public-goods funding platform. Donations route to the same wallet and appear on the wall as a single 'via Giveth' entry."
-              emphasized
-              action={
-                <Button asChild variant="outline" className="min-h-9 w-full justify-between">
-                  <a href={GIVETH_URL} target="_blank" rel="noopener noreferrer">
-                    Giveth
-                    <ExternalLink className="h-3.5 w-3.5" />
-                  </a>
-                </Button>
-              }
-            />
           </div>
           <p className="text-xs text-muted-foreground leading-relaxed">
-            Easiest: wallet — same address on every chain. Cheapest gas: Base or Gnosis.
-            Via Giveth: supports their public-goods pool; donations arrive at the wallet and appear on the wall as a
-            single &ldquo;via Giveth&rdquo; entry.
+            Best for long-term sustainability: a recurring Giveth donation. Direct wallet support works on every
+            supported chain; Base and Gnosis are usually the cheapest gas paths. Giveth donations arrive at the wallet
+            and appear on the wall as a single &ldquo;via Giveth&rdquo; entry.
           </p>
           <div className="space-y-2">
             <p className="pharos-kicker text-muted-foreground">Other ways to help</p>
@@ -381,8 +437,8 @@ export function SupportCtas() {
             </div>
           </div>
           <p className="text-xs text-muted-foreground">
-            Found bad data or a broken view? The feedback form on any stablecoin detail page goes straight to
-            the maintainers.
+            Found bad data or a broken view? The feedback form on any stablecoin detail page goes straight to the
+            maintainers.
           </p>
         </CardContent>
       </Card>
@@ -406,7 +462,7 @@ function CtaCard({
   return (
     <div
       className={cn(
-        "flex h-full flex-col gap-2 rounded-xl border bg-background/40 p-4",
+        "flex h-full flex-col gap-2 rounded-lg border bg-background/40 p-4",
         emphasized ? "border-l-[3px] border-l-frost-blue border-border/60" : "border-border/60",
       )}
     >
@@ -423,20 +479,19 @@ function CtaCard({
 /* ----------------------------------------------------------- Year-end + FAQ */
 
 export function YearEndHorizon() {
-  const shareUrl =
-    "https://x.com/intent/tweet?text=" +
-    encodeURIComponent("Pharos — independent stablecoin analytics, MIT-licensed. https://pharos.watch");
+  const shareUrl = "https://x.com/intent/tweet?text=" + encodeURIComponent(PHAROS_SHARE_MESSAGE);
   return (
-    <Card className={cn("rounded-xl border-l-[3px]", toneBorder("brand"))}>
+    <Card className={cn("rounded-lg border-l-[3px]", toneBorder("brand"))}>
       <CardHeader className="space-y-1">
         <p className={cn("pharos-kicker", toneKicker("brand"))}>Where we&apos;re going</p>
         <CardTitle as="h2">Path to sustainability</CardTitle>
       </CardHeader>
       <CardContent className="space-y-3 text-sm leading-relaxed text-muted-foreground">
         <p>
-          Pharos aims to fund itself by the end of 2026 without subsidy from Brice. Until then, he covers the gap
-          directly. We review trajectory each quarter — if it is clearly behind, this paragraph will say so rather than
-          leave the commitment stale.
+          Pharos aims to become sustainable by the end of 2026 while the website always remains fully free to access.
+          Donations cover today&apos;s public-good work; in parallel, we are exploring sustaining options that do not
+          put the core site behind a paywall, including subscription-based high-frequency API keys for teams that need
+          heavier programmatic access.
         </p>
         <p className="text-xs">
           If you can&apos;t support financially,{" "}
@@ -448,7 +503,7 @@ export function YearEndHorizon() {
           >
             sharing Pharos
           </a>{" "}
-          helps others find it.
+          helps stablecoin users find open risk data before they need it.
         </p>
       </CardContent>
     </Card>
@@ -458,20 +513,32 @@ export function YearEndHorizon() {
 export function FundingFaq() {
   const qa: Array<{ q: string; a: string }> = [
     {
+      q: "Why does Pharos ask for support?",
+      a: "Independent stablecoin analytics has real data, infrastructure, and research costs. Support keeps the website free for everyone instead of making risk analysis available only through private terminals.",
+    },
+    {
+      q: "Why recurring Giveth donations?",
+      a: "Recurring support is the clearest long-term signal. It smooths one-off donation spikes and lets Pharos plan coverage, alerting, and data-review work without guessing month to month.",
+    },
+    {
       q: "Is my donation tax-deductible?",
-      a: "No — Pharos is not a registered charity. Giveth donations may qualify in some jurisdictions; check Giveth's documentation.",
+      a: "No. Pharos is not a registered charity. Giveth donations may qualify in some jurisdictions; check Giveth's documentation.",
     },
     {
       q: "What do supporters get?",
-      a: "Public recognition on the wall unless you ask for a custom label. All Pharos features stay free for everyone — there is no paid tier.",
+      a: "Public recognition on the wall unless you ask for a custom label. The public website stays fully free; any future paid surface would be for high-frequency or heavy API usage, not the core dashboards.",
     },
     {
-      q: "What happens to donations if Pharos stops operating?",
-      a: "The MIT-licensed code and the on-chain ledger remain available. Donations are non-refundable.",
+      q: "Can I help without donating?",
+      a: "Yes. Share Pharos, star the MIT-licensed repo, open issues for bad data, join Telegram, or contribute code and research.",
+    },
+    {
+      q: "What does support make possible?",
+      a: "More stablecoins covered, faster fixes when data breaks, clearer risk explanations, and a public reference that analysts, builders, and users can check before trusting a peg.",
     },
   ];
   return (
-    <Card className="rounded-xl border-l-[3px] border-l-zinc-500">
+    <Card className="rounded-lg border-l-[3px] border-l-zinc-500">
       <CardHeader className="space-y-1">
         <p className="pharos-kicker text-muted-foreground">Questions</p>
         <CardTitle as="h2">FAQ</CardTitle>

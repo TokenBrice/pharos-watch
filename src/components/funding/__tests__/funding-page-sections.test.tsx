@@ -6,6 +6,9 @@ import {
   FundingKpiRow,
   CostBreakdown,
   DonorList,
+  FundingFaq,
+  SupportCtas,
+  YearEndHorizon,
 } from "../funding-page-sections";
 import type { CostLineItem, Donation } from "@shared/lib/funding/types";
 
@@ -33,8 +36,12 @@ describe("FundingKpiRow", () => {
     expect(screen.getByText("This month coverage")).toBeTruthy();
     // 300 / 1540 ≈ 19%
     expect(screen.getByText("19%")).toBeTruthy();
+    const progress = screen.getByRole("progressbar", { name: "Monthly funding coverage" });
+    expect(progress.getAttribute("aria-valuenow")).toBe("19");
     expect(screen.getByText("Community support")).toBeTruthy();
     expect(screen.getByText(/from 2 supporters/)).toBeTruthy();
+    expect(screen.getByText("Recurring Giveth")).toBeTruthy();
+    expect(screen.getByText(/Donations keep Pharos freely accessible/)).toBeTruthy();
   });
 
   it("shows cold-start copy when lifetime community is zero", () => {
@@ -52,24 +59,19 @@ describe("FundingKpiRow", () => {
     );
     expect(screen.getByText("Tracking begins")).toBeTruthy();
     expect(screen.getByText("Be the first")).toBeTruthy();
+    expect(screen.getByRole("progressbar").getAttribute("aria-valuetext")).toContain("Tracking begins");
   });
 });
 
 describe("CostBreakdown", () => {
-  it("renders team and infra groups, total, and derived founder subsidy", () => {
-    render(
-      <CostBreakdown
-        items={COSTS}
-        currentCommunityUsd={300}
-        lastReviewedAt={1744934400}
-      />,
-    );
+  it("renders team and infra groups, total, and derived open funding gap", () => {
+    render(<CostBreakdown items={COSTS} currentCommunityUsd={300} lastReviewedAt={1744934400} />);
     expect(screen.getByText("Team")).toBeTruthy();
     expect(screen.getByText("Infrastructure")).toBeTruthy();
     expect(screen.getByText("Ike")).toBeTruthy();
     expect(screen.getByText(/1,540/)).toBeTruthy(); // total
-    // Founder subsidy is derived: max(0, total - community) = 1540 - 300 = 1240
-    expect(screen.getByText(/This month: \$300 community · \$1,240 founder subsidy/)).toBeTruthy();
+    // Open gap is derived: max(0, total - community) = 1540 - 300 = 1240
+    expect(screen.getByText(/This month: \$300 community · \$1,240 still open/)).toBeTruthy();
   });
 });
 
@@ -111,5 +113,38 @@ describe("DonorList", () => {
   it("shows empty state when no community donations exist", () => {
     render(<DonorList donations={[]} lastUpdatedAt={now} />);
     expect(screen.getByText(/No community donations yet/)).toBeTruthy();
+  });
+});
+
+describe("SupportCtas", () => {
+  it("highlights recurring Giveth support as the long-term path", () => {
+    render(<SupportCtas />);
+    expect(screen.getByText("Recurring via Giveth")).toBeTruthy();
+    expect(screen.getByText("Set up Giveth support")).toBeTruthy();
+    expect(screen.getByText(/Best for long-term sustainability: a recurring Giveth donation/)).toBeTruthy();
+  });
+});
+
+describe("YearEndHorizon", () => {
+  it("describes the free-site sustainability path and expands the share message", () => {
+    render(<YearEndHorizon />);
+    expect(screen.getByText(/website always remains fully free to access/)).toBeTruthy();
+    expect(screen.getByText(/subscription-based high-frequency API keys/)).toBeTruthy();
+
+    const shareLink = screen.getByRole("link", { name: "sharing Pharos" });
+    const href = shareLink.getAttribute("href") ?? "";
+    expect(decodeURIComponent(href)).toContain("Stablecoin risk data should be public infrastructure");
+    expect(decodeURIComponent(href)).toContain("Help keep it open: https://pharos.watch");
+  });
+});
+
+describe("FundingFaq", () => {
+  it("focuses on impact and does not mention a nonexistent on-chain ledger", () => {
+    render(<FundingFaq />);
+    expect(screen.getByText("Why does Pharos ask for support?")).toBeTruthy();
+    expect(screen.getByText("Why recurring Giveth donations?")).toBeTruthy();
+    expect(screen.getByText("What does support make possible?")).toBeTruthy();
+    expect(screen.getByText(/More stablecoins covered/)).toBeTruthy();
+    expect(screen.queryByText(/on-chain ledger/i)).toBeNull();
   });
 });

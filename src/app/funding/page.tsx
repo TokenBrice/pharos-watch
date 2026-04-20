@@ -15,7 +15,7 @@ import type { CostsFile, DonationsFile } from "@shared/lib/funding/types";
 
 export const metadata: Metadata = {
   title: "Funding",
-  description: "On-chain donations, running costs, and Pharos's path to being fully community-funded.",
+  description: "On-chain donations, running costs, and Pharos's path to staying freely accessible.",
   robots: { index: false, follow: false }, // stealth release — not indexed in v1
   alternates: { canonical: "/funding/" },
 };
@@ -38,15 +38,10 @@ export default function FundingPage() {
       path="/funding/"
       title="Funding"
       leadParagraphs={[
-        "An honest ledger of what Pharos costs to run, what supporters cover, and where we are on the path to a self-funded project.",
+        "An honest ledger of what Pharos costs to run, what supporters cover, and how each donation helps keep stablecoin risk analytics freely accessible to everyone.",
       ]}
     >
       <div className="space-y-8">
-        <p className="text-xs text-muted-foreground">
-          <a href="#how-to-support" className="underline underline-offset-2 hover:text-foreground">
-            Skip to how to support &rarr;
-          </a>
-        </p>
         <FundingKpiRow summary={summary} monthlyTargetUsd={monthlyTargetUsd} />
         <div className="grid gap-4 lg:grid-cols-2">
           <CostBreakdown
