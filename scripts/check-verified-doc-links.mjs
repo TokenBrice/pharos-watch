@@ -1,33 +1,11 @@
 #!/usr/bin/env node
 
-import { existsSync, readFileSync, readdirSync, statSync } from "node:fs";
-import { dirname, extname, join, relative, resolve } from "node:path";
+import { existsSync, readFileSync, statSync } from "node:fs";
+import { dirname, relative, resolve } from "node:path";
+import { getVerifiedDocFiles, splitLines } from "./lib/doc-files.mjs";
 
 const repoRoot = process.cwd();
-const docsRoot = resolve(repoRoot, "docs");
-const verifiedDocFiles = [
-  resolve(repoRoot, "README.md"),
-  ...collectMarkdownFiles(docsRoot),
-];
-
-function collectMarkdownFiles(rootDir) {
-  const files = [];
-  for (const entry of readdirSync(rootDir, { withFileTypes: true })) {
-    const entryPath = join(rootDir, entry.name);
-    if (entry.isDirectory()) {
-      files.push(...collectMarkdownFiles(entryPath));
-      continue;
-    }
-    if (entry.isFile() && extname(entry.name) === ".md") {
-      files.push(entryPath);
-    }
-  }
-  return files;
-}
-
-function splitLines(text) {
-  return text.split("\n").map((line) => (line.endsWith("\r") ? line.slice(0, -1) : line));
-}
+const verifiedDocFiles = getVerifiedDocFiles(repoRoot);
 
 function stripMarkdownLinks(text) {
   return text.replace(/\[([^\]]+)\]\([^)]+\)/g, "$1");

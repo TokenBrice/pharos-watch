@@ -306,15 +306,20 @@ Current consumers:
 
 ### Module-Level State
 
-Most module-level mutable state was eliminated in the parameter-passing refactor. The remaining intentional cache is:
+Most module-level mutable state was eliminated in the parameter-passing refactor. Remaining intentional isolate-local state is allowlisted here:
 
-- `shared/lib/cloudflare-access-jwt.ts` → module-level `jwksCache` with a 1-hour TTL for Cloudflare Access signing keys
+| Module | State | Purpose | Reset / TTL behavior |
+| --- | --- | --- | --- |
+| `shared/lib/cloudflare-access-jwt.ts` | `jwksCache` | Cloudflare Access signing-key cache | 1-hour TTL; auth still re-fetches when cold or expired |
+| `worker/src/lib/rate-limit.ts` | `IsolateLocalState` limiter/prune state | Public API limiter emergency counters and pending prune coordination | Resets on isolate recycle/deploy; D1 remains source of truth |
+| `worker/src/lib/api-key-core.ts` | API-key cache, last-used throttle, per-key prune state | Short-lived key lookup cache and write-throttling for API-key metadata | 5-second key cache TTL; usage updates are best-effort and D1 remains source of truth |
+| `functions/lib/request-attribution.ts` | Pages attribution prune bucket/promise | Avoids duplicate attribution-prune work inside one Pages Functions isolate | Resets on isolate recycle/deploy; D1 remains source of truth |
 
 **Constraints:**
 
-- State persists within an isolate but resets on cold starts
-- State is NOT shared across isolates
-- The JWKS cache is an optimization only; auth still re-fetches when the cache is cold or expired
+- State persists within one isolate but resets on cold starts, deployments, or isolate recycle.
+- State is NOT shared across isolates.
+- Each entry above is an optimization or local coordination aid; persistent correctness must come from D1, request inputs, or provider responses.
 
 ---
 
