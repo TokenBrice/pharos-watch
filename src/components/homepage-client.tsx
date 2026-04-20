@@ -360,7 +360,7 @@ export function HomepageClient() {
           <TotalMcapChart />
         </SectionErrorBoundary>
 
-        <div className="grid grid-cols-1 gap-6 lg:grid-cols-2 lg:items-start">
+        <div className="grid grid-cols-1 gap-6 lg:grid-cols-2 lg:items-stretch">
           <SectionErrorBoundary name="peg-diversity">
             <PegDiversityChart />
           </SectionErrorBoundary>
