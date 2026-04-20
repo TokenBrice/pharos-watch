@@ -2,6 +2,7 @@ import { createHash } from "node:crypto";
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
+import { sortCemeteryCoins } from "../shared/lib/cemetery";
 import { CAUSE_META, DEAD_STABLECOINS } from "../shared/lib/dead-stablecoins";
 import { SITE_ORIGIN } from "../shared/lib/runtime-origins";
 import type { DeadStablecoin } from "../shared/types";
@@ -53,34 +54,6 @@ const CSV_COLUMNS = [
   "contracts",
   "pharosUrl",
 ] as const satisfies readonly (keyof CemeteryDatasetRow)[];
-
-function getDeathMonthValue(deathDate: string): number {
-  const [yearPart, monthPart] = deathDate.split("-");
-  const year = Number(yearPart);
-  const month = Number(monthPart ?? "1");
-
-  if (!Number.isFinite(year) || !Number.isFinite(month)) {
-    return 0;
-  }
-
-  return year * 12 + Math.max(0, month - 1);
-}
-
-function sortByNewestDeath(coins: DeadStablecoin[]): DeadStablecoin[] {
-  return [...coins].sort((left, right) => {
-    const deathDiff = getDeathMonthValue(right.deathDate) - getDeathMonthValue(left.deathDate);
-    if (deathDiff !== 0) {
-      return deathDiff;
-    }
-
-    const peakDiff = (right.peakMcap ?? 0) - (left.peakMcap ?? 0);
-    if (peakDiff !== 0) {
-      return peakDiff;
-    }
-
-    return left.symbol.localeCompare(right.symbol);
-  });
-}
 
 function slugify(value: string): string {
   const slug = value
@@ -194,7 +167,7 @@ function renderJson(rows: CemeteryDatasetRow[]): string {
   }, null, 2)}\n`;
 }
 
-const rows = sortByNewestDeath(DEAD_STABLECOINS).map(coinToRow);
+const rows = sortCemeteryCoins(DEAD_STABLECOINS, "newest").map(coinToRow);
 const nextJson = renderJson(rows);
 const nextCsv = renderCsv(rows);
 

@@ -66,6 +66,8 @@ describe("stablecoin OG card data", () => {
     expect(markup).toContain("7D FLOW");
     expect(markup).toContain("PEG SCORE");
     expect(markup).toContain("BACKING");
+    expect(markup).toContain("Fiat");
+    expect(markup).toContain("CeFi");
   });
 });
 

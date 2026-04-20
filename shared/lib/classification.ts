@@ -70,6 +70,23 @@ export const BACKING_LABELS_SHORT: Record<BackingType, string> = {
   algorithmic: "Algo",
 };
 
+export function getBackingLabelShort(value: string): string {
+  if (value in BACKING_LABELS_SHORT) {
+    return BACKING_LABELS_SHORT[value as BackingType];
+  }
+  if (value === "fiat" || value === "fiat-backed") return "Fiat";
+  if (value === "crypto") return "Crypto";
+  if (value === "rwa") return "RWA";
+  return value;
+}
+
+export function getGovernanceLabelShort(value: string): string {
+  if (value in GOVERNANCE_LABELS_SHORT) {
+    return GOVERNANCE_LABELS_SHORT[value as GovernanceType];
+  }
+  return value;
+}
+
 // ---------------------------------------------------------------------------
 // Peg currency labels
 // ---------------------------------------------------------------------------

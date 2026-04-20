@@ -7,6 +7,7 @@ import {
   computeDexLiquidityDriftSummary,
   readPreviousDexLiquiditySummary,
   round4,
+  type DexLiquidityDriftSummary,
 } from "./orchestrator-drift";
 
 type DexLiquidityCronMetadata = ReturnType<typeof DexLiquidityCronMetadataSchema.parse>;
@@ -237,36 +238,7 @@ export interface DexLiquidityPostScoreAnalysis {
         reducedTvlUsd: number;
       }>;
     };
-    qualityDriftFlags: string[];
-    qualityDriftSeverity: "none" | "medium" | "high";
-    qualityDriftMetrics: {
-      previousPriceObservationCoins: number | null;
-      currentPriceObservationCoins: number;
-      priceObservationPctDelta: number | null;
-      previousMeasuredBalanceCoveragePct: number | null;
-      currentMeasuredBalanceCoveragePct: number;
-      measuredBalanceCoverageDelta: number | null;
-      previousStagedPoolsMerged: number | null;
-      currentStagedPoolsMerged: number;
-      stagedPoolsMergedPctDelta: number | null;
-      previousStagedPoolsSkipped: number | null;
-      currentStagedPoolsSkipped: number;
-      stagedPoolsSkippedPctDelta: number | null;
-      previousWeakCoverageCoins: number | null;
-      currentWeakCoverageCoins: number;
-      weakCoverageDelta: number | null;
-    };
-    topAssetCoverageDeltas: Array<{
-      stablecoinId: string;
-      previousPoolCount: number;
-      currentPoolCount: number;
-      poolCountPctDelta: number | null;
-      previousCoverageConfidence: number | null;
-      currentCoverageConfidence: number | null;
-      previousMeasuredShare: number | null;
-      currentMeasuredShare: number | null;
-    }>;
-  };
+  } & DexLiquidityDriftSummary;
 }
 
 export async function analyzeDexLiquidityPostScoring(params: {

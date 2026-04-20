@@ -1,7 +1,7 @@
 import * as React from "react";
 import { CardFrame, Sparkline, TEXT_SECONDARY, FROST_BLUE, SEMANTIC_COLORS } from "./shared";
 import { GRADE_RADAR_COLORS, gradeRange } from "@shared/lib/report-cards";
-import { THREAT_BAND_HEX } from "@shared/lib/classification";
+import { getBackingLabelShort, getGovernanceLabelShort, THREAT_BAND_HEX } from "@shared/lib/classification";
 import { formatCurrency } from "@shared/lib/format";
 
 export interface StablecoinCardData {
@@ -50,30 +50,6 @@ function getAdaptiveTreatment(data: StablecoinCardData): {
   return {};
 }
 
-/** Format backing type to short label */
-function formatBacking(backing: string): string {
-  const map: Record<string, string> = {
-    fiat: "Fiat",
-    "fiat-backed": "Fiat",
-    crypto: "Crypto",
-    "crypto-backed": "Crypto",
-    rwa: "RWA",
-    "rwa-backed": "RWA",
-    algorithmic: "Algo",
-  };
-  return map[backing] || backing;
-}
-
-/** Format governance type to short label */
-function formatGovernance(gov: string): string {
-  const map: Record<string, string> = {
-    centralized: "CeFi",
-    "centralized-dependent": "CeFi-Dep",
-    decentralized: "DeFi",
-  };
-  return map[gov] || gov;
-}
-
 /** Get color for 24h change */
 function getChangeColor(value: number | null): string {
   if (value === null) return TEXT_SECONDARY;
@@ -114,11 +90,11 @@ export function StablecoinCard({ data }: { data: StablecoinCardData }) {
     },
     { 
       label: "BACKING", 
-      value: formatBacking(data.backing),
+      value: getBackingLabelShort(data.backing),
     },
     { 
       label: "TYPE", 
-      value: formatGovernance(data.governance),
+      value: getGovernanceLabelShort(data.governance),
     },
     { 
       label: "REDEMPTION", 
