@@ -1,6 +1,9 @@
 /**
- * Screenshot each page on pharos.watch at 1200×630 for OG images.
+ * Screenshot public page content at 1200×628 for OG images.
  * Usage: node scripts/screenshot-og.mjs
+ *
+ * Set OG_BASE_URL to capture another environment:
+ *   OG_BASE_URL=http://127.0.0.1:4173 node scripts/screenshot-og.mjs
  */
 import { chromium } from '/usr/lib/node_modules/playwright/index.mjs';
 import { mkdirSync } from 'fs';
@@ -9,12 +12,17 @@ import { fileURLToPath } from 'url';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const OUT = path.join(__dirname, '../public');
-const BASE = 'https://pharos.watch';
+const BASE = process.env.OG_BASE_URL?.replace(/\/+$/, '') || 'https://pharos.watch';
+const OG_WIDTH = 1200;
+const OG_HEIGHT = 628;
 
 const PAGES = [
   { path: '/',                file: 'og-card.png'           },
+  { path: '/about',           file: 'og-about.png'          },
   { path: '/cemetery',        file: 'og-cemetery.png'       },
+  { path: '/chains',          file: 'og-chains.png'         },
   { path: '/compare',         file: 'og-compare.png'        },
+  { path: '/coverage',        file: 'og-coverage.png'       },
   { path: '/depeg',           file: 'og-depeg.png'          },
   { path: '/flows',           file: 'og-flows.png'          },
   { path: '/liquidity',       file: 'og-liquidity.png'      },
@@ -23,17 +31,19 @@ const PAGES = [
   { path: '/blacklist',       file: 'og-blacklist.png'      },
   { path: '/stability-index', file: 'og-stability-index.png'},
   { path: '/dependency-map',  file: 'og-dependency-map.png' },
-  { path: '/digest',          file: 'og-digest.png',         scrollY: 200 },
+  { path: '/digest',          file: 'og-digest.png'          },
   // Portfolio pre-loaded with typical holdings so it shows data, not empty state
   { path: '/portfolio?p=usdt-tether:10000,usdc-circle:5000,dai-makerdao:2000,usde-ethena:1000', file: 'og-portfolio.png' },
   { path: '/methodology',     file: 'og-methodology.png'    },
+  { path: '/start',           file: 'og-start.png'          },
+  { path: '/telegram',        file: 'og-telegram.png'       },
 ];
 
 mkdirSync(OUT, { recursive: true });
 
 const browser = await chromium.launch();
 const context = await browser.newContext({
-  viewport: { width: 1200, height: 630 },
+  viewport: { width: OG_WIDTH, height: OG_HEIGHT },
   colorScheme: 'dark',
   // Prevent cookie banners / consent overlays from appearing
   locale: 'en-US',
@@ -42,7 +52,52 @@ const context = await browser.newContext({
 // Suppress non-critical console noise
 context.on('console', () => {});
 
-for (const { path: pagePath, file, scrollY } of PAGES) {
+const SOCIAL_CAPTURE_CSS = `
+  html,
+  body {
+    width: ${OG_WIDTH}px !important;
+    min-width: ${OG_WIDTH}px !important;
+    min-height: ${OG_HEIGHT}px !important;
+    overflow: hidden !important;
+    background: var(--background, #05070a) !important;
+  }
+
+  header,
+  aside,
+  footer,
+  [data-radix-popper-content-wrapper],
+  [role="dialog"] {
+    display: none !important;
+  }
+
+  body > div {
+    min-height: ${OG_HEIGHT}px !important;
+  }
+
+  #main-content {
+    box-sizing: border-box !important;
+    position: fixed !important;
+    inset: 0 auto auto 0 !important;
+    z-index: 2147483647 !important;
+    width: ${OG_WIDTH}px !important;
+    max-width: none !important;
+    height: ${OG_HEIGHT}px !important;
+    min-height: ${OG_HEIGHT}px !important;
+    margin: 0 !important;
+    padding: 10px !important;
+    overflow: hidden !important;
+  }
+
+  #main-content > * {
+    max-width: none !important;
+  }
+
+  .pharos-mobile-utility-safe {
+    padding-bottom: 0 !important;
+  }
+`;
+
+for (const { path: pagePath, file } of PAGES) {
   const url = BASE + pagePath;
   const outFile = path.join(OUT, file);
 
@@ -53,8 +108,7 @@ for (const { path: pagePath, file, scrollY } of PAGES) {
     await page.goto(url, { waitUntil: 'networkidle', timeout: 30_000 });
     // Extra settle time for React hydration + data fetch
     await page.waitForTimeout(3000);
-    // Scroll if needed to show the best content
-    if (scrollY) await page.evaluate((y) => window.scrollTo(0, y), scrollY);
+    await page.addStyleTag({ content: SOCIAL_CAPTURE_CSS });
     // Hide the feedback button and any overlays
     await page.evaluate(() => {
       document.querySelectorAll('[data-radix-popper-content-wrapper], [role="dialog"]')
@@ -64,7 +118,7 @@ for (const { path: pagePath, file, scrollY } of PAGES) {
         if (btn.textContent?.includes('Feedback')) btn.style.display = 'none';
       });
     });
-    await page.screenshot({ path: outFile, clip: { x: 0, y: scrollY ?? 0, width: 1200, height: 630 } });
+    await page.screenshot({ path: outFile, clip: { x: 0, y: 0, width: OG_WIDTH, height: OG_HEIGHT } });
     console.log('done');
   } catch (err) {
     console.log(`FAILED: ${err.message}`);

@@ -11,7 +11,6 @@ export const metadata = buildPageMetadata({
   description,
   canonical: "/portfolio/",
   ogImage: `${SITE_URL}/og-portfolio.png`,
-  ogHeight: 664,
   robots: {
     index: false,
     follow: true,

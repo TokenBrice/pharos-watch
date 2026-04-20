@@ -16,10 +16,10 @@ export const metadata: Metadata = {
     description:
       "Configured issuance-chain minting and redemption flows for tracked stablecoins. Net flow direction, pressure-vs-baseline signals, and the Bank Run Gauge.",
     url: "/flows/",
-    images: [{ url: `${SITE_URL}/og-flows.png`, width: 1200, height: 630 }],
+    images: [{ url: `${SITE_URL}/og-flows.png`, width: 1200, height: 628 }],
   },
   twitter: {
-    images: [{ url: `${SITE_URL}/og-flows.png`, width: 1200, height: 630 }],
+    images: [{ url: `${SITE_URL}/og-flows.png`, width: 1200, height: 628 }],
   },
 };
 
