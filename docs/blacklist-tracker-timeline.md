@@ -1,6 +1,15 @@
 # Blacklist Tracker Methodology — Version Timeline
 
-Internal changelog reconstructed from git history. Covers Blacklist Tracker `v1.0` through `v3.97` (2026-02-09 -> 2026-04-19).
+Internal changelog reconstructed from git history. Covers Blacklist Tracker `v1.0` through `v3.98` (2026-02-09 -> 2026-04-20).
+
+---
+
+## v3.98 — USDA destroy-event correction (2026-04-20)
+
+- **USDA event family narrowed** — Avalon USDa now tracks only `AddedBlackList(address)` and `RemovedBlackList(address)`, matching the verified USDa source/ABI
+- **Non-existent destroy topic removed** — USDA no longer subscribes to Tether's `DestroyedBlackFunds(address,uint256)` event; the verified USDa contract does not expose that event
+- **Freezability unchanged** — USDa remains direct `Freezable: Yes` because `isBlackListed` gates transfers and manager-controlled add/remove blacklist functions exist
+- **Burn documented separately** — USDa's role-gated `burn(address,uint256)` is a privileged destroy capability, but Pharos does not map standard burns into blacklist-tracker `destroy` rows without a dedicated destroy event
 
 ---
 
@@ -25,7 +34,7 @@ Internal changelog reconstructed from git history. Covers Blacklist Tracker `v1.
 - **TUSD coverage** — Added new `TRUEUSD_EVENT_FAMILY` on Ethereum: single `Blacklisted(address,bool)` topic with direction resolved from the bool at data slot 0 via the new `BlacklistEventDef.eventTypeFromDataBoolIndex` extension, plus `DestroyedBlackFunds(address,uint256)` (reuses the USDT legacy destroy topic)
 - **NUSD coverage** — Added new `NEUTRL_DENYLIST_FAMILY` on Ethereum: `AddedToDenylist(address indexed)` / `RemovedFromDenylist(address indexed)`
 - **EURCV coverage** — Added new `SOCGEN_FREEZE_FAMILY` on Ethereum: batch `AddressesFrozen(address[])` / `AddressesUnFrozen(address[])` via the shared `addressArrayData` path
-- **USDA / USAT / AEUR coverage** — Reuse existing families: USDA uses USDT legacy, USAT uses USDT0, AEUR uses `DUAL_INDEX_FREEZE_EVENT_FAMILY` (Ethereum)
+- **USDA / USAT / AEUR coverage** — Reuse existing families: USDA initially reused USDT legacy (later narrowed in v3.98 to exclude `DestroyedBlackFunds`), USAT uses USDT0, AEUR uses `DUAL_INDEX_FREEZE_EVENT_FAMILY` (Ethereum)
 - **XUSD / XAUm coverage** — Reuse existing families: XUSD uses the Circle USDC blacklist family on Ethereum + BSC, XAUm uses the USDT0 family on Ethereum + BSC
 - **JPYC coverage** — Added new `CENTRE_BLOCKLISTED_FAMILY` on Ethereum + Polygon: `Blocklisted(address indexed)` / `UnBlocklisted(address indexed)` (distinct spelling from USDC's `Blacklisted`/`UnBlacklisted`)
 - **FRXUSD coverage** — Added new `FRAX_FREEZE_FAMILY` on Ethereum: `AccountFrozen(address)` / `AccountThawed(address)` with non-indexed address resolved via `addressDataIndex=0`

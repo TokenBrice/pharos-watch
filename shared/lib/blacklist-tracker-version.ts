@@ -1,9 +1,25 @@
 import { createMethodologyVersion } from "./methodology-version";
 
 const blacklistTracker = createMethodologyVersion({
-  currentVersion: "3.97",
+  currentVersion: "3.98",
   changelogPath: "/methodology/blacklist-tracker-changelog/",
   changelog: [
+  {
+    version: "3.98",
+    title: "USDA destroy-event correction",
+    date: "2026-04-20",
+    effectiveAt: 1776643200, // 2026-04-20T00:00:00Z
+    summary:
+      "Narrows Avalon USDa event tracking to the two events its verified contract actually emits: AddedBlackList(address) and RemovedBlackList(address). USDa remains directly freezable and role-burnable, but it no longer subscribes to Tether's DestroyedBlackFunds(address,uint256) topic because the verified USDa ABI/source does not expose that event.",
+    impact: [
+      "USDA blacklist/unblacklist event ingestion remains unchanged",
+      "USDA no longer advertises or scans a non-existent DestroyedBlackFunds event in CONTRACT_CONFIGS",
+      "The report-card and blacklistability metadata still mark USDA as directly freezable because isBlackListed gates transfers and manager-controlled add/remove blacklist functions exist",
+      "Role-gated burn(address,uint256) is documented as a privileged destroy capability, but not mapped to blacklist-tracker destroy rows without a dedicated destroy event",
+    ],
+    commits: [],
+    reconstructed: false,
+  },
   {
     version: "3.97",
     title: "Status amount-gap tolerance",
@@ -40,12 +56,12 @@ const blacklistTracker = createMethodologyVersion({
     date: "2026-04-17",
     effectiveAt: 1776466971, // 2026-04-17T00:00:00Z
     summary:
-      "Adds eleven new tracked stablecoins across four new event families and six existing families. TUSD joins through a new TRUEUSD_EVENT_FAMILY that discriminates blacklist vs unblacklist via the bool at data slot 0 through the new BlacklistEventDef.eventTypeFromDataBoolIndex extension. JPYC adds CENTRE_BLOCKLISTED_FAMILY (Blocklisted/UnBlocklisted), FRXUSD adds FRAX_FREEZE_FAMILY (AccountFrozen/AccountThawed with non-indexed address), EURCV adds SOCGEN_FREEZE_FAMILY (batch AddressesFrozen/AddressesUnFrozen), NUSD adds NEUTRL_DENYLIST_FAMILY, and FIDD adds FIDELITY_RESTRICTION_FAMILY (TransferRestrictionImposed/Removed). USDA, USAT, AEUR, XUSD, and XAUM reuse existing families. Several BSC/Avalanche/Base deployments remain deferred pending block-explorer API access, and apxUSD is intentionally deferred because the verified ABI exposes no direction discriminator.",
+      "Adds eleven new tracked stablecoins across four new event families and six existing families. TUSD joins through a new TRUEUSD_EVENT_FAMILY that discriminates blacklist vs unblacklist via the bool at data slot 0 through the new BlacklistEventDef.eventTypeFromDataBoolIndex extension. JPYC adds CENTRE_BLOCKLISTED_FAMILY (Blocklisted/UnBlocklisted), FRXUSD adds FRAX_FREEZE_FAMILY (AccountFrozen/AccountThawed with non-indexed address), EURCV adds SOCGEN_FREEZE_FAMILY (batch AddressesFrozen/AddressesUnFrozen), NUSD adds NEUTRL_DENYLIST_FAMILY, and FIDD adds FIDELITY_RESTRICTION_FAMILY (TransferRestrictionImposed/Removed). USDA joins through legacy AddedBlackList/RemovedBlackList signatures, while USAT, AEUR, XUSD, and XAUM reuse existing families. Several BSC/Avalanche/Base deployments remain deferred pending block-explorer API access, and apxUSD is intentionally deferred because the verified ABI exposes no direction discriminator.",
     impact: [
       "Added TUSD on Ethereum (TRUEUSD_EVENT_FAMILY with bool-discriminator Blacklisted(address,bool) + DestroyedBlackFunds)",
       "Added NUSD on Ethereum (NEUTRL_DENYLIST_FAMILY: AddedToDenylist / RemovedFromDenylist)",
       "Added EURCV on Ethereum (SOCGEN_FREEZE_FAMILY: batch AddressesFrozen(address[]) / AddressesUnFrozen(address[]))",
-      "Added USDA on Ethereum reusing USDT legacy family; USAT on Ethereum reusing USDT0 family; AEUR on Ethereum reusing DUAL_INDEX_FREEZE family",
+      "Added USDA on Ethereum using legacy AddedBlackList / RemovedBlackList signatures; USAT on Ethereum reusing USDT0 family; AEUR on Ethereum reusing DUAL_INDEX_FREEZE family",
       "Added XUSD on Ethereum + BSC reusing the Circle USDC blacklist family; XAUm on Ethereum + BSC reusing the USDT0 family",
       "Added JPYC on Ethereum + Polygon (CENTRE_BLOCKLISTED_FAMILY: Blocklisted / UnBlocklisted)",
       "Added FRXUSD on Ethereum (FRAX_FREEZE_FAMILY: AccountFrozen / AccountThawed with addressDataIndex=0)",

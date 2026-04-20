@@ -182,6 +182,14 @@ All use USDC events: `Blacklisted(address)`, `UnBlacklisted(address)`. Decimals:
 - **Events:** `Blacklisted(address)`, `DeBlacklisted(address)`, `DestroyedBlackFunds(address,uint256)`
 - **Note:** A7A5 is RUB-pegged. USD values use the `a7a5-old-vector` price-cache entry instead of assuming native units equal dollars.
 
+### USDA (Avalon)
+
+- **Chain:** Ethereum
+- **Address:** `0x8a60e489004ca22d775c5f2c657598278d17d9c2`
+- **Decimals:** 18
+- **Events:** `AddedBlackList(address)`, `RemovedBlackList(address)`
+- **Note:** The verified USDa contract also exposes role-gated `burn(address,uint256)` and blocks transfers where either side is `isBlackListed`, so the asset is directly freezable. It does not expose Tether's `DestroyedBlackFunds(address,uint256)` event, so Pharos does not map USDa burns into blacklist-tracker `destroy` rows.
+
 ### Direct EVM coverage wave (v3.9)
 
 | Asset | Chain(s) | Events | Notes |
@@ -237,6 +245,11 @@ DestroyedBlackFunds(address,uint256)
   Amount: second 32 bytes of data
   hasAmount: true
 ```
+
+USDA (Avalon) uses the first two legacy `AddedBlackList` / `RemovedBlackList`
+signatures only. Its verified contract has a role-gated burn function but no
+`DestroyedBlackFunds` event, so USDa is intentionally excluded from this
+destroy-event signature.
 
 ### USDT0 Events (new Tether contracts)
 
@@ -758,8 +771,8 @@ The handler now exposes only unsuppressed rows for the live-supported symbols: U
   "methodology": {
     "version": "3.9",
     "versionLabel": "v3.9",
-    "currentVersion": "3.97",
-    "currentVersionLabel": "v3.97",
+    "currentVersion": "3.98",
+    "currentVersionLabel": "v3.98",
     "changelogPath": "/methodology/blacklist-tracker-changelog/",
     "asOf": 1704067200,
     "isCurrent": false
