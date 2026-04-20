@@ -4,6 +4,7 @@ import type { BluechipRating, BluechipSmidge } from "@shared/types/market";
 import { getCache, shouldSkipFreshCache, setCacheIfNewer } from "../lib/db-cache";
 import type { CronResult } from "../lib/cron-logger";
 import { fetchWithRetry } from "../lib/fetch-retry";
+import { cancelResponseBodyQuietly } from "../lib/response-body";
 import { validatePayloadWithSchema } from "../lib/api-utils";
 import { USER_AGENT, CIRCUIT_SOURCE } from "../lib/constants";
 import { shouldAttemptFetch, recordOutcomeSafe } from "../lib/circuit-breaker";
@@ -116,6 +117,7 @@ export async function syncBluechip(db: D1Database, signal?: AbortSignal): Promis
         );
         if (!res || !res.ok) {
           failedSlugs.push({ slug, reason: res ? `http-${res.status}` : "no-response" });
+          await cancelResponseBodyQuietly(res);
           return null;
         }
         const payload = await parseBluechipResponseJson(res, slug);

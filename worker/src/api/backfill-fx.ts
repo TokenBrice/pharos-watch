@@ -9,6 +9,7 @@ import {
 } from "@shared/lib/rate-series";
 import { USER_AGENT } from "../lib/constants";
 import { fetchWithRetry } from "../lib/fetch-retry";
+import { cancelResponseBodyQuietly } from "../lib/response-body";
 import { getCache, setCache } from "../lib/db-cache";
 import { FrankfurterTimeSeriesSchema } from "../lib/external-api-schemas";
 import type { D1Database } from "@cloudflare/workers-types";
@@ -130,6 +131,7 @@ async function fetchHistoricalSecondaryFxDay(date: string): Promise<Record<strin
     { passthrough404: true, timeoutMs: 20_000 },
   );
   if (!res || !res.ok) {
+    await cancelResponseBodyQuietly(res);
     res = await fetchWithRetry(
       fallbackUrl,
       { headers: { "User-Agent": USER_AGENT } },
@@ -139,6 +141,7 @@ async function fetchHistoricalSecondaryFxDay(date: string): Promise<Record<strin
   }
   if (!res || !res.ok) {
     console.warn(`[backfill-depegs] secondary FX API returned ${res?.status ?? "no response"} for ${date}`);
+    await cancelResponseBodyQuietly(res);
     return null;
   }
 

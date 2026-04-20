@@ -144,6 +144,32 @@ describe("fetchHistoricalSecondaryFxRates", () => {
     expect(fetchSpy).toHaveBeenCalledTimes(1);
     expect(fetchSpy.mock.calls[0]?.[0]).toContain("@2025-06-15/v1/currencies/usd.min.json");
   });
+
+  it("cancels non-OK secondary FX fallback responses", async () => {
+    const primary = new Response(JSON.stringify({ error: "missing" }), { status: 404 });
+    const fallback = new Response(JSON.stringify({ error: "missing" }), { status: 404 });
+    const primaryCancel = vi.spyOn(primary.body!, "cancel");
+    const fallbackCancel = vi.spyOn(fallback.body!, "cancel");
+    vi.stubGlobal("fetch", vi.fn(async (input: string | Request) => {
+      const url = typeof input === "string" ? input : input.url;
+      return url.includes("cdn.jsdelivr.net") ? primary : fallback;
+    }));
+
+    const db = mockD1([
+      {
+        match: "SELECT value, updated_at FROM cache WHERE key = ?",
+        matchBinds: ["fx-history-secondary:2025"],
+        rows: [],
+        first: null,
+      },
+    ]);
+
+    const series = await fetchHistoricalSecondaryFxRates(db, ["CNH"], "2025-06-14", "2025-06-14");
+
+    expect(series.CNH).toEqual([]);
+    expect(primaryCancel).toHaveBeenCalledOnce();
+    expect(fallbackCancel).toHaveBeenCalledOnce();
+  });
 });
 
 describe("extractDepegEvents", () => {

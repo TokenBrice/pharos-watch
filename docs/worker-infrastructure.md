@@ -199,7 +199,7 @@ The Worker uses `caches.default` (Cloudflare's per-colo edge cache) to cache GET
 
 2. **Cache check:** `caches.default.match(cacheKey)` — returns cached response if available
 
-3. **Cache store:** `ctx.waitUntil(cache.put(cacheKey, response.clone()))` — the response is cloned **without** CORS headers before caching. CORS headers are added per-request after cache lookup to avoid caching origin-specific headers.
+3. **Cache store:** `ctx.waitUntil(cache.put(cacheKey, response.clone()).catch(...))` — successful cacheable responses are cloned **without** CORS headers before caching. CORS headers are added per-request after cache lookup to avoid caching origin-specific headers. The Worker skips edge-cache writes for responses whose `Cache-Control` contains `no-store`, `no-cache`, or `private`; those responses are intentionally not persisted in `caches.default`.
 
 4. **Cache-Control profiles** (set by individual API handlers):
 

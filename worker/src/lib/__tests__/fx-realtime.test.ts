@@ -19,10 +19,13 @@ describe("fetchRealtimeFxRates", () => {
   });
 
   it("returns empty map on API failure", async () => {
-    vi.stubGlobal("fetch", vi.fn().mockResolvedValue({ ok: false, status: 500 }));
+    const response = new Response("down", { status: 500 });
+    const cancel = vi.spyOn(response.body!, "cancel");
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(response));
     const result = await fetchRealtimeFxRates("test-key");
     expect(result.completed).toBe(true);
     expect(result.rates.size).toBe(0);
+    expect(cancel).toHaveBeenCalledOnce();
   });
 
   it("validates rates against bounds before returning", async () => {

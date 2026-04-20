@@ -3,6 +3,7 @@ import {
   isValidFxRate,
   REALTIME_FX_CURRENCY_TO_PEG,
 } from "./fx-config";
+import { cancelResponseBodyQuietly } from "./response-body";
 
 /**
  * Real-time FX rate provider using Open Exchange Rates.
@@ -40,6 +41,7 @@ export async function fetchRealtimeFxRates(
     );
     if (!res.ok) {
       console.warn(`[fx-realtime] Open Exchange Rates returned ${res.status}`);
+      await cancelResponseBodyQuietly(res);
       return { rates: result, completed: true };
     }
     const data = OpenExchangeRatesSchema.parse(await res.json());

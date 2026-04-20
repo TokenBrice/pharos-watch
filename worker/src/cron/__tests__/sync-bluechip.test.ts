@@ -193,10 +193,14 @@ describe("syncBluechip", () => {
   });
 
   it("returns degraded when bluechip API requests fail", async () => {
-    mockFetch([
-      { match: "/coin-data/tether", body: { error: "down" }, status: 500 },
-      { match: "/coin-data/usdc", body: { error: "down" }, status: 500 },
-    ]);
+    const tetherResponse = new Response(JSON.stringify({ error: "down" }), { status: 500 });
+    const usdcResponse = new Response(JSON.stringify({ error: "down" }), { status: 500 });
+    const tetherCancel = vi.spyOn(tetherResponse.body!, "cancel");
+    const usdcCancel = vi.spyOn(usdcResponse.body!, "cancel");
+    vi.stubGlobal("fetch", vi.fn(async (input: string | Request) => {
+      const url = typeof input === "string" ? input : input.url;
+      return url.includes("/coin-data/tether") ? tetherResponse : usdcResponse;
+    }));
 
     const db = mockD1();
     const result = await syncBluechip(db);
@@ -213,6 +217,8 @@ describe("syncBluechip", () => {
       { slug: "usdc", reason: "http-500" },
     ]);
     expect(getCacheInsert(db as MockD1Database)).toBeUndefined();
+    expect(tetherCancel).toHaveBeenCalledOnce();
+    expect(usdcCancel).toHaveBeenCalledOnce();
   });
 
   it("merges fresh ratings into the existing cache when only a subset of slugs succeeds", async () => {
