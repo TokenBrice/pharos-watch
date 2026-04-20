@@ -1,14 +1,15 @@
-import { execSync } from "child_process";
-import { writeFileSync, unlinkSync } from "fs";
-import { tmpdir } from "os";
-import { join } from "path";
+import { execFileSync } from "node:child_process";
+import { writeFileSync, unlinkSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 
 const DEFAULT_SQL_BATCH_SIZE = 200;
 const DEFAULT_MAX_BUFFER = 50 * 1024 * 1024;
 
 export function d1Query(databaseName: string, sql: string): string {
-  return execSync(
-    `npx wrangler d1 execute ${databaseName} --remote --command ${JSON.stringify(sql)} --json`,
+  return execFileSync(
+    "npx",
+    ["wrangler", "d1", "execute", databaseName, "--remote", "--command", sql, "--json"],
     { encoding: "utf-8", maxBuffer: DEFAULT_MAX_BUFFER, stdio: "pipe" },
   );
 }
@@ -24,8 +25,9 @@ export function d1ExecFile(databaseName: string, statements: string[], prefix: s
   const tmpFile = join(tmpdir(), `${prefix}-${Date.now()}.sql`);
   try {
     writeFileSync(tmpFile, statements.join("\n")); // eslint-disable-line security/detect-non-literal-fs-filename
-    execSync(
-      `npx wrangler d1 execute ${databaseName} --remote --file ${JSON.stringify(tmpFile)} --json`,
+    execFileSync(
+      "npx",
+      ["wrangler", "d1", "execute", databaseName, "--remote", "--file", tmpFile, "--json"],
       { encoding: "utf-8", maxBuffer: DEFAULT_MAX_BUFFER, stdio: "pipe" },
     );
   } finally {

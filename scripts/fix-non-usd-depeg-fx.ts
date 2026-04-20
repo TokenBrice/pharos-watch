@@ -14,13 +14,15 @@
  * Only touches source='backfill' rows. Live events are never modified.
  *
  * Usage:
- *   cd worker && npx tsx ../scripts/fix-non-usd-depeg-fx.ts [--dry-run]
+ *   cd worker && npx tsx ../scripts/fix-non-usd-depeg-fx.ts          # dry-run
+ *   cd worker && npx tsx ../scripts/fix-non-usd-depeg-fx.ts --apply  # live mutation
  */
 
 import { interpolateRateAtTimestamp, type TimestampedRatePoint } from "../shared/lib/rate-series";
 import { d1BatchExec, d1QueryParsed } from "./lib/remote-d1";
 
-const DRY_RUN = process.argv.includes("--dry-run");
+const APPLY = process.argv.includes("--apply");
+const DRY_RUN = !APPLY;
 const NON_USD_THRESHOLD_BPS = 150;
 const DB_NAME = "stablecoin-db";
 // ── FX rate helpers ──────────────────────────────────────────────────
@@ -53,6 +55,7 @@ const PEG_TO_FX: Record<string, string> = {
   peggedAUD: "AUD", peggedZAR: "ZAR", peggedCAD: "CAD", peggedCNY: "CNY",
   peggedCNH: "CNY", peggedPHP: "PHP", peggedMXN: "MXN",
 };
+const VALID_ECB_PEG_TYPES = new Set(Object.keys(PEG_TO_FX));
 
 // ── Main ─────────────────────────────────────────────────────────────
 
@@ -77,17 +80,16 @@ async function main() {
   let totalUnchanged = 0;
   let totalSkipped = 0;
 
-  for (const { peg_type } of pegTypes) {
+  for (const { peg_type, cnt } of pegTypes) {
     const fxCode = PEG_TO_FX[peg_type];
     if (!fxCode) {
       // Skip commodity pegs (GOLD, SILVER) and VAR — those use peer-median, not ECB FX
       console.log(`[${peg_type}] Skipping — no ECB FX source (uses peer-median or other reference)`);
-      const skipCount = d1QueryParsed<{ cnt: number }>(
-        DB_NAME,
-        `SELECT COUNT(*) as cnt FROM depeg_events WHERE source = 'backfill' AND peg_type = '${peg_type}'`,
-      )[0]?.cnt ?? 0;
-      totalSkipped += skipCount;
+      totalSkipped += cnt;
       continue;
+    }
+    if (!VALID_ECB_PEG_TYPES.has(peg_type)) {
+      throw new Error(`Unexpected ECB peg type: ${peg_type}`);
     }
 
     // 2. Fetch all events for this peg type
@@ -105,6 +107,7 @@ async function main() {
       peg_reference: number;
     }>(
       DB_NAME,
+      // SAFETY: peg_type is validated against VALID_ECB_PEG_TYPES before interpolation.
       `SELECT id, stablecoin_id, symbol, direction, peak_deviation_bps, started_at, ended_at, start_price, peak_price, recovery_price, peg_reference FROM depeg_events WHERE source = 'backfill' AND peg_type = '${peg_type}' ORDER BY started_at`,
     );
 
@@ -165,11 +168,13 @@ async function main() {
       // Deletes: batch IDs into IN clauses (50 IDs per statement)
       for (let i = 0; i < toDelete.length; i += 50) {
         const ids = toDelete.slice(i, i + 50).join(",");
+        // SAFETY: ids are numeric D1 primary keys read from depeg_events and joined without user input.
         statements.push(`DELETE FROM depeg_events WHERE id IN (${ids});`);
       }
 
       // Updates: one statement per event
       for (const { id, newBps, newRef } of toUpdate) {
+        // SAFETY: id/newBps/newRef are numeric values computed from D1 rows and FX interpolation.
         statements.push(
           `UPDATE depeg_events SET peak_deviation_bps = ${newBps}, peg_reference = ${newRef} WHERE id = ${id};`,
         );

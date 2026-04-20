@@ -7,14 +7,16 @@
  * Only touches source='backfill' rows. Live events are never modified.
  *
  * Usage:
- *   cd worker && npx tsx ../scripts/fix-commodity-depeg-median.ts [--dry-run]
+ *   cd worker && npx tsx ../scripts/fix-commodity-depeg-median.ts          # dry-run
+ *   cd worker && npx tsx ../scripts/fix-commodity-depeg-median.ts --apply  # live mutation
  */
 
 import { buildCommodityPeerMedianSeries, type CommodityPeg } from "../shared/lib/commodity-median";
 import { interpolateRateAtTimestamp } from "../shared/lib/rate-series";
 import { d1BatchExec, d1QueryParsed } from "./lib/remote-d1";
 
-const DRY_RUN = process.argv.includes("--dry-run");
+const APPLY = process.argv.includes("--apply");
+const DRY_RUN = !APPLY;
 const NON_USD_THRESHOLD_BPS = 150;
 const DB_NAME = "stablecoin-db";
 const DAY_SECONDS = 86400;
@@ -129,6 +131,7 @@ async function main() {
       peg_reference: number;
     }>(
       DB_NAME,
+      // SAFETY: pegType is selected from the static [["GOLD", "peggedGOLD"], ["SILVER", "peggedSILVER"]] tuple.
       `SELECT id, stablecoin_id, symbol, direction, peak_deviation_bps, started_at, start_price, peak_price, peg_reference FROM depeg_events WHERE source = 'backfill' AND peg_type = '${pegType}' ORDER BY started_at`,
     );
 
@@ -177,9 +180,11 @@ async function main() {
       const statements: string[] = [];
       for (let i = 0; i < toDelete.length; i += 50) {
         const ids = toDelete.slice(i, i + 50).join(",");
+        // SAFETY: ids are numeric D1 primary keys read from depeg_events and joined without user input.
         statements.push(`DELETE FROM depeg_events WHERE id IN (${ids});`);
       }
       for (const { id, newBps, newRef } of toUpdate) {
+        // SAFETY: id/newBps/newRef are numeric values computed from D1 rows and commodity median interpolation.
         statements.push(
           `UPDATE depeg_events SET peak_deviation_bps = ${newBps}, peg_reference = ${newRef} WHERE id = ${id};`,
         );

@@ -381,6 +381,7 @@ async function main() {
   try {
     const sqlFile = join(tmpDir, "rebuild.sql");
     const statements = [
+      // SAFETY: stablecoin/chainId are constrained by the selected blacklist config scope before SQL generation.
       `DELETE FROM blacklist_current_balances WHERE stablecoin = '${options.stablecoin}' AND chain_id = '${options.chainId}';`,
       ...rowsToWrite.map((row) =>
         `INSERT INTO blacklist_current_balances (id, stablecoin, chain_id, address, amount_native, amount_usd, source, status, observed_at, attempt_count, last_attempted_at, last_error_class)
