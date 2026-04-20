@@ -14,15 +14,8 @@ import {
   ACTIVE_DEPEG_CAP_F_BPS,
   ACTIVE_DEPEG_CAP_F_SCORE,
 } from "@shared/lib/report-card-active-depeg";
-import type {
-  StablecoinMeta,
-  GovernanceType,
-  GovernanceQuality,
-  ChainTier,
-  DeploymentModel,
-  CollateralQuality,
-  CustodyModel,
-} from "@shared/types/core";
+import { createReportCardRawInputs } from "@shared/lib/report-card-raw-inputs";
+import type { StablecoinMeta } from "@shared/types/core";
 import type {
   ReportCard,
   ReportCardGrade,
@@ -49,33 +42,7 @@ export function buildDefunctReportCards(): ReportCard[] {
         dependencyRisk: nrDim,
       },
       ratedDimensions: 5,
-      rawInputs: {
-        pegScore: null,
-        activeDepeg: false,
-        activeDepegBps: null,
-        depegEventCount: 0,
-        lastEventAt: null,
-        liquidityScore: null,
-        effectiveExitScore: null,
-        redemptionBackstopScore: null,
-        redemptionRouteFamily: null,
-        redemptionModelConfidence: null,
-        redemptionUsedForLiquidity: false,
-        redemptionImmediateCapacityUsd: null,
-        redemptionImmediateCapacityRatio: null,
-        concentrationHhi: null,
-        bluechipGrade: null,
-        canBeBlacklisted: false,
-        chainTier: "ethereum" as ChainTier,
-        deploymentModel: "single-chain" as DeploymentModel,
-        collateralQuality: "native" as CollateralQuality,
-        custodyModel: "onchain" as CustodyModel,
-        governanceTier: "centralized" as GovernanceType,
-        governanceQuality: "single-entity" as GovernanceQuality,
-        dependencies: [],
-        navToken: false,
-        collateralFromLive: false,
-      },
+      rawInputs: createReportCardRawInputs(),
       isDefunct: true,
     };
   });

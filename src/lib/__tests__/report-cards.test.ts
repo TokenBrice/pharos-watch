@@ -1,4 +1,5 @@
 import { describe, it, expect } from "vitest";
+import { createReportCardRawInputs } from "@shared/lib/report-card-raw-inputs";
 import {
   scoreResilience,
   isBlacklistable,
@@ -57,6 +58,30 @@ function makePeg(overrides: Partial<PegSummaryCoin> = {}): PegSummaryCoin {
     ...overrides,
   };
 }
+
+describe("createReportCardRawInputs", () => {
+  it("returns the default raw input shape with typed overrides", () => {
+    const inputs = createReportCardRawInputs({
+      pegScore: 95,
+      liquidityScore: 80,
+      dependencies: [{ id: "usdc-circle", weight: 0.5 }],
+    });
+
+    expect(inputs).toMatchObject({
+      pegScore: 95,
+      liquidityScore: 80,
+      activeDepeg: false,
+      chainTier: "ethereum",
+      deploymentModel: "single-chain",
+      collateralQuality: "native",
+      custodyModel: "onchain",
+      governanceTier: "centralized",
+      governanceQuality: "single-entity",
+      collateralFromLive: false,
+    });
+    expect(inputs.dependencies).toEqual([{ id: "usdc-circle", weight: 0.5 }]);
+  });
+});
 
 describe("scoreResilience — blacklist descriptive only (v6)", () => {
   const meta = makeMeta();

@@ -15,6 +15,7 @@ import { usePortfolio } from "@/hooks/use-portfolio";
 import { ACTIVE_STABLECOINS, TRACKED_META_BY_ID } from "@shared/lib/stablecoins";
 import { DEAD_STABLECOINS } from "@shared/lib/dead-stablecoins";
 import { DIMENSION_ORDER, scoreToGrade } from "@shared/lib/report-cards";
+import { createReportCardRawInputs } from "@shared/lib/report-card-raw-inputs";
 import type { ReportCard } from "@shared/types";
 import { AlertTriangle, Share2, Trash2, Wallet, X } from "lucide-react";
 import { trackEvent } from "@/lib/analytics";
@@ -345,33 +346,7 @@ export function PortfolioClient() {
       ) as ReportCard["dimensions"],
       ratedDimensions: DIMENSION_ORDER.filter((k) => portfolio.dimensionScores[k] !== null).length,
       isDefunct: false,
-      rawInputs: {
-        pegScore: null,
-        activeDepeg: false,
-        activeDepegBps: null,
-        depegEventCount: 0,
-        lastEventAt: null,
-        liquidityScore: null,
-        effectiveExitScore: null,
-        redemptionBackstopScore: null,
-        redemptionRouteFamily: null,
-        redemptionModelConfidence: null,
-        redemptionUsedForLiquidity: false,
-        redemptionImmediateCapacityUsd: null,
-        redemptionImmediateCapacityRatio: null,
-        concentrationHhi: null,
-        bluechipGrade: null,
-        canBeBlacklisted: false,
-        chainTier: "ethereum",
-        deploymentModel: "single-chain",
-        collateralQuality: "native",
-        custodyModel: "onchain",
-        governanceTier: "centralized",
-        governanceQuality: "single-entity",
-        dependencies: [],
-        navToken: false,
-        collateralFromLive: false,
-      },
+      rawInputs: createReportCardRawInputs(),
     };
   }, [portfolio.holdings.length, portfolio.portfolioGrade, portfolio.portfolioScore, portfolio.dimensionScores]);
 

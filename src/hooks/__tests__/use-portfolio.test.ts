@@ -2,6 +2,7 @@
 
 import { act, renderHook, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it } from "vitest";
+import { createReportCardRawInputs } from "@shared/lib/report-card-raw-inputs";
 import { scoreToGrade } from "@shared/lib/report-cards";
 import type { DimensionKey, ReportCard } from "@shared/types";
 import { usePortfolio } from "../use-portfolio";
@@ -45,33 +46,13 @@ function makeCard(
     baseScore: options.overallScore,
     dimensions,
     ratedDimensions: DIMENSIONS.filter((dimension) => dimensions[dimension].score !== null).length,
-    rawInputs: {
+    rawInputs: createReportCardRawInputs({
       pegScore: dimensions.pegStability.score,
-      activeDepeg: false,
-      activeDepegBps: null,
-      depegEventCount: 0,
-      lastEventAt: null,
       liquidityScore: dimensions.liquidity.score,
-      effectiveExitScore: null,
-      redemptionBackstopScore: null,
-      redemptionRouteFamily: null,
-      redemptionModelConfidence: null,
-      redemptionUsedForLiquidity: false,
-      redemptionImmediateCapacityUsd: null,
-      redemptionImmediateCapacityRatio: null,
-      concentrationHhi: null,
-      bluechipGrade: null,
-      canBeBlacklisted: false,
-      chainTier: "ethereum",
-      deploymentModel: "single-chain",
       collateralQuality: "rwa",
-      custodyModel: "institutional-regulated",
-      governanceTier: "centralized",
       governanceQuality: "regulated-entity",
-      dependencies: [],
-      navToken: false,
-      collateralFromLive: false,
-    },
+      custodyModel: "institutional-regulated",
+    }),
     dependencies: [],
     isDefunct: false,
   };

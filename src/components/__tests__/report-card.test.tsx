@@ -3,6 +3,7 @@
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { ReportCardDetail } from "@/components/report-card";
+import { createReportCardRawInputs } from "@shared/lib/report-card-raw-inputs";
 import type { ReportCard } from "@shared/types";
 
 vi.mock("@/components/radar-chart", () => ({
@@ -47,33 +48,13 @@ function makeReportCard(): ReportCard {
         detail: "Exposure: none (0)",
       },
     },
-    rawInputs: {
+    rawInputs: createReportCardRawInputs({
       pegScore: 95,
-      activeDepeg: false,
-      activeDepegBps: null,
-      depegEventCount: 0,
-      lastEventAt: null,
       liquidityScore: 72,
-      effectiveExitScore: null,
-      redemptionBackstopScore: null,
-      redemptionRouteFamily: null,
-      redemptionModelConfidence: null,
-      redemptionUsedForLiquidity: false,
-      redemptionImmediateCapacityUsd: null,
-      redemptionImmediateCapacityRatio: null,
-      concentrationHhi: null,
-      bluechipGrade: null,
-      canBeBlacklisted: false,
-      chainTier: "ethereum",
-      deploymentModel: "single-chain",
       collateralQuality: "rwa",
-      custodyModel: "institutional-regulated",
-      governanceTier: "centralized",
       governanceQuality: "regulated-entity",
-      dependencies: [],
-      navToken: false,
-      collateralFromLive: false,
-    },
+      custodyModel: "institutional-regulated",
+    }),
   };
 }
 
