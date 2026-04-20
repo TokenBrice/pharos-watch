@@ -3716,6 +3716,7 @@
         "decimals": 18
       }
     ],
+    "canBeBlacklisted": true,
     "deploymentModel": "third-party-bridge",
     "collateralQuality": "alt-lst-bridged-or-mixed",
     "reserves": [

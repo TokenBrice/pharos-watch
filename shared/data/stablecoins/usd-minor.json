@@ -1057,6 +1057,7 @@
         "decimals": 18
       }
     ],
+    "canBeBlacklisted": true,
     "deploymentModel": "third-party-bridge",
     "custodyModel": "institutional-top",
     "governanceQuality": "dao-governance",

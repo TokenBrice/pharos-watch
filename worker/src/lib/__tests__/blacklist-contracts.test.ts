@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins";
+import { getTrackedBlacklistStatus } from "@shared/lib/tracked-blacklist-status";
 import {
   CONTRACT_CONFIGS,
   PYUSD_EVENT_FAMILY,
@@ -11,6 +12,13 @@ import {
 } from "../blacklist-contracts";
 
 describe("blacklist-contracts shared metadata alignment", () => {
+  it("marks every blacklist-tracked stablecoin as directly freezable", () => {
+    const mismatches = [...new Set(CONTRACT_CONFIGS.map((config) => config.stablecoinId))]
+      .filter((stablecoinId) => getTrackedBlacklistStatus(stablecoinId) !== true);
+
+    expect(mismatches).toEqual([]);
+  });
+
   it("resolves each tracked contract from shared stablecoin metadata", () => {
     for (const config of CONTRACT_CONFIGS) {
       const meta = TRACKED_META_BY_ID.get(config.stablecoinId);

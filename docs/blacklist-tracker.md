@@ -12,6 +12,8 @@ The tracker now has two distinct amount layers:
 
 **Live API/UI filter enum:** USDC, USDT, PAXG, XAUT, PYUSD, USD1, USDG, RLUSD, U, USDTB, A7A5, FDUSD, BRZ, AUSD, MNEE, EURI, USDQ, USDO, USDX, AID, TGBP, EURC, BUIDL, USDP, TUSD, NUSD, EURCV, USDA, USAT, AEUR, XUSD, XAUM, JPYC, FRXUSD, FIDD via `BLACKLIST_STABLECOINS` in `shared/types/market.ts` (re-exported through `shared/types/index.ts`).
 
+Every stablecoin ID wired into `CONTRACT_CONFIGS` must resolve to direct `Freezable: Yes` in shared metadata/report-card status. `worker/src/lib/__tests__/blacklist-contracts.test.ts` guards this so direct tracker coverage does not show as only upstream-inherited exposure on `/blacklist`.
+
 Implementation note: `EURC` is live-supported with mirror-zero suppression. Circle often mirrors the same blacklist action across both USDC and EURC; rows classified as zero-balance mirrors stay auditable in storage but are excluded from public `/blacklist` events, active records, and frozen-value aggregates.
 
 ---
