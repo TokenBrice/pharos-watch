@@ -31,6 +31,7 @@ const FULL_DEPLOY_INFRA_PREFIXES = [
 const FULL_DEPLOY_GUARDRAIL_EXACT_PATHS = new Set([
   "scripts/audit-pricing-provider-config.ts",
   "scripts/check-critical-coverage.mjs",
+  "scripts/check-cron-abort-contract.mjs",
   "scripts/check-cron-connection-budget.ts",
   "scripts/check-cron-schedule-sync.ts",
   "scripts/check-doc-counts.mjs",

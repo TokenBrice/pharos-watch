@@ -269,6 +269,13 @@ describe("computeAndStoreDEWS", () => {
     });
   });
 
+  it("throws before D1 work when the cron signal is already aborted", async () => {
+    const controller = new AbortController();
+    controller.abort(new Error("dews aborted"));
+
+    await expect(computeAndStoreDEWS(makeDb([]), controller.signal)).rejects.toThrow("dews aborted");
+  });
+
   it("loads 7d liquidity history from snapshot_date/liquidity_score/total_tvl_usd", async () => {
     const sqlSeen: string[] = [];
     const db = makeDb(sqlSeen);

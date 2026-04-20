@@ -2,19 +2,15 @@ import { batchExecute } from "../lib/db";
 import { PSI_ELIGIBLE_STABLECOINS } from "@shared/lib/psi-eligible";
 import { sumPegBuckets } from "@shared/lib/supply";
 import type { CronResult } from "../lib/cron-logger";
+import { throwIfAborted } from "../lib/abort";
 import { loadStablecoinsCache } from "../lib/stablecoins-cache";
 import { getCache, setCache } from "../lib/db-cache";
 
-export async function snapshotSupply(db: D1Database, _signal?: AbortSignal): Promise<CronResult> {
-  if (_signal?.aborted) {
-    return {
-      status: "degraded",
-      itemCount: 0,
-      metadata: JSON.stringify({ reason: "aborted" }),
-    };
-  }
+export async function snapshotSupply(db: D1Database, signal?: AbortSignal): Promise<CronResult> {
+  throwIfAborted(signal);
 
   const stablecoinsCache = await loadStablecoinsCache(db, { mode: "strict", allowLegacyArray: false });
+  throwIfAborted(signal);
   if (stablecoinsCache.kind !== "ok") {
     console.error("[snapshot-supply] No stablecoins cache found");
     return {
@@ -44,6 +40,7 @@ export async function snapshotSupply(db: D1Database, _signal?: AbortSignal): Pro
   // INSERT OR REPLACE row keyed on snapshot_date.
   const COOLDOWN_SEC = 20 * 3600;
   const lastWrite = await getCache(db, "snapshot-supply:last-write");
+  throwIfAborted(signal);
   if (lastWrite && (Math.floor(Date.now() / 1000) - lastWrite.updatedAt) < COOLDOWN_SEC) {
     return { itemCount: 0, metadata: JSON.stringify({ reason: "cooldown_active", lastWriteAgeSec: Math.floor(Date.now() / 1000) - lastWrite.updatedAt }) };
   }
@@ -84,7 +81,9 @@ export async function snapshotSupply(db: D1Database, _signal?: AbortSignal): Pro
 
   if (stmts.length > 0) {
     try {
+      throwIfAborted(signal);
       await batchExecute(db, stmts);
+      throwIfAborted(signal);
       await setCache(db, "snapshot-supply:last-write", JSON.stringify({ snapshotDate }));
     } catch (err) {
       console.error("[snapshot-supply] batchExecute failed:", err);

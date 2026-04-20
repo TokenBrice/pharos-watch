@@ -18,6 +18,7 @@ npm run check:worker-boundary # Enforce the shared boundary in both directions (
 npm run check:shared-cycles # Fail on circular dependencies inside `shared/`, `worker/src`, and `src`
 npm run check:unused-code # Detect unreferenced internal runtime modules and unused named exports across `src/`, `shared/`, `worker/src/`, and `functions/`
 npm run check:hotspot-ratchet # Fail when enrolled hotspots regress or generated hotspot candidates lack explicit enrollment/waivers
+npm run check:cron-abort-contract # Verify leased cron jobs accept/pass AbortSignal or carry explicit waivers
 npm run check:cron-sync # Verify `shared/lib/cron-jobs.ts`, `shared/lib/scheduled-runner-registry.ts`, and `worker/wrangler.toml` stay aligned
 npm run check:cron-connections # Enforce the documented per-trigger outbound connection budget across cron slots
 npm run check:doc-counts # Verify tracked/shadow/adapter/bluechip/live-enabled counts in docs match code

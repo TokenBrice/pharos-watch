@@ -35,6 +35,13 @@ describe("snapshotSupply", () => {
     expect(result.itemCount).toBe(0);
   });
 
+  it("throws before D1 work when the cron signal is already aborted", async () => {
+    const controller = new AbortController();
+    controller.abort(new Error("snapshot supply aborted"));
+
+    await expect(snapshotSupply(mockD1(), controller.signal)).rejects.toThrow("snapshot supply aborted");
+  });
+
   it("returns itemCount 0 when cache is stale (>1200s)", async () => {
     const staleUpdatedAt = Math.floor(Date.now() / 1000) - 1500;
     const cacheValue = JSON.stringify({

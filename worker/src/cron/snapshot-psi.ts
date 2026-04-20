@@ -1,9 +1,11 @@
 import type { CronResult } from "../lib/cron-logger";
+import { throwIfAborted } from "../lib/abort";
 import { DAY_SECONDS } from "@shared/lib/time-constants";
 import { getConditionBand } from "../lib/stability-index";
 import { PSI_METHODOLOGY_VERSION } from "@shared/lib/stability-index-version";
 
-export async function snapshotPsiDaily(db: D1Database, _signal?: AbortSignal): Promise<CronResult> {
+export async function snapshotPsiDaily(db: D1Database, signal?: AbortSignal): Promise<CronResult> {
+  throwIfAborted(signal);
   const now = Math.floor(Date.now() / 1000);
   const todayMidnight = now - (now % DAY_SECONDS);
   const yesterdayMidnight = todayMidnight - DAY_SECONDS;
@@ -24,6 +26,7 @@ export async function snapshotPsiDaily(db: D1Database, _signal?: AbortSignal): P
       )
       .bind(yesterdayMidnight, todayMidnight)
       .first<{ avg_score: number | null; avg_severity: number | null; avg_breadth: number | null; avg_stress_breadth: number | null; avg_trend: number | null; cnt: number }>();
+    throwIfAborted(signal);
 
     versionRows = await db
       .prepare(
@@ -35,6 +38,7 @@ export async function snapshotPsiDaily(db: D1Database, _signal?: AbortSignal): P
       )
       .bind(yesterdayMidnight, todayMidnight)
       .all<{ methodology_version: string; cnt: number }>();
+    throwIfAborted(signal);
   } catch (err) {
     console.error("[snapshot-psi] DB query failed:", err);
     return { status: "degraded", itemCount: 0, metadata: JSON.stringify({ reason: "db_query_failed", error: String(err).slice(0, 200) }) };
@@ -61,6 +65,7 @@ export async function snapshotPsiDaily(db: D1Database, _signal?: AbortSignal): P
     (versionRows.results ?? []).map((r) => [r.methodology_version, r.cnt]),
   );
 
+  throwIfAborted(signal);
   await db
     .prepare(
       `INSERT OR REPLACE INTO stability_index (computed_at, score, band, components, input_snapshot, methodology_version)
@@ -80,6 +85,7 @@ export async function snapshotPsiDaily(db: D1Database, _signal?: AbortSignal): P
       methodologyVersion,
     )
     .run();
+  throwIfAborted(signal);
 
   console.log(`[snapshot-psi] yesterday avg=${score} band=${band} samples=${row.cnt}`);
   return { itemCount: 1, metadata: `avg=${score} band=${band} samples=${row.cnt}` };

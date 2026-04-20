@@ -76,6 +76,14 @@ const ONE_WEEK_SEC = 7 * 24 * 60 * 60;
 const TWO_WEEKS_SEC = 14 * 24 * 60 * 60;
 
 describe("runPruneCronHistory", () => {
+  it("throws before D1 work when the cron signal is already aborted", async () => {
+    const { db } = createStubDb();
+    const controller = new AbortController();
+    controller.abort(new Error("cron history prune aborted"));
+
+    await expect(runPruneCronHistory(db, controller.signal)).rejects.toThrow("cron history prune aborted");
+  });
+
   it("removes cron_runs older than 7 days and keeps newer rows", async () => {
     const { db, cronRuns } = createStubDb();
     const now = Math.floor(Date.now() / 1000);

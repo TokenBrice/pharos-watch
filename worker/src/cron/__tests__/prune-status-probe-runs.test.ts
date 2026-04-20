@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { pruneStatusProbeRuns } from "../prune-status-probe-runs";
+import { pruneStatusProbeRuns, runPruneStatusProbeRuns } from "../prune-status-probe-runs";
 
 interface ProbeRunRow {
   id: number;
@@ -100,6 +100,13 @@ async function seedProbeRuns(
 }
 
 describe("pruneStatusProbeRuns", () => {
+  it("throws before D1 work when the cron signal is already aborted", async () => {
+    const controller = new AbortController();
+    controller.abort(new Error("probe prune aborted"));
+
+    await expect(runPruneStatusProbeRuns(createStubDb(), controller.signal)).rejects.toThrow("probe prune aborted");
+  });
+
   it("deletes rows older than cutoffSec and stops at batchSize", async () => {
     const db = createStubDb();
     const now = Math.floor(Date.now() / 1000);

@@ -25,6 +25,13 @@ describe("snapshotPsiDaily", () => {
     vi.useRealTimers();
   });
 
+  it("throws before D1 work when the cron signal is already aborted", async () => {
+    const controller = new AbortController();
+    controller.abort(new Error("snapshot psi aborted"));
+
+    await expect(snapshotPsiDaily(mockD1(), controller.signal)).rejects.toThrow("snapshot psi aborted");
+  });
+
   it("computes yesterday average from 96 samples and inserts stability_index row", async () => {
     const db = mockD1([
       {

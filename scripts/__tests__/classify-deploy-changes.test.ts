@@ -74,6 +74,7 @@ describe("hasDeployImpact", () => {
       "scripts/lib/deploy-impact.mjs",
       "scripts/lib/validate-contract.mjs",
       ".github/actions/setup-workspace/action.yml",
+      "scripts/check-cron-abort-contract.mjs",
       "scripts/check-cron-connection-budget.ts",
       "scripts/check-env-contract.mjs",
       "scripts/check-sql-interpolation-safety.mjs",

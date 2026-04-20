@@ -29,6 +29,7 @@
 import { PSI_ELIGIBLE_STABLECOINS, PSI_ELIGIBLE_META_BY_ID } from "@shared/lib/psi-eligible";
 import { derivePegRates } from "@shared/lib/peg-rates";
 import type { CronResult } from "../lib/cron-logger";
+import { throwIfAborted } from "../lib/abort";
 import { loadStablecoinsCache } from "../lib/stablecoins-cache";
 import { getCache, setCache } from "../lib/db-cache";
 import { logMalformedJsonPath } from "../lib/json-decode-observability";
@@ -67,14 +68,15 @@ const DEWS_BOOTSTRAP_SENTINEL_CACHE_KEY = "dews:bootstrap-complete";
  * does not abort the entire run.
  *
  * @param db - D1 database handle bound to the Worker environment.
- * @param _signal - Unused AbortSignal (reserved for future graceful shutdown).
+ * @param signal - AbortSignal used for cron timeout and lease-loss propagation.
  * @returns CronResult with itemCount (coins computed) and JSON metadata
  *   containing rowsRead, rowsWritten, sourceCoverage, and sourceFailures.
  */
 export async function computeAndStoreDEWS(
   db: D1Database,
-  _signal?: AbortSignal,
+  signal?: AbortSignal,
 ): Promise<CronResult> {
+  throwIfAborted(signal);
   const nowSec = Math.floor(Date.now() / 1000);
   const eligibleIds = new Set(PSI_ELIGIBLE_STABLECOINS.map((meta) => meta.id));
   const sourceFailures: SourceFailure[] = [];
@@ -85,6 +87,7 @@ export async function computeAndStoreDEWS(
 
   // 1. Read stablecoins cache
   const stablecoinsCache = await loadStablecoinsCache(db, { mode: "strict", allowLegacyArray: true });
+  throwIfAborted(signal);
   if (stablecoinsCache.kind !== "ok") {
     const failure: SourceFailure = {
       source: "stablecoins-cache",
@@ -110,6 +113,7 @@ export async function computeAndStoreDEWS(
   sourceCoverage.stablecoins = assets.length;
   const assetById = new Map(assets.map((a) => [a.id, a]));
   const bootstrapPending = (await getCache(db, DEWS_BOOTSTRAP_SENTINEL_CACHE_KEY)) == null;
+  throwIfAborted(signal);
 
   const registerSourceFailure = (
     source: string,
@@ -167,6 +171,7 @@ export async function computeAndStoreDEWS(
     registerSourceFailure,
     registerMalformedPersistedInput,
   });
+  throwIfAborted(signal);
   Object.assign(sourceCoverage, sourceState.sourceCoverage);
 
   const { results, liqHistCoverageCount, insufficientDataCount, noCurrentSupplyIds } = buildDewsScoringResult({
@@ -175,6 +180,7 @@ export async function computeAndStoreDEWS(
     sourceState,
     registerMalformedPersistedInput,
   });
+  throwIfAborted(signal);
   const { rowsDropped, rowsRetiredCurrent } = await persistDewsResults({
     db,
     results,
@@ -182,6 +188,7 @@ export async function computeAndStoreDEWS(
     noCurrentSupplyIds,
     nowSec,
   });
+  throwIfAborted(signal);
 
   const liqHistCoverage = results.length > 0 ? liqHistCoverageCount / results.length : 0;
   if (results.length > 0 && liqHistCoverage < 0.5) {
@@ -197,6 +204,7 @@ export async function computeAndStoreDEWS(
 
   console.log(`[dews] Computed DEWS for ${results.length} coins`);
   if (bootstrapPending) {
+    throwIfAborted(signal);
     await setCache(
       db,
       DEWS_BOOTSTRAP_SENTINEL_CACHE_KEY,
