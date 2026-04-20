@@ -4,7 +4,7 @@ export type CemeterySortMode = "newest" | "oldest";
 
 const MAJOR_CEMETERY_COLLAPSE_MCAP = 1_000_000_000;
 
-export function getDeathMonthValue(deathDate: string): number {
+function getDeathMonthValue(deathDate: string): number {
   const [yearPart, monthPart] = deathDate.split("-");
   const year = Number(yearPart);
   const month = Number(monthPart ?? "1");
