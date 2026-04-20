@@ -1,9 +1,6 @@
 /admin/*
   X-Robots-Tag: noindex, nofollow
 
-/funding/*
-  X-Robots-Tag: noindex, nofollow
-
 /portfolio/*
   X-Robots-Tag: noindex, follow
 

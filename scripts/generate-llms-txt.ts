@@ -128,6 +128,7 @@ const apiLinks = [
     absolute("/postman/pharos-api.postman_environment.json"),
     "Production environment template with API key placeholder.",
   ],
+  ["Funding", absolute("/funding/"), "Public ledger of Pharos running costs, donations, and sustainability path."],
   ["About", absolute("/about/"), "Project context and data sources."],
 ] as const;
 

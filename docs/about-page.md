@@ -20,7 +20,7 @@ The route shell is owned directly by `src/app/about/page.tsx`.
 
 - `metadata` sets the canonical path `/about/` plus route-specific title/description/Open Graph fields
 - the page renders through `FeaturePageShell` with `breadcrumbName="About Pharos"`, `path="/about/"`, title `About Pharos`, and a single lead paragraph
-- `headerSupplement` renders `AboutReferenceModule` immediately below the title/lead with five reference cards derived from `NAV_GROUPS.info` excluding `/about`: `/methodology/`, `/coverage/`, `/about/api/`, `/status/`, and `/changelog/`
+- `headerSupplement` renders `AboutReferenceModule` immediately below the title/lead with six reference cards derived from `NAV_GROUPS.info` excluding `/about`: `/funding/`, `/methodology/`, `/coverage/`, `/about/api/`, `/status/`, and `/changelog/`
 - the shell's `preface` injects FAQ JSON-LD describing why Pharos exists, what it tracks, how it classifies coins, and where the data comes from
 
 ## Section Contract
@@ -54,11 +54,11 @@ The page is organized into these sections, in order:
 ## Navigation Contract
 
 - `/about/` remains a top-level route, and primary navigation places it first in the `Reference` group (`NAV_GROUPS.info`).
-- `/about/` is now the reference hub for low-frequency explainer surfaces. `Methodology`, `Coverage`, API Reference, Status, and Changelog are grouped around it in the reference module. `Start Here` is not part of the About reference module; it remains the conditional bottom-nav shortcut and footer link.
+- `/about/` is now the reference hub for low-frequency explainer surfaces. `Funding`, `Methodology`, `Coverage`, API Reference, Status, and Changelog are grouped around it in the reference module. `Start Here` is not part of the About reference module; it remains the conditional bottom-nav shortcut and footer link.
 - `Peg Tracker` must link to `/depeg/`, because the dedicated depeg route owns the heatmap and depeg-history surface
 - `Contagion Map` must link to `/dependency-map/`
 - `Systemic Risk Scoreboard` remains linked to `/safety-scores/` because the stress-panel scoreboard lives on that route
-- `Methodology`, broadcast, Telegram, GitHub, and profile links are surfaced as explicit CTAs rather than buried inline links
+- `Funding`, `Methodology`, broadcast, Telegram, GitHub, and profile links are surfaced as explicit CTAs rather than buried inline links
 
 ## Content Notes
 

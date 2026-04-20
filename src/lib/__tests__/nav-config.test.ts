@@ -35,5 +35,14 @@ describe("nav-config", () => {
 
     expect(infoGroup?.label).toBe("Reference");
     expect(infoGroup?.items.some((item) => item.href === "/digest")).toBe(false);
+    expect(infoGroup?.items.map((item) => item.href)).toEqual([
+      "/about",
+      "/funding",
+      "/methodology",
+      "/coverage",
+      "/about/api",
+      "/status",
+      "/changelog",
+    ]);
   });
 });

@@ -454,11 +454,16 @@ export default function AboutPage() {
           </p>
           <p>
             Pharos is a public good, a resource. It&apos;s a mission-driven project made to elevate the understanding of
-            stablecoin market participants: free, open source, and with no plan to monetize.{" "}
-            <Link href="/start/" className={INLINE_EXTERNAL_LINK_CLASS}>
-              Get started
+            stablecoin market participants: the dashboard stays free, the code is open source, and sustainability comes
+            from community support plus future paid API access for heavy programmatic usage.{" "}
+            <Link href="/funding/" className={INLINE_EXTERNAL_LINK_CLASS}>
+              See the funding ledger
             </Link>{" "}
-            and make the most of it!
+            or{" "}
+            <Link href="/start/" className={INLINE_EXTERNAL_LINK_CLASS}>
+              get started
+            </Link>{" "}
+            and make the most of it.
           </p>
           <p>
             For architecture, methodology, and design references, use the{" "}

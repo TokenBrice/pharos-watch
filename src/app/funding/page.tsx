@@ -1,4 +1,3 @@
-import type { Metadata } from "next";
 import { FeaturePageShell } from "@/components/feature-page-shell";
 import {
   FundingKpiRow,
@@ -8,22 +7,21 @@ import {
   YearEndHorizon,
   FundingFaq,
 } from "@/components/funding/funding-page-sections";
+import { buildPageMetadata } from "@/lib/page-metadata";
 import { computeCostsTotal, summarizeDonations } from "@shared/lib/funding/helpers";
 import costsData from "@shared/data/funding/costs.json";
 import donationsData from "@shared/data/funding/donations.json";
 import type { CostsFile, DonationsFile } from "@shared/lib/funding/types";
 
-export const metadata: Metadata = {
+export const metadata = buildPageMetadata({
   title: "Funding",
   description: "On-chain donations, running costs, and Pharos's path to staying freely accessible.",
-  robots: { index: false, follow: false }, // stealth release — not indexed in v1
-  alternates: { canonical: "/funding/" },
-};
+  canonical: "/funding/",
+});
 
 // Build-time timestamp anchors "this month" for the KPI split. Static export
 // means this reflects the last deploy, not the visitor's clock. Monthly
-// boundaries can be up to ~7 days stale (funding-update skill cadence);
-// acceptable for a stealth-released page with weekly redeploys.
+// boundaries can be up to ~7 days stale (funding-update skill cadence).
 const BUILD_TIMESTAMP_SEC = Math.floor(Date.now() / 1000);
 
 export default function FundingPage() {

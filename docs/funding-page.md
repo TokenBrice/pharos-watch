@@ -1,6 +1,15 @@
-# Funding page
+# Funding Page
 
-Public ledger of Pharos's running costs and the donations that cover them. Stealth-released — route metadata is `robots: { index: false, follow: false }` (`noindex,nofollow`), canonical `/funding/`, and the route has no sitemap or navigation entry in v1.
+Public ledger of Pharos's running costs, donations, and sustainability path. The route is public and indexable with canonical `/funding/`, sitemap coverage, Reference navigation, footer navigation, and a `/llms.txt` entry.
+
+## Route and crawlability
+
+- `src/app/funding/page.tsx` renders through `FeaturePageShell` and uses `buildPageMetadata(...)`.
+- `src/app/sitemap.ts` includes `/funding/`; `lastModified` uses the latest of the route edit date, `costs.last_reviewed_at`, and `donations.last_updated_at`.
+- `src/lib/nav-config.ts` places Funding in the `Reference` group.
+- `src/components/footer.tsx` includes Funding in the footer route list.
+- `scripts/generate-llms-txt.ts` includes Funding in the public LLM-facing index.
+- `public/_headers` must not emit `X-Robots-Tag: noindex` for `/funding/*`.
 
 ## Data model
 
@@ -19,7 +28,7 @@ Row shape for donations is defined in `shared/lib/funding/types.ts` (`Donation`)
 - **No ENS resolver module.** ENS reverse + forward-verify runs once per new address during the skill's run; results are frozen into `display` on the row.
 - **No spam filter module.** Unknown-token pricing requires a manual USD value from the user, which naturally gates out spoofed-ticker spam.
 
-If donation volume grows to the point where hand-curation becomes painful, promote the skill to a worker cron (daily Alchemy scan → D1 → `/api/funding-summary` endpoint). Everything the page renders is already derivable from what the skill writes, so the frontend does not need to change.
+If donation volume grows to the point where hand-curation becomes painful, promote the skill to a worker cron (daily Alchemy scan -> D1 -> `/api/funding-summary` endpoint). Everything the page renders is already derivable from what the skill writes, so the frontend does not need to change.
 
 ## Ownership & cadence
 

@@ -29,7 +29,7 @@
 import { PSI_ELIGIBLE_STABLECOINS, PSI_ELIGIBLE_META_BY_ID } from "@shared/lib/psi-eligible";
 import { derivePegRates } from "@shared/lib/peg-rates";
 import type { CronResult } from "../lib/cron-logger";
-import { throwIfAborted } from "../lib/abort";
+import { runWithAbort } from "../lib/abort";
 import { loadStablecoinsCache } from "../lib/stablecoins-cache";
 import { getCache, setCache } from "../lib/db-cache";
 import { logMalformedJsonPath } from "../lib/json-decode-observability";
@@ -76,7 +76,6 @@ export async function computeAndStoreDEWS(
   db: D1Database,
   signal?: AbortSignal,
 ): Promise<CronResult> {
-  throwIfAborted(signal);
   const nowSec = Math.floor(Date.now() / 1000);
   const eligibleIds = new Set(PSI_ELIGIBLE_STABLECOINS.map((meta) => meta.id));
   const sourceFailures: SourceFailure[] = [];
@@ -86,8 +85,7 @@ export async function computeAndStoreDEWS(
   let malformedCoreInputRows = 0;
 
   // 1. Read stablecoins cache
-  const stablecoinsCache = await loadStablecoinsCache(db, { mode: "strict", allowLegacyArray: true });
-  throwIfAborted(signal);
+  const stablecoinsCache = await runWithAbort(signal, () => loadStablecoinsCache(db, { mode: "strict", allowLegacyArray: true }));
   if (stablecoinsCache.kind !== "ok") {
     const failure: SourceFailure = {
       source: "stablecoins-cache",
@@ -112,8 +110,7 @@ export async function computeAndStoreDEWS(
   const { peggedAssets: assets, fxFallbackRates } = stablecoinsCache.payload;
   sourceCoverage.stablecoins = assets.length;
   const assetById = new Map(assets.map((a) => [a.id, a]));
-  const bootstrapPending = (await getCache(db, DEWS_BOOTSTRAP_SENTINEL_CACHE_KEY)) == null;
-  throwIfAborted(signal);
+  const bootstrapPending = (await runWithAbort(signal, () => getCache(db, DEWS_BOOTSTRAP_SENTINEL_CACHE_KEY))) == null;
 
   const registerSourceFailure = (
     source: string,
@@ -164,14 +161,15 @@ export async function computeAndStoreDEWS(
   // Derive peg rates for non-USD reference prices
   const { rates: pegRates } = derivePegRates(assets, PSI_ELIGIBLE_META_BY_ID, fxFallbackRates);
 
-  const sourceState = await loadDewsSourceState({
-    db,
-    nowSec,
-    bootstrapPending,
-    registerSourceFailure,
-    registerMalformedPersistedInput,
-  });
-  throwIfAborted(signal);
+  const sourceState = await runWithAbort(signal, () =>
+    loadDewsSourceState({
+      db,
+      nowSec,
+      bootstrapPending,
+      registerSourceFailure,
+      registerMalformedPersistedInput,
+    })
+  );
   Object.assign(sourceCoverage, sourceState.sourceCoverage);
 
   const { results, liqHistCoverageCount, insufficientDataCount, noCurrentSupplyIds } = buildDewsScoringResult({
@@ -180,21 +178,19 @@ export async function computeAndStoreDEWS(
     sourceState,
     registerMalformedPersistedInput,
   });
-  throwIfAborted(signal);
-  const { rowsDropped, rowsRetiredCurrent } = await persistDewsResults({
-    db,
-    results,
-    eligibleIds,
-    noCurrentSupplyIds,
-    nowSec,
-  });
-  throwIfAborted(signal);
+  const { rowsDropped, rowsRetiredCurrent } = await runWithAbort(signal, () =>
+    persistDewsResults({
+      db,
+      results,
+      eligibleIds,
+      noCurrentSupplyIds,
+      nowSec,
+    })
+  );
 
   const liqHistCoverage = results.length > 0 ? liqHistCoverageCount / results.length : 0;
   if (results.length > 0 && liqHistCoverage < 0.5) {
-    console.warn(
-      `[dews] Low 7d liquidity history coverage: ${liqHistCoverageCount}/${results.length} (${(liqHistCoverage * 100).toFixed(1)}%)`,
-    );
+    console.warn(`[dews] Low 7d liquidity history coverage: ${liqHistCoverageCount}/${results.length} (${(liqHistCoverage * 100).toFixed(1)}%)`);
   }
 
   const hardFailures = sourceFailures.filter((failure) => !failure.bootstrapAllowed);
@@ -204,12 +200,7 @@ export async function computeAndStoreDEWS(
 
   console.log(`[dews] Computed DEWS for ${results.length} coins`);
   if (bootstrapPending) {
-    throwIfAborted(signal);
-    await setCache(
-      db,
-      DEWS_BOOTSTRAP_SENTINEL_CACHE_KEY,
-      JSON.stringify({ completedAt: nowSec }),
-    );
+    await runWithAbort(signal, () => setCache(db, DEWS_BOOTSTRAP_SENTINEL_CACHE_KEY, JSON.stringify({ completedAt: nowSec })));
   }
   return {
     itemCount: results.length,

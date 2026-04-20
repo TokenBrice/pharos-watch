@@ -22,7 +22,7 @@ const SUPPORTED_CHAINS: FundingChain[] = ["ethereum", "base", "optimism", "arbit
 // Floor to the nearest 10 so the share message reads as a round figure and stays
 // honestly conservative as canonical-order grows.
 const TRACKED_COUNT_FLOOR = Math.floor(TRACKED_STABLECOINS.length / 10) * 10;
-const PHAROS_SHARE_MESSAGE = `Stablecoin risk data should be public infrastructure, not a private terminal. Pharos tracks ${TRACKED_COUNT_FLOOR}+ stablecoins with peg, safety, liquidity, depeg, blacklist, flow, yield, and dependency signals. MIT-licensed, practitioner-built, free to use. Help keep it open: https://pharos.watch`;
+const PHAROS_SHARE_MESSAGE = `Stablecoin risk data should be public infrastructure, not a private terminal. Pharos tracks ${TRACKED_COUNT_FLOOR}+ stablecoins with peg, safety, liquidity, depeg, blacklist, flow, yield, and dependency signals. MIT-licensed, practitioner-built, free to use. Help keep it open: https://pharos.watch/funding/`;
 
 // Brand-marked icons matching the footer (lucide has no X/Telegram icons).
 function XIcon({ className }: { className?: string }) {

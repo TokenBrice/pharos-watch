@@ -21,6 +21,7 @@ import {
   TrendingUp,
   TableProperties,
   ScrollText,
+  Heart,
   createLucideIcon,
 } from "lucide-react";
 
@@ -85,6 +86,7 @@ export const NAV_GROUPS: NavGroup[] = [
     label: "Reference",
     items: [
       { href: "/about", label: "About", icon: Info, description: "Scope, data sources, and why Pharos exists" },
+      { href: "/funding", label: "Funding", icon: Heart, description: "Running costs, supporter ledger, and public sustainability path" },
       { href: "/methodology", label: "Methodology", icon: BookOpen, description: "Reference manual for formulas, thresholds, and changelogs" },
       { href: "/coverage", label: "Coverage", icon: TableProperties, description: "Truth surface for what each route can show per coin" },
       { href: "/about/api", label: "API Reference", icon: KeyRound, description: "Auth model, key requirement, and full endpoint reference" },

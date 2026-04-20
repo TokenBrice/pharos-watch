@@ -145,12 +145,10 @@ Worker cron refactors should place reusable stage contracts under `worker/src/cr
   - `/docs/` and `/docs/[slug]/` for the curated public documentation archive; the allowlist lives in `shared/lib/public-docs.ts`
   - `/about/api/`
   - `/changelog/`
-  - major feature pages with standalone static copy (`/start/`, `/upcoming/`, `/blacklist/`, `/depeg/`, `/liquidity/`, `/safety-scores/`, `/stability-index/`, `/yield/`, `/flows/`, `/dependency-map/`, `/cemetery/`, `/telegram/`, `/status/`, `/about/`, `/privacy/`)
+  - major feature pages with standalone static copy (`/start/`, `/upcoming/`, `/blacklist/`, `/depeg/`, `/liquidity/`, `/safety-scores/`, `/stability-index/`, `/yield/`, `/flows/`, `/dependency-map/`, `/cemetery/`, `/telegram/`, `/funding/`, `/status/`, `/about/`, `/privacy/`)
 - Tool roots intentionally marked `noindex,follow`:
   - `/compare/`
   - `/portfolio/`
-- Stealth/noindex public routes:
-  - `/funding/` (`noindex,nofollow`; static JSON-backed funding ledger, intentionally absent from sitemap/nav in v1)
 - Private operator routes marked `noindex,nofollow`:
   - `/admin/`
   - `/api/admin/`
@@ -172,7 +170,7 @@ Worker cron refactors should place reusable stage contracts under `worker/src/cr
 
 - `src/lib/page-metadata.ts` is the shared helper for per-route canonical metadata, Open Graph images, Twitter cards, and sentence-aware description trimming.
 - `src/app/layout.tsx` owns the sitewide metadata baseline, icons, `api.pharos.watch` preconnect, and root JSON-LD (`WebSite`, `Organization`, `Person`, `WebApplication`) with stable `#website`, `#organization`, `#person-tokenbrice`, and `#webapp` anchors. It intentionally does not emit `SearchAction` until the site has a real query handler.
-- `src/app/sitemap.ts` owns sitemap output for indexable routes. `/compare/`, `/portfolio/`, `/funding/`, and `/admin/` are omitted; `/compare/[slug]/` static comparison pages are included. `LAST_EDITED` dates are auto-generated from git history during prebuild (`scripts/generate-sitemap-dates.ts`) and written to a generated JSON file (gitignored). Public docs use `scripts/generate-docs-metadata.ts` for git-derived first/last modified dates.
+- `src/app/sitemap.ts` owns sitemap output for indexable routes. `/compare/`, `/portfolio/`, and `/admin/` are omitted; `/compare/[slug]/` static comparison pages are included. `/funding/` uses the latest of route edit time and checked-in funding data timestamps for `lastModified`. `LAST_EDITED` dates are auto-generated from git history during prebuild (`scripts/generate-sitemap-dates.ts`) and written to a generated JSON file (gitignored). Public docs use `scripts/generate-docs-metadata.ts` for git-derived first/last modified dates.
 - `src/app/robots.ts` publishes an allow-all crawl policy, explicit AI crawler allow groups, disallows for operator surfaces (`/admin`, `/admin/`, `/api/admin`, `/api/admin/`), and the sitemap location.
 
 ---
