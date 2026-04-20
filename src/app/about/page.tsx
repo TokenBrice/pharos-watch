@@ -445,7 +445,7 @@ export default function AboutPage() {
         >
           <p>
             Stablecoins are the backbone of on-chain finance, yet the data to evaluate them is scattered, inconsistent,
-            or buried behind paywalls. Worse, marketing claims rarely match reality: a "decentralized" stablecoin may rely
+            or buried behind paywalls. Worse, marketing claims rarely match reality: a &quot;decentralized&quot; stablecoin may rely
             entirely on centralized collateral. An issuer can freeze balances without warning. A deep liquidity pool on one
             DEX can evaporate overnight. And when a major stablecoin fails, the collateral chains transmit that stress to
             dozens of derivatives that looked safe in isolation.
