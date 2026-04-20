@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { trackEvent } from "@/lib/analytics";
 import { canvasToBlob, loadImage, renderCompareShareImage } from "@/lib/compare-share-image";
 import type { ShareCoinData, ShareRadarData } from "@/lib/compare-share-image";
@@ -49,6 +49,20 @@ export function useCompareShareActions({
 }: UseCompareShareActionsOptions) {
   const [shareLoading, setShareLoading] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
+  const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => () => {
+    if (toastTimer.current) clearTimeout(toastTimer.current);
+  }, []);
+
+  const showToast = useCallback((message: string, durationMs: number) => {
+    if (toastTimer.current) clearTimeout(toastTimer.current);
+    setToast(message);
+    toastTimer.current = setTimeout(() => {
+      setToast(null);
+      toastTimer.current = null;
+    }, durationMs);
+  }, []);
 
   const buildShareData = useCallback(async (): Promise<{
     coins: ShareCoinData[];
@@ -116,8 +130,7 @@ export function useCompareShareActions({
           const blob = await canvasToBlob(canvas);
           try {
             await navigator.clipboard.write([new ClipboardItem({ "image/png": blob })]);
-            setToast("Image copied! Paste it in your tweet (Ctrl+V)");
-            setTimeout(() => setToast(null), 5000);
+            showToast("Image copied! Paste it in your tweet (Ctrl+V)", 5000);
           } catch {
             // Clipboard image write not supported — continue to intent URL.
           }
@@ -134,7 +147,7 @@ export function useCompareShareActions({
       "_blank",
       "noopener,noreferrer",
     );
-  }, [buildShareData, comparisonCoins]);
+  }, [buildShareData, comparisonCoins, showToast]);
 
   const handleWebShare = useCallback(async () => {
     setShareLoading(true);
@@ -158,16 +171,14 @@ export function useCompareShareActions({
       } else {
         try {
           await navigator.clipboard.write([new ClipboardItem({ "image/png": blob })]);
-          setToast("Image copied to clipboard");
-          setTimeout(() => setToast(null), 3000);
+          showToast("Image copied to clipboard", 3000);
         } catch {
           try {
             await navigator.clipboard.writeText(window.location.href);
-            setToast("Link copied to clipboard");
+            showToast("Link copied to clipboard", 3000);
           } catch {
-            setToast("Could not copy to clipboard");
+            showToast("Could not copy to clipboard", 3000);
           }
-          setTimeout(() => setToast(null), 3000);
         }
       }
     } catch (error) {
@@ -177,7 +188,7 @@ export function useCompareShareActions({
     } finally {
       setShareLoading(false);
     }
-  }, [buildShareData, comparisonCoins]);
+  }, [buildShareData, comparisonCoins, showToast]);
 
   const handleDownload = useCallback(async () => {
     setShareLoading(true);

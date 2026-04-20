@@ -64,6 +64,28 @@ describe("handleTelegramWebhook", () => {
     expect(fetchSpy).not.toHaveBeenCalled();
   });
 
+  it("returns 200 for missing secret without logging timing-safe compare misconfiguration", async () => {
+    const db = mockD1([]);
+    const error = vi.spyOn(console, "error").mockImplementation(() => {});
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    const request = new Request("https://x/api/telegram-webhook", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ message: { chat: { id: 123 }, text: "/start" } }),
+    });
+
+    const res = await handleTelegramWebhook(db, request, "test-secret", "bot-token");
+
+    expect(res.status).toBe(200);
+    expect(fetchSpy).not.toHaveBeenCalled();
+    expect(error).not.toHaveBeenCalledWith(
+      "[auth] timingSafeCompare called with empty string — possible misconfiguration",
+    );
+    expect(warn).not.toHaveBeenCalledWith(
+      "[telegram-webhook] auth validation failed — returning 200 to prevent retry storm",
+    );
+  });
+
   it("accepts the previous webhook secret during the overlap window", async () => {
     const db = mockD1([{ match: "telegram_pending_disambiguation", rows: [] }]);
     const res = await handleTelegramWebhook(

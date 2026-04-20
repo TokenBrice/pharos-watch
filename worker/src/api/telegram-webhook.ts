@@ -77,6 +77,9 @@ export const handleTelegramWebhook = withErrorHandler(
 
     const providedSecret =
       request.headers.get("X-Telegram-Bot-Api-Secret-Token") ?? "";
+    if (!providedSecret.trim()) {
+      return ok();
+    }
     const validCurrentSecret = webhookSecret
       ? await timingSafeCompare(providedSecret, webhookSecret)
       : false;

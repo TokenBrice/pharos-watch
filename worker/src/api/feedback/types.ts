@@ -16,7 +16,7 @@ export const FeedbackBodySchema = z.object({
   expectedValue: z.string().max(500).optional(),
   stablecoinId: z.string().max(100).optional(),
   stablecoinName: z.string().max(100).optional(),
-  pageUrl: z.string().startsWith("/", "Invalid pageUrl").max(300),
+  pageUrl: z.string().max(300).regex(/^\/(?!\/)[^\r\n]*$/, "Invalid pageUrl"),
   pegValue: z.string().max(100).optional(),
   contactHandle: z.string().max(100).optional(),
   website: z.string().optional(),

@@ -110,6 +110,15 @@ describe("handleFeedback", () => {
     expect(body.error).toMatch(/pageUrl/i);
   });
 
+  it("returns 400 when pageUrl is protocol-relative", async () => {
+    const db = mockD1([{ match: "feedback_rate_limit", rows: [], runMeta: { changes: 1 } }]);
+    const res = await handleFeedback(db, makeRequest(makeFeedbackBody({ pageUrl: "//evil.com" })), makeEnv());
+
+    expect(res.status).toBe(400);
+    const body = (await res.json()) as { error: string };
+    expect(body.error).toMatch(/pageUrl/i);
+  });
+
   it("returns 400 when stablecoinId is invalid", async () => {
     const db = mockD1([]);
     const res = await handleFeedback(db, makeRequest(makeFeedbackBody({ stablecoinId: "not-a-real-coin" })), makeEnv());
