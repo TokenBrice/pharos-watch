@@ -94,7 +94,7 @@ A shadcn `Dialog` with three feedback modes selected via a segmented tab control
   expectedValue?: string;       // data-correction only; optional
   stablecoinId?: string;        // Pharos ID, used for auto-verification
   stablecoinName?: string;      // display name, appended to issue title
-  pageUrl: string;              // must start with "/"
+  pageUrl: string;              // single-slash internal path, e.g. "/stablecoin/usdc-circle/"
   pegValue?: string;            // current displayed peg value
   contactHandle?: string;       // optional Telegram/X handle shown on GitHub
   website?: string;             // honeypot — must be empty

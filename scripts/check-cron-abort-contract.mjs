@@ -53,15 +53,30 @@ export function scanCronAbortContract(roots = DEFAULT_ROOTS, cwd = process.cwd()
     scannedFiles.push(...files);
     for (const file of files) {
       const rel = relative(cwd, file).replaceAll("\\", "/");
-      const lines = readFileSync(file, "utf8").split("\n");
+      const content = readFileSync(file, "utf8");
+      const lines = content.split("\n");
+      const reported = new Set();
+      const report = (lineIndex, text) => {
+        const key = `${rel}:${lineIndex + 1}:${text}`;
+        if (reported.has(key) || isWaived(waivers, rel, text)) return;
+        reported.add(key);
+        violations.push({ file: rel, line: lineIndex + 1, text });
+      };
       for (const [index, line] of lines.entries()) {
         const trimmed = line.trim();
-        const dropsSignal =
-          /\brunLeasedCron\([^,\n]+,\s*\(\s*\)\s*=>/.test(trimmed) ||
-          /\brunBestEffortScheduledJob\([^,\n]+,[^,\n]+,[^,\n]+,\s*\(\s*\)\s*=>/.test(trimmed) ||
-          /\b_signal\b.*AbortSignal/.test(trimmed);
-        if (!dropsSignal || isWaived(waivers, rel, trimmed)) continue;
-        violations.push({ file: rel, line: index + 1, text: trimmed });
+        if (/\b_signal\b.*AbortSignal/.test(trimmed)) {
+          report(index, trimmed);
+        }
+      }
+      for (const pattern of [
+        /\brunLeasedCron\([\s\S]{0,240}?,\s*\(\s*\)\s*=>/g,
+        /\brunBestEffortScheduledJob\([\s\S]{0,320}?,\s*\(\s*\)\s*=>/g,
+      ]) {
+        for (const match of content.matchAll(pattern)) {
+          const prefix = content.slice(0, match.index);
+          const lineIndex = prefix.split("\n").length - 1;
+          report(lineIndex, lines[lineIndex]?.trim() ?? match[0].trim());
+        }
       }
     }
   }
