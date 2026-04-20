@@ -51,9 +51,9 @@ export default function FundingPage() {
           />
           <DonorList donations={donations.donations} lastUpdatedAt={donations.last_updated_at} />
         </div>
+        <YearEndHorizon />
         <SupportCtas />
         <FundingFaq />
-        <YearEndHorizon />
       </div>
     </FeaturePageShell>
   );

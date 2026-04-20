@@ -7,6 +7,7 @@ import { cn } from "@/lib/utils";
 import { buildExplorerUrl } from "@shared/lib/explorer";
 import { formatAddress } from "@shared/lib/format";
 import { CHAIN_META } from "@shared/lib/chains";
+import { TRACKED_STABLECOINS } from "@shared/lib/stablecoins";
 import type { CostLineItem, Donation, FundingChain } from "@shared/lib/funding/types";
 import type { DonationSummary } from "@shared/lib/funding/helpers";
 import { groupCostsByCategory } from "@shared/lib/funding/helpers";
@@ -18,8 +19,10 @@ const GITHUB_URL = "https://github.com/TokenBrice/stablecoin-dashboard";
 const TWITTER_URL = "https://x.com/PharosWatch";
 const TELEGRAM_GROUP_URL = "https://t.me/pharoswatchers";
 const SUPPORTED_CHAINS: FundingChain[] = ["ethereum", "base", "optimism", "arbitrum", "polygon", "gnosis"];
-const PHAROS_SHARE_MESSAGE =
-  "Stablecoin risk data should be public infrastructure, not a private terminal. Pharos tracks 190+ stablecoins with peg, safety, liquidity, depeg, blacklist, flow, yield, and dependency signals. MIT-licensed, practitioner-built, free to use. Help keep it open: https://pharos.watch";
+// Floor to the nearest 10 so the share message reads as a round figure and stays
+// honestly conservative as canonical-order grows.
+const TRACKED_COUNT_FLOOR = Math.floor(TRACKED_STABLECOINS.length / 10) * 10;
+const PHAROS_SHARE_MESSAGE = `Stablecoin risk data should be public infrastructure, not a private terminal. Pharos tracks ${TRACKED_COUNT_FLOOR}+ stablecoins with peg, safety, liquidity, depeg, blacklist, flow, yield, and dependency signals. MIT-licensed, practitioner-built, free to use. Help keep it open: https://pharos.watch`;
 
 // Brand-marked icons matching the footer (lucide has no X/Telegram icons).
 function XIcon({ className }: { className?: string }) {
@@ -329,111 +332,22 @@ export function SupportCtas() {
           <CardTitle as="h2">How to support</CardTitle>
         </CardHeader>
         <CardContent className="space-y-6">
-          <div className="grid gap-3 sm:grid-cols-2">
-            <CtaCard
-              icon={Heart}
-              title="Recurring via Giveth"
-              description="The best long-term support: set a recurring donation so Pharos has predictable runway while the website stays free for everyone."
-              emphasized
-              action={
-                <Button asChild variant="outline" className="min-h-9 w-full justify-between">
-                  <a href={GIVETH_URL} target="_blank" rel="noopener noreferrer">
-                    Set up Giveth support
-                    <ExternalLink className="h-3.5 w-3.5" />
-                  </a>
-                </Button>
-              }
-            />
-            <CtaCard
-              icon={Wallet}
-              title="Wallet"
-              description={`${PHAROS_FUNDING_ENS} resolves to the same address on every supported chain. ETH, stablecoins, and other ERC-20s accepted.`}
-              action={
-                <div className="space-y-2">
-                  <div className="flex items-center gap-2 rounded-md border border-border/60 bg-background px-3 py-1.5">
-                    <span className="flex-1 truncate font-mono text-xs">
-                      {formatAddress(PHAROS_FUNDING_WALLET_DISPLAY)}
-                    </span>
-                    <CopyButton text={PHAROS_FUNDING_WALLET_DISPLAY} />
-                  </div>
-                  <div className="flex flex-wrap gap-1.5">
-                    {SUPPORTED_CHAINS.map((c) => {
-                      const meta = CHAIN_META[c];
-                      return (
-                        <span
-                          key={c}
-                          className="inline-flex items-center gap-1 rounded-full border border-border/60 bg-muted/40 px-2 py-0.5 text-[10px]"
-                        >
-                          {meta?.logoPath ? <Image src={meta.logoPath} alt="" width={12} height={12} /> : null}
-                          {meta?.name ?? c}
-                        </span>
-                      );
-                    })}
-                  </div>
-                </div>
-              }
-            />
+          <div className="grid gap-3 lg:grid-cols-3">
+            <PrimaryGivethTile />
+            <WalletTile />
           </div>
           <p className="text-xs text-muted-foreground leading-relaxed">
-            Best for long-term sustainability: a recurring Giveth donation. Direct wallet support works on every
-            supported chain; Base and Gnosis are usually the cheapest gas paths. Giveth donations arrive at the wallet
-            and appear on the wall as a single &ldquo;via Giveth&rdquo; entry.
+            Best for long-term sustainability: a recurring Giveth stream on Optimism or Base. Direct wallet support
+            works on every supported chain; Base and Gnosis are usually the cheapest gas paths. Giveth donations
+            arrive at the wallet and appear on the wall as a single &ldquo;via Giveth&rdquo; entry.
           </p>
           <div className="space-y-2">
             <p className="pharos-kicker text-muted-foreground">Other ways to help</p>
-            <div className="grid gap-3 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
-              <CtaCard
-                icon={Star}
-                title="Star on GitHub"
-                description="A star helps others find Pharos when they search GitHub."
-                action={
-                  <Button asChild variant="outline" className="min-h-9 w-full justify-between">
-                    <a href={GITHUB_URL} target="_blank" rel="noopener noreferrer">
-                      GitHub
-                      <ExternalLink className="h-3.5 w-3.5" />
-                    </a>
-                  </Button>
-                }
-              />
-              <CtaCard
-                icon={Wrench}
-                title="Contribute"
-                description="MIT-licensed. Issues and PRs welcome."
-                action={
-                  <Button asChild variant="outline" className="min-h-9 w-full justify-between">
-                    <a href={`${GITHUB_URL}/issues`} target="_blank" rel="noopener noreferrer">
-                      Issues
-                      <ExternalLink className="h-3.5 w-3.5" />
-                    </a>
-                  </Button>
-                }
-              />
-              <CtaCard
-                icon={XIcon}
-                title="Follow on X"
-                description="Peg alerts, new coverage, and occasional hot takes from @PharosWatch."
-                action={
-                  <Button asChild variant="outline" className="min-h-9 w-full justify-between">
-                    <a href={TWITTER_URL} target="_blank" rel="noopener noreferrer">
-                      @PharosWatch
-                      <ExternalLink className="h-3.5 w-3.5" />
-                    </a>
-                  </Button>
-                }
-              />
-              <CtaCard
-                icon={TelegramIcon}
-                title="Join Telegram group"
-                description="Stablecoin-watcher chat. Ask questions, share signals, meet the community."
-                action={
-                  <Button asChild variant="outline" className="min-h-9 w-full justify-between">
-                    <a href={TELEGRAM_GROUP_URL} target="_blank" rel="noopener noreferrer">
-                      @pharoswatchers
-                      <ExternalLink className="h-3.5 w-3.5" />
-                    </a>
-                  </Button>
-                }
-              />
+            <div className="flex flex-wrap gap-2">
+              <SocialButton icon={Star} label="Star on GitHub" href={GITHUB_URL} />
+              <SocialButton icon={Wrench} label="Issues / PRs" href={`${GITHUB_URL}/issues`} />
+              <SocialButton icon={XIcon} label="@PharosWatch" href={TWITTER_URL} />
+              <SocialButton icon={TelegramIcon} label="@pharoswatchers" href={TELEGRAM_GROUP_URL} />
             </div>
           </div>
           <p className="text-xs text-muted-foreground">
@@ -446,33 +360,85 @@ export function SupportCtas() {
   );
 }
 
-function CtaCard({
+function PrimaryGivethTile() {
+  return (
+    <div className="flex h-full flex-col gap-3 rounded-lg border border-frost-blue/30 bg-frost-blue/8 p-5 lg:col-span-2 dark:bg-frost-blue/6">
+      <div className="flex items-center gap-2">
+        <Heart className="h-4 w-4 text-sky-700 dark:text-frost-blue/82" />
+        <p className={cn("pharos-kicker", toneKicker("brand"))}>Recommended</p>
+      </div>
+      <p className="text-base font-semibold text-foreground">Recurring via Giveth</p>
+      <p className="text-sm text-muted-foreground leading-relaxed">
+        The strongest long-term signal: set a recurring donation so Pharos has predictable runway while the website
+        stays free for everyone. Recurring streams run on Optimism or Base only.
+      </p>
+      <div className="mt-auto pt-2">
+        <Button
+          asChild
+          className="min-h-10 w-full justify-between bg-frost-blue text-zinc-950 hover:bg-frost-blue/90 sm:w-auto"
+        >
+          <a href={GIVETH_URL} target="_blank" rel="noopener noreferrer">
+            Set up Giveth support
+            <ExternalLink className="h-3.5 w-3.5" />
+          </a>
+        </Button>
+      </div>
+    </div>
+  );
+}
+
+function WalletTile() {
+  return (
+    <div className="flex h-full flex-col gap-2 rounded-lg border border-border/60 bg-background/40 p-4 lg:col-span-1">
+      <div className="flex items-center gap-2">
+        <Wallet className="h-4 w-4 text-foreground" />
+        <p className="text-sm font-medium text-foreground">Direct wallet</p>
+      </div>
+      <p className="text-xs text-muted-foreground">
+        {PHAROS_FUNDING_ENS} resolves to the same address on every supported chain. ETH, stablecoins, and other
+        ERC-20s accepted.
+      </p>
+      <div className="mt-auto space-y-2 pt-2">
+        <div className="flex items-center gap-2 rounded-md border border-border/60 bg-background px-3 py-1.5">
+          <span className="flex-1 truncate font-mono text-xs">{formatAddress(PHAROS_FUNDING_WALLET_DISPLAY)}</span>
+          <CopyButton text={PHAROS_FUNDING_WALLET_DISPLAY} />
+        </div>
+        <div className="flex flex-wrap gap-1.5">
+          {SUPPORTED_CHAINS.map((c) => {
+            const meta = CHAIN_META[c];
+            return (
+              <span
+                key={c}
+                className="inline-flex items-center gap-1 rounded-full border border-border/60 bg-muted/40 px-2 py-0.5 text-[10px]"
+              >
+                {meta?.logoPath ? <Image src={meta.logoPath} alt="" width={12} height={12} /> : null}
+                {meta?.name ?? c}
+              </span>
+            );
+          })}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function SocialButton({
   icon: Icon,
-  title,
-  description,
-  action,
-  emphasized,
+  label,
+  href,
 }: {
   icon: React.ComponentType<{ className?: string }>;
-  title: string;
-  description: string;
-  action: React.ReactNode;
-  emphasized?: boolean;
+  label: string;
+  href: string;
 }) {
   return (
-    <div
-      className={cn(
-        "flex h-full flex-col gap-2 rounded-lg border bg-background/40 p-4",
-        emphasized ? "border-l-[3px] border-l-frost-blue border-border/60" : "border-border/60",
-      )}
-    >
-      <div className="flex items-center gap-2">
-        <Icon className={cn("h-4 w-4", emphasized ? "text-sky-700 dark:text-frost-blue/82" : "text-foreground")} />
-        <p className="text-sm font-medium text-foreground">{title}</p>
-      </div>
-      <p className="text-xs text-muted-foreground">{description}</p>
-      <div className="mt-auto pt-2">{action}</div>
-    </div>
+    <Button asChild variant="outline" size="sm">
+      <a href={href} target="_blank" rel="noopener noreferrer">
+        <Icon className="h-3.5 w-3.5" />
+        {label}
+        <ExternalLink className="h-3 w-3 opacity-60" />
+      </a>
+    </Button>
   );
 }
 
@@ -488,10 +454,9 @@ export function YearEndHorizon() {
       </CardHeader>
       <CardContent className="space-y-3 text-sm leading-relaxed text-muted-foreground">
         <p>
-          Pharos aims to become sustainable by the end of 2026 while the website always remains fully free to access.
-          Donations cover today&apos;s public-good work; in parallel, we are exploring sustaining options that do not
-          put the core site behind a paywall, including subscription-based high-frequency API keys for teams that need
-          heavier programmatic access.
+          The dashboard stays free for everyone, forever. Sustainability comes from two streams: community donations
+          today, and &mdash; once mature &mdash; paid API access for institutional users with heavy programmatic needs.
+          Target: self-sustaining by Q4 2026, public dashboard untouched.
         </p>
         <p className="text-xs">
           If you can&apos;t support financially,{" "}

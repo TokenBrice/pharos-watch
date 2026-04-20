@@ -117,19 +117,21 @@ describe("DonorList", () => {
 });
 
 describe("SupportCtas", () => {
-  it("highlights recurring Giveth support as the long-term path", () => {
+  it("highlights recurring Giveth support as the long-term path and notes the OP/Base constraint", () => {
     render(<SupportCtas />);
     expect(screen.getByText("Recurring via Giveth")).toBeTruthy();
     expect(screen.getByText("Set up Giveth support")).toBeTruthy();
-    expect(screen.getByText(/Best for long-term sustainability: a recurring Giveth donation/)).toBeTruthy();
+    expect(screen.getByText(/Recurring streams run on Optimism or Base only/)).toBeTruthy();
+    expect(screen.getByText(/recurring Giveth stream on Optimism or Base/)).toBeTruthy();
   });
 });
 
 describe("YearEndHorizon", () => {
-  it("describes the free-site sustainability path and expands the share message", () => {
+  it("commits to a free dashboard and names the two sustainability streams", () => {
     render(<YearEndHorizon />);
-    expect(screen.getByText(/website always remains fully free to access/)).toBeTruthy();
-    expect(screen.getByText(/subscription-based high-frequency API keys/)).toBeTruthy();
+    expect(screen.getByText(/dashboard stays free for everyone, forever/)).toBeTruthy();
+    expect(screen.getByText(/paid API access for institutional users/)).toBeTruthy();
+    expect(screen.getByText(/self-sustaining by Q4 2026/)).toBeTruthy();
 
     const shareLink = screen.getByRole("link", { name: "sharing Pharos" });
     const href = shareLink.getAttribute("href") ?? "";
