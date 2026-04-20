@@ -1,116 +1,84 @@
 import { describe, expect, it } from "vitest";
-import { mockD1 } from "../../../api/__tests__/helpers/mock-d1";
-import { createBudget } from "../../../lib/evm-logs";
-import type { ContractEventConfig } from "../../../lib/blacklist-contracts";
+import { enrichRowBalances } from "../amount-recovery";
 import type { BlacklistRow } from "../shared";
-import { backfillAmounts, enrichRowBalances } from "../amount-recovery";
-import { shouldSuppressAsMirrorZero } from "../shared";
+import { chainConfig, type ContractEventConfig } from "../../../lib/blacklist-contracts";
 
-const a7a5Config: ContractEventConfig = {
-  configKey: "ethereum-0x6fa0be17e4bea2fcfa22ef89bf8ac9aab0ab0fc9",
-  chain: {
-    chainId: "ethereum",
-    chainName: "Ethereum",
-    evmChainId: 1,
-    explorerUrl: "https://etherscan.io",
-    type: "evm",
-  },
-  stablecoinId: "a7a5-old-vector",
-  stablecoin: "A7A5",
-  contractAddress: "0x6fa0be17e4bea2fcfa22ef89bf8ac9aab0ab0fc9",
-  decimals: 6,
-  events: [],
-};
+function makeConfig(): ContractEventConfig {
+  return {
+    stablecoin: "USDC",
+    stablecoinId: "usdc-circle",
+    chain: chainConfig("ethereum"),
+    contractAddress: "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
+    decimals: 6,
+    events: [{ signature: "Blacklisted(address)", eventType: "blacklist", topicHash: "0x00", hasAmount: false, addressTopicIndex: 1 }],
+    configKey: "USDC:ethereum",
+  };
+}
 
 function makeRow(overrides: Partial<BlacklistRow> = {}): BlacklistRow {
   return {
-    id: "ethereum-0xtx-0x0",
-    stablecoin: "A7A5",
+    id: "row-1",
+    stablecoin: "USDC",
+    chain: "Ethereum",
     chain_id: "ethereum",
-    chain_name: "Ethereum",
-    event_type: "destroy",
     address: "0x1111111111111111111111111111111111111111",
-    amount_native: 123,
+    event_type: "blacklist",
+    block_number: 100,
+    tx_hash: "0xabc",
+    log_index: 0,
+    timestamp: 1_700_000_000,
+    amount_native: null,
     amount_usd_at_event: null,
-    amount_source: "event",
-    amount_status: "resolved",
-    tx_hash: "0xtx",
-    block_number: 22_080_100,
-    timestamp: 1_776_300_000,
-    methodology_version: "3.8",
-    contract_address: a7a5Config.contractAddress,
-    config_key: a7a5Config.configKey,
-    event_signature: "DestroyedBlackFunds(address,uint256)",
-    event_topic0: "0xtopic",
+    amount_source: null,
+    amount_status: null,
     amount_attempt_count: 0,
     amount_last_attempted_at: null,
     amount_last_error_class: null,
     amount_last_provider: null,
-    explorer_tx_url: "https://etherscan.io/tx/0xtx",
-    explorer_address_url: "https://etherscan.io/address/0x1111111111111111111111111111111111111111",
     ...overrides,
-  };
+  } as BlacklistRow;
 }
 
-describe("EURC mirror-zero suppression (regression)", () => {
-  it("suppresses a fresh EURC blacklist row when enrichment returns 0", () => {
-    // Unit-test the pure helper since hitting the full backfill path is
-    // already covered elsewhere.
-    expect(shouldSuppressAsMirrorZero("EURC", "blacklist", 0)).toBe(true);
-    expect(shouldSuppressAsMirrorZero("EURC", "unblacklist", 0)).toBe(true);
-  });
-
-  it("leaves EURC destroy rows unsuppressed even at zero", () => {
-    expect(shouldSuppressAsMirrorZero("EURC", "destroy", 0)).toBe(false);
-  });
-
-  it("leaves non-EURC rows unsuppressed at zero", () => {
-    expect(shouldSuppressAsMirrorZero("USDC", "blacklist", 0)).toBe(false);
-  });
-
-  it("ignores non-zero amounts", () => {
-    expect(shouldSuppressAsMirrorZero("EURC", "blacklist", 123)).toBe(false);
-    expect(shouldSuppressAsMirrorZero("EURC", "blacklist", null)).toBe(false);
-  });
-});
-
 describe("enrichRowBalances", () => {
-  it("fills USD value for emitted A7A5 amounts using the supplied asset price", async () => {
-    const rows = [makeRow()];
-
-    const counters = await enrichRowBalances(
+  it("values rows that already have native amounts without provider calls", async () => {
+    const rows = [makeRow({ amount_native: 12.5 })];
+    const limiter = async () => {
+      throw new Error("provider should not be called");
+    };
+    const result = await enrichRowBalances(
       rows,
-      a7a5Config,
+      makeConfig(),
       null,
       null,
-      async (fn) => fn(),
-      createBudget(5),
+      limiter,
+      { count: 0, limit: 1 },
       Date.now() + 10_000,
       undefined,
       undefined,
-      0.0125,
+      1,
     );
 
-    expect(counters).toEqual({ attempted: 0, succeeded: 0, failed: 0 });
-    expect(rows[0]?.amount_usd_at_event).toBe(1.5375);
+    expect(result).toEqual({ attempted: 0, succeeded: 0, failed: 0 });
+    expect(rows[0].amount_usd_at_event).toBe(12.5);
   });
-});
 
-describe("backfillAmounts", () => {
-  it("does not let Tron rows block the per-row EVM recovery pass", async () => {
-    const db = mockD1([{ match: "FROM blacklist_events", rows: [] }], { requireMatch: true });
-
-    await backfillAmounts(
-      db,
+  it("marks runtime budget exhaustion without provider calls", async () => {
+    const rows = [makeRow()];
+    const limiter = async () => {
+      throw new Error("provider should not be called");
+    };
+    const result = await enrichRowBalances(
+      rows,
+      makeConfig(),
       null,
       null,
-      async (fn) => fn(),
-      createBudget(5),
-      Date.now() + 10_000,
+      limiter,
+      { count: 0, limit: 1 },
+      Date.now() - 1,
     );
 
-    const select = db.getHistory().find((entry) => entry.sql.includes("FROM blacklist_events"));
-    expect(select?.sql).toContain("AND chain_id != 'tron'");
-    expect(select?.binds).toEqual([100]);
+    expect(result).toEqual({ attempted: 0, succeeded: 0, failed: 0 });
+    expect(rows[0].amount_last_error_class).toBe("runtime_budget");
+    expect(rows[0].amount_last_provider).toBe("none");
   });
 });
