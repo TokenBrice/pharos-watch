@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { Star } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { TableCell, TableRow } from "@/components/ui/table";
 import {
@@ -38,6 +39,9 @@ interface StablecoinVirtualRowProps {
   pegScores?: Map<string, PegSummaryCoin>;
   dexLiquidity?: DexLiquidityMap;
   reportCards?: Record<string, ReportCard>;
+  showPinnedControl?: boolean;
+  isPinned?: boolean;
+  onTogglePinned?: (coinId: string) => void;
   onNavigate: (coinId: string) => void;
   onPrefetch: (coinId: string) => void;
 }
@@ -82,6 +86,9 @@ export function StablecoinVirtualRow({
   pegScores,
   dexLiquidity,
   reportCards,
+  showPinnedControl = false,
+  isPinned = false,
+  onTogglePinned,
   onNavigate,
   onPrefetch,
 }: StablecoinVirtualRowProps) {
@@ -115,6 +122,29 @@ export function StablecoinVirtualRow({
       aria-label={`View ${coin.name} (${coin.symbol}) details`}
       tabIndex={0}
     >
+      {showPinnedControl && (
+        <TableCell className="text-center">
+          {onTogglePinned && (
+            <button
+              type="button"
+              aria-label={`${isPinned ? "Unstar" : "Star"} ${coin.symbol}`}
+              aria-pressed={isPinned}
+              title={`${isPinned ? "Unstar" : "Star"} ${coin.symbol}`}
+              className={`pharos-focus-ring inline-flex size-6 items-center justify-center rounded-md transition-colors ${
+                isPinned
+                  ? "bg-amber-500/10 text-amber-700 hover:bg-amber-500/15 dark:text-amber-300"
+                  : "text-muted-foreground opacity-80 hover:text-foreground sm:opacity-0 sm:group-hover:opacity-100 sm:focus-visible:opacity-100"
+              }`}
+              onClick={(e) => {
+                e.stopPropagation();
+                onTogglePinned(coin.id);
+              }}
+            >
+              <Star className={`h-3.5 w-3.5 ${isPinned ? "fill-current" : ""}`} aria-hidden />
+            </button>
+          )}
+        </TableCell>
+      )}
       {isVisible("rank") && (
         <TableCell className="text-right text-muted-foreground text-xs font-mono tabular-nums">
           {index + 1}
@@ -122,26 +152,28 @@ export function StablecoinVirtualRow({
       )}
       {isVisible("name") && (
         <TableCell>
-          <Link
-            href={buildStablecoinUrl(coin.id)}
-            className={`pharos-focus-ring flex items-center rounded-md px-1 py-1 font-medium hover:bg-muted/35 ${
-              isListDensity ? "gap-1.5" : "gap-2"
-            }`}
-            onClick={(e) => e.stopPropagation()}
-            onMouseEnter={() => onPrefetch(coin.id)}
-          >
-            <StablecoinLogo src={logos?.[coin.id]} name={coin.name} size={densityConfig.iconSize} />
-            <span className="min-w-0">
-              <span className="block font-medium text-foreground">{coin.symbol}</span>
-              <span
-                className={`max-w-[180px] truncate text-xs text-muted-foreground ${
-                  isListDensity ? "hidden" : "hidden xl:block"
-                }`}
-              >
-                {coin.name}
+          <div className="flex items-center">
+            <Link
+              href={buildStablecoinUrl(coin.id)}
+              className={`pharos-focus-ring flex min-w-0 flex-1 items-center rounded-md px-1 py-1 font-medium hover:bg-muted/35 ${
+                isListDensity ? "gap-1.5" : "gap-2"
+              }`}
+              onClick={(e) => e.stopPropagation()}
+              onMouseEnter={() => onPrefetch(coin.id)}
+            >
+              <StablecoinLogo src={logos?.[coin.id]} name={coin.name} size={densityConfig.iconSize} />
+              <span className="min-w-0">
+                <span className="block font-medium text-foreground">{coin.symbol}</span>
+                <span
+                  className={`max-w-[180px] truncate text-xs text-muted-foreground ${
+                    isListDensity ? "hidden" : "hidden xl:block"
+                  }`}
+                >
+                  {coin.name}
+                </span>
               </span>
-            </span>
-          </Link>
+            </Link>
+          </div>
         </TableCell>
       )}
       {isVisible("price") && (

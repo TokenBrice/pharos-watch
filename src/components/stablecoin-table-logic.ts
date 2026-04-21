@@ -40,6 +40,30 @@ const SORT_KEY_TO_COLUMN: Record<StablecoinTableSortKey, ColumnId> = {
   blacklistable: "blacklistable",
 };
 
+export function prioritizePinnedStablecoins(
+  rows: readonly StablecoinData[],
+  pinnedStablecoinIds: readonly string[],
+): StablecoinData[] {
+  if (rows.length === 0 || pinnedStablecoinIds.length === 0) {
+    return [...rows];
+  }
+
+  const pinnedOrder = new Map(pinnedStablecoinIds.map((id, index) => [id, index]));
+  const pinned: StablecoinData[] = [];
+  const unpinned: StablecoinData[] = [];
+
+  for (const row of rows) {
+    if (pinnedOrder.has(row.id)) {
+      pinned.push(row);
+    } else {
+      unpinned.push(row);
+    }
+  }
+
+  pinned.sort((a, b) => (pinnedOrder.get(a.id) ?? 0) - (pinnedOrder.get(b.id) ?? 0));
+  return [...pinned, ...unpinned];
+}
+
 export function buildTrackedIdSet(
   activeFilters: FilterTag[],
   reportCards?: Record<string, ReportCard>,

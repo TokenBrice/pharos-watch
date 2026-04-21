@@ -54,6 +54,7 @@ Core query inputs:
 - `useDexLiquidity()`
 - `useReportCards()`
 - `useStressSignals()`
+- `usePinnedStablecoins()` for local pinned-watchlist state
 
 Derived helpers:
 
@@ -64,6 +65,12 @@ Page-level shared error and freshness surfaces:
 
 - `QueryErrorNotice`
 - `StaleDataBanner`
+
+Starred stablecoin state is local to the browser:
+
+- localStorage key: `pharos-pinned-stablecoins`
+- value: normalized stablecoin ID array
+- invalid, inactive, duplicate, or over-limit IDs are ignored on read
 
 ### `SiteHeader`
 
@@ -167,6 +174,8 @@ This section contains:
 - `PegBrowseStrip`
 - `StablecoinTable`
 - conditional `FilterBar` mounted through the table's `filterPanel` slot only while the local Filters toggle is open
+
+When pinning is enabled from the homepage, each table row shows a locked star column to the left of the rank column. Starred rows are shown at the top of the table, ahead of unstarred rows; filters and search still decide which rows are eligible to appear in the table.
 
 `PegBrowseStrip` uses `ACTIVE_PEGS`, `PEG_SLUGS`, and `pegCoinCount(...)` to expose peg landing pages without duplicating routing logic locally.
 

@@ -8,6 +8,7 @@ import { useDexLiquidity, usePegSummary, useReportCards, useStressSignals } from
 import { useStablecoins } from "@/hooks/use-stablecoins";
 import { useLogos } from "@/hooks/use-logos";
 import { useHomepageFilters, FILTER_GROUPS } from "@/hooks/use-homepage-filters";
+import { usePinnedStablecoins } from "@/hooks/use-pinned-stablecoins";
 import { useDataAnnounce } from "@/hooks/use-data-announce";
 import { DataLiveRegion } from "@/components/data-live-region";
 import { MarketHighlights } from "@/components/market-highlights";
@@ -108,6 +109,7 @@ export function HomepageClient() {
   const { data: stressData } = useStressSignals();
 
   const filters = useHomepageFilters();
+  const pinnedStablecoins = usePinnedStablecoins();
   const { dewsRiskLevel, filteredRowCount, pegRates, pegScores, reportCardMap } = useMemo(
     () => buildHomepageViewModel({
       stablecoinsData: data,
@@ -240,6 +242,8 @@ export function HomepageClient() {
             pegScores={pegScores}
             dexLiquidity={dexLiquidity ?? undefined}
             reportCards={reportCardMap}
+            pinnedStablecoinIds={pinnedStablecoins.pinnedIds}
+            onTogglePinnedStablecoin={pinnedStablecoins.togglePinned}
             onClearSearch={() => filters.setSearchQuery("")}
             onClearFilters={filters.clearAll}
           />

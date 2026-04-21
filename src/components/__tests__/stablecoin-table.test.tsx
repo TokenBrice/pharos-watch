@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 
-import { cleanup, render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { StablecoinTable } from "@/components/stablecoin-table";
@@ -43,6 +43,14 @@ const coin = {
   circulatingPrevMonth: { peggedUSD: 97_000_000 },
   chainCirculating: {},
   chains: ["Ethereum"],
+} as unknown as StablecoinData;
+
+const usdc = {
+  ...coin,
+  id: "usdc-circle",
+  name: "USD Coin",
+  symbol: "USDC",
+  circulating: { peggedUSD: 50_000_000 },
 } as unknown as StablecoinData;
 
 const reportCard = {
@@ -144,5 +152,56 @@ describe("StablecoinTable", () => {
 
     expect(screen.getAllByText("Blacklistable").length).toBeGreaterThan(0);
     expect(screen.getAllByText("Yes").length).toBeGreaterThan(0);
+  });
+
+  it("renders a star control when pinning is enabled", () => {
+    const onTogglePinned = vi.fn();
+
+    render(
+      <StablecoinTable
+        data={[coin]}
+        isLoading={false}
+        activeFilters={[]}
+        pegRates={{}}
+        onTogglePinnedStablecoin={onTogglePinned}
+      />,
+    );
+
+    const starButton = screen.getByRole("button", { name: "Star USDT" });
+    fireEvent.click(starButton);
+
+    expect(onTogglePinned).toHaveBeenCalledWith("usdt-tether");
+    expect(push).not.toHaveBeenCalled();
+  });
+
+  it("marks starred row controls as pressed", () => {
+    render(
+      <StablecoinTable
+        data={[coin]}
+        isLoading={false}
+        activeFilters={[]}
+        pegRates={{}}
+        pinnedStablecoinIds={["usdt-tether"]}
+        onTogglePinnedStablecoin={vi.fn()}
+      />,
+    );
+
+    expect(screen.getByRole("button", { name: "Unstar USDT" }).getAttribute("aria-pressed")).toBe("true");
+  });
+
+  it("shows starred stablecoins before the rest of the sorted table", () => {
+    render(
+      <StablecoinTable
+        data={[coin, usdc]}
+        isLoading={false}
+        activeFilters={[]}
+        pegRates={{}}
+        pinnedStablecoinIds={["usdc-circle"]}
+        onTogglePinnedStablecoin={vi.fn()}
+      />,
+    );
+
+    expect(screen.getByText("USDC")).toBeTruthy();
+    expect(screen.queryByText("USDT")).toBeNull();
   });
 });

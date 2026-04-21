@@ -3,6 +3,7 @@ import {
   buildTrackedIdSet,
   sortStablecoins,
   filterStablecoins,
+  prioritizePinnedStablecoins,
   resolveEffectiveSortKey,
   type StablecoinTableSortKey,
 } from "@/components/stablecoin-table-logic";
@@ -163,6 +164,28 @@ describe("resolveEffectiveSortKey", () => {
   it("falls back to mcap when column is not visible", () => {
     const visible = new Set<ColumnId>(["name", "price"]);
     expect(resolveEffectiveSortKey("stability", visible)).toBe("mcap");
+  });
+});
+
+describe("prioritizePinnedStablecoins", () => {
+  it("moves pinned rows to the top in pinned order", () => {
+    const rows = [
+      makeCoin("usdt-tether", "Tether"),
+      makeCoin("usdc-circle", "USD Coin"),
+      makeCoin("dai-maker", "Dai"),
+    ];
+
+    const result = prioritizePinnedStablecoins(rows, ["dai-maker", "usdc-circle"]);
+
+    expect(result.map((coin) => coin.id)).toEqual(["dai-maker", "usdc-circle", "usdt-tether"]);
+  });
+
+  it("ignores pinned ids that are not present in the current filtered rows", () => {
+    const rows = [makeCoin("usdt-tether", "Tether"), makeCoin("usdc-circle", "USD Coin")];
+
+    const result = prioritizePinnedStablecoins(rows, ["missing", "usdc-circle"]);
+
+    expect(result.map((coin) => coin.id)).toEqual(["usdc-circle", "usdt-tether"]);
   });
 });
 

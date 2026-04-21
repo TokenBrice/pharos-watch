@@ -27,6 +27,7 @@ import {
   buildTrackedIdSet,
   exportStablecoinsCsv,
   filterStablecoins,
+  prioritizePinnedStablecoins,
   resolveEffectiveSortKey,
   sortStablecoins,
   type StablecoinTableSortKey,
@@ -102,6 +103,8 @@ interface StablecoinTableProps {
   pegScores?: Map<string, PegSummaryCoin>;
   dexLiquidity?: DexLiquidityMap;
   reportCards?: Record<string, ReportCard>;
+  pinnedStablecoinIds?: readonly string[];
+  onTogglePinnedStablecoin?: (stablecoinId: string) => void;
   onClearSearch?: () => void;
   onClearFilters?: () => void;
 }
@@ -118,6 +121,8 @@ export function StablecoinTable({
   pegScores,
   dexLiquidity,
   reportCards,
+  pinnedStablecoinIds = [],
+  onTogglePinnedStablecoin,
   onClearSearch,
   onClearFilters,
 }: StablecoinTableProps) {
@@ -149,7 +154,9 @@ export function StablecoinTable({
     },
   );
   const visibleSet = useMemo(() => new Set(visibleColumns), [visibleColumns]);
+  const showPinnedControls = typeof onTogglePinnedStablecoin === "function";
   const isVisible = useCallback((id: ColumnId) => visibleSet.has(id), [visibleSet]);
+  const pinnedStablecoinSet = useMemo(() => new Set(pinnedStablecoinIds), [pinnedStablecoinIds]);
 
   // Keyboard shortcut: focus table
   useEffect(() => {
@@ -184,20 +191,25 @@ export function StablecoinTable({
     [filtered, sort, effectiveSortKey, pegRates, pegScores, dexLiquidity, reportCards],
   );
 
-  // Reset scroll when filters, search, or sort change.
-  const prevRef = useRef<{ filtered: typeof filtered; sort: typeof sort } | null>(null);
+  const displayed = useMemo(
+    () => prioritizePinnedStablecoins(sorted, pinnedStablecoinIds),
+    [pinnedStablecoinIds, sorted],
+  );
+
+  // Reset scroll when filters, search, sort, or starred row priority changes.
+  const prevRef = useRef<{ rows: typeof displayed; sort: typeof sort } | null>(null);
   useEffect(() => {
     const prev = prevRef.current;
-    if (prev && (prev.filtered !== filtered || prev.sort !== sort)) {
+    if (prev && (prev.rows !== displayed || prev.sort !== sort)) {
       scrollRef.current?.scrollTo({ top: 0 });
     }
-    prevRef.current = { filtered, sort };
-  }, [filtered, sort]);
+    prevRef.current = { rows: displayed, sort };
+  }, [displayed, sort]);
 
   // Virtual scrolling with density-aware row height
   // eslint-disable-next-line react-hooks/incompatible-library -- TanStack Virtual is intentional for large datasets.
   const virtualizer = useVirtualizer({
-    count: sorted.length,
+    count: displayed.length,
     getScrollElement: () => scrollRef.current,
     estimateSize: () => densityConfig.rowHeight,
     overscan: OVERSCAN,
@@ -213,8 +225,8 @@ export function StablecoinTable({
   const rangeEnd = virtualItems.length > 0 ? virtualItems[virtualItems.length - 1].index + 1 : 0;
 
   const handleCsvExport = useCallback(() => {
-    exportStablecoinsCsv(sorted, pegScores, dexLiquidity, reportCards);
-  }, [sorted, pegScores, dexLiquidity, reportCards]);
+    exportStablecoinsCsv(displayed, pegScores, dexLiquidity, reportCards);
+  }, [displayed, pegScores, dexLiquidity, reportCards]);
 
   if (isLoading) {
     return (
@@ -247,7 +259,7 @@ export function StablecoinTable({
         onResetColumns={resetColumns}
         defaultColumns={deviceDefault}
         onExport={handleCsvExport}
-        exportDisabled={sorted.length === 0}
+        exportDisabled={displayed.length === 0}
         additionalActions={toolbarActions}
       />
       {filterPanel}
@@ -258,6 +270,11 @@ export function StablecoinTable({
           <TableCaption className="sr-only">Stablecoin data table</TableCaption>
           <TableHeader className="sticky top-0 z-10 bg-muted">
             <TableRow>
+              {showPinnedControls && (
+                <TableHead scope="col" className="w-[36px] text-center">
+                  <span className="sr-only">Starred</span>
+                </TableHead>
+              )}
               {STABLECOIN_HEADER_DEFS.filter((column) => isVisible(column.id)).map((column) =>
                 column.sortKey ? (
                   <SortableTableHead
@@ -289,7 +306,7 @@ export function StablecoinTable({
               </tr>
             )}
             {virtualItems.map((virtualRow) => {
-              const coin = sorted[virtualRow.index];
+              const coin = displayed[virtualRow.index];
               return (
                 <StablecoinVirtualRow
                   key={coin.id}
@@ -303,6 +320,9 @@ export function StablecoinTable({
                   pegScores={pegScores}
                   dexLiquidity={dexLiquidity}
                   reportCards={reportCards}
+                  showPinnedControl={showPinnedControls}
+                  isPinned={pinnedStablecoinSet.has(coin.id)}
+                  onTogglePinned={onTogglePinnedStablecoin}
                   onNavigate={(coinId) => router.push(buildStablecoinUrl(coinId))}
                   onPrefetch={prefetch}
                 />
@@ -313,7 +333,7 @@ export function StablecoinTable({
                 <td style={{ height: paddingBottom, padding: 0 }} />
               </tr>
             )}
-            {sorted.length === 0 && (
+            {displayed.length === 0 && (
               <StablecoinTableEmptyState
                 searchQuery={searchQuery}
                 activeFilters={activeFilters}
@@ -328,13 +348,13 @@ export function StablecoinTable({
       </div>
 
       {/* Scroll position footer */}
-      {sorted.length > 0 && (
+      {displayed.length > 0 && (
         <TablePagination
           page={0}
           totalPages={1}
           rangeStart={rangeStart}
           rangeEnd={rangeEnd}
-          total={sorted.length}
+          total={displayed.length}
           noun="stablecoins"
           showControls={false}
           supplementaryText="Rows open the detail dossier. Green and red deltas reflect supply expansion and contraction, not price return."
