@@ -225,7 +225,7 @@ The `StaleDataBanner` component (`src/components/stale-data-banner.tsx`) warns u
 | Page                  | Queries monitored                                   | staleTime constants                                                |
 | --------------------- | --------------------------------------------------- | ------------------------------------------------------------------ |
 | **Homepage**          | Prices, Peg Data, Liquidity, Report Cards           | `CRON_15MIN`, `CRON_15MIN`, `CRON_30MIN`, `CRON_15MIN`             |
-| **Stablecoin detail** | Prices, Peg Data, Liquidity, Report Cards           | `CRON_15MIN`, `CRON_15MIN`, `CRON_30MIN`, `CRON_15MIN`             |
+| **Stablecoin detail** | Prices, Peg Data, Liquidity, Report Cards, Redemption Backstops | `CRON_15MIN`, `CRON_15MIN`, `CRON_30MIN`, `CRON_15MIN`, `CRON_RESERVE_SYNC` |
 | **Depeg**             | Peg Data, DEWS, Depeg Events                        | `CRON_15MIN`, `CRON_30MIN`, `CRON_15MIN`                           |
 | **Compare**           | Prices, Peg Data, Liquidity, Report Cards, Bluechip | `CRON_15MIN`, `CRON_15MIN`, `CRON_30MIN`, `CRON_15MIN`, `CRON_24H` |
 | **Safety scores**     | Grades, Prices                                      | `CRON_15MIN`, `CRON_15MIN`                                         |
@@ -233,6 +233,7 @@ The `StaleDataBanner` component (`src/components/stale-data-banner.tsx`) warns u
 | **Yield**             | Yield Rankings                                      | `CRON_YIELD`                                                       |
 | **Flows**             | Mint/Burn Flows                                     | `CRON_MINT_BURN`                                                   |
 | **Blacklist**         | Blacklist                                           | `CRON_BLACKLIST`                                                   |
+| **Coverage**          | Coverage matrix inputs                             | route model stale-query set                                        |
 | **Portfolio**         | Grades                                              | `CRON_15MIN`                                                       |
 | **Chains**            | Chain Data                                          | `CRON_30MIN` freshness budget from `/api/chains`                   |
 | **Chain detail**      | Chain Data, Prices                                  | `CRON_30MIN`, `CRON_15MIN`                                         |

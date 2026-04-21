@@ -38,13 +38,14 @@ Live reserve support is declared per coin in `StablecoinMeta.liveReservesConfig`
 
 ### Registry-Defined Adapter Classes
 
-The shared registry in `shared/lib/live-reserve-adapters.ts` defines two important adapter properties that are not user-configured per coin:
+The shared registry in `shared/lib/live-reserve-adapters-definitions.ts` defines four important adapter properties that are not user-configured per coin:
 
 | Property           | Meaning                                                                                                      |
 | ------------------ | ------------------------------------------------------------------------------------------------------------ |
 | `sourceModel`      | Distinguishes `dynamic-mix`, `validated-static`, and `single-bucket` reserve shapes                          |
 | `evidenceClass`    | Distinguishes scoring-eligible `independent` feeds from `static-validated` and `weak-live-probe` feeds       |
 | `sharedSourceMode` | Distinguishes per-coin fetches (`none`) from explicitly source-invariant result sharing (`source-invariant`) |
+| `redemptionTelemetry` | Declares whether the adapter can emit direct/proxy redemption capacity and current-fee telemetry          |
 
 - `dynamic-mix`: independently measured reserve compositions. These can be `independent` evidence for scoring when the sync state is clean.
 - `validated-static`: live validation/probe adapters over curated/static slices. These remain authoritative for the reserve detail API, but they are tagged `static-validated` and do not count as independent live collateral inputs for report-card scoring.

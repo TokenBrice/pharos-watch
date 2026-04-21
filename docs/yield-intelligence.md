@@ -420,7 +420,7 @@ This selection behavior is surfaced in row-level `provenance` metadata on `/api/
 ```sql
 CREATE TABLE yield_data (
   stablecoin_id       TEXT NOT NULL,
-  source_key          TEXT NOT NULL,  -- DL pool UUID, "onchain:<stablecoin_id>", "price-derived", or "rate-derived"
+  source_key          TEXT NOT NULL,  -- DL pool UUID, "onchain:<stablecoin_id>", "protocol-api:<family>", "price-derived", or "rate-derived"
   symbol              TEXT NOT NULL,
   current_apy         REAL NOT NULL,
   apy_base            REAL,
@@ -431,7 +431,7 @@ CREATE TABLE yield_data (
   yield_type          TEXT NOT NULL,
   source_pool         TEXT,           -- DL pool UUID
   source_tvl_usd      REAL,
-  data_source         TEXT NOT NULL,  -- "onchain" | "defillama" | "defillama-auto" | "price-derived" | "rate-derived"
+  data_source         TEXT NOT NULL,  -- "onchain" | "defillama" | "defillama-auto" | "protocol-api" | "price-derived" | "rate-derived"
   safety_score        REAL,
   safety_grade        TEXT,
   pharos_yield_score  REAL,

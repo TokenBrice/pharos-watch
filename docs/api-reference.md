@@ -276,7 +276,7 @@ Full stablecoin list with current supply, price, chain breakdown, and FX rates. 
 }
 ```
 
-`fxFallbackRates` is present when the ECB FX-rate cron has run; keys are `pegType` strings (e.g. `"peggedEUR"`), values are rates in USD.
+`fxFallbackRates` is present when the FX-rate state loaded by `sync-stablecoins` has usable fresh or static references; inputs can come from Frankfurter/ECB, secondary or tertiary FX mirrors, commodity references, or cached/static fallback rates. Keys are `pegType` strings (e.g. `"peggedEUR"`), values are rates in USD.
 
 **`StablecoinData` fields**
 

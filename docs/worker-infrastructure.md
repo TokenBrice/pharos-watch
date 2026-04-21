@@ -539,13 +539,13 @@ Workers enforce a **6 concurrent fetch connections** limit per cron trigger invo
 | 15      | `0 6 1 * *`        |                                      1 (DeFiLlama yield scan)                                      |    5     |
 | 16      | `0 3 * * *`        |                     0 (prune-status-probe-runs + prune-cron-history; both DB-only)                 |    6     |
 
-The `*/5 * * * *` digest-trigger poll slot exists in the scheduled runner registry, but it is not represented in `CRON_JOB_DEFINITIONS` and is not part of the enforced `check:cron-connections` budget table today. It performs a lightweight D1 poll and only enqueues the normal digest job path when a manual trigger is pending.
+The `*/5 * * * *` digest-trigger poll slot exists in the scheduled runner registry, but it is not represented in `CRON_JOB_DEFINITIONS` and is not part of the enforced `check:cron-connections` budget table today. It performs a lightweight D1 poll and, when a manual trigger is pending, executes `generateDailyDigest(...)` directly under the existing `daily-digest` lease.
 
 **Policy for new jobs:**
 
 - Jobs requiring <=1 external connection may share any slot with headroom >=2.
 - Jobs requiring >2 concurrent connections should get a dedicated trigger slot.
-- Never add a fetching job to a slot with headroom <=1 (budget rows 10, 11, and 13 are effectively full).
+- Never add a fetching job to a slot with headroom <=1 (budget rows 11, 12, and 14 are effectively full).
 
 ### Cron Error Handling Policy
 

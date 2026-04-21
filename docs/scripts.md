@@ -148,7 +148,7 @@ These are wired into the GitHub Actions CI workflows (`.github/workflows/validat
 ### `screenshot-og.mjs`
 
 - Imports Playwright from `/usr/lib/node_modules/playwright/index.mjs`, so it assumes a system-installed package at that path.
-- Captures fixed 1200×630 screenshots for selected routes and writes them into `public/`.
+- Captures fixed 1200×628 screenshots for selected routes and writes them into `public/`.
 
 ### `smoke-ui.mjs`
 

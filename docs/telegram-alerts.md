@@ -98,8 +98,8 @@ Current actions:
 
 - `snooze:1h | 4h | 24h`
 
-Unknown action codes receive a silent ack; they are not treated as errors so
-the bot stays forward-compatible with future keyboards.
+Unknown action codes receive a visible callback toast but are not treated as
+errors, so the bot stays forward-compatible with future keyboards.
 
 Registration script `scripts/register-telegram-webhook.sh` declares
 `allowed_updates = ["message", "callback_query"]` so Telegram forwards only
