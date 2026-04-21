@@ -156,7 +156,7 @@ Client best practices:
 
 ## Rate Limits
 
-Public API traffic enforces rate limiting to ensure fair usage. The Telegram webhook is exempt from the public IP limiter because Telegram sends from fixed infrastructure and is authenticated separately with `X-Telegram-Bot-Api-Secret-Token`; valid API-key traffic uses the per-key limiter instead of the IP limiter.
+Public API traffic enforces rate limiting to ensure fair usage. The Telegram webhook is exempt from the public IP limiter because Telegram sends from fixed infrastructure and is authenticated separately with `X-Telegram-Bot-Api-Secret-Token`; valid API keys on protected public routes use the per-key limiter instead of the IP limiter. Exempt public routes do not authenticate API keys and continue through their route-specific or public-IP limiter path.
 
 ### Global Limit
 
@@ -563,7 +563,7 @@ When present, `provenance` has:
 | `freshnessMode` | `"verified" \| "unverified" \| "not-applicable" \| undefined` | Explicit freshness policy when the adapter emits one |
 | `scoringEligible` | `boolean` | Whether this exact snapshot is currently eligible for collateral-quality passthrough |
 
-**Response (404):** `{ "error": "Not found" }`
+**Response (404):** unknown or non-canonical IDs are rejected by the shared ID resolver with `{ "error": "Unknown stablecoin" }`; known active coins without live reserve support, or with no resolved reserve result, return `{ "error": "Not found" }`.
 
 ---
 
@@ -1468,7 +1468,7 @@ Browser consumers on `pharos.watch` and `ops.pharos.watch` should use same-origi
 
 Latest Pharos Stability Index (PSI) sample plus daily history. The PSI is a composite ecosystem health score (0–100) computed from active depeg severity, affected-market breadth, DEWS stress breadth, and 7-day ecosystem trend across the PSI-eligible universe (tracked coins plus shadow assets used for historical continuity). If a dependency failure prevents a safe fresh sample, the endpoint continues serving the last healthy stored PSI sample instead of publishing a degraded substitute.
 
-**Cache:** standard — `X-Data-Age` and `Warning` headers included after at least one PSI sample/history row exists. Before bootstrap, the empty `{ current: null, history: [] }` response carries `Cache-Control` only.
+**Cache:** standard — `X-Data-Age` and `Warning` headers included after at least one PSI sample/history row exists. Before bootstrap, the empty response carries `Cache-Control` only and contains `{ current: null, history: [], methodology: ... }` without `malformedRows`.
 
 **Error responses:** `503` when the canonical current PSI `components` or `input_snapshot` payload is missing or malformed.
 
@@ -1964,6 +1964,7 @@ Historical yield data for a single stablecoin. If a stored `warning_signals` pay
 | `current`     | `YieldHistoryPoint\|null` | Latest row in the returned history window, or `null` when no history exists |
 | `history`     | `YieldHistoryPoint[]`  | History rows sorted by `date` ASC                                           |
 | `methodology` | `object`               | Yield methodology envelope for the response                                 |
+| `warning`     | `string \| undefined`  | Present when freshness lookup fails and the handler falls back to cache metadata |
 
 **`YieldHistoryPoint`**
 
@@ -2710,8 +2711,10 @@ Machine-readable status timeline endpoint for tooling and incident analysis.
 | Param   | Type                  | Default | Description                                                                              |
 | ------- | --------------------- | ------- | ---------------------------------------------------------------------------------------- |
 | `limit` | `integer`             | `50`    | Number of transitions to return (1–200)                                                  |
-| `from`  | `integer \| ISO date` | —       | Optional lower bound for transition `created_at` (Unix seconds/milliseconds or ISO date) |
-| `to`    | `integer \| ISO date` | —       | Optional upper bound for transition `created_at` (Unix seconds/milliseconds or ISO date) |
+| `from`  | `integer \| ISO date` | —       | Optional lower bound for transition `created_at` (Unix seconds/milliseconds or ISO date); invalid values are ignored |
+| `to`    | `integer \| ISO date` | —       | Optional upper bound for transition `created_at` (Unix seconds/milliseconds or ISO date); invalid values are ignored |
+
+`limit` is clamped into `1..200` by the shared query parser.
 
 **Response shape:** `StatusHistoryResponse` (defined in `shared/types/index.ts`)
 
@@ -2806,6 +2809,8 @@ Admin-only API key creation route.
 | `expiresAt`          | `integer \| null` | No | Unix timestamp when the key should expire. Omit to use the default 90-day expiry. Send `null` only for a deliberate non-expiring exception. |
 
 **Response shape:** `ApiKeyCreateResponse`
+
+**Success status:** `201 Created`
 
 `token` is returned only once. Persist it immediately; later list/read paths expose only `maskedToken`. `key.expiresAt` in the response reflects the stored expiry after the default-90-day fallback is applied.
 
@@ -3290,10 +3295,10 @@ Returns stablecoins tracked by CoinGecko or DefiLlama that Pharos does not yet m
 | Param    | Type                               | Default    | Description                |
 | -------- | ---------------------------------- | ---------- | -------------------------- |
 | `status` | `"active" \| "dismissed" \| "all"` | `"active"` | Filter by candidate status |
-| `limit`  | `integer`                          | `50`       | Max results (max 200)      |
-| `offset` | `integer`                          | `0`        | Pagination offset          |
+| `limit`  | `integer`                          | `50`       | Max results (clamped to 1–200) |
+| `offset` | `integer`                          | `0`        | Pagination offset (clamped to >= 0) |
 
-Malformed `limit` / `offset` values return `400` instead of silently defaulting.
+Malformed `limit` / `offset` values return `400` instead of silently defaulting. Out-of-range numeric values are clamped by the shared query parser.
 
 **Response**
 

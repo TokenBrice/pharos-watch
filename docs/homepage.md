@@ -13,11 +13,10 @@ Route contract for `/`, the main Pharos dashboard.
 
 The route does not use `FeaturePageShell`. Instead, the server page renders:
 
-1. A visible `h1` in `SiteHeader` (exactly one raw `<h1>` in built HTML)
-2. `CollectionPage` + `ItemList` JSON-LD payloads for the top 20 active stablecoins
-3. `SiteHeader`
-4. `KpiBar`
-5. `HomepageClient`
+1. `CollectionPage` + `ItemList` JSON-LD payloads for the top 20 active stablecoins
+2. `SiteHeader`, which owns the visible `h1` (exactly one raw `<h1>` in built HTML)
+3. a responsive wrapper containing `HomepageStartHereCallout` and `KpiBar` (`lg+` reorders the KPI strip above the first-session callout visually)
+4. `HomepageClient`
 
 Metadata is authored directly in `src/app/page.tsx` with canonical `/` and the shared `/og-card.png` Open Graph image.
 

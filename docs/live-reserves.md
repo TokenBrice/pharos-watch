@@ -351,12 +351,12 @@ This table reflects the adapter keys currently configured in `shared/data/stable
 
 | Adapter                    | Primary input               | Semantics                            | Configured coins |
 | -------------------------- | --------------------------- | ------------------------------------ | ---------------- |
-| `abracadabra`              | `http-json`                 | `protocol-reserve`                   | 1                |
+| `abracadabra`              | `onchain-evm`               | `collateral-mix`                     | 1                |
 | `accountable`              | `http-json`                 | `collateral-mix` / `protocol-reserve` | 7               |
 | `anzen-usdz`               | `onchain-evm`              | `single-asset`                       | 1                |
 | `asymmetry`                | `http-json`                 | `collateral-mix`                     | 1                |
 | `btcfi`                    | `http-json`                 | `collateral-mix`                     | 1                |
-| `buck-io-transparency`     | `http-json`                 | `attestation-mix`                    | 1                |
+| `buck-io-transparency`     | `http-html`                 | `attestation-mix`                    | 1                |
 | `cap-vault`                | `onchain-evm`               | `protocol-reserve`                   | 1                |
 | `chainlink-nav`            | `onchain-evm`               | `single-asset`                       | 6                |
 | `chainlink-por`            | `onchain-evm`               | `attestation-mix`                    | 1                |
@@ -377,7 +377,7 @@ This table reflects the adapter keys currently configured in `shared/data/stable
 | `jupusd`                   | `http-json`                 | `collateral-mix`                     | 1                |
 | `liquity-v1`               | `onchain-evm`               | `single-asset`                       | 1                |
 | `liquity-v2-branches`      | `onchain-evm`               | `collateral-mix`                     | 6                |
-| `lista`                    | `http-json`                 | `protocol-reserve`                   | 1                |
+| `lista`                    | `onchain-evm`               | `collateral-mix`                     | 1                |
 | `m0`                       | `http-json`                 | `protocol-reserve`                   | 10               |
 | `mento`                    | `http-html`                 | `collateral-mix`                     | 2                |
 | `openeden-usdo`            | `http-json`                 | `collateral-mix`                     | 1                |
@@ -393,7 +393,7 @@ This table reflects the adapter keys currently configured in `shared/data/stable
 | `usdai-proof-of-reserves`  | `http-json`                 | `collateral-mix`                     | 1                |
 | `usd1-bundle-oracle`       | `onchain-evm`               | `single-asset`                       | 1                |
 | `usdd-data-platform`       | `http-json`                 | `collateral-mix`                     | 1                |
-| `usdh-native-markets`      | `http-json`                 | `collateral-mix`                     | 1                |
+| `usdh-native-markets`      | `http-html`                 | `attestation-mix`                    | 1                |
 
 `collateral-positions-api` can now optionally attach direct redemption-capacity telemetry alongside the collateral mix when a reviewed bridge-backed stable exit exists. `zchf-frankencoin` uses this path to publish the current VCHF StablecoinBridge inventory as `immediateRedeemableUsd` for redemption-backstop modeling without changing the reserve-slice composition itself.
 

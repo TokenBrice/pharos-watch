@@ -228,14 +228,18 @@ The `StaleDataBanner` component (`src/components/stale-data-banner.tsx`) warns u
 | **Stablecoin detail** | Prices, Peg Data, Liquidity, Report Cards           | `CRON_15MIN`, `CRON_15MIN`, `CRON_30MIN`, `CRON_15MIN`             |
 | **Depeg**             | Peg Data, DEWS, Depeg Events                        | `CRON_15MIN`, `CRON_30MIN`, `CRON_15MIN`                           |
 | **Compare**           | Prices, Peg Data, Liquidity, Report Cards, Bluechip | `CRON_15MIN`, `CRON_15MIN`, `CRON_30MIN`, `CRON_15MIN`, `CRON_24H` |
-
-Homepage KPI cards also consume PSI, mint/burn, and DEWS data, while Compare can fetch supply-history and per-coin mint/burn detail queries. Those additional queries are not part of the current page-level stale banner contract.
 | **Safety scores**     | Grades, Prices                                      | `CRON_15MIN`, `CRON_15MIN`                                         |
 | **Liquidity**         | Liquidity                                           | `CRON_30MIN`                                                       |
 | **Yield**             | Yield Rankings                                      | `CRON_YIELD`                                                       |
 | **Flows**             | Mint/Burn Flows                                     | `CRON_MINT_BURN`                                                   |
 | **Blacklist**         | Blacklist                                           | `CRON_BLACKLIST`                                                   |
 | **Portfolio**         | Grades                                              | `CRON_15MIN`                                                       |
+| **Chains**            | Chain Data                                          | `CRON_30MIN` freshness budget from `/api/chains`                   |
+| **Chain detail**      | Chain Data, Prices                                  | `CRON_30MIN`, `CRON_15MIN`                                         |
+| **Stability Index**   | Stability Index                                     | `CRON_30MIN`                                                       |
+| **Digest archive**    | Digests                                             | `CRON_24H`                                                         |
+
+Homepage KPI cards also consume PSI, mint/burn, and DEWS data, while Compare can fetch supply-history and per-coin mint/burn detail queries. Those additional queries are not part of the current page-level stale banner contract.
 
 Constants defined in `src/lib/cron-intervals.ts`: `CRON_1MIN` (1 min), `CRON_15MIN` (15 min, stablecoins list), `CRON_30MIN` (30 min, DEX liquidity), `CRON_MINT_BURN` (30 min, mint/burn), `CRON_YIELD` (1 hour, yield rankings), `CRON_1H` (1 hour, generic budget), `CRON_RESERVE_SYNC` (4 hours, live reserves + redemption backstops), `CRON_BLACKLIST` (6 hours), `CRON_24H` (24 hours).
 

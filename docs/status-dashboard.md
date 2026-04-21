@@ -52,13 +52,14 @@ The active frontend operator mode is now:
   - a sticky `LongformScrollspyNav` rail labeled `Jump to Lane`, driven by the ranked `sections` model
 - `/admin/` disables indexing (`robots: { index: false, follow: false }`)
 - `/status/` stays read-only, uses only public read endpoints, and is public/indexable through its route metadata and sitemap entry
-- The public `/status/` top fold now keeps browser-sync metadata inside a dedicated `Live watch` side panel instead of the page-title row, so the page title stays stable at narrow and medium widths
+- The public `/status/` top fold uses `PublicStatusHero`: a headline row, conditional warning paragraph, four-metric strip, and compact metadata footer with browser-sync timing and refresh control.
 - The public `/status/` top fold also keeps the `Status runway` explicitly fixed to the last 30 days; the `24h` / `7d` / `30d` pills now belong only to the transition log below so filter changes do not silently reframe the hero summary
 - `src/components/status/public-status-hero.tsx`
   - Renders the public-monitor hero with:
     - a status narrative headline instead of the old single-word + four-card metric template
-    - a lead-signal panel for the first public warning or steady-state watch note
-    - a live-watch side panel for health sample time, public-query sync floor, browser probe summary, circuit-breaker posture, refresh control, and operator-handoff note
+    - a warning line only when the public status is not healthy or warnings are present
+    - four compact metric tiles for cache pressure, browser probes, mint/burn sync, and circuit breakers
+    - a compact footer for health sample time, public-query sync floor, and browser probe freshness
 - `src/components/status/uptime-bar.tsx`
   - Renders the fixed 30-day public `Status runway` with explicit labeling (`Last 30d`) so the hero summary keeps a stable scope even while the transition table is filtered
 - The public `Overview` lane uses flatter signal cards for mint/burn sync, blacklist ingestion, optional Telegram bot health, and impacted public surfaces

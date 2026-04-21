@@ -142,7 +142,7 @@ Current digest generation constraints that are actually encoded in repo code:
 - weekly cron lease: `12 * 60_000 ms` (12 min)
 - max_tokens: `64000` daily, `64000` weekly — Anthropic's documented floor for Opus 4.7 at `xhigh`/`max` effort with adaptive thinking. Earlier settings of 16k → 32k at `effort: "max"` both hit `stop_reason=max_tokens` with no text emitted; the root-cause fix on 2026-04-18 lowered effort to `xhigh` and raised the ceiling to 64k in one change.
 - cadence: daily scheduled run plus deferred manual admin trigger (see "Manual trigger runtime model" below)
-- cost envelope (approximate, assuming single-attempt runs): Opus 4.7 input ~$5/Mtok, output ~$25/Mtok. Daily worst-case at 64k tokens ≈ $4.80; weekly worst-case at 64k ≈ $4.80. Annualized ≈ $2000 at cap. Actual usage is typically much lower since most runs don't approach the cap; the ceiling exists to survive adaptive-thinking-heavy runs. Monitor `usage.output_tokens` via the digest:last-trigger-result cache key or cron_runs metadata.
+- cost envelope (approximate, assuming single-attempt runs): Opus 4.7 input ~$5/Mtok, output ~$25/Mtok. Daily worst-case at 64k tokens ≈ $4.80; weekly worst-case at 64k ≈ $4.80. Annualized ≈ $2000 at cap. Actual usage is typically much lower since most runs don't approach the cap; the ceiling exists to survive adaptive-thinking-heavy runs. The current worker does not persist token-usage telemetry in `digest:last-trigger-result` or `cron_runs`; use provider-side Anthropic usage logs for exact spend.
 
 ### Manual trigger runtime model
 

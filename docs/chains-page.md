@@ -40,7 +40,7 @@ The leaderboard is public and indexable. The profile routes are statically gener
 `src/app/chains/client.tsx` consumes `useChains()` and renders:
 
 - hero summary: total stablecoin supply, optional weighted global 7d trend, chain count, and a top-chain dominance breakdown bar/legend
-- sortable leaderboard table with `<caption>` for screen readers
+- sortable leaderboard table rendered through `DataTableShell`
 - `QueryErrorNotice` with retry and `StaleDataBanner` (preset `"chains"`)
 - skeleton loading states (KPI grid + table rows)
 - row click and keyboard navigation into `/chains/[chain]/`
