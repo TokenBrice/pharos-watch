@@ -288,12 +288,12 @@ Posted to Telegram only (no Twitter for weekly recaps). Title is prefixed with "
 The latest digest is presented in a broadsheet newspaper style:
 - **Masthead:** compact uppercase lockup with the full date; the homepage preview uses a slightly sharper mono masthead treatment than the archive broadsheet
 - **Headline:** the homepage preview uses `Newsreader` at a larger newspaper-style display scale, while the full `/digest/` broadsheet keeps the original serif headline treatment
-- **Body:** Extended text paragraphs in italic Courier-style monospace (`EDITORIAL_BODY_STYLE`). On the homepage, only the first editorial paragraph is shown as a teaser; the paragraph is preserved whole and never character-clamped mid-sentence. The `/digest/` archive broadsheet shows the full editorial body.
+- **Body:** Extended text paragraphs in italic Courier-style monospace (`EDITORIAL_BODY_STYLE`). On the homepage and `/digest/` archive preview, only the first editorial paragraph is shown as a teaser; the paragraph is preserved whole and never character-clamped mid-sentence. Digest detail pages show the full editorial body.
 - **Homepage preview split:** desktop uses an asymmetric two-column layout with a hairline `Executive Summary` label and headline block on the left, then the lead paragraph plus CTA rail on the right
 
 The `text` field remains the short distribution summary used for metadata and digest detail intros. The shared broadsheet renderer prefers `extended`, and falls back to `text` only if `extended` is unavailable.
 
-Used in two places: the homepage (title + first editorial paragraph + "Read today's full digest" link) and the `/digest/` archive page (full broadsheet body, without the link since the wire table follows).
+Used in three visible modes: the homepage (title + first editorial paragraph + "Read today's full digest" link), the `/digest/` archive page (`variant="preview"` with first paragraph + "Continue reading" link plus a weekly teaser before the wire table), and digest detail pages (full broadsheet body).
 
 ### Archive page
 

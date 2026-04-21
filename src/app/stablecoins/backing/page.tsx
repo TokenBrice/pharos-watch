@@ -7,7 +7,7 @@ const TOTAL = BACKING_TAXONOMY_PAGES.reduce((sum, page) => sum + page.coins.leng
 
 export const metadata: Metadata = buildPageMetadata({
   title: "Stablecoins by Backing Type",
-  description: `Browse ${TOTAL} active stablecoins by backing model: real-world assets, crypto collateral, and algorithmic designs.`,
+  description: `Browse ${TOTAL} active stablecoins by backing model: real-world assets and crypto collateral.`,
   canonical: "/stablecoins/backing/",
 });
 
@@ -23,7 +23,7 @@ export default function StablecoinBackingHubPage() {
       ]}
       title="Stablecoins by Backing Type"
       leadParagraphs={[
-        "Compare stablecoin cohorts by reserve structure, from fiat and Treasury-backed issuers to crypto-collateralized and algorithmic designs.",
+        "Compare stablecoin cohorts by reserve structure, from fiat and Treasury-backed issuers to crypto-collateralized designs.",
       ]}
       itemListName="Backing type stablecoin hubs"
       pages={BACKING_TAXONOMY_PAGES}

@@ -690,11 +690,12 @@ Each `history` row includes:
 
 **Layout (top to bottom):**
 
-1. Stale data banner (tracks the hourly core publish lane and warns when rankings are delayed or stale)
-2. Summary stat cards — Average Yield (TVL-weighted), Benchmark / Default Benchmark (USD), Best Risk-Adjusted (highest PYS)
-3. Yield vs Safety scatter plot
-4. Yield leaderboard table
-5. Disclaimer
+1. `QueryErrorNotice` when the rankings query fails
+2. Stale data banner (tracks the hourly core publish lane and warns when rankings are delayed or stale)
+3. Snapshot count text, optional `Data Provenance`, and peg filter controls
+4. Yield vs Safety scatter card with the summary metrics integrated into the card header
+5. Yield leaderboard table
+6. Disclaimer
 
 ### Stablecoin Detail: `YieldDetailSection` (`src/components/yield-detail-section.tsx`)
 

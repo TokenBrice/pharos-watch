@@ -216,7 +216,7 @@ HTTP method allowance is defined centrally in `shared/lib/api-endpoints/` and en
 - `POST` is accepted on `/api/api-keys/:id/update`, `/api/api-keys/:id/deactivate`, and `/api/api-keys/:id/rotate`.
 - `/api/audit-depeg-history` allows `GET` only with `?dry-run=true`; otherwise it is `POST`-only.
 - `/api/backfill-dews` allows `GET` for the historical backtest and for `repair=...&dry-run=true` previews; mutating repair runs are `POST`-only.
-- Unknown `GET` paths return `404`. Unknown `POST` `/api/*` paths return `405` with `Allow: GET`; unsupported verbs return `405` with `Allow: GET, POST`. Once a static or dynamic route family is registered, known paths with disallowed methods return `405` with `Allow`.
+- Unknown paths return `404` before router method validation because no route dependencies can be hydrated. Once a static or dynamic route family is registered, known paths with disallowed methods return `405` with `Allow`; unsupported verbs on known endpoint families return `405` with `Allow: GET, POST`.
 
 The same shared endpoint descriptors now also carry static worker dependency-hydration hints consumed by `worker/src/routes/registry.ts`, where the worker binds shared endpoint keys directly to handlers through a single static route-definition list. That keeps endpoint metadata, router behavior, method guards, admin status-page actions, and worker-side static route wiring aligned from one source of truth plus one worker binding table.
 

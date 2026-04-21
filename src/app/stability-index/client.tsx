@@ -420,7 +420,7 @@ function Methodology({
         <p className="text-sm text-muted-foreground">
           Chronically depegged coins decay linearly from full impact at 30 days to a 25% floor at 150 days.{" "}
           <Link
-            href="/methodology/#stability-index"
+            href="/methodology/#stability-index-methodology"
             className="pharos-focus-ring text-foreground underline underline-offset-4 hover:text-amber-700 dark:text-amber-400 transition-colors rounded-sm"
           >
             Full methodology &rarr;

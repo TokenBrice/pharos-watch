@@ -144,7 +144,7 @@ Above the fold (`src/app/page.tsx`):
 2. `HomepageStartHereCallout` (first-session only)
 3. `KpiBar`
 
-The callout and KPI bar share a `flex flex-col gap-3 lg:contents` wrapper. Because the wrapper becomes `display: contents` at `lg+`, the DOM order remains the effective order at every breakpoint: first-session visitors see the callout before the KPI bar, and returning visitors see the KPI bar directly under the header.
+The callout and KPI bar share a `flex flex-col gap-3 lg:contents` wrapper. DOM order keeps the first-session callout before the KPI bar for mobile/narrow layouts; on `lg+`, `lg:order-1` on the KPI wrapper and `lg:order-2` on the callout wrapper place the KPI strip above the callout visually. Returning visitors see the KPI bar directly under the header.
 
 Under the fold (`HomepageClient`):
 
