@@ -13,6 +13,7 @@ import {
   logUpstreamException,
   logUpstreamFailure,
 } from "./shared";
+import { handleCacheBackedDetail } from "./cache-fallback";
 
 async function fetchCoinGeckoOnlyTokens(config: {
   stablecoinId: string;
@@ -76,6 +77,16 @@ export async function handleCoinGeckoOnlyDetail(
       emptyReason: "coingecko-history-empty",
       staleReason: "coingecko-history-stale",
     });
+    if (tokens.length === 0) {
+      return handleCacheBackedDetail(
+        {
+          db: config.db,
+          stablecoinId: config.stablecoinId,
+          pegType: config.pegType,
+        },
+        detail,
+      );
+    }
 
     return detail.createFreshResponseFromTokens(tokens);
   } catch (err) {
