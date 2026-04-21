@@ -1,14 +1,12 @@
 import { getCache } from "../lib/db-cache";
 import { withErrorHandler } from "../lib/api-utils";
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins";
-import { handleCommodityDetail } from "./stablecoin-detail/commodity";
-import { handleCoinGeckoOnlyDetail } from "./stablecoin-detail/coingecko-only";
-import { handleDefiLlamaDetail } from "./stablecoin-detail/defillama";
 import {
   CACHE_TTL_SECONDS,
   createDetailResponseHelpers,
   createFreshCacheHitResponse,
 } from "./stablecoin-detail/shared";
+import { routeStablecoinDetail } from "./stablecoin-detail/router";
 
 export const handleStablecoinDetail = withErrorHandler(
   "stablecoin-detail",
@@ -32,45 +30,6 @@ export const handleStablecoinDetail = withErrorHandler(
       cached,
       execCtx: ctx,
     });
-    const geckoId = meta?.geckoId;
-
-    const isCommodity =
-      !!meta && (meta.flags.pegCurrency === "GOLD" || meta.flags.pegCurrency === "SILVER") && !!geckoId;
-
-    if (isCommodity) {
-      return handleCommodityDetail(
-        {
-          stablecoinId: id,
-          geckoId,
-          protocolSlug: meta.protocolSlug ?? "",
-          pegType,
-          coingeckoApiKey,
-        },
-        detail,
-      );
-    }
-
-    if (meta?.detailProvider === "coingecko" && geckoId) {
-      return handleCoinGeckoOnlyDetail(
-        {
-          db,
-          stablecoinId: id,
-          geckoId,
-          pegType,
-          coingeckoApiKey,
-        },
-        detail,
-      );
-    }
-
-    return handleDefiLlamaDetail(
-      {
-        db,
-        stablecoinId: id,
-        llamaId: meta?.llamaId ?? id,
-        meta,
-      },
-      detail,
-    );
+    return routeStablecoinDetail({ db, stablecoinId: id, pegType, coingeckoApiKey }, detail);
   },
 );
