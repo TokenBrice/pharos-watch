@@ -443,7 +443,9 @@ export function DexLiquidityCard({ stablecoinId }: { stablecoinId: string }) {
           <Skeleton className="h-3 w-36" />
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="grid grid-cols-3 gap-4">
+          <div className="grid grid-cols-2 gap-x-4 gap-y-5 sm:grid-cols-3 lg:grid-cols-6">
+            <Skeleton className="col-span-2 h-16" />
+            <Skeleton className="h-12" />
             <Skeleton className="h-12" />
             <Skeleton className="h-12" />
             <Skeleton className="h-12" />
@@ -476,6 +478,8 @@ export function DexLiquidityCard({ stablecoinId }: { stablecoinId: string }) {
   const coverageBadge = getLiquidityCoverageBadge(liq.coverageClass ?? "unobserved");
   const isRated = liq.liquidityScore != null;
   const evidenceLabel = getLiquidityEvidenceLabel(liq);
+  const hasTvlChange24h = liq.tvlChange24h != null && Math.abs(liq.tvlChange24h) >= 0.05;
+  const hasTvlChange7d = liq.tvlChange7d != null && Math.abs(liq.tvlChange7d) >= 0.05;
 
   return (
     <Card className="rounded-xl animate-in fade-in duration-300">
@@ -513,31 +517,34 @@ export function DexLiquidityCard({ stablecoinId }: { stablecoinId: string }) {
 
         {/* ── Zone 1: Health Summary ── */}
         <div className="space-y-3">
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
-            <div>
-              <p className="text-xs text-muted-foreground"><span className="sm:hidden">AMM TVL</span><span className="hidden sm:inline">Total AMM Liquidity TVL</span></p>
-              <p className="text-lg font-extrabold font-mono tabular-nums">{formatCurrency(liq.totalTvlUsd)}</p>
-              {(liq.tvlChange24h != null || liq.tvlChange7d != null) && (
-                <div className="flex gap-2 mt-0.5">
-                  {liq.tvlChange24h != null && (
-                    <span className="text-xs text-muted-foreground">
-                      24h <TrendArrow value={liq.tvlChange24h} />
-                    </span>
-                  )}
-                  {liq.tvlChange7d != null && (
-                    <span className="text-xs text-muted-foreground">
-                      7d <TrendArrow value={liq.tvlChange7d} />
-                    </span>
-                  )}
-                </div>
-              )}
-              {liq.effectiveTvlUsd > 0 && liq.effectiveTvlUsd !== liq.totalTvlUsd && (
-                <div className="text-xs text-muted-foreground mt-0.5">
-                  <span className="inline-flex items-center gap-1">
-                    <MethodologyLabel topic="effectiveTvl">Effective</MethodologyLabel>: {formatCurrency(liq.effectiveTvlUsd)}
+          <div className="grid grid-cols-2 gap-x-4 gap-y-5 sm:grid-cols-3 lg:grid-cols-6">
+            <div className="col-span-2 min-w-0 space-y-1 sm:col-span-2 lg:col-span-2">
+              <p className="text-xs font-medium text-muted-foreground">
+                <MethodologyLabel topic="effectiveTvl">Effective Liquidity</MethodologyLabel>
+              </p>
+              <p className="text-xl font-extrabold font-mono tabular-nums sm:text-2xl">{formatCurrency(liq.effectiveTvlUsd)}</p>
+              <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs text-muted-foreground">
+                <span>
+                  <span className="sm:hidden">AMM TVL</span>
+                  <span className="hidden sm:inline">Total AMM Liquidity TVL</span>
+                  {": "}
+                  <span className="font-mono tabular-nums text-foreground/90">{formatCurrency(liq.totalTvlUsd)}</span>
+                </span>
+                {(hasTvlChange24h || hasTvlChange7d) && (
+                  <span className="flex flex-wrap gap-x-2 gap-y-0.5">
+                    {hasTvlChange24h && (
+                      <span>
+                        24h <TrendArrow value={liq.tvlChange24h} />
+                      </span>
+                    )}
+                    {hasTvlChange7d && (
+                      <span>
+                        7d <TrendArrow value={liq.tvlChange7d} />
+                      </span>
+                    )}
                   </span>
-                </div>
-              )}
+                )}
+              </div>
               {evidenceLabel && (
                 <div className="text-xs text-muted-foreground mt-0.5">{evidenceLabel}</div>
               )}

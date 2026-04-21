@@ -93,6 +93,43 @@ describe("DexLiquidityCard", () => {
     useDexLiquidityHistoryMock.mockReset();
   });
 
+  it("promotes effective liquidity above total AMM liquidity in the overview metrics", () => {
+    useDexLiquidityMock.mockReturnValue({
+      data: {
+        "usdc-circle": makeLiquidityData({
+          totalTvlUsd: 10_200_000,
+          effectiveTvlUsd: 910_710,
+          totalVolume24hUsd: 265_010,
+          totalVolume7dUsd: 663_820,
+          poolCount: 13,
+          chainCount: 2,
+          liquidityScore: 40,
+          coverageClass: "mixed",
+          liquidityEvidenceClass: "partial_measured",
+          hasMeasuredLiquidityEvidence: true,
+          balanceMeasuredTvlUsd: 1_224_000,
+          tvlChange24h: -14.3,
+          tvlChange7d: -12.3,
+        }),
+      },
+      isLoading: false,
+    });
+    useDexLiquidityHistoryMock.mockReturnValue({
+      data: [],
+      isLoading: false,
+    });
+
+    render(<DexLiquidityCard stablecoinId="usdc-circle" />);
+
+    const effectiveLabel = screen.getByText("Effective Liquidity");
+    const effectiveValue = screen.getByText("$910.71K");
+    const totalAmmLabel = screen.getByText("Total AMM Liquidity TVL");
+    const totalAmmValue = screen.getByText("$10.20M");
+
+    expect(effectiveLabel.compareDocumentPosition(totalAmmLabel) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(effectiveValue.compareDocumentPosition(totalAmmValue) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  });
+
   it("renders an explicit unobserved-history state instead of a zero-value chart for unrated assets", () => {
     useDexLiquidityMock.mockReturnValue({
       data: {
