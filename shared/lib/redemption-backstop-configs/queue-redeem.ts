@@ -11,6 +11,7 @@ import {
 
 const REVIEWED_QUEUE_REDEMPTION_AT = "2026-03-23";
 const REVIEWED_REMEDIATION_AT = "2026-03-30";
+const REVIEWED_WRAPPER_QUEUE_AT = "2026-04-21";
 const reviewedQueueRedemptionSupplyFull = documentedBoundSupplyFull(
   REVIEWED_QUEUE_REDEMPTION_AT,
 );
@@ -143,6 +144,38 @@ export const QUEUE_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopCon
     notes: [
       "Current route models sUSDai as an eventual queued exit back into USDai rather than as an immediate stablecoin redemption rail",
       "Issuer docs describe a limited instant-liquidity buffer, but Pharos does not assign a numeric immediate-capacity bound until a trustworthy public figure exists",
+    ],
+  },
+  "susde-ethena": {
+    ...queueRedeemBase,
+    ...documentedBoundSupplyFull(REVIEWED_WRAPPER_QUEUE_AT),
+    accessModel: "whitelisted-onchain",
+    settlementModel: "days",
+    costModel: documentedVariableFee(
+      "Ethena staking docs describe sUSDe unstaking as a 7-day cooldown into USDe, with users bearing transaction and execution costs rather than paying a separate fixed protocol redemption fee",
+    ),
+    docs: [
+      sourceRef("Ethena staking docs", "https://docs.ethena.fi/solution-design/staking-usde", ["route", "capacity", "settlement"]),
+      sourceRef("Ethena staking key functions", "https://docs.ethena.fi/solution-design/staking-usde/staking-key-functions", ["route", "access", "settlement"]),
+      sourceRef("Ethena key addresses", "https://docs.ethena.fi/solution-design/key-addresses", ["route"]),
+    ],
+    notes: [
+      "sUSDe burns immediately into a claim on underlying USDe, but the user can only withdraw that USDe after the cooldown window has elapsed",
+      "Ethena staking includes jurisdictional and sanctions-based restrictions on the staking contract itself, so the wrapper route is modeled as whitelisted-onchain rather than fully permissionless",
+    ],
+  },
+  "syusd-aegis": {
+    ...queueRedeemBase,
+    ...documentedBoundSupplyFull(REVIEWED_WRAPPER_QUEUE_AT),
+    settlementModel: "days",
+    costModel: fixedFee(0, "Aegis docs describe sYUSD staking and unstaking with 0% protocol fee"),
+    docs: [
+      sourceRef("Aegis sYUSD docs", "https://docs.aegis.im/tokens/syusd-yield-bearing-token", ["route", "capacity", "fees", "settlement"]),
+      sourceRef("Aegis smart contracts", "https://docs.aegis.im/smart-contracts", ["route"]),
+    ],
+    notes: [
+      "sYUSD exits through a documented 7-day cooldown back into YUSD at the live staking-vault exchange rate",
+      "The wrapper queue is distinct from YUSD's own primary-market redemption path and does not assume a separate instant-liquidity buffer beyond the contract's cooldown release",
     ],
   },
   "cgusd-cygnus-finance": {

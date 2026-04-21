@@ -1114,6 +1114,98 @@
     }
   },
   {
+    "id": "sfrxusd-frax",
+    "name": "Staked Frax USD",
+    "symbol": "sfrxUSD",
+    "flags": {
+      "backing": "rwa-backed",
+      "pegCurrency": "USD",
+      "governance": "centralized-dependent",
+      "yieldBearing": true,
+      "rwa": false,
+      "navToken": true
+    },
+    "pegReferenceId": "frxusd-frax",
+    "collateral": "frxUSD deposited into Frax's savings vault; the wrapper remains fully backed by frxUSD while protocol income and custodian yield accrue through the vault exchange rate",
+    "pegMechanism": "Deposit frxUSD to mint sfrxUSD and redeem sfrxUSD for the current convertToAssets amount of frxUSD; the share price rises as Frax routes frxUSD yield to the staking vault",
+    "detailProvider": "coingecko",
+    "geckoId": "staked-frax-usd",
+    "links": [
+      {
+        "label": "Website",
+        "url": "https://frax.com/"
+      },
+      {
+        "label": "Twitter",
+        "url": "https://x.com/fraxfinance"
+      },
+      {
+        "label": "Docs",
+        "url": "https://docs.frax.com/protocol/assets/frxusd/sfrxusd"
+      },
+      {
+        "label": "Addresses",
+        "url": "https://docs.frax.com/protocol/assets/frxusd/addresses"
+      }
+    ],
+    "contracts": [
+      {
+        "chain": "ethereum",
+        "address": "0xcf62f905562626cfcdd2261162a51fd02fc9c5b6",
+        "decimals": 18
+      },
+      {
+        "chain": "fraxtal",
+        "address": "0xfc00000000000000000000000000000000000008",
+        "decimals": 18
+      }
+    ],
+    "canBeBlacklisted": true,
+    "deploymentModel": "native-multichain",
+    "collateralQuality": "rwa",
+    "custodyModel": "institutional-top",
+    "governanceQuality": "wrapper",
+    "reserves": [
+      {
+        "name": "frxUSD savings vault shares",
+        "pct": 100,
+        "risk": "low",
+        "coinId": "frxusd-frax",
+        "depType": "wrapper"
+      }
+    ],
+    "yieldConfig": {
+      "yieldSource": "Frax staking (sfrxUSD)",
+      "yieldType": "nav-appreciation"
+    },
+    "liveReservesConfig": {
+      "adapter": "erc4626-single-asset",
+      "version": 1,
+      "semantics": "single-asset",
+      "breakerScope": "sfrxusd-frax",
+      "display": {
+        "url": "https://docs.frax.com/protocol/assets/frxusd/sfrxusd",
+        "label": "Frax sfrxUSD"
+      },
+      "inputs": {
+        "primary": {
+          "kind": "onchain-evm",
+          "chain": "ethereum",
+          "rpcMode": "alchemy"
+        }
+      },
+      "params": {
+        "slice": {
+          "name": "frxUSD savings vault shares",
+          "risk": "low",
+          "coinId": "frxusd-frax",
+          "depType": "wrapper",
+          "expectedAssetAddress": "0xcacd6fd266af91b8aed52accc382b4e165586e29"
+        }
+      }
+    }
+  },
+  {
     "id": "rwausdi-multipli",
     "name": "rwaUSDi",
     "symbol": "rwaUSDi",
@@ -2365,6 +2457,107 @@
     }
   },
   {
+    "id": "cusdo-openeden",
+    "name": "Compounding OpenDollar",
+    "symbol": "cUSDO",
+    "flags": {
+      "backing": "rwa-backed",
+      "pegCurrency": "USD",
+      "governance": "centralized",
+      "yieldBearing": true,
+      "rwa": false,
+      "navToken": true
+    },
+    "pegReferenceId": "usdo-openeden",
+    "collateral": "USDO wrapped into OpenEden's non-rebasing cUSDO format; the wrapper keeps the same Treasury-backed reserve stack as USDO while yield accrues through price appreciation instead of rebasing",
+    "pegMechanism": "Users can wrap USDO into cUSDO or unwrap cUSDO back into USDO at any time; unlike rebasing USDO, cUSDO compounds by increasing in redeemable USDO per token",
+    "detailProvider": "coingecko",
+    "geckoId": "compounding-open-dollar",
+    "links": [
+      {
+        "label": "Website",
+        "url": "https://openeden.com/"
+      },
+      {
+        "label": "Twitter",
+        "url": "https://x.com/OpenEden_X"
+      },
+      {
+        "label": "Docs",
+        "url": "https://docs.openeden.com/usdo/cusdo-token"
+      },
+      {
+        "label": "Integration Guide",
+        "url": "https://docs.openeden.com/usdo/developers/integration-guide"
+      }
+    ],
+    "contracts": [
+      {
+        "chain": "ethereum",
+        "address": "0xad55aebc9b8c03fc43cd9f62260391c13c23e7c0",
+        "decimals": 18
+      },
+      {
+        "chain": "base",
+        "address": "0x83db73ef5192de4b6a4c92bd0141ba1a0dc87c65",
+        "decimals": 18
+      },
+      {
+        "chain": "bsc",
+        "address": "0x64748ea3e31d0b7916f0ff91b017b9f404ded8ef",
+        "decimals": 18
+      },
+      {
+        "chain": "solana",
+        "address": "BnANu5CtUogLqcvBNByJuwaRvRxNtVuDcAytwjsUUtqs",
+        "decimals": 9
+      }
+    ],
+    "deploymentModel": "third-party-bridge",
+    "collateralQuality": "rwa",
+    "custodyModel": "institutional-regulated",
+    "governanceQuality": "wrapper",
+    "reserves": [
+      {
+        "name": "USDO wrapper shares",
+        "pct": 100,
+        "risk": "low",
+        "coinId": "usdo-openeden",
+        "depType": "wrapper"
+      }
+    ],
+    "yieldConfig": {
+      "yieldSource": "OpenEden cUSDO wrapper",
+      "yieldType": "nav-appreciation"
+    },
+    "liveReservesConfig": {
+      "adapter": "erc4626-single-asset",
+      "version": 1,
+      "semantics": "single-asset",
+      "breakerScope": "cusdo-openeden",
+      "display": {
+        "url": "https://docs.openeden.com/usdo/cusdo-token",
+        "label": "OpenEden cUSDO"
+      },
+      "inputs": {
+        "primary": {
+          "kind": "onchain-evm",
+          "chain": "ethereum",
+          "rpcMode": "alchemy"
+        }
+      },
+      "params": {
+        "slice": {
+          "name": "USDO wrapper shares",
+          "risk": "low",
+          "coinId": "usdo-openeden",
+          "depType": "wrapper",
+          "expectedAssetAddress": "0x8238884ec9668ef77b90c6dff4d1a9f4f4823bfe"
+        }
+      }
+    }
+  },
+  {
     "id": "usdon-ondo",
     "name": "Ondo U.S. Dollar Token",
     "symbol": "USDon",
@@ -3438,6 +3631,97 @@
     "yieldConfig": {
       "yieldSource": "Aegis delta-neutral strategy",
       "yieldType": "lending-vault"
+    }
+  },
+  {
+    "id": "syusd-aegis",
+    "name": "Aegis Staked YUSD",
+    "symbol": "sYUSD",
+    "flags": {
+      "backing": "crypto-backed",
+      "pegCurrency": "USD",
+      "governance": "centralized",
+      "yieldBearing": true,
+      "rwa": false,
+      "navToken": true
+    },
+    "pegReferenceId": "yusd-aegis",
+    "collateral": "YUSD deposited into Aegis's ERC-4626 staking contract; the wrapper remains backed by YUSD while funding-rate income accrues through the rising exchange rate",
+    "pegMechanism": "Deposit YUSD to receive sYUSD; the exchange rate versus YUSD increases as rewards accrue, while unstaking enters Aegis's documented 7-day cooldown before YUSD can be withdrawn",
+    "detailProvider": "coingecko",
+    "geckoId": "staked-yusd",
+    "links": [
+      {
+        "label": "Website",
+        "url": "https://aegis.im/"
+      },
+      {
+        "label": "Twitter",
+        "url": "https://x.com/aegis_im"
+      },
+      {
+        "label": "Docs",
+        "url": "https://docs.aegis.im/tokens/syusd-yield-bearing-token"
+      },
+      {
+        "label": "Smart Contracts",
+        "url": "https://docs.aegis.im/smart-contracts"
+      }
+    ],
+    "contracts": [
+      {
+        "chain": "ethereum",
+        "address": "0xfe0ccc9942e98c963fe6b4e5194eb6e3baa4cb64",
+        "decimals": 18
+      },
+      {
+        "chain": "bsc",
+        "address": "0x24db057b19241eefb9b522e8627c293ed8f93af2",
+        "decimals": 18
+      }
+    ],
+    "deploymentModel": "third-party-bridge",
+    "collateralQuality": "exotic",
+    "custodyModel": "cex",
+    "governanceQuality": "wrapper",
+    "reserves": [
+      {
+        "name": "YUSD staking vault shares",
+        "pct": 100,
+        "risk": "medium",
+        "coinId": "yusd-aegis",
+        "depType": "wrapper"
+      }
+    ],
+    "yieldConfig": {
+      "yieldSource": "Aegis staking (sYUSD)",
+      "yieldType": "nav-appreciation"
+    },
+    "liveReservesConfig": {
+      "adapter": "erc4626-single-asset",
+      "version": 1,
+      "semantics": "single-asset",
+      "breakerScope": "syusd-aegis",
+      "display": {
+        "url": "https://docs.aegis.im/tokens/syusd-yield-bearing-token",
+        "label": "Aegis sYUSD"
+      },
+      "inputs": {
+        "primary": {
+          "kind": "onchain-evm",
+          "chain": "ethereum",
+          "rpcMode": "alchemy"
+        }
+      },
+      "params": {
+        "slice": {
+          "name": "YUSD staking vault shares",
+          "risk": "medium",
+          "coinId": "yusd-aegis",
+          "depType": "wrapper",
+          "expectedAssetAddress": "0x4274cd7277c7bb0806bd5fe84b9adae466a8da0a"
+        }
+      }
     }
   },
   {
@@ -8080,6 +8364,107 @@
       "yieldSource": "BIMA savings (sUSBD)",
       "yieldType": "lending-vault"
     }
+  },
+  {
+    "id": "doc-money-on-chain",
+    "name": "Dollar on Chain",
+    "symbol": "DOC",
+    "flags": {
+      "backing": "crypto-backed",
+      "pegCurrency": "USD",
+      "governance": "decentralized",
+      "yieldBearing": false,
+      "rwa": false,
+      "navToken": false
+    },
+    "collateral": "rBTC locked in Money On Chain smart contracts on Rootstock",
+    "pegMechanism": "DOC targets 1 USD through overcollateralized rBTC backing, protocol incentives, and permissionless DOC-to-rBTC redemption through the Money On Chain dApp",
+    "llamaId": "30",
+    "detailProvider": "defillama",
+    "geckoId": "dollar-on-chain",
+    "links": [
+      {
+        "label": "Website",
+        "url": "https://moneyonchain.com/doc-stablecoin/"
+      },
+      {
+        "label": "Docs",
+        "url": "https://docs.moneyonchain.com/main-rbtc-contract/money-on-chain-platform/main-concepts"
+      },
+      {
+        "label": "Dapp",
+        "url": "https://dapp.moneyonchain.com/"
+      }
+    ],
+    "contracts": [
+      {
+        "chain": "rootstock",
+        "address": "0xe700691da7b9851f2f35f8b8182c69c53ccad9db",
+        "decimals": 18
+      },
+      {
+        "chain": "arbitrum",
+        "address": "0x2ad62eb9744c720364f6ac856360a43e8a2229b5",
+        "decimals": 18
+      }
+    ],
+    "chainTier": "mature-alt-l1",
+    "deploymentModel": "third-party-bridge",
+    "reserves": [
+      {
+        "name": "Rootstock BTC (rBTC) collateral",
+        "pct": 100,
+        "risk": "medium"
+      }
+    ]
+  },
+  {
+    "id": "usdrif-rif",
+    "name": "RIF US Dollar",
+    "symbol": "USDRIF",
+    "flags": {
+      "backing": "crypto-backed",
+      "pegCurrency": "USD",
+      "governance": "decentralized",
+      "yieldBearing": false,
+      "rwa": false,
+      "navToken": false
+    },
+    "collateral": "RIF tokens locked in the RIF On Chain protocol on Rootstock",
+    "pegMechanism": "USDRIF is minted against RIF collateral and can be redeemed for the same dollar value in RIF through the protocol, with smart-contract rules and scheduled settlement supporting the peg",
+    "llamaId": "159",
+    "detailProvider": "defillama",
+    "geckoId": "rif-us-dollar",
+    "links": [
+      {
+        "label": "Website",
+        "url": "https://rifonchain.com/"
+      },
+      {
+        "label": "Docs",
+        "url": "https://wiki.rifonchain.com/frequently-asked-questions/web-app-faq"
+      },
+      {
+        "label": "Dapp",
+        "url": "https://dapp.rifonchain.com/"
+      }
+    ],
+    "contracts": [
+      {
+        "chain": "rootstock",
+        "address": "0x3a15461d8ae0f0fb5fa2629e9da7d66a794a6e37",
+        "decimals": 18
+      }
+    ],
+    "chainTier": "mature-alt-l1",
+    "collateralQuality": "exotic",
+    "reserves": [
+      {
+        "name": "RIF collateral locked in RIF On Chain smart contracts",
+        "pct": 100,
+        "risk": "high"
+      }
+    ]
   },
   {
     "id": "usp-pikudao",

@@ -9,7 +9,7 @@ Dedicated documentation for the live reserve-composition subsystem that powers `
 - **Cron:** `sync-live-reserves` (`worker/src/cron/sync-live-reserves.ts`)
 - **Schedule:** `11 */4 * * *` (every 4 hours at :11 UTC)
 - **Shared 4-hourly lane:** after live reserve sync, the same slot runs redemption backstop sync, Kinesis supply sync, and collateral-drift checks / alerts (`worker/src/handlers/scheduled/hourly-live-reserves.ts`)
-- **Current coverage:** 159 live-enabled stablecoins across 44 registered adapters; 43 adapter keys are currently configured by `shared/data/stablecoins/*.json`
+- **Current coverage:** 166 live-enabled stablecoins across 44 registered adapters; 43 adapter keys are currently configured by `shared/data/stablecoins/*.json`
 - **Storage:** `reserve_composition`, `reserve_composition_history`, `reserve_sync_state`, `reserve_sync_attempt_history`
 - **API:** `GET /api/stablecoin-reserves/:id`
 - **Frontend consumers:** `useStablecoinReserves()`, stablecoin detail view model, `/status` reserve-sync health
@@ -366,7 +366,7 @@ This table reflects the adapter keys currently configured in `shared/data/stable
 | `crvusd`                   | `http-json`                 | `collateral-mix`                     | 1                |
 | `curated-validated`        | `onchain-evm` / `onchain-solana` | `attestation-mix` / `collateral-mix` / `single-asset` | 34 |
 | `dola-inverse`             | `http-json`                 | `collateral-mix`                     | 1                |
-| `erc4626-single-asset`     | `onchain-evm`               | `single-asset`                       | 9                |
+| `erc4626-single-asset`     | `onchain-evm`               | `single-asset`                       | 16               |
 | `ethena`                   | `http-json`                 | `collateral-mix`                     | 1                |
 | `evm-branch-balances`      | `onchain-evm`               | `collateral-mix`                     | 4                |
 | `falcon`                   | `http-json`                 | `collateral-mix`                     | 1                |

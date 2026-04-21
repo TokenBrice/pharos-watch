@@ -12,6 +12,7 @@ import {
 const REVIEWED_DIRECT_REDEMPTION_AT = "2026-03-23";
 const REVIEWED_REMEDIATION_AT = "2026-03-30";
 const REVIEWED_ZCHF_BRIDGE_AT = "2026-04-06";
+const REVIEWED_WRAPPER_REDEMPTION_AT = "2026-04-21";
 const reviewedDirectRedemptionSupplyFull = documentedBoundSupplyFull(
   REVIEWED_DIRECT_REDEMPTION_AT,
 );
@@ -163,6 +164,76 @@ export const STABLECOIN_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackst
     notes: [
       "Fresh live reserve telemetry uses the current USDC position as the immediate redeemable lower bound",
       "When the timestamp-less Reservoir balance-sheet feed cannot meet scoring-grade freshness requirements, the route falls back to the reviewed 25 bps minimum USDC PSM balance documented by Reservoir",
+    ],
+  },
+  "susds-sky": {
+    ...stablecoinRedeemBase,
+    ...documentedBoundSupplyFull(REVIEWED_WRAPPER_REDEMPTION_AT),
+    executionModel: "rules-based-nav",
+    costModel: fixedFee(0, "Sky docs describe sUSDS vault deposits and withdrawals with no fee"),
+    docs: [
+      sourceRef("Sky sUSDS docs", "https://developers.sky.money/core-protocol/susds/", ["route", "capacity", "fees"]),
+      sourceRef("Sky protocol token routes", "https://developers.sky.money/quick-start/protocol-token-routes/", ["route", "capacity"]),
+    ],
+    notes: [
+      "sUSDS is an ERC-4626 savings wrapper over USDS: holders can deposit USDS to mint sUSDS and redeem back into USDS at the live vault exchange rate",
+      "The wrapper exits immediately into USDS, after which the underlying Sky stablecoin keeps its own direct PSM-backed exit quality",
+    ],
+  },
+  "sdai-sky": {
+    ...stablecoinRedeemBase,
+    ...documentedBoundSupplyFull(REVIEWED_WRAPPER_REDEMPTION_AT),
+    executionModel: "rules-based-nav",
+    costModel: fixedFee(0, "Spark documents withdrawals from savings vaults without slippage or platform fees"),
+    docs: [
+      sourceRef("Spark website", "https://spark.fi/", ["route", "fees"]),
+      sourceRef("Spark docs portal", "https://docs.spark.fi/", ["route", "capacity"]),
+    ],
+    notes: [
+      "sDAI is the Dai Savings Rate wrapper: holders exit at the live ERC-4626 exchange rate into DAI rather than through a queued or discretionary process",
+      "The wrapper leg is immediate; downstream par-exit quality is inherited from DAI's own PSM-backed redemption surface",
+    ],
+  },
+  "sfrxusd-frax": {
+    ...stablecoinRedeemBase,
+    ...documentedBoundSupplyFull(REVIEWED_WRAPPER_REDEMPTION_AT),
+    executionModel: "rules-based-nav",
+    costModel: documentedVariableFee(NO_PUBLIC_NUMERIC_REDEMPTION_FEE),
+    docs: [
+      sourceRef("Frax sfrxUSD docs", "https://docs.frax.com/protocol/assets/frxusd/sfrxusd", ["route", "capacity"]),
+      sourceRef("Frax frxUSD addresses", "https://docs.frax.com/protocol/assets/frxusd/addresses", ["route"]),
+    ],
+    notes: [
+      "sfrxUSD is an ERC-4626-like savings wrapper over frxUSD and exits immediately back into the underlying at the current exchange rate",
+      "The wrapper does not add a separate queue or access gate beyond the base frxUSD system",
+    ],
+  },
+  "scrvusd-curve": {
+    ...stablecoinRedeemBase,
+    ...documentedBoundSupplyFull(REVIEWED_WRAPPER_REDEMPTION_AT),
+    executionModel: "rules-based-nav",
+    costModel: documentedVariableFee(NO_PUBLIC_NUMERIC_REDEMPTION_FEE),
+    docs: [
+      sourceRef("Curve scrvUSD month-in-review", "https://news.curve.finance/savings-crvusd-a-month-in-review/", ["route", "capacity"]),
+      sourceRef("Curve resources", "https://resources.curve.finance/", ["route"]),
+    ],
+    notes: [
+      "scrvUSD is Curve's savings wrapper over crvUSD and exits into the underlying at the live vault exchange rate",
+      "The wrapper route is immediate; actual par-exit quality then depends on the underlying crvUSD redemption and peg-defense surface",
+    ],
+  },
+  "cusdo-openeden": {
+    ...stablecoinRedeemBase,
+    ...documentedBoundSupplyFull(REVIEWED_WRAPPER_REDEMPTION_AT),
+    executionModel: "rules-based-nav",
+    costModel: documentedVariableFee(NO_PUBLIC_NUMERIC_REDEMPTION_FEE),
+    docs: [
+      sourceRef("OpenEden cUSDO token docs", "https://docs.openeden.com/usdo/cusdo-token", ["route", "capacity"]),
+      sourceRef("OpenEden integration guide", "https://docs.openeden.com/usdo/developers/integration-guide", ["route"]),
+    ],
+    notes: [
+      "cUSDO is the non-rebasing wrapper over USDO and can be wrapped or unwrapped on demand at the current conversion rate",
+      "The wrapper leg is immediate; downstream primary-market USDO redemption remains governed by OpenEden's own issuer flow",
     ],
   },
   "usdf-astherus": {

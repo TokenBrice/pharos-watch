@@ -795,6 +795,93 @@
     }
   },
   {
+    "id": "susde-ethena",
+    "name": "Ethena Staked USDe",
+    "symbol": "sUSDe",
+    "flags": {
+      "backing": "crypto-backed",
+      "pegCurrency": "USD",
+      "governance": "centralized-dependent",
+      "yieldBearing": true,
+      "rwa": false,
+      "navToken": true
+    },
+    "pegReferenceId": "usde-ethena",
+    "collateral": "USDe deposited into Ethena's ERC-4626 staking contract; the wrapper remains fully backed by USDe while additional USDe rewards accrue inside the vault",
+    "pegMechanism": "Stake USDe to receive sUSDe; the exchange rate versus USDe rises as rewards are transferred into the staking contract, while unstaking burns sUSDe immediately and releases USDe after Ethena's documented 7-day cooldown",
+    "detailProvider": "coingecko",
+    "geckoId": "ethena-staked-usde",
+    "links": [
+      {
+        "label": "Website",
+        "url": "https://ethena.fi/"
+      },
+      {
+        "label": "Twitter",
+        "url": "https://x.com/ethena"
+      },
+      {
+        "label": "Docs",
+        "url": "https://docs.ethena.fi/solution-design/staking-usde"
+      },
+      {
+        "label": "Key Addresses",
+        "url": "https://docs.ethena.fi/solution-design/key-addresses"
+      }
+    ],
+    "contracts": [
+      {
+        "chain": "ethereum",
+        "address": "0x9d39a5de30e57443bff2a8307a4256c8797a3497",
+        "decimals": 18
+      }
+    ],
+    "canBeBlacklisted": true,
+    "deploymentModel": "single-chain",
+    "collateralQuality": "exotic",
+    "custodyModel": "cex",
+    "governanceQuality": "wrapper",
+    "reserves": [
+      {
+        "name": "USDe staking vault shares",
+        "pct": 100,
+        "risk": "medium",
+        "coinId": "usde-ethena",
+        "depType": "wrapper"
+      }
+    ],
+    "yieldConfig": {
+      "yieldSource": "Ethena staking (sUSDe)",
+      "yieldType": "nav-appreciation"
+    },
+    "liveReservesConfig": {
+      "adapter": "erc4626-single-asset",
+      "version": 1,
+      "semantics": "single-asset",
+      "breakerScope": "susde-ethena",
+      "display": {
+        "url": "https://docs.ethena.fi/solution-design/staking-usde",
+        "label": "Ethena sUSDe"
+      },
+      "inputs": {
+        "primary": {
+          "kind": "onchain-evm",
+          "chain": "ethereum",
+          "rpcMode": "alchemy"
+        }
+      },
+      "params": {
+        "slice": {
+          "name": "USDe staking vault shares",
+          "risk": "medium",
+          "coinId": "usde-ethena",
+          "depType": "wrapper",
+          "expectedAssetAddress": "0x4c9edd5852cd905f086c759e8383e09bff1e68b3"
+        }
+      }
+    }
+  },
+  {
     "id": "usds-sky",
     "name": "Sky Dollar",
     "symbol": "USDS",
@@ -924,6 +1011,98 @@
     "yieldConfig": {
       "yieldSource": "Sky Savings Rate (sUSDS)",
       "yieldType": "governance-set"
+    }
+  },
+  {
+    "id": "susds-sky",
+    "name": "Sky Savings USDS",
+    "symbol": "sUSDS",
+    "flags": {
+      "backing": "crypto-backed",
+      "pegCurrency": "USD",
+      "governance": "centralized-dependent",
+      "yieldBearing": true,
+      "rwa": false,
+      "navToken": true
+    },
+    "pegReferenceId": "usds-sky",
+    "collateral": "USDS deposited into Sky's ERC-4626 savings vault; the wrapper remains fully backed by USDS while the exchange rate compounds with the Sky Savings Rate",
+    "pegMechanism": "Deposit USDS to mint sUSDS and withdraw USDS directly from the vault with no protocol fee; sUSDS and sDAI are both savings wrappers but are not exchangeable 1:1 because they have accrued different amounts of yield",
+    "detailProvider": "coingecko",
+    "geckoId": "susds",
+    "links": [
+      {
+        "label": "Website",
+        "url": "https://spark.fi/"
+      },
+      {
+        "label": "Twitter",
+        "url": "https://x.com/sparkdotfi"
+      },
+      {
+        "label": "Docs",
+        "url": "https://developers.sky.money/core-protocol/susds/"
+      },
+      {
+        "label": "Deployments",
+        "url": "https://developers.sky.money/quick-start/deployments-tracker/"
+      }
+    ],
+    "contracts": [
+      {
+        "chain": "ethereum",
+        "address": "0xa3931d71877c0e7a3148cb7eb4463524fec27fbd",
+        "decimals": 18
+      },
+      {
+        "chain": "base",
+        "address": "0x5875eee11cf8398102fdad704c9e96607675467a",
+        "decimals": 18
+      }
+    ],
+    "canBeBlacklisted": "possible",
+    "deploymentModel": "third-party-bridge",
+    "collateralQuality": "rwa",
+    "custodyModel": "institutional-top",
+    "governanceQuality": "wrapper",
+    "reserves": [
+      {
+        "name": "USDS savings vault shares",
+        "pct": 100,
+        "risk": "low",
+        "coinId": "usds-sky",
+        "depType": "wrapper"
+      }
+    ],
+    "yieldConfig": {
+      "yieldSource": "Sky Savings Rate (sUSDS)",
+      "yieldType": "nav-appreciation"
+    },
+    "liveReservesConfig": {
+      "adapter": "erc4626-single-asset",
+      "version": 1,
+      "semantics": "single-asset",
+      "breakerScope": "susds-sky",
+      "display": {
+        "url": "https://developers.sky.money/core-protocol/susds/",
+        "label": "Sky sUSDS"
+      },
+      "inputs": {
+        "primary": {
+          "kind": "onchain-evm",
+          "chain": "ethereum",
+          "rpcMode": "alchemy"
+        }
+      },
+      "params": {
+        "slice": {
+          "name": "USDS savings vault shares",
+          "risk": "low",
+          "coinId": "usds-sky",
+          "depType": "wrapper",
+          "expectedAssetAddress": "0xdc035d45d973e3ec169d2276ddab16f1e407384f"
+        }
+      }
     }
   },
   {
@@ -1297,6 +1476,88 @@
     "yieldConfig": {
       "yieldSource": "Dai Savings Rate (sDAI)",
       "yieldType": "governance-set"
+    }
+  },
+  {
+    "id": "sdai-sky",
+    "name": "Savings Dai",
+    "symbol": "sDAI",
+    "flags": {
+      "backing": "crypto-backed",
+      "pegCurrency": "USD",
+      "governance": "centralized-dependent",
+      "yieldBearing": true,
+      "rwa": false,
+      "navToken": true
+    },
+    "pegReferenceId": "dai-makerdao",
+    "collateral": "DAI deposited into the sDAI savings vault; the wrapper remains fully backed by DAI while the exchange rate compounds with the Dai Savings Rate",
+    "pegMechanism": "Deposit DAI to mint sDAI and redeem sDAI for the current convertToAssets amount of DAI; the share price rises as DSR accrues, and Spark's savings front-end documents withdrawals without slippage or platform fees",
+    "detailProvider": "coingecko",
+    "geckoId": "savings-dai",
+    "links": [
+      {
+        "label": "Website",
+        "url": "https://spark.fi/"
+      },
+      {
+        "label": "Twitter",
+        "url": "https://x.com/sparkdotfi"
+      },
+      {
+        "label": "Docs",
+        "url": "https://docs.spark.fi/"
+      }
+    ],
+    "contracts": [
+      {
+        "chain": "ethereum",
+        "address": "0x83f20f44975d03b1b09e64809b757c47f942beea",
+        "decimals": 18
+      }
+    ],
+    "deploymentModel": "single-chain",
+    "collateralQuality": "rwa",
+    "custodyModel": "institutional-top",
+    "governanceQuality": "wrapper",
+    "reserves": [
+      {
+        "name": "DAI savings vault shares",
+        "pct": 100,
+        "risk": "low",
+        "coinId": "dai-makerdao",
+        "depType": "wrapper"
+      }
+    ],
+    "yieldConfig": {
+      "yieldSource": "Dai Savings Rate (sDAI)",
+      "yieldType": "nav-appreciation"
+    },
+    "liveReservesConfig": {
+      "adapter": "erc4626-single-asset",
+      "version": 1,
+      "semantics": "single-asset",
+      "breakerScope": "sdai-sky",
+      "display": {
+        "url": "https://spark.fi/",
+        "label": "Spark sDAI"
+      },
+      "inputs": {
+        "primary": {
+          "kind": "onchain-evm",
+          "chain": "ethereum",
+          "rpcMode": "alchemy"
+        }
+      },
+      "params": {
+        "slice": {
+          "name": "DAI savings vault shares",
+          "risk": "low",
+          "coinId": "dai-makerdao",
+          "depType": "wrapper",
+          "expectedAssetAddress": "0x6b175474e89094c44da98b954eedeac495271d0f"
+        }
+      }
     }
   },
   {
@@ -3805,6 +4066,91 @@
     "yieldConfig": {
       "yieldSource": "Curve Savings (scrvUSD)",
       "yieldType": "governance-set"
+    }
+  },
+  {
+    "id": "scrvusd-curve",
+    "name": "Savings crvUSD",
+    "symbol": "scrvUSD",
+    "flags": {
+      "backing": "crypto-backed",
+      "pegCurrency": "USD",
+      "governance": "centralized-dependent",
+      "yieldBearing": true,
+      "rwa": false,
+      "navToken": true
+    },
+    "pegReferenceId": "crvusd-curve",
+    "collateral": "crvUSD deposited into Curve's savings vault; the wrapper remains fully backed by crvUSD while a share of borrower interest and protocol revenue compounds through the vault exchange rate",
+    "pegMechanism": "Deposit crvUSD to mint scrvUSD and redeem scrvUSD for the current convertToAssets amount of crvUSD; the share price rises as Curve redirects part of crvUSD borrowing revenue to scrvUSD depositors",
+    "detailProvider": "coingecko",
+    "geckoId": "savings-crvusd",
+    "links": [
+      {
+        "label": "Website",
+        "url": "https://www.curve.finance/"
+      },
+      {
+        "label": "Twitter",
+        "url": "https://x.com/CurveFinance"
+      },
+      {
+        "label": "Docs",
+        "url": "https://resources.curve.finance/"
+      },
+      {
+        "label": "Overview",
+        "url": "https://news.curve.finance/savings-crvusd-a-month-in-review/"
+      }
+    ],
+    "contracts": [
+      {
+        "chain": "ethereum",
+        "address": "0x0655977feb2f289a4ab78af67bab0d17aab84367",
+        "decimals": 18
+      }
+    ],
+    "deploymentModel": "single-chain",
+    "collateralQuality": "alt-lst-bridged-or-mixed",
+    "governanceQuality": "wrapper",
+    "reserves": [
+      {
+        "name": "crvUSD savings vault shares",
+        "pct": 100,
+        "risk": "medium",
+        "coinId": "crvusd-curve",
+        "depType": "wrapper"
+      }
+    ],
+    "yieldConfig": {
+      "yieldSource": "Curve savings (scrvUSD)",
+      "yieldType": "nav-appreciation"
+    },
+    "liveReservesConfig": {
+      "adapter": "erc4626-single-asset",
+      "version": 1,
+      "semantics": "single-asset",
+      "breakerScope": "scrvusd-curve",
+      "display": {
+        "url": "https://news.curve.finance/savings-crvusd-a-month-in-review/",
+        "label": "Curve scrvUSD"
+      },
+      "inputs": {
+        "primary": {
+          "kind": "onchain-evm",
+          "chain": "ethereum",
+          "rpcMode": "alchemy"
+        }
+      },
+      "params": {
+        "slice": {
+          "name": "crvUSD savings vault shares",
+          "risk": "medium",
+          "coinId": "crvusd-curve",
+          "depType": "wrapper",
+          "expectedAssetAddress": "0xf939e0a03fb07f59a73314e73794be0e57ac1b4e"
+        }
+      }
     }
   },
   {

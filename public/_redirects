@@ -236,6 +236,10 @@
 /stablecoin/183 /stablecoin/btcusd-btcfi/ 301
 /stablecoin/253/ /stablecoin/usbd-bima/ 301
 /stablecoin/253 /stablecoin/usbd-bima/ 301
+/stablecoin/30/ /stablecoin/doc-money-on-chain/ 301
+/stablecoin/30 /stablecoin/doc-money-on-chain/ 301
+/stablecoin/159/ /stablecoin/usdrif-rif/ 301
+/stablecoin/159 /stablecoin/usdrif-rif/ 301
 /stablecoin/331/ /stablecoin/usp-pikudao/ 301
 /stablecoin/331 /stablecoin/usp-pikudao/ 301
 /stablecoin/240/ /stablecoin/usdr-stablr/ 301
@@ -256,6 +260,8 @@
 /stablecoin/122 /stablecoin/gyen-gyen/ 301
 /stablecoin/165/ /stablecoin/audd-novatti/ 301
 /stablecoin/165 /stablecoin/audd-novatti/ 301
+/stablecoin/cg-forte-aud/ /stablecoin/audf-forte/ 301
+/stablecoin/cg-forte-aud /stablecoin/audf-forte/ 301
 /stablecoin/cg-jpyc/ /stablecoin/jpyc-jpyc/ 301
 /stablecoin/cg-jpyc /stablecoin/jpyc-jpyc/ 301
 /stablecoin/gold-xaut/ /stablecoin/xaut-tether/ 301

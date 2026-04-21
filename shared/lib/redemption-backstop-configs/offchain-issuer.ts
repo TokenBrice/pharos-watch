@@ -222,6 +222,25 @@ export const OFFCHAIN_ISSUER_BACKSTOP_CONFIGS: Record<string, RedemptionBackstop
       "Macropod legal materials describe AUD bank-account redemption for approved clients; manual processing can use best efforts for next-business-day ADI instruction when instant rails are unavailable",
     ],
   },
+  "audf-forte": {
+    ...issuerBase,
+    ...documentedBoundSupplyFull("2026-04-21"),
+    settlementModel: "days",
+    routeStatus: "open",
+    costModel: documentedVariableFee(
+      "Forte documents 1:1 AUDF issuance and redemption for eligible users, but the reviewed public materials do not publish a standalone numeric redemption fee schedule",
+    ),
+    docs: [
+      sourceRef("Forte home", "https://www.forteaud.com/", ["route"]),
+      sourceRef("Forte reserve reports", "https://www.forteaud.com/new-page", ["capacity"]),
+      sourceRef("Forte PDS", "https://www.forteaud.com/s/AUDF_PDS.pdf", ["route", "capacity", "fees"]),
+      sourceRef("Forte terms", "https://www.forteaud.com/s/ForteAUDTermsofUseJanuary2026.pdf", ["route", "access", "fees"]),
+    ],
+    notes: [
+      "Forte documents 1:1 minting and redemption into Australian dollars for approved account holders, with payouts directed to verified bank accounts rather than through an instant onchain rail",
+      "Reserve reports are published as static monthly PDFs, so Pharos treats AUDF as documented-bound eventual issuer redeemability rather than a live measured buffer",
+    ],
+  },
   "eurc-circle": {
     ...issuerBase,
     ...reviewedDirectRedemptionSupplyFull,

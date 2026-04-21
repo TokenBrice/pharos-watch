@@ -209,6 +209,16 @@
     "text": "Bima's USBD puts Bitcoin liquid staking derivatives into Liquity-style vaults at 150% minimum collateral ratio, with permissionless redemption for $1 of BTC-denominated collateral and a PSM offering near-1:1 stablecoin swaps -- a sound architecture undermined by the quality of what sits inside. The NR safety grade, zero DEX liquidity, no observable price feed, and DEWS Alert at 38 paint the picture of a protocol that has not yet achieved escape velocity at $7.5M in stagnant supply across seven chains. The collateral is classified as alt-LST/bridged/mixed and rated high risk -- meaning this is not plain BTC backing but a chain of wrappers and restaking derivatives where each layer adds trust assumptions the Liquity mechanics were designed to avoid. The 83-rated permissionless redemption backstop is structurally strong on paper, but with zero secondary market and flatlined supply, the practical exit for most holders remains an open question.",
     "updatedAt": "2026-04-13"
   },
+  "doc-money-on-chain": {
+    "title": "Bitcoin, Not Bank Deposits",
+    "text": "Dollar on Chain is one of the cleaner hard-money stablecoin designs in the tracked set: no bank reserve story, no fiat custodian, just rBTC locked inside Money On Chain and a protocol that lets holders move back into Bitcoin-sidechain collateral when they want out. That simplicity cuts both ways. DOC's reserve logic is easier to trust than most small fiat tokens, but its market depth, chain reach, and surrounding infrastructure are far thinner than mainstream dollar stablecoins. At roughly $5 million in circulation, DOC matters less as a payments network than as proof that Bitcoin-collateralized dollars are still alive outside Ethereum's orbit.",
+    "updatedAt": "2026-04-21"
+  },
+  "usdrif-rif": {
+    "title": "The RIF-Collateralized Dollar",
+    "text": "RIF US Dollar pushes the Rootstock stablecoin experiment further out on the risk curve than DOC: the peg is maintained with RIF collateral rather than Bitcoin collateral, which keeps everything onchain and transparent while making the reserve much weaker in quality. The protocol docs support minting and redemption, but the structure is still niche -- small, volatile-collateral-backed, and dependent on a market that has never reached real scale. That makes USDRIF worth tracking as a live Rootstock stablecoin, not as a high-confidence safe haven.",
+    "updatedAt": "2026-04-21"
+  },
   "isc-international-stable-currency": {
     "title": "The Anti-Dollar Experiment",
     "text": "ISC deliberately rejects the USD peg in favor of tracking purchasing power through a basket of gold, bonds, T-bills, equities, and cash — a flatcoin that appreciates over time rather than losing value to inflation, with NAV-based pricing and a 20% USDC dependency noted in its reserve structure. The institutional-unregulated custody and Solana-only deployment place ISC firmly in experimental territory, and the variable peg currency classification makes it harder to use as a medium of exchange than a conventional dollar token. As a concept, ISC is the most intellectually honest take on what 'stable' should mean — stable purchasing power rather than stable nominal value. At minimal market cap, ISC is about as niche as stablecoins get, proving that being philosophically right and being commercially viable are different things.",
@@ -984,9 +994,49 @@
     "text": "Macropod AUDM brings an Australian-dollar unit into the active Pharos set with DefiLlama supply, CoinGecko pricing, Ethereum and Solana contracts, and issuer documentation describing segregated AUD reserve accounts at Australian ADIs. The product is straightforward: approved Macropod clients can mint and redeem through the platform, with current reserves split mostly between Westpac and Banking Circle Australia. The main constraints are scale and disclosure cadence. Pharos can monitor the AUD peg immediately and validate live token supply, while a monthly-report adapter would be needed for stronger reserve automation.",
     "updatedAt": "2026-04-20"
   },
+  "audf-forte": {
+    "title": "Australia's New Regulated Long Tail",
+    "text": "Forte AUD is the straightforward version of an Australian stablecoin: issuer-run, AFSL-regulated, publicly documented, and redeemable back into bank-account AUD for eligible users. The reserve story is respectable for a long-tail fiat token because Forte publishes recurring reserve reports and legal terms instead of treating backing as a black box, but the public evidence is still PDF-based rather than a continuously queryable feed. At roughly $3.6 million in market cap, AUDF is not systemically important. It is interesting because the legal and reserve posture is cleaner than many niche fiat coins even while the liquidity footprint remains small.",
+    "updatedAt": "2026-04-21"
+  },
   "busd0-usual": {
     "title": "Fixed-Maturity USD0 Bond",
     "text": "bUSD0 is Usual's fixed-notional USD0 bond, formerly USD0++, with a June 11, 2028 maturity. It is backed by locked USD0 but does not behave like a spot stablecoin before maturity: par exit requires both bUSD0 and the separate rt-bUSD0 early-exit right, while secondary-market bUSD0 can trade below one dollar. Yield is paid through USUAL coupons rather than dollar NAV growth, so the risk is a mix of USD0 reserve quality, Usual DAO parameter risk, and liquidity/discount risk before maturity.",
+    "updatedAt": "2026-04-21"
+  },
+  "susde-ethena": {
+    "title": "Ethena's Savings Sleeve",
+    "text": "sUSDe is the yield-bearing wrapper over USDe. It keeps the same core reserve and custody stack as USDe, but packages protocol income into a rising exchange rate instead of leaving the holder in the base token. The important difference is exit shape: unstaking burns sUSDe immediately, but withdrawing USDe still runs through Ethena's cooldown flow and staking-contract restrictions, so this should not be treated like instant cash.",
+    "updatedAt": "2026-04-21"
+  },
+  "susds-sky": {
+    "title": "The Plain Sky Savings Token",
+    "text": "sUSDS is the straightforward savings wrapper in the Sky stack. Unlike stUSDS, it does not push holders into a risk-capital module or SKY-backed borrower exposure; it is the direct ERC-4626 savings receipt over USDS. That makes it the clean yield-bearing expression of Sky's base dollar, with wrapper risk mostly limited to the vault contract and the underlying USDS reserve mix.",
+    "updatedAt": "2026-04-21"
+  },
+  "sdai-sky": {
+    "title": "The Classic DSR Wrapper",
+    "text": "sDAI is the original Dai savings receipt: deposit DAI, receive a token whose redeemable DAI balance grows with the Dai Savings Rate. It adds very little conceptual complexity beyond the base asset, but it still belongs on its own row because holders are choosing a NAV-appreciating wrapper with its own liquidity, integrations, and wrapper-contract risk rather than plain DAI.",
+    "updatedAt": "2026-04-21"
+  },
+  "sfrxusd-frax": {
+    "title": "Frax's Yield Sleeve",
+    "text": "sfrxUSD is the savings wrapper over frxUSD. Holders are effectively taking the Frax USD reserve stack and opting into a rising exchange rate instead of the flat base token, so the key risk is not a new reserve book but the same Frax custodian and wrapper assumptions concentrated into a yield-bearing vault share.",
+    "updatedAt": "2026-04-21"
+  },
+  "scrvusd-curve": {
+    "title": "Borrower Interest Receipt",
+    "text": "scrvUSD is the savings share for Curve's crvUSD system. It is backed by deposited crvUSD, but its value grows as Curve routes part of crvUSD borrowing income and protocol revenue into the vault. The result is a cleaner hold-for-yield version of crvUSD, while still inheriting the base stablecoin's BTC/ETH collateral profile and peg-defense design.",
+    "updatedAt": "2026-04-21"
+  },
+  "cusdo-openeden": {
+    "title": "Non-Rebasing OpenDollar",
+    "text": "cUSDO is OpenEden's non-rebasing wrapper for USDO. It keeps the same Treasury-backed reserve and issuer redemption framework as the base token, but converts daily yield distribution into price appreciation so it can plug into protocols that do not handle rebasing balances well. Economically it is still an OpenDollar claim, just in a different wrapper format.",
+    "updatedAt": "2026-04-21"
+  },
+  "syusd-aegis": {
+    "title": "Aegis Cooldown Wrapper",
+    "text": "sYUSD is the staked version of Aegis YUSD. It inherits YUSD's BTC spot plus short-perp hedge design and off-exchange custody assumptions, then adds a vault wrapper and a seven-day unstaking cooldown on top. That makes it meaningfully different from base YUSD even though both ultimately depend on the same delta-neutral funding-rate machine.",
     "updatedAt": "2026-04-21"
   },
   "stusds-sky": {

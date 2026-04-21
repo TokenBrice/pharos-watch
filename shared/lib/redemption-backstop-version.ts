@@ -1,9 +1,24 @@
 import { createMethodologyVersion, toMethodologyVersionLabel } from "./methodology-version";
 
 const redemptionBackstop = createMethodologyVersion({
-  currentVersion: "3.99",
+  currentVersion: "3.991",
   changelogPath: "/methodology/#safety-scores-methodology",
   changelog: [
+    {
+      version: "3.991",
+      title: "AUDF and DOC route coverage",
+      date: "2026-04-21",
+      effectiveAt: 1776729600,
+      summary:
+        "Forte AUD and Dollar on Chain now publish reviewed redemption routes, extending modeled coverage to one additional offchain issuer rail and one additional BTC-collateral redemption rail.",
+      impact: [
+        "AUDF now carries a documented-bound offchain-issuer redemption route sourced from Forte's PDS, legal terms, and reserve-report page",
+        "DOC now carries a permissionless collateral-redeem route into RBTC sourced from Money On Chain protocol docs",
+        "Coverage rises to 179 configured redemption routes, with route-family totals now at 93 offchain-issuer and 23 collateral-redeem",
+      ],
+      commits: [],
+      reconstructed: false,
+    },
     {
       version: "3.99",
       title: "Flat/RWA issuer coverage expansion",

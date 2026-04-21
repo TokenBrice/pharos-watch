@@ -1,6 +1,6 @@
 # Pharos
 
-> Pharos tracks 194 active stablecoins across major chains with depeg alerts, liquidity scores, on-chain safety signals, dependency-risk scoring, and report-card-style risk summaries. Data refreshes multiple times per day from the Pharos Cloudflare Worker API.
+> Pharos tracks 204 active stablecoins across major chains with depeg alerts, liquidity scores, on-chain safety signals, dependency-risk scoring, and report-card-style risk summaries. Data refreshes multiple times per day from the Pharos Cloudflare Worker API.
 
 ## Core Data
 
@@ -101,10 +101,13 @@ Docs support `Accept: text/markdown` content negotiation for agent consumption.
 - [Tether (USDT)](https://pharos.watch/stablecoin/usdt-tether/): centralized stablecoin backed by real-world assets pegged to US Dollar.
 - [USD Coin (USDC)](https://pharos.watch/stablecoin/usdc-circle/): centralized stablecoin backed by real-world assets pegged to US Dollar.
 - [Ethena USDe (USDe)](https://pharos.watch/stablecoin/usde-ethena/): CeFi-dependent stablecoin collateralized by crypto assets pegged to US Dollar.
+- [Ethena Staked USDe (sUSDe)](https://pharos.watch/stablecoin/susde-ethena/): CeFi-dependent stablecoin collateralized by crypto assets pegged to US Dollar.
 - [Sky Dollar (USDS)](https://pharos.watch/stablecoin/usds-sky/): CeFi-dependent stablecoin collateralized by crypto assets pegged to US Dollar.
+- [Sky Savings USDS (sUSDS)](https://pharos.watch/stablecoin/susds-sky/): CeFi-dependent stablecoin collateralized by crypto assets pegged to US Dollar.
 - [Staked USDS (stUSDS)](https://pharos.watch/stablecoin/stusds-sky/): CeFi-dependent stablecoin collateralized by crypto assets pegged to US Dollar.
 - [World Liberty Financial USD (USD1)](https://pharos.watch/stablecoin/usd1-world-liberty-financial/): centralized stablecoin backed by real-world assets pegged to US Dollar.
 - [Dai (DAI)](https://pharos.watch/stablecoin/dai-makerdao/): CeFi-dependent stablecoin collateralized by crypto assets pegged to US Dollar.
+- [Savings Dai (sDAI)](https://pharos.watch/stablecoin/sdai-sky/): CeFi-dependent stablecoin collateralized by crypto assets pegged to US Dollar.
 - [PayPal USD (PYUSD)](https://pharos.watch/stablecoin/pyusd-paypal/): centralized stablecoin backed by real-world assets pegged to US Dollar.
 - [Falcon USD (USDf)](https://pharos.watch/stablecoin/usdf-falcon/): CeFi-dependent stablecoin collateralized by crypto assets pegged to US Dollar.
 - [Hashnote USYC (USYC)](https://pharos.watch/stablecoin/usyc-hashnote/): centralized stablecoin backed by real-world assets pegged to US Dollar.
@@ -131,6 +134,7 @@ Docs support `Accept: text/markdown` content negotiation for agent consumption.
 - [Resolv USD (USR)](https://pharos.watch/stablecoin/usr-resolv/): CeFi-dependent stablecoin collateralized by crypto assets pegged to US Dollar.
 - [YLDS (YLDS)](https://pharos.watch/stablecoin/ylds-figure/): centralized stablecoin backed by real-world assets pegged to US Dollar.
 - [crvUSD (crvUSD)](https://pharos.watch/stablecoin/crvusd-curve/): CeFi-dependent stablecoin collateralized by crypto assets pegged to US Dollar.
+- [Savings crvUSD (scrvUSD)](https://pharos.watch/stablecoin/scrvusd-curve/): CeFi-dependent stablecoin collateralized by crypto assets pegged to US Dollar.
 - [Solstice USX (USX)](https://pharos.watch/stablecoin/usx-solstice/): CeFi-dependent stablecoin collateralized by crypto assets pegged to US Dollar.
 - [Avalon USDa (USDA)](https://pharos.watch/stablecoin/usda-avalon/): CeFi-dependent stablecoin collateralized by crypto assets pegged to US Dollar.
 - [Frax (FRAX)](https://pharos.watch/stablecoin/frax-frax/): CeFi-dependent stablecoin backed by real-world assets pegged to US Dollar.
@@ -143,6 +147,7 @@ Docs support `Accept: text/markdown` content negotiation for agent consumption.
 - [Brazilian Digital (BRZ)](https://pharos.watch/stablecoin/brz-transfero/): centralized stablecoin backed by real-world assets pegged to Brazilian Real.
 - [Gate USD (GUSD)](https://pharos.watch/stablecoin/gusd-gate/): centralized stablecoin backed by real-world assets pegged to US Dollar.
 - [Frax USD (FRXUSD)](https://pharos.watch/stablecoin/frxusd-frax/): CeFi-dependent stablecoin backed by real-world assets pegged to US Dollar.
+- [Staked Frax USD (sfrxUSD)](https://pharos.watch/stablecoin/sfrxusd-frax/): CeFi-dependent stablecoin backed by real-world assets pegged to US Dollar.
 - [rwaUSDi (rwaUSDi)](https://pharos.watch/stablecoin/rwausdi-multipli/): CeFi-dependent stablecoin collateralized by crypto assets pegged to US Dollar.
 - [Avant USD (avUSD)](https://pharos.watch/stablecoin/avusd-avant/): centralized stablecoin backed by real-world assets pegged to US Dollar.
 - [Pleasing USD (PUSD)](https://pharos.watch/stablecoin/pusd-pleasing/): CeFi-dependent stablecoin backed by real-world assets pegged to US Dollar.
@@ -159,6 +164,7 @@ Docs support `Accept: text/markdown` content negotiation for agent consumption.
 - [Lista USD (LISUSD)](https://pharos.watch/stablecoin/lisusd-lista/): CeFi-dependent stablecoin collateralized by crypto assets pegged to US Dollar.
 - [Ondo U.S. Dollar Token (USDon)](https://pharos.watch/stablecoin/usdon-ondo/): centralized stablecoin backed by real-world assets pegged to US Dollar.
 - [OpenDollar USDO (USDO)](https://pharos.watch/stablecoin/usdo-openeden/): centralized stablecoin backed by real-world assets pegged to US Dollar.
+- [Compounding OpenDollar (cUSDO)](https://pharos.watch/stablecoin/cusdo-openeden/): centralized stablecoin backed by real-world assets pegged to US Dollar.
 - [Cygnus Finance Global USD (cgUSD)](https://pharos.watch/stablecoin/cgusd-cygnus-finance/): centralized stablecoin backed by real-world assets pegged to US Dollar.
 - [EUR CoinVertible (EURCV)](https://pharos.watch/stablecoin/eurcv-societe-generale-forge/): centralized stablecoin backed by real-world assets pegged to Euro.
 - [Anchored Coins AEUR (AEUR)](https://pharos.watch/stablecoin/aeur-anchored-coins/): centralized stablecoin backed by real-world assets pegged to Euro.
@@ -174,6 +180,7 @@ Docs support `Accept: text/markdown` content negotiation for agent consumption.
 - [StraitsX XUSD (XUSD)](https://pharos.watch/stablecoin/xusd-straitsx/): centralized stablecoin backed by real-world assets pegged to US Dollar.
 - [Metamask USD (MUSD)](https://pharos.watch/stablecoin/musd-metamask/): centralized stablecoin backed by real-world assets pegged to US Dollar.
 - [Aegis YUSD (YUSD)](https://pharos.watch/stablecoin/yusd-aegis/): centralized stablecoin collateralized by crypto assets pegged to US Dollar.
+- [Aegis Staked YUSD (sYUSD)](https://pharos.watch/stablecoin/syusd-aegis/): centralized stablecoin collateralized by crypto assets pegged to US Dollar.
 - [sUSD (SUSD)](https://pharos.watch/stablecoin/susd-synthetix/): CeFi-dependent stablecoin collateralized by crypto assets pegged to US Dollar.
 - [Liquity BOLD (BOLD)](https://pharos.watch/stablecoin/bold-liquity/): decentralized stablecoin collateralized by crypto assets pegged to US Dollar.
 - [sBOLD by K3 Capital (sBOLD)](https://pharos.watch/stablecoin/sbold-k3-capital/): CeFi-dependent stablecoin collateralized by crypto assets pegged to US Dollar.
@@ -232,6 +239,8 @@ Docs support `Accept: text/markdown` content negotiation for agent consumption.
 - [Origin Dollar (OUSD)](https://pharos.watch/stablecoin/ousd-origin-protocol/): CeFi-dependent stablecoin collateralized by crypto assets pegged to US Dollar.
 - [Bitcoin USD (BtcUSD)](https://pharos.watch/stablecoin/btcusd-btcfi/): CeFi-dependent stablecoin collateralized by crypto assets pegged to US Dollar.
 - [Bima USBD (USBD)](https://pharos.watch/stablecoin/usbd-bima/): CeFi-dependent stablecoin collateralized by crypto assets pegged to US Dollar.
+- [Dollar on Chain (DOC)](https://pharos.watch/stablecoin/doc-money-on-chain/): decentralized stablecoin collateralized by crypto assets pegged to US Dollar.
+- [RIF US Dollar (USDRIF)](https://pharos.watch/stablecoin/usdrif-rif/): decentralized stablecoin collateralized by crypto assets pegged to US Dollar.
 - [PikuDAO USP (USP)](https://pharos.watch/stablecoin/usp-pikudao/): CeFi-dependent stablecoin collateralized by crypto assets pegged to US Dollar.
 - [StablR USD (USDR)](https://pharos.watch/stablecoin/usdr-stablr/): centralized stablecoin backed by real-world assets pegged to US Dollar.
 - [USDU Finance (USDU)](https://pharos.watch/stablecoin/usdu-usdu-finance/): CeFi-dependent stablecoin collateralized by crypto assets pegged to US Dollar.
@@ -250,6 +259,7 @@ Docs support `Accept: text/markdown` content negotiation for agent consumption.
 - [AxCNH (AxCNH)](https://pharos.watch/stablecoin/axcnh-anchorx/): centralized stablecoin backed by real-world assets pegged to Offshore Yuan.
 - [Rupiah Token (IDRT)](https://pharos.watch/stablecoin/idrt-rupiah-token/): centralized stablecoin backed by real-world assets pegged to Indonesian Rupiah.
 - [Macropod (AUDM)](https://pharos.watch/stablecoin/audm-macropod/): centralized stablecoin backed by real-world assets pegged to Australian Dollar.
+- [Forte AUD (AUDF)](https://pharos.watch/stablecoin/audf-forte/): centralized stablecoin backed by real-world assets pegged to Australian Dollar.
 - [BiLira (TRYB)](https://pharos.watch/stablecoin/tryb-bilira/): centralized stablecoin backed by real-world assets pegged to Turkish Lira.
 - [Tether Gold (XAUT)](https://pharos.watch/stablecoin/xaut-tether/): centralized stablecoin backed by real-world assets pegged to Gold.
 - [PAX Gold (PAXG)](https://pharos.watch/stablecoin/paxg-paxos/): centralized stablecoin backed by real-world assets pegged to Gold.

@@ -184,6 +184,22 @@ export const COLLATERAL_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackst
       "Omni-CDP with $1-of-collateral redemption arbitrage; public fee schedule not disclosed",
     ),
   },
+  "doc-money-on-chain": {
+    ...collateralRedeemBase,
+    ...documentedBoundSupplyFull("2026-04-21"),
+    costModel: documentedVariableFee(
+      "Money On Chain docs describe permissionless DOC redemption into RBTC, but the reviewed public materials do not publish a single fixed numeric redemption fee schedule",
+    ),
+    docs: [
+      sourceRef("DOC overview", "https://moneyonchain.com/doc-stablecoin/", ["route"]),
+      sourceRef("Money On Chain main concepts", "https://docs.moneyonchain.com/main-rbtc-contract/money-on-chain-platform/main-concepts", ["route", "capacity"]),
+      sourceRef("Redeeming DOCs", "https://docs.moneyonchain.com/main-rbtc-contract/integration-with-moc-platform/getting-docs/redeeming-docs", ["route", "fees"]),
+    ],
+    notes: [
+      "Money On Chain documents a permissionless DOC -> RBTC redemption path for the BTC-backed system, so Pharos models the direct collateral exit rather than relying only on secondary-market liquidity",
+      "The current route remains documented-bound until a dedicated Rootstock reserve adapter exposes fresh current protocol capacity and fee telemetry",
+    ],
+  },
   "usbd-bima": {
     ...collateralRedeemBase,
     ...reviewedDirectRedemptionSupplyFull,
