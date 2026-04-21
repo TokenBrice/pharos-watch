@@ -3677,6 +3677,180 @@
     }
   },
   {
+    "id": "stkgho-umbrella-aave",
+    "name": "Aave Umbrella stkGHO",
+    "symbol": "stkGHO.v1",
+    "flags": {
+      "backing": "crypto-backed",
+      "pegCurrency": "USD",
+      "governance": "centralized-dependent",
+      "yieldBearing": true,
+      "rwa": false,
+      "navToken": true
+    },
+    "pegReferenceId": "gho-aave",
+    "collateral": "GHO staked into Aave Umbrella as a slashable safety-module asset covering GHO deficits; holders earn Umbrella rewards while accepting cooldown and automated slashing risk",
+    "pegMechanism": "ERC-4626-style staking receipt over GHO with 1:1 convertToAssets under normal conditions; unstaking requires Aave Umbrella cooldown and withdrawal-window mechanics, and deficit events can reduce redeemable value through slashing",
+    "detailProvider": "coingecko",
+    "links": [
+      {
+        "label": "Website",
+        "url": "https://aave.com/"
+      },
+      {
+        "label": "Twitter",
+        "url": "https://x.com/aave"
+      },
+      {
+        "label": "Docs",
+        "url": "https://aave.com/help/umbrella/umbrella"
+      },
+      {
+        "label": "GitHub",
+        "url": "https://github.com/aave-dao/aave-address-book"
+      }
+    ],
+    "contracts": [
+      {
+        "chain": "ethereum",
+        "address": "0x4f827a63755855cdf3e8f3bcd20265c833f15033",
+        "decimals": 18
+      }
+    ],
+    "deploymentModel": "single-chain",
+    "collateralQuality": "exotic",
+    "custodyModel": "onchain",
+    "governanceQuality": "wrapper",
+    "reserves": [
+      {
+        "name": "GHO staked in Aave Umbrella safety module",
+        "pct": 100,
+        "risk": "high",
+        "coinId": "gho-aave",
+        "depType": "wrapper"
+      }
+    ],
+    "yieldConfig": {
+      "yieldSource": "Aave Umbrella stkGHO rewards",
+      "yieldType": "governance-set"
+    },
+    "liveReservesConfig": {
+      "adapter": "erc4626-single-asset",
+      "version": 1,
+      "semantics": "single-asset",
+      "breakerScope": "stkgho-umbrella-aave",
+      "display": {
+        "url": "https://aave.com/help/umbrella/umbrella",
+        "label": "Aave Umbrella"
+      },
+      "inputs": {
+        "primary": {
+          "kind": "onchain-evm",
+          "chain": "ethereum",
+          "rpcMode": "alchemy"
+        }
+      },
+      "params": {
+        "slice": {
+          "name": "GHO staked in Aave Umbrella safety module",
+          "risk": "high",
+          "coinId": "gho-aave",
+          "depType": "wrapper",
+          "expectedAssetAddress": "0x40d16fc0246ad3160ccc09b8d0d3a2cd28ae6c2f"
+        }
+      }
+    }
+  },
+  {
+    "id": "sbold-k3-capital",
+    "name": "sBOLD by K3 Capital",
+    "symbol": "sBOLD",
+    "flags": {
+      "backing": "crypto-backed",
+      "pegCurrency": "USD",
+      "governance": "centralized-dependent",
+      "yieldBearing": true,
+      "rwa": false,
+      "navToken": true
+    },
+    "pegReferenceId": "bold-liquity",
+    "collateral": "BOLD deposited into K3's ERC-4626 sBOLD vault and allocated across Liquity V2 Stability Pools to earn interest and liquidation gains",
+    "pegMechanism": "Vault shares appreciate against BOLD as Stability Pool interest and liquidation gains are compounded; liquidation collateral is converted back to BOLD by mutable solver/swap infrastructure, so final value inherits BOLD peg and K3 execution risk",
+    "detailProvider": "coingecko",
+    "geckoId": "sbold-by-k3-capital",
+    "links": [
+      {
+        "label": "Website",
+        "url": "https://www.k3.capital/"
+      },
+      {
+        "label": "Twitter",
+        "url": "https://x.com/k3_capital"
+      },
+      {
+        "label": "Docs",
+        "url": "https://k3-capital.gitbook.io/sbold"
+      },
+      {
+        "label": "GitHub",
+        "url": "https://github.com/K3Capital"
+      }
+    ],
+    "contracts": [
+      {
+        "chain": "ethereum",
+        "address": "0x50bd66d59911f5e086ec87ae43c811e0d059dd11",
+        "decimals": 18
+      }
+    ],
+    "deploymentModel": "single-chain",
+    "collateralQuality": "alt-lst-bridged-or-mixed",
+    "custodyModel": "onchain",
+    "governanceQuality": "wrapper",
+    "infrastructures": [
+      "liquity-v2"
+    ],
+    "reserves": [
+      {
+        "name": "BOLD deployed into Liquity V2 Stability Pools",
+        "pct": 100,
+        "risk": "medium",
+        "coinId": "bold-liquity",
+        "depType": "wrapper"
+      }
+    ],
+    "yieldConfig": {
+      "yieldSource": "K3 sBOLD Stability Pool vault",
+      "yieldType": "lending-vault"
+    },
+    "liveReservesConfig": {
+      "adapter": "erc4626-single-asset",
+      "version": 1,
+      "semantics": "single-asset",
+      "breakerScope": "sbold-k3-capital",
+      "display": {
+        "url": "https://www.liquity.org/blog/sbold---the-on-chain-defi-savings-account",
+        "label": "sBOLD"
+      },
+      "inputs": {
+        "primary": {
+          "kind": "onchain-evm",
+          "chain": "ethereum",
+          "rpcMode": "alchemy"
+        }
+      },
+      "params": {
+        "slice": {
+          "name": "BOLD deployed into Liquity V2 Stability Pools",
+          "risk": "medium",
+          "coinId": "bold-liquity",
+          "depType": "wrapper",
+          "expectedAssetAddress": "0x6440f144b7e50d6a8439336510312d2f54beb01d"
+        }
+      }
+    }
+  },
+  {
     "id": "hyusd-hylo",
     "name": "Hylo HYUSD",
     "symbol": "HYUSD",
@@ -6895,12 +7069,12 @@
       "backing": "crypto-backed",
       "pegCurrency": "USD",
       "governance": "centralized-dependent",
-      "yieldBearing": true,
+      "yieldBearing": false,
       "rwa": false,
       "navToken": false
     },
-    "collateral": "USDC held 1:1 as reserve; yield generated by deploying USDC into delta-neutral options volatility arbitrage strategies (options box spreads) on centralized exchanges via msY staking",
-    "pegMechanism": "Direct 1:1 redemption for USDC; peg maintained by full USDC reserve backing; yield accrues to stakers (msY) not to msUSD holders",
+    "collateral": "USDC plus a delta-neutral options and derivatives strategy reserve; yield accrues to the separate msY staking token rather than to unstaked msUSD holders",
+    "pegMechanism": "KYC-verified users mint and redeem against USDC through Main Street contracts, while secondary-market liquidity supports non-primary exits; staking msUSD into msY is a separate NAV-appreciating yield path",
     "llamaId": "297",
     "detailProvider": "defillama",
     "geckoId": "main-street-usd",
@@ -6930,17 +7104,12 @@
     "custodyModel": "cex",
     "reserves": [
       {
-        "name": "USDC (1:1 backing)",
+        "name": "USDC and delta-neutral options strategy reserve",
         "pct": 100,
-        "risk": "low",
-        "coinId": "usdc-circle",
-        "depType": "wrapper"
+        "risk": "high",
+        "coinId": "usdc-circle"
       }
     ],
-    "yieldConfig": {
-      "yieldSource": "Main Street savings (msY)",
-      "yieldType": "lending-vault"
-    },
     "liveReservesConfig": {
       "adapter": "single-asset",
       "version": 1,
@@ -6958,10 +7127,95 @@
         }
       },
       "params": {
-        "label": "USDC",
-        "risk": "low",
-        "coinId": "usdc-circle",
+        "label": "USDC and delta-neutral strategy reserve",
+        "risk": "high"
+      }
+    }
+  },
+  {
+    "id": "msy-main-street",
+    "name": "Main Street Yield",
+    "symbol": "msY",
+    "flags": {
+      "backing": "crypto-backed",
+      "pegCurrency": "USD",
+      "governance": "centralized-dependent",
+      "yieldBearing": true,
+      "rwa": false,
+      "navToken": true
+    },
+    "pegReferenceId": "msusd-main-street",
+    "collateral": "msUSD strategy vault shares backed by Main Street's delta-neutral options and derivatives strategy reserve; exchange-rate gains accrue to msY holders",
+    "pegMechanism": "ERC-4626-style staking token over msUSD; users stake msUSD for msY, whose exchange rate appreciates with strategy returns, while final USDC redemption inherits Main Street's primary-market caps and cooldowns",
+    "detailProvider": "coingecko",
+    "geckoId": "main-street-yield",
+    "links": [
+      {
+        "label": "Website",
+        "url": "https://mainstreet.finance/"
+      },
+      {
+        "label": "Twitter",
+        "url": "https://x.com/Main_St_Finance"
+      },
+      {
+        "label": "Docs",
+        "url": "https://mainstreet-finance.gitbook.io/mainstreet.finance/"
+      },
+      {
+        "label": "GitHub",
+        "url": "https://github.com/Mainstreet-Labs"
+      }
+    ],
+    "contracts": [
+      {
+        "chain": "ethereum",
+        "address": "0x890a5122aa1da30fec4286de7904ff808f0bd74a",
+        "decimals": 18
+      }
+    ],
+    "deploymentModel": "single-chain",
+    "collateralQuality": "exotic",
+    "custodyModel": "cex",
+    "governanceQuality": "wrapper",
+    "reserves": [
+      {
+        "name": "msUSD options strategy vault shares",
+        "pct": 100,
+        "risk": "high",
+        "coinId": "msusd-main-street",
         "depType": "wrapper"
+      }
+    ],
+    "yieldConfig": {
+      "defiLlamaPoolId": "8a28570f-2316-488a-94a7-67c87e76c1f1",
+      "yieldSource": "Main Street savings (msY)",
+      "yieldType": "nav-appreciation"
+    },
+    "liveReservesConfig": {
+      "adapter": "erc4626-single-asset",
+      "version": 1,
+      "semantics": "single-asset",
+      "breakerScope": "msy-main-street",
+      "display": {
+        "url": "https://mainstreet-finance.gitbook.io/mainstreet.finance/technical/key-addresses",
+        "label": "Main Street msY"
+      },
+      "inputs": {
+        "primary": {
+          "kind": "onchain-evm",
+          "chain": "ethereum",
+          "rpcMode": "alchemy"
+        }
+      },
+      "params": {
+        "slice": {
+          "name": "msUSD options strategy vault shares",
+          "risk": "high",
+          "coinId": "msusd-main-street",
+          "depType": "wrapper",
+          "expectedAssetAddress": "0x4ba01f22827018b4772cd326c7627fb4956a7c00"
+        }
       }
     }
   },
@@ -9292,6 +9546,115 @@
     }
   },
   {
+    "id": "yusd-yieldfi",
+    "name": "YieldFi yUSD",
+    "symbol": "YUSD",
+    "flags": {
+      "backing": "crypto-backed",
+      "pegCurrency": "USD",
+      "governance": "centralized-dependent",
+      "yieldBearing": true,
+      "rwa": false,
+      "navToken": true
+    },
+    "pegReferenceId": "usdc-circle",
+    "collateral": "USDC deposited into YieldFi yUSD and actively allocated across Pendle principal tokens, Morpho and Silo vaults, and private-credit vaults",
+    "pegMechanism": "ERC-4626 vault token over USDC; the vault targets stable returns while preserving dollar value, with yield vesting and active allocator limits across supported strategies",
+    "detailProvider": "coingecko",
+    "geckoId": "yieldfi-ytoken",
+    "links": [
+      {
+        "label": "Website",
+        "url": "https://yield.fi/"
+      },
+      {
+        "label": "Docs",
+        "url": "https://docs.yield.fi/technical-docs/ytokens/yusd"
+      }
+    ],
+    "contracts": [
+      {
+        "chain": "ethereum",
+        "address": "0x19ebd191f7a24ece672ba13a302212b5ef7f35cb",
+        "decimals": 18
+      },
+      {
+        "chain": "arbitrum",
+        "address": "0x4772d2e014f9fc3a820c444e3313968e9a5c8121",
+        "decimals": 18
+      },
+      {
+        "chain": "base",
+        "address": "0x4772d2e014f9fc3a820c444e3313968e9a5c8121",
+        "decimals": 18
+      },
+      {
+        "chain": "optimism",
+        "address": "0x4772d2e014f9fc3a820c444e3313968e9a5c8121",
+        "decimals": 18
+      },
+      {
+        "chain": "sonic",
+        "address": "0x4772d2e014f9fc3a820c444e3313968e9a5c8121",
+        "decimals": 18
+      },
+      {
+        "chain": "plume",
+        "address": "0x4772d2e014f9fc3a820c444e3313968e9a5c8121",
+        "decimals": 18
+      },
+      {
+        "chain": "katana",
+        "address": "0x4772d2e014f9fc3a820c444e3313968e9a5c8121",
+        "decimals": 18
+      }
+    ],
+    "canBeBlacklisted": "possible",
+    "deploymentModel": "third-party-bridge",
+    "collateralQuality": "exotic",
+    "custodyModel": "onchain",
+    "governanceQuality": "multisig",
+    "reserves": [
+      {
+        "name": "USDC active strategy vaults and private-credit positions",
+        "pct": 100,
+        "risk": "high",
+        "coinId": "usdc-circle",
+        "depType": "wrapper"
+      }
+    ],
+    "yieldConfig": {
+      "yieldSource": "YieldFi yUSD strategies",
+      "yieldType": "nav-appreciation"
+    },
+    "liveReservesConfig": {
+      "adapter": "erc4626-single-asset",
+      "version": 1,
+      "semantics": "single-asset",
+      "breakerScope": "yusd-yieldfi",
+      "display": {
+        "url": "https://docs.yield.fi/technical-docs/ytokens/yusd",
+        "label": "YieldFi yUSD"
+      },
+      "inputs": {
+        "primary": {
+          "kind": "onchain-evm",
+          "chain": "ethereum",
+          "rpcMode": "alchemy"
+        }
+      },
+      "params": {
+        "slice": {
+          "name": "USDC active strategy vaults and private-credit positions",
+          "risk": "high",
+          "coinId": "usdc-circle",
+          "depType": "wrapper",
+          "expectedAssetAddress": "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48"
+        }
+      }
+    }
+  },
+  {
     "id": "aid-gaib",
     "name": "GAIB AID",
     "symbol": "AID",
@@ -9299,12 +9662,12 @@
       "backing": "rwa-backed",
       "pegCurrency": "USD",
       "governance": "centralized",
-      "yieldBearing": true,
+      "yieldBearing": false,
       "rwa": true,
       "navToken": false
     },
-    "collateral": "U.S. Treasury bills and accepted stablecoins (USDC, USDT); the companion sAID token accrues yield from GPU/AI infrastructure financing agreements",
-    "pegMechanism": "1:1 mint and burn against accepted stablecoins; AID itself is non-yield-bearing",
+    "collateral": "U.S. Treasury bills and accepted stablecoins (USDC, USDT, and other approved stable assets); staking into sAID is the separate route into GAIB's AI infrastructure financing portfolio",
+    "pegMechanism": "1:1 mint and burn against accepted stablecoins through GAIB AID contracts; whitelisted partners can mint or redeem directly while other users trade through the app or DEX liquidity",
     "llamaId": "353",
     "detailProvider": "defillama",
     "geckoId": "gaib-aid",
@@ -9345,15 +9708,11 @@
     "collateralQuality": "rwa",
     "custodyModel": "institutional-regulated",
     "governanceQuality": "single-entity",
-    "yieldConfig": {
-      "yieldSource": "GAIB savings (sAID)",
-      "yieldType": "lending-vault"
-    },
     "reserves": [
       {
-        "name": "GPU compute leases & accepted stablecoin deposits",
+        "name": "U.S. Treasuries and accepted stablecoin reserves",
         "pct": 100,
-        "risk": "medium"
+        "risk": "low"
       }
     ],
     "liveReservesConfig": {
@@ -9373,8 +9732,92 @@
         }
       },
       "params": {
-        "label": "GPU compute-backed USD reserves",
-        "risk": "medium"
+        "label": "U.S. Treasury and accepted stablecoin reserves",
+        "risk": "low"
+      }
+    }
+  },
+  {
+    "id": "said-gaib",
+    "name": "GAIB sAID",
+    "symbol": "sAID",
+    "flags": {
+      "backing": "rwa-backed",
+      "pegCurrency": "USD",
+      "governance": "centralized",
+      "yieldBearing": true,
+      "rwa": true,
+      "navToken": true
+    },
+    "pegReferenceId": "aid-gaib",
+    "collateral": "AID staked into GAIB's ERC-4626 sAID vault, representing a NAV share of AI infrastructure financing positions plus stable reserve buffers",
+    "pegMechanism": "sAID is not pegged to $1; it is minted by staking AID at deposit NAV and redeemed through a 30-day FIFO withdrawal cycle at unstaking NAV, which can reflect unrealized losses",
+    "detailProvider": "coingecko",
+    "geckoId": "gaib-said",
+    "links": [
+      {
+        "label": "Website",
+        "url": "https://gaib.ai/"
+      },
+      {
+        "label": "Twitter",
+        "url": "https://x.com/gaib_ai"
+      },
+      {
+        "label": "Docs",
+        "url": "https://docs.gaib.ai/products/gaib-products/staked-ai-dollar-said"
+      }
+    ],
+    "contracts": [
+      {
+        "chain": "ethereum",
+        "address": "0xb3b3c527ba57cd61648e2ec2f5e006a0b390a9f8",
+        "decimals": 18
+      }
+    ],
+    "canBeBlacklisted": true,
+    "deploymentModel": "single-chain",
+    "collateralQuality": "exotic",
+    "custodyModel": "institutional-unregulated",
+    "governanceQuality": "single-entity",
+    "reserves": [
+      {
+        "name": "AID vault shares and AI infrastructure financing portfolio",
+        "pct": 100,
+        "risk": "high",
+        "coinId": "aid-gaib",
+        "depType": "wrapper"
+      }
+    ],
+    "yieldConfig": {
+      "defiLlamaPoolId": "e575606e-5642-4f87-b9ad-3e53d6f83c82",
+      "yieldSource": "GAIB savings (sAID)",
+      "yieldType": "nav-appreciation"
+    },
+    "liveReservesConfig": {
+      "adapter": "erc4626-single-asset",
+      "version": 1,
+      "semantics": "single-asset",
+      "breakerScope": "said-gaib",
+      "display": {
+        "url": "https://docs.gaib.ai/products/gaib-products/staked-ai-dollar-said",
+        "label": "GAIB sAID"
+      },
+      "inputs": {
+        "primary": {
+          "kind": "onchain-evm",
+          "chain": "ethereum",
+          "rpcMode": "alchemy"
+        }
+      },
+      "params": {
+        "slice": {
+          "name": "AID vault shares and AI infrastructure financing portfolio",
+          "risk": "high",
+          "coinId": "aid-gaib",
+          "depType": "wrapper",
+          "expectedAssetAddress": "0x18f52b3fb465118731d9e0d276d4eb3599d57596"
+        }
       }
     }
   },

@@ -6,7 +6,7 @@ Risk-adjusted yield tracking and ranking for yield-bearing stablecoins and curat
 
 ## Methodology Versioning
 
-- **Current methodology version:** `v7.41`
+- **Current methodology version:** `v7.42`
 - **Public changelog page:** `/methodology/yield-changelog/`
 - **Canonical source:** `shared/lib/yield-methodology-version.ts`
 
@@ -17,6 +17,8 @@ Rankings provenance now carries source-native freshness for derived sources:
 - `sourceObservedAt` / `sourceAgeSeconds` reflect the actual latest observation backing the ranking, not just the cron run time
 - `comparisonAnchorObservedAt` / `comparisonAnchorAgeSeconds` are included when APY is derived from a prior anchor, such as price-derived and on-chain exchange-rate calculations
 - `sUSDai` is now a first-class tracked yield-bearing NAV token, so base `USDai` no longer inherits the USD.AI savings venue through `YIELD_VARIANT_MAP`
+- Risk-bearing wrappers with materially different holder exposure now own their yield rows directly when they are tracked as separate assets: `stcUSD`, `sAID`, `msY`, and K3 `sBOLD` no longer publish through their base stablecoin rows
+- `stUSDS` uses a direct ERC-4626 exchange-rate reader, while Aave Umbrella `stkGHO` is inventoried as an intentional runtime-yield gap until reliable reward APY telemetry is available
 - `crvusd-curve` now uses a dedicated scrvUSD current-rate on-chain reader based on the Yearn V3 profit-unlock stream, rather than the generic 7-day `convertToAssets` exchange-rate delta
 - PYS now keeps raw APY as the base yield term, then adds 25% of the row's benchmark spread before applying the safety and consistency penalties
 - supplemental protocol families now keep asset-scoped source identity for same-chain markets (notably Aave V3), preventing cross-coin cache collapse and preserving per-asset alternative-source coverage
@@ -190,16 +192,13 @@ This keeps wrapper pools like `fxSAVE` and `msY` eligible even when DeFiLlama ma
 | Yuzu USD (344)        | syzUSD   | Yuzu savings                |
 | fxUSD (168)           | fxSAVE  | Concentrator savings        |
 | Noon USN (230)        | sUSN    | Noon savings                |
-| Main Street USD (297) | msY   | Main Street savings         |
-
-`YIELD_VARIANT_MAP` is only used when the yield-bearing wrapper is not already modeled as its own tracked asset. As of April 4, 2026, `sUSDai` is tracked directly, so base `USDai` no longer resolves through the wrapper map.
-| GAIB AID (353)        | sAID    | GAIB AID staking            |
 | Parallel USDp         | sUSDp   | Parallel savings wrapper    |
 | dUSD (dTRINITY)       | sdUSD   | dTRINITY dStake vault       |
 | Flying Tulip ftUSD    | sftUSD  | Flying Tulip staking        |
 | Hermetica USDh        | sUSDh   | Hermetica staking wrapper   |
-| Cap cUSD              | stCUSD  | Cap savings wrapper         |
 | Saturn USDat          | sUSDat  | Saturn staking vault        |
+
+`YIELD_VARIANT_MAP` is only used when the yield-bearing wrapper is not already modeled as its own tracked asset. As of April 21, 2026, `sUSDai`, `stcUSD`, `sAID`, `msY`, and K3 `sBOLD` are tracked directly, so their base assets no longer resolve through those wrapper paths.
 
 APY, base/reward split, pool TVL, and pool UUID are all taken directly from the DL response.
 
@@ -209,7 +208,7 @@ For coins whose native savings path is published by the protocol itself but is n
 
 Protocol-specific lending-market readers that query protocol state directly also live in this tier. Even when the transport is an on-chain call, these rows are treated as curated protocol-native venues rather than Tier 1 deterministic native-wrapper sources, so arbitration still prefers a stronger native wrapper or savings source when one exists.
 
-This tier can also carry explicit wrapper-over-wrapper native sources when the upstream venue is a distinct managed wrapper around a tracked native yield token. BOLD now uses this path for K3 `sBOLD`, which wraps `yBOLD` while still representing the Liquity Stability Pool yield stack rather than a governance-set rate.
+This tier can also carry explicit wrapper-over-wrapper native sources when the upstream venue is a distinct managed wrapper around a tracked native yield token. K3 `sBOLD` now owns this path directly as `sbold-k3-capital`, while base BOLD keeps its Yearn `yBOLD` native-wrapper source.
 
 Published lending-opportunity suggestions also apply an explicit venue exclusion for Resolv / `USR`, `stUSR`, and `wstUSR`-linked markets. They now also require observable venue TVL and must clear a size floor equal to the higher of the existing absolute floor and `0.1%` of the tracked stablecoin's current supply. These filters are scoped to the suggestion layer for base assets such as USDC or USDT; they do not remove native tracked yield assets from the broader methodology inventory.
 

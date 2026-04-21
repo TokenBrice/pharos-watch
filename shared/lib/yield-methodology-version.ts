@@ -3,9 +3,24 @@ import {
 } from "./methodology-version";
 
 const yieldMethodology = createMethodologyVersion({
-  currentVersion: "7.41",
+  currentVersion: "7.42",
   changelogPath: "/methodology/yield-changelog/",
   changelog: [
+  {
+    version: "7.42",
+    title: "First-Class Risk Wrapper Yield Assets",
+    date: "2026-04-21",
+    effectiveAt: 1776777600,
+    summary:
+      "Yield wrappers whose holder risk differs materially from the base stablecoin now own their yield rows directly instead of publishing through the base asset.",
+    impact: [
+      "Cap `stcUSD`, GAIB `sAID`, Main Street `msY`, and K3 `sBOLD` are tracked as first-class yield-bearing NAV/wrapper assets rather than as native yield on cUSD, AID, msUSD, or BOLD",
+      "`stUSDS` uses the generic on-chain ERC-4626 exchange-rate reader because the risk-capital token is distinct from Sky's plain sUSDS savings wrapper and has no standalone DeFiLlama stablecoin row",
+      "Aave Umbrella `stkGHO` is inventoried as an intentional runtime-yield gap until a reliable reward APY source is available, avoiding a misleading zero-yield publication",
+    ],
+    commits: [],
+    reconstructed: false,
+  },
   {
     version: "7.41",
     title: "On-Chain Bootstrap Seeds Excluded From Rolling APY",

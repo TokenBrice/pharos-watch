@@ -122,8 +122,8 @@ describe("yield config registry", () => {
     }
   });
 
-  it("pins BOLD's Liquity alt source to the explicit K3 sBOLD wrapper label", () => {
-    expect(EXPLICIT_YIELD_SOURCE_POOL_MAP["bold-liquity"]).toContainEqual(
+  it("pins sBOLD's Liquity alt source to the explicit K3 wrapper label", () => {
+    expect(EXPLICIT_YIELD_SOURCE_POOL_MAP["sbold-k3-capital"]).toContainEqual(
       expect.objectContaining({
         poolId: "dac71f4f-7b97-463a-b19f-9796c56c21f1",
         yieldSource: "Liquity Stability Pool (via K3 sBOLD)",

@@ -144,22 +144,6 @@ export const YIELD_VARIANT_MAP: Record<string, YieldVariant> = {
     yieldSource: "Noon savings (sUSN)",
     yieldType: "governance-set",
   },
-  // Main Street USD -> msY (savings wrapper, $23M TVL)
-  "msusd-main-street": {
-    variantSymbol: "msY",
-    variantChain: "ethereum",
-    yieldSource: "Main Street savings (msY)",
-    yieldType: "lending-vault",
-  },
-  // GAIB AID -> sAID (savings wrapper, $15M TVL)
-  "aid-gaib": {
-    variantSymbol: "sAID",
-    variantAddress: "0x18F52B3fb465118731d9e0d276d4Eb3599D57596",
-    variantChain: "ethereum",
-    variantProject: "gaib",
-    yieldSource: "GAIB savings (sAID)",
-    yieldType: "lending-vault",
-  },
   // dUSD -> sdUSD (dTRINITY dStake ERC-4626 vault)
   "dusd-dtrinity": {
     variantSymbol: "sdUSD",
@@ -189,15 +173,6 @@ export const YIELD_VARIANT_MAP: Record<string, YieldVariant> = {
     variantSymbol: "sUSDh",
     variantChain: "stacks",
     yieldSource: "Hermetica staking (sUSDh)",
-    yieldType: "lending-vault",
-  },
-  // cUSD -> stCUSD (Cap staked savings wrapper, ~$68M TVL, ~4.6% APY)
-  "cusd-cap": {
-    variantSymbol: "stCUSD",
-    variantAddress: "0xcCcc62962d17b8914c62D74FfB843d73B2a3cccC",
-    variantChain: "ethereum",
-    variantProject: "cap",
-    yieldSource: "Cap savings (stCUSD)",
     yieldType: "lending-vault",
   },
   // USDat -> sUSDat (Saturn staking ERC-4626 vault — STRC + Treasuries dynamic mix, target ~11% APY)

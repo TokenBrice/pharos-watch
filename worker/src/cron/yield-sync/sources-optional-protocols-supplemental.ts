@@ -257,7 +257,7 @@ export async function fetchYearnKongSources(
           const sourceNamespace = isK3Sbold ? "k3" : (vault.yearn ? "yearn" : "kong");
 
           results.push({
-            stablecoinId: isK3Sbold ? "bold-liquity" : undefined,
+            stablecoinId: isK3Sbold ? "sbold-k3-capital" : undefined,
             symbol: vault.asset.symbol,
             chain,
             address: vault.asset.address ?? null,

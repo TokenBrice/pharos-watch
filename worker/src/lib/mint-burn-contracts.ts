@@ -96,6 +96,14 @@ const EXTENDED_ETHEREUM_TRANSFER_EXPANSION_SPECS: Array<{
   { stablecoinId: "chfau-allunity", dustThreshold: 10_000 },
   { stablecoinId: "mxnb-juno", dustThreshold: 10_000 },
   { stablecoinId: "cjpy-yamato", dustThreshold: 10_000 },
+  { stablecoinId: "stusds-sky", dustThreshold: 10_000 },
+  { stablecoinId: "busd0-usual", dustThreshold: 10_000 },
+  { stablecoinId: "stkgho-umbrella-aave", dustThreshold: 10_000 },
+  { stablecoinId: "stcusd-cap", dustThreshold: 10_000 },
+  { stablecoinId: "msy-main-street", dustThreshold: 10_000 },
+  { stablecoinId: "sbold-k3-capital", dustThreshold: 10_000 },
+  { stablecoinId: "yusd-yieldfi", dustThreshold: 10_000 },
+  { stablecoinId: "said-gaib", dustThreshold: 10_000 },
 ];
 
 const MINT_BURN_CONFIG_SPECS: MintBurnContractConfigSpec[] = [

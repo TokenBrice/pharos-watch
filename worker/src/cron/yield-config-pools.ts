@@ -28,6 +28,8 @@ export const YIELD_POOL_MAP: Record<string, string> = {
   "syrupusdt-maple": "8edfdf02-cdbb-43f7-bca6-954e5fe56813",
   // yoUSD - pendle SY yield token, Base, $1.3M TVL, ~8.0% APY
   "yousd-yield-optimizer": "c7c9e2c5-a3ea-4e6e-80d7-090fd2d604c5",
+  // bUSD0 - usual-usd0 liquid bond, Ethereum, $500M+ TVL, ~3.3% APY
+  "busd0-usual": "55b0893b-1dbb-47fd-9912-5e439cd3d511",
   // ── Wave 1: Native yield coins (C+ or above) ─────────────────────
   // USDS -> sUSDS - sky-lending, Ethereum, $5.3B TVL, ~4.0% APY
   "usds-sky": "d8c4eff5-c8a9-46fc-a888-057c4c668e72",
@@ -55,8 +57,8 @@ export const YIELD_POOL_MAP: Record<string, string> = {
   "usdf-falcon": "0f67a08c-3f24-4a4b-963e-541f5a5c0364",
   // Unitas -> sUSDu - unitas native savings, Solana, $49M TVL, ~12.9% APY
   "usdu-unitas": "7f980c43-5b87-4690-a11a-b0e8a5e37a63",
-  // GAIB AID -> sAID - gaib native savings, Ethereum, $15M TVL, ~11.4% APY
-  "aid-gaib": "e575606e-5642-4f87-b9ad-3e53d6f83c82",
+  // GAIB sAID - gaib native savings, Ethereum, $15M TVL, ~10.5% APY
+  "said-gaib": "e575606e-5642-4f87-b9ad-3e53d6f83c82",
   // OUSG - ondo-yield-assets native, Ethereum, $519M TVL, ~3.1% APY
   "ousg-ondo-finance": "7436db9b-2872-46c8-81a2-da6baff902b7",
   // sUSDai - usd-ai native savings, Arbitrum, $217M TVL, ~7.7% APY
@@ -67,12 +69,12 @@ export const YIELD_POOL_MAP: Record<string, string> = {
   "avusd-avant": "2fe112ff-95a5-4ba0-8ee3-a741e6a8f7c9",
   // Neutrl USD -> sNUSD - pendle PT-buying pool, Ethereum, $41M TVL, ~7.5% APY
   "nusd-neutrl": "0f38d9a4-8e34-4abc-b9ba-25f326ef7828",
-  // Main Street USD - mainstreet native pool, Ethereum, $29M TVL, ~12.0% APY
-  "msusd-main-street": "8a28570f-2316-488a-94a7-67c87e76c1f1",
+  // Main Street msY - mainstreet native pool, Ethereum, $50M+ TVL, ~12.0% APY
+  "msy-main-street": "8a28570f-2316-488a-94a7-67c87e76c1f1",
   // Yuzu USD -> syzUSD - yuzu-money native savings, Plasma, $28M TVL, ~7.3% APY
   "yzusd-yuzu": "6174b1d6-8212-4964-95bf-ca9c539864ba",
   // Noon USN -> sUSN - morpho-v1 collateral, Ethereum, $10M TVL, APY via on-chain rate
   "usn-noon": "a18a761b-49cd-416d-8342-839cac722094",
-  // Cap cUSD -> stCUSD - cap native staking, Ethereum, $68M TVL, ~4.6% APY
-  "cusd-cap": "bf6ca887-e357-49ec-8031-0d1a6141c455",
+  // Cap stcUSD - cap native staking, Ethereum, $90M+ TVL, ~5.9% APY
+  "stcusd-cap": "bf6ca887-e357-49ec-8031-0d1a6141c455",
 };

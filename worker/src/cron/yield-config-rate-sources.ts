@@ -42,6 +42,15 @@ export const ON_CHAIN_RATE_CONFIGS: OnChainRateConfig[] = [
       "0x0000000000000000000000000000000000000000000000000de0b6b3a7640000",
   },
   {
+    stablecoinId: "stusds-sky",
+    chain: "ethereum",
+    contract: "0x99cd4ec3f88a45940936f469e4bb72a2a701eeb9",
+    selector: "0x07a2d13a",
+    decimals: 18,
+    inputAmount:
+      "0x0000000000000000000000000000000000000000000000000de0b6b3a7640000",
+  },
+  {
     stablecoinId: "dai-makerdao",
     chain: "ethereum",
     contract: "0x83F20F44975D03b1b09e64809B757c47f942BEeA",
@@ -157,6 +166,7 @@ export const DIRECT_PROTOCOL_API_STRATEGIES: Record<string, string> = {
 export const INTENTIONAL_GAP_REASONS: Record<string, string> = {
   "bd-basedollar": "pre-launch asset with no reliable runtime yield source yet",
   "pusd-polaris": "pre-launch asset with no reliable runtime yield source yet",
+  "stkgho-umbrella-aave": "Umbrella rewards are external emissions over a 1:1 GHO staking receipt; no reliable APY source is wired yet",
   "trusd-tori": "pre-launch asset with no reliable runtime yield source yet",
   "usg-tangent": "pre-launch asset with no reliable runtime yield source yet",
 };

@@ -1,6 +1,15 @@
 # Yield Intelligence Methodology - Version Timeline
 
-Internal changelog reconstructed from git history. Covers Yield Intelligence `v1.0` through `v7.41` (2026-03-01 -> 2026-04-21).
+Internal changelog reconstructed from git history. Covers Yield Intelligence `v1.0` through `v7.42` (2026-03-01 -> 2026-04-21).
+
+---
+
+## v7.42 - First-class risk wrapper yield assets (Apr 21, 2026)
+
+- Risk-bearing wrappers whose holder exposure differs materially from the base stablecoin now own yield rows directly instead of publishing through the base asset
+- `stcUSD`, `sAID`, `msY`, and K3 `sBOLD` move from base-asset wrapper/native-yield treatment onto their own tracked NAV/wrapper assets
+- `stUSDS` uses the generic on-chain ERC-4626 exchange-rate reader because Sky's risk-capital token is distinct from the plain `sUSDS` savings wrapper and has no standalone stablecoin row in DefiLlama
+- Aave Umbrella `stkGHO` is an explicit runtime-yield gap until a reliable rewards APY source is wired, so coverage audits do not mistake missing reward telemetry for successful zero-yield publication
 
 ---
 

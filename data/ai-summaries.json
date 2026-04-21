@@ -983,5 +983,45 @@
     "title": "Australia's New On-Chain Dollar",
     "text": "Macropod AUDM brings an Australian-dollar unit into the active Pharos set with DefiLlama supply, CoinGecko pricing, Ethereum and Solana contracts, and issuer documentation describing segregated AUD reserve accounts at Australian ADIs. The product is straightforward: approved Macropod clients can mint and redeem through the platform, with current reserves split mostly between Westpac and Banking Circle Australia. The main constraints are scale and disclosure cadence. Pharos can monitor the AUD peg immediately and validate live token supply, while a monthly-report adapter would be needed for stronger reserve automation.",
     "updatedAt": "2026-04-20"
+  },
+  "busd0-usual": {
+    "title": "Fixed-Maturity USD0 Bond",
+    "text": "bUSD0 is Usual's fixed-notional USD0 bond, formerly USD0++, with a June 11, 2028 maturity. It is backed by locked USD0 but does not behave like a spot stablecoin before maturity: par exit requires both bUSD0 and the separate rt-bUSD0 early-exit right, while secondary-market bUSD0 can trade below one dollar. Yield is paid through USUAL coupons rather than dollar NAV growth, so the risk is a mix of USD0 reserve quality, Usual DAO parameter risk, and liquidity/discount risk before maturity.",
+    "updatedAt": "2026-04-21"
+  },
+  "stusds-sky": {
+    "title": "Sky Risk-Capital USDS",
+    "text": "stUSDS is Sky's expert-mode risk-capital token, not a plain sUSDS savings receipt. Deposited USDS funds SKY-backed borrowing while idle liquidity earns the Sky Savings Rate, exposing holders to borrower shortfall, governance slashing, utilization, and withdrawal-liquidity risk. It inherits the broad Sky/USDS ecosystem but should rank differently from USDS and sUSDS because its value can be affected by staked-SKY loan performance.",
+    "updatedAt": "2026-04-21"
+  },
+  "stcusd-cap": {
+    "title": "Cap Yield Wrapper",
+    "text": "stcUSD is the yield-bearing version of Cap cUSD. Users stake cUSD into an ERC-4626 vault while Cap operators borrow reserve assets against restaker collateral and repay with yield above the hurdle rate. Cap's design attempts to keep stablecoin holders whole through overcollateralization and slashing, but stcUSD still adds operator, restaker, strategy, and vault risk on top of the underlying cUSD basket.",
+    "updatedAt": "2026-04-21"
+  },
+  "said-gaib": {
+    "title": "AI Infrastructure NAV Token",
+    "text": "sAID is GAIB's staked AID vault token. Unlike AID, which is intended as the stable base currency backed by Treasuries and accepted stablecoins, sAID floats with the NAV of AI infrastructure financing positions plus stable reserve buffers. Monthly withdrawal cycles, unrealized-loss-aware unstaking NAV, and private AI financing exposure make it a materially different asset from AID.",
+    "updatedAt": "2026-04-21"
+  },
+  "msy-main-street": {
+    "title": "Main Street Strategy Share",
+    "text": "msY is Main Street's yield share over msUSD. It accrues value from the protocol's options and derivatives strategy reserve, while final exit ultimately depends on converting back through msUSD and Main Street's USDC redemption process. The token therefore carries strategy execution, exchange/custody, liquidity, and governance risk that should not be folded into the base msUSD row.",
+    "updatedAt": "2026-04-21"
+  },
+  "yusd-yieldfi": {
+    "title": "YieldFi USDC Strategy Vault",
+    "text": "YieldFi yUSD is an ERC-4626 vault over USDC that allocates capital across Pendle principal tokens, Morpho and Silo vaults, and private-credit vaults. Its stability depends on USDC as the native underlying, but its holder risk comes from active allocator decisions and the performance of those yield venues. Pharos tracks it separately from Aegis YUSD and YO Protocol yoUSD because the name collision hides a distinct issuer and reserve strategy.",
+    "updatedAt": "2026-04-21"
+  },
+  "sbold-k3-capital": {
+    "title": "K3 Stability Pool BOLD",
+    "text": "sBOLD is K3 Capital's ERC-4626 wrapper around BOLD deployed into Liquity V2 Stability Pools. It earns interest and liquidation gains while automating the conversion of liquidated ETH and LST collateral back into BOLD. The base BOLD system is immutable and fully on-chain, but sBOLD adds K3-controlled vault, oracle, solver, and fee-switch risk, so it belongs as a separate wrapper exposure.",
+    "updatedAt": "2026-04-21"
+  },
+  "stkgho-umbrella-aave": {
+    "title": "Aave Umbrella GHO Staking",
+    "text": "Aave Umbrella stkGHO is the slashable GHO staking receipt for Aave's upgraded safety module. It is backed by GHO, but unlike liquid GHO or simple savings GHO, holders accept Umbrella-specific cooldowns, withdrawal windows, and automated slashing if covered GHO deficits occur. That makes it a distinct loss-absorption asset rather than a plain yield venue on the base stablecoin.",
+    "updatedAt": "2026-04-21"
   }
 }

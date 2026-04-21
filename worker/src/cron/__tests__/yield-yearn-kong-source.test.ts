@@ -67,7 +67,7 @@ describe("fetchYearnKongSources", () => {
     expect(results[0].yield.sourceKey).toContain("protocol-api:kong:");
   });
 
-  it("maps Staked yBOLD to bold-liquity as a native K3 source", async () => {
+  it("maps Staked yBOLD to sBOLD as a native K3 source", async () => {
     mockFetch([{
       match: "kong.yearn.fi",
       body: { data: { vaults: [{
@@ -87,7 +87,7 @@ describe("fetchYearnKongSources", () => {
     const results = await fetchYearnKongSources();
     expect(results).toHaveLength(1);
     expect(results[0]).toEqual(expect.objectContaining({
-      stablecoinId: "bold-liquity",
+      stablecoinId: "sbold-k3-capital",
       symbol: "yBOLD",
       chain: "ethereum",
       address: "0x9F4330700a36B29952869fac9b33f45EEdd8A3d8",
