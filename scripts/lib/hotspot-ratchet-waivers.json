@@ -51,6 +51,10 @@
     "disposition": "deferred",
     "notes": "Status metadata summarization has grown with the ops dashboard. Defer structural cleanup until the status surface settles after the current parallel work."
   },
+  "src/components/status/api-keys-panel.tsx": {
+    "disposition": "queued-p4",
+    "notes": "The API keys operator panel currently mixes create/edit form state, admin mutations, expiry/rate-limit validation, and token reveal rendering in one client component. Keep it explicitly waived until the next ops-UI decomposition pass splits the mutation helpers and per-key row editor out of the panel shell."
+  },
   "src/components/dex-liquidity-card.tsx": {
     "disposition": "queued-p4",
     "notes": "The DEX liquidity detail card still mixes summary copy, top-pool rendering, and history presentation in one shell. Track it for the next frontend hotspot pass rather than folding a larger decomposition into this pricing/liquidity fix."

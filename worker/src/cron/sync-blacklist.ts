@@ -1,7 +1,6 @@
-import { CONTRACT_CONFIGS } from "../lib/blacklist-contracts";
 import { CIRCUIT_SOURCE } from "../lib/constants";
 import { shouldAttemptFetch, recordOutcomeSafe } from "../lib/circuit-breaker";
-import { getLastBlock, setLastBlock } from "../lib/db";
+import { setLastBlock } from "../lib/db";
 import {
   type RateLimitedFetch,
   createBudget,
@@ -16,8 +15,15 @@ import { reportCronProgress, withBudgetMetadata } from "../lib/cron-progress";
 import { fetchEvmEventsIncremental } from "./blacklist/evm-source";
 import { fetchTronEventsIncremental } from "./blacklist/tron-source";
 import type { BlacklistRow } from "./blacklist/shared";
-import { backfillAmounts, backfillTronFromLedger } from "./blacklist/amount-recovery";
+import { backfillAmounts } from "./blacklist/amount-recovery";
 import { processFetchedBlacklistRows } from "./blacklist/post-fetch";
+import {
+  applyTronLedgerMirrorPass,
+  deriveSyncBlacklistStatus,
+  loadBlacklistConfigStates,
+  recordApiErrorConfig,
+  recordProcessedRows,
+} from "./blacklist/sync-support";
 
 const EVM_SCANNED_TO_LATEST = 99999999;
 const SYNC_BLACKLIST_RUNTIME_BUDGET_MS = 7 * 60_000;
@@ -73,13 +79,15 @@ export async function syncBlacklist(opts: SyncBlacklistOptions): Promise<SyncBla
   const budget = createBudget(900);
   const deadlineMs = Date.now() + SYNC_BLACKLIST_RUNTIME_BUDGET_MS;
   let totalFetchedEvents = 0;
-  let totalInsertedRows = 0;
   let contractsSkipped = 0;
   let apiErrors = 0;
   let rpcLogConfigs = 0;
   let runtimeBudgetHit = false;
-  const enrichCounters = { attempted: 0, succeeded: 0, failed: 0 };
-  const currentBalanceCacheCounters = { updated: 0, deleted: 0, failed: 0 };
+  const counters = {
+    totalInsertedRows: 0,
+    enrichCounters: { attempted: 0, succeeded: 0, failed: 0 },
+    currentBalanceCacheCounters: { updated: 0, deleted: 0, failed: 0 },
+  };
   const apiErrorClasses: Record<string, number> = {};
   const apiErrorConfigs: Array<{
     configKey: string;
@@ -98,52 +106,8 @@ export async function syncBlacklist(opts: SyncBlacklistOptions): Promise<SyncBla
     }
     return cache;
   };
-  const recordProcessedRows = (processed: Awaited<ReturnType<typeof processFetchedBlacklistRows>>): void => {
-    enrichCounters.attempted += processed.enrichCounters.attempted;
-    enrichCounters.succeeded += processed.enrichCounters.succeeded;
-    enrichCounters.failed += processed.enrichCounters.failed;
-    currentBalanceCacheCounters.updated += processed.currentBalanceCacheCounters.updated;
-    currentBalanceCacheCounters.deleted += processed.currentBalanceCacheCounters.deleted;
-    currentBalanceCacheCounters.failed += processed.currentBalanceCacheCounters.failed;
-    totalInsertedRows += processed.insertedRows;
-  };
-
-  const configStates = await Promise.all(
-    CONTRACT_CONFIGS.map(async (config) => {
-      const configKey = config.configKey;
-      const lastBlock = await getLastBlock(db, configKey);
-      return { config, configKey, lastBlock };
-    }),
-  );
-  const zeroCursorConfigs = configStates.filter((state) => state.lastBlock === 0).map((state) => state.configKey);
-  const recordApiErrorConfig = (
-    configKey: string,
-    stablecoin: string,
-    chainId: string,
-    reason: string,
-    error?: unknown,
-  ): void => {
-    if (apiErrorConfigs.length >= 10) return;
-    const entry: (typeof apiErrorConfigs)[number] = { configKey, stablecoin, chainId, reason };
-    if (error instanceof Error) {
-      entry.errorMessage = error.message.slice(0, 200);
-      if (error.stack) {
-        entry.stackHead = error.stack.split("\n").slice(0, 3).join(" | ").slice(0, 240);
-      }
-    }
-    apiErrorConfigs.push(entry);
-  };
-
-  let tronLedgerUpdated = 0;
-  try {
-    const ledgerResult = await backfillTronFromLedger(db);
-    tronLedgerUpdated = ledgerResult.updated;
-    if (tronLedgerUpdated > 0) {
-      console.log(`[sync-blacklist] Tron ledger mirror updated ${tronLedgerUpdated} row(s)`);
-    }
-  } catch (err) {
-    console.warn("[sync-blacklist] Tron ledger mirror failed:", err);
-  }
+  const { configStates, zeroCursorConfigs } = await loadBlacklistConfigStates(db);
+  let tronLedgerUpdated = await applyTronLedgerMirrorPass(db, "initial");
 
   // Backfill NULL amounts first — this has priority over new event scanning
   // because the worker may time out before completing the full config loop.
@@ -234,7 +198,7 @@ export async function syncBlacklist(opts: SyncBlacklistOptions): Promise<SyncBla
         await recordOutcomeSafe(db, CIRCUIT_SOURCE.TRONGRID, !result.apiError);
         if (result.apiError) {
           apiErrors++;
-          recordApiErrorConfig(configKey, config.stablecoin, config.chain.chainId, "trongrid-failed");
+          recordApiErrorConfig(apiErrorConfigs, configKey, config.stablecoin, config.chain.chainId, "trongrid-failed");
         }
 
         const processed = await processFetchedBlacklistRows({
@@ -252,7 +216,7 @@ export async function syncBlacklist(opts: SyncBlacklistOptions): Promise<SyncBla
           signal,
           chainRpcs,
         });
-        recordProcessedRows(processed);
+        recordProcessedRows(counters, processed);
 
         if (result.incomplete) {
           runtimeBudgetHit = true;
@@ -311,7 +275,7 @@ export async function syncBlacklist(opts: SyncBlacklistOptions): Promise<SyncBla
           signal,
           chainRpcs,
         });
-        recordProcessedRows(processed);
+        recordProcessedRows(counters, processed);
 
         let newBlock: number;
         if (result.incomplete) {
@@ -324,6 +288,7 @@ export async function syncBlacklist(opts: SyncBlacklistOptions): Promise<SyncBla
           const partialAdvance = result.scannedToBlock;
           apiErrors++;
           recordApiErrorConfig(
+            apiErrorConfigs,
             configKey,
             config.stablecoin,
             config.chain.chainId,
@@ -384,26 +349,19 @@ export async function syncBlacklist(opts: SyncBlacklistOptions): Promise<SyncBla
       apiErrors++;
       const errorClass = err instanceof Error ? err.name : "UnknownError";
       apiErrorClasses[errorClass] = (apiErrorClasses[errorClass] ?? 0) + 1;
-      recordApiErrorConfig(configKey, config.stablecoin, config.chain.chainId, `exception:${errorClass}`, err);
+      recordApiErrorConfig(
+        apiErrorConfigs,
+        configKey,
+        config.stablecoin,
+        config.chain.chainId,
+        `exception:${errorClass}`,
+        err,
+      );
       console.warn(`[sync-blacklist] Failed ${config.stablecoin} on ${config.chain.chainName}:`, err);
     }
   }
 
-  try {
-    // Newly fetched Tron blacklist rows only become ledger-resolvable after the
-    // current-balance cache refresh in processFetchedBlacklistRows. Reapply the
-    // mirror here so the same cron cycle resolves fresh Tron rows instead of
-    // leaving /admin degraded until the next 6-hour pass.
-    const ledgerResult = await backfillTronFromLedger(db);
-    tronLedgerUpdated += ledgerResult.updated;
-    if (ledgerResult.updated > 0) {
-      console.log(
-        `[sync-blacklist] Tron ledger mirror updated ${ledgerResult.updated} row(s) after current-balance sync`,
-      );
-    }
-  } catch (err) {
-    console.warn("[sync-blacklist] Post-sync Tron ledger mirror failed:", err);
-  }
+  tronLedgerUpdated += await applyTronLedgerMirrorPass(db, "post-sync");
 
   console.log(`[sync-blacklist] Completed with ${budget.count}/${budget.limit} subrequests`);
   await reportCronProgress(onProgress, {
@@ -412,7 +370,7 @@ export async function syncBlacklist(opts: SyncBlacklistOptions): Promise<SyncBla
     itemsTotal: configStates.length,
     message: "Completed blacklist sync",
     metadata: {
-      rowsWritten: totalInsertedRows,
+      rowsWritten: counters.totalInsertedRows,
       eventsFetched: totalFetchedEvents,
       contractsSkipped,
       apiErrors,
@@ -420,21 +378,12 @@ export async function syncBlacklist(opts: SyncBlacklistOptions): Promise<SyncBla
   }, budget);
   // Tolerate up to 25% of configs failing (transient upstream timeouts) before
   // marking the run degraded.  More than 50% is a full error.
-  const degradedThreshold = Math.max(1, Math.ceil(CONTRACT_CONFIGS.length * 0.25));
-  const errorThreshold = Math.ceil(CONTRACT_CONFIGS.length / 2);
-  const status: SyncBlacklistResult["status"] =
-    apiErrors > errorThreshold
-      ? "error"
-      : apiErrors > degradedThreshold
-        ? "degraded"
-        : runtimeBudgetHit
-          ? "degraded"
-          : "ok";
+  const status: SyncBlacklistResult["status"] = deriveSyncBlacklistStatus(apiErrors, runtimeBudgetHit);
   return {
     status,
-    itemCount: totalInsertedRows,
+    itemCount: counters.totalInsertedRows,
     metadata: JSON.stringify(withBudgetMetadata(budget, {
-      rowsWritten: totalInsertedRows,
+      rowsWritten: counters.totalInsertedRows,
       eventsFetched: totalFetchedEvents,
       contractsSkipped,
       apiErrors,
@@ -446,12 +395,12 @@ export async function syncBlacklist(opts: SyncBlacklistOptions): Promise<SyncBla
       runtimeBudgetReached: runtimeBudgetHit,
       subrequestBudgetReached: budgetExhausted(budget),
       runtimeBudgetMs: SYNC_BLACKLIST_RUNTIME_BUDGET_MS,
-      enrichAttempted: enrichCounters.attempted,
-      enrichSucceeded: enrichCounters.succeeded,
-      enrichFailed: enrichCounters.failed,
-      currentBalanceCacheUpdated: currentBalanceCacheCounters.updated,
-      currentBalanceCacheDeleted: currentBalanceCacheCounters.deleted,
-      currentBalanceCacheFailed: currentBalanceCacheCounters.failed,
+      enrichAttempted: counters.enrichCounters.attempted,
+      enrichSucceeded: counters.enrichCounters.succeeded,
+      enrichFailed: counters.enrichCounters.failed,
+      currentBalanceCacheUpdated: counters.currentBalanceCacheCounters.updated,
+      currentBalanceCacheDeleted: counters.currentBalanceCacheCounters.deleted,
+      currentBalanceCacheFailed: counters.currentBalanceCacheCounters.failed,
       tronLedgerUpdated,
     })),
   };
