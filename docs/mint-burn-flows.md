@@ -33,7 +33,7 @@ Public `/api/mint-burn-flows` freshness metadata and the `/flows` page intention
 - **Function:** `syncMintBurn(db, alchemyApiKey, { lane, jobName, ... })`
 - **Provider:** Alchemy JSON-RPC
 - **File:** `worker/src/cron/sync-mint-burn.ts`
-- **Registration:** cron declared in `worker/wrangler.toml`, executed via `worker/src/handlers/scheduled.ts`
+- **Registration:** cron declared in `worker/wrangler.toml`; `worker/src/handlers/scheduled.ts` dispatches the isolated slots through `worker/src/handlers/scheduled/twenty-minute-mint-burn-critical.ts`, `worker/src/handlers/scheduled/twenty-minute-mint-burn-extended.ts`, and the shared `worker/src/handlers/scheduled/mint-burn-slot.ts`
 - **Returns:** `{ itemCount, status, metadata }` where `itemCount = rowsInserted` (not parsed rows). Metadata includes `lane`, `jobName`, `nullPricesHealed`, and per-config coverage-frontier diagnostics when scans are partial.
 - **Operator notes:** internal ingestion process notes are kept outside the public documentation archive.
 

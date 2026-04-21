@@ -76,6 +76,8 @@ Some public routes are documented by feature docs or the architecture doc rather
 | `/dependency-map/` | [dependency-map.md](./dependency-map.md) |
 | `/digest/` | [digest-pipeline.md](./digest-pipeline.md) |
 | `/digest/[date]/` | [digest-pipeline.md](./digest-pipeline.md) |
+| `/docs/` | [architecture.md](./architecture.md), [doc-ownership.json](./doc-ownership.json) |
+| `/docs/[slug]/` | [architecture.md](./architecture.md), [doc-ownership.json](./doc-ownership.json) |
 | `/flows/` | [mint-burn-flows.md](./mint-burn-flows.md) |
 | `/funding/` | [funding-page.md](./funding-page.md) |
 | `/liquidity/` | [dex-liquidity.md](./dex-liquidity.md) |
@@ -101,11 +103,11 @@ Some public routes are documented by feature docs or the architecture doc rather
 
 ## Operator Routes
 
-These routes are not public product surfaces, but they are part of the maintained operator workflow.
+These routes are not public product surfaces, but they are part of the maintained operator workflow on `ops.pharos.watch`.
 
 | Route | Primary doc(s) |
 |-------|-----------------|
-| `/admin/` on `ops.pharos.watch` | [status-dashboard.md](./status-dashboard.md), [operator-origin-access.md](./operator-origin-access.md), [api-reference.md](./api-reference.md#admin-endpoints) |
+| `/admin/` | [status-dashboard.md](./status-dashboard.md), [operator-origin-access.md](./operator-origin-access.md), [api-reference.md](./api-reference.md#admin-endpoints) |
 
 ## Route Contract Update Checklist
 

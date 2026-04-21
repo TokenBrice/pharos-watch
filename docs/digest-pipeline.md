@@ -373,7 +373,8 @@ Without `ANTHROPIC_API_KEY`, generation is skipped entirely. Telegram delivery i
 | `worker/src/api/daily-digest.ts` | `GET /api/daily-digest` handler |
 | `worker/src/api/digest-archive.ts` | `GET /api/digest-archive` handler |
 | `worker/src/api/digest-snapshot.ts` | `GET /api/digest-snapshot` handler |
-| `worker/src/handlers/scheduled.ts` | Cron scheduling orchestration (daily digest runs after `snapshot-psi`) |
+| `worker/src/handlers/scheduled.ts` | Thin cron-expression dispatcher for scheduled slots |
+| `worker/src/handlers/scheduled/daily-0805.ts` | Daily 08:05 slot runner: `sync-bluechip`, `daily-digest` -> `weekly-recap`, and `discovery-scan` |
 | `worker/src/routes/registry.ts` | Static worker route bindings keyed by shared endpoint descriptors, including the background `trigger-digest` enqueue path |
 | `worker/src/router.ts` | Worker route dispatcher for static registry lookup plus dynamic route matching |
 | `worker/src/lib/env.ts` | `Env` interface used by fetch/scheduled handlers |

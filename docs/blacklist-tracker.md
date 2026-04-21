@@ -937,7 +937,8 @@ Gating is driven by the view model (`src/lib/stablecoin-detail-view-model.ts` â†
 | `worker/src/lib/evm-logs.ts`                               | Etherscan v2 log fetching, recursive splitting, rate limiting, `decodeUint256`             |
 | `worker/src/api/blacklist.ts`                              | `GET /api/blacklist` handler                                                               |
 | `worker/src/routes/registry.ts`                            | API route dispatch, including admin endpoints (`reset-blacklist-sync`, `debug-sync-state`, `remediate-blacklist-amount-gaps`) |
-| `worker/src/handlers/scheduled.ts`                         | Cron scheduling orchestration for `sync-blacklist`                                         |
+| `worker/src/handlers/scheduled.ts`                         | Thin cron-expression dispatcher for scheduled slots                                        |
+| `worker/src/handlers/scheduled/hourly-blacklist.ts`         | Dedicated 6-hourly `sync-blacklist` slot runner                                            |
 | `worker/src/lib/db.ts`                                     | `getLastBlock()`, `setLastBlock()`, `batchExecute()`                                       |
 | `worker/migrations/0000_baseline.sql`                      | Baseline blacklist schema, including `blacklist_events`, `blacklist_sync_state`, and the pre-0072 index/version additions |
 | `worker/migrations/0076_blacklist_provenance_and_amount_semantics.sql` | Adds amount provenance and semantics columns                                  |

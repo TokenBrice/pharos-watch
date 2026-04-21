@@ -35,6 +35,8 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `src/app/dependency-map/page.tsx` - route /dependency-map; metadata
 - `src/app/digest/[date]/page.tsx` - route /digest/[date]; default:DigestDetailPage, generateMetadata, generateStaticParams
 - `src/app/digest/page.tsx` - route /digest; default:DigestArchivePage, metadata
+- `src/app/docs/[slug]/page.tsx` - route /docs/[slug]; default:DocPage, generateMetadata, generateStaticParams
+- `src/app/docs/page.tsx` - route /docs; default:DocsIndexPage, metadata
 - `src/app/error.tsx` - default:Error
 - `src/app/flows/error.tsx`
 - `src/app/flows/layout.tsx` - default:FlowsLayout, metadata
@@ -157,7 +159,7 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `src/lib/blacklist-status.ts` - getResolvedBlacklistStatus, getResolvedBlacklistStatusLabel
 - `src/lib/bluechip.ts` - BLUECHIP_REPORT_BASE, GRADE_ORDER
 - `src/lib/browser-storage.ts` - getWindowStorage, safeStorageGetItem, safeStorageRemoveItem, safeStorageSetItem
-- `src/lib/cemetery.ts` - CemeterySortMode, CemeteryYearSection, buildCemeteryYearSections, sortCemeteryCoins
+- `src/lib/cemetery.ts` - CemeteryYearSection, buildCemeteryYearSections, sortCemeteryCoins
 - `src/lib/chain-ui.ts` - HEALTH_BADGE_CLASSES, HEALTH_FILL_CLASSES, HEALTH_TEXT_CLASSES, trendColor
 - `src/lib/chart-animation.ts` - CHART_DRAW_IN, CHART_NO_ANIM
 - `src/lib/chart-colors.ts` - CHART_AMBER, CHART_BLUE, CHART_CYAN, CHART_GREEN, CHART_HEIGHT, CHART_ORANGE
@@ -188,7 +190,7 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `src/lib/flow-intensity.ts` - FlowIntensitySemantics, getPressureShiftDisplay, normalizeToSignedFlowIntensity
 - `src/lib/flow-signal-ui.ts` - FlowDirectionUi, FlowPressureUi, buildFlowOverviewDescription, buildFlowOverviewHeadline, buildFlowSummaryNarrative, getFlowDirectionUi
 - `src/lib/fonts.ts` - digestDisplay, geistMono, geistSans
-- `src/lib/json-ld.ts` - safeJsonLd
+- `src/lib/json-ld.ts` - PHAROS_ORG_NODE, PHAROS_PERSON_TOKENBRICE_NODE, safeJsonLd
 - `src/lib/liquidity-coverage.ts` - formatLiquiditySourceMix, getLiquidityCoverageBadge
 - `src/lib/logos.ts` - logosById
 - `src/lib/methodology-context.ts` - METHODOLOGY_CONTEXT, MethodologyContextItem, MethodologyContextKey
@@ -242,10 +244,11 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `src/components/create-page-error.tsx` - createPageError
 - `src/components/daily-digest.tsx` - DailyDigest, DigestFullDisplay
 - `src/components/data-health-banner.tsx` - DataHealthBanner
-- ... 192 more files omitted; use `rg --files src/components` for the full list.
+- ... 194 more files omitted; use `rg --files src/components` for the full list.
 
 ## Pages Functions
 
+- `functions/_middleware.ts` - onRequest, prefersMarkdown
 - `functions/_site-data/[[path]].ts` - onRequest
 - `functions/admin/[[path]].ts` - onRequest
 - `functions/api/admin/[[path]].ts` - onRequest
@@ -270,6 +273,7 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `shared/lib/blacklist-tracker-version.ts` - BLACKLIST_TRACKER_METHODOLOGY_CHANGELOG, BLACKLIST_TRACKER_METHODOLOGY_CHANGELOG_PATH, BLACKLIST_TRACKER_METHODOLOGY_VERSION, BLACKLIST_TRACKER_METHODOLOGY_VERSION_LABEL, getBlacklistTrackerMethodologyVersionAt
 - `shared/lib/blacklist.ts` - BlacklistAddressCountMode, buildBlacklistAddressCountKey, computeBlacklistAmountUsdAtEvent, getBlacklistPriceAssetId, isBlacklistAmountGapStatus, isGoldBlacklistStablecoin
 - `shared/lib/cache-health.ts` - getCacheFreshnessRatio, getCacheFreshnessStatus, getCacheImpactStatus
+- `shared/lib/cemetery.ts` - CemeterySortMode, sortCemeteryCoins
 - `shared/lib/centralized-custody.ts` - CENTRALIZED_CUSTODY_CRYPTO, computeCentralizedCustodyFraction
 - `shared/lib/chain-aggregator.ts` - ChainAggregatorAsset, ChainAggregatorInput, aggregateChains
 - `shared/lib/chain-circulating.ts` - ChainCirculatingPoint, RawChainCirculating, canonicalizeChainCirculating, findCanonicalChainData
@@ -304,7 +308,7 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `shared/lib/methodology-version.ts` - MethodologyChangelogEntry, MethodologyVersion, MethodologyVersionConfig, compareMethodologyVersions, createMethodologyVersion, toMethodologyVersionLabel
 - `shared/lib/mint-burn-flow-version.ts` - MINT_BURN_FLOW_METHODOLOGY_CHANGELOG, MINT_BURN_FLOW_METHODOLOGY_CHANGELOG_PATH, MINT_BURN_FLOW_METHODOLOGY_VERSION_LABEL
 - `shared/lib/mint-burn-signals.ts` - COIN_FLOW_COMPOSITE_STATE_VALUES, CoinFlowCompositeState, NET_FLOW_DIRECTION_24H_VALUES, NetFlowDirection24h, PRESSURE_SHIFT_STABLE_BAND_MAX, PRESSURE_SHIFT_STATE_VALUES
-- `shared/lib/ops-limits.ts` - CIRCUIT_OPEN_THRESHOLD, CIRCUIT_PROBE_INTERVAL_SEC, FEEDBACK_RATE_LIMIT_MAX_SUBMISSIONS, FEEDBACK_RATE_LIMIT_WINDOW_SEC, PUBLIC_API_RATE_LIMIT_MAX_REQUESTS, PUBLIC_API_RATE_LIMIT_WINDOW_SEC
+- `shared/lib/ops-limits.ts` - API_KEY_DEFAULT_EXPIRY_SEC, API_KEY_DEFAULT_RATE_LIMIT_PER_MINUTE, API_KEY_DEPENDENCY_RETRY_AFTER_SEC, API_KEY_MAX_RATE_LIMIT_PER_MINUTE, API_KEY_MIN_RATE_LIMIT_PER_MINUTE, CIRCUIT_OPEN_THRESHOLD
 - `shared/lib/peg-rates.ts` - COMMODITY_MEDIAN_EXCLUDES, PegRateSource, PegRatesResult, derivePegRates, getPegReference
 - `shared/lib/peg-score.ts` - PEG_SCORE_LOOKBACK_SEC, PegScoreResult, coinTrackingStart, computePegScore, computePegScoreWithWindow
 - `shared/lib/peg-utils.ts` - mergeDepegSeconds, worstDeviation
@@ -318,8 +322,7 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `shared/lib/pricing-source-registry-special.ts` - PRICING_SOURCE_REGISTRY_SPECIAL
 - `shared/lib/pricing-source-registry-types.ts` - PricingSourceCapabilities, PricingSourceFreshnessKind, PricingSourceRegistryEntry, PricingSourceTrustTier
 - `shared/lib/pricing-source-registry.ts` - PRICING_SOURCE_REGISTRY, PricingSourceKey, getPricingSourceRegistryEntry, isPricingSourceProtocolOverride, isPricingSourceSoftGuardrailExempt
-- `shared/lib/pricing-sources.ts` - PRICE_SOURCE_HEALTH_BUCKET_KEYS, PRICE_TRANSPARENCY_SOURCE_KEYS, PriceSourceHealthBucketKey, createEmptyPriceSourceHealthDistribution, getPriceSourceHealthBucketShortLabel, getPricingSourceLabel
-- ... 55 more files omitted; use `rg --files shared/lib` for the full list.
+- ... 58 more files omitted; use `rg --files shared/lib` for the full list.
 
 ## Stablecoin data
 
@@ -355,6 +358,7 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `worker/src/handlers/scheduled/daily-0300.ts` - runDaily0300Slot
 - `worker/src/handlers/scheduled/daily-0800.ts` - runDaily0800Slot
 - `worker/src/handlers/scheduled/daily-0805.ts` - runDaily0805Slot
+- `worker/src/handlers/scheduled/dews-psi.ts` - runDewsPsiSlot
 - `worker/src/handlers/scheduled/digest-trigger-poll.ts` - DIGEST_LAST_TRIGGER_RESULT_CACHE_KEY, runDigestTriggerPollSlot
 - `worker/src/handlers/scheduled/five-minute-telegram.ts` - runFiveMinuteTelegramSlot
 - `worker/src/handlers/scheduled/half-hourly.ts` - runHalfHourlySlot
@@ -521,7 +525,7 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 
 ## Worker library
 
-- `worker/src/lib/abort.ts` - abortError, rethrowIfAborted, sleepWithSignal, throwIfAborted
+- `worker/src/lib/abort.ts` - abortError, rethrowIfAborted, runWithAbort, sleepWithSignal, throwIfAborted
 - `worker/src/lib/admin-action-audit.ts` - AdminActionLogEntry, DETAILS_MAX_LEN, logAdminAction
 - `worker/src/lib/admin-job.ts` - AdminJobContext, buildAdminJobSummary, noAdminTargetsResponse, readAdminIntegerParam, readAdminStringParam, runAdminJob
 - `worker/src/lib/alchemy-logs.ts` - AlchemyLogEntry, AlchemyLogsFetchResult, AlchemyTransactionEntry, AlchemyTransactionReceipt, PersistentBlockTimestampCache, ResolveBlockTimestampOptions
@@ -588,10 +592,14 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `scripts/__tests__/check-worker-migrations.test.ts`
 - `scripts/__tests__/classify-deploy-changes.test.ts`
 - `scripts/__tests__/doc-sync.test.ts`
+- `scripts/__tests__/fixtures/sql-safety/scripts/safe-root-script.ts` - safeRootScriptValueInterpolation
+- `scripts/__tests__/fixtures/sql-safety/scripts/unsafe-root-script.ts` - unsafeRootScriptValueInterpolation
 - `scripts/__tests__/fixtures/sql-safety/worker/scripts/unsafe-worker-scripts.ts` - buildUnsafeWorkerScriptQuery
 - `scripts/__tests__/fixtures/sql-safety/worker/src/safe-allowlist.ts` - buildSafeAllowlistQuery
 - `scripts/__tests__/fixtures/sql-safety/worker/src/safe-safety-comment.ts` - buildSafeCommentQuery
 - `scripts/__tests__/fixtures/sql-safety/worker/src/unsafe-worker-src.ts` - buildUnsafeWorkerSrcQuery
+- `scripts/__tests__/generate-markdown-exports.test.ts`
+- `scripts/__tests__/remote-d1.test.ts`
 - `scripts/__tests__/rollback-pages-deployment.test.ts`
 - `scripts/__tests__/smoke-ops.test.ts`
 - `scripts/__tests__/smoke-ui.test.ts`
@@ -600,6 +608,7 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `scripts/__tests__/validate-ci-parity.test.ts`
 - `scripts/audit-pricing-provider-config.ts`
 - `scripts/check-critical-coverage.mjs`
+- `scripts/check-cron-abort-contract.mjs` - main, scanCronAbortContract
 - `scripts/check-cron-connection-budget.ts`
 - `scripts/check-cron-schedule-sync.ts`
 - `scripts/check-doc-counts.mjs`
@@ -623,25 +632,21 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `scripts/fix-commodity-depeg-median.ts`
 - `scripts/fix-non-usd-depeg-fx.ts`
 - `scripts/generate-agent-code-map.mjs`
+- `scripts/generate-cemetery-dataset.ts`
+- `scripts/generate-docs-metadata.ts`
+- `scripts/generate-llms-txt.ts`
+- `scripts/generate-markdown-exports.ts` - main, writeMarkdownRoute
+- `scripts/generate-openapi-spec.ts`
+- `scripts/generate-postman-collection.ts`
 - `scripts/generate-redirects.ts`
 - `scripts/generate-sitemap-dates.ts`
 - `scripts/lib/critical-coverage.mjs` - CRITICAL_FILES, findCoverageFor, normalizePath, parseLcov
 - `scripts/lib/deploy-impact.mjs` - hasDeployImpact, hasPagesDeployImpact, hasWorkerDeployImpact, normalizeRepoPath
+- `scripts/lib/doc-files.mjs` - collectMarkdownFiles, getVerifiedDocFiles, splitLines
 - `scripts/lib/doc-sync/checks.ts` - runDocSyncChecks
 - `scripts/lib/doc-sync/methodology-manifest.ts` - DEPEG_DEWS_METHODOLOGY_VERSION_LABEL, METHODOLOGY_DOC_VERSION_CHECKS, SAFETY_SCORE_VERSION_LABEL
 - `scripts/lib/doc-sync/shared.ts` - Failure, expectEqual, expectNumber, findLineValue, formatNumber, getAllNumbersFromText
 - `scripts/lib/hotspot-ratchet.mjs` - BASELINE_PATH, TARGET_FILES, WAIVER_PATH, collectAllHotspotMetrics, collectAllRepoHotspotMetrics, collectHotspotCandidateFiles
-- `scripts/lib/remote-d1.ts` - d1BatchExec, d1ExecFile, d1Query, d1QueryParsed
-- `scripts/lib/validate-contract.mjs` - COMMON_VALIDATE_POSTBUILD_COMMANDS, COMMON_VALIDATE_PREBUILD_COMMANDS, PAGES_VALIDATE_COMMANDS, WORKER_VALIDATE_COMMANDS, buildCiValidateCommands, buildCiValidateStepPlan
-- `scripts/refresh-reserve-html-fixtures.ts`
-- `scripts/rollback-pages-deployment.mjs` - rollbackPagesDeployment
-- `scripts/screenshot-og.mjs`
-- `scripts/serve-static-export.mjs` - createStaticExportServer, resolveStaticFilePath
-- `scripts/smoke-api.mjs` - ENDPOINT_ASSERTIONS, assertPathCoverage
-- `scripts/smoke-ops.mjs` - extractCookiePairs, fetchJson, fetchOpsUiProxyStatus, fetchOpsUiProxyStatusWithRetry, hasOpsUiAccessSessionCookie, mergeCookieHeader
-- `scripts/smoke-transport.mjs`
-- `scripts/smoke-ui.mjs` - getAnalyticsPayloadUrls, hasGaConfigInit, run, verifyAnalyticsSnippet
-- `scripts/sync-digests.ts`
-- `scripts/test-merge-gate.mjs` - buildCommandPlan, getChangedFiles, getCommandEnv, normalizePath, runMergeGate
-- `scripts/update-critical-coverage-baseline.mjs`
-- `scripts/update-hotspot-ratchet-baseline.mjs`
+- `scripts/lib/markdown-renderers.ts` - MarkdownRoute, frontMatterBlock, renderChangelogIndex, renderDigestDetail, renderDocMarkdown, renderDocsIndexMarkdown
+- `scripts/lib/methodology-to-markdown.ts` - METHODOLOGY_CHANGELOG_KEYS, MethodologyChangelogKey, buildMethodologyChangelogMarkdown, buildMethodologyIndexMarkdown
+- ... 14 more files omitted; use `rg --files scripts` for the full list.
