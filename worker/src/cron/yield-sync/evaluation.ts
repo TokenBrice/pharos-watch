@@ -23,6 +23,21 @@ function isResolvedYieldEntryWithYield(
   return entry.yield != null;
 }
 
+function isOnChainBootstrapSeed(row: YieldHistorySnapshotRow): boolean {
+  return row.data_source === "onchain"
+    && row.exchange_rate != null
+    && row.apy === 0
+    && row.apy_base == null;
+}
+
+function getHistoryRowsForStats(
+  dataSource: string,
+  rows: YieldHistorySnapshotRow[],
+): YieldHistorySnapshotRow[] {
+  if (dataSource !== "onchain") return rows;
+  return rows.filter((row) => !isOnChainBootstrapSeed(row));
+}
+
 export function shouldDegradeForRiskFreeRate(meta: {
   fallbackMode: string | null;
   isFallback: boolean;
@@ -107,10 +122,11 @@ export function evaluateYieldSources(input: EvaluateYieldSourcesInput): Evaluate
         input.startSec,
       );
       const historyRows = historySelection.rows;
-      const samples = historyRows.map((row) => row.apy);
+      const historyRowsForStats = getHistoryRowsForStats(y.dataSource, historyRows);
+      const samples = historyRowsForStats.map((row) => row.apy);
       samples.push(y.currentApy);
 
-      const apy7dSamples = historyRows
+      const apy7dSamples = historyRowsForStats
         .filter((row) => row.recorded_at >= input.sevenDaysAgoSec)
         .map((row) => row.apy);
       apy7dSamples.push(y.currentApy);

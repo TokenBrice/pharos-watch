@@ -513,11 +513,11 @@ export function HeroCard({
       return { value: "—", sub: undefined, color: "text-muted-foreground" };
     }
     if (yieldRanking.excessYield === null) {
-      return { value: "—", sub: "No benchmark gap", color: "text-muted-foreground" };
+      return { value: "—", sub: "No 30d gap", color: "text-muted-foreground" };
     }
     return {
       value: formatSignedPercent(yieldRanking.excessYield),
-      sub: "vs Ref",
+      sub: "30d vs Ref",
       color: yieldRanking.excessYield >= 0 ? "text-green-700 dark:text-green-400" : "text-red-700 dark:text-red-400",
     };
   })();
@@ -620,7 +620,7 @@ export function HeroCard({
     },
     {
       key: "excess-yield",
-      label: <MethodologyLabel topic="pys">Excess Yield</MethodologyLabel>,
+      label: <MethodologyLabel topic="pys">30d Excess</MethodologyLabel>,
       value: excessYieldDisplay.value,
       subValue: excessYieldDisplay.sub,
       colorClass: excessYieldDisplay.color,

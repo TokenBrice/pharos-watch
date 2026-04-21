@@ -10,6 +10,7 @@ export interface YieldHistorySnapshotRow {
   recorded_at: number;
   is_best: number | null;
   apy: number;
+  apy_base?: number | null;
   source_tvl_usd: number | null;
   data_source: string;
   yield_source: string | null;
@@ -42,7 +43,7 @@ export async function loadYieldHistorySnapshots(
     const [historyResult, prevTvlResult, prevBestResult] = await Promise.all([
       db
         .prepare(
-          `SELECT stablecoin_id, source_key, recorded_at, is_best, apy, source_tvl_usd, data_source, yield_source, yield_type, exchange_rate
+          `SELECT stablecoin_id, source_key, recorded_at, is_best, apy, apy_base, source_tvl_usd, data_source, yield_source, yield_type, exchange_rate
            FROM yield_history
            WHERE stablecoin_id IN (${resolvedIdInClause.sql}) AND recorded_at >= ?
            ORDER BY stablecoin_id ASC, recorded_at ASC`,
@@ -60,7 +61,7 @@ export async function loadYieldHistorySnapshots(
         .all<YieldHistorySnapshotRow>(),
       db
         .prepare(
-          `SELECT stablecoin_id, source_key, recorded_at, is_best, apy, source_tvl_usd, data_source, yield_source, yield_type, exchange_rate
+          `SELECT stablecoin_id, source_key, recorded_at, is_best, apy, apy_base, source_tvl_usd, data_source, yield_source, yield_type, exchange_rate
            FROM yield_history
            WHERE stablecoin_id IN (${resolvedIdInClause.sql}) AND is_best = 1 AND recorded_at < ?
            ORDER BY stablecoin_id ASC, recorded_at DESC`,

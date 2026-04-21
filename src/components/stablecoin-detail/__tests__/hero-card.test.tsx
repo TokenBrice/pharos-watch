@@ -251,7 +251,7 @@ describe("HeroCard", () => {
     expect(html).not.toContain(">Blacklistable<");
     // Freezable hint is attached via the methodology-hint trigger.
     expect(html).toContain('data-testid="methodology-hint-freezable"');
-    expect(html).toContain("Excess Yield");
+    expect(html).toContain("30d Excess");
     expect(html).toContain("+0.85%");
     expect(html).not.toContain("1Y vs USD");
     expect(html).toContain("DEWS");

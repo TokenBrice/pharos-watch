@@ -153,7 +153,7 @@ export default function YieldDetailSection({ stablecoinId }: YieldDetailSectionP
       </div>
 
       <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
-        <span className="text-xs font-semibold uppercase tracking-[0.12em] text-muted-foreground">Excess Yield</span>
+        <span className="text-xs font-semibold uppercase tracking-[0.12em] text-muted-foreground">30d Excess Yield</span>
         <span
           className={cn(
             "font-mono text-3xl tabular-nums",

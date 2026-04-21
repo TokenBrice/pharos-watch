@@ -1,6 +1,15 @@
 # Yield Intelligence Methodology - Version Timeline
 
-Internal changelog reconstructed from git history. Covers Yield Intelligence `v1.0` through `v7.4` (2026-03-01 -> 2026-04-13).
+Internal changelog reconstructed from git history. Covers Yield Intelligence `v1.0` through `v7.41` (2026-03-01 -> 2026-04-21).
+
+---
+
+## v7.41 - On-chain bootstrap seeds excluded from rolling APY (Apr 21, 2026)
+
+- Deterministic on-chain seed rows used only to establish a 7-day exchange-rate anchor no longer count as observed zero-yield samples in rolling APY stats
+- This removes artificial bootstrap drag from `apy7d`, `apy30d`, `excessYield`, yield stability, and PYS once real on-chain APY samples exist
+- The raw seed rows remain in `yield_history` for exchange-rate anchoring, but rows with `data_source='onchain'`, `exchange_rate IS NOT NULL`, `apy = 0`, and `apy_base IS NULL` are excluded from rolling stats
+- Detail-page and hero-chip copy now labels `excessYield` as 30-day based, matching the formula `apy30d - benchmarkRate`
 
 ---
 

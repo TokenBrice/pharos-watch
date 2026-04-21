@@ -114,7 +114,7 @@ The server shell then appends `ExploreNextSection` after the client-rendered ana
 
 On `lg+` the hero's right column renders `HeroSignalsRail` — a four-pill stack (Safety / Peg / Liquidity / DEWS) that jumps to `#report-card` (for Safety, Peg, and DEWS) or `#liquidity`. This replaces the former desktop `SafetyGradeHero` duplicate that sat opposite the Safety Score card. On `<lg` the hero still renders `SafetyGradeHero` because the Safety Score card is far down the scroll on narrow screens.
 
-Hero signal chips below the identity block are severity-ordered: `DEWS`, `Freezable`, `Peg`, `Liquidity`, `Excess Yield`, optional `1Y vs USD`, `Chains`. The chip previously labelled `BLACKLISTABLE` now reads `Freezable` (industry term; methodology docs still use "Blacklistable" as the canonical methodology label).
+Hero signal chips below the identity block are severity-ordered: `DEWS`, `Freezable`, `Peg`, `Liquidity`, `30d Excess`, optional `1Y vs USD`, `Chains`. The chip previously labelled `BLACKLISTABLE` now reads `Freezable` (industry term; methodology docs still use "Blacklistable" as the canonical methodology label).
 
 ### Classification taxonomy pills
 

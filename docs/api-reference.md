@@ -1894,7 +1894,7 @@ Cache-backed yield rankings written by the `sync-yield-data` cron. The endpoint 
 | `safetyScore`      | `number \| null`   | Current Safety Score input used by Yield Intelligence. Rated coins match `/api/report-cards`; unrated coins use the default NR penalty input (`40`) |
 | `safetyGrade`      | `string \| null`   | Current Safety Score letter grade (`"A+"` through `"F"`, or `"NR"`) from `/api/report-cards`                                                        |
 | `yieldToRisk`      | `number \| null`   | Yield-to-risk ratio recomputed at read time from cached APY inputs plus the current Safety Score                                                    |
-| `excessYield`      | `number \| null`   | APY above risk-free rate (percentage points)                                                                                                        |
+| `excessYield`      | `number \| null`   | 30-day average APY above the row benchmark (percentage points)                                                                                      |
 | `benchmarkKey`     | `"USD" \| "EUR" \| "CHF" \| undefined` | Benchmark selected for this row's `excessYield` and any rate-derived APY logic |
 | `benchmarkLabel`   | `string \| undefined` | Human-readable benchmark label for the row |
 | `benchmarkCurrency`| `string \| undefined` | Benchmark currency code used for the row |
@@ -1952,8 +1952,8 @@ Historical yield data for a single stablecoin. If a stored `warning_signals` pay
   },
   "history": [YieldHistoryPoint, "..."],
   "methodology": {
-    "version": "7.4",
-    "currentVersion": "7.4",
+    "version": "7.41",
+    "currentVersion": "7.41",
     "changelogPath": "/methodology/yield-changelog/"
   }
 }

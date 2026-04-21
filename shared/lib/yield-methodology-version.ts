@@ -3,9 +3,24 @@ import {
 } from "./methodology-version";
 
 const yieldMethodology = createMethodologyVersion({
-  currentVersion: "7.4",
+  currentVersion: "7.41",
   changelogPath: "/methodology/yield-changelog/",
   changelog: [
+  {
+    version: "7.41",
+    title: "On-Chain Bootstrap Seeds Excluded From Rolling APY",
+    date: "2026-04-21",
+    effectiveAt: 1776729600,
+    summary:
+      "Deterministic on-chain seed rows used only to establish a 7-day exchange-rate anchor no longer count as observed zero-yield samples in rolling APY, excess-yield, stability, or PYS calculations.",
+    impact: [
+      "On-chain rows whose first observations were bootstrap `0%` APY placeholders now compute `apy7d`, `apy30d`, `excessYield`, yield stability, and PYS from real APY samples once an anchor exists",
+      "`excessYield` remains defined as `apy30d - benchmarkRate`; detail-page and hero-chip copy now labels it as 30-day based so it is not confused with current APY spread",
+      "Historical seed rows remain in `yield_history` for exchange-rate anchoring, but the evaluator excludes rows with `data_source='onchain'`, `exchange_rate IS NOT NULL`, `apy = 0`, and `apy_base IS NULL` from rolling stats",
+    ],
+    commits: [],
+    reconstructed: false,
+  },
   {
     version: "7.4",
     title: "Pre-Launch Lending Overrides Quarantined",

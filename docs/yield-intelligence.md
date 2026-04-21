@@ -6,7 +6,7 @@ Risk-adjusted yield tracking and ranking for yield-bearing stablecoins and curat
 
 ## Methodology Versioning
 
-- **Current methodology version:** `v7.4`
+- **Current methodology version:** `v7.41`
 - **Public changelog page:** `/methodology/yield-changelog/`
 - **Canonical source:** `shared/lib/yield-methodology-version.ts`
 
@@ -27,6 +27,7 @@ Rankings provenance now carries source-native freshness for derived sources:
 - published `lending-opportunity` suggestions now explicitly exclude Resolv / `USR`, `stUSR`, and `wstUSR`-linked venues across both supplemental protocol APIs and auto-discovered DeFiLlama lending pools, so impaired wrapper ecosystems do not surface as recommended base-asset yield routes
 - pre-launch yield-bearing assets with no live runtime source now publish as explicit intentional manifest gaps rather than appearing as covered entries with zero strategies; this currently includes `bd-basedollar`, `pusd-polaris`, `trusd-tori`, and `usg-tangent`
 - explicit and deterministic lending candidates are ignored unless the target asset is in the active stablecoin universe, so pre-launch metadata cannot surface on the live yield leaderboard before launch
+- deterministic on-chain bootstrap seed rows still persist exchange-rate anchors, but they are excluded from rolling APY, excess-yield, stability, and PYS stats once real on-chain APY samples exist
 
 ---
 
@@ -101,7 +102,7 @@ Currently configured for 12 generic vaults (all use selector `0x07a2d13a` — `c
 apy = ((rate_now / rate_7d_ago) ^ (365.25 / 7) - 1) * 100
 ```
 
-Even when Tier 1 succeeds, the cron still falls through to Tier 2 to collect additional wrapper/native DeFiLlama rows. If no previous exchange rate exists yet (first sync), Tier 1 emits a seed row with `currentApy: 0` and the current `exchangeRate` so the rate is persisted in `yield_history`. This breaks the bootstrapping deadlock: without the seed, the on-chain source would never resolve because it needs a 7-day-old rate, but the rate was never stored because the source never resolved. Subsequent syncs (7+ days later) will find the seed rate and compute a real APY.
+Even when Tier 1 succeeds, the cron still falls through to Tier 2 to collect additional wrapper/native DeFiLlama rows. If no previous exchange rate exists yet (first sync), Tier 1 emits a seed row with `currentApy: 0`, `apyBase: null`, and the current `exchangeRate` so the rate is persisted in `yield_history`. This breaks the bootstrapping deadlock: without the seed, the on-chain source would never resolve because it needs a 7-day-old rate, but the rate was never stored because the source never resolved. Subsequent syncs (7+ days later) will find the seed rate and compute a real APY. Once real on-chain APY samples exist, those bootstrap seeds are excluded from rolling `apy7d`, `apy30d`, `excessYield`, yield stability, and PYS calculations because they are anchor placeholders, not observed zero-yield periods.
 
 #### Special-case Tier 1 estimator: Curve scrvUSD
 
@@ -335,7 +336,7 @@ Frontend components display PYS breakdown via `computePysBreakdown()` in `src/li
 | ------ | ------- | ----------- |
 | `yieldStability` | `1 - CV(30d samples)` | 0–1, higher = more consistent. Null if < 2 samples or mean ≈ 0 (`|mean| < 1e-10`) |
 | `yieldToRisk` | `apy30d / (101 - safetyScore)` | Raw yield per unit of risk |
-| `excessYield` | `apy30d - benchmarkRate` | Yield above the row's selected benchmark |
+| `excessYield` | `apy30d - benchmarkRate` | 30-day average APY above the row's selected benchmark |
 | `effectiveYield` | `max(0, apy30d + 0.25 * excessYield)` | Benchmark-aware yield term used by PYS before safety and consistency penalties |
 | `apy7d` | Timestamp-filtered 7d average | 7-day trailing APY (uses `recorded_at >= now - 7d`, not proportional slicing) |
 | `apy30d` | Simple average of 30d samples | 30-day trailing APY |
@@ -377,7 +378,7 @@ https://indexdata.six-group.com/download/saron/h_sar3mc_delayed.csv
 - Rate-derived configs can explicitly override the benchmark key when the asset's benchmark should differ from the peg currency
 - When a native benchmark is unavailable, the row falls back to USD and records `benchmarkSelectionMode: "fallback-usd"`
 
-**Usage:** The hourly core yield sync resolves `excessYield` and rate-derived APY against each row's selected benchmark. Detail cards, hero chips, and history charts render that row-level label. The `/yield` scatter plot now always keeps a benchmark frame visible: homogeneous scopes use the shared visible benchmark, while mixed scopes use the default USD benchmark as an orientation frame and rely on row-level tags for the exact hurdle.
+**Usage:** The hourly core yield sync resolves `excessYield` from 30-day average APY and rate-derived APY against each row's selected benchmark. Detail cards, hero chips, and history charts render that row-level label. The `/yield` scatter plot now always keeps a benchmark frame visible: homogeneous scopes use the shared visible benchmark, while mixed scopes use the default USD benchmark as an orientation frame and rely on row-level tags for the exact hurdle.
 
 ---
 
@@ -699,7 +700,7 @@ Each `history` row includes:
 
 ### Stablecoin Detail: `YieldDetailSection` (`src/components/yield-detail-section.tsx`)
 
-Yield intelligence section for stablecoin detail pages. Shows stat cards (Current APY, 30d APY, PYS with breakdown, Stability, Excess Yield), source info, source links, alt sources, warning callouts, embedded `YieldHistoryChart`, and contextual methodology hints / footer links for PYS and yield stability. Conditional: only renders for coins with yield data.
+Yield intelligence section for stablecoin detail pages. Shows stat cards (Current APY, 30d APY, PYS with breakdown, Stability) plus 30d Excess Yield, source info, source links, alt sources, warning callouts, embedded `YieldHistoryChart`, and contextual methodology hints / footer links for PYS and yield stability. Conditional: only renders for coins with yield data.
 
 It reuses the cached `/api/yield-rankings` payload to find the coin's best-source row, surfaces row-level provenance (selection reason, source age, benchmark state, source-switch state), and passes the selected benchmark context, peer median, and source list into `YieldHistoryChart`.
 
@@ -709,7 +710,7 @@ It reuses the cached `/api/yield-rankings` payload to find the coin's best-sourc
 2. Warning treatment:
    - 2+ active signals: amber callout block listing every warning label
    - 1 active signal: compact inline alert row
-3. Five stat cards: Current APY, 30d APY, PYS (with click/focus disclosure for the score breakdown), Stability, Excess Yield
+3. 30d Excess Yield callout plus four stat cards: Current APY, 30d APY, PYS (with click/focus disclosure for the score breakdown), Stability
 4. Source info row: clickable source name, normalized data-source badge, source TVL
 5. Alternative sources list when `altSources.length > 0`
 6. Shared `YieldHistoryChart`
