@@ -4,7 +4,7 @@ Multi-dimensional risk grades (A+ through F) for every tracked stablecoin. Compu
 
 The stablecoin registry currently contains 197 tracked metadata entries. Report-card snapshots score the active subset and the cemetery set; pre-launch tracked entries remain outside the scored snapshot until they launch.
 
-## Overall Grade (v7.07)
+## Overall Grade (v7.08)
 
 Four-step computation:
 
@@ -15,7 +15,7 @@ Four-step computation:
 
 Cemetery coins get a permanent F.
 
-Current-version note: v7.07 reverses v6.1's stale-DEX suppression: Liquidity / Exit (and the redemption-backstop snapshot serving `/api/redemption-backstops`) now reuse the last-known DEX liquidity score when its freshness runway has elapsed, instead of dropping documented offchain-issuer routes to `NR` on routine `sync-dex-liquidity` cron lag. Staleness is surfaced via `liquidityStale` and `inputFreshness.dexLiquidity.stale`; absent (not stale) DEX snapshots still trigger the documented offchain-issuer primary-market-floor exclusion unchanged. All v7.06 behavior carries forward: the stronger peg treatment introduced in v6.93, NAV-wrapper peg inheritance from v6.94, treatment of custodied BTC wrappers plus issuer-seizable tokenized collateral as direct inherited freeze exposure for blacklistability attribution when they dominate reserve weight, disabling static or non-live-direct redemption uplift during severe active depegs unless current live-open redemption evidence exists, removal of the legacy active-depeg peg-dimension cap, suppression of materially stale redemption-backstop rows from Safety Score Liquidity / Exit only after the report-card freshness runway expires, collateral-quality passthrough for reserve adapters whose upstreams expose verified source timestamps, USDaf's Asymmetry feed qualifying when its protocol API timestamp is fresh, additional proof-style feeds promoted only when they have independent timestamped NAV, balance-sheet, or bundle-oracle evidence, separation of standalone redemption-route quality from Safety Score-eligible exit capacity, frxUSD using fresh Frax balance-sheet redemption capacity when that live route is current, and USTB using Superstate's current liquidity endpoint without treating NAV/AUM as immediate liquidity. Eventual-only routes stay visible and still do not replace missing DEX liquidity, but documented offchain issuer routes can now add a primary-market exit diversification bonus when a DEX liquidity score is already present. Queue-like routes remain capped before blending. The `activeDepegBps` field remains in `RawDimensionInputs` so stressed-grade recomputations and the frontend can apply the same peak-based cap.
+Current-version note: v7.08 clarifies reserve-risk tiering for actively managed strategy books. Delta-neutral wording is not enough to assign a medium tier by itself: transparent spot or wrapped market exposure can remain medium, but reserves delegated into externally managed market-neutral, basis, perp, LP, private-deal, or custody-dependent strategy books are high unless there is stronger granular evidence that the slice is only an idle stablecoin or cash-equivalent buffer. This reclassifies avUSD's 0xPartners-managed strategy and loss-absorption reserve from medium to high. All v7.07 behavior carries forward: Liquidity / Exit (and the redemption-backstop snapshot serving `/api/redemption-backstops`) reuse last-known DEX liquidity when its freshness runway has elapsed, staleness is surfaced via `liquidityStale` and `inputFreshness.dexLiquidity.stale`, absent DEX snapshots still trigger the documented offchain-issuer primary-market-floor exclusion, and the `activeDepegBps` field remains in `RawDimensionInputs` so stressed-grade recomputations and the frontend apply the same cap.
 
 ## Dimensions
 
@@ -160,8 +160,8 @@ other scoring dimensions.
 | ----------------- | ----- | ---------------------------------- | ----------------------------------------------------------------------------- |
 | `very-low`        | 100   | No/minimal counterparty risk       | Government securities, cash, repos, physical gold/silver, ETH, canonical WETH |
 | `low`             | 75    | Stablecoin/tokenized layer         | USDC, BUIDL, USYC, ETH LSTs, other stablecoins                                |
-| `medium`          | 50    | Wrapped/structured market exposure | wBTC, tokenized gold, delta-neutral strategies, tokenized ETFs                |
-| `high`            | 25    | Volatile native assets             | SOL, BNB, TRX, alt-chain tokens                                               |
+| `medium`          | 50    | Wrapped/structured market exposure | wBTC, tokenized gold, transparent spot/wrapped market exposure, tokenized ETFs |
+| `high`            | 25    | Active strategy / volatile exposure | SOL, BNB, TRX, alt-chain tokens, externally managed market-neutral or basis books, LP/private-deal/perp strategy reserves |
 | `very-high`       | 5     | Governance/exotic/opaque           | Governance tokens, algorithmic mechanisms, sanctioned assets                  |
 
 **Formula:** `score = round(Σ(slice_pct × tier_score) / Σ(slice_pct))`
@@ -170,7 +170,7 @@ other scoring dimensions.
 
 Reserve compositions are maintained in `StablecoinMeta.reserves` as arrays of `{ name, pct, risk }` slices.
 
-Direct ETH reserve slices and canonical wrapped ETH (`WETH`) use the same `very-low` tier. ETH liquid staking tokens (`stETH`, `wstETH`, `rETH`, etc.) remain `low`, while strategy buckets or bridged ETH exposures can still be modeled separately when the reserve slice represents more than spot ETH custody.
+Direct ETH reserve slices and canonical wrapped ETH (`WETH`) use the same `very-low` tier. ETH liquid staking tokens (`stETH`, `wstETH`, `rETH`, etc.) remain `low`, while strategy buckets or bridged ETH exposures can still be modeled separately when the reserve slice represents more than spot ETH custody. Delta-neutral labels are evaluated by structure: transparent spot/wrapped exposure can remain medium, but capital delegated to external managers, off-exchange or perp books, LPs, private liquidity deals, or complex DeFi strategy baskets is high unless a stronger source proves the slice is only a liquid stablecoin/cash-equivalent buffer.
 
 #### Collateral Quality: Enum Fallback
 

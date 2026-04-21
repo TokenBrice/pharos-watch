@@ -1,6 +1,15 @@
 # Report Cards Scoring — Version Timeline
 
-Internal changelog reconstructed from git history plus the live version metadata source. Covers v1.0 through v7.07 (2026-02-25 → 2026-04-18). The newest sections track the machine-readable version source closely; older reconstructed sections below v6.92 preserve the original authoring-era grouping and are not guaranteed to be in strict descending source order. Use `shared/lib/safety-score-version-data.ts` for canonical machine ordering.
+Internal changelog reconstructed from git history plus the live version metadata source. Covers v1.0 through v7.08 (2026-02-25 → 2026-04-21). The newest sections track the machine-readable version source closely; older reconstructed sections below v6.92 preserve the original authoring-era grouping and are not guaranteed to be in strict descending source order. Use `shared/lib/safety-score-version-data.ts` for canonical machine ordering.
+
+## v7.08 — Strategy reserve tier clarification (2026-04-21)
+
+Reserve-risk tiering now distinguishes transparent spot/wrapped market exposure from actively managed strategy books:
+
+- Delta-neutral wording no longer implies a medium tier by itself
+- Transparent spot or wrapped market exposure can remain medium when the reserve slice is mainly asset exposure and custody/counterparty risk is handled by the custody dimension
+- Externally managed market-neutral, basis, perp, LP, private-deal, or custody-dependent strategy reserves are high unless stronger granular evidence shows the slice is only an idle stablecoin or cash-equivalent buffer
+- avUSD's 0xPartners-managed reserve slices moved from medium to high because protocol materials describe capital being actively deployed across strategy managers and market-neutral yield strategies, not just held as idle USDC
 
 ## v7.07 — Stale DEX liquidity stays usable for Exit scoring (2026-04-18)
 

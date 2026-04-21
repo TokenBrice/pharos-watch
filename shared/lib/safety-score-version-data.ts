@@ -1,9 +1,25 @@
 import type { MethodologyVersionConfig } from "./methodology-version";
 
 export const SAFETY_SCORE_VERSION_CONFIG: MethodologyVersionConfig = {
-  currentVersion: "7.07",
+  currentVersion: "7.08",
   changelogPath: "/methodology/scoring-changelog/",
   changelog: [
+    {
+      version: "7.08",
+      title: "Strategy reserve tier clarification",
+      date: "2026-04-21",
+      effectiveAt: 1776729600,
+      summary:
+        "Reserve-risk tiering now distinguishes transparent spot or wrapped market exposure from actively managed strategy books; externally managed market-neutral, basis, perp, LP, private-deal, or custody-dependent strategy reserves are high unless stronger granular evidence shows the slice is only an idle stablecoin or cash-equivalent buffer.",
+      impact: [
+        "Delta-neutral wording no longer implies a medium reserve-risk tier by itself",
+        "Transparent spot or wrapped market exposure can remain medium when the slice is mainly asset exposure and custody/counterparty risk is handled by the custody dimension",
+        "Externally managed market-neutral, basis, perp, LP, private-deal, or custody-dependent strategy reserves are high unless stronger granular evidence shows the slice is only an idle stablecoin or cash-equivalent buffer",
+        "avUSD's 0xPartners-managed strategy and loss-absorption reserve slices move from medium to high, lowering its reserve-derived collateral quality while leaving its existing unregulated-custody penalty intact",
+      ],
+      commits: [],
+      reconstructed: false,
+    },
     {
       version: "7.07",
       title: "Stale DEX liquidity stays usable for Exit scoring",

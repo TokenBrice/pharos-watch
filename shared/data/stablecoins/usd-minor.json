@@ -1218,7 +1218,7 @@
       "rwa": false,
       "navToken": false
     },
-    "collateral": "USDC reserves held in protocol smart contracts",
+    "collateral": "USDC deposits backing avUSD are deployed through Avant's actively managed market-neutral strategy framework, including basis trades, lending-rate arbitrage, yield trading, lending markets, liquidity provisioning, and private liquidity deals",
     "pegMechanism": "1:1 redemption for USDC via Avant Protocol with a 0.05% redemption fee and 1–7 day settlement window",
     "llamaId": "271",
     "detailProvider": "defillama",
@@ -1262,13 +1262,13 @@
       {
         "name": "USDC (1:1 backing, deployed into delta-neutral strategies via 0xPartners)",
         "pct": 95,
-        "risk": "medium",
+        "risk": "high",
         "coinId": "usdc-circle"
       },
       {
         "name": "Loss-absorption reserve (0xPartners managed)",
         "pct": 5,
-        "risk": "medium"
+        "risk": "high"
       }
     ],
     "yieldConfig": {

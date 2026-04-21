@@ -15,7 +15,10 @@ export function CollateralQualityMethodologyCopy() {
       on reserve surfaces, but they never override curated collateral scoring.
       Each reserve slice is classified into one of five risk tiers and the score is their weighted average.
       Direct ETH and canonical WETH slices share the same Very Low tier, while ETH liquid staking tokens
-      remain Low. For coins without usable reserve compositions, a coarser enum-based fallback is used.
+      remain Low. Delta-neutral wording is evaluated by structure: transparent spot or wrapped exposure can
+      stay Medium, but externally managed market-neutral, basis, perp, LP, private-deal, or custody-dependent
+      strategy books are High unless stronger granular evidence shows the slice is only a liquid stablecoin or
+      cash-equivalent buffer. For coins without usable reserve compositions, a coarser enum-based fallback is used.
       Explicit overrides exist for coins where defaults are incorrect (e.g., protocols on Solana, coins
       with CEX custody).
     </p>

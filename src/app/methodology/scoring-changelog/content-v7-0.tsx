@@ -1,5 +1,34 @@
 import { VersionCard, getScoringEntry } from "./content-shared";
 
+export function ScoringChangelogV708Entry() {
+  return (
+    <VersionCard
+      entry={getScoringEntry("7.08")}
+      accent="border-l-emerald-500"
+    >
+      <p>
+        Reserve-risk tiering now distinguishes transparent spot or wrapped market exposure from actively managed
+        strategy books.
+      </p>
+      <ul className="list-disc list-inside space-y-1">
+        <li>Delta-neutral wording no longer implies a medium reserve-risk tier by itself.</li>
+        <li>
+          Transparent spot or wrapped market exposure can remain medium when custody and counterparty risk are
+          already captured by the custody model.
+        </li>
+        <li>
+          Externally managed market-neutral, basis, perp, LP, private-deal, or custody-dependent strategy reserves
+          are high unless stronger granular evidence shows the slice is only an idle stablecoin or cash-equivalent
+          buffer.
+        </li>
+        <li>
+          avUSD&apos;s 0xPartners-managed strategy and loss-absorption reserve slices move from medium to high.
+        </li>
+      </ul>
+    </VersionCard>
+  );
+}
+
 export function ScoringChangelogV707Entry() {
   return (
     <VersionCard
