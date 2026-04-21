@@ -137,11 +137,11 @@ All use USDC events: `Blacklisted(address)`, `UnBlacklisted(address)`. Decimals:
 
 ### USD1 (World Liberty Financial USD)
 
-| Chain    | Address                                      | Decimals | Events            |
-| -------- | -------------------------------------------- | -------- | ----------------- |
-| Ethereum | `0x8d0d000ee44948fc98c9b98a4fa4921476f08b0d` | 18       | Dual-index freeze |
-| BSC      | `0x8d0d000ee44948fc98c9b98a4fa4921476f08b0d` | 18       | Dual-index freeze |
-| Tron     | `TPFqcBAaaUMCSVRCqPaQ9QnzKhmuoLR6Rc`         | 18       | Dual-index freeze |
+| Chain    | Address                                      | Decimals | Events |
+| -------- | -------------------------------------------- | -------- | ------ |
+| Ethereum | `0x8d0d000ee44948fc98c9b98a4fa4921476f08b0d` | 18       | Dual-index freeze/unfreeze plus WLFI `FrozenAccountDrained` / `FrozenFundsReallocated` destroy events |
+| BSC      | `0x8d0d000ee44948fc98c9b98a4fa4921476f08b0d` | 18       | Dual-index freeze/unfreeze plus WLFI `FrozenAccountDrained` / `FrozenFundsReallocated` destroy events |
+| Tron     | `TPFqcBAaaUMCSVRCqPaQ9QnzKhmuoLR6Rc`         | 18       | Dual-index freeze/unfreeze plus WLFI `FrozenAccountDrained` / `FrozenFundsReallocated` destroy events |
 
 ### USDG (Global Dollar)
 
@@ -202,8 +202,8 @@ All use USDC events: `Blacklisted(address)`, `UnBlacklisted(address)`. Decimals:
 | USDQ | Ethereum | `BlockPlaced(address)`, `BlockReleased(address)`, `DestroyedBlockedFunds(address,uint256)` | USDT0/Hadron pattern |
 | USDO | Ethereum, Base | `AccountBanned(address)`, `AccountUnbanned(address)` | Indexed address |
 | USDX | Ethereum | `AddedBlacklist(address)`, `RemovedBlacklist(address)` | Non-indexed address in data |
-| AID | Ethereum | `AddedToDenyList(address[])`, `RemovedFromDenyList(address[])` | Dynamic address-array event expands to one row per address |
-| TGBP | Ethereum, Avalanche | `Banned(address)`, `UnBanned(address)` | Indexed address; GBP-denominated USD conversion |
+| AID | Ethereum, Arbitrum | `AddedToDenyList(address[])`, `RemovedFromDenyList(address[])` | Dynamic address-array event expands to one row per address; Base remains deferred |
+| TGBP | Ethereum, Avalanche, Polygon | `Banned(address)`, `UnBanned(address)` | Indexed address; GBP-denominated USD conversion; Base and BSC remain deferred |
 | EURC | Ethereum, Base, Avalanche | `Blacklisted(address)`, `UnBlacklisted(address)` | Circle mirror-zero rows are preserved with suppression metadata and excluded from public aggregates |
 | USDP | Ethereum | `FreezeAddress(address)`, `UnfreezeAddress(address)`, `FrozenAddressWiped(address)` | Same freeze pattern as PYUSD/USDG (Paxos family) |
 | BUIDL | Ethereum, BSC, Optimism, Arbitrum, Avalanche, Polygon | `Seize(address,address,uint256,string)`, `OmnibusSeize(address,address,uint256,string,uint8)` | Seize-only coverage mapped to `destroy`; not a live blacklist/freeze state |

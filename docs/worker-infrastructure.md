@@ -84,7 +84,7 @@ The paired Pages Functions contracts live in `functions/lib/ops-env.ts` and `fun
 | `TELEGRAM_BOT_TOKEN`             | string     | No                                                 | Digest → Telegram, bot chat replies, subscriber alert dispatch                                                                                                             |
 | `TELEGRAM_CHAT_ID`               | string     | No                                                 | Digest channel posts and cemetery announcements                                                                                                                            |
 | `TELEGRAM_WEBHOOK_SECRET`        | string     | No                                                 | Telegram webhook secret validation via `X-Telegram-Bot-Api-Secret-Token`; registration and reconciliation emit this current secret                                          |
-| `TELEGRAM_WEBHOOK_SECRET_PREVIOUS` | string   | No                                                 | Optional 24-hour overlap secret accepted by the Telegram webhook receiver during secret rotation                                                                             |
+| `TELEGRAM_WEBHOOK_SECRET_PREVIOUS` | string   | No                                                 | Optional previous Telegram webhook secret accepted until operators remove it; the 24-hour rotation window is policy, not Worker-enforced age logic                            |
 | `MAINTENANCE_MODE`               | `string?`  | No                                                 | Optional. When set to the exact string `"true"`, the worker returns 503 for all non-`OPTIONS` requests. Used as a kill switch.                                             |
 | `MINT_BURN_DISABLED_IDS`         | string     | No                                                 | Mint/burn runtime disable list by stablecoin ID (CSV)                                                                                                                      |
 | `MINT_BURN_DISABLED_SYMBOLS`     | string     | No                                                 | Mint/burn runtime disable list by symbol (CSV)                                                                                                                             |
@@ -205,7 +205,7 @@ The Worker uses `caches.default` (Cloudflare's per-colo edge cache) to cache GET
 
 | Profile  | `Cache-Control` header                 | Used by                                                                                                                                                            |
 | -------- | -------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| Realtime | `public, s-maxage=60, max-age=10`      | stablecoins, stablecoin-summary, blacklist, depeg-events, peg-summary, mint-burn-events, chains                                                                    |
+| Realtime | `public, s-maxage=60, max-age=10`      | stablecoins, stablecoin-summary, blacklist, blacklist-summary, depeg-events, peg-summary, mint-burn-events, chains                                                 |
 | Per-coin | `public, s-maxage=300, max-age=10`     | stablecoin detail (`/api/stablecoin/:id`)                                                                                                                          |
 | Standard | `public, s-maxage=300, max-age=60`     | stablecoin-charts, redemption-backstops, usds-status, daily-digest, digest-archive, report-cards, stability-index, yield-rankings, mint-burn-flows, stress-signals |
 | Custom   | `public, s-maxage=300, max-age=300`    | dex-liquidity                                                                                                                                                      |
@@ -246,10 +246,10 @@ This baseline is enough to catch most abuse, regression, or cache-efficiency pro
 
 - Pages Functions on `pharos.watch`, `ops.pharos.watch`, and Pages preview hosts proxy same-origin `/_site-data/*` requests with host-aware policy: production hosts require `SITE_API_ORIGIN`, while preview/local rehearsal may intentionally fall back to `api.pharos.watch` only for exempt routes, auth-off/report-only tests, Worker previews, or proxy setups that also forward a valid API key
 - the proxy injects `X-Pharos-Site-Proxy-Secret` from `SITE_API_SHARED_SECRET` and continues to emit only the current secret during rotations
-- the worker accepts that header only on `site-api.pharos.watch` or Worker preview URLs during CI rehearsal; it accepts either `SITE_API_SHARED_SECRET` or `SITE_API_SHARED_SECRET_PREVIOUS` during the 24-hour overlap window, while preview/local public-API fallback remains a rehearsal-only path
+- the worker accepts that header only on `site-api.pharos.watch` or Worker preview URLs during CI rehearsal; it accepts either `SITE_API_SHARED_SECRET` or `SITE_API_SHARED_SECRET_PREVIOUS` while both are configured, while preview/local public-API fallback remains a rehearsal-only path
 - the worker allows only `GET` requests to allowlisted public-read routes from `shared/lib/site-data-routes.ts`
 - site-data requests skip public API request-source telemetry so the public API attribution dataset stays scoped to `api.pharos.watch`
-- overlap sequence: set `SITE_API_SHARED_SECRET_PREVIOUS` to the retiring value, deploy the new current secret everywhere that emits `X-Pharos-Site-Proxy-Secret`, keep both values active for 24 hours, then remove `SITE_API_SHARED_SECRET_PREVIOUS`
+- overlap sequence: set `SITE_API_SHARED_SECRET_PREVIOUS` to the retiring value, deploy the new current secret everywhere that emits `X-Pharos-Site-Proxy-Secret`, keep both values active for 24 hours as operator policy, then remove `SITE_API_SHARED_SECRET_PREVIOUS`
 
 ### Router-Dispatched Status Actions
 
@@ -606,7 +606,7 @@ async function logCronRun(
 - Records the normalized slot timestamp (`slot_started_at`) alongside per-job history/progress rows
 - Exposes a `reportProgress(...)` callback; leased jobs now emit wrapper-owned milestones (`started`, `lease-acquired`, `completed`, timeout/skip states when applicable) before any cron-specific progress stages
 - Executes the job function
-- On success: inserts row into `cron_runs` with `status='ok'`, `item_count`, and `metadata`
+- On normal completion: inserts row into `cron_runs` with `status = resolvedResult.status ?? "ok"`, `item_count`, and `metadata`; returned statuses such as `degraded`, `skipped_locked`, or `error` are preserved
 - On lease contention: inserts row with `status='skipped_locked'` and lease metadata
 - On error: inserts row with `status='error'` and error message, calls `sendAlert()`, re-throws
 - On completion/error of a progress-reporting job: clears the corresponding `cron_run_progress` row
@@ -636,7 +636,7 @@ CREATE TABLE cron_run_progress (
 );
 ```
 
-Current producers:
+All leased jobs emit wrapper-owned progress milestones. Current producers with cron-specific detailed stages include:
 
 - `sync-stablecoins`
 - `sync-live-reserves`
@@ -1128,7 +1128,7 @@ Returns raw and effective status, recent `cron_runs`, active `cron_run_progress`
 | `prune-cron-history`            | 86,400s (24h)    | `0 3 * * *`                                       |
 | `yield-coverage-audit`          | 2,592,000s (30d) | `0 6 1 * *`                                       |
 
-A job is marked "unhealthy" if its last run had `status='error'` or if the last run started more than 2× its expected interval ago. `/api/status` now also exposes `crons[*].inFlight` while a long-running leased job is active, including `stage`, `itemsDone/itemsTotal`, the last heartbeat timestamp, and a `stale` flag when the active-progress row stops updating. Only progress rows backed by a still-active matching lease are surfaced this way.
+A job is treated as healthy when cron telemetry is unavailable, when a fresh in-flight run exists, when the last run is fresh and `ok`/`degraded`, when a fresh `skipped_locked` run has another fresh `ok` run in recent history, or when a watch-tier job has no history yet. Otherwise it is unhealthy, including stale history or non-fresh errors. `/api/status` now also exposes `crons[*].inFlight` while a long-running leased job is active, including `stage`, `itemsDone/itemsTotal`, the last heartbeat timestamp, and a `stale` flag when the active-progress row stops updating. Only progress rows backed by a still-active matching lease are surfaced this way.
 
 The status handler now surfaces per-subsection loader failures through `sectionErrors` instead of silently swallowing them. When a subsection query fails, the affected field degrades to `null`/empty and the response still returns `200` with a machine-readable error entry for that subsection. Those subsection messages are sanitized summaries rather than raw SQL / exception text.
 

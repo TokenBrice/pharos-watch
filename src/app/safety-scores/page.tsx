@@ -26,7 +26,7 @@ const FAQ_ITEMS = [
   {
     question: "How are stablecoin safety grades calculated?",
     answer:
-      "Each stablecoin is scored across five weighted base dimensions: liquidity depth (DEX pool size, volume, protocol diversity, and redemption backstops), resilience (collateral quality, custody model, and blacklist capability), decentralization (governance type and chain infrastructure), dependency risk (exposure to upstream stablecoins), and peg stability. The four structural dimensions are combined first, then peg stability acts as a multiplier on the result. The resulting 0–100 score maps to a letter grade from A+ to F.",
+      "Each stablecoin is scored across four weighted base dimensions: liquidity / exit capacity, resilience, decentralization, and dependency risk. Peg stability is then applied as a multiplier on the result. The resulting 0–100 score maps to a letter grade from A+ to F.",
   },
   {
     question: "What does the contagion simulation show?",
@@ -65,7 +65,7 @@ export default createClientFeaturePage({
     headerActions: <ShareButton ogPath="/api/og/safety-scores" />,
     leadParagraphs: [
       "Letter grades from A+ to F computed from live reserve feeds, transitive dependency scoring, and redemption-backstop blending — not just market-cap rankings.",
-      "Each grade weights five dimensions — liquidity depth, resilience, decentralization, dependency risk, and peg stability — then caps the result based on upstream exposure. A coin backed by USDC cannot score higher than USDC. The contagion simulator shows exactly how a major failure cascades through collateral chains.",
+      "Each grade weights four base dimensions — liquidity / exit capacity, resilience, decentralization, and dependency risk — then applies peg stability as a multiplier and caps wrapper or mechanism dependencies against upstream scores. The contagion simulator shows exactly how a major failure cascades through collateral chains.",
     ],
   },
   afterClient: (

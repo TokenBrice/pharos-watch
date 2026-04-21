@@ -321,6 +321,8 @@ interface DepegEvent {
   recoveryPrice: number | null
   pegReference: number
   source: "live" | "backfill"
+  confirmationSources: string | null
+  pendingReason: string | null
 }
 ```
 

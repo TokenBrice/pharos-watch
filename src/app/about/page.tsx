@@ -418,7 +418,7 @@ export default function AboutPage() {
                 },
                 {
                   question: "What does Pharos track?",
-                  answer: `Pharos tracks ${ACTIVE_STABLECOINS.length} active stablecoins across supported chains, classified by governance, backing, and peg currency. It documents ${DEAD_STABLECOINS.length} dead stablecoins in the cemetery, monitors issuer freeze and blacklist events on-chain for supported centralized stablecoins, provides composite peg scores with depeg detection and heatmaps, integrates independent Bluechip SMIDGE safety ratings, scores DEX liquidity depth 0-100 across decentralized exchanges, computes a 30-minute Pharos Stability Index for ecosystem health, and issues report cards from five weighted base dimensions plus a peg-stability multiplier, including an exit-liquidity input that blends DEX liquidity with protocol or issuer redemption backstops when a direct exit path exists.`,
+                  answer: `Pharos tracks ${ACTIVE_STABLECOINS.length} active stablecoins across supported chains, classified by governance, backing, and peg currency. It documents ${DEAD_STABLECOINS.length} dead stablecoins in the cemetery, monitors issuer freeze and blacklist events on-chain for supported centralized stablecoins, provides composite peg scores with depeg detection and heatmaps, integrates independent Bluechip SMIDGE safety ratings, scores DEX liquidity depth 0-100 across decentralized exchanges, computes a 30-minute Pharos Stability Index for ecosystem health, and issues report cards from four weighted base dimensions plus a peg-stability multiplier, including an exit-liquidity input that blends DEX liquidity with protocol or issuer redemption backstops when a direct exit path exists.`,
                 },
                 {
                   question: "How does Pharos classify stablecoins?",
@@ -724,8 +724,8 @@ export default function AboutPage() {
           contentClassName="space-y-3 text-sm leading-relaxed text-muted-foreground"
         >
           <p>
-            Pharos grades every stablecoin across five base dimensions, with peg stability acting as a multiplier on
-            top. The methodology page covers the full grading formula, peg score computation, DEX liquidity scoring, and
+            Pharos grades every stablecoin across four weighted base dimensions, with peg stability acting as a
+            multiplier on top. The methodology page covers the full grading formula, peg score computation, DEX liquidity scoring, and
             contagion stress-test design.
           </p>
           <Button asChild variant="outline" className={CTA_BUTTON_CLASS}>

@@ -39,7 +39,7 @@ Internal changelog reconstructed from git history. Covers Mint/Burn Flow `v1.0` 
 - Config deferral: configs that exit a run with `apiErrors > 5` AND `coverage < 0.8` are inserted into `mint_burn_config_deferral` with a 1-hour grace period; subsequent runs skip them (protects healthy configs from budget starvation).
 - Recalc-failure propagation: `recalcAffectedHours` failures now downgrade the critical lane `ok → degraded` and surface `recalcFailed` + `recalcError` in cron metadata (previously silently logged).
 - Cache invalidation: on successful runs (`ok` / `degraded`), `mint-burn-flows:*` rows are purged from the shared `cache` table via a PK-range predicate.
-- Bounded-concurrency tx-context fetch: `runWithConcurrencyLimit(..., 4, ...)` replaces the serial `resolveTxContext` loop, leaving 2 connections of headroom in Cloudflare's per-trigger 6-connection pool.
+- Bounded-concurrency tx-context fetch: local `mapWithConcurrency(..., 4, ...)` replaces the serial `resolveTxContext` loop. Each worker fetches transaction and receipt context together, so this is a bounded best-effort speedup rather than a fixed connection-headroom guarantee.
 
 **Admin endpoints**
 

@@ -105,8 +105,9 @@ export function PricingPipelineMethodologySection() {
           composed only of list-style aggregators (CoinGecko, DefiLlama, DefiLlama-list) are now downgraded to
           single-source regardless of which two combine, closing the CoinGecko + DefiLlama-detail tautology alongside the
           existing CG + DL-list downgrade. Cluster tiebreak also prefers hard-tier clusters over equal-weight soft-tier
-          clusters before falling through to spread and peg-proximity rules, and a lone promoted DEX protocol now
-          requires hard-source corroboration before entering primary consensus. Corroborating candidate prices now stay
+          clusters before falling through to spread and peg-proximity rules. A lone promoted DEX protocol is admitted
+          only when no non-DEX source exists, or when a hard market/oracle/protocol source agrees within threshold.
+          Corroborating candidate prices now stay
           attached through later validation when the selected primary result is unchanged, so a real severe depeg is not
           cleared as a single-source mark. When a confirmed severe depeg briefly loses corroboration, the pipeline
           preserves trusted continuity from fresh replay-safe{" "}

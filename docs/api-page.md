@@ -53,7 +53,7 @@ The route renders:
 6. A visible API access FAQ rendered with matching `FAQPage` JSON-LD
 7. A `Before You Call The API` section rendered from the intro portion of `docs/api-reference.md`
 8. A top-level scrollspy rail driven by the rendered H2 sections from the markdown doc, excluding the hidden admin auth/idempotency and admin endpoint sections
-9. Per-section endpoint indexes when a section contains H3 endpoint subsections
+9. H3 endpoint subsections rendered as article cards and exposed as collapsible subsection links in the API navigation rail
 
 ---
 

@@ -216,7 +216,7 @@ HTTP method allowance is defined centrally in `shared/lib/api-endpoints/` and en
 - `POST` is accepted on `/api/api-keys/:id/update`, `/api/api-keys/:id/deactivate`, and `/api/api-keys/:id/rotate`.
 - `/api/audit-depeg-history` allows `GET` only with `?dry-run=true`; otherwise it is `POST`-only.
 - `/api/backfill-dews` allows `GET` for the historical backtest and for `repair=...&dry-run=true` previews; mutating repair runs are `POST`-only.
-- Unmatched unknown paths return `404` before method validation. Once a static or dynamic route family is registered, known paths with disallowed methods return `405` with `Allow`; unsupported verbs on known endpoint families return `405` with `Allow: GET, POST`.
+- Unknown `GET` paths return `404`. Unknown `POST` `/api/*` paths return `405` with `Allow: GET`; unsupported verbs return `405` with `Allow: GET, POST`. Once a static or dynamic route family is registered, known paths with disallowed methods return `405` with `Allow`.
 
 The same shared endpoint descriptors now also carry static worker dependency-hydration hints consumed by `worker/src/routes/registry.ts`, where the worker binds shared endpoint keys directly to handlers through a single static route-definition list. That keeps endpoint metadata, router behavior, method guards, admin status-page actions, and worker-side static route wiring aligned from one source of truth plus one worker binding table.
 
@@ -1401,7 +1401,7 @@ Public transition history for the read-only `/status/` page. Returns the current
 | Param    | Type                  | Default | Description |
 | -------- | --------------------- | ------- | ----------- |
 | `window` | `"24h" \| "7d" \| "30d"` | `"30d"` | Transition time window applied server-side before rows are returned |
-| `limit`  | `integer`             | `50`    | Max transitions returned after the time-window filter (1–200) |
+| `limit`  | `integer`             | `50`    | Max raw status transitions loaded within the time window before public-impact filtering (1–200); returned public transitions may be fewer |
 
 **Response**
 
@@ -1468,7 +1468,7 @@ Browser consumers on `pharos.watch` and `ops.pharos.watch` should use same-origi
 
 Latest Pharos Stability Index (PSI) sample plus daily history. The PSI is a composite ecosystem health score (0–100) computed from active depeg severity, affected-market breadth, DEWS stress breadth, and 7-day ecosystem trend across the PSI-eligible universe (tracked coins plus shadow assets used for historical continuity). If a dependency failure prevents a safe fresh sample, the endpoint continues serving the last healthy stored PSI sample instead of publishing a degraded substitute.
 
-**Cache:** standard — `X-Data-Age` and `Warning` headers included.
+**Cache:** standard — `X-Data-Age` and `Warning` headers included after at least one PSI sample/history row exists. Before bootstrap, the empty `{ current: null, history: [] }` response carries `Cache-Control` only.
 
 **Error responses:** `503` when the canonical current PSI `components` or `input_snapshot` payload is missing or malformed.
 
@@ -1476,7 +1476,7 @@ Latest Pharos Stability Index (PSI) sample plus daily history. The PSI is a comp
 
 | Param    | Type     | Default | Description                                                                                   |
 | -------- | -------- | ------- | --------------------------------------------------------------------------------------------- |
-| `detail` | `"true"` | —       | When `"true"`, returns full history with per-day component breakdowns instead of last 91 days |
+| `detail` | `"true"` | —       | When `"true"`, returns full history with persisted per-day component breakdowns instead of last 91 days |
 
 **Response**
 
@@ -1515,7 +1515,7 @@ Latest Pharos Stability Index (PSI) sample plus daily history. The PSI is a comp
 | `current.totalMcapUsd`         | `number`              | Total ecosystem market cap from the latest input snapshot (`0` when unavailable)            |
 | `current.computedAt`           | `number`              | Unix seconds of computation                                                                 |
 | `current.methodologyVersion`   | `string`              | Methodology version used to compute the current score                                       |
-| `history`                      | `array`               | Historical scores, newest first. With `detail=true`, each entry includes `components`       |
+| `history`                      | `array`               | Historical scores, newest first. With `detail=true`, persisted rows include `components`; the synthesized current-day running-average point may omit them |
 | `malformedRows`                | `number`              | Count of historical rows dropped from `detail=true` because persisted `components` JSON was malformed |
 | `history[].methodologyVersion` | `string`              | Methodology version used for that history point                                             |
 | `methodology`                  | `object`              | Version metadata for current PSI methodology context                                        |
@@ -1610,7 +1610,7 @@ For peg handling, `rawInputs.pegScore` is the effective peg input used by report
 | `rawInputs`       | `RawDimensionInputs`                   | Raw scoring inputs for client-side grade recomputation (stress testing)             |
 | `isDefunct`       | `boolean`                              | `true` for cemetery coins (permanent F grade)                                       |
 
-**`DependencyWeight`**: `{ id: string, weight: number, type?: DependencyType }` — upstream stablecoin ID + fraction of collateral from that source (0–1), with optional dependency category. Weights sum to ≤ 1.0; the remainder represents non-stablecoin collateral.
+**`DependencyWeight`**: `{ id: string, weight: number, type?: DependencyType }` — upstream stablecoin ID + fraction of collateral from that source (0–1), with optional dependency category. When total dependency weight is ≤ 1.0, the remainder represents non-stablecoin collateral; when declared dependency weight exceeds 1.0, dependency scoring normalizes by raw total and uses no self-backed remainder.
 
 **`RawDimensionInputs`**
 
@@ -2345,7 +2345,7 @@ Public feedback ingestion endpoint used by the in-app feedback modal. Validates 
 
 Telegram Bot API webhook endpoint. Receives user messages, processes bot commands, and manages subscriptions.
 
-**Authentication:** exempt from `X-API-Key`; requires `X-Telegram-Bot-Api-Secret-Token` instead. Not the standard `X-Admin-Key`.
+**Authentication:** exempt from `X-API-Key`; requires `X-Telegram-Bot-Api-Secret-Token` for processing. Missing or invalid webhook secrets are acknowledged with `200 ok` and ignored to prevent Telegram retry storms. Not the standard `X-Admin-Key`.
 
 **Rate limiting:** Exempt from IP rate limiter (Telegram sends from fixed IPs).
 

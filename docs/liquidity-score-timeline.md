@@ -9,7 +9,7 @@ Internal changelog reconstructed from git history. Covers Liquidity Score `v1.0`
 **Commit:** `unreleased`
 
 - Absolute TVL Depth fallback (used when a coin has no live `circulatingUsd`) now mirrors the ratio formula's anchor via a $1B implied reference mcap: `35 * log10(tvl / 700_000)` replaces the legacy `20 * log10(tvl / 100_000) + 20`
-- Yields: $700K → 0, $5M → 30, $140M → 80, ~$500M → clamps at 100 — parity with the ratio branch at 0.07%/0.5%/14%/25% depth of a $1B reference coin
+- Yields: $700K → 0, $5M → 30, $140M → 80, ~$500M → clamps at 100 — parity with the ratio branch at 0.07%/0.5%/14%/50% depth of a $1B reference coin
 - Coins without market-cap data no longer gain ~24 points of unearned TVL Depth on equivalent liquidity
 - Aerodrome/Velodrome Slipstream price observations now derive from on-chain `sqrt_ratio` (Q64.96) via a new `sqrtRatioToSpotPrice` helper; reserve ratios are not spot prices for concentrated-liquidity pools
 - Slipstream pools where `sqrt_ratio` is unusable and one side has no tracked USD price are now dropped entirely instead of falling back to a biased reserve-ratio derivation

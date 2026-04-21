@@ -20,6 +20,7 @@ This note supplements [`docs/yield-intelligence.md`](./yield-intelligence.md) wi
   - `Hashnote USYC`
   - `Ondo USDY oracle`
   - `B.Protocol LQTY-only`
+  - `Curve scrvUSD current-rate`
 - `sync-yield-supplemental` owns the heavier best-effort families. It writes a cached snapshot and does not overwrite the last good snapshot with an empty result.
 - supplemental candidate dedupe now keys on source identity plus asset identity, not bare `sourceKey` alone, so same-chain families such as Aave V3 cannot collapse multiple coins into one cached row.
 - `sync-yield-supplemental` metadata now reports raw candidate count, deduped candidate count, and dropped-row count so silent row loss is visible in cron history.

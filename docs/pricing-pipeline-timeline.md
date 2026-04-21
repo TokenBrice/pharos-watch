@@ -16,7 +16,7 @@ Internal changelog reconstructed from the machine-readable methodology version s
 - Two-source clusters composed only of list-style aggregators (CoinGecko, DefiLlama, DefiLlama-list) are now downgraded to `single-source` regardless of which two combine, closing the CoinGecko + DefiLlama-detail tautology in addition to the previously-downgraded CG + DL-list combination
 - Replay cache now enforces per-source max trusted age alongside the composite 6-hour cap so replay cannot keep a source active beyond its native freshness window
 - DefiLlama `/coins` contract-price fallback and DexScreener dex-liquidity / dex-discovery fallbacks now gate on and record against their own dedicated circuit breakers instead of reusing unrelated breaker state
-- A single promoted DEX protocol now requires hard-source corroboration to enter primary consensus, preventing a lone DEX print from self-confirming
+- A lone promoted DEX protocol is admitted only when no non-DEX source exists, or when a hard market/oracle/protocol source agrees within threshold. Two or more promoted DEX protocols are admitted as candidate sources; consensus then determines agreement.
 - Binance short-circuits to the secondary host on HTTP 5xx / 429 responses instead of retrying the first host, shortening outage detection latency
 - RedStone solo-retry is bounded to 5 requests per run and spaced to respect the Worker's per-trigger connection budget
 - GT-probe evidence rejection now downgrades the pre-GT primary to low-confidence when divergence was significant, rather than silently discarding the probe

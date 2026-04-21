@@ -14,6 +14,7 @@ npm run typecheck     # Type-check frontend, shared, Pages Functions, and root s
 npm run typecheck:worker-scripts # Type-check worker-bound operational scripts
 npm run audit:deps    # Fails on high-severity npm advisories
 npm run seo:check     # Static SEO audit against built `out/` HTML
+npm run check:cemetery-dataset # Verify generated Stablecoin Cemetery JSON/CSV exports match source data
 npm run check:worker-boundary # Enforce the shared boundary in both directions (no worker -> `src` imports, no `src`/`shared`/`scripts`/`functions` -> `worker/src` imports; pure cross-runtime metadata belongs in `shared/`)
 npm run check:shared-cycles # Fail on circular dependencies inside `shared/`, `worker/src`, and `src`
 npm run check:unused-code # Detect unreferenced internal runtime modules and unused named exports across `src/`, `shared/`, `worker/src/`, and `functions/`
@@ -27,6 +28,9 @@ npm run check:doc-source-paths # Verify backtick source-path references in READM
 npm run check:doc-sync # Verify exact methodology versions, thresholds, weights, and enforced limits stay aligned with code and canonical version labels
 npm run check:env-contract # Verify documented env bindings match the worker Env interface
 npm run check:duplicate-exports # Detect duplicate export declarations within individual files
+npm run check:llms-txt # Verify generated `/llms.txt` is current
+npm run check:openapi # Verify generated public OpenAPI artifact is current
+npm run check:postman # Verify generated public Postman collection/environment artifacts are current
 npm run check:sql-safety # Static analysis of D1 SQL patterns for safety issues
 npm run check:stablecoin-data # Validate stablecoin JSON data files against schema
 npm run check:redemption-backstops # Validate redemption backstop configs for completeness

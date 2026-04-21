@@ -110,7 +110,7 @@ Breakdowns are intentionally dense and should stay short:
 - DEX: `primary / mixed / fallback`
 - Reserve view: `score-grade / configured / checking / curated-validated / proof / curated / estimated`
 - Redemption: `heuristic / configured / issuer / psm / queue / collateral / stable / basket`
-- Flows: `full / partial / bootstrapping`
+- Flows: `full / partial / lagging / bootstrapping / data n/a`
 - Price: `tracked / price-only`
 - Blacklist: `covered / uncovered` within the directly blacklistable eligible set
 

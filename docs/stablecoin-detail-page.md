@@ -103,11 +103,11 @@ The server shell then appends `ExploreNextSection` after the client-rendered ana
 
 ### Rail vs section rules
 
-- `LongformScrollspyNav` pill order is: `report-card` (Safety), `overview`, optional `reserves`, optional `price`, `chart` (Market), optional `yield`, `liquidity`, optional `flows`, optional `blacklist`, `history`, `explore-next`. This is the current rail order; it does not strictly mirror DOM order because `YieldDetailSection` renders before `McapChart`. Optional pills appear only when their source data is present (`reserves != null`, `hasPriceTransparency`, `hasYieldSection`, `hasFlows`, `hasBlacklist`).
+- `LongformScrollspyNav` pill order is: `report-card` (Safety), `overview`, optional `reserves`, optional `price`, `chart` (Market), optional `yield`, `liquidity`, optional `flows`, optional `blacklist`, `history`, `explore-next`. This is the current rail order; it does not strictly mirror DOM order because `YieldDetailSection` renders before `McapChart`. Optional pills appear only when their source data is present (`reserves != null`, `hasPriceTransparency`, `hasYieldSection`, `hasFlows`, `hasBlacklist`); the `history` pill is currently always present even though the target section is omitted for NAV tokens.
 - Section ids are stable; do not rename them. In particular: the Safety pill still targets `#report-card`, and the Market pill still targets `#chart`.
 - `CollateralUsageSection` renders inline within the overview zone and is not a top-level scrollspy entry.
 - `DistributionSection` renders after the chart, outside the top-level rail.
-- `DepegHistory` is omitted for NAV tokens.
+- `DepegHistory` is omitted for NAV tokens, leaving the always-present `history` rail pill without a rendered target on those pages.
 - `YieldDetailSection` decides its own empty/loading/null behavior from the cached yield rankings plus static coin metadata. Non-yield-bearing coins can still render the section when the yield stack publishes a live lending-opportunity or curated ranking row for that asset.
 
 ### Hero signals rail (desktop) / SafetyGradeHero (mobile)

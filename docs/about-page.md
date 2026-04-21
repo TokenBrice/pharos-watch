@@ -19,7 +19,7 @@ Primary implementation file:
 The route shell is owned directly by `src/app/about/page.tsx`.
 
 - `metadata` sets the canonical path `/about/` plus route-specific title/description/Open Graph fields
-- the page renders through `FeaturePageShell` with `breadcrumbName="About Pharos"`, `path="/about/"`, title `About Pharos`, and a single lead paragraph
+- the page renders through `FeaturePageShell` with `breadcrumbName="About Pharos"`, `path="/about/"`, title `About Pharos`, and two lead paragraphs
 - `headerSupplement` renders `AboutReferenceModule` immediately below the title/lead with six reference cards derived from `NAV_GROUPS.info` excluding `/about`: `/funding/`, `/methodology/`, `/coverage/`, `/about/api/`, `/status/`, and `/changelog/`
 - the shell's `preface` injects FAQ JSON-LD describing why Pharos exists, what it tracks, how it classifies coins, and where the data comes from
 

@@ -23,7 +23,7 @@ Public-facing analytics dashboard tracking 197 stablecoins in repo metadata: 186
 - **Redemption Backstops** — modeled issuer / protocol redemption routes with effective-exit scoring for 170 configured assets
 - **Detail pages** — full analytics dossiers for tracked live assets plus dedicated pre-launch detail views, with conditional reserve, redemption backstop, liquidity, and safety surfaces when data exists
 - **Public status page + private operator admin** — read-only system health on `/status/`, plus Access-gated monitoring and recovery controls on `ops.pharos.watch/admin/`
-- **Backing type breakdown** — active public surfaces currently use RWA-backed and crypto-backed cohorts; the legacy algorithmic taxonomy route remains for archive compatibility, but there are no active algorithmic assets in the tracked universe
+- **Backing type breakdown** — active public surfaces expose RWA-backed and crypto-backed cohorts; algorithmic remains a legacy metadata label only, with no generated algorithmic backing route because there are no active algorithmic assets
 - **Yield-bearing & NAV token filters** — identify tokens that accrue yield natively
 - **Research-grade data pipeline** — structural validation, concurrent write protection, depeg deduplication, and price validation guardrails
 - **Dark/light mode**
@@ -125,7 +125,7 @@ Both sets above. Run `npm run dev` and `cd worker && npx wrangler dev` in separa
 ### Other commands
 
 ```bash
-npm run build    # Production build (includes type-checking)
+npm run build    # Production static build
 npm run lint     # ESLint
 cd worker && npx tsc --noEmit   # Type-check worker
 ```
@@ -285,7 +285,7 @@ Cloudflare D1 (SQLite database)
   ├── status_discrepancy_state → data quality discrepancy tracking
   ├── dex_pool_staging     → DEX discovery staging table
   ├── dex_discovery_meta   → DEX discovery backoff tracking per coin per source
-  ├── discovery_candidates → candidate pools pending verification
+  ├── discovery_candidates → potential new stablecoin coverage candidates pending review/dismissal
   ├── block_timestamp_cache → cached block-to-timestamp mappings
   ├── cron_leases          → single-writer cron execution fencing
   ├── cron_runs            → cron execution log for health monitoring
@@ -325,7 +325,7 @@ The data pipeline includes multiple guardrails designed for research-grade accur
 - **Freshness header** — `/api/stablecoins` returns `X-Data-Age` so consumers can detect stale data
 - **Atomic backfill** — depeg event backfills use transactional batch operations to prevent data loss on worker crashes
 - **Retry logic** — the shared `fetchWithRetry()` helper provides exponential backoff with opt-in 404 passthrough, while some provider integrations use bespoke timeout/retry handling when batching or raw upstream semantics require it
-- **Circuit breakers** — per-source circuit breakers (3-strike open, 30-min probe) prevent hammering many degraded upstreams; N-source weighted primary consensus cross-checks market, oracle, exchange, and on-chain voices and now chooses the peg-closer candidate for fixed non-NAV pegs when sources diverge; CoinGecko supply fallback activates when DefiLlama is unavailable
+- **Circuit breakers** — per-source circuit breakers (3-strike open, 30-min probe) prevent hammering many degraded upstreams; N-source weighted primary consensus cross-checks market, oracle, exchange, and on-chain voices, and low-confidence fixed non-NAV selection prefers stronger trust tier, then peg proximity, then weight and source key when sources diverge; CoinGecko supply fallback activates when DefiLlama is unavailable
 - **Mint/burn reliability controls** — rotating config scheduling, per-chain request quotas, adaptive `eth_getLogs` range splitting, timestamp caching, degraded-run escalation, and admin-controlled chunked backfill (`/api/backfill-mint-burn`)
 
 ## Deployment
@@ -336,7 +336,7 @@ For the canonical delivery workflow (including worktree merge flow and the repo 
 For the full Worker, Pages Functions, and frontend runtime binding table, see [.env.example](./.env.example) and [docs/worker-infrastructure.md](./docs/worker-infrastructure.md).
 For mint/burn ingestion diagnostics and recovery, use [docs/runbooks/mint-burn-integrity.md](./docs/runbooks/mint-burn-integrity.md) for operator remediation and [docs/mint-burn-flows.md](./docs/mint-burn-flows.md) for pipeline details; do not use `/agents/` notes as runbooks.
 
-1. **Validate gate:** `npm run audit:deps` → `npm run audit:pricing-providers` → `npm run lint` → `npm run typecheck` → `npm run check:worker-boundary` → `npm run check:shared-cycles` → `npm run check:migrations` → `npm run check:cron-sync` → `npm run check:cron-connections` → `npm run check:doc-counts` → `npm run check:verified-doc-links` → `npm run check:doc-source-paths` → `npm run check:doc-sync` → `npm run check:env-contract` → `npm run check:duplicate-exports` → `npm run check:redemption-backstops` → `npm run check:unused-code` → `npm run check:hotspot-ratchet` → `npm run check:sql-safety` → `npm run check:stablecoin-data` → `npm run build` + `npm run seo:check` when Pages-impacting files changed → `npm test` → `npm run coverage:critical` → `cd worker && npx tsc --noEmit` + `cd worker && npx tsc --noEmit -p tsconfig.scripts.json` when worker-impacting files changed
+1. **Validate gate:** `npm run audit:deps` → `npm run audit:pricing-providers` → `npm run lint` → `npm run typecheck` → `npm run check:cemetery-dataset` → `npm run check:cron-abort-contract` → `npm run check:cron-connections` → `npm run check:cron-sync` → `npm run check:doc-counts` → `npm run check:doc-source-paths` → `npm run check:doc-sync` → `npm run check:duplicate-exports` → `npm run check:env-contract` → `npm run check:hotspot-ratchet` → `npm run check:llms-txt` → `npm run check:migrations` → `npm run check:openapi` → `npm run check:postman` → `npm run check:redemption-backstops` → `npm run check:shared-cycles` → `npm run check:sql-safety` → `npm run check:stablecoin-data` → `npm run check:unused-code` → `npm run check:verified-doc-links` → `npm run check:worker-boundary` → `npm run build` + `npm run seo:check` when Pages-impacting files changed → `npm test` → `npm run coverage:critical` → `cd worker && npx tsc --noEmit` + `cd worker && npx tsc --noEmit -p tsconfig.scripts.json` when worker-impacting files changed
 2. **Worker candidate upload + preview smoke:** `npm ci` → capture the currently live Worker version ID → `cd worker && npx --no-install wrangler d1 migrations apply stablecoin-db --remote` → `cd worker && npx --no-install wrangler versions upload` → `npm run test:smoke-api` against that uploaded preview URL
 3. **Worker promotion:** `cd worker && npx --no-install wrangler versions deploy <uploaded-version>@100` → `cd worker && npx --no-install wrangler triggers deploy`
 4. **Production API smoke gate:** `npm run test:smoke-api` against `SMOKE_API_BASE` (fed from GitHub variable `SMOKE_API_BASE_URL`, fallback `API_BASE_URL`); if this fails after promotion, CI auto-rolls the Worker back to the previously live version

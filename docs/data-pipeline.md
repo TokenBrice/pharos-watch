@@ -220,7 +220,7 @@ This prevents false positive depeg events for systemically important stablecoins
 
 ## Stale Data Monitoring (Frontend)
 
-The `StaleDataBanner` component (`src/components/stale-data-banner.tsx`) warns users when data from any critical query is degraded or stale. Frontend freshness uses the shared `FRESHNESS_RATIOS` thresholds from `shared/lib/status-thresholds.ts`: fresh through `8x staleTime`, degraded through `12x staleTime`, then stale. When a hook uses `apiFetchWithMeta()`, backend freshness metadata (`_meta.status`, `X-Data-Age`, stale `Warning`) takes precedence over browser fetch time so a fresh client refetch cannot mask stale server data. Each page monitors all TanStack Query hooks that feed its content:
+The `StaleDataBanner` component (`src/components/stale-data-banner.tsx`) warns users when data from selected critical queries is degraded or stale. Frontend freshness uses the shared `FRESHNESS_RATIOS` thresholds from `shared/lib/status-thresholds.ts`: fresh through `8x staleTime`, degraded through `12x staleTime`, then stale. When a hook uses `apiFetchWithMeta()`, backend freshness metadata (`_meta.status`, `X-Data-Age`, stale `Warning`) takes precedence over browser fetch time so a fresh client refetch cannot mask stale server data. The table below lists the page-level banner coverage; some routes also render additional detail queries that are handled locally rather than by the page-level banner:
 
 | Page                  | Queries monitored                                   | staleTime constants                                                |
 | --------------------- | --------------------------------------------------- | ------------------------------------------------------------------ |
@@ -228,6 +228,8 @@ The `StaleDataBanner` component (`src/components/stale-data-banner.tsx`) warns u
 | **Stablecoin detail** | Prices, Peg Data, Liquidity, Report Cards           | `CRON_15MIN`, `CRON_15MIN`, `CRON_30MIN`, `CRON_15MIN`             |
 | **Depeg**             | Peg Data, DEWS, Depeg Events                        | `CRON_15MIN`, `CRON_30MIN`, `CRON_15MIN`                           |
 | **Compare**           | Prices, Peg Data, Liquidity, Report Cards, Bluechip | `CRON_15MIN`, `CRON_15MIN`, `CRON_30MIN`, `CRON_15MIN`, `CRON_24H` |
+
+Homepage KPI cards also consume PSI, mint/burn, and DEWS data, while Compare can fetch supply-history and per-coin mint/burn detail queries. Those additional queries are not part of the current page-level stale banner contract.
 | **Safety scores**     | Grades, Prices                                      | `CRON_15MIN`, `CRON_15MIN`                                         |
 | **Liquidity**         | Liquidity                                           | `CRON_30MIN`                                                       |
 | **Yield**             | Yield Rankings                                      | `CRON_YIELD`                                                       |

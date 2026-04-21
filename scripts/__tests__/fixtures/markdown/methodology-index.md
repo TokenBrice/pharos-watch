@@ -19,9 +19,9 @@ Fallback enrichment is bounded. CoinMarketCap, Jupiter, DexScreener, and other l
 
 ## Stability Index Methodology
 
-The Pharos Stability Index (PSI) compresses market-wide stablecoin stress into a 0-100 condition score. It starts at 100, subtracts penalties for severity, breadth, stress breadth, and trend, then maps the result into condition bands from BEDROCK to MELTDOWN.
+The Pharos Stability Index (PSI) compresses market-wide stablecoin stress into a 0-100 condition score. It starts at 100, subtracts penalties for severity, breadth, and stress breadth, then adds a clamped trend term before mapping the result into condition bands from BEDROCK to MELTDOWN.
 
-Severity captures how bad current deviations are. Breadth captures how many assets are involved. Stress breadth captures how many stablecoins are elevated in DEWS. Trend captures whether the system is getting better or worse over the current window.
+Severity captures how bad current deviations are. Breadth captures how many assets are involved. Stress breadth captures how many stablecoins are elevated in DEWS. Trend captures whether the system is getting better or worse over the current window: negative trend reduces the score, while positive trend can offset part of the penalty.
 
 PSI is deliberately conservative: one small depeg should not move the entire market condition, but simultaneous broad stress should pull the index down even if no single coin dominates the tape.
 
@@ -30,7 +30,7 @@ PSI is deliberately conservative: one small depeg should not move the entire mar
 
 Pharos synthesizes stablecoin risk into a single transparent grade. The score starts with weighted base dimensions for Liquidity / Exit, Resilience, Decentralization, and Dependency Risk, then applies a peg-stability multiplier.
 
-Liquidity / Exit measures how much usable exit capacity exists across DEX depth and eligible redemption backstops. Resilience measures collateral quality, custody, deployment model, and chain security. Decentralization measures governance and operational control. Dependency Risk penalizes wrapper, collateral, and mechanism exposure to other assets.
+Liquidity / Exit measures how much usable exit capacity exists across DEX depth and eligible redemption backstops. Resilience measures collateral quality and custody model. Chain tier and deployment model affect only the Decentralization chain-risk penalty. Dependency Risk penalizes wrapper, collateral, and mechanism exposure to other assets.
 
 The peg multiplier prevents a structurally strong asset with a bad peg from receiving an inflated grade. Severe active depegs, missing liquidity, stale redemption evidence, and high dependency concentration all cap or penalize the final result.
 
@@ -100,9 +100,9 @@ Blacklist exposure feeds report-card dependency and resilience review because th
 
 ## Chain Health Score
 
-Chain Health Score evaluates how healthy each chain's stablecoin stack is. It combines stablecoin supply, diversification, safety-grade mix, dependency concentration, issuer concentration, and stress signals.
+Chain Health Score evaluates how healthy each chain's stablecoin stack is. It combines supply-weighted Safety Score quality, chain environment, stablecoin concentration, peg stability, and RWA/crypto backing diversity.
 
-The score is computed from current stablecoin and report-card data rather than a separate opaque dataset. A chain with large supply but one dominant issuer, weak collateral quality, or broad stress can score below a smaller but more diversified chain.
+The score is computed from current stablecoin and report-card data rather than a separate opaque dataset. A chain with large supply but one dominant issuer, weak collateral quality, poor peg behavior, or narrow backing diversity can score below a smaller but more diversified chain.
 
 Chain Health is intended as market-structure context: it helps users understand whether a chain's stablecoin liquidity is deep, resilient, and diversified enough to support activity during stress.
 

@@ -73,11 +73,13 @@ UI note: when `/flows` receives a mint/burn-specific `sync.warning`, it renders 
 
 Token identity now resolves from the shared stablecoin loader in `shared/lib/stablecoins/index.ts`, which validates the checked-in metadata assets under `shared/data/stablecoins/*.json` at module load. The mint/burn config file only keeps tracker-specific fields such as event signatures, `startBlock`, `dustThreshold`, tiering, and bridge-detection hints. The only explicit address overrides are the two `reUSD` vault-event configs, which intentionally track non-token contracts.
 
-### Tracked Stablecoins
+### Representative Stablecoins
 
 Current scope: **132 contract configs** across **131 stablecoin IDs** (7 critical + 125 extended).
 
 March 24, 2026 expansion: an additional 40 transfer-only configs were added for tracked assets that already had shared contract metadata but were not yet wired into the mint/burn registry. That wave initially included USDai on Ethereum, but canonical USDai issuance tracking now runs on native Arbitrum after LayerZero bridge-transfer filtering work. GYD was later removed when the asset moved to the cemetery. The broader active wave includes `U`, `A7A5`, `USDA` (Avalon), `BRZ`, `KAG`, `satUSD`, `rwaUSDi`, `FPI`, `AEUR`, `USDQ`, `USDX`, `MIM`, `USA₮`, `ZeUSD`, `GGBR`, `XSGD`, `IDRT`, `TRYB`, `EURS`, `pUSD` (Plume), `USBD`, `DGLD`, `AxCNH`, `EURQ`, `GYEN`, `USDU Finance`, `ZARP`, `USDp`, `PHT`, `VCHF`, `USSD`, `CADC`, `VEUR`, `dUSD` (dTRINITY), `USDaf`, `EURAU`, `DUSD` (Alto), and `ebUSD`.
+
+The table below is representative, not exhaustive. The complete active registry is `MINT_BURN_CONFIGS` in `worker/src/lib/mint-burn-contracts.ts`.
 
 | Symbol | ID | Decimals | Category | Events |
 |--------|----|----------|----------|--------|
@@ -216,7 +218,7 @@ reUSD's `Deposited(address user, address token, uint256 amount)` event has all t
    - Enforce the per-config request cap while fetching logs, resolving timestamps, and classifying bridge activity so a single config cannot monopolize the lane.
    - Resolve block timestamps — batch `eth_getBlockByNumber` for all unique blocks in the returned logs, using local + persistent (`block_timestamp_cache`) caches.
    - Parse logs per event definition: decode amount (respecting decimals), derive counterparty address, compute `amount_usd = amount * price` (null if no price), and initialize `flow_type='standard'`.
-   - Resolve transaction-context receipts for candidate bridge rows with bounded concurrency (limit=4 via `runWithConcurrencyLimit`) instead of a serial loop. This keeps 2 connections of headroom in Cloudflare's per-trigger 6-connection pool while still drastically speeding up classification for configs with many unique tx hashes.
+   - Resolve transaction-context receipts for candidate bridge rows with the local `mapWithConcurrency` helper (`TX_CONTEXT_CONCURRENCY = 4`) instead of a serial loop. Each worker fetches transaction and receipt context together, so this is a bounded best-effort speedup rather than a fixed per-trigger headroom guarantee.
    - Classify bridge transfers after all parsed rows for the config chunk are assembled so bridge-related mints and burns can be tagged together while still sharing the same transaction-context budget.
    - Detect atomic roundtrips after all event definitions for the config are parsed: group rows by `(tx_hash, stablecoin_id)` and flip the whole group to `flow_type='atomic_roundtrip'` when both mint and burn directions appear in the same transaction and their totals match within `ROUNDTRIP_AMOUNT_TOLERANCE` (0.5%). Rows with an empty `tx_hash` are defensively skipped.
    - Filter out dust events (amount < `dustThreshold`).
@@ -233,7 +235,7 @@ reUSD's `Deposited(address user, address token, uint256 amount)` event has all t
    - Cron metadata now includes both `nullPricesHealed` and `nullPriceBacklog` (`recent`, `historical`) so operators can distinguish live healable gaps from older debt.
 9. **Emit active progress** — long runs call the shared cron `reportProgress(...)` hook so `/api/status` can surface the active stage, queue position, and budget heartbeat while the lease is still live.
 10. **Escalate degraded runs** — the critical lane emits `status=degraded|error` when sustained coverage/API thresholds are breached, with streak tracking in `mint_burn_run_state`. The extended lane keeps the same observability metadata but does not escalate long-tail backlog pressure to `error`.
-11. **Sweep cross-run roundtrips** — on non-error runs, query up to 200 `(tx_hash, stablecoin_id)` groups within the last 48 hours where both mint and burn directions exist but `flow_type = 'standard'`. Reclassify to `atomic_roundtrip` and re-aggregate affected hourly buckets. This catches roundtrips where the mint and burn were ingested in separate cron runs. The HAVING clause mirrors `ROUNDTRIP_AMOUNT_TOLERANCE` from the in-memory detector so partial same-tx groups (e.g. mint 100 / burn 50) are not mis-tagged as atomic roundtrips.
+11. **Sweep cross-run roundtrips** — on non-error runs, query up to 200 `(tx_hash, stablecoin_id, chain_id)` groups within the last 7 days where both mint and burn directions exist but `flow_type = 'standard'`. Reclassify to `atomic_roundtrip` and re-aggregate affected hourly buckets. This catches roundtrips where the mint and burn were ingested in separate cron runs. The HAVING clause mirrors `ROUNDTRIP_AMOUNT_TOLERANCE` from the in-memory detector so partial same-tx groups (e.g. mint 100 / burn 50) are not mis-tagged as atomic roundtrips.
 12. **Invalidate flow API caches** — on successful runs (`status ∈ {ok, degraded}`), purge `mint-burn-flows:*` rows from the shared `cache` table using a PK-range predicate (`key >= 'mint-burn-flows:' AND key < 'mint-burn-flows:\uffff'`). This drops stale pre-sync aggregate payloads so the next `/api/mint-burn-flows` request rebuilds against the freshly written buckets.
 
 **Counterparty resolution:** For mints, `topics[2]` (recipient). For burns, `topics[1]` (sender).
@@ -255,7 +257,7 @@ Cron (`sync-mint-burn`) and admin backfill (`backfill-mint-burn`) now share a si
 | `context.ts` | Shared loaders for current prices and historical price series |
 | `persistence.ts` | `INSERT OR IGNORE` event writes, burn classification updates, affected-hour aggregation |
 | `price-heal.ts` | Auto-heal recent NULL-price rows from `price_cache` and return affected hours |
-| `roundtrip-sweep.ts` | Post-cron sweep for cross-run atomic roundtrip detection (48h window, 200 limit) |
+| `roundtrip-sweep.ts` | Post-cron sweep for cross-run atomic roundtrip detection (7-day window, 200-group limit per run) |
 | `sync-state.ts` | Sync-state key helpers plus mode-specific upserts (`replace` for cron, `monotonic-max` for backfill) |
 
 Implementation invariant: `worker/src/api/backfill-mint-burn.ts` does not import from `worker/src/cron/sync-mint-burn.ts`; both entrypoints import shared helpers from `mint-burn-pipeline/*`.
@@ -283,12 +285,12 @@ Key behavior changes forward-going:
 
 ### Atomic Roundtrip Detection
 
-Same-transaction mint+burn pairs for one stablecoin are tagged `flow_type='atomic_roundtrip'` in two places: in-memory during ingestion (per config chunk) and via the post-run sweep (cross-run, 48h window). Both paths now share the same `ROUNDTRIP_AMOUNT_TOLERANCE = 0.005` (0.5%) rule:
+Same-transaction mint+burn pairs for one stablecoin are tagged `flow_type='atomic_roundtrip'` in two places: in-memory during ingestion (per config chunk) and via the post-run sweep (cross-run, 7-day lookback, capped at 200 groups per run). Both paths now share the same `ROUNDTRIP_AMOUNT_TOLERANCE = 0.005` (0.5%) rule:
 
 - A group tags atomic only when `|sum(mint) - sum(burn)| ≤ 0.005 × max(mintSum, burnSum)`.
 - Partial same-tx groups (e.g. mint 100 / burn 50) are no longer flagged atomic_roundtrip and stay as `standard` flow.
 - Rows with an empty `tx_hash` are defensively skipped by the in-memory detector.
-- The sweep SQL mirrors the tolerance via `HAVING ... ABS(mint_amt - burn_amt) > 0.005 * (CASE WHEN mint_amt >= burn_amt THEN mint_amt ELSE burn_amt END)` (SQLite has no two-arg `MAX`, so the explicit `CASE` is intentional).
+- The forward tagging SQL mirrors the tolerance via `HAVING ... ABS(mint_amt - burn_amt) <= 0.005 * (CASE WHEN mint_amt >= burn_amt THEN mint_amt ELSE burn_amt END)` (SQLite has no two-arg `MAX`, so the explicit `CASE` is intentional). Reverse cleanup uses `NOT (...)` around the same predicate.
 - A drift-guard unit test asserts `ROUNDTRIP_AMOUNT_TOLERANCE === 0.005` so changes to the TS constant surface against the SQL literals that mirror it.
 
 ---
@@ -388,7 +390,7 @@ Detects simultaneous outflows from risky stablecoins and inflows to safe havens.
 
 ## Database Schema
 
-### mint_burn_events (migration 0031)
+### mint_burn_events (current excerpt; baseline plus later indexes)
 
 ```sql
 CREATE TABLE mint_burn_events (
@@ -402,6 +404,8 @@ CREATE TABLE mint_burn_events (
   price_used REAL,                     -- Price at resolution time
   price_timestamp INTEGER,             -- When the price was sourced (cache update time), NOT the event's block timestamp
   price_source TEXT,                   -- "supply-history-daily", "price-cache-current", "price_cache_heal", "backfill-supply-history-daily", or "backfill-derived-amount-usd"
+  burn_type TEXT,                      -- "redemption", "bridge", "atomic_roundtrip", etc. when classified
+  burn_review_reason TEXT,             -- reason code when burn classification needs review
   flow_type TEXT DEFAULT 'standard',   -- "standard", "bridge_transfer", or "atomic_roundtrip"
   counterparty TEXT,                   -- Address that received/sent tokens
   tx_hash TEXT NOT NULL,
@@ -413,6 +417,9 @@ CREATE TABLE mint_burn_events (
 CREATE INDEX idx_mbe2_ts ON mint_burn_events(timestamp DESC);
 CREATE INDEX idx_mbe2_coin ON mint_burn_events(stablecoin_id, timestamp DESC);
 CREATE INDEX idx_mbe2_chain ON mint_burn_events(chain_id, timestamp DESC);
+CREATE INDEX idx_mbe2_burn_type ON mint_burn_events(burn_type, timestamp DESC);
+CREATE INDEX idx_mbe_coin_chain_ts ON mint_burn_events(stablecoin_id, chain_id, timestamp DESC);
+CREATE INDEX idx_mbe_symbol_ts ON mint_burn_events(symbol, timestamp DESC);
 CREATE INDEX idx_mbe_null_price_ts ON mint_burn_events(timestamp DESC) WHERE amount_usd IS NULL;
 
 -- migration 0097: composite index to speed roundtrip sweep and future flow_type-filtered queries
@@ -610,7 +617,7 @@ Retroactive cleanup endpoint for historical rows that predate shared roundtrip d
 | `recalcError` | string (optional) | Error message captured from the failed recalc call |
 | `nullPriceBacklogRecent` | number | Count of `amount_usd IS NULL` rows inside the 48h auto-heal window still awaiting price resolution |
 | `nullPriceBacklogHistorical` | number | Count of `amount_usd IS NULL` rows older than the auto-heal window (debt that `backfill-mint-burn-prices` must address) |
-| `roundtripsBacklogSaturated` | boolean | `true` when the cross-run roundtrip sweep hit its per-run limit and more candidate groups likely remain in the 48h window |
+| `roundtripsBacklogSaturated` | boolean | `true` when the cross-run roundtrip sweep hit its per-run limit and more candidate groups likely remain in the 7-day lookback window |
 | `budgetUsed` | number | Alchemy subrequests consumed by this run (emitted via `withBudgetMetadata`) |
 | `budgetLimit` | number | Global subrequest budget for the run (default 200) |
 

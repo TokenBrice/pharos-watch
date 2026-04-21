@@ -10,7 +10,7 @@ import {
 } from "../../methodology-shared";
 import { SafetyScoreCalculator } from "@/components/methodology/safety-score-calculator";
 import { CollateralQualityMethodologyCopy, ReserveRelatedSignalsMethodologyCopy } from "../core-sections-fragments";
-export const CONTENT_MARKDOWN = `## Safety Scores Grading Methodology\n\nPharos synthesizes stablecoin risk into a single transparent grade. The score starts with weighted base dimensions for Liquidity / Exit, Resilience, Decentralization, and Dependency Risk, then applies a peg-stability multiplier.\n\nLiquidity / Exit measures how much usable exit capacity exists across DEX depth and eligible redemption backstops. Resilience measures collateral quality, custody, deployment model, and chain security. Decentralization measures governance and operational control. Dependency Risk penalizes wrapper, collateral, and mechanism exposure to other assets.\n\nThe peg multiplier prevents a structurally strong asset with a bad peg from receiving an inflated grade. Severe active depegs, missing liquidity, stale redemption evidence, and high dependency concentration all cap or penalize the final result.\n`;
+export const CONTENT_MARKDOWN = `## Safety Scores Grading Methodology\n\nPharos synthesizes stablecoin risk into a single transparent grade. The score starts with weighted base dimensions for Liquidity / Exit, Resilience, Decentralization, and Dependency Risk, then applies a peg-stability multiplier.\n\nLiquidity / Exit measures how much usable exit capacity exists across DEX depth and eligible redemption backstops. Resilience measures collateral quality and custody model. Chain tier and deployment model affect only the Decentralization chain-risk penalty. Dependency Risk penalizes wrapper, collateral, and mechanism exposure to other assets.\n\nThe peg multiplier prevents a structurally strong asset with a bad peg from receiving an inflated grade. Severe active depegs, missing liquidity, stale redemption evidence, and high dependency concentration all cap or penalize the final result.\n`;
 export function SafetyScoresMethodologySection() {
   return (
           <MethodologySectionShell
@@ -25,8 +25,8 @@ export function SafetyScoresMethodologySection() {
           >
               <p>
                 Pharos synthesizes multiple data signals into a single transparent grade per stablecoin. The overall score
-                is computed in two steps: first, a weighted average of five base dimensions (exit liquidity, resilience,
-                decentralization, dependency risk, peg stability), then a peg stability multiplier that penalizes coins with poor pegs
+                is computed in two steps: first, a weighted average of four base dimensions (exit liquidity, resilience,
+                decentralization, dependency risk), then a peg stability multiplier that penalizes coins with poor pegs
                 while barely affecting well-pegged ones. The exit-liquidity dimension blends raw DEX liquidity with
                 redemption-backstop quality only when the route has usable current evidence. Reserve data is a separate
                 resilience input: live reserve sync can improve collateral quality only when the latest snapshot is fresh,
@@ -214,7 +214,7 @@ export function SafetyScoresMethodologySection() {
                     diversification bonus for having a second viable path.
                   </p>
                   <p className="font-mono">
-                    effectiveExit = min(100, max(dex, redemption) + min(dex, redemption) &times; 0.10)
+                    effectiveExit = round(min(100, max(dex, redemption) + min(dex, redemption) &times; 0.10))
                   </p>
                   <p>
                     If only DEX liquidity exists, it is used directly. Eligible immediate, live, or queue-style redemption can stand alone when DEX liquidity is absent, with route family caps and component scoring as guardrails. Documented offchain issuer routes with eventual-only capacity do not replace missing DEX liquidity; they can only add the primary-market bonus when DEX liquidity already exists.
@@ -362,9 +362,9 @@ export function SafetyScoresMethodologySection() {
                   </ul>
                   <p className="mt-2">
                     <span className="text-foreground font-medium">Dependency type ceilings</span> &mdash; each dependency is
-                    classified as <em>wrapper</em>, <em>mechanism-critical</em>, or <em>collateral</em> (default). Wrappers
+                    classified as <em>wrapper</em>, <em>mechanism</em>, or <em>collateral</em> (default). Wrappers
                     (e.g., syrupUSDC &rarr; USDC) are thin layers around the upstream &mdash; their score is capped at{" "}
-                    <code className="text-xs">upstream &minus; 3</code>. Mechanism-critical dependencies (e.g., DAI &rarr;
+                    <code className="text-xs">upstream &minus; 3</code>. Mechanism dependencies (e.g., DAI &rarr;
                     USDC via PSM) are essential to the peg &mdash; score is capped at the upstream&apos;s score. Collateral
                     dependencies use the blended formula with no ceiling.
                   </p>

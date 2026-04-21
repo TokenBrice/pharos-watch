@@ -24,7 +24,7 @@ const HERO_LANES = [
     icon: KeyRound,
     eyebrow: "For integrations",
     description:
-      "Call `https://api.pharos.watch` directly. Protected public routes require `X-API-Key`; missing or invalid keys receive `401`.",
+      "Call `https://api.pharos.watch` directly. Protected public routes require `X-API-Key`; missing or invalid keys normally receive `401` after limiter and dependency checks.",
   },
   {
     title: "Website lane",
@@ -51,7 +51,7 @@ const ABOUT_API_FAQ: FaqItem[] = [
   {
     question: "Do I need an API key for every endpoint?",
     answer:
-      "No. Health checks, OG images, the feedback endpoint, and the Telegram webhook do not require an X-API-Key. All other protected public routes on https://api.pharos.watch require X-API-Key and return 401 without it.",
+      "No. Health checks, OG images, the feedback endpoint, and the Telegram webhook do not require an X-API-Key. All other protected public routes on https://api.pharos.watch require X-API-Key and normally return 401 without it, though 429 or 503 can occur first when limiter or auth dependencies fail.",
   },
   {
     question: "What is the difference between the public API lane and the website lane?",

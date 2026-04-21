@@ -8,7 +8,7 @@ Runbook for the operator-origin split that now fronts `/admin/` and browser admi
 
 Current repo-side state:
 
-- the Worker is attached to both `api.pharos.watch` and `ops-api.pharos.watch`
+- the Worker is attached to `api.pharos.watch`, `site-api.pharos.watch`, and `ops-api.pharos.watch`
 - browser CORS allows both `pharos.watch` and `ops.pharos.watch`
 - `/admin/` only serves the live operator panel on `ops.pharos.watch`; the public host is blocked by the Pages host-gate function and returns a non-indexed `404`
 - `/status/` is public and read-only on both the public and ops hosts

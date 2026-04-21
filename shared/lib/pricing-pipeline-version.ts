@@ -22,7 +22,7 @@ const pricing = createMethodologyVersion({
         "Two-source clusters composed only of list-style aggregators (coingecko, defillama, defillama-list) are now downgraded to single-source regardless of which two combine, closing the CG+defillama-detail tautology",
         "Replay cache enforces per-source max trusted age in addition to the composite 6-hour cap",
         "DefiLlama /coins contract-price fallback and DexScreener dex-liquidity / dex-discovery fallbacks now gate on and record against their own circuit breakers",
-        "Single promoted DEX protocol now requires hard-source corroboration to enter primary consensus",
+        "A lone promoted DEX protocol is admitted only when no non-DEX source exists, or when a hard market/oracle/protocol source agrees within threshold; two or more promoted DEX protocols are admitted as candidate sources before consensus determines agreement",
         "Binance short-circuits to the secondary host on HTTP 5xx / 429 instead of retrying the first host",
         "RedStone solo-retry is bounded to 5 requests per run and spaced to respect Worker connection budget",
         "GT-probe evidence rejection downgrades the pre-GT primary to low-confidence when divergence was significant",

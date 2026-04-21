@@ -49,7 +49,7 @@ Internal changelog reconstructed from git history. Covers Blacklist Tracker `v1.
 - **Phase 2 migrations** — Five D1 migrations applied: 0100 dedup mixed-case `blacklist_sync_state` keys, 0101 reset pre-v3.2 `derived` amount rows into the backfill pool, 0102 reseed the Gnosis BRZ cursor to startBlock-1 so the fixed scanner begins a clean catch-up, 0103 add composite backfill + API-filter indexes on `blacklist_events`, 0104 stamp the 917 existing EURC mirror-zero rows as `permanently_unavailable`
 - **Phase 3 efficiency** — `/api/blacklist-summary` rewritten to aggregate quarterly chart points and per-coin counts in SQL; post-fetch counters inlined so summary-endpoint memory drops from ~5–10MB to a few KB per cache miss
 - **Phase 4 frontend polish** — Data-driven stats strip + amount-status badge, per-coin stat border rendered via inline style, CSV split into native / unit / USD / status columns, page-clamp + zero-total + filter-reset covered by tests
-- **Phase 5 minor coverage gaps** — Added Polygon USDQ, Arbitrum + Base AID, and Base + BSC + Polygon TGBP chain-coverage rows for existing coins
+- **Phase 5 minor coverage gaps** — Added Polygon USDQ, Arbitrum AID, and Polygon TGBP chain-coverage rows for existing coins; Base AID plus Base/BSC TGBP remain deferred
 - **Operational note** — Post-merge, Gnosis BRZ begins at block 33,257,602 and catches up via 9k-block windows, so the two known missed events (blocks 45,229,172 and 45,229,396) will arrive near the end of a ~1,400-run catch-up on the 6-hour blacklist cadence. This is expected and not a regression.
 
 ---
@@ -72,7 +72,7 @@ Internal changelog reconstructed from git history. Covers Blacklist Tracker `v1.
 
 ## v3.91 — Coverage quality + USDP addition (2026-04-16)
 
-- **WLFI destroy events** — Added `FrozenAccountDrained` and `FrozenFundsReallocated` tracking for USD1/U/FDUSD/EURI
+- **WLFI destroy events** — Added `FrozenAccountDrained` and `FrozenFundsReallocated` tracking for USD1 through the USD1-only freeze + destroy event family
 - **USDP coverage** — Added Pax Dollar Ethereum coverage using the Paxos freeze family
 - **Start-block corrections** — Corrected Arbitrum start blocks for FDUSD, AUSD, and BUIDL
 

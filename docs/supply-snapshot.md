@@ -1,6 +1,8 @@
 # Supply Snapshot Pipeline
 
-Daily market cap snapshot pipeline. Captures each PSI-eligible stablecoin's circulating supply (in USD) once per day from the strict cached `stablecoins` payload and stores it in D1 for historical charting.
+Daily market cap snapshot pipeline. Captures cached `peggedAssets` whose IDs are PSI-eligible, stores their circulating supply (in USD) in D1, and uses that history for charting and replay.
+
+Shadow assets are part of PSI eligibility, but this cron only reads rows present in the cached `stablecoins` payload. Shadow-asset history therefore requires separate historical/backfill coverage unless a shadow asset is present in that cache.
 
 The snapshot does **not** call upstream APIs or on-chain RPCs. DefiLlama remains the primary source for regular assets, but the cached payload can include CoinGecko gap-fill rows, DefiLlama history gap-fill rows, commodity/CoinGecko supplemental rows, and on-chain-total-supply supplemental rows assembled by the 15-minute `syncStablecoins()` cron.
 

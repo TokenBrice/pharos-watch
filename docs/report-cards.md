@@ -25,7 +25,7 @@ Current-version note: v7.07 reverses v6.1's stale-DEX suppression: Liquidity / E
 | -------------------- | ------ | -------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | **Liquidity / Exit** | 30%    | `liquidityScore` + `redemptionBackstopScore` | Uses `effectiveExitScore`, which preserves DEX liquidity as the floor and lets direct redemption quality help when present                                                                         |
 | **Resilience**       | 20%    | Token metadata (2 sub-factors)               | Average of collateral quality and custody model; blacklist capability is reported descriptively but does not affect the score                                                                      |
-| **Decentralization** | 15%    | Governance quality + chain infrastructure    | `GovernanceQuality` tiers: `dao-governance` → 85, `multisig` → 55, `regulated-entity` → 40, `single-entity` → 20, `wrapper` → 10. Threshold-based penalty from combined chain infrastructure score |
+| **Decentralization** | 15%    | Governance quality + chain infrastructure    | `GovernanceQuality` tiers: `immutable-code` → 100, `dao-governance` → 85, `multisig` → 55, `regulated-entity` → 40, `single-entity` → 20, `wrapper` → 10. Threshold-based penalty from combined chain infrastructure score |
 | **Dependency Risk**  | 25%    | Upstream stablecoin scores                   | No deps → varies by governance (decentralized: 90, centralized-dependent: 75, centralized: 95). With deps → blended score (upstream × weight + self-backed), −10 if any < 75                       |
 
 ### Peg Stability (multiplier)
@@ -273,12 +273,12 @@ Chain penalty applies to `dao-governance` and `multisig` tiers. Exempt tiers: `i
 
 **Universal scoring (v5.1):** All coins with upstream stablecoin dependencies get blended scores, regardless of governance type. Topological sort ensures every coin is scored after all its upstreams.
 
-**Dependency derivation:** Dependencies are primarily derived from reserve composition data. Reserve slices with a `coinId` field (linking to a tracked stablecoin) are extracted by `deriveDependencies()` in `shared/lib/reserve-templates.ts` and converted to `DependencyWeight[]` (weight = `pct / 100`, type = `depType ?? "collateral"`). Weights come directly from reserve percentages and are not renormalized, so non-stablecoin reserve slices contribute to the "self-backed" component of the score. For coins whose reserves don't reference tracked stablecoins, the function falls back to the manual `dependencies` array on `StablecoinMeta`.
+**Dependency derivation:** Dependencies are primarily derived from reserve composition data. Reserve slices with a `coinId` field (linking to a tracked stablecoin) are extracted by `deriveDependencies()` in `shared/lib/reserve-templates.ts` and converted to `DependencyWeight[]` (weight = `pct / 100`, type = `depType ?? "collateral"`). Weights come directly from reserve percentages when total dependency weight is <= 1, so non-stablecoin reserve slices contribute to the "self-backed" component of the score. If declared dependency weight exceeds 1, dependency weights are normalized by raw total and the self-backed fraction is zero. For coins whose reserves don't reference tracked stablecoins, the function falls back to the manual `dependencies` array on `StablecoinMeta`.
 
 **Scoring:**
 
 - **No dependencies**: `SELF_BACKED_SCORE_BY_GOVERNANCE[governance]` — varies by tier: `decentralized` = 90, `centralized-dependent` = 75, `centralized` = 95
-- **With dependencies**: `score = sum(weight_i × upstream_score_i) + (1 − totalWeight) × SELF_BACKED_SCORE`
+- **With dependencies**: `score = sum((weight_i / normalizer) × upstream_score_i) + (1 − min(1, rawTotalWeight)) × SELF_BACKED_SCORE`, where `normalizer = rawTotalWeight` only when raw dependency weight exceeds 1 and is otherwise 1
 - −10 penalty if any dependency scores below 75 (B-)
 - Falls back to 70 if all dependency scores are unavailable; if only some upstream scores are unavailable, those missing weights are scored at 70 and still count as weak dependencies for the below-75 penalty
 
@@ -357,7 +357,7 @@ Implementation notes:
 
 Key types:
 
-- **`DependencyWeight`**: `{ id: string; weight: number }` — upstream stablecoin ID + collateral fraction (0–1). Replaces the old `string[]` dependency format.
+- **`DependencyWeight`**: `{ id: string; weight: number; type?: "wrapper" | "mechanism" | "collateral" }` — upstream stablecoin ID, collateral fraction (0–1), and optional dependency ceiling semantics. Replaces the old `string[]` dependency format.
 - **`RawDimensionInputs`**: Raw scoring inputs per card (`pegScore`, `activeDepeg`, `activeDepegBps`, `liquidityScore`, `effectiveExitScore`, `redemptionBackstopScore`, `redemptionRouteFamily`, `redemptionImmediateCapacityUsd`, `redemptionImmediateCapacityRatio`, `concentrationHhi`, `bluechipGrade`, `canBeBlacklisted`, `chainTier`, `deploymentModel`, `collateralQuality`, `custodyModel`, `governanceTier`, `governanceQuality`, `dependencies`, `navToken`, `collateralFromLive`) — enables client-side stress test recomputation.
 
 ## Portfolio Analyzer & Stress Test
