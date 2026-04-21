@@ -1,9 +1,24 @@
 import { createMethodologyVersion } from "./methodology-version";
 
 const blacklistTracker = createMethodologyVersion({
-  currentVersion: "3.98",
+  currentVersion: "3.99",
   changelogPath: "/methodology/blacklist-tracker-changelog/",
   changelog: [
+  {
+    version: "3.99",
+    title: "Same-run Tron ledger reconciliation",
+    date: "2026-04-21",
+    effectiveAt: 1776729600, // 2026-04-21T00:00:00Z
+    summary:
+      "Reapplies the Tron freeze-ledger mirror after current-balance cache writes so newly ingested Tron blacklist rows resolve in the same `sync-blacklist` cycle, and aligns admin recovery guidance away from destructive sync resets for generic amount-gap warnings.",
+    impact: [
+      "Fresh Tron blacklist/unblacklist rows no longer wait for the next 6-hour cron cycle before `current_balance_snapshot` amounts appear on matching event rows",
+      "The admin current-balance backfill action now re-applies the Tron ledger mirror after rebuilding `blacklist_current_balances`",
+      "Blacklist-gap recommendations now prioritize balance backfill, sync-state inspection, and targeted remediation ahead of `reset-blacklist-sync`",
+    ],
+    commits: [],
+    reconstructed: false,
+  },
   {
     version: "3.98",
     title: "USDA destroy-event correction",

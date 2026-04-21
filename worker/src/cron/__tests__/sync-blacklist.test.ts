@@ -364,6 +364,69 @@ describe("syncBlacklist", () => {
     expect(fetchMock.mock.calls.some(([url]) => String(url).includes("trongrid.io"))).toBe(true);
   });
 
+  it("reapplies the Tron ledger mirror after refreshing current balances", async () => {
+    const db = makeDb();
+
+    vi.mocked(fetchEvmLogsForTopic).mockResolvedValue([]);
+
+    const fetchMock = vi.fn(async (url: string | Request) => {
+      const urlStr = typeof url === "string" ? url : url.url;
+      if (urlStr.includes("trongrid.io/v1/contracts") && urlStr.includes("event_name=AddedBlackList")) {
+        return new Response(
+          JSON.stringify({
+            success: true,
+            data: [
+              {
+                block_number: 50000000,
+                block_timestamp: 1718650752000,
+                transaction_id: "tx-tron-ledger-1",
+                event_index: 0,
+                event_name: "AddedBlackList",
+                result: { _user: "0x00000000000000000000000000000000000000ab" },
+              },
+            ],
+            meta: {},
+          }),
+          { status: 200, headers: { "Content-Type": "application/json" } },
+        );
+      }
+      if (urlStr.includes("trongrid.io/v1/contracts")) {
+        return new Response(JSON.stringify({ success: true, data: [] }), {
+          status: 200,
+          headers: { "Content-Type": "application/json" },
+        });
+      }
+      if (urlStr.includes("api.trongrid.io/jsonrpc")) {
+        return new Response(
+          JSON.stringify({
+            jsonrpc: "2.0",
+            id: 1,
+            result: "0x00000000000000000000000000000000000000000000000000000000000f4240",
+          }),
+          { status: 200, headers: { "Content-Type": "application/json" } },
+        );
+      }
+      return new Response(JSON.stringify({ success: true, data: [] }), {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      });
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    await syncBlacklist(buildTestOpts({ db }));
+
+    const history = db.getHistory();
+    const tronLedgerMirrorRuns = history.filter((entry) =>
+      entry.sql.includes("amount_source = 'current_balance_snapshot'"),
+    );
+    const currentBalanceUpserts = history.filter((entry) =>
+      entry.sql.includes("INSERT INTO blacklist_current_balances"),
+    );
+
+    expect(currentBalanceUpserts.length).toBeGreaterThan(0);
+    expect(tronLedgerMirrorRuns).toHaveLength(2);
+  });
+
   it("returns zero events when all APIs return empty", async () => {
     const db = makeDb();
 

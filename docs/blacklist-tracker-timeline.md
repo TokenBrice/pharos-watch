@@ -1,6 +1,14 @@
 # Blacklist Tracker Methodology — Version Timeline
 
-Internal changelog reconstructed from git history. Covers Blacklist Tracker `v1.0` through `v3.98` (2026-02-09 -> 2026-04-20).
+Internal changelog reconstructed from git history. Covers Blacklist Tracker `v1.0` through `v3.99` (2026-02-09 -> 2026-04-21).
+
+---
+
+## v3.99 — Same-run Tron ledger reconciliation (2026-04-21)
+
+- **Same-cycle Tron resolution** — `sync-blacklist` now reapplies the Tron freeze-ledger mirror after refreshing `blacklist_current_balances`, so fresh Tron blacklist rows resolve inside the same cron cycle instead of waiting for the next 6-hour pass
+- **Admin parity** — `Backfill Blacklist Balances` now re-applies the same Tron ledger mirror after rebuilding current-balance snapshots, so manual remediation matches the cron path
+- **Safer operator guidance** — Blacklist-gap recommendations now point operators toward balance backfill, sync-state inspection, and targeted amount-gap remediation before `Reset Blacklist Sync`
 
 ---
 

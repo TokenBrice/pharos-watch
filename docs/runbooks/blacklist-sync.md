@@ -18,10 +18,11 @@ The blacklist ingestion pipeline has unresolved gaps in recent blocks. Missing a
 
 - **Reset sync pointer:** Admin page → Recommended actions → `reset-blacklist-sync`. Reverts block pointers backward (EVM: 50,000 blocks; Tron: 604,800,000 ms) to re-process. Idempotent — safe to re-run.
 - **Remediate amount gaps:** Admin page → All actions → `Remediate Blacklist Gaps` (`POST /api/remediate-blacklist-amount-gaps`); run dry-run first when using direct query/body parameters.
-- **Backfill active balances:** Admin page → All actions → `Backfill Blacklist Balances` (`POST /api/backfill-blacklist-current-balances`, prefer `?dryRun=true` first) when `blacklist_current_balances` is missing or stale.
+- **Backfill active balances:** Admin page → All actions → `Backfill Blacklist Balances` (`POST /api/backfill-blacklist-current-balances`, prefer `?dryRun=true` first) when `blacklist_current_balances` is missing or stale. This now also re-applies the Tron freeze-ledger mirror so matching Tron event rows can resolve immediately after balance backfill.
 - **Per-chain investigation:** the sync cron (`sync-blacklist`) logs per-chain outcomes in `cron_runs.metadata`. Inspect recent runs in the admin page's Crons section.
 
 ## Prevention
 
 - Missing amounts are resolved via the amount-recovery lane. Persistent gaps indicate an RPC or event-decoding issue upstream, not a sync-pointer problem.
+- Fresh Tron-only gaps with a healthy `sync-blacklist` run can be same-cycle ledger-reconciliation lag rather than a stuck cursor. If matching `blacklist_current_balances` rows already exist, prefer balance backfill or the next scheduled run over pointer reset.
 - Only use `reset-blacklist-sync` when debug-sync-state confirms a stuck pointer — not for transient data-quality blips.

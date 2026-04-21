@@ -573,7 +573,7 @@ CREATE INDEX idx_blacklist_events_suppression_reason ON blacklist_events(suppres
 - `amount_last_attempted_at`, `amount_last_error_class`, and `amount_last_provider` are operator diagnostics for unresolved rows
 - `suppression_reason` records auditable rows excluded from public aggregate/event surfaces; currently `circle_mirror_zero_balance` for EURC rows that mirror Circle actions without frozen EURC value
 
-`amount_source='current_balance_snapshot'` is written when Tron rows are reconciled from the freeze-ledger mirror in `blacklist_current_balances`. `amount_source='derived'` and `amount_source='legacy_migration'` are treated as legacy migration artifacts, not active ingestion modes. Older Tron blacklist/unblacklist rows that still carried current-state-derived values are reset so event rows no longer claim unsupported historical precision.
+`amount_source='current_balance_snapshot'` is written when Tron rows are reconciled from the freeze-ledger mirror in `blacklist_current_balances`. `sync-blacklist` reapplies that mirror after refreshing current balances, so newly ingested Tron blacklist rows resolve in the same cron cycle rather than waiting for the next 6-hour pass. `amount_source='derived'` and `amount_source='legacy_migration'` are treated as legacy migration artifacts, not active ingestion modes. Older Tron blacklist/unblacklist rows that still carried current-state-derived values are reset so event rows no longer claim unsupported historical precision.
 
 ### blacklist_current_balances table
 

@@ -11,8 +11,16 @@ const CAUSE_ACTION_PATHS: Partial<Record<string, readonly string[]>> = {
   stablecoins_cache_degraded: ["/api/backfill-cg-prices"],
   missing_prices_degraded: ["/api/backfill-cg-prices"],
   missing_prices_stale: ["/api/backfill-cg-prices"],
-  blacklist_gaps_degraded: ["/api/reset-blacklist-sync"],
-  blacklist_gaps_stale: ["/api/reset-blacklist-sync"],
+  blacklist_gaps_degraded: [
+    "/api/backfill-blacklist-current-balances",
+    "/api/debug-sync-state",
+    "/api/remediate-blacklist-amount-gaps",
+  ],
+  blacklist_gaps_stale: [
+    "/api/backfill-blacklist-current-balances",
+    "/api/debug-sync-state",
+    "/api/remediate-blacklist-amount-gaps",
+  ],
   onchain_integrity_degraded: ["/api/backfill-mint-burn", "/api/backfill-mint-burn-prices"],
   onchain_integrity_stale: ["/api/backfill-mint-burn", "/api/backfill-mint-burn-prices"],
   onchain_monitor_unavailable: ["/api/backfill-mint-burn"],

@@ -389,6 +389,22 @@ export async function syncBlacklist(opts: SyncBlacklistOptions): Promise<SyncBla
     }
   }
 
+  try {
+    // Newly fetched Tron blacklist rows only become ledger-resolvable after the
+    // current-balance cache refresh in processFetchedBlacklistRows. Reapply the
+    // mirror here so the same cron cycle resolves fresh Tron rows instead of
+    // leaving /admin degraded until the next 6-hour pass.
+    const ledgerResult = await backfillTronFromLedger(db);
+    tronLedgerUpdated += ledgerResult.updated;
+    if (ledgerResult.updated > 0) {
+      console.log(
+        `[sync-blacklist] Tron ledger mirror updated ${ledgerResult.updated} row(s) after current-balance sync`,
+      );
+    }
+  } catch (err) {
+    console.warn("[sync-blacklist] Post-sync Tron ledger mirror failed:", err);
+  }
+
   console.log(`[sync-blacklist] Completed with ${budget.count}/${budget.limit} subrequests`);
   await reportCronProgress(onProgress, {
     stage: "complete",

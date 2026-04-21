@@ -4,6 +4,7 @@ import { createBudget, createRateLimiter } from "../lib/evm-logs";
 import {
   syncCurrentBalanceCacheForRows,
 } from "../cron/blacklist/current-balance-cache";
+import { backfillTronFromLedger } from "../cron/blacklist/amount-recovery";
 import type { BlacklistRow } from "../cron/blacklist/shared";
 import type { ChainRpcConfig } from "../lib/chain-registry";
 import { runAdminRoute } from "../lib/route-wrappers";
@@ -136,6 +137,14 @@ export async function handleBackfillBlacklistCurrentBalances(
         });
 
         if (Date.now() >= deadlineMs) break;
+      }
+
+      if (!dryRun) {
+        // Keep admin remediation aligned with the cron path: once current
+        // balances exist for Tron rows, reapply the ledger mirror so matching
+        // blacklist_events resolve immediately instead of waiting for another
+        // scheduled sync.
+        await backfillTronFromLedger(db);
       }
 
       const totals = configResults.reduce(
