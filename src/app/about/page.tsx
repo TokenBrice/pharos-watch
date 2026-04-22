@@ -2,30 +2,7 @@ import type { Metadata } from "next";
 import type { ReactNode } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import {
-  Activity,
-  ArrowLeftRight,
-  ArrowRight,
-  BarChart3,
-  Briefcase,
-  Droplets,
-  ExternalLink,
-  Flame,
-  FlaskConical,
-  Gauge,
-  GitBranch,
-  Globe,
-  Layers,
-  Network,
-  Newspaper,
-  Radio,
-  Rocket,
-  ShieldAlert,
-  ShieldCheck,
-  Skull,
-  TrendingUp,
-  type LucideIcon,
-} from "lucide-react";
+import { ArrowRight, ExternalLink, GitBranch, Radio } from "lucide-react";
 import { AboutReferenceModule } from "@/components/about-reference-module";
 import { Button } from "@/components/ui/button";
 import { FeaturePageShell } from "@/components/feature-page-shell";
@@ -33,37 +10,18 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 import { safeJsonLd } from "@/lib/json-ld";
 import { buildFaqJsonLd } from "@/lib/faq";
+import {
+  ABOUT_LEAD_PARAGRAPHS,
+  COMPUTED_FEATURES,
+  DATA_PIPELINE_STEPS,
+  DATA_SOURCE_GROUPS,
+  getAboutFaqItems,
+  getTrackedFeatures,
+  TEAM_MEMBERS,
+  type AboutFeatureItem,
+} from "./content";
 import { DEAD_STABLECOINS } from "@shared/lib/dead-stablecoins";
 import { ACTIVE_STABLECOINS, PRE_LAUNCH_STABLECOINS } from "@shared/lib/stablecoins";
-
-const DATA_SOURCE_GROUPS = [
-  {
-    label: "Supply & Price",
-    sources:
-      "DefiLlama, CoinGecko, GeckoTerminal, CoinMarketCap, DexScreener, Jupiter Price API, Pyth Network, Binance, Kraken, Bitstamp, Coinbase, RedStone, Curve on-chain, Fluid, Balancer, Raydium, Orca, Meteora, PancakeSwap, Aerodrome Slipstream, Velodrome Slipstream, and direct protocol redemption quotes for selected redeemable assets such as Cap cUSD and infiniFi iUSD; CoinGecko also repairs total supply for tracked DefiLlama-backed assets when known deployments are missing from DefiLlama chain coverage",
-  },
-  {
-    label: "Reserve Transparency",
-    sources:
-      "Issuer and protocol reserve APIs, dashboards, proof-of-reserve portals, and direct on-chain vault/accounting reads (including live reserve composition feeds from providers such as Anzen, Ethena, Falcon, Frankencoin, Hashnote, infiniFi, M0, Mento Reserve, OpenEden, Re, USDD, USD.AI, USD1 Chainlink bundle oracle, Accountable, Tether, Frax, Circle, First Digital Labs, SG-FORGE, Paxos, Sky/MakerDAO, Chainlink PoR/NAV oracles, Aave GHO, f(x), Asymmetry, JupUSD, USDGO, Solstice, River, Alloy, and Curve/Yield Basis reserve reads where available)",
-  },
-  {
-    label: "On-chain Reads & Events",
-    sources:
-      "Etherscan v2 (freeze events), TronGrid, Alchemy, dRPC, selected public chain RPCs (including EVM RPCs for configured mint/burn flows, direct Liquity/B.Protocol branch debt reads, and Frankencoin's ZCHF -> VCHF StablecoinBridge balance probe, plus Solana mainnet RPC reads for tracked mint-supply validation), and reconciled freeze-ledger bootstrap rows from kyc.rip / stables.rip for major ETH and TRON blacklist coverage, and M0 GraphQL subgraph for Infrastructure tagging",
-  },
-  {
-    label: "Ratings & Reference",
-    sources:
-      "Bluechip, Chainlink Data Feeds, ECB via Frankfurter, Open Exchange Rates (real-time FX cross-validation), fawazahmed0/currency-api (CNH and non-ECB FX), ExchangeRate-API (tertiary full-set FX fallback), gold-api.com, FRED DGS3MO, Treasury.gov yield curve XML fallback, the ECB Data API for 3M compounded €STR, and SIX delayed SARON compound-rate downloads via public guest access",
-  },
-  {
-    label: "DEX Data",
-    sources:
-      "DeFiLlama Yields & Protocols, protocol-native yield APIs and deterministic on-chain yield readers (Hashnote, Ondo, Morpho, Pendle, Yearn Kong, Beefy, Aave V3, Compound V3, BIMA Earn, Curve scrvUSD current-rate, B.Protocol LQTY-only), Curve Finance API, The Graph, Fluid API + DexReservesResolver, Balancer API, Raydium API, Orca API, Meteora API, PancakeSwap subgraphs, Aerodrome and Velodrome Sugar view contracts, GeckoTerminal, DexScreener; dead or deprecated DEX slugs such as Bunni are blocked from runtime pricing and liquidity inputs rather than treated as live venues",
-  },
-  { label: "AI Generation", sources: "Anthropic Claude (daily digest)" },
-] as const;
 
 const INLINE_EXTERNAL_LINK_CLASS =
   "pharos-focus-ring inline-flex items-center gap-1 rounded-sm text-foreground underline underline-offset-4 transition-colors hover:text-frost-blue";
@@ -71,15 +29,6 @@ const CTA_BUTTON_CLASS =
   "min-h-11 w-full justify-between rounded-2xl border-border/65 bg-background/50 px-4 py-2 whitespace-normal text-left sm:h-9 sm:min-h-0 sm:w-auto sm:justify-center sm:whitespace-nowrap sm:rounded-full";
 
 type AboutTone = "brand" | "data" | "insight" | "classification" | "neutral";
-
-interface AboutFeatureItem {
-  title: string;
-  description: ReactNode;
-  icon: LucideIcon;
-  href?: string;
-  external?: boolean;
-  linkLabel?: string;
-}
 
 function getToneClasses(tone: AboutTone) {
   switch (tone) {
@@ -253,185 +202,31 @@ export const metadata: Metadata = {
 };
 
 export default function AboutPage() {
-  const trackedFeatures: AboutFeatureItem[] = [
-    {
-      title: `${ACTIVE_STABLECOINS.length} stablecoins`,
-      description: "Coverage across supported chains, classified by governance, backing, and peg currency.",
-      icon: BarChart3,
-    },
-    {
-      title: `${PRE_LAUNCH_STABLECOINS.length} upcoming stablecoins`,
-      description:
-        "Pre-launch projects tracked from announcement to launch, with milestones, timelines, and featured content.",
-      icon: Rocket,
-      href: "/upcoming/",
-      linkLabel: "View upcoming",
-    },
-    {
-      title: `${DEAD_STABLECOINS.length} coins in the Cemetery`,
-      description:
-        "Algorithmic failures, rug pulls, regulatory shutdowns, and the quiet abandonments worth remembering.",
-      icon: Skull,
-      href: "/cemetery/",
-      linkLabel: "Open cemetery",
-    },
-    {
-      title: "Blacklist Tracker",
-      description:
-        "Tracks issuer-intervention events (freeze, unfreeze, pause, block, and wipe) across supported contracts and chains, with chain-specific amount provenance where available.",
-      icon: ShieldAlert,
-      href: "/blacklist/",
-      linkLabel: "Open blacklist tracker",
-    },
-    {
-      title: "Peg Tracker",
-      description:
-        "Composite peg scores, depeg event detection, heatmaps, and four years of depeg history on the dedicated tracker.",
-      icon: Activity,
-      href: "/depeg/",
-      linkLabel: "Open depeg tracker",
-    },
-    {
-      title: "Bluechip safety ratings",
-      description: "Independent SMIDGE (Security, Management, Insurance, Decentralization, Governance, Escrow) coverage for rated stablecoins, pulled in as an outside reference signal.",
-      icon: ShieldCheck,
-      href: "https://bluechip.org",
-      external: true,
-      linkLabel: "Review source",
-    },
-    {
-      title: "DEX liquidity",
-      description: "Pool depth, volume, quality-adjusted TVL, durability, and pair diversity scored 0-100.",
-      icon: Droplets,
-      href: "/liquidity/",
-      linkLabel: "Open liquidity tracker",
-    },
-    {
-      title: "Chain Analytics",
-      description:
-        "Per-chain stablecoin supply totals, 24h/7d/30d trends, composition breakdowns, and a Chain Health Score across quality, chain environment, concentration, peg stability, and backing diversity.",
-      icon: Globe,
-      href: "/chains/",
-      linkLabel: "Open chain leaderboard",
-    },
-    {
-      title: "Mint and burn flows",
-      description:
-        "Configured issuance-chain mint and burn monitoring via Alchemy JSON-RPC, including the Bank Run Gauge and flight-to-quality detection.",
-      icon: Flame,
-      href: "/flows/",
-      linkLabel: "Open flow tracker",
-    },
-    {
-      title: "Portfolio Audit",
-      description:
-        "Analyze your stablecoin holdings against Pharos safety, liquidity, and peg data to spot concentration risk.",
-      icon: Briefcase,
-      href: "/portfolio/",
-    },
-  ];
-
-  const computedFeatures: AboutFeatureItem[] = [
-    {
-      title: "Daily Digest",
-      description:
-        "A daily briefing on stablecoin market conditions covering supply shifts, depeg alerts, and liquidity changes.",
-      icon: Newspaper,
-      href: "/digest/",
-      linkLabel: "Open digest",
-    },
-    {
-      title: "Pharos Stability Index (PSI)",
-      description:
-        "A 30-minute ecosystem health score that combines active-depeg severity, market-cap breadth, DEWS stress breadth, and 7-day market-cap trend into a 0-100 signal.",
-      icon: Gauge,
-      href: "/stability-index/",
-      linkLabel: "Open stability index",
-    },
-    {
-      title: "Safety Grades",
-      description:
-        "Composite A+ to F grades built from liquidity, resilience, decentralization, dependency risk, and peg behavior.",
-      icon: FlaskConical,
-      href: "/safety-scores/",
-      linkLabel: "Open scorecards",
-    },
-    {
-      title: "Contagion Map",
-      description:
-        "A live dependency graph showing how collateral relationships can transmit stress through the ecosystem.",
-      icon: Network,
-      href: "/dependency-map/",
-      linkLabel: "Open dependency map",
-    },
-    {
-      title: "Systemic Risk Scoreboard",
-      description:
-        "The highest-impact single-coin failure scenarios (part of Safety Scores), surfaced inside the scorecard stress panel before a crisis makes them obvious.",
-      icon: Layers,
-      href: "/safety-scores/",
-      linkLabel: "Open stress panel",
-    },
-    {
-      title: "Depeg Early Warning (DEWS)",
-      description:
-        "A per-coin stress score refreshed every 30 minutes from supply velocity, pool balance drift, liquidity erosion, price confidence, source divergence, blacklist activity, mint and burn flow, and yield anomalies.",
-      icon: ShieldAlert,
-      href: "/depeg/",
-    },
-    {
-      title: "Stablecoin Comparison",
-      description:
-        "Side-by-side analysis of any tracked stablecoins across safety, liquidity, peg stability, and yield metrics.",
-      icon: ArrowLeftRight,
-      href: "/compare/",
-    },
-    {
-      title: "Risk-Adjusted Yield",
-      description:
-        "Yield opportunities scored against stablecoin safety, benchmark context, source freshness, and APY consistency.",
-      icon: TrendingUp,
-      href: "/yield/",
-    },
-  ];
+  const activeStablecoinCount = ACTIVE_STABLECOINS.length;
+  const preLaunchStablecoinCount = PRE_LAUNCH_STABLECOINS.length;
+  const deadStablecoinCount = DEAD_STABLECOINS.length;
+  const trackedFeatures = getTrackedFeatures({
+    activeStablecoins: activeStablecoinCount,
+    deadStablecoins: deadStablecoinCount,
+    preLaunchStablecoins: preLaunchStablecoinCount,
+  });
+  const faqItems = getAboutFaqItems({
+    activeStablecoins: activeStablecoinCount,
+    deadStablecoins: deadStablecoinCount,
+  });
 
   return (
     <FeaturePageShell
       breadcrumbName="About Pharos"
       path="/about/"
       title="About Pharos"
-      leadParagraphs={[
-        "Most trackers show price. Pharos shows risk.",
-        "We monitor 197 stablecoins with honest classification, live reserve feeds, forward-looking depeg warnings, and the only public blacklist tracker covering 35 coins across 9 chains — because knowing what a stablecoin is worth means knowing what could make it fail.",
-      ]}
+      leadParagraphs={ABOUT_LEAD_PARAGRAPHS}
       headerSupplement={<AboutReferenceModule />}
       preface={
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{
-            __html: safeJsonLd(
-              buildFaqJsonLd([
-                {
-                  question: "Why does Pharos exist?",
-                  answer:
-                    "Pharos is a project by TokenBrice, Ike, Claude, and Codex. It puts the stablecoin data you want to monitor in one place: honest classification, freeze tracking, and a graveyard for the ones that didn't make it.",
-                },
-                {
-                  question: "What does Pharos track?",
-                  answer: `Pharos tracks ${ACTIVE_STABLECOINS.length} active stablecoins across supported chains, classified by governance, backing, and peg currency. It documents ${DEAD_STABLECOINS.length} dead stablecoins in the cemetery, monitors issuer freeze and blacklist events on-chain for supported centralized stablecoins, provides composite peg scores with depeg detection and heatmaps, integrates independent Bluechip SMIDGE safety ratings, scores DEX liquidity depth 0-100 across decentralized exchanges, computes a 30-minute Pharos Stability Index for ecosystem health, and issues report cards from four weighted base dimensions plus a peg-stability multiplier, including an exit-liquidity input that blends DEX liquidity with protocol or issuer redemption backstops when a direct exit path exists.`,
-                },
-                {
-                  question: "How does Pharos classify stablecoins?",
-                  answer:
-                    "Pharos classifies stablecoins into three governance tiers: CeFi (fully centralized), CeFi-Dependent (decentralized infrastructure but reliant on centralized collateral or peg mechanisms), and DeFi (fully on-chain, no centralized custody dependency). This reflects actual infrastructure dependency, not marketing claims.",
-                },
-                {
-                  question: "Where does Pharos get its data?",
-                  answer:
-                    "Pharos aggregates data from DefiLlama, CoinGecko, on-chain RPC nodes, Etherscan, TronGrid, protocol-native APIs, and curated sources like Bluechip. Details on all data sources are available on the About page.",
-                },
-              ]),
-            ),
+            __html: safeJsonLd(buildFaqJsonLd(faqItems)),
           }}
         />
       }
@@ -486,56 +281,22 @@ export default function AboutPage() {
           contentClassName="grid gap-4 text-sm leading-relaxed text-muted-foreground lg:grid-cols-[auto_minmax(0,1fr)] lg:gap-5"
         >
           <div className="flex flex-wrap items-start gap-4">
-            <figure className="flex flex-col items-center gap-1.5">
-              <div className="rounded-xl border border-border/60 bg-background/50 p-1">
-                <Image
-                  src="/tokenbrice.png"
-                  alt="TokenBrice"
-                  width={72}
-                  height={72}
-                  className="h-14 w-14 rounded-lg sm:h-16 sm:w-16"
-                />
-              </div>
-              <figcaption className="text-[11px] uppercase tracking-wide text-muted-foreground">Creator</figcaption>
-            </figure>
-            <figure className="flex flex-col items-center gap-1.5">
-              <div className="rounded-xl border border-border/60 bg-background/50 p-1">
-                <Image
-                  src="/ike.jpg"
-                  alt="Ike"
-                  width={72}
-                  height={72}
-                  className="h-14 w-14 rounded-lg sm:h-16 sm:w-16"
-                />
-              </div>
-              <figcaption className="text-[11px] uppercase tracking-wide text-muted-foreground">Champion</figcaption>
-            </figure>
-            <figure className="flex flex-col items-center gap-1.5">
-              <div className="rounded-xl border border-border/60 bg-background/50 p-1">
-                <Image
-                  src="/claude.png"
-                  alt="Claude"
-                  width={72}
-                  height={72}
-                  className="h-14 w-14 rounded-lg sm:h-16 sm:w-16"
-                />
-              </div>
-              <figcaption className="text-[11px] uppercase tracking-wide text-muted-foreground">
-                AI Brainstormer
-              </figcaption>
-            </figure>
-            <figure className="flex flex-col items-center gap-1.5">
-              <div className="rounded-xl border border-border/60 bg-background/50 p-1">
-                <Image
-                  src="/codex.svg"
-                  alt="Codex"
-                  width={72}
-                  height={72}
-                  className="h-14 w-14 rounded-lg sm:h-16 sm:w-16"
-                />
-              </div>
-              <figcaption className="text-[11px] uppercase tracking-wide text-muted-foreground">AI Engineer</figcaption>
-            </figure>
+            {TEAM_MEMBERS.map((member) => (
+              <figure key={member.name} className="flex flex-col items-center gap-1.5">
+                <div className="rounded-xl border border-border/60 bg-background/50 p-1">
+                  <Image
+                    src={member.imageSrc}
+                    alt={member.name}
+                    width={72}
+                    height={72}
+                    className="h-14 w-14 rounded-lg sm:h-16 sm:w-16"
+                  />
+                </div>
+                <figcaption className="text-[11px] uppercase tracking-wide text-muted-foreground">
+                  {member.role}
+                </figcaption>
+              </figure>
+            ))}
           </div>
           <div className="space-y-3">
             <p>
@@ -617,7 +378,7 @@ export default function AboutPage() {
           eyebrow="Signals"
           title="What Pharos Computes"
           intro="The analysis layer — models, scores, and forecasts you cannot find anywhere else: a VIX for stablecoins, dependency-capped safety grades, and forward-looking depeg pressure."
-          items={computedFeatures}
+          items={COMPUTED_FEATURES}
           tone="insight"
           footer={
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
@@ -661,57 +422,27 @@ export default function AboutPage() {
             APIs directly.
           </p>
           <div className="grid gap-6 lg:grid-cols-[minmax(0,1.35fr)_minmax(0,0.95fr)]">
-            <div className="rounded-xl bg-muted/20 p-4 space-y-4">
+            <div className="space-y-4 rounded-xl bg-muted/20 p-4">
               <p className="text-sm font-semibold text-foreground">Source groups</p>
               <PipelineSources />
             </div>
-            <div className="rounded-xl bg-muted/20 p-4 space-y-4 lg:border-l-2 lg:border-border/60 lg:bg-transparent lg:p-0 lg:border-l">
+            <div className="space-y-4 rounded-xl bg-muted/20 p-4 lg:border-l lg:border-l-2 lg:border-border/60 lg:bg-transparent lg:p-0">
               <p className="text-sm font-semibold text-foreground">Processing path</p>
               <ol className="space-y-4">
-                <li aria-label="Step 1: Sources" className="flex gap-3">
-                  <div
-                    aria-hidden="true"
-                    className="flex size-10 shrink-0 items-center justify-center rounded-full border border-border/60 bg-background/70 text-sm font-semibold text-foreground"
-                  >
-                    1
-                  </div>
-                  <div className="space-y-1">
-                    <p className="text-sm font-medium text-foreground">Sources</p>
-                    <p>
-                      Market, on-chain, ratings, FX, commodity, and digest inputs are collected on a fixed schedule.
-                    </p>
-                  </div>
-                </li>
-                <li aria-label="Step 2: Cloudflare Worker + D1" className="flex gap-3">
-                  <div
-                    aria-hidden="true"
-                    className="flex size-10 shrink-0 items-center justify-center rounded-full border border-border/60 bg-background/70 text-sm font-semibold text-foreground"
-                  >
-                    2
-                  </div>
-                  <div className="space-y-1">
-                    <p className="text-sm font-medium text-foreground">Cloudflare Worker + D1</p>
-                    <p>
-                      Staggered 5-minute, 15-minute, 30-minute, hourly, multi-hour, daily, and monthly lanes normalize
-                      the data and cache the results for the public API.
-                    </p>
-                  </div>
-                </li>
-                <li aria-label="Step 3: Static dashboard" className="flex gap-3">
-                  <div
-                    aria-hidden="true"
-                    className="flex size-10 shrink-0 items-center justify-center rounded-full border border-border/60 bg-background/70 text-sm font-semibold text-foreground"
-                  >
-                    3
-                  </div>
-                  <div className="space-y-1">
-                    <p className="text-sm font-medium text-foreground">Static dashboard</p>
-                    <p>
-                      Next.js pages on Cloudflare Pages consume the worker outputs and render the stablecoin view
-                      without direct third-party calls.
-                    </p>
-                  </div>
-                </li>
+                {DATA_PIPELINE_STEPS.map((step) => (
+                  <li key={step.step} aria-label={step.ariaLabel} className="flex gap-3">
+                    <div
+                      aria-hidden="true"
+                      className="flex size-10 shrink-0 items-center justify-center rounded-full border border-border/60 bg-background/70 text-sm font-semibold text-foreground"
+                    >
+                      {step.step}
+                    </div>
+                    <div className="space-y-1">
+                      <p className="text-sm font-medium text-foreground">{step.title}</p>
+                      <p>{step.description}</p>
+                    </div>
+                  </li>
+                ))}
               </ol>
             </div>
           </div>
