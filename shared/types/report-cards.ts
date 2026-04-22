@@ -95,8 +95,8 @@ const RawDimensionInputsSchema = z.object({
   governanceTier: GovernanceTypeSchema,
   governanceQuality: GovernanceQualitySchema,
   dependencies: z.array(DependencyWeightSchema),
-  variantParentId: z.string().nullable().optional().default(null),
-  variantKind: z.enum(VARIANT_KIND_VALUES).nullable().optional().default(null),
+  variantParentId: z.string().nullable().optional(),
+  variantKind: z.enum(VARIANT_KIND_VALUES).nullable().optional(),
   navToken: z.boolean(),
   collateralFromLive: z.boolean().optional().default(false),
 });
@@ -121,8 +121,8 @@ export const ReportCardSchema = z.object({
   overallGrade: ReportCardGradeSchema,
   overallScore: z.number().nullable(),
   baseScore: z.number().nullable(),
-  overallCapped: z.boolean().optional().default(false),
-  uncappedOverallScore: z.number().nullable().optional().default(null),
+  overallCapped: z.boolean().optional(),
+  uncappedOverallScore: z.number().nullable().optional(),
   dimensions: z.object({
     pegStability: ReportCardDimensionSchema,
     liquidity: ReportCardDimensionSchema,

@@ -344,7 +344,6 @@ export async function dispatchTelegramAlerts(
 
     const previousDepegSnapshot = parseSnapshotMap<DepegSnapshot>(depegCache);
     const previousSafetySnapshot = parseSnapshotMap<SafetySnapshot>(safetyCache);
-
     const mustSeedSnapshots =
       isSnapshotMissingOrStale(dewsCache, nowSec) ||
       (dewsAlertableCache != null && isSnapshotMissingOrStale(dewsAlertableCache, nowSec)) ||
@@ -360,9 +359,6 @@ export async function dispatchTelegramAlerts(
       const result = emptyResult(true, chatsWithActiveSnooze);
       return { itemCount: 0, metadata: JSON.stringify(result) };
     }
-
-    // Defense-in-depth null guards: mustSeedSnapshots above catches null snapshots,
-    // but protect downstream indexing in case guard logic drifts.
     const safeDewsSnapshot = previousDewsSnapshot ?? {};
     const safeDewsAlertable = previousDewsAlertableSnapshot ?? {};
     const safeDepegSnapshot = previousDepegSnapshot ?? {};
@@ -488,10 +484,7 @@ export async function dispatchTelegramAlerts(
         suppressedMethodologyChanges++;
         continue;
       }
-
-      if (!previous) {
-        continue;
-      }
+      if (!previous) continue;
 
       safetyChanges.push({
         stablecoinId,

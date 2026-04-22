@@ -27,10 +27,6 @@ export function getVariantDisplay(kind: VariantKind) {
   return VARIANT_DISPLAY[kind];
 }
 
-export function getVariantShortLabel(kind: VariantKind): string {
-  return VARIANT_DISPLAY[kind].shortLabel;
-}
-
 export function getVariantAccessibleLabel(kind: VariantKind): string {
   return VARIANT_DISPLAY[kind].fullLabel;
 }

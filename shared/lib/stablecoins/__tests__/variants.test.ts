@@ -5,7 +5,7 @@ import {
   getVariantRelationship,
   getVariants,
   isTrackedVariant,
-} from "@shared/lib/stablecoins";
+} from "../index";
 
 describe("stablecoin variants", () => {
   it("resolves a tracked variant parent", () => {

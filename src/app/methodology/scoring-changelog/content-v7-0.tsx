@@ -1,5 +1,41 @@
 import { VersionCard, getScoringEntry } from "./content-shared";
 
+export function ScoringChangelogV709Entry() {
+  return (
+    <VersionCard
+      entry={getScoringEntry("7.09")}
+      accent="border-l-emerald-500"
+    >
+      <p>
+        Tracked savings and staked wrappers now carry an explicit parent relationship in Safety Scores instead of
+        relying on reserve-shape quirks to infer the upstream stablecoin.
+      </p>
+      <ul className="list-disc list-inside space-y-1">
+        <li>
+          Nine tracked wrapped or staked stablecoins now declare canonical{" "}
+          <code className="text-xs bg-muted px-1 py-0.5 rounded">variantOf</code> /{" "}
+          <code className="text-xs bg-muted px-1 py-0.5 rounded">variantKind</code> metadata and contribute a
+          synthetic <code className="text-xs bg-muted px-1 py-0.5 rounded">wrapper</code> edge from parent to child
+          in dependency scoring, topological ordering, and the dependency graph.
+        </li>
+        <li>
+          Dependency Risk now caps tracked savings wrappers at parent minus 3 points and tracked risk-absorption
+          wrappers at parent minus 5 points, while legacy non-variant wrapper dependencies keep the original
+          parent-minus-3 behavior.
+        </li>
+        <li>
+          Tracked variants cannot outscore their parent overall card; live cards and stressed recomputation now expose{" "}
+          <code className="text-xs bg-muted px-1 py-0.5 rounded">overallCapped</code>,{" "}
+          <code className="text-xs bg-muted px-1 py-0.5 rounded">uncappedOverallScore</code>,{" "}
+          <code className="text-xs bg-muted px-1 py-0.5 rounded">rawInputs.variantParentId</code>, and{" "}
+          <code className="text-xs bg-muted px-1 py-0.5 rounded">rawInputs.variantKind</code> so parent-cap drag is
+          distinct from peg drag in the UI and stress tooling.
+        </li>
+      </ul>
+    </VersionCard>
+  );
+}
+
 export function ScoringChangelogV708Entry() {
   return (
     <VersionCard
