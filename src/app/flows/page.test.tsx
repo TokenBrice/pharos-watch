@@ -2,6 +2,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { ReactNode } from "react";
 import FlowsPage from "@/app/flows/page";
+import FlowsLayout from "@/app/flows/layout";
 import { useMintBurnFlows } from "@/hooks/use-mint-burn-flows";
 
 vi.mock("next/link", () => ({
@@ -159,5 +160,34 @@ describe("FlowsPage", () => {
 
     expect(html).not.toContain("Live refresh is running behind");
     expect(html).not.toContain("Showing an older snapshot");
+  });
+
+  it("emits one breadcrumb json-ld from the shell and keeps the FAQ json-ld in layout", () => {
+    mockUseMintBurnFlows.mockImplementation((hours = 24) => {
+      if (hours === 168) {
+        return makeQueryResult({
+          data: buildFlowData(null),
+        }) as unknown as ReturnType<typeof useMintBurnFlows>;
+      }
+
+      return makeQueryResult({
+        data: buildFlowData(null),
+        meta: {
+          updatedAt: Math.floor(Date.now() / 1000) - 120,
+          ageSeconds: 120,
+          status: "fresh",
+        },
+      }) as unknown as ReturnType<typeof useMintBurnFlows>;
+    });
+
+    const html = renderToStaticMarkup(
+      <FlowsLayout>
+        <FlowsPage />
+      </FlowsLayout>,
+    );
+
+    expect(html.match(/"@type":"BreadcrumbList"/g)).toHaveLength(1);
+    expect(html).toContain('"@type":"FAQPage"');
+    expect(html).not.toContain("This section failed to load. Try refreshing the page.");
   });
 });

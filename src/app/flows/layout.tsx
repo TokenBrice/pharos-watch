@@ -1,5 +1,4 @@
 import type { Metadata } from "next";
-import { BreadcrumbJsonLd } from "@/components/breadcrumb-json-ld";
 import { safeJsonLd } from "@/lib/json-ld";
 import { buildFaqJsonLd } from "@/lib/faq";
 import { SITE_ORIGIN as SITE_URL } from "@shared/lib/runtime-origins";
@@ -30,12 +29,6 @@ export default function FlowsLayout({
 }) {
   return (
     <>
-      <BreadcrumbJsonLd
-        items={[
-          { name: "Home", url: "/" },
-          { name: "Mint/Burn Flows", url: "/flows/" },
-        ]}
-      />
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{
