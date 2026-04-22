@@ -10,6 +10,8 @@ import {
   type PreparedFeedbackSubmission,
 } from "./types";
 
+const FEEDBACK_DEPENDENCY_RETRY_AFTER_SEC = 60;
+
 export async function parseFeedbackRequest(request: Request): Promise<FeedbackBody | Response> {
   try {
     const raw = await request.json();
@@ -65,15 +67,26 @@ export async function prepareFeedbackSubmission(
     return errorResponse(503, "Feedback service temporarily unavailable");
   }
 
-  const allowed = await checkFeedbackRateLimit(
-    db,
-    resolveFeedbackClientIp(request),
-    env.FEEDBACK_IP_SALT,
-    FEEDBACK_RATE_LIMIT_WINDOW_SEC,
-    FEEDBACK_RATE_LIMIT_MAX_SUBMISSIONS,
-  );
+  let allowed: boolean;
+  try {
+    allowed = await checkFeedbackRateLimit(
+      db,
+      resolveFeedbackClientIp(request),
+      env.FEEDBACK_IP_SALT,
+      FEEDBACK_RATE_LIMIT_WINDOW_SEC,
+      FEEDBACK_RATE_LIMIT_MAX_SUBMISSIONS,
+    );
+  } catch (error) {
+    console.error("[feedback] rate-limit dependency unavailable:", error);
+    return errorResponse(
+      503,
+      "Feedback service temporarily unavailable. Please try again.",
+      { retryAfterSec: FEEDBACK_DEPENDENCY_RETRY_AFTER_SEC },
+    );
+  }
+
   if (!allowed) {
-      return errorResponse(429, "Too many submissions. Please wait a few minutes.");
+    return errorResponse(429, "Too many submissions. Please wait a few minutes.");
   }
 
   return {

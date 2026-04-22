@@ -2,16 +2,19 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { z } from "zod";
 import { PHAROS_WEB_ACCEPT_MARKER } from "@shared/lib/request-source-marker";
 import {
+  apiRequest,
   apiFetch,
   apiFetchWithMeta,
   ApiFetchError,
   buildRequestUrl,
+  DEFAULT_API_REQUEST_TIMEOUT_MS,
   resolveApiBase,
   SchemaValidationError,
 } from "../api";
 
 describe("api contract validation policy", () => {
   afterEach(() => {
+    vi.useRealTimers();
     vi.restoreAllMocks();
     vi.unstubAllGlobals();
   });
@@ -167,6 +170,72 @@ describe("api contract validation policy", () => {
     const [, init] = fetchSpy.mock.calls[0] ?? [];
     const headers = new Headers((init as RequestInit | undefined)?.headers);
     expect(headers.get("Accept")).toContain(PHAROS_WEB_ACCEPT_MARKER);
+  });
+
+  it("propagates caller-provided AbortSignal through the shared request helper", async () => {
+    vi.stubGlobal("window", { location: { hostname: "pharos.watch" } });
+    vi.useFakeTimers();
+    const fetchSpy = vi.spyOn(globalThis, "fetch").mockImplementation((_input, init) => (
+      new Promise<Response>((_resolve, reject) => {
+        init?.signal?.addEventListener("abort", () => {
+          reject(init.signal?.reason ?? new DOMException("caller aborted", "AbortError"));
+        });
+      })
+    ));
+    const controller = new AbortController();
+
+    const requestPromise = apiRequest("/api/stablecoins", { signal: controller.signal });
+    const rejection = expect(requestPromise).rejects.toMatchObject({
+      name: "AbortError",
+      message: "caller aborted",
+    });
+    controller.abort(new DOMException("caller aborted", "AbortError"));
+    await vi.runAllTimersAsync();
+
+    await rejection;
+    expect(fetchSpy).toHaveBeenCalledOnce();
+  });
+
+  it("applies the default shared API timeout when callers do not provide one", async () => {
+    vi.stubGlobal("window", { location: { hostname: "pharos.watch" } });
+    vi.useFakeTimers();
+    vi.spyOn(globalThis, "fetch").mockImplementation((_input, init) => (
+      new Promise<Response>((_resolve, reject) => {
+        init?.signal?.addEventListener("abort", () => {
+          reject(init.signal?.reason ?? new DOMException("timed out", "TimeoutError"));
+        });
+      })
+    ));
+
+    const requestPromise = apiRequest("/api/stablecoins");
+    const rejection = expect(requestPromise).rejects.toMatchObject({
+      name: "TimeoutError",
+      message: `API request timed out after ${DEFAULT_API_REQUEST_TIMEOUT_MS}ms`,
+    });
+    await vi.advanceTimersByTimeAsync(DEFAULT_API_REQUEST_TIMEOUT_MS);
+
+    await rejection;
+  });
+
+  it("allows callers to override the shared timeout through apiFetch options", async () => {
+    vi.stubGlobal("window", { location: { hostname: "pharos.watch" } });
+    vi.useFakeTimers();
+    vi.spyOn(globalThis, "fetch").mockImplementation((_input, init) => (
+      new Promise<Response>((_resolve, reject) => {
+        init?.signal?.addEventListener("abort", () => {
+          reject(init.signal?.reason ?? new DOMException("timed out", "TimeoutError"));
+        });
+      })
+    ));
+
+    const requestPromise = apiFetch("/api/stablecoins", undefined, undefined, undefined, { timeoutMs: 250 });
+    const rejection = expect(requestPromise).rejects.toMatchObject({
+      name: "TimeoutError",
+      message: "API request timed out after 250ms",
+    });
+    await vi.advanceTimersByTimeAsync(250);
+
+    await rejection;
   });
 
   it("throws ApiFetchError with status on non-OK responses", async () => {

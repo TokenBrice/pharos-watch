@@ -98,7 +98,7 @@ describe("query polling policy", () => {
     await options.queryFn();
     const [path, init] = fetchMock.mock.calls[0] as [string, RequestInit];
     expect(path).toBe("/api/admin/status");
-    expect(init).toBeUndefined();
+    expect(init).toEqual(expect.objectContaining({ signal: expect.any(AbortSignal) }));
   });
 
   it("useRequestSourceStats uses the ops proxy and shared polling policy", async () => {
@@ -127,7 +127,7 @@ describe("query polling policy", () => {
     await options.queryFn();
     const [path, init] = fetchMock.mock.calls[0] as [string, RequestInit];
     expect(path).toBe("/api/admin/request-source-stats?hours=24&bucketSec=3600&routeLimit=5&apiKeyLimit=25");
-    expect(init).toBeUndefined();
+    expect(init).toEqual(expect.objectContaining({ signal: expect.any(AbortSignal) }));
   });
 
   it("useEndpointProbes uses shared polling and switches admin paths to same-origin proxy mode", async () => {

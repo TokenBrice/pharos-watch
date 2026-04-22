@@ -148,6 +148,21 @@ describe("handleFeedback", () => {
     expect(body.error).toMatch(/Too many/i);
   });
 
+  it("returns explicit degraded-service 503 when feedback rate-limit storage fails", async () => {
+    const db = mockD1([
+      { match: "feedback_rate_limit", rows: [], throwError: new Error("D1 unavailable") },
+    ]);
+
+    const res = await handleFeedback(db, makeRequest(makeFeedbackBody()), makeEnv());
+
+    expect(res.status).toBe(503);
+    expect(res.headers.get("Retry-After")).toBe("60");
+    await expect(res.json()).resolves.toEqual({
+      error: "Feedback service temporarily unavailable. Please try again.",
+    });
+    expect(fetchSpy).not.toHaveBeenCalled();
+  });
+
   it("returns 503 when FEEDBACK_IP_SALT is not configured", async () => {
     const db = mockD1([]);
     const res = await handleFeedback(db, makeRequest(makeFeedbackBody()), { GITHUB_PAT: "ghp_test_token" });

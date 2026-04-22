@@ -47,6 +47,8 @@ export function buildUpstreamHeaders(
 /**
  * Build a proxy response by forwarding a set of upstream response headers.
  * Optionally null out the body for HEAD requests and set a default Cache-Control.
+ * Preserve Retry-After by default so degraded upstream backoff semantics survive
+ * the Pages proxy layers.
  */
 export function buildProxyResponse(
   upstreamRes: Response,
@@ -57,6 +59,10 @@ export function buildProxyResponse(
   for (const name of forwardedHeaders) {
     const value = upstreamRes.headers.get(name);
     if (value) headers.set(name, value);
+  }
+  const retryAfter = upstreamRes.headers.get("Retry-After");
+  if (retryAfter) {
+    headers.set("Retry-After", retryAfter);
   }
   if (!headers.has("Cache-Control") && options?.defaultCacheControl) {
     headers.set("Cache-Control", options.defaultCacheControl);

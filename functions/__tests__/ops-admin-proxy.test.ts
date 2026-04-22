@@ -251,6 +251,27 @@ describe("ops admin proxy", () => {
     expect(await response.json()).toEqual({ error: "Operator API upstream auth failed" });
   });
 
+  it("preserves upstream Retry-After headers on degraded admin responses", async () => {
+    vi.stubGlobal("fetch", vi.fn(async () => new Response(JSON.stringify({ error: "temporarily unavailable" }), {
+      status: 503,
+      headers: {
+        "Content-Type": "application/json",
+        "Retry-After": "60",
+      },
+    })));
+
+    const response = await onRequest({
+      request: makeAuthedRequest("https://ops.pharos.watch/api/admin/status"),
+      env: BASE_ENV,
+      params: { path: "status" },
+    });
+
+    expect(response.status).toBe(503);
+    expect(response.headers.get("Retry-After")).toBe("60");
+    expect(response.headers.get("X-Robots-Tag")).toBe("noindex, nofollow");
+    await expect(response.json()).resolves.toEqual({ error: "temporarily unavailable" });
+  });
+
   it("returns 502 when the upstream fetch itself fails", async () => {
     const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
     vi.stubGlobal("fetch", vi.fn(async () => {

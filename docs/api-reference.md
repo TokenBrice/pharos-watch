@@ -175,7 +175,7 @@ When the public IP limiter or per-key public API limiter is exceeded, the API re
 
 Rate-limited responses include the retry delay in the HTTP `Retry-After` header when the worker can compute one.
 
-`POST /api/feedback` also has a form-specific limiter. Its `429` body is `{ "error": "Too many submissions. Please wait a few minutes." }`, and it should be handled as a local submission throttle rather than as a public API quota response.
+`POST /api/feedback` also has a form-specific limiter. Its `429` body is `{ "error": "Too many submissions. Please wait a few minutes." }`, and it should be handled as a local submission throttle rather than as a public API quota response. If the feedback limiter's D1 dependency is unavailable, the endpoint returns `503 Service Unavailable` with `{ "error": "Feedback service temporarily unavailable. Please try again." }` and `Retry-After: 60`.
 
 If global public-IP limiter bookkeeping fails repeatedly, the worker fails closed after 3 consecutive limiter errors and returns `503 Service Unavailable` with `{ "error": "Public API temporarily unavailable" }` plus `Retry-After: 60`. Treat this as an emergency limiter-health condition, not as successful quota exhaustion. API-key traffic uses a separate per-key limiter; quota overages return `429` with `Retry-After` when available. API-key authentication and per-key limiter storage failures fail closed immediately with `503 Service Unavailable`, `{ "error": "Public API temporarily unavailable" }`, and `Retry-After: 60`. Best-effort API-key usage timestamp updates do not fail otherwise successful reads.
 
@@ -199,7 +199,7 @@ JSON API handlers use `{ "error": "message" }` JSON format. `GET /api/og/*` retu
 | 429    | Too Many Requests     | Rate limit exceeded (global public IP limiter, per-key public API limiter, or feedback-specific limiter; feedback uses its own message body)                                                               |
 | 500    | Internal Server Error | Unhandled exception (caught by `withErrorHandler`)                                                                                                                                                       |
 | 502    | Bad Gateway           | Upstream fetch failed (external data provider or Pages proxy upstream), or the ops proxy received a Cloudflare Access login redirect from `ops-api` |
-| 503    | Service Unavailable   | Cache-passthrough endpoint where cache has never been populated, cached payload is corrupt / rejected by validation, limiter storage fails closed after repeated D1 errors, or `MAINTENANCE_MODE=true` (global kill switch via `wrangler secret put`) |
+| 503    | Service Unavailable   | Cache-passthrough endpoint where cache has never been populated, cached payload is corrupt / rejected by validation, limiter storage fails closed after repeated D1 errors, feedback limiter/storage dependency failure, or `MAINTENANCE_MODE=true` (global kill switch via `wrangler secret put`) |
 | 504    | Gateway Timeout       | Pages `/_site-data/*` or `/api/admin/*` proxy timed out waiting for its Worker upstream (10 s default; 20 s for ops `/api/status` and `/api/status-history`) |
 
 **Rule:** Cache-passthrough handlers return **503** when data hasn't been populated yet or when the stored cache payload is malformed and rejected at read time. Query handlers that find no matching rows return **200** with empty results (e.g., `{ events: [], total: 0 }`). When `MAINTENANCE_MODE` is set to `"true"`, all non-`OPTIONS` requests immediately return `503` with `{ "error": "maintenance", "message": "..." }` — used during DB migrations. `OPTIONS` CORS preflights are handled before the maintenance gate.
@@ -2320,6 +2320,7 @@ Public feedback ingestion endpoint used by the in-app feedback modal. Validates 
 
 - Global public API limiter: D1-backed per-IP-hash limiter (`300 requests / 60 seconds`) for non-admin requests. If the distributed limiter path fails, the worker fails open for the first two consecutive storage failures, then returns `503` with `Retry-After: 60` until limiter storage recovers or the emergency counter decays.
 - Feedback endpoint limiter: `3 submissions / 10 minutes` per salted IP hash in D1.
+- Feedback limiter dependency failure: `503` with `Retry-After: 60` and `{ "error": "Feedback service temporarily unavailable. Please try again." }`.
 
 **Request body**
 
@@ -2359,7 +2360,7 @@ Public feedback ingestion endpoint used by the in-app feedback modal. Validates 
 - `400` invalid payload
 - `429` rate limited (3 submissions / 10 minutes per salted IP hash)
 - `500` forwarding/processing failure
-- `503` service misconfigured (missing `FEEDBACK_IP_SALT` or `GITHUB_PAT`)
+- `503` service misconfigured (missing `FEEDBACK_IP_SALT` or `GITHUB_PAT`) or feedback limiter/storage dependency failure (`Retry-After: 60`)
 
 ---
 

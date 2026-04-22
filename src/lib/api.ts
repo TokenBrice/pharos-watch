@@ -3,9 +3,11 @@ import { API_PATHS } from "@shared/lib/api-endpoints";
 import { PHAROS_WEB_ACCEPT_MARKER } from "@shared/lib/request-source-marker";
 import { toSiteDataPath } from "@shared/lib/site-data-routes";
 import { FRESHNESS_RATIOS } from "@shared/lib/status-thresholds";
+import { createTimeoutSignal } from "@shared/lib/timeout-signal";
 import { isSiteDataUiHostname, resolvePublicApiBase } from "@shared/lib/runtime-origins";
 
 export type ApiContractMode = "strict" | "warn";
+export const DEFAULT_API_REQUEST_TIMEOUT_MS = 10_000;
 
 export function resolveApiBase(
   hostname?: string | null,
@@ -66,11 +68,64 @@ function withPublicApiAcceptMarker(path: string, init?: RequestInit): RequestIni
   };
 }
 
-function apiRequest(
+export interface ApiRequestOptions {
+  signal?: AbortSignal;
+  timeoutMs?: number | null;
+}
+
+function resolveApiRequestSignal(
+  init?: RequestInit,
+  options?: ApiRequestOptions,
+): AbortSignal | undefined {
+  return options?.signal ?? init?.signal ?? undefined;
+}
+
+function resolveApiRequestTimeoutMs(options?: ApiRequestOptions): number | null {
+  if (options?.timeoutMs === null) {
+    return null;
+  }
+
+  if (options?.timeoutMs === undefined) {
+    return DEFAULT_API_REQUEST_TIMEOUT_MS;
+  }
+
+  if (!Number.isFinite(options.timeoutMs)) {
+    return DEFAULT_API_REQUEST_TIMEOUT_MS;
+  }
+
+  return Math.max(1, Math.ceil(options.timeoutMs));
+}
+
+export async function apiRequest(
   path: string,
   init?: RequestInit,
+  options?: ApiRequestOptions,
 ): Promise<Response> {
-  return fetch(buildRequestUrl(path), withPublicApiAcceptMarker(path, init));
+  const parentSignal = resolveApiRequestSignal(init, options);
+  const requestInit = withPublicApiAcceptMarker(path, {
+    ...init,
+    signal: parentSignal,
+  });
+  const timeoutMs = resolveApiRequestTimeoutMs(options);
+
+  if (timeoutMs == null) {
+    return fetch(buildRequestUrl(path), requestInit);
+  }
+
+  const timeout = createTimeoutSignal({
+    timeoutMs,
+    timeoutReason: new DOMException(`API request timed out after ${timeoutMs}ms`, "TimeoutError"),
+    parentSignal,
+  });
+
+  try {
+    return await fetch(buildRequestUrl(path), {
+      ...(requestInit ?? {}),
+      signal: timeout.signal,
+    });
+  } finally {
+    timeout.dispose();
+  }
 }
 
 export class SchemaValidationError extends Error {
@@ -189,7 +244,7 @@ function validateApiPayload<T>(
 
 // --- Standard fetch (no meta) ---
 
-export interface ApiFetchOptions {
+export interface ApiFetchOptions extends ApiRequestOptions {
   nullOn404?: boolean;
 }
 
@@ -218,7 +273,7 @@ export async function apiFetch<T>(
   contractMode?: ApiContractMode,
   options?: ApiFetchOptions,
 ): Promise<T | null> {
-  const res = await apiRequest(path, init);
+  const res = await apiRequest(path, init, options);
   if (!res.ok) {
     if (options?.nullOn404 && res.status === 404) return null;
     throw await buildFetchError(path, res);
@@ -237,8 +292,9 @@ export async function apiFetchWithMeta<T>(
   init?: RequestInit,
   maxAgeSec = 900,
   contractMode?: ApiContractMode,
+  requestOptions?: ApiRequestOptions,
 ): Promise<{ data: T; meta: ApiMeta | null }> {
-  const res = await apiRequest(path, init);
+  const res = await apiRequest(path, init, requestOptions);
   if (!res.ok) throw await buildFetchError(path, res);
 
   const json: unknown = await res.json();

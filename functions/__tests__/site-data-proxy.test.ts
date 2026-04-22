@@ -174,6 +174,28 @@ describe("site-data proxy", () => {
       && entry.binds[4] === "site-api")).toBe(true);
   });
 
+  it("preserves upstream Retry-After headers on site-data rate limits", async () => {
+    const fetchSpy = vi.fn(async () => new Response(JSON.stringify({ error: "Rate limit exceeded" }), {
+      status: 429,
+      headers: {
+        "Content-Type": "application/json",
+        "Retry-After": "45",
+      },
+    }));
+    vi.stubGlobal("fetch", fetchSpy);
+
+    const response = await onRequest({
+      request: new Request("https://pharos.watch/_site-data/stablecoins"),
+      env: makeEnv(),
+      params: { path: "stablecoins" },
+    });
+
+    expect(response.status).toBe(429);
+    expect(response.headers.get("Retry-After")).toBe("45");
+    await expect(response.json()).resolves.toEqual({ error: "Rate limit exceeded" });
+    expect(cachePut).not.toHaveBeenCalled();
+  });
+
   it("proxies public-status-history through the site-data lane", async () => {
     const fetchSpy = vi.fn(async () => new Response(JSON.stringify({ ok: true }), {
       status: 200,
