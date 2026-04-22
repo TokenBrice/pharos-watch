@@ -1,7 +1,8 @@
 "use client";
 
 import { useCallback, useMemo } from "react";
-import { COMMODITY_PEG_TAGS, FIAT_NON_USD_PEG_TAGS, type FilterTag } from "@shared/types";
+import { COMMODITY_PEG_TAGS, FIAT_NON_USD_PEG_TAGS } from "@shared/lib/filter-tags";
+import type { FilterTag } from "@shared/types";
 import { useUrlFilters } from "@/hooks/use-url-filters";
 
 interface FilterGroup {

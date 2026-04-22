@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { getFilterTags } from "../core";
+import { getFilterTags } from "../../lib/filter-tags";
 import type { StablecoinMeta } from "../core";
 
 function makeCoin(overrides: Partial<StablecoinMeta> = {}): StablecoinMeta {

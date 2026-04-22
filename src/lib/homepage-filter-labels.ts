@@ -1,5 +1,6 @@
 import { getBackingLabelShort, getGovernanceLabelShort } from "@shared/lib/classification";
-import { FILTER_TAG_LABELS, type FilterTag } from "@shared/types";
+import { FILTER_TAG_LABELS } from "@shared/lib/filter-tags";
+import type { FilterTag } from "@shared/types";
 
 const HOMEPAGE_FILTER_CONTROL_LABEL_OVERRIDES: Partial<Record<FilterTag, string>> = {
   "fiat-non-usd-peg": "Non USD",

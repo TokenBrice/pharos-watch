@@ -1,6 +1,9 @@
-import type { DependencyType } from "./dependency-types";
+import { z } from "zod";
+import { DependencyTypeSchema, type DependencyType } from "./dependency-types";
 
 export type ReserveRisk = "very-low" | "low" | "medium" | "high" | "very-high";
+export const RESERVE_RISK_VALUES = ["very-low", "low", "medium", "high", "very-high"] as const;
+export const ReserveRiskSchema = z.enum(RESERVE_RISK_VALUES);
 
 export interface ReserveSlice {
   name: string;
@@ -10,3 +13,12 @@ export interface ReserveSlice {
   depType?: DependencyType;
   blacklistable?: boolean;
 }
+
+export const ReserveSliceSchema: z.ZodType<ReserveSlice> = z.object({
+  name: z.string(),
+  pct: z.number().finite().positive().max(100),
+  risk: ReserveRiskSchema,
+  coinId: z.string().optional(),
+  depType: DependencyTypeSchema.optional(),
+  blacklistable: z.boolean().optional(),
+}).strict();

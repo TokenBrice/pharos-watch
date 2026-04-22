@@ -7,14 +7,14 @@ import {
   resolveEffectiveSortKey,
   type StablecoinTableSortKey,
 } from "@/components/stablecoin-table-logic";
-import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins";
 import {
   COMMODITY_PEG_TAGS,
   FIAT_NON_USD_PEG_TAGS,
-  OTHER_PEG_TAGS,
   getFilterTags,
-  type StablecoinData,
-} from "@shared/types";
+  OTHER_PEG_TAGS,
+} from "@shared/lib/filter-tags";
+import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins";
+import type { StablecoinData } from "@shared/types";
 import type { ColumnId } from "@/hooks/use-preferences";
 
 // Minimal StablecoinData factory

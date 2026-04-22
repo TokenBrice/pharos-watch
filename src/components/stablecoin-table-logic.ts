@@ -2,11 +2,16 @@ import { downloadCsv } from "@/lib/csv-export";
 import { createTableComparator } from "@/lib/table-comparator";
 import { getResolvedBlacklistStatus, getResolvedBlacklistStatusLabel } from "@/lib/blacklist-status";
 import type { ColumnId } from "@/hooks/use-preferences";
+import {
+  GRADE_FILTER_TAGS,
+  getFilterTags,
+  gradeMatchesFilter,
+  OTHER_PEG_TAGS,
+} from "@shared/lib/filter-tags";
 import { getPegReference } from "@shared/lib/peg-rates";
 import { getCirculatingRaw, getPrevDayRaw, getPrevWeekRaw } from "@shared/lib/supply";
 import { ACTIVE_IDS, TRACKED_META_BY_ID, ACTIVE_STABLECOINS } from "@shared/lib/stablecoins";
 import type { DexLiquidityMap, FilterTag, PegSummaryCoin, ReportCard, StablecoinData } from "@shared/types";
-import { getFilterTags, OTHER_PEG_TAGS, GRADE_FILTER_TAGS, gradeMatchesFilter } from "@shared/types";
 
 export type StablecoinTableSortKey =
   | "name"

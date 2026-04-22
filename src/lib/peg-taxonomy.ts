@@ -1,5 +1,6 @@
 import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins";
-import { pegCurrencyToFilterTag, type PegCurrency } from "@shared/types";
+import { pegCurrencyToFilterTag } from "@shared/lib/filter-tags";
+import type { PegCurrency } from "@shared/types";
 import {
   ACTIVE_PEGS,
   PEG_INTRO,

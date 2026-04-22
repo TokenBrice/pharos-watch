@@ -3,7 +3,7 @@
 import { useMemo } from "react";
 import { SectionErrorBoundary } from "@/components/section-error-boundary";
 import { StablecoinFilteredTable } from "@/components/stablecoin-filtered-table";
-import { pegCurrencyToFilterTag } from "@shared/types";
+import { pegCurrencyToFilterTag } from "@shared/lib/filter-tags";
 import type { PegCurrency } from "@shared/types";
 
 export function PegLandingClient({ pegCurrency }: { pegCurrency: PegCurrency }) {
