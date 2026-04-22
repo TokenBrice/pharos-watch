@@ -1,6 +1,4 @@
 import type {
-  DependencyType,
-  DependencyWeight,
   ReserveDisplayBadgeView,
   LiveReserveSnapshotMetadata,
   ReserveProvenanceView,
@@ -129,32 +127,4 @@ export function getReserves(coin: StablecoinMeta): ReserveResult | null {
   return { reserves: TEMPLATES[key], estimated: true, mode: "template-fallback" };
 }
 
-// ── Dependency derivation from reserves ───────────────────────────────
-
-/**
- * Derives dependency weights from reserve composition.
- * Reserve slices with `coinId` are converted to DependencyWeight entries.
- * Falls back to manual `meta.dependencies` when no reserves have coinId links.
- */
-export function deriveDependencies(meta: Pick<StablecoinMeta, 'reserves' | 'dependencies'>): DependencyWeight[] {
-  const reserves = meta.reserves;
-  if (!reserves?.length) return meta.dependencies ?? [];
-
-  const linked = reserves.filter((r): r is typeof r & { coinId: string } => !!r.coinId);
-  if (linked.length === 0) return meta.dependencies ?? [];
-
-  // Aggregate by (coinId, depType) — multiple reserve slices backed by the
-  // same upstream coin (e.g. two sUSDe strategies) are one dependency.
-  const map = new Map<string, { id: string; weight: number; type: DependencyType }>();
-  for (const r of linked) {
-    const type: DependencyType = r.depType ?? "collateral";
-    const key = `${r.coinId}::${type}`;
-    const existing = map.get(key);
-    if (existing) {
-      existing.weight += r.pct / 100;
-    } else {
-      map.set(key, { id: r.coinId, weight: r.pct / 100, type });
-    }
-  }
-  return Array.from(map.values());
-}
+export { deriveDependencies } from "./dependency-derivation";

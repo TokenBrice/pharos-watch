@@ -8,7 +8,7 @@ import { StablecoinLogo } from "@/components/stablecoin-logo";
 import { useLogos } from "@/hooks/use-logos";
 import { DETAIL_SECTION_TITLE_CLASS } from "@/components/stablecoin-detail/section-title";
 import { TRACKED_STABLECOINS } from "@shared/lib/stablecoins";
-import { deriveDependencies } from "@shared/lib/reserve-templates";
+import { deriveDependencies } from "@shared/lib/dependency-derivation";
 import type { DependencyType, StablecoinMeta } from "@shared/types";
 
 interface CollateralUsageEntry {

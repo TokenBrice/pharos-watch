@@ -1,4 +1,4 @@
-import { deriveDependencies } from "../reserve-templates";
+import { deriveDependencies } from "../dependency-derivation";
 import type { DependencyWeight, StablecoinMeta, VariantKind } from "../../types";
 import { ACTIVE_META_BY_ID, ACTIVE_STABLECOINS } from "./registry";
 

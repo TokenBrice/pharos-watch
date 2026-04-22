@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { deriveDependencies } from "@shared/lib/reserve-templates";
+import { deriveDependencies } from "@shared/lib/dependency-derivation";
 import type { StablecoinMeta, DependencyWeight } from "@shared/types";
 
 // Minimal helper — only fields deriveDependencies reads

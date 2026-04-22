@@ -24,7 +24,7 @@ import {
   type StablecoinDetailSummary,
 } from "@/hooks/use-stablecoin-detail-view-model";
 import { TRACKED_STABLECOINS } from "@shared/lib/stablecoins";
-import { deriveDependencies } from "@shared/lib/reserve-templates";
+import { deriveDependencies } from "@shared/lib/dependency-derivation";
 import { GOVERNANCE_LABELS } from "@shared/lib/classification";
 import { buildLiveCompareUrl, getPrimaryStaticComparisonPageForCoin } from "@/lib/compare-pages";
 import { buildGovernanceTaxonomyUrl } from "@/lib/stablecoin-taxonomy";

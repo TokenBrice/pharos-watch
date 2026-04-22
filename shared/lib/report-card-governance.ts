@@ -5,6 +5,7 @@ import type {
   StablecoinMeta,
 } from "../types";
 import { scoreToGrade } from "./report-card-core";
+import { inferGovernanceQuality } from "./report-card-policy";
 import { chainInfraLabel, chainInfraScore, resolveResilienceFactors } from "./report-card-resilience";
 
 export const GOVERNANCE_QUALITY_SCORE: Record<GovernanceQuality, number> = {
@@ -24,21 +25,6 @@ const GOVERNANCE_QUALITY_LABEL: Record<GovernanceQuality, string> = {
   "single-entity": "Single-entity governance",
   wrapper: "Wrapper (inherits upstream)",
 };
-
-function inferGovernanceQuality(governance: GovernanceType): GovernanceQuality {
-  switch (governance) {
-    case "decentralized":
-      return "dao-governance";
-    case "centralized-dependent":
-      return "multisig";
-    case "centralized":
-      return "single-entity";
-    default: {
-      const exhaustive: never = governance;
-      return exhaustive;
-    }
-  }
-}
 
 export function resolveGovernanceQuality(
   governance: GovernanceType,

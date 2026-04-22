@@ -1,20 +1,21 @@
 import type {
-  BackingType,
   ChainTier,
   CollateralQuality,
   CustodyModel,
   DeploymentModel,
-  GovernanceType,
   ReportCardDimension,
   ReserveRisk,
   ReserveSlice,
   StablecoinMeta,
 } from "../types";
 import { scoreToGrade } from "./report-card-core";
+import { inferResilienceDefaults } from "./report-card-policy";
 import {
   getBlacklistStatusLabel,
   type BlacklistStatus,
 } from "./report-card-blacklist-risk";
+
+export { inferResilienceDefaults } from "./report-card-policy";
 
 const CHAIN_TIER_SCORE: Record<ChainTier, number> = {
   ethereum: 100,
@@ -121,55 +122,6 @@ export function chainInfraLabel(tier: ChainTier, model: DeploymentModel): string
   const base = CHAIN_TIER_LABEL[tier];
   const suffix = DEPLOYMENT_MODEL_LABEL[model];
   return suffix ? `${base} (${suffix})` : base;
-}
-
-export function inferResilienceDefaults(
-  backing: BackingType,
-  governance: GovernanceType,
-): {
-  chainTier: ChainTier;
-  deploymentModel: DeploymentModel;
-  collateralQuality: CollateralQuality;
-  custodyModel: CustodyModel;
-} {
-  if (backing === "rwa-backed" && governance === "centralized") {
-    return {
-      chainTier: "ethereum",
-      deploymentModel: "single-chain",
-      collateralQuality: "rwa",
-      custodyModel: "institutional-regulated",
-    };
-  }
-  if (backing === "rwa-backed" && governance === "centralized-dependent") {
-    return {
-      chainTier: "ethereum",
-      deploymentModel: "single-chain",
-      collateralQuality: "rwa",
-      custodyModel: "institutional-regulated",
-    };
-  }
-  if (backing === "crypto-backed" && governance === "decentralized") {
-    return {
-      chainTier: "ethereum",
-      deploymentModel: "single-chain",
-      collateralQuality: "native",
-      custodyModel: "onchain",
-    };
-  }
-  if (backing === "crypto-backed" && governance === "centralized-dependent") {
-    return {
-      chainTier: "ethereum",
-      deploymentModel: "single-chain",
-      collateralQuality: "eth-lst",
-      custodyModel: "onchain",
-    };
-  }
-  return {
-    chainTier: "ethereum",
-    deploymentModel: "single-chain",
-    collateralQuality: "native",
-    custodyModel: "onchain",
-  };
 }
 
 export function resolveResilienceFactors(meta: StablecoinMeta): {
