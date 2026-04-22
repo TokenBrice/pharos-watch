@@ -6,12 +6,9 @@ import { BluechipRatingsMapSchema } from "@shared/types/market";
 import { computePYS, yieldStabilityToApyVarianceScore } from "@shared/lib/yield-scoring";
 import {
   addFreshnessHeaders,
-  buildFreshnessMeta,
   createCacheHandler,
   errorResponse,
-  jsonResponse,
   readCachedJsonOr503,
-  validatePayloadWithSchema,
   withErrorHandler,
 } from "../lib/api-utils";
 import { CACHE_PROFILES, DEFAULT_SAFETY_SCORE } from "../lib/constants";
@@ -78,38 +75,14 @@ export const handleStablecoinCharts = withErrorHandler(
   },
 );
 
-export const handleBluechipRatings = withErrorHandler(
+export const handleBluechipRatings = createCacheHandler(
   "bluechip-ratings",
-  async (db: D1Database): Promise<Response> => {
-    const cached = await getCache(db, "bluechip-ratings");
-    if (!cached) {
-      return errorResponse(503, "Data not yet available");
-    }
-
-    const headers = addFreshnessHeaders({
-      "Content-Type": "application/json",
-      "Cache-Control": CACHE_PROFILES.slow,
-    }, cached.updatedAt, API_FRESHNESS_MAX_AGE_SEC.bluechip);
-
-    const parsed = readCachedJsonOr503<unknown>("bluechip-ratings", "bluechip-ratings", cached);
-    if (!parsed.ok) {
-      return parsed.response;
-    }
-
-    const validation = validatePayloadWithSchema(
-      BluechipRatingsMapSchema,
-      parsed.data,
-      "bluechip-ratings:cache-read",
-    );
-    if (!validation.ok) {
-      return errorResponse(503, "Cached bluechip-ratings payload is malformed");
-    }
-
-    const body = {
-      ...validation.data,
-      _meta: buildFreshnessMeta(cached.updatedAt, API_FRESHNESS_MAX_AGE_SEC.bluechip),
-    };
-    return jsonResponse(body, headers);
+  "bluechip-ratings",
+  CACHE_PROFILES.slow,
+  API_FRESHNESS_MAX_AGE_SEC.bluechip,
+  {
+    schema: BluechipRatingsMapSchema,
+    malformedMessage: "Cached bluechip-ratings payload is malformed",
   },
 );
 
@@ -199,48 +172,23 @@ function hydrateYieldRankingsWithLiveSafety(
  * Returns cached yield rankings, with live Safety Score fields hydrated from the
  * current report-card snapshot so the endpoint cannot drift from /api/report-cards.
  */
-export const handleYieldRankings = withErrorHandler(
+export const handleYieldRankings = createCacheHandler(
   "yield-rankings",
-  async (db: D1Database): Promise<Response> => {
-    const cached = await getCache(db, "yield-rankings");
-    if (!cached) {
-      return errorResponse(503, "Data not yet available");
-    }
-
-    const headers = addFreshnessHeaders({
-      "Content-Type": "application/json",
-      "Cache-Control": CACHE_PROFILES.standard,
-    }, cached.updatedAt, YIELD_RANKINGS_MAX_AGE_SEC);
-
-    const parsed = readCachedJsonOr503<unknown>("yield-rankings", "yield-rankings", cached);
-    if (!parsed.ok) {
-      return parsed.response;
-    }
-
-    let body = parsed.data;
-    const validation = validatePayloadWithSchema(
-      YieldRankingsResponseSchema,
-      parsed.data,
-      "yield-rankings:cache-read",
-    );
-
-    if (!validation.ok) {
-      return errorResponse(503, "Cached yield-rankings payload is malformed");
-    }
-
-    try {
-      const snapshot = await buildReportCardsSnapshot(db);
-      body = hydrateYieldRankingsWithLiveSafety(validation.data, snapshot.cards);
-    } catch (err) {
-      console.warn("[yield-rankings] Live safety hydration failed:", err instanceof Error ? err.message : err);
-      body = validation.data;
-    }
-
-    if (body && typeof body === "object" && !Array.isArray(body)) {
-      (body as Record<string, unknown>)._meta = buildFreshnessMeta(cached.updatedAt, YIELD_RANKINGS_MAX_AGE_SEC);
-      return jsonResponse(body, headers);
-    }
-
-    return new Response(cached.value, { headers });
+  "yield-rankings",
+  CACHE_PROFILES.standard,
+  YIELD_RANKINGS_MAX_AGE_SEC,
+  {
+    schema: YieldRankingsResponseSchema,
+    malformedMessage: "Cached yield-rankings payload is malformed",
+    transform: async (payload, { db }) => {
+      const validatedPayload = payload as YieldRankingsResponse;
+      try {
+        const snapshot = await buildReportCardsSnapshot(db);
+        return hydrateYieldRankingsWithLiveSafety(validatedPayload, snapshot.cards);
+      } catch (err) {
+        console.warn("[yield-rankings] Live safety hydration failed:", err instanceof Error ? err.message : err);
+        return validatedPayload;
+      }
+    },
   },
 );

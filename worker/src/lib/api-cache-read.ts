@@ -1,6 +1,7 @@
+import type { ZodType } from "zod";
 import { getCache } from "./db-cache";
 import { buildFreshnessMeta, addFreshnessHeaders } from "./api-freshness";
-import { errorResponse, withErrorHandler } from "./api-response";
+import { errorResponse, jsonResponse, validatePayloadWithSchema, withErrorHandler } from "./api-response";
 
 export function safeJsonParse<T>(json: string | null | undefined, fallback: T): T {
   if (json == null) return fallback;
@@ -71,6 +72,18 @@ export function createCacheHandler(
   cacheKey: string,
   cacheControl: string,
   maxAgeSec: number,
+  options?: {
+    schema?: ZodType<unknown>;
+    transform?: (
+      payload: unknown,
+      context: {
+        db: D1Database;
+        cached: { value: string; updatedAt: number };
+      },
+    ) => Promise<unknown> | unknown;
+    injectMeta?: "auto" | "never";
+    malformedMessage?: string;
+  },
 ): (db: D1Database) => Promise<Response> {
   return withErrorHandler(endpoint, async (db: D1Database): Promise<Response> => {
     const cached = await getCache(db, cacheKey);
@@ -87,11 +100,30 @@ export function createCacheHandler(
     if (!parsed.ok) {
       return parsed.response;
     }
-    if (parsed.data && typeof parsed.data === "object" && !Array.isArray(parsed.data)) {
-      (parsed.data as Record<string, unknown>)._meta = buildFreshnessMeta(cached.updatedAt, maxAgeSec);
-      return new Response(JSON.stringify(parsed.data), { headers });
+
+    let body: unknown = parsed.data;
+    if (options?.schema) {
+      const validation = validatePayloadWithSchema(options.schema, body, `${endpoint}:cache-read`);
+      if (!validation.ok) {
+        return errorResponse(503, options.malformedMessage ?? `Cached ${cacheKey} payload is malformed`);
+      }
+      body = validation.data;
     }
 
-    return new Response(cached.value, { headers });
+    if (options?.transform) {
+      body = await options.transform(body, { db, cached });
+    }
+
+    if (options?.injectMeta !== "never" && body && typeof body === "object" && !Array.isArray(body)) {
+      return jsonResponse(
+        {
+          ...(body as Record<string, unknown>),
+          _meta: buildFreshnessMeta(cached.updatedAt, maxAgeSec),
+        },
+        headers,
+      );
+    }
+
+    return new Response(JSON.stringify(body), { headers });
   });
 }
