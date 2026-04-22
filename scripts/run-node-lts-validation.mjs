@@ -1,31 +1,10 @@
 import { spawnSync } from "node:child_process";
 
 import {
-  COMMON_VALIDATE_POSTBUILD_COMMANDS,
-  PAGES_VALIDATE_COMMANDS,
+  buildValidateCommandPlan,
 } from "./lib/validate-contract.mjs";
 
 const TARGET_LTS_NODE_MAJOR = 24;
-const COMMON_LTS_VALIDATE_COMMANDS = Object.freeze([
-  "npm run audit:deps",
-  "npm run audit:pricing-providers",
-  "npm run lint",
-  "npm run typecheck",
-  "npm run check:migrations",
-  "timeout 2s env DEV_PROXY_PORT=3310 node scripts/run-dev-api-proxy.mjs || test $? -eq 124",
-]);
-const LTS_WORKER_VALIDATE_COMMANDS = Object.freeze([
-  "cd worker && node ../node_modules/typescript/bin/tsc --noEmit",
-  "cd worker && node ../node_modules/typescript/bin/tsc --noEmit -p tsconfig.scripts.json",
-]);
-const EXPLICIT_LTS_BLOCKERS = Object.freeze([
-  {
-    command: "npm run validate:prebuild",
-    blockedBy: "npm run check:shared-cycles",
-    reason:
-      "scripts/check-shared-cycles.mjs shells out through `npx --yes madge ...`, which npm 11 on Node 24 rejects with EUSAGE.",
-  },
-]);
 
 function parseBooleanArg(name, defaultValue) {
   const prefix = `${name}=`;
@@ -89,26 +68,15 @@ function main() {
   const pagesChanged = parseBooleanArg("--pages-changed", true);
   const workerChanged = parseBooleanArg("--worker-changed", true);
   const coverageCompareRef = parseStringArg("--coverage-compare-ref", "");
-  const postBuildCommands = COMMON_VALIDATE_POSTBUILD_COMMANDS.map((cmd) =>
+  const plan = buildValidateCommandPlan({ pagesChanged, workerChanged }).map((cmd) =>
     cmd === "npm run coverage:critical" && coverageCompareRef
       ? `CRITICAL_COVERAGE_COMPARE_REF=${shellQuote(coverageCompareRef)} ${cmd}`
       : cmd,
   );
-  const plan = [
-    ...COMMON_LTS_VALIDATE_COMMANDS,
-    ...(pagesChanged ? PAGES_VALIDATE_COMMANDS : []),
-    ...postBuildCommands,
-    ...(workerChanged ? LTS_WORKER_VALIDATE_COMMANDS : []),
-  ];
 
   console.log(
-    `[lts] Running ${plan.length} validation steps on Node ${process.version} for the explicit LTS target (${TARGET_LTS_NODE_MAJOR}.x).`,
+    `[lts] Running ${plan.length} shared validation steps on Node ${process.version} for the explicit LTS target (${TARGET_LTS_NODE_MAJOR}.x).`,
   );
-  for (const blocker of EXPLICIT_LTS_BLOCKERS) {
-    console.log(
-      `[lts] Skipping ${blocker.command}: blocked by ${blocker.blockedBy}. ${blocker.reason}`,
-    );
-  }
 
   for (const cmd of plan) {
     runCommand(cmd);

@@ -1,7 +1,10 @@
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
-import { buildCiValidateStepPlan } from "../lib/validate-contract.mjs";
+import {
+  buildCiValidateStepPlan,
+  VALIDATE_PREBUILD_COMMANDS,
+} from "../lib/validate-contract.mjs";
 
 function extractRunSteps(yaml) {
   const lines = yaml.split(/\r?\n/g);
@@ -91,5 +94,40 @@ describe("validate-ci parity", () => {
       cmd: "npm run validate:lts -- --pages-changed=${{ inputs.pages_changed }} --worker-changed=${{ inputs.worker_changed }} --coverage-compare-ref=${{ inputs.coverage-compare-ref }}",
       condition: null,
     });
+  });
+
+  it("keeps validate:prebuild delegated to the shared registry", () => {
+    const packageJson = JSON.parse(
+      readFileSync(resolve(process.cwd(), "package.json"), "utf8"),
+    ) as { scripts: Record<string, string> };
+
+    expect(packageJson.scripts["validate:prebuild"]).toBe("node scripts/run-validate-prebuild.mjs");
+    expect(VALIDATE_PREBUILD_COMMANDS).toEqual([
+      "npm run audit:deps",
+      "npm run audit:pricing-providers",
+      "npm run lint",
+      "npm run typecheck",
+      "npm run check:cemetery-dataset",
+      "npm run check:cron-abort-contract",
+      "npm run check:cron-connections",
+      "npm run check:cron-sync",
+      "npm run check:doc-counts",
+      "npm run check:doc-source-paths",
+      "npm run check:doc-sync",
+      "npm run check:duplicate-exports",
+      "npm run check:env-contract",
+      "npm run check:hotspot-ratchet",
+      "npm run check:llms-txt",
+      "npm run check:migrations",
+      "npm run check:openapi",
+      "npm run check:postman",
+      "npm run check:redemption-backstops",
+      "npm run check:shared-cycles",
+      "npm run check:sql-safety",
+      "npm run check:stablecoin-data",
+      "npm run check:unused-code",
+      "npm run check:verified-doc-links",
+      "npm run check:worker-boundary",
+    ]);
   });
 });

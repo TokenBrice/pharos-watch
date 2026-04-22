@@ -56,6 +56,8 @@ describe("hasPagesDeployImpact", () => {
     expect(hasPagesDeployImpact(["scripts/generate-llms-txt.ts"])).toBe(true);
     expect(hasPagesDeployImpact(["scripts/generate-docs-metadata.ts"])).toBe(true);
     expect(hasPagesDeployImpact(["scripts/generate-markdown-exports.ts"])).toBe(true);
+    expect(hasPagesDeployImpact(["scripts/generate-openapi-spec.ts"])).toBe(true);
+    expect(hasPagesDeployImpact(["scripts/generate-postman-collection.ts"])).toBe(true);
   });
 });
 

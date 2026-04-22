@@ -2,7 +2,7 @@
 
 import { spawnSync } from "node:child_process";
 
-const MADGE_ARGS = ["--yes", "madge", "--circular", "--extensions", "ts,tsx", "--ts-config", "tsconfig.json"];
+const MADGE_ARGS = ["--no-install", "madge", "--circular", "--extensions", "ts,tsx", "--ts-config", "tsconfig.json"];
 const CYCLE_TARGETS = [
   { label: "shared", path: "shared", mode: "blocking" },
   { label: "worker/src", path: "worker/src", mode: "blocking" },

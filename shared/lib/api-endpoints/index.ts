@@ -3,8 +3,6 @@ export {
   DYNAMIC_ENDPOINT_DESCRIPTORS,
   findDynamicEndpointDescriptor,
   getDynamicEndpointDescriptorByKey,
-  type DynamicEndpointDescriptor,
-  type DynamicEndpointDescriptorKey,
 } from "./dynamic";
 export {
   ENDPOINT_DEFINITIONS,

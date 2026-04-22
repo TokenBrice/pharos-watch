@@ -38,6 +38,7 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `src/app/docs/[slug]/page.tsx` - route /docs/[slug]; default:DocPage, generateMetadata, generateStaticParams
 - `src/app/docs/page.tsx` - route /docs; default:DocsIndexPage, metadata
 - `src/app/error.tsx` - default:Error
+- `src/app/flows/client.tsx` - default:FlowsClient
 - `src/app/flows/error.tsx`
 - `src/app/flows/layout.tsx` - default:FlowsLayout, metadata
 - `src/app/flows/page.tsx` - route /flows; default:FlowsPage
@@ -96,10 +97,10 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 
 ## Frontend hooks
 
-- `src/hooks/api-hooks.ts` - NonUsdSharePoint, useBluechipRatings, useDailyDigest, useDexLiquidity, useDexLiquidityHistory, useDigestArchive
+- `src/hooks/api-hooks.ts` - NonUsdSharePoint, dexLiquidityHistoryQueryOptions, safetyScoreHistoryQueryOptions, useBluechipRatings, useDailyDigest, useDexLiquidity
 - `src/hooks/use-admin-polling-query.ts` - useAdminPollingQuery
 - `src/hooks/use-api-keys.ts` - useApiKeys
-- `src/hooks/use-api-query.ts` - ApiQueryWithMetaResult, createApiQueryFn, createApiQueryFnWithMeta, createPollingQueryOptions, createStaticQueryOptions, useApiQuery
+- `src/hooks/use-api-query.ts` - ApiQueryWithMetaResult, PollingWindow, createApiPollingQueryOptions, createApiPollingQueryOptionsWithMeta, createApiQueryFn, createApiQueryFnWithMeta
 - `src/hooks/use-blacklist-events.ts` - useBlacklistEventsPage, useBlacklistSummary
 - `src/hooks/use-chain-profile-data.ts` - useChainProfileData
 - `src/hooks/use-chains.ts` - ChainStablecoin, ChainStablecoinsResult, useChainStablecoins, useChains
@@ -107,20 +108,22 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `src/hooks/use-chart-shell.ts` - useChartShell
 - `src/hooks/use-command-palette-history.ts` - useCommandPaletteHistory
 - `src/hooks/use-compare-data-model.ts` - useCompareDataModel
-- `src/hooks/use-compare-selection.ts` - normalizeCompareRange, useCompareSelection
+- `src/hooks/use-compare-selection.ts` - useCompareSelection
 - `src/hooks/use-compare-share-actions.ts` - useCompareShareActions
+- `src/hooks/use-contagion-graph-drag.ts` - useContagionGraphDrag
 - `src/hooks/use-count-up.ts` - useCountUp
 - `src/hooks/use-coverage-matrix-model.ts` - useCoverageMatrixModel
 - `src/hooks/use-data-announce.ts` - useDataAnnounce
-- `src/hooks/use-depeg-events.ts` - useInfiniteDepegEvents
+- `src/hooks/use-depeg-events.ts` - depegEventsInfiniteQueryOptions, useInfiniteDepegEvents
 - `src/hooks/use-endpoint-probes.ts` - ENDPOINT_GROUPS, ENDPOINT_PROBE_CONCURRENCY, collectEndpointProbes, useEndpointProbes, usePublicEndpointProbes
 - `src/hooks/use-entrance-sequence.ts` - useEntranceSequence
 - `src/hooks/use-homepage-filters.ts` - FILTER_GROUPS, parseHomepageParams, useHomepageFilters
 - `src/hooks/use-hydrated.ts` - useHydrated
 - `src/hooks/use-is-mobile.ts` - useIsMobile
 - `src/hooks/use-logos.ts` - useLogos
-- `src/hooks/use-mint-burn-flows.ts` - useMintBurnEvents, useMintBurnFlows, useMintBurnFlowsCoin
+- `src/hooks/use-mint-burn-flows.ts` - mintBurnFlowsCoinQueryOptions, useMintBurnEvents, useMintBurnFlows, useMintBurnFlowsCoin
 - `src/hooks/use-nav-collapse.ts` - STORAGE_KEY, getExpandedState, setExpandedState, useNavCollapse
+- `src/hooks/use-pinned-stablecoins.ts` - usePinnedStablecoins
 - `src/hooks/use-portfolio.ts` - categorizeCollateral, computeGroupedExposure, usePortfolio
 - `src/hooks/use-preferences.ts` - usePreference
 - `src/hooks/use-prefetch-stablecoin.ts` - usePrefetchStablecoin
@@ -130,10 +133,9 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `src/hooks/use-sort.ts` - SortDirection, getNextSortState, shouldToggleSortOnKeyDown, useSort
 - `src/hooks/use-sorted-paginated-table.ts` - useSortedPaginatedTable
 - `src/hooks/use-sorted-table-rows.ts` - TableSortState, sortTableRows, useSortedTableRows
-- `src/hooks/use-stablecoin-detail-history.ts` - useStablecoinDetailHistory
 - `src/hooks/use-stablecoin-detail-view-model.ts` - useStablecoinDetailViewModel
 - `src/hooks/use-stablecoin-reserves.ts` - StablecoinReservesQueryState, useStablecoinReserves
-- `src/hooks/use-stablecoins.ts` - useStablecoins, useSupplyHistory
+- `src/hooks/use-stablecoins.ts` - supplyHistoryQueryOptions, useStablecoins, useSupplyHistory
 - `src/hooks/use-start-here-callout.ts` - useStartHereCallout
 - `src/hooks/use-start-here-nav-visibility.ts` - useStartHereNavVisibility
 - `src/hooks/use-status-dashboard-model.ts` - useStatusDashboardModel
@@ -145,15 +147,14 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `src/hooks/use-telegram-pulse.ts` - useTelegramPulse
 - `src/hooks/use-theme-toggle.ts` - useThemeToggle
 - `src/hooks/use-time-range-filter.ts` - TimeRangeOption, useTimeRangeFilter
-- `src/hooks/use-toast.ts` - Toast, ToastType, useToast
-- ... 1 more files omitted; use `rg --files src/hooks` for the full list.
+- ... 2 more files omitted; use `rg --files src/hooks` for the full list.
 
 ## Frontend library
 
 - `src/lib/admin-access.ts` - buildAdminApiPath, isOpsUiHost
 - `src/lib/analytics.ts` - trackEvent, trackSearch
 - `src/lib/api-reference-doc.ts` - ApiReferenceDocument, ApiReferenceSection, MarkdownBlock, MarkdownCodeBlock, MarkdownListBlock, MarkdownParagraphBlock
-- `src/lib/api.ts` - API_BASE, ApiContractMode, ApiFetchError, ApiFetchOptions, ApiMeta, SchemaValidationError
+- `src/lib/api.ts` - API_BASE, ApiContractMode, ApiFetchError, ApiFetchOptions, ApiMeta, ApiRequestOptions
 - `src/lib/blacklist-api.ts` - FetchBlacklistEventsParams, buildBlacklistEventsPath, fetchBlacklistEvents, fetchBlacklistSummary
 - `src/lib/blacklist-status-buckets.ts` - BLACKLIST_STATUS_BUCKET_COLORS, BLACKLIST_STATUS_BUCKET_DESCRIPTIONS, BLACKLIST_STATUS_BUCKET_LABELS, BLACKLIST_STATUS_BUCKET_ORDER, BlacklistStatusBucket, BlacklistStatusBucketKey
 - `src/lib/blacklist-status.ts` - getResolvedBlacklistStatus, getResolvedBlacklistStatusLabel
@@ -164,6 +165,7 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `src/lib/chart-animation.ts` - CHART_DRAW_IN, CHART_NO_ANIM
 - `src/lib/chart-colors.ts` - CHART_AMBER, CHART_BLUE, CHART_CYAN, CHART_GREEN, CHART_HEIGHT, CHART_ORANGE
 - `src/lib/chart-export.ts` - downloadChartPng
+- `src/lib/chart-time-range.ts` - formatRangeTickDate
 - `src/lib/chart-utils.ts` - computeChartYDomain, mergeSeriesByTimestamp
 - `src/lib/client-feature-page.tsx` - createClientFeaturePage
 - `src/lib/column-visibility.ts` - ALL_COLUMNS, ColumnId, DEFAULT_VISIBLE_COLUMNS, LOCKED_COLUMNS, MOBILE_DEFAULT_COLUMNS, isColumnId
@@ -190,6 +192,7 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `src/lib/flow-intensity.ts` - FlowIntensitySemantics, getPressureShiftDisplay, normalizeToSignedFlowIntensity
 - `src/lib/flow-signal-ui.ts` - FlowDirectionUi, FlowPressureUi, buildFlowOverviewDescription, buildFlowOverviewHeadline, buildFlowSummaryNarrative, getFlowDirectionUi
 - `src/lib/fonts.ts` - digestDisplay, geistMono, geistSans
+- `src/lib/homepage-filter-labels.ts` - getHomepageActiveFilterLabel, getHomepageFilterControlLabel
 - `src/lib/json-ld.ts` - PHAROS_ORG_NODE, PHAROS_PERSON_TOKENBRICE_NODE, safeJsonLd
 - `src/lib/liquidity-coverage.ts` - formatLiquiditySourceMix, getLiquidityCoverageBadge
 - `src/lib/logos.ts` - logosById
@@ -198,9 +201,7 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `src/lib/mint-burn-timeframes.ts` - formatMintBurnWindowLabel, getMintBurnSummaryTimeframe, getNetFlowForHours
 - `src/lib/nav-config.ts` - BOTTOM_NAV_ITEMS, DEFAULT_EXPANDED, NAV_GROUPS, NAV_ITEMS, NavGroup, NavItem
 - `src/lib/navigation.ts` - isRouteActive
-- `src/lib/page-metadata.ts` - buildApiOgImageUrl, buildPageMetadata, buildStablecoinDetailDescription, buildStablecoinDetailMetadata, summarizeText, trimTextAtWordBoundary
-- `src/lib/peg-landing.ts` - ACTIVE_PEGS, PEG_INTRO, PEG_LABELS, PEG_LABELS_SHORT, PEG_SLUGS, buildPegLandingUrl
-- ... 29 more files omitted; use `rg --files src/lib` for the full list.
+- ... 33 more files omitted; use `rg --files src/lib` for the full list.
 
 ## Key components
 
@@ -238,13 +239,13 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `src/components/comparison-table.tsx` - ComparisonTable
 - `src/components/contagion-graph-graph.ts` - FocusMode, ResolvedLink, RippleState, computeRippleState, computeVisibleGraph, findDirectionalNeighbor
 - `src/components/contagion-graph-model.ts` - TYPE_COLORS, TYPE_DASH, gradeColor
+- `src/components/contagion-graph-tooltips.tsx` - buildEdgeTooltipElement, buildNodeTooltipElement, buildTooltipAnnouncement
 - `src/components/contagion-graph.tsx` - ContagionGraph
 - `src/components/copy-button.tsx` - CopyButton
 - `src/components/coverage-lens-summary.tsx` - CoverageLensSummary
 - `src/components/create-page-error.tsx` - createPageError
 - `src/components/daily-digest.tsx` - DailyDigest, DigestFullDisplay
-- `src/components/data-health-banner.tsx` - DataHealthBanner
-- ... 194 more files omitted; use `rg --files src/components` for the full list.
+- ... 203 more files omitted; use `rg --files src/components` for the full list.
 
 ## Pages Functions
 
@@ -263,6 +264,7 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 ## Shared library
 
 - `shared/lib/api-endpoints/definitions.ts` - DynamicAdminEndpointMatch, ENDPOINT_DEFINITIONS, EndpointDefinition, EndpointDefinitionByKey, EndpointDependenciesForKey, EndpointDependency
+- `shared/lib/api-endpoints/dynamic.ts` - DYNAMIC_ENDPOINT_DESCRIPTORS, DynamicEndpointDescriptor, DynamicEndpointDescriptorKey, findDynamicEndpointDescriptor, getDynamicEndpointDescriptorByKey
 - `shared/lib/api-endpoints/index.ts` - API_PATHS, buildQueryPath, getStatusPageActions
 - `shared/lib/api-endpoints/paths.ts` - API_PATHS, buildQueryPath
 - `shared/lib/api-endpoints/status.ts` - getStatusPageActions
@@ -291,6 +293,7 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `shared/lib/depeg-dews-version.ts` - DEPEG_DEWS_METHODOLOGY_CHANGELOG, DEPEG_DEWS_METHODOLOGY_CHANGELOG_PATH, DEPEG_DEWS_METHODOLOGY_VERSION, DEPEG_DEWS_METHODOLOGY_VERSION_LABEL, getDepegDewsMethodologyVersionAt
 - `shared/lib/dependency-graph.ts` - DependencyGraphEdge, buildDependencyGraphEdges, collectDependencyGraphIds, filterDependencyGraphEdgesToLive
 - `shared/lib/dews-config.ts` - DEWS_SIGNAL_WEIGHTS, DEWS_THREAT_BANDS
+- `shared/lib/env-contract.ts` - ENV_BINDINGS, EnvBindingDefinition, EnvBindingKey, EnvBindingValueType, EnvExampleSection, EnvRuntimeName
 - `shared/lib/env-utils.ts` - getConfiguredValue, hasConfiguredValue
 - `shared/lib/explorer.ts` - ExplorerEntityType, buildExplorerUrl
 - `shared/lib/format.ts` - abbreviateNumberParts, formatAddress, formatBps, formatChartDate, formatChartPercent, formatCompactCount
@@ -320,18 +323,17 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `shared/lib/pricing-source-registry-market-feeds.ts` - PRICING_SOURCE_REGISTRY_MARKET_FEEDS
 - `shared/lib/pricing-source-registry-presets.ts` - PRICING_SOURCE_PRESETS, definePricingSource
 - `shared/lib/pricing-source-registry-special.ts` - PRICING_SOURCE_REGISTRY_SPECIAL
-- `shared/lib/pricing-source-registry-types.ts` - PricingSourceCapabilities, PricingSourceFreshnessKind, PricingSourceRegistryEntry, PricingSourceTrustTier
-- `shared/lib/pricing-source-registry.ts` - PRICING_SOURCE_REGISTRY, PricingSourceKey, getPricingSourceRegistryEntry, isPricingSourceProtocolOverride, isPricingSourceSoftGuardrailExempt
-- ... 58 more files omitted; use `rg --files shared/lib` for the full list.
+- ... 63 more files omitted; use `rg --files shared/lib` for the full list.
 
 ## Stablecoin data
 
-- `shared/data/stablecoins/canonical-order.json` - 197 entries
+- `shared/data/stablecoins/canonical-order.json` - 215 entries
+- `shared/data/stablecoins/coins.generated.json` - 0 entries
 - `shared/data/stablecoins/commodity.json` - 9 entries
-- `shared/data/stablecoins/non-usd.json` - 40 entries
+- `shared/data/stablecoins/non-usd.json` - 41 entries
 - `shared/data/stablecoins/pre-launch.json` - 11 entries
-- `shared/data/stablecoins/usd-major.json` - 29 entries
-- `shared/data/stablecoins/usd-minor.json` - 108 entries
+- `shared/data/stablecoins/usd-major.json` - 36 entries
+- `shared/data/stablecoins/usd-minor.json` - 118 entries
 
 ## Worker routing
 
@@ -435,9 +437,9 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `worker/src/api/safety-score-history.ts` - handleSafetyScoreHistory
 - `worker/src/api/stability-index.ts` - handleStabilityIndex
 - `worker/src/api/stablecoin-detail.ts` - handleStablecoinDetail
+- `worker/src/api/stablecoin-detail/cache-fallback.ts` - handleCacheBackedDetail
 - `worker/src/api/stablecoin-detail/coingecko-only.ts` - handleCoinGeckoOnlyDetail
-- `worker/src/api/stablecoin-detail/commodity.ts` - CommodityDetailConfig, fetchCommodityTokens, handleCommodityDetail
-- ... 20 more files omitted; use `rg --files worker/src/api` for the full list.
+- ... 22 more files omitted; use `rg --files worker/src/api` for the full list.
 
 ## Worker cron
 
@@ -448,6 +450,7 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `worker/src/cron/blacklist/persistence.ts` - insertBlacklistRows
 - `worker/src/cron/blacklist/post-fetch.ts` - BlacklistPostFetchCounters, CurrentBalanceCacheCounters, processFetchedBlacklistRows
 - `worker/src/cron/blacklist/shared.ts` - BlacklistRow, buildExplorerAddressUrl, buildExplorerTxUrl, shouldSuppressAsMirrorZero
+- `worker/src/cron/blacklist/sync-support.ts` - applyTronLedgerMirrorPass, deriveSyncBlacklistStatus, loadBlacklistConfigStates, recordApiErrorConfig, recordProcessedRows
 - `worker/src/cron/blacklist/tron-source.ts` - fetchTronEventsIncremental, parseTronEvent
 - `worker/src/cron/compute-dews.ts` - computeAndStoreDEWS
 - `worker/src/cron/confirm-pending-depegs.ts` - confirmPendingDepegs
@@ -520,8 +523,7 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `worker/src/cron/dex-liquidity/scoring-helpers.ts` - accumulateGlobalAggregate, aggregateProtocolSources, applyProtocolCaps, applyRebuiltMetrics, buildDexPriceObservationsFromRetainedPools, classifyCoverage
 - `worker/src/cron/dex-liquidity/scoring.ts` - computeDepthStability, computeDexPrices, computeSeriesStability, computeStablecoinScores
 - `worker/src/cron/dex-liquidity/staging-merge.ts` - mergeStagedPools
-- `worker/src/cron/dex-liquidity/subgraph-family-runner.ts` - runSubgraphFamily
-- ... 176 more files omitted; use `rg --files worker/src/cron` for the full list.
+- ... 186 more files omitted; use `rg --files worker/src/cron` for the full list.
 
 ## Worker library
 
@@ -529,6 +531,7 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `worker/src/lib/admin-action-audit.ts` - AdminActionLogEntry, DETAILS_MAX_LEN, logAdminAction
 - `worker/src/lib/admin-job.ts` - AdminJobContext, buildAdminJobSummary, noAdminTargetsResponse, readAdminIntegerParam, readAdminStringParam, runAdminJob
 - `worker/src/lib/alchemy-logs.ts` - AlchemyLogEntry, AlchemyLogsFetchResult, AlchemyTransactionEntry, AlchemyTransactionReceipt, PersistentBlockTimestampCache, ResolveBlockTimestampOptions
+- `worker/src/lib/alert-safety-source-cache.ts` - ALERT_SAFETY_SOURCE_CACHE_KEY, AlertSafetySnapshotEnvelope, AlertSafetySourceAssessment, AlertSafetySourceEnvelope, AlertSafetySourceRow, AlertSafetySourceSnapshot
 - `worker/src/lib/alerts.ts` - normalizeWebhookUrl, sendAlert
 - `worker/src/lib/api-cache-read.ts` - CachedJsonReadResult, createCacheHandler, readCachedJson, readCachedJsonOr503, safeJsonParse, safeJsonParseWithContext
 - `worker/src/lib/api-freshness.ts` - CacheFreshnessDiagnostic, CacheStatusFailure, CronTimestampLookupResult, CronTimestampLookupStatus, FreshnessMeta, addFreshnessHeaders
@@ -584,8 +587,7 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `worker/src/lib/depeg-signals.ts` - DepegDirection, DepegSignal, DirectionalSignalStatus, classifyDirectionalSignal, coerceDepegDirection, deriveDepegSignal
 - `worker/src/lib/depeg-trust-policy.ts` - DexPriceTrustTier, DexTrustPolicy, classifyPrimaryDepegTrust, getDexTrustPolicy, hasFreshMultiSourcePrimaryAgreement, isAuthoritativeDepegPegReference
 - `worker/src/lib/dews.ts` - DEWSInput, DEWSResult, PoolEntry, SignalResult, computeDEWS, getThreatBand
-- `worker/src/lib/dex-api-common.ts`
-- ... 136 more files omitted; use `rg --files worker/src/lib` for the full list.
+- ... 141 more files omitted; use `rg --files worker/src/lib` for the full list.
 
 ## Validation and tooling
 
@@ -604,6 +606,7 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `scripts/__tests__/smoke-ops.test.ts`
 - `scripts/__tests__/smoke-ui.test.ts`
 - `scripts/__tests__/sql-interpolation-safety.test.ts`
+- `scripts/__tests__/stablecoin-catalog-sources.test.ts`
 - `scripts/__tests__/test-merge-gate.test.ts`
 - `scripts/__tests__/validate-ci-parity.test.ts`
 - `scripts/audit-pricing-provider-config.ts`
@@ -639,6 +642,7 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `scripts/generate-openapi-spec.ts`
 - `scripts/generate-postman-collection.ts`
 - `scripts/generate-sitemap-dates.ts`
+- `scripts/generate-stablecoin-per-coin-asset.ts`
 - `scripts/lib/critical-coverage.mjs` - CRITICAL_FILES, findCoverageFor, normalizePath, parseLcov
 - `scripts/lib/deploy-impact.mjs` - hasDeployImpact, hasPagesDeployImpact, hasWorkerDeployImpact, normalizeRepoPath
 - `scripts/lib/doc-files.mjs` - collectMarkdownFiles, getVerifiedDocFiles, splitLines
@@ -647,5 +651,4 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `scripts/lib/doc-sync/shared.ts` - Failure, expectEqual, expectNumber, findLineValue, formatNumber, getAllNumbersFromText
 - `scripts/lib/hotspot-ratchet.mjs` - BASELINE_PATH, TARGET_FILES, WAIVER_PATH, collectAllHotspotMetrics, collectAllRepoHotspotMetrics, collectHotspotCandidateFiles
 - `scripts/lib/markdown-renderers.ts` - MarkdownRoute, frontMatterBlock, renderChangelogIndex, renderDigestDetail, renderDocMarkdown, renderDocsIndexMarkdown
-- `scripts/lib/methodology-to-markdown.ts` - METHODOLOGY_CHANGELOG_KEYS, MethodologyChangelogKey, buildMethodologyChangelogMarkdown, buildMethodologyIndexMarkdown
-- ... 14 more files omitted; use `rg --files scripts` for the full list.
+- ... 19 more files omitted; use `rg --files scripts` for the full list.
