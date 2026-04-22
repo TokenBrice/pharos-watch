@@ -191,32 +191,55 @@ describe("syncLiveReserves", () => {
     expect(recordOutcomeSafeMock).toHaveBeenCalledTimes(uniqueBreakerKeys.size);
   });
 
-  it("issues a single atomic batch of NOT IN DELETEs covering state, composition, and cache", async () => {
+  it("cleans stale reserve artifacts by deleting only rows outside the active keep-list", async () => {
     mockAdapterRegistry(
       async () => ({ slices: [{ name: "Mock Farm", pct: 100, risk: "low" as const }] }),
     );
 
     const { syncLiveReserves } = await import("../sync-live-reserves");
-    const db = mockD1();
+    const db = mockD1([
+      {
+        match: "SELECT stablecoin_id FROM reserve_sync_state",
+        rows: [
+          { stablecoin_id: "stale-sync-state" },
+          { stablecoin_id: ACTIVE_STABLECOINS.find((coin) => coin.liveReservesConfig)?.id },
+        ],
+      },
+      {
+        match: "SELECT stablecoin_id FROM reserve_composition",
+        rows: [
+          { stablecoin_id: "stale-composition" },
+          { stablecoin_id: ACTIVE_STABLECOINS.find((coin) => coin.liveReservesConfig)?.id },
+        ],
+      },
+      {
+        match: "SELECT key FROM cache WHERE key LIKE 'circuit:live-reserves:%'",
+        rows: [
+          { key: "circuit:live-reserves:stale-breaker" },
+          { key: "circuit:live-reserves:infinifi" },
+        ],
+      },
+    ]);
 
     await syncLiveReserves(db, new AbortController().signal, {});
 
     const deleteStateRows = db.getHistory().filter((entry) => (
-      entry.sql.includes("DELETE FROM reserve_sync_state WHERE stablecoin_id NOT IN")
+      entry.sql.includes("DELETE FROM reserve_sync_state WHERE stablecoin_id IN")
     ));
     expect(deleteStateRows).toHaveLength(1);
-    expect(deleteStateRows[0]?.binds.length).toBe(configuredCoinCount);
+    expect(deleteStateRows[0]?.binds).toEqual(["stale-sync-state"]);
 
     const deleteCompositionRows = db.getHistory().filter((entry) => (
-      entry.sql.includes("DELETE FROM reserve_composition WHERE stablecoin_id NOT IN")
+      entry.sql.includes("DELETE FROM reserve_composition WHERE stablecoin_id IN")
     ));
     expect(deleteCompositionRows).toHaveLength(1);
-    expect(deleteCompositionRows[0]?.binds.length).toBe(configuredCoinCount);
+    expect(deleteCompositionRows[0]?.binds).toEqual(["stale-composition"]);
 
     const deleteCacheRows = db.getHistory().filter((entry) => (
-      entry.sql.includes("DELETE FROM cache WHERE key LIKE 'circuit:live-reserves:%' AND key NOT IN")
+      entry.sql.includes("DELETE FROM cache WHERE key IN")
     ));
     expect(deleteCacheRows).toHaveLength(1);
+    expect(deleteCacheRows[0]?.binds).toEqual(["circuit:live-reserves:stale-breaker"]);
 
     // Per-row DELETE FROM reserve_sync_state WHERE stablecoin_id = ? must be gone.
     expect(

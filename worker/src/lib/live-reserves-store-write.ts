@@ -1,3 +1,5 @@
+import { chunkArray } from "./collections";
+import { buildInClause } from "./db";
 import {
   LIVE_RESERVE_HISTORY_RETENTION_SEC,
   type LiveReserveHistoryPruneResult,
@@ -15,6 +17,14 @@ import {
   buildReserveSyncRecordDeferredStatement,
   type ReserveSyncDeferredRecord,
 } from "./live-reserves-store-statements";
+
+const LIVE_RESERVE_ARTIFACT_DELETE_CHUNK_SIZE = 900;
+
+export interface LiveReserveArtifactCleanupResult {
+  syncStateDeleted: number;
+  compositionDeleted: number;
+  breakerCacheDeleted: number;
+}
 
 export async function upsertReserveComposition(
   db: D1Database,
@@ -96,6 +106,85 @@ export async function finalizeReserveSyncAttempt(
   }
 
   return { finalized };
+}
+
+async function loadStringColumn(
+  db: D1Database,
+  sql: string,
+  column: string,
+): Promise<string[]> {
+  const rows = await db.prepare(sql).all<Record<string, unknown>>();
+  return Array.from(new Set(
+    (rows.results ?? [])
+      .map((row) => row[column])
+      .filter((value): value is string => typeof value === "string"),
+  ));
+}
+
+async function deleteExactMatchesInChunks(
+  db: D1Database,
+  sqlPrefix: string,
+  values: readonly string[],
+): Promise<number> {
+  let totalDeleted = 0;
+  for (const valueChunk of chunkArray(values, LIVE_RESERVE_ARTIFACT_DELETE_CHUNK_SIZE)) {
+    const inClause = buildInClause(valueChunk);
+    const result = await db
+      .prepare(`${sqlPrefix} IN (${inClause.sql})`)
+      .bind(...inClause.binds)
+      .run();
+    totalDeleted += Number(result.meta?.changes ?? 0);
+  }
+  return totalDeleted;
+}
+
+export async function cleanupStaleLiveReserveArtifacts(
+  db: D1Database,
+  activeCoinIds: readonly string[],
+  activeBreakerKeys: ReadonlySet<string>,
+): Promise<LiveReserveArtifactCleanupResult> {
+  const activeCoinIdSet = new Set(activeCoinIds);
+  const activeCacheKeySet = new Set(
+    Array.from(activeBreakerKeys, (breakerKey) => `circuit:${breakerKey}`),
+  );
+
+  const [existingSyncStateIds, existingCompositionIds, existingBreakerCacheKeys] = await Promise.all([
+    loadStringColumn(db, "SELECT stablecoin_id FROM reserve_sync_state", "stablecoin_id"),
+    loadStringColumn(db, "SELECT stablecoin_id FROM reserve_composition", "stablecoin_id"),
+    loadStringColumn(
+      db,
+      "SELECT key FROM cache WHERE key LIKE 'circuit:live-reserves:%'",
+      "key",
+    ),
+  ]);
+
+  const staleSyncStateIds = existingSyncStateIds.filter((stablecoinId) => !activeCoinIdSet.has(stablecoinId));
+  const staleCompositionIds = existingCompositionIds.filter((stablecoinId) => !activeCoinIdSet.has(stablecoinId));
+  const staleBreakerCacheKeys = existingBreakerCacheKeys.filter((cacheKey) => !activeCacheKeySet.has(cacheKey));
+
+  const [syncStateDeleted, compositionDeleted, breakerCacheDeleted] = await Promise.all([
+    deleteExactMatchesInChunks(
+      db,
+      "DELETE FROM reserve_sync_state WHERE stablecoin_id",
+      staleSyncStateIds,
+    ),
+    deleteExactMatchesInChunks(
+      db,
+      "DELETE FROM reserve_composition WHERE stablecoin_id",
+      staleCompositionIds,
+    ),
+    deleteExactMatchesInChunks(
+      db,
+      "DELETE FROM cache WHERE key",
+      staleBreakerCacheKeys,
+    ),
+  ]);
+
+  return {
+    syncStateDeleted,
+    compositionDeleted,
+    breakerCacheDeleted,
+  };
 }
 
 const DEFAULT_PRUNE_BATCH_SIZE = 5000;

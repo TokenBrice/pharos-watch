@@ -4,8 +4,10 @@ import { getReserveAdapter, type AdapterContext, type AdapterResult, type Reserv
 import { recordOutcomeSafe } from "../lib/circuit-breaker";
 import { reportCronProgress } from "../lib/cron-progress";
 import {
+  cleanupStaleLiveReserveArtifacts,
   loadReserveSyncStateMap,
   pruneLiveReserveHistory,
+  type ReserveSyncStateRecord,
 } from "../lib/live-reserves-store";
 import { syncReserveCoin } from "./sync-live-reserves-core";
 import {
@@ -26,6 +28,19 @@ import {
 const ADAPTER_TIMEOUT_MS = 20_000;
 const SYNC_RUN_BUDGET_MS = 11 * 60 * 1000;
 
+interface ReserveCoinQueueResult {
+  synced: number;
+  failed: number;
+  skipped: number;
+  warningMessages: string[];
+  coinsWithErrors: string[];
+  coinsWithWarnings: string[];
+  breakerKeys: Set<string>;
+  breakerOutcomes: Map<string, boolean>;
+  deferredCoins: number;
+  nextCursorStablecoinId: string | null;
+}
+
 function createAbortableAttemptSignal(
   parentSignal: AbortSignal,
   timeoutMs: number,
@@ -40,70 +55,6 @@ function createAbortableAttemptSignal(
   };
 
   return { signal: timeout.signal, cleanup };
-}
-
-const D1_IN_PARAM_CHUNK_SIZE = 900;
-
-function chunk<T>(values: readonly T[], size: number): T[][] {
-  if (values.length === 0) return [];
-  const chunks: T[][] = [];
-  for (let i = 0; i < values.length; i += size) {
-    chunks.push(values.slice(i, i + size));
-  }
-  return chunks;
-}
-
-function buildNotInPlaceholders(count: number): string {
-  return new Array(count).fill("?").join(", ");
-}
-
-async function cleanupStaleReserveSyncArtifacts(
-  db: D1Database,
-  activeCoinIds: readonly string[],
-  activeBreakerKeys: ReadonlySet<string>,
-): Promise<void> {
-  const statements: D1PreparedStatement[] = [];
-
-  const coinIdChunks = chunk(activeCoinIds, D1_IN_PARAM_CHUNK_SIZE);
-  if (coinIdChunks.length === 0) {
-    statements.push(db.prepare("DELETE FROM reserve_sync_state"));
-    statements.push(db.prepare("DELETE FROM reserve_composition"));
-  } else {
-    for (const chunkedIds of coinIdChunks) {
-      const placeholders = buildNotInPlaceholders(chunkedIds.length);
-      statements.push(
-        db
-          .prepare(`DELETE FROM reserve_sync_state WHERE stablecoin_id NOT IN (${placeholders})`)
-          .bind(...chunkedIds),
-      );
-      statements.push(
-        db
-          .prepare(`DELETE FROM reserve_composition WHERE stablecoin_id NOT IN (${placeholders})`)
-          .bind(...chunkedIds),
-      );
-    }
-  }
-
-  const cacheKeys = Array.from(activeBreakerKeys).map((key) => `circuit:${key}`);
-  const cacheKeyChunks = chunk(cacheKeys, D1_IN_PARAM_CHUNK_SIZE);
-  if (cacheKeyChunks.length === 0) {
-    statements.push(
-      db.prepare("DELETE FROM cache WHERE key LIKE 'circuit:live-reserves:%'"),
-    );
-  } else {
-    for (const chunkedKeys of cacheKeyChunks) {
-      const placeholders = buildNotInPlaceholders(chunkedKeys.length);
-      statements.push(
-        db
-          .prepare(
-            `DELETE FROM cache WHERE key LIKE 'circuit:live-reserves:%' AND key NOT IN (${placeholders})`,
-          )
-          .bind(...chunkedKeys),
-      );
-    }
-  }
-
-  await db.batch(statements);
 }
 
 async function reportLiveReserveProgress(
@@ -152,47 +103,15 @@ async function runAdapterAttempt(
   }
 }
 
-export async function syncLiveReserves(
-  db: D1Database,
-  signal: AbortSignal,
-  adapterCtx?: AdapterContext,
-  reportProgress?: CronProgressReporter,
-): Promise<CronResult> {
-  let synced = 0;
-  let failed = 0;
-  let skipped = 0;
-  const runStartedAt = Math.floor(Date.now() / 1000);
-  const runStartedMs = Date.now();
-  const warningMessages: string[] = [];
-  const coinsWithErrors: string[] = [];
-  const coinsWithWarnings: string[] = [];
-  const breakerKeys = new Set<string>();
+function createReserveAdapterRunner(args: {
+  signal: AbortSignal;
+  adapterCtx: AdapterContext;
+}): (
+  coin: ConfiguredCoin,
+  config: LiveReserveConfig,
+  adapter: ReserveAdapterDefinition,
+) => Promise<AdapterResult> {
   const sharedSourceResults = new Map<string, Promise<AdapterResult>>();
-  const cursorState = await loadLiveReserveCursorState(db);
-  const orderedCoins = rotateConfiguredCoins(CONFIGURED_COINS, cursorState?.nextStablecoinId ?? null);
-  const syncStates = await loadReserveSyncStateMap(db, CONFIGURED_COINS.map((coin) => coin.id));
-  const breakerOutcomes = new Map<string, boolean>();
-  const breakerCanFetch = new Map<string, boolean>();
-  const effectiveAdapterCtx: AdapterContext = {
-    ...(adapterCtx ?? {}),
-    nowSec: runStartedAt,
-    requestCache: adapterCtx?.requestCache ?? new Map<string, Promise<unknown>>(),
-  };
-  const total = orderedCoins.length;
-  let deferredCoins = 0;
-  let nextCursorStablecoinId: string | null = null;
-
-  await reportLiveReserveProgress(reportProgress, {
-    stage: "setup",
-    message: cursorState?.nextStablecoinId
-      ? `Loaded live reserve sync state (resuming at ${cursorState.nextStablecoinId})`
-      : "Loaded live reserve sync state",
-    itemsDone: 0,
-    itemsTotal: total,
-    synced,
-    failed,
-    skipped,
-  });
 
   const tryPrimary = (
     coin: ConfiguredCoin,
@@ -201,7 +120,7 @@ export async function syncLiveReserves(
   ): Promise<AdapterResult> => {
     const cacheKey = buildSharedSourceCacheKey(config, adapter);
     if (!cacheKey) {
-      return runAdapterAttempt(coin, config, adapter, signal, effectiveAdapterCtx);
+      return runAdapterAttempt(coin, config, adapter, args.signal, args.adapterCtx);
     }
 
     const cached = sharedSourceResults.get(cacheKey);
@@ -210,12 +129,12 @@ export async function syncLiveReserves(
     // Retain the promise (including rejections) for the remainder of the run
     // so every coin sharing this source sees a single fetch outcome. The
     // circuit breaker handles cross-run retry suppression.
-    const resultPromise = runAdapterAttempt(coin, config, adapter, signal, effectiveAdapterCtx);
+    const resultPromise = runAdapterAttempt(coin, config, adapter, args.signal, args.adapterCtx);
     sharedSourceResults.set(cacheKey, resultPromise);
     return resultPromise;
   };
 
-  const runAdapter = async (
+  return async (
     coin: ConfiguredCoin,
     config: LiveReserveConfig,
     adapter: ReserveAdapterDefinition,
@@ -231,7 +150,7 @@ export async function syncLiveReserves(
       for (const fb of config.inputs.fallbacks ?? []) {
         try {
           const fbConfig = { ...config, inputs: { ...config.inputs, primary: fb } };
-          const fallbackResult = await runAdapterAttempt(coin, fbConfig, adapter, signal, effectiveAdapterCtx);
+          const fallbackResult = await runAdapterAttempt(coin, fbConfig, adapter, args.signal, args.adapterCtx);
           const primaryMessage = primaryError instanceof Error
             ? primaryError.message
             : String(primaryError);
@@ -248,26 +167,52 @@ export async function syncLiveReserves(
             ...fallbackResult,
             warnings: [...(fallbackResult.warnings ?? []), fallbackWarning],
           };
-        } catch (e) {
-          fallbackAttempts.push({ input: fb, error: e, index: fallbackAttempts.length });
-          console.warn(`[sync-live-reserves] Fallback failed for ${coin.id}:`, e);
-          continue;
+        } catch (error) {
+          fallbackAttempts.push({ input: fb, error, index: fallbackAttempts.length });
+          console.warn(`[sync-live-reserves] Fallback failed for ${coin.id}:`, error);
         }
       }
       throw buildReserveAdapterAttemptChainError(config, primaryError, fallbackAttempts);
     }
   };
+}
 
-  for (const [index, coin] of orderedCoins.entries()) {
-    if (signal?.aborted) throw signal.reason ?? new Error("sync-live-reserves aborted");
-    const budgetRemaining = SYNC_RUN_BUDGET_MS - (Date.now() - runStartedMs);
+async function runReserveCoinQueue(args: {
+  db: D1Database;
+  signal: AbortSignal;
+  orderedCoins: readonly ConfiguredCoin[];
+  runStartedMs: number;
+  runAdapter: (
+    coin: ConfiguredCoin,
+    config: LiveReserveConfig,
+    adapter: ReserveAdapterDefinition,
+  ) => Promise<AdapterResult>;
+  syncStates: Map<string, ReserveSyncStateRecord>;
+  reportProgress?: CronProgressReporter;
+}): Promise<ReserveCoinQueueResult> {
+  let synced = 0;
+  let failed = 0;
+  let skipped = 0;
+  let deferredCoins = 0;
+  let nextCursorStablecoinId: string | null = null;
+  const warningMessages: string[] = [];
+  const coinsWithErrors: string[] = [];
+  const coinsWithWarnings: string[] = [];
+  const breakerKeys = new Set<string>();
+  const breakerOutcomes = new Map<string, boolean>();
+  const breakerCanFetch = new Map<string, boolean>();
+  const total = args.orderedCoins.length;
+
+  for (const [index, coin] of args.orderedCoins.entries()) {
+    if (args.signal?.aborted) throw args.signal.reason ?? new Error("sync-live-reserves aborted");
+    const budgetRemaining = SYNC_RUN_BUDGET_MS - (Date.now() - args.runStartedMs);
     if (budgetRemaining < ADAPTER_TIMEOUT_MS) {
       console.warn(
         `[sync-live-reserves] Run budget exhausted at coin ${index}/${total}, deferring remaining`,
       );
       const deferred = await recordDeferredTail(
-        db,
-        orderedCoins.slice(index),
+        args.db,
+        args.orderedCoins.slice(index),
         breakerKeys,
         Math.floor(Date.now() / 1000),
       );
@@ -276,11 +221,12 @@ export async function syncLiveReserves(
       skipped += deferredCoins;
       break;
     }
+
     const config = coin.liveReservesConfig!;
     const breakerKey = breakerKeyForConfig(config);
     breakerKeys.add(breakerKey);
 
-    await reportLiveReserveProgress(reportProgress, {
+    await reportLiveReserveProgress(args.reportProgress, {
       stage: "syncing",
       message: `Syncing ${coin.id}`,
       itemsDone: index,
@@ -294,13 +240,13 @@ export async function syncLiveReserves(
     });
 
     const result = await syncReserveCoin({
-      db,
+      db: args.db,
       coin,
-      signal,
+      signal: args.signal,
       adapter: getReserveAdapter(config.adapter),
-      runAdapter,
+      runAdapter: args.runAdapter,
       breakerCanFetch,
-      previousState: syncStates.get(coin.id) ?? null,
+      previousState: args.syncStates.get(coin.id) ?? null,
     });
 
     if (result.status === "synced") {
@@ -325,68 +271,151 @@ export async function syncLiveReserves(
     }
   }
 
-  await reportLiveReserveProgress(reportProgress, {
-    stage: "finalizing",
-    message: "Recording reserve sync outcomes and cleanup",
-    itemsDone: total,
-    itemsTotal: total,
+  return {
     synced,
     failed,
     skipped,
+    warningMessages,
+    coinsWithErrors,
+    coinsWithWarnings,
+    breakerKeys,
+    breakerOutcomes,
+    deferredCoins,
+    nextCursorStablecoinId,
+  };
+}
+
+async function finalizeReserveSyncRun(args: {
+  db: D1Database;
+  total: number;
+  runStartedAt: number;
+  reportProgress?: CronProgressReporter;
+  synced: number;
+  failed: number;
+  skipped: number;
+  warningMessages: string[];
+  coinsWithErrors: string[];
+  coinsWithWarnings: string[];
+  breakerKeys: ReadonlySet<string>;
+  breakerOutcomes: ReadonlyMap<string, boolean>;
+  deferredCoins: number;
+  nextCursorStablecoinId: string | null;
+}): Promise<CronResult> {
+  await reportLiveReserveProgress(args.reportProgress, {
+    stage: "finalizing",
+    message: "Recording reserve sync outcomes and cleanup",
+    itemsDone: args.total,
+    itemsTotal: args.total,
+    synced: args.synced,
+    failed: args.failed,
+    skipped: args.skipped,
   });
 
-  // Deferred breaker outcome recording: worst outcome per key wins
-  for (const [key, success] of breakerOutcomes) {
-    await recordOutcomeSafe(db, key, success);
+  // Deferred breaker outcome recording: worst outcome per key wins.
+  for (const [key, success] of args.breakerOutcomes) {
+    await recordOutcomeSafe(args.db, key, success);
   }
 
   try {
-    await cleanupStaleReserveSyncArtifacts(
-      db,
+    await cleanupStaleLiveReserveArtifacts(
+      args.db,
       CONFIGURED_COINS.map((coin) => coin.id),
-      breakerKeys,
+      args.breakerKeys,
     );
-  } catch (e) {
-    console.warn("[sync-live-reserves] Ghost reserve artifact cleanup failed:", e);
+  } catch (error) {
+    console.warn("[sync-live-reserves] Ghost reserve artifact cleanup failed:", error);
   }
 
   await persistLiveReserveCursorState(
-    db,
-    deferredCoins,
-    nextCursorStablecoinId,
+    args.db,
+    args.deferredCoins,
+    args.nextCursorStablecoinId,
   );
 
   let historyPrune: Awaited<ReturnType<typeof pruneLiveReserveHistory>> | null = null;
   try {
-    historyPrune = await pruneLiveReserveHistory(db, runStartedAt);
-  } catch (e) {
-    console.warn("[sync-live-reserves] Live reserve history prune failed:", e);
+    historyPrune = await pruneLiveReserveHistory(args.db, args.runStartedAt);
+  } catch (error) {
+    console.warn("[sync-live-reserves] Live reserve history prune failed:", error);
   }
 
   const status: CronResult["status"] =
-    synced === 0 && (failed > 0 || skipped > 0)
+    args.synced === 0 && (args.failed > 0 || args.skipped > 0)
       ? "error"
-      : (failed + skipped) > Math.ceil(total * 0.1)
+      : (args.failed + args.skipped) > Math.ceil(args.total * 0.1)
         ? "degraded"
         : "ok";
 
   return {
-    itemCount: synced,
+    itemCount: args.synced,
     status,
     metadata: JSON.stringify({
       structureVersion: 2,
-      synced,
-      failed,
-      skipped,
-      total,
-      warningCount: warningMessages.length,
-      deferredCoins,
-      nextCursorStablecoinId,
-      ...(coinsWithWarnings.length > 0 ? { coinsWithWarnings } : {}),
-      ...(coinsWithErrors.length > 0 ? { coinsWithErrors } : {}),
-      ...(warningMessages.length > 0 ? { warnings: warningMessages } : {}),
+      synced: args.synced,
+      failed: args.failed,
+      skipped: args.skipped,
+      total: args.total,
+      warningCount: args.warningMessages.length,
+      deferredCoins: args.deferredCoins,
+      nextCursorStablecoinId: args.nextCursorStablecoinId,
+      ...(args.coinsWithWarnings.length > 0 ? { coinsWithWarnings: args.coinsWithWarnings } : {}),
+      ...(args.coinsWithErrors.length > 0 ? { coinsWithErrors: args.coinsWithErrors } : {}),
+      ...(args.warningMessages.length > 0 ? { warnings: args.warningMessages } : {}),
       ...(historyPrune ? { historyPrune } : {}),
-      breakerKeys: Array.from(breakerKeys),
+      breakerKeys: Array.from(args.breakerKeys),
     }),
   };
+}
+
+export async function syncLiveReserves(
+  db: D1Database,
+  signal: AbortSignal,
+  adapterCtx?: AdapterContext,
+  reportProgress?: CronProgressReporter,
+): Promise<CronResult> {
+  const runStartedAt = Math.floor(Date.now() / 1000);
+  const runStartedMs = Date.now();
+  const cursorState = await loadLiveReserveCursorState(db);
+  const orderedCoins = rotateConfiguredCoins(CONFIGURED_COINS, cursorState?.nextStablecoinId ?? null);
+  const syncStates = await loadReserveSyncStateMap(db, CONFIGURED_COINS.map((coin) => coin.id));
+  const effectiveAdapterCtx: AdapterContext = {
+    ...(adapterCtx ?? {}),
+    nowSec: runStartedAt,
+    requestCache: adapterCtx?.requestCache ?? new Map<string, Promise<unknown>>(),
+  };
+  const total = orderedCoins.length;
+
+  await reportLiveReserveProgress(reportProgress, {
+    stage: "setup",
+    message: cursorState?.nextStablecoinId
+      ? `Loaded live reserve sync state (resuming at ${cursorState.nextStablecoinId})`
+      : "Loaded live reserve sync state",
+    itemsDone: 0,
+    itemsTotal: total,
+    synced: 0,
+    failed: 0,
+    skipped: 0,
+  });
+
+  const runAdapter = createReserveAdapterRunner({
+    signal,
+    adapterCtx: effectiveAdapterCtx,
+  });
+  const queueResult = await runReserveCoinQueue({
+    db,
+    signal,
+    orderedCoins,
+    runStartedMs,
+    runAdapter,
+    syncStates,
+    reportProgress,
+  });
+
+  return finalizeReserveSyncRun({
+    db,
+    total,
+    runStartedAt,
+    reportProgress,
+    ...queueResult,
+  });
 }
