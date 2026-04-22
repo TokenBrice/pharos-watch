@@ -17,6 +17,7 @@ import { trackEvent } from "@/lib/analytics";
 import { DateTooltip, MonoYAxis, TimeGrid, TimeXAxis } from "@/components/chart-primitives";
 import { useIsMobile } from "@/hooks/use-is-mobile";
 import { buildPsiChartData } from "@shared/lib/psi-view-model";
+import { formatRangeTickDate } from "@/lib/chart-time-range";
 
 /* ─── Constants ─────────────────────────────────────────────────── */
 
@@ -41,6 +42,7 @@ export function ScoreChart({
   const { range, setRange, filteredData, options } = useTimeRangeFilter(data, "ts");
   const isMobile = useIsMobile();
   const { animProps, handleAnimationEnd, chartContainerRef, isChartReady, width, height } = useChartShell<HTMLDivElement>();
+  const formatTimestamp = useCallback((ts: number) => formatRangeTickDate(ts, range), [range]);
 
   /* Hide overlapping event labels when zoomed into a tight range */
   const visibleEvents = useMemo(() => {
@@ -166,6 +168,7 @@ export function ScoreChart({
                   <TimeXAxis
                     dataKey="ts"
                     minTickGap={72}
+                    tickFormatter={formatTimestamp}
                   />
                   <MonoYAxis domain={[0, 100]} />
                   <DateTooltip

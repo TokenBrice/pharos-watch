@@ -34,6 +34,7 @@ import { QueryErrorNotice } from "@/components/query-error-notice";
 import { StablecoinLogo } from "@/components/stablecoin-logo";
 import { useLogos } from "@/hooks/use-logos";
 import { ScoreChart } from "@/components/psi-history-chart";
+import { formatRangeTickDate } from "@/lib/chart-time-range";
 import { buildStablecoinUrl } from "@/lib/urls";
 import { MethodologyLabel } from "@/components/methodology-hint";
 import type { MethodologyContextKey } from "@/lib/methodology-context";
@@ -228,6 +229,7 @@ function ComponentChart({
   const handleAnimationEnd = useCallback(() => {
     setShouldAnimate(false);
   }, []);
+  const formatTimestamp = useCallback((ts: number) => formatRangeTickDate(ts, range), [range]);
 
   return (
     <Card className="rounded-xl animate-in fade-in duration-300">
@@ -271,7 +273,7 @@ function ComponentChart({
                   </linearGradient>
                 </defs>
                 <TimeGrid />
-                <TimeXAxis dataKey="ts" minTickGap={72} />
+                <TimeXAxis dataKey="ts" minTickGap={72} tickFormatter={formatTimestamp} />
                 <MonoYAxis />
                 <DateTooltip
                   formatter={(value, name) => [formatScore(Number(value)), String(name)]}
