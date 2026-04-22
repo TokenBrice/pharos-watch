@@ -11,7 +11,7 @@
 // `2026-04-17-daily-digest-root-cause-and-fix-plan.md` for why HTTP
 // `ctx.waitUntil` was abandoned.
 import { generateDailyDigest } from "../../cron/daily-digest";
-import { buildTelegramCreds } from "../../lib/runtime-credentials";
+import { buildTelegramCreds, buildTwitterCreds } from "../../lib/runtime-credentials";
 import { deleteCache, getCache, setCache } from "../../lib/db-cache";
 import { DIGEST_FORCE_RUN_CACHE_KEY } from "../../api/admin-actions";
 import type { ScheduledRuntimeContext } from "./context";
@@ -57,7 +57,7 @@ export async function runDigestTriggerPollSlot(runtime: ScheduledRuntimeContext)
       generateDailyDigest(
         runtime.db,
         runtime.env.ANTHROPIC_API_KEY ?? null,
-        null,
+        buildTwitterCreds(runtime.env),
         true,
         buildTelegramCreds(runtime.env),
         signal,

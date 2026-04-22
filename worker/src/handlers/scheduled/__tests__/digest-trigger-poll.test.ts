@@ -5,6 +5,7 @@ vi.mock("../../../cron/daily-digest", () => ({
   generateDailyDigest: vi.fn(),
 }));
 vi.mock("../../../lib/runtime-credentials", () => ({
+  buildTwitterCreds: vi.fn(() => null),
   buildTelegramCreds: vi.fn(() => null),
 }));
 vi.mock("../../../lib/db-cache", () => ({
@@ -15,6 +16,7 @@ vi.mock("../../../lib/db-cache", () => ({
 
 import { generateDailyDigest } from "../../../cron/daily-digest";
 import { deleteCache, getCache, setCache } from "../../../lib/db-cache";
+import { buildTwitterCreds } from "../../../lib/runtime-credentials";
 import { runDigestTriggerPollSlot, DIGEST_LAST_TRIGGER_RESULT_CACHE_KEY } from "../digest-trigger-poll";
 import { DIGEST_FORCE_RUN_CACHE_KEY } from "../../../api/admin-actions";
 
@@ -76,6 +78,12 @@ describe("runDigestTriggerPollSlot", () => {
   });
 
   it("runs daily-digest with force=true and clears the flag on success", async () => {
+    vi.mocked(buildTwitterCreds).mockReturnValueOnce({
+      apiKey: "tw-key",
+      apiSecret: "tw-secret",
+      accessToken: "tw-token",
+      accessTokenSecret: "tw-token-secret",
+    });
     vi.mocked(getCache).mockResolvedValueOnce({
       value: JSON.stringify({ requestedAt: 1_700_000_000, requestId: "manual-digest-abc" }),
       updatedAt: 1_700_000_000,
@@ -92,6 +100,12 @@ describe("runDigestTriggerPollSlot", () => {
     expect(generateDailyDigest).toHaveBeenCalledTimes(1);
     const digestArgs = vi.mocked(generateDailyDigest).mock.calls[0];
     // (db, anthropicApiKey, twitterCreds, force, telegramCreds, signal)
+    expect(digestArgs[2]).toEqual({
+      apiKey: "tw-key",
+      apiSecret: "tw-secret",
+      accessToken: "tw-token",
+      accessTokenSecret: "tw-token-secret",
+    });
     expect(digestArgs[3]).toBe(true);
 
     expect(deleteCache).toHaveBeenCalledWith(expect.anything(), DIGEST_FORCE_RUN_CACHE_KEY);

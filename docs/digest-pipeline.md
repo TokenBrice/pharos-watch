@@ -1,6 +1,6 @@
 # Digest Pipeline
 
-Daily AI-generated stablecoin market recap, distributed to the web and Telegram. The Twitter helper exists, but the current scheduled and manual-trigger digest paths pass `twitterCreds = null`, so Twitter posting is not wired into runtime digest delivery today.
+Daily AI-generated stablecoin market recap, distributed to the web, Twitter/X, and Telegram.
 
 ---
 
@@ -168,7 +168,7 @@ After the digest is stored in D1, it is posted to the configured Telegram channe
 | `TWITTER_ACCESS_TOKEN` | OAuth access token |
 | `TWITTER_ACCESS_TOKEN_SECRET` | OAuth access token secret |
 
-If any of the four are absent, Twitter posting is skipped silently. Current scheduled and manual-trigger digest paths pass `twitterCreds = null`, so this helper is available but not active in runtime digest delivery.
+If any of the four are absent, Twitter posting is skipped silently.
 
 ### Telegram
 

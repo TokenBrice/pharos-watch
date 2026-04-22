@@ -137,7 +137,7 @@ Current digest generation constraints that are actually encoded in repo code:
 - per-attempt fetch timeout: `11 * 60_000 ms` (11 min), local to `requestDigestCopy`; safety net so a single stalled attempt cannot consume the outer budget
 - retry depth for the digest Anthropic call: `2` (max 3 attempts); the outer `AbortSignal` caps total wall time regardless
 - corrective retry skip: if first-pass elapsed `>= 50%` of the outer budget (6 min), the in-process retry after quality failures is skipped; the parse is accepted with `qualityIssues` flagged `degraded`
-- daily cron lease (wrapper timeout): `14 * 60_000 ms` (14 min), leaves ~2 min under Cloudflare's 15-min scheduled-event ceiling for D1 persistence, Telegram delivery, and cron_runs logging. The Twitter helper exists, but current scheduled/manual digest paths pass `twitterCreds = null`.
+- daily cron lease (wrapper timeout): `14 * 60_000 ms` (14 min), leaves ~2 min under Cloudflare's 15-min scheduled-event ceiling for D1 persistence, Twitter/Telegram delivery, and cron_runs logging.
 - daily-digest heartbeat override: `heartbeatSec = 30`, `maxRenewFailures = 3` (see `worker/src/handlers/scheduled/context.ts` — default policy unchanged for other jobs)
 - weekly cron lease: `12 * 60_000 ms` (12 min)
 - max_tokens: `64000` daily, `64000` weekly — Anthropic's documented floor for Opus 4.7 at `xhigh`/`max` effort with adaptive thinking. Earlier settings of 16k → 32k at `effort: "max"` both hit `stop_reason=max_tokens` with no text emitted; the root-cause fix on 2026-04-18 lowered effort to `xhigh` and raised the ceiling to 64k in one change.

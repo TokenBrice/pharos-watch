@@ -564,6 +564,10 @@ describe("worker.scheduled", () => {
       DB: {} as D1Database,
       CORS_ORIGIN: "https://pharos.watch",
       ANTHROPIC_API_KEY: "anthropic",
+      TWITTER_API_KEY: "tw-key",
+      TWITTER_API_SECRET: "tw-secret",
+      TWITTER_ACCESS_TOKEN: "tw-token",
+      TWITTER_ACCESS_TOKEN_SECRET: "tw-token-secret",
     } as const;
 
     await worker.scheduled(
@@ -575,6 +579,13 @@ describe("worker.scheduled", () => {
 
     expect(cronMocks.syncBluechip).toHaveBeenCalledTimes(1);
     expect(cronMocks.generateDailyDigest).toHaveBeenCalledTimes(1);
+    const digestArgs = cronMocks.generateDailyDigest.mock.calls[0] as unknown[] | undefined;
+    expect(digestArgs?.[2]).toEqual({
+      apiKey: "tw-key",
+      apiSecret: "tw-secret",
+      accessToken: "tw-token",
+      accessTokenSecret: "tw-token-secret",
+    });
     expect(cronMocks.generateWeeklyRecap).toHaveBeenCalledTimes(1);
     expect(cronMocks.runDiscoveryScan).toHaveBeenCalledTimes(1);
   });
