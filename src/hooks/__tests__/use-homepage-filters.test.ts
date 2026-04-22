@@ -67,6 +67,17 @@ describe("parseHomepageParams", () => {
     expect(result.groupSelections["Grade"]).toBe("grade-a");
   });
 
+  it("parses the consolidated >=C grade filter", () => {
+    const params = new URLSearchParams("grade=grade-ge-c");
+    const result = parseHomepageParams(params);
+    expect(result.groupSelections["Grade"]).toBe("grade-ge-c");
+  });
+
+  it("maps legacy C-threshold grade filters to the consolidated >=C option", () => {
+    expect(parseHomepageParams(new URLSearchParams("grade=grade-ge-c-plus")).groupSelections["Grade"]).toBe("grade-ge-c");
+    expect(parseHomepageParams(new URLSearchParams("grade=grade-ge-c-minus")).groupSelections["Grade"]).toBe("grade-ge-c");
+  });
+
   it("parses Infrastructure filter using lowercase key", () => {
     const params = new URLSearchParams("infrastructure=infrastructure-liquity-v2");
     const result = parseHomepageParams(params);

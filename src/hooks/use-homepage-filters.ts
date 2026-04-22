@@ -24,7 +24,7 @@ export const FILTER_GROUPS: FilterGroup[] = [
   },
   {
     label: "Grade",
-    options: ["grade-a", "grade-ge-b", "grade-ge-c-plus", "grade-ge-c-minus", "grade-le-d"],
+    options: ["grade-a", "grade-ge-b", "grade-ge-c", "grade-le-d"],
   },
   {
     label: "Infrastructure",
@@ -52,6 +52,18 @@ function normalizeHomepagePegFilter(raw: string): FilterTag | null {
   return null;
 }
 
+function normalizeHomepageGradeFilter(raw: string): FilterTag | null {
+  if (raw === "grade-ge-c-plus" || raw === "grade-ge-c-minus") {
+    return "grade-ge-c";
+  }
+
+  if (raw === "grade-a" || raw === "grade-ge-b" || raw === "grade-ge-c" || raw === "grade-le-d") {
+    return raw;
+  }
+
+  return null;
+}
+
 export function parseHomepageParams(searchParams: URLSearchParams): {
   groupSelections: Record<string, FilterTag | "">;
   searchQuery: string;
@@ -65,6 +77,14 @@ export function parseHomepageParams(searchParams: URLSearchParams): {
 
     if (group.label === "Peg") {
       const normalized = normalizeHomepagePegFilter(raw);
+      if (normalized) {
+        selections[group.label] = normalized;
+      }
+      continue;
+    }
+
+    if (group.label === "Grade") {
+      const normalized = normalizeHomepageGradeFilter(raw);
       if (normalized) {
         selections[group.label] = normalized;
       }

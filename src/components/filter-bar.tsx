@@ -4,18 +4,8 @@ import { Search, X } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { FILTER_GROUPS } from "@/hooks/use-homepage-filters";
+import { getHomepageFilterControlLabel } from "@/lib/homepage-filter-labels";
 import type { FilterTag } from "@shared/types";
-import { FILTER_TAG_LABELS } from "@shared/types";
-
-const FILTER_BAR_LABEL_OVERRIDES: Partial<Record<FilterTag, string>> = {
-  "fiat-non-usd-peg": "Non USD",
-  "rwa-backed": "RWA",
-  "crypto-backed": "Crypto",
-  "centralized-dependent": "CeFi-Dep",
-  "variant-tracked": "All variants",
-  "variant-savings-passthrough": "Savings",
-  "variant-risk-absorption": "Risk-Abs",
-};
 
 interface FilterBarProps {
   groupSelections: Record<string, FilterTag | "">;
@@ -78,18 +68,18 @@ export function FilterBar({
         </div>
       </div>
 
-      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-[1fr_1.2fr_0.6fr_1fr_1.2fr_1fr]">
+      <div className="grid gap-3 sm:grid-cols-2 lg:flex lg:flex-wrap lg:items-start lg:justify-between lg:gap-y-3 lg:gap-x-0">
         {FILTER_GROUPS.map((group) => (
           <div
             key={group.label}
-            className={`space-y-2${group.label === "Peg" ? " hidden sm:block" : ""}${group.label === "Type" ? " lg:min-w-0" : ""}`}
+            className={`space-y-2 lg:flex-none lg:text-center${group.label === "Peg" ? " hidden sm:block" : ""}`}
           >
-            <p className="pharos-kicker">{group.label}</p>
+            <p className="pharos-kicker lg:text-center">{group.label}</p>
             <ToggleGroup
               type="single"
               value={groupSelections[group.label] ?? ""}
               onValueChange={(v) => handleGroupChange(group.label, v)}
-              className="flex w-full flex-wrap justify-start gap-1"
+              className="flex w-full flex-wrap justify-start gap-1 lg:w-auto lg:justify-center"
             >
               {group.options.map((opt) => (
                 <ToggleGroupItem
@@ -97,9 +87,9 @@ export function FilterBar({
                   value={opt}
                   variant="outline"
                   size="sm"
-                  className="pharos-toggle-pill min-h-11 px-3 sm:min-h-8 sm:py-1"
+                  className={`pharos-toggle-pill min-h-11 sm:min-h-8 sm:py-1${group.label === "Infrastructure" ? " px-2.5" : " px-3"}`}
                 >
-                  {FILTER_BAR_LABEL_OVERRIDES[opt] ?? FILTER_TAG_LABELS[opt]}
+                  {getHomepageFilterControlLabel(opt)}
                 </ToggleGroupItem>
               ))}
             </ToggleGroup>

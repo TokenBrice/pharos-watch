@@ -294,6 +294,7 @@ export type FilterTag =
   | "variant-risk-absorption"
   | "grade-a"
   | "grade-ge-b"
+  | "grade-ge-c"
   | "grade-ge-c-plus"
   | "grade-ge-c-minus"
   | "grade-le-d";
@@ -386,6 +387,7 @@ export const FILTER_TAG_LABELS: Record<FilterTag, string> = {
   "variant-risk-absorption": "Risk absorption variant",
   "grade-a": "A",
   "grade-ge-b": "≥B",
+  "grade-ge-c": "≥C",
   "grade-ge-c-plus": "≥C+",
   "grade-ge-c-minus": "≥C-",
   "grade-le-d": "≤D",
@@ -471,6 +473,7 @@ export function getFilterTags(meta: StablecoinMeta): FilterTag[] {
 export const GRADE_FILTER_TAGS: FilterTag[] = [
   "grade-a",
   "grade-ge-b",
+  "grade-ge-c",
   "grade-ge-c-plus",
   "grade-ge-c-minus",
   "grade-le-d",
@@ -503,6 +506,8 @@ export function gradeMatchesFilter(grade: string | undefined, filterTag: FilterT
       return grade.startsWith("A");
     case "grade-ge-b":
       return gradeValue >= GRADE_RANK["B"];
+    case "grade-ge-c":
+      return gradeValue >= GRADE_RANK.C;
     case "grade-ge-c-plus":
       return gradeValue >= GRADE_RANK["C+"];
     case "grade-ge-c-minus":

@@ -24,8 +24,8 @@ import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins";
 import { UpcomingStablecoinsSection } from "@/components/upcoming-stablecoins-section";
 import { PEG_CURRENCY_COUNT } from "@shared/lib/classification";
 import { ACTIVE_PEGS, pegCoinCount } from "@/lib/peg-landing";
-import { FILTER_TAG_LABELS } from "@shared/types";
 import { buildHomepageViewModel } from "@/components/homepage-client-view-model";
+import { getHomepageActiveFilterLabel } from "@/lib/homepage-filter-labels";
 
 const CEFI_COUNT = ACTIVE_STABLECOINS.filter((s) => s.flags.governance === "centralized").length;
 const CEFI_DEP_COUNT = ACTIVE_STABLECOINS.filter((s) => s.flags.governance === "centralized-dependent").length;
@@ -82,10 +82,6 @@ const NonUsdShareChart = dynamic(
 const DailyDigest = dynamic(() => import("@/components/daily-digest").then((mod) => mod.DailyDigest), {
   loading: () => <SectionSkeleton className="h-[220px] w-full rounded-xl" />,
 });
-
-function getHomepageFilterLabel(tag: keyof typeof FILTER_TAG_LABELS) {
-  return tag === "fiat-non-usd-peg" ? "Non USD" : FILTER_TAG_LABELS[tag];
-}
 
 export function HomepageClient() {
   const [showFilters, setShowFilters] = useState(false);
@@ -205,9 +201,9 @@ export function HomepageClient() {
                           key={tag}
                           onClick={() => group && filters.handleGroupChange(group.label, "all")}
                           className="pharos-focus-ring inline-flex items-center gap-1 rounded-full border border-primary/25 bg-primary/10 px-2.5 py-1 text-[11px] font-medium text-foreground transition-colors hover:bg-primary/20"
-                          aria-label={`Remove ${getHomepageFilterLabel(tag)} filter`}
+                          aria-label={`Remove ${getHomepageActiveFilterLabel(tag)} filter`}
                         >
-                          {getHomepageFilterLabel(tag)}
+                          {getHomepageActiveFilterLabel(tag)}
                           <X className="h-3 w-3 text-muted-foreground" aria-hidden />
                         </button>
                       );

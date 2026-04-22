@@ -130,4 +130,16 @@ describe("HomepageClient", () => {
     expect(screen.getByRole("button", { name: "Remove Risk absorption variant filter" })).toBeTruthy();
     expect(screen.getByText("Risk absorption variant")).toBeTruthy();
   });
+
+  it("uses shortened labels for active type filter chips", () => {
+    useHomepageFiltersMock.mockReturnValue(makeFilters({
+      groupSelections: { Type: "decentralized" },
+      activeFilters: ["decentralized"],
+      hasFilters: true,
+    }));
+
+    render(<HomepageClient />);
+
+    expect(screen.getByRole("button", { name: "Remove DeFi filter" })).toBeTruthy();
+  });
 });
