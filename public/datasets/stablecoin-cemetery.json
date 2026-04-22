@@ -7,7 +7,7 @@
   "jsonUrl": "https://pharos.watch/datasets/stablecoin-cemetery.json",
   "csvUrl": "https://pharos.watch/datasets/stablecoin-cemetery.csv",
   "sourceDataPath": "shared/data/dead-stablecoins.json",
-  "sourceChecksum": "sha256:41cadbc52523da7c50c86000ff48761b561d5addc1b18d6ad00f5f457f750984",
+  "sourceChecksum": "sha256:490b87d9b7aef29b71b116be626c9637e69d22563cd799e480f48394a8e65882",
   "recordsOrderedBy": "deathDate descending, then peakMcapUsd descending, then symbol ascending",
   "rowCount": 88,
   "limitations": [
@@ -16,7 +16,7 @@
     "Each row includes one primary source link; the export is an incident index, not a complete bibliography."
   ],
   "fields": {
-    "id": "Stable export row identifier derived from symbol, name, and deathDate.",
+    "id": "Stable export row identifier from curated dead-stablecoin metadata.",
     "name": "Stablecoin or protocol display name.",
     "symbol": "Primary stablecoin ticker or display symbol.",
     "llamaId": "Optional DefiLlama stablecoin identifier when historically available.",

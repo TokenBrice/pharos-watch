@@ -6,8 +6,10 @@ const mockSetCache = vi.fn();
 vi.mock("@shared/lib/dead-stablecoins", () => ({
   DEAD_STABLECOINS: [
     {
+      id: "pusd-palm-usd-2026-01",
       name: "Palm USD",
       symbol: "PUSD",
+      llamaId: "315",
       pegCurrency: "USD",
       causeOfDeath: "liquidity-drain",
       deathDate: "2026-01",
@@ -18,6 +20,7 @@ vi.mock("@shared/lib/dead-stablecoins", () => ({
       sourceLabel: "Example",
     },
     {
+      id: "eura-angle-eura-2026-03",
       name: "Angle EURA",
       symbol: "EURA",
       pegCurrency: "EUR",
@@ -30,6 +33,7 @@ vi.mock("@shared/lib/dead-stablecoins", () => ({
       sourceLabel: "Example",
     },
     {
+      id: "usda-angle-usda-2026-03",
       name: "Angle USDA",
       symbol: "USDA",
       pegCurrency: "USD",
@@ -102,9 +106,9 @@ describe("prepareTelegramDigestAppendices", () => {
       {},
       "telegram:cemetery-snapshot",
       JSON.stringify([
-        "PUSD|2026-01|palm usd",
-        "EURA|2026-03|angle eura",
-        "USDA|2026-03|angle usda",
+        "pusd-palm-usd-2026-01",
+        "eura-angle-eura-2026-03",
+        "usda-angle-usda-2026-03",
       ]),
     ]);
     expect(mockSetCache.mock.calls[1]).toEqual([
@@ -152,9 +156,9 @@ describe("prepareTelegramDigestAppendices", () => {
       if (key === "telegram:cemetery-snapshot") {
         return {
           value: JSON.stringify([
-            "PUSD|2026-01|palm usd",
-            "EURA|2026-03|angle eura",
-            "USDA|2026-03|angle usda",
+            "pusd-palm-usd-2026-01",
+            "eura-angle-eura-2026-03",
+            "usda-angle-usda-2026-03",
           ]),
           updatedAt: 1_778_500_000,
         };
@@ -201,7 +205,7 @@ describe("prepareTelegramDigestAppendices", () => {
     mockGetCache.mockImplementation(async (_db: unknown, key: string) => {
       if (key === "telegram:cemetery-snapshot") {
         return {
-          value: JSON.stringify(["PUSD|2026-01|palm usd"]),
+          value: JSON.stringify(["llama:315"]),
           updatedAt: 1_778_500_000,
         };
       }
@@ -257,9 +261,9 @@ describe("prepareTelegramDigestAppendices", () => {
       {},
       "telegram:cemetery-snapshot",
       JSON.stringify([
-        "PUSD|2026-01|palm usd",
-        "EURA|2026-03|angle eura",
-        "USDA|2026-03|angle usda",
+        "pusd-palm-usd-2026-01",
+        "eura-angle-eura-2026-03",
+        "usda-angle-usda-2026-03",
       ]),
     ]);
     expect(mockSetCache.mock.calls[1]).toEqual([
@@ -276,6 +280,46 @@ describe("prepareTelegramDigestAppendices", () => {
       {},
       "telegram:tracked-stablecoins-pending",
       JSON.stringify([]),
+    ]);
+  });
+
+  it("treats old fallback cemetery snapshot keys as already seen and rewrites them to stable ids", async () => {
+    mockGetCache.mockImplementation(async (_db: unknown, key: string) => {
+      if (key === "telegram:cemetery-snapshot") {
+        return {
+          value: JSON.stringify([
+            "PUSD|2026-01|palm usd",
+            "EURA|2026-03|angle eura",
+            "USDA|2026-03|angle usda",
+          ]),
+          updatedAt: 1_778_500_000,
+        };
+      }
+      if (key === "telegram:tracked-stablecoins-snapshot") {
+        return {
+          value: JSON.stringify(["usdt-tether", "usdx-example", "eurx-example"]),
+          updatedAt: 1_778_500_000,
+        };
+      }
+      return null;
+    });
+
+    const prepared = await prepareTelegramDigestAppendices({} as D1Database);
+
+    expect(prepared.appendixHtml).toBeNull();
+    expect(prepared.metadata).toMatchObject({
+      hasAppendix: false,
+      cemeteryDetected: 0,
+    });
+    expect(mockSetCache).toHaveBeenCalledTimes(1);
+    expect(mockSetCache.mock.calls[0]).toEqual([
+      {},
+      "telegram:cemetery-snapshot",
+      JSON.stringify([
+        "pusd-palm-usd-2026-01",
+        "eura-angle-eura-2026-03",
+        "usda-angle-usda-2026-03",
+      ]),
     ]);
   });
 });

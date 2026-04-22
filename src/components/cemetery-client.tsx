@@ -16,7 +16,7 @@ const SORT_OPTIONS: { value: CemeterySortMode; label: string }[] = [
 export function CemeteryClient() {
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
   const [sortMode, setSortMode] = useState<CemeterySortMode>("newest");
-  const [highlightedSymbol, setHighlightedSymbol] = useState<string | null>(null);
+  const [highlightedId, setHighlightedId] = useState<string | null>(null);
   const highlightTimerRef = useRef<ReturnType<typeof setTimeout>>(null);
 
   // Clear highlight timer on unmount
@@ -24,30 +24,30 @@ export function CemeteryClient() {
 
   const orderedCoins = sortCemeteryCoins(DEAD_STABLECOINS, sortMode);
 
-  const handleToggle = useCallback((symbol: string) => {
+  const handleToggle = useCallback((coinId: string) => {
     setExpanded((prev) => {
       const next = new Set(prev);
-      if (next.has(symbol)) {
-        next.delete(symbol);
+      if (next.has(coinId)) {
+        next.delete(coinId);
       } else {
-        next.add(symbol);
+        next.add(coinId);
       }
       return next;
     });
   }, []);
 
-  const handleTombstoneSelect = useCallback((symbol: string) => {
+  const handleTombstoneSelect = useCallback((coinId: string) => {
     setExpanded((prev) => {
       const next = new Set(prev);
-      next.add(symbol);
+      next.add(coinId);
       return next;
     });
-    setHighlightedSymbol(symbol);
+    setHighlightedId(coinId);
     if (highlightTimerRef.current) clearTimeout(highlightTimerRef.current);
-    highlightTimerRef.current = setTimeout(() => setHighlightedSymbol(null), 2000);
+    highlightTimerRef.current = setTimeout(() => setHighlightedId(null), 2000);
     // Scroll to autopsy card after a tick so the DOM has expanded
     requestAnimationFrame(() => {
-      const el = document.getElementById(`obituary-${symbol}`);
+      const el = document.getElementById(`obituary-${coinId}`);
       if (el) {
         el.scrollIntoView({ behavior: "smooth", block: "center" });
       }
@@ -106,14 +106,14 @@ export function CemeteryClient() {
           </CardDescription>
         </CardHeader>
         <CardContent className="pt-4">
-          <StablecoinCemetery
-            coins={orderedCoins}
-            expanded={expanded}
-            onToggle={handleToggle}
-            highlightedSymbol={highlightedSymbol}
-          />
-        </CardContent>
-      </Card>
+        <StablecoinCemetery
+          coins={orderedCoins}
+          expanded={expanded}
+          onToggle={handleToggle}
+          highlightedId={highlightedId}
+        />
+      </CardContent>
+    </Card>
     </div>
   );
 }

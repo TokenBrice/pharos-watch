@@ -170,6 +170,7 @@ describe("tracked stablecoin metadata", () => {
 
   it("rejects malformed dead stablecoin assets with readable schema errors", () => {
     expect(() => parseDeadStablecoinAssets([{
+      id: "broken-dead-coin",
       name: "Broken Dead Coin",
       symbol: "DEAD",
       pegCurrency: "USD",
@@ -177,6 +178,20 @@ describe("tracked stablecoin metadata", () => {
       deathDate: "2025-01-01",
       sourceUrl: "https://example.com",
     }], "dead-broken.json")).toThrowError(/dead-broken\.json/);
+  });
+
+  it("rejects malformed dead stablecoin ids", () => {
+    expect(() => parseDeadStablecoinAssets([{
+      id: "Broken Dead Coin",
+      name: "Broken Dead Coin",
+      symbol: "DEAD",
+      pegCurrency: "USD",
+      causeOfDeath: "algorithmic-failure",
+      deathDate: "2025-01-01",
+      obituary: "Broken",
+      sourceUrl: "https://example.com",
+      sourceLabel: "Example",
+    }], "dead-id-broken.json")).toThrowError(/id/);
   });
 
   it("does not attach a CoinGecko slug to M by M0 when the base token is not contract-resolved on CoinGecko", () => {

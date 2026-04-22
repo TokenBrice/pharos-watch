@@ -27,7 +27,7 @@ Primary files:
 Cemetery data is static and versioned in-repo. The raw dataset lives in `shared/data/dead-stablecoins.json` and is validated/exported as `DEAD_STABLECOINS` by `shared/lib/dead-stablecoins.ts`.
 
 Each entry follows `DeadStablecoin` (`shared/types/index.ts`) with fields such as:
-- identity (`name`, `symbol`, optional `llamaId`)
+- identity (`id`, `name`, `symbol`, optional `llamaId`)
 - context (`pegCurrency`, `causeOfDeath`, `deathDate`)
 - narrative (`epitaph`, `obituary`, `sourceUrl`, `sourceLabel`)
 - optional `peakMcap`
@@ -43,6 +43,8 @@ Cause metadata (labels + colors) is centralized in `CAUSE_META` / `CAUSE_HEX`.
 - `/datasets/stablecoin-cemetery.csv`
 
 The JSON export includes schema metadata, field descriptions, source-data path, canonical cemetery URL, source labels/URLs per row, and known historical token contracts when available. The CSV export mirrors the same row set with contracts flattened as `chain:address` pairs. Both exports are deterministic and sorted newest-failure first for citation/research reuse. `npm run prebuild` regenerates them, and `npm run check:cemetery-dataset` fails when checked-in public exports drift from `shared/data/dead-stablecoins.json`.
+
+The stable `id` field is the primary dead-coin identifier across the cemetery UI, public dataset export, report-card defunct rows, and Telegram cemetery snapshots. `llamaId` remains optional provider metadata only.
 
 The `/cemetery/` page links directly to both exports from the route header so researchers and journalists can cite/download the dataset without inspecting the repository.
 

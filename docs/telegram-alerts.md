@@ -316,7 +316,7 @@ guaranteeing delivery for large subscriber populations.
 - Pending additions are appended to the next successful Telegram daily digest post.
 - Snapshot advancement for pending additions is deferred until after Telegram accepts the digest post, so failed delivery does not lose pending notices.
 
-Stablecoin identity for cemetery diffs uses `llamaId` when present; otherwise the fallback key is `symbol|deathDate|name`. Tracked-coin diffs use the canonical Pharos stablecoin ID.
+Stablecoin identity for cemetery diffs uses the stable dead-coin `id` from `shared/data/dead-stablecoins.json`. Legacy `llama:*` and `symbol|deathDate|name` snapshot entries are still treated as equivalent during migration, but new snapshots are rewritten to stable dead-coin IDs only. Tracked-coin diffs use the canonical Pharos stablecoin ID.
 
 ### Appendix Shape
 

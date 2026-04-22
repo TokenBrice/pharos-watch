@@ -30,6 +30,32 @@ const DependencyWeightNumberSchema = z.number().finite().positive().max(1);
 const ReservePctSchema = z.number().finite().positive().max(100);
 const CommodityOuncesSchema = z.number().finite().positive();
 
+function isSlugLikeId(value: string): boolean {
+  if (!value) return false;
+  if (value.startsWith("-") || value.endsWith("-")) return false;
+
+  let previousWasHyphen = false;
+  for (const char of value) {
+    const isLowerAlpha = char >= "a" && char <= "z";
+    const isDigit = char >= "0" && char <= "9";
+    const isHyphen = char === "-";
+
+    if (!isLowerAlpha && !isDigit && !isHyphen) {
+      return false;
+    }
+    if (isHyphen && previousWasHyphen) {
+      return false;
+    }
+    previousWasHyphen = isHyphen;
+  }
+
+  return true;
+}
+
+const DeadStablecoinIdSchema = z.string().refine(isSlugLikeId, {
+  message: "Invalid dead stablecoin id",
+});
+
 const StablecoinFlagsAssetSchema = z.object({
   backing: z.enum(BACKING_TYPE_VALUES),
   pegCurrency: z.enum(PEG_CURRENCY_VALUES),
@@ -159,6 +185,7 @@ export const StablecoinMetaAssetArraySchema = z.array(StablecoinMetaAssetSchema)
 export const CanonicalOrderAssetSchema = z.array(z.string());
 
 export const DeadStablecoinAssetSchema = z.object({
+  id: DeadStablecoinIdSchema,
   name: z.string(),
   symbol: z.string(),
   llamaId: z.string().optional(),

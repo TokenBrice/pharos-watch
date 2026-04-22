@@ -63,9 +63,22 @@ export interface QueueTrackedStablecoinAdditionsResult {
   baselineMissing: boolean;
 }
 
-function buildDeadStablecoinKey(coin: DeadStablecoin): string {
-  if (coin.llamaId) return `llama:${coin.llamaId}`;
+function buildLegacyDeadStablecoinKey(coin: DeadStablecoin): string {
   return `${coin.symbol.toUpperCase()}|${coin.deathDate}|${coin.name.toLowerCase()}`;
+}
+
+function buildDeadStablecoinKey(coin: DeadStablecoin): string {
+  return coin.id;
+}
+
+function wasDeadStablecoinPreviouslySeen(previousKeys: Set<string>, coin: DeadStablecoin): boolean {
+  if (previousKeys.has(coin.id)) {
+    return true;
+  }
+  if (coin.llamaId && previousKeys.has(`llama:${coin.llamaId}`)) {
+    return true;
+  }
+  return previousKeys.has(buildLegacyDeadStablecoinKey(coin));
 }
 
 function buildCemeterySnapshotPayload(): string {
@@ -232,7 +245,7 @@ export async function prepareTelegramDigestAppendices(
       metadata.seededSnapshots.push("cemetery:invalid-reseeded");
     } else {
       const newCemeteryCoins = DEAD_STABLECOINS.filter(
-        (coin) => !previousCemeteryKeys.has(buildDeadStablecoinKey(coin)),
+        (coin) => !wasDeadStablecoinPreviouslySeen(previousCemeteryKeys, coin),
       );
 
       if (newCemeteryCoins.length === 0) {

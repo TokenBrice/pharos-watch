@@ -11,28 +11,28 @@ import type { DeadStablecoin } from "@shared/types";
 interface StablecoinCemeteryProps {
   coins: DeadStablecoin[];
   expanded: Set<string>;
-  onToggle: (symbol: string) => void;
-  highlightedSymbol?: string | null;
+  onToggle: (coinId: string) => void;
+  highlightedId?: string | null;
 }
 
-export function StablecoinCemetery({ coins, expanded, onToggle, highlightedSymbol }: StablecoinCemeteryProps) {
+export function StablecoinCemetery({ coins, expanded, onToggle, highlightedId }: StablecoinCemeteryProps) {
   return (
     <div className="rounded-xl border divide-y divide-border">
       {coins.map((coin) => {
         const cause = CAUSE_META[coin.causeOfDeath];
-        const isExpanded = expanded.has(coin.symbol);
+        const isExpanded = expanded.has(coin.id);
         const logoUrl = coin.logo ? `/logos/cemetery/${coin.logo}` : undefined;
-        const isHighlighted = highlightedSymbol === coin.symbol;
+        const isHighlighted = highlightedId === coin.id;
 
         return (
-          <div key={coin.symbol} id={`obituary-${coin.symbol}`} className={isHighlighted ? "ring-2 ring-primary/50" : undefined}>
+          <div key={coin.id} id={`obituary-${coin.id}`} className={isHighlighted ? "ring-2 ring-primary/50" : undefined}>
             {/* Collapsed row — always visible */}
             <button
               type="button"
               className="pharos-focus-ring w-full px-4 py-3 flex items-center gap-3 text-left hover:bg-muted/30 transition-colors cursor-pointer"
-              onClick={() => onToggle(coin.symbol)}
+              onClick={() => onToggle(coin.id)}
               aria-expanded={isExpanded}
-              aria-controls={`autopsy-${coin.symbol}`}
+              aria-controls={`autopsy-${coin.id}`}
             >
               {/* Logo */}
               <div
@@ -92,7 +92,7 @@ export function StablecoinCemetery({ coins, expanded, onToggle, highlightedSymbo
 
             {/* Expanded autopsy content — grid-rows animation */}
             <div
-              id={`autopsy-${coin.symbol}`}
+              id={`autopsy-${coin.id}`}
               className="grid transition-[grid-template-rows] duration-300 ease-out"
               style={{ gridTemplateRows: isExpanded ? "1fr" : "0fr" }}
             >

@@ -164,7 +164,7 @@ function Tombstone({
 }: {
   coin: DeadStablecoin;
   index: number;
-  onSelect: (symbol: string) => void;
+  onSelect: (coinId: string) => void;
   flowerCount: number;
   onPayRespects: () => void;
 }) {
@@ -250,11 +250,11 @@ function Tombstone({
         setHovered(false);
         setTooltipShift(0);
       }}
-      onClick={() => onSelect(coin.symbol)}
+      onClick={() => onSelect(coin.id)}
       onKeyDown={(e) => {
         if (e.key === "Enter" || e.key === " ") {
           e.preventDefault();
-          onSelect(coin.symbol);
+          onSelect(coin.id);
         } else if (e.key === "f" || e.key === "F") {
           onPayRespects();
         }
@@ -384,18 +384,18 @@ function Tombstone({
 
 interface CemeteryTombstonesProps {
   coins: DeadStablecoin[];
-  onSelect: (symbol: string) => void;
+  onSelect: (coinId: string) => void;
 }
 
 export function CemeteryTombstones({ coins, onSelect }: CemeteryTombstonesProps) {
   const [flowers, setFlowers] = useState<Record<string, number>>({});
   const sections = buildCemeteryYearSections(coins);
 
-  const handlePayRespects = useCallback((symbol: string) => {
+  const handlePayRespects = useCallback((coinId: string) => {
     setFlowers((prev) => {
-      const current = prev[symbol] ?? 0;
+      const current = prev[coinId] ?? 0;
       if (current >= 50) return prev;
-      return { ...prev, [symbol]: current + 1 };
+      return { ...prev, [coinId]: current + 1 };
     });
   }, []);
 
@@ -420,12 +420,12 @@ export function CemeteryTombstones({ coins, onSelect }: CemeteryTombstonesProps)
                 >
                   {section.coins.map((coin, i) => (
                     <Tombstone
-                      key={coin.symbol}
+                      key={coin.id}
                       coin={coin}
                       index={i}
                       onSelect={onSelect}
-                      flowerCount={flowers[coin.symbol] ?? 0}
-                      onPayRespects={() => handlePayRespects(coin.symbol)}
+                      flowerCount={flowers[coin.id] ?? 0}
+                      onPayRespects={() => handlePayRespects(coin.id)}
                     />
                   ))}
                 </div>

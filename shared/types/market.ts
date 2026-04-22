@@ -88,6 +88,7 @@ export const CAUSE_OF_DEATH_VALUES = [
 export type CauseOfDeath = (typeof CAUSE_OF_DEATH_VALUES)[number];
 
 export interface DeadStablecoin {
+  id: string;
   name: string;
   symbol: string;
   llamaId?: string;

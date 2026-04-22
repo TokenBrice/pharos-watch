@@ -25,10 +25,9 @@ import type { ReportCardsInputFreshness } from "./report-cards-snapshot-inputs";
 
 export function buildDefunctReportCards(): ReportCard[] {
   return DEAD_STABLECOINS.map((dead) => {
-    const id = dead.llamaId ?? `dead-${dead.symbol.toLowerCase()}`;
     const nrDim = { grade: "F" as const, score: 0, detail: "Defunct stablecoin" };
     return {
-      id,
+      id: dead.id,
       name: dead.name,
       symbol: dead.symbol,
       overallGrade: "F" as const,

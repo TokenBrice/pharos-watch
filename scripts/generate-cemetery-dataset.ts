@@ -55,15 +55,6 @@ const CSV_COLUMNS = [
   "pharosUrl",
 ] as const satisfies readonly (keyof CemeteryDatasetRow)[];
 
-function slugify(value: string): string {
-  const slug = value
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-+|-+$/g, "");
-
-  return slug || "unknown";
-}
-
 function getDeathDatePrecision(deathDate: string): CemeteryDatasetRow["deathDatePrecision"] {
   if (/^\d{4}-\d{2}-\d{2}$/.test(deathDate)) return "day";
   if (/^\d{4}-\d{2}$/.test(deathDate)) return "month";
@@ -73,7 +64,7 @@ function getDeathDatePrecision(deathDate: string): CemeteryDatasetRow["deathDate
 
 function coinToRow(coin: DeadStablecoin): CemeteryDatasetRow {
   return {
-    id: `${slugify(coin.symbol)}-${slugify(coin.name)}-${coin.deathDate}`,
+    id: coin.id,
     name: coin.name,
     symbol: coin.symbol,
     llamaId: coin.llamaId ?? null,
@@ -91,6 +82,16 @@ function coinToRow(coin: DeadStablecoin): CemeteryDatasetRow {
     contracts: coin.contracts ?? [],
     pharosUrl: `${SITE_ORIGIN}/cemetery/`,
   };
+}
+
+function assertUniqueRowIds(rows: CemeteryDatasetRow[]): void {
+  const seen = new Set<string>();
+  for (const row of rows) {
+    if (seen.has(row.id)) {
+      throw new Error(`Duplicate cemetery dataset id: ${row.id}`);
+    }
+    seen.add(row.id);
+  }
 }
 
 function normalizeCsvText(value: string): string {
@@ -145,7 +146,7 @@ function renderJson(rows: CemeteryDatasetRow[]): string {
       "Each row includes one primary source link; the export is an incident index, not a complete bibliography.",
     ],
     fields: {
-      id: "Stable export row identifier derived from symbol, name, and deathDate.",
+      id: "Stable export row identifier from curated dead-stablecoin metadata.",
       name: "Stablecoin or protocol display name.",
       symbol: "Primary stablecoin ticker or display symbol.",
       llamaId: "Optional DefiLlama stablecoin identifier when historically available.",
@@ -168,6 +169,7 @@ function renderJson(rows: CemeteryDatasetRow[]): string {
 }
 
 const rows = sortCemeteryCoins(DEAD_STABLECOINS, "newest").map(coinToRow);
+assertUniqueRowIds(rows);
 const nextJson = renderJson(rows);
 const nextCsv = renderCsv(rows);
 

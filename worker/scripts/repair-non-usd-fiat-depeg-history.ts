@@ -48,10 +48,6 @@ const REPO_ROOT = resolve(fileURLToPath(new URL("../..", import.meta.url)));
 const WORKER_ROOT = resolve(fileURLToPath(new URL("..", import.meta.url)));
 const OPS_API_BASE = "https://ops-api.pharos.watch";
 const SECONDARY_FX_FETCH_CONCURRENCY = 8;
-const LEGACY_CANONICAL_ID_MAP: Record<string, string> = {
-  "300": "tryb-bilira",
-  "cg-idrt": "idrt-rupiah-token",
-};
 const PURGE_ONLY_ORPHAN_IDS: Record<string, { symbol: string; pegCurrency: string; reason: string }> = {
   "eura-angle": {
     symbol: "EURA",
@@ -519,7 +515,7 @@ async function main(): Promise<void> {
 
   for (const row of targetCounts) {
     const rawId = row.stablecoin_id;
-    const canonicalId = LEGACY_CANONICAL_ID_MAP[rawId] ?? rawId;
+    const canonicalId = rawId;
     const canonicalMeta = PSI_ELIGIBLE_META_BY_ID.get(canonicalId);
     if (canonicalMeta) {
       if (canonicalMeta.flags.navToken) continue;

@@ -64,98 +64,109 @@ export function ReportCardMini({
   trend,
 }: ReportCardMiniProps) {
   const dimUnaffected = isSimulating && !isSimulated;
+  const cardBody = (
+    <Card
+      className={cn(
+        "hover:bg-accent/50 hover:shadow-md transition-all cursor-pointer h-full",
+        isSimulated && "border-dashed border-amber-500/40",
+        dimUnaffected && "opacity-60"
+      )}
+    >
+      <CardContent className="relative flex flex-col items-center gap-2.5 pt-3 pb-3">
+        {/* Simulated badge */}
+        {isSimulated && (
+          <span className="absolute top-2 right-2 text-[10px] font-semibold text-amber-700 dark:text-amber-400 bg-amber-500/15 rounded-full px-2 py-0.5 leading-none border border-amber-500/20">
+            Simulated
+          </span>
+        )}
+        {/* Header: logo + name + symbol */}
+        <div className="flex items-center gap-2 min-w-0 max-w-full">
+          <StablecoinLogo src={logo} name={card.name} size={24} />
+          <span className="truncate text-sm font-medium">{card.name}</span>
+          <span className="text-xs text-muted-foreground shrink-0">{card.symbol}</span>
+        </div>
+        {coreSettlement && (
+          <span className="rounded-full border border-frost-blue/30 bg-frost-blue/10 px-2 py-0.5 text-[10px] font-semibold leading-none text-sky-800 dark:text-sky-300">
+            Core rail
+          </span>
+        )}
+
+        {/* Large grade badge — show before→after when simulated */}
+        {isSimulated && originalGrade && originalGrade !== card.overallGrade ? (
+          <div className="flex items-center gap-1.5">
+            <Badge
+              variant="outline"
+              className={cn(
+                "text-base font-bold font-mono px-2 py-0.5 pharos-grade-pop",
+                REPORT_CARD_GRADE_COLORS[originalGrade]
+              )}
+              style={{ animationDelay: `${animIndex * 40}ms` }}
+            >
+              {originalGrade}
+            </Badge>
+            <span className="text-muted-foreground text-sm">&rarr;</span>
+            <Badge
+              variant="outline"
+              className={cn(
+                "text-base font-bold font-mono px-2 py-0.5 pharos-grade-pop",
+                REPORT_CARD_GRADE_COLORS[card.overallGrade]
+              )}
+              style={{ animationDelay: `${animIndex * 40 + 80}ms` }}
+            >
+              {card.overallGrade}
+            </Badge>
+            {originalScore != null && card.overallScore != null && (
+              <span className="text-xs font-medium text-red-700 dark:text-red-400">
+                {"\u25BC"}
+                {Math.abs(card.overallScore - originalScore)}
+              </span>
+            )}
+          </div>
+        ) : (
+          <div className="flex items-center gap-2">
+            <Badge
+              variant="outline"
+              className={cn(
+                "text-xl font-bold font-mono px-3 py-1 pharos-grade-pop",
+                REPORT_CARD_GRADE_COLORS[card.overallGrade]
+              )}
+              style={{ animationDelay: `${animIndex * 40}ms` }}
+            >
+              {card.overallGrade}
+            </Badge>
+            {/* Trend indicator */}
+            <TrendIndicator trend={trend} score={card.overallScore ?? undefined} />
+          </div>
+        )}
+
+        {/* Radar chart or Defunct label */}
+        {card.isDefunct ? (
+          <span className="text-sm text-muted-foreground italic py-6">Defunct</span>
+        ) : (
+          <div className="w-full max-w-[11rem]">
+            <div className="aspect-[1/1.04]">
+              <ReportCardRadar card={card} labels="short" />
+            </div>
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+
+  if (card.isDefunct) {
+    return (
+      <div className="block h-full rounded-xl">
+        {cardBody}
+      </div>
+    );
+  }
 
   return (
     <Link
       href={buildStablecoinUrl(card.id)}
       className="pharos-focus-ring block h-full active:scale-[0.995] transition-transform rounded-xl"
     >
-      <Card
-        className={cn(
-          "hover:bg-accent/50 hover:shadow-md transition-all cursor-pointer h-full",
-          isSimulated && "border-dashed border-amber-500/40",
-          dimUnaffected && "opacity-60"
-        )}
-      >
-        <CardContent className="relative flex flex-col items-center gap-2.5 pt-3 pb-3">
-          {/* Simulated badge */}
-          {isSimulated && (
-            <span className="absolute top-2 right-2 text-[10px] font-semibold text-amber-700 dark:text-amber-400 bg-amber-500/15 rounded-full px-2 py-0.5 leading-none border border-amber-500/20">
-              Simulated
-            </span>
-          )}
-          {/* Header: logo + name + symbol */}
-          <div className="flex items-center gap-2 min-w-0 max-w-full">
-            <StablecoinLogo src={logo} name={card.name} size={24} />
-            <span className="truncate text-sm font-medium">{card.name}</span>
-            <span className="text-xs text-muted-foreground shrink-0">{card.symbol}</span>
-          </div>
-          {coreSettlement && (
-            <span className="rounded-full border border-frost-blue/30 bg-frost-blue/10 px-2 py-0.5 text-[10px] font-semibold leading-none text-sky-800 dark:text-sky-300">
-              Core rail
-            </span>
-          )}
-
-          {/* Large grade badge — show before→after when simulated */}
-          {isSimulated && originalGrade && originalGrade !== card.overallGrade ? (
-            <div className="flex items-center gap-1.5">
-              <Badge
-                variant="outline"
-                className={cn(
-                  "text-base font-bold font-mono px-2 py-0.5 pharos-grade-pop",
-                  REPORT_CARD_GRADE_COLORS[originalGrade]
-                )}
-                style={{ animationDelay: `${animIndex * 40}ms` }}
-              >
-                {originalGrade}
-              </Badge>
-              <span className="text-muted-foreground text-sm">&rarr;</span>
-              <Badge
-                variant="outline"
-                className={cn(
-                  "text-base font-bold font-mono px-2 py-0.5 pharos-grade-pop",
-                  REPORT_CARD_GRADE_COLORS[card.overallGrade]
-                )}
-                style={{ animationDelay: `${animIndex * 40 + 80}ms` }}
-              >
-                {card.overallGrade}
-              </Badge>
-              {originalScore != null && card.overallScore != null && (
-                <span className="text-xs font-medium text-red-700 dark:text-red-400">
-                  {"\u25BC"}
-                  {Math.abs(card.overallScore - originalScore)}
-                </span>
-              )}
-            </div>
-          ) : (
-            <div className="flex items-center gap-2">
-              <Badge
-                variant="outline"
-                className={cn(
-                  "text-xl font-bold font-mono px-3 py-1 pharos-grade-pop",
-                  REPORT_CARD_GRADE_COLORS[card.overallGrade]
-                )}
-                style={{ animationDelay: `${animIndex * 40}ms` }}
-              >
-                {card.overallGrade}
-              </Badge>
-              {/* Trend indicator */}
-              <TrendIndicator trend={trend} score={card.overallScore ?? undefined} />
-            </div>
-          )}
-
-          {/* Radar chart or Defunct label */}
-          {card.isDefunct ? (
-            <span className="text-sm text-muted-foreground italic py-6">Defunct</span>
-          ) : (
-            <div className="w-full max-w-[11rem]">
-              <div className="aspect-[1/1.04]">
-                <ReportCardRadar card={card} labels="short" />
-              </div>
-            </div>
-          )}
-        </CardContent>
-      </Card>
+      {cardBody}
     </Link>
   );
 }

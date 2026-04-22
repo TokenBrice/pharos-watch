@@ -58,7 +58,7 @@ Canonical IDs use `ticker-issuer` format — lowercase ticker symbol hyphenated 
 | `"ustb-superstate"` | Superstate USTB |
 | `"gyen-gyen"`       | GYEN            |
 
-The full list is exported from `shared/lib/stablecoins/index.ts`, with the raw metadata stored in `shared/data/stablecoins/*.json` and validated by `shared/lib/stablecoins/schema.ts`. The API currently accepts canonical IDs only; legacy route redirects are handled at the frontend/static-export layer, not by the worker ID resolver.
+The full list is exported from `shared/lib/stablecoins/index.ts`, with the raw metadata stored in `shared/data/stablecoins/*.json` and validated by `shared/lib/stablecoins/schema.ts`. The API accepts canonical IDs only. Non-canonical stablecoin detail URLs and legacy frontend route aliases are retired and unsupported.
 
 ---
 
@@ -1599,7 +1599,7 @@ For peg handling, `rawInputs.pegScore` is the effective peg input used by report
 
 | Field             | Type                                   | Description                                                                         |
 | ----------------- | -------------------------------------- | ----------------------------------------------------------------------------------- |
-| `id`              | `string`                               | Pharos stablecoin ID                                                                |
+| `id`              | `string`                               | Canonical Pharos stablecoin ID for live cards; stable cemetery ID for defunct cards |
 | `name`            | `string`                               | Full name                                                                           |
 | `symbol`          | `string`                               | Ticker                                                                              |
 | `overallGrade`    | `string`                               | Letter grade: `"A+"` through `"F"`, or `"NR"`                                       |

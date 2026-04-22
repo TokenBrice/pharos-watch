@@ -46,6 +46,23 @@ describe("handleReportCards", () => {
     expect(card).toHaveProperty("dimensions");
   });
 
+  it("emits unique non-numeric ids for defunct cards", async () => {
+    const asset = makeAsset({ id: "usdt-tether", symbol: "USDT" });
+    const db = makeReportCardsDb([asset]);
+    const res = await handleReportCards(db);
+    const body = (await res.json()) as {
+      cards: Array<{ id: string; isDefunct?: boolean }>;
+    };
+
+    const defunctIds = body.cards
+      .filter((card) => card.isDefunct === true)
+      .map((card) => card.id);
+
+    expect(defunctIds.length).toBeGreaterThan(0);
+    expect(new Set(defunctIds).size).toBe(defunctIds.length);
+    expect(defunctIds.every((id) => !/^\d+$/.test(id))).toBe(true);
+  });
+
   it("includes X-Data-Age header", async () => {
     const asset = makeAsset();
     const db = makeReportCardsDb([asset]);

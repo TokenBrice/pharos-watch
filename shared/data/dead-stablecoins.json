@@ -1,5 +1,6 @@
 [
   {
+    "id": "usnbt-nubits-2018-03",
     "name": "NuBits",
     "symbol": "USNBT",
     "logo": "nubits.png",
@@ -12,6 +13,7 @@
     "sourceLabel": "Reserve Research"
   },
   {
+    "id": "esd-empty-set-dollar-2021-01",
     "name": "Empty Set Dollar",
     "symbol": "ESD",
     "logo": "esd.png",
@@ -31,6 +33,7 @@
     ]
   },
   {
+    "id": "dsd-dynamic-set-dollar-2021-01",
     "name": "Dynamic Set Dollar",
     "symbol": "DSD",
     "logo": "dsd.png",
@@ -50,6 +53,7 @@
     ]
   },
   {
+    "id": "bac-basis-cash-2021-01",
     "name": "Basis Cash",
     "symbol": "BAC",
     "logo": "bac.png",
@@ -69,6 +73,7 @@
     ]
   },
   {
+    "id": "iron-iron-2021-06",
     "name": "IRON",
     "symbol": "IRON",
     "logo": "iron.png",
@@ -88,6 +93,7 @@
     ]
   },
   {
+    "id": "vai-vai-2021-09",
     "name": "Vai",
     "symbol": "VAI",
     "logo": "vai.png",
@@ -107,6 +113,7 @@
     ]
   },
   {
+    "id": "cash-cashio-dollar-2022-03",
     "name": "Cashio Dollar",
     "symbol": "CASH",
     "logo": "cash-cashio.png",
@@ -126,6 +133,7 @@
     ]
   },
   {
+    "id": "usdn-neutrino-usd-2022-04",
     "name": "Neutrino USD",
     "symbol": "USDN",
     "logo": "usdn.png",
@@ -145,6 +153,7 @@
     ]
   },
   {
+    "id": "bean-beanstalk-v1-2022-04",
     "name": "Beanstalk v1",
     "symbol": "BEAN",
     "logo": "bean.png",
@@ -164,6 +173,7 @@
     ]
   },
   {
+    "id": "ust-terrausd-2022-05",
     "name": "TerraUSD",
     "symbol": "UST",
     "llamaId": "3",
@@ -184,6 +194,7 @@
     ]
   },
   {
+    "id": "krt-terrakrw-2022-05",
     "name": "TerraKRW",
     "symbol": "KRT",
     "logo": "krt.png",
@@ -203,6 +214,7 @@
     ]
   },
   {
+    "id": "dei-dei-2022-05",
     "name": "DEI",
     "symbol": "DEI",
     "logo": "dei.png",
@@ -222,6 +234,7 @@
     ]
   },
   {
+    "id": "flexusd-flexusd-2022-06",
     "name": "flexUSD",
     "symbol": "FLEXUSD",
     "logo": "flexusd.png",
@@ -241,6 +254,7 @@
     ]
   },
   {
+    "id": "usdx-kava-usdx-2022-06",
     "name": "Kava USDX",
     "symbol": "USDX",
     "llamaId": "42",
@@ -255,6 +269,7 @@
     "sourceLabel": "The Block"
   },
   {
+    "id": "fusd-fantom-usd-2022-06",
     "name": "Fantom USD",
     "symbol": "FUSD",
     "llamaId": "63",
@@ -275,6 +290,7 @@
     ]
   },
   {
+    "id": "volt-volt-protocol-2022-08",
     "name": "VOLT Protocol",
     "symbol": "VOLT",
     "logo": "volt.png",
@@ -294,6 +310,7 @@
     ]
   },
   {
+    "id": "fei-fei-usd-2022-08",
     "name": "Fei USD",
     "symbol": "FEI",
     "logo": "fei.png",
@@ -313,6 +330,7 @@
     ]
   },
   {
+    "id": "usds-spiceusd-2022-09",
     "name": "SpiceUSD",
     "symbol": "USDS",
     "llamaId": "31",
@@ -333,6 +351,7 @@
     ]
   },
   {
+    "id": "husd-husd-2022-10",
     "name": "HUSD",
     "symbol": "HUSD",
     "logo": "husd.jpg",
@@ -352,6 +371,7 @@
     ]
   },
   {
+    "id": "usn-usn-2022-10",
     "name": "USN",
     "symbol": "USN",
     "llamaId": "54",
@@ -372,6 +392,7 @@
     ]
   },
   {
+    "id": "usp-usp-stablecoin-2023-02",
     "name": "USP Stablecoin",
     "symbol": "USP",
     "llamaId": "97",
@@ -392,6 +413,7 @@
     ]
   },
   {
+    "id": "usds-sperax-usd-2023-02",
     "name": "Sperax USD",
     "symbol": "USDs",
     "logo": "usds-sperax.png",
@@ -411,6 +433,7 @@
     ]
   },
   {
+    "id": "busd-binance-usd-2023-02",
     "name": "Binance USD",
     "symbol": "BUSD",
     "logo": "busd.png",
@@ -434,6 +457,7 @@
     ]
   },
   {
+    "id": "rsv-reserve-2023-03",
     "name": "Reserve",
     "symbol": "RSV",
     "logo": "rsv.png",
@@ -453,6 +477,7 @@
     ]
   },
   {
+    "id": "musd-mstable-usd-2023-04",
     "name": "mStable USD",
     "symbol": "MUSD",
     "logo": "musd.png",
@@ -472,6 +497,7 @@
     ]
   },
   {
+    "id": "usdk-usdk-2023-06",
     "name": "USDK",
     "symbol": "USDK",
     "logo": "usdk.png",
@@ -491,6 +517,7 @@
     ]
   },
   {
+    "id": "usdp-usdp-stablecoin-2023-06",
     "name": "USDP Stablecoin",
     "symbol": "USDP",
     "logo": "usdp.png",
@@ -510,6 +537,7 @@
     ]
   },
   {
+    "id": "usdi-interest-protocol-2023-06",
     "name": "Interest Protocol",
     "symbol": "USDI",
     "llamaId": "76",
@@ -524,6 +552,7 @@
     "sourceLabel": "DefiLlama"
   },
   {
+    "id": "tor-tor-2023-07",
     "name": "TOR",
     "symbol": "TOR",
     "logo": "tor.png",
@@ -543,6 +572,7 @@
     ]
   },
   {
+    "id": "usdc-m-multichain-usdc-2023-07",
     "name": "Multichain USDC",
     "symbol": "USDC.m",
     "logo": "usdc-multichain.png",
@@ -562,6 +592,7 @@
     ]
   },
   {
+    "id": "pai-parrot-usd-2023-07",
     "name": "Parrot USD",
     "symbol": "PAI",
     "logo": "pai.png",
@@ -581,6 +612,7 @@
     ]
   },
   {
+    "id": "ausd-acala-usd-2023-07",
     "name": "Acala USD",
     "symbol": "aUSD",
     "logo": "ausd.png",
@@ -594,6 +626,7 @@
     "sourceLabel": "CoinDesk"
   },
   {
+    "id": "fiat-fiat-i-2023-07",
     "name": "FIAT I",
     "symbol": "FIAT",
     "llamaId": "61",
@@ -614,6 +647,7 @@
     ]
   },
   {
+    "id": "vst-vesta-stable-2023-09",
     "name": "Vesta Stable",
     "symbol": "VST",
     "logo": "vst.png",
@@ -633,6 +667,7 @@
     ]
   },
   {
+    "id": "usdr-real-usd-2023-10",
     "name": "Real USD",
     "symbol": "USDR",
     "llamaId": "85",
@@ -653,6 +688,7 @@
     ]
   },
   {
+    "id": "r-raft-r-2023-11",
     "name": "Raft R",
     "symbol": "R",
     "llamaId": "115",
@@ -673,6 +709,7 @@
     ]
   },
   {
+    "id": "yusd-yusd-stablecoin-2023-12",
     "name": "YUSD Stablecoin",
     "symbol": "YUSD",
     "llamaId": "13",
@@ -693,6 +730,7 @@
     ]
   },
   {
+    "id": "ibeur-iron-bank-euro-2023-12",
     "name": "Iron Bank EURO",
     "symbol": "IBEUR",
     "logo": "ibeur.png",
@@ -712,6 +750,7 @@
     ]
   },
   {
+    "id": "rai-rai-reflex-index-2024-02",
     "name": "Rai Reflex Index",
     "symbol": "RAI",
     "logo": "rai.png",
@@ -731,6 +770,7 @@
     ]
   },
   {
+    "id": "bean-bean-2024-05",
     "name": "Bean",
     "symbol": "BEAN",
     "llamaId": "67",
@@ -751,6 +791,7 @@
     ]
   },
   {
+    "id": "eusd-lybra-eusd-2024-06",
     "name": "Lybra eUSD",
     "symbol": "eUSD",
     "logo": "eusd.png",
@@ -770,6 +811,7 @@
     ]
   },
   {
+    "id": "peusd-lybra-peusd-2024-06",
     "name": "Lybra peUSD",
     "symbol": "peUSD",
     "logo": "peusd.png",
@@ -789,6 +831,7 @@
     ]
   },
   {
+    "id": "pusd-jpeg-d-pusd-2024-06",
     "name": "JPEG'd PUSd",
     "symbol": "PUSD",
     "logo": "pusd.jpg",
@@ -808,6 +851,7 @@
     ]
   },
   {
+    "id": "ush-hedge-usd-2024-06",
     "name": "Hedge USD",
     "symbol": "USH",
     "logo": "ush.png",
@@ -827,6 +871,7 @@
     ]
   },
   {
+    "id": "star-preon-star-2024-06",
     "name": "Preon STAR",
     "symbol": "STAR",
     "logo": "star.png",
@@ -846,6 +891,7 @@
     ]
   },
   {
+    "id": "cash-stabl-fi-cash-2024-06",
     "name": "Stabl.fi Cash",
     "symbol": "CASH",
     "llamaId": "99",
@@ -866,6 +912,7 @@
     ]
   },
   {
+    "id": "note-note-2024-06",
     "name": "NOTE",
     "symbol": "NOTE",
     "llamaId": "78",
@@ -880,6 +927,7 @@
     "sourceLabel": "DefiLlama"
   },
   {
+    "id": "dyadv1-dyad-v1-2024-06",
     "name": "DYAD v1",
     "symbol": "DYADv1",
     "logo": "dyad.png",
@@ -899,6 +947,7 @@
     ]
   },
   {
+    "id": "seur-synthetix-seur-2024-07",
     "name": "Synthetix sEUR",
     "symbol": "sEUR",
     "logo": "seur.png",
@@ -918,6 +967,7 @@
     ]
   },
   {
+    "id": "uno-nostra-uno-2024-07",
     "name": "Nostra UNO",
     "symbol": "UNO",
     "llamaId": "177",
@@ -938,6 +988,7 @@
     ]
   },
   {
+    "id": "uxd-uxd-stablecoin-2024-08",
     "name": "UXD Stablecoin",
     "symbol": "UXD",
     "logo": "uxd.png",
@@ -957,6 +1008,7 @@
     ]
   },
   {
+    "id": "par-parallel-2024-09",
     "name": "Parallel",
     "symbol": "PAR",
     "llamaId": "56",
@@ -977,6 +1029,7 @@
     ]
   },
   {
+    "id": "bob-zkbob-bob-2024-10",
     "name": "zkBob BOB",
     "symbol": "BOB",
     "logo": "bob.png",
@@ -996,6 +1049,7 @@
     ]
   },
   {
+    "id": "mkusd-prisma-mkusd-2024-11",
     "name": "Prisma mkUSD",
     "symbol": "mkUSD",
     "logo": "mkusd.png",
@@ -1015,6 +1069,7 @@
     ]
   },
   {
+    "id": "ultra-prismalrt-ultra-2024-11",
     "name": "PrismaLRT ULTRA",
     "symbol": "ULTRA",
     "logo": "ultra.png",
@@ -1034,6 +1089,7 @@
     ]
   },
   {
+    "id": "eurt-euro-tether-2024-11",
     "name": "Euro Tether",
     "symbol": "EURT",
     "logo": "eurt.png",
@@ -1053,6 +1109,7 @@
     ]
   },
   {
+    "id": "dai-overnight-dai-2024-12",
     "name": "Overnight DAI+",
     "symbol": "DAI+",
     "logo": "dai-plus.png",
@@ -1072,6 +1129,7 @@
     ]
   },
   {
+    "id": "usdv-verified-usd-2024-12",
     "name": "Verified USD",
     "symbol": "USDV",
     "logo": "usdv.png",
@@ -1091,6 +1149,7 @@
     ]
   },
   {
+    "id": "l-bold-legacy-bold-2025-02",
     "name": "Legacy BOLD",
     "symbol": "L-BOLD",
     "logo": "lbold.png",
@@ -1110,6 +1169,7 @@
     ]
   },
   {
+    "id": "usd-usd-2025-01",
     "name": "USD+",
     "symbol": "USD+",
     "logo": "usd-plus.png",
@@ -1129,6 +1189,7 @@
     ]
   },
   {
+    "id": "usdm-mountain-protocol-usd-2025-05",
     "name": "Mountain Protocol USD",
     "symbol": "USDM",
     "llamaId": "132",
@@ -1149,6 +1210,7 @@
     ]
   },
   {
+    "id": "euroe-euroe-2025-05",
     "name": "EUROe",
     "symbol": "EUROe",
     "llamaId": "98",
@@ -1169,6 +1231,7 @@
     ]
   },
   {
+    "id": "dyad-dyad-v2-2025-06",
     "name": "DYAD v2",
     "symbol": "DYAD",
     "llamaId": "207",
@@ -1189,6 +1252,7 @@
     ]
   },
   {
+    "id": "mod-move-dollar-2025-06",
     "name": "Move Dollar",
     "symbol": "MOD",
     "logo": "mod.png",
@@ -1208,6 +1272,7 @@
     ]
   },
   {
+    "id": "zusd-gmo-zusd-2025-06",
     "name": "GMO ZUSD",
     "symbol": "ZUSD",
     "logo": "zusd.png",
@@ -1227,6 +1292,7 @@
     ]
   },
   {
+    "id": "grai-gravita-grai-2025-06",
     "name": "Gravita GRAI",
     "symbol": "GRAI",
     "logo": "grai.png",
@@ -1246,6 +1312,7 @@
     ]
   },
   {
+    "id": "hyusd-high-yield-usd-2025-06",
     "name": "High Yield USD",
     "symbol": "HYUSD",
     "logo": "hyusd.png",
@@ -1265,6 +1332,7 @@
     ]
   },
   {
+    "id": "usdl-liquid-loans-usdl-2025-06",
     "name": "Liquid Loans USDL",
     "symbol": "USDL",
     "logo": "liquid-loans-usdl.png",
@@ -1279,6 +1347,7 @@
     "sourceLabel": "DefiLlama"
   },
   {
+    "id": "usdj-just-usdj-2025-08",
     "name": "JUST USDJ",
     "symbol": "USDJ",
     "logo": "usdj.png",
@@ -1298,6 +1367,7 @@
     ]
   },
   {
+    "id": "pinto-pinto-2025-10",
     "name": "Pinto",
     "symbol": "PINTO",
     "logo": "pinto.png",
@@ -1317,6 +1387,7 @@
     ]
   },
   {
+    "id": "lvlusd-level-usd-2025-10",
     "name": "Level USD",
     "symbol": "LVLUSD",
     "logo": "lvlusd.png",
@@ -1336,6 +1407,7 @@
     ]
   },
   {
+    "id": "usdl-lift-dollar-2025-10",
     "name": "Lift Dollar",
     "symbol": "USDL",
     "logo": "usdl.png",
@@ -1355,6 +1427,7 @@
     ]
   },
   {
+    "id": "csusdl-coinshift-csusdl-2025-10",
     "name": "Coinshift csUSDL",
     "symbol": "csUSDL",
     "logo": "csusdl.png",
@@ -1374,6 +1447,7 @@
     ]
   },
   {
+    "id": "deusd-elixir-deusd-2025-11",
     "name": "Elixir deUSD",
     "symbol": "DEUSD",
     "logo": "deusd.png",
@@ -1393,6 +1467,7 @@
     ]
   },
   {
+    "id": "usdx-stables-labs-usdx-2025-11",
     "name": "Stables Labs USDX",
     "symbol": "USDX",
     "logo": "usdx-stableslabs.png",
@@ -1412,6 +1487,7 @@
     ]
   },
   {
+    "id": "xusd-stream-finance-xusd-2025-11",
     "name": "Stream Finance xUSD",
     "symbol": "xUSD",
     "logo": "xusd.png",
@@ -1431,6 +1507,7 @@
     ]
   },
   {
+    "id": "yu-yu-2025-11",
     "name": "YU",
     "symbol": "YU",
     "llamaId": "268",
@@ -1451,6 +1528,7 @@
     ]
   },
   {
+    "id": "uspd-us-permissionless-dollar-2025-12",
     "name": "US Permissionless Dollar",
     "symbol": "USPD",
     "llamaId": "315",
@@ -1471,6 +1549,7 @@
     ]
   },
   {
+    "id": "pusd-palm-usd-2026-01",
     "name": "Palm USD",
     "symbol": "PUSD",
     "logo": "pusd-palm.png",
@@ -1490,6 +1569,7 @@
     ]
   },
   {
+    "id": "cnht-tether-cnh-2026-02",
     "name": "Tether CNH",
     "symbol": "CNHT",
     "logo": "cnht.png",
@@ -1509,6 +1589,7 @@
     ]
   },
   {
+    "id": "eura-angle-eura-2026-03",
     "name": "Angle EURA",
     "symbol": "EURA",
     "logo": "eura.png",
@@ -1528,6 +1609,7 @@
     ]
   },
   {
+    "id": "usda-angle-usda-2026-03",
     "name": "Angle USDA",
     "symbol": "USDA",
     "logo": "usda-angle.png",
@@ -1546,6 +1628,7 @@
     ]
   },
   {
+    "id": "float-float-protocol-2025-07",
     "name": "Float Protocol",
     "symbol": "FLOAT",
     "logo": "float.png",
@@ -1565,6 +1648,7 @@
     ]
   },
   {
+    "id": "usdl-lift-dollar-2025-12",
     "name": "Lift Dollar",
     "symbol": "USDL",
     "logo": "usdl.png",
@@ -1585,6 +1669,7 @@
     ]
   },
   {
+    "id": "usdm-mountain-protocol-usdm-2025-08",
     "name": "Mountain Protocol USDM",
     "symbol": "USDM",
     "logo": "usdm-mountain.png",
@@ -1605,6 +1690,7 @@
     ]
   },
   {
+    "id": "syusd-synnax-stablecoin-2026-01",
     "name": "Synnax Stablecoin",
     "symbol": "syUSD",
     "logo": "syusd.png",
@@ -1625,6 +1711,7 @@
     ]
   },
   {
+    "id": "d-saga-dollar-2026-01",
     "name": "Saga Dollar",
     "symbol": "D",
     "logo": "saga-dollar.svg",
@@ -1639,6 +1726,7 @@
     "sourceLabel": "CoinTelegraph"
   },
   {
+    "id": "gyd-gyroscope-gyd-2026-02",
     "name": "Gyroscope GYD",
     "symbol": "GYD",
     "logo": "gyd.png",
