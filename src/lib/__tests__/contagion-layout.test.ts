@@ -250,6 +250,58 @@ describe("buildGraphData", () => {
       expect(node.r).toBeGreaterThanOrEqual(0);
     }
   });
+
+  it("renders the synthetic wrapper edge between a tracked variant and its parent exactly once", () => {
+    const cards = [mockCard("usds-sky", "USDS"), mockCard("susds-sky", "SUSDS")];
+    const mcapMap = new Map<string, number>([
+      ["usds-sky", 5_000_000_000],
+      ["susds-sky", 2_000_000_000],
+    ]);
+    const dependencyEdges = [
+      { from: "usds-sky", to: "susds-sky", weight: 1, type: "wrapper" as const },
+    ];
+
+    const result = buildGraphData(cards, mcapMap, dependencyEdges);
+    const nodeIds = result.nodes.map((n) => n.id).sort();
+    expect(nodeIds).toEqual(["susds-sky", "usds-sky"]);
+
+    const wrapperLinks = result.links.filter((link) => {
+      const srcId = typeof link.source === "string" ? link.source : (link.source as GraphNode).id;
+      const tgtId = typeof link.target === "string" ? link.target : (link.target as GraphNode).id;
+      return link.type === "wrapper" && srcId === "susds-sky" && tgtId === "usds-sky";
+    });
+    expect(wrapperLinks).toHaveLength(1);
+    expect(wrapperLinks[0].weight).toBe(1);
+  });
+
+  it("keeps node and link totals stable when the variant edge is added alongside an existing reserve edge", () => {
+    const cards = [
+      mockCard("upstream", "UP"),
+      mockCard("downstream", "DOWN"),
+      mockCard("susds-sky", "SUSDS"),
+      mockCard("usds-sky", "USDS"),
+    ];
+    const mcapMap = new Map<string, number>([
+      ["upstream", 5_000_000_000],
+      ["downstream", 3_000_000_000],
+      ["usds-sky", 4_000_000_000],
+      ["susds-sky", 1_000_000_000],
+    ]);
+
+    const edgesWithoutVariant = [
+      { from: "upstream", to: "downstream", weight: 0.6, type: "collateral" as const },
+    ];
+    const edgesWithVariant = [
+      ...edgesWithoutVariant,
+      { from: "usds-sky", to: "susds-sky", weight: 1, type: "wrapper" as const },
+    ];
+
+    const baseline = buildGraphData(cards, mcapMap, edgesWithoutVariant);
+    const withVariant = buildGraphData(cards, mcapMap, edgesWithVariant);
+
+    expect(withVariant.nodes.length).toBe(baseline.nodes.length + 2);
+    expect(withVariant.links.length).toBe(baseline.links.length + 1);
+  });
 });
 
 // ---------------------------------------------------------------------------

@@ -222,7 +222,7 @@ These skills do not replace review — they are research scaffolding. Always ver
 - `flags.governance` is the coarse public taxonomy. `governanceQuality` is the finer report-card override.
 - `canBeBlacklisted` only accepts `true`, `false`, or `"possible"`. Do not invent `"inherited"` in metadata; that is computed later.
 - `pegReferenceId` is for NAV wrappers or derivative assets whose stability should inherit from another tracked base asset.
-- `variantOf` / `variantKind` are only for active wrapped or staked coins whose primary user expectation is still direct exposure to another tracked stablecoin. In v1 they co-require, the parent must be an active non-variant non-`navToken` stablecoin, and the child must keep `flags.navToken === true` plus `pegReferenceId === variantOf`.
+- `variantOf` / `variantKind` are only for active wrapped, staked, or bond-maturity children whose primary user expectation is still direct exposure to another tracked stablecoin. They co-require, the parent must be an active non-variant non-`navToken` stablecoin, and the child must keep `flags.navToken === true` plus `pegReferenceId === variantOf`. Supported kinds and their dependency-risk ceilings relative to the parent overall: `savings-passthrough` = `parent - 3`, `risk-absorption` = `parent - 5`, `bond-maturity` = `parent - 8`. Blacklistable/freezable status inherits from the parent automatically — do not author `canBeBlacklisted` on a variant unless the wrapper's own contract exposes a freeze surface beyond the parent's.
 - `tradedContracts` is for market-traded variants that matter for discovery/liquidity/yield identity but are not the canonical supply contracts.
 - `tags` is optional editorial metadata. Do not use it instead of a first-class field.
 

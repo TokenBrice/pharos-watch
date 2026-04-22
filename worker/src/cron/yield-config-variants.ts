@@ -12,7 +12,12 @@ export const YIELD_VARIANT_MAP: Record<string, YieldVariant> = {
     variantSymbol: "loAZND",
     variantChain: "monad",
   },
-  // GHO -> sGHO (Aave Safety Module staking wrapper)
+  // GHO -> sGHO (Aave Safety Module staking wrapper).
+  // NOTE: sGHO is a different instrument from the tracked `stkgho-umbrella-aave`
+  // variant (Umbrella staking, risk-absorption). Both are Aave products over
+  // GHO but represent distinct wrappers; keeping this entry under the parent
+  // is correct and does not conflict with the Phase 1.6 tracked-wrapper yield
+  // ownership handoff (which only covered sUSDe/sUSDS/sDAI/sfrxUSD/scrvUSD).
   "gho-aave": {
     variantSymbol: "sGHO",
     variantChain: "ethereum",

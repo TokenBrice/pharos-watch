@@ -8,6 +8,7 @@ import {
   scoreDependencyRisk,
   scoreResilience,
   scoreDecentralization,
+  applyVariantOverallCap,
   chainInfraScore,
   getBlacklistStatusLabel,
   isBlacklistable,
@@ -215,6 +216,17 @@ describe("scoreDependencyRisk", () => {
       variantParentId: "usds-sky",
       variantKind: "risk-absorption",
     }, new Map([["usds-sky", 80]]));
+
+    expect(result.score).toBe(75);
+  });
+
+  it("uses the strategy-vault wrapper ceiling for tracked strategy variants", () => {
+    const result = scoreDependencyRisk({
+      governance: "centralized-dependent",
+      dependencies: [{ id: "usdai-usd-ai", weight: 1, type: "wrapper" }],
+      variantParentId: "usdai-usd-ai",
+      variantKind: "strategy-vault",
+    }, new Map([["usdai-usd-ai", 80]]));
 
     expect(result.score).toBe(75);
   });
@@ -870,6 +882,55 @@ describe("computeStressedGrades", () => {
   });
 });
 
+describe("applyVariantOverallCap", () => {
+  const base = {
+    grade: "A" as const,
+    score: 88,
+    baseScore: 87.5,
+    ratedDimensions: 5,
+  };
+
+  it("caps the child score at the parent and records the pre-cap value (live-cap path)", () => {
+    const result = applyVariantOverallCap(base, 72);
+    expect(result.overallCapped).toBe(true);
+    expect(result.score).toBe(72);
+    expect(result.grade).toBe(scoreToGrade(72));
+    expect(result.uncappedOverallScore).toBe(88);
+    expect(result.baseScore).toBe(base.baseScore);
+  });
+
+  it("skips the cap and leaves the child untouched when the parent is unrated", () => {
+    const result = applyVariantOverallCap(base, null);
+    expect(result.overallCapped).toBe(false);
+    expect(result.score).toBe(88);
+    expect(result.grade).toBe(base.grade);
+    expect(result.uncappedOverallScore).toBeNull();
+    expect(result.baseScore).toBe(base.baseScore);
+  });
+
+  it("skips the cap when the child already scores at or below the parent", () => {
+    const equalCap = applyVariantOverallCap(base, 88);
+    expect(equalCap.overallCapped).toBe(false);
+    expect(equalCap.score).toBe(88);
+    expect(equalCap.uncappedOverallScore).toBeNull();
+
+    const underCap = applyVariantOverallCap(base, 95);
+    expect(underCap.overallCapped).toBe(false);
+    expect(underCap.score).toBe(88);
+    expect(underCap.uncappedOverallScore).toBeNull();
+  });
+
+  it("skips the cap when the child score is null", () => {
+    const result = applyVariantOverallCap(
+      { grade: "NR", score: null, baseScore: null, ratedDimensions: 0 },
+      72,
+    );
+    expect(result.overallCapped).toBe(false);
+    expect(result.score).toBeNull();
+    expect(result.uncappedOverallScore).toBeNull();
+  });
+});
+
 describe("chainInfraScore", () => {
   it("scores mature-alt-l1 single-chain at 45", () => {
     expect(chainInfraScore("mature-alt-l1", "single-chain")).toBe(45);
@@ -1190,6 +1251,108 @@ describe("enrichLiveSlicesForBlacklist", () => {
     ];
     const enriched = enrichLiveSlicesForBlacklist(live, blacklistableIds, trackedMetaById);
     expect(isBlacklistable(meta as never, blacklistableIds, enriched)).toBe("inherited");
+  });
+});
+
+describe("resolveBlacklistStatuses variant inheritance", () => {
+  it("inherits a blacklistable parent as upstream on a tracked variant", () => {
+    const metas = [
+      {
+        id: "parent",
+        name: "Parent",
+        symbol: "PAR",
+        flags: { governance: "centralized" as const },
+      },
+      {
+        id: "child",
+        name: "Child",
+        symbol: "CHD",
+        flags: { governance: "centralized-dependent" as const, navToken: true },
+        variantOf: "parent",
+        variantKind: "savings-passthrough" as const,
+        pegReferenceId: "parent",
+      },
+    ];
+
+    const resolved = resolveBlacklistStatuses(metas as never);
+    expect(resolved.get("parent")).toBe(true);
+    expect(resolved.get("child")).toBe("inherited");
+  });
+
+  it("propagates a possible parent status to a tracked variant", () => {
+    const metas = [
+      {
+        id: "parent",
+        name: "Parent",
+        symbol: "PAR",
+        flags: { governance: "centralized-dependent" as const },
+        canBeBlacklisted: "possible" as const,
+      },
+      {
+        id: "child",
+        name: "Child",
+        symbol: "CHD",
+        flags: { governance: "centralized-dependent" as const, navToken: true },
+        variantOf: "parent",
+        variantKind: "savings-passthrough" as const,
+        pegReferenceId: "parent",
+      },
+    ];
+
+    const resolved = resolveBlacklistStatuses(metas as never);
+    expect(resolved.get("parent")).toBe("possible");
+    expect(resolved.get("child")).toBe("possible");
+  });
+
+  it("does not coerce a variant to inherited when the parent is not blacklistable", () => {
+    const metas = [
+      {
+        id: "parent",
+        name: "Parent",
+        symbol: "PAR",
+        flags: { governance: "decentralized" as const },
+        canBeBlacklisted: false as const,
+        reserves: [{ name: "ETH", pct: 100, risk: "very-low" as const }],
+      },
+      {
+        id: "child",
+        name: "Child",
+        symbol: "CHD",
+        flags: { governance: "centralized-dependent" as const, navToken: true },
+        variantOf: "parent",
+        variantKind: "savings-passthrough" as const,
+        pegReferenceId: "parent",
+        reserves: [{ name: "Parent", pct: 100, risk: "low" as const, coinId: "parent" }],
+      },
+    ];
+
+    const resolved = resolveBlacklistStatuses(metas as never);
+    expect(resolved.get("parent")).toBe(false);
+    expect(resolved.get("child")).toBe(false);
+  });
+
+  it("keeps an explicit override on the variant even when the parent is blacklistable", () => {
+    const metas = [
+      {
+        id: "parent",
+        name: "Parent",
+        symbol: "PAR",
+        flags: { governance: "centralized" as const },
+      },
+      {
+        id: "child",
+        name: "Child",
+        symbol: "CHD",
+        flags: { governance: "centralized-dependent" as const, navToken: true },
+        variantOf: "parent",
+        variantKind: "risk-absorption" as const,
+        pegReferenceId: "parent",
+        canBeBlacklisted: true as const,
+      },
+    ];
+
+    const resolved = resolveBlacklistStatuses(metas as never);
+    expect(resolved.get("child")).toBe(true);
   });
 });
 

@@ -46,6 +46,41 @@ describe("handleReportCards", () => {
     expect(card).toHaveProperty("dimensions");
   });
 
+  it("every card exposes variant-aware parent-cap fields on the top-level payload and rawInputs", async () => {
+    const asset = makeAsset({ id: "usdt-tether", symbol: "USDT" });
+    const db = makeReportCardsDb([asset]);
+    const res = await handleReportCards(db);
+    const body = (await res.json()) as {
+      cards: Array<{
+        id: string;
+        overallCapped?: unknown;
+        uncappedOverallScore?: unknown;
+        rawInputs?: { variantParentId?: unknown; variantKind?: unknown };
+      }>;
+    };
+
+    expect(body.cards.length).toBeGreaterThan(0);
+    for (const card of body.cards) {
+      expect(card).toHaveProperty("overallCapped");
+      expect(typeof card.overallCapped).toBe("boolean");
+      expect(card).toHaveProperty("uncappedOverallScore");
+      expect(
+        card.uncappedOverallScore === null || typeof card.uncappedOverallScore === "number",
+      ).toBe(true);
+      expect(card.rawInputs).toBeDefined();
+      expect(card.rawInputs).toHaveProperty("variantParentId");
+      expect(
+        card.rawInputs!.variantParentId === null ||
+          typeof card.rawInputs!.variantParentId === "string",
+      ).toBe(true);
+      expect(card.rawInputs).toHaveProperty("variantKind");
+      expect(
+        card.rawInputs!.variantKind === null ||
+          typeof card.rawInputs!.variantKind === "string",
+      ).toBe(true);
+    }
+  });
+
   it("emits unique non-numeric ids for defunct cards", async () => {
     const asset = makeAsset({ id: "usdt-tether", symbol: "USDT" });
     const db = makeReportCardsDb([asset]);

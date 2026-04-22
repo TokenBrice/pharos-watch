@@ -307,6 +307,10 @@ export async function dispatchTelegramAlerts(
         )
         .all<ActiveDepegRow>()
         .then((result) => result.results ?? []),
+      // Seed-only fallback. Live safety-alert diffs come from the alert-only
+      // source cache below; these rows are only consulted when the source cache
+      // is missing/stale/wrong-generation, and in that branch safety alerts
+      // stay suppressed (see `safetyAlertsSuppressed` downstream).
       db
         .prepare(
           `SELECT h.stablecoin_id,

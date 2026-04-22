@@ -19,6 +19,7 @@ interface BlacklistSymbolMatcher {
 export interface BlacklistResolutionContext {
   blacklistableIds: ReadonlySet<string>;
   symbolMatchers: readonly BlacklistSymbolMatcher[];
+  trackedMetaById?: ReadonlyMap<string, StablecoinMeta>;
 }
 
 export interface ResolveBlacklistStatusOptions {
@@ -199,6 +200,7 @@ export function createBlacklistResolutionContext(
   return {
     blacklistableIds,
     symbolMatchers,
+    trackedMetaById,
   };
 }
 
@@ -237,6 +239,21 @@ export function resolveBlacklistStatus(
 ): BlacklistStatus {
   if (meta.canBeBlacklisted !== undefined) return meta.canBeBlacklisted;
   if (meta.flags.governance === "centralized") return true;
+
+  // Tracked parent variants inherit their parent's freeze surface: a sUSDS or
+  // sDAI holder's exposure to issuer-side freeze flows through the parent, so
+  // resolve the parent's status rather than relying on reserve/text inference.
+  if (meta.variantOf && options.context) {
+    if (options.context.blacklistableIds.has(meta.variantOf)) {
+      return "inherited";
+    }
+    const parentMeta = options.context.trackedMetaById?.get(meta.variantOf);
+    if (parentMeta) {
+      const parentStatus = resolveBlacklistStatus(parentMeta, options);
+      if (parentStatus === true || parentStatus === "inherited") return "inherited";
+      if (parentStatus === "possible") return "possible";
+    }
+  }
 
   const effectiveReserves = options.reserveSlices ?? meta.reserves;
   const enrichedReserves = effectiveReserves && options.context
