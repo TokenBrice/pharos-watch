@@ -1,12 +1,14 @@
 export {
+  createBlacklistResolutionContext,
   enrichLiveSlicesForBlacklist,
   getBlacklistStatusLabel,
   isBlacklistable,
-} from "./report-card-blacklist-matchers";
+  resolveBlacklistStatus,
+  resolveBlacklistStatuses,
+} from "./report-card-blacklist-authority";
 export type {
   BlacklistStatus,
   BlacklistResolutionContext,
   ResolveBlacklistStatusOptions,
   ResolveBlacklistStatusesOptions,
-} from "./report-card-blacklist-matchers";
-export { resolveBlacklistStatuses } from "./report-card-blacklist-resolver";
+} from "./report-card-blacklist-authority";

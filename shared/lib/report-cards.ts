@@ -32,9 +32,11 @@ export { GOVERNANCE_QUALITY_SCORE, resolveGovernanceQuality, scoreDecentralizati
 export { scoreDependencyRisk } from "./report-card-dependency";
 export { applyVariantOverallCap, computeOverallGrade, computeStressedGrades } from "./report-card-overall";
 export {
+  createBlacklistResolutionContext,
   enrichLiveSlicesForBlacklist,
   getBlacklistStatusLabel,
   isBlacklistable,
+  resolveBlacklistStatus,
   resolveBlacklistStatuses,
   type BlacklistStatus,
 } from "./report-card-blacklist-risk";
