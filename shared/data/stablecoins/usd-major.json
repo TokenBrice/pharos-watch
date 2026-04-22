@@ -1144,7 +1144,6 @@
         "decimals": 18
       }
     ],
-    "canBeBlacklisted": "possible",
     "deploymentModel": "single-chain",
     "collateralQuality": "exotic",
     "custodyModel": "onchain",
@@ -3688,7 +3687,6 @@
         "decimals": 18
       }
     ],
-    "canBeBlacklisted": "possible",
     "deploymentModel": "single-chain",
     "collateralQuality": "exotic",
     "custodyModel": "institutional-regulated",

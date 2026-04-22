@@ -2,8 +2,6 @@ import { CENTRALIZED_CUSTODY_CRYPTO } from "./centralized-custody";
 import type { ReserveSlice, StablecoinMeta } from "../types";
 
 export type BlacklistStatus = boolean | "possible" | "inherited";
-
-export const INHERITED_BLACKLIST_THRESHOLD_PCT = 50;
 const MIN_SYMBOL_LENGTH_FOR_DETECTION = 3;
 const SYMBOL_MATCHER_PREFIX_GROUP = "(?:s|stata|vb|syrup\\s*)?";
 const SYMBOL_MATCHER_SUFFIX_GROUP = "(?:0)?";
@@ -91,8 +89,8 @@ const DIRECT_COLLATERAL_BLACKLIST_SYMBOLS = [
   "TSLAX",
 ] as const;
 
-const DIRECT_COLLATERAL_BLACKLIST_PATTERNS = DIRECT_COLLATERAL_BLACKLIST_SYMBOLS.map(
-  (symbol) => buildBlacklistableSymbolPattern(symbol),
+const DIRECT_COLLATERAL_BLACKLIST_PATTERNS = DIRECT_COLLATERAL_BLACKLIST_SYMBOLS.map((symbol) =>
+  buildBlacklistableSymbolPattern(symbol),
 );
 
 const CUSTODY_BLACKLIST_TEXT_PATTERNS: readonly RegExp[] = [
@@ -137,43 +135,27 @@ function sliceTextSignalsDirectBlacklistRisk(text: string): boolean {
   );
 }
 
-function textSignalsKnownBlacklistableSymbol(
-  text: string,
-  context?: BlacklistResolutionContext,
-): boolean {
+function textSignalsKnownBlacklistableSymbol(text: string, context?: BlacklistResolutionContext): boolean {
   if (!context) return false;
   return context.symbolMatchers.some(({ pattern }) => pattern.test(text));
 }
 
 function sliceTextSignalsPossibleBlacklistRisk(text: string): boolean {
-  return (
-    sliceTextSignalsDirectBlacklistRisk(text) ||
-    textMatchesAny(text, POSSIBLE_BLACKLIST_TEXT_PATTERNS)
-  );
+  return sliceTextSignalsDirectBlacklistRisk(text) || textMatchesAny(text, POSSIBLE_BLACKLIST_TEXT_PATTERNS);
 }
 
-function metaTextSignalsPossibleBlacklistRisk(
-  meta: StablecoinMeta,
-  context?: BlacklistResolutionContext,
-): boolean {
+function metaTextSignalsPossibleBlacklistRisk(meta: StablecoinMeta, context?: BlacklistResolutionContext): boolean {
   const text = `${meta.collateral ?? ""} ${meta.pegMechanism ?? ""}`;
   return (
     textMatchesAny(text, CUSTODY_BLACKLIST_TEXT_PATTERNS) ||
-    (
-      BLACKLIST_BACKING_CONTEXT_PATTERN.test(text) &&
-      (
-        textMatchesAny(text, DIRECT_BLACKLIST_TEXT_PATTERNS) ||
+    (BLACKLIST_BACKING_CONTEXT_PATTERN.test(text) &&
+      (textMatchesAny(text, DIRECT_BLACKLIST_TEXT_PATTERNS) ||
         DIRECT_COLLATERAL_BLACKLIST_PATTERNS.some((pattern) => pattern.test(text)) ||
-        textSignalsKnownBlacklistableSymbol(text, context)
-      )
-    )
+        textSignalsKnownBlacklistableSymbol(text, context)))
   );
 }
 
-function reserveSliceBlacklistRisk(
-  slice: ReserveSlice,
-  context?: BlacklistResolutionContext,
-): ReserveBlacklistRisk {
+function reserveSliceBlacklistRisk(slice: ReserveSlice, context?: BlacklistResolutionContext): ReserveBlacklistRisk {
   if (slice.blacklistable === true) return "direct";
   if (slice.coinId !== undefined && context?.blacklistableIds.has(slice.coinId) === true) return "direct";
   if (sliceTextSignalsDirectBlacklistRisk(slice.name)) return "direct";
@@ -256,9 +238,10 @@ export function resolveBlacklistStatus(
   }
 
   const effectiveReserves = options.reserveSlices ?? meta.reserves;
-  const enrichedReserves = effectiveReserves && options.context
-    ? enrichReserveSlicesForBlacklist(effectiveReserves, options.context)
-    : effectiveReserves;
+  const enrichedReserves =
+    effectiveReserves && options.context
+      ? enrichReserveSlicesForBlacklist(effectiveReserves, options.context)
+      : effectiveReserves;
 
   if (enrichedReserves) {
     let directReservePct = 0;
@@ -273,12 +256,11 @@ export function resolveBlacklistStatus(
         possibleReservePct += slice.pct;
       }
     }
-    if (directReservePct > INHERITED_BLACKLIST_THRESHOLD_PCT) return "inherited";
-    if (directReservePct > 0 || possibleReservePct > 0) return "possible";
+    if (directReservePct > 0 || possibleReservePct > 0) return "inherited";
   }
 
-  if (meta.custodyModel === "cex") return "possible";
-  if (metaTextSignalsPossibleBlacklistRisk(meta, options.context)) return "possible";
+  if (meta.custodyModel === "cex") return "inherited";
+  if (metaTextSignalsPossibleBlacklistRisk(meta, options.context)) return "inherited";
   return false;
 }
 

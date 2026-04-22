@@ -1,5 +1,4 @@
 export {
-  INHERITED_BLACKLIST_THRESHOLD_PCT,
   enrichLiveSlicesForBlacklist,
   getBlacklistStatusLabel,
   isBlacklistable,

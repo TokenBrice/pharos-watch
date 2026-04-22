@@ -1090,7 +1090,7 @@ describe("isBlacklistable", () => {
     expect(isBlacklistable(meta as never)).toBe("possible");
   });
 
-  it("returns inherited for majority reserve exposure even when governance is centralized-dependent", () => {
+  it("returns inherited for reserve exposure even when governance is centralized-dependent", () => {
     const meta = {
       flags: { governance: "centralized-dependent" as const },
       canBeBlacklisted: undefined,
@@ -1101,7 +1101,7 @@ describe("isBlacklistable", () => {
     expect(isBlacklistable(meta as never, new Set(["usdc-circle"]))).toBe("inherited");
   });
 
-  it("returns possible for direct reserve exposure below the inherited threshold", () => {
+  it("returns inherited for direct reserve exposure below the old inherited threshold", () => {
     const meta = {
       flags: { governance: "centralized-dependent" as const },
       canBeBlacklisted: undefined,
@@ -1110,10 +1110,10 @@ describe("isBlacklistable", () => {
         { name: "ETH", pct: 65, risk: "very-low" },
       ],
     };
-    expect(isBlacklistable(meta as never)).toBe("possible");
+    expect(isBlacklistable(meta as never)).toBe("inherited");
   });
 
-  it("returns possible for cex-backed reserve rails even without explicit reserve annotations", () => {
+  it("returns inherited for cex-backed reserve rails even without explicit reserve annotations", () => {
     const meta = {
       flags: { governance: "centralized-dependent" as const },
       canBeBlacklisted: undefined,
@@ -1123,7 +1123,7 @@ describe("isBlacklistable", () => {
         { name: "JLP basket", pct: 80, risk: "high" },
       ],
     };
-    expect(isBlacklistable(meta as never)).toBe("possible");
+    expect(isBlacklistable(meta as never)).toBe("inherited");
   });
 
   it("returns inherited when most reserves sit in named stablecoin baskets", () => {
