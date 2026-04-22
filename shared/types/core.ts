@@ -112,6 +112,8 @@ export const CHAIN_TIER_VALUES = ["ethereum", "stage1-l2", "mature-alt-l1", "est
 export const DEPLOYMENT_MODEL_VALUES = ["single-chain", "canonical-bridge", "third-party-bridge", "native-multichain"] as const;
 export const COLLATERAL_QUALITY_VALUES = ["native", "rwa", "eth-lst", "alt-lst-bridged-or-mixed", "exotic"] as const;
 export const CUSTODY_MODEL_VALUES = ["onchain", "institutional-top", "institutional-regulated", "institutional-unregulated", "institutional-sanctioned", "cex"] as const;
+export const VARIANT_KIND_VALUES = ["savings-passthrough", "risk-absorption"] as const;
+export type VariantKind = (typeof VARIANT_KIND_VALUES)[number];
 export const GOVERNANCE_QUALITY_VALUES = [
   "immutable-code",
   "dao-governance",
@@ -234,6 +236,8 @@ export interface StablecoinMeta {
   custodyModel?: CustodyModel;
   governanceQuality?: GovernanceQuality;
   infrastructures?: Infrastructure[];
+  variantOf?: string;
+  variantKind?: VariantKind;
   reserves?: ReserveSlice[];
   liveReservesConfig?: LiveReservesConfig;
   notices?: CoinNotice[];
@@ -285,6 +289,9 @@ export type FilterTag =
   | "infrastructure-liquity-v1"
   | "infrastructure-liquity-v2"
   | "infrastructure-m0"
+  | "variant-tracked"
+  | "variant-savings-passthrough"
+  | "variant-risk-absorption"
   | "grade-a"
   | "grade-ge-b"
   | "grade-ge-c-plus"
@@ -374,6 +381,9 @@ export const FILTER_TAG_LABELS: Record<FilterTag, string> = {
   "infrastructure-liquity-v1": "Liquity v1",
   "infrastructure-liquity-v2": "Liquity v2",
   "infrastructure-m0": "M0",
+  "variant-tracked": "All variants",
+  "variant-savings-passthrough": "Savings variant",
+  "variant-risk-absorption": "Risk absorption variant",
   "grade-a": "A",
   "grade-ge-b": "≥B",
   "grade-ge-c-plus": "≥C+",
@@ -445,6 +455,14 @@ export function getFilterTags(meta: StablecoinMeta): FilterTag[] {
   tags.push(meta.flags.backing);
   for (const infra of meta.infrastructures ?? []) {
     tags.push(`infrastructure-${infra}` as FilterTag);
+  }
+  if (meta.variantOf && meta.variantKind) {
+    tags.push("variant-tracked");
+    if (meta.variantKind === "savings-passthrough") {
+      tags.push("variant-savings-passthrough");
+    } else if (meta.variantKind === "risk-absorption") {
+      tags.push("variant-risk-absorption");
+    }
   }
   return tags;
 }

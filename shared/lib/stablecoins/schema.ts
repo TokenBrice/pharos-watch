@@ -15,6 +15,7 @@ import {
   PROOF_OF_RESERVES_TYPE_VALUES,
   COIN_NOTICE_TYPE_VALUES,
   YIELD_TYPE_VALUES,
+  VARIANT_KIND_VALUES,
   LAUNCH_PHASE_VALUES,
   LAUNCH_MILESTONE_TYPE_VALUES,
   FEATURED_CONTENT_TYPE_VALUES,
@@ -165,6 +166,8 @@ export const StablecoinMetaAssetSchema = z.object({
   custodyModel: z.enum(CUSTODY_MODEL_VALUES).optional(),
   governanceQuality: z.enum(GOVERNANCE_QUALITY_VALUES).optional(),
   infrastructures: z.array(z.enum(INFRASTRUCTURE_VALUES)).optional(),
+  variantOf: z.string().optional(),
+  variantKind: z.enum(VARIANT_KIND_VALUES).optional(),
   reserves: z.array(ReserveSliceAssetSchema).optional(),
   liveReservesConfig: LiveReservesConfigSchema.optional(),
   notices: z.array(CoinNoticeAssetSchema).optional(),
@@ -179,7 +182,17 @@ export const StablecoinMetaAssetSchema = z.object({
   featuredContent: z.array(FeaturedContentAssetSchema).optional(),
   milestones: z.array(LaunchMilestoneAssetSchema).optional(),
   dateHistory: z.array(DateHistoryEntryAssetSchema).optional(),
-}).strict();
+}).strict().superRefine((meta, ctx) => {
+  if ((meta.variantOf == null) === (meta.variantKind == null)) {
+    return;
+  }
+
+  ctx.addIssue({
+    code: z.ZodIssueCode.custom,
+    message: "variantOf and variantKind must both be set or both be absent",
+    path: ["variantOf"],
+  });
+});
 
 export const StablecoinMetaAssetArraySchema = z.array(StablecoinMetaAssetSchema);
 export const CanonicalOrderAssetSchema = z.array(z.string());

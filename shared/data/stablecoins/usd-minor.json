@@ -1125,6 +1125,8 @@
       "rwa": false,
       "navToken": true
     },
+    "variantOf": "frxusd-frax",
+    "variantKind": "savings-passthrough",
     "pegReferenceId": "frxusd-frax",
     "collateral": "frxUSD deposited into Frax's savings vault; the wrapper remains fully backed by frxUSD while protocol income and custodian yield accrue through the vault exchange rate",
     "pegMechanism": "Deposit frxUSD to mint sfrxUSD and redeem sfrxUSD for the current convertToAssets amount of frxUSD; the share price rises as Frax routes frxUSD yield to the staking vault",
@@ -2468,6 +2470,8 @@
       "rwa": false,
       "navToken": true
     },
+    "variantOf": "usdo-openeden",
+    "variantKind": "savings-passthrough",
     "pegReferenceId": "usdo-openeden",
     "collateral": "USDO wrapped into OpenEden's non-rebasing cUSDO format; the wrapper keeps the same Treasury-backed reserve stack as USDO while yield accrues through price appreciation instead of rebasing",
     "pegMechanism": "Users can wrap USDO into cUSDO or unwrap cUSDO back into USDO at any time; unlike rebasing USDO, cUSDO compounds by increasing in redeemable USDO per token",
@@ -3645,6 +3649,8 @@
       "rwa": false,
       "navToken": true
     },
+    "variantOf": "yusd-aegis",
+    "variantKind": "savings-passthrough",
     "pegReferenceId": "yusd-aegis",
     "collateral": "YUSD deposited into Aegis's ERC-4626 staking contract; the wrapper remains backed by YUSD while funding-rate income accrues through the rising exchange rate",
     "pegMechanism": "Deposit YUSD to receive sYUSD; the exchange rate versus YUSD increases as rewards accrue, while unstaking enters Aegis's documented 7-day cooldown before YUSD can be withdrawn",
@@ -3972,6 +3978,8 @@
       "rwa": false,
       "navToken": true
     },
+    "variantOf": "gho-aave",
+    "variantKind": "risk-absorption",
     "pegReferenceId": "gho-aave",
     "collateral": "GHO staked into Aave Umbrella as a slashable safety-module asset covering GHO deficits; holders earn Umbrella rewards while accepting cooldown and automated slashing risk",
     "pegMechanism": "ERC-4626-style staking receipt over GHO with 1:1 convertToAssets under normal conditions; unstaking requires Aave Umbrella cooldown and withdrawal-window mechanics, and deficit events can reduce redeemable value through slashing",

@@ -806,6 +806,8 @@
       "rwa": false,
       "navToken": true
     },
+    "variantOf": "usde-ethena",
+    "variantKind": "savings-passthrough",
     "pegReferenceId": "usde-ethena",
     "collateral": "USDe deposited into Ethena's ERC-4626 staking contract; the wrapper remains fully backed by USDe while additional USDe rewards accrue inside the vault",
     "pegMechanism": "Stake USDe to receive sUSDe; the exchange rate versus USDe rises as rewards are transferred into the staking contract, while unstaking burns sUSDe immediately and releases USDe after Ethena's documented 7-day cooldown",
@@ -1025,6 +1027,8 @@
       "rwa": false,
       "navToken": true
     },
+    "variantOf": "usds-sky",
+    "variantKind": "savings-passthrough",
     "pegReferenceId": "usds-sky",
     "collateral": "USDS deposited into Sky's ERC-4626 savings vault; the wrapper remains fully backed by USDS while the exchange rate compounds with the Sky Savings Rate",
     "pegMechanism": "Deposit USDS to mint sUSDS and withdraw USDS directly from the vault with no protocol fee; sUSDS and sDAI are both savings wrappers but are not exchangeable 1:1 because they have accrued different amounts of yield",
@@ -1117,6 +1121,8 @@
       "rwa": false,
       "navToken": true
     },
+    "variantOf": "usds-sky",
+    "variantKind": "risk-absorption",
     "pegReferenceId": "usds-sky",
     "collateral": "USDS supplied to Sky's stUSDS risk-capital module, where idle liquidity earns the Sky Savings Rate and borrowed liquidity funds SKY-backed positions; holders absorb staked-SKY loan shortfall and governance slashing risk",
     "pegMechanism": "ERC-4626 NAV shares over USDS; users deposit USDS to mint stUSDS and withdraw USDS subject to unutilized module liquidity, while bad debt or governance slashing can reduce redeemable value",
@@ -1490,6 +1496,8 @@
       "rwa": false,
       "navToken": true
     },
+    "variantOf": "dai-makerdao",
+    "variantKind": "savings-passthrough",
     "pegReferenceId": "dai-makerdao",
     "collateral": "DAI deposited into the sDAI savings vault; the wrapper remains fully backed by DAI while the exchange rate compounds with the Dai Savings Rate",
     "pegMechanism": "Deposit DAI to mint sDAI and redeem sDAI for the current convertToAssets amount of DAI; the share price rises as DSR accrues, and Spark's savings front-end documents withdrawals without slippage or platform fees",
@@ -4079,6 +4087,8 @@
       "rwa": false,
       "navToken": true
     },
+    "variantOf": "crvusd-curve",
+    "variantKind": "savings-passthrough",
     "pegReferenceId": "crvusd-curve",
     "collateral": "crvUSD deposited into Curve's savings vault; the wrapper remains fully backed by crvUSD while a share of borrower interest and protocol revenue compounds through the vault exchange rate",
     "pegMechanism": "Deposit crvUSD to mint scrvUSD and redeem scrvUSD for the current convertToAssets amount of crvUSD; the share price rises as Curve redirects part of crvUSD borrowing revenue to scrvUSD depositors",

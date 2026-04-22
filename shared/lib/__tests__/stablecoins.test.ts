@@ -16,6 +16,7 @@ import {
   TRACKED_META_BY_ID,
   TRACKED_STABLECOINS,
 } from "@shared/lib/stablecoins";
+import { getVariants, isTrackedVariant } from "@shared/lib/stablecoins";
 import {
   parseCanonicalOrderAsset,
   parseDeadStablecoinAssets,
@@ -107,6 +108,37 @@ describe("tracked stablecoin metadata", () => {
       .map((coin) => coin.id);
 
     expect(algorithmicIds).toEqual([]);
+  });
+
+  it("tracks exactly the nine implementation-scope variants", () => {
+    const variantIds = ACTIVE_STABLECOINS
+      .filter((coin) => isTrackedVariant(coin.id))
+      .map((coin) => coin.id);
+
+    expect(variantIds).toEqual([
+      "susde-ethena",
+      "susds-sky",
+      "stusds-sky",
+      "sdai-sky",
+      "stkgho-umbrella-aave",
+      "scrvusd-curve",
+      "sfrxusd-frax",
+      "cusdo-openeden",
+      "syusd-aegis",
+    ]);
+  });
+
+  it("keeps tracked variant parents active and canonical", () => {
+    for (const coin of ACTIVE_STABLECOINS.filter((entry) => entry.variantOf != null)) {
+      const parent = TRACKED_META_BY_ID.get(coin.variantOf!);
+      expect(parent, coin.id).toBeDefined();
+      expect(parent?.status, coin.id).not.toBe("pre-launch");
+      expect(coin.pegReferenceId, coin.id).toBe(coin.variantOf);
+    }
+  });
+
+  it("keeps only USDS with two tracked child variants", () => {
+    expect(getVariants("usds-sky").map((coin) => coin.id)).toEqual(["susds-sky", "stusds-sky"]);
   });
 
   it("rejects malformed stablecoin assets with readable schema errors", () => {

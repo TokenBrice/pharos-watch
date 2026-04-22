@@ -5,6 +5,7 @@ import {
   StablecoinMetaAssetArraySchema,
   CanonicalOrderAssetSchema,
 } from "../shared/lib/stablecoins/schema";
+import { validateVariantRelationships } from "../shared/lib/stablecoins/validate-variants";
 import { CHAIN_META } from "../shared/lib/chains";
 import type { StablecoinMeta } from "../shared/types";
 
@@ -174,6 +175,11 @@ for (const { file, coin } of stablecoinEntries) {
   const issue = getRuntimeAdmissionIssue(coin);
   if (!issue) continue;
   process.stderr.write(`${join(DATA_DIR, file)} (${coin.id}): ${issue}\n`);
+  errorCount++;
+}
+
+for (const error of validateVariantRelationships(stablecoinEntries.map(({ coin }) => coin))) {
+  process.stderr.write(`${DATA_DIR}: ${error}\n`);
   errorCount++;
 }
 

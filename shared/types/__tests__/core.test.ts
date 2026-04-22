@@ -48,3 +48,34 @@ describe("getFilterTags — infrastructures", () => {
     expect(tags).toContain("infrastructure-m0");
   });
 });
+
+describe("getFilterTags — tracked variants", () => {
+  it("emits no variant tags when variant metadata is absent", () => {
+    const tags = getFilterTags(makeCoin());
+    expect(tags).not.toContain("variant-tracked");
+    expect(tags).not.toContain("variant-savings-passthrough");
+    expect(tags).not.toContain("variant-risk-absorption");
+  });
+
+  it("emits tracked savings variant tags", () => {
+    const tags = getFilterTags(makeCoin({
+      variantOf: "base-coin",
+      variantKind: "savings-passthrough",
+    }));
+
+    expect(tags).toContain("variant-tracked");
+    expect(tags).toContain("variant-savings-passthrough");
+    expect(tags).not.toContain("variant-risk-absorption");
+  });
+
+  it("emits tracked risk-absorption variant tags", () => {
+    const tags = getFilterTags(makeCoin({
+      variantOf: "base-coin",
+      variantKind: "risk-absorption",
+    }));
+
+    expect(tags).toContain("variant-tracked");
+    expect(tags).toContain("variant-risk-absorption");
+    expect(tags).not.toContain("variant-savings-passthrough");
+  });
+});
