@@ -209,6 +209,13 @@ export default function StatusClient() {
                   className={getStatusTone("degraded").badgeClassName}
                 />
               )}
+              {telegramSummary?.safetyAlertsSuppressed && (
+                <SummaryBadge
+                  label="Safety Alerts"
+                  value={telegramSummary.safetyAlertSourceState ?? "suppressed"}
+                  className={getStatusTone("degraded").badgeClassName}
+                />
+              )}
             </>
           }
         >
@@ -294,10 +301,19 @@ export default function StatusClient() {
             <PublicSignalCard
               title="Telegram Bot Health"
               badges={
-                telegramSummary.pendingDeliveries > 0 || (telegramSummary.lastDispatchStatus && telegramSummary.lastDispatchStatus !== "ok") ? (
+                telegramSummary.pendingDeliveries > 0 ||
+                telegramSummary.safetyAlertsSuppressed ||
+                (telegramSummary.lastDispatchStatus && telegramSummary.lastDispatchStatus !== "ok") ? (
                   <div className="flex flex-wrap gap-2">
                     {telegramSummary.pendingDeliveries > 0 && (
                       <SummaryBadge label="Pending" value={String(telegramSummary.pendingDeliveries)} className={getStatusTone("degraded").badgeClassName} />
+                    )}
+                    {telegramSummary.safetyAlertsSuppressed && (
+                      <SummaryBadge
+                        label="Safety Alerts"
+                        value={telegramSummary.safetyAlertSourceState ?? "suppressed"}
+                        className={getStatusTone("degraded").badgeClassName}
+                      />
                     )}
                     {telegramSummary.lastDispatchStatus && telegramSummary.lastDispatchStatus !== "ok" && (
                       <SummaryBadge label="Last Dispatch" value={telegramSummary.lastDispatchStatus} className={getStatusTone("stale").badgeClassName} />
@@ -323,6 +339,14 @@ export default function StatusClient() {
               {telegramSummary.pendingDeliveries > 0 && (
                 <div className="rounded-[1rem] border border-amber-500/20 bg-amber-500/5 p-3 text-xs leading-relaxed text-amber-700 dark:text-amber-300">
                   {telegramSummary.pendingDeliveries} alert{telegramSummary.pendingDeliveries !== 1 ? "s" : ""} pending delivery
+                </div>
+              )}
+              {telegramSummary.safetyAlertsSuppressed && (
+                <div className="rounded-[1rem] border border-amber-500/20 bg-amber-500/5 p-3 text-xs leading-relaxed text-amber-700 dark:text-amber-300">
+                  Safety alerts are paused because the live report-card source is {telegramSummary.safetyAlertSourceState ?? "unavailable"}
+                  {telegramSummary.safetyAlertSourceAgeSeconds != null
+                    ? ` (${telegramSummary.safetyAlertSourceAgeSeconds}s old)`
+                    : ""}.
                 </div>
               )}
             </PublicSignalCard>

@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { mockD1 } from "../../api/__tests__/helpers/mock-d1";
+import { getAlertSafetySourceGeneration } from "../../lib/alert-safety-source-cache";
 
 const mockGetCache = vi.fn();
 const mockSetCache = vi.fn();
@@ -30,6 +31,34 @@ vi.mock("../../lib/telegram", async (importOriginal) => {
 });
 
 const { dispatchTelegramAlerts } = await import("../dispatch-telegram-alerts");
+
+function makeSafetySourceCache(
+  snapshot: Record<string, { grade: string; score: number | null; methodologyVersion: string | null }>,
+  publishedAt: number,
+) {
+  return {
+    value: JSON.stringify({
+      generation: getAlertSafetySourceGeneration(),
+      methodologyVersion: "7.10",
+      publishedAt,
+      snapshot,
+    }),
+    updatedAt: publishedAt,
+  };
+}
+
+function makeSafetySnapshotCache(
+  snapshot: Record<string, { grade: string; score: number | null; methodologyVersion: string | null }>,
+  generation = getAlertSafetySourceGeneration(),
+) {
+  return {
+    value: JSON.stringify({
+      generation,
+      snapshot,
+    }),
+    updatedAt: Math.floor(Date.now() / 1000) - 60,
+  };
+}
 
 beforeEach(() => {
   mockGetCache.mockReset();
@@ -92,12 +121,16 @@ describe("dispatchTelegramAlerts", () => {
     const metadata = JSON.parse(result.metadata) as {
       snapshotSeeded: boolean;
       subscribersNotified: number;
+      safetyAlertSourceState: string | null;
+      safetyAlertsSuppressed: boolean;
     };
 
     expect(result.itemCount).toBe(0);
     expect(metadata.snapshotSeeded).toBe(true);
     expect(metadata.subscribersNotified).toBe(0);
-    expect(mockSetCache).toHaveBeenCalledTimes(5);
+    expect(metadata.safetyAlertSourceState).toBe("missing");
+    expect(metadata.safetyAlertsSuppressed).toBe(true);
+    expect(mockSetCache).toHaveBeenCalledTimes(4);
     expect(mockRecordOutcome).toHaveBeenCalledTimes(1);
   });
 
@@ -112,12 +145,14 @@ describe("dispatchTelegramAlerts", () => {
         return { value: JSON.stringify({}), updatedAt: now - 60 };
       }
       if (key === "alert:safety-snapshot") {
-        return {
-          value: JSON.stringify({
-            "usdc-circle": { grade: "B", score: 78 },
-          }),
-          updatedAt: now - 60,
-        };
+        return makeSafetySnapshotCache({
+          "usdc-circle": { grade: "B", score: 78, methodologyVersion: "7.09" },
+        });
+      }
+      if (key === "alert:safety-source-cache") {
+        return makeSafetySourceCache({
+          "usdc-circle": { grade: "C", score: 61, methodologyVersion: "7.09" },
+        }, now - 60);
       }
       return null;
     });
@@ -188,6 +223,82 @@ describe("dispatchTelegramAlerts", () => {
     expect(metadata.subscribersNotified).toBe(1);
     expect(metadata.messagesSent).toBe(1);
     expect(mockSendToChat).toHaveBeenCalledTimes(1);
+  });
+
+  it("suppresses only safety alerts when the live safety source cache is from the wrong generation", async () => {
+    const now = Math.floor(Date.now() / 1000);
+
+    mockGetCache.mockImplementation(async (_db: unknown, key: string) => {
+      if (key === "alert:dews-snapshot") {
+        return { value: JSON.stringify({ "usdc-circle": "CALM" }), updatedAt: now - 60 };
+      }
+      if (key === "alert:depeg-snapshot") {
+        return { value: JSON.stringify({}), updatedAt: now - 60 };
+      }
+      if (key === "alert:safety-snapshot") {
+        return makeSafetySnapshotCache({
+          "usdc-circle": { grade: "B", score: 78, methodologyVersion: "7.08" },
+        }, "legacy-generation");
+      }
+      if (key === "alert:safety-source-cache") {
+        return {
+          value: JSON.stringify({
+            generation: "legacy-generation",
+            methodologyVersion: "7.09",
+            publishedAt: now - 60,
+            snapshot: {
+              "usdc-circle": { grade: "C", score: 61, methodologyVersion: "7.09" },
+            },
+          }),
+          updatedAt: now - 60,
+        };
+      }
+      return null;
+    });
+
+    const db = mockD1([
+      {
+        match: "FROM stress_signals",
+        rows: [{ stablecoin_id: "usdc-circle", score: 42, band: "ALERT", signals_json: "{}" }],
+      },
+      { match: "FROM depeg_events WHERE ended_at IS NULL", rows: [] },
+      {
+        match: "FROM safety_grade_history",
+        rows: [{
+          stablecoin_id: "usdc-circle",
+          grade: "C",
+          score: 61,
+          prev_grade: "B",
+          prev_score: 78,
+          recorded_at: now,
+          methodology_version: "7.09",
+        }],
+      },
+      { match: "SELECT id, chat_id, message_html", rows: [] },
+      {
+        match: "sub.alert_dews = 1",
+        rows: [{ stablecoin_id: "usdc-circle", chat_id: "12345", last_active_at: now }],
+      },
+      {
+        match: "sub.alert_safety = 1",
+        rows: [{ stablecoin_id: "usdc-circle", chat_id: "12345", last_active_at: now }],
+      },
+      { match: "DELETE FROM telegram_pending_alerts WHERE created_at", rows: [] },
+    ]);
+
+    const result = await dispatchTelegramAlerts(db, "bot-token");
+    const metadata = JSON.parse(result.metadata) as {
+      eventsDetected: { dews: number; safety: number };
+      messagesSent: number;
+      safetyAlertSourceState: string;
+      safetyAlertsSuppressed: boolean;
+    };
+
+    expect(metadata.eventsDetected.dews).toBe(1);
+    expect(metadata.eventsDetected.safety).toBe(0);
+    expect(metadata.messagesSent).toBe(1);
+    expect(metadata.safetyAlertSourceState).toBe("wrong-generation");
+    expect(metadata.safetyAlertsSuppressed).toBe(true);
   });
 
   it("fans out global all-stablecoin alert subscriptions without per-coin rows", async () => {
@@ -396,6 +507,12 @@ describe("dispatchTelegramAlerts", () => {
           updatedAt: snapshotUpdatedAt,
         };
       }
+      if (key === "alert:safety-source-cache") {
+        return makeSafetySourceCache({
+          "usdc-circle": { grade: "A", score: 84, methodologyVersion: "7.09" },
+          "bold-liquity": { grade: "B+", score: 79, methodologyVersion: "7.09" },
+        }, snapshotUpdatedAt);
+      }
       return null;
     });
 
@@ -468,6 +585,12 @@ describe("dispatchTelegramAlerts", () => {
           }),
           updatedAt: snapshotUpdatedAt,
         };
+      }
+      if (key === "alert:safety-source-cache") {
+        return makeSafetySourceCache({
+          "usdc-circle": { grade: "A", score: 84, methodologyVersion: "7.09" },
+          "bold-liquity": { grade: "A-", score: 80, methodologyVersion: "7.09" },
+        }, snapshotUpdatedAt);
       }
       return null;
     });
@@ -952,12 +1075,14 @@ describe("dispatchTelegramAlerts", () => {
       if (key === "alert:dews-snapshot") return { value: "{}", updatedAt: now - 60 };
       if (key === "alert:depeg-snapshot") return { value: "{}", updatedAt: now - 60 };
       if (key === "alert:safety-snapshot") {
-        return {
-          value: JSON.stringify({
-            "usdc-circle": { grade: "B", score: 78, methodologyVersion: "v1" },
-          }),
-          updatedAt: now - 60,
-        };
+        return makeSafetySnapshotCache({
+          "usdc-circle": { grade: "B", score: 78, methodologyVersion: "v1" },
+        });
+      }
+      if (key === "alert:safety-source-cache") {
+        return makeSafetySourceCache({
+          "usdc-circle": { grade: "C", score: 61, methodologyVersion: "v2" },
+        }, now - 60);
       }
       return null;
     });

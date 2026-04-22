@@ -321,6 +321,20 @@ function summarizeRedemptionBackstops(metadata: Record<string, unknown>): string
   ].filter((line): line is string => line != null);
 }
 
+function summarizeTelegramAlerts(metadata: Record<string, unknown>): string[] {
+  const safetyAlertSourceState = readString(metadata.safetyAlertSourceState);
+  const safetyAlertSourceAgeSeconds = readNumber(metadata.safetyAlertSourceAgeSeconds);
+  const safetyAlertsSuppressed = readBoolean(metadata.safetyAlertsSuppressed);
+  const safetyAlertSourceGeneration = readString(metadata.safetyAlertSourceGeneration);
+
+  return [
+    safetyAlertSourceState ? `safety source ${safetyAlertSourceState}` : null,
+    safetyAlertsSuppressed ? "safety alerts suppressed" : null,
+    safetyAlertSourceAgeSeconds != null ? `source age ${safetyAlertSourceAgeSeconds}s` : null,
+    safetyAlertSourceGeneration ? `generation ${safetyAlertSourceGeneration}` : null,
+  ].filter((line): line is string => line != null);
+}
+
 const SUMMARIZER_BY_JOB: Record<string, (metadata: Record<string, unknown>) => string[]> = {
   "status-self-check": summarizeStatusSelfCheck,
   "sync-dex-discovery": summarizeDexDiscovery,
@@ -330,6 +344,7 @@ const SUMMARIZER_BY_JOB: Record<string, (metadata: Record<string, unknown>) => s
   "sync-mint-burn-extended": summarizeMintBurn,
   "sync-live-reserves": summarizeLiveReserves,
   "sync-redemption-backstops": summarizeRedemptionBackstops,
+  "dispatch-telegram-alerts": summarizeTelegramAlerts,
 };
 
 export function summarizeCronMetadata(job: string, metadata: Record<string, unknown> | undefined): string[] {

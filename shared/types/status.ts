@@ -255,6 +255,8 @@ export interface TelegramDispatchEventsDetected {
   suppressedMethodologyChanges: number;
 }
 
+export type SafetyAlertSourceState = "ok" | "missing" | "corrupt" | "stale" | "wrong-generation";
+
 export interface TelegramDispatchCronResult {
   subscribersNotified: number;
   messagesSent: number;
@@ -274,6 +276,10 @@ export interface TelegramDispatchCronResult {
   pendingEnqueued: number;
   pendingExpired: number;
   chatsWithActiveSnooze: number;
+  safetyAlertSourceState: SafetyAlertSourceState;
+  safetyAlertSourceAgeSeconds: number | null;
+  safetyAlertsSuppressed: boolean;
+  safetyAlertSourceGeneration: string | null;
   eventsDetected: TelegramDispatchEventsDetected;
 }
 
@@ -307,6 +313,10 @@ export interface TelegramDispatchCronMetadata {
   pendingEnqueued: number | null;
   pendingExpired: number | null;
   chatsWithActiveSnooze: number | null;
+  safetyAlertSourceState: SafetyAlertSourceState | null;
+  safetyAlertSourceAgeSeconds: number | null;
+  safetyAlertsSuppressed: boolean;
+  safetyAlertSourceGeneration: string | null;
   eventsDetected: ParsedTelegramDispatchEventsDetected | null;
 }
 
@@ -589,6 +599,10 @@ export interface TelegramHealthSummary {
   pendingDeliveries: number;
   lastDispatchAt: number | null;
   lastDispatchStatus: string | null;
+  safetyAlertSourceState: SafetyAlertSourceState | null;
+  safetyAlertSourceAgeSeconds: number | null;
+  safetyAlertsSuppressed: boolean;
+  safetyAlertSourceGeneration: string | null;
 }
 
 export interface HealthResponse {
@@ -653,6 +667,10 @@ export const HealthResponseSchema: z.ZodType<HealthResponse> = z.object({
     pendingDeliveries: z.number(),
     lastDispatchAt: z.number().nullable(),
     lastDispatchStatus: z.string().nullable(),
+    safetyAlertSourceState: z.enum(["ok", "missing", "corrupt", "stale", "wrong-generation"]).nullable(),
+    safetyAlertSourceAgeSeconds: z.number().nullable(),
+    safetyAlertsSuppressed: z.boolean(),
+    safetyAlertSourceGeneration: z.string().nullable(),
   }).nullable().optional(),
 });
 

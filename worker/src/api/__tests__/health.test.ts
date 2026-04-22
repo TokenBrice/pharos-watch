@@ -356,16 +356,75 @@ describe("handleHealth", () => {
       { match: "status = 'ok'", rows: [], first: { started_at: now - 300 } },
       { match: "telegram_subscribers", rows: [], first: { n: 42 } },
       { match: "telegram_pending_alerts", rows: [], first: { n: 3 } },
-      { match: "dispatch-telegram-alerts", rows: [], first: { started_at: now - 120, status: "ok" } },
+      {
+        match: "dispatch-telegram-alerts",
+        rows: [],
+        first: {
+          started_at: now - 120,
+          status: "ok",
+          metadata: JSON.stringify({
+            safetyAlertSourceState: "ok",
+            safetyAlertSourceAgeSeconds: 120,
+            safetyAlertsSuppressed: false,
+            safetyAlertSourceGeneration: "safety-7.09-alert-source-v1",
+          }),
+        },
+      },
     ]);
     const res = await handleHealth(db);
-    const body = (await res.json()) as { telegramSummary: { totalChats: number; pendingDeliveries: number; lastDispatchAt: number | null; lastDispatchStatus: string | null } | null };
+    const body = (await res.json()) as {
+      telegramSummary: {
+        totalChats: number;
+        pendingDeliveries: number;
+        lastDispatchAt: number | null;
+        lastDispatchStatus: string | null;
+        safetyAlertSourceState: string | null;
+        safetyAlertSourceAgeSeconds: number | null;
+        safetyAlertsSuppressed: boolean;
+        safetyAlertSourceGeneration: string | null;
+      } | null;
+    };
     expect(body.telegramSummary).toEqual({
       totalChats: 42,
       pendingDeliveries: 3,
       lastDispatchAt: now - 120,
       lastDispatchStatus: "ok",
+      safetyAlertSourceState: "ok",
+      safetyAlertSourceAgeSeconds: 120,
+      safetyAlertsSuppressed: false,
+      safetyAlertSourceGeneration: "safety-7.09-alert-source-v1",
     });
+  });
+
+  it("adds a warning when safety alerts are suppressed", async () => {
+    const now = Math.floor(Date.now() / 1000);
+    const db = mockD1([
+      { match: "cache", rows: [] },
+      { match: "blacklist_events", rows: [], first: { total: 0, missing: 0 } },
+      { match: "mint_burn_hourly", rows: [], first: { total: 0 } },
+      { match: "SELECT status", rows: [], first: { status: "ok" } },
+      { match: "status = 'ok'", rows: [], first: { started_at: now - 300 } },
+      { match: "telegram_subscribers", rows: [], first: { n: 42 } },
+      { match: "telegram_pending_alerts", rows: [], first: { n: 3 } },
+      {
+        match: "dispatch-telegram-alerts",
+        rows: [],
+        first: {
+          started_at: now - 120,
+          status: "degraded",
+          metadata: JSON.stringify({
+            safetyAlertSourceState: "wrong-generation",
+            safetyAlertSourceAgeSeconds: 120,
+            safetyAlertsSuppressed: true,
+            safetyAlertSourceGeneration: "legacy-generation",
+          }),
+        },
+      },
+    ]);
+
+    const res = await handleHealth(db);
+    const body = (await res.json()) as { warnings: string[] };
+    expect(body.warnings).toContain("telegram-safety-alerts-suppressed:wrong-generation");
   });
 
   it("returns null telegramSummary when telegram tables do not exist", async () => {

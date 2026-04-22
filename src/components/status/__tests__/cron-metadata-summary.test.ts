@@ -54,4 +54,17 @@ describe("summarizeCronMetadata", () => {
 
     expect(summary).toContain("availability impaired 1");
   });
+
+  it("surfaces telegram safety source suppression metadata", () => {
+    const summary = summarizeCronMetadata("dispatch-telegram-alerts", {
+      safetyAlertSourceState: "wrong-generation",
+      safetyAlertSourceAgeSeconds: 420,
+      safetyAlertsSuppressed: true,
+      safetyAlertSourceGeneration: "legacy-generation",
+    });
+
+    expect(summary).toContain("safety source wrong-generation");
+    expect(summary).toContain("safety alerts suppressed");
+    expect(summary).toContain("source age 420s");
+  });
 });

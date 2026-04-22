@@ -1,9 +1,16 @@
 import { THREAT_BAND_ORDER, isThreatBand } from "@shared/lib/classification";
+import { CRON_INTERVALS } from "@shared/lib/cron-jobs";
 import { TRACKED_META_BY_ID, ACTIVE_IDS, PRE_LAUNCH_STABLECOINS } from "@shared/lib/stablecoins";
 import type { TelegramDispatchCronResult } from "@shared/types";
 import { throwIfAborted } from "../lib/abort";
 import { readCachedJson } from "../lib/api-utils";
-import { ALERT_SAFETY_SOURCE_CACHE_KEY } from "../lib/alert-safety-source-cache";
+import {
+  ALERT_SAFETY_SOURCE_CACHE_KEY,
+  assessAlertSafetySourceCache,
+  buildAlertSafetySnapshotEnvelope,
+  getAlertSafetySourceGeneration,
+  parseAlertSafetySnapshotEnvelope,
+} from "../lib/alert-safety-source-cache";
 import { getCache } from "../lib/db-cache";
 import { buildInClause } from "../lib/db";
 import { shouldAttemptFetch, recordOutcome } from "../lib/circuit-breaker";
@@ -23,7 +30,6 @@ import {
   SNAPSHOT_KEYS,
   type DewsSnapshot,
   type DepegSnapshot,
-  type SafetySnapshot,
   type DewsRow,
   type ActiveDepegRow,
   type SafetyRow,
@@ -104,6 +110,10 @@ function emptyResult(snapshotSeeded: boolean, chatsWithActiveSnooze = 0): Dispat
     freshRetryQueued: 0,
     freshPermanentFailures: 0,
     chatsWithActiveSnooze,
+    safetyAlertSourceState: "missing",
+    safetyAlertSourceAgeSeconds: null,
+    safetyAlertsSuppressed: true,
+    safetyAlertSourceGeneration: null,
   };
 }
 
@@ -331,38 +341,62 @@ export async function dispatchTelegramAlerts(
     const previousDewsAlertableSnapshot =
       parseSnapshotMap<DewsSnapshot>(dewsAlertableCache) ??
       filterAlertableBands(previousDewsSnapshot);
+    const previousDepegSnapshot = parseSnapshotMap<DepegSnapshot>(depegCache);
+    const safetySourceAssessment = assessAlertSafetySourceCache(safetySourceCache, {
+      expectedGeneration: getAlertSafetySourceGeneration(),
+      nowSec,
+      producerIntervalSec: CRON_INTERVALS["publish-report-card-cache"],
+    });
     const currentSafetySnapshot =
-      parseSnapshotMap<SafetySnapshot>(safetySourceCache) ??
-      buildSafetySnapshot(safetyRows);
+      safetySourceAssessment.state === "ok"
+        ? (safetySourceAssessment.envelope?.snapshot ?? buildSafetySnapshot(safetyRows))
+        : null;
+    const previousSafetyEnvelope = parseAlertSafetySnapshotEnvelope(safetyCache);
+    const previousSafetySnapshot = previousSafetyEnvelope?.snapshot ?? null;
+    const safetySnapshotNeedsSeed =
+      currentSafetySnapshot != null && (
+        previousSafetyEnvelope == null ||
+        isSnapshotMissingOrStale(safetyCache, nowSec) ||
+        previousSafetyEnvelope.generation !== (safetySourceAssessment.generation ?? "")
+      );
     const currentSnapshots = {
       dews: buildDewsSnapshot(dewsRows),
       dewsAlertable: buildDewsAlertableSnapshot(dewsRows, previousDewsAlertableSnapshot),
       depeg: buildDepegSnapshot(activeDepegRows),
-      safety: currentSafetySnapshot,
+      safety:
+        currentSafetySnapshot != null && safetySourceAssessment.generation != null
+          ? buildAlertSafetySnapshotEnvelope(
+              currentSafetySnapshot,
+              safetySourceAssessment.generation,
+            )
+          : null,
       launch: PRE_LAUNCH_STABLECOINS.map((c) => c.id),
     };
 
-    const previousDepegSnapshot = parseSnapshotMap<DepegSnapshot>(depegCache);
-    const previousSafetySnapshot = parseSnapshotMap<SafetySnapshot>(safetyCache);
     const mustSeedSnapshots =
       isSnapshotMissingOrStale(dewsCache, nowSec) ||
       (dewsAlertableCache != null && isSnapshotMissingOrStale(dewsAlertableCache, nowSec)) ||
       isSnapshotMissingOrStale(depegCache, nowSec) ||
-      isSnapshotMissingOrStale(safetyCache, nowSec) ||
       previousDewsSnapshot == null ||
-      previousDepegSnapshot == null ||
-      previousSafetySnapshot == null;
+      previousDepegSnapshot == null;
 
     if (mustSeedSnapshots) {
       await writeSnapshots(db, currentSnapshots);
       await recordOutcome(db, CIRCUIT_SOURCE.TELEGRAM_API, true);
       const result = emptyResult(true, chatsWithActiveSnooze);
+      result.safetyAlertSourceState = safetySourceAssessment.state;
+      result.safetyAlertSourceAgeSeconds = safetySourceAssessment.ageSeconds;
+      result.safetyAlertSourceGeneration = safetySourceAssessment.generation;
+      result.safetyAlertsSuppressed = safetySourceAssessment.state !== "ok" || safetySnapshotNeedsSeed;
       return { itemCount: 0, metadata: JSON.stringify(result) };
     }
     const safeDewsSnapshot = previousDewsSnapshot ?? {};
     const safeDewsAlertable = previousDewsAlertableSnapshot ?? {};
     const safeDepegSnapshot = previousDepegSnapshot ?? {};
-    const safeSafetySnapshot = previousSafetySnapshot ?? {};
+    const safeSafetySnapshot =
+      currentSafetySnapshot != null && !safetySnapshotNeedsSeed
+        ? (previousSafetySnapshot ?? {})
+        : {};
 
     const pendingBudget = Math.floor(MAX_MESSAGES_PER_RUN / 4);
     const drainResult = await drainPendingQueue(db, botToken, pendingBudget, signal);
@@ -476,24 +510,26 @@ export async function dispatchTelegramAlerts(
 
     const safetyChanges: SafetyChange[] = [];
     let suppressedMethodologyChanges = 0;
-    for (const [stablecoinId, row] of Object.entries(currentSafetySnapshot)) {
-      const previous = safeSafetySnapshot[stablecoinId];
-      if (previous?.grade === row.grade) continue;
+    if (currentSafetySnapshot != null && !safetySnapshotNeedsSeed) {
+      for (const [stablecoinId, row] of Object.entries(currentSafetySnapshot)) {
+        const previous = safeSafetySnapshot[stablecoinId];
+        if (previous?.grade === row.grade) continue;
 
-      if (previous?.methodologyVersion && row.methodologyVersion && previous.methodologyVersion !== row.methodologyVersion) {
-        suppressedMethodologyChanges++;
-        continue;
+        if (previous?.methodologyVersion && row.methodologyVersion && previous.methodologyVersion !== row.methodologyVersion) {
+          suppressedMethodologyChanges++;
+          continue;
+        }
+        if (!previous) continue;
+
+        safetyChanges.push({
+          stablecoinId,
+          symbol: getSymbol(stablecoinId),
+          oldGrade: previous?.grade ?? "UNKNOWN",
+          newGrade: row.grade,
+          oldScore: previous?.score ?? null,
+          newScore: row.score ?? null,
+        });
       }
-      if (!previous) continue;
-
-      safetyChanges.push({
-        stablecoinId,
-        symbol: getSymbol(stablecoinId),
-        oldGrade: previous?.grade ?? "UNKNOWN",
-        newGrade: row.grade,
-        oldScore: previous?.score ?? null,
-        newScore: row.score ?? null,
-      });
     }
 
     // -- Detect launch promotions (pre-launch coins that moved to active) -----
@@ -665,6 +701,10 @@ export async function dispatchTelegramAlerts(
       freshRetryQueued,
       freshPermanentFailures,
       chatsWithActiveSnooze,
+      safetyAlertSourceState: safetySourceAssessment.state,
+      safetyAlertSourceAgeSeconds: safetySourceAssessment.ageSeconds,
+      safetyAlertsSuppressed: safetySourceAssessment.state !== "ok" || safetySnapshotNeedsSeed,
+      safetyAlertSourceGeneration: safetySourceAssessment.generation,
     };
 
     const attemptedMessages = result.pendingAttempted + result.freshAttempted;

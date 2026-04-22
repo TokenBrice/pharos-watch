@@ -67,6 +67,10 @@ describe("status-metadata", () => {
       pendingEnqueued: 5,
       pendingExpired: 2,
       chatsWithActiveSnooze: null,
+      safetyAlertSourceState: null,
+      safetyAlertSourceAgeSeconds: null,
+      safetyAlertsSuppressed: false,
+      safetyAlertSourceGeneration: null,
       eventsDetected: {
         dews: 2,
         depeg: 1,

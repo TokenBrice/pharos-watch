@@ -70,6 +70,10 @@ export function parseTelegramDispatchCronMetadata(value: unknown): TelegramDispa
     pendingEnqueued: readMetadataNumber(record.pendingEnqueued),
     pendingExpired: readMetadataNumber(record.pendingExpired),
     chatsWithActiveSnooze: readMetadataNumber(record.chatsWithActiveSnooze),
+    safetyAlertSourceState: readMetadataString(record.safetyAlertSourceState) as TelegramDispatchCronMetadata["safetyAlertSourceState"],
+    safetyAlertSourceAgeSeconds: readMetadataNumber(record.safetyAlertSourceAgeSeconds),
+    safetyAlertsSuppressed: readMetadataBoolean(record.safetyAlertsSuppressed) === true,
+    safetyAlertSourceGeneration: readMetadataString(record.safetyAlertSourceGeneration),
     eventsDetected: eventsRecord
       ? {
           dews: readMetadataNumber(eventsRecord.dews),

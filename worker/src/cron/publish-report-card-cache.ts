@@ -1,7 +1,7 @@
 import { buildReportCardsSnapshot } from "../lib/report-cards-snapshot";
 import {
   ALERT_SAFETY_SOURCE_CACHE_KEY,
-  buildAlertSafetySourceSnapshot,
+  buildAlertSafetySourceEnvelope,
 } from "../lib/alert-safety-source-cache";
 import { setCache } from "../lib/db-cache";
 import { writeReportCardCache } from "../lib/report-card-cache";
@@ -25,7 +25,11 @@ export async function publishReportCardCache(
   await setCache(
     db,
     ALERT_SAFETY_SOURCE_CACHE_KEY,
-    JSON.stringify(buildAlertSafetySourceSnapshot(snapshot.cards, snapshot.methodology.version)),
+    JSON.stringify(buildAlertSafetySourceEnvelope(
+      snapshot.cards,
+      snapshot.methodology.version,
+      snapshot.updatedAt,
+    )),
   );
 
   return {

@@ -3,6 +3,7 @@ import {
   jsonResponse,
 } from "../lib/api-utils";
 import type { HealthResponse, TelegramHealthSummary } from "@shared/types/status";
+import { parseTelegramDispatchCronMetadata } from "@shared/lib/status-metadata";
 import { assessPublicHealth } from "../lib/public-health-assessment";
 
 export const handleHealth = withErrorHandler("health", async (db: D1Database): Promise<Response> => {
@@ -18,16 +19,33 @@ export const handleHealth = withErrorHandler("health", async (db: D1Database): P
         db.prepare("SELECT COUNT(*) AS n FROM telegram_pending_alerts").first<{ n: number }>(),
         db
           .prepare(
-            "SELECT started_at, status FROM cron_runs WHERE job = 'dispatch-telegram-alerts' ORDER BY started_at DESC LIMIT 1",
+            "SELECT started_at, status, metadata FROM cron_runs WHERE job = 'dispatch-telegram-alerts' ORDER BY started_at DESC LIMIT 1",
           )
-          .first<{ started_at: number; status: string }>(),
+          .first<{ started_at: number; status: string; metadata: string | null }>(),
       ]);
+      let dispatchMeta = null;
+      if (lastDispatch?.metadata) {
+        try {
+          dispatchMeta = parseTelegramDispatchCronMetadata(JSON.parse(lastDispatch.metadata));
+        } catch (error) {
+          console.warn("[health] telegram dispatch metadata unavailable:", error);
+        }
+      }
       telegramSummary = {
         totalChats: chatCount?.n ?? 0,
         pendingDeliveries: pendingCount?.n ?? 0,
         lastDispatchAt: lastDispatch?.started_at ?? null,
         lastDispatchStatus: lastDispatch?.status ?? null,
+        safetyAlertSourceState: dispatchMeta?.safetyAlertSourceState ?? null,
+        safetyAlertSourceAgeSeconds: dispatchMeta?.safetyAlertSourceAgeSeconds ?? null,
+        safetyAlertsSuppressed: dispatchMeta?.safetyAlertsSuppressed ?? false,
+        safetyAlertSourceGeneration: dispatchMeta?.safetyAlertSourceGeneration ?? null,
       };
+      if (dispatchMeta?.safetyAlertsSuppressed) {
+        assessment.warnings.push(
+          `telegram-safety-alerts-suppressed:${dispatchMeta.safetyAlertSourceState ?? "missing"}`,
+        );
+      }
     } catch (error) {
       console.warn("[health] telegram summary unavailable:", error);
       // Telegram tables may not be migrated yet, or the summary queries may be

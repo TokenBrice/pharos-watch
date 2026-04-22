@@ -126,6 +126,14 @@ export function TelegramBotStats({ telegramBot, dispatchCron, error, nowSeconds 
                     Run skipped: {dispatchMeta.skipped}
                   </div>
                 ) : null}
+                {dispatchMeta?.safetyAlertsSuppressed ? (
+                  <div className="rounded-md border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-sm text-amber-700 dark:text-amber-300">
+                    Safety alerts suppressed: {dispatchMeta.safetyAlertSourceState ?? "missing"}
+                    {dispatchMeta.safetyAlertSourceAgeSeconds != null
+                      ? ` · source age ${formatElapsedSeconds(dispatchMeta.safetyAlertSourceAgeSeconds)}`
+                      : ""}
+                  </div>
+                ) : null}
                 {renderDelta("Subscribers notified", dispatchMeta?.subscribersNotified ?? null)}
                 {renderDelta("Messages sent", dispatchMeta?.messagesSent ?? lastDispatch.itemCount ?? null)}
                 {renderDelta("Fresh attempted", dispatchMeta?.freshAttempted ?? null)}
@@ -137,6 +145,7 @@ export function TelegramBotStats({ telegramBot, dispatchCron, error, nowSeconds 
                 {renderDelta("Pending dropped", dispatchMeta?.pendingDropped ?? null)}
                 {renderDelta("Pending newly enqueued", dispatchMeta?.pendingEnqueued ?? null)}
                 {renderDelta("Blocked cleaned up", dispatchMeta?.blockedUsersCleanedUp ?? null)}
+                {renderDelta("Safety source age", dispatchMeta?.safetyAlertSourceAgeSeconds ?? null)}
                 {renderDelta("DEWS changes", dispatchMeta?.eventsDetected?.dews ?? null)}
                 {renderDelta("Depeg changes", dispatchMeta?.eventsDetected?.depeg ?? null)}
                 {renderDelta("Depeg worsening", dispatchMeta?.eventsDetected?.depegWorsening ?? null)}
@@ -146,6 +155,9 @@ export function TelegramBotStats({ telegramBot, dispatchCron, error, nowSeconds 
                 <div className="flex flex-wrap gap-2 pt-1">
                   {dispatchMeta?.snapshotSeeded ? <Badge variant="secondary">snapshot reseeded</Badge> : null}
                   {dispatchMeta?.cappedAtLimit ? <Badge variant="secondary">hit message cap</Badge> : null}
+                  {dispatchMeta?.safetyAlertSourceState && dispatchMeta.safetyAlertSourceState !== "ok" ? (
+                    <Badge variant="secondary">{dispatchMeta.safetyAlertSourceState}</Badge>
+                  ) : null}
                 </div>
               </>
             ) : (

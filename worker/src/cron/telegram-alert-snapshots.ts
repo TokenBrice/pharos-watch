@@ -2,7 +2,10 @@ import { isDewsAlertable, type DepegAlertPayload } from "../lib/telegram-alerts"
 import { setCache } from "../lib/db-cache";
 import { DAY_SECONDS } from "@shared/lib/time-constants";
 import { unwrapStressSignalsEnvelope } from "@shared/lib/stress-signals-envelope";
-import type { AlertSafetySourceSnapshot } from "../lib/alert-safety-source-cache";
+import type {
+  AlertSafetySnapshotEnvelope,
+  AlertSafetySourceSnapshot,
+} from "../lib/alert-safety-source-cache";
 
 // ---------- Constants ----------
 
@@ -193,15 +196,20 @@ export async function writeSnapshots(
     dews: DewsSnapshot;
     dewsAlertable: DewsSnapshot;
     depeg: DepegSnapshot;
-    safety: SafetySnapshot;
+    safety?: AlertSafetySnapshotEnvelope | null;
     launch: string[];
   },
 ): Promise<void> {
-  await Promise.all([
+  const writes: Promise<unknown>[] = [
     setCache(db, SNAPSHOT_KEYS.dews, JSON.stringify(snapshots.dews)),
     setCache(db, SNAPSHOT_KEYS.dewsAlertable, JSON.stringify(snapshots.dewsAlertable)),
     setCache(db, SNAPSHOT_KEYS.depeg, JSON.stringify(snapshots.depeg)),
-    setCache(db, SNAPSHOT_KEYS.safety, JSON.stringify(snapshots.safety)),
     setCache(db, SNAPSHOT_KEYS.launch, JSON.stringify(snapshots.launch)),
-  ]);
+  ];
+
+  if (snapshots.safety) {
+    writes.push(setCache(db, SNAPSHOT_KEYS.safety, JSON.stringify(snapshots.safety)));
+  }
+
+  await Promise.all(writes);
 }
