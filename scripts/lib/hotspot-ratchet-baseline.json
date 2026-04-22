@@ -1,6 +1,6 @@
 {
   "shared/lib/report-cards.ts": {
-    "fileLines": 46,
+    "fileLines": 41,
     "maxFunctionLines": 0,
     "branchCount": 0,
     "disposition": "queued-p4",
@@ -12,9 +12,9 @@
     "notes": "Report-card scoring and projection logic are still concentrated here. The next pass should separate scoring families, blacklist/live-slice enrichment, and presentation-oriented shaping."
   },
   "worker/src/api/stablecoin-detail.ts": {
-    "fileLines": 77,
-    "maxFunctionLines": 61,
-    "branchCount": 4,
+    "fileLines": 36,
+    "maxFunctionLines": 22,
+    "branchCount": 2,
     "disposition": "stabilized",
     "targetBudget": {
       "fileLines": 76,
@@ -96,8 +96,8 @@
     "notes": "Section body is now isolated from the methodology shell. Keep future PSI copy changes local to this module unless composition order changes."
   },
   "src/app/methodology/sections/core/safety-scores-section.tsx": {
-    "fileLines": 515,
-    "maxFunctionLines": 501,
+    "fileLines": 509,
+    "maxFunctionLines": 495,
     "branchCount": 0,
     "disposition": "queued-p4",
     "targetBudget": {
@@ -240,8 +240,8 @@
     "notes": "Digest generation, input shaping, and channel delivery now live below the cron shell. Keep new delivery/provider detail out of this entrypoint."
   },
   "worker/src/cron/dispatch-telegram-alerts.ts": {
-    "fileLines": 725,
-    "maxFunctionLines": 457,
+    "fileLines": 729,
+    "maxFunctionLines": 461,
     "branchCount": 37,
     "disposition": "deferred",
     "targetBudget": {
@@ -276,7 +276,7 @@
     "notes": "Post-score baselines, drift guards, and metadata assembly now live in dedicated helpers. Keep the entrypoint focused on phase order, abort boundaries, and persistence sequencing."
   },
   "worker/src/cron/dex-liquidity/orchestrator-analysis.ts": {
-    "fileLines": 634,
+    "fileLines": 606,
     "maxFunctionLines": 362,
     "branchCount": 41,
     "disposition": "queued-p4",
@@ -312,8 +312,8 @@
     "notes": "Reserve adapter orchestration, persistence, and publication policy are still concentrated in the cron shell. Next pass should separate adapter execution from persistence and summary assembly."
   },
   "worker/src/cron/compute-dews.ts": {
-    "fileLines": 230,
-    "maxFunctionLines": 156,
+    "fileLines": 229,
+    "maxFunctionLines": 154,
     "branchCount": 9,
     "disposition": "stabilized",
     "targetBudget": {
@@ -336,9 +336,9 @@
     "notes": "Previously a major hotspot and now materially reduced. Preserve the split; future providers should land in helper modules, not back in this shell."
   },
   "worker/src/cron/sync-blacklist.ts": {
-    "fileLines": 446,
-    "maxFunctionLines": 377,
-    "branchCount": 37,
+    "fileLines": 408,
+    "maxFunctionLines": 333,
+    "branchCount": 29,
     "disposition": "queued-p4",
     "targetBudget": {
       "fileLines": 280,
