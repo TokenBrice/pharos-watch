@@ -34,7 +34,7 @@ There is no dedicated `/api/portfolio` endpoint. Portfolio holdings stay client-
 - **Share/query param:** `?p=<encoded-holdings>`
 - **Priority order on load:** URL share payload -> `localStorage` -> empty state
 
-`usePortfolio` validates and normalizes holdings through the shared canonical-ID registries. Unknown IDs are dropped, duplicate canonical IDs are merged, and migrated data is written back once after a successful read.
+`usePortfolio` validates canonical holdings only. Unknown or non-canonical IDs are dropped, duplicate canonical IDs are merged, and the cleaned state is written back once after a successful read.
 
 ---
 
@@ -71,7 +71,7 @@ When changing portfolio behavior, update this doc alongside the relevant runtime
 | `src/app/portfolio/page.tsx` | Static route shell, metadata, breadcrumb/shell config |
 | `src/app/portfolio/client.tsx` | Interactive holdings editor, presets, grade/exposure presentation |
 | `src/hooks/use-portfolio.ts` | Browser persistence, share-link helpers, portfolio score derivation |
-| `src/lib/portfolio-codec.ts` | Query/localStorage encoding + canonical-ID migration |
+| `src/lib/portfolio-codec.ts` | Query/localStorage encoding + canonical-only validation |
 | `src/lib/portfolio-analysis.ts` | Upstream exposure grouping and collateral categorization |
 | `src/components/portfolio-empty-state.tsx` | Preset-first onboarding and empty-state copy |
 | `docs/report-cards.md` | Underlying scoring model consumed by the portfolio page |

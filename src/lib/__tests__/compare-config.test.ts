@@ -2,15 +2,15 @@ import { describe, expect, it } from "vitest";
 import { resolveCompareSelectedIds } from "../compare-config";
 
 describe("resolveCompareSelectedIds", () => {
-  it("prefers canonical ids and unique legacy symbols", () => {
-    expect(resolveCompareSelectedIds("usdc-circle,usdt")).toEqual([
+  it("keeps canonical ids only", () => {
+    expect(resolveCompareSelectedIds("usdc-circle,usdt-tether")).toEqual([
       "usdc-circle",
       "usdt-tether",
     ]);
   });
 
-  it("drops ambiguous legacy symbols", () => {
-    expect(resolveCompareSelectedIds("usdf,usdc-circle")).toEqual([
+  it("drops non-canonical selections", () => {
+    expect(resolveCompareSelectedIds("usdt,1,usdc-circle")).toEqual([
       "usdc-circle",
     ]);
   });

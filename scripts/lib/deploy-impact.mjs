@@ -79,7 +79,6 @@ const PAGES_CHANGE_EXACT_PATHS = new Set([
   "scripts/generate-docs-metadata.ts",
   "scripts/generate-llms-txt.ts",
   "scripts/generate-markdown-exports.ts",
-  "scripts/generate-redirects.ts",
   "scripts/serve-static-export.mjs",
   "scripts/smoke-ui.mjs",
   "scripts/sync-digests.ts",

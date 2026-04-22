@@ -97,8 +97,12 @@ describe("parseStressSelectionFromSearch", () => {
     });
   });
 
-  it("rejects ambiguous legacy symbols", () => {
+  it("rejects non-canonical stress params", () => {
     expect(parseStressSelectionFromSearch("?stress=usdf&grade=D")).toEqual({
+      coinId: null,
+      grade: null,
+    });
+    expect(parseStressSelectionFromSearch("?stress=1&grade=D")).toEqual({
       coinId: null,
       grade: null,
     });

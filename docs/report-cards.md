@@ -374,7 +374,7 @@ Users enter stablecoin holdings (coin + USD amount). Derived computations (all c
 
 State: `usePortfolio` hook. Sources (priority): URL `?p=usdc-circle:50000,dai-makerdao:5000` → `localStorage` → empty. Shared links don't overwrite saved portfolio.
 
-`localStorage` migration behavior: on read, holdings are validated, then IDs are migrated through the shared registries used by `src/lib/portfolio-codec.ts` (`REGISTRY_BY_ID` first, `REGISTRY_BY_LLAMA_ID` second). Unknown IDs are dropped, duplicate canonical IDs are merged by amount, and migrated data is written back once.
+Portfolio holdings now accept canonical IDs only. On read, `src/lib/portfolio-codec.ts` validates holdings, drops unknown or non-canonical IDs, merges duplicate canonical IDs by amount, and writes the cleaned state back once after a successful read.
 
 ### Interactive Stress Test
 
@@ -387,8 +387,6 @@ Users simulate a grade downgrade for any upstream coin and watch cascading grade
 - **Card grid simulation**: ALL affected coins show dashed amber borders + "Simulated" badge regardless of portfolio mode. Unaffected cards dimmed. Sticky banner with clear button.
 
 State: `useStressTest` hook. URL sync: `?stress=usdc-circle&grade=D`.
-
-Legacy symbol-based tokens are still accepted only when the symbol is unique across tracked metadata. Ambiguous symbols are rejected instead of silently resolving to the wrong asset.
 
 ## Frontend
 

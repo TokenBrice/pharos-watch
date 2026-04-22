@@ -132,7 +132,6 @@ describe("usePortfolio", () => {
 
     expect(result.current.holdings).toEqual([
       { coinId: "usdc-circle", amount: 0 },
-      { coinId: "usdt-tether", amount: 2 },
     ]);
     expect(JSON.parse(window.localStorage.getItem(STORAGE_KEY) ?? "null")).toEqual(result.current.holdings);
   });
@@ -183,7 +182,7 @@ describe("usePortfolio", () => {
     const { result } = renderHook(() => usePortfolio([]));
 
     act(() => {
-      result.current.addCoin("1", 0);
+      result.current.addCoin("usdt-tether", 0);
       result.current.addCoin("usdc-circle", 20);
     });
 

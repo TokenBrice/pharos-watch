@@ -1,4 +1,4 @@
-import { REGISTRY_BY_ID, REGISTRY_BY_LLAMA_ID } from "@shared/lib/stablecoin-id-registry";
+import { REGISTRY_BY_ID } from "@shared/lib/stablecoin-id-registry";
 import { isKnownCoinId } from "@shared/lib/validate-coin-id";
 import {
   decodeStablecoinUrlToken,
@@ -17,7 +17,7 @@ export function normalizePortfolioAmount(value: unknown): number | null {
 }
 
 function canonicalPortfolioCoinId(coinId: string): string | null {
-  return (REGISTRY_BY_ID.get(coinId) ?? REGISTRY_BY_LLAMA_ID.get(coinId))?.id ?? null;
+  return REGISTRY_BY_ID.get(coinId)?.id ?? null;
 }
 
 export function normalizePortfolioHolding(value: unknown): PortfolioHolding | null {

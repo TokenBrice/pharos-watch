@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import type { TimeRangeOption } from "@/hooks/use-time-range-filter";
 import { useUrlFilters } from "@/hooks/use-url-filters";
 import { trackEvent } from "@/lib/analytics";
@@ -13,7 +13,7 @@ import type { CoinOption } from "@/lib/compare-types";
 
 const VALID_COMPARE_RANGES = new Set<TimeRangeOption>(["7d", "30d", "90d", "1y", "all"]);
 
-export function normalizeCompareRange(value: string | null): TimeRangeOption {
+function normalizeCompareRange(value: string | null): TimeRangeOption {
   if (value && VALID_COMPARE_RANGES.has(value as TimeRangeOption)) {
     return value as TimeRangeOption;
   }
@@ -27,9 +27,25 @@ export function useCompareSelection() {
     () => resolveCompareSelectedIds(searchParams.get("coins")),
     [searchParams],
   );
+  const rawCoinsParam = searchParams.get("coins");
 
   const range = normalizeCompareRange(searchParams.get("range"));
   const [flowHours, setFlowHours] = useState<24 | 168 | 720>(24);
+
+  useEffect(() => {
+    if (!rawCoinsParam) return;
+
+    const normalizedCoins = selectedIds.join(",");
+    if (normalizedCoins === rawCoinsParam) return;
+
+    replaceParams((params) => {
+      if (normalizedCoins) {
+        params.set("coins", normalizedCoins);
+      } else {
+        params.delete("coins");
+      }
+    });
+  }, [rawCoinsParam, replaceParams, selectedIds]);
 
   const setRange = useCallback(
     (newRange: TimeRangeOption) => {

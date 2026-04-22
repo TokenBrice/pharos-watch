@@ -9,13 +9,13 @@ describe("stablecoin URL codec", () => {
     expect(encodeStablecoinUrlToken("usdc-circle")).toBe("usdc-circle");
   });
 
-  it("decodes canonical ids, unique legacy symbols, and llama ids", () => {
+  it("decodes canonical ids only", () => {
     expect(decodeStablecoinUrlToken("usdc-circle")).toBe("usdc-circle");
-    expect(decodeStablecoinUrlToken("usdc")).toBe("usdc-circle");
-    expect(decodeStablecoinUrlToken("1")).toBe("usdt-tether");
   });
 
-  it("rejects ambiguous legacy symbols", () => {
+  it("rejects non-canonical tokens", () => {
+    expect(decodeStablecoinUrlToken("usdc")).toBeNull();
+    expect(decodeStablecoinUrlToken("1")).toBeNull();
     expect(decodeStablecoinUrlToken("usdf")).toBeNull();
     expect(decodeStablecoinUrlToken("cUSD")).toBeNull();
   });

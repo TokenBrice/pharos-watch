@@ -19,33 +19,35 @@ describe("portfolio codec", () => {
     expect(encodePortfolioHoldings(holdings)).toBe("usdc-circle:25,usdt-tether:75");
   });
 
-  it("accepts unique legacy symbols but rejects ambiguous ones", () => {
-    expect(parsePortfolioUrlParam("usdc:25")).toEqual([
+  it("accepts canonical ids and rejects non-canonical ones", () => {
+    expect(parsePortfolioUrlParam("usdc-circle:25")).toEqual([
       { coinId: "usdc-circle", amount: 25 },
     ]);
+    expect(parsePortfolioUrlParam("usdc:25")).toEqual([]);
+    expect(parsePortfolioUrlParam("1:25")).toEqual([]);
     expect(parsePortfolioUrlParam("usdf:25")).toEqual([]);
   });
 
-  it("migrates legacy llama ids and merges duplicates", () => {
+  it("merges duplicate canonical ids only", () => {
     expect(migratePortfolioIds([
-      { coinId: "1", amount: 40 },
       { coinId: "usdt-tether", amount: 10 },
-      { coinId: "2", amount: 50 },
+      { coinId: "usdt-tether", amount: 40 },
+      { coinId: "usdc-circle", amount: 50 },
     ])).toEqual([
       { coinId: "usdt-tether", amount: 50 },
       { coinId: "usdc-circle", amount: 50 },
     ]);
   });
 
-  it("preserves and merges zero-amount legacy draft holdings", () => {
+  it("drops non-canonical zero-amount draft holdings", () => {
     expect(migratePortfolioIds([
-      { coinId: "1", amount: 0 },
+      { coinId: "not-a-coin", amount: 0 },
       { coinId: "usdt-tether", amount: 10 },
     ])).toEqual([
       { coinId: "usdt-tether", amount: 10 },
     ]);
 
-    expect(encodePortfolioHoldings([{ coinId: "1", amount: 0 }])).toBe("usdt-tether:0");
+    expect(encodePortfolioHoldings([{ coinId: "usdt-tether", amount: 0 }])).toBe("usdt-tether:0");
   });
 });
 
@@ -114,10 +116,7 @@ describe("normalization helpers", () => {
   });
 
   it("canonicalizes known legacy ids while rejecting invalid holdings", () => {
-    expect(normalizePortfolioHolding({ coinId: "1", amount: 12 })).toEqual({
-      coinId: "usdt-tether",
-      amount: 12,
-    });
+    expect(normalizePortfolioHolding({ coinId: "1", amount: 12 })).toBeNull();
     expect(normalizePortfolioHolding({ coinId: "usdc-circle", amount: -1 })).toBeNull();
     expect(normalizePortfolioHolding({ coinId: "not-a-coin", amount: 1 })).toBeNull();
   });

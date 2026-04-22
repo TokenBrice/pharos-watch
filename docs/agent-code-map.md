@@ -638,7 +638,6 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `scripts/generate-markdown-exports.ts` - main, writeMarkdownRoute
 - `scripts/generate-openapi-spec.ts`
 - `scripts/generate-postman-collection.ts`
-- `scripts/generate-redirects.ts`
 - `scripts/generate-sitemap-dates.ts`
 - `scripts/lib/critical-coverage.mjs` - CRITICAL_FILES, findCoverageFor, normalizePath, parseLcov
 - `scripts/lib/deploy-impact.mjs` - hasDeployImpact, hasPagesDeployImpact, hasWorkerDeployImpact, normalizeRepoPath
