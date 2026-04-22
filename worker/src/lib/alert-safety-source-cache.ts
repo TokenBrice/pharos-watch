@@ -2,8 +2,8 @@ import { SAFETY_SCORE_VERSION } from "@shared/lib/safety-score-version";
 import type { ReportCard } from "@shared/types";
 
 export const ALERT_SAFETY_SOURCE_CACHE_KEY = "alert:safety-source-cache";
-export const ALERT_SAFETY_SOURCE_SCHEMA_VERSION = "1";
-export const ALERT_SAFETY_SOURCE_STALE_PRODUCER_INTERVALS = 2;
+const ALERT_SAFETY_SOURCE_SCHEMA_VERSION = "1";
+const ALERT_SAFETY_SOURCE_STALE_PRODUCER_INTERVALS = 2;
 
 export type AlertSafetySourceState = "ok" | "missing" | "corrupt" | "stale" | "wrong-generation";
 
@@ -69,7 +69,7 @@ export function getAlertSafetySourceGeneration(methodologyVersion = SAFETY_SCORE
   return `safety-${methodologyVersion}-alert-source-v${ALERT_SAFETY_SOURCE_SCHEMA_VERSION}`;
 }
 
-export function buildAlertSafetySourceSnapshot(
+function buildAlertSafetySourceSnapshot(
   cards: ReportCard[],
   methodologyVersion: string,
 ): AlertSafetySourceSnapshot {
@@ -100,7 +100,7 @@ export function buildAlertSafetySourceEnvelope(
   };
 }
 
-export function parseAlertSafetySourceEnvelope(
+function parseAlertSafetySourceEnvelope(
   cached: { value: string; updatedAt: number } | null,
 ): AlertSafetySourceEnvelope | null {
   const parsed = parseCachedValue(cached);

@@ -7,13 +7,13 @@ import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { DatabaseSync } from "node:sqlite";
 import {
-  buildYieldHistoryWriterPausePayload,
-  LEGACY_BEST_YIELD_SOURCE_KEY,
-  listYieldHistoryCleanupTargets,
   parseYieldHistoryWriterPause,
   YIELD_HISTORY_CLEANUP_WRITER_PAUSE_KEY,
-  type YieldHistoryCleanupTarget,
 } from "../src/lib/yield-history-cleanup";
+import {
+  LEGACY_BEST_YIELD_SOURCE_KEY,
+  YIELD_HISTORY_OWNERSHIP_HANDOFFS,
+} from "../src/lib/yield-history-ownership-handoffs";
 
 const DB_NAME = "stablecoin-db";
 const SCRIPT_DIR = dirname(fileURLToPath(import.meta.url));
@@ -34,6 +34,11 @@ const YIELD_HISTORY_COLUMNS = [
   "yield_source",
   "yield_type",
 ] as const;
+
+interface YieldHistoryCleanupTarget {
+  stablecoinId: string;
+  sourceKeys: string[];
+}
 
 export interface YieldHistoryCleanupRow {
   stablecoin_id: string;
@@ -63,6 +68,25 @@ export interface YieldHistoryCleanupSummary {
   totalRows: number;
   byStablecoin: Record<string, number>;
   byStablecoinSource: Record<string, number>;
+}
+
+function listYieldHistoryCleanupTargets(): YieldHistoryCleanupTarget[] {
+  return Object.entries(YIELD_HISTORY_OWNERSHIP_HANDOFFS).map(([stablecoinId, sourceKeys]) => ({
+    stablecoinId,
+    sourceKeys,
+  }));
+}
+
+function buildYieldHistoryWriterPausePayload(
+  reason = "yield-history-cleanup",
+  operator: string | null = null,
+  pausedAt = Math.floor(Date.now() / 1000),
+) {
+  return {
+    reason,
+    pausedAt,
+    operator,
+  };
 }
 
 function escapeSqlString(value: string): string {

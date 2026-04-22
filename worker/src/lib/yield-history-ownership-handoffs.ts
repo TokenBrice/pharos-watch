@@ -25,7 +25,7 @@ export const YIELD_HISTORY_OWNERSHIP_HANDOFFS: Record<string, string[]> = {
   ],
 };
 
-export function getSuppressedYieldHistorySourceKeys(stablecoinId: string): string[] {
+function getSuppressedYieldHistorySourceKeys(stablecoinId: string): string[] {
   return YIELD_HISTORY_OWNERSHIP_HANDOFFS[stablecoinId] ?? [];
 }
 
