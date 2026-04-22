@@ -3264,7 +3264,7 @@
       "version": 2,
       "semantics": "protocol-reserve",
       "display": {
-        "url": "https://aave.com/gho",
+        "url": "https://aave.tokenlogic.xyz/gho",
         "label": "Aave GHO"
       },
       "inputs": {
