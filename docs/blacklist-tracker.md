@@ -7,6 +7,7 @@ The tracker now has two distinct amount layers:
 - `blacklist_events` stores event-time amounts only when Pharos can justify them historically
 - `blacklist_current_balances` stores persistent freeze-ledger snapshots used by the public frozen-total summary
 - the `/blacklist` status charts now support on-page drilldown into the matching stablecoin subset for each blacklistability bucket
+- the `/blacklist` summary cards now include an unfreezable market-share stat: blacklist-status `No` market cap divided by total tracked stablecoin market cap
 
 **Cron-backed sync coverage:** USDC, USDT, PAXG, XAUT, PYUSD, USD1, USDG, RLUSD, U, USDtb, A7A5, FDUSD, BRZ, AUSD, MNEE, EURI, USDQ, USDO, USDX, AID, TGBP, EURC, BUIDL, USDP, TUSD, NUSD, EURCV, USDA, USAT, AEUR, XUSD, XAUm, JPYC, FRXUSD, FIDD.
 

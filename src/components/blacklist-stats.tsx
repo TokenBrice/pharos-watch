@@ -1,10 +1,15 @@
 "use client";
 
+import { useMemo } from "react";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { MetricStatCard } from "@/components/metric-stat-card";
-import { formatCurrency } from "@shared/lib/format";
+import { useReportCards } from "@/hooks/api-hooks";
+import { useStablecoins } from "@/hooks/use-stablecoins";
+import { buildReportCardMap } from "@/lib/stablecoin-lookups";
+import { BLACKLIST_STATUS_BUCKET_COLORS, buildBlacklistStatusBuckets } from "@/lib/blacklist-status-buckets";
 import { BLACKLIST_CHART_COLORS } from "@shared/lib/classification";
+import { formatCurrency, formatPercent } from "@shared/lib/format";
 import type { BlacklistStablecoin, BlacklistSummaryResponse } from "@shared/types";
 
 interface BlacklistStatsProps {
@@ -12,10 +17,41 @@ interface BlacklistStatsProps {
   isLoading: boolean;
 }
 
+function formatMarketSharePercentage(value: number): string {
+  if (value < 0.1) return formatPercent(value, 3);
+  if (value < 1) return formatPercent(value, 2);
+  return formatPercent(value, 1);
+}
+
 export function BlacklistStats({ stats, isLoading }: BlacklistStatsProps) {
+  const { data: stablecoinData, isLoading: stablecoinsLoading } = useStablecoins();
+  const { data: reportCardsData, isLoading: reportCardsLoading } = useReportCards();
   const trackedAddressCount = stats?.trackedAddressCount ?? stats?.activeAddressCount ?? 0;
   const trackedAmountGapCount = stats?.trackedAmountGapCount ?? stats?.activeAmountGapCount ?? 0;
   const trackedFrozenTotal = stats?.trackedFrozenTotal ?? stats?.activeFrozenTotal ?? 0;
+  const reportCardMap = useMemo(() => buildReportCardMap(reportCardsData?.cards), [reportCardsData?.cards]);
+  const blacklistStatusBuckets = useMemo(
+    () => buildBlacklistStatusBuckets(stablecoinData?.peggedAssets, reportCardMap),
+    [reportCardMap, stablecoinData?.peggedAssets],
+  );
+  const totalTrackedMarketCap = useMemo(
+    () => blacklistStatusBuckets.reduce((sum, bucket) => sum + bucket.marketCap, 0),
+    [blacklistStatusBuckets],
+  );
+  const unfreezableBucket = useMemo(
+    () => blacklistStatusBuckets.find((bucket) => bucket.key === "no") ?? null,
+    [blacklistStatusBuckets],
+  );
+  const unfreezableMarketSharePct =
+    unfreezableBucket && totalTrackedMarketCap > 0
+      ? (unfreezableBucket.marketCap / totalTrackedMarketCap) * 100
+      : 0;
+  const isUnfreezableShareLoading = stablecoinsLoading || reportCardsLoading;
+  const unfreezableMarketShareValue = isUnfreezableShareLoading ? "—" : formatMarketSharePercentage(unfreezableMarketSharePct);
+  const unfreezableMarketShareSubtext =
+    unfreezableBucket && totalTrackedMarketCap > 0
+      ? `${formatCurrency(unfreezableBucket.marketCap)} of ${formatCurrency(totalTrackedMarketCap)} total`
+      : "blacklist status: no / total market cap";
 
   const topByCount = stats?.perCoinBlacklistCounts
     ? (Object.entries(stats.perCoinBlacklistCounts) as [BlacklistStablecoin, number][])
@@ -55,7 +91,7 @@ export function BlacklistStats({ stats, isLoading }: BlacklistStatsProps) {
           />
         ))}
       </div>
-      <div className="grid grid-cols-2 gap-3 sm:gap-5 lg:grid-cols-3">
+      <div className="grid grid-cols-2 gap-3 sm:gap-5 xl:grid-cols-4">
         <MetricStatCard
           borderColorClass="border-l-emerald-500"
           title="Freeze Ledger"
@@ -73,6 +109,13 @@ export function BlacklistStats({ stats, isLoading }: BlacklistStatsProps) {
           title="Total Destroyed Funds"
           value={stats ? formatCurrency(stats.destroyedTotal) : "$0"}
           subtext="seized & burned (USD value)"
+        />
+        <MetricStatCard
+          borderColorClass="border-border"
+          borderColorHex={BLACKLIST_STATUS_BUCKET_COLORS.no}
+          title="Unfreezable Market Share"
+          value={unfreezableMarketShareValue}
+          subtext={unfreezableMarketShareSubtext}
         />
       </div>
     </div>
