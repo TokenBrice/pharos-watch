@@ -61,36 +61,42 @@ export const NAV_GROUPS: NavGroup[] = [
     key: "data",
     label: "TRACK",
     items: [
-      { href: "/chains/", label: "Stable per Chain", icon: Layers, description: "Chain-by-chain stablecoin share, mix, and health" },
       { href: "/liquidity", label: "Liquidity", icon: Droplets, description: "DEX depth, durability, and market support" },
       { href: "/depeg", label: "Depeg", icon: Activity, description: "Live incident board for peg stress and early warnings" },
       { href: "/flows", label: "Mint/Burn Flows", icon: ArrowUpDown, description: "Configured issuance-chain mint and burn pressure" },
       { href: "/blacklist", label: "Blacklist", icon: ShieldBan, description: "Freeze activity and issuer control events" },
-      { href: "/upcoming", label: "Upcoming", icon: Rocket, description: "Pre-launch stablecoins and launch-watch context" },
-      { href: "/telegram", label: "Telegram", icon: Send, description: "Push alerts for depegs, DEWS shifts, and the daily digest" },
+      { href: "/chains/", label: "Chains", icon: Layers, description: "Chain-by-chain stablecoin share, mix, and health" },
       { href: "/cemetery", label: "Cemetery", icon: Skull, description: "Failed stablecoins and the lessons they left behind" },
     ],
   },
   {
     key: "tools",
-    label: "Analyze",
+    label: "ANALYZE",
     items: [
+      { href: "/dependency-map", label: "Dependency Map", icon: Network, description: "Collateral graph for hidden upstream stablecoin risk" },
       { href: "/portfolio", label: "Portfolio Audit", icon: Wallet, description: "Look through your holdings as one combined stablecoin book" },
       { href: "/compare", label: "Compare", icon: ArrowLeftRight, description: "Build a live peer set and judge substitutes side by side" },
-      { href: "/dependency-map", label: "Dependency Map", icon: Network, description: "Collateral graph for hidden upstream stablecoin risk" },
+    ],
+  },
+  {
+    key: "monitor",
+    label: "MONITOR",
+    items: [
+      { href: "/telegram", label: "Telegram", icon: Send, description: "Push alerts for depegs, DEWS shifts, and the daily digest" },
+      { href: "/upcoming", label: "Upcoming", icon: Rocket, description: "Pre-launch stablecoins and launch-watch context" },
       { href: "/digest", label: "Digest", icon: Newspaper, description: "Daily editorial recap of the stablecoin market" },
+      { href: "/status", label: "Pharos Status", icon: Activity, description: "Live health of every data pipeline and cron sync" },
     ],
   },
   {
     key: "info",
-    label: "Reference",
+    label: "REFERENCE",
     items: [
       { href: "/about", label: "About", icon: Info, description: "Scope, data sources, and why Pharos exists" },
       { href: "/funding", label: "Funding", icon: Heart, description: "Running costs, supporter ledger, and public sustainability path" },
       { href: "/methodology", label: "Methodology", icon: BookOpen, description: "Reference manual for formulas, thresholds, and changelogs" },
       { href: "/coverage", label: "Coverage", icon: TableProperties, description: "Truth surface for what each route can show per coin" },
       { href: "/about/api", label: "API Reference", icon: KeyRound, description: "Auth model, key requirement, and full endpoint reference" },
-      { href: "/status", label: "Status", icon: Activity, description: "Live health of every data pipeline and cron sync" },
       { href: "/changelog", label: "Changelog", icon: ScrollText, description: "Weekly release notes and feature updates" },
     ],
   },
@@ -99,6 +105,7 @@ export const NAV_GROUPS: NavGroup[] = [
 export const DEFAULT_EXPANDED: Record<string, boolean> = {
   data: true,
   tools: false,
+  monitor: false,
   info: false,
 };
 

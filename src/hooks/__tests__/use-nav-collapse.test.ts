@@ -43,10 +43,11 @@ describe("getExpandedState", () => {
   it("returns defaults when localStorage is empty", () => {
     const state = getExpandedState();
     // TRACK group (data) defaults to expanded so the highest-traffic data
-    // routes are one click away on first render; tools and info stay
-    // collapsed.
+    // routes are one click away on first render; Analyze, Monitor, and
+    // Reference stay collapsed.
     expect(state["data"]).toBe(true);
     expect(state["tools"]).toBe(false);
+    expect(state["monitor"]).toBe(false);
     expect(state["info"]).toBe(false);
   });
 
@@ -55,6 +56,7 @@ describe("getExpandedState", () => {
     const state = getExpandedState();
     expect(state["data"]).toBe(false);    // overridden
     expect(state["tools"]).toBe(false);   // default
+    expect(state["monitor"]).toBe(false); // default
     expect(state["info"]).toBe(false);    // default
   });
 
@@ -63,15 +65,16 @@ describe("getExpandedState", () => {
     const state = getExpandedState();
     expect(state["data"]).toBe(true); // falls back to defaults
     expect(state["tools"]).toBe(false);
+    expect(state["monitor"]).toBe(false);
     expect(state["info"]).toBe(false);
   });
 });
 
 describe("setExpandedState", () => {
   it("persists state to localStorage", () => {
-    setExpandedState({ data: true, tools: false, info: true });
+    setExpandedState({ data: true, tools: false, monitor: true, info: true });
     const raw = mockStorage.getItem(STORAGE_KEY);
-    expect(JSON.parse(raw!)).toEqual({ data: true, tools: false, info: true });
+    expect(JSON.parse(raw!)).toEqual({ data: true, tools: false, monitor: true, info: true });
   });
 });
 
