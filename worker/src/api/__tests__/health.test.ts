@@ -1,4 +1,4 @@
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, vi } from "vitest";
 import { mockD1 } from "./helpers/mock-d1";
 import { handleHealth } from "../health";
 
@@ -394,6 +394,51 @@ describe("handleHealth", () => {
       safetyAlertsSuppressed: false,
       safetyAlertSourceGeneration: "safety-7.09-alert-source-v1",
     });
+  });
+
+  it("keeps telegramSummary counts when the last dispatch metadata is malformed", async () => {
+    const now = Math.floor(Date.now() / 1000);
+    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => undefined);
+    const db = mockD1([
+      { match: "cache", rows: [] },
+      { match: "blacklist_events", rows: [], first: { total: 0, missing: 0 } },
+      { match: "mint_burn_hourly", rows: [], first: { total: 0 } },
+      { match: "SELECT status", rows: [], first: { status: "ok" } },
+      { match: "status = 'ok'", rows: [], first: { started_at: now - 300 } },
+      { match: "telegram_subscribers", rows: [], first: { n: 42 } },
+      { match: "telegram_pending_alerts", rows: [], first: { n: 3 } },
+      {
+        match: "dispatch-telegram-alerts",
+        rows: [],
+        first: { started_at: now - 120, status: "ok", metadata: "{bad-json" },
+      },
+    ]);
+
+    const res = await handleHealth(db);
+    const body = (await res.json()) as {
+      telegramSummary: {
+        totalChats: number;
+        pendingDeliveries: number;
+        lastDispatchAt: number | null;
+        lastDispatchStatus: string | null;
+        safetyAlertSourceState: string | null;
+        safetyAlertSourceAgeSeconds: number | null;
+        safetyAlertsSuppressed: boolean;
+        safetyAlertSourceGeneration: string | null;
+      } | null;
+    };
+
+    expect(body.telegramSummary).toEqual({
+      totalChats: 42,
+      pendingDeliveries: 3,
+      lastDispatchAt: now - 120,
+      lastDispatchStatus: "ok",
+      safetyAlertSourceState: null,
+      safetyAlertSourceAgeSeconds: null,
+      safetyAlertsSuppressed: false,
+      safetyAlertSourceGeneration: null,
+    });
+    expect(warnSpy).toHaveBeenCalled();
   });
 
   it("adds a warning when safety alerts are suppressed", async () => {

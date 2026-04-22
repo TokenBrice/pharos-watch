@@ -400,6 +400,33 @@ describe("syncYieldData", () => {
     expect(setCache).toHaveBeenCalled();
   });
 
+  it("returns a degraded no-op result while the cleanup writer pause is armed", async () => {
+    const db = makeDb();
+    const nowSec = Math.floor(Date.now() / 1000);
+    vi.mocked(getCache).mockImplementation(async (_db, key) => {
+      if (key === "yield-history-cleanup:writer-pause") {
+        return {
+          value: JSON.stringify({
+            reason: "yield-history-cleanup",
+            pausedAt: nowSec - 60,
+            operator: "tester",
+          }),
+          updatedAt: nowSec - 60,
+        };
+      }
+      return null;
+    });
+
+    const result = await syncYieldData(db);
+
+    expect(result).toMatchObject({
+      status: "degraded",
+      itemCount: 0,
+    });
+    expect(result.metadata).toContain("\"writerPaused\":true");
+    expect(batchExecute).not.toHaveBeenCalled();
+  });
+
   it("purges stale yield rows for refreshed coins after writing the current source set", async () => {
     const db = makeDb();
     mockHealthyRiskFreeRateCache();
