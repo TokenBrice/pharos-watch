@@ -3,21 +3,9 @@
     "disposition": "deferred",
     "notes": "Coverage aggregation and scenario logic are still evolving with the matrix surface. Defer decomposition until the coverage data model settles."
   },
-  "src/app/stability-index/client.tsx": {
-    "disposition": "queued-p4",
-    "notes": "The PSI route client is still a broad UI composition surface. Keep it waived until the route-level frontend hotspot pass is scheduled."
-  },
-  "src/app/about/page.tsx": {
-    "disposition": "deferred",
-    "notes": "The about page is content-heavy and low-risk operationally. Defer structural cleanup behind higher-value worker and analytics refactors."
-  },
   "src/components/stablecoin-detail/hero-card.tsx": {
     "disposition": "queued-p4",
     "notes": "The stablecoin detail hero remains a large presentation hotspot. Track it for the planned frontend decomposition lane rather than mixing it into the worker-focused tranche."
-  },
-  "src/app/safety-scores/client.tsx": {
-    "disposition": "queued-p4",
-    "notes": "Risk Lab route client remains a broad UI composition surface. Keep waived for a dedicated safety-score frontend decomposition pass rather than mixing it into worker-oriented simplification tranches."
   },
   "src/components/kpi-bar.tsx": {
     "disposition": "queued-p4",
@@ -98,5 +86,21 @@
   "worker/src/cron/confirm-pending-depegs.ts": {
     "disposition": "queued-p4",
     "notes": "Grew during the 2026-04-18 depeg+DEWS hardening wave with pool-status count classification, circuit-breaker guards, offchainSourceLabel tracking, and composite pending-reason parsing. The main confirmPendingDepegs function is now the obvious split candidate — per-row evaluation (primary/native/off-chain/DEX/CEX/pool collection) should extract into buildConfirmationPlan; the decision matrix should extract into evaluatePromotionDecision. Follow-up in the next /simplify pass."
+  },
+  "worker/src/lib/dews.ts": {
+    "disposition": "queued-p4",
+    "notes": "DEWS scoring and contagion policy remain intentionally concentrated while the early-warning surface is still evolving. Split signal derivation, contagion weighting, and aggregate scoring in a dedicated DEWS cleanup pass."
+  },
+  "worker/src/cron/detect-depegs.ts": {
+    "disposition": "queued-p4",
+    "notes": "Depeg detection still mixes fetch orchestration, signal arbitration, and persistence decisions in one large cron module. Keep it waived until the next depeg pipeline simplification pass."
+  },
+  "worker/src/api/mint-burn-flows.ts": {
+    "disposition": "queued-p4",
+    "notes": "The mint/burn flows handler still centralizes response shaping and per-surface orchestration even after shared helpers were extracted. Track it for a focused API decomposition pass instead of widening the current refactor tranche."
+  },
+  "worker/src/cron/dex-liquidity/pool-helpers.ts": {
+    "disposition": "queued-p4",
+    "notes": "Pool helper logic remains branch-heavy because it encodes multiple pool identity and pricing heuristics. Defer further extraction until the DEX-liquidity discovery/scoring surfaces settle."
   }
 }

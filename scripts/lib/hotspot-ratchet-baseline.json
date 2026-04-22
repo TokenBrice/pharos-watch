@@ -1,6 +1,6 @@
 {
   "shared/lib/report-cards.ts": {
-    "fileLines": 41,
+    "fileLines": 43,
     "maxFunctionLines": 0,
     "branchCount": 0,
     "disposition": "queued-p4",
@@ -48,9 +48,9 @@
     "notes": "Request-entry shell is intentionally thin after router extraction. Any new dispatch logic should move downward."
   },
   "src/components/contagion-graph.tsx": {
-    "fileLines": 642,
-    "maxFunctionLines": 598,
-    "branchCount": 70,
+    "fileLines": 554,
+    "maxFunctionLines": 506,
+    "branchCount": 48,
     "disposition": "deferred",
     "targetBudget": {
       "fileLines": 560,
@@ -240,9 +240,9 @@
     "notes": "Digest generation, input shaping, and channel delivery now live below the cron shell. Keep new delivery/provider detail out of this entrypoint."
   },
   "worker/src/cron/dispatch-telegram-alerts.ts": {
-    "fileLines": 729,
-    "maxFunctionLines": 461,
-    "branchCount": 37,
+    "fileLines": 597,
+    "maxFunctionLines": 331,
+    "branchCount": 26,
     "disposition": "deferred",
     "targetBudget": {
       "fileLines": 540,
@@ -300,9 +300,9 @@
     "notes": "Config execution and post-run completion logic now live in `mint-burn/*` helpers. Keep the cron shell as queue setup plus progress coordination instead of regrowing per-config or epilogue logic."
   },
   "worker/src/cron/sync-live-reserves.ts": {
-    "fileLines": 394,
-    "maxFunctionLines": 239,
-    "branchCount": 34,
+    "fileLines": 422,
+    "maxFunctionLines": 107,
+    "branchCount": 27,
     "disposition": "queued-p4",
     "targetBudget": {
       "fileLines": 380,
@@ -336,9 +336,9 @@
     "notes": "Previously a major hotspot and now materially reduced. Preserve the split; future providers should land in helper modules, not back in this shell."
   },
   "worker/src/cron/sync-blacklist.ts": {
-    "fileLines": 408,
-    "maxFunctionLines": 333,
-    "branchCount": 29,
+    "fileLines": 490,
+    "maxFunctionLines": 267,
+    "branchCount": 36,
     "disposition": "queued-p4",
     "targetBudget": {
       "fileLines": 280,

@@ -126,5 +126,3 @@ export function getReserves(coin: StablecoinMeta): ReserveResult | null {
 
   return { reserves: TEMPLATES[key], estimated: true, mode: "template-fallback" };
 }
-
-export { deriveDependencies } from "./dependency-derivation";
