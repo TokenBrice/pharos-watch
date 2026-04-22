@@ -14,6 +14,27 @@ import {
 import { hasConsistentSnapshotState } from "./live-reserves-store-legacy";
 import { parseReserveCompositionRow } from "./live-reserves-store-row-decoding";
 
+function extractReserveEvidenceUrls(
+  metadata: import("@shared/types/live-reserves").LiveReserveSnapshotMetadata | undefined,
+  displayUrl: string | undefined,
+): string[] | undefined {
+  const sourceUrls = metadata?.redemption?.sourceUrls;
+  if (!Array.isArray(sourceUrls) || sourceUrls.length === 0) return undefined;
+
+  const seen = new Set<string>();
+  const evidenceUrls: string[] = [];
+
+  for (const url of sourceUrls) {
+    if (typeof url !== "string") continue;
+    const trimmed = url.trim();
+    if (trimmed.length === 0 || trimmed === displayUrl || seen.has(trimmed)) continue;
+    seen.add(trimmed);
+    evidenceUrls.push(trimmed);
+  }
+
+  return evidenceUrls.length > 0 ? evidenceUrls : undefined;
+}
+
 function buildSyncView(
   syncState: import("./live-reserves-store-shared").ReserveSyncStateRecord | null,
   stale: boolean,
@@ -98,6 +119,7 @@ export async function resolveReserveResult(
   if (liveSnapshot) {
     const provenance = buildReserveProvenanceView(liveSnapshot, syncState, stale);
     const displayBadge = buildReserveDisplayBadgeView(liveSnapshot);
+    const evidenceUrls = extractReserveEvidenceUrls(liveSnapshot.metadata, displayUrl);
     return {
       reserves: liveSnapshot.slices,
       estimated: false,
@@ -105,6 +127,7 @@ export async function resolveReserveResult(
       liveAt: liveSnapshot.fetchedAt,
       source: liveSnapshot.source,
       displayUrl,
+      evidenceUrls,
       displayBadge,
       metadata: liveSnapshot.metadata,
       provenance,

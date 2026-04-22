@@ -262,6 +262,7 @@ export interface StablecoinReservesResponse {
   liveAt?: number;
   source?: string;
   displayUrl?: string;
+  evidenceUrls?: string[];
   metadata?: LiveReserveSnapshotMetadata;
   provenance?: ReserveProvenanceView;
   displayBadge?: ReserveDisplayBadgeView;

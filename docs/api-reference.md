@@ -539,13 +539,20 @@ Returns the resolved reserve presentation for a stablecoin with `liveReservesCon
 | `estimated`    | `boolean`        | `true` only when using the classification template fallback                                                                      |
 | `liveAt`       | `number?`        | Unix seconds of the last successful live snapshot. Present only when live data exists                                            |
 | `source`       | `string?`        | Adapter key (for example `"infinifi"`, `"m0"`, `"openeden-usdo"`, or `"accountable"`). Present only when live data exists        |
-| `displayUrl`   | `string?`        | Human-readable source link shown in the UI. Present only when configured                                                         |
+| `displayUrl`   | `string?`        | Curated click-through page shown as `Source` in the UI. Present only when configured                                             |
+| `evidenceUrls` | `string[]?`      | Adapter-emitted evidence URLs for the authoritative live snapshot, shown separately as `Evidence` links when available           |
 | `displayBadge` | `object?`        | User-facing reserve badge semantics for authoritative live snapshots (`live`, `curated-validated`, or `proof`)                  |
 | `metadata`     | `object?`        | Adapter snapshot metadata for authoritative live snapshots. This can include feed-specific context such as `yieldBasisCollateralPct` for `crvusd` |
 | `provenance`   | `object?`        | Evidence-quality envelope for authoritative live snapshots (`evidenceClass`, `sourceModel`, optional `freshnessMode`, `scoringEligible`) |
 | `sync`         | `object?`        | Live sync state (`status`, `bootstrap`, `stale`, `lastAttemptedAt`, `lastSuccessAt`, `warnings`, `lastError`). Present only when live-enabled |
 
 `sync.warnings` can include both adapter-emitted warnings from the latest attempt and storage-integrity warnings when a stored live snapshot is rejected and the endpoint fails closed to a fallback presentation.
+
+`displayUrl` and `evidenceUrls` are intentionally different:
+
+- `displayUrl` is the curated reserve-card destination
+- `evidenceUrls` are adapter-emitted URLs tied to the authoritative live snapshot metadata
+- some live feeds expose only `displayUrl`, while others expose both
 
 When present, `displayBadge` has:
 

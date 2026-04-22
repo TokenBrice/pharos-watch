@@ -140,33 +140,40 @@ function buildReserveFootnote(
   reserves: ReserveResult,
   isLiveEnabled: boolean,
 ): React.ReactNode | null {
-  const sourceLink = reserves.displayUrl ? (
-    <>
-      <span aria-hidden>·</span>
+  const references = [
+    ...(reserves.displayUrl ? [{ label: "Source", url: reserves.displayUrl }] : []),
+    ...((reserves.evidenceUrls ?? []).map((url, index) => ({
+      label: index === 0 ? "Evidence" : `Evidence ${index + 1}`,
+      url,
+    }))),
+  ];
+  const referenceLinks = references.map((reference) => (
+    <span key={`${reference.label}:${reference.url}`}>
+      <span aria-hidden>·</span>{" "}
       <a
-        href={reserves.displayUrl}
+        href={reference.url}
         target="_blank"
         rel="noopener noreferrer"
         className="underline underline-offset-2 hover:text-foreground transition-colors"
       >
-        Source
+        {reference.label}
       </a>
-    </>
-  ) : null;
+    </span>
+  ));
 
   switch (reserves.mode) {
     case "live":
       return (
         <>
           <span>{formatReserveSnapshotFreshLabel(reserves)}</span>
-          {sourceLink}
+          {referenceLinks}
         </>
       );
     case "live-stale":
       return (
         <>
           <span>{formatReserveSnapshotStaleLabel(reserves)}</span>
-          {sourceLink}
+          {referenceLinks}
         </>
       );
     case "curated-fallback":

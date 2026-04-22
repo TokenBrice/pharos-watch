@@ -316,6 +316,12 @@ The optional `displayBadge` object is also present only for authoritative `live`
 - `provenance` answers scoring/evidence semantics
 - `displayBadge` answers the honest user-facing reserve label
 
+The optional `displayUrl` and `evidenceUrls` fields are also intentionally separate:
+
+- `displayUrl` is the curated reserve-card destination configured in `liveReservesConfig.display.url`
+- `evidenceUrls` are adapter-emitted URLs tied to the authoritative live snapshot metadata
+- the detail page can show both when a coin has a curated overview page plus narrower evidence links for the exact live snapshot
+
 The optional `metadata` object is also present only for authoritative `live` / `live-stale` snapshots. It exposes the adapter snapshot metadata already stored with the reserve snapshot row so the UI can surface feed-specific context without re-querying D1. For example, `crvusd` now exposes `yieldBasisCollateralPct` when Yield Basis positions account for part of the live reserve mix.
 
 The optional `sync` object exposes the last operational state:

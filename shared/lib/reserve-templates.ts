@@ -20,6 +20,8 @@ export interface ReserveResult {
   source?: string;
   /** Human-readable URL to link to. Present when reserves came from a live sync. */
   displayUrl?: string;
+  /** Adapter-emitted evidence URLs for the authoritative live snapshot. */
+  evidenceUrls?: string[];
   /** User-facing badge semantics for authoritative live reserve snapshots. */
   displayBadge?: ReserveDisplayBadgeView;
   /** Adapter-level metadata for authoritative live reserve snapshots. */

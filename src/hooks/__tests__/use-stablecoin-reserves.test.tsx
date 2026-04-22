@@ -30,6 +30,7 @@ describe("useStablecoinReserves", () => {
         liveAt: 1_700_000_000,
         source: "adapter",
         displayUrl: "https://example.com",
+        evidenceUrls: ["https://example.com/evidence"],
         displayBadge: { kind: "live", label: "Live" },
         metadata: { yieldBasisCollateralPct: 89.7 },
         provenance: { method: "api" },
@@ -45,6 +46,7 @@ describe("useStablecoinReserves", () => {
       mode: "live",
       source: "adapter",
       displayUrl: "https://example.com",
+      evidenceUrls: ["https://example.com/evidence"],
       displayBadge: { kind: "live", label: "Live" },
       metadata: { yieldBasisCollateralPct: 89.7 },
     });

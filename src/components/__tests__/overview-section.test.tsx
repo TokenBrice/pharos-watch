@@ -120,6 +120,39 @@ describe("OverviewSection", () => {
     expect(html).toContain("Yield Basis positions account for 89.7% of this live reserve mix.");
   });
 
+  it("renders separate Source and Evidence links for authoritative live reserve snapshots", () => {
+    const coin = TRACKED_META_BY_ID.get("gho-aave");
+    expect(coin).toBeDefined();
+
+    const html = renderToStaticMarkup(
+      <OverviewSection
+        stablecoinId="gho-aave"
+        coin={coin!}
+        summary={null}
+        reserves={{
+          reserves: [{ name: "stataUSDC GSM", pct: 100, risk: "low" }],
+          estimated: false,
+          mode: "live",
+          liveAt: 1_700_000_000,
+          source: "gho",
+          displayUrl: "https://aave.tokenlogic.xyz/gho",
+          evidenceUrls: ["https://aave.com/help/gho-stablecoin/stability-module"],
+          displayBadge: {
+            kind: "live",
+            label: "Live",
+          },
+        }}
+        reserveFetchError={null}
+        isNavToken
+      />,
+    );
+
+    expect(html).toContain(">Source</a>");
+    expect(html).toContain(">Evidence</a>");
+    expect(html).toContain("https://aave.tokenlogic.xyz/gho");
+    expect(html).toContain("https://aave.com/help/gho-stablecoin/stability-module");
+  });
+
   it("renders static-validated reserve provenance messaging", () => {
     const coin = TRACKED_META_BY_ID.get("frax-frax");
     expect(coin).toBeDefined();

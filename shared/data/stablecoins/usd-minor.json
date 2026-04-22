@@ -4284,8 +4284,8 @@
       "semantics": "single-asset",
       "breakerScope": "lusd-liquity",
       "display": {
-        "url": "https://www.liquity.org/",
-        "label": "Website"
+        "url": "https://docs.liquity.org/liquity-v1/documentation/resources",
+        "label": "Liquity Docs V1"
       },
       "inputs": {
         "primary": {

@@ -60,7 +60,17 @@ describe("handleStablecoinReserves", () => {
           slices: JSON.stringify(slices),
           fetched_at: now,
           source: "infinifi",
-          metadata: JSON.stringify({ freshnessMode: "not-applicable", yieldBasisCollateralPct: 89.7 }),
+          metadata: JSON.stringify({
+            freshnessMode: "not-applicable",
+            yieldBasisCollateralPct: 89.7,
+            redemption: {
+              sourceUrls: [
+                "https://stats.infinifi.xyz/",
+                "https://docs.infinifi.example/reserves",
+                "https://docs.infinifi.example/reserves",
+              ],
+            },
+          }),
           adapter_source_model: "dynamic-mix",
           adapter_evidence_class: "independent",
         },
@@ -90,9 +100,13 @@ describe("handleStablecoinReserves", () => {
       estimated: boolean;
       source: string;
       mode: string;
+      evidenceUrls?: string[];
       metadata?: {
         freshnessMode?: string;
         yieldBasisCollateralPct?: number;
+        redemption?: {
+          sourceUrls?: string[];
+        };
       };
       displayBadge?: {
         kind: string;
@@ -112,7 +126,15 @@ describe("handleStablecoinReserves", () => {
     expect(body.metadata).toEqual({
       freshnessMode: "not-applicable",
       yieldBasisCollateralPct: 89.7,
+      redemption: {
+        sourceUrls: [
+          "https://stats.infinifi.xyz/",
+          "https://docs.infinifi.example/reserves",
+          "https://docs.infinifi.example/reserves",
+        ],
+      },
     });
+    expect(body.evidenceUrls).toEqual(["https://docs.infinifi.example/reserves"]);
     expect(body.displayBadge).toEqual({
       kind: "live",
       label: "Live",

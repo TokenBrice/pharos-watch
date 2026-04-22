@@ -39,17 +39,20 @@
 
 ## Systemic limitation
 
-- Some adapters already attach more specific URLs under `metadata.redemption.sourceUrls`, but the reserve API does not expose those URLs as the reserve-card `Source` link.
-- This means the frontend cannot currently distinguish:
+- Some adapters already attach more specific URLs under `metadata.redemption.sourceUrls`, but the reserve card originally exposed only the single curated `display.url`.
+- That meant the frontend could not distinguish:
   - a manually curated display page
   - a runtime evidence URL emitted by the adapter
   - a redemption-route source URL that is useful context but not the full reserve source
 
-## Change made
+## Implemented follow-up
 
 - Updated `gho-aave` `liveReservesConfig.display.url` from `https://aave.com/gho` to `https://aave.tokenlogic.xyz/gho`.
+- Tightened `lusd-liquity` `liveReservesConfig.display.url` from the generic `https://www.liquity.org/` homepage to `https://docs.liquity.org/liquity-v1/documentation/resources`.
+- Added top-level `evidenceUrls` to the reserve response contract so `GET /api/stablecoin-reserves/:id` can expose adapter-emitted evidence links separately from the curated `displayUrl`.
+- Updated the detail-page reserve footnote to render `Source` and `Evidence` links separately when both exist.
 
-## Why I stopped there
+## Remaining judgment calls
 
-- The GHO metadata fix is low-risk and directly addresses the user-visible defect.
-- A full solution for the broader issue would require deciding whether the reserve card should keep using a manually curated display URL, prefer adapter-emitted evidence URLs when available, or support multiple source links. That is a broader product/API contract change, not a surgical metadata correction.
+- Many other protocol-native / on-chain adapters still use homepage-or-docs style `display.url` values, but unlike GHO and LUSD they do not all have a single obviously superior public reserve page.
+- The current shipped split reduces pressure to over-edit those links because the UI can now keep a curated destination while also surfacing narrower adapter evidence URLs when available.
