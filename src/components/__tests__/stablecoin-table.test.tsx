@@ -53,6 +53,14 @@ const usdc = {
   circulating: { peggedUSD: 50_000_000 },
 } as unknown as StablecoinData;
 
+const susds = {
+  ...coin,
+  id: "susds-sky",
+  name: "Sky Savings USDS",
+  symbol: "sUSDS",
+  circulating: { peggedUSD: 75_000_000 },
+} as unknown as StablecoinData;
+
 const reportCard = {
   id: "usdt-tether",
   name: "Tether",
@@ -203,5 +211,20 @@ describe("StablecoinTable", () => {
 
     expect(screen.getByText("USDC")).toBeTruthy();
     expect(screen.queryByText("USDT")).toBeNull();
+  });
+
+  it("adds full variant context to the row and inner detail link", () => {
+    render(
+      <StablecoinTable
+        data={[susds]}
+        isLoading={false}
+        activeFilters={[]}
+        pegRates={{}}
+      />,
+    );
+
+    expect(screen.getByLabelText("Savings variant")).toBeTruthy();
+    expect(screen.getAllByRole("link", { name: /View Sky Savings USDS \(sUSDS\) details, Savings variant/i })).toHaveLength(2);
+    expect(screen.getByText("Savings")).toBeTruthy();
   });
 });

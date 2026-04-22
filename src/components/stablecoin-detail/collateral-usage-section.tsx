@@ -30,6 +30,7 @@ function useCollateralUsage(stablecoinId: string): CollateralUsageEntry[] {
     const usage: CollateralUsageEntry[] = [];
     for (const coin of TRACKED_STABLECOINS) {
       if (coin.id === stablecoinId) continue;
+      if (coin.variantOf === stablecoinId) continue;
       for (const dep of deriveDependencies(coin)) {
         if (dep.id === stablecoinId) {
           usage.push({ coin, weight: dep.weight, type: dep.type ?? "collateral" });

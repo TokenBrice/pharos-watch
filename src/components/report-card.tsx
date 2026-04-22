@@ -347,13 +347,25 @@ export function ReportCardDetail({ card, liquidityComponents }: ReportCardDetail
                 <div className="text-xs text-muted-foreground text-center space-y-1 mt-1">
                   <div className="flex items-center gap-2 justify-center">
                     <span>Base: <span className="font-mono text-foreground">{card.baseScore.toFixed(1)}</span></span>
-                    {card.baseScore !== card.overallScore && (
+                    {card.overallCapped === true && card.uncappedOverallScore != null ? (
+                      <>
+                        <span>·</span>
+                        <span>Parent cap: <span className="font-mono text-amber-600 dark:text-amber-400">−{(card.uncappedOverallScore - card.overallScore).toFixed(1)}</span></span>
+                      </>
+                    ) : card.baseScore !== card.overallScore ? (
                       <>
                         <span>·</span>
                         <span>Peg: <span className="font-mono text-amber-600 dark:text-amber-400">−{(card.baseScore - card.overallScore).toFixed(1)}</span></span>
                       </>
-                    )}
+                    ) : null}
                   </div>
+                  {card.overallCapped === true && card.rawInputs.variantParentId ? (
+                    <div className="flex justify-center">
+                      <span className="inline-flex items-center rounded-full border border-amber-500/20 bg-amber-500/10 px-2 py-0.5 text-[11px] font-medium text-amber-700 dark:text-amber-400">
+                        Overall capped at parent stablecoin
+                      </span>
+                    </div>
+                  ) : null}
                 </div>
               )}
             </div>

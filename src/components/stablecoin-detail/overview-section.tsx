@@ -276,7 +276,7 @@ export function OverviewSection({
   const hasAnything = hasLeft || hasRightColumn;
 
   if (!hasAnything) {
-    return <section id="overview" />;
+    return null;
   }
 
   const rightColumnContent = hasRightColumn ? (
@@ -296,15 +296,11 @@ export function OverviewSection({
   ) : null;
 
   if (!hasLeft) {
-    return (
-      <section id="overview">
-        {rightColumnContent}
-      </section>
-    );
+    return rightColumnContent;
   }
 
   return (
-    <section id="overview">
+    <div>
       <div className={`grid grid-cols-1 gap-6 ${hasRightColumn ? "lg:grid-cols-2" : ""}`}>
           <div className="flex flex-col gap-6">
             {summary && <AiSummary {...summary} />}
@@ -355,6 +351,6 @@ export function OverviewSection({
           </div>
           {rightColumnContent}
         </div>
-    </section>
+    </div>
   );
 }

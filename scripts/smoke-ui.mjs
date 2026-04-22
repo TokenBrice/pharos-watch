@@ -236,12 +236,12 @@ function buildSmokeRunCode(config) {
     }, { waitTimeoutMs: config.waitTimeoutMs });
   }
 
-  async function measureOverflow(route, waitMs) {
+  async function measureOverflow(route, waitMs, options = {}) {
     const routeUrl = joinUrl(config.baseUrl, route);
     await page.goto(routeUrl, { timeout: config.waitTimeoutMs, waitUntil: "domcontentloaded" });
 
     return page.evaluate(
-      async ({ route, sampleIntervalMs, settleSamples, styleReadyTimeoutMs, waitMs }) => {
+      async ({ openHomepageFilters, route, sampleIntervalMs, settleSamples, styleReadyTimeoutMs, summaryLabel, waitMs }) => {
         const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
         const measure = () => {
           const doc = document.documentElement;
@@ -272,6 +272,13 @@ function buildSmokeRunCode(config) {
         while (!cssReady && Date.now() < cssReadyDeadline) {
           await delay(100);
           cssReady = isCssReady();
+        }
+
+        if (openHomepageFilters && route === "/") {
+          const filterToggle = Array.from(document.querySelectorAll("button"))
+            .find((button) => button.textContent?.trim() === "Filters" || button.textContent?.trim() === "Hide");
+          filterToggle?.click();
+          await delay(200);
         }
 
         const samples = [];
@@ -321,15 +328,17 @@ function buildSmokeRunCode(config) {
           innerWidth: finalSample.innerWidth,
           maxDelta,
           offenders,
-          path: route,
+          path: summaryLabel,
           sampledDeltas,
           scrollWidth: finalSample.scrollWidth,
         };
       },
       {
+        openHomepageFilters: options.openHomepageFilters === true,
         route,
         sampleIntervalMs: config.overflowSampleIntervalMs,
         settleSamples: config.overflowSettleSamples,
+        summaryLabel: options.summaryLabel ?? route,
         styleReadyTimeoutMs: config.styleReadyTimeoutMs,
         waitMs,
       },
@@ -355,12 +364,32 @@ function buildSmokeRunCode(config) {
     await page.setViewportSize({ height: config.mobileHeight, width: config.mobileWidth });
 
     for (const route of config.routes) {
-      const initial = await measureOverflow(route, config.overflowWaitMs);
+      const initial = await measureOverflow(route, config.overflowWaitMs, {
+        openHomepageFilters: route === "/",
+      });
       let retry = null;
       if (initial.hasOverflow) {
-        retry = await measureOverflow(route, config.overflowWaitMs + config.overflowRetryExtraWaitMs);
+        retry = await measureOverflow(route, config.overflowWaitMs + config.overflowRetryExtraWaitMs, {
+          openHomepageFilters: route === "/",
+        });
       }
       overflowChecks.push({ initial, retry, route });
+    }
+
+    if (config.routes.includes("/")) {
+      await page.setViewportSize({ height: 900, width: 1280 });
+      const initial = await measureOverflow("/", config.overflowWaitMs, {
+        openHomepageFilters: true,
+        summaryLabel: "/ [desktop filters]",
+      });
+      let retry = null;
+      if (initial.hasOverflow) {
+        retry = await measureOverflow("/", config.overflowWaitMs + config.overflowRetryExtraWaitMs, {
+          openHomepageFilters: true,
+          summaryLabel: "/ [desktop filters]",
+        });
+      }
+      overflowChecks.push({ initial, retry, route: "/ [desktop filters]" });
     }
   }
 

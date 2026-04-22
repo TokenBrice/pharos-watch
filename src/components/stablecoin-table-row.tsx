@@ -24,6 +24,8 @@ import { buildStablecoinUrl } from "@/lib/urls";
 import { getStablecoinTableRowRiskLevel } from "@/components/stablecoin-table-logic";
 import { DeviationIcon } from "@/components/severity-icon";
 import { StablecoinLogo } from "@/components/stablecoin-logo";
+import { getVariantAccessibleLabel, getVariantDisplay } from "@/lib/variant-display";
+import type { TableDensity } from "@/hooks/use-table-density";
 
 interface StablecoinVirtualRowProps {
   coin: StablecoinData;
@@ -32,7 +34,7 @@ interface StablecoinVirtualRowProps {
     rowHeight: number;
     iconSize: number;
   };
-  isListDensity: boolean;
+  density: TableDensity;
   isVisible: (id: ColumnId) => boolean;
   logos?: Record<string, string>;
   pegRates: Record<string, number>;
@@ -79,7 +81,7 @@ export function StablecoinVirtualRow({
   coin,
   index,
   densityConfig,
-  isListDensity,
+  density,
   isVisible,
   logos,
   pegRates,
@@ -96,6 +98,8 @@ export function StablecoinVirtualRow({
   const prevDay = getPrevDayRaw(coin);
   const prevWeek = getPrevWeekRaw(coin);
   const meta = TRACKED_META_BY_ID.get(coin.id);
+  const variantDisplay = meta?.variantKind ? getVariantDisplay(meta.variantKind) : null;
+  const variantContext = meta?.variantKind ? getVariantAccessibleLabel(meta.variantKind) : null;
   const blacklistStatus = getResolvedBlacklistStatus(coin.id, reportCards?.[coin.id]);
   const change24h = prevDay > 0 ? ((circulating - prevDay) / prevDay) * 100 : 0;
   const change7d = prevWeek > 0 ? ((circulating - prevWeek) / prevWeek) * 100 : 0;
@@ -104,22 +108,32 @@ export function StablecoinVirtualRow({
   const riskClass = riskLevel === "depeg" ? "pharos-row-risk-depeg" :
     riskLevel === "poor" ? "pharos-row-risk-poor" :
     riskLevel === "warning" ? "pharos-row-risk-warning" : "";
+  const isCompactDensity = density === "list" || density === "compact";
+
+  function isNestedInteractiveTarget(target: EventTarget | null): boolean {
+    return target instanceof HTMLElement
+      && target.closest("a,button,input,select,textarea,[role=\"button\"],[role=\"link\"]") != null;
+  }
 
   return (
     <TableRow
       key={coin.id}
       className={`group cursor-pointer focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:outline-none ${riskClass}`}
       style={{ height: densityConfig.rowHeight }}
-      onClick={() => onNavigate(coin.id)}
+      onClick={(event) => {
+        if (isNestedInteractiveTarget(event.target)) return;
+        onNavigate(coin.id);
+      }}
       onMouseEnter={() => onPrefetch(coin.id)}
       onKeyDown={(e) => {
+        if (e.target !== e.currentTarget || isNestedInteractiveTarget(e.target)) return;
         if (e.key === "Enter" || e.key === " ") {
           e.preventDefault();
           onNavigate(coin.id);
         }
       }}
       role="link"
-      aria-label={`View ${coin.name} (${coin.symbol}) details`}
+      aria-label={`View ${coin.name} (${coin.symbol}) details${variantContext ? `, ${variantContext}` : ""}`}
       tabIndex={0}
     >
       {showPinnedControl && (
@@ -139,6 +153,9 @@ export function StablecoinVirtualRow({
                 e.stopPropagation();
                 onTogglePinned(coin.id);
               }}
+              onKeyDown={(e) => {
+                e.stopPropagation();
+              }}
             >
               <Star className={`h-3.5 w-3.5 ${isPinned ? "fill-current" : ""}`} aria-hidden />
             </button>
@@ -156,17 +173,29 @@ export function StablecoinVirtualRow({
             <Link
               href={buildStablecoinUrl(coin.id)}
               className={`pharos-focus-ring flex min-w-0 flex-1 items-center rounded-md px-1 py-1 font-medium hover:bg-muted/35 ${
-                isListDensity ? "gap-1.5" : "gap-2"
+                density === "list" ? "gap-1.5" : "gap-2"
               }`}
               onClick={(e) => e.stopPropagation()}
+              onKeyDown={(e) => e.stopPropagation()}
               onMouseEnter={() => onPrefetch(coin.id)}
+              aria-label={`View ${coin.name} (${coin.symbol}) details${variantContext ? `, ${variantContext}` : ""}`}
             >
               <StablecoinLogo src={logos?.[coin.id]} name={coin.name} size={densityConfig.iconSize} />
               <span className="min-w-0">
-                <span className="block font-medium text-foreground">{coin.symbol}</span>
+                <span className="flex flex-wrap items-center gap-1.5 font-medium text-foreground">
+                  <span>{coin.symbol}</span>
+                  {variantDisplay ? (
+                    <span
+                      className={`inline-flex items-center rounded-full border px-1.5 py-0.5 text-[10px] font-semibold ${variantDisplay.badgeClass}${isCompactDensity ? "" : " leading-none"}`}
+                      aria-label={variantContext ?? undefined}
+                    >
+                      {variantDisplay.shortLabel}
+                    </span>
+                  ) : null}
+                </span>
                 <span
                   className={`max-w-[180px] truncate text-xs text-muted-foreground ${
-                    isListDensity ? "hidden" : "hidden xl:block"
+                    density === "list" ? "hidden" : "hidden xl:block"
                   }`}
                 >
                   {coin.name}

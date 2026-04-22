@@ -1605,6 +1605,8 @@ For peg handling, `rawInputs.pegScore` is the effective peg input used by report
 | `overallGrade`    | `string`                               | Letter grade: `"A+"` through `"F"`, or `"NR"`                                       |
 | `overallScore`    | `number \| null`                       | Weighted score 0–100. `null` for unrated coins                                      |
 | `baseScore`       | `number \| null`                       | Pre-peg-multiplier/no-liquidity/active-depeg-cap score after base dimension blending |
+| `overallCapped`   | `boolean`                              | `true` when the card is capped at a tracked parent stablecoin's overall score        |
+| `uncappedOverallScore` | `number \| null`                  | Post-dimension/post-peg score before the tracked-parent overall cap, when applicable |
 | `dimensions`      | `Record<DimensionKey, DimensionScore>` | Per-dimension grade, score, and detail text                                         |
 | `ratedDimensions` | `number`                               | Number of dimensions with data (max 5)                                              |
 | `rawInputs`       | `RawDimensionInputs`                   | Raw scoring inputs for client-side grade recomputation (stress testing)             |
@@ -1639,6 +1641,8 @@ For peg handling, `rawInputs.pegScore` is the effective peg input used by report
 | `governanceTier`                   | `GovernanceType`                                |
 | `governanceQuality`                | `GovernanceQuality`                             |
 | `dependencies`                     | `DependencyWeight[]`                            |
+| `variantParentId`                  | `string \| null`                                |
+| `variantKind`                      | `"savings-passthrough" \| "risk-absorption" \| null` |
 | `navToken`                         | `boolean`                                       |
 | `collateralFromLive`               | `boolean`                                       |
 

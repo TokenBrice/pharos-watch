@@ -9,6 +9,7 @@ describe("FILTER_GROUPS", () => {
     expect(labels).toContain("Backing");
     expect(labels).toContain("Grade");
     expect(labels).toContain("Infrastructure");
+    expect(labels).toContain("Variant");
   });
 
   it("every group has at least one option", () => {
@@ -76,6 +77,12 @@ describe("parseHomepageParams", () => {
     const params = new URLSearchParams("infrastructure=infrastructure-m0");
     const result = parseHomepageParams(params);
     expect(result.groupSelections["Infrastructure"]).toBe("infrastructure-m0");
+  });
+
+  it("parses the variant filter", () => {
+    const params = new URLSearchParams("variant=variant-risk-absorption");
+    const result = parseHomepageParams(params);
+    expect(result.groupSelections["Variant"]).toBe("variant-risk-absorption");
   });
 
   it("parses the search query q parameter", () => {

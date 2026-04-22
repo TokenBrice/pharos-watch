@@ -3,9 +3,24 @@ import {
 } from "./methodology-version";
 
 const yieldMethodology = createMethodologyVersion({
-  currentVersion: "7.42",
+  currentVersion: "7.43",
   changelogPath: "/methodology/yield-changelog/",
   changelog: [
+  {
+    version: "7.43",
+    title: "Tracked savings wrappers own their native APY history",
+    date: "2026-04-22",
+    effectiveAt: 1776816000,
+    summary:
+      "Base stablecoins no longer publish tracked savings-wrapper APY through parent-owned config or historical series when the wrapper is itself a tracked asset.",
+    impact: [
+      "`sUSDe`, `sUSDS`, `sDAI`, `sfrxUSD`, and `scrvUSD` now own the native runtime pool and deterministic rate readers that used to live on `USDe`, `USDS`, `DAI`, `frxUSD`, and `crvUSD`",
+      "Those five base assets no longer advertise wrapper-owned `yieldBearing` metadata or serve the old wrapper APY series through `/api/yield-history`; the historical discontinuity is intentional and reflects corrected ownership rather than a missing backfill",
+      "Parent-side wrapper source keys are filtered immediately at read time and purged on the hourly yield sync path, so misattributed pre-handoff rows do not linger under the base ids after rollout",
+    ],
+    commits: [],
+    reconstructed: false,
+  },
   {
     version: "7.42",
     title: "First-Class Risk Wrapper Yield Assets",

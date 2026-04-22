@@ -107,6 +107,7 @@ Managed by `src/hooks/use-homepage-filters.ts` and `src/hooks/use-url-filters.ts
 - `backing` -> one active backing filter
 - `grade` -> one active score-tier filter
 - `infrastructure` -> one active infrastructure filter (`infrastructure-liquity-v1`, `infrastructure-liquity-v2`, `infrastructure-m0`)
+- `variant` -> one active tracked-variant filter (`variant-tracked`, `variant-savings-passthrough`, `variant-risk-absorption`)
 
 Rules:
 

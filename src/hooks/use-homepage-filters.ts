@@ -30,6 +30,10 @@ export const FILTER_GROUPS: FilterGroup[] = [
     label: "Infrastructure",
     options: ["infrastructure-liquity-v1", "infrastructure-liquity-v2", "infrastructure-m0"],
   },
+  {
+    label: "Variant",
+    options: ["variant-tracked", "variant-savings-passthrough", "variant-risk-absorption"],
+  },
 ];
 
 function normalizeHomepagePegFilter(raw: string): FilterTag | null {

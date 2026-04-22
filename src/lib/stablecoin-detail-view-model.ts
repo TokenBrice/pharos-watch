@@ -26,6 +26,11 @@ import {
 } from "@shared/lib/supply";
 import { DAY_SECONDS } from "@shared/lib/time-constants";
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins";
+import {
+  getVariantParent,
+  getVariantRelationship,
+  getVariants,
+} from "@shared/lib/stablecoins";
 import { getReserves, type ReserveResult } from "@shared/lib/reserve-templates";
 import {
   deriveDeviationBps,
@@ -66,6 +71,11 @@ interface StablecoinDetailReadyViewModel extends BaseViewModel {
   summary: StablecoinDetailSummary | null;
   logoSrc?: string;
   reportCard: ReportCard | undefined;
+  variantParent: StablecoinMeta | null;
+  variantSiblings: StablecoinMeta[];
+  childVariants: StablecoinMeta[];
+  isVariant: boolean;
+  hasVariants: boolean;
   coinData: StablecoinData;
   mcap: number;
   supply: number | null;
@@ -284,6 +294,9 @@ export function buildStablecoinDetailViewModel({
   const stressSignal = stressSignalsData?.signals[id] ?? null;
   const redemptionBackstop = redemptionBackstopsData?.coins?.[id];
   const reportCard = reportCardsData?.cards.find((candidate) => candidate.id === id);
+  const variantRelationship = getVariantRelationship(id);
+  const variantParent = getVariantParent(id);
+  const childVariants = getVariants(id);
   const reserves = liveReserves ?? getReserves(coin);
   const hasFlows =
     isFlowsLoading
@@ -303,6 +316,11 @@ export function buildStablecoinDetailViewModel({
     summary,
     logoSrc,
     reportCard,
+    variantParent,
+    variantSiblings: variantRelationship?.siblings ?? [],
+    childVariants,
+    isVariant: variantRelationship != null,
+    hasVariants: childVariants.length > 0,
     coinData,
     mcap,
     supply,

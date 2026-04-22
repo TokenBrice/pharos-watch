@@ -15,6 +15,8 @@ import { LongformScrollspyNav } from "@/components/longform-scrollspy-nav";
 import { HeroCard } from "@/components/stablecoin-detail/hero-card";
 import { StablecoinDetailLoadingShell } from "@/components/stablecoin-detail/loading-shell";
 import { NoticesAndSummarySection } from "@/components/stablecoin-detail/notices-and-summary-section";
+import { ParentVariantsCard } from "@/components/stablecoin-detail/parent-variants-card";
+import { UnderlyingAssetCard } from "@/components/stablecoin-detail/underlying-asset-card";
 import { ExploitNoticeBanner } from "@/components/exploit-notice-banner";
 import { useInfiniteDepegEvents } from "@/hooks/use-depeg-events";
 import {
@@ -151,6 +153,7 @@ export default function StablecoinDetailClient({ id, summary, coin, logoSrc }: S
   const hasCollateralUsage = useMemo(() => {
     return TRACKED_STABLECOINS.some((c) => {
       if (c.id === id) return false;
+      if (c.variantOf === id) return false;
       return deriveDependencies(c).some((dep) => dep.id === id);
     });
   }, [id]);
@@ -243,6 +246,8 @@ export default function StablecoinDetailClient({ id, summary, coin, logoSrc }: S
           yieldRanking={viewModel.yieldRanking}
           stressSignal={viewModel.stressSignal}
           reportCard={viewModel.reportCard ?? null}
+          variantParent={viewModel.variantParent}
+          variantKind={viewModel.coin.variantKind ?? null}
           onOpenFeedback={() => setFeedbackOpen(true)}
         />
 
@@ -295,6 +300,16 @@ export default function StablecoinDetailClient({ id, summary, coin, logoSrc }: S
       {/* ── Context & details zone ── */}
       <div className="mt-12 space-y-6">
         <section id="overview">
+          {viewModel.variantParent && viewModel.coin.variantKind ? (
+            <UnderlyingAssetCard
+              parent={viewModel.variantParent}
+              kind={viewModel.coin.variantKind}
+              siblings={viewModel.variantSiblings}
+            />
+          ) : null}
+          {viewModel.childVariants.length > 0 ? (
+            <ParentVariantsCard variants={viewModel.childVariants} />
+          ) : null}
           <NoticesAndSummarySection
             stablecoinId={viewModel.id}
             coin={viewModel.coin}

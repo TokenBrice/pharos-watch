@@ -308,6 +308,57 @@ describe("HeroCard", () => {
     expect(html).not.toContain("No issuer controls");
   });
 
+  it("renders the tracked parent chip for variant detail pages", () => {
+    const parentCoin: StablecoinMeta = {
+      ...coin,
+      id: "usds-sky",
+      name: "Sky Dollar",
+      symbol: "USDS",
+    };
+
+    const variantCoin: StablecoinMeta = {
+      ...coin,
+      id: "susds-sky",
+      name: "Sky Savings USDS",
+      symbol: "sUSDS",
+      variantOf: "usds-sky",
+      variantKind: "savings-passthrough",
+      flags: {
+        ...coin.flags,
+        navToken: true,
+      },
+    };
+
+    const html = renderToStaticMarkup(
+      <HeroCard
+        coin={variantCoin}
+        coinData={{ ...coinData, id: "susds-sky", name: "Sky Savings USDS", symbol: "sUSDS" }}
+        logoSrc="/logos/susds.svg"
+        isNavToken
+        mcap={1_000_000_000}
+        supply={1_000_000_000}
+        prevDay={995_000_000}
+        prevWeek={980_000_000}
+        prevMonth={970_000_000}
+        performanceVsUsd1y={null}
+        pegRef={1}
+        deviationBps={0}
+        gaugeDeviationBps={0}
+        pegScoreResult={null}
+        recordedDepegEventCount={0}
+        liquidityData={liquidityData}
+        yieldRanking={yieldRanking}
+        stressSignal={stressSignal}
+        reportCard={null}
+        variantParent={parentCoin}
+        variantKind="savings-passthrough"
+        onOpenFeedback={() => {}}
+      />,
+    );
+
+    expect(html).toContain("Variant of USDS");
+  });
+
   it("renders 1Y vs USD for eligible non-USD coins when performance is available", () => {
     const nonUsdCoin: StablecoinMeta = {
       ...coin,

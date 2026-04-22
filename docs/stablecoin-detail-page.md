@@ -71,7 +71,7 @@ The builder returns one of four states:
 - `not-found`
 - `ready`
 
-`ready` contains the fully derived detail payload: supply numbers, peg reference context, deviation metrics, derived non-USD/commodity `performanceVsUsd1y` when enough priced history exists, report card, liquidity row, redemption backstop, reserve presentation, supply history, yield ranking, DEWS stress signal, blacklist-support state, stale-query inputs, and convenience flags like `isNavToken`, `hasYieldSection`, `hasFlows`, and `hasBlacklist`.
+`ready` contains the fully derived detail payload: supply numbers, peg reference context, deviation metrics, derived non-USD/commodity `performanceVsUsd1y` when enough priced history exists, report card, liquidity row, redemption backstop, reserve presentation, supply history, yield ranking, DEWS stress signal, blacklist-support state, tracked parent/child variant relationships, stale-query inputs, and convenience flags like `isNavToken`, `isVariant`, `hasVariants`, `hasYieldSection`, `hasFlows`, and `hasBlacklist`.
 
 The client `loading` state now mirrors the server fallback more closely: it keeps the coin identity, classification line, and dossier framing visible instead of dropping back to anonymous skeleton blocks.
 
@@ -87,7 +87,7 @@ The client `loading` state now mirrors the server fallback more closely: it keep
 4. `ExploitNoticeBanner`
 5. `LongformScrollspyNav`
 6. `ReportCardDetail` + `SafetyScoreHistorySection`
-7. `NoticesAndSummarySection` (wraps `OverviewSection`, `CoinNotices`, and the nested `PriceTransparencyCard` anchor)
+7. `UnderlyingAssetCard` for tracked variants, then `ParentVariantsCard` for parents with tracked children, then `NoticesAndSummarySection` (wraps `OverviewSection`, `CoinNotices`, and the nested `PriceTransparencyCard` anchor)
 8. `KeyInfoCard`
 9. `CollateralUsageSection` when the coin is used as tracked collateral elsewhere
 10. `YieldDetailSection` when the coin is marked `yieldBearing` or the cached yield rankings include a live row for that coin
@@ -105,7 +105,8 @@ The server shell then appends `ExploreNextSection` after the client-rendered ana
 
 - `LongformScrollspyNav` pill order is: `report-card` (Safety), `overview`, optional `reserves`, optional `price`, `chart` (Market), optional `yield`, `liquidity`, optional `flows`, optional `blacklist`, `history`, `explore-next`. This is the current rail order; it does not strictly mirror DOM order because `YieldDetailSection` renders before `McapChart`. Optional pills appear only when their source data is present (`reserves != null`, `hasPriceTransparency`, `hasYieldSection`, `hasFlows`, `hasBlacklist`); the `history` pill is currently always present even though the target section is omitted for NAV tokens.
 - Section ids are stable; do not rename them. In particular: the Safety pill still targets `#report-card`, and the Market pill still targets `#chart`.
-- `CollateralUsageSection` renders inline within the overview zone and is not a top-level scrollspy entry.
+- The outer detail composition owns the single `#overview` anchor. Nested overview subcomponents do not publish a second `#overview` id.
+- `UnderlyingAssetCard`, `ParentVariantsCard`, and `CollateralUsageSection` render inline within the overview zone and are not top-level scrollspy entries.
 - `DistributionSection` renders after the chart, outside the top-level rail.
 - `DepegHistory` is omitted for NAV tokens, leaving the always-present `history` rail pill without a rendered target on those pages.
 - `YieldDetailSection` decides its own empty/loading/null behavior from the cached yield rankings plus static coin metadata. Non-yield-bearing coins can still render the section when the yield stack publishes a live lending-opportunity or curated ranking row for that asset.

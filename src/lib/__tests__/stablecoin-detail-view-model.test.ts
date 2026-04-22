@@ -157,6 +157,108 @@ describe("stablecoin detail view-model builder", () => {
     expect(viewModel.hasYieldSection).toBe(true);
   });
 
+  it("exposes tracked variant parent and parent-side child variants", () => {
+    const variant = TRACKED_META_BY_ID.get("susds-sky");
+    const parent = TRACKED_META_BY_ID.get("usds-sky");
+    expect(variant).toBeDefined();
+    expect(parent).toBeDefined();
+
+    const variantViewModel = buildStablecoinDetailViewModel({
+      id: "susds-sky",
+      coin: variant!,
+      summary: null,
+      handleRetryAll: () => {},
+      supplyData: [{ date: 1_700_000_000, circulatingUsd: 100, price: 1 }],
+      supplyLoading: false,
+      supplyError: null,
+      listData: {
+        peggedAssets: [
+          {
+            id: "susds-sky",
+            name: "Sky Savings USDS",
+            symbol: "sUSDS",
+            pegType: "peggedUSD",
+            price: 1.02,
+            circulating: { peggedUSD: 100 },
+            circulatingPrevDay: { peggedUSD: 98 },
+            circulatingPrevWeek: { peggedUSD: 96 },
+            circulatingPrevMonth: { peggedUSD: 92 },
+          },
+        ],
+        fxFallbackRates: {},
+      } as never,
+      listLoading: false,
+      listError: null,
+      isListError: false,
+      listUpdatedAt: 1,
+      pegSummaryData: undefined,
+      pegUpdatedAt: 0,
+      pegError: null,
+      liquidityMap: undefined,
+      liqUpdatedAt: 0,
+      liquidityError: null,
+      reportCardsData: undefined,
+      rcUpdatedAt: 0,
+      reportCardsError: null,
+      flowsData: undefined,
+      isFlowsLoading: false,
+      isBlacklistLoading: false,
+    });
+
+    expect(variantViewModel.status).toBe("ready");
+    if (variantViewModel.status !== "ready") return;
+    expect(variantViewModel.variantParent?.id).toBe("usds-sky");
+    expect(variantViewModel.isVariant).toBe(true);
+    expect(variantViewModel.variantSiblings.map((coin) => coin.id)).toContain("stusds-sky");
+
+    const parentViewModel = buildStablecoinDetailViewModel({
+      id: "usds-sky",
+      coin: parent!,
+      summary: null,
+      handleRetryAll: () => {},
+      supplyData: [{ date: 1_700_000_000, circulatingUsd: 100, price: 1 }],
+      supplyLoading: false,
+      supplyError: null,
+      listData: {
+        peggedAssets: [
+          {
+            id: "usds-sky",
+            name: "Sky Dollar",
+            symbol: "USDS",
+            pegType: "peggedUSD",
+            price: 1,
+            circulating: { peggedUSD: 100 },
+            circulatingPrevDay: { peggedUSD: 99 },
+            circulatingPrevWeek: { peggedUSD: 98 },
+            circulatingPrevMonth: { peggedUSD: 97 },
+          },
+        ],
+        fxFallbackRates: {},
+      } as never,
+      listLoading: false,
+      listError: null,
+      isListError: false,
+      listUpdatedAt: 1,
+      pegSummaryData: undefined,
+      pegUpdatedAt: 0,
+      pegError: null,
+      liquidityMap: undefined,
+      liqUpdatedAt: 0,
+      liquidityError: null,
+      reportCardsData: undefined,
+      rcUpdatedAt: 0,
+      reportCardsError: null,
+      flowsData: undefined,
+      isFlowsLoading: false,
+      isBlacklistLoading: false,
+    });
+
+    expect(parentViewModel.status).toBe("ready");
+    if (parentViewModel.status !== "ready") return;
+    expect(parentViewModel.hasVariants).toBe(true);
+    expect(parentViewModel.childVariants.map((coin) => coin.id)).toEqual(["susds-sky", "stusds-sky"]);
+  });
+
   it("enables the yield section for commodity assets when a live ranking exists", () => {
     const coin = TRACKED_META_BY_ID.get("xaut-tether");
     expect(coin).toBeDefined();

@@ -139,7 +139,6 @@ export function StablecoinTable({
   // Density mode
   const [density, setDensity] = useTableDensity();
   const densityConfig = DENSITY_CONFIGS[density];
-  const isListDensity = density === "list";
 
   // Column visibility — mobile gets a reduced default (hiddenMobile columns start off)
   const deviceDefault = useMemo(
@@ -313,7 +312,7 @@ export function StablecoinTable({
                   coin={coin}
                   index={virtualRow.index}
                   densityConfig={densityConfig}
-                  isListDensity={isListDensity}
+                  density={density}
                   isVisible={isVisible}
                   logos={logos}
                   pegRates={pegRates}

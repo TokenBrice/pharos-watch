@@ -4,7 +4,7 @@ Multi-dimensional risk grades (A+ through F) for every tracked stablecoin. Compu
 
 The stablecoin registry currently contains 215 tracked metadata entries. Report-card snapshots score the active subset and the cemetery set; pre-launch tracked entries remain outside the scored snapshot until they launch.
 
-## Overall Grade (v7.08)
+## Overall Grade (v7.09)
 
 Four-step computation:
 
@@ -15,7 +15,7 @@ Four-step computation:
 
 Cemetery coins get a permanent F.
 
-Current-version note: v7.08 clarifies reserve-risk tiering for actively managed strategy books. Delta-neutral wording is not enough to assign a medium tier by itself: transparent spot or wrapped market exposure can remain medium, but reserves delegated into externally managed market-neutral, basis, perp, LP, private-deal, or custody-dependent strategy books are high unless there is stronger granular evidence that the slice is only an idle stablecoin or cash-equivalent buffer. This reclassifies avUSD's 0xPartners-managed strategy and loss-absorption reserve from medium to high. All v7.07 behavior carries forward: Liquidity / Exit (and the redemption-backstop snapshot serving `/api/redemption-backstops`) reuse last-known DEX liquidity when its freshness runway has elapsed, staleness is surfaced via `liquidityStale` and `inputFreshness.dexLiquidity.stale`, absent DEX snapshots still trigger the documented offchain-issuer primary-market-floor exclusion, and the `activeDepegBps` field remains in `RawDimensionInputs` so stressed-grade recomputations and the frontend apply the same cap.
+Current-version note: v7.09 makes tracked wrapped/staked variants first-class parent-linked cards. The nine in-scope tracked variants now declare canonical `variantOf` / `variantKind` metadata, contribute a synthetic `wrapper` dependency edge from parent to child in both live scoring and the dependency graph, and cannot outscore the parent's overall card. Savings wrappers cap at parent minus 3 in Dependency Risk, risk-absorption wrappers cap at parent minus 5, and live/stressed overall scores now expose `overallCapped`, `uncappedOverallScore`, `rawInputs.variantParentId`, and `rawInputs.variantKind` so the UI can distinguish a parent cap from ordinary peg drag. Severe active-depeg caps also follow inherited `pegReferenceId` links for these tracked wrappers, so a parent's open depeg still constrains the child. All v7.08 strategy-reserve-tier behavior carries forward unchanged.
 
 ## Dimensions
 
@@ -26,7 +26,7 @@ Current-version note: v7.08 clarifies reserve-risk tiering for actively managed 
 | **Liquidity / Exit** | 30%    | `liquidityScore` + `redemptionBackstopScore` | Uses `effectiveExitScore`, which preserves DEX liquidity as the floor and lets direct redemption quality help when present                                                                         |
 | **Resilience**       | 20%    | Token metadata (2 sub-factors)               | Average of collateral quality and custody model; blacklist capability is reported descriptively but does not affect the score                                                                      |
 | **Decentralization** | 15%    | Governance quality + chain infrastructure    | `GovernanceQuality` tiers: `immutable-code` → 100, `dao-governance` → 85, `multisig` → 55, `regulated-entity` → 40, `single-entity` → 20, `wrapper` → 10. Threshold-based penalty from combined chain infrastructure score |
-| **Dependency Risk**  | 25%    | Upstream stablecoin scores                   | No deps → varies by governance (decentralized: 90, centralized-dependent: 75, centralized: 95). With deps → blended score (upstream × weight + self-backed), −10 if any < 75                       |
+| **Dependency Risk**  | 25%    | Upstream stablecoin scores                   | No deps → varies by governance (decentralized: 90, centralized-dependent: 75, centralized: 95). With deps → blended score (upstream × weight + self-backed), −10 if any < 75, plus wrapper/mechanism ceilings |
 
 ### Peg Stability (multiplier)
 
@@ -358,7 +358,7 @@ Implementation notes:
 Key types:
 
 - **`DependencyWeight`**: `{ id: string; weight: number; type?: "wrapper" | "mechanism" | "collateral" }` — upstream stablecoin ID, collateral fraction (0–1), and optional dependency ceiling semantics. Replaces the old `string[]` dependency format.
-- **`RawDimensionInputs`**: Raw scoring inputs per card (`pegScore`, `activeDepeg`, `activeDepegBps`, `liquidityScore`, `effectiveExitScore`, `redemptionBackstopScore`, `redemptionRouteFamily`, `redemptionImmediateCapacityUsd`, `redemptionImmediateCapacityRatio`, `concentrationHhi`, `bluechipGrade`, `canBeBlacklisted`, `chainTier`, `deploymentModel`, `collateralQuality`, `custodyModel`, `governanceTier`, `governanceQuality`, `dependencies`, `navToken`, `collateralFromLive`) — enables client-side stress test recomputation.
+- **`RawDimensionInputs`**: Raw scoring inputs per card (`pegScore`, `activeDepeg`, `activeDepegBps`, `liquidityScore`, `effectiveExitScore`, `redemptionBackstopScore`, `redemptionRouteFamily`, `redemptionImmediateCapacityUsd`, `redemptionImmediateCapacityRatio`, `concentrationHhi`, `bluechipGrade`, `canBeBlacklisted`, `chainTier`, `deploymentModel`, `collateralQuality`, `custodyModel`, `governanceTier`, `governanceQuality`, `dependencies`, `variantParentId`, `variantKind`, `navToken`, `collateralFromLive`) — enables client-side stress test recomputation.
 
 ## Portfolio Analyzer & Stress Test
 

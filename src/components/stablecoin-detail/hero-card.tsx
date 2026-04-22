@@ -23,6 +23,7 @@ import type { Infrastructure } from "@shared/types";
 import { buildLiveCompareUrl, getPrimaryStaticComparisonPageForCoin } from "@/lib/compare-pages";
 import { buildBackingTaxonomyUrl, buildGovernanceTaxonomyUrl } from "@/lib/stablecoin-taxonomy";
 import { buildPegLandingUrl } from "@/lib/peg-landing";
+import { getVariantDisplay } from "@/lib/variant-display";
 import {
   formatCurrency,
   formatNativePrice,
@@ -48,8 +49,10 @@ import type {
   StablecoinMeta,
   StressSignalEntry,
   YieldRanking,
+  VariantKind,
 } from "@shared/types";
 import { MethodologyLabel } from "@/components/methodology-hint";
+import { buildStablecoinUrl } from "@/lib/urls";
 
 interface HeroCardProps {
   coin: StablecoinMeta;
@@ -71,6 +74,8 @@ interface HeroCardProps {
   yieldRanking: YieldRanking | null;
   stressSignal: StressSignalEntry | null;
   reportCard: ReportCard | null;
+  variantParent?: StablecoinMeta | null;
+  variantKind?: VariantKind | null;
   onOpenFeedback: () => void;
 }
 
@@ -404,6 +409,8 @@ export function HeroCard({
   yieldRanking,
   stressSignal,
   reportCard,
+  variantParent,
+  variantKind,
   onOpenFeedback,
 }: HeroCardProps) {
   const infrastructures: Infrastructure[] = coin.infrastructures ?? [];
@@ -575,6 +582,7 @@ export function HeroCard({
   const depegThresholdBps = coinData.pegType === "peggedUSD"
     ? DEPEG_THRESHOLD_BPS
     : DEPEG_THRESHOLD_BPS_NON_USD;
+  const variantDisplay = variantKind ? getVariantDisplay(variantKind) : null;
   const limitedDepegCoverageNote =
     !isNavToken &&
     pegScoreResult?.depegEventCoverageLimited === true &&
@@ -671,6 +679,14 @@ export function HeroCard({
               <BluechipHeaderBadge stablecoinId={coin.id} />
             </div>
             <HeroClassificationLine coin={coin} />
+            {variantParent && variantDisplay ? (
+              <Link
+                href={buildStablecoinUrl(variantParent.id)}
+                className={`pharos-focus-ring mt-1 inline-flex items-center rounded-full border px-2 py-0.5 text-[11px] font-semibold ${variantDisplay.chipClass}`}
+              >
+                Variant of {variantParent.symbol}
+              </Link>
+            ) : null}
             <div className="mt-1 flex flex-wrap items-center gap-1.5">
               {infrastructures.map((value) => (
                 <InfrastructureChip key={value} value={value} />
@@ -773,6 +789,16 @@ export function HeroCard({
                   <div className="flex items-center gap-3 mt-1">
                     <HeroClassificationLine coin={coin} />
                   </div>
+                  {variantParent && variantDisplay ? (
+                    <div className="mt-1.5">
+                      <Link
+                        href={buildStablecoinUrl(variantParent.id)}
+                        className={`pharos-focus-ring inline-flex items-center rounded-full border px-2.5 py-1 text-[11px] font-semibold ${variantDisplay.chipClass}`}
+                      >
+                        Variant of {variantParent.symbol}
+                      </Link>
+                    </div>
+                  ) : null}
                   <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
                     {infrastructures.map((value) => (
                       <InfrastructureChip key={value} value={value} />

@@ -6,7 +6,7 @@ Risk-adjusted yield tracking and ranking for yield-bearing stablecoins and curat
 
 ## Methodology Versioning
 
-- **Current methodology version:** `v7.42`
+- **Current methodology version:** `v7.43`
 - **Public changelog page:** `/methodology/yield-changelog/`
 - **Canonical source:** `shared/lib/yield-methodology-version.ts`
 
@@ -16,6 +16,8 @@ Rankings provenance now carries source-native freshness for derived sources:
 
 - `sourceObservedAt` / `sourceAgeSeconds` reflect the actual latest observation backing the ranking, not just the cron run time
 - `comparisonAnchorObservedAt` / `comparisonAnchorAgeSeconds` are included when APY is derived from a prior anchor, such as price-derived and on-chain exchange-rate calculations
+- `sUSDe`, `sUSDS`, `sDAI`, `sfrxUSD`, and `scrvUSD` now own the wrapper APY rows that used to publish through `USDe`, `USDS`, `DAI`, `frxUSD`, and `crvUSD`
+- Parent-side wrapper history for those five base assets is filtered immediately from `/api/yield-history` and purged on the hourly sync path, so the post-handoff discontinuity is explicit rather than silently grandfathered
 - `sUSDai` is now a first-class tracked yield-bearing NAV token, so base `USDai` no longer inherits the USD.AI savings venue through `YIELD_VARIANT_MAP`
 - Risk-bearing wrappers with materially different holder exposure now own their yield rows directly when they are tracked as separate assets: `stcUSD`, `sAID`, `msY`, and K3 `sBOLD` no longer publish through their base stablecoin rows
 - `stUSDS` uses a direct ERC-4626 exchange-rate reader, while Aave Umbrella `stkGHO` is inventoried as an intentional runtime-yield gap until reliable reward APY telemetry is available
@@ -35,7 +37,7 @@ Rankings provenance now carries source-native freshness for derived sources:
 
 ## Tracked Coins
 
-Every stablecoin with `flags.yieldBearing: true` in `shared/lib/stablecoins/index.ts` is inventoried by the yield manifest. Live cron resolution operates on the active subset (`status !== "pre-launch"`), while pre-launch or intentionally uncovered assets remain visible to operators through explicit manifest entries instead of silently disappearing from coverage accounting. Pre-launch records live in `shared/data/stablecoins/pre-launch.json` and are skipped by explicit lending override publication until they move into the active registry shards. The sync also supports deterministic custom sources for select non-yield-bearing coins, exact-pool curated overrides for select non-stablecoin assets, plus automatic lending pool discovery for tracked non-gold/silver stablecoins rated C- or above (safety score >= 50), including coins already flagged `yieldBearing`. `yieldConfig` is used when present to provide canonical source/type labels; auto-discovered lending rows synthesize protocol-derived labels when the source is `defillama-auto`.
+Every stablecoin with `flags.yieldBearing: true` in `shared/lib/stablecoins/index.ts` is inventoried by the yield manifest. Live cron resolution operates on the active subset (`status !== "pre-launch"`), while pre-launch or intentionally uncovered assets remain visible to operators through explicit manifest entries instead of silently disappearing from coverage accounting. Pre-launch records live in `shared/data/stablecoins/pre-launch.json` and are skipped by explicit lending override publication until they move into the active registry shards. The sync also supports deterministic custom sources for select non-yield-bearing coins, exact-pool curated overrides for select non-stablecoin assets, plus automatic lending pool discovery for tracked non-gold/silver stablecoins rated C- or above (safety score >= 50), including coins already flagged `yieldBearing`. `yieldConfig` is used when present to provide canonical source/type labels; auto-discovered lending rows synthesize protocol-derived labels when the source is `defillama-auto`. Tracked savings wrappers must own their own runtime pool/on-chain readers; if the wrapper is tracked as its own coin, do not leave the base asset marked `yieldBearing` purely because the wrapper exists.
 
 | Field         | Type        | Description                                                                                   |
 | ------------- | ----------- | --------------------------------------------------------------------------------------------- |
@@ -83,12 +85,12 @@ Currently configured for 12 generic vaults (all use selector `0x07a2d13a` — `c
 
 | Coin ID | Wrapper | Contract | Chain |
 |---------|---------|----------|-------|
-| `usde-ethena` | sUSDe | `0x9D39...7497` | Ethereum |
+| `susde-ethena` | sUSDe | `0x9D39...7497` | Ethereum |
 | `iusd-infinifi` | siUSD | `0xDBDC...bCB` | Ethereum |
 | `usdp-parallel` | sUSDp | `0x472e...7e7` | Base |
-| `usds-sky` | sUSDS | `0xa393...fbD` | Ethereum |
-| `dai-makerdao` | sDAI | `0x83F2...BEeA` | Ethereum |
-| `frxusd-frax` | sfrxUSD | `0xcf62...5b6` | Ethereum |
+| `susds-sky` | sUSDS | `0xa393...fbD` | Ethereum |
+| `sdai-sky` | sDAI | `0x83F2...BEeA` | Ethereum |
+| `sfrxusd-frax` | sfrxUSD | `0xcf62...5b6` | Ethereum |
 | `dola-inverse-finance` | sDOLA | `0xb45a...7305` | Ethereum |
 | `bold-liquity` | yBOLD | `0x9F43...a3d8` | Ethereum |
 | `usdf-falcon` | sUSDf | `0xc8cf...4b0` | Ethereum |
@@ -96,7 +98,7 @@ Currently configured for 12 generic vaults (all use selector `0x07a2d13a` — `c
 | `ustb-superstate` | USTB | ERC-4626 (6 decimals) | Ethereum |
 | `thbill-theo` | thBILL | ERC-4626 (6 decimals) | Ethereum |
 
-`crvusd-curve` is intentionally quarantined from this generic Tier 1 reader because its trailing 7-day `convertToAssets(1e18)` delta understated Curve's current scrvUSD savings APY. It uses the scrvUSD special-case estimator below instead. `dusd-dtrinity` and `reusd-re-protocol` are also quarantined from the generic reader for now because their current `convertToAssets(1e18)` probes do not return a usable value, so they continue to rely on non-deterministic source paths until protocol-specific deterministic adapters are added.
+`scrvusd-curve` is intentionally quarantined from this generic Tier 1 reader because its trailing 7-day `convertToAssets(1e18)` delta understated Curve's current scrvUSD savings APY. It uses the scrvUSD special-case estimator below instead. `dusd-dtrinity` and `reusd-re-protocol` are also quarantined from the generic reader for now because their current `convertToAssets(1e18)` probes do not return a usable value, so they continue to rely on non-deterministic source paths until protocol-specific deterministic adapters are added.
 
 **APY formula:**
 
@@ -125,7 +127,7 @@ apr             = sharesPerSecond * 31_536_000 / totalSupply
 apy             = ((1 + apr / 365) ^ 365 - 1) * 100
 ```
 
-When `fullProfitUnlockDate` is no longer in the future, the current unlock rate is treated as 0. The row publishes under source key `onchain:crvusd-curve:scrvusd-current-rate`, leaving the old `onchain:crvusd-curve` trailing-delta history unmixed. The curated DeFiLlama pool `5fd328af-4203-471b-bd16-1705c726d926` remains an alternative/fallback source.
+When `fullProfitUnlockDate` is no longer in the future, the current unlock rate is treated as 0. The row publishes under source key `onchain:scrvusd-curve:scrvusd-current-rate`, leaving the old parent-owned `crvUSD` history unmixed. The curated DeFiLlama pool `5fd328af-4203-471b-bd16-1705c726d926` remains an alternative/fallback source.
 
 #### Special-case Tier 1 estimator: LUSD / B.Protocol Stability Pool
 
@@ -198,7 +200,7 @@ This keeps wrapper pools like `fxSAVE` and `msY` eligible even when DeFiLlama ma
 | Hermetica USDh        | sUSDh   | Hermetica staking wrapper   |
 | Saturn USDat          | sUSDat  | Saturn staking vault        |
 
-`YIELD_VARIANT_MAP` is only used when the yield-bearing wrapper is not already modeled as its own tracked asset. As of April 21, 2026, `sUSDai`, `stcUSD`, `sAID`, `msY`, and K3 `sBOLD` are tracked directly, so their base assets no longer resolve through those wrapper paths.
+`YIELD_VARIANT_MAP` is only used when the yield-bearing wrapper is not already modeled as its own tracked asset. As of April 22, 2026, `sUSDe`, `sUSDS`, `sDAI`, `sfrxUSD`, `scrvUSD`, `sUSDai`, `stcUSD`, `sAID`, `msY`, and K3 `sBOLD` are tracked directly, so their base assets no longer resolve through those wrapper paths.
 
 APY, base/reward split, pool TVL, and pool UUID are all taken directly from the DL response.
 

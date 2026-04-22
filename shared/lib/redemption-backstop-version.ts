@@ -1,9 +1,24 @@
 import { createMethodologyVersion, toMethodologyVersionLabel } from "./methodology-version";
 
 const redemptionBackstop = createMethodologyVersion({
-  currentVersion: "3.991",
+  currentVersion: "3.992",
   changelogPath: "/methodology/#safety-scores-methodology",
   changelog: [
+    {
+      version: "3.992",
+      title: "Tracked wrapper routes inherit severe parent depegs",
+      date: "2026-04-22",
+      effectiveAt: 1776816000,
+      summary:
+        "Configured tracked wrappers now inherit a severe active-depeg impairment from their parent stablecoin when their peg is explicitly authored through that same parent link.",
+      impact: [
+        "Wrapper routes whose metadata keeps `pegReferenceId === variantOf` now reuse the parent's severe active-depeg exercisability gate instead of remaining scoreable when only the parent has the open depeg row",
+        "This inherited impairment is scoped only to wrappers that already have a redemption-backstop config in the registry; the rollout does not add new route coverage by itself",
+        "Safety Score active-depeg caps and Redemption Backstop route impairment now stay aligned for tracked wrappers on the same quarter-hourly/4-hourly runtime clocks",
+      ],
+      commits: [],
+      reconstructed: false,
+    },
     {
       version: "3.991",
       title: "AUDF and DOC route coverage",

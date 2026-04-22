@@ -216,7 +216,7 @@ export function HomepageClient() {
                   </>
                 ) : (
                   <span className="hidden text-[11px] text-muted-foreground/60 sm:inline">
-                    Filter by peg, backing, governance, grade
+                    Filter by peg, type, backing, grade, infrastructure, or variant
                   </span>
                 )}
                 <Button

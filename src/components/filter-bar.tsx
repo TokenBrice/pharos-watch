@@ -12,6 +12,9 @@ const FILTER_BAR_LABEL_OVERRIDES: Partial<Record<FilterTag, string>> = {
   "rwa-backed": "RWA",
   "crypto-backed": "Crypto",
   "centralized-dependent": "CeFi-Dep",
+  "variant-tracked": "All variants",
+  "variant-savings-passthrough": "Savings",
+  "variant-risk-absorption": "Risk-Abs",
 };
 
 interface FilterBarProps {
@@ -75,7 +78,7 @@ export function FilterBar({
         </div>
       </div>
 
-      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-[1fr_1.2fr_0.6fr_1fr_1.2fr]">
+      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-[1fr_1.2fr_0.6fr_1fr_1.2fr_1fr]">
         {FILTER_GROUPS.map((group) => (
           <div
             key={group.label}

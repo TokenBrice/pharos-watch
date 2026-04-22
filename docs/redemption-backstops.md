@@ -6,11 +6,11 @@ Modeled redemption-route coverage for tracked stablecoins. This subsystem estima
 
 ## Methodology Versioning
 
-- **Current methodology version:** `v3.991`
+- **Current methodology version:** `v3.992`
 - **Public methodology anchor:** `/methodology/#safety-scores-methodology`
 - **Canonical source files:** `shared/lib/redemption-backstops.ts`, `shared/lib/redemption-backstop-configs/*`, `shared/lib/redemption-backstop-scoring.ts`, `shared/lib/redemption-backstop-version.ts`
 
-Latest `v3.991` update: AUDF and DOC now publish reviewed redemption routes, adding documented offchain issuer redeemability for Forte AUD and permissionless collateral redemption coverage for Dollar on Chain.
+Latest `v3.992` update: configured tracked wrappers now inherit a severe active-depeg impairment from the parent stablecoin whenever the wrapper keeps `pegReferenceId === variantOf`, so redemption exercisability stays aligned with the parent-linked Safety Score cap.
 
 There is no standalone changelog page yet. The public methodology link currently points at the Safety Scores section because redemption backstops feed the report-card liquidity dimension.
 
@@ -92,7 +92,7 @@ An optional per-config `totalScoreCap` can apply an additional `config-cap`.
 
 The redemption-backstop cron materializes raw `effectiveExitScore` on every resolved row using the last-known DEX liquidity input, even when that input is stale relative to the `CRON_INTERVALS["sync-dex-liquidity"] * 2` freshness budget. When no DEX liquidity exists, the raw `/api/redemption-backstops` score can still be redemption-only for resolved routes, including offchain-issuer routes whose route-family cap is the guardrail. Stale DEX input still marks the cron run `degraded` and flips `metadata.liquidityStale = true` for operational visibility. Report cards then apply their own confidence and availability gating on top, so stale redemption snapshots and low-confidence redemption routes stay visible on redemption surfaces but do not uplift Safety Score liquidity. In the report-card Liquidity / Exit dimension, documented offchain issuer routes with eventual-only capacity can add only the primary-market exit bonus when DEX liquidity is already available; they do not replace missing DEX liquidity for Safety Score scoring.
 
-Severe active depegs add a current-exercisability gate on top of the static route score. When an open `depeg_events` row has `abs(peak_deviation_bps) >= 2500`, a static, estimated, live-proxy, issuer/API, queue, or documented-bound redemption route is marked `impaired` unless it has live-direct dynamic permissionless redemption capacity with atomic or immediate settlement. This prevents stale route documentation from producing a strong par-exit score while the market is indicating that broad redemption is not currently clearing.
+Severe active depegs add a current-exercisability gate on top of the static route score. When an open `depeg_events` row has `abs(peak_deviation_bps) >= 2500`, a static, estimated, live-proxy, issuer/API, queue, or documented-bound redemption route is marked `impaired` unless it has live-direct dynamic permissionless redemption capacity with atomic or immediate settlement. For configured tracked wrappers whose metadata keeps `pegReferenceId === variantOf`, that impairment now also propagates from the parent stablecoin's open severe-depeg row. This prevents stale route documentation from producing a strong par-exit score while the market is indicating that broad redemption is not currently clearing.
 
 The effective exit model parameters are surfaced by `/api/redemption-backstops.methodology.effectiveExitModel` and reused by report cards.
 

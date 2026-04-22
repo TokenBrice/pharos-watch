@@ -1,9 +1,25 @@
 import type { MethodologyVersionConfig } from "./methodology-version";
 
 export const SAFETY_SCORE_VERSION_CONFIG: MethodologyVersionConfig = {
-  currentVersion: "7.08",
+  currentVersion: "7.09",
   changelogPath: "/methodology/scoring-changelog/",
   changelog: [
+    {
+      version: "7.09",
+      title: "Tracked wrapper and staked variants become explicit parent-linked cards",
+      date: "2026-04-22",
+      effectiveAt: 1776816000,
+      summary:
+        "Tracked savings and risk-absorption wrappers now carry an explicit parent relationship in Safety Scores, so dependency ceilings, parent caps, and stressed recomputation no longer depend on reserve-shape quirks.",
+      impact: [
+        "Nine tracked wrapped or staked stablecoins now declare canonical `variantOf` / `variantKind` metadata and contribute a synthetic `wrapper` edge from parent to child in dependency scoring, topological ordering, and the dependency graph",
+        "Dependency Risk applies a wrapper ceiling of parent minus 3 points for tracked savings wrappers and parent minus 5 points for tracked risk-absorption wrappers, while legacy non-variant wrapper dependencies keep the existing parent minus 3 behavior",
+        "Tracked variants cannot outscore their parent overall card: live cards and stressed recomputation both cap the child at the parent's overall score and expose `overallCapped`, `uncappedOverallScore`, `rawInputs.variantParentId`, and `rawInputs.variantKind` for transparency",
+        "Active severe depeg caps now follow inherited `pegReferenceId` links for tracked wrappers, so a parent depeg continues to cap the child even when the wrapper has no direct open-event row of its own",
+      ],
+      commits: [],
+      reconstructed: false,
+    },
     {
       version: "7.08",
       title: "Strategy reserve tier clarification",

@@ -153,6 +153,17 @@ describe("buildTrackedIdSet", () => {
     expect(trackedIds.has("m-m0")).toBe(true);
     expect(trackedIds.has("susdai-usd-ai")).toBe(false);
   });
+
+  it("returns only tracked parent variants for the variant filters", () => {
+    const allVariants = buildTrackedIdSet(["variant-tracked"]);
+    expect(allVariants.has("susds-sky")).toBe(true);
+    expect(allVariants.has("stusds-sky")).toBe(true);
+    expect(allVariants.has("usds-sky")).toBe(false);
+    expect(allVariants.size).toBe(9);
+
+    const riskAbsorption = buildTrackedIdSet(["variant-risk-absorption"]);
+    expect(riskAbsorption).toEqual(new Set(["stusds-sky", "stkgho-umbrella-aave"]));
+  });
 });
 
 describe("resolveEffectiveSortKey", () => {

@@ -80,4 +80,28 @@ describe("ReportCardDetail", () => {
     expect(screen.getByText("Collateral:")).toBeTruthy();
     expect(screen.getByText("Reserve assets")).toBeTruthy();
   });
+
+  it("surfaces the parent-cap note separately from peg drag", () => {
+    render(
+      <ReportCardDetail
+        card={{
+          ...makeReportCard(),
+          overallScore: 72,
+          overallCapped: true,
+          uncappedOverallScore: 79,
+          rawInputs: createReportCardRawInputs({
+            pegScore: 95,
+            liquidityScore: 72,
+            variantParentId: "usds-sky",
+            variantKind: "savings-passthrough",
+          }),
+        }}
+        liquidityComponents={null}
+      />,
+    );
+
+    expect(screen.getByText("Overall capped at parent stablecoin")).toBeTruthy();
+    expect(screen.getByText(/Parent cap:/)).toBeTruthy();
+    expect(screen.queryByText(/Peg:/)).toBeNull();
+  });
 });

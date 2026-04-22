@@ -222,6 +222,7 @@ These skills do not replace review — they are research scaffolding. Always ver
 - `flags.governance` is the coarse public taxonomy. `governanceQuality` is the finer report-card override.
 - `canBeBlacklisted` only accepts `true`, `false`, or `"possible"`. Do not invent `"inherited"` in metadata; that is computed later.
 - `pegReferenceId` is for NAV wrappers or derivative assets whose stability should inherit from another tracked base asset.
+- `variantOf` / `variantKind` are only for active wrapped or staked coins whose primary user expectation is still direct exposure to another tracked stablecoin. In v1 they co-require, the parent must be an active non-variant non-`navToken` stablecoin, and the child must keep `flags.navToken === true` plus `pegReferenceId === variantOf`.
 - `tradedContracts` is for market-traded variants that matter for discovery/liquidity/yield identity but are not the canonical supply contracts.
 - `tags` is optional editorial metadata. Do not use it instead of a first-class field.
 
@@ -382,6 +383,7 @@ Notes:
 - Use a real mechanism type such as `nav-appreciation`, `rebase`, or `lending-vault`.
 - `lending-opportunity` is primarily a runtime-discovered publication type, not the usual static metadata choice.
 - If the yield wrapper is tracked as its own coin, do not also force the base asset through `YIELD_VARIANT_MAP`.
+- When a tracked savings wrapper becomes the canonical yield surface, remove the wrapper-owned `yieldBearing` / `yieldConfig` metadata and historical ownership from the parent instead of leaving the base asset as the wrapper host.
 - If no yield source exists and none is expected, add a row to `INTENTIONAL_GAP_REASONS` rather than leaving the coverage audit red.
 
 ### 5d. Redemption backstops
