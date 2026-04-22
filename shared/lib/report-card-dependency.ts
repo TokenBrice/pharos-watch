@@ -22,6 +22,7 @@ const GOVERNANCE_DETAIL_LABEL: Record<GovernanceType, string> = {
 const UNAVAILABLE_DEPENDENCY_SCORE = 70;
 const VARIANT_WRAPPER_PENALTY: Record<VariantKind, number> = {
   "savings-passthrough": 3,
+  "strategy-vault": 5,
   "risk-absorption": 5,
   "bond-maturity": 8,
 };

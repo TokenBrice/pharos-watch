@@ -244,6 +244,8 @@ async function handleStablecoinOg(db: D1Database, coinId: string): Promise<Respo
   const liq = dexLiqMap[id];
   const variantLabel = meta?.variantKind === "savings-passthrough"
     ? "Savings"
+    : meta?.variantKind === "strategy-vault"
+      ? "Strategy"
     : meta?.variantKind === "risk-absorption"
       ? "Risk-Abs"
       : meta?.variantKind === "bond-maturity"

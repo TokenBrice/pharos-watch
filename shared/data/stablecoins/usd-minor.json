@@ -7432,6 +7432,8 @@
       "rwa": false,
       "navToken": true
     },
+    "variantOf": "msusd-main-street",
+    "variantKind": "strategy-vault",
     "pegReferenceId": "msusd-main-street",
     "collateral": "msUSD strategy vault shares backed by Main Street's delta-neutral options and derivatives strategy reserve; exchange-rate gains accrue to msY holders",
     "pegMechanism": "ERC-4626-style staking token over msUSD; users stake msUSD for msY, whose exchange rate appreciates with strategy returns, while final USDC redemption inherits Main Street's primary-market caps and cooldowns",
@@ -10138,6 +10140,8 @@
       "rwa": true,
       "navToken": true
     },
+    "variantOf": "aid-gaib",
+    "variantKind": "strategy-vault",
     "pegReferenceId": "aid-gaib",
     "collateral": "AID staked into GAIB's ERC-4626 sAID vault, representing a NAV share of AI infrastructure financing positions plus stable reserve buffers",
     "pegMechanism": "sAID is not pegged to $1; it is minted by staking AID at deposit NAV and redeemed through a 30-day FIFO withdrawal cycle at unstaking NAV, which can reflect unrealized losses",

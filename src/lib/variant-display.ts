@@ -15,6 +15,12 @@ const VARIANT_DISPLAY: Record<
     badgeClass: "border-frost-blue/30 bg-frost-blue/10 text-frost-blue",
     chipClass: "border-frost-blue/30 bg-frost-blue/10 text-frost-blue",
   },
+  "strategy-vault": {
+    shortLabel: "Strategy",
+    fullLabel: "Strategy vault variant",
+    badgeClass: "border-orange-500/30 bg-orange-500/10 text-orange-700 dark:text-orange-400",
+    chipClass: "border-orange-500/30 bg-orange-500/10 text-orange-700 dark:text-orange-400",
+  },
   "risk-absorption": {
     shortLabel: "Risk-Abs",
     fullLabel: "Risk absorption variant",

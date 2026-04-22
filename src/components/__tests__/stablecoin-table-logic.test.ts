@@ -157,10 +157,19 @@ describe("buildTrackedIdSet", () => {
   it("returns only tracked parent variants for the variant filters", () => {
     const allVariants = buildTrackedIdSet(["variant-tracked"]);
     expect(allVariants.has("susds-sky")).toBe(true);
+    expect(allVariants.has("susdai-usd-ai")).toBe(true);
     expect(allVariants.has("stusds-sky")).toBe(true);
     expect(allVariants.has("busd0-usual")).toBe(true);
     expect(allVariants.has("usds-sky")).toBe(false);
-    expect(allVariants.size).toBe(10);
+    expect(allVariants.size).toBe(14);
+
+    const strategy = buildTrackedIdSet(["variant-strategy-vault"]);
+    expect(strategy).toEqual(new Set([
+      "susdai-usd-ai",
+      "stcusd-cap",
+      "msy-main-street",
+      "said-gaib",
+    ]));
 
     const riskAbsorption = buildTrackedIdSet(["variant-risk-absorption"]);
     expect(riskAbsorption).toEqual(new Set(["stusds-sky", "stkgho-umbrella-aave"]));

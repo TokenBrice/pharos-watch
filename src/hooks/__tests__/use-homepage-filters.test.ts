@@ -96,6 +96,12 @@ describe("parseHomepageParams", () => {
     expect(result.groupSelections["Variant"]).toBe("variant-risk-absorption");
   });
 
+  it("parses the strategy variant filter", () => {
+    const params = new URLSearchParams("variant=variant-strategy-vault");
+    const result = parseHomepageParams(params);
+    expect(result.groupSelections["Variant"]).toBe("variant-strategy-vault");
+  });
+
   it("parses the bond variant filter", () => {
     const params = new URLSearchParams("variant=variant-bond-maturity");
     const result = parseHomepageParams(params);

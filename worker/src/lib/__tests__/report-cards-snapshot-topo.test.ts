@@ -10,7 +10,7 @@ function makeMeta(
     governance?: GovernanceType;
     canBeBlacklisted?: boolean | "possible";
     variantOf?: string;
-    variantKind?: "savings-passthrough" | "risk-absorption";
+    variantKind?: "savings-passthrough" | "strategy-vault" | "risk-absorption";
   },
 ): StablecoinMeta {
   return {
@@ -75,6 +75,21 @@ describe("topologicalOrder", () => {
       makeMeta("child", [{ coinId: "parent", pct: 100, name: "Parent", risk: "low" }], {
         variantOf: "parent",
         variantKind: "risk-absorption",
+      }),
+      makeMeta("parent"),
+    ];
+
+    const sorted = topologicalOrder(metas);
+    const ids = sorted.map((meta) => meta.id);
+
+    expect(ids.indexOf("parent")).toBeLessThan(ids.indexOf("child"));
+  });
+
+  it("places a strategy-vault child after its parent even when the reserves do not reference the parent directly", () => {
+    const metas = [
+      makeMeta("child", [{ name: "Strategy book", pct: 100, risk: "low" }], {
+        variantOf: "parent",
+        variantKind: "strategy-vault",
       }),
       makeMeta("parent"),
     ];

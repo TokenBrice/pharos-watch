@@ -9,7 +9,7 @@ import type { StablecoinMeta } from "../../types/core";
 function makeMeta(input: {
   id: string;
   variantOf?: string;
-  variantKind?: "savings-passthrough" | "risk-absorption";
+  variantKind?: "savings-passthrough" | "strategy-vault" | "risk-absorption";
   reserves?: Array<{
     name: string;
     pct: number;
@@ -78,6 +78,24 @@ describe("dependency-graph", () => {
         variantKind: "savings-passthrough",
         reserves: [
           { name: "Parent reserve", pct: 100, risk: "low", coinId: "parent", depType: "collateral" },
+        ],
+      }),
+    ]);
+
+    expect(edges).toEqual([
+      { from: "parent", to: "child", weight: 1, type: "wrapper" },
+    ]);
+  });
+
+  it("emits the synthetic wrapper edge even when a strategy-vault child has no parent reserve slice", () => {
+    const edges = buildDependencyGraphEdges([
+      makeMeta({ id: "parent" }),
+      makeMeta({
+        id: "child",
+        variantOf: "parent",
+        variantKind: "strategy-vault",
+        reserves: [
+          { name: "Strategy book", pct: 100, risk: "high" },
         ],
       }),
     ]);

@@ -2838,6 +2838,8 @@
       "rwa": false,
       "navToken": true
     },
+    "variantOf": "usdai-usd-ai",
+    "variantKind": "strategy-vault",
     "pegReferenceId": "usdai-usd-ai",
     "collateral": "Yield-bearing USD.AI position backed by a mixed reserve stack that currently pairs a large PYUSD liquid sleeve with GPU-backed infrastructure loans financing AI compute; current issuer materials describe value-warranty coverage on new GPU loans",
     "pegMechanism": "Stake USDai to receive sUSDai; the token appreciates versus USDai as yield accrues, while unstaking enters the protocol's queued withdrawal flow with fixed 30-day processing windows and a limited instant-liquidity buffer",
@@ -3654,6 +3656,8 @@
       "rwa": false,
       "navToken": true
     },
+    "variantOf": "cusd-cap",
+    "variantKind": "strategy-vault",
     "pegReferenceId": "cusd-cap",
     "collateral": "ERC-4626 staked cUSD shares backed by Cap's reserve basket and operator-lending framework; yield comes from reserve yield and overcollateralized operator borrowing",
     "pegMechanism": "Users stake cUSD for stcUSD; the stcUSD exchange rate appreciates versus cUSD as yield accrues, and final USD exit inherits cUSD proportional basket redemption and Cap's slashing protections",

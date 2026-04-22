@@ -115,6 +115,7 @@ describe("HomepageClient", () => {
     expect(screen.getByText("Variant")).toBeTruthy();
     expect(screen.getByRole("radio", { name: "All variants" })).toBeTruthy();
     expect(screen.getByRole("radio", { name: "Savings" })).toBeTruthy();
+    expect(screen.getByRole("radio", { name: "Strategy" })).toBeTruthy();
     expect(screen.getByRole("radio", { name: "Risk-Abs" })).toBeTruthy();
     expect(screen.getByRole("radio", { name: "Bond" })).toBeTruthy();
   });
