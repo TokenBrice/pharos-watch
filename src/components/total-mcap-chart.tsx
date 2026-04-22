@@ -14,8 +14,9 @@ import { formatCurrency } from "@shared/lib/format";
 import { DateTooltip, MonoYAxis, TimeGrid, TimeXAxis } from "@/components/chart-primitives";
 import { useStablecoinCharts } from "@/hooks/api-hooks";
 import { useStablecoinDetailHistory } from "@/hooks/use-stablecoin-detail-history";
+import { useStablecoins } from "@/hooks/use-stablecoins";
 import { computeChartYDomain } from "@/lib/chart-utils";
-import { buildTotalMcapChartRows } from "@/lib/total-mcap-chart";
+import { buildCurrentTotalMcapRow, buildTotalMcapChartRows } from "@/lib/total-mcap-chart";
 import { CHART_SLATE, USDT_GREEN, USDC_BLUE, SKY_YELLOW } from "@/lib/chart-colors";
 
 export function TotalMcapChart() {
@@ -24,6 +25,7 @@ export function TotalMcapChart() {
     downloadChartPng(chartRef, "pharos-total-mcap");
   }, []);
   const { data, isLoading } = useStablecoinCharts();
+  const { data: stablecoinsData, dataUpdatedAt: stablecoinsUpdatedAt } = useStablecoins();
   const { data: usdtHistory } = useStablecoinDetailHistory("usdt-tether");
   const { data: usdcHistory } = useStablecoinDetailHistory("usdc-circle");
   const { data: usdsHistory } = useStablecoinDetailHistory("usds-sky");
@@ -32,14 +34,20 @@ export function TotalMcapChart() {
 
   const chartData = useMemo(() => {
     if (!Array.isArray(data) || data.length === 0) return [];
+    const fallbackCurrentTs = Number(data[data.length - 1]?.date ?? 0) * 1000 + 1;
+
+    const currentSnapshot = buildCurrentTotalMcapRow(
+      stablecoinsData,
+      stablecoinsUpdatedAt > 0 ? stablecoinsUpdatedAt : fallbackCurrentTs,
+    );
 
     return buildTotalMcapChartRows(data, {
       usdtHistory,
       usdcHistory,
       usdsHistory,
       daiHistory,
-    });
-  }, [data, usdtHistory, usdcHistory, usdsHistory, daiHistory]);
+    }, currentSnapshot);
+  }, [data, daiHistory, stablecoinsData, stablecoinsUpdatedAt, usdcHistory, usdsHistory, usdtHistory]);
 
   const { range, setRange, filteredData, options } = useTimeRangeFilter(chartData, "ts");
 

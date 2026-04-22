@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { buildTotalMcapChartRows } from "../total-mcap-chart";
+import { buildCurrentTotalMcapRow, buildTotalMcapChartRows } from "../total-mcap-chart";
 
 describe("buildTotalMcapChartRows", () => {
   it("aligns per-coin history to the latest snapshot at or before each downsampled chart point", () => {
@@ -54,6 +54,108 @@ describe("buildTotalMcapChartRows", () => {
     expect(rows).toEqual([
       { ts: 100000, usdt: 0, usdc: 0, sky: 0, others: 50, total: 50 },
       { ts: 200000, usdt: 20, usdc: 0, sky: 0, others: 55, total: 75 },
+    ]);
+  });
+
+  it("appends a live current snapshot so the latest chart total matches the live cache", () => {
+    const currentSnapshot = buildCurrentTotalMcapRow(
+      {
+        peggedAssets: [
+          {
+            id: "usdt-tether",
+            name: "Tether",
+            symbol: "USDT",
+            geckoId: "tether",
+            pegType: "peggedUSD",
+            pegMechanism: "fiat-backed",
+            price: 1,
+            priceSource: "defillama",
+            priceConfidence: "high",
+            priceUpdatedAt: null,
+            priceObservedAt: null,
+            priceObservedAtMode: null,
+            priceSyncedAt: null,
+            consensusSources: [],
+            agreeSources: [],
+            supplySource: "defillama",
+            circulating: { peggedUSD: 110 },
+            circulatingPrevDay: {},
+            circulatingPrevWeek: {},
+            circulatingPrevMonth: {},
+            chainCirculating: {},
+            chains: [],
+          },
+          {
+            id: "usdc-circle",
+            name: "USD Coin",
+            symbol: "USDC",
+            geckoId: "usd-coin",
+            pegType: "peggedUSD",
+            pegMechanism: "fiat-backed",
+            price: 1,
+            priceSource: "defillama",
+            priceConfidence: "high",
+            priceUpdatedAt: null,
+            priceObservedAt: null,
+            priceObservedAtMode: null,
+            priceSyncedAt: null,
+            consensusSources: [],
+            agreeSources: [],
+            supplySource: "defillama",
+            circulating: { peggedUSD: 70 },
+            circulatingPrevDay: {},
+            circulatingPrevWeek: {},
+            circulatingPrevMonth: {},
+            chainCirculating: {},
+            chains: [],
+          },
+          {
+            id: "susds-sky",
+            name: "Savings USDS",
+            symbol: "sUSDS",
+            geckoId: "susds",
+            pegType: "peggedUSD",
+            pegMechanism: "yield-bearing",
+            price: 1,
+            priceSource: "coingecko",
+            priceConfidence: "single-source",
+            priceUpdatedAt: null,
+            priceObservedAt: null,
+            priceObservedAtMode: null,
+            priceSyncedAt: null,
+            consensusSources: [],
+            agreeSources: [],
+            supplySource: "coingecko-fallback",
+            circulating: { peggedUSD: 20 },
+            circulatingPrevDay: {},
+            circulatingPrevWeek: {},
+            circulatingPrevMonth: {},
+            chainCirculating: {},
+            chains: [],
+          },
+        ],
+      },
+      250000,
+    );
+
+    const rows = buildTotalMcapChartRows(
+      [
+        { date: 100, totalCirculatingUSD: { peggedUSD: 150 } },
+        { date: 200, totalCirculatingUSD: { peggedUSD: 175 } },
+      ],
+      {
+        usdtHistory: [],
+        usdcHistory: [],
+        usdsHistory: [],
+        daiHistory: [],
+      },
+      currentSnapshot,
+    );
+
+    expect(rows).toEqual([
+      { ts: 100000, usdt: 0, usdc: 0, sky: 0, others: 150, total: 150 },
+      { ts: 200000, usdt: 0, usdc: 0, sky: 0, others: 175, total: 175 },
+      { ts: 250000, usdt: 110, usdc: 70, sky: 0, others: 20, total: 200 },
     ]);
   });
 });

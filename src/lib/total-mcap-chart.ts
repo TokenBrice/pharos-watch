@@ -1,4 +1,5 @@
-import type { StablecoinChartPoint, SupplyHistoryPoint } from "@shared/types";
+import { getCirculatingRaw } from "@shared/lib/supply";
+import type { StablecoinChartPoint, StablecoinListResponse, SupplyHistoryPoint } from "@shared/types";
 
 export interface TotalMcapChartRow {
   ts: number;
@@ -30,6 +31,43 @@ function alignHistoryAtOrBeforeDate(
   return aligned;
 }
 
+export function buildCurrentTotalMcapRow(
+  stablecoinsData: StablecoinListResponse | undefined,
+  timestampMs: number,
+): TotalMcapChartRow | null {
+  const assets = stablecoinsData?.peggedAssets;
+  if (!assets?.length) return null;
+
+  let total = 0;
+  let usdt = 0;
+  let usdc = 0;
+  let sky = 0;
+
+  for (const asset of assets) {
+    const mcap = getCirculatingRaw(asset);
+    total += mcap;
+
+    if (asset.id === "usdt-tether") {
+      usdt += mcap;
+    } else if (asset.id === "usdc-circle") {
+      usdc += mcap;
+    } else if (asset.id === "usds-sky" || asset.id === "dai-makerdao") {
+      sky += mcap;
+    }
+  }
+
+  if (total <= 0) return null;
+
+  return {
+    ts: timestampMs,
+    usdt,
+    usdc,
+    sky,
+    others: Math.max(0, total - usdt - usdc - sky),
+    total,
+  };
+}
+
 export function buildTotalMcapChartRows(
   chartPoints: StablecoinChartPoint[],
   {
@@ -43,6 +81,7 @@ export function buildTotalMcapChartRows(
     usdsHistory: SupplyHistoryPoint[];
     daiHistory: SupplyHistoryPoint[];
   },
+  currentSnapshot?: TotalMcapChartRow | null,
 ): TotalMcapChartRow[] {
   if (chartPoints.length === 0) return [];
 
@@ -51,7 +90,7 @@ export function buildTotalMcapChartRows(
   const usdsSeries = alignHistoryAtOrBeforeDate(chartPoints, usdsHistory);
   const daiSeries = alignHistoryAtOrBeforeDate(chartPoints, daiHistory);
 
-  return chartPoints.map((point, index) => {
+  const rows = chartPoints.map((point, index) => {
     const total = Object.values(point.totalCirculatingUSD).reduce((sum, value) => sum + (value ?? 0), 0);
     const usdt = usdtSeries[index] ?? 0;
     const usdc = usdcSeries[index] ?? 0;
@@ -67,4 +106,17 @@ export function buildTotalMcapChartRows(
       total,
     };
   });
+
+  if (!currentSnapshot) return rows;
+
+  const lastRow = rows[rows.length - 1];
+  if (!lastRow) return [currentSnapshot];
+
+  if (currentSnapshot.ts <= lastRow.ts) {
+    rows[rows.length - 1] = { ...currentSnapshot, ts: lastRow.ts };
+    return rows;
+  }
+
+  rows.push(currentSnapshot);
+  return rows;
 }
