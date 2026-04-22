@@ -6,18 +6,11 @@ import type {
   EndpointPublicApiAccess,
   EndpointSiteDataAccess,
 } from "./definitions";
+import { findDynamicEndpointDescriptor } from "./dynamic";
 import { ENDPOINT_DEFINITIONS, getEndpointDefinition } from "./definitions";
 
 type EndpointMethod = "GET" | "POST";
 
-const STABLECOIN_DETAIL_PATH_PATTERN = /^\/api\/stablecoin\/[^/]+$/;
-const STABLECOIN_SUMMARY_PATH_PATTERN = /^\/api\/stablecoin-summary\/[^/]+$/;
-const STABLECOIN_RESERVES_PATH_PATTERN = /^\/api\/stablecoin-reserves\/[^/]+$/;
-const OG_IMAGE_PATH_PATTERN = /^\/api\/og\//;
-const DISCOVERY_DISMISS_PATH_PATTERN = /^\/api\/discovery-candidates\/(\d+)\/dismiss$/;
-const API_KEY_UPDATE_PATH_PATTERN = /^\/api\/api-keys\/(\d+)\/update$/;
-const API_KEY_DEACTIVATE_PATH_PATTERN = /^\/api\/api-keys\/(\d+)\/deactivate$/;
-const API_KEY_ROTATE_PATH_PATTERN = /^\/api\/api-keys\/(\d+)\/rotate$/;
 const GET_ONLY_METHODS = ["GET"] as const satisfies readonly EndpointMethod[];
 const POST_ONLY_METHODS = ["POST"] as const satisfies readonly EndpointMethod[];
 const GET_AND_POST_METHODS = ["GET", "POST"] as const satisfies readonly EndpointMethod[];
@@ -29,18 +22,9 @@ export function getPublicApiAccess(path: string): EndpointPublicApiAccess | null
   if (endpoint) {
     return endpoint.publicApiAccess;
   }
-  if (matchDynamicAdminEndpoint(path)) {
-    return "exempt";
-  }
-  if (OG_IMAGE_PATH_PATTERN.test(path)) {
-    return "exempt";
-  }
-  if (
-    STABLECOIN_DETAIL_PATH_PATTERN.test(path) ||
-    STABLECOIN_SUMMARY_PATH_PATTERN.test(path) ||
-    STABLECOIN_RESERVES_PATH_PATTERN.test(path)
-  ) {
-    return "protected";
+  const dynamicDescriptor = findDynamicEndpointDescriptor(path);
+  if (dynamicDescriptor) {
+    return dynamicDescriptor.publicApiAccess;
   }
   return null;
 }
@@ -54,18 +38,9 @@ export function getSiteDataAccess(path: string): EndpointSiteDataAccess | null {
   if (endpoint) {
     return endpoint.siteDataAccess;
   }
-  if (
-    STABLECOIN_DETAIL_PATH_PATTERN.test(path) ||
-    STABLECOIN_SUMMARY_PATH_PATTERN.test(path) ||
-    STABLECOIN_RESERVES_PATH_PATTERN.test(path)
-  ) {
-    return "allowed";
-  }
-  if (
-    matchDynamicAdminEndpoint(path) ||
-    OG_IMAGE_PATH_PATTERN.test(path)
-  ) {
-    return "denied";
+  const dynamicDescriptor = findDynamicEndpointDescriptor(path);
+  if (dynamicDescriptor) {
+    return dynamicDescriptor.siteDataAccess;
   }
   return null;
 }
@@ -75,9 +50,18 @@ export function isSiteDataAllowedPath(path: string): boolean {
 }
 
 export function matchDynamicAdminEndpoint(path: string): DynamicAdminEndpointMatch | null {
-  const discoveryDismissMatch = path.match(DISCOVERY_DISMISS_PATH_PATTERN);
-  if (discoveryDismissMatch) {
-    const candidateId = Number.parseInt(discoveryDismissMatch[1] ?? "", 10);
+  const dynamicDescriptor = findDynamicEndpointDescriptor(path);
+  if (!dynamicDescriptor?.adminRequired) {
+    return null;
+  }
+
+  const match = path.match(dynamicDescriptor.pattern);
+  if (!match) {
+    return null;
+  }
+
+  if (dynamicDescriptor.key === "discovery-candidate-dismiss") {
+    const candidateId = Number.parseInt(match[1] ?? "", 10);
     if (!Number.isFinite(candidateId) || candidateId <= 0) {
       return null;
     }
@@ -85,35 +69,31 @@ export function matchDynamicAdminEndpoint(path: string): DynamicAdminEndpointMat
       key: "discovery-candidate-dismiss",
       path,
       candidateId,
-      methods: POST_ONLY_METHODS,
+      methods: dynamicDescriptor.methods,
     };
   }
 
-  const apiKeyPatterns: Array<[RegExp, "api-key-update" | "api-key-deactivate" | "api-key-rotate"]> = [
-    [API_KEY_UPDATE_PATH_PATTERN, "api-key-update"],
-    [API_KEY_DEACTIVATE_PATH_PATTERN, "api-key-deactivate"],
-    [API_KEY_ROTATE_PATH_PATTERN, "api-key-rotate"],
-  ];
-  for (const [pattern, key] of apiKeyPatterns) {
-    const match = path.match(pattern);
-    if (!match) continue;
-    const apiKeyId = Number.parseInt(match[1] ?? "", 10);
-    if (!Number.isFinite(apiKeyId) || apiKeyId <= 0) {
-      return null;
-    }
-    return {
-      key,
-      path,
-      apiKeyId,
-      methods: POST_ONLY_METHODS,
-    };
+  const apiKeyId = Number.parseInt(match[1] ?? "", 10);
+  if (!Number.isFinite(apiKeyId) || apiKeyId <= 0) {
+    return null;
   }
-
-  return null;
+  if (
+    dynamicDescriptor.key !== "api-key-update"
+    && dynamicDescriptor.key !== "api-key-deactivate"
+    && dynamicDescriptor.key !== "api-key-rotate"
+  ) {
+    return null;
+  }
+  return {
+    key: dynamicDescriptor.key,
+    path,
+    apiKeyId,
+    methods: dynamicDescriptor.methods,
+  };
 }
 
 export function isAdminPath(path: string): boolean {
-  return Boolean(getEndpointDefinition(path)?.adminRequired || matchDynamicAdminEndpoint(path));
+  return Boolean(getEndpointDefinition(path)?.adminRequired || findDynamicEndpointDescriptor(path)?.adminRequired);
 }
 
 export function isMutatingAdminGetAllowed(url: URL): boolean {
@@ -135,18 +115,9 @@ function getAllowedEndpointMethods(url: URL): readonly EndpointMethod[] | null {
     return definition.methods;
   }
 
-  if (STABLECOIN_DETAIL_PATH_PATTERN.test(url.pathname)) {
-    return GET_ONLY_METHODS;
-  }
-  if (STABLECOIN_SUMMARY_PATH_PATTERN.test(url.pathname)) {
-    return GET_ONLY_METHODS;
-  }
-  const dynamicAdminEndpoint = matchDynamicAdminEndpoint(url.pathname);
-  if (dynamicAdminEndpoint) {
-    return dynamicAdminEndpoint.methods;
-  }
-  if (OG_IMAGE_PATH_PATTERN.test(url.pathname)) {
-    return GET_ONLY_METHODS;
+  const dynamicDescriptor = findDynamicEndpointDescriptor(url.pathname);
+  if (dynamicDescriptor) {
+    return dynamicDescriptor.methods;
   }
 
   return null;

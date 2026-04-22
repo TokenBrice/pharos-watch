@@ -35,7 +35,7 @@ export interface DynamicEndpointDescriptor {
 export const DYNAMIC_ENDPOINT_DESCRIPTORS = [
   {
     key: "stablecoin-summary",
-    pattern: /^\/api\/stablecoin-summary\/[^/]+$/,
+    pattern: /^\/api\/stablecoin-summary\/([^/]+)$/,
     methods: ["GET"],
     publicApiAccess: "protected",
     siteDataAccess: "allowed",
@@ -48,7 +48,7 @@ export const DYNAMIC_ENDPOINT_DESCRIPTORS = [
   },
   {
     key: "stablecoin-reserves",
-    pattern: /^\/api\/stablecoin-reserves\/[^/]+$/,
+    pattern: /^\/api\/stablecoin-reserves\/([^/]+)$/,
     methods: ["GET"],
     publicApiAccess: "protected",
     siteDataAccess: "allowed",
@@ -61,7 +61,7 @@ export const DYNAMIC_ENDPOINT_DESCRIPTORS = [
   },
   {
     key: "stablecoin-detail",
-    pattern: /^\/api\/stablecoin\/[^/]+$/,
+    pattern: /^\/api\/stablecoin\/([^/]+)$/,
     methods: ["GET"],
     publicApiAccess: "protected",
     siteDataAccess: "allowed",
@@ -87,7 +87,7 @@ export const DYNAMIC_ENDPOINT_DESCRIPTORS = [
   },
   {
     key: "discovery-candidate-dismiss",
-    pattern: /^\/api\/discovery-candidates\/[^/]+\/dismiss$/,
+    pattern: /^\/api\/discovery-candidates\/(\d+)\/dismiss$/,
     methods: ["POST"],
     publicApiAccess: "exempt",
     siteDataAccess: "denied",
@@ -97,7 +97,7 @@ export const DYNAMIC_ENDPOINT_DESCRIPTORS = [
   },
   {
     key: "api-key-update",
-    pattern: /^\/api\/api-keys\/[^/]+\/update$/,
+    pattern: /^\/api\/api-keys\/(\d+)\/update$/,
     methods: ["POST"],
     publicApiAccess: "exempt",
     siteDataAccess: "denied",
@@ -107,7 +107,7 @@ export const DYNAMIC_ENDPOINT_DESCRIPTORS = [
   },
   {
     key: "api-key-deactivate",
-    pattern: /^\/api\/api-keys\/[^/]+\/deactivate$/,
+    pattern: /^\/api\/api-keys\/(\d+)\/deactivate$/,
     methods: ["POST"],
     publicApiAccess: "exempt",
     siteDataAccess: "denied",
@@ -117,7 +117,7 @@ export const DYNAMIC_ENDPOINT_DESCRIPTORS = [
   },
   {
     key: "api-key-rotate",
-    pattern: /^\/api\/api-keys\/[^/]+\/rotate$/,
+    pattern: /^\/api\/api-keys\/(\d+)\/rotate$/,
     methods: ["POST"],
     publicApiAccess: "exempt",
     siteDataAccess: "denied",
