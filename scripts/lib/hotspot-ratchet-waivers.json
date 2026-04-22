@@ -15,10 +15,6 @@
     "disposition": "queued-p4",
     "notes": "The stablecoin detail hero remains a large presentation hotspot. Track it for the planned frontend decomposition lane rather than mixing it into the worker-focused tranche."
   },
-  "worker/src/cron/sync-stablecoins/enrich-prices-primary.ts": {
-    "disposition": "queued-p4",
-    "notes": "Primary pricing enrichment is still a large hotspot after the pass-family split. Follow up with an internal phase breakdown once the current pricing changes stabilize."
-  },
   "src/app/safety-scores/client.tsx": {
     "disposition": "queued-p4",
     "notes": "Risk Lab route client remains a broad UI composition surface. Keep waived for a dedicated safety-score frontend decomposition pass rather than mixing it into worker-oriented simplification tranches."
@@ -47,6 +43,10 @@
     "disposition": "queued-p4",
     "notes": "The audit/repair handler still mixes validation, replay planning, and mutation orchestration. Keep it explicitly owned as a later admin-path hotspot rather than widening this tranche."
   },
+  "worker/src/cron/blacklist/amount-recovery.ts": {
+    "disposition": "queued-p4",
+    "notes": "Blacklist amount recovery still mixes provider fanout, pricing fallback, event-shape branching, and batch-write orchestration in one branch-heavy module. Track it for a dedicated blacklist recovery simplification pass rather than folding that work into the current reserve/pricing/status tranche."
+  },
   "src/components/status/cron-metadata-summary.ts": {
     "disposition": "deferred",
     "notes": "Status metadata summarization has grown with the ops dashboard. Defer structural cleanup until the status surface settles after the current parallel work."
@@ -67,13 +67,17 @@
     "disposition": "deferred",
     "notes": "FX-rate helper orchestration remains a large policy surface after earlier trims. Defer another split until the next FX-state/runtime cleanup tranche."
   },
-  "worker/src/lib/mint-burn-contracts.ts": {
+  "src/app/admin/status-dashboard.tsx": {
     "disposition": "queued-p4",
-    "notes": "Config registry for all tracked stablecoins plus the v5.2 bridge-detection validator/audit block. Grew past the default file-size budget during mint-burn comprehensive remediation. Follow-up pass should extract the per-coin config array into a data-only module and keep only the schema + validator logic in this file."
+    "notes": "Admin status dashboard still centralizes top-fold triage, section composition, and operator controls in one client shell. Keep waived until the dedicated admin-status decomposition lane is scheduled instead of widening the current mixed status/frontend tranche."
   },
-  "src/app/status/client.tsx": {
+  "shared/lib/env-contract.ts": {
     "disposition": "queued-p4",
-    "notes": "Status page client centralizes the full operator-dashboard composition. Keep waived until the status route gets a dedicated UI decomposition pass."
+    "notes": "The shared env-contract manifest now centralizes the binding inventory plus generated example/docs views. Keep it waived until a dedicated follow-up pass decides whether to split generation helpers from the manifest definition without regressing the single-source-of-truth contract."
+  },
+  "src/lib/contagion-layout.ts": {
+    "disposition": "queued-p4",
+    "notes": "The contagion layout engine still combines graph shaping, simulation setup, radius heuristics, and clamp/label rules in one branchy module. Track it for the next dedicated contagion graph simplification pass rather than mixing a layout-engine breakup into the current status/pricing tranche."
   },
   "worker/src/cron/daily-digest/prompt.ts": {
     "disposition": "queued-p4",

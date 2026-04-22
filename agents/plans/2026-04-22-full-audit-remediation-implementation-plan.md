@@ -436,6 +436,10 @@ Implementation:
   - persist resume/defer state
   - expose deferred-tail / budget-exhaustion metrics in status tooling
 
+Implementation note:
+- The current branch delivers the resume/defer state plus deferred-tail metrics portion of `PR-13`.
+- The still-unimplemented sharding/partitioning step is tracked explicitly in `agents/tasks/2026-04-22-live-reserve-sharding-follow-up.md`.
+
 Acceptance criteria:
 - Catalog changes can land with smaller review surfaces and reduced merge conflicts while preserving current runtime imports.
 - Live reserve sync exposes scaling pressure before user-visible staleness becomes the first signal.
