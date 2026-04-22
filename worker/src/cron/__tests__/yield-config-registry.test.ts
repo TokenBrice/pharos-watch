@@ -108,7 +108,20 @@ describe("yield config registry", () => {
       .map((entry) => entry.stablecoinId)
       .sort();
 
-    expect(quarantined).toEqual(["crvusd-curve", "dusd-dtrinity", "reusd-re-protocol"]);
+    expect(quarantined).toEqual(["dusd-dtrinity", "reusd-re-protocol", "scrvusd-curve"]);
+  });
+
+  it("moves tracked savings-wrapper runtime ownership from the parent ids to the child ids", () => {
+    for (const stablecoinId of ["usde-ethena", "usds-sky", "dai-makerdao", "frxusd-frax", "crvusd-curve"]) {
+      expect(YIELD_POOL_MAP[stablecoinId], stablecoinId).toBeUndefined();
+      expect(YIELD_VARIANT_MAP[stablecoinId], stablecoinId).toBeUndefined();
+    }
+
+    expect(YIELD_POOL_MAP["susde-ethena"]).toBe("66985a81-9c51-46ca-9977-42b4fe7bc6df");
+    expect(YIELD_POOL_MAP["susds-sky"]).toBe("d8c4eff5-c8a9-46fc-a888-057c4c668e72");
+    expect(YIELD_POOL_MAP["sdai-sky"]).toBe("13392973-be6e-4b2f-bce9-4f7dd53d1c3a");
+    expect(YIELD_POOL_MAP["sfrxusd-frax"]).toBe("42523cca-14b0-44f6-95fb-4781069520a5");
+    expect(YIELD_POOL_MAP["scrvusd-curve"]).toBe("5fd328af-4203-471b-bd16-1705c726d926");
   });
 
   it("includes high-TVL stablecoin lending protocols from 2026-03-25 audit", () => {

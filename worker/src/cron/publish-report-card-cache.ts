@@ -1,4 +1,9 @@
 import { buildReportCardsSnapshot } from "../lib/report-cards-snapshot";
+import {
+  ALERT_SAFETY_SOURCE_CACHE_KEY,
+  buildAlertSafetySourceSnapshot,
+} from "../lib/alert-safety-source-cache";
+import { setCache } from "../lib/db-cache";
 import { writeReportCardCache } from "../lib/report-card-cache";
 import type { CronResult } from "../lib/cron-logger";
 
@@ -17,6 +22,11 @@ export async function publishReportCardCache(
   }
 
   const { writtenCount } = await writeReportCardCache(db, snapshot.cards, snapshot.updatedAt);
+  await setCache(
+    db,
+    ALERT_SAFETY_SOURCE_CACHE_KEY,
+    JSON.stringify(buildAlertSafetySourceSnapshot(snapshot.cards, snapshot.methodology.version)),
+  );
 
   return {
     itemCount: writtenCount,
@@ -27,4 +37,3 @@ export async function publishReportCardCache(
     }),
   };
 }
-

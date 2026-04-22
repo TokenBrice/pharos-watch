@@ -1,4 +1,5 @@
 import { describe, it, expect } from "vitest";
+import { createReportCardRawInputs } from "../report-card-raw-inputs";
 import {
   scoreLiquidity,
   scoreToGrade,
@@ -167,52 +168,55 @@ describe("computeOverallGrade — active depeg cap", () => {
 
 describe("scoreDependencyRisk", () => {
   it("scores self-backed centralized coin at 95", () => {
-    const meta = {
-      flags: { governance: "centralized" as const },
-      dependencies: undefined,
-      reserves: undefined,
-    };
-    const result = scoreDependencyRisk(meta as never, new Map());
+    const result = scoreDependencyRisk({
+      governance: "centralized",
+      dependencies: [],
+    }, new Map());
     expect(result.score).toBe(95);
   });
 
   it("scores self-backed decentralized coin at 90", () => {
-    const meta = {
-      flags: { governance: "decentralized" as const },
-      dependencies: undefined,
-      reserves: undefined,
-    };
-    const result = scoreDependencyRisk(meta as never, new Map());
+    const result = scoreDependencyRisk({
+      governance: "decentralized",
+      dependencies: [],
+    }, new Map());
     expect(result.score).toBe(90);
   });
 
   it("caps wrapper dependency score", () => {
-    const meta = {
-      flags: { governance: "centralized" as const },
-      dependencies: [{ id: "usdc", weight: 1.0, type: "wrapper" as const }],
-      reserves: undefined,
-    };
     const upstream = new Map([["usdc", 80]]);
-    const result = scoreDependencyRisk(meta as never, upstream);
+    const result = scoreDependencyRisk({
+      governance: "centralized",
+      dependencies: [{ id: "usdc", weight: 1.0, type: "wrapper" }],
+    }, upstream);
     // Wrapper cap: dep_score - 3 = 77
     expect(result.score).toBeLessThanOrEqual(77);
   });
 
   it("scores partially unavailable dependency weights at the conservative fallback", () => {
-    const meta = {
-      flags: { governance: "centralized" as const },
+    const result = scoreDependencyRisk({
+      governance: "centralized",
       dependencies: [
         { id: "available", weight: 0.5, type: "collateral" as const },
         { id: "missing", weight: 0.3, type: "collateral" as const },
       ],
-      reserves: undefined,
-    };
-    const result = scoreDependencyRisk(meta as never, new Map([["available", 90]]));
+    }, new Map([["available", 90]]));
 
     // 50% * 90 + 30% * 70 + 20% self-backed centralized score 95 = 85, then
     // the unavailable dependency is treated as weak (<75), applying -10.
     expect(result.score).toBe(75);
     expect(result.detail).toContain("Unavailable upstream scores: 1 dep");
+  });
+
+  it("uses the wider risk-absorption wrapper ceiling for tracked variants", () => {
+    const result = scoreDependencyRisk({
+      governance: "centralized-dependent",
+      dependencies: [{ id: "usds-sky", weight: 1, type: "wrapper" }],
+      variantParentId: "usds-sky",
+      variantKind: "risk-absorption",
+    }, new Map([["usds-sky", 80]]));
+
+    expect(result.score).toBe(75);
   });
 });
 
@@ -805,6 +809,53 @@ describe("computeStressedGrades", () => {
     expect(stressedDependent.overallScore).toBeLessThan(dependent.overallScore ?? 0);
     expect(stressedTransitive.dimensions.dependencyRisk.score).toBeLessThan(transitive.dimensions.dependencyRisk.score ?? 100);
     expect(stressedTransitive.overallScore).toBeLessThan(transitive.overallScore ?? 0);
+  });
+
+  it("caps tracked variants at the parent overall score in live and stressed paths", () => {
+    const parent = makeCard({
+      id: "parent",
+      name: "Parent",
+      symbol: "PAR",
+      overallScore: 72,
+      overallGrade: scoreToGrade(72),
+    });
+    const variant = makeCard({
+      id: "variant",
+      name: "Variant",
+      symbol: "VAR",
+      overallScore: 72,
+      overallGrade: scoreToGrade(72),
+      rawInputs: {
+        ...createReportCardRawInputs({
+          pegScore: 95,
+          liquidityScore: 90,
+          effectiveExitScore: 90,
+          governanceTier: "centralized-dependent",
+          governanceQuality: "wrapper",
+          dependencies: [{ id: "parent", weight: 1, type: "wrapper" }],
+          variantParentId: "parent",
+          variantKind: "savings-passthrough",
+        }),
+      },
+      dimensions: {
+        pegStability: makeDimension(95),
+        liquidity: makeDimension(90),
+        resilience: makeDimension(88),
+        decentralization: makeDimension(70),
+        dependencyRisk: makeDimension(82),
+      },
+      baseScore: 86.5,
+    });
+
+    const [unchangedParent, stressedVariant] = computeStressedGrades(
+      [parent, variant],
+      new Map([["variant", 90]]),
+    );
+
+    expect(unchangedParent.overallScore).toBe(72);
+    expect(stressedVariant.overallScore).toBe(72);
+    expect(stressedVariant.overallCapped).toBe(true);
+    expect(stressedVariant.uncappedOverallScore).toBe(90);
   });
 });
 

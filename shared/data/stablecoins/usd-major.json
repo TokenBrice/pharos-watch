@@ -577,7 +577,7 @@
       "backing": "crypto-backed",
       "pegCurrency": "USD",
       "governance": "centralized-dependent",
-      "yieldBearing": true,
+      "yieldBearing": false,
       "rwa": false,
       "navToken": false
     },
@@ -788,10 +788,6 @@
           }
         ]
       }
-    },
-    "yieldConfig": {
-      "yieldSource": "Ethena staking (sUSDe)",
-      "yieldType": "governance-set"
     }
   },
   {
@@ -891,7 +887,7 @@
       "backing": "crypto-backed",
       "pegCurrency": "USD",
       "governance": "centralized-dependent",
-      "yieldBearing": true,
+      "yieldBearing": false,
       "rwa": false,
       "navToken": false
     },
@@ -1009,10 +1005,6 @@
           "url": "https://info-sky.blockanalitica.com/groups/?days_ago=1&order=-debt"
         }
       }
-    },
-    "yieldConfig": {
-      "yieldSource": "Sky Savings Rate (sUSDS)",
-      "yieldType": "governance-set"
     }
   },
   {
@@ -1331,7 +1323,7 @@
       "backing": "crypto-backed",
       "pegCurrency": "USD",
       "governance": "centralized-dependent",
-      "yieldBearing": true,
+      "yieldBearing": false,
       "rwa": false,
       "navToken": false
     },
@@ -1478,10 +1470,6 @@
           "url": "https://info-sky.blockanalitica.com/groups/?days_ago=1&order=-debt"
         }
       }
-    },
-    "yieldConfig": {
-      "yieldSource": "Dai Savings Rate (sDAI)",
-      "yieldType": "governance-set"
     }
   },
   {
@@ -3161,7 +3149,7 @@
       "backing": "crypto-backed",
       "pegCurrency": "USD",
       "governance": "centralized-dependent",
-      "yieldBearing": true,
+      "yieldBearing": false,
       "rwa": false,
       "navToken": false
     },
@@ -3948,7 +3936,7 @@
       "backing": "crypto-backed",
       "pegCurrency": "USD",
       "governance": "centralized-dependent",
-      "yieldBearing": true,
+      "yieldBearing": false,
       "rwa": false,
       "navToken": false
     },
@@ -4069,10 +4057,6 @@
           "url": "https://prices.curve.finance/v1/crvusd/markets"
         }
       }
-    },
-    "yieldConfig": {
-      "yieldSource": "Curve Savings (scrvUSD)",
-      "yieldType": "governance-set"
     }
   },
   {

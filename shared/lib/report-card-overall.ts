@@ -13,10 +13,17 @@ import {
 import { activeDepegCapScore } from "./report-card-active-depeg";
 import { scoreDependencyRisk } from "./report-card-dependency";
 
+interface OverallComputation {
+  grade: ReportCardGrade;
+  score: number | null;
+  baseScore: number | null;
+  ratedDimensions: number;
+}
+
 export function computeOverallGrade(
   dimensions: Record<DimensionKey, ReportCardDimension>,
   options?: { navToken?: boolean; activeDepegBps?: number | null },
-): { grade: ReportCardGrade; score: number | null; baseScore: number | null; ratedDimensions: number } {
+): OverallComputation {
   const keys = Object.keys(DIMENSION_WEIGHTS) as DimensionKey[];
 
   let ratedWeight = 0;
@@ -60,6 +67,27 @@ export function computeOverallGrade(
   const ratedDimensions = baseRatedCount + (pegScore !== null ? 1 : 0);
 
   return { grade: scoreToGrade(clamped), score: clamped, baseScore, ratedDimensions };
+}
+
+export function applyVariantOverallCap(
+  overall: OverallComputation,
+  parentScore: number | null,
+): OverallComputation & { overallCapped: boolean; uncappedOverallScore: number | null } {
+  if (overall.score == null || parentScore == null || overall.score <= parentScore) {
+    return {
+      ...overall,
+      overallCapped: false,
+      uncappedOverallScore: null,
+    };
+  }
+
+  return {
+    ...overall,
+    grade: scoreToGrade(parentScore),
+    score: parentScore,
+    overallCapped: true,
+    uncappedOverallScore: overall.score,
+  };
 }
 
 export function computeStressedGrades(
@@ -128,29 +156,52 @@ export function computeStressedGrades(
   for (const card of cards) {
     const override = overrides.get(card.id);
     if (override !== undefined) {
+      const capped = applyVariantOverallCap(
+        {
+          grade: scoreToGrade(override),
+          score: override,
+          baseScore: card.baseScore,
+          ratedDimensions: card.ratedDimensions,
+        },
+        card.rawInputs.variantParentId != null
+          ? (overallScores.get(card.rawInputs.variantParentId) ?? null)
+          : null,
+      );
       updatedCards.set(card.id, {
         ...card,
-        overallGrade: scoreToGrade(override),
-        overallScore: override,
-        baseScore: card.baseScore,
+        overallGrade: capped.grade,
+        overallScore: capped.score,
+        baseScore: capped.baseScore,
+        overallCapped: capped.overallCapped,
+        uncappedOverallScore: capped.uncappedOverallScore,
       });
+      if (capped.score !== null) {
+        overallScores.set(card.id, capped.score);
+      } else {
+        overallScores.delete(card.id);
+      }
     }
   }
 
   for (const id of recomputeOrder) {
     const card = cardById.get(id);
     if (!card) continue;
-    const meta = {
-      flags: { governance: card.rawInputs.governanceTier },
+    const dependencyRisk = scoreDependencyRisk({
+      governance: card.rawInputs.governanceTier,
       dependencies: card.rawInputs.dependencies,
-      reserves: undefined,
-    };
-    const dependencyRisk = scoreDependencyRisk(meta, overallScores);
+      variantParentId: card.rawInputs.variantParentId ?? null,
+      variantKind: card.rawInputs.variantKind ?? null,
+    }, overallScores);
     const dimensions = { ...card.dimensions, dependencyRisk };
-    const overall = computeOverallGrade(dimensions, {
-      navToken: card.rawInputs.navToken,
-      activeDepegBps: card.rawInputs.activeDepegBps ?? null,
-    });
+    const overall = applyVariantOverallCap(
+      computeOverallGrade(dimensions, {
+        navToken: card.rawInputs.navToken,
+        activeDepegBps: card.rawInputs.activeDepegBps ?? null,
+      }),
+      card.rawInputs.variantParentId != null
+        ? (overallScores.get(card.rawInputs.variantParentId) ?? null)
+        : null,
+    );
     const updated = {
       ...card,
       dimensions,
@@ -158,6 +209,8 @@ export function computeStressedGrades(
       overallScore: overall.score,
       baseScore: overall.baseScore,
       ratedDimensions: overall.ratedDimensions,
+      overallCapped: overall.overallCapped,
+      uncappedOverallScore: overall.uncappedOverallScore,
     };
     updatedCards.set(card.id, updated);
     if (overall.score !== null) {

@@ -1,5 +1,5 @@
 import { ACTIVE_STABLECOINS, ACTIVE_META_BY_ID } from "@shared/lib/stablecoins";
-import { deriveDependencies } from "@shared/lib/reserve-templates";
+import { deriveVariantAwareDependencies } from "@shared/lib/stablecoins";
 import {
   scorePegStability,
   scoreLiquidity,
@@ -7,6 +7,7 @@ import {
   scoreDecentralization,
   scoreDependencyRisk,
   computeOverallGrade,
+  applyVariantOverallCap,
   resolveResilienceFactors,
   resolveGovernanceQuality,
   type BlacklistStatus,
@@ -108,8 +109,12 @@ function computeReportCard(input: ComputeCardInput): ReportCard {
   const liq = dexLiqMap[meta.id];
   const redemption = redemptionBackstopMap[meta.id];
   const rating = bluechipMap[meta.id];
+  const activeDepegSourceId =
+    resolvedPeg.inheritedFromReference && meta.pegReferenceId
+      ? meta.pegReferenceId
+      : meta.id;
   const activeDepegBps = peg?.activeDepeg
-    ? activeDepegPeakBpsById.get(meta.id) ?? null
+    ? activeDepegPeakBpsById.get(activeDepegSourceId) ?? null
     : null;
   const redemptionUsedForLiquidity = isRedemptionEligibleForLiquidity(redemption, {
     activeDepegBps,
@@ -118,7 +123,7 @@ function computeReportCard(input: ComputeCardInput): ReportCard {
 
   const resilienceFactors = resolveResilienceFactors(meta);
   const liveSlices = liveReserveMap.get(meta.id);
-  const deps = deriveDependencies(meta);
+  const deps = deriveVariantAwareDependencies(meta);
 
   const dimensions: Record<DimensionKey, ReturnType<typeof scorePegStability>> = {
     pegStability: scorePegStability(peg, meta, {
@@ -128,11 +133,21 @@ function computeReportCard(input: ComputeCardInput): ReportCard {
     liquidity: scoreLiquidity(liq, redemption, { activeDepegBps }),
     resilience: scoreResilience(meta, blacklistStatus, liveSlices),
     decentralization: scoreDecentralization(meta.flags.governance as GovernanceType, meta),
-    dependencyRisk: scoreDependencyRisk(meta, overallScores),
+    dependencyRisk: scoreDependencyRisk({
+      governance: meta.flags.governance as GovernanceType,
+      dependencies: deps,
+      variantParentId: meta.variantOf ?? null,
+      variantKind: meta.variantKind ?? null,
+    }, overallScores),
   };
 
   const navToken = !!meta.flags.navToken;
-  const overall = computeOverallGrade(dimensions, { navToken, activeDepegBps });
+  const overall = applyVariantOverallCap(
+    computeOverallGrade(dimensions, { navToken, activeDepegBps }),
+    meta.variantOf != null
+      ? (overallScores.get(meta.variantOf) ?? null)
+      : null,
+  );
 
   const rawInputs: RawDimensionInputs = {
     pegScore: peg?.pegScore ?? null,
@@ -158,6 +173,8 @@ function computeReportCard(input: ComputeCardInput): ReportCard {
     governanceTier: meta.flags.governance as GovernanceType,
     governanceQuality: resolveGovernanceQuality(meta.flags.governance as GovernanceType, meta),
     dependencies: deps,
+    variantParentId: meta.variantOf ?? null,
+    variantKind: meta.variantKind ?? null,
     navToken,
     collateralFromLive: !!liveSlices,
   };
@@ -169,6 +186,8 @@ function computeReportCard(input: ComputeCardInput): ReportCard {
     overallGrade: overall.grade,
     overallScore: overall.score,
     baseScore: overall.baseScore,
+    overallCapped: overall.overallCapped,
+    uncappedOverallScore: overall.uncappedOverallScore,
     dimensions,
     ratedDimensions: overall.ratedDimensions,
     rawInputs,
@@ -212,7 +231,7 @@ export function topologicalOrder(metas: StablecoinMeta[]): StablecoinMeta[] {
     visited.add(id);
     const meta = metaMap.get(id);
     if (!meta) return;
-    for (const dep of deriveDependencies(meta)) {
+    for (const dep of deriveVariantAwareDependencies(meta)) {
       if (metaMap.has(dep.id)) visit(dep.id);
     }
     result.push(meta);

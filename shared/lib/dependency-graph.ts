@@ -1,4 +1,4 @@
-import { deriveDependencies } from "./reserve-templates";
+import { deriveVariantAwareDependencies } from "./stablecoins";
 import type { DependencyType, StablecoinMeta } from "../types/core";
 
 export interface DependencyGraphEdge {
@@ -14,7 +14,7 @@ export function buildDependencyGraphEdges(
   const edges: DependencyGraphEdge[] = [];
 
   for (const meta of metas) {
-    for (const dep of deriveDependencies(meta)) {
+    for (const dep of deriveVariantAwareDependencies(meta)) {
       edges.push({
         from: dep.id,
         to: meta.id,

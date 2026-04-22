@@ -903,7 +903,7 @@
       "backing": "rwa-backed",
       "pegCurrency": "USD",
       "governance": "centralized-dependent",
-      "yieldBearing": true,
+      "yieldBearing": false,
       "rwa": false,
       "navToken": false
     },
@@ -1107,10 +1107,6 @@
           "url": "https://api.frax.finance/v2/frxusd/balance-sheet/latest"
         }
       }
-    },
-    "yieldConfig": {
-      "yieldSource": "Frax Staking (sfrxUSD)",
-      "yieldType": "governance-set"
     }
   },
   {

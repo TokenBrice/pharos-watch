@@ -12,6 +12,7 @@ import { buildOnChainSourceKey, parseYieldWarningSignals } from "../lib/yield-ut
 import { resolveYieldSourceUrl } from "../lib/yield-source-links";
 import { logMalformedJsonPath } from "../lib/json-decode-observability";
 import { parseYieldRankingsPublishedCutoff } from "../cron/yield-sync/cache";
+import { isSuppressedYieldHistoryRow } from "../cron/yield-sync/history";
 import { CRON_INTERVALS } from "@shared/lib/cron-jobs";
 import {
   YIELD_METHODOLOGY_CHANGELOG_PATH,
@@ -127,35 +128,37 @@ export const handleYieldHistory = withErrorHandler("yield-history", async (
     : await db.prepare(sql).bind(parsed.stablecoinId, parsed.cutoff, publishedCutoff).all<YieldHistoryRow>();
 
   let previousSourceKey: string | null = null;
-  const history = (result.results ?? []).map((row) => {
-    const normalizedSourceKey = normalizeHistorySourceKey(parsed.stablecoinId, row, mode);
-    const sourceSwitch =
-      mode === "best" &&
-      previousSourceKey != null &&
-      previousSourceKey !== normalizedSourceKey;
+  const history = (result.results ?? [])
+    .filter((row) => !isSuppressedYieldHistoryRow(parsed.stablecoinId, row.source_key))
+    .map((row) => {
+      const normalizedSourceKey = normalizeHistorySourceKey(parsed.stablecoinId, row, mode);
+      const sourceSwitch =
+        mode === "best" &&
+        previousSourceKey != null &&
+        previousSourceKey !== normalizedSourceKey;
     previousSourceKey = normalizedSourceKey;
 
-    return {
-      date: row.recorded_at,
-      apy: row.apy,
-      apyBase: row.apy_base,
-      apyReward: row.apy_reward,
-      exchangeRate: row.exchange_rate,
-      sourceTvlUsd: row.source_tvl_usd,
-      warningSignals: parseYieldWarningSignals(row.warning_signals),
-      sourceKey: normalizedSourceKey,
-      yieldSource: row.yield_source,
-      yieldSourceUrl: resolveYieldSourceUrl({
-        stablecoinId: parsed.stablecoinId,
+      return {
+        date: row.recorded_at,
+        apy: row.apy,
+        apyBase: row.apy_base,
+        apyReward: row.apy_reward,
+        exchangeRate: row.exchange_rate,
+        sourceTvlUsd: row.source_tvl_usd,
+        warningSignals: parseYieldWarningSignals(row.warning_signals),
         sourceKey: normalizedSourceKey,
         yieldSource: row.yield_source,
-      }),
-      yieldType: row.yield_type,
-      dataSource: row.data_source,
-      isBest: row.is_best === 1,
-      sourceSwitch,
-    };
-  });
+        yieldSourceUrl: resolveYieldSourceUrl({
+          stablecoinId: parsed.stablecoinId,
+          sourceKey: normalizedSourceKey,
+          yieldSource: row.yield_source,
+        }),
+        yieldType: row.yield_type,
+        dataSource: row.data_source,
+        isBest: row.is_best === 1,
+        sourceSwitch,
+      };
+    });
 
   const latestHistoryTimestamp = history.length > 0
     ? Math.max(...history.map((row) => (typeof row.date === "number" ? row.date : 0)))

@@ -1,13 +1,6 @@
 import type { YieldVariant } from "./yield-config-registry";
 
 export const YIELD_VARIANT_MAP: Record<string, YieldVariant> = {
-  // USDe -> sUSDe (Ethena staked wrapper)
-  "usde-ethena": {
-    variantSymbol: "sUSDe",
-    variantAddress: "0x9D39A5DE30e57443BfF2A8307A4256c8797A3497",
-    variantChain: "ethereum",
-    variantProject: "ethena-usde",
-  },
   // reUSD -> stUSR (Resolv staked wrapper)
   "reusd-re-protocol": {
     variantSymbol: "stUSR",
@@ -19,37 +12,12 @@ export const YIELD_VARIANT_MAP: Record<string, YieldVariant> = {
     variantSymbol: "loAZND",
     variantChain: "monad",
   },
-  // USDS -> sUSDS (Sky Savings Rate wrapper)
-  "usds-sky": {
-    variantSymbol: "sUSDS",
-    variantAddress: "0xa3931d71877C0E7a3148CB7Eb4463524FEc27fbD",
-    variantChain: "ethereum",
-    variantProject: "sky-lending",
-  },
   // GHO -> sGHO (Aave Safety Module staking wrapper)
   "gho-aave": {
     variantSymbol: "sGHO",
     variantChain: "ethereum",
     variantAddress: "0x40D16FC0246aD3160Ccc09B8D0D3A2cD28aE6C2f",
     variantProject: "aave-v3",
-  },
-  // DAI -> sDAI (Dai Savings Rate wrapper)
-  "dai-makerdao": {
-    variantSymbol: "sDAI",
-    variantAddress: "0x83F20F44975D03b1b09e64809B757c47f942BEeA",
-    variantChain: "ethereum",
-  },
-  // crvUSD -> scrvUSD (Curve Savings vault)
-  "crvusd-curve": {
-    variantSymbol: "scrvUSD",
-    variantAddress: "0x0655977FEb2f289A4aB78af67BAB0d17aAb84367",
-    variantChain: "ethereum",
-  },
-  // FRXUSD -> sfrxUSD (Frax Staking wrapper)
-  "frxusd-frax": {
-    variantSymbol: "sfrxUSD",
-    variantAddress: "0xcf62f905562626cfcdd2261162a51fd02fc9c5b6",
-    variantChain: "ethereum",
   },
   // DOLA -> sDOLA (Inverse Finance Savings)
   "dola-inverse-finance": {

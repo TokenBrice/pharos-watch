@@ -2,9 +2,9 @@ import type {
   DependencyType,
   GovernanceType,
   ReportCardDimension,
-  StablecoinMeta,
+  DependencyWeight,
+  VariantKind,
 } from "../types";
-import { deriveDependencies } from "./reserve-templates";
 import { scoreToGrade } from "./report-card-core";
 
 const SELF_BACKED_SCORE_BY_GOVERNANCE: Record<GovernanceType, number> = {
@@ -20,16 +20,25 @@ const GOVERNANCE_DETAIL_LABEL: Record<GovernanceType, string> = {
 };
 
 const UNAVAILABLE_DEPENDENCY_SCORE = 70;
+const VARIANT_WRAPPER_PENALTY: Record<VariantKind, number> = {
+  "savings-passthrough": 3,
+  "risk-absorption": 5,
+};
+
+export interface ScoreDependencyRiskArgs {
+  governance: GovernanceType;
+  dependencies: DependencyWeight[];
+  variantParentId?: string | null;
+  variantKind?: VariantKind | null;
+}
 
 export function scoreDependencyRisk(
-  meta: Pick<StablecoinMeta, "dependencies" | "reserves"> & {
-    flags: Pick<StablecoinMeta["flags"], "governance">;
-  },
+  args: ScoreDependencyRiskArgs,
   overallScores: Map<string, number>,
 ): ReportCardDimension {
-  const dependencies = deriveDependencies(meta);
+  const { dependencies } = args;
   if (!dependencies || dependencies.length === 0) {
-    const governance = meta.flags.governance;
+    const governance = args.governance;
     const selfScore = SELF_BACKED_SCORE_BY_GOVERNANCE[governance];
     return {
       grade: scoreToGrade(selfScore),
@@ -75,7 +84,7 @@ export function scoreDependencyRisk(
     });
   }
 
-  const governance = meta.flags.governance;
+  const governance = args.governance;
   const selfBackedScore = SELF_BACKED_SCORE_BY_GOVERNANCE[governance];
   const declaredWeight = dependencies.reduce((sum, dependency) => sum + dependency.weight, 0);
   const resolvedWeight = resolved
@@ -97,10 +106,17 @@ export function scoreDependencyRisk(
     score -= 10;
   }
 
-  const wrapperPenalty = 3;
   let ceiling = Infinity;
   for (const dependency of resolved) {
-    if (dependency.type === "wrapper") ceiling = Math.min(ceiling, dependency.score - wrapperPenalty);
+    if (dependency.type === "wrapper") {
+      const wrapperPenalty =
+        args.variantParentId != null &&
+        args.variantKind != null &&
+        dependency.id === args.variantParentId
+          ? VARIANT_WRAPPER_PENALTY[args.variantKind]
+          : 3;
+      ceiling = Math.min(ceiling, dependency.score - wrapperPenalty);
+    }
     else if (dependency.type === "mechanism") ceiling = Math.min(ceiling, dependency.score);
   }
   if (ceiling < Infinity) {

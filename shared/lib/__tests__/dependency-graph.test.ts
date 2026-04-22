@@ -8,6 +8,8 @@ import type { StablecoinMeta } from "../../types/core";
 
 function makeMeta(input: {
   id: string;
+  variantOf?: string;
+  variantKind?: "savings-passthrough" | "risk-absorption";
   reserves?: Array<{
     name: string;
     pct: number;
@@ -63,5 +65,25 @@ describe("dependency-graph", () => {
   it("collects both upstream and dependent ids for coverage semantics", () => {
     const ids = collectDependencyGraphIds(buildDependencyGraphEdges(metas));
     expect(ids).toEqual(new Set(["upstream", "dependent-a", "dependent-b"]));
+  });
+
+  it("emits a single synthetic wrapper edge for tracked variants", () => {
+    const edges = buildDependencyGraphEdges([
+      makeMeta({
+        id: "parent",
+      }),
+      makeMeta({
+        id: "child",
+        variantOf: "parent",
+        variantKind: "savings-passthrough",
+        reserves: [
+          { name: "Parent reserve", pct: 100, risk: "low", coinId: "parent", depType: "collateral" },
+        ],
+      }),
+    ]);
+
+    expect(edges).toEqual([
+      { from: "parent", to: "child", weight: 1, type: "wrapper" },
+    ]);
   });
 });

@@ -34,7 +34,7 @@ export {
   scoreDecentralization,
 } from "./report-card-governance";
 export { scoreDependencyRisk } from "./report-card-dependency";
-export { computeOverallGrade, computeStressedGrades } from "./report-card-overall";
+export { applyVariantOverallCap, computeOverallGrade, computeStressedGrades } from "./report-card-overall";
 export {
   enrichLiveSlicesForBlacklist,
   getBlacklistStatusLabel,

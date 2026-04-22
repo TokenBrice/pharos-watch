@@ -16,6 +16,8 @@ import {
   GovernanceQualitySchema,
   GovernanceType,
   GovernanceTypeSchema,
+  VariantKind,
+  VARIANT_KIND_VALUES,
 } from "./core";
 import {
   RedemptionModelConfidenceSchema,
@@ -93,6 +95,8 @@ const RawDimensionInputsSchema = z.object({
   governanceTier: GovernanceTypeSchema,
   governanceQuality: GovernanceQualitySchema,
   dependencies: z.array(DependencyWeightSchema),
+  variantParentId: z.string().nullable().optional().default(null),
+  variantKind: z.enum(VARIANT_KIND_VALUES).nullable().optional().default(null),
   navToken: z.boolean(),
   collateralFromLive: z.boolean().optional().default(false),
 });
@@ -106,6 +110,8 @@ export interface RawDimensionInputs extends z.infer<typeof RawDimensionInputsSch
   governanceTier: GovernanceType;
   governanceQuality: GovernanceQuality;
   dependencies: DependencyWeight[];
+  variantParentId?: string | null;
+  variantKind?: VariantKind | null;
 }
 
 export const ReportCardSchema = z.object({
@@ -115,6 +121,8 @@ export const ReportCardSchema = z.object({
   overallGrade: ReportCardGradeSchema,
   overallScore: z.number().nullable(),
   baseScore: z.number().nullable(),
+  overallCapped: z.boolean().optional().default(false),
+  uncappedOverallScore: z.number().nullable().optional().default(null),
   dimensions: z.object({
     pegStability: ReportCardDimensionSchema,
     liquidity: ReportCardDimensionSchema,
@@ -129,6 +137,8 @@ export const ReportCardSchema = z.object({
 
 export interface ReportCard extends z.infer<typeof ReportCardSchema> {
   overallGrade: ReportCardGrade;
+  overallCapped?: boolean;
+  uncappedOverallScore?: number | null;
   dimensions: Record<DimensionKey, ReportCardDimension>;
   rawInputs: RawDimensionInputs;
 }

@@ -1,6 +1,6 @@
 export const YIELD_POOL_MAP: Record<string, string> = {
-  // USDe (sUSDe) - ethena-usde native staking, Ethereum, $3.5B TVL, ~3.6% APY
-  "usde-ethena": "66985a81-9c51-46ca-9977-42b4fe7bc6df",
+  // sUSDe - ethena-usde native staking, Ethereum, $3.5B TVL, ~3.6% APY
+  "susde-ethena": "66985a81-9c51-46ca-9977-42b4fe7bc6df",
   // USYC - ondo-yield-assets (listed as USDYC), Ethereum, $602M TVL, ~3.6% APY
   "usyc-hashnote": "ee457473-3b5f-4b53-8c8a-fde6b2e16c8a",
   // USDY - ondo-yield-assets native, Ethereum, $149M TVL, ~3.6% APY
@@ -31,16 +31,16 @@ export const YIELD_POOL_MAP: Record<string, string> = {
   // bUSD0 - usual-usd0 liquid bond, Ethereum, $500M+ TVL, ~3.3% APY
   "busd0-usual": "55b0893b-1dbb-47fd-9912-5e439cd3d511",
   // ── Wave 1: Native yield coins (C+ or above) ─────────────────────
-  // USDS -> sUSDS - sky-lending, Ethereum, $5.3B TVL, ~4.0% APY
-  "usds-sky": "d8c4eff5-c8a9-46fc-a888-057c4c668e72",
+  // sUSDS - sky-lending, Ethereum, $5.3B TVL, ~4.0% APY
+  "susds-sky": "d8c4eff5-c8a9-46fc-a888-057c4c668e72",
   // GHO -> sGHO - aave-v3 staking, Ethereum, $266M TVL, ~5.3% APY
   "gho-aave": "ff2a68af-030c-4697-b0a1-b62a738eaef0",
-  // DAI -> sDAI - sdai native, Gnosis, $86M TVL, ~5.5% APY
-  "dai-makerdao": "13392973-be6e-4b2f-bce9-4f7dd53d1c3a",
-  // crvUSD -> scrvUSD - crvusd native savings, Ethereum, $40M TVL, ~6.7% APY
-  "crvusd-curve": "5fd328af-4203-471b-bd16-1705c726d926",
-  // FRXUSD -> sfrxUSD - frax native staking, Ethereum, $26M TVL, ~4.3% APY
-  "frxusd-frax": "42523cca-14b0-44f6-95fb-4781069520a5",
+  // sDAI - sdai native, Gnosis, $86M TVL, ~5.5% APY
+  "sdai-sky": "13392973-be6e-4b2f-bce9-4f7dd53d1c3a",
+  // scrvUSD - curve native savings, Ethereum, $40M TVL, ~6.7% APY
+  "scrvusd-curve": "5fd328af-4203-471b-bd16-1705c726d926",
+  // sfrxUSD - frax native staking, Ethereum, $26M TVL, ~4.3% APY
+  "sfrxusd-frax": "42523cca-14b0-44f6-95fb-4781069520a5",
   // DOLA -> sDOLA - inverse-finance-firm, Ethereum, $14M TVL, ~4.3% APY
   "dola-inverse-finance": "bf0f95c9-bc46-467d-9762-1d80ff50cd74",
   // BOLD -> yBOLD - yearn-finance vault, Ethereum, $4.5M TVL, ~9.8% APY

@@ -7,6 +7,7 @@ import type { ChainRpcConfig } from "../lib/chain-registry";
 import { resolveYieldSources } from "./yield-sync/resolve";
 import {
   loadYieldHistorySnapshots,
+  purgeYieldHistoryOwnershipHandoffs,
   type YieldHistorySnapshotRow,
 } from "./yield-sync/history";
 import {
@@ -52,6 +53,8 @@ export async function syncYieldData(
   if (yieldCoins.length === 0) {
     return { itemCount: 0, metadata: "no yield-bearing coins" };
   }
+
+  await purgeYieldHistoryOwnershipHandoffs(db);
 
   const {
     dlPools,

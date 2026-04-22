@@ -146,6 +146,23 @@ describe("handleYieldHistory", () => {
     expect(body.history[0]?.warningSignals).toEqual([]);
   });
 
+  it("filters misattributed parent wrapper history after tracked-child ownership handoff", async () => {
+    const wrapperRow = makeYieldHistoryRow({
+      source_key: "66985a81-9c51-46ca-9977-42b4fe7bc6df",
+      data_source: "defillama",
+      yield_source: "Ethena staking (sUSDe)",
+      yield_type: "nav-appreciation",
+    });
+    const db = mockD1([{ match: "yield_history", rows: [wrapperRow] }]);
+
+    const res = await handleYieldHistory(db, new URL("https://x/api/yield-history?stablecoin=usde-ethena"));
+    expect(res.status).toBe(200);
+
+    const body = await res.json() as { current: null; history: unknown[] };
+    expect(body.current).toBeNull();
+    expect(body.history).toEqual([]);
+  });
+
   it("uses the hourly yield freshness budget for history responses", async () => {
     const updatedAt = Math.floor(Date.now() / 1000) - 3_500;
     const historyRow = makeYieldHistoryRow({ recorded_at: updatedAt });

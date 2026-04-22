@@ -377,7 +377,7 @@ describe("dispatchTelegramAlerts", () => {
     expect(mockSendToChat).not.toHaveBeenCalled();
   });
 
-  it("uses per-coin latest safety rows and prev_grade when repairing a partial legacy snapshot", async () => {
+  it("treats first-seen ids in a partial legacy safety snapshot as seed-only without alerting", async () => {
     const now = 1_778_150_000;
     const snapshotUpdatedAt = now - 3600;
 
@@ -441,11 +441,9 @@ describe("dispatchTelegramAlerts", () => {
       subscribersNotified: number;
     };
 
-    expect(metadata.eventsDetected.safety).toBe(1);
-    expect(metadata.subscribersNotified).toBe(1);
-    expect(mockSendToChat).toHaveBeenCalledTimes(1);
-    expect(mockSendToChat.mock.calls[0]?.[1]).toContain("A- → B+");
-    expect(mockSendToChat.mock.calls[0]?.[1]).not.toContain("UNKNOWN");
+    expect(metadata.eventsDetected.safety).toBe(0);
+    expect(metadata.subscribersNotified).toBe(0);
+    expect(mockSendToChat).not.toHaveBeenCalled();
 
     const safetySnapshotCall = mockSetCache.mock.calls.find((call) => call[1] === "alert:safety-snapshot");
     expect(safetySnapshotCall?.[2]).toContain("\"bold-liquity\"");

@@ -3,6 +3,7 @@ import { TRACKED_META_BY_ID, ACTIVE_IDS, PRE_LAUNCH_STABLECOINS } from "@shared/
 import type { TelegramDispatchCronResult } from "@shared/types";
 import { throwIfAborted } from "../lib/abort";
 import { readCachedJson } from "../lib/api-utils";
+import { ALERT_SAFETY_SOURCE_CACHE_KEY } from "../lib/alert-safety-source-cache";
 import { getCache } from "../lib/db-cache";
 import { buildInClause } from "../lib/db";
 import { shouldAttemptFetch, recordOutcome } from "../lib/circuit-breaker";
@@ -278,7 +279,7 @@ export async function dispatchTelegramAlerts(
       .all<{ chat_id: string }>();
     const chatsWithActiveSnooze = (snoozedRows.results ?? []).length;
 
-    const [dewsRows, activeDepegRows, safetyRows, dewsCache, dewsAlertableCache, depegCache, safetyCache] = await Promise.all([
+    const [dewsRows, activeDepegRows, safetyRows, dewsCache, dewsAlertableCache, depegCache, safetyCache, safetySourceCache] = await Promise.all([
       db
         .prepare(
           `SELECT s.stablecoin_id, s.score, s.band, s.signals_json
@@ -320,6 +321,7 @@ export async function dispatchTelegramAlerts(
       getCache(db, SNAPSHOT_KEYS.dewsAlertable),
       getCache(db, SNAPSHOT_KEYS.depeg),
       getCache(db, SNAPSHOT_KEYS.safety),
+      getCache(db, ALERT_SAFETY_SOURCE_CACHE_KEY),
     ]);
 
     throwIfAborted(signal);
@@ -329,11 +331,14 @@ export async function dispatchTelegramAlerts(
     const previousDewsAlertableSnapshot =
       parseSnapshotMap<DewsSnapshot>(dewsAlertableCache) ??
       filterAlertableBands(previousDewsSnapshot);
+    const currentSafetySnapshot =
+      parseSnapshotMap<SafetySnapshot>(safetySourceCache) ??
+      buildSafetySnapshot(safetyRows);
     const currentSnapshots = {
       dews: buildDewsSnapshot(dewsRows),
       dewsAlertable: buildDewsAlertableSnapshot(dewsRows, previousDewsAlertableSnapshot),
       depeg: buildDepegSnapshot(activeDepegRows),
-      safety: buildSafetySnapshot(safetyRows),
+      safety: currentSafetySnapshot,
       launch: PRE_LAUNCH_STABLECOINS.map((c) => c.id),
     };
 
@@ -475,27 +480,25 @@ export async function dispatchTelegramAlerts(
 
     const safetyChanges: SafetyChange[] = [];
     let suppressedMethodologyChanges = 0;
-    for (const row of safetyRows) {
-      const previous = safeSafetySnapshot[row.stablecoin_id];
+    for (const [stablecoinId, row] of Object.entries(currentSafetySnapshot)) {
+      const previous = safeSafetySnapshot[stablecoinId];
       if (previous?.grade === row.grade) continue;
 
-      if (previous?.methodologyVersion && row.methodology_version && previous.methodologyVersion !== row.methodology_version) {
+      if (previous?.methodologyVersion && row.methodologyVersion && previous.methodologyVersion !== row.methodologyVersion) {
         suppressedMethodologyChanges++;
         continue;
       }
 
       if (!previous) {
-        if (row.recorded_at <= (safetyCache?.updatedAt ?? 0) || row.prev_grade == null) {
-          continue;
-        }
+        continue;
       }
 
       safetyChanges.push({
-        stablecoinId: row.stablecoin_id,
-        symbol: getSymbol(row.stablecoin_id),
-        oldGrade: previous?.grade ?? row.prev_grade ?? "UNKNOWN",
+        stablecoinId,
+        symbol: getSymbol(stablecoinId),
+        oldGrade: previous?.grade ?? "UNKNOWN",
         newGrade: row.grade,
-        oldScore: previous?.score ?? row.prev_score ?? null,
+        oldScore: previous?.score ?? null,
         newScore: row.score ?? null,
       });
     }

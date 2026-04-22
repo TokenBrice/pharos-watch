@@ -1,8 +1,61 @@
 import { THIRTY_DAYS_SECONDS } from "@shared/lib/time-constants";
+import { buildOnChainSourceKey } from "../../lib/yield-utils";
 import { buildInClause } from "../../lib/db";
 import { chunkArray } from "../../lib/collections";
 
 const D1_SAFE_SQL_IN_CHUNK_SIZE = 90;
+const LEGACY_BEST_SOURCE_KEY = "legacy-best";
+const YIELD_HISTORY_OWNERSHIP_HANDOFFS: Record<string, string[]> = {
+  "usde-ethena": [
+    buildOnChainSourceKey("usde-ethena"),
+    "66985a81-9c51-46ca-9977-42b4fe7bc6df",
+  ],
+  "usds-sky": [
+    buildOnChainSourceKey("usds-sky"),
+    "d8c4eff5-c8a9-46fc-a888-057c4c668e72",
+  ],
+  "dai-makerdao": [
+    buildOnChainSourceKey("dai-makerdao"),
+    "13392973-be6e-4b2f-bce9-4f7dd53d1c3a",
+  ],
+  "frxusd-frax": [
+    buildOnChainSourceKey("frxusd-frax"),
+    "42523cca-14b0-44f6-95fb-4781069520a5",
+  ],
+  "crvusd-curve": [
+    "5fd328af-4203-471b-bd16-1705c726d926",
+    "onchain:crvusd-curve:scrvusd-current-rate",
+  ],
+};
+
+function getSuppressedYieldHistorySourceKeys(stablecoinId: string): string[] {
+  return YIELD_HISTORY_OWNERSHIP_HANDOFFS[stablecoinId] ?? [];
+}
+
+export function isSuppressedYieldHistoryRow(
+  stablecoinId: string,
+  sourceKey: string | null | undefined,
+): boolean {
+  const suppressedSourceKeys = getSuppressedYieldHistorySourceKeys(stablecoinId);
+  if (suppressedSourceKeys.length === 0) return false;
+  if (sourceKey == null) return true;
+  if (sourceKey === LEGACY_BEST_SOURCE_KEY) return true;
+  return suppressedSourceKeys.includes(sourceKey);
+}
+
+export async function purgeYieldHistoryOwnershipHandoffs(db: D1Database): Promise<void> {
+  for (const [stablecoinId, sourceKeys] of Object.entries(YIELD_HISTORY_OWNERSHIP_HANDOFFS)) {
+    const inClause = buildInClause(sourceKeys);
+    await db
+      .prepare(
+        `DELETE FROM yield_history
+         WHERE stablecoin_id = ?
+           AND (source_key IS NULL OR source_key = ? OR source_key IN (${inClause.sql}))`,
+      )
+      .bind(stablecoinId, LEGACY_BEST_SOURCE_KEY, ...inClause.binds)
+      .run();
+  }
+}
 
 export interface YieldHistorySnapshotRow {
   stablecoin_id: string;
@@ -70,9 +123,18 @@ export async function loadYieldHistorySnapshots(
         .all<YieldHistorySnapshotRow>(),
     ]);
 
-    appendRows(historyRows, historyResult.results ?? []);
-    appendRows(prevTvlRows, prevTvlResult.results ?? []);
-    appendRows(prevBestRows, prevBestResult.results ?? []);
+    appendRows(
+      historyRows,
+      (historyResult.results ?? []).filter((row) => !isSuppressedYieldHistoryRow(row.stablecoin_id, row.source_key)),
+    );
+    appendRows(
+      prevTvlRows,
+      (prevTvlResult.results ?? []).filter((row) => !isSuppressedYieldHistoryRow(row.stablecoin_id, row.source_key)),
+    );
+    appendRows(
+      prevBestRows,
+      (prevBestResult.results ?? []).filter((row) => !isSuppressedYieldHistoryRow(row.stablecoin_id, row.source_key)),
+    );
   }
 
   return { historyRows, prevTvlRows, prevBestRows };

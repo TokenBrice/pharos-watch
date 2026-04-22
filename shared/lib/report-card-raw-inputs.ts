@@ -27,6 +27,8 @@ export function createReportCardRawInputs(
     governanceTier: "centralized",
     governanceQuality: "single-entity",
     dependencies: [],
+    variantParentId: null,
+    variantKind: null,
     navToken: false,
     collateralFromLive: false,
     ...overrides,

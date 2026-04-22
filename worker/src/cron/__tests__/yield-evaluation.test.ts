@@ -8,8 +8,8 @@ describe("evaluateYieldSources", () => {
     const result = evaluateYieldSources({
       resolved: [
         {
-          id: "crvusd-curve",
-          symbol: "crvUSD",
+          id: "scrvusd-curve",
+          symbol: "scrvUSD",
           yield: {
             currentApy: 4.2747,
             apyBase: 4.2747,
@@ -18,7 +18,7 @@ describe("evaluateYieldSources", () => {
             sourceTvlUsd: 30_158_843,
             dataSource: "onchain",
             exchangeRate: null,
-            sourceKey: "onchain:crvusd-curve:scrvusd-current-rate",
+            sourceKey: "onchain:scrvusd-curve:scrvusd-current-rate",
             sourceObservedAt: startSec,
             comparisonAnchorObservedAt: null,
             yieldSource: "Curve Savings (scrvUSD)",
@@ -28,7 +28,7 @@ describe("evaluateYieldSources", () => {
       ],
       startSec,
       sevenDaysAgoSec: startSec - 7 * 86400,
-      safetyScores: new Map([["crvusd-curve", { score: 86, grade: "A-" }]]),
+      safetyScores: new Map([["scrvusd-curve", { score: 86, grade: "A-" }]]),
       riskFreeRates: {
         USD: buildHardcodedUsdBenchmark("test"),
         EUR: null,
@@ -40,11 +40,11 @@ describe("evaluateYieldSources", () => {
       legacyDeterministicOnChainHistoryById: new Map(),
       legacyHistoryById: new Map([
         [
-          "crvusd-curve",
+          "scrvusd-curve",
           [
             {
-              stablecoin_id: "crvusd-curve",
-              source_key: "onchain:crvusd-curve",
+              stablecoin_id: "scrvusd-curve",
+              source_key: "onchain:scrvusd-curve",
               recorded_at: startSec - 2 * 86400,
               is_best: 1,
               apy: 3.06,
@@ -59,7 +59,7 @@ describe("evaluateYieldSources", () => {
       ]),
       prevTvlBySource: new Map(),
       legacyPrevTvlById: new Map(),
-      prevBestSourceKeyByCoin: new Map([["crvusd-curve", "onchain:crvusd-curve"]]),
+      prevBestSourceKeyByCoin: new Map([["scrvusd-curve", "onchain:scrvusd-curve"]]),
     });
 
     const [source] = result.evaluatedSources;

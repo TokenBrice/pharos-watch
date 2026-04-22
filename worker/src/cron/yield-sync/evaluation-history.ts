@@ -4,7 +4,7 @@ import type { YieldHistorySnapshotRow } from "./history";
 
 const LEGACY_HISTORY_MAX_AGE_SEC = 30 * DAY_SECONDS + 5 * DAY_SECONDS;
 const LEGACY_LUSD_BPROTOCOL_SOURCE_KEY = "bprotocol-lqty-only";
-const SCRVUSD_CURRENT_RATE_SOURCE_KEY = "onchain:crvusd-curve:scrvusd-current-rate";
+const SCRVUSD_CURRENT_RATE_SOURCE_KEY = "onchain:scrvusd-curve:scrvusd-current-rate";
 
 export function buildHistoryKey(stablecoinId: string, sourceKey: string): string {
   return `${stablecoinId}::${sourceKey}`;
@@ -68,7 +68,7 @@ export function pickHistoryRowsForSource(
   const legacyCutoff = startSec - LEGACY_HISTORY_MAX_AGE_SEC;
   const freshLegacyRows = legacyRows.filter((row) => row.recorded_at >= legacyCutoff);
   const hasKnownSourceSemanticsBreak =
-    stablecoinId === "crvusd-curve" && sourceKey === SCRVUSD_CURRENT_RATE_SOURCE_KEY;
+    stablecoinId === "scrvusd-curve" && sourceKey === SCRVUSD_CURRENT_RATE_SOURCE_KEY;
 
   if (
     freshLegacyRows.length > 0 &&

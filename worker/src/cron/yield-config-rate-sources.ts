@@ -6,7 +6,7 @@ import type { OnChainRateConfig, RateDerivedConfig } from "./yield-config-regist
  */
 export const ON_CHAIN_RATE_CONFIGS: OnChainRateConfig[] = [
   {
-    stablecoinId: "usde-ethena",
+    stablecoinId: "susde-ethena",
     chain: "ethereum",
     contract: "0x9D39A5DE30e57443BfF2A8307A4256c8797A3497",
     selector: "0x07a2d13a",
@@ -33,7 +33,7 @@ export const ON_CHAIN_RATE_CONFIGS: OnChainRateConfig[] = [
       "0x0000000000000000000000000000000000000000000000000de0b6b3a7640000",
   },
   {
-    stablecoinId: "usds-sky",
+    stablecoinId: "susds-sky",
     chain: "ethereum",
     contract: "0xa3931d71877C0E7a3148CB7Eb4463524FEc27fbD",
     selector: "0x07a2d13a",
@@ -51,7 +51,7 @@ export const ON_CHAIN_RATE_CONFIGS: OnChainRateConfig[] = [
       "0x0000000000000000000000000000000000000000000000000de0b6b3a7640000",
   },
   {
-    stablecoinId: "dai-makerdao",
+    stablecoinId: "sdai-sky",
     chain: "ethereum",
     contract: "0x83F20F44975D03b1b09e64809B757c47f942BEeA",
     selector: "0x07a2d13a",
@@ -60,7 +60,7 @@ export const ON_CHAIN_RATE_CONFIGS: OnChainRateConfig[] = [
       "0x0000000000000000000000000000000000000000000000000de0b6b3a7640000",
   },
   {
-    stablecoinId: "frxusd-frax",
+    stablecoinId: "sfrxusd-frax",
     chain: "ethereum",
     contract: "0xcf62f905562626cfcdd2261162a51fd02fc9c5b6",
     selector: "0x07a2d13a",
@@ -143,20 +143,20 @@ export const RATE_DERIVED_CONFIGS: RateDerivedConfig[] = [
  *
  * These remain yield-bearing assets with other source paths, but are quarantined
  * from the generic ERC-4626 reader until they have protocol-specific adapters:
- * - crvusd-curve: uses a dedicated scrvUSD profit-unlock current-rate reader;
+ * - scrvusd-curve: uses a dedicated scrvUSD profit-unlock current-rate reader;
  *   generic 7-day convertToAssets deltas understate Curve's current savings APY
  * - dusd-dtrinity: current convertToAssets probe reverts
  * - reusd-re-protocol: current convertToAssets probe returns empty data
  */
 export const QUARANTINED_DETERMINISTIC_ADAPTERS: Record<string, string> = {
-  "crvusd-curve":
+  "scrvusd-curve":
     "generic 7-day convertToAssets delta understates Curve's scrvUSD current profit-unlock APY; uses dedicated current-rate reader",
   "dusd-dtrinity": "generic convertToAssets probe reverts; requires protocol-specific deterministic reader",
   "reusd-re-protocol": "generic convertToAssets probe returns empty data; requires protocol-specific deterministic reader",
 };
 
 export const DIRECT_PROTOCOL_API_STRATEGIES: Record<string, string> = {
-  "crvusd-curve": "Curve scrvUSD current-rate reader",
+  "scrvusd-curve": "Curve scrvUSD current-rate reader",
   "lusd-liquity": "B.Protocol LQTY-only",
   "usbd-bima": "BIMA savings",
   "usyc-hashnote": "Hashnote NAV feed",

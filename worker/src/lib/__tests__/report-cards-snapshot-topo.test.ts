@@ -6,7 +6,12 @@ import type { StablecoinMeta, GovernanceType } from "@shared/types/core";
 function makeMeta(
   id: string,
   reserves?: Array<{ coinId?: string; pct: number; name: string; risk: "low"; blacklistable?: boolean }>,
-  overrides?: { governance?: GovernanceType; canBeBlacklisted?: boolean | "possible" },
+  overrides?: {
+    governance?: GovernanceType;
+    canBeBlacklisted?: boolean | "possible";
+    variantOf?: string;
+    variantKind?: "savings-passthrough" | "risk-absorption";
+  },
 ): StablecoinMeta {
   return {
     id,
@@ -14,6 +19,8 @@ function makeMeta(
     symbol: id.toUpperCase(),
     flags: { governance: overrides?.governance ?? "centralized", backing: "rwa-backed" },
     reserves: reserves ?? [],
+    ...(overrides?.variantOf ? { variantOf: overrides.variantOf } : {}),
+    ...(overrides?.variantKind ? { variantKind: overrides.variantKind } : {}),
     ...(overrides?.canBeBlacklisted !== undefined && { canBeBlacklisted: overrides.canBeBlacklisted }),
   } as unknown as StablecoinMeta;
 }
@@ -61,6 +68,21 @@ describe("topologicalOrder", () => {
     // Should not hang — visited set prevents infinite recursion
     const sorted = topologicalOrder(metas);
     expect(sorted).toHaveLength(2);
+  });
+
+  it("places a tracked variant after its parent even when reserves would imply a different edge type", () => {
+    const metas = [
+      makeMeta("child", [{ coinId: "parent", pct: 100, name: "Parent", risk: "low" }], {
+        variantOf: "parent",
+        variantKind: "risk-absorption",
+      }),
+      makeMeta("parent"),
+    ];
+
+    const sorted = topologicalOrder(metas);
+    const ids = sorted.map((meta) => meta.id);
+
+    expect(ids.indexOf("parent")).toBeLessThan(ids.indexOf("child"));
   });
 });
 

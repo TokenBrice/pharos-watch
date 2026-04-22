@@ -1,5 +1,6 @@
 import type { RedemptionRouteStatus, RedemptionRouteStatusSource } from "@shared/types/redemption";
 import { REDEMPTION_SEVERE_ACTIVE_DEPEG_BPS } from "@shared/lib/report-card-active-depeg";
+import { ACTIVE_STABLECOINS, TRACKED_META_BY_ID } from "@shared/lib/stablecoins";
 
 interface ActiveDepegAvailabilityRow {
   stablecoin_id: string;
@@ -37,10 +38,12 @@ export async function loadSevereActiveDepegAvailabilityMap(
     .all<ActiveDepegAvailabilityRow>();
 
   const result = new Map<string, RedemptionRouteAvailability>();
+  const directRowsById = new Map<string, ActiveDepegAvailabilityRow>();
   for (const row of rows.results ?? []) {
     const activeDepegBps = Math.abs(row.peak_deviation_bps);
     if (activeDepegBps < REDEMPTION_SEVERE_ACTIVE_DEPEG_BPS) continue;
 
+    directRowsById.set(row.stablecoin_id, row);
     result.set(row.stablecoin_id, {
       routeStatus: "degraded",
       routeStatusSource: "market-implied",
@@ -49,6 +52,28 @@ export async function loadSevereActiveDepegAvailabilityMap(
       routeStatusReviewedAt,
       activeDepegBps,
       activeDepegStartedAt: row.started_at,
+    });
+  }
+
+  for (const meta of ACTIVE_STABLECOINS) {
+    if (!meta.variantOf || meta.pegReferenceId !== meta.variantOf) continue;
+    if (result.has(meta.id)) continue;
+
+    const parentRow = directRowsById.get(meta.variantOf);
+    if (!parentRow) continue;
+
+    const activeDepegBps = Math.abs(parentRow.peak_deviation_bps);
+    if (activeDepegBps < REDEMPTION_SEVERE_ACTIVE_DEPEG_BPS) continue;
+
+    const parentSymbol = TRACKED_META_BY_ID.get(meta.variantOf)?.symbol ?? meta.variantOf;
+    result.set(meta.id, {
+      routeStatus: "degraded",
+      routeStatusSource: "market-implied",
+      routeStatusReason:
+        `Parent ${parentSymbol} has an active severe depeg of ${activeDepegBps} bps started ${formatUtcDate(parentRow.started_at)}; wrapper redemption requires current live-open evidence before it can score.`,
+      routeStatusReviewedAt,
+      activeDepegBps,
+      activeDepegStartedAt: parentRow.started_at,
     });
   }
 

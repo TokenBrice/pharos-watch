@@ -83,7 +83,7 @@ describe("fetchCurveScrvusdCurrentRateSource", () => {
         sourcePool: "5fd328af-4203-471b-bd16-1705c726d926",
         dataSource: "onchain",
         exchangeRate: null,
-        sourceKey: "onchain:crvusd-curve:scrvusd-current-rate",
+        sourceKey: "onchain:scrvusd-curve:scrvusd-current-rate",
         sourceObservedAt: 1775891171,
         comparisonAnchorObservedAt: null,
         yieldSource: "Curve Savings (scrvUSD)",

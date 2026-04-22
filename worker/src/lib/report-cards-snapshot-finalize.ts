@@ -33,6 +33,8 @@ export function buildDefunctReportCards(): ReportCard[] {
       overallGrade: "F" as const,
       overallScore: 0,
       baseScore: null,
+      overallCapped: false,
+      uncappedOverallScore: null,
       dimensions: {
         pegStability: nrDim,
         liquidity: nrDim,

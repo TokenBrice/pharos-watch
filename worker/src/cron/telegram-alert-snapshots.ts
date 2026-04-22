@@ -2,6 +2,7 @@ import { isDewsAlertable, type DepegAlertPayload } from "../lib/telegram-alerts"
 import { setCache } from "../lib/db-cache";
 import { DAY_SECONDS } from "@shared/lib/time-constants";
 import { unwrapStressSignalsEnvelope } from "@shared/lib/stress-signals-envelope";
+import type { AlertSafetySourceSnapshot } from "../lib/alert-safety-source-cache";
 
 // ---------- Constants ----------
 
@@ -34,7 +35,7 @@ export const SAFETY_GRADE_RANK: Record<string, number> = {
 
 export type DewsSnapshot = Record<string, string>;
 export type DepegSnapshot = Record<string, DepegAlertPayload>;
-export type SafetySnapshot = Record<string, { grade: string; score: number | null; methodologyVersion: string | null }>;
+export type SafetySnapshot = AlertSafetySourceSnapshot;
 
 export interface DewsRow {
   stablecoin_id: string;
