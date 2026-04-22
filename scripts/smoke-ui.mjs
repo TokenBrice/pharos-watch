@@ -364,16 +364,27 @@ function buildSmokeRunCode(config) {
     await page.setViewportSize({ height: config.mobileHeight, width: config.mobileWidth });
 
     for (const route of config.routes) {
-      const initial = await measureOverflow(route, config.overflowWaitMs, {
-        openHomepageFilters: route === "/",
-      });
+      const initial = await measureOverflow(route, config.overflowWaitMs);
       let retry = null;
       if (initial.hasOverflow) {
-        retry = await measureOverflow(route, config.overflowWaitMs + config.overflowRetryExtraWaitMs, {
-          openHomepageFilters: route === "/",
-        });
+        retry = await measureOverflow(route, config.overflowWaitMs + config.overflowRetryExtraWaitMs);
       }
       overflowChecks.push({ initial, retry, route });
+
+      if (route === "/") {
+        const mobileFiltersOpen = await measureOverflow(route, config.overflowWaitMs, {
+          openHomepageFilters: true,
+          summaryLabel: "/ [filters open]",
+        });
+        let mobileFiltersRetry = null;
+        if (mobileFiltersOpen.hasOverflow) {
+          mobileFiltersRetry = await measureOverflow(route, config.overflowWaitMs + config.overflowRetryExtraWaitMs, {
+            openHomepageFilters: true,
+            summaryLabel: "/ [filters open]",
+          });
+        }
+        overflowChecks.push({ initial: mobileFiltersOpen, retry: mobileFiltersRetry, route: "/ [filters open]" });
+      }
     }
 
     if (config.routes.includes("/")) {

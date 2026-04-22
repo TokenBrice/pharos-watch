@@ -1,6 +1,14 @@
 # Yield Intelligence Methodology - Version Timeline
 
-Internal changelog reconstructed from git history. Covers Yield Intelligence `v1.0` through `v7.42` (2026-03-01 -> 2026-04-21).
+Internal changelog reconstructed from git history. Covers Yield Intelligence `v1.0` through `v7.43` (2026-03-01 -> 2026-04-22).
+
+---
+
+## v7.43 - Tracked savings wrappers own their native APY history (Apr 22, 2026)
+
+- `sUSDe`, `sUSDS`, `sDAI`, `sfrxUSD`, and `scrvUSD` now own the wrapper APY rows that used to publish through `USDe`, `USDS`, `DAI`, `frxUSD`, and `crvUSD`
+- Those five base assets no longer advertise wrapper-owned `yieldBearing` metadata or serve the old wrapper APY series through `/api/yield-history`
+- Parent-side wrapper source keys are filtered immediately at read time and purged on the hourly sync path, so misattributed pre-handoff rows do not linger under the base ids after rollout
 
 ---
 

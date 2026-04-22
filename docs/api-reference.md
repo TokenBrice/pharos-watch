@@ -1567,7 +1567,7 @@ Stablecoin risk grade cards with dimension-level scores. Output includes 5 dimen
     "edges": [{ "from": "usde-ethena", "to": "usdc-circle", "weight": 0.9, "type": "collateral" }, ...]
   },
   "methodology": {
-    "version": "7.07",
+    "version": "7.09",
     "weights": { "pegStability": 0, "liquidity": 0.30, "resilience": 0.20, "decentralization": 0.15, "dependencyRisk": 0.25 },
     "pegMultiplierExponent": 0.4,
     "activeDepegSeveritySource": "open-event-peak",
@@ -1691,14 +1691,14 @@ Rows written by the current worker are grouped by a completed snapshot run manif
       "feeModelKind": "undisclosed-reviewed",
       "modelConfidence": "low",
       "updatedAt": 1773350400,
-      "methodologyVersion": "3.99"
+      "methodologyVersion": "3.992"
     }
   },
   "methodology": {
-    "version": "3.99",
-    "versionLabel": "v3.99",
-    "currentVersion": "3.99",
-    "currentVersionLabel": "v3.99",
+    "version": "3.992",
+    "versionLabel": "v3.992",
+    "currentVersion": "3.992",
+    "currentVersionLabel": "v3.992",
     "changelogPath": "/methodology/#safety-scores-methodology",
     "asOf": 1773350400,
     "isCurrent": true,
@@ -1951,13 +1951,13 @@ Historical yield data for a single stablecoin. If a stored `warning_signals` pay
   "current": {
     "date": 1772000000,
     "apy": 4.21,
-    "sourceKey": "onchain:usde-ethena",
+    "sourceKey": "onchain:susde-ethena",
     "yieldSource": "Ethena staking (sUSDe)"
   },
   "history": [YieldHistoryPoint, "..."],
   "methodology": {
-    "version": "7.41",
-    "currentVersion": "7.41",
+    "version": "7.43",
+    "currentVersion": "7.43",
     "changelogPath": "/methodology/yield-changelog/"
   }
 }

@@ -1,6 +1,15 @@
 # Report Cards Scoring — Version Timeline
 
-Internal changelog reconstructed from git history plus the live version metadata source. Covers v1.0 through v7.08 (2026-02-25 → 2026-04-21). The newest sections track the machine-readable version source closely; older reconstructed sections below v6.92 preserve the original authoring-era grouping and are not guaranteed to be in strict descending source order. Use `shared/lib/safety-score-version-data.ts` for canonical machine ordering.
+Internal changelog reconstructed from git history plus the live version metadata source. Covers v1.0 through v7.09 (2026-02-25 → 2026-04-22). The newest sections track the machine-readable version source closely; older reconstructed sections below v6.92 preserve the original authoring-era grouping and are not guaranteed to be in strict descending source order. Use `shared/lib/safety-score-version-data.ts` for canonical machine ordering.
+
+## v7.09 — Tracked wrapper and staked variants become explicit parent-linked cards (2026-04-22)
+
+Tracked savings and staked wrappers now carry an explicit parent relationship in Safety Scores instead of relying on reserve-shape quirks:
+
+- Nine tracked wrapped or staked stablecoins now declare canonical `variantOf` / `variantKind` metadata and contribute a synthetic `wrapper` edge from parent to child in dependency scoring, topological ordering, and the dependency graph
+- Dependency Risk now caps tracked savings wrappers at parent minus 3 points and tracked risk-absorption wrappers at parent minus 5 points, while legacy non-variant wrapper dependencies keep the original parent-minus-3 behavior
+- Tracked variants cannot outscore their parent overall card; live cards and stressed recomputation now expose `overallCapped`, `uncappedOverallScore`, `rawInputs.variantParentId`, and `rawInputs.variantKind` so parent-cap drag is distinct from peg drag in the UI and stress tooling
+- Severe active-depeg caps now follow inherited `pegReferenceId` links for these tracked wrappers, so a parent's open depeg still constrains the child
 
 ## v7.08 — Strategy reserve tier clarification (2026-04-21)
 

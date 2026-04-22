@@ -300,29 +300,31 @@ export default function StablecoinDetailClient({ id, summary, coin, logoSrc }: S
       {/* ── Context & details zone ── */}
       <div className="mt-12 space-y-6">
         <section id="overview">
-          {viewModel.variantParent && viewModel.coin.variantKind ? (
-            <UnderlyingAssetCard
-              parent={viewModel.variantParent}
-              kind={viewModel.coin.variantKind}
-              siblings={viewModel.variantSiblings}
+          <div className="space-y-6">
+            {viewModel.variantParent && viewModel.coin.variantKind ? (
+              <UnderlyingAssetCard
+                parent={viewModel.variantParent}
+                kind={viewModel.coin.variantKind}
+                siblings={viewModel.variantSiblings}
+              />
+            ) : null}
+            {viewModel.childVariants.length > 0 ? (
+              <ParentVariantsCard variants={viewModel.childVariants} />
+            ) : null}
+            <NoticesAndSummarySection
+              stablecoinId={viewModel.id}
+              coin={viewModel.coin}
+              summary={viewModel.summary}
+              reserves={viewModel.reserves}
+              reserveFetchError={viewModel.reserveFetchError}
+              redemptionBackstop={viewModel.redemptionBackstop}
+              isNavToken={viewModel.isNavToken}
+              coinData={viewModel.coinData}
+              consensusSources={viewModel.consensusSources}
+              agreeSources={viewModel.agreeSources}
+              dexPriceCheck={viewModel.dexPriceCheck}
             />
-          ) : null}
-          {viewModel.childVariants.length > 0 ? (
-            <ParentVariantsCard variants={viewModel.childVariants} />
-          ) : null}
-          <NoticesAndSummarySection
-            stablecoinId={viewModel.id}
-            coin={viewModel.coin}
-            summary={viewModel.summary}
-            reserves={viewModel.reserves}
-            reserveFetchError={viewModel.reserveFetchError}
-            redemptionBackstop={viewModel.redemptionBackstop}
-            isNavToken={viewModel.isNavToken}
-            coinData={viewModel.coinData}
-            consensusSources={viewModel.consensusSources}
-            agreeSources={viewModel.agreeSources}
-            dexPriceCheck={viewModel.dexPriceCheck}
-          />
+          </div>
         </section>
 
         <section id="info">

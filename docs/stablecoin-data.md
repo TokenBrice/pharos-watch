@@ -24,6 +24,7 @@ Stablecoin metadata is the checked-in source of truth for the asset universe. Us
 - Preserve existing supply policy. Primary supply comes from DefiLlama through the existing fallback path; do not add manual, on-chain, CMC, or DEX supply overrides.
 - Contract metadata belongs under each coin's `contracts` array. Use verified chain IDs and decimals from source metadata or explorers before adding them.
 - Use `liveReservesConfig`, `yieldConfig`, and other feature configs only when the relevant pipeline already supports that source family.
+- `variantOf` and `variantKind` are active-only parent-wrapper metadata. Use them only for wrapped/staked coins whose user expectation is still direct exposure to another tracked stablecoin; they co-require, the parent must be active, non-variant, and non-`navToken`, and the child must keep `pegReferenceId === variantOf` plus `flags.navToken === true`.
 - Pre-launch assets stay in `pre-launch.json` until they have enough live metadata for active public surfaces.
 - Shadow assets belong only in `shared/lib/shadow-stablecoins.ts`, not in the main JSON shards.
 
@@ -41,7 +42,7 @@ If the change affects page counts, feature coverage, reserve coverage, source fa
 
 ## Cache Admission
 
-`scripts/check-stablecoin-data.ts` validates schema shape, canonical-order consistency, and whether active assets have a static path into `/api/stablecoins` cache admission. If that check fails, fix metadata or pipeline support rather than bypassing the guard.
+`scripts/check-stablecoin-data.ts` validates schema shape, canonical-order consistency, wrapper-variant invariants, and whether active assets have a static path into `/api/stablecoins` cache admission. If that check fails, fix metadata or pipeline support rather than bypassing the guard.
 
 Common admission fields:
 

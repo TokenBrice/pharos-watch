@@ -301,6 +301,16 @@ export function ReportCardDetail({ card, liquidityComponents }: ReportCardDetail
 
   const gradeRange = card.overallGrade.charAt(0);
   const topBorderColor = GRADE_BORDER_HEX[gradeRange] ?? GRADE_BORDER_HEX.B;
+  const pegDrag =
+    card.baseScore != null && card.uncappedOverallScore != null
+      ? Math.max(0, card.baseScore - card.uncappedOverallScore)
+      : card.baseScore != null && card.overallScore != null
+        ? Math.max(0, card.baseScore - card.overallScore)
+        : null;
+  const parentCapDelta =
+    card.overallCapped === true && card.uncappedOverallScore != null && card.overallScore != null
+      ? Math.max(0, card.uncappedOverallScore - card.overallScore)
+      : null;
 
   return (
     <Card
@@ -347,15 +357,16 @@ export function ReportCardDetail({ card, liquidityComponents }: ReportCardDetail
                 <div className="text-xs text-muted-foreground text-center space-y-1 mt-1">
                   <div className="flex items-center gap-2 justify-center">
                     <span>Base: <span className="font-mono text-foreground">{card.baseScore.toFixed(1)}</span></span>
-                    {card.overallCapped === true && card.uncappedOverallScore != null ? (
+                    {pegDrag != null && pegDrag > 0 ? (
                       <>
                         <span>·</span>
-                        <span>Parent cap: <span className="font-mono text-amber-600 dark:text-amber-400">−{(card.uncappedOverallScore - card.overallScore).toFixed(1)}</span></span>
+                        <span>Peg: <span className="font-mono text-amber-600 dark:text-amber-400">−{pegDrag.toFixed(1)}</span></span>
                       </>
-                    ) : card.baseScore !== card.overallScore ? (
+                    ) : null}
+                    {parentCapDelta != null ? (
                       <>
                         <span>·</span>
-                        <span>Peg: <span className="font-mono text-amber-600 dark:text-amber-400">−{(card.baseScore - card.overallScore).toFixed(1)}</span></span>
+                        <span>Parent cap: <span className="font-mono text-amber-600 dark:text-amber-400">−{parentCapDelta.toFixed(1)}</span></span>
                       </>
                     ) : null}
                   </div>

@@ -110,9 +110,13 @@ export function StablecoinVirtualRow({
     riskLevel === "warning" ? "pharos-row-risk-warning" : "";
   const isCompactDensity = density === "list" || density === "compact";
 
-  function isNestedInteractiveTarget(target: EventTarget | null): boolean {
-    return target instanceof HTMLElement
-      && target.closest("a,button,input,select,textarea,[role=\"button\"],[role=\"link\"]") != null;
+  function isNestedInteractiveTarget(
+    target: EventTarget | null,
+    currentTarget: EventTarget | null,
+  ): boolean {
+    if (!(target instanceof HTMLElement)) return false;
+    const interactiveAncestor = target.closest("a,button,input,select,textarea,[role=\"button\"],[role=\"link\"]");
+    return interactiveAncestor != null && interactiveAncestor !== currentTarget;
   }
 
   return (
@@ -121,12 +125,12 @@ export function StablecoinVirtualRow({
       className={`group cursor-pointer focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:outline-none ${riskClass}`}
       style={{ height: densityConfig.rowHeight }}
       onClick={(event) => {
-        if (isNestedInteractiveTarget(event.target)) return;
+        if (isNestedInteractiveTarget(event.target, event.currentTarget)) return;
         onNavigate(coin.id);
       }}
       onMouseEnter={() => onPrefetch(coin.id)}
       onKeyDown={(e) => {
-        if (e.target !== e.currentTarget || isNestedInteractiveTarget(e.target)) return;
+        if (e.target !== e.currentTarget || isNestedInteractiveTarget(e.target, e.currentTarget)) return;
         if (e.key === "Enter" || e.key === " ") {
           e.preventDefault();
           onNavigate(coin.id);
