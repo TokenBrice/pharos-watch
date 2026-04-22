@@ -54,7 +54,7 @@ describe("site-data env contract", () => {
       },
       {
         code: "site-data-db-missing",
-        message: "DB must be bound on the Pages project for durable site-data attribution telemetry.",
+        message: "DB is optional for the Pages site-data proxy, but attribution telemetry is disabled when it is not bound.",
       },
     ]);
   });

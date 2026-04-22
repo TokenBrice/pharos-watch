@@ -12,6 +12,7 @@ const COMMON_LTS_VALIDATE_COMMANDS = Object.freeze([
   "npm run lint",
   "npm run typecheck",
   "npm run check:migrations",
+  "timeout 2s env DEV_PROXY_PORT=3310 node scripts/run-dev-api-proxy.mjs || test $? -eq 124",
 ]);
 const LTS_WORKER_VALIDATE_COMMANDS = Object.freeze([
   "cd worker && node ../node_modules/typescript/bin/tsc --noEmit",

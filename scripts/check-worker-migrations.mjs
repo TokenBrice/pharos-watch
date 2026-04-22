@@ -140,6 +140,32 @@ export function validateRolloutSafetyAnnotation(file, sql, enforcementPrefix = R
 }
 
 async function createExecutor(dbPath) {
+  const sqlite3Probe = spawnSync("sqlite3", ["-version"], {
+    encoding: "utf8",
+  });
+
+  if (!sqlite3Probe.error && sqlite3Probe.status === 0) {
+    return {
+      backend: "sqlite3",
+      close() {},
+      execute(sql) {
+        const result = spawnSync("sqlite3", ["-bail", dbPath], {
+          encoding: "utf8",
+          input: sql,
+        });
+
+        if (result.error) {
+          throw new Error(`sqlite3 CLI execution failed: ${result.error.message}`);
+        }
+
+        if (result.status !== 0) {
+          const detail = (result.stderr || result.stdout || "").trim();
+          throw new Error(detail || `sqlite3 exited with status ${result.status}`);
+        }
+      },
+    };
+  }
+
   try {
     const { DatabaseSync } = await import("node:sqlite");
     const db = new DatabaseSync(dbPath);
@@ -153,28 +179,16 @@ async function createExecutor(dbPath) {
         db.exec(sql);
       },
     };
-  } catch {
-    return {
-      backend: "sqlite3",
-      close() {},
-      execute(sql) {
-        const result = spawnSync("sqlite3", [dbPath], {
-          encoding: "utf8",
-          input: sql,
-        });
-
-        if (result.error) {
-          throw new Error(
-            `sqlite3 fallback is unavailable (${result.error.message}). Use Node 22+ or install sqlite3.`,
-          );
-        }
-
-        if (result.status !== 0) {
-          const detail = (result.stderr || result.stdout || "").trim();
-          throw new Error(detail || `sqlite3 exited with status ${result.status}`);
-        }
-      },
-    };
+  } catch (error) {
+    const sqlite3Detail = sqlite3Probe.error
+      ? sqlite3Probe.error.code === "ENOENT"
+        ? "sqlite3 CLI is not installed"
+        : sqlite3Probe.error.message
+      : (sqlite3Probe.stderr || sqlite3Probe.stdout || "").trim() || `sqlite3 -version exited with status ${sqlite3Probe.status}`;
+    const nodeSqliteDetail = error instanceof Error ? error.message : String(error);
+    throw new Error(
+      `Worker migration validation requires sqlite3 or node:sqlite. sqlite3 probe: ${sqlite3Detail}. node:sqlite load failed: ${nodeSqliteDetail}`,
+    );
   }
 }
 

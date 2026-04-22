@@ -144,6 +144,8 @@ const EXPORT_ALLOWLIST = new Set([
   "worker/src/lib/dex-api-common.ts::DIRECT_API_MAX_POOL_TVL_USD",
   "worker/src/lib/external-api-schemas.ts::TronEventResultSchema",
   "worker/src/lib/external-api-schemas.ts::TronEventSchema",
+  "shared/lib/env-contract.ts::ENV_BINDINGS",
+  "shared/lib/env-contract.ts::getAllEnvBindingKeys",
   "worker/src/lib/live-reserves-store.ts::getConfiguredLiveReserveCoins",
   "worker/src/lib/live-reserves-store.ts::upsertReserveComposition",
   "worker/src/lib/mint-burn-health-config.ts::computeMintBurnSyncFreshnessStatus",

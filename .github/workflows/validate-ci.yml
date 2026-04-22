@@ -50,3 +50,19 @@ jobs:
         run: cd worker && npx tsc --noEmit
       - if: ${{ inputs.worker_changed }}
         run: cd worker && npx tsc --noEmit -p tsconfig.scripts.json
+
+  validate-lts:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    env:
+      NEXT_PUBLIC_GA_ID: ${{ vars.NEXT_PUBLIC_GA_ID }}
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          fetch-depth: 0
+      - uses: ./.github/actions/setup-workspace
+        with:
+          node-version: 24.x
+          tooling-cache: "true"
+      - run: npm run validate:lts -- --pages-changed=${{ inputs.pages_changed }} --worker-changed=${{ inputs.worker_changed }} --coverage-compare-ref=${{ inputs.coverage-compare-ref }}

@@ -45,64 +45,6 @@ export interface Env {
   MAINTENANCE_MODE?: string;
 }
 
-export const WORKER_REQUIRED_ENV_KEYS = [
-  "DB",
-  "CORS_ORIGIN",
-] as const;
-
-export const WORKER_OPTIONAL_ENV_KEYS = [
-  "SELF_URL",
-  "SITE_API_SHARED_SECRET",
-  "SITE_API_SHARED_SECRET_PREVIOUS",
-  "API_KEY_HASH_PEPPER",
-  "API_KEY_HASH_PEPPER_PREVIOUS",
-  "PUBLIC_API_AUTH_MODE",
-  "CF_ACCESS_TEAM_DOMAIN",
-  "CF_ACCESS_OPS_API_AUD",
-  "ETHERSCAN_API_KEY",
-  "TRONGRID_API_KEY",
-  "DRPC_API_KEY",
-  "ALCHEMY_API_KEY",
-  "GRAPH_API_KEY",
-  "ALERT_WEBHOOK_URL",
-  "ANTHROPIC_API_KEY",
-  "CMC_API_KEY",
-  "COINGECKO_API_KEY",
-  "GITHUB_PAT",
-  "FEEDBACK_IP_SALT",
-  "PUBLIC_API_RATE_LIMIT_SALT",
-  "TWITTER_API_KEY",
-  "TWITTER_API_SECRET",
-  "TWITTER_ACCESS_TOKEN",
-  "TWITTER_ACCESS_TOKEN_SECRET",
-  "TELEGRAM_BOT_TOKEN",
-  "TELEGRAM_CHAT_ID",
-  "TELEGRAM_WEBHOOK_SECRET",
-  "TELEGRAM_WEBHOOK_SECRET_PREVIOUS",
-  "MINT_BURN_DISABLED_IDS",
-  "MINT_BURN_DISABLED_SYMBOLS",
-  "MINT_BURN_MAJOR_SYMBOLS",
-  "MINT_BURN_STALE_WARN_SEC",
-  "MINT_BURN_STALE_CRIT_SEC",
-  "MINT_BURN_ALERT_COOLDOWN_SEC",
-  "OPENEXCHANGERATES_API_KEY",
-  "CLOUDFLARE_ACCOUNT_ID",
-  "CLOUDFLARE_D1_STATUS_API_TOKEN",
-  "CLOUDFLARE_D1_DATABASE_ID",
-  "MAINTENANCE_MODE",
-] as const;
-
-export const WORKER_RESERVED_ENV_KEYS = [
-  "OPS_UI_ORIGIN",
-  "OPS_API_ORIGIN",
-  "CF_ACCESS_OPS_UI_AUD",
-] as const;
-
-export const WORKER_ACTIVE_ENV_KEYS = [
-  ...WORKER_REQUIRED_ENV_KEYS,
-  ...WORKER_OPTIONAL_ENV_KEYS,
-] as const;
-
 export interface WorkerEnvIssue {
   code:
     | "ops-access-partial-config"
@@ -135,6 +77,12 @@ export interface ResolvedPublicApiRateLimitSalt {
 export type PublicApiAuthMode = "off" | "report-only" | "enforce";
 
 import { hasConfiguredValue, getConfiguredValue } from "@shared/lib/env-utils";
+import { getRuntimeActiveEnvKeys, getRuntimeEnvKeys } from "@shared/lib/env-contract";
+
+export const WORKER_REQUIRED_ENV_KEYS = getRuntimeEnvKeys("worker", "required");
+export const WORKER_OPTIONAL_ENV_KEYS = getRuntimeEnvKeys("worker", "optional");
+export const WORKER_RESERVED_ENV_KEYS = getRuntimeEnvKeys("worker", "reserved");
+export const WORKER_ACTIVE_ENV_KEYS = getRuntimeActiveEnvKeys("worker");
 
 export function parseCsvEnv(value: string | undefined): string[] {
   if (!value) return [];

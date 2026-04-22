@@ -1,4 +1,5 @@
 import { normalizeTeamDomain } from "@shared/lib/cloudflare-access-jwt";
+import { getRuntimeActiveEnvKeys, getRuntimeEnvKeys } from "@shared/lib/env-contract";
 import { getConfiguredValue } from "@shared/lib/env-utils";
 import { OPS_API_ORIGIN, resolveOrigin } from "@shared/lib/runtime-origins";
 
@@ -23,24 +24,13 @@ export interface ResolvedPagesOpsUiAccessConfig {
   aud: string;
 }
 
-export const PAGES_FUNCTIONS_REQUIRED_ENV_KEYS = [
-  "OPS_API_SERVICE_TOKEN_ID",
-  "OPS_API_SERVICE_TOKEN_SECRET",
-  "CF_ACCESS_TEAM_DOMAIN",
-  "CF_ACCESS_OPS_UI_AUD",
-] as const;
+export const PAGES_FUNCTIONS_REQUIRED_ENV_KEYS = getRuntimeEnvKeys("pagesOps", "required");
 
-export const PAGES_FUNCTIONS_OPTIONAL_ENV_KEYS = [
-  "OPS_UI_ORIGIN",
-  "OPS_API_ORIGIN",
-] as const;
+export const PAGES_FUNCTIONS_OPTIONAL_ENV_KEYS = getRuntimeEnvKeys("pagesOps", "optional");
 
-export const PAGES_FUNCTIONS_RESERVED_ENV_KEYS = [] as const;
+export const PAGES_FUNCTIONS_RESERVED_ENV_KEYS = getRuntimeEnvKeys("pagesOps", "reserved");
 
-export const PAGES_FUNCTIONS_ACTIVE_ENV_KEYS = [
-  ...PAGES_FUNCTIONS_REQUIRED_ENV_KEYS,
-  ...PAGES_FUNCTIONS_OPTIONAL_ENV_KEYS,
-] as const;
+export const PAGES_FUNCTIONS_ACTIVE_ENV_KEYS = getRuntimeActiveEnvKeys("pagesOps");
 
 export function resolveOpsApiOrigin(env: Pick<OpsAdminProxyEnv, "OPS_API_ORIGIN">): string {
   return resolveOrigin(env.OPS_API_ORIGIN, DEFAULT_OPS_API_ORIGIN);

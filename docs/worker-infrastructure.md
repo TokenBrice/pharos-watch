@@ -35,63 +35,71 @@ invocation_logs = true
 
 ## Env Interface
 
-The `Env` interface is defined in `worker/src/lib/env.ts` and consumed by `worker/src/index.ts` plus the HTTP-request helper stack under `worker/src/handlers/http*.ts` and the scheduled-runtime entrypoint/context (`worker/src/handlers/scheduled.ts`, `worker/src/handlers/scheduled/context.ts`). `DB`, `CORS_ORIGIN`, `SELF_URL`, `CF_ACCESS_TEAM_DOMAIN`, `CF_ACCESS_OPS_API_AUD`, and `PUBLIC_API_AUTH_MODE` are set in `worker/wrangler.toml`; the remaining active bindings are runtime env values (typically provided via Cloudflare Worker secrets).
+The `Env` interface is defined in `worker/src/lib/env.ts` and consumed by `worker/src/index.ts` plus the HTTP-request helper stack under `worker/src/handlers/http*.ts` and the scheduled-runtime entrypoint/context (`worker/src/handlers/scheduled.ts`, `worker/src/handlers/scheduled/context.ts`). `DB`, `CORS_ORIGIN`, `SELF_URL`, `CF_ACCESS_TEAM_DOMAIN`, `CF_ACCESS_OPS_API_AUD`, and `PUBLIC_API_AUTH_MODE` are set in `worker/wrangler.toml`; the remaining active bindings are runtime env values (typically provided via Cloudflare Worker secrets). The cross-runtime key manifest now lives in `shared/lib/env-contract.ts`.
 
-`worker/src/lib/env.ts` is now the canonical worker binding contract and exports four groupings:
+`worker/src/lib/env.ts` still exports the worker runtime views:
 
 - `WORKER_REQUIRED_ENV_KEYS`
 - `WORKER_OPTIONAL_ENV_KEYS`
 - `WORKER_RESERVED_ENV_KEYS`
 - `WORKER_ACTIVE_ENV_KEYS` (`required + optional`)
 
-The paired Pages Functions contracts live in `functions/lib/ops-env.ts` and `functions/lib/site-api-env.ts`, with the same `required` / `optional` / `reserved` / `active` shape. Worker runtime validation logs contract errors when Access bindings are only partially configured, when admin D1 status bindings are only partially configured, when `PUBLIC_API_RATE_LIMIT_SALT` is missing, when `SITE_API_SHARED_SECRET` is missing, or when public API auth mode is configured without `API_KEY_HASH_PEPPER`. The Pages ops-proxy contract now actively requires `CF_ACCESS_TEAM_DOMAIN` + `CF_ACCESS_OPS_UI_AUD` for inbound UI JWT verification, and the Pages `site-data` contract expects a `DB` binding so same-origin demand telemetry can be written into the shared D1 database.
+The paired Pages Functions contracts live in `functions/lib/ops-env.ts` and `functions/lib/site-api-env.ts`, with the same `required` / `optional` / `reserved` / `active` shape derived from that shared manifest. Worker runtime validation logs contract errors when Access bindings are only partially configured, when admin D1 status bindings are only partially configured, when `PUBLIC_API_RATE_LIMIT_SALT` is missing, when `SITE_API_SHARED_SECRET` is missing, or when public API auth mode is configured without `API_KEY_HASH_PEPPER`. The Pages ops-proxy contract now actively requires `CF_ACCESS_TEAM_DOMAIN` + `CF_ACCESS_OPS_UI_AUD` for inbound UI JWT verification, and the Pages `site-data` contract expects a `DB` binding so same-origin demand telemetry can be written into the shared D1 database.
 
-| Binding                          | Type       | Required                                           | Used by                                                                                                                                                                    |
-| -------------------------------- | ---------- | -------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `DB`                             | D1Database | Yes                                                | All crons and API handlers                                                                                                                                                 |
-| `CORS_ORIGIN`                    | string     | Yes                                                | Comma-separated CORS allowlist. Repo default: `https://pharos.watch,https://ops.pharos.watch`                                                                              |
-| `SELF_URL`                       | string     | No                                                 | Status self-check external probe base URL; the default production origin (`https://api.pharos.watch`) is router-probed internally to avoid custom-domain self-fetch `522`s |
-| `SITE_API_SHARED_SECRET`         | string     | No (worker contract); Yes for the website data lane | Shared secret required for `site-api.pharos.watch` and Worker preview site-data requests authenticated via `X-Pharos-Site-Proxy-Secret`                                        |
-| `SITE_API_SHARED_SECRET_PREVIOUS` | string     | No                                                 | Optional overlap secret accepted alongside `SITE_API_SHARED_SECRET` during a 24-hour rotation window                                                                          |
-| `API_KEY_HASH_PEPPER`            | string     | No (worker contract); Yes once public auth leaves `off` | Pepper used to HMAC-hash the secret portion of public API keys                                                                                                                    |
-| `API_KEY_HASH_PEPPER_PREVIOUS`   | string     | No                                                 | Optional overlap pepper accepted alongside `API_KEY_HASH_PEPPER` during API key pepper rotation                                                                                    |
-| `PUBLIC_API_AUTH_MODE`           | string     | No                                                 | Public API auth mode: `off`, `report-only`, or `enforce`                                                                                                                          |
-| `OPS_UI_ORIGIN`                  | string     | No                                                 | Reserved on the worker runtime for cross-runtime alignment. The value is active on Pages Functions host gating (`https://ops.pharos.watch`)                                |
-| `OPS_API_ORIGIN`                 | string     | No                                                 | Reserved on the worker runtime for cross-runtime alignment. The value is active on Pages Functions proxying (`https://ops-api.pharos.watch`)                               |
-| `CF_ACCESS_TEAM_DOMAIN`          | string     | No                                                 | Cloudflare Access team domain used by worker-side JWT verification for `ops-api.pharos.watch` admin requests. Must be configured together with `CF_ACCESS_OPS_API_AUD` for admin Access verification. |
-| `CF_ACCESS_OPS_UI_AUD`           | string     | No                                                 | Reserved on the worker runtime; active and required in the Pages Functions contract for `/api/admin/*` UI JWT validation                                                    |
-| `CF_ACCESS_OPS_API_AUD`          | string     | No                                                 | Cloudflare Access audience used by `worker/src/lib/auth.ts` to verify `Cf-Access-Jwt-Assertion` on `ops-api.pharos.watch` admin requests                                   |
-| `ETHERSCAN_API_KEY`              | string     | No                                                 | Blacklist sync, USDS status                                                                                                                                                |
-| `TRONGRID_API_KEY`               | string     | No                                                 | Blacklist sync (Tron chain)                                                                                                                                                |
-| `DRPC_API_KEY`                   | string     | No                                                 | L2 archive node balance lookups                                                                                                                                            |
-| `ALCHEMY_API_KEY`                | string     | No                                                 | Chain RPC primary endpoints                                                                                                                                                |
-| `GRAPH_API_KEY`                  | string     | No                                                 | DEX liquidity (The Graph subgraphs)                                                                                                                                        |
-| `ALERT_WEBHOOK_URL`              | string     | No                                                 | Discord/Slack error alerts                                                                                                                                                 |
-| `ANTHROPIC_API_KEY`              | string     | No                                                 | Daily digest LLM generation                                                                                                                                                |
-| `CMC_API_KEY`                    | string     | No                                                 | Price fallback (CoinMarketCap)                                                                                                                                             |
-| `OPENEXCHANGERATES_API_KEY`      | string     | No                                                 | Real-time FX rate cross-validation (Open Exchange Rates)                                                                                                                   |
-| `COINGECKO_API_KEY`              | string     | No                                                 | Price enrichment, depeg confirmation                                                                                                                                       |
-| `CLOUDFLARE_ACCOUNT_ID`          | string     | No                                                 | Admin-only D1 status metrics (`/api/status` -> `d1Usage`) Cloudflare account scope                                                                                         |
-| `CLOUDFLARE_D1_STATUS_API_TOKEN` | string     | No                                                 | Admin-only D1 status metrics (`/api/status` -> `d1Usage`) token with D1 read + analytics read access                                                                       |
-| `CLOUDFLARE_D1_DATABASE_ID`      | string     | No                                                 | Admin-only D1 status metrics (`/api/status` -> `d1Usage`) target database id                                                                                               |
-| `GITHUB_PAT`                     | string     | No (worker contract); Yes for feedback submissions | Feedback → GitHub Issues                                                                                                                                                   |
-| `FEEDBACK_IP_SALT`               | string     | No (worker contract); Yes for feedback submissions | Rate limit IP hashing for `POST /api/feedback`                                                                                                                             |
-| `PUBLIC_API_RATE_LIMIT_SALT`     | string     | Yes for deployed public API traffic                | Dedicated salt for hashed public API rate limiting. Public `/api/*` traffic returns `503` until this binding is configured.                                                |
-| `TWITTER_API_KEY`                | string     | No                                                 | Twitter/X digest delivery credentials                                                                                                                                     |
-| `TWITTER_API_SECRET`             | string     | No                                                 | Twitter/X digest delivery credentials                                                                                                                                     |
-| `TWITTER_ACCESS_TOKEN`           | string     | No                                                 | Twitter/X digest delivery credentials                                                                                                                                     |
-| `TWITTER_ACCESS_TOKEN_SECRET`    | string     | No                                                 | Twitter/X digest delivery credentials                                                                                                                                     |
-| `TELEGRAM_BOT_TOKEN`             | string     | No                                                 | Digest → Telegram, bot chat replies, subscriber alert dispatch                                                                                                             |
-| `TELEGRAM_CHAT_ID`               | string     | No                                                 | Digest channel posts and cemetery announcements                                                                                                                            |
-| `TELEGRAM_WEBHOOK_SECRET`        | string     | No                                                 | Telegram webhook secret validation via `X-Telegram-Bot-Api-Secret-Token`; registration and reconciliation emit this current secret                                          |
-| `TELEGRAM_WEBHOOK_SECRET_PREVIOUS` | string   | No                                                 | Optional previous Telegram webhook secret accepted until operators remove it; the 24-hour rotation window is policy, not Worker-enforced age logic                            |
-| `MAINTENANCE_MODE`               | `string?`  | No                                                 | Optional. When set to the exact string `"true"`, the worker returns 503 for all non-`OPTIONS` requests. Used as a kill switch.                                             |
-| `MINT_BURN_DISABLED_IDS`         | string     | No                                                 | Mint/burn runtime disable list by stablecoin ID (CSV)                                                                                                                      |
-| `MINT_BURN_DISABLED_SYMBOLS`     | string     | No                                                 | Mint/burn runtime disable list by symbol (CSV)                                                                                                                             |
-| `MINT_BURN_MAJOR_SYMBOLS`        | string     | No                                                 | Mint/burn health-check major symbols override (CSV)                                                                                                                        |
-| `MINT_BURN_STALE_WARN_SEC`       | string     | No                                                 | Mint/burn stale-warning threshold override (seconds)                                                                                                                       |
-| `MINT_BURN_STALE_CRIT_SEC`       | string     | No                                                 | Mint/burn stale-critical threshold override (seconds)                                                                                                                      |
-| `MINT_BURN_ALERT_COOLDOWN_SEC`   | string     | No                                                 | Mint/burn stale alert dedupe cooldown override (seconds)                                                                                                                   |
+<!-- ENV-CONTRACT:WORKER-INFRASTRUCTURE:BEGIN -->
+Canonical binding ownership now lives in `shared/lib/env-contract.ts`; the worker and Pages env modules derive their `required` / `optional` / `reserved` views from that manifest.
+
+| Binding | Type | Worker | Pages ops | Pages site-data | Description |
+| --- | --- | --- | --- | --- | --- |
+| `DB` | `D1Database` | required | - | optional | Primary D1 binding for worker reads/writes; the Pages site-data lane also uses it for attribution telemetry. |
+| `CORS_ORIGIN` | `string` | required | - | - | Comma-separated CORS allowlist; repo default is `https://pharos.watch,https://ops.pharos.watch`. |
+| `SELF_URL` | `string` | optional | - | - | Status self-check external probe base URL. |
+| `SITE_API_SHARED_SECRET` | `string` | optional | - | required | Shared secret for Pages `/_site-data/*` -> Worker `site-api` authentication via `X-Pharos-Site-Proxy-Secret`. |
+| `SITE_API_SHARED_SECRET_PREVIOUS` | `string` | optional | - | - | Optional overlap secret accepted alongside `SITE_API_SHARED_SECRET` during the site-data rotation window. |
+| `API_KEY_HASH_PEPPER` | `string` | optional | - | - | HMAC pepper used to hash the secret portion of public API keys. |
+| `API_KEY_HASH_PEPPER_PREVIOUS` | `string` | optional | - | - | Optional overlap pepper accepted alongside `API_KEY_HASH_PEPPER` during public API key rotation. |
+| `PUBLIC_API_AUTH_MODE` | `string` | optional | - | - | Public API auth mode: `off`, `report-only`, or `enforce`. |
+| `CF_ACCESS_TEAM_DOMAIN` | `string` | optional | required | - | Cloudflare Access team domain used to verify Access JWTs on worker admin requests and the Pages ops proxy. |
+| `CF_ACCESS_OPS_API_AUD` | `string` | optional | - | - | Cloudflare Access audience for worker-side `ops-api.pharos.watch` JWT verification. |
+| `ETHERSCAN_API_KEY` | `string` | optional | - | - | Etherscan API credential used by blacklist sync and USDS status reads. |
+| `TRONGRID_API_KEY` | `string` | optional | - | - | TronGrid API credential used by the Tron blacklist-sync lane. |
+| `DRPC_API_KEY` | `string` | optional | - | - | dRPC credential used for L2 archive-node balance lookups. |
+| `ALCHEMY_API_KEY` | `string` | optional | - | - | Alchemy credential used for primary chain RPC endpoints. |
+| `GRAPH_API_KEY` | `string` | optional | - | - | The Graph credential used by DEX liquidity subgraph reads. |
+| `ALERT_WEBHOOK_URL` | `string` | optional | - | - | Webhook URL used for Discord/Slack-style error alerts. |
+| `ANTHROPIC_API_KEY` | `string` | optional | - | - | Anthropic credential used for daily digest generation. |
+| `CMC_API_KEY` | `string` | optional | - | - | CoinMarketCap credential used by the price-fallback pass. |
+| `COINGECKO_API_KEY` | `string` | optional | - | - | CoinGecko credential used for price enrichment and depeg confirmation. |
+| `GITHUB_PAT` | `string` | optional | - | - | GitHub personal access token used by the feedback -> issue bridge. |
+| `FEEDBACK_IP_SALT` | `string` | optional | - | - | Dedicated salt for hashed-IP feedback submission throttling. |
+| `PUBLIC_API_RATE_LIMIT_SALT` | `string` | optional | - | - | Dedicated salt for hashed public API rate limiting; deployed public API traffic returns `503` until configured. |
+| `TWITTER_API_KEY` | `string` | optional | - | - | Twitter/X digest delivery credential. |
+| `TWITTER_API_SECRET` | `string` | optional | - | - | Twitter/X digest delivery credential. |
+| `TWITTER_ACCESS_TOKEN` | `string` | optional | - | - | Twitter/X digest delivery credential. |
+| `TWITTER_ACCESS_TOKEN_SECRET` | `string` | optional | - | - | Twitter/X digest delivery credential. |
+| `TELEGRAM_BOT_TOKEN` | `string` | optional | - | - | Telegram bot credential used for digest delivery and alert dispatch. |
+| `TELEGRAM_CHAT_ID` | `string` | optional | - | - | Telegram target chat/channel for digest posts and announcements. |
+| `TELEGRAM_WEBHOOK_SECRET` | `string` | optional | - | - | Telegram webhook secret used to authenticate the webhook lane. |
+| `TELEGRAM_WEBHOOK_SECRET_PREVIOUS` | `string` | optional | - | - | Optional overlap Telegram webhook secret accepted during secret rotation. |
+| `MINT_BURN_DISABLED_IDS` | `string` | optional | - | - | Mint/burn runtime disable list by stablecoin ID (CSV). |
+| `MINT_BURN_DISABLED_SYMBOLS` | `string` | optional | - | - | Mint/burn runtime disable list by symbol (CSV). |
+| `MINT_BURN_MAJOR_SYMBOLS` | `string` | optional | - | - | Mint/burn health-check major-symbols override (CSV). |
+| `MINT_BURN_STALE_WARN_SEC` | `string` | optional | - | - | Mint/burn stale-warning threshold override (seconds). |
+| `MINT_BURN_STALE_CRIT_SEC` | `string` | optional | - | - | Mint/burn stale-critical threshold override (seconds). |
+| `MINT_BURN_ALERT_COOLDOWN_SEC` | `string` | optional | - | - | Mint/burn stale-alert dedupe cooldown override (seconds). |
+| `OPENEXCHANGERATES_API_KEY` | `string` | optional | - | - | Open Exchange Rates credential used for FX cross-validation. |
+| `CLOUDFLARE_ACCOUNT_ID` | `string` | optional | - | - | Cloudflare account scope used by admin D1 status metrics. |
+| `CLOUDFLARE_D1_STATUS_API_TOKEN` | `string` | optional | - | - | Cloudflare API token with D1 status/analytics read access for admin metrics. |
+| `CLOUDFLARE_D1_DATABASE_ID` | `string` | optional | - | - | Target D1 database ID used by admin D1 status metrics. |
+| `MAINTENANCE_MODE` | `string` | optional | - | - | Global worker kill switch; when `true`, non-`OPTIONS` traffic returns `503` maintenance responses. |
+| `OPS_UI_ORIGIN` | `string` | reserved | optional | optional | Ops UI origin override; reserved on the worker and active on Pages host-gating / same-origin checks. |
+| `OPS_API_ORIGIN` | `string` | reserved | optional | - | Ops API origin override; reserved on the worker and active on the Pages admin proxy upstream hop. |
+| `CF_ACCESS_OPS_UI_AUD` | `string` | reserved | required | - | Cloudflare Access audience used by the Pages ops proxy to verify the inbound UI JWT. |
+| `OPS_API_SERVICE_TOKEN_ID` | `string` | - | required | - | Pages-managed Access service-token client ID used on the server-to-server hop to `ops-api.pharos.watch`. |
+| `OPS_API_SERVICE_TOKEN_SECRET` | `string` | - | required | - | Pages-managed Access service-token client secret used on the server-to-server hop to `ops-api.pharos.watch`. |
+| `SITE_ORIGIN` | `string` | - | - | optional | Site origin override used by the Pages `/_site-data/*` proxy when classifying production hosts. |
+| `SITE_API_ORIGIN` | `string` | - | - | optional | Site-data upstream origin; production Pages hosts require `https://site-api.pharos.watch`. |
+<!-- ENV-CONTRACT:WORKER-INFRASTRUCTURE:END -->
 
 ---
 

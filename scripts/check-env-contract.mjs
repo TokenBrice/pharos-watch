@@ -2,18 +2,34 @@
 
 import { readFileSync, readdirSync } from "node:fs";
 import { extname, join, relative, resolve } from "node:path";
+const {
+  getAllEnvBindingKeys,
+  renderEnvExample,
+  renderOperatorOriginAccessEnvBlock,
+  renderWorkerInfrastructureEnvBlock,
+} = await import("../shared/lib/env-contract.ts");
 
 const repoRoot = process.cwd();
 const envExamplePath = resolve(repoRoot, ".env.example");
-const workerEnvPath = resolve(repoRoot, "worker/src/lib/env.ts");
-const pagesOpsEnvPath = resolve(repoRoot, "functions/lib/ops-env.ts");
-const pagesSiteDataEnvPath = resolve(repoRoot, "functions/lib/site-api-env.ts");
 
 const DOC_SCAN_FILES = [
   resolve(repoRoot, "README.md"),
   resolve(repoRoot, "docs/deployment-process.md"),
   resolve(repoRoot, "docs/operator-origin-access.md"),
   resolve(repoRoot, "docs/scripts.md"),
+];
+
+const GENERATED_DOC_BLOCKS = [
+  {
+    filePath: resolve(repoRoot, "docs/operator-origin-access.md"),
+    marker: "ENV-CONTRACT:OPERATOR-ORIGIN-ACCESS",
+    render: renderOperatorOriginAccessEnvBlock,
+  },
+  {
+    filePath: resolve(repoRoot, "docs/worker-infrastructure.md"),
+    marker: "ENV-CONTRACT:WORKER-INFRASTRUCTURE",
+    render: renderWorkerInfrastructureEnvBlock,
+  },
 ];
 
 const SOURCE_SCAN_ROOTS = [
@@ -35,7 +51,6 @@ const SOURCE_SCAN_EXTENSIONS = new Set([
   ".sh",
 ]);
 
-const EXTERNALLY_DECLARED_ENV_KEYS = new Set(["DB"]);
 const DOC_NON_ENV_TOKENS = new Set([
   "WORKER_REQUIRED_ENV_KEYS",
   "WORKER_OPTIONAL_ENV_KEYS",
@@ -48,10 +63,15 @@ const DOC_NON_ENV_TOKENS = new Set([
   "SITE_DATA_FUNCTIONS_REQUIRED_ENV_KEYS",
   "SITE_DATA_FUNCTIONS_OPTIONAL_ENV_KEYS",
   "SITE_DATA_FUNCTIONS_ACTIVE_ENV_KEYS",
+  "ENV_BINDINGS",
 ]);
 
+function normalizeText(text) {
+  return text.replace(/\r\n/g, "\n");
+}
+
 function splitLines(text) {
-  return text.split("\n").map((line) => (line.endsWith("\r") ? line.slice(0, -1) : line));
+  return normalizeText(text).split("\n");
 }
 
 function collectFiles(rootDir) {
@@ -87,64 +107,7 @@ function parseEnvExampleKeys(filePath) {
     keys.add(key);
   }
 
-  return { keys, duplicates };
-}
-
-function parseTsStringArray(filePath, constName) {
-  const source = readFileSync(filePath, "utf8");
-  const marker = `export const ${constName} = [`;
-  const start = source.indexOf(marker);
-  if (start < 0) {
-    throw new Error(`Could not locate ${constName} in ${filePath}`);
-  }
-
-  const arrayStart = start + marker.length;
-  const arrayEnd = source.indexOf("] as const;", arrayStart);
-  if (arrayEnd < 0) {
-    throw new Error(`Could not find array terminator for ${constName} in ${filePath}`);
-  }
-
-  return extractDoubleQuotedStrings(source.slice(arrayStart, arrayEnd));
-}
-
-function extractDoubleQuotedStrings(source) {
-  const values = [];
-  let index = 0;
-
-  while (index < source.length) {
-    if (source[index] !== "\"") {
-      index += 1;
-      continue;
-    }
-
-    let value = "";
-    let cursor = index + 1;
-    while (cursor < source.length) {
-      const char = source[cursor];
-      if (char === "\\") {
-        if (cursor + 1 < source.length) {
-          value += source[cursor + 1];
-          cursor += 2;
-          continue;
-        }
-        break;
-      }
-      if (char === "\"") {
-        values.push(value);
-        index = cursor + 1;
-        value = "";
-        break;
-      }
-      value += char;
-      cursor += 1;
-    }
-
-    if (cursor >= source.length) {
-      break;
-    }
-  }
-
-  return values;
+  return { duplicates, keys };
 }
 
 function addRegexMatches(set, source, pattern, captureIndex = 1) {
@@ -154,26 +117,6 @@ function addRegexMatches(set, source, pattern, captureIndex = 1) {
       set.add(key);
     }
   }
-}
-
-function collectSourceEnvKeys(filePaths) {
-  const keys = new Set();
-
-  for (const filePath of filePaths) {
-    const source = readFileSync(filePath, "utf8");
-    addRegexMatches(keys, source, /process\.env\.([A-Z][A-Z0-9_]+)/g);
-    addRegexMatches(keys, source, /(?:^|[^A-Za-z0-9_])env\.([A-Z][A-Z0-9_]+)/g);
-    addRegexMatches(keys, source, /\b(?:secrets|vars)\.([A-Z][A-Z0-9_]+)/g);
-    addRegexMatches(keys, source, /\bread[A-Za-z0-9]*Env\(\s*"([A-Z][A-Z0-9_]+)"/g);
-
-    if (extname(filePath) === ".sh") {
-      for (const key of collectShellEnvKeys(source)) {
-        keys.add(key);
-      }
-    }
-  }
-
-  return keys;
 }
 
 function collectShellEnvKeys(source) {
@@ -201,6 +144,26 @@ function collectShellEnvKeys(source) {
 
     if (isEnvKeyCandidate(key)) {
       keys.add(key);
+    }
+  }
+
+  return keys;
+}
+
+function collectSourceEnvKeys(filePaths) {
+  const keys = new Set();
+
+  for (const filePath of filePaths) {
+    const source = readFileSync(filePath, "utf8");
+    addRegexMatches(keys, source, /process\.env\.([A-Z][A-Z0-9_]+)/g);
+    addRegexMatches(keys, source, /(?:^|[^A-Za-z0-9_])env\.([A-Z][A-Z0-9_]+)/g);
+    addRegexMatches(keys, source, /\b(?:secrets|vars)\.([A-Z][A-Z0-9_]+)/g);
+    addRegexMatches(keys, source, /\bread[A-Za-z0-9]*Env\(\s*"([A-Z][A-Z0-9_]+)"/g);
+
+    if (extname(filePath) === ".sh") {
+      for (const key of collectShellEnvKeys(source)) {
+        keys.add(key);
+      }
     }
   }
 
@@ -274,22 +237,80 @@ function formatFileList(filePaths) {
   return [...filePaths].map((filePath) => relative(repoRoot, filePath)).sort().join(", ");
 }
 
+function findFirstDifferenceLine(expected, actual) {
+  const expectedLines = splitLines(expected);
+  const actualLines = splitLines(actual);
+  const maxLines = Math.max(expectedLines.length, actualLines.length);
+
+  for (let index = 0; index < maxLines; index += 1) {
+    if (expectedLines[index] !== actualLines[index]) {
+      return {
+        actual: actualLines[index] ?? "<missing>",
+        expected: expectedLines[index] ?? "<missing>",
+        line: index + 1,
+      };
+    }
+  }
+
+  return null;
+}
+
+function buildGeneratedBlock(marker, content) {
+  return `<!-- ${marker}:BEGIN -->\n${content}\n<!-- ${marker}:END -->`;
+}
+
+function assertFileMatchesExpected(filePath, expected, errors) {
+  const actual = normalizeText(readFileSync(filePath, "utf8"));
+  if (actual === expected) {
+    return;
+  }
+
+  const diff = findFirstDifferenceLine(expected, actual);
+  if (!diff) {
+    errors.push(`${relative(repoRoot, filePath)} does not match the manifest-derived output.`);
+    return;
+  }
+
+  errors.push(
+    `${relative(repoRoot, filePath)} drifts from the manifest-derived output at line ${diff.line}: expected ${JSON.stringify(diff.expected)} but found ${JSON.stringify(diff.actual)}`,
+  );
+}
+
+function assertGeneratedBlockMatches(filePath, marker, expectedContent, errors) {
+  const source = normalizeText(readFileSync(filePath, "utf8"));
+  const startMarker = `<!-- ${marker}:BEGIN -->`;
+  const endMarker = `<!-- ${marker}:END -->`;
+  const startIndex = source.indexOf(startMarker);
+  const endIndex = source.indexOf(endMarker);
+
+  if (startIndex < 0 || endIndex < 0 || endIndex < startIndex) {
+    errors.push(`${relative(repoRoot, filePath)} is missing the generated block markers for ${marker}.`);
+    return;
+  }
+
+  const actualBlock = source.slice(startIndex, endIndex + endMarker.length);
+  const expectedBlock = buildGeneratedBlock(marker, expectedContent);
+  if (actualBlock === expectedBlock) {
+    return;
+  }
+
+  const diff = findFirstDifferenceLine(expectedBlock, actualBlock);
+  if (!diff) {
+    errors.push(`${relative(repoRoot, filePath)} has a stale generated block for ${marker}.`);
+    return;
+  }
+
+  errors.push(
+    `${relative(repoRoot, filePath)} has a stale generated block for ${marker} at line ${diff.line}: expected ${JSON.stringify(diff.expected)} but found ${JSON.stringify(diff.actual)}`,
+  );
+}
+
 const envExample = parseEnvExampleKeys(envExamplePath);
-const runtimeContractKeys = new Set([
-  ...parseTsStringArray(workerEnvPath, "WORKER_REQUIRED_ENV_KEYS"),
-  ...parseTsStringArray(workerEnvPath, "WORKER_OPTIONAL_ENV_KEYS"),
-  ...parseTsStringArray(workerEnvPath, "WORKER_RESERVED_ENV_KEYS"),
-  ...parseTsStringArray(pagesOpsEnvPath, "PAGES_FUNCTIONS_REQUIRED_ENV_KEYS"),
-  ...parseTsStringArray(pagesOpsEnvPath, "PAGES_FUNCTIONS_OPTIONAL_ENV_KEYS"),
-  ...parseTsStringArray(pagesOpsEnvPath, "PAGES_FUNCTIONS_RESERVED_ENV_KEYS"),
-  ...parseTsStringArray(pagesSiteDataEnvPath, "SITE_DATA_FUNCTIONS_REQUIRED_ENV_KEYS"),
-  ...parseTsStringArray(pagesSiteDataEnvPath, "SITE_DATA_FUNCTIONS_OPTIONAL_ENV_KEYS"),
-]);
+const manifestEnvKeys = new Set(getAllEnvBindingKeys());
 const sourceEnvKeys = collectSourceEnvKeys(SOURCE_SCAN_ROOTS.flatMap(collectFiles));
 const documentedEnvKeys = collectDocumentedEnvKeys(DOC_SCAN_FILES);
 const knownEnvKeys = new Set([
-  ...envExample.keys,
-  ...runtimeContractKeys,
+  ...manifestEnvKeys,
   ...sourceEnvKeys,
 ]);
 
@@ -299,13 +320,14 @@ if (envExample.duplicates.size > 0) {
   errors.push(`.env.example defines duplicate keys: ${[...envExample.duplicates].sort().join(", ")}`);
 }
 
-for (const key of [...runtimeContractKeys].sort()) {
-  if (EXTERNALLY_DECLARED_ENV_KEYS.has(key) || envExample.keys.has(key)) continue;
-  errors.push(`.env.example is missing runtime contract key ${key}`);
+assertFileMatchesExpected(envExamplePath, renderEnvExample(), errors);
+
+for (const block of GENERATED_DOC_BLOCKS) {
+  assertGeneratedBlockMatches(block.filePath, block.marker, block.render(), errors);
 }
 
 for (const [key, filePaths] of documentedEnvKeys) {
-  if (EXTERNALLY_DECLARED_ENV_KEYS.has(key) || knownEnvKeys.has(key)) continue;
+  if (knownEnvKeys.has(key)) continue;
   errors.push(`Verified env docs reference unknown env key ${key} in ${formatFileList(filePaths)}`);
 }
 
@@ -318,5 +340,5 @@ if (errors.length > 0) {
 }
 
 console.log(
-  `Environment contract passed (${envExample.keys.size} .env.example keys, ${runtimeContractKeys.size} runtime contract keys, ${sourceEnvKeys.size} source-tracked keys).`,
+  "Environment contract is in sync with the shared manifest, generated docs blocks, and referenced env names.",
 );

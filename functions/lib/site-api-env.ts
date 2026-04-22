@@ -1,4 +1,5 @@
 import type { D1Database } from "@cloudflare/workers-types";
+import { getRuntimeActiveEnvKeys, getRuntimeEnvKeys } from "@shared/lib/env-contract";
 import { getConfiguredValue } from "@shared/lib/env-utils";
 import {
   API_ORIGIN,
@@ -30,21 +31,11 @@ export interface SiteDataProxyRuntimePolicy {
   hostKind: "production" | "preview-or-local";
 }
 
-export const SITE_DATA_FUNCTIONS_REQUIRED_ENV_KEYS = [
-  "SITE_API_SHARED_SECRET",
-] as const;
+export const SITE_DATA_FUNCTIONS_REQUIRED_ENV_KEYS = getRuntimeEnvKeys("pagesSiteData", "required");
 
-export const SITE_DATA_FUNCTIONS_OPTIONAL_ENV_KEYS = [
-  "DB",
-  "SITE_ORIGIN",
-  "OPS_UI_ORIGIN",
-  "SITE_API_ORIGIN",
-] as const;
+export const SITE_DATA_FUNCTIONS_OPTIONAL_ENV_KEYS = getRuntimeEnvKeys("pagesSiteData", "optional");
 
-export const SITE_DATA_FUNCTIONS_ACTIVE_ENV_KEYS = [
-  ...SITE_DATA_FUNCTIONS_REQUIRED_ENV_KEYS,
-  ...SITE_DATA_FUNCTIONS_OPTIONAL_ENV_KEYS,
-] as const;
+export const SITE_DATA_FUNCTIONS_ACTIVE_ENV_KEYS = getRuntimeActiveEnvKeys("pagesSiteData");
 
 export function isProductionSiteDataHostname(hostname: string): boolean {
   return hostname === SITE_HOSTNAME || hostname === OPS_UI_HOSTNAME;
@@ -111,7 +102,7 @@ export function validatePagesSiteDataProxyEnv(
   if (!env.DB) {
     issues.push({
       code: "site-data-db-missing",
-      message: "DB must be bound on the Pages project for durable site-data attribution telemetry.",
+      message: "DB is optional for the Pages site-data proxy, but attribution telemetry is disabled when it is not bound.",
     });
   }
 

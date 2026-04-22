@@ -42,9 +42,9 @@ runs:
           .cache/eslint
           *.tsbuildinfo
           worker/*.tsbuildinfo
-        key: tooling-cache-${{ runner.os }}-${{ hashFiles('package-lock.json', 'next.config.ts', 'tsconfig.json', 'tsconfig.typecheck.json', 'worker/tsconfig.json') }}
+        key: tooling-cache-${{ runner.os }}-${{ inputs.node-version }}-${{ hashFiles('package-lock.json', 'next.config.ts', 'tsconfig.json', 'tsconfig.typecheck.json', 'worker/tsconfig.json') }}
         restore-keys: |
-          tooling-cache-${{ runner.os }}-
+          tooling-cache-${{ runner.os }}-${{ inputs.node-version }}-
 
     - if: ${{ inputs.install-deps == 'true' }}
       shell: bash

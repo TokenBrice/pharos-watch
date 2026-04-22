@@ -74,12 +74,22 @@ describe("validate-ci parity", () => {
       resolve(process.cwd(), ".github/actions/setup-workspace/action.yml"),
       "utf8",
     );
-    const validateJob = extractJobBlock(workflow, "validate");
+    const validateJob = extractJobBlock(workflow, "validate", "validate-lts");
     const setupWorkspaceRunSteps = extractRunSteps(setupWorkspaceAction);
 
     expect([...setupWorkspaceRunSteps, ...extractRunSteps(validateJob)]).toEqual([
       { cmd: "npm ci", condition: null },
       ...buildCiValidateStepPlan(),
     ]);
+  });
+
+  it("threads the coverage compare ref through the LTS validate lane", () => {
+    const workflow = readFileSync(resolve(process.cwd(), ".github/workflows/validate-ci.yml"), "utf8");
+    const validateLtsJob = extractJobBlock(workflow, "validate-lts");
+
+    expect(extractRunSteps(validateLtsJob)).toContainEqual({
+      cmd: "npm run validate:lts -- --pages-changed=${{ inputs.pages_changed }} --worker-changed=${{ inputs.worker_changed }} --coverage-compare-ref=${{ inputs.coverage-compare-ref }}",
+      condition: null,
+    });
   });
 });
