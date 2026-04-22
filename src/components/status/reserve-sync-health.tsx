@@ -60,6 +60,10 @@ export function ReserveSyncHealthCard({ health, nowSeconds }: ReserveSyncHealthC
             <div className="text-muted-foreground">Missing</div>
             <div className="font-mono text-lg text-red-600 dark:text-red-400">{health.missingCoins}</div>
           </div>
+          <div>
+            <div className="text-muted-foreground">Deferred</div>
+            <div className="font-mono text-lg text-amber-600 dark:text-amber-400">{health.deferredCoins}</div>
+          </div>
         </div>
 
         <div className="space-y-1 text-xs text-muted-foreground">
@@ -70,6 +74,11 @@ export function ReserveSyncHealthCard({ health, nowSeconds }: ReserveSyncHealthC
           <div>
             Coverage: {(health.freshCoverageRatio * 100).toFixed(0)}% fresh, {(health.authoritativeFreshCoverageRatio * 100).toFixed(0)}% authoritative
           </div>
+          {health.nextCursorStablecoinId && (
+            <div>
+              Next deferred cursor: {health.nextCursorStablecoinId}
+            </div>
+          )}
         </div>
 
         <div className="space-y-2 rounded-lg border border-border/60 bg-muted/20 p-3">

@@ -34,6 +34,17 @@ export interface DashboardQuerySync {
   stale: boolean;
 }
 
+export interface BrowserProbeSummary {
+  sampleCount: number;
+  passCount: number;
+  failCount: number;
+  degradedCount: number;
+  staleCount: number;
+  p95LatencyMs: number | null;
+  status: StatusResponse["overallStatus"];
+  updatedAt: number | null;
+}
+
 const STATUS_TONE = {
   healthy: {
     label: "Healthy",
@@ -118,7 +129,7 @@ function buildQuerySync(
 export function buildBrowserProbeSummary(
   probes: EndpointProbeResult[] | undefined,
   updatedAtMs: number,
-) {
+): BrowserProbeSummary | null {
   if (!probes || probes.length === 0) return null;
   let passCount = 0;
   let degradedCount = 0;

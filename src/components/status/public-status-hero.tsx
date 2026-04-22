@@ -3,6 +3,7 @@
 import type { HealthResponse } from "@shared/types";
 import { RefreshCountdown } from "@/components/status/refresh-countdown";
 import { FreshnessIndicator } from "@/components/status/freshness-indicator";
+import type { BrowserProbeSummary } from "@/lib/status-dashboard-model";
 import { formatTimestampMs, formatTimestampSeconds, getStatusTone } from "@/lib/status-dashboard-model";
 import { getPublicMintBurnStatus } from "@/lib/status/public-status";
 import { cn } from "@/lib/utils";
@@ -10,23 +11,12 @@ import { cn } from "@/lib/utils";
 /** Mark data stale when older than 3 min (>3x our 60s refresh cadence). */
 const PUBLIC_HERO_STALE_AFTER_MS = 180_000;
 
-interface PublicProbeSummary {
-  sampleCount: number;
-  passCount: number;
-  failCount: number;
-  degradedCount: number;
-  staleCount: number;
-  p95LatencyMs: number | null;
-  status: "healthy" | "degraded" | "stale";
-  updatedAt: number | null;
-}
-
 interface PublicStatusHeroProps {
   healthData: HealthResponse;
   lastUpdated: number;
-  probeSummary: PublicProbeSummary | null;
+  probeSummary: BrowserProbeSummary | null;
   worstCacheRatio: number | null;
-  worstCacheStatus: "healthy" | "degraded" | "stale";
+  worstCacheStatus: HealthResponse["status"];
   impactedCacheLanes: number;
   openCircuits: number;
   halfOpenCircuits: number;

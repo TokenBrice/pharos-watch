@@ -1,5 +1,6 @@
 import { getLiveReserveAdapterDefinition } from "@shared/lib/live-reserve-adapters";
 import type { ReserveCompositionOverview, ReserveCompositionRecord, ReserveSnapshotMetadataRecord } from "./live-reserves-store-shared";
+import { getCache } from "./db-cache";
 import {
   getConfiguredLiveReserveCoins,
   LIVE_RESERVE_FRESHNESS_SEC,
@@ -30,11 +31,13 @@ export async function computeReserveCompositionOverview(
       independentFreshEligible: 0,
       independentFreshUnverified: 0,
       staticValidatedFresh: 0,
-      weakProbeFresh: 0,
-      writeTimeoutUncertain: 0,
-      persistentlyStaleIndependentCoins: [],
-      lastSuccessAt: null,
-      oldestFreshAgeSec: null,
+    weakProbeFresh: 0,
+    writeTimeoutUncertain: 0,
+    deferredCoins: 0,
+    nextCursorStablecoinId: null,
+    persistentlyStaleIndependentCoins: [],
+    lastSuccessAt: null,
+    oldestFreshAgeSec: null,
     };
   }
 
@@ -55,9 +58,23 @@ export async function computeReserveCompositionOverview(
   let staticValidatedFresh = 0;
   let weakProbeFresh = 0;
   let writeTimeoutUncertain = 0;
+  let deferredCoins = 0;
   const persistentlyStaleIndependentCoins: Array<{ stablecoinId: string; ageSec: number }> = [];
   let lastSuccessAt: number | null = null;
   let oldestFreshAgeSec: number | null = null;
+  let nextCursorStablecoinId: string | null = null;
+
+  const cursorCache = await getCache(db, "live-reserves:run-cursor");
+  if (cursorCache) {
+    try {
+      const parsed = JSON.parse(cursorCache.value) as { nextStablecoinId?: unknown };
+      if (typeof parsed.nextStablecoinId === "string") {
+        nextCursorStablecoinId = parsed.nextStablecoinId;
+      }
+    } catch {
+      nextCursorStablecoinId = null;
+    }
+  }
 
   for (const coin of configuredCoins) {
     const syncState = syncById.get(coin.id) ?? null;
@@ -81,6 +98,13 @@ export async function computeReserveCompositionOverview(
           ageSec: now - syncState.lastSuccessAt,
         });
       }
+    }
+
+    if (
+      syncState?.lastStatus === "skipped" &&
+      syncState.metadata.failureCategory === "run-budget-exhausted"
+    ) {
+      deferredCoins++;
     }
 
     const uncertainWrite = hasUncertainWriteState(syncState);
@@ -156,6 +180,8 @@ export async function computeReserveCompositionOverview(
     staticValidatedFresh,
     weakProbeFresh,
     writeTimeoutUncertain,
+    deferredCoins,
+    nextCursorStablecoinId,
     persistentlyStaleIndependentCoins: persistentlyStaleIndependentCoins.sort(
       (a, b) => b.ageSec - a.ageSec,
     ),

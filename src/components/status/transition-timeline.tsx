@@ -4,6 +4,7 @@ import { Fragment, useState } from "react";
 import type { StatusCause, StatusTransition } from "@shared/types";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import type { StatusHistoryWindow } from "@/hooks/use-status-history";
+import { SeverityPill } from "./severity-pill";
 
 const HISTORY_WINDOWS: readonly StatusHistoryWindow[] = ["6h", "24h", "7d", "30d"];
 
@@ -108,17 +109,7 @@ export function TransitionTimeline({
                                 transition.causes.map((cause) => (
                                   <div key={`${transition.id}-${cause.code}`} className="rounded-md border border-border/60 px-3 py-2">
                                     <div className="flex flex-wrap items-center gap-2">
-                                      <span
-                                        className={`rounded-full px-2 py-0.5 text-[11px] font-medium ${
-                                          cause.severity === "critical"
-                                            ? "bg-red-500/15 text-red-700 dark:text-red-400"
-                                            : cause.severity === "warning"
-                                              ? "bg-amber-500/15 text-amber-700 dark:text-amber-400"
-                                              : "bg-muted text-muted-foreground"
-                                        }`}
-                                      >
-                                        {cause.severity}
-                                      </span>
+                                      <SeverityPill severity={cause.severity} />
                                       <span className="font-mono text-[11px] text-muted-foreground">{formatCause(cause)}</span>
                                     </div>
                                     <div className="mt-1 text-xs text-muted-foreground">{cause.message}</div>

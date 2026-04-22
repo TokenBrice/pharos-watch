@@ -124,6 +124,8 @@ export interface ReserveCompositionOverview {
   staticValidatedFresh: number;
   weakProbeFresh: number;
   writeTimeoutUncertain: number;
+  deferredCoins: number;
+  nextCursorStablecoinId: string | null;
   /**
    * Coins whose adapter is classified as `independent` but whose latest source
    * has been stuck in `degraded` or `error` with the last successful snapshot

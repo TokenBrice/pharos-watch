@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import {
   getNoticeTone,
+  getStatusTone,
   type DashboardNotice,
   type DashboardSectionId,
 } from "@/lib/status-dashboard-model";
@@ -25,6 +26,28 @@ export function SummaryBadge({
       <span className="text-muted-foreground">{label}</span>
       <span className="ml-1.5 font-mono tabular-nums text-foreground">{value}</span>
     </div>
+  );
+}
+
+export function StatusSummaryBadge({
+  label,
+  status,
+  value,
+  className,
+}: {
+  label: string;
+  status: "healthy" | "degraded" | "stale";
+  value?: string;
+  className?: string;
+}) {
+  const tone = getStatusTone(status);
+
+  return (
+    <SummaryBadge
+      label={label}
+      value={value ?? tone.label}
+      className={cn(tone.badgeClassName, className)}
+    />
   );
 }
 

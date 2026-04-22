@@ -1,6 +1,9 @@
-import { deleteCache, getCache, setCache } from "../lib/db-cache";
-import { recordReserveSyncDeferred } from "../lib/live-reserves-store";
+import { deleteCache, getCache } from "../lib/db-cache";
 import { breakerKeyForConfig, type ConfiguredCoin } from "./sync-live-reserves-shared";
+import {
+  buildReserveSyncAttemptHistoryInsertStatement,
+  buildReserveSyncRecordDeferredStatement,
+} from "../lib/live-reserves-store-statements";
 
 const RESERVE_SYNC_CURSOR_CACHE_KEY = "live-reserves:run-cursor";
 
@@ -57,21 +60,64 @@ export async function recordDeferredTail(
 ): Promise<{ deferredCoins: number; nextCursorStablecoinId: string | null }> {
   const deferredCoins = remainingCoins.length;
   const nextCursorStablecoinId = remainingCoins[0]?.id ?? null;
+  const statements: D1PreparedStatement[] = [];
+  const metadata = {
+    failureCategory: "run-budget-exhausted",
+    deferredTail: true,
+  };
 
   for (const remaining of remainingCoins) {
     const remainingConfig = remaining.liveReservesConfig!;
     const remainingBreakerKey = breakerKeyForConfig(remainingConfig);
     breakerKeys.add(remainingBreakerKey);
-    try {
-      await recordReserveSyncDeferred(db, {
+    statements.push(
+      buildReserveSyncRecordDeferredStatement(db, {
         stablecoinId: remaining.id,
         adapterKey: remainingConfig.adapter,
         breakerKey: remainingBreakerKey,
         attemptedAt,
         reason: "run-budget-exhausted",
-      });
+      }),
+      buildReserveSyncAttemptHistoryInsertStatement(db, {
+        stablecoinId: remaining.id,
+        attemptedAt,
+        adapterKey: remainingConfig.adapter,
+        breakerKey: remainingBreakerKey,
+        status: "skipped",
+        warningCount: 0,
+        warnings: [],
+        lastError: "run-budget-exhausted",
+        metadata,
+        attemptId: null,
+      }),
+    );
+  }
+
+  if (deferredCoins > 0 && nextCursorStablecoinId) {
+    statements.push(
+      db
+        .prepare(
+          "INSERT OR REPLACE INTO cache (key, value, updated_at) VALUES (?, ?, ?)",
+        )
+        .bind(
+          RESERVE_SYNC_CURSOR_CACHE_KEY,
+          JSON.stringify({
+            nextStablecoinId: nextCursorStablecoinId,
+            deferredCount: deferredCoins,
+            deferredAt: attemptedAt,
+            reason: "run-budget-exhausted",
+          } satisfies LiveReserveCursorState),
+          attemptedAt,
+        ),
+    );
+  }
+
+  if (statements.length > 0) {
+    try {
+      await db.batch(statements);
     } catch (error) {
-      console.warn(`[sync-live-reserves] Failed to record deferred sync for ${remaining.id}:`, error);
+      const message = error instanceof Error ? error.message : String(error);
+      throw new Error(`Failed to record deferred reserve tail state: ${message}`);
     }
   }
 
@@ -85,19 +131,8 @@ export async function persistLiveReserveCursorState(
   db: D1Database,
   deferredCoins: number,
   nextCursorStablecoinId: string | null,
-  deferredAt: number,
 ): Promise<void> {
   if (deferredCoins > 0 && nextCursorStablecoinId) {
-    await setCache(
-      db,
-      RESERVE_SYNC_CURSOR_CACHE_KEY,
-      JSON.stringify({
-        nextStablecoinId: nextCursorStablecoinId,
-        deferredCount: deferredCoins,
-        deferredAt,
-        reason: "run-budget-exhausted",
-      } satisfies LiveReserveCursorState),
-    );
     return;
   }
 

@@ -4,37 +4,14 @@ import {
   STATUS_ONCHAIN_THRESHOLDS,
   hasRepresentativeOnchainRatioSample,
 } from "@shared/lib/status-thresholds";
+import type { DataQuality } from "@shared/types";
 import { Card, CardContent } from "@/components/ui/card";
 import { HOUR_SECONDS } from "@/lib/constants";
 
+type TimedDataQuality = DataQuality & { nowSeconds: number };
+
 interface DataQualityCardsProps {
-  dq: {
-    nowSeconds: number;
-    stablecoinsCacheStatus: "ok" | "degraded" | "error";
-    stablecoinsCacheReason: string | null;
-    blacklistGapStatus: "ok" | "failed";
-    activeDepegStatus: "ok" | "failed";
-    onchainSupplyQueryStatus: "ok" | "failed" | "unavailable";
-    sourceFailures: Array<{
-      source: "stablecoins-cache" | "blacklist-gaps" | "active-depegs" | "onchain-supply";
-      message: string;
-    }>;
-    totalStablecoins: number;
-    missingPrices: number;
-    blacklistMissingAmounts: number;
-    blacklistRecentMissingAmounts: number;
-    blacklistRecentWindowSec: number;
-    blacklistMissingRatio: number;
-    blacklistTotal: number;
-    onchainSupplyDivergences: number;
-    onchainDivergenceRatio: number;
-    onchainSupplyMonitoring: "active" | "unavailable";
-    onchainSupplyLatestAt: number | null;
-    onchainSupplyTrackedCoins: number;
-    activeDepegs: number;
-    staleOnchainSupply: number;
-    onchainStaleRatio: number;
-  };
+  dq: TimedDataQuality;
 }
 
 export function DataQualityCards({ dq }: DataQualityCardsProps) {

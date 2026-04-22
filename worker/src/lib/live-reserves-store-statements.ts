@@ -272,6 +272,8 @@ export function buildReserveSyncRecordDeferredStatement(
          breaker_key = excluded.breaker_key,
          last_attempted_at = excluded.last_attempted_at,
          last_status = 'skipped',
+         warning_count = 0,
+         warnings = NULL,
          last_error = excluded.last_error,
          metadata = excluded.metadata,
          pending_attempt_id = NULL`,

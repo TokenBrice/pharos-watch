@@ -1,6 +1,7 @@
 import { Card, CardContent } from "@/components/ui/card";
 import { formatElapsedSeconds } from "@shared/lib/format";
-import type { StatusDiscrepancyReason } from "@shared/types/status";
+import type { StatusDiscrepancyReason, StatusResponse, StatusSectionError } from "@shared/types";
+import type { BrowserProbeSummary } from "@/lib/status-dashboard-model";
 
 function discrepancyReasonLabel(reason: StatusDiscrepancyReason): string {
   switch (reason) {
@@ -16,55 +17,12 @@ function discrepancyReasonLabel(reason: StatusDiscrepancyReason): string {
 }
 
 interface SystemDiagnosticsProps {
-  state: {
-    currentStatus: "healthy" | "degraded" | "stale";
-    rawStatus: "healthy" | "degraded" | "stale";
-    lastEvaluatedAt: number;
-    lastChangedAt: number;
-    consecutiveRaw: {
-      healthy: number;
-      degraded: number;
-      stale: number;
-    };
-    thresholds: {
-      escalateToDegraded: number;
-      escalateToStale: number;
-      recoverToDegraded: number;
-      recoverToHealthy: number;
-    };
-  };
-  staleness: { ageSeconds: number; maxAgeSec: number; isStale: boolean };
-  probe: {
-    timestamp: number | null;
-    status: "healthy" | "degraded" | "stale" | "unknown";
-    sampleCount: number;
-    passCount: number;
-    failCount: number;
-    bootstrapMissCount?: number;
-    p95LatencyMs: number | null;
-  };
-  discrepancy: {
-    hasDivergence: boolean;
-    severityDelta: number;
-    details: string | null;
-    probeAgeSeconds: number | null;
-    consecutiveDivergent: number;
-    discrepancyReason: StatusDiscrepancyReason;
-  };
-  browserProbe?: {
-    sampleCount: number;
-    passCount: number;
-    failCount: number;
-    degradedCount?: number;
-    staleCount?: number;
-    p95LatencyMs: number | null;
-    status?: "healthy" | "degraded" | "stale";
-    updatedAt: number | null;
-  } | null;
-  error?: {
-    code: string;
-    message: string;
-  };
+  state: StatusResponse["state"];
+  staleness: StatusResponse["staleness"];
+  probe: StatusResponse["probe"];
+  discrepancy: StatusResponse["discrepancy"];
+  browserProbe?: BrowserProbeSummary | null;
+  error?: StatusSectionError;
   nowSeconds: number;
 }
 

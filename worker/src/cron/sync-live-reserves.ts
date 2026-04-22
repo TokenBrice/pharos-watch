@@ -6,7 +6,6 @@ import { reportCronProgress } from "../lib/cron-progress";
 import {
   loadReserveSyncStateMap,
   pruneLiveReserveHistory,
-  recordReserveSyncDeferred,
 } from "../lib/live-reserves-store";
 import { syncReserveCoin } from "./sync-live-reserves-core";
 import {
@@ -18,6 +17,12 @@ import {
   type LiveReserveConfig,
 } from "./sync-live-reserves-shared";
 import { createAdapterIoLimiter, RESERVE_ADAPTER_MAX_PARALLEL_IO } from "./reserve-adapters/concurrency";
+import {
+  loadLiveReserveCursorState,
+  persistLiveReserveCursorState,
+  recordDeferredTail,
+  rotateConfiguredCoins,
+} from "./sync-live-reserves-run-state";
 const ADAPTER_TIMEOUT_MS = 20_000;
 const SYNC_RUN_BUDGET_MS = 11 * 60 * 1000;
 
@@ -163,6 +168,8 @@ export async function syncLiveReserves(
   const coinsWithWarnings: string[] = [];
   const breakerKeys = new Set<string>();
   const sharedSourceResults = new Map<string, Promise<AdapterResult>>();
+  const cursorState = await loadLiveReserveCursorState(db);
+  const orderedCoins = rotateConfiguredCoins(CONFIGURED_COINS, cursorState?.nextStablecoinId ?? null);
   const syncStates = await loadReserveSyncStateMap(db, CONFIGURED_COINS.map((coin) => coin.id));
   const breakerOutcomes = new Map<string, boolean>();
   const breakerCanFetch = new Map<string, boolean>();
@@ -171,11 +178,15 @@ export async function syncLiveReserves(
     nowSec: runStartedAt,
     requestCache: adapterCtx?.requestCache ?? new Map<string, Promise<unknown>>(),
   };
-  const total = CONFIGURED_COINS.length;
+  const total = orderedCoins.length;
+  let deferredCoins = 0;
+  let nextCursorStablecoinId: string | null = null;
 
   await reportLiveReserveProgress(reportProgress, {
     stage: "setup",
-    message: "Loaded live reserve sync state",
+    message: cursorState?.nextStablecoinId
+      ? `Loaded live reserve sync state (resuming at ${cursorState.nextStablecoinId})`
+      : "Loaded live reserve sync state",
     itemsDone: 0,
     itemsTotal: total,
     synced,
@@ -247,30 +258,22 @@ export async function syncLiveReserves(
     }
   };
 
-  for (const [index, coin] of CONFIGURED_COINS.entries()) {
+  for (const [index, coin] of orderedCoins.entries()) {
     if (signal?.aborted) throw signal.reason ?? new Error("sync-live-reserves aborted");
     const budgetRemaining = SYNC_RUN_BUDGET_MS - (Date.now() - runStartedMs);
     if (budgetRemaining < ADAPTER_TIMEOUT_MS) {
       console.warn(
         `[sync-live-reserves] Run budget exhausted at coin ${index}/${total}, deferring remaining`,
       );
-      for (const remaining of CONFIGURED_COINS.slice(index)) {
-        const remainingConfig = remaining.liveReservesConfig!;
-        const remainingBreakerKey = breakerKeyForConfig(remainingConfig);
-        breakerKeys.add(remainingBreakerKey);
-        try {
-          await recordReserveSyncDeferred(db, {
-            stablecoinId: remaining.id,
-            adapterKey: remainingConfig.adapter,
-            breakerKey: remainingBreakerKey,
-            attemptedAt: Math.floor(Date.now() / 1000),
-            reason: "run-budget-exhausted",
-          });
-        } catch (e) {
-          console.warn(`[sync-live-reserves] Failed to record deferred sync for ${remaining.id}:`, e);
-        }
-        skipped++;
-      }
+      const deferred = await recordDeferredTail(
+        db,
+        orderedCoins.slice(index),
+        breakerKeys,
+        Math.floor(Date.now() / 1000),
+      );
+      deferredCoins = deferred.deferredCoins;
+      nextCursorStablecoinId = deferred.nextCursorStablecoinId;
+      skipped += deferredCoins;
       break;
     }
     const config = coin.liveReservesConfig!;
@@ -347,6 +350,12 @@ export async function syncLiveReserves(
     console.warn("[sync-live-reserves] Ghost reserve artifact cleanup failed:", e);
   }
 
+  await persistLiveReserveCursorState(
+    db,
+    deferredCoins,
+    nextCursorStablecoinId,
+  );
+
   let historyPrune: Awaited<ReturnType<typeof pruneLiveReserveHistory>> | null = null;
   try {
     historyPrune = await pruneLiveReserveHistory(db, runStartedAt);
@@ -371,6 +380,8 @@ export async function syncLiveReserves(
       skipped,
       total,
       warningCount: warningMessages.length,
+      deferredCoins,
+      nextCursorStablecoinId,
       ...(coinsWithWarnings.length > 0 ? { coinsWithWarnings } : {}),
       ...(coinsWithErrors.length > 0 ? { coinsWithErrors } : {}),
       ...(warningMessages.length > 0 ? { warnings: warningMessages } : {}),

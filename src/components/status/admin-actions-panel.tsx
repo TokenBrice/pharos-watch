@@ -7,6 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { deriveStatusActionRecommendations } from "@/lib/status/action-recommendations";
 import { AdminActionButton, type AdminActionExecution } from "./admin-action-button";
 import { formatElapsedSeconds } from "@shared/lib/format";
+import { SeverityPill } from "./severity-pill";
 
 const ADMIN_ACTIONS = getStatusPageActions();
 type AdminAction = (typeof ADMIN_ACTIONS)[number];
@@ -97,17 +98,7 @@ export function AdminActionsPanel({
                       <div className="text-sm font-medium">{recommendation.action.label}</div>
                       <div className="text-xs text-muted-foreground">{recommendation.reason}</div>
                     </div>
-                    <span
-                      className={`rounded-full px-2 py-0.5 text-[11px] font-medium ${
-                        recommendation.severity === "critical"
-                          ? "bg-red-500/15 text-red-700 dark:text-red-400"
-                          : recommendation.severity === "warning"
-                            ? "bg-amber-500/15 text-amber-700 dark:text-amber-400"
-                            : "bg-muted text-muted-foreground"
-                      }`}
-                    >
-                      {recommendation.severity}
-                    </span>
+                    <SeverityPill severity={recommendation.severity} />
                   </div>
                   <div className="mt-3">
                     <AdminActionButton

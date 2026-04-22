@@ -532,6 +532,8 @@ export interface StatusResponse {
     staticValidatedFresh: number;
     weakProbeFresh: number;
     writeTimeoutUncertain: number;
+    deferredCoins: number;
+    nextCursorStablecoinId: string | null;
     /**
      * Coins whose adapter is classified as independent evidence but whose
      * latest source has been stuck in degraded/error with the last

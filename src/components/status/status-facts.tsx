@@ -6,6 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { getRecommendedActionsForCause } from "@/lib/status/action-recommendations";
 import { getBlockerCauses, getWatchCauses } from "@/lib/status-dashboard-model";
 import { AdminActionButton } from "./admin-action-button";
+import { SeverityPill } from "./severity-pill";
 
 interface StatusFactsProps {
   dbHealthy: boolean;
@@ -66,17 +67,7 @@ function CauseList({
                 <div className="flex flex-wrap items-start justify-between gap-2">
                   <div className="space-y-1">
                     <div className="flex flex-wrap items-center gap-2">
-                      <span
-                        className={`rounded-full px-2 py-0.5 text-[11px] font-medium ${
-                          cause.severity === "critical"
-                            ? "bg-red-500/15 text-red-700 dark:text-red-400"
-                            : cause.severity === "warning"
-                              ? "bg-amber-500/15 text-amber-700 dark:text-amber-400"
-                          : "bg-muted text-muted-foreground"
-                        }`}
-                      >
-                        {cause.severity}
-                      </span>
+                      <SeverityPill severity={cause.severity} />
                       <span className="rounded-full border border-border/60 px-2 py-0.5 text-[11px] text-muted-foreground">
                         {cause.layer}
                       </span>

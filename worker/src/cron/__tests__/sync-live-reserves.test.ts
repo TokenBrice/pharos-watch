@@ -226,6 +226,61 @@ describe("syncLiveReserves", () => {
     ).toBe(false);
   });
 
+  it("persists a deferred cursor on budget exhaustion and resumes from that coin on the next run", async () => {
+    const configuredIds = ACTIVE_STABLECOINS.filter((coin) => coin.liveReservesConfig).map((coin) => coin.id);
+    let nowMs = 0;
+    let activeRun = 1;
+    const visitedByRun = new Map<number, string[]>();
+
+    vi.spyOn(Date, "now").mockImplementation(() => nowMs);
+    mockAdapterRegistry(async (coin) => {
+      const visited = visitedByRun.get(activeRun) ?? [];
+      visited.push(coin?.id ?? "unknown");
+      visitedByRun.set(activeRun, visited);
+      if (activeRun === 1 && visited.length === 1) {
+        nowMs = 11 * 60 * 1000;
+      }
+      return { slices: [{ name: "Mock Farm", pct: 100, risk: "low" as const }] };
+    });
+
+    const { syncLiveReserves } = await import("../sync-live-reserves");
+    const db = mockD1();
+
+    const firstRun = await syncLiveReserves(db, new AbortController().signal, {});
+    const firstRunMetadata = JSON.parse(firstRun?.metadata ?? "{}") as {
+      deferredCoins?: number;
+      nextCursorStablecoinId?: string | null;
+    };
+    const cursorWrite = db.getHistory().find((entry) =>
+      entry.sql.includes("INSERT OR REPLACE INTO cache") && entry.binds[0] === "live-reserves:run-cursor"
+    );
+
+    expect(firstRunMetadata).toMatchObject({
+      deferredCoins: configuredCoinCount - 1,
+      nextCursorStablecoinId: configuredIds[1],
+    });
+    expect(cursorWrite).toBeDefined();
+
+    activeRun = 2;
+    nowMs = 0;
+    const cursorValue = cursorWrite?.binds[1];
+    const resumedDb = mockD1([
+      {
+        match: "SELECT value, updated_at FROM cache WHERE key = ?",
+        matchBinds: ["live-reserves:run-cursor"],
+        rows: [],
+        first: {
+          value: cursorValue,
+          updated_at: 0,
+        },
+      },
+    ]);
+    await syncLiveReserves(resumedDb, new AbortController().signal, {});
+
+    expect(visitedByRun.get(1)?.[0]).toBe(configuredIds[0]);
+    expect(visitedByRun.get(2)?.[0]).toBe(firstRunMetadata.nextCursorStablecoinId);
+  });
+
   it("classifies parser drift in sync attempt metadata", async () => {
     mockAdapterRegistry(async () => {
       throw new Error("circle-transparency: layout-changed: missing reserve attributes");

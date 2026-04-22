@@ -1,6 +1,6 @@
 import type { StatusActionRecommendation } from "@/lib/status/action-recommendations";
 import { AdminActionButton } from "@/components/status/admin-action-button";
-import { cn } from "@/lib/utils";
+import { SeverityPill } from "@/components/status/severity-pill";
 
 export function RecommendedActionStrip({
   recommendations,
@@ -40,18 +40,7 @@ export function RecommendedActionStrip({
             <div className="flex flex-wrap items-start justify-between gap-2">
               <div className="space-y-1">
                 <div className="flex flex-wrap items-center gap-2">
-                  <span
-                    className={cn(
-                      "rounded-full px-2 py-0.5 text-[11px] font-medium",
-                      recommendation.severity === "critical"
-                        ? "bg-red-500/15 text-red-700 dark:text-red-400"
-                        : recommendation.severity === "warning"
-                          ? "bg-amber-500/15 text-amber-700 dark:text-amber-400"
-                          : "bg-muted text-muted-foreground",
-                    )}
-                  >
-                    {recommendation.severity}
-                  </span>
+                  <SeverityPill severity={recommendation.severity} />
                   <span className="text-xs text-muted-foreground">
                     {recommendation.source === "cause" ? "cause" : "cron lane"}
                   </span>
