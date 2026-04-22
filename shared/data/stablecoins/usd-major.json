@@ -3232,36 +3232,35 @@
     "governanceQuality": "dao-governance",
     "reserves": [
       {
-        "name": "wstETH",
-        "pct": 34,
-        "risk": "low"
-      },
-      {
-        "name": "sDAI",
-        "pct": 18,
-        "risk": "low",
-        "coinId": "dai-makerdao"
-      },
-      {
-        "name": "WETH",
-        "pct": 16,
-        "risk": "very-low"
-      },
-      {
-        "name": "WBTC",
-        "pct": 14,
+        "name": "GhoDirectFacilitator GSMs Mainnet",
+        "pct": 38.4,
         "risk": "medium"
       },
       {
-        "name": "Yield-bearing stablecoin GSMs",
-        "pct": 13,
-        "risk": "low",
-        "blacklistable": true
+        "name": "CoreGhoDirectMinter",
+        "pct": 22.7,
+        "risk": "medium"
       },
       {
-        "name": "Other Aave V3 Collateral",
-        "pct": 5,
-        "risk": "high"
+        "name": "stataUSDC GSM",
+        "pct": 19.7,
+        "risk": "low",
+        "coinId": "usdc-circle"
+      },
+      {
+        "name": "LidoGhoDirectMinter",
+        "pct": 7.6,
+        "risk": "medium"
+      },
+      {
+        "name": "GhoDirectFacilitator Plasma",
+        "pct": 6.9,
+        "risk": "medium"
+      },
+      {
+        "name": "HorizonGhoDirectMinter",
+        "pct": 4.7,
+        "risk": "medium"
       }
     ],
     "liveReservesConfig": {

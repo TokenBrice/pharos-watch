@@ -8,6 +8,26 @@ const REVIEWED_WARNING_IDS = new Map<string, string>([
     "usdu-unitas::JLP (Jupiter Perps LP: BTC, ETH, SOL, USDC basket)::USDC",
     "JLP is a mixed basket reserve slice, not a direct USDC holding.",
   ],
+  [
+    "gho-aave::GhoDirectFacilitator GSMs Mainnet::GHO",
+    "GHO facilitator labels describe issuance rails, not upstream GHO reserve assets that should inherit coinId linkage.",
+  ],
+  [
+    "gho-aave::CoreGhoDirectMinter::GHO",
+    "GHO direct-minter labels describe facilitator issuance rails, not upstream GHO reserve assets that should inherit coinId linkage.",
+  ],
+  [
+    "gho-aave::LidoGhoDirectMinter::GHO",
+    "GHO direct-minter labels describe facilitator issuance rails, not upstream GHO reserve assets that should inherit coinId linkage.",
+  ],
+  [
+    "gho-aave::GhoDirectFacilitator Plasma::GHO",
+    "GHO facilitator labels describe issuance rails, not upstream GHO reserve assets that should inherit coinId linkage.",
+  ],
+  [
+    "gho-aave::HorizonGhoDirectMinter::GHO",
+    "GHO direct-minter labels describe facilitator issuance rails, not upstream GHO reserve assets that should inherit coinId linkage.",
+  ],
 ]);
 
 describe("reserve coinId validation", () => {
