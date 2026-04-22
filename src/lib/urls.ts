@@ -9,7 +9,7 @@ export function buildStablecoinUrl(id: string): string {
 }
 
 export function buildHomepageVariantBrowseUrl(kind?: VariantKind | null): string {
-  if (!kind) {
+  if (!kind || kind === "bond-maturity") {
     return "/?variant=variant-tracked";
   }
   return `/?variant=${encodeURIComponent(`variant-${kind}`)}`;

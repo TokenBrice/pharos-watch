@@ -187,4 +187,36 @@ describe("StablecoinDetailClient", () => {
     expect(screen.getAllByText("Sky Dollar").length).toBeGreaterThan(0);
     expect(screen.getByRole("link", { name: "Browse all savings variants" })).toBeTruthy();
   });
+
+  it("falls back to tracked variants browse link for bond variants", () => {
+    const coin = TRACKED_META_BY_ID.get("busd0-usual")!;
+    useStablecoinDetailViewModelMock.mockReturnValue(makeReadyViewModel({
+      id: coin.id,
+      coin,
+      variantParent: TRACKED_META_BY_ID.get("usd0-usual")!,
+      variantSiblings: [],
+      childVariants: [],
+      isVariant: true,
+      hasVariants: false,
+      coinData: {
+        id: coin.id,
+        name: coin.name,
+        symbol: coin.symbol,
+        pegType: "peggedUSD",
+        price: 1,
+        circulating: { peggedUSD: 100 },
+        circulatingPrevDay: { peggedUSD: 99 },
+        circulatingPrevWeek: { peggedUSD: 98 },
+        circulatingPrevMonth: { peggedUSD: 97 },
+        chainCirculating: {},
+        chains: ["ethereum"],
+      },
+      isNavToken: true,
+    }));
+
+    render(<StablecoinDetailClient id={coin.id} summary={null} coin={coin} />);
+
+    const browseLink = screen.getByRole("link", { name: "Browse all tracked variants" });
+    expect(browseLink.getAttribute("href")).toBe("/?variant=variant-tracked");
+  });
 });

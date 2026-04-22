@@ -18,7 +18,11 @@ interface UnderlyingAssetCardProps {
 export function UnderlyingAssetCard({ parent, kind, siblings }: UnderlyingAssetCardProps) {
   const { data: logos } = useLogos();
   const display = getVariantDisplay(kind);
-  const browseLabel = getVariantAccessibleLabel(kind).replace(/\s+variant$/i, "").toLowerCase();
+  const browseHref = buildHomepageVariantBrowseUrl(kind);
+  const browseLinkText =
+    kind === "bond-maturity"
+      ? "Browse all tracked variants"
+      : `Browse all ${getVariantAccessibleLabel(kind).replace(/\s+variant$/i, "").toLowerCase()} variants`;
 
   return (
     <Card className="rounded-xl border-border/60">
@@ -51,10 +55,10 @@ export function UnderlyingAssetCard({ parent, kind, siblings }: UnderlyingAssetC
           </p>
         ) : null}
         <Link
-          href={buildHomepageVariantBrowseUrl(kind)}
+          href={browseHref}
           className="pharos-focus-ring inline-flex w-fit items-center text-xs font-medium text-muted-foreground underline-offset-4 transition-colors hover:text-foreground hover:underline"
         >
-          Browse all {browseLabel} variants
+          {browseLinkText}
         </Link>
       </CardContent>
     </Card>

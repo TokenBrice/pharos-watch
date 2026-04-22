@@ -102,10 +102,10 @@ describe("parseHomepageParams", () => {
     expect(result.groupSelections["Variant"]).toBe("variant-strategy-vault");
   });
 
-  it("parses the bond variant filter", () => {
+  it("maps the retired bond variant filter to all variants", () => {
     const params = new URLSearchParams("variant=variant-bond-maturity");
     const result = parseHomepageParams(params);
-    expect(result.groupSelections["Variant"]).toBe("variant-bond-maturity");
+    expect(result.groupSelections["Variant"]).toBe("variant-tracked");
   });
 
   it("parses the search query q parameter", () => {

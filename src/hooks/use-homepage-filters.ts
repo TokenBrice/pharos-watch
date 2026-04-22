@@ -32,7 +32,7 @@ export const FILTER_GROUPS: FilterGroup[] = [
   },
   {
     label: "Variant",
-    options: ["variant-tracked", "variant-savings-passthrough", "variant-strategy-vault", "variant-risk-absorption", "variant-bond-maturity"],
+    options: ["variant-tracked", "variant-savings-passthrough", "variant-strategy-vault", "variant-risk-absorption"],
   },
 ];
 
@@ -64,6 +64,23 @@ function normalizeHomepageGradeFilter(raw: string): FilterTag | null {
   return null;
 }
 
+function normalizeHomepageVariantFilter(raw: string): FilterTag | null {
+  if (raw === "variant-bond-maturity") {
+    return "variant-tracked";
+  }
+
+  if (
+    raw === "variant-tracked" ||
+    raw === "variant-savings-passthrough" ||
+    raw === "variant-strategy-vault" ||
+    raw === "variant-risk-absorption"
+  ) {
+    return raw;
+  }
+
+  return null;
+}
+
 export function parseHomepageParams(searchParams: URLSearchParams): {
   groupSelections: Record<string, FilterTag | "">;
   searchQuery: string;
@@ -85,6 +102,14 @@ export function parseHomepageParams(searchParams: URLSearchParams): {
 
     if (group.label === "Grade") {
       const normalized = normalizeHomepageGradeFilter(raw);
+      if (normalized) {
+        selections[group.label] = normalized;
+      }
+      continue;
+    }
+
+    if (group.label === "Variant") {
+      const normalized = normalizeHomepageVariantFilter(raw);
       if (normalized) {
         selections[group.label] = normalized;
       }
