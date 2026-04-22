@@ -1,5 +1,43 @@
 import { VersionCard, getScoringEntry } from "./content-shared";
 
+export function ScoringChangelogV711Entry() {
+  return (
+    <VersionCard
+      entry={getScoringEntry("7.11")}
+      accent="border-l-emerald-500"
+    >
+      <p>
+        The tracked parent-linked wrapper framework now covers the four highest-confidence strategy-vault children.
+      </p>
+      <ul className="list-disc list-inside space-y-1">
+        <li>
+          <code className="text-xs bg-muted px-1 py-0.5 rounded">sUSDai</code>,{" "}
+          <code className="text-xs bg-muted px-1 py-0.5 rounded">msY</code>,{" "}
+          <code className="text-xs bg-muted px-1 py-0.5 rounded">sAID</code>, and{" "}
+          <code className="text-xs bg-muted px-1 py-0.5 rounded">stcUSD</code> now declare canonical{" "}
+          <code className="text-xs bg-muted px-1 py-0.5 rounded">variantOf</code> /{" "}
+          <code className="text-xs bg-muted px-1 py-0.5 rounded">variantKind</code> metadata as tracked{" "}
+          <code className="text-xs bg-muted px-1 py-0.5 rounded">strategy-vault</code> children.
+        </li>
+        <li>
+          Dependency Risk now applies a tracked strategy-vault wrapper ceiling of parent minus 5 points, while the
+          existing parent-overall cap still prevents the child from outscoring the parent card.
+        </li>
+        <li>
+          The homepage variant owner on <code className="text-xs bg-muted px-1 py-0.5 rounded">/</code> now includes a
+          <code className="text-xs bg-muted px-1 py-0.5 rounded">Strategy</code> filter state alongside the existing
+          Savings, Risk-Abs, and Bond families.
+        </li>
+        <li>
+          This phase keeps the current parent-linked{" "}
+          <code className="text-xs bg-muted px-1 py-0.5 rounded">pegReferenceId</code> path for these four products,
+          so severe parent depegs still constrain the child until independent NAV/peg handling ships later.
+        </li>
+      </ul>
+    </VersionCard>
+  );
+}
+
 export function ScoringChangelogV710Entry() {
   return (
     <VersionCard

@@ -1,9 +1,25 @@
 import type { MethodologyVersionConfig } from "./methodology-version";
 
 export const SAFETY_SCORE_VERSION_CONFIG: MethodologyVersionConfig = {
-  currentVersion: "7.10",
+  currentVersion: "7.11",
   changelogPath: "/methodology/scoring-changelog/",
   changelog: [
+    {
+      version: "7.11",
+      title: "Strategy-vault children join the tracked variant framework",
+      date: "2026-04-22",
+      effectiveAt: 1776823200,
+      summary:
+        "The tracked parent-variant framework now covers the four highest-confidence strategy-vault children whose user expectation is still direct exposure to a tracked parent stablecoin.",
+      impact: [
+        "`sUSDai`, `msY`, `sAID`, and `stcUSD` now declare canonical `variantOf` / `variantKind` metadata as tracked `strategy-vault` children of their already-tracked parent stablecoins",
+        "Dependency Risk now applies the same parent-minus-5 wrapper ceiling to tracked `strategy-vault` children that already applied to tracked risk-absorption wrappers, while the existing parent-overall cap still prevents the child from outscoring the parent card",
+        "The homepage variant owner on `/` now exposes a `Strategy` filter state alongside the existing tracked, savings, risk-absorption, and bond cohorts",
+        "This rollout keeps the current parent-linked `pegReferenceId` path for these four strategy-vault children, so severe parent depegs still constrain the child until independent NAV/peg handling ships in a later phase",
+      ],
+      commits: [],
+      reconstructed: false,
+    },
     {
       version: "7.10",
       title: "Bond-maturity variants join the parent-linked wrapper framework",

@@ -4,7 +4,7 @@ Multi-dimensional risk grades (A+ through F) for every tracked stablecoin. Compu
 
 The stablecoin registry currently contains 215 tracked metadata entries. Report-card snapshots score the active subset and the cemetery set; pre-launch tracked entries remain outside the scored snapshot until they launch.
 
-## Overall Grade (v7.10)
+## Overall Grade (v7.11)
 
 Four-step computation:
 
@@ -15,7 +15,7 @@ Four-step computation:
 
 Cemetery coins get a permanent F.
 
-Current-version note: v7.10 extends the tracked parent-variant framework to bond-maturity wrappers, starting with `bUSD0` as a `bond-maturity` child of `USD0`. Tracked variants declare canonical `variantOf` / `variantKind` metadata, contribute a synthetic `wrapper` dependency edge from parent to child in both live scoring and the dependency graph, and cannot outscore the parent's overall card. Savings wrappers cap at parent minus 3 in Dependency Risk, risk-absorption wrappers cap at parent minus 5, and bond-maturity wrappers cap at parent minus 8. Live/stressed overall scores expose `overallCapped`, `uncappedOverallScore`, `rawInputs.variantParentId`, and `rawInputs.variantKind` so the UI can distinguish a parent cap from ordinary peg drag. Severe active-depeg caps also follow inherited `pegReferenceId` links for these tracked wrappers, so a parent's open depeg still constrains the child. All v7.08 strategy-reserve-tier behavior carries forward unchanged.
+Current-version note: v7.11 extends the tracked parent-variant framework to the four highest-confidence strategy-vault children: `sUSDai`, `msY`, `sAID`, and `stcUSD`. Tracked variants declare canonical `variantOf` / `variantKind` metadata, contribute a synthetic `wrapper` dependency edge from parent to child in both live scoring and the dependency graph, and cannot outscore the parent's overall card. Savings wrappers cap at parent minus 3 in Dependency Risk, strategy-vault and risk-absorption wrappers cap at parent minus 5, and bond-maturity wrappers cap at parent minus 8. Live/stressed overall scores expose `overallCapped`, `uncappedOverallScore`, `rawInputs.variantParentId`, and `rawInputs.variantKind` so the UI can distinguish a parent cap from ordinary peg drag. In this phase the four tracked strategy-vault children keep the current parent-linked `pegReferenceId` path, so severe parent depegs still constrain the child until independent NAV/peg handling ships later. All v7.08 strategy-reserve-tier behavior carries forward unchanged.
 
 ## Dimensions
 
@@ -296,7 +296,7 @@ Each dependency relationship can be classified as `wrapper`, `mechanism`, or `co
 
 | Type         | Meaning                                              | Ceiling            |
 | ------------ | ---------------------------------------------------- | ------------------ |
-| `wrapper`    | Thin layer around upstream (e.g., syrupUSDC -> USDC) | legacy wrapper: `upstream_score - 3`; tracked savings variant: `-3`; tracked risk-absorption variant: `-5`; tracked bond-maturity variant: `-8` |
+| `wrapper`    | Thin layer around upstream (e.g., syrupUSDC -> USDC) | legacy wrapper: `upstream_score - 3`; tracked savings variant: `-3`; tracked strategy-vault variant: `-5`; tracked risk-absorption variant: `-5`; tracked bond-maturity variant: `-8` |
 | `mechanism`  | Critical to peg mechanism (e.g., DAI -> USDC PSM)    | upstream_score     |
 | `collateral` | Standard collateral (default)                        | no ceiling         |
 
@@ -309,6 +309,7 @@ The ceiling ensures that a coin which fundamentally depends on an upstream stabl
 - **USDC at 95, DAI (mechanism dep):** blended = 82, ceiling = 95, final = **82** (no change -- blended already below ceiling)
 - **USDC at 60, DAI (mechanism dep):** blended = 69.75, ceiling = 60, final = **60** (ceiling kicks in)
 - **syrupUSDC (legacy wrapper dep on USDC at 95):** ceiling = 95 - 3 = **92**
+- **sUSDai (strategy-vault dep on USDai at 80):** ceiling = 80 - 5 = **75**
 - **bUSD0 (bond-maturity dep on USD0 at 95):** ceiling = 95 - 8 = **87**
 
 ## Grade Thresholds

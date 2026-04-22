@@ -1,6 +1,13 @@
 # Report Cards Scoring — Version Timeline
 
-Internal changelog reconstructed from git history plus the live version metadata source. Covers v1.0 through v7.10 (2026-02-25 → 2026-04-22). The newest sections track the machine-readable version source closely; older reconstructed sections below v6.92 preserve the original authoring-era grouping and are not guaranteed to be in strict descending source order. Use `shared/lib/safety-score-version-data.ts` for canonical machine ordering.
+Internal changelog reconstructed from git history plus the live version metadata source. Covers v1.0 through v7.11 (2026-02-25 → 2026-04-22). The newest sections track the machine-readable version source closely; older reconstructed sections below v6.92 preserve the original authoring-era grouping and are not guaranteed to be in strict descending source order. Use `shared/lib/safety-score-version-data.ts` for canonical machine ordering.
+
+## v7.11 — Strategy-vault children join the tracked variant framework (2026-04-22)
+
+- `sUSDai`, `msY`, `sAID`, and `stcUSD` now declare canonical `variantOf` / `variantKind` metadata as tracked `strategy-vault` children of already-tracked parent stablecoins
+- Dependency Risk now supports a tracked `strategy-vault` wrapper ceiling of parent minus 5 points
+- The homepage variant owner on `/` now includes a `Strategy` filter state alongside the existing tracked-variant families
+- This phase keeps parent-linked `pegReferenceId` inheritance for those four products, so parent severe-depeg caps still constrain the child until direct NAV/peg handling ships in a later pass
 
 ## v7.10 — Bond-maturity variants join the parent-linked wrapper framework (2026-04-22)
 

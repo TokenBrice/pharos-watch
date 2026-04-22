@@ -56,7 +56,7 @@ Key fields on `StablecoinMeta` (see `shared/types/index.ts` for the full interfa
 - `canBeBlacklisted?: boolean | "possible"` — blacklist capability (for resilience scoring)
 - `chainTier? / deploymentModel? / collateralQuality? / custodyModel? / governanceQuality?` — report card resilience/decentralization overrides
 - `infrastructures?: Infrastructure[]` — structured infrastructure-lineage list (`"liquity-v1"` / `"liquity-v2"` / `"m0"`) used for UI badges, cohort filters, and discovery hubs. An array so a coin can belong to more than one infrastructure simultaneously, though in practice each coin currently has zero or one entry.
-- `variantOf?: string` / `variantKind?: "savings-passthrough" | "risk-absorption" | "bond-maturity"` — active-only parent-variant metadata for tracked wrapper or bond-leg products whose user expectation is still direct exposure to another tracked stablecoin
+- `variantOf?: string` / `variantKind?: "savings-passthrough" | "strategy-vault" | "risk-absorption" | "bond-maturity"` — active-only parent-variant metadata for tracked wrapper, strategy-vault, or bond-leg products whose user expectation is still direct exposure to another tracked stablecoin
 - `reserves?: ReserveSlice[]` — reserve composition data
 - `yieldConfig?: YieldConfig` — yield intelligence configuration
 - `pythFeedId?: string` — Pyth Network oracle feed ID (used for gold/commodity stablecoins)

@@ -1331,7 +1331,7 @@ Cache freshness in `/api/health` separates producer cadence, endpoint freshness,
     "safetyAlertSourceState": "ok",
     "safetyAlertSourceAgeSeconds": 120,
     "safetyAlertsSuppressed": false,
-    "safetyAlertSourceGeneration": "safety-7.10-alert-source-v1"
+    "safetyAlertSourceGeneration": "safety-7.11-alert-source-v1"
   }
 }
 ```
@@ -1582,7 +1582,7 @@ Stablecoin risk grade cards with dimension-level scores. Output includes 5 dimen
     "edges": [{ "from": "usde-ethena", "to": "usdc-circle", "weight": 0.9, "type": "collateral" }, ...]
   },
   "methodology": {
-    "version": "7.10",
+    "version": "7.11",
     "weights": { "pegStability": 0, "liquidity": 0.30, "resilience": 0.20, "decentralization": 0.15, "dependencyRisk": 0.25 },
     "pegMultiplierExponent": 0.4,
     "activeDepegSeveritySource": "open-event-peak",
@@ -1657,7 +1657,7 @@ For peg handling, `rawInputs.pegScore` is the effective peg input used by report
 | `governanceQuality`                | `GovernanceQuality`                             |
 | `dependencies`                     | `DependencyWeight[]`                            |
 | `variantParentId`                  | `string \| null`                                |
-| `variantKind`                      | `"savings-passthrough" \| "risk-absorption" \| "bond-maturity" \| null` |
+| `variantKind`                      | `"savings-passthrough" \| "strategy-vault" \| "risk-absorption" \| "bond-maturity" \| null` |
 | `navToken`                         | `boolean`                                       |
 | `collateralFromLive`               | `boolean`                                       |
 
