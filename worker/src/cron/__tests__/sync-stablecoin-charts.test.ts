@@ -82,6 +82,53 @@ describe("syncStablecoinCharts", () => {
     expect(cached[0].totalCirculatingUSD.peggedUSD).toBeTypeOf("number");
   });
 
+  it("merges structural supplemental supply-history overlays into the cached chart payload", async () => {
+    const nowSec = Math.floor(Date.now() / 1000);
+    mockFetch([
+      {
+        match: "stablecoincharts/all",
+        body: makeRawChartPoints(120, nowSec),
+      },
+    ]);
+
+    const db = mockD1([
+      {
+        match: "SELECT value, updated_at FROM cache WHERE key = ?",
+        matchBinds: ["fx-rates"],
+        rows: [],
+        first: {
+          value: JSON.stringify({ peggedUSD: 1 }),
+          updated_at: nowSec,
+        },
+      },
+      {
+        match: "FROM supply_history",
+        rows: [
+          {
+            stablecoin_id: "susds-sky",
+            snapshot_date: nowSec - 30 * 86_400,
+            circulating_usd: 25,
+          },
+          {
+            stablecoin_id: "paxg-paxos",
+            snapshot_date: nowSec - 30 * 86_400,
+            circulating_usd: 7,
+          },
+        ],
+      },
+    ]);
+
+    const result = await syncStablecoinCharts(db);
+    expect(result.status).toBeUndefined();
+
+    const insert = getCacheInsert(db as MockD1Database);
+    const cached = JSON.parse(String(insert?.binds[1])) as Array<{ totalCirculatingUSD: Record<string, number> }>;
+    const recentPoint = cached.find((point) => point.totalCirculatingUSD.peggedGOLD === 7);
+
+    expect(recentPoint?.totalCirculatingUSD.peggedUSD).toBeGreaterThan(25);
+    expect(recentPoint?.totalCirculatingUSD.peggedGOLD).toBe(7);
+  });
+
   it("returns degraded status when DefiLlama API fails", async () => {
     mockFetch([
       {

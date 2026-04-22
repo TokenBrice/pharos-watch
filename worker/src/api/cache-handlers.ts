@@ -17,6 +17,23 @@ import {
 import { CACHE_PROFILES, DEFAULT_SAFETY_SCORE } from "../lib/constants";
 import { getCache } from "../lib/db-cache";
 import { buildReportCardsSnapshot } from "../lib/report-cards-snapshot";
+import { loadStablecoinsCache } from "../lib/stablecoins-cache";
+import {
+  appendOrReplaceCurrentStablecoinChartsPoint,
+  buildCurrentStablecoinChartsPoint,
+} from "../lib/stablecoin-charts-reconciliation";
+
+function isStablecoinChartPointArray(
+  payload: unknown,
+): payload is Array<{ date: number; totalCirculatingUSD: Record<string, number> }> {
+  return Array.isArray(payload) && payload.every((entry) => (
+    !!entry &&
+    typeof entry === "object" &&
+    typeof (entry as { date?: unknown }).date === "number" &&
+    !!(entry as { totalCirculatingUSD?: unknown }).totalCirculatingUSD &&
+    typeof (entry as { totalCirculatingUSD?: unknown }).totalCirculatingUSD === "object"
+  ));
+}
 
 export const handleStablecoins = createCacheHandler(
   "stablecoins",
@@ -25,11 +42,40 @@ export const handleStablecoins = createCacheHandler(
   API_FRESHNESS_MAX_AGE_SEC.stablecoins,
 );
 
-export const handleStablecoinCharts = createCacheHandler(
+export const handleStablecoinCharts = withErrorHandler(
   "stablecoin-charts",
-  "stablecoin-charts",
-  CACHE_PROFILES.standard,
-  API_FRESHNESS_MAX_AGE_SEC.stablecoinCharts,
+  async (db: D1Database): Promise<Response> => {
+    const cached = await getCache(db, "stablecoin-charts");
+    if (!cached) {
+      return errorResponse(503, "Data not yet available");
+    }
+
+    const headers = addFreshnessHeaders({
+      "Content-Type": "application/json",
+      "Cache-Control": CACHE_PROFILES.standard,
+    }, cached.updatedAt, API_FRESHNESS_MAX_AGE_SEC.stablecoinCharts);
+
+    const parsed = readCachedJsonOr503<unknown>("stablecoin-charts", "stablecoin-charts", cached);
+    if (!parsed.ok) {
+      return parsed.response;
+    }
+    if (!isStablecoinChartPointArray(parsed.data)) {
+      return errorResponse(503, "Cached stablecoin-charts payload is malformed");
+    }
+
+    let points = parsed.data;
+
+    const stablecoinsCache = await loadStablecoinsCache(db, { mode: "strict", allowLegacyArray: true });
+    if (stablecoinsCache.kind === "ok") {
+      const currentPoint = buildCurrentStablecoinChartsPoint(
+        stablecoinsCache.payload.peggedAssets,
+        stablecoinsCache.updatedAt,
+      );
+      points = appendOrReplaceCurrentStablecoinChartsPoint(points, currentPoint);
+    }
+
+    return new Response(JSON.stringify(points), { headers });
+  },
 );
 
 export const handleBluechipRatings = withErrorHandler(

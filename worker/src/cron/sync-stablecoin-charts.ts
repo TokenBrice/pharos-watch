@@ -3,6 +3,9 @@ import type { CronResult } from "../lib/cron-logger";
 import { fetchWithRetry } from "../lib/fetch-retry";
 import { DEFILLAMA_BASE } from "../lib/constants";
 import { getFxReferenceTypeFromState, loadFxRateState } from "../lib/fx-rate-state";
+import { buildInClause } from "../lib/db";
+import { mergeStructuralSupplementalHistoryIntoCharts, STRUCTURAL_SUPPLEMENTAL_CHART_CONFIGS } from "../lib/stablecoin-charts-reconciliation";
+import { throwIfAborted } from "../lib/abort";
 
 /** Implied rate must be within 1/N to Nx of our cached FX rate.
  *  3x tolerates multi-year FX drift (e.g. ARS ~10x over 4 years won't hit
@@ -20,6 +23,12 @@ interface RawChartPoint {
 interface DownsampledPoint {
   date: number;
   totalCirculatingUSD: Record<string, number>;
+}
+
+interface SupplyHistoryChartRow {
+  stablecoin_id: string;
+  snapshot_date: number;
+  circulating_usd: number;
 }
 
 function downsample(data: RawChartPoint[]): DownsampledPoint[] {
@@ -61,6 +70,7 @@ function downsample(data: RawChartPoint[]): DownsampledPoint[] {
 }
 
 export async function syncStablecoinCharts(db: D1Database, signal?: AbortSignal): Promise<CronResult> {
+  throwIfAborted(signal);
   const syncStartSec = Math.floor(Date.now() / 1000);
 
   const COOLDOWN_SEC = 3600;
@@ -134,6 +144,28 @@ export async function syncStablecoinCharts(db: D1Database, signal?: AbortSignal)
     if (fixes > 0) {
       console.log(`[sync-charts] Fixed ${fixes} corrupted totalCirculatingUSD values`);
     }
+  }
+
+  throwIfAborted(signal);
+  if (STRUCTURAL_SUPPLEMENTAL_CHART_CONFIGS.length > 0) {
+    const supplementalIds = STRUCTURAL_SUPPLEMENTAL_CHART_CONFIGS.map((config) => config.id);
+    const supplementalIn = buildInClause(supplementalIds);
+    const overlayRowsResult = await db
+      .prepare(
+        `SELECT stablecoin_id, snapshot_date, circulating_usd
+         FROM supply_history
+         WHERE stablecoin_id IN (${supplementalIn.sql})
+         ORDER BY stablecoin_id ASC, snapshot_date ASC`,
+      )
+      .bind(...supplementalIn.binds)
+      .all<SupplyHistoryChartRow>();
+    raw = mergeStructuralSupplementalHistoryIntoCharts(raw.map((point) => ({
+      date: point.date,
+      totalCirculatingUSD: point.totalCirculatingUSD ?? {},
+    })), overlayRowsResult.results ?? []).map((point) => ({
+      date: point.date,
+      totalCirculatingUSD: point.totalCirculatingUSD,
+    }));
   }
 
   const downsampled = downsample(raw);

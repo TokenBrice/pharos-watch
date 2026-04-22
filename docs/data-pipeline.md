@@ -13,6 +13,8 @@ For tracked supplemental assets that are not in DefiLlama's stablecoin list, the
 
 If the supplemental CoinGecko market-cap fetch is temporarily unavailable, `syncStablecoins()` now reuses the last known good cached supply snapshot for those supplemental assets instead of emitting zero-supply rows or dropping them from the payload. That preservation rule now covers all tracked `detailProvider === "coingecko"` assets, including ones that currently rely on on-chain supply fallback without a `geckoId`. When a fresh DefiLlama `coins.llama.fi` price is still available, that fresher price is merged onto the restored supply snapshot.
 
+The aggregate `stablecoin-charts` cache now reconciles those structural supplemental tracked assets back into the published total-market-cap history instead of relying on DefiLlama's aggregate chart feed alone. `syncStablecoinCharts()` still starts from `stablecoincharts/all`, but after the FX repair pass it overlays the tracked non-DefiLlama cohort from D1 `supply_history` before downsampling and cache publication. `GET /api/stablecoin-charts` then appends or replaces the trailing point with a live aggregate built from the current `stablecoins` cache so the chart endpoint's latest value matches the homepage KPI card.
+
 ### Circuit Breakers
 
 Most high-risk external integrations are protected by per-source circuit breakers (`worker/src/lib/circuit-breaker.ts`). State is persisted in the D1 `cache` table under keys like `circuit:defillama-stablecoins`. Bounded low-volume fallbacks such as gold-api.com metal spot quotes, the secondary FX mirror, and ExchangeRate-API daily reference snapshots use explicit retry/timeout/cooldown behavior but are not currently circuit-gated.

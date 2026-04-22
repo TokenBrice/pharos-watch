@@ -222,7 +222,7 @@ Individual stablecoin market cap history. Area chart with time range filtering (
 
 **File:** `src/components/total-mcap-chart.tsx`
 
-Aggregated market cap breakdown. The total series comes from the downsampled `stablecoin-charts` cache. The named buckets use each coin's cached detail history (`GET /api/stablecoin/:id`) so the homepage breakdown has full-history coverage instead of the shorter `supply_history` window. Those per-coin histories are aligned to the latest point at or before each total-chart date before computing `Others`. The visible stacks are USDT, USDC, `USDS + DAI`, and `Others`.
+Aggregated market cap breakdown. The total series comes from `GET /api/stablecoin-charts`, whose cached historical backbone starts from DefiLlama aggregate chart data but is reconciled with structural supplemental tracked-asset daily history from D1 `supply_history` before publication. The endpoint then appends or replaces the trailing point with a live aggregate from the current `stablecoins` cache so the homepage chart headline matches the KPI card. The named buckets use each coin's cached detail history (`GET /api/stablecoin/:id`) so the homepage breakdown has full-history coverage instead of the shorter `supply_history` window. Those per-coin histories are aligned to the latest point at or before each total-chart date before computing `Others`. The visible stacks are USDT, USDC, `USDS + DAI`, and `Others`.
 
 ### Compare page
 

@@ -576,7 +576,7 @@ When present, `provenance` has:
 
 ### `GET /api/stablecoin-charts`
 
-Aggregate historical supply chart data across all stablecoins, broken down by peg type. `sync-stablecoin-charts` is triggered every 30 minutes, but a `stablecoin-charts:last-write` cooldown caps successful refreshes at once per hour; `/api/health` treats the cache as healthy for up to 1 hour.
+Aggregate historical supply chart data across the live homepage market-cap universe, broken down by peg type. The hourly `stablecoin-charts` cache still starts from DefiLlama's aggregate chart history, but the worker now reconciles structurally supplemental tracked assets (for example wrapper NAV tokens and commodity tokens that are not present in DefiLlama's aggregate chart feed) from D1 `supply_history` before publishing the cache. At read time the handler also appends or replaces the latest point with a live snapshot derived from the current `stablecoins` cache so the endpoint's trailing point matches the homepage KPI card. `sync-stablecoin-charts` is triggered every 30 minutes, but a `stablecoin-charts:last-write` cooldown caps successful refreshes at once per hour; `/api/health` treats the cache as healthy for up to 1 hour.
 
 **Cache:** standard — `X-Data-Age` and `Warning` headers included. This array response gets freshness headers only; it does not receive a response-body `_meta` envelope.
 
@@ -594,9 +594,9 @@ Aggregate historical supply chart data across all stablecoins, broken down by pe
 ]
 ```
 
-| Field                 | Type                     | Description                          |
-| --------------------- | ------------------------ | ------------------------------------ |
-| `date`                | `number`                 | Unix timestamp (seconds)             |
+| Field                 | Type                     | Description |
+| --------------------- | ------------------------ | ----------- |
+| `date`                | `number`                 | Unix timestamp (seconds). Historical points are downsampled cache entries; the trailing point may be a fresher live `stablecoins` snapshot timestamp |
 | `totalCirculatingUSD` | `Record<string, number>` | Aggregate supply in USD per peg type |
 
 ---

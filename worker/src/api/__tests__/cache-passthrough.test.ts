@@ -1,6 +1,6 @@
 /**
- * Contract tests for cache-passthrough handlers.
- * All use createCacheHandler: cache hit -> 200 + _meta, cache miss -> 503.
+ * Contract tests for cache-backed public handlers.
+ * Object payload handlers add `_meta`; array payload handlers keep header-only freshness.
  */
 import { afterEach, beforeEach, describe, it, expect, vi } from "vitest";
 import { mockD1 } from "./helpers/mock-d1";
@@ -101,14 +101,70 @@ describe("cache-passthrough: handleStablecoinCharts", () => {
     expect(res.status).toBe(503);
   });
 
-  it("returns 200 with concrete _meta on cache hit", async () => {
+  it("returns 200 with freshness headers and appends the live stablecoins snapshot", async () => {
     const nowSec = Math.floor(Date.now() / 1000);
-    const db = makeCacheDb("stablecoin-charts", { charts: {} }, nowSec - 5);
+    const db = mockD1([
+      {
+        match: "cache",
+        matchBinds: ["stablecoin-charts"],
+        rows: [{
+          key: "stablecoin-charts",
+          value: JSON.stringify([{ date: nowSec - 3600, totalCirculatingUSD: { peggedUSD: 100 } }]),
+          updated_at: nowSec - 5,
+        }],
+        first: {
+          key: "stablecoin-charts",
+          value: JSON.stringify([{ date: nowSec - 3600, totalCirculatingUSD: { peggedUSD: 100 } }]),
+          updated_at: nowSec - 5,
+        },
+      },
+      {
+        match: "cache",
+        matchBinds: ["stablecoins"],
+        rows: [{
+          key: "stablecoins",
+          value: JSON.stringify({
+            peggedAssets: [
+              {
+                id: "usdc-circle",
+                symbol: "USDC",
+                name: "USD Coin",
+                pegType: "peggedUSD",
+                price: 1,
+                circulating: { peggedUSD: 120 },
+              },
+            ],
+          }),
+          updated_at: nowSec,
+        }],
+        first: {
+          key: "stablecoins",
+          value: JSON.stringify({
+            peggedAssets: [
+              {
+                id: "usdc-circle",
+                symbol: "USDC",
+                name: "USD Coin",
+                pegType: "peggedUSD",
+                price: 1,
+                circulating: { peggedUSD: 120 },
+              },
+            ],
+          }),
+          updated_at: nowSec,
+        },
+      },
+    ]);
     const res = await handleStablecoinCharts(db);
+
     expect(res.status).toBe(200);
-    const body = (await res.json()) as { _meta: { status: string; ageSeconds: number } };
-    expect(body._meta.status).toBe("fresh");
-    expect(body._meta.ageSeconds).toBe(5);
+    const body = (await res.json()) as Array<{ date: number; totalCirculatingUSD: Record<string, number> }>;
+
+    expect(body).toEqual([
+      { date: nowSec - 3600, totalCirculatingUSD: { peggedUSD: 100 } },
+      { date: nowSec, totalCirculatingUSD: { peggedUSD: 120 } },
+    ]);
+    expect(res.headers.get("X-Data-Age")).toBe("5");
   });
 });
 

@@ -899,7 +899,7 @@ The three crons below were previously only listed by filename in [Architecture](
 
 **File:** `worker/src/cron/sync-stablecoin-charts.ts`
 **Schedule:** `10,40 * * * *` (shared half-hourly trigger; successful writes are capped at once per hour)
-**Data source:** `https://stablecoins.llama.fi/stablecoincharts/all`
+**Data source:** DefiLlama aggregate chart history + structural supplemental tracked-asset overlays from D1 `supply_history`
 
 **Algorithm:**
 
@@ -912,12 +912,18 @@ The three crons below were previously only listed by filename in [Architecture](
    - For each eligible chart point, validate implied FX rate: `totalCirculatingUSD[key] / totalCirculating[key]`
    - If rate falls outside tolerance band (`fxRate / RATE_TOLERANCE` to `fxRate * RATE_TOLERANCE`), recompute the USD value using the current cached FX rate
    - `RATE_TOLERANCE = 3` (accepts 1/3× to 3× of expected rate)
-5. Downsample to adaptive time buckets:
+5. Reconcile structurally supplemental tracked assets:
+   - Load the active tracked coins whose canonical detail provider is not DefiLlama (for example CoinGecko-only wrappers and commodity tokens)
+   - Query their daily `supply_history` rows from D1
+   - Align each coin's last known `circulating_usd` value at or before each DefiLlama chart point, then add it into the chart point's `totalCirculatingUSD`
+6. Downsample to adaptive time buckets:
    - Last 90 days: daily (86,400s intervals)
    - 90 days to 2 years: weekly (604,800s intervals)
    - Older than 2 years: monthly (2,592,000s intervals)
-6. If the downsampled payload has fewer than 10 points, return `status: "degraded"` and skip publication
-7. Write to cache via `setCacheIfNewer()` (CAS — won't overwrite newer data) and update `stablecoin-charts:last-write`
+7. If the downsampled payload has fewer than 10 points, return `status: "degraded"` and skip publication
+8. Write to cache via `setCacheIfNewer()` (CAS — won't overwrite newer data) and update `stablecoin-charts:last-write`
+
+**Read-time hydration:** `GET /api/stablecoin-charts` still serves the cached array with normal freshness headers, but before serializing it appends or replaces the trailing point with a live aggregate built from the current `stablecoins` cache. This keeps the homepage total-market-cap chart endpoint aligned with the KPI card even when the downsampled cache's latest historical point is UTC-midnight or when the current stablecoins payload is using a temporary supply fallback for a tracked supplemental asset.
 
 **Cooldown guard:** alternate half-hourly runs skip the upstream fetch entirely when the 1-hour write cooldown is still active.
 

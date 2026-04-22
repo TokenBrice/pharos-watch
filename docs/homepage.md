@@ -237,6 +237,6 @@ When changing homepage behavior, update this doc if any of these contracts move:
 - major data-source composition for the homepage-wide stale/error surfaces
 - homepage chart source-alignment rules for `TotalMcapChart`
 
-`TotalMcapChart` uses `GET /api/stablecoin-charts` for the aggregate total and cached `GET /api/stablecoin/:id` history for the named USDT / USDC / USDS + DAI stacks. The named series are aligned by "latest point at or before chart date" so the breakdown stays valid against the downsampled total history.
+`TotalMcapChart` uses `GET /api/stablecoin-charts` for the aggregate total and cached `GET /api/stablecoin/:id` history for the named USDT / USDC / USDS + DAI stacks. The backend `stablecoin-charts` endpoint now owns both source-alignment rules: the cached historical series is reconciled with structural supplemental tracked-asset history from D1 `supply_history`, and the handler appends or replaces the trailing point with a live aggregate from the current `stablecoins` cache so the chart headline matches the KPI card. The named series are still aligned by "latest point at or before chart date" so the breakdown stays valid against that total history.
 
 For visual/layout-specific changes, also update [Design Language](./design-language.md). For end-to-end source-to-hook mapping, see [Data Flow Map](./data-flow-map.md).
