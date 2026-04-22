@@ -1,13 +1,10 @@
-import { makeIdempotentAdminRoute } from "../lib/route-wrappers";
-import { errorResponse, jsonResponse } from "../lib/api-utils";
+import {
+  adminErrorResponse,
+  adminJsonResponse,
+  type AdminUrlRouteContext,
+  makeIdempotentAdminRoute,
+} from "../lib/route-wrappers";
 import { logAdminAction } from "../lib/admin-action-audit";
-
-interface AdminRouteContext {
-  db: D1Database;
-  url: URL;
-  request: Request;
-  trustedAdmin: boolean;
-}
 
 function parseIds(raw: string | null): number[] | null {
   if (!raw) return null;
@@ -23,14 +20,14 @@ function parseIds(raw: string | null): number[] | null {
   return ids.length > 0 ? ids : null;
 }
 
-export const handleBulkDismissDiscoveryCandidates = makeIdempotentAdminRoute<AdminRouteContext>(
+export const handleBulkDismissDiscoveryCandidates = makeIdempotentAdminRoute<AdminUrlRouteContext>(
   "route-bulk-dismiss-discovery-candidates",
   "bulk-dismiss-discovery-candidates",
   async ({ db, url, request }) => {
     const all = url.searchParams.get("all") === "true";
     const ids = parseIds(url.searchParams.get("ids"));
     if (!all && !ids) {
-      return errorResponse(400, "Missing required param: pass either ?all=true or ?ids=1,2,3");
+      return adminErrorResponse(400, "Missing required param: pass either ?all=true or ?ids=1,2,3");
     }
 
     let dismissed = 0;
@@ -60,6 +57,6 @@ export const handleBulkDismissDiscoveryCandidates = makeIdempotentAdminRoute<Adm
       },
       request,
     );
-    return jsonResponse({ ok: true, dismissed }, { status: 200, noStore: true });
+    return adminJsonResponse({ ok: true, dismissed }, { status: 200 });
   },
 );

@@ -28,6 +28,7 @@ describe("handleResetCronLease", () => {
     const url = new URL("https://ops-api.pharos.watch/api/reset-cron-lease?job=sync-mint-burn");
     const res = await handleResetCronLease({ db, url, request: adminRequest(url.toString()), trustedAdmin: true });
     expect(res.status).toBe(200);
+    expect(res.headers.get("Cache-Control")).toBe("no-store");
     const body = (await res.json()) as { ok: boolean; cleared: number };
     expect(body.ok).toBe(true);
     expect(body.cleared).toBe(1);
@@ -38,6 +39,7 @@ describe("handleResetCronLease", () => {
     const url = new URL("https://ops-api.pharos.watch/api/reset-cron-lease");
     const res = await handleResetCronLease({ db, url, request: adminRequest(url.toString()), trustedAdmin: true });
     expect(res.status).toBe(400);
+    expect(res.headers.get("Cache-Control")).toBe("no-store");
   });
 
   it("rejects unknown job name (whitelist)", async () => {
@@ -61,6 +63,7 @@ describe("handleResetCircuitBreaker", () => {
     const url = new URL("https://ops-api.pharos.watch/api/reset-circuit-breaker?circuit=binance-prices");
     const res = await handleResetCircuitBreaker({ db, url, request: adminRequest(url.toString()), trustedAdmin: true });
     expect(res.status).toBe(200);
+    expect(res.headers.get("Cache-Control")).toBe("no-store");
     const body = (await res.json()) as { ok: boolean; cleared: number };
     expect(body.cleared).toBe(1);
   });
@@ -70,6 +73,7 @@ describe("handleResetCircuitBreaker", () => {
     const url = new URL("https://ops-api.pharos.watch/api/reset-circuit-breaker?circuit=bogus-breaker");
     const res = await handleResetCircuitBreaker({ db, url, request: adminRequest(url.toString()), trustedAdmin: true });
     expect(res.status).toBe(400);
+    expect(res.headers.get("Cache-Control")).toBe("no-store");
   });
 });
 
@@ -89,6 +93,7 @@ describe("handleKillCronInFlight", () => {
     );
     const res = await handleKillCronInFlight({ db, url, request: adminRequest(url.toString()), trustedAdmin: true });
     expect(res.status).toBe(200);
+    expect(res.headers.get("Cache-Control")).toBe("no-store");
   });
 
   it("returns 409 when no lease row matched (owner mismatch)", async () => {
@@ -101,6 +106,7 @@ describe("handleKillCronInFlight", () => {
     );
     const res = await handleKillCronInFlight({ db, url, request: adminRequest(url.toString()), trustedAdmin: true });
     expect(res.status).toBe(409);
+    expect(res.headers.get("Cache-Control")).toBe("no-store");
   });
 
   it("rejects missing leaseOwner with 400", async () => {
@@ -108,6 +114,7 @@ describe("handleKillCronInFlight", () => {
     const url = new URL("https://ops-api.pharos.watch/api/kill-cron-in-flight?job=sync-mint-burn");
     const res = await handleKillCronInFlight({ db, url, request: adminRequest(url.toString()), trustedAdmin: true });
     expect(res.status).toBe(400);
+    expect(res.headers.get("Cache-Control")).toBe("no-store");
   });
 });
 
@@ -129,6 +136,7 @@ describe("handleBulkDismissDiscoveryCandidates", () => {
       trustedAdmin: true,
     });
     expect(res.status).toBe(200);
+    expect(res.headers.get("Cache-Control")).toBe("no-store");
     const body = (await res.json()) as { ok: boolean; dismissed: number };
     expect(body.dismissed).toBe(2);
   });
@@ -146,6 +154,7 @@ describe("handleBulkDismissDiscoveryCandidates", () => {
       trustedAdmin: true,
     });
     expect(res.status).toBe(200);
+    expect(res.headers.get("Cache-Control")).toBe("no-store");
   });
 
   it("rejects when neither ids nor all=true is provided", async () => {
@@ -158,6 +167,7 @@ describe("handleBulkDismissDiscoveryCandidates", () => {
       trustedAdmin: true,
     });
     expect(res.status).toBe(400);
+    expect(res.headers.get("Cache-Control")).toBe("no-store");
   });
 
   it("rejects malformed ids", async () => {
@@ -172,6 +182,7 @@ describe("handleBulkDismissDiscoveryCandidates", () => {
       trustedAdmin: true,
     });
     expect(res.status).toBe(400);
+    expect(res.headers.get("Cache-Control")).toBe("no-store");
   });
 });
 

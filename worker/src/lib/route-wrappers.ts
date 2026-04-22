@@ -1,13 +1,18 @@
 import { withAdmin } from "./auth";
 import { runIdempotentAdminAction } from "./idempotency";
-import { jsonResponse, withErrorHandler } from "./api-utils";
+import { errorResponse, jsonResponse, withErrorHandler } from "./api-utils";
+import type { JsonResponseOptions } from "./api-response";
 
 const MUTATING_METHODS = new Set(["POST", "PUT", "PATCH", "DELETE"]);
 
-interface RouteWrapperContext {
+export interface AdminRouteContext {
   db: D1Database;
   request: Request;
   trustedAdmin: boolean;
+}
+
+export interface AdminUrlRouteContext extends AdminRouteContext {
+  url: URL;
 }
 
 interface RunAdminRouteOptions {
@@ -43,7 +48,21 @@ export function runAdminRoute(
   })();
 }
 
-export function makeAdminRoute<TContext extends RouteWrapperContext>(
+type AdminResponseOptions = Omit<JsonResponseOptions, "noStore">;
+
+export function adminJsonResponse(body: unknown, options?: AdminResponseOptions): Response {
+  return jsonResponse(body, { ...(options ?? {}), noStore: true });
+}
+
+export function adminErrorResponse(
+  status: number,
+  message: string,
+  options?: Omit<AdminResponseOptions, "status">,
+): Response {
+  return errorResponse(status, message, { ...(options ?? {}), noStore: true });
+}
+
+export function makeAdminRoute<TContext extends AdminRouteContext>(
   endpoint: string,
   handler: (context: TContext) => Promise<Response>,
 ): (context: TContext) => Promise<Response> {
@@ -58,7 +77,7 @@ export function makeAdminRoute<TContext extends RouteWrapperContext>(
     );
 }
 
-export function makeIdempotentAdminRoute<TContext extends RouteWrapperContext>(
+export function makeIdempotentAdminRoute<TContext extends AdminRouteContext>(
   endpoint: string,
   action: string,
   handler: (context: TContext) => Promise<Response>,
@@ -76,7 +95,7 @@ export function makeIdempotentAdminRoute<TContext extends RouteWrapperContext>(
     );
 }
 
-export function makeConditionalIdempotentAdminRoute<TContext extends RouteWrapperContext>(
+export function makeConditionalIdempotentAdminRoute<TContext extends AdminRouteContext>(
   endpoint: string,
   action: string,
   shouldUseIdempotency: (context: TContext) => boolean,
