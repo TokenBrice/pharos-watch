@@ -35,6 +35,7 @@ import {
 
 const SKELETON_ROWS = Array.from({ length: 10 }, (_, i) => i);
 const OVERSCAN = 12;
+const EMPTY_PINNED_STABLECOIN_IDS: readonly string[] = [];
 
 interface StablecoinHeaderDef {
   id: ColumnId;
@@ -121,7 +122,7 @@ export function StablecoinTable({
   pegScores,
   dexLiquidity,
   reportCards,
-  pinnedStablecoinIds = [],
+  pinnedStablecoinIds = EMPTY_PINNED_STABLECOIN_IDS,
   onTogglePinnedStablecoin,
   onClearSearch,
   onClearFilters,

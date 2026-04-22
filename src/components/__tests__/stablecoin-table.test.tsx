@@ -115,6 +115,7 @@ describe("StablecoinTable", () => {
     push.mockReset();
     virtualItemsMock.splice(0, virtualItemsMock.length, { index: 0, start: 0, end: 40 });
     virtualTotalSizeMock.current = 40;
+    HTMLElement.prototype.scrollTo = vi.fn();
   });
 
   it("normalizes persisted column visibility from localStorage", () => {
@@ -232,6 +233,35 @@ describe("StablecoinTable", () => {
     expect(screen.getByLabelText("Savings variant")).toBeTruthy();
     expect(screen.getAllByRole("link", { name: /View Sky Savings USDS \(sUSDS\) details, Savings variant/i })).toHaveLength(2);
     expect(screen.getByText("Savings")).toBeTruthy();
+  });
+
+  it("does not reset vertical scroll on rerender when pinning is disabled", () => {
+    const rows = [coin, usdc];
+    const activeFilters: never[] = [];
+    const pegRates = {};
+
+    const { rerender } = render(
+      <StablecoinTable
+        data={rows}
+        isLoading={false}
+        activeFilters={activeFilters}
+        pegRates={pegRates}
+      />,
+    );
+
+    const scrollToMock = vi.mocked(HTMLElement.prototype.scrollTo);
+    scrollToMock.mockClear();
+
+    rerender(
+      <StablecoinTable
+        data={rows}
+        isLoading={false}
+        activeFilters={activeFilters}
+        pegRates={pegRates}
+      />,
+    );
+
+    expect(scrollToMock).not.toHaveBeenCalled();
   });
 
   it("derives stripe state from the stable row index instead of rendered tbody position", () => {
