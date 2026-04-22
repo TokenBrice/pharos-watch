@@ -2,10 +2,18 @@
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
+import type { PegCurrency } from "@shared/types";
 import { ACTIVE_PEGS, PEG_LABELS_SHORT, PEG_SLUGS } from "@/lib/peg-landing";
 
 const PEG_PILL_CLASS =
   "pharos-focus-ring inline-flex min-h-11 items-center rounded-full border border-border/70 bg-background/55 px-3 py-1.5 text-xs font-medium text-muted-foreground shadow-sm transition-[background-color,border-color,color,box-shadow] hover:border-border hover:bg-accent/65 hover:text-foreground sm:min-h-9 sm:py-1";
+
+interface PegBrowseChip {
+  key: string;
+  href: string;
+  label: string;
+  count: number;
+}
 
 /** Group pegs into semantic categories for the browse strip. */
 type PegGroup = { label: string; pegs: typeof ACTIVE_PEGS };
@@ -25,7 +33,46 @@ function groupPegs(pegs: typeof ACTIVE_PEGS): PegGroup[] {
   return groups;
 }
 
-const PEG_PREVIEW_FIAT = 4;
+const COLLAPSED_FIAT_PREVIEW_ORDER: PegCurrency[] = ["USD", "EUR", "CHF"];
+
+function buildPegChip(
+  peg: PegCurrency,
+  countFn: (peg: (typeof ACTIVE_PEGS)[number]) => number,
+): PegBrowseChip | null {
+  const slug = PEG_SLUGS[peg];
+  if (!slug) return null;
+
+  return {
+    key: peg,
+    href: `/stablecoins/${slug}/`,
+    label: PEG_LABELS_SHORT[peg],
+    count: countFn(peg),
+  };
+}
+
+function buildCollapsedFiatPreview(
+  pegs: typeof ACTIVE_PEGS,
+  countFn: (peg: (typeof ACTIVE_PEGS)[number]) => number,
+): PegBrowseChip[] {
+  const preview = COLLAPSED_FIAT_PREVIEW_ORDER.flatMap((peg) => (
+    pegs.includes(peg) ? [buildPegChip(peg, countFn)].filter((chip): chip is PegBrowseChip => chip !== null) : []
+  ));
+
+  const fiatExceptUsdCount = pegs
+    .filter((peg) => peg !== "USD")
+    .reduce((sum, peg) => sum + countFn(peg), 0);
+
+  if (fiatExceptUsdCount > 0) {
+    preview.push({
+      key: "fiat-except-usd",
+      href: "/?peg=fiat-non-usd-peg#filter-bar",
+      label: "Fiat Except USD",
+      count: fiatExceptUsdCount,
+    });
+  }
+
+  return preview;
+}
 
 export function PegBrowseStrip({
   pegs,
@@ -36,10 +83,13 @@ export function PegBrowseStrip({
 }) {
   const [expanded, setExpanded] = useState(false);
   const groups = useMemo(() => groupPegs(pegs), [pegs]);
+  const fiatPreview = useMemo(
+    () => buildCollapsedFiatPreview(groups.find((group) => group.label === "Fiat")?.pegs ?? [], countFn),
+    [countFn, groups],
+  );
 
-  // Collapsed: first N fiat + all commodity/other
-  const collapsedFiatCount = PEG_PREVIEW_FIAT;
-  const hasFiatOverflow = groups[0]?.pegs.length > collapsedFiatCount;
+  // Collapsed: selected fiat previews + an aggregate non-USD fiat lens.
+  const hasFiatOverflow = (groups.find((group) => group.label === "Fiat")?.pegs.length ?? 0) > fiatPreview.length;
 
   return (
     <div className="space-y-2">
@@ -50,31 +100,30 @@ export function PegBrowseStrip({
             onClick={() => setExpanded((v) => !v)}
             className="pharos-focus-ring text-[11px] font-medium text-muted-foreground hover:text-foreground transition-colors"
           >
-            {expanded ? "Show fewer" : `+${groups[0].pegs.length - collapsedFiatCount} more pegs`}
+            {expanded ? "Show fewer" : `+${(groups.find((group) => group.label === "Fiat")?.pegs.length ?? 0) - fiatPreview.length} more pegs`}
           </button>
         )}
       </div>
       <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
         {groups.map((group) => {
-          const visiblePegs =
-            !expanded && group.label === "Fiat"
-              ? group.pegs.slice(0, collapsedFiatCount)
-              : group.pegs;
+          const visibleItems = !expanded && group.label === "Fiat"
+            ? fiatPreview
+            : group.pegs
+                .map((peg) => buildPegChip(peg, countFn))
+                .filter((chip): chip is PegBrowseChip => chip !== null);
           return (
             <div key={group.label} className="flex flex-wrap items-center gap-1.5">
               <span className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground/60 mr-0.5">
                 {group.label}
               </span>
-              {visiblePegs.map((peg) => {
-                const slug = PEG_SLUGS[peg];
-                if (!slug) return null;
+              {visibleItems.map((item) => {
                 return (
                   <Link
-                    key={peg}
-                    href={`/stablecoins/${slug}/`}
+                    key={item.key}
+                    href={item.href}
                     className={PEG_PILL_CLASS}
                   >
-                    {PEG_LABELS_SHORT[peg]} ({countFn(peg)})
+                    {item.label} ({item.count})
                   </Link>
                 );
               })}
