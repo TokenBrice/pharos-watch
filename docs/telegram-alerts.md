@@ -13,6 +13,8 @@ The subsystem has four moving parts:
 
 The delivery system is worker-owned. The frontend exposes a static `/telegram/` landing page plus a lightweight public telemetry strip sourced from `GET /api/telegram-pulse`; it does not call any mutating bot APIs directly.
 
+The safety-alert path now has an additional hard dependency: `publish-report-card-cache` writes a generation-aware live safety source snapshot into `cache["alert:safety-source-cache"]`, and the 5-minute Telegram lane will suppress only safety-grade alerts when that source is missing, corrupt, stale, or from the wrong generation.
+
 ## Files
 
 - `worker/src/api/telegram-webhook.ts`
@@ -198,6 +200,7 @@ Each dispatch run loads:
 - Latest DEWS rows from `stress_signals`
 - Active depegs from `depeg_events WHERE ended_at IS NULL`
 - The latest `safety_grade_history` row for each stablecoin (not just the latest change day)
+- The live safety source cache from `cache["alert:safety-source-cache"]`
 - Prior dispatch snapshots from cache keys:
   - `alert:dews-snapshot`
   - `alert:dews-alertable-snapshot`
@@ -207,6 +210,8 @@ Each dispatch run loads:
 When `alert:dews-alertable-snapshot` is absent (for example, immediately after deploy), the dispatcher rebuilds it from the raw DEWS snapshot so the rollout does not require a noisy cold start.
 
 DEWS, depeg, and safety snapshots older than `24 hours` are treated as stale and are reseeded before any alerts are sent. Launch promotions use a separate best-effort `alert:launch-snapshot` read later in the run; a missing or malformed launch snapshot falls back to an empty prior set and does not trigger the stale-snapshot seed gate.
+
+The live safety source cache is evaluated separately from those historical snapshots. It is hard-required for safety-grade fan-out and is considered stale after two `publish-report-card-cache` producer intervals.
 
 ### First-Run / Stale-Snapshot Behavior
 
@@ -227,8 +232,11 @@ This prevents a cold start from blasting subscribers with every current conditio
 - Depeg worsening milestones by comparing current active event severity to the prior snapshot
 - Depeg resolutions by checking which prior active depegs disappeared and then loading the corresponding closed event rows
 - Safety-grade changes by comparing each coin's latest `safety_grade_history` row to the prior snapshot
+- Safety-grade changes are emitted only when the live safety source cache is generation-valid; fallback-to-history no longer rewrites the alert snapshot as if it were a valid live source
 - Launch promotions by comparing the current launch snapshot to `alert:launch-snapshot`
 - Methodology-version-only safety regrades are suppressed from user alerts
+
+If the live safety source cache is missing, corrupt, stale, or from the wrong generation, DEWS/depeg/launch alerts can still continue, but safety alerts stay suppressed until a fresh publish lands and the Telegram lane reseeds its prior safety snapshot under that same generation.
 
 If the cached safety snapshot is missing a coin, the dispatcher suppresses the alert unless that coin's latest grade-change row is newer than the cached snapshot timestamp. This avoids false `UNKNOWN → grade` alerts when repairing older partial snapshots or when a newly tracked coin gets its first seed row.
 

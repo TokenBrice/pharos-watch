@@ -79,6 +79,18 @@ Useful merge-gate controls:
 - `MERGE_GATE_BASE_REF=<ref>` to override the default compare base (`origin/main`)
 - `MERGE_GATE_DRY_RUN=1` to print the command plan without executing it
 
+## Yield History Cleanup Windows
+
+The tracked savings-wrapper ownership cleanup uses `worker/scripts/yield-history-cleanup.ts` as an operator-run maintenance tool. When that cleanup is part of a release:
+
+1. Deploy the read-path and hourly-purge protections first.
+2. Arm the writer pause guard.
+3. Verify `sync-yield-data` is not actively leased.
+4. Export the targeted parent/source rows.
+5. Rehearse the delete + restore drill on a local throwaway SQLite dataset.
+6. Run the bounded production cleanup only after the restore drill passes.
+7. Verify the parent/source rows stay absent after the next hourly writer cycle.
+
 ## CI Deploy Sequence
 
 Defined across:

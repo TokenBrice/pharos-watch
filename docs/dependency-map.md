@@ -133,6 +133,6 @@ When a node is hovered, the graph visualizes how stress could propagate through 
 ## Scope and Limits
 
 - The map is intentionally scoped to the largest 50 live dependency-linked coins for readability.
-- Dependencies are metadata/reserve-derived (`buildDependencyGraphEdges`), not discovered from live on-chain graph traversal.
-- The live reserve sync feature now affects the stablecoin detail-page reserve card plus report-card collateral quality for eligible independent live feeds. The dependency map still derives links from curated static reserve metadata and manual dependencies.
+- Dependencies are metadata-derived through the shared report-card edge builder (`buildDependencyGraphEdges`), including synthetic tracked-variant `wrapper` edges where applicable; the map still does not perform live on-chain graph discovery.
+- The live reserve sync feature now affects the stablecoin detail-page reserve card plus report-card collateral quality for eligible independent live feeds. The dependency map still reads the shared curated dependency model rather than deriving links from live reserve snapshots.
 - Defunct coins are excluded from the graph.

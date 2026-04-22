@@ -466,6 +466,8 @@ This offset schedule exists so long-tail mint/burn backfill pressure cannot star
 
 Dedicated trigger for Telegram work. Isolated from the quarter-hourly pipeline so subscriber fan-out gets its own 6-connection pool and CPU budget. Subscriber fan-out uses up to 5 of 6 available connections for parallel `sendBatch()` sends. Up to 200 subscriber message attempts per run; overflow and retryable fresh-send failures are enqueued to `telegram_pending_alerts` in D1 for subsequent runs.
 
+Safety-grade fan-out on this lane is now gated by the generation-aware live source cache `cache["alert:safety-source-cache"]`, written only by `publish-report-card-cache`. If that source is missing, corrupt, stale, or from the wrong generation, only safety alerts are suppressed; DEWS/depeg/launch alerts continue.
+
 ### Trigger 13: `*/5 * * * *` (manual digest trigger poll)
 
 | Job surface | Function | File | Documentation |

@@ -22,6 +22,7 @@ This note supplements [`docs/yield-intelligence.md`](./yield-intelligence.md) wi
   - `B.Protocol LQTY-only`
   - `Curve scrvUSD current-rate`
 - `sync-yield-supplemental` owns the heavier best-effort families. It writes a cached snapshot and does not overwrite the last good snapshot with an empty result.
+- `sync-yield-data` now also respects the operator pause guard `cache["yield-history-cleanup:writer-pause"]`. When that key is armed for a cleanup window, the hourly publisher returns a degraded no-op result instead of purging or rewriting parent-owned history during the operator mutation.
 - supplemental candidate dedupe now keys on source identity plus asset identity, not bare `sourceKey` alone, so same-chain families such as Aave V3 cannot collapse multiple coins into one cached row.
 - `sync-yield-supplemental` metadata now reports raw candidate count, deduped candidate count, and dropped-row count so silent row loss is visible in cron history.
 - read-time `yield-rankings` freshness warnings are now source-cadence-aware: hourly families trip after three hourly publish cycles, supplemental protocol-API plus optional Aave/Compound rows wait 6 hours so they do not false-positive during their normal 4-hour cache cycle, and `price-derived` rows wait 36 hours because their observations come from daily `supply_history` snapshots.

@@ -39,7 +39,7 @@ Application source-of-truth docs live in `/docs/` and [../README.md](../README.m
 
 ## Route And Page Contracts
 
-- [homepage.md](./homepage.md) - `/` dashboard composition, filter/query contract, and Start Here callout behavior
+- [homepage.md](./homepage.md) - `/` dashboard composition, filter/query contract, Start Here callout behavior, and primary variant-browse ownership
 - [start-page.md](./start-page.md) - `/start/` onboarding route, curated route map, and homepage integration contract
 - [upcoming-page.md](./upcoming-page.md) - `/upcoming/` pre-launch tracker, filter model, and crawlability contract
 - [about-page.md](./about-page.md) - `/about/` section contract and update rules
@@ -89,7 +89,7 @@ Some public routes are documented by feature docs or the architecture doc rather
 | `/stability-index/` | [stability-index.md](./stability-index.md) |
 | `/start/` | [start-page.md](./start-page.md) |
 | `/status/` | [status-dashboard.md](./status-dashboard.md) |
-| `/stablecoins/` | [architecture.md](./architecture.md), [classification.md](./classification.md) |
+| `/stablecoins/` | [architecture.md](./architecture.md), [classification.md](./classification.md) — taxonomy surface only; tracked-variant browse ownership stays on `/` |
 | `/stablecoins/[peg]/` | [architecture.md](./architecture.md), [classification.md](./classification.md) |
 | `/stablecoins/backing/` | [architecture.md](./architecture.md), [classification.md](./classification.md) |
 | `/stablecoins/backing/[backing]/` | [architecture.md](./architecture.md), [classification.md](./classification.md) |

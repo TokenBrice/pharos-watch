@@ -1,0 +1,89 @@
+{
+  "generatedAt": 1776856729,
+  "operator": null,
+  "targets": [
+    {
+      "stablecoinId": "usde-ethena",
+      "sourceKeys": [
+        "onchain:usde-ethena",
+        "66985a81-9c51-46ca-9977-42b4fe7bc6df"
+      ]
+    },
+    {
+      "stablecoinId": "usds-sky",
+      "sourceKeys": [
+        "onchain:usds-sky",
+        "d8c4eff5-c8a9-46fc-a888-057c4c668e72"
+      ]
+    },
+    {
+      "stablecoinId": "dai-makerdao",
+      "sourceKeys": [
+        "onchain:dai-makerdao",
+        "13392973-be6e-4b2f-bce9-4f7dd53d1c3a"
+      ]
+    },
+    {
+      "stablecoinId": "frxusd-frax",
+      "sourceKeys": [
+        "onchain:frxusd-frax",
+        "42523cca-14b0-44f6-95fb-4781069520a5"
+      ]
+    },
+    {
+      "stablecoinId": "crvusd-curve",
+      "sourceKeys": [
+        "5fd328af-4203-471b-bd16-1705c726d926",
+        "onchain:crvusd-curve:scrvusd-current-rate"
+      ]
+    }
+  ],
+  "rowCount": 3,
+  "rows": [
+    {
+      "stablecoin_id": "usde-ethena",
+      "source_key": null,
+      "recorded_at": 1700000000,
+      "is_best": 1,
+      "apy": 5.1,
+      "apy_base": null,
+      "apy_reward": null,
+      "exchange_rate": null,
+      "source_tvl_usd": 10000000,
+      "data_source": "defillama",
+      "warning_signals": null,
+      "yield_source": "Ethena staking (sUSDe)",
+      "yield_type": "nav-appreciation"
+    },
+    {
+      "stablecoin_id": "usde-ethena",
+      "source_key": "66985a81-9c51-46ca-9977-42b4fe7bc6df",
+      "recorded_at": 1700000360,
+      "is_best": 0,
+      "apy": 5.2,
+      "apy_base": null,
+      "apy_reward": null,
+      "exchange_rate": null,
+      "source_tvl_usd": 10100000,
+      "data_source": "defillama",
+      "warning_signals": null,
+      "yield_source": "Ethena staking (sUSDe)",
+      "yield_type": "nav-appreciation"
+    },
+    {
+      "stablecoin_id": "usds-sky",
+      "source_key": "d8c4eff5-c8a9-46fc-a888-057c4c668e72",
+      "recorded_at": 1700000720,
+      "is_best": 0,
+      "apy": 4,
+      "apy_base": null,
+      "apy_reward": null,
+      "exchange_rate": null,
+      "source_tvl_usd": 8000000,
+      "data_source": "defillama",
+      "warning_signals": null,
+      "yield_source": "Sky Savings Rate (sUSDS)",
+      "yield_type": "lending-vault"
+    }
+  ]
+}

@@ -137,6 +137,13 @@ These are wired into the GitHub Actions CI workflows (`.github/workflows/validat
 - Live mode deletes and rewrites non-USD non-commodity backfill rows under canonical stablecoin IDs. Legacy per-coin alias folding has been retired; orphan rows must now already be canonical before replay.
 - Known dead orphan IDs such as `eura-angle` are purged instead of replayed back into the active depeg history surface.
 
+### `worker/scripts/yield-history-cleanup.ts`
+
+- One-shot operator tool for the five tracked savings-wrapper ownership handoffs (`USDe`, `USDS`, `DAI`, `frxUSD`, `crvUSD`).
+- Supports dry-run inventory, artifact export, delete, and restore paths against either a local SQLite rehearsal dataset (`--sqlite`) or Wrangler D1 (`--remote` / `--local`).
+- Remote mutation and remote restore both require `--execute --confirm yield-history-cleanup` plus an armed writer pause guard (`--arm-writer-pause`) so the hourly `sync-yield-data` publisher cannot race the cleanup window.
+- The source-selection contract is shared with the live read path and hourly purge path through `worker/src/lib/yield-history-cleanup.ts`.
+
 ### `register-telegram-webhook.sh`
 
 - Requires `TELEGRAM_BOT_TOKEN` and `TELEGRAM_WEBHOOK_SECRET`.

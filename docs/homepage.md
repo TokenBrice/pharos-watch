@@ -99,6 +99,8 @@ Repeated hook usage is expected. These surfaces share TanStack Query cache state
 
 The homepage table uses browser URL search params as its public state contract.
 
+The homepage is also the primary browse owner for tracked variants. Variant discovery stays on `/` through the shared `variant` query param rather than moving to a dedicated route family.
+
 Managed by `src/hooks/use-homepage-filters.ts` and `src/hooks/use-url-filters.ts`:
 
 - `q` -> text search
@@ -107,7 +109,7 @@ Managed by `src/hooks/use-homepage-filters.ts` and `src/hooks/use-url-filters.ts
 - `backing` -> one active backing filter
 - `grade` -> one active score-tier filter
 - `infrastructure` -> one active infrastructure filter (`infrastructure-liquity-v1`, `infrastructure-liquity-v2`, `infrastructure-m0`)
-- `variant` -> one active tracked-variant filter (`variant-tracked`, `variant-savings-passthrough`, `variant-risk-absorption`)
+- `variant` -> one active tracked-variant filter (`variant-tracked`, `variant-savings-passthrough`, `variant-risk-absorption`, `variant-bond-maturity`)
 
 Rules:
 

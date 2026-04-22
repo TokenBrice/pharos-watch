@@ -87,7 +87,7 @@ The client `loading` state now mirrors the server fallback more closely: it keep
 4. `ExploitNoticeBanner`
 5. `LongformScrollspyNav`
 6. `ReportCardDetail` + `SafetyScoreHistorySection`
-7. `UnderlyingAssetCard` for tracked variants, then `ParentVariantsCard` for parents with tracked children, then `NoticesAndSummarySection` (wraps `OverviewSection`, `CoinNotices`, and the nested `PriceTransparencyCard` anchor)
+7. `UnderlyingAssetCard` for tracked variants, then `ParentVariantsCard` for parents with tracked children, then `NoticesAndSummarySection` (wraps `OverviewSection`, `CoinNotices`, and the nested `PriceTransparencyCard` anchor). The variant cards are contextual navigation only; they link back into the homepage owner for browse/discovery instead of introducing a dedicated variant route family.
 8. `KeyInfoCard`
 9. `CollateralUsageSection` when the coin is used as tracked collateral elsewhere
 10. `YieldDetailSection` when the coin is marked `yieldBearing` or the cached yield rankings include a live row for that coin

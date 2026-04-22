@@ -1,6 +1,12 @@
 # Report Cards Scoring — Version Timeline
 
-Internal changelog reconstructed from git history plus the live version metadata source. Covers v1.0 through v7.09 (2026-02-25 → 2026-04-22). The newest sections track the machine-readable version source closely; older reconstructed sections below v6.92 preserve the original authoring-era grouping and are not guaranteed to be in strict descending source order. Use `shared/lib/safety-score-version-data.ts` for canonical machine ordering.
+Internal changelog reconstructed from git history plus the live version metadata source. Covers v1.0 through v7.10 (2026-02-25 → 2026-04-22). The newest sections track the machine-readable version source closely; older reconstructed sections below v6.92 preserve the original authoring-era grouping and are not guaranteed to be in strict descending source order. Use `shared/lib/safety-score-version-data.ts` for canonical machine ordering.
+
+## v7.10 — Bond-maturity variants join the parent-linked wrapper framework (2026-04-22)
+
+- `bUSD0` now declares canonical `variantOf = usd0-usual` and `variantKind = bond-maturity`
+- Dependency Risk now supports a tracked `bond-maturity` wrapper ceiling of parent minus 8 points
+- The homepage variant owner on `/` now includes a `Bond` filter state, and variant detail/parent cards link back into that owner instead of introducing a dedicated route family
 
 ## v7.09 — Tracked wrapper and staked variants become explicit parent-linked cards (2026-04-22)
 

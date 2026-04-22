@@ -1327,7 +1327,11 @@ Cache freshness in `/api/health` separates producer cadence, endpoint freshness,
     "totalChats": 142,
     "pendingDeliveries": 0,
     "lastDispatchAt": 1771856400,
-    "lastDispatchStatus": "success"
+    "lastDispatchStatus": "ok",
+    "safetyAlertSourceState": "ok",
+    "safetyAlertSourceAgeSeconds": 120,
+    "safetyAlertsSuppressed": false,
+    "safetyAlertSourceGeneration": "safety-7.10-alert-source-v1"
   }
 }
 ```
@@ -1349,6 +1353,10 @@ Cache freshness in `/api/health` separates producer cadence, endpoint freshness,
 | `telegramSummary.pendingDeliveries`  | `number`                           | Pending overflow alert deliveries waiting in `telegram_pending_alerts`                                                                                                                                                                                                                                                                                                                                                                                                                                                |
 | `telegramSummary.lastDispatchAt`     | `number \| null`                   | Unix seconds of the most recent `dispatch-telegram-alerts` cron run, if available                                                                                                                                                                                                                                                                                                                                                                                                                                    |
 | `telegramSummary.lastDispatchStatus` | `string \| null`                   | Status of the most recent `dispatch-telegram-alerts` cron run, if available                                                                                                                                                                                                                                                                                                                                                                                                                                          |
+| `telegramSummary.safetyAlertSourceState` | `"ok" \| "missing" \| "corrupt" \| "stale" \| "wrong-generation" \| null` | Live safety-alert source-cache state from the most recent Telegram dispatch run                                                                                                                                                                                                                                                                                                                                                         |
+| `telegramSummary.safetyAlertSourceAgeSeconds` | `number \| null`            | Age of the current live safety-alert source snapshot when available                                                                                                                                                                                                                                                                                                                                                                                                                                                  |
+| `telegramSummary.safetyAlertsSuppressed` | `boolean`                    | `true` when safety alerts are paused because the live source snapshot is missing, corrupt, stale, or from the wrong generation                                                                                                                                                                                                                                                                                                                                                                                   |
+| `telegramSummary.safetyAlertSourceGeneration` | `string \| null`          | Generation marker of the current live safety-alert source snapshot                                                                                                                                                                                                                                                                                                                                                                                                                                                   |
 | `mintBurn.totalEvents`               | `number \| null`                   | Legacy advisory total. `null` on the budget-capped health path because `/api/health` no longer scans `mint_burn_hourly`; use `/api/mint-burn-flows` or `/api/mint-burn-events` for mint/burn data views.                                                                                                                                                                                                                                                                                                             |
 | `mintBurn.latestEventTs`             | `number \| null`                   | Legacy advisory timestamp. `null` on the budget-capped health path because `/api/health` no longer scans `mint_burn_events`; freshness is represented by `mintBurn.sync.lastSuccessfulSyncAt`.                                                                                                                                                                                                                                                                                                                       |
 | `mintBurn.latestHourlyTs`            | `number \| null`                   | Legacy advisory timestamp. `null` on the budget-capped health path because `/api/health` no longer scans `mint_burn_hourly`.                                                                                                                                                                                                                                                                                                                                                                                         |
@@ -1574,7 +1582,7 @@ Stablecoin risk grade cards with dimension-level scores. Output includes 5 dimen
     "edges": [{ "from": "usde-ethena", "to": "usdc-circle", "weight": 0.9, "type": "collateral" }, ...]
   },
   "methodology": {
-    "version": "7.09",
+    "version": "7.10",
     "weights": { "pegStability": 0, "liquidity": 0.30, "resilience": 0.20, "decentralization": 0.15, "dependencyRisk": 0.25 },
     "pegMultiplierExponent": 0.4,
     "activeDepegSeveritySource": "open-event-peak",
@@ -1649,7 +1657,7 @@ For peg handling, `rawInputs.pegScore` is the effective peg input used by report
 | `governanceQuality`                | `GovernanceQuality`                             |
 | `dependencies`                     | `DependencyWeight[]`                            |
 | `variantParentId`                  | `string \| null`                                |
-| `variantKind`                      | `"savings-passthrough" \| "risk-absorption" \| null` |
+| `variantKind`                      | `"savings-passthrough" \| "risk-absorption" \| "bond-maturity" \| null` |
 | `navToken`                         | `boolean`                                       |
 | `collateralFromLive`               | `boolean`                                       |
 
@@ -1934,6 +1942,8 @@ When present, `YieldRanking.provenance` includes:
 ### `GET /api/yield-history`
 
 Historical yield data for a single stablecoin. If a stored `warning_signals` payload is malformed, the API treats it as an empty array rather than failing the entire response. Returned rows are capped at the latest published `/api/yield-rankings` snapshot so history cannot advance past an unpublished yield cache state. If the cached rankings payload is missing or malformed, the cap degrades to the latest successful `sync-yield-data` cron timestamp instead of wall-clock `now`.
+
+For the five tracked savings-wrapper handoffs (`USDe`, `USDS`, `DAI`, `frxUSD`, `crvUSD`), parent-owned wrapper rows are filtered immediately at read time and are also purged by the hourly publisher plus the operator cleanup tool. The discontinuity is intentional: those child-owned series no longer remain queryable through the parent id or through `mode=source&sourceKey=...`.
 
 **Cache:** slow — `X-Data-Age` and `Warning` headers included. Freshness threshold: 3600 s (1 hour, aligned to the hourly `sync-yield-data` publisher).
 
@@ -2695,6 +2705,15 @@ Ratio-based on-chain status thresholds apply only when `dataQuality.onchainSuppl
 `sectionErrors` is a machine-readable map of subsection loader failures. When an individual status subsection fails (for example Telegram stats, discovery backlog, CoinGecko price drift, D1 usage telemetry, liquidity health, reserve drift, or mint/burn reconciliation), `/api/status` still returns `200`, keeps the unaffected sections intact, and records the degraded subsection under `sectionErrors` with a stable `code` plus an operator-facing sanitized `message`. Raw exception text, SQL fragments, and table names stay in logs, not in the response body.
 
 `crons["dispatch-telegram-alerts"].lastRun.metadata` now carries a richer delivery breakdown, including fields such as `freshAttempted`, `freshSent`, `freshRetryQueued`, `freshPermanentFailures`, `pendingAttempted`, `pendingDrained`, `pendingRetryQueued`, `pendingDropped`, `pendingEnqueued`, and expanded `eventsDetected` counters (`depegTriggered`, `depegResolved`, `depegWorsening`, `launch`, `suppressedMethodologyChanges`).
+
+The same cron metadata also exposes the live safety-alert source contract:
+
+- `safetyAlertSourceState`
+- `safetyAlertSourceAgeSeconds`
+- `safetyAlertsSuppressed`
+- `safetyAlertSourceGeneration`
+
+When `safetyAlertsSuppressed=true`, DEWS/depeg/launch alerts can still continue, but safety-grade alerts remain paused until `publish-report-card-cache` writes a fresh generation-valid source snapshot and the Telegram lane reseeds its own prior-snapshot cache.
 
 `crons["status-self-check"].lastRun.metadata` now also includes `freshnessDiagnostics` when raw status had to fall back from a freshness sentinel to table or cron evidence during the self-check run.
 

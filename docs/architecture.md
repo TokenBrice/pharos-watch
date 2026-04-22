@@ -149,6 +149,7 @@ Worker cron refactors should place reusable stage contracts under `worker/src/cr
 - Tool roots intentionally marked `noindex,follow`:
   - `/compare/`
   - `/portfolio/`
+- Tracked-variant browse ownership stays on the homepage query state (`/?variant=...`). The repo does not ship a dedicated `/stablecoins/variants/*` family.
 - Private operator routes marked `noindex,nofollow`:
   - `/admin/`
   - `/api/admin/`

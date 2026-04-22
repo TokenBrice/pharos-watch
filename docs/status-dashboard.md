@@ -119,7 +119,7 @@ The active frontend operator mode is now:
 - `src/components/longform-scrollspy-nav.tsx`
   - Applies sticky section navigation without re-running hash alignment on every live refresh, so polling does not snap operators back to an anchored section mid-scroll
 - `src/components/status/telegram-bot-stats.tsx`
-  - Renders Telegram subscriber adoption metrics, top subscribed coins, custom-preference / quiet-hour counts, and the latest `dispatch-telegram-alerts` delivery summary
+  - Renders Telegram subscriber adoption metrics, top subscribed coins, custom-preference / quiet-hour counts, the latest `dispatch-telegram-alerts` delivery summary, and the safety-alert source-cache state when safety alerts are suppressed
 - Cron cards are grouped by trigger slot on the page:
   - 15-minute core ingestion / score recompute
   - 5-minute Telegram dispatch lane for subscriber alerts
@@ -390,6 +390,8 @@ The UI uses that block plus `crons["dispatch-telegram-alerts"].lastRun.metadata`
 - custom-preference adoption and quiet-hours adoption
 - muted / misconfigured chat counts
 - top subscribed stablecoins
+- live safety-alert source state (`ok`, `missing`, `corrupt`, `stale`, `wrong-generation`)
+- whether safety alerts are currently suppressed while DEWS/depeg/launch fan-out continues
 - latest dispatch delivery stats (`subscribersNotified`, `messagesSent`, `blockedUsersCleanedUp`, `eventsDetected`, `freshRetryQueued`, `freshPermanentFailures`, `pendingRetryQueued`, `pendingDropped`)
 
 ### Synthetic self-check
