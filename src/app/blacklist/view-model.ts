@@ -1,15 +1,21 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useReportCards } from "@/hooks/api-hooks";
 import { useBlacklistEventsPage, useBlacklistSummary } from "@/hooks/use-blacklist-events";
+import { useStablecoins } from "@/hooks/use-stablecoins";
 import { useUrlFilters } from "@/hooks/use-url-filters";
 import { trackEvent, trackSearch } from "@/lib/analytics";
+import { buildBlacklistStatusBuckets, type BlacklistStatusBucket } from "@/lib/blacklist-status-buckets";
+import { buildReportCardMap } from "@/lib/stablecoin-lookups";
 import {
   BLACKLIST_STABLECOINS,
   type BlacklistStablecoin,
   type BlacklistEventType,
   type BlacklistSortDirection,
   type BlacklistSortKey,
+  type ReportCard,
+  type StablecoinData,
 } from "@shared/types";
 import { type BlacklistStatusBucketKey } from "@/lib/blacklist-status-buckets";
 
@@ -81,8 +87,24 @@ export function useBlacklistPageController() {
     refetch: refetchSummary,
     meta: summaryMeta,
   } = useBlacklistSummary();
+  const {
+    data: stablecoinData,
+    isLoading: supportStablecoinsLoading,
+  } = useStablecoins();
+  const {
+    data: reportCardsData,
+    isLoading: supportReportCardsLoading,
+  } = useReportCards();
   const { searchParams, replaceParams } = useUrlFilters();
   const parsedFilters = useMemo(() => parseBlacklistPageFilters(searchParams.toString()), [searchParams]);
+  const reportCardMap = useMemo(
+    () => buildReportCardMap(reportCardsData?.cards) as Record<string, ReportCard> | undefined,
+    [reportCardsData?.cards],
+  );
+  const blacklistStatusBuckets = useMemo<BlacklistStatusBucket[] | null>(
+    () => (stablecoinData ? buildBlacklistStatusBuckets(stablecoinData.peggedAssets, reportCardMap) : null),
+    [reportCardMap, stablecoinData],
+  );
 
   const { stablecoinFilter, chainFilter, eventTypeFilter, sortKey, sortDirection, page, searchQuery, statusBucket } =
     parsedFilters;
@@ -255,6 +277,11 @@ export function useBlacklistPageController() {
     error,
     dataUpdatedAt,
     freshnessMeta,
+    stablecoins: stablecoinData?.peggedAssets as StablecoinData[] | undefined,
+    stablecoinFxFallbackRates: stablecoinData?.fxFallbackRates,
+    reportCardMap,
+    blacklistStatusBuckets,
+    supportDataLoading: supportStablecoinsLoading || supportReportCardsLoading,
     refetchSummary,
     refetchPage,
     statusBucket,

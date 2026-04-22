@@ -1,13 +1,9 @@
 "use client";
 
-import { useMemo } from "react";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { MetricStatCard } from "@/components/metric-stat-card";
-import { useReportCards } from "@/hooks/api-hooks";
-import { useStablecoins } from "@/hooks/use-stablecoins";
-import { buildReportCardMap } from "@/lib/stablecoin-lookups";
-import { BLACKLIST_STATUS_BUCKET_COLORS, buildBlacklistStatusBuckets } from "@/lib/blacklist-status-buckets";
+import { BLACKLIST_STATUS_BUCKET_COLORS, type BlacklistStatusBucket } from "@/lib/blacklist-status-buckets";
 import { BLACKLIST_CHART_COLORS } from "@shared/lib/classification";
 import { formatCurrency, formatPercent } from "@shared/lib/format";
 import type { BlacklistStablecoin, BlacklistSummaryResponse } from "@shared/types";
@@ -15,6 +11,8 @@ import type { BlacklistStablecoin, BlacklistSummaryResponse } from "@shared/type
 interface BlacklistStatsProps {
   stats: BlacklistSummaryResponse["stats"] | undefined;
   isLoading: boolean;
+  blacklistStatusBuckets: BlacklistStatusBucket[] | null;
+  supportDataLoading: boolean;
 }
 
 function formatMarketSharePercentage(value: number): string {
@@ -23,30 +21,22 @@ function formatMarketSharePercentage(value: number): string {
   return formatPercent(value, 1);
 }
 
-export function BlacklistStats({ stats, isLoading }: BlacklistStatsProps) {
-  const { data: stablecoinData, isLoading: stablecoinsLoading } = useStablecoins();
-  const { data: reportCardsData, isLoading: reportCardsLoading } = useReportCards();
+export function BlacklistStats({
+  stats,
+  isLoading,
+  blacklistStatusBuckets,
+  supportDataLoading,
+}: BlacklistStatsProps) {
   const trackedAddressCount = stats?.trackedAddressCount ?? stats?.activeAddressCount ?? 0;
   const trackedAmountGapCount = stats?.trackedAmountGapCount ?? stats?.activeAmountGapCount ?? 0;
   const trackedFrozenTotal = stats?.trackedFrozenTotal ?? stats?.activeFrozenTotal ?? 0;
-  const reportCardMap = useMemo(() => buildReportCardMap(reportCardsData?.cards), [reportCardsData?.cards]);
-  const blacklistStatusBuckets = useMemo(
-    () => buildBlacklistStatusBuckets(stablecoinData?.peggedAssets, reportCardMap),
-    [reportCardMap, stablecoinData?.peggedAssets],
-  );
-  const totalTrackedMarketCap = useMemo(
-    () => blacklistStatusBuckets.reduce((sum, bucket) => sum + bucket.marketCap, 0),
-    [blacklistStatusBuckets],
-  );
-  const unfreezableBucket = useMemo(
-    () => blacklistStatusBuckets.find((bucket) => bucket.key === "no") ?? null,
-    [blacklistStatusBuckets],
-  );
+  const totalTrackedMarketCap = (blacklistStatusBuckets ?? []).reduce((sum, bucket) => sum + bucket.marketCap, 0);
+  const unfreezableBucket = blacklistStatusBuckets?.find((bucket) => bucket.key === "no") ?? null;
   const unfreezableMarketSharePct =
     unfreezableBucket && totalTrackedMarketCap > 0
       ? (unfreezableBucket.marketCap / totalTrackedMarketCap) * 100
       : 0;
-  const isUnfreezableShareLoading = stablecoinsLoading || reportCardsLoading;
+  const isUnfreezableShareLoading = supportDataLoading;
   const unfreezableMarketShareValue = isUnfreezableShareLoading ? "—" : formatMarketSharePercentage(unfreezableMarketSharePct);
   const unfreezableMarketShareSubtext =
     unfreezableBucket && totalTrackedMarketCap > 0

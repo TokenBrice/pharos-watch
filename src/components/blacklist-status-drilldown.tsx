@@ -2,13 +2,12 @@
 
 import { useMemo } from "react";
 import { X } from "lucide-react";
-import { useDexLiquidity, usePegSummary, useReportCards } from "@/hooks/api-hooks";
+import { useDexLiquidity, usePegSummary } from "@/hooks/api-hooks";
 import { useLogos } from "@/hooks/use-logos";
-import { useStablecoins } from "@/hooks/use-stablecoins";
 import { StablecoinTable } from "@/components/stablecoin-table";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { buildPegSummaryCoinMap, buildReportCardMap } from "@/lib/stablecoin-lookups";
+import { buildPegSummaryCoinMap } from "@/lib/stablecoin-lookups";
 import {
   BLACKLIST_STATUS_BUCKET_DESCRIPTIONS,
   BLACKLIST_STATUS_BUCKET_LABELS,
@@ -17,30 +16,36 @@ import {
 } from "@/lib/blacklist-status-buckets";
 import { derivePegRates } from "@shared/lib/peg-rates";
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins";
+import type { ReportCard, StablecoinData } from "@shared/types";
 
 interface BlacklistStatusDrilldownProps {
   status: BlacklistStatusBucketKey;
+  stablecoins: StablecoinData[] | undefined;
+  fxFallbackRates?: Record<string, number>;
+  reportCards: Record<string, ReportCard> | undefined;
   onClear: () => void;
 }
 
-export function BlacklistStatusDrilldown({ status, onClear }: BlacklistStatusDrilldownProps) {
-  const { data: stablecoinsData, isLoading } = useStablecoins();
+export function BlacklistStatusDrilldown({
+  status,
+  stablecoins,
+  fxFallbackRates,
+  reportCards,
+  onClear,
+}: BlacklistStatusDrilldownProps) {
   const { data: logos } = useLogos();
   const { data: pegSummaryData } = usePegSummary();
   const { data: dexLiquidity } = useDexLiquidity();
-  const { data: reportCardsData } = useReportCards();
-
-  const reportCardMap = useMemo(() => buildReportCardMap(reportCardsData?.cards), [reportCardsData?.cards]);
   const pegScores = useMemo(() => buildPegSummaryCoinMap(pegSummaryData?.coins), [pegSummaryData?.coins]);
 
   const { rates: pegRates } = useMemo(
-    () => derivePegRates(stablecoinsData?.peggedAssets ?? [], TRACKED_META_BY_ID, stablecoinsData?.fxFallbackRates),
-    [stablecoinsData],
+    () => derivePegRates(stablecoins ?? [], TRACKED_META_BY_ID, fxFallbackRates),
+    [fxFallbackRates, stablecoins],
   );
 
   const filteredStablecoins = useMemo(
-    () => filterStablecoinsByBlacklistStatus(stablecoinsData?.peggedAssets, status, reportCardMap),
-    [stablecoinsData?.peggedAssets, status, reportCardMap],
+    () => filterStablecoinsByBlacklistStatus(stablecoins, status, reportCards),
+    [stablecoins, status, reportCards],
   );
 
   return (
@@ -71,13 +76,13 @@ export function BlacklistStatusDrilldown({ status, onClear }: BlacklistStatusDri
         <CardContent>
           <StablecoinTable
             data={filteredStablecoins}
-            isLoading={isLoading}
+            isLoading={!stablecoins}
             activeFilters={[]}
             logos={logos}
             pegRates={pegRates}
             pegScores={pegScores}
             dexLiquidity={dexLiquidity ?? undefined}
-            reportCards={reportCardMap}
+            reportCards={reportCards}
           />
         </CardContent>
       </Card>

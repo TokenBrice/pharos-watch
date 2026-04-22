@@ -18,20 +18,6 @@ vi.mock("@/hooks/use-chart-container-ready", () => ({
   }),
 }));
 
-vi.mock("@/hooks/use-stablecoins", () => ({
-  useStablecoins: () => ({
-    data: { peggedAssets: [] },
-    isLoading: false,
-  }),
-}));
-
-vi.mock("@/hooks/api-hooks", () => ({
-  useReportCards: () => ({
-    data: { cards: [] },
-    isLoading: false,
-  }),
-}));
-
 vi.mock("@/lib/blacklist-status-buckets", () => ({
   BLACKLIST_STATUS_BUCKET_COLORS: {
     yes: "#ef4444",
@@ -46,12 +32,6 @@ vi.mock("@/lib/blacklist-status-buckets", () => ({
     no: "No",
   },
   BLACKLIST_STATUS_BUCKET_ORDER: ["yes", "possible", "upstream", "no"],
-  buildBlacklistStatusBuckets: () => [
-    { status: "Yes", key: "yes", count: 5, marketCap: 100 },
-    { status: "Possible", key: "possible", count: 3, marketCap: 50 },
-    { status: "Upstream", key: "upstream", count: 2, marketCap: 25 },
-    { status: "No", key: "no", count: 1, marketCap: 10 },
-  ],
 }));
 
 vi.mock("recharts", () => ({
@@ -78,7 +58,18 @@ describe("BlacklistStatusCharts", () => {
   it("calls back with the selected status bucket when a bar is clicked", () => {
     const onStatusSelect = vi.fn();
 
-    render(<BlacklistStatusCharts onStatusSelect={onStatusSelect} />);
+    render(
+      <BlacklistStatusCharts
+        buckets={[
+          { status: "Yes", key: "yes", count: 5, marketCap: 100 },
+          { status: "Possible", key: "possible", count: 3, marketCap: 50 },
+          { status: "Upstream", key: "upstream", count: 2, marketCap: 25 },
+          { status: "No", key: "no", count: 1, marketCap: 10 },
+        ]}
+        isLoading={false}
+        onStatusSelect={onStatusSelect}
+      />,
+    );
 
     fireEvent.click(screen.getAllByRole("button", { name: "Show No stablecoins" })[0]);
 

@@ -1,21 +1,16 @@
 "use client";
 
-import { useMemo } from "react";
 import { BarChart, Bar, Tooltip, Cell } from "recharts";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useChartContainerReady } from "@/hooks/use-chart-container-ready";
-import { useStablecoins } from "@/hooks/use-stablecoins";
-import { useReportCards } from "@/hooks/api-hooks";
 import { formatCurrency } from "@shared/lib/format";
-import { buildReportCardMap } from "@/lib/stablecoin-lookups";
 import { PharosChartTooltip, TooltipLabel, TooltipRow } from "@/components/pharos-chart-tooltip";
 import { CategoricalXAxis, ChartGrid, MonoYAxis } from "@/components/chart-primitives";
 import {
   BLACKLIST_STATUS_BUCKET_COLORS,
   BLACKLIST_STATUS_BUCKET_LABELS,
   BLACKLIST_STATUS_BUCKET_ORDER,
-  buildBlacklistStatusBuckets,
   type BlacklistStatusBucket,
   type BlacklistStatusBucketKey,
 } from "@/lib/blacklist-status-buckets";
@@ -152,22 +147,16 @@ function StatusTooltip({
 }
 
 export function BlacklistStatusCharts({
+  buckets,
+  isLoading,
   selectedStatus = null,
   onStatusSelect,
 }: {
+  buckets: BlacklistStatusBucket[] | null;
+  isLoading: boolean;
   selectedStatus?: BlacklistStatusBucketKey | null;
   onStatusSelect?: (status: BlacklistStatusBucketKey) => void;
 }) {
-  const { data: stablecoinData, isLoading: supplyLoading } = useStablecoins();
-  const { data: reportCardsData, isLoading: rcLoading } = useReportCards();
-  const isLoading = supplyLoading || rcLoading;
-
-  const buckets = useMemo(() => {
-    if (!stablecoinData) return null;
-    const reportCards = buildReportCardMap(reportCardsData?.cards);
-    return buildBlacklistStatusBuckets(stablecoinData?.peggedAssets, reportCards);
-  }, [stablecoinData, reportCardsData]);
-
   if (isLoading || !buckets) {
     return (
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-5">

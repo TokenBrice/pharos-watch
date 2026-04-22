@@ -27,6 +27,11 @@ function BlacklistPageInner() {
     error,
     dataUpdatedAt,
     freshnessMeta,
+    stablecoins,
+    stablecoinFxFallbackRates,
+    reportCardMap,
+    blacklistStatusBuckets,
+    supportDataLoading,
     refetchSummary,
     refetchPage,
     statusBucket,
@@ -86,13 +91,29 @@ function BlacklistPageInner() {
         queries={[{ preset: "blacklist", dataUpdatedAt, error, hasData: !!summary || events.length > 0, meta: freshnessMeta }]}
       />
 
-      <BlacklistStats stats={summary?.stats} isLoading={summaryLoading} />
+      <BlacklistStats
+        stats={summary?.stats}
+        isLoading={summaryLoading}
+        blacklistStatusBuckets={blacklistStatusBuckets}
+        supportDataLoading={supportDataLoading}
+      />
 
-      <BlacklistStatusCharts selectedStatus={statusBucket} onStatusSelect={handleStatusBucketChange} />
+      <BlacklistStatusCharts
+        buckets={blacklistStatusBuckets}
+        isLoading={supportDataLoading}
+        selectedStatus={statusBucket}
+        onStatusSelect={handleStatusBucketChange}
+      />
 
       {statusBucket ? (
         <div ref={drilldownRef}>
-          <BlacklistStatusDrilldown status={statusBucket} onClear={handleStatusBucketClear} />
+          <BlacklistStatusDrilldown
+            status={statusBucket}
+            stablecoins={stablecoins}
+            fxFallbackRates={stablecoinFxFallbackRates}
+            reportCards={reportCardMap}
+            onClear={handleStatusBucketClear}
+          />
         </div>
       ) : null}
 

@@ -34,6 +34,20 @@ vi.mock("@/lib/analytics", () => ({
   trackSearch: trackSearchMock,
 }));
 
+vi.mock("@/hooks/use-stablecoins", () => ({
+  useStablecoins: () => ({
+    data: { peggedAssets: [] },
+    isLoading: false,
+  }),
+}));
+
+vi.mock("@/hooks/api-hooks", () => ({
+  useReportCards: () => ({
+    data: { cards: [] },
+    isLoading: false,
+  }),
+}));
+
 describe("parseBlacklistPageFilters", () => {
   it("normalizes accepted values and falls back for invalid input", () => {
     const filters = parseBlacklistPageFilters(
