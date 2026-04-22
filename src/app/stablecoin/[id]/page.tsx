@@ -164,6 +164,7 @@ export default async function StablecoinDetailPage({ params }: { params: Promise
               coin.symbol,
               coin.name,
               "stablecoin",
+              ...(coin.variantKind ? [coin.variantKind, "stablecoin variant"] : []),
               GOVERNANCE_LABELS[coin.flags.governance] ?? coin.flags.governance,
               BACKING_LABELS[coin.flags.backing] ?? coin.flags.backing,
               PEG_LABELS_SHORT[coin.flags.pegCurrency] ?? coin.flags.pegCurrency,
@@ -172,6 +173,8 @@ export default async function StablecoinDetailPage({ params }: { params: Promise
             ],
             identifier: [
               ...(coin.geckoId ? [{ "@type": "PropertyValue", propertyID: "geckoId", value: coin.geckoId }] : []),
+              ...(coin.variantOf ? [{ "@type": "PropertyValue", propertyID: "variantOf", value: coin.variantOf }] : []),
+              ...(coin.variantKind ? [{ "@type": "PropertyValue", propertyID: "variantKind", value: coin.variantKind }] : []),
               ...(coin.contracts ?? []).map((contract) => ({
                 "@type": "PropertyValue",
                 propertyID: `contract:${contract.chain}`,

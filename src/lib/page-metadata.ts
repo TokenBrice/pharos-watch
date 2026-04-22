@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { BACKING_BADGE_STYLES, PEG_LABELS_SHORT } from "@shared/lib/classification";
 import { API_ORIGIN } from "@shared/lib/runtime-origins";
+import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins";
 import type { BackingType, StablecoinMeta } from "@shared/types";
 import { getResolvedBlacklistStatus } from "@/lib/blacklist-status";
 import { buildStablecoinUrl } from "@/lib/urls";
@@ -69,6 +70,11 @@ function getReserveDifferentiator(coin: StablecoinMeta): string | null {
 
 function getMetadataDifferentiator(coin: StablecoinMeta): string | null {
   const blacklistStatus = getResolvedBlacklistStatus(coin.id);
+  const variantParent = coin.variantOf ? TRACKED_META_BY_ID.get(coin.variantOf) : null;
+
+  if (coin.variantKind && variantParent) {
+    return `${coin.symbol} is tracked as a ${coin.variantKind.replace(/-/g, " ")} of ${variantParent.symbol}.`;
+  }
 
   if (coin.flags.yieldBearing) {
     const source = coin.yieldConfig?.yieldSource;

@@ -1,5 +1,36 @@
 import { VersionCard, getScoringEntry } from "./content-shared";
 
+export function ScoringChangelogV710Entry() {
+  return (
+    <VersionCard
+      entry={getScoringEntry("7.10")}
+      accent="border-l-emerald-500"
+    >
+      <p>
+        The parent-linked wrapper framework now covers bond-maturity variants, starting with bUSD0 as a bond leg
+        over USD0.
+      </p>
+      <ul className="list-disc list-inside space-y-1">
+        <li>
+          <code className="text-xs bg-muted px-1 py-0.5 rounded">bUSD0</code> now declares canonical{" "}
+          <code className="text-xs bg-muted px-1 py-0.5 rounded">variantOf</code> /{" "}
+          <code className="text-xs bg-muted px-1 py-0.5 rounded">variantKind</code> metadata as a{" "}
+          <code className="text-xs bg-muted px-1 py-0.5 rounded">bond-maturity</code> child of USD0.
+        </li>
+        <li>
+          Dependency Risk now applies a stricter bond wrapper ceiling of parent minus 8 points while the existing
+          parent-overall cap still prevents the child from outscoring the parent card.
+        </li>
+        <li>
+          The homepage variant owner on <code className="text-xs bg-muted px-1 py-0.5 rounded">/</code> now includes a
+          <code className="text-xs bg-muted px-1 py-0.5 rounded">Bond</code> filter state, and detail-page variant cards
+          link back into that owner instead of introducing a dedicated variant route family.
+        </li>
+      </ul>
+    </VersionCard>
+  );
+}
+
 export function ScoringChangelogV709Entry() {
   return (
     <VersionCard

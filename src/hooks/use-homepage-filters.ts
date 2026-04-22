@@ -32,7 +32,7 @@ export const FILTER_GROUPS: FilterGroup[] = [
   },
   {
     label: "Variant",
-    options: ["variant-tracked", "variant-savings-passthrough", "variant-risk-absorption"],
+    options: ["variant-tracked", "variant-savings-passthrough", "variant-risk-absorption", "variant-bond-maturity"],
   },
 ];
 

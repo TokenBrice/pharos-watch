@@ -116,6 +116,7 @@ describe("HomepageClient", () => {
     expect(screen.getByRole("radio", { name: "All variants" })).toBeTruthy();
     expect(screen.getByRole("radio", { name: "Savings" })).toBeTruthy();
     expect(screen.getByRole("radio", { name: "Risk-Abs" })).toBeTruthy();
+    expect(screen.getByRole("radio", { name: "Bond" })).toBeTruthy();
   });
 
   it("uses the full accessibility wording for active variant filter chips", () => {

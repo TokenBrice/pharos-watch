@@ -110,7 +110,7 @@ describe("tracked stablecoin metadata", () => {
     expect(algorithmicIds).toEqual([]);
   });
 
-  it("tracks exactly the nine implementation-scope variants", () => {
+  it("tracks the ten current implementation-scope variants", () => {
     const variantIds = ACTIVE_STABLECOINS
       .filter((coin) => isTrackedVariant(coin.id))
       .map((coin) => coin.id);
@@ -120,6 +120,7 @@ describe("tracked stablecoin metadata", () => {
       "susds-sky",
       "stusds-sky",
       "sdai-sky",
+      "busd0-usual",
       "stkgho-umbrella-aave",
       "scrvusd-curve",
       "sfrxusd-frax",

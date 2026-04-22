@@ -106,6 +106,8 @@ interface StablecoinOgSignalsInput {
   governance: string;
   redemptionScore: number | null;
   change24h: number | null;
+  variantLabel?: string | null;
+  variantParentSymbol?: string | null;
 }
 
 export function deriveStablecoinOgCardData({
@@ -121,6 +123,8 @@ export function deriveStablecoinOgCardData({
   governance,
   redemptionScore,
   change24h,
+  variantLabel,
+  variantParentSymbol,
 }: StablecoinOgSignalsInput): StablecoinCardData {
   const pegPrice = coin.price ?? 1;
   const mcap = sumPegBuckets(coin.circulating);
@@ -144,6 +148,8 @@ export function deriveStablecoinOgCardData({
     governance,
     redemptionScore,
     change24h,
+    variantLabel: variantLabel ?? null,
+    variantParentSymbol: variantParentSymbol ?? null,
     lastUpdated: new Date().toISOString().slice(0, 16).replace("T", " ") + " UTC",
   };
 }
@@ -236,6 +242,16 @@ async function handleStablecoinOg(db: D1Database, coinId: string): Promise<Respo
   });
   const meta = TRACKED_META_BY_ID.get(id);
   const liq = dexLiqMap[id];
+  const variantLabel = meta?.variantKind === "savings-passthrough"
+    ? "Savings"
+    : meta?.variantKind === "risk-absorption"
+      ? "Risk-Abs"
+      : meta?.variantKind === "bond-maturity"
+        ? "Bond"
+        : null;
+  const variantParentSymbol = meta?.variantOf
+    ? (TRACKED_META_BY_ID.get(meta.variantOf)?.symbol ?? meta.variantOf)
+    : null;
 
   // Calculate 24h price change
   let change24h: number | null = null;
@@ -256,6 +272,8 @@ async function handleStablecoinOg(db: D1Database, coinId: string): Promise<Respo
     governance: meta?.flags.governance ?? "centralized",
     redemptionScore: null, // Not available in current cache schema
     change24h,
+    variantLabel,
+    variantParentSymbol,
   });
 
   const png = await renderPng(<StablecoinCard data={data} />);

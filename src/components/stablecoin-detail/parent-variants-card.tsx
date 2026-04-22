@@ -7,7 +7,7 @@ import { StablecoinLogo } from "@/components/stablecoin-logo";
 import { useLogos } from "@/hooks/use-logos";
 import { DETAIL_SECTION_TITLE_CLASS } from "@/components/stablecoin-detail/section-title";
 import { getVariantDisplay } from "@/lib/variant-display";
-import { buildStablecoinUrl } from "@/lib/urls";
+import { buildHomepageVariantBrowseUrl, buildStablecoinUrl } from "@/lib/urls";
 import type { StablecoinMeta } from "@shared/types";
 
 interface ParentVariantsCardProps {
@@ -52,6 +52,12 @@ export function ParentVariantsCard({ variants }: ParentVariantsCardProps) {
             </Link>
           );
         })}
+        <Link
+          href={buildHomepageVariantBrowseUrl()}
+          className="pharos-focus-ring mt-1 inline-flex w-fit items-center text-xs font-medium text-muted-foreground underline-offset-4 transition-colors hover:text-foreground hover:underline"
+        >
+          Browse all tracked variants
+        </Link>
       </CardContent>
     </Card>
   );

@@ -55,6 +55,7 @@ describe("getFilterTags — tracked variants", () => {
     expect(tags).not.toContain("variant-tracked");
     expect(tags).not.toContain("variant-savings-passthrough");
     expect(tags).not.toContain("variant-risk-absorption");
+    expect(tags).not.toContain("variant-bond-maturity");
   });
 
   it("emits tracked savings variant tags", () => {
@@ -66,6 +67,7 @@ describe("getFilterTags — tracked variants", () => {
     expect(tags).toContain("variant-tracked");
     expect(tags).toContain("variant-savings-passthrough");
     expect(tags).not.toContain("variant-risk-absorption");
+    expect(tags).not.toContain("variant-bond-maturity");
   });
 
   it("emits tracked risk-absorption variant tags", () => {
@@ -77,5 +79,18 @@ describe("getFilterTags — tracked variants", () => {
     expect(tags).toContain("variant-tracked");
     expect(tags).toContain("variant-risk-absorption");
     expect(tags).not.toContain("variant-savings-passthrough");
+    expect(tags).not.toContain("variant-bond-maturity");
+  });
+
+  it("emits tracked bond variant tags", () => {
+    const tags = getFilterTags(makeCoin({
+      variantOf: "base-coin",
+      variantKind: "bond-maturity",
+    }));
+
+    expect(tags).toContain("variant-tracked");
+    expect(tags).toContain("variant-bond-maturity");
+    expect(tags).not.toContain("variant-savings-passthrough");
+    expect(tags).not.toContain("variant-risk-absorption");
   });
 });

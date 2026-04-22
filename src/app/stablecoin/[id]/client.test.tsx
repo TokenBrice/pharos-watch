@@ -147,6 +147,7 @@ describe("StablecoinDetailClient", () => {
     expect(overviewSections[0]?.contains(screen.getByText("Variants"))).toBe(true);
     expect(screen.getAllByText("Sky Savings USDS").length).toBeGreaterThan(0);
     expect(screen.getAllByText("Staked USDS").length).toBeGreaterThan(0);
+    expect(screen.getByRole("link", { name: "Browse all tracked variants" })).toBeTruthy();
   });
 
   it("renders the underlying asset card inside the single overview section for variants", () => {
@@ -184,5 +185,6 @@ describe("StablecoinDetailClient", () => {
     expect(screen.getByText("Underlying Asset")).toBeTruthy();
     expect(overviewSections[0]?.contains(screen.getByText("Underlying Asset"))).toBe(true);
     expect(screen.getAllByText("Sky Dollar").length).toBeGreaterThan(0);
+    expect(screen.getByRole("link", { name: "Browse all savings variants" })).toBeTruthy();
   });
 });

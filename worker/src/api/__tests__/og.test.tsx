@@ -69,6 +69,35 @@ describe("stablecoin OG card data", () => {
     expect(markup).toContain("Fiat");
     expect(markup).toContain("CeFi");
   });
+
+  it("renders variant context when provided", () => {
+    const markup = renderToStaticMarkup(
+      <StablecoinCard
+        data={{
+          name: "Bond USD0",
+          symbol: "bUSD0",
+          grade: "B+",
+          pegPrice: 1,
+          dewsBand: "CALM",
+          liquidityScore: 70,
+          mcap: 10_000_000,
+          vol24h: null,
+          flow7d: 500_000,
+          sparklineData: [0.995, 1.0],
+          hasActiveDepeg: false,
+          pegScore: 88,
+          backing: "rwa",
+          governance: "centralized-dependent",
+          redemptionScore: 75,
+          change24h: 0.1,
+          variantLabel: "Bond",
+          variantParentSymbol: "USD0",
+        }}
+      />,
+    );
+
+    expect(markup).toContain("Bond of USD0");
+  });
 });
 
 describe("stability index OG card", () => {

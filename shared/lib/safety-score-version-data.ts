@@ -1,9 +1,24 @@
 import type { MethodologyVersionConfig } from "./methodology-version";
 
 export const SAFETY_SCORE_VERSION_CONFIG: MethodologyVersionConfig = {
-  currentVersion: "7.09",
+  currentVersion: "7.10",
   changelogPath: "/methodology/scoring-changelog/",
   changelog: [
+    {
+      version: "7.10",
+      title: "Bond-maturity variants join the parent-linked wrapper framework",
+      date: "2026-04-22",
+      effectiveAt: 1776819600,
+      summary:
+        "The tracked variant framework now covers bond-maturity wrappers, starting with bUSD0 as a bond leg over USD0.",
+      impact: [
+        "`bUSD0` now declares canonical `variantOf` / `variantKind` metadata as a `bond-maturity` child of `USD0`, so the relationship is visible across Safety Scores, detail pages, the homepage filters, and the report-card dependency graph",
+        "Dependency Risk applies a stricter wrapper ceiling of parent minus 8 points for `bond-maturity` variants, while the existing parent-overall cap still prevents the child from outscoring the parent card",
+        "The homepage variant owner on `/` now exposes a `Bond` filter state alongside the existing tracked, savings, and risk-absorption cohorts, and detail pages link back into that owner instead of introducing a dedicated variant route family",
+      ],
+      commits: [],
+      reconstructed: false,
+    },
     {
       version: "7.09",
       title: "Tracked wrapper and staked variants become explicit parent-linked cards",

@@ -218,6 +218,17 @@ describe("scoreDependencyRisk", () => {
 
     expect(result.score).toBe(75);
   });
+
+  it("uses the strictest wrapper ceiling for bond-maturity variants", () => {
+    const result = scoreDependencyRisk({
+      governance: "centralized-dependent",
+      dependencies: [{ id: "usd0-usual", weight: 1, type: "wrapper" }],
+      variantParentId: "usd0-usual",
+      variantKind: "bond-maturity",
+    }, new Map([["usd0-usual", 95]]));
+
+    expect(result.score).toBe(87);
+  });
 });
 
 describe("scoreLiquidity", () => {

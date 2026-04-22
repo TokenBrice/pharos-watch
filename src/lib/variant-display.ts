@@ -21,6 +21,12 @@ const VARIANT_DISPLAY: Record<
     badgeClass: "border-amber-500/30 bg-amber-500/10 text-amber-700 dark:text-amber-400",
     chipClass: "border-amber-500/30 bg-amber-500/10 text-amber-700 dark:text-amber-400",
   },
+  "bond-maturity": {
+    shortLabel: "Bond",
+    fullLabel: "Bond variant",
+    badgeClass: "border-slate-500/25 bg-slate-500/10 text-slate-700 dark:text-slate-300",
+    chipClass: "border-slate-500/25 bg-slate-500/10 text-slate-700 dark:text-slate-300",
+  },
 };
 
 export function getVariantDisplay(kind: VariantKind) {

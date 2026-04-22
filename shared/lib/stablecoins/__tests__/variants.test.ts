@@ -27,6 +27,7 @@ describe("stablecoin variants", () => {
 
   it("marks only authored tracked variants", () => {
     expect(isTrackedVariant("susde-ethena")).toBe(true);
+    expect(isTrackedVariant("busd0-usual")).toBe(true);
     expect(isTrackedVariant("usde-ethena")).toBe(false);
     expect(isTrackedVariant("susdai-usd-ai")).toBe(false);
   });

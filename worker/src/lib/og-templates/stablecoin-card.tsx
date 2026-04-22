@@ -22,6 +22,8 @@ export interface StablecoinCardData {
   governance: string;
   redemptionScore: number | null;
   change24h: number | null;
+  variantLabel?: string | null;
+  variantParentSymbol?: string | null;
   lastUpdated?: string;
 }
 
@@ -112,6 +114,21 @@ export function StablecoinCard({ data }: { data: StablecoinCardData }) {
     >
       {/* Top section: metrics */}
       <div style={{ display: "flex", flexDirection: "column" }}>
+        {data.variantLabel && data.variantParentSymbol ? (
+          <div
+            style={{
+              display: "flex",
+              marginBottom: 18,
+              fontFamily: "Geist Mono",
+              fontSize: 16,
+              letterSpacing: "0.08em",
+              color: TEXT_SECONDARY,
+              textTransform: "uppercase",
+            }}
+          >
+            {data.variantLabel} of {data.variantParentSymbol}
+          </div>
+        ) : null}
         {/* Primary metrics row - 6 items */}
         <div
           style={{

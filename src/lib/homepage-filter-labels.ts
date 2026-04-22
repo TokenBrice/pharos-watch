@@ -6,6 +6,7 @@ const HOMEPAGE_FILTER_CONTROL_LABEL_OVERRIDES: Partial<Record<FilterTag, string>
   "variant-tracked": "All variants",
   "variant-savings-passthrough": "Savings",
   "variant-risk-absorption": "Risk-Abs",
+  "variant-bond-maturity": "Bond",
   "infrastructure-liquity-v1": "LQTYv1",
   "infrastructure-liquity-v2": "LQTYv2",
   "infrastructure-m0": "M0",
@@ -19,6 +20,7 @@ const HOMEPAGE_FILTER_CONTROL_LABEL_OVERRIDES: Partial<Record<FilterTag, string>
 
 const HOMEPAGE_ACTIVE_FILTER_LABEL_OVERRIDES: Partial<Record<FilterTag, string>> = {
   "fiat-non-usd-peg": "Non USD",
+  "variant-bond-maturity": "Bond",
   centralized: "CeFi",
   "centralized-dependent": "CeFi-Dep",
   decentralized: "DeFi",

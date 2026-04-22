@@ -158,11 +158,15 @@ describe("buildTrackedIdSet", () => {
     const allVariants = buildTrackedIdSet(["variant-tracked"]);
     expect(allVariants.has("susds-sky")).toBe(true);
     expect(allVariants.has("stusds-sky")).toBe(true);
+    expect(allVariants.has("busd0-usual")).toBe(true);
     expect(allVariants.has("usds-sky")).toBe(false);
-    expect(allVariants.size).toBe(9);
+    expect(allVariants.size).toBe(10);
 
     const riskAbsorption = buildTrackedIdSet(["variant-risk-absorption"]);
     expect(riskAbsorption).toEqual(new Set(["stusds-sky", "stkgho-umbrella-aave"]));
+
+    const bond = buildTrackedIdSet(["variant-bond-maturity"]);
+    expect(bond).toEqual(new Set(["busd0-usual"]));
   });
 });
 

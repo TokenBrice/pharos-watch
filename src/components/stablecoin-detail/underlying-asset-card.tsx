@@ -6,7 +6,7 @@ import { StablecoinLogo } from "@/components/stablecoin-logo";
 import { useLogos } from "@/hooks/use-logos";
 import { DETAIL_SECTION_TITLE_CLASS } from "@/components/stablecoin-detail/section-title";
 import { getVariantAccessibleLabel, getVariantDisplay } from "@/lib/variant-display";
-import { buildStablecoinUrl } from "@/lib/urls";
+import { buildHomepageVariantBrowseUrl, buildStablecoinUrl } from "@/lib/urls";
 import type { StablecoinMeta, VariantKind } from "@shared/types";
 
 interface UnderlyingAssetCardProps {
@@ -18,6 +18,7 @@ interface UnderlyingAssetCardProps {
 export function UnderlyingAssetCard({ parent, kind, siblings }: UnderlyingAssetCardProps) {
   const { data: logos } = useLogos();
   const display = getVariantDisplay(kind);
+  const browseLabel = getVariantAccessibleLabel(kind).replace(/\s+variant$/i, "").toLowerCase();
 
   return (
     <Card className="rounded-xl border-border/60">
@@ -49,6 +50,12 @@ export function UnderlyingAssetCard({ parent, kind, siblings }: UnderlyingAssetC
             Related tracked variants: {siblings.map((sibling) => sibling.symbol).join(", ")}.
           </p>
         ) : null}
+        <Link
+          href={buildHomepageVariantBrowseUrl(kind)}
+          className="pharos-focus-ring inline-flex w-fit items-center text-xs font-medium text-muted-foreground underline-offset-4 transition-colors hover:text-foreground hover:underline"
+        >
+          Browse all {browseLabel} variants
+        </Link>
       </CardContent>
     </Card>
   );

@@ -96,6 +96,12 @@ describe("parseHomepageParams", () => {
     expect(result.groupSelections["Variant"]).toBe("variant-risk-absorption");
   });
 
+  it("parses the bond variant filter", () => {
+    const params = new URLSearchParams("variant=variant-bond-maturity");
+    const result = parseHomepageParams(params);
+    expect(result.groupSelections["Variant"]).toBe("variant-bond-maturity");
+  });
+
   it("parses the search query q parameter", () => {
     const params = new URLSearchParams("q=usdc");
     const result = parseHomepageParams(params);
