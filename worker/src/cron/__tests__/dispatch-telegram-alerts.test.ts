@@ -356,6 +356,155 @@ describe("dispatchTelegramAlerts", () => {
     expect(mockSendToChat.mock.calls[0]?.[0]).toBe("777");
   });
 
+  it("sends global safety alerts only for material downgrades", async () => {
+    const now = Math.floor(Date.now() / 1000);
+
+    mockGetCache.mockImplementation(async (_db: unknown, key: string) => {
+      if (key === "alert:dews-snapshot") {
+        return { value: JSON.stringify({}), updatedAt: now - 60 };
+      }
+      if (key === "alert:depeg-snapshot") {
+        return { value: JSON.stringify({}), updatedAt: now - 60 };
+      }
+      if (key === "alert:safety-snapshot") {
+        return makeSafetySnapshotCache({
+          "usdc-circle": { grade: "B", score: 70, methodologyVersion: "7.09" },
+        });
+      }
+      if (key === "alert:safety-source-cache") {
+        return makeSafetySourceCache({
+          "usdc-circle": { grade: "C+", score: 66, methodologyVersion: "7.09" },
+        }, now - 60);
+      }
+      return null;
+    });
+
+    const db = mockD1([
+      { match: "FROM stress_signals", rows: [] },
+      { match: "FROM depeg_events WHERE ended_at IS NULL", rows: [] },
+      { match: "FROM safety_grade_history", rows: [] },
+      { match: "SELECT id, chat_id, message_html", rows: [] },
+      { match: "sub.alert_safety = 1", matchBinds: ["usdc-circle", now], rows: [] },
+      {
+        match: "WHERE global_alert_safety = 1",
+        rows: [{ chat_id: "777", last_active_at: now, quiet_hours_enabled: 0, quiet_hours_start_utc: null, quiet_hours_end_utc: null }],
+      },
+      { match: "DELETE FROM telegram_pending_alerts WHERE created_at", rows: [] },
+    ]);
+
+    const result = await dispatchTelegramAlerts(db, "bot-token");
+    const metadata = JSON.parse(result.metadata) as {
+      eventsDetected: { safety: number };
+      subscribersNotified: number;
+      messagesSent: number;
+    };
+
+    expect(metadata.eventsDetected.safety).toBe(1);
+    expect(metadata.subscribersNotified).toBe(1);
+    expect(metadata.messagesSent).toBe(1);
+    expect(mockSendToChat).toHaveBeenCalledTimes(1);
+    expect(mockSendToChat.mock.calls[0]?.[0]).toBe("777");
+  });
+
+  it("sends global safety alerts for scoreless downgrades", async () => {
+    const now = Math.floor(Date.now() / 1000);
+
+    mockGetCache.mockImplementation(async (_db: unknown, key: string) => {
+      if (key === "alert:dews-snapshot") {
+        return { value: JSON.stringify({}), updatedAt: now - 60 };
+      }
+      if (key === "alert:depeg-snapshot") {
+        return { value: JSON.stringify({}), updatedAt: now - 60 };
+      }
+      if (key === "alert:safety-snapshot") {
+        return makeSafetySnapshotCache({
+          "usdc-circle": { grade: "B", score: null, methodologyVersion: "7.09" },
+        });
+      }
+      if (key === "alert:safety-source-cache") {
+        return makeSafetySourceCache({
+          "usdc-circle": { grade: "C+", score: null, methodologyVersion: "7.09" },
+        }, now - 60);
+      }
+      return null;
+    });
+
+    const db = mockD1([
+      { match: "FROM stress_signals", rows: [] },
+      { match: "FROM depeg_events WHERE ended_at IS NULL", rows: [] },
+      { match: "FROM safety_grade_history", rows: [] },
+      { match: "SELECT id, chat_id, message_html", rows: [] },
+      { match: "sub.alert_safety = 1", matchBinds: ["usdc-circle", now], rows: [] },
+      {
+        match: "WHERE global_alert_safety = 1",
+        rows: [{ chat_id: "777", last_active_at: now, quiet_hours_enabled: 0, quiet_hours_start_utc: null, quiet_hours_end_utc: null }],
+      },
+      { match: "DELETE FROM telegram_pending_alerts WHERE created_at", rows: [] },
+    ]);
+
+    const result = await dispatchTelegramAlerts(db, "bot-token");
+    const metadata = JSON.parse(result.metadata) as {
+      eventsDetected: { safety: number };
+      subscribersNotified: number;
+      messagesSent: number;
+    };
+
+    expect(metadata.eventsDetected.safety).toBe(1);
+    expect(metadata.subscribersNotified).toBe(1);
+    expect(metadata.messagesSent).toBe(1);
+    expect(mockSendToChat).toHaveBeenCalledTimes(1);
+    expect(mockSendToChat.mock.calls[0]?.[0]).toBe("777");
+  });
+
+  it("suppresses minor global safety downgrades", async () => {
+    const now = Math.floor(Date.now() / 1000);
+
+    mockGetCache.mockImplementation(async (_db: unknown, key: string) => {
+      if (key === "alert:dews-snapshot") {
+        return { value: JSON.stringify({}), updatedAt: now - 60 };
+      }
+      if (key === "alert:depeg-snapshot") {
+        return { value: JSON.stringify({}), updatedAt: now - 60 };
+      }
+      if (key === "alert:safety-snapshot") {
+        return makeSafetySnapshotCache({
+          "usdc-circle": { grade: "B-", score: 65, methodologyVersion: "7.09" },
+        });
+      }
+      if (key === "alert:safety-source-cache") {
+        return makeSafetySourceCache({
+          "usdc-circle": { grade: "C+", score: 64, methodologyVersion: "7.09" },
+        }, now - 60);
+      }
+      return null;
+    });
+
+    const db = mockD1([
+      { match: "FROM stress_signals", rows: [] },
+      { match: "FROM depeg_events WHERE ended_at IS NULL", rows: [] },
+      { match: "FROM safety_grade_history", rows: [] },
+      { match: "SELECT id, chat_id, message_html", rows: [] },
+      { match: "sub.alert_safety = 1", matchBinds: ["usdc-circle", now], rows: [] },
+      {
+        match: "WHERE global_alert_safety = 1",
+        rows: [{ chat_id: "777", last_active_at: now, quiet_hours_enabled: 0, quiet_hours_start_utc: null, quiet_hours_end_utc: null }],
+      },
+      { match: "DELETE FROM telegram_pending_alerts WHERE created_at", rows: [] },
+    ]);
+
+    const result = await dispatchTelegramAlerts(db, "bot-token");
+    const metadata = JSON.parse(result.metadata) as {
+      eventsDetected: { safety: number };
+      subscribersNotified: number;
+      messagesSent: number;
+    };
+
+    expect(metadata.eventsDetected.safety).toBe(1);
+    expect(metadata.subscribersNotified).toBe(0);
+    expect(metadata.messagesSent).toBe(0);
+    expect(mockSendToChat).not.toHaveBeenCalled();
+  });
+
   it("batches resolved depeg lookups into one query", async () => {
     const now = Math.floor(Date.now() / 1000);
 
@@ -474,6 +623,124 @@ describe("dispatchTelegramAlerts", () => {
       },
       { match: "WHERE global_alert_depeg = 1", rows: [] },
       { match: "WHERE global_alert_safety = 1", rows: [] },
+      { match: "DELETE FROM telegram_pending_alerts WHERE created_at", rows: [] },
+    ]);
+
+    const result = await dispatchTelegramAlerts(db, "bot-token");
+    const metadata = JSON.parse(result.metadata) as {
+      subscribersNotified: number;
+      messagesSent: number;
+    };
+
+    expect(metadata.subscribersNotified).toBe(0);
+    expect(metadata.messagesSent).toBe(0);
+    expect(mockSendToChat).not.toHaveBeenCalled();
+  });
+
+  it("lets a per-coin safety follow override the global material-only safety tier", async () => {
+    const now = Math.floor(Date.now() / 1000);
+
+    mockGetCache.mockImplementation(async (_db: unknown, key: string) => {
+      if (key === "alert:dews-snapshot") {
+        return { value: JSON.stringify({}), updatedAt: now - 60 };
+      }
+      if (key === "alert:depeg-snapshot") {
+        return { value: JSON.stringify({}), updatedAt: now - 60 };
+      }
+      if (key === "alert:safety-snapshot") {
+        return makeSafetySnapshotCache({
+          "usdc-circle": { grade: "B-", score: 65, methodologyVersion: "7.09" },
+        });
+      }
+      if (key === "alert:safety-source-cache") {
+        return makeSafetySourceCache({
+          "usdc-circle": { grade: "C+", score: 64, methodologyVersion: "7.09" },
+        }, now - 60);
+      }
+      return null;
+    });
+
+    const db = mockD1([
+      { match: "FROM stress_signals", rows: [] },
+      { match: "FROM depeg_events WHERE ended_at IS NULL", rows: [] },
+      { match: "FROM safety_grade_history", rows: [] },
+      { match: "SELECT id, chat_id, message_html", rows: [] },
+      {
+        match: "sub.alert_safety = 1",
+        matchBinds: ["usdc-circle", now],
+        rows: [{
+          stablecoin_id: "usdc-circle",
+          chat_id: "777",
+          last_active_at: now,
+          safety_mode: null,
+          quiet_hours_enabled: 0,
+          quiet_hours_start_utc: null,
+          quiet_hours_end_utc: null,
+        }],
+      },
+      {
+        match: "WHERE global_alert_safety = 1",
+        rows: [{ chat_id: "777", last_active_at: now, quiet_hours_enabled: 0, quiet_hours_start_utc: null, quiet_hours_end_utc: null }],
+      },
+      { match: "DELETE FROM telegram_pending_alerts WHERE created_at", rows: [] },
+    ]);
+
+    const result = await dispatchTelegramAlerts(db, "bot-token");
+    const metadata = JSON.parse(result.metadata) as {
+      subscribersNotified: number;
+      messagesSent: number;
+    };
+
+    expect(metadata.subscribersNotified).toBe(1);
+    expect(metadata.messagesSent).toBe(1);
+    expect(mockSendToChat).toHaveBeenCalledTimes(1);
+  });
+
+  it("lets a restrictive per-coin safety mode suppress the global safety tier", async () => {
+    const now = Math.floor(Date.now() / 1000);
+
+    mockGetCache.mockImplementation(async (_db: unknown, key: string) => {
+      if (key === "alert:dews-snapshot") {
+        return { value: JSON.stringify({}), updatedAt: now - 60 };
+      }
+      if (key === "alert:depeg-snapshot") {
+        return { value: JSON.stringify({}), updatedAt: now - 60 };
+      }
+      if (key === "alert:safety-snapshot") {
+        return makeSafetySnapshotCache({
+          "usdc-circle": { grade: "B", score: 70, methodologyVersion: "7.09" },
+        });
+      }
+      if (key === "alert:safety-source-cache") {
+        return makeSafetySourceCache({
+          "usdc-circle": { grade: "C+", score: 66, methodologyVersion: "7.09" },
+        }, now - 60);
+      }
+      return null;
+    });
+
+    const db = mockD1([
+      { match: "FROM stress_signals", rows: [] },
+      { match: "FROM depeg_events WHERE ended_at IS NULL", rows: [] },
+      { match: "FROM safety_grade_history", rows: [] },
+      { match: "SELECT id, chat_id, message_html", rows: [] },
+      {
+        match: "sub.alert_safety = 1",
+        matchBinds: ["usdc-circle", now],
+        rows: [{
+          stablecoin_id: "usdc-circle",
+          chat_id: "777",
+          last_active_at: now,
+          safety_mode: "upgrade-only",
+          quiet_hours_enabled: 0,
+          quiet_hours_start_utc: null,
+          quiet_hours_end_utc: null,
+        }],
+      },
+      {
+        match: "WHERE global_alert_safety = 1",
+        rows: [{ chat_id: "777", last_active_at: now, quiet_hours_enabled: 0, quiet_hours_start_utc: null, quiet_hours_end_utc: null }],
+      },
       { match: "DELETE FROM telegram_pending_alerts WHERE created_at", rows: [] },
     ]);
 

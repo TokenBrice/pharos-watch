@@ -48,6 +48,7 @@ import {
 type DispatchResult = TelegramDispatchCronResult;
 
 const MAX_MESSAGES_PER_RUN = 200;
+const GLOBAL_SAFETY_MIN_SCORE_DROP = 3;
 
 const ALERT_COLUMN_BY_TYPE = {
   dews: "alert_dews",
@@ -66,6 +67,7 @@ const VALID_ALERT_COLUMNS = new Set(Object.values(ALERT_COLUMN_BY_TYPE));
 const VALID_GLOBAL_ALERT_COLUMNS = new Set(Object.values(GLOBAL_ALERT_COLUMN_BY_TYPE));
 
 type AlertType = keyof typeof ALERT_COLUMN_BY_TYPE;
+type LoadedSubscriberRow = Omit<SubscriberRow, "isGlobal"> & { stablecoin_id: string };
 
 function emptyResult(snapshotSeeded: boolean, chatsWithActiveSnooze = 0): DispatchResult {
   return {
@@ -153,6 +155,14 @@ function shouldIncludeSafetyChange(change: SafetyChange, mode: string | null): b
   return true;
 }
 
+function isMaterialSafetyDowngrade(change: SafetyChange): boolean {
+  if (isSafetyDeescalation(change.oldGrade, change.newGrade)) return false;
+  if (change.oldScore != null && change.newScore != null) {
+    return change.oldScore - change.newScore >= GLOBAL_SAFETY_MIN_SCORE_DROP;
+  }
+  return true;
+}
+
 function crossesDepegWorseningStep(
   previousDeviationBps: number,
   currentDeviationBps: number,
@@ -194,7 +204,7 @@ async function loadSubscriberRowsBatch(
           AND (u.alert_snooze_until_ts IS NULL OR u.alert_snooze_until_ts <= ?)`,
     )
     .bind(...stablecoinIds, nowSec)
-    .all<SubscriberRow & { stablecoin_id: string }>();
+    .all<LoadedSubscriberRow>();
 
   const map = new Map<string, SubscriberRow[]>();
   for (const row of result.results ?? []) {
@@ -208,6 +218,7 @@ async function loadSubscriberRowsBatch(
       quiet_hours_enabled: row.quiet_hours_enabled ?? 0,
       quiet_hours_start_utc: row.quiet_hours_start_utc ?? null,
       quiet_hours_end_utc: row.quiet_hours_end_utc ?? null,
+      isGlobal: false,
     });
     map.set(row.stablecoin_id, existing);
   }
@@ -248,6 +259,7 @@ async function loadGlobalSubscriberRows(
     quiet_hours_enabled: row.quiet_hours_enabled ?? 0,
     quiet_hours_start_utc: row.quiet_hours_start_utc ?? null,
     quiet_hours_end_utc: row.quiet_hours_end_utc ?? null,
+    isGlobal: true,
   }));
 }
 
@@ -478,7 +490,10 @@ export async function dispatchTelegramAlerts(
       globalSafetySubs,
       alertsByChat,
       (alerts) => alerts.safety,
-      (sub, change) => shouldIncludeSafetyChange(change, sub.safety_mode),
+      (sub, change) =>
+        sub.isGlobal
+          ? isMaterialSafetyDowngrade(change)
+          : shouldIncludeSafetyChange(change, sub.safety_mode),
     );
     routeAlertEvents(
       launchPromoted,

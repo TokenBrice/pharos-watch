@@ -21,6 +21,7 @@ export interface SubscriberRow {
   quiet_hours_enabled: number | null;
   quiet_hours_start_utc: number | null;
   quiet_hours_end_utc: number | null;
+  isGlobal: boolean;
 }
 
 export interface AlertsByChatEntry {

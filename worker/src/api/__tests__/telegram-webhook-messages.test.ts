@@ -114,7 +114,7 @@ describe("describeGlobalAlertSettings", () => {
       global_alert_dews: 1, global_alert_depeg: 0, global_alert_safety: 1, global_alert_launch: 1,
       quiet_hours_enabled: 0, quiet_hours_start_utc: null, quiet_hours_end_utc: null,
     };
-    expect(describeGlobalAlertSettings(sub)).toBe("DEWS, Safety, Launch");
+    expect(describeGlobalAlertSettings(sub)).toBe("DEWS, Safety (downgrades; 3-point drop when scored), Launch");
   });
 });
 

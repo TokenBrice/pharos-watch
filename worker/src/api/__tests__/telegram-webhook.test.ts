@@ -293,7 +293,7 @@ describe("handleTelegramWebhook", () => {
     const history = db.getHistory();
     expect(history.some((entry) => entry.sql.includes("global_alert_dews"))).toBe(true);
     expect(history.some((entry) => entry.sql.includes("INSERT INTO telegram_subscriptions"))).toBe(false);
-    expect(sentMessageBody().text).toContain("All stablecoins: DEWS, Safety");
+    expect(sentMessageBody().text).toContain("All stablecoins: DEWS, Safety (downgrades; 3-point drop when scored)");
   });
 
   it("handles /subscribe with a preset watchlist", async () => {
@@ -466,7 +466,7 @@ describe("handleTelegramWebhook", () => {
     await handleTelegramWebhook(db, makeWebhookRequest(123, "/list"), "test-secret", "bot-token");
 
     const text = sentMessageBody().text;
-    expect(text).toContain("All stablecoins: Depeg, Safety");
+    expect(text).toContain("All stablecoins: Depeg, Safety (downgrades; 3-point drop when scored)");
     expect(text).toContain("Coins (0):");
   });
 

@@ -164,6 +164,13 @@ Additional alert controls:
 
 Global subscriptions are additive, but explicit per-coin rows take precedence for that coin and alert type. That means a per-coin DEWS threshold or safety mode overrides the global default fan-out for the same chat/coin pair.
 
+Global all-stablecoin safety follows are intentionally narrower than per-coin safety follows. The current product tier is:
+
+- downgrade-only
+- material-only when scores are present (`oldScore - newScore >= 3`)
+
+This policy applies only to the global `safety all` tier. Explicit per-coin safety follows still honor the coin's configured `safety_mode`.
+
 ### Ticker Resolution
 
 Ticker parsing lives in `worker/src/lib/telegram-alerts.ts` and is built from `TRACKED_STABLECOINS`.
@@ -190,8 +197,8 @@ Telegram may redeliver the same `update_id`. The webhook stores the highest proc
 `dispatchTelegramAlerts(db, botToken, signal?)` runs on a dedicated 5-minute cron slot
 (`2,7,12,17,22,27,32,37,42,47,52,57 * * * *`), isolated from the quarter-hourly pipeline.
 
-It no longer runs inside the quarter-hourly or daily slots. Safety-grade changes from the
-daily `snapshot-safety-grade-history` job are detected within 5 minutes of the snapshot completing.
+It no longer runs inside the quarter-hourly or daily slots. Safety-grade changes are detected
+within 5 minutes of `publish-report-card-cache` refreshing the live safety source cache.
 
 ### Snapshot Inputs
 
@@ -231,7 +238,7 @@ This prevents a cold start from blasting subscribers with every current conditio
 - New active depeg events by comparing current active-depeg snapshot to the prior snapshot
 - Depeg worsening milestones by comparing current active event severity to the prior snapshot
 - Depeg resolutions by checking which prior active depegs disappeared and then loading the corresponding closed event rows
-- Safety-grade changes by comparing each coin's latest `safety_grade_history` row to the prior snapshot
+- Safety-grade changes by comparing the previous `alert:safety-snapshot` against the live safety source cache written by `publish-report-card-cache`
 - Safety-grade changes are emitted only when the live safety source cache is generation-valid; fallback-to-history no longer rewrites the alert snapshot as if it were a valid live source
 - Launch promotions by comparing the current launch snapshot to `alert:launch-snapshot`
 - Methodology-version-only safety regrades are suppressed from user alerts
@@ -268,7 +275,8 @@ Global all-stablecoin follows use the matching `telegram_subscribers` flags:
 Filtering is subscription-aware:
 
 - DEWS compares `newBand` against the coin's `dews_min_band`
-- Safety changes respect the coin's `safety_mode`
+- Per-coin safety changes respect the coin's `safety_mode`
+- Global all-stablecoin safety follows accept downgrades only, with a materiality filter when scores are present (`oldScore - newScore >= 3`; scoreless downgrades still pass through)
 - Depeg worsening follows the coin's `depeg_worsening_bps_step`
 - Quiet hours force `disable_notification = true`
 - Chats with `alert_snooze_until_ts > now` are fully skipped for the run. The count of currently-snoozed chats (whether or not they would have received an alert this run) surfaces as `chatsWithActiveSnooze` in dispatch metadata.

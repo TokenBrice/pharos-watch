@@ -18,7 +18,7 @@ Join <a href="https://t.me/pharoswatch">@pharoswatch</a> for Pharos updates and 
 <code>/subscribe dews usd-top25</code>
 <code>/subscribe safety mcap-ge-1b</code>
 <code>/subscribe launch USDPT</code>  ← pre-launch watch
-<code>/subscribe safety all</code>
+<code>/subscribe safety all</code>  ← downgrades across all tracked coins (3-point drop when scored)
 <code>/set USDC depeg-step 250</code>
 <code>/mute 22-07</code>  ← quiet hours in UTC
 
@@ -36,6 +36,8 @@ Enable alert types (dews, depeg, safety, launch) for one or more coins or preset
 
 <code>/subscribe &lt;types&gt; all</code>
 Enable alert types across all tracked stablecoins
+
+When used with <code>safety</code>, all-stablecoin follows deliver downgrades only and require a score drop of at least 3 points when scores are present.
 
 <code>/presets</code>
 Show the preset watchlist catalog and examples

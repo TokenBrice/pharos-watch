@@ -8,6 +8,8 @@ import type { SubscriberRow, SubscriptionRow } from "./telegram-webhook-shared";
 import { STABLECOIN_BY_ID } from "./telegram-webhook-shared";
 import type { StatusForCoin } from "./telegram-webhook-status";
 
+const GLOBAL_SAFETY_LABEL = "Safety (downgrades; 3-point drop when scored)";
+
 export function buildNotFoundMessage(ticker: string, suggestion?: ResolvedCoin): string {
   const lines = [`Ticker or preset "${ticker}" not found.`];
   if (suggestion) {
@@ -237,7 +239,7 @@ export function describeGlobalAlertSettings(subscriber: SubscriberRow | null): s
     labels.push("Depeg");
   }
   if (subscriber.global_alert_safety) {
-    labels.push("Safety");
+    labels.push(GLOBAL_SAFETY_LABEL);
   }
   if (subscriber.global_alert_launch) {
     labels.push("Launch");

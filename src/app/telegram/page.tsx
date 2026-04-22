@@ -56,7 +56,7 @@ View on Pharos: pharos.watch/stablecoin/usdc-circle`,
   {
     key: "safety",
     label: "Safety Grade Changes",
-    tagline: "grade shifts after daily safety snapshot, methodology-only regrades suppressed",
+    tagline: "live report-card grade shifts, with methodology-only regrades suppressed",
     content: `Safety Grade Change
 
 DAI — A- → B+
@@ -79,7 +79,7 @@ View on Pharos: pharos.watch/stablecoin/usdpt-western-union`,
 ] as const;
 
 const COMMANDS = [
-  { command: "/subscribe <types> all", description: "Enable alert types across all tracked stablecoins", example: "/subscribe depeg,safety all" },
+  { command: "/subscribe <types> all", description: "Enable alert types across all tracked stablecoins; safety all sends downgrades only and needs a 3-point score drop when scored", example: "/subscribe depeg,safety all" },
   { command: "/subscribe <types> <targets>", description: "Enable alert types for coins or preset watchlists", example: "/subscribe dews,depeg USDT,USDC" },
   { command: "/status <ticker>", description: "Current peg, DEWS band, and safety grade for one coin — no subscription needed", example: "/status USDC" },
   { command: "/presets", description: "Show preset watchlists like usd-top25 or mcap-ge-1b", example: "/presets" },
@@ -103,7 +103,7 @@ const TELEGRAM_FAQ: FaqItem[] = [
   {
     question: "Can I get alerts for all tracked stablecoins at once?",
     answer:
-      "Yes. Send /subscribe <type> all, for example /subscribe depeg all, to subscribe to an alert type across every tracked stablecoin.",
+      "Yes. Send /subscribe <type> all, for example /subscribe depeg all, to subscribe to an alert type across every tracked stablecoin. For safety, the all-stablecoin tier is intentionally narrower: it sends downgrades only and applies a 3-point filter when scores are present.",
   },
   {
     question: "How do I silence Telegram notifications during certain hours?",
@@ -342,8 +342,8 @@ export default function TelegramPage() {
                 <p className="text-sm font-semibold">Cadence</p>
                 <p className="mt-2 text-xs text-muted-foreground leading-relaxed">
                   The dispatcher runs every 5 minutes. DEWS and depeg alerts arrive within one cycle.
-                  Safety grades shift once daily after the safety snapshot, and launch alerts fire
-                  within 5 minutes of a pre-launch asset going live.
+                  Safety alerts are diffed against the live report-card publish path, and launch alerts
+                  fire within 5 minutes of a pre-launch asset going live.
                 </p>
               </CardContent>
             </Card>
@@ -426,7 +426,7 @@ export default function TelegramPage() {
                   </div>
                   <div>
                     <code className="block rounded bg-muted px-2 py-1.5 text-xs font-mono">/subscribe safety all</code>
-                    <p className="mt-1 text-xs text-muted-foreground">All-stablecoin alerts by type</p>
+                    <p className="mt-1 text-xs text-muted-foreground">Global safety watchtower for downgrades across all tracked stablecoins, with a 3-point filter when scores are present</p>
                   </div>
                   <div>
                     <code className="block rounded bg-muted px-2 py-1.5 text-xs font-mono">/subscribe launch USDPT</code>
@@ -619,7 +619,7 @@ export default function TelegramPage() {
                 featureList: [
                   "Depeg alerts (triggered, worsening milestones, resolved)",
                   "DEWS threat-band alerts (ALERT, WARNING, DANGER)",
-                  "Safety grade change alerts",
+                  "Safety grade alerts, including global downgrade filtering by score when available",
                   "Pre-launch stablecoin launch alerts",
                   "Per-coin thresholds and quiet hours",
                   "Inline snooze (1h / 4h / 24h)",
