@@ -101,7 +101,7 @@ describe("cache-passthrough: handleStablecoinCharts", () => {
     expect(res.status).toBe(503);
   });
 
-  it("returns 200 with freshness headers and appends the live stablecoins snapshot", async () => {
+  it("accepts legacy cached string dates and appends the live stablecoins snapshot", async () => {
     const nowSec = Math.floor(Date.now() / 1000);
     const db = mockD1([
       {
@@ -109,12 +109,12 @@ describe("cache-passthrough: handleStablecoinCharts", () => {
         matchBinds: ["stablecoin-charts"],
         rows: [{
           key: "stablecoin-charts",
-          value: JSON.stringify([{ date: nowSec - 3600, totalCirculatingUSD: { peggedUSD: 100 } }]),
+          value: JSON.stringify([{ date: String(nowSec - 3600), totalCirculatingUSD: { peggedUSD: 100 } }]),
           updated_at: nowSec - 5,
         }],
         first: {
           key: "stablecoin-charts",
-          value: JSON.stringify([{ date: nowSec - 3600, totalCirculatingUSD: { peggedUSD: 100 } }]),
+          value: JSON.stringify([{ date: String(nowSec - 3600), totalCirculatingUSD: { peggedUSD: 100 } }]),
           updated_at: nowSec - 5,
         },
       },
@@ -164,6 +164,7 @@ describe("cache-passthrough: handleStablecoinCharts", () => {
       { date: nowSec - 3600, totalCirculatingUSD: { peggedUSD: 100 } },
       { date: nowSec, totalCirculatingUSD: { peggedUSD: 120 } },
     ]);
+    expect(typeof body[0]?.date).toBe("number");
     expect(res.headers.get("X-Data-Age")).toBe("5");
   });
 });

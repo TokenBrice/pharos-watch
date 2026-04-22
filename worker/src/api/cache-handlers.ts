@@ -15,22 +15,11 @@ import { CACHE_PROFILES, DEFAULT_SAFETY_SCORE } from "../lib/constants";
 import { getCache } from "../lib/db-cache";
 import { buildReportCardsSnapshot } from "../lib/report-cards-snapshot";
 import { loadStablecoinsCache } from "../lib/stablecoins-cache";
+import { normalizeStablecoinChartPoints } from "../lib/stablecoin-charts-payload";
 import {
   appendOrReplaceCurrentStablecoinChartsPoint,
   buildCurrentStablecoinChartsPoint,
 } from "../lib/stablecoin-charts-reconciliation";
-
-function isStablecoinChartPointArray(
-  payload: unknown,
-): payload is Array<{ date: number; totalCirculatingUSD: Record<string, number> }> {
-  return Array.isArray(payload) && payload.every((entry) => (
-    !!entry &&
-    typeof entry === "object" &&
-    typeof (entry as { date?: unknown }).date === "number" &&
-    !!(entry as { totalCirculatingUSD?: unknown }).totalCirculatingUSD &&
-    typeof (entry as { totalCirculatingUSD?: unknown }).totalCirculatingUSD === "object"
-  ));
-}
 
 export const handleStablecoins = createCacheHandler(
   "stablecoins",
@@ -56,11 +45,12 @@ export const handleStablecoinCharts = withErrorHandler(
     if (!parsed.ok) {
       return parsed.response;
     }
-    if (!isStablecoinChartPointArray(parsed.data)) {
+    const normalizedPoints = normalizeStablecoinChartPoints(parsed.data);
+    if (!normalizedPoints) {
       return errorResponse(503, "Cached stablecoin-charts payload is malformed");
     }
 
-    let points = parsed.data;
+    let points = normalizedPoints;
 
     const stablecoinsCache = await loadStablecoinsCache(db, { mode: "strict", allowLegacyArray: true });
     if (stablecoinsCache.kind === "ok") {

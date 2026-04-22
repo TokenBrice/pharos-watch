@@ -4,6 +4,7 @@ import { fetchWithRetry } from "../lib/fetch-retry";
 import { DEFILLAMA_BASE } from "../lib/constants";
 import { getFxReferenceTypeFromState, loadFxRateState } from "../lib/fx-rate-state";
 import { buildInClause } from "../lib/db";
+import { normalizeStablecoinChartDateSeconds } from "../lib/stablecoin-charts-payload";
 import { mergeStructuralSupplementalHistoryIntoCharts, STRUCTURAL_SUPPLEMENTAL_CHART_CONFIGS } from "../lib/stablecoin-charts-reconciliation";
 import { throwIfAborted } from "../lib/abort";
 
@@ -15,6 +16,12 @@ const MIN_DOWNSAMPLED_POINTS = 10;
 const LIVE_FX_REPAIR_MAX_POINT_AGE_SEC = 3 * 24 * 60 * 60;
 
 interface RawChartPoint {
+  date: number | string;
+  totalCirculating?: Record<string, number>;
+  totalCirculatingUSD?: Record<string, number>;
+}
+
+interface NormalizedRawChartPoint {
   date: number;
   totalCirculating?: Record<string, number>;
   totalCirculatingUSD?: Record<string, number>;
@@ -31,7 +38,7 @@ interface SupplyHistoryChartRow {
   circulating_usd: number;
 }
 
-function downsample(data: RawChartPoint[]): DownsampledPoint[] {
+function downsample(data: NormalizedRawChartPoint[]): DownsampledPoint[] {
   if (data.length === 0) return [];
 
   const nowSeconds = Math.floor(Date.now() / 1000);
@@ -112,13 +119,23 @@ export async function syncStablecoinCharts(db: D1Database, signal?: AbortSignal)
     };
   }
 
+  let normalizedRaw: NormalizedRawChartPoint[] = raw.flatMap((point) => {
+    const date = normalizeStablecoinChartDateSeconds(point.date);
+    if (date == null) return [];
+    return [{ ...point, date }];
+  });
+  const invalidDateCount = raw.length - normalizedRaw.length;
+  if (invalidDateCount > 0) {
+    console.warn(`[sync-charts] Dropped ${invalidDateCount} chart points with invalid dates`);
+  }
+
   // Fix corrupted totalCirculatingUSD values (e.g. DefiLlama RUB bug Feb 2026)
   // by validating implied FX rates against known bounds and recomputing from
   // totalCirculating * cached FX rate when out of range.
   const fxState = await loadFxRateState(db);
   let fixes = 0;
   if (fxState) {
-    for (const point of raw) {
+    for (const point of normalizedRaw) {
       const circ = point.totalCirculating;
       const usd = point.totalCirculatingUSD;
       if (!circ || !usd) continue;
@@ -159,7 +176,7 @@ export async function syncStablecoinCharts(db: D1Database, signal?: AbortSignal)
       )
       .bind(...supplementalIn.binds)
       .all<SupplyHistoryChartRow>();
-    raw = mergeStructuralSupplementalHistoryIntoCharts(raw.map((point) => ({
+    normalizedRaw = mergeStructuralSupplementalHistoryIntoCharts(normalizedRaw.map((point) => ({
       date: point.date,
       totalCirculatingUSD: point.totalCirculatingUSD ?? {},
     })), overlayRowsResult.results ?? []).map((point) => ({
@@ -168,7 +185,7 @@ export async function syncStablecoinCharts(db: D1Database, signal?: AbortSignal)
     }));
   }
 
-  const downsampled = downsample(raw);
+  const downsampled = downsample(normalizedRaw);
   if (downsampled.length < MIN_DOWNSAMPLED_POINTS) {
     console.error(`[sync-charts] Downsampled payload too small (${downsampled.length}), preserving existing cache`);
     return {
@@ -176,7 +193,7 @@ export async function syncStablecoinCharts(db: D1Database, signal?: AbortSignal)
       itemCount: 0,
       metadata: JSON.stringify({
         reason: "downsampled-payload-too-small",
-        rawPoints: raw.length,
+        rawPoints: normalizedRaw.length,
         downsampledPoints: downsampled.length,
       }),
     };
@@ -184,9 +201,9 @@ export async function syncStablecoinCharts(db: D1Database, signal?: AbortSignal)
 
   await setCacheIfNewer(db, "stablecoin-charts", JSON.stringify(downsampled), syncStartSec);
   await setCache(db, "stablecoin-charts:last-write", "1");
-  console.log(`[sync-charts] Cached ${downsampled.length} points (from ${raw.length} raw)`);
+  console.log(`[sync-charts] Cached ${downsampled.length} points (from ${normalizedRaw.length} raw)`);
   return {
     itemCount: downsampled.length,
-    metadata: JSON.stringify({ rawPoints: raw.length, downsampledPoints: downsampled.length, fxFixes: fixes }),
+    metadata: JSON.stringify({ rawPoints: normalizedRaw.length, downsampledPoints: downsampled.length, fxFixes: fixes }),
   };
 }

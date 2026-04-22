@@ -24,6 +24,17 @@ function makeRawChartPoints(count: number, nowSec: number): Array<{
   });
 }
 
+function makeRawChartPointsWithStringDates(count: number, nowSec: number): Array<{
+  date: string;
+  totalCirculating: Record<string, number>;
+  totalCirculatingUSD: Record<string, number>;
+}> {
+  return makeRawChartPoints(count, nowSec).map((point) => ({
+    ...point,
+    date: String(point.date),
+  }));
+}
+
 function getCacheInsert(db: MockD1Database): { sql: string; binds: unknown[] } | undefined {
   return db
     .getHistory()
@@ -80,6 +91,36 @@ describe("syncStablecoinCharts", () => {
     const cached = JSON.parse(String(insert?.binds[1])) as Array<{ totalCirculatingUSD: Record<string, number> }>;
     expect(cached.length).toBeGreaterThan(0);
     expect(cached[0].totalCirculatingUSD.peggedUSD).toBeTypeOf("number");
+  });
+
+  it("coerces upstream string dates before writing the cached chart payload", async () => {
+    const nowSec = Math.floor(Date.now() / 1000);
+    mockFetch([
+      {
+        match: "stablecoincharts/all",
+        body: makeRawChartPointsWithStringDates(120, nowSec),
+      },
+    ]);
+
+    const db = mockD1([
+      {
+        match: "SELECT value, updated_at FROM cache WHERE key = ?",
+        matchBinds: ["fx-rates"],
+        rows: [],
+        first: {
+          value: JSON.stringify({ peggedUSD: 1 }),
+          updated_at: nowSec,
+        },
+      },
+    ]);
+
+    const result = await syncStablecoinCharts(db);
+
+    expect(result.status).toBeUndefined();
+    const insert = getCacheInsert(db as MockD1Database);
+    const cached = JSON.parse(String(insert?.binds[1])) as Array<{ date: number; totalCirculatingUSD: Record<string, number> }>;
+    expect(cached.length).toBeGreaterThan(0);
+    expect(typeof cached[0]?.date).toBe("number");
   });
 
   it("merges structural supplemental supply-history overlays into the cached chart payload", async () => {
