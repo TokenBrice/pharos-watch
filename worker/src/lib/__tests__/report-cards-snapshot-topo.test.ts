@@ -127,7 +127,7 @@ describe("transitive blacklist inheritance", () => {
     expect(ids.has("downstream")).toBe(true);
   });
 
-  it("does not add coins below the 50% threshold", () => {
+  it("adds coins below the old 50% threshold when upstream freeze exposure is present", () => {
     const metas = [
       makeMeta("upstream", []),
       makeMeta("downstream", [{ coinId: "upstream", pct: 40, name: "X", risk: "low" }], {
@@ -136,7 +136,7 @@ describe("transitive blacklist inheritance", () => {
     ];
     const ids = buildTransitiveSet(metas);
     expect(ids.has("upstream")).toBe(true);
-    expect(ids.has("downstream")).toBe(false);
+    expect(ids.has("downstream")).toBe(true);
   });
 
   it("explicit canBeBlacklisted: false blocks transitivity", () => {

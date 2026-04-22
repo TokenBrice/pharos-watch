@@ -52,12 +52,12 @@ describe("stablecoin variants", () => {
     }
   });
 
-  it("resolves stkgho-umbrella-aave to possible via gho-aave inheritance", () => {
+  it("resolves stkgho-umbrella-aave to upstream via gho-aave inheritance", () => {
     // Regression: before the variant-aware inheritance rule, this resolved to
-    // `false` because gho-aave is only "possible" (not in blacklistableIds) and
+    // `false` because gho-aave was not in blacklistableIds and
     // no reserve-text pattern matched "gho".
-    expect(getTrackedBlacklistStatus("gho-aave")).toBe("possible");
-    expect(getTrackedBlacklistStatus("stkgho-umbrella-aave")).toBe("possible");
+    expect(getTrackedBlacklistStatus("gho-aave")).toBe("inherited");
+    expect(getTrackedBlacklistStatus("stkgho-umbrella-aave")).toBe("inherited");
   });
 
   it("normalizes variant-aware dependencies to a single synthetic wrapper edge", () => {
