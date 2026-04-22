@@ -38,6 +38,7 @@ import {
 } from "@shared/types";
 import {
   createApiQueryFn,
+  createApiPollingQueryOptions,
   createStaticQueryOptions,
   useApiQuery,
   useApiQueryWithMeta,
@@ -77,7 +78,13 @@ export function useDexLiquidity() {
 }
 
 export function useDexLiquidityHistory(stablecoinId: string, days = 90) {
-  return useApiQuery<DexLiquidityHistoryPoint[]>(
+  return useQuery<DexLiquidityHistoryPoint[], Error>(
+    dexLiquidityHistoryQueryOptions(stablecoinId, days),
+  );
+}
+
+export function dexLiquidityHistoryQueryOptions(stablecoinId: string, days = 90) {
+  return createApiPollingQueryOptions<DexLiquidityHistoryPoint[]>(
     ["dex-liquidity-history", stablecoinId, days],
     API_PATHS.dexLiquidityHistory(stablecoinId, days),
     CRON_1H,
@@ -150,7 +157,13 @@ export function useRedemptionBackstops() {
 }
 
 export function useSafetyScoreHistory(stablecoinId: string, days = 3650) {
-  return useApiQuery<SafetyScoreHistoryResponse>(
+  return useQuery<SafetyScoreHistoryResponse, Error>(
+    safetyScoreHistoryQueryOptions(stablecoinId, days),
+  );
+}
+
+export function safetyScoreHistoryQueryOptions(stablecoinId: string, days = 3650) {
+  return createApiPollingQueryOptions<SafetyScoreHistoryResponse>(
     ["safety-score-history", stablecoinId, days],
     API_PATHS.safetyScoreHistory(stablecoinId, days),
     CRON_24H,

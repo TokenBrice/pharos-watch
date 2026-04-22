@@ -2,17 +2,14 @@
 
 import { useCallback, useMemo } from "react";
 import { useQueries } from "@tanstack/react-query";
-import { API_PATHS } from "@shared/lib/api-endpoints";
 import {
   useBluechipRatings,
   useDexLiquidity,
   usePegSummary,
   useReportCards,
 } from "@/hooks/api-hooks";
-import { useStablecoins } from "@/hooks/use-stablecoins";
-import { useMintBurnFlows } from "@/hooks/use-mint-burn-flows";
-import { apiFetch } from "@/lib/api";
-import { CRON_1H, CRON_MINT_BURN } from "@/lib/cron-intervals";
+import { supplyHistoryQueryOptions, useStablecoins } from "@/hooks/use-stablecoins";
+import { mintBurnFlowsCoinQueryOptions, useMintBurnFlows } from "@/hooks/use-mint-burn-flows";
 import { COMPARE_COLORS } from "@/lib/compare-config";
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins";
 import {
@@ -23,11 +20,8 @@ import {
 } from "@/lib/compare-derive";
 import { derivePegRates } from "@shared/lib/peg-rates";
 import {
-  MintBurnPerCoinResponseSchema,
-  SupplyHistoryResponseSchema,
   type ReportCard,
   type StablecoinData,
-  type SupplyHistoryPoint,
 } from "@shared/types";
 
 interface UseCompareDataModelOptions {
@@ -97,30 +91,11 @@ export function useCompareDataModel({
   }, [listData]);
 
   const detailQueries = useQueries({
-    queries: selectedIds.map((id) => ({
-      queryKey: ["supply-history", id, 1825],
-      queryFn: () =>
-        apiFetch<SupplyHistoryPoint[]>(
-          API_PATHS.supplyHistory(id, 1825),
-          SupplyHistoryResponseSchema,
-        ),
-      staleTime: CRON_1H,
-      refetchInterval: 2 * CRON_1H,
-      enabled: !!id,
-    })),
+    queries: selectedIds.map((id) => supplyHistoryQueryOptions(id)),
   });
 
   const flowCoinQueries = useQueries({
-    queries: selectedIds.map((id) => ({
-      queryKey: ["mint-burn-flows", id, flowHours],
-      queryFn: () => apiFetch(
-        API_PATHS.mintBurnFlows({ stablecoin: id, hours: flowHours }),
-        MintBurnPerCoinResponseSchema,
-      ),
-      staleTime: CRON_MINT_BURN,
-      refetchInterval: 2 * CRON_MINT_BURN,
-      enabled: !!id,
-    })),
+    queries: selectedIds.map((id) => mintBurnFlowsCoinQueryOptions(id, flowHours)),
   });
 
   const detailErrors = useMemo(() => {
@@ -168,7 +143,7 @@ export function useCompareDataModel({
   const flowSeries = useMemo(() => {
     return deriveFlowSeries({
       selectedIds,
-      flowDetails: selectedIds.map((_, index) => flowCoinQueries[index]?.data),
+      flowDetails: selectedIds.map((_, index) => flowCoinQueries[index]?.data?.data),
       metaMap: TRACKED_META_BY_ID,
     });
   }, [flowCoinQueries, selectedIds]);

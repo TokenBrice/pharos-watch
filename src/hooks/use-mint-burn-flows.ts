@@ -1,9 +1,15 @@
 "use client";
 
+import { useQuery } from "@tanstack/react-query";
 import { useMemo } from "react";
 import { API_PATHS } from "@shared/lib/api-endpoints";
 import { API_FRESHNESS_MAX_AGE_SEC } from "@shared/lib/api-freshness";
-import { useApiQueryWithMeta } from "./use-api-query";
+import type { ApiMeta } from "@/lib/api";
+import {
+  createApiPollingQueryOptionsWithMeta,
+  unwrapApiQueryWithMetaResult,
+  useApiQueryWithMeta,
+} from "./use-api-query";
 import { CRON_MINT_BURN } from "@/lib/cron-intervals";
 import {
   MintBurnFlowsResponseSchema,
@@ -99,13 +105,12 @@ export function useMintBurnFlows(hours = 24) {
   };
 }
 
-/** Per-coin flows — returns flat object with chains[], hourly[]. Requires stablecoinId. */
-export function useMintBurnFlowsCoin(
+export function mintBurnFlowsCoinQueryOptions(
   stablecoinId: string,
   hours = 24,
   opts?: { enabled?: boolean },
 ) {
-  return useApiQueryWithMeta<MintBurnPerCoinResponse>(
+  return createApiPollingQueryOptionsWithMeta<MintBurnPerCoinResponse>(
     ["mint-burn-flows", stablecoinId, hours],
     API_PATHS.mintBurnFlows({ stablecoin: stablecoinId, hours: hours !== 24 ? hours : undefined }),
     CRON_MINT_BURN,
@@ -114,6 +119,19 @@ export function useMintBurnFlowsCoin(
       schema: MintBurnPerCoinResponseSchema,
       metaMaxAgeSec: MINT_BURN_META_MAX_AGE_SEC,
     },
+  );
+}
+
+/** Per-coin flows — returns flat object with chains[], hourly[]. Requires stablecoinId. */
+export function useMintBurnFlowsCoin(
+  stablecoinId: string,
+  hours = 24,
+  opts?: { enabled?: boolean },
+) {
+  return unwrapApiQueryWithMetaResult(
+    useQuery<{ data: MintBurnPerCoinResponse; meta: ApiMeta | null }, Error>(
+      mintBurnFlowsCoinQueryOptions(stablecoinId, hours, opts),
+    ),
   );
 }
 

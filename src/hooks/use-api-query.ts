@@ -19,6 +19,11 @@ interface ApiQueryOptions<T> extends PollingQueryControlOptions {
   contractMode?: ApiContractMode;
 }
 
+export interface PollingWindow {
+  staleTime: number;
+  refetchInterval: number;
+}
+
 export function createApiQueryFn<T>(
   path: string,
   schema?: ZodType<T>,
@@ -53,16 +58,61 @@ export function createPollingQueryOptions<T>(
   queryFn: () => Promise<T>,
   cronInterval: number,
   opts?: PollingQueryControlOptions,
-) {
+): UseQueryOptions<T, Error, T, readonly unknown[]> {
+  const { staleTime, refetchInterval } = getPollingWindow(cronInterval);
   return {
     queryKey: key,
     queryFn,
-    staleTime: cronInterval,
-    refetchInterval: 2 * cronInterval,
+    staleTime,
+    refetchInterval,
     retry: opts?.retry ?? 2,
     retryDelay: opts?.retryDelay ?? DEFAULT_RETRY_DELAY,
     enabled: opts?.enabled,
   };
+}
+
+export function getPollingWindow(cronInterval: number): PollingWindow {
+  return {
+    staleTime: cronInterval,
+    refetchInterval: 2 * cronInterval,
+  };
+}
+
+export function createApiPollingQueryOptions<T>(
+  key: readonly unknown[],
+  path: string,
+  cronInterval: number,
+  opts?: ApiQueryOptions<T>,
+): UseQueryOptions<T, Error, T, readonly unknown[]> {
+  return createPollingQueryOptions(
+    key,
+    createApiQueryFn(path, opts?.schema, opts?.fetchInit, opts?.contractMode),
+    cronInterval,
+    {
+      enabled: opts?.enabled,
+      retry: opts?.retry,
+      retryDelay: opts?.retryDelay,
+    },
+  );
+}
+
+export function createApiPollingQueryOptionsWithMeta<T>(
+  key: readonly unknown[],
+  path: string,
+  cronInterval: number,
+  opts?: ApiQueryOptions<T>,
+): UseQueryOptions<{ data: T; meta: ApiMeta | null }, Error, { data: T; meta: ApiMeta | null }, readonly unknown[]> {
+  const metaMaxAgeSec = opts?.metaMaxAgeSec ?? Math.max(1, Math.round(cronInterval / 1000));
+  return createPollingQueryOptions(
+    key,
+    createApiQueryFnWithMeta(path, opts?.schema, opts?.fetchInit, metaMaxAgeSec, opts?.contractMode),
+    cronInterval,
+    {
+      enabled: opts?.enabled,
+      retry: opts?.retry,
+      retryDelay: opts?.retryDelay,
+    },
+  );
 }
 
 export function usePollingQuery<T>(
@@ -111,16 +161,7 @@ export function useApiQuery<T>(
   cronInterval: number,
   opts?: ApiQueryOptions<T>,
 ): UseQueryResult<T, Error> {
-  return usePollingQuery(
-    key,
-    createApiQueryFn(path, opts?.schema, opts?.fetchInit, opts?.contractMode),
-    cronInterval,
-    {
-      enabled: opts?.enabled,
-      retry: opts?.retry,
-      retryDelay: opts?.retryDelay,
-    },
-  );
+  return useQuery<T, Error>(createApiPollingQueryOptions(key, path, cronInterval, opts));
 }
 
 export interface ApiQueryWithMetaResult<T>
@@ -129,28 +170,26 @@ export interface ApiQueryWithMetaResult<T>
   meta: ApiMeta | null;
 }
 
-export function useApiQueryWithMeta<T>(
-  key: readonly unknown[],
-  path: string,
-  cronInterval: number,
-  opts?: ApiQueryOptions<T>,
+export function unwrapApiQueryWithMetaResult<T>(
+  query: UseQueryResult<{ data: T; meta: ApiMeta | null }, Error>,
 ): ApiQueryWithMetaResult<T> {
-  const metaMaxAgeSec = opts?.metaMaxAgeSec ?? Math.max(1, Math.round(cronInterval / 1000));
-  const query = usePollingQuery(
-    key,
-    createApiQueryFnWithMeta(path, opts?.schema, opts?.fetchInit, metaMaxAgeSec, opts?.contractMode),
-    cronInterval,
-    {
-      enabled: opts?.enabled,
-      retry: opts?.retry,
-      retryDelay: opts?.retryDelay,
-    },
-  );
-
   const { data, ...rest } = query;
   return {
     ...rest,
     data: data?.data,
     meta: data?.meta ?? null,
   };
+}
+
+export function useApiQueryWithMeta<T>(
+  key: readonly unknown[],
+  path: string,
+  cronInterval: number,
+  opts?: ApiQueryOptions<T>,
+): ApiQueryWithMetaResult<T> {
+  return unwrapApiQueryWithMetaResult(
+    useQuery<{ data: T; meta: ApiMeta | null }, Error>(
+      createApiPollingQueryOptionsWithMeta(key, path, cronInterval, opts),
+    ),
+  );
 }

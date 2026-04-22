@@ -13,7 +13,7 @@ import { useTimeRangeFilter } from "@/hooks/use-time-range-filter";
 import { formatCurrency } from "@shared/lib/format";
 import { DateTooltip, MonoYAxis, TimeGrid, TimeXAxis } from "@/components/chart-primitives";
 import { useStablecoinCharts } from "@/hooks/api-hooks";
-import { useStablecoinDetailHistory } from "@/hooks/use-stablecoin-detail-history";
+import { useSupplyHistory } from "@/hooks/use-stablecoins";
 import { computeChartYDomain } from "@/lib/chart-utils";
 import { buildTotalMcapChartRows } from "@/lib/total-mcap-chart";
 import { CHART_SLATE, USDT_GREEN, USDC_BLUE, SKY_YELLOW } from "@/lib/chart-colors";
@@ -24,10 +24,10 @@ export function TotalMcapChart() {
     downloadChartPng(chartRef, "pharos-total-mcap");
   }, []);
   const { data, isLoading } = useStablecoinCharts();
-  const { data: usdtHistory } = useStablecoinDetailHistory("usdt-tether");
-  const { data: usdcHistory } = useStablecoinDetailHistory("usdc-circle");
-  const { data: usdsHistory } = useStablecoinDetailHistory("usds-sky");
-  const { data: daiHistory } = useStablecoinDetailHistory("dai-makerdao");
+  const { data: usdtHistory } = useSupplyHistory("usdt-tether");
+  const { data: usdcHistory } = useSupplyHistory("usdc-circle");
+  const { data: usdsHistory } = useSupplyHistory("usds-sky");
+  const { data: daiHistory } = useSupplyHistory("dai-makerdao");
   const { animProps, handleAnimationEnd, chartContainerRef, isChartReady, width, height } = useChartShell<HTMLDivElement>();
 
   const chartData = useMemo(() => {

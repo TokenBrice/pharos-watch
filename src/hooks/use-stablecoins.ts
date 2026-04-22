@@ -1,5 +1,6 @@
 "use client";
 
+import { useQuery } from "@tanstack/react-query";
 import { API_PATHS } from "@shared/lib/api-endpoints";
 import {
   StablecoinListResponseSchema,
@@ -8,7 +9,7 @@ import {
   type SupplyHistoryPoint,
 } from "@shared/types";
 import { API_FRESHNESS_MAX_AGE_SEC } from "@shared/lib/api-freshness";
-import { useApiQuery, useApiQueryWithMeta } from "./use-api-query";
+import { createApiPollingQueryOptions, useApiQueryWithMeta } from "./use-api-query";
 import { CRON_15MIN, CRON_1H } from "@/lib/cron-intervals";
 
 export type { SupplyHistoryPoint } from "@shared/types";
@@ -23,8 +24,8 @@ export function useStablecoins() {
   );
 }
 
-export function useSupplyHistory(id: string, days = 1825) {
-  const query = useApiQuery<SupplyHistoryPoint[]>(
+export function supplyHistoryQueryOptions(id: string, days = 1825) {
+  return createApiPollingQueryOptions<SupplyHistoryPoint[]>(
     ["supply-history", id, days],
     API_PATHS.supplyHistory(id, days),
     CRON_1H,
@@ -33,6 +34,10 @@ export function useSupplyHistory(id: string, days = 1825) {
       schema: SupplyHistoryResponseSchema,
     },
   );
+}
+
+export function useSupplyHistory(id: string, days = 1825) {
+  const query = useQuery<SupplyHistoryPoint[], Error>(supplyHistoryQueryOptions(id, days));
 
   return {
     data: query.data ?? [],

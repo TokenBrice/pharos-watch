@@ -1,11 +1,12 @@
 "use client";
 
 import { useEffect, useRef } from "react";
-import { useInfiniteQuery } from "@tanstack/react-query";
+import { infiniteQueryOptions, useInfiniteQuery } from "@tanstack/react-query";
 import { API_PATHS } from "@shared/lib/api-endpoints";
 import { DepegEventsResponseSchema, type DepegEventsResponse } from "@shared/types";
 import { apiFetchWithMeta } from "@/lib/api";
 import { CRON_15MIN } from "@/lib/cron-intervals";
+import { getPollingWindow } from "./use-api-query";
 
 const DEPEG_EVENTS_PAGE_SIZE = 100;
 
@@ -27,18 +28,14 @@ function buildDepegEventsPath({
   return API_PATHS.depegEvents({ stablecoinId, limit, offset });
 }
 
-export function useInfiniteDepegEvents({
-  stablecoinId,
-  enabled = true,
-  autoLoadAll = false,
-}: UseInfiniteDepegEventsOptions = {}) {
-  const query = useInfiniteQuery({
-    queryKey: ["depeg-events", "infinite", stablecoinId ?? null],
+export function depegEventsInfiniteQueryOptions(stablecoinId?: string) {
+  const { staleTime, refetchInterval } = getPollingWindow(CRON_15MIN);
+  return infiniteQueryOptions({
+    queryKey: ["depeg-events", "infinite", stablecoinId ?? null] as const,
     initialPageParam: 0,
-    staleTime: CRON_15MIN,
-    refetchInterval: 2 * CRON_15MIN,
+    staleTime,
+    refetchInterval,
     retry: 2,
-    enabled,
     queryFn: async ({ pageParam }) => apiFetchWithMeta<DepegEventsResponse>(
       buildDepegEventsPath({
         stablecoinId,
@@ -51,6 +48,17 @@ export function useInfiniteDepegEvents({
       const loaded = allPages.reduce((sum, page) => sum + page.data.events.length, 0);
       return loaded < lastPage.data.total ? loaded : undefined;
     },
+  });
+}
+
+export function useInfiniteDepegEvents({
+  stablecoinId,
+  enabled = true,
+  autoLoadAll = false,
+}: UseInfiniteDepegEventsOptions = {}) {
+  const query = useInfiniteQuery({
+    ...depegEventsInfiniteQueryOptions(stablecoinId),
+    enabled,
   });
   const { error, fetchNextPage, hasNextPage, isFetchingNextPage } = query;
   const retryCountRef = useRef(0);
