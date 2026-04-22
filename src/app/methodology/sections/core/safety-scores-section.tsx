@@ -458,13 +458,10 @@ export function SafetyScoresMethodologySection() {
                     <li>Decentralization score is structural, not a value judgment</li>
                     <li>
                       Blacklist capability is reported descriptively only and does not affect the Resilience score.
-                      Explicit mutable-contract overrides still surface as &ldquo;possible&rdquo;, but reserve-side
-                      stablecoin, custodied-wrapper, issuer-seizable tokenized collateral, and custody/CEX clues can now
-                      also resolve to &ldquo;possible&rdquo; when exposure is below the inherited threshold. Stablecoins
-                      where a majority of reserves (by weight) are backed by directly blacklistable collateral, custodied
-                      BTC wrappers, tokenized gold, issuer-seizable tokenized shares/RWAs, or already-blacklistable
-                      upstream assets are flagged as
-                      &ldquo;inherited&rdquo; blacklist risk
+                      Explicit mutable-contract overrides still surface as &ldquo;possible&rdquo;. Reserve-side
+                      stablecoins, custodied wrappers, issuer-seizable tokenized collateral, custody/CEX rails, and
+                      tracked parent-asset exposures now resolve to &ldquo;inherited&rdquo; blacklist risk instead of
+                      sharing the &ldquo;possible&rdquo; bucket.
                     </li>
                   </ul>
                 </div>

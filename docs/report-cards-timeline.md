@@ -1,6 +1,12 @@
 # Report Cards Scoring — Version Timeline
 
-Internal changelog reconstructed from git history plus the live version metadata source. Covers v1.0 through v7.12 (2026-02-25 → 2026-04-22). The newest sections track the machine-readable version source closely; older reconstructed sections below v6.92 preserve the original authoring-era grouping and are not guaranteed to be in strict descending source order. Use `shared/lib/safety-score-version-data.ts` for canonical machine ordering.
+Internal changelog reconstructed from git history plus the live version metadata source. Covers v1.0 through v7.13 (2026-02-25 → 2026-04-22). The newest sections track the machine-readable version source closely; older reconstructed sections below v6.92 preserve the original authoring-era grouping and are not guaranteed to be in strict descending source order. Use `shared/lib/safety-score-version-data.ts` for canonical machine ordering.
+
+## v7.13 — Reserve-driven blacklist risk moves to Upstream (2026-04-22)
+
+- Shared blacklist resolution now reserves `possible` for curated direct token/vault pause, freeze, or blacklist controls
+- Reserve-side stablecoins, wrapped/custodied collateral, custody/CEX rails, and tracked parent-asset exposures now resolve to `inherited` / `Upstream` regardless of reserve weight
+- This re-buckets reserve-driven freeze risk without changing the existing tracked-variant dependency ceilings or parent-overall cap behavior
 
 ## v7.12 — sBOLD joins tracked risk-absorption variants (2026-04-22)
 
@@ -192,14 +198,14 @@ Safety Score structure is unchanged, but LUSD's reserve telemetry is now promote
 
 Six weighted dimensions:
 
-| Dimension        | Weight | Scoring approach                                                        |
-|------------------|--------|-------------------------------------------------------------------------|
+| Dimension        | Weight | Scoring approach                                                                               |
+| ---------------- | ------ | ---------------------------------------------------------------------------------------------- |
 | Peg Stability    | 25%    | pegScore passthrough, capped at 65 during active depeg, +3 bonus if last depeg > 12 months ago |
-| Liquidity        | 25%    | liquidityScore from DEX data, HHI penalty (−5 if >0.5, −10 if >0.8)    |
-| Safety           | 20%    | Bluechip rating passthrough (A+=100 … F=25), NR if no rating            |
-| Resilience       | 15%    | 2-factor: chain distribution 60% + freeze rate 40%                      |
-| Decentralization | 10%    | 3-tier: decentralized=95, centralized-dependent=70, centralized=50      |
-| Dependency Risk  | 5%     | CeFi-Dependent only: unweighted avg of upstream scores, −10 if any <75. Others=95 |
+| Liquidity        | 25%    | liquidityScore from DEX data, HHI penalty (−5 if >0.5, −10 if >0.8)                            |
+| Safety           | 20%    | Bluechip rating passthrough (A+=100 … F=25), NR if no rating                                   |
+| Resilience       | 15%    | 2-factor: chain distribution 60% + freeze rate 40%                                             |
+| Decentralization | 10%    | 3-tier: decentralized=95, centralized-dependent=70, centralized=50                             |
+| Dependency Risk  | 5%     | CeFi-Dependent only: unweighted avg of upstream scores, −10 if any <75. Others=95              |
 
 Grade thresholds: A+≥97, A≥93, A-≥90, B+≥85, B≥80, B-≥75, C+≥70, C≥65, C-≥60, D≥50, F≥0.
 Minimum 3 rated dimensions required, otherwise overall = NR.
@@ -214,8 +220,8 @@ Minimum 3 rated dimensions required, otherwise overall = NR.
 Weights after patches:
 
 | Peg | Liquidity | Safety | Resilience | Decentralization | Dep Risk |
-|-----|-----------|--------|------------|------------------|----------|
-| 25% | 25%      | 20%    | 10%        | 5%               | 15%      |
+| --- | --------- | ------ | ---------- | ---------------- | -------- |
+| 25% | 25%       | 20%    | 10%        | 5%               | 15%      |
 
 ---
 
@@ -226,10 +232,11 @@ Weights after patches:
 **Rationale:** Only ~20 of 142 coins had Bluechip ratings. Sparse coverage caused inconsistent weight redistribution across remaining dimensions. Safety removed entirely; Bluechip display kept for informational use.
 
 | Peg | Liquidity | Resilience | Decentralization | Dep Risk |
-|-----|-----------|------------|------------------|----------|
-| 25% | 25%      | 15%        | 10%              | 25%      |
+| --- | --------- | ---------- | ---------------- | -------- |
+| 25% | 25%       | 15%        | 10%              | 25%      |
 
 Other changes in the v2.0 era:
+
 - **Self-backed CeFi-Dependent score lowered** (`3bc1232`): 95→75. PSMs/arbitrage carry systemic coupling risk even for non-stablecoin collateral.
 - **Peg adjustments removed** (`2b85a87`): Active-depeg cap (65) and +3 bonus stripped. PSI already encodes depeg severity.
 - **HHI penalty removed** (`2b85a87`): Liquidity score passed through as-is.
@@ -247,18 +254,18 @@ Other changes in the v2.0 era:
 
 Complete redesign of Resilience from 2 factors (chain distribution + freeze rate) to 4 equal sub-factors (25% each):
 
-| Sub-factor           | Tiers and scores                                                         |
-|----------------------|--------------------------------------------------------------------------|
-| Chain Risk           | ethereum=100, stage1-l2=66, established-alt-l1=20, unproven=0           |
-| Collateral Quality   | native=100, eth-lst=66, alt-lst-bridged-or-mixed=20, rwa=50, exotic=0   |
-| Custody Model        | onchain=100, institutional=50, cex=0                                     |
-| Blacklist Capability | not-blacklistable=100, possible=50, blacklistable=0                      |
+| Sub-factor           | Tiers and scores                                                      |
+| -------------------- | --------------------------------------------------------------------- |
+| Chain Risk           | ethereum=100, stage1-l2=66, established-alt-l1=20, unproven=0         |
+| Collateral Quality   | native=100, eth-lst=66, alt-lst-bridged-or-mixed=20, rwa=50, exotic=0 |
+| Custody Model        | onchain=100, institutional=50, cex=0                                  |
+| Blacklist Capability | not-blacklistable=100, possible=50, blacklistable=0                   |
 
 New types: `ChainRisk`, `CollateralQuality`, `CustodyModel`. Defaults inferred from backing + governance.
 
 | Peg | Liquidity | Resilience | Decentralization | Dep Risk |
-|-----|-----------|------------|------------------|----------|
-| 25% | 20%      | 20%        | 10%              | 25%      |
+| --- | --------- | ---------- | ---------------- | -------- |
+| 25% | 20%       | 20%        | 10%              | 25%      |
 
 ### v3.0 note — Chain-risk penalty bump (Feb 26)
 
@@ -272,6 +279,7 @@ Unversioned note for the steeper chain-risk penalties already applied inside the
 
 New `DependencyType` field: `wrapper`, `mechanism`, or `collateral` (default).
 After blended score is computed, ceilings apply:
+
 - **wrapper** → ceiling = upstream_score − 3
 - **mechanism** → ceiling = upstream_score
 - **collateral** → no ceiling
@@ -285,7 +293,7 @@ Prevents thin wrappers (e.g. a USDC wrapper) from scoring higher than their upst
 For coins with curated `reserves[]` arrays, collateral quality is computed as a weighted average instead of using the enum fallback:
 
 | Reserve Risk Tier | Score |
-|-------------------|-------|
+| ----------------- | ----- |
 | very-low          | 100   |
 | low               | 75    |
 | medium            | 50    |
@@ -308,19 +316,19 @@ Also: decentralization 10%→15%, dependency risk 25%→25% (confirmed).
 final = base × (pegScore / 100) ^ 0.20
 ```
 
-| pegScore  | Multiplier | Impact  |
-|------|------------|---------|
-| 100  | 1.000      | none    |
-| 90   | ~0.979     | −2%     |
-| 50   | ~0.870     | −13%   |
-| 10   | ~0.631     | −37%   |
-| 0    | 0          | dead    |
-| null | 1.0        | NAV token, no penalty |
+| pegScore | Multiplier | Impact                |
+| -------- | ---------- | --------------------- |
+| 100      | 1.000      | none                  |
+| 90       | ~0.979     | −2%                   |
+| 50       | ~0.870     | −13%                  |
+| 10       | ~0.631     | −37%                  |
+| 0        | 0          | dead                  |
+| null     | 1.0        | NAV token, no penalty |
 
 Base dimensions:
 
 | Liquidity | Resilience | Decentralization | Dep Risk |
-|-----------|------------|------------------|----------|
+| --------- | ---------- | ---------------- | -------- |
 | 25%       | 25%        | 10%              | 30%      |
 
 Grade thresholds lowered 5 points (structural deflation): A+≥92, A≥88, A-≥85, B+≥80, B≥75, B-≥70, C+≥65, C≥60, C-≥55, D≥45.
@@ -337,7 +345,7 @@ Liquidity 25%→30% ("swappability is the most defining aspect of a stablecoin")
 Final v4.1 weights (after also adjusting decentralization/dep-risk):
 
 | Liquidity | Resilience | Decentralization | Dep Risk |
-|-----------|------------|------------------|----------|
+| --------- | ---------- | ---------------- | -------- |
 | 30%       | 20%        | 15%              | 25%      |
 
 ---
@@ -348,18 +356,19 @@ Final v4.1 weights (after also adjusting decentralization/dep-risk):
 
 ### Decentralization: 3-tier → 6-tier GovernanceQuality
 
-| Tier              | Score | Replaces                |
-|-------------------|-------|-------------------------|
-| dao-governance    | 85    | decentralized (was 100) |
-| multisig          | 55    | centralized-dependent (was 50) |
-| single-entity     | 20    | centralized (was 0)     |
-| wrapper           | 10    | new                     |
+| Tier           | Score | Replaces                       |
+| -------------- | ----- | ------------------------------ |
+| dao-governance | 85    | decentralized (was 100)        |
+| multisig       | 55    | centralized-dependent (was 50) |
+| single-entity  | 20    | centralized (was 0)            |
+| wrapper        | 10    | new                            |
 
 Resolved via `meta.governanceQuality ?? inferGovernanceQuality(meta.flags.governance)`.
 
 ### Dependency Risk: universal, not CeFi-only
 
 All coins with upstream dependencies now get scored (not just centralized-dependent). Self-backed scores vary:
+
 - decentralized → 90
 - centralized-dependent → 75
 - centralized → 95
@@ -369,6 +378,7 @@ Dependencies auto-derived from `reserves[].coinId` via `deriveDependencies()`, f
 ### Resilience: chain infra restructured
 
 Chain infrastructure scored as `CHAIN_TIER_SCORE[chainTier] × DEPLOYMENT_MULT[deploymentModel]`:
+
 - **ChainTier**: ethereum=100, stage1-l2=66, established-alt-l1=20, unproven=0
 - **DeploymentModel** multiplier: single-chain=1.0, canonical-bridge=0.85, third-party-bridge=0.60, native-multichain=0.40
 
@@ -392,14 +402,14 @@ Weights unchanged from v4.1: 30/20/15/25.
 
 Full GovernanceQuality table:
 
-| Tier              | Score |
-|-------------------|-------|
-| immutable-code    | 100   |
-| dao-governance    | 85    |
-| multisig          | 55    |
-| regulated-entity  | 40    |
-| single-entity     | 20    |
-| wrapper           | 10    |
+| Tier             | Score |
+| ---------------- | ----- |
+| immutable-code   | 100   |
+| dao-governance   | 85    |
+| multisig         | 55    |
+| regulated-entity | 40    |
+| single-entity    | 20    |
+| wrapper          | 10    |
 
 ### v5.3 — Remove chain infra from Resilience (Feb 28)
 
@@ -590,22 +600,22 @@ Weights and grade thresholds are unchanged from v6.0.
 
 ## Quick Reference: Weight Evolution
 
-| Version     | Peg        | Exit Liquidity | Safety  | Resilience | Decentralization | Dep Risk |
-|-------------|------------|----------------|---------|------------|------------------|----------|
-| v1.0        | 25%        | 25%            | 20%     | 15%        | 10%              | 5%       |
-| v1.0 patch  | 25%        | 25%            | 20%     | 10%        | 5%               | 15%      |
-| v2.0        | 25%        | 25%            | removed | 15%        | 10%              | 25%      |
-| v3.0        | 25%        | 20%            | —       | 20%        | 10%              | 25%      |
-| v3.3        | 25%        | 20%            | —       | 20%        | 15%              | 25%      |
-| v4.0        | multiplier | 25%            | —       | 25%        | 10%              | 30%      |
-| v4.1        | multiplier | 30%            | —       | 20%        | 15%              | 25%      |
-| v5.0–5.8    | multiplier | 30%            | —       | 20%        | 15%              | 25%      |
-| **v6.0-v7.07** | **multiplier** | **30%** | **—** | **20%** | **15%** | **25%** |
+| Version        | Peg            | Exit Liquidity | Safety  | Resilience | Decentralization | Dep Risk |
+| -------------- | -------------- | -------------- | ------- | ---------- | ---------------- | -------- |
+| v1.0           | 25%            | 25%            | 20%     | 15%        | 10%              | 5%       |
+| v1.0 patch     | 25%            | 25%            | 20%     | 10%        | 5%               | 15%      |
+| v2.0           | 25%            | 25%            | removed | 15%        | 10%              | 25%      |
+| v3.0           | 25%            | 20%            | —       | 20%        | 10%              | 25%      |
+| v3.3           | 25%            | 20%            | —       | 20%        | 15%              | 25%      |
+| v4.0           | multiplier     | 25%            | —       | 25%        | 10%              | 30%      |
+| v4.1           | multiplier     | 30%            | —       | 20%        | 15%              | 25%      |
+| v5.0–5.8       | multiplier     | 30%            | —       | 20%        | 15%              | 25%      |
+| **v6.0-v7.07** | **multiplier** | **30%**        | **—**   | **20%**    | **15%**          | **25%**  |
 
 ## Quick Reference: Grade Thresholds
 
 | Grade | v1.0 | v4.0 (−5) | v5.1 (−5) |
-|-------|------|-----------|-----------|
+| ----- | ---- | --------- | --------- |
 | A+    | 97   | 92        | **87**    |
 | A     | 93   | 88        | **83**    |
 | A-    | 90   | 85        | **80**    |

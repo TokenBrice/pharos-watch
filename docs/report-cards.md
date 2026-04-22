@@ -4,7 +4,7 @@ Multi-dimensional risk grades (A+ through F) for every tracked stablecoin. Compu
 
 The stablecoin registry currently contains 215 tracked metadata entries. Report-card snapshots score the active subset and the cemetery set; pre-launch tracked entries remain outside the scored snapshot until they launch.
 
-## Overall Grade (v7.12)
+## Overall Grade (v7.13)
 
 Four-step computation:
 
@@ -15,23 +15,23 @@ Four-step computation:
 
 Cemetery coins get a permanent F.
 
-Current-version note: v7.12 extends the tracked parent-variant framework to K3 `sBOLD` as a `risk-absorption` child of `BOLD`, following the earlier `strategy-vault` rollout for `sUSDai`, `msY`, `sAID`, and `stcUSD`. Tracked variants declare canonical `variantOf` / `variantKind` metadata, contribute a synthetic `wrapper` dependency edge from parent to child in both live scoring and the dependency graph, and cannot outscore the parent's overall card. Savings wrappers cap at parent minus 3 in Dependency Risk, strategy-vault and risk-absorption wrappers cap at parent minus 5, and bond-maturity wrappers cap at parent minus 8. Live/stressed overall scores expose `overallCapped`, `uncappedOverallScore`, `rawInputs.variantParentId`, and `rawInputs.variantKind` so the UI can distinguish a parent cap from ordinary peg drag. In this phase tracked strategy-vault children and `sBOLD` keep the current parent-linked `pegReferenceId` path, so severe parent depegs still constrain the child until independent NAV/peg handling ships later. All v7.08 strategy-reserve-tier behavior carries forward unchanged.
+Current-version note: v7.13 narrows `Possible` blacklist labeling to curated direct token or vault controls, while any reserve-, backing-, parent-asset-, or custody-driven freeze path now resolves as `Upstream`. This re-buckets collateral-driven freeze exposure without changing the existing tracked-variant framework: savings wrappers still cap at parent minus 3 in Dependency Risk, strategy-vault and risk-absorption wrappers cap at parent minus 5, and bond-maturity wrappers cap at parent minus 8. All v7.12 parent-linked variant behavior carries forward unchanged.
 
 ## Dimensions
 
 ### Base dimensions (weighted sum)
 
-| Dimension            | Weight | Source                                       | Scoring                                                                                                                                                                                            |
-| -------------------- | ------ | -------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Liquidity / Exit** | 30%    | `liquidityScore` + `redemptionBackstopScore` | Uses `effectiveExitScore`, which preserves DEX liquidity as the floor and lets direct redemption quality help when present                                                                         |
-| **Resilience**       | 20%    | Token metadata (2 sub-factors)               | Average of collateral quality and custody model; blacklist capability is reported descriptively but does not affect the score                                                                      |
+| Dimension            | Weight | Source                                       | Scoring                                                                                                                                                                                                                    |
+| -------------------- | ------ | -------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Liquidity / Exit** | 30%    | `liquidityScore` + `redemptionBackstopScore` | Uses `effectiveExitScore`, which preserves DEX liquidity as the floor and lets direct redemption quality help when present                                                                                                 |
+| **Resilience**       | 20%    | Token metadata (2 sub-factors)               | Average of collateral quality and custody model; blacklist capability is reported descriptively but does not affect the score                                                                                              |
 | **Decentralization** | 15%    | Governance quality + chain infrastructure    | `GovernanceQuality` tiers: `immutable-code` → 100, `dao-governance` → 85, `multisig` → 55, `regulated-entity` → 40, `single-entity` → 20, `wrapper` → 10. Threshold-based penalty from combined chain infrastructure score |
-| **Dependency Risk**  | 25%    | Upstream stablecoin scores                   | No deps → varies by governance (decentralized: 90, centralized-dependent: 75, centralized: 95). With deps → blended score (upstream × weight + self-backed), −10 if any < 75, plus wrapper/mechanism ceilings |
+| **Dependency Risk**  | 25%    | Upstream stablecoin scores                   | No deps → varies by governance (decentralized: 90, centralized-dependent: 75, centralized: 95). With deps → blended score (upstream × weight + self-backed), −10 if any < 75, plus wrapper/mechanism ceilings              |
 
 ### Peg Stability (multiplier)
 
-| Source                      | Scoring                                                                                  |
-| --------------------------- | ---------------------------------------------------------------------------------------- |
+| Source                      | Scoring                                                                                                                                                                                                                                             |
+| --------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `pegScore` from peg summary | Applied as `(pegScore/100)^0.40` multiplier to base score. Pure NAV tokens stay neutral; configured NAV wrappers can inherit peg risk from a referenced base stablecoin. Active open-event peaks >= 2500 bps cap overall at F; >= 1000 bps cap at D |
 
 ### Peg Stability Details
@@ -82,14 +82,14 @@ For tokenized RWA collateral, the custody model follows the ultimate reserve/leg
 
 Blacklist capability is reported descriptively only and does not affect the Resilience score.
 
-| Value                       | Condition                                                             |
-| --------------------------- | --------------------------------------------------------------------- |
-| Yes                         | `canBeBlacklisted: true` (explicit) or `governance === "centralized"` |
-| Possible                    | Explicit `canBeBlacklisted: "possible"` override, sub-majority reserve exposure to blacklistable/custodial assets, or reserve-rail text that clearly implies CEX/custody freeze exposure |
-| Upstream                    | >50% of reserves are directly tied to explicitly blacklistable or already-blacklistable upstream assets (resolved transitively) |
-| No                          | None of the above                                                     |
+| Value    | Condition                                                                                                             |
+| -------- | --------------------------------------------------------------------------------------------------------------------- |
+| Yes      | `canBeBlacklisted: true` (explicit) or `governance === "centralized"`                                                 |
+| Possible | Explicit `canBeBlacklisted: "possible"` override for a direct token/vault freeze, blacklist, or pause surface         |
+| Upstream | Any reserve, backing, custody, or parent-asset path that can freeze or block redemptions upstream of the token itself |
+| No       | None of the above                                                                                                     |
 
-`"inherited"` is a **computed** value only — it never appears as a manual override in stablecoin metadata. The `canBeBlacklisted` field in `StablecoinMeta` only accepts `boolean | "possible"`. The inherited tier is derived at scoring time when reserve compositions show that a majority of a coin's reserves are either explicitly marked blacklistable or backed by upstream assets that are themselves blacklistable. Coins with reserve-side blacklist clues below that majority threshold now resolve to `"possible"` rather than incorrectly falling through to `"no"`.
+`"inherited"` is a **computed** value only — it never appears as a manual override in stablecoin metadata. The `canBeBlacklisted` field in `StablecoinMeta` only accepts `boolean | "possible"`. The inherited tier now covers reserve-side stablecoins, custodied wrappers, issuer-seizable tokenized collateral, custody/CEX rails, and tracked parent-asset exposures regardless of weight. `"possible"` is reserved for curated direct token/vault controls whose freeze surface exists at the holder-facing asset rather than only in upstream collateral.
 
 #### Collateral Quality: Reserve-Derived Scoring (v3.3)
 
@@ -99,11 +99,11 @@ For coins with curated reserve compositions, collateral quality is computed as a
 
 Three reserve-related labels mean different things:
 
-| Label | Meaning | Score impact |
-| ----- | ------- | ------------ |
-| Reserve view | The stablecoin detail page can show a reserve composition from live sync, curated validation, proof/liveness, curated metadata, or estimated templates | Informational unless the feed also satisfies the score-grade live reserve rules |
-| Score-grade live reserve | The current report-card snapshot used a fresh, clean, independent live reserve snapshot for collateral quality | Can replace curated collateral slices in the Resilience dimension |
-| Redemption telemetry | A live reserve adapter emitted current redemption capacity, fee, freshness, or route status | Can feed Redemption Backstop capacity or fee scoring; does not automatically change collateral quality |
+| Label                    | Meaning                                                                                                                                                | Score impact                                                                                           |
+| ------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------ |
+| Reserve view             | The stablecoin detail page can show a reserve composition from live sync, curated validation, proof/liveness, curated metadata, or estimated templates | Informational unless the feed also satisfies the score-grade live reserve rules                        |
+| Score-grade live reserve | The current report-card snapshot used a fresh, clean, independent live reserve snapshot for collateral quality                                         | Can replace curated collateral slices in the Resilience dimension                                      |
+| Redemption telemetry     | A live reserve adapter emitted current redemption capacity, fee, freshness, or route status                                                            | Can feed Redemption Backstop capacity or fee scoring; does not automatically change collateral quality |
 
 For coins with live reserve sync (`liveReservesConfig`), the collateral quality score
 can use the 4-hourly live snapshot from `reserve_composition` instead of curated
@@ -156,13 +156,13 @@ heuristics are applied there as well. The collateral drift alert (>15pt
 divergence) helps operators detect when curated metadata needs updating for
 other scoring dimensions.
 
-| Reserve Risk Tier | Score | Description                        | Examples                                                                      |
-| ----------------- | ----- | ---------------------------------- | ----------------------------------------------------------------------------- |
-| `very-low`        | 100   | No/minimal counterparty risk       | Government securities, cash, repos, physical gold/silver, ETH, canonical WETH |
-| `low`             | 75    | Stablecoin/tokenized layer         | USDC, BUIDL, USYC, ETH LSTs, other stablecoins                                |
-| `medium`          | 50    | Wrapped/structured market exposure | wBTC, tokenized gold, transparent spot/wrapped market exposure, tokenized ETFs |
+| Reserve Risk Tier | Score | Description                         | Examples                                                                                                                  |
+| ----------------- | ----- | ----------------------------------- | ------------------------------------------------------------------------------------------------------------------------- |
+| `very-low`        | 100   | No/minimal counterparty risk        | Government securities, cash, repos, physical gold/silver, ETH, canonical WETH                                             |
+| `low`             | 75    | Stablecoin/tokenized layer          | USDC, BUIDL, USYC, ETH LSTs, other stablecoins                                                                            |
+| `medium`          | 50    | Wrapped/structured market exposure  | wBTC, tokenized gold, transparent spot/wrapped market exposure, tokenized ETFs                                            |
 | `high`            | 25    | Active strategy / volatile exposure | SOL, BNB, TRX, alt-chain tokens, externally managed market-neutral or basis books, LP/private-deal/perp strategy reserves |
-| `very-high`       | 5     | Governance/exotic/opaque           | Governance tokens, algorithmic mechanisms, sanctioned assets                  |
+| `very-high`       | 5     | Governance/exotic/opaque            | Governance tokens, algorithmic mechanisms, sanctioned assets                                                              |
 
 **Formula:** `score = round(Σ(slice_pct × tier_score) / Σ(slice_pct))`
 
@@ -186,13 +186,13 @@ For coins without curated reserves, the legacy enum-based scoring is used:
 
 **Default inference:** When sub-factor fields aren't explicitly set on `StablecoinMeta`, defaults are inferred from `backing` + `governance`:
 
-| Backing + Governance                      | Chain Tier | Deployment Model | Collateral Quality | Custody Model |
-| ----------------------------------------- | ---------- | ---------------- | ------------------ | ------------- |
+| Backing + Governance                      | Chain Tier | Deployment Model | Collateral Quality | Custody Model           |
+| ----------------------------------------- | ---------- | ---------------- | ------------------ | ----------------------- |
 | `rwa-backed` + `centralized`              | ethereum   | single-chain     | rwa                | institutional-regulated |
 | `rwa-backed` + `centralized-dependent`    | ethereum   | single-chain     | rwa                | institutional-regulated |
-| `crypto-backed` + `decentralized`         | ethereum   | single-chain     | native             | onchain       |
-| `crypto-backed` + `centralized-dependent` | ethereum   | single-chain     | eth-lst            | onchain       |
-| `algorithmic` + any                       | ethereum   | single-chain     | native             | onchain       |
+| `crypto-backed` + `decentralized`         | ethereum   | single-chain     | native             | onchain                 |
+| `crypto-backed` + `centralized-dependent` | ethereum   | single-chain     | eth-lst            | onchain                 |
+| `algorithmic` + any                       | ethereum   | single-chain     | native             | onchain                 |
 
 Explicit overrides exist for coins where defaults are incorrect (e.g. HYUSD on Solana, USDe with CEX custody, BOLD with third-party bridge).
 
@@ -294,11 +294,11 @@ Chain penalty applies to `dao-governance` and `multisig` tiers. Exempt tiers: `i
 
 Each dependency relationship can be classified as `wrapper`, `mechanism`, or `collateral` (default). After the blended score is computed, a ceiling is applied based on the most critical upstream dependency.
 
-| Type         | Meaning                                              | Ceiling            |
-| ------------ | ---------------------------------------------------- | ------------------ |
+| Type         | Meaning                                              | Ceiling                                                                                                                                                                               |
+| ------------ | ---------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `wrapper`    | Thin layer around upstream (e.g., syrupUSDC -> USDC) | legacy wrapper: `upstream_score - 3`; tracked savings variant: `-3`; tracked strategy-vault variant: `-5`; tracked risk-absorption variant: `-5`; tracked bond-maturity variant: `-8` |
-| `mechanism`  | Critical to peg mechanism (e.g., DAI -> USDC PSM)    | upstream_score     |
-| `collateral` | Standard collateral (default)                        | no ceiling         |
+| `mechanism`  | Critical to peg mechanism (e.g., DAI -> USDC PSM)    | upstream_score                                                                                                                                                                        |
+| `collateral` | Standard collateral (default)                        | no ceiling                                                                                                                                                                            |
 
 Formula: `final_score = min(blended_score, min_ceiling_from_wrapper_and_mechanism_deps)`
 

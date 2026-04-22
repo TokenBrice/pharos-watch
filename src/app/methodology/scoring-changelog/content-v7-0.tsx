@@ -1,5 +1,35 @@
 import { VersionCard, getScoringEntry } from "./content-shared";
 
+export function ScoringChangelogV713Entry() {
+  return (
+    <VersionCard
+      entry={getScoringEntry("7.13")}
+      accent="border-l-emerald-500"
+    >
+      <p>
+        Blacklist labeling now reserves <code className="text-xs bg-muted px-1 py-0.5 rounded">possible</code> for
+        curated direct token or vault controls.
+      </p>
+      <ul className="list-disc list-inside space-y-1">
+        <li>
+          Reserve-side stablecoins, wrapped or custodied collateral, custody/CEX rails, and tracked parent-asset
+          exposures now resolve to <code className="text-xs bg-muted px-1 py-0.5 rounded">inherited</code> / Upstream
+          instead of sharing the <code className="text-xs bg-muted px-1 py-0.5 rounded">possible</code> bucket.
+        </li>
+        <li>
+          Explicit <code className="text-xs bg-muted px-1 py-0.5 rounded">canBeBlacklisted: &quot;possible&quot;</code>{" "}
+          overrides remain only on assets whose holder-facing token or vault still exposes a pause, freeze, or blacklist
+          surface.
+        </li>
+        <li>
+          The change is descriptive only for Resilience and does not alter tracked-variant dependency ceilings or the
+          parent-overall cap framework added in recent v7.x releases.
+        </li>
+      </ul>
+    </VersionCard>
+  );
+}
+
 export function ScoringChangelogV712Entry() {
   return (
     <VersionCard

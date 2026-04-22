@@ -1,9 +1,24 @@
 import type { MethodologyVersionConfig } from "./methodology-version";
 
 export const SAFETY_SCORE_VERSION_CONFIG: MethodologyVersionConfig = {
-  currentVersion: "7.12",
+  currentVersion: "7.13",
   changelogPath: "/methodology/scoring-changelog/",
   changelog: [
+    {
+      version: "7.13",
+      title: "Reserve-driven blacklist risk moves to Upstream",
+      date: "2026-04-22",
+      effectiveAt: 1776830400,
+      summary:
+        "`Possible` blacklist labeling is now reserved for curated direct token or vault freeze controls, while reserve- and custody-driven exposure resolves as `Upstream`.",
+      impact: [
+        "Shared blacklist resolution now classifies any reserve-side, backing-side, custody-side, or parent-asset freeze path as `inherited` / Upstream instead of keeping a separate sub-threshold `possible` bucket",
+        "Curated direct-control overrides remain only on assets whose holder-facing token or vault still exposes a pause, freeze, or blacklist surface, including dormant controls that are currently disabled until governance or admin action",
+        "This re-buckets reserve-driven cases such as strategy wrappers, PSM-backed assets, and custody-heavy tokens without changing the existing tracked-variant dependency ceilings or parent-overall cap behavior",
+      ],
+      commits: [],
+      reconstructed: false,
+    },
     {
       version: "7.12",
       title: "sBOLD joins tracked risk-absorption variants",
@@ -559,8 +574,7 @@ export const SAFETY_SCORE_VERSION_CONFIG: MethodologyVersionConfig = {
       title: "Peg score fairness for young coins",
       date: "2026-03-01",
       effectiveAt: 1772323200,
-      summary:
-        "Three peg-scoring fixes prevent young coins with repeated brief depegs from being over-scored.",
+      summary: "Three peg-scoring fixes prevent young coins with repeated brief depegs from being over-scored.",
       impact: [
         "Tracking window capped to coin age via coinTrackingStart()",
         "Severity magnitude floor ensures each depeg contributes a minimum penalty",
@@ -576,9 +590,7 @@ export const SAFETY_SCORE_VERSION_CONFIG: MethodologyVersionConfig = {
       effectiveAt: 1772236804,
       summary:
         "When Liquidity is NR (no DEX data), overall score receives a 10% penalty instead of redistributing weight.",
-      impact: [
-        "NR liquidity now applies final *= 0.9 after peg multiplier instead of inflating other dimensions",
-      ],
+      impact: ["NR liquidity now applies final *= 0.9 after peg multiplier instead of inflating other dimensions"],
       commits: ["14131fa"],
       reconstructed: true,
     },
@@ -589,9 +601,7 @@ export const SAFETY_SCORE_VERSION_CONFIG: MethodologyVersionConfig = {
       effectiveAt: 1772236803,
       summary:
         "Chain infra double-counting fixed: removed from Resilience sub-factors, now exclusively in Decentralization.",
-      impact: [
-        "Resilience becomes a 3-factor model (collateral quality, custody model, blacklist capability)",
-      ],
+      impact: ["Resilience becomes a 3-factor model (collateral quality, custody model, blacklist capability)"],
       commits: ["8c060b3"],
       reconstructed: true,
     },
@@ -602,9 +612,7 @@ export const SAFETY_SCORE_VERSION_CONFIG: MethodologyVersionConfig = {
       effectiveAt: 1772236802,
       summary:
         "Added immutable-code as highest GovernanceQuality tier (score 100) for protocols with no admin keys or upgrade path.",
-      impact: [
-        "LUSD, BOLD now score 100 in governance quality; exempt from chain infra penalty",
-      ],
+      impact: ["LUSD, BOLD now score 100 in governance quality; exempt from chain infra penalty"],
       commits: ["c6c0b77"],
       reconstructed: true,
     },
@@ -687,9 +695,7 @@ export const SAFETY_SCORE_VERSION_CONFIG: MethodologyVersionConfig = {
       effectiveAt: 1772150400,
       summary:
         "New DependencyType field (wrapper/mechanism/collateral) with ceilings preventing wrappers from scoring above upstream.",
-      impact: [
-        "Wrapper ceiling = upstream_score - 3, mechanism ceiling = upstream_score, collateral = no ceiling",
-      ],
+      impact: ["Wrapper ceiling = upstream_score - 3, mechanism ceiling = upstream_score, collateral = no ceiling"],
       commits: ["fa1d992"],
       reconstructed: true,
     },
@@ -714,9 +720,7 @@ export const SAFETY_SCORE_VERSION_CONFIG: MethodologyVersionConfig = {
       effectiveAt: 1772064000,
       summary:
         "Safety dimension removed due to sparse Bluechip rating coverage (~20/142 coins). Bluechip display kept for informational use.",
-      impact: [
-        "Safety dimension dropped; weight redistributed to remaining 5 dimensions",
-      ],
+      impact: ["Safety dimension dropped; weight redistributed to remaining 5 dimensions"],
       commits: ["a272ca8"],
       reconstructed: true,
     },
