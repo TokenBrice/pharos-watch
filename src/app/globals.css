@@ -522,6 +522,14 @@
     background-color: var(--table-row-hover);
   }
 
+  /* Virtualized tables must stripe by stable row index, not DOM child position. */
+  .pharos-table-striped-indexed tbody tr[data-row-striped="true"] {
+    background-color: var(--table-row-stripe);
+  }
+  .dark .pharos-table-striped-indexed tbody tr[data-row-striped="true"] {
+    background-color: var(--table-row-stripe);
+  }
+
   /* Risk row indicators */
   .pharos-row-risk-depeg {
     border-left: 3px solid var(--p-red-500) !important;

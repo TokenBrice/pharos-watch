@@ -30,6 +30,7 @@ import type { TableDensity } from "@/hooks/use-table-density";
 interface StablecoinVirtualRowProps {
   coin: StablecoinData;
   index: number;
+  isStriped: boolean;
   densityConfig: {
     rowHeight: number;
     iconSize: number;
@@ -80,6 +81,7 @@ function MiniSparkline({ values }: { values: number[] }) {
 export function StablecoinVirtualRow({
   coin,
   index,
+  isStriped,
   densityConfig,
   density,
   isVisible,
@@ -124,6 +126,7 @@ export function StablecoinVirtualRow({
       key={coin.id}
       className={`group cursor-pointer focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:outline-none ${riskClass}`}
       style={{ height: densityConfig.rowHeight }}
+      data-row-striped={isStriped ? "true" : undefined}
       onClick={(event) => {
         if (isNestedInteractiveTarget(event.target, event.currentTarget)) return;
         onNavigate(coin.id);

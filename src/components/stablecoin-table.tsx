@@ -265,7 +265,9 @@ export function StablecoinTable({
 
       {/* Scroll container — handles both horizontal and vertical overflow */}
       <div ref={scrollRef} className="scroll-shadow max-h-[50vh] overflow-y-auto overflow-x-auto px-0 pb-2 pr-2 sm:max-h-[70vh] sm:pr-0">
-        <table className={`min-w-[420px] sm:min-w-[820px] w-full caption-bottom text-sm pharos-table-striped pharos-density-${density}`}>
+        <table
+          className={`min-w-[420px] sm:min-w-[820px] w-full caption-bottom text-sm pharos-table-striped-indexed pharos-density-${density}`}
+        >
           <TableCaption className="sr-only">Stablecoin data table</TableCaption>
           <TableHeader className="sticky top-0 z-10 bg-muted">
             <TableRow>
@@ -311,6 +313,7 @@ export function StablecoinTable({
                   key={coin.id}
                   coin={coin}
                   index={virtualRow.index}
+                  isStriped={virtualRow.index % 2 === 1}
                   densityConfig={densityConfig}
                   density={density}
                   isVisible={isVisible}

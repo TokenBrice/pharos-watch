@@ -7,6 +7,10 @@ import { StablecoinTable } from "@/components/stablecoin-table";
 import type { ReportCard, StablecoinData } from "@shared/types";
 
 const push = vi.fn();
+const { virtualItemsMock, virtualTotalSizeMock } = vi.hoisted(() => ({
+  virtualItemsMock: [{ index: 0, start: 0, end: 40 }],
+  virtualTotalSizeMock: { current: 40 },
+}));
 
 afterEach(() => {
   cleanup();
@@ -22,8 +26,8 @@ vi.mock("next/navigation", () => ({
 
 vi.mock("@tanstack/react-virtual", () => ({
   useVirtualizer: () => ({
-    getVirtualItems: () => [{ index: 0, start: 0, end: 40 }],
-    getTotalSize: () => 40,
+    getVirtualItems: () => virtualItemsMock,
+    getTotalSize: () => virtualTotalSizeMock.current,
   }),
 }));
 
@@ -109,6 +113,8 @@ describe("StablecoinTable", () => {
   beforeEach(() => {
     localStorage.clear();
     push.mockReset();
+    virtualItemsMock.splice(0, virtualItemsMock.length, { index: 0, start: 0, end: 40 });
+    virtualTotalSizeMock.current = 40;
   });
 
   it("normalizes persisted column visibility from localStorage", () => {
@@ -226,5 +232,26 @@ describe("StablecoinTable", () => {
     expect(screen.getByLabelText("Savings variant")).toBeTruthy();
     expect(screen.getAllByRole("link", { name: /View Sky Savings USDS \(sUSDS\) details, Savings variant/i })).toHaveLength(2);
     expect(screen.getByText("Savings")).toBeTruthy();
+  });
+
+  it("derives stripe state from the stable row index instead of rendered tbody position", () => {
+    virtualItemsMock.splice(0, virtualItemsMock.length, { index: 1, start: 40, end: 80 });
+    virtualTotalSizeMock.current = 80;
+
+    render(
+      <StablecoinTable
+        data={[coin, usdc]}
+        isLoading={false}
+        activeFilters={[]}
+        pegRates={{}}
+      />,
+    );
+
+    const bodyRows = document.querySelectorAll("tbody tr");
+    const usdcRow = screen.getByText("USDC").closest("tr");
+
+    expect(bodyRows).toHaveLength(2);
+    expect(bodyRows[0]?.getAttribute("data-row-striped")).toBeNull();
+    expect(usdcRow?.getAttribute("data-row-striped")).toBe("true");
   });
 });
