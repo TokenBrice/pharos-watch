@@ -2,12 +2,14 @@ import type { ReserveSlice, StablecoinMeta } from "@shared/types/core";
 import type { LiveReserveWarning, LiveReservesConfig } from "@shared/types/live-reserves";
 import { parseLiveReserveAdapterParams } from "@shared/lib/live-reserve-adapters";
 import type { AdapterContext, AdapterResult } from "./types";
+import type { OnchainRateProbe } from "./helpers";
 import {
+  buildRedemptionSnapshotMetadata,
   decimalNumberFromBigInt,
   fetchDefiLlamaPrices,
-  fetchOnchainRateBps,
   fetchOnchainUint256,
   notApplicableFreshnessMetadata,
+  probeOptionalRedemptionRateBps,
   requireOnchainInput,
   reserveDegradedWarning,
 } from "./helpers";
@@ -30,11 +32,7 @@ interface LiquityV1Params {
   };
   rpcUrl?: string;
   fallbackRpcUrl?: string;
-  redemptionRateProbe?: {
-    contract: string;
-    selector: string;
-    decimals?: number;
-  };
+  redemptionRateProbe?: OnchainRateProbe;
 }
 
 function readParams(config: LiveReservesConfig): LiquityV1Params {
@@ -74,16 +72,14 @@ export async function fetchLiquityV1Reserves(
       chain: input.chain,
       timeoutMs,
     }),
-    params.redemptionRateProbe
-      ? fetchOnchainRateBps(
-          input,
-          params.redemptionRateProbe,
-          signal,
-          ctx,
-          params.rpcUrl,
-          params.fallbackRpcUrl,
-        )
-      : Promise.resolve(null),
+    probeOptionalRedemptionRateBps(
+      input,
+      params.redemptionRateProbe,
+      signal,
+      ctx,
+      params.rpcUrl,
+      params.fallbackRpcUrl,
+    ),
   ]);
 
   if (totalCollateralRaw == null || totalCollateralRaw <= 0n) {
@@ -146,24 +142,19 @@ export async function fetchLiquityV1Reserves(
       ...(ethPriceUsd != null ? { ethPriceUsd } : {}),
       ...(collateralizationRatio != null ? { collateralizationRatio } : {}),
       immediateRedeemableUsd: capacityUsd,
-      redemption: {
+      ...buildRedemptionSnapshotMetadata({
         capacityUsd,
-        capacityKind: "live-direct-bounded" as const,
-        freshnessKind: "same-run-onchain" as const,
-        routeStatus: "open" as const,
+        capacityKind: "live-direct-bounded",
+        freshnessKind: "same-run-onchain",
+        routeStatus: "open",
         holderEligibility: "any-holder",
         settlementDelaySec: 0,
         sourceUrls: [
           "https://docs.liquity.org/liquity-v1/faq/lusd-redemptions",
           "https://docs.liquity.org/liquity-v1/documentation/resources",
         ],
-        ...(redemptionFeeBps != null ? { feeBps: redemptionFeeBps } : {}),
-      },
-      ...(redemptionFeeBps != null
-        ? {
-            redemptionFeeBps,
-          }
-        : {}),
+        feeBps: redemptionFeeBps,
+      }),
     },
   };
 }

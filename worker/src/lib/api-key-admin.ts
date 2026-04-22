@@ -6,6 +6,8 @@ import type {
 } from "@shared/types";
 import {
   buildApiKeyMaterial,
+  buildPublicApiKeyReturningClause,
+  buildPublicApiKeySelectQuery,
   clearApiKeyCache,
   getApiKeyDefaultExpirySec,
   getApiKeyDefaultRateLimitPerMinute,
@@ -26,21 +28,7 @@ import { errorResponse } from "./api-utils";
 
 export async function listApiKeys(db: ApiKeyDb, nowSec = getNowSec()): Promise<ApiKeyListResponse> {
   const rows = await db.prepare(
-    `SELECT
-       id,
-       key_prefix,
-       name,
-       owner_email,
-       tier,
-       traffic_class,
-       rate_limit_per_minute,
-       is_active,
-       expires_at,
-       created_at,
-       updated_at,
-       last_used_at,
-       last_used_route
-     FROM api_keys
+    `${buildPublicApiKeySelectQuery()}
      ORDER BY created_at DESC, id DESC`,
   ).all<ApiKeyPublicRow>();
 
@@ -85,20 +73,7 @@ export async function createApiKey(
        updated_at
      )
      VALUES (?, ?, ?, ?, ?, ?, ?, 1, ?, ?, ?)
-     RETURNING
-       id,
-       key_prefix,
-       name,
-       owner_email,
-       tier,
-       traffic_class,
-       rate_limit_per_minute,
-       is_active,
-       expires_at,
-       created_at,
-       updated_at,
-       last_used_at,
-       last_used_route`,
+     ${buildPublicApiKeyReturningClause()}`,
   )
     .bind(
       material.keyPrefix,

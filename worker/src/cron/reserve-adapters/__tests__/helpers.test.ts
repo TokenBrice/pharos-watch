@@ -8,6 +8,7 @@ vi.mock("../../../lib/fetch-retry", () => ({
 import { fetchWithRetry } from "../../../lib/fetch-retry";
 import {
   accumulateBucketedExposure,
+  buildRedemptionSnapshotMetadata,
   buildBucketSlices,
   buildUnknownExposureWarning,
   classifyBucketedValues,
@@ -26,6 +27,27 @@ import {
   valueUsdFromBigIntPrice,
   verifiedFreshnessMetadata,
 } from "../helpers";
+
+describe("buildRedemptionSnapshotMetadata", () => {
+  it("mirrors fee telemetry into nested redemption metadata and the legacy top-level field", () => {
+    expect(buildRedemptionSnapshotMetadata({
+      capacityUsd: 1250,
+      capacityKind: "live-direct-bounded",
+      freshnessKind: "same-run-onchain",
+      routeStatus: "open",
+      feeBps: 52,
+    })).toEqual({
+      redemptionFeeBps: 52,
+      redemption: {
+        capacityUsd: 1250,
+        capacityKind: "live-direct-bounded",
+        freshnessKind: "same-run-onchain",
+        routeStatus: "open",
+        feeBps: 52,
+      },
+    });
+  });
+});
 
 describe("normalizeSlices", () => {
   it("rounds to one decimal by default and adjusts the largest slice to sum to 100", () => {

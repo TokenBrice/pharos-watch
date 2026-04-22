@@ -7,13 +7,13 @@ vi.mock("../helpers", async (importOriginal) => {
   return {
     ...actual,
     fetchJsonWithRetry: vi.fn(),
-    fetchOnchainRateBps: vi.fn(),
+    probeOptionalRedemptionRateBps: vi.fn(),
     probeOnchainTotalSupply: vi.fn(),
   };
 });
 
 import { fetchSingleAssetReserves } from "../single-asset";
-import { fetchJsonWithRetry, fetchOnchainRateBps, probeOnchainTotalSupply } from "../helpers";
+import { fetchJsonWithRetry, probeOnchainTotalSupply, probeOptionalRedemptionRateBps } from "../helpers";
 
 const signal = AbortSignal.timeout(5000);
 
@@ -179,7 +179,7 @@ describe("fetchSingleAssetReserves", () => {
 
   it("includes live redemption fee metadata when a probe is configured", async () => {
     vi.mocked(probeOnchainTotalSupply).mockResolvedValue(1000000n);
-    vi.mocked(fetchOnchainRateBps).mockResolvedValue(50);
+    vi.mocked(probeOptionalRedemptionRateBps).mockResolvedValue(50);
     const config: LiveReservesConfig = {
       adapter: "single-asset",
       version: 1,

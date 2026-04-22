@@ -23,7 +23,7 @@ interface EvmCallOptions {
   timeoutMs?: number;
 }
 
-interface OnchainRateProbe {
+export interface OnchainRateProbe {
   contract: string;
   selector: string;
   decimals?: number;

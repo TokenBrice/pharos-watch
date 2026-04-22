@@ -1,5 +1,5 @@
 import { fetchWithRetry } from "../lib/fetch-retry";
-import { getCache, setCache } from "../lib/db-cache";
+import { setCache } from "../lib/db-cache";
 import { shouldAttemptFetch, recordOutcome } from "../lib/circuit-breaker";
 import {
   CIRCUIT_SOURCE,
@@ -19,8 +19,6 @@ import type { CronResult } from "../lib/cron-logger";
 import {
   buildRiskFreeRateCachePayload,
   buildRiskFreeRatesCachePayload,
-  parseRiskFreeRateCache,
-  parseRiskFreeRatesCache,
   serializeRiskFreeRateCache,
   serializeRiskFreeRatesCache,
 } from "./yield-sync/cache";
@@ -30,6 +28,7 @@ import {
   type ParsedYieldBenchmarkMeta,
   type ParsedYieldBenchmarkRegistry,
 } from "./yield-sync/benchmarks";
+import { loadRiskFreeRateRegistry } from "./yield-sync/sources-riskfree";
 
 const RISK_FREE_RATES_CACHE_KEY = "risk_free_rates";
 const LEGACY_USD_RISK_FREE_RATE_CACHE_KEY = "risk_free_rate";
@@ -156,39 +155,6 @@ export function parseSixSar3mcCsv(csv: string): { recordDate: string; rate: numb
   }
 
   return null;
-}
-
-async function loadPreviousBenchmarks(db: D1Database): Promise<ParsedYieldBenchmarkRegistry> {
-  const multiCache = await getCache(db, RISK_FREE_RATES_CACHE_KEY);
-  if (multiCache) {
-    const parsed = parseRiskFreeRatesCache(multiCache.value, multiCache.updatedAt);
-    if (parsed) return parsed;
-  }
-
-  const legacyUsdCache = await getCache(db, LEGACY_USD_RISK_FREE_RATE_CACHE_KEY);
-  if (legacyUsdCache) {
-    const parsedUsd = parseRiskFreeRateCache(
-      legacyUsdCache.value,
-      legacyUsdCache.updatedAt,
-      Math.floor(Date.now() / 1000),
-      { key: "USD" },
-    );
-    if (parsedUsd) {
-      return {
-        USD: parsedUsd,
-        EUR: null,
-        CHF: null,
-      };
-    }
-  }
-
-  return {
-    USD: buildHardcodedUsdBenchmark(
-      multiCache || legacyUsdCache ? "invalid-cache" : "missing-cache",
-    ),
-    EUR: null,
-    CHF: null,
-  };
 }
 
 function toCacheEntry(benchmark: ParsedYieldBenchmarkMeta | null) {
@@ -412,7 +378,7 @@ async function trySixSar3mcCsv(signal?: AbortSignal): Promise<{ rate: number; re
 }
 
 export async function fetchTbillRate(db: D1Database, signal?: AbortSignal): Promise<CronResult> {
-  const previous = await loadPreviousBenchmarks(db);
+  const previous = await loadRiskFreeRateRegistry(db);
 
   if (!await shouldAttemptFetch(db, CIRCUIT_SOURCE.TREASURY_RATES)) {
     const usdRetained = buildRetainedBenchmark(previous.USD, "circuit-open");

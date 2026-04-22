@@ -2,10 +2,11 @@ import type { StablecoinMeta } from "@shared/types/core";
 import type { LiveReservesConfig } from "@shared/types/live-reserves";
 import type { AdapterContext, AdapterResult } from "./types";
 import {
+  buildRedemptionSnapshotMetadata,
   decimalNumberFromBigInt,
-  fetchOnchainRateBps,
   fetchOnchainRawCall,
   fetchOnchainUint256,
+  probeOptionalRedemptionRateBps,
   requireOnchainInput,
 } from "./helpers";
 import {
@@ -86,17 +87,16 @@ export function buildLiquityV2RedemptionMetadata(
   return {
     totalDebtUsd: capacityUsd,
     immediateRedeemableUsd: capacityUsd,
-    ...(snapshot.redemptionFeeBps != null ? { redemptionFeeBps: snapshot.redemptionFeeBps } : {}),
-    redemption: {
+    ...buildRedemptionSnapshotMetadata({
       capacityUsd,
-      capacityKind: "live-direct-bounded" as const,
-      freshnessKind: "same-run-onchain" as const,
+      capacityKind: "live-direct-bounded",
+      freshnessKind: "same-run-onchain",
       routeStatus,
       ...(routeStatusReason ? { routeStatusReason } : {}),
       holderEligibility: "any-holder",
       settlementDelaySec: 0,
-      ...(snapshot.redemptionFeeBps != null ? { feeBps: snapshot.redemptionFeeBps } : {}),
-    },
+      feeBps: snapshot.redemptionFeeBps,
+    }),
     details: {
       proofKind: "liquity-v2-active-pool-debt",
       branchDebt: snapshot.debts.map((entry) => ({
@@ -123,16 +123,14 @@ export async function fetchLiquityV2BranchReserves(
 
   const [balances, redemptionFeeBps] = await Promise.all([
     fetchBranchBalances(input, params, signal, ctx),
-    params.redemptionRateProbe
-      ? fetchOnchainRateBps(
-          input,
-          params.redemptionRateProbe,
-          signal,
-          ctx,
-          params.rpcUrl,
-          params.fallbackRpcUrl,
-        )
-      : Promise.resolve(null),
+    probeOptionalRedemptionRateBps(
+      input,
+      params.redemptionRateProbe,
+      signal,
+      ctx,
+      params.rpcUrl,
+      params.fallbackRpcUrl,
+    ),
   ]);
   const debts = await Promise.all(
     balances.map(async (entry) => {

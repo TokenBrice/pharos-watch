@@ -5,6 +5,9 @@ import { computeApyFromPrice } from "../yield-helpers";
 import { buildHardcodedUsdBenchmark, type ParsedYieldBenchmarkRegistry } from "./benchmarks";
 import { parseRiskFreeRateCache, parseRiskFreeRatesCache } from "./cache";
 
+const RISK_FREE_RATES_CACHE_KEY = "risk_free_rates";
+const LEGACY_USD_RISK_FREE_RATE_CACHE_KEY = "risk_free_rate";
+
 export async function getPriceDerivedApy(
   db: D1Database,
   stablecoinId: string,
@@ -50,8 +53,11 @@ export async function getPriceDerivedApy(
   };
 }
 
-export async function loadRiskFreeRateRegistry(db: D1Database): Promise<ParsedYieldBenchmarkRegistry> {
-  const registryCache = await getCache(db, "risk_free_rates");
+export async function loadRiskFreeRateRegistry(
+  db: D1Database,
+  nowSec = Math.floor(Date.now() / 1000),
+): Promise<ParsedYieldBenchmarkRegistry> {
+  const registryCache = await getCache(db, RISK_FREE_RATES_CACHE_KEY);
   if (registryCache) {
     const parsed = parseRiskFreeRatesCache(registryCache.value, registryCache.updatedAt);
     if (parsed) {
@@ -59,12 +65,12 @@ export async function loadRiskFreeRateRegistry(db: D1Database): Promise<ParsedYi
     }
   }
 
-  const legacyUsdCache = await getCache(db, "risk_free_rate");
+  const legacyUsdCache = await getCache(db, LEGACY_USD_RISK_FREE_RATE_CACHE_KEY);
   if (legacyUsdCache) {
     const parsedUsd = parseRiskFreeRateCache(
       legacyUsdCache.value,
       legacyUsdCache.updatedAt,
-      Math.floor(Date.now() / 1000),
+      nowSec,
       { key: "USD" },
     );
     if (parsedUsd) {

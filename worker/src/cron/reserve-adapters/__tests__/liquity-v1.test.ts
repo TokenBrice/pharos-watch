@@ -7,13 +7,13 @@ vi.mock("../helpers", async (importOriginal) => {
   return {
     ...actual,
     fetchOnchainUint256: vi.fn(),
-    fetchOnchainRateBps: vi.fn(),
     fetchDefiLlamaPrices: vi.fn(),
+    probeOptionalRedemptionRateBps: vi.fn(),
   };
 });
 
 import { fetchLiquityV1Reserves } from "../liquity-v1";
-import { fetchDefiLlamaPrices, fetchOnchainRateBps, fetchOnchainUint256 } from "../helpers";
+import { fetchDefiLlamaPrices, fetchOnchainUint256, probeOptionalRedemptionRateBps } from "../helpers";
 
 const signal = AbortSignal.timeout(5_000);
 const coin = { id: "lusd-liquity" } as StablecoinMeta;
@@ -48,7 +48,7 @@ describe("fetchLiquityV1Reserves", () => {
     vi.mocked(fetchOnchainUint256)
       .mockResolvedValueOnce(200_000_000_000_000_000_000n) // 200 ETH
       .mockResolvedValueOnce(150_000_000_000_000_000_000_000n); // 150k LUSD
-    vi.mocked(fetchOnchainRateBps).mockResolvedValue(50);
+    vi.mocked(probeOptionalRedemptionRateBps).mockResolvedValue(50);
     vi.mocked(fetchDefiLlamaPrices).mockResolvedValue(new Map([["ETH", 2000]]));
 
     const result = await fetchLiquityV1Reserves(coin, config, signal);
@@ -92,7 +92,7 @@ describe("fetchLiquityV1Reserves", () => {
     vi.mocked(fetchOnchainUint256)
       .mockResolvedValueOnce(100_000_000_000_000_000_000n)
       .mockResolvedValueOnce(100_000_000_000_000_000_000n);
-    vi.mocked(fetchOnchainRateBps).mockResolvedValue(50);
+    vi.mocked(probeOptionalRedemptionRateBps).mockResolvedValue(50);
     vi.mocked(fetchDefiLlamaPrices).mockResolvedValue(new Map([["ETH", 1]]));
 
     const result = await fetchLiquityV1Reserves(coin, config, signal);
@@ -110,7 +110,7 @@ describe("fetchLiquityV1Reserves", () => {
     vi.mocked(fetchOnchainUint256)
       .mockResolvedValueOnce(100_000_000_000_000_000_000n)
       .mockResolvedValueOnce(100_000_000_000_000_000_000n);
-    vi.mocked(fetchOnchainRateBps).mockResolvedValue(null);
+    vi.mocked(probeOptionalRedemptionRateBps).mockResolvedValue(null);
     vi.mocked(fetchDefiLlamaPrices).mockResolvedValue(new Map());
 
     const result = await fetchLiquityV1Reserves(coin, config, signal);

@@ -45,10 +45,15 @@ export {
   fetchOnchainRateBps,
   fetchOnchainRawCall,
   fetchOnchainUint256,
+  type OnchainRateProbe,
 } from "./onchain";
 export {
   probeOnchainTotalSupply,
   probeTrackedTokenSupply,
 } from "./token-supply";
+export {
+  buildRedemptionSnapshotMetadata,
+  probeOptionalRedemptionRateBps,
+} from "./redemption";
 export { getJsonPath } from "./json-path";
 export { reserveDegradedWarning, reserveInfoWarning } from "./warnings";

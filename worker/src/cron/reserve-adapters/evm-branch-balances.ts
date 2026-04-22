@@ -2,9 +2,10 @@ import type { StablecoinMeta } from "@shared/types/core";
 import type { LiveReservesConfig, LiveReserveWarning } from "@shared/types/live-reserves";
 import type { AdapterContext, AdapterResult } from "./types";
 import {
+  buildRedemptionSnapshotMetadata,
   decimalNumberFromBigInt,
-  fetchOnchainRateBps,
   fetchOnchainUint256,
+  probeOptionalRedemptionRateBps,
   requireOnchainInput,
   reserveDegradedWarning,
 } from "./helpers";
@@ -31,16 +32,14 @@ export async function fetchEvmBranchBalancesReserves(
 
   const [balances, redemptionFeeBps, debtRaw] = await Promise.all([
     fetchBranchBalances(input, params, signal, ctx),
-    params.redemptionRateProbe
-      ? fetchOnchainRateBps(
-          input,
-          params.redemptionRateProbe,
-          signal,
-          ctx,
-          params.rpcUrl,
-          params.fallbackRpcUrl,
-        )
-      : Promise.resolve(null),
+    probeOptionalRedemptionRateBps(
+      input,
+      params.redemptionRateProbe,
+      signal,
+      ctx,
+      params.rpcUrl,
+      params.fallbackRpcUrl,
+    ),
     debtSelector
       ? fetchOnchainUint256({
           contract: params.debtContract ?? params.branches[0].holder,
@@ -58,13 +57,10 @@ export async function fetchEvmBranchBalancesReserves(
   const priceMap = await fetchBranchPriceMap(balances, signal, ctx);
 
   const baseMetadata = redemptionFeeBps != null
-    ? {
-        redemptionFeeBps,
-        redemption: {
-          feeBps: redemptionFeeBps,
-          freshnessKind: "same-run-onchain" as const,
-        },
-      }
+    ? buildRedemptionSnapshotMetadata({
+        feeBps: redemptionFeeBps,
+        freshnessKind: "same-run-onchain",
+      })
     : undefined;
 
   // If debt reconciliation is configured, compute collateralizationRatio from

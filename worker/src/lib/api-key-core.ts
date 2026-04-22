@@ -95,6 +95,63 @@ export type ApiKeyAuthenticationResult =
 
 type ApiKeyAuditAction = "created" | "updated" | "deactivated" | "rotated";
 
+const API_KEY_PUBLIC_PROJECTION = `
+       id,
+       key_prefix,
+       name,
+       owner_email,
+       tier,
+       traffic_class,
+       rate_limit_per_minute,
+       is_active,
+       expires_at,
+       created_at,
+       updated_at,
+       last_used_at,
+       last_used_route`;
+
+const API_KEY_PRIVATE_PROJECTION = `
+       id,
+       key_prefix,
+       secret_hash,
+       name,
+       owner_email,
+       tier,
+       traffic_class,
+       rate_limit_per_minute,
+       is_active,
+       expires_at,
+       created_at,
+       updated_at,
+       last_used_at,
+       last_used_route`;
+
+function buildApiKeySelectQuery(projection: string, whereClause?: string): string {
+  return `SELECT${projection}
+     FROM api_keys${whereClause ? `
+     ${whereClause}` : ""}`;
+}
+
+export function buildPublicApiKeySelectQuery(whereClause?: string): string {
+  return buildApiKeySelectQuery(API_KEY_PUBLIC_PROJECTION, whereClause);
+}
+
+function buildPrivateApiKeySelectQuery(whereClause?: string): string {
+  return buildApiKeySelectQuery(API_KEY_PRIVATE_PROJECTION, whereClause);
+}
+
+function buildPrivateApiKeySelectQueryWithPepper(whereClause?: string): string {
+  return buildApiKeySelectQuery(
+    `${API_KEY_PRIVATE_PROJECTION},
+       pepper_version`,
+    whereClause,
+  );
+}
+
+export function buildPublicApiKeyReturningClause(): string {
+  return `RETURNING${API_KEY_PUBLIC_PROJECTION}`;
+}
+
 const _ak = new IsolateLocalState(() => ({
   apiKeyCache: new Map<string, CachedApiKeyEntry>(),
   apiKeyLastUsageUpdateById: new Map<number, number>(),
@@ -304,26 +361,7 @@ export async function lookupApiKeyByPrefix(db: ApiKeyDb, keyPrefix: string): Pro
     return cached.row;
   }
 
-  const row = await db.prepare(
-    `SELECT
-       id,
-       key_prefix,
-       secret_hash,
-       name,
-       owner_email,
-       tier,
-       traffic_class,
-       rate_limit_per_minute,
-       is_active,
-       expires_at,
-       created_at,
-       updated_at,
-       last_used_at,
-       last_used_route,
-       pepper_version
-     FROM api_keys
-     WHERE key_prefix = ?`,
-  )
+  const row = await db.prepare(buildPrivateApiKeySelectQueryWithPepper("WHERE key_prefix = ?"))
     .bind(keyPrefix)
     .first<ApiKeyRow>();
 
@@ -440,48 +478,13 @@ export function normalizeUpdateInput(body: Record<string, unknown>): ApiKeyUpdat
 }
 
 export async function selectApiKeyById(db: ApiKeyDb, id: number): Promise<ApiKeyRow | null> {
-  return db.prepare(
-    `SELECT
-       id,
-       key_prefix,
-       secret_hash,
-       name,
-       owner_email,
-       tier,
-       traffic_class,
-       rate_limit_per_minute,
-       is_active,
-       expires_at,
-       created_at,
-       updated_at,
-       last_used_at,
-       last_used_route
-     FROM api_keys
-     WHERE id = ?`,
-  )
+  return db.prepare(buildPrivateApiKeySelectQuery("WHERE id = ?"))
     .bind(id)
     .first<ApiKeyRow>();
 }
 
 export async function selectPublicApiKeyById(db: ApiKeyDb, id: number): Promise<ApiKeyPublicRow | null> {
-  return db.prepare(
-    `SELECT
-       id,
-       key_prefix,
-       name,
-       owner_email,
-       tier,
-       traffic_class,
-       rate_limit_per_minute,
-       is_active,
-       expires_at,
-       created_at,
-       updated_at,
-       last_used_at,
-       last_used_route
-     FROM api_keys
-     WHERE id = ?`,
-  )
+  return db.prepare(buildPublicApiKeySelectQuery("WHERE id = ?"))
     .bind(id)
     .first<ApiKeyPublicRow>();
 }

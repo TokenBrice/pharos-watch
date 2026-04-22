@@ -8,13 +8,13 @@ vi.mock("../helpers", async (importOriginal) => {
     ...actual,
     fetchErc20Balance: vi.fn(),
     fetchDefiLlamaPrices: vi.fn(),
-    fetchOnchainRateBps: vi.fn(),
     fetchOnchainUint256: vi.fn(),
+    probeOptionalRedemptionRateBps: vi.fn(),
   };
 });
 
 import { fetchEvmBranchBalancesReserves } from "../evm-branch-balances";
-import { fetchDefiLlamaPrices, fetchErc20Balance, fetchOnchainRateBps, fetchOnchainUint256 } from "../helpers";
+import { fetchDefiLlamaPrices, fetchErc20Balance, fetchOnchainUint256, probeOptionalRedemptionRateBps } from "../helpers";
 
 const signal = AbortSignal.timeout(5000);
 const coin = { id: "test-coin" } as unknown as StablecoinMeta;
@@ -90,7 +90,7 @@ describe("fetchEvmBranchBalancesReserves", () => {
     vi.mocked(fetchDefiLlamaPrices).mockResolvedValue(
       new Map([["wstETH", 2000]]),
     );
-    vi.mocked(fetchOnchainRateBps).mockResolvedValue(50);
+    vi.mocked(probeOptionalRedemptionRateBps).mockResolvedValue(50);
 
     const config: LiveReservesConfig = {
       adapter: "evm-branch-balances",

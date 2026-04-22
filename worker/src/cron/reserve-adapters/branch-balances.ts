@@ -2,6 +2,7 @@ import { parseLiveReserveAdapterParams } from "@shared/lib/live-reserve-adapters
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins";
 import type { ReserveSlice } from "@shared/types/core";
 import type { LiveReserveAdapterKey, LiveReservesConfig, LiveReserveWarning } from "@shared/types/live-reserves";
+import type { OnchainRateProbe } from "./helpers";
 import type { AdapterContext, AdapterResult } from "./types";
 import {
   fetchDefiLlamaPrices,
@@ -33,11 +34,7 @@ export interface BranchBalanceParams {
   rpcUrl?: string;
   fallbackRpcUrl?: string;
   branches: BranchConfig[];
-  redemptionRateProbe?: {
-    contract: string;
-    selector: string;
-    decimals?: number;
-  };
+  redemptionRateProbe?: OnchainRateProbe;
   debtSelector?: string;
   debtContract?: string;
   debtDecimals?: number;

@@ -2,13 +2,15 @@ import type { ReserveSlice, StablecoinMeta } from "@shared/types/core";
 import type { LiveReservesConfig } from "@shared/types/live-reserves";
 import { parseLiveReserveAdapterParams } from "@shared/lib/live-reserve-adapters";
 import type { AdapterContext, AdapterResult } from "./types";
+import type { OnchainRateProbe } from "./helpers";
 import {
-  fetchOnchainRateBps,
+  buildRedemptionSnapshotMetadata,
   fetchJsonWithRetry,
   getJsonPath,
   isHttpJsonInput,
   parsePositiveNumericLike,
   parseTimestampLikeToUnixSeconds,
+  probeOptionalRedemptionRateBps,
   probeOnchainTotalSupply,
   requireOnchainInput,
   notApplicableFreshnessMetadata,
@@ -34,11 +36,7 @@ interface SingleAssetParams {
   supplyProbe?: JsonPathProbe;
   timestampProbe?: JsonPathProbe;
   reserveSourceLabel?: string;
-  redemptionRateProbe?: {
-    contract: string;
-    selector: string;
-    decimals?: number;
-  };
+  redemptionRateProbe?: OnchainRateProbe;
 }
 
 function readParams(config: LiveReservesConfig): SingleAssetParams {
@@ -114,12 +112,12 @@ export async function fetchSingleAssetReserves(
         ...(totalReserveUsd != null && supplyUsd != null && supplyUsd > 0
           ? { collateralizationRatio: totalReserveUsd / supplyUsd }
           : {}),
-        redemption: {
-          capacityKind: "documented-bound" as const,
-          freshnessKind: sourceTimestamp != null ? "verified-source-timestamp" as const : "unverified" as const,
+        ...buildRedemptionSnapshotMetadata({
+          capacityKind: "documented-bound",
+          freshnessKind: sourceTimestamp != null ? "verified-source-timestamp" : "unverified",
           ...(sourceTimestamp != null ? { sourceTimestamp } : {}),
-          routeStatus: "unknown" as const,
-        },
+          routeStatus: "unknown",
+        }),
         details: {
           proofKind: totalReserveUsd != null && supplyUsd != null
             ? "reserve-and-supply-probe"
@@ -139,16 +137,14 @@ export async function fetchSingleAssetReserves(
       params.rpcUrl,
       params.fallbackRpcUrl,
     );
-    const redemptionFeeProbe = params.redemptionRateProbe
-      ? fetchOnchainRateBps(
-          onchainInput,
-          params.redemptionRateProbe,
-          signal,
-          ctx,
-          params.rpcUrl,
-          params.fallbackRpcUrl,
-        )
-      : Promise.resolve(null);
+    const redemptionFeeProbe = probeOptionalRedemptionRateBps(
+      onchainInput,
+      params.redemptionRateProbe,
+      signal,
+      ctx,
+      params.rpcUrl,
+      params.fallbackRpcUrl,
+    );
 
     const [, redemptionFeeBps] = await Promise.all([supplyProbe, redemptionFeeProbe]);
 
@@ -165,17 +161,12 @@ export async function fetchSingleAssetReserves(
           proofKind: "erc20-total-supply-liveness",
           reserveSourceLabel: params.reserveSourceLabel ?? params.label,
         }),
-        redemption: {
-          capacityKind: "documented-bound" as const,
-          freshnessKind: "same-run-onchain" as const,
-          routeStatus: "unknown" as const,
-          ...(redemptionFeeBps != null ? { feeBps: redemptionFeeBps } : {}),
-        },
-        ...(redemptionFeeBps != null
-          ? {
-              redemptionFeeBps,
-            }
-          : {}),
+        ...buildRedemptionSnapshotMetadata({
+          capacityKind: "documented-bound",
+          freshnessKind: "same-run-onchain",
+          routeStatus: "unknown",
+          feeBps: redemptionFeeBps,
+        }),
       },
     };
   }
