@@ -1,5 +1,12 @@
 export { API_PATHS, buildQueryPath } from "./paths";
 export {
+  DYNAMIC_ENDPOINT_DESCRIPTORS,
+  findDynamicEndpointDescriptor,
+  getDynamicEndpointDescriptorByKey,
+  type DynamicEndpointDescriptor,
+  type DynamicEndpointDescriptorKey,
+} from "./dynamic";
+export {
   ENDPOINT_DEFINITIONS,
   STRICT_CONTRACT_PATHS_LIST,
   getEndpointDefinition,

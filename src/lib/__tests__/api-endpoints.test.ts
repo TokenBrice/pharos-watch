@@ -1,10 +1,13 @@
 import { describe, expect, it } from "vitest";
 import {
+  DYNAMIC_ENDPOINT_DESCRIPTORS,
   getSiteDataAccess,
   getPublicApiAccess,
   getProbePaths,
   getStatusPageActions,
   ENDPOINT_DEFINITIONS,
+  findDynamicEndpointDescriptor,
+  getDynamicEndpointDescriptorByKey,
   isAdminPath,
   isCacheBypassPath,
   isMutatingAdminPath,
@@ -200,6 +203,54 @@ describe("api endpoint registry", () => {
     expect(isAdminPath("/api/request-source-stats")).toBe(true);
     expect(isAdminPath("/api/discovery-candidates/42/dismiss")).toBe(true);
     expect(isAdminPath("/api/stablecoins")).toBe(false);
+  });
+
+  it("keeps the shared dynamic descriptor table aligned with current access and dependency policies", () => {
+    expect(DYNAMIC_ENDPOINT_DESCRIPTORS).toHaveLength(8);
+
+    expect(findDynamicEndpointDescriptor("/api/stablecoin/usdt-tether")).toMatchObject({
+      key: "stablecoin-detail",
+      publicApiAccess: "protected",
+      siteDataAccess: "allowed",
+      adminRequired: false,
+      routeDependencies: ["coingeckoApiKey"],
+      requestAttribution: {
+        routeKey: "stablecoin-detail",
+        routePath: "/api/stablecoin/:id",
+      },
+    });
+    expect(findDynamicEndpointDescriptor("/api/stablecoin-summary/usdc-circle")).toMatchObject({
+      key: "stablecoin-summary",
+      publicApiAccess: "protected",
+      siteDataAccess: "allowed",
+      adminRequired: false,
+      routeDependencies: [],
+    });
+    expect(findDynamicEndpointDescriptor("/api/stablecoin-reserves/iusd-infinifi")).toMatchObject({
+      key: "stablecoin-reserves",
+      publicApiAccess: "protected",
+      siteDataAccess: "allowed",
+      adminRequired: false,
+      routeDependencies: [],
+    });
+    expect(findDynamicEndpointDescriptor("/api/og/stablecoin/usdt-tether")).toMatchObject({
+      key: "og-image",
+      publicApiAccess: "exempt",
+      siteDataAccess: "denied",
+      adminRequired: false,
+      routeDependencies: [],
+    });
+    expect(getDynamicEndpointDescriptorByKey("api-key-rotate")).toMatchObject({
+      methods: ["POST"],
+      adminRequired: true,
+      routeDependencies: ["apiKeyHashPepper"],
+    });
+
+    expect(getPublicApiAccess("/api/stablecoin/usdt-tether")).toBe("protected");
+    expect(getSiteDataAccess("/api/stablecoin/usdt-tether")).toBe("allowed");
+    expect(getPublicApiAccess("/api/og/stablecoin/usdt-tether")).toBe("exempt");
+    expect(getSiteDataAccess("/api/og/stablecoin/usdt-tether")).toBe("denied");
+    expect(isAdminPath("/api/discovery-candidates/42/dismiss")).toBe(true);
   });
 
   it("validates endpoint methods from shared definitions", () => {

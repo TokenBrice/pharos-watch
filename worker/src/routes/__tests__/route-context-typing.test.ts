@@ -5,7 +5,7 @@ import type { TelegramCreds } from "../../lib/telegram";
 import { buildRouteContext } from "../../handlers/http/context";
 import { getDynamicRouteMatch } from "../dynamic-routes";
 import { defineDynamicRoute, defineStaticRoute, type RouteContextFor } from "../shared";
-import type { EndpointDependenciesForKey } from "@shared/lib/api-endpoints";
+import { getDynamicEndpointDescriptorByKey, type EndpointDependenciesForKey } from "@shared/lib/api-endpoints";
 import type { CloudflareD1StatusBindings } from "../../lib/env";
 
 describe("route context typing", () => {
@@ -91,5 +91,23 @@ describe("route context typing", () => {
     expect(getDynamicRouteMatch("/api/api-keys/7/update")?.dependencies).toEqual(["apiKeyHashPepper"]);
     expect(getDynamicRouteMatch("/api/api-keys/7/deactivate")?.dependencies).toEqual([]);
     expect(getDynamicRouteMatch("/api/api-keys/7/rotate")?.dependencies).toEqual(["apiKeyHashPepper"]);
+  });
+
+  it("keeps the shared dynamic descriptor table aligned with worker dependency hydration", () => {
+    expect(getDynamicEndpointDescriptorByKey("stablecoin-detail")?.routeDependencies).toEqual(["coingeckoApiKey"]);
+    expect(getDynamicEndpointDescriptorByKey("stablecoin-summary")?.routeDependencies).toEqual([]);
+    expect(getDynamicEndpointDescriptorByKey("stablecoin-reserves")?.routeDependencies).toEqual([]);
+    expect(getDynamicEndpointDescriptorByKey("discovery-candidate-dismiss")?.routeDependencies).toEqual(
+      getDynamicRouteMatch("/api/discovery-candidates/42/dismiss")?.dependencies,
+    );
+    expect(getDynamicEndpointDescriptorByKey("api-key-update")?.routeDependencies).toEqual(
+      getDynamicRouteMatch("/api/api-keys/7/update")?.dependencies,
+    );
+    expect(getDynamicEndpointDescriptorByKey("api-key-deactivate")?.routeDependencies).toEqual(
+      getDynamicRouteMatch("/api/api-keys/7/deactivate")?.dependencies,
+    );
+    expect(getDynamicEndpointDescriptorByKey("api-key-rotate")?.routeDependencies).toEqual(
+      getDynamicRouteMatch("/api/api-keys/7/rotate")?.dependencies,
+    );
   });
 });

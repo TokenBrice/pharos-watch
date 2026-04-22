@@ -5,6 +5,7 @@ import {
   classifyBrowserRequestConsumer,
   resolveApiRequestRouteMetric,
 } from "@shared/lib/request-attribution";
+import { findDynamicEndpointDescriptor } from "@shared/lib/api-endpoints";
 import { mockD1 } from "../../api/__tests__/helpers/mock-d1";
 import { PHAROS_WEB_ACCEPT_MARKER } from "@shared/lib/request-source-marker";
 import {
@@ -82,6 +83,22 @@ describe("request-source-attribution", () => {
       routeKey: "og-image",
       routePath: "/api/og/*",
     });
+  });
+
+  it("keeps dynamic descriptor attribution metadata aligned with request attribution output", () => {
+    expect(findDynamicEndpointDescriptor("/api/stablecoin/usdt-tether")?.requestAttribution).toEqual(
+      resolveApiRequestRouteMetric("/api/stablecoin/usdt-tether"),
+    );
+    expect(findDynamicEndpointDescriptor("/api/stablecoin-summary/usdc-circle")?.requestAttribution).toEqual(
+      resolveApiRequestRouteMetric("/api/stablecoin-summary/usdc-circle"),
+    );
+    expect(findDynamicEndpointDescriptor("/api/stablecoin-reserves/iusd-infinifi")?.requestAttribution).toEqual(
+      resolveApiRequestRouteMetric("/api/stablecoin-reserves/iusd-infinifi"),
+    );
+    expect(findDynamicEndpointDescriptor("/api/og/stablecoin/usdt-tether")?.requestAttribution).toEqual(
+      resolveApiRequestRouteMetric("/api/og/stablecoin/usdt-tether"),
+    );
+    expect(findDynamicEndpointDescriptor("/api/discovery-candidates/42/dismiss")?.requestAttribution).toBeNull();
   });
 
   it("skips admin and webhook routes from attribution", () => {
