@@ -2,7 +2,7 @@ import {
   computeBlacklistAmountUsdAtEvent,
   getBlacklistPriceAssetId,
 } from "@shared/lib/blacklist";
-import { fetchBlacklistAssetPriceFromCache } from "./current-balance-cache";
+import { fetchBlacklistAssetPriceFromCache } from "./row-preparation";
 import { shouldSuppressAsMirrorZero } from "./shared";
 import { throwIfAborted } from "../../lib/abort";
 import {
@@ -26,6 +26,11 @@ import { fetchWithRetry } from "../../lib/fetch-retry";
 import { fetchEvmTokenBalance } from "../blacklist/balance-providers";
 import type { BlacklistRow } from "../blacklist/shared";
 import type { ChainRpcConfig } from "../../lib/chain-registry";
+import {
+  blacklistRuntimeBudgetReached,
+  blacklistSubrequestBudgetReached,
+  type BlacklistRunBudget,
+} from "./run-budget";
 
 // Conservative hourly recovery cap: one D1 batch chunk and well below the
 // sync-blacklist 900-subrequest run budget observed in production.
@@ -50,10 +55,6 @@ export type BlacklistRecoveryProvider =
   | "trongrid"
   | "event_receipt"
   | "none";
-
-function runtimeBudgetReached(deadlineMs: number): boolean {
-  return Date.now() >= deadlineMs;
-}
 
 function markRecoveryAttempt(
   row: Pick<
@@ -83,8 +84,7 @@ export async function enrichRowBalances(
   etherscanApiKey: string | null,
   drpcApiKey: string | null,
   etherscanLimiter: RateLimitedFetch,
-  budget: SubrequestBudget,
-  deadlineMs: number,
+  runBudget: BlacklistRunBudget,
   signal?: AbortSignal,
   chainRpcs?: Map<string, ChainRpcConfig>,
   assetPriceUsd?: number | null,
@@ -92,13 +92,13 @@ export async function enrichRowBalances(
   const counters = { attempted: 0, succeeded: 0, failed: 0 };
   for (const row of rows) {
     throwIfAborted(signal);
-    if (runtimeBudgetReached(deadlineMs)) {
+    if (blacklistRuntimeBudgetReached(runBudget)) {
       if (row.amount_native == null && row.amount_status !== "permanently_unavailable") {
         markRecoveryAttempt(row, "none", "runtime_budget");
       }
       break;
     }
-    if (budgetExhausted(budget)) {
+    if (blacklistSubrequestBudgetReached(runBudget)) {
       if (row.amount_native == null && row.amount_status !== "permanently_unavailable") {
         markRecoveryAttempt(row, "none", "budget_exhausted");
       }
@@ -138,7 +138,7 @@ export async function enrichRowBalances(
             config,
             etherscanApiKey,
             etherscanLimiter,
-            budget,
+            runBudget.subrequestBudget,
             signal,
           );
           if (amount != null) source = "event";
@@ -153,7 +153,7 @@ export async function enrichRowBalances(
             etherscanApiKey,
             drpcApiKey,
             etherscanLimiter,
-            budget,
+            runBudget.subrequestBudget,
             signal,
             chainRpcs,
           );
@@ -254,12 +254,11 @@ export async function backfillAmounts(
   etherscanApiKey: string | null,
   drpcApiKey: string | null,
   etherscanLimiter: RateLimitedFetch,
-  budget: SubrequestBudget,
-  deadlineMs: number,
+  runBudget: BlacklistRunBudget,
   signal?: AbortSignal,
   chainRpcs?: Map<string, ChainRpcConfig>,
 ): Promise<{ runtimeBudgetReached: boolean }> {
-  if (runtimeBudgetReached(deadlineMs)) {
+  if (blacklistRuntimeBudgetReached(runBudget)) {
     return { runtimeBudgetReached: true };
   }
 
@@ -309,11 +308,11 @@ export async function backfillAmounts(
 
   for (const row of result.results) {
     throwIfAborted(signal);
-    if (runtimeBudgetReached(deadlineMs)) {
+    if (blacklistRuntimeBudgetReached(runBudget)) {
       runtimeBudgetHit = true;
       break;
     }
-    if (budgetExhausted(budget)) break;
+    if (blacklistSubrequestBudgetReached(runBudget)) break;
 
     const symbol = row.stablecoin as ContractEventConfig["stablecoin"];
     const config = row.config_key
@@ -364,7 +363,7 @@ export async function backfillAmounts(
         config,
         etherscanApiKey,
         etherscanLimiter,
-        budget,
+        runBudget.subrequestBudget,
         signal,
       );
       if (amount != null) {
@@ -380,7 +379,7 @@ export async function backfillAmounts(
           etherscanApiKey,
           drpcApiKey,
           etherscanLimiter,
-          budget,
+          runBudget.subrequestBudget,
           signal,
           chainRpcs,
         );
@@ -401,7 +400,7 @@ export async function backfillAmounts(
         etherscanApiKey,
         drpcApiKey,
         etherscanLimiter,
-        budget,
+        runBudget.subrequestBudget,
         signal,
         chainRpcs,
       );

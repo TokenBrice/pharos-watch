@@ -17,7 +17,6 @@ import {
 import type { BlacklistEventType } from "@shared/types/market";
 import { getChainRpc, type ChainRpcConfig } from "../../lib/chain-registry";
 import {
-  budgetExhausted,
   decodeAddress,
   decodeUint256,
   decodeUint256AtSlot,
@@ -25,9 +24,13 @@ import {
   readDataWord,
   type EtherscanLogEntry,
   type RateLimitedFetch,
-  type SubrequestBudget,
 } from "../../lib/evm-logs";
 import { buildExplorerAddressUrl, buildExplorerTxUrl, type BlacklistRow } from "./shared";
+import {
+  blacklistRuntimeBudgetReached,
+  blacklistSubrequestBudgetReached,
+  type BlacklistRunBudget,
+} from "./run-budget";
 
 const RPC_LOG_SCAN_CHAIN_IDS = new Set(["base", "optimism", "avalanche", "bsc", "gnosis"]);
 /** Per-chain `eth_getLogs` windows. Gnosis is capped at 9_000 because dRPC's free
@@ -65,10 +68,6 @@ export interface FetchEvmEventsIncrementalResult {
 
 function shouldPreferRpcLogScan(chainId: string): boolean {
   return RPC_LOG_SCAN_CHAIN_IDS.has(chainId);
-}
-
-function runtimeBudgetReached(deadlineMs: number): boolean {
-  return Date.now() >= deadlineMs;
 }
 
 /** Maximum plausible size of an address[] batch event — well above any real
@@ -231,7 +230,7 @@ export function parseEvmLogs(
 
 export async function resolveRpcLogTarget(
   chainId: string,
-  budget: SubrequestBudget,
+  runBudget: Pick<BlacklistRunBudget, "subrequestBudget">,
   signal?: AbortSignal,
   chainRpcs?: Map<string, ChainRpcConfig>,
 ): Promise<RpcLogTarget | null> {
@@ -248,7 +247,7 @@ export async function resolveRpcLogTarget(
   );
 
   for (const target of rpcTargets) {
-    const chainHead = await getAlchemyBlockNumber(target.url, budget, signal);
+    const chainHead = await getAlchemyBlockNumber(target.url, runBudget.subrequestBudget, signal);
     if (chainHead != null) {
       const chainWindow = RPC_LOG_SCAN_WINDOWS[chainId];
       return {
@@ -268,9 +267,8 @@ export async function fetchEvmEventsIncremental(
   apiKey: string | null,
   fromBlock: number,
   timestampCache: Map<number, number>,
-  deadlineMs: number,
+  runBudget: BlacklistRunBudget,
   rateLimit: RateLimitedFetch,
-  budget: SubrequestBudget,
   signal?: AbortSignal,
   chainRpcs?: Map<string, ChainRpcConfig>,
 ): Promise<FetchEvmEventsIncrementalResult> {
@@ -296,17 +294,17 @@ export async function fetchEvmEventsIncremental(
   let incomplete = false;
   let rpcTargetPromise: Promise<RpcLogTarget | null> | null = null;
   const getRpcTarget = (): Promise<RpcLogTarget | null> => {
-    rpcTargetPromise ??= resolveRpcLogTarget(config.chain.chainId, budget, signal, chainRpcs);
+    rpcTargetPromise ??= resolveRpcLogTarget(config.chain.chainId, runBudget, signal, chainRpcs);
     return rpcTargetPromise;
   };
 
   for (const topicHash of getBlacklistTopicHashes(config)) {
     throwIfAborted(signal);
-    if (runtimeBudgetReached(deadlineMs)) {
+    if (blacklistRuntimeBudgetReached(runBudget)) {
       incomplete = true;
       break;
     }
-    if (budgetExhausted(budget)) {
+    if (blacklistSubrequestBudgetReached(runBudget)) {
       incomplete = true;
       break;
     }
@@ -326,7 +324,7 @@ export async function fetchEvmEventsIncremental(
         99999999,
         0,
         rateLimit,
-        budget,
+        runBudget.subrequestBudget,
         signal,
       );
       if (logs !== null) {
@@ -353,7 +351,7 @@ export async function fetchEvmEventsIncremental(
                 [{ index: 0, value: topicHash }],
                 fromBlock,
                 scanToBlock,
-                budget,
+                runBudget.subrequestBudget,
                 signal,
               );
 
@@ -365,7 +363,7 @@ export async function fetchEvmEventsIncremental(
           ];
           const blockTimestamps =
             uniqueBlocks.length > 0
-              ? await resolveBlockTimestamps(rpcTarget.rpcUrl, uniqueBlocks, budget, {
+              ? await resolveBlockTimestamps(rpcTarget.rpcUrl, uniqueBlocks, runBudget.subrequestBudget, {
                   signal,
                   localCache: timestampCache,
                   persistentCache: {

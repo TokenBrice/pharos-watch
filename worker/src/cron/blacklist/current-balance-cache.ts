@@ -1,24 +1,27 @@
 import {
   computeBlacklistAmountUsdAtEvent,
-  getBlacklistPriceAssetId,
   isGoldBlacklistStablecoin,
 } from "@shared/lib/blacklist";
-import type { BlacklistStablecoin } from "@shared/types/market";
 import {
   upsertBlacklistCurrentBalance,
 } from "../../lib/blacklist-current-balances";
 import type { ContractEventConfig } from "../../lib/blacklist-contracts";
-import { budgetExhausted, type RateLimitedFetch, type SubrequestBudget } from "../../lib/evm-logs";
+import { type RateLimitedFetch } from "../../lib/evm-logs";
 import type { ChainRpcConfig } from "../../lib/chain-registry";
 import {
   fetchEvmTokenCurrentBalance,
   fetchTronTokenCurrentBalance,
 } from "./balance-providers";
 import type { BlacklistRow } from "./shared";
-
-function runtimeBudgetReached(deadlineMs: number): boolean {
-  return Date.now() >= deadlineMs;
-}
+import {
+  blacklistRuntimeBudgetReached,
+  blacklistSubrequestBudgetReached,
+  type BlacklistRunBudget,
+} from "./run-budget";
+import {
+  buildLatestBlacklistRows,
+  fetchBlacklistAssetPriceFromCache,
+} from "./row-preparation";
 
 export interface SyncCurrentBalanceCacheResult {
   updated: number;
@@ -32,10 +35,11 @@ type CurrentBalanceFetchContext = {
   trongridApiKey: string | null;
   etherscanLimiter: RateLimitedFetch;
   tronLimiter: RateLimitedFetch;
-  budget: SubrequestBudget;
-  deadlineMs: number;
+  runBudget: BlacklistRunBudget;
   signal?: AbortSignal;
   chainRpcs?: Map<string, ChainRpcConfig>;
+  assetPriceUsd?: number | null;
+  latestRows?: readonly BlacklistRow[];
 };
 
 async function fetchCurrentBalanceForAddress(
@@ -49,7 +53,7 @@ async function fetchCurrentBalanceForAddress(
       address,
       context.trongridApiKey,
       context.tronLimiter,
-      context.budget,
+      context.runBudget.subrequestBudget,
       context.signal,
     );
   }
@@ -59,7 +63,7 @@ async function fetchCurrentBalanceForAddress(
     address,
     context.etherscanApiKey,
     context.etherscanLimiter,
-    context.budget,
+    context.runBudget.subrequestBudget,
     context.signal,
     context.chainRpcs,
   );
@@ -106,24 +110,6 @@ async function persistCurrentBalanceResult(
   return "updated";
 }
 
-/**
- * Fetch the USD conversion price for non-USD-valued blacklist assets.
- * PAXG/XAUT use their own gold-token market entries; A7A5 is RUB-pegged
- * and must not be treated as USD 1:1.
- */
-export async function fetchBlacklistAssetPriceFromCache(
-  db: D1Database,
-  stablecoin: BlacklistStablecoin,
-): Promise<number | null> {
-  const assetId = getBlacklistPriceAssetId(stablecoin);
-  if (!assetId) return null;
-  const row = await db
-    .prepare("SELECT price FROM price_cache WHERE asset_id = ? LIMIT 1")
-    .bind(assetId)
-    .first<{ price: number }>();
-  return row?.price ?? null;
-}
-
 export async function syncCurrentBalanceCacheForRows(
   db: D1Database,
   config: ContractEventConfig,
@@ -134,21 +120,17 @@ export async function syncCurrentBalanceCacheForRows(
     return { updated: 0, deleted: 0, failed: 0 };
   }
 
-  const latestByAddress = new Map<string, BlacklistRow>();
-  const ordered = [...rows].sort((a, b) => (a.timestamp === b.timestamp ? a.id.localeCompare(b.id) : a.timestamp - b.timestamp));
-  for (const row of ordered) {
-    latestByAddress.set(row.address.toLowerCase(), row);
-  }
-
+  const latestRows = context.latestRows ?? buildLatestBlacklistRows(rows);
   const counters: SyncCurrentBalanceCacheResult = { updated: 0, deleted: 0, failed: 0 };
   const now = Math.floor(Date.now() / 1000);
 
-  const assetPriceUsd = getBlacklistPriceAssetId(config.stablecoin)
-    ? await fetchBlacklistAssetPriceFromCache(db, config.stablecoin)
-    : null;
+  const assetPriceUsd = context.assetPriceUsd ?? await fetchBlacklistAssetPriceFromCache(db, config.stablecoin);
 
-  for (const row of latestByAddress.values()) {
-    if (runtimeBudgetReached(context.deadlineMs) || budgetExhausted(context.budget)) break;
+  for (const row of latestRows) {
+    if (
+      blacklistRuntimeBudgetReached(context.runBudget)
+      || blacklistSubrequestBudgetReached(context.runBudget)
+    ) break;
 
     if (row.event_type === "unblacklist") {
       // Preserve the freeze-ledger snapshot after releases so historical seized/frozen

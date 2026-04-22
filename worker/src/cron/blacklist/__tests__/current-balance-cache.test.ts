@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { createBudget } from "../../../lib/evm-logs";
 import type { ContractEventConfig } from "../../../lib/blacklist-contracts";
+import { type BlacklistRunBudget } from "../run-budget";
 
 vi.mock("../../../lib/blacklist-current-balances", () => ({
   upsertBlacklistCurrentBalance: vi.fn(),
@@ -49,14 +50,18 @@ const a7a5Config: ContractEventConfig = {
 };
 
 function makeContext() {
+  const runBudget: BlacklistRunBudget = {
+    subrequestBudget: createBudget(10),
+    deadlineMs: Date.now() + 10_000,
+    minimumConfigWindowMs: 0,
+  };
   return {
     etherscanApiKey: null,
     drpcApiKey: null,
     trongridApiKey: null,
     etherscanLimiter: async <T>(fn: () => Promise<T>) => fn(),
     tronLimiter: async <T>(fn: () => Promise<T>) => fn(),
-    budget: createBudget(10),
-    deadlineMs: Date.now() + 10_000,
+    runBudget,
   };
 }
 

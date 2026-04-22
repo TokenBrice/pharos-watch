@@ -5,14 +5,17 @@ import { TronEventsResponseSchema } from "../../lib/external-api-schemas";
 import type { ContractEventConfig } from "../../lib/blacklist-contracts";
 import { getBlacklistEventBySignature } from "../../lib/blacklist-contracts";
 import {
-  budgetExhausted,
   type RateLimitedFetch,
-  type SubrequestBudget,
 } from "../../lib/evm-logs";
 import { fetchWithRetry } from "../../lib/fetch-retry";
 import { bigIntToDecimal } from "../../lib/bigint";
 import { throwIfAborted } from "../../lib/abort";
 import { buildExplorerAddressUrl, buildExplorerTxUrl, type BlacklistRow } from "./shared";
+import {
+  blacklistRuntimeBudgetReached,
+  blacklistSubrequestBudgetReached,
+  type BlacklistRunBudget,
+} from "./run-budget";
 
 interface TronEventResult {
   block_number: number;
@@ -27,10 +30,6 @@ interface TronEventsResponse {
   data: TronEventResult[];
   meta?: { links?: { next?: string } };
   success: boolean;
-}
-
-function runtimeBudgetReached(deadlineMs: number): boolean {
-  return Date.now() >= deadlineMs;
 }
 
 export function parseTronEvent(config: ContractEventConfig, evt: TronEventResult): BlacklistRow | null {
@@ -89,9 +88,8 @@ export async function fetchTronEventsIncremental(
   config: ContractEventConfig,
   apiKey: string | null,
   lastTimestampMs: number,
-  deadlineMs: number,
+  runBudget: BlacklistRunBudget,
   rateLimit: RateLimitedFetch,
-  budget: SubrequestBudget,
   signal?: AbortSignal,
 ): Promise<{ rows: BlacklistRow[]; maxBlock: number; incomplete: boolean; apiError: boolean }> {
   const rows: BlacklistRow[] = [];
@@ -103,11 +101,11 @@ export async function fetchTronEventsIncremental(
 
   for (const eventDef of config.events) {
     throwIfAborted(signal);
-    if (runtimeBudgetReached(deadlineMs)) {
+    if (blacklistRuntimeBudgetReached(runBudget)) {
       incomplete = true;
       break;
     }
-    if (budgetExhausted(budget)) break;
+    if (blacklistSubrequestBudgetReached(runBudget)) break;
 
     const tsFilter = lastTimestampMs > 0 ? `&min_block_timestamp=${lastTimestampMs}` : "";
     const eventName = eventDef.signature.split("(")[0];
@@ -116,13 +114,13 @@ export async function fetchTronEventsIncremental(
 
     while (url) {
       throwIfAborted(signal);
-      if (runtimeBudgetReached(deadlineMs)) {
+      if (blacklistRuntimeBudgetReached(runBudget)) {
         incomplete = true;
         break;
       }
-      if (budgetExhausted(budget)) break;
+      if (blacklistSubrequestBudgetReached(runBudget)) break;
 
-      budget.count++;
+      runBudget.subrequestBudget.count++;
       const json: TronEventsResponse | null = await rateLimit(async () => {
         const res = await fetchWithRetry(url!, { headers, signal });
         if (!res) return null;

@@ -1,12 +1,17 @@
 import { getBlacklistPriceAssetId } from "@shared/lib/blacklist";
 import { CONTRACT_CONFIGS } from "../../lib/blacklist-contracts";
 import { buildInClause } from "../../lib/db";
-import { type RateLimitedFetch, type SubrequestBudget } from "../../lib/evm-logs";
+import { type RateLimitedFetch } from "../../lib/evm-logs";
 import { type ChainRpcConfig } from "../../lib/chain-registry";
-import { syncCurrentBalanceCacheForRows, fetchBlacklistAssetPriceFromCache } from "./current-balance-cache";
+import { syncCurrentBalanceCacheForRows } from "./current-balance-cache";
 import { type BlacklistRow, shouldSuppressAsMirrorZero } from "./shared";
 import { enrichRowBalances } from "./amount-recovery";
 import { insertBlacklistRows } from "./persistence";
+import { type BlacklistRunBudget } from "./run-budget";
+import {
+  buildLatestBlacklistRows,
+  fetchBlacklistAssetPriceFromCache,
+} from "./row-preparation";
 
 type BlacklistConfig = (typeof CONTRACT_CONFIGS)[number];
 // D1's practical SQL-variable ceiling can be lower than the nominal 100.
@@ -34,8 +39,7 @@ interface ProcessFetchedBlacklistRowsOptions {
   trongridApiKey: string | null;
   etherscanLimiter: RateLimitedFetch;
   tronLimiter: RateLimitedFetch;
-  budget: SubrequestBudget;
-  deadlineMs: number;
+  runBudget: BlacklistRunBudget;
   signal?: AbortSignal;
   chainRpcs?: Map<string, ChainRpcConfig>;
 }
@@ -95,8 +99,7 @@ export async function processFetchedBlacklistRows(
     options.etherscanApiKey,
     options.drpcApiKey,
     options.etherscanLimiter,
-    options.budget,
-    options.deadlineMs,
+    options.runBudget,
     options.signal,
     options.chainRpcs,
     assetPriceUsd,
@@ -114,6 +117,7 @@ export async function processFetchedBlacklistRows(
 
   const insertedRows = await insertBlacklistRows(options.db, newRows);
   const ledgerRows = newRows.filter((row) => row.suppression_reason == null);
+  const latestLedgerRows = buildLatestBlacklistRows(ledgerRows);
   const currentBalanceCacheCounters = await syncCurrentBalanceCacheForRows(
     options.db,
     options.config,
@@ -124,10 +128,11 @@ export async function processFetchedBlacklistRows(
       trongridApiKey: options.trongridApiKey,
       etherscanLimiter: options.etherscanLimiter,
       tronLimiter: options.tronLimiter,
-      budget: options.budget,
-      deadlineMs: options.deadlineMs,
+      runBudget: options.runBudget,
       signal: options.signal,
       chainRpcs: options.chainRpcs,
+      assetPriceUsd,
+      latestRows: latestLedgerRows,
     },
   );
 

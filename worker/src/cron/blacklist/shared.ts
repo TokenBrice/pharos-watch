@@ -42,6 +42,15 @@ export interface BlacklistRow {
   explorer_address_url: string;
 }
 
+export interface BlacklistScanResult {
+  rows: BlacklistRow[];
+  latestCursor: number;
+  nextCursor: number | null;
+  apiError: boolean;
+  incomplete: boolean;
+  usedRpcLogs: boolean;
+}
+
 export function buildExplorerTxUrl(chain: ChainConfig, txHash: string): string {
   return buildExplorerUrl({
     chainType: chain.type,

@@ -1,6 +1,7 @@
 import { describe, expect, it, vi, beforeEach } from "vitest";
 import { fetchTronEventsIncremental } from "../tron-source";
 import { createBudget, createRateLimiter } from "../../../lib/evm-logs";
+import type { BlacklistRunBudget } from "../run-budget";
 
 const configStub = {
   configKey: "tron-test",
@@ -19,6 +20,14 @@ describe("fetchTronEventsIncremental error propagation", () => {
     global.fetch = vi.fn();
   });
 
+  function makeRunBudget(): BlacklistRunBudget {
+    return {
+      subrequestBudget: createBudget(100),
+      deadlineMs: Date.now() + 60_000,
+      minimumConfigWindowMs: 0,
+    };
+  }
+
   it("returns apiError=true when TronGrid responds with HTTP 500", async () => {
     (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValue(
       new Response("server error", { status: 500 }),
@@ -27,9 +36,8 @@ describe("fetchTronEventsIncremental error propagation", () => {
       configStub,
       null,
       0,
-      Date.now() + 60_000,
+      makeRunBudget(),
       createRateLimiter(3),
-      createBudget(100),
       undefined,
     );
     expect(result.apiError).toBe(true);
@@ -44,9 +52,8 @@ describe("fetchTronEventsIncremental error propagation", () => {
       configStub,
       null,
       0,
-      Date.now() + 60_000,
+      makeRunBudget(),
       createRateLimiter(3),
-      createBudget(100),
       undefined,
     );
     expect(result.apiError).toBe(true);
@@ -60,9 +67,8 @@ describe("fetchTronEventsIncremental error propagation", () => {
       configStub,
       null,
       0,
-      Date.now() + 60_000,
+      makeRunBudget(),
       createRateLimiter(3),
-      createBudget(100),
       undefined,
     );
     expect(result.apiError).toBe(true);
@@ -77,9 +83,8 @@ describe("fetchTronEventsIncremental error propagation", () => {
       configStub,
       null,
       0,
-      Date.now() + 60_000,
+      makeRunBudget(),
       createRateLimiter(3),
-      createBudget(100),
       undefined,
     );
     expect(result.apiError).toBe(false);

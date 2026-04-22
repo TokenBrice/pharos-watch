@@ -5,6 +5,7 @@ import {
   syncCurrentBalanceCacheForRows,
 } from "../cron/blacklist/current-balance-cache";
 import { backfillTronFromLedger } from "../cron/blacklist/amount-recovery";
+import type { BlacklistRunBudget } from "../cron/blacklist/run-budget";
 import type { BlacklistRow } from "../cron/blacklist/shared";
 import type { ChainRpcConfig } from "../lib/chain-registry";
 import { runAdminRoute } from "../lib/route-wrappers";
@@ -120,8 +121,11 @@ export async function handleBackfillBlacklistCurrentBalances(
           trongridApiKey: null,
           etherscanLimiter,
           tronLimiter,
-          budget,
-          deadlineMs,
+          runBudget: {
+            subrequestBudget: budget,
+            deadlineMs,
+            minimumConfigWindowMs: 0,
+          } satisfies BlacklistRunBudget,
           signal: undefined,
           chainRpcs,
         });

@@ -4,6 +4,7 @@ import { shouldSuppressAsMirrorZero } from "../shared";
 import { mockD1 } from "../../../api/__tests__/helpers/mock-d1";
 import type { BlacklistRow } from "../shared";
 import { chainConfig, type ContractEventConfig } from "../../../lib/blacklist-contracts";
+import type { BlacklistRunBudget } from "../run-budget";
 
 function makeConfig(): ContractEventConfig {
   return {
@@ -41,6 +42,15 @@ function makeRow(overrides: Partial<BlacklistRow> = {}): BlacklistRow {
   } as BlacklistRow;
 }
 
+function makeRunBudget(overrides: Partial<BlacklistRunBudget> = {}): BlacklistRunBudget {
+  return {
+    subrequestBudget: { count: 0, limit: 1 },
+    deadlineMs: Date.now() + 10_000,
+    minimumConfigWindowMs: 0,
+    ...overrides,
+  };
+}
+
 describe("enrichRowBalances", () => {
   it("keeps EURC mirror-zero suppression explicit", () => {
     expect(shouldSuppressAsMirrorZero("EURC", "blacklist", 0)).toBe(true);
@@ -57,7 +67,7 @@ describe("enrichRowBalances", () => {
     ]);
     const limiter = async <T>(fn: () => Promise<T>) => fn();
 
-    await backfillAmounts(db, null, null, limiter, { count: 0, limit: 1 }, Date.now() + 10_000);
+    await backfillAmounts(db, null, null, limiter, makeRunBudget());
 
     expect(db.getHistory()[0]?.sql).toContain("AND chain_id != 'tron'");
   });
@@ -73,8 +83,7 @@ describe("enrichRowBalances", () => {
       null,
       null,
       limiter,
-      { count: 0, limit: 1 },
-      Date.now() + 10_000,
+      makeRunBudget(),
       undefined,
       undefined,
       1,
@@ -95,8 +104,7 @@ describe("enrichRowBalances", () => {
       null,
       null,
       limiter,
-      { count: 0, limit: 1 },
-      Date.now() - 1,
+      makeRunBudget({ deadlineMs: Date.now() - 1 }),
     );
 
     expect(result).toEqual({ attempted: 0, succeeded: 0, failed: 0 });

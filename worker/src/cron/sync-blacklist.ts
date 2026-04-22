@@ -3,8 +3,6 @@ import { shouldAttemptFetch, recordOutcomeSafe } from "../lib/circuit-breaker";
 import { setLastBlock } from "../lib/db";
 import {
   type RateLimitedFetch,
-  createBudget,
-  budgetExhausted,
   createRateLimiter,
   getEvmBlockNumber,
 } from "../lib/evm-logs";
@@ -12,11 +10,18 @@ import { type ChainRpcConfig } from "../lib/chain-registry";
 import { throwIfAborted } from "../lib/abort";
 import type { CronProgressReporter } from "../lib/cron-logger";
 import { reportCronProgress, withBudgetMetadata } from "../lib/cron-progress";
+import { CONTRACT_CONFIGS } from "../lib/blacklist-contracts";
 import { fetchEvmEventsIncremental } from "./blacklist/evm-source";
 import { fetchTronEventsIncremental } from "./blacklist/tron-source";
-import type { BlacklistRow } from "./blacklist/shared";
+import type { BlacklistRow, BlacklistScanResult } from "./blacklist/shared";
 import { backfillAmounts } from "./blacklist/amount-recovery";
 import { processFetchedBlacklistRows } from "./blacklist/post-fetch";
+import {
+  blacklistShouldStopBeforeNextConfig,
+  blacklistSubrequestBudgetReached,
+  createBlacklistRunBudget,
+  type BlacklistRunBudget,
+} from "./blacklist/run-budget";
 import {
   applyTronLedgerMirrorPass,
   deriveSyncBlacklistStatus,
@@ -57,10 +62,6 @@ function evmSafetyMarginBlocks(evmChainId: number): number {
   return Math.ceil(INDEXING_SAFETY_SEC / blockTime);
 }
 
-function shouldStopBeforeNextConfig(deadlineMs: number): boolean {
-  return Date.now() + SYNC_BLACKLIST_MIN_CONFIG_WINDOW_MS >= deadlineMs;
-}
-
 export interface SyncBlacklistOptions {
   db: D1Database;
   etherscanApiKey: string | null;
@@ -72,12 +73,163 @@ export interface SyncBlacklistOptions {
   chainRpcs?: Map<string, ChainRpcConfig>;
 }
 
+function buildTronScanResult(
+  result: { rows: BlacklistRow[]; maxBlock: number; incomplete: boolean; apiError: boolean },
+  lastCursor: number,
+): BlacklistScanResult {
+  const nextCursor = result.incomplete
+    ? lastCursor
+    : result.rows.length > 0
+      ? result.maxBlock
+      : Math.max(Date.now() - TRON_SAFETY_MS, lastCursor);
+
+  return {
+    rows: result.rows,
+    latestCursor: result.maxBlock,
+    nextCursor: nextCursor > lastCursor ? nextCursor : null,
+    apiError: result.apiError,
+    incomplete: result.incomplete,
+    usedRpcLogs: false,
+  };
+}
+
+function buildEvmScanResult(args: {
+  result: {
+    rows: BlacklistRow[];
+    maxBlock: number;
+    apiError: boolean;
+    chainHead: number | null;
+    usedRpcLogs: boolean;
+    scannedToBlock: number | null;
+    incomplete: boolean;
+  };
+  lastCursor: number;
+  configuredStartBlock: number;
+  wasReset: boolean;
+  evmChainId: number;
+  chainHeadCache: Map<number, number>;
+}): BlacklistScanResult {
+  let nextCursor = args.lastCursor;
+  const { result } = args;
+
+  if (result.incomplete) {
+    nextCursor = args.lastCursor;
+  } else if (result.apiError) {
+    const partialAdvance = result.scannedToBlock;
+    nextCursor =
+      partialAdvance != null && partialAdvance > args.lastCursor
+        ? partialAdvance
+        : args.lastCursor;
+  } else if (result.rows.length > 0) {
+    nextCursor = result.maxBlock;
+  } else {
+    const head = args.chainHeadCache.get(args.evmChainId);
+    const margin = evmSafetyMarginBlocks(args.evmChainId);
+    if (result.usedRpcLogs && result.scannedToBlock != null && head != null && result.scannedToBlock < head) {
+      nextCursor = Math.max(result.scannedToBlock, args.lastCursor);
+    } else {
+      nextCursor = head
+        ? Math.max(head - margin, args.lastCursor)
+        : args.wasReset
+          ? args.configuredStartBlock
+          : args.lastCursor;
+    }
+  }
+
+  return {
+    rows: result.rows,
+    latestCursor: result.maxBlock,
+    nextCursor: nextCursor !== args.lastCursor ? nextCursor : null,
+    apiError: result.apiError,
+    incomplete: result.incomplete,
+    usedRpcLogs: result.usedRpcLogs,
+  };
+}
+
+async function scanBlacklistConfig(args: {
+  db: D1Database;
+  config: (typeof CONTRACT_CONFIGS)[number];
+  configKey: string;
+  lastBlock: number;
+  runBudget: BlacklistRunBudget;
+  etherscanApiKey: string | null;
+  trongridApiKey: string | null;
+  etherscanLimiter: RateLimitedFetch;
+  tronLimiter: RateLimitedFetch;
+  signal?: AbortSignal;
+  chainHeadCache: Map<number, number>;
+  chainRpcs?: Map<string, ChainRpcConfig>;
+  getChainTimestampCache: (chainId: string) => Map<number, number>;
+}): Promise<BlacklistScanResult> {
+  if (args.config.chain.type === "tron") {
+    const result = await fetchTronEventsIncremental(
+      args.config,
+      args.trongridApiKey,
+      args.lastBlock,
+      args.runBudget,
+      args.tronLimiter,
+      args.signal,
+    );
+    return buildTronScanResult(result, args.lastBlock);
+  }
+
+  const evmChainId = args.config.chain.evmChainId!;
+  const wasReset = args.lastBlock >= EVM_SCANNED_TO_LATEST;
+  const configuredStartBlock =
+    typeof args.config.startBlock === "number" && Number.isFinite(args.config.startBlock) && args.config.startBlock > 0
+      ? Math.floor(args.config.startBlock)
+      : 0;
+  const fromBlock = wasReset
+    ? configuredStartBlock
+    : args.lastBlock > 0
+      ? args.lastBlock + 1
+      : configuredStartBlock;
+
+  const result = await fetchEvmEventsIncremental(
+    args.db,
+    args.config,
+    args.etherscanApiKey,
+    fromBlock,
+    args.getChainTimestampCache(args.config.chain.chainId),
+    args.runBudget,
+    args.etherscanLimiter,
+    args.signal,
+    args.chainRpcs,
+  );
+
+  if (result.chainHead != null) {
+    args.chainHeadCache.set(evmChainId, result.chainHead);
+  } else if (!args.chainHeadCache.has(evmChainId) && !result.incomplete && !result.apiError && result.rows.length === 0) {
+    const head = await getEvmBlockNumber(
+      evmChainId,
+      args.etherscanApiKey,
+      args.etherscanLimiter,
+      args.runBudget.subrequestBudget,
+      args.signal,
+    );
+    if (head) args.chainHeadCache.set(evmChainId, head);
+  }
+
+  return buildEvmScanResult({
+    result,
+    lastCursor: args.lastBlock,
+    configuredStartBlock,
+    wasReset,
+    evmChainId,
+    chainHeadCache: args.chainHeadCache,
+  });
+}
+
 export async function syncBlacklist(opts: SyncBlacklistOptions): Promise<SyncBlacklistResult> {
   const { db, etherscanApiKey, trongridApiKey, drpcApiKey, externalEtherscanRL, signal, onProgress, chainRpcs } = opts;
   const etherscanLimiter = externalEtherscanRL ?? createRateLimiter(4);
   const tronLimiter = createRateLimiter(3);
-  const budget = createBudget(900);
-  const deadlineMs = Date.now() + SYNC_BLACKLIST_RUNTIME_BUDGET_MS;
+  const runBudget = createBlacklistRunBudget({
+    subrequestLimit: 900,
+    runtimeBudgetMs: SYNC_BLACKLIST_RUNTIME_BUDGET_MS,
+    minimumConfigWindowMs: SYNC_BLACKLIST_MIN_CONFIG_WINDOW_MS,
+  });
+  const budget = runBudget.subrequestBudget;
   let totalFetchedEvents = 0;
   let contractsSkipped = 0;
   let apiErrors = 0;
@@ -117,8 +269,7 @@ export async function syncBlacklist(opts: SyncBlacklistOptions): Promise<SyncBla
       etherscanApiKey,
       drpcApiKey,
       etherscanLimiter,
-      budget,
-      deadlineMs,
+      runBudget,
       signal,
       chainRpcs,
     );
@@ -142,7 +293,7 @@ export async function syncBlacklist(opts: SyncBlacklistOptions): Promise<SyncBla
 
   for (let ci = 0; ci < configStates.length; ci++) {
     throwIfAborted(signal);
-    if (shouldStopBeforeNextConfig(deadlineMs)) {
+    if (blacklistShouldStopBeforeNextConfig(runBudget)) {
       runtimeBudgetHit = true;
       contractsSkipped = configStates.length - ci;
       console.warn(`[sync-blacklist] Runtime budget reached, skipping ${contractsSkipped} remaining contracts`);
@@ -160,7 +311,7 @@ export async function syncBlacklist(opts: SyncBlacklistOptions): Promise<SyncBla
         chainId: config.chain.chainId,
       },
     }, budget);
-    if (budgetExhausted(budget)) {
+    if (blacklistSubrequestBudgetReached(runBudget)) {
       runtimeBudgetHit = true;
       contractsSkipped = configStates.length - ci;
       console.log(`[sync-blacklist] Budget exhausted (${budget.count}/${budget.limit}), skipping ${contractsSkipped} remaining contracts`);
@@ -175,26 +326,23 @@ export async function syncBlacklist(opts: SyncBlacklistOptions): Promise<SyncBla
     }
 
     try {
-      let result: {
-        rows: BlacklistRow[];
-        maxBlock: number;
-        apiError: boolean;           // required on both branches now
-        chainHead?: number | null;
-        usedRpcLogs?: boolean;
-        scannedToBlock?: number | null;
-        incomplete?: boolean;
-      };
+      const result = await scanBlacklistConfig({
+        db,
+        config,
+        configKey,
+        lastBlock,
+        runBudget,
+        etherscanApiKey,
+        trongridApiKey,
+        etherscanLimiter,
+        tronLimiter,
+        signal,
+        chainHeadCache,
+        chainRpcs,
+        getChainTimestampCache,
+      });
 
       if (config.chain.type === "tron") {
-        result = await fetchTronEventsIncremental(
-          config,
-          trongridApiKey,
-          lastBlock,
-          deadlineMs,
-          tronLimiter,
-          budget,
-          signal,
-        );
         await recordOutcomeSafe(db, CIRCUIT_SOURCE.TRONGRID, !result.apiError);
         if (result.apiError) {
           apiErrors++;
@@ -211,8 +359,7 @@ export async function syncBlacklist(opts: SyncBlacklistOptions): Promise<SyncBla
           trongridApiKey,
           etherscanLimiter,
           tronLimiter,
-          budget,
-          deadlineMs,
+          runBudget,
           signal,
           chainRpcs,
         });
@@ -223,39 +370,8 @@ export async function syncBlacklist(opts: SyncBlacklistOptions): Promise<SyncBla
           console.warn(
             `[sync-blacklist] Runtime budget reached while scanning ${config.stablecoin} on ${config.chain.chainName}, keeping sync at ts ${lastBlock}`,
           );
-        } else {
-          // When no events found, advance toward current time but leave a safety margin
-          // to avoid permanently skipping events the explorer hasn't indexed yet.
-          const newBlock = result.rows.length > 0 ? result.maxBlock : Math.max(Date.now() - TRON_SAFETY_MS, lastBlock);
-          if (newBlock > lastBlock) {
-            await setLastBlock(db, configKey, newBlock);
-          }
         }
       } else {
-        const evmChainId = config.chain.evmChainId!;
-        // If lastBlock hit the sentinel (99999999), reset to 0 to re-scan.
-        const wasReset = lastBlock >= EVM_SCANNED_TO_LATEST;
-        const configuredStartBlock =
-          typeof config.startBlock === "number" && Number.isFinite(config.startBlock) && config.startBlock > 0
-            ? Math.floor(config.startBlock)
-            : 0;
-        const fromBlock = wasReset
-          ? configuredStartBlock
-          : lastBlock > 0
-            ? lastBlock + 1
-            : configuredStartBlock;
-        result = await fetchEvmEventsIncremental(
-          db,
-          config,
-          etherscanApiKey,
-          fromBlock,
-          getChainTimestampCache(config.chain.chainId),
-          deadlineMs,
-          etherscanLimiter,
-          budget,
-          signal,
-          chainRpcs,
-        );
         if (result.usedRpcLogs) {
           rpcLogConfigs++;
         }
@@ -270,80 +386,46 @@ export async function syncBlacklist(opts: SyncBlacklistOptions): Promise<SyncBla
           trongridApiKey,
           etherscanLimiter,
           tronLimiter,
-          budget,
-          deadlineMs,
+          runBudget,
           signal,
           chainRpcs,
         });
         recordProcessedRows(counters, processed);
 
-        let newBlock: number;
         if (result.incomplete) {
           runtimeBudgetHit = true;
-          newBlock = lastBlock;
           console.warn(
             `[sync-blacklist] Runtime budget reached while scanning ${config.stablecoin} on ${config.chain.chainName}, keeping sync at block ${lastBlock}`,
           );
         } else if (result.apiError) {
-          const partialAdvance = result.scannedToBlock;
           apiErrors++;
           recordApiErrorConfig(
             apiErrorConfigs,
             configKey,
             config.stablecoin,
             config.chain.chainId,
-            partialAdvance != null && partialAdvance > lastBlock ? "partial-coverage" : "no-coverage",
+            result.nextCursor != null ? "partial-coverage" : "no-coverage",
           );
-          if (partialAdvance != null && partialAdvance > lastBlock) {
-            newBlock = partialAdvance;
+          if (result.nextCursor != null) {
             console.warn(
-              `[sync-blacklist] Partial coverage scanning ${config.stablecoin} on ${config.chain.chainName}, advancing sync from ${lastBlock} to ${newBlock}`,
+              `[sync-blacklist] Partial coverage scanning ${config.stablecoin} on ${config.chain.chainName}, advancing sync from ${lastBlock} to ${result.nextCursor}`,
             );
           } else {
             console.warn(
               `[sync-blacklist] API error scanning ${config.stablecoin} on ${config.chain.chainName}, keeping sync at block ${lastBlock}`,
             );
-            newBlock = lastBlock;
-          }
-        } else if (result.rows.length > 0) {
-          newBlock = result.maxBlock;
-        } else {
-          // Genuine no events — advance sync state toward chain head, but leave a safety
-          // margin to avoid permanently skipping events that the explorer hasn't indexed yet.
-          if (!chainHeadCache.has(evmChainId)) {
-            const head =
-              result.chainHead ??
-              (await getEvmBlockNumber(evmChainId, etherscanApiKey, etherscanLimiter, budget, signal));
-            if (head) chainHeadCache.set(evmChainId, head);
-          }
-          const head = chainHeadCache.get(evmChainId);
-          const margin = evmSafetyMarginBlocks(evmChainId);
-          if (
-            result.usedRpcLogs &&
-            result.scannedToBlock != null &&
-            head != null &&
-            result.scannedToBlock < head
-          ) {
-            newBlock = Math.max(result.scannedToBlock, lastBlock);
-          } else {
-            // Fall back: if sentinel was reset, use the configured start block rather than staying stuck at sentinel.
-            newBlock = head
-              ? Math.max(head - margin, lastBlock)
-              : wasReset
-                ? configuredStartBlock
-                : lastBlock;
           }
         }
+      }
 
-        if (newBlock !== lastBlock) {
-          await setLastBlock(db, configKey, newBlock);
-        }
+      if (result.nextCursor != null) {
+        await setLastBlock(db, configKey, result.nextCursor);
       }
 
       totalFetchedEvents += result.rows.length;
       const syncLabel = config.chain.type === "tron" ? "ts" : "block";
       console.log(
-        `[sync-blacklist] ${config.stablecoin} on ${config.chain.chainName}: ${result.rows.length} new events, ${syncLabel} ${result.maxBlock}`,
+        `[sync-blacklist] ${config.stablecoin} on ${config.chain.chainName}: ${result.rows.length} new events, ${syncLabel} ${result.latestCursor}`,
       );
     } catch (err) {
       apiErrors++;
@@ -393,7 +475,7 @@ export async function syncBlacklist(opts: SyncBlacklistOptions): Promise<SyncBla
       rpcLogConfigs,
       apiErrorClasses,
       runtimeBudgetReached: runtimeBudgetHit,
-      subrequestBudgetReached: budgetExhausted(budget),
+      subrequestBudgetReached: blacklistSubrequestBudgetReached(runBudget),
       runtimeBudgetMs: SYNC_BLACKLIST_RUNTIME_BUDGET_MS,
       enrichAttempted: counters.enrichCounters.attempted,
       enrichSucceeded: counters.enrichCounters.succeeded,
