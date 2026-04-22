@@ -8,19 +8,10 @@ import { digestDisplay } from "@/lib/fonts";
 import { safeJsonLd } from "@/lib/json-ld";
 import { summarizeText } from "@/lib/page-metadata";
 import { SITE_ORIGIN as SITE_URL } from "@shared/lib/runtime-origins";
+import type { DigestContentEntry } from "@shared/types";
 import digests from "../../../../data/digests.json";
 
-interface DigestEntry {
-  date: string;
-  title: string;
-  text: string;
-  extended: string;
-  generatedAt: number;
-  digestType?: "daily" | "weekly";
-  editionNumber?: number;
-}
-
-const allDigests = digests as DigestEntry[];
+const allDigests = digests as DigestContentEntry[];
 const digestByDate = new Map(allDigests.map((d) => [d.date, d]));
 
 export function generateStaticParams() {

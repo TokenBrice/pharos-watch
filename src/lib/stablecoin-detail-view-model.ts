@@ -4,6 +4,7 @@ import type {
   DexLiquidityData,
   PegSummaryCoin,
   ReportCard,
+  StablecoinAiSummary,
   StablecoinData,
   StablecoinMeta,
   StablecoinListResponse,
@@ -41,11 +42,7 @@ import {
 import type { MintBurnFlowsResponse } from "@shared/types";
 import type { ApiMeta } from "@/lib/api";
 
-export interface StablecoinDetailSummary {
-  title: string;
-  text: string;
-  updatedAt: string;
-}
+export type StablecoinDetailSummary = StablecoinAiSummary;
 
 interface BaseViewModel {
   handleRetryAll: () => void;
@@ -118,7 +115,7 @@ export type StablecoinDetailViewModel =
   | NotFoundViewModel
   | StablecoinDetailReadyViewModel;
 
-interface BuildStablecoinDetailViewModelParams {
+interface LegacyBuildStablecoinDetailViewModelParams {
   id: string;
   coin: StablecoinMeta;
   summary: StablecoinDetailSummary | null;
@@ -158,6 +155,60 @@ interface BuildStablecoinDetailViewModelParams {
   liveReserves?: ReserveResult | null;
   liveReserveError?: unknown | null;
   nowMs?: number;
+}
+
+interface StablecoinDetailViewModelCoreInputs {
+  id: string;
+  coin: StablecoinMeta;
+  summary: StablecoinDetailSummary | null;
+  logoSrc?: string;
+  handleRetryAll: () => void;
+}
+
+interface StablecoinDetailViewModelQueryInputs {
+  supplyData?: SupplyHistoryPoint[];
+  supplyLoading: boolean;
+  supplyError: unknown | null;
+  listData?: StablecoinListResponse;
+  listLoading: boolean;
+  listError: unknown | null;
+  isListError: boolean;
+  listUpdatedAt: number;
+  listMeta: ApiMeta | null;
+  pegSummaryData?: PegSummaryResponse;
+  pegUpdatedAt: number;
+  pegError: unknown | null;
+  pegMeta: ApiMeta | null;
+  liquidityMap?: DexLiquidityMap;
+  liqUpdatedAt: number;
+  liquidityError: unknown | null;
+  liquidityMeta: ApiMeta | null;
+  reportCardsData?: ReportCardsResponse;
+  rcUpdatedAt: number;
+  reportCardsError: unknown | null;
+  reportCardsMeta: ApiMeta | null;
+  redemptionBackstopsData?: RedemptionBackstopsResponse;
+  rbUpdatedAt?: number;
+  redemptionBackstopsError?: unknown | null;
+  redemptionBackstopsMeta?: ApiMeta | null;
+}
+
+interface StablecoinDetailViewModelSupplementalInputs {
+  yieldRankingsData?: YieldRankingsResponse;
+  stressSignalsData?: StressSignalsAllResponse;
+  flowsData?: MintBurnFlowsResponse;
+  isFlowsLoading: boolean;
+  blacklistSummary?: BlacklistSummaryResponse;
+  isBlacklistLoading: boolean;
+  liveReserves?: ReserveResult | null;
+  liveReserveError?: unknown | null;
+  nowMs?: number;
+}
+
+interface BuildStablecoinDetailViewModelParams {
+  core: StablecoinDetailViewModelCoreInputs;
+  queries: StablecoinDetailViewModelQueryInputs;
+  supplemental: StablecoinDetailViewModelSupplementalInputs;
 }
 
 const YEAR_SECONDS = 365 * DAY_SECONDS;
@@ -207,47 +258,63 @@ function computePerformanceVsUsd1y(
   return ((currentPrice / anchor.price) - 1) * 100;
 }
 
-export function buildStablecoinDetailViewModel({
-  id,
-  coin,
-  summary,
-  logoSrc,
-  handleRetryAll,
-  supplyData,
-  supplyLoading,
-  supplyError,
-  listData,
-  listLoading,
-  listError,
-  isListError,
-  listUpdatedAt,
-  listMeta,
-  pegSummaryData,
-  pegUpdatedAt,
-  pegError,
-  pegMeta,
-  liquidityMap,
-  liqUpdatedAt,
-  liquidityError,
-  liquidityMeta,
-  reportCardsData,
-  rcUpdatedAt,
-  reportCardsError,
-  reportCardsMeta,
-  redemptionBackstopsData,
-  rbUpdatedAt = 0,
-  redemptionBackstopsError = null,
-  redemptionBackstopsMeta = null,
-  yieldRankingsData,
-  stressSignalsData,
-  flowsData,
-  isFlowsLoading,
-  blacklistSummary,
-  isBlacklistLoading,
-  liveReserves = null,
-  liveReserveError = null,
-  nowMs = Date.now(),
-}: BuildStablecoinDetailViewModelParams): StablecoinDetailViewModel {
+function normalizeBuildStablecoinDetailParams(
+  params: BuildStablecoinDetailViewModelParams | LegacyBuildStablecoinDetailViewModelParams,
+): LegacyBuildStablecoinDetailViewModelParams {
+  if ("core" in params) {
+    return {
+      ...params.core,
+      ...params.queries,
+      ...params.supplemental,
+    };
+  }
+  return params;
+}
+
+export function buildStablecoinDetailViewModel(
+  params: BuildStablecoinDetailViewModelParams | LegacyBuildStablecoinDetailViewModelParams,
+): StablecoinDetailViewModel {
+  const {
+    id,
+    coin,
+    summary,
+    logoSrc,
+    handleRetryAll,
+    supplyData,
+    supplyLoading,
+    supplyError,
+    listData,
+    listLoading,
+    listError,
+    isListError,
+    listUpdatedAt,
+    listMeta,
+    pegSummaryData,
+    pegUpdatedAt,
+    pegError,
+    pegMeta,
+    liquidityMap,
+    liqUpdatedAt,
+    liquidityError,
+    liquidityMeta,
+    reportCardsData,
+    rcUpdatedAt,
+    reportCardsError,
+    reportCardsMeta,
+    redemptionBackstopsData,
+    rbUpdatedAt = 0,
+    redemptionBackstopsError = null,
+    redemptionBackstopsMeta = null,
+    yieldRankingsData,
+    stressSignalsData,
+    flowsData,
+    isFlowsLoading,
+    blacklistSummary,
+    isBlacklistLoading,
+    liveReserves = null,
+    liveReserveError = null,
+    nowMs = Date.now(),
+  } = normalizeBuildStablecoinDetailParams(params);
   if (supplyLoading || listLoading) {
     return { status: "loading", handleRetryAll };
   }

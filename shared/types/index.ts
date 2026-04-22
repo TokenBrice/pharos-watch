@@ -11,3 +11,4 @@ export * from "./redemption";
 export * from "./chains";
 export * from "./request-source";
 export * from "./api-keys";
+export * from "./editorial";

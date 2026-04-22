@@ -3,18 +3,18 @@
 import { CoinNotices } from "@/components/coin-notice";
 import { OverviewSection } from "@/components/stablecoin-detail/overview-section";
 import type { ReserveResult } from "@shared/lib/reserve-templates";
-import type { PegSummaryCoin, RedemptionBackstopEntry, StablecoinMeta, StablecoinData } from "@shared/types";
-
-interface SummaryData {
-  title: string;
-  text: string;
-  updatedAt: string;
-}
+import type {
+  PegSummaryCoin,
+  RedemptionBackstopEntry,
+  StablecoinAiSummary,
+  StablecoinMeta,
+  StablecoinData,
+} from "@shared/types";
 
 interface NoticesAndSummarySectionProps {
   stablecoinId: string;
   coin: StablecoinMeta;
-  summary: SummaryData | null;
+  summary: StablecoinAiSummary | null;
   reserves: ReserveResult | null;
   reserveFetchError: unknown | null;
   redemptionBackstop?: RedemptionBackstopEntry;

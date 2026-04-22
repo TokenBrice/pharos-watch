@@ -59,7 +59,7 @@ export function useContagionGraphDrag({
   }, [basePositions, draggedPositions, simulationKey]);
 
   const handlePointerDown = useCallback((event: React.PointerEvent, nodeId: string) => {
-    if (!event.isPrimary) return;
+    if (event.isPrimary === false) return;
     event.preventDefault();
     const svgPoint = projectClientPoint(svgRef.current, event.clientX, event.clientY);
     if (!svgPoint) return;

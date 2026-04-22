@@ -19,6 +19,10 @@ import {
   type PublicDoc,
 } from "../../shared/lib/public-docs";
 import { TRACKED_META_BY_ID } from "../../shared/lib/stablecoins";
+import type {
+  DigestContentEntry,
+  StablecoinAiSummariesById,
+} from "../../shared/types";
 
 const REPO_ROOT = join(dirname(fileURLToPath(import.meta.url)), "..", "..");
 
@@ -29,23 +33,7 @@ export interface MarkdownRoute {
   body: string;
 }
 
-interface Summary {
-  title: string;
-  text: string;
-  updatedAt: string;
-}
-
-interface DigestEntry {
-  date: string;
-  title: string;
-  text: string;
-  extended: string;
-  generatedAt: number;
-  digestType?: "daily" | "weekly";
-  editionNumber?: number;
-}
-
-const summaries = aiSummaries as Record<string, Summary>;
+const summaries = aiSummaries as StablecoinAiSummariesById;
 
 export function frontMatterBlock(attrs: Record<string, string>): string {
   return (
@@ -65,7 +53,7 @@ function cleanMarkdownText(value: string | undefined): string | null {
 
 export function renderStablecoinDetail(
   id: string,
-  summariesById: Record<string, Summary> = summaries,
+  summariesById: StablecoinAiSummariesById = summaries,
 ): string {
   const coin = TRACKED_META_BY_ID.get(id);
   if (!coin) throw new Error(`Unknown stablecoin id: ${id}`);
@@ -161,7 +149,7 @@ export function renderChangelogIndex(entries: readonly ChangelogEntry[] = change
   );
 }
 
-export function renderDigestDetail(digest: DigestEntry): string {
+export function renderDigestDetail(digest: DigestContentEntry): string {
   const iso = new Date(digest.generatedAt * 1000).toISOString();
   return (
     frontMatterBlock({
@@ -175,7 +163,7 @@ export function renderDigestDetail(digest: DigestEntry): string {
 }
 
 export function* iterateDigestRoutes(): Generator<MarkdownRoute> {
-  for (const digest of digestsData as DigestEntry[]) {
+  for (const digest of digestsData as DigestContentEntry[]) {
     yield { path: `/digest/${digest.date}/`, body: renderDigestDetail(digest) };
   }
 }

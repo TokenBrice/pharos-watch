@@ -1,13 +1,8 @@
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { DETAIL_SECTION_TITLE_CLASS } from "@/components/stablecoin-detail/section-title";
+import type { StablecoinAiSummary } from "@shared/types";
 
-interface AiSummaryProps {
-  title: string;
-  text: string;
-  updatedAt: string;
-}
-
-export function AiSummary({ title, text, updatedAt }: AiSummaryProps) {
+export function AiSummary({ title, text, updatedAt }: StablecoinAiSummary) {
   const isoDate = updatedAt;
   const dateline = new Date(`${updatedAt}T00:00:00Z`).toLocaleDateString("en-US", {
     month: "long",

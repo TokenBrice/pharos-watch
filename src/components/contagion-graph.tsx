@@ -18,16 +18,20 @@ import {
   WIDTH,
   HEIGHT,
   PAD,
-  MIN_RADIUS,
   RING_WIDTH,
   HUB_LABEL_FONT_SIZE,
-  clampGraphPosition,
   type HubTier,
   type SupernodeState,
 } from "@/lib/contagion-layout";
 import { formatCurrency } from "@shared/lib/format";
 import { GRADE_RADAR_COLORS } from "@shared/lib/report-cards";
 import { gradeColor, TYPE_COLORS, TYPE_DASH } from "@/components/contagion-graph-model";
+import {
+  buildEdgeTooltipElement,
+  buildNodeTooltipElement,
+  buildTooltipAnnouncement,
+} from "@/components/contagion-graph-tooltips";
+import { useContagionGraphDrag } from "@/hooks/use-contagion-graph-drag";
 import type { ReportCard, ReportCardsResponse } from "@shared/types";
 
 interface ContagionGraphProps {
@@ -101,74 +105,18 @@ export function ContagionGraph({ cards, dependencyEdges, mcapMap, logos }: Conta
     ].join("::"),
     [nodes, links.length, supernodeState.tierById],
   );
-  const [draggedPositions, setDraggedPositions] = useState<{
-    baseKey: string;
-    positions: Map<string, { x: number; y: number }>;
-  }>({
-    baseKey: "",
-    positions: new Map(),
+  const {
+    dragId,
+    positions,
+    handlePointerDown,
+    handlePointerMove,
+    handlePointerUp,
+  } = useContagionGraphDrag({
+    svgRef,
+    nodeMap,
+    basePositions,
+    simulationKey,
   });
-  const positions = useMemo(() => {
-    if (draggedPositions.baseKey !== simulationKey || draggedPositions.positions.size === 0) {
-      return basePositions;
-    }
-
-    const next = new Map(basePositions);
-    for (const [id, position] of draggedPositions.positions) {
-      if (next.has(id)) next.set(id, position);
-    }
-    return next;
-  }, [basePositions, draggedPositions, simulationKey]);
-
-  // Drag state
-  const [dragId, setDragId] = useState<string | null>(null);
-  const dragStart = useRef<{ mx: number; my: number; nx: number; ny: number } | null>(null);
-
-  const projectClientPoint = useCallback((clientX: number, clientY: number) => {
-    const svg = svgRef.current;
-    if (!svg) return null;
-    const pt = svg.createSVGPoint();
-    pt.x = clientX;
-    pt.y = clientY;
-    const ctm = svg.getScreenCTM();
-    if (!ctm) return null;
-    return pt.matrixTransform(ctm.inverse());
-  }, []);
-
-  const handlePointerDown = useCallback((e: React.PointerEvent, nodeId: string) => {
-    if (!e.isPrimary) return;
-    e.preventDefault();
-    const svgP = projectClientPoint(e.clientX, e.clientY);
-    if (!svgP) return;
-    const pos = positions.get(nodeId);
-    if (!pos) return;
-    e.currentTarget.setPointerCapture?.(e.pointerId);
-    setDragId(nodeId);
-    dragStart.current = { mx: svgP.x, my: svgP.y, nx: pos.x, ny: pos.y };
-  }, [positions, projectClientPoint]);
-
-  const handlePointerMove = useCallback((e: React.PointerEvent<SVGSVGElement>) => {
-    if (!dragId || !dragStart.current) return;
-    const svgP = projectClientPoint(e.clientX, e.clientY);
-    if (!svgP) return;
-    const dx = svgP.x - dragStart.current.mx;
-    const dy = svgP.y - dragStart.current.my;
-    setDraggedPositions((prev) => {
-      const next = prev.baseKey === simulationKey ? new Map(prev.positions) : new Map<string, { x: number; y: number }>();
-      const r = nodeMap.get(dragId)?.r ?? MIN_RADIUS;
-      const ds = dragStart.current;
-      if (ds) next.set(dragId, clampGraphPosition(ds.nx + dx, ds.ny + dy, r));
-      return {
-        baseKey: simulationKey,
-        positions: next,
-      };
-    });
-  }, [dragId, nodeMap, projectClientPoint, simulationKey]);
-
-  const handlePointerUp = useCallback(() => {
-    setDragId(null);
-    dragStart.current = null;
-  }, []);
 
   // Tooltip state
   const [hoveredId, setHoveredId] = useState<string | null>(null);
@@ -247,77 +195,41 @@ export function ContagionGraph({ cards, dependencyEdges, mcapMap, logos }: Conta
 
   if (nodes.length === 0) return null;
 
-  // Screen-reader tooltip announcement (polite live region)
-  const tooltipAnnouncement = (() => {
-    if (activeHoveredEdge !== null) {
-      const link = resolvedLinkByIndex.get(activeHoveredEdge);
-      if (!link) return "";
-      const fromNode = nodeMap.get(link.tgtId);
-      const toNode = nodeMap.get(link.srcId);
-      if (!fromNode || !toNode) return "";
-      return `${fromNode.symbol} to ${toNode.symbol}, ${Math.round(link.weight * 100)}% ${link.type} dependency`;
-    }
-    if (activeHoveredId) {
-      const node = nodeMap.get(activeHoveredId);
-      const card = cards.find((c) => c.id === activeHoveredId);
-      if (!node) return "";
-      return `${node.symbol}, Grade ${card?.overallGrade ?? "NR"}, market cap ${formatCurrency(node.mcap)}`;
-    }
-    return "";
-  })();
+  const tooltipAnnouncement = buildTooltipAnnouncement({
+    activeHoveredId,
+    activeHoveredEdge,
+    cards,
+    nodeMap,
+    positions,
+    resolvedLinkByIndex,
+    width: WIDTH,
+    height: HEIGHT,
+    pad: PAD,
+  });
 
-  // Pre-compute tooltip elements for cleaner JSX
-  const nodeTooltipEl = (() => {
-    if (!activeHoveredId || activeHoveredEdge !== null) return null;
-    const node = nodeMap.get(activeHoveredId);
-    const pos = positions.get(activeHoveredId);
-    if (!node || !pos) return null;
-    const card = cards.find((c) => c.id === activeHoveredId);
-    const tx = Math.min(pos.x + node.r + 8, WIDTH - 135);
-    const ty = Math.max(PAD, pos.y - 20);
-    return (
-      <g pointerEvents="none">
-        <rect x={tx} y={ty} width={125} height={52} rx={6}
-          fill="var(--color-card, #f8f9fa)" stroke="var(--color-border, #e2e5e9)" strokeWidth={1} />
-        <text x={tx + 8} y={ty + 18} fill="currentColor" fontSize={12} fontWeight={600}>
-          {node.symbol}
-        </text>
-        <text x={tx + 8} y={ty + 34} fill="currentColor" fontSize={10} opacity={0.7}>
-          Grade: {card?.overallGrade ?? "NR"}
-        </text>
-        <text x={tx + 8} y={ty + 46} fill="currentColor" fontSize={10} opacity={0.7} fontFamily="var(--font-mono, monospace)">
-          {formatCurrency(node.mcap)}
-        </text>
-      </g>
-    );
-  })();
+  const nodeTooltipEl = buildNodeTooltipElement({
+    activeHoveredId,
+    activeHoveredEdge,
+    cards,
+    nodeMap,
+    positions,
+    resolvedLinkByIndex,
+    width: WIDTH,
+    height: HEIGHT,
+    pad: PAD,
+  });
 
-  const edgeTooltipEl = (() => {
-    if (activeHoveredEdge === null) return null;
-    const link = resolvedLinkByIndex.get(activeHoveredEdge);
-    if (!link) return null;
-    const fromPos = positions.get(link.tgtId);
-    const toPos = positions.get(link.srcId);
-    const fromNode = nodeMap.get(link.tgtId);
-    const toNode = nodeMap.get(link.srcId);
-    if (!fromPos || !toPos || !fromNode || !toNode) return null;
-    const mx = (fromPos.x + toPos.x) / 2;
-    const my = (fromPos.y + toPos.y) / 2;
-    const tx = Math.min(Math.max(mx + 8, PAD), WIDTH - 140);
-    const ty = Math.min(Math.max(my - 20, PAD), HEIGHT - 44);
-    return (
-      <g pointerEvents="none">
-        <rect x={tx} y={ty} width={130} height={38} rx={6}
-          fill="var(--color-card, #f8f9fa)" stroke="var(--color-border, #e2e5e9)" strokeWidth={1} />
-        <text x={tx + 8} y={ty + 15} fill="currentColor" fontSize={11} fontWeight={600}>
-          {fromNode.symbol} → {toNode.symbol}
-        </text>
-        <text x={tx + 8} y={ty + 30} fill="currentColor" fontSize={10} opacity={0.7}>
-          {Math.round(link.weight * 100)}% · {link.type}
-        </text>
-      </g>
-    );
-  })();
+  const edgeTooltipEl = buildEdgeTooltipElement({
+    activeHoveredId,
+    activeHoveredEdge,
+    cards,
+    nodeMap,
+    positions,
+    resolvedLinkByIndex,
+    width: WIDTH,
+    height: HEIGHT,
+    pad: PAD,
+  });
 
   return (
     <Card className="rounded-xl">
