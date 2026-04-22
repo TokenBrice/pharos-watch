@@ -2,6 +2,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { mockD1 } from "./helpers/mock-d1";
 import { makeYieldHistoryRow } from "./helpers/fixtures";
 import { handleYieldHistory } from "../yield-history";
+import { YIELD_HISTORY_OWNERSHIP_HANDOFFS } from "../../lib/yield-history-ownership-handoffs";
 
 describe("handleYieldHistory", () => {
   afterEach(() => {
@@ -161,6 +162,28 @@ describe("handleYieldHistory", () => {
     const body = await res.json() as { current: null; history: unknown[] };
     expect(body.current).toBeNull();
     expect(body.history).toEqual([]);
+  });
+
+  it("suppresses all tracked parent handoff source keys in source mode", async () => {
+    for (const [stablecoinId, sourceKeys] of Object.entries(YIELD_HISTORY_OWNERSHIP_HANDOFFS)) {
+      for (const sourceKey of sourceKeys) {
+        const suppressedRow = makeYieldHistoryRow({
+          source_key: sourceKey,
+          yield_source: `${stablecoinId}:${sourceKey}`,
+        });
+        const db = mockD1([{ match: "yield_history", rows: [suppressedRow] }]);
+
+        const res = await handleYieldHistory(
+          db,
+          new URL(`https://x/api/yield-history?stablecoin=${stablecoinId}&sourceKey=${encodeURIComponent(sourceKey)}`),
+        );
+
+        expect(res.status, `${stablecoinId}:${sourceKey}`).toBe(200);
+        const body = await res.json() as { current: null; history: unknown[] };
+        expect(body.current, `${stablecoinId}:${sourceKey}`).toBeNull();
+        expect(body.history, `${stablecoinId}:${sourceKey}`).toEqual([]);
+      }
+    }
   });
 
   it("uses the hourly yield freshness budget for history responses", async () => {

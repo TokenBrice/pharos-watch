@@ -2,8 +2,13 @@
 import { ACTIVE_YIELD_BEARING_STABLECOINS } from "@shared/lib/tracked-stablecoin-utils";
 import { DAY_SECONDS } from "@shared/lib/time-constants";
 import type { CronResult } from "../lib/cron-logger";
+import { getCache } from "../lib/db-cache";
 import { ON_CHAIN_RATE_CONFIGS } from "./yield-config";
 import type { ChainRpcConfig } from "../lib/chain-registry";
+import {
+  YIELD_HISTORY_CLEANUP_WRITER_PAUSE_KEY,
+  parseYieldHistoryWriterPause,
+} from "../lib/yield-history-cleanup";
 import { resolveYieldSources } from "./yield-sync/resolve";
 import {
   loadYieldHistorySnapshots,
@@ -52,6 +57,22 @@ export async function syncYieldData(
 
   if (yieldCoins.length === 0) {
     return { itemCount: 0, metadata: "no yield-bearing coins" };
+  }
+
+  const writerPause = parseYieldHistoryWriterPause(
+    await getCache(db, YIELD_HISTORY_CLEANUP_WRITER_PAUSE_KEY),
+  );
+  if (writerPause) {
+    return {
+      status: "degraded",
+      itemCount: 0,
+      metadata: JSON.stringify({
+        writerPaused: true,
+        pauseReason: writerPause.reason,
+        pauseOperator: writerPause.operator,
+        pausedAt: writerPause.pausedAt,
+      }),
+    };
   }
 
   await purgeYieldHistoryOwnershipHandoffs(db);
