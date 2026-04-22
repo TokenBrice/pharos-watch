@@ -1,16 +1,8 @@
 import { THREAT_BAND_ORDER, isThreatBand } from "@shared/lib/classification";
-import { CRON_INTERVALS } from "@shared/lib/cron-jobs";
 import { TRACKED_META_BY_ID, ACTIVE_IDS, PRE_LAUNCH_STABLECOINS } from "@shared/lib/stablecoins";
 import type { TelegramDispatchCronResult } from "@shared/types";
 import { throwIfAborted } from "../lib/abort";
 import { readCachedJson } from "../lib/api-utils";
-import {
-  ALERT_SAFETY_SOURCE_CACHE_KEY,
-  assessAlertSafetySourceCache,
-  buildAlertSafetySnapshotEnvelope,
-  getAlertSafetySourceGeneration,
-  parseAlertSafetySnapshotEnvelope,
-} from "../lib/alert-safety-source-cache";
 import { getCache } from "../lib/db-cache";
 import { buildInClause } from "../lib/db";
 import { shouldAttemptFetch, recordOutcome } from "../lib/circuit-breaker";
@@ -19,31 +11,25 @@ import {
   isDewsAlertable,
   isDewsDeescalation,
   type ConsolidatedAlerts,
-  type DewsChange,
   type DepegAlertPayload,
   type DepegResolved,
   type DepegWorsening,
   type SafetyChange,
-  type LaunchAlert,
 } from "../lib/telegram-alerts";
 import {
   SNAPSHOT_KEYS,
-  type DewsSnapshot,
-  type DepegSnapshot,
-  type DewsRow,
-  type ActiveDepegRow,
-  type SafetyRow,
-  parseSnapshotMap,
-  isSnapshotMissingOrStale,
-  buildDewsSnapshot,
-  buildDewsAlertableSnapshot,
-  filterAlertableBands,
-  buildDepegSnapshot,
-  buildSafetySnapshot,
-  extractTopSignals,
   isSafetyDeescalation,
   writeSnapshots,
 } from "./telegram-alert-snapshots";
+import {
+  buildDewsChanges,
+  buildLaunchPromotions,
+  buildSafetyChanges,
+} from "./telegram-alert-changes";
+import {
+  buildDispatchSnapshotState,
+  loadDispatchSourceData,
+} from "./dispatch-telegram-state";
 import {
   drainPendingQueue,
   enqueuePendingAlerts,
@@ -278,111 +264,24 @@ export async function dispatchTelegramAlerts(
   try {
     throwIfAborted(signal);
 
-    // Snapshot snoozed chats once at the start of the run. The per-type SELECTs
-    // below use the same threshold, so counting here avoids union/dedupe work.
-    const snoozeNowSec = Math.floor(Date.now() / 1000);
-    const snoozedRows = await db
-      .prepare(
-        "SELECT chat_id FROM telegram_subscribers WHERE alert_snooze_until_ts IS NOT NULL AND alert_snooze_until_ts > ?",
-      )
-      .bind(snoozeNowSec)
-      .all<{ chat_id: string }>();
-    const chatsWithActiveSnooze = (snoozedRows.results ?? []).length;
-
-    const [dewsRows, activeDepegRows, safetyRows, dewsCache, dewsAlertableCache, depegCache, safetyCache, safetySourceCache] = await Promise.all([
-      db
-        .prepare(
-          `SELECT s.stablecoin_id, s.score, s.band, s.signals_json
-             FROM stress_signals s
-             INNER JOIN (
-               SELECT stablecoin_id, MAX(computed_at) AS max_at
-                 FROM stress_signals GROUP BY stablecoin_id
-             ) latest ON s.stablecoin_id = latest.stablecoin_id AND s.computed_at = latest.max_at`,
-        )
-        .all<DewsRow>()
-        .then((result) => result.results ?? []),
-      db
-        .prepare(
-          "SELECT stablecoin_id, symbol, direction, peak_deviation_bps, start_price, peg_reference FROM depeg_events WHERE ended_at IS NULL",
-        )
-        .all<ActiveDepegRow>()
-        .then((result) => result.results ?? []),
-      // Seed-only fallback. Live safety-alert diffs come from the alert-only
-      // source cache below; these rows are only consulted when the source cache
-      // is missing/stale/wrong-generation, and in that branch safety alerts
-      // stay suppressed (see `safetyAlertsSuppressed` downstream).
-      db
-        .prepare(
-          `SELECT h.stablecoin_id,
-                  h.grade,
-                  h.score,
-                  h.prev_grade,
-                  h.prev_score,
-                  h.recorded_at,
-                  h.methodology_version
-             FROM safety_grade_history h
-             INNER JOIN (
-               SELECT stablecoin_id, MAX(recorded_at) AS max_recorded_at
-                 FROM safety_grade_history
-                GROUP BY stablecoin_id
-             ) latest
-               ON latest.stablecoin_id = h.stablecoin_id
-              AND latest.max_recorded_at = h.recorded_at`,
-        )
-        .all<SafetyRow>()
-        .then((result) => result.results ?? []),
-      getCache(db, SNAPSHOT_KEYS.dews),
-      getCache(db, SNAPSHOT_KEYS.dewsAlertable),
-      getCache(db, SNAPSHOT_KEYS.depeg),
-      getCache(db, SNAPSHOT_KEYS.safety),
-      getCache(db, ALERT_SAFETY_SOURCE_CACHE_KEY),
-    ]);
+    const sourceData = await loadDispatchSourceData(db);
+    const { chatsWithActiveSnooze, dewsRows, activeDepegRows } = sourceData;
 
     throwIfAborted(signal);
 
     const nowSec = Math.floor(Date.now() / 1000);
-    const previousDewsSnapshot = parseSnapshotMap<DewsSnapshot>(dewsCache);
-    const previousDewsAlertableSnapshot =
-      parseSnapshotMap<DewsSnapshot>(dewsAlertableCache) ??
-      filterAlertableBands(previousDewsSnapshot);
-    const previousDepegSnapshot = parseSnapshotMap<DepegSnapshot>(depegCache);
-    const safetySourceAssessment = assessAlertSafetySourceCache(safetySourceCache, {
-      expectedGeneration: getAlertSafetySourceGeneration(),
-      nowSec,
-      producerIntervalSec: CRON_INTERVALS["publish-report-card-cache"],
-    });
-    const currentSafetySnapshot =
-      safetySourceAssessment.state === "ok"
-        ? (safetySourceAssessment.envelope?.snapshot ?? buildSafetySnapshot(safetyRows))
-        : null;
-    const previousSafetyEnvelope = parseAlertSafetySnapshotEnvelope(safetyCache);
-    const previousSafetySnapshot = previousSafetyEnvelope?.snapshot ?? null;
-    const safetySnapshotNeedsSeed =
-      currentSafetySnapshot != null && (
-        previousSafetyEnvelope == null ||
-        isSnapshotMissingOrStale(safetyCache, nowSec) ||
-        previousSafetyEnvelope.generation !== (safetySourceAssessment.generation ?? "")
-      );
-    const currentSnapshots = {
-      dews: buildDewsSnapshot(dewsRows),
-      dewsAlertable: buildDewsAlertableSnapshot(dewsRows, previousDewsAlertableSnapshot),
-      depeg: buildDepegSnapshot(activeDepegRows),
-      safety:
-        currentSafetySnapshot != null && safetySourceAssessment.generation != null
-          ? buildAlertSafetySnapshotEnvelope(
-              currentSafetySnapshot,
-              safetySourceAssessment.generation,
-            )
-          : null,
-      launch: PRE_LAUNCH_STABLECOINS.map((c) => c.id),
-    };
-
-    const mustSeedSnapshots =
-      isSnapshotMissingOrStale(dewsCache, nowSec) ||
-      (dewsAlertableCache != null && isSnapshotMissingOrStale(dewsAlertableCache, nowSec)) ||
-      isSnapshotMissingOrStale(depegCache, nowSec) ||
-      previousDewsSnapshot == null ||
-      previousDepegSnapshot == null;
+    const snapshotState = buildDispatchSnapshotState(sourceData, nowSec);
+    const {
+      currentSafetySnapshot,
+      currentSnapshots,
+      mustSeedSnapshots,
+      safeDepegSnapshot,
+      safeDewsAlertable,
+      safeDewsSnapshot,
+      safeSafetySnapshot,
+      safetySnapshotNeedsSeed,
+      safetySourceAssessment,
+    } = snapshotState;
 
     if (mustSeedSnapshots) {
       await writeSnapshots(db, currentSnapshots);
@@ -394,38 +293,17 @@ export async function dispatchTelegramAlerts(
       result.safetyAlertsSuppressed = safetySourceAssessment.state !== "ok" || safetySnapshotNeedsSeed;
       return { itemCount: 0, metadata: JSON.stringify(result) };
     }
-    const safeDewsSnapshot = previousDewsSnapshot ?? {};
-    const safeDewsAlertable = previousDewsAlertableSnapshot ?? {};
-    const safeDepegSnapshot = previousDepegSnapshot ?? {};
-    const safeSafetySnapshot =
-      currentSafetySnapshot != null && !safetySnapshotNeedsSeed
-        ? (previousSafetySnapshot ?? {})
-        : {};
-
     const pendingBudget = Math.floor(MAX_MESSAGES_PER_RUN / 4);
     const drainResult = await drainPendingQueue(db, botToken, pendingBudget, signal);
 
     throwIfAborted(signal);
 
-    const dewsChanges: DewsChange[] = [];
-    for (const row of dewsRows) {
-      const oldBand = safeDewsAlertable[row.stablecoin_id];
-      if (oldBand === row.band || !isDewsAlertable(row.band)) continue;
-      const previousRawBand = safeDewsSnapshot[row.stablecoin_id];
-      dewsChanges.push({
-        stablecoinId: row.stablecoin_id,
-        symbol: getSymbol(row.stablecoin_id),
-        oldBand:
-          typeof oldBand === "string"
-            ? oldBand
-            : typeof previousRawBand === "string"
-              ? previousRawBand
-              : "UNKNOWN",
-        newBand: row.band,
-        score: row.score,
-        topSignals: extractTopSignals(row.signals_json),
-      });
-    }
+    const dewsChanges = buildDewsChanges(
+      dewsRows.filter((row) => isDewsAlertable(row.band)),
+      safeDewsAlertable,
+      safeDewsSnapshot,
+      getSymbol,
+    );
 
     const previousActiveIds = new Set(Object.keys(safeDepegSnapshot));
     const currentActiveIds = new Set(Object.keys(currentSnapshots.depeg));
@@ -512,29 +390,12 @@ export async function dispatchTelegramAlerts(
       }
     }
 
-    const safetyChanges: SafetyChange[] = [];
-    let suppressedMethodologyChanges = 0;
-    if (currentSafetySnapshot != null && !safetySnapshotNeedsSeed) {
-      for (const [stablecoinId, row] of Object.entries(currentSafetySnapshot)) {
-        const previous = safeSafetySnapshot[stablecoinId];
-        if (previous?.grade === row.grade) continue;
-
-        if (previous?.methodologyVersion && row.methodologyVersion && previous.methodologyVersion !== row.methodologyVersion) {
-          suppressedMethodologyChanges++;
-          continue;
-        }
-        if (!previous) continue;
-
-        safetyChanges.push({
-          stablecoinId,
-          symbol: getSymbol(stablecoinId),
-          oldGrade: previous?.grade ?? "UNKNOWN",
-          newGrade: row.grade,
-          oldScore: previous?.score ?? null,
-          newScore: row.score ?? null,
-        });
-      }
-    }
+    const {
+      changes: safetyChanges,
+      suppressedMethodologyChanges,
+    } = !safetySnapshotNeedsSeed
+      ? buildSafetyChanges(currentSafetySnapshot, safeSafetySnapshot, getSymbol)
+      : { changes: [], suppressedMethodologyChanges: 0 };
 
     // -- Detect launch promotions (pre-launch coins that moved to active) -----
     const previousLaunchSnapshot = readCachedJson<string[]>(
@@ -543,24 +404,16 @@ export async function dispatchTelegramAlerts(
       await getCache(db, SNAPSHOT_KEYS.launch),
     );
     const prevLaunchIds = previousLaunchSnapshot.status === "ok" && Array.isArray(previousLaunchSnapshot.data)
-      ? new Set(previousLaunchSnapshot.data)
+      ? new Set<string>(previousLaunchSnapshot.data)
       : new Set<string>();
     const currentLaunchIds = new Set(PRE_LAUNCH_STABLECOINS.map((c) => c.id));
 
-    const launchPromoted: LaunchAlert[] = [];
-    // An ID that was previously pre-launch but is no longer, AND exists in ACTIVE_IDS = promoted
-    for (const id of prevLaunchIds) {
-      if (!currentLaunchIds.has(id) && ACTIVE_IDS.has(id)) {
-        const coin = TRACKED_META_BY_ID.get(id);
-        if (coin) {
-          launchPromoted.push({
-            stablecoinId: id,
-            symbol: coin.symbol,
-            name: coin.name,
-          });
-        }
-      }
-    }
+    const launchPromoted = buildLaunchPromotions(
+      prevLaunchIds,
+      currentLaunchIds,
+      ACTIVE_IDS,
+      TRACKED_META_BY_ID,
+    );
 
     const dewsIds = dewsChanges.map((c) => c.stablecoinId);
     const depegIds = [
