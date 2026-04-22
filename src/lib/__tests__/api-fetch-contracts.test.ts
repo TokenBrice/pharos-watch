@@ -8,6 +8,7 @@ import {
   ApiFetchError,
   buildRequestUrl,
   DEFAULT_API_REQUEST_TIMEOUT_MS,
+  fetchStablecoinReserves,
   resolveApiBase,
   SchemaValidationError,
 } from "../api";
@@ -255,6 +256,12 @@ describe("api contract validation policy", () => {
     expect(result).toBeNull();
   });
 
+  it("fetchStablecoinReserves inherits the shared null-on-404 behavior", async () => {
+    globalThis.fetch = vi.fn().mockResolvedValue(new Response("Not found", { status: 404 }));
+    const result = await fetchStablecoinReserves("usdc-circle");
+    expect(result).toBeNull();
+  });
+
   it("still throws on 404 when nullOn404 is not set", async () => {
     globalThis.fetch = vi.fn().mockResolvedValue(new Response("Not found", { status: 404 }));
     await expect(apiFetch("/api/stablecoin-reserves/test")).rejects.toThrow(ApiFetchError);
@@ -276,6 +283,32 @@ describe("api contract validation policy", () => {
     const result = await apiFetchWithMeta("/api/daily-digest", z.object({ ok: z.boolean() }), undefined, 900, "warn");
     expect(result.meta?.warning).toContain("Response is stale");
     expect(result.meta?.status).toBe("stale");
+  });
+
+  it("creates degraded meta from a freshness warning even without age metadata", async () => {
+    vi.spyOn(globalThis, "fetch").mockResolvedValueOnce(
+      new Response(JSON.stringify({ ok: true }), {
+        status: 200,
+        headers: {
+          "Content-Type": "application/json",
+          Warning: '110 - "Response is degraded"',
+        },
+      }),
+    );
+
+    const result = await apiFetchWithMeta(
+      "/api/daily-digest",
+      z.object({ ok: z.boolean() }),
+      undefined,
+      900,
+      "warn",
+    );
+
+    expect(result.meta).toMatchObject({
+      ageSeconds: 0,
+      status: "degraded",
+      warning: '110 - "Response is degraded"',
+    });
   });
 
   it("downgrades fresh _meta to degraded when a Warning header is present", async () => {
