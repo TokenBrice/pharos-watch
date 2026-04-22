@@ -6,7 +6,7 @@ import type {
   EndpointPublicApiAccess,
   EndpointSiteDataAccess,
 } from "./definitions";
-import { findDynamicEndpointDescriptor } from "./dynamic";
+import { findDynamicEndpointDescriptor, getDynamicEndpointDescriptorByKey } from "./dynamic";
 import { ENDPOINT_DEFINITIONS, getEndpointDefinition } from "./definitions";
 
 type EndpointMethod = "GET" | "POST";
@@ -22,7 +22,7 @@ export function getPublicApiAccess(path: string): EndpointPublicApiAccess | null
   if (endpoint) {
     return endpoint.publicApiAccess;
   }
-  const dynamicDescriptor = findDynamicEndpointDescriptor(path);
+  const dynamicDescriptor = getResolvedDynamicEndpointDescriptor(path);
   if (dynamicDescriptor) {
     return dynamicDescriptor.publicApiAccess;
   }
@@ -38,7 +38,7 @@ export function getSiteDataAccess(path: string): EndpointSiteDataAccess | null {
   if (endpoint) {
     return endpoint.siteDataAccess;
   }
-  const dynamicDescriptor = findDynamicEndpointDescriptor(path);
+  const dynamicDescriptor = getResolvedDynamicEndpointDescriptor(path);
   if (dynamicDescriptor) {
     return dynamicDescriptor.siteDataAccess;
   }
@@ -93,7 +93,7 @@ export function matchDynamicAdminEndpoint(path: string): DynamicAdminEndpointMat
 }
 
 export function isAdminPath(path: string): boolean {
-  return Boolean(getEndpointDefinition(path)?.adminRequired || findDynamicEndpointDescriptor(path)?.adminRequired);
+  return Boolean(getEndpointDefinition(path)?.adminRequired || matchDynamicAdminEndpoint(path));
 }
 
 export function isMutatingAdminGetAllowed(url: URL): boolean {
@@ -115,12 +115,26 @@ function getAllowedEndpointMethods(url: URL): readonly EndpointMethod[] | null {
     return definition.methods;
   }
 
-  const dynamicDescriptor = findDynamicEndpointDescriptor(url.pathname);
+  const dynamicDescriptor = getResolvedDynamicEndpointDescriptor(url.pathname);
   if (dynamicDescriptor) {
     return dynamicDescriptor.methods;
   }
 
   return null;
+}
+
+function getResolvedDynamicEndpointDescriptor(path: string) {
+  const dynamicDescriptor = findDynamicEndpointDescriptor(path);
+  if (!dynamicDescriptor) {
+    return null;
+  }
+  if (!dynamicDescriptor.adminRequired) {
+    return dynamicDescriptor;
+  }
+  const dynamicAdminEndpoint = matchDynamicAdminEndpoint(path);
+  return dynamicAdminEndpoint
+    ? getDynamicEndpointDescriptorByKey(dynamicAdminEndpoint.key)
+    : null;
 }
 
 export function validateEndpointMethod(url: URL, method: string): EndpointMethodValidationError | null {

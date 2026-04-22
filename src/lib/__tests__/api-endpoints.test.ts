@@ -198,10 +198,14 @@ describe("api endpoint registry", () => {
       methods: ["POST"],
     });
     expect(matchDynamicAdminEndpoint("/api/discovery-candidates/not-a-number/dismiss")).toBeNull();
+    expect(matchDynamicAdminEndpoint("/api/discovery-candidates/0/dismiss")).toBeNull();
+    expect(matchDynamicAdminEndpoint("/api/api-keys/0/update")).toBeNull();
     expect(isAdminPath("/api/status")).toBe(true);
     expect(isAdminPath("/api/api-keys")).toBe(true);
     expect(isAdminPath("/api/request-source-stats")).toBe(true);
     expect(isAdminPath("/api/discovery-candidates/42/dismiss")).toBe(true);
+    expect(isAdminPath("/api/discovery-candidates/0/dismiss")).toBe(false);
+    expect(isAdminPath("/api/api-keys/0/update")).toBe(false);
     expect(isAdminPath("/api/stablecoins")).toBe(false);
   });
 
@@ -251,6 +255,10 @@ describe("api endpoint registry", () => {
     expect(getPublicApiAccess("/api/og/stablecoin/usdt-tether")).toBe("exempt");
     expect(getSiteDataAccess("/api/og/stablecoin/usdt-tether")).toBe("denied");
     expect(isAdminPath("/api/discovery-candidates/42/dismiss")).toBe(true);
+    expect(getPublicApiAccess("/api/discovery-candidates/0/dismiss")).toBeNull();
+    expect(getSiteDataAccess("/api/discovery-candidates/0/dismiss")).toBeNull();
+    expect(getPublicApiAccess("/api/api-keys/0/update")).toBeNull();
+    expect(getSiteDataAccess("/api/api-keys/0/update")).toBeNull();
   });
 
   it("validates endpoint methods from shared definitions", () => {
