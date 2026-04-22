@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import deadStablecoinAsset from "../../data/dead-stablecoins.json";
 import canonicalOrderAsset from "../../data/stablecoins/canonical-order.json";
+import perCoinGeneratedAsset from "../../data/stablecoins/coins.generated.json";
 import commodityAsset from "../../data/stablecoins/commodity.json";
 import nonUsdAsset from "../../data/stablecoins/non-usd.json";
 import preLaunchAsset from "../../data/stablecoins/pre-launch.json";
@@ -47,6 +48,7 @@ describe("tracked stablecoin metadata", () => {
     const nonUsd = parseStablecoinMetaAssets(nonUsdAsset, "non-usd");
     const commodity = parseStablecoinMetaAssets(commodityAsset, "commodity");
     const preLaunch = parseStablecoinMetaAssets(preLaunchAsset, "pre-launch");
+    const perCoinGenerated = parseStablecoinMetaAssets(perCoinGeneratedAsset, "coins.generated");
     const canonicalOrder = parseCanonicalOrderAsset(canonicalOrderAsset, "canonical-order");
 
     expect(usdMajor).toHaveLength(36);
@@ -54,8 +56,11 @@ describe("tracked stablecoin metadata", () => {
     expect(nonUsd).toHaveLength(41);
     expect(commodity).toHaveLength(9);
     expect(preLaunch).toHaveLength(11);
+    expect(perCoinGenerated).toHaveLength(0);
     expect(canonicalOrder).toHaveLength(215);
-    expect(usdMajor.length + usdMinor.length + nonUsd.length + commodity.length + preLaunch.length).toBe(canonicalOrder.length);
+    expect(
+      usdMajor.length + usdMinor.length + nonUsd.length + commodity.length + preLaunch.length + perCoinGenerated.length,
+    ).toBe(canonicalOrder.length);
     expect(parseDeadStablecoinAssets(deadStablecoinAsset, "dead-stablecoins")).toHaveLength(88);
   });
 
@@ -66,6 +71,7 @@ describe("tracked stablecoin metadata", () => {
       ...parseStablecoinMetaAssets(nonUsdAsset, "non-usd"),
       ...parseStablecoinMetaAssets(commodityAsset, "commodity"),
       ...parseStablecoinMetaAssets(preLaunchAsset, "pre-launch"),
+      ...parseStablecoinMetaAssets(perCoinGeneratedAsset, "coins.generated"),
     ].map((coin) => coin.id));
 
     expect(parseCanonicalOrderAsset(canonicalOrderAsset, "canonical-order").filter((id) => !knownIds.has(id))).toEqual([]);

@@ -1,41 +1,62 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
-import { z } from "zod";
-import {
-  StablecoinMetaAssetArraySchema,
-  CanonicalOrderAssetSchema,
-} from "../shared/lib/stablecoins/schema";
+import { CanonicalOrderAssetSchema } from "../shared/lib/stablecoins/schema";
 import { validateVariantRelationships } from "../shared/lib/stablecoins/validate-variants";
 import { CHAIN_META } from "../shared/lib/chains";
 import type { StablecoinMeta } from "../shared/types";
+import {
+  CANONICAL_ORDER_ASSET_FILE,
+  findCanonicalOrderIssues,
+  findDuplicateStablecoinIds,
+  GENERATED_PER_COIN_ASSET_FILE,
+  LEGACY_STABLECOIN_ASSET_FILES,
+  loadGeneratedPerCoinCoins,
+  loadLegacyStablecoinEntries,
+  loadPerCoinStablecoinEntries,
+  PER_COIN_SOURCE_DIR,
+  STABLECOIN_DATA_DIR,
+  syncGeneratedPerCoinAsset,
+  type StablecoinSourceEntry,
+} from "./lib/stablecoin-catalog-sources";
 
-const DATA_DIR = "shared/data/stablecoins";
-const STABLECOIN_ASSET_FILES = new Set([
-  "usd-major.json",
-  "usd-minor.json",
-  "non-usd.json",
-  "commodity.json",
-  "pre-launch.json",
-]);
 const RESERVE_TOTAL_TOLERANCE = 0.5;
 const RESERVE_TOTAL_ALLOWLIST = new Set<string>();
 
-interface DataFile {
-  file: string;
-  schema: z.ZodType;
+let errorCount = 0;
+
+function reportError(message: string): void {
+  process.stderr.write(`${message}\n`);
+  errorCount++;
 }
 
-const DATA_FILES: DataFile[] = [
-  { file: "usd-major.json", schema: StablecoinMetaAssetArraySchema },
-  { file: "usd-minor.json", schema: StablecoinMetaAssetArraySchema },
-  { file: "non-usd.json", schema: StablecoinMetaAssetArraySchema },
-  { file: "commodity.json", schema: StablecoinMetaAssetArraySchema },
-  { file: "pre-launch.json", schema: StablecoinMetaAssetArraySchema },
-  { file: "canonical-order.json", schema: CanonicalOrderAssetSchema },
-];
+function readCanonicalOrder(): string[] {
+  const path = join(STABLECOIN_DATA_DIR, CANONICAL_ORDER_ASSET_FILE);
+  try {
+    const result = CanonicalOrderAssetSchema.safeParse(
+      // Repo-owned validation only reads the checked-in canonical-order asset.
+      // eslint-disable-next-line security/detect-non-literal-fs-filename
+      JSON.parse(readFileSync(path, "utf8")) as unknown,
+    );
+    if (result.success) {
+      process.stdout.write(`${path}: ${result.data.length} entries OK\n`);
+      return result.data;
+    }
 
-let errorCount = 0;
-const stablecoinEntries: Array<{ file: string; coin: StablecoinMeta }> = [];
+    const issues = result.error.issues
+      .slice(0, 8)
+      .map((issue) => {
+        const issuePath = issue.path.length > 0 ? `[${issue.path.join(".")}]` : "";
+        return `${path}${issuePath}: ${issue.message}`;
+      });
+    for (const issue of issues) {
+      reportError(issue);
+    }
+    return [];
+  } catch (error) {
+    reportError(`${path}: ${error instanceof Error ? error.message : String(error)}`);
+    return [];
+  }
+}
 
 function hasSupportedOnchainSupplyContract(coin: StablecoinMeta): boolean {
   return coin.contracts?.some((contract) => {
@@ -74,14 +95,18 @@ function getRuntimeAdmissionIssue(coin: StablecoinMeta): string | null {
   );
 }
 
-function getStatusPartitionIssue(file: string, coin: StablecoinMeta): string | null {
-  if (file === "pre-launch.json") {
-    return coin.status === "pre-launch"
+function getStatusPartitionIssue(entry: StablecoinSourceEntry): string | null {
+  if (entry.sourceKind !== "legacy") {
+    return null;
+  }
+
+  if (entry.legacyShard === "pre-launch.json") {
+    return entry.coin.status === "pre-launch"
       ? null
       : "pre-launch.json may only contain assets with status=pre-launch";
   }
 
-  return coin.status === "pre-launch"
+  return entry.coin.status === "pre-launch"
     ? "pre-launch assets belong in shared/data/stablecoins/pre-launch.json"
     : null;
 }
@@ -111,76 +136,94 @@ function getDependencyTotalIssue(coin: StablecoinMeta): string | null {
   return total > 0 ? null : "dependency weight total must be greater than 0";
 }
 
-for (const { file, schema } of DATA_FILES) {
-  const path = join(DATA_DIR, file);
+let canonicalOrder: string[] = [];
+let legacyEntries: StablecoinSourceEntry[] = [];
+let perCoinEntries: StablecoinSourceEntry[] = [];
+let generatedPerCoinCoins: StablecoinMeta[] = [];
+
+canonicalOrder = readCanonicalOrder();
+
+try {
+  legacyEntries = loadLegacyStablecoinEntries();
+  for (const file of LEGACY_STABLECOIN_ASSET_FILES) {
+    const relativePath = `${STABLECOIN_DATA_DIR}/${file}`;
+    const count = legacyEntries.filter((entry) => entry.file === relativePath).length;
+    process.stdout.write(`${relativePath}: ${count} entries OK\n`);
+  }
+} catch (error) {
+  reportError(error instanceof Error ? error.message : String(error));
+}
+
+try {
+  perCoinEntries = loadPerCoinStablecoinEntries();
+  process.stdout.write(`${PER_COIN_SOURCE_DIR}: ${perCoinEntries.length} entries OK\n`);
+} catch (error) {
+  reportError(error instanceof Error ? error.message : String(error));
+}
+
+try {
+  generatedPerCoinCoins = loadGeneratedPerCoinCoins();
+  process.stdout.write(`${GENERATED_PER_COIN_ASSET_FILE}: ${generatedPerCoinCoins.length} entries OK\n`);
+} catch (error) {
+  reportError(error instanceof Error ? error.message : String(error));
+}
+
+if (errorCount === 0) {
   try {
-    // Repo-owned validation only reads from the curated stablecoin data directory.
-    // eslint-disable-next-line security/detect-non-literal-fs-filename
-    const raw = readFileSync(path, "utf8");
-    const parsed = JSON.parse(raw) as unknown;
+    syncGeneratedPerCoinAsset({ check: true });
+    process.stdout.write(`${GENERATED_PER_COIN_ASSET_FILE}: generated aggregate is current\n`);
+  } catch (error) {
+    reportError(error instanceof Error ? error.message : String(error));
+  }
+}
 
-    if (Array.isArray(parsed)) {
-      const result = schema.safeParse(parsed);
-      if (result.success) {
-        process.stdout.write(`${path}: ${parsed.length} entries OK\n`);
-        if (STABLECOIN_ASSET_FILES.has(file)) {
-          stablecoinEntries.push(
-            ...(result.data as StablecoinMeta[]).map((coin) => ({ file, coin })),
-          );
-        }
-      } else {
-        for (const issue of result.error.issues) {
-          const pathStr = issue.path.length > 0 ? `[${issue.path.join(".")}]` : "";
-          const entry =
-            issue.path.length > 0 && typeof issue.path[0] === "number"
-              ? parsed[issue.path[0]]
-              : undefined;
-          const id =
-            typeof entry === "object" && entry !== null && "id" in entry
-              ? (entry as { id: string }).id
-              : "";
-          process.stderr.write(`${path}${pathStr} (${id}): ${issue.message}\n`);
-          errorCount++;
-        }
-      }
-    } else {
-      process.stderr.write(`${path}: expected array, got ${typeof parsed}\n`);
-      errorCount++;
+if (errorCount === 0) {
+  const allEntries = [...legacyEntries, ...perCoinEntries];
+
+  for (const issue of findDuplicateStablecoinIds(allEntries)) {
+    reportError(
+      `${STABLECOIN_DATA_DIR}: duplicate stablecoin id "${issue.id}" found in ${issue.entries.map((entry) => entry.file).join(", ")}`,
+    );
+  }
+
+  const canonicalIssues = findCanonicalOrderIssues(canonicalOrder, allEntries);
+  for (const id of canonicalIssues.duplicateIds) {
+    reportError(`${STABLECOIN_DATA_DIR}/${CANONICAL_ORDER_ASSET_FILE}: duplicate stablecoin ID "${id}"`);
+  }
+  for (const id of canonicalIssues.unknownIds) {
+    reportError(`${STABLECOIN_DATA_DIR}/${CANONICAL_ORDER_ASSET_FILE}: unknown stablecoin ID "${id}"`);
+  }
+  if (canonicalIssues.missingIds.length > 0) {
+    reportError(
+      `${STABLECOIN_DATA_DIR}/${CANONICAL_ORDER_ASSET_FILE}: missing tracked stablecoin IDs ${canonicalIssues.missingIds.join(", ")}`,
+    );
+  }
+
+  for (const entry of allEntries) {
+    const partitionIssue = getStatusPartitionIssue(entry);
+    if (partitionIssue) {
+      reportError(`${entry.file} (${entry.coin.id}): ${partitionIssue}`);
     }
-  } catch (err) {
-    process.stderr.write(`${path}: ${err instanceof Error ? err.message : String(err)}\n`);
-    errorCount++;
-  }
-}
 
-for (const { file, coin } of stablecoinEntries) {
-  const partitionIssue = getStatusPartitionIssue(file, coin);
-  if (partitionIssue) {
-    process.stderr.write(`${join(DATA_DIR, file)} (${coin.id}): ${partitionIssue}\n`);
-    errorCount++;
-  }
+    const reserveTotalIssue = getReserveTotalIssue(entry.coin);
+    if (reserveTotalIssue) {
+      reportError(`${entry.file} (${entry.coin.id}): ${reserveTotalIssue}`);
+    }
 
-  const reserveTotalIssue = getReserveTotalIssue(coin);
-  if (reserveTotalIssue) {
-    process.stderr.write(`${join(DATA_DIR, file)} (${coin.id}): ${reserveTotalIssue}\n`);
-    errorCount++;
+    const dependencyTotalIssue = getDependencyTotalIssue(entry.coin);
+    if (dependencyTotalIssue) {
+      reportError(`${entry.file} (${entry.coin.id}): ${dependencyTotalIssue}`);
+    }
+
+    const runtimeAdmissionIssue = getRuntimeAdmissionIssue(entry.coin);
+    if (runtimeAdmissionIssue) {
+      reportError(`${entry.file} (${entry.coin.id}): ${runtimeAdmissionIssue}`);
+    }
   }
 
-  const dependencyTotalIssue = getDependencyTotalIssue(coin);
-  if (dependencyTotalIssue) {
-    process.stderr.write(`${join(DATA_DIR, file)} (${coin.id}): ${dependencyTotalIssue}\n`);
-    errorCount++;
+  for (const error of validateVariantRelationships(allEntries.map((entry) => entry.coin))) {
+    reportError(`${STABLECOIN_DATA_DIR}: ${error}`);
   }
-
-  const issue = getRuntimeAdmissionIssue(coin);
-  if (!issue) continue;
-  process.stderr.write(`${join(DATA_DIR, file)} (${coin.id}): ${issue}\n`);
-  errorCount++;
-}
-
-for (const error of validateVariantRelationships(stablecoinEntries.map(({ coin }) => coin))) {
-  process.stderr.write(`${DATA_DIR}: ${error}\n`);
-  errorCount++;
 }
 
 if (errorCount > 0) {
