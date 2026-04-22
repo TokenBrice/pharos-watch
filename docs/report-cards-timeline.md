@@ -1,6 +1,12 @@
 # Report Cards Scoring — Version Timeline
 
-Internal changelog reconstructed from git history plus the live version metadata source. Covers v1.0 through v7.11 (2026-02-25 → 2026-04-22). The newest sections track the machine-readable version source closely; older reconstructed sections below v6.92 preserve the original authoring-era grouping and are not guaranteed to be in strict descending source order. Use `shared/lib/safety-score-version-data.ts` for canonical machine ordering.
+Internal changelog reconstructed from git history plus the live version metadata source. Covers v1.0 through v7.12 (2026-02-25 → 2026-04-22). The newest sections track the machine-readable version source closely; older reconstructed sections below v6.92 preserve the original authoring-era grouping and are not guaranteed to be in strict descending source order. Use `shared/lib/safety-score-version-data.ts` for canonical machine ordering.
+
+## v7.12 — sBOLD joins tracked risk-absorption variants (2026-04-22)
+
+- `sbold-k3-capital` now declares canonical `variantOf = bold-liquity` and `variantKind = risk-absorption`
+- sBOLD now joins the tracked risk-absorption cohort beside `stUSDS` and `stkGHO.v1`, using the existing parent-minus-5 dependency ceiling and parent-overall cap
+- This phase keeps parent-linked `pegReferenceId` inheritance for sBOLD, so severe parent depegs still constrain the child until direct NAV/peg handling ships in a later pass
 
 ## v7.11 — Strategy-vault children join the tracked variant framework (2026-04-22)
 

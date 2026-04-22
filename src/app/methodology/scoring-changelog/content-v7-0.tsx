@@ -1,5 +1,37 @@
 import { VersionCard, getScoringEntry } from "./content-shared";
 
+export function ScoringChangelogV712Entry() {
+  return (
+    <VersionCard
+      entry={getScoringEntry("7.12")}
+      accent="border-l-emerald-500"
+    >
+      <p>
+        K3 sBOLD now joins the tracked parent-linked variant framework as a risk-absorption child of BOLD.
+      </p>
+      <ul className="list-disc list-inside space-y-1">
+        <li>
+          <code className="text-xs bg-muted px-1 py-0.5 rounded">sbold-k3-capital</code> now declares canonical{" "}
+          <code className="text-xs bg-muted px-1 py-0.5 rounded">variantOf</code> /{" "}
+          <code className="text-xs bg-muted px-1 py-0.5 rounded">variantKind</code> metadata as a{" "}
+          <code className="text-xs bg-muted px-1 py-0.5 rounded">risk-absorption</code> child of{" "}
+          <code className="text-xs bg-muted px-1 py-0.5 rounded">bold-liquity</code>.
+        </li>
+        <li>
+          The classification is based on Liquity Stability Pool loss-absorption dominating the wrapper&apos;s extra risk
+          surface, rather than a generic strategy-vault interpretation.
+        </li>
+        <li>
+          sBOLD now joins the tracked risk-absorption cohort beside{" "}
+          <code className="text-xs bg-muted px-1 py-0.5 rounded">stUSDS</code> and{" "}
+          <code className="text-xs bg-muted px-1 py-0.5 rounded">stkGHO.v1</code>, using the existing parent minus 5
+          dependency ceiling and parent-overall cap.
+        </li>
+      </ul>
+    </VersionCard>
+  );
+}
+
 export function ScoringChangelogV711Entry() {
   return (
     <VersionCard

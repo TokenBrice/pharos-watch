@@ -110,7 +110,7 @@ describe("tracked stablecoin metadata", () => {
     expect(algorithmicIds).toEqual([]);
   });
 
-  it("tracks the fourteen current implementation-scope variants", () => {
+  it("tracks the fifteen current implementation-scope variants", () => {
     const variantIds = ACTIVE_STABLECOINS
       .filter((coin) => isTrackedVariant(coin.id))
       .map((coin) => coin.id);
@@ -128,6 +128,7 @@ describe("tracked stablecoin metadata", () => {
       "sfrxusd-frax",
       "cusdo-openeden",
       "syusd-aegis",
+      "sbold-k3-capital",
       "msy-main-street",
       "said-gaib",
     ]);

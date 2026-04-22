@@ -4,7 +4,7 @@ Multi-dimensional risk grades (A+ through F) for every tracked stablecoin. Compu
 
 The stablecoin registry currently contains 215 tracked metadata entries. Report-card snapshots score the active subset and the cemetery set; pre-launch tracked entries remain outside the scored snapshot until they launch.
 
-## Overall Grade (v7.11)
+## Overall Grade (v7.12)
 
 Four-step computation:
 
@@ -15,7 +15,7 @@ Four-step computation:
 
 Cemetery coins get a permanent F.
 
-Current-version note: v7.11 extends the tracked parent-variant framework to the four highest-confidence strategy-vault children: `sUSDai`, `msY`, `sAID`, and `stcUSD`. Tracked variants declare canonical `variantOf` / `variantKind` metadata, contribute a synthetic `wrapper` dependency edge from parent to child in both live scoring and the dependency graph, and cannot outscore the parent's overall card. Savings wrappers cap at parent minus 3 in Dependency Risk, strategy-vault and risk-absorption wrappers cap at parent minus 5, and bond-maturity wrappers cap at parent minus 8. Live/stressed overall scores expose `overallCapped`, `uncappedOverallScore`, `rawInputs.variantParentId`, and `rawInputs.variantKind` so the UI can distinguish a parent cap from ordinary peg drag. In this phase the four tracked strategy-vault children keep the current parent-linked `pegReferenceId` path, so severe parent depegs still constrain the child until independent NAV/peg handling ships later. All v7.08 strategy-reserve-tier behavior carries forward unchanged.
+Current-version note: v7.12 extends the tracked parent-variant framework to K3 `sBOLD` as a `risk-absorption` child of `BOLD`, following the earlier `strategy-vault` rollout for `sUSDai`, `msY`, `sAID`, and `stcUSD`. Tracked variants declare canonical `variantOf` / `variantKind` metadata, contribute a synthetic `wrapper` dependency edge from parent to child in both live scoring and the dependency graph, and cannot outscore the parent's overall card. Savings wrappers cap at parent minus 3 in Dependency Risk, strategy-vault and risk-absorption wrappers cap at parent minus 5, and bond-maturity wrappers cap at parent minus 8. Live/stressed overall scores expose `overallCapped`, `uncappedOverallScore`, `rawInputs.variantParentId`, and `rawInputs.variantKind` so the UI can distinguish a parent cap from ordinary peg drag. In this phase tracked strategy-vault children and `sBOLD` keep the current parent-linked `pegReferenceId` path, so severe parent depegs still constrain the child until independent NAV/peg handling ships later. All v7.08 strategy-reserve-tier behavior carries forward unchanged.
 
 ## Dimensions
 

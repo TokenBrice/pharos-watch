@@ -1,9 +1,24 @@
 import type { MethodologyVersionConfig } from "./methodology-version";
 
 export const SAFETY_SCORE_VERSION_CONFIG: MethodologyVersionConfig = {
-  currentVersion: "7.11",
+  currentVersion: "7.12",
   changelogPath: "/methodology/scoring-changelog/",
   changelog: [
+    {
+      version: "7.12",
+      title: "sBOLD joins tracked risk-absorption variants",
+      date: "2026-04-22",
+      effectiveAt: 1776826800,
+      summary:
+        "The tracked parent-variant framework now includes K3 sBOLD as a `risk-absorption` child of BOLD because Liquity Stability Pool loss-absorption dominates the wrapper's extra risk surface.",
+      impact: [
+        "`sbold-k3-capital` now declares canonical `variantOf = bold-liquity` and `variantKind = risk-absorption`, so the relationship is visible across Safety Scores, detail pages, homepage variant filters, and the dependency graph",
+        "sBOLD now joins the tracked risk-absorption cohort beside `stUSDS` and `stkGHO.v1`, inheriting the existing parent-minus-5 dependency ceiling and parent-overall cap",
+        "This phase keeps the current parent-linked `pegReferenceId` path for sBOLD, so severe parent depegs still constrain the child until independent NAV/peg handling ships later",
+      ],
+      commits: [],
+      reconstructed: false,
+    },
     {
       version: "7.11",
       title: "Strategy-vault children join the tracked variant framework",

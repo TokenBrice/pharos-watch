@@ -1331,7 +1331,7 @@ Cache freshness in `/api/health` separates producer cadence, endpoint freshness,
     "safetyAlertSourceState": "ok",
     "safetyAlertSourceAgeSeconds": 120,
     "safetyAlertsSuppressed": false,
-    "safetyAlertSourceGeneration": "safety-7.11-alert-source-v1"
+    "safetyAlertSourceGeneration": "safety-7.12-alert-source-v1"
   }
 }
 ```
@@ -1582,7 +1582,7 @@ Stablecoin risk grade cards with dimension-level scores. Output includes 5 dimen
     "edges": [{ "from": "usde-ethena", "to": "usdc-circle", "weight": 0.9, "type": "collateral" }, ...]
   },
   "methodology": {
-    "version": "7.11",
+    "version": "7.12",
     "weights": { "pegStability": 0, "liquidity": 0.30, "resilience": 0.20, "decentralization": 0.15, "dependencyRisk": 0.25 },
     "pegMultiplierExponent": 0.4,
     "activeDepegSeveritySource": "open-event-peak",

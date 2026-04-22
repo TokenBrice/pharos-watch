@@ -31,6 +31,7 @@ describe("stablecoin variants", () => {
     expect(isTrackedVariant("susde-ethena")).toBe(true);
     expect(isTrackedVariant("susdai-usd-ai")).toBe(true);
     expect(isTrackedVariant("busd0-usual")).toBe(true);
+    expect(isTrackedVariant("sbold-k3-capital")).toBe(true);
     expect(isTrackedVariant("usde-ethena")).toBe(false);
     expect(isTrackedVariant("syrupusdc-maple")).toBe(false);
   });
