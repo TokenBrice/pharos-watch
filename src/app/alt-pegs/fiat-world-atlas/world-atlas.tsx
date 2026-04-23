@@ -157,11 +157,20 @@ export function FiatWorldAtlas({
       />
 
       <div data-alt-peg-layout="desktop-atlas" className="hidden xl:block">
+        <a
+          href="#alt-peg-cohort-list"
+          className="sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-4 focus:z-50 focus:rounded-md focus:bg-background focus:px-3 focus:py-2 focus:text-sm focus:ring-2 focus:ring-ring"
+        >
+          Skip peg map
+        </a>
         <PegDiversityHeroLive worldMap={<WorldMap />} />
         <p className="px-4 pt-2 pb-4 text-center text-[10px] font-medium uppercase tracking-[0.12em] text-muted-foreground dark:text-slate-400">
-          Size ∝ market cap · $1M &hellip; $3B+
+          Size ∝ market cap · $1M ... ~$550M+
         </p>
-        <div className="grid gap-3 bg-background/45 px-4 py-4 dark:bg-white/[0.035] sm:grid-cols-2 sm:px-5 sm:py-5 lg:grid-cols-3">
+        <div
+          id="alt-peg-cohort-list"
+          className="grid gap-3 bg-background/45 px-4 py-4 dark:bg-white/[0.035] sm:grid-cols-2 sm:px-5 sm:py-5 lg:grid-cols-3"
+        >
           {geoRegions.map(({ region, items }) => (
             <FiatRegionSection key={region} region={region} items={items} />
           ))}

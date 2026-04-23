@@ -6,6 +6,7 @@ import type { SkyCohort } from "@/lib/alt-peg-hero";
 
 export function ConstellationCohort({ cohort }: { cohort: SkyCohort }) {
   if (cohort.coins.length === 0) return null;
+  const cohortMarketCap = cohort.coins.reduce((sum, coin) => sum + coin.marketCap, 0);
   return (
     <div className="constellation-cohort" aria-label="Index-linked stablecoins">
       <svg
@@ -36,7 +37,15 @@ export function ConstellationCohort({ cohort }: { cohort: SkyCohort }) {
         Index · Constellation
       </span>
       {cohort.coins.map((c) => (
-        <CoinEmblem key={c.id} coin={c} variant="star" loading="eager" />
+        <CoinEmblem
+          key={c.id}
+          coin={c}
+          variant="star"
+          loading="eager"
+          cohortCoinCount={cohort.coins.length}
+          cohortMarketCap={cohortMarketCap}
+          hoverCardYPlacement="below"
+        />
       ))}
     </div>
   );

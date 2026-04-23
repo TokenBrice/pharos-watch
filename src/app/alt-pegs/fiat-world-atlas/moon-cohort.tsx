@@ -6,6 +6,7 @@ import type { SkyCohort } from "@/lib/alt-peg-hero";
 
 export function MoonCohort({ cohort }: { cohort: SkyCohort }) {
   if (cohort.coins.length === 0) return null;
+  const cohortMarketCap = cohort.coins.reduce((sum, coin) => sum + coin.marketCap, 0);
   return (
     <div className="moon-cohort" aria-label="Silver stablecoins">
       <div className="moon-cohort__halo" style={{ left: "50%", top: "42%" }} />
@@ -14,7 +15,15 @@ export function MoonCohort({ cohort }: { cohort: SkyCohort }) {
         Silver · Moon
       </span>
       {cohort.coins.map((c) => (
-        <CoinEmblem key={c.id} coin={c} variant="moon" loading="eager" />
+        <CoinEmblem
+          key={c.id}
+          coin={c}
+          variant="moon"
+          loading="eager"
+          cohortCoinCount={cohort.coins.length}
+          cohortMarketCap={cohortMarketCap}
+          hoverCardYPlacement="below"
+        />
       ))}
     </div>
   );

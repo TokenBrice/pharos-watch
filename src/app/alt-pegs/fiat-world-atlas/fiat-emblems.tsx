@@ -9,16 +9,19 @@ export function FiatEmblems({ clusters }: { clusters: readonly PegCluster[] }) {
   return (
     <div className="fiat-emblems">
       <CohortThreads coins={allCoins} colorHex="#60a5fa" />
-      {clusters.map((cluster) =>
-        cluster.coins.map((coin, idx) => (
+      {clusters.map((cluster) => {
+        const cohortMarketCap = cluster.coins.reduce((sum, coin) => sum + coin.marketCap, 0);
+        return cluster.coins.map((coin, idx) => (
           <CoinEmblem
             key={coin.id}
             coin={coin}
             variant="fiat"
             loading={idx === 0 ? "eager" : "lazy"}
+            cohortCoinCount={cluster.coins.length}
+            cohortMarketCap={cohortMarketCap}
           />
-        )),
-      )}
+        ));
+      })}
     </div>
   );
 }

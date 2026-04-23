@@ -76,7 +76,7 @@ describe("CoinEmblem", () => {
   it("shows a key-data hover card for the active stablecoin", () => {
     const { getByRole } = render(
       <HoverProvider>
-        <CoinEmblem coin={sample} variant="fiat" />
+        <CoinEmblem coin={sample} variant="fiat" cohortCoinCount={4} cohortMarketCap={1_000_000_000} />
       </HoverProvider>,
     );
     const link = getByRole("link");
@@ -84,10 +84,27 @@ describe("CoinEmblem", () => {
 
     const card = screen.getByRole("tooltip");
     expect(card.textContent).toContain("EURC");
-    expect(card.textContent).toContain("EUR peg");
+    expect(card.textContent).toContain("Euro cohort");
     expect(card.textContent).toContain("Market cap");
-    expect(card.textContent).toContain("Cohort");
+    expect(card.textContent).toContain("Share");
+    expect(card.textContent).toContain("43.2%");
+    expect(card.textContent).toContain("Cohort cap");
+    expect(card.textContent).toContain("Cohort size");
+    expect(card.textContent).toContain("4 coins");
+    expect(card.textContent).toContain("Open profile");
     expect(link.getAttribute("aria-describedby")).toBe(card.id);
+  });
+
+  it("shows the hover card on keyboard focus", () => {
+    const { getByRole } = render(
+      <HoverProvider>
+        <CoinEmblem coin={sample} variant="fiat" cohortCoinCount={4} cohortMarketCap={1_000_000_000} />
+      </HoverProvider>,
+    );
+    const link = getByRole("link");
+    fireEvent.focus(link);
+
+    expect(screen.getByRole("tooltip").textContent).toContain("Open profile");
   });
 
   it("positions edge hover cards back toward the map frame", () => {
@@ -99,5 +116,14 @@ describe("CoinEmblem", () => {
     const link = getByRole("link");
     expect(link.getAttribute("data-card-x")).toBe("right");
     expect(link.getAttribute("data-card-y")).toBe("below");
+  });
+
+  it("allows sky cohorts to force hover cards below the emblem", () => {
+    const { getByRole } = render(
+      <HoverProvider>
+        <CoinEmblem coin={{ ...sample, y: 70 }} variant="moon" hoverCardYPlacement="below" />
+      </HoverProvider>,
+    );
+    expect(getByRole("link").getAttribute("data-card-y")).toBe("below");
   });
 });

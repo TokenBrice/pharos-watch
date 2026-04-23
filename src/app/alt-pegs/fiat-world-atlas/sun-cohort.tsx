@@ -10,6 +10,7 @@ export function SunCohort({ cohort }: { cohort: SkyCohort }) {
   if (cohort.coins.length === 0) return null;
   const [primary, ...rest] = cohort.coins;
   const coinCount = cohort.coins.length;
+  const cohortMarketCap = cohort.coins.reduce((sum, coin) => sum + coin.marketCap, 0);
 
   return (
     <div className="sun-cohort" aria-label="Gold stablecoins">
@@ -38,13 +39,23 @@ export function SunCohort({ cohort }: { cohort: SkyCohort }) {
       <span className="sky-region-tag" style={{ left: "16%", top: "9%" }}>
         Gold · Sun · {coinCount} {coinCount === 1 ? "coin" : "coins"}
       </span>
-      <CoinEmblem coin={primary} variant="sun-core" loading="eager" />
+      <CoinEmblem
+        coin={primary}
+        variant="sun-core"
+        loading="eager"
+        cohortCoinCount={coinCount}
+        cohortMarketCap={cohortMarketCap}
+        hoverCardYPlacement="below"
+      />
       {rest.map((c, i) => (
         <CoinEmblem
           key={c.id}
           coin={c}
           variant={i === 0 ? "sun-core" : "sun-planet"}
           loading={i < 2 ? "eager" : "lazy"}
+          cohortCoinCount={coinCount}
+          cohortMarketCap={cohortMarketCap}
+          hoverCardYPlacement="below"
         />
       ))}
     </div>
