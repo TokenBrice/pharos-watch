@@ -36,12 +36,21 @@ describe("StaticAltPegLinkHub", () => {
     expect(styleBlock).toContain("path#JP{fill:#f43f5e");
   });
 
-  it("renders the celestial band with Gold, Silver, and CPI orbitals", () => {
+  it("renders deadspot markers for Gold, Silver, and CPI inside the desktop map", () => {
+    const { container } = render(<StaticAltPegLinkHub />);
+    const desktopAtlas = container.querySelector('[data-alt-peg-layout="desktop-atlas"]');
+    const deadspots = desktopAtlas?.querySelector('[data-testid="map-deadspot-references"]');
+    expect(deadspots).not.toBeNull();
+    expect(deadspots?.querySelector('[data-body-kind="sun"]')).not.toBeNull();
+    expect(deadspots?.querySelector('[data-body-kind="moon"]')).not.toBeNull();
+    expect(deadspots?.querySelector('[data-body-kind="index"]')).not.toBeNull();
+  });
+
+  it("keeps the celestial band as a mobile-only fallback beneath the xl:hidden wrapper", () => {
     const { container } = render(<StaticAltPegLinkHub />);
     const band = container.querySelector('[data-testid="celestial-band"]');
     expect(band).not.toBeNull();
-    expect(band?.querySelector('[data-orbital="sun"]')).not.toBeNull();
-    expect(band?.querySelector('[data-orbital="moon"]')).not.toBeNull();
-    expect(band?.querySelector('[data-orbital="index"]')).not.toBeNull();
+    const mobileWrapper = band?.closest(".xl\\:hidden");
+    expect(mobileWrapper).not.toBeNull();
   });
 });

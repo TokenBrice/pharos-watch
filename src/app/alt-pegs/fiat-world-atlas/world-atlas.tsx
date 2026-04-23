@@ -11,6 +11,7 @@ import {
 } from "@/app/alt-pegs/fiat-world-atlas/world-map-interactive";
 import { MobileRegionList } from "@/app/alt-pegs/fiat-world-atlas/mobile-region-list";
 import { MapEmblemClusters } from "@/app/alt-pegs/fiat-world-atlas/map-emblem-clusters";
+import { MapDeadspotReferences } from "@/app/alt-pegs/fiat-world-atlas/map-deadspot-references";
 import { PEG_COUNTRY_MAP } from "@/lib/alt-peg-geography";
 import { buildPegEmblemClusters } from "@/lib/alt-peg-emblems";
 
@@ -66,7 +67,7 @@ export function FiatWorldAtlas({
           </h3>
           <p className="text-sm text-muted-foreground">
             Countries are colored by the fiat peg whose currency they reference.
-            Gold, Silver, and index-linked cohorts float above the map as
+            Gold, Silver, and index-linked cohorts float over ocean deadspots as
             references that exist beyond any single monetary region.
           </p>
         </div>
@@ -82,8 +83,6 @@ export function FiatWorldAtlas({
         </div>
       </div>
 
-      <CelestialBand items={commodityIndexItems} />
-
       <div
         data-alt-peg-layout="desktop-atlas"
         className="hidden xl:block"
@@ -93,6 +92,7 @@ export function FiatWorldAtlas({
             <WorldMap items={fiatItems} />
           </WorldMapInteractive>
           <MapEmblemClusters clusters={buildPegEmblemClusters()} />
+          <MapDeadspotReferences items={commodityIndexItems} />
         </div>
         <div className="grid gap-3 px-4 py-4 sm:px-5 sm:py-5 sm:grid-cols-2 lg:grid-cols-3">
           {geoRegions.map(({ region, items }) => (
@@ -101,7 +101,10 @@ export function FiatWorldAtlas({
         </div>
       </div>
 
-      <MobileRegionList fiatItems={fiatItems} />
+      <div className="xl:hidden">
+        <CelestialBand items={commodityIndexItems} />
+        <MobileRegionList fiatItems={fiatItems} />
+      </div>
     </section>
   );
 }
