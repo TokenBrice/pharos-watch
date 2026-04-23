@@ -1,5 +1,6 @@
 // @vitest-environment jsdom
 
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { render, screen } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { describe, expect, it, vi } from "vitest";
@@ -22,14 +23,21 @@ vi.mock("@/components/section-error-boundary", () => ({
   SectionErrorBoundary: ({ children }: { children: ReactNode }) => <>{children}</>,
 }));
 
+function withQueryClient(children: ReactNode): ReactNode {
+  const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+  return <QueryClientProvider client={client}>{children}</QueryClientProvider>;
+}
+
 describe("AltPegsPage", () => {
   it("renders the static peg diversity hero before the client analytics", () => {
-    const { container } = render(<AltPegsPage />);
+    const { container } = render(withQueryClient(<AltPegsPage />));
 
     expect(screen.getByTestId("alt-pegs-client")).toBeTruthy();
     expect(screen.getByRole("heading", { name: "Peg Diversity Map" })).toBeTruthy();
     expect(
-      screen.getAllByRole("link", { name: /Euro/i }).some((link) => link.getAttribute("href") === "/stablecoins/eur"),
+      screen
+        .getAllByRole("link", { name: /Euro/i })
+        .some((link) => link.getAttribute("href") === "/stablecoins/eur"),
     ).toBe(true);
 
     const text = container.textContent ?? "";
