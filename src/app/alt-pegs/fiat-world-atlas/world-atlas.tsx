@@ -66,12 +66,12 @@ export function FiatWorldAtlas({
 
       <div
         data-alt-peg-layout="desktop-atlas"
-        className="hidden border-t border-border/60 px-4 py-4 sm:px-5 sm:py-5 xl:block"
+        className="hidden xl:block"
       >
-        <div className="relative overflow-hidden rounded-[1.5rem] border border-border/60 bg-background/35 p-3">
+        <div className="relative bg-[oklch(0.14_0.01_248)]">
           <WorldMap items={fiatItems} />
         </div>
-        <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="grid gap-3 px-4 py-4 sm:px-5 sm:py-5 sm:grid-cols-2 lg:grid-cols-3">
           {geoRegions.map(({ region, items }) => (
             <FiatRegionSection key={region} region={region} items={items} />
           ))}

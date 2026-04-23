@@ -10,7 +10,8 @@ const WORLD_SVG = readFileSync(
 
 function buildStyleBlock(fills: ReadonlyMap<string, { colorHex: string }>): string {
   const rules: string[] = [
-    `.fiat-world-map{--world-default-fill:oklch(0.22 0.012 248 / 0.95);--world-stroke:oklch(0.45 0.02 248 / 0.55)}`,
+    `.fiat-world-map{--world-default-fill:oklch(0.28 0.014 248 / 1);--world-stroke:oklch(0.62 0.02 248 / 0.85)}`,
+    `.fiat-world-map .world-countries{stroke-width:0.7}`,
     `.fiat-world-map .world-countries path{transition:fill 180ms ease}`,
   ];
   for (const [iso, fill] of fills) {

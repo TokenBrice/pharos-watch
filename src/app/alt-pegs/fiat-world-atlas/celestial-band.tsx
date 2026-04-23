@@ -117,7 +117,7 @@ export function CelestialBand({ items }: { items: readonly AltPegLinkHubItem[] }
 
   return (
     <div
-      className="flex flex-wrap items-center gap-3 border-b border-border/55 px-4 py-3 sm:px-5 sm:py-4"
+      className="flex flex-wrap items-center gap-3 border-b border-border/20 px-4 py-3 sm:px-5 sm:py-4"
       data-testid="celestial-band"
     >
       <p className="mr-auto text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
