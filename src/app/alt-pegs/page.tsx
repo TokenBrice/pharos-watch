@@ -31,5 +31,5 @@ export default createClientFeaturePage({
       "This route tracks the non-USD segment as a market-structure surface: current cohort share, historical non-USD growth, and direct links into each peg family Pharos already covers.",
     ],
   },
-  afterClient: <StaticAltPegLinkHub />,
+  beforeClient: <StaticAltPegLinkHub />,
 });

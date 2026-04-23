@@ -17,7 +17,7 @@ describe("StaticAltPegLinkHub", () => {
     expect(html).not.toContain("/stablecoins/usd");
     expect(html).toContain("Fiat Peg Geography");
     expect(html).toContain("References beyond geography");
-    expect(html).toContain("Explore Peg Cohorts");
+    expect(html).toContain("Peg Diversity Map");
   });
 
   it("keeps the desktop atlas gated behind the xl layout and mobile list at xl:hidden", () => {

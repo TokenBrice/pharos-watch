@@ -127,6 +127,7 @@ describe("validate-ci parity", () => {
       "npm run check:stablecoin-data",
       "npm run check:unused-code",
       "npm run check:verified-doc-links",
+      "npm run check:world-map",
       "npm run check:worker-boundary",
     ]);
   });

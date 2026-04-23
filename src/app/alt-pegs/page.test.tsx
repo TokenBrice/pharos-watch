@@ -23,13 +23,16 @@ vi.mock("@/components/section-error-boundary", () => ({
 }));
 
 describe("AltPegsPage", () => {
-  it("includes the static link hub in the page composition", () => {
-    render(<AltPegsPage />);
+  it("renders the static peg diversity hero before the client analytics", () => {
+    const { container } = render(<AltPegsPage />);
 
     expect(screen.getByTestId("alt-pegs-client")).toBeTruthy();
-    expect(screen.getByRole("heading", { name: "Explore Peg Cohorts" })).toBeTruthy();
+    expect(screen.getByRole("heading", { name: "Peg Diversity Map" })).toBeTruthy();
     expect(
       screen.getAllByRole("link", { name: /Euro/i }).some((link) => link.getAttribute("href") === "/stablecoins/eur"),
     ).toBe(true);
+
+    const text = container.textContent ?? "";
+    expect(text.indexOf("Peg Diversity Map")).toBeLessThan(text.indexOf("alt-pegs-client"));
   });
 });

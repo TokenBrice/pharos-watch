@@ -1,4 +1,4 @@
-import { readFileSync, writeFileSync, mkdirSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { geoNaturalEarth1, geoPath } from "d3-geo";
 import { feature } from "topojson-client";
@@ -8,6 +8,7 @@ import { M49_TO_ISO2 } from "./data/m49-to-iso2";
 
 const SRC = resolve("scripts/data/world-countries-110m.json");
 const OUT = resolve("public/maps/world-countries.svg");
+const CHECK_MODE = process.argv.includes("--check");
 const WIDTH = 900;
 const HEIGHT = 460;
 
@@ -39,6 +40,15 @@ const svg = [
   `</svg>`,
 ].join("\n");
 
-mkdirSync(dirname(OUT), { recursive: true });
-writeFileSync(OUT, svg);
-console.log(`Wrote ${paths.length} countries to ${OUT}`);
+if (CHECK_MODE) {
+  const currentSvg = existsSync(OUT) ? readFileSync(OUT, "utf8") : "";
+  if (currentSvg !== svg) {
+    console.error("World map SVG is out of date. Run `npm run build:world-map`.");
+    process.exit(1);
+  }
+  console.log("World map SVG is current");
+} else {
+  mkdirSync(dirname(OUT), { recursive: true });
+  writeFileSync(OUT, svg);
+  console.log(`Wrote ${paths.length} countries to ${OUT}`);
+}

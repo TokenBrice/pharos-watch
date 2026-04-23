@@ -52,7 +52,7 @@ export default function MethodologyPage() {
             },
             {
               question: "How is the liquidity score calculated?",
-              answer: "The liquidity score evaluates how easily a stablecoin can be exited to its peg asset on-chain. It combines DEX TVL depth (30%), 24-hour volume activity (25%), pool quality and diversity (20%), pair durability and age (15%), and diversification across protocols and chains (10%). Quality multipliers adjust for pool type (e.g., Curve stableswap vs Uniswap V3 wide tiers). Scores are normalized to 0–100.",
+              answer: "The liquidity score evaluates how easily a stablecoin can be exited to its peg asset on-chain. It combines DEX TVL depth (30%), 24-hour volume activity (20%), pool quality and diversity (20%), pair durability and age (20%), and diversification across protocols and chains (10%). Quality multipliers adjust for pool type (e.g., Curve stableswap vs Uniswap V3 wide tiers). Scores are normalized to 0–100.",
             },
             {
               question: "How does Pharos confirm depegs and maintain DEWS history?",

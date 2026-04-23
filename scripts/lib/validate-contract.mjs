@@ -23,6 +23,7 @@ export const VALIDATE_PREBUILD_COMMANDS = [
   "npm run check:stablecoin-data",
   "npm run check:unused-code",
   "npm run check:verified-doc-links",
+  "npm run check:world-map",
   "npm run check:worker-boundary",
 ];
 

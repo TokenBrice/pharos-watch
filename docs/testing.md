@@ -31,6 +31,7 @@ npm run check:duplicate-exports # Detect duplicate export declarations within in
 npm run check:llms-txt # Verify generated `/llms.txt` is current
 npm run check:openapi # Verify generated public OpenAPI artifact is current
 npm run check:postman # Verify generated public Postman collection/environment artifacts are current
+npm run check:world-map # Verify generated static world map SVG is current
 npm run check:sql-safety # Static analysis of D1 SQL patterns for safety issues
 npm run check:stablecoin-data # Validate stablecoin JSON data files against schema
 npm run check:redemption-backstops # Validate redemption backstop configs for completeness

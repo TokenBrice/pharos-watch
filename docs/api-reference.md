@@ -410,7 +410,7 @@ Browser surfaces on `pharos.watch` and `ops.pharos.watch` should reach this rout
 
 ### `GET /api/non-usd-share`
 
-Returns historical non-USD stablecoin market share data from `supply_history`, split into commodity-pegged (gold/silver) and fiat non-USD buckets. Data is downsampled: daily for the last 90 days, weekly for the last 2 years, monthly beyond that.
+Returns historical non-USD stablecoin market share data from `supply_history`, split into commodity-pegged (gold/silver) and non-commodity non-USD buckets. The response keeps the legacy `fiatNonUsd*` field names for wire compatibility, but those fields include currency-linked plus other non-commodity non-USD pegs. Data is downsampled: daily for the last 90 days, weekly for the last 2 years, monthly beyond that.
 
 **Cache:** slow — `public, s-maxage=3600, max-age=300`
 
@@ -426,9 +426,9 @@ Unlike most numeric-query handlers, this endpoint defaults missing or malformed 
 | ------------------ | -------- | ------------------------------------------------ |
 | `date`             | `number` | Unix seconds (snapshot date)                     |
 | `commodityShare`   | `number` | Commodity-pegged share as % of total supply      |
-| `fiatNonUsdShare`  | `number` | Fiat non-USD share as % of total supply          |
+| `fiatNonUsdShare`  | `number` | Non-commodity non-USD share as % of total supply, using the legacy field name |
 | `commodity`        | `number` | Commodity-pegged circulating USD                 |
-| `fiatNonUsd`       | `number` | Fiat non-USD circulating USD                     |
+| `fiatNonUsd`       | `number` | Non-commodity non-USD circulating USD, using the legacy field name |
 | `total`            | `number` | Total circulating USD across all tracked coins   |
 
 ---

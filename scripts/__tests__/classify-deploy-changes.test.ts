@@ -55,6 +55,7 @@ describe("hasPagesDeployImpact", () => {
     expect(hasPagesDeployImpact([".github/workflows/rebuild-pages.yml"])).toBe(true);
     expect(hasPagesDeployImpact(["scripts/generate-llms-txt.ts"])).toBe(true);
     expect(hasPagesDeployImpact(["scripts/generate-docs-metadata.ts"])).toBe(true);
+    expect(hasPagesDeployImpact(["scripts/build-world-map-svg.ts"])).toBe(true);
     expect(hasPagesDeployImpact(["scripts/generate-markdown-exports.ts"])).toBe(true);
     expect(hasPagesDeployImpact(["scripts/generate-openapi-spec.ts"])).toBe(true);
     expect(hasPagesDeployImpact(["scripts/generate-postman-collection.ts"])).toBe(true);
@@ -90,6 +91,14 @@ describe("hasDeployImpact", () => {
       expect(hasWorkerDeployImpact([file]), file).toBe(true);
       expect(hasPagesDeployImpact([file]), file).toBe(true);
     }
+  });
+
+  it("treats static map generation as Pages-only deploy infrastructure", () => {
+    const file = "scripts/build-world-map-svg.ts";
+
+    expect(hasDeployImpact([file])).toBe(true);
+    expect(hasPagesDeployImpact([file])).toBe(true);
+    expect(hasWorkerDeployImpact([file])).toBe(false);
   });
 });
 

@@ -9,18 +9,5 @@ export function StaticAltPegLinkHub() {
     .filter((g) => g.label !== "Fiat")
     .flatMap((g) => g.items);
 
-  return (
-    <section aria-labelledby="alt-peg-link-hub" className="space-y-3">
-      <div className="space-y-1">
-        <p className="pharos-kicker">Drill Down</p>
-        <h2 id="alt-peg-link-hub" className="pharos-section-title">Explore Peg Cohorts</h2>
-        <p className="pharos-meta">
-          Static route links keep the non-USD cohort taxonomy crawlable and make
-          it easy to jump from the market lens into the peg you want to inspect
-          next.
-        </p>
-      </div>
-      <FiatWorldAtlas fiatItems={fiatItems} commodityIndexItems={commodityIndexItems} />
-    </section>
-  );
+  return <FiatWorldAtlas fiatItems={fiatItems} commodityIndexItems={commodityIndexItems} />;
 }

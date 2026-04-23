@@ -21,7 +21,7 @@ export function MoonGlyph({ color }: { color: string }) {
     <svg viewBox="0 0 100 100" className="h-full w-full">
       <circle cx="50" cy="50" r="38" fill={`${color}28`} />
       <circle cx="50" cy="50" r="26" fill={color} />
-      <circle cx="42" cy="44" r="22" fill="var(--background)" opacity="0.9" />
+      <circle cx="42" cy="44" r="22" fill="oklch(0.11 0.012 248)" opacity="0.9" />
     </svg>
   );
 }

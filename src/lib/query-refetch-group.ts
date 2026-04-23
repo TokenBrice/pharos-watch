@@ -1,4 +1,4 @@
-import { isCancelledError } from "@tanstack/query-core";
+import { isCancelledError } from "@tanstack/react-query";
 
 export type QueryRefetchFn = () => Promise<unknown>;
 

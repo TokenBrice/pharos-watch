@@ -1,10 +1,6 @@
 import Link from "next/link";
 import type { AltPegLinkHubItem } from "@/lib/alt-peg-market";
-import {
-  IndexGlyph,
-  MoonGlyph,
-  SunGlyph,
-} from "@/app/alt-pegs/fiat-world-atlas/non-geo-glyphs";
+import { IndexGlyph, MoonGlyph, SunGlyph } from "@/app/alt-pegs/fiat-world-atlas/non-geo-glyphs";
 
 type BodyKind = "sun" | "moon" | "index";
 
@@ -33,9 +29,7 @@ function pickBodies(items: readonly AltPegLinkHubItem[]): Body[] {
   if (gold) bodies.push({ kind: "sun", item: gold });
   const silver = byPeg.get("SILVER");
   if (silver) bodies.push({ kind: "moon", item: silver });
-  const index = items.filter(
-    (i) => i.peg !== "GOLD" && i.peg !== "SILVER" && i.region === "Other",
-  );
+  const index = items.filter((i) => i.peg !== "GOLD" && i.peg !== "SILVER" && i.region === "Other");
   if (index.length > 0) {
     const coinCount = index.reduce((sum, i) => sum + i.coinCount, 0);
     const symbolPreview = index
@@ -55,19 +49,12 @@ function pickBodies(items: readonly AltPegLinkHubItem[]): Body[] {
   return bodies;
 }
 
-export function MapDeadspotReferences({
-  items,
-}: {
-  items: readonly AltPegLinkHubItem[];
-}) {
+export function MapDeadspotReferences({ items }: { items: readonly AltPegLinkHubItem[] }) {
   const bodies = pickBodies(items);
   if (bodies.length === 0) return null;
 
   return (
-    <ul
-      data-testid="map-deadspot-references"
-      className="pointer-events-none absolute inset-0 m-0 list-none p-0"
-    >
+    <ul data-testid="map-deadspot-references" className="pointer-events-none absolute inset-0 m-0 list-none p-0">
       {bodies.map((body) => {
         const { kind, item } = body;
         const anchor = DEADSPOT_ANCHORS[kind];
@@ -91,10 +78,8 @@ export function MapDeadspotReferences({
               </span>
             </Link>
             <span className="flex flex-col items-center gap-0.5 text-center">
-              <span className="text-sm font-semibold tracking-tight text-foreground">
-                {item.label}
-              </span>
-              <span className="font-mono text-[10px] tabular-nums text-muted-foreground">
+              <span className="text-sm font-semibold tracking-tight text-white">{item.label}</span>
+              <span className="font-mono text-[10px] tabular-nums text-slate-300/82">
                 {item.coinCount} coin{item.coinCount === 1 ? "" : "s"}
                 {item.symbolPreview ? ` · ${item.symbolPreview}` : ""}
               </span>

@@ -40,8 +40,8 @@ export function RegionSummaryPill({
       }}
     >
       <span className="inline-block h-2 w-2 rounded-full" style={{ backgroundColor: accentHex }} />
-      <span className="text-[11px] font-semibold uppercase tracking-[0.16em] text-foreground/92">{region}</span>
-      <span className="font-mono text-[11px] tabular-nums text-muted-foreground">
+      <span className="text-[11px] font-semibold uppercase tracking-[0.16em] text-white/92">{region}</span>
+      <span className="font-mono text-[11px] tabular-nums text-slate-300/86">
         {formatCohortCount(cohortCount)} · {formatCoinCount(coinCount)}
       </span>
     </div>
@@ -58,13 +58,13 @@ export function LinkChip({ item }: { item: AltPegLinkHubItem }) {
       href={item.href}
       aria-label={`${item.label}, ${formatCoinCount(item.coinCount)}${item.symbolPreview ? `. ${item.symbolPreview}` : ""}`}
       style={style}
-      className="pharos-focus-ring inline-flex min-h-11 flex-col rounded-xl border border-border/65 bg-background/50 px-3 py-2 text-left shadow-sm transition-[background-color,border-color,color,box-shadow] hover:border-border hover:bg-accent/55 hover:text-foreground"
+      className="pharos-focus-ring inline-flex min-h-10 flex-col rounded-lg border border-white/10 bg-white/[0.045] px-3 py-2 text-left transition-[background-color,border-color,color] hover:border-white/30 hover:bg-white/[0.08]"
     >
-      <span className="inline-flex items-center gap-2 text-sm font-medium text-foreground">
+      <span className="inline-flex items-center gap-2 text-sm font-medium text-white">
         <span className="inline-block h-2.5 w-2.5 rounded-full" style={{ backgroundColor: item.colorHex }} />
         {item.label}
       </span>
-      <span className="mt-1 font-mono text-[11px] tabular-nums text-muted-foreground">
+      <span className="mt-1 font-mono text-[11px] tabular-nums text-slate-300/86">
         {formatCoinCount(item.coinCount)}
         {item.symbolPreview ? ` · ${item.symbolPreview}` : ""}
       </span>
@@ -72,16 +72,10 @@ export function LinkChip({ item }: { item: AltPegLinkHubItem }) {
   );
 }
 
-export function FiatRegionSection({
-  region,
-  items,
-}: {
-  region: AltPegRegion;
-  items: readonly AltPegLinkHubItem[];
-}) {
+export function FiatRegionSection({ region, items }: { region: AltPegRegion; items: readonly AltPegLinkHubItem[] }) {
   const slug = region.toLowerCase().replace(/\s+/g, "-");
   const coinCount = items.reduce((sum, i) => sum + i.coinCount, 0);
-  const accentHex = region === "Other" ? items[0]?.colorHex ?? "#64748b" : REGION_ACCENT[region];
+  const accentHex = region === "Other" ? (items[0]?.colorHex ?? "#64748b") : REGION_ACCENT[region];
   return (
     <section aria-labelledby={`alt-peg-region-${slug}`} className="space-y-2" data-region={region}>
       <div className="flex items-center justify-between gap-2">
@@ -89,12 +83,12 @@ export function FiatRegionSection({
           <span className="inline-block h-2.5 w-2.5 rounded-full" style={{ backgroundColor: accentHex }} />
           <h4
             id={`alt-peg-region-${slug}`}
-            className="text-[11px] font-semibold uppercase tracking-[0.18em] text-foreground/90"
+            className="text-[11px] font-semibold uppercase tracking-[0.18em] text-white/90"
           >
             {region}
           </h4>
         </div>
-        <p className="font-mono text-[11px] tabular-nums text-muted-foreground">
+        <p className="font-mono text-[11px] tabular-nums text-slate-300/86">
           {formatCohortCount(items.length)} · {formatCoinCount(coinCount)}
         </p>
       </div>

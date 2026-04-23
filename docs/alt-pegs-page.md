@@ -32,7 +32,7 @@ The route renders through `createClientFeaturePage(...)` / `FeaturePageShell` wi
 - `path="/alt-pegs/"`
 - title `Non-USD Market Structure`
 - two lead paragraphs describing the route as the non-USD market-structure surface
-- the static peg link hub rendered after the client content so the drill-down links are included in the static HTML
+- the static peg diversity map hero rendered before the client content so the drill-down links are included in the static HTML and visible as the top route module
 
 Metadata is authored in `src/app/alt-pegs/page.tsx` with canonical `/alt-pegs/` through `buildPageMetadata(...)`.
 
@@ -70,7 +70,9 @@ Important contract:
 
 ## Section Order
 
-`AltPegsClient` renders, in order:
+The route renders `StaticAltPegLinkHub` before `AltPegsClient`. The static hero is a single dark, map-first `FiatWorldAtlas` card headed by `Peg Diversity Map`; it carries the region summary pills, the desktop world map, non-geographic reference markers, and the crawlable cohort links. The atlas owns its text colors instead of inheriting page foreground tokens because the map remains a dark cartographic surface in both site themes.
+
+`AltPegsClient` then renders, in order:
 
 1. `StaleDataBanner`
 2. hero snapshot for the current non-USD segment
@@ -78,9 +80,9 @@ Important contract:
 4. `NonUsdShareChart`
 5. `AltPegCohortHistoryChart`
 
-`page.tsx` then renders `StaticAltPegLinkHub` after the client surface so the peg drill-down links are present in static HTML. On `xl+`, a single `FiatWorldAtlas` card carries the full non-USD drill-down surface: a celestial band above the map renders Gold (sun), Silver (moon), and CPI/Index (orbital glyph), and the map itself is a pre-rendered static SVG of 1:110m Natural Earth geometry, colored per country via `PEG_COUNTRY_MAP` in `src/lib/alt-peg-geography.ts`. The SVG is regenerated with `npm run build:world-map` (dev-only d3-geo + topojson-client). Below `xl`, the surface falls back to a stacked `MobileRegionList` that now includes the non-geographic cohorts at the bottom.
+On `xl+`, the `FiatWorldAtlas` hero carries the full non-USD drill-down surface: Gold (sun), Silver (moon), and CPI/Index (orbital glyph) float over the map's ocean deadspots, and the map itself is a pre-rendered static SVG of 1:110m Natural Earth geometry, colored per country via `PEG_COUNTRY_MAP` in `src/lib/alt-peg-geography.ts`. The SVG is regenerated with `npm run build:world-map` (dev-only d3-geo + topojson-client). Below `xl`, fiat cohorts fall back to a stacked `MobileRegionList`; non-geographic reference cohorts remain in the celestial band above the map/list area.
 
-The route intentionally keeps all current-state modules ahead of the historical modules to reduce trust issues caused by mixed source cadences.
+The route intentionally keeps the static taxonomy map ahead of live analytics, then keeps all client current-state modules ahead of the historical modules to reduce trust issues caused by mixed source cadences.
 
 Current Release 1 behavior:
 
@@ -97,8 +99,8 @@ Current Release 1 behavior:
 - `src/lib/nav-config.ts` includes `/alt-pegs` in the primary nav block immediately after `/yield`, labeled `Non-USD Stables`.
 - The command palette picks the route up automatically through shared nav config.
 - `scripts/generate-llms-txt.ts` includes `/alt-pegs/` in the generated `public/llms.txt`.
-- `StaticAltPegLinkHub` is part of the static route output, so `out/alt-pegs/index.html` contains crawlable links into representative non-USD peg cohorts even though the visible analytics surface is client-rendered.
-- The static link hub's desktop treatment is a single `FiatWorldAtlas` card: a celestial band (Gold sun, Silver moon, CPI/Index orbital) above a pre-rendered static SVG world map whose countries are colored per `PEG_COUNTRY_MAP`. Commodity, CPI-linked, and other non-fiat reference cohorts stay crawlable through the celestial band on desktop and through the stacked `MobileRegionList` on narrower viewports.
+- `StaticAltPegLinkHub` is part of the static route output before the client analytics, so `out/alt-pegs/index.html` contains crawlable links into representative non-USD peg cohorts and exposes the peg diversity map as the route's first visible module.
+- The static link hub's treatment is a single dark `FiatWorldAtlas` hero card: Gold sun, Silver moon, and CPI/Index orbital references float on the desktop map, while a pre-rendered static SVG world map colors countries per `PEG_COUNTRY_MAP`. Commodity, CPI-linked, and other non-fiat reference cohorts stay crawlable through the desktop deadspot markers plus `Beyond Geography` link rail, and through the celestial band on narrower viewports; fiat cohorts use the world map plus region chips on desktop and the stacked `MobileRegionList` on narrower viewports.
 
 ---
 

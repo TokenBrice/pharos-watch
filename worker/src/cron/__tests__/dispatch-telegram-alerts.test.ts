@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { mockD1 } from "../../api/__tests__/helpers/mock-d1";
 import { getAlertSafetySourceGeneration } from "../../lib/alert-safety-source-cache";
 
@@ -61,6 +61,9 @@ function makeSafetySnapshotCache(
 }
 
 beforeEach(() => {
+  vi.useFakeTimers();
+  vi.setSystemTime(new Date("2026-04-23T12:00:00Z"));
+
   mockGetCache.mockReset();
   mockSetCache.mockReset();
   mockShouldAttemptFetch.mockReset();
@@ -93,6 +96,10 @@ beforeEach(() => {
       return results;
     },
   );
+});
+
+afterEach(() => {
+  vi.useRealTimers();
 });
 
 describe("dispatchTelegramAlerts", () => {

@@ -11,10 +11,7 @@ interface MapEmblemClustersProps {
  * map. The wrapper is pointer-events:none so country hover events still reach
  * the SVG paths underneath.
  */
-export function MapEmblemClusters({
-  clusters,
-  maxVisible = 3,
-}: MapEmblemClustersProps) {
+export function MapEmblemClusters({ clusters, maxVisible = 3 }: MapEmblemClustersProps) {
   if (clusters.length === 0) return null;
 
   return (
@@ -30,7 +27,7 @@ export function MapEmblemClusters({
           <li
             key={cluster.peg}
             data-peg={cluster.peg}
-            className="absolute flex -translate-x-1/2 -translate-y-1/2 items-center gap-1 rounded-full border border-border/60 bg-background/80 px-1.5 py-1 shadow-[0_4px_12px_oklch(0_0_0_/0.4)]"
+            className="absolute flex -translate-x-1/2 -translate-y-1/2 items-center gap-1 rounded-full border border-white/15 bg-slate-950/78 px-1.5 py-1 shadow-[0_4px_12px_oklch(0_0_0_/0.4)]"
             style={{
               left: `${cluster.anchor.x}%`,
               top: `${cluster.anchor.y}%`,
@@ -42,8 +39,8 @@ export function MapEmblemClusters({
                   key={emblem.id}
                   className={
                     index === 0
-                      ? "inline-flex h-[18px] w-[18px] items-center justify-center overflow-hidden rounded-full border border-border/60 bg-background"
-                      : "-ml-2 inline-flex h-[18px] w-[18px] items-center justify-center overflow-hidden rounded-full border border-border/60 bg-background"
+                      ? "inline-flex h-[18px] w-[18px] items-center justify-center overflow-hidden rounded-full border border-white/20 bg-slate-100"
+                      : "-ml-2 inline-flex h-[18px] w-[18px] items-center justify-center overflow-hidden rounded-full border border-white/20 bg-slate-100"
                   }
                   title={`${emblem.name} (${emblem.symbol})`}
                 >
@@ -60,7 +57,7 @@ export function MapEmblemClusters({
             </span>
             {overflow > 0 ? (
               <span
-                className="inline-flex h-[18px] items-center rounded-full px-1.5 font-mono text-[10px] font-medium text-foreground"
+                className="inline-flex h-[18px] items-center rounded-full px-1.5 font-mono text-[10px] font-medium text-white"
                 style={{ backgroundColor: `${cluster.colorHex}1f` }}
                 data-testid={`overflow-${cluster.peg}`}
               >

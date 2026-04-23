@@ -63,7 +63,7 @@ export function HomepageAltPegsTeaser({
             </div>
             <div className="grid gap-3 sm:grid-cols-2">
               <div className="rounded-xl border border-border/60 bg-muted/15 px-3 py-3">
-                <p className="pharos-kicker">Fiat Non-USD</p>
+                <p className="pharos-kicker">Non-commodity Non-USD</p>
                 <p className="mt-1 font-mono text-sm font-semibold text-foreground">
                   {formatCurrency(snapshot.fiatNonUsdMarketCap, 1)}
                 </p>
