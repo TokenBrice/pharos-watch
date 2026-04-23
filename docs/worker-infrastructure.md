@@ -347,6 +347,7 @@ crons = [
   "6 */2 * * *",
   "13,43 * * * *",
   "10,40 * * * *",
+  "16,46 * * * *",
   "26,56 * * * *",
   "11 */4 * * *",
   "20 * * * *",
@@ -376,7 +377,7 @@ crons = [
 - `capabilities.stablecoinsCache`
 - `capabilities.depegPipeline`
 
-`snapshot-supply` retry requires the stablecoins-cache capability. Both `snapshot-supply` and `snapshot-chain-supply` enforce a 20-hour cooldown via a `cache` table key (`snapshot-supply:last-write` / `snapshot-chain-supply:last-write`) so the quarter-hourly slot produces at most one UTC-day-keyed snapshot write per day. `publish-report-card-cache` also requires the stablecoins-cache capability and refreshes the shared Safety Score cache used by Chain Health without relying on the yield cron. `stability-index` and `compute-dews` run on the decoupled half-hourly DB-only trigger (Trigger 8). `sync-dex-liquidity` still refreshes every 30 minutes, while `sync-yield-data` now publishes on its own hourly post-DEX trigger.
+`snapshot-supply` retry requires the stablecoins-cache capability. Both `snapshot-supply` and `snapshot-chain-supply` enforce a 20-hour cooldown via a `cache` table key (`snapshot-supply:last-write` / `snapshot-chain-supply:last-write`) so the quarter-hourly slot produces at most one UTC-day-keyed snapshot write per day. `publish-report-card-cache` also requires the stablecoins-cache capability and refreshes the shared Safety Score cache used by Chain Health without relying on the yield cron. `stability-index` and `compute-dews` run on the decoupled half-hourly DB-only trigger (Trigger 9). `sync-dex-liquidity` still refreshes every 30 minutes on its own lane, while `sync-stablecoin-charts` now uses a separate half-hourly charts trigger with the same 1-hour write cooldown, and `sync-yield-data` still publishes on its own hourly post-DEX trigger.
 
 **Inline staleness alert:** After sync-stablecoins completes, if the `stablecoins` cache is older than 1800 seconds (30 min), `sendAlert()` fires a webhook notification. This is a health check — not a cron job itself.
 
@@ -420,18 +421,25 @@ Dedicated 2-hourly trigger for DEX pool discovery. Uses strictly sequential fetc
 
 This offset schedule exists so long-tail mint/burn backfill pressure cannot starve the critical lane (which runs at `4,34`, staggered 9 minutes earlier). It uses a separate `mint_burn_run_state.job` key (`sync-mint-burn-extended`) and warning-only coverage semantics. Moved from 20-minute to 30-minute cadence in the same change that bumped the critical lane.
 
-### Trigger 7: `10,40 * * * *` (every 30 minutes, at :10/:40)
+### Trigger 7: `10,40 * * * *` (DEX liquidity — dedicated, every 30 min)
 
-| Job                      | Function                          | File                                            | Documentation                                  |
-| ------------------------ | --------------------------------- | ----------------------------------------------- | ---------------------------------------------- |
-| `sync-stablecoin-charts` | `syncStablecoinCharts()`          | `worker/src/cron/sync-stablecoin-charts.ts`     | This doc (below)                               |
-| `sync-dex-liquidity`     | `syncDexLiquidity()`              | `worker/src/cron/dex-liquidity/orchestrator.ts` | [DEX Liquidity Score](./dex-liquidity.md)      |
+| Job                  | Function             | File                                            | Documentation                             |
+| -------------------- | -------------------- | ----------------------------------------------- | ----------------------------------------- |
+| `sync-dex-liquidity` | `syncDexLiquidity()` | `worker/src/cron/dex-liquidity/orchestrator.ts` | [DEX Liquidity Score](./dex-liquidity.md) |
 
-**Execution model:** The slot runs in sequential order for connection control: charts → dex-liquidity. Charts is a single lightweight DL fetch (~2s) that completes quickly and frees the pool. `sync-stablecoin-charts` enforces a 1-hour cooldown via `stablecoin-charts:last-write` — on the alternate 30-min run, it returns immediately with `cooldown_active`. The slot shares the Workers 6-connection limit and the configured CPU budget, so fetch-heavy or CPU-heavy additions must account for total in-slot pressure. `sync-dex-liquidity` still stages its protocol-native DEX fetchers only after Curve and subgraph enrichment have consumed their response bodies, and the newer Meteora / PancakeSwap / Slipstream lanes follow the same sequencing rule rather than overlapping the earlier fetch-heavy phase. UniV3 subgraph queries continue to run in parallel across chains for reduced wall-clock time. DEWS and PSI were moved to Trigger 8 so a platform-level DEX-liquidity CPU kill cannot starve the DB-only publication jobs.
+**Execution model:** This slot is dedicated to `sync-dex-liquidity` so the heavy scoring path has a full scheduled invocation budget to itself. `sync-dex-liquidity` still stages its protocol-native DEX fetchers only after Curve and subgraph enrichment have consumed their response bodies, and the newer Meteora / PancakeSwap / Slipstream lanes follow the same sequencing rule rather than overlapping the earlier fetch-heavy phase. UniV3 subgraph queries continue to run in parallel across chains for reduced wall-clock time. DEWS and PSI were moved to Trigger 9 so a platform-level DEX-liquidity CPU kill cannot starve the DB-only publication jobs.
 
 `sync-dex-liquidity` metadata now tracks both row coverage and value coverage. In addition to `currentCoverage` / `previousCoverage`, the cron records `currentGlobalTvl`, `previousGlobalTvl`, top-10 covered TVL, row/value guard flags, current/previous coverage-class distribution, and persistence diagnostics (`placeholderRowsWritten`, orphan-row cleanup status, historical snapshot write status). `/status` surfaces the coverage slice through the Liquidity Health card, while the raw cron metadata keeps the persistence diagnostics available for operator debugging.
 
-### Trigger 8: `26,56 * * * *` (DEWS / PSI — DB-only, every 30 min)
+### Trigger 8: `16,46 * * * *` (stablecoin charts — dedicated, every 30 min)
+
+| Job                      | Function                 | File                                        | Documentation    |
+| ------------------------ | ------------------------ | ------------------------------------------- | ---------------- |
+| `sync-stablecoin-charts` | `syncStablecoinCharts()` | `worker/src/cron/sync-stablecoin-charts.ts` | This doc (below) |
+
+**Execution model:** This slot is dedicated to `sync-stablecoin-charts`. Successful writes are still capped at once per hour via `stablecoin-charts:last-write`, so alternate runs return `cooldown_active` immediately. The dedicated lane keeps the lightweight chart refresh from consuming the same invocation budget as DEX scoring while preserving the existing publish cadence.
+
+### Trigger 9: `26,56 * * * *` (DEWS / PSI — DB-only, every 30 min)
 
 | Job               | Function                          | File                                 | Documentation                                  |
 | ----------------- | --------------------------------- | ------------------------------------ | ---------------------------------------------- |
@@ -440,7 +448,7 @@ This offset schedule exists so long-tail mint/burn backfill pressure cannot star
 
 **Execution model:** The slot runs `compute-dews` then `stability-index` as DB-only jobs. It is offset sixteen minutes after the `10,40` DEX-liquidity slot so normal DEX runs can publish fresh liquidity inputs first, but it remains a separate scheduled invocation. If DEX-liquidity overruns CPU budget or is killed by the platform, this slot still runs against the last available tables and records any stale DEX-liquidity input as degraded source coverage in DEWS metadata.
 
-### Trigger 9: `11 */4 * * *` (every 4h at :11 — reserve + redemption lane)
+### Trigger 10: `11 */4 * * *` (every 4h at :11 — reserve + redemption lane)
 
 | Job                         | Function                    | File                                           | Documentation                                     |
 | --------------------------- | --------------------------- | ---------------------------------------------- | ------------------------------------------------- |
@@ -450,7 +458,7 @@ This offset schedule exists so long-tail mint/burn backfill pressure cannot star
 
 **Connection budget:** dedicated 4-hourly trigger for reserve and redemption tuning. Jobs run sequentially so live reserve adapters finish before redemption backstop sync consumes reserve metadata. Kinesis supply sync adds 2 sequential HTTP fetches (1 connection peak). Moved from hourly to 4-hourly because most reserve attestations (Chainlink PoR, Ethena, Tether transparency, etc.) update daily or weekly — hourly polling was wasted RPC + HTTP traffic. The slot-level "Live reserve sync stale" alert threshold in `worker/src/handlers/scheduled/hourly-live-reserves.ts` is 12h (≥ 3 missed runs); `LIVE_RESERVE_FRESHNESS_SEC = 48h` at the API layer keeps consumer-facing "fresh" classification unaffected.
 
-### Trigger 10: `20 * * * *` (hourly at :20 — core yield publication)
+### Trigger 11: `20 * * * *` (hourly at :20 — core yield publication)
 
 | Job               | Function          | File                                                                  | Documentation                                 |
 | ----------------- | ----------------- | --------------------------------------------------------------------- | --------------------------------------------- |
@@ -458,7 +466,7 @@ This offset schedule exists so long-tail mint/burn backfill pressure cannot star
 
 **Connection budget:** dedicated hourly trigger for the core publisher. The job consumes cached DEX pools plus the cached supplemental yield snapshot, keeps deterministic on-chain reads to a single in-flight lane, and is allowed a larger app-level timeout because it no longer shares the half-hourly slot.
 
-### Trigger 11: `25 */4 * * *` (every 4 hours at :25 — yield supplemental lane)
+### Trigger 12: `25 */4 * * *` (every 4 hours at :25 — yield supplemental lane)
 
 | Job                       | Function                  | File                                         | Documentation                                 |
 | ------------------------- | ------------------------- | -------------------------------------------- | --------------------------------------------- |
@@ -466,7 +474,7 @@ This offset schedule exists so long-tail mint/burn backfill pressure cannot star
 
 **Connection budget:** dedicated multi-hour trigger for the heavier optional yield families (Morpho, Pendle, Yearn/Kong, Beefy, Compound V3, Aave V3). It writes a cache snapshot that the hourly publisher consumes, so protocol-API stalls reduce optional coverage instead of blocking `yield-rankings`.
 
-### Trigger 12: `2,7,12,17,22,27,32,37,42,47,52,57 * * * *` (Telegram dispatch — dedicated, every 5 min)
+### Trigger 13: `2,7,12,17,22,27,32,37,42,47,52,57 * * * *` (Telegram dispatch — dedicated, every 5 min)
 
 | Job                        | Function                   | File                                          | Documentation                              |
 | -------------------------- | -------------------------- | --------------------------------------------- | ------------------------------------------ |
@@ -476,7 +484,7 @@ Dedicated trigger for Telegram work. Isolated from the quarter-hourly pipeline s
 
 Safety-grade fan-out on this lane is now gated by the generation-aware live source cache `cache["alert:safety-source-cache"]`, written only by `publish-report-card-cache`. If that source is missing, corrupt, stale, or from the wrong generation, only safety alerts are suppressed; DEWS/depeg/launch alerts continue.
 
-### Trigger 13: `*/5 * * * *` (manual digest trigger poll)
+### Trigger 14: `*/5 * * * *` (manual digest trigger poll)
 
 | Job surface | Function | File | Documentation |
 | ----------- | -------- | ---- | ------------- |
@@ -484,7 +492,7 @@ Safety-grade fan-out on this lane is now gated by the generation-aware live sour
 
 This slot polls the `digest:force-run-request` cache key written by `POST /api/trigger-digest`. When a request is pending, it runs `generateDailyDigest(..., force=true, twitterCreds=null, ...)` under the existing `daily-digest` lease, clears or preserves the flag according to the lease outcome, and writes `digest:last-trigger-result` for the ops UI. It is a runner slot, not a separate status-tracked cron job.
 
-### Trigger 14: `0 8 * * *` (daily at 08:00 UTC — snapshots & lightweight fetchers)
+### Trigger 15: `0 8 * * *` (daily at 08:00 UTC — snapshots & lightweight fetchers)
 
 | Job                             | Function                       | File                                               | Documentation                                    |
 | ------------------------------- | ------------------------------ | -------------------------------------------------- | ------------------------------------------------ |
@@ -496,7 +504,7 @@ This slot polls the `digest:force-run-request` cache key written by `POST /api/t
 
 **Connection budget:** 3 snapshot jobs are D1-only (0 external connections). `fetch-tbill-rate` (ECB/FRED/Treasury/SIX benchmark fetches, still serialized inside one job) and `sync-usds-status` (Etherscan) are chained sequentially on the external-fetch branch to keep this trigger conservative on connection use. A failed `fetch-tbill-rate` run no longer suppresses `sync-usds-status`; peak external usage is 1 connection.
 
-### Trigger 15: `5 8 * * *` (daily at 08:05 UTC — heavy external fetchers)
+### Trigger 16: `5 8 * * *` (daily at 08:05 UTC — heavy external fetchers)
 
 | Job              | Function                | File                                | Documentation                           |
 | ---------------- | ----------------------- | ----------------------------------- | --------------------------------------- |
@@ -507,7 +515,7 @@ This slot polls the `digest:force-run-request` cache key written by `POST /api/t
 
 **Connection budget:** `sync-bluechip` (3 parallel batch connections), `daily-digest` / `weekly-recap` (1 long-lived Anthropic API call at a time because the recap is chained after the daily digest), and `discovery-scan` (1 CoinGecko call) use ≤5 concurrent external connections. The 5-minute offset from Trigger 14 ensures PSI snapshot data is available for the daily digest without an explicit chain dependency. `weekly-recap` and `discovery-scan` both run Monday-only and return immediately on other days. Reliability is now failure-contained at the job level for this slot: a thrown `sync-bluechip`, `daily-digest`, `weekly-recap`, or `discovery-scan` run is recorded independently and no longer aborts the rest of the 08:05 lane before the remaining jobs can settle.
 
-### Trigger 16: `0 6 1 * *` (monthly at 06:00 UTC on the 1st)
+### Trigger 17: `0 6 1 * *` (monthly at 06:00 UTC on the 1st)
 
 | Job                    | Function                  | File                                                   | Documentation                                 |
 | ---------------------- | ------------------------- | ------------------------------------------------------ | --------------------------------------------- |
@@ -515,7 +523,7 @@ This slot polls the `digest:force-run-request` cache key written by `POST /api/t
 
 Runs once a month on the 1st at 06:00 UTC. Scans unmatched high-TVL DeFiLlama pools and flags missing protocols as high-confidence or review-needed expansion candidates.
 
-### Trigger 17: `0 3 * * *` (daily at 03:00 UTC — TTL pruning)
+### Trigger 18: `0 3 * * *` (daily at 03:00 UTC — TTL pruning)
 
 | Job                       | Function                    | File                                             | Documentation            |
 | ------------------------- | --------------------------- | ------------------------------------------------ | ------------------------ |
@@ -538,16 +546,17 @@ Workers enforce a **6 concurrent fetch connections** limit per cron trigger invo
 | 4       | `4,34 * * * *`     |                                        1 (Alchemy JSON-RPC)                                        |    5     |
 | 5       | `6 */2 * * *`      |                                  1 (sequential CG/GT/DexScreener)                                  |    5     |
 | 6       | `13,43 * * * *`    |                                1 (Alchemy JSON-RPC, extended lane)                                 |    5     |
-| 7       | `10,40 * * * *`    |                                  4 (charts -> DEX liquidity are chained)                           |    2     |
-| 8       | `26,56 * * * *`    |                                  0 (DEWS -> PSI; both DB-only)                                     |    6     |
-| 9       | `11 */4 * * *`     |                2 (reserve adapters + Kinesis are sequential; redemption is DB-only)                |    4     |
-| 10      | `20 * * * *`       |                                      1 (core yield publisher)                                      |    5     |
-| 11      | `25 */4 * * *`     |                                  5 (supplemental yield families)                                   |    1     |
-| 12      | `2,7,...,57 * * * *` |                        5 (Telegram alert dispatcher batches sends in groups of 5)                  |    1     |
-| 13      | `0 8 * * *`        |                 1 (benchmark feeds -> USDS Etherscan reads are chained serially)                   |    5     |
-| 14      | `5 8 * * *`        |                     5 (Bluechip batch of 3 + Anthropic + CoinGecko; digest/recap chained)          |    1     |
-| 15      | `0 6 1 * *`        |                                      1 (DeFiLlama yield scan)                                      |    5     |
-| 16      | `0 3 * * *`        |                     0 (prune-status-probe-runs + prune-cron-history; both DB-only)                 |    6     |
+| 7       | `10,40 * * * *`    |                                        4 (DEX liquidity)                                           |    2     |
+| 8       | `16,46 * * * *`    |                                      1 (stablecoin charts)                                         |    5     |
+| 9       | `26,56 * * * *`    |                                  0 (DEWS -> PSI; both DB-only)                                     |    6     |
+| 10      | `11 */4 * * *`     |                2 (reserve adapters + Kinesis are sequential; redemption is DB-only)                |    4     |
+| 11      | `20 * * * *`       |                                      1 (core yield publisher)                                      |    5     |
+| 12      | `25 */4 * * *`     |                                  5 (supplemental yield families)                                   |    1     |
+| 13      | `2,7,...,57 * * * *` |                        5 (Telegram alert dispatcher batches sends in groups of 5)                  |    1     |
+| 14      | `0 8 * * *`        |                 1 (benchmark feeds -> USDS Etherscan reads are chained serially)                   |    5     |
+| 15      | `5 8 * * *`        |                     5 (Bluechip batch of 3 + Anthropic + CoinGecko; digest/recap chained)          |    1     |
+| 16      | `0 6 1 * *`        |                                      1 (DeFiLlama yield scan)                                      |    5     |
+| 17      | `0 3 * * *`        |                     0 (prune-status-probe-runs + prune-cron-history; both DB-only)                 |    6     |
 
 The `*/5 * * * *` digest-trigger poll slot exists in the scheduled runner registry, but it is not represented in `CRON_JOB_DEFINITIONS` and is not part of the enforced `check:cron-connections` budget table today. It performs a lightweight D1 poll and, when a manual trigger is pending, executes `generateDailyDigest(...)` directly under the existing `daily-digest` lease.
 
@@ -555,7 +564,7 @@ The `*/5 * * * *` digest-trigger poll slot exists in the scheduled runner regist
 
 - Jobs requiring <=1 external connection may share any slot with headroom >=2.
 - Jobs requiring >2 concurrent connections should get a dedicated trigger slot.
-- Never add a fetching job to a slot with headroom <=1 (budget rows 11, 12, and 14 are effectively full).
+- Never add a fetching job to a slot with headroom <=1 (budget rows 12, 13, and 15 are effectively full).
 
 ### Cron Error Handling Policy
 
@@ -898,7 +907,7 @@ The three crons below were previously only listed by filename in [Architecture](
 ### sync-stablecoin-charts
 
 **File:** `worker/src/cron/sync-stablecoin-charts.ts`
-**Schedule:** `10,40 * * * *` (shared half-hourly trigger; successful writes are capped at once per hour)
+**Schedule:** `16,46 * * * *` (dedicated half-hourly trigger; successful writes are capped at once per hour)
 **Data source:** DefiLlama aggregate chart history + structural supplemental tracked-asset overlays from D1 `supply_history`
 
 **Algorithm:**

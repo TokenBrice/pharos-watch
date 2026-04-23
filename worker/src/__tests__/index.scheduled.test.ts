@@ -422,7 +422,7 @@ describe("worker.scheduled", () => {
     expect(cronMocks.publishReportCardCache).toHaveBeenCalledTimes(1);
   });
 
-  it("runs charts → dex on the 30-min cron", async () => {
+  it("runs dex only on the 10,40 DEX trigger", async () => {
     const { ctx, waits } = makeCtx();
     const env = {
       DB: {} as D1Database,
@@ -436,14 +436,31 @@ describe("worker.scheduled", () => {
     );
     await Promise.all(waits);
 
-    expect(cronMocks.syncStablecoinCharts).toHaveBeenCalledTimes(1);
+    expect(cronMocks.syncStablecoinCharts).not.toHaveBeenCalled();
     expect(cronMocks.syncDexLiquidity).toHaveBeenCalledTimes(1);
     expect(cronMocks.computeAndStoreDEWS).not.toHaveBeenCalled();
     expect(cronMocks.computeAndStoreStabilityIndex).not.toHaveBeenCalled();
     expect(cronMocks.syncYieldData).not.toHaveBeenCalled();
-    expect(cronMocks.syncDexLiquidity.mock.invocationCallOrder[0]).toBeGreaterThan(
-      cronMocks.syncStablecoinCharts.mock.invocationCallOrder[0],
+  });
+
+  it("runs charts only on the dedicated 16,46 charts trigger", async () => {
+    const { ctx, waits } = makeCtx();
+    const env = {
+      DB: {} as D1Database,
+      CORS_ORIGIN: "https://pharos.watch",
+    } as const;
+
+    await worker.scheduled(
+      { cron: "16,46 * * * *" } as ScheduledEvent,
+      env as never,
+      ctx,
     );
+    await Promise.all(waits);
+
+    expect(cronMocks.syncStablecoinCharts).toHaveBeenCalledTimes(1);
+    expect(cronMocks.syncDexLiquidity).not.toHaveBeenCalled();
+    expect(cronMocks.computeAndStoreDEWS).not.toHaveBeenCalled();
+    expect(cronMocks.computeAndStoreStabilityIndex).not.toHaveBeenCalled();
   });
 
   it("runs dews → psi on the decoupled DB-only trigger", async () => {

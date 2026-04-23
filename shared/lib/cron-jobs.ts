@@ -17,6 +17,7 @@ export const CRON_SCHEDULES = {
   twoHourlyDexDiscovery: "6 */2 * * *",
   halfHourlyMintBurnExtended: "13,43 * * * *",
   halfHourlyOffset: "10,40 * * * *",
+  halfHourlyChartsOffset: "16,46 * * * *",
   dewsPsiOffset: "26,56 * * * *",
   fourHourlyReserveSync: "11 */4 * * *",
   hourlyYieldSync: "20 * * * *",
@@ -42,6 +43,7 @@ const CRON_SCHEDULE_BUCKETS = {
   twoHourlyDexDiscovery: { intervalSec: 2 * 3600, offsetSec: 6 * 60 },
   halfHourlyMintBurnExtended: { intervalSec: 1800, offsetSec: 13 * 60 },
   halfHourlyOffset: { intervalSec: 1800, offsetSec: 10 * 60 },
+  halfHourlyChartsOffset: { intervalSec: 1800, offsetSec: 16 * 60 },
   dewsPsiOffset: { intervalSec: 1800, offsetSec: 26 * 60 },
   fourHourlyReserveSync: { intervalSec: 4 * 3600, offsetSec: 11 * 60 },
   hourlyYieldSync: { intervalSec: 3600, offsetSec: 20 * 60 },
@@ -108,7 +110,7 @@ export const CRON_GROUPS: readonly CronGroupDefinition[] = [
     key: "half-hourly",
     title: "30-minute slot",
     badge: "~30 min",
-    description: "Shared chart/DEX scoring and decoupled DEWS/PSI lanes plus isolated mint/burn critical and extended triggers.",
+    description: "Dedicated DEX and chart lanes, decoupled DEWS/PSI publication, plus isolated mint/burn critical and extended triggers.",
   },
   {
     key: "hourly",
@@ -152,10 +154,9 @@ const CRON_JOB_DEFINITIONS_BASE: readonly CronJobDefinition[] = [
     label: "Stablecoin charts",
     group: "half-hourly",
     intervalSec: 3600,
-    scheduleKey: "halfHourlyOffset",
-    triggerMode: "shared",
+    scheduleKey: "halfHourlyChartsOffset",
+    triggerMode: "isolated",
     maxConnections: 1, // Single DL stablecoincharts/all fetch
-    connectionGroup: "half-hourly-chain",
   },
   {
     job: "sync-fx-rates",
@@ -247,9 +248,8 @@ const CRON_JOB_DEFINITIONS_BASE: readonly CronJobDefinition[] = [
     group: "half-hourly",
     intervalSec: 1800,
     scheduleKey: "halfHourlyOffset",
-    triggerMode: "shared",
+    triggerMode: "isolated",
     maxConnections: 4, // DL yields + protocols parallel (2), then Curve chains parallel (4 peak), then GT crawl (1)
-    connectionGroup: "half-hourly-chain",
   },
   {
     job: "sync-yield-data",

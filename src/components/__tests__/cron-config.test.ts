@@ -14,16 +14,16 @@ describe("status cron config", () => {
       group: "half-hourly",
       label: "DEX liquidity scoring",
       schedule: "10,40 * * * *",
-      triggerMode: "shared",
+      triggerMode: "isolated",
     });
   });
 
-  it("maps stablecoin charts to the shared half-hourly offset slot", () => {
+  it("maps stablecoin charts to the dedicated half-hourly charts slot", () => {
     expect(getStatusCronDisplay("sync-stablecoin-charts")).toEqual({
       group: "half-hourly",
       label: "Stablecoin charts",
-      schedule: "10,40 * * * *",
-      triggerMode: "shared",
+      schedule: "16,46 * * * *",
+      triggerMode: "isolated",
     });
   });
 
@@ -86,7 +86,7 @@ describe("status cron config", () => {
 
   it("keeps cron group copy aligned with mixed trigger cadences", () => {
     expect(CRON_GROUPS.find((group) => group.key === "half-hourly")?.description).toContain(
-      "DEX scoring and decoupled DEWS/PSI lanes plus isolated mint/burn",
+      "Dedicated DEX and chart lanes, decoupled DEWS/PSI publication",
     );
     expect(CRON_GROUPS.find((group) => group.key === "hourly")?.description).toContain(
       "core yield publication",

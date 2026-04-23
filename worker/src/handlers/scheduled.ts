@@ -10,6 +10,7 @@ import { runHalfHourlyMintBurnCriticalSlot } from "./scheduled/twenty-minute-min
 import { runTwoHourlyDexDiscoverySlot } from "./scheduled/thirty-minute-dex-discovery";
 import { runHalfHourlyMintBurnExtendedSlot } from "./scheduled/twenty-minute-mint-burn-extended";
 import { runHalfHourlySlot } from "./scheduled/half-hourly";
+import { runHalfHourlyChartsSlot } from "./scheduled/half-hourly-charts";
 import { runDewsPsiSlot } from "./scheduled/dews-psi";
 import { runFourHourlyReserveSyncSlot } from "./scheduled/hourly-live-reserves";
 import { runHourlyYieldSlot } from "./scheduled/hourly-yield";
@@ -31,6 +32,7 @@ const SLOT_RUNNER_BY_KEY = {
   twoHourlyDexDiscovery: runTwoHourlyDexDiscoverySlot,
   halfHourlyMintBurnExtended: runHalfHourlyMintBurnExtendedSlot,
   halfHourlyOffset: runHalfHourlySlot,
+  halfHourlyChartsOffset: runHalfHourlyChartsSlot,
   dewsPsiOffset: runDewsPsiSlot,
   fourHourlyReserveSync: runFourHourlyReserveSyncSlot,
   hourlyYieldSync: runHourlyYieldSlot,
