@@ -56,4 +56,35 @@ describe("buildTotalMcapChartRows", () => {
       { ts: 200000, usdt: 20, usdc: 0, sky: 0, others: 55, total: 75 },
     ]);
   });
+
+  it("keeps pre-2021 rows aligned with long-range cohort history instead of zeroing the majors", () => {
+    const rows = buildTotalMcapChartRows(
+      [
+        { date: 1_580_000_000, totalCirculatingUSD: { peggedUSD: 10_000 } },
+        { date: 1_620_000_000, totalCirculatingUSD: { peggedUSD: 20_000 } },
+      ],
+      {
+        usdtHistory: [
+          { date: 1_570_000_000, circulatingUsd: 4_000, price: 1 },
+          { date: 1_610_000_000, circulatingUsd: 8_000, price: 1 },
+        ],
+        usdcHistory: [
+          { date: 1_570_000_000, circulatingUsd: 2_000, price: 1 },
+          { date: 1_610_000_000, circulatingUsd: 4_000, price: 1 },
+        ],
+        usdsHistory: [
+          { date: 1_570_000_000, circulatingUsd: 500, price: 1 },
+        ],
+        daiHistory: [
+          { date: 1_570_000_000, circulatingUsd: 1_000, price: 1 },
+          { date: 1_610_000_000, circulatingUsd: 2_000, price: 1 },
+        ],
+      },
+    );
+
+    expect(rows).toEqual([
+      { ts: 1_580_000_000_000, usdt: 4_000, usdc: 2_000, sky: 1_500, others: 2_500, total: 10_000 },
+      { ts: 1_620_000_000_000, usdt: 8_000, usdc: 4_000, sky: 2_500, others: 5_500, total: 20_000 },
+    ]);
+  });
 });
