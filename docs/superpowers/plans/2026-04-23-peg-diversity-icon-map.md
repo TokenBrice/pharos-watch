@@ -32,19 +32,19 @@ Components:
 - `src/app/alt-pegs/fiat-world-atlas/moon-cohort.tsx`
 - `src/app/alt-pegs/fiat-world-atlas/constellation-cohort.tsx`
 - `src/app/alt-pegs/fiat-world-atlas/sky-layer.tsx`
-- `src/app/alt-pegs/fiat-world-atlas/earth-layer.tsx`
+- `src/app/alt-pegs/fiat-world-atlas/peg-diversity-hero-live.tsx`
 - `src/app/alt-pegs/fiat-world-atlas/fiat-emblems.tsx`
 
 ### Rewrite
 
-- `src/app/alt-pegs/fiat-world-atlas/world-atlas.tsx` — compose `<HoverProvider><SkyLayer/><EarthLayer/></HoverProvider>` for desktop; mobile unchanged
+- `src/app/alt-pegs/fiat-world-atlas/world-atlas.tsx` — render the desktop live hero; mobile unchanged
 - `src/app/alt-pegs/fiat-world-atlas/world-map.tsx` — strip the `items` prop + country color fills; render SVG only with muted slate theme
 
 ### Delete (+ their tests)
 
-- `src/app/alt-pegs/fiat-world-atlas/map-emblem-clusters.tsx`
-- `src/app/alt-pegs/fiat-world-atlas/map-deadspot-references.tsx`
-- `src/app/alt-pegs/fiat-world-atlas/world-map-interactive.tsx`
+- Remove the obsolete map-emblem-clusters component and test.
+- Remove the obsolete map-deadspot-references component and test.
+- Remove the obsolete world-map-interactive component and test.
 
 ---
 
@@ -1310,7 +1310,7 @@ git commit -m "feat(alt-pegs): SkyLayer composition"
 ## Task 12: EarthLayer + FiatEmblems
 
 **Files:**
-- Create: `src/app/alt-pegs/fiat-world-atlas/earth-layer.tsx`
+- Create: `src/app/alt-pegs/fiat-world-atlas/peg-diversity-hero-live.tsx`
 - Create: `src/app/alt-pegs/fiat-world-atlas/fiat-emblems.tsx`
 - Modify: `src/app/alt-pegs/fiat-world-atlas/world-map.tsx` — remove `items` prop and country colors; stay SVG-only with muted slate theme
 
@@ -1404,7 +1404,7 @@ git commit -m "feat(alt-pegs): EarthLayer with aspect-locked map frame + fiat em
 **Files:**
 - Rewrite: `src/app/alt-pegs/fiat-world-atlas/world-atlas.tsx`
 - Create: `src/app/alt-pegs/fiat-world-atlas/peg-hero.css` — all hero-specific styles (keyframes, classes, CSS vars)
-- Modify: `src/app/alt-pegs/alt-pegs-page.tsx` or wherever `FiatWorldAtlas` is rendered — verify props still match
+- Modify: `src/app/alt-pegs/client.tsx` or wherever `FiatWorldAtlas` is rendered — verify props still match
 
 - [ ] **Step 1: Create peg-hero.css**
 
@@ -1828,12 +1828,9 @@ git commit -m "feat(alt-pegs): rewire hero to night-sky icon map"
 ## Task 14: Remove obsolete components and their tests
 
 **Files:**
-- Delete: `src/app/alt-pegs/fiat-world-atlas/map-emblem-clusters.tsx`
-- Delete: `src/app/alt-pegs/fiat-world-atlas/map-deadspot-references.tsx`
-- Delete: `src/app/alt-pegs/fiat-world-atlas/world-map-interactive.tsx`
-- Delete: `src/app/alt-pegs/fiat-world-atlas/__tests__/map-emblem-clusters.test.tsx`
-- Delete: `src/app/alt-pegs/fiat-world-atlas/__tests__/map-deadspot-references.test.tsx`
-- Delete: `src/app/alt-pegs/fiat-world-atlas/__tests__/world-map-interactive.test.tsx`
+- Delete the obsolete map-emblem-clusters component and its test.
+- Delete the obsolete map-deadspot-references component and its test.
+- Delete the obsolete world-map-interactive component and its test.
 - Modify: `src/app/alt-pegs/fiat-world-atlas/__tests__/world-map.test.tsx` — the existing test passed `items` and asserted color maps; rewrite to the new signature
 
 - [ ] **Step 1: Rewrite world-map.test.tsx to match the simplified WorldMap**

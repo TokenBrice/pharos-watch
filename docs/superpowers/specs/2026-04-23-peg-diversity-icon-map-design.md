@@ -111,7 +111,7 @@ New:
 - `src/app/alt-pegs/fiat-world-atlas/sun-cohort.tsx` — gold sun + planets
 - `src/app/alt-pegs/fiat-world-atlas/moon-cohort.tsx` — silver moon
 - `src/app/alt-pegs/fiat-world-atlas/constellation-cohort.tsx` — index stars + traces
-- `src/app/alt-pegs/fiat-world-atlas/earth-layer.tsx` — map frame + fiat emblems container
+- `src/app/alt-pegs/fiat-world-atlas/peg-diversity-hero-live.tsx` — live map frame + sky/fiat composition
 - `src/app/alt-pegs/fiat-world-atlas/fiat-emblems.tsx` — renders all fiat coin emblems on the map
 - `src/app/alt-pegs/fiat-world-atlas/coin-emblem.tsx` — atomic emblem (link, image, hover/focus)
 - `src/app/alt-pegs/fiat-world-atlas/cohort-threads.tsx` — SVG overlay for hover threads
@@ -122,13 +122,13 @@ New:
 
 Rewritten:
 
-- `src/app/alt-pegs/fiat-world-atlas/world-atlas.tsx` — compose `SkyLayer` + `EarthLayer`, provide `HoverProvider`
+- `src/app/alt-pegs/fiat-world-atlas/world-atlas.tsx` — renders the desktop live hero and mobile fallback
 
 Deleted:
 
-- `src/app/alt-pegs/fiat-world-atlas/map-emblem-clusters.tsx`
-- `src/app/alt-pegs/fiat-world-atlas/map-deadspot-references.tsx`
-- `src/app/alt-pegs/fiat-world-atlas/world-map-interactive.tsx` (country-hover layer)
+- Obsolete map-emblem-clusters component
+- Obsolete map-deadspot-references component
+- Obsolete world-map-interactive country-hover layer
 
 ### Data flow
 
