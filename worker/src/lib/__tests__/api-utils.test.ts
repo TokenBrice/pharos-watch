@@ -104,6 +104,14 @@ describe("parseIntParam", () => {
     expect(response.status).toBe(400);
     expect(await response.json()).toEqual({ error: "Invalid offset: must be a number" });
   });
+
+  it("returns 400 response for non-finite integer input", async () => {
+    const result = parseIntParam("9".repeat(400), 100, 1, 1000, "limit");
+    expect(result).toBeInstanceOf(Response);
+    const response = result as Response;
+    expect(response.status).toBe(400);
+    expect(await response.json()).toEqual({ error: "Invalid limit: must be a number" });
+  });
 });
 
 describe("integer query helpers", () => {
@@ -120,10 +128,30 @@ describe("integer query helpers", () => {
   it("parses optional non-negative integer params with a fallback default", () => {
     expect(parseOptionalNonNegativeIntegerParam("0", 90)).toBe(0);
     expect(parseOptionalNonNegativeIntegerParam("-1", 90)).toBe(90);
+    expect(parseOptionalNonNegativeIntegerParam(null, 90)).toBe(90);
+  });
+
+  it("returns null for missing or blank optional positive integer params", () => {
+    expect(parseOptionalPositiveIntegerParam(null, "limit")).toBeNull();
+    expect(parseOptionalPositiveIntegerParam("   ", "limit")).toBeNull();
+  });
+
+  it("parses and caps optional positive integer params", () => {
+    expect(parseOptionalPositiveIntegerParam("25", "limit")).toBe(25);
+    expect(parseOptionalPositiveIntegerParam("500", "limit", { max: 200 })).toBe(200);
   });
 
   it("rejects malformed optional positive integer params", async () => {
     const result = parseOptionalPositiveIntegerParam("25abc", "limit");
+    expect(result).toBeInstanceOf(Response);
+    if (result instanceof Response) {
+      expect(result.status).toBe(400);
+      await expect(result.json()).resolves.toEqual({ error: "Invalid limit: must be a positive integer" });
+    }
+  });
+
+  it.each(["0", "9".repeat(400)])("rejects invalid optional positive integer param %s", async (value) => {
+    const result = parseOptionalPositiveIntegerParam(value, "limit");
     expect(result).toBeInstanceOf(Response);
     if (result instanceof Response) {
       expect(result.status).toBe(400);
@@ -155,6 +183,14 @@ describe("parseFloatParam", () => {
     const response = result as Response;
     expect(response.status).toBe(400);
     expect(await response.json()).toEqual({ error: "Invalid minAmount: must be between 0 and 100" });
+  });
+
+  it("returns 400 for non-finite float input", async () => {
+    const result = parseFloatParam(`${"9".repeat(400)}.5`, 0, 0, 100, "minAmount");
+    expect(result).toBeInstanceOf(Response);
+    const response = result as Response;
+    expect(response.status).toBe(400);
+    expect(await response.json()).toEqual({ error: "Invalid minAmount: must be a number" });
   });
 });
 
