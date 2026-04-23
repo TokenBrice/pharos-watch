@@ -49,7 +49,7 @@ function TopCohortStrip({ rows }: { rows: ReturnType<typeof buildAltPegSnapshot>
             #{index + 1} {row.label}
           </span>
           <span className="peg-hero__top-value">
-            {formatCompactUsd(row.marketCap)} · {formatPercent(row.sharePct, 1)} alt cap
+            {formatCompactUsd(row.marketCap)} · {formatPercent(row.sharePct, 1)} non-USD cap
           </span>
         </Link>
       ))}
@@ -72,7 +72,11 @@ export function PegDiversityHeroLive({ worldMap }: { worldMap: ReactNode }) {
       <div className="peg-hero">
         <TopCohortStrip rows={snapshot.topRows} />
         <FiatSizeKey />
-        {showStatusOverlay ? <div className="peg-hero__status-overlay">{statusCopy}</div> : null}
+        {showStatusOverlay ? (
+          <div className="peg-hero__status-overlay" role="status" aria-live="polite">
+            {statusCopy}
+          </div>
+        ) : null}
         <SkyLayer cohorts={hero.skyCohorts} />
         <div className="peg-hero__earth">
           <div className="peg-hero__horizon" aria-hidden="true" />

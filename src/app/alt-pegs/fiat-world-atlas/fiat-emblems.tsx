@@ -26,6 +26,7 @@ export function FiatEmblems({ clusters }: { clusters: readonly PegCluster[] }) {
             cohortCoinCount={cluster.coins.length}
             cohortMarketCap={cohortMarketCap}
             cohortSymbolPreview={cohortSymbolPreview}
+            cohortRank={cluster.rank}
             showTickerLabel={coin.id === leaderId || cluster.coins.length === 1}
           />
         ));

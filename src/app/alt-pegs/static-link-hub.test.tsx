@@ -25,6 +25,7 @@ describe("StaticAltPegLinkHub", () => {
     expect(html).toContain("Alt-Peg Atlas");
     expect(html).toContain("References beyond geography");
     expect(html).toContain("Peg Diversity Map");
+    expect(html).toContain("Cohorts listed by coin count");
   });
 
   it("keeps the desktop atlas gated behind the xl layout and mobile list at xl:hidden", () => {
@@ -48,7 +49,15 @@ describe("StaticAltPegLinkHub", () => {
     const { container } = render(withQueryClient(<StaticAltPegLinkHub />));
     const desktopAtlas = container.querySelector('[data-alt-peg-layout="desktop-atlas"]');
     expect(desktopAtlas?.textContent).toContain("Fiat size");
-    expect(desktopAtlas?.textContent).toContain("Loading live coin positions.");
+    const status = desktopAtlas?.querySelector('[role="status"]');
+    expect(status?.textContent).toContain("Loading live coin positions.");
+  });
+
+  it("renders focusable region jump targets", () => {
+    const { container } = render(withQueryClient(<StaticAltPegLinkHub />));
+    const europe = container.querySelector("#alt-peg-region-europe");
+    expect(europe?.getAttribute("tabindex")).toBe("-1");
+    expect(europe?.getAttribute("aria-labelledby")).toBe("alt-peg-region-europe-heading");
   });
 
   it("keeps the celestial band as a mobile-only fallback beneath the xl:hidden wrapper", () => {

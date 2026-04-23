@@ -1,6 +1,6 @@
 import type { CSSProperties } from "react";
 import Link from "next/link";
-import { ArrowDown, ArrowRight } from "lucide-react";
+import { ArrowRight, MapPin } from "lucide-react";
 import type { AltPegLinkHubItem, AltPegRegion } from "@/lib/alt-peg-market";
 
 const REGION_ACCENT: Record<Exclude<AltPegRegion, "Other">, string> = {
@@ -34,9 +34,11 @@ export function RegionSummaryPill({
   href: string;
 }) {
   const accentHex = REGION_ACCENT[region];
+  const linkLabel = `Jump to ${region} cohort list, ${formatCohortCount(cohortCount)}, ${formatCoinCount(coinCount)}`;
   return (
     <Link
       href={href}
+      aria-label={linkLabel}
       className="pharos-focus-ring inline-flex min-h-9 items-center gap-2 rounded-full border px-3 py-1.5 transition-[background-color,border-color] hover:bg-muted/20"
       style={{
         borderColor: withAlpha(accentHex, "24"),
@@ -50,7 +52,7 @@ export function RegionSummaryPill({
       <span className="font-mono text-[11px] tabular-nums text-muted-foreground dark:text-slate-300/86">
         {formatCohortCount(cohortCount)} · {formatCoinCount(coinCount)}
       </span>
-      <ArrowDown className="h-3 w-3 shrink-0 text-muted-foreground" aria-hidden="true" />
+      <MapPin className="h-3 w-3 shrink-0 text-muted-foreground" aria-hidden="true" />
     </Link>
   );
 }
@@ -84,13 +86,21 @@ export function FiatRegionSection({ region, items }: { region: AltPegRegion; ite
   const slug = region.toLowerCase().replace(/\s+/g, "-");
   const coinCount = items.reduce((sum, i) => sum + i.coinCount, 0);
   const accentHex = region === "Other" ? (items[0]?.colorHex ?? "#64748b") : REGION_ACCENT[region];
+  const sectionId = `alt-peg-region-${slug}`;
+  const headingId = `${sectionId}-heading`;
   return (
-    <section aria-labelledby={`alt-peg-region-${slug}`} className="space-y-2" data-region={region}>
+    <section
+      id={sectionId}
+      aria-labelledby={headingId}
+      className="fiat-region-section space-y-2"
+      data-region={region}
+      tabIndex={-1}
+    >
       <div className="flex items-center justify-between gap-2">
         <div className="inline-flex items-center gap-2">
           <span className="inline-block h-2.5 w-2.5 rounded-full" style={{ backgroundColor: accentHex }} />
           <h4
-            id={`alt-peg-region-${slug}`}
+            id={headingId}
             className="text-[11px] font-semibold uppercase tracking-[0.18em] text-foreground/90 dark:text-white/90"
           >
             {region}

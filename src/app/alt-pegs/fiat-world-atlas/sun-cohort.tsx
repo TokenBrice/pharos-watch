@@ -47,6 +47,7 @@ export function SunCohort({ cohort }: { cohort: SkyCohort }) {
         cohortCoinCount={coinCount}
         cohortMarketCap={cohortMarketCap}
         cohortSymbolPreview={cohortSymbolPreview}
+        cohortRank={cohort.rank}
         hoverCardYPlacement="below"
         showTickerLabel
       />
@@ -59,6 +60,7 @@ export function SunCohort({ cohort }: { cohort: SkyCohort }) {
           cohortCoinCount={coinCount}
           cohortMarketCap={cohortMarketCap}
           cohortSymbolPreview={cohortSymbolPreview}
+          cohortRank={cohort.rank}
           hoverCardYPlacement="below"
         />
       ))}

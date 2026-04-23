@@ -44,6 +44,7 @@ describe("CoinEmblem", () => {
     expect(link.style.height).toBe("109px");
     expect(link.style.left).toBe("52%");
     expect(link.style.top).toBe("20%");
+    expect(link.style.getPropertyValue("--coin-z")).toBe("24");
   });
 
   it("applies variant-specific class", () => {
@@ -82,6 +83,7 @@ describe("CoinEmblem", () => {
           cohortCoinCount={4}
           cohortMarketCap={1_000_000_000}
           cohortSymbolPreview="EURC · EURCV · AEUR"
+          cohortRank={2}
           showTickerLabel
         />
       </HoverProvider>,
@@ -100,6 +102,7 @@ describe("CoinEmblem", () => {
     expect(card.textContent).toContain("4 coins");
     expect(card.textContent).toContain("Top peers");
     expect(card.textContent).toContain("EURC · EURCV · AEUR");
+    expect(card.textContent).toContain("#2 by non-USD cap");
     expect(card.textContent).toContain("Open EURC profile");
     expect(screen.getByText("EURC", { selector: ".coin-emblem__mini-label" })).toBeTruthy();
     expect(link.getAttribute("aria-describedby")).toBe(card.id);

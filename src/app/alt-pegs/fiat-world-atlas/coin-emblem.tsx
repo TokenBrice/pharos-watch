@@ -9,6 +9,7 @@ import { useHoverState } from "@/app/alt-pegs/fiat-world-atlas/hover-context";
 
 export type EmblemVariant = "fiat" | "sun-core" | "sun-planet" | "moon" | "star";
 type HoverCardYPlacement = "auto" | "above" | "below";
+type CoinEmblemStyle = CSSProperties & { "--coin-z": number };
 
 export function CoinEmblem({
   coin,
@@ -17,6 +18,7 @@ export function CoinEmblem({
   cohortCoinCount = 1,
   cohortMarketCap,
   cohortSymbolPreview,
+  cohortRank,
   hoverCardYPlacement = "auto",
   showTickerLabel = false,
 }: {
@@ -26,6 +28,7 @@ export function CoinEmblem({
   cohortCoinCount?: number;
   cohortMarketCap?: number;
   cohortSymbolPreview?: string;
+  cohortRank?: number;
   hoverCardYPlacement?: HoverCardYPlacement;
   showTickerLabel?: boolean;
 }) {
@@ -53,11 +56,12 @@ export function CoinEmblem({
   const cardY = hoverCardYPlacement === "auto" ? (coin.y < 24 ? "below" : "above") : hoverCardYPlacement;
   const tooltipId = `coin-emblem-card-${coin.id}`;
 
-  const style: CSSProperties = {
+  const style: CoinEmblemStyle = {
     left: `${coin.x}%`,
     top: `${coin.y}%`,
     width: `${coin.sizePx}px`,
     height: `${coin.sizePx}px`,
+    "--coin-z": Math.min(24, Math.max(5, Math.round(coin.sizePx / 4))),
   };
 
   const cls = [
@@ -112,6 +116,7 @@ export function CoinEmblem({
             <span className="coin-emblem__hover-card-peg">{cohortLabel}</span>
           </span>
           {showCoinName ? <span className="coin-emblem__hover-card-name">{coin.name}</span> : null}
+          {cohortRank ? <span className="coin-emblem__hover-card-rank">#{cohortRank} by non-USD cap</span> : null}
           <span className="coin-emblem__hover-card-grid">
             <span>
               <span className="coin-emblem__hover-card-label">Market cap</span>

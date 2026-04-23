@@ -61,8 +61,7 @@ function AtlasHeroHeader({
                 CPI-linked references float in the sky above — references beyond any single monetary region.
               </span>
               <span className="xl:hidden">
-                Wide screens show the coin-level geographic atlas; this view summarizes the same cohorts as direct peg
-                links, with gold, silver, and CPI-linked references grouped above geography.
+                Currency cohorts are grouped by region below; gold, silver, and CPI-linked references appear first.
               </span>
             </p>
           </div>
@@ -160,6 +159,9 @@ export function FiatWorldAtlas({
           id="alt-peg-cohort-list"
           className="grid gap-3 border-t border-border/60 bg-background/45 px-4 py-4 dark:border-white/10 dark:bg-white/[0.035] sm:grid-cols-2 sm:px-5 sm:py-5 lg:grid-cols-3"
         >
+          <p className="font-mono text-[10px] uppercase tracking-[0.14em] text-muted-foreground dark:text-slate-300/78 sm:col-span-2 lg:col-span-3">
+            Cohorts listed by coin count; live cap rank appears on the map.
+          </p>
           {geoRegions.map(({ region, items }) => (
             <FiatRegionSection key={region} region={region} items={items} />
           ))}
