@@ -17,6 +17,7 @@ const DEFAULT_RETRY_DELAY_MS = 1_500;
 function parseArgs(argv) {
   const args = {
     baseUrl: process.env.SMOKE_API_BASE ?? process.env.API_BASE_URL ?? "",
+    requireApiKey: parseBoolean(process.env.SMOKE_API_REQUIRE_KEY, process.env.CI === "true"),
     timeoutMs: parsePositiveInt(process.env.SMOKE_API_TIMEOUT_MS, DEFAULT_TIMEOUT_MS),
     retryCount: parseNonNegativeInt(process.env.SMOKE_API_RETRY_COUNT, DEFAULT_RETRY_COUNT),
     retryDelayMs: parsePositiveInt(process.env.SMOKE_API_RETRY_DELAY_MS, DEFAULT_RETRY_DELAY_MS),
@@ -35,9 +36,18 @@ function parseArgs(argv) {
     } else if (arg === "--retry-delay-ms") {
       args.retryDelayMs = parsePositiveInt(argv[i + 1], args.retryDelayMs);
       i += 1;
+    } else if (arg === "--require-api-key") {
+      args.requireApiKey = true;
+    } else if (arg === "--allow-unauthenticated") {
+      args.requireApiKey = false;
     }
   }
   return args;
+}
+
+function parseBoolean(value, fallback) {
+  if (value == null || value.trim() === "") return fallback;
+  return /^(1|true|yes|on)$/i.test(value.trim());
 }
 
 function parsePositiveInt(value, fallback) {
@@ -156,6 +166,15 @@ function loadStrictContractPaths() {
     assert(typeof p === "string" && p.startsWith("/api/"), `Invalid strict API path entry: ${String(p)}`);
   }
   return parsed;
+}
+
+async function assertProtectedRoutesRejectAnonymous(baseUrl, endpointPath, timeoutMs, retryCount, retryDelayMs) {
+  const result = await fetchJsonWithRetry(baseUrl, endpointPath, timeoutMs, retryCount, retryDelayMs);
+  assert(
+    result.status === 401,
+    `${endpointPath} returned ${result.status} without SMOKE_API_KEY; expected protected public routes to return 401`,
+  );
+  return result;
 }
 
 export const ENDPOINT_ASSERTIONS = {
@@ -286,7 +305,7 @@ export function assertPathCoverage(strictPaths, endpointAssertions) {
 }
 
 async function run() {
-  const { baseUrl: rawBaseUrl, timeoutMs, retryCount, retryDelayMs } = parseArgs(process.argv.slice(2));
+  const { baseUrl: rawBaseUrl, requireApiKey, timeoutMs, retryCount, retryDelayMs } = parseArgs(process.argv.slice(2));
   const baseUrl = ensureBaseUrl(rawBaseUrl);
   const strictPaths = loadStrictContractPaths();
   assertPathCoverage(strictPaths, ENDPOINT_ASSERTIONS);
@@ -301,6 +320,21 @@ async function run() {
     "/api/health missing valid status"
   );
   console.log(`[smoke-api] OK /api/health (${health.body.status})`);
+
+  const smokeApiKey = (process.env.SMOKE_API_KEY ?? "").trim();
+  if (!smokeApiKey) {
+    if (requireApiKey) {
+      throw new Error(
+        "Missing SMOKE_API_KEY. Strict API smoke checks require X-API-Key; set SMOKE_API_KEY or pass --allow-unauthenticated for health/auth-gate checks only.",
+      );
+    }
+    const protectedPath = strictPaths[0];
+    await assertProtectedRoutesRejectAnonymous(baseUrl, protectedPath, timeoutMs, retryCount, retryDelayMs);
+    console.log(`[smoke-api] OK ${protectedPath} rejected anonymous request with 401`);
+    console.log("[smoke-api] SKIP strict contract paths because SMOKE_API_KEY is unset.");
+    console.log("[smoke-api] Unauthenticated health/auth-gate checks passed.");
+    return;
+  }
 
   for (const endpointPath of strictPaths) {
     const result = await fetchJsonWithRetry(baseUrl, endpointPath, timeoutMs, retryCount, retryDelayMs);

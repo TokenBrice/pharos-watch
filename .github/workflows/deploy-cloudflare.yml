@@ -112,6 +112,7 @@ jobs:
         env:
           SMOKE_API_BASE: ${{ steps.upload-version.outputs.preview_url }}
           SMOKE_API_KEY: ${{ secrets.SMOKE_API_KEY }}
+          SMOKE_API_REQUIRE_KEY: "true"
 
   deploy-worker:
     needs:
@@ -152,6 +153,7 @@ jobs:
         env:
           SMOKE_API_BASE: ${{ vars.SMOKE_API_BASE_URL || vars.API_BASE_URL }}
           SMOKE_API_KEY: ${{ secrets.SMOKE_API_KEY }}
+          SMOKE_API_REQUIRE_KEY: "true"
 
   rollback-worker:
     needs:
