@@ -7,23 +7,17 @@ import { WorldMap } from "@/app/alt-pegs/fiat-world-atlas/world-map";
 afterEach(cleanup);
 
 describe("WorldMap", () => {
-  it("renders country paths with the peg fill for tracked fiats", () => {
-    const { container } = render(
-      <WorldMap
-        items={[
-          { peg: "EUR", colorHex: "#8b5cf6" } as never,
-          { peg: "JPY", colorHex: "#f43f5e" } as never,
-        ]}
-      />,
-    );
+  it("renders the world SVG with the fiat-world-map wrapper", () => {
+    const { container } = render(<WorldMap />);
+    const wrapper = container.querySelector(".fiat-world-map");
+    expect(wrapper).not.toBeNull();
+    expect(wrapper!.querySelector("svg")).not.toBeNull();
+  });
 
-    expect(container.querySelector("path#DE")).not.toBeNull();
-    expect(container.querySelector("path#JP")).not.toBeNull();
-
-    const styleBlock = container.querySelector("style")?.textContent ?? "";
-    expect(styleBlock).toContain("path#DE{fill:#8b5cf6");
-    expect(styleBlock).toContain("path#FR{fill:#8b5cf6");
-    expect(styleBlock).toContain("path#JP{fill:#f43f5e");
-    expect(styleBlock).not.toContain("path#US{fill:");
+  it("does not apply any peg-specific fill overrides", () => {
+    const { container } = render(<WorldMap />);
+    const styleEl = container.querySelector("style");
+    expect(styleEl).not.toBeNull();
+    expect(styleEl!.textContent).not.toMatch(/path#\w+\{fill:/);
   });
 });

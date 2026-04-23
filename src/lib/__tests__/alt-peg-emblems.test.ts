@@ -1,56 +1,31 @@
 import { describe, expect, it } from "vitest";
-import { buildPegEmblems, buildPegEmblemClusters, buildPegEmblemsForPegs, PEG_ANCHORS } from "@/lib/alt-peg-emblems";
-import { PEG_COUNTRY_MAP } from "@/lib/alt-peg-geography";
+import { PEG_ANCHORS } from "@/lib/alt-peg-emblems";
 
-describe("buildPegEmblemClusters", () => {
-  const clusters = buildPegEmblemClusters();
-
-  it("returns one cluster per covered peg with at least one tracked stablecoin", () => {
-    const coveredPegs = Object.keys(PEG_COUNTRY_MAP).filter((peg) => PEG_ANCHORS[peg]);
-    // Every covered peg should have at least one stablecoin in the fixture;
-    // if that changes, this assertion will correctly fail and prompt an update.
-    expect(clusters.length).toBe(coveredPegs.length);
-  });
-
-  it("every cluster has at least one emblem", () => {
-    for (const cluster of clusters) {
-      expect(cluster.emblems.length).toBeGreaterThanOrEqual(1);
-    }
-  });
-
-  it("EUR cluster contains at least 10 emblems", () => {
-    const eur = clusters.find((c) => c.peg === "EUR");
-    expect(eur).toBeDefined();
-    expect(eur!.emblems.length).toBeGreaterThanOrEqual(10);
-  });
-
-  it("exposes commodity peg emblems for non-geographic map markers", () => {
-    const gold = buildPegEmblems("GOLD");
-    expect(gold.map((emblem) => emblem.symbol)).toEqual(expect.arrayContaining(["XAUT", "PAXG", "KAU"]));
-
-    const silver = buildPegEmblems("SILVER");
-    expect(silver.map((emblem) => emblem.symbol)).toContain("KAG");
-  });
-
-  it("combines index-linked peg emblems for aggregate deadspot markers", () => {
-    const indexLinked = buildPegEmblemsForPegs(["VAR"]);
-    expect(indexLinked.map((emblem) => emblem.symbol)).toEqual(expect.arrayContaining(["FPI", "ISC", "SILK"]));
-  });
-
-  it("every emblem has a non-empty logoSrc string", () => {
-    for (const cluster of clusters) {
-      for (const emblem of cluster.emblems) {
-        expect(typeof emblem.logoSrc).toBe("string");
-        expect(emblem.logoSrc.length).toBeGreaterThan(0);
-      }
-    }
-  });
-
-  it("emblems within each cluster are sorted alphabetically by symbol", () => {
-    for (const cluster of clusters) {
-      const symbols = cluster.emblems.map((e) => e.symbol);
-      const sorted = [...symbols].sort((a, b) => a.localeCompare(b));
-      expect(symbols).toEqual(sorted);
+describe("PEG_ANCHORS", () => {
+  it("anchors every fiat peg the hero renders", () => {
+    const requiredPegs = [
+      "EUR",
+      "CHF",
+      "GBP",
+      "RUB",
+      "TRY",
+      "JPY",
+      "IDR",
+      "SGD",
+      "CNH",
+      "PHP",
+      "BRL",
+      "CAD",
+      "MXN",
+      "ZAR",
+      "AUD",
+    ];
+    for (const peg of requiredPegs) {
+      expect(PEG_ANCHORS[peg]).toBeDefined();
+      expect(PEG_ANCHORS[peg].x).toBeGreaterThanOrEqual(0);
+      expect(PEG_ANCHORS[peg].x).toBeLessThanOrEqual(100);
+      expect(PEG_ANCHORS[peg].y).toBeGreaterThanOrEqual(0);
+      expect(PEG_ANCHORS[peg].y).toBeLessThanOrEqual(100);
     }
   });
 });
