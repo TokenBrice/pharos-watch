@@ -48,25 +48,59 @@ export default function CemeteryPage() {
               "@type": "CollectionPage",
               "@id": `${SITE_URL}/cemetery/#collection`,
               name: "Stablecoin Cemetery",
-              description: cemeteryDescription,
+              description: `${DEAD_STABLECOINS.length} defunct stablecoins documented.`,
               url: `${SITE_URL}/cemetery/`,
-              image: `${SITE_URL}/og-cemetery.png`,
-              mainEntity: {
-                "@type": "ItemList",
-                itemListElement: schemaCoins.map((coin, index) => ({
-                  "@type": "ListItem",
-                  position: index + 1,
-                  name: coin.name,
-                  url: `${SITE_URL}/stablecoin/${coin.id}/`,
-                })),
-              },
+              mainEntity: { "@id": `${SITE_URL}/cemetery/#itemlist` },
+              isPartOf: { "@id": `${SITE_URL}#website` },
+            },
+            {
+              "@context": "https://schema.org",
+              "@type": "ItemList",
+              "@id": `${SITE_URL}/cemetery/#itemlist`,
+              name: "Stablecoin Cemetery",
+              description: `${DEAD_STABLECOINS.length} defunct, depegged, and discontinued stablecoins documented with cause of death and obituaries.`,
+              numberOfItems: DEAD_STABLECOINS.length,
+              itemListElement: schemaCoins.map((coin, i) => ({
+                "@type": "ListItem",
+                position: i + 1,
+                item: {
+                  "@type": "Thing",
+                  name: `${coin.name} (${coin.symbol})`,
+                  description: coin.obituary,
+                },
+              })),
             },
           ]),
         }}
       />
+      <div className="space-y-2">
+        <nav aria-label="Breadcrumb" className="flex items-center gap-1.5 text-sm text-muted-foreground">
+          <Link href="/" className="pharos-focus-ring hover:text-foreground transition-colors">Dashboard</Link>
+          <span>/</span>
+          <span className="text-foreground">Stablecoin Cemetery</span>
+        </nav>
+        <h1 className="text-4xl font-extrabold tracking-tighter">Stablecoin Cemetery</h1>
+        <p className="text-sm text-muted-foreground">
+          Defunct, depegged, and discontinued. Newest graves surface first, and the biggest collapses stand tallest.{" "}
+          <span className="hidden md:inline">Press F on hover to pay respects.</span>
+        </p>
+        <p className="text-sm text-muted-foreground">
+          Download the citation-ready dataset as{" "}
+          <a className="pharos-focus-ring text-foreground underline-offset-4 hover:underline" href="/datasets/stablecoin-cemetery.json">
+            JSON
+          </a>{" "}
+          or{" "}
+          <a className="pharos-focus-ring text-foreground underline-offset-4 hover:underline" href="/datasets/stablecoin-cemetery.csv">
+            CSV
+          </a>
+          .
+        </p>
+      </div>
+
       <CemeteryCharts />
       <CemeteryClient />
-      <FaqSection items={FAQ_ITEMS} />
+
+      <FaqSection items={FAQ_ITEMS} includeJsonLd />
     </div>
   );
 }
