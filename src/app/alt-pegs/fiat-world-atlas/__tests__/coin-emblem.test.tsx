@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { cleanup, render } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
 import { CoinEmblem } from "@/app/alt-pegs/fiat-world-atlas/coin-emblem";
 import { HoverProvider } from "@/app/alt-pegs/fiat-world-atlas/hover-context";
@@ -71,5 +71,33 @@ describe("CoinEmblem", () => {
     const link = getByRole("link");
     expect(link.getAttribute("data-coin-id")).toBe("eurc-circle");
     expect(link.getAttribute("data-peg")).toBe("EUR");
+  });
+
+  it("shows a key-data hover card for the active stablecoin", () => {
+    const { getByRole } = render(
+      <HoverProvider>
+        <CoinEmblem coin={sample} variant="fiat" />
+      </HoverProvider>,
+    );
+    const link = getByRole("link");
+    fireEvent.mouseEnter(link);
+
+    const card = screen.getByRole("tooltip");
+    expect(card.textContent).toContain("EURC");
+    expect(card.textContent).toContain("EUR peg");
+    expect(card.textContent).toContain("Market cap");
+    expect(card.textContent).toContain("Cohort");
+    expect(link.getAttribute("aria-describedby")).toBe(card.id);
+  });
+
+  it("positions edge hover cards back toward the map frame", () => {
+    const { getByRole } = render(
+      <HoverProvider>
+        <CoinEmblem coin={{ ...sample, x: 88, y: 12 }} variant="fiat" />
+      </HoverProvider>,
+    );
+    const link = getByRole("link");
+    expect(link.getAttribute("data-card-x")).toBe("right");
+    expect(link.getAttribute("data-card-y")).toBe("below");
   });
 });

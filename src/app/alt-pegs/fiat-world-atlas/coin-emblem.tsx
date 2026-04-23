@@ -30,6 +30,9 @@ export function CoinEmblem({
   const onLeave = useCallback(() => setHoveredCoin(null), [setHoveredCoin]);
 
   const mcap = coin.marketCap > 0 ? formatCompactUsd(coin.marketCap) : null;
+  const cardX = coin.x < 24 ? "left" : coin.x > 76 ? "right" : "center";
+  const cardY = coin.y < 24 ? "below" : "above";
+  const tooltipId = `coin-emblem-card-${coin.id}`;
 
   const style: CSSProperties = {
     left: `${coin.x}%`,
@@ -58,12 +61,15 @@ export function CoinEmblem({
       className={cls}
       style={style}
       aria-label={ariaLabel}
+      aria-describedby={hovered ? tooltipId : undefined}
       onMouseEnter={onEnter}
       onMouseLeave={onLeave}
       onFocus={onEnter}
       onBlur={onLeave}
       data-coin-id={coin.id}
       data-peg={coin.pegCurrency}
+      data-card-x={cardX}
+      data-card-y={cardY}
     >
       <Image
         src={coin.logoSrc}
@@ -75,10 +81,22 @@ export function CoinEmblem({
         className="coin-emblem__img"
       />
       {hovered ? (
-        <span role="tooltip" className="coin-emblem__tooltip">
-          <span className="coin-emblem__tooltip-symbol">{coin.symbol}</span>
-          {mcap ? <span className="coin-emblem__tooltip-mcap">{mcap}</span> : null}
-          <span className="coin-emblem__tooltip-peg">{coin.pegCurrency}</span>
+        <span id={tooltipId} role="tooltip" className="coin-emblem__hover-card">
+          <span className="coin-emblem__hover-card-head">
+            <span className="coin-emblem__hover-card-symbol">{coin.symbol}</span>
+            <span className="coin-emblem__hover-card-peg">{coin.pegCurrency} peg</span>
+          </span>
+          <span className="coin-emblem__hover-card-name">{coin.name}</span>
+          <span className="coin-emblem__hover-card-grid">
+            <span>
+              <span className="coin-emblem__hover-card-label">Market cap</span>
+              <span className="coin-emblem__hover-card-value">{mcap ?? "n/a"}</span>
+            </span>
+            <span>
+              <span className="coin-emblem__hover-card-label">Cohort</span>
+              <span className="coin-emblem__hover-card-value">{coin.pegCurrency}</span>
+            </span>
+          </span>
         </span>
       ) : null}
     </a>

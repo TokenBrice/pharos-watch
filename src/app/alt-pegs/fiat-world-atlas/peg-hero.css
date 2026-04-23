@@ -198,7 +198,7 @@
 .coin-emblem {
   position: absolute;
   border-radius: 50%;
-  overflow: hidden;
+  overflow: visible;
   background: #f1f5f9;
   border: 2px solid rgba(255, 255, 255, 0.95);
   box-shadow: 0 6px 18px rgba(0, 0, 0, 0.55), 0 2px 6px rgba(0, 0, 0, 0.4);
@@ -218,6 +218,7 @@
   height: 100%;
   object-fit: cover;
   display: block;
+  border-radius: inherit;
 }
 
 .coin-emblem--sun-core {
@@ -257,41 +258,94 @@
   opacity: 0.55;
 }
 
-.coin-emblem__tooltip {
+.coin-emblem__hover-card {
   position: absolute;
-  top: calc(100% + 8px);
+  bottom: calc(100% + 10px);
   left: 50%;
   transform: translateX(-50%);
-  background: oklch(0.09 0.02 260 / 0.96);
-  border: 1px solid oklch(0.75 0.05 260 / 0.35);
+  width: max-content;
+  min-width: 176px;
+  max-width: 220px;
+  background:
+    linear-gradient(135deg, oklch(0.18 0.025 254 / 0.98), oklch(0.095 0.018 260 / 0.98)),
+    oklch(0.11 0.018 260 / 0.98);
+  border: 1px solid oklch(0.75 0.05 260 / 0.36);
   border-radius: 8px;
-  padding: 7px 11px;
-  min-width: 120px;
+  padding: 10px 11px;
   color: oklch(0.98 0 0);
-  font-size: 10px;
-  line-height: 1.4;
-  backdrop-filter: blur(8px);
+  backdrop-filter: blur(10px);
   z-index: 40;
-  white-space: nowrap;
+  white-space: normal;
   display: flex;
   flex-direction: column;
-  gap: 2px;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+  gap: 7px;
+  box-shadow: 0 16px 42px rgba(0, 0, 0, 0.58), inset 0 1px 0 oklch(1 0 0 / 0.08);
   pointer-events: none;
 }
-.coin-emblem__tooltip-symbol {
-  font-weight: 700;
+.coin-emblem[data-card-y="below"] .coin-emblem__hover-card {
+  top: calc(100% + 10px);
+  bottom: auto;
+}
+.coin-emblem[data-card-x="left"] .coin-emblem__hover-card {
+  left: 0;
+  transform: translateX(-8px);
+}
+.coin-emblem[data-card-x="right"] .coin-emblem__hover-card {
+  left: auto;
+  right: 0;
+  transform: translateX(8px);
+}
+.coin-emblem__hover-card-head,
+.coin-emblem__hover-card-grid {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+.coin-emblem__hover-card-symbol {
   font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.02em;
 }
-.coin-emblem__tooltip-mcap {
-  color: oklch(0.78 0.14 250);
-  font-variant-numeric: tabular-nums;
-}
-.coin-emblem__tooltip-peg {
-  color: oklch(0.75 0.04 260 / 0.7);
-  font-size: 9px;
-  letter-spacing: 0.06em;
+.coin-emblem__hover-card-peg {
+  border-radius: 999px;
+  background: oklch(0.74 0.11 250 / 0.14);
+  border: 1px solid oklch(0.78 0.09 250 / 0.22);
+  color: oklch(0.82 0.08 248);
+  padding: 2px 6px;
+  font-size: 8px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
   text-transform: uppercase;
+}
+.coin-emblem__hover-card-name {
+  color: oklch(0.88 0.025 250);
+  font-size: 11px;
+  font-weight: 650;
+  line-height: 1.25;
+}
+.coin-emblem__hover-card-grid {
+  border-top: 1px solid oklch(1 0 0 / 0.1);
+  padding-top: 7px;
+}
+.coin-emblem__hover-card-label,
+.coin-emblem__hover-card-value {
+  display: block;
+}
+.coin-emblem__hover-card-label {
+  color: oklch(0.72 0.025 250 / 0.78);
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+.coin-emblem__hover-card-value {
+  margin-top: 2px;
+  color: oklch(0.9 0.09 245);
+  font-family: ui-monospace, SFMono-Regular, "SF Mono", Consolas, "Liberation Mono", monospace;
+  font-size: 11px;
+  font-weight: 750;
+  font-variant-numeric: tabular-nums;
 }
 
 /* ===== Cohort threads ===== */
