@@ -1,12 +1,13 @@
 import { formatCurrency } from "@shared/lib/format";
 import {
+  DIMENSION_LABELS,
   DIMENSION_ORDER,
   DIMENSION_SHORT_LABELS,
   gradeRange,
   scoreToGrade,
 } from "@shared/lib/report-cards";
 import { sumPegBuckets } from "@shared/lib/supply";
-import type { ReportCard, StablecoinData } from "@shared/types";
+import type { DimensionKey, ReportCard, ReportCardGrade, StablecoinData } from "@shared/types";
 
 export type GradeFilter = "all" | "A" | "B" | "C" | "D" | "F" | "NR";
 export type SortKey =
@@ -18,6 +19,7 @@ export type SortKey =
   | "decentralization"
   | "dependencyRisk"
   | "mcap";
+export type SortDirection = "asc" | "desc";
 
 export const GRADE_RANGES: Exclude<GradeFilter, "all">[] = ["A", "B", "C", "D", "F", "NR"];
 
@@ -32,6 +34,35 @@ export interface CoreSettlementProfile {
   marketCapUsd: number;
   chainCount: number;
   sortScore: number;
+}
+
+export interface SafetyInspectionFinding {
+  id: string;
+  symbol: string;
+  name: string;
+  grade: ReportCardGrade;
+  score: number | null;
+  marketCapUsd: number;
+}
+
+export interface SafetyInspectionRow {
+  key: DimensionKey;
+  label: string;
+  shortLabel: string;
+  averageScore: number | null;
+  weightedScore: number | null;
+  findingCount: number;
+  findingExposureUsd: number;
+  unknownCount: number;
+  worstFindings: SafetyInspectionFinding[];
+}
+
+export interface SafetyInspectionBoardModel {
+  rows: SafetyInspectionRow[];
+  leadFinding: SafetyInspectionRow | null;
+  inspectedCount: number;
+  totalMarketCapUsd: number;
+  findingExposureUsd: number;
 }
 
 export function buildSafetyMcapMap(
@@ -117,11 +148,13 @@ export function filterAndSortReportCards(
   {
     gradeFilter,
     sortKey,
+    sortDirection = "desc",
     mcapMap,
     coreSettlementProfiles = new Map(),
   }: {
     gradeFilter: GradeFilter;
     sortKey: SortKey;
+    sortDirection?: SortDirection;
     mcapMap: Map<string, number>;
     coreSettlementProfiles?: Map<string, CoreSettlementProfile>;
   },
@@ -138,7 +171,7 @@ export function filterAndSortReportCards(
     if (aScore === null && bScore === null) return 0;
     if (aScore === null) return 1;
     if (bScore === null) return -1;
-    return bScore - aScore;
+    return sortDirection === "asc" ? aScore - bScore : bScore - aScore;
   });
 }
 
@@ -186,18 +219,121 @@ export function buildSafetyHeadlineStats(cards: ReportCard[], mcapMap: Map<strin
         .filter((score): score is number => score != null);
       return {
         key,
-        avg: scores.length > 0 ? scores.reduce((sum, score) => sum + score, 0) / scores.length : 0,
+        avg: scores.length > 0 ? scores.reduce((sum, score) => sum + score, 0) / scores.length : null,
       };
     })
-    .reduce((lowest, next) => (lowest.avg < next.avg ? lowest : next));
+    .filter((entry): entry is { key: DimensionKey; avg: number } => entry.avg != null)
+    .reduce<{ key: DimensionKey; avg: number } | null>((lowest, next) => {
+      if (!lowest) return next;
+      return lowest.avg < next.avg ? lowest : next;
+    }, null);
 
   return [
     { label: "Ecosystem avg.", value: String(avgScore), detail: scoreToGrade(avgScore) },
     { label: "Supply in A/B", value: `${abPct}%`, detail: formatCurrency(abSupply) },
     {
       label: "Weakest dimension",
-      value: DIMENSION_SHORT_LABELS[weakest.key],
-      detail: `avg ${Math.round(weakest.avg)}`,
+      value: weakest ? DIMENSION_SHORT_LABELS[weakest.key] : "NR",
+      detail: weakest ? `avg ${Math.round(weakest.avg)}` : "no scored dimensions",
     },
   ];
+}
+
+function isInspectionFinding(grade: ReportCardGrade): boolean {
+  const range = gradeRange(grade);
+  return range === "D" || range === "F";
+}
+
+export function buildSafetyInspectionBoard(
+  cards: ReportCard[] | undefined,
+  mcapMap: Map<string, number>,
+): SafetyInspectionBoardModel {
+  const activeCards = (cards ?? []).filter((card) => !card.isDefunct);
+  const totalMarketCapUsd = activeCards.reduce((sum, card) => sum + (mcapMap.get(card.id) ?? 0), 0);
+  const findingExposureUsd = activeCards.reduce((sum, card) => {
+    const hasFinding = DIMENSION_ORDER.some((key) => isInspectionFinding(card.dimensions[key].grade));
+    return hasFinding ? sum + (mcapMap.get(card.id) ?? 0) : sum;
+  }, 0);
+
+  const rows = DIMENSION_ORDER.map((key): SafetyInspectionRow => {
+    const scored = activeCards
+      .map((card) => card.dimensions[key].score)
+      .filter((score): score is number => score != null);
+    const averageScore = scored.length > 0
+      ? Math.round(scored.reduce((sum, score) => sum + score, 0) / scored.length)
+      : null;
+
+    let weightedNumerator = 0;
+    let weightedDenominator = 0;
+    let findingExposureUsd = 0;
+    let findingCount = 0;
+    let unknownCount = 0;
+
+    const findings: SafetyInspectionFinding[] = [];
+
+    for (const card of activeCards) {
+      const dimension = card.dimensions[key];
+      const marketCapUsd = mcapMap.get(card.id) ?? 0;
+      if (dimension.score != null && marketCapUsd > 0) {
+        weightedNumerator += dimension.score * marketCapUsd;
+        weightedDenominator += marketCapUsd;
+      }
+      if (dimension.score == null) {
+        unknownCount += 1;
+      }
+      if (isInspectionFinding(dimension.grade)) {
+        findingCount += 1;
+        findingExposureUsd += marketCapUsd;
+        findings.push({
+          id: card.id,
+          symbol: card.symbol,
+          name: card.name,
+          grade: dimension.grade,
+          score: dimension.score,
+          marketCapUsd,
+        });
+      }
+    }
+
+    const weightedScore = weightedDenominator > 0
+      ? Math.round(weightedNumerator / weightedDenominator)
+      : null;
+
+    return {
+      key,
+      label: DIMENSION_LABELS[key],
+      shortLabel: DIMENSION_SHORT_LABELS[key],
+      averageScore,
+      weightedScore,
+      findingCount,
+      findingExposureUsd,
+      unknownCount,
+      worstFindings: findings
+        .sort((a, b) => {
+          if (a.score == null && b.score == null) return b.marketCapUsd - a.marketCapUsd;
+          if (a.score == null) return 1;
+          if (b.score == null) return -1;
+          if (a.score !== b.score) return a.score - b.score;
+          return b.marketCapUsd - a.marketCapUsd;
+        })
+        .slice(0, 3),
+    };
+  });
+
+  const leadFinding = rows.reduce<SafetyInspectionRow | null>((lowest, row) => {
+    const rowScore = row.weightedScore ?? row.averageScore;
+    if (rowScore == null) return lowest;
+    if (!lowest) return row;
+    const lowestScore = lowest.weightedScore ?? lowest.averageScore;
+    if (lowestScore == null) return row;
+    return rowScore < lowestScore ? row : lowest;
+  }, null);
+
+  return {
+    rows,
+    leadFinding,
+    inspectedCount: activeCards.length,
+    totalMarketCapUsd,
+    findingExposureUsd,
+  };
 }

@@ -21,6 +21,7 @@ import { formatCompactUsd } from "@shared/lib/format";
 import type { HealthBand, ChainSummary } from "@shared/types/chains";
 import { StablecoinLogo } from "@/components/stablecoin-logo";
 import { logosById } from "@/lib/logos";
+import { ChainHarborMap } from "./harbor-map";
 
 /** Muted oklch palette for the dominance breakdown bar — distinct but not decorative. */
 const DOMINANCE_COLORS = [
@@ -194,6 +195,7 @@ export function ChainsLeaderboardClient() {
                       width={14}
                       height={14}
                       className={cn("rounded-full", CHAIN_META[chain.id]?.darkInvert ? "dark:invert" : "")}
+                      style={{ width: 14, height: 14 }}
                     />
                     <span>{chain.name}</span>
                     <span className="font-mono tabular-nums">{(chain.dominanceShare * 100).toFixed(1)}%</span>
@@ -211,6 +213,8 @@ export function ChainsLeaderboardClient() {
           );
         })()}
       </div>
+
+      <ChainHarborMap chains={data.chains} globalTotalUsd={data.globalTotalUsd} />
 
       {/* Table */}
       <DataTableShell
@@ -242,7 +246,14 @@ export function ChainsLeaderboardClient() {
                 </TableCell>
                 <TableCell>
                   <div className="flex items-center gap-2">
-                    <Image src={chain.logoPath} alt="" width={20} height={20} className={cn("rounded-full", CHAIN_META[chain.id]?.darkInvert ? "dark:invert" : "")} />
+                    <Image
+                      src={chain.logoPath}
+                      alt=""
+                      width={20}
+                      height={20}
+                      className={cn("rounded-full", CHAIN_META[chain.id]?.darkInvert ? "dark:invert" : "")}
+                      style={{ width: 20, height: 20 }}
+                    />
                     <span className="font-medium">{chain.name}</span>
                     <ChainTypeBadge type={chain.type} />
                   </div>

@@ -5,6 +5,7 @@ import { ReportCardMini } from "@/components/report-card-mini";
 import { QueryFreshnessNotices } from "@/components/query-freshness-notices";
 import { StressTestPanel } from "@/components/stress-test-panel";
 import { SystemicRiskHeadline } from "@/components/systemic-risk-headline";
+import { SafetyInspectionBoard } from "./inspection-board";
 import { useReportCards } from "@/hooks/api-hooks";
 import { useLogos } from "@/hooks/use-logos";
 import { useStressTest } from "@/hooks/use-stress-test";
@@ -18,6 +19,7 @@ import {
   buildCoreSettlementProfiles,
   buildSafetyGradeCounts,
   buildSafetyHeadlineStats,
+  buildSafetyInspectionBoard,
   buildSafetyMcapMap,
   buildSafetyStablecoinMap,
   filterAndSortReportCards,
@@ -101,6 +103,7 @@ export function ReportCardsClient() {
 
   const [gradeFilter, setGradeFilter] = useState<GradeFilter>("all");
   const [sortKey, setSortKey] = useState<SortKey>("overall");
+  const [sortDirection, setSortDirection] = useState<"asc" | "desc">("desc");
   const reportCards = reportData?.cards;
 
   const stablecoinMap = useMemo(
@@ -115,8 +118,22 @@ export function ReportCardsClient() {
     () => (reportCards ? buildSafetyHeadlineStats(reportCards, mcapMap) : []),
     [reportCards, mcapMap],
   );
+  const inspectionModel = useMemo(
+    () => buildSafetyInspectionBoard(reportCards, mcapMap),
+    [reportCards, mcapMap],
+  );
 
   const { replaceParams } = useUrlFilters();
+
+  const handleSortChange = useCallback((value: SortKey) => {
+    setSortKey(value);
+    setSortDirection("desc");
+  }, []);
+
+  const handleInspectionSortChange = useCallback((value: SortKey) => {
+    setSortKey(value);
+    setSortDirection("asc");
+  }, []);
 
   useEffect(() => {
     replaceParams((params) => {
@@ -158,12 +175,14 @@ export function ReportCardsClient() {
     () => filterAndSortReportCards(displayCards, {
       gradeFilter,
       sortKey,
+      sortDirection,
       mcapMap,
       coreSettlementProfiles,
     }),
-    [displayCards, gradeFilter, sortKey, mcapMap, coreSettlementProfiles],
+    [displayCards, gradeFilter, sortKey, sortDirection, mcapMap, coreSettlementProfiles],
   );
   const groupedCards = useMemo(() => groupReportCardsByGrade(filteredCards), [filteredCards]);
+  const showGroupedCards = gradeFilter === "all" && !isSimulating && sortDirection === "desc";
 
   const renderMiniCard = useCallback((card: ReportCard, index: number) => (
     <LazyCard key={card.id}>
@@ -218,6 +237,14 @@ export function ReportCardsClient() {
         />
       )}
 
+      {inspectionModel.totalMarketCapUsd > 0 && (
+        <SafetyInspectionBoard
+          model={inspectionModel}
+          sortKey={sortKey}
+          onSortChange={handleInspectionSortChange}
+        />
+      )}
+
       <SafetyLandscapeCard
         gradeCounts={gradeCounts}
         totalCards={totalCards}
@@ -249,7 +276,7 @@ export function ReportCardsClient() {
         gradeCounts={gradeCounts}
         sortKey={sortKey}
         onGradeFilterChange={setGradeFilter}
-        onSortChange={setSortKey}
+        onSortChange={handleSortChange}
       />
 
       {stressTest.stressedCards && (
@@ -263,7 +290,7 @@ export function ReportCardsClient() {
           gradeFilter={gradeFilter}
           onClearFilter={() => setGradeFilter("all")}
         />
-      ) : gradeFilter === "all" && !isSimulating ? (
+      ) : showGroupedCards ? (
         <SafetyCardsGrid groupedCards={groupedCards} renderCard={renderMiniCard} />
       ) : (
         <SafetyCardsGrid cards={filteredCards} renderCard={renderMiniCard} />

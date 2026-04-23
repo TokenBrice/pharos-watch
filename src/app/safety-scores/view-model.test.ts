@@ -3,6 +3,7 @@ import type { ReportCard } from "@shared/types";
 import {
   buildSafetyGradeCounts,
   buildSafetyHeadlineStats,
+  buildSafetyInspectionBoard,
   buildSafetyMcapMap,
   buildSafetyStablecoinMap,
   buildCoreSettlementProfiles,
@@ -92,6 +93,53 @@ describe("safety score view-model", () => {
     expect(filtered.map((card) => card.id)).toEqual(["usdt-tether"]);
   });
 
+  it("can sort a dimension weakest-first while keeping unrated rows at the bottom", () => {
+    const cards = [
+      makeCard({
+        id: "strong-liquidity",
+        symbol: "SLQ",
+        dimensions: {
+          pegStability: { score: 95, grade: "A" },
+          liquidity: { score: 88, grade: "B+" },
+          resilience: { score: 88, grade: "B+" },
+          decentralization: { score: 70, grade: "B-" },
+          dependencyRisk: { score: 62, grade: "C" },
+        },
+      }),
+      makeCard({
+        id: "weak-liquidity",
+        symbol: "WLQ",
+        dimensions: {
+          pegStability: { score: 95, grade: "A" },
+          liquidity: { score: 32, grade: "D" },
+          resilience: { score: 88, grade: "B+" },
+          decentralization: { score: 70, grade: "B-" },
+          dependencyRisk: { score: 62, grade: "C" },
+        },
+      }),
+      makeCard({
+        id: "unknown-liquidity",
+        symbol: "ULQ",
+        dimensions: {
+          pegStability: { score: 95, grade: "A" },
+          liquidity: { score: null, grade: "NR" },
+          resilience: { score: 88, grade: "B+" },
+          decentralization: { score: 70, grade: "B-" },
+          dependencyRisk: { score: 62, grade: "C" },
+        },
+      }),
+    ];
+
+    const sorted = filterAndSortReportCards(cards, {
+      gradeFilter: "all",
+      sortKey: "liquidity",
+      sortDirection: "asc",
+      mcapMap: new Map(),
+    });
+
+    expect(sorted.map((card) => card.id)).toEqual(["weak-liquidity", "strong-liquidity", "unknown-liquidity"]);
+  });
+
   it("builds grade counts, grouped sections, and headline stats from visible cards", () => {
     const cards = [
       makeCard({ id: "usdc-circle", overallScore: 92, overallGrade: "A" }),
@@ -120,6 +168,27 @@ describe("safety score view-model", () => {
       expect.objectContaining({ label: "Supply in A/B", value: "99%" }),
       expect.objectContaining({ label: "Weakest dimension", detail: expect.stringContaining("avg") }),
     ]);
+  });
+
+  it("does not treat all-unknown dimensions as zero-score weakest dimensions", () => {
+    const cards = [
+      makeCard({
+        dimensions: {
+          pegStability: { score: 91, grade: "A-" },
+          liquidity: { score: 78, grade: "B" },
+          resilience: { score: 82, grade: "B+" },
+          decentralization: { score: null, grade: "NR" },
+          dependencyRisk: { score: 65, grade: "C+" },
+        },
+      }),
+    ];
+
+    const weakest = buildSafetyHeadlineStats(cards, new Map()).find((stat) => stat.label === "Weakest dimension");
+
+    expect(weakest).toEqual(expect.objectContaining({
+      value: "Dep.",
+      detail: "avg 65",
+    }));
   });
 
   it("derives core settlement profiles from objective market, peg, liquidity, dependency, and issuer-exit gates", () => {
@@ -164,5 +233,58 @@ describe("safety score view-model", () => {
       coreSettlementProfiles: profiles,
     });
     expect(sorted.map((card) => card.id)).toEqual(["usdt-tether", "small-usd"]);
+  });
+
+  it("builds a market-weighted inspection board and ranks dimension findings", () => {
+    const cards = [
+      makeCard({
+        id: "large-fragile",
+        symbol: "LFG",
+        name: "Large Fragile",
+        overallScore: 62,
+        overallGrade: "C",
+        dimensions: {
+          pegStability: { score: 90, grade: "A" },
+          liquidity: { score: 42, grade: "D" },
+          resilience: { score: 80, grade: "B" },
+          decentralization: { score: 55, grade: "C" },
+          dependencyRisk: { score: 88, grade: "B+" },
+        },
+      }),
+      makeCard({
+        id: "small-critical",
+        symbol: "SCR",
+        name: "Small Critical",
+        overallScore: 50,
+        overallGrade: "D",
+        dimensions: {
+          pegStability: { score: 70, grade: "B-" },
+          liquidity: { score: 20, grade: "F" },
+          resilience: { score: 60, grade: "C" },
+          decentralization: { score: 45, grade: "D" },
+          dependencyRisk: { score: 40, grade: "D" },
+        },
+      }),
+    ];
+    const mcapMap = new Map([
+      ["large-fragile", 90],
+      ["small-critical", 10],
+    ]);
+
+    const model = buildSafetyInspectionBoard(cards, mcapMap);
+    const liquidity = model.rows.find((row) => row.key === "liquidity");
+
+    expect(model.inspectedCount).toBe(2);
+    expect(model.totalMarketCapUsd).toBe(100);
+    expect(model.findingExposureUsd).toBe(100);
+    expect(model.leadFinding?.key).toBe("liquidity");
+    expect(liquidity).toMatchObject({
+      averageScore: 31,
+      weightedScore: 40,
+      findingCount: 2,
+      findingExposureUsd: 100,
+      unknownCount: 0,
+    });
+    expect(liquidity?.worstFindings.map((finding) => finding.symbol)).toEqual(["SCR", "LFG"]);
   });
 });
