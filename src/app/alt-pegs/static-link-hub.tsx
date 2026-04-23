@@ -618,12 +618,12 @@ export function StaticAltPegLinkHub() {
             <div className="space-y-3 border-b border-border/60 px-4 py-4 sm:px-5 sm:py-5">
               <div className="space-y-1">
                 <h3 id="alt-peg-fiat-geography" className="pharos-kicker">
-                  Fiat Peg Geography
+                  Fiat Reference Regions
                 </h3>
                 <p className="text-sm text-muted-foreground">
-                  The atlas only encodes fiat reference regions. Coverage markers scale with tracked fiat coin count so
-                  broader region coverage reads heavier on the map. Commodity, CPI-linked, and other reference cohorts
-                  stay off-map so the geography view remains truthful and fast to scan.
+                  The atlas only encodes fiat reference-currency regions. Coverage markers scale with tracked fiat coin
+                  count so broader region coverage reads heavier on the map. Commodity, CPI-linked, and other
+                  reference cohorts stay off-map so the geography view remains truthful and fast to scan.
                 </p>
               </div>
 

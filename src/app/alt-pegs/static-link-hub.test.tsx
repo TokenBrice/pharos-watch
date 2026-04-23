@@ -22,7 +22,7 @@ describe("StaticAltPegLinkHub", () => {
     expect(html).toContain("Europe");
     expect(html).toContain("Asia");
     expect(html).toContain("Explore Peg Cohorts");
-    expect(html).toContain("Fiat Peg Geography");
+    expect(html).toContain("Fiat Reference Regions");
     expect(html).toContain("Non-geographic references");
     expect(html).toContain("Coverage markers scale with tracked fiat coin count");
     expect(html).toContain("Marker size = tracked fiat coin count");
