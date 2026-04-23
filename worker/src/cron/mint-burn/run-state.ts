@@ -1,4 +1,5 @@
 import { normalizeStringSet } from "../../lib/normalizers";
+import { rotateFromCursor } from "../shared/cursor-rotation";
 
 export interface MintBurnRunStateRow {
   nextConfigIndex: number;
@@ -12,10 +13,7 @@ export function resolveStartIndex<T>(
   configs: T[],
   keyFn: (config: T) => string,
 ): number {
-  if (!lastConfigKey || configs.length === 0) return 0;
-  const idx = configs.findIndex((c) => keyFn(c) === lastConfigKey);
-  if (idx < 0) return 0;
-  return (idx + 1) % configs.length;
+  return rotateFromCursor(configs, lastConfigKey, keyFn, { startAfterCursor: true }).startIndex;
 }
 
 export function normalizeDisabledConfigIdSet(values?: Iterable<string>): Set<string> {

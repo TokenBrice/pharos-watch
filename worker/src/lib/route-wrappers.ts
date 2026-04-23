@@ -24,6 +24,18 @@ interface RunAdminRouteOptions {
   shouldUseIdempotency?: boolean;
 }
 
+function withNoStore(response: Response): Response {
+  if (response.headers.get("Cache-Control") === "no-store") return response;
+
+  const headers = new Headers(response.headers);
+  headers.set("Cache-Control", "no-store");
+  return new Response(response.body, {
+    status: response.status,
+    statusText: response.statusText,
+    headers,
+  });
+}
+
 export function runAdminRoute(
   options: RunAdminRouteOptions,
   handler: () => Promise<Response>,
@@ -45,7 +57,7 @@ export function runAdminRoute(
       }
       return handler();
     }, options.trustedAdmin);
-  })();
+  })().then(withNoStore);
 }
 
 type AdminResponseOptions = Omit<JsonResponseOptions, "noStore">;

@@ -1,5 +1,5 @@
 import { requireAdmin } from "../lib/auth";
-import { jsonResponse } from "../lib/api-utils";
+import { jsonResponse, parseOptionalNonNegativeIntegerParam } from "../lib/api-utils";
 import { batchExecute } from "../lib/db";
 import { collectAffectedHours, recalcAffectedHours } from "../lib/mint-burn-pipeline/persistence";
 import { ROUNDTRIP_TOLERANCE_HAVING_SQL } from "../lib/mint-burn-pipeline/roundtrip-detection";
@@ -23,12 +23,8 @@ interface RoundtripDiscoveryRow {
 }
 
 function resolveSince(url: URL): number {
-  const raw = url.searchParams.get("since");
-  if (raw !== null) {
-    const parsed = Number.parseInt(raw, 10);
-    if (Number.isFinite(parsed) && parsed >= 0) return parsed;
-  }
-  return Math.floor(Date.now() / 1000) - DEFAULT_SINCE_LOOKBACK_SEC;
+  const defaultSince = Math.floor(Date.now() / 1000) - DEFAULT_SINCE_LOOKBACK_SEC;
+  return parseOptionalNonNegativeIntegerParam(url.searchParams.get("since"), defaultSince);
 }
 
 function resolveStablecoinId(url: URL): string | null {

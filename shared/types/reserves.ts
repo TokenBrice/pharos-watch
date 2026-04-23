@@ -1,9 +1,9 @@
 import { z } from "zod";
 import { DependencyTypeSchema, type DependencyType } from "./dependency-types";
 
-export type ReserveRisk = "very-low" | "low" | "medium" | "high" | "very-high";
-const RESERVE_RISK_VALUES = ["very-low", "low", "medium", "high", "very-high"] as const;
-const ReserveRiskSchema = z.enum(RESERVE_RISK_VALUES);
+export const RESERVE_RISK_VALUES = ["very-low", "low", "medium", "high", "very-high"] as const;
+export type ReserveRisk = (typeof RESERVE_RISK_VALUES)[number];
+export const ReserveRiskSchema = z.enum(RESERVE_RISK_VALUES);
 
 export interface ReserveSlice {
   name: string;

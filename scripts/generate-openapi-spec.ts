@@ -45,6 +45,13 @@ const DAYS_PARAM = {
   description: "Historical lookback window in days. Endpoint-specific bounds may apply.",
 };
 
+const HOURS_PARAM = {
+  name: "hours",
+  in: "query" as const,
+  schema: { type: "integer" as const, minimum: 1, maximum: 720 },
+  description: "Historical lookback window in hours. Defaults to 24.",
+};
+
 const LIMIT_PARAM = {
   name: "limit",
   in: "query" as const,
@@ -193,7 +200,7 @@ const endpoints: ApiEndpoint[] = [
     summary: "Mint and burn flows",
     description: "Mint/burn flow aggregates for the selected window.",
     tags: ["Flows"],
-    parameters: [STABLECOIN_QUERY_PARAM, DAYS_PARAM],
+    parameters: [STABLECOIN_QUERY_PARAM, HOURS_PARAM],
   },
   {
     path: "/api/mint-burn-events",

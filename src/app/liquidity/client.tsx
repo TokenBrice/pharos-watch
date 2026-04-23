@@ -8,8 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Search } from "lucide-react";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { useDexLiquidity } from "@/hooks/api-hooks";
-import { StaleDataBanner } from "@/components/stale-data-banner";
-import { QueryErrorNotice } from "@/components/query-error-notice";
+import { QueryFreshnessNotices } from "@/components/query-freshness-notices";
 import { useLogos } from "@/hooks/use-logos";
 import { useUrlFilters } from "@/hooks/use-url-filters";
 import { LiquidityStats } from "@/components/liquidity-stats";
@@ -179,12 +178,13 @@ export function LiquidityClient() {
 
   return (
     <div className="space-y-6">
-      <QueryErrorNotice error={error} hasData={!!liquidityMap} onRetry={handleRetry} />
-      {showDataHealthBanner && (
-        <StaleDataBanner
-          queries={[{ preset: "dexLiquidity", dataUpdatedAt, error, hasData: !!liquidityMap, meta }]}
-        />
-      )}
+      <QueryFreshnessNotices
+        error={error}
+        hasData={!!liquidityMap}
+        onRetry={handleRetry}
+        queries={[{ preset: "dexLiquidity", dataUpdatedAt, error, hasData: !!liquidityMap, meta }]}
+        showFreshnessBanner={showDataHealthBanner}
+      />
       {meta?.warning && (
         <div role="alert" className="rounded-lg border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm text-amber-700 dark:text-amber-300">
           {formatWarningMessage(meta.warning)}

@@ -1,9 +1,9 @@
 import { z } from "zod";
 import { DAY_SECONDS } from "./time-constants";
 import { DEPENDENCY_TYPE_VALUES } from "../types/dependency-types";
+import { ReserveRiskSchema } from "../types/reserves";
 import {
   LIVE_RESERVE_RPC_MODE_VALUES,
-  LIVE_RESERVE_RISK_VALUES,
   LIVE_RESERVE_SEMANTICS_VALUES,
   type LiveReserveAdapterKey,
   type LiveReserveAdapterValidationPolicy,
@@ -12,7 +12,7 @@ import {
 
 const LiveReserveSemanticsSchema = z.enum(LIVE_RESERVE_SEMANTICS_VALUES);
 const LiveReserveRpcModeSchema = z.enum(LIVE_RESERVE_RPC_MODE_VALUES);
-const LiveReserveRiskSchema = z.enum(LIVE_RESERVE_RISK_VALUES);
+const LiveReserveRiskSchema = ReserveRiskSchema;
 const LiveReserveDependencyTypeSchema = z.enum(DEPENDENCY_TYPE_VALUES);
 type LiveReserveInputKind = LiveReserveInput["kind"];
 

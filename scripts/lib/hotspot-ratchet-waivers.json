@@ -63,6 +63,10 @@
     "disposition": "queued-p4",
     "notes": "The shared env-contract manifest now centralizes the binding inventory plus generated example/docs views. Keep it waived until a dedicated follow-up pass decides whether to split generation helpers from the manifest definition without regressing the single-source-of-truth contract."
   },
+  "shared/lib/classification.ts": {
+    "disposition": "deferred",
+    "notes": "Classification now intentionally centralizes peg labels, badge styles, chart colors, and filter labels behind a canonical metadata table. Treat the file-line count as a data-table hotspot, not a behavior hotspot; revisit only if classification grows more non-data logic."
+  },
   "src/lib/contagion-layout.ts": {
     "disposition": "queued-p4",
     "notes": "The contagion layout engine still combines graph shaping, simulation setup, radius heuristics, and clamp/label rules in one branchy module. Track it for the next dedicated contagion graph simplification pass rather than mixing a layout-engine breakup into the current status/pricing tranche."
@@ -94,10 +98,6 @@
   "worker/src/cron/detect-depegs.ts": {
     "disposition": "queued-p4",
     "notes": "Depeg detection still mixes fetch orchestration, signal arbitration, and persistence decisions in one large cron module. Keep it waived until the next depeg pipeline simplification pass."
-  },
-  "worker/src/api/mint-burn-flows.ts": {
-    "disposition": "queued-p4",
-    "notes": "The mint/burn flows handler still centralizes response shaping and per-surface orchestration even after shared helpers were extracted. Track it for a focused API decomposition pass instead of widening the current refactor tranche."
   },
   "worker/src/cron/dex-liquidity/pool-helpers.ts": {
     "disposition": "queued-p4",

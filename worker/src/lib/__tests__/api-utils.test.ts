@@ -4,9 +4,12 @@ import {
   errorResponse,
   fetchPaginatedEvents,
   handleStablecoinHistoryRequest,
+  parseClampedIntegerParam,
   parseFloatParam,
   parseIntParam,
+  parseOptionalNonNegativeIntegerParam,
   parseOptionalEnumParam,
+  parseOptionalPositiveIntegerParam,
   parseOptionalRequestJsonObject,
   parseEnumParam,
   parseRequiredStablecoinIdParam,
@@ -100,6 +103,32 @@ describe("parseIntParam", () => {
     const response = result as Response;
     expect(response.status).toBe(400);
     expect(await response.json()).toEqual({ error: "Invalid offset: must be a number" });
+  });
+});
+
+describe("integer query helpers", () => {
+  it("defaults malformed clamped integer params and clamps out-of-range values", () => {
+    expect(parseClampedIntegerParam("abc", 50, 1, 200)).toBe(50);
+    expect(parseClampedIntegerParam("999", 50, 1, 200)).toBe(200);
+    expect(parseClampedIntegerParam("0", 50, 1, 200)).toBe(1);
+  });
+
+  it("can preserve zero-as-default behavior for legacy clamped params", () => {
+    expect(parseClampedIntegerParam("0", 1825, 30, 1825, { zeroAsDefault: true })).toBe(1825);
+  });
+
+  it("parses optional non-negative integer params with a fallback default", () => {
+    expect(parseOptionalNonNegativeIntegerParam("0", 90)).toBe(0);
+    expect(parseOptionalNonNegativeIntegerParam("-1", 90)).toBe(90);
+  });
+
+  it("rejects malformed optional positive integer params", async () => {
+    const result = parseOptionalPositiveIntegerParam("25abc", "limit");
+    expect(result).toBeInstanceOf(Response);
+    if (result instanceof Response) {
+      expect(result.status).toBe(400);
+      await expect(result.json()).resolves.toEqual({ error: "Invalid limit: must be a positive integer" });
+    }
   });
 });
 

@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 /**
  * CI guard: detects stale hardcoded counts in primary docs.
- * Reads authoritative counts from source files, then checks key docs
+ * Imports authoritative counts from source modules, then checks key docs
  * for matching numbers.
  *
  * Covered counts:
@@ -17,73 +17,59 @@
 import { readFileSync } from "node:fs";
 import { resolve, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
+import "tsx";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const root = resolve(__dirname, "..");
 
 // --- Extract authoritative counts from source ---
 
-function readJson(relativePath) {
-  return JSON.parse(readFileSync(resolve(root, relativePath), "utf-8"));
+function getModuleExport(module, name) {
+  const value = module[name] ?? module.default?.[name] ?? module["module.exports"]?.[name];
+  if (value == null) {
+    throw new Error(`FATAL: Could not import ${name}`);
+  }
+  return value;
 }
 
-const stablecoinAssets = [
-  "shared/data/stablecoins/usd-major.json",
-  "shared/data/stablecoins/usd-minor.json",
-  "shared/data/stablecoins/non-usd.json",
-  "shared/data/stablecoins/commodity.json",
-  "shared/data/stablecoins/pre-launch.json",
-  "shared/data/stablecoins/coins.generated.json",
-].map((relativePath) => ({
-  relativePath,
-  data: readJson(relativePath),
-}));
+const [
+  stablecoinsModule,
+  shadowStablecoinsModule,
+  reserveAdaptersModule,
+  bluechipSlugsModule,
+] = await Promise.all([
+  import("../shared/lib/stablecoins/index.ts"),
+  import("../shared/lib/shadow-stablecoins.ts"),
+  import("../shared/lib/live-reserve-adapters-definitions.ts"),
+  import("../shared/lib/bluechip-slugs.ts"),
+]);
+
+const TRACKED_STABLECOINS = getModuleExport(stablecoinsModule, "TRACKED_STABLECOINS");
+const SHADOW_STABLECOINS = getModuleExport(shadowStablecoinsModule, "SHADOW_STABLECOINS");
+const LIVE_RESERVE_ADAPTER_DEFINITIONS = getModuleExport(
+  reserveAdaptersModule,
+  "LIVE_RESERVE_ADAPTER_DEFINITIONS",
+);
+const BLUECHIP_SLUG_MAP = getModuleExport(bluechipSlugsModule, "BLUECHIP_SLUG_MAP");
 
 // 1. Tracked stablecoins
-const trackedCount = readJson("shared/data/stablecoins/canonical-order.json").length;
+const trackedCount = TRACKED_STABLECOINS.length;
 
 // 2. Shadow stablecoins
-const shadowSrc = readFileSync(
-  resolve(root, "shared/lib/shadow-stablecoins.ts"),
-  "utf-8",
-);
-const shadowCount = (shadowSrc.match(/\{\s*id:\s*"/g) || []).length;
+const shadowCount = SHADOW_STABLECOINS.length;
 
 const psiCount = trackedCount + shadowCount;
 
 // 3. Reserve adapters
-const adapterSrc = readFileSync(
-  resolve(root, "shared/lib/live-reserve-adapters-definitions.ts"),
-  "utf-8",
-);
-const adapterBlock = adapterSrc.match(
-  /export const LIVE_RESERVE_ADAPTER_DEFINITIONS\s*=\s*\{([\s\S]*?)\}\s*as const satisfies Record</,
-);
-if (!adapterBlock) {
-  console.error("FATAL: Could not find LIVE_RESERVE_ADAPTER_DEFINITIONS in shared/lib/live-reserve-adapters-definitions.ts");
-  process.exit(1);
-}
-const adapterCount = (adapterBlock[1].match(/^ {2}(?:"[a-z][a-z0-9-]+"|\w+)\s*:/gm) || []).length;
+const adapterCount = Object.keys(LIVE_RESERVE_ADAPTER_DEFINITIONS).length;
 
 // 4. Bluechip slugs
-const bluechipSrc = readFileSync(
-  resolve(root, "worker/src/lib/bluechip-slugs.ts"),
-  "utf-8",
-);
-const bluechipBlock = bluechipSrc.match(
-  /BLUECHIP_SLUG_MAP:\s*Record<[\s\S]*?>\s*=\s*\{([\s\S]*?)\};/,
-);
-if (!bluechipBlock) {
-  console.error("FATAL: Could not find BLUECHIP_SLUG_MAP in bluechip-slugs.ts");
-  process.exit(1);
-}
-const bluechipCount = (bluechipBlock[1].match(/^\s+\w+:\s*"/gm) || []).length;
+const bluechipCount = Object.keys(BLUECHIP_SLUG_MAP).length;
 
-// 5. Live-enabled stablecoins (coins declaring liveReservesConfig in the checked-in JSON assets)
-const liveEnabledCount = stablecoinAssets.reduce(
-  (sum, asset) => sum + asset.data.filter((coin) => Object.hasOwn(coin, "liveReservesConfig")).length,
-  0,
-);
+// 5. Live-enabled stablecoins
+const liveEnabledCount = TRACKED_STABLECOINS.filter(
+  (coin) => Object.hasOwn(coin, "liveReservesConfig"),
+).length;
 
 console.log(
   `Authoritative counts: ${trackedCount} tracked, ${shadowCount} shadow, ${psiCount} PSI-eligible, ${adapterCount} adapters, ${bluechipCount} bluechip slugs, ${liveEnabledCount} live-enabled`,

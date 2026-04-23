@@ -1,7 +1,7 @@
 import type { ChainResilienceTier } from "./chains";
 import type { ChainHealthFactors, HealthBand } from "../types/chains";
 
-export const HEALTH_METHODOLOGY_VERSION = "1.2";
+export { CHAIN_HEALTH_METHODOLOGY_VERSION as HEALTH_METHODOLOGY_VERSION } from "./chain-health-version";
 
 export const QUALITY_WEIGHT = 0.30;
 export const CHAIN_ENVIRONMENT_WEIGHT = 0.20;

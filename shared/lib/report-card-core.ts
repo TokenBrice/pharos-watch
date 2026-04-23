@@ -44,6 +44,26 @@ export const GRADE_THRESHOLDS: { grade: ReportCardGrade; min: number }[] = [
   { grade: "F", min: 0 },
 ];
 
+export const REPORT_CARD_GRADE_RANK: Record<ReportCardGrade, number> = {
+  NR: -1,
+  F: 0,
+  D: 1,
+  "C-": 2,
+  C: 3,
+  "C+": 4,
+  "B-": 5,
+  B: 6,
+  "B+": 7,
+  "A-": 8,
+  A: 9,
+  "A+": 10,
+};
+
+export function getReportCardGradeRank(grade: string | null | undefined): number | null {
+  if (!grade) return null;
+  return (REPORT_CARD_GRADE_RANK as Record<string, number | undefined>)[grade] ?? null;
+}
+
 export const REPORT_CARD_GRADE_COLORS: Record<ReportCardGrade, string> = {
   "A+": "bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-500/20",
   A: "bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-500/20",

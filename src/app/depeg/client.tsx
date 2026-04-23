@@ -12,8 +12,7 @@ import { useStressSignals } from "@/hooks/api-hooks";
 import { useInfiniteDepegEvents } from "@/hooks/use-depeg-events";
 import { useLogos } from "@/hooks/use-logos";
 import { useUrlFilters } from "@/hooks/use-url-filters";
-import { StaleDataBanner } from "@/components/stale-data-banner";
-import { QueryErrorNotice } from "@/components/query-error-notice";
+import { QueryFreshnessNotices } from "@/components/query-freshness-notices";
 import { SectionErrorBoundary } from "@/components/section-error-boundary";
 import { DepegTrackerStats } from "@/components/depeg-tracker-stats";
 import { DepegTrackerTable } from "@/components/depeg-tracker-table";
@@ -138,8 +137,10 @@ export function DepegClient() {
 
   return (
       <div className="space-y-6">
-      <QueryErrorNotice error={globalError} hasData={!!pegData?.coins?.length} onRetry={handleRetry} />
-      <StaleDataBanner
+      <QueryFreshnessNotices
+        error={globalError}
+        hasData={!!pegData?.coins?.length}
+        onRetry={handleRetry}
         queries={[
           { preset: "pegSummary", dataUpdatedAt: pegUpdatedAt, error: pegError, hasData: !!pegData?.coins?.length, meta: pegMeta },
           { preset: "stressSignals", dataUpdatedAt: dewsUpdatedAt, error: dewsError, hasData: !!dewsData?.signals, meta: dewsMeta },

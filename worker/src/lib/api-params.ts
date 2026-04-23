@@ -15,6 +15,14 @@ export interface ParamSpec extends NumericParseOptions {
   name?: string;
 }
 
+interface ClampedIntegerParamOptions {
+  zeroAsDefault?: boolean;
+}
+
+interface OptionalPositiveIntegerParamOptions {
+  max?: number;
+}
+
 function rejectOutOfRange(name: string, min: number, max: number): Response {
   return errorResponse(400, `Invalid ${name}: must be between ${min} and ${max}`);
 }
@@ -77,6 +85,48 @@ export function parseIntParam(
     return errorResponse(400, `Invalid ${name}: must be a number`);
   }
   return applyRangePolicy(parsed, min, max, name, options?.rangePolicy ?? "clamp");
+}
+
+export function parseClampedIntegerParam(
+  value: string | null | undefined,
+  defaultVal: number,
+  min: number,
+  max: number,
+  options?: ClampedIntegerParamOptions,
+): number {
+  const parsed = value == null ? defaultVal : Number(value);
+  const normalized = !Number.isFinite(parsed) || (options?.zeroAsDefault === true && parsed === 0)
+    ? defaultVal
+    : Math.floor(parsed);
+  return Math.max(min, Math.min(max, normalized));
+}
+
+export function parseOptionalNonNegativeIntegerParam(
+  value: string | null | undefined,
+  defaultVal: number,
+): number {
+  if (value != null) {
+    const parsed = Number.parseInt(value, 10);
+    if (Number.isFinite(parsed) && parsed >= 0) return parsed;
+  }
+  return defaultVal;
+}
+
+export function parseOptionalPositiveIntegerParam(
+  value: string | null | undefined,
+  fieldName = "parameter",
+  options?: OptionalPositiveIntegerParamOptions,
+): number | Response | null {
+  if (value == null || value.trim().length === 0) return null;
+  const trimmed = value.trim();
+  if (!/^\d+$/.test(trimmed)) {
+    return errorResponse(400, `Invalid ${fieldName}: must be a positive integer`);
+  }
+  const parsed = Number.parseInt(trimmed, 10);
+  if (!Number.isSafeInteger(parsed) || parsed <= 0) {
+    return errorResponse(400, `Invalid ${fieldName}: must be a positive integer`);
+  }
+  return options?.max != null ? Math.min(parsed, options.max) : parsed;
 }
 
 export function parseFloatParam(

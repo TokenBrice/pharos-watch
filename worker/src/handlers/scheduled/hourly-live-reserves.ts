@@ -13,38 +13,40 @@ import { computeReserveCompositionOverview, getMaxSyncAge } from "../../lib/live
 import { DAY_SECONDS } from "@shared/lib/time-constants";
 import { sendAlert } from "../../lib/alerts";
 import type { ScheduledRuntimeContext } from "./context";
+import { runBestEffortScheduledJob } from "./run-best-effort-job";
 
 const PERSISTENTLY_STALE_ALERT_COUNT_THRESHOLD = 3;
 const PERSISTENTLY_STALE_ALERT_MAX_AGE_SEC = 21 * DAY_SECONDS;
 
 export async function runFourHourlyReserveSyncSlot(runtime: ScheduledRuntimeContext): Promise<void> {
-  try {
-    await runtime.runLeasedCron("sync-live-reserves", (signal, reportProgress) =>
+  await runBestEffortScheduledJob(
+    runtime,
+    "four-hourly reserve sync slot",
+    "sync-live-reserves",
+    (signal, reportProgress) =>
       syncLiveReserves(runtime.db, signal, {
         etherscanApiKey: runtime.env.ETHERSCAN_API_KEY,
         alchemyApiKey: runtime.env.ALCHEMY_API_KEY,
         chainRpcs: runtime.chainRpcs,
       }, reportProgress),
-    );
-  } catch (e) {
-    console.error("[hourly-live-reserves] Live reserves sync failed:", e);
-  }
+    { errorMessage: "[hourly-live-reserves] Live reserves sync failed:" },
+  );
 
-  try {
-    await runtime.runLeasedCron("sync-redemption-backstops", (signal) =>
-      syncRedemptionBackstops(runtime.db, signal),
-    );
-  } catch (e) {
-    console.error("[hourly-live-reserves] Redemption backstops sync failed:", e);
-  }
+  await runBestEffortScheduledJob(
+    runtime,
+    "four-hourly reserve sync slot",
+    "sync-redemption-backstops",
+    (signal) => syncRedemptionBackstops(runtime.db, signal),
+    { errorMessage: "[hourly-live-reserves] Redemption backstops sync failed:" },
+  );
 
-  try {
-    await runtime.runLeasedCron("sync-kinesis-supply", (signal) =>
-      syncKinesisSupply(runtime.db, signal),
-    );
-  } catch (e) {
-    console.error("[hourly-live-reserves] Kinesis supply sync failed:", e);
-  }
+  await runBestEffortScheduledJob(
+    runtime,
+    "four-hourly reserve sync slot",
+    "sync-kinesis-supply",
+    (signal) => syncKinesisSupply(runtime.db, signal),
+    { errorMessage: "[hourly-live-reserves] Kinesis supply sync failed:" },
+  );
 
   try {
     const drift = await checkCollateralDrift(runtime.db);

@@ -29,7 +29,14 @@ function resolveDynamicStablecoinRoute(
   return handler(resolved.canonicalId);
 }
 
-function requireDynamicEndpointDescriptor(key: DynamicAdminEndpointMatch["key"] | "stablecoin-summary" | "stablecoin-reserves" | "stablecoin-detail" | "og-image") {
+type DynamicEndpointDescriptorKey =
+  | DynamicAdminEndpointMatch["key"]
+  | "stablecoin-summary"
+  | "stablecoin-reserves"
+  | "stablecoin-detail"
+  | "og-image";
+
+function requireDynamicEndpointDescriptor(key: DynamicEndpointDescriptorKey) {
   const descriptor = getDynamicEndpointDescriptorByKey(key);
   if (!descriptor) {
     throw new Error(`Dynamic endpoint descriptor "${key}" must be declared in shared/lib/api-endpoints/dynamic.ts`);
@@ -37,34 +44,38 @@ function requireDynamicEndpointDescriptor(key: DynamicAdminEndpointMatch["key"] 
   return descriptor;
 }
 
+function defineDynamicRouteFromDescriptor(
+  key: DynamicEndpointDescriptorKey,
+  handle: DynamicRouteDefinition["handle"],
+): DynamicRouteDefinition {
+  const descriptor = requireDynamicEndpointDescriptor(key);
+  return defineDynamicRoute(descriptor.pattern, descriptor.routeDependencies, handle);
+}
+
 const DYNAMIC_ROUTE_DEFINITIONS = [
-  defineDynamicRoute(
-    requireDynamicEndpointDescriptor("stablecoin-summary").pattern,
-    requireDynamicEndpointDescriptor("stablecoin-summary").routeDependencies,
+  defineDynamicRouteFromDescriptor(
+    "stablecoin-summary",
     (routeCtx, match) => resolveDynamicStablecoinRoute(
       match,
       (canonicalId) => handleStablecoinSummary(routeCtx.db, canonicalId),
     ),
   ),
-  defineDynamicRoute(
-    requireDynamicEndpointDescriptor("stablecoin-reserves").pattern,
-    requireDynamicEndpointDescriptor("stablecoin-reserves").routeDependencies,
+  defineDynamicRouteFromDescriptor(
+    "stablecoin-reserves",
     (routeCtx, match) => resolveDynamicStablecoinRoute(
       match,
       (canonicalId) => handleStablecoinReserves(routeCtx.db, canonicalId),
     ),
   ),
-  defineDynamicRoute(
-    requireDynamicEndpointDescriptor("stablecoin-detail").pattern,
-    requireDynamicEndpointDescriptor("stablecoin-detail").routeDependencies,
+  defineDynamicRouteFromDescriptor(
+    "stablecoin-detail",
     (routeCtx, match) => resolveDynamicStablecoinRoute(
       match,
       (canonicalId) => handleStablecoinDetail(routeCtx.db, canonicalId, routeCtx.execCtx, routeCtx.coingeckoApiKey),
     ),
   ),
-  defineDynamicRoute(
-    requireDynamicEndpointDescriptor("og-image").pattern,
-    requireDynamicEndpointDescriptor("og-image").routeDependencies,
+  defineDynamicRouteFromDescriptor(
+    "og-image",
     (routeCtx) => handleOg(routeCtx.db, routeCtx.url.pathname).then((response) => response ?? errorResponse(404, "Unknown OG route")),
   ),
 ] as const satisfies readonly DynamicRouteDefinition[];

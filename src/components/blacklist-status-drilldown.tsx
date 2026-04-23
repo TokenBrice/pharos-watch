@@ -7,15 +7,13 @@ import { useLogos } from "@/hooks/use-logos";
 import { StablecoinTable } from "@/components/stablecoin-table";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { buildPegSummaryCoinMap } from "@/lib/stablecoin-lookups";
+import { buildStablecoinTableInputs } from "@/lib/stablecoin-table-inputs";
 import {
   BLACKLIST_STATUS_BUCKET_DESCRIPTIONS,
   BLACKLIST_STATUS_BUCKET_LABELS,
   filterStablecoinsByBlacklistStatus,
   type BlacklistStatusBucketKey,
 } from "@/lib/blacklist-status-buckets";
-import { derivePegRates } from "@shared/lib/peg-rates";
-import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins";
 import type { ReportCard, StablecoinData } from "@shared/types";
 
 interface BlacklistStatusDrilldownProps {
@@ -36,11 +34,14 @@ export function BlacklistStatusDrilldown({
   const { data: logos } = useLogos();
   const { data: pegSummaryData } = usePegSummary();
   const { data: dexLiquidity } = useDexLiquidity();
-  const pegScores = useMemo(() => buildPegSummaryCoinMap(pegSummaryData?.coins), [pegSummaryData?.coins]);
-
-  const { rates: pegRates } = useMemo(
-    () => derivePegRates(stablecoins ?? [], TRACKED_META_BY_ID, fxFallbackRates),
-    [fxFallbackRates, stablecoins],
+  const tableInputs = useMemo(
+    () =>
+      buildStablecoinTableInputs({
+        stablecoins,
+        fxFallbackRates,
+        pegSummaryCoins: pegSummaryData?.coins,
+      }),
+    [fxFallbackRates, pegSummaryData?.coins, stablecoins],
   );
 
   const filteredStablecoins = useMemo(
@@ -79,8 +80,8 @@ export function BlacklistStatusDrilldown({
             isLoading={!stablecoins}
             activeFilters={[]}
             logos={logos}
-            pegRates={pegRates}
-            pegScores={pegScores}
+            pegRates={tableInputs.pegRates}
+            pegScores={tableInputs.pegScores}
             dexLiquidity={dexLiquidity ?? undefined}
             reportCards={reportCards}
           />

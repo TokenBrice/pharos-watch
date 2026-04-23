@@ -6,11 +6,9 @@ import type {
   StablecoinListResponse,
   StressSignalsAllResponse,
 } from "@shared/types";
-import { derivePegRates } from "@shared/lib/peg-rates";
 import { getDewsRiskLevel, isThreatBand } from "@shared/lib/classification";
-import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins";
 import { buildTrackedIdSet, filterStablecoins } from "@/components/stablecoin-table-logic";
-import { buildPegSummaryCoinMap, buildReportCardMap } from "@/lib/stablecoin-lookups";
+import { buildStablecoinTableInputs } from "@/lib/stablecoin-table-inputs";
 
 interface HomepageFiltersState {
   activeFilters: readonly FilterTag[];
@@ -25,13 +23,13 @@ export function buildHomepageViewModel(args: {
   dexLiquidity?: DexLiquidityMap;
   filters: HomepageFiltersState;
 }) {
-  const reportCardMap = buildReportCardMap(args.reportCardsData?.cards);
-  const pegScores = buildPegSummaryCoinMap(args.pegSummaryData?.coins);
-  const { rates: pegRates } = derivePegRates(
-    args.stablecoinsData?.peggedAssets ?? [],
-    TRACKED_META_BY_ID,
-    args.stablecoinsData?.fxFallbackRates,
-  );
+  const tableInputs = buildStablecoinTableInputs({
+    stablecoins: args.stablecoinsData?.peggedAssets,
+    fxFallbackRates: args.stablecoinsData?.fxFallbackRates,
+    pegSummaryCoins: args.pegSummaryData?.coins,
+    reportCards: args.reportCardsData?.cards,
+  });
+  const reportCardMap = tableInputs.reportCards;
   const trackedIds = buildTrackedIdSet([...args.filters.activeFilters], reportCardMap);
   const filteredRowCount = filterStablecoins(
     args.stablecoinsData?.peggedAssets,
@@ -41,8 +39,8 @@ export function buildHomepageViewModel(args: {
 
   return {
     reportCardMap,
-    pegScores,
-    pegRates,
+    pegScores: tableInputs.pegScores,
+    pegRates: tableInputs.pegRates,
     filteredRowCount,
     dewsRiskLevel: getDewsRiskLevel(
       args.stressData?.signals

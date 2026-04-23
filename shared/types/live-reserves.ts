@@ -1,5 +1,9 @@
 import type { DependencyType } from "./dependency-types";
-import type { ReserveSlice } from "./reserves";
+import {
+  RESERVE_RISK_VALUES,
+  type ReserveRisk,
+  type ReserveSlice,
+} from "./reserves";
 import {
   RedemptionRouteStatusSchema,
   RedemptionRouteStatusSourceSchema,
@@ -119,7 +123,7 @@ export const LIVE_RESERVE_SEMANTICS_VALUES = [
 ] as const;
 
 export const LIVE_RESERVE_RPC_MODE_VALUES = ["etherscan-proxy", "alchemy", "public-rpc"] as const;
-export const LIVE_RESERVE_RISK_VALUES = ["very-low", "low", "medium", "high", "very-high"] as const;
+export const LIVE_RESERVE_RISK_VALUES = RESERVE_RISK_VALUES;
 
 export type LiveReserveAdapterKey = (typeof LIVE_RESERVE_ADAPTER_KEYS)[number];
 export type LiveReserveSourceModel = (typeof LIVE_RESERVE_SOURCE_MODEL_VALUES)[number];
@@ -135,7 +139,7 @@ export type LiveReserveRedemptionRouteStatus = (typeof LIVE_RESERVE_REDEMPTION_R
 export type LiveReserveRedemptionRouteStatusSource = (typeof LIVE_RESERVE_REDEMPTION_ROUTE_STATUS_SOURCE_VALUES)[number];
 export type ReserveDisplayBadgeKind = (typeof RESERVE_DISPLAY_BADGE_KIND_VALUES)[number];
 export type LiveReserveSemantics = (typeof LIVE_RESERVE_SEMANTICS_VALUES)[number];
-export type LiveReserveRisk = (typeof LIVE_RESERVE_RISK_VALUES)[number];
+export type LiveReserveRisk = ReserveRisk;
 export type LiveReserveRpcMode = (typeof LIVE_RESERVE_RPC_MODE_VALUES)[number];
 export type LiveReserveDependencyType = DependencyType;
 

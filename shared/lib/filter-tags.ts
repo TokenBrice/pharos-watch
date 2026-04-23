@@ -1,79 +1,41 @@
 import type { FilterTag, PegCurrency, StablecoinMeta } from "../types/core";
+import {
+  PEG_FILTER_TAG_LABELS,
+  PEG_METADATA,
+  type PegCurrencyFilterTag,
+} from "./classification";
+import {
+  getReportCardGradeRank,
+  REPORT_CARD_GRADE_RANK,
+} from "./report-card-core";
 
-export const COMMODITY_PEG_TAGS: FilterTag[] = ["gold-peg", "silver-peg"];
+type PegMetadataEntry = [PegCurrency, (typeof PEG_METADATA)[PegCurrency]];
 
-export const FIAT_NON_USD_PEG_TAGS: FilterTag[] = [
-  "eur-peg",
-  "chf-peg",
-  "gbp-peg",
-  "brl-peg",
-  "rub-peg",
-  "jpy-peg",
-  "idr-peg",
-  "sgd-peg",
-  "try-peg",
-  "aud-peg",
-  "zar-peg",
-  "cad-peg",
-  "cny-peg",
-  "cnh-peg",
-  "php-peg",
-  "mxn-peg",
-  "uah-peg",
-  "ars-peg",
-  "var-peg",
-  "other-peg",
-];
+const PEG_METADATA_ENTRIES = Object.entries(PEG_METADATA) as PegMetadataEntry[];
 
-export const OTHER_PEG_TAGS: FilterTag[] = [
-  "chf-peg",
-  "gbp-peg",
-  "brl-peg",
-  "rub-peg",
-  "jpy-peg",
-  "idr-peg",
-  "sgd-peg",
-  "try-peg",
-  "aud-peg",
-  "zar-peg",
-  "cad-peg",
-  "cny-peg",
-  "cnh-peg",
-  "php-peg",
-  "mxn-peg",
-  "uah-peg",
-  "ars-peg",
-  "silver-peg",
-  "var-peg",
-  "other-peg",
-];
+function pegFilterTagsWhere(matches: (peg: PegCurrency) => boolean): FilterTag[] {
+  return PEG_METADATA_ENTRIES
+    .filter(([peg]) => matches(peg))
+    .map(([, metadata]) => metadata.filterTag);
+}
 
-export const FILTER_TAG_LABELS: Record<FilterTag, string> = {
-  "usd-peg": "USD",
+function isCommodityPeg(peg: PegCurrency): boolean {
+  return peg === "GOLD" || peg === "SILVER";
+}
+
+export const COMMODITY_PEG_TAGS = pegFilterTagsWhere(isCommodityPeg);
+
+export const FIAT_NON_USD_PEG_TAGS = pegFilterTagsWhere(
+  (peg) => peg !== "USD" && !isCommodityPeg(peg),
+);
+
+export const OTHER_PEG_TAGS = pegFilterTagsWhere(
+  (peg) => peg !== "USD" && peg !== "EUR" && peg !== "GOLD",
+);
+
+const NON_PEG_FILTER_TAG_LABELS = {
   "fiat-non-usd-peg": "Fiat non-USD",
   "commodity-peg": "Commodities",
-  "eur-peg": "EUR",
-  "gold-peg": "Gold",
-  "chf-peg": "CHF",
-  "gbp-peg": "GBP",
-  "brl-peg": "BRL",
-  "rub-peg": "RUB",
-  "jpy-peg": "JPY",
-  "idr-peg": "IDR",
-  "sgd-peg": "SGD",
-  "try-peg": "TRY",
-  "aud-peg": "AUD",
-  "zar-peg": "ZAR",
-  "cad-peg": "CAD",
-  "cny-peg": "CNY",
-  "cnh-peg": "CNH",
-  "php-peg": "PHP",
-  "mxn-peg": "MXN",
-  "uah-peg": "UAH",
-  "ars-peg": "ARS",
-  "silver-peg": "Silver",
-  "var-peg": "CPI",
-  "other-peg": "Other",
   centralized: "Centralized",
   "centralized-dependent": "CeFi-Dependent",
   decentralized: "Decentralized",
@@ -94,57 +56,15 @@ export const FILTER_TAG_LABELS: Record<FilterTag, string> = {
   "grade-ge-c-plus": "≥C+",
   "grade-ge-c-minus": "≥C-",
   "grade-le-d": "≤D",
+} satisfies Record<Exclude<FilterTag, PegCurrencyFilterTag>, string>;
+
+export const FILTER_TAG_LABELS: Record<FilterTag, string> = {
+  ...PEG_FILTER_TAG_LABELS,
+  ...NON_PEG_FILTER_TAG_LABELS,
 };
 
 export function pegCurrencyToFilterTag(peg: PegCurrency): FilterTag {
-  switch (peg) {
-    case "USD":
-      return "usd-peg";
-    case "EUR":
-      return "eur-peg";
-    case "GOLD":
-      return "gold-peg";
-    case "CHF":
-      return "chf-peg";
-    case "GBP":
-      return "gbp-peg";
-    case "BRL":
-      return "brl-peg";
-    case "RUB":
-      return "rub-peg";
-    case "JPY":
-      return "jpy-peg";
-    case "IDR":
-      return "idr-peg";
-    case "SGD":
-      return "sgd-peg";
-    case "TRY":
-      return "try-peg";
-    case "AUD":
-      return "aud-peg";
-    case "ZAR":
-      return "zar-peg";
-    case "CAD":
-      return "cad-peg";
-    case "CNY":
-      return "cny-peg";
-    case "CNH":
-      return "cnh-peg";
-    case "PHP":
-      return "php-peg";
-    case "MXN":
-      return "mxn-peg";
-    case "UAH":
-      return "uah-peg";
-    case "ARS":
-      return "ars-peg";
-    case "SILVER":
-      return "silver-peg";
-    case "VAR":
-      return "var-peg";
-    default:
-      return "other-peg";
-  }
+  return PEG_METADATA[peg].filterTag;
 }
 
 export function getFilterTags(meta: StablecoinMeta): FilterTag[] {
@@ -185,39 +105,24 @@ export const GRADE_FILTER_TAGS: FilterTag[] = [
   "grade-le-d",
 ];
 
-const GRADE_RANK: Record<string, number> = {
-  "A+": 12,
-  "A": 11,
-  "A-": 10,
-  "B+": 9,
-  "B": 8,
-  "B-": 7,
-  "C+": 6,
-  "C": 5,
-  "C-": 4,
-  "D+": 3,
-  "D": 2,
-  "D-": 1,
-  "F": 0,
-};
-
 export function gradeMatchesFilter(grade: string | undefined, filterTag: FilterTag): boolean {
   if (!grade) return false;
-  const gradeValue = GRADE_RANK[grade] ?? -1;
+  const gradeValue = getReportCardGradeRank(grade);
+  if (gradeValue == null) return false;
 
   switch (filterTag) {
     case "grade-a":
-      return grade.startsWith("A");
+      return gradeValue >= REPORT_CARD_GRADE_RANK["A-"];
     case "grade-ge-b":
-      return gradeValue >= GRADE_RANK["B"];
+      return gradeValue >= REPORT_CARD_GRADE_RANK.B;
     case "grade-ge-c":
-      return gradeValue >= GRADE_RANK.C;
+      return gradeValue >= REPORT_CARD_GRADE_RANK.C;
     case "grade-ge-c-plus":
-      return gradeValue >= GRADE_RANK["C+"];
+      return gradeValue >= REPORT_CARD_GRADE_RANK["C+"];
     case "grade-ge-c-minus":
-      return gradeValue >= GRADE_RANK["C-"];
+      return gradeValue >= REPORT_CARD_GRADE_RANK["C-"];
     case "grade-le-d":
-      return gradeValue <= GRADE_RANK["D"];
+      return gradeValue <= REPORT_CARD_GRADE_RANK.D;
     default:
       return false;
   }

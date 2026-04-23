@@ -2,8 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { ReportCardMini } from "@/components/report-card-mini";
-import { QueryErrorNotice } from "@/components/query-error-notice";
-import { StaleDataBanner } from "@/components/stale-data-banner";
+import { QueryFreshnessNotices } from "@/components/query-freshness-notices";
 import { StressTestPanel } from "@/components/stress-test-panel";
 import { SystemicRiskHeadline } from "@/components/systemic-risk-headline";
 import { useReportCards } from "@/hooks/api-hooks";
@@ -187,12 +186,10 @@ export function ReportCardsClient() {
 
   return (
     <div className="space-y-6">
-      <QueryErrorNotice
+      <QueryFreshnessNotices
         error={globalError}
         hasData={!!reportData?.cards?.length || !!stablecoinsData?.peggedAssets?.length}
         onRetry={handleRetry}
-      />
-      <StaleDataBanner
         queries={[
           {
             preset: "reportCards",

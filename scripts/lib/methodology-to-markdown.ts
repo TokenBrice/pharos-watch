@@ -91,6 +91,10 @@ export type MethodologyChangelogKey = keyof typeof CHANGELOG_REGISTRY;
 
 export const METHODOLOGY_CHANGELOG_KEYS = Object.keys(CHANGELOG_REGISTRY) as MethodologyChangelogKey[];
 
+export function getMethodologyChangelogPath(key: MethodologyChangelogKey): string {
+  return CHANGELOG_REGISTRY[key].path;
+}
+
 export function buildMethodologyIndexMarkdown(): string {
   return (
     frontMatterBlock({

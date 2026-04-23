@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 
-import { render } from "@testing-library/react";
-import { describe, expect, it } from "vitest";
+import { cleanup, render } from "@testing-library/react";
+import { afterEach, describe, expect, it } from "vitest";
 import { CelestialBand } from "@/app/alt-pegs/fiat-world-atlas/celestial-band";
 
 const items = [
@@ -9,6 +9,8 @@ const items = [
   { peg: "SILVER", label: "Silver", href: "/stablecoins/silver", coinCount: 1, symbolPreview: "KAG",              group: "Commodity", region: "Other", colorHex: "#9ca3af" },
   { peg: "VAR",    label: "CPI",    href: "/stablecoins/cpi",    coinCount: 3, symbolPreview: "FPI · ISC · SILK", group: "Other",     region: "Other", colorHex: "#64748b" },
 ] as never;
+
+afterEach(cleanup);
 
 describe("CelestialBand", () => {
   it("renders Gold, Silver, and Index orbitals with the right hrefs and counts", () => {

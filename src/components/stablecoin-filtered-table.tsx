@@ -4,12 +4,9 @@ import { useMemo } from "react";
 import { useDexLiquidity, usePegSummary, useReportCards } from "@/hooks/api-hooks";
 import { useLogos } from "@/hooks/use-logos";
 import { useStablecoins } from "@/hooks/use-stablecoins";
-import { QueryErrorNotice } from "@/components/query-error-notice";
+import { QueryFreshnessNotices } from "@/components/query-freshness-notices";
 import { StablecoinTable } from "@/components/stablecoin-table";
-import { StaleDataBanner } from "@/components/stale-data-banner";
-import { buildPegSummaryCoinMap, buildReportCardMap } from "@/lib/stablecoin-lookups";
-import { derivePegRates } from "@shared/lib/peg-rates";
-import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins";
+import { buildStablecoinTableInputs } from "@/lib/stablecoin-table-inputs";
 import type { FilterTag } from "@shared/types";
 
 interface StablecoinFilteredTableProps {
@@ -24,37 +21,37 @@ export function StablecoinFilteredTable({ activeFilters, renderNotice }: Stablec
   const { data: dexLiquidity } = useDexLiquidity();
   const { data: reportCardsData } = useReportCards();
 
-  const pegScores = useMemo(() => buildPegSummaryCoinMap(pegSummaryData?.coins), [pegSummaryData?.coins]);
-
-  const reportCardMap = useMemo(() => buildReportCardMap(reportCardsData?.cards), [reportCardsData?.cards]);
-
-  const { rates: pegRates, sources: pegRateSources } = useMemo(
-    () => derivePegRates(data?.peggedAssets ?? [], TRACKED_META_BY_ID, data?.fxFallbackRates),
-    [data],
+  const tableInputs = useMemo(
+    () =>
+      buildStablecoinTableInputs({
+        stablecoins: data?.peggedAssets,
+        fxFallbackRates: data?.fxFallbackRates,
+        pegSummaryCoins: pegSummaryData?.coins,
+        reportCards: reportCardsData?.cards,
+      }),
+    [data?.fxFallbackRates, data?.peggedAssets, pegSummaryData?.coins, reportCardsData?.cards],
   );
 
   return (
     <>
-      <QueryErrorNotice
+      <QueryFreshnessNotices
         error={error}
         hasData={!!data?.peggedAssets?.length}
         onRetry={() => {
           void refetch();
         }}
-      />
-      <StaleDataBanner
         queries={[{ preset: "stablecoins", dataUpdatedAt, error, hasData: !!data?.peggedAssets?.length, meta }]}
       />
-      {renderNotice?.({ pegRateSources })}
+      {renderNotice?.({ pegRateSources: tableInputs.pegRateSources })}
       <StablecoinTable
         data={data?.peggedAssets}
         isLoading={isLoading}
         activeFilters={[...activeFilters]}
         logos={logos}
-        pegRates={pegRates}
-        pegScores={pegScores}
+        pegRates={tableInputs.pegRates}
+        pegScores={tableInputs.pegScores}
         dexLiquidity={dexLiquidity ?? undefined}
-        reportCards={reportCardMap}
+        reportCards={tableInputs.reportCards}
       />
     </>
   );

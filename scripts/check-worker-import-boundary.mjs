@@ -71,12 +71,6 @@ const allWorkerOk = runBoundaryCheck("all worker sources", {
   forbiddenPattern: WORKER_TO_FRONTEND_IMPORT_PATTERN,
 });
 
-const nonTestWorkerOk = runBoundaryCheck("non-test worker sources", {
-  rootDir: WORKER_SRC_DIR,
-  excludeTests: true,
-  forbiddenPattern: WORKER_TO_FRONTEND_IMPORT_PATTERN,
-});
-
 const appDirs = ["src", "shared", "scripts", "functions"];
 const allFrontendBoundaryOk = appDirs.every((dir) =>
   runBoundaryCheck(`${dir} sources`, {
@@ -86,7 +80,7 @@ const allFrontendBoundaryOk = appDirs.every((dir) =>
   }),
 );
 
-if (!allWorkerOk || !nonTestWorkerOk || !allFrontendBoundaryOk) {
+if (!allWorkerOk || !allFrontendBoundaryOk) {
   process.exit(1);
 }
 

@@ -1,12 +1,10 @@
 import type { ScheduledRuntimeContext } from "./context";
 import { runYieldCoverageAudit } from "../../cron/yield-coverage-audit";
+import { runBestEffortScheduledJob } from "./run-best-effort-job";
 
 export async function runMonthlyYieldAuditSlot(runtime: ScheduledRuntimeContext): Promise<void> {
-  try {
-    await runtime.runLeasedCron("yield-coverage-audit", (signal) =>
-      runYieldCoverageAudit(runtime.db, signal),
-    );
-  } catch (err) {
-    console.error("[cron] yield-coverage-audit failed in monthly slot:", err);
-  }
+  await runBestEffortScheduledJob(runtime, "monthly yield audit slot", "yield-coverage-audit", (signal) =>
+    runYieldCoverageAudit(runtime.db, signal),
+    { errorMessage: "[cron] yield-coverage-audit failed in monthly slot:" },
+  );
 }

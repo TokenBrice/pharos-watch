@@ -7,6 +7,7 @@ import { changelogs } from "../src/data/changelogs";
 import {
   buildMethodologyChangelogMarkdown,
   buildMethodologyIndexMarkdown,
+  getMethodologyChangelogPath,
   METHODOLOGY_CHANGELOG_KEYS,
 } from "./lib/methodology-to-markdown";
 import {
@@ -19,18 +20,6 @@ import {
 
 const SCRIPT_PATH = fileURLToPath(import.meta.url);
 const OUT_DIR = join(dirname(SCRIPT_PATH), "../out");
-
-const CHANGELOG_PATHS: Record<(typeof METHODOLOGY_CHANGELOG_KEYS)[number], string> = {
-  scoring: "/methodology/scoring-changelog/",
-  depeg: "/methodology/depeg-changelog/",
-  "blacklist-tracker": "/methodology/blacklist-tracker-changelog/",
-  "liquidity-score": "/methodology/liquidity-score-changelog/",
-  "stability-index": "/methodology/stability-index-changelog/",
-  "mint-burn-flow": "/methodology/mint-burn-flow-changelog/",
-  yield: "/methodology/yield-changelog/",
-  "pricing-pipeline": "/methodology/pricing-pipeline-changelog/",
-  "chain-health": "/methodology/chain-health-changelog/",
-};
 
 export function writeMarkdownRoute(outDir: string, route: MarkdownRoute): void {
   if (!route.path.startsWith("/") || !route.path.endsWith("/")) {
@@ -63,7 +52,7 @@ export async function main(): Promise<void> {
 
   for (const key of METHODOLOGY_CHANGELOG_KEYS) {
     write({
-      path: CHANGELOG_PATHS[key],
+      path: getMethodologyChangelogPath(key),
       body: buildMethodologyChangelogMarkdown(key),
     });
   }

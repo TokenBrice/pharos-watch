@@ -8,6 +8,7 @@
 import { dispatchTelegramAlerts } from "../../cron/dispatch-telegram-alerts";
 import { reconcileTelegramWebhookRegistration } from "../../lib/telegram-webhook-registration";
 import type { ScheduledRuntimeContext } from "./context";
+import { runBestEffortScheduledJob } from "./run-best-effort-job";
 
 export async function runFiveMinuteTelegramSlot(runtime: ScheduledRuntimeContext): Promise<void> {
   if (!runtime.env.TELEGRAM_BOT_TOKEN) {
@@ -27,11 +28,11 @@ export async function runFiveMinuteTelegramSlot(runtime: ScheduledRuntimeContext
     console.error("[cron] Telegram webhook reconciliation failed:", err);
   }
 
-  try {
-    await runtime.runLeasedCron("dispatch-telegram-alerts", (signal) =>
-      dispatchTelegramAlerts(runtime.db, runtime.env.TELEGRAM_BOT_TOKEN!, signal),
-    );
-  } catch (err) {
-    console.error("[cron] dispatch-telegram-alerts failed:", err);
-  }
+  await runBestEffortScheduledJob(
+    runtime,
+    "five-minute telegram slot",
+    "dispatch-telegram-alerts",
+    (signal) => dispatchTelegramAlerts(runtime.db, runtime.env.TELEGRAM_BOT_TOKEN!, signal),
+    { errorMessage: "[cron] dispatch-telegram-alerts failed:" },
+  );
 }

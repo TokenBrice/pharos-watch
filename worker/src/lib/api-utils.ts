@@ -19,10 +19,13 @@ export {
   withErrorHandler,
 } from "./api-response";
 export {
+  parseClampedIntegerParam,
   parseEnumParam,
   parseFloatParam,
   parseIntParam,
+  parseOptionalNonNegativeIntegerParam,
   parseOptionalEnumParam,
+  parseOptionalPositiveIntegerParam,
   parseOptionalRequestJsonObject,
   parseQueryParams,
   parseRequiredStablecoinIdParam,

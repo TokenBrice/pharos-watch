@@ -5,14 +5,10 @@ import { YieldRankingsResponseSchema, type YieldRanking, type YieldRankingsRespo
 import { BluechipRatingsMapSchema } from "@shared/types/market";
 import { computePYS, yieldStabilityToApyVarianceScore } from "@shared/lib/yield-scoring";
 import {
-  addFreshnessHeaders,
   createCacheHandler,
   errorResponse,
-  readCachedJsonOr503,
-  withErrorHandler,
 } from "../lib/api-utils";
 import { CACHE_PROFILES, DEFAULT_SAFETY_SCORE } from "../lib/constants";
-import { getCache } from "../lib/db-cache";
 import { buildReportCardsSnapshot } from "../lib/report-cards-snapshot";
 import { loadStablecoinsCache } from "../lib/stablecoins-cache";
 import { normalizeStablecoinChartPoints } from "../lib/stablecoin-charts-payload";
@@ -28,40 +24,32 @@ export const handleStablecoins = createCacheHandler(
   API_FRESHNESS_MAX_AGE_SEC.stablecoins,
 );
 
-export const handleStablecoinCharts = withErrorHandler(
+export const handleStablecoinCharts = createCacheHandler(
   "stablecoin-charts",
-  async (db: D1Database): Promise<Response> => {
-    const cached = await getCache(db, "stablecoin-charts");
-    if (!cached) {
-      return errorResponse(503, "Data not yet available");
-    }
+  "stablecoin-charts",
+  CACHE_PROFILES.standard,
+  API_FRESHNESS_MAX_AGE_SEC.stablecoinCharts,
+  {
+    injectMeta: "never",
+    transform: async (payload, { db }) => {
+      const normalizedPoints = normalizeStablecoinChartPoints(payload);
+      if (!normalizedPoints) {
+        return errorResponse(503, "Cached stablecoin-charts payload is malformed");
+      }
 
-    const headers = addFreshnessHeaders({
-      "Content-Type": "application/json",
-      "Cache-Control": CACHE_PROFILES.standard,
-    }, cached.updatedAt, API_FRESHNESS_MAX_AGE_SEC.stablecoinCharts);
+      let points = normalizedPoints;
 
-    const parsed = readCachedJsonOr503<unknown>("stablecoin-charts", "stablecoin-charts", cached);
-    if (!parsed.ok) {
-      return parsed.response;
-    }
-    const normalizedPoints = normalizeStablecoinChartPoints(parsed.data);
-    if (!normalizedPoints) {
-      return errorResponse(503, "Cached stablecoin-charts payload is malformed");
-    }
+      const stablecoinsCache = await loadStablecoinsCache(db, { mode: "strict", allowLegacyArray: true });
+      if (stablecoinsCache.kind === "ok") {
+        const currentPoint = buildCurrentStablecoinChartsPoint(
+          stablecoinsCache.payload.peggedAssets,
+          stablecoinsCache.updatedAt,
+        );
+        points = appendOrReplaceCurrentStablecoinChartsPoint(points, currentPoint);
+      }
 
-    let points = normalizedPoints;
-
-    const stablecoinsCache = await loadStablecoinsCache(db, { mode: "strict", allowLegacyArray: true });
-    if (stablecoinsCache.kind === "ok") {
-      const currentPoint = buildCurrentStablecoinChartsPoint(
-        stablecoinsCache.payload.peggedAssets,
-        stablecoinsCache.updatedAt,
-      );
-      points = appendOrReplaceCurrentStablecoinChartsPoint(points, currentPoint);
-    }
-
-    return new Response(JSON.stringify(points), { headers });
+      return points;
+    },
   },
 );
 

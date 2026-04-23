@@ -4,6 +4,7 @@ import type { LiveReservesConfig } from "./live-reserves";
 import type { ReserveSlice } from "./reserves";
 export type { DependencyType } from "./dependency-types";
 export type { ReserveRisk, ReserveSlice } from "./reserves";
+export { RESERVE_RISK_VALUES, ReserveRiskSchema } from "./reserves";
 export { DEPENDENCY_TYPE_VALUES, DependencyTypeSchema } from "./dependency-types";
 
 // --- Flag-based classification ---

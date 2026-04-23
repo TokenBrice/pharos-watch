@@ -42,7 +42,10 @@ export interface EndpointDefinition {
   routeDependencies?: readonly EndpointDependency[];
 }
 
-type BaseEndpointDefinition = Omit<EndpointDefinition, "publicApiAccess" | "siteDataAccess">;
+type BaseEndpointDefinition = Omit<EndpointDefinition, "publicApiAccess" | "siteDataAccess"> & {
+  publicApiAccess?: EndpointPublicApiAccess;
+  siteDataAccess?: EndpointSiteDataAccess;
+};
 
 export interface StatusPageAction {
   label: string;
@@ -140,6 +143,7 @@ const BASE_ENDPOINT_DEFINITIONS = [
     adminRequired: false,
     mutatingAdmin: false,
     cacheBypass: true,
+    publicApiAccess: "exempt",
     probeGroup: "public",
   },
   {
@@ -377,6 +381,7 @@ const BASE_ENDPOINT_DEFINITIONS = [
     adminRequired: false,
     mutatingAdmin: false,
     cacheBypass: true,
+    publicApiAccess: "exempt",
     routeDependencies: ["feedbackEnv"],
   },
   {
@@ -386,6 +391,7 @@ const BASE_ENDPOINT_DEFINITIONS = [
     adminRequired: false,
     mutatingAdmin: false,
     cacheBypass: true,
+    publicApiAccess: "exempt",
     routeDependencies: ["telegram"],
   },
 
@@ -720,53 +726,19 @@ export type EndpointDependenciesForKey<K extends EndpointKey> =
     ? Deps
     : readonly [];
 
-const SITE_DATA_ALLOWED_ENDPOINT_KEYS = new Set<EndpointKey>([
-  "stablecoins",
-  "stablecoin-detail-canary",
-  "stablecoin-summary-canary",
-  "stablecoin-reserves-canary",
-  "stablecoin-charts",
-  "peg-summary",
-  "health",
-  "blacklist",
-  "blacklist-summary",
-  "depeg-events",
-  "usds-status",
-  "bluechip-ratings",
-  "dex-liquidity",
-  "dex-liquidity-history",
-  "supply-history",
-  "daily-digest",
-  "digest-archive",
-  "digest-snapshot",
-  "yield-rankings",
-  "yield-history",
-  "safety-score-history",
-  "stability-index",
-  "report-cards",
-  "redemption-backstops",
-  "mint-burn-flows",
-  "mint-burn-events",
-  "stress-signals",
-  "chains",
-  "non-usd-share",
-  "public-status-history",
-  "telegram-pulse",
-]);
+function getSiteDataAccess(endpoint: BaseEndpointDefinition): EndpointSiteDataAccess {
+  if (endpoint.siteDataAccess) return endpoint.siteDataAccess;
+  return !endpoint.adminRequired && endpoint.methods.includes("GET") ? "allowed" : "denied";
+}
 
-const PUBLIC_API_EXEMPT_ENDPOINT_KEYS = new Set<EndpointKey>([
-  "health",
-  "feedback",
-  "telegram-webhook",
-]);
+function getPublicApiAccess(endpoint: BaseEndpointDefinition): EndpointPublicApiAccess {
+  return endpoint.publicApiAccess ?? (endpoint.adminRequired ? "exempt" : "protected");
+}
 
 export const ENDPOINT_DEFINITIONS: readonly EndpointDefinition[] = BASE_ENDPOINT_DEFINITIONS.map((endpoint) => ({
   ...endpoint,
-  publicApiAccess:
-    endpoint.adminRequired || PUBLIC_API_EXEMPT_ENDPOINT_KEYS.has(endpoint.key)
-      ? "exempt"
-      : "protected",
-  siteDataAccess: SITE_DATA_ALLOWED_ENDPOINT_KEYS.has(endpoint.key) ? "allowed" : "denied",
+  publicApiAccess: getPublicApiAccess(endpoint),
+  siteDataAccess: getSiteDataAccess(endpoint),
 }));
 
 const ENDPOINT_DEFINITION_BY_PATH = new Map<string, EndpointDefinition>(

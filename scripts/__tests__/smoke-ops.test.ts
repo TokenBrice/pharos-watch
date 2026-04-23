@@ -105,10 +105,13 @@ describe("fetchOpsUiProxyStatus", () => {
 });
 
 describe("fetchOpsUiProxyStatusWithRetry", () => {
-  it("retries a transient proxied 502 once before failing the smoke", async () => {
+  it.each<{ body: string; status: number }>([
+    { status: 502, body: "bad gateway" },
+    { status: 504, body: "gateway timeout" },
+  ])("retries a transient proxied $status once before failing the smoke", async ({ status, body }) => {
     const fetchMock = vi.fn()
-      .mockResolvedValueOnce(new Response("bad gateway", {
-        status: 502,
+      .mockResolvedValueOnce(new Response(body, {
+        status,
         headers: { "content-type": "text/plain" },
       }))
       .mockResolvedValueOnce(new Response(JSON.stringify({ overallStatus: "degraded" }), {
@@ -140,46 +143,7 @@ describe("fetchOpsUiProxyStatusWithRetry", () => {
       attemptNumber: 1,
       retryCount: 1,
       retryDelayMs: 2_000,
-      status: 502,
-    });
-  });
-
-  it("retries a transient proxied 504 once before failing the smoke", async () => {
-    const fetchMock = vi.fn()
-      .mockResolvedValueOnce(new Response("gateway timeout", {
-        status: 504,
-        headers: { "content-type": "text/plain" },
-      }))
-      .mockResolvedValueOnce(new Response(JSON.stringify({ overallStatus: "degraded" }), {
-        status: 200,
-        headers: { "content-type": "application/json" },
-      }));
-    const sleepMock = vi.fn().mockResolvedValue(undefined);
-    const onRetry = vi.fn();
-
-    const result = await fetchOpsUiProxyStatusWithRetry(
-      "https://ops.pharos.watch/api/admin/status",
-      {
-        "CF-Access-Client-Id": "id",
-        "CF-Access-Client-Secret": "secret",
-      },
-      {
-        fetchImpl: fetchMock,
-        retryCount: 1,
-        retryDelayMs: 2_000,
-        sleepImpl: sleepMock,
-        onRetry,
-      },
-    );
-
-    expect(result.proxiedStatus.response.status).toBe(200);
-    expect(fetchMock).toHaveBeenCalledTimes(2);
-    expect(sleepMock).toHaveBeenCalledWith(2_000);
-    expect(onRetry).toHaveBeenCalledWith({
-      attemptNumber: 1,
-      retryCount: 1,
-      retryDelayMs: 2_000,
-      status: 504,
+      status,
     });
   });
 

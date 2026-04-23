@@ -112,6 +112,9 @@ export function createCacheHandler(
 
     if (options?.transform) {
       body = await options.transform(body, { db, cached });
+      if (body instanceof Response) {
+        return body;
+      }
     }
 
     if (options?.injectMeta !== "never" && body && typeof body === "object" && !Array.isArray(body)) {

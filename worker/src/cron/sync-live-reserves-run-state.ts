@@ -1,5 +1,6 @@
 import { deleteCache, getCache } from "../lib/db-cache";
 import { breakerKeyForConfig, type ConfiguredCoin } from "./sync-live-reserves-shared";
+import { rotateFromCursor } from "./shared/cursor-rotation";
 import {
   buildReserveSyncAttemptHistoryInsertStatement,
   buildReserveSyncRecordDeferredStatement,
@@ -18,17 +19,7 @@ export function rotateConfiguredCoins(
   configuredCoins: readonly ConfiguredCoin[],
   nextStablecoinId: string | null,
 ): ConfiguredCoin[] {
-  if (!nextStablecoinId) {
-    return [...configuredCoins];
-  }
-  const startIndex = configuredCoins.findIndex((coin) => coin.id === nextStablecoinId);
-  if (startIndex <= 0) {
-    return [...configuredCoins];
-  }
-  return [
-    ...configuredCoins.slice(startIndex),
-    ...configuredCoins.slice(0, startIndex),
-  ];
+  return rotateFromCursor(configuredCoins, nextStablecoinId, (coin) => coin.id).items;
 }
 
 export async function loadLiveReserveCursorState(db: D1Database): Promise<{

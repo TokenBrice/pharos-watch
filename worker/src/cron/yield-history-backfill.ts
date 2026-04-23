@@ -1,4 +1,5 @@
 import { D1_BATCH_SIZE, USER_AGENT } from "../lib/constants";
+import { batchExecute } from "../lib/db";
 import { fetchWithRetry } from "../lib/fetch-retry";
 import { YIELD_POOL_MAP } from "./yield-config";
 
@@ -77,31 +78,26 @@ async function _backfillYieldHistory(
   const rows = buildBackfillRows(stablecoinId, poolUuid, body.data);
   if (rows.length === 0) return { inserted: 0, skipped: body.data.length };
 
-  let inserted = 0;
-  for (let i = 0; i < rows.length; i += D1_BATCH_SIZE) {
-    const batch = rows.slice(i, i + D1_BATCH_SIZE);
-    const stmts = batch.map((row) =>
-      db
-        .prepare(
-          `INSERT OR IGNORE INTO yield_history
-           (stablecoin_id, source_key, recorded_at, apy, apy_base, apy_reward, source_tvl_usd, data_source, is_best, warning_signals)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-        )
-        .bind(
-          row.stablecoin_id,
-          row.source_key,
-          row.recorded_at,
-          row.apy,
-          row.apy_base,
-          row.apy_reward,
-          row.source_tvl_usd,
-          row.data_source,
-          row.is_best,
-          row.warning_signals,
-        ),
-    );
-    await db.batch(stmts);
-    inserted += batch.length;
-  }
-  return { inserted, skipped: body.data.length - rows.length };
+  const stmts = rows.map((row) =>
+    db
+      .prepare(
+        `INSERT OR IGNORE INTO yield_history
+         (stablecoin_id, source_key, recorded_at, apy, apy_base, apy_reward, source_tvl_usd, data_source, is_best, warning_signals)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      )
+      .bind(
+        row.stablecoin_id,
+        row.source_key,
+        row.recorded_at,
+        row.apy,
+        row.apy_base,
+        row.apy_reward,
+        row.source_tvl_usd,
+        row.data_source,
+        row.is_best,
+        row.warning_signals,
+      ),
+  );
+  await batchExecute(db, stmts, D1_BATCH_SIZE);
+  return { inserted: rows.length, skipped: body.data.length - rows.length };
 }

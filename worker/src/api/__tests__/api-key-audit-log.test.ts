@@ -30,6 +30,7 @@ describe("api-key-audit-log handler", () => {
     const request = new Request("https://api.pharos.watch/api/api-keys/audit-log");
     const response = await handleApiKeyAuditLog(db, true, request);
     expect(response.status).toBe(200);
+    expect(response.headers.get("Cache-Control")).toBe("no-store");
 
     const body = await response.json() as { entries: Array<{ action: string; detail: unknown }> };
     expect(body.entries).toHaveLength(1);

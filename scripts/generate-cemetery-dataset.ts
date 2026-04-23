@@ -1,11 +1,12 @@
 import { createHash } from "node:crypto";
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { sortCemeteryCoins } from "../shared/lib/cemetery";
 import { CAUSE_META, DEAD_STABLECOINS } from "../shared/lib/dead-stablecoins";
 import { SITE_ORIGIN } from "../shared/lib/runtime-origins";
 import type { DeadStablecoin } from "../shared/types";
+import { syncGeneratedArtifacts } from "./lib/generated-artifacts";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const SOURCE_DATA_PATH = join(__dirname, "../shared/data/dead-stablecoins.json");
@@ -173,19 +174,13 @@ assertUniqueRowIds(rows);
 const nextJson = renderJson(rows);
 const nextCsv = renderCsv(rows);
 
-if (CHECK_MODE) {
-  const currentJson = existsSync(JSON_OUTPUT) ? readFileSync(JSON_OUTPUT, "utf8") : "";
-  const currentCsv = existsSync(CSV_OUTPUT) ? readFileSync(CSV_OUTPUT, "utf8") : "";
-
-  if (currentJson !== nextJson || currentCsv !== nextCsv) {
-    console.error("Cemetery dataset exports are out of date. Run `tsx scripts/generate-cemetery-dataset.ts`.");
-    process.exit(1);
-  }
-
-  console.log("Cemetery dataset exports are current");
-} else {
-  mkdirSync(OUTPUT_DIR, { recursive: true });
-  writeFileSync(JSON_OUTPUT, nextJson, "utf8");
-  writeFileSync(CSV_OUTPUT, nextCsv, "utf8");
-  console.log(`Generated cemetery dataset exports for ${rows.length} stablecoins`);
-}
+syncGeneratedArtifacts({
+  artifacts: [
+    { path: JSON_OUTPUT, contents: nextJson },
+    { path: CSV_OUTPUT, contents: nextCsv },
+  ],
+  check: CHECK_MODE,
+  staleMessage: "Cemetery dataset exports are out of date. Run `tsx scripts/generate-cemetery-dataset.ts`.",
+  currentMessage: "Cemetery dataset exports are current",
+  writtenMessage: `Generated cemetery dataset exports for ${rows.length} stablecoins`,
+});

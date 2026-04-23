@@ -1,0 +1,22 @@
+// Bluechip slug -> Pharos stablecoin ID (only coins in both systems).
+export const BLUECHIP_SLUG_MAP: Record<string, string> = {
+  usdc: "usdc-circle",
+  usdt: "usdt-tether",
+  dai: "dai-makerdao",
+  lusd: "lusd-liquity",
+  bold: "bold-liquity",
+  pyusd: "pyusd-paypal",
+  paxg: "paxg-paxos",
+  xaut: "xaut-tether",
+  gusd: "gusd-gemini",
+  usdp: "usdp-paxos",
+  eurc: "eurc-circle",
+  fdusd: "fdusd-first-digital",
+  frax: "frax-frax",
+  gho: "gho-aave",
+  tusd: "tusd-trueusd",
+  rlusd: "rlusd-ripple",
+  xsgd: "xsgd-straitsx",
+  ousd: "ousd-origin-protocol",
+  cetes: "cetes-etherfuse",
+};

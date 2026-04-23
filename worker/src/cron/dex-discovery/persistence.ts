@@ -1,3 +1,4 @@
+import { batchExecute } from "../../lib/db";
 import type { DiscoveryMeta, StagedPool } from "./types";
 
 const STAGING_UPSERT_SQL = `INSERT INTO dex_pool_staging
@@ -59,39 +60,36 @@ export async function upsertStagedPools(db: D1Database, pools: StagedPool[]): Pr
   });
   if (validPools.length === 0) return;
 
-  for (let i = 0; i < validPools.length; i += STAGING_BATCH_SIZE) {
-    const chunk = validPools.slice(i, i + STAGING_BATCH_SIZE);
-    const stmts = chunk.map((pool) =>
-      db
-        .prepare(STAGING_UPSERT_SQL)
-        .bind(
-          pool.poolId,
-          pool.stablecoinId,
-          pool.source,
-          pool.chain,
-          pool.protocol,
-          pool.dexId,
-          pool.symbol,
-          pool.tvlUsd,
-          pool.volume24h,
-          pool.qualityMultiplier,
-          pool.poolType,
-          pool.feeTier,
-          pool.balanceRatio,
-          pool.isStable === null ? null : pool.isStable ? 1 : 0,
-          pool.baseToken,
-          pool.quoteToken,
-          pool.quoteSymbol,
-          pool.priceUsd,
-          pool.lockedLiqPct,
-          pool.rawJson,
-          pool.discoveredAt,
-          pool.refreshedAt,
-        ),
-    );
+  const stmts = validPools.map((pool) =>
+    db
+      .prepare(STAGING_UPSERT_SQL)
+      .bind(
+        pool.poolId,
+        pool.stablecoinId,
+        pool.source,
+        pool.chain,
+        pool.protocol,
+        pool.dexId,
+        pool.symbol,
+        pool.tvlUsd,
+        pool.volume24h,
+        pool.qualityMultiplier,
+        pool.poolType,
+        pool.feeTier,
+        pool.balanceRatio,
+        pool.isStable === null ? null : pool.isStable ? 1 : 0,
+        pool.baseToken,
+        pool.quoteToken,
+        pool.quoteSymbol,
+        pool.priceUsd,
+        pool.lockedLiqPct,
+        pool.rawJson,
+        pool.discoveredAt,
+        pool.refreshedAt,
+      ),
+  );
 
-    await db.batch(stmts);
-  }
+  await batchExecute(db, stmts, STAGING_BATCH_SIZE);
 }
 
 /**

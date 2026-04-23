@@ -12,8 +12,7 @@ import { usePinnedStablecoins } from "@/hooks/use-pinned-stablecoins";
 import { useDataAnnounce } from "@/hooks/use-data-announce";
 import { DataLiveRegion } from "@/components/data-live-region";
 import { MarketHighlights } from "@/components/market-highlights";
-import { StaleDataBanner } from "@/components/stale-data-banner";
-import { QueryErrorNotice } from "@/components/query-error-notice";
+import { QueryFreshnessNotices } from "@/components/query-freshness-notices";
 import { FilterBar } from "@/components/filter-bar";
 import { SectionErrorBoundary } from "@/components/section-error-boundary";
 import { SectionSkeleton, ChartSkeleton } from "@/components/homepage-skeletons";
@@ -126,8 +125,10 @@ export function HomepageClient() {
   return (
     <div className="space-y-6">
       <DataLiveRegion />
-      <QueryErrorNotice error={globalError} hasData={!!data?.peggedAssets?.length} onRetry={handleRetry} />
-      <StaleDataBanner
+      <QueryFreshnessNotices
+        error={globalError}
+        hasData={!!data?.peggedAssets?.length}
+        onRetry={handleRetry}
         queries={[
           {
             preset: "stablecoins",

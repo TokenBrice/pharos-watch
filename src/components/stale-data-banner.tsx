@@ -9,7 +9,7 @@ import type { ApiMeta } from "@/lib/api";
  * Compatibility wrapper around DataHealthBanner.
  * Prefer using `preset` to keep label/stale-time semantics centralized.
  */
-interface StaleQuery {
+export interface StaleQuery {
   preset?: keyof typeof DATA_HEALTH_PRESETS;
   label?: string;
   /** Timestamp in ms (from TanStack Query's dataUpdatedAt), 0 if never fetched */
@@ -21,7 +21,7 @@ interface StaleQuery {
   meta?: ApiMeta | null;
 }
 
-export function StaleDataBanner({ queries }: { queries: StaleQuery[] }) {
+export function StaleDataBanner({ queries }: { queries: readonly StaleQuery[] }) {
   const health = queries.map((q) => {
     const preset = q.preset ? DATA_HEALTH_PRESETS[q.preset] : null;
     const label = q.label ?? preset?.label ?? "Data";

@@ -1,9 +1,12 @@
 import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins";
 import { buildInClause } from "../lib/db";
-import { jsonResponse, withErrorHandler } from "../lib/api-utils";
+import { jsonResponse, parseClampedIntegerParam, withErrorHandler } from "../lib/api-utils";
 import { CACHE_PROFILES } from "../lib/constants";
 
 const COMMODITY_PEGS = new Set(["GOLD", "SILVER"]);
+const DEFAULT_DAYS = 1825;
+const MIN_DAYS = 30;
+const MAX_DAYS = 1825;
 
 /** IDs of commodity-pegged stablecoins (gold, silver). */
 const COMMODITY_IDS = ACTIVE_STABLECOINS
@@ -25,8 +28,9 @@ interface AggRow {
 export const handleNonUsdShare = withErrorHandler(
   "non-usd-share",
   async (db: D1Database, url: URL): Promise<Response> => {
-    const daysParam = url.searchParams.get("days");
-    const days = Math.min(Math.max(Number(daysParam) || 1825, 30), 1825);
+    const days = parseClampedIntegerParam(url.searchParams.get("days"), DEFAULT_DAYS, MIN_DAYS, MAX_DAYS, {
+      zeroAsDefault: true,
+    });
     const cutoff = Math.floor(Date.now() / 1000) - days * 86400;
 
     const commodityIn = buildInClause(COMMODITY_IDS);

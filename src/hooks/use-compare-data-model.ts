@@ -12,6 +12,8 @@ import { supplyHistoryQueryOptions, useStablecoins } from "@/hooks/use-stablecoi
 import { mintBurnFlowsCoinQueryOptions, useMintBurnFlows } from "@/hooks/use-mint-burn-flows";
 import { COMPARE_COLORS } from "@/lib/compare-config";
 import { refetchQueryGroup } from "@/lib/query-refetch-group";
+import { buildPegSummaryCoinMap } from "@/lib/stablecoin-lookups";
+import { buildStablecoinTableInputs } from "@/lib/stablecoin-table-inputs";
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins";
 import {
   deriveComparisonCoins,
@@ -19,7 +21,6 @@ import {
   deriveFlowSeries,
   deriveFlowCardData,
 } from "@/lib/compare-derive";
-import { derivePegRates } from "@shared/lib/peg-rates";
 import {
   type ReportCard,
   type StablecoinData,
@@ -85,8 +86,12 @@ export function useCompareDataModel({
         assetMap: new Map<string, StablecoinData>(),
       };
     }
+    const tableInputs = buildStablecoinTableInputs({
+      stablecoins: listData.peggedAssets,
+      fxFallbackRates: listData.fxFallbackRates,
+    });
     return {
-      pegRates: derivePegRates(listData.peggedAssets, TRACKED_META_BY_ID, listData.fxFallbackRates).rates,
+      pegRates: tableInputs.pegRates,
       assetMap: new Map(listData.peggedAssets.map((a) => [a.id, a] as const)),
     };
   }, [listData]);
@@ -112,9 +117,8 @@ export function useCompareDataModel({
   // pegCoinMap and flowCoinMap depend on different queries (pegSummary vs flowData)
   // and cannot be combined without introducing unnecessary re-computation.
   const pegCoinMap = useMemo(() => {
-    if (!pegSummary?.coins) return new Map<string, NonNullable<typeof pegSummary>["coins"][number]>();
-    return new Map(pegSummary.coins.map((c) => [c.id, c] as const));
-  }, [pegSummary]);
+    return buildPegSummaryCoinMap(pegSummary?.coins);
+  }, [pegSummary?.coins]);
 
   const flowCoinMap = useMemo(() => {
     if (!flowData?.coins) return new Map<string, NonNullable<typeof flowData>["coins"][number]>();

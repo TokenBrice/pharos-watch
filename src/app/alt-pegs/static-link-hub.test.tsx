@@ -1,9 +1,11 @@
 // @vitest-environment jsdom
 
-import { render } from "@testing-library/react";
+import { cleanup, render } from "@testing-library/react";
 import { renderToStaticMarkup } from "react-dom/server";
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it } from "vitest";
 import { StaticAltPegLinkHub } from "@/app/alt-pegs/static-link-hub";
+
+afterEach(cleanup);
 
 describe("StaticAltPegLinkHub", () => {
   it("renders crawlable peg links in static markup for fiat, commodity, and index cohorts", () => {

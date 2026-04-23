@@ -15,8 +15,8 @@ import { ChartSkeleton } from "@/components/chart-skeleton";
 import { Share2, X, Download } from "lucide-react";
 import { DIMENSION_ORDER, DIMENSION_SHORT_LABELS } from "@shared/lib/report-cards";
 import { BACKING_LABELS, GOVERNANCE_LABELS, PEG_LABELS_SHORT } from "@shared/lib/classification";
-import { StaleDataBanner } from "@/components/stale-data-banner";
 import { QueryErrorNotice } from "@/components/query-error-notice";
+import { QueryFreshnessNotices } from "@/components/query-freshness-notices";
 import { CompareEmptyState } from "@/components/compare-empty-state";
 import { buildStablecoinUrl } from "@/lib/urls";
 import {
@@ -180,8 +180,10 @@ export function CompareClient() {
 
   return (
     <div className="space-y-6">
-      <QueryErrorNotice error={globalError} hasData={!!listData?.peggedAssets?.length} onRetry={handleRetry} />
-      <StaleDataBanner
+      <QueryFreshnessNotices
+        error={globalError}
+        hasData={!!listData?.peggedAssets?.length}
+        onRetry={handleRetry}
         queries={[
           { preset: "stablecoins", dataUpdatedAt, error: listError, hasData: !!listData?.peggedAssets?.length, meta: listMeta },
           { preset: "pegSummary", dataUpdatedAt: pegUpdatedAt, error: pegError, hasData: !!pegSummary?.coins?.length, meta: pegMeta },

@@ -1,4 +1,4 @@
-import { readFileSync, writeFileSync } from "node:fs";
+import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { PEG_LABELS_SHORT } from "../shared/lib/classification";
@@ -7,6 +7,7 @@ import { SITE_ORIGIN } from "../shared/lib/runtime-origins";
 import { ACTIVE_STABLECOINS } from "../shared/lib/stablecoins";
 import { PUBLIC_DOCS } from "../shared/lib/public-docs";
 import type { BackingType, GovernanceType, StablecoinMeta } from "../shared/types";
+import { syncGeneratedArtifacts } from "./lib/generated-artifacts";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const DIGESTS_PATH = join(__dirname, "../data/digests.json");
@@ -198,14 +199,10 @@ function render(): string {
 
 const output = render();
 
-if (CHECK_MODE) {
-  const current = readFileSync(OUTPUT_PATH, "utf8");
-  if (current !== output) {
-    console.error("public/llms.txt is out of date. Run `npm run prebuild` and commit the generated file.");
-    process.exit(1);
-  }
-  console.log("public/llms.txt is current");
-} else {
-  writeFileSync(OUTPUT_PATH, output, "utf8");
-  console.log(`Generated llms.txt for ${ACTIVE_STABLECOINS.length} active stablecoins`);
-}
+syncGeneratedArtifacts({
+  artifacts: [{ path: OUTPUT_PATH, contents: output }],
+  check: CHECK_MODE,
+  staleMessage: "public/llms.txt is out of date. Run `npm run prebuild` and commit the generated file.",
+  currentMessage: "public/llms.txt is current",
+  writtenMessage: `Generated llms.txt for ${ACTIVE_STABLECOINS.length} active stablecoins`,
+});

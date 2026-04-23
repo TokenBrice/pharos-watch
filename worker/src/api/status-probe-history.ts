@@ -1,5 +1,5 @@
 import { makeAdminRoute } from "../lib/route-wrappers";
-import { jsonResponse } from "../lib/api-utils";
+import { jsonResponse, parseClampedIntegerParam } from "../lib/api-utils";
 import { getProbePaths } from "@shared/lib/api-endpoints";
 
 interface AdminRouteContext {
@@ -42,12 +42,9 @@ export const handleStatusProbeHistory = makeAdminRoute<AdminRouteContext>(
     const path = url.searchParams.get("path");
     const allowedPaths = new Set<string>([...getProbePaths("public"), ...getProbePaths("admin")]);
     if (!path || !allowedPaths.has(path)) {
-      return jsonResponse({ error: "Missing or unknown path" }, { status: 400, noStore: true });
+      return jsonResponse({ error: "Missing or unknown path" }, { status: 400 });
     }
-    const daysRaw = Number(url.searchParams.get("days") ?? DEFAULT_DAYS);
-    const days = Number.isFinite(daysRaw)
-      ? Math.max(1, Math.min(MAX_DAYS, Math.floor(daysRaw)))
-      : DEFAULT_DAYS;
+    const days = parseClampedIntegerParam(url.searchParams.get("days"), DEFAULT_DAYS, 1, MAX_DAYS);
     const since = Math.floor(Date.now() / 1000) - days * 86_400;
 
     const rows = await db
@@ -81,6 +78,6 @@ export const handleStatusProbeHistory = makeAdminRoute<AdminRouteContext>(
       failCount: runs.filter((r) => r.failed).length,
     };
 
-    return jsonResponse({ path, summary, runs }, { noStore: true });
+    return jsonResponse({ path, summary, runs });
   },
 );
