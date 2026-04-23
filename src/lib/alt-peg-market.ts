@@ -104,16 +104,19 @@ function getFiatPegRegion(peg: PegCurrency): AltPegRegion {
     case "GBP":
     case "RUB":
     case "TRY":
+    case "UAH":
       return "Europe";
     case "JPY":
     case "IDR":
     case "SGD":
     case "CNH":
+    case "CNY":
     case "PHP":
       return "Asia";
     case "BRL":
     case "CAD":
     case "MXN":
+    case "ARS":
       return "Americas";
     case "ZAR":
       return "Africa";
