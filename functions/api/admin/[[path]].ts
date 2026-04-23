@@ -53,9 +53,6 @@ function resolveUpstreamPath(params: OpsAdminProxyContext["params"]): string | n
   return resolveWildcardProxyPath(params.path, "/api/");
 }
 
-function isAllowedAdminPath(path: string): boolean {
-  return isAdminPath(path);
-}
 
 function resolveOpsAdminProxyTimeoutMs(upstreamPath: string): number {
   return EXTENDED_STATUS_PROXY_PATHS.has(upstreamPath)
@@ -161,7 +158,7 @@ export const onRequest = async (context: OpsAdminProxyContext): Promise<Response
   }
 
   const upstreamPath = resolveUpstreamPath(params);
-  if (!upstreamPath || !isAllowedAdminPath(upstreamPath)) {
+  if (!upstreamPath || !isAdminPath(upstreamPath)) {
     return withNoindex(jsonError(404, "Not found"));
   }
 
