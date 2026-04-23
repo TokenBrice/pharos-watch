@@ -3,5 +3,5 @@
  */
 
 export function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null;
+  return value != null && typeof value === "object" && !Array.isArray(value);
 }

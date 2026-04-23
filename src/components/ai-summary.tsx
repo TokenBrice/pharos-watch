@@ -1,5 +1,5 @@
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
-import { DETAIL_SECTION_TITLE_CLASS } from "@/components/stablecoin-detail/section-title";
+import { DetailSectionTitle } from "@/components/stablecoin-detail/section-title";
 import type { StablecoinAiSummary } from "@shared/types";
 
 export function AiSummary({ title, text, updatedAt }: StablecoinAiSummary) {
@@ -15,7 +15,7 @@ export function AiSummary({ title, text, updatedAt }: StablecoinAiSummary) {
     <Card>
       <CardHeader>
         <div className="flex items-center justify-between gap-2">
-          <CardTitle as="h2" className={DETAIL_SECTION_TITLE_CLASS}>{title}</CardTitle>
+          <DetailSectionTitle>{title}</DetailSectionTitle>
           <time className="text-xs text-muted-foreground whitespace-nowrap" dateTime={isoDate}>
             Updated {dateline}
           </time>

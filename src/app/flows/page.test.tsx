@@ -2,7 +2,6 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { ReactNode } from "react";
 import FlowsPage from "@/app/flows/page";
-import FlowsLayout from "@/app/flows/layout";
 import { useMintBurnFlows } from "@/hooks/use-mint-burn-flows";
 
 vi.mock("next/link", () => ({
@@ -180,11 +179,7 @@ describe("FlowsPage", () => {
       }) as unknown as ReturnType<typeof useMintBurnFlows>;
     });
 
-    const html = renderToStaticMarkup(
-      <FlowsLayout>
-        <FlowsPage />
-      </FlowsLayout>,
-    );
+    const html = renderToStaticMarkup(<FlowsPage />);
 
     expect(html.match(/"@type":"BreadcrumbList"/g)).toHaveLength(1);
     expect(html).toContain('"@type":"FAQPage"');

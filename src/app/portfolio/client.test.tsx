@@ -82,10 +82,6 @@ vi.mock("@/components/stablecoin-logo", () => ({
   StablecoinLogo: ({ name }: { name: string }) => <div>{name}</div>,
 }));
 
-vi.mock("@/components/grade-badge", () => ({
-  GradeBadge: ({ grade }: { grade: string }) => <div>{grade}</div>,
-}));
-
 vi.mock("@/components/report-card-mini", () => ({
   ReportCardMini: ({ card }: { card: ReportCard }) => <div>{card.id}</div>,
 }));
