@@ -10,7 +10,9 @@ import {
   type CountryInfo,
 } from "@/app/alt-pegs/fiat-world-atlas/world-map-interactive";
 import { MobileRegionList } from "@/app/alt-pegs/fiat-world-atlas/mobile-region-list";
+import { MapEmblemClusters } from "@/app/alt-pegs/fiat-world-atlas/map-emblem-clusters";
 import { PEG_COUNTRY_MAP } from "@/lib/alt-peg-geography";
+import { buildPegEmblemClusters } from "@/lib/alt-peg-emblems";
 
 const ATLAS_REGION_ORDER: Exclude<AltPegRegion, "Other">[] = [
   "Americas",
@@ -90,6 +92,7 @@ export function FiatWorldAtlas({
           <WorldMapInteractive countryInfo={countryInfo}>
             <WorldMap items={fiatItems} />
           </WorldMapInteractive>
+          <MapEmblemClusters clusters={buildPegEmblemClusters()} />
         </div>
         <div className="grid gap-3 px-4 py-4 sm:px-5 sm:py-5 sm:grid-cols-2 lg:grid-cols-3">
           {geoRegions.map(({ region, items }) => (
