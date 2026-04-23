@@ -63,23 +63,3 @@ export function extractEscapedJsonValueAfterKey(
 
   throw htmlParseError(adapterName, `unterminated ${key}`);
 }
-
-export function extractEscapedJsonArrayBetween(
-  html: string,
-  startNeedle: string,
-  endNeedle: string,
-  adapterName: string,
-): string {
-  const start = html.indexOf(startNeedle);
-  if (start === -1) {
-    throw htmlLayoutChangedError(adapterName, `missing ${startNeedle}`);
-  }
-
-  const contentStart = start + startNeedle.length;
-  const end = html.indexOf(endNeedle, contentStart);
-  if (end === -1) {
-    throw htmlLayoutChangedError(adapterName, `missing ${endNeedle}`);
-  }
-
-  return decodeEscapedJsonFragment(`${html.slice(contentStart, end)}]`);
-}
