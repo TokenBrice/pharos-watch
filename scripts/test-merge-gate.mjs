@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-import { execSync, spawnSync } from "node:child_process";
+import { execSync, spawn } from "node:child_process";
 import { pathToFileURL } from "node:url";
 import {
   hasDeployImpact,
@@ -79,7 +79,7 @@ export function getChangedFiles({ stagedMode = false, baseRef = "origin/main", e
   return raw
     .split(/\r?\n/g)
     .map((line) => normalizePath(line.trim()))
-      .filter(Boolean);
+    .filter(Boolean);
 }
 
 export function getCommandEnv(cmd, changedFiles) {
@@ -92,20 +92,93 @@ export function getCommandEnv(cmd, changedFiles) {
   };
 }
 
+function createExecutionUnit(commands) {
+  return { commands };
+}
+
+function findPlanItem(plan, cmd) {
+  return plan.find((item) => item.cmd === cmd);
+}
+
+export function buildExecutionBatches(plan) {
+  const prebuildCommands = COMMON_VALIDATE_PREBUILD_COMMANDS.map((cmd) => findPlanItem(plan, cmd)).filter(Boolean);
+  const hasPagesBuild = PAGES_VALIDATE_COMMANDS.every((cmd) => findPlanItem(plan, cmd));
+  const postValidateUnits = [];
+
+  if (hasPagesBuild) {
+    postValidateUnits.push(
+      createExecutionUnit(PAGES_VALIDATE_COMMANDS.map((cmd) => findPlanItem(plan, cmd)).filter(Boolean)),
+    );
+  }
+
+  for (const cmd of COMMON_VALIDATE_POSTBUILD_COMMANDS) {
+    const item = findPlanItem(plan, cmd);
+    if (item) {
+      postValidateUnits.push(createExecutionUnit([item]));
+    }
+  }
+
+  for (const cmd of WORKER_VALIDATE_COMMANDS) {
+    const item = findPlanItem(plan, cmd);
+    if (item) {
+      postValidateUnits.push(createExecutionUnit([item]));
+    }
+  }
+
+  return [
+    ...prebuildCommands.map((item) => [createExecutionUnit([item])]),
+    ...(postValidateUnits.length > 0 ? [postValidateUnits] : []),
+  ];
+}
+
 function runCommand(cmd, extraEnv = {}) {
-  const result = spawnSync("bash", ["-lc", cmd], {
-    stdio: "inherit",
-    env: {
-      ...process.env,
-      ...extraEnv,
-    },
+  return new Promise((resolve) => {
+    const child = spawn("bash", ["-lc", cmd], {
+      stdio: "inherit",
+      env: {
+        ...process.env,
+        ...extraEnv,
+      },
+    });
+    child.on("error", () => resolve(1));
+    child.on("close", (code) => resolve(code ?? 1));
   });
-  if (result.status !== 0) {
-    process.exit(result.status ?? 1);
+}
+
+async function runExecutionUnit(unit, changedFiles) {
+  for (const item of unit.commands) {
+    console.log(`[merge-gate] Running: ${item.cmd}`);
+    const status = await runCommand(item.cmd, getCommandEnv(item.cmd, changedFiles));
+    if (status !== 0) {
+      return status;
+    }
+  }
+  return 0;
+}
+
+async function runExecutionBatches(plan, changedFiles, env = process.env) {
+  const serialMode = env.MERGE_GATE_SERIAL === "1";
+  const batches = serialMode ? plan.map((item) => [createExecutionUnit([item])]) : buildExecutionBatches(plan);
+
+  for (const batch of batches) {
+    if (batch.length === 1) {
+      const status = await runExecutionUnit(batch[0], changedFiles);
+      if (status !== 0) {
+        process.exit(status);
+      }
+      continue;
+    }
+
+    console.log(`[merge-gate] Running ${batch.length} independent command groups in parallel.`);
+    const statuses = await Promise.all(batch.map((unit) => runExecutionUnit(unit, changedFiles)));
+    const failure = statuses.find((status) => status !== 0);
+    if (failure != null) {
+      process.exit(failure);
+    }
   }
 }
 
-export function runMergeGate({ argv = process.argv.slice(2), env = process.env } = {}) {
+export async function runMergeGate({ argv = process.argv.slice(2), env = process.env } = {}) {
   const args = new Set(argv);
   const stagedMode = args.has("--staged");
   const baseRef = env.MERGE_GATE_BASE_REF ?? "origin/main";
@@ -143,15 +216,15 @@ export function runMergeGate({ argv = process.argv.slice(2), env = process.env }
     return;
   }
 
-  for (const item of plan) {
-    console.log(`[merge-gate] Running: ${item.cmd}`);
-    runCommand(item.cmd, getCommandEnv(item.cmd, changedFiles));
-  }
+  await runExecutionBatches(plan, changedFiles, env);
 
   console.log("[merge-gate] All checks passed.");
 }
 
 const isCliEntrypoint = process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href;
 if (isCliEntrypoint) {
-  runMergeGate();
+  runMergeGate().catch((error) => {
+    console.error(`[merge-gate] FAILED: ${error instanceof Error ? error.message : String(error)}`);
+    process.exit(1);
+  });
 }

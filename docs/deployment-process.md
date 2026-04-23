@@ -71,6 +71,8 @@ Default policy:
    - `cd worker && npx tsc --noEmit`
    - `cd worker && npx tsc --noEmit -p tsconfig.scripts.json`
 
+After `npm run validate:prebuild` succeeds, the local merge gate runs independent build/test/coverage/typecheck groups in parallel by default. This keeps the command set aligned with deploy CI while reducing local wall time. Set `MERGE_GATE_SERIAL=1` when debugging output ordering or resource contention.
+
 Pages-impacting files now use the same broad matcher as CI deploy classification: any `src/`, `shared/`, `functions/`, `public/`, or `data/` path, selected build/config scripts, shared validate/guardrail infrastructure, and the Pages release workflow files all require local export validation. Worker-impacting files use the same worker/shared/deploy-infra matcher as CI, including Worker operational scripts and shared validate/guardrail infrastructure. The gate still skips deploy-time smoke suites locally.
 
 Useful merge-gate controls:
@@ -78,6 +80,7 @@ Useful merge-gate controls:
 - `npm run test:merge-gate -- --staged` to diff staged files instead of `merge-base ... HEAD`
 - `MERGE_GATE_BASE_REF=<ref>` to override the default compare base (`origin/main`)
 - `MERGE_GATE_DRY_RUN=1` to print the command plan without executing it
+- `MERGE_GATE_SERIAL=1` to run the plan serially for lower local resource pressure
 
 ## Yield History Cleanup Windows
 

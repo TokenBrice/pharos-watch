@@ -200,7 +200,8 @@ These are wired into the GitHub Actions CI workflows (`.github/workflows/validat
 - For deploy-impacting diffs, always runs the same validate core as deploy CI: dependency audit, lint, worker-boundary, blocking cycle detection across `shared/`, `worker/src`, and `src`, migrations, cron schedule/connection checks, doc link/source-path/sync checks, duplicate-export and redemption-backstop checks, unused-code, hotspot-ratchet, full tests, and critical coverage.
 - Adds `npm run build` and `npm run seo:check` only when the changed-file set is Pages-impacting, using the same matcher as `classify-deploy-changes.mjs`.
 - Adds Worker runtime typecheck plus Worker operational-script typecheck only when the changed-file set is worker-impacting.
-- Supports `--staged`, `MERGE_GATE_BASE_REF=<ref>`, and `MERGE_GATE_DRY_RUN=1`.
+- After `npm run validate:prebuild` passes, runs independent Pages build/SEO, full-test, critical-coverage, and Worker typecheck groups in parallel to reduce local wall time while keeping the same command set. Set `MERGE_GATE_SERIAL=1` to use the older fully serial execution shape.
+- Supports `--staged`, `MERGE_GATE_BASE_REF=<ref>`, `MERGE_GATE_DRY_RUN=1`, and `MERGE_GATE_SERIAL=1`.
 
 ### `generate-agent-code-map.mjs`
 
@@ -211,7 +212,7 @@ These are wired into the GitHub Actions CI workflows (`.github/workflows/validat
 
 ### `smoke-api.mjs`
 
-- Validates `/api/health` and every strict contract endpoint derived from `shared/lib/api-endpoints/`.
+- Validates `/api/health` and every strict contract endpoint mirrored from `shared/lib/api-endpoints/`; `src/lib/__tests__/api-endpoints.test.ts` guards drift between the shared strict list and the smoke assertions.
 - Can target either production or a Worker preview URL via `--base-url` / `SMOKE_API_BASE`; the deploy workflow now uses it both before production promotion and after cutover.
 - Sends `X-API-Key` when `SMOKE_API_KEY` is set, which is required once protected public routes are enforced.
 - Executes strict endpoint checks sequentially to avoid post-deploy request fan-out against a freshly deployed worker.

@@ -3,12 +3,16 @@
 import path from "path";
 import { fileURLToPath } from "url";
 
-const strictContractModule = await import("../shared/lib/api-endpoints/index.ts");
-const STRICT_CONTRACT_PATHS_LIST =
-  strictContractModule.STRICT_CONTRACT_PATHS_LIST
-  ?? strictContractModule.default?.STRICT_CONTRACT_PATHS_LIST
-  ?? strictContractModule["module.exports"]?.STRICT_CONTRACT_PATHS_LIST
-  ?? [];
+export const STRICT_CONTRACT_SMOKE_PATHS = [
+  "/api/stablecoins",
+  "/api/peg-summary",
+  "/api/dex-liquidity",
+  "/api/stability-index",
+  "/api/report-cards",
+  "/api/redemption-backstops",
+  "/api/mint-burn-flows",
+  "/api/stress-signals",
+];
 
 const DEFAULT_TIMEOUT_MS = 12_000;
 const DEFAULT_RETRY_COUNT = 1;
@@ -63,9 +67,7 @@ function parseNonNegativeInt(value, fallback) {
 function ensureBaseUrl(input) {
   const trimmed = (input ?? "").trim();
   if (!trimmed) {
-    throw new Error(
-      "Missing API base URL. Pass --base-url https://... or set SMOKE_API_BASE/API_BASE_URL."
-    );
+    throw new Error("Missing API base URL. Pass --base-url https://... or set SMOKE_API_BASE/API_BASE_URL.");
   }
 
   const normalized = trimmed.endsWith("/") ? trimmed.slice(0, -1) : trimmed;
@@ -161,7 +163,7 @@ function stripMeta(body) {
 }
 
 function loadStrictContractPaths() {
-  const parsed = [...STRICT_CONTRACT_PATHS_LIST];
+  const parsed = [...STRICT_CONTRACT_SMOKE_PATHS];
   for (const p of parsed) {
     assert(typeof p === "string" && p.startsWith("/api/"), `Invalid strict API path entry: ${String(p)}`);
   }
@@ -215,7 +217,10 @@ export const ENDPOINT_ASSERTIONS = {
     if (body.current) {
       assert(isFiniteNumber(body.current.score), "/api/stability-index current.score is not finite");
       assert(body.current.score >= 0 && body.current.score <= 100, "/api/stability-index current.score out of range");
-      assert(typeof body.current.band === "string" && body.current.band.length > 0, "/api/stability-index missing current.band");
+      assert(
+        typeof body.current.band === "string" && body.current.band.length > 0,
+        "/api/stability-index missing current.band",
+      );
     }
     return body.current
       ? `score ${body.current.score.toFixed(1)} (${body.current.band})`
@@ -246,7 +251,10 @@ export const ENDPOINT_ASSERTIONS = {
       assert(sample.score >= 0 && sample.score <= 100, "/api/redemption-backstops sample score out of range");
     }
     if (sample.effectiveExitScore !== null) {
-      assert(isFiniteNumber(sample.effectiveExitScore), "/api/redemption-backstops sample effectiveExitScore is not finite");
+      assert(
+        isFiniteNumber(sample.effectiveExitScore),
+        "/api/redemption-backstops sample effectiveExitScore is not finite",
+      );
       assert(
         sample.effectiveExitScore >= 0 && sample.effectiveExitScore <= 100,
         "/api/redemption-backstops sample effectiveExitScore out of range",
@@ -317,7 +325,7 @@ async function run() {
   assert(health.status === 200, `/api/health returned ${health.status}`);
   assert(
     health.body && ["healthy", "degraded", "stale"].includes(health.body.status),
-    "/api/health missing valid status"
+    "/api/health missing valid status",
   );
   console.log(`[smoke-api] OK /api/health (${health.body.status})`);
 
@@ -345,8 +353,7 @@ async function run() {
   console.log("[smoke-api] All checks passed.");
 }
 
-const isDirectRun =
-  process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url);
+const isDirectRun = process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url);
 
 if (isDirectRun) {
   run().catch((error) => {

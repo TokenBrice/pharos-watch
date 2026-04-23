@@ -1,7 +1,5 @@
 import { describe, expect, it } from "vitest";
-import {
-  buildCommandPlan,
-} from "../test-merge-gate.mjs";
+import { buildExecutionBatches, buildCommandPlan } from "../test-merge-gate.mjs";
 import { getCommandEnv } from "../test-merge-gate.mjs";
 import {
   buildCiValidateCommands,
@@ -26,10 +24,9 @@ describe("buildCommandPlan", () => {
   });
 
   it("runs the worker path without build or SEO for worker-only changes", () => {
-    expect(buildCommandPlan([
-      "worker/src/api/status.ts",
-      "worker/src/cron/sync-yield-data.ts",
-    ]).map((item) => item.cmd)).toEqual([
+    expect(
+      buildCommandPlan(["worker/src/api/status.ts", "worker/src/cron/sync-yield-data.ts"]).map((item) => item.cmd),
+    ).toEqual([
       ...COMMON_VALIDATE_PREBUILD_COMMANDS,
       ...COMMON_VALIDATE_POSTBUILD_COMMANDS,
       ...WORKER_VALIDATE_COMMANDS,
@@ -62,14 +59,27 @@ describe("buildCommandPlan", () => {
   });
 
   it("provides the changed-file set to the local critical coverage command", () => {
-    expect(getCommandEnv("npm run coverage:critical", [
-      "worker/src/api/status.ts",
-      "docs/testing.md",
-    ])).toEqual({
+    expect(getCommandEnv("npm run coverage:critical", ["worker/src/api/status.ts", "docs/testing.md"])).toEqual({
       CRITICAL_COVERAGE_CHANGED_FILES: "worker/src/api/status.ts,docs/testing.md",
     });
 
     expect(getCommandEnv("npm test", ["worker/src/api/status.ts"])).toEqual({});
+  });
+
+  it("groups independent post-validate checks for parallel local execution", () => {
+    const plan = buildCommandPlan(["shared/lib/classification.ts"]);
+    expect(
+      buildExecutionBatches(plan).map((batch) => batch.map((unit) => unit.commands.map((item) => item.cmd))),
+    ).toEqual([
+      [["npm run validate:prebuild"]],
+      [
+        ["npm run build", "npm run seo:check"],
+        ["npm test"],
+        ["npm run coverage:critical"],
+        ["cd worker && npx tsc --noEmit"],
+        ["cd worker && npx tsc --noEmit -p tsconfig.scripts.json"],
+      ],
+    ]);
   });
 });
 
