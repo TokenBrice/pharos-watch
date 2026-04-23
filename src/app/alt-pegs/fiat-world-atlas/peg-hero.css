@@ -1,0 +1,316 @@
+.peg-hero {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 1.6 / 1;
+  border-radius: 12px;
+  overflow: hidden;
+  border: 1px solid oklch(0.6 0 0 / 0.12);
+  background: linear-gradient(
+    to bottom,
+    oklch(0.02 0 0) 0%,
+    oklch(0.08 0.02 260) 18%,
+    oklch(0.12 0.03 260) 30%,
+    oklch(0.15 0.04 260) 34%,
+    oklch(0.16 0.04 260) 37%,
+    oklch(0.12 0.03 260) 45%,
+    oklch(0.08 0.02 260) 65%,
+    oklch(0.04 0.01 260) 100%
+  );
+}
+
+.peg-hero__sky {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 30%;
+  z-index: 2;
+}
+.peg-hero__earth {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 70%;
+  z-index: 3;
+  display: flex;
+  justify-content: center;
+  align-items: flex-end;
+}
+.peg-hero__horizon {
+  position: absolute;
+  top: -2px;
+  left: 0;
+  right: 0;
+  height: 40px;
+  background: linear-gradient(
+    to bottom,
+    oklch(0.7 0.06 250 / 0.1),
+    oklch(0.6 0.08 250 / 0.04) 45%,
+    transparent 100%
+  );
+  pointer-events: none;
+  z-index: 2;
+}
+.peg-hero__map-frame {
+  position: relative;
+  height: 100%;
+  aspect-ratio: 900 / 460;
+  max-width: 100%;
+}
+.peg-hero__map-frame .fiat-world-map svg {
+  filter: drop-shadow(0 -4px 18px oklch(0.5 0.15 250 / 0.18));
+}
+
+/* ===== Starfield ===== */
+.peg-hero-starfield {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 1;
+}
+.peg-hero-starfield__star {
+  position: absolute;
+  border-radius: 50%;
+  background: #fff;
+  transform: translate(-50%, -50%);
+  box-shadow: 0 0 4px rgba(255, 255, 255, 0.7);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .peg-hero-starfield__star {
+    animation: peg-twinkle 4s ease-in-out infinite;
+  }
+  @keyframes peg-twinkle {
+    0%,
+    100% {
+      opacity: var(--star-o, 0.5);
+    }
+    50% {
+      opacity: 1;
+    }
+  }
+}
+
+/* ===== Sky region tag ===== */
+.sky-region-tag {
+  position: absolute;
+  transform: translate(-50%, -50%);
+  font-size: 9px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: oklch(0.85 0.02 250 / 0.58);
+  font-weight: 700;
+  padding: 3px 8px;
+  background: oklch(0 0 0 / 0.45);
+  border-radius: 10px;
+  white-space: nowrap;
+  pointer-events: none;
+  z-index: 4;
+}
+
+/* ===== Sun / Moon / Constellation wrappers ===== */
+.sun-cohort,
+.moon-cohort,
+.constellation-cohort {
+  position: absolute;
+  inset: 0;
+}
+.sun-cohort__halo,
+.moon-cohort__halo {
+  position: absolute;
+  transform: translate(-50%, -50%);
+  border-radius: 50%;
+  z-index: 1;
+  pointer-events: none;
+}
+.sun-cohort__halo {
+  width: 340px;
+  height: 340px;
+  background: radial-gradient(
+    circle at center,
+    oklch(0.92 0.16 90 / 0.55) 0%,
+    oklch(0.82 0.17 75 / 0.28) 18%,
+    oklch(0.68 0.14 55 / 0.12) 40%,
+    transparent 65%
+  );
+}
+.sun-cohort__rays {
+  position: absolute;
+  transform: translate(-50%, -50%);
+  width: 440px;
+  height: 440px;
+  z-index: 1;
+  pointer-events: none;
+  opacity: 0.4;
+}
+.moon-cohort__halo {
+  width: 160px;
+  height: 160px;
+  background: radial-gradient(
+    circle at center,
+    oklch(0.9 0.02 250 / 0.35) 0%,
+    oklch(0.75 0.02 250 / 0.14) 40%,
+    transparent 70%
+  );
+}
+.constellation-cohort__traces {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 1;
+  pointer-events: none;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .sun-cohort__halo {
+    animation: peg-pulse-sun 5s ease-in-out infinite;
+  }
+  .moon-cohort__halo {
+    animation: peg-pulse-moon 6s ease-in-out infinite;
+  }
+  @keyframes peg-pulse-sun {
+    0%,
+    100% {
+      transform: translate(-50%, -50%) scale(0.96);
+      opacity: 0.9;
+    }
+    50% {
+      transform: translate(-50%, -50%) scale(1);
+      opacity: 1;
+    }
+  }
+  @keyframes peg-pulse-moon {
+    0%,
+    100% {
+      transform: translate(-50%, -50%) scale(0.97);
+      opacity: 0.9;
+    }
+    50% {
+      transform: translate(-50%, -50%) scale(1);
+      opacity: 1;
+    }
+  }
+}
+
+/* ===== Coin emblem ===== */
+.coin-emblem {
+  position: absolute;
+  border-radius: 50%;
+  overflow: hidden;
+  background: #f1f5f9;
+  border: 2px solid rgba(255, 255, 255, 0.95);
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.55), 0 2px 6px rgba(0, 0, 0, 0.4);
+  transform: translate(-50%, -50%);
+  cursor: pointer;
+  display: block;
+  z-index: 5;
+  transition: transform 180ms ease-out, box-shadow 180ms ease-out,
+    opacity 180ms ease-out, border-color 180ms ease-out;
+  text-decoration: none;
+}
+.coin-emblem:focus-visible {
+  outline: none;
+}
+.coin-emblem__img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.coin-emblem--sun-core {
+  border: 3px solid oklch(0.85 0.18 90 / 0.95);
+  box-shadow: 0 0 0 3px oklch(0.85 0.18 90 / 0.25),
+    0 0 30px oklch(0.78 0.2 80 / 0.75), 0 0 70px oklch(0.78 0.2 80 / 0.35);
+}
+.coin-emblem--sun-planet {
+  border: 2px solid oklch(0.58 0.12 75 / 0.85);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.5), 0 0 10px oklch(0.78 0.2 80 / 0.25);
+}
+.coin-emblem--moon {
+  border: 3px solid oklch(0.9 0.02 250 / 0.95);
+  box-shadow: 0 0 0 2px oklch(0.9 0.02 250 / 0.25),
+    0 0 24px oklch(0.85 0.02 250 / 0.65), 0 0 55px oklch(0.85 0.02 250 / 0.3);
+}
+.coin-emblem--star {
+  border: 2px solid oklch(0.86 0.04 260 / 0.9);
+  box-shadow: 0 0 14px oklch(0.77 0.08 250 / 0.7),
+    0 0 30px oklch(0.65 0.1 250 / 0.35);
+}
+
+.coin-emblem.is-hovered,
+.coin-emblem:focus-visible {
+  transform: translate(-50%, -50%) scale(1.1);
+  z-index: 30;
+  box-shadow: 0 0 0 3px oklch(0.75 0.15 250 / 0.55),
+    0 0 28px oklch(0.75 0.2 250 / 0.65), 0 6px 18px rgba(0, 0, 0, 0.6);
+}
+.coin-emblem.is-sibling {
+  border-color: oklch(0.86 0.08 250 / 0.95);
+  box-shadow: 0 0 14px oklch(0.78 0.14 250 / 0.55),
+    0 0 28px oklch(0.7 0.15 250 / 0.3), 0 4px 10px rgba(0, 0, 0, 0.5);
+  z-index: 6;
+}
+.coin-emblem.is-dimmed {
+  opacity: 0.55;
+}
+
+.coin-emblem__tooltip {
+  position: absolute;
+  top: calc(100% + 8px);
+  left: 50%;
+  transform: translateX(-50%);
+  background: oklch(0.09 0.02 260 / 0.96);
+  border: 1px solid oklch(0.75 0.05 260 / 0.35);
+  border-radius: 8px;
+  padding: 7px 11px;
+  min-width: 120px;
+  color: oklch(0.98 0 0);
+  font-size: 10px;
+  line-height: 1.4;
+  backdrop-filter: blur(8px);
+  z-index: 40;
+  white-space: nowrap;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+  pointer-events: none;
+}
+.coin-emblem__tooltip-symbol {
+  font-weight: 700;
+  font-size: 12px;
+}
+.coin-emblem__tooltip-mcap {
+  color: oklch(0.78 0.14 250);
+  font-variant-numeric: tabular-nums;
+}
+.coin-emblem__tooltip-peg {
+  color: oklch(0.75 0.04 260 / 0.7);
+  font-size: 9px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+/* ===== Cohort threads ===== */
+.cohort-threads {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 4;
+  pointer-events: none;
+}
+
+.fiat-emblems {
+  position: absolute;
+  inset: 0;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .coin-emblem {
+    transition: none;
+  }
+}

@@ -1,15 +1,27 @@
-import type { AltPegLinkHubItem, AltPegRegion } from "@/lib/alt-peg-market";
-import { CelestialBand } from "@/app/alt-pegs/fiat-world-atlas/celestial-band";
-import { FiatRegionSection, LinkChip, RegionSummaryPill } from "@/app/alt-pegs/fiat-world-atlas/region-chips";
-import { WorldMap } from "@/app/alt-pegs/fiat-world-atlas/world-map";
-import { WorldMapInteractive, type CountryInfo } from "@/app/alt-pegs/fiat-world-atlas/world-map-interactive";
-import { MobileRegionList } from "@/app/alt-pegs/fiat-world-atlas/mobile-region-list";
-import { MapEmblemClusters } from "@/app/alt-pegs/fiat-world-atlas/map-emblem-clusters";
-import { MapDeadspotReferences } from "@/app/alt-pegs/fiat-world-atlas/map-deadspot-references";
-import { PEG_COUNTRY_MAP } from "@/lib/alt-peg-geography";
-import { buildPegEmblemClusters } from "@/lib/alt-peg-emblems";
+"use client";
 
-const ATLAS_REGION_ORDER: Exclude<AltPegRegion, "Other">[] = ["Americas", "Europe", "Asia", "Africa", "Oceania"];
+import type { AltPegLinkHubItem, AltPegRegion } from "@/lib/alt-peg-market";
+import { buildPegDiversityHero } from "@/lib/alt-peg-hero";
+import { useStablecoins } from "@/hooks/use-stablecoins";
+import { CelestialBand } from "@/app/alt-pegs/fiat-world-atlas/celestial-band";
+import {
+  FiatRegionSection,
+  LinkChip,
+  RegionSummaryPill,
+} from "@/app/alt-pegs/fiat-world-atlas/region-chips";
+import { MobileRegionList } from "@/app/alt-pegs/fiat-world-atlas/mobile-region-list";
+import { HoverProvider } from "@/app/alt-pegs/fiat-world-atlas/hover-context";
+import { SkyLayer } from "@/app/alt-pegs/fiat-world-atlas/sky-layer";
+import { EarthLayer } from "@/app/alt-pegs/fiat-world-atlas/earth-layer";
+import "./peg-hero.css";
+
+const ATLAS_REGION_ORDER: Exclude<AltPegRegion, "Other">[] = [
+  "Americas",
+  "Europe",
+  "Asia",
+  "Africa",
+  "Oceania",
+];
 
 function getRegionCoinCount(items: readonly AltPegLinkHubItem[]): number {
   return items.reduce((sum, i) => sum + i.coinCount, 0);
@@ -25,7 +37,9 @@ function AtlasMetric({ label, value }: { label: string; value: number }) {
       <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground dark:text-slate-400">
         {label}
       </p>
-      <p className="mt-1 font-mono text-xl font-semibold tabular-nums text-foreground dark:text-white">{value}</p>
+      <p className="mt-1 font-mono text-xl font-semibold tabular-nums text-foreground dark:text-white">
+        {value}
+      </p>
     </div>
   );
 }
@@ -35,7 +49,10 @@ function AtlasHeroHeader({
   totalCohortCount,
   totalCoinCount,
 }: {
-  geoRegions: readonly { region: Exclude<AltPegRegion, "Other">; items: readonly AltPegLinkHubItem[] }[];
+  geoRegions: readonly {
+    region: Exclude<AltPegRegion, "Other">;
+    items: readonly AltPegLinkHubItem[];
+  }[];
   totalCohortCount: number;
   totalCoinCount: number;
 }) {
@@ -43,7 +60,9 @@ function AtlasHeroHeader({
     <div className="relative z-10 px-4 py-5 sm:px-5 sm:py-6 lg:px-6">
       <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_minmax(19rem,0.44fr)] lg:items-end">
         <div className="space-y-3">
-          <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-frost-blue/90">Fiat Peg Geography</p>
+          <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-frost-blue/90">
+            Fiat Peg Geography
+          </p>
           <div className="space-y-2">
             <h2
               id="alt-peg-link-hub"
@@ -52,9 +71,9 @@ function AtlasHeroHeader({
               Peg Diversity Map
             </h2>
             <p className="max-w-4xl text-sm leading-relaxed text-muted-foreground dark:text-slate-300">
-              Static cohort links stay crawlable while the map shows how non-USD references spread across fiat regions,
-              commodities, and index-linked pegs. Gold, Silver, and index-linked cohorts float over ocean deadspots
-              because those references sit beyond any single monetary region.
+              Every non-USD stablecoin sits at its geographic origin, sized by market
+              cap. Gold, Silver, and index-linked references float in the sky above —
+              references beyond any single monetary region.
             </p>
           </div>
         </div>
@@ -115,6 +134,9 @@ export function FiatWorldAtlas({
   fiatItems: readonly AltPegLinkHubItem[];
   commodityIndexItems: readonly AltPegLinkHubItem[];
 }) {
+  const { data: stablecoins } = useStablecoins();
+  const hero = buildPegDiversityHero(stablecoins?.peggedAssets);
+
   const fiatByRegion = new Map<AltPegRegion, AltPegLinkHubItem[]>();
   for (const item of fiatItems) {
     const list = fiatByRegion.get(item.region) ?? [];
@@ -126,18 +148,6 @@ export function FiatWorldAtlas({
     items: fiatByRegion.get(region) ?? [],
   })).filter((entry) => entry.items.length > 0);
 
-  const countryInfo: Record<string, CountryInfo> = {};
-  for (const item of fiatItems) {
-    const countries = PEG_COUNTRY_MAP[item.peg];
-    if (!countries) continue;
-    const info: CountryInfo = {
-      peg: item.peg,
-      label: item.label,
-      coinCount: item.coinCount,
-      symbolPreview: item.symbolPreview,
-    };
-    for (const iso of countries) countryInfo[iso] = info;
-  }
   const fiatCoinCount = getRegionCoinCount(fiatItems);
   const referenceCoinCount = getRegionCoinCount(commodityIndexItems);
   const totalCohortCount = fiatItems.length + commodityIndexItems.length;
@@ -148,21 +158,30 @@ export function FiatWorldAtlas({
       aria-labelledby="alt-peg-link-hub"
       className="relative overflow-hidden rounded-[1.45rem] border border-border/70 bg-card/92 text-foreground shadow-[0_22px_60px_oklch(0_0_0_/0.12)] dark:border-white/10 dark:bg-[oklch(0.105_0.012_248)] dark:text-white dark:shadow-[0_26px_70px_oklch(0_0_0_/0.22)]"
     >
-      <AtlasHeroHeader geoRegions={geoRegions} totalCohortCount={totalCohortCount} totalCoinCount={totalCoinCount} />
+      <AtlasHeroHeader
+        geoRegions={geoRegions}
+        totalCohortCount={totalCohortCount}
+        totalCoinCount={totalCoinCount}
+      />
 
       <div data-alt-peg-layout="desktop-atlas" className="hidden xl:block">
-        <div className="relative border-y border-border/60 bg-[oklch(0.935_0.014_248)] dark:border-white/10 dark:bg-[oklch(0.08_0.01_248)]">
-          <WorldMapInteractive countryInfo={countryInfo}>
-            <WorldMap items={fiatItems} />
-          </WorldMapInteractive>
-          <MapEmblemClusters clusters={buildPegEmblemClusters()} />
-          <MapDeadspotReferences items={commodityIndexItems} />
-        </div>
+        <HoverProvider>
+          <div className="peg-hero">
+            <SkyLayer cohorts={hero.skyCohorts} />
+            <EarthLayer clusters={hero.pegClusters} />
+          </div>
+        </HoverProvider>
+        <p className="px-4 pt-2 pb-4 text-center text-[10px] font-medium uppercase tracking-[0.12em] text-muted-foreground dark:text-slate-400">
+          Size ∝ market cap · $1M &hellip; $3B+
+        </p>
         <div className="grid gap-3 bg-background/45 px-4 py-4 dark:bg-white/[0.035] sm:grid-cols-2 sm:px-5 sm:py-5 lg:grid-cols-3">
           {geoRegions.map(({ region, items }) => (
             <FiatRegionSection key={region} region={region} items={items} />
           ))}
-          <BeyondGeographyRail items={commodityIndexItems} referenceCoinCount={referenceCoinCount} />
+          <BeyondGeographyRail
+            items={commodityIndexItems}
+            referenceCoinCount={referenceCoinCount}
+          />
         </div>
       </div>
 
