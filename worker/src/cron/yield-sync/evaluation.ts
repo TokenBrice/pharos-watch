@@ -1,5 +1,6 @@
 import { DAY_SECONDS } from "@shared/lib/time-constants";
 import { DEFAULT_SAFETY_SCORE, PYS_SCALING_FACTOR } from "../../lib/constants";
+import { isOnChainBootstrapYieldSeed } from "../../lib/yield-utils";
 import { computeApyVarianceScore, computePYS, computeYieldStability } from "../yield-helpers";
 import type { YieldHistorySnapshotRow } from "./history";
 import { computeTvlWeightedMedianApy } from "./rankings";
@@ -23,19 +24,12 @@ function isResolvedYieldEntryWithYield(
   return entry.yield != null;
 }
 
-function isOnChainBootstrapSeed(row: YieldHistorySnapshotRow): boolean {
-  return row.data_source === "onchain"
-    && row.exchange_rate != null
-    && row.apy === 0
-    && row.apy_base == null;
-}
-
 function getHistoryRowsForStats(
   dataSource: string,
   rows: YieldHistorySnapshotRow[],
 ): YieldHistorySnapshotRow[] {
   if (dataSource !== "onchain") return rows;
-  return rows.filter((row) => !isOnChainBootstrapSeed(row));
+  return rows.filter((row) => !isOnChainBootstrapYieldSeed(row));
 }
 
 export function shouldDegradeForRiskFreeRate(meta: {

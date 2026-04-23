@@ -11,6 +11,7 @@ import {
 import { supplyHistoryQueryOptions, useStablecoins } from "@/hooks/use-stablecoins";
 import { mintBurnFlowsCoinQueryOptions, useMintBurnFlows } from "@/hooks/use-mint-burn-flows";
 import { COMPARE_COLORS } from "@/lib/compare-config";
+import { refetchQueryGroup } from "@/lib/query-refetch-group";
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins";
 import {
   deriveComparisonCoins,
@@ -56,7 +57,7 @@ export function useCompareDataModel({
     refetch: refetchReportCards,
     meta: reportCardsMeta,
   } = useReportCards();
-  const { data: flowData } = useMintBurnFlows();
+  const { data: flowData, refetch: refetchFlows } = useMintBurnFlows();
 
   const globalError = listError ?? pegError ?? bluechipError ?? dexError ?? reportCardsError;
 
@@ -159,24 +160,23 @@ export function useCompareDataModel({
   const detailLoading = detailQueries.some((query) => query.isLoading);
 
   const handleRetry = useCallback(() => {
-    void Promise.allSettled([
-      refetchList(),
-      refetchPeg(),
-      refetchBluechip(),
-      refetchLiquidity(),
-      refetchReportCards(),
-      ...detailQueries.map((query) => query.refetch()),
-      ...flowCoinQueries.map((query) => query.refetch()),
-    ]).then((results) => {
-      const failed = results.filter((r) => r.status === "rejected");
-      if (failed.length > 0) {
-        console.warn("[refetch] Some queries failed to refresh", failed);
-      }
+    return refetchQueryGroup([
+      refetchList,
+      refetchPeg,
+      refetchBluechip,
+      refetchLiquidity,
+      refetchReportCards,
+      refetchFlows,
+      ...detailQueries.map((query) => query.refetch),
+      ...flowCoinQueries.map((query) => query.refetch),
+    ], {
+      warnLabel: "[refetch] Some queries failed to refresh",
     });
   }, [
     detailQueries,
     flowCoinQueries,
     refetchBluechip,
+    refetchFlows,
     refetchLiquidity,
     refetchList,
     refetchPeg,

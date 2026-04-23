@@ -13,6 +13,7 @@ import { useSupplyHistory, useStablecoins } from "@/hooks/use-stablecoins";
 import { useMintBurnFlows } from "@/hooks/use-mint-burn-flows";
 import { useStablecoinReserves } from "@/hooks/use-stablecoin-reserves";
 import { useBlacklistSummary } from "@/hooks/use-blacklist-events";
+import { refetchQueryGroup } from "@/lib/query-refetch-group";
 import {
   buildStablecoinDetailViewModel,
   type StablecoinDetailSummary,
@@ -85,18 +86,15 @@ export function useStablecoinDetailViewModel({
   const liveReserves = useStablecoinReserves(id, !!coin.liveReservesConfig);
 
   const handleRetryAll = useCallback(() => {
-    void Promise.allSettled([
-      refetchSupply(),
-      refetchList(),
-      refetchPeg(),
-      refetchLiquidity(),
-      refetchReportCards(),
-      refetchRedemptionBackstops(),
-    ]).then((results) => {
-      const failed = results.filter((r) => r.status === "rejected");
-      if (failed.length > 0) {
-        console.warn("[refetch] Some queries failed to refresh", failed);
-      }
+    return refetchQueryGroup([
+      refetchSupply,
+      refetchList,
+      refetchPeg,
+      refetchLiquidity,
+      refetchReportCards,
+      refetchRedemptionBackstops,
+    ], {
+      warnLabel: "[refetch] Some queries failed to refresh",
     });
   }, [
     refetchLiquidity,

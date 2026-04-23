@@ -22,6 +22,7 @@ import { DEWSAlertFeed } from "@/components/dews-alert-feed";
 import { PegHeatmap } from "@/components/peg-heatmap";
 import { DepegFeed } from "@/components/depeg-feed";
 import { trackEvent, trackSearch } from "@/lib/analytics";
+import { refetchQueryGroup } from "@/lib/query-refetch-group";
 import { buildStablecoinUrl } from "@/lib/urls";
 import type { PegCurrency, GovernanceType } from "@shared/types";
 import { PEG_LABELS_SHORT, GOVERNANCE_LABELS, PEG_FILTER_OPTIONS, GOVERNANCE_FILTER_OPTIONS } from "@shared/lib/classification";
@@ -110,7 +111,7 @@ export function DepegClient() {
   }, [router]);
   const globalError = pegError ?? dewsError ?? eventsError;
   const handleRetry = useCallback(() => {
-    void Promise.allSettled([refetchPeg(), refetchDews(), refetchEvents()]);
+    return refetchQueryGroup([refetchPeg, refetchDews, refetchEvents]);
   }, [refetchDews, refetchEvents, refetchPeg]);
 
   // Loading state

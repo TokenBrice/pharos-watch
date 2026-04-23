@@ -8,7 +8,11 @@ import {
 } from "../lib/api-utils";
 import { CACHE_PROFILES } from "../lib/constants";
 import { getCache } from "../lib/db-cache";
-import { buildOnChainSourceKey, parseYieldWarningSignals } from "../lib/yield-utils";
+import {
+  buildOnChainSourceKey,
+  isOnChainBootstrapYieldSeed,
+  parseYieldWarningSignals,
+} from "../lib/yield-utils";
 import { resolveYieldSourceUrl } from "../lib/yield-source-links";
 import { logMalformedJsonPath } from "../lib/json-decode-observability";
 import { parseYieldRankingsPublishedCutoff } from "../cron/yield-sync/cache";
@@ -129,14 +133,17 @@ export const handleYieldHistory = withErrorHandler("yield-history", async (
 
   let previousSourceKey: string | null = null;
   const history = (result.results ?? [])
-    .filter((row) => !isSuppressedYieldHistoryRow(parsed.stablecoinId, row.source_key))
+    .filter((row) => (
+      !isSuppressedYieldHistoryRow(parsed.stablecoinId, row.source_key)
+      && !isOnChainBootstrapYieldSeed(row)
+    ))
     .map((row) => {
       const normalizedSourceKey = normalizeHistorySourceKey(parsed.stablecoinId, row, mode);
       const sourceSwitch =
         mode === "best" &&
         previousSourceKey != null &&
         previousSourceKey !== normalizedSourceKey;
-    previousSourceKey = normalizedSourceKey;
+      previousSourceKey = normalizedSourceKey;
 
       return {
         date: row.recorded_at,

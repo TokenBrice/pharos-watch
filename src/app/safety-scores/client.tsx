@@ -11,6 +11,7 @@ import { useLogos } from "@/hooks/use-logos";
 import { useStressTest } from "@/hooks/use-stress-test";
 import { useStablecoins } from "@/hooks/use-stablecoins";
 import { useUrlFilters } from "@/hooks/use-url-filters";
+import { refetchQueryGroup } from "@/lib/query-refetch-group";
 import { cn } from "@/lib/utils";
 import { encodeStablecoinUrlToken } from "@/lib/stablecoin-url-codec";
 import type { ReportCard } from "@shared/types";
@@ -96,7 +97,7 @@ export function ReportCardsClient() {
   const stressTest = useStressTest(reportData, mcapMap);
   const globalError = reportCardsError ?? pricesError;
   const handleRetry = useCallback(() => {
-    void Promise.allSettled([refetchReportCards(), refetchPrices()]);
+    return refetchQueryGroup([refetchReportCards, refetchPrices]);
   }, [refetchPrices, refetchReportCards]);
 
   const [gradeFilter, setGradeFilter] = useState<GradeFilter>("all");

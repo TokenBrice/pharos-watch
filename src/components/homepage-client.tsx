@@ -28,6 +28,7 @@ import { ACTIVE_PEGS, pegCoinCount } from "@/lib/peg-landing";
 import { buildHomepageViewModel } from "@/components/homepage-client-view-model";
 import { getHomepageActiveFilterLabel } from "@/lib/homepage-filter-labels";
 import { buildAltPegSnapshot } from "@/lib/alt-peg-market";
+import { refetchQueryGroup } from "@/lib/query-refetch-group";
 
 const CEFI_COUNT = ACTIVE_STABLECOINS.filter((s) => s.flags.governance === "centralized").length;
 const CEFI_DEP_COUNT = ACTIVE_STABLECOINS.filter((s) => s.flags.governance === "centralized-dependent").length;
@@ -111,7 +112,7 @@ export function HomepageClient() {
   const altPegSnapshot = useMemo(() => buildAltPegSnapshot(data?.peggedAssets), [data?.peggedAssets]);
   const globalError = pricesError ?? pegError ?? liquidityError ?? reportCardsError;
   const handleRetry = useCallback(() => {
-    void Promise.allSettled([refetchPrices(), refetchPeg(), refetchLiquidity(), refetchReportCards()]);
+    return refetchQueryGroup([refetchPrices, refetchPeg, refetchLiquidity, refetchReportCards]);
   }, [refetchPeg, refetchLiquidity, refetchPrices, refetchReportCards]);
 
   // Announce data updates to screen readers

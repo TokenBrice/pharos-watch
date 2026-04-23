@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useMemo } from "react";
+import { refetchQueryGroup } from "@/lib/query-refetch-group";
 import { useChainStablecoins, useChains } from "./use-chains";
 
 type SnapshotConsistency = "matched" | "mismatched" | "unknown";
@@ -53,12 +54,10 @@ export function useChainProfileData(chainId: string) {
     return null;
   }, [snapshotConsistency, stablecoinsQuery.error]);
 
-  const refetchAll = useCallback(async () => {
-    await Promise.allSettled([
-      chainsQuery.refetch(),
-      stablecoinsQuery.refetch(),
-    ]);
-  }, [chainsQuery, stablecoinsQuery]);
+  const refetchAll = useCallback(
+    () => refetchQueryGroup([chainsQuery.refetch, stablecoinsQuery.refetch]),
+    [chainsQuery.refetch, stablecoinsQuery.refetch],
+  );
 
   return {
     chain,

@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 
-import { renderHook } from "@testing-library/react";
+import { act, renderHook } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { makeChain, makeCoin } from "./chain-profile-fixtures";
 
@@ -88,5 +88,38 @@ describe("useChainProfileData", () => {
     expect(result.current.canRenderDetailedSections).toBe(true);
     expect(result.current.detailedSectionNotice).toMatch(/temporarily unavailable/i);
     expect(result.current.routeError).toBe(refreshError);
+  });
+
+  it("refetches both chain queries through refetchAll", async () => {
+    const refetchChains = vi.fn().mockResolvedValue({ status: "success", error: null });
+    const refetchStablecoins = vi.fn().mockResolvedValue({ status: "success", error: null });
+
+    useChainsMock.mockReturnValue({
+      data: { chains: [makeChain()] },
+      isLoading: false,
+      error: null,
+      refetch: refetchChains,
+      dataUpdatedAt: 1_710_500_000_000,
+      meta: { updatedAt: 1_710_500_000, ageSeconds: 60, status: "fresh" },
+    });
+    useChainStablecoinsMock.mockReturnValue({
+      coins: [makeCoin()],
+      totalUsd: 500_000_000,
+      isLoading: false,
+      isError: false,
+      error: null,
+      refetch: refetchStablecoins,
+      dataUpdatedAt: 1_710_500_000_000,
+      meta: { updatedAt: 1_710_500_000, ageSeconds: 60, status: "fresh" },
+    });
+
+    const { result } = renderHook(() => useChainProfileData("ethereum"));
+
+    await act(async () => {
+      await result.current.refetchAll();
+    });
+
+    expect(refetchChains).toHaveBeenCalledTimes(1);
+    expect(refetchStablecoins).toHaveBeenCalledTimes(1);
   });
 });

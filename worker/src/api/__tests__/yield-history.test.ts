@@ -88,6 +88,79 @@ describe("handleYieldHistory", () => {
     expect(body.history[0]?.sourceKey).toBe("aave-v3:usdt");
   });
 
+  it("filters on-chain bootstrap seed rows from best-mode history", async () => {
+    const bootstrapRow = makeYieldHistoryRow({
+      apy: 0,
+      apy_base: null,
+      data_source: "onchain",
+      exchange_rate: 1.001,
+      recorded_at: 1_771_000_000,
+      source_key: "onchain:usdt-tether",
+      yield_source: "On-chain seed",
+      yield_type: "nav-appreciation",
+    });
+    const liveRow = makeYieldHistoryRow({
+      apy: 4.2,
+      apy_base: null,
+      data_source: "onchain",
+      exchange_rate: 1.005,
+      recorded_at: 1_771_086_400,
+      source_key: "onchain:usdt-tether",
+      yield_source: "On-chain live",
+      yield_type: "nav-appreciation",
+    });
+    const db = mockD1([{ match: "yield_history", rows: [bootstrapRow, liveRow] }]);
+
+    const res = await handleYieldHistory(db, new URL("https://x/api/yield-history?stablecoin=usdt-tether"));
+
+    expect(res.status).toBe(200);
+    const body = await res.json() as {
+      current: { apy: number } | null;
+      history: Array<{ apy: number }>;
+    };
+    expect(body.history).toHaveLength(1);
+    expect(body.history[0]?.apy).toBe(4.2);
+    expect(body.current?.apy).toBe(4.2);
+  });
+
+  it("filters on-chain bootstrap seed rows from source-mode history", async () => {
+    const bootstrapRow = makeYieldHistoryRow({
+      apy: 0,
+      apy_base: null,
+      data_source: "onchain",
+      exchange_rate: 1.001,
+      recorded_at: 1_771_000_000,
+      source_key: "onchain:usdt-tether",
+      yield_source: "On-chain seed",
+      yield_type: "nav-appreciation",
+    });
+    const liveRow = makeYieldHistoryRow({
+      apy: 4.2,
+      apy_base: null,
+      data_source: "onchain",
+      exchange_rate: 1.005,
+      recorded_at: 1_771_086_400,
+      source_key: "onchain:usdt-tether",
+      yield_source: "On-chain live",
+      yield_type: "nav-appreciation",
+    });
+    const db = mockD1([{ match: "yield_history", rows: [bootstrapRow, liveRow] }]);
+
+    const res = await handleYieldHistory(
+      db,
+      new URL("https://x/api/yield-history?stablecoin=usdt-tether&sourceKey=onchain%3Ausdt-tether"),
+    );
+
+    expect(res.status).toBe(200);
+    const body = await res.json() as {
+      current: { apy: number } | null;
+      history: Array<{ apy: number }>;
+    };
+    expect(body.history).toHaveLength(1);
+    expect(body.history[0]?.apy).toBe(4.2);
+    expect(body.current?.apy).toBe(4.2);
+  });
+
   it("marks the transition from legacy-best to a source-aware row as a source switch", async () => {
     const legacyRow = makeYieldHistoryRow({
       source_key: "legacy-best",
