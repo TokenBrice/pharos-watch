@@ -5,7 +5,12 @@ import {
   RegionSummaryPill,
 } from "@/app/alt-pegs/fiat-world-atlas/region-chips";
 import { WorldMap } from "@/app/alt-pegs/fiat-world-atlas/world-map";
+import {
+  WorldMapInteractive,
+  type CountryInfo,
+} from "@/app/alt-pegs/fiat-world-atlas/world-map-interactive";
 import { MobileRegionList } from "@/app/alt-pegs/fiat-world-atlas/mobile-region-list";
+import { PEG_COUNTRY_MAP } from "@/lib/alt-peg-geography";
 
 const ATLAS_REGION_ORDER: Exclude<AltPegRegion, "Other">[] = [
   "Americas",
@@ -36,6 +41,19 @@ export function FiatWorldAtlas({
     region,
     items: fiatByRegion.get(region) ?? [],
   })).filter((entry) => entry.items.length > 0);
+
+  const countryInfo: Record<string, CountryInfo> = {};
+  for (const item of fiatItems) {
+    const countries = PEG_COUNTRY_MAP[item.peg];
+    if (!countries) continue;
+    const info: CountryInfo = {
+      peg: item.peg,
+      label: item.label,
+      coinCount: item.coinCount,
+      symbolPreview: item.symbolPreview,
+    };
+    for (const iso of countries) countryInfo[iso] = info;
+  }
 
   return (
     <section aria-labelledby="alt-peg-fiat-geography" className="pharos-card-shell overflow-hidden">
@@ -69,7 +87,9 @@ export function FiatWorldAtlas({
         className="hidden xl:block"
       >
         <div className="relative bg-[oklch(0.14_0.01_248)]">
-          <WorldMap items={fiatItems} />
+          <WorldMapInteractive countryInfo={countryInfo}>
+            <WorldMap items={fiatItems} />
+          </WorldMapInteractive>
         </div>
         <div className="grid gap-3 px-4 py-4 sm:px-5 sm:py-5 sm:grid-cols-2 lg:grid-cols-3">
           {geoRegions.map(({ region, items }) => (

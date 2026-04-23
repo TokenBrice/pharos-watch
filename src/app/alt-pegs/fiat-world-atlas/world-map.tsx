@@ -12,7 +12,8 @@ function buildStyleBlock(fills: ReadonlyMap<string, { colorHex: string }>): stri
   const rules: string[] = [
     `.fiat-world-map{--world-default-fill:oklch(0.28 0.014 248 / 1);--world-stroke:oklch(0.62 0.02 248 / 0.85)}`,
     `.fiat-world-map .world-countries{stroke-width:0.7}`,
-    `.fiat-world-map .world-countries path{transition:fill 180ms ease}`,
+    `.fiat-world-map .world-countries path{transition:fill 180ms ease,filter 180ms ease}`,
+    `.fiat-world-map path[data-tracked="true"]:hover{filter:brightness(1.25) saturate(1.1)}`,
   ];
   for (const [iso, fill] of fills) {
     rules.push(`.fiat-world-map path#${iso}{fill:${fill.colorHex};stroke:${fill.colorHex}}`);
