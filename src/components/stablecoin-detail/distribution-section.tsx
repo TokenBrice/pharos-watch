@@ -20,7 +20,7 @@ import {
   PROTOCOL_LOGOS,
   normalizeChain,
   prettifyProtocol,
-} from "@/lib/dex-constants";
+} from "@/lib/dex-display-constants";
 
 /* ── Types ── */
 

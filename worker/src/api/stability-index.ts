@@ -19,9 +19,7 @@ import {
 import { toMethodologyVersionLabel } from "@shared/lib/methodology-version";
 import { upsertPsiHistoryPoint } from "@shared/lib/psi-view-model";
 
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null;
-}
+import { isRecord } from "@shared/lib/type-guards";
 
 type PsiJsonDecodeReason = "missing" | "json-parse-failed" | "invalid-shape";
 

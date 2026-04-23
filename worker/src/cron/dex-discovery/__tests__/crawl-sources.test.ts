@@ -37,7 +37,7 @@ import { fetchCgTokenPools } from "../../../lib/coingecko-onchain";
 import { fetchWithRetry } from "../../../lib/fetch-retry";
 import { shouldAttemptFetch, recordOutcome } from "../../../lib/circuit-breaker";
 import { CIRCUIT_SOURCE } from "../../../lib/constants";
-import { QUALITY_MULTIPLIERS } from "../../../lib/dex-constants";
+import { QUALITY_MULTIPLIERS } from "../../../lib/dex-cron-constants";
 
 function createMockDb(): D1Database {
   return {

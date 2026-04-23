@@ -34,7 +34,7 @@ export {
   PYS_SUSTAINABILITY_FLOOR,
 } from "@shared/lib/yield-scoring";
 import { resolveChainId } from "@shared/lib/chains";
-import { normalizeDexSymbol } from "../lib/dex-constants";
+import { normalizeDexSymbol } from "../lib/dex-cron-constants";
 import { normalizeTokenAddress } from "./dex-liquidity/token-resolution";
 
 // --- Warning signal thresholds ---

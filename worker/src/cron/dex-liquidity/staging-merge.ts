@@ -2,7 +2,7 @@ import type { StagedPool } from "../dex-discovery/types";
 import { DAY_SECONDS } from "@shared/lib/time-constants";
 import { stagedPoolConfidence, stagedPoolMaturityDays } from "../dex-discovery/types";
 import { DEX_PRICE_OBSERVATION_MIN_TVL_USD } from "../../lib/constants";
-import { QUALITY_MULTIPLIERS } from "../../lib/dex-constants";
+import { QUALITY_MULTIPLIERS } from "../../lib/dex-cron-constants";
 import { toFiniteNumber } from "../../lib/number-utils";
 import type { PriceValidationReferences } from "../../lib/price-validation";
 import { mergeCgPools, mergeGtPools } from "./fetch-crawlers";

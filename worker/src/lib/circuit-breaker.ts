@@ -11,17 +11,11 @@ import {
   CIRCUIT_PROBE_INTERVAL_SEC,
 } from "./circuit-config";
 import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins";
+import type { CircuitRecord as SharedCircuitRecord } from "@shared/types/status";
 
+export type CircuitRecord = SharedCircuitRecord;
 export type CircuitState = "closed" | "open" | "half-open";
 export type CircuitOutcomeDecision = "success" | "failure" | "neutral";
-
-export interface CircuitRecord {
-  state: CircuitState;
-  consecutiveFailures: number;
-  lastFailureAt: number | null;
-  lastSuccessAt: number | null;
-  openedAt: number | null;
-}
 
 const DEFAULT_RECORD: CircuitRecord = {
   state: "closed",

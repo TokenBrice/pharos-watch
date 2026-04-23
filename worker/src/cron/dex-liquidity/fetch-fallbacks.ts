@@ -6,7 +6,7 @@ import { cgUrl, cgHeaders } from "../../lib/coingecko";
 import type { PriceValidationReferences } from "../../lib/price-validation";
 import { fetchDsTokenPoolsWithStatus, dsRateLimit, DS_CHAIN_MAP, getDsTrackedTokenPriceUsd } from "../../lib/dexscreener";
 import { shouldAttemptFetch, recordOutcome } from "../../lib/circuit-breaker";
-import { QUALITY_MULTIPLIERS, GT_DEX_QUALITY } from "../../lib/dex-constants";
+import { QUALITY_MULTIPLIERS, GT_DEX_QUALITY } from "../../lib/dex-cron-constants";
 import { sleepWithSignal, throwIfAborted } from "../../lib/abort";
 import type { LiquidityMetrics, DexPriceObs, GtNewPool, CgTicker } from "./types";
 import { getTrackedContracts } from "./pool-helpers";

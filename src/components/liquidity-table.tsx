@@ -16,7 +16,7 @@ import { Badge } from "@/components/ui/badge";
 import { usePrefetchStablecoin } from "@/hooks/use-prefetch-stablecoin";
 import { useSortedPaginatedTable } from "@/hooks/use-sorted-paginated-table";
 import { formatCurrency, formatPercent } from "@shared/lib/format";
-import { prettifyProtocol, PROTOCOL_LOGOS } from "@/lib/dex-constants";
+import { prettifyProtocol, PROTOCOL_LOGOS } from "@/lib/dex-display-constants";
 import { formatLiquiditySourceMix, getLiquidityCoverageBadge } from "@/lib/liquidity-coverage";
 import { getScoreColor, getDurabilityColor } from "@/lib/severity-colors";
 import { TABLE_PAGE_SIZE } from "@/lib/constants";

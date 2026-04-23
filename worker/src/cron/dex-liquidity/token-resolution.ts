@@ -1,4 +1,4 @@
-import { normalizeDexSymbol } from "../../lib/dex-constants";
+import { normalizeDexSymbol } from "../../lib/dex-cron-constants";
 import type { DexApiPoolToken } from "../../lib/dex-api-types";
 import type { SymbolLookups } from "./types";
 

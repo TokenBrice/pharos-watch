@@ -25,7 +25,7 @@ const FORWARDED_REQUEST_HEADERS = [
   // Required by the Worker's CSRF gate on mutating admin routes; the browser
   // sends it (see src/components/status/admin-action-button.tsx) but the
   // default Pages proxy only forwards an explicit allow-list.
-  "X-Pharos-Admin",
+  X_PHAROS_ADMIN_HEADER,
 ] as const;
 const FORWARDED_RESPONSE_HEADERS = [
   "Allow",
@@ -36,7 +36,7 @@ const FORWARDED_RESPONSE_HEADERS = [
   "X-Data-Age",
   "X-Idempotent-Replay",
 ] as const;
-const MUTATING_METHODS = new Set(["POST", "PUT", "PATCH", "DELETE"]);
+import { MUTATING_METHODS, X_PHAROS_ADMIN_HEADER } from "@shared/lib/admin-gate";
 const ACCESS_SESSION_COOKIE = "CF_Authorization";
 const EXTENDED_STATUS_PROXY_PATHS = new Set(["/api/status", "/api/status-history"]);
 const OPS_STATUS_PROXY_TIMEOUT_MS = 20_000;

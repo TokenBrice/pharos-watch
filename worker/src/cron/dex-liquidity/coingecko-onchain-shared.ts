@@ -1,4 +1,4 @@
-import { QUALITY_MULTIPLIERS } from "../../lib/dex-constants";
+import { QUALITY_MULTIPLIERS } from "../../lib/dex-cron-constants";
 import type { CgPool, CgPoolAttributes } from "../../lib/coingecko-onchain";
 import { parseCgPoolVolume } from "../../lib/coingecko-onchain";
 import type { ParsedPool } from "./crawl-helpers";

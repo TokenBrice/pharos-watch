@@ -10,7 +10,7 @@ import { crawlTokenPools, type CrawlToken } from "../dex-liquidity/crawl-helpers
 import { fetchGtTokenPools, getGtPoolType, parseGtPool } from "../dex-liquidity/geckoterminal-shared";
 import { makeChainAddressKey } from "../dex-liquidity/token-resolution";
 import { CG_TICKERS_RATE_MS } from "../dex-liquidity/constants";
-import { QUALITY_MULTIPLIERS } from "../../lib/dex-constants";
+import { QUALITY_MULTIPLIERS } from "../../lib/dex-cron-constants";
 import { fetchCgTokenPools } from "../../lib/coingecko-onchain";
 import { cgHeaders, cgUrl } from "../../lib/coingecko";
 import { fetchWithRetry } from "../../lib/fetch-retry";

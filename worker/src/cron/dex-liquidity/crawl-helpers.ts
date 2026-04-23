@@ -1,4 +1,4 @@
-import { isBlockedDexId } from "../../lib/dex-constants";
+import { isBlockedDexId } from "../../lib/dex-cron-constants";
 import { DAY_SECONDS } from "@shared/lib/time-constants";
 import { DEX_PRICE_OBSERVATION_MIN_TVL_USD } from "../../lib/constants";
 import { throwIfAborted } from "../../lib/abort";

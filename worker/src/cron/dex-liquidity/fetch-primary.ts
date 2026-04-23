@@ -5,7 +5,7 @@ import { USER_AGENT, CIRCUIT_SOURCE, DEX_PRICE_OBSERVATION_MIN_TVL_USD } from ".
 import { shouldAttemptFetch, recordOutcome } from "../../lib/circuit-breaker";
 import { buildDlStablecoinPoolsCache } from "../yield-sync/cache";
 import { isYieldRelevantDlPool } from "../yield-sync/pool-filter";
-import { normalizeDexSymbol } from "../../lib/dex-constants";
+import { normalizeDexSymbol } from "../../lib/dex-cron-constants";
 import type {
   LlamaPool, CurvePool, CurvePoolEntry, DexPriceObs,
   DataSources, CurveLookups, UniV3Lookups, AerodromeLookups,

@@ -1,7 +1,7 @@
 import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins";
 import { CHAIN_META, resolveChainId } from "@shared/lib/chains";
 import type { StablecoinMeta } from "@shared/types/core";
-import { normalizeDexSymbol } from "../../lib/dex-constants";
+import { normalizeDexSymbol } from "../../lib/dex-cron-constants";
 import { buildChainAddressKey, normalizeTokenAddress } from "../dex-liquidity/token-resolution";
 
 export interface YieldIdentityLookups {

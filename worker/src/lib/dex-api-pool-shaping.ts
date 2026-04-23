@@ -1,6 +1,6 @@
 import type { DexPriceObs, GtNewPool } from "../cron/dex-liquidity/types";
 import type { SymbolLookups } from "../cron/dex-liquidity/types";
-import { QUALITY_MULTIPLIERS, normalizeDexSymbol } from "./dex-constants";
+import { QUALITY_MULTIPLIERS, normalizeDexSymbol } from "./dex-cron-constants";
 import { buildPoolIdentity } from "../cron/dex-liquidity/pool-identity";
 import { isPlausibleDexObservationPrice } from "../cron/dex-liquidity/price-sanity";
 import type { PriceValidationReferences } from "./price-validation";

@@ -1,5 +1,9 @@
 import type { DependencyType } from "./dependency-types";
 import type { ReserveSlice } from "./reserves";
+import {
+  RedemptionRouteStatusSchema,
+  RedemptionRouteStatusSourceSchema,
+} from "./redemption";
 
 export const LIVE_RESERVE_ADAPTER_KEYS = [
   "abracadabra",
@@ -95,21 +99,11 @@ export const LIVE_RESERVE_REDEMPTION_FRESHNESS_KIND_VALUES = [
   "unverified",
 ] as const;
 
-export const LIVE_RESERVE_REDEMPTION_ROUTE_STATUS_VALUES = [
-  "open",
-  "degraded",
-  "paused",
-  "cohort-limited",
-  "unknown",
-] as const;
+export const LIVE_RESERVE_REDEMPTION_ROUTE_STATUS_VALUES =
+  RedemptionRouteStatusSchema.options;
 
-export const LIVE_RESERVE_REDEMPTION_ROUTE_STATUS_SOURCE_VALUES = [
-  "static-config",
-  "market-implied",
-  "operator-notice",
-  "protocol-api",
-  "onchain",
-] as const;
+export const LIVE_RESERVE_REDEMPTION_ROUTE_STATUS_SOURCE_VALUES =
+  RedemptionRouteStatusSourceSchema.options;
 
 export const RESERVE_DISPLAY_BADGE_KIND_VALUES = [
   "live",

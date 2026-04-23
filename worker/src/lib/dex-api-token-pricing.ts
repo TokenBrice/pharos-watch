@@ -1,6 +1,6 @@
 import type { PriceValidationReferences } from "./price-validation";
 import { buildPriceValidationContext, getReferencePriceForContext } from "./price-validation";
-import { isUsdReferenceSymbol, normalizeDexSymbol } from "./dex-constants";
+import { isUsdReferenceSymbol, normalizeDexSymbol } from "./dex-cron-constants";
 import { resolveTrackedStablecoinId } from "../cron/dex-liquidity/token-resolution";
 import type { DexApiPool, DexApiPoolToken } from "./dex-api-types";
 

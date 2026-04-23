@@ -3,7 +3,7 @@ import { runIdempotentAdminAction } from "./idempotency";
 import { errorResponse, jsonResponse, withErrorHandler } from "./api-utils";
 import type { JsonResponseOptions } from "./api-response";
 
-const MUTATING_METHODS = new Set(["POST", "PUT", "PATCH", "DELETE"]);
+import { MUTATING_METHODS, X_PHAROS_ADMIN_HEADER } from "@shared/lib/admin-gate";
 
 export interface AdminRouteContext {
   db: D1Database;
@@ -32,7 +32,7 @@ export function runAdminRoute(
     const method = options.request?.method?.toUpperCase() ?? "GET";
     if (
       MUTATING_METHODS.has(method) &&
-      options.request?.headers.get("X-Pharos-Admin") !== "1"
+      options.request?.headers.get(X_PHAROS_ADMIN_HEADER) !== "1"
     ) {
       return jsonResponse(
         { error: "Missing required X-Pharos-Admin header; refusing mutation." },

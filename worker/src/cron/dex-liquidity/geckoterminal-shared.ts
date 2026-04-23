@@ -1,5 +1,5 @@
 import { USER_AGENT } from "../../lib/constants";
-import { GT_API_BASE } from "../../lib/dex-constants";
+import { GT_API_BASE } from "../../lib/dex-cron-constants";
 import { fetchWithRetry } from "../../lib/fetch-retry";
 import { fetchPagedTokenPools } from "../../lib/paged-token-pools";
 import type { ParsedPool } from "./crawl-helpers";

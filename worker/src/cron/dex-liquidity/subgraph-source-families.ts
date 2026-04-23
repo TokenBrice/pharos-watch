@@ -1,6 +1,6 @@
 import { DEX_PRICE_OBSERVATION_MIN_TVL_USD } from "../../lib/constants";
 import type { PriceValidationReferences } from "../../lib/price-validation";
-import { isUsdReferenceSymbol, normalizeDexSymbol } from "../../lib/dex-constants";
+import { isUsdReferenceSymbol, normalizeDexSymbol } from "../../lib/dex-cron-constants";
 import { isPlausibleDexObservationPrice } from "./price-sanity";
 import { mergePriceObservations, type SubgraphPriceObservation } from "./subgraph-helpers";
 import type {

@@ -85,9 +85,7 @@ export type YieldRankingsPublishedCutoffResult =
   | { status: "parse-error"; updatedAt: null }
   | { status: "invalid-shape"; updatedAt: null };
 
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null;
-}
+import { isRecord } from "@shared/lib/type-guards";
 
 function toNullableString(value: unknown): string | null {
   return typeof value === "string" && value.trim() !== "" ? value : null;

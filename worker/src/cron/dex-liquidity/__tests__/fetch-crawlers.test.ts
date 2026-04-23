@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { QUALITY_MULTIPLIERS } from "../../../lib/dex-constants";
+import { QUALITY_MULTIPLIERS } from "../../../lib/dex-cron-constants";
 import { parseCgPool, classifyCgPool } from "../coingecko-onchain-shared";
 
 function makeCgPool(overrides: Partial<{

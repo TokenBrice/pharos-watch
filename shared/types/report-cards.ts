@@ -23,6 +23,7 @@ import {
   RedemptionModelConfidenceSchema,
   RedemptionRouteFamilySchema,
 } from "./redemption";
+import { DependencyWeightSchema } from "./stablecoin-meta-schemas";
 
 export type ReportCardGrade = "A+" | "A" | "A-" | "B+" | "B" | "B-" | "C+" | "C" | "C-" | "D" | "F" | "NR";
 const REPORT_CARD_GRADE_VALUES = ["A+", "A", "A-", "B+", "B", "B-", "C+", "C", "C-", "D", "F", "NR"] as const;
@@ -50,11 +51,7 @@ const ReportCardDimensionSchema = z.object({
 });
 export type ReportCardDimension = z.infer<typeof ReportCardDimensionSchema>;
 
-const DependencyWeightSchema = z.object({
-  id: z.string(),
-  weight: z.number(),
-  type: DependencyTypeSchema.optional(),
-});
+export { DependencyWeightSchema };
 
 // Wire-compatible schema: accepts legacy "possible-inherited" from old snapshots
 // and maps it to the clearer "inherited" label.

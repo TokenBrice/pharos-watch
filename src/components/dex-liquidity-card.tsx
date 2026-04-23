@@ -24,7 +24,7 @@ import {
   CHAIN_COLORS,
   prettifyProtocol,
   normalizeChain,
-} from "@/lib/dex-constants";
+} from "@/lib/dex-display-constants";
 import { CHAIN_META } from "@shared/lib/chains";
 import { getScoreTier, TIER_TEXT, getDurabilityColor, getDurabilityBgColor, ratioQualityColor } from "@/lib/severity-colors";
 import { BalanceBar } from "@/components/balance-bar";

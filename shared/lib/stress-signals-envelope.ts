@@ -5,9 +5,7 @@ export interface StressSignalsEnvelope {
   amplifiers: { psi: number; contagion: number };
 }
 
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return value != null && typeof value === "object" && !Array.isArray(value);
-}
+import { isRecord } from "./type-guards";
 
 /**
  * v5.95+ rows persist `{ signals, amplifiers }`; legacy rows persist the flat

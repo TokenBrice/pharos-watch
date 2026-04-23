@@ -4,7 +4,7 @@ import type {
   LiquidityMetrics,
   LiquiditySourceMix,
 } from "./types";
-import { isBlockedDexId } from "../../lib/dex-constants";
+import { isBlockedDexId } from "../../lib/dex-cron-constants";
 import { clamp } from "@shared/lib/math";
 import { normalizeProtocol } from "./pool-helpers";
 

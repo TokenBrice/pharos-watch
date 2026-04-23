@@ -1,4 +1,4 @@
-import { GT_API_BASE } from "./dex-constants";
+import { GT_API_BASE } from "./dex-cron-constants";
 import { RATE_LIMITS } from "./rate-limit";
 import { fetchWithRetry } from "./fetch-retry";
 import { cancelResponseBodyQuietly } from "./response-body";
