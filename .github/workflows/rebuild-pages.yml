@@ -16,30 +16,3 @@ jobs:
   pages-release:
     uses: ./.github/workflows/pages-release.yml
     secrets: inherit
-
-  smoke-ops:
-    needs: pages-release
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
-      - uses: ./.github/actions/setup-workspace
-        with:
-          node-version: 25
-          cache-npm: "false"
-          install-deps: "false"
-      - run: npm run test:smoke-ops
-        env:
-          SMOKE_OPS_UI_URL: ${{ vars.SMOKE_OPS_UI_URL || 'https://ops.pharos.watch/admin/' }}
-          SMOKE_OPS_API_BASE: ${{ vars.SMOKE_OPS_API_BASE || 'https://ops-api.pharos.watch' }}
-          OPS_SMOKE_CF_ACCESS_CLIENT_ID: ${{ secrets.OPS_SMOKE_CF_ACCESS_CLIENT_ID }}
-          OPS_SMOKE_CF_ACCESS_CLIENT_SECRET: ${{ secrets.OPS_SMOKE_CF_ACCESS_CLIENT_SECRET }}
-
-  smoke-transport:
-    needs: pages-release
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
-      - uses: ./.github/actions/setup-workspace
-        with:
-          node-version: 25
-      - run: npm run test:smoke-transport

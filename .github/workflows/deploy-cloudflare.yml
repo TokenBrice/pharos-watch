@@ -245,25 +245,14 @@ jobs:
   smoke-ops:
     needs:
       - detect-changes
-      - pages-publish
       - smoke-api
-      - smoke-ui-live
     if: >-
       ${{
         always()
         && needs.detect-changes.result == 'success'
-        && (
-          (
-            needs.detect-changes.outputs.pages_changed == 'true'
-            && needs.pages-publish.result == 'success'
-          )
-          || (
-            needs.detect-changes.outputs.pages_changed != 'true'
-            && needs.detect-changes.outputs.worker_changed == 'true'
-            && needs.smoke-api.result == 'success'
-            && needs.smoke-ui-live.result == 'success'
-          )
-        )
+        && needs.detect-changes.outputs.pages_changed != 'true'
+        && needs.detect-changes.outputs.worker_changed == 'true'
+        && needs.smoke-api.result == 'success'
       }}
     runs-on: ubuntu-latest
     steps:
@@ -283,25 +272,14 @@ jobs:
   smoke-transport:
     needs:
       - detect-changes
-      - pages-publish
       - smoke-api
-      - smoke-ui-live
     if: >-
       ${{
         always()
         && needs.detect-changes.result == 'success'
-        && (
-          (
-            needs.detect-changes.outputs.pages_changed == 'true'
-            && needs.pages-publish.result == 'success'
-          )
-          || (
-            needs.detect-changes.outputs.pages_changed != 'true'
-            && needs.detect-changes.outputs.worker_changed == 'true'
-            && needs.smoke-api.result == 'success'
-            && needs.smoke-ui-live.result == 'success'
-          )
-        )
+        && needs.detect-changes.outputs.pages_changed != 'true'
+        && needs.detect-changes.outputs.worker_changed == 'true'
+        && needs.smoke-api.result == 'success'
       }}
     runs-on: ubuntu-latest
     steps:
@@ -309,4 +287,6 @@ jobs:
       - uses: ./.github/actions/setup-workspace
         with:
           node-version: 25
+          cache-npm: "false"
+          install-deps: "false"
       - run: npm run test:smoke-transport

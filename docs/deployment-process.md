@@ -153,12 +153,15 @@ Deploy sequence in `.github/workflows/deploy-cloudflare.yml`:
    - executes the publish Pages path:
      - `deploy-pages` first captures the current Cloudflare Pages production deployment id (via `wrangler pages deployment list --project-name=stablecoin-dashboard --environment=production --json`) as a best-effort step (continue-on-error), emits it as the `previous_deployment_id` job output, then publishes the already verified artifact through Wrangler with the existing retry loop
      - `smoke-ui-live` then runs `npm run test:smoke-ui -- --url https://pharos.watch --mode live` against the real public host, including the same homepage shell/static-payload GA snippet check when configured
+     - `smoke-ops` and `smoke-transport` start after `deploy-pages` in parallel with `smoke-ui-live`, preserving the post-publish smoke surface while avoiding an unnecessary serial tail
      - `rollback-pages` calls the Cloudflare Pages rollback REST API via `scripts/rollback-pages-deployment.mjs` when `deploy-pages` succeeded but `smoke-ui-live` failed and `previous_deployment_id` is non-empty, restoring the previously live Pages production deployment; the overall workflow still surfaces as failed so the incident is visible
 9. `smoke-ui-live`
    - worker-only deploy path that runs `npm run test:smoke-ui -- --url https://pharos.watch --mode live`
    - verifies the live Pages frontend still works against the newly deployed worker/API when no static rebuild is needed, including the expected GA snippet when configured
 10. `smoke-ops`
    - private post-deploy ops smoke against `ops.pharos.watch/admin/` and `ops-api.pharos.watch`
+   - runs inside `pages-publish` after `deploy-pages` on Pages-including deploys, or after `smoke-api` on worker-only deploys
+   - runs in parallel with the public live UI smoke because it only depends on the production deployment being live
    - requires repository secrets `OPS_SMOKE_CF_ACCESS_CLIENT_ID` and `OPS_SMOKE_CF_ACCESS_CLIENT_SECRET`
    - UI check accepts either an Access redirect or a token-backed HTML response, so CI does not depend on the UI app also granting `Service Auth`
    - same-origin `ops.pharos.watch/api/admin/status` retries transient `502`/`504` gateway responses up to twice to absorb operator-status warmup immediately after promotion, but persistent proxy failures still fail the deploy

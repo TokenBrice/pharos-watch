@@ -344,10 +344,10 @@ For mint/burn ingestion diagnostics and recovery, use [docs/runbooks/mint-burn-i
 3. **Worker promotion:** `cd worker && npx --no-install wrangler versions deploy <uploaded-version>@100` → `cd worker && npx --no-install wrangler triggers deploy`
 4. **Production API smoke gate:** `npm run test:smoke-api` against `SMOKE_API_BASE` (fed from GitHub variable `SMOKE_API_BASE_URL`, fallback `API_BASE_URL`); if this fails after promotion, CI auto-rolls the Worker back to the previously live version
 5. **Pages prepare path:** `npm ci` → fetch `/api/digest-archive` once into `data/digests.json` → `npm run build` → `npm run seo:check` → serve `out/` locally through `npm run serve:static-export` → `npm run test:smoke-ui -- --url http://127.0.0.1:4173`; when both worker and Pages changed, this stage runs against the uploaded worker preview URL in parallel with worker promotion and production API smoke
-6. **Pages publish path:** after `pages-prepare` and, when worker/API changed, after production API smoke passes, publish the already verified artifact with `npx --no-install wrangler pages deploy out` (with retry in CI), then smoke the real `https://pharos.watch` host
+6. **Pages publish path:** after `pages-prepare` and, when worker/API changed, after production API smoke passes, publish the already verified artifact with `npx --no-install wrangler pages deploy out` (with retry in CI), then run public live UI, ops, and transport smokes in parallel
 7. **Worker-only live UI smoke:** worker-only deploys still smoke `https://pharos.watch` against the new worker/API when the static export was unchanged
-8. **Post-deploy ops smoke:** `npm run test:smoke-ops` runs after `pages-publish` on Pages-including deploys, or after `smoke-api` + `smoke-ui-live` on worker-only deploys
-9. **Transport smoke:** `npm run test:smoke-transport` verifies production transport behavior after main deploys and after scheduled/manual Pages rebuilds
+8. **Post-deploy ops smoke:** `npm run test:smoke-ops` runs after `deploy-pages` inside the Pages publish workflow, or after `smoke-api` on worker-only deploys
+9. **Transport smoke:** `npm run test:smoke-transport` verifies production transport behavior after main deploys and scheduled/manual Pages rebuilds, in parallel with the other live smokes
 
 Required GitHub secrets: `CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ACCOUNT_ID`, `SMOKE_API_KEY`, `DIGEST_API_KEY`, `SITE_API_SHARED_SECRET`, `OPS_SMOKE_CF_ACCESS_CLIENT_ID`, and `OPS_SMOKE_CF_ACCESS_CLIENT_SECRET`
 Required GitHub variable: `API_BASE_URL`
