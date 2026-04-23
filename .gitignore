@@ -129,3 +129,4 @@ output/playwright/
 # local screenshot artifacts from browser automation
 /alt-pegs-*.png
 /*-screenshot.png
+.superpowers/
