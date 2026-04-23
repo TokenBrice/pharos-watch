@@ -1,5 +1,6 @@
 // @vitest-environment jsdom
 import { act, cleanup, render } from "@testing-library/react";
+import { useEffect } from "react";
 import { afterEach, describe, expect, it } from "vitest";
 import { CohortThreads } from "@/app/alt-pegs/fiat-world-atlas/cohort-threads";
 import { HoverProvider, useHoverState } from "@/app/alt-pegs/fiat-world-atlas/hover-context";
@@ -20,18 +21,31 @@ function makeCoin(id: string, peg: PlacedCoin["pegCurrency"], x: number, y: numb
   };
 }
 
-declare global {
-  // eslint-disable-next-line no-var
-  var __hoverHandle: ReturnType<typeof useHoverState>;
-}
+type HoverState = ReturnType<typeof useHoverState>;
 
-function Grabber() {
-  globalThis.__hoverHandle = useHoverState();
+function Grabber({ onState }: { onState: (state: HoverState) => void }) {
+  const state = useHoverState();
+  useEffect(() => {
+    onState(state);
+  }, [onState, state]);
   return null;
 }
 
 describe("CohortThreads", () => {
   afterEach(() => cleanup());
+
+  function makeHandleCapture() {
+    let hoverHandle: HoverState | null = null;
+    const setHoverHandle = (state: HoverState) => {
+      hoverHandle = state;
+    };
+    const getHoverHandle = () => {
+      if (!hoverHandle) throw new Error("Hover handle was not captured");
+      return hoverHandle;
+    };
+
+    return { getHoverHandle, setHoverHandle };
+  }
 
   it("renders nothing when no coin is hovered", () => {
     const coins = [makeCoin("a", "EUR", 50, 20), makeCoin("b", "EUR", 60, 25)];
@@ -44,6 +58,7 @@ describe("CohortThreads", () => {
   });
 
   it("draws N-1 lines when hovering a coin with N siblings", () => {
+    const { getHoverHandle, setHoverHandle } = makeHandleCapture();
     const coins = [
       makeCoin("a", "EUR", 50, 20),
       makeCoin("b", "EUR", 60, 25),
@@ -52,27 +67,28 @@ describe("CohortThreads", () => {
     ];
     const { container } = render(
       <HoverProvider>
-        <Grabber />
+        <Grabber onState={setHoverHandle} />
         <CohortThreads coins={coins} colorHex="#60a5fa" />
       </HoverProvider>,
     );
     act(() => {
-      globalThis.__hoverHandle.setHoveredCoin({ id: "a", pegCurrency: "EUR" });
+      getHoverHandle().setHoveredCoin({ id: "a", pegCurrency: "EUR" });
     });
     const lines = container.querySelectorAll("line");
     expect(lines.length).toBe(2);
   });
 
   it("renders nothing when the hovered coin is not in this layer", () => {
+    const { getHoverHandle, setHoverHandle } = makeHandleCapture();
     const coins = [makeCoin("a", "EUR", 50, 20), makeCoin("b", "EUR", 60, 25)];
     const { container } = render(
       <HoverProvider>
-        <Grabber />
+        <Grabber onState={setHoverHandle} />
         <CohortThreads coins={coins} colorHex="#60a5fa" />
       </HoverProvider>,
     );
     act(() => {
-      globalThis.__hoverHandle.setHoveredCoin({ id: "xaut", pegCurrency: "GOLD" });
+      getHoverHandle().setHoveredCoin({ id: "xaut", pegCurrency: "GOLD" });
     });
     expect(container.querySelectorAll("line").length).toBe(0);
   });
