@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { ChevronDown } from "lucide-react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { DetailSectionTitle } from "@/components/stablecoin-detail/section-title";
 import type { PegSummaryCoin, StablecoinData } from "@shared/types";

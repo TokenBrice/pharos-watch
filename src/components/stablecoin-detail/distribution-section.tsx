@@ -3,7 +3,7 @@
 import { useMemo } from "react";
 import { PieChart, Pie, Cell, Tooltip, Sector } from "recharts";
 import type { PieSectorDataItem } from "recharts";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { DetailSectionTitle } from "@/components/stablecoin-detail/section-title";
 import { PharosChartTooltip, TooltipRow } from "@/components/pharos-chart-tooltip";

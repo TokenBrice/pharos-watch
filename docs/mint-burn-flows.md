@@ -629,7 +629,6 @@ Retroactive cleanup endpoint for historical rows that predate shared roundtrip d
 
 **Route:** `/flows`
 **File:** `src/app/flows/page.tsx`
-**Layout:** `src/app/flows/layout.tsx`
 
 Three sections:
 1. **Hero Overview** — net-direction hero with the baseline-relative Bank Run Gauge, a literal 24h Minting Pressure gauge, and flight-to-quality badge. Headline copy is derived from aggregate `Net Flow 24h` direction plus the Bank Run Gauge pressure state; it does not imply cross-asset breadth unless a separate breadth signal is added.
@@ -750,8 +749,7 @@ Current production scope already spans configured issuance chains. Planned next 
 | `worker/src/api/reclassify-atomic-roundtrips.ts` | Admin endpoint: retroactively tag same-tx mint/burn rows as atomic roundtrips |
 | `worker/migrations/0000_baseline.sql` | Baseline mint/burn schema (3 tables, including the historical v2 layout) |
 | `src/hooks/use-mint-burn-flows.ts` | TanStack Query hooks (3 hooks) |
-| `src/app/flows/page.tsx` | Frontend page |
-| `src/app/flows/layout.tsx` | Page metadata/layout |
+| `src/app/flows/page.tsx` | Frontend page and metadata |
 | `worker/src/lib/mint-burn-scoring.ts` | Pure Flow Intensity / Bank Run Gauge / flight-to-quality logic (`getGaugeBand`, `computeGaugeScore`, `detectFlightToQuality`) |
 | `src/components/flow-brrr-overview.tsx` | Shared Bank Run Gauge overview shell for `/flows` and homepage snapshot |
 | `src/components/flow-chart.tsx` | Recharts flow chart |
