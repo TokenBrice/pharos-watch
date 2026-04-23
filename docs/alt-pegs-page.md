@@ -78,7 +78,7 @@ Important contract:
 4. `NonUsdShareChart`
 5. `AltPegCohortHistoryChart`
 
-`page.tsx` then renders `StaticAltPegLinkHub` after the client surface so the peg drill-down links are present in static HTML. The fiat side of the hub gets the dominant layout column as a fiat-only reference-region lens on `xl+`, using a fixed-ratio world silhouette with coin-count-weighted coverage markers, perimeter callout cards, and leader lines that keep the map legible. Below `xl`, the surface falls back to the region list only. Commodity, CPI-linked, and other non-fiat reference cohorts stay in an explicit off-map sidecar because they are not monetary-region pegs.
+`page.tsx` then renders `StaticAltPegLinkHub` after the client surface so the peg drill-down links are present in static HTML. On `xl+`, a single `FiatWorldAtlas` card carries the full non-USD drill-down surface: a celestial band above the map renders Gold (sun), Silver (moon), and CPI/Index (orbital glyph), and the map itself is a pre-rendered static SVG of 1:110m Natural Earth geometry, colored per country via `PEG_COUNTRY_MAP` in `src/lib/alt-peg-geography.ts`. The SVG is regenerated with `npm run build:world-map` (dev-only d3-geo + topojson-client). Below `xl`, the surface falls back to a stacked `MobileRegionList` that now includes the non-geographic cohorts at the bottom.
 
 The route intentionally keeps all current-state modules ahead of the historical modules to reduce trust issues caused by mixed source cadences.
 
@@ -98,7 +98,7 @@ Current Release 1 behavior:
 - The command palette picks the route up automatically through shared nav config.
 - `scripts/generate-llms-txt.ts` includes `/alt-pegs/` in the generated `public/llms.txt`.
 - `StaticAltPegLinkHub` is part of the static route output, so `out/alt-pegs/index.html` contains crawlable links into representative non-USD peg cohorts even though the visible analytics surface is client-rendered.
-- The static link hub's desktop treatment is intentionally fiat-only on the atlas, with coverage markers sized by tracked fiat coin count plus docked region callouts and leader lines; commodity, CPI-linked, and other non-fiat reference cohorts remain crawlable in the same HTML via the off-map sidecar cards.
+- The static link hub's desktop treatment is a single `FiatWorldAtlas` card: a celestial band (Gold sun, Silver moon, CPI/Index orbital) above a pre-rendered static SVG world map whose countries are colored per `PEG_COUNTRY_MAP`. Commodity, CPI-linked, and other non-fiat reference cohorts stay crawlable through the celestial band on desktop and through the stacked `MobileRegionList` on narrower viewports.
 
 ---
 
