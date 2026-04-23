@@ -68,7 +68,7 @@ export const LIVE_RESERVE_ADAPTER_PRIMARY_INPUT_KINDS = {
   "liquity-v1": ["onchain-evm"],
   "liquity-v2-branches": ["onchain-evm"],
   m0: ["http-json"],
-  mento: ["http-html"],
+  mento: ["http-json"],
   "openeden-usdo": ["http-json"],
   "re-metrics": ["http-html"],
   reservoir: ["http-json"],

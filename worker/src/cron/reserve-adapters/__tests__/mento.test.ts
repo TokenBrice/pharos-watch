@@ -1,114 +1,130 @@
-import { readFileSync } from "node:fs";
-import { dirname, join } from "node:path";
-import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 import { adaptMentoReserveComposition, parseMentoReserveComposition } from "../mento";
 import { getReserveAdapter } from "../index";
 import { validateAdapterOutput } from "../validate";
 
-const FIXTURES_DIR = join(dirname(fileURLToPath(import.meta.url)), "fixtures");
-const SAMPLE_HTML = readFileSync(join(FIXTURES_DIR, "mento-reserve-composition.html"), "utf8");
+const SAMPLE_PAYLOAD = {
+  collateral: {
+    assets: [
+      { symbol: "sUSDS", percentage: 50 },
+      { symbol: "EURC", percentage: 10 },
+      { symbol: "axlEUROC", percentage: 5 },
+      { symbol: "CELO", percentage: 15 },
+      { symbol: "USDGLO", percentage: 5 },
+      { symbol: "stETH", percentage: 3 },
+      { symbol: "USDT", percentage: 4 },
+      { symbol: "USDC", percentage: 2 },
+      { symbol: "axlUSDC", percentage: 1 },
+      { symbol: "AUSD", percentage: 4 },
+      { symbol: "WETH", percentage: 1 },
+    ],
+  },
+};
 
 describe("mento adapter", () => {
-  it("parses reserveComposition from the server-rendered payload", () => {
-    const entries = parseMentoReserveComposition(SAMPLE_HTML);
+  it("parses reserve entries from the analytics API payload", () => {
+    const entries = parseMentoReserveComposition(SAMPLE_PAYLOAD);
     expect(entries).toEqual([
-      { symbol: "sUSDS", percent: 54.8 },
-      { symbol: "EURC", percent: 19.9 },
-      { symbol: "CELO", percent: 13.5 },
-      { symbol: "USDGLO", percent: 5.0 },
-      { symbol: "stETH", percent: 2.6 },
-      { symbol: "USDT", percent: 2.1 },
-      { symbol: "USDC", percent: 1.2 },
-      { symbol: "ETH", percent: 0.9 },
+      { symbol: "sUSDS", percent: 50 },
+      { symbol: "EURC", percent: 10 },
+      { symbol: "axlEUROC", percent: 5 },
+      { symbol: "CELO", percent: 15 },
+      { symbol: "USDGLO", percent: 5 },
+      { symbol: "stETH", percent: 3 },
+      { symbol: "USDT", percent: 4 },
+      { symbol: "USDC", percent: 2 },
+      { symbol: "axlUSDC", percent: 1 },
+      { symbol: "AUSD", percent: 4 },
+      { symbol: "WETH", percent: 1 },
     ]);
   });
 
-  it("maps parsed reserve composition into Pharos reserve slices", () => {
-    const result = adaptMentoReserveComposition(SAMPLE_HTML);
+  it("maps the analytics payload into Pharos reserve slices", () => {
+    const result = adaptMentoReserveComposition(SAMPLE_PAYLOAD);
     expect(result.slices).toEqual([
-      { name: "sUSDS (Sky savings USDS)", pct: 54.8, risk: "low", coinId: "usds-sky" },
-      { name: "EURC (Circle euro stablecoin)", pct: 19.9, risk: "low" },
-      { name: "CELO", pct: 13.5, risk: "high" },
+      { name: "sUSDS (Sky savings USDS)", pct: 50, risk: "low", coinId: "usds-sky" },
+      { name: "EURC (Circle euro stablecoin)", pct: 15, risk: "low", coinId: "eurc-circle" },
+      { name: "CELO", pct: 15, risk: "high" },
       { name: "USDGLO (Glo Dollar)", pct: 5, risk: "low" },
-      { name: "stETH (Lido staked ETH)", pct: 2.6, risk: "low" },
-      { name: "USDT", pct: 2.1, risk: "low", coinId: "usdt-tether" },
-      { name: "USDC", pct: 1.2, risk: "low", coinId: "usdc-circle" },
-      { name: "ETH", pct: 0.9, risk: "very-low" },
+      { name: "USDT", pct: 4, risk: "low", coinId: "usdt-tether" },
+      { name: "AUSD (Agora Dollar)", pct: 4, risk: "low", coinId: "ausd-agora" },
+      { name: "stETH (Lido staked ETH)", pct: 3, risk: "low" },
+      { name: "USDC", pct: 3, risk: "low", coinId: "usdc-circle" },
+      { name: "ETH", pct: 1, risk: "very-low" },
     ]);
     expect(result.warnings).toBeUndefined();
   });
 
   it("emits a structural integrity warning when fewer than 3 reserve entries are parsed", () => {
-    const twoEntryHtml = `<html><body><script>self.__next_f.push([1,"...\\"reserveComposition\\":[{\\"symbol\\":\\"USDC\\",\\"percent\\":80},{\\"symbol\\":\\"ETH\\",\\"percent\\":20}],\\"reserveHoldings\\":{}..."]);
-</script></body></html>`;
-    const result = adaptMentoReserveComposition(twoEntryHtml);
+    const twoEntryPayload = {
+      collateral: {
+        assets: [
+          { symbol: "USDC", percentage: 80 },
+          { symbol: "WETH", percentage: 20 },
+        ],
+      },
+    };
+
+    const result = adaptMentoReserveComposition(twoEntryPayload);
     expect(result.warnings).toBeDefined();
-    expect(result.warnings!.some((w) => w.code === "mento-low-entry-count")).toBe(true);
+    expect(result.warnings!.some((warning) => warning.code === "mento-low-entry-count")).toBe(true);
   });
 
   it("rejects reserve payloads whose percentages do not cover the full reserve mix", () => {
-    const lowPctHtml = `<html><body><script>self.__next_f.push([1,"...\\"reserveComposition\\":[{\\"symbol\\":\\"USDC\\",\\"percent\\":10},{\\"symbol\\":\\"ETH\\",\\"percent\\":5},{\\"symbol\\":\\"CELO\\",\\"percent\\":3}],\\"reserveHoldings\\":{}..."]);
-</script></body></html>`;
-    expect(() => adaptMentoReserveComposition(lowPctHtml)).toThrow("sum to 18.0%");
+    const lowPctPayload = {
+      collateral: {
+        assets: [
+          { symbol: "USDC", percentage: 10 },
+          { symbol: "WETH", percentage: 5 },
+          { symbol: "CELO", percentage: 3 },
+        ],
+      },
+    };
+
+    expect(() => adaptMentoReserveComposition(lowPctPayload)).toThrow("sum to 18.0%");
   });
 
-  it("throws on missing reserveComposition marker", () => {
-    expect(() => parseMentoReserveComposition("no data here")).toThrow("layout-changed");
+  it("throws on missing collateral assets", () => {
+    expect(() => parseMentoReserveComposition({})).toThrow("layout-changed");
   });
 
-  it("throws on missing reserveHoldings delimiter", () => {
-    const broken = `\\"reserveComposition\\":[{"symbol":"USDC","percent":40}]`;
-    expect(() => parseMentoReserveComposition(broken)).toThrow("layout-changed");
-  });
-
-  it("throws parse-failed when the embedded reserve JSON is malformed", () => {
-    const malformed = `<html><body><script>self.__next_f.push([1,"...\\"reserveComposition\\":[{\\"symbol\\":\\"USDC\\",\\"percent\\":40},bad-json],\\"reserveHoldings\\":{}..."]);
-</script></body></html>`;
-    expect(() => parseMentoReserveComposition(malformed)).toThrow("parse-failed");
+  it("throws when collateral assets contain no usable entries", () => {
+    expect(() => parseMentoReserveComposition({
+      collateral: {
+        assets: [{ symbol: 123, percentage: "40" }],
+      },
+    })).toThrow("layout-changed");
   });
 
   it("annotates freshness as explicitly unverified with reason metadata", () => {
-    const result = adaptMentoReserveComposition(SAMPLE_HTML);
+    const result = adaptMentoReserveComposition(SAMPLE_PAYLOAD);
     expect(result.metadata).toMatchObject({
       freshnessMode: "unverified",
       details: {
-        freshnessSource: "nextjs-embedded-payload",
+        freshnessSource: "mento-analytics-api",
       },
-    });
-  });
-
-  it("uses embedded reserve holding update timestamps when available", () => {
-    const updatedHtml = `<html><body><script>self.__next_f.push([1,"...\\"reserveComposition\\":[{\\"symbol\\":\\"USDC\\",\\"percent\\":60},{\\"symbol\\":\\"ETH\\",\\"percent\\":30},{\\"symbol\\":\\"CELO\\",\\"percent\\":10}],\\"reserveHoldings\\":{\\"totalReserveValue\\":100,\\"otherAssets\\":[{\\"symbol\\":\\"USDC\\",\\"updated\\":1776236240357},{\\"symbol\\":\\"ETH\\",\\"updated\\":1776236230357}]}..."]);
-</script></body></html>`;
-
-    const result = adaptMentoReserveComposition(updatedHtml);
-
-    expect(result.metadata).toMatchObject({
-      freshnessMode: "verified",
-      sourceTimestamp: 1776236230,
-      stableReservePct: 60,
-    });
-    expect(result.metadata?.redemption).toBeUndefined();
-    expect(validateAdapterOutput(result, { adapter: getReserveAdapter("mento") ?? undefined }).valid).toBe(true);
-  });
-
-
-  it("also accepts seconds-precision reserve holding update timestamps", () => {
-    const updatedHtml = `<html><body><script>self.__next_f.push([1,"...\\"reserveComposition\\":[{\\"symbol\\":\\"USDC\\",\\"percent\\":60},{\\"symbol\\":\\"ETH\\",\\"percent\\":30},{\\"symbol\\":\\"CELO\\",\\"percent\\":10}],\\"reserveHoldings\\":{\\"totalReserveValue\\":100,\\"otherAssets\\":[{\\"symbol\\":\\"USDC\\",\\"updated\\":1776236240}]}..."]);
-</script></body></html>`;
-    const result = adaptMentoReserveComposition(updatedHtml);
-    expect(result.metadata).toMatchObject({
-      freshnessMode: "verified",
-      sourceTimestamp: 1776236240,
+      stableReservePct: 81,
     });
   });
 
   it("emits an unknown-asset warning for symbols not in TOKEN_CONFIG", () => {
-    const unknownTokenHtml = `<html><body><script>self.__next_f.push([1,"...\\"reserveComposition\\":[{\\"symbol\\":\\"USDC\\",\\"percent\\":50},{\\"symbol\\":\\"ETH\\",\\"percent\\":30},{\\"symbol\\":\\"NEW_TOKEN\\",\\"percent\\":10},{\\"symbol\\":\\"CELO\\",\\"percent\\":10}],\\"reserveHoldings\\":{}..."]);
-</script></body></html>`;
-    const result = adaptMentoReserveComposition(unknownTokenHtml);
+    const unknownTokenPayload = {
+      collateral: {
+        assets: [
+          { symbol: "USDC", percentage: 50 },
+          { symbol: "WETH", percentage: 30 },
+          { symbol: "NEW_TOKEN", percentage: 10 },
+          { symbol: "CELO", percentage: 10 },
+        ],
+      },
+    };
+    const result = adaptMentoReserveComposition(unknownTokenPayload);
     expect(result.warnings).toBeDefined();
-    expect(result.warnings!.some((w) => w.code === "unknown-asset" && w.message.includes("NEW_TOKEN"))).toBe(true);
+    expect(result.warnings!.some((warning) => warning.code === "unknown-asset" && warning.message.includes("NEW_TOKEN"))).toBe(true);
+  });
+
+  it("produces reserve output that passes adapter validation", () => {
+    const result = adaptMentoReserveComposition(SAMPLE_PAYLOAD);
+    expect(validateAdapterOutput(result, { adapter: getReserveAdapter("mento") ?? undefined }).valid).toBe(true);
   });
 });

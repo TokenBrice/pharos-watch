@@ -3,108 +3,141 @@ import type { LiveReserveWarning, LiveReservesConfig } from "@shared/types/live-
 import { CANONICAL_ETH_RESERVE_RISK, getCanonicalReserveAssetRisk } from "@shared/lib/reserve-asset-risk";
 import type { AdapterContext, AdapterResult } from "./types";
 import {
-  fetchTextWithRetry,
-  htmlLayoutChangedError,
-  htmlParseError,
-  parseTimestampLikeToUnixSeconds,
-  requireHtmlInput,
+  fetchJsonWithRetry,
   reserveDegradedWarning,
   reserveInfoWarning,
   slicesFromPercentages,
   unverifiedFreshnessMetadata,
-  verifiedFreshnessMetadata,
 } from "./helpers";
-import { extractEscapedJsonArrayBetween, extractEscapedJsonValueAfterKey } from "./html";
+import { requireJsonInput } from "./input-guards";
 
 interface MentoReserveEntry {
   symbol: string;
   percent: number;
 }
 
-const RESERVE_COMPOSITION_START = '\\"reserveComposition\\":';
-const RESERVE_COMPOSITION_END = '],\\"reserveHoldings\\":';
-const RESERVE_HOLDINGS_KEY = '\\"reserveHoldings\\":';
+interface MentoReserveApiAsset {
+  symbol?: unknown;
+  percentage?: unknown;
+}
+
+interface MentoReserveApiResponse {
+  collateral?: {
+    assets?: MentoReserveApiAsset[];
+  };
+}
 
 interface TokenConfig {
+  key: string;
   name: string;
   risk: ReserveSlice["risk"];
   coinId?: string;
+  stableLike?: boolean;
 }
 
 const TOKEN_CONFIG: Record<string, TokenConfig> = {
-  sUSDS: { name: "sUSDS (Sky savings USDS)", risk: "low", coinId: "usds-sky" },
-  EURC: { name: "EURC (Circle euro stablecoin)", risk: "low" },
-  CELO: { name: "CELO", risk: getCanonicalReserveAssetRisk("CELO") ?? "high" },
-  USDGLO: { name: "USDGLO (Glo Dollar)", risk: "low" },
-  stETH: { name: "stETH (Lido staked ETH)", risk: getCanonicalReserveAssetRisk("stETH") ?? "low" },
-  USDT: { name: "USDT", risk: "low", coinId: "usdt-tether" },
-  USDC: { name: "USDC", risk: "low", coinId: "usdc-circle" },
-  ETH: { name: "ETH", risk: CANONICAL_ETH_RESERVE_RISK },
+  sUSDS: {
+    key: "sUSDS",
+    name: "sUSDS (Sky savings USDS)",
+    risk: "low",
+    coinId: "usds-sky",
+    stableLike: true,
+  },
+  EURC: {
+    key: "EURC",
+    name: "EURC (Circle euro stablecoin)",
+    risk: "low",
+    coinId: "eurc-circle",
+    stableLike: true,
+  },
+  axlEUROC: {
+    key: "EURC",
+    name: "EURC (Circle euro stablecoin)",
+    risk: "low",
+    coinId: "eurc-circle",
+    stableLike: true,
+  },
+  CELO: { key: "CELO", name: "CELO", risk: getCanonicalReserveAssetRisk("CELO") ?? "high" },
+  USDGLO: {
+    key: "USDGLO",
+    name: "USDGLO (Glo Dollar)",
+    risk: "low",
+    stableLike: true,
+  },
+  stETH: {
+    key: "stETH",
+    name: "stETH (Lido staked ETH)",
+    risk: getCanonicalReserveAssetRisk("stETH") ?? "low",
+  },
+  USDT: {
+    key: "USDT",
+    name: "USDT",
+    risk: "low",
+    coinId: "usdt-tether",
+    stableLike: true,
+  },
+  USDC: {
+    key: "USDC",
+    name: "USDC",
+    risk: "low",
+    coinId: "usdc-circle",
+    stableLike: true,
+  },
+  axlUSDC: {
+    key: "USDC",
+    name: "USDC",
+    risk: "low",
+    coinId: "usdc-circle",
+    stableLike: true,
+  },
+  AUSD: {
+    key: "AUSD",
+    name: "AUSD (Agora Dollar)",
+    risk: getCanonicalReserveAssetRisk("AUSD") ?? "low",
+    coinId: "ausd-agora",
+    stableLike: true,
+  },
+  ETH: { key: "ETH", name: "ETH", risk: CANONICAL_ETH_RESERVE_RISK },
+  WETH: { key: "ETH", name: "ETH", risk: CANONICAL_ETH_RESERVE_RISK },
+  WBTC: {
+    key: "WBTC",
+    name: "WBTC",
+    risk: getCanonicalReserveAssetRisk("WBTC") ?? "medium",
+  },
 };
 
-export function parseMentoReserveComposition(html: string): MentoReserveEntry[] {
-  const escapedJson = extractEscapedJsonArrayBetween(
-    html,
-    RESERVE_COMPOSITION_START,
-    RESERVE_COMPOSITION_END,
-    "mento",
-  );
-  let parsed: unknown;
-  try {
-    parsed = JSON.parse(escapedJson);
-  } catch (e) {
-    throw htmlParseError(
-      "mento",
-      `reserve composition JSON is malformed: ${e instanceof Error ? e.message : String(e)}`,
-    );
-  }
-  if (!Array.isArray(parsed)) {
-    throw htmlLayoutChangedError("mento", "reserveComposition was not an array");
+function getCollateralAssets(payload: unknown): MentoReserveApiAsset[] {
+  if (!payload || typeof payload !== "object") {
+    throw new Error("mento: layout-changed: response was not an object");
   }
 
-  return parsed
-    .filter((entry): entry is MentoReserveEntry =>
-      !!entry
-      && typeof entry === "object"
-      && typeof (entry as MentoReserveEntry).symbol === "string"
-      && typeof (entry as MentoReserveEntry).percent === "number",
-    );
+  const response = payload as MentoReserveApiResponse;
+  const assets = response.collateral?.assets;
+  if (!Array.isArray(assets)) {
+    throw new Error("mento: layout-changed: missing collateral.assets");
+  }
+
+  return assets;
 }
 
-function collectUpdatedTimestamps(value: unknown, timestamps: number[]): void {
-  if (!value || typeof value !== "object") return;
-  if (Array.isArray(value)) {
-    for (const item of value) collectUpdatedTimestamps(item, timestamps);
-    return;
+export function parseMentoReserveComposition(payload: unknown): MentoReserveEntry[] {
+  const assets = getCollateralAssets(payload);
+  const entries = assets.flatMap((asset) => (
+    typeof asset.symbol === "string" && typeof asset.percentage === "number"
+      ? [{ symbol: asset.symbol, percent: asset.percentage }]
+      : []
+  ));
+
+  if (entries.length === 0) {
+    throw new Error("mento: layout-changed: collateral.assets contained no usable entries");
   }
 
-  const record = value as Record<string, unknown>;
-  const normalized = parseTimestampLikeToUnixSeconds(record.updated);
-  if (normalized != null) {
-    timestamps.push(normalized);
-  }
-  for (const nested of Object.values(record)) {
-    collectUpdatedTimestamps(nested, timestamps);
-  }
+  return entries;
 }
 
-function extractMentoSourceTimestamp(html: string): number | null {
-  let parsed: unknown;
-  try {
-    parsed = JSON.parse(extractEscapedJsonValueAfterKey(html, RESERVE_HOLDINGS_KEY, "mento")) as unknown;
-  } catch {
-    return null;
-  }
-
-  const timestamps: number[] = [];
-  collectUpdatedTimestamps(parsed, timestamps);
-  return timestamps.length > 0 ? Math.min(...timestamps) : null;
-}
-
-export function adaptMentoReserveComposition(html: string): AdapterResult {
-  const entries = parseMentoReserveComposition(html);
+export function adaptMentoReserveComposition(payload: unknown): AdapterResult {
+  const entries = parseMentoReserveComposition(payload);
   const warnings: LiveReserveWarning[] = [];
-  const sourceTimestamp = extractMentoSourceTimestamp(html);
 
   if (entries.length < 3) {
     warnings.push(reserveInfoWarning(
@@ -113,24 +146,59 @@ export function adaptMentoReserveComposition(html: string): AdapterResult {
     ));
   }
 
-  const totalPct = entries.reduce((sum, e) => sum + e.percent, 0);
-  const stablePct = entries
-    .filter((entry) => ["USDC", "USDT", "sUSDS", "EURC", "USDGLO"].includes(entry.symbol))
-    .reduce((sum, entry) => sum + entry.percent, 0);
-  const slices = slicesFromPercentages(
-    entries.map((entry) => {
-      const config = TOKEN_CONFIG[entry.symbol];
-      if (!config) {
-        warnings.push(reserveDegradedWarning("unknown-asset", `Unmapped Mento reserve symbol: ${entry.symbol}`));
+  const grouped = new Map<string, {
+    name: string;
+    risk: ReserveSlice["risk"];
+    coinId?: string;
+    pct: number;
+    stableLike: boolean;
+  }>();
+
+  let stablePct = 0;
+  for (const entry of entries) {
+    const config = TOKEN_CONFIG[entry.symbol];
+    if (!config) {
+      warnings.push(reserveDegradedWarning("unknown-asset", `Unmapped Mento reserve symbol: ${entry.symbol}`));
+      const existing = grouped.get(entry.symbol);
+      if (existing) {
+        existing.pct += entry.percent;
+      } else {
+        grouped.set(entry.symbol, {
+          name: entry.symbol,
+          risk: "medium",
+          pct: entry.percent,
+          stableLike: false,
+        });
       }
-      const resolved = config ?? { name: entry.symbol, risk: "medium" as const };
-      return {
-        name: resolved.name,
+      continue;
+    }
+
+    const existing = grouped.get(config.key);
+    if (existing) {
+      existing.pct += entry.percent;
+    } else {
+      grouped.set(config.key, {
+        name: config.name,
+        risk: config.risk,
+        coinId: config.coinId,
         pct: entry.percent,
-        risk: resolved.risk,
-        ...(resolved.coinId ? { coinId: resolved.coinId } : {}),
-      };
-    }),
+        stableLike: config.stableLike ?? false,
+      });
+    }
+
+    if (config.stableLike) {
+      stablePct += entry.percent;
+    }
+  }
+
+  const totalPct = entries.reduce((sum, entry) => sum + entry.percent, 0);
+  const slices = slicesFromPercentages(
+    Array.from(grouped.values(), (group) => ({
+      name: group.name,
+      pct: group.pct,
+      risk: group.risk,
+      ...(group.coinId ? { coinId: group.coinId } : {}),
+    })),
     { decimals: 1, context: "Mento reserve composition" },
   );
 
@@ -140,12 +208,10 @@ export function adaptMentoReserveComposition(html: string): AdapterResult {
     metadata: {
       entryCount: entries.length,
       totalPct,
-      ...(sourceTimestamp != null
-        ? verifiedFreshnessMetadata(sourceTimestamp)
-        : unverifiedFreshnessMetadata(
-            "nextjs-embedded-payload",
-            "Mento reserve page embeds composition percentages without a trustworthy source timestamp",
-          )),
+      ...unverifiedFreshnessMetadata(
+        "mento-analytics-api",
+        "Mento analytics API exposes reserve composition but not a trustworthy payload update timestamp",
+      ),
       stableReservePct: stablePct,
     },
   };
@@ -157,7 +223,7 @@ export async function fetchMentoReserves(
   signal: AbortSignal,
   ctx?: AdapterContext,
 ): Promise<AdapterResult> {
-  const input = requireHtmlInput(config.inputs.primary, "mento");
-  const html = await fetchTextWithRetry(input.url, signal, 12_000, ctx);
-  return adaptMentoReserveComposition(html);
+  const input = requireJsonInput(config.inputs.primary, "mento");
+  const payload = await fetchJsonWithRetry<MentoReserveApiResponse>(input.url, signal, 12_000, ctx);
+  return adaptMentoReserveComposition(payload);
 }

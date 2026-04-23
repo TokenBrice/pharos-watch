@@ -386,7 +386,7 @@ This table reflects the adapter keys currently configured in `shared/data/stable
 | `liquity-v2-branches`      | `onchain-evm`               | `collateral-mix`                     | 6                |
 | `lista`                    | `onchain-evm`               | `collateral-mix`                     | 1                |
 | `m0`                       | `http-json`                 | `protocol-reserve`                   | 10               |
-| `mento`                    | `http-html`                 | `collateral-mix`                     | 2                |
+| `mento`                    | `http-json`                 | `collateral-mix`                     | 2                |
 | `openeden-usdo`            | `http-json`                 | `collateral-mix`                     | 1                |
 | `re-metrics`               | `http-html`                 | `collateral-mix`                     | 1                |
 | `reservoir`                | `http-json`                 | `protocol-reserve`                   | 1                |
@@ -406,7 +406,7 @@ This table reflects the adapter keys currently configured in `shared/data/stable
 
 `cap-vault` reads Cap cUSD's Ethereum vault state directly. Reserve slices are based on each supported asset's total supplied balance, while redemption-capacity telemetry uses unpaused available balances after borrows so the route does not treat borrowed or paused collateral as immediate exit capacity. The adapter emits nested `metadata.redemption` with `capacityKind = "live-direct-bounded"` and `freshnessKind = "same-run-onchain"`.
 
-`circle-transparency`, `m0`, and `mento` preserve source freshness when their upstream pages/API expose usable reserve disclosure or update timestamps: Circle uses the public reserve `As of` date, M0 uses the latest collateral/update timestamp exposed by its GraphQL schema, and Mento uses the embedded reserve-holding `updated` timestamps. When those timestamps are missing, the adapters keep `freshnessMode = "unverified"` and remain detail-visible without report-card collateral passthrough.
+`circle-transparency` and `m0` preserve source freshness when their upstream pages/API expose usable reserve disclosure or update timestamps: Circle uses the public reserve `As of` date, and M0 uses the latest collateral/update timestamp exposed by its GraphQL schema. `mento` now reads reserve composition from the server-side analytics API behind `reserve.mento.org`; that API is usable from the Worker even though the public site currently trips browser CORS errors, but it does not expose a trustworthy payload update timestamp, so Mento snapshots currently persist with `freshnessMode = "unverified"` and remain detail-visible without report-card collateral passthrough.
 
 `asymmetry` preserves the protocol API's top-level timestamp as verified freshness when available and normalizes branch symbols before classification, so casing-only variants such as `wBTC` do not degrade an otherwise mapped USDaf reserve mix.
 

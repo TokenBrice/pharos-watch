@@ -1806,8 +1806,8 @@
       },
       "inputs": {
         "primary": {
-          "kind": "http-html",
-          "url": "https://reserve.mento.org/"
+          "kind": "http-json",
+          "url": "https://mento-analytics-api-12390052758.us-central1.run.app/api/v2/reserve"
         }
       }
     }
