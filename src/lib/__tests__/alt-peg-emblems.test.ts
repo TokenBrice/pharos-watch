@@ -1,17 +1,12 @@
 import { describe, expect, it } from "vitest";
-import {
-  buildPegEmblemClusters,
-  PEG_ANCHORS,
-} from "@/lib/alt-peg-emblems";
+import { buildPegEmblems, buildPegEmblemClusters, buildPegEmblemsForPegs, PEG_ANCHORS } from "@/lib/alt-peg-emblems";
 import { PEG_COUNTRY_MAP } from "@/lib/alt-peg-geography";
 
 describe("buildPegEmblemClusters", () => {
   const clusters = buildPegEmblemClusters();
 
   it("returns one cluster per covered peg with at least one tracked stablecoin", () => {
-    const coveredPegs = Object.keys(PEG_COUNTRY_MAP).filter((peg) =>
-      PEG_ANCHORS[peg],
-    );
+    const coveredPegs = Object.keys(PEG_COUNTRY_MAP).filter((peg) => PEG_ANCHORS[peg]);
     // Every covered peg should have at least one stablecoin in the fixture;
     // if that changes, this assertion will correctly fail and prompt an update.
     expect(clusters.length).toBe(coveredPegs.length);
@@ -27,6 +22,19 @@ describe("buildPegEmblemClusters", () => {
     const eur = clusters.find((c) => c.peg === "EUR");
     expect(eur).toBeDefined();
     expect(eur!.emblems.length).toBeGreaterThanOrEqual(10);
+  });
+
+  it("exposes commodity peg emblems for non-geographic map markers", () => {
+    const gold = buildPegEmblems("GOLD");
+    expect(gold.map((emblem) => emblem.symbol)).toEqual(expect.arrayContaining(["XAUT", "PAXG", "KAU"]));
+
+    const silver = buildPegEmblems("SILVER");
+    expect(silver.map((emblem) => emblem.symbol)).toContain("KAG");
+  });
+
+  it("combines index-linked peg emblems for aggregate deadspot markers", () => {
+    const indexLinked = buildPegEmblemsForPegs(["VAR"]);
+    expect(indexLinked.map((emblem) => emblem.symbol)).toEqual(expect.arrayContaining(["FPI", "ISC", "SILK"]));
   });
 
   it("every emblem has a non-empty logoSrc string", () => {

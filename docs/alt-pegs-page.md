@@ -100,7 +100,7 @@ Current Release 1 behavior:
 - The command palette picks the route up automatically through shared nav config.
 - `scripts/generate-llms-txt.ts` includes `/alt-pegs/` in the generated `public/llms.txt`.
 - `StaticAltPegLinkHub` is part of the static route output before the client analytics, so `out/alt-pegs/index.html` contains crawlable links into representative non-USD peg cohorts and exposes the peg diversity map as the route's first visible module.
-- The static link hub's treatment is a single theme-aware `FiatWorldAtlas` hero card: Gold sun, Silver moon, and CPI/Index orbital references float on the desktop map, while a pre-rendered static SVG world map colors countries per `PEG_COUNTRY_MAP`. Commodity, CPI-linked, and other non-fiat reference cohorts stay crawlable through the desktop deadspot markers plus `Beyond Geography` link rail, and through the celestial band on narrower viewports; fiat cohorts use the world map plus region chips on desktop and the stacked `MobileRegionList` on narrower viewports.
+- The static link hub's treatment is a single theme-aware `FiatWorldAtlas` hero card: Gold sun, Silver moon, and CPI/Index orbital references float on the desktop map with stablecoin logo stacks, while a pre-rendered static SVG world map colors countries per `PEG_COUNTRY_MAP`. Commodity, CPI-linked, and other non-fiat reference cohorts stay crawlable through the desktop deadspot markers plus `Beyond Geography` link rail, and through the celestial band on narrower viewports; fiat cohorts use the world map plus logo clusters and region chips on desktop and the stacked `MobileRegionList` on narrower viewports.
 
 ---
 

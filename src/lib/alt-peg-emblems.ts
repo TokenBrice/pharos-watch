@@ -1,6 +1,6 @@
 import type { PegCurrency } from "@shared/types";
 import { PEG_CHART_COLORS } from "@shared/lib/classification";
-import nonUsdStablecoins from "@shared/data/stablecoins/non-usd.json";
+import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins";
 import { PEG_COUNTRY_MAP } from "@/lib/alt-peg-geography";
 import { logosById } from "@/lib/logos";
 
@@ -41,7 +41,7 @@ export const PEG_ANCHORS: Record<string, { x: number; y: number }> = {
   AUD: { x: 83, y: 63 },
 };
 
-interface NonUsdRecord {
+interface EmblemRecord {
   id: string;
   name: string;
   symbol: string;
@@ -49,7 +49,7 @@ interface NonUsdRecord {
   flags: { pegCurrency: PegCurrency };
 }
 
-function resolveLogoSrc(record: NonUsdRecord): string | undefined {
+function resolveLogoSrc(record: EmblemRecord): string | undefined {
   // The static logos map is keyed primarily by stablecoin id (slug); a handful
   // of USD coins are keyed by numeric llamaId as well. Try id first, fall back
   // to llamaId so we catch both conventions.
@@ -59,29 +59,40 @@ function resolveLogoSrc(record: NonUsdRecord): string | undefined {
   return undefined;
 }
 
+function buildEmblems(records: readonly EmblemRecord[]): PegEmblem[] {
+  const emblems: PegEmblem[] = [];
+  for (const record of records) {
+    const logoSrc = resolveLogoSrc(record);
+    if (!logoSrc) continue;
+    emblems.push({
+      id: record.id,
+      symbol: record.symbol,
+      name: record.name,
+      logoSrc,
+    });
+  }
+  return emblems.sort((a, b) => a.symbol.localeCompare(b.symbol));
+}
+
+export function buildPegEmblemsForPegs(pegs: readonly PegCurrency[]): readonly PegEmblem[] {
+  const pegSet = new Set(pegs);
+  if (pegSet.size === 0) return [];
+  return buildEmblems(ACTIVE_STABLECOINS.filter((record) => pegSet.has(record.flags.pegCurrency)));
+}
+
+export function buildPegEmblems(peg: PegCurrency): readonly PegEmblem[] {
+  return buildPegEmblemsForPegs([peg]);
+}
+
 export function buildPegEmblemClusters(): readonly PegEmblemCluster[] {
-  const records = nonUsdStablecoins as readonly NonUsdRecord[];
   const clusters: PegEmblemCluster[] = [];
 
   for (const peg of Object.keys(PEG_COUNTRY_MAP) as PegCurrency[]) {
     const anchor = PEG_ANCHORS[peg];
     if (!anchor) continue;
 
-    const emblems: PegEmblem[] = [];
-    for (const record of records) {
-      if (record.flags.pegCurrency !== peg) continue;
-      const logoSrc = resolveLogoSrc(record);
-      if (!logoSrc) continue;
-      emblems.push({
-        id: record.id,
-        symbol: record.symbol,
-        name: record.name,
-        logoSrc,
-      });
-    }
+    const emblems = buildPegEmblems(peg);
     if (emblems.length === 0) continue;
-
-    emblems.sort((a, b) => a.symbol.localeCompare(b.symbol));
 
     const colorHex = PEG_CHART_COLORS[peg]?.hex ?? "#64748b";
     clusters.push({ peg, anchor, colorHex, emblems });

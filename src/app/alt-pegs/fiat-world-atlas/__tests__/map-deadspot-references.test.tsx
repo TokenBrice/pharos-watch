@@ -2,15 +2,39 @@
 
 import { cleanup, render } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
-import {
-  DEADSPOT_ANCHORS,
-  MapDeadspotReferences,
-} from "@/app/alt-pegs/fiat-world-atlas/map-deadspot-references";
+import { DEADSPOT_ANCHORS, MapDeadspotReferences } from "@/app/alt-pegs/fiat-world-atlas/map-deadspot-references";
 
 const items = [
-  { peg: "GOLD",   label: "Gold",   href: "/stablecoins/gold",   coinCount: 8, symbolPreview: "XAUT · PAXG · KAU", group: "Commodity", region: "Other", colorHex: "#eab308" },
-  { peg: "SILVER", label: "Silver", href: "/stablecoins/silver", coinCount: 1, symbolPreview: "KAG",              group: "Commodity", region: "Other", colorHex: "#9ca3af" },
-  { peg: "VAR",    label: "CPI",    href: "/stablecoins/cpi",    coinCount: 3, symbolPreview: "FPI · ISC · SILK", group: "Other",     region: "Other", colorHex: "#64748b" },
+  {
+    peg: "GOLD",
+    label: "Gold",
+    href: "/stablecoins/gold",
+    coinCount: 8,
+    symbolPreview: "XAUT · PAXG · KAU",
+    group: "Commodity",
+    region: "Other",
+    colorHex: "#eab308",
+  },
+  {
+    peg: "SILVER",
+    label: "Silver",
+    href: "/stablecoins/silver",
+    coinCount: 1,
+    symbolPreview: "KAG",
+    group: "Commodity",
+    region: "Other",
+    colorHex: "#9ca3af",
+  },
+  {
+    peg: "VAR",
+    label: "CPI",
+    href: "/stablecoins/cpi",
+    coinCount: 3,
+    symbolPreview: "FPI · ISC · SILK",
+    group: "Other",
+    region: "Other",
+    colorHex: "#64748b",
+  },
 ] as never;
 
 afterEach(cleanup);
@@ -49,5 +73,23 @@ describe("MapDeadspotReferences", () => {
     expect(sunLink?.getAttribute("href")).toBe("/stablecoins/gold");
     expect(moonLink?.getAttribute("href")).toBe("/stablecoins/silver");
     expect(indexLink?.getAttribute("href")).toBe("/stablecoins/cpi");
+  });
+
+  it("renders stablecoin logos for commodity and index deadspot bodies", () => {
+    const { container } = render(<MapDeadspotReferences items={items} />);
+
+    const sun = container.querySelector('li[data-body-kind="sun"]');
+    const moon = container.querySelector('li[data-body-kind="moon"]');
+    const index = container.querySelector('li[data-body-kind="index"]');
+
+    expect(sun?.querySelectorAll("img").length).toBe(3);
+    expect(Array.from(sun?.querySelectorAll("img") ?? []).map((img) => img.getAttribute("src"))).toEqual([
+      "/logos/gold-xaut.png",
+      "/logos/gold-paxg.png",
+      "/logos/gold-kau.png",
+    ]);
+    expect(sun?.textContent).toContain("+5");
+    expect(moon?.querySelectorAll("img").length).toBe(1);
+    expect(index?.querySelectorAll("img").length).toBe(3);
   });
 });
