@@ -1,8 +1,4 @@
-"use client";
-
 import type { AltPegLinkHubItem, AltPegRegion } from "@/lib/alt-peg-market";
-import { buildPegDiversityHero } from "@/lib/alt-peg-hero";
-import { useStablecoins } from "@/hooks/use-stablecoins";
 import { CelestialBand } from "@/app/alt-pegs/fiat-world-atlas/celestial-band";
 import {
   FiatRegionSection,
@@ -10,9 +6,8 @@ import {
   RegionSummaryPill,
 } from "@/app/alt-pegs/fiat-world-atlas/region-chips";
 import { MobileRegionList } from "@/app/alt-pegs/fiat-world-atlas/mobile-region-list";
-import { HoverProvider } from "@/app/alt-pegs/fiat-world-atlas/hover-context";
-import { SkyLayer } from "@/app/alt-pegs/fiat-world-atlas/sky-layer";
-import { EarthLayer } from "@/app/alt-pegs/fiat-world-atlas/earth-layer";
+import { PegDiversityHeroLive } from "@/app/alt-pegs/fiat-world-atlas/peg-diversity-hero-live";
+import { WorldMap } from "@/app/alt-pegs/fiat-world-atlas/world-map";
 import "./peg-hero.css";
 
 const ATLAS_REGION_ORDER: Exclude<AltPegRegion, "Other">[] = [
@@ -134,9 +129,6 @@ export function FiatWorldAtlas({
   fiatItems: readonly AltPegLinkHubItem[];
   commodityIndexItems: readonly AltPegLinkHubItem[];
 }) {
-  const { data: stablecoins } = useStablecoins();
-  const hero = buildPegDiversityHero(stablecoins?.peggedAssets);
-
   const fiatByRegion = new Map<AltPegRegion, AltPegLinkHubItem[]>();
   for (const item of fiatItems) {
     const list = fiatByRegion.get(item.region) ?? [];
@@ -165,12 +157,7 @@ export function FiatWorldAtlas({
       />
 
       <div data-alt-peg-layout="desktop-atlas" className="hidden xl:block">
-        <HoverProvider>
-          <div className="peg-hero">
-            <SkyLayer cohorts={hero.skyCohorts} />
-            <EarthLayer clusters={hero.pegClusters} />
-          </div>
-        </HoverProvider>
+        <PegDiversityHeroLive worldMap={<WorldMap />} />
         <p className="px-4 pt-2 pb-4 text-center text-[10px] font-medium uppercase tracking-[0.12em] text-muted-foreground dark:text-slate-400">
           Size ∝ market cap · $1M &hellip; $3B+
         </p>
