@@ -51,13 +51,13 @@ On the share chart, `range=all` means all currently loaded points from the 5-yea
 
 This route stays frontend-only and uses existing public data sources:
 
-| Source | Used for |
-|--------|----------|
-| `useStablecoins()` | live alt-peg snapshot, current peg distribution, coin/peg counts |
-| `useNonUsdShare()` | non-USD share history and 1y trend context |
-| `useStablecoinCharts()` | historical cohort-growth chart |
-| `PEG_TAXONOMY_PAGES` / `peg-landing.ts` | stable peg labels, hrefs, and the static link hub |
-| `ACTIVE_META_BY_ID` | joining live API rows to tracked peg metadata |
+| Source                                  | Used for                                                         |
+| --------------------------------------- | ---------------------------------------------------------------- |
+| `useStablecoins()`                      | live alt-peg snapshot, current peg distribution, coin/peg counts |
+| `useNonUsdShare()`                      | non-USD share history and 1y trend context                       |
+| `useStablecoinCharts()`                 | historical cohort-growth chart                                   |
+| `PEG_TAXONOMY_PAGES` / `peg-landing.ts` | stable peg labels, hrefs, and the static link hub                |
+| `ACTIVE_META_BY_ID`                     | joining live API rows to tracked peg metadata                    |
 
 Important contract:
 
@@ -78,7 +78,7 @@ Important contract:
 4. `NonUsdShareChart`
 5. `AltPegCohortHistoryChart`
 
-`page.tsx` then renders `StaticAltPegLinkHub` after the client surface so the peg drill-down links are present in static HTML. The fiat side of the hub gets the dominant layout column as a fiat-only geography lens on larger breakpoints, using a world-atlas backdrop with coarse reference-currency regions and a region-grid fallback on small screens. Commodity, CPI-linked, and other non-fiat reference cohorts stay in an explicit off-map sidecar because they are not monetary-region pegs.
+`page.tsx` then renders `StaticAltPegLinkHub` after the client surface so the peg drill-down links are present in static HTML. The fiat side of the hub gets the dominant layout column as a fiat-only geography lens on larger breakpoints, using a fixed-ratio world silhouette with coin-count-weighted coverage markers. Small screens fall back to the region list only. Commodity, CPI-linked, and other non-fiat reference cohorts stay in an explicit off-map sidecar because they are not monetary-region pegs.
 
 The route intentionally keeps all current-state modules ahead of the historical modules to reduce trust issues caused by mixed source cadences.
 
@@ -98,7 +98,7 @@ Current Release 1 behavior:
 - The command palette picks the route up automatically through shared nav config.
 - `scripts/generate-llms-txt.ts` includes `/alt-pegs/` in the generated `public/llms.txt`.
 - `StaticAltPegLinkHub` is part of the static route output, so `out/alt-pegs/index.html` contains crawlable links into representative non-USD peg cohorts even though the visible analytics surface is client-rendered.
-- The static link hub's desktop treatment is intentionally fiat-only on the atlas, with broad region overlays and pinned cohort cards; commodity, CPI-linked, and other non-fiat reference cohorts remain crawlable in the same HTML via the off-map sidecar cards.
+- The static link hub's desktop treatment is intentionally fiat-only on the atlas, with coverage markers sized by tracked fiat coin count and pinned cohort cards; commodity, CPI-linked, and other non-fiat reference cohorts remain crawlable in the same HTML via the off-map sidecar cards.
 
 ---
 

@@ -10,16 +10,18 @@ describe("StaticAltPegLinkHub", () => {
     const silverLinks = html.match(/href="\/stablecoins\/silver\/?"/g) ?? [];
     const cpiLinks = html.match(/href="\/stablecoins\/cpi\/?"/g) ?? [];
 
-    expect(eurLinks).toHaveLength(1);
-    expect(goldLinks).toHaveLength(1);
-    expect(silverLinks).toHaveLength(1);
-    expect(cpiLinks).toHaveLength(1);
+    expect(eurLinks.length).toBeGreaterThanOrEqual(1);
+    expect(goldLinks.length).toBeGreaterThanOrEqual(1);
+    expect(silverLinks.length).toBeGreaterThanOrEqual(1);
+    expect(cpiLinks.length).toBeGreaterThanOrEqual(1);
     expect(html).not.toContain("/stablecoins/usd");
     expect(html).toContain("Europe");
     expect(html).toContain("Asia");
     expect(html).toContain("Explore Peg Cohorts");
     expect(html).toContain("Fiat Peg Geography");
     expect(html).toContain("Non-geographic references");
+    expect(html).toContain("Coverage markers scale with tracked fiat coin count");
+    expect(html).toContain("Marker size = tracked fiat coin count");
     expect(html).toContain("Tracked off-map because these cohorts reference assets or indices");
   });
 });

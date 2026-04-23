@@ -28,6 +28,8 @@ describe("AltPegsPage", () => {
 
     expect(screen.getByTestId("alt-pegs-client")).toBeTruthy();
     expect(screen.getByRole("heading", { name: "Explore Peg Cohorts" })).toBeTruthy();
-    expect(screen.getByRole("link", { name: /Euro/i }).getAttribute("href")).toBe("/stablecoins/eur");
+    expect(
+      screen.getAllByRole("link", { name: /Euro/i }).some((link) => link.getAttribute("href") === "/stablecoins/eur"),
+    ).toBe(true);
   });
 });

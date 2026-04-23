@@ -1,10 +1,6 @@
 import type { CSSProperties } from "react";
 import Link from "next/link";
-import {
-  buildAltPegLinkHubGroups,
-  type AltPegLinkHubItem,
-  type AltPegRegion,
-} from "@/lib/alt-peg-market";
+import { buildAltPegLinkHubGroups, type AltPegLinkHubItem, type AltPegRegion } from "@/lib/alt-peg-market";
 
 const LINK_HUB_GROUPS = buildAltPegLinkHubGroups();
 const FIAT_REGION_ORDER = ["Europe", "Asia", "Americas", "Africa", "Oceania", "Other"] as const;
@@ -137,10 +133,7 @@ function LinkChip({
         .join(" ")}
     >
       <span className="inline-flex items-center gap-2 text-sm font-medium text-foreground">
-        <span
-          className="inline-block h-2.5 w-2.5 rounded-full"
-          style={{ backgroundColor: colorHex }}
-        />
+        <span className="inline-block h-2.5 w-2.5 rounded-full" style={{ backgroundColor: colorHex }} />
         {label}
       </span>
       <span className="mt-1 text-xs text-muted-foreground">
@@ -154,32 +147,29 @@ function LinkChip({
 function RegionSummaryPill({
   region,
   cohortCount,
+  coinCount,
   accentHex,
 }: {
   region: string;
   cohortCount: number;
+  coinCount: number;
   accentHex: string;
 }) {
   return (
     <div
-      className="rounded-full border px-3 py-1.5"
+      className="min-w-[10rem] rounded-2xl border px-3 py-2"
       style={{
         borderColor: withAlpha(accentHex, "2e"),
         backgroundColor: withAlpha(accentHex, "12"),
       }}
     >
       <div className="flex items-center gap-2">
-        <span
-          className="inline-block h-2 w-2 rounded-full"
-          style={{ backgroundColor: accentHex }}
-        />
-        <span className="text-[11px] font-semibold uppercase tracking-[0.16em] text-foreground/90">
-          {region}
-        </span>
-        <span className="font-mono text-[11px] text-muted-foreground">
-          {cohortCount}
-        </span>
+        <span className="inline-block h-2 w-2 rounded-full" style={{ backgroundColor: accentHex }} />
+        <span className="text-[11px] font-semibold uppercase tracking-[0.16em] text-foreground/90">{region}</span>
       </div>
+      <p className="mt-1 font-mono text-[11px] text-muted-foreground">
+        {formatCoverageSummary(coinCount, cohortCount)}
+      </p>
     </div>
   );
 }
@@ -193,7 +183,7 @@ function AtlasBackdrop({ idSuffix }: { idSuffix: string }) {
       aria-hidden="true"
       viewBox="0 0 780 360"
       className="absolute inset-0 h-full w-full"
-      preserveAspectRatio="none"
+      preserveAspectRatio="xMidYMid meet"
     >
       <defs>
         <pattern id={gridId} width="64" height="64" patternUnits="userSpaceOnUse">
@@ -221,29 +211,57 @@ function AtlasBackdrop({ idSuffix }: { idSuffix: string }) {
       <g
         fill="oklch(0.31 0.022 248 / 0.95)"
         stroke="oklch(0.58 0.03 248 / 0.18)"
+        strokeLinejoin="round"
         strokeWidth="1.5"
       >
-        <path d="M70 88c24-35 92-47 138-24 28 14 44 41 44 67-14-2-31 2-45 13-18 14-28 32-52 39-28 8-67-5-93-28-23-20-35-54-23-67 11-13 22-17 31-33Z" />
-        <path d="M216 186c18 15 31 39 31 63 0 19-8 35-18 50-8 12-12 28-15 46-4 27-16 56-33 73-16-8-26-25-27-46-1-23 15-46 22-67 7-20 5-38 8-58 4-26 13-49 32-61Z" />
-        <path d="M372 86c17-14 44-16 63-5 13 8 21 19 23 31-11-3-21 0-29 5-11 7-20 17-32 20-19 5-47-4-56-18-6-10 15-25 31-33Z" />
-        <path d="M412 132c21-6 43-3 58 11 17 17 22 42 18 69-4 24-18 42-34 58-15 15-24 34-33 55-16 4-31-7-36-26-6-25 6-45 11-67 5-20 1-39-3-57-4-18-4-37 19-43Z" />
-        <path d="M456 82c38-28 110-36 170-19 39 11 74 38 84 71-14-5-28-7-42-4-29 5-51 26-79 32-24 6-50 0-73 7-24 7-46 28-72 25-28-3-56-30-59-57-3-22 27-39 39-55 7-9 18-13 32-20Z" />
-        <path d="M649 255c18-7 40-6 55 4 11 7 17 18 17 29-12-2-22 0-31 5-13 8-23 20-37 23-16 4-35-3-48-14-9-9-9-22 0-30 13-11 27-10 44-17Z" />
+        {ATLAS_LAND_PATHS.map((path, index) => (
+          <path key={`${idSuffix}-land-${index}`} d={path} />
+        ))}
       </g>
     </svg>
   );
 }
 
-function FiatRegionSection({
-  region,
-  items,
-}: {
-  region: AltPegRegion;
-  items: AltPegLinkHubItem[];
-}) {
+function CoverageMarker({ region }: { region: AtlasRegionEntry }) {
+  const layout = MAP_REGION_LAYOUT[region.region];
+  const outerSize = 42 + region.emphasis * 42;
+  const innerSize = 22 + region.emphasis * 18;
+
+  return (
+    <div
+      aria-hidden="true"
+      className="pointer-events-none absolute -translate-x-1/2 -translate-y-1/2"
+      style={layout.markerStyle}
+    >
+      <div
+        className="relative flex items-center justify-center rounded-full border backdrop-blur-[1px]"
+        style={{
+          width: `${outerSize}px`,
+          height: `${outerSize}px`,
+          borderColor: withAlpha(layout.accentHex, opacityToHex(0.45)),
+          backgroundColor: withAlpha(layout.accentHex, opacityToHex(0.14 + region.emphasis * 0.12)),
+          boxShadow: `0 0 0 1px ${withAlpha(layout.accentHex, opacityToHex(0.18))}`,
+        }}
+      >
+        <div
+          className="absolute rounded-full"
+          style={{
+            width: `${innerSize}px`,
+            height: `${innerSize}px`,
+            backgroundColor: withAlpha(layout.accentHex, opacityToHex(0.2 + region.emphasis * 0.16)),
+          }}
+        />
+        <span className="relative font-mono text-[11px] font-semibold text-foreground">{region.coinCount}</span>
+      </div>
+    </div>
+  );
+}
+
+function FiatRegionSection({ region, items }: { region: AltPegRegion; items: AltPegLinkHubItem[] }) {
   const slug = region.toLowerCase().replace(/\s+/g, "-");
   const atlasRegion = region !== "Other";
   const layout = atlasRegion ? MAP_REGION_LAYOUT[region] : null;
+  const coinCount = getRegionCoinCount(items);
 
   return (
     <section
@@ -270,13 +288,14 @@ function FiatRegionSection({
             className="inline-block h-2.5 w-2.5 rounded-full"
             style={{ backgroundColor: atlasRegion && layout ? layout.accentHex : items[0]?.colorHex }}
           />
-          <h4 id={`alt-peg-region-${slug}`} className="text-[11px] font-semibold uppercase tracking-[0.18em] text-foreground/90">
+          <h4
+            id={`alt-peg-region-${slug}`}
+            className="text-[11px] font-semibold uppercase tracking-[0.18em] text-foreground/90"
+          >
             {region}
           </h4>
         </div>
-        <p className="font-mono text-[11px] text-muted-foreground">
-          {formatCohortCount(items.length)}
-        </p>
+        <p className="font-mono text-[11px] text-muted-foreground">{formatCoverageSummary(coinCount, items.length)}</p>
       </div>
 
       <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-1 lg:gap-1.5">
@@ -305,13 +324,7 @@ function FiatRegionSection({
   );
 }
 
-function NonGeographicReferenceCard({
-  item,
-  featured = false,
-}: {
-  item: AltPegLinkHubItem;
-  featured?: boolean;
-}) {
+function NonGeographicReferenceCard({ item, featured = false }: { item: AltPegLinkHubItem; featured?: boolean }) {
   return (
     <Link
       href={item.href}
@@ -329,10 +342,7 @@ function NonGeographicReferenceCard({
             {formatOffMapGroupLabel(item.group)}
           </p>
           <div className="inline-flex items-center gap-2">
-            <span
-              className="inline-block h-2.5 w-2.5 rounded-full"
-              style={{ backgroundColor: item.colorHex }}
-            />
+            <span className="inline-block h-2.5 w-2.5 rounded-full" style={{ backgroundColor: item.colorHex }} />
             <span
               className={
                 featured
@@ -344,7 +354,10 @@ function NonGeographicReferenceCard({
             </span>
           </div>
         </div>
-        <span aria-hidden="true" className="rounded-full border border-border/60 bg-background/55 px-2 py-1 font-mono text-[11px] text-muted-foreground">
+        <span
+          aria-hidden="true"
+          className="rounded-full border border-border/60 bg-background/55 px-2 py-1 font-mono text-[11px] text-muted-foreground"
+        >
           {item.coinCount}
         </span>
       </div>
@@ -371,12 +384,22 @@ export function StaticAltPegLinkHub() {
     (region): region is { region: "Other"; items: AltPegLinkHubItem[] } => region.region === "Other",
   );
   const nonGeographicItems = sideGroups.flatMap((group) => group.items);
-  const leadReference =
-    [...nonGeographicItems].sort((left, right) => right.coinCount - left.coinCount)[0] ?? null;
+  const leadReference = [...nonGeographicItems].sort((left, right) => right.coinCount - left.coinCount)[0] ?? null;
   const secondaryReferences = nonGeographicItems.filter((item) => item.href !== leadReference?.href);
-  const atlasRegions = ATLAS_REGION_ORDER.map((region) => mapRegions.find((entry) => entry.region === region)).filter(
-    (region): region is { region: FiatMapRegion; items: AltPegLinkHubItem[] } => region != null,
-  );
+  const maxAtlasCoinCount = Math.max(1, ...mapRegions.map((region) => getRegionCoinCount(region.items)));
+  const atlasRegions: AtlasRegionEntry[] = ATLAS_REGION_ORDER.map((region) =>
+    mapRegions.find((entry) => entry.region === region),
+  )
+    .filter((region): region is { region: FiatMapRegion; items: AltPegLinkHubItem[] } => region != null)
+    .map((region) => {
+      const coinCount = getRegionCoinCount(region.items);
+
+      return {
+        ...region,
+        coinCount,
+        emphasis: Math.sqrt(coinCount / maxAtlasCoinCount),
+      };
+    });
 
   return (
     <section aria-labelledby="alt-peg-link-hub" className="space-y-3">
@@ -396,80 +419,82 @@ export function StaticAltPegLinkHub() {
           <section aria-labelledby="alt-peg-fiat-geography" className="pharos-card-shell overflow-hidden">
             <div className="space-y-3 border-b border-border/60 px-4 py-4 sm:px-5 sm:py-5">
               <div className="space-y-1">
-                <h3 id="alt-peg-fiat-geography" className="pharos-kicker">Fiat Peg Geography</h3>
+                <h3 id="alt-peg-fiat-geography" className="pharos-kicker">
+                  Fiat Peg Geography
+                </h3>
                 <p className="text-sm text-muted-foreground">
-                  The atlas only encodes fiat reference regions. Commodity, CPI-linked, and other reference cohorts
+                  The atlas only encodes fiat reference regions. Coverage markers scale with tracked fiat coin count so
+                  broader region coverage reads heavier on the map. Commodity, CPI-linked, and other reference cohorts
                   stay off-map so the geography view remains truthful and fast to scan.
                 </p>
               </div>
 
               <div className="flex flex-wrap gap-2">
-                {atlasRegions.map(({ region, items }) => (
+                {atlasRegions.map(({ region, items, coinCount }) => (
                   <RegionSummaryPill
                     key={region}
                     region={region}
                     cohortCount={items.length}
+                    coinCount={coinCount}
                     accentHex={MAP_REGION_LAYOUT[region].accentHex}
                   />
                 ))}
               </div>
             </div>
 
-            <div className="px-4 py-4 sm:px-5 sm:py-5">
-              <div className="relative lg:min-h-[31rem]">
-                <div className="relative overflow-hidden rounded-[1.5rem] border border-border/60 bg-background/35 px-3 py-3 lg:absolute lg:inset-0 lg:rounded-none lg:border-0 lg:bg-transparent lg:px-0 lg:py-0">
-                  <div className="relative h-40 overflow-hidden rounded-[1.25rem] lg:h-full lg:rounded-none">
-                    <AtlasBackdrop idSuffix="atlas" />
-                    <div className="hidden lg:block absolute inset-x-0 top-0 h-28 bg-[radial-gradient(circle_at_top,oklch(0.75_0.08_248_/_0.08),transparent_72%)]" />
-                    <div className="hidden lg:block absolute inset-x-0 bottom-0 h-24 bg-gradient-to-t from-background/70 to-transparent" />
-                    <div className="absolute left-3 top-3 rounded-xl border border-border/60 bg-background/82 px-3 py-2 shadow-sm lg:left-4 lg:top-4">
-                      <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-foreground/90">
-                        Reference-Currency Regions
-                      </p>
-                      <p className="mt-1 text-[11px] text-muted-foreground">
-                        Not issuer, reserve, or circulation geography.
-                      </p>
-                    </div>
+            <div className="hidden px-4 py-4 sm:px-5 sm:py-5 lg:block">
+              <div className="relative aspect-[13/6] overflow-hidden rounded-[1.5rem] border border-border/60 bg-background/35">
+                <AtlasBackdrop idSuffix="atlas-desktop" />
+                <div className="absolute inset-x-0 top-0 h-28 bg-[radial-gradient(circle_at_top,oklch(0.75_0.08_248_/_0.08),transparent_72%)]" />
+                <div className="absolute inset-x-0 bottom-0 h-24 bg-gradient-to-t from-background/70 to-transparent" />
 
-                    {atlasRegions.map(({ region }) => {
-                      const layout = MAP_REGION_LAYOUT[region];
-                      return (
-                        <div
-                          key={region}
-                          className="absolute rounded-[1.3rem] border lg:rounded-[2.25rem]"
-                          style={{
-                            ...layout.overlayStyle,
-                            borderColor: withAlpha(layout.accentHex, "26"),
-                            background:
-                              `radial-gradient(circle at top left, ${withAlpha(layout.accentHex, "2a")} 0%, ${withAlpha(layout.accentHex, "10")} 48%, transparent 100%)`,
-                            boxShadow: `inset 0 1px 0 ${withAlpha(layout.accentHex, "20")}`,
-                          }}
-                        />
-                      );
-                    })}
-                  </div>
+                <div className="absolute left-4 top-4 rounded-xl border border-border/60 bg-background/82 px-3 py-2 shadow-sm">
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-foreground/90">
+                    Reference-Currency Regions
+                  </p>
+                  <p className="mt-1 text-[11px] text-muted-foreground">
+                    Not issuer, reserve, or circulation geography.
+                  </p>
+                </div>
+                <div className="absolute bottom-4 left-4 rounded-full border border-border/60 bg-background/78 px-3 py-1.5 text-[11px] text-muted-foreground">
+                  Marker size = tracked fiat coin count
                 </div>
 
-                <div className="mt-4 grid gap-4 lg:mt-0 lg:min-h-[31rem] lg:grid-cols-[minmax(0,1fr)_minmax(15rem,0.82fr)_minmax(0,1.08fr)] lg:grid-rows-[minmax(0,1fr)_minmax(0,0.9fr)_minmax(0,0.55fr)] lg:items-start">
+                {atlasRegions.map((region) => (
+                  <CoverageMarker key={region.region} region={region} />
+                ))}
+
+                <div className="absolute inset-0 grid min-h-0 grid-cols-[minmax(0,1fr)_minmax(15rem,0.82fr)_minmax(0,1.08fr)] grid-rows-[minmax(0,1fr)_minmax(0,0.9fr)_minmax(0,0.55fr)] items-start p-4">
                   {atlasRegions.map(({ region, items }) => (
                     <FiatRegionSection key={region} region={region} items={items} />
                   ))}
-                  {otherFiatRegions.length > 0 ? (
-                    <div className="space-y-4 lg:col-span-3 lg:pt-4">
-                      {otherFiatRegions.map((region) => (
-                        <FiatRegionSection key={region.region} region={region.region} items={region.items} />
-                      ))}
-                    </div>
-                  ) : null}
                 </div>
               </div>
+
+              {otherFiatRegions.length > 0 ? (
+                <div className="border-t border-border/60 pt-4">
+                  <div className="space-y-4">
+                    {otherFiatRegions.map((region) => (
+                      <FiatRegionSection key={region.region} region={region.region} items={region.items} />
+                    ))}
+                  </div>
+                </div>
+              ) : null}
+            </div>
+
+            <div className="space-y-4 px-4 py-4 sm:px-5 sm:py-5 lg:hidden">
+              {fiatRegions.map((region) => (
+                <FiatRegionSection key={region.region} region={region.region} items={region.items} />
+              ))}
             </div>
           </section>
         ) : null}
 
         <section aria-labelledby="alt-peg-nongeographic" className="pharos-card-shell space-y-4 p-4 sm:p-5">
           <div className="space-y-1">
-            <h3 id="alt-peg-nongeographic" className="pharos-kicker">Non-geographic references</h3>
+            <h3 id="alt-peg-nongeographic" className="pharos-kicker">
+              Non-geographic references
+            </h3>
             <p className="text-sm text-muted-foreground">
               Tracked off-map because these cohorts reference assets or indices, not monetary regions. The largest
               off-map cohort stays visually weighted here without taking over the atlas.
