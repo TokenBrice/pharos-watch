@@ -78,7 +78,7 @@ export function FiatWorldAtlas({
         </div>
       </div>
 
-      <MobileRegionList fiatItems={fiatItems} commodityIndexItems={commodityIndexItems} />
+      <MobileRegionList fiatItems={fiatItems} />
     </section>
   );
 }

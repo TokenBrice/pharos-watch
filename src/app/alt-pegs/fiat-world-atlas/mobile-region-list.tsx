@@ -1,14 +1,12 @@
 import type { AltPegLinkHubItem, AltPegRegion } from "@/lib/alt-peg-market";
-import { FiatRegionSection, LinkChip } from "@/app/alt-pegs/fiat-world-atlas/region-chips";
+import { FiatRegionSection } from "@/app/alt-pegs/fiat-world-atlas/region-chips";
 
 const MOBILE_REGION_ORDER: AltPegRegion[] = ["Europe", "Asia", "Americas", "Africa", "Oceania", "Other"];
 
 export function MobileRegionList({
   fiatItems,
-  commodityIndexItems,
 }: {
   fiatItems: readonly AltPegLinkHubItem[];
-  commodityIndexItems: readonly AltPegLinkHubItem[];
 }) {
   const byRegion = new Map<AltPegRegion, AltPegLinkHubItem[]>();
   for (const item of fiatItems) {
@@ -26,25 +24,6 @@ export function MobileRegionList({
       {regions.map(({ region, items }) => (
         <FiatRegionSection key={region} region={region} items={items} />
       ))}
-      {commodityIndexItems.length > 0 ? (
-        <section
-          aria-labelledby="alt-peg-mobile-commodity"
-          className="space-y-2"
-          data-region="Non-geographic"
-        >
-          <h4
-            id="alt-peg-mobile-commodity"
-            className="text-[11px] font-semibold uppercase tracking-[0.18em] text-foreground/90"
-          >
-            References beyond geography
-          </h4>
-          <div className="grid gap-2 sm:grid-cols-2">
-            {commodityIndexItems.map((item) => (
-              <LinkChip key={item.peg} item={item} />
-            ))}
-          </div>
-        </section>
-      ) : null}
     </div>
   );
 }
