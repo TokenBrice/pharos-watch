@@ -330,14 +330,4 @@ export type BluechipGrade = "A+" | "A" | "A-" | "B+" | "B" | "B-" | "C+" | "C" |
 const BLUECHIP_GRADE_VALUES = ["A+", "A", "A-", "B+", "B", "B-", "C+", "C", "C-", "D", "F"] as const;
 export const BluechipGradeSchema = z.enum(BLUECHIP_GRADE_VALUES);
 
-export const MethodologyEnvelopeSchema = z.object({
-  version: z.string(),
-  versionLabel: z.string(),
-  currentVersion: z.string(),
-  currentVersionLabel: z.string(),
-  changelogPath: z.string(),
-  asOf: z.number(),
-  isCurrent: z.boolean(),
-});
-
-export type MethodologyEnvelope = z.infer<typeof MethodologyEnvelopeSchema>;
+export { MethodologyEnvelopeSchema, type MethodologyEnvelope } from "./methodology-envelope";

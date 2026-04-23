@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { MethodologyEnvelopeSchema } from "./core";
+import { MethodologyEnvelopeSchema } from "./methodology-envelope";
 
 export const RedemptionRouteFamilySchema = z.enum([
   "stablecoin-redeem",
