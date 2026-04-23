@@ -10,13 +10,7 @@ vi.mock("next/dynamic", () => ({
 }));
 
 vi.mock("@/components/feature-page-shell", () => ({
-  FeaturePageShell: ({
-    title,
-    children,
-  }: {
-    title: string;
-    children: ReactNode;
-  }) => (
+  FeaturePageShell: ({ title, children }: { title: string; children: ReactNode }) => (
     <div>
       <h1>{title}</h1>
       {children}
