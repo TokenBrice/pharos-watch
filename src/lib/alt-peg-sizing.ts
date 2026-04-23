@@ -1,6 +1,6 @@
 export const SIZE_FLOOR = 26;
 export const SIZE_CEIL = 120;
-export const FIAT_MAP_SIZE_CEIL = 100;
+export const FIAT_MAP_SIZE_CEIL = 84;
 const SIZE_SCALE = 4.0;
 const MCAP_DIVISOR = 1_000_000;
 

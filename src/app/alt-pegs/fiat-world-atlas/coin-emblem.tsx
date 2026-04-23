@@ -48,7 +48,7 @@ export function CoinEmblem({
   const cohortLabel = `${pegLabel} cohort`;
   const coinCountLabel = `${cohortCoinCount} ${cohortCoinCount === 1 ? "coin" : "coins"}`;
   const showCoinName = coin.name.trim().toLowerCase() !== coin.symbol.trim().toLowerCase();
-  const shouldShowTickerLabel = showTickerLabel && coin.sizePx >= 44;
+  const shouldShowTickerLabel = showTickerLabel;
   const cardX = coin.x < 24 ? "left" : coin.x > 76 ? "right" : "center";
   const cardY = hoverCardYPlacement === "auto" ? (coin.y < 24 ? "below" : "above") : hoverCardYPlacement;
   const tooltipId = `coin-emblem-card-${coin.id}`;
@@ -136,7 +136,7 @@ export function CoinEmblem({
               <span className="coin-emblem__hover-card-value">{cohortSymbolPreview}</span>
             </span>
           ) : null}
-          <span className="coin-emblem__hover-card-action">Click emblem to open {coin.symbol}</span>
+          <span className="coin-emblem__hover-card-action">Open {coin.symbol} profile</span>
         </span>
       ) : null}
       {shouldShowTickerLabel ? <span className="coin-emblem__mini-label">{coin.symbol}</span> : null}

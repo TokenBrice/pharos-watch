@@ -51,7 +51,7 @@ function AtlasHeroHeader({
           <div className="space-y-2">
             <h2
               id="alt-peg-link-hub"
-              className="text-4xl font-black leading-[0.95] tracking-normal text-foreground dark:text-white sm:text-5xl"
+              className="text-4xl font-black leading-[0.95] tracking-normal text-foreground dark:text-white xl:text-5xl"
             >
               Peg Diversity Map
             </h2>
@@ -61,7 +61,7 @@ function AtlasHeroHeader({
                 CPI-linked references float in the sky above — references beyond any single monetary region.
               </span>
               <span className="xl:hidden">
-                Desktop shows the coin-level geographic atlas; this view summarizes the same cohorts as direct peg
+                Wide screens show the coin-level geographic atlas; this view summarizes the same cohorts as direct peg
                 links, with gold, silver, and CPI-linked references grouped above geography.
               </span>
             </p>

@@ -100,7 +100,7 @@ describe("CoinEmblem", () => {
     expect(card.textContent).toContain("4 coins");
     expect(card.textContent).toContain("Top peers");
     expect(card.textContent).toContain("EURC · EURCV · AEUR");
-    expect(card.textContent).toContain("Click emblem to open EURC");
+    expect(card.textContent).toContain("Open EURC profile");
     expect(screen.getByText("EURC", { selector: ".coin-emblem__mini-label" })).toBeTruthy();
     expect(link.getAttribute("aria-describedby")).toBe(card.id);
   });
@@ -114,7 +114,17 @@ describe("CoinEmblem", () => {
     const link = getByRole("link");
     fireEvent.focus(link);
 
-    expect(screen.getByRole("tooltip").textContent).toContain("Click emblem to open EURC");
+    expect(screen.getByRole("tooltip").textContent).toContain("Open EURC profile");
+  });
+
+  it("keeps requested ticker labels visible for small single-coin cohorts", () => {
+    render(
+      <HoverProvider>
+        <CoinEmblem coin={{ ...sample, sizePx: 34 }} variant="fiat" showTickerLabel />
+      </HoverProvider>,
+    );
+
+    expect(screen.getByText("EURC", { selector: ".coin-emblem__mini-label" })).toBeTruthy();
   });
 
   it("positions edge hover cards back toward the map frame", () => {

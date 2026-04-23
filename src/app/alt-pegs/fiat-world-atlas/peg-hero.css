@@ -1,7 +1,7 @@
 .peg-hero {
   position: relative;
   width: 100%;
-  aspect-ratio: 1.6 / 1;
+  height: clamp(390px, 48vw, 590px);
   border-radius: 12px;
   overflow: hidden;
   border: 1px solid oklch(0.6 0 0 / 0.12);
@@ -43,12 +43,7 @@
   left: 0;
   right: 0;
   height: 40px;
-  background: linear-gradient(
-    to bottom,
-    oklch(0.7 0.06 250 / 0.1),
-    oklch(0.6 0.08 250 / 0.04) 45%,
-    transparent 100%
-  );
+  background: linear-gradient(to bottom, oklch(0.7 0.06 250 / 0.1), oklch(0.6 0.08 250 / 0.04) 45%, transparent 100%);
   pointer-events: none;
   z-index: 2;
 }
@@ -201,13 +196,18 @@
   overflow: visible;
   background: #f1f5f9;
   border: 2px solid rgba(255, 255, 255, 0.95);
-  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.55), 0 2px 6px rgba(0, 0, 0, 0.4);
+  box-shadow:
+    0 6px 18px rgba(0, 0, 0, 0.55),
+    0 2px 6px rgba(0, 0, 0, 0.4);
   transform: translate(-50%, -50%);
   cursor: pointer;
   display: block;
   z-index: 5;
-  transition: transform 180ms ease-out, box-shadow 180ms ease-out,
-    opacity 180ms ease-out, border-color 180ms ease-out;
+  transition:
+    transform 180ms ease-out,
+    box-shadow 180ms ease-out,
+    opacity 180ms ease-out,
+    border-color 180ms ease-out;
   text-decoration: none;
 }
 .coin-emblem:focus-visible {
@@ -224,21 +224,28 @@
 
 .coin-emblem--sun-core {
   border: 3px solid oklch(0.85 0.18 90 / 0.95);
-  box-shadow: 0 0 0 3px oklch(0.85 0.18 90 / 0.25),
-    0 0 30px oklch(0.78 0.2 80 / 0.75), 0 0 70px oklch(0.78 0.2 80 / 0.35);
+  box-shadow:
+    0 0 0 3px oklch(0.85 0.18 90 / 0.25),
+    0 0 30px oklch(0.78 0.2 80 / 0.75),
+    0 0 70px oklch(0.78 0.2 80 / 0.35);
 }
 .coin-emblem--sun-planet {
   border: 2px solid oklch(0.58 0.12 75 / 0.85);
-  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.5), 0 0 10px oklch(0.78 0.2 80 / 0.25);
+  box-shadow:
+    0 4px 14px rgba(0, 0, 0, 0.5),
+    0 0 10px oklch(0.78 0.2 80 / 0.25);
 }
 .coin-emblem--moon {
   border: 3px solid oklch(0.9 0.02 250 / 0.95);
-  box-shadow: 0 0 0 2px oklch(0.9 0.02 250 / 0.25),
-    0 0 24px oklch(0.85 0.02 250 / 0.65), 0 0 55px oklch(0.85 0.02 250 / 0.3);
+  box-shadow:
+    0 0 0 2px oklch(0.9 0.02 250 / 0.25),
+    0 0 24px oklch(0.85 0.02 250 / 0.65),
+    0 0 55px oklch(0.85 0.02 250 / 0.3);
 }
 .coin-emblem--star {
   border: 2px solid oklch(0.86 0.04 260 / 0.9);
-  box-shadow: 0 0 14px oklch(0.77 0.08 250 / 0.7),
+  box-shadow:
+    0 0 14px oklch(0.77 0.08 250 / 0.7),
     0 0 30px oklch(0.65 0.1 250 / 0.35);
 }
 
@@ -246,13 +253,17 @@
 .coin-emblem:focus-visible {
   transform: translate(-50%, -50%) scale(1.1);
   z-index: 30;
-  box-shadow: 0 0 0 3px oklch(0.75 0.15 250 / 0.55),
-    0 0 28px oklch(0.75 0.2 250 / 0.65), 0 6px 18px rgba(0, 0, 0, 0.6);
+  box-shadow:
+    0 0 0 3px oklch(0.75 0.15 250 / 0.55),
+    0 0 28px oklch(0.75 0.2 250 / 0.65),
+    0 6px 18px rgba(0, 0, 0, 0.6);
 }
 .coin-emblem.is-sibling {
   border-color: oklch(0.86 0.08 250 / 0.95);
-  box-shadow: 0 0 14px oklch(0.78 0.14 250 / 0.55),
-    0 0 28px oklch(0.7 0.15 250 / 0.3), 0 4px 10px rgba(0, 0, 0, 0.5);
+  box-shadow:
+    0 0 14px oklch(0.78 0.14 250 / 0.55),
+    0 0 28px oklch(0.7 0.15 250 / 0.3),
+    0 4px 10px rgba(0, 0, 0, 0.5);
   z-index: 6;
 }
 .coin-emblem.is-dimmed {
@@ -288,8 +299,7 @@
   min-width: 190px;
   max-width: 232px;
   background:
-    linear-gradient(135deg, oklch(0.18 0.025 254 / 0.98), oklch(0.095 0.018 260 / 0.98)),
-    oklch(0.11 0.018 260 / 0.98);
+    linear-gradient(135deg, oklch(0.18 0.025 254 / 0.98), oklch(0.095 0.018 260 / 0.98)), oklch(0.11 0.018 260 / 0.98);
   border: 1px solid oklch(0.75 0.05 260 / 0.36);
   border-radius: 8px;
   padding: 10px 11px;
@@ -300,7 +310,9 @@
   display: flex;
   flex-direction: column;
   gap: 7px;
-  box-shadow: 0 16px 42px rgba(0, 0, 0, 0.58), inset 0 1px 0 oklch(1 0 0 / 0.08);
+  box-shadow:
+    0 16px 42px rgba(0, 0, 0, 0.58),
+    inset 0 1px 0 oklch(1 0 0 / 0.08);
   pointer-events: none;
 }
 .coin-emblem[data-card-y="below"] .coin-emblem__hover-card {
@@ -395,17 +407,19 @@
   background: oklch(0.055 0.018 255 / 0.78);
   color: oklch(0.92 0.035 250);
   backdrop-filter: blur(10px);
-  box-shadow: 0 14px 30px rgba(0, 0, 0, 0.34), inset 0 1px 0 oklch(1 0 0 / 0.06);
-  pointer-events: none;
+  box-shadow:
+    0 14px 30px rgba(0, 0, 0, 0.34),
+    inset 0 1px 0 oklch(1 0 0 / 0.06);
 }
 
 .peg-hero__scale-key {
   left: 12px;
-  bottom: 12px;
+  top: 12px;
   display: flex;
   align-items: center;
   gap: 7px;
   padding: 7px 9px;
+  pointer-events: none;
 }
 
 .peg-hero__scale-label,
@@ -435,7 +449,7 @@
 }
 
 .peg-hero__top-cohorts {
-  bottom: 12px;
+  top: 12px;
   right: 12px;
   display: grid;
   gap: 5px;
@@ -448,7 +462,17 @@
   grid-template-columns: auto 1fr auto;
   align-items: center;
   gap: 6px;
+  border-radius: 6px;
+  color: inherit;
   font-size: 10px;
+  padding: 2px 3px;
+  text-decoration: none;
+  transition: background-color 160ms ease-out;
+}
+
+.peg-hero__top-row:hover,
+.peg-hero__top-row:focus-visible {
+  background: oklch(1 0 0 / 0.07);
 }
 
 .peg-hero__top-dot {
@@ -469,6 +493,27 @@
   font-family: var(--font-geist-mono), ui-monospace, SFMono-Regular, "SF Mono", Consolas, "Liberation Mono", monospace;
   font-weight: 750;
   font-variant-numeric: tabular-nums;
+}
+
+.peg-hero__status-overlay {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 13;
+  max-width: min(24rem, calc(100% - 2rem));
+  border: 1px solid oklch(0.8 0.03 250 / 0.2);
+  border-radius: 8px;
+  background: oklch(0.055 0.018 255 / 0.84);
+  box-shadow:
+    0 16px 34px rgba(0, 0, 0, 0.42),
+    inset 0 1px 0 oklch(1 0 0 / 0.07);
+  color: oklch(0.88 0.035 250);
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1.35;
+  padding: 10px 12px;
+  text-align: center;
 }
 
 /* ===== Cohort threads ===== */

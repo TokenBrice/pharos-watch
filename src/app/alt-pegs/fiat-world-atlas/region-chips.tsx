@@ -1,6 +1,6 @@
 import type { CSSProperties } from "react";
 import Link from "next/link";
-import { ArrowRight } from "lucide-react";
+import { ArrowDown, ArrowRight } from "lucide-react";
 import type { AltPegLinkHubItem, AltPegRegion } from "@/lib/alt-peg-market";
 
 const REGION_ACCENT: Record<Exclude<AltPegRegion, "Other">, string> = {
@@ -50,6 +50,7 @@ export function RegionSummaryPill({
       <span className="font-mono text-[11px] tabular-nums text-muted-foreground dark:text-slate-300/86">
         {formatCohortCount(cohortCount)} · {formatCoinCount(coinCount)}
       </span>
+      <ArrowDown className="h-3 w-3 shrink-0 text-muted-foreground" aria-hidden="true" />
     </Link>
   );
 }

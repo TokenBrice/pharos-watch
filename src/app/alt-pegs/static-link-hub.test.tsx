@@ -44,6 +44,13 @@ describe("StaticAltPegLinkHub", () => {
     expect(desktopAtlas?.querySelector(".peg-hero__earth")).not.toBeNull();
   });
 
+  it("explains the live coin layer while atlas data is loading", () => {
+    const { container } = render(withQueryClient(<StaticAltPegLinkHub />));
+    const desktopAtlas = container.querySelector('[data-alt-peg-layout="desktop-atlas"]');
+    expect(desktopAtlas?.textContent).toContain("Fiat size");
+    expect(desktopAtlas?.textContent).toContain("Loading live coin positions.");
+  });
+
   it("keeps the celestial band as a mobile-only fallback beneath the xl:hidden wrapper", () => {
     const { container } = render(withQueryClient(<StaticAltPegLinkHub />));
     const band = container.querySelector('[data-testid="celestial-band"]');
