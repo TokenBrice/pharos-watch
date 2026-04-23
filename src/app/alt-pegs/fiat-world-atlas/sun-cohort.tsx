@@ -11,13 +11,14 @@ export function SunCohort({ cohort }: { cohort: SkyCohort }) {
   const [primary, ...rest] = cohort.coins;
   const coinCount = cohort.coins.length;
   const cohortMarketCap = cohort.coins.reduce((sum, coin) => sum + coin.marketCap, 0);
+  const cohortSymbolPreview = cohort.coins
+    .slice(0, 3)
+    .map((coin) => coin.symbol)
+    .join(" · ");
 
   return (
     <div className="sun-cohort" aria-label="Gold stablecoins">
-      <div
-        className="sun-cohort__halo"
-        style={{ left: `${SUN_HALO_PCT.cx}%`, top: `${SUN_HALO_PCT.cy}%` }}
-      />
+      <div className="sun-cohort__halo" style={{ left: `${SUN_HALO_PCT.cx}%`, top: `${SUN_HALO_PCT.cy}%` }} />
       <svg
         className="sun-cohort__rays"
         style={{ left: `${SUN_HALO_PCT.cx}%`, top: `${SUN_HALO_PCT.cy}%` }}
@@ -45,7 +46,9 @@ export function SunCohort({ cohort }: { cohort: SkyCohort }) {
         loading="eager"
         cohortCoinCount={coinCount}
         cohortMarketCap={cohortMarketCap}
+        cohortSymbolPreview={cohortSymbolPreview}
         hoverCardYPlacement="below"
+        showTickerLabel
       />
       {rest.map((c, i) => (
         <CoinEmblem
@@ -55,6 +58,7 @@ export function SunCohort({ cohort }: { cohort: SkyCohort }) {
           loading={i < 2 ? "eager" : "lazy"}
           cohortCoinCount={coinCount}
           cohortMarketCap={cohortMarketCap}
+          cohortSymbolPreview={cohortSymbolPreview}
           hoverCardYPlacement="below"
         />
       ))}

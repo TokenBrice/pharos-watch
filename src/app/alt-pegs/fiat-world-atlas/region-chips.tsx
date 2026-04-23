@@ -1,5 +1,6 @@
 import type { CSSProperties } from "react";
 import Link from "next/link";
+import { ArrowRight } from "lucide-react";
 import type { AltPegLinkHubItem, AltPegRegion } from "@/lib/alt-peg-market";
 
 const REGION_ACCENT: Record<Exclude<AltPegRegion, "Other">, string> = {
@@ -25,15 +26,18 @@ export function RegionSummaryPill({
   region,
   coinCount,
   cohortCount,
+  href,
 }: {
   region: Exclude<AltPegRegion, "Other">;
   coinCount: number;
   cohortCount: number;
+  href: string;
 }) {
   const accentHex = REGION_ACCENT[region];
   return (
-    <div
-      className="inline-flex min-h-9 items-center gap-2 rounded-full border px-3 py-1.5"
+    <Link
+      href={href}
+      className="pharos-focus-ring inline-flex min-h-9 items-center gap-2 rounded-full border px-3 py-1.5 transition-[background-color,border-color] hover:bg-muted/20"
       style={{
         borderColor: withAlpha(accentHex, "24"),
         backgroundColor: withAlpha(accentHex, "0d"),
@@ -46,7 +50,7 @@ export function RegionSummaryPill({
       <span className="font-mono text-[11px] tabular-nums text-muted-foreground dark:text-slate-300/86">
         {formatCohortCount(cohortCount)} · {formatCoinCount(coinCount)}
       </span>
-    </div>
+    </Link>
   );
 }
 
@@ -60,11 +64,12 @@ export function LinkChip({ item }: { item: AltPegLinkHubItem }) {
       href={item.href}
       aria-label={`${item.label}, ${formatCoinCount(item.coinCount)}${item.symbolPreview ? `. ${item.symbolPreview}` : ""}`}
       style={style}
-      className="pharos-focus-ring inline-flex min-h-10 flex-col rounded-lg border border-border/60 bg-background/45 px-3 py-2 text-left transition-[background-color,border-color,color] dark:border-white/10 dark:bg-white/[0.045]"
+      className="pharos-focus-ring group inline-flex min-h-10 flex-col rounded-lg border border-border/60 bg-background/45 px-3 py-2 text-left transition-[background-color,border-color,color] hover:bg-muted/20 dark:border-white/10 dark:bg-white/[0.045] dark:hover:bg-white/[0.075]"
     >
       <span className="inline-flex items-center gap-2 text-sm font-medium text-foreground dark:text-white">
         <span className="inline-block h-2.5 w-2.5 rounded-full" style={{ backgroundColor: item.colorHex }} />
-        {item.label}
+        <span className="min-w-0 flex-1">{item.label}</span>
+        <ArrowRight className="h-3.5 w-3.5 shrink-0 text-muted-foreground transition-transform group-hover:translate-x-0.5 group-hover:text-foreground" />
       </span>
       <span className="mt-1 font-mono text-[11px] tabular-nums text-muted-foreground dark:text-slate-300/86">
         {formatCoinCount(item.coinCount)}

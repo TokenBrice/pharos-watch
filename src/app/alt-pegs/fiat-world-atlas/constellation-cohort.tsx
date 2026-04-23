@@ -7,14 +7,13 @@ import type { SkyCohort } from "@/lib/alt-peg-hero";
 export function ConstellationCohort({ cohort }: { cohort: SkyCohort }) {
   if (cohort.coins.length === 0) return null;
   const cohortMarketCap = cohort.coins.reduce((sum, coin) => sum + coin.marketCap, 0);
+  const cohortSymbolPreview = cohort.coins
+    .slice(0, 3)
+    .map((coin) => coin.symbol)
+    .join(" · ");
   return (
-    <div className="constellation-cohort" aria-label="Index-linked stablecoins">
-      <svg
-        className="constellation-cohort__traces"
-        viewBox="0 0 100 100"
-        preserveAspectRatio="none"
-        aria-hidden="true"
-      >
+    <div className="constellation-cohort" aria-label="CPI-linked stablecoins">
+      <svg className="constellation-cohort__traces" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
         {cohort.coins.slice(1).map((c, idx) => {
           const prev = cohort.coins[idx];
           return (
@@ -34,7 +33,7 @@ export function ConstellationCohort({ cohort }: { cohort: SkyCohort }) {
       </svg>
       <CohortThreads coins={cohort.coins} colorHex="#a8bae0" />
       <span className="sky-region-tag" style={{ left: "82%", top: "9%" }}>
-        Index · Constellation
+        CPI · Constellation · {cohort.coins.length} {cohort.coins.length === 1 ? "coin" : "coins"}
       </span>
       {cohort.coins.map((c) => (
         <CoinEmblem
@@ -44,7 +43,9 @@ export function ConstellationCohort({ cohort }: { cohort: SkyCohort }) {
           loading="eager"
           cohortCoinCount={cohort.coins.length}
           cohortMarketCap={cohortMarketCap}
+          cohortSymbolPreview={cohortSymbolPreview}
           hoverCardYPlacement="below"
+          showTickerLabel={c.id === cohort.coins[0]?.id}
         />
       ))}
     </div>

@@ -1,22 +1,12 @@
 import type { AltPegLinkHubItem, AltPegRegion } from "@/lib/alt-peg-market";
 import { CelestialBand } from "@/app/alt-pegs/fiat-world-atlas/celestial-band";
-import {
-  FiatRegionSection,
-  LinkChip,
-  RegionSummaryPill,
-} from "@/app/alt-pegs/fiat-world-atlas/region-chips";
+import { FiatRegionSection, LinkChip, RegionSummaryPill } from "@/app/alt-pegs/fiat-world-atlas/region-chips";
 import { MobileRegionList } from "@/app/alt-pegs/fiat-world-atlas/mobile-region-list";
 import { PegDiversityHeroLive } from "@/app/alt-pegs/fiat-world-atlas/peg-diversity-hero-live";
 import { WorldMap } from "@/app/alt-pegs/fiat-world-atlas/world-map";
 import "./peg-hero.css";
 
-const ATLAS_REGION_ORDER: Exclude<AltPegRegion, "Other">[] = [
-  "Americas",
-  "Europe",
-  "Asia",
-  "Africa",
-  "Oceania",
-];
+const ATLAS_REGION_ORDER: Exclude<AltPegRegion, "Other">[] = ["Americas", "Europe", "Asia", "Africa", "Oceania"];
 
 function getRegionCoinCount(items: readonly AltPegLinkHubItem[]): number {
   return items.reduce((sum, i) => sum + i.coinCount, 0);
@@ -26,15 +16,17 @@ function formatCount(n: number, singular: string, plural = `${singular}s`): stri
   return `${n} ${n === 1 ? singular : plural}`;
 }
 
+function regionSlug(region: AltPegRegion): string {
+  return region.toLowerCase().replace(/\s+/g, "-");
+}
+
 function AtlasMetric({ label, value }: { label: string; value: number }) {
   return (
     <div className="min-w-0 border-l border-border/70 pl-3 first:border-l-0 first:pl-0 dark:border-white/10">
       <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground dark:text-slate-400">
         {label}
       </p>
-      <p className="mt-1 font-mono text-xl font-semibold tabular-nums text-foreground dark:text-white">
-        {value}
-      </p>
+      <p className="mt-1 font-mono text-xl font-semibold tabular-nums text-foreground dark:text-white">{value}</p>
     </div>
   );
 }
@@ -55,9 +47,7 @@ function AtlasHeroHeader({
     <div className="relative z-10 px-4 py-5 sm:px-5 sm:py-6 lg:px-6">
       <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_minmax(19rem,0.44fr)] lg:items-end">
         <div className="space-y-3">
-          <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-frost-blue/90">
-            Fiat Peg Geography
-          </p>
+          <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-frost-blue/90">Alt-Peg Atlas</p>
           <div className="space-y-2">
             <h2
               id="alt-peg-link-hub"
@@ -66,9 +56,14 @@ function AtlasHeroHeader({
               Peg Diversity Map
             </h2>
             <p className="max-w-4xl text-sm leading-relaxed text-muted-foreground dark:text-slate-300">
-              Every non-USD stablecoin sits at its geographic origin, sized by market
-              cap. Gold, Silver, and index-linked references float in the sky above —
-              references beyond any single monetary region.
+              <span className="hidden xl:inline">
+                Every non-USD stablecoin sits at its geographic origin, sized by market cap. Gold, Silver, and
+                CPI-linked references float in the sky above — references beyond any single monetary region.
+              </span>
+              <span className="xl:hidden">
+                Desktop shows the coin-level geographic atlas; this view summarizes the same cohorts as direct peg
+                links, with gold, silver, and CPI-linked references grouped above geography.
+              </span>
             </p>
           </div>
         </div>
@@ -87,6 +82,7 @@ function AtlasHeroHeader({
             region={region}
             cohortCount={items.length}
             coinCount={getRegionCoinCount(items)}
+            href={`#alt-peg-region-${regionSlug(region)}`}
           />
         ))}
       </div>
@@ -150,11 +146,7 @@ export function FiatWorldAtlas({
       aria-labelledby="alt-peg-link-hub"
       className="relative overflow-hidden rounded-[1.45rem] border border-border/70 bg-card/92 text-foreground shadow-[0_22px_60px_oklch(0_0_0_/0.12)] dark:border-white/10 dark:bg-[oklch(0.105_0.012_248)] dark:text-white dark:shadow-[0_26px_70px_oklch(0_0_0_/0.22)]"
     >
-      <AtlasHeroHeader
-        geoRegions={geoRegions}
-        totalCohortCount={totalCohortCount}
-        totalCoinCount={totalCoinCount}
-      />
+      <AtlasHeroHeader geoRegions={geoRegions} totalCohortCount={totalCohortCount} totalCoinCount={totalCoinCount} />
 
       <div data-alt-peg-layout="desktop-atlas" className="hidden xl:block">
         <a
@@ -164,20 +156,14 @@ export function FiatWorldAtlas({
           Skip peg map
         </a>
         <PegDiversityHeroLive worldMap={<WorldMap />} />
-        <p className="px-4 pt-2 pb-4 text-center text-[10px] font-medium uppercase tracking-[0.12em] text-muted-foreground dark:text-slate-400">
-          Size ∝ market cap · $1M ... ~$550M+
-        </p>
         <div
           id="alt-peg-cohort-list"
-          className="grid gap-3 bg-background/45 px-4 py-4 dark:bg-white/[0.035] sm:grid-cols-2 sm:px-5 sm:py-5 lg:grid-cols-3"
+          className="grid gap-3 border-t border-border/60 bg-background/45 px-4 py-4 dark:border-white/10 dark:bg-white/[0.035] sm:grid-cols-2 sm:px-5 sm:py-5 lg:grid-cols-3"
         >
           {geoRegions.map(({ region, items }) => (
             <FiatRegionSection key={region} region={region} items={items} />
           ))}
-          <BeyondGeographyRail
-            items={commodityIndexItems}
-            referenceCoinCount={referenceCoinCount}
-          />
+          <BeyondGeographyRail items={commodityIndexItems} referenceCoinCount={referenceCoinCount} />
         </div>
       </div>
 

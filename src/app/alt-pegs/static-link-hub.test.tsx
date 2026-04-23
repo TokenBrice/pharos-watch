@@ -22,7 +22,7 @@ describe("StaticAltPegLinkHub", () => {
     expect(html.match(/href="\/stablecoins\/silver\/?"/g)?.length).toBeGreaterThanOrEqual(1);
     expect(html.match(/href="\/stablecoins\/cpi\/?"/g)?.length).toBeGreaterThanOrEqual(1);
     expect(html).not.toContain("/stablecoins/usd");
-    expect(html).toContain("Fiat Peg Geography");
+    expect(html).toContain("Alt-Peg Atlas");
     expect(html).toContain("References beyond geography");
     expect(html).toContain("Peg Diversity Map");
   });

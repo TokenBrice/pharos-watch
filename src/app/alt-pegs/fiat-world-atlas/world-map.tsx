@@ -11,7 +11,7 @@ const STYLE_BLOCK = `
 
 export function WorldMap() {
   return (
-    <div className="fiat-world-map relative h-full w-full" aria-label="World map backdrop">
+    <div className="fiat-world-map relative h-full w-full" aria-hidden="true">
       <style>{STYLE_BLOCK}</style>
       <div className="[&_svg]:h-full [&_svg]:w-full" dangerouslySetInnerHTML={{ __html: WORLD_SVG }} />
     </div>

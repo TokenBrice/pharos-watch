@@ -79,10 +79,10 @@ export function CelestialBand({ items }: { items: readonly AltPegLinkHubItem[] }
 
   return (
     <div
-      className="flex flex-wrap items-center gap-3 border-b border-border/60 px-4 py-3 dark:border-white/10 sm:px-5 sm:py-4"
+      className="grid gap-3 border-b border-border/60 px-4 py-3 dark:border-white/10 sm:px-5 sm:py-4 md:grid-cols-3 lg:grid-cols-[minmax(12rem,0.8fr)_repeat(3,minmax(0,1fr))] lg:items-center xl:flex xl:flex-wrap"
       data-testid="celestial-band"
     >
-      <p className="mr-auto text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-foreground dark:text-slate-300/86">
+      <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-foreground dark:text-slate-300/86 md:col-span-3 lg:col-span-1 xl:mr-auto">
         References beyond geography
       </p>
       {bodies.map((body) => (

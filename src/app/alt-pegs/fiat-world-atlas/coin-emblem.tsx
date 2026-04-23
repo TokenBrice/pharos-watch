@@ -16,14 +16,18 @@ export function CoinEmblem({
   loading = "lazy",
   cohortCoinCount = 1,
   cohortMarketCap,
+  cohortSymbolPreview,
   hoverCardYPlacement = "auto",
+  showTickerLabel = false,
 }: {
   coin: PlacedCoin;
   variant: EmblemVariant;
   loading?: "eager" | "lazy";
   cohortCoinCount?: number;
   cohortMarketCap?: number;
+  cohortSymbolPreview?: string;
   hoverCardYPlacement?: HoverCardYPlacement;
+  showTickerLabel?: boolean;
 }) {
   const { setHoveredCoin, isHovered, isSibling, isDimmed } = useHoverState();
   const target = useMemo(() => ({ id: coin.id, pegCurrency: coin.pegCurrency }), [coin.id, coin.pegCurrency]);
@@ -44,6 +48,7 @@ export function CoinEmblem({
   const cohortLabel = `${pegLabel} cohort`;
   const coinCountLabel = `${cohortCoinCount} ${cohortCoinCount === 1 ? "coin" : "coins"}`;
   const showCoinName = coin.name.trim().toLowerCase() !== coin.symbol.trim().toLowerCase();
+  const shouldShowTickerLabel = showTickerLabel && coin.sizePx >= 44;
   const cardX = coin.x < 24 ? "left" : coin.x > 76 ? "right" : "center";
   const cardY = hoverCardYPlacement === "auto" ? (coin.y < 24 ? "below" : "above") : hoverCardYPlacement;
   const tooltipId = `coin-emblem-card-${coin.id}`;
@@ -113,7 +118,7 @@ export function CoinEmblem({
               <span className="coin-emblem__hover-card-value">{mcap ?? "n/a"}</span>
             </span>
             <span>
-              <span className="coin-emblem__hover-card-label">Share</span>
+              <span className="coin-emblem__hover-card-label">Cohort share</span>
               <span className="coin-emblem__hover-card-value">{cohortShare ?? "n/a"}</span>
             </span>
             <span>
@@ -125,9 +130,16 @@ export function CoinEmblem({
               <span className="coin-emblem__hover-card-value">{coinCountLabel}</span>
             </span>
           </span>
-          <span className="coin-emblem__hover-card-action">Open profile</span>
+          {cohortSymbolPreview ? (
+            <span className="coin-emblem__hover-card-peers">
+              <span className="coin-emblem__hover-card-label">Top peers</span>
+              <span className="coin-emblem__hover-card-value">{cohortSymbolPreview}</span>
+            </span>
+          ) : null}
+          <span className="coin-emblem__hover-card-action">Click emblem to open {coin.symbol}</span>
         </span>
       ) : null}
+      {shouldShowTickerLabel ? <span className="coin-emblem__mini-label">{coin.symbol}</span> : null}
     </a>
   );
 }

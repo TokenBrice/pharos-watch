@@ -76,7 +76,14 @@ describe("CoinEmblem", () => {
   it("shows a key-data hover card for the active stablecoin", () => {
     const { getByRole } = render(
       <HoverProvider>
-        <CoinEmblem coin={sample} variant="fiat" cohortCoinCount={4} cohortMarketCap={1_000_000_000} />
+        <CoinEmblem
+          coin={sample}
+          variant="fiat"
+          cohortCoinCount={4}
+          cohortMarketCap={1_000_000_000}
+          cohortSymbolPreview="EURC · EURCV · AEUR"
+          showTickerLabel
+        />
       </HoverProvider>,
     );
     const link = getByRole("link");
@@ -86,12 +93,15 @@ describe("CoinEmblem", () => {
     expect(card.textContent).toContain("EURC");
     expect(card.textContent).toContain("Euro cohort");
     expect(card.textContent).toContain("Market cap");
-    expect(card.textContent).toContain("Share");
+    expect(card.textContent).toContain("Cohort share");
     expect(card.textContent).toContain("43.2%");
     expect(card.textContent).toContain("Cohort cap");
     expect(card.textContent).toContain("Cohort size");
     expect(card.textContent).toContain("4 coins");
-    expect(card.textContent).toContain("Open profile");
+    expect(card.textContent).toContain("Top peers");
+    expect(card.textContent).toContain("EURC · EURCV · AEUR");
+    expect(card.textContent).toContain("Click emblem to open EURC");
+    expect(screen.getByText("EURC", { selector: ".coin-emblem__mini-label" })).toBeTruthy();
     expect(link.getAttribute("aria-describedby")).toBe(card.id);
   });
 
@@ -104,7 +114,7 @@ describe("CoinEmblem", () => {
     const link = getByRole("link");
     fireEvent.focus(link);
 
-    expect(screen.getByRole("tooltip").textContent).toContain("Open profile");
+    expect(screen.getByRole("tooltip").textContent).toContain("Click emblem to open EURC");
   });
 
   it("positions edge hover cards back toward the map frame", () => {

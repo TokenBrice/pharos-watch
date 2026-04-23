@@ -256,7 +256,27 @@
   z-index: 6;
 }
 .coin-emblem.is-dimmed {
-  opacity: 0.55;
+  opacity: 0.34;
+}
+
+.coin-emblem__mini-label {
+  position: absolute;
+  left: 50%;
+  bottom: -18px;
+  transform: translateX(-50%);
+  border: 1px solid oklch(0.8 0.04 250 / 0.28);
+  border-radius: 999px;
+  background: oklch(0.08 0.018 255 / 0.82);
+  box-shadow: 0 8px 18px rgba(0, 0, 0, 0.42);
+  color: oklch(0.94 0.04 250);
+  font-family: var(--font-geist-mono), ui-monospace, SFMono-Regular, "SF Mono", Consolas, "Liberation Mono", monospace;
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  line-height: 1;
+  padding: 4px 6px;
+  pointer-events: none;
+  white-space: nowrap;
 }
 
 .coin-emblem__hover-card {
@@ -352,6 +372,10 @@
   font-weight: 750;
   font-variant-numeric: tabular-nums;
 }
+.coin-emblem__hover-card-peers {
+  border-top: 1px solid oklch(1 0 0 / 0.1);
+  padding-top: 6px;
+}
 .coin-emblem__hover-card-action {
   border-top: 1px solid oklch(1 0 0 / 0.1);
   padding-top: 6px;
@@ -360,6 +384,91 @@
   font-weight: 750;
   letter-spacing: 0.04em;
   text-transform: uppercase;
+}
+
+.peg-hero__scale-key,
+.peg-hero__top-cohorts {
+  position: absolute;
+  z-index: 12;
+  border: 1px solid oklch(0.8 0.03 250 / 0.18);
+  border-radius: 8px;
+  background: oklch(0.055 0.018 255 / 0.78);
+  color: oklch(0.92 0.035 250);
+  backdrop-filter: blur(10px);
+  box-shadow: 0 14px 30px rgba(0, 0, 0, 0.34), inset 0 1px 0 oklch(1 0 0 / 0.06);
+  pointer-events: none;
+}
+
+.peg-hero__scale-key {
+  left: 12px;
+  bottom: 12px;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 7px 9px;
+}
+
+.peg-hero__scale-label,
+.peg-hero__top-label {
+  color: oklch(0.76 0.03 250 / 0.9);
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.peg-hero__scale-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-family: var(--font-geist-mono), ui-monospace, SFMono-Regular, "SF Mono", Consolas, "Liberation Mono", monospace;
+  font-size: 10px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.peg-hero__scale-dot {
+  display: inline-block;
+  border-radius: 999px;
+  background: oklch(0.72 0.14 248 / 0.2);
+  border: 1px solid oklch(0.78 0.12 248 / 0.55);
+}
+
+.peg-hero__top-cohorts {
+  bottom: 12px;
+  right: 12px;
+  display: grid;
+  gap: 5px;
+  min-width: 190px;
+  padding: 8px 9px;
+}
+
+.peg-hero__top-row {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 6px;
+  font-size: 10px;
+}
+
+.peg-hero__top-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 999px;
+}
+
+.peg-hero__top-name {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.peg-hero__top-value {
+  color: oklch(0.9 0.08 245);
+  font-family: var(--font-geist-mono), ui-monospace, SFMono-Regular, "SF Mono", Consolas, "Liberation Mono", monospace;
+  font-weight: 750;
+  font-variant-numeric: tabular-nums;
 }
 
 /* ===== Cohort threads ===== */
