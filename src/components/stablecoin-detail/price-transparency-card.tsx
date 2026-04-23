@@ -4,7 +4,7 @@ import { useState } from "react";
 import { ChevronDown } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { DETAIL_SECTION_TITLE_CLASS } from "@/components/stablecoin-detail/section-title";
+import { DetailSectionTitle } from "@/components/stablecoin-detail/section-title";
 import type { PegSummaryCoin, StablecoinData } from "@shared/types";
 import { cn } from "@/lib/utils";
 import {
@@ -62,9 +62,9 @@ export function PriceTransparencyCard({
   return (
     <Card className="rounded-xl" id="price-transparency">
       <CardHeader className="pb-2">
-        <CardTitle as="h2" className={DETAIL_SECTION_TITLE_CLASS}>
+        <DetailSectionTitle>
           Price Transparency
-        </CardTitle>
+        </DetailSectionTitle>
       </CardHeader>
       <CardContent className="space-y-4">
         {/* Summary Bar */}

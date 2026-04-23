@@ -5,7 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { StablecoinLogo } from "@/components/stablecoin-logo";
 import { useLogos } from "@/hooks/use-logos";
-import { DETAIL_SECTION_TITLE_CLASS } from "@/components/stablecoin-detail/section-title";
+import { DetailSectionTitle } from "@/components/stablecoin-detail/section-title";
 import { getVariantDisplay } from "@/lib/variant-display";
 import { buildHomepageVariantBrowseUrl, buildStablecoinUrl } from "@/lib/urls";
 import type { StablecoinMeta } from "@shared/types";
@@ -23,7 +23,7 @@ export function ParentVariantsCard({ variants }: ParentVariantsCardProps) {
     <Card className="rounded-xl border-border/60">
       <CardHeader className="pb-3">
         <div className="flex items-center gap-2">
-          <CardTitle as="h2" className={DETAIL_SECTION_TITLE_CLASS}>Variants</CardTitle>
+          <DetailSectionTitle>Variants</DetailSectionTitle>
           <Badge variant="outline" className="text-[11px]">{variants.length}</Badge>
         </div>
       </CardHeader>

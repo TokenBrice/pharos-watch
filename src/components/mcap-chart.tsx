@@ -3,7 +3,7 @@
 import { useMemo } from "react";
 import { AreaChart, Area } from "recharts";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { DETAIL_SECTION_TITLE_CLASS } from "@/components/stablecoin-detail/section-title";
+import { DetailSectionTitle } from "@/components/stablecoin-detail/section-title";
 import { useChartContainerReady } from "@/hooks/use-chart-container-ready";
 import { TimeRangeButtons } from "@/components/time-range-buttons";
 import { useTimeRangeFilter, type TimeRangeOption } from "@/hooks/use-time-range-filter";
@@ -143,7 +143,7 @@ export function McapChart({ data }: McapChartProps) {
   return (
     <Card className="rounded-xl border-l-[3px] border-l-blue-500 animate-in fade-in duration-300">
       <CardHeader className="flex flex-row items-center justify-between">
-        <CardTitle as="h2" className={DETAIL_SECTION_TITLE_CLASS}>Market Cap</CardTitle>
+        <DetailSectionTitle>Market Cap</DetailSectionTitle>
         <TimeRangeButtons options={options} value={range} onChange={setRange} />
       </CardHeader>
       <CardContent>

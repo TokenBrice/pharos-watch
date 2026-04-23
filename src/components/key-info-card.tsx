@@ -4,8 +4,8 @@ import { useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { Check, Copy, ExternalLink, Globe } from "lucide-react";
-import { DETAIL_SECTION_TITLE_CLASS } from "@/components/stablecoin-detail/section-title";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { DetailSectionTitle } from "@/components/stablecoin-detail/section-title";
+import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { CHAIN_META } from "@shared/lib/chains";
 import { getInfrastructureLabel, getInfrastructureSummary } from "@shared/lib/infrastructure";
 import { formatAddress } from "@shared/lib/format";
@@ -47,9 +47,9 @@ export function KeyInfoCard({ meta }: { meta: StablecoinMeta }) {
   return (
     <Card className="rounded-xl">
       <CardHeader className="pb-2">
-        <CardTitle as="h2" className={DETAIL_SECTION_TITLE_CLASS}>
+        <DetailSectionTitle>
           Key Information
-        </CardTitle>
+        </DetailSectionTitle>
       </CardHeader>
       <CardContent className="space-y-3 sm:space-y-4">
         {/* Classification badges (identity) then external links (navigation) */}

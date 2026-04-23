@@ -9,6 +9,7 @@ import { FeaturePageShell } from "@/components/feature-page-shell";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 import { safeJsonLd } from "@/lib/json-ld";
+import { buildPageMetadata } from "@/lib/page-metadata";
 import { buildFaqJsonLd } from "@/lib/faq";
 import {
   ABOUT_LEAD_PARAGRAPHS,
@@ -184,22 +185,12 @@ function AboutFeatureSection({
   );
 }
 
-export const metadata: Metadata = {
+export const metadata: Metadata = buildPageMetadata({
   title: "About Pharos: Shining a Light on Every Peg",
   description:
     "About Pharos, an open stablecoin analytics dashboard by TokenBrice, Ike, Claude, and Codex. Honest classification, freeze tracking, and a graveyard for the ones that didn't make it.",
-  alternates: {
-    canonical: "/about/",
-  },
-  openGraph: {
-    title: "About Pharos: Shining a Light on Every Peg",
-    description:
-      "About Pharos, an open stablecoin analytics dashboard by TokenBrice, Ike, Claude, and Codex. Honest classification, freeze tracking, and a graveyard for the ones that didn't make it.",
-    url: "/about/",
-    type: "website",
-    images: [{ url: "/og-card.png", width: 1200, height: 628 }],
-  },
-};
+  canonical: "/about/",
+});
 
 export default function AboutPage() {
   const activeStablecoinCount = ACTIVE_STABLECOINS.length;

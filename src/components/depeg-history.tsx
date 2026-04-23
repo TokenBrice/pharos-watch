@@ -13,7 +13,7 @@ import {
 } from "@/components/ui/table";
 import { Skeleton } from "@/components/ui/skeleton";
 import { QueryErrorNotice } from "@/components/query-error-notice";
-import { DETAIL_SECTION_TITLE_CLASS } from "@/components/stablecoin-detail/section-title";
+import { DetailSectionTitle } from "@/components/stablecoin-detail/section-title";
 import { formatDuration, formatNativePrice, formatEventDate, formatBps, formatCurrency } from "@shared/lib/format";
 import { DEPEG_EVENT_MIN_SUPPLY_USD } from "@shared/lib/depeg-detection-config";
 import { deviationColorClass } from "@/lib/severity-colors";
@@ -48,7 +48,7 @@ const DEPEG_HISTORY_COLUMNS: readonly DataTableColumn[] = [
 function DepegHistoryIntro() {
   return (
     <div className="mb-3">
-      <h2 className={DETAIL_SECTION_TITLE_CLASS}>Depeg History</h2>
+      <DetailSectionTitle>Depeg History</DetailSectionTitle>
       <p className="mt-1 text-sm text-muted-foreground">
         {DEPEG_HISTORY_DESCRIPTION}
       </p>

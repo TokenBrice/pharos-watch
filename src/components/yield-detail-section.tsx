@@ -3,10 +3,10 @@
 import type { ReactNode } from "react";
 import { AlertTriangle } from "lucide-react";
 import { QueryErrorNotice } from "@/components/query-error-notice";
-import { DETAIL_SECTION_TITLE_CLASS } from "@/components/stablecoin-detail/section-title";
+import { DetailSectionTitle } from "@/components/stablecoin-detail/section-title";
 import { YieldSourceLink } from "@/components/yield-source-link";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 import { formatYieldWarningSignal } from "@/lib/yield-constants";
 import { formatCurrency, formatPercent } from "@shared/lib/format";
@@ -29,9 +29,9 @@ function YieldDetailSectionFrame({ headerEnd, children }: { headerEnd?: ReactNod
         <CardHeader className="pb-2">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div className="flex items-center gap-2">
-              <CardTitle as="h2" id="yield-intelligence-heading" className={DETAIL_SECTION_TITLE_CLASS}>
+              <DetailSectionTitle id="yield-intelligence-heading">
                 Yield Intelligence
-              </CardTitle>
+              </DetailSectionTitle>
             </div>
             {headerEnd}
           </div>

@@ -5,7 +5,8 @@ import Link from "next/link";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { StablecoinLogo } from "@/components/stablecoin-logo";
-import { GradeBadge } from "@/components/grade-badge";
+import { Badge } from "@/components/ui/badge";
+import { REPORT_CARD_GRADE_COLORS } from "@shared/lib/report-cards";
 import { formatCurrency } from "@shared/lib/format";
 import type { StressTestState } from "@/hooks/use-stress-test";
 import type { ReportCardGrade } from "@shared/types";
@@ -272,10 +273,10 @@ export function StressTestPanel({
                         {mcap != null ? formatCurrency(mcap) : "—"}
                       </td>
                       <td className="py-2.5 pr-3 text-center">
-                        <GradeBadge grade={impact.gradeBefore} score={impact.scoreBefore} />
+                        <Badge variant="outline" className={`text-xs px-2 py-0.5 font-medium ${REPORT_CARD_GRADE_COLORS[impact.gradeBefore]}`} aria-label={`Safety grade ${impact.gradeBefore}${impact.scoreBefore !== null ? `, score ${impact.scoreBefore}` : ""}`}>{impact.gradeBefore}{impact.scoreBefore !== null && <span className="ml-1 opacity-70" aria-hidden="true">({impact.scoreBefore})</span>}</Badge>
                       </td>
                       <td className="py-2.5 pr-3 text-center">
-                        <GradeBadge grade={impact.gradeAfter} score={impact.scoreAfter} />
+                        <Badge variant="outline" className={`text-xs px-2 py-0.5 font-medium ${REPORT_CARD_GRADE_COLORS[impact.gradeAfter]}`} aria-label={`Safety grade ${impact.gradeAfter}${impact.scoreAfter !== null ? `, score ${impact.scoreAfter}` : ""}`}>{impact.gradeAfter}{impact.scoreAfter !== null && <span className="ml-1 opacity-70" aria-hidden="true">({impact.scoreAfter})</span>}</Badge>
                       </td>
                       <td className="py-2.5 text-right">
                         <span className={cn("font-mono font-semibold", severityColor)}>

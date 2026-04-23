@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { StablecoinLogo } from "@/components/stablecoin-logo";
 import { useLogos } from "@/hooks/use-logos";
-import { DETAIL_SECTION_TITLE_CLASS } from "@/components/stablecoin-detail/section-title";
+import { DetailSectionTitle } from "@/components/stablecoin-detail/section-title";
 import { TRACKED_STABLECOINS } from "@shared/lib/stablecoins";
 import { deriveDependencies } from "@shared/lib/dependency-derivation";
 import type { DependencyType, StablecoinMeta } from "@shared/types";
@@ -110,9 +110,9 @@ export function CollateralUsageSection({ stablecoinId }: CollateralUsageSectionP
       <Card className="rounded-xl border-l-[3px] border-l-amber-500 animate-in fade-in duration-300">
         <CardHeader className="pb-2">
           <div className="flex items-center gap-2">
-            <CardTitle as="h2" className={DETAIL_SECTION_TITLE_CLASS}>
+            <DetailSectionTitle>
               {ticker} Is Used as Collateral by:
-            </CardTitle>
+            </DetailSectionTitle>
             <Badge variant="outline" className="text-[11px]">
               {usage.length} {usage.length === 1 ? "stablecoin" : "stablecoins"}
             </Badge>

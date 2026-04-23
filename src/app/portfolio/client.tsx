@@ -7,7 +7,8 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { CoinSelector } from "@/components/coin-selector";
 import { ReportCardRadar } from "@/components/radar-chart";
 import { StablecoinLogo } from "@/components/stablecoin-logo";
-import { GradeBadge } from "@/components/grade-badge";
+import { Badge } from "@/components/ui/badge";
+import { REPORT_CARD_GRADE_COLORS } from "@shared/lib/report-cards";
 import { ReportCardMini } from "@/components/report-card-mini";
 import { useReportCards } from "@/hooks/api-hooks";
 import { useLogos } from "@/hooks/use-logos";
@@ -490,7 +491,7 @@ export function PortfolioClient() {
         <Card>
           <CardContent className="pt-6 space-y-6">
             <div className="flex items-center gap-4">
-              <GradeBadge grade={portfolio.portfolioGrade} score={portfolio.portfolioScore} size="lg" />
+              <Badge variant="outline" className={`text-2xl px-4 py-2 font-bold ${REPORT_CARD_GRADE_COLORS[portfolio.portfolioGrade]}`} aria-label={`Safety grade ${portfolio.portfolioGrade}${portfolio.portfolioScore !== null ? `, score ${portfolio.portfolioScore}` : ""}`}>{portfolio.portfolioGrade}{portfolio.portfolioScore !== null && <span className="ml-1 opacity-70" aria-hidden="true">({portfolio.portfolioScore})</span>}</Badge>
               <div>
                 <div className="text-sm text-muted-foreground">Portfolio Total</div>
                 <div className="text-lg font-semibold">{formatUsd(portfolio.totalUsd)}</div>

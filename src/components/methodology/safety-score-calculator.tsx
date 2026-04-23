@@ -1,7 +1,8 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { GradeBadge } from "@/components/grade-badge";
+import { Badge } from "@/components/ui/badge";
+import { REPORT_CARD_GRADE_COLORS } from "@shared/lib/report-cards";
 import {
   computeOverallGrade,
   DIMENSION_LABELS,
@@ -91,7 +92,7 @@ export function SafetyScoreCalculator() {
       {result.score !== null && (
         <div className="flex flex-wrap items-center gap-3 border-t border-border/50 pt-3">
           <span className="text-sm text-muted-foreground">Computed grade:</span>
-          <GradeBadge grade={result.grade} score={result.score} />
+          <Badge variant="outline" className={`text-xs px-2 py-0.5 font-medium ${REPORT_CARD_GRADE_COLORS[result.grade]}`} aria-label={`Safety grade ${result.grade}${result.score !== null ? `, score ${result.score}` : ""}`}>{result.grade}{result.score !== null && <span className="ml-1 opacity-70" aria-hidden="true">({result.score})</span>}</Badge>
           <span className="font-mono tabular-nums text-sm text-foreground">
             {result.score} / 100
           </span>

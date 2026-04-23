@@ -2,9 +2,9 @@
 
 import { useMemo, useState } from "react";
 import { AreaChart, Area, XAxis, YAxis, Tooltip } from "recharts";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { DETAIL_SECTION_TITLE_CLASS } from "@/components/stablecoin-detail/section-title";
+import { DetailSectionTitle } from "@/components/stablecoin-detail/section-title";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ChartSkeleton } from "@/components/chart-skeleton";
 import {
@@ -460,9 +460,9 @@ export function DexLiquidityCard({ stablecoinId }: { stablecoinId: string }) {
     return (
       <Card className="rounded-xl">
         <CardHeader className="pb-2">
-          <CardTitle as="h2" className={DETAIL_SECTION_TITLE_CLASS}>
+          <DetailSectionTitle>
             <MethodologyLabel topic="liquidityScore">DEX Liquidity</MethodologyLabel>
-          </CardTitle>
+          </DetailSectionTitle>
         </CardHeader>
         <CardContent>
           <p className="text-sm text-muted-foreground">
@@ -486,9 +486,9 @@ export function DexLiquidityCard({ stablecoinId }: { stablecoinId: string }) {
       <CardHeader className="pb-2">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div className="flex min-w-0 flex-wrap items-center gap-2">
-            <CardTitle as="h2" className={DETAIL_SECTION_TITLE_CLASS}>
+            <DetailSectionTitle>
               <MethodologyLabel topic="liquidityScore">DEX Liquidity</MethodologyLabel>
-            </CardTitle>
+            </DetailSectionTitle>
             <Badge
               variant="outline"
               className={`text-[11px] ${coverageBadge.className}`}

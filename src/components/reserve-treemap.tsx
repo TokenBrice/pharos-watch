@@ -2,9 +2,9 @@
 
 import { useMemo } from "react";
 import { Treemap, Tooltip } from "recharts";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { SectionErrorBoundary } from "@/components/section-error-boundary";
-import { DETAIL_SECTION_TITLE_CLASS } from "@/components/stablecoin-detail/section-title";
+import { DetailSectionTitle } from "@/components/stablecoin-detail/section-title";
 import { ChartSkeleton } from "@/components/chart-skeleton";
 import { useChartContainerReady } from "@/hooks/use-chart-container-ready";
 import { PharosChartTooltip, TooltipLabel, TooltipRow } from "@/components/pharos-chart-tooltip";
@@ -133,14 +133,14 @@ export function ReserveTreemap({ reserves, badge }: ReserveTreemapProps) {
   return (
     <Card className="rounded-xl">
       <CardHeader className="pb-2">
-        <CardTitle as="h2" className={`${DETAIL_SECTION_TITLE_CLASS} flex items-center gap-2`}>
+        <DetailSectionTitle className="flex items-center gap-2">
           Reserve Composition
           {badge && (
             <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-medium ${RESERVE_BADGE_CLASSNAMES[badge.kind]}`}>
               {badge.label}
             </span>
           )}
-        </CardTitle>
+        </DetailSectionTitle>
         <div className="flex items-center gap-4 text-xs text-muted-foreground mt-1">
           {(Object.entries(RISK_LABELS) as [ReserveRisk, string][]).map(([risk, label]) => (
             <div key={risk} className="flex items-center gap-1">

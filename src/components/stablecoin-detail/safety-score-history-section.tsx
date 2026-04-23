@@ -2,7 +2,8 @@
 
 import { useMemo, useState } from "react";
 import { ArrowDown, ArrowUp } from "lucide-react";
-import { GradeBadge } from "@/components/grade-badge";
+import { Badge } from "@/components/ui/badge";
+import { REPORT_CARD_GRADE_COLORS } from "@shared/lib/report-cards";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
@@ -12,7 +13,7 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { QueryErrorNotice } from "@/components/query-error-notice";
-import { DETAIL_SECTION_TITLE_CLASS } from "@/components/stablecoin-detail/section-title";
+import { DetailSectionTitle } from "@/components/stablecoin-detail/section-title";
 import { useSafetyScoreHistory } from "@/hooks/api-hooks";
 import {
   formatChartDate,
@@ -175,19 +176,19 @@ export function SafetyScoreHistorySection({
   return (
     <Card className="rounded-xl">
       <CardHeader className="pb-1">
-        <CardTitle as="h2" className={DETAIL_SECTION_TITLE_CLASS}>
+        <DetailSectionTitle>
           Grade History
-        </CardTitle>
+        </DetailSectionTitle>
       </CardHeader>
       <CardContent>
         {/* Summary stats strip */}
         {stats && (
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
             <StatBox label="Best Grade">
-              <GradeBadge grade={stats.best.grade} score={stats.best.score} />
+              <Badge variant="outline" className={`text-xs px-2 py-0.5 font-medium ${REPORT_CARD_GRADE_COLORS[stats.best.grade]}`} aria-label={`Safety grade ${stats.best.grade}${stats.best.score !== null ? `, score ${stats.best.score}` : ""}`}>{stats.best.grade}{stats.best.score !== null && <span className="ml-1 opacity-70" aria-hidden="true">({stats.best.score})</span>}</Badge>
             </StatBox>
             <StatBox label="Lowest Grade">
-              <GradeBadge grade={stats.worst.grade} score={stats.worst.score} />
+              <Badge variant="outline" className={`text-xs px-2 py-0.5 font-medium ${REPORT_CARD_GRADE_COLORS[stats.worst.grade]}`} aria-label={`Safety grade ${stats.worst.grade}${stats.worst.score !== null ? `, score ${stats.worst.score}` : ""}`}>{stats.worst.grade}{stats.worst.score !== null && <span className="ml-1 opacity-70" aria-hidden="true">({stats.worst.score})</span>}</Badge>
             </StatBox>
             <StatBox label="Current Streak">
               <div className="flex items-center gap-1.5">
@@ -195,10 +196,7 @@ export function SafetyScoreHistorySection({
                   {formatTrackingSpanDays(stats.streakDays)}
                 </span>
                 <span className="text-sm text-muted-foreground">at</span>
-                <GradeBadge
-                  grade={stats.lastEntry.grade}
-                  score={stats.lastEntry.score}
-                />
+                <Badge variant="outline" className={`text-xs px-2 py-0.5 font-medium ${REPORT_CARD_GRADE_COLORS[stats.lastEntry.grade]}`} aria-label={`Safety grade ${stats.lastEntry.grade}${stats.lastEntry.score !== null ? `, score ${stats.lastEntry.score}` : ""}`}>{stats.lastEntry.grade}{stats.lastEntry.score !== null && <span className="ml-1 opacity-70" aria-hidden="true">({stats.lastEntry.score})</span>}</Badge>
               </div>
             </StatBox>
           </div>
@@ -256,7 +254,7 @@ export function SafetyScoreHistorySection({
                 <span className="text-sm font-medium">
                   {formatChartDate(point.date * 1000, "long")}
                 </span>
-                <GradeBadge grade={point.grade} score={point.score} />
+                <Badge variant="outline" className={`text-xs px-2 py-0.5 font-medium ${REPORT_CARD_GRADE_COLORS[point.grade]}`} aria-label={`Safety grade ${point.grade}${point.score !== null ? `, score ${point.score}` : ""}`}>{point.grade}{point.score !== null && <span className="ml-1 opacity-70" aria-hidden="true">({point.score})</span>}</Badge>
               </div>
               <TransitionIndicator point={point} />
             </li>

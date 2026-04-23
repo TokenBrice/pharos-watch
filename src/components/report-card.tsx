@@ -15,9 +15,10 @@ import { ReportCardRadar } from "./radar-chart";
 import { TRACKED_STABLECOINS } from "@shared/lib/stablecoins";
 import Link from "next/link";
 import { buildStablecoinUrl } from "@/lib/urls";
-import { DETAIL_SECTION_TITLE_CLASS } from "@/components/stablecoin-detail/section-title";
+import { DetailSectionTitle } from "@/components/stablecoin-detail/section-title";
 import { MethodologyCardActions, MethodologyHint, MethodologyLabel } from "@/components/methodology-hint";
 import { cn } from "@/lib/utils";
+import { parseDimensionDetail } from "@/lib/report-card-parsing";
 import { LIQUIDITY_SCORE_WEIGHTS } from "@shared/lib/liquidity-score-weights";
 
 // ---------------------------------------------------------------------------
@@ -155,21 +156,18 @@ function DimensionRow({ dimKey, dim, card, liquidityComponents }: DimensionRowPr
           {(dimKey === "resilience" || dimKey === "decentralization" || dimKey === "dependencyRisk") && (
             <div className="space-y-1">
               {dim.detail.split(". ").map((part) => {
-                const match = part.match(/^(.+?):\s*(.+?)\s*\((-?\d+)\)$/);
-                if (!match) return null;
-                const [, label, desc, scoreStr] = match;
-                const subScore = parseInt(scoreStr, 10);
-                const isNegative = subScore < 0;
+                const detail = parseDimensionDetail(part);
+                if (!detail) return null;
                 return (
                   <div
-                    key={`${dimKey}-${label}`}
+                    key={`${dimKey}-${detail.label}`}
                     className="flex items-center justify-between text-xs"
                   >
                     <span className="text-muted-foreground">
-                      {label}: <span className="text-foreground/80">{desc}</span>
+                      {detail.label}: <span className="text-foreground/80">{detail.desc}</span>
                     </span>
-                    <span className={`tabular-nums font-mono ${isNegative ? "text-amber-700 dark:text-amber-400" : "text-foreground/80"}`}>
-                      {isNegative ? subScore : subScore === 0 ? "—" : `+${subScore}`}
+                    <span className={`tabular-nums font-mono ${detail.isNegative ? "text-amber-700 dark:text-amber-400" : "text-foreground/80"}`}>
+                      {detail.displayScore}
                     </span>
                   </div>
                 );
@@ -277,7 +275,7 @@ export function ReportCardDetail({ card, liquidityComponents }: ReportCardDetail
         style={{ borderTopWidth: '3px', borderTopColor: GRADE_BORDER_HEX.F }}
       >
         <CardHeader>
-          <CardTitle as="h2" className={DETAIL_SECTION_TITLE_CLASS}>Safety Score</CardTitle>
+          <DetailSectionTitle>Safety Score</DetailSectionTitle>
         </CardHeader>
         <CardContent>
           <div className="flex items-center gap-4">

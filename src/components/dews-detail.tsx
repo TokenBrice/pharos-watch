@@ -2,14 +2,14 @@
 
 import { useMemo, useState } from "react";
 import { AreaChart, Area, ReferenceLine } from "recharts";
-import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
+import { Card, CardHeader, CardContent } from "@/components/ui/card";
 import { useStressSignalDetail } from "@/hooks/api-hooks";
 import { useChartContainerReady } from "@/hooks/use-chart-container-ready";
 import { THREAT_BAND_COLORS, THREAT_BAND_LABELS } from "@shared/lib/classification";
 import { THREAT_BAND_HEX, SIGNAL_CHART_COLORS } from "@/lib/chart-colors";
 import type { ThreatBand } from "@shared/lib/classification";
 import { QueryErrorNotice } from "@/components/query-error-notice";
-import { DETAIL_SECTION_TITLE_CLASS } from "@/components/stablecoin-detail/section-title";
+import { DetailSectionTitle } from "@/components/stablecoin-detail/section-title";
 import { DateTooltip, MonoYAxis, TimeGrid, TimeXAxis } from "@/components/chart-primitives";
 import { formatChartDate } from "@shared/lib/format";
 import { MethodologyCardActions, MethodologyLabel } from "@/components/methodology-hint";
@@ -155,9 +155,9 @@ export function DEWSDetail({ stablecoinId }: DEWSDetailProps) {
     return (
       <Card className="animate-pulse">
         <CardHeader>
-          <CardTitle as="h2" className={DETAIL_SECTION_TITLE_CLASS}>
+          <DetailSectionTitle>
             <MethodologyLabel topic="dews">DEWS: Depeg Early Warning System</MethodologyLabel>
-          </CardTitle>
+          </DetailSectionTitle>
         </CardHeader>
         <CardContent>
           <div className="h-32 bg-muted rounded" />
@@ -174,9 +174,9 @@ export function DEWSDetail({ stablecoinId }: DEWSDetailProps) {
     return (
       <Card>
         <CardHeader>
-          <CardTitle as="h2" className={DETAIL_SECTION_TITLE_CLASS}>
+          <DetailSectionTitle>
             <MethodologyLabel topic="dews">DEWS: Depeg Early Warning System</MethodologyLabel>
-          </CardTitle>
+          </DetailSectionTitle>
         </CardHeader>
         <CardContent>
           <p className="text-sm text-muted-foreground">
@@ -200,9 +200,9 @@ export function DEWSDetail({ stablecoinId }: DEWSDetailProps) {
   return (
     <Card className="animate-in fade-in duration-300">
       <CardHeader className="flex flex-row items-center justify-between gap-3">
-        <CardTitle as="h2" className={DETAIL_SECTION_TITLE_CLASS}>
+        <DetailSectionTitle>
           <MethodologyLabel topic="dews">Depeg Early Warning</MethodologyLabel>
-        </CardTitle>
+        </DetailSectionTitle>
         <div className="flex items-center gap-2">
           <span className="text-2xl font-extrabold font-mono tabular-nums">{score}</span>
           <span className={`rounded-md border px-2 py-0.5 text-xs font-semibold ${bandColor}`}>

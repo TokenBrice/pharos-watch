@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { ArrowRight } from "lucide-react";
-import { DETAIL_SECTION_TITLE_CLASS } from "@/components/stablecoin-detail/section-title";
+import { DetailSectionTitle } from "@/components/stablecoin-detail/section-title";
 import { StablecoinLogo } from "@/components/stablecoin-logo";
 import { BACKING_LABELS, GOVERNANCE_LABELS, PEG_LABELS_SHORT } from "@shared/lib/classification";
 import { getInfrastructureLabel } from "@shared/lib/infrastructure";
@@ -78,9 +78,9 @@ export function ExploreNextSection({
   return (
     <section id="explore-next" className="mt-8 -mx-4 rounded-2xl bg-muted/15 px-4 py-6 sm:-mx-6 sm:px-6 space-y-4" aria-labelledby="explore-next-heading">
       <div className="space-y-1.5">
-        <h2 id="explore-next-heading" className={DETAIL_SECTION_TITLE_CLASS}>
+        <DetailSectionTitle>
           Explore Next
-        </h2>
+        </DetailSectionTitle>
         <p className="max-w-3xl text-sm text-muted-foreground">
           Move from this coin into the next useful surface: peer benchmarks, taxonomy cohorts, or live trackers that add context to what you just read.
         </p>

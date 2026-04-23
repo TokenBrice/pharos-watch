@@ -8,7 +8,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { DETAIL_SECTION_TITLE_CLASS } from "@/components/stablecoin-detail/section-title";
+import { DetailSectionTitle } from "@/components/stablecoin-detail/section-title";
 import { Skeleton } from "@/components/ui/skeleton";
 import { FlowMachineScene } from "@/components/flow-machine-scene";
 import { MintingPressureGauge } from "@/components/minting-pressure-gauge";
@@ -176,9 +176,9 @@ export function FlowSummaryCard({ stablecoinId }: FlowSummaryCardProps) {
   return (
     <Card>
       <CardHeader>
-        <CardTitle as="h3" className={DETAIL_SECTION_TITLE_CLASS}>
+        <DetailSectionTitle as="h3">
           <MethodologyLabel topic="mintBurnFlows">Mint &amp; Burn Flows</MethodologyLabel>
-        </CardTitle>
+        </DetailSectionTitle>
       </CardHeader>
       <CardContent>
         <div className="grid gap-4 lg:grid-cols-[0.95fr_1.05fr]">

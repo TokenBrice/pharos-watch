@@ -5,7 +5,7 @@ import { PieChart, Pie, Cell, Tooltip, Sector } from "recharts";
 import type { PieSectorDataItem } from "recharts";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { DETAIL_SECTION_TITLE_CLASS } from "@/components/stablecoin-detail/section-title";
+import { DetailSectionTitle } from "@/components/stablecoin-detail/section-title";
 import { PharosChartTooltip, TooltipRow } from "@/components/pharos-chart-tooltip";
 import { useChartContainerReady } from "@/hooks/use-chart-container-ready";
 import { useStablecoins } from "@/hooks/use-stablecoins";
@@ -132,7 +132,7 @@ function DonutCard({
   return (
     <Card className="rounded-xl">
       <CardHeader className="pb-2">
-        <CardTitle as="h2" className={DETAIL_SECTION_TITLE_CLASS}>{title}</CardTitle>
+        <DetailSectionTitle>{title}</DetailSectionTitle>
       </CardHeader>
       <CardContent className="space-y-3">
         <div
@@ -237,7 +237,7 @@ function ChainDistributionCard({ stablecoinId }: { stablecoinId: string }) {
     return (
       <Card className="rounded-xl">
         <CardHeader className="pb-2">
-          <CardTitle as="h2" className={DETAIL_SECTION_TITLE_CLASS}>Supply by Chain</CardTitle>
+          <DetailSectionTitle>Supply by Chain</DetailSectionTitle>
         </CardHeader>
         <CardContent>
           <Skeleton className="h-[200px] sm:h-[250px] rounded-xl" />
@@ -280,7 +280,7 @@ function DexDistributionCard({ stablecoinId }: { stablecoinId: string }) {
     return (
       <Card className="rounded-xl">
         <CardHeader className="pb-2">
-          <CardTitle as="h2" className={DETAIL_SECTION_TITLE_CLASS}>Liquidity by Protocol</CardTitle>
+          <DetailSectionTitle>Liquidity by Protocol</DetailSectionTitle>
         </CardHeader>
         <CardContent>
           <Skeleton className="h-[200px] sm:h-[250px] rounded-xl" />
@@ -293,7 +293,7 @@ function DexDistributionCard({ stablecoinId }: { stablecoinId: string }) {
     return (
       <Card className="rounded-xl">
         <CardHeader className="pb-2">
-          <CardTitle as="h2" className={DETAIL_SECTION_TITLE_CLASS}>Liquidity by Protocol</CardTitle>
+          <DetailSectionTitle>Liquidity by Protocol</DetailSectionTitle>
         </CardHeader>
         <CardContent>
           <div className="rounded-md border px-4 py-2.5 text-sm border-border/60 bg-muted/40 text-muted-foreground">

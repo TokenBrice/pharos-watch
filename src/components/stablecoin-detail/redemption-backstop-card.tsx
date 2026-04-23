@@ -4,7 +4,7 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ChevronDown } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { DETAIL_SECTION_TITLE_CLASS } from "./section-title";
+import { DetailSectionTitle } from "@/components/stablecoin-detail/section-title";
 import type { RedemptionBackstopEntry } from "@shared/types";
 import { MethodologyCardActions, MethodologyLabel } from "@/components/methodology-hint";
 import { buildRedemptionBackstopCardViewModel } from "./redemption-backstop-card-view-model";
@@ -19,9 +19,9 @@ export function RedemptionBackstopCard({
   return (
     <Card>
       <CardHeader className="pb-3">
-        <CardTitle as="h2" className={DETAIL_SECTION_TITLE_CLASS}>
+        <DetailSectionTitle>
           <MethodologyLabel topic="redemptionBackstop">Redemption Backstop</MethodologyLabel>
-        </CardTitle>
+        </DetailSectionTitle>
       </CardHeader>
       <CardContent className="space-y-4">
         {/* ── arrange: Hero score + Exit, separated from metadata ── */}
