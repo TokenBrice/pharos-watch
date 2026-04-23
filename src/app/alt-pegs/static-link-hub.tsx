@@ -25,27 +25,27 @@ const MAP_REGION_LAYOUT: Record<
   Americas: {
     accentHex: "#3b82f6",
     markerStyle: { top: "31%", left: "18%" },
-    panelClassName: "lg:col-start-1 lg:row-start-1 lg:row-span-2 lg:self-start lg:mt-6",
+    panelClassName: "xl:col-start-1 xl:row-start-1 xl:row-span-2 xl:self-start xl:mt-6",
   },
   Europe: {
     accentHex: "#8b5cf6",
     markerStyle: { top: "24%", left: "51%" },
-    panelClassName: "lg:col-start-2 lg:row-start-1 lg:self-start lg:mt-3",
+    panelClassName: "xl:col-start-2 xl:row-start-1 xl:self-start xl:mt-3",
   },
   Asia: {
     accentHex: "#14b8a6",
     markerStyle: { top: "31%", left: "71%" },
-    panelClassName: "lg:col-start-3 lg:row-start-1 lg:row-span-2 lg:self-start lg:mt-10",
+    panelClassName: "xl:col-start-3 xl:row-start-1 xl:row-span-2 xl:self-start xl:mt-10",
   },
   Africa: {
     accentHex: "#d946ef",
     markerStyle: { top: "55%", left: "58%" },
-    panelClassName: "lg:col-start-2 lg:row-start-2 lg:self-end lg:mb-6",
+    panelClassName: "xl:col-start-2 xl:row-start-2 xl:self-end xl:mb-6",
   },
   Oceania: {
     accentHex: "#6366f1",
     markerStyle: { top: "71%", left: "84%" },
-    panelClassName: "lg:col-start-3 lg:row-start-3 lg:self-start",
+    panelClassName: "xl:col-start-3 xl:row-start-3 xl:self-start",
   },
 };
 
@@ -269,7 +269,7 @@ function FiatRegionSection({ region, items }: { region: AltPegRegion; items: Alt
       className={[
         "space-y-2",
         atlasRegion
-          ? `lg:z-10 lg:rounded-[1.5rem] lg:border lg:border-border/70 lg:bg-background/82 lg:p-3 lg:shadow-[0_20px_45px_oklch(0_0_0_/0.22)] lg:backdrop-blur-[2px] ${layout?.panelClassName ?? ""}`
+          ? `xl:z-10 xl:rounded-[1.5rem] xl:border xl:border-border/70 xl:bg-background/82 xl:p-3 xl:shadow-[0_20px_45px_oklch(0_0_0_/0.22)] xl:backdrop-blur-[2px] ${layout?.panelClassName ?? ""}`
           : "",
       ]
         .filter(Boolean)
@@ -298,7 +298,7 @@ function FiatRegionSection({ region, items }: { region: AltPegRegion; items: Alt
         <p className="font-mono text-[11px] text-muted-foreground">{formatCoverageSummary(coinCount, items.length)}</p>
       </div>
 
-      <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-1 lg:gap-1.5">
+      <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-1 xl:gap-1.5">
         {items.map((item) => (
           <LinkChip
             key={item.href}
@@ -307,7 +307,7 @@ function FiatRegionSection({ region, items }: { region: AltPegRegion; items: Alt
             coinCount={item.coinCount}
             symbolPreview={item.symbolPreview}
             colorHex={item.colorHex}
-            className={atlasRegion ? "lg:min-h-0 lg:px-2.5 lg:py-2" : undefined}
+            className={atlasRegion ? "xl:min-h-0 xl:px-2.5 xl:py-2" : undefined}
             style={
               atlasRegion
                 ? {
@@ -442,7 +442,7 @@ export function StaticAltPegLinkHub() {
               </div>
             </div>
 
-            <div className="hidden px-4 py-4 sm:px-5 sm:py-5 lg:block">
+            <div className="hidden px-4 py-4 sm:px-5 sm:py-5 xl:block">
               <div className="relative aspect-[13/6] overflow-hidden rounded-[1.5rem] border border-border/60 bg-background/35">
                 <AtlasBackdrop idSuffix="atlas-desktop" />
                 <div className="absolute inset-x-0 top-0 h-28 bg-[radial-gradient(circle_at_top,oklch(0.75_0.08_248_/_0.08),transparent_72%)]" />
@@ -482,7 +482,7 @@ export function StaticAltPegLinkHub() {
               ) : null}
             </div>
 
-            <div className="space-y-4 px-4 py-4 sm:px-5 sm:py-5 lg:hidden">
+            <div className="space-y-4 px-4 py-4 sm:px-5 sm:py-5 xl:hidden">
               {fiatRegions.map((region) => (
                 <FiatRegionSection key={region.region} region={region.region} items={region.items} />
               ))}

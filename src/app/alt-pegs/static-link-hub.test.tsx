@@ -1,5 +1,9 @@
+// @vitest-environment jsdom
+
+import { render, screen, within } from "@testing-library/react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
+import { buildAltPegLinkHubGroups } from "@/lib/alt-peg-market";
 import { StaticAltPegLinkHub } from "@/app/alt-pegs/static-link-hub";
 
 describe("StaticAltPegLinkHub", () => {
@@ -23,5 +27,23 @@ describe("StaticAltPegLinkHub", () => {
     expect(html).toContain("Coverage markers scale with tracked fiat coin count");
     expect(html).toContain("Marker size = tracked fiat coin count");
     expect(html).toContain("Tracked off-map because these cohorts reference assets or indices");
+  });
+
+  it("highlights the largest off-map cohort first", () => {
+    const offMapItems = buildAltPegLinkHubGroups()
+      .filter((group) => group.label !== "Fiat")
+      .flatMap((group) => group.items);
+    const expectedLead = [...offMapItems].sort((left, right) => right.coinCount - left.coinCount)[0];
+
+    expect(expectedLead).toBeDefined();
+
+    render(<StaticAltPegLinkHub />);
+
+    const sectionHeading = screen.getByRole("heading", { name: "Non-geographic references" });
+    const section = sectionHeading.closest("section");
+    expect(section).not.toBeNull();
+
+    const links = within(section as HTMLElement).getAllByRole("link");
+    expect(links[0]?.getAttribute("aria-label")).toContain(expectedLead?.label ?? "");
   });
 });

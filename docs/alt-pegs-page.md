@@ -78,7 +78,7 @@ Important contract:
 4. `NonUsdShareChart`
 5. `AltPegCohortHistoryChart`
 
-`page.tsx` then renders `StaticAltPegLinkHub` after the client surface so the peg drill-down links are present in static HTML. The fiat side of the hub gets the dominant layout column as a fiat-only geography lens on larger breakpoints, using a fixed-ratio world silhouette with coin-count-weighted coverage markers. Small screens fall back to the region list only. Commodity, CPI-linked, and other non-fiat reference cohorts stay in an explicit off-map sidecar because they are not monetary-region pegs.
+`page.tsx` then renders `StaticAltPegLinkHub` after the client surface so the peg drill-down links are present in static HTML. The fiat side of the hub gets the dominant layout column as a fiat-only geography lens on `xl+`, using a fixed-ratio world silhouette with coin-count-weighted coverage markers. Below `xl`, the surface falls back to the region list only. Commodity, CPI-linked, and other non-fiat reference cohorts stay in an explicit off-map sidecar because they are not monetary-region pegs.
 
 The route intentionally keeps all current-state modules ahead of the historical modules to reduce trust issues caused by mixed source cadences.
 
