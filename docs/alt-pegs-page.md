@@ -24,7 +24,7 @@ This route is intentionally not a generic filtered stablecoin table and not a pa
 - **Route-local history chart:** `src/app/alt-pegs/alt-peg-cohort-history-chart.tsx`
 - **Server-rendered crawlability surface:** `src/app/alt-pegs/static-link-hub.tsx`
 - **Shared frontend model:** `src/lib/alt-peg-market.ts`
-- **Tests:** `src/app/alt-pegs/page.test.tsx`, `src/app/alt-pegs/client.test.tsx`, `src/app/alt-pegs/static-link-hub.test.tsx`, `src/lib/__tests__/alt-peg-market.test.ts`
+- **Tests:** `src/app/alt-pegs/page.test.tsx`, `src/app/alt-pegs/client.test.tsx`, `src/app/alt-pegs/static-link-hub.test.tsx`, `src/app/alt-pegs/alt-peg-cohort-history-chart.test.tsx`, `src/components/__tests__/non-usd-share-chart.test.tsx`, `src/lib/__tests__/alt-peg-market.test.ts`
 
 The route renders through `createClientFeaturePage(...)` / `FeaturePageShell` with:
 
@@ -35,6 +35,15 @@ The route renders through `createClientFeaturePage(...)` / `FeaturePageShell` wi
 - the static peg link hub rendered after the client content so the drill-down links are included in the static HTML
 
 Metadata is authored in `src/app/alt-pegs/page.tsx` with canonical `/alt-pegs/` through `buildPageMetadata(...)`.
+
+Focused chart inspection stays on the same route through query-param state:
+
+- `?view=focused`
+- `?chart=share|cohorts`
+- `?range=7d|30d|90d|1y|all`
+
+The canonical route remains `/alt-pegs/`; focused query states are shareable inspection views, not separate canonical pages.
+On the share chart, `range=all` means all currently loaded points from the 5-year `non-usd-share` endpoint window rather than unbounded history.
 
 ---
 
@@ -55,6 +64,7 @@ Important contract:
 - `GET /api/stablecoins` does not expose `pegCurrency` directly on the live rows.
 - `src/lib/alt-peg-market.ts` must join live rows against tracked frontend metadata before filtering to non-USD cohorts.
 - The route must not add a worker/API endpoint unless the current frontend joins stop being sufficient.
+- The current non-commodity historical bucket exposed by `useNonUsdShare()` is not pure fiat-only history; it includes currency-linked plus other non-commodity non-USD pegs. Route copy should stay honest about that unless the data contract changes.
 
 ---
 
@@ -68,9 +78,15 @@ Important contract:
 4. `NonUsdShareChart`
 5. `AltPegCohortHistoryChart`
 
-`page.tsx` then renders `StaticAltPegLinkHub` after the client surface so the peg drill-down links are present in static HTML. The fiat side of the hub gets the dominant layout column and groups its cohorts by region.
+`page.tsx` then renders `StaticAltPegLinkHub` after the client surface so the peg drill-down links are present in static HTML. The fiat side of the hub gets the dominant layout column as a fiat-only geography lens on larger breakpoints, with a region-grid fallback on small screens. Commodity and CPI-linked cohorts stay in an explicit off-map sidecar because they are non-geographic references.
 
 The route intentionally keeps all current-state modules ahead of the historical modules to reduce trust issues caused by mixed source cadences.
+
+Current Release 1 behavior:
+
+- both historical charts default to `1Y`
+- each chart surfaces explicit unit, denominator, coverage-start, cadence, and provenance notes
+- each historical card can enter a same-route focused inspection mode through the query state above
 
 ---
 
@@ -82,6 +98,7 @@ The route intentionally keeps all current-state modules ahead of the historical 
 - The command palette picks the route up automatically through shared nav config.
 - `scripts/generate-llms-txt.ts` includes `/alt-pegs/` in the generated `public/llms.txt`.
 - `StaticAltPegLinkHub` is part of the static route output, so `out/alt-pegs/index.html` contains crawlable links into representative non-USD peg cohorts even though the visible analytics surface is client-rendered.
+- The static link hub's desktop treatment is intentionally fiat-only on the atlas; non-geographic references remain crawlable in the same HTML via the sidecar cards.
 
 ---
 
@@ -106,6 +123,7 @@ Update this doc when any of these contracts change:
 - route title, canonical path, or metadata ownership
 - section order
 - frontend-only data model assumptions
+- focused chart query-state behavior
 - crawlability pattern for peg links
 - homepage teaser integration
 - nav, sitemap, or `/llms.txt` discoverability rules

@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo } from "react";
+import { useCallback, useMemo, useState } from "react";
 import Link from "next/link";
 import { ArrowRight } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -9,6 +9,8 @@ import { SectionErrorBoundary } from "@/components/section-error-boundary";
 import { StaleDataBanner } from "@/components/stale-data-banner";
 import { NonUsdShareChart } from "@/components/non-usd-share-chart";
 import { useNonUsdShare } from "@/hooks/api-hooks";
+import { TimeRangeOption, isTimeRangeOption } from "@/hooks/use-time-range-filter";
+import { useUrlFilters } from "@/hooks/use-url-filters";
 import { useStablecoins } from "@/hooks/use-stablecoins";
 import { AltPegCohortHistoryChart } from "./alt-peg-cohort-history-chart";
 import {
@@ -18,9 +20,17 @@ import {
 import { formatCurrency, formatPercent, formatSignedPercent } from "@shared/lib/format";
 import { API_FRESHNESS_MAX_AGE_SEC } from "@shared/lib/api-freshness";
 
+type FocusedChart = "share" | "cohorts";
+
+const DEFAULT_HISTORY_RANGE: TimeRangeOption = "1y";
+
 function formatPctPointDelta(value: number | null): string {
   if (value == null) return "—";
   return `${value > 0 ? "+" : ""}${value.toFixed(2)} pts`;
+}
+
+function isFocusedChart(value: string | null): value is FocusedChart {
+  return value === "share" || value === "cohorts";
 }
 
 function AltPegSnapshotHero({
@@ -41,7 +51,7 @@ function AltPegSnapshotHero({
   yearlyShareDeltaPctPoints: number | null;
 }) {
   const commodityShare = marketCap > 0 ? (commodityMarketCap / marketCap) * 100 : 0;
-  const fiatShare = marketCap > 0 ? (fiatNonUsdMarketCap / marketCap) * 100 : 0;
+  const nonCommodityShare = marketCap > 0 ? (fiatNonUsdMarketCap / marketCap) * 100 : 0;
 
   return (
     <section className="pharos-card-shell overflow-hidden">
@@ -54,11 +64,12 @@ function AltPegSnapshotHero({
                 {formatCurrency(marketCap, 1)}
               </h2>
               <p className="text-base font-medium text-foreground">
-                {formatPercent(sharePct)} of the tracked stablecoin market now sits outside USD pegs.
+                {formatPercent(sharePct)} of the tracked stablecoin market now sits outside USD pegs across
+                commodities, currency-linked cohorts, and other non-commodity structures.
               </p>
               <p className="pharos-meta max-w-2xl">
-                Use this surface to see whether non-USD growth is broadening, which peg cohorts matter now, and where
-                to drill down next.
+                This surface covers all alt-pegs, not only fiat-linked stables. The split below keeps commodities
+                beside currency-linked plus other non-commodity non-USD pegs so you can see which side leads right now.
               </p>
             </div>
           </div>
@@ -75,7 +86,7 @@ function AltPegSnapshotHero({
               <p className="mt-1 font-mono text-lg font-semibold text-foreground">{altCoinCount}</p>
             </div>
             <div className="rounded-2xl border border-border/60 bg-muted/15 px-3 py-3">
-              <p className="pharos-kicker">Active Pegs</p>
+              <p className="pharos-kicker">Active Peg Cohorts</p>
               <p className="mt-1 font-mono text-lg font-semibold text-foreground">{altPegCount}</p>
             </div>
           </div>
@@ -83,23 +94,23 @@ function AltPegSnapshotHero({
 
         <div className="space-y-4 rounded-[1.35rem] border border-border/60 bg-muted/12 p-4">
           <div className="space-y-1">
-            <p className="pharos-kicker">Non-USD Mix</p>
+            <p className="pharos-kicker">All Alt-Peg Mix</p>
             <p className="text-sm text-muted-foreground">
-              Commodity-linked and fiat-linked cohorts both shape the segment today; use the distribution table below to
-              see which one actually dominates right now.
+              This split is commodities versus non-commodity non-USD cohorts. The non-commodity side includes
+              currency-linked plus VAR and other non-commodity pegs tracked by Pharos.
             </p>
           </div>
           <div className="h-3 w-full overflow-hidden rounded-full bg-muted/35">
             <div className="h-full bg-[color:var(--chart-5)]" style={{ width: `${commodityShare}%` }} />
-            <div className="h-full bg-[color:var(--brand-accent)]" style={{ width: `${fiatShare}%` }} />
+            <div className="h-full bg-[color:var(--brand-accent)]" style={{ width: `${nonCommodityShare}%` }} />
           </div>
           <div className="grid gap-3 sm:grid-cols-2">
             <div className="rounded-xl border border-border/50 bg-background/45 px-3 py-3">
-              <p className="pharos-kicker">Fiat Non-USD</p>
+              <p className="pharos-kicker">Non-commodity Non-USD</p>
               <p className="mt-1 font-mono text-base font-semibold text-foreground">
                 {formatCurrency(fiatNonUsdMarketCap, 1)}
               </p>
-              <p className="mt-1 text-xs text-muted-foreground">{formatPercent(fiatShare)} of alt-peg market</p>
+              <p className="mt-1 text-xs text-muted-foreground">{formatPercent(nonCommodityShare)} of alt-peg market</p>
             </div>
             <div className="rounded-xl border border-border/50 bg-background/45 px-3 py-3">
               <p className="pharos-kicker">Commodities</p>
@@ -210,12 +221,58 @@ function AltPegDistributionCard({
 export function AltPegsClient() {
   const stablecoinsQuery = useStablecoins();
   const shareQuery = useNonUsdShare();
+  const { searchParams, pushSearchParams, replaceParams } = useUrlFilters();
 
   const snapshot = useMemo(
     () => buildAltPegSnapshot(stablecoinsQuery.data?.peggedAssets),
     [stablecoinsQuery.data?.peggedAssets],
   );
   const trendStats = useMemo(() => buildAltPegTrendStats(shareQuery.data), [shareQuery.data]);
+  const focusedChart = useMemo(() => {
+    const view = searchParams.get("view");
+    const chart = searchParams.get("chart");
+    return view === "focused" && isFocusedChart(chart) ? chart : null;
+  }, [searchParams]);
+  const focusedRange = useMemo(() => {
+    const range = searchParams.get("range");
+    return range && isTimeRangeOption(range) ? range : DEFAULT_HISTORY_RANGE;
+  }, [searchParams]);
+  const [shareRange, setShareRange] = useState<TimeRangeOption>(() =>
+    focusedChart === "share" ? focusedRange : DEFAULT_HISTORY_RANGE,
+  );
+  const [cohortRange, setCohortRange] = useState<TimeRangeOption>(() =>
+    focusedChart === "cohorts" ? focusedRange : DEFAULT_HISTORY_RANGE,
+  );
+
+  const openFocusedChart = useCallback(
+    (chart: FocusedChart, range: TimeRangeOption) => {
+      pushSearchParams((params) => {
+        params.set("view", "focused");
+        params.set("chart", chart);
+        params.set("range", range);
+      });
+    },
+    [pushSearchParams],
+  );
+
+  const closeFocusedChart = useCallback(() => {
+    replaceParams((params) => {
+      params.delete("view");
+      params.delete("chart");
+      params.delete("range");
+    });
+  }, [replaceParams]);
+
+  const setFocusedRange = useCallback(
+    (chart: FocusedChart, range: TimeRangeOption) => {
+      replaceParams((params) => {
+        params.set("view", "focused");
+        params.set("chart", chart);
+        params.set("range", range);
+      });
+    },
+    [replaceParams],
+  );
 
   if (stablecoinsQuery.isLoading && !stablecoinsQuery.data?.peggedAssets?.length) {
     return (
@@ -278,32 +335,58 @@ export function AltPegsClient() {
           <div className="flex flex-wrap items-center justify-between gap-2">
             <div className="space-y-1">
               <p className="pharos-kicker">History</p>
-              <h2 className="pharos-section-title">How Fast Is The Non-USD Share Growing?</h2>
+              <h2 className="pharos-section-title">How Much Of The Total Stablecoin Market Sits Outside USD?</h2>
               <p className="pharos-meta">
                 {trendStats?.yearlyMarketCapChangePct != null ? (
                   <>
-                    Alt-peg market cap is {formatSignedPercent(trendStats.yearlyMarketCapChangePct, 1)} versus the
-                    nearest point one year ago.
+                    Current outside-USD segment size is {formatSignedPercent(trendStats.yearlyMarketCapChangePct, 1)}{" "}
+                    versus the nearest point one year ago.
                   </>
                 ) : (
-                  "Historical share data tracks the non-USD market as one combined segment before you split by cohort."
+                  "This first history view tracks share of the total stablecoin market outside USD before you split the segment into individual cohorts."
                 )}
               </p>
             </div>
-            <Link
-              href="/stablecoins/eur/"
-              className="pharos-focus-ring inline-flex items-center gap-1 rounded-sm text-xs text-muted-foreground hover:text-foreground"
-            >
-              Start with EUR
-              <ArrowRight className="h-3 w-3" />
-            </Link>
+            {snapshot.topRows[0] ? (
+              <Link
+                href={snapshot.topRows[0].href}
+                className="pharos-focus-ring inline-flex items-center gap-1 rounded-sm text-xs text-muted-foreground hover:text-foreground"
+              >
+                Largest current cohort: {snapshot.topRows[0].label}
+                <ArrowRight className="h-3 w-3" />
+              </Link>
+            ) : null}
           </div>
-          <NonUsdShareChart />
+          <NonUsdShareChart
+            key={focusedChart === "share" ? `share-focused-${focusedRange}` : `share-overview-${shareRange}`}
+            initialRange={focusedChart === "share" ? focusedRange : shareRange}
+            isFocused={focusedChart === "share"}
+            onOpenFocus={(range) => openFocusedChart("share", range)}
+            onCloseFocus={closeFocusedChart}
+            onRangeChange={(range) => {
+              setShareRange(range);
+              if (focusedChart === "share") {
+                setFocusedRange("share", range);
+              }
+            }}
+          />
         </section>
       </SectionErrorBoundary>
 
       <SectionErrorBoundary name="alt-peg-cohort-growth">
-        <AltPegCohortHistoryChart />
+        <AltPegCohortHistoryChart
+          key={focusedChart === "cohorts" ? `cohorts-focused-${focusedRange}` : `cohorts-overview-${cohortRange}`}
+          initialRange={focusedChart === "cohorts" ? focusedRange : cohortRange}
+          isFocused={focusedChart === "cohorts"}
+          onOpenFocus={(range) => openFocusedChart("cohorts", range)}
+          onCloseFocus={closeFocusedChart}
+          onRangeChange={(range) => {
+            setCohortRange(range);
+            if (focusedChart === "cohorts") {
+              setFocusedRange("cohorts", range);
+            }
+          }}
+        />
       </SectionErrorBoundary>
     </div>
   );

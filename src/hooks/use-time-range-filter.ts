@@ -5,6 +5,7 @@ import { useMemo, useState } from "react";
 export type TimeRangeOption = "7d" | "30d" | "90d" | "1y" | "all";
 
 const DEFAULT_OPTIONS: TimeRangeOption[] = ["7d", "30d", "90d", "1y", "all"];
+const DEFAULT_RANGE: TimeRangeOption = "all";
 
 const RANGE_MS: Record<string, number> = {
   "7d": 7 * 86400000,
@@ -13,13 +14,24 @@ const RANGE_MS: Record<string, number> = {
   "1y": 365 * 86400000,
 };
 
+export function isTimeRangeOption(value: string): value is TimeRangeOption {
+  return DEFAULT_OPTIONS.includes(value as TimeRangeOption);
+}
+
+interface UseTimeRangeFilterConfig {
+  initialRange?: TimeRangeOption;
+}
+
 export function useTimeRangeFilter<T extends Record<K, number>, K extends keyof T>(
   data: T[],
   tsKey: K,
-  options: TimeRangeOption[] = DEFAULT_OPTIONS
+  options: TimeRangeOption[] = DEFAULT_OPTIONS,
+  config: UseTimeRangeFilterConfig = {},
 ) {
-  const defaultRange = options[options.length - 1] ?? "all";
-  const [range, setRange] = useState<TimeRangeOption>(defaultRange);
+  const fallbackRange = options[options.length - 1] ?? DEFAULT_RANGE;
+  const initialRange =
+    config.initialRange && options.includes(config.initialRange) ? config.initialRange : fallbackRange;
+  const [range, setRange] = useState<TimeRangeOption>(initialRange);
 
   const filteredData = useMemo(() => {
     if (range === "all" || data.length === 0) return data;

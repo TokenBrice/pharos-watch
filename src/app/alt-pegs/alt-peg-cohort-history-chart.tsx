@@ -1,13 +1,14 @@
 "use client";
 
 import { useMemo } from "react";
+import { Maximize2, Minimize2 } from "lucide-react";
 import { Area, AreaChart } from "recharts";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useChartShell } from "@/hooks/use-chart-shell";
 import { useStablecoinCharts } from "@/hooks/api-hooks";
 import { TimeRangeButtons } from "@/components/time-range-buttons";
-import { useTimeRangeFilter } from "@/hooks/use-time-range-filter";
+import { TimeRangeOption, useTimeRangeFilter } from "@/hooks/use-time-range-filter";
 import { DateTooltip, MonoYAxis, TimeGrid, TimeXAxis } from "@/components/chart-primitives";
 import { computeChartYDomain } from "@/lib/chart-utils";
 import { CHART_HEIGHT } from "@/lib/chart-colors";
@@ -18,6 +19,9 @@ import { PharosChartTooltip, TooltipLabel, TooltipRow } from "@/components/pharo
 const OTHER_KEY = "peggedOther";
 const OTHER_THRESHOLD = 5_000_000;
 const OTHER_COLOR = PEG_CHART_COLORS.OTHER.hex;
+const RANGE_OPTIONS: TimeRangeOption[] = ["7d", "30d", "90d", "1y", "all"];
+const DEFAULT_RANGE: TimeRangeOption = "1y";
+const FOCUSED_CHART_HEIGHT = "h-[24rem] sm:h-[30rem]";
 
 function pegKeyToCode(key: string): string {
   return key.replace(/^pegged/, "");
@@ -76,7 +80,21 @@ function CohortTooltip({ active, payload, label, pegKeys }: ChartTooltipProps) {
   );
 }
 
-export function AltPegCohortHistoryChart() {
+interface AltPegCohortHistoryChartProps {
+  initialRange?: TimeRangeOption;
+  isFocused?: boolean;
+  onOpenFocus?: (range: TimeRangeOption) => void;
+  onCloseFocus?: () => void;
+  onRangeChange?: (range: TimeRangeOption) => void;
+}
+
+export function AltPegCohortHistoryChart({
+  initialRange = DEFAULT_RANGE,
+  isFocused = false,
+  onOpenFocus,
+  onCloseFocus,
+  onRangeChange,
+}: AltPegCohortHistoryChartProps = {}) {
   const { data, isLoading } = useStablecoinCharts();
   const { animProps, handleAnimationEnd, chartContainerRef, isChartReady, width, height } =
     useChartShell<HTMLDivElement>();
@@ -140,7 +158,17 @@ export function AltPegCohortHistoryChart() {
     };
   }, [data]);
 
-  const { range, setRange, filteredData, options } = useTimeRangeFilter(chartData, "ts");
+  const coverageStartLabel = chartData[0] ? formatChartDate(chartData[0].ts, "long") : null;
+  const chartHeightClass = isFocused ? FOCUSED_CHART_HEIGHT : CHART_HEIGHT;
+
+  const { range, setRange, filteredData, options } = useTimeRangeFilter(chartData, "ts", RANGE_OPTIONS, {
+    initialRange,
+  });
+  const handleRangeChange = (nextRange: TimeRangeOption) => {
+    setRange(nextRange);
+    onRangeChange?.(nextRange);
+  };
+
   const yDomain = useMemo(
     () =>
       computeChartYDomain(
@@ -170,25 +198,63 @@ export function AltPegCohortHistoryChart() {
 
   return (
     <Card className="pharos-card-shell animate-in fade-in duration-300">
-      <CardHeader className="flex flex-row items-center justify-between gap-3">
+      <CardHeader className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div className="space-y-1">
           <CardTitle as="h2" className="pharos-section-title">
-            Alt-Peg Cohort Growth
+            Alt-Peg Market Cap By Cohort
           </CardTitle>
           <p className="pharos-meta">
-            {pegCount} non-USD pegs tracked · {formatCurrency(totalNonUsd, 1)} current market cap.
+            {legendKeys.length} currently visible cohorts in this feed &middot; current alt-peg market cap:{" "}
+            {formatCurrency(totalNonUsd, 1)}.
           </p>
+          {coverageStartLabel ? (
+            <p className="text-xs text-muted-foreground">
+              Coverage starts {coverageStartLabel}. This uses the cached stablecoin-charts cohort market-cap feed with
+              a fresher live tail point, so read it as a composition view rather than an exact historical ledger.
+              Cohorts below the current ${OTHER_THRESHOLD.toLocaleString("en-US")} latest-point threshold roll into
+              Other.
+            </p>
+          ) : null}
+          {isFocused ? (
+            <p className="text-xs text-muted-foreground">
+              Focused view &middot; shareable URL &middot; this chart measures cohort dollar market cap, not share of
+              the total stablecoin market.
+            </p>
+          ) : null}
         </div>
-        <TimeRangeButtons options={options} value={range} onChange={setRange} />
+        <div className="flex flex-wrap items-center justify-end gap-2">
+          <TimeRangeButtons options={options} value={range} onChange={handleRangeChange} />
+          {isFocused ? (
+            <button
+              type="button"
+              onClick={onCloseFocus}
+              aria-label="Return cohort chart to overview"
+              className="pharos-focus-ring inline-flex items-center gap-1 rounded-sm text-xs text-muted-foreground hover:text-foreground"
+            >
+              <Minimize2 className="h-3.5 w-3.5" />
+              Return cohort chart to overview
+            </button>
+          ) : (
+            <button
+              type="button"
+              onClick={() => onOpenFocus?.(range)}
+              aria-label="Open large cohort chart"
+              className="pharos-focus-ring inline-flex items-center gap-1 rounded-sm text-xs text-muted-foreground hover:text-foreground"
+            >
+              <Maximize2 className="h-3.5 w-3.5" />
+              Open large cohort chart
+            </button>
+          )}
+        </div>
       </CardHeader>
       <CardContent className="space-y-4">
         {filteredData.length > 0 ? (
           <>
             <div
               ref={chartContainerRef}
-              className={CHART_HEIGHT}
+              className={chartHeightClass}
               role="figure"
-              aria-label={`Alt-peg cohort growth chart covering ${pegCount} peg currencies`}
+              aria-label={`Alt-peg market-cap-by-cohort chart covering ${pegCount} peg currencies`}
             >
               {isChartReady ? (
                 <AreaChart
@@ -256,7 +322,7 @@ export function AltPegCohortHistoryChart() {
             </div>
           </>
         ) : (
-          <div className={`flex ${CHART_HEIGHT} items-center justify-center text-muted-foreground`}>
+          <div className={`flex ${chartHeightClass} items-center justify-center text-muted-foreground`}>
             No cohort-growth data available
           </div>
         )}

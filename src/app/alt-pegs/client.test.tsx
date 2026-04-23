@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 
-import { render, screen } from "@testing-library/react";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { AltPegsClient } from "@/app/alt-pegs/client";
 
 const refetchMock = vi.fn();
@@ -23,11 +23,64 @@ vi.mock("@/hooks/api-hooks", () => ({
 }));
 
 vi.mock("@/components/non-usd-share-chart", () => ({
-  NonUsdShareChart: () => <div data-testid="non-usd-share-chart">non-usd-share-chart</div>,
+  NonUsdShareChart: ({
+    initialRange,
+    isFocused,
+    onOpenFocus,
+    onCloseFocus,
+    onRangeChange,
+  }: {
+    initialRange?: string;
+    isFocused?: boolean;
+    onOpenFocus?: (value: string) => void;
+    onCloseFocus?: () => void;
+    onRangeChange?: (value: string) => void;
+  }) => (
+    <div data-testid="non-usd-share-chart">
+      share-chart {isFocused ? "focused" : "default"} {initialRange}
+      <button type="button" onClick={() => onOpenFocus?.("90d")}>
+        open-share
+      </button>
+      <button type="button" onClick={() => onOpenFocus?.("all")}>
+        open-share-all
+      </button>
+      <button type="button" onClick={() => onCloseFocus?.()}>
+        close-share
+      </button>
+      <button type="button" onClick={() => onRangeChange?.("30d")}>
+        range-share
+      </button>
+    </div>
+  ),
 }));
 
 vi.mock("@/app/alt-pegs/alt-peg-cohort-history-chart", () => ({
-  AltPegCohortHistoryChart: () => <div data-testid="alt-peg-cohort-chart">alt-peg-cohort-chart</div>,
+  AltPegCohortHistoryChart: ({
+    initialRange,
+    isFocused,
+    onOpenFocus,
+    onCloseFocus,
+    onRangeChange,
+  }: {
+    initialRange?: string;
+    isFocused?: boolean;
+    onOpenFocus?: (value: string) => void;
+    onCloseFocus?: () => void;
+    onRangeChange?: (value: string) => void;
+  }) => (
+    <div data-testid="alt-peg-cohort-chart">
+      cohort-chart {isFocused ? "focused" : "default"} {initialRange}
+      <button type="button" onClick={() => onOpenFocus?.("90d")}>
+        open-cohorts
+      </button>
+      <button type="button" onClick={() => onCloseFocus?.()}>
+        close-cohorts
+      </button>
+      <button type="button" onClick={() => onRangeChange?.("all")}>
+        range-cohorts
+      </button>
+    </div>
+  ),
 }));
 
 function makeCoin(id: string, marketCap: number) {
@@ -57,8 +110,20 @@ function makeCoin(id: string, marketCap: number) {
   };
 }
 
+function expectFocusSearch(expected: { view?: string | null; chart?: string | null; range?: string | null }) {
+  const params = new URLSearchParams(window.location.search);
+  expect(params.get("view")).toBe(expected.view ?? null);
+  expect(params.get("chart")).toBe(expected.chart ?? null);
+  expect(params.get("range")).toBe(expected.range ?? null);
+}
+
 describe("AltPegsClient", () => {
+  afterEach(() => {
+    cleanup();
+  });
+
   beforeEach(() => {
+    window.history.replaceState(null, "", "/alt-pegs/");
     refetchMock.mockReset();
     useStablecoinsMock.mockReturnValue({
       data: {
@@ -105,9 +170,11 @@ describe("AltPegsClient", () => {
     render(<AltPegsClient />);
 
     expect(screen.getByRole("heading", { name: "Which Non-USD Pegs Matter Now" })).toBeTruthy();
-    expect(screen.getByRole("heading", { name: "How Fast Is The Non-USD Share Growing?" })).toBeTruthy();
+    expect(screen.getByRole("heading", { name: "How Much Of The Total Stablecoin Market Sits Outside USD?" })).toBeTruthy();
     expect(screen.getByTestId("non-usd-share-chart")).toBeTruthy();
     expect(screen.getByTestId("alt-peg-cohort-chart")).toBeTruthy();
+    expect(screen.getByText(/share-chart default 1y/i)).toBeTruthy();
+    expect(screen.getByText(/cohort-chart default 1y/i)).toBeTruthy();
   });
 
   it("renders peg drill-down links from the distribution card", () => {
@@ -119,5 +186,99 @@ describe("AltPegsClient", () => {
     expect(
       screen.getAllByRole("link", { name: "Gold" }).some((link) => link.getAttribute("href") === "/stablecoins/gold"),
     ).toBe(true);
+  });
+
+  it("restores a focused share chart from the URL", () => {
+    window.history.replaceState(null, "", "/alt-pegs/?view=focused&chart=share&range=90d");
+
+    render(<AltPegsClient />);
+
+    expect(screen.getByText(/share-chart focused 90d/i)).toBeTruthy();
+    expect(screen.getByText(/cohort-chart default 1y/i)).toBeTruthy();
+  });
+
+  it("opens and updates a focused share chart through URL state", async () => {
+    render(<AltPegsClient />);
+
+    fireEvent.click(screen.getByRole("button", { name: "open-share" }));
+
+    await waitFor(() => {
+      expectFocusSearch({ view: "focused", chart: "share", range: "90d" });
+    });
+
+    fireEvent.click(screen.getByRole("button", { name: "range-share" }));
+
+    await waitFor(() => {
+      expectFocusSearch({ view: "focused", chart: "share", range: "30d" });
+    });
+  });
+
+  it("keeps an explicit all-range focused share URL", async () => {
+    render(<AltPegsClient />);
+
+    fireEvent.click(screen.getByRole("button", { name: "open-share-all" }));
+
+    await waitFor(() => {
+      expectFocusSearch({ view: "focused", chart: "share", range: "all" });
+    });
+  });
+
+  it("closes the focused share chart and clears focus params", async () => {
+    window.history.replaceState(null, "", "/alt-pegs/?view=focused&chart=share&range=90d");
+
+    render(<AltPegsClient />);
+    fireEvent.click(screen.getByRole("button", { name: "close-share" }));
+
+    await waitFor(() => {
+      expectFocusSearch({});
+    });
+  });
+
+  it("opens, updates, and closes a focused cohort chart through URL state", async () => {
+    render(<AltPegsClient />);
+
+    fireEvent.click(screen.getByRole("button", { name: "open-cohorts" }));
+
+    await waitFor(() => {
+      expectFocusSearch({ view: "focused", chart: "cohorts", range: "90d" });
+    });
+
+    fireEvent.click(screen.getByRole("button", { name: "range-cohorts" }));
+
+    await waitFor(() => {
+      expectFocusSearch({ view: "focused", chart: "cohorts", range: "all" });
+    });
+
+    fireEvent.click(screen.getByRole("button", { name: "close-cohorts" }));
+
+    await waitFor(() => {
+      expectFocusSearch({});
+    });
+  });
+
+  it("responds to popstate changes for focused chart URLs", async () => {
+    render(<AltPegsClient />);
+
+    await waitFor(() => {
+      expect(screen.getByText(/share-chart default 1y/i)).toBeTruthy();
+    });
+
+    act(() => {
+      window.history.replaceState(null, "", "/alt-pegs/?view=focused&chart=share&range=90d");
+      window.dispatchEvent(new PopStateEvent("popstate"));
+    });
+
+    await waitFor(() => {
+      expect(screen.getByText(/share-chart focused 90d/i)).toBeTruthy();
+    });
+
+    act(() => {
+      window.history.replaceState(null, "", "/alt-pegs/");
+      window.dispatchEvent(new PopStateEvent("popstate"));
+    });
+
+    await waitFor(() => {
+      expect(screen.getByText(/share-chart default 1y/i)).toBeTruthy();
+    });
   });
 });

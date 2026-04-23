@@ -21,9 +21,10 @@ const DEFAULT_OVERFLOW_SETTLE_SAMPLES = 4;
 const DEFAULT_OVERFLOW_SAMPLE_INTERVAL_MS = 350;
 const DEFAULT_STYLE_READY_TIMEOUT_MS = 4000;
 const DEFAULT_OVERFLOW_RETRY_EXTRA_WAIT_MS = 2000;
-const DEFAULT_LIVE_CANARY_ROUTE = "/yield/";
+const DEFAULT_LIVE_CANARY_ROUTES = ["/yield/", "/alt-pegs/"];
 const OVERFLOW_ROUTE_DEFAULTS = [
   "/",
+  "/alt-pegs/",
   "/dependency-map/",
   "/flows/",
   "/yield/",
@@ -152,7 +153,15 @@ function getOverflowRoutes(mode) {
     return fromEnv;
   }
   if (mode === "live") {
-    return [normalizeRoute(process.env.SMOKE_UI_CANARY_ROUTE ?? DEFAULT_LIVE_CANARY_ROUTE)];
+    const liveCanaries = (process.env.SMOKE_UI_CANARY_ROUTE ?? "")
+      .split(",")
+      .map((route) => route.trim())
+      .filter(Boolean)
+      .map((route) => normalizeRoute(route));
+    if (liveCanaries.length > 0) {
+      return liveCanaries;
+    }
+    return DEFAULT_LIVE_CANARY_ROUTES;
   }
   return OVERFLOW_ROUTE_DEFAULTS;
 }

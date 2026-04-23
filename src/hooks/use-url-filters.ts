@@ -6,12 +6,10 @@ import { useCallback, useEffect, useMemo, useState } from "react";
  * Shared hook for managing URL search-param-based filters.
  *
  * - `getParam(key, default?)` — read a param (falls back to default or "")
- * - `setParam(key, value)` — set a single param; deletes it when value is a
- *   "clear" sentinel ("all", "")
- * - `setParams(updates)` — batch-set multiple params in one history.replaceState()
+ * - `setParam(key, value)` / `setParams(updates)` — replace the current search state
+ * - `pushParam(key, value)` / `pushParams(updates)` — create a new history entry
  *
- * All updates use `history.replaceState()` to avoid scroll jumps and keep the
- * browser history clean without requiring App Router navigation.
+ * This keeps route-local filter state shareable without requiring App Router navigation.
  */
 
 export function isUrlFilterClearValue(value: string): boolean {
@@ -44,13 +42,17 @@ export function useUrlFilters() {
     [searchParams],
   );
 
-  const writeParams = useCallback((params: URLSearchParams) => {
+  const writeParams = useCallback((params: URLSearchParams, mode: "replace" | "push" = "replace") => {
     if (typeof window === "undefined") return;
     const qs = params.toString();
     const nextSearch = qs ? `?${qs}` : "";
     const nextUrl = `${window.location.pathname}${nextSearch}`;
     if (window.location.search !== nextSearch) {
-      window.history.replaceState(null, "", nextUrl);
+      if (mode === "push") {
+        window.history.pushState(null, "", nextUrl);
+      } else {
+        window.history.replaceState(null, "", nextUrl);
+      }
     }
     setSearch(nextSearch);
   }, []);
@@ -63,7 +65,20 @@ export function useUrlFilters() {
       } else {
         params.set(key, value);
       }
-      writeParams(params);
+      writeParams(params, "replace");
+    },
+    [searchParams, writeParams],
+  );
+
+  const pushParam = useCallback(
+    (key: string, value: string) => {
+      const params = new URLSearchParams(searchParams.toString());
+      if (isUrlFilterClearValue(value)) {
+        params.delete(key);
+      } else {
+        params.set(key, value);
+      }
+      writeParams(params, "push");
     },
     [searchParams, writeParams],
   );
@@ -78,7 +93,31 @@ export function useUrlFilters() {
           params.set(key, value);
         }
       }
-      writeParams(params);
+      writeParams(params, "replace");
+    },
+    [searchParams, writeParams],
+  );
+
+  const pushParams = useCallback(
+    (updates: Record<string, string>) => {
+      const params = new URLSearchParams(searchParams.toString());
+      for (const [key, value] of Object.entries(updates)) {
+        if (isUrlFilterClearValue(value)) {
+          params.delete(key);
+        } else {
+          params.set(key, value);
+        }
+      }
+      writeParams(params, "push");
+    },
+    [searchParams, writeParams],
+  );
+
+  const pushSearchParams = useCallback(
+    (updater: (params: URLSearchParams) => void) => {
+      const params = new URLSearchParams(searchParams.toString());
+      updater(params);
+      writeParams(params, "push");
     },
     [searchParams, writeParams],
   );
@@ -87,10 +126,10 @@ export function useUrlFilters() {
     (updater: (params: URLSearchParams) => void) => {
       const params = new URLSearchParams(searchParams.toString());
       updater(params);
-      writeParams(params);
+      writeParams(params, "replace");
     },
     [searchParams, writeParams],
   );
 
-  return { searchParams, getParam, setParam, setParams, replaceParams };
+  return { searchParams, getParam, setParam, pushParam, setParams, pushParams, pushSearchParams, replaceParams };
 }
