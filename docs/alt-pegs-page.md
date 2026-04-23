@@ -70,7 +70,7 @@ Important contract:
 
 ## Section Order
 
-The route renders `StaticAltPegLinkHub` before `AltPegsClient`. The static hero is a single dark, map-first `FiatWorldAtlas` card headed by `Peg Diversity Map`; it carries the region summary pills, the desktop world map, non-geographic reference markers, and the crawlable cohort links. The atlas owns its text colors instead of inheriting page foreground tokens because the map remains a dark cartographic surface in both site themes.
+The route renders `StaticAltPegLinkHub` before `AltPegsClient`. The static hero is a single theme-aware, map-first `FiatWorldAtlas` card headed by `Peg Diversity Map`; it carries the region summary pills, the desktop world map, non-geographic reference markers, and the crawlable cohort links. In light mode, the atlas uses a pale cartographic surface; dark mode keeps the higher-contrast night-map treatment.
 
 `AltPegsClient` then renders, in order:
 
@@ -100,7 +100,7 @@ Current Release 1 behavior:
 - The command palette picks the route up automatically through shared nav config.
 - `scripts/generate-llms-txt.ts` includes `/alt-pegs/` in the generated `public/llms.txt`.
 - `StaticAltPegLinkHub` is part of the static route output before the client analytics, so `out/alt-pegs/index.html` contains crawlable links into representative non-USD peg cohorts and exposes the peg diversity map as the route's first visible module.
-- The static link hub's treatment is a single dark `FiatWorldAtlas` hero card: Gold sun, Silver moon, and CPI/Index orbital references float on the desktop map, while a pre-rendered static SVG world map colors countries per `PEG_COUNTRY_MAP`. Commodity, CPI-linked, and other non-fiat reference cohorts stay crawlable through the desktop deadspot markers plus `Beyond Geography` link rail, and through the celestial band on narrower viewports; fiat cohorts use the world map plus region chips on desktop and the stacked `MobileRegionList` on narrower viewports.
+- The static link hub's treatment is a single theme-aware `FiatWorldAtlas` hero card: Gold sun, Silver moon, and CPI/Index orbital references float on the desktop map, while a pre-rendered static SVG world map colors countries per `PEG_COUNTRY_MAP`. Commodity, CPI-linked, and other non-fiat reference cohorts stay crawlable through the desktop deadspot markers plus `Beyond Geography` link rail, and through the celestial band on narrower viewports; fiat cohorts use the world map plus region chips on desktop and the stacked `MobileRegionList` on narrower viewports.
 
 ---
 

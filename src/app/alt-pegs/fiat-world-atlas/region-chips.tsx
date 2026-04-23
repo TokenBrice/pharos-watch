@@ -40,8 +40,10 @@ export function RegionSummaryPill({
       }}
     >
       <span className="inline-block h-2 w-2 rounded-full" style={{ backgroundColor: accentHex }} />
-      <span className="text-[11px] font-semibold uppercase tracking-[0.16em] text-white/92">{region}</span>
-      <span className="font-mono text-[11px] tabular-nums text-slate-300/86">
+      <span className="text-[11px] font-semibold uppercase tracking-[0.16em] text-foreground/90 dark:text-white/92">
+        {region}
+      </span>
+      <span className="font-mono text-[11px] tabular-nums text-muted-foreground dark:text-slate-300/86">
         {formatCohortCount(cohortCount)} · {formatCoinCount(coinCount)}
       </span>
     </div>
@@ -58,13 +60,13 @@ export function LinkChip({ item }: { item: AltPegLinkHubItem }) {
       href={item.href}
       aria-label={`${item.label}, ${formatCoinCount(item.coinCount)}${item.symbolPreview ? `. ${item.symbolPreview}` : ""}`}
       style={style}
-      className="pharos-focus-ring inline-flex min-h-10 flex-col rounded-lg border border-white/10 bg-white/[0.045] px-3 py-2 text-left transition-[background-color,border-color,color] hover:border-white/30 hover:bg-white/[0.08]"
+      className="pharos-focus-ring inline-flex min-h-10 flex-col rounded-lg border border-border/60 bg-background/45 px-3 py-2 text-left transition-[background-color,border-color,color] dark:border-white/10 dark:bg-white/[0.045]"
     >
-      <span className="inline-flex items-center gap-2 text-sm font-medium text-white">
+      <span className="inline-flex items-center gap-2 text-sm font-medium text-foreground dark:text-white">
         <span className="inline-block h-2.5 w-2.5 rounded-full" style={{ backgroundColor: item.colorHex }} />
         {item.label}
       </span>
-      <span className="mt-1 font-mono text-[11px] tabular-nums text-slate-300/86">
+      <span className="mt-1 font-mono text-[11px] tabular-nums text-muted-foreground dark:text-slate-300/86">
         {formatCoinCount(item.coinCount)}
         {item.symbolPreview ? ` · ${item.symbolPreview}` : ""}
       </span>
@@ -83,12 +85,12 @@ export function FiatRegionSection({ region, items }: { region: AltPegRegion; ite
           <span className="inline-block h-2.5 w-2.5 rounded-full" style={{ backgroundColor: accentHex }} />
           <h4
             id={`alt-peg-region-${slug}`}
-            className="text-[11px] font-semibold uppercase tracking-[0.18em] text-white/90"
+            className="text-[11px] font-semibold uppercase tracking-[0.18em] text-foreground/90 dark:text-white/90"
           >
             {region}
           </h4>
         </div>
-        <p className="font-mono text-[11px] tabular-nums text-slate-300/86">
+        <p className="font-mono text-[11px] tabular-nums text-muted-foreground dark:text-slate-300/86">
           {formatCohortCount(items.length)} · {formatCoinCount(coinCount)}
         </p>
       </div>

@@ -78,8 +78,8 @@ export function MapDeadspotReferences({ items }: { items: readonly AltPegLinkHub
               </span>
             </Link>
             <span className="flex flex-col items-center gap-0.5 text-center">
-              <span className="text-sm font-semibold tracking-tight text-white">{item.label}</span>
-              <span className="font-mono text-[10px] tabular-nums text-slate-300/82">
+              <span className="text-sm font-semibold tracking-tight text-foreground dark:text-white">{item.label}</span>
+              <span className="font-mono text-[10px] tabular-nums text-muted-foreground dark:text-slate-300/82">
                 {item.coinCount} coin{item.coinCount === 1 ? "" : "s"}
                 {item.symbolPreview ? ` · ${item.symbolPreview}` : ""}
               </span>

@@ -51,7 +51,7 @@ function Orbital({ body, maxCoinCount }: { body: OrbitalBody; maxCoinCount: numb
     <Link
       href={item.href}
       aria-label={`${item.label}, ${item.coinCount} coins`}
-      className="pharos-focus-ring group inline-flex items-center gap-3 rounded-2xl border border-white/12 bg-white/[0.055] px-3 py-2 transition-[background-color,border-color] hover:border-white/28 hover:bg-white/[0.09]"
+      className="pharos-focus-ring group inline-flex items-center gap-3 rounded-2xl border border-border/60 bg-background/55 px-3 py-2 transition-[background-color,border-color] hover:bg-accent/35 dark:border-white/12 dark:bg-white/[0.055] dark:hover:border-white/28 dark:hover:bg-white/[0.09]"
       data-orbital={kind}
       data-peg={item.peg}
       data-coin-count={item.coinCount}
@@ -62,8 +62,8 @@ function Orbital({ body, maxCoinCount }: { body: OrbitalBody; maxCoinCount: numb
         {kind === "index" ? <IndexGlyph color={item.colorHex} /> : null}
       </span>
       <span className="flex flex-col gap-0.5">
-        <span className="text-sm font-semibold tracking-tight text-white">{item.label}</span>
-        <span className="font-mono text-[11px] tabular-nums text-slate-300/86">
+        <span className="text-sm font-semibold tracking-tight text-foreground dark:text-white">{item.label}</span>
+        <span className="font-mono text-[11px] tabular-nums text-muted-foreground dark:text-slate-300/86">
           {item.coinCount} coin{item.coinCount === 1 ? "" : "s"}
           {item.symbolPreview ? ` · ${item.symbolPreview}` : ""}
         </span>
@@ -79,10 +79,10 @@ export function CelestialBand({ items }: { items: readonly AltPegLinkHubItem[] }
 
   return (
     <div
-      className="flex flex-wrap items-center gap-3 border-b border-white/10 px-4 py-3 sm:px-5 sm:py-4"
+      className="flex flex-wrap items-center gap-3 border-b border-border/60 px-4 py-3 dark:border-white/10 sm:px-5 sm:py-4"
       data-testid="celestial-band"
     >
-      <p className="mr-auto text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-300/86">
+      <p className="mr-auto text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-foreground dark:text-slate-300/86">
         References beyond geography
       </p>
       {bodies.map((body) => (

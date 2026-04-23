@@ -21,9 +21,11 @@ function formatCount(n: number, singular: string, plural = `${singular}s`): stri
 
 function AtlasMetric({ label, value }: { label: string; value: number }) {
   return (
-    <div className="min-w-0 border-l border-white/10 pl-3 first:border-l-0 first:pl-0">
-      <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-400">{label}</p>
-      <p className="mt-1 font-mono text-xl font-semibold tabular-nums text-white">{value}</p>
+    <div className="min-w-0 border-l border-border/70 pl-3 first:border-l-0 first:pl-0 dark:border-white/10">
+      <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground dark:text-slate-400">
+        {label}
+      </p>
+      <p className="mt-1 font-mono text-xl font-semibold tabular-nums text-foreground dark:text-white">{value}</p>
     </div>
   );
 }
@@ -45,11 +47,11 @@ function AtlasHeroHeader({
           <div className="space-y-2">
             <h2
               id="alt-peg-link-hub"
-              className="text-4xl font-black leading-[0.95] tracking-normal text-white sm:text-5xl"
+              className="text-4xl font-black leading-[0.95] tracking-normal text-foreground dark:text-white sm:text-5xl"
             >
               Peg Diversity Map
             </h2>
-            <p className="max-w-4xl text-sm leading-relaxed text-slate-300">
+            <p className="max-w-4xl text-sm leading-relaxed text-muted-foreground dark:text-slate-300">
               Static cohort links stay crawlable while the map shows how non-USD references spread across fiat regions,
               commodities, and index-linked pegs. Gold, Silver, and index-linked cohorts float over ocean deadspots
               because those references sit beyond any single monetary region.
@@ -57,7 +59,7 @@ function AtlasHeroHeader({
           </div>
         </div>
 
-        <div className="grid grid-cols-3 gap-3 border-t border-white/10 pt-4 lg:border-t-0 lg:pt-0">
+        <div className="grid grid-cols-3 gap-3 border-t border-border/70 pt-4 dark:border-white/10 lg:border-t-0 lg:pt-0">
           <AtlasMetric label="Cohorts" value={totalCohortCount} />
           <AtlasMetric label="Coins" value={totalCoinCount} />
           <AtlasMetric label="Regions" value={geoRegions.length} />
@@ -90,8 +92,10 @@ function BeyondGeographyRail({
   return (
     <section aria-label="References beyond geography" className="space-y-2">
       <div className="flex items-center justify-between gap-2">
-        <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-white/90">Beyond Geography</p>
-        <p className="font-mono text-[11px] tabular-nums text-slate-300/86">
+        <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-foreground/90 dark:text-white/90">
+          Beyond Geography
+        </p>
+        <p className="font-mono text-[11px] tabular-nums text-muted-foreground dark:text-slate-300/86">
           {formatCount(items.length, "cohort")} · {formatCount(referenceCoinCount, "coin")}
         </p>
       </div>
@@ -142,19 +146,19 @@ export function FiatWorldAtlas({
   return (
     <section
       aria-labelledby="alt-peg-link-hub"
-      className="relative overflow-hidden rounded-[1.45rem] border border-slate-950/15 bg-[oklch(0.105_0.012_248)] text-white shadow-[0_26px_70px_oklch(0_0_0_/0.22)] dark:border-white/10"
+      className="relative overflow-hidden rounded-[1.45rem] border border-border/70 bg-card/92 text-foreground shadow-[0_22px_60px_oklch(0_0_0_/0.12)] dark:border-white/10 dark:bg-[oklch(0.105_0.012_248)] dark:text-white dark:shadow-[0_26px_70px_oklch(0_0_0_/0.22)]"
     >
       <AtlasHeroHeader geoRegions={geoRegions} totalCohortCount={totalCohortCount} totalCoinCount={totalCoinCount} />
 
       <div data-alt-peg-layout="desktop-atlas" className="hidden xl:block">
-        <div className="relative border-y border-white/10 bg-[oklch(0.08_0.01_248)]">
+        <div className="relative border-y border-border/60 bg-[oklch(0.935_0.014_248)] dark:border-white/10 dark:bg-[oklch(0.08_0.01_248)]">
           <WorldMapInteractive countryInfo={countryInfo}>
             <WorldMap items={fiatItems} />
           </WorldMapInteractive>
           <MapEmblemClusters clusters={buildPegEmblemClusters()} />
           <MapDeadspotReferences items={commodityIndexItems} />
         </div>
-        <div className="grid gap-3 bg-white/[0.035] px-4 py-4 sm:grid-cols-2 sm:px-5 sm:py-5 lg:grid-cols-3">
+        <div className="grid gap-3 bg-background/45 px-4 py-4 dark:bg-white/[0.035] sm:grid-cols-2 sm:px-5 sm:py-5 lg:grid-cols-3">
           {geoRegions.map(({ region, items }) => (
             <FiatRegionSection key={region} region={region} items={items} />
           ))}
