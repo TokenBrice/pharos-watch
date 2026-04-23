@@ -59,6 +59,7 @@ Core query inputs:
 Derived helpers:
 
 - `buildHomepageViewModel(...)` in `src/components/homepage-client-view-model.ts` (calls `derivePegRates(...)` for non-USD peg display context)
+- `buildAltPegSnapshot(...)` in `src/lib/alt-peg-market.ts` for the Research Surfaces `HomepageAltPegsTeaser`
 - `useHomepageFilters()` for URL-backed table filters
 
 Page-level shared error and freshness surfaces:
@@ -197,9 +198,9 @@ This band contains:
 
 - `CategoryStats` (full-width)
 - `TotalMcapChart` (full-width)
-- `PegDiversityChart` and `NonUsdShareChart` side-by-side in a 2-col grid at `lg+`; stacked below `lg`.
+- `HomepageAltPegsTeaser` (full-width CTA surface into `/alt-pegs/`)
 
-All four components are wrapped in individual `SectionErrorBoundary` instances.
+All three components are wrapped in individual `SectionErrorBoundary` instances.
 
 ### Market Snapshot freshness
 
@@ -218,8 +219,6 @@ The heavier homepage sections are dynamically imported in `src/components/homepa
 - `DEWSSummary`
 - `HomepageFlowOverview`
 - `HomepageSafetyOverview`
-- `PegDiversityChart`
-- `NonUsdShareChart`
 - `DailyDigest`
 
 Each dynamic module uses a shape-matched skeleton rather than blocking the full page render.

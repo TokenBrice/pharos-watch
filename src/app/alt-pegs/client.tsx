@@ -1,0 +1,310 @@
+"use client";
+
+import { useMemo } from "react";
+import Link from "next/link";
+import { ArrowRight } from "lucide-react";
+import { Skeleton } from "@/components/ui/skeleton";
+import { QueryErrorNotice } from "@/components/query-error-notice";
+import { SectionErrorBoundary } from "@/components/section-error-boundary";
+import { StaleDataBanner } from "@/components/stale-data-banner";
+import { NonUsdShareChart } from "@/components/non-usd-share-chart";
+import { useNonUsdShare } from "@/hooks/api-hooks";
+import { useStablecoins } from "@/hooks/use-stablecoins";
+import { AltPegCohortHistoryChart } from "./alt-peg-cohort-history-chart";
+import {
+  buildAltPegSnapshot,
+  buildAltPegTrendStats,
+} from "@/lib/alt-peg-market";
+import { formatCurrency, formatPercent, formatSignedPercent } from "@shared/lib/format";
+import { API_FRESHNESS_MAX_AGE_SEC } from "@shared/lib/api-freshness";
+
+function formatPctPointDelta(value: number | null): string {
+  if (value == null) return "—";
+  return `${value > 0 ? "+" : ""}${value.toFixed(2)} pts`;
+}
+
+function AltPegSnapshotHero({
+  marketCap,
+  sharePct,
+  fiatNonUsdMarketCap,
+  commodityMarketCap,
+  altCoinCount,
+  altPegCount,
+  yearlyShareDeltaPctPoints,
+}: {
+  marketCap: number;
+  sharePct: number;
+  fiatNonUsdMarketCap: number;
+  commodityMarketCap: number;
+  altCoinCount: number;
+  altPegCount: number;
+  yearlyShareDeltaPctPoints: number | null;
+}) {
+  const commodityShare = marketCap > 0 ? (commodityMarketCap / marketCap) * 100 : 0;
+  const fiatShare = marketCap > 0 ? (fiatNonUsdMarketCap / marketCap) * 100 : 0;
+
+  return (
+    <section className="pharos-card-shell overflow-hidden">
+      <div className="grid gap-6 px-4 py-4 sm:px-5 sm:py-5 xl:grid-cols-[minmax(0,1.1fr)_minmax(20rem,0.9fr)] xl:items-start">
+        <div className="space-y-4">
+          <div className="space-y-2">
+            <p className="pharos-kicker">Current Structure</p>
+            <div className="space-y-1">
+              <h2 className="text-[clamp(2rem,4vw,3.4rem)] font-black tracking-[-0.04em] text-foreground">
+                {formatCurrency(marketCap, 1)}
+              </h2>
+              <p className="text-base font-medium text-foreground">
+                {formatPercent(sharePct)} of the tracked stablecoin market now sits outside USD pegs.
+              </p>
+              <p className="pharos-meta max-w-2xl">
+                Use this surface to see whether non-USD growth is broadening, which peg cohorts matter now, and where
+                to drill down next.
+              </p>
+            </div>
+          </div>
+
+          <div className="grid gap-3 sm:grid-cols-3">
+            <div className="rounded-2xl border border-border/60 bg-muted/15 px-3 py-3">
+              <p className="pharos-kicker">1Y Share Change</p>
+              <p className="mt-1 font-mono text-lg font-semibold text-foreground">
+                {formatPctPointDelta(yearlyShareDeltaPctPoints)}
+              </p>
+            </div>
+            <div className="rounded-2xl border border-border/60 bg-muted/15 px-3 py-3">
+              <p className="pharos-kicker">Tracked Coins</p>
+              <p className="mt-1 font-mono text-lg font-semibold text-foreground">{altCoinCount}</p>
+            </div>
+            <div className="rounded-2xl border border-border/60 bg-muted/15 px-3 py-3">
+              <p className="pharos-kicker">Active Pegs</p>
+              <p className="mt-1 font-mono text-lg font-semibold text-foreground">{altPegCount}</p>
+            </div>
+          </div>
+        </div>
+
+        <div className="space-y-4 rounded-[1.35rem] border border-border/60 bg-muted/12 p-4">
+          <div className="space-y-1">
+            <p className="pharos-kicker">Non-USD Mix</p>
+            <p className="text-sm text-muted-foreground">
+              Commodity-linked and fiat-linked cohorts both shape the segment today; use the distribution table below to
+              see which one actually dominates right now.
+            </p>
+          </div>
+          <div className="h-3 w-full overflow-hidden rounded-full bg-muted/35">
+            <div className="h-full bg-[color:var(--chart-5)]" style={{ width: `${commodityShare}%` }} />
+            <div className="h-full bg-[color:var(--brand-accent)]" style={{ width: `${fiatShare}%` }} />
+          </div>
+          <div className="grid gap-3 sm:grid-cols-2">
+            <div className="rounded-xl border border-border/50 bg-background/45 px-3 py-3">
+              <p className="pharos-kicker">Fiat Non-USD</p>
+              <p className="mt-1 font-mono text-base font-semibold text-foreground">
+                {formatCurrency(fiatNonUsdMarketCap, 1)}
+              </p>
+              <p className="mt-1 text-xs text-muted-foreground">{formatPercent(fiatShare)} of alt-peg market</p>
+            </div>
+            <div className="rounded-xl border border-border/50 bg-background/45 px-3 py-3">
+              <p className="pharos-kicker">Commodities</p>
+              <p className="mt-1 font-mono text-base font-semibold text-foreground">
+                {formatCurrency(commodityMarketCap, 1)}
+              </p>
+              <p className="mt-1 text-xs text-muted-foreground">{formatPercent(commodityShare)} of alt-peg market</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function AltPegDistributionCard({
+  rows,
+  altMarketCap,
+}: {
+  rows: ReturnType<typeof buildAltPegSnapshot>["distributionRows"];
+  altMarketCap: number;
+}) {
+  return (
+    <section className="space-y-3">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="space-y-1">
+          <p className="pharos-kicker">Current Distribution</p>
+          <h2 className="pharos-section-title">Which Non-USD Pegs Matter Now</h2>
+          <p className="pharos-meta">
+            Ranked by current market cap, with direct links into each peg cohort page.
+          </p>
+        </div>
+        <div className="rounded-full border border-border/60 bg-muted/15 px-3 py-1.5 font-mono text-xs text-muted-foreground">
+          {formatCurrency(altMarketCap, 1)} alt-peg market cap
+        </div>
+      </div>
+
+      <div className="pharos-card-shell overflow-hidden">
+        <div className="pharos-panel-header hidden grid-cols-[minmax(0,1.35fr)_minmax(0,0.7fr)_minmax(0,0.6fr)_minmax(0,0.85fr)] gap-4 md:grid">
+          <span className="pharos-kicker">Peg</span>
+          <span className="pharos-kicker">Market Cap</span>
+          <span className="pharos-kicker">Share</span>
+          <span className="pharos-kicker">Largest Coin</span>
+        </div>
+        <div className="divide-y divide-border/40">
+          {rows.map((row) => (
+            <div
+              key={row.peg}
+              className="grid gap-3 px-4 py-4 sm:px-5 md:grid-cols-[minmax(0,1.35fr)_minmax(0,0.7fr)_minmax(0,0.6fr)_minmax(0,0.85fr)] md:items-center"
+            >
+              <div className="space-y-2">
+                <div className="flex items-center gap-2">
+                  <span
+                    className="inline-block h-2.5 w-2.5 rounded-full"
+                    style={{ backgroundColor: row.colorHex }}
+                  />
+                  <Link
+                    href={row.href}
+                    className="pharos-focus-ring rounded-sm text-sm font-medium text-foreground hover:text-primary"
+                  >
+                    {row.label}
+                  </Link>
+                  <span className="rounded-full border border-border/60 bg-muted/15 px-2 py-0.5 font-mono text-[11px] text-muted-foreground">
+                    {row.coinCount} coin{row.coinCount === 1 ? "" : "s"}
+                  </span>
+                </div>
+                <div className="space-y-1">
+                  <div className="h-2 overflow-hidden rounded-full bg-muted/30">
+                    <div
+                      className="h-full rounded-full"
+                      style={{ width: `${Math.max(row.sharePct, 2)}%`, backgroundColor: row.colorHex }}
+                    />
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    {row.group} cohort · {formatPercent(row.sharePct)} of alt-peg market
+                  </p>
+                </div>
+              </div>
+
+              <div className="space-y-1">
+                <p className="pharos-kicker md:hidden">Market Cap</p>
+                <p className="font-mono text-sm font-semibold text-foreground">{formatCurrency(row.marketCap, 1)}</p>
+              </div>
+
+              <div className="space-y-1">
+                <p className="pharos-kicker md:hidden">Share</p>
+                <p className="font-mono text-sm font-semibold text-foreground">{formatPercent(row.sharePct)}</p>
+              </div>
+
+              <div className="space-y-1">
+                <p className="pharos-kicker md:hidden">Largest Coin</p>
+                <Link
+                  href={row.leaderHref}
+                  className="pharos-focus-ring rounded-sm text-sm font-medium text-foreground hover:text-primary"
+                >
+                  {row.leaderSymbol}
+                </Link>
+                <p className="text-xs text-muted-foreground">{row.leaderName}</p>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+}
+
+export function AltPegsClient() {
+  const stablecoinsQuery = useStablecoins();
+  const shareQuery = useNonUsdShare();
+
+  const snapshot = useMemo(
+    () => buildAltPegSnapshot(stablecoinsQuery.data?.peggedAssets),
+    [stablecoinsQuery.data?.peggedAssets],
+  );
+  const trendStats = useMemo(() => buildAltPegTrendStats(shareQuery.data), [shareQuery.data]);
+
+  if (stablecoinsQuery.isLoading && !stablecoinsQuery.data?.peggedAssets?.length) {
+    return (
+      <div className="space-y-6">
+        <Skeleton className="h-[280px] w-full rounded-xl" />
+        <Skeleton className="h-[520px] w-full rounded-xl" />
+        <Skeleton className="h-[360px] w-full rounded-xl" />
+        <Skeleton className="h-[360px] w-full rounded-xl" />
+      </div>
+    );
+  }
+
+  if (stablecoinsQuery.isError || (!stablecoinsQuery.isLoading && snapshot.altCoinCount === 0)) {
+    return (
+      <QueryErrorNotice
+        error={stablecoinsQuery.error ?? new Error("Alt-peg market data is temporarily unavailable.")}
+        hasData={false}
+        onRetry={() => {
+          void stablecoinsQuery.refetch();
+        }}
+      />
+    );
+  }
+
+  return (
+    <div className="space-y-6 animate-in fade-in duration-300">
+      <StaleDataBanner
+        queries={[
+          {
+            preset: "stablecoins",
+            dataUpdatedAt: stablecoinsQuery.dataUpdatedAt,
+            error: stablecoinsQuery.error,
+            hasData: snapshot.altCoinCount > 0,
+            meta: stablecoinsQuery.meta,
+          },
+          {
+            label: "Non-USD Share",
+            dataUpdatedAt: shareQuery.dataUpdatedAt,
+            staleTime: API_FRESHNESS_MAX_AGE_SEC.nonUsdShare * 1000,
+            error: shareQuery.error,
+            hasData: !!shareQuery.data?.length,
+          },
+        ]}
+      />
+
+      <AltPegSnapshotHero
+        marketCap={snapshot.altMarketCap}
+        sharePct={snapshot.altSharePct}
+        fiatNonUsdMarketCap={snapshot.fiatNonUsdMarketCap}
+        commodityMarketCap={snapshot.commodityMarketCap}
+        altCoinCount={snapshot.altCoinCount}
+        altPegCount={snapshot.altPegCount}
+        yearlyShareDeltaPctPoints={trendStats?.yearlyShareDeltaPctPoints ?? null}
+      />
+
+      <AltPegDistributionCard rows={snapshot.distributionRows} altMarketCap={snapshot.altMarketCap} />
+
+      <SectionErrorBoundary name="non-usd-share">
+        <section className="space-y-3">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <div className="space-y-1">
+              <p className="pharos-kicker">History</p>
+              <h2 className="pharos-section-title">How Fast Is The Non-USD Share Growing?</h2>
+              <p className="pharos-meta">
+                {trendStats?.yearlyMarketCapChangePct != null ? (
+                  <>
+                    Alt-peg market cap is {formatSignedPercent(trendStats.yearlyMarketCapChangePct, 1)} versus the
+                    nearest point one year ago.
+                  </>
+                ) : (
+                  "Historical share data tracks the non-USD market as one combined segment before you split by cohort."
+                )}
+              </p>
+            </div>
+            <Link
+              href="/stablecoins/eur/"
+              className="pharos-focus-ring inline-flex items-center gap-1 rounded-sm text-xs text-muted-foreground hover:text-foreground"
+            >
+              Start with EUR
+              <ArrowRight className="h-3 w-3" />
+            </Link>
+          </div>
+          <NonUsdShareChart />
+        </section>
+      </SectionErrorBoundary>
+
+      <SectionErrorBoundary name="alt-peg-cohort-growth">
+        <AltPegCohortHistoryChart />
+      </SectionErrorBoundary>
+    </div>
+  );
+}

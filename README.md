@@ -13,6 +13,7 @@ Public-facing analytics dashboard tracking 215 stablecoins in repo metadata: 204
 - **DEX Liquidity Score** — composite liquidity score (0–100) per stablecoin from DEX pool TVL, volume, quality, durability, and pair diversity
 - **DEX Price Cross-Validation** — implied prices from Curve, Uniswap V3, Aerodrome and Velodrome Slipstream, Fluid, Balancer, Raydium, Orca, Meteora, PancakeSwap, and DexScreener pools used to suppress false depeg alerts
 - **Coverage Matrix** — per-feature coverage breadth across tracked coins and tracked market cap
+- **Non-USD Market Structure** — dedicated route for euro, gold, CPI-linked, and other non-USD stablecoin cohorts, with current distribution and historical share growth
 - **Upcoming Stablecoins** — pre-launch tracker with phase, peg, and backing filters plus schedule-drift badges
 - **Chains** — per-chain stablecoin leaderboard and profile pages with Chain Health Score breakdowns
 - **Compare** — side-by-side stablecoin comparison across key metrics
@@ -136,6 +137,7 @@ cd worker && npx tsc --noEmit   # Type-check worker
 src/                              Frontend (Next.js static export)
 ├── app/
 │   ├── page.tsx                  Homepage: stats, charts, filters, peg tracker, table
+│   ├── alt-pegs/                 Non-USD market structure route
 │   ├── blacklist/                Freeze & blacklist event tracker
 │   ├── cemetery/                 Dead stablecoin graveyard
 │   ├── chains/                   Chain analytics leaderboard + per-chain profiles
@@ -198,6 +200,7 @@ worker/                           Cloudflare Worker (API + cron jobs)
 Current source-of-truth product docs live in `/docs/` and this README. `/agents/` stores working notes, plans, audits, and research history; treat it as archival context unless a file there explicitly says otherwise.
 
 - [docs/README.md](./docs/README.md) - verified documentation index and topic map
+- [docs/alt-pegs-page.md](./docs/alt-pegs-page.md) - `/alt-pegs/` route contract, crawlability pattern, and homepage integration
 - [docs/api-reference.md](./docs/api-reference.md) - exact API routes, query params, headers, and response contracts
 - [docs/architecture.md](./docs/architecture.md) - curated file tree and architecture-significant routes
 - [docs/worker-infrastructure.md](./docs/worker-infrastructure.md) - Worker env bindings, cron slots, cache/auth behavior

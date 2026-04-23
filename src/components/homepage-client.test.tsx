@@ -143,4 +143,72 @@ describe("HomepageClient", () => {
 
     expect(screen.getByRole("button", { name: "Remove DeFi filter" })).toBeTruthy();
   });
+
+  it("replaces the non-usd chart pair with the alt-peg teaser surface", () => {
+    useStablecoinsMock.mockReturnValue({
+      data: {
+        peggedAssets: [
+          {
+            id: "eurc-circle",
+            name: "EURC",
+            symbol: "EURC",
+            geckoId: null,
+            pegType: "peggedUSD",
+            pegMechanism: "",
+            price: 1,
+            priceSource: "test",
+            priceConfidence: null,
+            priceUpdatedAt: null,
+            priceObservedAt: null,
+            priceObservedAtMode: null,
+            priceSyncedAt: null,
+            consensusSources: [],
+            agreeSources: [],
+            supplySource: "test",
+            circulating: { usd: 50_000_000 },
+            circulatingPrevDay: {},
+            circulatingPrevWeek: {},
+            circulatingPrevMonth: {},
+            chainCirculating: {},
+            chains: [],
+          },
+          {
+            id: "paxg-paxos",
+            name: "PAX Gold",
+            symbol: "PAXG",
+            geckoId: null,
+            pegType: "peggedUSD",
+            pegMechanism: "",
+            price: 1,
+            priceSource: "test",
+            priceConfidence: null,
+            priceUpdatedAt: null,
+            priceObservedAt: null,
+            priceObservedAtMode: null,
+            priceSyncedAt: null,
+            consensusSources: [],
+            agreeSources: [],
+            supplySource: "test",
+            circulating: { usd: 25_000_000 },
+            circulatingPrevDay: {},
+            circulatingPrevWeek: {},
+            circulatingPrevMonth: {},
+            chainCirculating: {},
+            chains: [],
+          },
+        ],
+        fxFallbackRates: {},
+      },
+      isLoading: false,
+      error: null,
+      dataUpdatedAt: 0,
+      refetch: refetchMock,
+      meta: null,
+    });
+
+    render(<HomepageClient />);
+
+    expect(screen.getByRole("heading", { name: "Alternative Pegs Need Their Own Surface" })).toBeTruthy();
+    expect(screen.getByRole("link", { name: /Open Non-USD Route/i }).getAttribute("href")).toBe("/alt-pegs");
+  });
 });

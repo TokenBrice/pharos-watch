@@ -10,6 +10,7 @@
 - [DEWS (Depeg Early Warning System)](https://pharos.watch/depeg/): Active depegs, watch-list, and historical DEWS bands.
 - [Liquidity](https://pharos.watch/liquidity/): DEX liquidity scores, pool counts, TVL depth.
 - [Yield](https://pharos.watch/yield/): Yield-bearing stablecoin intelligence.
+- [Non-USD Market Structure](https://pharos.watch/alt-pegs/): Historical and current market structure for non-USD stablecoin cohorts.
 - [Chains](https://pharos.watch/chains/): Per-chain stablecoin distribution and health.
 - [Flows](https://pharos.watch/flows/): Mint/burn flow dashboards.
 - [Blacklist Tracker](https://pharos.watch/blacklist/): Issuer freeze events and exposure.

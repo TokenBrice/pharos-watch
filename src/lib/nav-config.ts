@@ -22,6 +22,7 @@ import {
   TableProperties,
   ScrollText,
   Heart,
+  Globe,
   createLucideIcon,
 } from "lucide-react";
 
@@ -54,6 +55,7 @@ export const PRIMARY_NAV_ITEMS: NavItem[] = [
   { href: "/stability-index", label: "Stability Index", icon: LighthouseIcon, description: "Market-regime read for the stablecoin system" },
   { href: "/safety-scores", label: "Safety Scores", icon: FlaskConical, description: "Cross-market safety grades and contagion scenarios" },
   { href: "/yield", label: "Risk-Adjusted Yield", icon: TrendingUp, description: "Yield ranked after adjusting for stablecoin risk" },
+  { href: "/alt-pegs", label: "Non-USD Stables", icon: Globe, description: "Market structure and cohort growth beyond dollar pegs" },
 ];
 
 export const NAV_GROUPS: NavGroup[] = [

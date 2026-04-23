@@ -40,6 +40,7 @@ Application source-of-truth docs live in `/docs/` and [../README.md](../README.m
 ## Route And Page Contracts
 
 - [homepage.md](./homepage.md) - `/` dashboard composition, filter/query contract, Start Here callout behavior, and primary variant-browse ownership
+- [alt-pegs-page.md](./alt-pegs-page.md) - `/alt-pegs/` non-USD market-structure route, crawlability pattern, and homepage integration contract
 - [start-page.md](./start-page.md) - `/start/` onboarding route, curated route map, and homepage integration contract
 - [upcoming-page.md](./upcoming-page.md) - `/upcoming/` pre-launch tracker, filter model, and crawlability contract
 - [about-page.md](./about-page.md) - `/about/` section contract and update rules
@@ -62,6 +63,7 @@ Some public routes are documented by feature docs or the architecture doc rather
 | Route | Primary doc(s) |
 |-------|-----------------|
 | `/` | [homepage.md](./homepage.md) |
+| `/alt-pegs/` | [alt-pegs-page.md](./alt-pegs-page.md) |
 | `/about/` | [about-page.md](./about-page.md) |
 | `/about/api/` | [api-page.md](./api-page.md), [api-reference.md](./api-reference.md) |
 | `/blacklist/` | [blacklist-tracker.md](./blacklist-tracker.md) |

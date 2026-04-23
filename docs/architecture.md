@@ -131,6 +131,7 @@ Worker cron refactors should place reusable stage contracts under `worker/src/cr
 
 - Indexable route families include:
   - `/`
+  - `/alt-pegs/`
   - `/coverage/`
   - `/chains/` and `/chains/[chain]/`
   - `/stablecoin/[id]/`
@@ -145,7 +146,7 @@ Worker cron refactors should place reusable stage contracts under `worker/src/cr
   - `/docs/` and `/docs/[slug]/` for the curated public documentation archive; the allowlist lives in `shared/lib/public-docs.ts`
   - `/about/api/`
   - `/changelog/`
-  - major feature pages with standalone static copy (`/start/`, `/upcoming/`, `/blacklist/`, `/depeg/`, `/liquidity/`, `/safety-scores/`, `/stability-index/`, `/yield/`, `/flows/`, `/dependency-map/`, `/cemetery/`, `/telegram/`, `/funding/`, `/status/`, `/about/`, `/privacy/`)
+  - major feature pages with standalone static copy (`/start/`, `/alt-pegs/`, `/upcoming/`, `/blacklist/`, `/depeg/`, `/liquidity/`, `/safety-scores/`, `/stability-index/`, `/yield/`, `/flows/`, `/dependency-map/`, `/cemetery/`, `/telegram/`, `/funding/`, `/status/`, `/about/`, `/privacy/`)
 - Tool roots intentionally marked `noindex,follow`:
   - `/compare/`
   - `/portfolio/`

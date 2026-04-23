@@ -75,6 +75,7 @@ const coreDataLinks = [
   ["DEWS (Depeg Early Warning System)", absolute("/depeg/"), "Active depegs, watch-list, and historical DEWS bands."],
   ["Liquidity", absolute("/liquidity/"), "DEX liquidity scores, pool counts, TVL depth."],
   ["Yield", absolute("/yield/"), "Yield-bearing stablecoin intelligence."],
+  ["Non-USD Market Structure", absolute("/alt-pegs/"), "Historical and current market structure for non-USD stablecoin cohorts."],
   ["Chains", absolute("/chains/"), "Per-chain stablecoin distribution and health."],
   ["Flows", absolute("/flows/"), "Mint/burn flow dashboards."],
   ["Blacklist Tracker", absolute("/blacklist/"), "Issuer freeze events and exposure."],

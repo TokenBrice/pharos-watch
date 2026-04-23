@@ -8,7 +8,9 @@ describe("nav-config", () => {
       "/stability-index",
       "/safety-scores",
       "/yield",
+      "/alt-pegs",
     ]);
+    expect(PRIMARY_NAV_ITEMS.find((item) => item.href === "/alt-pegs")?.label).toBe("Non-USD Stables");
 
     // Telegram moved out of the primary block; it lives in the TRACK data
     // group, while Digest and Status now live in the separate MONITOR group.

@@ -19,6 +19,7 @@ import { SectionErrorBoundary } from "@/components/section-error-boundary";
 import { SectionSkeleton, ChartSkeleton } from "@/components/homepage-skeletons";
 import { PegBrowseStrip } from "@/components/peg-distribution-grid";
 import { HomepageSectionBand } from "@/components/homepage-sections";
+import { HomepageAltPegsTeaser } from "@/components/homepage-alt-pegs-teaser";
 import { Button } from "@/components/ui/button";
 import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins";
 import { UpcomingStablecoinsSection } from "@/components/upcoming-stablecoins-section";
@@ -26,6 +27,7 @@ import { PEG_CURRENCY_COUNT } from "@shared/lib/classification";
 import { ACTIVE_PEGS, pegCoinCount } from "@/lib/peg-landing";
 import { buildHomepageViewModel } from "@/components/homepage-client-view-model";
 import { getHomepageActiveFilterLabel } from "@/lib/homepage-filter-labels";
+import { buildAltPegSnapshot } from "@/lib/alt-peg-market";
 
 const CEFI_COUNT = ACTIVE_STABLECOINS.filter((s) => s.flags.governance === "centralized").length;
 const CEFI_DEP_COUNT = ACTIVE_STABLECOINS.filter((s) => s.flags.governance === "centralized-dependent").length;
@@ -62,20 +64,6 @@ const HomepageSafetyOverview = dynamic(
   () => import("@/components/homepage-safety-overview").then((mod) => mod.HomepageSafetyOverview),
   {
     loading: () => <SectionSkeleton className="h-[320px] w-full rounded-xl" />,
-  },
-);
-
-const PegDiversityChart = dynamic(
-  () => import("@/components/peg-diversity-chart").then((mod) => mod.PegDiversityChart),
-  {
-    loading: () => <ChartSkeleton className="h-[360px] w-full" type="bar" />,
-  },
-);
-
-const NonUsdShareChart = dynamic(
-  () => import("@/components/non-usd-share-chart").then((mod) => mod.NonUsdShareChart),
-  {
-    loading: () => <ChartSkeleton className="h-[360px] w-full" type="area" />,
   },
 );
 
@@ -120,6 +108,7 @@ export function HomepageClient() {
     }),
     [data, dexLiquidity, filters.activeFilters, filters.searchQuery, pegSummaryData, reportCardsData, stressData],
   );
+  const altPegSnapshot = useMemo(() => buildAltPegSnapshot(data?.peggedAssets), [data?.peggedAssets]);
   const globalError = pricesError ?? pegError ?? liquidityError ?? reportCardsError;
   const handleRetry = useCallback(() => {
     void Promise.allSettled([refetchPrices(), refetchPeg(), refetchLiquidity(), refetchReportCards()]);
@@ -346,7 +335,7 @@ export function HomepageClient() {
         <HomepageSectionBand
           eyebrow="Research Surfaces"
           title="Distribution and market structure"
-          description="Cohort mix, total market-cap regime changes, and non-USD peg growth."
+          description="Whole-market concentration plus a dedicated route for non-USD structure."
         />
 
         <SectionErrorBoundary name="stats">
@@ -360,15 +349,9 @@ export function HomepageClient() {
           <TotalMcapChart />
         </SectionErrorBoundary>
 
-        <div className="grid grid-cols-1 gap-6 lg:grid-cols-2 lg:items-stretch">
-          <SectionErrorBoundary name="peg-diversity">
-            <PegDiversityChart />
-          </SectionErrorBoundary>
-
-          <SectionErrorBoundary name="non-usd-share">
-            <NonUsdShareChart />
-          </SectionErrorBoundary>
-        </div>
+        <SectionErrorBoundary name="alt-pegs">
+          <HomepageAltPegsTeaser snapshot={altPegSnapshot} isLoading={isLoading} />
+        </SectionErrorBoundary>
       </section>
 
       <section aria-label="About Pharos" className="space-y-2 border-t border-border/50 pt-6">
