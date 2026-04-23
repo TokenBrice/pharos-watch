@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { buildExecutionBatches, buildCommandPlan } from "../test-merge-gate.mjs";
+import { buildExecutionBatches, buildCommandPlan, runExecutionBatches } from "../test-merge-gate.mjs";
 import { getCommandEnv } from "../test-merge-gate.mjs";
 import {
   buildCiValidateCommands,
@@ -79,6 +79,53 @@ describe("buildCommandPlan", () => {
         ["cd worker && npx tsc --noEmit"],
         ["cd worker && npx tsc --noEmit -p tsconfig.scripts.json"],
       ],
+    ]);
+  });
+
+  it("aborts sibling parallel groups after the first post-validate failure", async () => {
+    const plan = buildCommandPlan(["shared/lib/classification.ts"]);
+    const calls: string[] = [];
+    const aborted: string[] = [];
+    let exitStatus: number | undefined;
+
+    await runExecutionBatches(
+      plan,
+      ["shared/lib/classification.ts"],
+      {},
+      {
+        exit: (status) => {
+          exitStatus = status;
+        },
+        runCommandImpl: (cmd, _extraEnv, { signal } = {}) => {
+          calls.push(cmd);
+
+          if (cmd === "npm run validate:prebuild") {
+            return Promise.resolve({ status: 0, aborted: false });
+          }
+
+          if (cmd === "npm run build") {
+            return Promise.resolve({ status: 1, aborted: false });
+          }
+
+          return new Promise((resolve) => {
+            signal?.addEventListener("abort", () => {
+              aborted.push(cmd);
+              resolve({ status: 130, aborted: true });
+            });
+          });
+        },
+      },
+    );
+
+    expect(exitStatus).toBe(1);
+    expect(calls).toContain("npm run validate:prebuild");
+    expect(calls).toContain("npm run build");
+    expect(calls).not.toContain("npm run seo:check");
+    expect(aborted).toEqual([
+      "npm test",
+      "npm run coverage:critical",
+      "cd worker && npx tsc --noEmit",
+      "cd worker && npx tsc --noEmit -p tsconfig.scripts.json",
     ]);
   });
 });

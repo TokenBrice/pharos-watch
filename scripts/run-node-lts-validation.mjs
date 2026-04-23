@@ -1,8 +1,6 @@
 import { spawnSync } from "node:child_process";
-
-import {
-  buildValidateCommandPlan,
-} from "./lib/validate-contract.mjs";
+import { COMMON_VALIDATE_PREBUILD_COMMANDS } from "./lib/validate-contract.mjs";
+import { runPostPrebuildValidation } from "./run-validate-postbuild.mjs";
 
 const TARGET_LTS_NODE_MAJOR = 24;
 
@@ -33,10 +31,6 @@ function parseStringArg(name, defaultValue = "") {
   return match.slice(prefix.length);
 }
 
-function shellQuote(value) {
-  return `'${value.replaceAll("'", `'\"'\"'`)}'`;
-}
-
 function runCommand(cmd) {
   console.log(`\n[lts] ${cmd}`);
   const result = spawnSync(cmd, {
@@ -56,31 +50,33 @@ function runCommand(cmd) {
 function assertTargetNodeMajor() {
   const currentMajor = Number.parseInt(process.versions.node.split(".")[0] ?? "0", 10);
   if (currentMajor !== TARGET_LTS_NODE_MAJOR) {
-    throw new Error(
-      `npm run validate:lts must run on Node ${TARGET_LTS_NODE_MAJOR}.x (current: ${process.version}).`,
-    );
+    throw new Error(`npm run validate:lts must run on Node ${TARGET_LTS_NODE_MAJOR}.x (current: ${process.version}).`);
   }
 }
 
-function main() {
+async function main() {
   assertTargetNodeMajor();
 
   const pagesChanged = parseBooleanArg("--pages-changed", true);
   const workerChanged = parseBooleanArg("--worker-changed", true);
   const coverageCompareRef = parseStringArg("--coverage-compare-ref", "");
-  const plan = buildValidateCommandPlan({ pagesChanged, workerChanged }).map((cmd) =>
-    cmd === "npm run coverage:critical" && coverageCompareRef
-      ? `CRITICAL_COVERAGE_COMPARE_REF=${shellQuote(coverageCompareRef)} ${cmd}`
-      : cmd,
-  );
 
   console.log(
-    `[lts] Running ${plan.length} shared validation steps on Node ${process.version} for the explicit LTS target (${TARGET_LTS_NODE_MAJOR}.x).`,
+    `[lts] Running shared validation on Node ${process.version} for the explicit LTS target (${TARGET_LTS_NODE_MAJOR}.x).`,
   );
 
-  for (const cmd of plan) {
+  for (const cmd of COMMON_VALIDATE_PREBUILD_COMMANDS) {
     runCommand(cmd);
   }
+
+  await runPostPrebuildValidation({
+    coverageCompareRef,
+    pagesChanged,
+    workerChanged,
+  });
 }
 
-main();
+main().catch((error) => {
+  console.error(`[lts] FAILED: ${error instanceof Error ? error.message : String(error)}`);
+  process.exit(1);
+});

@@ -37,19 +37,9 @@ jobs:
           node-version: 25.x
           tooling-cache: "true"
       - run: npm run validate:prebuild
-      - if: ${{ inputs.pages_changed }}
-        run: npm run build
-      - if: ${{ inputs.pages_changed }}
-        run: npm run seo:check
-      - run: npm test
-      - run: npm run coverage:critical
+      - run: node scripts/run-validate-postbuild.mjs --pages-changed=${{ inputs.pages_changed }} --worker-changed=${{ inputs.worker_changed }} --coverage-compare-ref=${{ inputs.coverage-compare-ref }}
         env:
           CRITICAL_COVERAGE_THRESHOLD: "40"
-          CRITICAL_COVERAGE_COMPARE_REF: ${{ inputs.coverage-compare-ref }}
-      - if: ${{ inputs.worker_changed }}
-        run: cd worker && npx tsc --noEmit
-      - if: ${{ inputs.worker_changed }}
-        run: cd worker && npx tsc --noEmit -p tsconfig.scripts.json
 
   validate-lts:
     runs-on: ubuntu-latest

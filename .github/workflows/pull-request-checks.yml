@@ -22,11 +22,6 @@ jobs:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
           fetch-depth: 0
-      - uses: ./.github/actions/setup-workspace
-        with:
-          node-version: 25
-          cache-npm: "false"
-          install-deps: "false"
       - id: classify
         env:
           DEPLOY_BASE_SHA: ${{ github.event.pull_request.base.sha }}

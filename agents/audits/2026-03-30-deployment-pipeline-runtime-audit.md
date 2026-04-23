@@ -79,8 +79,8 @@ The biggest thing not to do first: cutting cheap checks like doc-sync, hotspot-r
 
 Latest 4 successful push deploys reviewed:
 
-| Run | SHA | Total |
-| --- | --- | ---: |
+| Run           | SHA       |  Total |
+| ------------- | --------- | -----: |
 | `23757258622` | `718ca75` | `658s` |
 | `23754700032` | `5efe923` | `707s` |
 | `23750959818` | `62e054c` | `712s` |
@@ -90,20 +90,20 @@ Average full push deploy runtime: `684.25s` (`11m24s`)
 
 ### Average job durations across those runs
 
-| Job | Avg |
-| --- | ---: |
-| `validate / validate` | `232.0s` |
-| `pages-release / build-pages` | `74.5s` |
-| `pages-release / smoke-ui` | `60.0s` |
-| `pages-release / deploy-pages` | `57.5s` |
-| `smoke-api` | `41.8s` |
-| `upload-worker-version` | `41.3s` |
-| `smoke-api-preview` | `35.5s` |
-| `pages-release / smoke-ui-live` | `33.8s` |
-| `deploy-worker` | `33.0s` |
-| `smoke-ops` | `25.8s` |
-| `validate / validate-node24` | `91.3s` |
-| `detect-changes` | `7.3s` |
+| Job                             |      Avg |
+| ------------------------------- | -------: |
+| `validate / validate`           | `232.0s` |
+| `pages-release / build-pages`   |  `74.5s` |
+| `pages-release / smoke-ui`      |  `60.0s` |
+| `pages-release / deploy-pages`  |  `57.5s` |
+| `smoke-api`                     |  `41.8s` |
+| `upload-worker-version`         |  `41.3s` |
+| `smoke-api-preview`             |  `35.5s` |
+| `pages-release / smoke-ui-live` |  `33.8s` |
+| `deploy-worker`                 |  `33.0s` |
+| `smoke-ops`                     |  `25.8s` |
+| `validate / validate-node24`    |  `91.3s` |
+| `detect-changes`                |   `7.3s` |
 
 Observations:
 
@@ -123,16 +123,16 @@ Observations:
 
 Average step durations inside `validate / validate`:
 
-| Step | Avg |
-| --- | ---: |
-| `npm test` | `71.0s` |
-| `npm run lint` | `46.3s` |
-| `npm run build` | `38.0s` |
-| `npm run typecheck` | `15.0s` |
-| `npm ci` | `14.8s` |
-| `cd worker && npx tsc --noEmit` | `11.3s` |
-| `npm run coverage:critical` | `9.0s` |
-| `npm run check:shared-cycles` | `7.5s` |
+| Step                              |          Avg |
+| --------------------------------- | -----------: |
+| `npm test`                        |      `71.0s` |
+| `npm run lint`                    |      `46.3s` |
+| `npm run build`                   |      `38.0s` |
+| `npm run typecheck`               |      `15.0s` |
+| `npm ci`                          |      `14.8s` |
+| `cd worker && npx tsc --noEmit`   |      `11.3s` |
+| `npm run coverage:critical`       |       `9.0s` |
+| `npm run check:shared-cycles`     |       `7.5s` |
 | all remaining checks individually | `0s` to `3s` |
 
 Conclusion:
@@ -144,10 +144,10 @@ Conclusion:
 
 Latest 3 successful `Rebuild Pages` runs:
 
-| Run | Total | Notes |
-| --- | ---: | --- |
-| `23738426406` | `250s` | typical |
-| `23705535969` | `260s` | typical |
+| Run           |  Total | Notes                                   |
+| ------------- | -----: | --------------------------------------- |
+| `23738426406` | `250s` | typical                                 |
+| `23705535969` | `260s` | typical                                 |
 | `23639005828` | `330s` | slower deploy-pages + smoke-ops outlier |
 
 Typical scheduled rebuild runtime is currently about `4m10s` to `4m20s`.
@@ -586,3 +586,41 @@ The best near-term runtime wins are not “delete checks.” They are:
 - cache the expensive build/lint/typecheck work
 
 If those are implemented cleanly, the deploy path should get materially faster without reducing confidence in production releases.
+
+## 2026-04-23 Runtime Optimization Follow-Up
+
+Review target:
+
+- [`.github/workflows/deploy-cloudflare.yml`](/home/ahirice/Documents/git/stablecoin-dashboard/.github/workflows/deploy-cloudflare.yml)
+- [`.github/workflows/pages-prepare.yml`](/home/ahirice/Documents/git/stablecoin-dashboard/.github/workflows/pages-prepare.yml)
+- [`.github/workflows/pages-publish.yml`](/home/ahirice/Documents/git/stablecoin-dashboard/.github/workflows/pages-publish.yml)
+- [`.github/workflows/validate-ci.yml`](/home/ahirice/Documents/git/stablecoin-dashboard/.github/workflows/validate-ci.yml)
+- [`.github/actions/setup-workspace/action.yml`](/home/ahirice/Documents/git/stablecoin-dashboard/.github/actions/setup-workspace/action.yml)
+- [`scripts/test-merge-gate.mjs`](/home/ahirice/Documents/git/stablecoin-dashboard/scripts/test-merge-gate.mjs)
+- [docs/deployment-process.md](/home/ahirice/Documents/git/stablecoin-dashboard/docs/deployment-process.md)
+
+Current implementation status:
+
+- P1 is implemented: combined worker + Pages deploys start `pages-prepare` after `upload-worker-version` succeeds, and that job includes the uploaded Worker preview smoke. `pages-prepare` receives the preview URL as `api_base_url`, so digest sync and local static export proxying rehearse against the exact candidate Worker while `deploy-worker` and production `smoke-api` continue separately.
+- P2 is partially implemented: preview upload and preview API smoke now share one `upload-worker-version` job, and smoke-only jobs use `install-deps: "false"` where they only need checked-in scripts and Node. The Worker promotion job remains separate, preserving a clean boundary before production traffic and trigger sync.
+- P3 is implemented for the expensive repeatable tooling surfaces: the shared setup action restores `.next/cache`, `.cache/eslint`, and root/worker `*.tsbuildinfo` outputs for `validate`, `validate-lts`, and `pages-prepare`, keyed by Node version and core config files.
+- P4 is implemented for the Pages path and worker-only path: `smoke-ops` and `smoke-transport` start from the production-changing gate rather than waiting for public live UI smoke completion.
+- P5 remains intentionally present but now uses the same post-prebuild batching as the Node 25 validate lane: `validate-lts` still runs the shared deploy-surface-aware contract on Node 24.x, but after `validate:prebuild` it runs independent build/test/coverage/typecheck groups in parallel and preserves `build -> seo:check` ordering.
+- P6 remains conditional: full push-time validation is still appropriate unless branch protection is changed so PR status checks become the mandatory pre-merge gate.
+- A 2026-04-23 second pass added `scripts/run-validate-postbuild.mjs` so both CI validate lanes can run post-prebuild groups in parallel, moved the Pages local artifact smoke into the existing `build-pages` job to avoid a second runner setup and artifact download, removed unused PR `detect-changes` setup, and kept smoke-only jobs install-free where their scripts run on plain Node.
+
+Residual risks to keep visible:
+
+- Preview-backed Pages preparation is only as representative as the preview URL and proxy environment. Keep the production `smoke-api` gate before `pages-publish`, because preview URLs do not cover final route, custom-domain, trigger, or account-side behavior.
+- Tooling cache hits are opportunistic. Treat cache misses as expected behavior, not deploy failures; cache correctness depends on the key including `package-lock.json`, Next config, and TypeScript configs.
+- Smoke-only jobs that skip `npm ci` depend on scripts that run with Node built-ins or already available workflow context. If a smoke script starts importing package dependencies directly, either restore install coverage for that job or bundle/refactor the script deliberately.
+- Pages rollback is best effort because it depends on capturing the previous production deployment id before publish. A failed capture should leave the deploy visible as risky in the workflow summary and requires manual rollback if live smoke fails.
+- The deploy concurrency group now queues all production-changing deploy and rebuild workflows. This prevents overlapping production mutation and rollback work, but it can make runtime look worse during a queue backlog; distinguish queued time from execution time when measuring optimization impact.
+
+Measurement notes for the next runtime review:
+
+- Compare execution duration, not just total workflow duration, because the shared `production-deploy` concurrency group can add queue time.
+- Segment combined deploys, worker-only deploys, Pages-only deploys, and scheduled rebuilds; the optimizations affect those paths differently.
+- For combined deploys, measure whether `pages-prepare / build-pages` overlaps `deploy-worker` and production `smoke-api` as intended; local artifact smoke now appears inside `build-pages` rather than as a separate `pages-prepare / smoke-ui` job.
+- Track warm-cache and cold-cache runs separately for `validate`, `validate-lts`, and `pages-prepare / build-pages`.
+- Keep the earlier 2026-03-30 baseline (`684.25s` average full push deploy runtime) as the pre-overlap reference, but do not compare it directly to docs-only or deploy-surface-skipped pushes.

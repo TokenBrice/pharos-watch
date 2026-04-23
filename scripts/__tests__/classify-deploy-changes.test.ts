@@ -19,11 +19,7 @@ describe("normalizeChangedFiles", () => {
 
 describe("hasWorkerDeployImpact", () => {
   it("returns false for frontend-only changes", () => {
-    expect(hasWorkerDeployImpact([
-      "src/app/page.tsx",
-      "src/components/header.tsx",
-      "docs/testing.md",
-    ])).toBe(false);
+    expect(hasWorkerDeployImpact(["src/app/page.tsx", "src/components/header.tsx", "docs/testing.md"])).toBe(false);
   });
 
   it("returns true for worker, shared, and workflow-infra changes", () => {
@@ -35,11 +31,9 @@ describe("hasWorkerDeployImpact", () => {
 
 describe("hasPagesDeployImpact", () => {
   it("returns false for worker-only changes", () => {
-    expect(hasPagesDeployImpact([
-      "worker/src/api/health.ts",
-      "worker/src/cron/sync-stablecoins.ts",
-      "docs/testing.md",
-    ])).toBe(false);
+    expect(
+      hasPagesDeployImpact(["worker/src/api/health.ts", "worker/src/cron/sync-stablecoins.ts", "docs/testing.md"]),
+    ).toBe(false);
   });
 
   it("returns true for frontend, shared, and deploy-infra changes", () => {
@@ -83,6 +77,9 @@ describe("hasDeployImpact", () => {
       "scripts/check-env-contract.mjs",
       "scripts/check-sql-interpolation-safety.mjs",
       "scripts/generate-cemetery-dataset.ts",
+      "scripts/run-node-lts-validation.mjs",
+      "scripts/run-validate-postbuild.mjs",
+      "scripts/run-validate-prebuild.mjs",
       "scripts/test-merge-gate.mjs",
     ];
 

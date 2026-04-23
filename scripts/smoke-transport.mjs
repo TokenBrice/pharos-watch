@@ -2,8 +2,7 @@
 
 const DEFAULT_TIMEOUT_MS = 12_000;
 const DEFAULT_API_URL = "http://api.pharos.watch/api/health?smoke=transport";
-const DEFAULT_SITE_API_URL =
-  "http://site-api.pharos.watch/api/stablecoins?limit=1&smoke=transport";
+const DEFAULT_SITE_API_URL = "http://site-api.pharos.watch/api/stablecoins?limit=1&smoke=transport";
 
 function assert(condition, message) {
   if (!condition) {
@@ -92,15 +91,15 @@ async function runCheck(label, rawUrl, timeoutMs) {
 async function run() {
   const args = parseArgs(process.argv.slice(2));
 
-  await runCheck("api", args.apiUrl, args.timeoutMs);
-  await runCheck("site-api", args.siteApiUrl, args.timeoutMs);
+  await Promise.all([
+    runCheck("api", args.apiUrl, args.timeoutMs),
+    runCheck("site-api", args.siteApiUrl, args.timeoutMs),
+  ]);
 
   console.log("[smoke-transport] All checks passed.");
 }
 
 run().catch((error) => {
-  console.error(
-    `[smoke-transport] FAILED: ${error instanceof Error ? error.message : String(error)}`,
-  );
+  console.error(`[smoke-transport] FAILED: ${error instanceof Error ? error.message : String(error)}`);
   process.exit(1);
 });

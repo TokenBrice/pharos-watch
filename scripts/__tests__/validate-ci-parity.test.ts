@@ -3,8 +3,16 @@ import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 import {
   buildCiValidateStepPlan,
+  COMMON_VALIDATE_POSTBUILD_COMMANDS,
+  PAGES_VALIDATE_COMMANDS,
   VALIDATE_PREBUILD_COMMANDS,
+  WORKER_VALIDATE_COMMANDS,
 } from "../lib/validate-contract.mjs";
+import {
+  buildPostPrebuildExecutionUnits,
+  getPostPrebuildCommandEnv,
+  runPostPrebuildValidation,
+} from "../run-validate-postbuild.mjs";
 
 function extractRunSteps(yaml) {
   const lines = yaml.split(/\r?\n/g);
@@ -82,7 +90,11 @@ describe("validate-ci parity", () => {
 
     expect([...setupWorkspaceRunSteps, ...extractRunSteps(validateJob)]).toEqual([
       { cmd: "npm ci", condition: null },
-      ...buildCiValidateStepPlan(),
+      { cmd: "npm run validate:prebuild", condition: null },
+      {
+        cmd: "node scripts/run-validate-postbuild.mjs --pages-changed=${{ inputs.pages_changed }} --worker-changed=${{ inputs.worker_changed }} --coverage-compare-ref=${{ inputs.coverage-compare-ref }}",
+        condition: null,
+      },
     ]);
   });
 
@@ -97,9 +109,9 @@ describe("validate-ci parity", () => {
   });
 
   it("keeps validate:prebuild delegated to the shared registry", () => {
-    const packageJson = JSON.parse(
-      readFileSync(resolve(process.cwd(), "package.json"), "utf8"),
-    ) as { scripts: Record<string, string> };
+    const packageJson = JSON.parse(readFileSync(resolve(process.cwd(), "package.json"), "utf8")) as {
+      scripts: Record<string, string>;
+    };
 
     expect(packageJson.scripts["validate:prebuild"]).toBe("node scripts/run-validate-prebuild.mjs");
     expect(VALIDATE_PREBUILD_COMMANDS).toEqual([
@@ -129,6 +141,84 @@ describe("validate-ci parity", () => {
       "npm run check:verified-doc-links",
       "npm run check:world-map",
       "npm run check:worker-boundary",
+    ]);
+  });
+
+  it("keeps the expanded validate contract model available for local planning", () => {
+    expect(buildCiValidateStepPlan()).toEqual([
+      { cmd: "npm run validate:prebuild", condition: null },
+      ...PAGES_VALIDATE_COMMANDS.map((cmd) => ({ cmd, condition: "pages_changed" })),
+      ...COMMON_VALIDATE_POSTBUILD_COMMANDS.map((cmd) => ({ cmd, condition: null })),
+      ...WORKER_VALIDATE_COMMANDS.map((cmd) => ({ cmd, condition: "worker_changed" })),
+    ]);
+  });
+
+  it("runs post-prebuild CI checks in independent execution groups", () => {
+    expect(
+      buildPostPrebuildExecutionUnits({ pagesChanged: true, workerChanged: true }).map((unit) => unit.commands),
+    ).toEqual([
+      PAGES_VALIDATE_COMMANDS,
+      ["npm test"],
+      ["npm run coverage:critical"],
+      ["cd worker && npx tsc --noEmit"],
+      ["cd worker && npx tsc --noEmit -p tsconfig.scripts.json"],
+    ]);
+
+    expect(
+      buildPostPrebuildExecutionUnits({ pagesChanged: false, workerChanged: true }).map((unit) => unit.commands),
+    ).toEqual([
+      ["npm test"],
+      ["npm run coverage:critical"],
+      ["cd worker && npx tsc --noEmit"],
+      ["cd worker && npx tsc --noEmit -p tsconfig.scripts.json"],
+    ]);
+  });
+
+  it("threads the coverage compare ref into the post-prebuild coverage command", () => {
+    expect(
+      getPostPrebuildCommandEnv("npm run coverage:critical", {
+        coverageCompareRef: "abc123",
+      }),
+    ).toEqual({ CRITICAL_COVERAGE_COMPARE_REF: "abc123" });
+    expect(getPostPrebuildCommandEnv("npm test", { coverageCompareRef: "abc123" })).toEqual({});
+  });
+
+  it("aborts sibling post-prebuild groups after the first failure", async () => {
+    const calls: string[] = [];
+    const aborted: string[] = [];
+    let exitStatus: number | undefined;
+
+    await runPostPrebuildValidation(
+      { pagesChanged: true, workerChanged: true },
+      {
+        exit: (status) => {
+          exitStatus = status;
+        },
+        runCommandImpl: (cmd, _extraEnv, { signal } = {}) => {
+          calls.push(cmd);
+
+          if (cmd === "npm run build") {
+            return Promise.resolve({ status: 1, aborted: false });
+          }
+
+          return new Promise((resolve) => {
+            signal?.addEventListener("abort", () => {
+              aborted.push(cmd);
+              resolve({ status: 130, aborted: true });
+            });
+          });
+        },
+      },
+    );
+
+    expect(exitStatus).toBe(1);
+    expect(calls).toContain("npm run build");
+    expect(calls).not.toContain("npm run seo:check");
+    expect(aborted).toEqual([
+      "npm test",
+      "npm run coverage:critical",
+      "cd worker && npx tsc --noEmit",
+      "cd worker && npx tsc --noEmit -p tsconfig.scripts.json",
     ]);
   });
 });

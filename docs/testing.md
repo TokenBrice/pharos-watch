@@ -74,10 +74,11 @@ For deployment/worktree operating procedure (including the local merge gate befo
    - `npm run coverage:critical`
    - `cd worker && npx tsc --noEmit` when `worker_changed=true`
    - `cd worker && npx tsc --noEmit -p tsconfig.scripts.json` when `worker_changed=true`
+   - after `npm run validate:prebuild`, runs the Pages build/SEO group, full tests, critical coverage, and Worker typecheck groups in parallel through `scripts/run-validate-postbuild.mjs`; `VALIDATE_POSTBUILD_SERIAL=1` restores the old serial post-prebuild shape for debugging
 3. `validate-lts` (same reusable workflow):
    - installs Node 24.x, the current LTS target
    - runs `npm run validate:lts` with the same `pages_changed` / `worker_changed` deploy-surface flags as the main validate job
-   - runs the same shared validate contract as the main deploy lane, including `npm run validate:prebuild`, Pages build/SEO when needed, tests, critical coverage, and worker typechecks when needed
+   - runs the same shared validate contract as the main deploy lane, including `npm run validate:prebuild`, then the same post-prebuild parallel groups for Pages build/SEO when needed, tests, critical coverage, and worker typechecks when needed
 4. `detect-changes` (push/manual deploy workflow; same classifier also runs in pull-request checks):
    - Diffs `github.event.before...github.sha` on `push`
    - Emits `deploy_required`, `worker_changed`, and `pages_changed`
@@ -97,7 +98,7 @@ For deployment/worktree operating procedure (including the local merge gate befo
    - Sync routes/domains/cron triggers with `wrangler triggers deploy`
    - Skipped on Pages-only or non-deploy `push` events
 7. `smoke-api` (needs `deploy-worker` when worker/API work is required):
-   - `npm ci`
+   - sets up Node without reinstalling dependencies because the smoke script runs on plain Node
    - Run `npm run test:smoke-api`
    - Uses `SMOKE_API_BASE` from `vars.SMOKE_API_BASE_URL` (preferred) or `vars.API_BASE_URL`
    - Passes `SMOKE_API_KEY` from GitHub repository secrets
@@ -112,25 +113,28 @@ For deployment/worktree operating procedure (including the local merge gate befo
    - reusable workflow in `.github/workflows/pages-prepare.yml`
    - runs only when `pages_changed=true`
    - waits for preview-smoked `upload-worker-version` only when worker/API work was also required for that push
-   - executes `build-pages -> smoke-ui`
+   - executes `build-pages`, which also runs the local artifact `smoke-ui` before the reusable workflow can succeed
    - on combined worker + Pages deploys, uses the uploaded Worker's preview URL for digest sync and for the local `/_site-data/*` smoke lane so the static export is rehearsed against the exact candidate API while worker promotion continues in parallel
-   - `build-pages` fetches `/api/digest-archive` once from the selected API environment into `data/digests.json`, forwarding `DIGEST_API_KEY` from GitHub repository secrets and `NEXT_PUBLIC_GA_ID` from GitHub repo vars into `npm run build`, then runs `npm run seo:check`, and uploads `out/`
-   - `smoke-ui` serves that exact artifact locally, proxies direct `/api/*` calls to the selected public API base, proxies `/_site-data/*` to the selected `site-api` base, injects `SITE_API_SHARED_SECRET` for the site-data proxy hop, and runs `npm run test:smoke-ui -- --url http://127.0.0.1:4173 --mode local`
+   - `build-pages` fetches `/api/digest-archive` once from the selected API environment into `data/digests.json`, forwarding `DIGEST_API_KEY` from GitHub repository secrets and `NEXT_PUBLIC_GA_ID` from GitHub repo vars into `npm run build`, then runs `npm run seo:check`, uploads `out/`, serves that exact artifact locally, proxies direct `/api/*` calls to the selected public API base, proxies `/_site-data/*` to the selected `site-api` base, injects `SITE_API_SHARED_SECRET` for the site-data proxy hop, and runs `npm run test:smoke-ui -- --url http://127.0.0.1:4173 --mode local`
    - when `SMOKE_UI_EXPECT_GA_ID` is configured, that smoke step also verifies the built homepage artifact still contains the expected GA snippet
 10. `pages-publish`:
-   - reusable workflow in `.github/workflows/pages-publish.yml`
-   - runs only when `pages_changed=true`
-   - waits for `pages-prepare`
-   - also waits for post-promotion `smoke-api` only when worker/API work was required for that push
-   - executes `deploy-pages`, then starts the live public, ops, and transport smokes
-   - `deploy-pages` still publishes the verified artifact with the Wrangler retry loop
-   - `smoke-ui-live` then verifies the real public host with `npm run test:smoke-ui -- --url https://pharos.watch --mode live`
-   - `smoke-ops` and `smoke-transport` also start after `deploy-pages`, in parallel with `smoke-ui-live`, so Pages deploys keep all post-publish checks without serializing independent smokes
+
+- reusable workflow in `.github/workflows/pages-publish.yml`
+- runs only when `pages_changed=true`
+- waits for `pages-prepare`
+- also waits for post-promotion `smoke-api` only when worker/API work was required for that push
+- executes `deploy-pages`, then starts the live public, ops, and transport smokes
+- `deploy-pages` still publishes the verified artifact with the Wrangler retry loop
+- `smoke-ui-live` then verifies the real public host with `npm run test:smoke-ui -- --url https://pharos.watch --mode live`
+- `smoke-ops` and `smoke-transport` also start after `deploy-pages`, in parallel with `smoke-ui-live`, so Pages deploys keep all post-publish checks without serializing independent smokes
+
 11. `smoke-ui-live` (worker-only push path):
-   - Runs only when `worker_changed=true` and `pages_changed=false`
-   - Runs `npm run test:smoke-ui -- --url https://pharos.watch --mode live`
-   - when `SMOKE_UI_EXPECT_GA_ID` is configured, also verifies the live homepage artifact still contains the expected GA snippet
-   - Verifies that the unchanged live Pages frontend still works against the newly deployed worker/API without repeating the full local overflow sweep
+
+- Runs only when `worker_changed=true` and `pages_changed=false`
+- Runs `npm run test:smoke-ui -- --url https://pharos.watch --mode live`
+- when `SMOKE_UI_EXPECT_GA_ID` is configured, also verifies the live homepage artifact still contains the expected GA snippet
+- Verifies that the unchanged live Pages frontend still works against the newly deployed worker/API without repeating the full local overflow sweep
+
 12. `smoke-ops`:
 
 - Run `npm run test:smoke-ops`
@@ -214,11 +218,11 @@ Rollback:
 2. Re-run the workflow manually.
 3. Leave the replacement token active until verification succeeds.
 
-The workflows pin `actions/checkout@v6`, `actions/setup-node@v6`, and `actions/cache@v4` by commit SHA. The main validate/deploy lanes still run on Node 25, while the reusable validate workflow also runs an explicit Node 24 LTS proof lane (`npm run validate:lts`) against the same shared deploy-surface-aware validate contract. Tooling caches for `.next/cache`, `.cache/eslint`, and `*.tsbuildinfo` are keyed by the requested Node version so the Node 24 and Node 25 lanes do not clobber each other. The repo engines remain pinned to Node 25 for the primary local/runtime baseline. Worker deploys intentionally avoid `cloudflare/wrangler-action`; the repo now uses a root npm workspace, so CI installs the shared toolchain from the root lockfile and invokes Wrangler with `npx --no-install`. `npm run audit:deps` also runs in the validate job so high-severity production advisories fail the push/manual deploy pipeline before deploy, and the scheduled dependency-audit workflow covers devDependencies separately. The production-changing workflows also share one global `concurrency` group (`production-deploy`): push/manual deploys and scheduled/manual Pages rebuilds queue behind active production runs instead of canceling post-promotion smoke or rollback work, even when a manual dispatch is launched from a non-main ref.
+The workflows pin `actions/checkout@v6`, `actions/setup-node@v6`, and `actions/cache@v4` by commit SHA. The main validate/deploy lanes still run on Node 25, while the reusable validate workflow also runs an explicit Node 24 LTS proof lane (`npm run validate:lts`) against the same shared deploy-surface-aware validate contract. Both validate lanes run the shared `validate:prebuild` guardrail set first, then use `scripts/run-validate-postbuild.mjs` to run independent build/test/coverage/typecheck groups in parallel while preserving `build -> seo:check` ordering; set `VALIDATE_POSTBUILD_SERIAL=1` when debugging a serial CI shape locally. Tooling caches for `.next/cache`, `.cache/eslint`, and `*.tsbuildinfo` are keyed by the requested Node version so the Node 24 and Node 25 lanes do not clobber each other. The repo engines remain pinned to Node 25 for the primary local/runtime baseline. Worker deploys intentionally avoid `cloudflare/wrangler-action`; the repo now uses a root npm workspace, so CI installs the shared toolchain from the root lockfile and invokes Wrangler with `npx --no-install`. `npm run audit:deps` also runs in the validate job so high-severity production advisories fail the push/manual deploy pipeline before deploy, and the scheduled dependency-audit workflow covers devDependencies separately. The production-changing workflows also share one global `concurrency` group (`production-deploy`): push/manual deploys and scheduled/manual Pages rebuilds queue behind active production runs instead of canceling post-promotion smoke or rollback work, even when a manual dispatch is launched from a non-main ref.
 
 `npm run check:migrations` replays every file in `worker/migrations/` against a throwaway SQLite database before deploy. It now prefers the `sqlite3` CLI when present and falls back to Node's built-in `node:sqlite`, which removes the old Node-25-first happy path while still catching schema typos in unapplied D1 migrations before `deploy-worker` touches production. Historical duplicate migration prefixes are tracked explicitly in `worker/migrations/MANIFEST.md`; the checker fails only on new undeclared duplicates and keeps the current allowlist visible in review. The same check now also enforces the rollout-safety contract for new migrations starting at `0071`: every new migration must declare `-- rollout-safety: backward-compatible`, and obvious table/column drop or rename patterns are rejected because the standard deploy path applies D1 migrations before the new worker is live.
 
-`npm run test:merge-gate` now mirrors the deploy-path validate contract locally. If the changed-file set is not deploy-impacting, it prints the diff and exits successfully. For deploy-impacting diffs, it always runs `audit:deps`, `audit:pricing-providers`, lint, the root source `typecheck`, worker-boundary, shared-cycle detection, migrations, cron schedule/connection checks, `check:doc-counts`, `check:verified-doc-links`, `check:doc-source-paths`, `check:doc-sync`, `check:env-contract`, duplicate-export and redemption-backstop guards, unused-code, hotspot-ratchet, SQL-safety, `check:stablecoin-data`, the full test suite, and critical coverage. The cycle step now blocks on cycles in `shared/`, `worker/src`, and `src`. It adds `npm run build` + `npm run seo:check` when Pages-impacting files changed, and adds both `cd worker && npx tsc --noEmit` and `cd worker && npx tsc --noEmit -p tsconfig.scripts.json` when worker-impacting files changed. After `validate:prebuild`, independent build/test/coverage/typecheck groups run in parallel by default; set `MERGE_GATE_SERIAL=1` for the older serial execution shape. It still skips deploy-time smoke suites.
+`npm run test:merge-gate` now mirrors the deploy-path validate contract locally. If the changed-file set is not deploy-impacting, it prints the diff and exits successfully. For deploy-impacting diffs, it always runs `audit:deps`, `audit:pricing-providers`, lint, the root source `typecheck`, worker-boundary, shared-cycle detection, migrations, cron schedule/connection checks, `check:doc-counts`, `check:verified-doc-links`, `check:doc-source-paths`, `check:doc-sync`, `check:env-contract`, duplicate-export and redemption-backstop guards, unused-code, hotspot-ratchet, SQL-safety, `check:stablecoin-data`, the full test suite, and critical coverage. The cycle step now blocks on cycles in `shared/`, `worker/src`, and `src`. It adds `npm run build` + `npm run seo:check` when Pages-impacting files changed, and adds both `cd worker && npx tsc --noEmit` and `cd worker && npx tsc --noEmit -p tsconfig.scripts.json` when worker-impacting files changed. After `validate:prebuild`, independent build/test/coverage/typecheck groups run in parallel by default; a failing parallel group aborts siblings and reports the failing command explicitly. Set `MERGE_GATE_SERIAL=1` for the older serial execution shape. It still skips deploy-time smoke suites.
 
 `npm run check:unused-code` now scans all runtime code under `src/`, `shared/`, `worker/src/`, and `functions/`, with explicit module/export allowlists for intentional exceptions. `npm run check:hotspot-ratchet` now guards the maintained shell/facade files in `scripts/lib/hotspot-ratchet-baseline.json`, including `worker/src/cron/compute-dews.ts`, and also generates current repo-wide hotspot candidates from the top file-line, max-function-line, and branch-count outliers. Every generated candidate must either be enrolled in the baseline or explicitly waived in `scripts/lib/hotspot-ratchet-waivers.json`, so newly emerged hotspots cannot drift past the guardrail unseen. The ratchet still fails fast on stale target paths and unexpected baseline entries, and it now also fails on stale waiver entries. Each baseline entry declares a `disposition`, `targetBudget`, and implementation note so the ratchet doubles as a decomposition backlog rather than a blind ceiling list. Refresh the baseline only after an intentional refactor with `npm run check:hotspot-ratchet:update-baseline`, and update the matching waiver/backlog metadata at the same time.
 
@@ -240,18 +244,13 @@ export default defineConfig({
   plugins: [wasmStubPlugin()],
   test: {
     execArgv: nodeExecArgv,
-    exclude: [
-      ...configDefaults.exclude,
-      ...worktreeExcludes,
-      ".claude/**",
-      ".next/**",
-      "out/**",
-      "coverage/**",
-    ],
+    exclude: [...configDefaults.exclude, ...worktreeExcludes, ".claude/**", ".next/**", "out/**", "coverage/**"],
     coverage: {
       provider: "v8",
       reporter: ["text", "lcov"],
-      exclude: [/* mirrors test.exclude */],
+      exclude: [
+        /* mirrors test.exclude */
+      ],
       thresholds: { lines: 66 }, // Local full-suite coverage reference; CI enforces the critical coverage gate separately
     },
   },
@@ -412,14 +411,14 @@ npm run coverage:critical
 
 Keep this section focused on how the suite is organized and which surfaces are gate-critical. Do not add a full per-file table; stale path tables were a recurring documentation drift source.
 
-| Area | Location | Purpose |
-| --- | --- | --- |
-| Frontend library and page tests | `src/**/__tests__/`, colocated `*.test.ts(x)` files | Pure derivations, route view models, hooks, UI state, and page contracts |
-| Shared runtime tests | `shared/lib/__tests__/` | Runtime-neutral scoring, classification, chain, dependency, reserve, and formatting contracts |
-| Worker API tests | `worker/src/api/__tests__/` | Handler contracts, response shapes, auth/method behavior, and admin backfill surfaces |
-| Worker library tests | `worker/src/lib/__tests__/` | Auth, cache, rate limit, pricing, status, mint/burn, reserves, report cards, and helper modules |
-| Cron tests | `worker/src/cron/**/__tests__/` and colocated cron `*.test.ts` files | Scheduled ingestion, scoring, persistence, degradation, and adapter behavior |
-| Script tests | `scripts/__tests__/` | CI guardrail and operational-script behavior |
+| Area                            | Location                                                             | Purpose                                                                                         |
+| ------------------------------- | -------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------- |
+| Frontend library and page tests | `src/**/__tests__/`, colocated `*.test.ts(x)` files                  | Pure derivations, route view models, hooks, UI state, and page contracts                        |
+| Shared runtime tests            | `shared/lib/__tests__/`                                              | Runtime-neutral scoring, classification, chain, dependency, reserve, and formatting contracts   |
+| Worker API tests                | `worker/src/api/__tests__/`                                          | Handler contracts, response shapes, auth/method behavior, and admin backfill surfaces           |
+| Worker library tests            | `worker/src/lib/__tests__/`                                          | Auth, cache, rate limit, pricing, status, mint/burn, reserves, report cards, and helper modules |
+| Cron tests                      | `worker/src/cron/**/__tests__/` and colocated cron `*.test.ts` files | Scheduled ingestion, scoring, persistence, degradation, and adapter behavior                    |
+| Script tests                    | `scripts/__tests__/`                                                 | CI guardrail and operational-script behavior                                                    |
 
 Critical gate coverage is intentionally smaller than the full suite:
 
@@ -536,8 +535,8 @@ Selected files have explicit threshold overrides in `scripts/check-critical-cove
 - `npm run test:invariants` covers numerical/schema invariants and cache-write validation guards in critical cron paths.
 - `npm run test:merge-gate` runs a delta-aware local gate for merged worktree changes. It skips cleanly when no deploy surfaces changed, runs the shared validate core for deploy-impacting diffs, adds `build` + `seo:check` for Pages-impacting changes, and adds Worker runtime plus Worker operational-script typechecks for worker-impacting changes. Useful controls: `npm run test:merge-gate -- --staged`, `MERGE_GATE_BASE_REF=<ref>`, `MERGE_GATE_DRY_RUN=1`, and `MERGE_GATE_SERIAL=1`.
 - `npm run test:smoke-api` performs HTTP-level smoke checks for `/api/health` plus every strict contract path mirrored from `shared/lib/api-endpoints/` and guarded by `src/lib/__tests__/api-endpoints.test.ts` (currently including `stablecoins`, `peg-summary`, `report-cards`, `stability-index`, `dex-liquidity`, `redemption-backstops`, `stress-signals`, and `mint-burn-flows`) with shape/range assertions, sequential endpoint execution, and bounded retries for transient failures.
-- `npm run test:smoke-ops` performs private post-deploy checks against the operator surfaces through Cloudflare Access. For direct `ops-api.pharos.watch` requests, service-token mode sends `CF-Access-Client-Id` / `CF-Access-Client-Secret` and the worker verifies the injected Access JWT there. For the same-origin Pages proxy path, the script first attempts to bootstrap an Access session on `ops.pharos.watch`; when a `CF_Authorization` cookie is returned, it reuses that cookie in a best-effort smoke of `https://ops.pharos.watch/api/admin/status`. The proxy assertion retries up to two transient `502`/`504` gateway responses to absorb post-deploy warmup on the operator status path, but all other non-auth failures still fail immediately. If the UI host exposes only the interactive Access redirect, if the service-token UI flow renders the shell without yielding a browser session cookie, or if the proxied request remains `401 Unauthorized` after that cookie replay, the script keeps the shell/direct-API assertions and skips the same-origin proxy assertion.
-- `npm run test:smoke-transport` performs manual-redirect `HEAD` checks against `http://api.pharos.watch/...` and `http://site-api.pharos.watch/...`, requiring `308` plus an exact `Location` match that preserves host, path, and query while upgrading only to `https`.
+- `npm run test:smoke-ops` performs private post-deploy checks against the operator surfaces through Cloudflare Access. For direct `ops-api.pharos.watch` requests, service-token mode sends `CF-Access-Client-Id` / `CF-Access-Client-Secret` and the worker verifies the injected Access JWT there. The independent direct ops API probes start together with the ops UI shell fetch to avoid serializing unrelated network waits. For the same-origin Pages proxy path, the script first attempts to bootstrap an Access session on `ops.pharos.watch`; when a `CF_Authorization` cookie is returned, it reuses that cookie in a best-effort smoke of `https://ops.pharos.watch/api/admin/status`. The proxy assertion retries up to two transient `502`/`504` gateway responses to absorb post-deploy warmup on the operator status path, but all other non-auth failures still fail immediately. If the UI host exposes only the interactive Access redirect, if the service-token UI flow renders the shell without yielding a browser session cookie, or if the proxied request remains `401 Unauthorized` after that cookie replay, the script keeps the shell/direct-API assertions and skips the same-origin proxy assertion.
+- `npm run test:smoke-transport` performs concurrent manual-redirect `HEAD` checks against `http://api.pharos.watch/...` and `http://site-api.pharos.watch/...`, requiring `308` plus an exact `Location` match that preserves host, path, and query while upgrading only to `https`.
 - `npm run test:smoke-ui` performs a fast browser smoke check in either local or live mode. Local mode keeps the full tracked mobile overflow route sweep against the built artifact, while live mode keeps the homepage/GA checks and a narrow mobile canary route set against the real host. Both modes fail on homepage outage/empty states (`Failed to load data` or `Failed to load this dataset`, `stablecoins:404`, `Data not yet available` or `Waiting for first sync`, `Connection issue` or `Unable to reach the Pharos data API right now.`, `No stablecoin data available`).
 
 ### Tier-3 Structural Refactor Targeted Suites
