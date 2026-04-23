@@ -27,6 +27,16 @@ export const VALIDATE_PREBUILD_COMMANDS = [
   "npm run check:worker-boundary",
 ];
 
+export const VALIDATE_PREBUILD_MAX_PARALLEL = 8;
+
+export const VALIDATE_PREBUILD_TASK_NAMES = VALIDATE_PREBUILD_COMMANDS.map((cmd) => {
+  const prefix = "npm run ";
+  if (!cmd.startsWith(prefix)) {
+    throw new Error(`validate:prebuild only supports npm-script commands. Received: ${cmd}`);
+  }
+  return cmd.slice(prefix.length);
+});
+
 // Keep the top-level CI/merge-gate contract as the umbrella script while the
 // package-level implementation delegates to the shared registry above.
 export const COMMON_VALIDATE_PREBUILD_COMMANDS = [
@@ -39,7 +49,7 @@ export const PAGES_VALIDATE_COMMANDS = [
 ];
 
 export const COMMON_VALIDATE_POSTBUILD_COMMANDS = [
-  "npm test",
+  "npm run test:noncritical",
   "npm run coverage:critical",
 ];
 
@@ -82,6 +92,18 @@ export function buildCiValidateCommands() {
   return buildValidateCommandPlan();
 }
 
-export function buildValidatePrebuildRunnerArgs() {
-  return ["--no-install", "run-p", "-l", "--aggregate-output", ...VALIDATE_PREBUILD_COMMANDS];
+export function buildValidatePrebuildRunnerArgs({ continueOnError = false } = {}) {
+  const args = [
+    "-l",
+    "--aggregate-output",
+    "--max-parallel",
+    String(VALIDATE_PREBUILD_MAX_PARALLEL),
+    ...VALIDATE_PREBUILD_TASK_NAMES,
+  ];
+
+  if (continueOnError) {
+    args.splice(2, 0, "--continue-on-error");
+  }
+
+  return args;
 }

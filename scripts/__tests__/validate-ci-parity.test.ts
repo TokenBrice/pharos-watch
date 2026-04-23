@@ -3,11 +3,19 @@ import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 import {
   buildCiValidateStepPlan,
+  buildValidatePrebuildRunnerArgs,
   COMMON_VALIDATE_POSTBUILD_COMMANDS,
   PAGES_VALIDATE_COMMANDS,
+  VALIDATE_PREBUILD_MAX_PARALLEL,
   VALIDATE_PREBUILD_COMMANDS,
+  VALIDATE_PREBUILD_TASK_NAMES,
   WORKER_VALIDATE_COMMANDS,
 } from "../lib/validate-contract.mjs";
+import {
+  buildCriticalCoverageArgs,
+  buildNoncriticalTestArgs,
+  CRITICAL_TEST_FILES,
+} from "../lib/critical-test-files.mjs";
 import {
   buildPostPrebuildExecutionUnits,
   getPostPrebuildCommandEnv,
@@ -114,6 +122,8 @@ describe("validate-ci parity", () => {
     };
 
     expect(packageJson.scripts["validate:prebuild"]).toBe("node scripts/run-validate-prebuild.mjs");
+    expect(packageJson.scripts["test:noncritical"]).toBe("node scripts/run-noncritical-tests.mjs");
+    expect(packageJson.scripts["coverage:critical"]).toBe("node scripts/run-critical-coverage.mjs");
     expect(VALIDATE_PREBUILD_COMMANDS).toEqual([
       "npm run audit:deps",
       "npm run audit:pricing-providers",
@@ -144,6 +154,39 @@ describe("validate-ci parity", () => {
     ]);
   });
 
+  it("keeps the prebuild runner bounded while preserving the shared command set", () => {
+    expect(VALIDATE_PREBUILD_TASK_NAMES).toEqual(VALIDATE_PREBUILD_COMMANDS.map((cmd) => cmd.slice("npm run ".length)));
+    expect(buildValidatePrebuildRunnerArgs()).toEqual([
+      "-l",
+      "--aggregate-output",
+      "--max-parallel",
+      String(VALIDATE_PREBUILD_MAX_PARALLEL),
+      ...VALIDATE_PREBUILD_TASK_NAMES,
+    ]);
+    expect(buildValidatePrebuildRunnerArgs({ continueOnError: true })).toEqual([
+      "-l",
+      "--aggregate-output",
+      "--continue-on-error",
+      "--max-parallel",
+      String(VALIDATE_PREBUILD_MAX_PARALLEL),
+      ...VALIDATE_PREBUILD_TASK_NAMES,
+    ]);
+  });
+
+  it("keeps critical and non-critical test runners derived from one critical test list", () => {
+    expect(buildCriticalCoverageArgs()).toEqual([
+      "run",
+      "--coverage",
+      "--coverage.thresholds.lines=0",
+      ...CRITICAL_TEST_FILES,
+    ]);
+    expect(buildNoncriticalTestArgs(["--reporter=dot"])).toEqual([
+      "run",
+      ...CRITICAL_TEST_FILES.flatMap((file) => ["--exclude", file]),
+      "--reporter=dot",
+    ]);
+  });
+
   it("keeps the expanded validate contract model available for local planning", () => {
     expect(buildCiValidateStepPlan()).toEqual([
       { cmd: "npm run validate:prebuild", condition: null },
@@ -158,7 +201,7 @@ describe("validate-ci parity", () => {
       buildPostPrebuildExecutionUnits({ pagesChanged: true, workerChanged: true }).map((unit) => unit.commands),
     ).toEqual([
       PAGES_VALIDATE_COMMANDS,
-      ["npm test"],
+      ["npm run test:noncritical"],
       ["npm run coverage:critical"],
       ["cd worker && npx tsc --noEmit"],
       ["cd worker && npx tsc --noEmit -p tsconfig.scripts.json"],
@@ -167,7 +210,7 @@ describe("validate-ci parity", () => {
     expect(
       buildPostPrebuildExecutionUnits({ pagesChanged: false, workerChanged: true }).map((unit) => unit.commands),
     ).toEqual([
-      ["npm test"],
+      ["npm run test:noncritical"],
       ["npm run coverage:critical"],
       ["cd worker && npx tsc --noEmit"],
       ["cd worker && npx tsc --noEmit -p tsconfig.scripts.json"],
@@ -180,7 +223,7 @@ describe("validate-ci parity", () => {
         coverageCompareRef: "abc123",
       }),
     ).toEqual({ CRITICAL_COVERAGE_COMPARE_REF: "abc123" });
-    expect(getPostPrebuildCommandEnv("npm test", { coverageCompareRef: "abc123" })).toEqual({});
+    expect(getPostPrebuildCommandEnv("npm run test:noncritical", { coverageCompareRef: "abc123" })).toEqual({});
   });
 
   it("aborts sibling post-prebuild groups after the first failure", async () => {
@@ -215,7 +258,7 @@ describe("validate-ci parity", () => {
     expect(calls).toContain("npm run build");
     expect(calls).not.toContain("npm run seo:check");
     expect(aborted).toEqual([
-      "npm test",
+      "npm run test:noncritical",
       "npm run coverage:critical",
       "cd worker && npx tsc --noEmit",
       "cd worker && npx tsc --noEmit -p tsconfig.scripts.json",

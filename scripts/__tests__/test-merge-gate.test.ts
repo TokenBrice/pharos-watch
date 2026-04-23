@@ -63,7 +63,7 @@ describe("buildCommandPlan", () => {
       CRITICAL_COVERAGE_CHANGED_FILES: "worker/src/api/status.ts,docs/testing.md",
     });
 
-    expect(getCommandEnv("npm test", ["worker/src/api/status.ts"])).toEqual({});
+    expect(getCommandEnv("npm run test:noncritical", ["worker/src/api/status.ts"])).toEqual({});
   });
 
   it("groups independent post-validate checks for parallel local execution", () => {
@@ -74,7 +74,7 @@ describe("buildCommandPlan", () => {
       [["npm run validate:prebuild"]],
       [
         ["npm run build", "npm run seo:check"],
-        ["npm test"],
+        ["npm run test:noncritical"],
         ["npm run coverage:critical"],
         ["cd worker && npx tsc --noEmit"],
         ["cd worker && npx tsc --noEmit -p tsconfig.scripts.json"],
@@ -122,7 +122,7 @@ describe("buildCommandPlan", () => {
     expect(calls).toContain("npm run build");
     expect(calls).not.toContain("npm run seo:check");
     expect(aborted).toEqual([
-      "npm test",
+      "npm run test:noncritical",
       "npm run coverage:critical",
       "cd worker && npx tsc --noEmit",
       "cd worker && npx tsc --noEmit -p tsconfig.scripts.json",

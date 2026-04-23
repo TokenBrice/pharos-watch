@@ -1,17 +1,12 @@
 #!/usr/bin/env node
 
 import { spawnSync } from "node:child_process";
-import { VALIDATE_PREBUILD_COMMANDS } from "./lib/validate-contract.mjs";
+import { localBin } from "./lib/local-bin.mjs";
+import { buildValidatePrebuildRunnerArgs } from "./lib/validate-contract.mjs";
 
-const taskNames = VALIDATE_PREBUILD_COMMANDS.map((cmd) => {
-  const prefix = "npm run ";
-  if (!cmd.startsWith(prefix)) {
-    throw new Error(`validate:prebuild only supports npm-script commands. Received: ${cmd}`);
-  }
-  return cmd.slice(prefix.length);
-});
-
-const result = spawnSync("npx", ["--no-install", "run-p", "-l", "--aggregate-output", ...taskNames], {
+const result = spawnSync(localBin("run-p"), buildValidatePrebuildRunnerArgs({
+  continueOnError: process.env.VALIDATE_PREBUILD_CONTINUE_ON_ERROR === "1",
+}), {
   stdio: "inherit",
 });
 
