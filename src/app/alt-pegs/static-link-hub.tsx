@@ -7,6 +7,9 @@ const FIAT_REGION_ORDER = ["Europe", "Asia", "Americas", "Africa", "Oceania", "O
 const ATLAS_REGION_ORDER = ["Americas", "Europe", "Asia", "Africa", "Oceania"] as const;
 const ATLAS_VIEWBOX_WIDTH = 780;
 const ATLAS_VIEWBOX_HEIGHT = 360;
+const ATLAS_STRUCTURE_BORDER = "oklch(0.72 0.14 248 / 0.16)";
+const ATLAS_STRUCTURE_SURFACE = "oklch(0.72 0.14 248 / 0.06)";
+const ATLAS_STRUCTURE_LINE = "oklch(0.72 0.14 248 / 0.24)";
 
 type FiatMapRegion = Exclude<AltPegRegion, "Other">;
 
@@ -152,12 +155,6 @@ function getRegionCoinCount(items: AltPegLinkHubItem[]): number {
   return items.reduce((total, item) => total + item.coinCount, 0);
 }
 
-function opacityToHex(opacity: number): string {
-  return Math.round(Math.min(1, Math.max(0, opacity)) * 255)
-    .toString(16)
-    .padStart(2, "0");
-}
-
 function formatOffMapGroupLabel(group: AltPegLinkHubItem["group"]): string {
   switch (group) {
     case "Commodity":
@@ -246,8 +243,8 @@ function RegionSummaryPill({
     <div
       className="inline-flex min-h-9 items-center gap-2 rounded-full border px-3 py-1.5"
       style={{
-        borderColor: withAlpha(accentHex, "24"),
-        backgroundColor: withAlpha(accentHex, "0d"),
+        borderColor: ATLAS_STRUCTURE_BORDER,
+        backgroundColor: ATLAS_STRUCTURE_SURFACE,
       }}
     >
       <span className="inline-block h-2 w-2 rounded-full" style={{ backgroundColor: accentHex }} />
@@ -333,8 +330,8 @@ function AtlasBackdrop({
             <path
               key={`${idSuffix}-${region}-footprint-${index}`}
               d={path}
-              fill={withAlpha(layout.accentHex, "16")}
-              stroke={withAlpha(layout.accentHex, "30")}
+              fill={withAlpha(layout.accentHex, "10")}
+              stroke={withAlpha(layout.accentHex, "18")}
             />
           ));
         })}
@@ -364,7 +361,7 @@ function AtlasLeadLines({ atlasRegions }: { atlasRegions: readonly AtlasRegionEn
             <path
               key={`${region}-card-leader`}
               d={buildConnectorPath(layout.connectorStart, layout.badge)}
-              stroke={withAlpha(layout.accentHex, "40")}
+              stroke={ATLAS_STRUCTURE_LINE}
               strokeWidth="1.45"
             />
           );
@@ -375,7 +372,7 @@ function AtlasLeadLines({ atlasRegions }: { atlasRegions: readonly AtlasRegionEn
             <path
               key={`${region}-badge-leader`}
               d={`M${layout.badge.x} ${layout.badge.y}L${layout.anchor.x} ${layout.anchor.y}`}
-              stroke={withAlpha(layout.accentHex, "5a")}
+              stroke={withAlpha(layout.accentHex, "3c")}
               strokeWidth="1.25"
             />
           );
@@ -402,8 +399,8 @@ function CoverageMarker({ region }: { region: AtlasRegionEntry }) {
           style={{
             width: `${haloSize}px`,
             height: `${haloSize}px`,
-            borderColor: withAlpha(layout.accentHex, opacityToHex(0.18 + region.emphasis * 0.18)),
-            backgroundColor: withAlpha(layout.accentHex, opacityToHex(0.06 + region.emphasis * 0.08)),
+            borderColor: ATLAS_STRUCTURE_BORDER,
+            backgroundColor: ATLAS_STRUCTURE_SURFACE,
           }}
         />
         <div
@@ -421,7 +418,7 @@ function CoverageMarker({ region }: { region: AtlasRegionEntry }) {
         style={{
           ...pointToStyle(layout.badge),
           minWidth: `${badgeMinWidth}px`,
-          borderColor: withAlpha(layout.accentHex, "32"),
+          borderColor: ATLAS_STRUCTURE_BORDER,
           boxShadow: "var(--elevation-rest)",
         }}
       >
@@ -462,7 +459,7 @@ function FiatRegionSection({
         docked && atlasRegion && layout
           ? {
               ...rectToStyle(layout.card),
-              borderColor: withAlpha(layout.accentHex, "20"),
+              borderColor: ATLAS_STRUCTURE_BORDER,
               boxShadow: "var(--elevation-rest)",
             }
           : undefined
@@ -473,7 +470,7 @@ function FiatRegionSection({
           aria-hidden="true"
           className="absolute inset-x-4 top-0 h-px"
           style={{
-            background: `linear-gradient(90deg, ${withAlpha(layout.accentHex, "00")} 0%, ${withAlpha(layout.accentHex, "88")} 50%, ${withAlpha(layout.accentHex, "00")} 100%)`,
+            background: `linear-gradient(90deg, oklch(0.72 0.14 248 / 0) 0%, ${ATLAS_STRUCTURE_LINE} 50%, oklch(0.72 0.14 248 / 0) 100%)`,
           }}
         />
       ) : null}
