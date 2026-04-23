@@ -79,6 +79,7 @@ export function CoinEmblem({
     coin.name,
     mcap ? `${mcap} market cap` : null,
     cohortLabel,
+    cohortRank ? `#${cohortRank} by non-USD cap` : null,
     cohortShare ? `${cohortShare} of cohort market cap` : null,
   ]
     .filter(Boolean)

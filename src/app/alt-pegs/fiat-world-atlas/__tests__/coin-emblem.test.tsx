@@ -105,6 +105,7 @@ describe("CoinEmblem", () => {
     expect(card.textContent).toContain("#2 by non-USD cap");
     expect(card.textContent).toContain("Open EURC profile");
     expect(screen.getByText("EURC", { selector: ".coin-emblem__mini-label" })).toBeTruthy();
+    expect(link.getAttribute("aria-label")).toContain("#2 by non-USD cap");
     expect(link.getAttribute("aria-describedby")).toBe(card.id);
   });
 

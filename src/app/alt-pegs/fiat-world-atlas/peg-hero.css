@@ -270,6 +270,23 @@
   opacity: 0.34;
 }
 
+.coin-emblem-hit-layer {
+  position: absolute;
+  inset: 0;
+  z-index: 38;
+  pointer-events: none;
+}
+
+.coin-emblem-hit-target {
+  position: absolute;
+  display: block;
+  border-radius: 999px;
+  cursor: pointer;
+  pointer-events: auto;
+  transform: translate(-50%, -50%);
+  z-index: var(--hit-z, 40);
+}
+
 .coin-emblem__mini-label {
   position: absolute;
   left: 50%;
@@ -418,9 +435,14 @@
     box-shadow 180ms ease-out;
 }
 
-.fiat-region-section:target {
+.fiat-region-section:target,
+.fiat-region-section:focus {
   background: oklch(0.74 0.11 250 / 0.08);
   box-shadow: 0 0 0 1px oklch(0.74 0.11 250 / 0.22);
+}
+
+.fiat-region-section:focus {
+  outline: none;
 }
 
 .fiat-region-section:focus-visible {
