@@ -46,4 +46,22 @@ describe("StaticAltPegLinkHub", () => {
     const links = within(section as HTMLElement).getAllByRole("link");
     expect(links[0]?.getAttribute("aria-label")).toContain(expectedLead?.label ?? "");
   });
+
+  it("keeps the desktop atlas gated behind the xl layout and scales markers by coverage", () => {
+    const { container } = render(<StaticAltPegLinkHub />);
+
+    const desktopAtlas = container.querySelector('[data-alt-peg-layout="desktop-atlas"]');
+    const regionList = container.querySelector('[data-alt-peg-layout="region-list"]');
+    const europeMarker = container.querySelector('[data-region="Europe"]');
+    const africaMarker = container.querySelector('[data-region="Africa"]');
+
+    expect(desktopAtlas?.className).toContain("hidden");
+    expect(desktopAtlas?.className).toContain("xl:block");
+    expect(regionList?.className).toContain("xl:hidden");
+    expect(europeMarker?.getAttribute("data-coin-count")).toBe("20");
+    expect(africaMarker?.getAttribute("data-coin-count")).toBe("1");
+    expect(Number(europeMarker?.getAttribute("data-marker-size"))).toBeGreaterThan(
+      Number(africaMarker?.getAttribute("data-marker-size")),
+    );
+  });
 });

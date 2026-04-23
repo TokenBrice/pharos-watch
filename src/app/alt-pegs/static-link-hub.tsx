@@ -231,6 +231,9 @@ function CoverageMarker({ region }: { region: AtlasRegionEntry }) {
     <div
       aria-hidden="true"
       className="pointer-events-none absolute -translate-x-1/2 -translate-y-1/2"
+      data-coin-count={region.coinCount}
+      data-marker-size={outerSize.toFixed(2)}
+      data-region={region.region}
       style={layout.markerStyle}
     >
       <div
@@ -442,7 +445,7 @@ export function StaticAltPegLinkHub() {
               </div>
             </div>
 
-            <div className="hidden px-4 py-4 sm:px-5 sm:py-5 xl:block">
+            <div data-alt-peg-layout="desktop-atlas" className="hidden px-4 py-4 sm:px-5 sm:py-5 xl:block">
               <div className="relative aspect-[13/6] overflow-hidden rounded-[1.5rem] border border-border/60 bg-background/35">
                 <AtlasBackdrop idSuffix="atlas-desktop" />
                 <div className="absolute inset-x-0 top-0 h-28 bg-[radial-gradient(circle_at_top,oklch(0.75_0.08_248_/_0.08),transparent_72%)]" />
@@ -482,7 +485,7 @@ export function StaticAltPegLinkHub() {
               ) : null}
             </div>
 
-            <div className="space-y-4 px-4 py-4 sm:px-5 sm:py-5 xl:hidden">
+            <div data-alt-peg-layout="region-list" className="space-y-4 px-4 py-4 sm:px-5 sm:py-5 xl:hidden">
               {fiatRegions.map((region) => (
                 <FiatRegionSection key={region.region} region={region.region} items={region.items} />
               ))}
