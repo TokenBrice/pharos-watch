@@ -38,6 +38,18 @@ export function getYieldBenchmarkReferenceText(value: YieldBenchmarkLike | Yield
   return `vs ${getYieldBenchmarkDisplayLabel(value)}`;
 }
 
+export function getYieldBenchmarkGapReferenceText(
+  value: YieldBenchmarkLike | YieldBenchmarkMeta | null | undefined,
+  opts: { includePeriod?: boolean; periodLabel?: string } = {},
+): string {
+  const prefix = opts.includePeriod === false ? "" : `${opts.periodLabel ?? "30d"} `;
+  return `${prefix}${getYieldBenchmarkReferenceText(value)}`;
+}
+
+export function getYieldBenchmarkGapUnavailableText(periodLabel = "30d"): string {
+  return `No ${periodLabel} benchmark gap`;
+}
+
 function getYieldBenchmarkKeys(rankings: YieldRanking[]): YieldBenchmarkKey[] {
   return Array.from(
     new Set(

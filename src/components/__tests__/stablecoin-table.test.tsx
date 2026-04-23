@@ -220,6 +220,34 @@ describe("StablecoinTable", () => {
     expect(screen.queryByText("USDT")).toBeNull();
   });
 
+  it("keeps rank values tied to pre-pin sort order", () => {
+    localStorage.setItem("pharos-table-columns", JSON.stringify(["rank", "name"]));
+    virtualItemsMock.splice(
+      0,
+      virtualItemsMock.length,
+      { index: 0, start: 0, end: 40 },
+      { index: 1, start: 40, end: 80 },
+    );
+    virtualTotalSizeMock.current = 80;
+
+    render(
+      <StablecoinTable
+        data={[coin, usdc]}
+        isLoading={false}
+        activeFilters={[]}
+        pegRates={{}}
+        pinnedStablecoinIds={["usdc-circle"]}
+        onTogglePinnedStablecoin={vi.fn()}
+      />,
+    );
+
+    const usdcRow = screen.getByText("USDC").closest("tr");
+    const usdtRow = screen.getByText("USDT").closest("tr");
+
+    expect(usdcRow?.querySelectorAll("td")[1]?.textContent).toBe("2");
+    expect(usdtRow?.querySelectorAll("td")[1]?.textContent).toBe("1");
+  });
+
   it("adds full variant context to the row and inner detail link", () => {
     render(
       <StablecoinTable

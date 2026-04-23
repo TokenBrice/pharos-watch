@@ -157,8 +157,15 @@ export function useRedemptionBackstops() {
 }
 
 export function useSafetyScoreHistory(stablecoinId: string, days = 3650) {
-  return useQuery<SafetyScoreHistoryResponse, Error>(
-    safetyScoreHistoryQueryOptions(stablecoinId, days),
+  return useApiQueryWithMeta<SafetyScoreHistoryResponse>(
+    ["safety-score-history", stablecoinId, days],
+    API_PATHS.safetyScoreHistory(stablecoinId, days),
+    CRON_24H,
+    {
+      enabled: !!stablecoinId,
+      schema: SafetyScoreHistoryResponseSchema,
+      metaMaxAgeSec: CRON_24H / 1000,
+    },
   );
 }
 

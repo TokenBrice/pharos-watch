@@ -3,7 +3,7 @@
 import { useMemo, useState, type Dispatch, type SetStateAction } from "react";
 import { useYieldRankings } from "@/hooks/api-hooks";
 import { useUrlFilters } from "@/hooks/use-url-filters";
-import { getYieldBenchmarkReferenceText } from "@/lib/yield-benchmark";
+import { getYieldBenchmarkGapReferenceText } from "@/lib/yield-benchmark";
 import { computePysBreakdown, getPysColor } from "@/lib/yield-constants";
 import { YIELD_TYPE_LABELS, YIELD_TYPE_STYLES } from "@shared/lib/classification";
 import { formatPercentFromRatio, formatSignedPercent as sharedFormatSignedPercent } from "@shared/lib/format";
@@ -185,7 +185,7 @@ export function useYieldDetailSectionModel(stablecoinId: string): YieldDetailSec
   const dataSourceMeta = DATA_SOURCE_BADGES[ranking.dataSource] ?? DATA_SOURCE_BADGES.defillama;
   const singleWarning = ranking.warningSignals.length === 1 ? ranking.warningSignals[0] : null;
   const historySources = buildHistorySources(ranking);
-  const benchmarkSubtitle = getYieldBenchmarkReferenceText(ranking);
+  const benchmarkSubtitle = getYieldBenchmarkGapReferenceText(ranking, { includePeriod: false });
 
   return {
     status: "ready",

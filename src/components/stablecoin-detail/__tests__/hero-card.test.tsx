@@ -190,6 +190,15 @@ const yieldRanking: YieldRanking = {
   safetyGrade: "B+",
   yieldToRisk: 3.2,
   excessYield: 0.85,
+  benchmarkKey: "USD",
+  benchmarkLabel: "USD 3M T-Bill",
+  benchmarkCurrency: "USD",
+  benchmarkRate: 3.75,
+  benchmarkRecordDate: "2026-04-21",
+  benchmarkIsFallback: false,
+  benchmarkFallbackMode: null,
+  benchmarkSelectionMode: "native",
+  benchmarkIsProxy: false,
   yieldStability: 0.92,
   apyVariance30d: 0.1,
   apyMin30d: 4.4,
@@ -253,6 +262,7 @@ describe("HeroCard", () => {
     expect(html).toContain('data-testid="methodology-hint-freezable"');
     expect(html).toContain("30d Excess");
     expect(html).toContain("+0.85%");
+    expect(html).toContain("30d vs USD 3M T-Bill");
     expect(html).not.toContain("1Y vs USD");
     expect(html).toContain("DEWS");
     expect(html).toContain("Watch");
@@ -306,6 +316,35 @@ describe("HeroCard", () => {
     expect(html).toContain("Freezable");
     expect(html).toContain("Upstream");
     expect(html).not.toContain("No issuer controls");
+  });
+
+  it("uses shared no-gap copy when excess yield is unavailable", () => {
+    const html = renderToStaticMarkup(
+      <HeroCard
+        coin={coin}
+        coinData={coinData}
+        logoSrc="/logos/usdc.svg"
+        isNavToken={false}
+        mcap={1_000_000_000}
+        supply={1_000_000_000}
+        prevDay={995_000_000}
+        prevWeek={980_000_000}
+        prevMonth={970_000_000}
+        performanceVsUsd1y={null}
+        pegRef={1}
+        deviationBps={-2}
+        gaugeDeviationBps={2}
+        pegScoreResult={pegScoreResult}
+        recordedDepegEventCount={3}
+        liquidityData={liquidityData}
+        yieldRanking={{ ...yieldRanking, excessYield: null }}
+        stressSignal={stressSignal}
+        reportCard={reportCardWithInheritedBlacklistRisk}
+        onOpenFeedback={() => {}}
+      />,
+    );
+
+    expect(html).toContain("No 30d benchmark gap");
   });
 
   it("renders the tracked parent chip for variant detail pages", () => {

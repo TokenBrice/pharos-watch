@@ -29,7 +29,7 @@ import type { TableDensity } from "@/hooks/use-table-density";
 
 interface StablecoinVirtualRowProps {
   coin: StablecoinData;
-  index: number;
+  rank: number;
   isStriped: boolean;
   densityConfig: {
     rowHeight: number;
@@ -80,7 +80,7 @@ function MiniSparkline({ values }: { values: number[] }) {
 
 export function StablecoinVirtualRow({
   coin,
-  index,
+  rank,
   isStriped,
   densityConfig,
   density,
@@ -171,7 +171,7 @@ export function StablecoinVirtualRow({
       )}
       {isVisible("rank") && (
         <TableCell className="text-right text-muted-foreground text-xs font-mono tabular-nums">
-          {index + 1}
+          {rank}
         </TableCell>
       )}
       {isVisible("name") && (

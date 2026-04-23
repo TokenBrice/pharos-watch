@@ -32,6 +32,10 @@ import { getResolvedBlacklistStatus } from "@/lib/blacklist-status";
 import { getScoreColor, pegScoreColor } from "@/lib/severity-colors";
 import { getVariantDisplay } from "@/lib/variant-display";
 import {
+  getYieldBenchmarkGapReferenceText,
+  getYieldBenchmarkGapUnavailableText,
+} from "@/lib/yield-benchmark";
+import {
   HeroCardDesktopSection,
   HeroCardHeader,
   HeroCardMobileSection,
@@ -205,11 +209,15 @@ export function HeroCard({
       return { value: "—", sub: undefined, color: "text-muted-foreground" };
     }
     if (yieldRanking.excessYield === null) {
-      return { value: "—", sub: "No 30d gap", color: "text-muted-foreground" };
+      return {
+        value: "—",
+        sub: getYieldBenchmarkGapUnavailableText(),
+        color: "text-muted-foreground",
+      };
     }
     return {
       value: formatSignedPercent(yieldRanking.excessYield),
-      sub: "30d vs Ref",
+      sub: getYieldBenchmarkGapReferenceText(yieldRanking),
       color:
         yieldRanking.excessYield >= 0
           ? "text-green-700 dark:text-green-400"

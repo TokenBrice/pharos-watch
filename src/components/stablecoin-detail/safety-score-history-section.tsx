@@ -5,7 +5,7 @@ import { ArrowDown, ArrowUp } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { REPORT_CARD_GRADE_COLORS } from "@shared/lib/report-cards";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import {
   Tooltip,
   TooltipContent,
@@ -14,7 +14,9 @@ import {
 } from "@/components/ui/tooltip";
 import { QueryErrorNotice } from "@/components/query-error-notice";
 import { DetailSectionTitle } from "@/components/stablecoin-detail/section-title";
+import { FreshnessIndicator } from "@/components/status/freshness-indicator";
 import { useSafetyScoreHistory } from "@/hooks/api-hooks";
+import { CRON_24H } from "@/lib/cron-intervals";
 import {
   formatChartDate,
   formatDuration,
@@ -113,7 +115,7 @@ interface SafetyScoreHistorySectionProps {
 export function SafetyScoreHistorySection({
   stablecoinId,
 }: SafetyScoreHistorySectionProps) {
-  const { data, isLoading, error } = useSafetyScoreHistory(stablecoinId, 3650);
+  const { data, meta, isLoading, error } = useSafetyScoreHistory(stablecoinId, 3650);
   const [expanded, setExpanded] = useState(false);
 
   // --- derived data --------------------------------------------------------
@@ -175,10 +177,15 @@ export function SafetyScoreHistorySection({
 
   return (
     <Card className="rounded-xl">
-      <CardHeader className="pb-1">
-        <DetailSectionTitle>
-          Grade History
-        </DetailSectionTitle>
+      <CardHeader className="flex flex-row flex-wrap items-center justify-between gap-2 pb-1">
+        <DetailSectionTitle>Grade History</DetailSectionTitle>
+        {meta?.updatedAt != null && meta.updatedAt > 0 ? (
+          <FreshnessIndicator
+            updatedAtMs={meta.updatedAt * 1000}
+            staleAfterMs={CRON_24H}
+            labelPrefix="Updated"
+          />
+        ) : null}
       </CardHeader>
       <CardContent>
         {/* Summary stats strip */}

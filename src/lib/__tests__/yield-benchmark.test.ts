@@ -2,6 +2,8 @@ import { describe, expect, it } from "vitest";
 
 import {
   getYieldBenchmarkDisplayLabel,
+  getYieldBenchmarkGapReferenceText,
+  getYieldBenchmarkGapUnavailableText,
   resolveYieldScatterBenchmarkFrame,
 } from "@/lib/yield-benchmark";
 import type { YieldBenchmarkRegistry, YieldRanking } from "@shared/types";
@@ -99,6 +101,25 @@ describe("getYieldBenchmarkDisplayLabel", () => {
         benchmarkIsFallback: true,
       }),
     ).toBe("USD 3M T-Bill (fallback)");
+  });
+});
+
+describe("yield benchmark gap copy", () => {
+  it("builds a shared 30d benchmark subtitle for excess yield callouts", () => {
+    expect(
+      getYieldBenchmarkGapReferenceText({
+        benchmarkLabel: "USD 3M T-Bill",
+      }),
+    ).toBe("30d vs USD 3M T-Bill");
+    expect(
+      getYieldBenchmarkGapReferenceText({
+        benchmarkLabel: "USD 3M T-Bill",
+      }, { includePeriod: false }),
+    ).toBe("vs USD 3M T-Bill");
+  });
+
+  it("builds the shared no-gap fallback copy", () => {
+    expect(getYieldBenchmarkGapUnavailableText()).toBe("No 30d benchmark gap");
   });
 });
 

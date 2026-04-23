@@ -57,6 +57,7 @@ describe("SafetyScoreHistorySection", () => {
   it("does not render while loading", () => {
     useSafetyScoreHistoryMock.mockReturnValue({
       data: undefined,
+      meta: null,
       isLoading: true,
       error: null,
     });
@@ -68,6 +69,7 @@ describe("SafetyScoreHistorySection", () => {
   it("does not render when history is empty", () => {
     useSafetyScoreHistoryMock.mockReturnValue({
       data: [],
+      meta: null,
       isLoading: false,
       error: null,
     });
@@ -79,6 +81,7 @@ describe("SafetyScoreHistorySection", () => {
   it("renders error banner when query errors", () => {
     useSafetyScoreHistoryMock.mockReturnValue({
       data: undefined,
+      meta: null,
       isLoading: false,
       error: new Error("boom"),
     });
@@ -108,6 +111,7 @@ describe("SafetyScoreHistorySection", () => {
           methodologyVersion: "5.5",
         },
       ],
+      meta: { updatedAt: NOW_SEC - 7_200, ageSeconds: 7_200, status: "fresh" },
       isLoading: false,
       error: null,
     });
@@ -124,6 +128,7 @@ describe("SafetyScoreHistorySection", () => {
 
     // Initial grade still present
     expect(html).toContain("Initial grade");
+    expect(html).toContain("Updated: 2h ago");
   });
 
   it("caps visible entries at 3 and shows 'Show more' button", () => {
@@ -137,6 +142,7 @@ describe("SafetyScoreHistorySection", () => {
 
     useSafetyScoreHistoryMock.mockReturnValue({
       data: entries,
+      meta: null,
       isLoading: false,
       error: null,
     });
@@ -158,11 +164,26 @@ describe("SafetyScoreHistorySection", () => {
         { date: 1_741_000_000, grade: "A", score: 85, prevGrade: null, prevScore: null, methodologyVersion: "6.0" },
         { date: 1_741_500_000, grade: "B+", score: 78, prevGrade: "A", prevScore: 85, methodologyVersion: "6.0" },
       ],
+      meta: null,
       isLoading: false,
       error: null,
     });
 
     const html = renderToStaticMarkup(<SafetyScoreHistorySection stablecoinId="usdt-tether" />);
     expect(html).toContain("Downgraded from A");
+  });
+
+  it("omits the freshness indicator when history meta is unavailable", () => {
+    useSafetyScoreHistoryMock.mockReturnValue({
+      data: [
+        { date: 1_741_000_000, grade: "B", score: 74, prevGrade: null, prevScore: null, methodologyVersion: "6.0" },
+      ],
+      meta: null,
+      isLoading: false,
+      error: null,
+    });
+
+    const html = renderToStaticMarkup(<SafetyScoreHistorySection stablecoinId="usdt-tether" />);
+    expect(html).not.toContain("Updated:");
   });
 });

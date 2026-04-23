@@ -195,6 +195,10 @@ export function StablecoinTable({
     () => prioritizePinnedStablecoins(sorted, pinnedStablecoinIds),
     [pinnedStablecoinIds, sorted],
   );
+  const sortedRankById = useMemo(
+    () => new Map(sorted.map((coin, index) => [coin.id, index + 1] as const)),
+    [sorted],
+  );
 
   // Reset scroll when filters, search, sort, or starred row priority changes.
   const prevRef = useRef<{ rows: typeof displayed; sort: typeof sort } | null>(null);
@@ -313,7 +317,7 @@ export function StablecoinTable({
                 <StablecoinVirtualRow
                   key={coin.id}
                   coin={coin}
-                  index={virtualRow.index}
+                  rank={sortedRankById.get(coin.id) ?? virtualRow.index + 1}
                   isStriped={virtualRow.index % 2 === 1}
                   densityConfig={densityConfig}
                   density={density}
