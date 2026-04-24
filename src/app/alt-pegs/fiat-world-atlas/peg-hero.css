@@ -549,21 +549,21 @@
   flex-direction: column;
   gap: 6px;
   min-height: 56px;
-  border: 1px solid oklch(0.75 0.05 260 / 0.16);
   border-radius: 8px;
-  background: oklch(1 0 0 / 0.035);
+  background: oklch(1 0 0 / 0.04);
+  box-shadow: inset 0 0 0 1px oklch(0.75 0.05 260 / 0.1);
   color: inherit;
-  padding: 9px 11px;
+  padding: 10px 12px;
   text-decoration: none;
   transition:
     background-color 160ms ease-out,
-    border-color 160ms ease-out;
+    box-shadow 160ms ease-out;
 }
 
 .peg-hero__top-row:hover,
 .peg-hero__top-row:focus-visible {
-  background: oklch(1 0 0 / 0.08);
-  border-color: oklch(0.78 0.09 250 / 0.42);
+  background: oklch(1 0 0 / 0.085);
+  box-shadow: inset 0 0 0 1px oklch(0.78 0.09 250 / 0.38);
 }
 
 .peg-hero__top-head {
