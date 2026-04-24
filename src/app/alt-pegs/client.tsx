@@ -64,7 +64,7 @@ function AltPegSnapshotHero({
 
   return (
     <section className="pharos-card-shell overflow-hidden">
-      <div className="grid gap-6 px-4 py-4 sm:px-5 sm:py-5 lg:grid-cols-[minmax(0,1.1fr)_minmax(20rem,0.9fr)] lg:items-start">
+      <div className="grid gap-6 px-4 py-4 sm:px-5 sm:py-5 lg:grid-cols-[minmax(0,1.1fr)_minmax(20rem,0.9fr)] lg:items-stretch">
         <div className="space-y-4">
           <div className="space-y-2">
             <p className="pharos-kicker">Current Structure</p>
