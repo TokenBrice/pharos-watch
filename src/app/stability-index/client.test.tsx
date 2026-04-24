@@ -60,8 +60,10 @@ vi.mock("recharts", () => ({
   Area: () => <div />,
 }));
 
-vi.mock("@/components/stability-index", () => ({
-  PsiLighthouse: ({ band }: { band: string }) => <div>{band} lighthouse</div>,
+vi.mock("./psi-lighthouse-scene", () => ({
+  PsiLighthouseScene: ({ band, score }: { band: string; score: number }) => (
+    <div>{band} lighthouse scene {Math.round(score)}</div>
+  ),
 }));
 
 vi.mock("@/components/psi-history-chart", () => ({

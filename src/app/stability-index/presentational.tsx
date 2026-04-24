@@ -4,7 +4,6 @@ import Link from "next/link";
 import { ExternalLink } from "lucide-react";
 import { ChartSkeleton } from "@/components/chart-skeleton";
 import { MethodologyLabel } from "@/components/methodology-hint";
-import { PsiLighthouse } from "@/components/stability-index";
 import { StablecoinLogo } from "@/components/stablecoin-logo";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -13,13 +12,8 @@ import { cn } from "@/lib/utils";
 import { buildStablecoinUrl } from "@/lib/urls";
 import type { MethodologyContextKey } from "@/lib/methodology-context";
 import { formatCurrency, formatScore } from "@shared/lib/format";
-import {
-  PSI_BAND_CLASSES,
-  PSI_BG_OVERLAY_CLASSES,
-  PSI_BORDER_CLASSES,
-  PSI_HEX_COLORS,
-  type ConditionBand,
-} from "@shared/lib/psi-colors";
+import { PSI_BAND_CLASSES, type ConditionBand } from "@shared/lib/psi-colors";
+import { PsiLighthouseScene } from "./psi-lighthouse-scene";
 import type { HistoryStatItem, PsiContributorRow, PsiEventTimelineRow } from "./view-model";
 
 export interface StabilityComponentScores {
@@ -72,97 +66,6 @@ export const STABILITY_COMPONENT_DETAIL: Array<{
     color: STABILITY_COMPONENT_COLORS.trend,
   },
 ];
-
-const ARC_BANDS = [
-  { min: 0, max: 20, color: PSI_HEX_COLORS.MELTDOWN },
-  { min: 20, max: 40, color: PSI_HEX_COLORS.CRISIS },
-  { min: 40, max: 60, color: PSI_HEX_COLORS.FRACTURE },
-  { min: 60, max: 75, color: PSI_HEX_COLORS.TREMOR },
-  { min: 75, max: 90, color: PSI_HEX_COLORS.STEADY },
-  { min: 90, max: 100, color: PSI_HEX_COLORS.BEDROCK },
-];
-
-function ScoreArc({ score, color, size = 140 }: { score: number; color: string; size?: number }) {
-  const r = 44;
-  const cx = 50;
-  const cy = 54;
-  const startAngle = 150;
-  const sweep = 240;
-  const gap = 1.2;
-
-  function polarToXY(angleDeg: number) {
-    const rad = (angleDeg * Math.PI) / 180;
-    return { x: cx + r * Math.cos(rad), y: cy + r * Math.sin(rad) };
-  }
-
-  function arcPath(a1: number, a2: number) {
-    const start = polarToXY(a1);
-    const end = polarToXY(a2);
-    const large = a2 - a1 > 180 ? 1 : 0;
-    return `M ${start.x} ${start.y} A ${r} ${r} 0 ${large} 1 ${end.x} ${end.y}`;
-  }
-
-  const clamped = Math.max(0, Math.min(100, score));
-  const needleAngle = startAngle + (clamped / 100) * sweep;
-  const needleTip = polarToXY(needleAngle);
-  const needleBase1Angle = needleAngle + 90;
-  const needleBase2Angle = needleAngle - 90;
-  const baseR = 3;
-  const base1 = {
-    x: cx + baseR * Math.cos((needleBase1Angle * Math.PI) / 180),
-    y: cy + baseR * Math.sin((needleBase1Angle * Math.PI) / 180),
-  };
-  const base2 = {
-    x: cx + baseR * Math.cos((needleBase2Angle * Math.PI) / 180),
-    y: cy + baseR * Math.sin((needleBase2Angle * Math.PI) / 180),
-  };
-
-  return (
-    <svg width={size} height={size * 0.72} viewBox="0 0 100 72" fill="none" className="shrink-0">
-      {ARC_BANDS.map((band) => {
-        const segmentStart = startAngle + (band.min / 100) * sweep + gap / 2;
-        const segmentEnd = startAngle + (band.max / 100) * sweep - gap / 2;
-        return (
-          <path
-            key={band.min}
-            d={arcPath(segmentStart, segmentEnd)}
-            stroke={band.color}
-            strokeWidth={5}
-            strokeLinecap="round"
-            fill="none"
-            opacity={0.35}
-          />
-        );
-      })}
-
-      {ARC_BANDS.map((band) => {
-        const bandStart = startAngle + (band.min / 100) * sweep + gap / 2;
-        const bandEnd = startAngle + (band.max / 100) * sweep - gap / 2;
-        if (clamped <= band.min) return null;
-        const fillEnd = Math.min(bandEnd, startAngle + (clamped / 100) * sweep);
-        if (fillEnd <= bandStart) return null;
-        return (
-          <path
-            key={`fill-${band.min}`}
-            d={arcPath(bandStart, fillEnd)}
-            stroke={band.color}
-            strokeWidth={5}
-            strokeLinecap="round"
-            fill="none"
-            opacity={0.85}
-          />
-        );
-      })}
-
-      <polygon
-        points={`${needleTip.x},${needleTip.y} ${base1.x},${base1.y} ${base2.x},${base2.y}`}
-        fill={color}
-        opacity={0.9}
-      />
-      <circle cx={cx} cy={cy} r={3.5} fill="var(--surface-overlay, #1a1a2e)" stroke={color} strokeWidth={1.5} />
-    </svg>
-  );
-}
 
 function PsiHistoryStatsGrid({
   items,
@@ -275,57 +178,45 @@ export function StabilityIndexHero({
 }) {
   const conditionBand = band as ConditionBand;
   const colorClass = PSI_BAND_CLASSES[conditionBand] ?? "text-foreground";
-  const hexColor = PSI_HEX_COLORS[conditionBand] ?? "#888";
   const deltaClass = delta != null && delta >= 0
     ? "text-green-700 dark:text-green-400"
     : "text-red-700 dark:text-red-400";
 
   return (
-    <Card
-      className={cn(
-        "rounded-xl py-0 border-l-4 transition-colors duration-500",
-        PSI_BORDER_CLASSES[conditionBand] ?? "",
-        PSI_BG_OVERLAY_CLASSES[conditionBand] ?? "",
-      )}
-    >
+    <Card className="rounded-xl py-0">
       <CardContent
-        className="grid gap-5 py-5 sm:gap-6 sm:py-6 lg:grid-cols-[minmax(24rem,1fr)_minmax(22rem,0.78fr)] lg:items-center"
+        className="flex flex-col gap-5 py-5 sm:gap-6 sm:py-6 lg:flex-row lg:items-center lg:gap-6"
         aria-live="polite"
       >
-        <div className="flex flex-col items-center gap-4 sm:flex-row sm:justify-center lg:justify-start">
-          <div className="flex items-center gap-4 lg:gap-6">
-            <PsiLighthouse band={band} color={hexColor} size={128} />
-            <ScoreArc score={score} color={hexColor} size={192} />
+        <div className="mx-auto w-full max-w-xs overflow-hidden rounded-lg lg:mx-0 lg:w-64 lg:shrink-0">
+          <PsiLighthouseScene band={band} score={score} />
+        </div>
+
+        <div className="flex flex-col items-center gap-1 text-center lg:shrink-0 lg:items-start lg:text-left">
+          <div className="flex items-baseline gap-2">
+            <span className="text-xs text-muted-foreground">
+              <MethodologyLabel topic="psi">PSI</MethodologyLabel>
+            </span>
+            <span className={`font-mono text-5xl font-extrabold leading-none tabular-nums ${colorClass}`}>
+              {formatScore(score)}
+            </span>
+            <span className={`text-base font-bold uppercase tracking-wide ${colorClass}`}>
+              {band}
+            </span>
           </div>
-          <div className="flex shrink-0 flex-col items-center gap-1 text-center sm:items-start sm:text-left">
-            <div className="flex items-baseline gap-2">
-              <span className="text-xs text-muted-foreground">
-                <MethodologyLabel topic="psi">PSI</MethodologyLabel>
+          <div className="flex flex-wrap items-center justify-center gap-x-3 gap-y-1 text-sm text-muted-foreground lg:justify-start">
+            {delta !== null && (
+              <span className={`font-medium tabular-nums ${deltaClass}`}>
+                {delta >= 0 ? "+" : ""}
+                {delta.toFixed(1)} vs yesterday
               </span>
-              <span className={`font-mono text-5xl font-extrabold leading-none tabular-nums ${colorClass}`}>
-                {formatScore(score)}
-              </span>
-              <span className={`text-base font-bold uppercase tracking-wide ${colorClass}`}>
-                {band}
-              </span>
-            </div>
-            <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-muted-foreground">
-              {delta !== null && (
-                <span className={`font-medium tabular-nums ${deltaClass}`}>
-                  {delta >= 0 ? "+" : ""}
-                  {delta.toFixed(1)} vs yesterday
-                </span>
-              )}
-              <span>{daysInBand} day{daysInBand !== 1 ? "s" : ""} in {band}</span>
-            </div>
+            )}
+            <span>{daysInBand} day{daysInBand !== 1 ? "s" : ""} in {band}</span>
           </div>
         </div>
 
-        <div className="hidden rounded-lg border border-border/60 bg-background/35 p-4 lg:block">
-          <div className="mb-3 flex items-center justify-between gap-3">
-            <p className="pharos-kicker">Historical PSI</p>
-            <p className="text-xs text-muted-foreground">30-day range and all-time low</p>
-          </div>
+        <div className="hidden lg:block lg:flex-1 lg:border-l lg:border-border/60 lg:pl-6">
+          <p className="pharos-kicker mb-3">Historical PSI</p>
           <PsiHistoryStatsGrid items={historyStats} />
         </div>
 

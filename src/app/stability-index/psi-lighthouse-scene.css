@@ -1,0 +1,46 @@
+@media (prefers-reduced-motion: no-preference) {
+  @keyframes psi-scene-halo-pulse {
+    0%,
+    100% {
+      opacity: 0.55;
+    }
+    50% {
+      opacity: 1;
+    }
+  }
+  @keyframes psi-scene-flame-flicker-outer {
+    0%,
+    100% {
+      transform: scaleY(1) scaleX(1);
+    }
+    33% {
+      transform: scaleY(1.06) scaleX(0.96);
+    }
+    66% {
+      transform: scaleY(0.96) scaleX(1.04);
+    }
+  }
+  @keyframes psi-scene-flame-flicker-mid {
+    0%,
+    100% {
+      transform: scaleY(1) scaleX(1);
+    }
+    50% {
+      transform: scaleY(1.08) scaleX(0.94);
+    }
+  }
+
+  .psi-scene-halo {
+    animation: psi-scene-halo-pulse var(--psi-pulse-dur, 3s) ease-in-out infinite;
+  }
+  .psi-scene-flame-outer {
+    animation: psi-scene-flame-flicker-outer 1.6s ease-in-out infinite;
+    transform-origin: center bottom;
+    transform-box: fill-box;
+  }
+  .psi-scene-flame-mid {
+    animation: psi-scene-flame-flicker-mid 1.1s ease-in-out infinite;
+    transform-origin: center bottom;
+    transform-box: fill-box;
+  }
+}
