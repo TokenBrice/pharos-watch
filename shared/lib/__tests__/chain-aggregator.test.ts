@@ -81,12 +81,59 @@ describe("aggregateChains", () => {
   it("computes globalTotalUsd across all chains", () => {
     const result = aggregateChains(makeInput());
     expect(result.globalTotalUsd).toBe(750); // 550 + 200
+    expect(result.chainAttributedTotalUsd).toBe(750);
+    expect(result.unattributedTotalUsd).toBe(0);
   });
 
   it("computes dominanceShare", () => {
     const result = aggregateChains(makeInput());
     const eth = result.chains.find((c) => c.id === "ethereum")!;
     expect(eth.dominanceShare).toBeCloseTo(550 / 750, 4);
+  });
+
+  it("uses all tracked supply for the global total while preserving chain-attributed supply", () => {
+    const input = makeInput({
+      peggedAssets: [
+        {
+          id: "usdt-tether",
+          symbol: "USDT",
+          name: "Tether",
+          price: 1.0,
+          pegType: "peggedUSD",
+          circulating: { peggedUSD: 700 },
+          circulatingPrevDay: { peggedUSD: 680 },
+          circulatingPrevWeek: { peggedUSD: 650 },
+          circulatingPrevMonth: { peggedUSD: 600 },
+          chainCirculating: {
+            ethereum: { current: 300, circulatingPrevDay: 295, circulatingPrevWeek: 280, circulatingPrevMonth: 250 },
+            bsc: { current: 200, circulatingPrevDay: 200, circulatingPrevWeek: 200, circulatingPrevMonth: 200 },
+          },
+        },
+        {
+          id: "usdc-circle",
+          symbol: "USDC",
+          name: "USD Coin",
+          price: 0.999,
+          pegType: "peggedUSD",
+          circulating: { peggedUSD: 300 },
+          circulatingPrevDay: { peggedUSD: 290 },
+          circulatingPrevWeek: { peggedUSD: 285 },
+          circulatingPrevMonth: { peggedUSD: 260 },
+          chainCirculating: {
+            ethereum: { current: 250, circulatingPrevDay: 248, circulatingPrevWeek: 240, circulatingPrevMonth: 230 },
+          },
+        },
+      ],
+    });
+
+    const result = aggregateChains(input);
+    const eth = result.chains.find((c) => c.id === "ethereum")!;
+
+    expect(result.globalTotalUsd).toBe(1000);
+    expect(result.chainAttributedTotalUsd).toBe(750);
+    expect(result.unattributedTotalUsd).toBe(250);
+    expect(result.globalChange7dPct).toBeCloseTo((1000 - 935) / 935, 4);
+    expect(eth.dominanceShare).toBeCloseTo(550 / 1000, 4);
   });
 
   it("includes the top stablecoins per chain by local supply", () => {

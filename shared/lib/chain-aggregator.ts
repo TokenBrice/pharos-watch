@@ -2,6 +2,7 @@ import { CHAIN_META, getChainResilienceTier } from "./chains";
 import { canonicalizeChainCirculating } from "./chain-circulating";
 import { TRACKED_META_BY_ID } from "./stablecoins";
 import { getPegReference } from "./peg-rates";
+import { sumPegBuckets } from "./supply";
 import {
   computeConcentrationScore,
   computeBackingDiversityScore,
@@ -26,6 +27,10 @@ export interface ChainAggregatorAsset {
   name?: string;
   price: number | null;
   pegType?: string;
+  circulating?: Record<string, number>;
+  circulatingPrevDay?: Record<string, number>;
+  circulatingPrevWeek?: Record<string, number>;
+  circulatingPrevMonth?: Record<string, number>;
   chainCirculating?: Record<string, { current?: number; circulatingPrevDay?: number; circulatingPrevWeek?: number; circulatingPrevMonth?: number }>;
 }
 
@@ -56,8 +61,21 @@ export function aggregateChains(input: ChainAggregatorInput): ChainsResponse {
 
   // Phase 1: accumulate per-chain data
   const accumulators = new Map<string, ChainAccumulator>();
+  let aggregateTotalUsd = 0;
+  let aggregatePrevDayUsd = 0;
+  let aggregatePrevWeekUsd = 0;
+  let aggregatePrevMonthUsd = 0;
+  let hasAggregateSupply = false;
 
   for (const asset of peggedAssets) {
+    if (asset.circulating) {
+      hasAggregateSupply = true;
+      aggregateTotalUsd += sumPegBuckets(asset.circulating);
+      aggregatePrevDayUsd += sumPegBuckets(asset.circulatingPrevDay);
+      aggregatePrevWeekUsd += sumPegBuckets(asset.circulatingPrevWeek);
+      aggregatePrevMonthUsd += sumPegBuckets(asset.circulatingPrevMonth);
+    }
+
     const canonicalChainCirculating = canonicalizeChainCirculating(asset.chainCirculating);
 
     for (const [chainId, data] of canonicalChainCirculating) {
@@ -89,7 +107,16 @@ export function aggregateChains(input: ChainAggregatorInput): ChainsResponse {
   }
 
   // Phase 2: compute summaries
-  const globalTotalUsd = Array.from(accumulators.values()).reduce((s, a) => s + a.totalUsd, 0);
+  const chainAttributedTotalUsd = Array.from(accumulators.values()).reduce((s, a) => s + a.totalUsd, 0);
+  const chainPrevDayUsd = Array.from(accumulators.values()).reduce((s, a) => s + a.prevDay, 0);
+  const chainPrevWeekUsd = Array.from(accumulators.values()).reduce((s, a) => s + a.prevWeek, 0);
+  const chainPrevMonthUsd = Array.from(accumulators.values()).reduce((s, a) => s + a.prevMonth, 0);
+  const useAggregateSupply = hasAggregateSupply && aggregateTotalUsd > 0;
+  const globalTotalUsd = useAggregateSupply ? aggregateTotalUsd : chainAttributedTotalUsd;
+  const globalPrevDayUsd = useAggregateSupply ? aggregatePrevDayUsd : chainPrevDayUsd;
+  const globalPrevWeekUsd = useAggregateSupply ? aggregatePrevWeekUsd : chainPrevWeekUsd;
+  const globalPrevMonthUsd = useAggregateSupply ? aggregatePrevMonthUsd : chainPrevMonthUsd;
+  const unattributedTotalUsd = Math.max(0, globalTotalUsd - chainAttributedTotalUsd);
   const chains: ChainSummary[] = [];
 
   for (const [chainId, acc] of accumulators) {
@@ -182,6 +209,11 @@ export function aggregateChains(input: ChainAggregatorInput): ChainsResponse {
   return {
     chains,
     globalTotalUsd,
+    chainAttributedTotalUsd,
+    unattributedTotalUsd,
+    globalChange24hPct: globalPrevDayUsd > 0 ? (globalTotalUsd - globalPrevDayUsd) / globalPrevDayUsd : 0,
+    globalChange7dPct: globalPrevWeekUsd > 0 ? (globalTotalUsd - globalPrevWeekUsd) / globalPrevWeekUsd : 0,
+    globalChange30dPct: globalPrevMonthUsd > 0 ? (globalTotalUsd - globalPrevMonthUsd) / globalPrevMonthUsd : 0,
     updatedAt: Math.floor(Date.now() / 1000),
     healthMethodologyVersion: HEALTH_METHODOLOGY_VERSION,
   };

@@ -45,6 +45,11 @@ export interface ChainSummary {
 export interface ChainsResponse {
   chains: ChainSummary[];
   globalTotalUsd: number;
+  chainAttributedTotalUsd: number;
+  unattributedTotalUsd: number;
+  globalChange24hPct: number;
+  globalChange7dPct: number;
+  globalChange30dPct: number;
   updatedAt: number;
   healthMethodologyVersion: string;
 }

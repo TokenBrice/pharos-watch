@@ -34,6 +34,8 @@ const DOMINANCE_COLORS = [
   "oklch(0.62 0.14 160)", // teal
   "oklch(0.62 0.12 20)",  // rose
 ];
+const OTHER_CHAINS_COLOR = "oklch(0.55 0.02 260)";
+const UNATTRIBUTED_COLOR = "oklch(0.66 0.03 245)";
 
 type ChainSortKey = "totalUsd" | "healthScore" | "change24hPct" | "change7dPct" | "change30dPct" | "stablecoinCount" | "dominanceShare";
 const CHAIN_COLUMNS: readonly DataTableColumn<ChainSortKey>[] = [
@@ -164,11 +166,10 @@ export function ChainsLeaderboardClient() {
   }
   if (!data) return null;
 
-  // Aggregate 7d change for global trend
-  const globalChange7d = data.globalTotalUsd > 0
+  const fallbackGlobalChange7d = data.globalTotalUsd > 0
     ? data.chains.reduce((sum, c) => sum + (c.change7dPct || 0) * c.totalUsd, 0) / data.globalTotalUsd
     : 0;
-  const change7dPct = globalChange7d * 100;
+  const change7dPct = (Number.isFinite(data.globalChange7dPct) ? data.globalChange7dPct : fallbackGlobalChange7d) * 100;
   const show7dTrend = Math.abs(change7dPct) >= 0.05;
 
   return (
@@ -204,13 +205,21 @@ export function ChainsLeaderboardClient() {
 
         {/* Dominance breakdown */}
         {topBySupply.length > 0 && (() => {
-          const othersShare = 1 - topBySupply.reduce((s, c) => s + c.dominanceShare, 0);
+          const topShare = topBySupply.reduce((s, c) => s + c.dominanceShare, 0);
+          const chainAttributedTotalUsd = Number.isFinite(data.chainAttributedTotalUsd)
+            ? data.chainAttributedTotalUsd
+            : data.chains.reduce((sum, chain) => sum + chain.totalUsd, 0);
+          const chainAttributedShare = data.globalTotalUsd > 0 ? chainAttributedTotalUsd / data.globalTotalUsd : 0;
+          const unattributedShare = data.globalTotalUsd > 0 && Number.isFinite(data.unattributedTotalUsd)
+            ? data.unattributedTotalUsd / data.globalTotalUsd
+            : 0;
+          const otherChainsShare = Math.max(0, chainAttributedShare - topShare);
           return (
             <>
               <div
                 className="flex h-2.5 w-full overflow-hidden rounded-full"
                 role="img"
-                aria-label={`Supply dominance: ${topBySupply.map((c) => `${c.name} ${(c.dominanceShare * 100).toFixed(1)}%`).join(", ")}${othersShare > 0.005 ? `, Others ${(othersShare * 100).toFixed(1)}%` : ""}`}
+                aria-label={`Supply dominance: ${topBySupply.map((c) => `${c.name} ${(c.dominanceShare * 100).toFixed(1)}%`).join(", ")}${otherChainsShare > 0.005 ? `, Other chains ${(otherChainsShare * 100).toFixed(1)}%` : ""}${unattributedShare > 0.005 ? `, Unattributed ${(unattributedShare * 100).toFixed(1)}%` : ""}`}
               >
                 {topBySupply.map((chain, idx) => (
                   <div
@@ -222,10 +231,20 @@ export function ChainsLeaderboardClient() {
                     }}
                   />
                 ))}
-                {othersShare > 0.005 && (
+                {otherChainsShare > 0.005 && (
                   <div
-                    className="h-full bg-muted-foreground/20"
-                    style={{ width: `${othersShare * 100}%` }}
+                    className="h-full"
+                    style={{ width: `${otherChainsShare * 100}%`, backgroundColor: OTHER_CHAINS_COLOR }}
+                  />
+                )}
+                {unattributedShare > 0.005 && (
+                  <div
+                    className="h-full"
+                    style={{
+                      width: `${unattributedShare * 100}%`,
+                      backgroundColor: UNATTRIBUTED_COLOR,
+                      backgroundImage: "repeating-linear-gradient(135deg, transparent 0 4px, oklch(0.95 0.01 245 / 0.35) 4px 6px)",
+                    }}
                   />
                 )}
               </div>
@@ -248,11 +267,24 @@ export function ChainsLeaderboardClient() {
                     <span className="font-mono tabular-nums">{(chain.dominanceShare * 100).toFixed(1)}%</span>
                   </span>
                 ))}
-                {othersShare > 0.005 && (
+                {otherChainsShare > 0.005 && (
                   <span className="inline-flex items-center gap-1.5">
-                    <span className="inline-block h-2 w-2 rounded-full bg-muted-foreground/20" />
-                    <span>Others</span>
-                    <span className="font-mono tabular-nums">{(othersShare * 100).toFixed(1)}%</span>
+                    <span className="inline-block h-2 w-2 rounded-full" style={{ backgroundColor: OTHER_CHAINS_COLOR }} />
+                    <span>Other chains</span>
+                    <span className="font-mono tabular-nums">{(otherChainsShare * 100).toFixed(1)}%</span>
+                  </span>
+                )}
+                {unattributedShare > 0.005 && (
+                  <span className="inline-flex items-center gap-1.5">
+                    <span
+                      className="inline-block h-2 w-2 rounded-full"
+                      style={{
+                        backgroundColor: UNATTRIBUTED_COLOR,
+                        backgroundImage: "repeating-linear-gradient(135deg, transparent 0 3px, oklch(0.95 0.01 245 / 0.45) 3px 4px)",
+                      }}
+                    />
+                    <span>Unattributed</span>
+                    <span className="font-mono tabular-nums">{(unattributedShare * 100).toFixed(1)}%</span>
                   </span>
                 )}
               </div>

@@ -470,6 +470,11 @@ Returns chain-level stablecoin aggregates with Chain Health Scores. Computed on-
   },
   "chains": [ChainSummary, ...],
   "globalTotalUsd": 230000000000,
+  "chainAttributedTotalUsd": 218000000000,
+  "unattributedTotalUsd": 12000000000,
+  "globalChange24hPct": 0.0012,
+  "globalChange7dPct": 0.0045,
+  "globalChange30dPct": 0.018,
   "updatedAt": 1710500000,
   "healthMethodologyVersion": "1.2"
 }
@@ -478,7 +483,12 @@ Returns chain-level stablecoin aggregates with Chain Health Scores. Computed on-
 | Field                      | Type             | Description                                                |
 | -------------------------- | ---------------- | ---------------------------------------------------------- |
 | `chains`                   | `ChainSummary[]` | Chains sorted by `totalUsd` descending                     |
-| `globalTotalUsd`           | `number`         | Sum of all chain supply in USD                             |
+| `globalTotalUsd`           | `number`         | Total tracked stablecoin supply in USD, matching `GET /api/stablecoins` aggregate supply |
+| `chainAttributedTotalUsd`  | `number`         | Supply that the source data attributes to concrete chains in USD |
+| `unattributedTotalUsd`     | `number`         | Positive residual between tracked supply and chain-attributed supply in USD |
+| `globalChange24hPct`       | `number`         | 24h change for total tracked stablecoin supply as a decimal share |
+| `globalChange7dPct`        | `number`         | 7d change for total tracked stablecoin supply as a decimal share |
+| `globalChange30dPct`       | `number`         | 30d change for total tracked stablecoin supply as a decimal share |
 | `updatedAt`                | `number`         | Unix epoch seconds of the underlying stablecoins snapshot  |
 | `healthMethodologyVersion` | `string`         | Chain Health Score methodology version (currently `"1.2"`) |
 
@@ -502,7 +512,7 @@ Returns chain-level stablecoin aggregates with Chain Health Scores. Computed on-
 | `stablecoinCount`    | `number`                              | Number of distinct stablecoins on this chain                                                                                 |
 | `dominantStablecoin` | `{ id, symbol, share }`               | Largest stablecoin by supply on the chain                                                                                    |
 | `topStablecoins`     | `{ id, symbol, share, supplyUsd }[]`  | Up to five largest stablecoins by supply on the chain; `share` is chain-local (0–1) and `supplyUsd` is USD-denominated       |
-| `dominanceShare`     | `number`                              | Chain share of the global tracked stablecoin supply (0–1)                                                                    |
+| `dominanceShare`     | `number`                              | Chain share of `globalTotalUsd` (0–1); chain rows may sum below 1 when source data has unattributed supply                    |
 | `healthScore`        | `number \| null`                      | Chain Health Score 0–100, or `null` if insufficient data                                                                     |
 | `healthBand`         | `string \| null`                      | Health band label: `"robust"` (80–100), `"healthy"` (60–79), `"mixed"` (40–59), `"fragile"` (20–39), `"concentrated"` (0–19) |
 | `healthFactors`      | `ChainHealthFactors`                  | Raw sub-factor scores (0–100 each; `quality` may still be `null`)                                                            |

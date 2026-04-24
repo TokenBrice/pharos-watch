@@ -39,7 +39,8 @@ The leaderboard is public and indexable. The profile routes are statically gener
 
 `src/app/chains/client.tsx` consumes `useChains()` and renders:
 
-- hero summary: total stablecoin supply, optional weighted global 7d trend, chain count, and a top-chain dominance breakdown bar/legend
+- hero summary: total tracked stablecoin supply, optional global 7d trend, chain count, and a top-chain dominance breakdown bar/legend
+- explicit `Unattributed` residual in the dominance breakdown when the stablecoins cache has supply that DefiLlama does not attribute to a concrete chain
 - sortable leaderboard table rendered through `DataTableShell`
 - `QueryErrorNotice` with retry and `StaleDataBanner` (preset `"chains"`)
 - skeleton loading states (KPI grid + table rows)
@@ -127,6 +128,7 @@ Bands:
 - derives non-USD peg references from `fxFallbackRates`
 - hydrates safety scores from the report-card cache when available
 - computes the response via `aggregateChains(...)`
+- computes `globalTotalUsd` from all tracked circulating supply, while preserving `chainAttributedTotalUsd` and `unattributedTotalUsd` for chain-specific residuals
 - overwrites `updatedAt` with the stablecoins-cache timestamp
 - applies freshness headers with `X-Data-Age`, exposes report-card dependency freshness in `_meta.dependencies.reportCards`, and downgrades `Cache-Control` to `no-store` when the chain snapshot or health dependency is degraded
 - preserves the detailed-chain data gate in the route client by exposing freshness metadata for `useChainProfileData()`
