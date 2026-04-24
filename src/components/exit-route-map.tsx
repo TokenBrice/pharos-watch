@@ -73,77 +73,6 @@ function SelectedExitRoutePanel({ selection }: { selection: LiquidityExitRouteSe
   );
 }
 
-function ExitRouteLegend() {
-  const items = [
-    {
-      key: "door",
-      label: "Protocol doors",
-      detail: "Wider gate = more venue depth",
-      sample: (
-        <span className="exit-route-legend__sample exit-route-legend__sample--door" aria-hidden="true">
-          <span />
-          <span />
-          <span />
-        </span>
-      ),
-    },
-    {
-      key: "throat",
-      label: "Exit throat",
-      detail: "Narrower opening = more crowding",
-      sample: (
-        <span className="exit-route-legend__sample exit-route-legend__sample--throat" aria-hidden="true">
-          <span />
-          <span />
-          <span />
-          <span />
-        </span>
-      ),
-    },
-    {
-      key: "lane",
-      label: "Chain lanes",
-      detail: "Wider lane = more chain depth",
-      sample: (
-        <span className="exit-route-legend__sample exit-route-legend__sample--lane" aria-hidden="true">
-          <span />
-          <span />
-          <span />
-        </span>
-      ),
-    },
-    {
-      key: "flow",
-      label: "Flow quality",
-      detail: "Broken flow = weaker organic/balance",
-      sample: (
-        <span className="exit-route-legend__sample exit-route-legend__sample--flow" aria-hidden="true">
-          <span />
-          <span />
-        </span>
-      ),
-    },
-  ];
-
-  return (
-    <div className="exit-route-legend" aria-label="Exit route map visual encoding">
-      <div className="exit-route-legend__header">
-        <span className="pharos-kicker">Read the route map</span>
-        <span>Protocol depth enters from the left, passes through the crowding throat, and exits by chain on the right.</span>
-      </div>
-      <div className="exit-route-legend__grid">
-        {items.map(({ key, label, detail, sample }) => (
-          <div key={key} className="exit-route-legend__item">
-            {sample}
-            <span className="font-medium text-foreground">{label}</span>
-            <span>{detail}</span>
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-}
-
 function ExitRoutePackets({
   route,
   pathId,
@@ -258,6 +187,7 @@ function ExitRouteInstrumentScene({
                 className={`exit-route-instrument__route exit-route-instrument__route--protocol ${isSelected ? "exit-route-instrument__route-selected" : ""} ${isDimmed ? "exit-route-instrument__route-dimmed" : ""}`}
                 data-testid={`protocol-door-${route.key}`}
                 data-flow-intensity={route.flowIntensity}
+                data-share-pct={route.sharePct.toFixed(2)}
                 aria-label={`${route.label} protocol door, ${formatCurrency(route.valueUsd, 0)}, ${formatPercent(route.sharePct, 1)} of DEX TVL`}
                 onFocus={() => onSelect(nextSelection)}
                 onMouseEnter={() => onSelect(nextSelection)}
@@ -283,7 +213,7 @@ function ExitRouteInstrumentScene({
                 <line x1={EXIT_ROUTE_SCENE.doorApertureX} y1={geometry.y - 13} x2={EXIT_ROUTE_SCENE.doorApertureX + geometry.apertureWidth} y2={geometry.y - 13} stroke={route.colorHex} strokeWidth="0.8" opacity="0.72" />
                 <circle cx={EXIT_ROUTE_SCENE.doorX} cy={geometry.y} r="13" fill="var(--route-chip-bg)" stroke={route.colorHex} strokeWidth="1.2" />
                 {route.logoPath ? (
-                  <image href={route.logoPath} x={EXIT_ROUTE_SCENE.doorX - 9} y={geometry.y - 9} width="18" height="18" preserveAspectRatio="xMidYMid meet" />
+                  <image aria-hidden="true" href={route.logoPath} x={EXIT_ROUTE_SCENE.doorX - 9} y={geometry.y - 9} width="18" height="18" preserveAspectRatio="xMidYMid meet" />
                 ) : (
                   <text x={EXIT_ROUTE_SCENE.doorX} y={geometry.y + 4} textAnchor="middle" fill="var(--route-hero)" fontSize="13" fontWeight="800" aria-hidden="true">+</text>
                 )}
@@ -312,6 +242,7 @@ function ExitRouteInstrumentScene({
                 className={`exit-route-instrument__route exit-route-instrument__route--chain ${isSelected ? "exit-route-instrument__route-selected" : ""} ${isDimmed ? "exit-route-instrument__route-dimmed" : ""}`}
                 data-testid={`chain-lane-${route.key}`}
                 data-flow-intensity={route.flowIntensity}
+                data-share-pct={route.sharePct.toFixed(2)}
                 aria-label={`${route.label} chain lane, ${formatCurrency(route.valueUsd, 0)}, ${formatPercent(route.sharePct, 1)} of DEX TVL`}
                 onFocus={() => onSelect(nextSelection)}
                 onMouseEnter={() => onSelect(nextSelection)}
@@ -340,7 +271,7 @@ function ExitRouteInstrumentScene({
                 <line x1={EXIT_ROUTE_SCENE.laneX} y1={geometry.laneBarY + 3} x2={EXIT_ROUTE_SCENE.laneX + geometry.laneWidth} y2={geometry.laneBarY + 3} stroke="var(--route-lane-highlight)" strokeWidth="0.7" opacity="0.5" />
                 <circle cx={EXIT_ROUTE_SCENE.laneLogoX} cy={geometry.logoY} r="12" fill="var(--route-chip-bg)" stroke={route.colorHex} strokeWidth="1.2" />
                 {route.logoPath ? (
-                  <image href={route.logoPath} x={EXIT_ROUTE_SCENE.laneLogoX - 8} y={geometry.logoY - 8} width="16" height="16" preserveAspectRatio="xMidYMid meet" />
+                  <image aria-hidden="true" href={route.logoPath} x={EXIT_ROUTE_SCENE.laneLogoX - 8} y={geometry.logoY - 8} width="16" height="16" preserveAspectRatio="xMidYMid meet" />
                 ) : (
                   <text x={EXIT_ROUTE_SCENE.laneLogoX} y={geometry.logoY + 4} textAnchor="middle" fill="var(--route-hero)" fontSize="12" fontWeight="800" aria-hidden="true">+</text>
                 )}
@@ -427,6 +358,7 @@ function ExitRouteFallbackList({
             type="button"
             className={`exit-route-fallback-list__row ${isSelected ? "exit-route-fallback-list__row--active" : ""}`}
             aria-pressed={isSelected}
+            aria-label={`${row.label} ${row.kind === "protocol" ? "protocol door" : row.kind === "chain" ? "chain lane" : "exit throat"}, ${formatCurrency(row.valueUsd, 0)}, ${row.sharePct == null ? "100%" : formatPercent(row.sharePct, 1)} of DEX TVL`}
             onClick={() => onSelect(row)}
           >
             <span>
@@ -468,9 +400,7 @@ export function LiquidityExitRouteMap({
     ?? allSelections[0];
   const activeMetric = selected.kind === "throat"
     ? "crowding"
-    : selected.kind === "protocol"
-      ? "routes"
-      : "organic";
+    : "routes";
 
   return (
     <Card className="overflow-hidden rounded-xl border-l-[3px] border-l-emerald-500">
@@ -478,14 +408,13 @@ export function LiquidityExitRouteMap({
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div className="space-y-1">
             <CardTitle className="text-lg font-semibold tracking-tight">Exit Route Map</CardTitle>
-            <p className="max-w-3xl text-sm text-muted-foreground">
+            <p className="exit-route-map__summary text-sm text-muted-foreground">
               DEX depth by venue and chain. This maps secondary-market exits only; issuer redemption capacity is scored separately.
             </p>
           </div>
         </div>
       </CardHeader>
       <CardContent className="space-y-4">
-        <ExitRouteLegend />
         <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_14rem]">
           <div className="pharos-chart-stage min-w-0 max-w-full space-y-3 overflow-hidden">
             <ExitRouteInstrumentScene model={model} selected={selected} onSelect={handleSelectRoute} />
@@ -509,7 +438,7 @@ export function LiquidityExitRouteMap({
               icon={<DoorOpen className="h-4 w-4 text-emerald-700 dark:text-emerald-300" aria-hidden />}
               label="Open routes"
               value={`${model.protocolCount} / ${model.chainCount}`}
-              detail={`${model.poolCount} pools across protocol / chain buckets`}
+              detail={`${model.poolCount} pools across protocol doors / chain lanes`}
               active={activeMetric === "routes"}
             />
             <ExitRouteMetric
@@ -531,7 +460,6 @@ export function LiquidityExitRouteMap({
               label={<MethodologyLabel topic="liquidityScore">Organic</MethodologyLabel>}
               value={model.organicPct == null ? "NR" : `${model.organicPct}%`}
               detail={`${formatCurrency(model.totalVolume24hUsd, 0)} 24h routed volume`}
-              active={activeMetric === "organic"}
             />
           </div>
         </div>

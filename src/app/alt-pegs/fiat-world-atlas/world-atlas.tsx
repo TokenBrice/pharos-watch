@@ -6,15 +6,12 @@ import "./peg-hero.css";
 function AtlasHeroHeader() {
   return (
     <div className="relative z-10 px-4 pt-4 pb-3 sm:px-5 sm:pt-5 sm:pb-4 lg:px-6">
-      <div className="flex max-w-4xl flex-wrap items-baseline gap-x-3 gap-y-1">
-        <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-frost-blue/90">Alt-Peg Atlas</p>
-        <h2
-          id="alt-peg-link-hub"
-          className="text-base font-semibold tracking-tight text-foreground/85 dark:text-white/80"
-        >
-          Peg Diversity Map
-        </h2>
-      </div>
+      <h2
+        id="alt-peg-link-hub"
+        className="text-lg font-semibold tracking-tight text-frost-blue/95 sm:text-xl lg:text-[1.45rem]"
+      >
+        Peg Diversity Atlas
+      </h2>
     </div>
   );
 }

@@ -32,7 +32,6 @@ const FIAT_SIZE_KEY_STEPS = [
 function FiatSizeKey() {
   return (
     <div className="peg-hero__scale-key" aria-label="Fiat market cap size key">
-      <span className="peg-hero__scale-label">Fiat logo size</span>
       {FIAT_SIZE_KEY_STEPS.map(({ value, label }) => {
         const dotSize = Math.max(7, Math.round(coinEmblemSize(value, { ceil: FIAT_MAP_SIZE_CEIL }) / 2));
         return (
@@ -76,6 +75,7 @@ export function PegDiversityHeroLive({ worldMap }: { worldMap: ReactNode }) {
   const peggedAssets = data?.peggedAssets;
   const hero = useMemo(() => buildPegDiversityHero(peggedAssets), [peggedAssets]);
   const snapshot = useMemo(() => buildAltPegSnapshot(peggedAssets), [peggedAssets]);
+  const topCohorts = snapshot.distributionRows.slice(0, 5);
   const showStatusOverlay = !data?.peggedAssets?.length || stablecoinsQuery.isError;
   const statusCopy =
     stablecoinsQuery.isError || (!stablecoinsQuery.isLoading && !data?.peggedAssets?.length)
@@ -85,9 +85,8 @@ export function PegDiversityHeroLive({ worldMap }: { worldMap: ReactNode }) {
   return (
     <HoverProvider>
       <div className="peg-hero__live-shell">
-        <div className="peg-hero__legend-rail">
-          <FiatSizeKey />
-          <TopCohortStrip rows={snapshot.topRows} />
+        <div className="peg-hero__legend-stack">
+          <TopCohortStrip rows={topCohorts} />
         </div>
         <div className="peg-hero">
           {showStatusOverlay ? (
@@ -97,6 +96,7 @@ export function PegDiversityHeroLive({ worldMap }: { worldMap: ReactNode }) {
           ) : null}
           <SkyLayer cohorts={hero.skyCohorts} />
           <div className="peg-hero__earth">
+            <FiatSizeKey />
             <div className="peg-hero__map-frame">
               {worldMap}
               <FiatEmblems clusters={hero.pegClusters} />

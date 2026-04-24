@@ -22,11 +22,8 @@
   --peg-sky-scale: 1;
 }
 
-.peg-hero__legend-rail {
-  display: grid;
-  grid-template-columns: minmax(14rem, auto) minmax(0, 1fr);
-  gap: 8px;
-  padding: 10px 12px;
+.peg-hero__legend-stack {
+  padding: 10px 12px 8px;
 }
 
 .peg-hero {
@@ -78,6 +75,14 @@
   height: 100%;
   aspect-ratio: 900 / 460;
   max-width: 100%;
+}
+
+.peg-hero__scale-key {
+  position: absolute;
+  left: 12px;
+  bottom: 12px;
+  z-index: 6;
+  max-width: calc(100% - 24px);
 }
 .fiat-world-map {
   z-index: 1;
@@ -507,7 +512,6 @@
   pointer-events: none;
 }
 
-.peg-hero__scale-label,
 .peg-hero__top-label {
   color: oklch(0.76 0.03 250 / 0.9);
   font-size: 9px;
@@ -537,13 +541,14 @@
   display: flex;
   flex-direction: column;
   gap: 8px;
+  width: 100%;
   min-width: 0;
   padding: 10px 12px;
 }
 
 .peg-hero__top-grid {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(5, minmax(0, 1fr));
   align-items: stretch;
   gap: 8px;
   min-width: 0;
@@ -631,12 +636,6 @@
   text-transform: uppercase;
 }
 
-@media (max-width: 1360px) {
-  .peg-hero__legend-rail {
-    grid-template-columns: 1fr;
-  }
-}
-
 @media (max-width: 1279px) {
   .peg-hero__live-shell {
     --peg-coin-scale: 0.72;
@@ -658,10 +657,8 @@
     --peg-sky-scale: 0.72;
   }
 
-  .peg-hero__legend-rail {
-    grid-template-columns: 1fr;
-    gap: 7px;
-    padding: 8px;
+  .peg-hero__legend-stack {
+    padding: 8px 8px 6px;
   }
 
   .peg-hero {
@@ -681,7 +678,7 @@
   }
 
   .peg-hero__top-grid {
-    grid-template-columns: 1fr;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
   .peg-hero__top-row {
@@ -699,10 +696,22 @@
     gap: 2px;
   }
 
+  .peg-hero__scale-key {
+    left: 8px;
+    bottom: 8px;
+    max-width: calc(100% - 16px);
+  }
+
   .coin-emblem__mini-label {
     bottom: -14px;
     font-size: 8px;
     padding: 3px 5px;
+  }
+}
+
+@media (max-width: 480px) {
+  .peg-hero__top-grid {
+    grid-template-columns: 1fr;
   }
 }
 
