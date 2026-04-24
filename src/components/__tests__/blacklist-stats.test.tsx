@@ -63,7 +63,10 @@ describe("BlacklistStats", () => {
 
     expect(screen.getByText("Unfreezable Market Share")).toBeTruthy();
     expect(screen.getByText("12.5%")).toBeTruthy();
-    expect(screen.getByText("$30.00B of $240.00B total")).toBeTruthy();
+    expect(screen.getByText("2 stablecoins · $30.00B of $240.00B total")).toBeTruthy();
+    expect(screen.queryByText("Freeze Ledger")).toBeNull();
+    expect(screen.queryByText("USDT Blacklisted")).toBeNull();
+    expect(screen.queryByText("unique events")).toBeNull();
   });
 
   it("keeps extra precision for sub-0.1% market-share values", () => {
