@@ -3,7 +3,8 @@ import { cleanup, render, screen } from "@testing-library/react";
 import { createElement, type ImgHTMLAttributes } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { ChainSummary } from "@shared/types/chains";
-import { buildChainHarborModel, ChainHarborMap } from "./harbor-map";
+import { buildChainHarborModel } from "./harbor-map";
+import { HarborList as ChainHarborMap } from "./harbor-list";
 
 vi.mock("next/image", () => ({
   default: (props: ImgHTMLAttributes<HTMLImageElement>) => createElement("img", { ...props, alt: props.alt ?? "" }),

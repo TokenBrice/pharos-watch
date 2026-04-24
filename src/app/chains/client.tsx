@@ -21,7 +21,7 @@ import { formatCompactUsd } from "@shared/lib/format";
 import type { HealthBand, ChainSummary } from "@shared/types/chains";
 import { StablecoinLogo } from "@/components/stablecoin-logo";
 import { logosById } from "@/lib/logos";
-import { ChainHarborMap } from "./harbor-map";
+import { HarborList } from "./harbor-list";
 
 /** Muted oklch palette for the dominance breakdown bar — distinct but not decorative. */
 const DOMINANCE_COLORS = [
@@ -214,7 +214,7 @@ export function ChainsLeaderboardClient() {
         })()}
       </div>
 
-      <ChainHarborMap chains={data.chains} globalTotalUsd={data.globalTotalUsd} />
+      <HarborList chains={data.chains} globalTotalUsd={data.globalTotalUsd} />
 
       {/* Table */}
       <DataTableShell
