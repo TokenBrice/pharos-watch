@@ -1,7 +1,7 @@
 # Pharos Data Visualization And Storytelling Enhancement Pass
 
 Date: 2026-04-24
-Status: preparation plan, revision 4 pending reviewer loop
+Status: preparation plan, revision 5 ready for final reviewer loop
 
 ## Purpose
 
@@ -84,119 +84,37 @@ Every new or changed storytelling visualization must include:
 
 ## Existing Surface Enhancement Map
 
-### `/chains/` Harbor
+Repo-shape resolution: every candidate below names the current owner files, payload source, implementation readiness, validation path, and release decision. Deferred items are still specified enough for a later worker, but they are intentionally out of this release because of dirty worktree overlap, semantic sensitivity, or lower near-term value.
 
-- Current: `src/app/chains/nautical-chart.tsx`, `harbor-map.ts`, `harbor-list.tsx`, `client.tsx`.
-- Enhancement: selected harbor detail panel plus hover/focus sync from ship to leaderboard row.
-- Data: `ChainHarborEntry.topStablecoins`, `dominanceShare`, `change7dPct`, `stablecoinCount`, `remaining`.
-- Value: makes cargo actionable and links metaphor to the table.
-- Decision: defer because unrelated chain files already exist in the dirty worktree.
-
-### `/depeg/` DEWS Radar
-
-- Current: `src/components/dews-summary.tsx`, `dews-alert-feed.tsx`, `peg-heatmap.tsx`.
-- Enhancement: radar contact selection that filters/highlights alert feed and heatmap row, plus compact signal breakdown.
-- Data: `useStressSignals()`, `useStressSignalDetail()`, existing DEWS detail helpers.
-- Value: turns a radar overview into a navigable incident workflow.
-- Decision: follow-up. Coupling across three sections is higher than the value for this first release.
-
-### `/flows/` Printer/Shredder
-
-- Current: `flow-brrr-overview.tsx`, `flow-machine-scene.tsx`, `flow-chart.tsx`.
-- Enhancement: pressure receipt beside the machine with top minted/burned symbols and coverage state.
-- Data: `/api/mint-burn-flows` rows, 24h/7d/30d/90d flow fields, coverage metadata.
-- Value: names what the machine is printing or shredding instead of staying aggregate.
-- Decision: follow-up. Public flow semantics are sensitive and require careful lag/coverage caveats.
-
-### `/alt-pegs/` Atlas
-
-- Current: `fiat-world-atlas/*`, `alt-peg-hero.ts`, `alt-peg-market.ts`.
-- Enhancement: mobile itinerary grouped by region/cohort.
-- Data: existing atlas/cohort models.
-- Value: improves mobile storytelling.
-- Decision: defer because unrelated alt-peg/chains work has been active in the worktree.
-
-### `/safety-scores/` Inspection Board
-
-- Current: `inspection-board.tsx`, `view-model.ts`, `stress-test-panel.tsx`.
-- Enhancement: inspection docket/exposure bar by dimension.
-- Data: `buildSafetyInspectionBoard()` outputs such as `dimensionSummaries`, `worstFindings`, `findingExposureUsd`.
-- Value: clearer audit artifact.
-- Decision: defer. Safety Score surfaces are score-sensitive and need a separate score-impact review.
-
-### `/stability-index/` Lighthouse
-
-- Current: `presentational.tsx`, `view-model.ts`, `psi-history-chart.tsx`.
-- Enhancement: component beam dimmers and contributor-driven dimming explanation.
-- Data: current PSI components, contributors, history stats.
-- Value: explains what is dimming the lighthouse today.
-- Decision: follow-up. Curated event/contributor causality can overclaim.
-
-### `/liquidity/` Exit Route Map
-
-- Current: `liquidity-stats.tsx`, `liquidity-table.tsx`.
-- Existing state: route already has protocol/chain rails, HHI, pool balance, organic share, leading route labels, exact values, and caveat copy.
-- Data rule if touched: global DEX score fields may be null; derive HHI from `protocolTvl`, use existing aggregate fallback for pool balance and organic values, or render NR.
-- Decision: validation-only unless a precise missing improvement appears. Do not duplicate the existing exit route map.
-
-### `/coverage/` Control Tower
-
-- Current: `use-coverage-matrix-model.ts`, `coverage-page-sections.tsx`, `coverage-lens-summary.tsx`.
-- Existing state: Feature Snapshot already compares count reach and market-cap reach and highlights widest, narrowest, and major-heavy features.
-- Data rule if touched: unavailable live feeds must be visibly annotated as Pharos feature availability/status, not asset safety or general data quality.
-- Decision: audit/refinement only. Do not build another reach chart unless implementation identifies a precise missing behavior.
-
-### `/blacklist/` Intervention Ledger
-
-- Current: `blacklist-stats.tsx`, `blacklist-status-charts.tsx`, `blacklist-chart.tsx`, `blacklist-table.tsx`.
-- Enhancement: intervention ledger strip combining resolved blacklist/freeze exposure buckets, tracked symbol event-count leaders, and frozen-value quarter context.
-- Data: `BlacklistSummaryResponse.stats.perCoinTotalEvents`, chart quarters, `buildBlacklistStatusBuckets()`.
-- Value: connects resolved freeze exposure to observed intervention history without treating event streams as issuer-level risk.
-- Decision: implement as frontend-only.
-- Scope guard: split resolved exposure status from observed supported tracker events; do not imply event count predicts policy risk. `yes`, `possible`, `upstream`, and `no` must be labelled as resolved blacklist/freeze exposure buckets: `upstream` is inherited collateral/custody/parent exposure, and `no` means no resolved exposure in the current model. If quarter frozen-value context is shown, include the existing tracker caveat that public aggregates reflect supported event coverage and amount/suppression rules.
-
-### `/cemetery/` Memorial
-
-- Current: `cemetery-client.tsx`, `cemetery-tombstones.tsx`, `cemetery-charts.tsx`.
-- Enhancement: cross-highlight cause/year/largest failure between charts, tombstones, and autopsy cards.
-- Data: static `DEAD_STABLECOINS`.
-- Value: strong polish but less operationally useful than yield/dependency/blacklist.
-- Decision: defer.
-
-### `/dependency-map/` Dependency Hubs Board
-
-- Current: `dependency-map/client.tsx`, `contagion-graph.tsx`, `dependency-map-mobile-summary.tsx`, `contagion-layout.ts`.
-- Enhancement: dependency hub board ranking upstream hubs by dependent count, dimensionless inbound weight, direct dependent market-cap context, and examples; keep graph as the main visual.
-- Data: report-card dependency edges, live card IDs, stablecoin market caps.
-- Value: makes systemic-risk graph actionable and readable on mobile.
-- Decision: implement by extracting the existing mobile hub calculation into a pure model shared by mobile and desktop.
-- Metric definitions:
-  - `dependentCount`: number of unique live direct dependents where an edge points from the hub to the dependent in the current graph orientation.
-  - `inboundWeight`: dimensionless sum of direct dependency edge weights; label exactly as "inbound weight", not USD exposure.
-  - `uniqueDependentMcapUsd`: optional visible context computed from `edge.to` direct dependents only, deduped by dependent ID; label as modeled dependent market cap, not loss, liquidity, or guaranteed exposure.
-  - the existing mobile hub `mcap` value is the hub's own market cap and must not be reused as dependent market-cap context.
-  - no transitive or recursive blast-radius claim in this pass.
-
-### Stablecoin Detail Dossier
-
-- Current: `src/app/stablecoin/[id]/client.tsx`, `use-stablecoin-detail-view-model.ts`, detail components.
-- Enhancement: compact risk-story strip naming the strongest current signal across Safety, DEWS, Liquidity, Flows, Blacklist, and Reserves.
-- Data: already aggregated in detail view model.
-- Value: helps users orient before diving into sections.
-- Decision: defer. Easy to overclaim without narrower model review.
+| Surface | Current repo shape | Existing payload/model contract | Implementation-ready enhancement | Owner files if implemented | Tests and docs | Release decision |
+| --- | --- | --- | --- | --- | --- | --- |
+| `/chains/` Harbor | `src/app/chains/client.tsx` renders `NauticalChart`; `src/app/chains/harbor-map.ts` builds `ChainHarborEntry`; current dirty files include `src/app/chains/nautical-chart.tsx`, `nautical-chart.css`, and tests. | `ChainHarborEntry` exposes `totalUsd`, `sharePct`, `berthPct`, `healthScore`, `healthBand`, `stablecoinCount`, `dominantId`, `dominantSymbol`, `dominantSharePct`, `dominantCargoUsd`, `cargos`, and `change7dPct`. | Add `SelectedHarborPanel` and hover/focus sync between ship, harbor panel, and leaderboard row. Panel fields: chain name/logo, total supply, share, health band, stablecoin count, dominant cargo, top 3 cargos, 7d change. Use the table as the exact-value counterpart. | `src/app/chains/client.tsx`, `src/app/chains/nautical-chart.tsx`, `src/app/chains/harbor-map.ts`, optional `src/app/chains/selected-harbor-panel.tsx`, `docs/chains-page.md`. | `src/app/chains/harbor-map.test.ts`, `src/app/chains/nautical-chart.test.tsx`, keyboard focus/manual overflow smoke. | Defer. The concept is ready, but active unrelated chain files make this unsafe for the current implementation stack. |
+| `/depeg/` DEWS Radar | `src/app/depeg/client.tsx` coordinates `DEWSSummary`, `DEWSAlertFeed`, `PegHeatmap`, and `DepegTrackerTable`. `src/components/dews-summary-model.ts` is already pure and testable. | `usePegSummary()`, `useStressSignals()`, `useInfiniteDepegEvents()`, and `ElevatedCoin` fields: `id`, `symbol`, `name`, `logoUrl`, `score`, `band`, `mcap`, `x`, `y`. | Add radar-contact selection that highlights matching alert feed rows, heatmap row, and table rows, with a compact signal breakdown tray. Selection must clear explicitly and must not hide unmatched incidents unless the control says it is filtering. | `src/app/depeg/client.tsx`, `src/components/dews-summary.tsx`, `src/components/dews-summary-model.ts`, `src/components/dews-alert-feed.tsx`, `src/components/peg-heatmap.tsx`, `docs/depeg-detection.md`. | `src/components/__tests__/dews-summary.test.ts`, `src/lib/__tests__/dews-radar-utils.test.ts`, `src/app/depeg/page.test.tsx`, keyboard/SVG focus smoke. | Follow-up. Useful but cross-couples three incident surfaces; not first release. |
+| `/flows/` Printer/Shredder | `src/app/flows/client.tsx` renders `FlowBrrrOverview`, `FlowChart`, and `FlowTable`. `FlowBrrrOverview` already computes top mint/burn and 24h/7d pressure locally. | `useMintBurnFlows(24/168/range)` rows plus `MintBurnGauge` fields from `useMintBurnGauge()`. Available fields include 24h/7d/range mint, burn, net, tracked coin count, top mint, top burn, and flow direction. | Add `FlowPressureReceipt`: a receipt-like strip attached to the printer/shredder showing what was printed, what was shredded, net direction, top symbols, tracked-scope caveat, and coverage/lag state. Extract a pure receipt model before rendering. | `src/components/flow-brrr-overview.tsx`, `src/components/flow-pressure-receipt.tsx`, `src/lib/flow-pressure-receipt-model.ts`, `docs/mint-burn-flows.md`. | `src/app/flows/page.test.tsx`, `src/lib/__tests__/mint-burn-timeframes.test.ts`, new receipt model/component tests. | Follow-up. Implementation-ready, but public lag/coverage wording needs its own methodology-doc pass. |
+| `/alt-pegs/` Atlas | `src/app/alt-pegs/client.tsx` renders `AltPegSnapshotHero`, `AltPegDistributionCard`, `NonUsdShareChart`, `AltPegCohortHistoryChart`, and `AltPegCohortDirectory`. Current dirty files include the atlas implementation and tests. | `buildAltPegSnapshot()`, `buildAltPegTrendStats()`, and `buildPegDiversityHero()` expose cohorts, clusters, sky cohorts, placed coins, market totals, and non-USD share history. | Add mobile `AtlasItinerary`: region/cohort lanes that convert packed atlas geometry into a readable list, with one-tap jump to cohort history and directory. Keep the map as the first desktop signal. | `src/app/alt-pegs/client.tsx`, `src/app/alt-pegs/fiat-world-atlas/*`, `src/lib/alt-peg-hero.ts`, `docs/alt-pegs-page.md`. | Existing alt-peg client/page/cohort tests plus packing/sizing tests and mobile smoke. | Defer because the route is actively dirty outside this pass. |
+| `/safety-scores/` Inspection Board | `src/app/safety-scores/client.tsx` already renders `SafetyInspectionBoard`, `CoreSettlementStrip`, and `SafetyLandscapeCard`. | `buildSafetyInspectionBoard(reportCards, mcapMap)` produces `dimensionSummaries`, `worstFindings`, open-finding counts, and `findingExposureUsd`. | Future refinement: row-to-card focus, dimension detail tray, and clearer "open findings by reviewed dimension" text. Do not change scores, grades, thresholds, or classification copy in this pass. | `src/app/safety-scores/inspection-board.tsx`, `src/app/safety-scores/view-model.ts`, `docs/safety-scores-page.md` or methodology only if semantics change. | `src/app/safety-scores/inspection-board.test.tsx`, `src/app/safety-scores/view-model.test.ts`. | Defer. Score-sensitive surface; separate score-impact review required. |
+| `/stability-index/` Lighthouse | `src/app/stability-index/client.tsx` renders `StabilityIndexHero`, `ComponentChart`, `ScoreChart`, contributor rows, and event timeline. | `buildPsiComponentData()`, `buildPsiContributorRows()`, `buildPsiEventTimelineRows()`, and `buildPsiHistoryStats()` expose current components, deltas, contributors, and event context. | Add `PsiBeamDimmers`: compact lanes for depeg stress, flow stress, market concentration, and contributor pressure. It can say "current component pressure" but must not claim curated events caused the current score. | `src/app/stability-index/client.tsx`, `src/app/stability-index/view-model.ts`, optional `psi-beam-dimmers.tsx`, `docs/stability-index.md`. | `src/app/stability-index/view-model.test.ts`, `src/app/stability-index/client.test.tsx`, `src/lib/__tests__/psi-history-events.test.ts`. | Follow-up. Ready, but causality copy needs extra review. |
+| `/liquidity/` Exit Route Map | `src/app/liquidity/client.tsx` renders `LiquidityStats` and `LiquidityTable`; `src/components/liquidity-stats.tsx` already includes `buildLiquidityExitRouteModel()`, `LiquidityExitRouteMap`, `ExitRouteRail`, and metrics. | Existing model exposes route shares, HHI/concentration, leading protocol/chain, pool balance, organic activity, total TVL, and caveats. Global DEX score fields may be null. | Validation-only audit: confirm protocol/chain rails, exact values, NR states, HHI, organic, balance, and caveat copy remain visible across desktop/mobile. If touched, derive HHI from `protocolTvl`, use nullable fallbacks, and do not add a second exit-route visualization. | `src/components/liquidity-stats.tsx`, `src/app/liquidity/client.tsx`, `docs/dex-liquidity.md` only if a precise issue is found. | `src/components/__tests__/liquidity-stats.test.tsx`, `src/lib/liquidity-ui.test.ts`, local route smoke. | Validation-only. Existing surface already satisfies the original concept. |
+| `/coverage/` Control Tower | `src/app/coverage/coverage-page-sections.tsx` renders `CoverageFeatureSnapshotCard`, `CoveragePricingSourcesCard`, and `CoverageMatrixCard`; `src/hooks/use-coverage-matrix-model.ts` builds the route model. | `useCoverageMatrixModel()` combines stablecoins, peg, DEX, redemption, yield, flows, report cards, pricing-source summaries, feature summaries, and widest/narrowest/major-heavy insights. | Validation-only audit: confirm count reach, market-cap reach, feature availability/status, lens summary, and pricing-source depth are already readable. If touched, labels must say Pharos feature availability/status, not asset safety or general data quality. | `src/app/coverage/coverage-page-sections.tsx`, `src/hooks/use-coverage-matrix-model.ts`, `docs/coverage-page.md` only if a precise issue is found. | `src/lib/__tests__/coverage.test.ts`, `src/app/coverage/coverage-filtering.test.ts`, smoke route. | Validation-only. Do not duplicate the Feature Snapshot. |
+| `/blacklist/` Intervention Ledger | `src/app/blacklist/client.tsx` renders stats, status charts, drilldown, quarterly chart, filters, and table. | `summary.stats.perCoinTotalEvents`, `perCoinBlacklistCounts`, `perCoinFrozenTotal`, `perCoinDestroyedTotal`, `summary.chart`, and `buildBlacklistStatusBuckets()` with keys `yes`, `possible`, `upstream`, `no`. | Implement `BlacklistInterventionLedger`: a compact ledger strip after `BlacklistStats` and before status charts. Blocks: resolved blacklist/freeze exposure buckets, symbols/contracts with observed supported events, quarter peak/recent frozen/destroyed context. Keep event history visually separate from exposure buckets. | `src/components/blacklist-intervention-ledger.tsx`, `src/app/blacklist/client.tsx`, `src/lib/blacklist-status-buckets.ts` only if exported labels are reused, `docs/blacklist-tracker.md`. | `src/components/__tests__/blacklist-intervention-ledger.test.tsx`, changed blacklist status/chart tests as needed, local route smoke. | Implement Batch 3, frontend-only. Labels must say "resolved blacklist/freeze exposure buckets" and "symbols/contracts with observed supported events". |
+| `/cemetery/` Memorial | `src/components/cemetery-client.tsx`, `cemetery-tombstones.tsx`, and `cemetery-charts.tsx` render a bespoke memorial surface from static data. | Static `DEAD_STABLECOINS` powers cause/year/largest-collapse charts, tombstones, and autopsy cards. | Add cross-highlight between cause/year/largest charts, tombstones, and selected autopsy. Use URL-stable selection only if it does not create crawl/index noise. | `src/components/cemetery-client.tsx`, `src/components/cemetery-tombstones.tsx`, `src/components/cemetery-charts.tsx`, `docs/cemetery-and-compare.md`. | `src/components/__tests__/cemetery-client.test.tsx`, keyboard selection smoke. | Defer. Polished but less operationally valuable than the three chosen batches. |
+| `/dependency-map/` Dependency Hubs Board | `src/app/dependency-map/client.tsx` currently computes `mobileSummary` inline, renders `ContagionGraph`, then `DependencyMapMobileSummary`; graph edges use upstream `from` -> dependent `to`. | `reportData.cards`, `reportData.dependencyGraph.edges`, `filterDependencyGraphEdgesToLive()`, `mcapMap` from `stablecoinsData.peggedAssets` and `sumPegBuckets()`. Existing mobile field `mcap` is hub own market cap. | Implement `DependencyHubsBoard` and pure `firebreak-board-model.ts`. Extract the mobile hub logic into the pure model shared by desktop and mobile. Metrics: unique direct dependents, dimensionless inbound weight, optional deduped direct-dependent market-cap context, top example dependents, and edge-type mix. | `src/app/dependency-map/firebreak-board-model.ts`, `src/app/dependency-map/firebreak-board.tsx`, `src/app/dependency-map/client.tsx`, `src/components/dependency-map-mobile-summary.tsx`, `docs/dependency-map.md`. | `src/app/dependency-map/firebreak-board-model.test.ts`, `src/app/dependency-map/firebreak-board.test.tsx`, `src/app/dependency-map/client.test.tsx`. | Implement Batch 2. No transitive blast-radius, loss, liquidity, or guaranteed exposure claims. |
+| `/stablecoin/[id]` Dossier Spine | `src/app/stablecoin/[id]/client.tsx` renders many route-local sections from `use-stablecoin-detail-view-model.ts`; route already has a hero signal rail and scrollspy. | Detail view model gathers supply, peg, liquidity, report card, redemption, yield, stress signals, flows, blacklist, live reserves, and static metadata. | Add `DossierSpine`: a compact "current strongest signal" strip with one selected signal from Safety, DEWS, Liquidity, Flows, Blacklist, Reserves, and Yield, each linking to its section. Needs a pure arbitration model and strict "current signal, not advice" copy. | `src/hooks/use-stablecoin-detail-view-model.ts`, `src/lib/stablecoin-detail-view-model.ts`, `src/components/stablecoin-detail/*`, `docs/stablecoin-detail-page.md`. | `src/app/stablecoin/[id]/client.test.tsx`, `src/lib/__tests__/stablecoin-detail-view-model.test.ts`, detail component tests. | Defer. High value, but easy to over-rank unlike signals without a separate arbitration review. |
 
 ## New Storytelling Opportunity Matrix
 
-| Priority | Experience | Primary route | Data | Decision |
-| --- | --- | --- | --- | --- |
-| 1 | Yield Sources Board | `/yield/` | published selected ranking sources, alt sources, selected-source provenance, benchmark context | Implement Batch 1 |
-| 2 | Dependency Hubs Board | `/dependency-map/` | dependency graph edges, report cards, market caps | Implement Batch 2 |
-| 3 | Intervention Ledger | `/blacklist/` | blacklist/freeze exposure buckets, tracked symbol event counts, quarter chart | Implement Batch 3 frontend-only |
-| 4 | Coverage Control Tower audit | `/coverage/` | feature summaries, market-cap reach, coverage states | Validate existing surface; no new chart unless precise gap |
-| 5 | Liquidity Route Meter audit | `/liquidity/` | global DEX route shares and derived HHI | Validate existing surface; no duplicate build |
-| 6 | Flow Pressure Receipt | `/flows/` | flow rows, coverage metadata | Follow-up |
-| 7 | PSI Beam Dimmers | `/stability-index/` | PSI components, contributors | Follow-up |
-| 8 | Stablecoin Dossier Spine | `/stablecoin/[id]` | multiple route-local feeds | Follow-up after separate review |
+This matrix turns the remaining opportunity space into implementable work orders. "Implement" means this pass should ship it. "Validation-only" means the route already has the intended metaphor and only needs proof or a precise issue. "Follow-up" means implementation-ready but not in the first stack.
+
+| Priority | Experience | Route | Existing data contract | Derivation/model contract | UI contract | Files and tests | Risk guard | Decision |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| 1 | Yield Sources Board | `/yield/` | `YieldRanking[]` after `dedupeYieldRankings()`, `YieldRanking.altSources`, `YieldRanking.provenance`, `data.benchmarks`, `data.provenance`, active peg filter in `YieldClient`. | New pure `buildYieldSourceConstellation(rankings, options)` returns `selectedCount`, `alternateCount`, `representedSourceCount`, `groups` by `yieldType` and `dataSource`, `selectedConfidenceCounts`, `sourceSwitchCount`, `anomalyCount`, APY min/median/max over represented selected+alternate rows, and benchmark labels. Confidence is counted only from selected ranking `provenance.confidenceTier`; alt sources never receive confidence tiers. | A compact "source board" before the scatter: source-family lanes/cards, exact counts, confidence distribution labelled "selected-source confidence", APY range/median, source-switch/anomaly badges when present, and a table/list fallback that exposes the same numbers without hover. Mobile stacks groups as rows with 44px controls; no nested cards inside cards. | `src/app/yield/source-constellation-model.ts`, `.test.ts`, `source-constellation.tsx`, `.test.tsx`, `src/app/yield/client.tsx`, `docs/yield-intelligence.md`; reuse existing yield table/source-sheet tests where affected. | APY is not safety or investability. Do not render rejected, stale, unavailable, or historical-only sources absent from the current ranking payload. Do not imply alt-source confidence. | Implement Batch 1. |
+| 2 | Dependency Hubs Board | `/dependency-map/` | `ReportCardsResponse.cards`, `dependencyGraph.edges`, `filterDependencyGraphEdgesToLive()`, live IDs from non-defunct cards, `mcapMap` from stablecoin circulating buckets. | New pure `buildDependencyFirebreakBoard({ cards, edges, mcapMap })` returns ranked hubs with `id`, `label`, `dependentCount`, `inboundWeight`, `uniqueDependentMcapUsd`, `hubMcapUsd`, `examples`, and `edgeTypeBreakdown`. Dedupe dependent IDs for counts and dependent market cap; still sum all direct edge weights for `inboundWeight`. | Desktop board beside/under the graph: "upstream hubs", counts, inbound weight, modeled dependent market-cap context, examples. Mobile summary consumes the same model and is the primary readable surface below the graph. | `src/app/dependency-map/firebreak-board-model.ts`, `.test.ts`, `firebreak-board.tsx`, `.test.tsx`, `src/app/dependency-map/client.tsx`, `src/components/dependency-map-mobile-summary.tsx`, `docs/dependency-map.md`. | Dimensionless inbound weight is not USD. `uniqueDependentMcapUsd` is direct modeled dependent market cap, not loss, liquidity, or guaranteed exposure. Existing mobile `mcap` hub value must not be reused as dependent exposure. | Implement Batch 2. |
+| 3 | Intervention Ledger | `/blacklist/` | `BlacklistSummaryResponse.stats`, `summary.chart`, `buildBlacklistStatusBuckets()`, current filters and status drilldown state. | New `buildBlacklistInterventionLedgerModel()` inside the component or a small pure helper if logic grows. Return exposure bucket rows, top symbols/contracts with observed supported events from `perCoinTotalEvents`, top currently frozen symbols from `perCoinFrozenTotal`, peak/recent quarter context from `summary.chart`, and coverage caveats. | Ledger strip after stats: resolved exposure buckets first, observed supported event leaders second, quarter context third. Use compact bars/ledger rows, not another full chart. Every visual row has exact count/USD text. | `src/components/blacklist-intervention-ledger.tsx`, test under `src/components/__tests__/`, `src/app/blacklist/client.tsx`, `docs/blacklist-tracker.md`. | Separate resolved blacklist/freeze exposure from observed supported tracker events. Event count is observed supported history, not policy probability. Bucket `no` means no resolved exposure in the current model. | Implement Batch 3 frontend-only. |
+| 4 | Coverage Control Tower Audit | `/coverage/` | `useCoverageMatrixModel()` feature summaries, pricing-source summary, market-cap reach, lens summary. | No new model unless audit finds a precise gap. Record whether the existing Feature Snapshot already satisfies count reach, market-cap reach, widest/narrowest, and major-heavy explanation. | If untouched, no UI change. If refined, copy-only or small label treatment; no duplicate reach chart. | `agents/` validation note; optional `docs/coverage-page.md` and coverage tests only if changed. | Labels must mean Pharos feature availability/status, not generalized asset safety or "data quality". | Validation-only. |
+| 5 | Liquidity Exit Route Audit | `/liquidity/` | `buildLiquidityExitRouteModel()`, global DEX route shares, `protocolTvl`, chain/protocol rails, HHI/concentration, pool balance, organic share. | No new model unless audit finds a precise gap. If changed, preserve nullable global score handling and derive HHI from `protocolTvl`. | If untouched, no UI change. If refined, improve existing exit-route rails rather than introducing a second route map. | `agents/` validation note; optional `docs/dex-liquidity.md`, `liquidity-stats` tests only if changed. | Do not overstate exit safety; route map describes current DEX telemetry and concentration. | Validation-only. |
+| 6 | Flow Pressure Receipt | `/flows/` | `useMintBurnFlows()`, `useMintBurnGauge()`, local `FlowBrrrOverview` snapshot calculations. | Extract `buildFlowPressureReceiptModel()` returning mint/burn/net totals, top symbols, tracked scope, NR/lag/coverage state, and timeframe labels. | Receipt strip physically attached to the machine metaphor and exact-value list/table counterpart. | `src/lib/flow-pressure-receipt-model.ts`, `src/components/flow-pressure-receipt.tsx`, flow tests, `docs/mint-burn-flows.md`. | Must disclose tracked-chain scope and lag; do not imply global supply creation/destruction when only tracked contracts are present. | Follow-up, implementation-ready. |
+| 7 | PSI Beam Dimmers | `/stability-index/` | `buildPsiComponentData()`, `buildPsiContributorRows()`, event timeline rows and history stats. | `buildPsiBeamDimmers()` can reuse component data to classify component pressure lanes and top current contributor context. | Thin dimmer rail near the lighthouse hero with exact PSI component values and deltas. | `src/app/stability-index/psi-beam-dimmers.tsx`, view-model tests, `docs/stability-index.md`. | Say component pressure, not event causality. Do not change PSI scoring. | Follow-up, implementation-ready. |
+| 8 | Stablecoin Dossier Spine | `/stablecoin/[id]` | Existing stablecoin detail view model aggregates Safety, DEWS, Liquidity, Flows, Blacklist, Reserves, Yield, and static metadata. | A pure `buildStablecoinDossierSpine()` ranks route-local signals by explicit, reviewed display priority and returns one current summary per signal family. | Sticky-or-near-hero compact strip linking to sections, with exact values and "current signal" labels. | Detail view-model/component tests and `docs/stablecoin-detail-page.md`. | Avoid creating a hidden composite score or recommendation. | Follow-up after separate arbitration review. |
 
 ## Concrete Release Scope
 
@@ -228,6 +146,7 @@ Add `/dependency-map/` Dependency Hubs Board:
 Add `/blacklist/` Intervention Ledger:
 
 - visual summarizes resolved direct/possible/upstream/no blacklist/freeze exposure buckets and top tracked symbols/contracts by observed supported events;
+- implementation labels the observed-event block as "symbols/contracts with observed supported events";
 - uses existing summary/status data only;
 - separates resolved exposure status from observed supported tracker events;
 - caveat: event count is observed supported tracker history, not policy probability.
@@ -296,7 +215,7 @@ Broad validation:
 - local static-export smoke: start the static export server and run `SMOKE_UI_OVERFLOW_ROUTES="/yield/,/dependency-map/,/blacklist/" npm run test:smoke-ui -- --url http://127.0.0.1:<port> --mode local`.
 - additional accessibility check for `/yield/`, `/dependency-map/`, and `/blacklist/`: keyboard tab traversal, visible focus, screen-reader label/summary presence, 200% zoom, both-theme contrast/manual review for the new visual marks, and no page-level horizontal overflow.
 - docs checks when docs change: `npm run check:verified-doc-links` and `npm run check:doc-source-paths`; broader doc validation is also covered by merge gate.
-- after committing: `npm run test:merge-gate`; if checking staged work before commit, use `npm run test:merge-gate -- --staged` because merge gate is committed-diff based.
+- before committing a work slice, `npm run test:merge-gate -- --staged` is allowed as a staged-diff check; after all commits are created, run the normal committed-stack gate `npm run test:merge-gate`.
 
 Deployment:
 
@@ -306,8 +225,8 @@ Deployment:
   3. dependency firebreak board and docs,
   4. blacklist intervention ledger and docs.
 - use pathspec-only staging or pathspec-limited commits to exclude unrelated dirty files.
-- before push, run `git log --oneline origin/main..HEAD` and confirm it contains the accepted existing local commit plus the four visualization-pass commits only.
-- push `main` to `origin/main`.
+- immediately before push, run `git fetch origin main`, then `git log --oneline origin/main..HEAD` and confirm it contains the accepted existing local commit plus the four visualization-pass commits only.
+- push from the clean implementation branch with a normal non-force push to `origin` using `git push origin HEAD:main`. If the fetch shows remote `main` moved unexpectedly, stop and reconcile before pushing.
 
 ## Review Loop Criteria
 
