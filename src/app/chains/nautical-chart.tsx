@@ -18,6 +18,31 @@ const WATERLINE_Y = 224;
 const PIER_X = 58;
 const LIGHTHOUSE_ZONE = 220;
 
+const NAUTICAL_PALETTE = {
+  beam: "#fde68a",
+  flameOuter: "#f97316",
+  flameMid: "#fbbf24",
+  flameCore: "#fef9c3",
+  glint: "#fff7ad",
+  waterline: "#0ea5e9",
+  depthLine: "#38bdf8",
+  depthTick: "#0284c7",
+  ripple: "#7dd3fc",
+  wakePositive: "#10b981",
+  wakeNegative: "#ef4444",
+  distantFleet: "#475569",
+  star: "#f8fafc",
+  fog: "#cbd5e1",
+  sailStart: "#fff7ed",
+  sailMid: "#e5e7eb",
+  sailEnd: "#94a3b8",
+  hullTop: "#b7793d",
+  hullMid: "#7c3f12",
+  hullBottom: "#3b1d0b",
+  reflectionMask: "#ffffff",
+  unrated: "#94a3b8",
+} as const;
+
 const CHAIN_ACCENT_HEX: Record<string, string> = {
   arbitrum: "#28a0f0",
   base: "#0052ff",
@@ -30,7 +55,7 @@ const CHAIN_ACCENT_HEX: Record<string, string> = {
 };
 
 function healthHex(band: HealthBand | null): string {
-  return band ? HEALTH_HEX_FILL[band] : "#94a3b8";
+  return band ? HEALTH_HEX_FILL[band] : NAUTICAL_PALETTE.unrated;
 }
 
 function chainAccentHex(id: string): string {
@@ -283,25 +308,25 @@ function Lighthouse({
       <line x1={baseX - 9} y1={brazierBottom} x2={baseX + 9} y2={brazierBottom} stroke="oklch(0.6 0.05 60)" strokeWidth={1.1} />
 
       {/* Halo glow behind flames */}
-      <circle cx={baseX} cy={brazierBottom - 7} r={26} fill="#f97316" opacity={dim ? 0.08 : 0.16} className="nc-lighthouse-pulse" />
-      <circle cx={baseX} cy={brazierBottom - 7} r={14} fill="#fde68a" opacity={dim ? 0.22 : 0.4} />
+      <circle cx={baseX} cy={brazierBottom - 7} r={26} fill={NAUTICAL_PALETTE.flameOuter} opacity={dim ? 0.08 : 0.16} className="nc-lighthouse-pulse" />
+      <circle cx={baseX} cy={brazierBottom - 7} r={14} fill={NAUTICAL_PALETTE.beam} opacity={dim ? 0.22 : 0.4} />
 
       {/* Flames — three stacked layers, outer to core */}
       <path
         className="nc-flame-outer"
         d={`M ${baseX - 6} ${brazierBottom - 1} Q ${baseX - 5} ${brazierBottom - 9} ${baseX - 1.5} ${brazierBottom - 14} Q ${baseX} ${brazierBottom - 17} ${baseX + 1.5} ${brazierBottom - 14} Q ${baseX + 5} ${brazierBottom - 9} ${baseX + 6} ${brazierBottom - 1} Z`}
-        fill="#f97316"
+        fill={NAUTICAL_PALETTE.flameOuter}
         opacity={flameOpacity * 0.85}
       />
       <path
         className="nc-flame-mid"
         d={`M ${baseX - 3.5} ${brazierBottom - 2} Q ${baseX - 3} ${brazierBottom - 8} ${baseX - 0.8} ${brazierBottom - 12} Q ${baseX} ${brazierBottom - 15} ${baseX + 0.8} ${brazierBottom - 12} Q ${baseX + 3} ${brazierBottom - 8} ${baseX + 3.5} ${brazierBottom - 2} Z`}
-        fill="#fbbf24"
+        fill={NAUTICAL_PALETTE.flameMid}
         opacity={flameOpacity * 0.95}
       />
       <path
         d={`M ${baseX - 1.6} ${brazierBottom - 3} Q ${baseX - 1.2} ${brazierBottom - 7} ${baseX} ${brazierBottom - 11} Q ${baseX + 1.2} ${brazierBottom - 7} ${baseX + 1.6} ${brazierBottom - 3} Z`}
-        fill="#fef9c3"
+        fill={NAUTICAL_PALETTE.flameCore}
         opacity={flameOpacity}
       />
 
@@ -359,11 +384,11 @@ function Stars() {
   return (
     <g aria-hidden="true">
       {stars.map(([x, y, r, o], i) => (
-        <circle key={i} cx={x} cy={y} r={r} fill="#f8fafc" opacity={o} />
+        <circle key={i} cx={x} cy={y} r={r} fill={NAUTICAL_PALETTE.star} opacity={o} />
       ))}
       {/* Twin-star "eye" — Pharos watching */}
-      <circle cx={245} cy={50} r={2.2} fill="#f8fafc" opacity={0.95} />
-      <circle cx={245} cy={50} r={4} fill="none" stroke="#f8fafc" strokeWidth={0.4} opacity={0.4} />
+      <circle cx={245} cy={50} r={2.2} fill={NAUTICAL_PALETTE.star} opacity={0.95} />
+      <circle cx={245} cy={50} r={4} fill="none" stroke={NAUTICAL_PALETTE.star} strokeWidth={0.4} opacity={0.4} />
     </g>
   );
 }
@@ -385,7 +410,7 @@ function WaveRipples() {
           y1={y}
           x2={SCENE_WIDTH - 30}
           y2={y}
-          stroke="#7dd3fc"
+          stroke={NAUTICAL_PALETTE.ripple}
           strokeWidth={0.7}
           strokeDasharray={dash}
           strokeLinecap="round"
@@ -406,7 +431,7 @@ function Fog() {
           y1={y}
           x2={SCENE_WIDTH - 20}
           y2={y}
-          stroke="#cbd5e1"
+          stroke={NAUTICAL_PALETTE.fog}
           strokeWidth={2.4}
           strokeLinecap="round"
           strokeDasharray={i === 1 ? "32 10" : i === 2 ? "20 8" : "14 6"}
@@ -444,7 +469,7 @@ function ChartGrid({ laneWidth, lanes }: { laneWidth: number; lanes: number }) {
             y1={y}
             x2={endX}
             y2={y}
-            stroke="#38bdf8"
+            stroke={NAUTICAL_PALETTE.depthLine}
             strokeWidth={0.7}
             strokeDasharray={i % 2 === 0 ? "7 9" : "2 10"}
             opacity={0.14}
@@ -639,7 +664,7 @@ function Ship({
               ? `M ${deckRight + 3} ${hullBottom - 3} q ${wake * 26} -3 ${wake * 60} 1`
               : `M ${deckLeft - 3} ${hullBottom - 3} q ${wake * 26} -3 ${wake * 60} 1`
           }
-          stroke={wake > 0 ? "#10b981" : "#ef4444"}
+          stroke={wake > 0 ? NAUTICAL_PALETTE.wakePositive : NAUTICAL_PALETTE.wakeNegative}
           strokeWidth={1.1}
           strokeDasharray="2 5"
           fill="none"
@@ -788,7 +813,7 @@ function Ship({
               y1={hullBottom + offset}
               x2={deckRight - 4 - i * 2}
               y2={hullBottom + offset}
-              stroke="#0284c7"
+              stroke={NAUTICAL_PALETTE.depthTick}
               strokeWidth={0.75}
               opacity={0.34 - i * 0.07}
             />
@@ -867,7 +892,7 @@ function HarborLight({ geom }: { geom: ShipGeometry }) {
         className="nc-harbor-light-ray"
         d={`M ${lightStartX} ${lightStartY} C ${centerX + geom.hullW * 0.12} ${lightStartY + 22}, ${centerX - geom.hullW * 0.2} ${lightEndY - 24}, ${lightEndX} ${lightEndY}`}
         fill="none"
-        stroke="#fde68a"
+        stroke={NAUTICAL_PALETTE.beam}
         strokeWidth={2.1}
         strokeLinecap="round"
         opacity={0.54}
@@ -876,7 +901,7 @@ function HarborLight({ geom }: { geom: ShipGeometry }) {
         className="nc-harbor-light-ray nc-harbor-light-ray-soft"
         d={`M ${lightStartX + 7} ${lightStartY + 10} C ${centerX + geom.hullW * 0.15} ${lightStartY + 30}, ${centerX - geom.hullW * 0.1} ${lightEndY - 16}, ${lightEndX + 18} ${lightEndY + 4}`}
         fill="none"
-        stroke="#fde68a"
+        stroke={NAUTICAL_PALETTE.beam}
         strokeWidth={1.2}
         strokeLinecap="round"
         opacity={0.28}
@@ -887,14 +912,14 @@ function HarborLight({ geom }: { geom: ShipGeometry }) {
         cy={WATERLINE_Y + 5}
         rx={rippleWidth}
         ry={4.4}
-        fill="#fde68a"
+        fill={NAUTICAL_PALETTE.beam}
         opacity={0.2}
       />
       <path
         className="nc-harbor-light-water-line"
         d={`M ${centerX - rippleWidth * 0.58} ${WATERLINE_Y + 12} Q ${centerX} ${WATERLINE_Y + 7} ${centerX + rippleWidth * 0.58} ${WATERLINE_Y + 12}`}
         fill="none"
-        stroke="#fde68a"
+        stroke={NAUTICAL_PALETTE.beam}
         strokeWidth={0.9}
         strokeLinecap="round"
         opacity={0.32}
@@ -904,25 +929,47 @@ function HarborLight({ geom }: { geom: ShipGeometry }) {
         cx={centerX}
         cy={sailTopY}
         r={2.4}
-        fill="#fff7ad"
+        fill={NAUTICAL_PALETTE.glint}
         opacity={0.9}
       />
     </g>
   );
 }
 
-function HorizonFleet({ remaining, y, maxX }: { remaining: readonly ChainSummary[]; y: number; maxX: number }) {
+function HorizonFleet({
+  remaining,
+  y,
+  maxX,
+  totalUsd,
+}: {
+  remaining: readonly ChainSummary[];
+  y: number;
+  maxX: number;
+  totalUsd: number;
+}) {
   if (remaining.length === 0) return null;
   const visible = remaining.slice(0, 8);
   const spacing = 18;
   const baseX = maxX - visible.length * spacing - 30;
+  const remainingSupplyUsd = remaining.reduce((sum, chain) => sum + chain.totalUsd, 0);
+  const remainingSharePct = totalUsd > 0 ? (remainingSupplyUsd / totalUsd) * 100 : 0;
   return (
     <g opacity={0.5}>
       {visible.map((c, i) => (
-        <path key={c.id} d={`M ${baseX + i * spacing} ${y + 4} h 14 l -3 3 h -9 Z`} fill="#475569" opacity={0.7}>
+        <path key={c.id} d={`M ${baseX + i * spacing} ${y + 4} h 14 l -3 3 h -9 Z`} fill={NAUTICAL_PALETTE.distantFleet} opacity={0.7}>
           <title>{c.name}</title>
         </path>
       ))}
+      <text
+        x={baseX + visible.length * spacing + 8}
+        y={y + 9}
+        fontSize={7.5}
+        fontFamily="ui-monospace, Menlo, monospace"
+        fill="currentColor"
+        opacity={0.5}
+      >
+        {remaining.length} more · {remainingSharePct.toFixed(1)}%
+      </text>
     </g>
   );
 }
@@ -1069,8 +1116,8 @@ export function NauticalChart({
               <stop offset="100%" stopColor="oklch(0.1 0.04 250)" stopOpacity="0.85" />
             </linearGradient>
             <linearGradient id="nc-beam" x1="1" y1="0" x2="0" y2="0">
-              <stop offset="0%" stopColor="#fde68a" stopOpacity="0.55" />
-              <stop offset="100%" stopColor="#fde68a" stopOpacity="0" />
+              <stop offset="0%" stopColor={NAUTICAL_PALETTE.beam} stopOpacity="0.55" />
+              <stop offset="100%" stopColor={NAUTICAL_PALETTE.beam} stopOpacity="0" />
             </linearGradient>
             <linearGradient id="nc-stone" x1="0" y1="0" x2="1" y2="0">
               <stop offset="0%" stopColor="oklch(0.92 0.024 78)" stopOpacity="0.96" />
@@ -1078,19 +1125,19 @@ export function NauticalChart({
               <stop offset="100%" stopColor="oklch(0.66 0.03 75)" stopOpacity="0.94" />
             </linearGradient>
             <linearGradient id="nc-sail-cloth" x1="0" y1="0" x2="1" y2="1">
-              <stop offset="0%" stopColor="#fff7ed" stopOpacity="0.96" />
-              <stop offset="58%" stopColor="#e5e7eb" stopOpacity="0.82" />
-              <stop offset="100%" stopColor="#94a3b8" stopOpacity="0.58" />
+              <stop offset="0%" stopColor={NAUTICAL_PALETTE.sailStart} stopOpacity="0.96" />
+              <stop offset="58%" stopColor={NAUTICAL_PALETTE.sailMid} stopOpacity="0.82" />
+              <stop offset="100%" stopColor={NAUTICAL_PALETTE.sailEnd} stopOpacity="0.58" />
             </linearGradient>
             <linearGradient id="nc-hull-wood" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stopColor="#b7793d" stopOpacity="0.98" />
-              <stop offset="58%" stopColor="#7c3f12" stopOpacity="0.96" />
-              <stop offset="100%" stopColor="#3b1d0b" stopOpacity="0.98" />
+              <stop offset="0%" stopColor={NAUTICAL_PALETTE.hullTop} stopOpacity="0.98" />
+              <stop offset="58%" stopColor={NAUTICAL_PALETTE.hullMid} stopOpacity="0.96" />
+              <stop offset="100%" stopColor={NAUTICAL_PALETTE.hullBottom} stopOpacity="0.98" />
             </linearGradient>
             <linearGradient id="nc-reflection-fade" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stopColor="#ffffff" stopOpacity="0.5" />
-              <stop offset="35%" stopColor="#ffffff" stopOpacity="0.3" />
-              <stop offset="100%" stopColor="#ffffff" stopOpacity="0" />
+              <stop offset="0%" stopColor={NAUTICAL_PALETTE.reflectionMask} stopOpacity="0.5" />
+              <stop offset="35%" stopColor={NAUTICAL_PALETTE.reflectionMask} stopOpacity="0.3" />
+              <stop offset="100%" stopColor={NAUTICAL_PALETTE.reflectionMask} stopOpacity="0" />
             </linearGradient>
             <mask id="nc-reflection-mask" maskUnits="userSpaceOnUse">
               <rect x="0" y={WATERLINE_Y} width={SCENE_WIDTH} height={SCENE_HEIGHT - WATERLINE_Y} fill="url(#nc-reflection-fade)" />
@@ -1108,7 +1155,7 @@ export function NauticalChart({
           <Coastline />
 
           {/* Background fleet on the horizon */}
-          <HorizonFleet remaining={remaining} y={WATERLINE_Y - 8} maxX={SCENE_WIDTH - LIGHTHOUSE_ZONE} />
+          <HorizonFleet remaining={remaining} y={WATERLINE_Y - 8} maxX={SCENE_WIDTH - LIGHTHOUSE_ZONE} totalUsd={globalTotalUsd} />
 
           {/* Water */}
           <rect x="0" y={WATERLINE_Y} width={SCENE_WIDTH} height={SCENE_HEIGHT - WATERLINE_Y} fill="url(#nc-water)" />
@@ -1132,7 +1179,7 @@ export function NauticalChart({
             y1={WATERLINE_Y}
             x2={SCENE_WIDTH}
             y2={WATERLINE_Y}
-            stroke="#0ea5e9"
+            stroke={NAUTICAL_PALETTE.waterline}
             strokeWidth={1}
             strokeDasharray="6 8"
             opacity={0.5}
@@ -1168,7 +1215,7 @@ export function NauticalChart({
                   rx={Math.max(30, geom.hullW * 0.58)}
                   ry={8}
                   fill="none"
-                  stroke="#fde68a"
+                  stroke={NAUTICAL_PALETTE.beam}
                   strokeWidth={1.2}
                   strokeDasharray="4 5"
                 />
