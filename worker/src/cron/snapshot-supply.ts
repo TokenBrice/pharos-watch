@@ -77,6 +77,15 @@ export async function snapshotSupply(db: D1Database, signal?: AbortSignal): Prom
   const expectedCount = trackedIds.size;
   if (stmts.length < expectedCount * 0.8) {
     console.warn(`[snapshot-supply] Only ${stmts.length}/${expectedCount} coins have valid data — possible upstream issue`);
+    return {
+      status: "degraded",
+      itemCount: 0,
+      metadata: JSON.stringify({
+        reason: "partial_snapshot_blocked",
+        validRows: stmts.length,
+        expectedCount,
+      }),
+    };
   }
 
   if (stmts.length > 0) {

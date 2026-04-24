@@ -1,7 +1,15 @@
+import { API_FRESHNESS_MAX_AGE_SEC } from "@shared/lib/api-freshness";
 import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins";
 import { buildInClause } from "../lib/db";
-import { jsonResponse, parseClampedIntegerParam, withErrorHandler } from "../lib/api-utils";
+import {
+  addFreshnessHeaders,
+  getLatestSuccessfulCronTimestampResult,
+  jsonResponse,
+  parseClampedIntegerParam,
+  withErrorHandler,
+} from "../lib/api-utils";
 import { CACHE_PROFILES } from "../lib/constants";
+import { getCompletedSupplySnapshotDate } from "../lib/supply-snapshot-completion";
 
 const COMMODITY_PEGS = new Set(["GOLD", "SILVER"]);
 const DEFAULT_DAYS = 1825;
@@ -35,6 +43,9 @@ export const handleNonUsdShare = withErrorHandler(
 
     const commodityIn = buildInClause(COMMODITY_IDS);
     const fiatIn = buildInClause(FIAT_NON_USD_IDS);
+    const completedSnapshotDate = await getCompletedSupplySnapshotDate(db);
+    const latestSnapshotFilter = completedSnapshotDate == null ? "" : " AND snapshot_date <= ?";
+    const latestSnapshotBinds = completedSnapshotDate == null ? [] : [completedSnapshotDate];
 
     const result = await db
       .prepare(
@@ -44,11 +55,11 @@ export const handleNonUsdShare = withErrorHandler(
            ROUND(SUM(CASE WHEN stablecoin_id IN (${commodityIn.sql}) THEN circulating_usd ELSE 0 END), 2) AS commodity,
            ROUND(SUM(CASE WHEN stablecoin_id IN (${fiatIn.sql}) THEN circulating_usd ELSE 0 END), 2) AS fiat_non_usd
          FROM supply_history
-         WHERE snapshot_date >= ?
+         WHERE snapshot_date >= ?${latestSnapshotFilter}
          GROUP BY snapshot_date
          ORDER BY snapshot_date ASC`,
       )
-      .bind(...commodityIn.binds, ...fiatIn.binds, cutoff)
+      .bind(...commodityIn.binds, ...fiatIn.binds, cutoff, ...latestSnapshotBinds)
       .all<AggRow>();
 
     const rows = result.results ?? [];
@@ -93,8 +104,20 @@ export const handleNonUsdShare = withErrorHandler(
       }
     }
 
-    return jsonResponse(points, {
-      "Cache-Control": CACHE_PROFILES.slow,
-    });
+    const latestSnapshotRun = await getLatestSuccessfulCronTimestampResult(db, "snapshot-supply");
+    const latestPointDate = points.reduce<number | null>(
+      (latest, point) => latest == null ? point.date : Math.max(latest, point.date),
+      null,
+    );
+    const updatedAt = latestSnapshotRun.timestamp ?? latestPointDate;
+    const headers = updatedAt == null
+      ? { "Cache-Control": CACHE_PROFILES.slow }
+      : addFreshnessHeaders(
+        { "Cache-Control": CACHE_PROFILES.slow },
+        updatedAt,
+        API_FRESHNESS_MAX_AGE_SEC.nonUsdShare,
+      );
+
+    return jsonResponse(points, headers);
   },
 );

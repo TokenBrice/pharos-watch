@@ -414,6 +414,8 @@ Returns historical non-USD stablecoin market share data from `supply_history`, s
 
 **Cache:** slow — `public, s-maxage=3600, max-age=300`
 
+Freshness headers are emitted from the latest completed `snapshot-supply` run when available. Stale responses include `X-Data-Age` and can downgrade to `Cache-Control: no-store` with `Warning: 110` once the daily history runway is exceeded. Rows newer than the completed daily snapshot marker are hidden so a failed chunked write cannot expose a partial latest day.
+
 | Param  | Type     | Default | Constraints    | Description                           |
 | ------ | -------- | ------- | -------------- | ------------------------------------- |
 | `days` | `number` | `1825`  | min 30, max 1825 | Lookback window in days             |
@@ -1122,6 +1124,8 @@ Per-coin circulating supply and price history, snapshotted once daily at 08:00 U
 
 **Cache:** slow — `public, s-maxage=3600, max-age=300`
 
+Freshness headers are emitted from the latest completed `snapshot-supply` run when available. Rows newer than the completed daily snapshot marker are hidden so a failed chunked write cannot expose a partial latest day.
+
 **Required query parameter**
 
 | Param        | Type     | Description                     |
@@ -1579,10 +1583,10 @@ Stablecoin risk grade cards with dimension-level scores. Output includes 5 dimen
 {
   "cards": [ReportCard, ...],
   "dependencyGraph": {
-    "edges": [{ "from": "usde-ethena", "to": "usdc-circle", "weight": 0.9, "type": "collateral" }, ...]
+    "edges": [{ "from": "usdc-circle", "to": "usde-ethena", "weight": 0.9, "type": "collateral" }, ...]
   },
   "methodology": {
-    "version": "7.12",
+    "version": "7.13",
     "weights": { "pegStability": 0, "liquidity": 0.30, "resilience": 0.20, "decentralization": 0.15, "dependencyRisk": 0.25 },
     "pegMultiplierExponent": 0.4,
     "activeDepegSeveritySource": "open-event-peak",
@@ -1598,11 +1602,15 @@ Stablecoin risk grade cards with dimension-level scores. Output includes 5 dimen
     "dexLiquidity": { "updatedAt": 1771977600, "ageSeconds": 120, "stale": false },
     "redemptionBackstops": { "updatedAt": 1771977600, "ageSeconds": 300, "stale": false }
   },
+  "collateralDriftCoins": [{ "id": "jupusd-jupiter", "liveScore": 80, "curatedScore": 65, "delta": 15 }],
+  "liveToFallbackCoins": ["usdaf-asymmetry"],
   "updatedAt": 1771977600
 }
 ```
 
 The Liquidity dimension now represents `effectiveExitScore`: the public DEX liquidity score remains the floor, while redeemable assets can receive uplift from `redemptionBackstopScore` when a meaningful direct exit path exists. Documented offchain issuer exits with eventual-only capacity can add only a DEX-gated primary-market bonus; they do not replace missing DEX liquidity. Last-known DEX liquidity remains usable even after its freshness runway, with staleness surfaced through `liquidityStale` and `inputFreshness.dexLiquidity.stale`. Low-confidence redemption routes stay visible but do not uplift the score, and materially stale redemption inputs are not blended. Report-card redemption inputs are treated as materially stale after more than twice the 4-hourly redemption sync cadence, so normal cron lag does not globally remove medium- or high-confidence redemption uplift.
+
+When present, `collateralDriftCoins` lists live-reserve scoring deltas that exceed the reserve-drift threshold, and `liveToFallbackCoins` lists live-reserve-enabled assets whose report card used curated fallback reserves because no scoring-eligible live snapshot was available.
 
 For peg handling, `rawInputs.pegScore` is the effective peg input used by report-card scoring. Most coins use their direct peg-summary value. Configured NAV wrappers can inherit peg stability from a referenced base stablecoin when the wrapper share price is not the right peg-tracking surface; pure NAV tokens without a configured reference remain `null` and keep neutral handling. `rawInputs.activeDepegBps` is the open active depeg event's absolute peak deviation used for final Safety Score caps; it is not the latest spot deviation.
 

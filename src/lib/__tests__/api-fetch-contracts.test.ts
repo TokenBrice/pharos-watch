@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { z } from "zod";
+import { ReportCardsResponseSchema } from "@shared/types/report-cards";
 import { PHAROS_WEB_ACCEPT_MARKER } from "@shared/lib/request-source-marker";
 import {
   apiRequest,
@@ -123,6 +124,25 @@ describe("api contract validation policy", () => {
 
     expect(result.data).toEqual({ summary: null, coins: [] });
     expect(result.meta).toEqual({ updatedAt: 200, ageSeconds: 20, status: "degraded" });
+  });
+
+  it("preserves optional report-card live reserve telemetry in the shared schema", () => {
+    const parsed = ReportCardsResponseSchema.parse({
+      cards: [],
+      dependencyGraph: { edges: [{ from: "usdc-circle", to: "usde-ethena", weight: 0.9, type: "collateral" }] },
+      methodology: {
+        version: "7.13",
+        weights: { pegStability: 0, liquidity: 0.3, resilience: 0.2, decentralization: 0.15, dependencyRisk: 0.25 },
+        pegMultiplierExponent: 0.4,
+        thresholds: [{ grade: "A+", min: 87 }],
+      },
+      updatedAt: 1771977600,
+      collateralDriftCoins: [{ id: "jupusd-jupiter", liveScore: 80, curatedScore: 65, delta: 15 }],
+      liveToFallbackCoins: ["usdaf-asymmetry"],
+    });
+
+    expect(parsed.collateralDriftCoins).toEqual([{ id: "jupusd-jupiter", liveScore: 80, curatedScore: 65, delta: 15 }]);
+    expect(parsed.liveToFallbackCoins).toEqual(["usdaf-asymmetry"]);
   });
 
   it("resolves production API base from known hostnames when env is empty", () => {

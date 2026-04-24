@@ -1,5 +1,6 @@
 import { PSI_ELIGIBLE_STABLECOINS, PSI_ELIGIBLE_META_BY_ID } from "@shared/lib/psi-eligible";
 import { DAY_SECONDS } from "@shared/lib/time-constants";
+import { sumPegBuckets } from "@shared/lib/supply";
 import type { ContractDeployment } from "@shared/types/core";
 import { DEFILLAMA_BASE, DEFILLAMA_API, DEFILLAMA_COINS, USER_AGENT } from "../lib/constants";
 import { fetchCoinGeckoMarketHistory } from "../lib/coingecko-market-history";
@@ -361,7 +362,7 @@ export async function handleBackfillSupplyHistory(
           if (!circ) continue;
 
           // Sum across all peg buckets (native currency for non-USD, USD for USD coins)
-          const rawSum = Object.values(circ).reduce((sum, v) => sum + (v ?? 0), 0);
+          const rawSum = sumPegBuckets(circ);
           if (rawSum <= 0) continue;
 
           // Floor to UTC midnight

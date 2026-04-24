@@ -27,6 +27,20 @@ describe("handleNonUsdShare", () => {
     const db = mockD1(
       [
         {
+          match: "FROM cache",
+          matchBinds: ["snapshot-supply:last-write"],
+          rows: [{
+            key: "snapshot-supply:last-write",
+            value: JSON.stringify({ snapshotDate: unix("2026-04-07T00:00:00Z") }),
+            updated_at: Math.floor(nowMs / 1000) - 600,
+          }],
+          first: {
+            key: "snapshot-supply:last-write",
+            value: JSON.stringify({ snapshotDate: unix("2026-04-07T00:00:00Z") }),
+            updated_at: Math.floor(nowMs / 1000) - 600,
+          },
+        },
+        {
           match: "FROM supply_history",
           rows: [
             {
@@ -49,6 +63,12 @@ describe("handleNonUsdShare", () => {
             },
           ],
         },
+        {
+          match: "FROM cron_runs",
+          matchBinds: ["snapshot-supply"],
+          rows: [{ started_at: Math.floor(nowMs / 1000) - 600 }],
+          first: { started_at: Math.floor(nowMs / 1000) - 600 },
+        },
       ],
       { requireMatch: true },
     );
@@ -57,6 +77,7 @@ describe("handleNonUsdShare", () => {
 
     expect(res.status).toBe(200);
     expect(res.headers.get("Cache-Control")).toBeTruthy();
+    expect(res.headers.get("X-Data-Age")).toBe("600");
 
     const body = (await res.json()) as NonUsdSharePoint[];
     expect(body).toEqual([
@@ -86,9 +107,10 @@ describe("handleNonUsdShare", () => {
       },
     ]);
 
-    expect(db.getHistory()).toHaveLength(1);
-    const firstQueryBinds = db.getHistory()[0]?.binds ?? [];
-    expect(firstQueryBinds[firstQueryBinds.length - 1]).toBe(Math.floor(nowMs / 1000) - 1825 * 86400);
+    const supplyQuery = db.getHistory().find((entry) => entry.sql.includes("FROM supply_history"));
+    const firstQueryBinds = supplyQuery?.binds ?? [];
+    expect(firstQueryBinds[firstQueryBinds.length - 2]).toBe(Math.floor(nowMs / 1000) - 1825 * 86400);
+    expect(firstQueryBinds[firstQueryBinds.length - 1]).toBe(unix("2026-04-07T00:00:00Z"));
     db.assertAllMatchesUsed();
   });
 
@@ -97,6 +119,20 @@ describe("handleNonUsdShare", () => {
 
     const db = mockD1(
       [
+        {
+          match: "FROM cache",
+          matchBinds: ["snapshot-supply:last-write"],
+          rows: [{
+            key: "snapshot-supply:last-write",
+            value: JSON.stringify({ snapshotDate: unix("2026-04-08T00:00:00Z") }),
+            updated_at: unix("2026-04-08T08:00:00Z"),
+          }],
+          first: {
+            key: "snapshot-supply:last-write",
+            value: JSON.stringify({ snapshotDate: unix("2026-04-08T00:00:00Z") }),
+            updated_at: unix("2026-04-08T08:00:00Z"),
+          },
+        },
         {
           match: "FROM supply_history",
           rows: [
@@ -107,6 +143,12 @@ describe("handleNonUsdShare", () => {
             { snapshot_date: unix("2026-04-01T00:00:00Z"), total: 100, commodity: 14, fiat_non_usd: 5 },
             { snapshot_date: unix("2026-04-01T12:00:00Z"), total: 100, commodity: 15, fiat_non_usd: 5 },
           ],
+        },
+        {
+          match: "FROM cron_runs",
+          matchBinds: ["snapshot-supply"],
+          rows: [{ started_at: unix("2026-04-08T08:00:00Z") }],
+          first: { started_at: unix("2026-04-08T08:00:00Z") },
         },
       ],
       { requireMatch: true },

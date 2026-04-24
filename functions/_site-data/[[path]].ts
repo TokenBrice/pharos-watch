@@ -89,7 +89,12 @@ function getDefaultCache(): Cache {
 }
 
 function canCacheResponse(response: Response): boolean {
-  return response.ok && !response.headers.has("Set-Cookie");
+  const cacheControl = response.headers.get("Cache-Control") ?? "";
+  const warning = response.headers.get("Warning") ?? "";
+  return response.ok
+    && !response.headers.has("Set-Cookie")
+    && !/\bno-store\b/i.test(cacheControl)
+    && !/(?:^|,\s*)110\b/.test(warning);
 }
 
 async function queueSiteDataTelemetry(

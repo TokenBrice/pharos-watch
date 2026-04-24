@@ -93,4 +93,31 @@ describe("snapshotSupply", () => {
     const result = await snapshotSupply(db);
     expect(result.itemCount).toBe(0);
   });
+
+  it("blocks partial daily snapshots instead of writing a sparse day", async () => {
+    const freshUpdatedAt = Math.floor(Date.now() / 1000) - 30;
+    const cacheValue = JSON.stringify({
+      peggedAssets: [
+        { id: "usdt-tether", symbol: "USDT", price: 1.0, circulating: { peggedUSD: 100_000_000 } },
+      ],
+    });
+    const db = mockD1([{
+      match: "cache",
+      matchBinds: ["stablecoins"],
+      rows: [],
+      first: { key: "stablecoins", value: cacheValue, updated_at: freshUpdatedAt },
+    }]);
+
+    const result = await snapshotSupply(db);
+
+    expect(result.status).toBe("degraded");
+    expect(result.itemCount).toBe(0);
+    expect(JSON.parse(String(result.metadata))).toMatchObject({
+      reason: "partial_snapshot_blocked",
+      validRows: 1,
+      expectedCount: 2,
+    });
+    expect(db.getHistory().some((entry) => entry.sql.includes("INSERT OR REPLACE INTO supply_history"))).toBe(false);
+    expect(db.getHistory().some((entry) => entry.sql.includes("snapshot-supply:last-write"))).toBe(false);
+  });
 });

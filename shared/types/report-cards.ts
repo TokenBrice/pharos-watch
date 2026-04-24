@@ -175,6 +175,13 @@ const ReportCardsFreshnessEntrySchema = z.object({
   stale: z.boolean(),
 });
 
+const CollateralDriftEntrySchema = z.object({
+  id: z.string(),
+  liveScore: z.number(),
+  curatedScore: z.number(),
+  delta: z.number(),
+});
+
 export const ReportCardsResponseSchema = z.object({
   cards: z.array(ReportCardSchema),
   methodology: ReportCardsMethodologySchema,
@@ -186,6 +193,8 @@ export const ReportCardsResponseSchema = z.object({
     dexLiquidity: ReportCardsFreshnessEntrySchema,
     redemptionBackstops: ReportCardsFreshnessEntrySchema,
   }).optional(),
+  collateralDriftCoins: z.array(CollateralDriftEntrySchema).optional(),
+  liveToFallbackCoins: z.array(z.string()).optional(),
 });
 
 export interface ReportCardsResponse extends z.infer<typeof ReportCardsResponseSchema> {

@@ -181,7 +181,7 @@ ORDER BY snapshot_date ASC
 
 **Response:** array of `{ date, circulatingUsd, price }`
 
-**Cache profile:** slow (`s-maxage=3600`, `max-age=300`)
+**Cache profile:** slow (`s-maxage=3600`, `max-age=300`). Responses include `X-Data-Age` when the latest completed `snapshot-supply` run or a served snapshot row can be resolved. Rows newer than the completed daily snapshot marker are hidden so a failed chunked write cannot expose a partial latest day.
 
 ### GET /api/stablecoin/{id} (detail --- supply_history fallback)
 

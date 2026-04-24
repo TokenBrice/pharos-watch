@@ -168,6 +168,7 @@ The sync pipeline includes multiple layers of validation to prevent bad data fro
 39. **DEWS blacklist coverage parity**: `computeAndStoreDEWS()` now derives blacklist-signal coverage from the shared `BLACKLIST_STABLECOINS` set instead of a local hardcoded subset, so `PYUSD` and `USD1` receive the same `blacklist_events`-driven stress input as the other live blacklist-tracked coins.
 40. **DEWS thin-peg FX parity**: `computeAndStoreDEWS()` now passes cached `fxFallbackRates` into `derivePegRates()`, matching live depeg detection and peg-summary behavior for thin non-USD peg groups.
 41. **Recent-only chart FX repair**: `syncStablecoinCharts()` still corrects obvious recent `totalCirculatingUSD` corruption with the live FX cache, but it no longer rewrites deep historical points with today's FX reference.
+42. **Completed-day supply history reads**: `snapshotSupply()` blocks sparse daily snapshots instead of writing a partial day when fewer than 80% of PSI-eligible assets have usable supply. Public `supply-history` and `non-usd-share` reads cap rows to the completed `snapshot-supply:last-write` marker when present and emit `X-Data-Age` from the latest completed supply snapshot run.
 
 ## Gold & Silver Spot Prices (gold-api.com)
 

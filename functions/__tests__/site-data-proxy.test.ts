@@ -135,7 +135,7 @@ describe("site-data proxy", () => {
       headers: {
         "Cache-Control": "public, max-age=60",
         "Content-Type": "application/json",
-        Warning: '110 - "stale"',
+        Warning: '199 - "advisory"',
         "X-Data-Age": "12",
       },
     }));
@@ -164,7 +164,7 @@ describe("site-data proxy", () => {
     expect(forwardedHeaders.get("Accept")).toBe("application/json");
     expect(forwardedHeaders.get("X-Pharos-Site-Proxy-Secret")).toBe("shared-secret");
     expect(response.headers.get("Cache-Control")).toBe("public, max-age=60");
-    expect(response.headers.get("Warning")).toContain("stale");
+    expect(response.headers.get("Warning")).toContain("advisory");
     expect(response.headers.get("X-Data-Age")).toBe("12");
     expect(cachePut).toHaveBeenCalledTimes(1);
     expect(db.getHistory().some((entry) => entry.sql.includes("INSERT INTO site_data_request_stats")
@@ -172,6 +172,49 @@ describe("site-data proxy", () => {
       && entry.binds[2] === "/api/stablecoin-summary/:id"
       && entry.binds[3] === "pages-upstream-fetch"
       && entry.binds[4] === "site-api")).toBe(true);
+  });
+
+  it("does not cache upstream responses marked no-store", async () => {
+    const fetchSpy = vi.fn(async () => new Response(JSON.stringify({ ok: true }), {
+      status: 200,
+      headers: {
+        "Cache-Control": "no-store",
+        "Content-Type": "application/json",
+      },
+    }));
+    vi.stubGlobal("fetch", fetchSpy);
+
+    const response = await onRequest({
+      request: new Request("https://pharos.watch/_site-data/stablecoins"),
+      env: makeEnv(),
+      params: { path: "stablecoins" },
+    });
+
+    expect(response.status).toBe(200);
+    expect(response.headers.get("Cache-Control")).toBe("no-store");
+    expect(cachePut).not.toHaveBeenCalled();
+  });
+
+  it("does not cache stale upstream responses with Warning 110", async () => {
+    const fetchSpy = vi.fn(async () => new Response(JSON.stringify({ ok: true }), {
+      status: 200,
+      headers: {
+        "Cache-Control": "public, max-age=60",
+        "Content-Type": "application/json",
+        Warning: '110 - "Response is stale"',
+      },
+    }));
+    vi.stubGlobal("fetch", fetchSpy);
+
+    const response = await onRequest({
+      request: new Request("https://pharos.watch/_site-data/stablecoins"),
+      env: makeEnv(),
+      params: { path: "stablecoins" },
+    });
+
+    expect(response.status).toBe(200);
+    expect(response.headers.get("Warning")).toContain("Response is stale");
+    expect(cachePut).not.toHaveBeenCalled();
   });
 
   it("preserves upstream Retry-After headers on site-data rate limits", async () => {
