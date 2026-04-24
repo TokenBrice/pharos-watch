@@ -6,6 +6,7 @@ import {
   depthLayers,
   wakeLength,
   aggregateSkyBand,
+  nextHarborSweepId,
 } from "./nautical-scene-math";
 
 describe("hullWidth", () => {
@@ -98,5 +99,23 @@ describe("aggregateSkyBand", () => {
       { healthBand: null },
       { healthBand: "fragile" },
     ])).toBe("fog");
+  });
+});
+
+describe("nextHarborSweepId", () => {
+  const ids = ["ethereum", "tron", "base"] as const;
+
+  it("advances from the current visible harbor", () => {
+    expect(nextHarborSweepId("ethereum", ids)).toBe("tron");
+    expect(nextHarborSweepId("tron", ids)).toBe("base");
+  });
+
+  it("wraps at the end and starts from the first visible harbor when unknown", () => {
+    expect(nextHarborSweepId("base", ids)).toBe("ethereum");
+    expect(nextHarborSweepId("solana", ids)).toBe("ethereum");
+  });
+
+  it("returns null when no harbors are visible", () => {
+    expect(nextHarborSweepId(null, [])).toBeNull();
   });
 });

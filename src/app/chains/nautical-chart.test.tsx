@@ -101,4 +101,41 @@ describe("NauticalChart", () => {
     fireEvent.keyDown(baseShip, { key: "Enter" });
     expect(onSelectChain).toHaveBeenCalledWith("base");
   });
+
+  it("aims the lighthouse beam at the selected harbor", () => {
+    const chains = [
+      makeChain({ id: "ethereum", name: "Ethereum", totalUsd: 60 }),
+      makeChain({ id: "base", name: "Base", totalUsd: 25 }),
+    ];
+    const { rerender } = render(createElement(NauticalChart, {
+      chains,
+      globalTotalUsd: 100,
+      selectedChainId: "ethereum",
+    }));
+
+    const initialBeam = screen.getByTestId("nc-lighthouse-beam");
+    const initialAngle = initialBeam.getAttribute("style");
+
+    rerender(createElement(NauticalChart, {
+      chains,
+      globalTotalUsd: 100,
+      selectedChainId: "base",
+    }));
+
+    expect(screen.getByTestId("nc-lighthouse-beam").getAttribute("style")).not.toBe(initialAngle);
+  });
+
+  it("marks the selected harbor with a light wash instead of a dotted frame", () => {
+    const { container } = render(createElement(NauticalChart, {
+      chains: [
+        makeChain({ id: "ethereum", name: "Ethereum", totalUsd: 60 }),
+        makeChain({ id: "base", name: "Base", totalUsd: 25 }),
+      ],
+      globalTotalUsd: 100,
+      selectedChainId: "ethereum",
+    }));
+
+    expect(screen.getByTestId("nc-harbor-light")).toBeTruthy();
+    expect(container.querySelector("rect[stroke-dasharray='5 5']")).toBeNull();
+  });
 });

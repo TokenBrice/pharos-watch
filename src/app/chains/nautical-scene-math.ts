@@ -49,3 +49,10 @@ export function aggregateSkyBand(
   ).length;
   return unhealthy / rated.length >= 0.3 ? "fog" : "sun";
 }
+
+export function nextHarborSweepId(currentId: string | null, visibleHarborIds: readonly string[]): string | null {
+  if (visibleHarborIds.length === 0) return null;
+  const currentIndex = currentId == null ? 0 : visibleHarborIds.indexOf(currentId);
+  const nextIndex = currentIndex < 0 ? 0 : (currentIndex + 1) % visibleHarborIds.length;
+  return visibleHarborIds[nextIndex] ?? null;
+}

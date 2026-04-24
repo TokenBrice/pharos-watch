@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useChains } from "@/hooks/use-chains";
@@ -25,7 +25,8 @@ import type { HealthBand, ChainSummary } from "@shared/types/chains";
 import { StablecoinLogo } from "@/components/stablecoin-logo";
 import { logosById } from "@/lib/logos";
 import { NauticalChart } from "./nautical-chart";
-import { buildChainHarborEntries } from "./harbor-map";
+import { buildChainHarborEntries, HARBOR_MAX } from "./harbor-map";
+import { nextHarborSweepId } from "./nautical-scene-math";
 import { SelectedHarborPanel } from "./selected-harbor-panel";
 
 /** Muted oklch palette for the dominance breakdown bar — distinct but not decorative. */
@@ -38,6 +39,7 @@ const DOMINANCE_COLORS = [
 ];
 const OTHER_CHAINS_COLOR = "oklch(0.55 0.02 260)";
 const UNATTRIBUTED_COLOR = "oklch(0.66 0.03 245)";
+const HARBOR_LIGHT_SWEEP_MS = 7_000;
 
 type ChainSortKey = "totalUsd" | "healthScore" | "change24hPct" | "change7dPct" | "change30dPct" | "stablecoinCount" | "dominanceShare";
 const CHAIN_COLUMNS: readonly DataTableColumn<ChainSortKey>[] = [
@@ -143,6 +145,24 @@ export function ChainsLeaderboardClient() {
       ?? harborEntries[0]
       ?? null;
   }, [harborEntries, selectedChainId]);
+
+  const visibleHarborIds = useMemo(
+    () => harborEntries.slice(0, HARBOR_MAX).map((entry) => entry.id),
+    [harborEntries],
+  );
+
+  useEffect(() => {
+    if (visibleHarborIds.length <= 1) return;
+    if (typeof window.matchMedia === "function" && window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+
+    const intervalId = window.setInterval(() => {
+      setSelectedChainId((currentId) => {
+        return nextHarborSweepId(currentId, visibleHarborIds);
+      });
+    }, HARBOR_LIGHT_SWEEP_MS);
+
+    return () => window.clearInterval(intervalId);
+  }, [visibleHarborIds]);
 
   if (isLoading) {
     return (

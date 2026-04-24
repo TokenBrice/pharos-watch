@@ -103,6 +103,37 @@
       transform: scaleY(1.08) scaleX(0.94);
     }
   }
+  @keyframes nc-harbor-light-breathe {
+    0%,
+    100% {
+      opacity: 0.78;
+    }
+    50% {
+      opacity: 1;
+    }
+  }
+  @keyframes nc-harbor-light-water {
+    0%,
+    100% {
+      transform: scaleX(0.94);
+      opacity: 0.16;
+    }
+    50% {
+      transform: scaleX(1.06);
+      opacity: 0.28;
+    }
+  }
+  @keyframes nc-harbor-light-glint {
+    0%,
+    100% {
+      transform: scale(0.9);
+      opacity: 0.62;
+    }
+    50% {
+      transform: scale(1.35);
+      opacity: 0.96;
+    }
+  }
 
   .nc-waterline {
     animation: nc-wave-drift 8s ease-in-out infinite;
@@ -118,6 +149,36 @@
   }
   .nc-lighthouse-beam {
     animation: nc-beam-sweep 7s ease-in-out infinite;
+    transform: rotate(var(--nc-beam-angle, 0deg));
+    transform-box: view-box;
+    transform-origin: var(--nc-beam-origin-x, 1090px) var(--nc-beam-origin-y, 46px);
+    transition: transform 6.2s linear;
+  }
+  .nc-harbor-light {
+    animation: nc-harbor-light-breathe 4.8s ease-in-out infinite;
+    filter: drop-shadow(0 0 7px oklch(0.86 0.14 87 / 0.34));
+  }
+  .nc-ship-lit {
+    filter: drop-shadow(0 0 8px oklch(0.82 0.13 86 / 0.3));
+  }
+  .nc-harbor-light-ray {
+    stroke-dasharray: 24 18;
+    stroke-dashoffset: 0;
+  }
+  .nc-harbor-light-water {
+    animation: nc-harbor-light-water 5.2s ease-in-out infinite;
+    transform-box: fill-box;
+    transform-origin: center;
+  }
+  .nc-harbor-light-water-line {
+    animation: nc-harbor-light-water 6.1s ease-in-out infinite;
+    transform-box: fill-box;
+    transform-origin: center;
+  }
+  .nc-harbor-light-glint {
+    animation: nc-harbor-light-glint 3.4s ease-in-out infinite;
+    transform-box: fill-box;
+    transform-origin: center;
   }
   .nc-flame-outer {
     animation: nc-flame-flicker-outer 1.6s ease-in-out infinite;
@@ -128,5 +189,11 @@
     animation: nc-flame-flicker-mid 1.1s ease-in-out infinite;
     transform-origin: center bottom;
     transform-box: fill-box;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .nc-lighthouse-beam {
+    transform: rotate(var(--nc-beam-angle, 0deg));
   }
 }

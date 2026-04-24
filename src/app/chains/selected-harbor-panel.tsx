@@ -1,6 +1,7 @@
 import Image from "next/image";
 import { Anchor, ShipWheel } from "lucide-react";
 import { HEALTH_BADGE_CLASSES, trendColor } from "@/lib/chain-ui";
+import { logosById } from "@/lib/logos";
 import { cn } from "@/lib/utils";
 import { formatCompactUsd, formatSignedPercent } from "@shared/lib/format";
 import type { ChainHarborEntry } from "./harbor-map";
@@ -78,15 +79,38 @@ export function SelectedHarborPanel({ entry }: { entry: ChainHarborEntry | null 
       <div className="mt-4">
         <p className="pharos-kicker">Top cargo marks</p>
         <div className="mt-2 grid gap-2 md:grid-cols-3">
-          {topCargos.map((cargo) => (
-            <div key={`${entry.id}-${cargo.id}`} className="rounded-lg border border-border/60 bg-background/40 p-3">
-              <div className="flex items-center justify-between gap-3">
-                <span className="font-medium">{cargo.symbol}</span>
-                <span className="font-mono text-sm font-semibold tabular-nums">{cargo.sharePct.toFixed(1)}%</span>
+          {topCargos.map((cargo) => {
+            const logoPath = logosById[cargo.id];
+            return (
+              <div key={`${entry.id}-${cargo.id}`} className="rounded-lg border border-border/60 bg-background/40 p-3">
+                <div className="flex items-center justify-between gap-3">
+                  <span className="flex min-w-0 items-center gap-2">
+                    <span className="flex h-7 w-7 shrink-0 items-center justify-center overflow-hidden rounded-full border border-border/70 bg-background shadow-sm">
+                      {logoPath ? (
+                        <Image
+                          src={logoPath}
+                          alt=""
+                          width={28}
+                          height={28}
+                          className="h-full w-full object-contain"
+                          style={{ width: 28, height: 28 }}
+                        />
+                      ) : (
+                        <span className="font-mono text-xs font-semibold text-muted-foreground">
+                          {cargo.symbol.charAt(0)}
+                        </span>
+                      )}
+                    </span>
+                    <span className="truncate font-medium">{cargo.symbol}</span>
+                  </span>
+                  <span className="shrink-0 font-mono text-sm font-semibold tabular-nums">
+                    {cargo.sharePct.toFixed(1)}%
+                  </span>
+                </div>
+                <p className="mt-1 text-xs text-muted-foreground">{formatCompactUsd(cargo.cargoUsd)} on {entry.name}</p>
               </div>
-              <p className="mt-1 text-xs text-muted-foreground">{formatCompactUsd(cargo.cargoUsd)} on {entry.name}</p>
-            </div>
-          ))}
+            );
+          })}
         </div>
       </div>
 

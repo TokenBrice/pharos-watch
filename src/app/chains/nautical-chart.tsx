@@ -1,6 +1,6 @@
 "use client";
 
-import type { KeyboardEvent } from "react";
+import type { CSSProperties, KeyboardEvent } from "react";
 import { Anchor, Activity, ShipWheel } from "lucide-react";
 import type { ChainSummary } from "@shared/types/chains";
 import { HEALTH_BADGE_CLASSES, HEALTH_HEX_FILL } from "@/lib/chain-ui";
@@ -96,7 +96,15 @@ function shipDimensions(entry: ChainHarborEntry, x: number, hullW: number, laneY
   };
 }
 
-function Lighthouse({ dim }: { dim: boolean }) {
+function Lighthouse({
+  dim,
+  targetX,
+  targetY,
+}: {
+  dim: boolean;
+  targetX: number;
+  targetY: number;
+}) {
   // Pharos of Alexandria: square base → octagonal middle → cylindrical top, crowned with a fire brazier.
   // Built of pale limestone, ~140 m tall in antiquity. Here, three tapering tiers in stone, no candy stripes.
   const baseX = SCENE_WIDTH - 110;
@@ -128,11 +136,17 @@ function Lighthouse({ dim }: { dim: boolean }) {
 
   const beamOpacity = dim ? 0.32 : 0.72;
   const flameOpacity = dim ? 0.55 : 1;
+  const beamAngle = Math.atan2(targetY - beamY, targetX - baseX) * (180 / Math.PI) - 180;
+  const beamStyle = {
+    "--nc-beam-origin-x": `${baseX}px`,
+    "--nc-beam-origin-y": `${beamY}px`,
+    "--nc-beam-angle": `${beamAngle}deg`,
+  } as CSSProperties;
 
   return (
     <g aria-hidden="true">
       {/* Beam — sweeping left across the harbor from the brazier */}
-      <g className="nc-lighthouse-beam">
+      <g className="nc-lighthouse-beam" style={beamStyle} data-testid="nc-lighthouse-beam">
         <path
           d={`M ${baseX} ${beamY} L 20 ${beamTopY} L 20 ${beamBottomY} Z`}
           fill="url(#nc-beam)"
@@ -740,6 +754,65 @@ function ShipReflection({ entry, geom }: { entry: ChainHarborEntry; geom: ShipGe
   );
 }
 
+function HarborLight({ geom }: { geom: ShipGeometry }) {
+  const centerX = geom.deckLeft + geom.hullW / 2;
+  const sailTopY = Math.max(8, geom.mastTopY - 10);
+  const lightStartX = centerX + geom.hullW * 0.38;
+  const lightEndX = centerX - geom.hullW * 0.5;
+  const lightStartY = geom.mastTopY + 18;
+  const lightEndY = geom.hullBottom + 2;
+  const rippleWidth = Math.max(36, geom.hullW * 0.54);
+
+  return (
+    <g className="nc-harbor-light" data-testid="nc-harbor-light" aria-hidden="true">
+      <path
+        className="nc-harbor-light-ray"
+        d={`M ${lightStartX} ${lightStartY} C ${centerX + geom.hullW * 0.12} ${lightStartY + 22}, ${centerX - geom.hullW * 0.2} ${lightEndY - 24}, ${lightEndX} ${lightEndY}`}
+        fill="none"
+        stroke="#fde68a"
+        strokeWidth={2.1}
+        strokeLinecap="round"
+        opacity={0.54}
+      />
+      <path
+        className="nc-harbor-light-ray nc-harbor-light-ray-soft"
+        d={`M ${lightStartX + 7} ${lightStartY + 10} C ${centerX + geom.hullW * 0.15} ${lightStartY + 30}, ${centerX - geom.hullW * 0.1} ${lightEndY - 16}, ${lightEndX + 18} ${lightEndY + 4}`}
+        fill="none"
+        stroke="#fde68a"
+        strokeWidth={1.2}
+        strokeLinecap="round"
+        opacity={0.28}
+      />
+      <ellipse
+        className="nc-harbor-light-water"
+        cx={centerX}
+        cy={WATERLINE_Y + 5}
+        rx={rippleWidth}
+        ry={4.4}
+        fill="#fde68a"
+        opacity={0.2}
+      />
+      <path
+        className="nc-harbor-light-water-line"
+        d={`M ${centerX - rippleWidth * 0.58} ${WATERLINE_Y + 12} Q ${centerX} ${WATERLINE_Y + 7} ${centerX + rippleWidth * 0.58} ${WATERLINE_Y + 12}`}
+        fill="none"
+        stroke="#fde68a"
+        strokeWidth={0.9}
+        strokeLinecap="round"
+        opacity={0.32}
+      />
+      <circle
+        className="nc-harbor-light-glint"
+        cx={centerX}
+        cy={sailTopY}
+        r={2.4}
+        fill="#fff7ad"
+        opacity={0.9}
+      />
+    </g>
+  );
+}
+
 function HorizonFleet({ remaining, y, maxX }: { remaining: readonly ChainSummary[]; y: number; maxX: number }) {
   if (remaining.length === 0) return null;
   const visible = remaining.slice(0, 8);
@@ -810,6 +883,9 @@ export function NauticalChart({
       maxSupply > 0 ? Math.max(0.1, Math.min(1, Math.sqrt(entry.totalUsd / maxSupply))) : 0.1;
     return { entry, geom: shipDimensions(entry, x, hullW, WATERLINE_Y - 18, supplyScale) };
   });
+  const activeGeometry = geometries.find(({ entry }) => entry.id === activeChainId) ?? geometries[0];
+  const beamTargetX = activeGeometry ? activeGeometry.geom.deckLeft + activeGeometry.geom.hullW / 2 : PIER_X;
+  const beamTargetY = activeGeometry ? activeGeometry.geom.hullTop - 42 : WATERLINE_Y - 96;
   const handleShipKeyDown = (event: KeyboardEvent<SVGGElement>, chainId: string) => {
     if (event.key !== "Enter" && event.key !== " ") return;
     event.preventDefault();
@@ -928,7 +1004,7 @@ export function NauticalChart({
           <Stars />
 
           {/* Lighthouse beam (drawn early so ships sit in front) */}
-          <Lighthouse dim={sky === "fog"} />
+          <Lighthouse dim={sky === "fog"} targetX={beamTargetX} targetY={beamTargetY} />
 
           {/* Distant coastline silhouette */}
           <Coastline />
@@ -973,7 +1049,7 @@ export function NauticalChart({
                 role="button"
                 tabIndex={0}
                 aria-label={`Select ${entry.name} harbor`}
-                className="cursor-pointer outline-none"
+                className={cn("cursor-pointer outline-none", selected && "nc-ship-lit")}
                 onFocus={() => onSelectChain?.(entry.id)}
                 onMouseEnter={() => onSelectChain?.(entry.id)}
                 onClick={() => onSelectChain?.(entry.id)}
@@ -982,20 +1058,7 @@ export function NauticalChart({
                 <title>
                   {entry.name}: {formatCompactUsd(entry.totalUsd)} docked, {entry.sharePct.toFixed(1)}% of tracked supply
                 </title>
-                {selected ? (
-                  <rect
-                    x={geom.deckLeft - 12}
-                    y={Math.max(6, geom.mastTopY - 12)}
-                    width={geom.hullW + 24}
-                    height={Math.min(SCENE_HEIGHT - 12, geom.hullBottom + 42) - Math.max(6, geom.mastTopY - 12)}
-                    rx={12}
-                    fill="none"
-                    stroke="#38bdf8"
-                    strokeWidth={1.5}
-                    strokeDasharray="5 5"
-                    opacity={0.9}
-                  />
-                ) : null}
+                {selected ? <HarborLight geom={geom} /> : null}
                 <Ship entry={entry} geom={geom} maxCargoUsd={maxCargoUsd} />
               </g>
             );

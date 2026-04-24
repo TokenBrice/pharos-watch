@@ -44,6 +44,8 @@ describe("SelectedHarborPanel", () => {
     expect(screen.getByText("34")).toBeTruthy();
     expect(screen.getAllByText("USDC").length).toBeGreaterThan(0);
     expect(screen.getByText("52.4%")).toBeTruthy();
+    expect(document.querySelector('img[src="/logos/2-usdc.svg"]')).toBeTruthy();
+    expect(document.querySelector('img[src="/logos/1-usdt.svg"]')).toBeTruthy();
     expect(screen.getByText(/not issuer redemption capacity/i)).toBeTruthy();
   });
 });
