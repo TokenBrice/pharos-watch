@@ -1,7 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import { useCallback, useMemo, type CSSProperties } from "react";
+import { memo, useCallback, useMemo, type CSSProperties } from "react";
 import { PEG_LABELS_SHORT } from "@shared/lib/classification";
 import { formatCompactUsd, formatPercentFromRatio } from "@shared/lib/format";
 import type { PlacedCoin } from "@/lib/alt-peg-hero";
@@ -11,7 +11,7 @@ export type EmblemVariant = "fiat" | "sun-core" | "sun-planet" | "moon" | "star"
 type HoverCardYPlacement = "auto" | "above" | "below";
 type CoinEmblemStyle = CSSProperties & { "--coin-z": number };
 
-export function CoinEmblem({
+function CoinEmblemInner({
   coin,
   variant,
   loading = "lazy",
@@ -149,3 +149,5 @@ export function CoinEmblem({
     </a>
   );
 }
+
+export const CoinEmblem = memo(CoinEmblemInner);
