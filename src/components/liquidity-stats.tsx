@@ -290,6 +290,24 @@ const CANAL_TAPER_BY_BAND: Record<ReturnType<typeof crowdingBand>, number> = {
   unknown: 20,
 };
 
+const GATE_MIN_OPEN = 14;
+const GATE_MAX_OPEN = 58;
+const GATE_LEAN = 6;   // inward tilt at the top of each leaf (px)
+const GATE_CHIP_R = 12;
+
+function gateOpenWidth(sharePct: number): number {
+  const clamped = Math.max(0, Math.min(45, sharePct));
+  const t = clamped / 45;
+  return Math.round(GATE_MIN_OPEN + t * (GATE_MAX_OPEN - GATE_MIN_OPEN));
+}
+
+function gateXPositions(count: number): number[] {
+  if (count <= 0) return [];
+  if (count === 1) return [GATE_AREA_LEFT + GATE_AREA_WIDTH / 2];
+  const step = GATE_AREA_WIDTH / count;
+  return Array.from({ length: count }, (_, i) => GATE_AREA_LEFT + step * (i + 0.5));
+}
+
 function ExitRouteCanalScene({ model }: { model: LiquidityExitRouteModel }) {
   const band = crowdingBand(model.concentrationHhi);
   const taper = CANAL_TAPER_BY_BAND[band];
@@ -359,6 +377,78 @@ function ExitRouteCanalScene({ model }: { model: LiquidityExitRouteModel }) {
             strokeWidth="0.6"
             opacity="0.35"
           />
+
+          {/* Upstream wall — stone column at the canal's left edge, with 4 tide-gauge ticks. */}
+          <rect x={CANAL_LEFT_EDGE} y={CANAL_TOP} width="5" height={CANAL_BOTTOM - CANAL_TOP} fill="var(--canal-wall-stone)" />
+          <g stroke="var(--canal-caption-dim)" strokeWidth="0.8" opacity="0.7">
+            <line x1={CANAL_LEFT_EDGE + 5} y1="180" x2={CANAL_LEFT_EDGE + 11} y2="180" />
+            <line x1={CANAL_LEFT_EDGE + 5} y1="220" x2={CANAL_LEFT_EDGE + 11} y2="220" />
+            <line x1={CANAL_LEFT_EDGE + 5} y1="260" x2={CANAL_LEFT_EDGE + 11} y2="260" />
+            <line x1={CANAL_LEFT_EDGE + 5} y1="300" x2={CANAL_LEFT_EDGE + 11} y2="300" />
+          </g>
+
+          {/* Mitre-pair lock gates (protocols) */}
+          {(() => {
+            const xs = gateXPositions(model.protocolRoutes.length);
+            return model.protocolRoutes.map((route, i) => {
+              const open = gateOpenWidth(route.sharePct);
+              const cx = xs[i];
+              const leftPierX = cx - open / 2 - 10;
+              const rightPierX = cx + open / 2 + 6;
+              const canalDepth = CANAL_BOTTOM - CANAL_TOP;
+              const chipCy = CANAL_TOP + canalDepth / 2;
+
+              const leftLeaf = [
+                `M ${leftPierX + 6} ${CANAL_TOP}`,
+                `L ${cx - open / 2} ${CANAL_TOP + GATE_LEAN}`,
+                `L ${cx - open / 2} ${CANAL_BOTTOM - GATE_LEAN}`,
+                `L ${leftPierX + 6} ${CANAL_BOTTOM}`,
+                "Z",
+              ].join(" ");
+              const rightLeaf = [
+                `M ${rightPierX - 2} ${CANAL_TOP}`,
+                `L ${cx + open / 2} ${CANAL_TOP + GATE_LEAN}`,
+                `L ${cx + open / 2} ${CANAL_BOTTOM - GATE_LEAN}`,
+                `L ${rightPierX - 2} ${CANAL_BOTTOM}`,
+                "Z",
+              ].join(" ");
+
+              return (
+                <g
+                  key={`protocol-${route.key}`}
+                  data-testid={`protocol-gate-${route.key}`}
+                  aria-label={`${route.label} lock gate, ${formatCurrency(route.valueUsd, 0)}, ${formatPercent(route.sharePct, 1)} of DEX TVL`}
+                >
+                  <title>{`${route.label}: ${formatCurrency(route.valueUsd, 0)} lock gate (${formatPercent(route.sharePct, 1)})`}</title>
+                  <rect x={leftPierX} y={CANAL_TOP} width="4" height={canalDepth} fill="var(--canal-wall-stone)" />
+                  <path d={leftLeaf} fill={route.colorHex} fillOpacity="0.72" stroke="var(--canal-wall)" strokeWidth="0.6" />
+                  <path d={rightLeaf} fill={route.colorHex} fillOpacity="0.72" stroke="var(--canal-wall)" strokeWidth="0.6" />
+                  <rect x={rightPierX} y={CANAL_TOP} width="4" height={canalDepth} fill="var(--canal-wall-stone)" />
+                  <rect x={leftPierX - 1} y={CANAL_TOP - 6} width={rightPierX - leftPierX + 6} height="4" fill="var(--canal-wall)" />
+                  <circle cx={cx} cy={chipCy} r={GATE_CHIP_R} fill="oklch(0.06 0.012 248 / 0.92)" stroke={route.colorHex} strokeWidth="1.2" />
+                  {route.logoPath ? (
+                    <image href={route.logoPath} x={cx - 9} y={chipCy - 9} width="18" height="18" preserveAspectRatio="xMidYMid meet" />
+                  ) : (
+                    <text x={cx} y={chipCy + 4} textAnchor="middle" fill="oklch(0.92 0.01 248)" fontSize="13" fontWeight="800">+</text>
+                  )}
+                  <text x={cx} y={CANAL_BOTTOM + 16} textAnchor="middle" fill="var(--canal-hero)" fontSize="10" fontFamily="ui-monospace, Menlo, monospace">
+                    {formatCurrency(route.valueUsd, 0)}
+                  </text>
+                  <text
+                    x={cx}
+                    y={CANAL_BOTTOM + 30}
+                    textAnchor="middle"
+                    fill="var(--canal-caption)"
+                    fontSize="9"
+                    fontFamily="ui-monospace, Menlo, monospace"
+                    className="exit-route-canal__gate-pct"
+                  >
+                    {formatPercent(route.sharePct, 1)}
+                  </text>
+                </g>
+              );
+            });
+          })()}
 
           {/* Sea band (behind ripples, added in Task 6) */}
           <rect x="0" y="380" width={SCENE_WIDTH} height="100" fill="url(#exit-route-canal-sea)" />
