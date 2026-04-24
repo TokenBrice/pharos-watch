@@ -7,24 +7,24 @@ import { PSI_HEX_COLORS, PSI_PULSE_DURATION, type ConditionBand } from "@shared/
 import "./psi-lighthouse-scene.css";
 
 const WIDTH = 280;
-const HEIGHT = 200;
-const WATERLINE_Y = 180;
+const HEIGHT = 220;
+const WATERLINE_Y = 200;
 const LH_X = 180;
-const ROCK_TOP = WATERLINE_Y - 14; // 166
-const T1_BOTTOM = ROCK_TOP - 4; // 162
-const T1_TOP = T1_BOTTOM - 64; // 98
+const ROCK_TOP = WATERLINE_Y - 14; // 186
+const T1_BOTTOM = ROCK_TOP - 4; // 182
+const T1_TOP = T1_BOTTOM - 64; // 118
 const T1_HALF_BOTTOM = 26;
 const T1_HALF_TOP = 22;
-const T2_BOTTOM = T1_TOP - 1; // 97
-const T2_TOP = T2_BOTTOM - 36; // 61
+const T2_BOTTOM = T1_TOP - 1; // 117
+const T2_TOP = T2_BOTTOM - 36; // 81
 const T2_HALF_BOTTOM = 17;
 const T2_HALF_TOP = 14;
-const T3_BOTTOM = T2_TOP - 1; // 60
-const T3_TOP = T3_BOTTOM - 22; // 38
+const T3_BOTTOM = T2_TOP - 1; // 80
+const T3_TOP = T3_BOTTOM - 22; // 58
 const T3_HALF = 11;
-const BRAZIER_BOTTOM = T3_TOP - 1; // 37
-const BEAM_Y = BRAZIER_BOTTOM - 4; // 33
-const HALO_CY = BRAZIER_BOTTOM - 7; // 30
+const BRAZIER_BOTTOM = T3_TOP - 1; // 57
+const BEAM_Y = BRAZIER_BOTTOM - 4; // 53
+const HALO_CY = BRAZIER_BOTTOM - 7; // 50
 
 function scoreDynamics(score: number) {
   const clamped = Math.max(0, Math.min(100, Number.isFinite(score) ? score : 0));

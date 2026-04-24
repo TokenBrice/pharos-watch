@@ -34,10 +34,10 @@ describe("PsiBeamDimmers", () => {
 
     render(createElement(PsiBeamDimmers, { lanes }));
 
-    expect(screen.getByRole("heading", { name: "Current PSI component pressure" })).toBeTruthy();
+    expect(screen.getByText(/Beam Dimmers.*Current PSI component pressure/)).toBeTruthy();
     expect(screen.getByText("Severity")).toBeTruthy();
     expect(screen.getByText("Trend")).toBeTruthy();
-    expect(screen.getByText(/not a causal event timeline/i)).toBeTruthy();
+    expect(screen.getByText(/not a causal timeline/i)).toBeTruthy();
     expect(screen.getByText("support")).toBeTruthy();
   });
 });

@@ -1,6 +1,5 @@
 "use client";
 
-import { Activity } from "lucide-react";
 import { MethodologyLabel } from "@/components/methodology-hint";
 import { cn } from "@/lib/utils";
 import { formatScore } from "@shared/lib/format";
@@ -47,19 +46,12 @@ export function PsiBeamDimmers({
 
   return (
     <section aria-labelledby="psi-beam-dimmers-heading">
-      <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
-        <div>
-          <p className="pharos-kicker">Beam Dimmers</p>
-          <h2
-            id="psi-beam-dimmers-heading"
-            className="pharos-section-title mt-1 flex items-center gap-2"
-          >
-            <Activity className="h-4 w-4 text-amber-600 dark:text-amber-300" aria-hidden />
-            Current PSI component pressure
-          </h2>
-        </div>
-        <p className="max-w-xl text-xs text-muted-foreground">
-          Component values come from the current PSI formula sample; this rail is not a causal event timeline.
+      <div className="mb-3 flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
+        <p id="psi-beam-dimmers-heading" className="pharos-kicker">
+          Beam Dimmers · Current PSI component pressure
+        </p>
+        <p className="max-w-md text-[11px] text-muted-foreground">
+          Values from the current PSI sample — not a causal timeline.
         </p>
       </div>
 
