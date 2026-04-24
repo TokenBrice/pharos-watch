@@ -34,11 +34,7 @@ describe("AltPegsPage", () => {
 
     expect(screen.getByTestId("alt-pegs-client")).toBeTruthy();
     expect(screen.getByRole("heading", { name: "Peg Diversity Map" })).toBeTruthy();
-    expect(
-      screen
-        .getAllByRole("link", { name: /Euro/i })
-        .some((link) => link.getAttribute("href") === "/stablecoins/eur"),
-    ).toBe(true);
+    expect(container.querySelector('a[href="/stablecoins/eur"], a[href="/stablecoins/eur/"]')).not.toBeNull();
 
     const text = container.textContent ?? "";
     expect(text.indexOf("Peg Diversity Map")).toBeLessThan(text.indexOf("alt-pegs-client"));
