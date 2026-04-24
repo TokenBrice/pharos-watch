@@ -1,4 +1,5 @@
 import { buildAltPegLinkHubGroups, type AltPegLinkHubItem } from "@/lib/alt-peg-market";
+import { AltPegCohortDirectory } from "@/app/alt-pegs/fiat-world-atlas/cohort-directory";
 import { FiatWorldAtlas } from "@/app/alt-pegs/fiat-world-atlas";
 
 const LINK_HUB_GROUPS = buildAltPegLinkHubGroups();
@@ -9,5 +10,10 @@ export function StaticAltPegLinkHub() {
     .filter((g) => g.label !== "Fiat")
     .flatMap((g) => g.items);
 
-  return <FiatWorldAtlas fiatItems={fiatItems} commodityIndexItems={commodityIndexItems} />;
+  return (
+    <div className="space-y-6">
+      <FiatWorldAtlas fiatItems={fiatItems} commodityIndexItems={commodityIndexItems} />
+      <AltPegCohortDirectory fiatItems={fiatItems} commodityIndexItems={commodityIndexItems} />
+    </div>
+  );
 }
