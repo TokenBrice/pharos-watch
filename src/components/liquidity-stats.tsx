@@ -384,6 +384,27 @@ function ExitRouteCanalScene({ model }: { model: LiquidityExitRouteModel }) {
           {/* Sky band */}
           <rect x="0" y="0" width={SCENE_WIDTH} height="140" fill="url(#exit-route-canal-sky)" />
 
+          {/* Three hand-placed stars — asymmetric, varied sizes. */}
+          <g fill="var(--canal-star)" aria-hidden="true">
+            <circle cx="210" cy="35" r="1" />
+            <circle cx="480" cy="62" r="0.7" />
+            <circle cx="710" cy="28" r="1.1" />
+          </g>
+
+          {/* Distant lighthouse — silhouette-only, no text label. */}
+          <g className="exit-route-canal__lighthouse" aria-hidden="true">
+            <path d="M740,140 Q 790,126 840,140 Z" fill="oklch(0.11 0.014 248)" opacity="0.85" />
+            <rect x="787" y="108" width="6" height="12" fill="var(--canal-wall-stone)" />
+            <rect x="788" y="102" width="4" height="7" fill="var(--canal-wall)" />
+            <rect x="786" y="101" width="8" height="2" fill="var(--canal-wall-stone)" />
+            <circle cx="790" cy="99" r="1.4" fill="var(--canal-beacon)" />
+            <path
+              className="exit-route-canal__beam"
+              d="M790,101 L 905,72 L 905,82 L 790,105 Z"
+              fill="url(#exit-route-canal-beam)"
+            />
+          </g>
+
           {/* Canal water body (tapers toward dam per crowding band) */}
           <path d={canalPath} fill="url(#exit-route-canal-water)" />
 
@@ -516,6 +537,29 @@ function ExitRouteCanalScene({ model }: { model: LiquidityExitRouteModel }) {
               );
             });
           })()}
+
+          {/* Vessel drifting in the open-water stretch between the last gate and the dam.
+              Drift duration bound to --vessel-duration (crowding-driven). */}
+          <g className="exit-route-canal__vessel" transform="translate(640,320)" aria-hidden="true">
+            <path d="M-22,0 Q -20,7 -14,8 L 14,8 Q 20,7 20,0 Z" fill="oklch(0.88 0.008 248)" opacity="0.88" />
+            <rect x="-6" y="-6" width="12" height="6" fill="oklch(0.78 0.008 248)" opacity="0.88" />
+            <line x1="0" y1="-6" x2="0" y2="-17" stroke="oklch(0.78 0.008 248)" strokeWidth="0.9" />
+            <path d="M0,-17 L 5,-15 L 0,-13 Z" fill="var(--canal-accent)" opacity="0.7" />
+            <path d="M-22,5 Q -56,6 -96,10" fill="none" stroke="var(--canal-ripple)" strokeWidth="0.7" opacity="0.32" />
+            <path d="M-22,5 Q -76,9 -140,14" fill="none" stroke="var(--canal-ripple)" strokeWidth="0.5" opacity="0.18" />
+          </g>
+
+          {/* Sea ripples — 5 horizontal lines, varied dasharray + opacity taper. */}
+          <g className="exit-route-canal__wave" stroke="var(--canal-ripple)" fill="none" aria-hidden="true">
+            <path d="M0,395 H 970" strokeDasharray="8 14 4 22 12 18" strokeWidth="0.6" opacity="0.22" />
+            <path d="M0,410 H 970" strokeDasharray="12 16 6 24 10 20" strokeWidth="0.55" opacity="0.18" />
+            <path d="M0,425 H 970" strokeDasharray="6 18 10 14 8 22" strokeWidth="0.5" opacity="0.14" />
+            <path d="M0,440 H 970" strokeDasharray="14 10 20 8 16 12" strokeWidth="0.45" opacity="0.11" />
+            <path d="M0,455 H 970" strokeDasharray="10 22 6 16 14 18" strokeWidth="0.4" opacity="0.09" />
+          </g>
+          <text x="970" y="468" textAnchor="end" fill="var(--canal-caption-dim)" fontSize="9" fontWeight="700" letterSpacing="1.8" aria-hidden="true">
+            OPEN SEA
+          </text>
 
           {/* Canal group — carries the data-crowding-band attribute and the focal TVL numeric. */}
           <g
