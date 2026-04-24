@@ -2,7 +2,7 @@ import { z, type ZodType } from "zod";
 import { API_PATHS } from "@shared/lib/api-endpoints";
 import { PHAROS_WEB_ACCEPT_MARKER } from "@shared/lib/request-source-marker";
 import { toSiteDataPath } from "@shared/lib/site-data-routes";
-import { FRESHNESS_RATIOS } from "@shared/lib/status-thresholds";
+import { classifyFreshnessRatio } from "@shared/lib/status-thresholds";
 import { createTimeoutSignal } from "@shared/lib/timeout-signal";
 import { isSiteDataUiHostname, resolvePublicApiBase } from "@shared/lib/runtime-origins";
 import {
@@ -320,8 +320,11 @@ export async function apiFetchWithMeta<T>(
       const age = Number(ageHeader);
       if (Number.isFinite(age) && age >= 0) {
         const ratio = age / maxAgeSec;
-        const status = ratio <= FRESHNESS_RATIOS.FRESH ? "fresh" : ratio <= FRESHNESS_RATIOS.DEGRADED ? "degraded" : "stale";
-        meta = { updatedAt: Math.floor(Date.now() / 1000) - age, ageSeconds: age, status };
+        meta = {
+          updatedAt: Math.floor(Date.now() / 1000) - age,
+          ageSeconds: age,
+          status: classifyFreshnessRatio(ratio),
+        };
       }
     }
   }

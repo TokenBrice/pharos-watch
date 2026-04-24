@@ -1,6 +1,10 @@
 import { buildInClause } from "./db";
 import { CACHE_FRESHNESS_THRESHOLDS } from "./constants";
-import { FRESHNESS_RATIOS, STATUS_CACHE_RATIO_THRESHOLDS } from "@shared/lib/status-thresholds";
+import {
+  FRESHNESS_RATIOS,
+  STATUS_CACHE_RATIO_THRESHOLDS,
+  classifyFreshnessRatio,
+} from "@shared/lib/status-thresholds";
 import { getCacheFreshnessLane } from "@shared/lib/api-freshness";
 import type { CacheStatus } from "@shared/types/status";
 import { buildFxCacheStatus, getFxRatesMetaKey, hydrateFxRateState } from "./fx-rate-state";
@@ -68,11 +72,10 @@ const TABLE_FRESHNESS_FALLBACK_QUERIES: Record<FreshnessSentinelBackedCacheKey, 
 
 export function buildFreshnessMeta(updatedAt: number, maxAgeSec: number): FreshnessMeta {
   const age = Math.floor(Date.now() / 1000) - updatedAt;
-  const ratio = age / maxAgeSec;
   return {
     updatedAt,
     ageSeconds: age,
-    status: ratio <= FRESHNESS_RATIOS.FRESH ? "fresh" : ratio <= FRESHNESS_RATIOS.DEGRADED ? "degraded" : "stale",
+    status: classifyFreshnessRatio(age / maxAgeSec),
   };
 }
 

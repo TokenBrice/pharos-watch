@@ -9,6 +9,17 @@ export const FRESHNESS_RATIOS = {
   // Anything beyond DEGRADED is stale
 } as const;
 
+/**
+ * Classify an age/interval ratio into the canonical freshness status tier.
+ * Shared between worker buildFreshnessMeta and the frontend X-Data-Age fallback
+ * so threshold changes propagate in one place.
+ */
+export function classifyFreshnessRatio(ratio: number): "fresh" | "degraded" | "stale" {
+  if (ratio <= FRESHNESS_RATIOS.FRESH) return "fresh";
+  if (ratio <= FRESHNESS_RATIOS.DEGRADED) return "degraded";
+  return "stale";
+}
+
 // --- Blacklist gap thresholds ---
 export const BLACKLIST_RECENT_WINDOW_SEC = 24 * 3600;
 export const STATUS_BLACKLIST_THRESHOLDS = {
