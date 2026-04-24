@@ -1,3 +1,44 @@
+.nc-chart-viewport {
+  overflow-x: auto;
+  overflow-y: hidden;
+  overscroll-behavior-x: contain;
+  border-top: 1px solid oklch(1 0 0 / 0.06);
+  background: oklch(0.08 0.025 252);
+  scrollbar-color: oklch(0.62 0.13 248 / 0.65) oklch(0.12 0.03 252 / 0.55);
+  scrollbar-width: thin;
+  -webkit-overflow-scrolling: touch;
+}
+
+.nc-chart-viewport:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: -2px;
+}
+
+.nc-chart-svg {
+  aspect-ratio: 1200 / 320;
+  width: 62rem;
+  max-width: none;
+  height: auto;
+}
+
+@media (min-width: 640px) {
+  .nc-chart-svg {
+    width: 66rem;
+  }
+}
+
+@media (min-width: 1024px) {
+  .nc-chart-svg {
+    width: 74rem;
+  }
+}
+
+@media (min-width: 1280px) {
+  .nc-chart-svg {
+    width: 100%;
+  }
+}
+
 @media (prefers-reduced-motion: no-preference) {
   @keyframes nc-wave-drift {
     0%,

@@ -50,9 +50,8 @@ describe("NauticalChart", () => {
     ];
     render(createElement(NauticalChart, { chains, globalTotalUsd: 100 }));
 
-    // Heading appears in both the SVG scene and the xl:hidden HarborList fallback.
-    expect(screen.getAllByRole("heading", { name: "Where stablecoin supply is docked" }).length).toBeGreaterThanOrEqual(1);
-    expect(screen.getAllByText("Top 3 chains hold 100.0%").length).toBeGreaterThanOrEqual(1);
+    expect(screen.getByRole("heading", { name: "Where stablecoin supply is docked" })).toBeTruthy();
+    expect(screen.getByText("Top 3 chains hold 100.0%")).toBeTruthy();
     expect(screen.getAllByText("Ethereum").length).toBeGreaterThan(0);
     // SVG scene renders with aria-label
     const chart = screen.getByRole("img", { name: /Nautical chart of 3 largest/ });
@@ -68,11 +67,17 @@ describe("NauticalChart", () => {
     expect(screen.getAllByText("1").length).toBeGreaterThanOrEqual(1);
   });
 
-  it("renders the mobile fallback list (HarborList) inside xl:hidden wrapper", () => {
+  it("renders the chart inside a focusable responsive viewport instead of a list-only mobile fallback", () => {
     const chains = [makeChain({ id: "ethereum", name: "Ethereum", totalUsd: 60 })];
     const { container } = render(createElement(NauticalChart, { chains, globalTotalUsd: 100 }));
-    // HarborList's heading id must be present in the DOM even when xl:hidden.
-    const fallbackHeadings = container.querySelectorAll('[id="chain-harbor-heading"]');
-    expect(fallbackHeadings.length).toBeGreaterThanOrEqual(1);
+    const chart = screen.getByRole("img", { name: "Nautical chart of 1 largest stablecoin chain" });
+    const viewport = chart.closest(".nc-chart-viewport");
+
+    expect(viewport).toBeTruthy();
+    expect(viewport?.getAttribute("tabindex")).toBe("0");
+    expect(viewport?.getAttribute("aria-label")).toBe("Horizontally scrollable nautical chart of 1 largest stablecoin chain");
+    expect(chart.classList.contains("nc-chart-svg")).toBe(true);
+    expect(chart.getAttribute("preserveAspectRatio")).toBe("xMidYMid meet");
+    expect(container.querySelector('[id="chain-harbor-heading"]')).toBeNull();
   });
 });

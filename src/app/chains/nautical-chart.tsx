@@ -8,7 +8,6 @@ import { cn } from "@/lib/utils";
 import { logosById } from "@/lib/logos";
 import { buildChainHarborModel, type ChainHarborEntry } from "./harbor-map";
 import { hullWidth, cargoCapacityForHull, depthLayers, wakeLength, aggregateSkyBand } from "./nautical-scene-math";
-import { HarborList } from "./harbor-list";
 import "./nautical-chart.css";
 
 const SCENE_WIDTH = 1200;
@@ -785,6 +784,7 @@ export function NauticalChart({ chains, globalTotalUsd }: { chains: ChainSummary
   const sky = aggregateSkyBand(model.entries);
   const maxSupply = model.entries[0]?.totalUsd ?? 0;
   const topCount = model.entries.length;
+  const chartLabel = `Nautical chart of ${topCount} largest stablecoin ${topCount === 1 ? "chain" : "chains"}`;
   const laneWidth = (SCENE_WIDTH - PIER_X - LIGHTHOUSE_ZONE) / Math.max(topCount, 1);
 
   const remaining = [...chains].sort((a, b) => b.totalUsd - a.totalUsd).slice(topCount);
@@ -816,12 +816,17 @@ export function NauticalChart({ chains, globalTotalUsd }: { chains: ChainSummary
         </div>
       </div>
 
-      <div className="hidden xl:block">
+      <div
+        className="nc-chart-viewport"
+        role="group"
+        aria-label={`Horizontally scrollable ${chartLabel.toLowerCase()}`}
+        tabIndex={0}
+      >
         <svg
           viewBox={`0 0 ${SCENE_WIDTH} ${SCENE_HEIGHT}`}
           role="img"
-          aria-label={`Nautical chart of ${topCount} largest stablecoin chains`}
-          className="block w-full text-slate-100"
+          aria-label={chartLabel}
+          className="nc-chart-svg block text-slate-100"
           preserveAspectRatio="xMidYMid meet"
         >
           <defs>
@@ -929,10 +934,6 @@ export function NauticalChart({ chains, globalTotalUsd }: { chains: ChainSummary
           {/* Fog overlay when conditions are bad */}
           {sky === "fog" && <Fog />}
         </svg>
-      </div>
-
-      <div className="xl:hidden">
-        <HarborList chains={chains} globalTotalUsd={globalTotalUsd} />
       </div>
 
       <div className="grid gap-3 p-4 sm:grid-cols-2 xl:grid-cols-4">

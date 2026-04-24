@@ -565,7 +565,7 @@ Rules that keep this from drifting into decoration:
 - **Every shape encodes a data field.** No ornamental geometry. If a shape doesn't vary with a number, remove it.
 - **Inline JSX SVG, semantic CSS variables, hex fallbacks.** No external `.svg` assets, no runtime SVG libraries.
 - **CSS keyframes only, gated on `@media (prefers-reduced-motion: no-preference)`.** No framer-motion.
-- **Mobile degrades via breakpoint swap,** not feature removal. Rich visual above an `xl:` breakpoint; simplified list below.
+- **Mobile preserves the metaphor,** not feature removal. Visualization canvases should fit their container without page-level horizontal scrolling; use simplified lists only when the visual cannot remain legible.
 - **The underlying data table remains.** The metaphor is a hero. The table is the workbench.
 
 ---
