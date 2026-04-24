@@ -21,6 +21,8 @@ They are used where historical continuity matters:
 - `worker/src/cron/snapshot-supply.ts` and `worker/src/api/backfill-supply-history.ts` use the PSI-eligible registry
 - `worker/src/api/backfill-cg-prices.ts` also needs the PSI-eligible registry so replay-critical shadow price gaps can be repaired
 - `worker/src/api/backfill-depegs.ts` can backfill shadow assets the same way it backfills tracked assets
+- `worker/src/api/backfill-dews.ts` can replay DEWS rows over the PSI-eligible universe
+- `worker/src/lib/psi-history-universe.ts` centralizes the historical PSI/DEWS replay universe
 - `shared/lib/stablecoin-id-registry.ts` includes shadow entries in canonical ID resolution
 
 ---
@@ -81,3 +83,5 @@ Operational consequence:
 | `worker/src/api/backfill-supply-history.ts` | Admin supply-history backfill over PSI-eligible assets |
 | `worker/src/api/backfill-cg-prices.ts` | Admin historical price-fill over PSI-eligible assets, including shadows |
 | `worker/src/api/backfill-depegs.ts` | Admin depeg-history backfill over PSI-eligible assets |
+| `worker/src/api/backfill-dews.ts` | Admin DEWS history replay over PSI-eligible assets |
+| `worker/src/lib/psi-history-universe.ts` | Historical PSI/DEWS universe selection for active + shadow assets |

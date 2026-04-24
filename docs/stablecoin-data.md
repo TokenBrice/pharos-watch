@@ -65,7 +65,7 @@ Common admission fields:
 ## Documentation Touchpoints
 
 - Classification or taxonomy changes: `docs/classification.md`
-- Public source roster changes: `docs/about-page.md` and `src/app/about/page.tsx`
+- Public source roster changes: `docs/about-page.md` and `src/app/about/content.ts`
 - Reserve config changes: `docs/live-reserves.md`
 - Redemption-route changes: `docs/redemption-backstops.md`
 - Yield config changes: `docs/yield-intelligence.md`

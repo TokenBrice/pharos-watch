@@ -219,11 +219,9 @@ Current explicitly deferred major cohort:
 Scheduled/manual Pages rebuild sequence in `.github/workflows/rebuild-pages.yml`:
 
 1. `pages-release`
-   - reuses the same `.github/workflows/pages-release.yml` wrapper as push/manual production deploys, which composes `.github/workflows/pages-prepare.yml` and `.github/workflows/pages-publish.yml` into the standard build/smoke/deploy path including the post-publish live public-host smoke
-2. `smoke-ops` and `smoke-transport`
-   - both run after `pages-release`; neither waits for the other
-   - `smoke-ops` runs the normal post-deploy ops smoke
-   - `smoke-transport` runs the same transport redirect smoke used by the main production workflow
+   - reuses the same `.github/workflows/pages-release.yml` wrapper as push/manual production deploys
+   - that reusable wrapper composes `.github/workflows/pages-prepare.yml` and `.github/workflows/pages-publish.yml` into the standard build/smoke/deploy path
+   - the publish phase includes the post-publish live public-host smoke plus the `smoke-ops` and `smoke-transport` jobs; those smokes are inside the reusable Pages publish workflow, not separate jobs after the caller's `pages-release` job
 
 This workflow intentionally skips `validate`, `deploy-worker`, and `smoke-api`; it exists to refresh the Pages export after digest generation without redeploying unchanged worker code. It still runs the ops and transport post-deploy smoke lanes so custom-domain regressions fail visibly.
 

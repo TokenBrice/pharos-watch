@@ -126,7 +126,7 @@ export function LiquidityMethodologySection() {
             },
             {
               label: "Failure behavior",
-              value: "If liquidity score is null/missing, report-card liquidity dimension is NR",
+              value: "If both DEX liquidity and eligible redemption evidence are unavailable, the report-card Liquidity / Exit dimension is NR",
             },
           ]}
         />

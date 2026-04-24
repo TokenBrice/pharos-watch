@@ -16,7 +16,7 @@ The feedback pipeline has four layers:
 Inside the worker route, the handler is intentionally split into focused modules:
 
 - `worker/src/api/feedback/request.ts` for JSON parsing, business-rule validation, canonical ID normalization, and rate-limit / env policy checks
-- `worker/src/api/feedback/verification.ts` for auto-verification snapshots
+- `worker/src/api/feedback/verification.ts` for auto-verification snapshots from the normalized stablecoins cache payload
 - `worker/src/api/feedback/submission.ts` plus `github.ts` / `format.ts` for GitHub routing and payload assembly
 
 ---
@@ -166,7 +166,7 @@ When `type === "data-correction"` and a valid `stablecoinId` is provided, the wo
 
 | Output | Source |
 |--------|--------|
-| Cached price | `coin.price` from the cached DefiLlama payload |
+| Cached price | `coin.price` from the normalized stablecoins cache payload |
 | Circulating supply | Sum of `coin.circulating` values |
 | Peg deviation | `((price - pegReference) / pegReference) * 100` using the tracked peg currency |
 | Cache age | `now - cache.updatedAt` in seconds |

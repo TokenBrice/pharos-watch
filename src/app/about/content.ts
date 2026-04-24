@@ -53,10 +53,14 @@ export interface AboutDataPipelineStep {
   description: string;
 }
 
-export const ABOUT_LEAD_PARAGRAPHS = [
-  "Most trackers show price. Pharos shows risk.",
-  "We monitor 197 stablecoins with honest classification, live reserve feeds, forward-looking depeg warnings, and the only public blacklist tracker covering 35 coins across 9 chains — because knowing what a stablecoin is worth means knowing what could make it fail.",
-];
+export function getAboutLeadParagraphs({
+  activeStablecoins,
+}: Pick<AboutStablecoinCounts, "activeStablecoins">): string[] {
+  return [
+    "Most trackers show price. Pharos shows risk.",
+    `We monitor ${activeStablecoins} stablecoins with honest classification, live reserve feeds, forward-looking depeg warnings, and the only public blacklist tracker covering 35 coins across 9 chains — because knowing what a stablecoin is worth means knowing what could make it fail.`,
+  ];
+}
 
 export const DATA_SOURCE_GROUPS = [
   {
@@ -72,7 +76,7 @@ export const DATA_SOURCE_GROUPS = [
   {
     label: "On-chain Reads & Events",
     sources:
-      "Etherscan v2 (freeze events), TronGrid, Alchemy, dRPC, selected public chain RPCs (including EVM RPCs for configured mint/burn flows, direct Liquity/B.Protocol branch debt reads, and Frankencoin's ZCHF -> VCHF StablecoinBridge balance probe, plus Solana mainnet RPC reads for tracked mint-supply validation), and reconciled freeze-ledger bootstrap rows from kyc.rip / stables.rip for major ETH and TRON blacklist coverage, and M0 GraphQL subgraph for Infrastructure tagging",
+      "Etherscan v2 (freeze events), TronGrid, Alchemy, dRPC, selected public chain RPCs (including EVM RPCs for configured mint/burn flows, direct Liquity/B.Protocol branch debt reads, and Frankencoin's ZCHF -> VCHF StablecoinBridge balance probe, plus Solana mainnet RPC reads for tracked mint-supply validation), and reconciled freeze-ledger bootstrap rows from kyc.rip / stables.rip for major ETH and TRON blacklist coverage",
   },
   {
     label: "Ratings & Reference",
@@ -84,7 +88,7 @@ export const DATA_SOURCE_GROUPS = [
     sources:
       "DeFiLlama Yields & Protocols, protocol-native yield APIs and deterministic on-chain yield readers (Hashnote, Ondo, Morpho, Pendle, Yearn Kong, Beefy, Aave V3, Compound V3, BIMA Earn, Curve scrvUSD current-rate, B.Protocol LQTY-only), Curve Finance API, The Graph, Fluid API + DexReservesResolver, Balancer API, Raydium API, Orca API, Meteora API, PancakeSwap subgraphs, Aerodrome and Velodrome Sugar view contracts, GeckoTerminal, DexScreener; dead or deprecated DEX slugs such as Bunni are blocked from runtime pricing and liquidity inputs rather than treated as live venues",
   },
-  { label: "AI Generation", sources: "Anthropic Claude (daily digest)" },
+  { label: "AI Generation", sources: "Anthropic Claude (daily digest and Monday weekly recap)" },
 ] as const;
 
 export const TEAM_MEMBERS = [

@@ -48,11 +48,11 @@ export default function MethodologyPage() {
             },
             {
               question: "What is the DEWS early-warning system?",
-              answer: "The Depeg Early Warning System (DEWS) is a multi-factor composite that signals elevated depeg risk before a full event occurs. It combines peg deviation magnitude, DEX liquidity depth, 24-hour net mint/burn flow intensity versus 30-day baseline, blacklist freeze velocity, and stablecoin-sector contagion correlation. Each factor is scored 0–100 and combined with methodology-defined weights. Scores above 60 trigger cautionary signals; scores above 80 trigger high-risk alerts.",
+              answer: "The Depeg Early Warning System (DEWS) combines eight weighted 0-100 sub-signals: supply contraction, pool stress, liquidity erosion, price confidence, cross-source divergence, blacklist activity, mint/burn flow stress, and yield warnings. Available signals are blended with redistribution, then PSI and same-peg contagion can amplify the score. Bands are CALM <=15, WATCH <=35, ALERT <=55, WARNING <=75, and DANGER above 75.",
             },
             {
               question: "How is the liquidity score calculated?",
-              answer: "The liquidity score evaluates how easily a stablecoin can be exited to its peg asset on-chain. It combines DEX TVL depth (30%), 24-hour volume activity (20%), pool quality and diversity (20%), pair durability and age (20%), and diversification across protocols and chains (10%). Quality multipliers adjust for pool type (e.g., Curve stableswap vs Uniswap V3 wide tiers). Scores are normalized to 0–100.",
+              answer: "The liquidity score evaluates how easily a stablecoin can be exited through DEX markets. It combines TVL depth (30%), 24-hour volume activity (20%), pool quality (20%), durability (20%), and pair diversity (10%). TVL depth uses effective TVL relative to market cap, volume uses a log-scale volume/TVL ratio, pool quality measures mechanism and balance-health retention, durability blends TVL stability, volume consistency, maturity, and organic fees, and pair diversity counts distinct retained pools.",
             },
             {
               question: "How does Pharos confirm depegs and maintain DEWS history?",

@@ -71,7 +71,7 @@ Dead or explicitly blocked DEX ids are removed upstream from DEX crawl intake, p
 - **Sources disagree** → `priceConfidence: "low"`, best trusted fallback source used
 - **All sources down** → skip, falls through to enrichment pipeline
 
-Cluster selection breaks ties by size, then total cluster weight, then tighter spread, then peg proximity. The internal selected source inside the winning cluster is chosen by weight, trust tier, reference proximity, and finally source key, but that selected source is no longer forced to be the published high-confidence price.
+Cluster selection breaks ties by size, then total cluster weight, then strongest source trust tier, then tighter spread, then peg proximity, and finally a stable source label. The internal selected source inside the winning cluster is chosen by weight, trust tier, reference proximity, and finally source key, but that selected source is no longer forced to be the published high-confidence price.
 
 Each asset gets tagged with `priceConfidence` (high/single-source/low/fallback) and `supplySource` (`defillama`, `coingecko-fallback`, or `onchain-total-supply`). The `onchain-total-supply` path is used for supplemental assets whose circulating supply is derived from an on-chain total-supply probe instead of an upstream market-cap field; preview-only fiat CoinGecko assets can use that path with the existing FX reference for USD normalization while still keeping `price = null`. Solana total-supply fallback now reuses the same shared multi-endpoint probe used by the reserve-adapter path, so supplemental Solana assets do not depend on a narrower RPC list than the rest of the worker.
 

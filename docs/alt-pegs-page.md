@@ -76,13 +76,14 @@ The route renders `StaticAltPegLinkHub` before `AltPegsClient`. The static hero 
 
 1. `StaleDataBanner`
 2. hero snapshot for the current non-USD segment
-3. current peg-distribution card
-4. `NonUsdShareChart`
-5. `AltPegCohortHistoryChart`
+3. `NonUsdShareChart`
+4. `AltPegCohortHistoryChart`
+5. `AltPegCohortDirectory`
+6. current peg-distribution card
 
 On `xl+`, the `FiatWorldAtlas` hero carries the full non-USD drill-down surface: Gold (sun), Silver (moon), and CPI/Index (orbital glyph) float over the map's ocean deadspots, and the map itself is a pre-rendered static SVG of 1:110m Natural Earth geometry, colored per country via `PEG_COUNTRY_MAP` in `src/lib/alt-peg-geography.ts`. The SVG is regenerated with `npm run build:world-map` (dev-only d3-geo + topojson-client). Below `xl`, fiat cohorts fall back to a stacked `MobileRegionList`; non-geographic reference cohorts remain in the celestial band above the map/list area.
 
-The route intentionally keeps the static taxonomy map ahead of live analytics, then keeps all client current-state modules ahead of the historical modules to reduce trust issues caused by mixed source cadences.
+The route intentionally keeps the static taxonomy map ahead of live analytics, then gives the historical trend cards priority over the client-side directory and current distribution module so the analysis reads from market share history into the current cohort roster.
 
 Current Release 1 behavior:
 

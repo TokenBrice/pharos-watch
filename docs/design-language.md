@@ -112,12 +112,12 @@ Behavioral contract: [Start Page](./start-page.md)
 - Route board: uniform goal cards in `sm:grid-cols-2 xl:grid-cols-3`
 - Mobile top fold compresses the hero copy so the first route card stays visible above the fold
 - Desktop hero keeps the route board on the right while the left column stacks headline copy and `HeroEscapeHatch`
-- Desktop support content under the headline now stays in a clean vertical stack: CTA row first, then experienced-user note, signal brief, and route-planner note
+- Desktop support content under the headline stays in a clean vertical stack: CTA row first, then the experienced-user note
 - Follow-up sections use glossary cards, flattened feature-atlas groups, and shortcut cards instead of one long prose stream
 
 ### Home Dashboard (Special)
 
-Home keeps a single `sr-only` page `h1` for semantics and uses a non-heading top fold composed of:
+Home keeps a single visible page `h1` owned by `SiteHeader`; the rest of the top fold is composed of:
 
 Behavioral contract: [Homepage](./homepage.md)
 

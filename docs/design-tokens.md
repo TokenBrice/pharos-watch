@@ -100,7 +100,7 @@ For colors needed at JS runtime (Recharts, canvas, dynamic styles):
 
 | File                         | Exports                                                                     | Purpose                                                                  |
 | ---------------------------- | --------------------------------------------------------------------------- | ------------------------------------------------------------------------ |
-| `src/lib/chart-colors.ts`    | `CHART_PALETTE`, `CHART_BLUE`, `CHART_GREEN`, `CHART_ORANGE`, `CHART_CYAN`, `CHART_RED`, `CHART_SLATE`, `CHART_AMBER`, `CHART_HEIGHT`, `RECHARTS_TOOLTIP_STYLES` | Shared chart fill/stroke colors, chart-height utility, and tooltip styles (also has module-private `TOKEN` map) |
+| `src/lib/chart-colors.ts`    | `CHART_PALETTE`, `CHART_BLUE`, `CHART_GREEN`, `CHART_ORANGE`, `CHART_RED`, `CHART_SLATE`, `CHART_AMBER`, `CHART_HEIGHT`, `RECHARTS_TOOLTIP_STYLES` | Shared chart fill/stroke colors, chart-height utility, and tooltip styles (also has module-private `TOKEN` map) |
 | `src/lib/severity-colors.ts` | `deviationColorHex()`, `deviationColorClass()`, tier helpers                | Peg-deviation and score-tier helpers (text classes are light/dark aware) |
 
 These maps use the same hex values as the `--*-hex` CSS custom properties in `semantic.css` where CSS companions exist. Some runtime-only exports, such as threat bands, signal colors, and brand helpers, live only in the JS maps.

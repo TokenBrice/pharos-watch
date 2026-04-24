@@ -76,7 +76,7 @@ All external API calls and on-chain contract reads go through the Cloudflare Wor
 | [gold-api.com](https://gold-api.com/)                                   | Gold and silver spot prices for commodity-pegged stablecoin peg validation                                 | 30 min cooldown inside 15-min slot |
 | [FRED (St. Louis Fed)](https://fred.stlouisfed.org/series/DGS3MO) / Treasury.gov yield curve XML / ECB Data API / SIX delayed SARON guest access | USD, EUR, and CHF benchmark rates for yield benchmarking (`excessYield`), with Treasury.gov as the USD fallback | Daily                             |
 | [Bluechip](https://bluechip.org/)                                       | Independent stablecoin safety ratings (SMIDGE framework)                                                   | Daily                             |
-| [Anthropic](https://anthropic.com/)                                     | AI-generated daily market digest                                                                           | Daily                             |
+| [Anthropic](https://anthropic.com/)                                     | AI-generated daily market digest and Monday weekly recap                                                    | Daily / weekly                    |
 
 DEX discovery sources write to `dex_pool_staging` every 2 hours on the dedicated discovery cron; `syncDexLiquidity()` then merges staged rows on its separate 30-minute scoring cron. DexScreener also participates in the 15-minute stablecoin price-enrichment path.
 
@@ -146,6 +146,7 @@ src/                              Frontend (Next.js static export)
 │   ├── depeg/                    Live peg monitoring + event feed
 │   ├── dependency-map/           Collateral dependency graph visualization
 │   ├── digest/                   AI-generated daily market digest (+ digest/[date]/)
+│   ├── docs/                     Public documentation archive (+ docs/[slug]/ pages)
 │   ├── flows/                    Mint/burn flow tracker
 │   ├── funding/                  Static public-good funding ledger
 │   ├── liquidity/                DEX liquidity scores and pool breakdown
@@ -231,7 +232,8 @@ Cloudflare Worker (API layer)
   ├── Cron: 4,34 * * * *                        → mint/burn critical lane (every 30 min)
   ├── Cron: 6 */2 * * *                         → DEX discovery staging (every 2h)
   ├── Cron: 13,43 * * * *                       → mint/burn extended lane (every 30 min)
-  ├── Cron: 10,40 * * * *                       → stablecoin charts + DEX liquidity
+  ├── Cron: 10,40 * * * *                       → DEX liquidity
+  ├── Cron: 16,46 * * * *                       → stablecoin charts (1h cooldown)
   ├── Cron: 26,56 * * * *                       → DEWS + PSI DB-only compute
   ├── Cron: 11 */4 * * *                        → live reserve sync + redemption backstop snapshots + Kinesis supply + collateral drift check (every 4h)
   ├── Cron: 20 * * * *                          → yield sync

@@ -110,12 +110,13 @@ Managed by `src/hooks/use-homepage-filters.ts` and `src/hooks/use-url-filters.ts
 - `backing` -> one active backing filter
 - `grade` -> one active score-tier filter
 - `infrastructure` -> one active infrastructure filter (`infrastructure-liquity-v1`, `infrastructure-liquity-v2`, `infrastructure-m0`)
-- `variant` -> one active tracked-variant filter (`variant-tracked`, `variant-savings-passthrough`, `variant-strategy-vault`, `variant-risk-absorption`, `variant-bond-maturity`)
+- `variant` -> one active tracked-variant filter (`variant-tracked`, `variant-savings-passthrough`, `variant-strategy-vault`, `variant-risk-absorption`)
 
 Rules:
 
 - only one value per filter group is active at a time
 - legacy homepage peg params for specific non-USD buckets (for example `eur-peg`, `gold-peg`, `silver-peg`, `other-peg`) normalize into the current aggregate peg cohorts
+- legacy `variant-bond-maturity` params normalize into `variant-tracked`; bond-maturity rows remain tagged internally but are not exposed as a dedicated homepage filter option
 - the homepage peg browse strip groups landing pages into `Fiat`, `Commodity`, and `Other` categories, displaying all active pegs through `PEG_LABELS_SHORT`
 - `"all"` and empty-string values clear the param instead of persisting it
 - updates use `window.history.replaceState(...)`, so filter changes do not create extra history entries or scroll jumps

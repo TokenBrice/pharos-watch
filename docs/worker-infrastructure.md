@@ -1,6 +1,6 @@
 # Worker Infrastructure
 
-Cloudflare Worker serving the Pharos API. Handles HTTP routing, edge caching, CORS, admin auth, and 31 status-tracked scheduled runtime jobs across 17 cron expressions / runner slots. `CRON_INTERVALS` / `/api/status` track the 31 `CRON_JOB_DEFINITIONS` jobs across 16 job-bearing slots; the separate `*/5 * * * *` digest-trigger poll slot executes manual digest requests under the `daily-digest` lease rather than registering as its own status job.
+Cloudflare Worker serving the Pharos API. Handles HTTP routing, edge caching, CORS, admin auth, and scheduled runtime work across 18 cron expressions / runner slots. `CRON_INTERVALS` / `/api/status` track the 31 `CRON_JOB_DEFINITIONS` jobs across 17 job-bearing slots; the separate `*/5 * * * *` digest-trigger poll slot is the 18th runner slot and executes manual digest requests under the `daily-digest` lease rather than registering as its own status job.
 
 Execution note: the `snapshot-supply` retry path runs on the `*/15 * * * *` trigger only after a downstream-safe `sync-stablecoins` cache write.
 
@@ -188,7 +188,7 @@ Applied to every response via `addCorsHeaders()`:
 | `Vary`                          | `Origin`                                                                                        |
 | `Access-Control-Allow-Methods`  | `GET, POST, OPTIONS`                                                                            |
 | `Access-Control-Allow-Headers`  | `Content-Type, Idempotency-Key, X-API-Key, X-Pharos-Admin`                                      |
-| `Access-Control-Expose-Headers` | `X-Data-Age, Warning`                                                                           |
+| `Access-Control-Expose-Headers` | `X-Data-Age, Warning, Retry-After`                                                              |
 | `Access-Control-Max-Age`        | `86400`                                                                                         |
 | `X-Content-Type-Options`        | `nosniff`                                                                                       |
 | `Strict-Transport-Security`     | `max-age=31536000; includeSubDomains`                                                           |
@@ -244,7 +244,7 @@ This baseline is enough to catch most abuse, regression, or cache-efficiency pro
 
 - Accepts only the `ops-api.pharos.watch` lane after Cloudflare Access has authenticated the caller and injected `Cf-Access-Jwt-Assertion`
 - Internal worker-origin admin calls (for example `status-self-check`) simulate that same lane instead of using a shared secret
-- Returns `null` if authorized, 401 Response if not
+- `hasValidAdminCredential()` returns a boolean. `requireAdmin()` returns `null` when authorized or a 401 `Response` when unauthorized.
 - The worker verifies `Cf-Access-Jwt-Assertion` against `CF_ACCESS_OPS_API_AUD` using the team-domain JWKS and enforces JWT claims including `aud`, `exp`, and `iss`.
 - Cloudflare Access must still stay in front of `ops-api.pharos.watch`, because the worker does not authenticate callers independently of that Access layer.
 
@@ -333,7 +333,7 @@ Most module-level mutable state was eliminated in the parameter-passing refactor
 
 ## Cron Scheduling
 
-This worker declares 17 cron expressions in `worker/wrangler.toml`. Fetch-heavy lanes are split across separate trigger slots so they do not compete with the quarter-hourly core pipeline for the Workers per-trigger 6-connection fetch pool or share CPU budget with DB-only availability jobs.
+This worker declares 18 cron expressions in `worker/wrangler.toml`. Fetch-heavy lanes are split across separate trigger slots so they do not compete with the quarter-hourly core pipeline for the Workers per-trigger 6-connection fetch pool or share CPU budget with DB-only availability jobs.
 
 ### `worker/wrangler.toml` Triggers
 
@@ -490,7 +490,7 @@ Safety-grade fan-out on this lane is now gated by the generation-aware live sour
 | ----------- | -------- | ---- | ------------- |
 | `daily-digest` lease consumer | `runDigestTriggerPollSlot()` | `worker/src/handlers/scheduled/digest-trigger-poll.ts` | [Digest Pipeline](./digest-pipeline.md) |
 
-This slot polls the `digest:force-run-request` cache key written by `POST /api/trigger-digest`. When a request is pending, it runs `generateDailyDigest(..., force=true, twitterCreds=null, ...)` under the existing `daily-digest` lease, clears or preserves the flag according to the lease outcome, and writes `digest:last-trigger-result` for the ops UI. It is a runner slot, not a separate status-tracked cron job.
+This slot polls the `digest:force-run-request` cache key written by `POST /api/trigger-digest`. When a request is pending, it runs `generateDailyDigest(db, anthropicApiKey, buildTwitterCreds(env), true, buildTelegramCreds(env), signal)` under the existing `daily-digest` lease, clears or preserves the flag according to the lease outcome, and writes `digest:last-trigger-result` for the ops UI. It is a runner slot, not a separate status-tracked cron job.
 
 ### Trigger 15: `0 8 * * *` (daily at 08:00 UTC — snapshots & lightweight fetchers)
 
@@ -1117,12 +1117,12 @@ Health freshness checks for mint/burn major symbols and scheduler stale alerts u
 
 ### GET /api/status
 
-Returns raw and effective status, recent `cron_runs`, active `cron_run_progress` rows, data-quality metrics, state-machine metadata, synthetic probe summary, and transition timeline. Tracks 31 cron jobs across 16 job-bearing runner slots via `CRON_INTERVALS` and `CRON_JOB_DEFINITIONS` in `shared/lib/cron-jobs.ts`. The `*/5 * * * *` digest-trigger poll slot is not listed as a separate job because it runs work under the existing `daily-digest` lease only when a manual trigger flag is pending:
+Returns raw and effective status, recent `cron_runs`, active `cron_run_progress` rows, data-quality metrics, state-machine metadata, synthetic probe summary, and transition timeline. Tracks 31 cron jobs across 17 job-bearing runner slots via `CRON_INTERVALS` and `CRON_JOB_DEFINITIONS` in `shared/lib/cron-jobs.ts`. The `*/5 * * * *` digest-trigger poll slot is not listed as a separate job because it runs work under the existing `daily-digest` lease only when a manual trigger flag is pending:
 
 | Job                             | Interval         | Trigger                                           |
 | ------------------------------- | ---------------- | ------------------------------------------------- |
 | `sync-stablecoins`              | 900s (15min)     | `*/15 * * * *`                                    |
-| `sync-stablecoin-charts`        | 3,600s (1h)      | `10,40 * * * *` (1h cooldown)                     |
+| `sync-stablecoin-charts`        | 3,600s (1h)      | `16,46 * * * *` (1h cooldown)                     |
 | `sync-fx-rates`                 | 1,800s (30min)   | `*/15 * * * *` (30-min cooldown)                  |
 | `stability-index`               | 1,800s (30min)   | `26,56 * * * *`                                   |
 | `compute-dews`                  | 1,800s (30min)   | `26,56 * * * *`                                   |

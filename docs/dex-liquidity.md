@@ -20,7 +20,7 @@ Run metadata now includes `failedSources`, `fallbackMode` signals, staged-pool m
 | ------------------- | ------ | -------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | **TVL Depth**       | 30%    | DeFiLlama Yields           | Ratio-based log-scale: `35 * log10(depthRatio / 0.0007)` where `depthRatio = effectiveTvl / circulatingUsd`. ~0.5%->30, ~1.5%->47, ~6%->67, ~14%->80, ~25%+->90+. Falls back to `35 * log10(tvl / 700_000)` (parity with ratio formula at a $1B implied reference mcap) when `circulatingUsd` is unavailable. |
 | **Volume Activity** | 20%    | DeFiLlama Yields           | Log-scale V/T ratio: `38 * (log10(vtRatio) + 3)`. ~0.1%->0, ~0.3%->18, ~3.5%->59, ~19%->86, ~32%+->100                                                                                                                                     |
-| **Pool Quality**    | 20%    | Curve API + DeFiLlama      | Venue quality retention ratio: `(qualityAdjustedTvl/totalTvlUsd - 0.15) / 0.65 * 100`, rescaled from 15–80% range to 0–100 (see below)                                                                                                     |
+| **Pool Quality**    | 20%    | Curve API + DeFiLlama      | Venue quality retention ratio: `(qualityAdjustedTvl/totalTvlUsd - 0.15) / 0.65 * 100`, rescaled from 15–80% range to 0–100 (see below). The scoring component uses mechanism and balance-health retention; pair quality affects effective TVL and pool stress. |
 | **Durability**      | 20%    | DeFiLlama Yields + History | 35% TVL stability, 25% volume consistency, 25% maturity, 15% organic fraction (sqrt curve)                                                                                                                                                 |
 | **Diversity**       | 10%    | DeFiLlama Yields           | Pool count, diminishing returns: min(100, poolCount x 5)                                                                                                                                                                                   |
 
@@ -203,11 +203,11 @@ Per-stablecoin durability metric combining: TVL stability from 30-day CV (35%), 
 
 #### Pool Quality Formula
 
-Pool Quality measures the venue quality retention ratio: the fraction of total TVL that survives after applying mechanism, balance health, and pair quality multipliers.
+Pool Quality measures the venue quality retention ratio: the fraction of total TVL that survives after applying mechanism and balance-health multipliers.
 
 `poolQuality = min(100, max(0, (qualityAdjustedTvl / totalTvlUsd - 0.15) / 0.65 * 100))`
 
-Where `qualityAdjustedTvl` applies mechanism, balance health, and pair quality multipliers to raw TVL, and `totalTvlUsd` is the pre-adjustment sum across all pools. The linear rescaling maps the 15–80% retention range to 0–100, so a pool set retaining 15% or less of its raw TVL after quality adjustment scores 0, and one retaining 80% or more scores 100.
+Where `qualityAdjustedTvl` applies mechanism and balance-health multipliers to raw TVL, and `totalTvlUsd` is the pre-adjustment sum across all pools. Pair quality is already reflected upstream in `effectiveTvl` and the pool-stress diagnostics, but it is not part of this retention-ratio component. The linear rescaling maps the 15–80% retention range to 0–100, so a pool set retaining 15% or less of its raw TVL after quality adjustment scores 0, and one retaining 80% or more scores 100.
 
 #### Durability Sub-Component Weights
 

@@ -63,11 +63,11 @@ export function SafetyScoresMethodologySection() {
               </div>
               <ReserveRelatedSignalsMethodologyCopy />
               <WorkedExample summary="Worked example (verified against computeOverallGrade)">
-                <p className="font-mono">Inputs: DEX 30, Redemption 88, Exit 56, Res 70, Decen 60, Dep 75, Peg 92</p>
-                <p className="font-mono">base=(56*0.30+70*0.20+60*0.15+75*0.25)/0.90=65.06</p>
-                <p className="font-mono">final=round(base*(92/100)^0.40)=round(65.06*0.9672)=63</p>
+                <p className="font-mono">Inputs: DEX 30, Redemption 88, Exit 91, Res 70, Decen 60, Dep 75, Peg 92</p>
+                <p className="font-mono">base=(91*0.30+70*0.20+60*0.15+75*0.25)/0.90=76.72</p>
+                <p className="font-mono">final=round(base*(92/100)^0.40)=round(76.72*0.9672)=74</p>
                 <p>
-                  Result: <span className="text-foreground">Score 63 (grade C+)</span>.
+                  Result: <span className="text-foreground">Score 74 (grade B)</span>.
                 </p>
               </WorkedExample>
 

@@ -12,10 +12,10 @@ import { safeJsonLd } from "@/lib/json-ld";
 import { buildPageMetadata } from "@/lib/page-metadata";
 import { buildFaqJsonLd } from "@/lib/faq";
 import {
-  ABOUT_LEAD_PARAGRAPHS,
   COMPUTED_FEATURES,
   DATA_PIPELINE_STEPS,
   DATA_SOURCE_GROUPS,
+  getAboutLeadParagraphs,
   getAboutFaqItems,
   getTrackedFeatures,
   TEAM_MEMBERS,
@@ -205,13 +205,14 @@ export default function AboutPage() {
     activeStablecoins: activeStablecoinCount,
     deadStablecoins: deadStablecoinCount,
   });
+  const leadParagraphs = getAboutLeadParagraphs({ activeStablecoins: activeStablecoinCount });
 
   return (
     <FeaturePageShell
       breadcrumbName="About Pharos"
       path="/about/"
       title="About Pharos"
-      leadParagraphs={ABOUT_LEAD_PARAGRAPHS}
+      leadParagraphs={leadParagraphs}
       headerSupplement={<AboutReferenceModule />}
       preface={
         <script

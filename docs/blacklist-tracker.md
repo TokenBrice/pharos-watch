@@ -158,7 +158,7 @@ All use USDC events: `Blacklisted(address)`, `UnBlacklisted(address)`. Decimals:
 - **Address:** `0x8292bb45bf1ee4d140127049757c2e0ff06317ed`
 - **Decimals:** 18
 - **Events:** `AccountPaused(address)`, `AccountUnpaused(address)`
-- **Note:** RLUSD `clawback(address,uint256)` is not event-covered in v3.8 because the verified ABI does not expose a dedicated clawback event. Tracking clawbacks would require transaction-input classification over token burn/transfer logs.
+- **Note:** RLUSD `clawback(address,uint256)` is not event-covered because the verified ABI does not expose a dedicated clawback event. Tracking clawbacks would require transaction-input classification over token burn/transfer logs.
 
 ### U (United Stables)
 
