@@ -1,11 +1,13 @@
 "use client";
 
+import type { KeyboardEvent } from "react";
 import { Anchor, Activity, ShipWheel } from "lucide-react";
 import type { ChainSummary } from "@shared/types/chains";
 import { HEALTH_BADGE_CLASSES, HEALTH_HEX_FILL } from "@/lib/chain-ui";
 import type { HealthBand } from "@shared/types/chains";
 import { cn } from "@/lib/utils";
 import { logosById } from "@/lib/logos";
+import { formatCompactUsd } from "@shared/lib/format";
 import { buildChainHarborModel, type ChainHarborEntry } from "./harbor-map";
 import { hullWidth, cargoCapacityForHull, depthLayers, wakeLength, aggregateSkyBand } from "./nautical-scene-math";
 import "./nautical-chart.css";
@@ -777,10 +779,21 @@ function CompassPlate({
   );
 }
 
-export function NauticalChart({ chains, globalTotalUsd }: { chains: ChainSummary[]; globalTotalUsd: number }) {
+export function NauticalChart({
+  chains,
+  globalTotalUsd,
+  selectedChainId,
+  onSelectChain,
+}: {
+  chains: ChainSummary[];
+  globalTotalUsd: number;
+  selectedChainId?: string | null;
+  onSelectChain?: (chainId: string) => void;
+}) {
   const model = buildChainHarborModel(chains, globalTotalUsd);
   if (model.entries.length === 0) return null;
 
+  const activeChainId = selectedChainId ?? model.largestHarbor?.id ?? null;
   const sky = aggregateSkyBand(model.entries);
   const maxSupply = model.entries[0]?.totalUsd ?? 0;
   const topCount = model.entries.length;
@@ -797,6 +810,11 @@ export function NauticalChart({ chains, globalTotalUsd }: { chains: ChainSummary
       maxSupply > 0 ? Math.max(0.1, Math.min(1, Math.sqrt(entry.totalUsd / maxSupply))) : 0.1;
     return { entry, geom: shipDimensions(entry, x, hullW, WATERLINE_Y - 18, supplyScale) };
   });
+  const handleShipKeyDown = (event: KeyboardEvent<SVGGElement>, chainId: string) => {
+    if (event.key !== "Enter" && event.key !== " ") return;
+    event.preventDefault();
+    onSelectChain?.(chainId);
+  };
 
   return (
     <section className="pharos-card-shell overflow-hidden" aria-labelledby="chain-nautical-heading">
@@ -911,9 +929,41 @@ export function NauticalChart({ chains, globalTotalUsd }: { chains: ChainSummary
           />
 
           {/* Ships */}
-          {geometries.map(({ entry, geom }) => (
-            <Ship key={entry.id} entry={entry} geom={geom} maxCargoUsd={maxCargoUsd} />
-          ))}
+          {geometries.map(({ entry, geom }) => {
+            const selected = entry.id === activeChainId;
+            return (
+              <g
+                key={entry.id}
+                role="button"
+                tabIndex={0}
+                aria-label={`Select ${entry.name} harbor`}
+                className="cursor-pointer outline-none"
+                onFocus={() => onSelectChain?.(entry.id)}
+                onMouseEnter={() => onSelectChain?.(entry.id)}
+                onClick={() => onSelectChain?.(entry.id)}
+                onKeyDown={(event) => handleShipKeyDown(event, entry.id)}
+              >
+                <title>
+                  {entry.name}: {formatCompactUsd(entry.totalUsd)} docked, {entry.sharePct.toFixed(1)}% of tracked supply
+                </title>
+                {selected ? (
+                  <rect
+                    x={geom.deckLeft - 12}
+                    y={Math.max(6, geom.mastTopY - 12)}
+                    width={geom.hullW + 24}
+                    height={Math.min(SCENE_HEIGHT - 12, geom.hullBottom + 42) - Math.max(6, geom.mastTopY - 12)}
+                    rx={12}
+                    fill="none"
+                    stroke="#38bdf8"
+                    strokeWidth={1.5}
+                    strokeDasharray="5 5"
+                    opacity={0.9}
+                  />
+                ) : null}
+                <Ship entry={entry} geom={geom} maxCargoUsd={maxCargoUsd} />
+              </g>
+            );
+          })}
 
           {/* Ship name labels */}
           {geometries.map(({ entry, geom }) => (

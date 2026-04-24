@@ -3,7 +3,7 @@ import { cleanup, render, screen } from "@testing-library/react";
 import { createElement, type ImgHTMLAttributes } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { ChainSummary } from "@shared/types/chains";
-import { buildChainHarborModel } from "./harbor-map";
+import { buildChainHarborEntries, buildChainHarborModel } from "./harbor-map";
 import { HarborList as ChainHarborMap } from "./harbor-list";
 import { NauticalChart } from "./nautical-chart";
 
@@ -99,6 +99,21 @@ describe("buildChainHarborModel", () => {
     expect(model.entries).toHaveLength(8);
     expect(model.entries[0]?.id).toBe("chain-0");
     expect(model.entries[7]?.id).toBe("chain-7");
+  });
+
+  it("can derive selected-harbor entries for the full leaderboard", () => {
+    const chains = Array.from({ length: 10 }, (_, index) => makeChain({
+      id: `chain-${index}`,
+      name: `Chain ${index}`,
+      totalUsd: 10 - index,
+    }));
+
+    const entries = buildChainHarborEntries(chains, 55);
+
+    expect(entries).toHaveLength(10);
+    expect(entries[0]?.id).toBe("chain-0");
+    expect(entries[9]?.id).toBe("chain-9");
+    expect(entries[9]?.berthPct).toBe(10);
   });
 
   it("handles zero global supply and ignores unrated chains in the health average", () => {

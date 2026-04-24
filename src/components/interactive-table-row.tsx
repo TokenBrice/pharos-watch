@@ -27,6 +27,7 @@ export function InteractiveTableRow({
       className={`cursor-pointer focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:outline-none ${className}`}
       onClick={onActivate}
       onMouseEnter={onHover}
+      onFocus={onHover}
       onKeyDown={(e) => {
         if (e.key === "Enter" || e.key === " ") {
           e.preventDefault();

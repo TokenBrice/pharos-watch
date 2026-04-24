@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useChains } from "@/hooks/use-chains";
@@ -25,6 +25,8 @@ import type { HealthBand, ChainSummary } from "@shared/types/chains";
 import { StablecoinLogo } from "@/components/stablecoin-logo";
 import { logosById } from "@/lib/logos";
 import { NauticalChart } from "./nautical-chart";
+import { buildChainHarborEntries } from "./harbor-map";
+import { SelectedHarborPanel } from "./selected-harbor-panel";
 
 /** Muted oklch palette for the dominance breakdown bar — distinct but not decorative. */
 const DOMINANCE_COLORS = [
@@ -113,6 +115,7 @@ export function ChainsLeaderboardClient() {
   const stablecoinsQuery = useStablecoins();
   const { sortKey, sortDirection, toggleSort, getAriaSortValue } = useSort<ChainSortKey>("totalUsd", "desc");
   const router = useRouter();
+  const [selectedChainId, setSelectedChainId] = useState<string | null>(null);
 
   const sorted = useMemo(() => {
     if (!data?.chains) return [];
@@ -129,6 +132,17 @@ export function ChainsLeaderboardClient() {
     if (!data?.chains) return [];
     return attachTopStablecoinCargo(data.chains, stablecoinsQuery.data?.peggedAssets);
   }, [data, stablecoinsQuery.data]);
+
+  const harborEntries = useMemo(() => {
+    if (!data) return [];
+    return buildChainHarborEntries(chartChains, data.globalTotalUsd);
+  }, [chartChains, data]);
+
+  const selectedHarbor = useMemo(() => {
+    return harborEntries.find((entry) => entry.id === selectedChainId)
+      ?? harborEntries[0]
+      ?? null;
+  }, [harborEntries, selectedChainId]);
 
   if (isLoading) {
     return (
@@ -293,7 +307,14 @@ export function ChainsLeaderboardClient() {
         })()}
       </div>
 
-      <NauticalChart chains={chartChains} globalTotalUsd={data.globalTotalUsd} />
+      <NauticalChart
+        chains={chartChains}
+        globalTotalUsd={data.globalTotalUsd}
+        selectedChainId={selectedHarbor?.id ?? selectedChainId}
+        onSelectChain={setSelectedChainId}
+      />
+
+      <SelectedHarborPanel entry={selectedHarbor} />
 
       {/* Table */}
       <DataTableShell
@@ -317,6 +338,7 @@ export function ChainsLeaderboardClient() {
               role="link"
               ariaLabel={`${chain.name} — ${formatCompactUsd(chain.totalUsd)} supply`}
               className="group border-l-2 border-l-transparent transition-all duration-150 hover:border-l-frost-blue hover:bg-muted/30 hover:translate-x-[1px] data-[state=selected]:border-l-frost-blue"
+              onHover={() => setSelectedChainId(chain.id)}
               onActivate={() => router.push(`/chains/${chain.id}/`)}
             >
                 <TableCell className="text-right tabular-nums text-muted-foreground">

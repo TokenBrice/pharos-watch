@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { cleanup, render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { createElement, type ImgHTMLAttributes } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { ChainSummary } from "@shared/types/chains";
@@ -79,5 +79,26 @@ describe("NauticalChart", () => {
     expect(chart.classList.contains("nc-chart-svg")).toBe(true);
     expect(chart.getAttribute("preserveAspectRatio")).toBe("xMidYMid meet");
     expect(container.querySelector('[id="chain-harbor-heading"]')).toBeNull();
+  });
+
+  it("emits harbor selection from interactive ships", () => {
+    const onSelectChain = vi.fn();
+    const chains = [
+      makeChain({ id: "ethereum", name: "Ethereum", totalUsd: 60 }),
+      makeChain({ id: "base", name: "Base", totalUsd: 25 }),
+    ];
+    render(createElement(NauticalChart, {
+      chains,
+      globalTotalUsd: 100,
+      selectedChainId: "ethereum",
+      onSelectChain,
+    }));
+
+    const baseShip = screen.getByRole("button", { name: "Select Base harbor" });
+    fireEvent.mouseEnter(baseShip);
+    expect(onSelectChain).toHaveBeenCalledWith("base");
+
+    fireEvent.keyDown(baseShip, { key: "Enter" });
+    expect(onSelectChain).toHaveBeenCalledWith("base");
   });
 });
