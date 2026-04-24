@@ -69,7 +69,13 @@ function TopCohortStrip({ rows }: { rows: ReturnType<typeof buildAltPegSnapshot>
   );
 }
 
-export function PegDiversityHeroLive({ worldMap }: { worldMap: ReactNode }) {
+export function PegDiversityHeroLive({
+  worldMap,
+  variant = "default",
+}: {
+  worldMap: ReactNode;
+  variant?: "default" | "fullscreen";
+}) {
   const stablecoinsQuery = useStablecoins();
   const { data } = stablecoinsQuery;
   const peggedAssets = data?.peggedAssets;
@@ -84,11 +90,21 @@ export function PegDiversityHeroLive({ worldMap }: { worldMap: ReactNode }) {
 
   return (
     <HoverProvider>
-      <div className="peg-hero__live-shell">
+      <div
+        className={
+          variant === "fullscreen"
+            ? "peg-hero__live-shell peg-hero__live-shell--fullscreen"
+            : "peg-hero__live-shell"
+        }
+      >
         <div className="peg-hero__legend-stack">
           <TopCohortStrip rows={topCohorts} />
         </div>
-        <div className="peg-hero">
+        <div
+          className={
+            variant === "fullscreen" ? "peg-hero peg-hero--fullscreen" : "peg-hero"
+          }
+        >
           {showStatusOverlay ? (
             <div className="peg-hero__status-overlay" role="status" aria-live="polite">
               {statusCopy}
