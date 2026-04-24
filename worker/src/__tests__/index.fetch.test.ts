@@ -925,4 +925,32 @@ describe("worker.fetch", () => {
     expect(res.status).toBe(200);
     await expect(res.json()).resolves.toEqual({ cached: true });
   });
+
+  it("rejects /api/* without X-API-Key with 401", async () => {
+    const env = makeEnv();
+    const { ctx } = makeExecutionContext();
+
+    const res = await worker.fetch(
+      new Request("https://api.pharos.watch/api/peg-summary"),
+      env as never,
+      ctx,
+    );
+
+    expect(res.status).toBe(401);
+  });
+
+  it("rejects /api/* with an invalid X-API-Key with 401", async () => {
+    const env = makeEnv();
+    const { ctx } = makeExecutionContext();
+
+    const res = await worker.fetch(
+      new Request("https://api.pharos.watch/api/peg-summary", {
+        headers: { "X-API-Key": "not-a-valid-key-format" },
+      }),
+      env as never,
+      ctx,
+    );
+
+    expect(res.status).toBe(401);
+  });
 });
