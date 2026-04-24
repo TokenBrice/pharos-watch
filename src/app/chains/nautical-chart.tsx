@@ -118,20 +118,44 @@ function ChartGrid({ laneWidth, lanes }: { laneWidth: number; lanes: number }) {
   );
 }
 
-function Ship({ entry, laneY, x, hullW, rank }: { entry: ChainHarborEntry; laneY: number; x: number; hullW: number; rank: number }) {
+function Ship({
+  entry,
+  laneY,
+  x,
+  hullW,
+  rank,
+}: {
+  entry: ChainHarborEntry;
+  laneY: number;
+  x: number;
+  hullW: number;
+  rank: number;
+}) {
   const color = healthHex(entry.healthBand);
   const cargo = cargoBuckets(entry.stablecoinCount);
   const layers = depthLayers(entry.sharePct / 100);
   const wake = wakeLength(entry.change7dPct);
-  const hullTop = laneY;
-  const hullBottom = laneY + 17;
+  const hullTop = laneY - 4;
+  const hullBottom = laneY + 20;
   const deckLeft = x;
   const deckRight = x + hullW;
-  const bowInset = Math.min(16, Math.max(7, hullW * 0.1));
-  const sternInset = Math.min(8, Math.max(4, hullW * 0.05));
+  const bowInset = Math.min(22, Math.max(10, hullW * 0.16));
+  const sternInset = Math.min(10, Math.max(5, hullW * 0.07));
+  const midY = hullTop + (hullBottom - hullTop) / 2;
+  const keelY = hullBottom - 5;
+  const cabinW = Math.min(30, Math.max(18, hullW * 0.24));
+  const cabinH = 12;
+  const cabinX = Math.min(
+    deckRight - bowInset - cabinW - 5,
+    Math.max(deckLeft + sternInset + 8, deckLeft + hullW * 0.52 - cabinW / 2),
+  );
+  const cabinY = hullTop - 8;
+  const cargoStart = deckLeft + sternInset + 8;
+  const cargoSpan = Math.max(8, cabinX - cargoStart - 6);
+  const cargoGap = cargo > 1 ? Math.min(8, cargoSpan / (cargo - 1)) : 0;
 
-  const mastX = x + hullW * 0.62;
-  const flagWidth = Math.max(12, Math.min(36, (entry.dominantSharePct / 100) * 36));
+  const mastX = Math.min(deckRight - bowInset - 6, cabinX + cabinW + 6);
+  const flagWidth = Math.max(14, Math.min(42, (entry.dominantSharePct / 100) * 42));
   const logoSize = 16;
   const clipId = `nc-logo-${entry.id.replace(/[^a-z0-9-]/gi, "-")}`;
 
@@ -152,17 +176,29 @@ function Ship({ entry, laneY, x, hullW, rank }: { entry: ChainHarborEntry; laneY
         />
       )}
       <path
-        d={`M ${deckLeft + sternInset} ${hullTop} L ${deckRight - bowInset} ${hullTop} Q ${deckRight} ${hullTop + 8} ${deckRight - bowInset} ${hullBottom} L ${deckLeft + sternInset} ${hullBottom} Q ${deckLeft} ${hullTop + 8} ${deckLeft + sternInset} ${hullTop} Z`}
+        d={`M ${deckLeft + sternInset} ${hullTop + 4} L ${deckRight - bowInset} ${hullTop + 2} L ${deckRight} ${midY} L ${deckRight - bowInset} ${hullBottom - 1} L ${deckLeft + sternInset} ${hullBottom} L ${deckLeft} ${midY} Z`}
         fill={color}
-        opacity={0.76}
-        stroke="oklch(0.96 0.005 255 / 0.36)"
+        opacity={0.88}
+        stroke="oklch(1 0 0 / 0.4)"
         strokeWidth={0.8}
+      />
+      <path
+        d={`M ${deckLeft + sternInset + 3} ${keelY} L ${deckRight - bowInset + 2} ${keelY - 1} L ${deckRight - bowInset - 3} ${hullBottom - 2} L ${deckLeft + sternInset + 5} ${hullBottom - 1} Z`}
+        fill="oklch(0.12 0.018 250 / 0.58)"
+      />
+      <path
+        d={`M ${deckLeft + sternInset + 7} ${hullTop + 7} L ${deckRight - bowInset - 7} ${hullTop + 6} L ${deckRight - bowInset - 12} ${midY} L ${deckLeft + sternInset + 8} ${midY + 1} Z`}
+        fill="oklch(0.97 0.006 250 / 0.22)"
+      />
+      <path
+        d={`M ${deckLeft + sternInset + 7} ${midY + 4} L ${deckRight - bowInset - 9} ${midY + 3} L ${deckRight - bowInset - 13} ${keelY - 1} L ${deckLeft + sternInset + 8} ${keelY} Z`}
+        fill="oklch(0.05 0.012 250 / 0.2)"
       />
       <line
         x1={deckLeft + sternInset + 5}
-        y1={hullTop + 8.5}
+        y1={midY}
         x2={deckRight - bowInset - 4}
-        y2={hullTop + 8.5}
+        y2={midY}
         stroke="oklch(1 0 0 / 0.5)"
         strokeWidth={0.7}
         opacity={0.48}
@@ -170,37 +206,74 @@ function Ship({ entry, laneY, x, hullW, rank }: { entry: ChainHarborEntry; laneY
       {Array.from({ length: cargo }).map((_, i) => (
         <rect
           key={i}
-          x={deckLeft + 8 + i * 7}
-          y={hullTop - 5}
+          x={cargoStart + i * cargoGap}
+          y={hullTop + 1}
           width={5}
-          height={4}
-          rx={0.8}
-          fill="oklch(0.78 0.012 250 / 0.7)"
+          height={6}
+          rx={0.7}
+          fill="oklch(0.86 0.018 82 / 0.78)"
+          stroke="oklch(0.18 0.012 250 / 0.28)"
+          strokeWidth={0.45}
         />
       ))}
+      <path
+        d={`M ${cabinX + 3} ${cabinY} H ${cabinX + cabinW - 5} L ${cabinX + cabinW} ${cabinY + cabinH} H ${cabinX} Z`}
+        fill="oklch(0.2 0.018 250 / 0.92)"
+        stroke="oklch(1 0 0 / 0.32)"
+        strokeWidth={0.65}
+      />
+      <line
+        x1={cabinX + 5}
+        y1={cabinY + 5}
+        x2={cabinX + cabinW - 7}
+        y2={cabinY + 5}
+        stroke="#38bdf8"
+        strokeWidth={1.2}
+        opacity={0.62}
+      />
+      <rect
+        x={deckLeft + sternInset + 8}
+        y={midY - 4}
+        width={20}
+        height={8}
+        rx={2}
+        fill="oklch(0.08 0.012 250 / 0.45)"
+        stroke="oklch(1 0 0 / 0.22)"
+        strokeWidth={0.5}
+      />
+      <text
+        x={deckLeft + sternInset + 18}
+        y={midY + 2.8}
+        textAnchor="middle"
+        fontSize={7}
+        fontFamily="ui-monospace, Menlo, monospace"
+        fill="oklch(1 0 0 / 0.8)"
+      >
+        {rank}
+      </text>
       <line
         x1={mastX}
-        y1={hullTop + 1}
+        y1={hullTop + 2}
         x2={mastX}
-        y2={hullTop - 26}
+        y2={hullTop - 22}
         stroke="currentColor"
         strokeWidth={0.9}
         opacity={0.36}
       />
       <path
         className="nc-flag"
-        d={`M ${mastX} ${hullTop - 25} h ${flagWidth} l -4 5 l 4 5 h -${flagWidth} Z`}
+        d={`M ${mastX} ${hullTop - 21} h ${flagWidth} l -5 5 l 5 5 h -${flagWidth} Z`}
         fill={color}
         opacity={0.82}
       />
       <defs>
         <clipPath id={clipId}>
-          <circle cx={mastX + flagWidth / 2} cy={hullTop - 20} r={logoSize / 2} />
+          <circle cx={cabinX + cabinW / 2} cy={cabinY + cabinH + 2} r={logoSize / 2} />
         </clipPath>
       </defs>
       <circle
-        cx={mastX + flagWidth / 2}
-        cy={hullTop - 20}
+        cx={cabinX + cabinW / 2}
+        cy={cabinY + cabinH + 2}
         r={logoSize / 2 + 1.5}
         fill="oklch(0.98 0.006 250 / 0.9)"
         stroke="oklch(0.18 0.012 250 / 0.36)"
@@ -208,8 +281,8 @@ function Ship({ entry, laneY, x, hullW, rank }: { entry: ChainHarborEntry; laneY
       />
       <image
         href={entry.logoPath}
-        x={mastX + flagWidth / 2 - logoSize / 2}
-        y={hullTop - 20 - logoSize / 2}
+        x={cabinX + cabinW / 2 - logoSize / 2}
+        y={cabinY + cabinH + 2 - logoSize / 2}
         width={logoSize}
         height={logoSize}
         clipPath={`url(#${clipId})`}

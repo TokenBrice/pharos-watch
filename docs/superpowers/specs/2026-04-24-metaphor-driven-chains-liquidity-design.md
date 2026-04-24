@@ -64,7 +64,7 @@ Scene hides (`hidden xl:block`). The current bar-list from `harbor-map.tsx` — 
 
 ### File changes
 
-- `src/app/chains/harbor-map.tsx` → split into:
+- The previous harbor-map.tsx is removed and its responsibilities split into:
   - `src/app/chains/harbor-map.ts` — keep existing `buildChainHarborModel` as a pure-TS module. Extend with:
     - `hullWidth(totalUsd, maxUsd, cardWidth): number` (log-scaled)
     - `cargoBuckets(stablecoinCount): number` (0–6)

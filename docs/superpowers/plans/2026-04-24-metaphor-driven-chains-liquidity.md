@@ -21,7 +21,7 @@ One atomic refactor: no intermediate shims. Because `harbor-map.ts` and `harbor-
 **Files:**
 - Create: `src/app/chains/harbor-map.ts` (pure model)
 - Create: `src/app/chains/harbor-list.tsx` (component, extracted)
-- Delete: `src/app/chains/harbor-map.tsx`
+- Delete: src/app/chains/harbor-map.tsx (removed; its pieces now live in harbor-map.ts and harbor-list.tsx)
 - Modify: `src/app/chains/client.tsx` (swap import)
 - Modify: `src/app/chains/harbor-map.test.ts` (import from new locations)
 
