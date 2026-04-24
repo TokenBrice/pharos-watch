@@ -20,25 +20,19 @@ export function useBrowserFullscreen(open: boolean): RefObject<HTMLDivElement | 
           // the Radix Dialog remains the fallback.
         });
       }
-    } else if (!open && document.fullscreenElement === target) {
-      const exited = document.exitFullscreen?.();
-      if (exited && typeof exited.catch === "function") {
-        exited.catch(() => {
-          // Swallow — browser may have already exited via Esc/F11.
-        });
-      }
     }
-  }, [open]);
 
-  useEffect(() => {
     return () => {
-      if (typeof document === "undefined") return;
-      if (document.fullscreenElement === targetRef.current) {
+      if (document.fullscreenElement === target) {
         const exited = document.exitFullscreen?.();
-        if (exited && typeof exited.catch === "function") exited.catch(() => {});
+        if (exited && typeof exited.catch === "function") {
+          exited.catch(() => {
+            // Swallow — browser may have already exited via Esc/F11.
+          });
+        }
       }
     };
-  }, []);
+  }, [open]);
 
   return targetRef;
 }
