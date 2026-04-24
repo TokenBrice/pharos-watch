@@ -1,4 +1,6 @@
 import type { Metadata } from "next";
+import Link from "next/link";
+import { ArrowRight } from "lucide-react";
 import { ACTIVE_STABLECOINS, TRACKED_STABLECOINS } from "@shared/lib/stablecoins";
 import { PEG_CURRENCY_COUNT } from "@shared/lib/classification";
 import { CHAIN_META } from "@shared/lib/chains";
@@ -82,6 +84,16 @@ export default function HomePage() {
       />
       <div className="space-y-3">
         <SiteHeader total={total} pegCount={PEG_CURRENCY_COUNT} chainCount={Object.keys(CHAIN_META).length} />
+        <div className="flex flex-wrap items-center gap-3">
+          <span className="text-xs uppercase tracking-[0.14em] text-muted-foreground">Featured route</span>
+          <Link
+            href="/lighthouse/"
+            className="pharos-focus-ring inline-flex items-center gap-1 rounded-full border border-border/60 bg-background/60 px-3 py-1.5 text-sm font-medium text-foreground hover:border-frost-blue/50 hover:bg-background/80"
+          >
+            Lighthouse
+            <ArrowRight className="h-4 w-4" aria-hidden="true" />
+          </Link>
+        </div>
         <div className="flex flex-col gap-3 lg:contents">
           <div className="order-1 empty:hidden lg:order-2">
             <HomepageStartHereCallout />

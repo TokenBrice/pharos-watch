@@ -48,6 +48,7 @@ Application source-of-truth docs live in `/docs/` and [../README.md](../README.m
 - [methodology-page.md](./methodology-page.md) - `/methodology/` section-to-source mapping and changelog/update contract
 - [stablecoin-detail-page.md](./stablecoin-detail-page.md) - `/stablecoin/[id]/` route shell, view-model wiring, section order, and fallback/staleness rules
 - [chains-page.md](./chains-page.md) - `/chains/` leaderboard, `/chains/[chain]/` profile contract, and Chain Health Score wiring
+- [lighthouse-page.md](./lighthouse-page.md) - `/lighthouse/` concept route, scene model, and selection contract
 - [cemetery-and-compare.md](./cemetery-and-compare.md) - `/cemetery/` and `/compare/` data and URL contracts
 - [dependency-map.md](./dependency-map.md) - dependency-graph construction, rendering, and interaction model
 - [coverage-page.md](./coverage-page.md) - `/coverage/` matrix contract, source mapping, and update rules
@@ -60,55 +61,56 @@ Application source-of-truth docs live in `/docs/` and [../README.md](../README.m
 
 Some public routes are documented by feature docs or the architecture doc rather than dedicated route-contract files. Use this map when you know the route first and need the authoritative doc quickly.
 
-| Route | Primary doc(s) |
-|-------|-----------------|
-| `/` | [homepage.md](./homepage.md) |
-| `/alt-pegs/` | [alt-pegs-page.md](./alt-pegs-page.md) |
-| `/about/` | [about-page.md](./about-page.md) |
-| `/about/api/` | [api-page.md](./api-page.md), [api-reference.md](./api-reference.md) |
-| `/blacklist/` | [blacklist-tracker.md](./blacklist-tracker.md) |
-| `/cemetery/` | [cemetery-and-compare.md](./cemetery-and-compare.md) |
-| `/changelog/` | [architecture.md](./architecture.md) |
-| `/chains/` | [chains-page.md](./chains-page.md), [chain-health.md](./chain-health.md), [api-reference.md](./api-reference.md) |
-| `/chains/[chain]/` | [chains-page.md](./chains-page.md), [chain-health.md](./chain-health.md), [api-reference.md](./api-reference.md) |
-| `/compare/` | [cemetery-and-compare.md](./cemetery-and-compare.md) |
-| `/compare/[slug]/` | [cemetery-and-compare.md](./cemetery-and-compare.md) |
-| `/coverage/` | [coverage-page.md](./coverage-page.md) |
-| `/depeg/` | [depeg-detection.md](./depeg-detection.md), [dews.md](./dews.md) |
-| `/dependency-map/` | [dependency-map.md](./dependency-map.md) |
-| `/digest/` | [digest-pipeline.md](./digest-pipeline.md) |
-| `/digest/[date]/` | [digest-pipeline.md](./digest-pipeline.md) |
-| `/docs/` | [architecture.md](./architecture.md), [doc-ownership.json](./doc-ownership.json) |
-| `/docs/[slug]/` | [architecture.md](./architecture.md), [doc-ownership.json](./doc-ownership.json) |
-| `/flows/` | [mint-burn-flows.md](./mint-burn-flows.md) |
-| `/funding/` | [funding-page.md](./funding-page.md) |
-| `/liquidity/` | [dex-liquidity.md](./dex-liquidity.md) |
-| `/methodology/` | [methodology-page.md](./methodology-page.md) |
-| `/portfolio/` | [portfolio-page.md](./portfolio-page.md) |
-| `/privacy/` | [privacy-page.md](./privacy-page.md) |
-| `/safety-scores/` | [report-cards.md](./report-cards.md) |
-| `/stablecoin/[id]/` | [stablecoin-detail-page.md](./stablecoin-detail-page.md) |
-| `/stability-index/` | [stability-index.md](./stability-index.md) |
-| `/start/` | [start-page.md](./start-page.md) |
-| `/status/` | [status-dashboard.md](./status-dashboard.md) |
-| `/stablecoins/` | [architecture.md](./architecture.md), [classification.md](./classification.md) — taxonomy surface only; tracked-variant browse ownership stays on `/` |
-| `/stablecoins/[peg]/` | [architecture.md](./architecture.md), [classification.md](./classification.md) |
-| `/stablecoins/backing/` | [architecture.md](./architecture.md), [classification.md](./classification.md) |
-| `/stablecoins/backing/[backing]/` | [architecture.md](./architecture.md), [classification.md](./classification.md) |
-| `/stablecoins/governance/` | [architecture.md](./architecture.md), [classification.md](./classification.md) |
-| `/stablecoins/governance/[governance]/` | [architecture.md](./architecture.md), [classification.md](./classification.md) |
-| `/stablecoins/infrastructure/` | [architecture.md](./architecture.md), [classification.md](./classification.md) |
-| `/stablecoins/infrastructure/[infrastructure]/` | [architecture.md](./architecture.md), [classification.md](./classification.md) |
-| `/telegram/` | [telegram-alerts.md](./telegram-alerts.md) |
-| `/upcoming/` | [upcoming-page.md](./upcoming-page.md) |
-| `/yield/` | [yield-intelligence.md](./yield-intelligence.md) |
+| Route                                           | Primary doc(s)                                                                                                                                        |
+| ----------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `/`                                             | [homepage.md](./homepage.md)                                                                                                                          |
+| `/alt-pegs/`                                    | [alt-pegs-page.md](./alt-pegs-page.md)                                                                                                                |
+| `/about/`                                       | [about-page.md](./about-page.md)                                                                                                                      |
+| `/about/api/`                                   | [api-page.md](./api-page.md), [api-reference.md](./api-reference.md)                                                                                  |
+| `/blacklist/`                                   | [blacklist-tracker.md](./blacklist-tracker.md)                                                                                                        |
+| `/cemetery/`                                    | [cemetery-and-compare.md](./cemetery-and-compare.md)                                                                                                  |
+| `/changelog/`                                   | [architecture.md](./architecture.md)                                                                                                                  |
+| `/chains/`                                      | [chains-page.md](./chains-page.md), [chain-health.md](./chain-health.md), [api-reference.md](./api-reference.md)                                      |
+| `/chains/[chain]/`                              | [chains-page.md](./chains-page.md), [chain-health.md](./chain-health.md), [api-reference.md](./api-reference.md)                                      |
+| `/lighthouse/`                                  | [lighthouse-page.md](./lighthouse-page.md), [architecture.md](./architecture.md)                                                                      |
+| `/compare/`                                     | [cemetery-and-compare.md](./cemetery-and-compare.md)                                                                                                  |
+| `/compare/[slug]/`                              | [cemetery-and-compare.md](./cemetery-and-compare.md)                                                                                                  |
+| `/coverage/`                                    | [coverage-page.md](./coverage-page.md)                                                                                                                |
+| `/depeg/`                                       | [depeg-detection.md](./depeg-detection.md), [dews.md](./dews.md)                                                                                      |
+| `/dependency-map/`                              | [dependency-map.md](./dependency-map.md)                                                                                                              |
+| `/digest/`                                      | [digest-pipeline.md](./digest-pipeline.md)                                                                                                            |
+| `/digest/[date]/`                               | [digest-pipeline.md](./digest-pipeline.md)                                                                                                            |
+| `/docs/`                                        | [architecture.md](./architecture.md), [doc-ownership.json](./doc-ownership.json)                                                                      |
+| `/docs/[slug]/`                                 | [architecture.md](./architecture.md), [doc-ownership.json](./doc-ownership.json)                                                                      |
+| `/flows/`                                       | [mint-burn-flows.md](./mint-burn-flows.md)                                                                                                            |
+| `/funding/`                                     | [funding-page.md](./funding-page.md)                                                                                                                  |
+| `/liquidity/`                                   | [dex-liquidity.md](./dex-liquidity.md)                                                                                                                |
+| `/methodology/`                                 | [methodology-page.md](./methodology-page.md)                                                                                                          |
+| `/portfolio/`                                   | [portfolio-page.md](./portfolio-page.md)                                                                                                              |
+| `/privacy/`                                     | [privacy-page.md](./privacy-page.md)                                                                                                                  |
+| `/safety-scores/`                               | [report-cards.md](./report-cards.md)                                                                                                                  |
+| `/stablecoin/[id]/`                             | [stablecoin-detail-page.md](./stablecoin-detail-page.md)                                                                                              |
+| `/stability-index/`                             | [stability-index.md](./stability-index.md)                                                                                                            |
+| `/start/`                                       | [start-page.md](./start-page.md)                                                                                                                      |
+| `/status/`                                      | [status-dashboard.md](./status-dashboard.md)                                                                                                          |
+| `/stablecoins/`                                 | [architecture.md](./architecture.md), [classification.md](./classification.md) — taxonomy surface only; tracked-variant browse ownership stays on `/` |
+| `/stablecoins/[peg]/`                           | [architecture.md](./architecture.md), [classification.md](./classification.md)                                                                        |
+| `/stablecoins/backing/`                         | [architecture.md](./architecture.md), [classification.md](./classification.md)                                                                        |
+| `/stablecoins/backing/[backing]/`               | [architecture.md](./architecture.md), [classification.md](./classification.md)                                                                        |
+| `/stablecoins/governance/`                      | [architecture.md](./architecture.md), [classification.md](./classification.md)                                                                        |
+| `/stablecoins/governance/[governance]/`         | [architecture.md](./architecture.md), [classification.md](./classification.md)                                                                        |
+| `/stablecoins/infrastructure/`                  | [architecture.md](./architecture.md), [classification.md](./classification.md)                                                                        |
+| `/stablecoins/infrastructure/[infrastructure]/` | [architecture.md](./architecture.md), [classification.md](./classification.md)                                                                        |
+| `/telegram/`                                    | [telegram-alerts.md](./telegram-alerts.md)                                                                                                            |
+| `/upcoming/`                                    | [upcoming-page.md](./upcoming-page.md)                                                                                                                |
+| `/yield/`                                       | [yield-intelligence.md](./yield-intelligence.md)                                                                                                      |
 
 ## Operator Routes
 
 These routes are not public product surfaces, but they are part of the maintained operator workflow on `ops.pharos.watch`.
 
-| Route | Primary doc(s) |
-|-------|-----------------|
+| Route     | Primary doc(s)                                                                                                                                                 |
+| --------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `/admin/` | [status-dashboard.md](./status-dashboard.md), [operator-origin-access.md](./operator-origin-access.md), [api-reference.md](./api-reference.md#admin-endpoints) |
 
 ## Route Contract Update Checklist
@@ -124,17 +126,17 @@ For route/page behavior changes, start from the route's primary doc above and th
 
 These are public sub-pages of `/methodology/`. Use the route map below when you need the authoritative doc for a specific changelog URL.
 
-| Route | Primary doc(s) |
-|-------|-----------------|
-| `/methodology/pricing-pipeline-changelog/` | [methodology-page.md](./methodology-page.md), [pricing-pipeline-timeline.md](./pricing-pipeline-timeline.md) |
-| `/methodology/scoring-changelog/` | [methodology-page.md](./methodology-page.md), [report-cards-timeline.md](./report-cards-timeline.md) |
-| `/methodology/depeg-changelog/` | [methodology-page.md](./methodology-page.md), [depeg-dews-timeline.md](./depeg-dews-timeline.md) |
-| `/methodology/liquidity-score-changelog/` | [methodology-page.md](./methodology-page.md), [liquidity-score-timeline.md](./liquidity-score-timeline.md) |
-| `/methodology/stability-index-changelog/` | [methodology-page.md](./methodology-page.md), [stability-index-timeline.md](./stability-index-timeline.md) |
-| `/methodology/blacklist-tracker-changelog/` | [methodology-page.md](./methodology-page.md), [blacklist-tracker-timeline.md](./blacklist-tracker-timeline.md) |
-| `/methodology/mint-burn-flow-changelog/` | [methodology-page.md](./methodology-page.md), [mint-burn-flows-timeline.md](./mint-burn-flows-timeline.md) |
-| `/methodology/yield-changelog/` | [methodology-page.md](./methodology-page.md), [yield-intelligence-timeline.md](./yield-intelligence-timeline.md) |
-| `/methodology/chain-health-changelog/` | [methodology-page.md](./methodology-page.md), [chain-health-timeline.md](./chain-health-timeline.md) |
+| Route                                       | Primary doc(s)                                                                                                   |
+| ------------------------------------------- | ---------------------------------------------------------------------------------------------------------------- |
+| `/methodology/pricing-pipeline-changelog/`  | [methodology-page.md](./methodology-page.md), [pricing-pipeline-timeline.md](./pricing-pipeline-timeline.md)     |
+| `/methodology/scoring-changelog/`           | [methodology-page.md](./methodology-page.md), [report-cards-timeline.md](./report-cards-timeline.md)             |
+| `/methodology/depeg-changelog/`             | [methodology-page.md](./methodology-page.md), [depeg-dews-timeline.md](./depeg-dews-timeline.md)                 |
+| `/methodology/liquidity-score-changelog/`   | [methodology-page.md](./methodology-page.md), [liquidity-score-timeline.md](./liquidity-score-timeline.md)       |
+| `/methodology/stability-index-changelog/`   | [methodology-page.md](./methodology-page.md), [stability-index-timeline.md](./stability-index-timeline.md)       |
+| `/methodology/blacklist-tracker-changelog/` | [methodology-page.md](./methodology-page.md), [blacklist-tracker-timeline.md](./blacklist-tracker-timeline.md)   |
+| `/methodology/mint-burn-flow-changelog/`    | [methodology-page.md](./methodology-page.md), [mint-burn-flows-timeline.md](./mint-burn-flows-timeline.md)       |
+| `/methodology/yield-changelog/`             | [methodology-page.md](./methodology-page.md), [yield-intelligence-timeline.md](./yield-intelligence-timeline.md) |
+| `/methodology/chain-health-changelog/`      | [methodology-page.md](./methodology-page.md), [chain-health-timeline.md](./chain-health-timeline.md)             |
 
 ## Feature And Methodology Docs
 

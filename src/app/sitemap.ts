@@ -93,6 +93,12 @@ export default function sitemap(): MetadataRoute.Sitemap {
       priority: 0.8,
     },
     {
+      url: `${SITE_URL}/lighthouse/`,
+      lastModified: lastEdited("/lighthouse/"),
+      changeFrequency: "weekly",
+      priority: 0.6,
+    },
+    {
       url: `${SITE_URL}/upcoming/`,
       lastModified: lastEdited("/upcoming/"),
       changeFrequency: "daily",
@@ -262,14 +268,12 @@ export default function sitemap(): MetadataRoute.Sitemap {
     },
   ];
 
-  const stablecoinPages: MetadataRoute.Sitemap = TRACKED_STABLECOINS.map(
-    (coin) => ({
-      url: `${SITE_URL}${buildStablecoinUrl(coin.id)}`,
-      lastModified: now,
-      changeFrequency: "daily" as const,
-      priority: 0.6,
-    })
-  );
+  const stablecoinPages: MetadataRoute.Sitemap = TRACKED_STABLECOINS.map((coin) => ({
+    url: `${SITE_URL}${buildStablecoinUrl(coin.id)}`,
+    lastModified: now,
+    changeFrequency: "daily" as const,
+    priority: 0.6,
+  }));
 
   const chainPages: MetadataRoute.Sitemap = [
     {

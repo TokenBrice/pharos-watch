@@ -4,17 +4,13 @@ import { describe, expect, it } from "vitest";
 import { existsSync, readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
-import {
-  DOC_GROUPS,
-  PUBLIC_DOCS,
-  preparePublicDocMarkdown,
-} from "../public-docs";
+import { DOC_GROUPS, PUBLIC_DOCS, preparePublicDocMarkdown } from "../public-docs";
 
 const DOCS_DIR = join(dirname(fileURLToPath(import.meta.url)), "..", "..", "..", "docs");
 
 describe("PUBLIC_DOCS registry", () => {
   it("contains the reviewed initial public set", () => {
-    expect(PUBLIC_DOCS.length).toBe(20);
+    expect(PUBLIC_DOCS.length).toBe(21);
   });
 
   it("points every entry at an existing single-file markdown source", () => {

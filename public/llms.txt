@@ -12,6 +12,7 @@
 - [Yield](https://pharos.watch/yield/): Yield-bearing stablecoin intelligence.
 - [Non-USD Market Structure](https://pharos.watch/alt-pegs/): Historical and current market structure for non-USD stablecoin cohorts.
 - [Chains](https://pharos.watch/chains/): Per-chain stablecoin distribution and health.
+- [Lighthouse](https://pharos.watch/lighthouse/): Night-watch visualization of the largest chain harbors.
 - [Flows](https://pharos.watch/flows/): Mint/burn flow dashboards.
 - [Blacklist Tracker](https://pharos.watch/blacklist/): Issuer freeze events and exposure.
 - [Dependency Map](https://pharos.watch/dependency-map/): Inter-stablecoin dependency graph.
@@ -65,6 +66,7 @@
 - [Report Cards](https://pharos.watch/docs/report-cards/): Report-card scoring, portfolio analyzer, and stress test.
 - [Redemption Backstops](https://pharos.watch/docs/redemption-backstops/): Redemption routes, effective-exit scoring, and storage.
 - [Chain Health](https://pharos.watch/docs/chain-health/): Chain Health Score inputs, formula, factors, and bands.
+- [Lighthouse Page](https://pharos.watch/docs/lighthouse-page/): The Pharos Lighthouse concept route, scene model, and selection contract.
 - [Mint Burn Flows](https://pharos.watch/docs/mint-burn-flows/): Mint/burn ingestion, scoring, and admin backfills.
 - [Yield Intelligence](https://pharos.watch/docs/yield-intelligence/): APY resolution, PYS scoring, and warning signals.
 - [Shadow Stablecoins](https://pharos.watch/docs/shadow-stablecoins/): PSI-only shadow asset boundary and UI exclusion rules.

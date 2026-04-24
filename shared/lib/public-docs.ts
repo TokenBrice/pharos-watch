@@ -114,6 +114,13 @@ export const PUBLIC_DOCS: readonly PublicDoc[] = [
     group: "methodology",
   },
   {
+    source: "lighthouse-page.md",
+    slug: "lighthouse-page",
+    title: "Lighthouse Page",
+    summary: "The Pharos Lighthouse concept route, scene model, and selection contract.",
+    group: "system",
+  },
+  {
     source: "mint-burn-flows.md",
     slug: "mint-burn-flows",
     title: "Mint Burn Flows",
@@ -185,10 +192,7 @@ export function resolvePublicDocHref(
   return absolute ? `https://pharos.watch${path}` : path;
 }
 
-function rewritePublicDocLinks(
-  markdown: string,
-  { absolute = false }: { absolute?: boolean } = {},
-): string {
+function rewritePublicDocLinks(markdown: string, { absolute = false }: { absolute?: boolean } = {}): string {
   return markdown.replace(/\[([^\]]+)\]\(([^)]+)\)/g, (full, label: string, href: string) => {
     const resolved = resolvePublicDocHref(href, { absolute });
     if (resolved) return `[${label}](${resolved})`;
@@ -209,9 +213,7 @@ function redactPublicDocSource(markdown: string, source?: string): string {
       ? `${withoutAgentPaths.slice(0, adminAuthIndex)}\n${withoutAgentPaths.slice(publicEndpointsIndex)}`
       : withoutAgentPaths;
   const adminEndpointsIndex = withoutAdminAuth.indexOf("\n## Admin Endpoints");
-  return adminEndpointsIndex >= 0
-    ? withoutAdminAuth.slice(0, adminEndpointsIndex).trimEnd()
-    : withoutAdminAuth;
+  return adminEndpointsIndex >= 0 ? withoutAdminAuth.slice(0, adminEndpointsIndex).trimEnd() : withoutAdminAuth;
 }
 
 export function preparePublicDocMarkdown(

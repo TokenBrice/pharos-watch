@@ -1,0 +1,190 @@
+.lh-scene-shell {
+  display: grid;
+  gap: 1rem;
+}
+
+.lh-scene-frame {
+  overflow: hidden;
+  border: 1px solid oklch(1 0 0 / 0.08);
+  border-radius: 1rem;
+  background:
+    radial-gradient(circle at 18% 20%, oklch(0.98 0.06 248 / 0.09), transparent 28%),
+    linear-gradient(180deg, oklch(0.1 0.03 248), oklch(0.06 0.03 248));
+}
+
+.lh-scene {
+  width: 100%;
+  height: auto;
+  aspect-ratio: 1360 / 520;
+  display: block;
+}
+
+.lh-waterline {
+  transform-origin: center;
+}
+
+.lh-ship-target {
+  cursor: pointer;
+  transform-box: fill-box;
+  transform-origin: center bottom;
+  transition:
+    transform 180ms cubic-bezier(0.22, 1, 0.36, 1),
+    filter 180ms cubic-bezier(0.22, 1, 0.36, 1),
+    opacity 180ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.lh-ship-target:hover,
+.lh-ship-target:focus-visible,
+.lh-ship-target-selected {
+  transform: translateY(-3px);
+}
+
+.lh-ship-focus-ring {
+  opacity: 0;
+  transition: opacity 160ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.lh-ship-target:hover .lh-ship-focus-ring,
+.lh-ship-target:focus-visible .lh-ship-focus-ring,
+.lh-ship-target-selected .lh-ship-focus-ring {
+  opacity: 1;
+}
+
+.lh-ship-shadow {
+  fill: oklch(0.02 0 0 / 0.45);
+  filter: blur(4px);
+}
+
+.lh-hull {
+  filter: drop-shadow(0 2px 6px oklch(0.03 0 0 / 0.22));
+}
+
+.lh-sail {
+  transform-origin: center bottom;
+}
+
+.lh-ship-label {
+  font-size: 11px;
+  fill: oklch(0.96 0 0 / 0.82);
+  letter-spacing: 0;
+}
+
+.lh-ship-subtitle {
+  font-size: 10px;
+  fill: oklch(0.88 0.02 248 / 0.72);
+}
+
+.lh-beam {
+  transform-origin: 0 0;
+  transform-box: fill-box;
+  filter: drop-shadow(0 0 16px oklch(0.98 0.11 92 / 0.22));
+}
+
+.lh-fog-wash {
+  opacity: 0.12;
+}
+
+.lh-fog-wash--heavy {
+  opacity: 0.22;
+}
+
+.lh-tail-fleet {
+  opacity: 0.6;
+}
+
+.lh-scene-caption {
+  display: grid;
+  gap: 0.75rem;
+  border-top: 1px solid oklch(1 0 0 / 0.08);
+  padding-top: 0.75rem;
+}
+
+.lh-scene-caption__metrics {
+  display: grid;
+  gap: 0.75rem;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.lh-selected-manifest {
+  display: grid;
+  gap: 0.75rem;
+  border: 1px solid oklch(1 0 0 / 0.08);
+  background: oklch(0.12 0.02 248 / 0.56);
+  border-radius: 1rem;
+  padding: 0.95rem;
+}
+
+.lh-manifest-pill {
+  display: grid;
+  gap: 0.25rem;
+  border: 1px solid oklch(1 0 0 / 0.08);
+  border-radius: 0.875rem;
+  padding: 0.75rem 0.8rem;
+  background: oklch(0.08 0.02 248 / 0.52);
+}
+
+@media (max-width: 767px) {
+  .lh-scene-caption__metrics {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  @keyframes lh-water-drift {
+    0%,
+    100% {
+      transform: translateX(0);
+    }
+    50% {
+      transform: translateX(4px);
+    }
+  }
+
+  @keyframes lh-fog-drift {
+    0%,
+    100% {
+      transform: translateX(0);
+    }
+    50% {
+      transform: translateX(-8px);
+    }
+  }
+
+  @keyframes lh-beam-glow {
+    0%,
+    100% {
+      opacity: 0.72;
+    }
+    50% {
+      opacity: 0.84;
+    }
+  }
+
+  .lh-waterline {
+    animation: lh-water-drift 8s cubic-bezier(0.45, 0, 0.55, 1) infinite;
+  }
+
+  .lh-beam {
+    animation: lh-beam-glow 10s cubic-bezier(0.45, 0, 0.55, 1) infinite;
+  }
+
+  .lh-tail-fleet {
+    animation: lh-fog-drift 12s cubic-bezier(0.45, 0, 0.55, 1) infinite;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .lh-ship-target,
+  .lh-beam,
+  .lh-waterline,
+  .lh-tail-fleet {
+    animation: none !important;
+    transition: none !important;
+  }
+
+  .lh-ship-target:hover,
+  .lh-ship-target:focus-visible,
+  .lh-ship-target-selected {
+    transform: none;
+  }
+}

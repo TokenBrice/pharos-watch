@@ -43,12 +43,7 @@ function stablecoinPath(id: string): string {
 }
 
 function escapeMarkdown(text: string): string {
-  return text
-    .replaceAll("\\", "\\\\")
-    .replaceAll("[", "\\[")
-    .replaceAll("]", "\\]")
-    .replace(/\s+/g, " ")
-    .trim();
+  return text.replaceAll("\\", "\\\\").replaceAll("[", "\\[").replaceAll("]", "\\]").replace(/\s+/g, " ").trim();
 }
 
 function stablecoinDescription(coin: StablecoinMeta): string {
@@ -71,22 +66,27 @@ function loadDigests(): DigestEntry[] {
 
 const coreDataLinks = [
   ["Dashboard homepage", absolute("/"), "Market overview with KPI bar, peg-score heatmap, and stablecoin list."],
-  ["Safety Scores", absolute("/safety-scores/"), "Weighted Liquidity / Resilience / Decentralization / Dependency + peg-stability multiplier, A+ to F."],
+  [
+    "Safety Scores",
+    absolute("/safety-scores/"),
+    "Weighted Liquidity / Resilience / Decentralization / Dependency + peg-stability multiplier, A+ to F.",
+  ],
   ["Pharos Stability Index", absolute("/stability-index/"), "Aggregate market-stability gauge with history chart."],
   ["DEWS (Depeg Early Warning System)", absolute("/depeg/"), "Active depegs, watch-list, and historical DEWS bands."],
   ["Liquidity", absolute("/liquidity/"), "DEX liquidity scores, pool counts, TVL depth."],
   ["Yield", absolute("/yield/"), "Yield-bearing stablecoin intelligence."],
-  ["Non-USD Market Structure", absolute("/alt-pegs/"), "Historical and current market structure for non-USD stablecoin cohorts."],
+  [
+    "Non-USD Market Structure",
+    absolute("/alt-pegs/"),
+    "Historical and current market structure for non-USD stablecoin cohorts.",
+  ],
   ["Chains", absolute("/chains/"), "Per-chain stablecoin distribution and health."],
+  ["Lighthouse", absolute("/lighthouse/"), "Night-watch visualization of the largest chain harbors."],
   ["Flows", absolute("/flows/"), "Mint/burn flow dashboards."],
   ["Blacklist Tracker", absolute("/blacklist/"), "Issuer freeze events and exposure."],
   ["Dependency Map", absolute("/dependency-map/"), "Inter-stablecoin dependency graph."],
   ["Coverage", absolute("/coverage/"), "What Pharos tracks and what it does not."],
-  [
-    "Cemetery",
-    absolute("/cemetery/"),
-    `${DEAD_STABLECOINS.length} defunct stablecoins and their causes of death.`,
-  ],
+  ["Cemetery", absolute("/cemetery/"), `${DEAD_STABLECOINS.length} defunct stablecoins and their causes of death.`],
   [
     "Stablecoin Cemetery dataset (JSON)",
     absolute("/datasets/stablecoin-cemetery.json"),
@@ -115,11 +115,7 @@ const methodologyLinks = [
 
 const apiLinks = [
   ["API Reference", absolute("/about/api/"), "Public and ops lanes, auth model, endpoint catalogue."],
-  [
-    "OpenAPI spec",
-    absolute("/openapi.json"),
-    "Machine-readable OpenAPI 3.1 endpoint catalogue for the Pharos API.",
-  ],
+  ["OpenAPI spec", absolute("/openapi.json"), "Machine-readable OpenAPI 3.1 endpoint catalogue for the Pharos API."],
   [
     "Postman collection",
     absolute("/postman/pharos-api.postman_collection.json"),
@@ -182,15 +178,17 @@ function render(): string {
     "",
     "## Digest",
     "",
-    ...digests.map((entry) => (
-      `- [${escapeMarkdown(entry.title)}](${absolute(`/digest/${entry.date}/`)}): ${escapeMarkdown(entry.text)}`
-    )),
+    ...digests.map(
+      (entry) =>
+        `- [${escapeMarkdown(entry.title)}](${absolute(`/digest/${entry.date}/`)}): ${escapeMarkdown(entry.text)}`,
+    ),
     "",
     "## Stablecoins Index",
     "",
-    ...ACTIVE_STABLECOINS.map((coin) => (
-      `- [${escapeMarkdown(`${coin.name} (${coin.symbol})`)}](${absolute(stablecoinPath(coin.id))}): ${stablecoinDescription(coin)}`
-    )),
+    ...ACTIVE_STABLECOINS.map(
+      (coin) =>
+        `- [${escapeMarkdown(`${coin.name} (${coin.symbol})`)}](${absolute(stablecoinPath(coin.id))}): ${stablecoinDescription(coin)}`,
+    ),
     "",
   ];
 

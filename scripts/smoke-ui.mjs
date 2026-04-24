@@ -21,7 +21,7 @@ const DEFAULT_OVERFLOW_SETTLE_SAMPLES = 4;
 const DEFAULT_OVERFLOW_SAMPLE_INTERVAL_MS = 350;
 const DEFAULT_STYLE_READY_TIMEOUT_MS = 4000;
 const DEFAULT_OVERFLOW_RETRY_EXTRA_WAIT_MS = 2000;
-const DEFAULT_LIVE_CANARY_ROUTES = ["/yield/", "/alt-pegs/"];
+const DEFAULT_LIVE_CANARY_ROUTES = ["/yield/", "/alt-pegs/", "/lighthouse/"];
 const OVERFLOW_ROUTE_DEFAULTS = [
   "/",
   "/alt-pegs/",
@@ -29,6 +29,7 @@ const OVERFLOW_ROUTE_DEFAULTS = [
   "/flows/",
   "/yield/",
   "/liquidity/",
+  "/lighthouse/",
   "/depeg/",
   "/blacklist/",
   "/stability-index/",
@@ -74,11 +75,9 @@ function ensureMode(input) {
 }
 
 async function runPlaywrightCli(sessionId, args) {
-  const { stdout, stderr } = await execFileAsync(
-    "npx",
-    [...PLAYWRIGHT_CLI_PREFIX, `-s=${sessionId}`, ...args],
-    { maxBuffer: MAX_BUFFER_BYTES },
-  );
+  const { stdout, stderr } = await execFileAsync("npx", [...PLAYWRIGHT_CLI_PREFIX, `-s=${sessionId}`, ...args], {
+    maxBuffer: MAX_BUFFER_BYTES,
+  });
   return `${stdout ?? ""}${stderr ?? ""}`;
 }
 
@@ -90,8 +89,7 @@ function ensureNoCliError(step, output) {
 
 function parseResultJson(output) {
   const match =
-    output.match(/### Result\s*([\s\S]*?)\n### Ran Playwright code/m) ??
-    output.match(/### Result\s*([\s\S]*)$/m);
+    output.match(/### Result\s*([\s\S]*?)\n### Ran Playwright code/m) ?? output.match(/### Result\s*([\s\S]*)$/m);
   if (!match) {
     throw new Error(`[smoke-ui] Could not parse Playwright result output.\n${output}`);
   }
@@ -418,20 +416,20 @@ function buildSmokeRunCode(config) {
 }
 
 function formatOverflowFailure(summary) {
-  const sampledDeltas = Array.isArray(summary.sampledDeltas)
-    ? summary.sampledDeltas.join(",")
-    : "n/a";
-  const offenders = Array.isArray(summary.offenders) && summary.offenders.length > 0
-    ? summary.offenders
-      .map((offender) => {
-        const idPart = offender.id ? `#${offender.id}` : "";
-        const classPart = typeof offender.className === "string" && offender.className.trim().length > 0
-          ? `.${offender.className.trim().replace(/\s+/g, ".")}`
-          : "";
-        return `${offender.tag}${idPart}${classPart}[${offender.left},${offender.right}]`;
-      })
-      .join("; ")
-    : "none";
+  const sampledDeltas = Array.isArray(summary.sampledDeltas) ? summary.sampledDeltas.join(",") : "n/a";
+  const offenders =
+    Array.isArray(summary.offenders) && summary.offenders.length > 0
+      ? summary.offenders
+          .map((offender) => {
+            const idPart = offender.id ? `#${offender.id}` : "";
+            const classPart =
+              typeof offender.className === "string" && offender.className.trim().length > 0
+                ? `.${offender.className.trim().replace(/\s+/g, ".")}`
+                : "";
+            return `${offender.tag}${idPart}${classPart}[${offender.left},${offender.right}]`;
+          })
+          .join("; ")
+      : "none";
   return `Horizontal overflow detected on ${summary.path} (${summary.scrollWidth}px > ${summary.innerWidth}px, sampledDeltas=${sampledDeltas}, cssReady=${summary.cssReady}, bodyMargins=${summary.bodyMarginLeft}/${summary.bodyMarginRight}, offenders=${offenders})`;
 }
 
@@ -452,10 +450,7 @@ function formatUiSummary(summary) {
 }
 
 export function hasGaConfigInit(html, expectedGaId) {
-  const compactHtml = html
-    .replace(/\s+/g, "")
-    .replace(/\\"/g, '"')
-    .replace(/\\'/g, "'");
+  const compactHtml = html.replace(/\s+/g, "").replace(/\\"/g, '"').replace(/\\'/g, "'");
   return [
     `gtag('config','${expectedGaId}')`,
     `gtag('config',"${expectedGaId}")`,
@@ -535,10 +530,7 @@ export async function run() {
     overflowWaitMs: readPositiveIntEnv("SMOKE_UI_OVERFLOW_WAIT_MS", DEFAULT_OVERFLOW_WAIT_MS),
     routes: getOverflowRoutes(mode),
     skipOverflow,
-    styleReadyTimeoutMs: readPositiveIntEnv(
-      "SMOKE_UI_STYLE_READY_TIMEOUT_MS",
-      DEFAULT_STYLE_READY_TIMEOUT_MS,
-    ),
+    styleReadyTimeoutMs: readPositiveIntEnv("SMOKE_UI_STYLE_READY_TIMEOUT_MS", DEFAULT_STYLE_READY_TIMEOUT_MS),
     uiRetryCount,
     uiRetryDelayMs,
     waitTimeoutMs,
