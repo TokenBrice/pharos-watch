@@ -6,6 +6,7 @@ import {
 } from "../../lib/dex-api-common";
 import { sleepWithSignal } from "../../lib/abort";
 import { USER_AGENT } from "../../lib/constants";
+import { cancelResponseBodyQuietly } from "../../lib/response-body";
 
 const ORCA_API = "https://api.orca.so/v2/solana/pools";
 const ORCA_RATE_LIMIT_RETRIES = 3;
@@ -62,8 +63,10 @@ export async function fetchOrcaPools(signal?: AbortSignal): Promise<DexApiFetchR
       degraded = true;
       if (attempt === ORCA_RATE_LIMIT_RETRIES) {
         pageError = "rate limited (429) after retries";
+        await cancelResponseBodyQuietly(res);
         break;
       }
+      await cancelResponseBodyQuietly(res);
       await sleepWithSignal(ORCA_RATE_LIMIT_BACKOFF_MS * 2 ** attempt, signal);
     }
 
@@ -79,6 +82,7 @@ export async function fetchOrcaPools(signal?: AbortSignal): Promise<DexApiFetchR
 
     if (!res.ok) {
       errors.push(`API returned ${res.status}`);
+      await cancelResponseBodyQuietly(res);
       break;
     }
 

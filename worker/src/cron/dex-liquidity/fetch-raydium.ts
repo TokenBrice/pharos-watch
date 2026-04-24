@@ -5,6 +5,7 @@ import {
   type DexApiPool,
 } from "../../lib/dex-api-common";
 import { USER_AGENT } from "../../lib/constants";
+import { cancelResponseBodyQuietly } from "../../lib/response-body";
 import { isDexApiRecord, readDexApiJson } from "./direct-api-json";
 
 const RAYDIUM_API = "https://api-v3.raydium.io/pools/info/list";
@@ -71,6 +72,7 @@ async function fetchPoolType(
 
     if (!res.ok) {
       errors.push(`${poolType} page ${page} returned ${res.status}`);
+      await cancelResponseBodyQuietly(res);
       break;
     }
 

@@ -1,5 +1,6 @@
 import { makeDexApiFetchResult, type DexApiFetchResult, type DexApiPool } from "../../lib/dex-api-common";
 import { USER_AGENT } from "../../lib/constants";
+import { cancelResponseBodyQuietly } from "../../lib/response-body";
 import { isDexApiRecord, readDexApiJson } from "./direct-api-json";
 
 const BALANCER_API = "https://api-v3.balancer.fi/";
@@ -144,6 +145,7 @@ export async function fetchBalancerPools(signal?: AbortSignal): Promise<DexApiFe
 
     if (!res.ok) {
       errors.push(`API returned ${res.status} on page ${skip / pageSize + 1}`);
+      await cancelResponseBodyQuietly(res);
       break;
     }
 

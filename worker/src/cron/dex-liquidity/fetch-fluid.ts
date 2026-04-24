@@ -7,6 +7,7 @@ import {
 import { USER_AGENT } from "../../lib/constants";
 import { fetchEvmCallHexAtBlock } from "../../lib/evm-rpc";
 import { buildChainRpcs, type ChainRpcConfig } from "../../lib/chain-registry";
+import { cancelResponseBodyQuietly } from "../../lib/response-body";
 
 const FLUID_API_BASE = "https://api.fluid.instadapp.io/v2";
 const FLUID_RESOLVER_CALL_GAS = "0x0F4240";
@@ -155,6 +156,7 @@ export async function fetchFluidPools(
         signal: signal ? AbortSignal.any([signal, AbortSignal.timeout(15_000)]) : AbortSignal.timeout(15_000),
       });
       if (!res.ok) {
+        await cancelResponseBodyQuietly(res);
         throw new Error(`${chain} returned ${res.status}`);
       }
       const tickers = await res.json() as unknown;
