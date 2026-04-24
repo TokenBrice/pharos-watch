@@ -43,3 +43,14 @@ Scope: implementation notes for `agents/plans/2026-04-24-website-maintainability
   - `npm run check:hotspot-ratchet`
   - `npm run check:unused-code`
 - Follow-up signal: final repo-wide cleanup should decide whether `worker/src/api/mint-burn-flows.ts` is a real P1 handler decomposition candidate or just needs ownership metadata refinement.
+
+## Slice 4: Command Palette Pure Model Extraction
+
+- Added `src/components/command-palette-model.ts` for pure fuzzy matching, command action descriptors, page catalog composition, and result grouping order.
+- Kept dialog rendering, global shortcut listeners, selected-index state, focus capture/restoration, scroll-into-view, and keyboard handling in `src/components/command-palette.tsx`.
+- Added unit coverage for matching, action descriptor output, and grouping order.
+- Validation:
+  - `npm test -- src/hooks/__tests__/use-command-palette-history.test.ts src/components/__tests__/command-palette-model.test.ts`
+  - `npm run typecheck`
+  - `npm run check:hotspot-ratchet`
+- Follow-up signal: a later interaction-test pass is still needed before moving keyboard/focus behavior out of `command-palette.tsx`.

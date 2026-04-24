@@ -5,13 +5,20 @@ import { useRouter } from "next/navigation";
 import Image from "next/image";
 import { Moon, Sun, FileText, Coins, Clock, Trash2, Search, Copy, BookOpen, Newspaper, KeyRound } from "lucide-react";
 import { TRACKED_STABLECOINS } from "@shared/lib/stablecoins";
-import { NAV_ITEMS, BOTTOM_NAV_ITEMS } from "@/lib/nav-config";
 import { useLogos } from "@/hooks/use-logos";
 import { buildStablecoinUrl } from "@/lib/urls";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { useCommandPaletteHistory } from "@/hooks/use-command-palette-history";
 import { OPEN_COMMAND_PALETTE_EVENT } from "@/lib/command-palette";
 import { useThemeToggle } from "@/hooks/use-theme-toggle";
+import {
+  COMMAND_PALETTE_PAGES,
+  buildCommandPaletteActionDefinitions,
+  fuzzyMatch,
+  groupCommandPaletteResults,
+  type CommandPaletteActionIcon,
+  type CommandPaletteActionId,
+} from "@/components/command-palette-model";
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
@@ -26,19 +33,24 @@ interface SearchResult {
   keywords?: string[];
 }
 
-// ── Fuzzy match ──────────────────────────────────────────────────────────────
-
-function fuzzyMatch(query: string, target: string): boolean {
-  const q = query.toLowerCase();
-  const t = target.toLowerCase();
-  return t.includes(q) || t.split(/\s+/).some((word) => word.startsWith(q));
-}
-
-// ── All pages ────────────────────────────────────────────────────────────────
-
-const ALL_PAGES = [...NAV_ITEMS, ...BOTTOM_NAV_ITEMS];
-
 // ── Component ────────────────────────────────────────────────────────────────
+
+function getActionIcon(icon: CommandPaletteActionIcon): React.ReactNode {
+  switch (icon) {
+    case "theme-light":
+      return <Sun className="h-4 w-4" />;
+    case "theme-dark":
+      return <Moon className="h-4 w-4" />;
+    case "copy":
+      return <Copy className="h-4 w-4" />;
+    case "digest":
+      return <Newspaper className="h-4 w-4" />;
+    case "methodology":
+      return <BookOpen className="h-4 w-4" />;
+    case "api-docs":
+      return <KeyRound className="h-4 w-4" />;
+  }
+}
 
 export function CommandPalette() {
   const [open, setOpen] = useState(false);
@@ -164,7 +176,7 @@ export function CommandPalette() {
 
     // Pages
     if (q) {
-      for (const page of ALL_PAGES) {
+      for (const page of COMMAND_PALETTE_PAGES) {
         if (
           fuzzyMatch(q, page.label) ||
           (page.description && fuzzyMatch(q, page.description))
@@ -187,82 +199,42 @@ export function CommandPalette() {
     }
 
     // Actions
-    const actions: Array<{
-      id: string;
-      label: string;
-      sublabel: string;
-      keywords: string;
-      icon: React.ReactNode;
-      onSelect: () => void;
-    }> = [
-      {
-        id: "action-theme",
-        label: isDark ? "Switch to light mode" : "Switch to dark mode",
-        sublabel: "Toggle dark/light theme",
-        keywords: "toggle dark light mode theme",
-        icon: isDark ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />,
-        onSelect: () => {
+    const selectAction = (actionId: CommandPaletteActionId) => {
+      switch (actionId) {
+        case "theme":
           toggleTheme();
           closePalette();
-        },
-      },
-      {
-        id: "action-copy-url",
-        label: "Copy current URL",
-        sublabel: "Copies the current page URL to your clipboard",
-        keywords: "copy url link share clipboard",
-        icon: <Copy className="h-4 w-4" />,
-        onSelect: () => {
+          return;
+        case "copy-url":
           if (typeof window !== "undefined" && navigator.clipboard) {
             void navigator.clipboard.writeText(window.location.href);
           }
           closePalette();
-        },
-      },
-      {
-        id: "action-open-digest",
-        label: "Open today's digest",
-        sublabel: "Daily editorial recap of the stablecoin market",
-        keywords: "digest daily editorial newsletter summary",
-        icon: <Newspaper className="h-4 w-4" />,
-        onSelect: () => {
+          return;
+        case "open-digest":
           router.push("/digest/");
           closePalette();
-        },
-      },
-      {
-        id: "action-open-methodology",
-        label: "Open methodology",
-        sublabel: "Reference manual for formulas, thresholds, and changelogs",
-        keywords: "methodology reference formulas",
-        icon: <BookOpen className="h-4 w-4" />,
-        onSelect: () => {
+          return;
+        case "open-methodology":
           router.push("/methodology/");
           closePalette();
-        },
-      },
-      {
-        id: "action-open-api-docs",
-        label: "Open API docs",
-        sublabel: "Auth model, key requirement, and full endpoint reference",
-        keywords: "api docs endpoint reference keys",
-        icon: <KeyRound className="h-4 w-4" />,
-        onSelect: () => {
+          return;
+        case "open-api-docs":
           router.push("/about/api/");
           closePalette();
-        },
-      },
-    ];
+          return;
+      }
+    };
 
-    for (const action of actions) {
+    for (const action of buildCommandPaletteActionDefinitions(isDark)) {
       if (!q || fuzzyMatch(q, action.label) || fuzzyMatch(q, action.keywords)) {
         items.push({
           id: action.id,
           label: action.label,
           sublabel: action.sublabel,
           section: "Actions",
-          icon: action.icon,
-          onSelect: action.onSelect,
+          icon: getActionIcon(action.icon),
+          onSelect: () => selectAction(action.actionId),
         });
       }
     }
@@ -273,22 +245,7 @@ export function CommandPalette() {
   // ── Grouped results for rendering ──────────────────────────────────────
 
   const groupedResults = useMemo(() => {
-    const groups: { section: string; items: SearchResult[] }[] = [];
-    const sectionOrder: SearchResult["section"][] = [
-      "Recent",
-      "Stablecoins",
-      "Pages",
-      "Actions",
-    ];
-
-    for (const section of sectionOrder) {
-      const items = results.filter((r) => r.section === section);
-      if (items.length > 0) {
-        groups.push({ section, items });
-      }
-    }
-
-    return groups;
+    return groupCommandPaletteResults(results);
   }, [results]);
 
   // ── Flat list for keyboard navigation indexing ─────────────────────────
