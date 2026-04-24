@@ -7,6 +7,7 @@ import { QueryErrorNotice } from "@/components/query-error-notice";
 import { FlowChart } from "@/components/flow-chart";
 import { FlowTable } from "@/components/flow-table";
 import { FlowBrrrOverview } from "@/components/flow-brrr-overview";
+import { FlowPressureReceipt } from "@/components/flow-pressure-receipt";
 import { FeaturePageShell } from "@/components/feature-page-shell";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import {
@@ -143,6 +144,15 @@ export default function FlowsClient() {
           weeklyHourly={weeklyHourly}
           isLoading={isSummaryLoading || (hours !== 168 && isWeeklyLoading)}
         />
+        {!isSummaryLoading ? (
+          <FlowPressureReceipt
+            gauge={gauge ?? null}
+            coins={coins}
+            weeklyHourly={weeklyHourly}
+            scopeLabel={scopeLabel}
+            syncWarning={syncWarning}
+          />
+        ) : null}
         <p className="mt-3 text-xs text-muted-foreground">
           Coverage badges flag coins that are still bootstrapping, lagging, or
           missing enough history for full long-window comparisons. Values marked
