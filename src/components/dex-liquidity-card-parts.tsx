@@ -10,7 +10,7 @@ import {
 } from "@/components/liquidity-breakdown";
 import { useDexLiquidityHistory } from "@/hooks/api-hooks";
 import { useChartContainerReady } from "@/hooks/use-chart-container-ready";
-import { formatCurrency, formatChartDate, formatPercentFromRatio } from "@shared/lib/format";
+import { formatCurrency, formatChartDate } from "@shared/lib/format";
 import { RECHARTS_TOOLTIP_STYLES, CHART_BLUE } from "@/lib/chart-colors";
 import {
   PROTOCOL_COLORS,
