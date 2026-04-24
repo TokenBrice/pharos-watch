@@ -38,6 +38,20 @@ export interface DsFetchPoolsResult {
   pairs: DsPair[];
 }
 
+function isDsPair(value: unknown): value is DsPair {
+  if (!value || typeof value !== "object") return false;
+  const pair = value as Partial<DsPair>;
+  return typeof pair.chainId === "string"
+    && typeof pair.dexId === "string"
+    && typeof pair.pairAddress === "string"
+    && !!pair.baseToken
+    && typeof pair.baseToken.address === "string"
+    && typeof pair.baseToken.symbol === "string"
+    && !!pair.quoteToken
+    && typeof pair.quoteToken.address === "string"
+    && typeof pair.quoteToken.symbol === "string";
+}
+
 /**
  * Resolve the tracked token side and, when possible, its USD price.
  *
@@ -103,8 +117,10 @@ export async function fetchDsTokenPoolsWithStatus(
   if (!res?.ok) return { ok: false, pairs: [] };
 
   try {
-    const data = (await res.json()) as DsPair[] | null;
-    return { ok: true, pairs: Array.isArray(data) ? data : [] };
+    const data = (await res.json()) as unknown;
+    if (!Array.isArray(data)) return { ok: false, pairs: [] };
+    const pairs = data.filter(isDsPair);
+    return { ok: data.length === 0 || pairs.length > 0, pairs };
   } catch {
     return { ok: false, pairs: [] };
   }

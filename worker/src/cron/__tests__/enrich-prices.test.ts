@@ -647,6 +647,53 @@ describe("enrichMissingPrices", () => {
     expect(circuitWrites).toContain(`circuit:${CIRCUIT_SOURCE.DEXSCREENER_SEARCH}`);
   });
 
+  it("records DexScreener search failure when a 200 response contains malformed pairs", async () => {
+    const db = mockD1([
+      {
+        match: "SELECT value, updated_at FROM cache WHERE key = ?",
+        matchBinds: [`circuit:${CIRCUIT_SOURCE.DEXSCREENER_PRICES}`],
+        rows: [],
+        first: null,
+      },
+      {
+        match: "SELECT value, updated_at FROM cache WHERE key = ?",
+        matchBinds: [`circuit:${CIRCUIT_SOURCE.DEXSCREENER_SEARCH}`],
+        rows: [],
+        first: null,
+      },
+    ]);
+
+    const assets: PeggedAsset[] = [
+      {
+        id: "search-usd",
+        name: "Search USD",
+        symbol: "SUSD",
+        price: 0,
+        pegType: "peggedUSD",
+        circulating: { total: 90 },
+      },
+    ];
+
+    vi.stubGlobal("fetch", vi.fn(async () =>
+      new Response(JSON.stringify({ pairs: [{ pairAddress: "0xbroken" }] }), { status: 200 }),
+    ));
+
+    const result = await runDexScreenerPass(assets, undefined, db);
+
+    expect(result.resolved).toBe(0);
+    const searchWrite = db
+      .getHistory()
+      .find((entry) =>
+        entry.sql.includes("INSERT OR REPLACE INTO cache") &&
+        entry.binds[0] === `circuit:${CIRCUIT_SOURCE.DEXSCREENER_SEARCH}`
+      );
+    expect(searchWrite).toBeDefined();
+    expect(JSON.parse(String(searchWrite?.binds[1]))).toMatchObject({
+      state: "closed",
+      consecutiveFailures: 1,
+    });
+  });
+
   it("can still run exact DexScreener lookups when the search breaker is open", async () => {
     const nowSec = Math.floor(Date.now() / 1000);
     const db = mockD1([

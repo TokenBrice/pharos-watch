@@ -34,6 +34,19 @@ interface DexScreenerPair {
   chainId: string;
 }
 
+function isDexScreenerSearchPair(value: unknown): value is DexScreenerPair {
+  if (!value || typeof value !== "object") return false;
+  const pair = value as Partial<DexScreenerPair>;
+  return !!pair.baseToken
+    && typeof pair.baseToken.symbol === "string"
+    && !!pair.quoteToken
+    && typeof pair.quoteToken.symbol === "string"
+    && typeof pair.priceUsd === "string"
+    && !!pair.liquidity
+    && typeof pair.liquidity.usd === "number"
+    && typeof pair.chainId === "string";
+}
+
 interface DexScreenerTarget {
   chain: string;
   address: string;
@@ -266,11 +279,23 @@ export async function runDexScreenerPass(
           continue;
         }
 
-        dexSuccessfulSearchCalls += 1;
-        const data = (await res.json()) as { pairs?: DexScreenerPair[] };
-        if (!data.pairs?.length) continue;
+        const data = (await res.json()) as { pairs?: unknown };
+        if (data.pairs != null && !Array.isArray(data.pairs)) {
+          console.warn(`[enrich] DexScreener returned malformed pairs for ${entry.asset.symbol}`);
+          continue;
+        }
+        const pairs = Array.isArray(data.pairs)
+          ? data.pairs.filter(isDexScreenerSearchPair)
+          : [];
+        if (Array.isArray(data.pairs) && data.pairs.length > 0 && pairs.length === 0) {
+          console.warn(`[enrich] DexScreener returned no usable pairs for ${entry.asset.symbol}`);
+          continue;
+        }
 
-        const candidates = data.pairs.filter((pair) => {
+        dexSuccessfulSearchCalls += 1;
+        if (pairs.length === 0) continue;
+
+        const candidates = pairs.filter((pair) => {
           if (pair.baseToken.symbol.toUpperCase() !== symbolKey) return false;
           if (!pair.priceUsd || !pair.liquidity?.usd) return false;
           if (pair.liquidity.usd < DEXSCREENER_MIN_LIQUIDITY_USD) return false;
