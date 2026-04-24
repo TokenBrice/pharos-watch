@@ -21,4 +21,12 @@ describe("FiatWorldAtlas", () => {
     expect(screen.getByRole("heading", { name: "Peg Diversity Atlas" })).toBeTruthy();
     expect(screen.queryByText("Peg Diversity Map")).toBeNull();
   });
+
+  it("renders an Expand atlas trigger button", () => {
+    render(<FiatWorldAtlas fiatItems={[]} commodityIndexItems={[]} />);
+    const trigger = screen.getByRole("button", { name: /expand atlas/i });
+    expect(trigger).toBeTruthy();
+    expect(trigger.getAttribute("aria-haspopup")).toBe("dialog");
+    expect(trigger.getAttribute("aria-expanded")).toBe("false");
+  });
 });
