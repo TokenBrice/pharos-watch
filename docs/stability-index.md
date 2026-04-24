@@ -133,7 +133,7 @@ See [API Reference](./api-reference.md) for the full response shape.
 
 ## Frontend
 
-- **Homepage widget**: `src/components/stability-index.tsx` — score, band, delta from yesterday, 30-day sparkline, animated lighthouse icon
+- **Homepage widget**: `src/components/kpi-bar.tsx` — score, band, delta from yesterday, and 30-day sparkline in the market snapshot bar
 - **Dedicated page**: `src/app/stability-index/client.tsx` — hero KPI bar focused on the lighthouse/current PSI signal and historical PSI measurements, score history chart with band-colored zones, Beam Dimmers for the current formula component pressure, component breakdown stacked area chart, time range filter, methodology section, and contextual methodology hints on PSI plus the four component labels (`Severity`, `Breadth`, `Stress Breadth`, `Trend`). Beam Dimmers use the current PSI component values and prior-sample deltas only; they are not a causal event timeline and do not change scoring.
 - **Hook**: `src/hooks/api-hooks.ts` — `useStabilityIndex()` (homepage), `useStabilityIndexDetail()` (page)
 - **Route strategy (2026-03-05):** legacy `/stability-index-alt` was retired after Tier 3A review (no nav/sitemap/internal product usage) and now redirects to `/stability-index` via `public/_redirects`
@@ -150,6 +150,6 @@ The daily digest cron (08:05 UTC) queries the latest two stability index rows an
 | `worker/src/cron/stability-index.ts` | 30-minute cron job |
 | `worker/src/api/stability-index.ts` | API endpoint |
 | `worker/src/api/backfill-stability-index.ts` | Admin backfill (replays formula over completed UTC days only, using the PSI-eligible supply universe plus same-day historical price replay where available) |
-| `src/components/stability-index.tsx` | Homepage widget + lighthouse SVG |
+| `src/components/kpi-bar.tsx` | Homepage market snapshot PSI widget |
 | `src/app/stability-index/client.tsx` | Full page with charts and methodology |
 | `src/hooks/api-hooks.ts` | TanStack Query hook exports for `useStabilityIndex()` and `useStabilityIndexDetail()` |

@@ -34,7 +34,7 @@ A new component `PsiLighthouseScene` lives at `src/app/stability-index/psi-light
 - No color prop — band drives color internally via `PSI_HEX_COLORS` from `@shared/lib/psi-colors`.
 - Inline SVG `<defs>` are scoped with `useId()` so multiple instances (or co-existence with the /chains/ scene) don't collide.
 
-The old `PsiLighthouse` export in `src/components/stability-index.tsx` is removed after confirming it has no other call sites. If the file becomes empty, delete it.
+The old homepage PSI lighthouse treatment is removed after confirming it has no remaining call sites in `src/components/kpi-bar.tsx`.
 
 ### Scene composition
 
@@ -115,7 +115,7 @@ Existing tests referencing `PsiLighthouse` or `ScoreArc` are updated or removed 
 - `src/app/stability-index/psi-lighthouse-scene.css` — new
 - `src/app/stability-index/psi-lighthouse-scene.test.tsx` — new
 - `src/app/stability-index/presentational.tsx` — hero card chrome removal, left column swap, remove `ScoreArc` + `ARC_BANDS`
-- `src/components/stability-index.tsx` — remove `PsiLighthouse` (delete file if empty after)
+- `src/components/kpi-bar.tsx` — remove any old inline PSI lighthouse usage if still present
 - Update any test referencing removed symbols
 
 ## Out of scope
