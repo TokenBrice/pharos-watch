@@ -49,10 +49,10 @@ export function RegionSummaryPill({
       <span className="text-[11px] font-semibold uppercase tracking-[0.16em] text-foreground/90 dark:text-white/92">
         {region}
       </span>
-      <span className="font-mono text-[11px] tabular-nums text-muted-foreground dark:text-slate-300/86">
+      <span className="hidden font-mono text-[11px] tabular-nums text-muted-foreground dark:text-slate-300/86 sm:inline">
         {formatCohortCount(cohortCount)} · {formatCoinCount(coinCount)}
       </span>
-      <MapPin className="h-3 w-3 shrink-0 text-muted-foreground" aria-hidden="true" />
+      <MapPin className="hidden h-3 w-3 shrink-0 text-muted-foreground sm:block" aria-hidden="true" />
     </Link>
   );
 }

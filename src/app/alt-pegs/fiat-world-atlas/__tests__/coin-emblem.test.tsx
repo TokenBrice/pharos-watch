@@ -40,8 +40,9 @@ describe("CoinEmblem", () => {
       </HoverProvider>,
     );
     const link = getByRole("link") as HTMLAnchorElement;
-    expect(link.style.width).toBe("109px");
-    expect(link.style.height).toBe("109px");
+    expect(link.style.width).toBe("calc(var(--coin-size) * var(--peg-coin-scale, 1))");
+    expect(link.style.height).toBe("calc(var(--coin-size) * var(--peg-coin-scale, 1))");
+    expect(link.style.getPropertyValue("--coin-size")).toBe("109px");
     expect(link.style.left).toBe("52%");
     expect(link.style.top).toBe("20%");
     expect(link.style.getPropertyValue("--coin-z")).toBe("24");

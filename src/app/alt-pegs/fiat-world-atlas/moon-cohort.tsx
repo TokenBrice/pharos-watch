@@ -29,7 +29,6 @@ export function MoonCohort({ cohort }: { cohort: SkyCohort }) {
           cohortSymbolPreview={cohortSymbolPreview}
           cohortRank={cohort.rank}
           hoverCardYPlacement="below"
-          showTickerLabel={c.id === cohort.coins[0]?.id}
         />
       ))}
     </div>

@@ -49,7 +49,6 @@ export function SunCohort({ cohort }: { cohort: SkyCohort }) {
         cohortSymbolPreview={cohortSymbolPreview}
         cohortRank={cohort.rank}
         hoverCardYPlacement="below"
-        showTickerLabel
       />
       {rest.map((c, i) => (
         <CoinEmblem

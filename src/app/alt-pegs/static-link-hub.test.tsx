@@ -33,35 +33,43 @@ describe("StaticAltPegLinkHub", () => {
     expect(html).toContain("Alt-Peg Atlas");
     expect(html).toContain("Peg Diversity Map");
     expect(html).toContain("References beyond geography");
-    expect(html).toContain("Cohort details continue below the market-cap charts");
+    expect(html).toContain("Every non-USD stablecoin sits at its geographic origin");
+    expect(html).toContain("$25M");
+    expect(html).toContain("$200M");
   });
 
-  it("keeps the desktop atlas gated behind the xl layout", () => {
+  it("renders the atlas at every breakpoint instead of gating it behind xl", () => {
     const { container } = render(withQueryClient(<StaticAltPegLinkHub />));
-    const desktopAtlas = container.querySelector('[data-alt-peg-layout="desktop-atlas"]');
-    expect(desktopAtlas?.className).toContain("hidden");
-    expect(desktopAtlas?.className).toContain("xl:block");
+    const atlas = container.querySelector('[data-alt-peg-layout="responsive-atlas"]');
+    expect(atlas?.className).toContain("block");
+    expect(atlas?.className).not.toContain("hidden");
+    expect(atlas?.className).not.toContain("xl:block");
   });
 
-  it("renders the peg-hero night-sky composition inside the desktop atlas", () => {
+  it("renders the peg-hero night-sky composition inside the responsive atlas", () => {
     const { container } = render(withQueryClient(<StaticAltPegLinkHub />));
-    const desktopAtlas = container.querySelector('[data-alt-peg-layout="desktop-atlas"]');
-    expect(desktopAtlas?.querySelector(".peg-hero")).not.toBeNull();
-    expect(desktopAtlas?.querySelector(".peg-hero__sky")).not.toBeNull();
-    expect(desktopAtlas?.querySelector(".peg-hero__earth")).not.toBeNull();
+    const atlas = container.querySelector('[data-alt-peg-layout="responsive-atlas"]');
+    expect(atlas?.querySelector(".peg-hero")).not.toBeNull();
+    expect(atlas?.querySelector(".peg-hero__sky")).not.toBeNull();
+    expect(atlas?.querySelector(".peg-hero__earth")).not.toBeNull();
   });
 
   it("explains the live coin layer while atlas data is loading", () => {
     const { container } = render(withQueryClient(<StaticAltPegLinkHub />));
-    const desktopAtlas = container.querySelector('[data-alt-peg-layout="desktop-atlas"]');
-    expect(desktopAtlas?.textContent).toContain("Fiat logo size");
-    const status = desktopAtlas?.querySelector('[role="status"]');
+    const atlas = container.querySelector('[data-alt-peg-layout="responsive-atlas"]');
+    expect(atlas?.textContent).toContain("Fiat logo size");
+    const status = atlas?.querySelector('[role="status"]');
     expect(status?.textContent).toContain("Loading live coin positions.");
   });
 
-  it("points mobile users to the moved cohort detail section", () => {
+  it("wraps the atlas in a responsive viewport without forcing a tab stop", () => {
     const { container } = render(withQueryClient(<StaticAltPegLinkHub />));
-    expect(container.textContent).toContain("Cohort details continue below the market-cap charts");
+    const atlas = container.querySelector('[data-alt-peg-layout="responsive-atlas"]');
+    const viewport = atlas?.querySelector(".peg-hero__viewport");
+    expect(viewport).not.toBeNull();
+    expect(viewport?.getAttribute("role")).toBe("group");
+    expect(viewport?.hasAttribute("tabindex")).toBe(false);
+    expect(viewport?.getAttribute("aria-label")).toBe("Peg diversity map atlas");
   });
 
   it("keeps the static crawlable directory hidden with separate anchor ids", () => {

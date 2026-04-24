@@ -9,7 +9,7 @@ import { useHoverState } from "@/app/alt-pegs/fiat-world-atlas/hover-context";
 
 export type EmblemVariant = "fiat" | "sun-core" | "sun-planet" | "moon" | "star";
 type HoverCardYPlacement = "auto" | "above" | "below";
-type CoinEmblemStyle = CSSProperties & { "--coin-z": number };
+type CoinEmblemStyle = CSSProperties & { "--coin-z": number; "--coin-size": string };
 
 function CoinEmblemInner({
   coin,
@@ -59,8 +59,9 @@ function CoinEmblemInner({
   const style: CoinEmblemStyle = {
     left: `${coin.x}%`,
     top: `${coin.y}%`,
-    width: `${coin.sizePx}px`,
-    height: `${coin.sizePx}px`,
+    width: "calc(var(--coin-size) * var(--peg-coin-scale, 1))",
+    height: "calc(var(--coin-size) * var(--peg-coin-scale, 1))",
+    "--coin-size": `${coin.sizePx}px`,
     "--coin-z": Math.min(24, Math.max(5, Math.round(coin.sizePx / 4))),
   };
 

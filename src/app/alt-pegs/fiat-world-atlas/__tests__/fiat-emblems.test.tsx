@@ -47,8 +47,10 @@ describe("FiatEmblems", () => {
     expect(hitTarget).not.toBeNull();
     expect(hitTarget.getAttribute("aria-hidden")).toBe("true");
     expect(hitTarget.getAttribute("tabindex")).toBe("-1");
-    expect(hitTarget.style.width).toBe("24px");
-    expect(hitTarget.style.height).toBe("24px");
+    expect(hitTarget.style.width).toBe("calc(var(--hit-size) * var(--peg-hit-scale, 1))");
+    expect(hitTarget.style.height).toBe("calc(var(--hit-size) * var(--peg-hit-scale, 1))");
+    expect(hitTarget.style.getPropertyValue("--hit-size")).toBe("24px");
+    expect(container.querySelector(".coin-emblem__mini-label")).toBeNull();
 
     fireEvent.mouseEnter(hitTarget);
     expect(screen.getByRole("tooltip").textContent).toContain("VCHF");

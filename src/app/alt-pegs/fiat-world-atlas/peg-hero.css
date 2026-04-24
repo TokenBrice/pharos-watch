@@ -1,6 +1,25 @@
+.peg-hero__viewport {
+  overflow-x: hidden;
+  overflow-y: hidden;
+  overscroll-behavior-x: contain;
+  scrollbar-color: oklch(0.62 0.13 248 / 0.65) oklch(0.12 0.03 252 / 0.55);
+  scrollbar-width: thin;
+  -webkit-overflow-scrolling: touch;
+}
+
+.peg-hero__viewport:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: -2px;
+}
+
 .peg-hero__live-shell {
   border-top: 1px solid oklch(0.6 0 0 / 0.12);
   background: oklch(0.035 0.012 255 / 0.9);
+  width: 100%;
+  --peg-coin-scale: 1;
+  --peg-coin-hover-scale: 1.07;
+  --peg-hit-scale: 1;
+  --peg-sky-scale: 1;
 }
 
 .peg-hero__legend-rail {
@@ -80,7 +99,7 @@
   position: absolute;
   border-radius: 50%;
   background: #fff;
-  transform: translate(-50%, -50%);
+  transform: translate(-50%, -50%) scale(var(--peg-coin-scale, 1));
   box-shadow: 0 0 4px rgba(255, 255, 255, 0.7);
 }
 
@@ -102,7 +121,7 @@
 /* ===== Sky region tag ===== */
 .sky-region-tag {
   position: absolute;
-  transform: translate(-50%, -50%);
+  transform: translate(-50%, -50%) scale(var(--peg-coin-scale, 1));
   font-size: 9px;
   letter-spacing: 0.14em;
   text-transform: uppercase;
@@ -132,8 +151,8 @@
   pointer-events: none;
 }
 .sun-cohort__halo {
-  width: 260px;
-  height: 260px;
+  width: calc(260px * var(--peg-sky-scale, 1));
+  height: calc(260px * var(--peg-sky-scale, 1));
   background: radial-gradient(
     circle at center,
     oklch(0.92 0.16 90 / 0.38) 0%,
@@ -145,15 +164,15 @@
 .sun-cohort__rays {
   position: absolute;
   transform: translate(-50%, -50%);
-  width: 340px;
-  height: 340px;
+  width: calc(340px * var(--peg-sky-scale, 1));
+  height: calc(340px * var(--peg-sky-scale, 1));
   z-index: 1;
   pointer-events: none;
   opacity: 0.26;
 }
 .moon-cohort__halo {
-  width: 128px;
-  height: 128px;
+  width: calc(128px * var(--peg-sky-scale, 1));
+  height: calc(128px * var(--peg-sky-scale, 1));
   background: radial-gradient(
     circle at center,
     oklch(0.9 0.02 250 / 0.28) 0%,
@@ -263,7 +282,7 @@
 
 .coin-emblem.is-hovered,
 .coin-emblem:focus-visible {
-  transform: translate(-50%, -50%) scale(1.07);
+  transform: translate(-50%, -50%) scale(var(--peg-coin-hover-scale, 1.07));
   z-index: 30;
   box-shadow:
     0 0 0 3px oklch(0.75 0.15 250 / 0.55),
@@ -295,7 +314,7 @@
   border-radius: 999px;
   cursor: pointer;
   pointer-events: auto;
-  transform: translate(-50%, -50%);
+  transform: translate(-50%, -50%) scale(var(--peg-hit-scale, 1));
   z-index: var(--hit-z, 40);
 }
 
@@ -559,6 +578,10 @@
   font-size: 9px;
 }
 
+.peg-hero__top-value-context {
+  display: inline;
+}
+
 @media (min-width: 1450px) {
   .peg-hero__top-row {
     grid-template-columns: auto minmax(0, 1fr) auto;
@@ -580,6 +603,72 @@
 
   .peg-hero__top-label {
     grid-column: 1 / -1;
+  }
+}
+
+@media (max-width: 1279px) {
+  .peg-hero__live-shell {
+    --peg-coin-scale: 0.72;
+    --peg-coin-hover-scale: 0.8;
+    --peg-hit-scale: 1.12;
+    --peg-sky-scale: 0.88;
+  }
+
+  .peg-hero {
+    height: clamp(360px, 54vw, 470px);
+  }
+}
+
+@media (max-width: 639px) {
+  .peg-hero__live-shell {
+    --peg-coin-scale: 0.54;
+    --peg-coin-hover-scale: 0.64;
+    --peg-hit-scale: 1.35;
+    --peg-sky-scale: 0.72;
+  }
+
+  .peg-hero__legend-rail {
+    grid-template-columns: 1fr;
+    gap: 7px;
+    padding: 8px;
+  }
+
+  .peg-hero {
+    height: clamp(395px, 104vw, 470px);
+  }
+
+  .peg-hero__sky {
+    height: 38%;
+  }
+
+  .peg-hero__earth {
+    height: 62%;
+  }
+
+  .peg-hero__top-cohorts {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    padding: 7px;
+  }
+
+  .peg-hero__top-row {
+    min-height: 32px;
+    padding: 3px;
+  }
+
+  .peg-hero__top-value-context {
+    display: none;
+  }
+
+  .coin-emblem__mini-label {
+    bottom: -14px;
+    font-size: 8px;
+    padding: 3px 5px;
+  }
+}
+
+@media (min-width: 1280px) {
+  .peg-hero__viewport {
+    overflow-x: visible;
   }
 }
 

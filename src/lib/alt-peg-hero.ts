@@ -3,7 +3,7 @@ import { getCirculatingRaw } from "@shared/lib/supply";
 import { ACTIVE_META_BY_ID } from "@shared/lib/stablecoins";
 import type { PegCurrency, StablecoinData } from "@shared/types";
 import { PEG_ANCHORS } from "@/lib/alt-peg-emblems";
-import { arrangeClusterCoins, type PackingInput } from "@/lib/alt-peg-packing";
+import { arrangeClusterCoins, resolvePackedCoinOverlaps, type PackingInput } from "@/lib/alt-peg-packing";
 import { coinEmblemSize, FIAT_MAP_SIZE_CEIL, SKY_COHORT_SIZE_CEIL } from "@/lib/alt-peg-sizing";
 import { logosById } from "@/lib/logos";
 import { buildStablecoinUrl } from "@/lib/urls";
@@ -132,7 +132,33 @@ function placeSkyCohort(kind: SkyCohortKind, coins: HeroCoin[], rank?: number): 
     };
   });
 
-  return { ...template, rank, coins: placed };
+  return {
+    ...template,
+    rank,
+    coins: resolvePackedCoinOverlaps(placed, {
+      frameWidthPx: 1000,
+      frameHeightPx: 180,
+      paddingPx: 7,
+      getMobility: (coin) => (coin.id === placed[0]?.id ? 0.18 : 1),
+    }),
+  };
+}
+
+function separateFiatClusterLogos(clusters: readonly PegCluster[]): PegCluster[] {
+  if (clusters.length < 2) return [...clusters];
+
+  const flat = clusters.flatMap((cluster) => cluster.coins);
+  const leaderIds = new Set(clusters.map((cluster) => cluster.coins[0]?.id).filter(Boolean));
+  const separated = resolvePackedCoinOverlaps(flat, {
+    paddingPx: 6,
+    getMobility: (coin) => (leaderIds.has(coin.id) ? 0.24 : 1),
+  });
+  const byId = new Map(separated.map((coin) => [coin.id, coin]));
+
+  return clusters.map((cluster) => ({
+    ...cluster,
+    coins: cluster.coins.map((coin) => byId.get(coin.id) ?? coin),
+  }));
 }
 
 export function buildPegDiversityHero(peggedAssets: readonly StablecoinData[] | undefined): PegDiversityHero {
@@ -187,6 +213,7 @@ export function buildPegDiversityHero(peggedAssets: readonly StablecoinData[] | 
     const bMax = b.coins[0]?.marketCap ?? 0;
     return aMax - bMax;
   });
+  const separatedPegClusters = separateFiatClusterLogos(pegClusters);
 
   const skyCohorts: readonly SkyCohort[] = [
     placeSkyCohort("sun", goldCoins, cohortRankByPeg.get("GOLD")),
@@ -194,5 +221,5 @@ export function buildPegDiversityHero(peggedAssets: readonly StablecoinData[] | 
     placeSkyCohort("constellation", varCoins, cohortRankByPeg.get("VAR")),
   ];
 
-  return { pegClusters, skyCohorts };
+  return { pegClusters: separatedPegClusters, skyCohorts };
 }

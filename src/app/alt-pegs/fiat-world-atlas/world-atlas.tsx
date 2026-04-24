@@ -38,24 +38,24 @@ function AtlasHeroHeader({
   totalCoinCount: number;
 }) {
   return (
-    <div className="relative z-10 px-4 py-5 sm:px-5 sm:py-6 lg:px-6">
-      <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_minmax(19rem,0.44fr)] lg:items-end">
-        <div className="space-y-3">
+    <div className="relative z-10 px-4 py-4 sm:px-5 sm:py-6 lg:px-6">
+      <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(19rem,0.44fr)] lg:items-end">
+        <div className="space-y-2.5 sm:space-y-3">
           <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-frost-blue/90">Alt-Peg Atlas</p>
           <div className="space-y-2">
             <h2
               id="alt-peg-link-hub"
-              className="text-4xl font-black leading-[0.95] tracking-normal text-foreground dark:text-white xl:text-5xl"
+              className="text-3xl font-black leading-[0.95] tracking-normal text-foreground dark:text-white sm:text-4xl xl:text-5xl"
             >
               Peg Diversity Map
             </h2>
             <p className="max-w-4xl text-sm leading-relaxed text-muted-foreground dark:text-slate-300">
-              <span className="hidden xl:inline">
+              <span className="sm:hidden">
+                Non-USD stablecoins by origin and reference asset, sized by market cap.
+              </span>
+              <span className="hidden sm:inline">
                 Every non-USD stablecoin sits at its geographic origin, sized by market cap. Gold, Silver, and
                 CPI-linked references float in the sky above — references beyond any single monetary region.
-              </span>
-              <span className="xl:hidden">
-                Currency cohorts, gold, silver, and CPI-linked references continue below the market-cap charts.
               </span>
             </p>
           </div>
@@ -68,7 +68,7 @@ function AtlasHeroHeader({
         </div>
       </div>
 
-      <div className="mt-5 flex flex-wrap gap-2">
+      <div className="mt-4 flex flex-wrap gap-2 sm:mt-5">
         {geoRegions.map(({ region, items }) => (
           <RegionSummaryPill
             key={region}
@@ -112,19 +112,17 @@ export function FiatWorldAtlas({
     >
       <AtlasHeroHeader geoRegions={geoRegions} totalCohortCount={totalCohortCount} totalCoinCount={totalCoinCount} />
 
-      <div data-alt-peg-layout="desktop-atlas" className="hidden xl:block">
+      <div data-alt-peg-layout="responsive-atlas" className="block">
         <a
           href="#alt-peg-history-share"
           className="sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-4 focus:z-50 focus:rounded-md focus:bg-background focus:px-3 focus:py-2 focus:text-sm focus:ring-2 focus:ring-ring"
         >
           Skip peg map
         </a>
-        <PegDiversityHeroLive worldMap={<WorldMap />} />
+        <div className="peg-hero__viewport" role="group" aria-label="Peg diversity map atlas">
+          <PegDiversityHeroLive worldMap={<WorldMap />} />
+        </div>
       </div>
-
-      <p className="border-t border-border/60 px-4 py-3 font-mono text-[10px] uppercase tracking-[0.14em] text-muted-foreground dark:border-white/10 dark:text-slate-300/78 sm:px-5 xl:hidden">
-        Cohort details continue below the market-cap charts.
-      </p>
     </section>
   );
 }
