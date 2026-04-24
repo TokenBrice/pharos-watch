@@ -824,7 +824,7 @@ export function NauticalChart({
           <h2 id="chain-nautical-heading" className="text-lg font-semibold tracking-tight">
             Where stablecoin supply is docked
           </h2>
-          <p className="max-w-3xl text-sm text-muted-foreground">
+          <p className="max-w-5xl text-sm text-muted-foreground">
             Vessel length = supply · hull color = health · pennant = dominant-coin share · cargo marks = top stablecoins by chain-local supply.
           </p>
         </div>
