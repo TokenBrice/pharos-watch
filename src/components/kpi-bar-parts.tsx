@@ -181,7 +181,7 @@ export function PrimarySnapshotCard({
         isCrisis ? "animate-pulse" : ""
       }`}
       style={{
-        background: isElevated 
+        background: isElevated
           ? "var(--surface-featured-gradient), linear-gradient(135deg, oklch(0.7 0.15 25 / 0.08) 0%, transparent 50%)"
           : "var(--surface-featured-gradient)",
         borderColor: isCrisis ? "var(--p-red-400)" : isTremor ? "var(--p-amber-400)" : "var(--surface-featured-border)",

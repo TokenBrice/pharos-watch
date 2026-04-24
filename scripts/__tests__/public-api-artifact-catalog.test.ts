@@ -35,6 +35,8 @@ describe("public API artifact catalog", () => {
 
       if (!endpoint.path.includes("{")) {
         expect(endpoint.path, endpoint.key).toBe(definition?.path);
+      } else {
+        expect(endpoint.path, endpoint.key).toBe(definition?.path.replace(/\/[^/]+$/, "/{stablecoinId}"));
       }
     }
   });

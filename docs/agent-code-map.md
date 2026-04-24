@@ -185,6 +185,8 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `src/lib/constants.ts` - CATEGORY_LINKS, DAY_HOURS, NINETY_DAYS_HOURS, NINETY_DAYS_MS, TABLE_PAGE_SIZE, THIRTY_DAYS_HOURS
 - `src/lib/contagion-layout.ts` - CORE_LANE_HALF_WIDTH, CORE_LANE_MARGIN, CORE_PAIR_X_JITTER, CORE_PAIR_Y_OFFSET, CORE_RING_RADIUS_X, CORE_RING_RADIUS_Y
 - `src/lib/coverage-page-config.ts` - AUTHORITATIVE_ACCENT, CoverageFilterGroup, CoverageFilterKey, CoverageSortKey, FEATURE_ACCENT_CLASSES, FEATURE_ICON
+- `src/lib/coverage-features.ts` - COVERAGE_FEATURES
+- `src/lib/coverage-types.ts` - CoverageFeatureDefinition, CoverageFeatureKey, CoverageFeatureSummary, CoverageRow
 - `src/lib/coverage.ts` - COVERAGE_BADGE_TONE_CLASS, COVERAGE_FEATURES, CoverageFeatureDefinition, CoverageFeatureKey, CoverageFeatureSummary, CoverageRow
 - `src/lib/cron-intervals.ts` - CRON_15MIN, CRON_1H, CRON_1MIN, CRON_24H, CRON_30MIN, CRON_BLACKLIST
 - `src/lib/csv-export.ts` - downloadCsv
@@ -233,6 +235,7 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `src/components/coin-flow-card.tsx` - CoinFlowCard, CoinFlowCardProps
 - `src/components/coin-notice.tsx` - CoinNotices
 - `src/components/coin-selector.tsx` - CoinSelector
+- `src/components/command-palette-model.ts` - COMMAND_PALETTE_ACTIONS, COMMAND_PALETTE_PAGES, COMMAND_PALETTE_SECTION_ORDER, CommandPaletteActionDefinition, CommandPalettePageDefinition, buildCommandPaletteGroups, fuzzyMatch
 - `src/components/command-palette.tsx` - CommandPalette
 - `src/components/compare-empty-state.tsx` - CompareEmptyState
 - `src/components/comparison-chart.tsx` - ComparisonChart
