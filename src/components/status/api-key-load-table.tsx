@@ -35,14 +35,18 @@ export function ApiKeyLoadTable({
             ) : null}
           </div>
           <p className="text-sm leading-relaxed text-muted-foreground">
-            Authenticated API-key requests on protected public routes only. This excludes
+            Authenticated API-key requests on the public
+            {" "}
+            <code className="rounded bg-background/60 px-1 py-0.5 font-mono text-[0.92em] text-foreground">api.pharos.watch</code>
+            {" "}
+            lane. Excludes
             {" "}
             <code className="rounded bg-background/60 px-1 py-0.5 font-mono text-[0.92em] text-foreground">/_site-data/*</code>
             , the
             {" "}
             <code className="rounded bg-background/60 px-1 py-0.5 font-mono text-[0.92em] text-foreground">site-api</code>
             {" "}
-            lane, exempt routes, and any public traffic that was not authenticated with a valid key.
+            lane, and admin/telegram-webhook routes.
           </p>
         </div>
         {summary ? (
