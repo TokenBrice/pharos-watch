@@ -26,6 +26,7 @@ import { getScoreColor } from "@/lib/severity-colors";
 import type { DexLiquidityData } from "@shared/types";
 import { DEX_GLOBAL_KEY } from "@shared/types";
 import { MethodologyLabel } from "@/components/methodology-hint";
+import "./exit-route-canal.css";
 
 export interface LiquidityStatsData {
   totalTvl: number;
@@ -243,22 +244,6 @@ function ExitRouteMetric({
   );
 }
 
-function routeStrokeWidth(sharePct: number): number {
-  return Math.max(6, Math.min(30, 5 + Math.sqrt(Math.max(0, sharePct)) * 3.2));
-}
-
-function crowdingWaist(concentrationHhi: number | null): number {
-  if (concentrationHhi == null) return 138;
-  const clamped = Math.max(0.08, Math.min(0.5, concentrationHhi));
-  const t = (clamped - 0.08) / 0.42;
-  return Math.round(188 - t * 106);
-}
-
-function routeY(index: number, count: number): number {
-  if (count <= 1) return 190;
-  return 70 + (index * 240) / (count - 1);
-}
-
 function crowdingBand(concentrationHhi: number | null): "unknown" | "broad" | "visible" | "crowded" {
   if (concentrationHhi == null) return "unknown";
   if (concentrationHhi < 0.18) return "broad";
@@ -266,212 +251,147 @@ function crowdingBand(concentrationHhi: number | null): "unknown" | "broad" | "v
   return "crowded";
 }
 
-function ExitRouteTerminal({ model }: { model: LiquidityExitRouteModel }) {
-  const centerX = 460;
-  const centerY = 190;
-  const waist = crowdingWaist(model.concentrationHhi);
-  const outerWidth = 238;
-  const terminalTop = 102;
-  const terminalBottom = 278;
-  const organicIsLow = model.organicPct != null && model.organicPct < 55;
-  const balanceIsLow = model.weightedBalancePct != null && model.weightedBalancePct < 55;
-  const protocolTargetX = centerX - waist / 2;
-  const chainTargetX = centerX + waist / 2;
-  const routeDash = organicIsLow ? "12 9" : undefined;
+// Canal scene geometry — viewBox is 1000 × 480.
+// Gates occupy the left half of the canal so the right half reads as the open-water
+// focal area carrying the aggregate-TVL numeric and the drifting vessel.
+const SCENE_WIDTH = 1000;
+const SCENE_HEIGHT = 480;
+const CANAL_TOP = 140;
+const CANAL_BOTTOM = 380;
+const CANAL_LEFT_EDGE = 30;
+const GATE_AREA_LEFT = 80;
+const GATE_AREA_RIGHT = 500;
+const GATE_AREA_WIDTH = GATE_AREA_RIGHT - GATE_AREA_LEFT; // 420
+const OPEN_WATER_LEFT = GATE_AREA_RIGHT + 20;
+const DAM_X = 748;
+const DAM_WIDTH = 6;
+const BASIN_LEFT = DAM_X + DAM_WIDTH;
+const BASIN_RIGHT = 968;
+const BASIN_AREA_TOP = 150;
+const BASIN_AREA_BOTTOM = 372;
+const BASIN_GAP = 4;
+
+// Vessel drift duration per crowding band — higher HHI (crowded) = slower vessel.
+// Applied via a CSS custom property so motion stays in the stylesheet.
+const VESSEL_DURATION_BY_BAND: Record<ReturnType<typeof crowdingBand>, string> = {
+  broad: "11s",
+  visible: "14s",
+  crowded: "22s",
+  unknown: "14s",
+};
+
+// Canal taper on the open-water side — depth of the inward pinch toward the dam.
+// Higher HHI = more squeeze. Makes data-crowding-band visually legible instead of
+// being only a semantic attribute.
+const CANAL_TAPER_BY_BAND: Record<ReturnType<typeof crowdingBand>, number> = {
+  broad: 12,
+  visible: 32,
+  crowded: 64,
+  unknown: 20,
+};
+
+function ExitRouteCanalScene({ model }: { model: LiquidityExitRouteModel }) {
+  const band = crowdingBand(model.concentrationHhi);
+  const taper = CANAL_TAPER_BY_BAND[band];
+  const vesselDuration = VESSEL_DURATION_BY_BAND[band];
+
   const routeSummary = [
     `${formatCurrency(model.totalTvlUsd, 0)} DEX TVL`,
-    model.topProtocol ? `${model.topProtocol.label} leading protocol route` : null,
-    model.topChain ? `${model.topChain.label} leading chain lane` : null,
+    model.topProtocol ? `${model.topProtocol.label} leading protocol` : null,
+    model.topChain ? `${model.topChain.label} leading chain` : null,
     model.concentrationHhi == null ? null : `${model.concentrationHhi.toFixed(2)} crowding index`,
   ].filter(Boolean).join(", ");
 
+  const canalPath = [
+    `M ${CANAL_LEFT_EDGE} ${CANAL_TOP}`,
+    `L ${OPEN_WATER_LEFT} ${CANAL_TOP}`,
+    `L ${DAM_X} ${CANAL_TOP + taper}`,
+    `L ${DAM_X} ${CANAL_BOTTOM - taper}`,
+    `L ${OPEN_WATER_LEFT} ${CANAL_BOTTOM}`,
+    `L ${CANAL_LEFT_EDGE} ${CANAL_BOTTOM}`,
+    "Z",
+  ].join(" ");
+
   return (
-    <div className="overflow-hidden rounded-xl border border-border/70 bg-[radial-gradient(circle_at_50%_50%,oklch(0.18_0.03_180_/_0.32),transparent_38%),linear-gradient(180deg,oklch(0.13_0.014_248_/_0.78),oklch(0.08_0.012_248_/_0.92))]">
+    <div
+      className="exit-route-canal overflow-hidden rounded-xl border border-border/70"
+      style={{ "--vessel-duration": vesselDuration } as React.CSSProperties}
+    >
       <div className="overflow-x-auto">
         <svg
-          viewBox="0 0 920 380"
+          viewBox={`0 0 ${SCENE_WIDTH} ${SCENE_HEIGHT}`}
           role="img"
-          aria-label={`Exit route terminal: ${routeSummary}. Secondary-market DEX exits only.`}
-          className="h-auto min-w-[620px] w-full md:min-w-0"
-          data-testid="exit-route-terminal"
+          aria-label={`Exit route canal: ${routeSummary}. Secondary-market DEX exits only.`}
+          className="exit-route-canal__scene"
+          data-testid="exit-route-canal"
         >
           <defs>
-            <linearGradient id="exit-route-terminal-surface" x1="0" x2="1" y1="0" y2="1">
-              <stop offset="0%" stopColor="oklch(0.2 0.018 248 / 0.94)" />
-              <stop offset="100%" stopColor="oklch(0.105 0.014 248 / 0.98)" />
+            <linearGradient id="exit-route-canal-sky" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stopColor="var(--canal-sky-top)" />
+              <stop offset="70%" stopColor="var(--canal-sky-bottom)" />
+              <stop offset="100%" stopColor="var(--canal-sea-bottom)" />
             </linearGradient>
-            <filter id="exit-route-terminal-glow" x="-30%" y="-30%" width="160%" height="160%">
-              <feGaussianBlur stdDeviation="5" result="blur" />
-              <feMerge>
-                <feMergeNode in="blur" />
-                <feMergeNode in="SourceGraphic" />
-              </feMerge>
-            </filter>
+            <linearGradient id="exit-route-canal-water" x1="0" x2="1">
+              <stop offset="0%" stopColor="var(--canal-water-shallow)" />
+              <stop offset="100%" stopColor="var(--canal-water-deep)" />
+            </linearGradient>
+            <linearGradient id="exit-route-canal-sea" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stopColor="var(--canal-sea-top)" />
+              <stop offset="100%" stopColor="var(--canal-sea-bottom)" />
+            </linearGradient>
+            <linearGradient id="exit-route-canal-beam" x1="0" y1="0" x2="1" y2="0">
+              <stop offset="0%" stopColor="var(--canal-beacon-beam)" />
+              <stop offset="100%" stopColor="var(--canal-beacon-beam)" stopOpacity="0" />
+            </linearGradient>
           </defs>
 
-          <rect x="0" y="0" width="920" height="380" fill="url(#exit-route-terminal-surface)" />
-          {[58, 118, 178, 238, 298].map((y) => (
-            <line key={y} x1="28" x2="892" y1={y} y2={y} stroke="oklch(1 0 0 / 0.055)" strokeDasharray="2 14" />
-          ))}
-          <text x="40" y="34" fill="oklch(0.78 0.025 248)" fontSize="11" fontWeight="700" letterSpacing="2.2">
-            PROTOCOL GATES
-          </text>
-          <text x="730" y="34" fill="oklch(0.78 0.025 248)" fontSize="11" fontWeight="700" letterSpacing="2.2">
-            CHAIN LANES
-          </text>
-          <text x={centerX} y="34" textAnchor="middle" fill="oklch(0.78 0.025 248)" fontSize="11" fontWeight="700" letterSpacing="2.2">
-            EXIT CONCOURSE
-          </text>
+          {/* Sky band */}
+          <rect x="0" y="0" width={SCENE_WIDTH} height="140" fill="url(#exit-route-canal-sky)" />
 
-          {model.protocolRoutes.map((route, index) => {
-            const y = routeY(index, model.protocolRoutes.length);
-            const strokeWidth = routeStrokeWidth(route.sharePct);
-            const path = `M 184 ${y} C 292 ${y}, ${protocolTargetX - 58} ${centerY}, ${protocolTargetX + 2} ${centerY}`;
-            return (
-              <g
-                key={`protocol-${route.key}`}
-                data-testid={`protocol-gate-${route.key}`}
-                aria-label={`${route.label} protocol route, ${formatCurrency(route.valueUsd, 0)}, ${formatPercent(route.sharePct, 1)} of DEX TVL`}
-              >
-                <title>{`${route.label}: ${formatCurrency(route.valueUsd, 0)} protocol route (${formatPercent(route.sharePct, 1)})`}</title>
-                <path
-                  d={path}
-                  fill="none"
-                  stroke={route.colorHex}
-                  strokeWidth={strokeWidth}
-                  strokeLinecap="round"
-                  strokeDasharray={routeDash}
-                  opacity="0.58"
-                  filter="url(#exit-route-terminal-glow)"
-                />
-                <rect
-                  x="128"
-                  y={y - strokeWidth / 2 - 8}
-                  width={44 + route.sharePct * 0.55}
-                  height={strokeWidth + 16}
-                  rx="8"
-                  fill="oklch(0.06 0.012 248 / 0.82)"
-                  stroke={route.colorHex}
-                  strokeWidth="1.4"
-                  opacity="0.98"
-                />
-                <rect
-                  x="136"
-                  y={y - strokeWidth / 2 - 1}
-                  width={Math.max(16, route.sharePct * 1.5)}
-                  height={strokeWidth + 2}
-                  rx="4"
-                  fill={route.colorHex}
-                  opacity="0.9"
-                />
-                <circle cx="52" cy={y} r="14" fill="oklch(0.98 0.006 248 / 0.96)" stroke={route.colorHex} strokeWidth="1.2" />
-                {route.logoPath ? (
-                  <image href={route.logoPath} x="43" y={y - 9} width="18" height="18" preserveAspectRatio="xMidYMid meet" />
-                ) : (
-                  <text x="52" y={y + 4} textAnchor="middle" fill="oklch(0.2 0.012 248)" fontSize="13" fontWeight="800">
-                    +
-                  </text>
-                )}
-                <text x="72" y={y - 5} fill="oklch(0.94 0.01 248)" fontSize="11" fontFamily="ui-monospace, Menlo, monospace">
-                  {formatCurrency(route.valueUsd, 0)}
-                </text>
-                <text x="72" y={y + 10} fill="oklch(0.72 0.025 248)" fontSize="10" fontFamily="ui-monospace, Menlo, monospace">
-                  {formatPercent(route.sharePct, 1)}
-                </text>
-              </g>
-            );
-          })}
+          {/* Canal water body (tapers toward dam per crowding band) */}
+          <path d={canalPath} fill="url(#exit-route-canal-water)" />
 
-          {model.chainRoutes.map((route, index) => {
-            const y = routeY(index, model.chainRoutes.length);
-            const strokeWidth = routeStrokeWidth(route.sharePct);
-            const path = `M ${chainTargetX - 2} ${centerY} C ${chainTargetX + 58} ${centerY}, 628 ${y}, 726 ${y}`;
-            return (
-              <g
-                key={`chain-${route.key}`}
-                data-testid={`chain-lane-${route.key}`}
-                aria-label={`${route.label} chain lane, ${formatCurrency(route.valueUsd, 0)}, ${formatPercent(route.sharePct, 1)} of DEX TVL`}
-              >
-                <title>{`${route.label}: ${formatCurrency(route.valueUsd, 0)} chain lane (${formatPercent(route.sharePct, 1)})`}</title>
-                <path
-                  d={path}
-                  fill="none"
-                  stroke={route.colorHex}
-                  strokeWidth={strokeWidth}
-                  strokeLinecap="round"
-                  strokeDasharray={routeDash}
-                  opacity="0.58"
-                  filter="url(#exit-route-terminal-glow)"
-                />
-                <rect
-                  x="724"
-                  y={y - strokeWidth / 2 - 6}
-                  width={42 + route.sharePct * 0.62}
-                  height={strokeWidth + 12}
-                  rx="7"
-                  fill={route.colorHex}
-                  opacity="0.86"
-                />
-                <line
-                  x1="724"
-                  x2="852"
-                  y1={y}
-                  y2={y}
-                  stroke={route.colorHex}
-                  strokeWidth={Math.max(3, strokeWidth * 0.45)}
-                  strokeLinecap="round"
-                  opacity="0.68"
-                />
-                <text x="824" y={y - 5} fill="oklch(0.94 0.01 248)" fontSize="11" fontFamily="ui-monospace, Menlo, monospace" textAnchor="end">
-                  {formatCurrency(route.valueUsd, 0)}
-                </text>
-                <text x="824" y={y + 10} fill="oklch(0.72 0.025 248)" fontSize="10" fontFamily="ui-monospace, Menlo, monospace" textAnchor="end">
-                  {formatPercent(route.sharePct, 1)}
-                </text>
-                <circle cx="846" cy={y} r="14" fill="oklch(0.98 0.006 248 / 0.96)" stroke={route.colorHex} strokeWidth="1.2" />
-                {route.logoPath ? (
-                  <image href={route.logoPath} x="837" y={y - 9} width="18" height="18" preserveAspectRatio="xMidYMid meet" />
-                ) : (
-                  <text x="846" y={y + 4} textAnchor="middle" fill="oklch(0.2 0.012 248)" fontSize="13" fontWeight="800">
-                    +
-                  </text>
-                )}
-              </g>
-            );
-          })}
+          {/* Waterline highlight */}
+          <path
+            d={`M ${CANAL_LEFT_EDGE} ${CANAL_TOP} L ${OPEN_WATER_LEFT} ${CANAL_TOP} L ${DAM_X} ${CANAL_TOP + taper}`}
+            fill="none"
+            stroke="var(--canal-accent)"
+            strokeWidth="0.6"
+            opacity="0.35"
+          />
 
+          {/* Sea band (behind ripples, added in Task 6) */}
+          <rect x="0" y="380" width={SCENE_WIDTH} height="100" fill="url(#exit-route-canal-sea)" />
+
+          {/* Canal group — carries the data-crowding-band attribute and the focal TVL numeric. */}
           <g
-            data-testid="exit-concourse"
-            data-crowding-band={crowdingBand(model.concentrationHhi)}
-            aria-label={`Exit concourse crowding is ${crowdingBand(model.concentrationHhi)} with waist ${waist}`}
+            data-testid="exit-canal"
+            data-crowding-band={band}
+            aria-label={`Aggregate exit canal; crowding ${band}`}
           >
-            <path
-              d={[
-                `M ${centerX - outerWidth / 2} ${terminalTop}`,
-                `C ${centerX - waist / 2} ${terminalTop + 44}, ${centerX - waist / 2} ${terminalBottom - 44}, ${centerX - outerWidth / 2} ${terminalBottom}`,
-                `L ${centerX + outerWidth / 2} ${terminalBottom}`,
-                `C ${centerX + waist / 2} ${terminalBottom - 44}, ${centerX + waist / 2} ${terminalTop + 44}, ${centerX + outerWidth / 2} ${terminalTop}`,
-                "Z",
-              ].join(" ")}
-              fill="oklch(0.07 0.018 248 / 0.9)"
-              stroke="oklch(0.76 0.12 178 / 0.72)"
-              strokeWidth={balanceIsLow ? 1.2 : 1.8}
-              strokeDasharray={balanceIsLow ? "8 7" : undefined}
-            />
-            <ellipse
-              cx={centerX}
-              cy={centerY}
-              rx={Math.max(34, waist / 2 - 12)}
-              ry="42"
-              fill="oklch(0.77 0.13 178 / 0.14)"
-              stroke="oklch(0.78 0.14 178 / 0.58)"
-              strokeWidth="1"
-            />
-            <text x={centerX} y={centerY - 8} textAnchor="middle" fill="oklch(0.97 0.01 248)" fontSize="14" fontWeight="800">
+            <text
+              x="625"
+              y="232"
+              textAnchor="middle"
+              fill="var(--canal-hero)"
+              fontSize="48"
+              fontWeight="800"
+              letterSpacing="-1.5"
+              fontFamily="ui-sans-serif, system-ui, sans-serif"
+            >
               {formatCurrency(model.totalTvlUsd, 0)}
             </text>
-            <text x={centerX} y={centerY + 12} textAnchor="middle" fill="oklch(0.75 0.025 248)" fontSize="10" fontWeight="700" letterSpacing="1.5">
-              SECONDARY EXIT TVL
+            <text
+              x="625"
+              y="252"
+              textAnchor="middle"
+              fill="var(--canal-hero-kicker)"
+              fontSize="10"
+              fontWeight="700"
+              letterSpacing="1.8"
+              fontFamily="ui-sans-serif, system-ui, sans-serif"
+            >
+              SECONDARY EXIT TVL · DEX DEPTH
             </text>
           </g>
         </svg>
@@ -505,7 +425,7 @@ function LiquidityExitRouteMap({
       <CardContent className="space-y-4">
         <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_14rem]">
           <div className="pharos-chart-stage space-y-3">
-            <ExitRouteTerminal model={model} />
+            <ExitRouteCanalScene model={model} />
             <div className="flex flex-wrap items-center gap-x-4 gap-y-2 border-t border-border/60 pt-3 text-xs text-muted-foreground">
               <span>
                 Leading door:{" "}
