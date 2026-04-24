@@ -100,7 +100,7 @@ function PsiHistoryStatsGrid({
 
   const wrapperClass =
     resolved === "compact"
-      ? "grid w-full grid-cols-3 gap-x-3 gap-y-2 border-t border-border/60 pt-3 lg:hidden"
+      ? "grid w-full grid-cols-3 gap-x-3 gap-y-2 border-t border-border/60 pt-3 2xl:hidden"
       : resolved === "row"
         ? "flex items-end gap-8"
         : "grid grid-cols-3 gap-3";
@@ -227,26 +227,26 @@ export function StabilityIndexPanel({
           <p className="text-xs text-muted-foreground">Updated every 30 min</p>
         </div>
 
-        <div className="flex flex-col gap-6 lg:flex-row lg:items-stretch lg:gap-8">
-          <div className="mx-auto w-full max-w-sm overflow-hidden rounded-lg lg:mx-0 lg:w-1/2 lg:shrink-0">
+        <div className="flex flex-col gap-5 xl:min-h-[23rem] xl:flex-row xl:items-stretch xl:gap-7">
+          <div className="mx-auto flex w-full max-w-sm items-start overflow-hidden rounded-lg xl:mx-0 xl:min-h-0 xl:w-[min(34vw,27rem)] xl:max-w-none xl:shrink-0">
             <PsiLighthouseScene band={band} score={score} />
           </div>
 
-          <div className="flex flex-1 flex-col gap-5">
-            <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between lg:gap-6">
-              <div className="flex flex-col items-center gap-1 text-center lg:shrink-0 lg:items-start lg:text-left">
+          <div className="flex min-w-0 flex-1 flex-col gap-4">
+            <div className="flex min-w-0 flex-col gap-4 xl:flex-row xl:items-center xl:justify-between xl:gap-5">
+              <div className="flex min-w-0 flex-col items-center gap-1 text-center xl:shrink-0 xl:items-start xl:text-left">
                 <div className="flex items-baseline gap-2">
                   <span className="text-xs text-muted-foreground">
                     <MethodologyLabel topic="psi">PSI</MethodologyLabel>
                   </span>
-                  <span className={`font-mono text-6xl font-extrabold leading-none tabular-nums ${colorClass}`}>
+                  <span className={`font-mono text-6xl font-extrabold leading-none tabular-nums xl:text-[4.15rem] ${colorClass}`}>
                     {formatScore(score)}
                   </span>
                   <span className={`text-lg font-bold uppercase tracking-wide ${colorClass}`}>
                     {band}
                   </span>
                 </div>
-                <div className="flex flex-wrap items-baseline justify-center gap-x-3 gap-y-1 text-sm text-muted-foreground lg:justify-start">
+                <div className="flex flex-wrap items-baseline justify-center gap-x-3 gap-y-1 text-sm text-muted-foreground xl:justify-start">
                   {delta !== null && (
                     <span className={`font-medium tabular-nums ${deltaClass}`}>
                       {delta >= 0 ? "+" : ""}
@@ -257,7 +257,7 @@ export function StabilityIndexPanel({
                 </div>
               </div>
 
-              <div className="hidden lg:flex lg:items-center lg:justify-end">
+              <div className="hidden 2xl:flex 2xl:items-center 2xl:justify-end">
                 <PsiHistoryStatsGrid items={historyStats} layout="row" />
               </div>
             </div>

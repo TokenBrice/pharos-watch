@@ -30,11 +30,12 @@
     }
   }
   @keyframes psi-scene-beam-rotate {
-    from {
-      transform: rotate(0deg);
+    0%,
+    100% {
+      transform: rotate(7deg);
     }
-    to {
-      transform: rotate(360deg);
+    50% {
+      transform: rotate(-9deg);
     }
   }
 
@@ -52,7 +53,7 @@
     transform-box: fill-box;
   }
   .psi-scene-beam-rotate {
-    animation: psi-scene-beam-rotate var(--psi-beam-rotate-dur, 14s) linear infinite;
+    animation: psi-scene-beam-rotate var(--psi-beam-rotate-dur, 9.5s) cubic-bezier(0.45, 0, 0.2, 1) infinite;
     transform-origin: var(--psi-beam-origin-x, 180px) var(--psi-beam-origin-y, 33px);
     transform-box: view-box;
   }

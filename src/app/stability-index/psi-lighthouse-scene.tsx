@@ -8,10 +8,14 @@ import "./psi-lighthouse-scene.css";
 
 const WIDTH = 280;
 const HEIGHT = 240;
-const WATERLINE_Y = 220;
-const LH_X = 180;
-const ROCK_TOP = WATERLINE_Y - 14; // 206
-const T1_BOTTOM = ROCK_TOP - 4; // 202
+const VIEWBOX_X = 0;
+const VIEWBOX_Y = -48;
+const VIEWBOX_WIDTH = WIDTH + 96;
+const VIEWBOX_HEIGHT = HEIGHT - VIEWBOX_Y;
+const WATERLINE_Y = 212;
+const LH_X = 92;
+const ROCK_TOP = WATERLINE_Y - 18; // 194
+const T1_BOTTOM = ROCK_TOP + 4; // 198
 const T1_TOP = T1_BOTTOM - 80; // 122
 const T1_HALF_BOTTOM = 32;
 const T1_HALF_TOP = 27;
@@ -60,10 +64,20 @@ function Rocks() {
   return (
     <g aria-hidden="true">
       <path
-        d={`M ${LH_X - 48} ${WATERLINE_Y + 2} Q ${LH_X - 36} ${ROCK_TOP + 1} ${LH_X - 26} ${ROCK_TOP + 4} Q ${LH_X - 12} ${ROCK_TOP - 6} ${LH_X} ${ROCK_TOP - 2} Q ${LH_X + 14} ${ROCK_TOP + 4} ${LH_X + 30} ${ROCK_TOP} Q ${LH_X + 42} ${WATERLINE_Y} ${LH_X + 54} ${WATERLINE_Y + 2} Z`}
+        d={`M ${LH_X - 62} ${WATERLINE_Y + 12} Q ${LH_X - 46} ${ROCK_TOP + 9} ${LH_X - 31} ${ROCK_TOP + 7} Q ${LH_X - 16} ${ROCK_TOP - 8} ${LH_X + 1} ${ROCK_TOP - 4} Q ${LH_X + 18} ${ROCK_TOP - 1} ${LH_X + 34} ${ROCK_TOP + 5} Q ${LH_X + 50} ${ROCK_TOP + 9} ${LH_X + 66} ${WATERLINE_Y + 12} Z`}
+        fill="oklch(0.12 0.026 248)"
+        opacity={0.9}
+      />
+      <path
+        d={`M ${LH_X - 50} ${WATERLINE_Y + 1} Q ${LH_X - 39} ${ROCK_TOP + 1} ${LH_X - 27} ${ROCK_TOP + 5} Q ${LH_X - 14} ${ROCK_TOP - 7} ${LH_X} ${ROCK_TOP - 3} Q ${LH_X + 14} ${ROCK_TOP + 2} ${LH_X + 31} ${ROCK_TOP - 1} Q ${LH_X + 45} ${WATERLINE_Y - 1} ${LH_X + 57} ${WATERLINE_Y + 2} Z`}
         fill="oklch(0.16 0.022 250)"
         stroke="oklch(0.06 0.018 250)"
         strokeWidth={0.7}
+      />
+      <path
+        d={`M ${LH_X - 31} ${T1_BOTTOM + 1} Q ${LH_X - 12} ${T1_BOTTOM - 7} ${LH_X + 8} ${T1_BOTTOM - 4} Q ${LH_X + 26} ${T1_BOTTOM - 2} ${LH_X + 40} ${T1_BOTTOM + 4} L ${LH_X + 42} ${WATERLINE_Y + 1} L ${LH_X - 37} ${WATERLINE_Y + 1} Z`}
+        fill="oklch(0.10 0.022 248)"
+        opacity={0.82}
       />
       <path
         d={`M ${LH_X - 30} ${ROCK_TOP + 2} Q ${LH_X - 18} ${ROCK_TOP - 1} ${LH_X - 6} ${ROCK_TOP + 1}`}
@@ -76,6 +90,39 @@ function Rocks() {
         fill="none"
         stroke="oklch(0.34 0.018 250 / 0.6)"
         strokeWidth={0.6}
+      />
+      <path
+        d={`M ${LH_X - 56} ${WATERLINE_Y - 1} C ${LH_X - 36} ${WATERLINE_Y + 2} ${LH_X - 14} ${WATERLINE_Y + 2} ${LH_X + 4} ${WATERLINE_Y - 1} S ${LH_X + 39} ${WATERLINE_Y - 2} ${LH_X + 61} ${WATERLINE_Y + 1}`}
+        fill="none"
+        stroke="oklch(0.66 0.08 205 / 0.34)"
+        strokeWidth={1.2}
+        strokeLinecap="round"
+      />
+    </g>
+  );
+}
+
+function ForegroundRockLip() {
+  return (
+    <g aria-hidden="true">
+      <path
+        d={`M ${LH_X - 34} ${T1_BOTTOM - 1} Q ${LH_X - 18} ${T1_BOTTOM - 7} ${LH_X - 2} ${T1_BOTTOM - 5} Q ${LH_X + 16} ${T1_BOTTOM - 7} ${LH_X + 34} ${T1_BOTTOM - 1} L ${LH_X + 42} ${WATERLINE_Y + 1} Q ${LH_X + 15} ${WATERLINE_Y - 5} ${LH_X - 39} ${WATERLINE_Y + 1} Z`}
+        fill="oklch(0.075 0.022 248)"
+        opacity={0.96}
+      />
+      <path
+        d={`M ${LH_X - 38} ${T1_BOTTOM + 1} C ${LH_X - 18} ${T1_BOTTOM - 3} ${LH_X + 9} ${T1_BOTTOM - 4} ${LH_X + 36} ${T1_BOTTOM + 2}`}
+        fill="none"
+        stroke="oklch(0.32 0.026 210 / 0.38)"
+        strokeWidth={0.7}
+        strokeLinecap="round"
+      />
+      <path
+        d={`M ${LH_X - 52} ${WATERLINE_Y + 2} C ${LH_X - 27} ${WATERLINE_Y - 1} ${LH_X - 11} ${WATERLINE_Y - 1} ${LH_X + 7} ${WATERLINE_Y + 1} S ${LH_X + 39} ${WATERLINE_Y + 3} ${LH_X + 60} ${WATERLINE_Y + 1}`}
+        fill="none"
+        stroke="oklch(0.7 0.09 200 / 0.24)"
+        strokeWidth={1}
+        strokeLinecap="round"
       />
     </g>
   );
@@ -186,14 +233,14 @@ export function PsiLighthouseScene({
   const stoneId = `psi-scene-stone-${uid}`;
   const beamClipId = `psi-scene-beam-clip-${uid}`;
 
-  // Beam geometry — two wedges sweeping up-and-left from the brazier
-  const pFarTopX = LH_X - 260 * reach;
+  // Beam geometry — two wedges sweeping toward the data column from the brazier.
+  const pFarTopX = LH_X + 260 * reach;
   const pFarTopY = BEAM_Y - 85 * reach;
-  const pFarBotX = LH_X - 240 * reach;
+  const pFarBotX = LH_X + 240 * reach;
   const pFarBotY = BEAM_Y - 15 * reach;
-  const sFarTopX = LH_X - 280 * reach;
+  const sFarTopX = LH_X + 280 * reach;
   const sFarTopY = BEAM_Y - 40 * reach;
-  const sFarBotX = LH_X - 200 * reach;
+  const sFarBotX = LH_X + 200 * reach;
   const sFarBotY = BEAM_Y + 40 * reach;
 
   const flameGroupTransform = `translate(${LH_X} ${BRAZIER_BOTTOM}) scale(${flameScale}) translate(${-LH_X} ${-BRAZIER_BOTTOM})`;
@@ -202,12 +249,14 @@ export function PsiLighthouseScene({
     "--psi-pulse-dur": `${pulseDur}s`,
     "--psi-beam-origin-x": `${LH_X}px`,
     "--psi-beam-origin-y": `${BEAM_Y}px`,
+    aspectRatio: `${VIEWBOX_WIDTH} / ${VIEWBOX_HEIGHT}`,
+    display: "block",
   } as CSSProperties;
   const transitionStyle: CSSProperties = { transition: "fill 500ms ease-out, opacity 500ms ease-out" };
 
   return (
     <svg
-      viewBox={`0 0 ${WIDTH} ${HEIGHT}`}
+      viewBox={`${VIEWBOX_X} ${VIEWBOX_Y} ${VIEWBOX_WIDTH} ${VIEWBOX_HEIGHT}`}
       role="img"
       aria-label={`Pharos lighthouse — ${band} ${Math.round(score)}`}
       className={cn("psi-scene block h-auto w-full", className)}
@@ -238,17 +287,17 @@ export function PsiLighthouseScene({
           <stop offset="100%" stopColor="oklch(0.66 0.03 75)" stopOpacity="0.94" />
         </linearGradient>
         <clipPath id={beamClipId}>
-          <rect x="0" y="0" width={WIDTH} height={WATERLINE_Y} />
+          <rect x={VIEWBOX_X} y={VIEWBOX_Y} width={VIEWBOX_WIDTH} height={WATERLINE_Y - VIEWBOX_Y} />
         </clipPath>
       </defs>
 
       {/* Sky */}
-      <rect x="0" y="0" width={WIDTH} height={WATERLINE_Y} fill={`url(#${skyId})`} />
+      <rect x={VIEWBOX_X} y={VIEWBOX_Y} width={VIEWBOX_WIDTH} height={WATERLINE_Y - VIEWBOX_Y} fill={`url(#${skyId})`} />
       <rect
-        x="0"
-        y="0"
-        width={WIDTH}
-        height={WATERLINE_Y}
+        x={VIEWBOX_X}
+        y={VIEWBOX_Y}
+        width={VIEWBOX_WIDTH}
+        height={WATERLINE_Y - VIEWBOX_Y}
         fill={bandColor}
         opacity={0.12}
         style={transitionStyle}
@@ -278,11 +327,11 @@ export function PsiLighthouseScene({
       </g>
 
       {/* Water */}
-      <rect x="0" y={WATERLINE_Y} width={WIDTH} height={HEIGHT - WATERLINE_Y} fill={`url(#${waterId})`} />
+      <rect x={VIEWBOX_X} y={WATERLINE_Y} width={VIEWBOX_WIDTH} height={HEIGHT - WATERLINE_Y} fill={`url(#${waterId})`} />
       <rect
-        x="0"
+        x={VIEWBOX_X}
         y={WATERLINE_Y}
-        width={WIDTH}
+        width={VIEWBOX_WIDTH}
         height={HEIGHT - WATERLINE_Y}
         fill={bandColor}
         opacity={0.08}
@@ -291,9 +340,9 @@ export function PsiLighthouseScene({
 
       {/* Waterline */}
       <line
-        x1="0"
+        x1={VIEWBOX_X}
         y1={WATERLINE_Y}
-        x2={WIDTH}
+        x2={VIEWBOX_X + VIEWBOX_WIDTH}
         y2={WATERLINE_Y}
         stroke="#0ea5e9"
         strokeWidth={1}
@@ -303,6 +352,7 @@ export function PsiLighthouseScene({
 
       <Rocks />
       <LighthouseTiers stoneFill={`url(#${stoneId})`} />
+      <ForegroundRockLip />
 
       {/* Halo — breathing pulse + score-driven scale via radius */}
       <g opacity={0.35 * flameScale} style={transitionStyle}>

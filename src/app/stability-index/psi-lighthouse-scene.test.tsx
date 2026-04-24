@@ -21,8 +21,19 @@ describe("PsiLighthouseScene", () => {
     expect(svg.getAttribute("role")).toBe("img");
     expect(svg.getAttribute("aria-label")).toContain("BEDROCK");
     expect(svg.getAttribute("aria-label")).toContain("92");
+    expect(svg.getAttribute("preserveAspectRatio")).toBe("xMidYMid meet");
     expect(svg.dataset.band).toBe("BEDROCK");
     expect(svg.dataset.score).toBe("92");
+  });
+
+  it("gives the rightward beam overscan room inside the viewBox", () => {
+    const { svg } = renderScene("BEDROCK", 100);
+    const [minX, minY, width] = (svg.getAttribute("viewBox") ?? "")
+      .split(/\s+/)
+      .map(Number);
+    expect(minX).toBe(0);
+    expect(minY).toBeLessThan(0);
+    expect(width).toBeGreaterThan(280);
   });
 
   it.each(BANDS)("colors flames with PSI_HEX_COLORS for band %s", (band) => {
