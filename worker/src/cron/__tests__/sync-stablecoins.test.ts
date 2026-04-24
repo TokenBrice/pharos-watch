@@ -389,7 +389,8 @@ describe("syncStablecoins", () => {
 
     expect(result.itemCount).toBe(60);
     const metadata = JSON.parse(result.metadata ?? "{}") as Record<string, unknown>;
-    expect(metadata.cacheWriteMode).toBe("main-write");
+    expect(metadata.cacheWriteMode).toBe("published");
+    expect(metadata.casSkipped).toBe(false);
     expect(metadata.downstreamSafe).toBe(true);
     // Should have written to cache
     const cacheWrites = prepareSpy.mock.calls.filter(
@@ -405,6 +406,37 @@ describe("syncStablecoins", () => {
     expect(primaryPriceAssets).toHaveLength(60);
     const enrichmentAssets = vi.mocked(enrichMissingPrices).mock.calls[0]?.[0] as Array<{ id: string }>;
     expect(enrichmentAssets).toHaveLength(60);
+  });
+
+  it("does not claim publication or run downstream depeg stages when stablecoins CAS skips", async () => {
+    const db = mockD1([
+      { match: "INSERT INTO cache", rows: [], runMeta: { changes: 0 } },
+      { match: "cache", rows: [] },
+      { match: "supply_history", rows: [] },
+      { match: "price_cache", rows: [] },
+      { match: "circuit", rows: [] },
+    ]);
+    const dlData = makeDlResponse(60);
+
+    mockFetch([
+      { match: "api.coingecko.com", body: {} },
+      { match: "stablecoins.llama.fi", body: dlData },
+      { match: "coins.llama.fi/prices", body: { coins: {} } },
+    ]);
+
+    const result = await syncStablecoins(db);
+
+    expect(result.status).toBeUndefined();
+    expect(result.itemCount).toBe(0);
+    const metadata = JSON.parse(result.metadata ?? "{}") as Record<string, unknown>;
+    expect(metadata.rowsWritten).toBe(0);
+    expect(metadata.cacheWriteMode).toBe("skipped-newer");
+    expect(metadata.casSkipped).toBe(true);
+    expect(metadata.cacheWriteSucceeded).toBe(false);
+    expect(metadata.cacheKey).toBe("stablecoins");
+    expect(metadata.syncStartSec).toBe(Math.floor(Date.now() / 1000));
+    expect(detectDepegEvents).not.toHaveBeenCalled();
+    expect(confirmPendingDepegs).not.toHaveBeenCalled();
   });
 
   it("runs missing-price enrichment before the GT probe", async () => {
@@ -1224,6 +1256,7 @@ describe("syncStablecoins", () => {
     const metadata = JSON.parse(result.metadata ?? "{}") as Record<string, unknown>;
     expect(metadata.validationFailures).toBe(1);
     expect(metadata.cacheWriteMode).toBe("blocked-invalid-payload");
+    expect(metadata.casSkipped).toBe(false);
     expect(metadata.downstreamSafe).toBe(false);
     expect(sendAlert).toHaveBeenCalledWith(
       null,

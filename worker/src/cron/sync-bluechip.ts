@@ -191,18 +191,26 @@ export async function syncBluechip(db: D1Database, signal?: AbortSignal): Promis
     };
   }
 
-  await setCacheIfNewer(db, CACHE_KEY, JSON.stringify(ratingsMap), syncStartSec);
-  console.log(`[bluechip] Cache updated with ${Object.keys(ratingsMap).length} ratings (${freshCount} fresh)`);
+  const cacheResult = await setCacheIfNewer(db, CACHE_KEY, JSON.stringify(ratingsMap), syncStartSec);
+  console.log(
+    cacheResult.written
+      ? `[bluechip] Cache updated with ${Object.keys(ratingsMap).length} ratings (${freshCount} fresh)`
+      : `[bluechip] Cache update skipped; newer row exists (${freshCount} fresh fetched)`,
+  );
   return {
     ...(partialCoverage ? { status: "degraded" as const } : {}),
-    itemCount: freshCount,
+    itemCount: cacheResult.written ? freshCount : 0,
     metadata: JSON.stringify({
       ratingsFetched: freshCount,
-      ratingsPublished: Object.keys(ratingsMap).length,
+      ratingsPublished: cacheResult.written ? Object.keys(ratingsMap).length : 0,
       totalMappedRatings: totalEntries,
       retainedFromCache: Math.max(0, Object.keys(ratingsMap).length - freshCount),
       fallbackMode: partialCoverage ? "partial-cache-merge" : null,
       invalidPayloads,
+      cacheKey: CACHE_KEY,
+      syncStartSec,
+      cacheWriteMode: cacheResult.written ? "published" : "skipped-newer",
+      casSkipped: cacheResult.skippedBecauseNewer,
       ...(failedSlugs.length > 0 ? { failedSlugs } : {}),
     }),
   };

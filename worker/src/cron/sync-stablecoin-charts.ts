@@ -199,11 +199,42 @@ export async function syncStablecoinCharts(db: D1Database, signal?: AbortSignal)
     };
   }
 
-  await setCacheIfNewer(db, "stablecoin-charts", JSON.stringify(downsampled), syncStartSec);
-  await setCache(db, "stablecoin-charts:last-write", "1");
-  console.log(`[sync-charts] Cached ${downsampled.length} points (from ${normalizedRaw.length} raw)`);
+  const cacheResult = await setCacheIfNewer(db, "stablecoin-charts", JSON.stringify(downsampled), syncStartSec);
+  let lastWriteAdvanced = false;
+  let canonicalReadbackUpdatedAt: number | null = null;
+  if (cacheResult.written) {
+    await setCache(db, "stablecoin-charts:last-write", "1");
+    lastWriteAdvanced = true;
+    console.log(`[sync-charts] Cached ${downsampled.length} points (from ${normalizedRaw.length} raw)`);
+  } else {
+    const canonicalCache = await getCache(db, "stablecoin-charts");
+    canonicalReadbackUpdatedAt = canonicalCache?.updatedAt ?? null;
+    if (canonicalCache && canonicalCache.updatedAt > syncStartSec) {
+      await setCache(db, "stablecoin-charts:last-write", "1");
+      lastWriteAdvanced = true;
+      console.log(
+        `[sync-charts] Skipped chart cache write; newer canonical cache exists ` +
+        `(updatedAt=${canonicalCache.updatedAt}, syncStartSec=${syncStartSec})`,
+      );
+    } else {
+      console.warn(
+        `[sync-charts] Skipped chart cache write but could not confirm a newer canonical cache; ` +
+        `leaving last-write marker unchanged`,
+      );
+    }
+  }
   return {
-    itemCount: downsampled.length,
-    metadata: JSON.stringify({ rawPoints: normalizedRaw.length, downsampledPoints: downsampled.length, fxFixes: fixes }),
+    itemCount: cacheResult.written ? downsampled.length : 0,
+    metadata: JSON.stringify({
+      rawPoints: normalizedRaw.length,
+      downsampledPoints: downsampled.length,
+      fxFixes: fixes,
+      cacheKey: "stablecoin-charts",
+      syncStartSec,
+      cacheWriteMode: cacheResult.written ? "published" : "skipped-newer",
+      casSkipped: cacheResult.skippedBecauseNewer,
+      lastWriteAdvanced,
+      canonicalReadbackUpdatedAt,
+    }),
   };
 }

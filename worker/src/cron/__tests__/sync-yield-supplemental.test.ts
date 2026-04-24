@@ -77,7 +77,7 @@ vi.mock("../yield-sync/sources", () => ({
 }));
 
 vi.mock("../../lib/db-cache", () => ({
-  setCacheIfNewer: vi.fn(async () => {}),
+  setCacheIfNewer: vi.fn(async () => ({ written: true, skippedBecauseNewer: false })),
 }));
 
 import { setCacheIfNewer } from "../../lib/db-cache";

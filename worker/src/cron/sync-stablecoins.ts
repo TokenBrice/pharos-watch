@@ -169,6 +169,31 @@ export async function syncStablecoins(
   if (isAbortResult(cacheResult)) return cacheResult;
   if (!cacheResult.written) {
     await recordOutcome(db, CIRCUIT_SOURCE.DL_STABLECOINS, true);
+    if (cacheResult.skippedBecauseNewer) {
+      return {
+        itemCount: 0,
+        metadata: buildSyncMetadata({
+          rowsRead: rawAssetCount,
+          rowsWritten: 0,
+          rowsDropped: droppedMalformedAssets,
+          sourceCoverage: { defillama: true },
+          fallbackMode: null,
+          validationFailures: 0,
+          upstreamFetchOk: true,
+          payloadAccepted: true,
+          cacheWriteSucceeded: false,
+          depegPipelineSucceeded: false,
+          cacheKey: cacheResult.cacheKey,
+          syncStartSec: cacheResult.syncStartSec,
+        }, {
+          cacheWriteMode: "skipped-newer",
+          capabilities: {
+            stablecoinsCache: true,
+            depegPipeline: false,
+          },
+        }),
+      };
+    }
     return cacheResult.blockedResult!;
   }
   await reportStablecoinsStage(reportProgress, "cache-write", "Published stablecoins cache", {
@@ -207,6 +232,8 @@ export async function syncStablecoins(
     upstreamFetchOk: true,
     payloadAccepted: true,
     cacheWriteSucceeded: true,
+    cacheKey: cacheResult.cacheKey,
+    syncStartSec: cacheResult.syncStartSec,
     depegPipelineSucceeded: depegErrorCount === 0,
   });
   await reportStablecoinsStage(reportProgress, "complete", "Completed stablecoins sync", {

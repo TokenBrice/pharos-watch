@@ -1,7 +1,7 @@
 import type { CacheStatus } from "@shared/types/status";
 import { FRESHNESS_RATIOS, STATUS_CACHE_RATIO_THRESHOLDS } from "@shared/lib/status-thresholds";
 import { DAY_SECONDS } from "@shared/lib/time-constants";
-import { getCache, setCacheIfNewer } from "./db-cache";
+import { getCache, setCacheIfNewer, type CacheWriteResult } from "./db-cache";
 import { decodeJsonString } from "./cache-json";
 import { sanitizeRecordValues } from "./normalizers";
 
@@ -500,9 +500,13 @@ export async function persistFxRateState(
   rates: Record<string, number>,
   meta: FxRatesMeta,
   syncStartSec: number,
-): Promise<void> {
-  await setCacheIfNewer(db, FX_RATES_KEY, JSON.stringify(rates), syncStartSec);
-  await setCacheIfNewer(db, FX_RATES_META_KEY, JSON.stringify(meta), syncStartSec);
+): Promise<{
+  rates: CacheWriteResult;
+  meta: CacheWriteResult;
+}> {
+  const ratesResult = await setCacheIfNewer(db, FX_RATES_KEY, JSON.stringify(rates), syncStartSec);
+  const metaResult = await setCacheIfNewer(db, FX_RATES_META_KEY, JSON.stringify(meta), syncStartSec);
+  return { rates: ratesResult, meta: metaResult };
 }
 
 export function buildFxCacheStatus(

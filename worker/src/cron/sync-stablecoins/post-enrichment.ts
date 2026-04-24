@@ -116,6 +116,10 @@ export interface DepegPipelineResult {
 export interface CacheValidationResult {
   /** Whether the schema validation succeeded and the cache was written. */
   written: boolean;
+  /** Whether the write was skipped because a newer canonical cache already exists. */
+  skippedBecauseNewer: boolean;
+  cacheKey: string;
+  syncStartSec: number;
   /** If validation failed, the degraded CronResult to return. */
   blockedResult?: CronResult;
 }
@@ -434,7 +438,7 @@ export interface ValidateAndCacheInput {
 
 /**
  * Normalizes the payload, validates against the schema, and writes to the
- * stablecoins cache. Returns `{ written: true }` on success or
+ * stablecoins cache. Returns the CAS outcome on valid payloads or
  * `{ written: false, blockedResult }` on validation failure.
  */
 export async function validateAndWriteStablecoinsCache(
@@ -480,15 +484,32 @@ export async function validateAndWriteStablecoinsCache(
       validation.issues,
       stablecoinsCacheAgeSec,
     );
-    return { written: false, blockedResult: buildBlockedResult(stablecoinsCacheAgeSec) };
+    return {
+      written: false,
+      skippedBecauseNewer: false,
+      cacheKey: "stablecoins",
+      syncStartSec,
+      blockedResult: buildBlockedResult(stablecoinsCacheAgeSec),
+    };
   }
 
   const cacheWriteAbort = returnIfAborted(signal, validationContext === "fallback" ? "fallback-cache-write" : "persist-main-cache");
   if (cacheWriteAbort) return cacheWriteAbort;
-  await setCacheIfNewer(db, "stablecoins", JSON.stringify(validation.data), syncStartSec);
-  console.log(`[sync-stablecoins] ${validationContext === "fallback" ? "CG fallback: cached" : "Cached"} ${assets.length} assets`);
+  const cacheResult = await setCacheIfNewer(db, "stablecoins", JSON.stringify(validation.data), syncStartSec);
+  if (cacheResult.written) {
+    console.log(`[sync-stablecoins] ${validationContext === "fallback" ? "CG fallback: cached" : "Cached"} ${assets.length} assets`);
+  } else {
+    console.log(
+      `[sync-stablecoins] Skipped stablecoins cache write; newer canonical cache already exists ` +
+      `(syncStartSec=${syncStartSec})`,
+    );
+  }
 
-  return { written: true };
+  return {
+    ...cacheResult,
+    cacheKey: "stablecoins",
+    syncStartSec,
+  };
 }
 
 // ---------------------------------------------------------------------------

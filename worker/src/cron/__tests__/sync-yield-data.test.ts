@@ -153,7 +153,7 @@ vi.mock("../../lib/db", async (importOriginal) => {
 vi.mock("../../lib/db-cache", () => ({
   getCache: vi.fn(async () => null),
   setCache: vi.fn(async () => {}),
-  setCacheIfNewer: vi.fn(async () => {}),
+  setCacheIfNewer: vi.fn(async () => ({ written: true, skippedBecauseNewer: false })),
   writeFreshnessSentinel: vi.fn(async () => {}),
 }));
 
@@ -335,7 +335,7 @@ describe("syncYieldData", () => {
     // Reset mocks to factory defaults
     vi.mocked(getCache).mockReset().mockResolvedValue(null);
     vi.mocked(setCache).mockReset().mockResolvedValue(undefined);
-    vi.mocked(setCacheIfNewer).mockReset().mockResolvedValue(undefined);
+    vi.mocked(setCacheIfNewer).mockReset().mockResolvedValue({ written: true, skippedBecauseNewer: false });
     vi.mocked(batchExecute).mockReset().mockResolvedValue(0);
     vi.mocked(shouldAttemptFetch).mockReset().mockResolvedValue(true);
     vi.mocked(recordOutcome).mockReset().mockResolvedValue(undefined);

@@ -220,13 +220,27 @@ export async function syncFxRates(
     }
 
     const meta = syncState.buildPersistedMeta();
-    await persistFxRateState(db, syncState.usableRates, meta, syncStartSec);
-    await setCache(db, "sync-fx-rates:last-write", "1");
-    console.log(`[sync-fx-rates] Cached FX rates: ${JSON.stringify(syncState.usableRates)}`);
-    const metadata = syncState.buildResultMetadata(Object.values(SECONDARY_FX_CURRENCY_TO_PEG));
+    const cacheResult = await persistFxRateState(db, syncState.usableRates, meta, syncStartSec);
+    const canonicalCache = cacheResult.rates.written ? null : await getCache(db, "fx-rates");
+    const newerCanonicalConfirmed = !!canonicalCache && canonicalCache.updatedAt > syncStartSec;
+    if (cacheResult.rates.written || newerCanonicalConfirmed) {
+      await setCache(db, "sync-fx-rates:last-write", "1");
+    }
+    console.log(
+      cacheResult.rates.written
+        ? `[sync-fx-rates] Cached FX rates: ${JSON.stringify(syncState.usableRates)}`
+        : `[sync-fx-rates] Cache write skipped; newer FX rates row exists`,
+    );
+    const metadata: Record<string, unknown> = syncState.buildResultMetadata(Object.values(SECONDARY_FX_CURRENCY_TO_PEG));
+    metadata.cacheWriteMode = cacheResult.rates.written ? "published" : "skipped-newer";
+    metadata.casSkipped = cacheResult.rates.skippedBecauseNewer || cacheResult.meta.skippedBecauseNewer;
+    metadata.cacheKey = "fx-rates";
+    metadata.syncStartSec = syncStartSec;
+    metadata.cacheWriteSucceeded = cacheResult.rates.written;
+    metadata.lastWriteAdvanced = cacheResult.rates.written || newerCanonicalConfirmed;
     return {
       status: syncState.mode === "cached-fallback" && meta.consecutiveFallbackRuns >= 4 ? "degraded" : undefined,
-      itemCount: Object.keys(syncState.usableRates).length,
+      itemCount: cacheResult.rates.written ? Object.keys(syncState.usableRates).length : 0,
       metadata: JSON.stringify(metadata),
     };
   } catch (err) {

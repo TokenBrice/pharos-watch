@@ -41,6 +41,12 @@ function getCacheInsert(db: MockD1Database): { sql: string; binds: unknown[] } |
     .find((entry) => entry.sql.includes("INSERT INTO cache") && entry.binds[0] === "stablecoin-charts");
 }
 
+function getLastWriteMarker(db: MockD1Database): { sql: string; binds: unknown[] } | undefined {
+  return db
+    .getHistory()
+    .find((entry) => entry.sql.includes("INSERT OR REPLACE INTO cache") && entry.binds[0] === "stablecoin-charts:last-write");
+}
+
 describe("syncStablecoinCharts", () => {
   beforeEach(() => {
     vi.useFakeTimers();
@@ -80,9 +86,13 @@ describe("syncStablecoinCharts", () => {
     const metadata = JSON.parse(result.metadata ?? "{}") as {
       rawPoints: number;
       downsampledPoints: number;
+      cacheWriteMode: string;
+      casSkipped: boolean;
     };
     expect(metadata.rawPoints).toBe(120);
     expect(metadata.downsampledPoints).toBeGreaterThan(0);
+    expect(metadata.cacheWriteMode).toBe("published");
+    expect(metadata.casSkipped).toBe(false);
 
     const insert = getCacheInsert(db as MockD1Database);
     expect(insert).toBeDefined();
@@ -91,6 +101,7 @@ describe("syncStablecoinCharts", () => {
     const cached = JSON.parse(String(insert?.binds[1])) as Array<{ totalCirculatingUSD: Record<string, number> }>;
     expect(cached.length).toBeGreaterThan(0);
     expect(cached[0].totalCirculatingUSD.peggedUSD).toBeTypeOf("number");
+    expect(getLastWriteMarker(db as MockD1Database)).toBeDefined();
   });
 
   it("coerces upstream string dates before writing the cached chart payload", async () => {
@@ -232,6 +243,102 @@ describe("syncStablecoinCharts", () => {
     expect(metadata.reason).toBe("downsampled-payload-too-small");
     expect(metadata.downsampledPoints).toBeLessThan(10);
     expect(getCacheInsert(db as MockD1Database)).toBeUndefined();
+  });
+
+  it("does not advance the last-write marker when a CAS skip cannot confirm a newer canonical chart cache", async () => {
+    const nowSec = Math.floor(Date.now() / 1000);
+    mockFetch([
+      {
+        match: "stablecoincharts/all",
+        body: makeRawChartPoints(120, nowSec),
+      },
+    ]);
+
+    const db = mockD1([
+      {
+        match: "SELECT value, updated_at FROM cache WHERE key = ?",
+        matchBinds: ["fx-rates"],
+        rows: [],
+        first: {
+          value: JSON.stringify({ peggedUSD: 1 }),
+          updated_at: nowSec,
+        },
+      },
+      {
+        match: "SELECT value, updated_at FROM cache WHERE key = ?",
+        matchBinds: ["stablecoin-charts"],
+        rows: [],
+        first: null,
+      },
+      {
+        match: "INSERT INTO cache",
+        rows: [],
+        runMeta: { changes: 0 },
+      },
+    ]);
+
+    const result = await syncStablecoinCharts(db);
+
+    expect(result.status).toBeUndefined();
+    expect(result.itemCount).toBe(0);
+    const metadata = JSON.parse(result.metadata ?? "{}") as {
+      cacheWriteMode: string;
+      casSkipped: boolean;
+      lastWriteAdvanced: boolean;
+      canonicalReadbackUpdatedAt: number | null;
+    };
+    expect(metadata.cacheWriteMode).toBe("skipped-newer");
+    expect(metadata.casSkipped).toBe(true);
+    expect(metadata.lastWriteAdvanced).toBe(false);
+    expect(metadata.canonicalReadbackUpdatedAt).toBeNull();
+    expect(getLastWriteMarker(db as MockD1Database)).toBeUndefined();
+  });
+
+  it("advances the last-write marker after CAS skip only when readback confirms newer canonical chart cache", async () => {
+    const nowSec = Math.floor(Date.now() / 1000);
+    mockFetch([
+      {
+        match: "stablecoincharts/all",
+        body: makeRawChartPoints(120, nowSec),
+      },
+    ]);
+
+    const db = mockD1([
+      {
+        match: "SELECT value, updated_at FROM cache WHERE key = ?",
+        matchBinds: ["fx-rates"],
+        rows: [],
+        first: {
+          value: JSON.stringify({ peggedUSD: 1 }),
+          updated_at: nowSec,
+        },
+      },
+      {
+        match: "SELECT value, updated_at FROM cache WHERE key = ?",
+        matchBinds: ["stablecoin-charts"],
+        rows: [],
+        first: {
+          value: "[]",
+          updated_at: nowSec + 5,
+        },
+      },
+      {
+        match: "INSERT INTO cache",
+        rows: [],
+        runMeta: { changes: 0 },
+      },
+    ]);
+
+    const result = await syncStablecoinCharts(db);
+
+    expect(result.itemCount).toBe(0);
+    const metadata = JSON.parse(result.metadata ?? "{}") as {
+      lastWriteAdvanced: boolean;
+      canonicalReadbackUpdatedAt: number | null;
+    };
+    expect(metadata.lastWriteAdvanced).toBe(true);
+    expect(metadata.canonicalReadbackUpdatedAt).toBe(nowSec + 5);
+    expect(getLastWriteMarker(db as MockD1Database)).toBeDefined();
   });
 
   it("skips FX-based repair when the source freshness is stale even if usable sync is fresh", async () => {

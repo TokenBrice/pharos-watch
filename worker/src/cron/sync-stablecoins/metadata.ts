@@ -93,6 +93,8 @@ export function buildStablecoinsSyncResult(input: {
   upstreamFetchOk?: boolean;
   payloadAccepted?: boolean;
   cacheWriteSucceeded?: boolean;
+  cacheKey?: string;
+  syncStartSec?: number;
   depegPipelineSucceeded?: boolean;
 }): CronResult {
   const finalMissing = input.assets.filter(hasMissingPrice).length;
@@ -124,6 +126,8 @@ export function buildStablecoinsSyncResult(input: {
     upstreamFetchOk: input.upstreamFetchOk ?? true,
     payloadAccepted: input.payloadAccepted ?? true,
     cacheWriteSucceeded: input.cacheWriteSucceeded ?? true,
+    cacheKey: input.cacheKey ?? "stablecoins",
+    syncStartSec: input.syncStartSec,
     depegPipelineSucceeded: input.depegPipelineSucceeded ?? input.depegErrorCount === 0,
   };
   if (input.stalenessWarning) metadata.stalenessWarning = true;
@@ -137,7 +141,7 @@ export function buildStablecoinsSyncResult(input: {
     itemCount: input.assets.length,
     status,
     metadata: buildSyncMetadata(metadata, {
-      cacheWriteMode: "main-write",
+      cacheWriteMode: "published",
       capabilities: {
         stablecoinsCache: true,
         depegPipeline: input.depegPipelineSucceeded ?? input.depegErrorCount === 0,

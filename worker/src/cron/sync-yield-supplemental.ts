@@ -86,7 +86,7 @@ export async function syncYieldSupplemental(
     };
   }
 
-  await setCacheIfNewer(
+  const cacheResult = await setCacheIfNewer(
     db,
     YIELD_SUPPLEMENTAL_CACHE_KEY,
     buildYieldSupplementalSourcesCache(dedupedCandidates, startSec),
@@ -94,20 +94,24 @@ export async function syncYieldSupplemental(
   );
 
   return {
-    itemCount: dedupedCandidates.length,
+    itemCount: cacheResult.written ? dedupedCandidates.length : 0,
     metadata: JSON.stringify({
       rowsRead: rawCandidateCount,
-      rowsWritten: dedupedCandidates.length,
+      rowsWritten: cacheResult.written ? dedupedCandidates.length : 0,
       rowsDropped: droppedCount,
       sourceCoverage: {
         rawSupplementalCandidates: rawCandidateCount,
         dedupedSupplementalCandidates: dedupedCandidates.length,
-        supplementalCandidatesWritten: dedupedCandidates.length,
+        supplementalCandidatesWritten: cacheResult.written ? dedupedCandidates.length : 0,
         sourceFamilyCounts,
         optionalRpcTelemetry,
       },
       fallbackMode: null,
-      cacheWriteSkipped: false,
+      cacheWriteSkipped: cacheResult.skippedBecauseNewer,
+      cacheWriteMode: cacheResult.written ? "published" : "skipped-newer",
+      casSkipped: cacheResult.skippedBecauseNewer,
+      cacheKey: YIELD_SUPPLEMENTAL_CACHE_KEY,
+      syncStartSec: startSec,
     }),
   };
 }

@@ -303,7 +303,34 @@ export async function syncViaCoingeckoFallback(
     }),
   }));
   if (isAbortResult(cacheResult)) return cacheResult;
-  if (!cacheResult.written) return cacheResult.blockedResult!;
+  if (!cacheResult.written) {
+    if (cacheResult.skippedBecauseNewer) {
+      return {
+        itemCount: 0,
+        metadata: buildSyncMetadata({
+          rowsRead: assets.length,
+          rowsWritten: 0,
+          rowsDropped: 0,
+          sourceCoverage: { defillama: false, coingeckoFallbackAssets: assets.length },
+          fallbackMode: "coingecko-supply-fallback",
+          validationFailures: 0,
+          upstreamFetchOk: false,
+          payloadAccepted: true,
+          cacheWriteSucceeded: false,
+          depegPipelineSucceeded: false,
+          cacheKey: cacheResult.cacheKey,
+          syncStartSec: cacheResult.syncStartSec,
+        }, {
+          cacheWriteMode: "skipped-newer",
+          capabilities: {
+            stablecoinsCache: true,
+            depegPipeline: false,
+          },
+        }),
+      };
+    }
+    return cacheResult.blockedResult!;
+  }
   await reportStablecoinsStage(
     reportProgress,
     "fallback-cache-write",
@@ -357,9 +384,11 @@ export async function syncViaCoingeckoFallback(
       upstreamFetchOk: false,
       payloadAccepted: true,
       cacheWriteSucceeded: true,
+      cacheKey: cacheResult.cacheKey,
+      syncStartSec: cacheResult.syncStartSec,
       depegPipelineSucceeded: depegErrorCount === 0,
     }, {
-      cacheWriteMode: "fallback-write",
+      cacheWriteMode: "published",
       capabilities: {
         stablecoinsCache: true,
         depegPipeline: depegErrorCount === 0,

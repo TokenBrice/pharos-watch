@@ -175,12 +175,21 @@ describe("db utility helpers", () => {
     expect(write?.args[2]).toBe(Math.floor(Date.now() / 1000));
   });
 
-  it("logs when setCacheIfNewer skips write due to fresher row", async () => {
+  it("returns written when setCacheIfNewer inserts or updates the cache row", async () => {
+    const { db } = makeDb({ setCacheIfNewerChanges: 1 });
+
+    const result = await setCacheIfNewer(db, "stablecoins", '{"x":1}', 1700000000);
+
+    expect(result).toEqual({ written: true, skippedBecauseNewer: false });
+  });
+
+  it("returns skipped outcome and logs when setCacheIfNewer skips write due to fresher row", async () => {
     const { db } = makeDb({ setCacheIfNewerChanges: 0 });
     const logSpy = vi.spyOn(console, "log").mockImplementation(() => {});
 
-    await setCacheIfNewer(db, "stablecoins", '{"x":1}', 1700000000);
+    const result = await setCacheIfNewer(db, "stablecoins", '{"x":1}', 1700000000);
 
+    expect(result).toEqual({ written: false, skippedBecauseNewer: true });
     expect(logSpy).toHaveBeenCalledWith(expect.stringContaining('Skipped write for "stablecoins"'));
     logSpy.mockRestore();
   });

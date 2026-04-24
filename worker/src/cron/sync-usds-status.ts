@@ -1,4 +1,4 @@
-import { shouldSkipFreshCache, setCacheIfNewer } from "../lib/db-cache";
+import { shouldSkipFreshCache, setCacheIfNewer, type CacheWriteResult } from "../lib/db-cache";
 import type { CronResult } from "../lib/cron-logger";
 import { fetchEtherscanProxyHex } from "../lib/evm-rpc";
 import { shouldAttemptFetch, recordOutcomeSafe } from "../lib/circuit-breaker";
@@ -119,8 +119,9 @@ export async function syncUsdsStatus(
     lastChecked: Math.floor(Date.now() / 1000),
   };
 
+  let cacheResult: CacheWriteResult;
   try {
-    await setCacheIfNewer(db, CACHE_KEY, JSON.stringify(status), syncStartSec);
+    cacheResult = await setCacheIfNewer(db, CACHE_KEY, JSON.stringify(status), syncStartSec);
   } catch (err) {
     await recordOutcomeSafe(db, CIRCUIT_SOURCE.ETHERSCAN, true);
     console.error("[sync-usds-status] Cache write failed:", err);
@@ -131,9 +132,16 @@ export async function syncUsdsStatus(
     };
   }
   await recordOutcomeSafe(db, CIRCUIT_SOURCE.ETHERSCAN, true);
-  console.log("[usds-status] Cache updated");
+  console.log(cacheResult.written ? "[usds-status] Cache updated" : "[usds-status] Cache update skipped; newer row exists");
   return {
-    itemCount: 1,
-    metadata: JSON.stringify({ implementationAddress, freezeActive }),
+    itemCount: cacheResult.written ? 1 : 0,
+    metadata: JSON.stringify({
+      implementationAddress,
+      freezeActive,
+      cacheKey: CACHE_KEY,
+      syncStartSec,
+      cacheWriteMode: cacheResult.written ? "published" : "skipped-newer",
+      casSkipped: cacheResult.skippedBecauseNewer,
+    }),
   };
 }

@@ -33,11 +33,21 @@ export async function shouldSkipFreshCache(db: D1Database, key: string, maxAgeSe
   return Date.now() / 1000 - cached.updatedAt < maxAgeSec;
 }
 
+export interface CacheWriteResult {
+  written: boolean;
+  skippedBecauseNewer: boolean;
+}
+
 /**
  * Compare-and-swap cache write: only updates if the existing row is older than `syncStartSec`.
  * Prevents a slow cron run from overwriting a newer run's data.
  */
-export async function setCacheIfNewer(db: D1Database, key: string, value: string, syncStartSec: number): Promise<void> {
+export async function setCacheIfNewer(
+  db: D1Database,
+  key: string,
+  value: string,
+  syncStartSec: number,
+): Promise<CacheWriteResult> {
   const result = await db
     .prepare(
       `INSERT INTO cache (key, value, updated_at) VALUES (?, ?, ?)
@@ -48,7 +58,9 @@ export async function setCacheIfNewer(db: D1Database, key: string, value: string
     .run();
   if (result.meta.changes === 0) {
     console.log(`[cache] Skipped write for "${key}" — existing data is newer (started_at > ${syncStartSec})`);
+    return { written: false, skippedBecauseNewer: true };
   }
+  return { written: true, skippedBecauseNewer: false };
 }
 
 export async function writeFreshnessSentinel(

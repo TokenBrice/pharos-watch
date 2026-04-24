@@ -27,7 +27,7 @@ export type StablecoinsPayload = {
   fxFallbackRates?: Record<string, number>;
 };
 
-export type SyncCacheWriteMode = "main-write" | "fallback-write" | "blocked-invalid-payload" | "no-write";
+export type SyncCacheWriteMode = "published" | "skipped-newer" | "blocked-invalid-payload" | "no-write";
 
 interface SyncCapabilities {
   stablecoinsCache: boolean;
@@ -127,6 +127,7 @@ export function buildSyncMetadata(
   metadata: Record<string, unknown>,
   options?: {
     cacheWriteMode?: SyncCacheWriteMode;
+    casSkipped?: boolean;
     downstreamSafe?: boolean;
     capabilities?: Partial<SyncCapabilities>;
   },
@@ -138,6 +139,7 @@ export function buildSyncMetadata(
   return JSON.stringify({
     ...metadata,
     cacheWriteMode: options?.cacheWriteMode ?? "no-write",
+    casSkipped: options?.casSkipped ?? options?.cacheWriteMode === "skipped-newer",
     downstreamSafe: capabilities.stablecoinsCache,
     capabilities,
   });

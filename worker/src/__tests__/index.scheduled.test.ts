@@ -7,7 +7,7 @@ const cronMocks = vi.hoisted(() => ({
     itemCount: 1,
     metadata: JSON.stringify({
       downstreamSafe: true,
-      cacheWriteMode: "main-write",
+      cacheWriteMode: "published",
       capabilities: {
         stablecoinsCache: true,
         depegPipeline: true,
@@ -112,7 +112,7 @@ vi.mock("../cron/discovery-scan", () => ({ runDiscoveryScan: cronMocks.runDiscov
 vi.mock("../lib/db-cache", () => ({
   getCache: cronMocks.getCache,
   setCache: cronMocks.setCache,
-  setCacheIfNewer: vi.fn(async () => undefined),
+  setCacheIfNewer: vi.fn(async () => ({ written: true, skippedBecauseNewer: false })),
   shouldSkipFreshCache: vi.fn(async () => false),
   getPriceCache: vi.fn(async () => new Map()),
   savePriceCache: vi.fn(async () => undefined),
@@ -395,7 +395,7 @@ describe("worker.scheduled", () => {
       itemCount: 1,
       metadata: JSON.stringify({
         downstreamSafe: true,
-        cacheWriteMode: "main-write",
+        cacheWriteMode: "published",
         depegErrorCount: 1,
         capabilities: {
           stablecoinsCache: true,
