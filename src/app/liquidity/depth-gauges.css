@@ -1,0 +1,26 @@
+@media (prefers-reduced-motion: no-preference) {
+  @keyframes dg-ripple-still {
+    0%, 100% { transform: translateX(0); }
+    50% { transform: translateX(1px); }
+  }
+  @keyframes dg-ripple-gentle {
+    0%, 100% { transform: translateX(-2px); }
+    50% { transform: translateX(2px); }
+  }
+  @keyframes dg-ripple-choppy {
+    0% { transform: translateX(-3px) translateY(0); }
+    25% { transform: translateX(0) translateY(-1px); }
+    50% { transform: translateX(3px) translateY(0); }
+    75% { transform: translateX(0) translateY(1px); }
+    100% { transform: translateX(-3px) translateY(0); }
+  }
+  @keyframes dg-buoy-bob {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-2px); }
+  }
+
+  .dg-ripple-still { animation: dg-ripple-still 4s ease-in-out infinite; }
+  .dg-ripple-gentle { animation: dg-ripple-gentle 2.6s ease-in-out infinite; }
+  .dg-ripple-choppy { animation: dg-ripple-choppy 1.6s ease-in-out infinite; }
+  .dg-buoy { animation: dg-buoy-bob 3.5s ease-in-out infinite; transform-origin: center; }
+}
