@@ -7,7 +7,7 @@ import {
 import { USER_AGENT } from "../../lib/constants";
 import { fetchEvmCallHexAtBlock } from "../../lib/evm-rpc";
 import { buildChainRpcs, type ChainRpcConfig } from "../../lib/chain-registry";
-import { cancelResponseBodyQuietly } from "../../lib/response-body";
+import { fetchWithRetry } from "../../lib/fetch-retry";
 
 const FLUID_API_BASE = "https://api.fluid.instadapp.io/v2";
 const FLUID_RESOLVER_CALL_GAS = "0x0F4240";
@@ -151,12 +151,19 @@ export async function fetchFluidPools(
   for (const [chain, chainId] of Object.entries(FLUID_CHAINS) as Array<[keyof typeof FLUID_CHAINS, number]>) {
     const url = `${FLUID_API_BASE}/${chainId}/dexes/stats/tickers`;
     try {
-      const res = await fetch(url, {
-        headers: { "User-Agent": USER_AGENT },
-        signal: signal ? AbortSignal.any([signal, AbortSignal.timeout(15_000)]) : AbortSignal.timeout(15_000),
-      });
+      const res = await fetchWithRetry(
+        url,
+        {
+          headers: { "User-Agent": USER_AGENT, Accept: "application/json" },
+          signal,
+        },
+        2,
+        { timeoutMs: 15_000 },
+      );
+      if (!res) {
+        throw new Error(`${chain} request failed after retries`);
+      }
       if (!res.ok) {
-        await cancelResponseBodyQuietly(res);
         throw new Error(`${chain} returned ${res.status}`);
       }
       const tickers = await res.json() as unknown;
