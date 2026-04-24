@@ -174,7 +174,7 @@ describe("buildLiquidityExitRouteModel", () => {
 
 describe("LiquidityStats", () => {
   it("renders the exit route map with disclosed tail routes", () => {
-    render(createElement(LiquidityStats, {
+    const { container } = render(createElement(LiquidityStats, {
       stats: {
         totalTvl: 10_000,
         totalVol: 2_500,
@@ -206,11 +206,18 @@ describe("LiquidityStats", () => {
             arbitrum: 1_000,
           },
           poolCount: 42,
+          concentrationHhi: 0.31,
         } as DexLiquidityData,
       },
     }));
 
     expect(screen.getByText("Exit Route Map")).toBeTruthy();
-    expect(screen.getByText("Other routes")).toBeTruthy();
+    expect(screen.getByTestId("exit-route-terminal")).toBeTruthy();
+    expect(screen.getByTestId("protocol-gate-curve")).toBeTruthy();
+    expect(screen.getByTestId("protocol-gate-_other-routes")).toBeTruthy();
+    expect(screen.getByTestId("chain-lane-ethereum")).toBeTruthy();
+    expect(screen.getByTestId("exit-concourse").getAttribute("data-crowding-band")).toBe("visible");
+    expect(container.querySelector('image[href="/dexes/curve.png"]')).toBeTruthy();
+    expect(container.querySelector('image[href="/chains/ethereum.png"]')).toBeTruthy();
   });
 });
