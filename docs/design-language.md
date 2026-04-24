@@ -556,6 +556,20 @@ Live app-wide patterns:
 
 ---
 
+## Draw the Metaphor
+
+When a page introduces a metaphor, render it — don't just name it. The Stablecoin Cemetery draws actual tombstones with arched caps, crosses, and flower scatter. The Alt-Peg Atlas draws a starfield with celestial bands and constellation cohorts. The Chains Harbor Chart draws ships with flags, cargo, wakes, and depth lines. The Liquidity Depth Gauges draw water columns with surface ripples and buoys.
+
+Rules that keep this from drifting into decoration:
+
+- **Every shape encodes a data field.** No ornamental geometry. If a shape doesn't vary with a number, remove it.
+- **Inline JSX SVG, semantic CSS variables, hex fallbacks.** No external `.svg` assets, no runtime SVG libraries.
+- **CSS keyframes only, gated on `@media (prefers-reduced-motion: no-preference)`.** No framer-motion.
+- **Mobile degrades via breakpoint swap,** not feature removal. Rich visual above an `xl:` breakpoint; simplified list below.
+- **The underlying data table remains.** The metaphor is a hero. The table is the workbench.
+
+---
+
 ## Maintenance Rule
 
 If a deployed class pattern changes in production, update this document immediately after release. This file is intended to describe what users currently see, not aspirational or historical styles.
