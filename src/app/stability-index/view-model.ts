@@ -33,6 +33,47 @@ export interface PsiContributorRow extends StabilityContributor {
   total: number;
 }
 
+export type PsiBeamDimmerKey = "severity" | "breadth" | "stressBreadth" | "trend";
+
+export interface PsiBeamDimmerLane {
+  key: PsiBeamDimmerKey;
+  label: string;
+  value: number;
+  delta: number | null;
+  pressurePct: number;
+  max: number;
+  role: "penalty" | "support" | "drag";
+  detail: string;
+}
+
+const PSI_BEAM_DIMMER_DETAIL: Record<PsiBeamDimmerKey, { label: string; max: number; detail: string }> = {
+  severity: {
+    label: "Severity",
+    max: 68,
+    detail: "Current depeg depth penalty",
+  },
+  breadth: {
+    label: "Breadth",
+    max: 17,
+    detail: "Current active depeg spread",
+  },
+  stressBreadth: {
+    label: "Stress breadth",
+    max: 5,
+    detail: "Current DEWS warning-band pressure",
+  },
+  trend: {
+    label: "Trend",
+    max: 5,
+    detail: "7-day market-cap momentum",
+  },
+};
+
+function clampPct(value: number, max: number): number {
+  if (max <= 0) return 0;
+  return Math.max(0, Math.min(100, (value / max) * 100));
+}
+
 export function buildPsiComponentData(
   history: Array<{ date: number; components?: { severity?: number; breadth?: number; stressBreadth?: number; trend?: number } | null }> | undefined,
   current: { computedAt: number; components: { severity: number; breadth: number; stressBreadth?: number | null; trend: number } } | null | undefined,
@@ -55,6 +96,35 @@ export function buildPsiComponentData(
       trend: current.components.trend,
     },
   ];
+}
+
+export function buildPsiBeamDimmers(
+  componentData: Array<{ severity: number; breadth: number; stressBreadth: number; trend: number }> | undefined,
+): PsiBeamDimmerLane[] {
+  if (!componentData?.length) return [];
+  const current = componentData[componentData.length - 1];
+  const previous = componentData.length > 1 ? componentData[componentData.length - 2] : null;
+  const keys: PsiBeamDimmerKey[] = ["severity", "breadth", "stressBreadth", "trend"];
+
+  return keys.map((key) => {
+    const config = PSI_BEAM_DIMMER_DETAIL[key];
+    const value = current[key];
+    const previousValue = previous?.[key] ?? null;
+    const pressureValue = key === "trend" ? Math.max(0, -value) : Math.max(0, value);
+    const role = key === "trend"
+      ? value >= 0 ? "support" : "drag"
+      : "penalty";
+    return {
+      key,
+      label: config.label,
+      value,
+      delta: previousValue === null ? null : Math.round((value - previousValue) * 10) / 10,
+      pressurePct: clampPct(pressureValue, config.max),
+      max: config.max,
+      role,
+      detail: config.detail,
+    };
+  });
 }
 
 export function buildPsiHistoryStats(history: PsiHistoryPoint[]): HistoryStatItem[] {

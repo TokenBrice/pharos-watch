@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   buildPsiComponentData,
+  buildPsiBeamDimmers,
   buildPsiContributorRows,
   buildPsiEventTimelineRows,
   buildPsiHistoryStats,
@@ -51,6 +52,69 @@ describe("stability index view-model", () => {
     expect(svb).toMatchObject({
       psi: 35,
       psiBand: "CRISIS",
+    });
+  });
+
+  it("builds PSI beam dimmer lanes from current component values and prior-sample deltas", () => {
+    const lanes = buildPsiBeamDimmers([
+      { ts: 1, severity: 8, breadth: 3, stressBreadth: 1, trend: 2 },
+      { ts: 2, severity: 12, breadth: 4.5, stressBreadth: 2, trend: -1.5 },
+    ]);
+
+    expect(lanes).toEqual([
+      {
+        key: "severity",
+        label: "Severity",
+        value: 12,
+        delta: 4,
+        pressurePct: expect.closeTo(17.647, 2),
+        max: 68,
+        role: "penalty",
+        detail: "Current depeg depth penalty",
+      },
+      {
+        key: "breadth",
+        label: "Breadth",
+        value: 4.5,
+        delta: 1.5,
+        pressurePct: expect.closeTo(26.471, 2),
+        max: 17,
+        role: "penalty",
+        detail: "Current active depeg spread",
+      },
+      {
+        key: "stressBreadth",
+        label: "Stress breadth",
+        value: 2,
+        delta: 1,
+        pressurePct: 40,
+        max: 5,
+        role: "penalty",
+        detail: "Current DEWS warning-band pressure",
+      },
+      {
+        key: "trend",
+        label: "Trend",
+        value: -1.5,
+        delta: -3.5,
+        pressurePct: 30,
+        max: 5,
+        role: "drag",
+        detail: "7-day market-cap momentum",
+      },
+    ]);
+  });
+
+  it("treats positive PSI trend as support rather than pressure", () => {
+    const lanes = buildPsiBeamDimmers([
+      { ts: 1, severity: 0, breadth: 0, stressBreadth: 0, trend: 3 },
+    ]);
+
+    expect(lanes.find((lane) => lane.key === "trend")).toMatchObject({
+      value: 3,
+      delta: null,
+      pressurePct: 0,
+      role: "support",
     });
   });
 });

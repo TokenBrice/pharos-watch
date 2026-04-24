@@ -24,6 +24,7 @@ import {
 } from "@shared/lib/psi-view-model";
 import {
   buildPsiComponentData,
+  buildPsiBeamDimmers,
   buildPsiContributorRows,
   buildPsiEventTimelineRows,
   buildPsiHistoryStats,
@@ -39,6 +40,7 @@ import {
   STABILITY_COMPONENT_DETAIL,
   type StabilityComponentScores,
 } from "./presentational";
+import { PsiBeamDimmers } from "./psi-beam-dimmers";
 
 type ComponentChartPoint = { ts: number } & StabilityComponentScores;
 
@@ -174,6 +176,8 @@ export function StabilityIndexClient() {
 
   const componentData = useMemo(() => buildPsiComponentData(history ?? [], current), [current, history]);
 
+  const beamDimmerLanes = useMemo(() => buildPsiBeamDimmers(componentData), [componentData]);
+
   const historyStats = useMemo(() => buildPsiHistoryStats(history ?? []), [history]);
 
   const eventTimelineRows = useMemo(() => buildPsiEventTimelineRows(chartData), [chartData]);
@@ -233,6 +237,8 @@ export function StabilityIndexClient() {
         components={heroComponents}
         historyStats={historyStats}
       />
+
+      <PsiBeamDimmers lanes={beamDimmerLanes} />
 
       <ScoreChart data={chartData} />
 
