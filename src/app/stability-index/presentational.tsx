@@ -215,64 +215,59 @@ export function StabilityIndexPanel({
 
   return (
     <Card className="rounded-xl py-0">
-      <CardContent className="flex flex-col gap-6 py-6 sm:gap-7 sm:py-7" aria-live="polite">
-        <section aria-labelledby="psi-hero-heading">
-          <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
-            <div>
-              <p className="pharos-kicker">The Beacon</p>
-              <h2
-                id="psi-hero-heading"
-                className="pharos-section-title mt-1 flex items-center gap-2"
-              >
-                <Compass className="h-4 w-4 text-sky-700 dark:text-sky-300" aria-hidden />
-                Market regime, drift, and 30-day range
-              </h2>
-            </div>
-            <p className="text-xs text-muted-foreground">Updated every 30 min</p>
+      <CardContent className="py-6 sm:py-7" aria-live="polite">
+        <div className="mb-5 flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <p className="pharos-kicker">The Beacon</p>
+            <h2 className="pharos-section-title mt-1 flex items-center gap-2">
+              <Compass className="h-4 w-4 text-sky-700 dark:text-sky-300" aria-hidden />
+              Market regime, drift, and 30-day range
+            </h2>
+          </div>
+          <p className="text-xs text-muted-foreground">Updated every 30 min</p>
+        </div>
+
+        <div className="flex flex-col gap-6 lg:flex-row lg:items-stretch lg:gap-8">
+          <div className="mx-auto w-full max-w-sm overflow-hidden rounded-lg lg:mx-0 lg:w-1/2 lg:shrink-0">
+            <PsiLighthouseScene band={band} score={score} />
           </div>
 
-          <div className="flex flex-col gap-5 lg:flex-row lg:items-center lg:gap-8">
-            <div className="mx-auto w-full max-w-sm overflow-hidden rounded-lg lg:mx-0 lg:w-96 lg:shrink-0 xl:w-[28rem]">
-              <PsiLighthouseScene band={band} score={score} />
+          <div className="flex flex-1 flex-col gap-5 lg:gap-6">
+            <div className="flex flex-col items-center gap-1 text-center lg:items-start lg:text-left">
+              <div className="flex items-baseline gap-2">
+                <span className="text-xs text-muted-foreground">
+                  <MethodologyLabel topic="psi">PSI</MethodologyLabel>
+                </span>
+                <span className={`font-mono text-6xl font-extrabold leading-none tabular-nums ${colorClass}`}>
+                  {formatScore(score)}
+                </span>
+                <span className={`text-lg font-bold uppercase tracking-wide ${colorClass}`}>
+                  {band}
+                </span>
+              </div>
+              <div className="flex flex-wrap items-center justify-center gap-x-3 gap-y-1 text-sm text-muted-foreground lg:justify-start">
+                {delta !== null && (
+                  <span className={`font-medium tabular-nums ${deltaClass}`}>
+                    {delta >= 0 ? "+" : ""}
+                    {delta.toFixed(1)} vs yesterday
+                  </span>
+                )}
+                <span>{daysInBand} day{daysInBand !== 1 ? "s" : ""} in {band}</span>
+              </div>
             </div>
 
-            <div className="flex flex-1 flex-col gap-5 lg:gap-6">
-              <div className="flex flex-col items-center gap-1 text-center lg:items-start lg:text-left">
-                <div className="flex items-baseline gap-2">
-                  <span className="text-xs text-muted-foreground">
-                    <MethodologyLabel topic="psi">PSI</MethodologyLabel>
-                  </span>
-                  <span className={`font-mono text-6xl font-extrabold leading-none tabular-nums ${colorClass}`}>
-                    {formatScore(score)}
-                  </span>
-                  <span className={`text-lg font-bold uppercase tracking-wide ${colorClass}`}>
-                    {band}
-                  </span>
-                </div>
-                <div className="flex flex-wrap items-center justify-center gap-x-3 gap-y-1 text-sm text-muted-foreground lg:justify-start">
-                  {delta !== null && (
-                    <span className={`font-medium tabular-nums ${deltaClass}`}>
-                      {delta >= 0 ? "+" : ""}
-                      {delta.toFixed(1)} vs yesterday
-                    </span>
-                  )}
-                  <span>{daysInBand} day{daysInBand !== 1 ? "s" : ""} in {band}</span>
-                </div>
-              </div>
+            <div className="hidden border-t border-border/60 pt-5 lg:flex lg:items-center lg:gap-6">
+              <p className="pharos-kicker shrink-0">Historical PSI</p>
+              <PsiHistoryStatsGrid items={historyStats} layout="row" />
+            </div>
 
-              <div className="hidden lg:flex lg:items-center lg:gap-6 lg:border-t lg:border-border/60 lg:pt-5">
-                <p className="pharos-kicker shrink-0">Historical PSI</p>
-                <PsiHistoryStatsGrid items={historyStats} layout="row" />
-              </div>
+            <PsiHistoryStatsGrid items={historyStats} layout="compact" />
 
-              <PsiHistoryStatsGrid items={historyStats} layout="compact" />
+            <div className="border-t border-border/60 pt-5 lg:mt-auto">
+              <PsiBeamDimmers lanes={lanes} columns={2} />
             </div>
           </div>
-        </section>
-
-        <div className="border-t border-border/60" />
-
-        <PsiBeamDimmers lanes={lanes} />
+        </div>
       </CardContent>
     </Card>
   );

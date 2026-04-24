@@ -31,8 +31,19 @@ function deltaLabel(delta: number | null): string {
   return `${delta > 0 ? "+" : ""}${formatScore(delta)} vs prior sample`;
 }
 
-export function PsiBeamDimmers({ lanes }: { lanes: PsiBeamDimmerLane[] }) {
+export function PsiBeamDimmers({
+  lanes,
+  columns = 4,
+}: {
+  lanes: PsiBeamDimmerLane[];
+  columns?: 2 | 4;
+}) {
   if (lanes.length === 0) return null;
+
+  const gridClass =
+    columns === 2
+      ? "grid gap-3 sm:grid-cols-2"
+      : "grid gap-3 md:grid-cols-2 xl:grid-cols-4";
 
   return (
     <section aria-labelledby="psi-beam-dimmers-heading">
@@ -52,7 +63,7 @@ export function PsiBeamDimmers({ lanes }: { lanes: PsiBeamDimmerLane[] }) {
         </p>
       </div>
 
-      <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+      <div className={gridClass}>
         {lanes.map((lane) => (
           <div key={lane.key} className="rounded-lg border border-border/70 bg-muted/20 p-3">
             <div className="flex items-start justify-between gap-3">
