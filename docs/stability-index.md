@@ -134,7 +134,7 @@ See [API Reference](./api-reference.md) for the full response shape.
 ## Frontend
 
 - **Homepage widget**: `src/components/stability-index.tsx` — score, band, delta from yesterday, 30-day sparkline, animated lighthouse icon
-- **Dedicated page**: `src/app/stability-index/client.tsx` — score history chart with band-colored zones, Beam Dimmers for the current formula component pressure, component breakdown stacked area chart, time range filter, methodology section, and contextual methodology hints on PSI plus the four component labels (`Severity`, `Breadth`, `Stress Breadth`, `Trend`). Beam Dimmers use the current PSI component values and prior-sample deltas only; they are not a causal event timeline and do not change scoring.
+- **Dedicated page**: `src/app/stability-index/client.tsx` — hero KPI bar focused on the lighthouse/current PSI signal and historical PSI measurements, score history chart with band-colored zones, Beam Dimmers for the current formula component pressure, component breakdown stacked area chart, time range filter, methodology section, and contextual methodology hints on PSI plus the four component labels (`Severity`, `Breadth`, `Stress Breadth`, `Trend`). Beam Dimmers use the current PSI component values and prior-sample deltas only; they are not a causal event timeline and do not change scoring.
 - **Hook**: `src/hooks/api-hooks.ts` — `useStabilityIndex()` (homepage), `useStabilityIndexDetail()` (page)
 - **Route strategy (2026-03-05):** legacy `/stability-index-alt` was retired after Tier 3A review (no nav/sitemap/internal product usage) and now redirects to `/stability-index` via `public/_redirects`
 

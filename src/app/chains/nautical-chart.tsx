@@ -834,6 +834,47 @@ export function NauticalChart({
         </div>
       </div>
 
+      <div className="grid gap-3 border-b border-border/60 p-4 sm:grid-cols-2 xl:grid-cols-4">
+        <CompassPlate
+          icon={<Anchor className="h-4 w-4 text-sky-700 dark:text-sky-300" aria-hidden />}
+          label="Largest port"
+          value={model.largestHarbor?.name ?? "n/a"}
+          detail={`${model.largestHarbor?.dominantSymbol ?? "n/a"} dominant cargo`}
+        />
+        <CompassPlate
+          icon={<ShipWheel className="h-4 w-4 text-emerald-700 dark:text-emerald-300" aria-hidden />}
+          label="Avg health"
+          value={model.averageHealthScore ?? "NR"}
+          detail={`${model.harborCount} active chain profiles`}
+        />
+        <CompassPlate
+          icon={<Activity className="h-4 w-4 text-amber-700 dark:text-amber-300" aria-hidden />}
+          label="Fragile ports"
+          value={model.fragileHarbors}
+          detail="fragile or concentrated chains"
+        />
+        <div className="rounded-lg border border-border/70 bg-muted/20 p-3 shadow-[inset_0_1px_0_oklch(1_0_0_/0.05)]">
+          <p className="pharos-kicker">Health bands</p>
+          <div className="mt-2 flex flex-wrap gap-1.5">
+            {(["robust", "healthy", "mixed", "fragile", "concentrated"] as const).map((band) => (
+              <span
+                key={band}
+                className={cn(
+                  "rounded-full px-2 py-0.5 text-[11px] font-medium capitalize",
+                  HEALTH_BADGE_CLASSES[band],
+                )}
+              >
+                {band}
+              </span>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      <p className="border-b border-border/60 px-4 py-3 text-xs text-muted-foreground">
+        Source: Chain health snapshot. Harbor size is supply distribution, not issuer redemption capacity.
+      </p>
+
       <div
         className="nc-chart-viewport"
         role="group"
@@ -985,47 +1026,6 @@ export function NauticalChart({
           {sky === "fog" && <Fog />}
         </svg>
       </div>
-
-      <div className="grid gap-3 p-4 sm:grid-cols-2 xl:grid-cols-4">
-        <CompassPlate
-          icon={<Anchor className="h-4 w-4 text-sky-700 dark:text-sky-300" aria-hidden />}
-          label="Largest port"
-          value={model.largestHarbor?.name ?? "n/a"}
-          detail={`${model.largestHarbor?.dominantSymbol ?? "n/a"} dominant cargo`}
-        />
-        <CompassPlate
-          icon={<ShipWheel className="h-4 w-4 text-emerald-700 dark:text-emerald-300" aria-hidden />}
-          label="Avg health"
-          value={model.averageHealthScore ?? "NR"}
-          detail={`${model.harborCount} active chain profiles`}
-        />
-        <CompassPlate
-          icon={<Activity className="h-4 w-4 text-amber-700 dark:text-amber-300" aria-hidden />}
-          label="Fragile ports"
-          value={model.fragileHarbors}
-          detail="fragile or concentrated chains"
-        />
-        <div className="rounded-lg border border-border/70 bg-muted/20 p-3 shadow-[inset_0_1px_0_oklch(1_0_0_/0.05)]">
-          <p className="pharos-kicker">Health bands</p>
-          <div className="mt-2 flex flex-wrap gap-1.5">
-            {(["robust", "healthy", "mixed", "fragile", "concentrated"] as const).map((band) => (
-              <span
-                key={band}
-                className={cn(
-                  "rounded-full px-2 py-0.5 text-[11px] font-medium capitalize",
-                  HEALTH_BADGE_CLASSES[band],
-                )}
-              >
-                {band}
-              </span>
-            ))}
-          </div>
-        </div>
-      </div>
-
-      <p className="border-t border-border/60 px-4 py-3 text-xs text-muted-foreground">
-        Source: Chain health snapshot. Harbor size is supply distribution, not issuer redemption capacity.
-      </p>
     </section>
   );
 }

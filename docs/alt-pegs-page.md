@@ -70,7 +70,7 @@ Important contract:
 
 ## Section Order
 
-The route renders `StaticAltPegLinkHub` before `AltPegsClient`. The static hero is a single theme-aware, map-first `FiatWorldAtlas` card headed by `Peg Diversity Map`; it carries the region summary pills, a compact logo-size and top-cohort rail, the desktop world map, non-geographic reference markers, and the crawlable cohort links. In light mode, the atlas uses a pale cartographic surface; dark mode keeps the higher-contrast night-map treatment.
+The route renders `StaticAltPegLinkHub` before `AltPegsClient`. The static hero is a single theme-aware, map-first `FiatWorldAtlas` card headed by `Peg Diversity Map`; it carries the logo-size key, a readable top-three cohort rail, the desktop world map, non-geographic reference markers, and the crawlable cohort links. Region summary pills and duplicate cohort/coin/region KPI counters stay out of the map hero so the atlas itself remains the primary visual. In light mode, the atlas uses a pale cartographic surface; dark mode keeps the higher-contrast night-map treatment.
 
 `AltPegsClient` then renders, in order:
 
@@ -101,7 +101,7 @@ Current Release 1 behavior:
 - The command palette picks the route up automatically through shared nav config.
 - `scripts/generate-llms-txt.ts` includes `/alt-pegs/` in the generated `public/llms.txt`.
 - `StaticAltPegLinkHub` is part of the static route output before the client analytics, so `out/alt-pegs/index.html` contains crawlable links into representative non-USD peg cohorts and exposes the peg diversity map as the route's first visible module.
-- The static link hub's treatment is a single theme-aware `FiatWorldAtlas` hero card: Gold sun, Silver moon, and CPI/Index orbital references float on the map with capped stablecoin logo stacks, while a pre-rendered static SVG world map colors countries per `PEG_COUNTRY_MAP`. The map renders at all breakpoints; narrower viewports fit the atlas to the card with compact region chips, shortened top-cohort labels, scaled markers, and no always-visible ticker pills on the emblems. The fiat logo-size key uses five market-cap steps so the smaller marker scale is easier to read. Commodity, CPI-linked, and other non-fiat reference cohorts stay crawlable through the atlas markers plus `Beyond Geography` link rail, and through the celestial band in the downstream cohort directory; fiat cohorts use the world map plus smaller logo clusters and region chips in the atlas and the stacked `MobileRegionList` in the directory on narrower viewports.
+- The static link hub's treatment is a single theme-aware `FiatWorldAtlas` hero card: Gold sun, Silver moon, and CPI/Index orbital references float on the map with capped stablecoin logo stacks, while a pre-rendered static SVG world map colors countries per `PEG_COUNTRY_MAP`. The map renders at all breakpoints; narrower viewports fit the atlas to the card with scaled markers and no always-visible ticker pills on the emblems. The fiat logo-size key uses five market-cap steps so the smaller marker scale is easier to read, and the compact top-three cohort rail shows each cohort's rank, label, market cap, and non-USD share in two short lines. Commodity, CPI-linked, and other non-fiat reference cohorts stay crawlable through the atlas markers plus `Beyond Geography` link rail, and through the celestial band in the downstream cohort directory; fiat cohorts use the world map plus smaller logo clusters in the atlas and the stacked `MobileRegionList` in the directory on narrower viewports.
 
 ---
 

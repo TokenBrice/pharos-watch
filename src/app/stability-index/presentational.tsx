@@ -186,7 +186,7 @@ function PsiHistoryStatsGrid({
       className={cn(
         compact
           ? "grid w-full grid-cols-4 gap-x-3 gap-y-2 border-t border-border/60 pt-3 lg:hidden"
-          : "grid grid-cols-4 gap-x-4 gap-y-2",
+          : "grid grid-cols-4 gap-3",
         className,
       )}
     >
@@ -194,10 +194,10 @@ function PsiHistoryStatsGrid({
         const color = PSI_BAND_CLASSES[item.band as ConditionBand] ?? "text-foreground";
         return (
           <div key={item.label} className="flex min-w-0 flex-col items-center gap-0.5 text-center">
-            <span className={compact ? "text-xs text-muted-foreground whitespace-nowrap" : "pharos-kicker"}>
+            <span className={compact ? "text-xs text-muted-foreground whitespace-nowrap" : "text-[10px] font-semibold uppercase tracking-[0.16em] text-muted-foreground"}>
               {item.label}
             </span>
-            <span className={cn(compact ? "text-base font-bold" : "text-lg font-extrabold", "tabular-nums leading-none", color)}>
+            <span className={cn(compact ? "text-base font-bold" : "text-2xl font-extrabold", "tabular-nums leading-none", color)}>
               {item.value}
             </span>
             {item.sub ? <span className="text-xs leading-tight text-muted-foreground">{item.sub}</span> : null}
@@ -265,14 +265,12 @@ export function StabilityIndexHero({
   score,
   delta,
   daysInBand,
-  components,
   historyStats,
 }: {
   band: string;
   score: number;
   delta: number | null;
   daysInBand: number;
-  components: StabilityComponentScores;
   historyStats: HistoryStatItem[];
 }) {
   const conditionBand = band as ConditionBand;
@@ -291,20 +289,20 @@ export function StabilityIndexHero({
       )}
     >
       <CardContent
-        className="grid gap-4 py-5 sm:gap-5 sm:py-6 lg:grid-cols-[auto_minmax(0,1fr)_auto] lg:items-center lg:gap-6"
+        className="grid gap-5 py-5 sm:gap-6 sm:py-6 lg:grid-cols-[minmax(24rem,1fr)_minmax(22rem,0.78fr)] lg:items-center"
         aria-live="polite"
       >
-        <div className="flex items-center justify-center lg:justify-start">
-          <div className="flex items-center gap-4 lg:gap-5">
-            <PsiLighthouse band={band} color={hexColor} size={96} />
-            <ScoreArc score={score} color={hexColor} size={160} />
+        <div className="flex flex-col items-center gap-4 sm:flex-row sm:justify-center lg:justify-start">
+          <div className="flex items-center gap-4 lg:gap-6">
+            <PsiLighthouse band={band} color={hexColor} size={128} />
+            <ScoreArc score={score} color={hexColor} size={192} />
           </div>
-          <div className="hidden shrink-0 flex-col gap-1 pl-3 lg:flex">
+          <div className="flex shrink-0 flex-col items-center gap-1 text-center sm:items-start sm:text-left">
             <div className="flex items-baseline gap-2">
               <span className="text-xs text-muted-foreground">
                 <MethodologyLabel topic="psi">PSI</MethodologyLabel>
               </span>
-              <span className={`text-4xl font-extrabold font-mono tabular-nums leading-none ${colorClass}`}>
+              <span className={`font-mono text-5xl font-extrabold leading-none tabular-nums ${colorClass}`}>
                 {formatScore(score)}
               </span>
               <span className={`text-base font-bold uppercase tracking-wide ${colorClass}`}>
@@ -323,44 +321,11 @@ export function StabilityIndexHero({
           </div>
         </div>
 
-        <div className="flex flex-col items-center gap-1 lg:hidden">
-          <div className="flex items-baseline gap-2">
-            <span className="text-xs text-muted-foreground">
-              <MethodologyLabel topic="psi">PSI</MethodologyLabel>
-            </span>
-            <span className={`text-4xl font-extrabold font-mono tabular-nums leading-none ${colorClass}`}>
-              {formatScore(score)}
-            </span>
-            <span className={`text-base font-bold uppercase tracking-wide ${colorClass}`}>
-              {band}
-            </span>
+        <div className="hidden rounded-lg border border-border/60 bg-background/35 p-4 lg:block">
+          <div className="mb-3 flex items-center justify-between gap-3">
+            <p className="pharos-kicker">Historical PSI</p>
+            <p className="text-xs text-muted-foreground">30-day range and all-time low</p>
           </div>
-          <div className="flex flex-wrap items-center justify-center gap-x-3 gap-y-1 text-sm text-muted-foreground">
-            {delta !== null && (
-              <span className={`font-medium tabular-nums ${deltaClass}`}>
-                {delta >= 0 ? "+" : ""}
-                {delta.toFixed(1)} vs yesterday
-              </span>
-            )}
-            <span>{daysInBand} day{daysInBand !== 1 ? "s" : ""} in {band}</span>
-          </div>
-        </div>
-
-        <div className="hidden lg:grid lg:min-w-0 lg:grid-cols-4 lg:gap-x-5 lg:border-l lg:border-border/60 lg:pl-5">
-          {STABILITY_COMPONENT_DETAIL.map((component) => (
-            <div key={component.label} className="flex min-w-0 flex-col items-center gap-0.5 text-center">
-              <span className="text-xs text-muted-foreground">
-                <MethodologyLabel topic={component.topic}>{component.label}</MethodologyLabel>
-              </span>
-              <span className="text-lg font-extrabold tabular-nums leading-none" style={{ color: component.color }}>
-                {component.sign}
-                {formatScore(components[component.key] ?? 0)}
-              </span>
-            </div>
-          ))}
-        </div>
-
-        <div className="hidden lg:block lg:min-w-[18rem] lg:border-l lg:border-border/60 lg:pl-5">
           <PsiHistoryStatsGrid items={historyStats} />
         </div>
 

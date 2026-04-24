@@ -41,8 +41,8 @@ The leaderboard is public and indexable. The profile routes are statically gener
 
 - hero summary: total tracked stablecoin supply, optional global 7d trend, chain count, and a top-chain dominance breakdown bar/legend
 - explicit `Unattributed` residual in the dominance breakdown when the stablecoins cache has supply that DefiLlama does not attribute to a concrete chain
-- `NauticalChart`, fed by the chain snapshot plus `stablecoinsQuery.data?.peggedAssets` so the visual can attach top-stablecoin cargo/logos to each chain; the SVG harbor chart renders at every breakpoint in a responsive frame that fits the viewport without horizontal scrolling
-- `SelectedHarborPanel`, synchronized from the harbor chart and leaderboard hover/focus, showing the selected chain's exact supply, tracked share, health band, stablecoin count, dominant cargo, top cargo marks, and 7-day wake; the panel reads existing chain snapshot fields and does not change Chain Health semantics
+- `NauticalChart`, fed by the chain snapshot plus `stablecoinsQuery.data?.peggedAssets` so the visual can attach top-stablecoin cargo/logos to each chain; the route-level harbor summary plates (`Largest port`, `Avg health`, `Fragile ports`, and health bands) render before the SVG so the chart can finish with the map itself
+- `SelectedHarborPanel`, synchronized from the harbor chart and leaderboard hover/focus, showing the selected chain's exact supply, tracked share, health band, stablecoin count, dominant cargo, top cargo marks, and 7-day wake directly after the harbor map; the panel reads existing chain snapshot fields and does not change Chain Health semantics
 - sortable leaderboard table rendered through `DataTableShell`
 - `QueryErrorNotice` with retry and `StaleDataBanner` (preset `"chains"`)
 - skeleton loading states (KPI grid + table rows)

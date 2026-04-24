@@ -38,11 +38,10 @@ import {
   StabilityIndexLoadingState,
   STABILITY_COMPONENT_COLORS,
   STABILITY_COMPONENT_DETAIL,
-  type StabilityComponentScores,
 } from "./presentational";
 import { PsiBeamDimmers } from "./psi-beam-dimmers";
 
-type ComponentChartPoint = { ts: number } & StabilityComponentScores;
+type ComponentChartPoint = { ts: number; severity: number; breadth: number; stressBreadth: number; trend: number };
 
 function ComponentChart({ data }: { data: ComponentChartPoint[] }) {
   const { range, setRange, filteredData, options } = useTimeRangeFilter(data, "ts");
@@ -187,13 +186,6 @@ export function StabilityIndexClient() {
     [current?.contributors, current?.totalMcapUsd],
   );
 
-  const heroComponents = useMemo<StabilityComponentScores>(() => ({
-    severity: current?.components.severity ?? 0,
-    breadth: current?.components.breadth ?? 0,
-    stressBreadth: current?.components.stressBreadth ?? 0,
-    trend: current?.components.trend ?? 0,
-  }), [current?.components]);
-
   const displayPsi = useMemo(() => (current ? getDisplayedPsi(current) : null), [current]);
 
   const delta = useMemo(() => {
@@ -234,7 +226,6 @@ export function StabilityIndexClient() {
         score={displayPsi.score}
         delta={delta}
         daysInBand={daysInBand}
-        components={heroComponents}
         historyStats={historyStats}
       />
 

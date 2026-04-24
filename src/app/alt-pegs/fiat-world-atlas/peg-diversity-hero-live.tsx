@@ -53,13 +53,14 @@ function TopCohortStrip({ rows }: { rows: ReturnType<typeof buildAltPegSnapshot>
       <span className="peg-hero__top-label">Largest cohorts</span>
       {rows.map((row, index) => (
         <Link key={row.peg} href={row.href} className="peg-hero__top-row pharos-focus-ring">
-          <span className="peg-hero__top-dot" style={{ backgroundColor: row.colorHex }} />
-          <span className="peg-hero__top-name">
-            #{index + 1} {row.label}
+          <span className="peg-hero__top-rank">
+            <span className="peg-hero__top-dot" style={{ backgroundColor: row.colorHex }} />
+            #{index + 1}
           </span>
+          <span className="peg-hero__top-name">{row.label}</span>
           <span className="peg-hero__top-value">
-            {formatCompactUsd(row.marketCap)} · {formatPercent(row.sharePct, 1)}
-            <span className="peg-hero__top-value-context"> of non-USD cap</span>
+            <span>{formatCompactUsd(row.marketCap)}</span>
+            <span>{formatPercent(row.sharePct, 1)} of non-USD cap</span>
           </span>
         </Link>
       ))}

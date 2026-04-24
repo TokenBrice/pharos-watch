@@ -530,30 +530,48 @@
 
 .peg-hero__top-cohorts {
   display: grid;
-  grid-template-columns: auto repeat(3, minmax(0, 1fr));
-  align-items: center;
-  gap: 5px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  align-items: stretch;
+  gap: 8px;
   min-width: 0;
-  padding: 7px 8px;
+  padding: 8px;
 }
 
 .peg-hero__top-row {
   display: grid;
   grid-template-columns: auto minmax(0, 1fr);
   align-items: center;
-  gap: 2px 6px;
-  min-height: 28px;
+  gap: 4px 8px;
+  min-height: 42px;
   border-radius: 6px;
+  background: oklch(1 0 0 / 0.035);
   color: inherit;
-  font-size: 10px;
-  padding: 3px 4px;
+  font-size: 11px;
+  padding: 6px 8px;
   text-decoration: none;
-  transition: background-color 160ms ease-out;
+  transition:
+    background-color 160ms ease-out,
+    border-color 160ms ease-out;
 }
 
 .peg-hero__top-row:hover,
 .peg-hero__top-row:focus-visible {
-  background: oklch(1 0 0 / 0.07);
+  background: oklch(1 0 0 / 0.075);
+}
+
+.peg-hero__top-label {
+  grid-column: 1 / -1;
+}
+
+.peg-hero__top-rank {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  color: oklch(0.8 0.04 250);
+  font-family: var(--font-geist-mono), ui-monospace, SFMono-Regular, "SF Mono", Consolas, "Liberation Mono", monospace;
+  font-size: 10px;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
 }
 
 .peg-hero__top-dot {
@@ -567,29 +585,20 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  font-weight: 800;
 }
 
 .peg-hero__top-value {
-  grid-column: 2;
+  grid-column: 1 / -1;
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
   color: oklch(0.9 0.08 245);
   font-family: var(--font-geist-mono), ui-monospace, SFMono-Regular, "SF Mono", Consolas, "Liberation Mono", monospace;
   font-weight: 750;
   font-variant-numeric: tabular-nums;
-  font-size: 9px;
-}
-
-.peg-hero__top-value-context {
-  display: inline;
-}
-
-@media (min-width: 1450px) {
-  .peg-hero__top-row {
-    grid-template-columns: auto minmax(0, 1fr) auto;
-  }
-
-  .peg-hero__top-value {
-    grid-column: auto;
-  }
+  font-size: 10px;
 }
 
 @media (max-width: 1360px) {
@@ -599,10 +608,6 @@
 
   .peg-hero__top-cohorts {
     grid-template-columns: repeat(3, minmax(0, 1fr));
-  }
-
-  .peg-hero__top-label {
-    grid-column: 1 / -1;
   }
 }
 
@@ -646,17 +651,13 @@
   }
 
   .peg-hero__top-cohorts {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
+    grid-template-columns: 1fr;
     padding: 7px;
   }
 
   .peg-hero__top-row {
-    min-height: 32px;
-    padding: 3px;
-  }
-
-  .peg-hero__top-value-context {
-    display: none;
+    min-height: 46px;
+    padding: 6px;
   }
 
   .coin-emblem__mini-label {
