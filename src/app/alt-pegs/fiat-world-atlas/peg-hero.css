@@ -57,6 +57,10 @@
   height: 30%;
   z-index: 2;
 }
+.peg-hero__sky:has(.coin-emblem.is-hovered),
+.peg-hero__sky:has(.coin-emblem:focus-visible) {
+  z-index: 5;
+}
 .peg-hero__earth {
   position: absolute;
   bottom: 0;
@@ -70,12 +74,22 @@
 }
 .peg-hero__map-frame {
   position: relative;
+  isolation: isolate;
   height: 100%;
   aspect-ratio: 900 / 460;
   max-width: 100%;
 }
+.fiat-world-map {
+  z-index: 1;
+  pointer-events: none;
+  transition: opacity 180ms ease-out;
+}
 .peg-hero__map-frame .fiat-world-map svg {
   filter: drop-shadow(0 -4px 18px oklch(0.5 0.15 250 / 0.18));
+}
+.peg-hero__map-frame:has(.coin-emblem.is-hovered) .fiat-world-map,
+.peg-hero__map-frame:has(.coin-emblem:focus-visible) .fiat-world-map {
+  opacity: 0.58;
 }
 
 /* ===== Starfield ===== */
@@ -288,7 +302,8 @@
   z-index: 6;
 }
 .coin-emblem.is-dimmed {
-  opacity: 0.34;
+  opacity: 0.58;
+  filter: saturate(0.82) brightness(0.9);
 }
 
 .coin-emblem-hit-layer {
@@ -731,6 +746,7 @@
 .fiat-emblems {
   position: absolute;
   inset: 0;
+  z-index: 2;
 }
 
 @media (prefers-reduced-motion: reduce) {
