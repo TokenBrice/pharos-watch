@@ -14,7 +14,7 @@ import { WorldMap } from "@/app/alt-pegs/fiat-world-atlas/world-map";
 import { useBrowserFullscreen } from "@/app/alt-pegs/fiat-world-atlas/use-browser-fullscreen";
 
 const DIALOG_CONTENT_CLASSES =
-  "atlas-fullscreen-dialog__content fixed inset-2 sm:inset-4 top-2 left-2 sm:top-4 sm:left-4 max-w-none w-auto h-auto translate-x-0 translate-y-0 gap-0 overflow-hidden rounded-2xl border-border/70 p-0 shadow-2xl";
+  "atlas-fullscreen-dialog__content fixed inset-2 top-2 left-2 h-auto w-auto max-w-none translate-x-0 translate-y-0 gap-0 overflow-hidden rounded-2xl border-border/70 p-0 shadow-2xl sm:inset-4 sm:top-4 sm:left-4 sm:max-w-none";
 
 export function AtlasFullscreenDialog({
   open,

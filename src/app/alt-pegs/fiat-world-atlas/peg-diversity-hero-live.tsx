@@ -97,9 +97,11 @@ export function PegDiversityHeroLive({
             : "peg-hero__live-shell"
         }
       >
-        <div className="peg-hero__legend-stack">
-          <TopCohortStrip rows={topCohorts} />
-        </div>
+        {variant === "default" ? (
+          <div className="peg-hero__legend-stack">
+            <TopCohortStrip rows={topCohorts} />
+          </div>
+        ) : null}
         <div
           className={
             variant === "fullscreen" ? "peg-hero peg-hero--fullscreen" : "peg-hero"

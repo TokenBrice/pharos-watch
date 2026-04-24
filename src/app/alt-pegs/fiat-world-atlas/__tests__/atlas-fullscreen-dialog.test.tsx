@@ -31,6 +31,12 @@ describe("AtlasFullscreenDialog", () => {
     expect(hero.getAttribute("data-variant")).toBe("fullscreen");
   });
 
+  it("does not inherit the shared desktop modal width cap", () => {
+    render(<AtlasFullscreenDialog open={true} onOpenChange={() => {}} />);
+    const dialog = screen.getByRole("dialog", { name: /peg diversity atlas/i });
+    expect(dialog.className).toContain("sm:max-w-none");
+  });
+
   it("exposes a Close atlas control as the first focusable element", () => {
     render(<AtlasFullscreenDialog open={true} onOpenChange={() => {}} />);
     expect(screen.getByRole("button", { name: /close atlas/i })).toBeTruthy();

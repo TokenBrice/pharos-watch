@@ -769,7 +769,9 @@
 .atlas-fullscreen-dialog__content {
   display: flex;
   flex-direction: column;
-  background: oklch(0.035 0.012 255 / 0.98);
+  background:
+    radial-gradient(circle at 64% 16%, oklch(0.18 0.045 252 / 0.24), transparent 36%),
+    oklch(0.035 0.012 255 / 0.98);
 }
 
 .atlas-fullscreen-dialog__content:fullscreen {
@@ -782,8 +784,11 @@
   align-items: center;
   justify-content: space-between;
   gap: 12px;
+  min-height: 48px;
   padding: 10px 16px;
   border-bottom: 1px solid oklch(0.6 0 0 / 0.14);
+  background: oklch(0.045 0.014 255 / 0.92);
+  backdrop-filter: blur(14px);
 }
 
 .atlas-fullscreen-dialog__title {
@@ -826,6 +831,35 @@
   min-height: 0;
   height: auto;
   border-radius: 0;
+}
+
+@media (min-width: 1024px) and (min-height: 640px) {
+  .peg-hero__live-shell--fullscreen {
+    --peg-coin-scale: 1.08;
+    --peg-coin-hover-scale: 1.18;
+    --peg-hit-scale: 1.12;
+    --peg-sky-scale: 1.05;
+    border-top: 0;
+  }
+
+  .peg-hero__live-shell--fullscreen .peg-hero {
+    height: 100%;
+    border-top: 0;
+  }
+
+  .peg-hero__live-shell--fullscreen .peg-hero__sky {
+    height: 34%;
+  }
+
+  .peg-hero__live-shell--fullscreen .peg-hero__earth {
+    height: 66%;
+  }
+
+  .peg-hero__live-shell--fullscreen .peg-hero__scale-key {
+    left: 18px;
+    bottom: 18px;
+    max-width: calc(100% - 36px);
+  }
 }
 
 @media (max-width: 1279px) {
