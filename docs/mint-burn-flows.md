@@ -653,7 +653,8 @@ All hooks use Zod schema validation for aggregate and per-coin responses (`MintB
 
 | Component | File | Description |
 |-----------|------|-------------|
-| `FlowBrrrOverview` | `src/components/flow-brrr-overview.tsx` | Shared overview shell used by `/flows` and the homepage snapshot; renders the Bank Run Gauge band returned by the API plus the literal 24h minting-pressure gauge, with inline methodology help on the Bank Run Gauge label |
+| `FlowBrrrOverview` | `src/components/flow-brrr-overview.tsx` | Shared overview shell used by `/flows` and the homepage snapshot; renders the printer/shredder scene, Bank Run Gauge band, and literal 24h minting-pressure gauge. On `/flows` it folds in a `FlowReceiptBand` below a dashed tear-line carrying the 24h/7d mint/burn/net receipt tiles plus scope, top minter/burner, and coverage summary. Receipt band is suppressed in the `compact` variant used on the homepage. |
+| `FlowReceiptBand` | `src/components/flow-receipt-band.tsx` | Receipt-styled sub-component rendered inside `FlowBrrrOverview` on `/flows`. Shows 24h/7d printed/shredded/net tiles, scope caveat, top minter/burner, coverage pills, and any sync warning. |
 | `FlowChart` | `src/components/flow-chart.tsx` | Recharts composed chart: mint (green area), burn (red area), net flow (blue line), hourly tooltip |
 | `FlowTable` | `src/components/flow-table.tsx` | Sortable per-coin table. Sort keys: net24h, mint24h, burn24h, net7d, largest, pressure. Responsive column hiding; `Pressure vs 30D` header uses the shared methodology-hint trigger |
 | `FlowEventFeed` | `src/components/flow-event-feed.tsx` | Paginated event table: time, direction badge, amount USD, chain, tx link |
