@@ -15,8 +15,30 @@ const SCENE_HEIGHT = 260;
 const WATERLINE_Y = 150;
 const PIER_X = 58;
 
+const CHAIN_ACCENT_HEX: Record<string, string> = {
+  arbitrum: "#28a0f0",
+  base: "#0052ff",
+  bsc: "#f3ba2f",
+  ethereum: "#627eea",
+  hyperliquid: "#50e3c2",
+  polygon: "#8247e5",
+  solana: "#14f195",
+  tron: "#ff060a",
+};
+
 function healthHex(band: HealthBand | null): string {
   return band ? HEALTH_HEX_FILL[band] : "#94a3b8";
+}
+
+function chainAccentHex(id: string): string {
+  const curated = CHAIN_ACCENT_HEX[id];
+  if (curated) return curated;
+
+  let hash = 0;
+  for (const char of id) {
+    hash = (hash * 31 + char.charCodeAt(0)) % 360;
+  }
+  return `oklch(0.68 0.14 ${hash})`;
 }
 
 function RangeLight() {
@@ -124,19 +146,21 @@ function Ship({
   x,
   hullW,
   rank,
+  supplyScale,
 }: {
   entry: ChainHarborEntry;
   laneY: number;
   x: number;
   hullW: number;
   rank: number;
+  supplyScale: number;
 }) {
-  const color = healthHex(entry.healthBand);
+  const healthColor = healthHex(entry.healthBand);
+  const accentColor = chainAccentHex(entry.id);
   const cargo = cargoBuckets(entry.stablecoinCount);
   const layers = depthLayers(entry.sharePct / 100);
   const wake = wakeLength(entry.change7dPct);
-  const supplyScale = Math.max(0, Math.min(1, (hullW - 28) / 84));
-  const rigScale = 0.68 + supplyScale * 0.46;
+  const rigScale = 0.58 + supplyScale * 0.6;
   const hullDepth = 14 + supplyScale * 11;
   const hullTop = laneY + 12 - supplyScale * 7;
   const hullBottom = hullTop + hullDepth;
@@ -159,6 +183,7 @@ function Ship({
   const flagWidth = Math.max(12, Math.min(42, (entry.dominantSharePct / 100) * 42)) * (0.84 + supplyScale * 0.22);
   const logoSize = 12 + supplyScale * 6;
   const portholeRadius = 1.7 + supplyScale * 0.9;
+  const sailSealY = hullTop - 14 - supplyScale * 5;
   const clipId = `nc-logo-${entry.id.replace(/[^a-z0-9-]/gi, "-")}`;
 
   return (
@@ -211,33 +236,38 @@ function Ship({
         className="nc-sail"
         d={`M ${mainMastX + 2} ${mastTopY + 3 * rigScale} C ${mainMastX + hullW * 0.28} ${mastTopY + 12 * rigScale}, ${mainMastX + hullW * 0.33} ${railY - 14 * rigScale}, ${mainMastX + 3} ${railY - 2} Z`}
         fill="url(#nc-sail-cloth)"
-        stroke="oklch(1 0 0 / 0.55)"
-        strokeWidth={0.8}
+        stroke={accentColor}
+        strokeWidth={0.9}
+        opacity={0.98}
       />
       <path
         className="nc-sail"
         d={`M ${mainMastX - 2} ${mastTopY + 12 * rigScale} C ${mainMastX - hullW * 0.32} ${mastTopY + 19 * rigScale}, ${mainMastX - hullW * 0.35} ${railY - 10 * rigScale}, ${mainMastX - 2} ${railY - 1} Z`}
         fill="url(#nc-sail-cloth)"
-        stroke="oklch(1 0 0 / 0.48)"
-        strokeWidth={0.8}
+        stroke={accentColor}
+        strokeWidth={0.75}
+        opacity={0.9}
       />
       <path
         d={`M ${foreMastX + 1} ${foreTopY + 5 * rigScale} C ${foreMastX + hullW * 0.21} ${foreTopY + 10 * rigScale}, ${foreMastX + hullW * 0.24} ${railY - 9 * rigScale}, ${foreMastX + 1} ${railY - 1} Z`}
         fill="url(#nc-sail-cloth)"
-        stroke="oklch(1 0 0 / 0.42)"
+        stroke={accentColor}
         strokeWidth={0.65}
+        opacity={0.78}
       />
       <path
         d={`M ${aftMastX - 1} ${aftTopY + 6 * rigScale} C ${aftMastX + hullW * 0.18} ${aftTopY + 12 * rigScale}, ${aftMastX + hullW * 0.14} ${railY - 7 * rigScale}, ${aftMastX - 1} ${railY - 1} Z`}
         fill="url(#nc-sail-cloth)"
-        stroke="oklch(1 0 0 / 0.38)"
+        stroke={accentColor}
         strokeWidth={0.65}
+        opacity={0.7}
       />
       <path
         d={`M ${deckRight - bowRise + 2} ${railY} Q ${deckRight + 10} ${railY - 8} ${deckRight + 16} ${railY - 25} Q ${deckRight + 6} ${railY - 16} ${deckRight - bowRise - 4} ${railY}`}
         fill="url(#nc-sail-cloth)"
-        stroke="oklch(1 0 0 / 0.36)"
+        stroke={accentColor}
         strokeWidth={0.6}
+        opacity={0.72}
       />
       <path
         d={`M ${mainMastX} ${mastTopY + 4} Q ${deckLeft + sternInset + 2} ${railY - 2} ${deckLeft + sternInset} ${hullTop + 2}`}
@@ -256,8 +286,9 @@ function Ship({
           key={t}
           d={`M ${mainMastX + hullW * 0.02} ${mastTopY + (8 + t * 45) * rigScale} C ${mainMastX + hullW * 0.1} ${mastTopY + (12 + t * 45) * rigScale}, ${mainMastX + hullW * 0.16} ${mastTopY + (13 + t * 45) * rigScale}, ${mainMastX + hullW * 0.23} ${mastTopY + (10 + t * 45) * rigScale}`}
           fill="none"
-          stroke="oklch(0.18 0.014 250 / 0.28)"
+          stroke={accentColor}
           strokeWidth={0.55}
+          opacity={0.34}
         />
       ))}
       <path
@@ -268,9 +299,10 @@ function Ship({
       />
       <path
         d={`M ${deckLeft + sternInset + 2} ${hullTop + 5} L ${deckRight - bowRise - 3} ${hullTop + 4}`}
-        stroke="oklch(0.94 0.055 77 / 0.82)"
+        stroke={accentColor}
         strokeWidth={2.2}
         strokeLinecap="round"
+        opacity={0.86}
       />
       <path
         d={`M ${deckLeft + sternInset + 4} ${hullTop + 13} C ${deckLeft + hullW * 0.38} ${hullTop + 17}, ${deckLeft + hullW * 0.68} ${hullTop + 16}, ${deckRight - bowRise * 0.65} ${hullTop + 11}`}
@@ -291,8 +323,9 @@ function Ship({
           cy={hullTop + hullDepth * 0.58}
           r={portholeRadius}
           fill="oklch(0.08 0.012 45 / 0.68)"
-          stroke="oklch(0.9 0.05 75 / 0.52)"
+          stroke={accentColor}
           strokeWidth={0.6}
+          opacity={0.92}
         />
       ))}
       <text
@@ -310,33 +343,42 @@ function Ship({
         y1={mastTopY + 8}
         x2={mainMastX + 20}
         y2={mastTopY + 5}
-        stroke="oklch(0.58 0.08 62 / 0.82)"
+        stroke={accentColor}
         strokeWidth={2}
         strokeLinecap="round"
       />
       <path
         className="nc-flag"
         d={`M ${mainMastX + 2} ${mastTopY - 5} h ${flagWidth} l -5 4 l 5 4 h -${flagWidth} Z`}
-        fill={color}
+        fill={accentColor}
         opacity={0.9}
       />
       <defs>
         <clipPath id={clipId}>
-          <circle cx={mainMastX} cy={hullTop - 13} r={logoSize / 2} />
+          <circle cx={mainMastX} cy={sailSealY} r={logoSize / 2} />
         </clipPath>
       </defs>
       <circle
         cx={mainMastX}
-        cy={hullTop - 13}
+        cy={sailSealY}
         r={logoSize / 2 + 1.5}
         fill="oklch(0.98 0.006 250 / 0.9)"
-        stroke="oklch(0.18 0.012 250 / 0.36)"
+        stroke={accentColor}
+        strokeWidth={1}
+      />
+      <circle
+        cx={mainMastX}
+        cy={sailSealY}
+        r={logoSize / 2 + 4}
+        fill="none"
+        stroke={healthColor}
         strokeWidth={0.8}
+        opacity={0.55}
       />
       <image
         href={entry.logoPath}
         x={mainMastX - logoSize / 2}
-        y={hullTop - 13 - logoSize / 2}
+        y={sailSealY - logoSize / 2}
         width={logoSize}
         height={logoSize}
         clipPath={`url(#${clipId})`}
@@ -494,7 +536,19 @@ export function NauticalChart({ chains, globalTotalUsd }: { chains: ChainSummary
           {model.entries.map((entry, i) => {
             const hullW = hullWidth(entry.totalUsd, maxSupply, laneWidth * 1.1);
             const x = PIER_X + i * laneWidth + (laneWidth - hullW) / 2;
-            return <Ship key={entry.id} entry={entry} laneY={WATERLINE_Y - 18} x={x} hullW={hullW} rank={i + 1} />;
+            const supplyScale =
+              maxSupply > 0 ? Math.max(0.08, Math.min(1, Math.sqrt(entry.totalUsd / maxSupply))) : 0.08;
+            return (
+              <Ship
+                key={entry.id}
+                entry={entry}
+                laneY={WATERLINE_Y - 18}
+                x={x}
+                hullW={hullW}
+                rank={i + 1}
+                supplyScale={supplyScale}
+              />
+            );
           })}
         </svg>
       </div>
