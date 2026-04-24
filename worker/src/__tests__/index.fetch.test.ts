@@ -657,6 +657,36 @@ describe("worker.fetch", () => {
     expect(res.status).toBe(401);
   });
 
+  it("does not require a key on exempt public routes (health)", async () => {
+    const env = makeEnv();
+    const { ctx, waits } = makeExecutionContext();
+
+    const res = await worker.fetch(
+      new Request("https://api.pharos.watch/api/health"),
+      env as never,
+      ctx,
+    );
+    await Promise.all(waits);
+
+    expect(res.status).toBe(200);
+  });
+
+  it("does not require a key on exempt OG image routes", async () => {
+    // GET /api/og/* is dynamic and exempt; it may return 404 for unknown IDs
+    // but must not return 401.
+    const env = makeEnv();
+    const { ctx, waits } = makeExecutionContext();
+
+    const res = await worker.fetch(
+      new Request("https://api.pharos.watch/api/og/stablecoin/usdc-usd-coin"),
+      env as never,
+      ctx,
+    );
+    await Promise.all(waits);
+
+    expect(res.status).not.toBe(401);
+  });
+
   it("rejects /api/* with a malformed X-API-Key with 401", async () => {
     const env = makeEnv();
     const { ctx } = makeExecutionContext();

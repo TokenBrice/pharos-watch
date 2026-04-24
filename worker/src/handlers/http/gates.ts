@@ -1,4 +1,4 @@
-import { isSiteDataAllowedPath } from "@shared/lib/api-endpoints";
+import { getPublicApiAccess, isSiteDataAllowedPath } from "@shared/lib/api-endpoints";
 import { API_KEY_DEPENDENCY_RETRY_AFTER_SEC } from "@shared/lib/ops-limits";
 import { SITE_API_HOSTNAME } from "@shared/lib/runtime-origins";
 import { errorResponse } from "../../lib/api-utils";
@@ -92,6 +92,10 @@ export async function evaluateAccessGate(
 
   if (!url.pathname.startsWith("/api/") || url.pathname === "/api/telegram-webhook") {
     return { isAdmin, isSiteProxy: false, apiKey: null, requestLane: null, response: null };
+  }
+
+  if (getPublicApiAccess(url.pathname) === "exempt") {
+    return { isAdmin, isSiteProxy: false, apiKey: null, requestLane: "public-api", response: null };
   }
 
   const apiKeyAuth = await authenticateApiKey(
