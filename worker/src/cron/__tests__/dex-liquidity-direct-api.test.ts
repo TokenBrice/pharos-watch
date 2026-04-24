@@ -203,6 +203,8 @@ describe("fetchFluidPools", () => {
     const { fetchFluidPools } = await import("../dex-liquidity/fetch-fluid");
     mockFetch
       .mockRejectedValueOnce(new Error("network error"))
+      .mockRejectedValueOnce(new Error("network error"))
+      .mockRejectedValueOnce(new Error("network error"))
       .mockImplementation(() => Promise.resolve(jsonResponse([])));
 
     const pools = await fetchFluidPools();
