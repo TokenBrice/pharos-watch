@@ -24,14 +24,14 @@ const HERO_LANES = [
     icon: KeyRound,
     eyebrow: "For integrations",
     description:
-      "Call `https://api.pharos.watch` directly. Protected public routes require `X-API-Key`; missing or invalid keys normally receive `401` after limiter and dependency checks.",
+      "Call `https://api.pharos.watch` directly. Every `/api/*` request requires a valid `X-API-Key`; missing or invalid keys return `401`.",
   },
   {
     title: "Website lane",
     icon: Globe,
-    eyebrow: "For pharos.watch only",
+    eyebrow: "Same-origin only",
     description:
-      "Browsers on the site use same-origin `/_site-data/*`, which proxies to the internal Worker lane. External consumers should not use this path.",
+      "Browsers on `pharos.watch` use same-origin `/_site-data/*`. The lane accepts only requests whose `Origin` or `Referer` maps to `pharos.watch` or `ops.pharos.watch`; external clients cannot use it.",
   },
   {
     title: "Ops lane",
@@ -51,12 +51,12 @@ const ABOUT_API_FAQ: FaqItem[] = [
   {
     question: "Do I need an API key for every endpoint?",
     answer:
-      "No. Health checks, OG images, the feedback endpoint, and the Telegram webhook do not require an X-API-Key. All other protected public routes on https://api.pharos.watch require X-API-Key and normally return 401 without it, though 429 or 503 can occur first when limiter or auth dependencies fail.",
+      "Yes, for every /api/* route on https://api.pharos.watch. Only the Telegram webhook and admin routes are exempt; every other request without a valid X-API-Key returns 401 (429 or 503 can still surface first if the limiter or auth dependencies fail).",
   },
   {
     question: "What is the difference between the public API lane and the website lane?",
     answer:
-      "The public lane is https://api.pharos.watch and is for external integrations. The website lane is same-origin /_site-data/* on pharos.watch, used only by the Pharos web app itself. External consumers should call the public lane directly.",
+      "The public lane is https://api.pharos.watch and requires a valid X-API-Key. The website lane is same-origin /_site-data/* on pharos.watch, gated to the site's own origin — external consumers cannot use it.",
   },
   {
     question: "How is admin auth handled?",

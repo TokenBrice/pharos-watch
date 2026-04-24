@@ -187,15 +187,6 @@ export const ENV_BINDINGS = [
     },
   },
   {
-    key: "PUBLIC_API_AUTH_MODE",
-    valueType: "string",
-    description: "Public API auth mode: `off`, `report-only`, or `enforce`.",
-    example: { section: "workerOptional", value: "" },
-    runtimes: {
-      worker: { order: 6, status: "optional" },
-    },
-  },
-  {
     key: "CF_ACCESS_TEAM_DOMAIN",
     valueType: "string",
     description: "Cloudflare Access team domain used to verify Access JWTs on worker admin requests and the Pages ops proxy.",
@@ -313,15 +304,6 @@ export const ENV_BINDINGS = [
     example: { section: "workerOptional", value: "" },
     runtimes: {
       worker: { order: 19, status: "optional" },
-    },
-  },
-  {
-    key: "PUBLIC_API_RATE_LIMIT_SALT",
-    valueType: "string",
-    description: "Dedicated salt for hashed public API rate limiting; deployed public API traffic returns `503` until configured.",
-    example: { section: "workerOptional", value: "" },
-    runtimes: {
-      worker: { order: 20, status: "optional" },
     },
   },
   {
@@ -651,10 +633,6 @@ export function renderEnvExample(): string {
     if (section.key === "workerOptional") {
       const ordered = bindings.slice().sort((left, right) => compareRuntimeOrder(left, right, "worker"));
       for (const binding of ordered) {
-        if (binding.key === "PUBLIC_API_RATE_LIMIT_SALT") {
-          lines.push("# Required for deployed public API traffic. Public `/api/*` requests return 503");
-          lines.push("# until this binding is configured.");
-        }
         lines.push(renderValueLine(binding.key, binding.example?.value ?? ""));
       }
       continue;

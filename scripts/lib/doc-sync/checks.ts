@@ -14,8 +14,6 @@ import {
   CIRCUIT_PROBE_INTERVAL_SEC,
   FEEDBACK_RATE_LIMIT_MAX_SUBMISSIONS,
   FEEDBACK_RATE_LIMIT_WINDOW_SEC,
-  PUBLIC_API_RATE_LIMIT_MAX_REQUESTS,
-  PUBLIC_API_RATE_LIMIT_WINDOW_SEC,
 } from "../../../shared/lib/ops-limits";
 import {
   DEWS_SIGNAL_WEIGHTS,
@@ -296,17 +294,13 @@ function checkWorkerLimitsDoc(failures: Failure[]): void {
   const doc = read(file);
   const cronScheduleCount = Object.keys(CRON_SCHEDULES).length;
 
-  const publicApiRow = requireTableRow(doc, file, "Public API limiter");
   const feedbackRow = requireTableRow(doc, file, "Feedback limiter");
   const cronRow = requireTableRow(doc, file, "Cron expressions / trigger slots");
   const circuitRow = requireTableRow(doc, file, "Generic circuit breaker");
 
-  const publicApiNumbers = getAllNumbersFromText(publicApiRow[0]);
   const feedbackNumbers = getAllNumbersFromText(feedbackRow[0]);
   const circuitNumbers = getAllNumbersFromText(circuitRow[0]);
 
-  expectNumber(failures, file, "public API rate-limit requests", publicApiNumbers[0] ?? null, PUBLIC_API_RATE_LIMIT_MAX_REQUESTS);
-  expectNumber(failures, file, "public API rate-limit window seconds", publicApiNumbers[1] ?? null, PUBLIC_API_RATE_LIMIT_WINDOW_SEC);
   expectNumber(failures, file, "feedback rate-limit submissions", feedbackNumbers[0] ?? null, FEEDBACK_RATE_LIMIT_MAX_SUBMISSIONS);
   expectNumber(failures, file, "feedback rate-limit window minutes", feedbackNumbers[1] ?? null, FEEDBACK_RATE_LIMIT_WINDOW_SEC / 60);
   expectNumber(failures, file, "cron trigger count", getFirstNumberFromText(cronRow[0]), cronScheduleCount);

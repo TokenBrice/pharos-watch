@@ -8,9 +8,7 @@ import {
 import { recordSiteDataRequest } from "../lib/request-attribution";
 import { rejectIfNotSiteDataUiOrigin } from "../lib/site-data-origin";
 import {
-  resolveSiteDataProxyRuntimePolicy,
   resolveSiteApiOrigin,
-  resolveSiteDataUpstreamLane,
   validatePagesSiteDataProxyEnv,
   type SiteDataProxyEnv,
 } from "../lib/site-api-env";
@@ -105,7 +103,7 @@ async function queueSiteDataTelemetry(
   context: SiteDataProxyContext,
   upstreamPath: string,
   deliveryPath: "pages-cache-hit" | "pages-upstream-fetch" | "pages-upstream-timeout" | "pages-upstream-error",
-  upstreamLane: "" | "site-api" | "public-api-fallback" = "",
+  upstreamLane: "" | "site-api" = "",
 ): Promise<void> {
   const route = resolveApiRequestRouteMetric(upstreamPath);
   if (!route || !context.env.DB) {
@@ -133,10 +131,7 @@ export const onRequest = async (context: SiteDataProxyContext): Promise<Response
     return methodNotAllowed();
   }
 
-  const runtimePolicy = resolveSiteDataProxyRuntimePolicy(requestUrl);
-  const envIssues = validatePagesSiteDataProxyEnv(env, {
-    requireSiteApiOrigin: !runtimePolicy.allowPublicApiFallback,
-  });
+  const envIssues = validatePagesSiteDataProxyEnv(env);
   for (const issue of envIssues) {
     console.warn(`[site-data-proxy] ${issue.message}`);
   }
@@ -165,16 +160,11 @@ export const onRequest = async (context: SiteDataProxyContext): Promise<Response
     return upstreamHeaders;
   }
 
-  const upstreamOrigin = resolveSiteApiOrigin(env, {
-    allowPublicApiFallback: runtimePolicy.allowPublicApiFallback,
-  });
+  const upstreamOrigin = resolveSiteApiOrigin(env);
   if (!upstreamOrigin) {
     return jsonError(500, "Site API proxy is not configured");
   }
 
-  const upstreamLane = resolveSiteDataUpstreamLane(env, {
-    allowPublicApiFallback: runtimePolicy.allowPublicApiFallback,
-  });
   const upstreamUrl = new URL(`${upstreamPath}${requestUrl.search}`, upstreamOrigin);
   const upstreamResult = await fetchUpstreamProxy(request, {
     upstreamUrl: upstreamUrl.toString(),
@@ -191,13 +181,13 @@ export const onRequest = async (context: SiteDataProxyContext): Promise<Response
       context,
       upstreamPath,
       upstreamResult.errorKind === "timeout" ? "pages-upstream-timeout" : "pages-upstream-error",
-      upstreamLane,
+      "site-api",
     );
     return upstreamResult.response;
   }
 
   const response = buildProxyResponse(upstreamResult.response);
-  await queueSiteDataTelemetry(context, upstreamPath, "pages-upstream-fetch", upstreamLane);
+  await queueSiteDataTelemetry(context, upstreamPath, "pages-upstream-fetch", "site-api");
   if (!bypassPagesCache && canCacheResponse(response)) {
     await getDefaultCache().put(cacheKey, response.clone());
   }

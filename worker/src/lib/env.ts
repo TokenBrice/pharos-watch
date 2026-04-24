@@ -8,7 +8,6 @@ export interface Env {
   SITE_API_SHARED_SECRET_PREVIOUS?: string;
   API_KEY_HASH_PEPPER?: string;
   API_KEY_HASH_PEPPER_PREVIOUS?: string;
-  PUBLIC_API_AUTH_MODE?: string;
   CF_ACCESS_TEAM_DOMAIN?: string;
   CF_ACCESS_OPS_UI_AUD?: string;
   CF_ACCESS_OPS_API_AUD?: string;
@@ -23,7 +22,6 @@ export interface Env {
   COINGECKO_API_KEY?: string;
   GITHUB_PAT?: string;
   FEEDBACK_IP_SALT?: string;
-  PUBLIC_API_RATE_LIMIT_SALT?: string;
   TWITTER_API_KEY?: string;
   TWITTER_API_SECRET?: string;
   TWITTER_ACCESS_TOKEN?: string;
@@ -49,9 +47,7 @@ export interface WorkerEnvIssue {
   code:
     | "ops-access-partial-config"
     | "d1-status-partial-config"
-    | "public-api-rate-limit-misconfigured"
     | "site-api-secret-misconfigured"
-    | "public-api-auth-mode-invalid"
     | "public-api-auth-pepper-missing"
     | "api-key-pepper-noop-rotation";
   message: string;
@@ -68,13 +64,6 @@ export interface CloudflareD1StatusConfig {
   apiToken: string;
   databaseId: string;
 }
-
-export interface ResolvedPublicApiRateLimitSalt {
-  salt: string;
-  source: "public-api-rate-limit-salt";
-}
-
-export type PublicApiAuthMode = "off" | "report-only" | "enforce";
 
 import { hasConfiguredValue, getConfiguredValue } from "@shared/lib/env-utils";
 import { getRuntimeActiveEnvKeys, getRuntimeEnvKeys } from "@shared/lib/env-contract";
@@ -115,39 +104,14 @@ export function resolveCloudflareD1StatusConfig(
   return null;
 }
 
-export function resolvePublicApiRateLimitSalt(
-  env: Pick<Env, "PUBLIC_API_RATE_LIMIT_SALT">,
-): ResolvedPublicApiRateLimitSalt | null {
-  const salt = getConfiguredValue(env.PUBLIC_API_RATE_LIMIT_SALT);
-  if (salt) {
-    return {
-      salt,
-      source: "public-api-rate-limit-salt",
-    };
-  }
-  return null;
-}
-
-export function resolvePublicApiAuthMode(
-  env: Pick<Env, "PUBLIC_API_AUTH_MODE">,
-): PublicApiAuthMode {
-  const raw = getConfiguredValue(env.PUBLIC_API_AUTH_MODE)?.toLowerCase();
-  if (raw === "off" || raw === "report-only") {
-    return raw;
-  }
-  return "enforce";
-}
-
 export function validateWorkerEnvContract(
   env: Pick<
     Env,
     | "CF_ACCESS_OPS_API_AUD"
     | "CF_ACCESS_TEAM_DOMAIN"
-    | "PUBLIC_API_RATE_LIMIT_SALT"
     | "SITE_API_SHARED_SECRET"
     | "API_KEY_HASH_PEPPER"
     | "API_KEY_HASH_PEPPER_PREVIOUS"
-    | "PUBLIC_API_AUTH_MODE"
     | "FEEDBACK_IP_SALT"
     | "CLOUDFLARE_ACCOUNT_ID"
     | "CLOUDFLARE_D1_STATUS_API_TOKEN"
@@ -174,13 +138,6 @@ export function validateWorkerEnvContract(
     });
   }
 
-  if (!resolvePublicApiRateLimitSalt(env)) {
-    issues.push({
-      code: "public-api-rate-limit-misconfigured",
-      message: "PUBLIC_API_RATE_LIMIT_SALT is unset; public API rate limiting is disabled until the dedicated salt is configured.",
-    });
-  }
-
   if (!hasConfiguredValue(env.SITE_API_SHARED_SECRET)) {
     issues.push({
       code: "site-api-secret-misconfigured",
@@ -188,18 +145,10 @@ export function validateWorkerEnvContract(
     });
   }
 
-  const rawAuthMode = getConfiguredValue(env.PUBLIC_API_AUTH_MODE)?.toLowerCase();
-  if (rawAuthMode && rawAuthMode !== "off" && rawAuthMode !== "report-only" && rawAuthMode !== "enforce") {
-    issues.push({
-      code: "public-api-auth-mode-invalid",
-      message: "PUBLIC_API_AUTH_MODE must be one of off, report-only, or enforce.",
-    });
-  }
-
-  if (resolvePublicApiAuthMode(env) !== "off" && !hasConfiguredValue(env.API_KEY_HASH_PEPPER)) {
+  if (!hasConfiguredValue(env.API_KEY_HASH_PEPPER)) {
     issues.push({
       code: "public-api-auth-pepper-missing",
-      message: "API_KEY_HASH_PEPPER must be configured before public API auth mode can move beyond off.",
+      message: "API_KEY_HASH_PEPPER must be configured; /api/* requires a valid X-API-Key.",
     });
   }
 

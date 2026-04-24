@@ -1,4 +1,4 @@
-import { isSiteDataAllowedPath, getPublicApiAccess } from "@shared/lib/api-endpoints";
+import { getPublicApiAccess, isSiteDataAllowedPath } from "@shared/lib/api-endpoints";
 import { API_KEY_DEPENDENCY_RETRY_AFTER_SEC } from "@shared/lib/ops-limits";
 import { SITE_API_HOSTNAME } from "@shared/lib/runtime-origins";
 import { errorResponse } from "../../lib/api-utils";
@@ -13,16 +13,7 @@ import {
   hasValidSiteProxyCredential,
   isWorkerPreviewRequest,
 } from "../../lib/auth";
-import { checkPublicApiRateLimit } from "../../lib/rate-limit";
-import {
-  resolvePublicApiAuthMode,
-  resolvePublicApiRateLimitSalt,
-  validateWorkerEnvContract,
-} from "../../lib/env";
-import {
-  PUBLIC_API_RATE_LIMIT_MAX_REQUESTS,
-  PUBLIC_API_RATE_LIMIT_WINDOW_SEC,
-} from "../../lib/public-api-limits";
+import { validateWorkerEnvContract } from "../../lib/env";
 import type { Env } from "../../lib/env";
 
 const LOGGED_ENV_ISSUES = new Set<string>();
@@ -31,6 +22,13 @@ function publicApiUnavailableResponse(): Response {
   return errorResponse(503, "Public API temporarily unavailable", {
     retryAfterSec: API_KEY_DEPENDENCY_RETRY_AFTER_SEC,
   });
+}
+
+function unauthorizedResponse(): Response {
+  return errorResponse(
+    401,
+    "Unauthorized: valid X-API-Key required. Contact me@tokenbrice.com for access.",
+  );
 }
 
 export function warnWorkerEnvIssuesOnce(env: Env): void {
@@ -96,97 +94,57 @@ export async function evaluateAccessGate(
     return { isAdmin, isSiteProxy: false, apiKey: null, requestLane: null, response: null };
   }
 
-  const publicApiAccess = getPublicApiAccess(url.pathname);
-  const authMode = resolvePublicApiAuthMode(env);
-  let protectedRouteAuthFailure: "invalid" | "missing" | null = null;
-  if (publicApiAccess === "protected") {
-    const apiKeyAuth = await authenticateApiKey(
-      env.DB,
-      request.headers.get("X-API-Key"),
-      env.API_KEY_HASH_PEPPER,
-      env.API_KEY_HASH_PEPPER_PREVIOUS,
-    );
-    if (apiKeyAuth.kind === "valid") {
-      let rateLimitResponse: Response | null;
-      try {
-        rateLimitResponse = await checkApiKeyRateLimit(
-          env.DB,
-          apiKeyAuth.key.id,
-          apiKeyAuth.key.rateLimitPerMinute,
-        );
-      } catch (err) {
-        console.warn("[public-api-auth] API key rate-limit dependency unavailable:", err);
-        return { isAdmin, isSiteProxy: false, apiKey: null, requestLane: "public-api", response: publicApiUnavailableResponse() };
-      }
-      if (rateLimitResponse) {
-        return { isAdmin, isSiteProxy: false, apiKey: apiKeyAuth.key, requestLane: "public-api", response: rateLimitResponse };
-      }
-      try {
-        await recordApiKeyUsage(env.DB, apiKeyAuth.key, url.pathname);
-      } catch (err) {
-        console.warn("[public-api-auth] Failed to record API key usage:", err);
-      }
-      return { isAdmin, isSiteProxy: false, apiKey: apiKeyAuth.key, requestLane: "public-api", response: null };
-    }
-
-    if (authMode !== "off") {
-      if (apiKeyAuth.kind === "unavailable") {
-        return {
-          isAdmin,
-          isSiteProxy: false,
-          apiKey: null,
-          requestLane: "public-api",
-          response: publicApiUnavailableResponse(),
-        };
-      }
-      if (authMode === "report-only") {
-        console.warn(`[public-api-auth] rejected ${apiKeyAuth.kind} request on ${url.pathname}`);
-      }
-      protectedRouteAuthFailure = apiKeyAuth.kind;
-    }
+  if (getPublicApiAccess(url.pathname) === "exempt") {
+    return { isAdmin, isSiteProxy: false, apiKey: null, requestLane: "public-api", response: null };
   }
 
-  const publicApiRateLimit = resolvePublicApiRateLimitSalt(env);
-  if (!publicApiRateLimit) {
-    console.error("[env] Blocking public API request because PUBLIC_API_RATE_LIMIT_SALT is not configured");
-    return {
-      isAdmin,
-      isSiteProxy: false,
-      apiKey: null,
-      requestLane: "public-api",
-      response: publicApiUnavailableResponse(),
-    };
-  }
-  const response = await checkPublicApiRateLimit(
+  const apiKeyAuth = await authenticateApiKey(
     env.DB,
-    resolveClientIp(request),
-    publicApiRateLimit.salt,
-    PUBLIC_API_RATE_LIMIT_MAX_REQUESTS,
-    PUBLIC_API_RATE_LIMIT_WINDOW_SEC * 1000,
+    request.headers.get("X-API-Key"),
+    env.API_KEY_HASH_PEPPER,
+    env.API_KEY_HASH_PEPPER_PREVIOUS,
   );
-  if (response) {
-    return { isAdmin, isSiteProxy: false, apiKey: null, requestLane: "public-api", response };
-  }
-  if (protectedRouteAuthFailure && authMode === "enforce") {
+  if (apiKeyAuth.kind !== "valid") {
+    if (apiKeyAuth.kind === "unavailable") {
+      return {
+        isAdmin,
+        isSiteProxy: false,
+        apiKey: null,
+        requestLane: "public-api",
+        response: publicApiUnavailableResponse(),
+      };
+    }
     return {
       isAdmin,
       isSiteProxy: false,
       apiKey: null,
       requestLane: "public-api",
-      response: errorResponse(401, "Unauthorized"),
+      response: unauthorizedResponse(),
     };
   }
-  return { isAdmin, isSiteProxy: false, apiKey: null, requestLane: "public-api", response: null };
+
+  let rateLimitResponse: Response | null;
+  try {
+    rateLimitResponse = await checkApiKeyRateLimit(
+      env.DB,
+      apiKeyAuth.key.id,
+      apiKeyAuth.key.rateLimitPerMinute,
+    );
+  } catch (err) {
+    console.warn("[public-api-auth] API key rate-limit dependency unavailable:", err);
+    return { isAdmin, isSiteProxy: false, apiKey: null, requestLane: "public-api", response: publicApiUnavailableResponse() };
+  }
+  if (rateLimitResponse) {
+    return { isAdmin, isSiteProxy: false, apiKey: apiKeyAuth.key, requestLane: "public-api", response: rateLimitResponse };
+  }
+  try {
+    await recordApiKeyUsage(env.DB, apiKeyAuth.key, url.pathname);
+  } catch (err) {
+    console.warn("[public-api-auth] Failed to record API key usage:", err);
+  }
+  return { isAdmin, isSiteProxy: false, apiKey: apiKeyAuth.key, requestLane: "public-api", response: null };
 }
 
 export function notFoundResponse(): Response {
   return errorResponse(404, "Not found");
-}
-
-function resolveClientIp(request: Request): string {
-  const cfIp = request.headers.get("CF-Connecting-IP")?.trim();
-  if (cfIp) return cfIp;
-  const forwarded = request.headers.get("X-Forwarded-For");
-  const forwardedIp = forwarded?.split(",")[0]?.trim();
-  return forwardedIp || "unknown";
 }

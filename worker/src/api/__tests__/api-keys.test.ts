@@ -17,8 +17,6 @@ function makeEnv(db: D1Database) {
   return {
     DB: db,
     CORS_ORIGIN: "https://pharos.watch",
-    PUBLIC_API_RATE_LIMIT_SALT: "test-salt",
-    PUBLIC_API_AUTH_MODE: "enforce",
     API_KEY_HASH_PEPPER: "pepper",
     SITE_API_SHARED_SECRET: "site-secret",
   } as const;
@@ -366,7 +364,8 @@ describe("api key handlers", () => {
     );
 
     expect(response.status).toBe(401);
-    expect(await response.json()).toEqual({ error: "Unauthorized" });
+    const body = await response.json() as { error: string };
+    expect(body.error).toMatch(/Unauthorized/);
     await Promise.all(waits);
   });
 });

@@ -309,7 +309,7 @@ Parameters of record:
 
 Why the expression is tuned this way:
 
-- **Host scope** — `api.pharos.watch` only, not `site-api.pharos.watch` or `ops-api.pharos.watch`. Browser reads to `site-api` arrive via the same-origin Pages Functions proxy (`functions/_site-data/[[path]].ts`), which routes through Cloudflare's internal network; a single colo IP proxying many users could plausibly trip a per-IP limit under load. `site-api` is already gated by `SITE_API_SHARED_SECRET` and `ops-api` by Cloudflare Access, so neither benefits from an additional volumetric filter in front of its own auth layer. The public anonymous surface — `api.pharos.watch` — is where the flood risk actually lives.
+- **Host scope** — `api.pharos.watch` only, not `site-api.pharos.watch` or `ops-api.pharos.watch`. Browser reads to `site-api` arrive via the same-origin Pages Functions proxy (`functions/_site-data/[[path]].ts`), which routes through Cloudflare's internal network; a single colo IP proxying many users could plausibly trip a per-IP limit under load. `site-api` is already gated by `SITE_API_SHARED_SECRET` and `ops-api` by Cloudflare Access, so neither benefits from an additional volumetric filter in front of its own auth layer. The keyed public surface — `api.pharos.watch` — still benefits from a zone-side floor on the exempt routes (`/api/health`, `/api/og/*`, `/api/feedback`, `/api/telegram-webhook`) and as a flood-control backstop in front of per-key auth.
 - **Path filter** — `starts_with(http.request.uri.path, "/api/")` narrows the match to the legitimate API surface; stray requests to other paths on the host are left to default handling.
 - **Verified bot carve-out** — `not cf.bot_management.verified_bot` exempts Cloudflare's verified-bot list (Google, Bing, Anthropic/ClaudeBot, etc.) so legitimate crawlers never trip the limit. The field is available on all plans.
 
@@ -327,7 +327,7 @@ Rule id and verification:
 
 Operational notes:
 
-- The Worker-side public-API limiter (see `docs/worker-infrastructure.md` → Public API Auth and Rate Limiting and the Edge Cache Strategy subsection) remains in force for per-key accuracy and persists across colos. The WAF rule is a coarser, zone-side floor sitting in front of it.
+- The Worker-side per-key limiter (see `docs/worker-infrastructure.md` → Public API Auth and Rate Limiting and the Edge Cache Strategy subsection) remains in force for keyed `/api/*` requests and persists across colos. The WAF rule is a coarser, zone-side floor sitting in front of it.
 - Cloudflare plan quotas (number of active rate-limiting rules, minimum counting periods, available match fields) vary by plan and change over time. Verify the current plan comparison page before adding a second rule.
 
 ---

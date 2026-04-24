@@ -94,7 +94,7 @@ npm install
 NEXT_PUBLIC_API_BASE=http://localhost:8787 npm run dev
 ```
 
-`NEXT_PUBLIC_API_BASE` is mainly a local-dev override for `next dev` against `wrangler dev`. When it is unset, browser reads on `pharos.watch`, `ops.pharos.watch`, and `*.stablecoin-dashboard.pages.dev` go through same-origin `/_site-data/*`. Production Pages hosts (`pharos.watch`, `ops.pharos.watch`) require `SITE_API_ORIGIN` and proxy that lane with `SITE_API_SHARED_SECRET` to the dedicated `site-api` origin; preview/local hosts may still fall back to `https://api.pharos.watch` for rehearsal when `SITE_API_ORIGIN` is intentionally unset. That public-API fallback only works for protected reads when auth is disabled/report-only or when the proxy also supplies a valid API key; production `api.pharos.watch` enforces `X-API-Key`. Direct browser calls still use `https://api.pharos.watch` only for exempt public routes such as feedback submission and OG image fetches. Local static smoke/proxy setups can keep `NEXT_PUBLIC_API_BASE` empty. `NEXT_PUBLIC_GA_ID` is optional and only injects GA4 when set at build time.
+`NEXT_PUBLIC_API_BASE` is mainly a local-dev override for `next dev` against `wrangler dev`. When it is unset, browser reads on `pharos.watch`, `ops.pharos.watch`, and `*.stablecoin-dashboard.pages.dev` go through same-origin `/_site-data/*`. All Pages hosts require `SITE_API_ORIGIN` and proxy that lane with `SITE_API_SHARED_SECRET` to the dedicated `site-api` origin; when the binding is missing the proxy returns `500`. The `/_site-data/*` lane gates on the caller's `Origin` (or `Referer` fallback) and only accepts `pharos.watch`, `ops.pharos.watch`, or a Pages preview hostname. Direct browser calls still use `https://api.pharos.watch` only for exempt public routes such as feedback submission and OG image fetches; every other `/api/*` route requires a valid `X-API-Key`. `NEXT_PUBLIC_GA_ID` is optional and only injects GA4 when set at build time.
 
 ### Worker API
 
@@ -173,7 +173,7 @@ src/                              Frontend (Next.js static export)
 └── lib/                          Frontend-only utilities (API client, charts/colors, metadata, UI helpers)
 
 functions/                        Cloudflare Pages Functions for same-origin website/ops proxying
-├── _site-data/[[path]].ts        Same-origin website data proxy; production hosts require `SITE_API_ORIGIN`, preview/local public-API fallback needs exempt/auth-off/API-key-forwarding setup
+├── _site-data/[[path]].ts        Same-origin website data proxy; requires `SITE_API_ORIGIN` and gates on the caller's `Origin`/`Referer`
 ├── admin/[[path]].ts             Host gate for `/admin/` on `ops.pharos.watch`
 ├── api/admin/[[path]].ts         Same-origin admin proxy from `ops.pharos.watch` to `ops-api.pharos.watch`
 ├── lib/ops-env.ts                Shared Pages Functions env contract for ops-host gating and admin proxying
@@ -220,7 +220,7 @@ Current source-of-truth product docs live in `/docs/` and this README. `/agents/
 Runtime host split:
 
 - website UI: `https://pharos.watch`
-- website data lane: same-origin `/_site-data/*` -> `SITE_API_ORIGIN` on production hosts; preview/local rehearsal may fall back to `https://api.pharos.watch` only for exempt/auth-off/API-key-forwarding scenarios
+- website data lane: same-origin `/_site-data/*` -> `SITE_API_ORIGIN` on every Pages host; origin-gated to `pharos.watch`, `ops.pharos.watch`, and Pages preview hostnames
 - external integration API: `https://api.pharos.watch`
 - operator UI/API: `https://ops.pharos.watch` / `https://ops-api.pharos.watch`
 
@@ -356,11 +356,11 @@ Required GitHub variable: `API_BASE_URL`
 Optional GitHub variable: `SMOKE_API_BASE_URL` (recommended when smoke-testing a dedicated API host)
 Optional GitHub variables: `SMOKE_OPS_UI_URL`, `SMOKE_OPS_API_BASE`, `NEXT_PUBLIC_GA_ID`
 
-Worker secrets (set via `wrangler secret put`): `ETHERSCAN_API_KEY`, `TRONGRID_API_KEY`, `DRPC_API_KEY`, `ALCHEMY_API_KEY`, `GRAPH_API_KEY`, `CMC_API_KEY`, `COINGECKO_API_KEY`, `OPENEXCHANGERATES_API_KEY`, `ANTHROPIC_API_KEY`, `ALERT_WEBHOOK_URL`, `TWITTER_API_KEY`, `TWITTER_API_SECRET`, `TWITTER_ACCESS_TOKEN`, `TWITTER_ACCESS_TOKEN_SECRET`, `TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_ID`, `TELEGRAM_WEBHOOK_SECRET`, `TELEGRAM_WEBHOOK_SECRET_PREVIOUS`, `GITHUB_PAT`, `FEEDBACK_IP_SALT`, `PUBLIC_API_RATE_LIMIT_SALT`, `SITE_API_SHARED_SECRET`, `SITE_API_SHARED_SECRET_PREVIOUS`, `API_KEY_HASH_PEPPER`, `API_KEY_HASH_PEPPER_PREVIOUS`, `CLOUDFLARE_D1_STATUS_API_TOKEN`
+Worker secrets (set via `wrangler secret put`): `ETHERSCAN_API_KEY`, `TRONGRID_API_KEY`, `DRPC_API_KEY`, `ALCHEMY_API_KEY`, `GRAPH_API_KEY`, `CMC_API_KEY`, `COINGECKO_API_KEY`, `OPENEXCHANGERATES_API_KEY`, `ANTHROPIC_API_KEY`, `ALERT_WEBHOOK_URL`, `TWITTER_API_KEY`, `TWITTER_API_SECRET`, `TWITTER_ACCESS_TOKEN`, `TWITTER_ACCESS_TOKEN_SECRET`, `TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_ID`, `TELEGRAM_WEBHOOK_SECRET`, `TELEGRAM_WEBHOOK_SECRET_PREVIOUS`, `GITHUB_PAT`, `FEEDBACK_IP_SALT`, `SITE_API_SHARED_SECRET`, `SITE_API_SHARED_SECRET_PREVIOUS`, `API_KEY_HASH_PEPPER`, `API_KEY_HASH_PEPPER_PREVIOUS`, `CLOUDFLARE_D1_STATUS_API_TOKEN`
 
-`PUBLIC_API_RATE_LIMIT_SALT` is required for deployed public API traffic. If it is unset, the worker logs a configuration error and returns `503` for non-admin public `/api/*` requests instead of falling back to a built-in salt.
+`API_KEY_HASH_PEPPER` is required: every `/api/*` request on `api.pharos.watch` (except `/api/telegram-webhook` and admin routes) requires a valid `X-API-Key`, and the worker can't verify keys without the pepper.
 
-Worker vars (see `.env.example` for the current surface): active worker bindings include `CORS_ORIGIN`, `SELF_URL`, `CF_ACCESS_TEAM_DOMAIN`, `CF_ACCESS_OPS_API_AUD`, `MAINTENANCE_MODE`, `PUBLIC_API_AUTH_MODE`, `CLOUDFLARE_ACCOUNT_ID`, and `CLOUDFLARE_D1_DATABASE_ID`. `OPS_UI_ORIGIN`, `OPS_API_ORIGIN`, and `CF_ACCESS_OPS_UI_AUD` remain reserved on the worker side for cross-runtime contract alignment; `CF_ACCESS_OPS_UI_AUD` is active and required on Pages Functions for `/api/admin/*` UI JWT verification.
+Worker vars (see `.env.example` for the current surface): active worker bindings include `CORS_ORIGIN`, `SELF_URL`, `CF_ACCESS_TEAM_DOMAIN`, `CF_ACCESS_OPS_API_AUD`, `MAINTENANCE_MODE`, `CLOUDFLARE_ACCOUNT_ID`, and `CLOUDFLARE_D1_DATABASE_ID`. `OPS_UI_ORIGIN`, `OPS_API_ORIGIN`, and `CF_ACCESS_OPS_UI_AUD` remain reserved on the worker side for cross-runtime contract alignment; `CF_ACCESS_OPS_UI_AUD` is active and required on Pages Functions for `/api/admin/*` UI JWT verification.
 
 Pages Functions bindings: `SITE_API_SHARED_SECRET` and production `SITE_API_ORIGIN` for `/_site-data/*`; `DB` for site-data attribution; `OPS_API_SERVICE_TOKEN_ID`, `OPS_API_SERVICE_TOKEN_SECRET`, `CF_ACCESS_TEAM_DOMAIN`, and `CF_ACCESS_OPS_UI_AUD` for `/api/admin/*`
 
