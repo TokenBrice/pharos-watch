@@ -109,10 +109,10 @@ function Lighthouse({
   // Built of pale limestone, ~140 m tall in antiquity. Here, three tapering tiers in stone, no candy stripes.
   const baseX = SCENE_WIDTH - 110;
   const waterline = WATERLINE_Y;
-  const rockTop = waterline - 14;
+  const rockTop = waterline - 18;
 
   // Tier 1: square base
-  const t1Bottom = rockTop - 4;
+  const t1Bottom = rockTop + 4;
   const t1Top = t1Bottom - 64;
   const t1HalfBottom = 26;
   const t1HalfTop = 22;
@@ -161,13 +161,30 @@ function Lighthouse({
 
       {/* Rocky promontory */}
       <path
+        d={`M ${baseX - 58} ${waterline + 13} Q ${baseX - 42} ${rockTop + 8} ${baseX - 29} ${rockTop + 6} Q ${baseX - 15} ${rockTop - 7} ${baseX - 1} ${rockTop - 4} Q ${baseX + 15} ${rockTop - 1} ${baseX + 31} ${rockTop + 5} Q ${baseX + 47} ${rockTop + 9} ${baseX + 63} ${waterline + 13} Z`}
+        fill="oklch(0.11 0.026 248)"
+        opacity={0.92}
+      />
+      <path
         d={`M ${baseX - 50} ${waterline + 2} Q ${baseX - 38} ${rockTop + 1} ${baseX - 28} ${rockTop + 4} Q ${baseX - 14} ${rockTop - 6} ${baseX - 2} ${rockTop - 2} Q ${baseX + 12} ${rockTop + 4} ${baseX + 28} ${rockTop} Q ${baseX + 40} ${waterline} ${baseX + 52} ${waterline + 2} Z`}
         fill="oklch(0.16 0.022 250)"
         stroke="oklch(0.06 0.018 250)"
         strokeWidth={0.7}
       />
+      <path
+        d={`M ${baseX - 31} ${t1Bottom + 1} Q ${baseX - 12} ${t1Bottom - 7} ${baseX + 7} ${t1Bottom - 4} Q ${baseX + 25} ${t1Bottom - 2} ${baseX + 39} ${t1Bottom + 4} L ${baseX + 42} ${waterline + 1} L ${baseX - 37} ${waterline + 1} Z`}
+        fill="oklch(0.09 0.022 248)"
+        opacity={0.78}
+      />
       <path d={`M ${baseX - 32} ${rockTop + 2} Q ${baseX - 20} ${rockTop - 1} ${baseX - 8} ${rockTop + 1}`} fill="none" stroke="oklch(0.34 0.018 250 / 0.7)" strokeWidth={0.6} />
       <path d={`M ${baseX + 6} ${rockTop} Q ${baseX + 20} ${rockTop - 2} ${baseX + 30} ${rockTop + 2}`} fill="none" stroke="oklch(0.34 0.018 250 / 0.6)" strokeWidth={0.6} />
+      <path
+        d={`M ${baseX - 55} ${waterline} C ${baseX - 36} ${waterline + 2} ${baseX - 13} ${waterline + 2} ${baseX + 4} ${waterline - 1} S ${baseX + 38} ${waterline - 2} ${baseX + 60} ${waterline + 1}`}
+        fill="none"
+        stroke="oklch(0.66 0.08 205 / 0.32)"
+        strokeWidth={1.1}
+        strokeLinecap="round"
+      />
 
       {/* Tier 1 — square base, slight taper */}
       <path
@@ -278,6 +295,20 @@ function Lighthouse({
         d={`M ${baseX - 1.6} ${brazierBottom - 3} Q ${baseX - 1.2} ${brazierBottom - 7} ${baseX} ${brazierBottom - 11} Q ${baseX + 1.2} ${brazierBottom - 7} ${baseX + 1.6} ${brazierBottom - 3} Z`}
         fill="#fef9c3"
         opacity={flameOpacity}
+      />
+
+      {/* Foreground rock lip seats the tower into the promontory. */}
+      <path
+        d={`M ${baseX - 34} ${t1Bottom - 1} Q ${baseX - 17} ${t1Bottom - 7} ${baseX - 1} ${t1Bottom - 5} Q ${baseX + 16} ${t1Bottom - 7} ${baseX + 34} ${t1Bottom - 1} L ${baseX + 42} ${waterline + 1} Q ${baseX + 16} ${waterline - 5} ${baseX - 39} ${waterline + 1} Z`}
+        fill="oklch(0.07 0.022 248)"
+        opacity={0.95}
+      />
+      <path
+        d={`M ${baseX - 38} ${t1Bottom + 1} C ${baseX - 18} ${t1Bottom - 3} ${baseX + 9} ${t1Bottom - 4} ${baseX + 36} ${t1Bottom + 2}`}
+        fill="none"
+        stroke="oklch(0.32 0.026 210 / 0.36)"
+        strokeWidth={0.65}
+        strokeLinecap="round"
       />
 
       {/* Smoke wisp — only when not dim */}
@@ -1048,8 +1079,13 @@ export function NauticalChart({
                 key={entry.id}
                 role="button"
                 tabIndex={0}
+                aria-pressed={selected}
                 aria-label={`Select ${entry.name} harbor`}
-                className={cn("cursor-pointer outline-none", selected && "nc-ship-lit")}
+                className={cn("nc-ship-target cursor-pointer outline-none", selected && "nc-ship-lit nc-ship-target-selected")}
+                style={{
+                  "--nc-ship-origin-x": `${geom.deckLeft + geom.hullW / 2}px`,
+                  "--nc-ship-origin-y": `${geom.hullBottom}px`,
+                } as CSSProperties}
                 onFocus={() => onSelectChain?.(entry.id)}
                 onMouseEnter={() => onSelectChain?.(entry.id)}
                 onClick={() => onSelectChain?.(entry.id)}
@@ -1058,6 +1094,17 @@ export function NauticalChart({
                 <title>
                   {entry.name}: {formatCompactUsd(entry.totalUsd)} docked, {entry.sharePct.toFixed(1)}% of tracked supply
                 </title>
+                <ellipse
+                  className="nc-ship-focus-ring"
+                  cx={geom.deckLeft + geom.hullW / 2}
+                  cy={geom.hullBottom + 10}
+                  rx={Math.max(30, geom.hullW * 0.58)}
+                  ry={8}
+                  fill="none"
+                  stroke="#fde68a"
+                  strokeWidth={1.2}
+                  strokeDasharray="4 5"
+                />
                 {selected ? <HarborLight geom={geom} /> : null}
                 <Ship entry={entry} geom={geom} maxCargoUsd={maxCargoUsd} />
               </g>

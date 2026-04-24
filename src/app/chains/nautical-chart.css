@@ -152,7 +152,28 @@
     transform: rotate(var(--nc-beam-angle, 0deg));
     transform-box: view-box;
     transform-origin: var(--nc-beam-origin-x, 1090px) var(--nc-beam-origin-y, 46px);
-    transition: transform 6.2s linear;
+    transition: transform 1.15s cubic-bezier(0.22, 1, 0.36, 1);
+    will-change: transform;
+  }
+  .nc-ship-target {
+    transform-box: view-box;
+    transform-origin: var(--nc-ship-origin-x, 0px) var(--nc-ship-origin-y, 0px);
+    transition:
+      filter 180ms cubic-bezier(0.22, 1, 0.36, 1),
+      transform 180ms cubic-bezier(0.22, 1, 0.36, 1);
+  }
+  .nc-ship-target:hover,
+  .nc-ship-target:focus-visible,
+  .nc-ship-target-selected {
+    transform: translateY(-2px);
+  }
+  .nc-ship-focus-ring {
+    opacity: 0;
+    transition: opacity 160ms cubic-bezier(0.22, 1, 0.36, 1);
+  }
+  .nc-ship-target:focus-visible .nc-ship-focus-ring,
+  .nc-ship-target-selected .nc-ship-focus-ring {
+    opacity: 1;
   }
   .nc-harbor-light {
     animation: nc-harbor-light-breathe 4.8s ease-in-out infinite;
@@ -194,6 +215,16 @@
 
 @media (prefers-reduced-motion: reduce) {
   .nc-lighthouse-beam {
+    animation: none;
+    transition: none;
     transform: rotate(var(--nc-beam-angle, 0deg));
+  }
+  .nc-ship-target {
+    transition: none;
+  }
+  .nc-ship-target:hover,
+  .nc-ship-target:focus-visible,
+  .nc-ship-target-selected {
+    transform: none;
   }
 }
