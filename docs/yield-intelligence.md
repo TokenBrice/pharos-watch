@@ -12,6 +12,8 @@ Risk-adjusted yield tracking and ranking for yield-bearing stablecoins and curat
 
 Yield versions are bumped when APY source resolution, source arbitration, history semantics, PYS scoring logic, or score-affecting publication rules change.
 
+The `/yield` route-level Yield Sources board is presentation-only: it derives selected and alternate source rows from the existing `/api/yield-rankings` payload and does not change APY source resolution, source arbitration, scoring, or methodology versioning.
+
 Rankings provenance now carries source-native freshness for derived sources:
 
 - `sourceObservedAt` / `sourceAgeSeconds` reflect the actual latest observation backing the ranking, not just the cron run time
@@ -691,9 +693,25 @@ Each `history` row includes:
 1. `QueryErrorNotice` when the rankings query fails
 2. Stale data banner (tracks the hourly core publish lane and warns when rankings are delayed or stale)
 3. Snapshot count text, optional `Data Provenance`, and peg filter controls
-4. Yield vs Safety scatter card with the summary metrics integrated into the card header
-5. Yield leaderboard table
-6. Disclaimer
+4. Yield Sources board for the active peg-filtered ranking scope
+5. Yield vs Safety scatter card with the summary metrics integrated into the card header
+6. Yield leaderboard table
+7. Disclaimer
+
+### `YieldSourceBoard` (`src/app/yield/source-board.tsx`)
+
+Compact provenance board rendered before the scatter on `/yield`. It consumes the pure `buildYieldSourceBoardModel(rankings, options)` output from `src/app/yield/source-board-model.ts` and stays scoped to the currently visible, peg-filtered rankings.
+
+The model derives only from published selected rows and retained `altSources[]` in the current rankings payload:
+
+- selected best-source row count, alternate-source row count, represented source-row count, and represented data-source family count
+- source lanes grouped by `yieldType` and `dataSource`, with selected count, alternate count, source-row APY min/median/max, and source labels
+- selected-source confidence counts from `YieldRanking.provenance.confidenceTier` only; alternate rows do not carry or display confidence tiers
+- selected-row source-switch count and selected-row anomaly count from row provenance
+- source-row APY min/median/max across selected plus alternate rows in the current view
+- benchmark labels present in the selected rows, falling back to the response benchmark registry when row-level labels are absent
+
+The visible board labels APY as source-row APY context. It is not an asset median, market median, investability rating, safety signal, or methodology input. Mobile stacks source lanes as readable rows with the same counts and APY values visible without hover.
 
 ### Stablecoin Detail: `YieldDetailSection` (`src/components/yield-detail-section.tsx`)
 
@@ -881,6 +899,8 @@ The control row exposes four fixed lookback presets (`7d`, `30d`, `90d`, `1y`) p
 | `src/lib/__tests__/yield-constants.test.ts`          | Unit tests for shared frontend yield utilities                                                                                               |
 | `src/app/yield/page.tsx`                             | SSG page wrapper with metadata                                                                                                               |
 | `src/app/yield/client.tsx`                           | Interactive page: stats, scatter, leaderboard                                                                                                |
+| `src/app/yield/source-board-model.ts`                | Pure source-board model for selected/alternate source counts, source lanes, confidence counts, anomaly/switch counts, APY context, and benchmarks |
+| `src/app/yield/source-board.tsx`                     | Compact `/yield` source-provenance board rendered before the scatter                                                                         |
 | `src/components/yield-detail-section.tsx`            | Stablecoin detail-page yield section with warnings, source metadata, metric cards, and shared history chart                                 |
 | `src/components/yield-leaderboard.tsx`               | Sortable rankings table with `+N` alt-source pill badge                                                                                      |
 | `src/components/yield-history-chart.tsx`             | Shared APY history chart with row-benchmark / peer-median reference lines, optional base-reward split, and warning markers                   |

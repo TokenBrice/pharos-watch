@@ -14,6 +14,8 @@ import { StaleDataBanner } from "@/components/stale-data-banner";
 import { QueryErrorNotice } from "@/components/query-error-notice";
 import { YieldLeaderboard } from "@/components/yield-leaderboard";
 import { YieldScatterPlot } from "@/components/yield-scatter-plot";
+import { YieldSourceBoard } from "@/app/yield/source-board";
+import { buildYieldSourceBoardModel } from "@/app/yield/source-board-model";
 import {
   getYieldBenchmarkDisplayLabel,
   resolveYieldScatterBenchmarkFrame,
@@ -120,6 +122,13 @@ export function YieldClient() {
   const filteredRankings = useMemo(
     () => rankings.filter((ranking) => matchesYieldPegFilter(getYieldRankingPeg(ranking.id), pegFilter)),
     [rankings, pegFilter],
+  );
+  const sourceBoardModel = useMemo(
+    () => buildYieldSourceBoardModel(filteredRankings, {
+      benchmarks: data?.benchmarks ?? data?.provenance?.benchmarks ?? null,
+      fallbackBenchmark: data?.provenance?.benchmark ?? null,
+    }),
+    [data?.benchmarks, data?.provenance?.benchmark, data?.provenance?.benchmarks, filteredRankings],
   );
   const setPegFilter = useCallback(
     (value: YieldPegFilter) => {
@@ -335,6 +344,8 @@ export function YieldClient() {
           </ToggleGroup>
         </div>
       ) : null}
+
+      {filteredRankings.length > 0 ? <YieldSourceBoard model={sourceBoardModel} /> : null}
 
       {/* Scatter plot with integrated summary stats */}
       {data && filteredRankings.length > 0 && (
