@@ -328,8 +328,6 @@ export function AltPegsClient() {
         yearlyShareDeltaPctPoints={trendStats?.yearlyShareDeltaPctPoints ?? null}
       />
 
-      <AltPegDistributionCard rows={snapshot.distributionRows} altMarketCap={snapshot.altMarketCap} />
-
       <SectionErrorBoundary name="non-usd-share">
         <section className="space-y-3">
           <div className="flex flex-wrap items-center justify-between gap-2">
@@ -388,6 +386,8 @@ export function AltPegsClient() {
           }}
         />
       </SectionErrorBoundary>
+
+      <AltPegDistributionCard rows={snapshot.distributionRows} altMarketCap={snapshot.altMarketCap} />
     </div>
   );
 }
