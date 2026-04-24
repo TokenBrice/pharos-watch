@@ -252,7 +252,9 @@ export function PsiLighthouseScene({
     aspectRatio: `${VIEWBOX_WIDTH} / ${VIEWBOX_HEIGHT}`,
     display: "block",
   } as CSSProperties;
-  const transitionStyle: CSSProperties = { transition: "fill 500ms ease-out, opacity 500ms ease-out" };
+  const transitionStyle: CSSProperties = {
+    transition: "fill 600ms cubic-bezier(0.22, 1, 0.36, 1), opacity 600ms cubic-bezier(0.22, 1, 0.36, 1)",
+  };
 
   return (
     <svg
@@ -348,6 +350,15 @@ export function PsiLighthouseScene({
         strokeWidth={1}
         strokeDasharray="6 8"
         opacity={0.5}
+      />
+      <path
+        d={`M ${VIEWBOX_X + 12} ${WATERLINE_Y + 10} C ${VIEWBOX_X + 82} ${WATERLINE_Y + 7} ${VIEWBOX_X + 142} ${WATERLINE_Y + 13} ${VIEWBOX_X + 210} ${WATERLINE_Y + 9} S ${VIEWBOX_X + 316} ${WATERLINE_Y + 5} ${VIEWBOX_X + VIEWBOX_WIDTH - 18} ${WATERLINE_Y + 9}`}
+        fill="none"
+        stroke="oklch(0.78 0.08 205 / 0.28)"
+        strokeWidth={0.9}
+        strokeLinecap="round"
+        className="psi-scene-water-glint"
+        aria-hidden="true"
       />
 
       <Rocks />
