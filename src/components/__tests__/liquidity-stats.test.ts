@@ -212,11 +212,13 @@ describe("LiquidityStats", () => {
     }));
 
     expect(screen.getByText("Exit Route Map")).toBeTruthy();
-    expect(screen.getByTestId("exit-route-terminal")).toBeTruthy();
+    expect(screen.getByTestId("exit-route-canal")).toBeTruthy();
     expect(screen.getByTestId("protocol-gate-curve")).toBeTruthy();
     expect(screen.getByTestId("protocol-gate-_other-routes")).toBeTruthy();
-    expect(screen.getByTestId("chain-lane-ethereum")).toBeTruthy();
-    expect(screen.getByTestId("exit-concourse").getAttribute("data-crowding-band")).toBe("visible");
+    expect(screen.getByTestId("chain-basin-ethereum")).toBeTruthy();
+    expect(screen.getByTestId("exit-canal").getAttribute("data-crowding-band")).toBe("visible");
+    expect(screen.getByText("Leading door:")).toBeTruthy();
+    expect(screen.getByText("Leading lane:")).toBeTruthy();
     expect(container.querySelector('image[href="/dexes/curve.png"]')).toBeTruthy();
     expect(container.querySelector('image[href="/chains/ethereum.png"]')).toBeTruthy();
   });
