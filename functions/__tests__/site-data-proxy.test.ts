@@ -352,33 +352,6 @@ describe("site-data proxy", () => {
       && entry.binds[4] === "site-api")).toBe(true);
   });
 
-  it.skip("allows Pages preview hosts to fall back to the public API origin when SITE_API_ORIGIN is unset", async () => {
-    const fetchSpy = vi.fn(async () => new Response(JSON.stringify({ ok: true }), {
-      status: 200,
-      headers: { "Content-Type": "application/json" },
-    }));
-    vi.stubGlobal("fetch", fetchSpy);
-    const db = makeTestDb();
-
-    const response = await onRequest({
-      request: new Request("https://stablecoin-dashboard.pages.dev/_site-data/stablecoins"),
-      env: makeEnv(db, { SITE_API_ORIGIN: undefined }),
-      params: { path: "stablecoins" },
-    });
-
-    expect(response.status).toBe(200);
-    expect(fetchSpy).toHaveBeenCalledWith(
-      "https://api.pharos.watch/api/stablecoins",
-      expect.objectContaining({
-        method: "GET",
-        headers: expect.any(Headers),
-      }),
-    );
-    expect(db.getHistory().some((entry) => entry.sql.includes("INSERT INTO site_data_request_stats")
-      && entry.binds[3] === "pages-upstream-fetch"
-      && entry.binds[4] === "public-api-fallback")).toBe(true);
-  });
-
   it("fails closed on production site hosts when SITE_API_ORIGIN is unset", async () => {
     const fetchSpy = vi.fn();
     vi.stubGlobal("fetch", fetchSpy);
