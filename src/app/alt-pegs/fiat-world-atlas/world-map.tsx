@@ -1,7 +1,6 @@
-import { readFileSync } from "node:fs";
-import { resolve } from "node:path";
+"use client";
 
-const WORLD_SVG = readFileSync(resolve(process.cwd(), "public/maps/world-countries.svg"), "utf8");
+import { useEffect, useState } from "react";
 
 const STYLE_BLOCK = `
 .fiat-world-map{--world-default-fill:oklch(0.79 0.015 248 / 1);--world-stroke:oklch(0.48 0.02 248 / 0.58)}
@@ -10,10 +9,29 @@ const STYLE_BLOCK = `
 `;
 
 export function WorldMap() {
+  const [worldSvg, setWorldSvg] = useState("");
+
+  useEffect(() => {
+    let cancelled = false;
+
+    fetch("/maps/world-countries.svg")
+      .then((response) => response.ok ? response.text() : "")
+      .then((svg) => {
+        if (!cancelled) setWorldSvg(svg);
+      })
+      .catch(() => {
+        if (!cancelled) setWorldSvg("");
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
   return (
     <div className="fiat-world-map relative h-full w-full" aria-hidden="true">
       <style>{STYLE_BLOCK}</style>
-      <div className="[&_svg]:h-full [&_svg]:w-full" dangerouslySetInnerHTML={{ __html: WORLD_SVG }} />
+      <div className="[&_svg]:h-full [&_svg]:w-full" dangerouslySetInnerHTML={{ __html: worldSvg }} />
     </div>
   );
 }

@@ -1,17 +1,32 @@
 // @vitest-environment jsdom
 
-import { cleanup, render } from "@testing-library/react";
-import { afterEach, describe, expect, it } from "vitest";
+import { cleanup, render, waitFor } from "@testing-library/react";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { WorldMap } from "@/app/alt-pegs/fiat-world-atlas/world-map";
 
-afterEach(cleanup);
+const WORLD_SVG = '<svg viewBox="0 0 900 460"><g class="world-countries"><path id="US" /></g></svg>';
+
+beforeEach(() => {
+  vi.stubGlobal(
+    "fetch",
+    vi.fn().mockResolvedValue({
+      ok: true,
+      text: () => Promise.resolve(WORLD_SVG),
+    }),
+  );
+});
+
+afterEach(() => {
+  cleanup();
+  vi.unstubAllGlobals();
+});
 
 describe("WorldMap", () => {
-  it("renders the world SVG with the fiat-world-map wrapper", () => {
+  it("renders the world SVG with the fiat-world-map wrapper", async () => {
     const { container } = render(<WorldMap />);
     const wrapper = container.querySelector(".fiat-world-map");
     expect(wrapper).not.toBeNull();
-    expect(wrapper!.querySelector("svg")).not.toBeNull();
+    await waitFor(() => expect(wrapper!.querySelector("svg")).not.toBeNull());
   });
 
   it("does not apply any peg-specific fill overrides", () => {
