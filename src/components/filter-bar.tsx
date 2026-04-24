@@ -13,7 +13,7 @@ interface FilterBarProps {
   setSearchQuery: (q: string) => void;
   handleGroupChange: (group: string, value: string) => void;
   clearAll: () => void;
-  activeFilters: FilterTag[];
+  activeFilters: readonly FilterTag[];
   hasFilters: boolean;
 }
 

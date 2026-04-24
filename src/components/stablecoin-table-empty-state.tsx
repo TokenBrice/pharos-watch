@@ -11,7 +11,7 @@ import type { FilterTag, StablecoinData } from "@shared/types";
 
 interface StablecoinTableEmptyStateProps {
   searchQuery?: string;
-  activeFilters: FilterTag[];
+  activeFilters: readonly FilterTag[];
   data?: StablecoinData[];
   logos?: Record<string, string>;
   onClearSearch?: () => void;

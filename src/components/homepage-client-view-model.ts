@@ -30,7 +30,7 @@ export function buildHomepageViewModel(args: {
     reportCards: args.reportCardsData?.cards,
   });
   const reportCardMap = tableInputs.reportCards;
-  const trackedIds = buildTrackedIdSet([...args.filters.activeFilters], reportCardMap);
+  const trackedIds = buildTrackedIdSet(args.filters.activeFilters, reportCardMap);
   const filteredRowCount = filterStablecoins(
     args.stablecoinsData?.peggedAssets,
     trackedIds,

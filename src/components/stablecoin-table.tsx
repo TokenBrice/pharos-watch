@@ -95,7 +95,7 @@ const STABLECOIN_HEADER_DEFS: readonly StablecoinHeaderDef[] = [
 interface StablecoinTableProps {
   data: StablecoinData[] | undefined;
   isLoading: boolean;
-  activeFilters: FilterTag[];
+  activeFilters: readonly FilterTag[];
   toolbarActions?: React.ReactNode;
   filterPanel?: React.ReactNode;
   logos?: Record<string, string>;

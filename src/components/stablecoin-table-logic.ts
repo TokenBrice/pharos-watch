@@ -70,7 +70,7 @@ export function prioritizePinnedStablecoins(
 }
 
 export function buildTrackedIdSet(
-  activeFilters: FilterTag[],
+  activeFilters: readonly FilterTag[],
   reportCards?: Record<string, ReportCard>,
 ): ReadonlySet<string> {
   if (activeFilters.length === 0) {
