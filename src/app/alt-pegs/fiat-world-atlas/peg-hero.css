@@ -36,24 +36,17 @@
   border-radius: 0 0 12px 12px;
   overflow: hidden;
   border-top: 1px solid oklch(0.6 0 0 / 0.12);
-  background:
-    radial-gradient(
-      ellipse 82% 42% at 50% 34%,
-      oklch(0.3 0.08 246 / 0.55) 0%,
-      oklch(0.2 0.06 250 / 0.24) 38%,
-      transparent 74%
-    ),
-    linear-gradient(
-      to bottom,
-      oklch(0.02 0 0) 0%,
-      oklch(0.07 0.022 260) 16%,
-      oklch(0.11 0.034 258) 28%,
-      oklch(0.17 0.055 252) 33%,
-      oklch(0.19 0.06 250) 36%,
-      oklch(0.13 0.04 258) 45%,
-      oklch(0.07 0.02 260) 66%,
-      oklch(0.03 0.01 260) 100%
-    );
+  background: linear-gradient(
+    to bottom,
+    oklch(0.02 0 0) 0%,
+    oklch(0.08 0.02 260) 18%,
+    oklch(0.12 0.03 260) 30%,
+    oklch(0.15 0.04 260) 34%,
+    oklch(0.16 0.04 260) 37%,
+    oklch(0.12 0.03 260) 45%,
+    oklch(0.08 0.02 260) 65%,
+    oklch(0.04 0.01 260) 100%
+  );
 }
 
 .peg-hero__sky {
@@ -75,45 +68,14 @@
   justify-content: center;
   align-items: flex-end;
 }
-.peg-hero__horizon {
-  position: absolute;
-  top: -4px;
-  left: 0;
-  right: 0;
-  height: 72px;
-  background:
-    radial-gradient(ellipse 60% 140% at 50% 100%, oklch(0.82 0.12 244 / 0.22) 0%, transparent 62%),
-    linear-gradient(
-      to bottom,
-      oklch(0.78 0.1 248 / 0.18) 0%,
-      oklch(0.62 0.1 248 / 0.1) 38%,
-      oklch(0.5 0.08 252 / 0.04) 72%,
-      transparent 100%
-    );
-  pointer-events: none;
-  z-index: 2;
-}
 .peg-hero__map-frame {
   position: relative;
   height: 100%;
   aspect-ratio: 900 / 460;
   max-width: 100%;
 }
-.peg-hero__map-frame::before {
-  content: "";
-  position: absolute;
-  left: 10%;
-  right: 10%;
-  top: -12px;
-  height: 26px;
-  background: radial-gradient(ellipse 100% 100% at 50% 100%, oklch(0.78 0.14 246 / 0.28) 0%, transparent 72%);
-  filter: blur(2px);
-  pointer-events: none;
-  z-index: 1;
-}
 .peg-hero__map-frame .fiat-world-map svg {
-  filter: drop-shadow(0 -7px 26px oklch(0.55 0.17 246 / 0.34))
-    drop-shadow(0 -2px 8px oklch(0.5 0.14 248 / 0.22));
+  filter: drop-shadow(0 -4px 18px oklch(0.5 0.15 250 / 0.18));
 }
 
 /* ===== Starfield ===== */

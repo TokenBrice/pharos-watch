@@ -97,7 +97,6 @@ export function PegDiversityHeroLive({ worldMap }: { worldMap: ReactNode }) {
           ) : null}
           <SkyLayer cohorts={hero.skyCohorts} />
           <div className="peg-hero__earth">
-            <div className="peg-hero__horizon" aria-hidden="true" />
             <div className="peg-hero__map-frame">
               {worldMap}
               <FiatEmblems clusters={hero.pegClusters} />
