@@ -14,10 +14,9 @@ export function hullWidth(totalUsd: number, maxUsd: number, cardWidth: number): 
   return Math.max(HULL_MIN_WIDTH, Math.min(innerWidth, ratio * innerWidth));
 }
 
-/** 0..6 containers. 1 container per 5 coins (rounded up), capped at 6. */
-export function cargoBuckets(stablecoinCount: number): number {
-  if (stablecoinCount <= 0) return 0;
-  return Math.min(6, Math.ceil(stablecoinCount / 5));
+/** Cargo markers per hull: small boats carry 3, the largest visible hulls carry up to 5. */
+export function cargoCapacityForHull(hullW: number): number {
+  return Math.max(3, Math.min(5, Math.round(hullW / 18)));
 }
 
 /** 1 (shallow) / 2 (mid) / 3 (deep). Thresholds: <5% / 5–15% / ≥15%. */

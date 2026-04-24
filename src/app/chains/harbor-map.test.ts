@@ -32,6 +32,7 @@ function makeChain(overrides: Partial<ChainSummary>): ChainSummary {
       symbol: "USDC",
       share: 0.6,
     },
+    topStablecoins: overrides.topStablecoins,
     dominanceShare: overrides.dominanceShare ?? 0.5,
     healthScore: overrides.healthScore === undefined ? 82 : overrides.healthScore,
     healthBand: overrides.healthBand === undefined ? "healthy" : overrides.healthBand,
@@ -63,6 +64,27 @@ describe("buildChainHarborModel", () => {
     });
     expect(model.fragileHarbors).toBe(1);
     expect(model.averageHealthScore).toBe(67);
+  });
+
+  it("builds a top-stablecoin cargo manifest for the harbor chart", () => {
+    const model = buildChainHarborModel([
+      makeChain({
+        id: "ethereum",
+        name: "Ethereum",
+        totalUsd: 100,
+        topStablecoins: [
+          { id: "usdt-tether", symbol: "USDT", share: 0.45, supplyUsd: 45 },
+          { id: "usdc-circle", symbol: "USDC", share: 0.35, supplyUsd: 35 },
+          { id: "dai-makerdao", symbol: "DAI", share: 0.2, supplyUsd: 20 },
+        ],
+      }),
+    ], 100);
+
+    expect(model.entries[0]?.cargos).toEqual([
+      { id: "usdt-tether", symbol: "USDT", sharePct: 45, cargoUsd: 45 },
+      { id: "usdc-circle", symbol: "USDC", sharePct: 35, cargoUsd: 35 },
+      { id: "dai-makerdao", symbol: "DAI", sharePct: 20, cargoUsd: 20 },
+    ]);
   });
 
   it("caps the harbor map to the largest eight chains", () => {
@@ -146,5 +168,24 @@ describe("buildChainHarborModel", () => {
     const aptosLogo = chart.querySelector('image[href="/chains/aptos.png"]');
     expect(aptosLogo).toBeTruthy();
     expect(aptosLogo?.getAttribute("style") ?? "").not.toContain("invert");
+  });
+
+  it("keeps the lowered lighthouse beam inside the scene", () => {
+    render(createElement(NauticalChart, {
+      chains: [
+        makeChain({ id: "ethereum", name: "Ethereum", totalUsd: 60, healthScore: 90, healthBand: "robust" }),
+        makeChain({ id: "base", name: "Base", totalUsd: 25, healthScore: 70, healthBand: "mixed" }),
+      ],
+      globalTotalUsd: 100,
+    }));
+
+    const chart = screen.getByRole("img", { name: "Nautical chart of 2 largest stablecoin chains" });
+    const water = chart.querySelector('rect[fill="url(#nc-water)"]');
+    expect(Number(water?.getAttribute("y"))).toBeGreaterThan(180);
+
+    const beam = chart.querySelector('path[fill="url(#nc-beam)"]');
+    const yValues = [...(beam?.getAttribute("d") ?? "").matchAll(/[ML]\s+[-\d.]+\s+([-\d.]+)/g)]
+      .map((match) => Number(match[1]));
+    expect(Math.min(...yValues)).toBeGreaterThanOrEqual(0);
   });
 });

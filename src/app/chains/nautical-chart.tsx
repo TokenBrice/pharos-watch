@@ -5,14 +5,15 @@ import type { ChainSummary } from "@shared/types/chains";
 import { HEALTH_BADGE_CLASSES, HEALTH_HEX_FILL } from "@/lib/chain-ui";
 import type { HealthBand } from "@shared/types/chains";
 import { cn } from "@/lib/utils";
+import { logosById } from "@/lib/logos";
 import { buildChainHarborModel, type ChainHarborEntry } from "./harbor-map";
-import { hullWidth, cargoBuckets, depthLayers, wakeLength, aggregateSkyBand } from "./nautical-scene-math";
+import { hullWidth, cargoCapacityForHull, depthLayers, wakeLength, aggregateSkyBand } from "./nautical-scene-math";
 import { HarborList } from "./harbor-list";
 import "./nautical-chart.css";
 
 const SCENE_WIDTH = 1200;
 const SCENE_HEIGHT = 320;
-const WATERLINE_Y = 180;
+const WATERLINE_Y = 224;
 const PIER_X = 58;
 const LIGHTHOUSE_ZONE = 220;
 
@@ -121,6 +122,8 @@ function Lighthouse({ dim }: { dim: boolean }) {
   // Brazier (open fire bowl) and beam origin
   const brazierBottom = t3Top - 1;
   const beamY = brazierBottom - 4;
+  const beamTopY = Math.max(8, beamY - 74);
+  const beamBottomY = Math.min(waterline - 12, beamY + 126);
 
   const beamOpacity = dim ? 0.32 : 0.72;
   const flameOpacity = dim ? 0.55 : 1;
@@ -130,7 +133,7 @@ function Lighthouse({ dim }: { dim: boolean }) {
       {/* Beam — sweeping left across the harbor from the brazier */}
       <g className="nc-lighthouse-beam">
         <path
-          d={`M ${baseX} ${beamY} L 20 ${beamY - 110} L 20 ${beamY + 140} Z`}
+          d={`M ${baseX} ${beamY} L 20 ${beamTopY} L 20 ${beamBottomY} Z`}
           fill="url(#nc-beam)"
           opacity={beamOpacity}
         />
@@ -365,7 +368,7 @@ function ChartGrid({ laneWidth, lanes }: { laneWidth: number; lanes: number }) {
   const endX = SCENE_WIDTH - 28;
   return (
     <g aria-hidden="true">
-      {[36, 78, 120, 154].map((y) => (
+      {[36, 78, 120, 162, 200].map((y) => (
         <line
           key={`sky-${y}`}
           x1={startX}
@@ -378,19 +381,22 @@ function ChartGrid({ laneWidth, lanes }: { laneWidth: number; lanes: number }) {
           opacity={0.07}
         />
       ))}
-      {[210, 240, 270, 300].map((y, i) => (
-        <line
-          key={`depth-${y}`}
-          x1={startX}
-          y1={y}
-          x2={endX}
-          y2={y}
-          stroke="#38bdf8"
-          strokeWidth={0.7}
-          strokeDasharray={i % 2 === 0 ? "7 9" : "2 10"}
-          opacity={0.14}
-        />
-      ))}
+      {[18, 42, 66, 90].map((offset, i) => {
+        const y = WATERLINE_Y + offset;
+        return (
+          <line
+            key={`depth-${y}`}
+            x1={startX}
+            y1={y}
+            x2={endX}
+            y2={y}
+            stroke="#38bdf8"
+            strokeWidth={0.7}
+            strokeDasharray={i % 2 === 0 ? "7 9" : "2 10"}
+            opacity={0.14}
+          />
+        );
+      })}
       {Array.from({ length: lanes + 1 }).map((_, i) => {
         const x = PIER_X + i * laneWidth;
         return (
@@ -423,15 +429,14 @@ function ChartGrid({ laneWidth, lanes }: { laneWidth: number; lanes: number }) {
 function Ship({
   entry,
   geom,
-  rank,
+  maxCargoUsd,
 }: {
   entry: ChainHarborEntry;
   geom: ShipGeometry;
-  rank: number;
+  maxCargoUsd: number;
 }) {
   const healthColor = healthHex(entry.healthBand);
   const accentColor = chainAccentHex(entry.id);
-  const cargo = cargoBuckets(entry.stablecoinCount);
   const layers = depthLayers(entry.sharePct / 100);
   const wake = wakeLength(entry.change7dPct);
   const {
@@ -439,11 +444,38 @@ function Ship({
     railY, mainMastX, foreMastX, aftMastX, mastTopY, foreTopY, aftTopY, rigScale,
     hullDepth, hullW, flagWidth, logoSize, sailSealY,
   } = geom;
-  const cargoStart = deckLeft + sternInset + 7;
-  const cargoSpan = Math.max(10, hullW - sternInset - bowRise - 18);
-  const cargoGap = cargo > 1 ? Math.min(12, cargoSpan / (cargo - 1)) : 0;
+  const portholeCount = Math.max(3, Math.min(6, Math.round(hullW / 18)));
+  const portholeSpan = Math.max(12, hullW - sternInset - bowRise - 16);
+  const portholeStart = deckLeft + (hullW - portholeSpan) / 2;
+  const portholeGap = portholeCount > 1 ? portholeSpan / (portholeCount - 1) : 0;
   const portholeRadius = 1.9 + (rigScale - 0.62) * 1.2;
   const clipId = `nc-logo-${entry.id.replace(/[^a-z0-9-]/gi, "-")}`;
+  const cargoManifest = entry.cargos.slice(0, cargoCapacityForHull(hullW));
+  const cargoTrackInset = Math.max(5, Math.min(9, hullW * 0.1));
+  const cargoTrackStart = deckLeft + cargoTrackInset;
+  const cargoTrackEnd = deckRight - cargoTrackInset;
+  const cargoTrackWidth = Math.max(1, cargoTrackEnd - cargoTrackStart);
+  const cargoGap = cargoManifest.length > 1 ? cargoTrackWidth / (cargoManifest.length - 1) : 0;
+  const cargoMarkY = hullTop + hullDepth * 0.36;
+  const cargoMarks = cargoManifest.map((cargo, i) => {
+    const cargoScale = maxCargoUsd > 0 ? Math.sqrt(cargo.cargoUsd / maxCargoUsd) : 0;
+    const size = Math.max(5.5, Math.min(hullDepth * 0.42, 4.5 + cargoScale * 6));
+    const x = cargoManifest.length > 1
+      ? cargoTrackStart + i * cargoGap
+      : deckLeft + hullW / 2;
+    const safeId = `${entry.id}-${cargo.id}-${i}`.replace(/[^a-z0-9-]/gi, "-");
+    return {
+      ...cargo,
+      x,
+      y: cargoMarkY,
+      size,
+      clipId: `nc-cargo-${safeId}`,
+      logoPath: logosById[cargo.id],
+    };
+  });
+  const cargoTitle = cargoManifest
+    .map((cargo) => `${cargo.symbol} ${cargo.sharePct.toFixed(0)}%`)
+    .join(", ");
 
   return (
     <g>
@@ -552,11 +584,11 @@ function Ship({
       />
 
       {/* Portholes */}
-      {Array.from({ length: cargo }).map((_, i) => (
+      {Array.from({ length: portholeCount }).map((_, i) => (
         <circle
           key={i}
-          cx={cargoStart + i * cargoGap}
-          cy={hullTop + hullDepth * 0.58}
+          cx={portholeStart + i * portholeGap}
+          cy={hullTop + hullDepth * 0.72}
           r={portholeRadius}
           fill="oklch(0.08 0.012 45 / 0.7)"
           stroke={accentColor}
@@ -564,16 +596,52 @@ function Ship({
           opacity={0.94}
         />
       ))}
-      <text
-        x={deckLeft + sternInset + 12}
-        y={hullTop + hullDepth * 0.66}
-        textAnchor="middle"
-        fontSize={7.5}
-        fontFamily="ui-monospace, Menlo, monospace"
-        fill="oklch(1 0 0 / 0.85)"
-      >
-        {rank}
-      </text>
+      <g aria-hidden="true">
+        <title>
+          {entry.name} cargo manifest: {cargoTitle}
+        </title>
+        <defs>
+          {cargoMarks.map((cargo) => (
+            <clipPath key={cargo.clipId} id={cargo.clipId}>
+              <circle cx={cargo.x} cy={cargo.y} r={cargo.size / 2 - 0.8} />
+            </clipPath>
+          ))}
+        </defs>
+        {cargoMarks.map((cargo) => (
+          <g key={cargo.clipId}>
+            <circle
+              cx={cargo.x}
+              cy={cargo.y}
+              r={cargo.size / 2}
+              fill="oklch(0.98 0.006 250 / 0.95)"
+              stroke={accentColor}
+              strokeWidth={0.7}
+            />
+            {cargo.logoPath ? (
+              <image
+                href={cargo.logoPath}
+                x={cargo.x - cargo.size / 2 + 0.9}
+                y={cargo.y - cargo.size / 2 + 0.9}
+                width={cargo.size - 1.8}
+                height={cargo.size - 1.8}
+                clipPath={`url(#${cargo.clipId})`}
+              />
+            ) : (
+              <text
+                x={cargo.x}
+                y={cargo.y + cargo.size * 0.22}
+                textAnchor="middle"
+                fontSize={Math.max(4.2, cargo.size * 0.46)}
+                fontFamily="ui-monospace, Menlo, monospace"
+                fontWeight={700}
+                fill="oklch(0.18 0.025 250)"
+              >
+                {cargo.symbol.charAt(0)}
+              </text>
+            )}
+          </g>
+        ))}
+      </g>
 
       {/* Crow's nest yard */}
       <line x1={mainMastX - 11} y1={mastTopY + 8} x2={mainMastX + 22} y2={mastTopY + 5} stroke={accentColor} strokeWidth={2.2} strokeLinecap="round" />
@@ -720,13 +788,14 @@ export function NauticalChart({ chains, globalTotalUsd }: { chains: ChainSummary
   const laneWidth = (SCENE_WIDTH - PIER_X - LIGHTHOUSE_ZONE) / Math.max(topCount, 1);
 
   const remaining = [...chains].sort((a, b) => b.totalUsd - a.totalUsd).slice(topCount);
+  const maxCargoUsd = Math.max(0, ...model.entries.flatMap((entry) => entry.cargos.map((cargo) => cargo.cargoUsd)));
 
   const geometries = model.entries.map((entry, i) => {
     const hullW = hullWidth(entry.totalUsd, maxSupply, laneWidth * 1.1);
     const x = PIER_X + i * laneWidth + (laneWidth - hullW) / 2;
     const supplyScale =
       maxSupply > 0 ? Math.max(0.1, Math.min(1, Math.sqrt(entry.totalUsd / maxSupply))) : 0.1;
-    return { entry, geom: shipDimensions(entry, x, hullW, WATERLINE_Y - 18, supplyScale), rank: i + 1 };
+    return { entry, geom: shipDimensions(entry, x, hullW, WATERLINE_Y - 18, supplyScale) };
   });
 
   return (
@@ -738,8 +807,8 @@ export function NauticalChart({ chains, globalTotalUsd }: { chains: ChainSummary
             Where stablecoin supply is docked
           </h2>
           <p className="max-w-3xl text-sm text-muted-foreground">
-            Vessel length tracks supply; hull color is health band; pennant span is dominant-coin share; deck ticks
-            count listed stablecoins.
+            Vessel length tracks supply; hull color is health band; pennant span is dominant-coin share; window rows
+            scale with vessel size; hull cargo marks show top stablecoins sized by chain-local supply.
           </p>
         </div>
         <div className="rounded-full border border-frost-blue/30 bg-frost-blue/10 px-3 py-1 text-xs font-semibold text-sky-700 dark:text-sky-300">
@@ -837,12 +906,12 @@ export function NauticalChart({ chains, globalTotalUsd }: { chains: ChainSummary
           />
 
           {/* Ships */}
-          {geometries.map(({ entry, geom, rank }) => (
-            <Ship key={entry.id} entry={entry} geom={geom} rank={rank} />
+          {geometries.map(({ entry, geom }) => (
+            <Ship key={entry.id} entry={entry} geom={geom} maxCargoUsd={maxCargoUsd} />
           ))}
 
           {/* Ship name labels */}
-          {geometries.map(({ entry, geom, rank }) => (
+          {geometries.map(({ entry, geom }) => (
             <text
               key={`label-${entry.id}`}
               x={geom.deckLeft + geom.hullW / 2}
@@ -853,7 +922,7 @@ export function NauticalChart({ chains, globalTotalUsd }: { chains: ChainSummary
               fill="currentColor"
               opacity={0.62}
             >
-              #{rank} {entry.name}
+              {entry.name}
             </text>
           ))}
 

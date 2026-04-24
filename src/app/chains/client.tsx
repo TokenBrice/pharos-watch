@@ -4,6 +4,7 @@ import { useMemo } from "react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useChains } from "@/hooks/use-chains";
+import { useStablecoins } from "@/hooks/use-stablecoins";
 import { useSort } from "@/hooks/use-sort";
 import { TableCell } from "@/components/ui/table";
 import { DataTableShell, type DataTableColumn } from "@/components/data-table-shell";
@@ -15,9 +16,11 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 import { HEALTH_BADGE_CLASSES, trendColor } from "@/lib/chain-ui";
 import { formatSignedPercent } from "@shared/lib/format";
+import { findCanonicalChainData, type RawChainCirculating } from "@shared/lib/chain-circulating";
 import { ChainTypeBadge } from "@/components/chain-type-badge";
 import { CHAIN_META } from "@shared/lib/chains";
 import { formatCompactUsd } from "@shared/lib/format";
+import type { StablecoinData } from "@shared/types";
 import type { HealthBand, ChainSummary } from "@shared/types/chains";
 import { StablecoinLogo } from "@/components/stablecoin-logo";
 import { logosById } from "@/lib/logos";
@@ -65,8 +68,47 @@ function sortChains(chains: ChainSummary[], key: ChainSortKey, dir: "asc" | "des
   });
 }
 
+function deriveTopStablecoinsForChain(
+  chain: ChainSummary,
+  stablecoins: readonly StablecoinData[],
+): NonNullable<ChainSummary["topStablecoins"]> {
+  const allCargos = stablecoins.flatMap((asset) => {
+    const chainData = findCanonicalChainData(asset.chainCirculating as RawChainCirculating, chain.id);
+    if (!chainData || chainData.current <= 0) return [];
+    return [{
+      id: asset.id,
+      symbol: asset.symbol,
+      supplyUsd: chainData.current,
+    }];
+  });
+
+  const totalUsd = allCargos.reduce((sum, cargo) => sum + cargo.supplyUsd, 0);
+  if (totalUsd <= 0) return [];
+
+  return allCargos.sort((a, b) => b.supplyUsd - a.supplyUsd).slice(0, 5).map((cargo) => ({
+    ...cargo,
+    share: cargo.supplyUsd / totalUsd,
+  }));
+}
+
+function attachTopStablecoinCargo(
+  chains: readonly ChainSummary[],
+  stablecoins: readonly StablecoinData[] | undefined,
+): ChainSummary[] {
+  if (!stablecoins?.length) return [...chains];
+
+  return chains.map((chain) => {
+    const expectedCargoCount = Math.min(chain.stablecoinCount, 5);
+    if ((chain.topStablecoins?.length ?? 0) >= expectedCargoCount) return chain;
+
+    const topStablecoins = deriveTopStablecoinsForChain(chain, stablecoins);
+    return topStablecoins.length > 0 ? { ...chain, topStablecoins } : chain;
+  });
+}
+
 export function ChainsLeaderboardClient() {
   const { data, isLoading, isError, error, refetch, dataUpdatedAt, meta } = useChains();
+  const stablecoinsQuery = useStablecoins();
   const { sortKey, sortDirection, toggleSort, getAriaSortValue } = useSort<ChainSortKey>("totalUsd", "desc");
   const router = useRouter();
 
@@ -80,6 +122,11 @@ export function ChainsLeaderboardClient() {
     if (!data?.chains) return [];
     return [...data.chains].sort((a, b) => b.totalUsd - a.totalUsd).slice(0, 5);
   }, [data]);
+
+  const chartChains = useMemo(() => {
+    if (!data?.chains) return [];
+    return attachTopStablecoinCargo(data.chains, stablecoinsQuery.data?.peggedAssets);
+  }, [data, stablecoinsQuery.data]);
 
   if (isLoading) {
     return (
@@ -214,7 +261,7 @@ export function ChainsLeaderboardClient() {
         })()}
       </div>
 
-      <NauticalChart chains={data.chains} globalTotalUsd={data.globalTotalUsd} />
+      <NauticalChart chains={chartChains} globalTotalUsd={data.globalTotalUsd} />
 
       {/* Table */}
       <DataTableShell

@@ -24,6 +24,11 @@ function makeChain(overrides: Partial<ChainSummary>): ChainSummary {
     change30d: 0, change30dPct: 0,
     stablecoinCount: overrides.stablecoinCount ?? 3,
     dominantStablecoin: overrides.dominantStablecoin ?? { id: "usdc-circle", symbol: "USDC", share: 0.6 },
+    topStablecoins: overrides.topStablecoins ?? [
+      { id: "usdc-circle", symbol: "USDC", share: 0.5, supplyUsd: 50 },
+      { id: "usdt-tether", symbol: "USDT", share: 0.3, supplyUsd: 30 },
+      { id: "dai-makerdao", symbol: "DAI", share: 0.2, supplyUsd: 20 },
+    ],
     dominanceShare: overrides.dominanceShare ?? 0.5,
     healthScore: overrides.healthScore ?? 82,
     healthBand: overrides.healthBand ?? "healthy",
@@ -50,7 +55,15 @@ describe("NauticalChart", () => {
     expect(screen.getAllByText("Top 3 chains hold 100.0%").length).toBeGreaterThanOrEqual(1);
     expect(screen.getAllByText("Ethereum").length).toBeGreaterThan(0);
     // SVG scene renders with aria-label
-    expect(screen.getByRole("img", { name: /Nautical chart of 3 largest/ })).toBeTruthy();
+    const chart = screen.getByRole("img", { name: /Nautical chart of 3 largest/ });
+    expect(chart).toBeTruthy();
+    expect(chart.querySelector('image[href="/logos/2-usdc.svg"]')).toBeTruthy();
+    expect(chart.querySelector('image[href="/logos/1-usdt.svg"]')).toBeTruthy();
+    expect(chart.querySelector('image[href="/logos/5-dai.png"]')).toBeTruthy();
+    const cargoImages = [...chart.querySelectorAll("image")]
+      .filter((node) => (node.getAttribute("clip-path") ?? node.getAttribute("clipPath") ?? "").includes("nc-cargo-"));
+    expect(cargoImages.length).toBeGreaterThanOrEqual(9);
+    expect([...chart.querySelectorAll("text")].map((node) => node.textContent?.trim()).some((text) => text?.startsWith("#"))).toBe(false);
     // Fragile-ports compass plate shows 1
     expect(screen.getAllByText("1").length).toBeGreaterThanOrEqual(1);
   });

@@ -2,7 +2,7 @@ import { describe, it, expect } from "vitest";
 import type { HealthBand } from "@shared/types/chains";
 import {
   hullWidth,
-  cargoBuckets,
+  cargoCapacityForHull,
   depthLayers,
   wakeLength,
   aggregateSkyBand,
@@ -24,20 +24,16 @@ describe("hullWidth", () => {
   });
 });
 
-describe("cargoBuckets", () => {
-  it("returns 0 for zero coins", () => {
-    expect(cargoBuckets(0)).toBe(0);
+describe("cargoCapacityForHull", () => {
+  it("keeps small hulls readable with three cargo markers", () => {
+    expect(cargoCapacityForHull(28)).toBe(3);
+    expect(cargoCapacityForHull(50)).toBe(3);
   });
-  it("returns 1 for 1-5 coins", () => {
-    expect(cargoBuckets(1)).toBe(1);
-    expect(cargoBuckets(5)).toBe(1);
-  });
-  it("returns 2 for 6-10 coins", () => {
-    expect(cargoBuckets(6)).toBe(2);
-    expect(cargoBuckets(10)).toBe(2);
-  });
-  it("caps at 6 containers", () => {
-    expect(cargoBuckets(999)).toBe(6);
+
+  it("adds cargo markers as hull width allows", () => {
+    expect(cargoCapacityForHull(72)).toBe(4);
+    expect(cargoCapacityForHull(90)).toBe(5);
+    expect(cargoCapacityForHull(140)).toBe(5);
   });
 });
 
