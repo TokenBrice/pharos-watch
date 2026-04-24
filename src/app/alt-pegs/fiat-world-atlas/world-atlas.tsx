@@ -5,12 +5,12 @@ import "./peg-hero.css";
 
 function AtlasHeroHeader() {
   return (
-    <div className="relative z-10 px-4 py-4 sm:px-5 sm:py-6 lg:px-6">
-      <div className="max-w-4xl space-y-2.5 sm:space-y-3">
+    <div className="relative z-10 px-4 pt-4 pb-3 sm:px-5 sm:pt-5 sm:pb-4 lg:px-6">
+      <div className="flex max-w-4xl flex-wrap items-baseline gap-x-3 gap-y-1">
         <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-frost-blue/90">Alt-Peg Atlas</p>
         <h2
           id="alt-peg-link-hub"
-          className="text-3xl font-black leading-[0.95] tracking-normal text-foreground dark:text-white sm:text-4xl xl:text-5xl"
+          className="text-base font-semibold tracking-tight text-foreground/85 dark:text-white/80"
         >
           Peg Diversity Map
         </h2>
