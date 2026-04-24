@@ -151,9 +151,9 @@ export function useHomepageFilters() {
     setParams(updates);
   }, [setParams]);
 
-  // Collect active filters (one per group that has a selection)
-  const activeFilters: FilterTag[] = Object.values(groupSelections).filter(
-    (v): v is FilterTag => v !== ""
+  const activeFilters = useMemo(
+    () => Object.values(groupSelections).filter((v): v is FilterTag => v !== ""),
+    [groupSelections],
   );
 
   const hasFilters = activeFilters.length > 0;
