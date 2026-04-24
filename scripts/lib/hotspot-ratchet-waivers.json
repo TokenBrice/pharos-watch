@@ -7,10 +7,6 @@
     "disposition": "queued-p4",
     "notes": "The stablecoin detail hero remains a large presentation hotspot. Track it for the planned frontend decomposition lane rather than mixing it into the worker-focused tranche."
   },
-  "src/components/kpi-bar.tsx": {
-    "disposition": "queued-p4",
-    "notes": "The homepage KPI strip still mixes query orchestration, derived metrics, and dual-layout rendering. Track it with the broader analytics UI decomposition backlog."
-  },
   "src/app/chains/nautical-chart.tsx": {
     "disposition": "queued-p4",
     "notes": "The chains harbor scene intentionally concentrates SVG ship, lighthouse, water, and label primitives during the nautical redesign. Split ship rendering, harbor background, and scene view-model helpers in the next chains visualization cleanup pass."

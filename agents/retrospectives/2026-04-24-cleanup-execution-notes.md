@@ -19,3 +19,14 @@ Scope: implementation notes for `agents/plans/2026-04-24-website-maintainability
 - Replaced the only `useStablecoinDetailHistory()` consumer with `useSupplyHistory()` directly in the total market-cap chart.
 - Deleted `src/hooks/use-stablecoin-detail-history.ts`; this was a compatibility wrapper, not a reusable result-shape adapter.
 - Follow-up signal: thin wrappers should only be removed when they are one-hop aliases with a proven direct consumer migration. Wider hook files still contain useful domain adapters and should not be blanket-collapsed.
+
+## Slice 2: KPI Bar Presentation Split
+
+- Moved KPI chips, cells, skeleton, mini tiles, PSI primary card, and tiny trend display helpers into `src/components/kpi-bar-parts.tsx`.
+- Left data fetching, snapshot derivation, error handling, animation sequencing, and metric-definition assembly in `src/components/kpi-bar.tsx`.
+- Removed the stale hotspot waiver for `src/components/kpi-bar.tsx` after the component fell below the waived hotspot threshold.
+- Validation:
+  - `npm test -- src/components/__tests__/kpi-bar.test.tsx`
+  - `npm run typecheck`
+  - `npm run check:hotspot-ratchet`
+- Follow-up signal: the hotspot ratchet updater can refresh unrelated baseline entries when other committed files have drifted. Keep metadata commits scoped manually when executing a narrow slice.
