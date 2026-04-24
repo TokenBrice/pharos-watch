@@ -34,7 +34,7 @@ There is no dedicated `/api/portfolio` endpoint. Portfolio holdings stay client-
 - **Share/query param:** `?p=<encoded-holdings>`
 - **Priority order on load:** URL share payload -> `localStorage` -> empty state
 
-`usePortfolio` validates canonical holdings only. Unknown or non-canonical IDs are dropped, duplicate canonical IDs are merged, and the cleaned state is written back once after a successful read.
+`usePortfolio` validates canonical holdings only. Unknown or non-canonical IDs are dropped and duplicate canonical IDs are merged. Stored holdings are normalized and written back through `localStorage` after a successful storage-backed read. URL-sourced holdings take precedence and are normalized back into `?p=`, but they are not persisted to `localStorage`.
 
 ---
 

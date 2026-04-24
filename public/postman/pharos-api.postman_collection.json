@@ -159,6 +159,25 @@
             "description": "Live or fallback reserve composition where Pharos has reserve coverage."
           },
           "response": []
+        },
+        {
+          "name": "Stablecoin charts",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{apiBaseUrl}}/api/stablecoin-charts",
+              "host": [
+                "{{apiBaseUrl}}"
+              ],
+              "path": [
+                "api",
+                "stablecoin-charts"
+              ]
+            },
+            "description": "Historical total supply chart data."
+          },
+          "response": []
         }
       ]
     },
@@ -215,6 +234,44 @@
               ]
             },
             "description": "Historical and active depeg events, filterable by stablecoin."
+          },
+          "response": []
+        },
+        {
+          "name": "USDS freeze status",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{apiBaseUrl}}/api/usds-status",
+              "host": [
+                "{{apiBaseUrl}}"
+              ],
+              "path": [
+                "api",
+                "usds-status"
+              ]
+            },
+            "description": "Sky/USDS protocol status, including whether the freeze module is currently active."
+          },
+          "response": []
+        },
+        {
+          "name": "Bluechip ratings",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{apiBaseUrl}}/api/bluechip-ratings",
+              "host": [
+                "{{apiBaseUrl}}"
+              ],
+              "path": [
+                "api",
+                "bluechip-ratings"
+              ]
+            },
+            "description": "Safety ratings from bluechip.org for covered stablecoins."
           },
           "response": []
         },
@@ -497,6 +554,60 @@
               ]
             },
             "description": "Historical non-USD peg share series for market-structure views."
+          },
+          "response": []
+        },
+        {
+          "name": "Telegram pulse",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{apiBaseUrl}}/api/telegram-pulse",
+              "host": [
+                "{{apiBaseUrl}}"
+              ],
+              "path": [
+                "api",
+                "telegram-pulse"
+              ]
+            },
+            "description": "Lightweight public telemetry for Telegram alert surfaces."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Status",
+      "description": "Public operational status surfaces.",
+      "item": [
+        {
+          "name": "Public status history",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{apiBaseUrl}}/api/public-status-history?window=7d&limit=%7B%7Blimit%7D%7D",
+              "host": [
+                "{{apiBaseUrl}}"
+              ],
+              "path": [
+                "api",
+                "public-status-history"
+              ],
+              "query": [
+                {
+                  "key": "window",
+                  "value": "7d"
+                },
+                {
+                  "key": "limit",
+                  "value": "{{limit}}"
+                }
+              ]
+            },
+            "description": "Public status timeline for the Pharos system."
           },
           "response": []
         }

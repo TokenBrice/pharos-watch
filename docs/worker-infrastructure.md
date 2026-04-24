@@ -519,7 +519,7 @@ This slot polls the `digest:force-run-request` cache key written by `POST /api/t
 
 | Job                    | Function                  | File                                                   | Documentation                                 |
 | ---------------------- | ------------------------- | ------------------------------------------------------ | --------------------------------------------- |
-| `yield-coverage-audit` | `runYieldCoverageAudit()` | `worker/src/handlers/scheduled/monthly-yield-audit.ts` | [Yield Intelligence](./yield-intelligence.md) |
+| `yield-coverage-audit` | `runYieldCoverageAudit()` | `worker/src/cron/yield-coverage-audit.ts`              | [Yield Intelligence](./yield-intelligence.md) |
 
 Runs once a month on the 1st at 06:00 UTC. Scans unmatched high-TVL DeFiLlama pools and flags missing protocols as high-confidence or review-needed expansion candidates.
 

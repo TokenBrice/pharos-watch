@@ -57,6 +57,11 @@ const folders: PostmanFolder[] = [
         path: "/api/stablecoin-reserves/{{reserveStablecoinId}}",
         description: "Live or fallback reserve composition where Pharos has reserve coverage.",
       },
+      {
+        name: "Stablecoin charts",
+        path: "/api/stablecoin-charts",
+        description: "Historical total supply chart data.",
+      },
     ],
   },
   {
@@ -73,6 +78,16 @@ const folders: PostmanFolder[] = [
         path: "/api/depeg-events",
         query: { stablecoin: "{{stablecoinId}}", limit: "{{limit}}", offset: "0" },
         description: "Historical and active depeg events, filterable by stablecoin.",
+      },
+      {
+        name: "USDS freeze status",
+        path: "/api/usds-status",
+        description: "Sky/USDS protocol status, including whether the freeze module is currently active.",
+      },
+      {
+        name: "Bluechip ratings",
+        path: "/api/bluechip-ratings",
+        description: "Safety ratings from bluechip.org for covered stablecoins.",
       },
       {
         name: "DEX liquidity",
@@ -145,6 +160,23 @@ const folders: PostmanFolder[] = [
         path: "/api/non-usd-share",
         query: { days: "{{days}}" },
         description: "Historical non-USD peg share series for market-structure views.",
+      },
+      {
+        name: "Telegram pulse",
+        path: "/api/telegram-pulse",
+        description: "Lightweight public telemetry for Telegram alert surfaces.",
+      },
+    ],
+  },
+  {
+    name: "Status",
+    description: "Public operational status surfaces.",
+    requests: [
+      {
+        name: "Public status history",
+        path: "/api/public-status-history",
+        query: { window: "7d", limit: "{{limit}}" },
+        description: "Public status timeline for the Pharos system.",
       },
     ],
   },

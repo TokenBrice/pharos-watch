@@ -404,7 +404,7 @@ CREATE TABLE mint_burn_events (
   price_used REAL,                     -- Price at resolution time
   price_timestamp INTEGER,             -- When the price was sourced (cache update time), NOT the event's block timestamp
   price_source TEXT,                   -- "supply-history-daily", "price-cache-current", "price_cache_heal", "backfill-supply-history-daily", or "backfill-derived-amount-usd"
-  burn_type TEXT,                      -- "redemption", "bridge", "atomic_roundtrip", etc. when classified
+  burn_type TEXT,                      -- "effective_burn", "bridge_burn", or "review_required" when classified
   burn_review_reason TEXT,             -- reason code when burn classification needs review
   flow_type TEXT DEFAULT 'standard',   -- "standard", "bridge_transfer", or "atomic_roundtrip"
   counterparty TEXT,                   -- Address that received/sent tokens

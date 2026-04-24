@@ -426,6 +426,76 @@
         }
       }
     },
+    "/api/usds-status": {
+      "get": {
+        "tags": [
+          "Risk"
+        ],
+        "summary": "USDS freeze status",
+        "description": "Sky/USDS protocol status, including whether the freeze module is currently active.",
+        "operationId": "usdsStatus",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Successful response. See the public API reference for endpoint-specific payload fields.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JsonValue"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request"
+          },
+          "401": {
+            "description": "Missing or invalid API key"
+          },
+          "429": {
+            "description": "Rate limit exceeded"
+          },
+          "503": {
+            "description": "Service unavailable or cache not populated"
+          }
+        }
+      }
+    },
+    "/api/bluechip-ratings": {
+      "get": {
+        "tags": [
+          "Risk"
+        ],
+        "summary": "Bluechip ratings",
+        "description": "Safety ratings from bluechip.org for covered stablecoins.",
+        "operationId": "bluechipRatings",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Successful response. See the public API reference for endpoint-specific payload fields.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JsonValue"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request"
+          },
+          "401": {
+            "description": "Missing or invalid API key"
+          },
+          "429": {
+            "description": "Rate limit exceeded"
+          },
+          "503": {
+            "description": "Service unavailable or cache not populated"
+          }
+        }
+      }
+    },
     "/api/dex-liquidity": {
       "get": {
         "tags": [

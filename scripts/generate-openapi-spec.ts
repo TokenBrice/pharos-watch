@@ -129,6 +129,18 @@ const endpoints: ApiEndpoint[] = [
     ],
   },
   {
+    path: "/api/usds-status",
+    summary: "USDS freeze status",
+    description: "Sky/USDS protocol status, including whether the freeze module is currently active.",
+    tags: ["Risk"],
+  },
+  {
+    path: "/api/bluechip-ratings",
+    summary: "Bluechip ratings",
+    description: "Safety ratings from bluechip.org for covered stablecoins.",
+    tags: ["Risk"],
+  },
+  {
     path: "/api/dex-liquidity",
     summary: "DEX liquidity",
     description: "DEX liquidity scores, top pools, chain/protocol breakdowns, and quality metadata.",

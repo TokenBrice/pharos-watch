@@ -64,7 +64,7 @@ When an asset still has no usable current price after validation and fallback re
 1. 0 sources -> no result
 2. 1 source -> `single-source`
 3. 2+ sources -> build fully pairwise agreement clusters within a peg-aware threshold
-4. best cluster with 2+ members -> `high` confidence, publish the cluster median, and keep the best trusted member as internal provenance
+4. best cluster with 2+ members -> initially `high` confidence, publish the cluster median, and keep the best trusted member as internal provenance
 5. no 2+ cluster:
    - fixed pegs -> stay in fixed-peg mode even if the reference price is temporarily unavailable; choose the best trusted fallback source and mark `low`
    - NAV tokens -> use a wider 500 bps cluster threshold first, otherwise choose the best trusted fallback source and mark `low`
@@ -274,12 +274,14 @@ The final cached price can carry one of four confidence states:
 
 | Value | Meaning |
 |-------|---------|
-| `high` | 2 or more sources agree, or a validated authoritative override succeeded |
-| `single-source` | only one live source produced a usable price |
+| `high` | 2 or more independent sources agree, or a validated authoritative override succeeded |
+| `single-source` | only one live source produced a usable price, or a 2-source agreeing cluster was downgraded because every agreeing member is a list-style aggregator |
 | `low` | multiple sources existed but failed to form a strong agreeing cluster |
 | `fallback` | price came from enrichment rather than primary consensus |
 
 Downstream consumers use these tags for display, depeg confirmation, and risk handling.
+
+After consensus, `applyListAggregatorDowngrade()` downgrades 2-source clusters made entirely of list-style aggregators such as CoinGecko and DefiLlama-list from `high` to `single-source`, because those feeds can re-export overlapping upstream list data and are not treated as independent corroboration by themselves.
 
 When the GeckoTerminal probe produces a re-run consensus that the post-consensus validation lane rejects (e.g., because the GT-enriched price would trigger temporal-jump quarantine), Pharos still treats the GT divergence evidence as material: a pre-GT `single-source` primary is downgraded to `low`-confidence rather than kept at its pre-probe confidence, so the run does not discard the evidence that the soft single-source publication differed meaningfully from the probed DEX pool. The pre-GT source/price are preserved; only the confidence tag is adjusted.
 

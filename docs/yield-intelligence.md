@@ -81,7 +81,7 @@ interface OnChainRateConfig {
 }
 ```
 
-Currently configured for 12 generic vaults (all use selector `0x07a2d13a` — `convertToAssets(uint256)`):
+Currently configured for 13 generic vaults (all use selector `0x07a2d13a` — `convertToAssets(uint256)`):
 
 | Coin ID | Wrapper | Contract | Chain |
 |---------|---------|----------|-------|
@@ -89,6 +89,7 @@ Currently configured for 12 generic vaults (all use selector `0x07a2d13a` — `c
 | `iusd-infinifi` | siUSD | `0xDBDC...bCB` | Ethereum |
 | `usdp-parallel` | sUSDp | `0x472e...7e7` | Base |
 | `susds-sky` | sUSDS | `0xa393...fbD` | Ethereum |
+| `stusds-sky` | stUSDS | `0x99cd...eB9` | Ethereum |
 | `sdai-sky` | sDAI | `0x83F2...BEeA` | Ethereum |
 | `sfrxusd-frax` | sfrxUSD | `0xcf62...5b6` | Ethereum |
 | `dola-inverse-finance` | sDOLA | `0xb45a...7305` | Ethereum |
@@ -174,12 +175,7 @@ This keeps wrapper pools like `fxSAVE` and `msY` eligible even when DeFiLlama ma
 
 | Base Coin             | Wrapper | Purpose                     |
 | --------------------- | ------- | --------------------------- |
-| USDe (146)            | sUSDe   | Ethena staking wrapper      |
-| USDS (209)            | sUSDS   | Sky savings wrapper         |
 | GHO (118)             | sGHO    | Aave staked GHO             |
-| DAI (5)               | sDAI    | Spark savings DAI           |
-| crvUSD (110)          | scrvUSD | Curve staked crvUSD         |
-| FRXUSD (235)          | sfrxUSD | Frax staked frxUSD          |
 | DOLA (15)             | sDOLA   | Inverse Finance staked DOLA |
 | BOLD (269)            | yBOLD   | Liquity Stability Pool wrapper |
 | USBD (253)            | sUSBD   | BIMA savings wrapper        |

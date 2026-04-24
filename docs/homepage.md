@@ -62,10 +62,10 @@ Derived helpers:
 - `buildAltPegSnapshot(...)` in `src/lib/alt-peg-market.ts` for the Research Surfaces `HomepageAltPegsTeaser`
 - `useHomepageFilters()` for URL-backed table filters
 
-Page-level shared error and freshness surfaces:
+Page-level shared freshness and error surfaces:
 
-- `QueryErrorNotice`
-- `StaleDataBanner`
+- `DataLiveRegion`
+- `QueryFreshnessNotices`, which wraps `QueryErrorNotice` and `StaleDataBanner`
 
 Starred stablecoin state is local to the browser:
 
@@ -160,8 +160,8 @@ The callout and KPI bar share a `flex flex-col gap-3 lg:contents` wrapper. DOM o
 
 Under the fold (`HomepageClient`):
 
-1. `QueryErrorNotice`
-2. `StaleDataBanner`
+1. `DataLiveRegion`
+2. `QueryFreshnessNotices`
 3. `MarketHighlights`
 4. `Key Stablecoin Data` section
 5. `DailyDigest` in `preview` mode (prefixed with a short orientation caption)
