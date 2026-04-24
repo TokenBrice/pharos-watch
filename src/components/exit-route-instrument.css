@@ -1,0 +1,52 @@
+/*
+ * Exit Route Instrument
+ * Dense SVG scene tokens and reduced-motion-safe flow markers for the liquidity
+ * route map.
+ */
+
+.exit-route-instrument {
+  --route-stage-top: oklch(0.15 0.018 248);
+  --route-stage-bottom: oklch(0.08 0.012 248);
+  --route-grid: oklch(0.58 0.024 248 / 0.16);
+  --route-frame: oklch(0.34 0.018 248);
+  --route-channel-edge: oklch(0.20 0.034 222 / 0.92);
+  --route-channel-throat: oklch(0.14 0.022 226 / 0.96);
+  --route-rail: oklch(0.68 0.026 248 / 0.46);
+  --route-throat-panel: oklch(0.08 0.014 248 / 0.86);
+  --route-throat-marker: oklch(0.78 0.14 178);
+  --route-flow-marker: oklch(0.78 0.14 178 / 0.34);
+  --route-lane-highlight: oklch(0.94 0.006 248 / 0.42);
+  --route-chip-bg: oklch(0.06 0.012 248 / 0.94);
+  --route-hero: oklch(0.96 0.006 248);
+  --route-caption: oklch(0.70 0.018 248);
+}
+
+.exit-route-instrument__viewport {
+  overflow-x: auto;
+  overscroll-behavior-inline: contain;
+}
+
+.exit-route-instrument__scene {
+  display: block;
+  width: 100%;
+  min-width: 680px;
+  height: auto;
+}
+
+@media (min-width: 768px) {
+  .exit-route-instrument__scene {
+    min-width: 0;
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .exit-route-instrument__flow {
+    animation: exit-route-flow-pulse 7s ease-in-out infinite;
+    will-change: opacity;
+  }
+}
+
+@keyframes exit-route-flow-pulse {
+  0%, 100% { opacity: 0.46; }
+  50% { opacity: 0.9; }
+}

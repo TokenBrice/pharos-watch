@@ -212,11 +212,12 @@ describe("LiquidityStats", () => {
     }));
 
     expect(screen.getByText("Exit Route Map")).toBeTruthy();
-    expect(screen.getByTestId("exit-route-canal")).toBeTruthy();
-    expect(screen.getByTestId("protocol-gate-curve")).toBeTruthy();
-    expect(screen.getByTestId("protocol-gate-_other-routes")).toBeTruthy();
-    expect(screen.getByTestId("chain-basin-ethereum")).toBeTruthy();
-    expect(screen.getByTestId("exit-canal").getAttribute("data-crowding-band")).toBe("visible");
+    expect(screen.getByTestId("exit-route-instrument")).toBeTruthy();
+    expect(screen.getByTestId("protocol-door-curve")).toBeTruthy();
+    expect(screen.getByTestId("protocol-door-_other-routes")).toBeTruthy();
+    expect(screen.getByTestId("chain-lane-ethereum")).toBeTruthy();
+    expect(screen.getByTestId("exit-throat").getAttribute("data-crowding-band")).toBe("visible");
+    expect(screen.getByTestId("exit-route-flow-markers")).toBeTruthy();
     expect(screen.getByText("Leading door:")).toBeTruthy();
     expect(screen.getByText("Leading lane:")).toBeTruthy();
     expect(container.querySelector('image[href="/dexes/curve.png"]')).toBeTruthy();
