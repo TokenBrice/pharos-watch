@@ -10,6 +10,8 @@ import {
   getFreshnessSentinelProducerJob,
   listFreshnessSentinelCacheKeys,
   type FreshnessSentinelBackedCacheKey,
+  type FreshnessSentinelValidationReason,
+  validateFreshnessSentinelPayload,
 } from "./freshness-sentinels";
 
 export type { CacheStatus };
@@ -25,6 +27,7 @@ export interface CacheFreshnessDiagnostic {
   freshnessSource: "freshness-sentinel" | "table-fallback" | "cron-fallback";
   warning?: string;
   failureSource?: CacheStatusFailure["source"];
+  sentinelValidationReason?: FreshnessSentinelValidationReason;
 }
 
 export interface FreshnessMeta {
@@ -48,6 +51,8 @@ interface CacheRow {
 
 interface SentinelBackedFreshnessResult {
   ageSeconds: number | null;
+  freshnessSource: CacheFreshnessDiagnostic["freshnessSource"] | null;
+  sentinelValidationReason?: FreshnessSentinelValidationReason;
   diagnostics: CacheFreshnessDiagnostic[];
   failures: CacheStatusFailure[];
   warnings: string[];
@@ -89,6 +94,14 @@ function buildFallbackWarning(
     return `${key}: freshness fallback lookup failed`;
   }
   return `${key}: freshness diagnostics degraded; using ${source}`;
+}
+
+function buildSentinelValidationWarning(
+  key: string,
+  source: CacheFreshnessDiagnostic["freshnessSource"],
+  reason: FreshnessSentinelValidationReason,
+): string {
+  return `${key}: freshness sentinel invalid (${reason}); using ${source}`;
 }
 
 async function loadProducerCronFallbacks(
@@ -153,10 +166,19 @@ async function resolveSentinelBackedFreshness(params: {
   const warnings: string[] = [];
 
   const sentinelKey = getFreshnessSentinelCacheKey(params.key);
-  const sentinelUpdatedAt = params.cacheRowsByKey.get(sentinelKey)?.updated_at ?? null;
-  if (sentinelUpdatedAt != null) {
+  const sentinelRow = params.cacheRowsByKey.get(sentinelKey);
+  const sentinelValidation = sentinelRow
+    ? validateFreshnessSentinelPayload({
+        value: sentinelRow.value,
+        rowUpdatedAt: sentinelRow.updated_at,
+        expectedSource: getFreshnessSentinelProducerJob(params.key),
+        now: params.now,
+      })
+    : null;
+  if (sentinelValidation?.ok && sentinelValidation.payload) {
     return {
-      ageSeconds: Math.max(0, params.now - sentinelUpdatedAt),
+      ageSeconds: Math.max(0, params.now - sentinelValidation.payload.updatedAt),
+      freshnessSource: "freshness-sentinel",
       diagnostics,
       failures,
       warnings,
@@ -172,14 +194,19 @@ async function resolveSentinelBackedFreshness(params: {
       .first<{ age: number | null }>();
     const tableAge = row?.age != null ? Math.max(0, row.age) : null;
     if (tableAge != null) {
-      if (sentinelFailureSource) {
-        const warning = buildFallbackWarning(params.key, "table-fallback", sentinelFailureSource);
+      const warning = sentinelValidation?.reason
+        ? buildSentinelValidationWarning(params.key, "table-fallback", sentinelValidation.reason)
+        : sentinelFailureSource
+          ? buildFallbackWarning(params.key, "table-fallback", sentinelFailureSource)
+          : undefined;
+      if (warning) {
         warnings.push(warning);
         diagnostics.push({
           key: params.key,
           freshnessSource: "table-fallback",
           warning,
-          failureSource: sentinelFailureSource,
+          ...(sentinelFailureSource ? { failureSource: sentinelFailureSource } : {}),
+          ...(sentinelValidation?.reason ? { sentinelValidationReason: sentinelValidation.reason } : {}),
         });
         console.info(`[api-freshness] ${warning}`);
       } else {
@@ -190,6 +217,8 @@ async function resolveSentinelBackedFreshness(params: {
       }
       return {
         ageSeconds: tableAge,
+        freshnessSource: "table-fallback",
+        ...(sentinelValidation?.reason ? { sentinelValidationReason: sentinelValidation.reason } : {}),
         diagnostics,
         failures,
         warnings,
@@ -206,9 +235,11 @@ async function resolveSentinelBackedFreshness(params: {
   const cronFallbackTimestamp = params.cronFallbacks.get(params.key) ?? null;
   if (cronFallbackTimestamp != null) {
     const failureSource = failures[0]?.source ?? sentinelFailureSource ?? undefined;
-    const warning = failureSource
-      ? buildFallbackWarning(params.key, "cron-fallback", failureSource)
-      : undefined;
+    const warning = sentinelValidation?.reason
+      ? buildSentinelValidationWarning(params.key, "cron-fallback", sentinelValidation.reason)
+      : failureSource
+        ? buildFallbackWarning(params.key, "cron-fallback", failureSource)
+        : undefined;
     if (warning) {
       warnings.push(warning);
       console.info(`[api-freshness] ${warning}`);
@@ -218,9 +249,12 @@ async function resolveSentinelBackedFreshness(params: {
       freshnessSource: "cron-fallback",
       ...(warning ? { warning } : {}),
       ...(failureSource ? { failureSource } : {}),
+      ...(sentinelValidation?.reason ? { sentinelValidationReason: sentinelValidation.reason } : {}),
     });
     return {
       ageSeconds: Math.max(0, params.now - cronFallbackTimestamp),
+      freshnessSource: "cron-fallback",
+      ...(sentinelValidation?.reason ? { sentinelValidationReason: sentinelValidation.reason } : {}),
       diagnostics,
       failures,
       warnings,
@@ -237,6 +271,8 @@ async function resolveSentinelBackedFreshness(params: {
 
   return {
     ageSeconds: null,
+    freshnessSource: null,
+    ...(sentinelValidation?.reason ? { sentinelValidationReason: sentinelValidation.reason } : {}),
     diagnostics,
     failures,
     warnings,
@@ -294,6 +330,8 @@ export async function buildCacheStatuses(
   let statusFloor: "healthy" | "degraded" | "stale" = "healthy";
   const warnings: string[] = [];
   const diagnostics: CacheFreshnessDiagnostic[] = [];
+  const freshnessSourceByKey = new Map<string, CacheFreshnessDiagnostic["freshnessSource"]>();
+  const sentinelValidationReasonByKey = new Map<string, FreshnessSentinelValidationReason>();
   const fxState = cacheOnlyKeys.includes("fx-rates")
     ? hydrateFxRateState(
         (() => {
@@ -332,6 +370,12 @@ export async function buildCacheStatuses(
         cronFallbackError: cronFallbackLookup.errorMessage,
       });
       ageSeconds = freshness.ageSeconds;
+      if (freshness.freshnessSource) {
+        freshnessSourceByKey.set(key, freshness.freshnessSource);
+      }
+      if (freshness.sentinelValidationReason) {
+        sentinelValidationReasonByKey.set(key, freshness.sentinelValidationReason);
+      }
       failures.push(...freshness.failures);
       warnings.push(...freshness.warnings);
       diagnostics.push(...freshness.diagnostics);
@@ -348,6 +392,10 @@ export async function buildCacheStatuses(
         ageSeconds,
         maxAge,
         healthy: ratio <= FRESHNESS_RATIOS.DEGRADED,
+        ...(freshnessSourceByKey.has(key) ? { freshnessSource: freshnessSourceByKey.get(key) } : {}),
+        ...(sentinelValidationReasonByKey.has(key)
+          ? { sentinelValidationReason: sentinelValidationReasonByKey.get(key) }
+          : {}),
         ...(diagnostic?.warning ? { warning: diagnostic.warning } : {}),
       };
     }

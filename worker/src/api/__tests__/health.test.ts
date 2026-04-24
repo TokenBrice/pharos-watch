@@ -140,6 +140,77 @@ describe("handleHealth", () => {
     expect(body.mintBurn.sync.criticalLaneHealthy).toBe(true);
   });
 
+  it("surfaces sentinel fallback metadata when a freshness sentinel is invalid", async () => {
+    const now = Math.floor(Date.now() / 1000);
+    const db = mockD1([
+      {
+        match: "cache WHERE key IN",
+        rows: [
+          { key: "stablecoins", updated_at: now - 60, value: "{}" },
+          { key: "stablecoin-charts", updated_at: now - 60, value: "{}" },
+          { key: "usds-status", updated_at: now - 60, value: "{}" },
+          { key: "fx-rates", updated_at: now - 60, value: JSON.stringify({ peggedEUR: 1.08 }) },
+          { key: "bluechip-ratings", updated_at: now - 60, value: "{}" },
+          {
+            key: "freshness:dex-liquidity",
+            updated_at: now - 120,
+            value: JSON.stringify({
+              updatedAt: now - 120,
+              source: "sync-yield-data",
+              publishStatus: "ok",
+            }),
+          },
+          {
+            key: "freshness:yield-data",
+            updated_at: now - 180,
+            value: JSON.stringify({
+              updatedAt: now - 180,
+              source: "sync-yield-data",
+              publishStatus: "ok",
+            }),
+          },
+          {
+            key: "freshness:dews",
+            updated_at: now - 240,
+            value: JSON.stringify({
+              updatedAt: now - 240,
+              source: "compute-dews",
+              publishStatus: "ok",
+            }),
+          },
+        ],
+      },
+      { match: "dex_liquidity", rows: [], first: { age: 45 } },
+      { match: "blacklist_events", rows: [], first: { total: 0, missing: 0, missing_recent: 0 } },
+      { match: "mint_burn_hourly", rows: [], first: { total: 1234 } },
+      { match: "SELECT MAX(timestamp) as latest FROM mint_burn_events", rows: [], first: { latest: now - 30 } },
+      { match: "SELECT MAX(hour_ts) as latest FROM mint_burn_hourly", rows: [], first: { latest: now - 3600 } },
+      { match: "SELECT symbol, MAX(timestamp) as latest", rows: [{ symbol: "USDT", latest: now - 600 }] },
+      { match: "SELECT status", rows: [], first: { status: "ok" } },
+      { match: "status = 'ok'", rows: [], first: { started_at: now - 300 } },
+    ]);
+
+    const res = await handleHealth(db);
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as {
+      warnings: string[];
+      caches: Record<string, {
+        ageSeconds: number | null;
+        freshnessSource?: string;
+        sentinelValidationReason?: string;
+        warning?: string;
+      }>;
+    };
+
+    expect(body.caches["dex-liquidity"]).toMatchObject({
+      ageSeconds: 45,
+      freshnessSource: "table-fallback",
+      sentinelValidationReason: "wrong-source",
+      warning: "dex-liquidity: freshness sentinel invalid (wrong-source); using table-fallback",
+    });
+    expect(body.warnings).toContain("dex-liquidity: freshness sentinel invalid (wrong-source); using table-fallback");
+  });
+
   it("returns stale with warnings when the DB health sentinel fails", async () => {
     const db = mockD1([
       { match: "SELECT 1", rows: [], throwError: new Error("db down") },

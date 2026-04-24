@@ -701,9 +701,33 @@ describe("buildCacheStatuses", () => {
                 return {
                   results: [
                     { key: "stablecoins", updated_at: nowSec - 60, value: "{}" },
-                    { key: "freshness:dex-liquidity", updated_at: nowSec - 120, value: "{}" },
-                    { key: "freshness:yield-data", updated_at: nowSec - 180, value: "{}" },
-                    { key: "freshness:dews", updated_at: nowSec - 240, value: "{}" },
+                    {
+                      key: "freshness:dex-liquidity",
+                      updated_at: nowSec - 120,
+                      value: JSON.stringify({
+                        updatedAt: nowSec - 120,
+                        source: "sync-dex-liquidity",
+                        publishStatus: "ok",
+                      }),
+                    },
+                    {
+                      key: "freshness:yield-data",
+                      updated_at: nowSec - 180,
+                      value: JSON.stringify({
+                        updatedAt: nowSec - 180,
+                        source: "sync-yield-data",
+                        publishStatus: "ok",
+                      }),
+                    },
+                    {
+                      key: "freshness:dews",
+                      updated_at: nowSec - 240,
+                      value: JSON.stringify({
+                        updatedAt: nowSec - 240,
+                        source: "compute-dews",
+                        publishStatus: "ok",
+                      }),
+                    },
                   ] as T[],
                   success: true,
                   meta: {},
@@ -728,6 +752,7 @@ describe("buildCacheStatuses", () => {
 
     expect(caches["dex-liquidity"]?.ageSeconds).toBe(120);
     expect(caches["dex-liquidity"]).toMatchObject({
+      freshnessSource: "freshness-sentinel",
       producerJob: "sync-dex-liquidity",
       producerIntervalSec: 1800,
       endpointMaxAge: 3600,
@@ -735,6 +760,7 @@ describe("buildCacheStatuses", () => {
     });
     expect(caches["yield-data"]?.ageSeconds).toBe(180);
     expect(caches["yield-data"]).toMatchObject({
+      freshnessSource: "freshness-sentinel",
       producerJob: "sync-yield-data",
       producerIntervalSec: 3600,
       endpointMaxAge: 3600,
@@ -742,6 +768,7 @@ describe("buildCacheStatuses", () => {
     });
     expect(caches.dews?.ageSeconds).toBe(240);
     expect(caches.dews).toMatchObject({
+      freshnessSource: "freshness-sentinel",
       producerJob: "compute-dews",
       producerIntervalSec: 1800,
       endpointMaxAge: 1800,

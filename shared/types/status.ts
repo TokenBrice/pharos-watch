@@ -8,6 +8,8 @@ export interface CacheStatus {
   /** Availability budget used by /api/health and /api/status ratio bands. */
   maxAge: number;
   healthy: boolean;
+  freshnessSource?: "freshness-sentinel" | "table-fallback" | "cron-fallback";
+  sentinelValidationReason?: string | null;
   producerJob?: string | null;
   producerIntervalSec?: number | null;
   endpointMaxAge?: number | null;
@@ -28,6 +30,8 @@ const CacheStatusSchema = z.object({
   ageSeconds: z.number().nullable(),
   maxAge: z.number(),
   healthy: z.boolean(),
+  freshnessSource: z.enum(["freshness-sentinel", "table-fallback", "cron-fallback"]).optional(),
+  sentinelValidationReason: z.string().nullable().optional(),
   producerJob: z.string().nullable().optional(),
   producerIntervalSec: z.number().nullable().optional(),
   endpointMaxAge: z.number().nullable().optional(),
