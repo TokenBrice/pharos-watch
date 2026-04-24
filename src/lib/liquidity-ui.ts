@@ -16,14 +16,6 @@ export const COVERAGE_TEXT_CLASSES: Record<LiquidityCoverageClass, string> = {
   unobserved: "text-muted-foreground",
 };
 
-export const COVERAGE_WATER_HEX: Record<LiquidityCoverageClass, string> = {
-  primary: "#0369a1",
-  mixed: "#0d9488",
-  fallback: "#d97706",
-  legacy: "#64748b",
-  unobserved: "#94a3b8",
-};
-
 export type RippleBand = "still" | "gentle" | "choppy";
 
 export function rippleIntensityBand(volume24hUsd: number): RippleBand {
