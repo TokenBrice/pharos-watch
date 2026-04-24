@@ -13,7 +13,13 @@ export function StaticAltPegLinkHub() {
   return (
     <div className="space-y-6">
       <FiatWorldAtlas fiatItems={fiatItems} commodityIndexItems={commodityIndexItems} />
-      <AltPegCohortDirectory fiatItems={fiatItems} commodityIndexItems={commodityIndexItems} />
+      <div hidden>
+        <AltPegCohortDirectory
+          fiatItems={fiatItems}
+          commodityIndexItems={commodityIndexItems}
+          idPrefix="static-alt-peg"
+        />
+      </div>
     </div>
   );
 }

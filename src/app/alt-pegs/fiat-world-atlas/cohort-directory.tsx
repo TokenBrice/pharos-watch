@@ -44,9 +44,11 @@ function BeyondGeographyRail({
 export function AltPegCohortDirectory({
   fiatItems,
   commodityIndexItems,
+  idPrefix = "alt-peg",
 }: {
   fiatItems: readonly AltPegLinkHubItem[];
   commodityIndexItems: readonly AltPegLinkHubItem[];
+  idPrefix?: string;
 }) {
   const fiatByRegion = new Map<AltPegRegion, AltPegLinkHubItem[]>();
   for (const item of fiatItems) {
@@ -60,12 +62,15 @@ export function AltPegCohortDirectory({
   })).filter((entry) => entry.items.length > 0);
   const referenceCoinCount = getCoinCount(commodityIndexItems);
 
+  const sectionId = `${idPrefix}-cohort-list`;
+  const headingId = `${sectionId}-heading`;
+
   return (
-    <section id="alt-peg-cohort-list" aria-labelledby="alt-peg-cohort-list-heading" className="space-y-3">
+    <section id={sectionId} aria-labelledby={headingId} className="space-y-3">
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div className="space-y-1">
           <p className="pharos-kicker">Cohort Details</p>
-          <h2 id="alt-peg-cohort-list-heading" className="pharos-section-title">
+          <h2 id={headingId} className="pharos-section-title">
             Drill Into Each Alt-Peg Cohort
           </h2>
           <p className="pharos-meta">
@@ -77,7 +82,7 @@ export function AltPegCohortDirectory({
       <div className="pharos-card-shell overflow-hidden">
         <div className="xl:hidden">
           <CelestialBand items={commodityIndexItems} />
-          <MobileRegionList fiatItems={fiatItems} />
+          <MobileRegionList fiatItems={fiatItems} idPrefix={idPrefix} />
         </div>
 
         <div
@@ -85,7 +90,7 @@ export function AltPegCohortDirectory({
           className="hidden gap-3 px-4 py-4 dark:bg-white/[0.035] sm:px-5 sm:py-5 xl:grid xl:grid-cols-3"
         >
           {geoRegions.map(({ region, items }) => (
-            <FiatRegionSection key={region} region={region} items={items} />
+            <FiatRegionSection key={region} region={region} items={items} idPrefix={idPrefix} />
           ))}
           <BeyondGeographyRail items={commodityIndexItems} referenceCoinCount={referenceCoinCount} />
         </div>

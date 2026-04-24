@@ -63,6 +63,14 @@ describe("StaticAltPegLinkHub", () => {
     const { container } = render(withQueryClient(<StaticAltPegLinkHub />));
     expect(container.textContent).toContain("Cohort details continue below the market-cap charts");
   });
+
+  it("keeps the static crawlable directory hidden with separate anchor ids", () => {
+    const { container } = render(withQueryClient(<StaticAltPegLinkHub />));
+    const hiddenDirectory = container.querySelector("#static-alt-peg-cohort-list")?.closest("[hidden]");
+    expect(hiddenDirectory).not.toBeNull();
+    expect(container.querySelector("#static-alt-peg-region-europe")).not.toBeNull();
+    expect(container.querySelector("#alt-peg-region-europe")).toBeNull();
+  });
 });
 
 describe("AltPegCohortDirectory", () => {

@@ -82,11 +82,19 @@ export function LinkChip({ item }: { item: AltPegLinkHubItem }) {
   );
 }
 
-export function FiatRegionSection({ region, items }: { region: AltPegRegion; items: readonly AltPegLinkHubItem[] }) {
+export function FiatRegionSection({
+  region,
+  items,
+  idPrefix = "alt-peg",
+}: {
+  region: AltPegRegion;
+  items: readonly AltPegLinkHubItem[];
+  idPrefix?: string;
+}) {
   const slug = region.toLowerCase().replace(/\s+/g, "-");
   const coinCount = items.reduce((sum, i) => sum + i.coinCount, 0);
   const accentHex = region === "Other" ? (items[0]?.colorHex ?? "#64748b") : REGION_ACCENT[region];
-  const sectionId = `alt-peg-region-${slug}`;
+  const sectionId = `${idPrefix}-region-${slug}`;
   const headingId = `${sectionId}-heading`;
   return (
     <section

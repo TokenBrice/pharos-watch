@@ -3,7 +3,13 @@ import { FiatRegionSection } from "@/app/alt-pegs/fiat-world-atlas/region-chips"
 
 const MOBILE_REGION_ORDER: AltPegRegion[] = ["Europe", "Asia", "Americas", "Africa", "Oceania", "Other"];
 
-export function MobileRegionList({ fiatItems }: { fiatItems: readonly AltPegLinkHubItem[] }) {
+export function MobileRegionList({
+  fiatItems,
+  idPrefix,
+}: {
+  fiatItems: readonly AltPegLinkHubItem[];
+  idPrefix?: string;
+}) {
   const byRegion = new Map<AltPegRegion, AltPegLinkHubItem[]>();
   for (const item of fiatItems) {
     const list = byRegion.get(item.region) ?? [];
@@ -21,7 +27,7 @@ export function MobileRegionList({ fiatItems }: { fiatItems: readonly AltPegLink
         Cohorts listed by coin count.
       </p>
       {regions.map(({ region, items }) => (
-        <FiatRegionSection key={region} region={region} items={items} />
+        <FiatRegionSection key={region} region={region} items={items} idPrefix={idPrefix} />
       ))}
     </div>
   );
