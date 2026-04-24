@@ -1,7 +1,5 @@
 import type { AltPegLinkHubItem, AltPegRegion } from "@/lib/alt-peg-market";
-import { CelestialBand } from "@/app/alt-pegs/fiat-world-atlas/celestial-band";
-import { FiatRegionSection, LinkChip, RegionSummaryPill } from "@/app/alt-pegs/fiat-world-atlas/region-chips";
-import { MobileRegionList } from "@/app/alt-pegs/fiat-world-atlas/mobile-region-list";
+import { RegionSummaryPill } from "@/app/alt-pegs/fiat-world-atlas/region-chips";
 import { PegDiversityHeroLive } from "@/app/alt-pegs/fiat-world-atlas/peg-diversity-hero-live";
 import { WorldMap } from "@/app/alt-pegs/fiat-world-atlas/world-map";
 import "./peg-hero.css";
@@ -10,10 +8,6 @@ const ATLAS_REGION_ORDER: Exclude<AltPegRegion, "Other">[] = ["Americas", "Europ
 
 function getRegionCoinCount(items: readonly AltPegLinkHubItem[]): number {
   return items.reduce((sum, i) => sum + i.coinCount, 0);
-}
-
-function formatCount(n: number, singular: string, plural = `${singular}s`): string {
-  return `${n} ${n === 1 ? singular : plural}`;
 }
 
 function regionSlug(region: AltPegRegion): string {
@@ -89,34 +83,6 @@ function AtlasHeroHeader({
   );
 }
 
-function BeyondGeographyRail({
-  items,
-  referenceCoinCount,
-}: {
-  items: readonly AltPegLinkHubItem[];
-  referenceCoinCount: number;
-}) {
-  if (items.length === 0) return null;
-
-  return (
-    <section aria-label="References beyond geography" className="space-y-2">
-      <div className="flex items-center justify-between gap-2">
-        <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-foreground/90 dark:text-white/90">
-          Beyond Geography
-        </p>
-        <p className="font-mono text-[11px] tabular-nums text-muted-foreground dark:text-slate-300/86">
-          {formatCount(items.length, "cohort")} · {formatCount(referenceCoinCount, "coin")}
-        </p>
-      </div>
-      <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-1 lg:gap-1.5">
-        {items.map((item) => (
-          <LinkChip key={item.href} item={item} />
-        ))}
-      </div>
-    </section>
-  );
-}
-
 export function FiatWorldAtlas({
   fiatItems,
   commodityIndexItems,
@@ -136,9 +102,8 @@ export function FiatWorldAtlas({
   })).filter((entry) => entry.items.length > 0);
 
   const fiatCoinCount = getRegionCoinCount(fiatItems);
-  const referenceCoinCount = getRegionCoinCount(commodityIndexItems);
   const totalCohortCount = fiatItems.length + commodityIndexItems.length;
-  const totalCoinCount = fiatCoinCount + referenceCoinCount;
+  const totalCoinCount = fiatCoinCount + getRegionCoinCount(commodityIndexItems);
 
   return (
     <section
@@ -149,30 +114,17 @@ export function FiatWorldAtlas({
 
       <div data-alt-peg-layout="desktop-atlas" className="hidden xl:block">
         <a
-          href="#alt-peg-cohort-list"
+          href="#alt-peg-history-share"
           className="sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-4 focus:z-50 focus:rounded-md focus:bg-background focus:px-3 focus:py-2 focus:text-sm focus:ring-2 focus:ring-ring"
         >
           Skip peg map
         </a>
         <PegDiversityHeroLive worldMap={<WorldMap />} />
-        <div
-          id="alt-peg-cohort-list"
-          className="grid gap-3 border-t border-border/60 bg-background/45 px-4 py-4 dark:border-white/10 dark:bg-white/[0.035] sm:grid-cols-2 sm:px-5 sm:py-5 lg:grid-cols-3"
-        >
-          <p className="font-mono text-[10px] uppercase tracking-[0.14em] text-muted-foreground dark:text-slate-300/78 sm:col-span-2 lg:col-span-3">
-            Cohorts listed by coin count; live cap rank appears on the map.
-          </p>
-          {geoRegions.map(({ region, items }) => (
-            <FiatRegionSection key={region} region={region} items={items} />
-          ))}
-          <BeyondGeographyRail items={commodityIndexItems} referenceCoinCount={referenceCoinCount} />
-        </div>
       </div>
 
-      <div className="xl:hidden">
-        <CelestialBand items={commodityIndexItems} />
-        <MobileRegionList fiatItems={fiatItems} />
-      </div>
+      <p className="border-t border-border/60 px-4 py-3 font-mono text-[10px] uppercase tracking-[0.14em] text-muted-foreground dark:border-white/10 dark:text-slate-300/78 sm:px-5 xl:hidden">
+        Cohort details continue below the market-cap charts.
+      </p>
     </section>
   );
 }

@@ -13,9 +13,12 @@ import { TimeRangeOption, isTimeRangeOption } from "@/hooks/use-time-range-filte
 import { useUrlFilters } from "@/hooks/use-url-filters";
 import { useStablecoins } from "@/hooks/use-stablecoins";
 import { AltPegCohortHistoryChart } from "./alt-peg-cohort-history-chart";
+import { AltPegCohortDirectory } from "./fiat-world-atlas/cohort-directory";
 import {
+  buildAltPegLinkHubGroups,
   buildAltPegSnapshot,
   buildAltPegTrendStats,
+  type AltPegLinkHubItem,
 } from "@/lib/alt-peg-market";
 import { formatCurrency, formatPercent, formatSignedPercent } from "@shared/lib/format";
 import { API_FRESHNESS_MAX_AGE_SEC } from "@shared/lib/api-freshness";
@@ -23,6 +26,11 @@ import { API_FRESHNESS_MAX_AGE_SEC } from "@shared/lib/api-freshness";
 type FocusedChart = "share" | "cohorts";
 
 const DEFAULT_HISTORY_RANGE: TimeRangeOption = "1y";
+const LINK_HUB_GROUPS = buildAltPegLinkHubGroups();
+const FIAT_LINK_HUB_ITEMS = LINK_HUB_GROUPS.find((g) => g.label === "Fiat")?.items ?? [];
+const COMMODITY_INDEX_LINK_HUB_ITEMS: AltPegLinkHubItem[] = LINK_HUB_GROUPS
+  .filter((g) => g.label !== "Fiat")
+  .flatMap((g) => g.items);
 
 function formatPctPointDelta(value: number | null): string {
   if (value == null) return "—";
@@ -329,7 +337,7 @@ export function AltPegsClient() {
       />
 
       <SectionErrorBoundary name="non-usd-share">
-        <section className="space-y-3">
+        <section id="alt-peg-history-share" className="space-y-3">
           <div className="flex flex-wrap items-center justify-between gap-2">
             <div className="space-y-1">
               <p className="pharos-kicker">History</p>
@@ -386,6 +394,11 @@ export function AltPegsClient() {
           }}
         />
       </SectionErrorBoundary>
+
+      <AltPegCohortDirectory
+        fiatItems={FIAT_LINK_HUB_ITEMS}
+        commodityIndexItems={COMMODITY_INDEX_LINK_HUB_ITEMS}
+      />
 
       <AltPegDistributionCard rows={snapshot.distributionRows} altMarketCap={snapshot.altMarketCap} />
     </div>
