@@ -345,8 +345,6 @@ export function YieldClient() {
         </div>
       ) : null}
 
-      {filteredRankings.length > 0 ? <YieldSourceBoard model={sourceBoardModel} /> : null}
-
       {/* Scatter plot with integrated summary stats */}
       {data && filteredRankings.length > 0 && (
         <section aria-labelledby="scatter-heading">
@@ -433,6 +431,8 @@ export function YieldClient() {
           </div>
         </section>
       )}
+
+      {filteredRankings.length > 0 ? <YieldSourceBoard model={sourceBoardModel} /> : null}
 
       {/* Disclaimer */}
       <p className="text-xs text-muted-foreground leading-relaxed">
