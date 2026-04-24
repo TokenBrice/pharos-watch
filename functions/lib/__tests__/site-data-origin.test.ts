@@ -47,13 +47,15 @@ describe("rejectIfNotSiteDataUiOrigin", () => {
     expect(rejectIfNotSiteDataUiOrigin(r, env, notFound)?.status).toBe(404);
   });
 
-  it("shortcuts the header check on Pages preview hostnames", () => {
+  it("rejects direct Pages preview requests without caller headers", () => {
     const r = req("https://stablecoin-dashboard.pages.dev/_site-data/peg-summary");
-    expect(rejectIfNotSiteDataUiOrigin(r, env, notFound)).toBeNull();
+    expect(rejectIfNotSiteDataUiOrigin(r, env, notFound)?.status).toBe(404);
   });
 
-  it("shortcuts the header check on Pages preview subdomains", () => {
-    const r = req("https://abc123.stablecoin-dashboard.pages.dev/_site-data/peg-summary");
+  it("passes on Pages preview hosts when Referer is a Pages preview hostname", () => {
+    const r = req("https://abc123.stablecoin-dashboard.pages.dev/_site-data/peg-summary", {
+      Referer: "https://abc123.stablecoin-dashboard.pages.dev/stablecoins",
+    });
     expect(rejectIfNotSiteDataUiOrigin(r, env, notFound)).toBeNull();
   });
 

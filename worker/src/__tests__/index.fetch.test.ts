@@ -223,7 +223,10 @@ describe("worker.fetch", () => {
     expect(history.some((entry) => entry.sql.includes("INSERT INTO api_request_consumer_stats")
       && entry.binds[1] === "stablecoins"
       && entry.binds[2] === "/api/stablecoins"
-      && entry.binds[3] === "public-api")).toBe(true);
+      && entry.binds[3] === "public-api"
+      && entry.binds[4] === "external")).toBe(true);
+    expect(history.some((entry) => entry.sql.includes("INSERT INTO api_key_request_stats")
+      && entry.binds[0] === 7)).toBe(true);
   });
 
   it("returns a maintenance response before routing or cache lookup", async () => {

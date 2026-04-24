@@ -35,11 +35,6 @@ export function rejectIfNotSiteDataUiOrigin(
   env: { SITE_ORIGIN?: string; OPS_UI_ORIGIN?: string },
   notFound: () => Response,
 ): Response | null {
-  const url = new URL(request.url);
-  if (isPagesAppHostname(url.hostname)) {
-    return null;
-  }
-
   const allowed = resolveAllowedHostnames(env);
   const originHost = hostnameOfHeader(request.headers.get("Origin"));
   if (originHost !== null) {

@@ -80,6 +80,17 @@ describe("site-data proxy", () => {
     expect(cacheMatch).not.toHaveBeenCalled();
   });
 
+  it("rejects direct Pages preview requests without Origin or Referer", async () => {
+    const response = await onRequest({
+      request: new Request("https://stablecoin-dashboard.pages.dev/_site-data/stablecoins"),
+      env: makeEnv(),
+      params: { path: "stablecoins" },
+    });
+
+    expect(response.status).toBe(404);
+    expect(cacheMatch).not.toHaveBeenCalled();
+  });
+
   it("rejects requests from foreign origins", async () => {
     const response = await onRequest({
       request: new Request("https://pharos.watch/_site-data/stablecoins", {
