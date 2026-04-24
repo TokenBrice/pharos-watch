@@ -33,20 +33,23 @@ function deltaLabel(delta: number | null): string {
 export function PsiBeamDimmers({
   lanes,
   columns = 4,
+  density = "default",
 }: {
   lanes: PsiBeamDimmerLane[];
   columns?: 2 | 4;
+  density?: "default" | "compact";
 }) {
   if (lanes.length === 0) return null;
 
+  const isCompact = density === "compact";
   const gridClass =
     columns === 2
-      ? "grid gap-3 sm:grid-cols-2"
-      : "grid gap-3 md:grid-cols-2 xl:grid-cols-4";
+      ? cn("grid sm:grid-cols-2", isCompact ? "gap-2.5" : "gap-3")
+      : cn("grid md:grid-cols-2 xl:grid-cols-4", isCompact ? "gap-2.5" : "gap-3");
 
   return (
     <section aria-labelledby="psi-beam-dimmers-heading">
-      <div className="mb-3 flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
+      <div className={cn("flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1", isCompact ? "mb-2.5" : "mb-3")}>
         <p id="psi-beam-dimmers-heading" className="pharos-kicker">
           Beam Dimmers · Current PSI component pressure
         </p>
@@ -57,17 +60,18 @@ export function PsiBeamDimmers({
 
       <div className={gridClass}>
         {lanes.map((lane) => (
-          <div key={lane.key} className="rounded-lg border border-border/70 bg-muted/20 p-3">
+          <div key={lane.key} className={cn("rounded-lg border border-border/70 bg-muted/20", isCompact ? "p-2.5" : "p-3")}>
             <div className="flex items-start justify-between gap-3">
               <div>
                 <MethodologyLabel topic={METHODOLOGY_TOPICS[lane.key]}>
                   {lane.label}
                 </MethodologyLabel>
-                <p className="mt-1 text-xs text-muted-foreground">{lane.detail}</p>
+                <p className={cn("mt-1 text-muted-foreground", isCompact ? "text-[11px] leading-snug" : "text-xs")}>{lane.detail}</p>
               </div>
               <div className="text-right">
                 <p className={cn(
-                  "font-mono text-lg font-bold tabular-nums",
+                  "font-mono font-bold tabular-nums",
+                  isCompact ? "text-base" : "text-lg",
                   lane.role === "support" ? "text-emerald-700 dark:text-emerald-300" : "text-foreground",
                 )}>
                   {valueLabel(lane)}
@@ -77,14 +81,14 @@ export function PsiBeamDimmers({
                 </p>
               </div>
             </div>
-            <div className="mt-3">
-              <div className="h-2 overflow-hidden rounded-full bg-background/80">
+            <div className={isCompact ? "mt-2.5" : "mt-3"}>
+              <div className={cn("overflow-hidden rounded-full bg-background/80", isCompact ? "h-1.5" : "h-2")}>
                 <div
                   className={cn("h-full rounded-full", laneToneClass(lane))}
                   style={{ width: `${lane.pressurePct}%` }}
                 />
               </div>
-              <div className="mt-1 flex items-center justify-between gap-3 text-xs text-muted-foreground">
+              <div className={cn("mt-1 flex items-center justify-between gap-3 text-muted-foreground", isCompact ? "text-[11px]" : "text-xs")}>
                 <span>{deltaLabel(lane.delta)}</span>
                 <span className="font-mono tabular-nums">
                   {lane.pressurePct.toFixed(0)}%

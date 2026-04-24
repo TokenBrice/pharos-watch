@@ -100,7 +100,7 @@ function PsiHistoryStatsGrid({
 
   const wrapperClass =
     resolved === "compact"
-      ? "grid w-full grid-cols-3 gap-x-3 gap-y-2 border-t border-border/60 pt-3 2xl:hidden"
+      ? "grid w-full grid-cols-3 gap-x-3 gap-y-2 border-t border-border/60 pt-3 xl:hidden"
       : resolved === "row"
         ? "flex items-end gap-8"
         : "grid grid-cols-3 gap-3";
@@ -227,12 +227,12 @@ export function StabilityIndexPanel({
           <p className="text-xs text-muted-foreground">Updated every 30 min</p>
         </div>
 
-        <div className="flex flex-col gap-5 xl:min-h-[23rem] xl:flex-row xl:items-stretch xl:gap-7">
-          <div className="mx-auto flex w-full max-w-sm items-start overflow-hidden rounded-lg xl:mx-0 xl:min-h-0 xl:w-[min(34vw,27rem)] xl:max-w-none xl:shrink-0 xl:self-start">
+        <div className="flex flex-col gap-5 xl:flex-row xl:items-start xl:gap-7">
+          <div className="mx-auto flex w-full max-w-sm items-start overflow-hidden rounded-lg xl:mx-0 xl:min-h-0 xl:w-[min(37vw,31rem)] xl:max-w-none xl:shrink-0">
             <PsiLighthouseScene band={band} score={score} />
           </div>
 
-          <div className="flex min-w-0 flex-1 flex-col gap-4">
+          <div className="flex min-w-0 flex-1 flex-col gap-4 xl:pt-1">
             <div className="flex min-w-0 flex-col gap-4 xl:flex-row xl:items-center xl:justify-between xl:gap-5">
               <div className="flex min-w-0 flex-col items-center gap-1 text-center xl:shrink-0 xl:items-start xl:text-left">
                 <div className="flex items-baseline gap-2">
@@ -257,15 +257,15 @@ export function StabilityIndexPanel({
                 </div>
               </div>
 
-              <div className="hidden 2xl:flex 2xl:items-center 2xl:justify-end">
+              <div className="hidden xl:flex xl:items-center xl:justify-end">
                 <PsiHistoryStatsGrid items={historyStats} layout="row" />
               </div>
             </div>
 
             <PsiHistoryStatsGrid items={historyStats} layout="compact" />
 
-            <div className="border-t border-border/60 pt-4 lg:mt-auto">
-              <PsiBeamDimmers lanes={lanes} columns={2} />
+            <div className="border-t border-border/60 pt-4">
+              <PsiBeamDimmers lanes={lanes} columns={2} density="compact" />
             </div>
           </div>
         </div>
