@@ -176,12 +176,13 @@ Do not assume `18` decimals, or even one fixed decimal count per token across al
 SELECT snapshot_date, circulating_usd, price
 FROM supply_history
 WHERE stablecoin_id = ? AND snapshot_date >= ?
+  AND snapshot_date <= ? -- when snapshot-supply:last-write exists
 ORDER BY snapshot_date ASC
 ```
 
 **Response:** array of `{ date, circulatingUsd, price }`
 
-**Cache profile:** slow (`s-maxage=3600`, `max-age=300`). Responses include `X-Data-Age` when the latest completed `snapshot-supply` run or a served snapshot row can be resolved. Rows newer than the completed daily snapshot marker are hidden so a failed chunked write cannot expose a partial latest day.
+**Cache profile:** slow (`s-maxage=3600`, `max-age=300`). Responses include `X-Data-Age` from the `snapshot-supply:last-write` marker's `updated_at` when available, falling back to the latest served snapshot row only when the marker is absent. Rows newer than the completed daily snapshot marker are hidden so a failed chunked write cannot expose a partial latest day.
 
 ### GET /api/stablecoin/{id} (detail --- supply_history fallback)
 
@@ -240,7 +241,7 @@ The compare data model fetches per-coin `/api/supply-history` series directly th
 | Cache > 20 min old | Return degraded (`reason: "cache_stale"`) |
 | Successful write < 20 hours ago | Skip write (`reason: "cooldown_active"`) |
 | 0 prepared rows (all tracked coins missing/zero supply) | Return degraded (`reason: "all_coins_zero_supply"`) |
-| < 80% of tracked coins have valid data | Log warning, continue |
+| < 80% of tracked coins have valid data | Return degraded without writing rows (`reason: "partial_snapshot_blocked"`) |
 | `batchExecute()` exception | Propagate to `logCronRun` error handler |
 
 All cron runs are logged to the `cron_runs` table (7-day retention).

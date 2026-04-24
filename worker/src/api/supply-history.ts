@@ -1,11 +1,10 @@
 import { API_FRESHNESS_MAX_AGE_SEC } from "@shared/lib/api-freshness";
 import {
-  getLatestSuccessfulCronTimestampResult,
   handleStablecoinHistoryRequest,
   withErrorHandler,
 } from "../lib/api-utils";
 import { CACHE_PROFILES } from "../lib/constants";
-import { getCompletedSupplySnapshotDate } from "../lib/supply-snapshot-completion";
+import { getCompletedSupplySnapshot } from "../lib/supply-snapshot-completion";
 
 interface SupplyHistoryRow {
   snapshot_date: number;
@@ -17,6 +16,8 @@ export const handleSupplyHistory = withErrorHandler("supply-history", async (
   db: D1Database,
   url: URL
 ): Promise<Response> => {
+  const completedSnapshot = await getCompletedSupplySnapshot(db);
+
   return handleStablecoinHistoryRequest(db, url, {
     query: {
       defaultDays: 365,
@@ -26,9 +27,8 @@ export const handleSupplyHistory = withErrorHandler("supply-history", async (
     },
     cacheControl: CACHE_PROFILES.slow,
     fetchRows: async ({ db: database, stablecoinId, cutoff }) => {
-      const completedSnapshotDate = await getCompletedSupplySnapshotDate(database);
-      const latestSnapshotFilter = completedSnapshotDate == null ? "" : " AND snapshot_date <= ?";
-      const latestSnapshotBinds = completedSnapshotDate == null ? [] : [completedSnapshotDate];
+      const latestSnapshotFilter = completedSnapshot == null ? "" : " AND snapshot_date <= ?";
+      const latestSnapshotBinds = completedSnapshot == null ? [] : [completedSnapshot.snapshotDate];
       const result = await database
         .prepare(
           `SELECT snapshot_date, circulating_usd, price
@@ -45,13 +45,12 @@ export const handleSupplyHistory = withErrorHandler("supply-history", async (
       circulatingUsd: row.circulating_usd,
       price: row.price,
     }),
-    freshness: async ({ db: database, rows }) => {
+    freshness: ({ rows }) => {
       const latestRowTimestamp = rows.reduce<number | null>(
         (latest, row) => latest == null ? row.snapshot_date : Math.max(latest, row.snapshot_date),
         null,
       );
-      const latestSnapshotRun = await getLatestSuccessfulCronTimestampResult(database, "snapshot-supply");
-      const updatedAt = latestSnapshotRun.timestamp ?? latestRowTimestamp;
+      const updatedAt = completedSnapshot?.updatedAt ?? latestRowTimestamp;
       return updatedAt == null
         ? null
         : {

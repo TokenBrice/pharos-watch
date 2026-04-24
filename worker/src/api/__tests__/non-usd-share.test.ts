@@ -63,12 +63,6 @@ describe("handleNonUsdShare", () => {
             },
           ],
         },
-        {
-          match: "FROM cron_runs",
-          matchBinds: ["snapshot-supply"],
-          rows: [{ started_at: Math.floor(nowMs / 1000) - 600 }],
-          first: { started_at: Math.floor(nowMs / 1000) - 600 },
-        },
       ],
       { requireMatch: true },
     );
@@ -143,12 +137,6 @@ describe("handleNonUsdShare", () => {
             { snapshot_date: unix("2026-04-01T00:00:00Z"), total: 100, commodity: 14, fiat_non_usd: 5 },
             { snapshot_date: unix("2026-04-01T12:00:00Z"), total: 100, commodity: 15, fiat_non_usd: 5 },
           ],
-        },
-        {
-          match: "FROM cron_runs",
-          matchBinds: ["snapshot-supply"],
-          rows: [{ started_at: unix("2026-04-08T08:00:00Z") }],
-          first: { started_at: unix("2026-04-08T08:00:00Z") },
         },
       ],
       { requireMatch: true },

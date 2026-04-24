@@ -59,7 +59,7 @@ describe("handleSupplyHistory", () => {
     expect(body[0]).not.toHaveProperty("snapshot_date");
   });
 
-  it("includes freshness headers from the latest successful supply snapshot run", async () => {
+  it("includes freshness headers from the completed supply snapshot marker", async () => {
     const nowSec = 1_765_000_000;
     vi.spyOn(Date, "now").mockReturnValue(nowSec * 1000);
     const db = mockD1(
@@ -83,12 +83,6 @@ describe("handleSupplyHistory", () => {
           matchBinds: ["usdt-tether", nowSec - 365 * 86_400, row.snapshot_date],
           rows: [row],
         },
-        {
-          match: "FROM cron_runs",
-          matchBinds: ["snapshot-supply"],
-          rows: [{ started_at: nowSec - 300 }],
-          first: { started_at: nowSec - 300 },
-        },
       ],
       { requireMatch: true },
     );
@@ -98,6 +92,44 @@ describe("handleSupplyHistory", () => {
     expect(res.status).toBe(200);
     expect(res.headers.get("X-Data-Age")).toBe("300");
     expect(res.headers.get("Warning")).toBeNull();
+    db.assertAllMatchesUsed();
+  });
+
+  it("reports stale freshness when the completed snapshot marker is old", async () => {
+    const nowSec = 1_765_000_000;
+    const markerUpdatedAt = nowSec - 9 * 86_400;
+    vi.spyOn(Date, "now").mockReturnValue(nowSec * 1000);
+    const db = mockD1(
+      [
+        {
+          match: "FROM cache",
+          matchBinds: ["snapshot-supply:last-write"],
+          rows: [{
+            key: "snapshot-supply:last-write",
+            value: JSON.stringify({ snapshotDate: row.snapshot_date }),
+            updated_at: markerUpdatedAt,
+          }],
+          first: {
+            key: "snapshot-supply:last-write",
+            value: JSON.stringify({ snapshotDate: row.snapshot_date }),
+            updated_at: markerUpdatedAt,
+          },
+        },
+        {
+          match: "FROM supply_history",
+          matchBinds: ["usdt-tether", nowSec - 365 * 86_400, row.snapshot_date],
+          rows: [row],
+        },
+      ],
+      { requireMatch: true },
+    );
+
+    const res = await handleSupplyHistory(db, new URL("https://x/api/supply-history?stablecoin=usdt-tether"));
+
+    expect(res.status).toBe(200);
+    expect(res.headers.get("X-Data-Age")).toBe(String(9 * 86_400));
+    expect(res.headers.get("Warning")).toContain("Response is stale");
+    expect(db.getHistory().some((entry) => entry.sql.includes("FROM cron_runs"))).toBe(false);
     db.assertAllMatchesUsed();
   });
 });

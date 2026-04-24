@@ -3,13 +3,12 @@ import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins";
 import { buildInClause } from "../lib/db";
 import {
   addFreshnessHeaders,
-  getLatestSuccessfulCronTimestampResult,
   jsonResponse,
   parseClampedIntegerParam,
   withErrorHandler,
 } from "../lib/api-utils";
 import { CACHE_PROFILES } from "../lib/constants";
-import { getCompletedSupplySnapshotDate } from "../lib/supply-snapshot-completion";
+import { getCompletedSupplySnapshot } from "../lib/supply-snapshot-completion";
 
 const COMMODITY_PEGS = new Set(["GOLD", "SILVER"]);
 const DEFAULT_DAYS = 1825;
@@ -43,9 +42,9 @@ export const handleNonUsdShare = withErrorHandler(
 
     const commodityIn = buildInClause(COMMODITY_IDS);
     const fiatIn = buildInClause(FIAT_NON_USD_IDS);
-    const completedSnapshotDate = await getCompletedSupplySnapshotDate(db);
-    const latestSnapshotFilter = completedSnapshotDate == null ? "" : " AND snapshot_date <= ?";
-    const latestSnapshotBinds = completedSnapshotDate == null ? [] : [completedSnapshotDate];
+    const completedSnapshot = await getCompletedSupplySnapshot(db);
+    const latestSnapshotFilter = completedSnapshot == null ? "" : " AND snapshot_date <= ?";
+    const latestSnapshotBinds = completedSnapshot == null ? [] : [completedSnapshot.snapshotDate];
 
     const result = await db
       .prepare(
@@ -104,12 +103,11 @@ export const handleNonUsdShare = withErrorHandler(
       }
     }
 
-    const latestSnapshotRun = await getLatestSuccessfulCronTimestampResult(db, "snapshot-supply");
     const latestPointDate = points.reduce<number | null>(
       (latest, point) => latest == null ? point.date : Math.max(latest, point.date),
       null,
     );
-    const updatedAt = latestSnapshotRun.timestamp ?? latestPointDate;
+    const updatedAt = completedSnapshot?.updatedAt ?? latestPointDate;
     const headers = updatedAt == null
       ? { "Cache-Control": CACHE_PROFILES.slow }
       : addFreshnessHeaders(
