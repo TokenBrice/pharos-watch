@@ -136,6 +136,54 @@ function getDependencyTotalIssue(coin: StablecoinMeta): string | null {
   return total > 0 ? null : "dependency weight total must be greater than 0";
 }
 
+function getReferenceIssues(coin: StablecoinMeta, knownIds: ReadonlySet<string>): string[] {
+  const issues: string[] = [];
+
+  for (const dependency of coin.dependencies ?? []) {
+    if (!knownIds.has(dependency.id)) {
+      issues.push(`dependencies references unknown stablecoin ID "${dependency.id}"`);
+    }
+  }
+
+  for (const reserve of coin.reserves ?? []) {
+    if (reserve.coinId && !knownIds.has(reserve.coinId)) {
+      issues.push(`reserves references unknown stablecoin ID "${reserve.coinId}"`);
+    }
+  }
+
+  return issues;
+}
+
+function getContractDeploymentIssues(coin: StablecoinMeta): string[] {
+  const issues: string[] = [];
+  const seen = new Map<string, string>();
+
+  for (const listName of ["contracts", "tradedContracts"] as const) {
+    const contracts = coin[listName] ?? [];
+
+    contracts.forEach((contract, index) => {
+      const path = `${listName}[${index}]`;
+      const chainMeta = CHAIN_META[contract.chain];
+      if (!chainMeta) {
+        issues.push(`${path} uses unknown chain "${contract.chain}"`);
+      } else if (chainMeta.type === "evm" && !/^0x[0-9a-fA-F]{40}$/.test(contract.address)) {
+        issues.push(`${path} has invalid EVM address "${contract.address}"`);
+      }
+
+      const addressKey = chainMeta?.type === "evm" ? contract.address.toLowerCase() : contract.address;
+      const key = `${contract.chain}:${addressKey}`;
+      const previousPath = seen.get(key);
+      if (previousPath) {
+        issues.push(`${path} duplicates ${previousPath} (${key})`);
+      } else {
+        seen.set(key, path);
+      }
+    });
+  }
+
+  return issues;
+}
+
 let canonicalOrder: string[] = [];
 let legacyEntries: StablecoinSourceEntry[] = [];
 let perCoinEntries: StablecoinSourceEntry[] = [];
@@ -179,6 +227,7 @@ if (errorCount === 0) {
 
 if (errorCount === 0) {
   const allEntries = [...legacyEntries, ...perCoinEntries];
+  const knownIds = new Set(allEntries.map((entry) => entry.coin.id));
 
   for (const issue of findDuplicateStablecoinIds(allEntries)) {
     reportError(
@@ -218,6 +267,14 @@ if (errorCount === 0) {
     const runtimeAdmissionIssue = getRuntimeAdmissionIssue(entry.coin);
     if (runtimeAdmissionIssue) {
       reportError(`${entry.file} (${entry.coin.id}): ${runtimeAdmissionIssue}`);
+    }
+
+    for (const referenceIssue of getReferenceIssues(entry.coin, knownIds)) {
+      reportError(`${entry.file} (${entry.coin.id}): ${referenceIssue}`);
+    }
+
+    for (const contractIssue of getContractDeploymentIssues(entry.coin)) {
+      reportError(`${entry.file} (${entry.coin.id}): ${contractIssue}`);
     }
   }
 

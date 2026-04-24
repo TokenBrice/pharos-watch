@@ -68,8 +68,8 @@ Default policy:
    - `npm run test:noncritical`
    - `npm run coverage:critical`
 5. If worker-impacting files changed, additionally run:
-   - `cd worker && npx tsc --noEmit`
-   - `cd worker && npx tsc --noEmit -p tsconfig.scripts.json`
+   - `npm run typecheck:worker`
+   - `npm run typecheck:worker-scripts`
 
 After `npm run validate:prebuild` succeeds, the local merge gate runs independent build/non-critical-test/critical-coverage/typecheck groups in parallel by default. This keeps the validation surface aligned with deploy CI while reducing local wall time. Set `MERGE_GATE_SERIAL=1` when debugging output ordering or resource contention.
 
@@ -119,7 +119,7 @@ Deploy sequence in `.github/workflows/deploy-cloudflare.yml`:
    - runs only when `deploy_required=true`
    - always includes `npm run audit:deps`, `npm run audit:pricing-providers`, lint, policy/guardrail checks (including verified-doc link and env-contract validation), `npm run test:noncritical`, and `npm run coverage:critical`
    - includes `npm run build` + `npm run seo:check` only when `pages_changed=true`
-   - includes `cd worker && npx tsc --noEmit` and `cd worker && npx tsc --noEmit -p tsconfig.scripts.json` only when `worker_changed=true`
+   - includes `npm run typecheck:worker` and `npm run typecheck:worker-scripts` only when `worker_changed=true`
    - after `npm run validate:prebuild`, runs independent Pages build/SEO, non-critical-test, critical-coverage, and Worker typecheck groups in parallel through `scripts/run-validate-postbuild.mjs`; `npm run build` still precedes `npm run seo:check`, and `VALIDATE_POSTBUILD_SERIAL=1` restores the old serial shape for debugging
    - the same reusable workflow also runs `validate-lts`, which installs Node 24.x and executes `npm run validate:lts` against the same shared deploy-surface-aware validate contract with the same deploy-surface flags as the main Node 25 validate job
    - pull requests call the same reusable workflow with diff-derived `pages_changed` and `worker_changed` inputs, so PR Pages build/SEO and worker typecheck coverage follows the deploy-surface classifier while the shared non-deploy guardrails and tests still run on every PR

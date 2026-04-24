@@ -16,6 +16,7 @@ import {
   buildNoncriticalTestArgs,
   CRITICAL_TEST_FILES,
 } from "../lib/critical-test-files.mjs";
+import { CRITICAL_FILES } from "../lib/critical-coverage.mjs";
 import {
   buildPostPrebuildExecutionUnits,
   getPostPrebuildCommandEnv,
@@ -196,6 +197,14 @@ describe("validate-ci parity", () => {
     ]);
   });
 
+  it("keeps the critical coverage baseline aligned with the ratchet target list", () => {
+    const baseline = JSON.parse(
+      readFileSync(resolve(process.cwd(), ".ci/critical-coverage-baseline.json"), "utf8"),
+    ) as { files: Record<string, number> };
+
+    expect(Object.keys(baseline.files)).toEqual(CRITICAL_FILES);
+  });
+
   it("runs post-prebuild CI checks in independent execution groups", () => {
     expect(
       buildPostPrebuildExecutionUnits({ pagesChanged: true, workerChanged: true }).map((unit) => unit.commands),
@@ -203,8 +212,8 @@ describe("validate-ci parity", () => {
       PAGES_VALIDATE_COMMANDS,
       ["npm run test:noncritical"],
       ["npm run coverage:critical"],
-      ["cd worker && npx tsc --noEmit"],
-      ["cd worker && npx tsc --noEmit -p tsconfig.scripts.json"],
+      ["npm run typecheck:worker"],
+      ["npm run typecheck:worker-scripts"],
     ]);
 
     expect(
@@ -212,8 +221,8 @@ describe("validate-ci parity", () => {
     ).toEqual([
       ["npm run test:noncritical"],
       ["npm run coverage:critical"],
-      ["cd worker && npx tsc --noEmit"],
-      ["cd worker && npx tsc --noEmit -p tsconfig.scripts.json"],
+      ["npm run typecheck:worker"],
+      ["npm run typecheck:worker-scripts"],
     ]);
   });
 
@@ -260,8 +269,8 @@ describe("validate-ci parity", () => {
     expect(aborted).toEqual([
       "npm run test:noncritical",
       "npm run coverage:critical",
-      "cd worker && npx tsc --noEmit",
-      "cd worker && npx tsc --noEmit -p tsconfig.scripts.json",
+      "npm run typecheck:worker",
+      "npm run typecheck:worker-scripts",
     ]);
   });
 });

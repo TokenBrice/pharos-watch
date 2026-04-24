@@ -49,7 +49,7 @@ npm run test:critical-contracts
 For worker behavior changes, also run:
 
 ```bash
-cd worker && npx tsc --noEmit
+npm run typecheck:worker
 ```
 
 Before pushing deploy-impacting endpoint changes, run:

@@ -51,8 +51,12 @@ const DeadStablecoinIdSchema = z.string().refine(isSlugLikeId, {
   message: "Invalid dead stablecoin id",
 });
 
+const StablecoinIdSchema = z.string().refine(isSlugLikeId, {
+  message: "Invalid stablecoin id",
+});
+
 export const StablecoinMetaAssetSchema = z.object({
-  id: z.string(),
+  id: StablecoinIdSchema,
   llamaId: z.string().optional(),
   detailProvider: z.enum(DETAIL_PROVIDER_VALUES).optional(),
   name: z.string(),
@@ -108,7 +112,7 @@ export const StablecoinMetaAssetSchema = z.object({
 });
 
 export const StablecoinMetaAssetArraySchema = z.array(StablecoinMetaAssetSchema);
-export const CanonicalOrderAssetSchema = z.array(z.string());
+export const CanonicalOrderAssetSchema = z.array(StablecoinIdSchema);
 
 export const DeadStablecoinAssetSchema = z.object({
   id: DeadStablecoinIdSchema,

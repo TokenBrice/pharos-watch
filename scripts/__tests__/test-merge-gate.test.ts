@@ -76,8 +76,8 @@ describe("buildCommandPlan", () => {
         ["npm run build", "npm run seo:check"],
         ["npm run test:noncritical"],
         ["npm run coverage:critical"],
-        ["cd worker && npx tsc --noEmit"],
-        ["cd worker && npx tsc --noEmit -p tsconfig.scripts.json"],
+        ["npm run typecheck:worker"],
+        ["npm run typecheck:worker-scripts"],
       ],
     ]);
   });
@@ -124,8 +124,8 @@ describe("buildCommandPlan", () => {
     expect(aborted).toEqual([
       "npm run test:noncritical",
       "npm run coverage:critical",
-      "cd worker && npx tsc --noEmit",
-      "cd worker && npx tsc --noEmit -p tsconfig.scripts.json",
+      "npm run typecheck:worker",
+      "npm run typecheck:worker-scripts",
     ]);
   });
 });
