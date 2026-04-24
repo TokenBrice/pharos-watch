@@ -13,7 +13,6 @@ import { useLogos } from "@/hooks/use-logos";
 import { useUrlFilters } from "@/hooks/use-url-filters";
 import { LiquidityStats } from "@/components/liquidity-stats";
 import { LiquidityTable } from "@/components/liquidity-table";
-import { DepthGauges, type GaugeSort } from "./depth-gauges";
 import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins";
 import type { LiquidityRow } from "@/components/liquidity-table";
 import type { LiquidityStatsData } from "@/components/liquidity-stats";
@@ -48,14 +47,6 @@ export function LiquidityClient() {
   const rawPeg = getParam("peg", "all");
   const pegFilter: PegCurrency | "all" = rawPeg === "all" || rawPeg in PEG_LABELS_SHORT ? rawPeg as PegCurrency | "all" : "all";
   const setPegFilter = useCallback((v: PegCurrency | "all") => { trackEvent("filter_applied", { page: "liquidity", filter_type: "peg", filter_value: v }); setParam("peg", v); }, [setParam]);
-  const rawGaugeSort = getParam("gs", "depth");
-  const gaugeSort: GaugeSort = (rawGaugeSort === "volume" || rawGaugeSort === "clarity")
-    ? rawGaugeSort
-    : "depth";
-  const setGaugeSort = useCallback((s: GaugeSort) => {
-    trackEvent("filter_applied", { page: "liquidity", filter_type: "gaugeSort", filter_value: s });
-    setParam("gs", s);
-  }, [setParam]);
   const router = useRouter();
 
   // Search: local state for instant input, deferred value for filtering,
@@ -202,18 +193,6 @@ export function LiquidityClient() {
 
       {summaryStats && liquidityMap && (
         <LiquidityStats stats={summaryStats} liquidityMap={liquidityMap} />
-      )}
-
-      {liquidityMap && (
-        <DepthGauges
-          rows={scoredRows}
-          unratedRows={unratedRows}
-          liquidityMap={liquidityMap}
-          logos={logos ?? {}}
-          sort={gaugeSort}
-          onSortChange={setGaugeSort}
-          onSelect={handleRowClick}
-        />
       )}
 
       {/* Filters + Leaderboard */}

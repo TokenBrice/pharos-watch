@@ -558,7 +558,7 @@ Live app-wide patterns:
 
 ## Draw the Metaphor
 
-When a page introduces a metaphor, render it — don't just name it. The Stablecoin Cemetery draws actual tombstones with arched caps, crosses, and flower scatter. The Alt-Peg Atlas draws a starfield with celestial bands and constellation cohorts. The Chains Harbor Chart draws ships with flags, cargo, wakes, and depth lines. The Liquidity Depth Gauges draw water columns with surface ripples and buoys.
+When a page introduces a metaphor, render it — don't just name it. The Stablecoin Cemetery draws actual tombstones with arched caps, crosses, and flower scatter. The Alt-Peg Atlas draws a starfield with celestial bands and constellation cohorts. The Chains Harbor Chart draws ships with flags, cargo, wakes, and depth lines.
 
 Rules that keep this from drifting into decoration:
 
