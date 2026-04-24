@@ -1,5 +1,5 @@
 {
-  "last_updated_at": 1776513600,
+  "last_updated_at": 1777060544,
   "donations": [
     {
       "chain": "ethereum",
@@ -12,6 +12,78 @@
       "amount_decimal": 0.1,
       "usd_at_receipt": 219.22,
       "price_note": "coingecko-historical-2026-04-13"
+    },
+    {
+      "chain": "ethereum",
+      "tx_hash": "0xddf16297189a0ef2622dff2d68fab1edd6d8e67d2f38290672dd186f48c87a14",
+      "block_timestamp": 1776856727,
+      "from_address": "0xc37f82996dde442ff559572427276697eb923517",
+      "display": "0xc37f82...3517",
+      "kind": "community",
+      "asset_symbol": "ETH",
+      "amount_decimal": 0.01,
+      "usd_at_receipt": 23.28,
+      "price_note": "coingecko-historical-2026-04-22"
+    },
+    {
+      "chain": "optimism",
+      "tx_hash": "0x73f64c2e46f80b10f61854ef0b8246c4878dff096ce1a4852064d404779dbc59",
+      "block_timestamp": 1776958729,
+      "from_address": "0xe64113140960528f6af928d7ca4f45d192286a7a",
+      "display": "legac.eth",
+      "kind": "community",
+      "asset_symbol": "USDGLO",
+      "amount_decimal": 1.1,
+      "usd_at_receipt": 1.1,
+      "price_note": "stablecoin-1-to-1"
+    },
+    {
+      "chain": "ethereum",
+      "tx_hash": "0x0f837d6c4c836e903917ad82b69de347f956941ba091cd23b76cce2aa4239a1f",
+      "block_timestamp": 1776984683,
+      "from_address": "0x9324cb8c93d83a94978353e7c9c42f6d72d9ed96",
+      "display": "marketclown.eth",
+      "kind": "community",
+      "asset_symbol": "USDC",
+      "amount_decimal": 13.37,
+      "usd_at_receipt": 13.37,
+      "price_note": "stablecoin-1-to-1"
+    },
+    {
+      "chain": "ethereum",
+      "tx_hash": "0x6a722512483a5ab79b9037a90344ea14a774671901ebf2ef912973aa0a49bd36",
+      "block_timestamp": 1777035839,
+      "from_address": "0xc6a82350794e49fe59d42eb1fdd8ded79e0edaf6",
+      "display": "0xc6a823...daf6",
+      "kind": "community",
+      "asset_symbol": "USDC",
+      "amount_decimal": 5,
+      "usd_at_receipt": 5,
+      "price_note": "stablecoin-1-to-1"
+    },
+    {
+      "chain": "base",
+      "tx_hash": "0xda02c19389ddeee71c7b700dfe3570a0b2d0fe6cdafc1aa73166f52471d3bdbe",
+      "block_timestamp": 1777050507,
+      "from_address": "0x4df37cc3c48ec3eb689c8bf0d91249ce2506f73b",
+      "display": "sanson.eth",
+      "kind": "community",
+      "asset_symbol": "USDC",
+      "amount_decimal": 10,
+      "usd_at_receipt": 10,
+      "price_note": "stablecoin-1-to-1"
+    },
+    {
+      "chain": "ethereum",
+      "tx_hash": "0xd5fc86821a020016b3f5f8068427c7414ec61fba7b8b49cf1a0b7b8e0273003c",
+      "block_timestamp": 1777052807,
+      "from_address": "0xd465b8dcaa71d952683367ba8ec5fd3aa019f967",
+      "display": "0xd465b8...f967",
+      "kind": "community",
+      "asset_symbol": "ETH",
+      "amount_decimal": 0.1,
+      "usd_at_receipt": 233.08,
+      "price_note": "coingecko-historical-2026-04-24"
     }
   ]
 }
