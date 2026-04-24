@@ -78,15 +78,15 @@ function phaseToggleClass(phase: LaunchPhase, active: boolean): string {
 
   switch (phase) {
     case "announced":
-      return `pharos-toggle-pill ${FILTER_TOUCH} border-amber-400/20 bg-amber-500/12 text-amber-200 shadow-[inset_0_1px_0_rgba(255,255,255,0.05),0_10px_24px_rgba(245,158,11,0.12)]`;
+      return `pharos-toggle-pill ${FILTER_TOUCH} border-amber-500/30 bg-amber-500/12 text-amber-700 shadow-[inset_0_1px_0_rgba(255,255,255,0.05),0_10px_24px_rgba(245,158,11,0.12)] dark:border-amber-400/20 dark:text-amber-300`;
     case "testnet":
-      return `pharos-toggle-pill ${FILTER_TOUCH} border-indigo-400/20 bg-indigo-500/12 text-indigo-200 shadow-[inset_0_1px_0_rgba(255,255,255,0.05),0_10px_24px_rgba(99,102,241,0.12)]`;
+      return `pharos-toggle-pill ${FILTER_TOUCH} border-indigo-500/30 bg-indigo-500/12 text-indigo-700 shadow-[inset_0_1px_0_rgba(255,255,255,0.05),0_10px_24px_rgba(99,102,241,0.12)] dark:border-indigo-400/20 dark:text-indigo-300`;
     case "auditing":
-      return `pharos-toggle-pill ${FILTER_TOUCH} border-violet-400/20 bg-violet-500/12 text-violet-200 shadow-[inset_0_1px_0_rgba(255,255,255,0.05),0_10px_24px_rgba(139,92,246,0.12)]`;
+      return `pharos-toggle-pill ${FILTER_TOUCH} border-violet-500/30 bg-violet-500/12 text-violet-700 shadow-[inset_0_1px_0_rgba(255,255,255,0.05),0_10px_24px_rgba(139,92,246,0.12)] dark:border-violet-400/20 dark:text-violet-300`;
     case "beta":
-      return `pharos-toggle-pill ${FILTER_TOUCH} border-emerald-400/20 bg-emerald-500/12 text-emerald-200 shadow-[inset_0_1px_0_rgba(255,255,255,0.05),0_10px_24px_rgba(16,185,129,0.12)]`;
+      return `pharos-toggle-pill ${FILTER_TOUCH} border-emerald-500/30 bg-emerald-500/12 text-emerald-700 shadow-[inset_0_1px_0_rgba(255,255,255,0.05),0_10px_24px_rgba(16,185,129,0.12)] dark:border-emerald-400/20 dark:text-emerald-300`;
     case "launching-soon":
-      return `pharos-toggle-pill ${FILTER_TOUCH} border-sky-400/20 bg-sky-500/12 text-sky-200 shadow-[inset_0_1px_0_rgba(255,255,255,0.05),0_10px_24px_rgba(14,165,233,0.12)]`;
+      return `pharos-toggle-pill ${FILTER_TOUCH} border-sky-500/30 bg-sky-500/12 text-sky-700 shadow-[inset_0_1px_0_rgba(255,255,255,0.05),0_10px_24px_rgba(14,165,233,0.12)] dark:border-sky-400/20 dark:text-sky-300`;
   }
 }
 
@@ -179,7 +179,7 @@ export function UpcomingClient() {
                 setPegFilter(new Set());
                 setBackingFilter(new Set());
               }}
-              className="pharos-focus-ring self-start rounded-full border border-border/60 px-3 py-1.5 text-xs text-muted-foreground hover:text-foreground sm:self-auto"
+              className="pharos-focus-ring min-h-11 self-start rounded-full border border-border/60 px-3 py-1.5 text-xs text-muted-foreground hover:text-foreground sm:min-h-8 sm:self-auto"
             >
               Clear filters
             </button>

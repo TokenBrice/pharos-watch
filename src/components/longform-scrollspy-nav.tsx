@@ -183,7 +183,7 @@ export function LongformScrollspyNav({
                   setActiveId(section.id);
                 }}
                 className={cn(
-                  "pharos-focus-ring inline-flex min-h-9 shrink-0 snap-start items-center whitespace-nowrap rounded-full border px-3 py-1.5 text-xs font-medium transition-colors md:min-h-8 md:text-sm",
+                  "pharos-focus-ring inline-flex min-h-11 shrink-0 snap-start items-center whitespace-nowrap rounded-full border px-3 py-1.5 text-xs font-medium transition-colors md:min-h-8 md:text-sm",
                   effectiveActiveId === section.id
                     ? "border-foreground/35 bg-muted text-foreground"
                     : "border-border/60 bg-background/80 text-muted-foreground hover:border-foreground/20 hover:bg-muted hover:text-foreground",

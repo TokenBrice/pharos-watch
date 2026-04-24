@@ -1,5 +1,6 @@
 import { TableHead } from "@/components/ui/table";
 import { SortIcon } from "@/components/sort-icon";
+import { cn } from "@/lib/utils";
 
 interface SortableTableHeadProps<T extends string = string> {
   sortKey: T;
@@ -8,11 +9,16 @@ interface SortableTableHeadProps<T extends string = string> {
   label: string;
   toggleSort: (key: T) => void;
   getAriaSortValue: (key: T) => "ascending" | "descending" | "none";
-  handleSortKeyDown: (e: React.KeyboardEvent, key: T) => void;
+  adornment?: React.ReactNode;
   className?: string;
   title?: string;
-  children?: React.ReactNode;
   scope?: "col";
+}
+
+function getButtonAlignment(className: string): string {
+  if (className.includes("text-right")) return "justify-end";
+  if (className.includes("text-center")) return "justify-center";
+  return "justify-start";
 }
 
 export function SortableTableHead<T extends string = string>({
@@ -22,23 +28,30 @@ export function SortableTableHead<T extends string = string>({
   label,
   toggleSort,
   getAriaSortValue,
-  handleSortKeyDown,
+  adornment,
   className = "",
   title,
-  children,
   scope = "col",
 }: SortableTableHeadProps<T>) {
   return (
     <TableHead
       scope={scope}
-      className={`cursor-pointer hover:bg-muted/50 transition-colors ${className}`}
-      onClick={() => toggleSort(sortKey)}
+      className={className}
       aria-sort={getAriaSortValue(sortKey)}
-      tabIndex={0}
-      onKeyDown={(e) => handleSortKeyDown(e, sortKey)}
       title={title}
     >
-      {children ?? label} <SortIcon columnKey={sortKey} sortKey={currentSortKey} sortDirection={sortDirection} />
+      <span className={cn("flex w-full items-center gap-1", getButtonAlignment(className))}>
+        <button
+          type="button"
+          className="pharos-focus-ring -mx-1 inline-flex min-h-8 items-center gap-1 rounded-sm px-1 text-inherit transition-colors hover:bg-muted/50"
+          onClick={() => toggleSort(sortKey)}
+          aria-label={label ? `Sort by ${label}` : undefined}
+        >
+          <span>{label}</span>
+          <SortIcon columnKey={sortKey} sortKey={currentSortKey} sortDirection={sortDirection} />
+        </button>
+        {adornment}
+      </span>
     </TableHead>
   );
 }

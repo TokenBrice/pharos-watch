@@ -14,7 +14,7 @@ import { YIELD_TYPE_LABELS } from "@shared/lib/classification";
 import type { YieldRanking } from "@shared/types";
 import { TABLE_PAGE_SIZE } from "@/lib/constants";
 import { compareYieldRows, type YieldTableSortKey } from "@/components/yield-table-logic";
-import { MethodologyLabel } from "@/components/methodology-hint";
+import { MethodologyHint, MethodologyLabel } from "@/components/methodology-hint";
 import { YieldLeaderboardControls } from "@/components/yield-leaderboard-controls";
 import { YieldLeaderboardTableRow } from "@/components/yield-leaderboard-table-row";
 import { getYieldTypeLabel, matchesYieldSearch } from "@/components/yield-leaderboard-utils";
@@ -26,7 +26,8 @@ const YIELD_COLUMNS: readonly DataTableColumn<YieldTableSortKey>[] = [
   { id: "safety", label: "Safety", sortKey: "safetyScore", className: "hidden md:table-cell text-center", title: "Pharos Safety Grade / Score" },
   {
     id: "pys",
-    label: <MethodologyLabel topic="pys">PYS</MethodologyLabel>,
+    label: "PYS",
+    headerAdornment: <MethodologyHint topic="pys" />,
     sortKey: "pys",
     className: "text-right",
     title: "Pharos Yield Score: risk-adjusted yield ranking",
@@ -36,7 +37,8 @@ const YIELD_COLUMNS: readonly DataTableColumn<YieldTableSortKey>[] = [
   { id: "tvl", label: "TVL", sortKey: "tvl", className: "hidden lg:table-cell text-right", title: "Total value locked in yield source" },
   {
     id: "yieldStability",
-    label: <MethodologyLabel topic="yieldStability">Stability</MethodologyLabel>,
+    label: "Stability",
+    headerAdornment: <MethodologyHint topic="yieldStability" />,
     sortKey: "yieldStability",
     className: "hidden lg:table-cell text-right",
     title: "Yield stability over 30 days (0-100%)",
@@ -81,7 +83,6 @@ export function YieldLeaderboard({ rankings, logos, riskFreeRate, medianApy }: Y
     sortDirection,
     toggleSort,
     getAriaSortValue,
-    handleSortKeyDown,
     sortedRows: sorted,
     effectivePage,
     totalPages,
@@ -116,7 +117,6 @@ export function YieldLeaderboard({ rankings, logos, riskFreeRate, medianApy }: Y
           sortDirection,
           toggleSort,
           getAriaSortValue,
-          handleSortKeyDown,
         }}
         topSlot={
           <YieldLeaderboardControls

@@ -67,7 +67,7 @@ function sortChains(chains: ChainSummary[], key: ChainSortKey, dir: "asc" | "des
 
 export function ChainsLeaderboardClient() {
   const { data, isLoading, isError, error, refetch, dataUpdatedAt, meta } = useChains();
-  const { sortKey, sortDirection, toggleSort, getAriaSortValue, handleSortKeyDown } = useSort<ChainSortKey>("totalUsd", "desc");
+  const { sortKey, sortDirection, toggleSort, getAriaSortValue } = useSort<ChainSortKey>("totalUsd", "desc");
   const router = useRouter();
 
   const sorted = useMemo(() => {
@@ -225,10 +225,9 @@ export function ChainsLeaderboardClient() {
           sortDirection,
           toggleSort,
           getAriaSortValue,
-          handleSortKeyDown,
         }}
         containerClassName="overflow-y-auto md:max-h-[70vh]"
-        tableClassName="w-full"
+        tableClassName="min-w-[760px] w-full"
         headerClassName="sticky top-0 z-10"
       >
         {sorted.map((chain, i) => {

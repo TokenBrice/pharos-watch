@@ -15,20 +15,32 @@ import {
 import { cn } from "@/lib/utils";
 import type { TableDensity } from "@/hooks/use-table-density";
 
-export interface DataTableColumn<K extends string = string> {
+interface DataTableColumnBase {
   id: string;
-  label: React.ReactNode;
+  headerAdornment?: React.ReactNode;
   className?: string;
   title?: string;
-  sortKey?: K;
 }
+
+type DataTableStaticColumn = DataTableColumnBase & {
+  label: React.ReactNode;
+  sortKey?: undefined;
+  sortLabel?: undefined;
+};
+
+type DataTableSortableColumn<K extends string> = DataTableColumnBase & {
+  label: string;
+  sortKey: K;
+  sortLabel?: string;
+};
+
+export type DataTableColumn<K extends string = string> = DataTableStaticColumn | DataTableSortableColumn<K>;
 
 export interface DataTableSortControls<K extends string> {
   sortKey: K;
   sortDirection: "asc" | "desc";
   toggleSort: (key: K) => void;
   getAriaSortValue: (key: K) => "ascending" | "descending" | "none";
-  handleSortKeyDown: (e: React.KeyboardEvent, key: K) => void;
 }
 
 interface DataTableShellProps<K extends string> {
@@ -74,15 +86,13 @@ export function DataTableShell<K extends string>({
                   sortKey={column.sortKey}
                   currentSortKey={sort.sortKey}
                   sortDirection={sort.sortDirection}
-                  label={typeof column.label === "string" ? column.label : ""}
+                  label={column.sortLabel ?? (typeof column.label === "string" ? column.label : "")}
                   toggleSort={sort.toggleSort}
                   getAriaSortValue={sort.getAriaSortValue}
-                  handleSortKeyDown={sort.handleSortKeyDown}
+                  adornment={column.headerAdornment}
                   className={column.className}
                   title={column.title}
-                >
-                  {column.label}
-                </SortableTableHead>
+                />
               ) : (
                 <TableHead
                   key={column.id}

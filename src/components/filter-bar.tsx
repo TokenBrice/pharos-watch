@@ -41,7 +41,7 @@ export function FilterBar({
           {hasFilters && (
             <button
               onClick={clearAll}
-              className="pharos-focus-ring rounded-md px-1.5 py-1 text-xs text-muted-foreground hover:text-foreground"
+              className="pharos-focus-ring min-h-11 rounded-md px-2 py-1 text-xs text-muted-foreground hover:text-foreground sm:min-h-8"
             >
               Clear all
             </button>
@@ -53,13 +53,13 @@ export function FilterBar({
             placeholder="Search by name or symbol..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="h-11 border-border/70 pl-8 pr-8 text-sm sm:h-8 sm:text-xs"
+            className="h-11 border-border/70 pl-8 pr-12 text-sm sm:h-8 sm:pr-8 sm:text-xs"
             aria-label="Search stablecoins by name or symbol"
           />
           {searchQuery && (
             <button
               onClick={() => setSearchQuery("")}
-              className="pharos-focus-ring absolute right-1 top-1/2 -translate-y-1/2 rounded-md p-2 text-muted-foreground hover:text-foreground"
+              className="pharos-focus-ring absolute right-0 top-1/2 flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-md text-muted-foreground hover:text-foreground sm:right-1 sm:h-8 sm:w-8"
               aria-label="Clear search"
             >
               <X className="h-3.5 w-3.5" />
@@ -72,7 +72,7 @@ export function FilterBar({
         {FILTER_GROUPS.map((group) => (
           <div
             key={group.label}
-            className={`space-y-2 lg:flex-none lg:text-center${group.label === "Peg" ? " hidden sm:block" : ""}`}
+            className="space-y-2 lg:flex-none lg:text-center"
           >
             <p className="pharos-kicker lg:text-center">{group.label}</p>
             <ToggleGroup

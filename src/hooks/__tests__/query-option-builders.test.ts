@@ -11,6 +11,7 @@ vi.mock("@/lib/api", () => ({
 }));
 
 import { dexLiquidityHistoryQueryOptions, safetyScoreHistoryQueryOptions } from "../api-hooks";
+import { depegEventsInfiniteQueryOptions } from "../use-depeg-events";
 import { supplyHistoryQueryOptions } from "../use-stablecoins";
 import { mintBurnFlowsCoinQueryOptions } from "../use-mint-burn-flows";
 
@@ -62,5 +63,43 @@ describe("query option builders", () => {
     expect(safetyOptions.staleTime).toBe(24 * 60 * 60 * 1000);
     expect(safetyOptions.refetchInterval).toBe(2 * 24 * 60 * 60 * 1000);
     expect(safetyOptions.enabled).toBe(true);
+  });
+
+  it("passes TanStack Query cancellation signals to API fetches", async () => {
+    const options = supplyHistoryQueryOptions("usdc-circle");
+    const controller = new AbortController();
+
+    await options.queryFn?.({
+      signal: controller.signal,
+      queryKey: options.queryKey,
+      meta: undefined,
+    } as never);
+
+    expect(apiFetchMock).toHaveBeenLastCalledWith(
+      "/api/supply-history?stablecoin=usdc-circle&days=1825",
+      expect.anything(),
+      { signal: controller.signal },
+      undefined,
+    );
+  });
+
+  it("passes TanStack Query cancellation signals to infinite API fetches", async () => {
+    const options = depegEventsInfiniteQueryOptions("usdc-circle");
+    const controller = new AbortController();
+
+    await options.queryFn?.({
+      signal: controller.signal,
+      queryKey: options.queryKey,
+      meta: undefined,
+      pageParam: 0,
+      direction: "forward",
+      client: null,
+    } as never);
+
+    expect(apiFetchWithMetaMock).toHaveBeenLastCalledWith(
+      "/api/depeg-events?stablecoin=usdc-circle&limit=100&offset=0",
+      expect.anything(),
+      { signal: controller.signal },
+    );
   });
 });

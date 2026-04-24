@@ -28,7 +28,7 @@ function formatBlacklistAmountCell(evt: BlacklistEvent): string {
   return "\u2014";
 }
 import { EVENT_BADGE_STYLES, EVENT_LABELS } from "@shared/lib/classification";
-import { getNextSortState, shouldToggleSortOnKeyDown } from "@/hooks/use-sort";
+import { getNextSortState } from "@/hooks/use-sort";
 
 const AMOUNT_STATUS_TOOLTIPS: Record<string, string> = {
   recoverable_pending: "Amount not yet recovered from historical balance — backfill pass pending.",
@@ -78,13 +78,6 @@ export function BlacklistTable({
     if (sortKey !== columnKey) return "none";
     return sortDirection === "asc" ? "ascending" : "descending";
   }, [sortDirection, sortKey]);
-
-  const handleSortKeyDown = useCallback((e: React.KeyboardEvent, key: BlacklistSortKey) => {
-    if (shouldToggleSortOnKeyDown(e.key)) {
-      e.preventDefault();
-      toggleSort(key);
-    }
-  }, [toggleSort]);
 
   const handleCsvExport = useCallback(() => {
     downloadCsv(events, [
@@ -149,7 +142,6 @@ export function BlacklistTable({
         sortDirection,
         toggleSort,
         getAriaSortValue,
-        handleSortKeyDown,
       }}
       striped
       containerClassName="rounded-xl border"

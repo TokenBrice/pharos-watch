@@ -24,4 +24,33 @@ describe("DataTableShell", () => {
     expect(shell?.className).not.toContain("overflow-x-hidden");
     expect(shell?.className).not.toContain("lg:overflow-x-hidden");
   });
+
+  it("keeps sortable header adornments outside the native sort button", () => {
+    render(
+      <DataTableShell
+        columns={[{
+          id: "score",
+          label: "Score",
+          sortKey: "score",
+          headerAdornment: <button type="button">Help</button>,
+        }]}
+        sort={{
+          sortKey: "score",
+          sortDirection: "desc",
+          toggleSort: () => {},
+          getAriaSortValue: () => "descending",
+        }}
+      >
+        <tr>
+          <td>95</td>
+        </tr>
+      </DataTableShell>,
+    );
+
+    const sortButton = screen.getByRole("button", { name: "Sort by Score" });
+    const helpButton = screen.getByRole("button", { name: "Help" });
+
+    expect(sortButton.contains(helpButton)).toBe(false);
+    expect(sortButton.closest("th")?.contains(helpButton)).toBe(true);
+  });
 });

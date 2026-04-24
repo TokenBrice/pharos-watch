@@ -19,7 +19,7 @@ import {
   normalizeVisibleColumns,
   type ColumnId,
 } from "@/hooks/use-preferences";
-import { MethodologyLabel } from "@/components/methodology-hint";
+import { MethodologyHint } from "@/components/methodology-hint";
 import { TablePagination } from "@/components/table-pagination";
 import { StablecoinTableEmptyState } from "@/components/stablecoin-table-empty-state";
 import { StablecoinVirtualRow } from "@/components/stablecoin-table-row";
@@ -39,7 +39,9 @@ const EMPTY_PINNED_STABLECOIN_IDS: readonly string[] = [];
 
 interface StablecoinHeaderDef {
   id: ColumnId;
-  label: React.ReactNode;
+  label: string;
+  sortLabel?: string;
+  headerAdornment?: React.ReactNode;
   className?: string;
   title?: string;
   sortKey?: StablecoinTableSortKey;
@@ -61,21 +63,24 @@ const STABLECOIN_HEADER_DEFS: readonly StablecoinHeaderDef[] = [
   { id: "change7d", label: "7d", sortKey: "change7d", className: "text-right", title: "7-day market cap change" },
   {
     id: "grade",
-    label: <MethodologyLabel topic="safetyScore">Grade</MethodologyLabel>,
+    label: "Grade",
+    headerAdornment: <MethodologyHint topic="safetyScore" />,
     sortKey: "grade",
     className: "text-center",
     title: "Pharos Grade: overall safety score across peg stability, liquidity, resilience, decentralization, and dependency risk",
   },
   {
     id: "stability",
-    label: <MethodologyLabel topic="pegScore">Peg Score</MethodologyLabel>,
+    label: "Peg Score",
+    headerAdornment: <MethodologyHint topic="pegScore" />,
     sortKey: "stability",
     className: "text-right",
     title: "Peg Stability Score (0-100): measures peg-holding consistency over 30 days",
   },
   {
     id: "liquidity",
-    label: <MethodologyLabel topic="liquidityScore">Liq</MethodologyLabel>,
+    label: "Liq",
+    headerAdornment: <MethodologyHint topic="liquidityScore" />,
     sortKey: "liquidity",
     className: "text-right",
     title: "DEX Liquidity Score: measures pool depth, volume, and diversity across decentralized exchanges",
@@ -127,13 +132,16 @@ export function StablecoinTable({
   onClearSearch,
   onClearFilters,
 }: StablecoinTableProps) {
-  const { sortKey, sortDirection, toggleSort, getAriaSortValue, handleSortKeyDown } = useSort<StablecoinTableSortKey>(
+  const { sortKey, sortDirection, toggleSort, getAriaSortValue } = useSort<StablecoinTableSortKey>(
     "mcap",
     "desc",
   );
   const sort = useMemo(() => ({ key: sortKey, direction: sortDirection }), [sortKey, sortDirection]);
   const router = useRouter();
   const prefetch = usePrefetchStablecoin();
+  const handleNavigate = useCallback((coinId: string) => {
+    router.push(buildStablecoinUrl(coinId));
+  }, [router]);
   const scrollRef = useRef<HTMLDivElement>(null);
   const tableRef = useRef<HTMLDivElement>(null);
 
@@ -162,9 +170,7 @@ export function StablecoinTable({
   useEffect(() => {
     function handleFocusTable() {
       tableRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
-      // Focus the first row if available
-      const firstRow = tableRef.current?.querySelector<HTMLElement>('[role="link"]');
-      firstRow?.focus();
+      tableRef.current?.querySelector<HTMLElement>("[data-stablecoin-detail-link='true']")?.focus();
     }
 
     window.addEventListener("focus-stablecoin-table", handleFocusTable);
@@ -288,15 +294,13 @@ export function StablecoinTable({
                     sortKey={column.sortKey}
                     currentSortKey={sortKey}
                     sortDirection={sortDirection}
-                    label={typeof column.label === "string" ? column.label : ""}
+                    label={column.sortLabel ?? (typeof column.label === "string" ? column.label : "")}
                     toggleSort={toggleSort}
                     getAriaSortValue={getAriaSortValue}
-                    handleSortKeyDown={handleSortKeyDown}
+                    adornment={column.headerAdornment}
                     className={column.className}
                     title={column.title}
-                  >
-                    {column.label}
-                  </SortableTableHead>
+                  />
                 ) : (
                   <TableHead key={column.id} scope="col" className={column.className} title={column.title}>
                     {column.label}
@@ -330,7 +334,7 @@ export function StablecoinTable({
                   showPinnedControl={showPinnedControls}
                   isPinned={pinnedStablecoinSet.has(coin.id)}
                   onTogglePinned={onTogglePinnedStablecoin}
-                  onNavigate={(coinId) => router.push(buildStablecoinUrl(coinId))}
+                  onNavigate={handleNavigate}
                   onPrefetch={prefetch}
                 />
               );

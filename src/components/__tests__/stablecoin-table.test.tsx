@@ -248,7 +248,7 @@ describe("StablecoinTable", () => {
     expect(usdtRow?.querySelectorAll("td")[1]?.textContent).toBe("1");
   });
 
-  it("adds full variant context to the row and inner detail link", () => {
+  it("adds full variant context to the accessible detail link", () => {
     render(
       <StablecoinTable
         data={[susds]}
@@ -259,7 +259,7 @@ describe("StablecoinTable", () => {
     );
 
     expect(screen.getByLabelText("Savings variant")).toBeTruthy();
-    expect(screen.getAllByRole("link", { name: /View Sky Savings USDS \(sUSDS\) details, Savings variant/i })).toHaveLength(2);
+    expect(screen.getAllByRole("link", { name: /View Sky Savings USDS \(sUSDS\) details, Savings variant/i })).toHaveLength(1);
     expect(screen.getByText("Savings")).toBeTruthy();
   });
 

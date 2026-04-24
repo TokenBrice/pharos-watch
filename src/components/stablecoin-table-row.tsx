@@ -1,5 +1,6 @@
 "use client";
 
+import { memo } from "react";
 import Link from "next/link";
 import { Star } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
@@ -78,7 +79,7 @@ function MiniSparkline({ values }: { values: number[] }) {
   );
 }
 
-export function StablecoinVirtualRow({
+function StablecoinVirtualRowBase({
   coin,
   rank,
   isStriped,
@@ -124,7 +125,7 @@ export function StablecoinVirtualRow({
   return (
     <TableRow
       key={coin.id}
-      className={`group cursor-pointer focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:outline-none ${riskClass}`}
+      className={`group cursor-pointer ${riskClass}`}
       style={{ height: densityConfig.rowHeight }}
       data-row-striped={isStriped ? "true" : undefined}
       onClick={(event) => {
@@ -132,16 +133,6 @@ export function StablecoinVirtualRow({
         onNavigate(coin.id);
       }}
       onMouseEnter={() => onPrefetch(coin.id)}
-      onKeyDown={(e) => {
-        if (e.target !== e.currentTarget || isNestedInteractiveTarget(e.target, e.currentTarget)) return;
-        if (e.key === "Enter" || e.key === " ") {
-          e.preventDefault();
-          onNavigate(coin.id);
-        }
-      }}
-      role="link"
-      aria-label={`View ${coin.name} (${coin.symbol}) details${variantContext ? `, ${variantContext}` : ""}`}
-      tabIndex={0}
     >
       {showPinnedControl && (
         <TableCell className="text-center">
@@ -186,6 +177,7 @@ export function StablecoinVirtualRow({
               onKeyDown={(e) => e.stopPropagation()}
               onMouseEnter={() => onPrefetch(coin.id)}
               aria-label={`View ${coin.name} (${coin.symbol}) details${variantContext ? `, ${variantContext}` : ""}`}
+              data-stablecoin-detail-link="true"
             >
               <StablecoinLogo src={logos?.[coin.id]} name={coin.name} size={densityConfig.iconSize} />
               <span className="min-w-0">
@@ -379,3 +371,6 @@ export function StablecoinVirtualRow({
     </TableRow>
   );
 }
+
+export const StablecoinVirtualRow = memo(StablecoinVirtualRowBase);
+StablecoinVirtualRow.displayName = "StablecoinVirtualRow";

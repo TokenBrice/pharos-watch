@@ -1,10 +1,16 @@
 "use client";
 
-import { useQuery, type UseQueryOptions, type UseQueryResult } from "@tanstack/react-query";
+import {
+  useQuery,
+  type QueryFunctionContext,
+  type UseQueryOptions,
+  type UseQueryResult,
+} from "@tanstack/react-query";
 import { apiFetch, apiFetchWithMeta, type ApiContractMode, type ApiMeta } from "@/lib/api";
 import type { ZodType } from "zod";
 
 const DEFAULT_RETRY_DELAY = (attempt: number) => Math.min(1000 * 2 ** attempt, 10000);
+type ApiQueryFunction<T> = (context?: Pick<QueryFunctionContext<readonly unknown[]>, "signal">) => Promise<T>;
 
 interface PollingQueryControlOptions {
   enabled?: boolean;
@@ -24,17 +30,22 @@ export interface PollingWindow {
   refetchInterval: number;
 }
 
+function mergeFetchInitSignal(fetchInit: RequestInit | undefined, signal: AbortSignal | undefined): RequestInit | undefined {
+  if (!signal) return fetchInit;
+  if (!fetchInit) return { signal };
+  if (!fetchInit.signal || fetchInit.signal === signal) return { ...fetchInit, signal };
+  return { ...fetchInit, signal: AbortSignal.any([fetchInit.signal, signal]) };
+}
+
 export function createApiQueryFn<T>(
   path: string,
   schema?: ZodType<T>,
   fetchInit?: RequestInit,
   contractMode?: ApiContractMode,
-): () => Promise<T> {
-  return () => {
-    if (fetchInit) {
-      return apiFetch<T>(path, schema, fetchInit, contractMode);
-    }
-    return apiFetch<T>(path, schema, undefined, contractMode);
+): ApiQueryFunction<T> {
+  return (context) => {
+    const requestInit = mergeFetchInitSignal(fetchInit, context?.signal);
+    return apiFetch<T>(path, schema, requestInit, contractMode);
   };
 }
 
@@ -44,12 +55,10 @@ export function createApiQueryFnWithMeta<T>(
   fetchInit?: RequestInit,
   metaMaxAgeSec?: number,
   contractMode?: ApiContractMode,
-): () => Promise<{ data: T; meta: ApiMeta | null }> {
-  return () => {
-    if (fetchInit) {
-      return apiFetchWithMeta<T>(path, schema, fetchInit, metaMaxAgeSec, contractMode);
-    }
-    return apiFetchWithMeta<T>(path, schema, undefined, metaMaxAgeSec, contractMode);
+): ApiQueryFunction<{ data: T; meta: ApiMeta | null }> {
+  return (context) => {
+    const requestInit = mergeFetchInitSignal(fetchInit, context?.signal);
+    return apiFetchWithMeta<T>(path, schema, requestInit, metaMaxAgeSec, contractMode);
   };
 }
 

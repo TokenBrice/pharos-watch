@@ -40,7 +40,7 @@ export function ApiReferenceMobileNav({ sections, activeId, onNavigate }: ApiRef
           type="button"
           onClick={() => setOpen(true)}
           aria-label="Open API navigation"
-          className="pharos-focus-ring inline-flex size-9 items-center justify-center rounded-lg border border-border/60 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+          className="pharos-focus-ring inline-flex size-11 items-center justify-center rounded-lg border border-border/60 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground sm:size-9"
         >
           <Menu className="size-4" />
         </button>

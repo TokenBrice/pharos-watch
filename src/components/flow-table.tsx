@@ -38,7 +38,7 @@ import {
   PRESSURE_VALUE_CLASS,
   type FlowTableSortKey,
 } from "@/components/flow-table-logic";
-import { MethodologyLabel } from "@/components/methodology-hint";
+import { MethodologyHint } from "@/components/methodology-hint";
 
 interface FlowTableProps {
   coins: MintBurnCoinFlow[];
@@ -49,7 +49,8 @@ const FLOW_TABLE_COLUMNS: readonly DataTableColumn<FlowTableSortKey>[] = [
   { id: "coin", label: "Coin" },
   {
     id: "pressure",
-    label: <MethodologyLabel topic="pressureShift">Pressure vs 30D</MethodologyLabel>,
+    label: "Pressure vs 30D",
+    headerAdornment: <MethodologyHint topic="pressureShift" />,
     sortKey: "pressure",
     className: "text-right",
   },
@@ -69,7 +70,6 @@ export function FlowTable({ coins, isLoading }: FlowTableProps) {
     sortDirection,
     toggleSort,
     getAriaSortValue,
-    handleSortKeyDown,
     sortedRows: sorted,
   } = useSortedTableRows<MintBurnCoinFlow, FlowTableSortKey>(
     coins,
@@ -158,7 +158,6 @@ export function FlowTable({ coins, isLoading }: FlowTableProps) {
         sortDirection,
         toggleSort,
         getAriaSortValue,
-        handleSortKeyDown,
       }}
     >
       {sorted.map((coin) => {

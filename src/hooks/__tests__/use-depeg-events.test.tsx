@@ -68,7 +68,7 @@ describe("useInfiniteDepegEvents", () => {
       refetchInterval: number;
       queryKey: unknown[];
       getNextPageParam: (lastPage: { data: { events: unknown[]; total: number } }, allPages: Array<{ data: { events: unknown[]; total: number } }>) => number | undefined;
-      queryFn: ({ pageParam }: { pageParam: number }) => Promise<unknown>;
+      queryFn: ({ pageParam, signal }: { pageParam: number; signal?: AbortSignal }) => Promise<unknown>;
     };
     expect(options.queryKey).toEqual(["depeg-events", "infinite", "usdc-circle"]);
     expect(options.staleTime).toBe(15 * 60 * 1000);
@@ -85,6 +85,7 @@ describe("useInfiniteDepegEvents", () => {
     expect(apiFetchWithMetaMock).toHaveBeenCalledWith(
       "/api/depeg-events?stablecoin=usdc-circle&limit=100&offset=200",
       expect.anything(),
+      { signal: undefined },
     );
   });
 });

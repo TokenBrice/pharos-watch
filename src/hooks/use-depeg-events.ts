@@ -36,13 +36,14 @@ export function depegEventsInfiniteQueryOptions(stablecoinId?: string) {
     staleTime,
     refetchInterval,
     retry: 2,
-    queryFn: async ({ pageParam }) => apiFetchWithMeta<DepegEventsResponse>(
+    queryFn: async ({ pageParam, signal }) => apiFetchWithMeta<DepegEventsResponse>(
       buildDepegEventsPath({
         stablecoinId,
         limit: DEPEG_EVENTS_PAGE_SIZE,
         offset: pageParam,
       }),
       DepegEventsResponseSchema,
+      { signal },
     ),
     getNextPageParam: (lastPage, allPages) => {
       const loaded = allPages.reduce((sum, page) => sum + page.data.events.length, 0);
