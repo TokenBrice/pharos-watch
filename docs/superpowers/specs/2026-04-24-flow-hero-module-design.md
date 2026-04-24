@@ -81,7 +81,7 @@ Single `<article>` card with two internal registers:
 ### `src/components/flow-brrr-overview.tsx`
 
 - `FlowBrrrOverview` remains the only module rendered from `src/app/flows/client.tsx` under `<section aria-label="Mint/burn overview">`.
-- Inside it, render a new internal sub-component — `FlowReceiptBand` — below the existing hero content. This is either inlined or lifted into `src/components/flow-receipt-band.tsx` (preferred for file size discipline, since `flow-brrr-overview.tsx` is already ~400 lines).
+- Inside it, render a new internal sub-component — `FlowReceiptBand` — below the existing hero content. This is either inlined or adapted from the existing `src/components/flow-pressure-receipt.tsx` implementation so the spec keeps pointing at a real source path.
 - `FlowBrrrOverview` passes `gauge`, `coins`, `weeklyHourly`, `scopeLabel`, `syncWarning` down to the receipt band. The new `scopeLabel` and `syncWarning` props must be added to `FlowBrrrOverviewProps`.
 - `buildSnapshot` is trimmed: fields consumed only by the removed tile grids (`mint24h`, `burn24h`, `mint7d`, `burn7d`, `net24h`, `net7d`, `topMint`, `topBurn`) move to the receipt model or are computed from the snapshot's existing totals — keep whichever avoids duplicated summation. The scene/gauge-driving fields (`score`, `netDirection`, `pressureState`, `directionUi`, `pressureUi`, `leverPct`, `has24hActivity`, `headline`, `description`, `trackedCoins`, `sceneIntensity`, `sceneStress`) stay.
 - The removed left-column tile grids, the removed right-column top-minter/burner sub-grid, and the methodology-labelled Bank Run Gauge block are rearranged so the lever fills the freed space in the left column.
@@ -127,7 +127,7 @@ Single `<article>` card with two internal registers:
 ## Tests
 
 - Existing `/flows/` page test (`src/app/flows/page.test.tsx`) mocks `FlowBrrrOverview` and should continue to pass unchanged.
-- `src/components/__tests__/flow-pressure-receipt.test.tsx` — re-point at `FlowReceiptBand` (same model inputs, same assertions on tile values, coverage, sync warning). File renamed to `flow-receipt-band.test.tsx` to match the new component name.
+- `src/components/__tests__/flow-pressure-receipt.test.tsx` — re-point at `FlowReceiptBand` if the component moves inside the overview; keep the same model inputs and assertions on tile values, coverage, and sync warning.
 - `src/lib/__tests__/flow-pressure-receipt-model.test.ts` — unchanged; covers `buildFlowPressureReceiptModel` which is preserved as-is.
 - No new test fixtures required — the receipt model is unchanged.
 
