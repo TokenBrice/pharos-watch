@@ -30,24 +30,27 @@ describe("handleSupplyHistory", () => {
   });
 
   it("returns 400 when stablecoin param is missing", async () => {
-    const db = mockD1([]);
+    const db = mockD1([], { requireMatch: true });
     const res = await handleSupplyHistory(db, new URL("https://x/api/supply-history"));
     expect(res.status).toBe(400);
     expect(await res.json()).toEqual({ error: "Missing ?stablecoin= parameter" });
+    expect(db.getHistory()).toEqual([]);
   });
 
   it("returns 404 for unknown stablecoin ID", async () => {
-    const db = mockD1([]);
+    const db = mockD1([], { requireMatch: true });
     const res = await handleSupplyHistory(db, new URL("https://x/api/supply-history?stablecoin=<script>"));
     expect(res.status).toBe(404);
     expect(await res.json()).toEqual({ error: "Unknown stablecoin" });
+    expect(db.getHistory()).toEqual([]);
   });
 
   it("rejects out-of-range day windows instead of clamping them", async () => {
-    const db = mockD1([]);
+    const db = mockD1([], { requireMatch: true });
     const res = await handleSupplyHistory(db, new URL("https://x/api/supply-history?stablecoin=usdt-tether&days=9999"));
     expect(res.status).toBe(400);
     expect(await res.json()).toEqual({ error: "Invalid days: must be between 1 and 1825" });
+    expect(db.getHistory()).toEqual([]);
   });
 
   it("maps snake_case columns to camelCase", async () => {

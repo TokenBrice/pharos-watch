@@ -364,7 +364,7 @@ async function fetchOnChainMcap(
   const supplyContract = selectSingleOnChainSupplyContract(meta);
   if (!supplyContract) {
     if ((meta.contracts?.length ?? 0) > 1) {
-      console.warn(`[fiat-cg] ${meta.symbol}: skipping on-chain supply fallback because multiple supported contracts could undercount global supply`);
+      console.warn(`[fiat-cg] ${meta.symbol}: skipping on-chain supply fallback because multiple contracts could undercount global supply`);
     }
     return null;
   }

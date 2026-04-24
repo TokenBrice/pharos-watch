@@ -181,12 +181,14 @@ describe("AltPegsClient", () => {
     const { container } = render(<AltPegsClient />);
 
     const pageText = container.textContent ?? "";
-    expect(pageText.indexOf("How Much Of The Total Stablecoin Market Sits Outside USD?")).toBeLessThan(
-      pageText.indexOf("Which Non-USD Pegs Matter Now"),
-    );
-    expect(pageText.indexOf("cohort-chart default 1y")).toBeLessThan(
-      pageText.indexOf("Which Non-USD Pegs Matter Now"),
-    );
+    const shareChartIndex = pageText.indexOf("How Much Of The Total Stablecoin Market Sits Outside USD?");
+    const cohortChartIndex = pageText.indexOf("cohort-chart default 1y");
+    const tableIndex = pageText.indexOf("Which Non-USD Pegs Matter Now");
+    expect(shareChartIndex).toBeGreaterThanOrEqual(0);
+    expect(cohortChartIndex).toBeGreaterThanOrEqual(0);
+    expect(tableIndex).toBeGreaterThanOrEqual(0);
+    expect(shareChartIndex).toBeLessThan(tableIndex);
+    expect(cohortChartIndex).toBeLessThan(tableIndex);
   });
 
   it("renders peg drill-down links from the distribution card", () => {

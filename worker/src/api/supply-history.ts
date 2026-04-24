@@ -16,7 +16,11 @@ export const handleSupplyHistory = withErrorHandler("supply-history", async (
   db: D1Database,
   url: URL
 ): Promise<Response> => {
-  const completedSnapshot = await getCompletedSupplySnapshot(db);
+  let completedSnapshotPromise: ReturnType<typeof getCompletedSupplySnapshot> | null = null;
+  const loadCompletedSnapshot = () => {
+    completedSnapshotPromise ??= getCompletedSupplySnapshot(db);
+    return completedSnapshotPromise;
+  };
 
   return handleStablecoinHistoryRequest(db, url, {
     query: {
@@ -27,6 +31,7 @@ export const handleSupplyHistory = withErrorHandler("supply-history", async (
     },
     cacheControl: CACHE_PROFILES.slow,
     fetchRows: async ({ db: database, stablecoinId, cutoff }) => {
+      const completedSnapshot = await loadCompletedSnapshot();
       const latestSnapshotFilter = completedSnapshot == null ? "" : " AND snapshot_date <= ?";
       const latestSnapshotBinds = completedSnapshot == null ? [] : [completedSnapshot.snapshotDate];
       const result = await database
@@ -45,7 +50,8 @@ export const handleSupplyHistory = withErrorHandler("supply-history", async (
       circulatingUsd: row.circulating_usd,
       price: row.price,
     }),
-    freshness: ({ rows }) => {
+    freshness: async ({ rows }) => {
+      const completedSnapshot = await loadCompletedSnapshot();
       const latestRowTimestamp = rows.reduce<number | null>(
         (latest, row) => latest == null ? row.snapshot_date : Math.max(latest, row.snapshot_date),
         null,
