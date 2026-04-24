@@ -601,7 +601,6 @@ function Ship({
         width={logoSize}
         height={logoSize}
         clipPath={`url(#${clipId})`}
-        style={entry.darkInvert ? { filter: "invert(1)" } : undefined}
       />
 
       {/* Depth ticks below hull */}
@@ -753,7 +752,7 @@ export function NauticalChart({ chains, globalTotalUsd }: { chains: ChainSummary
           viewBox={`0 0 ${SCENE_WIDTH} ${SCENE_HEIGHT}`}
           role="img"
           aria-label={`Nautical chart of ${topCount} largest stablecoin chains`}
-          className="block w-full text-foreground"
+          className="block w-full text-slate-100"
           preserveAspectRatio="xMidYMid meet"
         >
           <defs>
