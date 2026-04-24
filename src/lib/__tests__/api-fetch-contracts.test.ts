@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { z } from "zod";
-import { StablecoinChartResponseSchema } from "@shared/types";
+import { StablecoinChartResponseSchema, StablecoinReservesResponseSchema } from "@shared/types";
 import { ReportCardsResponseSchema } from "@shared/types/report-cards";
 import { PHAROS_WEB_ACCEPT_MARKER } from "@shared/lib/request-source-marker";
 import {
@@ -158,6 +158,53 @@ describe("api contract validation policy", () => {
     ])).toThrow();
   });
 
+  it("parses valid stablecoin reserve payloads with open metadata details", () => {
+    const parsed = StablecoinReservesResponseSchema.parse({
+      stablecoinId: "iusd-infinifi",
+      mode: "live",
+      reserves: [{ name: "Test Farm", pct: 100, risk: "low" }],
+      estimated: false,
+      liveAt: 1_761_235_200,
+      source: "infinifi",
+      displayUrl: "https://example.com/reserves",
+      evidenceUrls: ["https://example.com/proof"],
+      displayBadge: { kind: "live", label: "Live" },
+      metadata: {
+        freshnessMode: "not-applicable",
+        yieldBasisCollateralPct: 89.7,
+        adapterSpecificField: { retained: true },
+        details: {
+          nestedAdapterTelemetry: { retained: true },
+        },
+        redemption: {
+          capacityUsd: 1000,
+          routeStatus: "open",
+          adapterSpecificRedemptionField: "retained",
+        },
+      },
+      provenance: {
+        evidenceClass: "independent",
+        sourceModel: "dynamic-mix",
+        freshnessMode: "not-applicable",
+        scoringEligible: true,
+      },
+      sync: {
+        enabled: true,
+        status: "ok",
+        stale: false,
+        bootstrap: false,
+        lastAttemptedAt: 1_761_235_200,
+        lastSuccessAt: 1_761_235_200,
+      },
+    });
+
+    expect(parsed.metadata?.details).toEqual({
+      nestedAdapterTelemetry: { retained: true },
+    });
+    expect(parsed.metadata?.adapterSpecificField).toEqual({ retained: true });
+    expect(parsed.metadata?.redemption?.adapterSpecificRedemptionField).toBe("retained");
+  });
+
   it("resolves production API base from known hostnames when env is empty", () => {
     expect(resolveApiBase("pharos.watch", "")).toBe("https://api.pharos.watch");
     expect(resolveApiBase("c0e7dcc0.stablecoin-dashboard.pages.dev", "")).toBe("https://api.pharos.watch");
@@ -293,6 +340,44 @@ describe("api contract validation policy", () => {
     globalThis.fetch = vi.fn().mockResolvedValue(new Response("Not found", { status: 404 }));
     const result = await fetchStablecoinReserves("usdc-circle");
     expect(result).toBeNull();
+  });
+
+  it("fetchStablecoinReserves validates successful reserve responses", async () => {
+    const body = {
+      stablecoinId: "iusd-infinifi",
+      mode: "live",
+      reserves: [{ name: "Test Farm", pct: 100, risk: "low" }],
+      estimated: false,
+      provenance: {
+        evidenceClass: "independent",
+        sourceModel: "dynamic-mix",
+        scoringEligible: true,
+      },
+    };
+    globalThis.fetch = vi.fn().mockResolvedValue(
+      new Response(JSON.stringify(body), {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      }),
+    );
+
+    await expect(fetchStablecoinReserves("iusd-infinifi")).resolves.toEqual(body);
+  });
+
+  it("fetchStablecoinReserves throws SchemaValidationError on malformed 200 payloads", async () => {
+    globalThis.fetch = vi.fn().mockResolvedValue(
+      new Response(JSON.stringify({
+        stablecoinId: "iusd-infinifi",
+        mode: "live",
+        reserves: [{ name: "Test Farm", pct: "100", risk: "low" }],
+        estimated: false,
+      }), {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      }),
+    );
+
+    await expect(fetchStablecoinReserves("iusd-infinifi")).rejects.toBeInstanceOf(SchemaValidationError);
   });
 
   it("still throws on 404 when nullOn404 is not set", async () => {

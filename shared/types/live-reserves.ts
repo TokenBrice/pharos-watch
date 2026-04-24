@@ -1,6 +1,8 @@
+import { z } from "zod";
 import type { DependencyType } from "./dependency-types";
 import {
   RESERVE_RISK_VALUES,
+  ReserveSliceSchema,
   type ReserveRisk,
   type ReserveSlice,
 } from "./reserves";
@@ -266,3 +268,84 @@ export interface StablecoinReservesResponse {
   displayBadge?: ReserveDisplayBadgeView;
   sync?: ReserveSyncStateView;
 }
+
+const UnknownRecordSchema: z.ZodType<Record<string, unknown>> = z.record(z.string(), z.unknown());
+
+export const LiveReserveRedemptionTelemetrySchema: z.ZodType<LiveReserveRedemptionTelemetry> = z.object({
+  capacityUsd: z.number().finite().optional(),
+  capacityRatioOfSupply: z.number().finite().optional(),
+  capacityKind: z.enum(LIVE_RESERVE_REDEMPTION_CAPACITY_KIND_VALUES).optional(),
+  freshnessKind: z.enum(LIVE_RESERVE_REDEMPTION_FRESHNESS_KIND_VALUES).optional(),
+  sourceTimestamp: z.number().finite().optional(),
+  blockNumber: z.number().finite().optional(),
+  routeStatus: RedemptionRouteStatusSchema.optional(),
+  routeStatusSource: RedemptionRouteStatusSourceSchema.optional(),
+  routeStatusReason: z.string().optional(),
+  routeStatusReviewedAt: z.string().optional(),
+  holderEligibility: z.string().optional(),
+  settlementDelaySec: z.number().finite().optional(),
+  queueDepthUsd: z.number().finite().optional(),
+  dailyLimitUsd: z.number().finite().optional(),
+  minRedeemUsd: z.number().finite().optional(),
+  feeBps: z.number().finite().optional(),
+  sourceUrls: z.array(z.string()).optional(),
+}).passthrough();
+
+export const LiveReserveSnapshotMetadataSchema: z.ZodType<LiveReserveSnapshotMetadata> = z.object({
+  sourceTimestamp: z.number().finite().optional(),
+  freshnessMode: z.enum(LIVE_RESERVE_FRESHNESS_MODE_VALUES).optional(),
+  unknownExposurePct: z.number().finite().optional(),
+  yieldBasisCollateralUsd: z.number().finite().optional(),
+  yieldBasisCollateralPct: z.number().finite().optional(),
+  supplyUsd: z.number().finite().optional(),
+  totalReserveUsd: z.number().finite().optional(),
+  totalAssetsUsd: z.number().finite().optional(),
+  totalLiabilitiesUsd: z.number().finite().optional(),
+  shareholderEquityUsd: z.number().finite().optional(),
+  collateralizationRatio: z.number().finite().optional(),
+  immediateRedeemableUsd: z.number().finite().optional(),
+  immediateRedeemableRatio: z.number().finite().optional(),
+  redemptionFeeBps: z.number().finite().optional(),
+  buyFeeBpsMin: z.number().finite().optional(),
+  buyFeeBpsMax: z.number().finite().optional(),
+  redemption: LiveReserveRedemptionTelemetrySchema.optional(),
+  details: UnknownRecordSchema.optional(),
+}).passthrough();
+
+export const ReserveProvenanceViewSchema: z.ZodType<ReserveProvenanceView> = z.object({
+  evidenceClass: z.enum(LIVE_RESERVE_EVIDENCE_CLASS_VALUES),
+  sourceModel: z.enum(LIVE_RESERVE_SOURCE_MODEL_VALUES),
+  freshnessMode: z.enum(LIVE_RESERVE_FRESHNESS_MODE_VALUES).optional(),
+  scoringEligible: z.boolean(),
+}).strict();
+
+export const ReserveDisplayBadgeViewSchema: z.ZodType<ReserveDisplayBadgeView> = z.object({
+  kind: z.enum(RESERVE_DISPLAY_BADGE_KIND_VALUES),
+  label: z.string(),
+}).strict();
+
+export const ReserveSyncStateViewSchema: z.ZodType<ReserveSyncStateView> = z.object({
+  enabled: z.boolean(),
+  status: z.enum(["ok", "degraded", "error", "skipped"]),
+  stale: z.boolean(),
+  bootstrap: z.boolean(),
+  lastAttemptedAt: z.number().finite().optional(),
+  lastSuccessAt: z.number().finite().optional(),
+  warnings: z.array(z.string()).optional(),
+  lastError: z.string().optional(),
+}).strict();
+
+export const StablecoinReservesResponseSchema: z.ZodType<StablecoinReservesResponse> = z.object({
+  stablecoinId: z.string(),
+  mode: z.enum(["live", "live-stale", "curated-fallback", "template-fallback", "unavailable"]),
+  reserves: z.array(ReserveSliceSchema),
+  estimated: z.boolean(),
+  liveAt: z.number().finite().optional(),
+  source: z.string().optional(),
+  displayUrl: z.string().optional(),
+  evidenceUrls: z.array(z.string()).optional(),
+  metadata: LiveReserveSnapshotMetadataSchema.optional(),
+  provenance: ReserveProvenanceViewSchema.optional(),
+  displayBadge: ReserveDisplayBadgeViewSchema.optional(),
+  sync: ReserveSyncStateViewSchema.optional(),
+}).strict();

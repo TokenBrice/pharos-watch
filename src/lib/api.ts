@@ -5,6 +5,10 @@ import { toSiteDataPath } from "@shared/lib/site-data-routes";
 import { FRESHNESS_RATIOS } from "@shared/lib/status-thresholds";
 import { createTimeoutSignal } from "@shared/lib/timeout-signal";
 import { isSiteDataUiHostname, resolvePublicApiBase } from "@shared/lib/runtime-origins";
+import {
+  StablecoinReservesResponseSchema,
+  type StablecoinReservesResponse,
+} from "@shared/types";
 
 export type ApiContractMode = "strict" | "warn";
 export const DEFAULT_API_REQUEST_TIMEOUT_MS = 10_000;
@@ -345,10 +349,10 @@ export async function apiFetchWithMeta<T>(
   return { data: validateApiPayload(path, data, schema, contractMode), meta };
 }
 
-export async function fetchStablecoinReserves(stablecoinId: string): Promise<import("@shared/types").StablecoinReservesResponse | null> {
-  return apiFetch<import("@shared/types").StablecoinReservesResponse>(
+export async function fetchStablecoinReserves(stablecoinId: string): Promise<StablecoinReservesResponse | null> {
+  return apiFetch<StablecoinReservesResponse>(
     API_PATHS.stablecoinReserves(stablecoinId),
-    undefined,
+    StablecoinReservesResponseSchema,
     undefined,
     undefined,
     { nullOn404: true },

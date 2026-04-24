@@ -33,8 +33,18 @@ describe("useStablecoinReserves", () => {
         evidenceUrls: ["https://example.com/evidence"],
         displayBadge: { kind: "live", label: "Live" },
         metadata: { yieldBasisCollateralPct: 89.7 },
-        provenance: { method: "api" },
-        sync: { lastSuccessfulSyncAt: 1_700_000_000 },
+        provenance: {
+          evidenceClass: "independent",
+          sourceModel: "dynamic-mix",
+          scoringEligible: true,
+        },
+        sync: {
+          enabled: true,
+          status: "ok",
+          stale: false,
+          bootstrap: false,
+          lastSuccessAt: 1_700_000_000,
+        },
       },
       error: null,
     });
@@ -69,7 +79,7 @@ describe("useStablecoinReserves", () => {
     // Reserve-sync cron cadence is 4h; staleTime = cadence, refetchInterval = 2× cadence.
     expect(options.staleTime({ state: { data: { mode: "live" } } })).toBe(4 * 60 * 60 * 1000);
     expect(options.refetchInterval({ state: { data: { mode: "live" } } })).toBe(2 * 4 * 60 * 60 * 1000);
-    expect(options.staleTime({ state: { data: { mode: "fallback" } } })).toBe(60 * 1000);
-    expect(options.refetchInterval({ state: { data: { mode: "fallback" } } })).toBe(2 * 60 * 1000);
+    expect(options.staleTime({ state: { data: { mode: "curated-fallback" } } })).toBe(60 * 1000);
+    expect(options.refetchInterval({ state: { data: { mode: "curated-fallback" } } })).toBe(2 * 60 * 1000);
   });
 });
