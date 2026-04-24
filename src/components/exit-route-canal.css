@@ -1,0 +1,113 @@
+/*
+ * Exit Route Canal — scene-level styles.
+ * Colour tokens, data-driven CSS custom properties, and ambient motion
+ * for the side-elevation canal SVG. Motion is opt-in via prefers-reduced-motion.
+ * Patterns match src/app/chains/nautical-chart.css.
+ */
+
+.exit-route-canal {
+  --canal-sky-top: oklch(0.18 0.024 248);
+  --canal-sky-bottom: oklch(0.08 0.014 248);
+  --canal-water-shallow: oklch(0.32 0.068 232 / 0.9);
+  --canal-water-deep: oklch(0.24 0.05 220 / 0.95);
+  --canal-wall: oklch(0.22 0.018 248);
+  --canal-wall-stone: oklch(0.31 0.015 248);
+  --canal-dam: oklch(0.36 0.024 248);
+  --canal-sea-top: oklch(0.15 0.018 248);
+  --canal-sea-bottom: oklch(0.09 0.012 248);
+  --canal-caption: oklch(0.56 0.014 248);
+  --canal-caption-dim: oklch(0.44 0.012 248);
+  --canal-hero: oklch(0.96 0.006 248);
+  --canal-hero-kicker: oklch(0.72 0.02 248);
+  --canal-accent: oklch(0.78 0.14 178);
+  --canal-beacon: oklch(0.86 0.18 82);
+  --canal-beacon-beam: oklch(0.86 0.18 82 / 0.35);
+  --canal-ripple: oklch(0.78 0.14 178);
+  --canal-star: oklch(0.88 0.01 248 / 0.55);
+
+  /* Data-driven vessel drift duration. Default 14s; overridden inline per crowding band. */
+  --vessel-duration: 14s;
+}
+
+.exit-route-canal__scene {
+  display: block;
+  width: 100%;
+  min-width: 560px;
+  height: auto;
+}
+
+@media (min-width: 768px) {
+  .exit-route-canal__scene {
+    min-width: 0;
+  }
+}
+
+/* Narrow-viewport compactions:
+ *  - Hide ornamental lighthouse (it crowds basin labels).
+ *  - Hide the gate percentage row (the $ row stays).
+ */
+@media (max-width: 640px) {
+  .exit-route-canal__lighthouse,
+  .exit-route-canal__gate-pct {
+    display: none;
+  }
+}
+
+/* --- Ambient motion (opt-in) ---
+ * All three animations are GPU-friendly (transform + opacity only).
+ * Static frame must be fully legible without them.
+ */
+@media (prefers-reduced-motion: no-preference) {
+  .exit-route-canal__vessel {
+    animation: exit-route-canal-drift var(--vessel-duration) ease-in-out infinite;
+    will-change: transform;
+  }
+  .exit-route-canal__beam {
+    /* view-box box model lets the transform-origin resolve in viewBox user units,
+     * so rotation pivots around the lamp head, not the path's bounding box. */
+    transform-box: view-box;
+    transform-origin: 790px 101px;
+    animation: exit-route-canal-sweep 16s ease-in-out infinite alternate;
+    will-change: transform, opacity;
+  }
+  /* Decoupled ripple phases — co-prime periods keep the lines from re-syncing. */
+  .exit-route-canal__wave > path:nth-child(1) {
+    animation: exit-route-canal-shimmer 5.3s ease-in-out infinite;
+    will-change: opacity;
+  }
+  .exit-route-canal__wave > path:nth-child(2) {
+    animation: exit-route-canal-shimmer 6.7s ease-in-out infinite;
+    animation-delay: -1.2s;
+    will-change: opacity;
+  }
+  .exit-route-canal__wave > path:nth-child(3) {
+    animation: exit-route-canal-shimmer 8.1s ease-in-out infinite;
+    animation-delay: -2.4s;
+    will-change: opacity;
+  }
+  .exit-route-canal__wave > path:nth-child(4) {
+    animation: exit-route-canal-shimmer 7.4s ease-in-out infinite;
+    animation-delay: -3.1s;
+    will-change: opacity;
+  }
+  .exit-route-canal__wave > path:nth-child(5) {
+    animation: exit-route-canal-shimmer 9.2s ease-in-out infinite;
+    animation-delay: -4.5s;
+    will-change: opacity;
+  }
+}
+
+@keyframes exit-route-canal-drift {
+  0%, 100% { transform: translate3d(-6px, 0, 0); }
+  50%      { transform: translate3d(6px, 1px, 0); }
+}
+
+@keyframes exit-route-canal-sweep {
+  0%   { transform: rotate(-7deg); opacity: 0.55; }
+  100% { transform: rotate(7deg);  opacity: 0.75; }
+}
+
+@keyframes exit-route-canal-shimmer {
+  0%, 100% { opacity: 0.6; }
+  50%      { opacity: 1; }
+}
