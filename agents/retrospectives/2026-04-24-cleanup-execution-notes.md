@@ -74,3 +74,14 @@ Scope: implementation notes for `agents/plans/2026-04-24-website-maintainability
   - `npm run typecheck`
   - `npm test -- src/lib/__tests__/stablecoin-taxonomy.test.ts src/app/stablecoins`
 - Follow-up signal: the taxonomy descriptor is intentionally limited to hub routes. `/stablecoins/[peg]/` should only join a wider descriptor if SEO metadata equivalence tests are added first.
+
+## Slice 7: Coverage Feature Definition Extraction
+
+- Moved the static `COVERAGE_FEATURES` table into `src/lib/coverage-features.ts`.
+- Left coverage status resolvers, row construction, summary derivation, and breakdown text in `src/lib/coverage.ts`.
+- Validation:
+  - `npm test -- src/lib/__tests__/coverage.test.ts src/app/coverage/coverage-filtering.test.ts`
+  - `npm run typecheck`
+  - `npm run check:hotspot-ratchet`
+  - `npm run check:unused-code`
+- Follow-up signal: the next safe coverage split is status presets/resolvers, but it should preserve exact labels and breakdown strings because they feed visible coverage copy.

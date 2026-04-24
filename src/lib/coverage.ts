@@ -2,6 +2,7 @@ import { BACKING_LABELS_SHORT, GOVERNANCE_LABELS_SHORT, PEG_LABELS_SHORT } from 
 import { getReserveDisplayBadgeKindForAdapter } from "@shared/lib/live-reserve-display";
 import type { BlacklistStatus } from "@shared/lib/report-cards";
 import { getReserves } from "@shared/lib/reserve-templates";
+import { COVERAGE_FEATURES } from "@/lib/coverage-features";
 import type {
   LiquidityCoverageClass,
   MintBurnCoverageStatus,
@@ -105,86 +106,7 @@ function hasBlacklistTrackerCoverage(coin: StablecoinMeta, blacklistStatus: Blac
   return BLACKLIST_SYMBOLS.has(coin.symbol.toUpperCase());
 }
 
-export const COVERAGE_FEATURES: readonly CoverageFeatureDefinition[] = [
-  {
-    key: "price",
-    label: "Price & Depeg",
-    shortLabel: "Price",
-    description: "Live price monitoring, peg summary coverage, and depeg event detection.",
-    headlineCountLabel: "≥3 sources",
-    headlineCoverageLabel: (coveragePct) => `${coveragePct.toFixed(0)}% with ≥3 price sources`,
-    headlineFilter: (row) => (row.statuses.price.sourceCount ?? 0) >= 3,
-    href: "/depeg/",
-  },
-  {
-    key: "safety",
-    label: "Safety Score",
-    shortLabel: "Safety",
-    description: "Overall report-card grade on the Safety Scores surface.",
-    href: "/safety-scores/",
-  },
-  {
-    key: "dex",
-    label: "DEX Price",
-    shortLabel: "DEX",
-    description: "DEX liquidity observation and price verification confidence.",
-    href: "/liquidity/",
-  },
-  {
-    key: "reserves",
-    label: "Reserve View",
-    shortLabel: "Reserves",
-    description:
-      "Detail-page reserve views are separated from score-grade live reserve inputs. The headline counts assets whose current report-card snapshot used fresh independent live reserve data.",
-    headlineKinds: ["live"],
-    headlineCountLabel: "Score-grade live",
-    headlineCoverageLabel: (coveragePct) => `${coveragePct.toFixed(0)}% with score-grade live reserves`,
-    headlineShareLabel: "Score-grade live reserve market-cap reach",
-  },
-  {
-    key: "redemption",
-    label: "Redemption Backstop",
-    shortLabel: "Backstop",
-    description:
-      "Modeled issuer or protocol exit routes beyond secondary-market DEX liquidity. Heuristic supply-based routes are broken out separately below.",
-    headlineCountLabel: "Strong coverage",
-    headlineCoverageLabel: (coveragePct) => `${coveragePct.toFixed(0)}% with strong redemption coverage`,
-    headlineShareLabel: "Strong redemption market-cap reach",
-    href: "/methodology/#safety-scores-methodology",
-  },
-  {
-    key: "yield",
-    label: "Yield",
-    shortLabel: "Yield",
-    description: "Current presence in the Yield Intelligence rankings.",
-    href: "/yield/",
-  },
-  {
-    key: "flows",
-    label: "Flows",
-    shortLabel: "Flows",
-    description: "Configured issuance-chain mint/burn flow tracking and coverage state.",
-    href: "/flows/",
-  },
-  {
-    key: "blacklist",
-    label: "Blacklist",
-    shortLabel: "Blacklist",
-    description: "Freeze / blacklist event tracking for issuers with supported event coverage.",
-    scopeFilter: (row) => row.blacklistStatus === true,
-    headlineCountLabel: "Blacklistable coins",
-    headlineCoverageLabel: (coveragePct) => `${coveragePct.toFixed(0)}% of blacklistable coins`,
-    headlineShareLabel: "Blacklistable market-cap reach",
-    href: "/blacklist/",
-  },
-  {
-    key: "dependency",
-    label: "Dependency Map",
-    shortLabel: "Dependency",
-    description: "Reserve or mechanism dependency edges in the report-card graph.",
-    href: "/dependency-map/",
-  },
-] as const;
+export { COVERAGE_FEATURES };
 
 export const COVERAGE_BADGE_TONE_CLASS: Record<CoverageTone, string> = {
   emerald: "border-emerald-500/22 bg-emerald-500/8 text-emerald-800 dark:text-emerald-300",
