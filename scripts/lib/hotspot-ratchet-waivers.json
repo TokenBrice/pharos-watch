@@ -11,6 +11,10 @@
     "disposition": "queued-p4",
     "notes": "The homepage KPI strip still mixes query orchestration, derived metrics, and dual-layout rendering. Track it with the broader analytics UI decomposition backlog."
   },
+  "src/app/chains/nautical-chart.tsx": {
+    "disposition": "queued-p4",
+    "notes": "The chains harbor scene intentionally concentrates SVG ship, lighthouse, water, and label primitives during the nautical redesign. Split ship rendering, harbor background, and scene view-model helpers in the next chains visualization cleanup pass."
+  },
   "src/components/command-palette.tsx": {
     "disposition": "queued-p4",
     "notes": "The command palette still combines indexing, keyboard handling, and rendering in one shell. Keep it waived until the navigation/search UI cleanup lane is scheduled."
