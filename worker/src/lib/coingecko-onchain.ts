@@ -71,6 +71,11 @@ export interface CgFetchOptions {
   timeoutMs?: number;
 }
 
+export interface CgTokenPoolsResult {
+  ok: boolean;
+  pools: CgPool[];
+}
+
 // ---------------------------------------------------------------------------
 // API functions
 // ---------------------------------------------------------------------------
@@ -94,6 +99,17 @@ export async function fetchCgTokenPools(
   apiKey: string | null = null,
   options?: CgFetchOptions,
 ): Promise<CgPool[]> {
+  return (await fetchCgTokenPoolsWithStatus(network, address, signal, apiKey, options)).pools;
+}
+
+export async function fetchCgTokenPoolsWithStatus(
+  network: string,
+  address: string,
+  signal?: AbortSignal,
+  apiKey: string | null = null,
+  options?: CgFetchOptions,
+): Promise<CgTokenPoolsResult> {
+  let ok = true;
   return fetchPagedTokenPools({
     maxPages: CG_ONCHAIN_TOKEN_POOLS_MAX_PAGES,
     pageSize: CG_ONCHAIN_TOKEN_POOLS_PAGE_SIZE,
@@ -106,11 +122,18 @@ export async function fetchCgTokenPools(
         headers: cgHeaders({ "User-Agent": USER_AGENT, Accept: "application/json" }, apiKey),
         signal,
       }, options?.maxRetries ?? 1, { timeoutMs: options?.timeoutMs });
-      if (!res?.ok) return [];
+      if (!res?.ok) {
+        ok = false;
+        return [];
+      }
       const json = (await res.json()) as { data?: unknown };
-      return Array.isArray(json.data) ? (json.data as CgPool[]) : [];
+      if (!Array.isArray(json.data)) {
+        ok = false;
+        return [];
+      }
+      return json.data as CgPool[];
     },
-  });
+  }).then((pools) => ({ ok, pools }));
 }
 
 /**

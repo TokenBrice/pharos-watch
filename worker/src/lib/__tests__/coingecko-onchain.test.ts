@@ -13,6 +13,7 @@ import { sleepWithSignal } from "../abort";
 import { fetchWithRetry } from "../fetch-retry";
 import {
   fetchCgTokenPools,
+  fetchCgTokenPoolsWithStatus,
   fetchCgTokensBatch,
   isOnchainAvailable,
   onchainRateLimit,
@@ -63,6 +64,22 @@ describe("coingecko-onchain", () => {
 
     vi.mocked(fetchWithRetry).mockResolvedValueOnce(new Response("{}", { status: 500 }));
     expect(await fetchCgTokenPools("eth", "0xghi")).toEqual([]);
+  });
+
+  it("exposes token-pool fetch status for circuit breaker accounting", async () => {
+    vi.mocked(fetchWithRetry).mockResolvedValueOnce(new Response("{}", { status: 500 }));
+    await expect(fetchCgTokenPoolsWithStatus("eth", "0xghi")).resolves.toEqual({
+      ok: false,
+      pools: [],
+    });
+
+    vi.mocked(fetchWithRetry).mockResolvedValueOnce(
+      new Response(JSON.stringify({ data: [] }), { status: 200 }),
+    );
+    await expect(fetchCgTokenPoolsWithStatus("eth", "0xempty")).resolves.toEqual({
+      ok: true,
+      pools: [],
+    });
   });
 
   it("fetches token batches, short-circuits empty input, and handles failures", async () => {

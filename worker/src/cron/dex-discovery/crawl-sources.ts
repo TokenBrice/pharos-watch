@@ -11,7 +11,7 @@ import { fetchGtTokenPools, getGtPoolType, parseGtPool } from "../dex-liquidity/
 import { makeChainAddressKey } from "../dex-liquidity/token-resolution";
 import { CG_TICKERS_RATE_MS } from "../dex-liquidity/constants";
 import { QUALITY_MULTIPLIERS } from "../../lib/dex-cron-constants";
-import { fetchCgTokenPools } from "../../lib/coingecko-onchain";
+import { fetchCgTokenPoolsWithStatus } from "../../lib/coingecko-onchain";
 import { cgHeaders, cgUrl } from "../../lib/coingecko";
 import { fetchWithRetry } from "../../lib/fetch-retry";
 import { USER_AGENT, DEX_PRICE_OBSERVATION_MIN_TVL_USD, CIRCUIT_SOURCE } from "../../lib/constants";
@@ -87,7 +87,13 @@ export async function crawlCoin(
   if (!cgApiKey?.trim()) {
     console.warn(`[dex-discovery] CG API key not configured — Stage 1 (CG onchain) skipped for ${stablecoinId}`);
   }
-  if (cgApiKey?.trim()) {
+  const cgOnchainAllowed = cgApiKey?.trim()
+    ? await shouldAttemptFetch(db, CIRCUIT_SOURCE.CG_ONCHAIN)
+    : false;
+  if (cgApiKey?.trim() && !cgOnchainAllowed) {
+    console.warn(`[dex-discovery] CG onchain circuit open — Stage 1 skipped for ${stablecoinId}`);
+  }
+  if (cgApiKey?.trim() && cgOnchainAllowed) {
     let cgRequests = 0;
 
     for (const { chain, address } of coinTargets) {
@@ -109,13 +115,15 @@ export async function crawlCoin(
       cgQueriedChains.add(chain);
 
       try {
-        const rawPools = await fetchCgTokenPools(
+        const result = await fetchCgTokenPoolsWithStatus(
           cgNetwork,
           address.toLowerCase(),
           buildStageSignal(signal, deadlineMs, DISCOVERY_STAGE_TIMEOUT_MS.cgOnchain),
           cgApiKey,
           { maxRetries: 0, timeoutMs: DISCOVERY_STAGE_TIMEOUT_MS.cgOnchain },
         );
+        await recordOutcome(db, CIRCUIT_SOURCE.CG_ONCHAIN, result.ok);
+        const rawPools = result.pools;
         for (const pool of rawPools) {
           const parsed = parseCgPool(pool);
           if (!parsed) continue;
@@ -191,6 +199,7 @@ export async function crawlCoin(
       } catch (err) {
         if (signal?.aborted) throw err;
         console.warn(`[dex-discovery] cg_onchain error for ${chain}:${address}`, err);
+        await recordOutcome(db, CIRCUIT_SOURCE.CG_ONCHAIN, false);
       }
     }
   }

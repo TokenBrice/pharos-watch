@@ -8,7 +8,7 @@ vi.mock("../../../lib/coingecko-onchain", async () => {
   const actual = await vi.importActual<typeof import("../../../lib/coingecko-onchain")>("../../../lib/coingecko-onchain");
   return {
     ...actual,
-    fetchCgTokenPools: vi.fn(async () => []),
+    fetchCgTokenPoolsWithStatus: vi.fn(async () => ({ ok: true, pools: [] })),
   };
 });
 
@@ -33,7 +33,7 @@ vi.mock("../../../lib/circuit-breaker", () => ({
 import { crawlCoin } from "../crawl-sources";
 import { crawlTokenPools } from "../../dex-liquidity/crawl-helpers";
 import { fetchDsTokenPoolsWithStatus } from "../../../lib/dexscreener";
-import { fetchCgTokenPools } from "../../../lib/coingecko-onchain";
+import { fetchCgTokenPoolsWithStatus } from "../../../lib/coingecko-onchain";
 import { fetchWithRetry } from "../../../lib/fetch-retry";
 import { shouldAttemptFetch, recordOutcome } from "../../../lib/circuit-breaker";
 import { CIRCUIT_SOURCE } from "../../../lib/constants";
@@ -61,7 +61,7 @@ describe("crawlCoin DexScreener hardening", () => {
   beforeEach(() => {
     vi.mocked(crawlTokenPools).mockResolvedValue({ stoppedEarly: false });
     vi.mocked(fetchDsTokenPoolsWithStatus).mockReset();
-    vi.mocked(fetchCgTokenPools).mockReset();
+    vi.mocked(fetchCgTokenPoolsWithStatus).mockReset();
     vi.mocked(fetchWithRetry).mockReset();
     vi.mocked(shouldAttemptFetch).mockReset();
     vi.mocked(recordOutcome).mockReset();
@@ -151,7 +151,7 @@ describe("crawlCoin DexScreener hardening", () => {
   });
 
   it("keeps CoinGecko onchain staging output aligned with current discovery rows", async () => {
-    vi.mocked(fetchCgTokenPools).mockResolvedValueOnce([{
+    vi.mocked(fetchCgTokenPoolsWithStatus).mockResolvedValueOnce({ ok: true, pools: [{
       id: "cg-pool",
       type: "pool",
       attributes: {
@@ -170,7 +170,7 @@ describe("crawlCoin DexScreener hardening", () => {
         quote_token: { data: { id: "token_0xquote", type: "token" } },
         dex: { data: { id: "uniswap-v3", type: "dex" } },
       },
-    } as never]);
+    } as never] });
 
     const result = await crawlCoin(
       createMockDb(),
@@ -209,6 +209,30 @@ describe("crawlCoin DexScreener hardening", () => {
       chain: "ethereum",
       protocol: "uniswap-v3",
     }]);
+    expect(recordOutcome).toHaveBeenCalledWith(
+      expect.anything(),
+      CIRCUIT_SOURCE.CG_ONCHAIN,
+      true,
+    );
+  });
+
+  it("records CoinGecko onchain failures when the helper reports a bad response", async () => {
+    vi.mocked(fetchCgTokenPoolsWithStatus).mockResolvedValueOnce({ ok: false, pools: [] });
+
+    const result = await crawlCoin(
+      createMockDb(),
+      "usdc-circle",
+      [{ chain: "ethereum", address: "0xAbC", decimals: 6 }],
+      "test-key",
+      new Set(),
+    );
+
+    expect(result.pools).toEqual([]);
+    expect(recordOutcome).toHaveBeenCalledWith(
+      expect.anything(),
+      CIRCUIT_SOURCE.CG_ONCHAIN,
+      false,
+    );
   });
 
   it("keeps CoinGecko tickers staging output aligned with current orderbook rows", async () => {

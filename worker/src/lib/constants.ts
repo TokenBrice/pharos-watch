@@ -128,6 +128,7 @@ export const CIRCUIT_SOURCE = {
   CG_DETAIL_PLATFORMS: "coingecko-detail-platforms",
   CG_MCAP: "coingecko-mcap",
   CG_DISCOVERY: "coingecko-discovery",
+  CG_ONCHAIN: "coingecko-onchain",
   DEXSCREENER_PRICES: "dexscreener-prices",
   DEXSCREENER_SEARCH: "dexscreener-search",
   CMC_PRICES: "coinmarketcap-prices",

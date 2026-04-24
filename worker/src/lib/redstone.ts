@@ -222,7 +222,7 @@ export async function fetchRedstonePrices(
     return { kind: "upstream-error", value: results, reason: "all RedStone batches failed" };
   }
   if (results.size === 0) {
-    return { kind: "no-data", value: results };
+    return { kind: "upstream-error", value: results, reason: "RedStone returned no usable prices" };
   }
   return { kind: "ok", value: results };
 }

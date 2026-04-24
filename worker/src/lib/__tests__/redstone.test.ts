@@ -125,6 +125,7 @@ describe("fetchRedstonePrices", () => {
 
     const outcome = await fetchRedstonePrices(["USDT"]);
 
+    expect(outcome.kind).toBe("upstream-error");
     expect(outcome.value.size).toBe(0);
   });
 
@@ -141,6 +142,7 @@ describe("fetchRedstonePrices", () => {
 
     const outcome = await fetchRedstonePrices(["USDT"]);
 
+    expect(outcome.kind).toBe("upstream-error");
     expect(outcome.value.size).toBe(0);
   });
 
