@@ -138,6 +138,17 @@
       opacity: 0.96;
     }
   }
+  @keyframes nc-reflection-drift {
+    0%,
+    100% {
+      transform: translateX(-1.5px);
+      opacity: 0.82;
+    }
+    50% {
+      transform: translateX(2px);
+      opacity: 0.68;
+    }
+  }
 
   .nc-waterline {
     animation: nc-wave-drift var(--nc-motion-water) var(--nc-ease-ambient) infinite;
@@ -175,9 +186,24 @@
     opacity: 0;
     transition: opacity 160ms var(--nc-ease-out);
   }
+  .nc-ship-secondary-detail {
+    opacity: 0.58;
+    transition: opacity 180ms var(--nc-ease-out);
+  }
+  .nc-ship-target:hover .nc-ship-secondary-detail,
+  .nc-ship-target:focus-visible .nc-ship-secondary-detail,
+  .nc-ship-target-selected .nc-ship-secondary-detail {
+    opacity: 1;
+  }
   .nc-ship-target:focus-visible .nc-ship-focus-ring,
   .nc-ship-target-selected .nc-ship-focus-ring {
     opacity: 1;
+  }
+  .nc-reflection-drift {
+    animation: nc-reflection-drift var(--nc-motion-water) var(--nc-ease-ambient) infinite;
+    animation-delay: var(--nc-reflection-delay, 0s);
+    transform-box: view-box;
+    will-change: transform, opacity;
   }
   .nc-harbor-light {
     animation: nc-harbor-light-breathe var(--nc-motion-selection) var(--nc-ease-ambient) infinite;
@@ -230,5 +256,8 @@
   .nc-ship-target:focus-visible,
   .nc-ship-target-selected {
     transform: none;
+  }
+  .nc-reflection-drift {
+    animation: none;
   }
 }

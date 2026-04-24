@@ -68,6 +68,14 @@ type ShipGeometry = {
   sailSealY: number;
 };
 
+type ShipCargoMark = ChainHarborEntry["cargos"][number] & {
+  x: number;
+  y: number;
+  size: number;
+  clipId: string;
+  logoPath: string | undefined;
+};
+
 function shipDimensions(entry: ChainHarborEntry, x: number, hullW: number, laneY: number, supplyScale: number): ShipGeometry {
   const rigScale = 0.62 + supplyScale * 0.7;
   const hullDepth = 16 + supplyScale * 12;
@@ -472,6 +480,105 @@ function ChartGrid({ laneWidth, lanes }: { laneWidth: number; lanes: number }) {
   );
 }
 
+function ShipCargoMarks({
+  entryName,
+  cargoTitle,
+  cargoMarks,
+  accentColor,
+}: {
+  entryName: string;
+  cargoTitle: string;
+  cargoMarks: ShipCargoMark[];
+  accentColor: string;
+}) {
+  return (
+    <g className="nc-ship-secondary-detail" aria-hidden="true">
+      <title>
+        {entryName} cargo manifest: {cargoTitle}
+      </title>
+      <defs>
+        {cargoMarks.map((cargo) => (
+          <clipPath key={cargo.clipId} id={cargo.clipId}>
+            <circle cx={cargo.x} cy={cargo.y} r={cargo.size / 2 - 0.8} />
+          </clipPath>
+        ))}
+      </defs>
+      {cargoMarks.map((cargo) => (
+        <g key={cargo.clipId}>
+          <circle
+            cx={cargo.x}
+            cy={cargo.y}
+            r={cargo.size / 2}
+            fill="oklch(0.98 0.006 250 / 0.95)"
+            stroke={accentColor}
+            strokeWidth={0.7}
+          />
+          {cargo.logoPath ? (
+            <image
+              href={cargo.logoPath}
+              x={cargo.x - cargo.size / 2 + 0.9}
+              y={cargo.y - cargo.size / 2 + 0.9}
+              width={cargo.size - 1.8}
+              height={cargo.size - 1.8}
+              clipPath={`url(#${cargo.clipId})`}
+            />
+          ) : (
+            <text
+              x={cargo.x}
+              y={cargo.y + cargo.size * 0.22}
+              textAnchor="middle"
+              fontSize={Math.max(4.2, cargo.size * 0.46)}
+              fontFamily="ui-monospace, Menlo, monospace"
+              fontWeight={700}
+              fill="oklch(0.18 0.025 250)"
+            >
+              {cargo.symbol.charAt(0)}
+            </text>
+          )}
+        </g>
+      ))}
+    </g>
+  );
+}
+
+function ShipSeal({
+  clipId,
+  accentColor,
+  healthColor,
+  logoPath,
+  x,
+  y,
+  size,
+}: {
+  clipId: string;
+  accentColor: string;
+  healthColor: string;
+  logoPath: string;
+  x: number;
+  y: number;
+  size: number;
+}) {
+  return (
+    <g>
+      <defs>
+        <clipPath id={clipId}>
+          <circle cx={x} cy={y} r={size / 2} />
+        </clipPath>
+      </defs>
+      <circle cx={x} cy={y} r={size / 2 + 1.6} fill="oklch(0.98 0.006 250 / 0.94)" stroke={accentColor} strokeWidth={1.1} />
+      <circle cx={x} cy={y} r={size / 2 + 4.5} fill="none" stroke={healthColor} strokeWidth={0.9} opacity={0.6} />
+      <image
+        href={logoPath}
+        x={x - size / 2}
+        y={y - size / 2}
+        width={size}
+        height={size}
+        clipPath={`url(#${clipId})`}
+      />
+    </g>
+  );
+}
+
 function Ship({
   entry,
   geom,
@@ -642,52 +749,12 @@ function Ship({
           opacity={0.94}
         />
       ))}
-      <g aria-hidden="true">
-        <title>
-          {entry.name} cargo manifest: {cargoTitle}
-        </title>
-        <defs>
-          {cargoMarks.map((cargo) => (
-            <clipPath key={cargo.clipId} id={cargo.clipId}>
-              <circle cx={cargo.x} cy={cargo.y} r={cargo.size / 2 - 0.8} />
-            </clipPath>
-          ))}
-        </defs>
-        {cargoMarks.map((cargo) => (
-          <g key={cargo.clipId}>
-            <circle
-              cx={cargo.x}
-              cy={cargo.y}
-              r={cargo.size / 2}
-              fill="oklch(0.98 0.006 250 / 0.95)"
-              stroke={accentColor}
-              strokeWidth={0.7}
-            />
-            {cargo.logoPath ? (
-              <image
-                href={cargo.logoPath}
-                x={cargo.x - cargo.size / 2 + 0.9}
-                y={cargo.y - cargo.size / 2 + 0.9}
-                width={cargo.size - 1.8}
-                height={cargo.size - 1.8}
-                clipPath={`url(#${cargo.clipId})`}
-              />
-            ) : (
-              <text
-                x={cargo.x}
-                y={cargo.y + cargo.size * 0.22}
-                textAnchor="middle"
-                fontSize={Math.max(4.2, cargo.size * 0.46)}
-                fontFamily="ui-monospace, Menlo, monospace"
-                fontWeight={700}
-                fill="oklch(0.18 0.025 250)"
-              >
-                {cargo.symbol.charAt(0)}
-              </text>
-            )}
-          </g>
-        ))}
-      </g>
+      <ShipCargoMarks
+        entryName={entry.name}
+        cargoTitle={cargoTitle}
+        cargoMarks={cargoMarks}
+        accentColor={accentColor}
+      />
 
       {/* Crow's nest yard */}
       <line x1={mainMastX - 11} y1={mastTopY + 8} x2={mainMastX + 22} y2={mastTopY + 5} stroke={accentColor} strokeWidth={2.2} strokeLinecap="round" />
@@ -700,44 +767,39 @@ function Ship({
         opacity={0.94}
       />
 
-      {/* Sail logo seal */}
-      <defs>
-        <clipPath id={clipId}>
-          <circle cx={mainMastX} cy={sailSealY} r={logoSize / 2} />
-        </clipPath>
-      </defs>
-      <circle cx={mainMastX} cy={sailSealY} r={logoSize / 2 + 1.6} fill="oklch(0.98 0.006 250 / 0.94)" stroke={accentColor} strokeWidth={1.1} />
-      <circle cx={mainMastX} cy={sailSealY} r={logoSize / 2 + 4.5} fill="none" stroke={healthColor} strokeWidth={0.9} opacity={0.6} />
-      <image
-        href={entry.logoPath}
-        x={mainMastX - logoSize / 2}
-        y={sailSealY - logoSize / 2}
-        width={logoSize}
-        height={logoSize}
-        clipPath={`url(#${clipId})`}
+      <ShipSeal
+        clipId={clipId}
+        accentColor={accentColor}
+        healthColor={healthColor}
+        logoPath={entry.logoPath}
+        x={mainMastX}
+        y={sailSealY}
+        size={logoSize}
       />
 
       {/* Depth ticks below hull */}
-      {Array.from({ length: layers }).map((_, i) => {
-        const offset = 4 + i * 3;
-        return (
-          <line
-            key={i}
-            x1={deckLeft + 4 + i * 2}
-            y1={hullBottom + offset}
-            x2={deckRight - 4 - i * 2}
-            y2={hullBottom + offset}
-            stroke="#0284c7"
-            strokeWidth={0.75}
-            opacity={0.34 - i * 0.07}
-          />
-        );
-      })}
+      <g className="nc-ship-secondary-detail">
+        {Array.from({ length: layers }).map((_, i) => {
+          const offset = 4 + i * 3;
+          return (
+            <line
+              key={i}
+              x1={deckLeft + 4 + i * 2}
+              y1={hullBottom + offset}
+              x2={deckRight - 4 - i * 2}
+              y2={hullBottom + offset}
+              stroke="#0284c7"
+              strokeWidth={0.75}
+              opacity={0.34 - i * 0.07}
+            />
+          );
+        })}
+      </g>
     </g>
   );
 }
 
-function ShipReflection({ entry, geom }: { entry: ChainHarborEntry; geom: ShipGeometry }) {
+function ShipReflection({ entry, geom, index }: { entry: ChainHarborEntry; geom: ShipGeometry; index: number }) {
   const accentColor = chainAccentHex(entry.id);
   const {
     hullTop, hullBottom, hullMidY, deckLeft, deckRight, sternInset, bowRise,
@@ -745,42 +807,47 @@ function ShipReflection({ entry, geom }: { entry: ChainHarborEntry; geom: ShipGe
   } = geom;
   return (
     <g transform={`translate(0, ${2 * WATERLINE_Y}) scale(1, -1)`}>
-      {/* Mast silhouettes — faint */}
-      <line x1={mainMastX} y1={mastTopY} x2={mainMastX} y2={hullBottom - 3} stroke="oklch(0.4 0.04 250 / 0.45)" strokeWidth={1.2} />
-      <line x1={foreMastX} y1={foreTopY} x2={foreMastX} y2={hullTop + 2} stroke="oklch(0.4 0.04 250 / 0.4)" strokeWidth={1} />
-      <line x1={aftMastX} y1={aftTopY} x2={aftMastX} y2={hullTop + 3} stroke="oklch(0.4 0.04 250 / 0.35)" strokeWidth={0.9} />
+      <g
+        className="nc-reflection-drift"
+        style={{ "--nc-reflection-delay": `${index * -0.55}s` } as CSSProperties}
+      >
+        {/* Mast silhouettes — faint */}
+        <line x1={mainMastX} y1={mastTopY} x2={mainMastX} y2={hullBottom - 3} stroke="oklch(0.4 0.04 250 / 0.45)" strokeWidth={1.2} />
+        <line x1={foreMastX} y1={foreTopY} x2={foreMastX} y2={hullTop + 2} stroke="oklch(0.4 0.04 250 / 0.4)" strokeWidth={1} />
+        <line x1={aftMastX} y1={aftTopY} x2={aftMastX} y2={hullTop + 3} stroke="oklch(0.4 0.04 250 / 0.35)" strokeWidth={0.9} />
 
-      {/* Sail silhouettes — outlines only */}
-      <path
-        d={`M ${mainMastX + 2} ${mastTopY + 3 * rigScale} C ${mainMastX + hullW * 0.3} ${mastTopY + 14 * rigScale}, ${mainMastX + hullW * 0.36} ${railY - 16 * rigScale}, ${mainMastX + 3} ${railY - 2} Z`}
-        fill="oklch(0.5 0.02 248 / 0.22)"
-        stroke="oklch(0.6 0.04 248 / 0.4)"
-        strokeWidth={0.5}
-      />
-      <path
-        d={`M ${mainMastX - 2} ${mastTopY + 14 * rigScale} C ${mainMastX - hullW * 0.34} ${mastTopY + 21 * rigScale}, ${mainMastX - hullW * 0.38} ${railY - 12 * rigScale}, ${mainMastX - 2} ${railY - 1} Z`}
-        fill="oklch(0.5 0.02 248 / 0.18)"
-        stroke="oklch(0.6 0.04 248 / 0.34)"
-        strokeWidth={0.5}
-      />
+        {/* Sail silhouettes — outlines only */}
+        <path
+          d={`M ${mainMastX + 2} ${mastTopY + 3 * rigScale} C ${mainMastX + hullW * 0.3} ${mastTopY + 14 * rigScale}, ${mainMastX + hullW * 0.36} ${railY - 16 * rigScale}, ${mainMastX + 3} ${railY - 2} Z`}
+          fill="oklch(0.5 0.02 248 / 0.22)"
+          stroke="oklch(0.6 0.04 248 / 0.4)"
+          strokeWidth={0.5}
+        />
+        <path
+          d={`M ${mainMastX - 2} ${mastTopY + 14 * rigScale} C ${mainMastX - hullW * 0.34} ${mastTopY + 21 * rigScale}, ${mainMastX - hullW * 0.38} ${railY - 12 * rigScale}, ${mainMastX - 2} ${railY - 1} Z`}
+          fill="oklch(0.5 0.02 248 / 0.18)"
+          stroke="oklch(0.6 0.04 248 / 0.34)"
+          strokeWidth={0.5}
+        />
 
-      {/* Hull silhouette — darker, no detail */}
-      <path
-        d={`M ${deckLeft + sternInset} ${railY} L ${deckRight - bowRise} ${railY} Q ${deckRight - 2} ${railY + 5} ${deckRight} ${hullMidY} Q ${deckRight - bowRise * 0.7} ${hullBottom + 3} ${deckLeft + sternInset + 9} ${hullBottom + 1} Q ${deckLeft - 3} ${hullBottom - 2} ${deckLeft} ${hullMidY} Q ${deckLeft + 3} ${hullTop + 3} ${deckLeft + sternInset} ${railY} Z`}
-        fill="oklch(0.18 0.025 35 / 0.78)"
-        stroke="oklch(0.06 0.018 250 / 0.5)"
-        strokeWidth={0.8}
-      />
-      {/* Brand stripe ghost */}
-      <path
-        d={`M ${deckLeft + sternInset + 2} ${hullTop + 5} L ${deckRight - bowRise - 3} ${hullTop + 4}`}
-        stroke={accentColor}
-        strokeWidth={1.6}
-        strokeLinecap="round"
-        opacity={0.55}
-      />
-      {/* Sail seal ghost */}
-      <circle cx={mainMastX} cy={sailSealY} r={logoSize / 2 + 1} fill="oklch(0.7 0.02 248 / 0.35)" stroke={accentColor} strokeWidth={0.5} opacity={0.5} />
+        {/* Hull silhouette — darker, no detail */}
+        <path
+          d={`M ${deckLeft + sternInset} ${railY} L ${deckRight - bowRise} ${railY} Q ${deckRight - 2} ${railY + 5} ${deckRight} ${hullMidY} Q ${deckRight - bowRise * 0.7} ${hullBottom + 3} ${deckLeft + sternInset + 9} ${hullBottom + 1} Q ${deckLeft - 3} ${hullBottom - 2} ${deckLeft} ${hullMidY} Q ${deckLeft + 3} ${hullTop + 3} ${deckLeft + sternInset} ${railY} Z`}
+          fill="oklch(0.18 0.025 35 / 0.78)"
+          stroke="oklch(0.06 0.018 250 / 0.5)"
+          strokeWidth={0.8}
+        />
+        {/* Brand stripe ghost */}
+        <path
+          d={`M ${deckLeft + sternInset + 2} ${hullTop + 5} L ${deckRight - bowRise - 3} ${hullTop + 4}`}
+          stroke={accentColor}
+          strokeWidth={1.6}
+          strokeLinecap="round"
+          opacity={0.55}
+        />
+        {/* Sail seal ghost */}
+        <circle cx={mainMastX} cy={sailSealY} r={logoSize / 2 + 1} fill="oklch(0.7 0.02 248 / 0.35)" stroke={accentColor} strokeWidth={0.5} opacity={0.5} />
+      </g>
     </g>
   );
 }
@@ -1050,8 +1117,8 @@ export function NauticalChart({
 
           {/* Reflections — flipped silhouettes below water, faded with depth */}
           <g mask="url(#nc-reflection-mask)" aria-hidden="true">
-            {geometries.map(({ entry, geom }) => (
-              <ShipReflection key={`r-${entry.id}`} entry={entry} geom={geom} />
+            {geometries.map(({ entry, geom }, index) => (
+              <ShipReflection key={`r-${entry.id}`} entry={entry} geom={geom} index={index} />
             ))}
           </g>
 
