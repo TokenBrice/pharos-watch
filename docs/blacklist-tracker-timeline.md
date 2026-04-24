@@ -128,7 +128,7 @@ Internal changelog reconstructed from git history. Covers Blacklist Tracker `v1.
 
 - `GET /api/blacklist-summary` chart buckets now come from the persistent freeze ledger rather than raw blacklist event-time amounts
 - Each tracked balance is attributed to the latest recorded blacklist event for that stablecoin/chain/address identity, so re-blacklisted addresses land in the quarter that matches the ledger row shown in the totals
-- If a tracked ledger row lacks a local blacklist timestamp, the chart falls back to the latest related event timestamp and then the snapshot observation time so tracked value is not omitted from the quarterly spread
+- If a tracked ledger row lacks a local blacklist timestamp, the chart falls back to the snapshot observation time so tracked value is not omitted from the quarterly spread
 
 ---
 
