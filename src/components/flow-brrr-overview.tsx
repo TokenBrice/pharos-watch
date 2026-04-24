@@ -271,7 +271,17 @@ function IterationOne({
           </div>
         </div>
 
-        {!isCompact && (
+        {isCompact ? (
+          <FlowReceiptBand
+            gauge={gauge}
+            coins={coins}
+            weeklyHourly={weeklyHourly}
+            scopeLabel={scopeLabel}
+            syncWarning={syncWarning}
+            variant="compact"
+            className="border-t border-dashed border-border/70 pt-4"
+          />
+        ) : (
           <div className="border-t border-dashed border-border/70 pt-5">
             <FlowReceiptBand
               gauge={gauge}

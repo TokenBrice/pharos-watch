@@ -6,7 +6,7 @@ import {
   buildFlowPressureReceiptModel,
   type FlowPressureReceiptRow,
 } from "@/lib/flow-pressure-receipt-model";
-import { formatCurrency, formatSignedCurrency } from "@shared/lib/format";
+import { formatCurrency, formatSignedCurrency, getNetColor } from "@shared/lib/format";
 import type {
   MintBurnCoinFlow,
   MintBurnGauge,
@@ -20,6 +20,7 @@ interface FlowReceiptBandProps {
   scopeLabel: string;
   syncWarning: string | null;
   className?: string;
+  variant?: "default" | "compact";
 }
 
 function formatReceiptCurrency(row: FlowPressureReceiptRow): string {
@@ -33,6 +34,10 @@ function toneClass(tone: FlowPressureReceiptRow["tone"]): string {
   return "text-foreground";
 }
 
+function valueClass(row: FlowPressureReceiptRow): string {
+  return row.tone === "net" && row.valueUsd !== null ? getNetColor(row.valueUsd) : toneClass(row.tone);
+}
+
 function statusLabel(status: string): string {
   return status.replace("-", " ");
 }
@@ -44,6 +49,7 @@ export function FlowReceiptBand({
   scopeLabel,
   syncWarning,
   className,
+  variant = "default",
 }: FlowReceiptBandProps) {
   const model = buildFlowPressureReceiptModel({
     gauge,
@@ -52,6 +58,35 @@ export function FlowReceiptBand({
     scopeLabel,
     syncWarning,
   });
+  const isCompact = variant === "compact";
+
+  if (isCompact) {
+    return (
+      <section className={cn("grid gap-2 sm:grid-cols-2 lg:grid-cols-3", className)} aria-label="Flow receipt">
+        {model.rows.map((row) => (
+          <div
+            key={row.id}
+            className="rounded-lg border border-border/60 bg-background/45 px-3 py-2.5"
+          >
+            <div className="flex items-center justify-between gap-3">
+              <span className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+                {row.label}
+              </span>
+              <span
+                className={cn(
+                  "font-mono text-sm font-semibold tabular-nums",
+                  valueClass(row),
+                )}
+              >
+                {formatReceiptCurrency(row)}
+              </span>
+            </div>
+            <p className="mt-1 text-xs text-muted-foreground">{row.detail}</p>
+          </div>
+        ))}
+      </section>
+    );
+  }
 
   return (
     <section
@@ -100,7 +135,7 @@ export function FlowReceiptBand({
                 <span
                   className={cn(
                     "font-mono text-sm font-semibold tabular-nums",
-                    toneClass(row.tone),
+                    valueClass(row),
                   )}
                 >
                   {formatReceiptCurrency(row)}

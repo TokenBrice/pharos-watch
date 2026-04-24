@@ -82,4 +82,48 @@ describe("FlowReceiptBand", () => {
 
     expect(screen.getByText(/Ingest lag detected/i)).toBeTruthy();
   });
+
+  it("renders the compact accounting tiles without the full receipt metadata", () => {
+    render(createElement(FlowReceiptBand, {
+      gauge,
+      coins: [coin("USDC", 25_000_000), coin("DAI", -9_000_000)],
+      weeklyHourly: [
+        { hourTs: 1, mintVolumeUsd: 10_000_000, burnVolumeUsd: 3_000_000, netFlowUsd: 7_000_000 },
+      ],
+      scopeLabel: "Configured issuance chains",
+      syncWarning: null,
+      variant: "compact",
+    }));
+
+    expect(screen.getByLabelText("Flow receipt")).toBeTruthy();
+    expect(screen.getByText("Printed 24h")).toBeTruthy();
+    expect(screen.getByText("Shredded 7d")).toBeTruthy();
+    expect(screen.queryByRole("heading", { name: "Printer and shredder accounting" })).toBeNull();
+    expect(screen.queryByText("Configured issuance chains")).toBeNull();
+    expect(screen.queryByText(/USDC/)).toBeNull();
+  });
+
+  it("colors positive and negative net receipt values by sign", () => {
+    const { rerender } = render(createElement(FlowReceiptBand, {
+      gauge,
+      coins: [coin("USDC", 25_000_000), coin("DAI", -9_000_000)],
+      weeklyHourly: [],
+      scopeLabel: "Configured issuance chains",
+      syncWarning: null,
+      variant: "compact",
+    }));
+
+    expect(screen.getByText("+$16.00M").className).toContain("text-emerald-700");
+
+    rerender(createElement(FlowReceiptBand, {
+      gauge,
+      coins: [coin("USDC", 4_000_000), coin("DAI", -9_000_000)],
+      weeklyHourly: [],
+      scopeLabel: "Configured issuance chains",
+      syncWarning: null,
+      variant: "compact",
+    }));
+
+    expect(screen.getByText("-$5.00M").className).toContain("text-red-700");
+  });
 });
