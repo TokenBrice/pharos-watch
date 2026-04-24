@@ -645,12 +645,12 @@ Freeze, blacklist, block/unblock, account-pause, and token-destruction events fo
   "events": [BlacklistEvent, ...],
   "total": 13422,
   "methodology": {
-    "version": "3.98",
-    "versionLabel": "v3.98",
-    "currentVersion": "3.98",
-    "currentVersionLabel": "v3.98",
+    "version": "3.99",
+    "versionLabel": "v3.99",
+    "currentVersion": "3.99",
+    "currentVersionLabel": "v3.99",
     "changelogPath": "/methodology/blacklist-tracker-changelog/",
-    "asOf": 1772606400,
+    "asOf": 1776729600,
     "isCurrent": true
   }
 }
@@ -745,12 +745,12 @@ The four `perCoin*` maps power the per-coin "Blacklist Activity" block on stable
   ],
   "totalEvents": 13422,
   "methodology": {
-    "version": "3.98",
-    "versionLabel": "v3.98",
-    "currentVersion": "3.98",
-    "currentVersionLabel": "v3.98",
+    "version": "3.99",
+    "versionLabel": "v3.99",
+    "currentVersion": "3.99",
+    "currentVersionLabel": "v3.99",
     "changelogPath": "/methodology/blacklist-tracker-changelog/",
-    "asOf": 1772606400,
+    "asOf": 1776729600,
     "isCurrent": true
   }
 }

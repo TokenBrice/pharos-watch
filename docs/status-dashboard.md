@@ -250,7 +250,7 @@ Computed from missing prices + blacklist gaps + on-chain supply monitor, with be
 
 #### Missing-price ratio bands (2026-04-13)
 
-The `missingPriceRatio` thresholds were raised on 2026-04-13 to eliminate boundary flapping at the ~15% operating point. At the time of that change, the active set was 181 stablecoins with a baseline of ~26-27 persistently missing prices; the current active set is 186. The pre-fix 15.00% degraded boundary produced 3+ visible `healthy↔degraded` transitions per day purely from counting noise.
+The `missingPriceRatio` thresholds were raised on 2026-04-13 to eliminate boundary flapping at the ~15% operating point. At the time of that change, the active set was 181 stablecoins with a baseline of ~26-27 persistently missing prices. The active set has since grown, so the status rule stays ratio-based rather than baking in a fixed active-count threshold. The pre-fix 15.00% degraded boundary produced 3+ visible `healthy↔degraded` transitions per day purely from counting noise.
 
 | Band | Enter | Cause code | Severity | Drives `dataQualityStatus`? |
 |---|---|---|---|---|
@@ -440,7 +440,7 @@ Response includes:
 Source: `src/hooks/use-endpoint-probes.ts`
 
 - Probe timeout: 5s for public endpoints and 20s for browser admin probes. The Pages ops proxy upstream budget is 20s only for `/api/status` and `/api/status-history`; other admin proxy paths can return `504` after the default 10s upstream timeout.
-- Parallel probing with `Promise.all`
+- Bounded browser probing uses a worker pool capped at 6 concurrent requests (`ENDPOINT_PROBE_CONCURRENCY`), with `Promise.all` only coordinating those workers rather than fanning out every endpoint at once.
 - Admin probe paths are now same-origin `/api/admin/*` calls on the ops host
 - The dashboard labels these as **browser-origin probes** to distinguish them from the worker-origin `status-self-check` synthetic probe stored in `/api/status`
 - Parameterized routes should probe `probePath` values from registry (for example `/api/mint-burn-events?stablecoin=usdt-tether`) to avoid expected `400` validation responses. `GET /api/status-probe-history` is currently still included in the admin probe group without its required `path` query, so it can produce an expected `400` until a stable canary `probePath` such as `/api/status-probe-history?path=/api/health` is configured or the route is removed from automatic probe coverage.

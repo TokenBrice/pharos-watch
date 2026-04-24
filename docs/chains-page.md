@@ -37,10 +37,11 @@ The leaderboard is public and indexable. The profile routes are statically gener
 - FAQ structured data from the route-local `CHAINS_FAQ_JSON_LD`
 - a hidden SEO nav listing every generated `/chains/[chain]/` route
 
-`src/app/chains/client.tsx` consumes `useChains()` and renders:
+`src/app/chains/client.tsx` consumes `useChains()` plus `useStablecoins()` and renders:
 
 - hero summary: total tracked stablecoin supply, optional global 7d trend, chain count, and a top-chain dominance breakdown bar/legend
 - explicit `Unattributed` residual in the dominance breakdown when the stablecoins cache has supply that DefiLlama does not attribute to a concrete chain
+- `NauticalChart`, fed by the chain snapshot plus `stablecoinsQuery.data?.peggedAssets` so the visual can attach top-stablecoin cargo/logos to each chain
 - sortable leaderboard table rendered through `DataTableShell`
 - `QueryErrorNotice` with retry and `StaleDataBanner` (preset `"chains"`)
 - skeleton loading states (KPI grid + table rows)

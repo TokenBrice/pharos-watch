@@ -8,7 +8,7 @@
 
 **Tech Stack:** Next.js 16, React 19, TypeScript, Tailwind CSS, Vitest + Testing Library, inline JSX SVG with semantic CSS variables. No new deps.
 
-**Reference docs:** `docs/superpowers/specs/2026-04-24-metaphor-driven-chains-liquidity-design.md`
+**Reference docs:** `agents/specs/2026-04-24-metaphor-driven-chains-liquidity-design.md`
 
 ---
 

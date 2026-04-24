@@ -16,7 +16,7 @@ The cached `/api/stablecoins` payload is missing, malformed, has the wrong objec
 
 ## Remediation
 
-- **Historical price backfill:** `backfill-cg-prices` repairs historical `supply_history` price rows; it does not republish the `stablecoins` cache.
+- **Recommended historical price backfill:** the status page currently recommends `backfill-cg-prices` for `stablecoins_cache_unavailable`, `stablecoins_cache_degraded`, and missing-price causes. It repairs historical `supply_history` price rows; it does not directly republish the `stablecoins` cache, so treat it as the right action when missing historical CoinGecko prices are implicated.
 - **Republish cache:** inspect `sync-stablecoins`, clear a stuck lease or provider breaker when applicable, then let the next quarter-hourly run publish the cache. Use `backfill-cg-prices` only when the incident also points at missing historical CoinGecko prices.
 - **Circuit breaker:** if a provider breaker is open, call `POST https://ops-api.pharos.watch/api/reset-circuit-breaker?circuit=<source>` with `CF-Access-Client-Id`, `CF-Access-Client-Secret`, `X-Pharos-Admin: 1`, and an `Idempotency-Key`.
 - **Cron lease:** if `sync-stablecoins` shows consecutive `skipped_locked` runs, call `POST https://ops-api.pharos.watch/api/reset-cron-lease?job=sync-stablecoins` with the same Access service-token + `X-Pharos-Admin` + `Idempotency-Key` pattern.
@@ -24,4 +24,4 @@ The cached `/api/stablecoins` payload is missing, malformed, has the wrong objec
 ## Prevention
 
 - The cache TTL and fallback mode are configured in the sync-stablecoins cron. Do not tune these without understanding the `status-thresholds` coupling.
-- For stablecoins-cache incidents, do not prefer the current recommended action unless missing historical CoinGecko prices are also implicated. Primary recovery is to inspect `sync-stablecoins`, clear a relevant lease or breaker when applicable, and let the next quarter-hourly publish run rebuild the cache.
+- For stablecoins-cache incidents, remember that the current recommended action is historical price backfill rather than direct cache publication. Primary recovery for a malformed or missing cache is still to inspect `sync-stablecoins`, clear a relevant lease or breaker when applicable, and let the next quarter-hourly publish run rebuild the cache.

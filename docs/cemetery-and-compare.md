@@ -97,14 +97,11 @@ Primary files:
 
 - Maximum selection: `MAX_COMPARE_COINS = 5`.
 - URL is the source of truth for selection state.
-- Query param `coins` accepts:
-  - canonical ticker-issuer IDs (primary format, e.g. `usdt-tether`)
-  - legacy DefiLlama / historical IDs that still resolve through the shared ID registry
-  - case-insensitive ticker symbols only when the symbol resolves uniquely; ambiguous symbols are rejected instead of guessing
+- Query param `coins` accepts canonical ticker-issuer IDs only (for example `usdt-tether`). Unknown IDs, legacy DefiLlama/historical IDs, and raw ticker symbols are dropped rather than guessed.
 - Query param `range` stores the market-cap chart window. Accepted values are `7d`, `30d`, `90d`, `1y`, and `all`; `all` is the default and is cleared from the URL instead of persisted.
 - Static comparison landing pages are generated from `STATIC_COMPARISON_PAGES` in `src/lib/compare-pages.ts` and live at `/compare/<left-id>-vs-<right-id>/`.
 
-Legacy coin tokens are resolved to canonical IDs in component state. The URL is rewritten with canonical IDs only when the user changes the selection or applies a preset; legacy `coins` params are not automatically rewritten on initial load.
+Initial load normalizes the `coins` URL param to the accepted canonical ID list. If invalid tokens were present, `useCompareSelection()` rewrites the URL to the surviving canonical IDs or removes `coins` entirely.
 
 ### Data dependencies
 

@@ -316,7 +316,7 @@ Coverage threshold: existing 66% lines applies. No new exemptions.
 
 ## Deliverables
 
-1. Spec committed at `docs/superpowers/specs/2026-04-23-peg-diversity-icon-map-design.md` (this file).
+1. Spec archived at `agents/specs/2026-04-23-peg-diversity-icon-map-design.md` (this file).
 2. Implementation plan committed alongside (separate file, produced by writing-plans).
 3. Feature branch or direct commits to `main` once tests pass and smoke-checked in browser.
 4. PR description referencing this spec.

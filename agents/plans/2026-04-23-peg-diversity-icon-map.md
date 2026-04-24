@@ -12,7 +12,7 @@
 
 ## Spec reference
 
-`docs/superpowers/specs/2026-04-23-peg-diversity-icon-map-design.md`
+`agents/specs/2026-04-23-peg-diversity-icon-map-design.md`
 
 ## File map
 
