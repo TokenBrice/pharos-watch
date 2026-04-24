@@ -63,6 +63,15 @@ describe("query option builders", () => {
     expect(safetyOptions.staleTime).toBe(24 * 60 * 60 * 1000);
     expect(safetyOptions.refetchInterval).toBe(2 * 24 * 60 * 60 * 1000);
     expect(safetyOptions.enabled).toBe(true);
+
+    await safetyOptions.queryFn?.();
+    expect(apiFetchWithMetaMock).toHaveBeenCalledWith(
+      "/api/safety-score-history?stablecoin=usdc-circle&days=3650",
+      expect.anything(),
+      undefined,
+      24 * 60 * 60,
+      undefined,
+    );
   });
 
   it("passes TanStack Query cancellation signals to API fetches", async () => {

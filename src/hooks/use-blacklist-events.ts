@@ -30,7 +30,17 @@ export function useBlacklistSummary() {
 
 export function useBlacklistEventsPage(params: FetchBlacklistEventsParams) {
   return useApiQueryWithMeta<BlacklistResponse>(
-    ["blacklist-events", params.stablecoin ?? "all", params.chainName ?? "all", params.eventType ?? "all", params.query ?? "", params.limit ?? 50, params.offset ?? 0],
+    [
+      "blacklist-events",
+      params.stablecoin ?? "all",
+      params.chainName ?? "all",
+      params.eventType ?? "all",
+      params.query ?? "",
+      params.sortBy ?? "date",
+      params.sortDirection ?? "desc",
+      params.limit ?? 50,
+      params.offset ?? 0,
+    ],
     buildBlacklistEventsPath(params),
     CRON_BLACKLIST,
     {

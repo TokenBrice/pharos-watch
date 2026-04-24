@@ -40,6 +40,7 @@ import {
 import {
   createApiQueryFn,
   createApiPollingQueryOptions,
+  createApiPollingQueryOptionsWithMeta,
   createStaticQueryOptions,
   useApiQuery,
   useApiQueryWithMeta,
@@ -171,13 +172,14 @@ export function useSafetyScoreHistory(stablecoinId: string, days = 3650) {
 }
 
 export function safetyScoreHistoryQueryOptions(stablecoinId: string, days = 3650) {
-  return createApiPollingQueryOptions<SafetyScoreHistoryResponse>(
+  return createApiPollingQueryOptionsWithMeta<SafetyScoreHistoryResponse>(
     ["safety-score-history", stablecoinId, days],
     API_PATHS.safetyScoreHistory(stablecoinId, days),
     CRON_24H,
     {
       enabled: !!stablecoinId,
       schema: SafetyScoreHistoryResponseSchema,
+      metaMaxAgeSec: CRON_24H / 1000,
     },
   );
 }
