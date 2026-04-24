@@ -1,3 +1,5 @@
+import { z } from "zod";
+
 export type DigestEditorialCandidateKind =
   | "depeg"
   | "resolved-depeg"
@@ -251,6 +253,11 @@ export interface StablecoinChartPoint {
   date: number;
   totalCirculatingUSD: Record<string, number>;
 }
+
+export const StablecoinChartResponseSchema = z.array(z.object({
+  date: z.number(),
+  totalCirculatingUSD: z.record(z.string(), z.number()),
+}));
 
 export interface UsdsStatusResponse {
   freezeActive: boolean;

@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { z } from "zod";
+import { StablecoinChartResponseSchema } from "@shared/types";
 import { ReportCardsResponseSchema } from "@shared/types/report-cards";
 import { PHAROS_WEB_ACCEPT_MARKER } from "@shared/lib/request-source-marker";
 import {
@@ -143,6 +144,18 @@ describe("api contract validation policy", () => {
 
     expect(parsed.collateralDriftCoins).toEqual([{ id: "jupusd-jupiter", liveScore: 80, curatedScore: 65, delta: 15 }]);
     expect(parsed.liveToFallbackCoins).toEqual(["usdaf-asymmetry"]);
+  });
+
+  it("validates stablecoin chart points before chart consumers use them", () => {
+    expect(StablecoinChartResponseSchema.parse([
+      { date: 1771977600, totalCirculatingUSD: { peggedUSD: 1, peggedEUR: 2 } },
+    ])).toEqual([
+      { date: 1771977600, totalCirculatingUSD: { peggedUSD: 1, peggedEUR: 2 } },
+    ]);
+
+    expect(() => StablecoinChartResponseSchema.parse([
+      { date: "1771977600", totalCirculatingUSD: { peggedUSD: 1 } },
+    ])).toThrow();
   });
 
   it("resolves production API base from known hostnames when env is empty", () => {

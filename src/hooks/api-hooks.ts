@@ -12,6 +12,7 @@ import {
   RedemptionBackstopsResponseSchema,
   SafetyScoreHistoryResponseSchema,
   StabilityIndexResponseSchema,
+  StablecoinChartResponseSchema,
   StressSignalsAllResponseSchema,
   StressSignalDetailResponseSchema,
   YieldHistoryResponseSchema,
@@ -182,7 +183,12 @@ export function safetyScoreHistoryQueryOptions(stablecoinId: string, days = 3650
 }
 
 export function useStablecoinCharts() {
-  return useApiQuery<StablecoinChartPoint[]>(["stablecoin-charts"], API_PATHS.stablecoinCharts(), CRON_1H);
+  return useApiQuery<StablecoinChartPoint[]>(
+    ["stablecoin-charts"],
+    API_PATHS.stablecoinCharts(),
+    CRON_1H,
+    { schema: StablecoinChartResponseSchema },
+  );
 }
 
 export interface NonUsdSharePoint {
