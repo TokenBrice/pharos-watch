@@ -107,14 +107,20 @@ function AltPegSnapshotHero({
           </div>
           <div className="grid gap-3 sm:grid-cols-2">
             <div className="rounded-xl border border-border/50 bg-background/45 px-3 py-3">
-              <p className="pharos-kicker">Non-commodity Non-USD</p>
+              <p className="pharos-kicker flex items-center gap-2 text-[color:var(--brand-accent)]">
+                <span className="size-2 rounded-full bg-[color:var(--brand-accent)]" aria-hidden="true" />
+                Non-commodity Non-USD
+              </p>
               <p className="mt-1 font-mono text-base font-semibold text-foreground">
                 {formatCurrency(fiatNonUsdMarketCap, 1)}
               </p>
               <p className="mt-1 text-xs text-muted-foreground">{formatPercent(nonCommodityShare)} of alt-peg market</p>
             </div>
             <div className="rounded-xl border border-border/50 bg-background/45 px-3 py-3">
-              <p className="pharos-kicker">Commodities</p>
+              <p className="pharos-kicker flex items-center gap-2 text-[color:var(--chart-5)]">
+                <span className="size-2 rounded-full bg-[color:var(--chart-5)]" aria-hidden="true" />
+                Commodities
+              </p>
               <p className="mt-1 font-mono text-base font-semibold text-foreground">
                 {formatCurrency(commodityMarketCap, 1)}
               </p>
