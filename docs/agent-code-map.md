@@ -134,7 +134,6 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `src/hooks/use-sort.ts` - SortDirection, getNextSortState, shouldToggleSortOnKeyDown, useSort
 - `src/hooks/use-sorted-paginated-table.ts` - useSortedPaginatedTable
 - `src/hooks/use-sorted-table-rows.ts` - TableSortState, sortTableRows, useSortedTableRows
-- `src/hooks/use-stablecoin-detail-history.ts` - useStablecoinDetailHistory
 - `src/hooks/use-stablecoin-detail-view-model.ts` - useStablecoinDetailViewModel
 - `src/hooks/use-stablecoin-reserves.ts` - StablecoinReservesQueryState, useStablecoinReserves
 - `src/hooks/use-stablecoins.ts` - supplyHistoryQueryOptions, useStablecoins, useSupplyHistory
