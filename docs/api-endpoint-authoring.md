@@ -20,7 +20,7 @@ Use this checklist when adding or changing a Worker API endpoint. The route regi
 ## Implementation Checklist
 
 1. Add or update a path helper in `shared/lib/api-endpoints/paths.ts`.
-2. Add an endpoint definition in `shared/lib/api-endpoints/definitions.ts` with the correct base metadata: method set, `adminRequired`, `mutatingAdmin`, `cacheBypass`, probe metadata, dependency hints, and status-page action metadata. `publicApiAccess` and `siteDataAccess` are derived fields; update `PUBLIC_API_EXEMPT_ENDPOINT_KEYS` or `SITE_DATA_ALLOWED_ENDPOINT_KEYS` in the same file when the auth or website-data classification needs to change.
+2. Add an endpoint definition in `shared/lib/api-endpoints/definitions.ts` with the correct base metadata: method set, `adminRequired`, `mutatingAdmin`, `cacheBypass`, probe metadata, dependency hints, and status-page action metadata. `publicApiAccess` and `siteDataAccess` default from that base metadata: non-admin routes are public-API protected, admin routes are public-API exempt, and non-admin `GET` routes are allowed on the website-data lane. Set `publicApiAccess` or `siteDataAccess` on the endpoint definition only when an endpoint needs to override those defaults.
 3. Bind the endpoint key to a handler in the appropriate `worker/src/routes/*-routes.ts` file, or add a dynamic route only when the path family cannot be represented as a static endpoint.
 4. Keep handler code under `worker/src/api/` and return through shared response helpers (`jsonResponse`, `errorResponse`, cache helpers) so status codes, CORS, and freshness behavior remain consistent.
 5. If the endpoint reads cache data, decide whether it should emit `_meta`, `X-Data-Age`, and `Warning` through `createCacheHandler()` or route-specific freshness injection.

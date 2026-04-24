@@ -146,7 +146,7 @@ logosById ────────┘
                  └─► <CoinEmblem/> each  ├─► <MoonCohort/>
                                          └─► <ConstellationCohort/>
                                               └─► <CoinEmblem/> each
-                                              
+
               ╰── <HoverProvider/> wraps everything ──╯
 ```
 
