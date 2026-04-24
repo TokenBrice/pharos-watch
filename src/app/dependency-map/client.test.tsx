@@ -24,8 +24,14 @@ vi.mock("@/components/contagion-graph", () => ({
 }));
 
 vi.mock("@/components/dependency-map-mobile-summary", () => ({
-  DependencyMapMobileSummary: ({ hubs }: { hubs: readonly unknown[] }) => (
-    <div data-testid="mobile-summary">summary:{hubs.length}</div>
+  DependencyMapMobileSummary: ({ model }: { model: { hubs: readonly unknown[] } }) => (
+    <div data-testid="mobile-summary">summary:{model.hubs.length}</div>
+  ),
+}));
+
+vi.mock("./dependency-hubs-board", () => ({
+  DependencyHubsBoard: ({ model }: { model: { hubs: readonly unknown[] } }) => (
+    <div data-testid="dependency-hubs-board">board:{model.hubs.length}</div>
   ),
 }));
 
@@ -75,6 +81,7 @@ describe("DependencyMapClient", () => {
     const { container } = render(<DependencyMapClient />);
 
     expect(screen.getByTestId("dependency-graph")).toBeTruthy();
+    expect(screen.getByTestId("dependency-hubs-board")).toBeTruthy();
     expect(screen.getByTestId("mobile-summary")).toBeTruthy();
     expect(container.querySelector(".hidden.md\\:block")).toBeNull();
   });

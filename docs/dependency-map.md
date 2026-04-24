@@ -7,6 +7,8 @@ The dependency map (`/dependency-map`) renders an interactive collateral graph f
 Primary files:
 - `src/app/dependency-map/page.tsx`
 - `src/app/dependency-map/client.tsx`
+- `src/app/dependency-map/dependency-hubs-model.ts` — shared pure model for desktop and mobile hub summaries
+- `src/app/dependency-map/dependency-hubs-board.tsx` — desktop exact-value dependency hub board
 - `src/lib/contagion-layout.ts` — graph construction, supernode scoring, simulation, and layout logic
 - `src/components/contagion-graph.tsx` — SVG rendering, interaction handlers
 - `src/components/dependency-map-mobile-summary.tsx` — mobile quick-summary companion card
@@ -37,6 +39,27 @@ Graph construction logic lives in `src/lib/contagion-layout.ts` (called via `use
 Edges are derived from the report-card edge set:
 - Each dependency edge is included only if both coins are in the selected top-50 set.
 - Edge `type` defaults to `"collateral"` when not explicitly provided.
+
+## Dependency Hubs Model And Board
+
+`buildDependencyHubsModel({ cards, edges, mcapMap })` is the shared model for the desktop Dependency Hubs Board and the mobile summary. It uses the current report-card dependency edge set plus the same stablecoin market-cap map used by the graph.
+
+Model contract:
+
+- `hubs`: ranked upstream hubs from live direct edges.
+- `dependentCount`: unique direct dependent count for a hub; duplicate direct edges to the same dependent count once.
+- `summedDirectDependencyWeight`: dimensionless sum of all live direct edge weights for a hub; duplicate direct edges still contribute their weights.
+- `uniqueDependentMcapUsd`: modeled dependent market-cap context, deduped by direct dependent ID for that hub.
+- `hubMcapUsd`: the hub's own market cap, kept separate from modeled dependent market-cap context.
+- `examples`: up to three direct dependent examples, sorted by dependent market cap.
+- `edgeTypeBreakdown`: direct edge counts and summed direct dependency weight by `collateral`, `mechanism`, and `wrapper`.
+
+Visible board contract:
+
+- Desktop renders the Dependency Hubs Board near the graph and labels the surface with "Upstream hubs".
+- The board exposes exact values for upstream hubs, direct dependents, summed direct dependency weight, modeled dependent market-cap context, hub own market cap, examples, and edge type breakdown.
+- Mobile consumes the same model and renders the same ranked hub metrics in the `DependencyMapMobileSummary` card below the graph.
+- Modeled dependent market-cap context is direct and deduped; it is not a transitive total or forecasted dollar outcome.
 
 ## Adaptive Supernodes
 
@@ -116,7 +139,7 @@ Edge encoding:
 ## Mobile Layout
 
 - The interactive graph now renders on all screen sizes, including phones.
-- On small screens, the `DependencyMapMobileSummary` card remains below the graph as a quick ranked companion view; it no longer replaces the graph.
+- On small screens, the `DependencyMapMobileSummary` card remains below the graph as a quick ranked companion view; it no longer replaces the graph and uses the same `buildDependencyHubsModel()` output as the desktop board.
 - Graph controls stack vertically on narrow widths while the SVG scales responsively through its `viewBox`.
 
 ### Contagion Ripple

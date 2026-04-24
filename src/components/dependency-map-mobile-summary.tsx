@@ -1,25 +1,22 @@
 "use client";
 
 import Link from "next/link";
-import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins";
 import { formatCurrency } from "@shared/lib/format";
 import { StablecoinLogo } from "@/components/stablecoin-logo";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-
-interface DependencyMapHubSummary {
-  id: string;
-  dependentCount: number;
-  weightedInbound: number;
-  mcap: number;
-  examples: string[];
-}
+import type { DependencyHubsModel } from "@/app/dependency-map/dependency-hubs-model";
 
 interface DependencyMapMobileSummaryProps {
-  hubs: readonly DependencyMapHubSummary[];
+  model: DependencyHubsModel;
   logos?: Record<string, string>;
 }
 
-export function DependencyMapMobileSummary({ hubs, logos }: DependencyMapMobileSummaryProps) {
+function formatWeight(value: number): string {
+  return value.toFixed(2);
+}
+
+export function DependencyMapMobileSummary({ model, logos }: DependencyMapMobileSummaryProps) {
+  const hubs = model.hubs.slice(0, 6);
   if (hubs.length === 0) return null;
 
   return (
@@ -35,53 +32,51 @@ export function DependencyMapMobileSummary({ hubs, logos }: DependencyMapMobileS
           <span className="text-xs text-muted-foreground">Top {hubs.length}</span>
         </div>
         <p className="text-sm text-muted-foreground">
-          Ranked by how many live stablecoins depend on them and how much weighted dependency flows inward.
+          Ranked by direct dependents, then summed direct dependency weight and modeled dependent market-cap context.
         </p>
       </CardHeader>
       <CardContent className="divide-y divide-border/40 pt-0">
-        {hubs.map((hub, index) => {
-          const coin = TRACKED_META_BY_ID.get(hub.id);
-          if (!coin) return null;
-
-          return (
-            <Link
-              key={hub.id}
-              href={`/stablecoin/${hub.id}`}
-              className="flex items-start gap-3 px-1 py-3 transition-colors hover:bg-muted/30 first:pt-0"
-            >
-              <span className="mt-0.5 font-mono text-xs text-muted-foreground">
-                {String(index + 1).padStart(2, "0")}
-              </span>
-              <StablecoinLogo src={logos?.[hub.id]} name={coin.name} size={28} />
-              <div className="min-w-0 flex-1 space-y-2">
-                <div className="flex items-start justify-between gap-3">
-                  <div className="min-w-0">
-                    <p className="truncate text-sm font-semibold text-foreground">{coin.name}</p>
-                    <p className="text-xs text-muted-foreground">{coin.symbol}</p>
-                  </div>
-                  <span className="rounded-full border border-border/50 bg-background/50 px-2.5 py-1 text-xs text-muted-foreground">
-                    {hub.dependentCount} dependents
-                  </span>
+        {hubs.map((hub, index) => (
+          <Link
+            key={hub.id}
+            href={`/stablecoin/${hub.id}`}
+            className="flex items-start gap-3 px-1 py-3 transition-colors hover:bg-muted/30 first:pt-0"
+          >
+            <span className="mt-0.5 font-mono text-xs text-muted-foreground">
+              {String(index + 1).padStart(2, "0")}
+            </span>
+            <StablecoinLogo src={logos?.[hub.id]} name={hub.label} size={28} />
+            <div className="min-w-0 flex-1 space-y-2">
+              <div className="flex items-start justify-between gap-3">
+                <div className="min-w-0">
+                  <p className="truncate text-sm font-semibold text-foreground">{hub.label}</p>
+                  <p className="text-xs text-muted-foreground">{hub.symbol}</p>
                 </div>
-
-                <div className="flex flex-wrap gap-2 text-xs text-muted-foreground">
-                  <span className="rounded-full border border-border/50 bg-background/50 px-2.5 py-1">
-                    Weighted inbound {hub.weightedInbound.toFixed(2)}
-                  </span>
-                  <span className="rounded-full border border-border/50 bg-background/50 px-2.5 py-1">
-                    Mcap {formatCurrency(hub.mcap, 1)}
-                  </span>
-                </div>
-
-                {hub.examples.length > 0 && (
-                  <p className="text-xs leading-relaxed text-muted-foreground">
-                    Major dependents: {hub.examples.join(", ")}
-                  </p>
-                )}
+                <span className="rounded-full border border-border/50 bg-background/50 px-2.5 py-1 text-xs text-muted-foreground">
+                  {hub.dependentCount} direct dependents
+                </span>
               </div>
-            </Link>
-          );
-        })}
+
+              <div className="flex flex-wrap gap-2 text-xs text-muted-foreground">
+                <span className="rounded-full border border-border/50 bg-background/50 px-2.5 py-1">
+                  Summed direct dependency weight {formatWeight(hub.summedDirectDependencyWeight)}
+                </span>
+                <span className="rounded-full border border-border/50 bg-background/50 px-2.5 py-1">
+                  Modeled dependent market-cap context {formatCurrency(hub.uniqueDependentMcapUsd, 1)}
+                </span>
+                <span className="rounded-full border border-border/50 bg-background/50 px-2.5 py-1">
+                  Hub own market cap {formatCurrency(hub.hubMcapUsd, 1)}
+                </span>
+              </div>
+
+              {hub.examples.length > 0 && (
+                <p className="text-xs leading-relaxed text-muted-foreground">
+                  Example direct dependents: {hub.examples.map((example) => example.symbol).join(", ")}
+                </p>
+              )}
+            </div>
+          </Link>
+        ))}
       </CardContent>
     </Card>
   );

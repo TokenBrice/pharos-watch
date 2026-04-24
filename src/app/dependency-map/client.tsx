@@ -1,7 +1,6 @@
 "use client";
 
 import { useMemo } from "react";
-import { filterDependencyGraphEdgesToLive } from "@shared/lib/dependency-graph";
 import { useReportCards } from "@/hooks/api-hooks";
 import { useStablecoins } from "@/hooks/use-stablecoins";
 import { useLogos } from "@/hooks/use-logos";
@@ -11,6 +10,8 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Card, CardContent } from "@/components/ui/card";
 import { QueryErrorNotice } from "@/components/query-error-notice";
 import { sumPegBuckets } from "@shared/lib/supply";
+import { DependencyHubsBoard } from "./dependency-hubs-board";
+import { buildDependencyHubsModel } from "./dependency-hubs-model";
 
 export function DependencyMapClient() {
   const reportCardsQuery = useReportCards();
@@ -35,42 +36,12 @@ export function DependencyMapClient() {
     return new Map(stablecoinsData.peggedAssets.map((a) => [a.id, a.circulating ? sumPegBuckets(a.circulating) : 0]));
   }, [stablecoinsData]);
 
-  const mobileSummary = useMemo(() => {
-    if (!reportData?.cards?.length) return [];
-
-    const liveIds = new Set(reportData.cards.filter((card) => !card.isDefunct).map((card) => card.id));
-    const cardById = new Map(reportData.cards.map((card) => [card.id, card]));
-    const hubMap = new Map<string, { dependentCount: number; weightedInbound: number; examples: string[] }>();
-    const liveEdges = filterDependencyGraphEdgesToLive(
-      reportData.dependencyGraph?.edges ?? [],
-      liveIds,
-    );
-
-    for (const edge of liveEdges) {
-      const hub = hubMap.get(edge.from) ?? { dependentCount: 0, weightedInbound: 0, examples: [] };
-      const dependentCard = cardById.get(edge.to);
-      hub.dependentCount += 1;
-      hub.weightedInbound += edge.weight;
-      if (dependentCard && hub.examples.length < 3) {
-        hub.examples.push(dependentCard.symbol);
-      }
-      hubMap.set(edge.from, hub);
-    }
-
-    return [...hubMap.entries()]
-      .map(([id, hub]) => ({
-        id,
-        dependentCount: hub.dependentCount,
-        weightedInbound: hub.weightedInbound,
-        mcap: mcapMap.get(id) ?? 0,
-        examples: hub.examples,
-      }))
-      .sort((a, b) => {
-        if (b.dependentCount !== a.dependentCount) return b.dependentCount - a.dependentCount;
-        if (b.weightedInbound !== a.weightedInbound) return b.weightedInbound - a.weightedInbound;
-        return b.mcap - a.mcap;
-      })
-      .slice(0, 6);
+  const dependencyHubsModel = useMemo(() => {
+    return buildDependencyHubsModel({
+      cards: reportData?.cards ?? [],
+      edges: reportData?.dependencyGraph?.edges ?? [],
+      mcapMap,
+    });
   }, [mcapMap, reportData]);
 
   if (isLoadingCards || isLoadingCoins) {
@@ -116,7 +87,8 @@ export function DependencyMapClient() {
         mcapMap={mcapMap}
         logos={logos}
       />
-      <DependencyMapMobileSummary hubs={mobileSummary} logos={logos} />
+      <DependencyHubsBoard model={dependencyHubsModel} logos={logos} />
+      <DependencyMapMobileSummary model={dependencyHubsModel} logos={logos} />
     </div>
   );
 }
