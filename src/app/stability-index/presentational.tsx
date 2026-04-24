@@ -100,10 +100,10 @@ function PsiHistoryStatsGrid({
 
   const wrapperClass =
     resolved === "compact"
-      ? "grid w-full grid-cols-4 gap-x-3 gap-y-2 border-t border-border/60 pt-3 lg:hidden"
+      ? "grid w-full grid-cols-3 gap-x-3 gap-y-2 border-t border-border/60 pt-3 lg:hidden"
       : resolved === "row"
         ? "flex flex-1 items-end justify-between gap-4"
-        : "grid grid-cols-4 gap-3";
+        : "grid grid-cols-3 gap-3";
 
   return (
     <div className={cn(wrapperClass, className)}>

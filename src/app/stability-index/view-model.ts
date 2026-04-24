@@ -1,4 +1,4 @@
-import { formatChartDate, formatScore } from "@shared/lib/format";
+import { formatScore } from "@shared/lib/format";
 import { PSI_BAND_CLASSES, PSI_HEX_COLORS, type ConditionBand } from "@shared/lib/psi-colors";
 import type { StabilityContributor } from "@/hooks/api-hooks";
 import { BAND_ZONES, PSI_EVENTS } from "@/lib/psi-history-events";
@@ -138,17 +138,10 @@ export function buildPsiHistoryStats(history: PsiHistoryPoint[]): HistoryStatIte
   const avg30Band = BAND_ZONES.find((zone) => avg30 >= zone.y1)?.label ?? "";
   const high30Band = last30.find((point) => point.score === high30)?.band ?? "";
   const low30Band = last30.find((point) => point.score === low30)?.band ?? "";
-  const worst = history.reduce((lowest, point) => (point.score < lowest.score ? point : lowest), history[0]);
   return [
     { label: "30d High", value: formatScore(high30), band: high30Band, sub: null },
     { label: "30d Low", value: formatScore(low30), band: low30Band, sub: null },
     { label: "30d Avg", value: formatScore(avg30), band: avg30Band, sub: null },
-    {
-      label: "ATL",
-      value: formatScore(worst.score),
-      band: worst.band,
-      sub: formatChartDate(worst.date * 1000, "month-year"),
-    },
   ];
 }
 
