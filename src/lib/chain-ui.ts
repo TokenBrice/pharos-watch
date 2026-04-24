@@ -25,6 +25,15 @@ export const HEALTH_FILL_CLASSES: Record<HealthBand, string> = {
   concentrated: "bg-red-500",
 };
 
+/** Hex values paired with HEALTH_FILL_CLASSES for use in SVG (where Tailwind classes can't apply). */
+export const HEALTH_HEX_FILL: Record<HealthBand, string> = {
+  robust: "#059669",
+  healthy: "#0284c7",
+  mixed: "#d97706",
+  fragile: "#ea580c",
+  concentrated: "#dc2626",
+};
+
 export function trendColor(value: number): string {
   return getNetColor(value, {
     positiveClass: "text-emerald-600 dark:text-emerald-400",

@@ -68,9 +68,14 @@ export function DepthGauges({
       {globalData && (
         <div className="pharos-card-shell flex flex-col items-center gap-4 p-5 md:flex-row md:items-stretch">
           <div className="flex shrink-0 items-center justify-center">
+            {/*
+              Global fill encodes 7d TVL change: baseline 75 +/- capped 7d%.
+              No 90d rolling ceiling exists on DexLiquidityData today, so this
+              is the best field-encoding available without changing the pipeline.
+            */}
             <DepthGauge
               size="lg"
-              score={100}
+              score={75 + Math.max(-15, Math.min(15, globalData.tvlChange7d ?? 0))}
               coverageClass="primary"
               volume24hUsd={globalData.totalVolume24hUsd}
               organicFraction={globalData.organicFraction}

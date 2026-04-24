@@ -2,60 +2,37 @@
 
 import { Anchor, Activity, ShipWheel } from "lucide-react";
 import type { ChainSummary } from "@shared/types/chains";
-import { HEALTH_BADGE_CLASSES } from "@/lib/chain-ui";
+import { HEALTH_BADGE_CLASSES, HEALTH_HEX_FILL } from "@/lib/chain-ui";
+import type { HealthBand } from "@shared/types/chains";
 import { cn } from "@/lib/utils";
 import { buildChainHarborModel, type ChainHarborEntry } from "./harbor-map";
-import {
-  hullWidth,
-  cargoBuckets,
-  depthLayers,
-  wakeLength,
-  aggregateSkyBand,
-} from "./nautical-scene-math";
+import { hullWidth, cargoBuckets, depthLayers, wakeLength, aggregateSkyBand } from "./nautical-scene-math";
 import { HarborList } from "./harbor-list";
 import "./nautical-chart.css";
 
-const SCENE_WIDTH = 900;
+const SCENE_WIDTH = 1200;
 const SCENE_HEIGHT = 260;
 const WATERLINE_Y = 150;
-const PIER_X = 40;
+const PIER_X = 58;
 
-const HEALTH_HEX: Record<string, string> = {
-  robust: "#10b981",
-  healthy: "#0ea5e9",
-  mixed: "#f59e0b",
-  fragile: "#f97316",
-  concentrated: "#ef4444",
-};
-
-function healthHex(band: string | null): string {
-  return band ? HEALTH_HEX[band] ?? "#94a3b8" : "#94a3b8";
+function healthHex(band: HealthBand | null): string {
+  return band ? HEALTH_HEX_FILL[band] : "#94a3b8";
 }
 
-function Sun() {
-  const cx = SCENE_WIDTH - 80;
-  const cy = 50;
+function RangeLight() {
+  const cx = SCENE_WIDTH - 104;
+  const cy = 54;
   return (
-    <g className="nc-sun" aria-hidden="true">
-      <circle cx={cx} cy={cy} r={22} fill="#fde68a" opacity={0.9} />
-      {[0, 45, 90, 135, 180, 225, 270, 315].map((deg) => {
-        const rad = (deg * Math.PI) / 180;
-        const r1 = 26;
-        const r2 = 38;
-        return (
-          <line
-            key={deg}
-            x1={cx + Math.cos(rad) * r1}
-            y1={cy + Math.sin(rad) * r1}
-            x2={cx + Math.cos(rad) * r2}
-            y2={cy + Math.sin(rad) * r2}
-            stroke="#fde68a"
-            strokeWidth={2}
-            strokeLinecap="round"
-            opacity={0.7}
-          />
-        );
-      })}
+    <g className="nc-range-light" aria-hidden="true">
+      <path
+        d={`M ${cx - 12} ${cy} L ${cx - 132} ${cy - 30} L ${cx - 132} ${cy + 30} Z`}
+        fill="url(#nc-range-beam)"
+        opacity={0.72}
+      />
+      <circle cx={cx} cy={cy} r={13} fill="#fde68a" opacity={0.88} />
+      <circle cx={cx} cy={cy} r={20} fill="none" stroke="#fde68a" strokeWidth={1} opacity={0.32} />
+      <line x1={cx - 18} y1={cy} x2={cx + 18} y2={cy} stroke="#fde68a" strokeWidth={1} opacity={0.5} />
+      <line x1={cx} y1={cy - 18} x2={cx} y2={cy + 18} stroke="#fde68a" strokeWidth={1} opacity={0.5} />
     </g>
   );
 }
@@ -81,29 +58,82 @@ function Fog() {
   );
 }
 
-function Ship({
-  entry,
-  laneY,
-  x,
-  hullW,
-}: {
-  entry: ChainHarborEntry;
-  laneY: number;
-  x: number;
-  hullW: number;
-}) {
+function ChartGrid({ laneWidth, lanes }: { laneWidth: number; lanes: number }) {
+  const startX = PIER_X - 18;
+  const endX = SCENE_WIDTH - 28;
+  return (
+    <g aria-hidden="true">
+      {[40, 80, 120].map((y) => (
+        <line
+          key={`sky-${y}`}
+          x1={startX}
+          y1={y}
+          x2={endX}
+          y2={y}
+          stroke="currentColor"
+          strokeWidth={0.65}
+          strokeDasharray="2 8"
+          opacity={0.09}
+        />
+      ))}
+      {[172, 194, 216, 238].map((y, i) => (
+        <line
+          key={`depth-${y}`}
+          x1={startX}
+          y1={y}
+          x2={endX}
+          y2={y}
+          stroke="#38bdf8"
+          strokeWidth={0.75}
+          strokeDasharray={i % 2 === 0 ? "7 9" : "2 10"}
+          opacity={0.18}
+        />
+      ))}
+      {Array.from({ length: lanes + 1 }).map((_, i) => {
+        const x = PIER_X + i * laneWidth;
+        return (
+          <line
+            key={`berth-${i}`}
+            x1={x}
+            y1={WATERLINE_Y - 34}
+            x2={x}
+            y2={SCENE_HEIGHT - 18}
+            stroke="currentColor"
+            strokeWidth={0.55}
+            opacity={0.08}
+          />
+        );
+      })}
+      <text
+        x={startX}
+        y={SCENE_HEIGHT - 18}
+        fontSize={8}
+        fontFamily="ui-monospace, Menlo, monospace"
+        fill="currentColor"
+        opacity={0.36}
+      >
+        DOMINANCE DRAFT
+      </text>
+    </g>
+  );
+}
+
+function Ship({ entry, laneY, x, hullW, rank }: { entry: ChainHarborEntry; laneY: number; x: number; hullW: number; rank: number }) {
   const color = healthHex(entry.healthBand);
   const cargo = cargoBuckets(entry.stablecoinCount);
   const layers = depthLayers(entry.sharePct / 100);
   const wake = wakeLength(entry.change7dPct);
   const hullTop = laneY;
-  const hullBottom = laneY + 18;
+  const hullBottom = laneY + 17;
   const deckLeft = x;
   const deckRight = x + hullW;
-  const bowInset = 6;
+  const bowInset = Math.min(16, Math.max(7, hullW * 0.1));
+  const sternInset = Math.min(8, Math.max(4, hullW * 0.05));
 
-  const mastX = x + hullW * 0.6;
-  const flagWidth = Math.max(10, Math.min(32, (entry.dominantSharePct / 100) * 32));
+  const mastX = x + hullW * 0.62;
+  const flagWidth = Math.max(12, Math.min(36, (entry.dominantSharePct / 100) * 36));
+  const logoSize = 16;
+  const clipId = `nc-logo-${entry.id.replace(/[^a-z0-9-]/gi, "-")}`;
 
   return (
     <g>
@@ -111,49 +141,79 @@ function Ship({
         <path
           d={
             wake > 0
-              ? `M ${deckRight} ${hullBottom - 2} q ${wake * 28} -4 ${wake * 56} 0`
-              : `M ${deckLeft} ${hullBottom - 2} q ${wake * 28} -4 ${wake * 56} 0`
+              ? `M ${deckRight + 3} ${hullBottom - 3} q ${wake * 24} -3 ${wake * 52} 1`
+              : `M ${deckLeft - 3} ${hullBottom - 3} q ${wake * 24} -3 ${wake * 52} 1`
           }
           stroke={wake > 0 ? "#10b981" : "#ef4444"}
-          strokeWidth={1.5}
-          strokeDasharray="3 3"
+          strokeWidth={1}
+          strokeDasharray="2 5"
           fill="none"
-          opacity={0.7}
+          opacity={0.5}
         />
       )}
       <path
-        d={`M ${deckLeft} ${hullTop} L ${deckRight} ${hullTop} L ${deckRight - bowInset} ${hullBottom} L ${deckLeft + bowInset} ${hullBottom} Z`}
+        d={`M ${deckLeft + sternInset} ${hullTop} L ${deckRight - bowInset} ${hullTop} Q ${deckRight} ${hullTop + 8} ${deckRight - bowInset} ${hullBottom} L ${deckLeft + sternInset} ${hullBottom} Q ${deckLeft} ${hullTop + 8} ${deckLeft + sternInset} ${hullTop} Z`}
         fill={color}
-        opacity={0.85}
+        opacity={0.76}
+        stroke="oklch(0.96 0.005 255 / 0.36)"
+        strokeWidth={0.8}
       />
-      <line x1={deckLeft} y1={hullTop} x2={deckRight} y2={hullTop} stroke="#475569" strokeWidth={0.75} opacity={0.4} />
+      <line
+        x1={deckLeft + sternInset + 5}
+        y1={hullTop + 8.5}
+        x2={deckRight - bowInset - 4}
+        y2={hullTop + 8.5}
+        stroke="oklch(1 0 0 / 0.5)"
+        strokeWidth={0.7}
+        opacity={0.48}
+      />
       {Array.from({ length: cargo }).map((_, i) => (
         <rect
           key={i}
-          x={deckLeft + 4 + i * 7}
-          y={hullTop - 6}
-          width={6}
-          height={6}
-          fill="#64748b"
-          opacity={0.65}
+          x={deckLeft + 8 + i * 7}
+          y={hullTop - 5}
+          width={5}
+          height={4}
+          rx={0.8}
+          fill="oklch(0.78 0.012 250 / 0.7)"
         />
       ))}
-      <line x1={mastX} y1={hullTop} x2={mastX} y2={hullTop - 28} stroke="#475569" strokeWidth={1.2} />
-      <rect
+      <line
+        x1={mastX}
+        y1={hullTop + 1}
+        x2={mastX}
+        y2={hullTop - 26}
+        stroke="currentColor"
+        strokeWidth={0.9}
+        opacity={0.36}
+      />
+      <path
         className="nc-flag"
-        x={mastX}
-        y={hullTop - 28}
-        width={flagWidth}
-        height={10}
+        d={`M ${mastX} ${hullTop - 25} h ${flagWidth} l -4 5 l 4 5 h -${flagWidth} Z`}
         fill={color}
-        opacity={0.9}
+        opacity={0.82}
+      />
+      <defs>
+        <clipPath id={clipId}>
+          <circle cx={mastX + flagWidth / 2} cy={hullTop - 20} r={logoSize / 2} />
+        </clipPath>
+      </defs>
+      <circle
+        cx={mastX + flagWidth / 2}
+        cy={hullTop - 20}
+        r={logoSize / 2 + 1.5}
+        fill="oklch(0.98 0.006 250 / 0.9)"
+        stroke="oklch(0.18 0.012 250 / 0.36)"
+        strokeWidth={0.8}
       />
       <image
         href={entry.logoPath}
-        x={mastX + flagWidth / 2 - 7}
-        y={hullTop - 27}
-        width={14}
-        height={14}
+        x={mastX + flagWidth / 2 - logoSize / 2}
+        y={hullTop - 20 - logoSize / 2}
+        width={logoSize}
+        height={logoSize}
+        clipPath={`url(#${clipId})`}
+        style={entry.darkInvert ? { filter: "invert(1)" } : undefined}
       />
       {Array.from({ length: layers }).map((_, i) => {
         const offset = 4 + i * 3;
@@ -165,8 +225,8 @@ function Ship({
             x2={deckRight - 4 - i * 2}
             y2={hullBottom + offset}
             stroke="#0284c7"
-            strokeWidth={0.75}
-            opacity={0.45 - i * 0.08}
+            strokeWidth={0.7}
+            opacity={0.34 - i * 0.07}
           />
         );
       })}
@@ -177,37 +237,23 @@ function Ship({
         fontSize={9}
         fontFamily="ui-monospace, Menlo, monospace"
         fill="currentColor"
-        opacity={0.6}
+        opacity={0.56}
       >
-        {entry.name}
+        #{rank} {entry.name}
       </text>
     </g>
   );
 }
 
-function HorizonFleet({
-  remaining,
-  y,
-}: {
-  remaining: readonly ChainSummary[];
-  y: number;
-}) {
+function HorizonFleet({ remaining, y }: { remaining: readonly ChainSummary[]; y: number }) {
   if (remaining.length === 0) return null;
   const baseX = SCENE_WIDTH - 220;
   return (
-    <g opacity={0.55}>
+    <g opacity={0.44}>
       {remaining.slice(0, 10).map((c, i) => (
-        <rect
-          key={c.id}
-          x={baseX + i * 18}
-          y={y}
-          width={14}
-          height={4}
-          fill="#475569"
-          opacity={0.5}
-        >
+        <path key={c.id} d={`M ${baseX + i * 18} ${y + 4} h 14 l -3 3 h -9 Z`} fill="#475569" opacity={0.62}>
           <title>{c.name}</title>
-        </rect>
+        </path>
       ))}
     </g>
   );
@@ -225,7 +271,7 @@ function CompassPlate({
   detail: string;
 }) {
   return (
-    <div className="relative rounded-xl border border-amber-700/20 bg-gradient-to-br from-amber-50/40 to-amber-100/10 p-3 dark:border-amber-300/15 dark:from-amber-950/30 dark:to-amber-900/10">
+    <div className="relative rounded-lg border border-border/70 bg-muted/20 p-3 shadow-[inset_0_1px_0_oklch(1_0_0_/0.05)]">
       <div className="flex items-center gap-2 text-muted-foreground">
         {icon}
         <span className="text-[11px] uppercase tracking-wide">{label}</span>
@@ -236,13 +282,7 @@ function CompassPlate({
   );
 }
 
-export function NauticalChart({
-  chains,
-  globalTotalUsd,
-}: {
-  chains: ChainSummary[];
-  globalTotalUsd: number;
-}) {
+export function NauticalChart({ chains, globalTotalUsd }: { chains: ChainSummary[]; globalTotalUsd: number }) {
   const model = buildChainHarborModel(chains, globalTotalUsd);
   if (model.entries.length === 0) return null;
 
@@ -251,9 +291,7 @@ export function NauticalChart({
   const topCount = model.entries.length;
   const laneWidth = (SCENE_WIDTH - PIER_X - 40) / Math.max(topCount, 1);
 
-  const remaining = [...chains]
-    .sort((a, b) => b.totalUsd - a.totalUsd)
-    .slice(topCount);
+  const remaining = [...chains].sort((a, b) => b.totalUsd - a.totalUsd).slice(topCount);
 
   return (
     <section className="pharos-card-shell overflow-hidden" aria-labelledby="chain-nautical-heading">
@@ -264,7 +302,8 @@ export function NauticalChart({
             Where stablecoin supply is docked
           </h2>
           <p className="max-w-3xl text-sm text-muted-foreground">
-            Ship length tracks supply. Hull color is health band; flag width is dominant-coin share; cargo is stablecoin count; depth lines mark dominance draft.
+            Vessel length tracks supply; hull color is health band; pennant span is dominant-coin share; deck ticks
+            count listed stablecoins.
           </p>
         </div>
         <div className="rounded-full border border-frost-blue/30 bg-frost-blue/10 px-3 py-1 text-xs font-semibold text-sky-700 dark:text-sky-300">
@@ -282,18 +321,24 @@ export function NauticalChart({
         >
           <defs>
             <linearGradient id="nc-sky" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stopColor="#e0f2fe" stopOpacity="0.6" />
-              <stop offset="100%" stopColor="#bae6fd" stopOpacity="0.1" />
+              <stop offset="0%" stopColor="#dbeafe" stopOpacity="0.34" />
+              <stop offset="100%" stopColor="#64748b" stopOpacity="0.08" />
             </linearGradient>
             <linearGradient id="nc-water" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stopColor="#0284c7" stopOpacity="0.12" />
-              <stop offset="100%" stopColor="#0c4a6e" stopOpacity="0.2" />
+              <stop offset="0%" stopColor="#075985" stopOpacity="0.18" />
+              <stop offset="100%" stopColor="#082f49" stopOpacity="0.28" />
+            </linearGradient>
+            <linearGradient id="nc-range-beam" x1="1" y1="0" x2="0" y2="0">
+              <stop offset="0%" stopColor="#fde68a" stopOpacity="0.34" />
+              <stop offset="100%" stopColor="#fde68a" stopOpacity="0" />
             </linearGradient>
           </defs>
           <rect x="0" y="0" width={SCENE_WIDTH} height={WATERLINE_Y} fill="url(#nc-sky)" />
           <rect x="0" y={WATERLINE_Y} width={SCENE_WIDTH} height={SCENE_HEIGHT - WATERLINE_Y} fill="url(#nc-water)" />
 
-          {sky === "sun" ? <Sun /> : <Fog />}
+          <ChartGrid laneWidth={laneWidth} lanes={topCount} />
+
+          {sky === "sun" ? <RangeLight /> : <Fog />}
 
           <HorizonFleet remaining={remaining} y={WATERLINE_Y - 6} />
 
@@ -305,22 +350,14 @@ export function NauticalChart({
             y2={WATERLINE_Y}
             stroke="#0284c7"
             strokeWidth={1}
-            strokeDasharray="4 6"
-            opacity={0.5}
+            strokeDasharray="6 8"
+            opacity={0.42}
           />
 
           {model.entries.map((entry, i) => {
             const hullW = hullWidth(entry.totalUsd, maxSupply, laneWidth * 1.1);
             const x = PIER_X + i * laneWidth + (laneWidth - hullW) / 2;
-            return (
-              <Ship
-                key={entry.id}
-                entry={entry}
-                laneY={WATERLINE_Y - 18}
-                x={x}
-                hullW={hullW}
-              />
-            );
+            return <Ship key={entry.id} entry={entry} laneY={WATERLINE_Y - 18} x={x} hullW={hullW} rank={i + 1} />;
           })}
         </svg>
       </div>
@@ -348,11 +385,17 @@ export function NauticalChart({
           value={model.fragileHarbors}
           detail="fragile or concentrated chains"
         />
-        <div className="rounded-xl border border-amber-700/20 bg-gradient-to-br from-amber-50/40 to-amber-100/10 p-3 dark:border-amber-300/15 dark:from-amber-950/30 dark:to-amber-900/10">
+        <div className="rounded-lg border border-border/70 bg-muted/20 p-3 shadow-[inset_0_1px_0_oklch(1_0_0_/0.05)]">
           <p className="pharos-kicker">Health bands</p>
           <div className="mt-2 flex flex-wrap gap-1.5">
             {(["robust", "healthy", "mixed", "fragile", "concentrated"] as const).map((band) => (
-              <span key={band} className={cn("rounded-full px-2 py-0.5 text-[11px] font-medium capitalize", HEALTH_BADGE_CLASSES[band])}>
+              <span
+                key={band}
+                className={cn(
+                  "rounded-full px-2 py-0.5 text-[11px] font-medium capitalize",
+                  HEALTH_BADGE_CLASSES[band],
+                )}
+              >
                 {band}
               </span>
             ))}
