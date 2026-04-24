@@ -7,6 +7,7 @@ import { formatCurrency } from "@shared/lib/format";
 import type {
   SafetyInspectionBoardModel,
   SafetyInspectionRow,
+  SortDirection,
   SortKey,
 } from "./view-model";
 
@@ -64,10 +65,12 @@ function formatScoreValue(score: number | null): string {
 export function SafetyInspectionBoard({
   model,
   sortKey,
+  sortDirection,
   onSortChange,
 }: {
   model: SafetyInspectionBoardModel;
   sortKey: SortKey;
+  sortDirection: SortDirection;
   onSortChange: (value: SortKey) => void;
 }) {
   if (model.rows.length === 0 || !model.leadFinding) return null;
@@ -122,14 +125,14 @@ export function SafetyInspectionBoard({
           {model.rows.map((row) => {
             const tone = scoreTone(row);
             const score = row.weightedScore ?? row.averageScore;
-            const active = sortKey === row.key;
+            const active = sortKey === row.key && sortDirection === "asc";
             return (
               <button
                 key={row.key}
                 type="button"
                 onClick={() => onSortChange(row.key)}
                 aria-pressed={active}
-                aria-label={`Sort report cards by ${row.label}`}
+                aria-label={`Sort report cards by weakest ${row.label} first`}
                 className={cn(
                   "pharos-focus-ring min-h-11 rounded-xl border p-3 text-left transition-colors",
                   active ? "border-frost-blue bg-frost-blue/10" : "border-border/60 bg-background/35 hover:bg-muted/30",

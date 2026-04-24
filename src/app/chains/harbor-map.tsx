@@ -141,7 +141,7 @@ export function ChainHarborMap({
             return (
               <div
                 key={entry.id}
-                className="grid grid-cols-[2rem_minmax(8rem,0.95fr)_minmax(0,1.6fr)] items-center gap-3 rounded-xl border border-border/60 bg-background/35 px-3 py-2.5"
+                className="grid grid-cols-[2rem_minmax(0,1fr)] items-center gap-3 rounded-xl border border-border/60 bg-background/35 px-3 py-2.5 sm:grid-cols-[2rem_minmax(8rem,0.95fr)_minmax(0,1.6fr)]"
               >
                 <span className="font-mono text-xs text-muted-foreground tabular-nums">{index + 1}</span>
                 <div className="flex min-w-0 items-center gap-2">
@@ -160,7 +160,7 @@ export function ChainHarborMap({
                     </p>
                   </div>
                 </div>
-                <div className="min-w-0 space-y-1.5">
+                <div className="col-span-2 min-w-0 space-y-1.5 sm:col-span-1">
                   <div className="h-2.5 overflow-hidden rounded-full bg-muted/45" aria-hidden="true">
                     <div className={cn("h-full rounded-full", fillClass)} style={{ width: `${Math.max(entry.berthPct, 2)}%` }} />
                   </div>

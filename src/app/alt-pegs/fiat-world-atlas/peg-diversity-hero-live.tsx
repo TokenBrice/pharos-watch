@@ -1,6 +1,6 @@
 "use client";
 
-import type { ReactNode } from "react";
+import { useMemo, type ReactNode } from "react";
 import Link from "next/link";
 import { formatCompactUsd, formatPercent } from "@shared/lib/format";
 import { FIAT_MAP_SIZE_CAP_MARKET_CAP } from "@/lib/alt-peg-sizing";
@@ -60,8 +60,9 @@ function TopCohortStrip({ rows }: { rows: ReturnType<typeof buildAltPegSnapshot>
 export function PegDiversityHeroLive({ worldMap }: { worldMap: ReactNode }) {
   const stablecoinsQuery = useStablecoins();
   const { data } = stablecoinsQuery;
-  const hero = buildPegDiversityHero(data?.peggedAssets);
-  const snapshot = buildAltPegSnapshot(data?.peggedAssets);
+  const peggedAssets = data?.peggedAssets;
+  const hero = useMemo(() => buildPegDiversityHero(peggedAssets), [peggedAssets]);
+  const snapshot = useMemo(() => buildAltPegSnapshot(peggedAssets), [peggedAssets]);
   const showStatusOverlay = !data?.peggedAssets?.length || stablecoinsQuery.isError;
   const statusCopy =
     stablecoinsQuery.isError || (!stablecoinsQuery.isLoading && !data?.peggedAssets?.length)

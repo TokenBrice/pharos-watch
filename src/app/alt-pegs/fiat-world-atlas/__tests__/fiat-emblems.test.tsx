@@ -47,6 +47,8 @@ describe("FiatEmblems", () => {
     expect(hitTarget).not.toBeNull();
     expect(hitTarget.getAttribute("aria-hidden")).toBe("true");
     expect(hitTarget.getAttribute("tabindex")).toBe("-1");
+    expect(hitTarget.style.width).toBe("24px");
+    expect(hitTarget.style.height).toBe("24px");
 
     fireEvent.mouseEnter(hitTarget);
     expect(screen.getByRole("tooltip").textContent).toContain("VCHF");

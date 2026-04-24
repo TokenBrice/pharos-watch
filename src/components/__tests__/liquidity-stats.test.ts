@@ -1,6 +1,15 @@
-import { describe, expect, it } from "vitest";
-import { buildLiquidityExitRouteModel, buildProtocolBreakdown } from "@/components/liquidity-stats";
+// @vitest-environment jsdom
+import { cleanup, render, screen } from "@testing-library/react";
+import { createElement, type ImgHTMLAttributes } from "react";
+import { afterEach, describe, expect, it, vi } from "vitest";
+import { buildLiquidityExitRouteModel, buildProtocolBreakdown, LiquidityStats } from "@/components/liquidity-stats";
 import { DEX_GLOBAL_KEY, type DexLiquidityData } from "@shared/types";
+
+vi.mock("next/image", () => ({
+  default: (props: ImgHTMLAttributes<HTMLImageElement>) => createElement("img", { ...props, alt: props.alt ?? "" }),
+}));
+
+afterEach(() => cleanup());
 
 describe("buildProtocolBreakdown", () => {
   it("caps the protocol legend at 10 entries by grouping everything after the top 9", () => {
@@ -117,10 +126,91 @@ describe("buildLiquidityExitRouteModel", () => {
     });
   });
 
+  it("aggregates non-top exit routes into a visible other bucket", () => {
+    const model = buildLiquidityExitRouteModel({
+      [DEX_GLOBAL_KEY]: {
+        totalTvlUsd: 10_000,
+        totalVolume24hUsd: 2_500,
+        protocolTvl: {
+          curve: 3_000,
+          fluid: 2_000,
+          balancer: 1_500,
+          orca: 1_000,
+          raydium: 900,
+          aerodrome: 700,
+          quickswap: 400,
+        },
+        chainTvl: {
+          ethereum: 6_000,
+          base: 2_000,
+          arbitrum: 1_000,
+        },
+        poolCount: 42,
+      } as DexLiquidityData,
+    });
+
+    expect(model?.protocolRoutes.map((route) => route.key)).toEqual([
+      "curve",
+      "fluid",
+      "balancer",
+      "orca",
+      "raydium",
+      "_other-routes",
+    ]);
+    expect(model?.protocolRoutes.at(-1)).toMatchObject({
+      label: "Other routes",
+      valueUsd: 1_100,
+      sharePct: 11,
+    });
+  });
+
   it("does not build an exit map without global TVL", () => {
     expect(buildLiquidityExitRouteModel({})).toBeNull();
     expect(buildLiquidityExitRouteModel({
       [DEX_GLOBAL_KEY]: { totalTvlUsd: 0 } as DexLiquidityData,
     })).toBeNull();
+  });
+});
+
+describe("LiquidityStats", () => {
+  it("renders the exit route map with disclosed tail routes", () => {
+    render(createElement(LiquidityStats, {
+      stats: {
+        totalTvl: 10_000,
+        totalVol: 2_500,
+        avgScore: 72,
+        withLiquidity: 4,
+        highConfidenceCoverage: 3,
+        fallbackCoverage: 1,
+        totalTracked: 6,
+        agg7dChange: null,
+        avgBalance: null,
+        avgOrganic: null,
+      },
+      liquidityMap: {
+        [DEX_GLOBAL_KEY]: {
+          totalTvlUsd: 10_000,
+          totalVolume24hUsd: 2_500,
+          protocolTvl: {
+            curve: 3_000,
+            fluid: 2_000,
+            balancer: 1_500,
+            orca: 1_000,
+            raydium: 900,
+            aerodrome: 700,
+            quickswap: 400,
+          },
+          chainTvl: {
+            ethereum: 6_000,
+            base: 2_000,
+            arbitrum: 1_000,
+          },
+          poolCount: 42,
+        } as DexLiquidityData,
+      },
+    }));
+
+    expect(screen.getByText("Exit Route Map")).toBeTruthy();
+    expect(screen.getByText("Other routes")).toBeTruthy();
   });
 });

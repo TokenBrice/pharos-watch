@@ -1,6 +1,15 @@
-import { describe, expect, it } from "vitest";
+// @vitest-environment jsdom
+import { cleanup, render, screen } from "@testing-library/react";
+import { createElement, type ImgHTMLAttributes } from "react";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import type { ChainSummary } from "@shared/types/chains";
-import { buildChainHarborModel } from "./harbor-map";
+import { buildChainHarborModel, ChainHarborMap } from "./harbor-map";
+
+vi.mock("next/image", () => ({
+  default: (props: ImgHTMLAttributes<HTMLImageElement>) => createElement("img", { ...props, alt: props.alt ?? "" }),
+}));
+
+afterEach(() => cleanup());
 
 function makeChain(overrides: Partial<ChainSummary>): ChainSummary {
   return {
@@ -95,5 +104,20 @@ describe("buildChainHarborModel", () => {
       healthBand: null,
     });
     expect(model.averageHealthScore).toBe(64);
+  });
+
+  it("renders the harbor map summary and chain rows", () => {
+    render(createElement(ChainHarborMap, {
+      chains: [
+        makeChain({ id: "ethereum", name: "Ethereum", totalUsd: 60, healthScore: 90, healthBand: "robust" }),
+        makeChain({ id: "base", name: "Base", totalUsd: 25, healthScore: 70, healthBand: "mixed" }),
+      ],
+      globalTotalUsd: 100,
+    }));
+
+    expect(screen.getByRole("heading", { name: "Where stablecoin supply is docked" })).toBeTruthy();
+    expect(screen.getAllByText("Ethereum").length).toBeGreaterThan(0);
+    expect(screen.getByText("Base")).toBeTruthy();
+    expect(screen.getByText("Top 2 chains hold 85.0%")).toBeTruthy();
   });
 });

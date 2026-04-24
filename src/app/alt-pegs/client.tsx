@@ -100,7 +100,7 @@ function AltPegSnapshotHero({
               currency-linked plus VAR and other non-commodity pegs tracked by Pharos.
             </p>
           </div>
-          <div className="h-3 w-full overflow-hidden rounded-full bg-muted/35">
+          <div className="flex h-3 w-full overflow-hidden rounded-full bg-muted/35">
             <div className="h-full bg-[color:var(--chart-5)]" style={{ width: `${commodityShare}%` }} />
             <div className="h-full bg-[color:var(--brand-accent)]" style={{ width: `${nonCommodityShare}%` }} />
           </div>

@@ -3,17 +3,17 @@
 import { useCallback, useMemo, type CSSProperties } from "react";
 import { CoinEmblem } from "@/app/alt-pegs/fiat-world-atlas/coin-emblem";
 import { CohortThreads } from "@/app/alt-pegs/fiat-world-atlas/cohort-threads";
-import { useHoverState } from "@/app/alt-pegs/fiat-world-atlas/hover-context";
+import { useHoverDispatch } from "@/app/alt-pegs/fiat-world-atlas/hover-context";
 import type { PegCluster, PlacedCoin } from "@/lib/alt-peg-hero";
 
 type HitTargetStyle = CSSProperties & { "--hit-z": number };
 
 function hitTargetSizePx(coin: PlacedCoin): number {
-  return Math.max(20, Math.min(32, Math.round(coin.sizePx * 0.55)));
+  return Math.max(24, Math.min(32, Math.round(coin.sizePx * 0.55)));
 }
 
 function CoinHitTarget({ coin }: { coin: PlacedCoin }) {
-  const { setHoveredCoin } = useHoverState();
+  const setHoveredCoin = useHoverDispatch();
   const target = useMemo(() => ({ id: coin.id, pegCurrency: coin.pegCurrency }), [coin.id, coin.pegCurrency]);
   const onEnter = useCallback(() => setHoveredCoin(target), [setHoveredCoin, target]);
   const onLeave = useCallback(() => setHoveredCoin(null), [setHoveredCoin]);

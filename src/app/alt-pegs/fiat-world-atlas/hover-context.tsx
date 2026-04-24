@@ -18,6 +18,7 @@ interface HoverContextValue {
 }
 
 const HoverContext = createContext<HoverContextValue | null>(null);
+const HoverDispatchContext = createContext<HoverContextValue["setHoveredCoin"] | null>(null);
 
 const FALLBACK: HoverContextValue = {
   hoveredCoinId: null,
@@ -32,7 +33,12 @@ export function HoverProvider({ children }: { children: ReactNode }) {
   const [hovered, setHovered] = useState<HoverTarget | null>(null);
 
   const setHoveredCoin = useCallback((target: HoverTarget | null) => {
-    setHovered(target);
+    setHovered((current) => {
+      if (current?.id === target?.id && current?.pegCurrency === target?.pegCurrency) {
+        return current;
+      }
+      return target;
+    });
   }, []);
 
   const value = useMemo<HoverContextValue>(() => {
@@ -49,10 +55,18 @@ export function HoverProvider({ children }: { children: ReactNode }) {
     };
   }, [hovered, setHoveredCoin]);
 
-  return <HoverContext.Provider value={value}>{children}</HoverContext.Provider>;
+  return (
+    <HoverDispatchContext.Provider value={setHoveredCoin}>
+      <HoverContext.Provider value={value}>{children}</HoverContext.Provider>
+    </HoverDispatchContext.Provider>
+  );
 }
 
 export function useHoverState(): HoverContextValue {
   const ctx = useContext(HoverContext);
   return ctx ?? FALLBACK;
+}
+
+export function useHoverDispatch(): HoverContextValue["setHoveredCoin"] {
+  return useContext(HoverDispatchContext) ?? FALLBACK.setHoveredCoin;
 }

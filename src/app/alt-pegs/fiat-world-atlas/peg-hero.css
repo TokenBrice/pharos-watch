@@ -514,10 +514,11 @@
   grid-template-columns: auto 1fr auto;
   align-items: center;
   gap: 6px;
+  min-height: 24px;
   border-radius: 6px;
   color: inherit;
   font-size: 10px;
-  padding: 2px 3px;
+  padding: 3px 4px;
   text-decoration: none;
   transition: background-color 160ms ease-out;
 }

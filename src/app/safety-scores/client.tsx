@@ -241,6 +241,7 @@ export function ReportCardsClient() {
         <SafetyInspectionBoard
           model={inspectionModel}
           sortKey={sortKey}
+          sortDirection={sortDirection}
           onSortChange={handleInspectionSortChange}
         />
       )}

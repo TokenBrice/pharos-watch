@@ -103,21 +103,36 @@ function buildExitRouteItems(
     denominatorUsd?: number;
   },
 ): LiquidityExitRouteItem[] {
-  const total = Object.values(values).reduce((sum, value) => sum + Math.max(value, 0), 0);
+  const sortedEntries = Object.entries(values)
+    .filter(([, value]) => value > 0)
+    .sort(([, a], [, b]) => b - a);
+  const total = sortedEntries.reduce((sum, [, value]) => sum + value, 0);
   if (total <= 0) return [];
   const shareBase = denominatorUsd && denominatorUsd > 0 ? denominatorUsd : total;
+  const visibleEntries = sortedEntries.slice(0, MAX_EXIT_ROUTE_ITEMS);
+  const omittedTotal = sortedEntries
+    .slice(MAX_EXIT_ROUTE_ITEMS)
+    .reduce((sum, [, value]) => sum + value, 0);
 
-  return Object.entries(values)
-    .filter(([, value]) => value > 0)
-    .sort(([, a], [, b]) => b - a)
-    .slice(0, MAX_EXIT_ROUTE_ITEMS)
-    .map(([key, value], index) => ({
+  const routes = visibleEntries.map(([key, value], index) => ({
       key,
       label: labelForKey(key),
       valueUsd: value,
       sharePct: (value / shareBase) * 100,
       colorClass: colorForKey(key, index),
     }));
+
+  if (omittedTotal > 0) {
+    routes.push({
+      key: "_other-routes",
+      label: "Other routes",
+      valueUsd: omittedTotal,
+      sharePct: (omittedTotal / shareBase) * 100,
+      colorClass: "bg-muted-foreground",
+    });
+  }
+
+  return routes;
 }
 
 export function buildLiquidityExitRouteModel(
