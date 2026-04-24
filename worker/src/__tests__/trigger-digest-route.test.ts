@@ -76,7 +76,7 @@ describe("trigger-digest route", () => {
     const body = (await response?.json()) as { ok: boolean; accepted: boolean; requestId: string };
     expect(body.ok).toBe(true);
     expect(body.accepted).toBe(true);
-    expect(body.requestId).toMatch(/^manual-digest-\d+-[a-z0-9]{1,8}$/);
+    expect(body.requestId).toMatch(/^manual-digest-[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/);
 
     expect(dbCacheMocks.setCache).toHaveBeenCalledTimes(1);
     const setCacheArgs = dbCacheMocks.setCache.mock.calls[0] as unknown[];

@@ -51,6 +51,14 @@ export async function checkApiKeyRateLimit(
   return null;
 }
 
+export function flushPendingApiKeyPrunes(): Promise<void> {
+  const state = getApiKeyRuntimeState();
+  const pending = state.pendingApiKeyPrune;
+  if (!pending) return Promise.resolve();
+  state.pendingApiKeyPrune = null;
+  return pending;
+}
+
 export async function recordApiKeyUsage(
   db: ApiKeyDb,
   key: AuthenticatedApiKey,
@@ -63,10 +71,10 @@ export async function recordApiKeyUsage(
     return;
   }
 
-  state.apiKeyLastUsageUpdateById.set(key.id, nowSec);
   await db.prepare(
     "UPDATE api_keys SET last_used_at = ?, last_used_route = ? WHERE id = ?",
   )
     .bind(nowSec, routePath, key.id)
     .run();
+  state.apiKeyLastUsageUpdateById.set(key.id, nowSec);
 }

@@ -27,7 +27,7 @@ export const handleTriggerDigest = makeAdminRoute(
   "route-trigger-digest",
   async ({ db, request }: TriggerDigestRouteContext) =>
     runIdempotentAdminAction(db, "trigger-digest", request, async () => {
-      const requestId = `manual-digest-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+      const requestId = `manual-digest-${crypto.randomUUID()}`;
       await setCache(
         db,
         DIGEST_FORCE_RUN_CACHE_KEY,

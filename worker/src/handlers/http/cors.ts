@@ -26,7 +26,7 @@ function corsHeaders(origin: string | null): Record<string, string> {
   const headers: Record<string, string> = {
     "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
     "Access-Control-Allow-Headers": "Content-Type, Idempotency-Key, X-API-Key, X-Pharos-Admin",
-    "Access-Control-Expose-Headers": "X-Data-Age, Warning",
+    "Access-Control-Expose-Headers": "X-Data-Age, Warning, Retry-After",
     "Access-Control-Max-Age": "86400",
     Vary: "Origin",
     "X-Content-Type-Options": "nosniff",

@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const mocks = vi.hoisted(() => ({
+  flushPendingApiKeyPrunes: vi.fn(() => Promise.resolve()),
   flushPendingPrunes: vi.fn(() => Promise.resolve()),
   getRouteDependencies: vi.fn(),
   route: vi.fn(),
@@ -17,6 +18,10 @@ const mocks = vi.hoisted(() => ({
   handleMaintenanceMode: vi.fn(),
   notFoundResponse: vi.fn(),
   warnWorkerEnvIssuesOnce: vi.fn(),
+}));
+
+vi.mock("../../../lib/api-key-rate-limit", () => ({
+  flushPendingApiKeyPrunes: mocks.flushPendingApiKeyPrunes,
 }));
 
 vi.mock("../../../lib/rate-limit", () => ({
@@ -165,6 +170,8 @@ describe("handleHttpRequestImpl", () => {
     expect(mocks.recordRequestSource).toHaveBeenCalledOnce();
     expect(mocks.readEdgeCache).not.toHaveBeenCalled();
     expect(mocks.route).not.toHaveBeenCalled();
+    expect(mocks.flushPendingPrunes).toHaveBeenCalledOnce();
+    expect(mocks.flushPendingApiKeyPrunes).toHaveBeenCalledOnce();
   });
 
   it("returns edge-cache hits before route lookup and records attribution", async () => {
@@ -184,6 +191,8 @@ describe("handleHttpRequestImpl", () => {
     expect(mocks.recordRequestSource).toHaveBeenCalledOnce();
     expect(mocks.getRouteDependencies).not.toHaveBeenCalled();
     expect(mocks.route).not.toHaveBeenCalled();
+    expect(mocks.flushPendingPrunes).toHaveBeenCalledOnce();
+    expect(mocks.flushPendingApiKeyPrunes).toHaveBeenCalledOnce();
   });
 
   it("returns 404 when no route dependencies are registered for the path", async () => {
@@ -199,6 +208,8 @@ describe("handleHttpRequestImpl", () => {
     expect(mocks.recordRequestSource).toHaveBeenCalledOnce();
     expect(mocks.notFoundResponse).toHaveBeenCalledOnce();
     expect(mocks.route).not.toHaveBeenCalled();
+    expect(mocks.flushPendingPrunes).toHaveBeenCalledOnce();
+    expect(mocks.flushPendingApiKeyPrunes).toHaveBeenCalledOnce();
   });
 
   it("returns 404 when the router returns null after dependency hydration", async () => {
@@ -219,7 +230,9 @@ describe("handleHttpRequestImpl", () => {
       routeDependencies: ["coingeckoApiKey"],
     });
     expect(mocks.recordRequestSource).toHaveBeenCalledOnce();
-    expect(mocks.flushPendingPrunes).not.toHaveBeenCalled();
+    expect(mocks.flushPendingPrunes).toHaveBeenCalledOnce();
+    expect(mocks.flushPendingApiKeyPrunes).toHaveBeenCalledOnce();
+    expect(ctx.waitUntil).toHaveBeenCalledOnce();
     expect(mocks.writeEdgeCache).not.toHaveBeenCalled();
   });
 
@@ -236,6 +249,7 @@ describe("handleHttpRequestImpl", () => {
     const env = makeEnv();
 
     mocks.flushPendingPrunes.mockReturnValue(flushPromise);
+    mocks.flushPendingApiKeyPrunes.mockReturnValue(Promise.resolve());
     mocks.createEdgeCacheContext.mockReturnValue(edgeCacheContext);
     mocks.buildRouteContext.mockReturnValue(routeContext);
     mocks.route.mockResolvedValue(routedResponse);
@@ -244,7 +258,9 @@ describe("handleHttpRequestImpl", () => {
 
     expect(response).toBe(routedResponse);
     expect(mocks.route).toHaveBeenCalledWith(routeContext);
-    expect(ctx.waitUntil).toHaveBeenCalledWith(flushPromise);
+    expect(mocks.flushPendingPrunes).toHaveBeenCalledOnce();
+    expect(mocks.flushPendingApiKeyPrunes).toHaveBeenCalledOnce();
+    expect(ctx.waitUntil).toHaveBeenCalledOnce();
     expect(mocks.recordRequestSource).toHaveBeenCalledOnce();
     expect(mocks.writeEdgeCache).toHaveBeenCalledWith(edgeCacheContext, routedResponse, ctx);
     expect(mocks.addCorsHeaders).toHaveBeenCalledWith(routedResponse, "https://pharos.watch");

@@ -97,6 +97,10 @@ function canCacheResponse(response: Response): boolean {
     && !/(?:^|,\s*)110\b/.test(warning);
 }
 
+function hasConditionalRequestHeaders(request: Request): boolean {
+  return request.headers.has("If-None-Match") || request.headers.has("If-Modified-Since");
+}
+
 async function queueSiteDataTelemetry(
   context: SiteDataProxyContext,
   upstreamPath: string,
@@ -146,11 +150,14 @@ export const onRequest = async (context: SiteDataProxyContext): Promise<Response
     return jsonError(404, "Not found");
   }
 
+  const bypassPagesCache = hasConditionalRequestHeaders(request);
   const cacheKey = buildCacheKey(request);
-  const cached = await getDefaultCache().match(cacheKey);
-  if (cached) {
-    await queueSiteDataTelemetry(context, upstreamPath, "pages-cache-hit");
-    return cached;
+  if (!bypassPagesCache) {
+    const cached = await getDefaultCache().match(cacheKey);
+    if (cached) {
+      await queueSiteDataTelemetry(context, upstreamPath, "pages-cache-hit");
+      return cached;
+    }
   }
 
   const upstreamHeaders = buildUpstreamHeaders(request, env);
@@ -191,7 +198,7 @@ export const onRequest = async (context: SiteDataProxyContext): Promise<Response
 
   const response = buildProxyResponse(upstreamResult.response);
   await queueSiteDataTelemetry(context, upstreamPath, "pages-upstream-fetch", upstreamLane);
-  if (canCacheResponse(response)) {
+  if (!bypassPagesCache && canCacheResponse(response)) {
     await getDefaultCache().put(cacheKey, response.clone());
   }
   return response;

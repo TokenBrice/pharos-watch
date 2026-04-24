@@ -431,6 +431,39 @@ describe("api key helpers", () => {
     expect(db.getHistory().filter((entry) => entry.sql.includes("UPDATE api_keys SET last_used_at"))).toHaveLength(1);
   });
 
+  it("does not throttle later last-used writes after a failed metadata update", async () => {
+    const key = {
+      id: 12,
+      keyPrefix: "0123456789abcdef",
+      name: "Ops",
+      ownerEmail: null,
+      tier: "standard",
+      trafficClass: "external" as const,
+      rateLimitPerMinute: 120,
+      isActive: true,
+      expiresAt: null,
+    };
+    const failingDb = mockD1([
+      {
+        match: "UPDATE api_keys SET last_used_at = ?, last_used_route = ? WHERE id = ?",
+        rows: [],
+        throwError: new Error("d1 unavailable"),
+      },
+    ], { requireMatch: true });
+    const succeedingDb = mockD1([
+      {
+        match: "UPDATE api_keys SET last_used_at = ?, last_used_route = ? WHERE id = ?",
+        rows: [],
+        runMeta: { changes: 1 },
+      },
+    ], { requireMatch: true });
+
+    await expect(recordApiKeyUsage(failingDb, key, "/api/stablecoins", 1_000)).rejects.toThrow("d1 unavailable");
+    await recordApiKeyUsage(succeedingDb, key, "/api/stablecoins", 1_001);
+
+    expect(succeedingDb.getHistory().filter((entry) => entry.sql.includes("UPDATE api_keys SET last_used_at"))).toHaveLength(1);
+  });
+
   it("does not cache misses so newly created keys authenticate immediately", async () => {
     const pepper = "pepper";
     const secret = "abcdefghijklmnopqrstuvwxyzABCDEF";

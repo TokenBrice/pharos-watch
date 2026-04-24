@@ -129,6 +129,31 @@ describe("site-data proxy", () => {
       && entry.binds[4] === "")).toBe(true);
   });
 
+  it("bypasses the Pages cache for conditional requests", async () => {
+    cacheMatch.mockResolvedValueOnce(new Response(JSON.stringify({ cached: true }), {
+      status: 200,
+      headers: { "Content-Type": "application/json" },
+    }));
+    const fetchSpy = vi.fn(async () => new Response(null, {
+      status: 304,
+      headers: { ETag: "\"stablecoins-v1\"" },
+    }));
+    vi.stubGlobal("fetch", fetchSpy);
+
+    const response = await onRequest({
+      request: new Request("https://pharos.watch/_site-data/stablecoins", {
+        headers: { "If-None-Match": "\"stablecoins-v1\"" },
+      }),
+      env: makeEnv(),
+      params: { path: "stablecoins" },
+    });
+
+    expect(response.status).toBe(304);
+    expect(cacheMatch).not.toHaveBeenCalled();
+    expect(fetchSpy).toHaveBeenCalledOnce();
+    expect(cachePut).not.toHaveBeenCalled();
+  });
+
   it("proxies allowlisted requests to the site API with the shared secret and records an upstream fetch", async () => {
     const fetchSpy = vi.fn(async () => new Response(JSON.stringify({ ok: true }), {
       status: 200,

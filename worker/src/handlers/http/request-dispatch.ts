@@ -1,3 +1,4 @@
+import { flushPendingApiKeyPrunes } from "../../lib/api-key-rate-limit";
 import { flushPendingPrunes } from "../../lib/rate-limit";
 import { getRouteDependencies, route } from "../../router";
 import type { Env } from "../../lib/env";
@@ -6,6 +7,18 @@ import { addCorsHeaders, handleCorsPreflight, resolveCorsOrigin } from "./cors";
 import { buildRouteContext } from "./context";
 import { createEdgeCacheContext, readEdgeCache, writeEdgeCache } from "./edge-cache";
 import { evaluateAccessGate, handleMaintenanceMode, notFoundResponse, warnWorkerEnvIssuesOnce } from "./gates";
+
+function queuePendingRateLimitPrunes(ctx: ExecutionContext): void {
+  ctx.waitUntil(Promise.all([
+    flushPendingPrunes(),
+    flushPendingApiKeyPrunes(),
+  ]).then(() => {}));
+}
+
+function finalizeResponse(response: Response, origin: string | null, ctx: ExecutionContext): Response {
+  queuePendingRateLimitPrunes(ctx);
+  return addCorsHeaders(response, origin);
+}
 
 export async function handleHttpRequestImpl(
   request: Request,
@@ -41,20 +54,20 @@ export async function handleHttpRequestImpl(
   });
   if (gateResponse) {
     recordRequestSource();
-    return addCorsHeaders(gateResponse, origin);
+    return finalizeResponse(gateResponse, origin, ctx);
   }
 
   const edgeCache = createEdgeCacheContext(request, url);
   const cached = await readEdgeCache(edgeCache);
   if (cached) {
     recordRequestSource();
-    return addCorsHeaders(cached, origin);
+    return finalizeResponse(cached, origin, ctx);
   }
 
   const routeDependencies = getRouteDependencies(url);
   if (routeDependencies == null) {
     recordRequestSource();
-    return addCorsHeaders(notFoundResponse(), origin);
+    return finalizeResponse(notFoundResponse(), origin, ctx);
   }
 
   const response = await route(
@@ -70,11 +83,10 @@ export async function handleHttpRequestImpl(
 
   if (!response) {
     recordRequestSource();
-    return addCorsHeaders(notFoundResponse(), origin);
+    return finalizeResponse(notFoundResponse(), origin, ctx);
   }
 
-  ctx.waitUntil(flushPendingPrunes());
   recordRequestSource();
   writeEdgeCache(edgeCache, response, ctx);
-  return addCorsHeaders(response, origin);
+  return finalizeResponse(response, origin, ctx);
 }
