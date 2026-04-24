@@ -1,9 +1,9 @@
 import type { CronResult } from "../lib/cron-logger";
 import { RUB_FALLBACK, CIRCUIT_SOURCE } from "../lib/constants";
 import { shouldAttemptFetch, recordOutcome } from "../lib/circuit-breaker";
-import { getCache, setCache } from "../lib/db-cache";
+import { getCache } from "../lib/db-cache";
 import type { ChainRpcConfig } from "../lib/chain-registry";
-import { loadFxRateState, persistFxRateState } from "../lib/fx-rate-state";
+import { loadFxRateState } from "../lib/fx-rate-state";
 import {
   EXPECTED_FX_PEG_KEYS,
   isValidFxRate,
@@ -14,6 +14,7 @@ import {
 import { loadCommodityPeerMedianReference, resolveMetalReferenceRates } from "../lib/fx-metals";
 import {
   FxSyncRunState,
+  persistFxSyncResult,
   runChainlinkOverlay,
   runOpenExchangeRatesOverlay,
 } from "./sync-fx-rates-helpers";
@@ -220,29 +221,7 @@ export async function syncFxRates(
     }
 
     const meta = syncState.buildPersistedMeta();
-    const cacheResult = await persistFxRateState(db, syncState.usableRates, meta, syncStartSec);
-    const canonicalCache = cacheResult.rates.written ? null : await getCache(db, "fx-rates");
-    const newerCanonicalConfirmed = !!canonicalCache && canonicalCache.updatedAt > syncStartSec;
-    if (cacheResult.rates.written || newerCanonicalConfirmed) {
-      await setCache(db, "sync-fx-rates:last-write", "1");
-    }
-    console.log(
-      cacheResult.rates.written
-        ? `[sync-fx-rates] Cached FX rates: ${JSON.stringify(syncState.usableRates)}`
-        : `[sync-fx-rates] Cache write skipped; newer FX rates row exists`,
-    );
-    const metadata: Record<string, unknown> = syncState.buildResultMetadata(Object.values(SECONDARY_FX_CURRENCY_TO_PEG));
-    metadata.cacheWriteMode = cacheResult.rates.written ? "published" : "skipped-newer";
-    metadata.casSkipped = cacheResult.rates.skippedBecauseNewer || cacheResult.meta.skippedBecauseNewer;
-    metadata.cacheKey = "fx-rates";
-    metadata.syncStartSec = syncStartSec;
-    metadata.cacheWriteSucceeded = cacheResult.rates.written;
-    metadata.lastWriteAdvanced = cacheResult.rates.written || newerCanonicalConfirmed;
-    return {
-      status: syncState.mode === "cached-fallback" && meta.consecutiveFallbackRuns >= 4 ? "degraded" : undefined,
-      itemCount: cacheResult.rates.written ? Object.keys(syncState.usableRates).length : 0,
-      metadata: JSON.stringify(metadata),
-    };
+    return persistFxSyncResult(db, syncState, meta, syncStartSec, Object.values(SECONDARY_FX_CURRENCY_TO_PEG));
   } catch (err) {
     console.error(`[sync-fx-rates] Failed:`, err);
     throw err instanceof Error ? err : new Error(String(err));

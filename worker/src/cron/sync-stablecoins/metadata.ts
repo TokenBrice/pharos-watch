@@ -1,5 +1,6 @@
 import { hasMissingPrice, type PeggedAsset } from "./enrich-prices";
 import { buildSyncMetadata, type CronResult, type PriceSourceHealth } from "./shared";
+import type { CacheValidationResult } from "./post-enrichment";
 import type { CanonicalDeduplicationResult } from "./phase-helpers";
 import type { GtProbeStats } from "../../lib/geckoterminal-price-probe";
 import {
@@ -145,6 +146,39 @@ export function buildStablecoinsSyncResult(input: {
       capabilities: {
         stablecoinsCache: true,
         depegPipeline: input.depegPipelineSucceeded ?? input.depegErrorCount === 0,
+      },
+    }),
+  };
+}
+
+export function buildStablecoinsUnwrittenCacheResult(input: {
+  cacheResult: CacheValidationResult;
+  rawAssetCount: number;
+  droppedMalformedAssets: number;
+}): CronResult {
+  if (!input.cacheResult.skippedBecauseNewer) {
+    return input.cacheResult.blockedResult!;
+  }
+  return {
+    itemCount: 0,
+    metadata: buildSyncMetadata({
+      rowsRead: input.rawAssetCount,
+      rowsWritten: 0,
+      rowsDropped: input.droppedMalformedAssets,
+      sourceCoverage: { defillama: true },
+      fallbackMode: null,
+      validationFailures: 0,
+      upstreamFetchOk: true,
+      payloadAccepted: true,
+      cacheWriteSucceeded: false,
+      depegPipelineSucceeded: false,
+      cacheKey: input.cacheResult.cacheKey,
+      syncStartSec: input.cacheResult.syncStartSec,
+    }, {
+      cacheWriteMode: "skipped-newer",
+      capabilities: {
+        stablecoinsCache: true,
+        depegPipeline: false,
       },
     }),
   };

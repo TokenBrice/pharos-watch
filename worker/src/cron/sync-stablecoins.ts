@@ -7,7 +7,7 @@ import {
   runDepegPipeline,
   isAbortResult,
 } from "./sync-stablecoins/post-enrichment";
-import { buildStablecoinsSyncResult } from "./sync-stablecoins/metadata";
+import { buildStablecoinsSyncResult, buildStablecoinsUnwrittenCacheResult } from "./sync-stablecoins/metadata";
 import {
   abortResult,
   checkStablecoinsPriceStaleness,
@@ -88,7 +88,6 @@ export async function syncStablecoins(
   } = pricingStage;
   const fillSupplyHistoryResult = await fillStablecoinsSupplyHistoryStage(db, assets, signal);
   if (fillSupplyHistoryResult) return fillSupplyHistoryResult;
-
   const stalenessCheck = await checkStablecoinsPriceStaleness({
     db,
     assets,
@@ -169,32 +168,7 @@ export async function syncStablecoins(
   if (isAbortResult(cacheResult)) return cacheResult;
   if (!cacheResult.written) {
     await recordOutcome(db, CIRCUIT_SOURCE.DL_STABLECOINS, true);
-    if (cacheResult.skippedBecauseNewer) {
-      return {
-        itemCount: 0,
-        metadata: buildSyncMetadata({
-          rowsRead: rawAssetCount,
-          rowsWritten: 0,
-          rowsDropped: droppedMalformedAssets,
-          sourceCoverage: { defillama: true },
-          fallbackMode: null,
-          validationFailures: 0,
-          upstreamFetchOk: true,
-          payloadAccepted: true,
-          cacheWriteSucceeded: false,
-          depegPipelineSucceeded: false,
-          cacheKey: cacheResult.cacheKey,
-          syncStartSec: cacheResult.syncStartSec,
-        }, {
-          cacheWriteMode: "skipped-newer",
-          capabilities: {
-            stablecoinsCache: true,
-            depegPipeline: false,
-          },
-        }),
-      };
-    }
-    return cacheResult.blockedResult!;
+    return buildStablecoinsUnwrittenCacheResult({ cacheResult, rawAssetCount, droppedMalformedAssets });
   }
   await reportStablecoinsStage(reportProgress, "cache-write", "Published stablecoins cache", {
     itemsDone: assets.length,
@@ -202,7 +176,6 @@ export async function syncStablecoins(
   });
   await recordOutcome(db, CIRCUIT_SOURCE.DL_STABLECOINS, true);
   await queueTrackedAdditionsNotice(db, previousAssetsById.keys(), assets);
-
   await reportStablecoinsStage(reportProgress, "depeg-pipeline", "Running depeg pipeline", {
     itemsTotal: assets.length,
   });
@@ -212,7 +185,6 @@ export async function syncStablecoins(
   );
   if (isAbortResult(depegResult)) return depegResult;
   const { depegErrorCount, depegErrors, providerDiagnostics: depegProviderDiagnostics } = depegResult;
-
   const result = buildStablecoinsSyncResult({
     assets,
     rawAssetCount,
@@ -232,8 +204,7 @@ export async function syncStablecoins(
     upstreamFetchOk: true,
     payloadAccepted: true,
     cacheWriteSucceeded: true,
-    cacheKey: cacheResult.cacheKey,
-    syncStartSec: cacheResult.syncStartSec,
+    cacheKey: cacheResult.cacheKey, syncStartSec: cacheResult.syncStartSec,
     depegPipelineSucceeded: depegErrorCount === 0,
   });
   await reportStablecoinsStage(reportProgress, "complete", "Completed stablecoins sync", {

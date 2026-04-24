@@ -7,7 +7,8 @@ import { shouldAttemptFetch, recordOutcome } from "../lib/circuit-breaker";
 import { getCache, setCache } from "../lib/db-cache";
 import type { MetalsResolution } from "../lib/fx-metals";
 import type { FxRateSourceMode, FxRateState, FxRateSyncMode, FxRatesMeta, FxSourceCadence } from "../lib/fx-rate-state";
-import { getFxSourceStatus } from "../lib/fx-rate-state";
+import { getFxSourceStatus, persistFxRateState } from "../lib/fx-rate-state";
+import type { CronResult } from "../lib/cron-logger";
 import {
   applyRealtimeOverlaySourceMetadata,
   canCarryForwardFxRates,
@@ -54,6 +55,39 @@ export type RunBestEffort = (label: string, fn: () => Promise<void>) => Promise<
 
 export type OpenExchangeRatesSourceStatus = "ok" | "partial" | "rate-limited" | "unavailable";
 export type ChainlinkSourceStatus = "ok" | "partial" | "unavailable";
+
+export async function persistFxSyncResult(
+  db: D1Database,
+  state: FxSyncRunState,
+  meta: FxRatesMeta,
+  syncStartSec: number,
+  secondaryPegKeys: string[],
+): Promise<CronResult> {
+  const cacheResult = await persistFxRateState(db, state.usableRates, meta, syncStartSec);
+  const canonicalCache = cacheResult.rates.written ? null : await getCache(db, "fx-rates");
+  const lastWriteAdvanced = cacheResult.rates.written || (!!canonicalCache && canonicalCache.updatedAt > syncStartSec);
+  if (lastWriteAdvanced) {
+    await setCache(db, "sync-fx-rates:last-write", "1");
+  }
+  console.log(
+    cacheResult.rates.written
+      ? `[sync-fx-rates] Cached FX rates: ${JSON.stringify(state.usableRates)}`
+      : "[sync-fx-rates] Cache write skipped; newer FX rates row exists",
+  );
+  return {
+    status: state.mode === "cached-fallback" && meta.consecutiveFallbackRuns >= 4 ? "degraded" : undefined,
+    itemCount: cacheResult.rates.written ? Object.keys(state.usableRates).length : 0,
+    metadata: JSON.stringify({
+      ...state.buildResultMetadata(secondaryPegKeys),
+      cacheWriteMode: cacheResult.rates.written ? "published" : "skipped-newer",
+      casSkipped: cacheResult.rates.skippedBecauseNewer || cacheResult.meta.skippedBecauseNewer,
+      cacheKey: "fx-rates",
+      syncStartSec,
+      cacheWriteSucceeded: cacheResult.rates.written,
+      lastWriteAdvanced,
+    }),
+  };
+}
 
 interface FxSyncRunStateParams {
   prevState: FxRateState | null;

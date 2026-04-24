@@ -23,6 +23,10 @@
     "disposition": "deferred",
     "notes": "Supplemental asset intake still mixes multiple provider families. Defer further splitting until the stablecoin sync surface stabilizes after the current tranche."
   },
+  "worker/src/cron/sync-stablecoins/fallback.ts": {
+    "disposition": "deferred",
+    "notes": "Fallback stablecoin sync still mixes fallback intake, enrichment setup, cache publication, and post-enrichment orchestration. Keep this explicitly waived for the dedicated stablecoin-sync decomposition lane rather than folding a broad refactor into the current CAS visibility fix."
+  },
   "worker/src/cron/dex-discovery/crawl-sources.ts": {
     "disposition": "queued-p4",
     "notes": "DEX discovery crawling is still source-dense and branchy. Track it for a later crawler-family extraction rather than expanding the current worker tranche."
@@ -98,9 +102,5 @@
   "worker/src/cron/detect-depegs.ts": {
     "disposition": "queued-p4",
     "notes": "Depeg detection still mixes fetch orchestration, signal arbitration, and persistence decisions in one large cron module. Keep it waived until the next depeg pipeline simplification pass."
-  },
-  "worker/src/cron/dex-liquidity/pool-helpers.ts": {
-    "disposition": "queued-p4",
-    "notes": "Pool helper logic remains branch-heavy because it encodes multiple pool identity and pricing heuristics. Defer further extraction until the DEX-liquidity discovery/scoring surfaces settle."
   }
 }
