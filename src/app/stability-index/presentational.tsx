@@ -233,32 +233,34 @@ export function StabilityIndexPanel({
           </div>
 
           <div className="flex flex-1 flex-col gap-5">
-            <div className="flex flex-wrap items-baseline justify-center gap-x-5 gap-y-1 lg:justify-start">
-              <div className="flex items-baseline gap-2">
-                <span className="text-xs text-muted-foreground">
-                  <MethodologyLabel topic="psi">PSI</MethodologyLabel>
-                </span>
-                <span className={`font-mono text-6xl font-extrabold leading-none tabular-nums ${colorClass}`}>
-                  {formatScore(score)}
-                </span>
-                <span className={`text-lg font-bold uppercase tracking-wide ${colorClass}`}>
-                  {band}
-                </span>
-              </div>
-              <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1 text-sm text-muted-foreground">
-                {delta !== null && (
-                  <span className={`font-medium tabular-nums ${deltaClass}`}>
-                    {delta >= 0 ? "+" : ""}
-                    {delta.toFixed(1)} vs yesterday
+            <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between lg:gap-6">
+              <div className="flex flex-col items-center gap-1 text-center lg:shrink-0 lg:items-start lg:text-left">
+                <div className="flex items-baseline gap-2">
+                  <span className="text-xs text-muted-foreground">
+                    <MethodologyLabel topic="psi">PSI</MethodologyLabel>
                   </span>
-                )}
-                <span>{daysInBand} day{daysInBand !== 1 ? "s" : ""} in {band}</span>
+                  <span className={`font-mono text-6xl font-extrabold leading-none tabular-nums ${colorClass}`}>
+                    {formatScore(score)}
+                  </span>
+                  <span className={`text-lg font-bold uppercase tracking-wide ${colorClass}`}>
+                    {band}
+                  </span>
+                </div>
+                <div className="flex flex-wrap items-baseline justify-center gap-x-3 gap-y-1 text-sm text-muted-foreground lg:justify-start">
+                  {delta !== null && (
+                    <span className={`font-medium tabular-nums ${deltaClass}`}>
+                      {delta >= 0 ? "+" : ""}
+                      {delta.toFixed(1)} vs yesterday
+                    </span>
+                  )}
+                  <span>{daysInBand} day{daysInBand !== 1 ? "s" : ""} in {band}</span>
+                </div>
               </div>
-            </div>
 
-            <div className="hidden border-t border-border/60 pt-4 lg:flex lg:items-center lg:gap-6">
-              <p className="pharos-kicker shrink-0">Historical PSI</p>
-              <PsiHistoryStatsGrid items={historyStats} layout="row" />
+              <div className="hidden lg:flex lg:flex-1 lg:items-center lg:justify-end lg:gap-6">
+                <p className="pharos-kicker shrink-0">Historical PSI</p>
+                <PsiHistoryStatsGrid items={historyStats} layout="row" />
+              </div>
             </div>
 
             <PsiHistoryStatsGrid items={historyStats} layout="compact" />
