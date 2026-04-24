@@ -2,6 +2,41 @@ import { describe, expect, it } from "vitest";
 import { mockD1 } from "../../api/__tests__/helpers/mock-d1";
 import { loadStablecoinsCache } from "../stablecoins-cache";
 
+function makePublishedAsset(overrides: Record<string, unknown> = {}) {
+  return {
+    id: "usdt-tether",
+    name: "Tether",
+    symbol: "USDT",
+    geckoId: "tether",
+    pegType: "peggedUSD",
+    pegMechanism: "fiat-backed",
+    price: 1,
+    priceSource: "defillama",
+    priceConfidence: "high",
+    priceUpdatedAt: 1_700_000_000,
+    priceObservedAt: 1_700_000_000,
+    priceObservedAtMode: "upstream",
+    priceSyncedAt: 1_700_000_000,
+    consensusSources: [],
+    agreeSources: [],
+    supplySource: "defillama",
+    circulating: { peggedUSD: 100_000_000 },
+    circulatingPrevDay: { peggedUSD: 99_000_000 },
+    circulatingPrevWeek: { peggedUSD: 98_000_000 },
+    circulatingPrevMonth: { peggedUSD: 97_000_000 },
+    chainCirculating: {
+      Ethereum: {
+        current: 100_000_000,
+        circulatingPrevDay: 99_000_000,
+        circulatingPrevWeek: 98_000_000,
+        circulatingPrevMonth: 97_000_000,
+      },
+    },
+    chains: ["Ethereum"],
+    ...overrides,
+  };
+}
+
 function makeDbWithStablecoinsValue(value: string | null): D1Database {
   if (value == null) {
     return mockD1([{ match: "cache", rows: [], first: null }]);
@@ -104,6 +139,7 @@ describe("loadStablecoinsCache", () => {
     expect(result.kind).toBe("degraded");
     if (result.kind === "degraded") {
       expect(result.reason).toBe("legacy-array-payload");
+      expect(result.filteredCount).toBe(0);
       const payload = result.payload;
       expect(payload).not.toBeNull();
       expect(payload?.peggedAssets).toHaveLength(1);
@@ -111,17 +147,85 @@ describe("loadStablecoinsCache", () => {
     }
   });
 
-  it("rejects legacy array shape in strict mode when disabled", async () => {
+  it("rejects legacy array shape unless explicitly enabled", async () => {
     const db = makeDbWithStablecoinsValue(JSON.stringify([{ id: "usdt-tether" }]));
 
     const result = await loadStablecoinsCache(db, {
       mode: "strict",
-      allowLegacyArray: false,
     });
 
     expect(result.kind).toBe("error");
     if (result.kind === "error") {
       expect(result.reason).toBe("legacy-array-not-allowed");
+    }
+  });
+
+  it("validates with the shared published response contract when requested", async () => {
+    const db = makeDbWithStablecoinsValue(
+      JSON.stringify({
+        peggedAssets: [makePublishedAsset()],
+        fxFallbackRates: { peggedEUR: 1.08 },
+      }),
+    );
+
+    const result = await loadStablecoinsCache(db, {
+      mode: "strict",
+      contract: "published",
+      allowLegacyArray: false,
+    });
+
+    expect(result.kind).toBe("ok");
+    if (result.kind === "ok") {
+      expect(result.filteredCount).toBe(0);
+      expect(result.payload.peggedAssets).toHaveLength(1);
+      expect(result.payload.peggedAssets[0]?.id).toBe("usdt-tether");
+      expect(result.payload.fxFallbackRates).toEqual({ peggedEUR: 1.08 });
+    }
+  });
+
+  it("rejects partially malformed payloads in published-contract mode", async () => {
+    const db = makeDbWithStablecoinsValue(
+      JSON.stringify({
+        peggedAssets: [
+          makePublishedAsset(),
+          { id: "broken-coin", symbol: "BROKEN" },
+        ],
+      }),
+    );
+
+    const result = await loadStablecoinsCache(db, {
+      mode: "strict",
+      contract: "published",
+      allowLegacyArray: false,
+    });
+
+    expect(result.kind).toBe("error");
+    if (result.kind === "error") {
+      expect(result.reason).toBe("published-contract-invalid");
+    }
+  });
+
+  it("returns degraded filtered count in critical-field compatibility mode", async () => {
+    const db = makeDbWithStablecoinsValue(
+      JSON.stringify({
+        peggedAssets: [
+          { id: "usdt-tether", symbol: "USDT" },
+          { id: "broken-coin" },
+        ],
+      }),
+    );
+
+    const result = await loadStablecoinsCache(db, {
+      mode: "strict",
+      contract: "critical-fields",
+    });
+
+    expect(result.kind).toBe("degraded");
+    if (result.kind === "degraded") {
+      expect(result.reason).toBe("filtered-malformed-entries");
+      expect(result.filteredCount).toBe(1);
+      expect(result.payload?.peggedAssets).toHaveLength(1);
+      expect(result.payload?.peggedAssets[0]?.id).toBe("usdt-tether");
     }
   });
 

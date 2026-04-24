@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { getCache } from "./db-cache";
 import { decodeCachedJson, type JsonDecodeMode } from "./cache-json";
-import type { StablecoinData } from "@shared/types/market";
+import { StablecoinListResponseSchema, type StablecoinData, type StablecoinListResponse } from "@shared/types/market";
 
 // Validate critical fields only -- passthrough preserves all upstream data
 const StablecoinEntrySchema = z.object({
@@ -19,10 +19,9 @@ export function validateStablecoinEntry(entry: unknown): StablecoinData | null {
   return result.success ? (result.data as StablecoinData) : null;
 }
 
-export interface StablecoinsCachePayload {
-  peggedAssets: StablecoinData[];
-  fxFallbackRates?: Record<string, number>;
-}
+export type StablecoinsCachePayload = StablecoinListResponse;
+
+export type StablecoinsCacheContract = "published" | "critical-fields";
 
 export type StablecoinsCacheFailureReason =
   | "missing-cache"
@@ -30,12 +29,15 @@ export type StablecoinsCacheFailureReason =
   | "invalid-payload-shape"
   | "missing-pegged-assets"
   | "legacy-array-not-allowed"
-  | "legacy-array-payload";
+  | "legacy-array-payload"
+  | "filtered-malformed-entries"
+  | "published-contract-invalid";
 
 export interface StablecoinsCacheLoadOk {
   kind: "ok";
   payload: StablecoinsCachePayload;
   updatedAt: number;
+  filteredCount?: number;
 }
 
 export interface StablecoinsCacheLoadDegraded {
@@ -43,6 +45,7 @@ export interface StablecoinsCacheLoadDegraded {
   reason: StablecoinsCacheFailureReason;
   payload: StablecoinsCachePayload | null;
   updatedAt: number | null;
+  filteredCount?: number;
 }
 
 export interface StablecoinsCacheLoadError {
@@ -58,7 +61,13 @@ export type StablecoinsCacheLoadResult =
 
 export interface LoadStablecoinsCacheOptions {
   mode?: "strict" | "lenient";
+  contract?: StablecoinsCacheContract;
   allowLegacyArray?: boolean;
+}
+
+interface StablecoinsCacheDecodePayload {
+  payload: StablecoinsCachePayload;
+  filteredCount: number;
 }
 
 function toFxFallbackRates(value: unknown): Record<string, number> | undefined {
@@ -72,7 +81,7 @@ function toFxFallbackRates(value: unknown): Record<string, number> | undefined {
   return Object.keys(out).length > 0 ? out : undefined;
 }
 
-function validateAndFilterArray(rawArray: unknown[]): StablecoinData[] | null {
+function validateAndFilterArray(rawArray: unknown[]): { assets: StablecoinData[]; filteredCount: number } | null {
   const validated = rawArray
     .map((entry: unknown) => validateStablecoinEntry(entry))
     .filter((e): e is StablecoinData => e !== null);
@@ -85,18 +94,24 @@ function validateAndFilterArray(rawArray: unknown[]): StablecoinData[] | null {
     console.warn(`[stablecoins-cache] Filtered ${rawArray.length - validated.length} malformed entries`);
   }
 
-  return validated;
+  return {
+    assets: validated,
+    filteredCount: rawArray.length - validated.length,
+  };
 }
 
 function normalizePayload(
   parsed: unknown,
-  allowLegacyArray: boolean,
+  options: {
+    allowLegacyArray: boolean;
+    contract: StablecoinsCacheContract;
+  },
 ):
-  | { kind: "ok"; payload: StablecoinsCachePayload }
-  | { kind: "degraded"; reason: "legacy-array-payload"; payload: StablecoinsCachePayload }
+  | { kind: "ok"; payload: StablecoinsCachePayload; filteredCount: number }
+  | { kind: "degraded"; reason: "legacy-array-payload" | "filtered-malformed-entries"; payload: StablecoinsCachePayload; filteredCount: number }
   | { kind: "error"; reason: StablecoinsCacheFailureReason } {
   if (Array.isArray(parsed)) {
-    if (!allowLegacyArray) {
+    if (!options.allowLegacyArray) {
       return { kind: "error", reason: "legacy-array-not-allowed" };
     }
     const validated = validateAndFilterArray(parsed);
@@ -106,7 +121,8 @@ function normalizePayload(
     return {
       kind: "degraded",
       reason: "legacy-array-payload",
-      payload: { peggedAssets: validated },
+      payload: { peggedAssets: validated.assets },
+      filteredCount: validated.filteredCount,
     };
   }
 
@@ -119,17 +135,41 @@ function normalizePayload(
     return { kind: "error", reason: "missing-pegged-assets" };
   }
 
+  if (options.contract === "published") {
+    const result = StablecoinListResponseSchema.safeParse(parsed);
+    if (!result.success) {
+      return { kind: "error", reason: "published-contract-invalid" };
+    }
+    return {
+      kind: "ok",
+      payload: result.data,
+      filteredCount: 0,
+    };
+  }
+
   const validated = validateAndFilterArray(obj.peggedAssets);
   if (validated === null) {
     return { kind: "error", reason: "missing-pegged-assets" };
   }
 
+  const payload = {
+    peggedAssets: validated.assets,
+    fxFallbackRates: toFxFallbackRates(obj.fxFallbackRates),
+  };
+
+  if (validated.filteredCount > 0) {
+    return {
+      kind: "degraded",
+      reason: "filtered-malformed-entries",
+      payload,
+      filteredCount: validated.filteredCount,
+    };
+  }
+
   return {
     kind: "ok",
-    payload: {
-      peggedAssets: validated,
-      fxFallbackRates: toFxFallbackRates(obj.fxFallbackRates),
-    },
+    payload,
+    filteredCount: 0,
   };
 }
 
@@ -158,24 +198,34 @@ export async function loadStablecoinsCache(
   options: LoadStablecoinsCacheOptions = {},
 ): Promise<StablecoinsCacheLoadResult> {
   const mode = options.mode ?? "strict";
-  const allowLegacyArray = options.allowLegacyArray ?? true;
+  const contract = options.contract ?? "critical-fields";
+  const allowLegacyArray = options.allowLegacyArray ?? false;
   const decodeMode: JsonDecodeMode = mode === "lenient" ? "degraded" : "strict";
-  const decoded = decodeCachedJson<StablecoinsCachePayload, StablecoinsCacheFailureReason>(
+  const decoded = decodeCachedJson<StablecoinsCacheDecodePayload, StablecoinsCacheFailureReason>(
     await getCache(db, "stablecoins"),
     {
       mode: decodeMode,
       missingReason: "missing-cache",
       parseErrorReason: "json-parse-failed",
       normalize: (parsed) => {
-        const normalized = normalizePayload(parsed, allowLegacyArray);
+        const normalized = normalizePayload(parsed, { allowLegacyArray, contract });
         if (normalized.kind === "ok") {
-          return { ok: true, payload: normalized.payload };
+          return {
+            ok: true,
+            payload: {
+              payload: normalized.payload,
+              filteredCount: normalized.filteredCount,
+            },
+          };
         }
         if (normalized.kind === "degraded") {
           return {
             ok: false,
             reason: normalized.reason,
-            payload: normalized.payload,
+            payload: {
+              payload: normalized.payload,
+              filteredCount: normalized.filteredCount,
+            },
           };
         }
         return { ok: false, reason: normalized.reason };
@@ -184,16 +234,22 @@ export async function loadStablecoinsCache(
   );
 
   if (!decoded.ok) {
-    if (decoded.reason === "legacy-array-payload" && decoded.payload != null) {
+    if (decoded.payload != null) {
       return {
         kind: "degraded",
         reason: decoded.reason,
-        payload: decoded.payload,
+        payload: decoded.payload.payload,
         updatedAt: decoded.updatedAt,
+        filteredCount: decoded.payload.filteredCount,
       };
     }
     return toFailure(mode, decoded.reason, decoded.updatedAt);
   }
 
-  return { kind: "ok", payload: decoded.payload, updatedAt: decoded.updatedAt ?? 0 };
+  return {
+    kind: "ok",
+    payload: decoded.payload.payload,
+    updatedAt: decoded.updatedAt ?? 0,
+    filteredCount: decoded.payload.filteredCount,
+  };
 }

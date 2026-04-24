@@ -72,7 +72,7 @@ export async function loadReportCardsSnapshotInputs(db: D1Database): Promise<Rep
     redemptionBackstopMapResult,
     liveReserveMapResult,
   ] = await Promise.allSettled([
-    loadStablecoinsCache(db, { mode: "strict", allowLegacyArray: false }),
+    loadStablecoinsCache(db, { mode: "strict", contract: "published", allowLegacyArray: false }),
     getCache(db, "bluechip-ratings"),
     loadDexLiquiditySnapshot(db),
     loadRedemptionBackstopSnapshot(db),

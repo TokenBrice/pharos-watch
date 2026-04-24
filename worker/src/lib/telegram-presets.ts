@@ -155,7 +155,7 @@ export async function resolveTelegramPresetTargets(
   db: D1Database,
   presetIds: readonly TelegramPresetId[],
 ): Promise<TelegramPresetResolveResult> {
-  const cacheResult = await loadStablecoinsCache(db, { mode: "strict" });
+  const cacheResult = await loadStablecoinsCache(db, { mode: "strict", allowLegacyArray: true });
   if (cacheResult.kind !== "ok") {
     return {
       kind: "error",

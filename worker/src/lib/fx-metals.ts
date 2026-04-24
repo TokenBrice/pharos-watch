@@ -55,7 +55,7 @@ export async function loadCommodityPeerMedianReference(
   db: D1Database,
   syncStartSec: number,
 ): Promise<CommodityPeerMedianReference> {
-  const stablecoinsCacheResult = await loadStablecoinsCache(db, { mode: "lenient" });
+  const stablecoinsCacheResult = await loadStablecoinsCache(db, { mode: "lenient", allowLegacyArray: true });
   if (!hasUsableStablecoinsPayload(stablecoinsCacheResult)) {
     return { rates: {}, updatedAt: null };
   }
