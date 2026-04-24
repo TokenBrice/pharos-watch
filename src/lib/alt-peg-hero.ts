@@ -150,7 +150,7 @@ function separateFiatClusterLogos(clusters: readonly PegCluster[]): PegCluster[]
   const flat = clusters.flatMap((cluster) => cluster.coins);
   const leaderIds = new Set(clusters.map((cluster) => cluster.coins[0]?.id).filter(Boolean));
   const separated = resolvePackedCoinOverlaps(flat, {
-    paddingPx: 6,
+    paddingPx: 12,
     getMobility: (coin) => (leaderIds.has(coin.id) ? 0.24 : 1),
   });
   const byId = new Map(separated.map((coin) => [coin.id, coin]));
