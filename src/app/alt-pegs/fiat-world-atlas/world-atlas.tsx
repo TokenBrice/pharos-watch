@@ -55,7 +55,7 @@ function AtlasHeroHeader({
                 CPI-linked references float in the sky above — references beyond any single monetary region.
               </span>
               <span className="xl:hidden">
-                Currency cohorts are grouped by region below; gold, silver, and CPI-linked references appear first.
+                Currency cohorts, gold, silver, and CPI-linked references continue below the market-cap charts.
               </span>
             </p>
           </div>
