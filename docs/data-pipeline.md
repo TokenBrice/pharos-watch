@@ -169,6 +169,7 @@ The sync pipeline includes multiple layers of validation to prevent bad data fro
 40. **DEWS thin-peg FX parity**: `computeAndStoreDEWS()` now passes cached `fxFallbackRates` into `derivePegRates()`, matching live depeg detection and peg-summary behavior for thin non-USD peg groups.
 41. **Recent-only chart FX repair**: `syncStablecoinCharts()` still corrects obvious recent `totalCirculatingUSD` corruption with the live FX cache, but it no longer rewrites deep historical points with today's FX reference.
 42. **Completed-day supply history reads**: `snapshotSupply()` blocks sparse daily snapshots instead of writing a partial day when fewer than 80% of PSI-eligible assets have usable supply. Public `supply-history` and `non-usd-share` reads cap rows to the completed `snapshot-supply:last-write` marker when present and emit `X-Data-Age` from the latest completed supply snapshot run.
+43. **Single-deployment on-chain supply fallback**: CoinGecko-detail supplemental assets may use on-chain `totalSupply * price` only when exactly one supported deployment can represent global supply. Multi-deployment assets skip that fallback instead of treating one chain's supply as the total market cap.
 
 ## Gold & Silver Spot Prices (gold-api.com)
 

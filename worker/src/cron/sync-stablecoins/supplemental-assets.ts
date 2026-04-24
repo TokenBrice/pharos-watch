@@ -343,17 +343,27 @@ async function fetchGoldTokens(cgData: CoinGeckoMcapData, signal?: AbortSignal):
   }
 }
 
-/** Fetch totalSupply from the first supported on-chain contract and return mcap = supply × price. */
+function isSupportedOnChainSupplyContract(contract: NonNullable<StablecoinMeta["contracts"]>[number]): boolean {
+  return contract.chain === "solana" || (contract.chain !== "stellar" && contract.chain !== "tron");
+}
+
+export function selectSingleOnChainSupplyContract(meta: StablecoinMeta): NonNullable<StablecoinMeta["contracts"]>[number] | null {
+  const supportedContracts = meta.contracts?.filter(isSupportedOnChainSupplyContract) ?? [];
+  return supportedContracts.length === 1 ? supportedContracts[0] : null;
+}
+
+/** Fetch totalSupply from one unambiguous on-chain contract and return mcap = supply × price. */
 async function fetchOnChainMcap(
   meta: StablecoinMeta,
   priceUsd: number,
   chainRpcs?: Map<string, ChainRpcConfig>,
   signal?: AbortSignal,
 ): Promise<number | null> {
-  const supplyContract = meta.contracts?.find(
-    (contract) => contract.chain === "solana" || (contract.chain !== "stellar" && contract.chain !== "tron"),
-  );
+  const supplyContract = selectSingleOnChainSupplyContract(meta);
   if (!supplyContract) {
+    if ((meta.contracts?.length ?? 0) > 1) {
+      console.warn(`[fiat-cg] ${meta.symbol}: skipping on-chain supply fallback because multiple supported contracts could undercount global supply`);
+    }
     return null;
   }
 
