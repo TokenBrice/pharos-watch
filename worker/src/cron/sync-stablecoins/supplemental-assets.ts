@@ -348,8 +348,10 @@ function isSupportedOnChainSupplyContract(contract: NonNullable<StablecoinMeta["
 }
 
 export function selectSingleOnChainSupplyContract(meta: StablecoinMeta): NonNullable<StablecoinMeta["contracts"]>[number] | null {
-  const supportedContracts = meta.contracts?.filter(isSupportedOnChainSupplyContract) ?? [];
-  return supportedContracts.length === 1 ? supportedContracts[0] : null;
+  const contracts = meta.contracts ?? [];
+  if (contracts.length !== 1) return null;
+  const [contract] = contracts;
+  return contract && isSupportedOnChainSupplyContract(contract) ? contract : null;
 }
 
 /** Fetch totalSupply from one unambiguous on-chain contract and return mcap = supply × price. */

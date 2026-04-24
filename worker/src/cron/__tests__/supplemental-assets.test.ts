@@ -11,9 +11,10 @@ function makeMeta(contracts: StablecoinMeta["contracts"]): StablecoinMeta {
     contracts,
     flags: {
       pegCurrency: "USD",
-      backing: "fiat-backed",
+      backing: "rwa-backed",
       governance: "centralized",
       yieldBearing: false,
+      rwa: false,
       navToken: false,
     },
   } as StablecoinMeta;
@@ -43,6 +44,13 @@ describe("selectSingleOnChainSupplyContract", () => {
     expect(selectSingleOnChainSupplyContract(makeMeta([
       { chain: "ethereum", address: "0x0000000000000000000000000000000000000001", decimals: 6 },
       { chain: "bsc", address: "0x0000000000000000000000000000000000000002", decimals: 6 },
+    ]))).toBeNull();
+  });
+
+  it("rejects mixed supported and unsupported contracts to avoid partial global supply", () => {
+    expect(selectSingleOnChainSupplyContract(makeMeta([
+      { chain: "tron", address: "TEST.TRON", decimals: 6 },
+      { chain: "ethereum", address: "0x0000000000000000000000000000000000000001", decimals: 6 },
     ]))).toBeNull();
   });
 });

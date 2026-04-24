@@ -28,7 +28,7 @@ describe("runCircuitGatedLeasedScheduledJob", () => {
       env: {} as ScheduledRuntimeContext["env"],
       ctx: {} as ExecutionContext,
       cron: "*/30 * * * *",
-      scheduleKey: "halfHourly",
+      scheduleKey: "halfHourlyOffset",
       scheduledTimeMs: null,
       slotStartedAt: 0,
       mintBurnDisabledIds: [],
