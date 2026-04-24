@@ -30,3 +30,16 @@ Scope: implementation notes for `agents/plans/2026-04-24-website-maintainability
   - `npm run typecheck`
   - `npm run check:hotspot-ratchet`
 - Follow-up signal: the hotspot ratchet updater can refresh unrelated baseline entries when other committed files have drifted. Keep metadata commits scoped manually when executing a narrow slice.
+
+## Slice 3: DEX Liquidity Card Parts Split
+
+- Moved DEX liquidity table, breakdown bars, TVL chart, pool source label, trend arrow, score breakdown, and durability/organic/stress badges into `src/components/dex-liquidity-card-parts.tsx`.
+- Kept `src/components/dex-liquidity-card.tsx` as the card shell that owns loading/empty states, score header, top health summary, and market-structure composition.
+- Removed the stale hotspot waiver for `src/components/dex-liquidity-card.tsx` after the card shell shrank below the waived threshold.
+- Added a hotspot waiver for pre-existing `worker/src/api/mint-burn-flows.ts` because the global ratchet surfaced it while validating this slice. No worker code changed; the waiver points it at the repo-wide follow-up lane.
+- Validation:
+  - `npm test -- src/components/__tests__/dex-liquidity-card.test.tsx`
+  - `npm run typecheck`
+  - `npm run check:hotspot-ratchet`
+  - `npm run check:unused-code`
+- Follow-up signal: final repo-wide cleanup should decide whether `worker/src/api/mint-burn-flows.ts` is a real P1 handler decomposition candidate or just needs ownership metadata refinement.

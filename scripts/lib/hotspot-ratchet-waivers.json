@@ -35,6 +35,10 @@
     "disposition": "queued-p4",
     "notes": "The audit/repair handler still mixes validation, replay planning, and mutation orchestration. Keep it explicitly owned as a later admin-path hotspot rather than widening this tranche."
   },
+  "worker/src/api/mint-burn-flows.ts": {
+    "disposition": "queued-p4",
+    "notes": "Mint/burn flow API handling now crosses the hotspot threshold with request parsing, aggregation, formatting, and response shaping in one handler. Track it for the repo-wide strategic cleanup pass instead of folding worker API refactors into the website cleanup slice."
+  },
   "worker/src/cron/blacklist/amount-recovery.ts": {
     "disposition": "queued-p4",
     "notes": "Blacklist amount recovery still mixes provider fanout, pricing fallback, event-shape branching, and batch-write orchestration in one branch-heavy module. Track it for a dedicated blacklist recovery simplification pass rather than folding that work into the current reserve/pricing/status tranche."
@@ -46,10 +50,6 @@
   "src/components/status/api-keys-panel.tsx": {
     "disposition": "queued-p4",
     "notes": "The API keys operator panel currently mixes create/edit form state, admin mutations, expiry/rate-limit validation, and token reveal rendering in one client component. Keep it explicitly waived until the next ops-UI decomposition pass splits the mutation helpers and per-key row editor out of the panel shell."
-  },
-  "src/components/dex-liquidity-card.tsx": {
-    "disposition": "queued-p4",
-    "notes": "The DEX liquidity detail card still mixes summary copy, top-pool rendering, and history presentation in one shell. Track it for the next frontend hotspot pass rather than folding a larger decomposition into this pricing/liquidity fix."
   },
   "shared/lib/format.ts": {
     "disposition": "deferred",
