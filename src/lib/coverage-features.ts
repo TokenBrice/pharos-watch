@@ -1,4 +1,4 @@
-import type { CoverageFeatureDefinition } from "@/lib/coverage";
+import type { CoverageFeatureDefinition } from "@/lib/coverage-types";
 
 export const COVERAGE_FEATURES: readonly CoverageFeatureDefinition[] = [
   {
