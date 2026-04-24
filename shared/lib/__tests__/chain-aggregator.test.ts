@@ -89,6 +89,16 @@ describe("aggregateChains", () => {
     expect(eth.dominanceShare).toBeCloseTo(550 / 750, 4);
   });
 
+  it("includes the top stablecoins per chain by local supply", () => {
+    const result = aggregateChains(makeInput());
+    const eth = result.chains.find((c) => c.id === "ethereum")!;
+
+    expect(eth.topStablecoins).toEqual([
+      { id: "usdt-tether", symbol: "USDT", share: 300 / 550, supplyUsd: 300 },
+      { id: "usdc-circle", symbol: "USDC", share: 250 / 550, supplyUsd: 250 },
+    ]);
+  });
+
   it("computes health score factors", () => {
     const result = aggregateChains(makeInput());
     const eth = result.chains.find((c) => c.id === "ethereum")!;

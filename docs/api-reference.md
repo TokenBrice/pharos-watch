@@ -499,12 +499,13 @@ Returns chain-level stablecoin aggregates with Chain Health Scores. Computed on-
 | `change7dPct`        | `number`                     | 7d supply change as a percentage                                                                                             |
 | `change30d`          | `number`                     | Absolute 30d supply change in USD                                                                                            |
 | `change30dPct`       | `number`                     | 30d supply change as a percentage                                                                                            |
-| `stablecoinCount`    | `number`                     | Number of distinct stablecoins on this chain                                                                                 |
-| `dominantStablecoin` | `{ id, symbol, share }`      | Largest stablecoin by supply on the chain                                                                                    |
-| `dominanceShare`     | `number`                     | Chain share of the global tracked stablecoin supply (0–1)                                                                    |
-| `healthScore`        | `number \| null`             | Chain Health Score 0–100, or `null` if insufficient data                                                                     |
-| `healthBand`         | `string \| null`             | Health band label: `"robust"` (80–100), `"healthy"` (60–79), `"mixed"` (40–59), `"fragile"` (20–39), `"concentrated"` (0–19) |
-| `healthFactors`      | `ChainHealthFactors`         | Raw sub-factor scores (0–100 each; `quality` may still be `null`)                                                            |
+| `stablecoinCount`    | `number`                              | Number of distinct stablecoins on this chain                                                                                 |
+| `dominantStablecoin` | `{ id, symbol, share }`               | Largest stablecoin by supply on the chain                                                                                    |
+| `topStablecoins`     | `{ id, symbol, share, supplyUsd }[]`  | Up to five largest stablecoins by supply on the chain; `share` is chain-local (0–1) and `supplyUsd` is USD-denominated       |
+| `dominanceShare`     | `number`                              | Chain share of the global tracked stablecoin supply (0–1)                                                                    |
+| `healthScore`        | `number \| null`                      | Chain Health Score 0–100, or `null` if insufficient data                                                                     |
+| `healthBand`         | `string \| null`                      | Health band label: `"robust"` (80–100), `"healthy"` (60–79), `"mixed"` (40–59), `"fragile"` (20–39), `"concentrated"` (0–19) |
+| `healthFactors`      | `ChainHealthFactors`                  | Raw sub-factor scores (0–100 each; `quality` may still be `null`)                                                            |
 
 **`ChainHealthFactors` fields:**
 

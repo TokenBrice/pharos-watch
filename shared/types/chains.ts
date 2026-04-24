@@ -14,6 +14,13 @@ export interface ChainDominantStablecoin {
   share: number;
 }
 
+export interface ChainTopStablecoin {
+  id: string;
+  symbol: string;
+  share: number;
+  supplyUsd: number;
+}
+
 export interface ChainSummary {
   id: string;
   name: string;
@@ -28,6 +35,7 @@ export interface ChainSummary {
   change30dPct: number;
   stablecoinCount: number;
   dominantStablecoin: ChainDominantStablecoin;
+  topStablecoins?: ChainTopStablecoin[];
   dominanceShare: number;
   healthScore: number | null;
   healthBand: HealthBand | null;

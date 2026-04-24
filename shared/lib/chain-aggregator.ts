@@ -106,6 +106,12 @@ export function aggregateChains(input: ChainAggregatorInput): ChainsResponse {
     // Dominant stablecoin
     const sorted = [...acc.coins].sort((a, b) => b.supplyUsd - a.supplyUsd);
     const dominant = sorted[0];
+    const topStablecoins = sorted.slice(0, 5).map((coin) => ({
+      id: coin.id,
+      symbol: coin.symbol,
+      share: coin.supplyUsd / acc.totalUsd,
+      supplyUsd: coin.supplyUsd,
+    }));
 
     // Supply shares for concentration
     const shares = acc.coins.map((c) => c.supplyUsd / acc.totalUsd);
@@ -163,6 +169,7 @@ export function aggregateChains(input: ChainAggregatorInput): ChainsResponse {
         symbol: dominant.symbol,
         share: dominant.supplyUsd / acc.totalUsd,
       },
+      topStablecoins,
       dominanceShare: globalTotalUsd > 0 ? acc.totalUsd / globalTotalUsd : 0,
       healthScore,
       healthBand,
