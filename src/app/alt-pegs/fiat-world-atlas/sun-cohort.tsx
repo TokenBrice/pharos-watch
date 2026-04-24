@@ -4,7 +4,7 @@ import { CoinEmblem } from "@/app/alt-pegs/fiat-world-atlas/coin-emblem";
 import { CohortThreads } from "@/app/alt-pegs/fiat-world-atlas/cohort-threads";
 import type { SkyCohort } from "@/lib/alt-peg-hero";
 
-const SUN_HALO_PCT = { cx: 16, cy: 48 };
+const SUN_HALO_PCT = { cx: 19, cy: 48 };
 
 export function SunCohort({ cohort }: { cohort: SkyCohort }) {
   if (cohort.coins.length === 0) return null;
@@ -37,8 +37,8 @@ export function SunCohort({ cohort }: { cohort: SkyCohort }) {
         </g>
       </svg>
       <CohortThreads coins={cohort.coins} colorHex="#facc15" />
-      <span className="sky-region-tag" style={{ left: "16%", top: "9%" }}>
-        Gold · Sun · {coinCount} {coinCount === 1 ? "coin" : "coins"}
+      <span className="sky-region-tag" style={{ left: "19%", top: "9%" }}>
+        Gold · {coinCount} {coinCount === 1 ? "coin" : "coins"}
       </span>
       <CoinEmblem
         coin={primary}

@@ -1,7 +1,8 @@
-export const SIZE_FLOOR = 26;
-export const SIZE_CEIL = 120;
-export const FIAT_MAP_SIZE_CEIL = 84;
-const SIZE_SCALE = 4.0;
+export const SIZE_FLOOR = 20;
+export const SIZE_CEIL = 92;
+export const SKY_COHORT_SIZE_CEIL = 84;
+export const FIAT_MAP_SIZE_CEIL = 58;
+const SIZE_SCALE = 2.9;
 const MCAP_DIVISOR = 1_000_000;
 
 export const FIAT_MAP_SIZE_CAP_MARKET_CAP = ((FIAT_MAP_SIZE_CEIL - SIZE_FLOOR) / SIZE_SCALE) ** 2 * MCAP_DIVISOR;

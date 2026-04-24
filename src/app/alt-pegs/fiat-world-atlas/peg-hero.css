@@ -1,10 +1,22 @@
+.peg-hero__live-shell {
+  border-top: 1px solid oklch(0.6 0 0 / 0.12);
+  background: oklch(0.035 0.012 255 / 0.9);
+}
+
+.peg-hero__legend-rail {
+  display: grid;
+  grid-template-columns: minmax(14rem, auto) minmax(0, 1fr);
+  gap: 8px;
+  padding: 10px 12px;
+}
+
 .peg-hero {
   position: relative;
   width: 100%;
   height: clamp(390px, 48vw, 590px);
-  border-radius: 12px;
+  border-radius: 0 0 12px 12px;
   overflow: hidden;
-  border: 1px solid oklch(0.6 0 0 / 0.12);
+  border-top: 1px solid oklch(0.6 0 0 / 0.12);
   background: linear-gradient(
     to bottom,
     oklch(0.02 0 0) 0%,
@@ -120,32 +132,32 @@
   pointer-events: none;
 }
 .sun-cohort__halo {
-  width: 340px;
-  height: 340px;
+  width: 260px;
+  height: 260px;
   background: radial-gradient(
     circle at center,
-    oklch(0.92 0.16 90 / 0.55) 0%,
-    oklch(0.82 0.17 75 / 0.28) 18%,
-    oklch(0.68 0.14 55 / 0.12) 40%,
+    oklch(0.92 0.16 90 / 0.38) 0%,
+    oklch(0.82 0.17 75 / 0.18) 20%,
+    oklch(0.68 0.14 55 / 0.08) 42%,
     transparent 65%
   );
 }
 .sun-cohort__rays {
   position: absolute;
   transform: translate(-50%, -50%);
-  width: 440px;
-  height: 440px;
+  width: 340px;
+  height: 340px;
   z-index: 1;
   pointer-events: none;
-  opacity: 0.4;
+  opacity: 0.26;
 }
 .moon-cohort__halo {
-  width: 160px;
-  height: 160px;
+  width: 128px;
+  height: 128px;
   background: radial-gradient(
     circle at center,
-    oklch(0.9 0.02 250 / 0.35) 0%,
-    oklch(0.75 0.02 250 / 0.14) 40%,
+    oklch(0.9 0.02 250 / 0.28) 0%,
+    oklch(0.75 0.02 250 / 0.1) 42%,
     transparent 70%
   );
 }
@@ -195,10 +207,10 @@
   border-radius: 50%;
   overflow: visible;
   background: #f1f5f9;
-  border: 2px solid rgba(255, 255, 255, 0.95);
+  border: 1px solid rgba(255, 255, 255, 0.92);
   box-shadow:
-    0 6px 18px rgba(0, 0, 0, 0.55),
-    0 2px 6px rgba(0, 0, 0, 0.4);
+    0 4px 12px rgba(0, 0, 0, 0.48),
+    0 1px 4px rgba(0, 0, 0, 0.36);
   transform: translate(-50%, -50%);
   cursor: pointer;
   display: block;
@@ -223,24 +235,24 @@
 }
 
 .coin-emblem--sun-core {
-  border: 3px solid oklch(0.85 0.18 90 / 0.95);
+  border: 2px solid oklch(0.85 0.18 90 / 0.92);
   box-shadow:
-    0 0 0 3px oklch(0.85 0.18 90 / 0.25),
-    0 0 30px oklch(0.78 0.2 80 / 0.75),
-    0 0 70px oklch(0.78 0.2 80 / 0.35);
+    0 0 0 2px oklch(0.85 0.18 90 / 0.18),
+    0 0 22px oklch(0.78 0.2 80 / 0.58),
+    0 0 48px oklch(0.78 0.2 80 / 0.24);
 }
 .coin-emblem--sun-planet {
-  border: 2px solid oklch(0.58 0.12 75 / 0.85);
+  border: 1px solid oklch(0.58 0.12 75 / 0.85);
   box-shadow:
     0 4px 14px rgba(0, 0, 0, 0.5),
     0 0 10px oklch(0.78 0.2 80 / 0.25);
 }
 .coin-emblem--moon {
-  border: 3px solid oklch(0.9 0.02 250 / 0.95);
+  border: 2px solid oklch(0.9 0.02 250 / 0.92);
   box-shadow:
-    0 0 0 2px oklch(0.9 0.02 250 / 0.25),
-    0 0 24px oklch(0.85 0.02 250 / 0.65),
-    0 0 55px oklch(0.85 0.02 250 / 0.3);
+    0 0 0 2px oklch(0.9 0.02 250 / 0.18),
+    0 0 18px oklch(0.85 0.02 250 / 0.52),
+    0 0 40px oklch(0.85 0.02 250 / 0.2);
 }
 .coin-emblem--star {
   border: 2px solid oklch(0.86 0.04 260 / 0.9);
@@ -251,7 +263,7 @@
 
 .coin-emblem.is-hovered,
 .coin-emblem:focus-visible {
-  transform: translate(-50%, -50%) scale(1.1);
+  transform: translate(-50%, -50%) scale(1.07);
   z-index: 30;
   box-shadow:
     0 0 0 3px oklch(0.75 0.15 250 / 0.55),
@@ -452,11 +464,9 @@
 
 .peg-hero__scale-key,
 .peg-hero__top-cohorts {
-  position: absolute;
-  z-index: 12;
   border: 1px solid oklch(0.8 0.03 250 / 0.18);
   border-radius: 8px;
-  background: oklch(0.055 0.018 255 / 0.78);
+  background: oklch(0.07 0.018 255 / 0.78);
   color: oklch(0.92 0.035 250);
   backdrop-filter: blur(10px);
   box-shadow:
@@ -465,10 +475,9 @@
 }
 
 .peg-hero__scale-key {
-  left: 12px;
-  top: 12px;
   display: flex;
   align-items: center;
+  flex-wrap: wrap;
   gap: 7px;
   padding: 7px 9px;
   pointer-events: none;
@@ -501,20 +510,20 @@
 }
 
 .peg-hero__top-cohorts {
-  top: 12px;
-  right: 12px;
   display: grid;
+  grid-template-columns: auto repeat(3, minmax(0, 1fr));
+  align-items: center;
   gap: 5px;
-  min-width: 190px;
-  padding: 8px 9px;
+  min-width: 0;
+  padding: 7px 8px;
 }
 
 .peg-hero__top-row {
   display: grid;
-  grid-template-columns: auto 1fr auto;
+  grid-template-columns: auto minmax(0, 1fr);
   align-items: center;
-  gap: 6px;
-  min-height: 24px;
+  gap: 2px 6px;
+  min-height: 28px;
   border-radius: 6px;
   color: inherit;
   font-size: 10px;
@@ -542,10 +551,36 @@
 }
 
 .peg-hero__top-value {
+  grid-column: 2;
   color: oklch(0.9 0.08 245);
   font-family: var(--font-geist-mono), ui-monospace, SFMono-Regular, "SF Mono", Consolas, "Liberation Mono", monospace;
   font-weight: 750;
   font-variant-numeric: tabular-nums;
+  font-size: 9px;
+}
+
+@media (min-width: 1450px) {
+  .peg-hero__top-row {
+    grid-template-columns: auto minmax(0, 1fr) auto;
+  }
+
+  .peg-hero__top-value {
+    grid-column: auto;
+  }
+}
+
+@media (max-width: 1360px) {
+  .peg-hero__legend-rail {
+    grid-template-columns: 1fr;
+  }
+
+  .peg-hero__top-cohorts {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .peg-hero__top-label {
+    grid-column: 1 / -1;
+  }
 }
 
 .peg-hero__status-overlay {
@@ -567,23 +602,6 @@
   line-height: 1.35;
   padding: 10px 12px;
   text-align: center;
-}
-
-@media (max-width: 1320px) {
-  .peg-hero__top-cohorts {
-    min-width: 168px;
-    padding: 7px;
-  }
-
-  .peg-hero__top-row {
-    grid-template-columns: auto minmax(0, 1fr);
-    gap: 3px 6px;
-  }
-
-  .peg-hero__top-value {
-    grid-column: 2;
-    font-size: 9px;
-  }
 }
 
 /* ===== Cohort threads ===== */

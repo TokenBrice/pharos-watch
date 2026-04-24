@@ -54,7 +54,7 @@ describe("StaticAltPegLinkHub", () => {
   it("explains the live coin layer while atlas data is loading", () => {
     const { container } = render(withQueryClient(<StaticAltPegLinkHub />));
     const desktopAtlas = container.querySelector('[data-alt-peg-layout="desktop-atlas"]');
-    expect(desktopAtlas?.textContent).toContain("Fiat size");
+    expect(desktopAtlas?.textContent).toContain("Fiat logo size");
     const status = desktopAtlas?.querySelector('[role="status"]');
     expect(status?.textContent).toContain("Loading live coin positions.");
   });

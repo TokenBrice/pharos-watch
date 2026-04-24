@@ -33,7 +33,7 @@ export function ConstellationCohort({ cohort }: { cohort: SkyCohort }) {
       </svg>
       <CohortThreads coins={cohort.coins} colorHex="#a8bae0" />
       <span className="sky-region-tag" style={{ left: "82%", top: "9%" }}>
-        CPI · Constellation · {cohort.coins.length} {cohort.coins.length === 1 ? "coin" : "coins"}
+        CPI · {cohort.coins.length} {cohort.coins.length === 1 ? "coin" : "coins"}
       </span>
       {cohort.coins.map((c) => (
         <CoinEmblem

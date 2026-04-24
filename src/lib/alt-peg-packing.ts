@@ -33,7 +33,7 @@ export function arrangeClusterCoins(
   for (let i = 1; i < sorted.length; i++) {
     const coin = sorted[i];
     const prev = sorted[i - 1];
-    const baseRadiusPx = Math.max(14, 0.6 * (prev.sizePx / 2 + coin.sizePx / 2));
+    const baseRadiusPx = Math.max(16, 0.78 * (prev.sizePx / 2 + coin.sizePx / 2));
     const angleDeg = INITIAL_ANGLE_DEG + (i - 1) * GOLDEN_ANGLE_DEG;
     const angleRad = (angleDeg * Math.PI) / 180;
 
@@ -44,7 +44,7 @@ export function arrangeClusterCoins(
       const dyPercent = (radiusPx * Math.sin(angleRad)) / (FRAME_H / 100);
       candidate = { ...coin, x: anchor.x + dxPercent, y: anchor.y + dyPercent };
       const overlaps = placed.some((p) => {
-        const minDist = ((p.sizePx + coin.sizePx) / 2) * 0.9;
+        const minDist = ((p.sizePx + coin.sizePx) / 2) * 1.04;
         return centerDistancePx(p, candidate!) < minDist;
       });
       if (!overlaps) break;

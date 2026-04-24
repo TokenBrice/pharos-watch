@@ -4,7 +4,7 @@ import { ACTIVE_META_BY_ID } from "@shared/lib/stablecoins";
 import type { PegCurrency, StablecoinData } from "@shared/types";
 import { PEG_ANCHORS } from "@/lib/alt-peg-emblems";
 import { arrangeClusterCoins, type PackingInput } from "@/lib/alt-peg-packing";
-import { coinEmblemSize, FIAT_MAP_SIZE_CEIL } from "@/lib/alt-peg-sizing";
+import { coinEmblemSize, FIAT_MAP_SIZE_CEIL, SKY_COHORT_SIZE_CEIL } from "@/lib/alt-peg-sizing";
 import { logosById } from "@/lib/logos";
 import { buildStablecoinUrl } from "@/lib/urls";
 
@@ -56,9 +56,9 @@ const EMPTY_SKY: readonly SkyCohort[] = [
 // Sky cohort centers & spread (percentages of the sky layer). The sun sits
 // left, moon center, constellation right; secondary coins ring outward.
 const SKY_LAYOUT: Record<SkyCohortKind, { cx: number; cy: number; spreadX: number; spreadY: number }> = {
-  sun: { cx: 20, cy: 48, spreadX: 20, spreadY: 34 },
-  moon: { cx: 50, cy: 42, spreadX: 10, spreadY: 30 },
-  constellation: { cx: 82, cy: 55, spreadX: 15, spreadY: 35 },
+  sun: { cx: 19, cy: 48, spreadX: 18, spreadY: 28 },
+  moon: { cx: 50, cy: 42, spreadX: 9, spreadY: 26 },
+  constellation: { cx: 82, cy: 52, spreadX: 13, spreadY: 30 },
 };
 
 interface LlamaCoin {
@@ -119,7 +119,7 @@ function placeSkyCohort(kind: SkyCohortKind, coins: HeroCoin[], rank?: number): 
   const sorted = [...coins].sort((a, b) => b.marketCap - a.marketCap);
   const layout = SKY_LAYOUT[kind];
   const placed: PlacedCoin[] = sorted.map((coin, index) => {
-    const sizePx = coinEmblemSize(coin.marketCap);
+    const sizePx = coinEmblemSize(coin.marketCap, { ceil: SKY_COHORT_SIZE_CEIL });
     if (index === 0) return { ...coin, x: layout.cx, y: layout.cy, sizePx };
     const angle = ((index - 1) / Math.max(1, sorted.length - 1)) * Math.PI * 2;
     const orbitRx = layout.spreadX * (0.35 + (index % 3) * 0.25);

@@ -70,7 +70,7 @@ Important contract:
 
 ## Section Order
 
-The route renders `StaticAltPegLinkHub` before `AltPegsClient`. The static hero is a single theme-aware, map-first `FiatWorldAtlas` card headed by `Peg Diversity Map`; it carries the region summary pills, the desktop world map, non-geographic reference markers, and the crawlable cohort links. In light mode, the atlas uses a pale cartographic surface; dark mode keeps the higher-contrast night-map treatment.
+The route renders `StaticAltPegLinkHub` before `AltPegsClient`. The static hero is a single theme-aware, map-first `FiatWorldAtlas` card headed by `Peg Diversity Map`; it carries the region summary pills, a compact logo-size and top-cohort rail, the desktop world map, non-geographic reference markers, and the crawlable cohort links. In light mode, the atlas uses a pale cartographic surface; dark mode keeps the higher-contrast night-map treatment.
 
 `AltPegsClient` then renders, in order:
 
@@ -81,7 +81,7 @@ The route renders `StaticAltPegLinkHub` before `AltPegsClient`. The static hero 
 5. `AltPegCohortDirectory`
 6. current peg-distribution card
 
-On `xl+`, the `FiatWorldAtlas` hero carries the full non-USD drill-down surface: Gold (sun), Silver (moon), and CPI/Index (orbital glyph) float over the map's ocean deadspots, and the map itself is a pre-rendered static SVG of 1:110m Natural Earth geometry, colored per country via `PEG_COUNTRY_MAP` in `src/lib/alt-peg-geography.ts`. The SVG is regenerated with `npm run build:world-map` (dev-only d3-geo + topojson-client). Below `xl`, fiat cohorts fall back to a stacked `MobileRegionList`; non-geographic reference cohorts remain in the celestial band above the map/list area.
+On `xl+`, the `FiatWorldAtlas` hero carries the full non-USD drill-down surface: Gold (sun), Silver (moon), and CPI/Index (orbital glyph) float over the map's ocean deadspots, while the top-cohort market-cap summary sits outside the plotted sky layer so it does not cover CPI-linked markers. The map itself is a pre-rendered static SVG of 1:110m Natural Earth geometry, colored per country via `PEG_COUNTRY_MAP` in `src/lib/alt-peg-geography.ts`. The SVG is regenerated with `npm run build:world-map` (dev-only d3-geo + topojson-client). Below `xl`, fiat cohorts fall back to a stacked `MobileRegionList`; non-geographic reference cohorts remain in the celestial band above the map/list area.
 
 The route intentionally keeps the static taxonomy map ahead of live analytics, then gives the historical trend cards priority over the client-side directory and current distribution module so the analysis reads from market share history into the current cohort roster.
 
@@ -101,7 +101,7 @@ Current Release 1 behavior:
 - The command palette picks the route up automatically through shared nav config.
 - `scripts/generate-llms-txt.ts` includes `/alt-pegs/` in the generated `public/llms.txt`.
 - `StaticAltPegLinkHub` is part of the static route output before the client analytics, so `out/alt-pegs/index.html` contains crawlable links into representative non-USD peg cohorts and exposes the peg diversity map as the route's first visible module.
-- The static link hub's treatment is a single theme-aware `FiatWorldAtlas` hero card: Gold sun, Silver moon, and CPI/Index orbital references float on the desktop map with stablecoin logo stacks, while a pre-rendered static SVG world map colors countries per `PEG_COUNTRY_MAP`. Commodity, CPI-linked, and other non-fiat reference cohorts stay crawlable through the desktop deadspot markers plus `Beyond Geography` link rail, and through the celestial band on narrower viewports; fiat cohorts use the world map plus logo clusters and region chips on desktop and the stacked `MobileRegionList` on narrower viewports.
+- The static link hub's treatment is a single theme-aware `FiatWorldAtlas` hero card: Gold sun, Silver moon, and CPI/Index orbital references float on the desktop map with capped stablecoin logo stacks, while a pre-rendered static SVG world map colors countries per `PEG_COUNTRY_MAP`. Commodity, CPI-linked, and other non-fiat reference cohorts stay crawlable through the desktop deadspot markers plus `Beyond Geography` link rail, and through the celestial band on narrower viewports; fiat cohorts use the world map plus smaller logo clusters and region chips on desktop and the stacked `MobileRegionList` on narrower viewports.
 
 ---
 

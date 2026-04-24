@@ -20,7 +20,7 @@ function formatFriendlyCap(value: number): string {
 function FiatSizeKey() {
   return (
     <div className="peg-hero__scale-key" aria-label="Fiat market cap size key">
-      <span className="peg-hero__scale-label">Fiat size</span>
+      <span className="peg-hero__scale-label">Fiat logo size</span>
       <span className="peg-hero__scale-item">
         <span className="peg-hero__scale-dot" style={{ width: 7, height: 7 }} />
         $1M
@@ -41,7 +41,7 @@ function TopCohortStrip({ rows }: { rows: ReturnType<typeof buildAltPegSnapshot>
   if (rows.length === 0) return null;
   return (
     <div className="peg-hero__top-cohorts" aria-label="Top cohorts by market cap">
-      <span className="peg-hero__top-label">Top cohorts by cap</span>
+      <span className="peg-hero__top-label">Largest cohorts</span>
       {rows.map((row, index) => (
         <Link key={row.peg} href={row.href} className="peg-hero__top-row pharos-focus-ring">
           <span className="peg-hero__top-dot" style={{ backgroundColor: row.colorHex }} />
@@ -49,7 +49,7 @@ function TopCohortStrip({ rows }: { rows: ReturnType<typeof buildAltPegSnapshot>
             #{index + 1} {row.label}
           </span>
           <span className="peg-hero__top-value">
-            {formatCompactUsd(row.marketCap)} · {formatPercent(row.sharePct, 1)} non-USD cap
+            {formatCompactUsd(row.marketCap)} · {formatPercent(row.sharePct, 1)} of non-USD cap
           </span>
         </Link>
       ))}
@@ -70,20 +70,24 @@ export function PegDiversityHeroLive({ worldMap }: { worldMap: ReactNode }) {
       : "Loading live coin positions.";
   return (
     <HoverProvider>
-      <div className="peg-hero">
-        <TopCohortStrip rows={snapshot.topRows} />
-        <FiatSizeKey />
-        {showStatusOverlay ? (
-          <div className="peg-hero__status-overlay" role="status" aria-live="polite">
-            {statusCopy}
-          </div>
-        ) : null}
-        <SkyLayer cohorts={hero.skyCohorts} />
-        <div className="peg-hero__earth">
-          <div className="peg-hero__horizon" aria-hidden="true" />
-          <div className="peg-hero__map-frame">
-            {worldMap}
-            <FiatEmblems clusters={hero.pegClusters} />
+      <div className="peg-hero__live-shell">
+        <div className="peg-hero__legend-rail">
+          <FiatSizeKey />
+          <TopCohortStrip rows={snapshot.topRows} />
+        </div>
+        <div className="peg-hero">
+          {showStatusOverlay ? (
+            <div className="peg-hero__status-overlay" role="status" aria-live="polite">
+              {statusCopy}
+            </div>
+          ) : null}
+          <SkyLayer cohorts={hero.skyCohorts} />
+          <div className="peg-hero__earth">
+            <div className="peg-hero__horizon" aria-hidden="true" />
+            <div className="peg-hero__map-frame">
+              {worldMap}
+              <FiatEmblems clusters={hero.pegClusters} />
+            </div>
           </div>
         </div>
       </div>

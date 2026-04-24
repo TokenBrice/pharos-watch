@@ -16,7 +16,7 @@ export function MoonCohort({ cohort }: { cohort: SkyCohort }) {
       <div className="moon-cohort__halo" style={{ left: "50%", top: "42%" }} />
       <CohortThreads coins={cohort.coins} colorHex="#cbd5e1" />
       <span className="sky-region-tag" style={{ left: "50%", top: "9%" }}>
-        Silver · Moon · {cohort.coins.length} {cohort.coins.length === 1 ? "coin" : "coins"}
+        Silver · {cohort.coins.length} {cohort.coins.length === 1 ? "coin" : "coins"}
       </span>
       {cohort.coins.map((c) => (
         <CoinEmblem
