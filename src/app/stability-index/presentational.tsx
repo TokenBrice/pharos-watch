@@ -228,7 +228,7 @@ export function StabilityIndexPanel({
         </div>
 
         <div className="flex flex-col gap-5 xl:min-h-[23rem] xl:flex-row xl:items-stretch xl:gap-7">
-          <div className="mx-auto flex w-full max-w-sm items-start overflow-hidden rounded-lg xl:mx-0 xl:min-h-0 xl:w-[min(34vw,27rem)] xl:max-w-none xl:shrink-0">
+          <div className="mx-auto flex w-full max-w-sm items-start overflow-hidden rounded-lg xl:mx-0 xl:min-h-0 xl:w-[min(34vw,27rem)] xl:max-w-none xl:shrink-0 xl:self-start">
             <PsiLighthouseScene band={band} score={score} />
           </div>
 
