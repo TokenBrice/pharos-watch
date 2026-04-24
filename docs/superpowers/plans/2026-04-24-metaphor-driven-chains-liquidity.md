@@ -1262,8 +1262,7 @@ git commit -m "feat(liquidity): add coverage-class + depth-fill helpers"
 ### Task 7: Depth gauge SVG component + CSS
 
 **Files:**
-- Create: `src/app/liquidity/depth-gauge.tsx`
-- Create: `src/app/liquidity/depth-gauges.css`
+- Retired after review: depth-gauge component and animation stylesheet.
 
 - [ ] **Step 1: Write CSS keyframes**
 
@@ -1487,7 +1486,7 @@ git commit -m "feat(liquidity): DepthGauge SVG component"
 ### Task 8: DepthGauges grid + Global Reservoir hero
 
 **Files:**
-- Create: `src/app/liquidity/depth-gauges.tsx`
+- Retired after review: DepthGauges grid and Global Reservoir hero.
 
 - [ ] **Step 1: Write the component**
 
@@ -1743,7 +1742,7 @@ git commit -m "feat(liquidity): mount DepthGauges above the leaderboard"
 ### Task 10: Component test for DepthGauges
 
 **Files:**
-- Create: `src/app/liquidity/depth-gauges.test.tsx`
+- Retired after review: DepthGauges component test.
 
 - [ ] **Step 1: Write the tests**
 

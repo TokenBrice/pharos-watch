@@ -122,10 +122,7 @@ Above the gauge grid, one oversized cylinder (roughly 4× width of the individua
 
 ### File changes
 
-- `src/app/liquidity/depth-gauges.tsx` — new. The gauge grid + hero reservoir + sort controls.
-- `src/app/liquidity/depth-gauge.tsx` — new. One gauge SVG (reused by grid and hero — size prop: `sm` | `lg`).
-- `src/app/liquidity/depth-gauges.css` — new. Keyframes: `ripple-still`, `ripple-gentle`, `ripple-choppy`, `buoy-bob`. All gated on `prefers-reduced-motion: no-preference`.
-- `src/app/liquidity/depth-gauges.test.tsx` — new. Tests cover: gauge renders correct fill% for score, coverage-class → color mapping, dry-gauge rendered for unrated rows, sort toggle reorders grid, mobile snap-scroll layout present at `< md`.
+- Liquidity depth-gauge module — retired after review; the gauge grid, shared gauge SVG, animation CSS, and component tests were removed from the live app.
 - `src/lib/liquidity-ui.ts` — new. `COVERAGE_FILL_CLASSES`, `COVERAGE_TEXT_CLASSES`, `rippleIntensityBand(volume24h)`, `clarityOpacity(organicFraction)`. Parallel to existing `src/lib/chain-ui.ts`.
 - `src/app/liquidity/client.tsx` — filter state (peg toggle, search input, new sort) is lifted to `LiquidityClient` and owned there (same `useUrlFilters` bindings as today). `<DepthGauges>` receives the already-filtered `scoredRows` / `unratedRows` and the filter UI elements as props (or renders them from shared state). `<LiquidityTable>` continues to receive the same filtered rows as today — unchanged props, unchanged render. Net: one filter source of truth, two consumers (gauges and table).
 
