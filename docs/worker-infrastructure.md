@@ -115,11 +115,11 @@ These are pure functions. `Env` bindings are only available inside handler funct
 
 ## Public API Auth and Rate Limiting
 
-Every `/api/*` request on `api.pharos.watch` (except `/api/telegram-webhook` and admin routes) requires a valid `X-API-Key`. Missing or invalid keys return `401 Unauthorized`.
+Non-exempt `/api/*` requests on `api.pharos.watch` require a valid `X-API-Key`. Missing or invalid keys return `401 Unauthorized`.
 
 When a valid key is present, the worker uses the D1-backed `api_key_rate_limit` table with the per-key threshold stored in `api_keys.rate_limit_per_minute` (default `120/min`). API keys carry `api_keys.traffic_class` (`external` or `site`) so request attribution can treat website-owned automation separately from third-party consumers. API-key auth or limiter dependency failures fail closed with `503 Service Unavailable` and `Retry-After: 60`. `FEEDBACK_IP_SALT` remains scoped to feedback submission hashing only.
 
-The Telegram webhook (`POST /api/telegram-webhook`) is authenticated separately through `X-Telegram-Bot-Api-Secret-Token`.
+The no-key public exceptions are `GET /api/health`, `GET /api/og/*`, `POST /api/feedback`, and `POST /api/telegram-webhook`. The Telegram webhook is authenticated separately through `X-Telegram-Bot-Api-Secret-Token`.
 
 ---
 

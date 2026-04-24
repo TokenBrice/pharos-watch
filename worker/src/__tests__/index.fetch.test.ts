@@ -655,6 +655,9 @@ describe("worker.fetch", () => {
     );
 
     expect(res.status).toBe(401);
+    await expect(res.json()).resolves.toEqual({
+      error: "Unauthorized: valid X-API-Key required. Contact me@tokenbrice.com for access.",
+    });
   });
 
   it("does not require a key on exempt public routes (health)", async () => {
@@ -687,6 +690,24 @@ describe("worker.fetch", () => {
     expect(res.status).not.toBe(401);
   });
 
+  it("does not require a key on exempt feedback submissions", async () => {
+    const env = makeEnv();
+    const { ctx, waits } = makeExecutionContext();
+
+    const res = await worker.fetch(
+      new Request("https://api.pharos.watch/api/feedback", {
+        method: "POST",
+        body: "not-json",
+      }),
+      env as never,
+      ctx,
+    );
+    await Promise.all(waits);
+
+    expect(res.status).toBe(400);
+    await expect(res.json()).resolves.toEqual({ error: "Invalid JSON body" });
+  });
+
   it("rejects /api/* with a malformed X-API-Key with 401", async () => {
     const env = makeEnv();
     const { ctx } = makeExecutionContext();
@@ -700,5 +721,8 @@ describe("worker.fetch", () => {
     );
 
     expect(res.status).toBe(401);
+    await expect(res.json()).resolves.toEqual({
+      error: "Unauthorized: valid X-API-Key required. Contact me@tokenbrice.com for access.",
+    });
   });
 });

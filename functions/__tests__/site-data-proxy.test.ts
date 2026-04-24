@@ -371,6 +371,13 @@ describe("site-data proxy", () => {
   });
 
   it("returns 500 when the site-proxy secret is missing", async () => {
+    cacheMatch.mockResolvedValueOnce(new Response(JSON.stringify({ cached: true }), {
+      status: 200,
+      headers: { "Content-Type": "application/json" },
+    }));
+    const fetchSpy = vi.fn();
+    vi.stubGlobal("fetch", fetchSpy);
+
     const response = await onRequest({
       request: new Request("https://pharos.watch/_site-data/stablecoins", {
         headers: { Origin: "https://pharos.watch" },
@@ -381,5 +388,7 @@ describe("site-data proxy", () => {
 
     expect(response.status).toBe(500);
     await expect(response.json()).resolves.toEqual({ error: "Site API proxy is not configured" });
+    expect(cacheMatch).not.toHaveBeenCalled();
+    expect(fetchSpy).not.toHaveBeenCalled();
   });
 });

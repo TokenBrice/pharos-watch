@@ -135,7 +135,7 @@ export const onRequest = async (context: SiteDataProxyContext): Promise<Response
   for (const issue of envIssues) {
     console.warn(`[site-data-proxy] ${issue.message}`);
   }
-  if (envIssues.some((issue) => issue.code === "site-api-origin-missing")) {
+  if (envIssues.some((issue) => issue.code === "site-api-origin-missing" || issue.code === "site-api-secret-missing")) {
     return jsonError(500, "Site API proxy is not configured");
   }
 

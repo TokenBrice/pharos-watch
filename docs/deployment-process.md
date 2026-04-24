@@ -194,7 +194,7 @@ Repository variables:
 - Required: `API_BASE_URL`
 - Optional: `SMOKE_API_BASE_URL`, `SMOKE_OPS_UI_URL`, `SMOKE_OPS_API_BASE`, `NEXT_PUBLIC_GA_ID`
 
-`SMOKE_API_KEY` is required because every `/api/*` route on `api.pharos.watch` (other than `/api/telegram-webhook` and admin routes) requires a valid `X-API-Key`.
+`SMOKE_API_KEY` is required because the smoke suite exercises protected public API routes on `api.pharos.watch`, and those non-exempt `/api/*` routes require a valid `X-API-Key`.
 
 ## Dependency Refresh Cadence
 

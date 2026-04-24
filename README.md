@@ -301,7 +301,7 @@ Cloudflare D1 (SQLite database)
   ├── admin_action_audit   → audited operator/admin mutation outcomes
   ├── feedback_submissions → legacy/schema-retained feedback table; current submissions go directly to GitHub Issues
   ├── feedback_rate_limit  → IP-based rate limiting for feedback submissions
-  ├── public_api_rate_limit → Distributed per-minute buckets for non-admin public API traffic
+  ├── public_api_rate_limit → legacy/schema-retained public API limiter table; no runtime writes after the keyed-only API gate
   ├── api_keys             → API key registrations for authenticated public API access
   ├── api_key_rate_limit   → per-key rate-limit state for authenticated API consumers
   ├── api_key_audit_log    → audit trail for API key lifecycle events
@@ -358,7 +358,7 @@ Optional GitHub variables: `SMOKE_OPS_UI_URL`, `SMOKE_OPS_API_BASE`, `NEXT_PUBLI
 
 Worker secrets (set via `wrangler secret put`): `ETHERSCAN_API_KEY`, `TRONGRID_API_KEY`, `DRPC_API_KEY`, `ALCHEMY_API_KEY`, `GRAPH_API_KEY`, `CMC_API_KEY`, `COINGECKO_API_KEY`, `OPENEXCHANGERATES_API_KEY`, `ANTHROPIC_API_KEY`, `ALERT_WEBHOOK_URL`, `TWITTER_API_KEY`, `TWITTER_API_SECRET`, `TWITTER_ACCESS_TOKEN`, `TWITTER_ACCESS_TOKEN_SECRET`, `TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_ID`, `TELEGRAM_WEBHOOK_SECRET`, `TELEGRAM_WEBHOOK_SECRET_PREVIOUS`, `GITHUB_PAT`, `FEEDBACK_IP_SALT`, `SITE_API_SHARED_SECRET`, `SITE_API_SHARED_SECRET_PREVIOUS`, `API_KEY_HASH_PEPPER`, `API_KEY_HASH_PEPPER_PREVIOUS`, `CLOUDFLARE_D1_STATUS_API_TOKEN`
 
-`API_KEY_HASH_PEPPER` is required: every `/api/*` request on `api.pharos.watch` (except `/api/telegram-webhook` and admin routes) requires a valid `X-API-Key`, and the worker can't verify keys without the pepper.
+`API_KEY_HASH_PEPPER` is required: non-exempt `/api/*` requests on `api.pharos.watch` require a valid `X-API-Key`, and the worker can't verify keys without the pepper. No-key public exceptions are health checks, OG images, feedback submission, and the Telegram webhook; Telegram still authenticates with its own secret.
 
 Worker vars (see `.env.example` for the current surface): active worker bindings include `CORS_ORIGIN`, `SELF_URL`, `CF_ACCESS_TEAM_DOMAIN`, `CF_ACCESS_OPS_API_AUD`, `MAINTENANCE_MODE`, `CLOUDFLARE_ACCOUNT_ID`, and `CLOUDFLARE_D1_DATABASE_ID`. `OPS_UI_ORIGIN`, `OPS_API_ORIGIN`, and `CF_ACCESS_OPS_UI_AUD` remain reserved on the worker side for cross-runtime contract alignment; `CF_ACCESS_OPS_UI_AUD` is active and required on Pages Functions for `/api/admin/*` UI JWT verification.
 
