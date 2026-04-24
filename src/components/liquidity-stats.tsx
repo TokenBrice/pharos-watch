@@ -308,6 +308,24 @@ function gateXPositions(count: number): number[] {
   return Array.from({ length: count }, (_, i) => GATE_AREA_LEFT + step * (i + 0.5));
 }
 
+function basinHeights(routes: LiquidityExitRouteItem[]): number[] {
+  // Allocate BASIN_AREA_TOP..BASIN_AREA_BOTTOM proportionally to sharePct, with a
+  // minimum row height for legibility. Invariant: minH * maxRoutes <= usable.
+  // With MAX_EXIT_ROUTE_ITEMS = 5 + 1 "Other" = 6 rows and usable ≈ 200 px, minH=18
+  // gives 108 px floor — well under the 200 px ceiling, so overflow is unreachable.
+  if (routes.length === 0) return [];
+  const usable = BASIN_AREA_BOTTOM - BASIN_AREA_TOP - BASIN_GAP * (routes.length - 1);
+  const totalShare = routes.reduce((sum, r) => sum + Math.max(0, r.sharePct), 0);
+  if (totalShare <= 0) return routes.map(() => 0);
+  const raw = routes.map((r) => (Math.max(0, r.sharePct) / totalShare) * usable);
+  const minH = 18;
+  const floored = raw.map((h) => Math.max(minH, h));
+  const sumFloored = floored.reduce((sum, h) => sum + h, 0);
+  if (sumFloored <= usable) return floored.map((h) => Math.round(h));
+  const scale = usable / sumFloored;
+  return floored.map((h) => Math.round(h * scale));
+}
+
 function ExitRouteCanalScene({ model }: { model: LiquidityExitRouteModel }) {
   const band = crowdingBand(model.concentrationHhi);
   const taper = CANAL_TAPER_BY_BAND[band];
@@ -452,6 +470,52 @@ function ExitRouteCanalScene({ model }: { model: LiquidityExitRouteModel }) {
 
           {/* Sea band (behind ripples, added in Task 6) */}
           <rect x="0" y="380" width={SCENE_WIDTH} height="100" fill="url(#exit-route-canal-sea)" />
+
+          {/* Dam wall with a mid-tone cornice strip (masonry depth). */}
+          <rect x={DAM_X - 2} y={CANAL_TOP - 4} width={DAM_WIDTH + 4} height="4" fill="var(--canal-wall-stone)" />
+          <rect x={DAM_X} y={CANAL_TOP} width={DAM_WIDTH} height={CANAL_BOTTOM - CANAL_TOP} fill="var(--canal-dam)" />
+
+          {/* Chain basins (delta) — trapezoidal pools splaying right from the dam face. */}
+          {(() => {
+            const heights = basinHeights(model.chainRoutes);
+            let cursor = BASIN_AREA_TOP;
+            return model.chainRoutes.map((route, i) => {
+              const top = cursor;
+              const h = heights[i];
+              cursor = top + h + BASIN_GAP;
+              const midY = top + h / 2;
+              const basinPath = [
+                `M ${BASIN_LEFT} ${top}`,
+                `L ${BASIN_RIGHT} ${top + 4}`,
+                `L ${BASIN_RIGHT} ${top + h - 4}`,
+                `L ${BASIN_LEFT} ${top + h}`,
+                "Z",
+              ].join(" ");
+              return (
+                <g
+                  key={`chain-${route.key}`}
+                  data-testid={`chain-basin-${route.key}`}
+                  aria-label={`${route.label} chain basin, ${formatCurrency(route.valueUsd, 0)}, ${formatPercent(route.sharePct, 1)} of DEX TVL`}
+                >
+                  <title>{`${route.label}: ${formatCurrency(route.valueUsd, 0)} chain basin (${formatPercent(route.sharePct, 1)})`}</title>
+                  <path d={basinPath} fill={route.colorHex} fillOpacity="0.62" />
+                  <line x1={BASIN_LEFT + 4} y1={top + 5} x2={BASIN_RIGHT - 4} y2={top + 5} stroke="var(--canal-accent)" strokeWidth="0.4" opacity="0.3" />
+                  <text x={BASIN_RIGHT - 30} y={midY - 1} textAnchor="end" fill="var(--canal-hero)" fontSize="11" fontFamily="ui-monospace, Menlo, monospace">
+                    {`${route.label} · ${formatCurrency(route.valueUsd, 0)}`}
+                  </text>
+                  <text x={BASIN_RIGHT - 30} y={midY + 11} textAnchor="end" fill="var(--canal-caption)" fontSize="9" fontFamily="ui-monospace, Menlo, monospace">
+                    {formatPercent(route.sharePct, 1)}
+                  </text>
+                  <circle cx={BASIN_RIGHT - 12} cy={midY + 3} r="10" fill="oklch(0.06 0.012 248 / 0.9)" stroke={route.colorHex} strokeWidth="1" />
+                  {route.logoPath ? (
+                    <image href={route.logoPath} x={BASIN_RIGHT - 20} y={midY - 5} width="16" height="16" preserveAspectRatio="xMidYMid meet" />
+                  ) : (
+                    <text x={BASIN_RIGHT - 12} y={midY + 6} textAnchor="middle" fill="oklch(0.92 0.01 248)" fontSize="11" fontWeight="800">+</text>
+                  )}
+                </g>
+              );
+            });
+          })()}
 
           {/* Canal group — carries the data-crowding-band attribute and the focal TVL numeric. */}
           <g
