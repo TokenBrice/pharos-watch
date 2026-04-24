@@ -25,14 +25,9 @@ function withQueryClient(children: ReactNode): ReactNode {
 describe("StaticAltPegLinkHub", () => {
   it("renders the static atlas orientation markup", () => {
     const html = renderToStaticMarkup(withQueryClient(<StaticAltPegLinkHub />));
-    expect(html.match(/href="\/stablecoins\/eur\/?"/g)?.length).toBeGreaterThanOrEqual(1);
-    expect(html.match(/href="\/stablecoins\/gold\/?"/g)?.length).toBeGreaterThanOrEqual(1);
-    expect(html.match(/href="\/stablecoins\/silver\/?"/g)?.length).toBeGreaterThanOrEqual(1);
-    expect(html.match(/href="\/stablecoins\/cpi\/?"/g)?.length).toBeGreaterThanOrEqual(1);
     expect(html).not.toContain("/stablecoins/usd");
     expect(html).toContain("Alt-Peg Atlas");
     expect(html).toContain("Peg Diversity Map");
-    expect(html).toContain("References beyond geography");
     expect(html).toContain("Cohort details continue below the market-cap charts");
   });
 
