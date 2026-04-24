@@ -44,13 +44,8 @@ interface FlowSnapshot {
   mint24h: number;
   burn24h: number;
   net24h: number;
-  mint7d: number | null;
-  burn7d: number | null;
-  net7d: number;
   score: number | null;
   trackedCoins: number;
-  topMint: MintBurnCoinFlow | null;
-  topBurn: MintBurnCoinFlow | null;
   headline: string;
   description: string;
   leverPct: number | null;
@@ -64,39 +59,16 @@ interface FlowSnapshot {
 function buildSnapshot(
   gauge: MintBurnGauge | null,
   coins: MintBurnCoinFlow[],
-  weeklyHourly?: MintBurnHourlyBucket[],
 ): FlowSnapshot {
   let mint24h = 0;
   let burn24h = 0;
   let net24h = 0;
-  let net7d = 0;
 
   for (const coin of coins) {
     mint24h += coin.mintVolume24hUsd;
     burn24h += coin.burnVolume24hUsd;
     net24h += coin.netFlow24hUsd;
-    net7d += coin.netFlow7dUsd;
   }
-
-  let mint7d: number | null = null;
-  let burn7d: number | null = null;
-  if (weeklyHourly && weeklyHourly.length > 0) {
-    mint7d = 0;
-    burn7d = 0;
-    for (const bucket of weeklyHourly) {
-      mint7d += bucket.mintVolumeUsd;
-      burn7d += bucket.burnVolumeUsd;
-    }
-  }
-
-  const topMint =
-    [...coins]
-      .filter((coin) => coin.netFlow24hUsd > 0)
-      .sort((a, b) => b.netFlow24hUsd - a.netFlow24hUsd)[0] ?? null;
-  const topBurn =
-    [...coins]
-      .filter((coin) => coin.netFlow24hUsd < 0)
-      .sort((a, b) => a.netFlow24hUsd - b.netFlow24hUsd)[0] ?? null;
 
   const score = gauge?.score ?? null;
   const has24hActivity = Boolean(mint24h || burn24h || net24h);
@@ -111,13 +83,8 @@ function buildSnapshot(
     mint24h,
     burn24h,
     net24h,
-    mint7d,
-    burn7d,
-    net7d,
     score,
     trackedCoins: gauge?.trackedCoins ?? coins.length,
-    topMint,
-    topBurn,
     headline: buildFlowOverviewHeadline(netDirection, pressureState),
     description: buildFlowOverviewDescription(netDirection, pressureState),
     leverPct,
@@ -331,8 +298,8 @@ export function FlowBrrrOverview({
   syncWarning = null,
 }: FlowBrrrOverviewProps) {
   const snapshot = useMemo(
-    () => buildSnapshot(gauge, coins, weeklyHourly),
-    [gauge, coins, weeklyHourly],
+    () => buildSnapshot(gauge, coins),
+    [gauge, coins],
   );
 
   if (isLoading) {
