@@ -147,7 +147,7 @@ Deploy sequence in `.github/workflows/deploy-cloudflare.yml`:
    - waits for `upload-worker-version` only when worker/API work was also required for the push
    - on combined worker + Pages deploys, uses the uploaded Worker's preview URL for digest sync and local `/_site-data/*` proxying so CI rehearses the static export against the exact candidate API while `deploy-worker` and `smoke-api` continue in parallel
    - executes the predeploy Pages path:
-     - `build-pages` fetches `/api/digest-archive` once from the selected API environment into `data/digests.json`, sending `DIGEST_API_KEY` from GitHub repository secrets and forwarding `NEXT_PUBLIC_GA_ID` from GitHub repo vars into `npm run build`, then runs `npm run seo:check`, uploads `out/`, serves the same local artifact with `npm run serve:static-export`, proxies direct `/api/*` calls to the selected public API base, proxies `/_site-data/*` to `STATIC_EXPORT_SITE_API_BASE` when configured or the same selected API base by default, injects `SITE_API_SHARED_SECRET` for that hop, and verifies the expected GA snippet in the homepage shell or root static RSC payload when `SMOKE_UI_EXPECT_GA_ID` is configured
+     - `build-pages` fetches `/api/digest-archive` once from the selected API environment into `data/digests.json`, sending `DIGEST_API_KEY` from GitHub repository secrets and forwarding `NEXT_PUBLIC_GA_ID` from GitHub repo vars into `npm run build`, then runs `npm run seo:check`, uploads `out/`, serves the same local artifact with `npm run serve:static-export`, proxies direct `/api/*` calls to the selected public API base, proxies `/_site-data/*` to the `STATIC_EXPORT_SITE_API_BASE` worker target (required) and injects `SITE_API_SHARED_SECRET` for that hop, and verifies the expected GA snippet in the homepage shell or root static RSC payload when `SMOKE_UI_EXPECT_GA_ID` is configured
 8. `pages-publish`
    - reusable workflow call to `.github/workflows/pages-publish.yml`
    - runs only when `detect-changes` reports `pages_changed=true`
@@ -194,7 +194,7 @@ Repository variables:
 - Required: `API_BASE_URL`
 - Optional: `SMOKE_API_BASE_URL`, `SMOKE_OPS_UI_URL`, `SMOKE_OPS_API_BASE`, `NEXT_PUBLIC_GA_ID`
 
-`SMOKE_API_KEY` is required under the checked-in production Worker config because `PUBLIC_API_AUTH_MODE = "enforce"` protects non-exempt public API routes.
+`SMOKE_API_KEY` is required because every `/api/*` route on `api.pharos.watch` (other than `/api/telegram-webhook` and admin routes) requires a valid `X-API-Key`.
 
 ## Dependency Refresh Cadence
 
@@ -249,7 +249,7 @@ The current origin split is:
 - public API: `api.pharos.watch`
 - operator API: `ops-api.pharos.watch`
 
-The browser-facing website data lane is same-origin `/_site-data/*` on the Pages project. Production Pages hosts proxy that lane with `SITE_API_SHARED_SECRET` to the explicit `SITE_API_ORIGIN` target and fail closed when that binding is missing; preview/local rehearsal may still point the same lane at `api.pharos.watch` when `SITE_API_ORIGIN` is intentionally unset only for exempt routes, auth-off/report-only tests, Worker previews, or proxy setups that also forward a valid API key. The Pages project must also bind the shared D1 database as `DB` so `/_site-data/*` cache hits and proxy outcomes are recorded for `/api/request-source-stats`. Worker route declarations for `site-api.pharos.watch` and `ops-api.pharos.watch` live in `worker/wrangler.toml` and deploy with the normal Worker job. The Pages custom domains plus Cloudflare Access applications for the ops surfaces are account-side setup and are documented in [operator-origin-access.md](./operator-origin-access.md).
+The browser-facing website data lane is same-origin `/_site-data/*` on the Pages project. Every Pages host (production and preview) proxies that lane with `SITE_API_SHARED_SECRET` to the explicit `SITE_API_ORIGIN` target and fails closed when the binding is missing. The lane also gates inbound requests on the caller's `Origin` (or `Referer` fallback); only `pharos.watch`, `ops.pharos.watch`, and `*.pages.dev` preview hostnames are accepted. The Pages project must also bind the shared D1 database as `DB` so `/_site-data/*` cache hits and proxy outcomes are recorded for `/api/request-source-stats`. Worker route declarations for `site-api.pharos.watch` and `ops-api.pharos.watch` live in `worker/wrangler.toml` and deploy with the normal Worker job. The Pages custom domains plus Cloudflare Access applications for the ops surfaces are account-side setup and are documented in [operator-origin-access.md](./operator-origin-access.md).
 
 ## Failure Policy
 

@@ -35,7 +35,7 @@ invocation_logs = true
 
 ## Env Interface
 
-The `Env` interface is defined in `worker/src/lib/env.ts` and consumed by `worker/src/index.ts` plus the HTTP-request helper stack under `worker/src/handlers/http*.ts` and the scheduled-runtime entrypoint/context (`worker/src/handlers/scheduled.ts`, `worker/src/handlers/scheduled/context.ts`). `DB`, `CORS_ORIGIN`, `SELF_URL`, `CF_ACCESS_TEAM_DOMAIN`, `CF_ACCESS_OPS_API_AUD`, and `PUBLIC_API_AUTH_MODE` are set in `worker/wrangler.toml`; the remaining active bindings are runtime env values (typically provided via Cloudflare Worker secrets). The cross-runtime key manifest now lives in `shared/lib/env-contract.ts`.
+The `Env` interface is defined in `worker/src/lib/env.ts` and consumed by `worker/src/index.ts` plus the HTTP-request helper stack under `worker/src/handlers/http*.ts` and the scheduled-runtime entrypoint/context (`worker/src/handlers/scheduled.ts`, `worker/src/handlers/scheduled/context.ts`). `DB`, `CORS_ORIGIN`, `SELF_URL`, `CF_ACCESS_TEAM_DOMAIN`, and `CF_ACCESS_OPS_API_AUD` are set in `worker/wrangler.toml`; the remaining active bindings are runtime env values (typically provided via Cloudflare Worker secrets). The cross-runtime key manifest now lives in `shared/lib/env-contract.ts`.
 
 `worker/src/lib/env.ts` still exports the worker runtime views:
 
@@ -44,7 +44,7 @@ The `Env` interface is defined in `worker/src/lib/env.ts` and consumed by `worke
 - `WORKER_RESERVED_ENV_KEYS`
 - `WORKER_ACTIVE_ENV_KEYS` (`required + optional`)
 
-The paired Pages Functions contracts live in `functions/lib/ops-env.ts` and `functions/lib/site-api-env.ts`, with the same `required` / `optional` / `reserved` / `active` shape derived from that shared manifest. Worker runtime validation logs contract errors when Access bindings are only partially configured, when admin D1 status bindings are only partially configured, when `PUBLIC_API_RATE_LIMIT_SALT` is missing, when `SITE_API_SHARED_SECRET` is missing, or when public API auth mode is configured without `API_KEY_HASH_PEPPER`. The Pages ops-proxy contract now actively requires `CF_ACCESS_TEAM_DOMAIN` + `CF_ACCESS_OPS_UI_AUD` for inbound UI JWT verification, and the Pages `site-data` contract expects a `DB` binding so same-origin demand telemetry can be written into the shared D1 database.
+The paired Pages Functions contracts live in `functions/lib/ops-env.ts` and `functions/lib/site-api-env.ts`, with the same `required` / `optional` / `reserved` / `active` shape derived from that shared manifest. Worker runtime validation logs contract errors when Access bindings are only partially configured, when admin D1 status bindings are only partially configured, when `SITE_API_SHARED_SECRET` is missing, or when `API_KEY_HASH_PEPPER` is missing. The Pages ops-proxy contract now actively requires `CF_ACCESS_TEAM_DOMAIN` + `CF_ACCESS_OPS_UI_AUD` for inbound UI JWT verification, and the Pages `site-data` contract expects a `DB` binding so same-origin demand telemetry can be written into the shared D1 database.
 
 <!-- ENV-CONTRACT:WORKER-INFRASTRUCTURE:BEGIN -->
 Canonical binding ownership now lives in `shared/lib/env-contract.ts`; the worker and Pages env modules derive their `required` / `optional` / `reserved` views from that manifest.
@@ -58,7 +58,6 @@ Canonical binding ownership now lives in `shared/lib/env-contract.ts`; the worke
 | `SITE_API_SHARED_SECRET_PREVIOUS` | `string` | optional | - | - | Optional overlap secret accepted alongside `SITE_API_SHARED_SECRET` during the site-data rotation window. |
 | `API_KEY_HASH_PEPPER` | `string` | optional | - | - | HMAC pepper used to hash the secret portion of public API keys. |
 | `API_KEY_HASH_PEPPER_PREVIOUS` | `string` | optional | - | - | Optional overlap pepper accepted alongside `API_KEY_HASH_PEPPER` during public API key rotation. |
-| `PUBLIC_API_AUTH_MODE` | `string` | optional | - | - | Public API auth mode: `off`, `report-only`, or `enforce`. |
 | `CF_ACCESS_TEAM_DOMAIN` | `string` | optional | required | - | Cloudflare Access team domain used to verify Access JWTs on worker admin requests and the Pages ops proxy. |
 | `CF_ACCESS_OPS_API_AUD` | `string` | optional | - | - | Cloudflare Access audience for worker-side `ops-api.pharos.watch` JWT verification. |
 | `ETHERSCAN_API_KEY` | `string` | optional | - | - | Etherscan API credential used by blacklist sync and USDS status reads. |
@@ -72,7 +71,6 @@ Canonical binding ownership now lives in `shared/lib/env-contract.ts`; the worke
 | `COINGECKO_API_KEY` | `string` | optional | - | - | CoinGecko credential used for price enrichment and depeg confirmation. |
 | `GITHUB_PAT` | `string` | optional | - | - | GitHub personal access token used by the feedback -> issue bridge. |
 | `FEEDBACK_IP_SALT` | `string` | optional | - | - | Dedicated salt for hashed-IP feedback submission throttling. |
-| `PUBLIC_API_RATE_LIMIT_SALT` | `string` | optional | - | - | Dedicated salt for hashed public API rate limiting; deployed public API traffic returns `503` until configured. |
 | `TWITTER_API_KEY` | `string` | optional | - | - | Twitter/X digest delivery credential. |
 | `TWITTER_API_SECRET` | `string` | optional | - | - | Twitter/X digest delivery credential. |
 | `TWITTER_ACCESS_TOKEN` | `string` | optional | - | - | Twitter/X digest delivery credential. |
@@ -117,15 +115,11 @@ These are pure functions. `Env` bindings are only available inside handler funct
 
 ## Public API Auth and Rate Limiting
 
-Protected non-admin public `/api/*` requests can be API-key-gated through `PUBLIC_API_AUTH_MODE`:
+Every `/api/*` request on `api.pharos.watch` (except `/api/telegram-webhook` and admin routes) requires a valid `X-API-Key`. Missing or invalid keys return `401 Unauthorized`.
 
-- `off`: no key required; all public traffic uses the legacy hashed-IP limiter
-- `report-only`: invalid/missing keys are logged on protected routes, but requests still fall back to the legacy hashed-IP limiter
-- `enforce`: protected routes require a valid `X-API-Key`
+When a valid key is present, the worker uses the D1-backed `api_key_rate_limit` table with the per-key threshold stored in `api_keys.rate_limit_per_minute` (default `120/min`). API keys carry `api_keys.traffic_class` (`external` or `site`) so request attribution can treat website-owned automation separately from third-party consumers. API-key auth or limiter dependency failures fail closed with `503 Service Unavailable` and `Retry-After: 60`. `FEEDBACK_IP_SALT` remains scoped to feedback submission hashing only.
 
-When a valid key is present, the worker uses the D1-backed `api_key_rate_limit` table with the per-key threshold stored in `api_keys.rate_limit_per_minute` (default `120/min`) and bypasses the legacy IP limiter. API keys also now carry `api_keys.traffic_class` (`external` or `site`) so request attribution can treat website-owned automation separately from third-party consumers. Exempt public routes, and protected routes while auth mode is not enforcing, still use the D1-backed `public_api_rate_limit` hashed-IP limiter. The worker requires a dedicated `PUBLIC_API_RATE_LIMIT_SALT` binding for that legacy path and returns `503` for public API traffic until the salt is configured. `FEEDBACK_IP_SALT` remains scoped to feedback submission hashing only. If the distributed legacy limiter path fails after a valid salt is present, the worker fails open for the first two consecutive storage failures, then returns `503` with `Retry-After: 60` until limiter storage recovers or the emergency counter decays.
-
-The remaining routes on `api.pharos.watch` that do not require `X-API-Key` are `GET /api/health`, `GET /api/og/*`, `POST /api/feedback`, and `POST /api/telegram-webhook`. The Telegram webhook is still authenticated separately through `X-Telegram-Bot-Api-Secret-Token`.
+The Telegram webhook (`POST /api/telegram-webhook`) is authenticated separately through `X-Telegram-Bot-Api-Secret-Token`.
 
 ---
 
@@ -144,14 +138,14 @@ Method/path flags (`mutatingAdmin`, `cacheBypass`, probe groups, status actions)
 
 ### Public API Auth and Rate Limiting
 
-- `worker/src/handlers/http/gates.ts` checks the request lane in this order: `ops-api` Access auth, `site-api` shared-secret auth, protected public API key auth, then legacy public-IP limiting.
-- Protected public routes accept `X-API-Key` tokens in the format `ph_live_<16 hex prefix>_<32 char base64url secret>`.
+- `worker/src/handlers/http/gates.ts` checks the request lane in this order: `ops-api` Access auth, `site-api` shared-secret auth, then public `/api/*` key auth. There is no unauthenticated public lane.
+- Public `/api/*` routes accept `X-API-Key` tokens in the format `ph_live_<16 hex prefix>_<32 char base64url secret>`.
 - Valid keys are verified from the D1-backed `api_keys` table using `key_prefix` lookup plus an HMAC-SHA256 secret hash with `API_KEY_HASH_PEPPER`.
-- Valid keyed requests use the D1-backed `api_key_rate_limit` table and bypass the legacy `public_api_rate_limit` IP limiter.
-- Default legacy threshold: `300 requests / 60 seconds` per IP hash, enforced through the D1-backed `public_api_rate_limit` table.
-- Requests already authorized for the `ops-api.pharos.watch` admin lane bypass both public limiters.
+- Valid keyed requests use the D1-backed `api_key_rate_limit` table with the per-key threshold stored in `api_keys.rate_limit_per_minute` (default `120/min`).
+- Requests already authorized for the `ops-api.pharos.watch` admin lane bypass the per-key limiter.
+- `/api/telegram-webhook` is exempt from the gate because Telegram authenticates separately with `X-Telegram-Bot-Api-Secret-Token`.
 - `site-api.pharos.watch` accepts only `GET` requests to allowlisted public-read paths and requires `X-Pharos-Site-Proxy-Secret`.
-- Website-only browser reads such as `public-status-history` and `telegram-pulse` should use same-origin `/_site-data/*` or the `site-api` lane, not anonymous calls to the external API host.
+- Website-only browser reads such as `public-status-history` and `telegram-pulse` must use same-origin `/_site-data/*`, which in turn proxies to the `site-api` lane.
 
 ### Request Attribution
 
@@ -252,9 +246,9 @@ This baseline is enough to catch most abuse, regression, or cache-efficiency pro
 
 **Files:** `functions/_site-data/[[path]].ts`, `worker/src/lib/auth.ts`, `worker/src/handlers/http/gates.ts`
 
-- Pages Functions on `pharos.watch`, `ops.pharos.watch`, and Pages preview hosts proxy same-origin `/_site-data/*` requests with host-aware policy: production hosts require `SITE_API_ORIGIN`, while preview/local rehearsal may intentionally fall back to `api.pharos.watch` only for exempt routes, auth-off/report-only tests, Worker previews, or proxy setups that also forward a valid API key
+- Pages Functions on `pharos.watch`, `ops.pharos.watch`, and Pages preview hosts proxy same-origin `/_site-data/*` requests to the explicit `SITE_API_ORIGIN` target on every host (production and preview); when that binding is missing the proxy returns `500`. The lane also gates on the caller's `Origin` header (or `Referer` as a fallback); only `pharos.watch`, `ops.pharos.watch`, and `*.pages.dev` preview hostnames are accepted.
 - the proxy injects `X-Pharos-Site-Proxy-Secret` from `SITE_API_SHARED_SECRET` and continues to emit only the current secret during rotations
-- the worker accepts that header only on `site-api.pharos.watch` or Worker preview URLs during CI rehearsal; it accepts either `SITE_API_SHARED_SECRET` or `SITE_API_SHARED_SECRET_PREVIOUS` while both are configured, while preview/local public-API fallback remains a rehearsal-only path
+- the worker accepts that header only on `site-api.pharos.watch` or Worker preview URLs during CI rehearsal; it accepts either `SITE_API_SHARED_SECRET` or `SITE_API_SHARED_SECRET_PREVIOUS` while both are configured
 - the worker allows only `GET` requests to allowlisted public-read routes from `shared/lib/site-data-routes.ts`
 - site-data requests skip public API request-source telemetry so the public API attribution dataset stays scoped to `api.pharos.watch`
 - overlap sequence: set `SITE_API_SHARED_SECRET_PREVIOUS` to the retiring value, deploy the new current secret everywhere that emits `X-Pharos-Site-Proxy-Secret`, keep both values active for 24 hours as operator policy, then remove `SITE_API_SHARED_SECRET_PREVIOUS`

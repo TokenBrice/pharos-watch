@@ -4,7 +4,7 @@ The Pharos API is a REST API served by a Cloudflare Worker backed by a D1 databa
 
 **Base URL:** `https://api.pharos.watch`
 
-Unless noted otherwise, responses are `Content-Type: application/json`. Exceptions: `GET /api/og/*` returns `image/png`, and `POST /api/telegram-webhook` returns a plain-text `ok` body. CORS headers are added to every response, but `Access-Control-Allow-Origin` is restricted by the Worker `CORS_ORIGIN` allowlist (production repo config: `https://pharos.watch,https://ops.pharos.watch`). When the request `Origin` matches an allowlisted entry, the Worker echoes that origin and sets `Vary: Origin`; when a request includes a foreign `Origin`, the worker omits `Access-Control-Allow-Origin`, and `OPTIONS` preflights from foreign origins receive `403`. Requests without an `Origin` header keep the existing first-allowlisted-origin fallback. Protected public `/api/*` traffic on `api.pharos.watch` is API-key-gated via `X-API-Key`; production runs with `PUBLIC_API_AUTH_MODE=enforce`, so missing or invalid keys normally receive `401 Unauthorized` after public-limiter checks. Rate-limit overages return `429`, and limiter/auth dependency failures can return `503`.
+Unless noted otherwise, responses are `Content-Type: application/json`. Exceptions: `GET /api/og/*` returns `image/png`, and `POST /api/telegram-webhook` returns a plain-text `ok` body. CORS headers are added to every response, but `Access-Control-Allow-Origin` is restricted by the Worker `CORS_ORIGIN` allowlist (production repo config: `https://pharos.watch,https://ops.pharos.watch`). When the request `Origin` matches an allowlisted entry, the Worker echoes that origin and sets `Vary: Origin`; when a request includes a foreign `Origin`, the worker omits `Access-Control-Allow-Origin`, and `OPTIONS` preflights from foreign origins receive `403`. Requests without an `Origin` header keep the existing first-allowlisted-origin fallback. Every `/api/*` request on `api.pharos.watch` (except `/api/telegram-webhook` and admin-only routes) requires a valid `X-API-Key`; missing or invalid keys return `401 Unauthorized`. Per-key rate-limit overages return `429`, and auth/limiter dependency failures can return `503`.
 
 ## Surface Split
 
@@ -156,16 +156,17 @@ Client best practices:
 
 ## Rate Limits
 
-Public API traffic enforces rate limiting to ensure fair usage. The Telegram webhook is exempt from the public IP limiter because Telegram sends from fixed infrastructure and is authenticated separately with `X-Telegram-Bot-Api-Secret-Token`; valid API keys on protected public routes use the per-key limiter instead of the IP limiter. Exempt public routes do not authenticate API keys and continue through their route-specific or public-IP limiter path.
+Public API traffic enforces per-key rate limiting to ensure fair usage. Every `/api/*` request except `/api/telegram-webhook` and admin routes requires a valid `X-API-Key`; the Telegram webhook is authenticated separately with `X-Telegram-Bot-Api-Secret-Token`.
 
-### Global Limit
+### Per-key limit
 
 | Scope | Limit | Window |
 |-------|-------|--------|
-| Per IP (unauthenticated) | 300 requests | 60 seconds |
 | Per API key | Varies (default 120) | 60 seconds |
 
-When the public IP limiter or per-key public API limiter is exceeded, the API returns `429 Too Many Requests`:
+Per-key overrides are stored in `api_keys.rate_limit_per_minute`.
+
+When the per-key limiter is exceeded, the API returns `429 Too Many Requests`:
 
 ```json
 {
@@ -177,7 +178,7 @@ Rate-limited responses include the retry delay in the HTTP `Retry-After` header 
 
 `POST /api/feedback` also has a form-specific limiter. Its `429` body is `{ "error": "Too many submissions. Please wait a few minutes." }`, and it should be handled as a local submission throttle rather than as a public API quota response. If the feedback limiter's D1 dependency is unavailable, the endpoint returns `503 Service Unavailable` with `{ "error": "Feedback service temporarily unavailable. Please try again." }` and `Retry-After: 60`.
 
-If global public-IP limiter bookkeeping fails repeatedly, the worker fails closed after 3 consecutive limiter errors and returns `503 Service Unavailable` with `{ "error": "Public API temporarily unavailable" }` plus `Retry-After: 60`. Treat this as an emergency limiter-health condition, not as successful quota exhaustion. API-key traffic uses a separate per-key limiter; quota overages return `429` with `Retry-After` when available. API-key authentication and per-key limiter storage failures fail closed immediately with `503 Service Unavailable`, `{ "error": "Public API temporarily unavailable" }`, and `Retry-After: 60`. Best-effort API-key usage timestamp updates do not fail otherwise successful reads.
+API-key authentication and per-key limiter storage failures fail closed immediately with `503 Service Unavailable`, `{ "error": "Public API temporarily unavailable" }`, and `Retry-After: 60`. Best-effort API-key usage timestamp updates do not fail otherwise successful reads.
 
 ### Retry Guidance
 
@@ -193,10 +194,10 @@ JSON API handlers use `{ "error": "message" }` JSON format. `GET /api/og/*` retu
 | Status | Meaning               | When                                                                                                                                                                                                     |
 | ------ | --------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | 400    | Bad Request           | Missing required parameters, invalid enum values, malformed numeric input, or out-of-range numeric/filter values on handlers that opt into rejection (`rangePolicy: "reject"`). Some endpoints intentionally clamp or default selected numeric params; endpoint sections call this out where it is part of the contract. |
-| 401    | Unauthorized          | Protected public endpoint called without a valid `X-API-Key`, or admin endpoint called without a valid `ops-api` Access JWT (typically obtained through Cloudflare Access user login or service-token auth) |
+| 401    | Unauthorized          | Public `/api/*` endpoint called without a valid `X-API-Key`, or admin endpoint called without a valid `ops-api` Access JWT (typically obtained through Cloudflare Access user login or service-token auth) |
 | 403    | Forbidden             | Disallowed CORS preflight from a foreign `Origin`, Pages ops proxy mutating request without a matching same-origin `Origin`, or mutating admin request missing `X-Pharos-Admin: 1` |
 | 404    | Not Found             | Unknown stablecoin ID or missing resource                                                                                                                                                                |
-| 429    | Too Many Requests     | Rate limit exceeded (global public IP limiter, per-key public API limiter, or feedback-specific limiter; feedback uses its own message body)                                                               |
+| 429    | Too Many Requests     | Rate limit exceeded (per-key public API limiter or feedback-specific limiter; feedback uses its own message body)                                                               |
 | 500    | Internal Server Error | Unhandled exception (caught by `withErrorHandler`)                                                                                                                                                       |
 | 502    | Bad Gateway           | Upstream fetch failed (external data provider or Pages proxy upstream), or the ops proxy received a Cloudflare Access login redirect from `ops-api` |
 | 503    | Service Unavailable   | Cache-passthrough endpoint where cache has never been populated, cached payload is corrupt / rejected by validation, limiter storage fails closed after repeated D1 errors, feedback limiter/storage dependency failure, or `MAINTENANCE_MODE=true` (global kill switch via `wrangler secret put`) |
@@ -226,7 +227,7 @@ Admin endpoints are authenticated only on the `ops-api.pharos.watch` host. Cloud
 
 Mutating admin calls also require `X-Pharos-Admin: 1` after Cloudflare Access authentication. Browser proxy calls forward that header from the operator UI and additionally require same-origin `Origin`; direct `ops-api` automation must send the header along with the Access service-token credentials.
 
-The website-internal read lane is separate from Cloudflare Access. `site-api.pharos.watch` accepts only allowlisted `GET` public-read paths and requires `X-Pharos-Site-Proxy-Secret`, which the Pages `/_site-data/*` proxy injects server-to-server from `SITE_API_SHARED_SECRET`. Production Pages hosts must configure `SITE_API_ORIGIN=https://site-api.pharos.watch` and fail closed when that binding is missing. Preview and local rehearsal may intentionally point the same lane at `api.pharos.watch` only when public API auth is disabled/report-only, when targeting a Worker preview URL that accepts the site-data secret, or when the local proxy also forwards a valid API key. Public browser traffic must not call `site-api.pharos.watch` directly.
+The website-internal read lane is separate from Cloudflare Access. `site-api.pharos.watch` accepts only allowlisted `GET` public-read paths and requires `X-Pharos-Site-Proxy-Secret`, which the Pages `/_site-data/*` proxy injects server-to-server from `SITE_API_SHARED_SECRET`. All Pages hosts — production and preview — must configure `SITE_API_ORIGIN=https://site-api.pharos.watch` (or a Worker preview URL that accepts the site-data secret); the Pages proxy fails closed with `500` when that binding is missing. The `/_site-data/*` lane additionally accepts requests only when the browser `Origin` header (or `Referer` as a fallback) matches `pharos.watch`, `ops.pharos.watch`, or a Pages preview hostname. Public browser traffic must not call `site-api.pharos.watch` directly.
 
 Many router-dispatched mutating admin endpoints also support optional `Idempotency-Key` handling. Current idempotent routes are:
 
@@ -2342,7 +2343,6 @@ Public feedback ingestion endpoint used by the in-app feedback modal. Validates 
 
 **Rate limits**
 
-- Global public API limiter: D1-backed per-IP-hash limiter (`300 requests / 60 seconds`) for non-admin requests. If the distributed limiter path fails, the worker fails open for the first two consecutive storage failures, then returns `503` with `Retry-After: 60` until limiter storage recovers or the emergency counter decays.
 - Feedback endpoint limiter: `3 submissions / 10 minutes` per salted IP hash in D1.
 - Feedback limiter dependency failure: `503` with `Retry-After: 60` and `{ "error": "Feedback service temporarily unavailable. Please try again." }`.
 
