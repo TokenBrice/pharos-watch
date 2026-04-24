@@ -319,12 +319,7 @@ export async function apiFetchWithMeta<T>(
     if (ageHeader) {
       const age = Number(ageHeader);
       if (Number.isFinite(age) && age >= 0) {
-        const ratio = age / maxAgeSec;
-        meta = {
-          updatedAt: Math.floor(Date.now() / 1000) - age,
-          ageSeconds: age,
-          status: classifyFreshnessRatio(ratio),
-        };
+        meta = { updatedAt: Math.floor(Date.now() / 1000) - age, ageSeconds: age, status: classifyFreshnessRatio(age / maxAgeSec) };
       }
     }
   }
