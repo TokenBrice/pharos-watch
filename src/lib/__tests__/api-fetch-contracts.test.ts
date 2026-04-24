@@ -52,6 +52,18 @@ describe("api contract validation policy", () => {
     expect(result).toEqual(body);
   });
 
+  it("returns raw successful payloads when no schema is provided", async () => {
+    const body = { ok: true, count: 2 };
+    vi.spyOn(globalThis, "fetch").mockResolvedValueOnce(
+      new Response(JSON.stringify(body), {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      }),
+    );
+
+    await expect(apiFetch("/api/custom")).resolves.toEqual(body);
+  });
+
   it("throws on schema mismatch by default whenever a schema is provided", async () => {
     vi.spyOn(globalThis, "fetch").mockResolvedValueOnce(
       new Response(JSON.stringify({ something: "unexpected" }), {
