@@ -73,12 +73,7 @@ function AltPegSnapshotHero({
                 {formatCurrency(marketCap, 1)}
               </h2>
               <p className="text-base font-medium text-foreground">
-                {formatPercent(sharePct)} of the tracked stablecoin market now sits outside USD pegs across
-                commodities, currency-linked cohorts, and other non-commodity structures.
-              </p>
-              <p className="pharos-meta max-w-2xl">
-                This surface covers all alt-pegs, not only fiat-linked stables. The split below keeps commodities
-                beside currency-linked plus other non-commodity non-USD pegs so you can see which side leads right now.
+                {formatPercent(sharePct)} of tracked stablecoin market cap is non-USD.
               </p>
             </div>
           </div>
@@ -104,10 +99,7 @@ function AltPegSnapshotHero({
         <div className="space-y-4 rounded-[1.35rem] border border-border/60 bg-muted/12 p-4">
           <div className="space-y-1">
             <p className="pharos-kicker">All Alt-Peg Mix</p>
-            <p className="text-sm text-muted-foreground">
-              This split is commodities versus non-commodity non-USD cohorts. The non-commodity side includes
-              currency-linked plus VAR and other non-commodity pegs tracked by Pharos.
-            </p>
+            <p className="text-sm text-muted-foreground">Commodities vs. all other non-USD pegs.</p>
           </div>
           <div className="flex h-3 w-full overflow-hidden rounded-full bg-muted/35">
             <div className="h-full bg-[color:var(--chart-5)]" style={{ width: `${commodityShare}%` }} />

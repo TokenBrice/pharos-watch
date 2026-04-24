@@ -31,7 +31,7 @@ The route renders through `createClientFeaturePage(...)` / `FeaturePageShell` wi
 - `breadcrumbName="Non-USD Market Structure"`
 - `path="/alt-pegs/"`
 - title `Non-USD Market Structure`
-- two lead paragraphs describing the route as the non-USD market-structure surface
+- one lead paragraph introducing the non-USD market-structure surface
 - the static peg diversity map hero rendered before the client content so the drill-down links are included in the static HTML and visible as the top route module
 
 Metadata is authored in `src/app/alt-pegs/page.tsx` with canonical `/alt-pegs/` through `buildPageMetadata(...)`.
