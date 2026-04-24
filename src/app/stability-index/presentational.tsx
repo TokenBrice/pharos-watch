@@ -102,7 +102,7 @@ function PsiHistoryStatsGrid({
     resolved === "compact"
       ? "grid w-full grid-cols-3 gap-x-3 gap-y-2 border-t border-border/60 pt-3 lg:hidden"
       : resolved === "row"
-        ? "flex flex-1 items-end justify-between gap-4"
+        ? "flex items-end gap-8"
         : "grid grid-cols-3 gap-3";
 
   return (
@@ -257,8 +257,7 @@ export function StabilityIndexPanel({
                 </div>
               </div>
 
-              <div className="hidden lg:flex lg:flex-1 lg:items-center lg:justify-end lg:gap-6">
-                <p className="pharos-kicker shrink-0">Historical PSI</p>
+              <div className="hidden lg:flex lg:items-center lg:justify-end">
                 <PsiHistoryStatsGrid items={historyStats} layout="row" />
               </div>
             </div>

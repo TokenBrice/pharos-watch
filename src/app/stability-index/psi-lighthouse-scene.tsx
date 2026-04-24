@@ -7,24 +7,24 @@ import { PSI_HEX_COLORS, PSI_PULSE_DURATION, type ConditionBand } from "@shared/
 import "./psi-lighthouse-scene.css";
 
 const WIDTH = 280;
-const HEIGHT = 220;
-const WATERLINE_Y = 200;
+const HEIGHT = 240;
+const WATERLINE_Y = 220;
 const LH_X = 180;
-const ROCK_TOP = WATERLINE_Y - 14; // 186
-const T1_BOTTOM = ROCK_TOP - 4; // 182
-const T1_TOP = T1_BOTTOM - 64; // 118
-const T1_HALF_BOTTOM = 26;
-const T1_HALF_TOP = 22;
-const T2_BOTTOM = T1_TOP - 1; // 117
-const T2_TOP = T2_BOTTOM - 36; // 81
-const T2_HALF_BOTTOM = 17;
-const T2_HALF_TOP = 14;
-const T3_BOTTOM = T2_TOP - 1; // 80
-const T3_TOP = T3_BOTTOM - 22; // 58
-const T3_HALF = 11;
-const BRAZIER_BOTTOM = T3_TOP - 1; // 57
-const BEAM_Y = BRAZIER_BOTTOM - 4; // 53
-const HALO_CY = BRAZIER_BOTTOM - 7; // 50
+const ROCK_TOP = WATERLINE_Y - 14; // 206
+const T1_BOTTOM = ROCK_TOP - 4; // 202
+const T1_TOP = T1_BOTTOM - 80; // 122
+const T1_HALF_BOTTOM = 32;
+const T1_HALF_TOP = 27;
+const T2_BOTTOM = T1_TOP - 1; // 121
+const T2_TOP = T2_BOTTOM - 45; // 76
+const T2_HALF_BOTTOM = 21;
+const T2_HALF_TOP = 17;
+const T3_BOTTOM = T2_TOP - 1; // 75
+const T3_TOP = T3_BOTTOM - 28; // 47
+const T3_HALF = 14;
+const BRAZIER_BOTTOM = T3_TOP - 1; // 46
+const BEAM_Y = BRAZIER_BOTTOM - 5; // 41
+const HALO_CY = BRAZIER_BOTTOM - 9; // 37
 
 function scoreDynamics(score: number) {
   const clamped = Math.max(0, Math.min(100, Number.isFinite(score) ? score : 0));
@@ -37,16 +37,15 @@ function scoreDynamics(score: number) {
 }
 
 function Stars() {
-  // Fixed positions, upper half of the 280x220 frame. Some in the upper-left to lift the
-  // quadrant when the beam is dim at low scores; rest scattered around.
+  // Fixed positions in the upper portion of the 280x240 frame, above the brazier (y~46).
   const stars: Array<[number, number, number, number]> = [
-    [34, 16, 0.8, 0.65],
-    [72, 46, 0.7, 0.6],
-    [108, 8, 0.9, 0.75],
-    [128, 30, 0.6, 0.5],
-    [216, 14, 1.0, 0.85],
-    [242, 38, 0.7, 0.6],
-    [262, 20, 0.8, 0.7],
+    [30, 14, 0.8, 0.65],
+    [66, 32, 0.7, 0.6],
+    [104, 8, 0.9, 0.75],
+    [134, 24, 0.6, 0.5],
+    [214, 10, 1.0, 0.85],
+    [240, 30, 0.7, 0.6],
+    [260, 16, 0.8, 0.7],
   ];
   return (
     <g aria-hidden="true">
@@ -92,35 +91,35 @@ function LighthouseTiers({ stoneFill }: { stoneFill: string }) {
         stroke="oklch(0.32 0.025 75)"
         strokeWidth={0.7}
       />
-      {[14, 28, 42, 56].map((dy) => (
+      {[18, 36, 54, 72].map((dy) => (
         <line
           key={`t1-${dy}`}
-          x1={LH_X - T1_HALF_BOTTOM + (dy / 64) * (T1_HALF_BOTTOM - T1_HALF_TOP) + 1}
+          x1={LH_X - T1_HALF_BOTTOM + (dy / 80) * (T1_HALF_BOTTOM - T1_HALF_TOP) + 1}
           y1={T1_BOTTOM - dy}
-          x2={LH_X + T1_HALF_BOTTOM - (dy / 64) * (T1_HALF_BOTTOM - T1_HALF_TOP) - 1}
+          x2={LH_X + T1_HALF_BOTTOM - (dy / 80) * (T1_HALF_BOTTOM - T1_HALF_TOP) - 1}
           y2={T1_BOTTOM - dy}
           stroke="oklch(0.45 0.025 75 / 0.4)"
           strokeWidth={0.35}
         />
       ))}
-      <line x1={LH_X - 8} y1={T1_BOTTOM - 4} x2={LH_X - 7.4} y2={T1_TOP + 4} stroke="oklch(0.45 0.025 75 / 0.45)" strokeWidth={0.35} />
-      <line x1={LH_X + 8} y1={T1_BOTTOM - 4} x2={LH_X + 7.4} y2={T1_TOP + 4} stroke="oklch(0.45 0.025 75 / 0.45)" strokeWidth={0.35} />
+      <line x1={LH_X - 10} y1={T1_BOTTOM - 4} x2={LH_X - 9.2} y2={T1_TOP + 4} stroke="oklch(0.45 0.025 75 / 0.45)" strokeWidth={0.35} />
+      <line x1={LH_X + 10} y1={T1_BOTTOM - 4} x2={LH_X + 9.2} y2={T1_TOP + 4} stroke="oklch(0.45 0.025 75 / 0.45)" strokeWidth={0.35} />
       {/* Door */}
       <path
-        d={`M ${LH_X - 4} ${T1_BOTTOM} L ${LH_X - 4} ${T1_BOTTOM - 11} Q ${LH_X - 4} ${T1_BOTTOM - 14} ${LH_X} ${T1_BOTTOM - 14} Q ${LH_X + 4} ${T1_BOTTOM - 14} ${LH_X + 4} ${T1_BOTTOM - 11} L ${LH_X + 4} ${T1_BOTTOM} Z`}
+        d={`M ${LH_X - 5} ${T1_BOTTOM} L ${LH_X - 5} ${T1_BOTTOM - 14} Q ${LH_X - 5} ${T1_BOTTOM - 18} ${LH_X} ${T1_BOTTOM - 18} Q ${LH_X + 5} ${T1_BOTTOM - 18} ${LH_X + 5} ${T1_BOTTOM - 14} L ${LH_X + 5} ${T1_BOTTOM} Z`}
         fill="oklch(0.16 0.022 60)"
         stroke="oklch(0.32 0.025 75 / 0.7)"
         strokeWidth={0.4}
       />
-      {[24, 40].map((dy) => (
+      {[28, 50].map((dy) => (
         <rect
           key={`t1-win-${dy}`}
-          x={LH_X - 1.4}
+          x={LH_X - 1.6}
           y={T1_BOTTOM - dy}
-          width={2.8}
-          height={5}
+          width={3.2}
+          height={6}
           fill="oklch(0.94 0.04 75 / 0.7)"
-          rx={0.6}
+          rx={0.7}
         />
       ))}
       <rect x={LH_X - T1_HALF_TOP - 3} y={T1_TOP - 3} width={(T1_HALF_TOP + 3) * 2} height={3} fill="oklch(0.5 0.03 75 / 0.85)" />
@@ -132,20 +131,20 @@ function LighthouseTiers({ stoneFill }: { stoneFill: string }) {
         stroke="oklch(0.32 0.025 75)"
         strokeWidth={0.7}
       />
-      <line x1={LH_X - 6.5} y1={T2_BOTTOM - 2} x2={LH_X - 5.5} y2={T2_TOP + 2} stroke="oklch(0.45 0.025 75 / 0.55)" strokeWidth={0.4} />
-      <line x1={LH_X + 6.5} y1={T2_BOTTOM - 2} x2={LH_X + 5.5} y2={T2_TOP + 2} stroke="oklch(0.45 0.025 75 / 0.55)" strokeWidth={0.4} />
-      <rect x={LH_X - 1.4} y={T2_BOTTOM - 16} width={2.8} height={5} fill="oklch(0.94 0.04 75 / 0.65)" rx={0.5} />
+      <line x1={LH_X - 8} y1={T2_BOTTOM - 2} x2={LH_X - 7} y2={T2_TOP + 2} stroke="oklch(0.45 0.025 75 / 0.55)" strokeWidth={0.4} />
+      <line x1={LH_X + 8} y1={T2_BOTTOM - 2} x2={LH_X + 7} y2={T2_TOP + 2} stroke="oklch(0.45 0.025 75 / 0.55)" strokeWidth={0.4} />
+      <rect x={LH_X - 1.6} y={T2_BOTTOM - 20} width={3.2} height={6} fill="oklch(0.94 0.04 75 / 0.65)" rx={0.6} />
       <rect x={LH_X - T2_HALF_TOP - 2.5} y={T2_TOP - 2.5} width={(T2_HALF_TOP + 2.5) * 2} height={2.5} fill="oklch(0.5 0.03 75 / 0.82)" />
 
       {/* Tier 3 — cylindrical colonnade */}
       <rect x={LH_X - T3_HALF} y={T3_TOP} width={T3_HALF * 2} height={T3_BOTTOM - T3_TOP} fill="oklch(0.2 0.025 60 / 0.55)" />
-      {[-9, -5, -1, 3, 7].map((dx, i) => (
+      {[-11, -6, -1, 4, 9].map((dx, i) => (
         <rect
           key={`col-${i}`}
           x={LH_X + dx}
-          y={T3_TOP + 1.5}
-          width={1.6}
-          height={T3_BOTTOM - T3_TOP - 3}
+          y={T3_TOP + 2}
+          width={2}
+          height={T3_BOTTOM - T3_TOP - 4}
           fill={stoneFill}
           stroke="oklch(0.4 0.025 75 / 0.5)"
           strokeWidth={0.25}
@@ -156,12 +155,12 @@ function LighthouseTiers({ stoneFill }: { stoneFill: string }) {
 
       {/* Brazier bowl */}
       <path
-        d={`M ${LH_X - 8} ${BRAZIER_BOTTOM} Q ${LH_X - 8} ${BRAZIER_BOTTOM + 5} ${LH_X - 4} ${BRAZIER_BOTTOM + 5} L ${LH_X + 4} ${BRAZIER_BOTTOM + 5} Q ${LH_X + 8} ${BRAZIER_BOTTOM + 5} ${LH_X + 8} ${BRAZIER_BOTTOM} Z`}
+        d={`M ${LH_X - 10} ${BRAZIER_BOTTOM} Q ${LH_X - 10} ${BRAZIER_BOTTOM + 6} ${LH_X - 5} ${BRAZIER_BOTTOM + 6} L ${LH_X + 5} ${BRAZIER_BOTTOM + 6} Q ${LH_X + 10} ${BRAZIER_BOTTOM + 6} ${LH_X + 10} ${BRAZIER_BOTTOM} Z`}
         fill="oklch(0.18 0.022 50)"
         stroke="oklch(0.5 0.04 60 / 0.85)"
         strokeWidth={0.7}
       />
-      <line x1={LH_X - 9} y1={BRAZIER_BOTTOM} x2={LH_X + 9} y2={BRAZIER_BOTTOM} stroke="oklch(0.6 0.05 60)" strokeWidth={1.1} />
+      <line x1={LH_X - 11} y1={BRAZIER_BOTTOM} x2={LH_X + 11} y2={BRAZIER_BOTTOM} stroke="oklch(0.6 0.05 60)" strokeWidth={1.3} />
     </g>
   );
 }
@@ -310,7 +309,7 @@ export function PsiLighthouseScene({
         <circle
           cx={LH_X}
           cy={HALO_CY}
-          r={26 * flameScale}
+          r={32 * flameScale}
           fill={bandColor}
           className="psi-scene-halo"
           data-testid="psi-scene-halo"
@@ -320,7 +319,7 @@ export function PsiLighthouseScene({
       <circle
         cx={LH_X}
         cy={HALO_CY}
-        r={14 * flameScale}
+        r={17 * flameScale}
         fill={bandColor}
         opacity={0.4 * flameScale}
         style={transitionStyle}
@@ -330,20 +329,20 @@ export function PsiLighthouseScene({
       <g transform={flameGroupTransform} data-testid="psi-scene-flames">
         <path
           className="psi-scene-flame-outer"
-          d={`M ${LH_X - 6} ${BRAZIER_BOTTOM - 1} Q ${LH_X - 5} ${BRAZIER_BOTTOM - 9} ${LH_X - 1.5} ${BRAZIER_BOTTOM - 14} Q ${LH_X} ${BRAZIER_BOTTOM - 17} ${LH_X + 1.5} ${BRAZIER_BOTTOM - 14} Q ${LH_X + 5} ${BRAZIER_BOTTOM - 9} ${LH_X + 6} ${BRAZIER_BOTTOM - 1} Z`}
+          d={`M ${LH_X - 8} ${BRAZIER_BOTTOM - 1} Q ${LH_X - 6.5} ${BRAZIER_BOTTOM - 11} ${LH_X - 2} ${BRAZIER_BOTTOM - 17} Q ${LH_X} ${BRAZIER_BOTTOM - 21} ${LH_X + 2} ${BRAZIER_BOTTOM - 17} Q ${LH_X + 6.5} ${BRAZIER_BOTTOM - 11} ${LH_X + 8} ${BRAZIER_BOTTOM - 1} Z`}
           fill={bandColor}
           opacity={0.75}
           style={transitionStyle}
         />
         <path
           className="psi-scene-flame-mid"
-          d={`M ${LH_X - 3.5} ${BRAZIER_BOTTOM - 2} Q ${LH_X - 3} ${BRAZIER_BOTTOM - 8} ${LH_X - 0.8} ${BRAZIER_BOTTOM - 12} Q ${LH_X} ${BRAZIER_BOTTOM - 15} ${LH_X + 0.8} ${BRAZIER_BOTTOM - 12} Q ${LH_X + 3} ${BRAZIER_BOTTOM - 8} ${LH_X + 3.5} ${BRAZIER_BOTTOM - 2} Z`}
+          d={`M ${LH_X - 4.5} ${BRAZIER_BOTTOM - 2} Q ${LH_X - 4} ${BRAZIER_BOTTOM - 10} ${LH_X - 1} ${BRAZIER_BOTTOM - 15} Q ${LH_X} ${BRAZIER_BOTTOM - 19} ${LH_X + 1} ${BRAZIER_BOTTOM - 15} Q ${LH_X + 4} ${BRAZIER_BOTTOM - 10} ${LH_X + 4.5} ${BRAZIER_BOTTOM - 2} Z`}
           fill={bandColor}
           opacity={0.92}
           style={transitionStyle}
         />
         <path
-          d={`M ${LH_X - 1.6} ${BRAZIER_BOTTOM - 3} Q ${LH_X - 1.2} ${BRAZIER_BOTTOM - 7} ${LH_X} ${BRAZIER_BOTTOM - 11} Q ${LH_X + 1.2} ${BRAZIER_BOTTOM - 7} ${LH_X + 1.6} ${BRAZIER_BOTTOM - 3} Z`}
+          d={`M ${LH_X - 2} ${BRAZIER_BOTTOM - 3} Q ${LH_X - 1.5} ${BRAZIER_BOTTOM - 9} ${LH_X} ${BRAZIER_BOTTOM - 14} Q ${LH_X + 1.5} ${BRAZIER_BOTTOM - 9} ${LH_X + 2} ${BRAZIER_BOTTOM - 3} Z`}
           fill={bandColor}
           style={transitionStyle}
         />
