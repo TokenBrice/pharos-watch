@@ -204,6 +204,15 @@ describe("buildReportCardsSnapshot", () => {
     await expect(buildReportCardsSnapshot(mockD1())).rejects.toBeInstanceOf(ReportCardsSnapshotUnavailableError);
   });
 
+  it("throws when stablecoins cache fails the published response contract", async () => {
+    const db = makeReportCardsDb([
+      makeAsset({ id: "usdt-tether", symbol: "USDT" }),
+      { id: "broken-coin", symbol: "BROKEN" } as ReturnType<typeof makeAsset>,
+    ]);
+
+    await expect(buildReportCardsSnapshot(db)).rejects.toBeInstanceOf(ReportCardsSnapshotUnavailableError);
+  });
+
   it("returns cards + methodology + dependencyGraph + updatedAt", async () => {
     const db = makeReportCardsDb([makeAsset({ id: "usdt-tether", symbol: "USDT" })]);
     const snapshot = await buildReportCardsSnapshot(db);
@@ -215,6 +224,36 @@ describe("buildReportCardsSnapshot", () => {
     expect(snapshot.methodology).toHaveProperty("thresholds");
     expect(Array.isArray(snapshot.dependencyGraph.edges)).toBe(true);
     expect(typeof snapshot.updatedAt).toBe("number");
+  });
+
+  it("uses live-derived dependencies consistently in raw inputs and dependency graph", async () => {
+    const db = makeReportCardsDb([makeAsset({ id: "dai-makerdao", symbol: "DAI" })]);
+    loadFreshIndependentLiveReserveMapMock.mockResolvedValueOnce(new Map([
+      [
+        "dai-makerdao",
+        [
+          { name: "Live USDT PSM", pct: 55, risk: "low", coinId: "usdt-tether", depType: "mechanism" },
+          { name: "Unmapped live collateral", pct: 45, risk: "very-low" },
+        ],
+      ],
+    ]));
+
+    const snapshot = await buildReportCardsSnapshot(db);
+    const card = snapshot.cards.find((entry) => entry.id === "dai-makerdao");
+
+    expect(card?.rawInputs.dependencyFromLive).toBe(true);
+    expect(card?.rawInputs.dependencies).toEqual([
+      { id: "usdt-tether", weight: 0.55, type: "mechanism" },
+    ]);
+    expect(snapshot.dependencyGraph.edges).toContainEqual({
+      from: "usdt-tether",
+      to: "dai-makerdao",
+      weight: 0.55,
+      type: "mechanism",
+    });
+    expect(snapshot.dependencyGraph.edges).not.toContainEqual(
+      expect.objectContaining({ from: "usdc-circle", to: "dai-makerdao" }),
+    );
   });
 
   it("matches /api/report-cards response payload", async () => {

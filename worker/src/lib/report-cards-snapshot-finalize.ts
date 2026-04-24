@@ -1,6 +1,4 @@
-import { buildDependencyGraphEdges } from "@shared/lib/dependency-graph";
 import { DEAD_STABLECOINS } from "@shared/lib/dead-stablecoins";
-import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins";
 import {
   METHODOLOGY_VERSION,
   DIMENSION_WEIGHTS,
@@ -15,7 +13,7 @@ import {
   ACTIVE_DEPEG_CAP_F_SCORE,
 } from "@shared/lib/report-card-active-depeg";
 import { createReportCardRawInputs } from "@shared/lib/report-card-raw-inputs";
-import type { StablecoinMeta } from "@shared/types/core";
+import type { DependencyGraphEdge } from "@shared/lib/dependency-graph";
 import type {
   ReportCard,
   ReportCardGrade,
@@ -66,6 +64,7 @@ export function buildReportCardsSnapshotEnvelope(input: {
   inputFreshness: ReportCardsInputFreshness;
   collateralDriftCoins: CollateralDriftEntry[];
   liveToFallbackCoins: string[];
+  dependencyGraphEdges: DependencyGraphEdge[];
 }) {
   return {
     cards: input.cards,
@@ -80,7 +79,7 @@ export function buildReportCardsSnapshotEnvelope(input: {
       },
       thresholds: GRADE_THRESHOLDS as { grade: ReportCardGrade; min: number }[],
     },
-    dependencyGraph: { edges: buildDependencyGraphEdges(ACTIVE_STABLECOINS as StablecoinMeta[]) },
+    dependencyGraph: { edges: input.dependencyGraphEdges },
     updatedAt: input.updatedAt,
     liquidityStale: input.liquidityStale,
     redemptionStale: input.redemptionStale,

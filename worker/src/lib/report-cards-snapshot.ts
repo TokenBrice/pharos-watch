@@ -97,7 +97,7 @@ export async function buildReportCardsSnapshot(db: D1Database): Promise<ReportCa
     }
   }
 
-  const liveCards = buildLiveReportCards({
+  const liveReportCards = buildLiveReportCards({
     pegDataById: pegAnalytics.pegDataById,
     activeDepegPeakBpsById,
     dexLiqMap: dexLiquiditySnapshot.map,
@@ -113,12 +113,13 @@ export async function buildReportCardsSnapshot(db: D1Database): Promise<ReportCa
   } = summarizeCollateralDriftFromLiveReserveMap(liveReserveMap);
 
   return buildReportCardsSnapshotEnvelope({
-    cards: sortReportCards([...liveCards, ...buildDefunctReportCards()]),
+    cards: sortReportCards([...liveReportCards.cards, ...buildDefunctReportCards()]),
     updatedAt: stablecoinsCached.updatedAt,
     liquidityStale,
     redemptionStale,
     inputFreshness,
     collateralDriftCoins,
     liveToFallbackCoins,
+    dependencyGraphEdges: liveReportCards.dependencyGraphEdges,
   });
 }

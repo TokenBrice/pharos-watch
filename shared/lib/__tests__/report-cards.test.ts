@@ -1,5 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { createReportCardRawInputs } from "../report-card-raw-inputs";
+import { deriveEffectiveDependencies } from "../dependency-derivation";
 import {
   scoreLiquidity,
   scoreToGrade,
@@ -240,6 +241,28 @@ describe("scoreDependencyRisk", () => {
     }, new Map([["usd0-usual", 95]]));
 
     expect(result.score).toBe(87);
+  });
+
+  it("applies live-derived mechanism dependency ceilings", () => {
+    const dependencies = deriveEffectiveDependencies(
+      {
+        reserves: [{ name: "Curated stablecoin", pct: 100, risk: "low", coinId: "curated" }],
+        dependencies: [],
+      },
+      {
+        liveReserveSlices: [
+          { name: "Live mechanism stablecoin", pct: 40, risk: "low", coinId: "live", depType: "mechanism" },
+          { name: "Self-backed reserve", pct: 60, risk: "very-low" },
+        ],
+      },
+    );
+
+    const result = scoreDependencyRisk({
+      governance: "centralized",
+      dependencies,
+    }, new Map([["live", 50]]));
+
+    expect(result.score).toBe(50);
   });
 });
 
@@ -717,6 +740,7 @@ describe("computeStressedGrades", () => {
       dependencies: [],
       navToken: false,
       collateralFromLive: false,
+      dependencyFromLive: false,
     },
     isDefunct: overrides.isDefunct ?? false,
   });
@@ -785,6 +809,7 @@ describe("computeStressedGrades", () => {
         dependencies: [{ id: "usdc", weight: 0.6, type: "collateral" }],
         navToken: false,
         collateralFromLive: false,
+        dependencyFromLive: false,
       },
     });
     const transitive = makeCard({
@@ -819,6 +844,7 @@ describe("computeStressedGrades", () => {
         dependencies: [{ id: "wrapper", weight: 0.5, type: "mechanism" }],
         navToken: false,
         collateralFromLive: false,
+        dependencyFromLive: false,
       },
     });
 

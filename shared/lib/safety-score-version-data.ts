@@ -1,9 +1,24 @@
 import type { MethodologyVersionConfig } from "./methodology-version";
 
 export const SAFETY_SCORE_VERSION_CONFIG: MethodologyVersionConfig = {
-  currentVersion: "7.13",
+  currentVersion: "7.14",
   changelogPath: "/methodology/scoring-changelog/",
   changelog: [
+    {
+      version: "7.14",
+      title: "Live reserve dependencies align with scoring",
+      date: "2026-04-24",
+      effectiveAt: 1777003200,
+      summary:
+        "Score-grade live reserve slices with tracked `coinId` links now drive Dependency Risk, raw dependency inputs, topological ordering, and the public dependency graph together.",
+      impact: [
+        "Report-card Dependency Risk now uses the same fresh independent live reserve slices already eligible for collateral-quality scoring when those slices carry tracked stablecoin links",
+        "Unmapped live reserve share remains implicit self-backed or non-stablecoin exposure, so live snapshots no longer fall back to stale curated dependency percentages for that remainder",
+        "The public dependency graph now publishes the effective dependency edges used by the snapshot, while tracked variant parent wrapper edges remain synthetic and de-duplicated",
+      ],
+      commits: [],
+      reconstructed: false,
+    },
     {
       version: "7.13",
       title: "Reserve-driven blacklist risk moves to Upstream",

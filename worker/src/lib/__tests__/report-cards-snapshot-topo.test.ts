@@ -99,6 +99,30 @@ describe("topologicalOrder", () => {
 
     expect(ids.indexOf("parent")).toBeLessThan(ids.indexOf("child"));
   });
+
+  it("places upstream before downstream when the edge comes from live reserves", () => {
+    const metas = [
+      makeMeta("downstream", [{ coinId: "curated", pct: 100, name: "Curated", risk: "low" }]),
+      makeMeta("live-upstream"),
+      makeMeta("curated"),
+    ];
+
+    const sorted = topologicalOrder(metas, {
+      liveReserveMap: new Map([
+        [
+          "downstream",
+          [
+            { coinId: "live-upstream", pct: 60, name: "Live upstream", risk: "low" },
+            { pct: 40, name: "Cash", risk: "low" },
+          ],
+        ],
+      ]),
+    });
+    const ids = sorted.map((meta) => meta.id);
+
+    expect(ids.indexOf("live-upstream")).toBeLessThan(ids.indexOf("downstream"));
+    expect(ids.indexOf("curated")).toBeGreaterThan(ids.indexOf("downstream"));
+  });
 });
 
 describe("transitive blacklist inheritance", () => {

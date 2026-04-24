@@ -31,7 +31,7 @@ describe("buildLiveReportCards variant activeDepeg cascade", () => {
     const pegDataById = new Map<string, PegSummaryCoin>([["usds-sky", parentPeg]]);
     const activeDepegPeakBpsById = new Map<string, number>([["usds-sky", 2800]]);
 
-    const cards = buildLiveReportCards({
+    const { cards } = buildLiveReportCards({
       pegDataById,
       activeDepegPeakBpsById,
       dexLiqMap: {},
@@ -71,7 +71,7 @@ describe("buildLiveReportCards variant activeDepeg cascade", () => {
     const pegDataById = new Map<string, PegSummaryCoin>([["usds-sky", parentPeg]]);
     const activeDepegPeakBpsById = new Map<string, number>();
 
-    const cards = buildLiveReportCards({
+    const { cards } = buildLiveReportCards({
       pegDataById,
       activeDepegPeakBpsById,
       dexLiqMap: {},

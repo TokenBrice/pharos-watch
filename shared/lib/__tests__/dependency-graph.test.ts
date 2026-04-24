@@ -4,6 +4,7 @@ import {
   collectDependencyGraphIds,
   filterDependencyGraphEdgesToLive,
 } from "../dependency-graph";
+import { deriveEffectiveDependencies } from "../dependency-derivation";
 import type { StablecoinMeta } from "../../types/core";
 
 function makeMeta(input: {
@@ -99,6 +100,105 @@ describe("dependency-graph", () => {
         ],
       }),
     ]);
+
+    expect(edges).toEqual([
+      { from: "parent", to: "child", weight: 1, type: "wrapper" },
+    ]);
+  });
+
+  it("prefers linked live reserve slices over curated linked slices", () => {
+    const meta = makeMeta({
+      id: "dependent",
+      reserves: [
+        { name: "Curated upstream", pct: 100, risk: "low", coinId: "curated-upstream" },
+      ],
+    });
+
+    const dependencies = deriveEffectiveDependencies(meta, {
+      liveReserveSlices: [
+        { name: "Live upstream", pct: 65, risk: "low", coinId: "live-upstream", depType: "mechanism" },
+        { name: "T-bills", pct: 35, risk: "very-low" },
+      ],
+    });
+
+    expect(dependencies).toEqual([
+      { id: "live-upstream", weight: 0.65, type: "mechanism" },
+    ]);
+  });
+
+  it("keeps unmapped live reserve share as implicit self-backed remainder", () => {
+    const dependencies = deriveEffectiveDependencies(
+      makeMeta({
+        id: "dependent",
+        reserves: [
+          { name: "Curated upstream", pct: 100, risk: "low", coinId: "curated-upstream" },
+        ],
+      }),
+      {
+        liveReserveSlices: [
+          { name: "Live upstream", pct: 40, risk: "low", coinId: "live-upstream" },
+          { name: "Cash and bills", pct: 60, risk: "very-low" },
+        ],
+      },
+    );
+
+    expect(dependencies).toEqual([
+      { id: "live-upstream", weight: 0.4, type: "collateral" },
+    ]);
+  });
+
+  it("uses live reserve slices when building graph edges", () => {
+    const edges = buildDependencyGraphEdges(
+      [
+        makeMeta({ id: "curated-upstream" }),
+        makeMeta({ id: "live-upstream" }),
+        makeMeta({
+          id: "dependent",
+          reserves: [
+            { name: "Curated upstream", pct: 100, risk: "low", coinId: "curated-upstream" },
+          ],
+        }),
+      ],
+      {
+        liveReserveSlicesById: new Map([
+          [
+            "dependent",
+            [
+              { name: "Live upstream", pct: 25, risk: "low", coinId: "live-upstream" },
+              { name: "Other live reserve", pct: 75, risk: "very-low" },
+            ],
+          ],
+        ]),
+      },
+    );
+
+    expect(edges).toEqual([
+      { from: "live-upstream", to: "dependent", weight: 0.25, type: "collateral" },
+    ]);
+  });
+
+  it("keeps the variant parent wrapper edge dominant over duplicate live parent reserve links", () => {
+    const edges = buildDependencyGraphEdges(
+      [
+        makeMeta({ id: "parent" }),
+        makeMeta({
+          id: "child",
+          variantOf: "parent",
+          variantKind: "strategy-vault",
+          reserves: [{ name: "Strategy book", pct: 100, risk: "high" }],
+        }),
+      ],
+      {
+        liveReserveSlicesById: new Map([
+          [
+            "child",
+            [
+              { name: "Parent live reserve", pct: 100, risk: "low", coinId: "parent", depType: "collateral" },
+            ],
+          ],
+        ]),
+      },
+    );
 
     expect(edges).toEqual([
       { from: "parent", to: "child", weight: 1, type: "wrapper" },

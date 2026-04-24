@@ -67,6 +67,7 @@ function makeCard(
       dependencies: [],
       navToken: false,
       collateralFromLive: false,
+      dependencyFromLive: false,
     },
     isDefunct,
   };

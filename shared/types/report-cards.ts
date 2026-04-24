@@ -96,6 +96,7 @@ const RawDimensionInputsSchema = z.object({
   variantKind: z.enum(VARIANT_KIND_VALUES).nullable().optional(),
   navToken: z.boolean(),
   collateralFromLive: z.boolean().optional().default(false),
+  dependencyFromLive: z.boolean().optional(),
 });
 
 export interface RawDimensionInputs extends z.infer<typeof RawDimensionInputsSchema> {

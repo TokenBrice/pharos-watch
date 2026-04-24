@@ -1,5 +1,5 @@
-import { deriveVariantAwareDependencies } from "./stablecoins";
-import type { DependencyType, StablecoinMeta } from "../types/core";
+import { deriveEffectiveDependencies } from "./dependency-derivation";
+import type { DependencyType, DependencyWeight, ReserveSlice, StablecoinMeta } from "../types/core";
 
 export interface DependencyGraphEdge {
   from: string;
@@ -10,11 +10,39 @@ export interface DependencyGraphEdge {
 
 export function buildDependencyGraphEdges(
   metas: readonly StablecoinMeta[],
+  options?: {
+    liveReserveSlicesById?: ReadonlyMap<string, readonly ReserveSlice[]>;
+  },
 ): DependencyGraphEdge[] {
   const edges: DependencyGraphEdge[] = [];
 
   for (const meta of metas) {
-    for (const dep of deriveVariantAwareDependencies(meta)) {
+    const liveReserveSlices = options?.liveReserveSlicesById?.get(meta.id);
+    const dependencies = deriveEffectiveDependencies(
+      meta,
+      liveReserveSlices != null ? { liveReserveSlices } : undefined,
+    );
+    for (const dep of dependencies) {
+      edges.push({
+        from: dep.id,
+        to: meta.id,
+        weight: dep.weight,
+        type: dep.type ?? "collateral",
+      });
+    }
+  }
+
+  return edges;
+}
+
+export function buildDependencyGraphEdgesFromDependencies(
+  metas: readonly Pick<StablecoinMeta, "id">[],
+  dependenciesById: ReadonlyMap<string, readonly DependencyWeight[]>,
+): DependencyGraphEdge[] {
+  const edges: DependencyGraphEdge[] = [];
+
+  for (const meta of metas) {
+    for (const dep of dependenciesById.get(meta.id) ?? []) {
       edges.push({
         from: dep.id,
         to: meta.id,

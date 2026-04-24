@@ -1,4 +1,4 @@
-import { deriveDependencies } from "../dependency-derivation";
+import { deriveEffectiveDependencies } from "../dependency-derivation";
 import type { DependencyWeight, StablecoinMeta, VariantKind } from "../../types";
 import { ACTIVE_META_BY_ID, ACTIVE_STABLECOINS } from "./registry";
 
@@ -11,13 +11,7 @@ function hasTrackedVariantMeta(
 export function deriveVariantAwareDependencies(
   meta: Pick<StablecoinMeta, "variantOf" | "dependencies" | "reserves">,
 ): DependencyWeight[] {
-  const dependencies = deriveDependencies(meta);
-  if (!meta.variantOf) return dependencies;
-
-  return [
-    ...dependencies.filter((dependency) => dependency.id !== meta.variantOf),
-    { id: meta.variantOf, weight: 1, type: "wrapper" },
-  ];
+  return deriveEffectiveDependencies(meta);
 }
 
 export function getVariantParent(id: string): StablecoinMeta | null {

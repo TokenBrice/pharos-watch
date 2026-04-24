@@ -31,6 +31,7 @@ export function createReportCardRawInputs(
     variantKind: null,
     navToken: false,
     collateralFromLive: false,
+    dependencyFromLive: false,
     ...overrides,
   };
   inputs.dependencies = overrides.dependencies ?? [];
