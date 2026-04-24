@@ -88,3 +88,14 @@ Scope: implementation notes for `agents/plans/2026-04-24-website-maintainability
   - `npm run check:shared-cycles`
   - `npm run check:duplicate-exports`
 - Follow-up signal: the next safe coverage split is status presets/resolvers, but it should preserve exact labels and breakdown strings because they feed visible coverage copy.
+
+## Repo-Wide Follow-up Slice 1: Public API Artifact Catalog
+
+- Added `scripts/lib/public-api-artifact-catalog.ts` as the shared integration-artifact descriptor for OpenAPI and Postman exports.
+- Rewired `scripts/generate-openapi-spec.ts` and `scripts/generate-postman-collection.ts` to consume the shared descriptor and the existing generated-artifact sync helper.
+- Added a focused catalog test that keeps integration-facing public `GET` endpoint keys aligned with `shared/lib/api-endpoints/definitions.ts` and verifies Postman folder/tag consistency.
+- Updated `docs/api-endpoint-authoring.md` so future endpoint authors know to update the shared artifact descriptor for public integration routes.
+- Intended impact:
+  - Runtime impact: none.
+  - Visual impact: none.
+  - Public artifact impact: none intended; generators should preserve existing output bytes unless the descriptor reveals real drift.

@@ -16,6 +16,7 @@ Use this checklist when adding or changing a Worker API endpoint. The route regi
 | Dynamic route bindings | `worker/src/routes/dynamic-routes.ts` |
 | Frontend API helpers | `src/hooks/api-hooks.ts`, `src/hooks/use-api-query.ts`, `src/lib/api.ts` |
 | Public contract | `docs/api-reference.md` |
+| Public OpenAPI/Postman artifact metadata | `scripts/lib/public-api-artifact-catalog.ts` |
 
 ## Implementation Checklist
 
@@ -26,7 +27,8 @@ Use this checklist when adding or changing a Worker API endpoint. The route regi
 5. If the endpoint reads cache data, decide whether it should emit `_meta`, `X-Data-Age`, and `Warning` through `createCacheHandler()` or route-specific freshness injection.
 6. If the frontend consumes the endpoint, add a typed hook and schema validation where nested response data is accessed. For cron-backed data, default to `staleTime = producer interval` and `refetchInterval = 2x producer interval`; document intentional exceptions such as health/status probes or faster UI polling over slow snapshots.
 7. Update `docs/api-reference.md` with methods, auth lane, parameters, cache profile, response shape, and error bodies.
-8. Add or update handler tests in `worker/src/api/__tests__/`. For critical endpoints, include the relevant suite in `npm run test:critical-contracts` only when it belongs on the critical path.
+8. If the endpoint is an integration-facing public `GET` route, add or update `scripts/lib/public-api-artifact-catalog.ts` so OpenAPI and Postman exports stay aligned with the runtime route metadata.
+9. Add or update handler tests in `worker/src/api/__tests__/`. For critical endpoints, include the relevant suite in `npm run test:critical-contracts` only when it belongs on the critical path.
 
 ## Auth And Lanes
 
