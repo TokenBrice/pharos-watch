@@ -74,13 +74,17 @@ export const STABILITY_COMPONENT_DETAIL: Array<{
   },
 ];
 
+type PsiHistoryStatsLayout = "grid" | "row" | "compact";
+
 function PsiHistoryStatsGrid({
   items,
   compact = false,
+  layout,
   className,
 }: {
   items: HistoryStatItem[];
   compact?: boolean;
+  layout?: PsiHistoryStatsLayout;
   className?: string;
 }) {
   if (items.length === 0) {
@@ -91,26 +95,44 @@ function PsiHistoryStatsGrid({
     );
   }
 
+  const resolved: PsiHistoryStatsLayout = layout ?? (compact ? "compact" : "grid");
+  const isCompact = resolved === "compact";
+
+  const wrapperClass =
+    resolved === "compact"
+      ? "grid w-full grid-cols-4 gap-x-3 gap-y-2 border-t border-border/60 pt-3 lg:hidden"
+      : resolved === "row"
+        ? "flex flex-1 items-end justify-between gap-4"
+        : "grid grid-cols-4 gap-3";
+
   return (
-    <div
-      className={cn(
-        compact
-          ? "grid w-full grid-cols-4 gap-x-3 gap-y-2 border-t border-border/60 pt-3 lg:hidden"
-          : "grid grid-cols-4 gap-3",
-        className,
-      )}
-    >
+    <div className={cn(wrapperClass, className)}>
       {items.map((item) => {
         const color = PSI_BAND_CLASSES[item.band as ConditionBand] ?? "text-foreground";
         return (
           <div key={item.label} className="flex min-w-0 flex-col items-center gap-0.5 text-center">
-            <span className={compact ? "text-xs text-muted-foreground whitespace-nowrap" : "text-[10px] font-semibold uppercase tracking-[0.16em] text-muted-foreground"}>
+            <span
+              className={cn(
+                "whitespace-nowrap",
+                isCompact
+                  ? "text-xs text-muted-foreground"
+                  : "text-[10px] font-semibold uppercase tracking-[0.16em] text-muted-foreground",
+              )}
+            >
               {item.label}
             </span>
-            <span className={cn(compact ? "text-base font-bold" : "text-2xl font-extrabold", "tabular-nums leading-none", color)}>
+            <span
+              className={cn(
+                "tabular-nums leading-none",
+                isCompact ? "text-base font-bold" : "text-2xl font-extrabold",
+                color,
+              )}
+            >
               {item.value}
             </span>
-            {item.sub ? <span className="text-xs leading-tight text-muted-foreground">{item.sub}</span> : null}
+            {item.sub ? (
+              <span className="whitespace-nowrap text-xs leading-tight text-muted-foreground">{item.sub}</span>
+            ) : null}
           </div>
         );
       })}
@@ -195,7 +217,7 @@ export function StabilityIndexPanel({
     <Card className="rounded-xl py-0">
       <CardContent className="flex flex-col gap-6 py-6 sm:gap-7 sm:py-7" aria-live="polite">
         <section aria-labelledby="psi-hero-heading">
-          <div className="mb-5 flex flex-wrap items-start justify-between gap-3">
+          <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
             <div>
               <p className="pharos-kicker">The Beacon</p>
               <h2
@@ -209,8 +231,8 @@ export function StabilityIndexPanel({
             <p className="text-xs text-muted-foreground">Updated every 30 min</p>
           </div>
 
-          <div className="flex flex-col gap-5 lg:flex-row lg:items-center lg:gap-7">
-            <div className="mx-auto w-full max-w-xs overflow-hidden rounded-lg lg:mx-0 lg:w-80 lg:shrink-0">
+          <div className="flex flex-col gap-5 lg:flex-row lg:items-center lg:gap-6 xl:gap-8">
+            <div className="mx-auto w-full max-w-sm overflow-hidden rounded-lg lg:mx-0 lg:w-80 lg:shrink-0 xl:w-96">
               <PsiLighthouseScene band={band} score={score} />
             </div>
 
@@ -237,16 +259,16 @@ export function StabilityIndexPanel({
               </div>
             </div>
 
-            <div className="hidden lg:block lg:flex-1 lg:border-l lg:border-border/60 lg:pl-7">
-              <p className="pharos-kicker mb-3">Historical PSI</p>
-              <PsiHistoryStatsGrid items={historyStats} />
+            <div className="hidden lg:flex lg:flex-1 lg:items-center lg:gap-6 lg:border-l lg:border-border/60 lg:pl-6">
+              <p className="pharos-kicker shrink-0">Historical PSI</p>
+              <PsiHistoryStatsGrid items={historyStats} layout="row" />
             </div>
 
-            <PsiHistoryStatsGrid items={historyStats} compact />
+            <PsiHistoryStatsGrid items={historyStats} layout="compact" />
           </div>
         </section>
 
-        <div className="border-t border-border/50" />
+        <div className="border-t border-border/60" />
 
         <PsiBeamDimmers lanes={lanes} />
       </CardContent>

@@ -7,7 +7,7 @@ import { PSI_HEX_COLORS, PSI_PULSE_DURATION, type ConditionBand } from "@shared/
 import "./psi-lighthouse-scene.css";
 
 const WIDTH = 280;
-const HEIGHT = 220;
+const HEIGHT = 200;
 const WATERLINE_Y = 180;
 const LH_X = 180;
 const ROCK_TOP = WATERLINE_Y - 14; // 166
@@ -185,6 +185,7 @@ export function PsiLighthouseScene({
   const waterId = `psi-scene-water-${uid}`;
   const beamId = `psi-scene-beam-${uid}`;
   const stoneId = `psi-scene-stone-${uid}`;
+  const beamClipId = `psi-scene-beam-clip-${uid}`;
 
   // Beam geometry — two wedges sweeping up-and-left from the brazier
   const pFarTopX = LH_X - 260 * reach;
@@ -200,6 +201,8 @@ export function PsiLighthouseScene({
 
   const cssVars = {
     "--psi-pulse-dur": `${pulseDur}s`,
+    "--psi-beam-origin-x": `${LH_X}px`,
+    "--psi-beam-origin-y": `${BEAM_Y}px`,
   } as CSSProperties;
   const transitionStyle: CSSProperties = { transition: "fill 500ms ease-out, opacity 500ms ease-out" };
 
@@ -235,6 +238,9 @@ export function PsiLighthouseScene({
           <stop offset="50%" stopColor="oklch(0.84 0.028 78)" stopOpacity="0.95" />
           <stop offset="100%" stopColor="oklch(0.66 0.03 75)" stopOpacity="0.94" />
         </linearGradient>
+        <clipPath id={beamClipId}>
+          <rect x="0" y="0" width={WIDTH} height={WATERLINE_Y} />
+        </clipPath>
       </defs>
 
       {/* Sky */}
@@ -252,22 +258,24 @@ export function PsiLighthouseScene({
 
       <Stars />
 
-      {/* Beam — behind the lighthouse */}
-      <g data-testid="psi-scene-beam">
-        <path
-          d={`M ${LH_X} ${BEAM_Y} L ${sFarTopX} ${sFarTopY} L ${sFarBotX} ${sFarBotY} Z`}
-          fill={`url(#${beamId})`}
-          opacity={beamOpacity * 0.5}
-          data-testid="psi-scene-beam-secondary"
-          style={transitionStyle}
-        />
-        <path
-          d={`M ${LH_X} ${BEAM_Y} L ${pFarTopX} ${pFarTopY} L ${pFarBotX} ${pFarBotY} Z`}
-          fill={`url(#${beamId})`}
-          opacity={beamOpacity}
-          data-testid="psi-scene-beam-primary"
-          style={transitionStyle}
-        />
+      {/* Beam — behind the lighthouse, clipped to above-water and rotating around the brazier */}
+      <g clipPath={`url(#${beamClipId})`}>
+        <g className="psi-scene-beam-rotate" data-testid="psi-scene-beam">
+          <path
+            d={`M ${LH_X} ${BEAM_Y} L ${sFarTopX} ${sFarTopY} L ${sFarBotX} ${sFarBotY} Z`}
+            fill={`url(#${beamId})`}
+            opacity={beamOpacity * 0.5}
+            data-testid="psi-scene-beam-secondary"
+            style={transitionStyle}
+          />
+          <path
+            d={`M ${LH_X} ${BEAM_Y} L ${pFarTopX} ${pFarTopY} L ${pFarBotX} ${pFarBotY} Z`}
+            fill={`url(#${beamId})`}
+            opacity={beamOpacity}
+            data-testid="psi-scene-beam-primary"
+            style={transitionStyle}
+          />
+        </g>
       </g>
 
       {/* Water */}
