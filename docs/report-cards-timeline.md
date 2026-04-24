@@ -1,6 +1,12 @@
 # Report Cards Scoring — Version Timeline
 
-Internal changelog reconstructed from git history plus the live version metadata source. Covers v1.0 through v7.13 (2026-02-25 → 2026-04-22). The newest sections track the machine-readable version source closely; older reconstructed sections below v6.92 preserve the original authoring-era grouping and are not guaranteed to be in strict descending source order. Use `shared/lib/safety-score-version-data.ts` for canonical machine ordering.
+Internal changelog reconstructed from git history plus the live version metadata source. Covers v1.0 through v7.14 (2026-02-25 → 2026-04-24). The newest sections track the machine-readable version source closely; older reconstructed sections below v6.92 preserve the original authoring-era grouping and are not guaranteed to be in strict descending source order. Use `shared/lib/safety-score-version-data.ts` for canonical machine ordering.
+
+## v7.14 — Live reserve dependencies align with scoring (2026-04-24)
+
+- Score-grade live reserve slices with tracked `coinId` links now drive Dependency Risk, raw dependency inputs, topological ordering, and the public dependency graph from the same effective dependency map
+- Unmapped live reserve share remains implicit self-backed or non-stablecoin exposure instead of falling back to stale curated dependency percentages
+- Tracked variant parent wrapper edges remain synthetic, dominant, and de-duplicated even when live reserve slices also link to the parent
 
 ## v7.13 — Reserve-driven blacklist risk moves to Upstream (2026-04-22)
 

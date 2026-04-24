@@ -1,5 +1,34 @@
 import { VersionCard, getScoringEntry } from "./content-shared";
 
+export function ScoringChangelogV714Entry() {
+  return (
+    <VersionCard
+      entry={getScoringEntry("7.14")}
+      accent="border-l-emerald-500"
+    >
+      <p>
+        Score-grade live reserve slices with tracked{" "}
+        <code className="text-xs bg-muted px-1 py-0.5 rounded">coinId</code> links now drive Dependency Risk,
+        raw dependency inputs, topological ordering, and the public dependency graph together.
+      </p>
+      <ul className="list-disc list-inside space-y-1">
+        <li>
+          Report-card Dependency Risk now uses the same fresh independent live reserve slices already
+          eligible for collateral-quality scoring when those slices carry tracked stablecoin links.
+        </li>
+        <li>
+          Unmapped live reserve share remains implicit self-backed or non-stablecoin exposure, so live
+          snapshots no longer fall back to stale curated dependency percentages for that remainder.
+        </li>
+        <li>
+          The public dependency graph now publishes the effective dependency edges used by the snapshot,
+          while tracked variant parent wrapper edges remain synthetic and de-duplicated.
+        </li>
+      </ul>
+    </VersionCard>
+  );
+}
+
 export function ScoringChangelogV713Entry() {
   return (
     <VersionCard

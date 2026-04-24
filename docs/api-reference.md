@@ -266,6 +266,8 @@ Full stablecoin list with current supply, price, chain breakdown, and FX rates. 
 
 **Cache:** realtime — `X-Data-Age` and `Warning` headers included.
 
+The canonical `stablecoins` cache is written only after `StablecoinListResponseSchema` validation. Worker consumers that require the published public contract can opt into the same schema on cache read and return `503` for schema-invalid cached objects. Compatibility readers that only need critical fields may still salvage valid entries from older or partially malformed payloads, but they surface that state as degraded with a filtered-entry count instead of treating the filtered payload as fully healthy.
+
 **Response**
 
 ```text
@@ -524,6 +526,7 @@ Returns the resolved reserve presentation for a stablecoin with `liveReservesCon
 - Live-enabled coins return `200` even before the first successful sync; the payload includes fallback mode + sync state.
 - This endpoint powers the stablecoin detail-page reserve card. The same underlying live-reserve dataset also feeds report-card collateral quality, reserve-drift monitoring, and `/status`, but those surfaces read D1-backed reserve snapshots directly rather than calling this endpoint.
 - A response is treated as `live` only when the stored reserve snapshot matches the latest successful sync state and passes strict integrity validation; orphaned partial writes or corrupt stored snapshots fall back to the curated/template presentation instead of presenting malformed live data as authoritative.
+- Successful responses are covered by the shared `StablecoinReservesResponseSchema`; frontend API clients validate `200` payloads strictly while preserving `404` as the not-live-enabled/null path.
 
 **Cache:** dynamic
 
@@ -544,7 +547,7 @@ Returns the resolved reserve presentation for a stablecoin with `liveReservesCon
 | `displayUrl`   | `string?`        | Curated click-through page shown as `Source` in the UI. Present only when configured                                             |
 | `evidenceUrls` | `string[]?`      | Adapter-emitted evidence URLs for the authoritative live snapshot, shown separately as `Evidence` links when available           |
 | `displayBadge` | `object?`        | User-facing reserve badge semantics for authoritative live snapshots (`live`, `curated-validated`, or `proof`)                  |
-| `metadata`     | `object?`        | Adapter snapshot metadata for authoritative live snapshots. This can include feed-specific context such as `yieldBasisCollateralPct` for `crvusd` |
+| `metadata`     | `object?`        | Adapter snapshot metadata for authoritative live snapshots. This can include feed-specific context such as `yieldBasisCollateralPct` for `crvusd`; adapter-specific metadata and nested `details` remain passthrough |
 | `provenance`   | `object?`        | Evidence-quality envelope for authoritative live snapshots (`evidenceClass`, `sourceModel`, optional `freshnessMode`, `scoringEligible`) |
 | `sync`         | `object?`        | Live sync state (`status`, `bootstrap`, `stale`, `lastAttemptedAt`, `lastSuccessAt`, `warnings`, `lastError`). Present only when live-enabled |
 
@@ -1387,6 +1390,8 @@ Cache freshness in `/api/health` separates producer cadence, endpoint freshness,
 | `availabilityMaxAge`      | `number \| null \| undefined`                | Availability budget used by `/api/health`, `/api/status`, and status-page cache ratios       |
 | `endpointBudgetReason`    | `string \| null \| undefined`                | Short explanation when endpoint freshness differs from producer cadence or availability budget |
 | `availabilityBudgetReason` | `string \| null \| undefined`               | Short explanation for the availability budget                                                |
+| `freshnessSource`          | `"freshness-sentinel" \| "table-fallback" \| "cron-fallback" \| undefined` | Source used to derive freshness for sentinel-backed cache lanes                              |
+| `sentinelValidationReason` | `string \| null \| undefined`               | Present when a malformed, stale, wrong-source, future-dated, or non-`ok` freshness sentinel was ignored |
 | `mode`                    | `"live" \| "cached-fallback" \| undefined`   | FX cache only: whether the latest usable sync came from a live fetch or cached fallback      |
 | `sourceUpdatedAt`         | `number \| null \| undefined`                | FX cache only: Unix seconds for the source currently driving `sourceStatus`                  |
 | `sourceAgeSeconds`        | `number \| null \| undefined`                | FX cache only: age of the source currently driving `sourceStatus`                            |
@@ -1397,7 +1402,7 @@ Cache freshness in `/api/health` separates producer cadence, endpoint freshness,
 The `/status/` page consumes the richer blacklist fields directly so it can distinguish long-tail historical cleanup from fresh incoming amount gaps.
 Blacklist amount-gap severity is intentionally tolerant of isolated parser/provider misses: data-quality degrades when the missing-amount ratio reaches 1% or when at least 5 recent events are missing amounts, and becomes stale at 2% or at 25 recent missing events.
 
-`dex-liquidity`, `yield-data`, and `dews` now compute freshness from producer-owned cache sentinels first (`freshness:dex-liquidity`, `freshness:yield-data`, `freshness:dews`). If a sentinel is missing, the worker temporarily falls back to the legacy table query; if the freshness diagnostic still fails, it can fall back again to the latest successful producer cron timestamp and emits a warning/info cause instead of treating the diagnostic miss itself as public `stale`.
+`dex-liquidity`, `yield-data`, and `dews` compute freshness from producer-owned cache sentinels first (`freshness:dex-liquidity`, `freshness:yield-data`, `freshness:dews`). A sentinel is trusted only when its JSON payload has `updatedAt`, the expected producer `source`, and `publishStatus: "ok"`; optional `rowsWritten` and `coverageRatio` fields may also be present. If the sentinel is missing or fails validation, the worker falls back to the legacy table query. If that freshness diagnostic also fails, it can fall back again to the latest successful producer cron timestamp. Invalid sentinels surface `freshnessSource`, `sentinelValidationReason`, and a cache `warning` instead of making the sentinel row authoritative.
 
 **Overall status logic:**
 
@@ -1614,7 +1619,7 @@ When present, `collateralDriftCoins` lists live-reserve scoring deltas that exce
 
 For peg handling, `rawInputs.pegScore` is the effective peg input used by report-card scoring. Most coins use their direct peg-summary value. Configured NAV wrappers can inherit peg stability from a referenced base stablecoin when the wrapper share price is not the right peg-tracking surface; pure NAV tokens without a configured reference remain `null` and keep neutral handling. `rawInputs.activeDepegBps` is the open active depeg event's absolute peak deviation used for final Safety Score caps; it is not the latest spot deviation.
 
-`GET /api/report-cards` treats the stablecoins cache and readable redemption-backstop table as hard dependencies. DEX liquidity, bluechip ratings, live-reserve inputs, and materially stale redemption rows are soft dependencies: if one of those loaders is temporarily unavailable or stale beyond its scoring freshness runway, the endpoint continues serving a degraded snapshot instead of failing closed, with stale inputs suppressed from scoring.
+`GET /api/report-cards` treats the stablecoins cache and readable redemption-backstop table as hard dependencies. The stablecoins cache is read in published-contract mode, so malformed cached objects that fail `StablecoinListResponseSchema` validation fail closed instead of being partially filtered for scoring. DEX liquidity, bluechip ratings, live-reserve inputs, and materially stale redemption rows are soft dependencies: if one of those loaders is temporarily unavailable or stale beyond its scoring freshness runway, the endpoint continues serving a degraded snapshot instead of failing closed, with stale inputs suppressed from scoring.
 
 **`dependencyGraph.edges`**: Pre-computed forward edges. `from` = upstream stablecoin ID, `to` = dependent stablecoin ID. `weight` and `type` carry the worker's canonical dependency metadata, so frontend graph consumers can use the snapshot directly instead of re-deriving edge semantics from static stablecoin metadata.
 

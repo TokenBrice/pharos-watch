@@ -15,7 +15,7 @@ Dedicated documentation for the live reserve-composition subsystem that powers `
 - **Frontend consumers:** `useStablecoinReserves()`, stablecoin detail view model, `/status` reserve-sync health
 - **Operational telemetry:** `sync-live-reserves` emits per-coin progress into `cron_run_progress`, including the current coin, adapter, breaker key, and running synced / failed / skipped counters
 
-This pipeline is intentionally separate from curated reserve metadata in `StablecoinMeta.reserves`. Live reserve sync affects live-enabled detail-page reserve views, status monitoring, and (since v5.8, tightened in v6.2 and v6.5) collateral quality scoring in report cards only when a snapshot is score-grade. A configured live adapter is not enough by itself: the report-card snapshot must use a fresh, clean, independent live reserve snapshot before `collateralFromLive` becomes true. The dependency map and all other scoring dimensions still derive from curated/static reserve metadata.
+This pipeline is intentionally separate from curated reserve metadata in `StablecoinMeta.reserves`. Live reserve sync affects live-enabled detail-page reserve views, status monitoring, and (since v5.8, tightened in v6.2 and v6.5) collateral quality scoring in report cards only when a snapshot is score-grade. A configured live adapter is not enough by itself: the report-card snapshot must use a fresh, clean, independent live reserve snapshot before `collateralFromLive` becomes true. Since Safety Score v7.14, those same score-grade live slices also drive Dependency Risk and dependency-map edges when they carry tracked `coinId` links; unmapped live reserve share remains implicit self-backed / non-stablecoin exposure.
 
 ---
 
@@ -286,6 +286,8 @@ Successful responses return `StablecoinReservesResponse` with one of these modes
 
 `live` / `live-stale` only apply when the stored snapshot matches the latest successful sync state and passes strict integrity validation. Orphaned partial writes or corrupt stored snapshots fail closed to the fallback modes.
 
+`StablecoinReservesResponseSchema` in `shared/types/live-reserves.ts` is the runtime contract for successful `200` responses and is used by the frontend reserve API client. Adapter-specific `metadata`, `metadata.details`, and nested redemption telemetry remain passthrough so feed telemetry can evolve without breaking consumers.
+
 Cache control:
 
 | Response mode                              | Cache-Control                        |
@@ -466,9 +468,9 @@ Adapter helpers now live in a small helper family, with `worker/src/cron/reserve
 ## Scope Boundaries
 
 - Live reserve sync is detail-page and status-surface infrastructure, not a replacement for curated reserve metadata everywhere else.
-- [Risk Lab](./report-cards.md) uses fresh authoritative independent live reserve snapshots for collateral quality scoring when available. In practice this now means: `dynamic-mix` adapters can qualify when their latest sync state is `ok` **and** the snapshot carries scoring-eligible freshness evidence, only a subset of `single-bucket` adapters carry `evidenceClass = independent`, and `validated-static` / `weak-live-probe` feeds remain detail-card/status data only. Dependency inference stays curated-only, but blacklist attribution can consume enriched live reserve slices when they exist.
+- [Risk Lab](./report-cards.md) uses fresh authoritative independent live reserve snapshots for collateral quality scoring when available. In practice this now means: `dynamic-mix` adapters can qualify when their latest sync state is `ok` **and** the snapshot carries scoring-eligible freshness evidence, only a subset of `single-bucket` adapters carry `evidenceClass = independent`, and `validated-static` / `weak-live-probe` feeds remain detail-card/status data only. Dependency inference uses the same score-grade live snapshot; live slices with `coinId` become dependency links, unmapped live share stays implicit self-backed / non-stablecoin exposure, and curated/static dependency modeling is used only when no score-grade live snapshot is available.
 - Blacklist attribution no longer treats live reserves as invisible just because most adapters lack `coinId` links. The report-card resolver enriches both live and curated reserve names with the same blacklist clue pipeline, then resolves inherited exposure to a fixed point across the tracked set so cyclic upstream graphs do not depend on traversal order. The collateral drift alert only compares comparable live reserve mixes: snapshots must still resolve to at least two live slices after normalization, so single-bucket proofs and collapsed one-slice snapshots do not generate noisy curated-vs-live drift alerts.
-- [Dependency Map](./dependency-map.md) remains authoritative for graph behavior; dependency edges still derive from curated/static reserve metadata plus manual dependencies.
+- [Dependency Map](./dependency-map.md) remains authoritative for graph behavior; dependency edges now come from the effective report-card dependency source, including score-grade live reserve links when present and curated/static reserve metadata plus manual dependencies otherwise.
 
 ---
 

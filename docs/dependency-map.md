@@ -26,7 +26,7 @@ Market-cap map construction lives in `src/app/dependency-map/client.tsx` and use
 Graph construction logic lives in `src/lib/contagion-layout.ts` (called via `useMemo` from `ContagionGraph`):
 
 - Filters out `isDefunct` report cards.
-- Uses `reportData.dependencyGraph?.edges` from `/api/report-cards` as the primary live dependency edge source, then filters to live source/target IDs with `filterDependencyGraphEdgesToLive()`.
+- Uses `reportData.dependencyGraph?.edges` from `/api/report-cards` as the primary dependency edge source, then filters to live source/target IDs with `filterDependencyGraphEdgesToLive()`.
 - `buildGraphData()` falls back to `buildDependencyGraphEdges(ACTIVE_STABLECOINS)` only when no `dependencyEdges` prop is provided.
 - The mobile hub summary is built from `reportData.dependencyGraph?.edges ?? []` and does not use the static fallback.
 - Removes coins with no incoming and no outgoing live dependency edges.
@@ -34,7 +34,7 @@ Graph construction logic lives in `src/lib/contagion-layout.ts` (called via `use
 - Takes top `MAX_NODES = 50`, then iteratively prunes coins that are isolated inside the displayed subset and backfills from lower-ranked candidates.
 - Node radius uses square-root scaling between `MIN_RADIUS = 10` and `MAX_RADIUS = 34`.
 
-Edges are derived from the live edge set:
+Edges are derived from the report-card edge set:
 - Each dependency edge is included only if both coins are in the selected top-50 set.
 - Edge `type` defaults to `"collateral"` when not explicitly provided.
 
@@ -133,6 +133,6 @@ When a node is hovered, the graph visualizes how stress could propagate through 
 ## Scope and Limits
 
 - The map is intentionally scoped to the largest 50 live dependency-linked coins for readability.
-- Dependencies are metadata-derived through the shared report-card edge builder (`buildDependencyGraphEdges`), including synthetic tracked-variant `wrapper` edges where applicable; the map still does not perform live on-chain graph discovery.
-- The live reserve sync feature now affects the stablecoin detail-page reserve card plus report-card collateral quality for eligible independent live feeds. The dependency map still reads the shared curated dependency model rather than deriving links from live reserve snapshots.
+- Dependencies are snapshot-derived from the same effective dependency resolver used by report-card scoring: score-grade live reserve slices with tracked `coinId` links can replace curated reserve links for that snapshot, unmapped live reserve share remains implicit self-backed / non-stablecoin exposure, and synthetic tracked-variant `wrapper` edges remain dominant where applicable. The map still does not perform live on-chain graph discovery.
+- Live reserve sync still affects the map only through the report-card snapshot; detail-only, stale, degraded, or non-score-grade reserve feeds do not create graph edges.
 - Defunct coins are excluded from the graph.

@@ -4,7 +4,7 @@ Multi-dimensional risk grades (A+ through F) for every tracked stablecoin. Compu
 
 The stablecoin registry currently contains 215 tracked metadata entries. Report-card snapshots score the active subset and the cemetery set; pre-launch tracked entries remain outside the scored snapshot until they launch.
 
-## Overall Grade (v7.13)
+## Overall Grade (v7.14)
 
 Four-step computation:
 
@@ -15,7 +15,7 @@ Four-step computation:
 
 Cemetery coins get a permanent F.
 
-Current-version note: v7.13 narrows `Possible` blacklist labeling to curated direct token or vault controls, while any reserve-, backing-, parent-asset-, or custody-driven freeze path now resolves as `Upstream`. This re-buckets collateral-driven freeze exposure without changing the existing tracked-variant framework: savings wrappers still cap at parent minus 3 in Dependency Risk, strategy-vault and risk-absorption wrappers cap at parent minus 5, and bond-maturity wrappers cap at parent minus 8. All v7.12 parent-linked variant behavior carries forward unchanged.
+Current-version note: v7.14 aligns score-grade live reserve dependency links with the rest of the report-card snapshot. When a fresh, clean, independent live reserve snapshot qualifies for collateral-quality scoring and its slices carry tracked `coinId` / `depType` links, those links now drive Dependency Risk, `rawInputs.dependencies`, topological ordering, and the public dependency graph. Unmapped live reserve share remains implicit self-backed or non-stablecoin exposure. The v7.13 `Possible` / `Upstream` blacklist split and all tracked-variant wrapper ceilings carry forward unchanged.
 
 ## Dimensions
 
@@ -102,7 +102,7 @@ Three reserve-related labels mean different things:
 | Label                    | Meaning                                                                                                                                                | Score impact                                                                                           |
 | ------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------ |
 | Reserve view             | The stablecoin detail page can show a reserve composition from live sync, curated validation, proof/liveness, curated metadata, or estimated templates | Informational unless the feed also satisfies the score-grade live reserve rules                        |
-| Score-grade live reserve | The current report-card snapshot used a fresh, clean, independent live reserve snapshot for collateral quality                                         | Can replace curated collateral slices in the Resilience dimension                                      |
+| Score-grade live reserve | The current report-card snapshot used a fresh, clean, independent live reserve snapshot for collateral quality                                         | Can replace curated collateral slices in the Resilience dimension and, when slices carry `coinId`, dependency links |
 | Redemption telemetry     | A live reserve adapter emitted current redemption capacity, fee, freshness, or route status                                                            | Can feed Redemption Backstop capacity or fee scoring; does not automatically change collateral quality |
 
 For coins with live reserve sync (`liveReservesConfig`), the collateral quality score
@@ -121,9 +121,12 @@ independent:
 
 This keeps reserve displays broad while keeping collateral scoring strict.
 
-The `collateralFromLive` flag in `RawDimensionInputs` indicates which source was used.
-Dependency inference (`deriveDependencies`) remains on curated data because live
-adapter slices do not carry `coinId` links.
+The `collateralFromLive` flag in `RawDimensionInputs` indicates which collateral source was used.
+The `dependencyFromLive` flag indicates that the Dependency Risk input came from
+the same score-grade live reserve snapshot. Live slices with `coinId` links are
+converted to dependency weights; live slices without `coinId` stay as implicit
+self-backed / non-stablecoin reserve share instead of reviving older curated
+stablecoin-link percentages.
 
 A delta alert fires when the independent live-derived score diverges from curated by >15 points,
 signaling that curated metadata (and potentially the governance classification) may
@@ -273,7 +276,7 @@ Chain penalty applies to `dao-governance` and `multisig` tiers. Exempt tiers: `i
 
 **Universal scoring (v5.1):** All coins with upstream stablecoin dependencies get blended scores, regardless of governance type. Topological sort ensures every coin is scored after all its upstreams.
 
-**Dependency derivation:** Dependencies are primarily derived from reserve composition data. Reserve slices with a `coinId` field (linking to a tracked stablecoin) are extracted by `deriveDependencies()` in `shared/lib/reserve-templates.ts` and converted to `DependencyWeight[]` (weight = `pct / 100`, type = `depType ?? "collateral"`). Weights come directly from reserve percentages when total dependency weight is <= 1, so non-stablecoin reserve slices contribute to the "self-backed" component of the score. If declared dependency weight exceeds 1, dependency weights are normalized by raw total and the self-backed fraction is zero. For coins whose reserves don't reference tracked stablecoins, the function falls back to the manual `dependencies` array on `StablecoinMeta`.
+**Dependency derivation:** Dependencies are primarily derived from reserve composition data. Reserve slices with a `coinId` field (linking to a tracked stablecoin) are extracted by `deriveEffectiveDependencies()` in `shared/lib/dependency-derivation.ts` and converted to `DependencyWeight[]` (weight = `pct / 100`, type = `depType ?? "collateral"`). When score-grade live reserve slices are present, they are the dependency source for that snapshot; otherwise the resolver falls back to curated `StablecoinMeta.reserves`, then to the manual `dependencies` array when curated reserves have no tracked links. Weights come directly from reserve percentages when total dependency weight is <= 1, so non-stablecoin or unmapped live reserve slices contribute to the "self-backed" component of the score. If declared dependency weight exceeds 1, dependency weights are normalized by raw total and the self-backed fraction is zero.
 
 **Scoring:**
 
@@ -360,7 +363,7 @@ Implementation notes:
 Key types:
 
 - **`DependencyWeight`**: `{ id: string; weight: number; type?: "wrapper" | "mechanism" | "collateral" }` — upstream stablecoin ID, collateral fraction (0–1), and optional dependency ceiling semantics. Replaces the old `string[]` dependency format.
-- **`RawDimensionInputs`**: Raw scoring inputs per card (`pegScore`, `activeDepeg`, `activeDepegBps`, `liquidityScore`, `effectiveExitScore`, `redemptionBackstopScore`, `redemptionRouteFamily`, `redemptionImmediateCapacityUsd`, `redemptionImmediateCapacityRatio`, `concentrationHhi`, `bluechipGrade`, `canBeBlacklisted`, `chainTier`, `deploymentModel`, `collateralQuality`, `custodyModel`, `governanceTier`, `governanceQuality`, `dependencies`, `variantParentId`, `variantKind`, `navToken`, `collateralFromLive`) — enables client-side stress test recomputation.
+- **`RawDimensionInputs`**: Raw scoring inputs per card (`pegScore`, `activeDepeg`, `activeDepegBps`, `liquidityScore`, `effectiveExitScore`, `redemptionBackstopScore`, `redemptionRouteFamily`, `redemptionImmediateCapacityUsd`, `redemptionImmediateCapacityRatio`, `concentrationHhi`, `bluechipGrade`, `canBeBlacklisted`, `chainTier`, `deploymentModel`, `collateralQuality`, `custodyModel`, `governanceTier`, `governanceQuality`, `dependencies`, `variantParentId`, `variantKind`, `navToken`, `collateralFromLive`, `dependencyFromLive`) — enables client-side stress test recomputation.
 
 ## Portfolio Analyzer & Stress Test
 

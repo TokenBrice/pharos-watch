@@ -659,6 +659,7 @@ Schema validation in hooks is done via `useApiQuery(..., { schema })` / `useApiQ
 - `StressSignalDetailResponseSchema`
 - `YieldHistoryResponseSchema`
 - `YieldRankingsResponseSchema`
+- `StablecoinReservesResponseSchema`
 
 Use `rg "schema:" src/hooks src/lib` for the live callsite set before adding or auditing endpoint validation.
 
