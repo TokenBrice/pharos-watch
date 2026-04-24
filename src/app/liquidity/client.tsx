@@ -15,7 +15,7 @@ import { LiquidityStats } from "@/components/liquidity-stats";
 import { LiquidityTable } from "@/components/liquidity-table";
 import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins";
 import type { LiquidityRow } from "@/components/liquidity-table";
-import type { LiquidityStatsData } from "@/components/liquidity-stats";
+import type { LiquidityStatsData } from "@/components/liquidity-stats-types";
 import type { PegCurrency } from "@shared/types";
 import { DEX_GLOBAL_KEY } from "@shared/types";
 import { PEG_LABELS_SHORT } from "@shared/lib/classification";

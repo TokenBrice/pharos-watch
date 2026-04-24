@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 
-import { render, screen } from "@testing-library/react";
-import { describe, expect, it } from "vitest";
+import { cleanup, render, screen } from "@testing-library/react";
+import { afterEach, describe, expect, it } from "vitest";
 import { DependencyHubsBoard } from "./dependency-hubs-board";
 import type { DependencyHubsModel } from "./dependency-hubs-model";
 
@@ -32,6 +32,8 @@ const MODEL: DependencyHubsModel = {
     },
   ],
 };
+
+afterEach(() => cleanup());
 
 describe("DependencyHubsBoard", () => {
   it("renders the dependency hub contract with exact modeled values", () => {
