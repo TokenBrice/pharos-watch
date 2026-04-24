@@ -18,6 +18,16 @@ export interface StablecoinTaxonomyPage<TValue extends GovernanceType | BackingT
   coins: StablecoinMeta[];
 }
 
+export interface StablecoinTaxonomyHubRouteConfig {
+  breadcrumbName: string;
+  path: string;
+  title: string;
+  description: (total: number) => string;
+  leadParagraphs: string[];
+  itemListName: string;
+  pages: ReadonlyArray<StablecoinTaxonomyPage<BackingType | GovernanceType | InfrastructureTaxonomyValue>>;
+}
+
 const GOVERNANCE_SLUGS: Record<GovernanceType, string> = {
   centralized: "cefi",
   "centralized-dependent": "cefi-dependent",
@@ -183,6 +193,57 @@ export const INFRASTRUCTURE_TAXONOMY_PAGES = (Object.entries(INFRASTRUCTURE_CONT
     };
   })
   .sort((left, right) => right.coins.length - left.coins.length);
+
+export const STABLECOIN_TAXONOMY_HUB_ROUTES = {
+  backing: {
+    breadcrumbName: "Backing",
+    path: "/stablecoins/backing/",
+    title: "Stablecoins by Backing Type",
+    description: (total: number) =>
+      `Browse ${total} active stablecoins by backing model: real-world assets and crypto collateral.`,
+    leadParagraphs: [
+      "Compare stablecoin cohorts by reserve structure, from fiat and Treasury-backed issuers to crypto-collateralized designs.",
+    ],
+    itemListName: "Backing type stablecoin hubs",
+    pages: BACKING_TAXONOMY_PAGES,
+  },
+  governance: {
+    breadcrumbName: "Governance",
+    path: "/stablecoins/governance/",
+    title: "Stablecoins by Governance Model",
+    description: (total: number) =>
+      `Browse ${total} active stablecoins by governance model: CeFi, CeFi-dependent, and DeFi-native designs.`,
+    leadParagraphs: [
+      "Separate centralized issuers, CeFi-dependent designs, and DeFi-native stablecoins before comparing peg stability, liquidity, and control risk.",
+    ],
+    itemListName: "Governance model stablecoin hubs",
+    pages: GOVERNANCE_TAXONOMY_PAGES,
+  },
+  infrastructure: {
+    breadcrumbName: "Infrastructure",
+    path: "/stablecoins/infrastructure/",
+    title: "Stablecoins by Shared Infrastructure",
+    description: (total: number) =>
+      `Browse ${total} active stablecoins grouped by shared infrastructure such as Liquity v1, Liquity v2, and M0.`,
+    leadParagraphs: [
+      "Group stablecoins that inherit common architecture, contracts, or issuance frameworks so correlated infrastructure risk is easier to spot.",
+    ],
+    itemListName: "Shared infrastructure stablecoin hubs",
+    pages: INFRASTRUCTURE_TAXONOMY_PAGES,
+  },
+} satisfies Record<string, StablecoinTaxonomyHubRouteConfig>;
+
+export function getStablecoinTaxonomyHubTotal(config: StablecoinTaxonomyHubRouteConfig): number {
+  return config.pages.reduce((sum, page) => sum + page.coins.length, 0);
+}
+
+export function getStablecoinTaxonomyHubBreadcrumbItems(config: StablecoinTaxonomyHubRouteConfig) {
+  return [
+    { name: "Home", url: "/" },
+    { name: "Stablecoins", url: "/stablecoins/" },
+    { name: config.breadcrumbName, url: config.path },
+  ];
+}
 
 export const ALL_STABLECOIN_TAXONOMY_PAGES = [...STABLECOIN_TAXONOMY_PAGES, ...INFRASTRUCTURE_TAXONOMY_PAGES];
 
