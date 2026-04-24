@@ -870,10 +870,6 @@ export function NauticalChart({
         </div>
       </div>
 
-      <p className="border-b border-border/60 px-4 py-3 text-xs text-muted-foreground">
-        Source: Chain health snapshot. Harbor size is supply distribution, not issuer redemption capacity.
-      </p>
-
       <div
         className="nc-chart-viewport"
         role="group"
