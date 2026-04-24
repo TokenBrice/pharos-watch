@@ -1,0 +1,25 @@
+@media (prefers-reduced-motion: no-preference) {
+  @keyframes nc-wave-drift {
+    0%, 100% { transform: translateX(0); }
+    50% { transform: translateX(6px); }
+  }
+  @keyframes nc-flag-wave {
+    0%, 100% { transform: skewX(-4deg); }
+    50% { transform: skewX(4deg); }
+  }
+  @keyframes nc-sun-pulse {
+    0%, 100% { opacity: 0.85; }
+    50% { opacity: 1; }
+  }
+
+  .nc-waterline {
+    animation: nc-wave-drift 8s ease-in-out infinite;
+  }
+  .nc-flag {
+    animation: nc-flag-wave 5s ease-in-out infinite;
+    transform-origin: left center;
+  }
+  .nc-sun {
+    animation: nc-sun-pulse 6s ease-in-out infinite;
+  }
+}
