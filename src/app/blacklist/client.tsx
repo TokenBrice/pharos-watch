@@ -6,6 +6,7 @@ import { QueryErrorNotice } from "@/components/query-error-notice";
 import { UsdsStatusCard } from "@/components/usds-status-card";
 import { EurcBlacklistCard } from "@/components/eurc-blacklist-card";
 import { BlacklistStats } from "@/components/blacklist-stats";
+import { BlacklistInterventionLedger } from "@/components/blacklist-intervention-ledger";
 import { BlacklistChart } from "@/components/blacklist-chart";
 import { BlacklistStatusCharts } from "@/components/blacklist-status-charts";
 import { BlacklistStatusDrilldown } from "@/components/blacklist-status-drilldown";
@@ -96,6 +97,13 @@ export default function BlacklistClient() {
         isLoading={summaryLoading}
         blacklistStatusBuckets={blacklistStatusBuckets}
         supportDataLoading={supportDataLoading}
+      />
+
+      <BlacklistInterventionLedger
+        stats={summary?.stats}
+        chart={summary?.chart}
+        buckets={blacklistStatusBuckets}
+        isLoading={summaryLoading || supportDataLoading}
       />
 
       <BlacklistStatusCharts

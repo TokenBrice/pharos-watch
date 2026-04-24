@@ -6,6 +6,7 @@ The tracker now has two distinct amount layers:
 
 - `blacklist_events` stores event-time amounts only when Pharos can justify them historically
 - `blacklist_current_balances` stores persistent freeze-ledger snapshots used by the public frozen-total summary
+- the `/blacklist` intervention ledger appears after the summary stats and before the status charts, keeping resolved exposure buckets separate from observed supported event history
 - the `/blacklist` status charts now support on-page drilldown into the matching stablecoin subset for each blacklistability bucket
 - the `/blacklist` summary cards now include an unfreezable market-share stat: blacklist-status `No` market cap divided by total tracked stablecoin market cap
 
@@ -16,6 +17,23 @@ The tracker now has two distinct amount layers:
 Every stablecoin ID wired into `CONTRACT_CONFIGS` must resolve to direct `Freezable: Yes` in shared metadata/report-card status. `worker/src/lib/__tests__/blacklist-contracts.test.ts` guards this so direct tracker coverage does not show as only upstream-inherited exposure on `/blacklist`.
 
 Implementation note: `EURC` is live-supported with mirror-zero suppression. Circle often mirrors the same blacklist action across both USDC and EURC; rows classified as zero-balance mirrors stay auditable in storage but are excluded from public `/blacklist` events, active records, and frozen-value aggregates.
+
+## Visible `/blacklist` Ledger Contract
+
+The public `/blacklist` page renders `BlacklistInterventionLedger` directly below the stats cards. It is a visible summary strip, not a methodology change, and uses only data already present in the page controller:
+
+- `blacklistStatusBuckets` from `buildBlacklistStatusBuckets()` for resolved blacklist/freeze exposure buckets
+- `summary.stats.perCoinTotalEvents` for stablecoin symbols with observed supported events
+- `summary.stats.perCoinFrozenTotal` and `summary.stats.perCoinDestroyedTotal` for exact symbol-level USD context
+- `summary.chart` for peak and latest tracked frozen-quarter context
+
+The exposure block is the resolved status model:
+
+- `possible` means direct possible token/vault control.
+- `upstream` means reserve/custody/parent exposure.
+- `no` means no resolved exposure in the current model.
+
+The observed-event block is separate from those exposure buckets. Event counts are observed supported tracker history, not policy probability, and the current summary payload is symbol-level only; the UI must not label those rows as contract-level event totals. Count and USD values must be visible in the ledger rows themselves, with hover states treated as supplemental only.
 
 ---
 
