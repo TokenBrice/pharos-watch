@@ -6,7 +6,7 @@ import { z } from "zod";
 
 export type FreshnessSentinelBackedCacheKey = (typeof FRESHNESS_SENTINEL_CACHE_KEYS)[number];
 
-export const FreshnessSentinelPayloadSchema = z.object({
+const FreshnessSentinelPayloadSchema = z.object({
   updatedAt: z.number().int().nonnegative(),
   source: z.string().min(1),
   publishStatus: z.literal("ok"),
