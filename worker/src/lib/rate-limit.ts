@@ -1,5 +1,4 @@
 import { IsolateLocalState } from "./isolate-local-state";
-import { errorResponse } from "./api-response";
 
 interface RateLimitRunResult {
   meta?: { changes?: number };
@@ -15,18 +14,8 @@ interface RateLimitDb {
   prepare(query: string): RateLimitStatement;
 }
 
-const PUBLIC_API_PRUNE_WINDOW_MULTIPLIER = 10;
-const PUBLIC_API_EMERGENCY_BLOCK_AFTER_FAILURES = 3;
-const PUBLIC_API_EMERGENCY_RETRY_AFTER_SEC = 60;
-const PUBLIC_API_FAILURE_DECAY_SEC = 5 * 60;
-
 const _rl = new IsolateLocalState(() => ({
-  lastPublicApiPruneBucket: null as number | null,
-  publicApiPruneFailures: 0,
   feedbackPruneFailures: 0,
-  consecutivePublicApiRateLimitFailures: 0,
-  lastPublicApiRateLimitFailureAt: null as number | null,
-  pendingPublicPrune: null as Promise<void> | null,
   pendingFeedbackPrune: null as Promise<void> | null,
 }));
 
@@ -37,17 +26,8 @@ const _rl = new IsolateLocalState(() => ({
  */
 export function flushPendingPrunes(): Promise<void> {
   const promises: Promise<void>[] = [];
-  if (_rl.state.pendingPublicPrune) { promises.push(_rl.state.pendingPublicPrune); _rl.state.pendingPublicPrune = null; }
   if (_rl.state.pendingFeedbackPrune) { promises.push(_rl.state.pendingFeedbackPrune); _rl.state.pendingFeedbackPrune = null; }
   return promises.length > 0 ? Promise.all(promises).then(() => {}) : Promise.resolve();
-}
-
-function buildRateLimitExceededResponse(retryAfterSec: number): Response {
-  return errorResponse(429, "Rate limit exceeded", { retryAfterSec });
-}
-
-function buildRateLimitUnavailableResponse(retryAfterSec = PUBLIC_API_EMERGENCY_RETRY_AFTER_SEC): Response {
-  return errorResponse(503, "Public API temporarily unavailable", { retryAfterSec });
 }
 
 export function resetRateLimitStateForTests(): void {
@@ -80,72 +60,6 @@ async function hashIpWithSalt(ip: string, salt: string): Promise<string> {
   const hashBuffer = await crypto.subtle.digest("SHA-256", data);
   const hashArray = Array.from(new Uint8Array(hashBuffer));
   return hashArray.map((b) => b.toString(16).padStart(2, "0")).join("").slice(0, 32);
-}
-
-export async function checkPublicApiRateLimit(
-  db: RateLimitDb,
-  ip: string,
-  salt: string,
-  limit = 60,
-  windowMs = 60_000,
-): Promise<Response | null> {
-  const nowSec = Math.floor(Date.now() / 1000);
-  if (_rl.state.lastPublicApiRateLimitFailureAt != null && nowSec - _rl.state.lastPublicApiRateLimitFailureAt > PUBLIC_API_FAILURE_DECAY_SEC) {
-    _rl.state.consecutivePublicApiRateLimitFailures = 0;
-    _rl.state.lastPublicApiRateLimitFailureAt = null;
-  }
-  const windowSec = Math.max(1, Math.ceil(windowMs / 1000));
-  const bucketStart = nowSec - (nowSec % windowSec);
-  const effectiveSalt = salt.trim();
-  if (!effectiveSalt) {
-    throw new Error("checkPublicApiRateLimit requires a configured PUBLIC_API_RATE_LIMIT_SALT");
-  }
-
-  try {
-    const ipHash = await hashIpWithSalt(ip, effectiveSalt);
-    const row = await db
-      .prepare(
-        `INSERT INTO public_api_rate_limit (ip_hash, bucket_start, count, last_seen_at)
-         VALUES (?, ?, 1, ?)
-         ON CONFLICT(ip_hash, bucket_start)
-         DO UPDATE SET count = count + 1, last_seen_at = excluded.last_seen_at
-         RETURNING count`,
-      )
-      .bind(ipHash, bucketStart, nowSec)
-      .first<{ count: number | null }>();
-
-    if (_rl.state.lastPublicApiPruneBucket !== bucketStart) {
-      _rl.state.lastPublicApiPruneBucket = bucketStart;
-      _rl.state.pendingPublicPrune = db.prepare("DELETE FROM public_api_rate_limit WHERE bucket_start < ?")
-        .bind(bucketStart - windowSec * PUBLIC_API_PRUNE_WINDOW_MULTIPLIER)
-        .run()
-        .then(() => { _rl.state.publicApiPruneFailures = 0; })
-        .catch((e) => {
-          _rl.state.publicApiPruneFailures++;
-          console.warn(`[public-api] rate-limit prune failed (${_rl.state.publicApiPruneFailures} consecutive):`, e);
-        });
-    }
-
-    _rl.state.consecutivePublicApiRateLimitFailures = 0;
-    _rl.state.lastPublicApiRateLimitFailureAt = null;
-    const count = row?.count ?? 0;
-    if (count > limit) {
-      return buildRateLimitExceededResponse(bucketStart + windowSec - nowSec);
-    }
-
-    return null;
-  } catch (err) {
-    _rl.state.consecutivePublicApiRateLimitFailures++;
-    _rl.state.lastPublicApiRateLimitFailureAt = nowSec;
-    console.warn(
-      `[public-api] distributed rate limit unavailable (${_rl.state.consecutivePublicApiRateLimitFailures} consecutive):`,
-      err,
-    );
-    if (_rl.state.consecutivePublicApiRateLimitFailures >= PUBLIC_API_EMERGENCY_BLOCK_AFTER_FAILURES) {
-      return buildRateLimitUnavailableResponse();
-    }
-    return null;
-  }
 }
 
 export async function checkFeedbackRateLimit(
