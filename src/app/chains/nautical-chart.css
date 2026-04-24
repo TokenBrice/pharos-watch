@@ -1,5 +1,5 @@
 .nc-chart-viewport {
-  overflow-x: auto;
+  overflow-x: hidden;
   overflow-y: hidden;
   overscroll-behavior-x: contain;
   border-top: 1px solid oklch(1 0 0 / 0.06);
@@ -16,14 +16,18 @@
 
 .nc-chart-svg {
   aspect-ratio: 1200 / 320;
-  width: 62rem;
-  max-width: none;
+  width: 100%;
+  max-width: 100%;
   height: auto;
 }
 
-@media (min-width: 640px) {
+@media (min-width: 768px) {
+  .nc-chart-viewport {
+    overflow-x: auto;
+  }
   .nc-chart-svg {
     width: 66rem;
+    max-width: none;
   }
 }
 

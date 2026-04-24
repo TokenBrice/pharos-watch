@@ -825,8 +825,7 @@ export function NauticalChart({
             Where stablecoin supply is docked
           </h2>
           <p className="max-w-3xl text-sm text-muted-foreground">
-            Vessel length tracks supply; hull color is health band; pennant span is dominant-coin share; window rows
-            scale with vessel size; hull cargo marks show top stablecoins sized by chain-local supply.
+            Vessel length = supply · hull color = health · pennant = dominant-coin share · cargo marks = top stablecoins by chain-local supply.
           </p>
         </div>
         <div className="rounded-full border border-frost-blue/30 bg-frost-blue/10 px-3 py-1 text-xs font-semibold text-sky-700 dark:text-sky-300">
