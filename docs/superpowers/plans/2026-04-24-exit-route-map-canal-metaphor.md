@@ -1,33 +1,47 @@
-# Exit Route Map — Canal & Locks Metaphor Implementation Plan
+# Exit Route Map — Canal & Locks Metaphor Implementation Plan (Revised)
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Replace the "transit concourse" SVG scene inside the Exit Route Map card with a side-elevation canal scene (lock gates, aggregate water body, delta of chain basins, distant Pharos lighthouse, vessel) while preserving every data input, metric, and sidebar control.
+**Goal:** Replace the "transit concourse" SVG scene inside the Exit Route Map card with a side-elevation canal scene (mitre-pair lock gates, tapering water body that encodes crowding, trapezoidal delta basins stepping down from the dam, varied sea ripples, a silhouette-only distant lighthouse, a vessel whose drift speed is bound to the crowding index) while preserving every data input, metric, and sidebar control.
 
-**Architecture:** Single-file visual rework of the `ExitRouteTerminal` subcomponent in `src/components/liquidity-stats.tsx`. The data model (`buildLiquidityExitRouteModel` and `LiquidityExitRouteModel`) is unchanged. The component is renamed `ExitRouteCanalScene` and renders an SVG composed of three horizontal bands (sky / canal / sea) with lock-gate rectangles in the canal and chain basins in a delta on the right. A colocated CSS module (`src/components/exit-route-canal.css`) holds gradients, colour tokens, and opt-in animations behind `prefers-reduced-motion: no-preference`.
+**Architecture:** Single-file visual rework of the `ExitRouteTerminal` subcomponent in `src/components/liquidity-stats.tsx`. The data model (`buildLiquidityExitRouteModel` and `LiquidityExitRouteModel`) is unchanged. The component is renamed `ExitRouteCanalScene`. A colocated CSS module (`src/components/exit-route-canal.css`) holds gradient defs, colour tokens, CSS custom properties for the data-driven vessel duration, responsive breakpoints, and three opt-in animations behind `prefers-reduced-motion: no-preference`, all modelled after the sibling `src/app/chains/nautical-chart.css`.
 
-**Tech Stack:** React 19 client component, inline SVG, Tailwind utility classes, vanilla CSS module imported from the component. No new dependencies. Vitest + Testing Library for tests (already set up).
+**Tech Stack:** React 19 client component, inline SVG, Tailwind utility classes, vanilla CSS module imported from the component. No new dependencies. Vitest + Testing Library for tests.
 
-**Reference:** Design spec at `docs/superpowers/specs/2026-04-24-exit-route-map-canal-metaphor-design.md` (committed `62892505`).
+**Reference:** Design spec at `docs/superpowers/specs/2026-04-24-exit-route-map-canal-metaphor-design.md`.
+
+**Revision changelog (vs previous plan):**
+- Caption copy reverts to "Leading door / Leading lane" (kept verbatim) to resolve the three-way vocabulary conflict with the sidebar `Open routes` metric.
+- Lock gates become mitre-pair leaves (two angled trapezoids meeting in the middle) instead of bar-in-pond rectangles.
+- Chain basins become trapezoidal pools stepping down from the dam face with a subtle water-surface highlight, replacing rounded-cap rectangles.
+- Sea ripples become 5 horizontal lines with varied `strokeDasharray` and opacity taper (0.22 → 0.09), replacing 3 identical sine curves.
+- TVL numeric is the primary focal point: 48px / 800 / letter-spacing -1.5, placed above the vessel, not below it.
+- Lighthouse drops the `PHAROS` text label; beam uses a gradient cone with `transform-box: view-box`.
+- Upstream kicker "UPSTREAM · HOLDERS" replaced by four small tide-gauge ticks on the upstream wall.
+- Stars reduced from 7 to 3 hand-placed.
+- Canal water body tapers toward the dam proportional to the crowding band (makes the `data-crowding-band` attribute visible, not just semantic).
+- Vessel drift duration is driven by `concentrationHhi` via a CSS custom property (slower when crowded).
+- Responsive CSS caps the gate roster at top-4 + "Other" below 640px and drops the percentage row at the gate labels.
+- Animation fixes: vessel easing linear→ease-in-out with a 1px vertical bob; beam gets `transform-box: view-box`; sea shimmer is opacity-only with co-prime periods per ripple line.
 
 ---
 
 ## File Structure
 
-- **Create:** `src/components/exit-route-canal.css` — gradient defs (sky, canal water, sea), colour tokens for gate/basin states, keyframe animations (vessel drift, lighthouse beam, wave shimmer) all scoped under a `.exit-route-canal` root class and guarded by `prefers-reduced-motion`.
-- **Modify:** `src/components/liquidity-stats.tsx` — remove `ExitRouteTerminal` (lines 269–481) and helper functions that only served it (`routeStrokeWidth`, `routeY`, `crowdingWaist`); add a new `ExitRouteCanalScene` component; update `LiquidityExitRouteMap` to import the CSS, render the new scene, and update the caption row copy (lines 510–517).
-- **Modify:** `src/components/__tests__/liquidity-stats.test.ts` — update testid assertions on lines 215–219, add assertions for the new caption copy and chain-basin testids.
+- **Create:** `src/components/exit-route-canal.css` — gradient defs, colour tokens, CSS custom property `--vessel-duration` (overridable), five keyframes, responsive breakpoints.
+- **Modify:** `src/components/liquidity-stats.tsx` — delete `ExitRouteTerminal` (lines 269–481) and the three orphan helpers `routeStrokeWidth`, `crowdingWaist`, `routeY` (lines 246–260); keep `crowdingBand` (lines 262–267); add a new `ExitRouteCanalScene` component that the `LiquidityExitRouteMap` parent renders. Import the new CSS. The caption row (lines 510–517) is unchanged.
+- **Modify:** `src/components/__tests__/liquidity-stats.test.ts:214-222` — update testid assertions to the new scene IDs; caption-copy assertions stay as-is (no `Leading gate` / `Leading basin` — those are explicitly abandoned).
 
 ---
 
-## Task 1: Update tests to expect the new canal scene
+## Task 1: Update tests to expect the new canal scene testids
 
 **Files:**
 - Modify: `src/components/__tests__/liquidity-stats.test.ts:214-222`
 
 - [ ] **Step 1: Rewrite the render assertions**
 
-Open `src/components/__tests__/liquidity-stats.test.ts`, locate the block at lines 214–222 (inside `it("renders the exit route map with disclosed tail routes", …)`), and replace it with:
+Open `src/components/__tests__/liquidity-stats.test.ts`, locate lines 214–222 (inside `it("renders the exit route map with disclosed tail routes", …)`), and replace them with:
 
 ```ts
     expect(screen.getByText("Exit Route Map")).toBeTruthy();
@@ -36,8 +50,8 @@ Open `src/components/__tests__/liquidity-stats.test.ts`, locate the block at lin
     expect(screen.getByTestId("protocol-gate-_other-routes")).toBeTruthy();
     expect(screen.getByTestId("chain-basin-ethereum")).toBeTruthy();
     expect(screen.getByTestId("exit-canal").getAttribute("data-crowding-band")).toBe("visible");
-    expect(screen.getByText("Leading gate:")).toBeTruthy();
-    expect(screen.getByText("Leading basin:")).toBeTruthy();
+    expect(screen.getByText("Leading door:")).toBeTruthy();
+    expect(screen.getByText("Leading lane:")).toBeTruthy();
     expect(container.querySelector('image[href="/dexes/curve.png"]')).toBeTruthy();
     expect(container.querySelector('image[href="/chains/ethereum.png"]')).toBeTruthy();
 ```
@@ -45,13 +59,19 @@ Open `src/components/__tests__/liquidity-stats.test.ts`, locate the block at lin
 - [ ] **Step 2: Run the failing test**
 
 Run: `npm test -- liquidity-stats.test.ts`
-Expected: FAIL — errors about `exit-route-canal`, `chain-basin-ethereum`, `exit-canal`, `Leading gate:`, `Leading basin:` not being found.
+Expected: FAIL. Three testid matchers are renamed by this task and will miss on the current DOM:
+
+- `exit-route-canal` (old name: `exit-route-terminal`)
+- `chain-basin-ethereum` (old name: `chain-lane-ethereum`)
+- `exit-canal` (old name: `exit-concourse`)
+
+The other assertions (`protocol-gate-curve`, `protocol-gate-_other-routes`, the two `image[href]` selectors, and `Leading door:` / `Leading lane:`) are unchanged from the current code and will pass immediately.
 
 - [ ] **Step 3: Commit**
 
 ```bash
 git add src/components/__tests__/liquidity-stats.test.ts
-git commit -m "test(liquidity): expect canal scene testids and new caption copy"
+git commit -m "test(liquidity): expect canal scene testids"
 ```
 
 ---
@@ -68,30 +88,39 @@ Create `src/components/exit-route-canal.css` with:
 ```css
 /*
  * Exit Route Canal — scene-level styles.
- * Colour tokens and ambient motion for the side-elevation canal SVG.
- * Motion is opt-in via prefers-reduced-motion.
+ * Colour tokens, data-driven CSS custom properties, and ambient motion
+ * for the side-elevation canal SVG. Motion is opt-in via prefers-reduced-motion.
+ * Patterns match src/app/chains/nautical-chart.css.
  */
 
 .exit-route-canal {
   --canal-sky-top: oklch(0.18 0.024 248);
   --canal-sky-bottom: oklch(0.08 0.014 248);
-  --canal-water-left: oklch(0.32 0.068 232 / 0.9);
-  --canal-water-right: oklch(0.68 0.14 200 / 0.75);
+  --canal-water-shallow: oklch(0.32 0.068 232 / 0.9);
+  --canal-water-deep: oklch(0.24 0.05 220 / 0.95);
   --canal-wall: oklch(0.22 0.018 248);
-  --canal-dam: oklch(0.34 0.022 248);
+  --canal-wall-stone: oklch(0.31 0.015 248);
+  --canal-dam: oklch(0.36 0.024 248);
   --canal-sea-top: oklch(0.15 0.018 248);
   --canal-sea-bottom: oklch(0.09 0.012 248);
   --canal-caption: oklch(0.56 0.014 248);
-  --canal-hero: oklch(0.92 0.014 248);
+  --canal-caption-dim: oklch(0.44 0.012 248);
+  --canal-hero: oklch(0.96 0.006 248);
+  --canal-hero-kicker: oklch(0.72 0.02 248);
+  --canal-accent: oklch(0.78 0.14 178);
   --canal-beacon: oklch(0.86 0.18 82);
-  --canal-beacon-beam: oklch(0.86 0.18 82 / 0.18);
+  --canal-beacon-beam: oklch(0.86 0.18 82 / 0.35);
+  --canal-ripple: oklch(0.78 0.14 178);
   --canal-star: oklch(0.88 0.01 248 / 0.55);
+
+  /* Data-driven vessel drift duration. Default 14s; overridden inline per crowding band. */
+  --vessel-duration: 14s;
 }
 
 .exit-route-canal__scene {
   display: block;
   width: 100%;
-  min-width: 620px;
+  min-width: 560px;
   height: auto;
 }
 
@@ -101,45 +130,80 @@ Create `src/components/exit-route-canal.css` with:
   }
 }
 
-/* Hide ornamental lighthouse on narrow viewports where the headland would crowd the basin labels. */
+/* Narrow-viewport compactions:
+ *  - Hide ornamental lighthouse (it crowds basin labels).
+ *  - Hide the gate percentage row (the $ row stays).
+ *  - Hide the tail gate ("other routes") and let the scene aggregate to the top-4 below 640px.
+ *  The component applies the compact-* classes conditionally.
+ */
 @media (max-width: 640px) {
-  .exit-route-canal__lighthouse {
+  .exit-route-canal__lighthouse,
+  .exit-route-canal__gate-pct {
     display: none;
   }
 }
 
-/* --- Ambient motion (opt-in) --- */
+/* --- Ambient motion (opt-in) ---
+ * All three animations are GPU-friendly (transform + opacity only).
+ * Static frame must be fully legible without them.
+ */
 @media (prefers-reduced-motion: no-preference) {
   .exit-route-canal__vessel {
-    animation: exit-route-canal-drift 12s linear infinite;
+    animation: exit-route-canal-drift var(--vessel-duration) ease-in-out infinite;
+    will-change: transform;
   }
   .exit-route-canal__beam {
-    transform-origin: 790px 102px;
-    animation: exit-route-canal-sweep 10s ease-in-out infinite alternate;
+    /* view-box box model lets the transform-origin resolve in viewBox user units,
+     * so rotation pivots around the lamp head, not the path's bounding box. */
+    transform-box: view-box;
+    transform-origin: 790px 101px;
+    animation: exit-route-canal-sweep 16s ease-in-out infinite alternate;
+    will-change: transform, opacity;
   }
-  .exit-route-canal__wave {
-    animation: exit-route-canal-shimmer 6s ease-in-out infinite alternate;
+  /* Decoupled ripple phases — co-prime periods keep the three lines from re-syncing. */
+  .exit-route-canal__wave > path:nth-child(1) {
+    animation: exit-route-canal-shimmer 5.3s ease-in-out infinite;
+    will-change: opacity;
+  }
+  .exit-route-canal__wave > path:nth-child(2) {
+    animation: exit-route-canal-shimmer 6.7s ease-in-out infinite;
+    animation-delay: -1.2s;
+    will-change: opacity;
+  }
+  .exit-route-canal__wave > path:nth-child(3) {
+    animation: exit-route-canal-shimmer 8.1s ease-in-out infinite;
+    animation-delay: -2.4s;
+    will-change: opacity;
+  }
+  .exit-route-canal__wave > path:nth-child(4) {
+    animation: exit-route-canal-shimmer 7.4s ease-in-out infinite;
+    animation-delay: -3.1s;
+    will-change: opacity;
+  }
+  .exit-route-canal__wave > path:nth-child(5) {
+    animation: exit-route-canal-shimmer 9.2s ease-in-out infinite;
+    animation-delay: -4.5s;
+    will-change: opacity;
   }
 }
 
 @keyframes exit-route-canal-drift {
-  0%   { transform: translateX(-8px); }
-  50%  { transform: translateX(8px); }
-  100% { transform: translateX(-8px); }
+  0%, 100% { transform: translate3d(-6px, 0, 0); }
+  50%      { transform: translate3d(6px, 1px, 0); }
 }
 
 @keyframes exit-route-canal-sweep {
-  0%   { transform: rotate(-8deg); opacity: 0.45; }
-  100% { transform: rotate(8deg);  opacity: 0.9; }
+  0%   { transform: rotate(-7deg); opacity: 0.55; }
+  100% { transform: rotate(7deg);  opacity: 0.75; }
 }
 
 @keyframes exit-route-canal-shimmer {
-  0%   { opacity: 0.65; transform: translateX(0); }
-  100% { opacity: 1;    transform: translateX(6px); }
+  0%, 100% { opacity: 0.6; }
+  50%      { opacity: 1; }
 }
 ```
 
-- [ ] **Step 2: Confirm the file exists and is valid CSS**
+- [ ] **Step 2: Confirm the file exists**
 
 Run: `test -f src/components/exit-route-canal.css && echo "ok"`
 Expected: `ok`
@@ -148,54 +212,115 @@ Expected: `ok`
 
 ```bash
 git add src/components/exit-route-canal.css
-git commit -m "feat(liquidity): add exit-route-canal stylesheet"
+git commit -m "feat(liquidity): add exit-route-canal stylesheet with data-driven motion"
 ```
 
 ---
 
 ## Task 3: Replace `ExitRouteTerminal` with `ExitRouteCanalScene` skeleton
 
-This task replaces the old component with a scaffold that renders the three scene bands, the outer container, and the `exit-route-canal` / `exit-canal` testids. Gates and basins are filled in Tasks 4 and 5.
+This task installs the scaffolding: three bands (sky/canal/sea), a crowding-driven canal taper, the focal TVL numeric, the `exit-route-canal` / `exit-canal` testids, and the data-driven `--vessel-duration` CSS var. Gates and basins are filled in Tasks 4 and 5; scene cues in Task 6.
 
 **Files:**
-- Modify: `src/components/liquidity-stats.tsx:269-481`
+- Modify: `src/components/liquidity-stats.tsx`
 
-- [ ] **Step 1: Import the new CSS at the top of the file**
+- [ ] **Step 1: Add the CSS import**
 
-In `src/components/liquidity-stats.tsx`, add a single import line under the existing import block (after line 28 `import { MethodologyLabel } …`):
+In `src/components/liquidity-stats.tsx`, add immediately after line 28 (the last import):
 
 ```ts
 import "./exit-route-canal.css";
 ```
 
-- [ ] **Step 2: Delete the old component and its scene-only helpers**
+- [ ] **Step 2: Delete the orphan helpers**
 
-Delete the following blocks from `src/components/liquidity-stats.tsx`:
+Delete lines 246–260 (the three functions `routeStrokeWidth`, `crowdingWaist`, `routeY`). Keep `crowdingBand` at lines 262–267 — the new scene reuses it.
 
-- Lines 246–260 (helpers `routeStrokeWidth`, `crowdingWaist`, `routeY`) — these are only used by `ExitRouteTerminal`. Keep `crowdingBand` (lines 262–267) because `ExitRouteCanalScene` reuses it.
-- Lines 269–481 (the entire `ExitRouteTerminal` function).
+- [ ] **Step 3: Delete the old component**
 
-After deletion, `crowdingBand` (unchanged) should be immediately followed by where the new component goes.
+Delete lines 269–481 (the entire `ExitRouteTerminal` function).
 
-- [ ] **Step 3: Add the skeleton for `ExitRouteCanalScene`**
+- [ ] **Step 4: Add shared geometry constants above the new component**
 
-Immediately after the `crowdingBand` function, insert:
+Immediately after `crowdingBand` (what was line 267), insert these constants. They are referenced by Tasks 3, 4, 5, and 6, so define them once:
+
+```ts
+// Canal scene geometry — viewBox is 1000 × 480.
+// Gates occupy the left half of the canal so the right half reads as the open-water
+// focal area carrying the aggregate-TVL numeric and the drifting vessel.
+const SCENE_WIDTH = 1000;
+const SCENE_HEIGHT = 480;
+const CANAL_TOP = 140;
+const CANAL_BOTTOM = 380;
+const CANAL_LEFT_EDGE = 30;
+const GATE_AREA_LEFT = 80;
+const GATE_AREA_RIGHT = 500;
+const GATE_AREA_WIDTH = GATE_AREA_RIGHT - GATE_AREA_LEFT; // 420
+const OPEN_WATER_LEFT = GATE_AREA_RIGHT + 20;
+const DAM_X = 748;
+const DAM_WIDTH = 6;
+const BASIN_LEFT = DAM_X + DAM_WIDTH;
+const BASIN_RIGHT = 968;
+const BASIN_AREA_TOP = 150;
+const BASIN_AREA_BOTTOM = 372;
+const BASIN_GAP = 4;
+
+// Vessel drift duration per crowding band — higher HHI (crowded) = slower vessel.
+// Applied via a CSS custom property so motion stays in the stylesheet.
+const VESSEL_DURATION_BY_BAND: Record<ReturnType<typeof crowdingBand>, string> = {
+  broad: "11s",
+  visible: "14s",
+  crowded: "22s",
+  unknown: "14s",
+};
+
+// Canal taper on the open-water side — depth of the inward pinch toward the dam.
+// Higher HHI = more squeeze. Makes data-crowding-band visually legible instead of
+// being only a semantic attribute.
+const CANAL_TAPER_BY_BAND: Record<ReturnType<typeof crowdingBand>, number> = {
+  broad: 12,
+  visible: 32,
+  crowded: 64,
+  unknown: 20,
+};
+```
+
+- [ ] **Step 5: Insert the `ExitRouteCanalScene` skeleton**
+
+Immediately after the constants block, insert:
 
 ```tsx
 function ExitRouteCanalScene({ model }: { model: LiquidityExitRouteModel }) {
   const band = crowdingBand(model.concentrationHhi);
+  const taper = CANAL_TAPER_BY_BAND[band];
+  const vesselDuration = VESSEL_DURATION_BY_BAND[band];
+
   const routeSummary = [
     `${formatCurrency(model.totalTvlUsd, 0)} DEX TVL`,
-    model.topProtocol ? `${model.topProtocol.label} leading protocol gate` : null,
-    model.topChain ? `${model.topChain.label} leading chain basin` : null,
+    model.topProtocol ? `${model.topProtocol.label} leading protocol` : null,
+    model.topChain ? `${model.topChain.label} leading chain` : null,
     model.concentrationHhi == null ? null : `${model.concentrationHhi.toFixed(2)} crowding index`,
   ].filter(Boolean).join(", ");
 
+  // Canal water body: rectangle across the gate area, tapered toward the dam on the open-water side.
+  const canalPath = [
+    `M ${CANAL_LEFT_EDGE} ${CANAL_TOP}`,
+    `L ${OPEN_WATER_LEFT} ${CANAL_TOP}`,
+    `L ${DAM_X} ${CANAL_TOP + taper}`,
+    `L ${DAM_X} ${CANAL_BOTTOM - taper}`,
+    `L ${OPEN_WATER_LEFT} ${CANAL_BOTTOM}`,
+    `L ${CANAL_LEFT_EDGE} ${CANAL_BOTTOM}`,
+    "Z",
+  ].join(" ");
+
   return (
-    <div className="exit-route-canal overflow-hidden rounded-xl border border-border/70">
+    <div
+      className="exit-route-canal overflow-hidden rounded-xl border border-border/70"
+      style={{ "--vessel-duration": vesselDuration } as React.CSSProperties}
+    >
       <div className="overflow-x-auto">
         <svg
-          viewBox="0 0 1000 480"
+          viewBox={`0 0 ${SCENE_WIDTH} ${SCENE_HEIGHT}`}
           role="img"
           aria-label={`Exit route canal: ${routeSummary}. Secondary-market DEX exits only.`}
           className="exit-route-canal__scene"
@@ -208,40 +333,67 @@ function ExitRouteCanalScene({ model }: { model: LiquidityExitRouteModel }) {
               <stop offset="100%" stopColor="var(--canal-sea-bottom)" />
             </linearGradient>
             <linearGradient id="exit-route-canal-water" x1="0" x2="1">
-              <stop offset="0%" stopColor="var(--canal-water-left)" />
-              <stop offset="100%" stopColor="var(--canal-water-right)" />
+              <stop offset="0%" stopColor="var(--canal-water-shallow)" />
+              <stop offset="100%" stopColor="var(--canal-water-deep)" />
             </linearGradient>
             <linearGradient id="exit-route-canal-sea" x1="0" y1="0" x2="0" y2="1">
               <stop offset="0%" stopColor="var(--canal-sea-top)" />
               <stop offset="100%" stopColor="var(--canal-sea-bottom)" />
             </linearGradient>
-            <radialGradient id="exit-route-canal-beam" cx="0%" cy="0%" r="100%">
+            <linearGradient id="exit-route-canal-beam" x1="0" y1="0" x2="1" y2="0">
               <stop offset="0%" stopColor="var(--canal-beacon-beam)" />
               <stop offset="100%" stopColor="var(--canal-beacon-beam)" stopOpacity="0" />
-            </radialGradient>
+            </linearGradient>
           </defs>
 
           {/* Sky band */}
-          <rect x="0" y="0" width="1000" height="140" fill="url(#exit-route-canal-sky)" />
+          <rect x="0" y="0" width={SCENE_WIDTH} height="140" fill="url(#exit-route-canal-sky)" />
 
-          {/* Canal band (aggregate water body) — gates/basin drawn in later tasks */}
-          <rect x="30" y="140" width="940" height="240" fill="url(#exit-route-canal-water)" />
+          {/* Canal water body (tapers toward dam per crowding band) */}
+          <path d={canalPath} fill="url(#exit-route-canal-water)" />
 
-          {/* Sea band */}
-          <rect x="0" y="380" width="1000" height="100" fill="url(#exit-route-canal-sea)" />
+          {/* Waterline highlight — a single thin stroke at the top of the canal. */}
+          <path
+            d={`M ${CANAL_LEFT_EDGE} ${CANAL_TOP} L ${OPEN_WATER_LEFT} ${CANAL_TOP} L ${DAM_X} ${CANAL_TOP + taper}`}
+            fill="none"
+            stroke="var(--canal-accent)"
+            strokeWidth="0.6"
+            opacity="0.35"
+          />
 
-          {/* Canal group with crowding attribute — used by tests.
-              Positioned in the open-water area (right half of canal) so it never collides with gate chips. */}
+          {/* Sea band (behind ripples, added in Task 6) */}
+          <rect x="0" y="380" width={SCENE_WIDTH} height="100" fill="url(#exit-route-canal-sea)" />
+
+          {/* Canal group — carries the data-crowding-band attribute and the focal TVL numeric. */}
           <g
             data-testid="exit-canal"
             data-crowding-band={band}
             aria-label={`Aggregate exit canal; crowding ${band}`}
           >
-            <text x="625" y="260" textAnchor="middle" fill="var(--canal-hero)" fontSize="26" fontWeight="700">
+            {/* Focal TVL numeric — centred in the open-water area, above the vessel. */}
+            <text
+              x="625"
+              y="232"
+              textAnchor="middle"
+              fill="var(--canal-hero)"
+              fontSize="48"
+              fontWeight="800"
+              letterSpacing="-1.5"
+              fontFamily="ui-sans-serif, system-ui, sans-serif"
+            >
               {formatCurrency(model.totalTvlUsd, 0)}
             </text>
-            <text x="625" y="280" textAnchor="middle" fill="var(--canal-caption)" fontSize="10" fontWeight="700" letterSpacing="1.5">
-              SECONDARY EXIT TVL
+            <text
+              x="625"
+              y="252"
+              textAnchor="middle"
+              fill="var(--canal-hero-kicker)"
+              fontSize="10"
+              fontWeight="700"
+              letterSpacing="1.8"
+              fontFamily="ui-sans-serif, system-ui, sans-serif"
+            >
+              SECONDARY EXIT TVL · DEX DEPTH
             </text>
           </g>
         </svg>
@@ -251,16 +403,20 @@ function ExitRouteCanalScene({ model }: { model: LiquidityExitRouteModel }) {
 }
 ```
 
-- [ ] **Step 4: Update the single call site inside `LiquidityExitRouteMap`**
+- [ ] **Step 6: Replace the single call site**
 
-In `LiquidityExitRouteMap`, change the element at the old line 508 from `<ExitRouteTerminal model={model} />` to `<ExitRouteCanalScene model={model} />`.
+In `LiquidityExitRouteMap` (the call site that still references `<ExitRouteTerminal model={model} />`), change it to:
 
-- [ ] **Step 5: Run the partial test to confirm skeleton loads**
+```tsx
+<ExitRouteCanalScene model={model} />
+```
+
+- [ ] **Step 7: Run the tests**
 
 Run: `npm test -- liquidity-stats.test.ts`
-Expected: still FAIL, but the failure now mentions `protocol-gate-curve` / `chain-basin-ethereum` (the skeleton renders; gates/basins aren't drawn yet).
+Expected: FAIL — `exit-route-canal` and `exit-canal` testids now pass; `protocol-gate-curve`, `protocol-gate-_other-routes`, `chain-basin-ethereum` still fail (not drawn yet); `image[href="/dexes/curve.png"]` and `image[href="/chains/ethereum.png"]` still fail (gate and basin logos come in the next tasks); `Leading door:` / `Leading lane:` still pass (caption row unchanged).
 
-- [ ] **Step 6: Commit**
+- [ ] **Step 8: Commit**
 
 ```bash
 git add src/components/liquidity-stats.tsx
@@ -269,64 +425,83 @@ git commit -m "refactor(liquidity): replace concourse scene with canal skeleton"
 
 ---
 
-## Task 4: Render lock gates (protocols) inside the canal band
+## Task 4: Render mitre-pair lock gates (protocols)
 
-Each protocol route becomes a vertical lock gate inside the canal. Gates are laid out left-to-right in `protocolRoutes` order (already sorted by sharePct desc). Gate width encodes `sharePct`. The gate includes a small mechanism bar at the top, protocol chip with logo at the middle, and numeric labels below the canal band.
+Each protocol route becomes a **pair of mitre leaves** (two angled trapezoids) hinged to the piers of its chamber. The open gap between the leaves at the canal centreline encodes `sharePct`. Leaves lean inward so the composition reads as "gates" rather than "bars in a pond".
 
 **Files:**
 - Modify: `src/components/liquidity-stats.tsx` (inside `ExitRouteCanalScene`)
 
-- [ ] **Step 1: Add the geometry helper for gate layout**
+- [ ] **Step 1: Add gate geometry helpers**
 
-Immediately above the `ExitRouteCanalScene` function definition, insert these helpers:
+Immediately above the `ExitRouteCanalScene` function (between the constants block and the component), insert:
 
 ```ts
-// Canal spans the full width between x=30 and x=970 in the viewBox.
-// Gates are clustered in the LEFT half so the right half reads as open water
-// carrying the aggregate-TVL numeric and the drifting vessel.
-const CANAL_TOP = 140;
-const CANAL_BOTTOM = 380;
-const GATE_AREA_LEFT = 80;
-const GATE_AREA_RIGHT = 500;
-const GATE_AREA_WIDTH = GATE_AREA_RIGHT - GATE_AREA_LEFT; // 420
-const GATE_MIN_OPEN = 18;
-const GATE_MAX_OPEN = 66;
+const GATE_MIN_OPEN = 14;
+const GATE_MAX_OPEN = 58;
+const GATE_LEAN = 6;   // inward tilt at the top of each leaf (px)
+const GATE_CHIP_R = 12;
 
 function gateOpenWidth(sharePct: number): number {
-  // Map 0–45% share → 18–66 px opening, clamped for legibility.
+  // Map 0–45% share → 14–58 px opening, clamped for legibility.
   const clamped = Math.max(0, Math.min(45, sharePct));
   const t = clamped / 45;
   return Math.round(GATE_MIN_OPEN + t * (GATE_MAX_OPEN - GATE_MIN_OPEN));
 }
 
 function gateXPositions(count: number): number[] {
-  // Evenly distributed gate centres across the gate area.
-  if (count <= 1) return [GATE_AREA_LEFT + GATE_AREA_WIDTH / 2];
+  if (count <= 0) return [];
+  if (count === 1) return [GATE_AREA_LEFT + GATE_AREA_WIDTH / 2];
   const step = GATE_AREA_WIDTH / count;
   return Array.from({ length: count }, (_, i) => GATE_AREA_LEFT + step * (i + 0.5));
 }
 ```
 
-- [ ] **Step 2: Render the gates inside the canal group**
+- [ ] **Step 2: Insert the upstream wall, tide-gauge ticks, and gate render block**
 
-Inside `ExitRouteCanalScene`, after the `<rect … fill="url(#exit-route-canal-water)" />` line and before the `<g data-testid="exit-canal" …>` group, insert:
+Inside `ExitRouteCanalScene`, immediately after the waterline-highlight `<path>` and before the sea-band `<rect>`, insert:
 
 ```tsx
-          {/* Upstream wall (left edge of canal) */}
-          <rect x="30" y={CANAL_TOP} width="5" height={CANAL_BOTTOM - CANAL_TOP} fill="var(--canal-wall)" />
-          <text x="45" y="130" fill="var(--canal-caption)" fontSize="9" fontWeight="700" letterSpacing="1.6">
-            UPSTREAM · HOLDERS
-          </text>
+          {/* Upstream wall — a stone column at the canal's left edge, with 4 tide-gauge ticks
+              replacing the old "UPSTREAM · HOLDERS" label. Ticks are cheap; label was redundant
+              (the wall + gates already imply upstream). */}
+          <rect x={CANAL_LEFT_EDGE} y={CANAL_TOP} width="5" height={CANAL_BOTTOM - CANAL_TOP} fill="var(--canal-wall-stone)" />
+          <g stroke="var(--canal-caption-dim)" strokeWidth="0.8" opacity="0.7">
+            <line x1={CANAL_LEFT_EDGE + 5} y1="180" x2={CANAL_LEFT_EDGE + 11} y2="180" />
+            <line x1={CANAL_LEFT_EDGE + 5} y1="220" x2={CANAL_LEFT_EDGE + 11} y2="220" />
+            <line x1={CANAL_LEFT_EDGE + 5} y1="260" x2={CANAL_LEFT_EDGE + 11} y2="260" />
+            <line x1={CANAL_LEFT_EDGE + 5} y1="300" x2={CANAL_LEFT_EDGE + 11} y2="300" />
+          </g>
 
-          {/* Lock gates (protocols) */}
+          {/* Mitre-pair lock gates (protocols) */}
           {(() => {
             const xs = gateXPositions(model.protocolRoutes.length);
             return model.protocolRoutes.map((route, i) => {
               const open = gateOpenWidth(route.sharePct);
               const cx = xs[i];
-              const leftPier = cx - open / 2 - 4;
-              const rightPier = cx + open / 2;
-              const chipR = 12;
+              const leftPierX = cx - open / 2 - 10;
+              const rightPierX = cx + open / 2 + 6;
+              const canalDepth = CANAL_BOTTOM - CANAL_TOP;
+              const chipCy = CANAL_TOP + canalDepth / 2;
+
+              // Left mitre leaf: trapezoid from left pier, leaning inward at the top,
+              // with the inner edge stopping just shy of the gate centreline.
+              const leftLeaf = [
+                `M ${leftPierX + 6} ${CANAL_TOP}`,
+                `L ${cx - open / 2} ${CANAL_TOP + GATE_LEAN}`,
+                `L ${cx - open / 2} ${CANAL_BOTTOM - GATE_LEAN}`,
+                `L ${leftPierX + 6} ${CANAL_BOTTOM}`,
+                "Z",
+              ].join(" ");
+              // Right mitre leaf: mirror.
+              const rightLeaf = [
+                `M ${rightPierX - 2} ${CANAL_TOP}`,
+                `L ${cx + open / 2} ${CANAL_TOP + GATE_LEAN}`,
+                `L ${cx + open / 2} ${CANAL_BOTTOM - GATE_LEAN}`,
+                `L ${rightPierX - 2} ${CANAL_BOTTOM}`,
+                "Z",
+              ].join(" ");
+
               return (
                 <g
                   key={`protocol-${route.key}`}
@@ -334,34 +509,37 @@ Inside `ExitRouteCanalScene`, after the `<rect … fill="url(#exit-route-canal-w
                   aria-label={`${route.label} lock gate, ${formatCurrency(route.valueUsd, 0)}, ${formatPercent(route.sharePct, 1)} of DEX TVL`}
                 >
                   <title>{`${route.label}: ${formatCurrency(route.valueUsd, 0)} lock gate (${formatPercent(route.sharePct, 1)})`}</title>
-                  {/* Left pier */}
-                  <rect x={leftPier} y={CANAL_TOP} width="4" height={CANAL_BOTTOM - CANAL_TOP} fill="var(--canal-wall)" />
-                  {/* Gate opening (fill colour encodes protocol) */}
-                  <rect
-                    x={leftPier + 4}
-                    y={CANAL_TOP}
-                    width={open}
-                    height={CANAL_BOTTOM - CANAL_TOP}
-                    fill={route.colorHex}
-                    opacity="0.5"
-                  />
-                  {/* Right pier */}
-                  <rect x={rightPier} y={CANAL_TOP} width="4" height={CANAL_BOTTOM - CANAL_TOP} fill="var(--canal-wall)" />
-                  {/* Gate mechanism bar at top */}
-                  <rect x={leftPier - 2} y={CANAL_TOP - 8} width={open + 10} height="8" fill="var(--canal-wall)" />
-                  <rect x={leftPier + 4} y={CANAL_TOP - 6} width={open} height="3" fill="oklch(0.78 0.14 178 / 0.7)" />
-                  {/* Protocol chip */}
-                  <circle cx={cx} cy={CANAL_TOP + 120} r={chipR} fill="oklch(0.06 0.012 248 / 0.9)" stroke={route.colorHex} strokeWidth="1.2" />
+                  {/* Left pier (stone) */}
+                  <rect x={leftPierX} y={CANAL_TOP} width="4" height={canalDepth} fill="var(--canal-wall-stone)" />
+                  {/* Left mitre leaf */}
+                  <path d={leftLeaf} fill={route.colorHex} fillOpacity="0.72" stroke="var(--canal-wall)" strokeWidth="0.6" />
+                  {/* Right mitre leaf */}
+                  <path d={rightLeaf} fill={route.colorHex} fillOpacity="0.72" stroke="var(--canal-wall)" strokeWidth="0.6" />
+                  {/* Right pier (stone) */}
+                  <rect x={rightPierX} y={CANAL_TOP} width="4" height={canalDepth} fill="var(--canal-wall-stone)" />
+                  {/* Gate mechanism bar at the crown (above the water) — single thin rail, no cyan accent stripe */}
+                  <rect x={leftPierX - 1} y={CANAL_TOP - 6} width={rightPierX - leftPierX + 6} height="4" fill="var(--canal-wall)" />
+                  {/* Protocol chip at canal mid-depth, over the mitre joint */}
+                  <circle cx={cx} cy={chipCy} r={GATE_CHIP_R} fill="oklch(0.06 0.012 248 / 0.92)" stroke={route.colorHex} strokeWidth="1.2" />
                   {route.logoPath ? (
-                    <image href={route.logoPath} x={cx - 9} y={CANAL_TOP + 111} width="18" height="18" preserveAspectRatio="xMidYMid meet" />
+                    <image href={route.logoPath} x={cx - 9} y={chipCy - 9} width="18" height="18" preserveAspectRatio="xMidYMid meet" />
                   ) : (
-                    <text x={cx} y={CANAL_TOP + 125} textAnchor="middle" fill="oklch(0.92 0.01 248)" fontSize="13" fontWeight="800">+</text>
+                    <text x={cx} y={chipCy + 4} textAnchor="middle" fill="oklch(0.92 0.01 248)" fontSize="13" fontWeight="800">+</text>
                   )}
-                  {/* Labels below the canal */}
+                  {/* $ label below the canal (always visible) */}
                   <text x={cx} y={CANAL_BOTTOM + 16} textAnchor="middle" fill="var(--canal-hero)" fontSize="10" fontFamily="ui-monospace, Menlo, monospace">
                     {formatCurrency(route.valueUsd, 0)}
                   </text>
-                  <text x={cx} y={CANAL_BOTTOM + 30} textAnchor="middle" fill="var(--canal-caption)" fontSize="9" fontFamily="ui-monospace, Menlo, monospace">
+                  {/* % label (hidden on narrow viewports via .exit-route-canal__gate-pct CSS rule) */}
+                  <text
+                    x={cx}
+                    y={CANAL_BOTTOM + 30}
+                    textAnchor="middle"
+                    fill="var(--canal-caption)"
+                    fontSize="9"
+                    fontFamily="ui-monospace, Menlo, monospace"
+                    className="exit-route-canal__gate-pct"
+                  >
                     {formatPercent(route.sharePct, 1)}
                   </text>
                 </g>
@@ -370,65 +548,62 @@ Inside `ExitRouteCanalScene`, after the `<rect … fill="url(#exit-route-canal-w
           })()}
 ```
 
-- [ ] **Step 3: Run the test — gate testids should pass**
+- [ ] **Step 3: Run tests — gate testids should pass**
 
 Run: `npm test -- liquidity-stats.test.ts`
-Expected: `protocol-gate-curve` and `protocol-gate-_other-routes` assertions pass; `chain-basin-ethereum` still fails.
+Expected: `protocol-gate-curve`, `protocol-gate-_other-routes`, and `image[href="/dexes/curve.png"]` assertions now pass; `chain-basin-ethereum` and `image[href="/chains/ethereum.png"]` still fail.
 
 - [ ] **Step 4: Commit**
 
 ```bash
 git add src/components/liquidity-stats.tsx
-git commit -m "feat(liquidity): render protocol lock gates in canal scene"
+git commit -m "feat(liquidity): render mitre-pair lock gates for protocols"
 ```
 
 ---
 
-## Task 5: Render chain basins in the delta
+## Task 5: Render trapezoidal delta basins (chains)
+
+Each chain basin becomes a **trapezoidal pool** that shares its left edge with the dam's downstream face and splays outward toward the right. A thin 0.5px water-surface stroke inside each basin sells the "pool" read.
 
 **Files:**
 - Modify: `src/components/liquidity-stats.tsx` (inside `ExitRouteCanalScene`)
 
-- [ ] **Step 1: Add basin geometry helpers**
+- [ ] **Step 1: Add basin height helper**
 
-Immediately after the gate helpers from Task 4, add:
+Immediately after the gate helpers (Task 4 Step 1), insert:
 
 ```ts
-const DAM_X = 748;
-const DAM_WIDTH = 6;
-const BASIN_LEFT = DAM_X + DAM_WIDTH;
-const BASIN_RIGHT = 968;
-const BASIN_AREA_TOP = 150;
-const BASIN_AREA_BOTTOM = 372;
-const BASIN_GAP = 4;
-
 function basinHeights(routes: LiquidityExitRouteItem[]): number[] {
-  // Distribute the basin stack proportionally to sharePct, with a minimum height for legibility.
-  const usable = BASIN_AREA_BOTTOM - BASIN_AREA_TOP - BASIN_GAP * Math.max(0, routes.length - 1);
+  // Allocate BASIN_AREA_TOP..BASIN_AREA_BOTTOM proportionally to sharePct, with a
+  // minimum row height for legibility. Invariant: minH * maxRoutes <= usable.
+  // With MAX_EXIT_ROUTE_ITEMS = 5 + 1 "Other" = 6 rows and usable ≈ 200 px, minH=18
+  // gives 108 px floor — well under the 200 px ceiling, so overflow is unreachable.
+  if (routes.length === 0) return [];
+  const usable = BASIN_AREA_BOTTOM - BASIN_AREA_TOP - BASIN_GAP * (routes.length - 1);
   const totalShare = routes.reduce((sum, r) => sum + Math.max(0, r.sharePct), 0);
-  if (totalShare <= 0 || routes.length === 0) return routes.map(() => 0);
+  if (totalShare <= 0) return routes.map(() => 0);
   const raw = routes.map((r) => (Math.max(0, r.sharePct) / totalShare) * usable);
   const minH = 18;
-  // Bump too-small values up to minH and rescale the rest.
   const floored = raw.map((h) => Math.max(minH, h));
-  const overflow = floored.reduce((sum, h) => sum + h, 0) - usable;
-  if (overflow <= 0) return floored.map((h) => Math.round(h));
-  const adjustable = floored.filter((h) => h > minH).length;
-  const perItem = adjustable > 0 ? overflow / adjustable : 0;
-  return floored.map((h) => Math.round(h > minH ? h - perItem : h));
+  const sumFloored = floored.reduce((sum, h) => sum + h, 0);
+  if (sumFloored <= usable) return floored.map((h) => Math.round(h));
+  // Rescale heights above minH to absorb the overflow.
+  const scale = usable / sumFloored;
+  return floored.map((h) => Math.round(h * scale));
 }
 ```
 
-- [ ] **Step 2: Render the dam wall and basins**
+- [ ] **Step 2: Insert dam wall and basin render block**
 
-Inside `ExitRouteCanalScene`, after the lock-gates block (end of the IIFE that renders gates) and before the `<g data-testid="exit-canal" …>` group, insert:
+Inside `ExitRouteCanalScene`, immediately after the gate IIFE (Task 4 Step 2) and before the `<g data-testid="exit-canal" …>` group, insert:
 
 ```tsx
-          {/* Dam wall */}
+          {/* Dam wall with a mid-tone cornice strip — more than a 1-px line, reads as masonry depth. */}
+          <rect x={DAM_X - 2} y={CANAL_TOP - 4} width={DAM_WIDTH + 4} height="4" fill="var(--canal-wall-stone)" />
           <rect x={DAM_X} y={CANAL_TOP} width={DAM_WIDTH} height={CANAL_BOTTOM - CANAL_TOP} fill="var(--canal-dam)" />
-          <rect x={DAM_X - 2} y={CANAL_TOP - 2} width={DAM_WIDTH + 4} height="4" fill="oklch(0.78 0.14 178 / 0.5)" />
 
-          {/* Chain basins (delta) */}
+          {/* Chain basins (delta) — trapezoidal pools splaying right from the dam face. */}
           {(() => {
             const heights = basinHeights(model.chainRoutes);
             let cursor = BASIN_AREA_TOP;
@@ -437,6 +612,14 @@ Inside `ExitRouteCanalScene`, after the lock-gates block (end of the IIFE that r
               const h = heights[i];
               cursor = top + h + BASIN_GAP;
               const midY = top + h / 2;
+              // Trapezoid: top edge slopes down-right by 4 px, bottom edge slopes up-right by 4 px.
+              const basinPath = [
+                `M ${BASIN_LEFT} ${top}`,
+                `L ${BASIN_RIGHT} ${top + 4}`,
+                `L ${BASIN_RIGHT} ${top + h - 4}`,
+                `L ${BASIN_LEFT} ${top + h}`,
+                "Z",
+              ].join(" ");
               return (
                 <g
                   key={`chain-${route.key}`}
@@ -444,13 +627,11 @@ Inside `ExitRouteCanalScene`, after the lock-gates block (end of the IIFE that r
                   aria-label={`${route.label} chain basin, ${formatCurrency(route.valueUsd, 0)}, ${formatPercent(route.sharePct, 1)} of DEX TVL`}
                 >
                   <title>{`${route.label}: ${formatCurrency(route.valueUsd, 0)} chain basin (${formatPercent(route.sharePct, 1)})`}</title>
-                  <path
-                    d={`M ${BASIN_LEFT} ${top} C ${BASIN_LEFT + 65} ${top}, ${BASIN_RIGHT - 30} ${top}, ${BASIN_RIGHT} ${top} L ${BASIN_RIGHT} ${top + h} C ${BASIN_RIGHT - 30} ${top + h + 2}, ${BASIN_LEFT + 65} ${top + h + 2}, ${BASIN_LEFT} ${top + h} Z`}
-                    fill={route.colorHex}
-                    opacity="0.55"
-                  />
+                  <path d={basinPath} fill={route.colorHex} fillOpacity="0.62" />
+                  {/* Water-surface highlight — a single faint stroke across the basin top */}
+                  <line x1={BASIN_LEFT + 4} y1={top + 5} x2={BASIN_RIGHT - 4} y2={top + 5} stroke="var(--canal-accent)" strokeWidth="0.4" opacity="0.3" />
                   {/* Right-aligned label cluster */}
-                  <text x={BASIN_RIGHT - 30} y={midY - 2} textAnchor="end" fill="var(--canal-hero)" fontSize="11" fontFamily="ui-monospace, Menlo, monospace">
+                  <text x={BASIN_RIGHT - 30} y={midY - 1} textAnchor="end" fill="var(--canal-hero)" fontSize="11" fontFamily="ui-monospace, Menlo, monospace">
                     {`${route.label} · ${formatCurrency(route.valueUsd, 0)}`}
                   </text>
                   <text x={BASIN_RIGHT - 30} y={midY + 11} textAnchor="end" fill="var(--canal-caption)" fontSize="9" fontFamily="ui-monospace, Menlo, monospace">
@@ -469,235 +650,202 @@ Inside `ExitRouteCanalScene`, after the lock-gates block (end of the IIFE that r
           })()}
 ```
 
-- [ ] **Step 3: Run the test — basin testid should pass**
+- [ ] **Step 3: Run tests — basin testids should pass**
 
 Run: `npm test -- liquidity-stats.test.ts`
-Expected: `chain-basin-ethereum` assertion passes; caption-copy assertions (`Leading gate:`, `Leading basin:`) still fail (handled in Task 7).
+Expected: `chain-basin-ethereum` and `image[href="/chains/ethereum.png"]` now pass. All assertions should pass.
 
 - [ ] **Step 4: Commit**
 
 ```bash
 git add src/components/liquidity-stats.tsx
-git commit -m "feat(liquidity): render chain basins in canal delta"
+git commit -m "feat(liquidity): render trapezoidal chain basins in the delta"
 ```
 
 ---
 
-## Task 6: Add scene cues — vessel, Pharos lighthouse, stars, waves, kicker labels
+## Task 6: Add scene cues — stars, silhouette lighthouse, vessel, varied sea ripples
 
 **Files:**
 - Modify: `src/components/liquidity-stats.tsx` (inside `ExitRouteCanalScene`)
 
+All ornamental groups in this task carry `aria-hidden="true"` so assistive tech is not told about decorative motion.
+
 - [ ] **Step 1: Insert sky-band ornaments after the sky rect**
 
-Inside `ExitRouteCanalScene`, immediately after `<rect x="0" y="0" width="1000" height="140" fill="url(#exit-route-canal-sky)" />` and before the canal rect, insert:
+Inside `ExitRouteCanalScene`, immediately after `<rect x="0" y="0" width={SCENE_WIDTH} height="140" fill="url(#exit-route-canal-sky)" />` and before the canal `<path>`, insert:
 
 ```tsx
-          {/* Stars */}
-          <g fill="var(--canal-star)">
-            <circle cx="140" cy="40" r="0.8" />
-            <circle cx="250" cy="70" r="0.6" />
-            <circle cx="380" cy="30" r="0.8" />
-            <circle cx="520" cy="55" r="0.6" />
-            <circle cx="640" cy="45" r="0.8" />
-            <circle cx="760" cy="60" r="0.6" />
-            <circle cx="880" cy="35" r="0.8" />
+          {/* Three hand-placed stars — asymmetric, varied sizes. */}
+          <g fill="var(--canal-star)" aria-hidden="true">
+            <circle cx="210" cy="35" r="1" />
+            <circle cx="480" cy="62" r="0.7" />
+            <circle cx="710" cy="28" r="1.1" />
           </g>
 
-          {/* Distant headland with Pharos lighthouse */}
-          <g className="exit-route-canal__lighthouse">
+          {/* Distant lighthouse — silhouette-only, no text label. The brand cue is the
+              shape and the faint beam; labelling would cannibalise /chains where the
+              lighthouse is the hero. */}
+          <g className="exit-route-canal__lighthouse" aria-hidden="true">
+            {/* Very faint horizon bump suggesting a headland — one path, one stroke */}
+            <path d="M740,140 Q 790,126 840,140 Z" fill="oklch(0.11 0.014 248)" opacity="0.85" />
+            {/* Tower: a two-tier silhouette (base + upper), not a single rect. */}
+            <rect x="787" y="108" width="6" height="12" fill="var(--canal-wall-stone)" />
+            <rect x="788" y="102" width="4" height="7" fill="var(--canal-wall)" />
+            {/* Gallery line */}
+            <rect x="786" y="101" width="8" height="2" fill="var(--canal-wall-stone)" />
+            {/* Beacon dot */}
+            <circle cx="790" cy="99" r="1.4" fill="var(--canal-beacon)" />
+            {/* Beam — gradient cone, rotated via CSS. transform-origin is in the CSS file. */}
             <path
-              d="M740,140 Q 770,120 800,118 L 820,120 Q 840,130 860,140 Z"
-              fill="oklch(0.11 0.014 248)"
-              stroke="oklch(0.22 0.018 248)"
-              strokeWidth="0.5"
+              className="exit-route-canal__beam"
+              d="M790,101 L 905,72 L 905,82 L 790,105 Z"
+              fill="url(#exit-route-canal-beam)"
             />
-            <g transform="translate(790,118)">
-              <rect x="-2" y="-14" width="4" height="14" fill="var(--canal-wall)" />
-              <rect x="-4" y="-14" width="8" height="2" fill="var(--canal-beacon)" opacity="0.7" />
-              <circle cx="0" cy="-17" r="1.8" fill="var(--canal-beacon)" />
-              <path className="exit-route-canal__beam" d="M0,-16 L 120,-40 L 0,-14 Z" fill="url(#exit-route-canal-beam)" />
-            </g>
-            <text x="790" y="135" textAnchor="middle" fill="var(--canal-caption)" fontSize="9" fontWeight="700" letterSpacing="1.6">
-              PHAROS
-            </text>
           </g>
 ```
 
-- [ ] **Step 2: Insert vessel between the lock gates and dam wall**
+- [ ] **Step 2: Insert vessel after basins, before the exit-canal group**
 
-Still inside `ExitRouteCanalScene`, immediately after the IIFE that renders the basins and before the `<g data-testid="exit-canal" …>` group, insert:
+Inside `ExitRouteCanalScene`, immediately after the basin IIFE (Task 5 Step 2) and before the `<g data-testid="exit-canal" …>` group, insert:
 
 ```tsx
-          {/* Vessel drifting in the open-water stretch between the last gate and the dam wall.
-              Positioned below the TVL numeric so the two don't compete for focus. */}
-          <g className="exit-route-canal__vessel" transform="translate(640,330)">
-            <path d="M-20,0 L 20,0 L 16,8 L -16,8 Z" fill="oklch(0.92 0.01 248)" opacity="0.85" />
-            <rect x="-6" y="-6" width="12" height="6" fill="oklch(0.85 0.01 248)" opacity="0.85" />
-            <line x1="0" y1="-6" x2="0" y2="-16" stroke="oklch(0.85 0.01 248)" strokeWidth="0.8" />
-            <path d="M-20,4 Q -60,4 -100,10" fill="none" stroke="oklch(0.78 0.14 178)" strokeWidth="0.7" opacity="0.35" />
-            <path d="M-20,4 Q -80,8 -140,16" fill="none" stroke="oklch(0.78 0.14 178)" strokeWidth="0.5" opacity="0.2" />
+          {/* Vessel drifting in the open-water stretch between the last gate and the dam.
+              Placed BELOW the focal TVL numeric so the two don't compete.
+              Drift duration is bound to --vessel-duration (crowding-driven). */}
+          <g className="exit-route-canal__vessel" transform="translate(640,320)" aria-hidden="true">
+            {/* Hull — single silhouette path, tapered stern */}
+            <path d="M-22,0 Q -20,7 -14,8 L 14,8 Q 20,7 20,0 Z" fill="oklch(0.88 0.008 248)" opacity="0.88" />
+            {/* Deckhouse */}
+            <rect x="-6" y="-6" width="12" height="6" fill="oklch(0.78 0.008 248)" opacity="0.88" />
+            {/* Mast and flag hint */}
+            <line x1="0" y1="-6" x2="0" y2="-17" stroke="oklch(0.78 0.008 248)" strokeWidth="0.9" />
+            <path d="M0,-17 L 5,-15 L 0,-13 Z" fill="var(--canal-accent)" opacity="0.7" />
+            {/* Wake */}
+            <path d="M-22,5 Q -56,6 -96,10" fill="none" stroke="var(--canal-ripple)" strokeWidth="0.7" opacity="0.32" />
+            <path d="M-22,5 Q -76,9 -140,14" fill="none" stroke="var(--canal-ripple)" strokeWidth="0.5" opacity="0.18" />
           </g>
 ```
 
-- [ ] **Step 3: Insert sea ripples inside the sea band**
+- [ ] **Step 3: Insert the sea ripples**
 
-Inside `ExitRouteCanalScene`, immediately after the sea-band rect `<rect x="0" y="380" width="1000" height="100" fill="url(#exit-route-canal-sea)" />`, insert:
+Inside `ExitRouteCanalScene`, immediately before the `<g data-testid="exit-canal" …>` group (so the ripples render between the sea band and the focal TVL numeric), insert:
 
 ```tsx
-          {/* Sea ripples */}
-          <g stroke="oklch(0.22 0.018 248)" strokeWidth="0.5" fill="none" opacity="0.9" className="exit-route-canal__wave">
-            <path d="M0,395 Q 50,390 100,395 T 200,395 T 300,395 T 400,395 T 500,395 T 600,395 T 700,395 T 800,395 T 900,395 T 1000,395" />
-            <path d="M0,415 Q 50,410 100,415 T 200,415 T 300,415 T 400,415 T 500,415 T 600,415 T 700,415 T 800,415 T 900,415 T 1000,415" />
-            <path d="M0,435 Q 50,430 100,435 T 200,435 T 300,435 T 400,435 T 500,435 T 600,435 T 700,435 T 800,435 T 900,435 T 1000,435" />
+          {/* Sea ripples — 5 horizontal lines with varied strokeDasharray and opacity taper.
+              Depth cue: farther-from-camera ripples are fainter. Each ripple animates on
+              its own co-prime period (see CSS) so the surface glimmers asynchronously. */}
+          <g className="exit-route-canal__wave" stroke="var(--canal-ripple)" fill="none" aria-hidden="true">
+            <path d="M0,395 H 970" strokeDasharray="8 14 4 22 12 18" strokeWidth="0.6" opacity="0.22" />
+            <path d="M0,410 H 970" strokeDasharray="12 16 6 24 10 20" strokeWidth="0.55" opacity="0.18" />
+            <path d="M0,425 H 970" strokeDasharray="6 18 10 14 8 22" strokeWidth="0.5" opacity="0.14" />
+            <path d="M0,440 H 970" strokeDasharray="14 10 20 8 16 12" strokeWidth="0.45" opacity="0.11" />
+            <path d="M0,455 H 970" strokeDasharray="10 22 6 16 14 18" strokeWidth="0.4" opacity="0.09" />
           </g>
-          <text x="970" y="465" textAnchor="end" fill="var(--canal-caption)" fontSize="9" fontWeight="700" letterSpacing="1.6">
+          <text x="970" y="468" textAnchor="end" fill="var(--canal-caption-dim)" fontSize="9" fontWeight="700" letterSpacing="1.8" aria-hidden="true">
             OPEN SEA
           </text>
 ```
 
-- [ ] **Step 4: Run the test to confirm the scene still renders**
+- [ ] **Step 4: Run the test — full suite should still pass**
 
 Run: `npm test -- liquidity-stats.test.ts`
-Expected: Same results as Task 5 — all testid/image assertions pass; `Leading gate:` / `Leading basin:` still fail.
+Expected: PASS — decorative elements added but no test assertions affected.
 
 - [ ] **Step 5: Commit**
 
 ```bash
 git add src/components/liquidity-stats.tsx
-git commit -m "feat(liquidity): add vessel, lighthouse, stars, ripples to canal scene"
+git commit -m "feat(liquidity): add vessel, silhouette lighthouse, varied sea ripples"
 ```
 
 ---
 
-## Task 7: Update caption copy in `LiquidityExitRouteMap`
-
-**Files:**
-- Modify: `src/components/liquidity-stats.tsx` (caption row inside `LiquidityExitRouteMap`)
-
-- [ ] **Step 1: Update the caption-row labels**
-
-In `LiquidityExitRouteMap`, locate the caption row (the `<div className="flex flex-wrap items-center gap-x-4 …">` block that contains `Leading door:` and `Leading lane:`). Replace:
-
-```tsx
-              <span>
-                Leading door:{" "}
-                <span className="font-medium text-foreground">{model.topProtocol?.label ?? "n/a"}</span>
-              </span>
-              <span>
-                Leading lane:{" "}
-                <span className="font-medium text-foreground">{model.topChain?.label ?? "n/a"}</span>
-              </span>
-```
-
-with:
-
-```tsx
-              <span>
-                Leading gate:{" "}
-                <span className="font-medium text-foreground">{model.topProtocol?.label ?? "n/a"}</span>
-              </span>
-              <span>
-                Leading basin:{" "}
-                <span className="font-medium text-foreground">{model.topChain?.label ?? "n/a"}</span>
-              </span>
-```
-
-- [ ] **Step 2: Run the test — all assertions should now pass**
-
-Run: `npm test -- liquidity-stats.test.ts`
-Expected: PASS.
-
-- [ ] **Step 3: Commit**
-
-```bash
-git add src/components/liquidity-stats.tsx
-git commit -m "copy(liquidity): rename caption Leading door→gate, lane→basin"
-```
-
----
-
-## Task 8: Verify responsive degradation at narrow widths
-
-The CSS file already hides the lighthouse below 640px (`@media (max-width: 640px)` block in Task 2). This task manually verifies scene legibility at 360px and 620px widths.
+## Task 7: Narrow-viewport validation
 
 **Files:** none modified unless adjustments are needed.
 
 - [ ] **Step 1: Start the dev server**
 
 Run: `npm run dev`
-Expected: server starts on port 3000 (default).
+Expected: server starts on port 3000.
 
-- [ ] **Step 2: Open the liquidity page in a headless browser**
+- [ ] **Step 2: Navigate to `/liquidity` at two widths**
 
-From another terminal, run (using Playwright MCP tools if available, or manually in a browser dev-tools at 360×640):
+Using Playwright MCP (preferred — proper wait primitives) or Chrome dev-tools, validate:
 
-```
-Navigate to http://localhost:3000/liquidity
-Resize viewport to 360×640.
-```
+- **1280 × 800:**
+  - [ ] Lighthouse visible on the headland
+  - [ ] Focal TVL numeric is the dominant read in the scene
+  - [ ] Mitre leaves of each gate visibly lean inward
+  - [ ] Canal tapers toward the dam (`data-crowding-band="visible"` in the fixture gives a 32 px taper)
+  - [ ] Trapezoidal basins visibly splay rightward from the dam face
+  - [ ] Sea ripples visibly shimmer asynchronously
+  - [ ] Vessel drifts smoothly (ease-in-out, no jitter at the midpoint reversal)
+  - [ ] Beam arc pivots around the lamp head (not around its own bbox)
 
-- [ ] **Step 3: Visually confirm**
+- **360 × 640 (iOS default):**
+  - [ ] Lighthouse is hidden
+  - [ ] Gate percentage row is hidden (only the `$` row remains)
+  - [ ] No horizontal overflow beyond the scene's declared `min-width: 560px` (a horizontal scrollbar *is* expected inside the card at this viewport; the page itself must not scroll horizontally)
+  - [ ] Basin labels are not clipped
 
-At 360×640:
-- [ ] Lock gates are visible with distinguishable widths
-- [ ] Gate percentages are legible (not overlapping)
-- [ ] The lighthouse group is hidden
-- [ ] Chain basin labels are right-aligned and not clipped
-- [ ] The sidebar stack wraps below the scene
+- [ ] **Step 3: Adjust CSS if needed**
 
-At 640×800:
-- [ ] Lighthouse becomes visible on the headland
-- [ ] All elements scale proportionally with the viewport
-
-If any of those fail, adjust `src/components/exit-route-canal.css` — typically by shortening label strings, reducing font size, or introducing additional breakpoints in the CSS file. Commit any adjustments with:
-
-```bash
-git add src/components/exit-route-canal.css
-git commit -m "style(liquidity): tighten canal scene at narrow breakpoints"
-```
-
-If no adjustments are needed, proceed to the next task.
+If any of those fail, tune `src/components/exit-route-canal.css` — typically by adjusting the `@media (max-width: 640px)` block, shortening labels via `.exit-route-canal__gate-pct` / similar class gates, or reducing font sizes at the SVG. Commit adjustments with a targeted message.
 
 - [ ] **Step 4: Stop the dev server**
 
 ---
 
-## Task 9: Full validation
+## Task 8: Full validation
 
 **Files:** none modified.
 
-- [ ] **Step 1: Run the full test suite**
+- [ ] **Step 1: Full test suite**
 
 Run: `npm test`
 Expected: All tests pass.
 
-- [ ] **Step 2: Run the build**
+- [ ] **Step 2: Build**
 
 Run: `npm run build`
 Expected: Build succeeds with no TypeScript errors.
 
-- [ ] **Step 3: Run the worker type-check**
+- [ ] **Step 3: Worker type-check**
 
 Run: `cd worker && npx tsc --noEmit`
 Expected: No errors.
 
-- [ ] **Step 4: Run the pre-push merge gate**
+- [ ] **Step 4: Merge gate**
 
 Run: `npm run test:merge-gate`
 Expected: Passes.
 
-- [ ] **Step 5: Run the lint pass**
+- [ ] **Step 5: Lint**
 
 Run: `npm run lint`
 Expected: No errors.
 
-- [ ] **Step 6: Confirm no orphaned imports**
+- [ ] **Step 6: Confirm no orphaned identifiers**
 
-Run: `grep -n "ExitRouteTerminal\|routeStrokeWidth\|crowdingWaist\|routeY\|chain-lane-" src/components/liquidity-stats.tsx src/components/__tests__/liquidity-stats.test.ts`
-Expected: No matches (all old identifiers removed).
+Run:
 
-- [ ] **Step 7: Final commit if any fixes were needed**
+```bash
+grep -n "ExitRouteTerminal\|routeStrokeWidth\|crowdingWaist\|routeY\|chain-lane-\|exit-route-terminal\|exit-concourse" src/components/liquidity-stats.tsx src/components/__tests__/liquidity-stats.test.ts
+```
+
+Expected: No matches.
+
+- [ ] **Step 7: Prefers-reduced-motion sanity**
+
+In the browser dev-tools, emulate `prefers-reduced-motion: reduce` and reload `/liquidity`.
+- [ ] Vessel does not drift
+- [ ] Beam does not sweep
+- [ ] Sea ripples do not shimmer
+- [ ] The static frame is fully legible: all numeric and textual content reads without motion
+
+- [ ] **Step 8: Final commit if any fixes were needed**
 
 ```bash
 git status
@@ -705,18 +853,19 @@ git add -p
 git commit -m "fix(liquidity): address validation findings"
 ```
 
-(If there are no changes, skip the commit.)
+(If no changes, skip.)
 
 ---
 
 ## Success Criteria
 
-1. `npm test` — all tests pass, including updated `liquidity-stats.test.ts` assertions.
+1. `npm test` — all tests pass.
 2. `npm run build` — succeeds.
 3. `cd worker && npx tsc --noEmit` — succeeds.
-4. `npm run lint` — no warnings or errors introduced.
+4. `npm run lint` — no new warnings or errors.
 5. `npm run test:merge-gate` — passes.
-6. Visually at ≥1280px: lock-gate widths are proportional to each protocol's `sharePct`, chain basins ordered top-to-bottom by size, Pharos lighthouse visible on the distant headland with faint beam, vessel mid-canal between the lock gates and the dam wall.
-7. At 360px width: lighthouse is hidden, all gate percentages remain readable, no horizontal overflow beyond the scene's intended 620px minimum.
-8. With `prefers-reduced-motion: reduce`: no animations trigger; the static composition is fully legible.
-9. No references to `ExitRouteTerminal`, `chain-lane-*`, `Leading door`, or `Leading lane` remain in the repo.
+6. At ≥1280px: mitre leaves visibly lean inward per gate, focal TVL numeric dominates the scene, canal taper visibly narrows toward the dam proportional to the crowding band, trapezoidal basins splay rightward, five sea ripples shimmer asynchronously, silhouette lighthouse sits in the upper right without a text label, vessel drifts smoothly under ease-in-out with a 1 px vertical bob.
+7. At 360px: lighthouse hidden, gate percentage row hidden, no horizontal page overflow. A horizontal scrollbar inside the card is acceptable and expected below 560 px.
+8. With `prefers-reduced-motion: reduce`: no motion triggers; static frame is fully legible.
+9. No references to `ExitRouteTerminal`, `routeStrokeWidth`, `crowdingWaist`, `routeY`, `exit-route-terminal`, `exit-concourse`, or `chain-lane-*` anywhere in the repo.
+10. The canal scene is family-legible with `/chains` (nautical, Pharos-beacon palette) without cannibalising it (no labelled lighthouse, smaller beam arc, silhouette-scale tower).
