@@ -28,7 +28,7 @@ export interface CommandPaletteSectionedItem {
 }
 
 export const COMMAND_PALETTE_PAGES = [...NAV_ITEMS, ...BOTTOM_NAV_ITEMS] as const;
-export const COMMAND_PALETTE_SECTION_ORDER: readonly CommandPaletteSection[] = [
+const COMMAND_PALETTE_SECTION_ORDER: readonly CommandPaletteSection[] = [
   "Recent",
   "Stablecoins",
   "Pages",

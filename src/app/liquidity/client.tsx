@@ -4,11 +4,10 @@ import { useDeferredValue, useEffect, useMemo, useCallback, useRef, useState } f
 import { useRouter } from "next/navigation";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Input } from "@/components/ui/input";
-import { Search } from "lucide-react";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { useDexLiquidity } from "@/hooks/api-hooks";
 import { QueryFreshnessNotices } from "@/components/query-freshness-notices";
+import { FilterSearchInput } from "@/components/filter-search-input";
 import { useLogos } from "@/hooks/use-logos";
 import { useUrlFilters } from "@/hooks/use-url-filters";
 import { LiquidityStats } from "@/components/liquidity-stats";
@@ -213,16 +212,14 @@ export function LiquidityClient() {
                 </ToggleGroupItem>
               ))}
             </ToggleGroup>
-            <div className="relative w-full sm:w-44">
-              <Search className="absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
-              <Input
-                placeholder="Search..."
-                value={searchInput}
-                onChange={(e) => setSearchInput(e.target.value)}
-                className="pl-8 h-11 md:h-8 text-xs"
-                aria-label="Search stablecoins by name or symbol"
-              />
-            </div>
+            <FilterSearchInput
+              value={searchInput}
+              onValueChange={setSearchInput}
+              placeholder="Search..."
+              className="relative w-full sm:w-44"
+              inputClassName="pl-8 h-11 md:h-8 text-xs"
+              ariaLabel="Search stablecoins by name or symbol"
+            />
           </div>
         </div>
 

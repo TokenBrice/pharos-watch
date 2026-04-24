@@ -3,10 +3,9 @@
 import { useMemo, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Search } from "lucide-react";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
+import { FilterSearchInput } from "@/components/filter-search-input";
 import { usePegSummary } from "@/hooks/api-hooks";
 import { useStressSignals } from "@/hooks/api-hooks";
 import { useInfiniteDepegEvents } from "@/hooks/use-depeg-events";
@@ -202,16 +201,14 @@ export function DepegClient() {
                   </ToggleGroupItem>
                 ))}
               </ToggleGroup>
-              <div className="relative w-full sm:w-44">
-                <Search className="absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
-                <Input
-                  placeholder="Search..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="pl-8 h-8 text-xs"
-                  aria-label="Search stablecoins by name or symbol"
-                />
-              </div>
+              <FilterSearchInput
+                value={searchQuery}
+                onValueChange={setSearchQuery}
+                placeholder="Search..."
+                className="relative w-full sm:w-44"
+                inputClassName="pl-8 h-8 text-xs"
+                ariaLabel="Search stablecoins by name or symbol"
+              />
             </div>
           </div>
 

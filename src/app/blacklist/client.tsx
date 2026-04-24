@@ -1,8 +1,8 @@
 "use client";
 
-import { Search } from "lucide-react";
 import { StaleDataBanner } from "@/components/stale-data-banner";
 import { QueryErrorNotice } from "@/components/query-error-notice";
+import { FilterSearchInput } from "@/components/filter-search-input";
 import { UsdsStatusCard } from "@/components/usds-status-card";
 import { EurcBlacklistCard } from "@/components/eurc-blacklist-card";
 import { BlacklistStats } from "@/components/blacklist-stats";
@@ -14,7 +14,6 @@ import { BlacklistFilters } from "@/components/blacklist-filters";
 import { BlacklistTable } from "@/components/blacklist-table";
 import { TablePagination } from "@/components/table-pagination";
 import { FeaturePageShell } from "@/components/feature-page-shell";
-import { Input } from "@/components/ui/input";
 import {
   BLACKLIST_TRACKER_METHODOLOGY_CHANGELOG_PATH,
   BLACKLIST_TRACKER_METHODOLOGY_VERSION_LABEL,
@@ -138,16 +137,14 @@ export default function BlacklistClient() {
           onChainChange={handleChainChange}
           onEventTypeChange={handleEventTypeChange}
         />
-        <div className="relative w-full sm:w-56">
-          <Search className="absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
-          <Input
-            placeholder="Search by address..."
-            value={searchInput}
-            onChange={(e) => handleSearchChange(e.target.value)}
-            className="pl-8 h-11 sm:h-8 text-sm sm:text-xs"
-            aria-label="Search events by address"
-          />
-        </div>
+        <FilterSearchInput
+          value={searchInput}
+          onValueChange={handleSearchChange}
+          placeholder="Search by address..."
+          className="relative w-full sm:w-56"
+          inputClassName="pl-8 h-11 sm:h-8 text-sm sm:text-xs"
+          ariaLabel="Search events by address"
+        />
       </div>
 
       <BlacklistTable

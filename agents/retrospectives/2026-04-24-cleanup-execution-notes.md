@@ -54,3 +54,13 @@ Scope: implementation notes for `agents/plans/2026-04-24-website-maintainability
   - `npm run typecheck`
   - `npm run check:hotspot-ratchet`
 - Follow-up signal: a later interaction-test pass is still needed before moving keyboard/focus behavior out of `command-palette.tsx`.
+
+## Slice 5: Controlled Filter Search Primitive
+
+- Added `src/components/filter-search-input.tsx` as a controlled visual wrapper for search-icon/input layout.
+- Reused it in depeg, liquidity, and blacklist route controls while keeping each route's URL, debounce, analytics, page-reset, and filtering semantics owned by the caller.
+- Validation:
+  - `npm test -- src/app/blacklist/view-model.test.tsx src/app/depeg/page.test.tsx src/hooks/__tests__/use-depeg-events.test.tsx src/components/__tests__/depeg-table-logic.test.ts src/components/__tests__/table-toolbar.test.tsx src/lib/liquidity-ui.test.ts src/components/__tests__/liquidity-table-logic.test.ts src/components/__tests__/liquidity-table.test.ts src/components/__tests__/liquidity-stats.test.ts`
+  - `npm run typecheck`
+  - `npm run check:unused-code`
+- Follow-up signal: `q=all` behavior is still inherited from the current URL-filter semantics. Any attempt to centralize URL/debounce behavior should first add explicit route-state tests for that sentinel case.
