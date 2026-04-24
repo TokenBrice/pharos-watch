@@ -50,20 +50,22 @@ function TopCohortStrip({ rows }: { rows: ReturnType<typeof buildAltPegSnapshot>
   if (rows.length === 0) return null;
   return (
     <div className="peg-hero__top-cohorts" aria-label="Top cohorts by market cap">
-      <span className="peg-hero__top-label">Largest cohorts</span>
-      {rows.map((row, index) => (
-        <Link key={row.peg} href={row.href} className="peg-hero__top-row pharos-focus-ring">
-          <span className="peg-hero__top-rank">
-            <span className="peg-hero__top-dot" style={{ backgroundColor: row.colorHex }} />
-            #{index + 1}
-          </span>
-          <span className="peg-hero__top-name">{row.label}</span>
-          <span className="peg-hero__top-value">
-            <span>{formatCompactUsd(row.marketCap)}</span>
-            <span>{formatPercent(row.sharePct, 1)} of non-USD cap</span>
-          </span>
-        </Link>
-      ))}
+      <span className="peg-hero__top-label">Largest Cohorts</span>
+      <div className="peg-hero__top-grid">
+        {rows.map((row, index) => (
+          <Link key={row.peg} href={row.href} className="peg-hero__top-row pharos-focus-ring">
+            <span className="peg-hero__top-head">
+              <span className="peg-hero__top-rank">#{index + 1}</span>
+              <span className="peg-hero__top-dot" style={{ backgroundColor: row.colorHex }} aria-hidden="true" />
+              <span className="peg-hero__top-name">{row.label}</span>
+            </span>
+            <span className="peg-hero__top-metrics">
+              <span className="peg-hero__top-cap">{formatCompactUsd(row.marketCap)}</span>
+              <span className="peg-hero__top-share">{formatPercent(row.sharePct, 1)} share</span>
+            </span>
+          </Link>
+        ))}
+      </div>
     </div>
   );
 }

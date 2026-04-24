@@ -29,14 +29,13 @@ function withQueryClient(children: ReactNode): ReactNode {
 }
 
 describe("AltPegsPage", () => {
-  it("renders the static peg diversity hero before the client analytics", () => {
+  it("renders the hidden crawlable directory before the client analytics", () => {
     const { container } = render(withQueryClient(<AltPegsPage />));
 
     expect(screen.getByTestId("alt-pegs-client")).toBeTruthy();
-    expect(screen.getByRole("heading", { name: "Peg Diversity Map" })).toBeTruthy();
     expect(container.querySelector('a[href="/stablecoins/eur"], a[href="/stablecoins/eur/"]')).not.toBeNull();
 
     const text = container.textContent ?? "";
-    expect(text.indexOf("Peg Diversity Map")).toBeLessThan(text.indexOf("alt-pegs-client"));
+    expect(text.indexOf("References beyond geography")).toBeLessThan(text.indexOf("alt-pegs-client"));
   });
 });

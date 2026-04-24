@@ -14,6 +14,7 @@ import { useUrlFilters } from "@/hooks/use-url-filters";
 import { useStablecoins } from "@/hooks/use-stablecoins";
 import { AltPegCohortHistoryChart } from "./alt-peg-cohort-history-chart";
 import { AltPegCohortDirectory } from "./fiat-world-atlas/cohort-directory";
+import { FiatWorldAtlas } from "./fiat-world-atlas";
 import {
   buildAltPegLinkHubGroups,
   buildAltPegSnapshot,
@@ -334,6 +335,11 @@ export function AltPegsClient() {
         altCoinCount={snapshot.altCoinCount}
         altPegCount={snapshot.altPegCount}
         yearlyShareDeltaPctPoints={trendStats?.yearlyShareDeltaPctPoints ?? null}
+      />
+
+      <FiatWorldAtlas
+        fiatItems={FIAT_LINK_HUB_ITEMS}
+        commodityIndexItems={COMMODITY_INDEX_LINK_HUB_ITEMS}
       />
 
       <SectionErrorBoundary name="non-usd-share">

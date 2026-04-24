@@ -8,22 +8,12 @@ function AtlasHeroHeader() {
     <div className="relative z-10 px-4 py-4 sm:px-5 sm:py-6 lg:px-6">
       <div className="max-w-4xl space-y-2.5 sm:space-y-3">
         <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-frost-blue/90">Alt-Peg Atlas</p>
-        <div className="space-y-2">
-          <h2
-            id="alt-peg-link-hub"
-            className="text-3xl font-black leading-[0.95] tracking-normal text-foreground dark:text-white sm:text-4xl xl:text-5xl"
-          >
-            Peg Diversity Map
-          </h2>
-          <p className="max-w-4xl text-sm leading-relaxed text-muted-foreground dark:text-slate-300">
-            <span className="sm:hidden">
-              Non-USD stablecoins by origin and reference asset, sized by market cap.
-            </span>
-            <span className="hidden sm:inline">
-              Every non-USD stablecoin sits at its geographic origin, sized by market cap, with Gold, Silver, and CPI-linked references floating above the map beyond any single monetary region.
-            </span>
-          </p>
-        </div>
+        <h2
+          id="alt-peg-link-hub"
+          className="text-3xl font-black leading-[0.95] tracking-normal text-foreground dark:text-white sm:text-4xl xl:text-5xl"
+        >
+          Peg Diversity Map
+        </h2>
       </div>
     </div>
   );

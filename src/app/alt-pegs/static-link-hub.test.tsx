@@ -23,53 +23,14 @@ function withQueryClient(children: ReactNode): ReactNode {
 }
 
 describe("StaticAltPegLinkHub", () => {
-  it("renders the static atlas orientation markup", () => {
+  it("renders the crawlable cohort directory markup", () => {
     const html = renderToStaticMarkup(withQueryClient(<StaticAltPegLinkHub />));
     expect(html.match(/href="\/stablecoins\/eur\/?"/g)?.length).toBeGreaterThanOrEqual(1);
     expect(html.match(/href="\/stablecoins\/gold\/?"/g)?.length).toBeGreaterThanOrEqual(1);
     expect(html.match(/href="\/stablecoins\/silver\/?"/g)?.length).toBeGreaterThanOrEqual(1);
     expect(html.match(/href="\/stablecoins\/cpi\/?"/g)?.length).toBeGreaterThanOrEqual(1);
     expect(html).not.toContain("/stablecoins/usd");
-    expect(html).toContain("Alt-Peg Atlas");
-    expect(html).toContain("Peg Diversity Map");
     expect(html).toContain("References beyond geography");
-    expect(html).toContain("Every non-USD stablecoin sits at its geographic origin");
-    expect(html).toContain("$25M");
-    expect(html).toContain("$200M");
-  });
-
-  it("renders the atlas at every breakpoint instead of gating it behind xl", () => {
-    const { container } = render(withQueryClient(<StaticAltPegLinkHub />));
-    const atlas = container.querySelector('[data-alt-peg-layout="responsive-atlas"]');
-    expect(atlas?.className).toContain("block");
-    expect(atlas?.className).not.toContain("hidden");
-    expect(atlas?.className).not.toContain("xl:block");
-  });
-
-  it("renders the peg-hero night-sky composition inside the responsive atlas", () => {
-    const { container } = render(withQueryClient(<StaticAltPegLinkHub />));
-    const atlas = container.querySelector('[data-alt-peg-layout="responsive-atlas"]');
-    expect(atlas?.querySelector(".peg-hero")).not.toBeNull();
-    expect(atlas?.querySelector(".peg-hero__sky")).not.toBeNull();
-    expect(atlas?.querySelector(".peg-hero__earth")).not.toBeNull();
-  });
-
-  it("explains the live coin layer while atlas data is loading", () => {
-    const { container } = render(withQueryClient(<StaticAltPegLinkHub />));
-    const atlas = container.querySelector('[data-alt-peg-layout="responsive-atlas"]');
-    expect(atlas?.textContent).toContain("Fiat logo size");
-    const status = atlas?.querySelector('[role="status"]');
-    expect(status?.textContent).toContain("Loading live coin positions.");
-  });
-
-  it("wraps the atlas in a responsive viewport without forcing a tab stop", () => {
-    const { container } = render(withQueryClient(<StaticAltPegLinkHub />));
-    const atlas = container.querySelector('[data-alt-peg-layout="responsive-atlas"]');
-    const viewport = atlas?.querySelector(".peg-hero__viewport");
-    expect(viewport).not.toBeNull();
-    expect(viewport?.getAttribute("role")).toBe("group");
-    expect(viewport?.hasAttribute("tabindex")).toBe(false);
-    expect(viewport?.getAttribute("aria-label")).toBe("Peg diversity map atlas");
   });
 
   it("keeps the static crawlable directory hidden with separate anchor ids", () => {
