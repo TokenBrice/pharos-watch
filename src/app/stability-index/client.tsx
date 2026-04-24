@@ -34,12 +34,11 @@ import {
   PsiEventTimelineCard,
   PsiMethodologyCard,
   StabilityIndexEmptyState,
-  StabilityIndexHero,
   StabilityIndexLoadingState,
+  StabilityIndexPanel,
   STABILITY_COMPONENT_COLORS,
   STABILITY_COMPONENT_DETAIL,
 } from "./presentational";
-import { PsiBeamDimmers } from "./psi-beam-dimmers";
 
 type ComponentChartPoint = { ts: number; severity: number; breadth: number; stressBreadth: number; trend: number };
 
@@ -221,15 +220,14 @@ export function StabilityIndexClient() {
         queries={[{ preset: "stabilityIndex", dataUpdatedAt, error, hasData: !!current, meta }]}
       />
 
-      <StabilityIndexHero
+      <StabilityIndexPanel
         band={displayPsi.band}
         score={displayPsi.score}
         delta={delta}
         daysInBand={daysInBand}
         historyStats={historyStats}
+        lanes={beamDimmerLanes}
       />
-
-      <PsiBeamDimmers lanes={beamDimmerLanes} />
 
       <ScoreChart data={chartData} />
 
