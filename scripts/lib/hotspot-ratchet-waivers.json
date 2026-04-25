@@ -1,4 +1,8 @@
 {
+  "worker/src/api/mint-burn-flows.ts": {
+    "disposition": "queued-p4",
+    "notes": "Promoted into the candidate window after the lighthouse rewrite removed cinematic-model.ts and lighthouse-stage.tsx (~1100 LOC combined), shifting the file-lines ranking. The mint-burn-flows endpoint still combines flow aggregation, pagination, and shape projection — defer decomposition until the dedicated worker-API tranche."
+  },
   "src/lib/coverage.ts": {
     "disposition": "deferred",
     "notes": "Coverage aggregation and scenario logic are still evolving with the matrix surface. Defer decomposition until the coverage data model settles."
@@ -70,10 +74,6 @@
   "src/lib/contagion-layout.ts": {
     "disposition": "queued-p4",
     "notes": "The contagion layout engine still combines graph shaping, simulation setup, radius heuristics, and clamp/label rules in one branchy module. Track it for the next dedicated contagion graph simplification pass rather than mixing a layout-engine breakup into the current status/pricing tranche."
-  },
-  "src/app/lighthouse/cinematic-model.ts": {
-    "disposition": "queued-p4",
-    "notes": "The lighthouse cinematic model intentionally centralizes the scene map, zone descriptors, and responsive staging constants while the visual language is still being iterated. Split the module data, animation timing, and layout helpers after the lighthouse world stabilizes."
   },
   "worker/src/cron/daily-digest/prompt.ts": {
     "disposition": "queued-p4",

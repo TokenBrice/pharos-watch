@@ -31,6 +31,7 @@ export default defineConfig({
       ".next/**",
       "out/**",
       "coverage/**",
+      "tests/visual/**",
     ],
     coverage: {
       provider: "v8",

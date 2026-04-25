@@ -67,15 +67,15 @@ This replaces Section 6 of the source spec. Every entry cites a real symbol veri
 | Visual | Data field | Source | Encoding |
 |---|---|---|---|
 | Lighthouse beam color | `StabilityIndexCurrent.band` → `PSI_HEX_COLORS` | `shared/lib/psi-colors.ts:6` | 6 PSI band hexes; cross-blend on band change (2 s, palette-snapped) |
-| Lighthouse beam sweep duration | `StabilityIndexCurrent.band` → new `PSI_SWEEP_DURATION` | new constant in `shared/lib/psi-colors.ts` (mirrors `src/lib/dews-radar-utils.ts:20-26`) | Piecewise per band: BEDROCK=12s, STEADY=9, TREMOR=6, FRACTURE=4, CRISIS=2.5, MELTDOWN=1.2 |
+| Lighthouse beam sweep duration | `StabilityIndexCurrent.band` → new `PSI_SWEEP_DURATION` | new constant in `shared/lib/psi-colors.ts` (mirrors `src/lib/dews-radar-utils.ts`) | Piecewise per band: BEDROCK=12s, STEADY=9, TREMOR=6, FRACTURE=4, CRISIS=2.5, MELTDOWN=1.2 |
 | Lighthouse lantern pulse | none — fixed | constant 1.2 Hz | Decoupled rhythm: heartbeat regardless of PSI |
-| Sea wave amplitude + tint | `useStressSignals()` highest band → `THREAT_BAND_HEX` | `shared/lib/classification.ts:621-627`, `src/lib/dews-radar-utils.ts:81-88` | Single intensity drives wave amplitude (1.5 → 4 px) and water tint |
+| Sea wave amplitude + tint | `useStressSignals()` highest band → `THREAT_BAND_HEX` | `shared/lib/classification.ts`, `src/lib/dews-radar-utils.ts` | Single intensity drives wave amplitude (1.5 → 4 px) and water tint |
 | Storm overlays (rain / lightning) | DEWS `WARNING`/`DANGER` only | same | Rain particles + occasional lightning flash above WARNING |
 | Cloud density | DEWS highest band | same | Sky tint + cloud sprite count |
 | Harbor build quality | `getChainResilienceTier(chainId)` | `shared/lib/chains.ts:151` | Tier 1 = stone seawalls; Tier 2 = wood pier; Tier 3 = weathered planks |
 | Harbor footprint (S/M/L) | `ChainSummary.totalUsd` | `shared/types/chains.ts:29` | Log-scaled via `hullWidth(totalUsd, maxUsd, ...)` (`src/app/chains/nautical-scene-math.ts:10`) |
 | Warehouse count per harbor | `ChainSummary.stablecoinCount` | `shared/types/chains.ts:36` | 1 warehouse per ~3 coins |
-| Chain flag on dock mast | `CHAIN_HEX[chainId]` (else neutral) | `src/lib/dex-display-constants.ts:82-93` | Small accent; fallback grey when undefined |
+| Chain flag on dock mast | `CHAIN_HEX[chainId]` (else neutral) | `src/lib/dex-display-constants.ts` | Small accent; fallback grey when undefined |
 | Boat hull silhouette | `(StablecoinMeta.flags.governance, .flags.backing)` | `shared/lib/classification.ts:46, 75` | Galleon (centralized) / Brigantine (centralized-dependent) / Schooner (decentralized); `backing === "algorithmic"` → Junk override |
 | Boat hull size | `ChainTopStablecoin.supplyUsd` | `shared/types/chains.ts:21` | 2 tiers (S, L), log-scaled inside harbor |
 | Boat pennant color (peg health) | `useStressSignals().signals[id].band` → `THREAT_BAND_HEX` | `src/hooks/api-hooks.ts:266`; `shared/lib/classification.ts:621` | 5 colors; neutral grey if no signal |
@@ -179,10 +179,10 @@ git commit -m "spike: install pixi/gsap for CSP probe"
 
 ### Task 0.2: Build the smallest hello-world canvas
 
-**Files:**
-- Create: `src/app/lighthouse-spike/page.tsx`
-- Create: `src/app/lighthouse-spike/client.tsx`
-- Create: `src/app/lighthouse-spike/hello-pixi.tsx`
+**Files (transient, deleted at end of Phase 0):**
+- Create: src/app/lighthouse-spike/page.tsx (no longer present after spike cleanup)
+- Create: src/app/lighthouse-spike/client.tsx (no longer present after spike cleanup)
+- Create: src/app/lighthouse-spike/hello-pixi.tsx (no longer present after spike cleanup)
 
 - [ ] **Step 1: Write the page route**
 
@@ -767,7 +767,7 @@ export const fixtureStablecoins = {
 } as unknown as StablecoinDataPayload;
 ```
 
-(Verify the exact shape of `ChainSummary`/`StablecoinDataPayload`/`StabilityIndexResponse`/`StressSignalsAllResponse` against `shared/types/chains.ts:24-43`, `shared/types/market.ts:23-72`, and the schemas in `shared/types/stability.ts`. Adjust fixture fields to match strict TypeScript.)
+(Verify the exact shape of `ChainSummary`/`StablecoinDataPayload`/`StabilityIndexResponse`/`StressSignalsAllResponse` against `shared/types/chains.ts`, `shared/types/market.ts`, and the schemas in `shared/types/stability.ts`. Adjust fixture fields to match strict TypeScript.)
 
 - [ ] **Step 2: Write the failing test**
 
@@ -3041,7 +3041,7 @@ git commit -m "test(lighthouse): playwright visual regression under reduced-moti
 ### Task 5.2: Update docs
 
 **Files:**
-- Create: `docs/agents/2026-04-25-lighthouse-isometric.md`
+- Create: `agents/retrospectives/2026-04-25-lighthouse-isometric-harbor.md`
 - Modify: `docs/architecture.md` if any new constraints surfaced (DPR cap, palette discipline, lint guard)
 
 - [ ] **Step 1: Author the agent note**

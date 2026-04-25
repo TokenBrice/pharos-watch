@@ -1,16 +1,11 @@
 "use client";
-import dynamic from "next/dynamic";
 import { useChains } from "@/hooks/use-chains";
 import { useStablecoins } from "@/hooks/use-stablecoins";
 import { useStabilityIndexDetail, useStressSignals } from "@/hooks/api-hooks";
 import { QueryErrorNotice } from "@/components/query-error-notice";
 import { LighthouseA11yLedger } from "./lighthouse-a11y-ledger";
+import { HarborSceneClient } from "./harbor-scene-client";
 import { buildSceneData } from "./systems/scene-data";
-
-const HarborSceneClient = dynamic(
-  () => import("./harbor-scene-client").then((m) => ({ default: m.HarborSceneClient })),
-  { ssr: false, loading: () => <div className="min-h-[70vh] animate-pulse bg-muted/10" aria-busy="true" /> },
-);
 
 export function LighthouseClient() {
   const chainsQuery = useChains();
