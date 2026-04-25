@@ -48,7 +48,7 @@ Application source-of-truth docs live in `/docs/` and [../README.md](../README.m
 - [methodology-page.md](./methodology-page.md) - `/methodology/` section-to-source mapping and changelog/update contract
 - [stablecoin-detail-page.md](./stablecoin-detail-page.md) - `/stablecoin/[id]/` route shell, view-model wiring, section order, and fallback/staleness rules
 - [chains-page.md](./chains-page.md) - `/chains/` leaderboard, `/chains/[chain]/` profile contract, and Chain Health Score wiring
-- [lighthouse-page.md](./lighthouse-page.md) - `/lighthouse/` concept route, scene model, and selection contract
+- [lighthouse-page.md](./lighthouse-page.md) - `/lighthouse/` cinematic route, model, stage layers, and selection contract
 - [cemetery-and-compare.md](./cemetery-and-compare.md) - `/cemetery/` and `/compare/` data and URL contracts
 - [dependency-map.md](./dependency-map.md) - dependency-graph construction, rendering, and interaction model
 - [coverage-page.md](./coverage-page.md) - `/coverage/` matrix contract, source mapping, and update rules

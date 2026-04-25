@@ -2,7 +2,7 @@
 
 Contract for the public concept route:
 
-- `/lighthouse/` lighthouse visualization over the chain fleet
+- `/lighthouse/` cinematic Pharos watch over chain harbors, PSI, DEWS, and non-USD peg structure
 
 ---
 
@@ -10,62 +10,63 @@ Contract for the public concept route:
 
 - **Page shell:** `src/app/lighthouse/page.tsx`
 - **Route client:** `src/app/lighthouse/client.tsx`
-- **Scene model:** `src/app/lighthouse/view-model.ts`
-- **Story model:** `src/app/lighthouse/story-model.ts`
-- **Scene renderer:** `src/app/lighthouse/lighthouse-scene.tsx`
-- **Story shell:** `src/app/lighthouse/lighthouse-story-shell.tsx`
-- **Story panels:** `src/app/lighthouse/lens-room-panel.tsx`, `src/app/lighthouse/storm-watch-panel.tsx`, `src/app/lighthouse/harbor-ledger.tsx`, `src/app/lighthouse/dawn-orders.tsx`
-- **Fleet manifest:** `src/app/lighthouse/lighthouse-fleet-list.tsx`
-- **Primary data hooks:** `useChains()`, `useStabilityIndexDetail()`, and `useStressSignals()`
-- **Primary API:** `GET /api/chains`, the PSI detail endpoint, and aggregate `GET /api/stress-signals`
+- **Cinematic model:** `src/app/lighthouse/cinematic-model.ts`
+- **Stage renderer:** `src/app/lighthouse/lighthouse-stage.tsx`
+- **Stage styles:** `src/app/lighthouse/lighthouse-stage.css`
+- **SVG layers:** `src/app/lighthouse/layers/*`
+- **Accessible ledger:** `src/app/lighthouse/lighthouse-a11y-ledger.tsx`
+- **Primary data hooks:** `useChains()`, `useStabilityIndexDetail()`, `useStressSignals()`, and `useStablecoins()`
+- **Primary API:** `GET /api/chains`, the PSI detail endpoint, aggregate `GET /api/stress-signals`, and `GET /api/stablecoins`
 
-The route is intentionally visual-first: the scene renders the view from inside the lighthouse lens room, projects the chain fleet onto the horizon, and keeps the selected illuminated harbor tied to exact Pharos data through the in-scene readout and signal reel.
+The route is intentionally visual-first. The lighthouse, islands, chain harbors, radar marks, and alt-peg sky projection are the visible interface. Text is kept out of the primary stage; exact data remains available through the accessible ledger and SVG labels.
 
 ---
 
 ## `/lighthouse/` Contract
 
-`src/app/lighthouse/page.tsx` renders a `FeaturePageShell` with:
+`src/app/lighthouse/page.tsx` renders a minimal route shell with:
 
-- breadcrumb + canonical path `/lighthouse/`
-- status badge `experimental`
-- lead copy framing the beam as an inspection signal, not a new score
+- canonical path `/lighthouse/`
+- breadcrumb JSON-LD
+- a screen-reader heading
+- a dynamic client boundary around the cinematic stage
 
 `src/app/lighthouse/client.tsx`:
 
-- loads the chain snapshot and PSI detail in parallel
-- resolves the default selection from the largest visible harbor
-- auto-cycles the inspection target until the user selects a harbor
-- respects reduced-motion preferences
+- loads chains, PSI detail, stress signals, and stablecoins in parallel
+- builds one pure `LighthouseCinematicModel`
+- auto-cycles the inspected harbor only in `watch` mode, only until the user pins a harbor, and only when reduced motion is not requested
+- lets hover/focus preview a harbor without pinning it
+- keeps display mode and ledger visibility as local UI state
 
-`src/app/lighthouse/view-model.ts`:
+`src/app/lighthouse/cinematic-model.ts`:
 
-- derives the visible ship set from `GET /api/chains`
-- caps the scene at the largest six harbors
-- computes the trailing fleet aggregate
-- resolves the selected harbor and the lighthouse target geometry
-- formats the scene caption and selected-manifest copy from existing chain fields only
+- derives the visible harbor fleet from existing chain helper semantics
+- caps the stage at the largest six harbors and aggregates the remaining chains into tail lights
+- uses PSI only for beam reach, lens brightness, color, and scene state
+- uses DEWS only as aggregate radar weather, never as per-chain causality
+- reuses alt-peg market-cap sizing and peg colors for the sky projection
+- sanitizes hostile numeric inputs before turning data into geometry
+- returns exact fallback ledger rows so the visual metaphor remains auditable
 
-`src/app/lighthouse/story-model.ts`:
+The stage is an SVG-first visualization. It stays inside the route viewport without horizontal scrolling and keeps the data mapping explicit:
 
-- orders the route chapters: Harbor, Lens, Storm, Ledger, and Orders
-- marks chapters unavailable when PSI or stress-signal data is missing
-- derives PSI lens slats from published PSI components only
-- derives DEWS storm-watch counts from aggregate `WARNING`, `ALERT`, and `DANGER` bands only
-- prepares ledger facts and onward route links without inventing a new score
+- harbor order and hull scale follow tracked chain supply
+- cargo marks follow visible hull capacity and are not a separate score
+- wake direction and length reflect 7-day chain supply movement
+- harbor signal color follows Chain Health band color semantics
+- the lighthouse beam targets the current selected or previewed harbor
+- PSI controls lens and beam behavior, not a new `/lighthouse/` score
+- DEWS radar rings and blips summarize aggregate stress-signal severity
+- alt-peg marks remain a secondary projection of non-USD peg structure
+- the accessible ledger repeats selected harbor, PSI, DEWS, alt-peg, and visible harbor facts in text form
 
-The main scene is an SVG-only visualization. It stays legible without horizontal scrolling and keeps the data mapping explicit:
+Mode controls are icon-only buttons:
 
-- horizon target order follows the largest visible chain harbors
-- signal height follows tracked supply share
-- dock width and pennant width reflect dominant stablecoin concentration
-- cargo marks scale with visible hull size and are not an independent risk signal
-- wake direction and length reflect 7-day change
-- the lens beam points at the current selection
-- PSI contributes a watch label in the baseline route; the Lens Room story chapter may use PSI color and component shutters explicitly
-- DEWS appears only as aggregate storm-watch context in the story chapter, never as chain-specific causality
-
-The story controls and signal reel are local UI state. Hover/focus can preview a harbor and move the beam; click, Enter, or Space pins the selection. Route navigation stays on explicit links.
+- `watch` emphasizes harbor inspection and beam movement
+- `radar` emphasizes DEWS aggregate weather
+- `atlas` emphasizes non-USD peg projection
+- ledger toggle exposes exact text facts on larger screens; small screens expose the ledger automatically
 
 ---
 
@@ -74,12 +75,12 @@ The story controls and signal reel are local UI state. Hover/focus can preview a
 Update this file when any of the following change:
 
 - `/lighthouse/` route shell, layout, or metadata
-- selection behavior or auto-cycle rules
-- visible ship limit or tail-fleet aggregation
-- data sourcing for the scene, manifest, or caption
-- scene semantics for beam, wake, or harbor mapping
+- selection, preview, pinning, or auto-cycle behavior
+- visible harbor limit or tail-fleet aggregation
+- data sourcing for chain harbors, PSI, DEWS, or alt-peg marks
+- stage semantics for beam, wake, radar, atlas projection, or accessible ledger
 
-Related docs to update in the same change:
+Related docs to check in the same change:
 
 - [architecture.md](./architecture.md)
 - [README.md](./README.md)

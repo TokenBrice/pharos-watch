@@ -20,6 +20,9 @@ Status: Running notes for the base and follow-up `/lighthouse/` implementation.
 - SVG accessibility labels intentionally repeat harbor names, so tests need ledger-scoped or `getAllBy*` assertions when checking exact names.
 - `npm test -- src/app/lighthouse/cinematic-model.test.ts src/app/lighthouse/lighthouse-stage.test.tsx src/app/lighthouse/page.test.tsx` passes after the stage implementation.
 - `npm run typecheck` passes after the stage implementation.
+- The previous chapter/story implementation became unreachable after the stage route switch; removing it eliminates stale docs/tests and keeps `/lighthouse/` to one model and one renderer.
+- `docs/lighthouse-page.md` now documents the cinematic model, stage layers, data hooks, and no-new-score semantics.
+- Cleanup validation passed with the focused lighthouse tests, `npm run check:doc-source-paths -- docs/lighthouse-page.md docs/README.md`, and `npm run typecheck`.
 
 ## Follow-Up Candidates
 
