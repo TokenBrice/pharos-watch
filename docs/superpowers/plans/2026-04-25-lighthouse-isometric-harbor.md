@@ -16,7 +16,7 @@
 
 ## 0. Reference Tables — locked before implementation
 
-### 0.1 Anchor palette (24 colors)
+### 0.1 Anchor palette (25 colors)
 
 Single source of truth. Every code-drawn `Graphics` call and every PixelLab asset must clamp to these.
 
@@ -356,8 +356,8 @@ import { describe, it, expect } from "vitest";
 import { HARBOR_PALETTE, hexToInt, paletteOrThrow } from "./palette";
 
 describe("HARBOR_PALETTE", () => {
-  it("contains 24 entries", () => {
-    expect(Object.keys(HARBOR_PALETTE)).toHaveLength(24);
+  it("contains 25 entries", () => {
+    expect(Object.keys(HARBOR_PALETTE)).toHaveLength(25);
   });
 
   it("each value is a 7-char hex starting with #", () => {
@@ -603,7 +603,9 @@ export function screenToWorld({ x, y }: ScreenCoord): TileCoord {
 }
 
 export function depthKey({ tileX, tileY, elevation }: DepthInput): number {
-  return tileX + tileY + elevation * SCENE_GRID;
+  // Multiplier 2x SCENE_GRID guarantees elevated tiles always sort above any
+  // ground tile in the 40x40 scene (max ground sum = 78 < SCENE_GRID*2 = 80).
+  return tileX + tileY + elevation * SCENE_GRID * 2;
 }
 ```
 
