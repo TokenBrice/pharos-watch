@@ -10,7 +10,11 @@ Status: Running notes for the base and follow-up `/lighthouse/` implementation.
 
 ## Base Implementation Findings
 
-- Pending.
+- Root model implemented as `src/app/lighthouse/cinematic-model.ts`.
+- The base model composes existing sources only: chain harbor helpers, PSI colors, DEWS helpers, and alt-peg hero sizing/packing.
+- Hostile input handling needed explicit sanitization before using chain and DEWS helpers; otherwise NaN geometry can leak through log/radar math.
+- DEWS is modeled as aggregate radar marks detached from chain harbors to preserve the no per-chain DEWS semantics.
+- Alt-peg projection should stay visually secondary because live alt-peg data can produce many small marks quickly.
 
 ## Follow-Up Candidates
 
