@@ -11,12 +11,27 @@ import { startBeamSweep, startLanternPulse, setBeamSweepDuration } from "./syste
 import { pickLargestHarborPlacement, aimBeamAt } from "./systems/reduced-motion-freeze";
 import { buildSkyLayer } from "./layers/sky-layer";
 import { buildWaterLayer } from "./layers/water-layer";
+import { buildBeamWaterLayer, type BeamWaterLayerAPI } from "./layers/beam-water-layer";
+import { buildHorizonLayer } from "./layers/horizon-layer";
 import { buildLampLayer, type LampLayerAPI } from "./layers/lamp-layer";
 import { buildHarborLayer, type HarborLayerAPI, type HarborPlacement } from "./layers/harbor-layer";
 import { buildBoatLayer, type BoatLayerAPI } from "./layers/boat-layer";
 import { buildLighthouseLayer, type LighthouseLayerAPI } from "./layers/lighthouse-layer";
+import { buildVignetteLayer } from "./layers/vignette-layer";
 import { UIOverlay } from "./layers/ui-overlay";
 import "./harbor-scene.css";
+
+/**
+ * Lighthouse anchor in canvas coordinates. Slightly right-of-center, two-thirds
+ * down — leaves vertical room above for the harbour ring (which is anchored
+ * NORTH of this point) and below for the foreground vignette.
+ */
+function getLighthouseAnchor(width: number, height: number): { x: number; y: number } {
+  return {
+    x: Math.round(width * 0.50),
+    y: Math.round(height * 0.78),
+  };
+}
 
 export function HarborSceneClient({ scene }: { scene: SceneData }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -29,6 +44,7 @@ export function HarborSceneClient({ scene }: { scene: SceneData }) {
   const harborLayerRef = useRef<HarborLayerAPI | null>(null);
   const boatLayerRef = useRef<BoatLayerAPI | null>(null);
   const lighthouseLayerRef = useRef<LighthouseLayerAPI | null>(null);
+  const beamWaterLayerRef = useRef<BeamWaterLayerAPI | null>(null);
   const beamTweenRef = useRef<gsap.core.Tween | null>(null);
   const placementsRef = useRef<Map<string, HarborPlacement> | null>(null);
 
@@ -52,26 +68,42 @@ export function HarborSceneClient({ scene }: { scene: SceneData }) {
 
     const sky = buildSkyLayer();
     const water = buildWaterLayer();
+    const beamWater = buildBeamWaterLayer();
+    const horizon = buildHorizonLayer();
     const lamps = buildLampLayer();
     const harbors = buildHarborLayer();
     const boats = buildBoatLayer();
     const lighthouse = buildLighthouseLayer();
+    const vignette = buildVignetteLayer();
     lampLayerRef.current = lamps;
     harborLayerRef.current = harbors;
     boatLayerRef.current = boats;
     lighthouseLayerRef.current = lighthouse;
+    beamWaterLayerRef.current = beamWater;
 
-    // Painter's order: sky -> water -> harbors -> boats -> lamps -> lighthouse.
-    // Lamps paint on top of harbour buildings (warm window glow above stone).
-    // Lighthouse paints last so its beam reads over everything.
-    const layers: DrawableLayer[] = [sky, water, harbors, boats, lamps, lighthouse];
+    // Painter's order:
+    //   sky -> water (with moonpath) -> beam-on-water highlight ->
+    //   alt-peg horizon silhouettes -> harbours -> boats ->
+    //   lamps (warm glow above buildings) -> lighthouse (beam over scene) ->
+    //   vignette (last; veils edges so the canvas reads as a painting).
+    const layers: DrawableLayer[] = [
+      sky,
+      water,
+      beamWater,
+      horizon,
+      harbors,
+      boats,
+      lamps,
+      lighthouse,
+      vignette,
+    ];
 
     let lastWidth = 0;
     let lastHeight = 0;
     const applyAnchorAndPlacements = () => {
-      const originX = Math.round(frame.width * 0.45);
-      const originY = Math.round(frame.height * 0.65);
+      const { x: originX, y: originY } = getLighthouseAnchor(frame.width, frame.height);
       lighthouse.setAnchor(originX, originY);
+      beamWater.setLighthouseAnchor(originX, originY);
       const placements = harbors.syncHarbors(sceneRef.current.harbors, originX, originY);
       placementsRef.current = placements;
 
@@ -186,9 +218,9 @@ export function HarborSceneClient({ scene }: { scene: SceneData }) {
     const cvs = canvasRef.current;
     if (!cvs) return;
     const r = cvs.getBoundingClientRect();
-    const originX = Math.round(r.width * 0.45);
-    const originY = Math.round(r.height * 0.65);
+    const { x: originX, y: originY } = getLighthouseAnchor(r.width, r.height);
     lighthouseLayerRef.current.setAnchor(originX, originY);
+    beamWaterLayerRef.current?.setLighthouseAnchor(originX, originY);
     const placements = harborLayerRef.current.syncHarbors(scene.harbors, originX, originY);
     placementsRef.current = placements;
 
