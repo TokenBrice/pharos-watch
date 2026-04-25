@@ -123,6 +123,8 @@ output/playwright/
 # playwright
 .playwright-mcp
 .playwright-cli
+/test-results/
+/playwright-report/
 
 .codex
 
