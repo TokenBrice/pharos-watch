@@ -1,0 +1,409 @@
+.lh2-expedition {
+  width: 100%;
+  min-height: calc(100svh - 1.5rem);
+}
+
+.lh2-frame {
+  position: relative;
+  width: 100%;
+  height: calc(100svh - 1.5rem);
+  min-height: 38rem;
+  overflow: hidden;
+  border: 1px solid color-mix(in oklch, var(--border) 62%, transparent);
+  background:
+    radial-gradient(circle at 50% 46%, oklch(0.54 0.07 92 / 0.06), transparent 34%),
+    oklch(0.045 0.03 224);
+}
+
+.lh2-svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.lh2-controls {
+  position: absolute;
+  top: 0.85rem;
+  right: 0.85rem;
+  z-index: 2;
+  display: flex;
+  gap: 0.35rem;
+  border: 1px solid oklch(0.86 0.055 86 / 0.18);
+  background: oklch(0.06 0.028 218 / 0.76);
+  padding: 0.3rem;
+}
+
+.lh2-control {
+  display: inline-grid;
+  width: 2.15rem;
+  height: 2.15rem;
+  place-items: center;
+  border: 1px solid transparent;
+  color: oklch(0.83 0.05 86 / 0.76);
+  transition:
+    background 180ms cubic-bezier(0.22, 1, 0.36, 1),
+    border-color 180ms cubic-bezier(0.22, 1, 0.36, 1),
+    color 180ms cubic-bezier(0.22, 1, 0.36, 1),
+    transform 180ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.lh2-control:hover,
+.lh2-control--active {
+  border-color: oklch(0.78 0.11 83 / 0.5);
+  background: oklch(0.78 0.11 83 / 0.14);
+  color: oklch(0.95 0.055 86);
+}
+
+.lh2-control:active {
+  transform: scale(0.96);
+}
+
+.lh2-vellum {
+  fill: oklch(0.19 0.04 88 / 0.11);
+  stroke: oklch(0.82 0.08 86 / 0.12);
+  stroke-width: 1.2;
+}
+
+.lh2-chart-contour,
+.lh2-ink-route,
+.lh2-causeway {
+  fill: none;
+  stroke: oklch(0.78 0.07 87 / 0.14);
+  stroke-linecap: round;
+  stroke-width: 1.2;
+}
+
+.lh2-ink-route {
+  stroke-dasharray: 8 13;
+  stroke-width: 1.7;
+}
+
+.lh2-compass-rose {
+  opacity: 0.26;
+}
+
+.lh2-compass-rose circle,
+.lh2-compass-rose line {
+  fill: none;
+  stroke: oklch(0.78 0.08 86 / 0.42);
+  stroke-width: 1.1;
+}
+
+.lh2-module-zone {
+  cursor: pointer;
+  outline: none;
+}
+
+.lh2-zone-hit {
+  fill: transparent;
+}
+
+.lh2-island-shadow {
+  fill: oklch(0.018 0.018 228 / 0.44);
+}
+
+.lh2-island-mass {
+  fill: color-mix(in oklch, var(--lh2-module-color, #d6a64b) 10%, oklch(0.105 0.038 184 / 0.84));
+  stroke: color-mix(in oklch, var(--lh2-module-color, #d6a64b) 48%, oklch(0.22 0.04 86));
+  stroke-opacity: 0.28;
+  stroke-width: 1.3;
+  transition:
+    fill 220ms cubic-bezier(0.22, 1, 0.36, 1),
+    stroke-opacity 220ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.lh2-island-rim {
+  fill: none;
+  stroke: var(--lh2-module-color, #d6a64b);
+  stroke-opacity: 0.22;
+  stroke-width: 1.5;
+}
+
+.lh2-module-zone:hover .lh2-island-mass,
+.lh2-module-zone:focus-visible .lh2-island-mass,
+.lh2-module-zone--active .lh2-island-mass {
+  fill: color-mix(in oklch, var(--lh2-module-color, #d6a64b) 18%, oklch(0.13 0.042 184 / 0.88));
+  stroke-opacity: 0.5;
+}
+
+.lh2-module-zone:hover .lh2-island-rim,
+.lh2-module-zone:focus-visible .lh2-island-rim,
+.lh2-module-zone--active .lh2-island-rim {
+  stroke-opacity: 0.5;
+}
+
+.lh2-beam {
+  pointer-events: none;
+}
+
+.lh2-beam-wash {
+  fill: var(--lh2-beam-color, #d6a64b);
+  opacity: 0.12;
+}
+
+.lh2-beam-core {
+  fill: var(--lh2-beam-color, #d6a64b);
+  opacity: 0.16;
+  transform-box: fill-box;
+  transform-origin: center;
+}
+
+.lh2-beam-thread {
+  stroke: oklch(0.96 0.075 87 / 0.45);
+  stroke-linecap: round;
+  stroke-width: 1.4;
+}
+
+.lh2-rock-shadow,
+.lh2-brass-shadow {
+  fill: oklch(0.015 0.016 228 / 0.46);
+}
+
+.lh2-rock {
+  fill: oklch(0.1 0.03 174);
+  stroke: oklch(0.56 0.06 92 / 0.24);
+  stroke-width: 1.2;
+}
+
+.lh2-tower-body {
+  fill: url(#lh2-stone);
+  stroke: oklch(0.33 0.035 83 / 0.72);
+  stroke-width: 1.2;
+}
+
+.lh2-tower-side {
+  fill: oklch(0.27 0.025 82 / 0.3);
+}
+
+.lh2-stone-course {
+  fill: none;
+  stroke: oklch(0.3 0.026 82 / 0.42);
+  stroke-width: 0.8;
+}
+
+.lh2-gallery,
+.lh2-lantern,
+.lh2-roof {
+  fill: url(#lh2-brass);
+  stroke: oklch(0.32 0.06 75 / 0.72);
+  stroke-width: 1.1;
+}
+
+.lh2-lantern-glass {
+  fill: color-mix(in oklch, var(--lh2-lamp-color, #d6a64b) 22%, oklch(0.78 0.04 88 / 0.42));
+  stroke: var(--lh2-lamp-color, #d6a64b);
+  stroke-opacity: 0.46;
+}
+
+.lh2-lamp-aura {
+  fill: var(--lh2-lamp-color, #d6a64b);
+  opacity: 0.16;
+}
+
+.lh2-lamp-core {
+  fill: var(--lh2-lamp-color, #d6a64b);
+}
+
+.lh2-spire {
+  stroke: oklch(0.78 0.08 86 / 0.8);
+  stroke-width: 2;
+  stroke-linecap: round;
+}
+
+.lh2-vessel,
+.lh2-dews-buoy,
+.lh2-alt-island {
+  cursor: pointer;
+  outline: none;
+}
+
+.lh2-vessel-hit,
+.lh2-buoy-hit,
+.lh2-alt-hit {
+  fill: transparent;
+}
+
+.lh2-vessel-wake,
+.lh2-alt-route {
+  fill: none;
+  stroke: var(--lh2-mark-color, #d6a64b);
+  stroke-linecap: round;
+  stroke-opacity: 0.24;
+  stroke-width: 1.4;
+}
+
+.lh2-hull {
+  fill: oklch(0.2 0.065 52);
+  stroke: var(--lh2-mark-color, #d6a64b);
+  stroke-opacity: 0.55;
+  stroke-width: 1.2;
+}
+
+.lh2-sail {
+  fill: url(#lh2-sail);
+  stroke: oklch(0.86 0.04 86 / 0.48);
+  stroke-width: 0.8;
+}
+
+.lh2-flag,
+.lh2-cargo-dot,
+.lh2-buoy-core,
+.lh2-buoy-flag,
+.lh2-alt-seal {
+  fill: var(--lh2-mark-color, #d6a64b);
+}
+
+.lh2-vessel,
+.lh2-dews-buoy,
+.lh2-alt-island {
+  transition:
+    opacity 180ms cubic-bezier(0.22, 1, 0.36, 1),
+    transform 180ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.lh2-vessel:hover,
+.lh2-vessel:focus-visible,
+.lh2-vessel--selected,
+.lh2-dews-buoy:hover,
+.lh2-dews-buoy:focus-visible,
+.lh2-dews-buoy--selected,
+.lh2-alt-island:hover,
+.lh2-alt-island:focus-visible,
+.lh2-alt-island--selected {
+  opacity: 1;
+}
+
+.lh2-vessel:hover .lh2-hull,
+.lh2-vessel:focus-visible .lh2-hull,
+.lh2-vessel--selected .lh2-hull,
+.lh2-dews-buoy:hover .lh2-buoy-core,
+.lh2-dews-buoy:focus-visible .lh2-buoy-core,
+.lh2-dews-buoy--selected .lh2-buoy-core,
+.lh2-alt-island:hover .lh2-alt-land,
+.lh2-alt-island:focus-visible .lh2-alt-land,
+.lh2-alt-island--selected .lh2-alt-land {
+  stroke-opacity: 0.88;
+}
+
+.lh2-brass-dial,
+.lh2-storm-dial {
+  fill: url(#lh2-brass);
+  stroke: oklch(0.3 0.055 75 / 0.78);
+  stroke-width: 1.4;
+}
+
+.lh2-dial-face {
+  fill: oklch(0.08 0.028 216 / 0.9);
+  stroke: var(--lh2-psi-color, #d6a64b);
+  stroke-opacity: 0.24;
+}
+
+.lh2-psi-petal,
+.lh2-storm-ring,
+.lh2-storm-spoke {
+  stroke: var(--lh2-psi-color, #d6a64b);
+  stroke-linecap: round;
+  stroke-opacity: 0.34;
+}
+
+.lh2-needle {
+  fill: var(--lh2-psi-color, #d6a64b);
+  opacity: 0.86;
+}
+
+.lh2-needle-pin {
+  fill: oklch(0.88 0.07 86);
+  stroke: oklch(0.26 0.045 72);
+  stroke-width: 1.2;
+}
+
+.lh2-storm-ring,
+.lh2-storm-spoke {
+  fill: none;
+  stroke: var(--lh2-dews-color, #d6a64b);
+}
+
+.lh2-storm-front {
+  fill: var(--lh2-dews-color, #d6a64b);
+  opacity: 0.12;
+  stroke: var(--lh2-dews-color, #d6a64b);
+  stroke-opacity: 0.36;
+}
+
+.lh2-buoy-flag {
+  opacity: 0.84;
+}
+
+.lh2-buoy-core {
+  stroke: oklch(0.94 0.04 86 / 0.6);
+  stroke-width: 1;
+}
+
+.lh2-alt-land {
+  fill: color-mix(in oklch, var(--lh2-mark-color, #2dd4bf) 16%, oklch(0.13 0.04 166));
+  stroke: var(--lh2-mark-color, #2dd4bf);
+  stroke-opacity: 0.48;
+  stroke-width: 1.2;
+}
+
+.lh2-alt-coast {
+  fill: none;
+  stroke: oklch(0.9 0.055 86 / 0.3);
+  stroke-linecap: round;
+  stroke-width: 1.1;
+}
+
+@media (max-width: 860px) {
+  .lh2-frame {
+    height: clamp(35rem, 124vw, calc(100svh - 1rem));
+    min-height: 35rem;
+  }
+
+  .lh2-controls {
+    top: 0.65rem;
+    right: 0.65rem;
+  }
+
+  .lh2-control {
+    width: 2.35rem;
+    height: 2.35rem;
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  @keyframes lh2-lamp-breathe {
+    0%,
+    100% {
+      opacity: 0.14;
+    }
+    50% {
+      opacity: 0.22;
+    }
+  }
+
+  @keyframes lh2-route-drift {
+    to {
+      stroke-dashoffset: -21;
+    }
+  }
+
+  .lh2-lamp-aura {
+    animation: lh2-lamp-breathe 4.8s cubic-bezier(0.45, 0, 0.55, 1) infinite;
+  }
+
+  .lh2-ink-route,
+  .lh2-vessel--selected .lh2-vessel-wake,
+  .lh2-alt-island--selected .lh2-alt-route {
+    animation: lh2-route-drift 5.5s linear infinite;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .lh2-lamp-aura,
+  .lh2-ink-route,
+  .lh2-vessel-wake,
+  .lh2-alt-route {
+    animation: none !important;
+    transition: none !important;
+  }
+}
