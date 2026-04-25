@@ -9,6 +9,10 @@ export const metadata: Metadata = buildPageMetadata({
   description:
     "A low-motion fantasy naval expedition chart for Pharos chain harbors, PSI, DEWS, and non-USD peg cohorts.",
   canonical: "/lighthouse-2/",
+  robots: {
+    index: false,
+    follow: true,
+  },
 });
 
 const Lighthouse2Client = dynamic(
