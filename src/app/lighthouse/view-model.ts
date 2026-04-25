@@ -38,6 +38,7 @@ export interface LighthouseShipRow {
   dominantCargoUsd: number;
   stablecoinCount: number;
   cargoCount: number;
+  pennantWidth: number;
   draftLayers: 1 | 2 | 3;
   hullWidth: number;
   hullHeight: number;
@@ -96,6 +97,7 @@ export function buildLighthouseSceneModel({
   const ships = visibleEntries.map((entry, index) => {
     const hullW = hullWidth(entry.totalUsd, maxUsd, 180);
     const cargoCount = Math.max(1, Math.min(5, cargoCapacityForHull(hullW)));
+    const pennantWidth = Math.max(20, Math.min(74, 20 + (entry.dominantSharePct / 100) * 54));
     const draftLayers = depthLayers(entry.dominantSharePct / 100);
     const wake = wakeLength(entry.change7dPct);
     const hullH = 24 + Math.round(hullW * 0.18) + (cargoCount - 1) * 2;
@@ -115,6 +117,7 @@ export function buildLighthouseSceneModel({
       dominantCargoUsd: entry.dominantCargoUsd,
       stablecoinCount: entry.stablecoinCount,
       cargoCount,
+      pennantWidth,
       draftLayers,
       hullWidth: hullW,
       hullHeight: hullH,

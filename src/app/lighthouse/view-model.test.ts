@@ -158,4 +158,25 @@ describe("buildLighthouseSceneModel", () => {
     expect(formatLighthouseShipSummary(model.selectedShip ?? model.ships[0]!)).toContain("Ethereum");
     expect(formatLighthouseShipSummary(model.selectedShip ?? model.ships[0]!)).toContain("$400.0M");
   });
+
+  it("derives pennant width from dominant cargo share", () => {
+    const chains = [
+      makeChain({
+        id: "low",
+        name: "Low",
+        totalUsd: 10_000_000,
+        dominantStablecoin: { id: "a", symbol: "A", share: 0.2 },
+      }),
+      makeChain({
+        id: "high",
+        name: "High",
+        totalUsd: 9_000_000,
+        dominantStablecoin: { id: "b", symbol: "B", share: 0.75 },
+      }),
+    ];
+    const model = buildLighthouseSceneModel({ chains, totalUsd: 19_000_000, stabilityIndex: PSI, selectedId: null });
+    const low = model.ships.find((ship) => ship.id === "low");
+    const high = model.ships.find((ship) => ship.id === "high");
+    expect(high?.pennantWidth ?? 0).toBeGreaterThan(low?.pennantWidth ?? 0);
+  });
 });

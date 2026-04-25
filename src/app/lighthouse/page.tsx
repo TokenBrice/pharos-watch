@@ -5,7 +5,7 @@ import { buildPageMetadata } from "@/lib/page-metadata";
 export const metadata: Metadata = buildPageMetadata({
   title: "Pharos Lighthouse",
   description:
-    "A visual night watch over the stablecoin fleet. The lighthouse beam inspects the largest chain harbors while the manifest keeps the data honest.",
+    "A cinematic night watch inside the Pharos lens room, projecting chain harbors, PSI, and aggregate stress signals back into exact dashboard data.",
   canonical: "/lighthouse/",
 });
 
@@ -27,7 +27,7 @@ export default createClientFeaturePage({
     title: "Pharos Lighthouse",
     statusBadge: { status: "experimental" },
     leadParagraphs: [
-      "The beam is an inspection signal, not a new score. Ships encode the largest chain harbors, hulls carry supply, and the manifest below keeps the scene readable on every viewport.",
+      "The beam is an inspection signal, not a new score. The lens projects the largest chain harbors onto the horizon while the readout and signal reel keep the scene auditable on every viewport.",
     ],
   },
 });

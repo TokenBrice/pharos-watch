@@ -4,30 +4,46 @@ import { useEffect, useState } from "react";
 import { QueryErrorNotice } from "@/components/query-error-notice";
 import { StaleDataBanner } from "@/components/stale-data-banner";
 import { useChains } from "@/hooks/use-chains";
-import { useStabilityIndexDetail } from "@/hooks/api-hooks";
+import { useStabilityIndexDetail, useStressSignals } from "@/hooks/api-hooks";
+import { DawnOrders } from "./dawn-orders";
+import { HarborLedger } from "./harbor-ledger";
 import { LighthouseScene } from "./lighthouse-scene";
 import { LighthouseFleetList } from "./lighthouse-fleet-list";
+import { LighthouseStoryShell } from "./lighthouse-story-shell";
+import { LensRoomPanel } from "./lens-room-panel";
+import { StormWatchPanel } from "./storm-watch-panel";
+import { buildLighthouseStoryModel, type LighthouseChapterId } from "./story-model";
 import { buildLighthouseSceneModel } from "./view-model";
 
 export function LighthouseClient() {
   const chainsQuery = useChains();
   const stabilityQuery = useStabilityIndexDetail();
+  const stressQuery = useStressSignals();
   const [manualSelectedId, setManualSelectedId] = useState<string | null>(null);
+  const [previewSelectedId, setPreviewSelectedId] = useState<string | null>(null);
+  const [activeChapterId, setActiveChapterId] = useState<LighthouseChapterId>("harbor");
   const [isPinned, setIsPinned] = useState(false);
   const handleSelect = (id: string) => {
     setIsPinned(true);
     setManualSelectedId(id);
+    setPreviewSelectedId(null);
   };
 
   const model = buildLighthouseSceneModel({
     chains: chainsQuery.data?.chains ?? [],
     totalUsd: chainsQuery.data?.globalTotalUsd ?? 0,
     stabilityIndex: stabilityQuery.data?.current ?? null,
-    selectedId: manualSelectedId,
+    selectedId: previewSelectedId ?? manualSelectedId,
+  });
+  const story = buildLighthouseStoryModel({
+    scene: model,
+    stabilityIndex: stabilityQuery.data?.current ?? null,
+    stressSignals: stressQuery.data ?? null,
+    activeChapterId,
   });
 
   useEffect(() => {
-    if (isPinned || model.ships.length <= 1) return;
+    if (isPinned || previewSelectedId || model.ships.length <= 1) return;
     if (typeof window.matchMedia === "function" && window.matchMedia("(prefers-reduced-motion: reduce)").matches)
       return;
 
@@ -42,7 +58,7 @@ export function LighthouseClient() {
     }, 8_000);
 
     return () => window.clearInterval(intervalId);
-  }, [isPinned, model.selectedId, model.ships]);
+  }, [isPinned, model.selectedId, model.ships, previewSelectedId]);
 
   if (chainsQuery.isError && !chainsQuery.data) {
     return (
@@ -76,6 +92,7 @@ export function LighthouseClient() {
         onRetry={() => {
           void chainsQuery.refetch();
           void stabilityQuery.refetch();
+          void stressQuery.refetch();
         }}
       />
 
@@ -95,10 +112,31 @@ export function LighthouseClient() {
             hasData: !!stabilityQuery.data?.current,
             meta: stabilityQuery.meta,
           },
+          {
+            preset: "stressSignals",
+            dataUpdatedAt: stressQuery.dataUpdatedAt,
+            error: stressQuery.error,
+            hasData: !!stressQuery.data?.signals,
+            meta: stressQuery.meta,
+          },
         ]}
       />
 
-      <LighthouseScene model={model} onSelect={handleSelect} />
+      <LighthouseStoryShell story={story} onChapterChange={setActiveChapterId}>
+        <LighthouseScene
+          model={model}
+          onSelect={handleSelect}
+          onPreview={setPreviewSelectedId}
+          onPreviewEnd={() => setPreviewSelectedId(null)}
+        />
+
+        {story.activeChapterId === "lens" ? <LensRoomPanel lens={story.lens} /> : null}
+        {story.activeChapterId === "storm" ? <StormWatchPanel storm={story.storm} /> : null}
+        {story.activeChapterId === "ledger" || story.activeChapterId === "harbor" ? (
+          <HarborLedger ledger={story.ledger} />
+        ) : null}
+        {story.activeChapterId === "dawn" ? <DawnOrders orders={story.dawnOrders} /> : null}
+      </LighthouseStoryShell>
 
       <LighthouseFleetList
         ships={model.ships}

@@ -26,6 +26,7 @@ const model: LighthouseSceneModel = {
       dominantCargoUsd: 32_200_000,
       stablecoinCount: 12,
       cargoCount: 4,
+      pennantWidth: 52,
       draftLayers: 3,
       hullWidth: 144,
       hullHeight: 42,
@@ -50,6 +51,7 @@ const model: LighthouseSceneModel = {
       dominantCargoUsd: 18_000_000,
       stablecoinCount: 7,
       cargoCount: 3,
+      pennantWidth: 60,
       draftLayers: 2,
       hullWidth: 88,
       hullHeight: 34,
@@ -103,6 +105,22 @@ describe("LighthouseScene", () => {
     fireEvent.click(ship!);
     fireEvent.keyDown(ship!, { key: "Enter" });
     expect(onSelect).toHaveBeenCalledWith("tron");
+  });
+
+  it("invokes preview when a ship is hovered or focused", () => {
+    const onPreview = vi.fn();
+    const onPreviewEnd = vi.fn();
+    const { container } = render(
+      <LighthouseScene model={model} onSelect={vi.fn()} onPreview={onPreview} onPreviewEnd={onPreviewEnd} />,
+    );
+    const ship = container.querySelector<SVGGElement>('[data-testid="lighthouse-ship-tron"]');
+    expect(ship).toBeTruthy();
+
+    fireEvent.pointerEnter(ship!);
+    fireEvent.focus(ship!);
+    fireEvent.pointerLeave(ship!);
+    expect(onPreview).toHaveBeenCalledWith("tron");
+    expect(onPreviewEnd).toHaveBeenCalled();
   });
 
   it("exposes the fleet summary in the caption", () => {

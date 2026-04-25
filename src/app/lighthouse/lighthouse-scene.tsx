@@ -2,270 +2,346 @@
 
 import { useId } from "react";
 import { HEALTH_HEX_FILL } from "@/lib/chain-ui";
-import { PSI_HEX_COLORS, type ConditionBand } from "@shared/lib/psi-colors";
-import { formatCompactUsd, formatPercent, formatSignedPercent } from "@shared/lib/format";
 import { cn } from "@/lib/utils";
+import { formatCompactUsd, formatPercent, formatPercentFromRatio, formatSignedPercent } from "@shared/lib/format";
 import type { LighthouseSceneModel, LighthouseShipRow } from "./view-model";
 import "./lighthouse-scene.css";
 
 const SCENE_WIDTH = 1360;
-const SCENE_HEIGHT = 520;
-const BEAM_LENGTH = 1040;
+const SCENE_HEIGHT = 640;
+const LENS_X = 262;
+const LENS_Y = 276;
+const HORIZON_START_X = 512;
+const HORIZON_END_X = 1132;
+const HORIZON_Y = 354;
+
+interface ProjectedHarbor extends LighthouseShipRow {
+  sceneX: number;
+  sceneY: number;
+  signalHeight: number;
+  dockWidth: number;
+}
 
 function healthColor(band: LighthouseShipRow["healthBand"]): string {
   if (!band) return "oklch(0.58 0.03 250)";
   return HEALTH_HEX_FILL[band];
 }
 
-function watchColor(band: string | null): string {
-  if (!band) return "#f59e0b";
-  return PSI_HEX_COLORS[band as ConditionBand] ?? "#f59e0b";
+function projectHarbors(ships: readonly LighthouseShipRow[]): ProjectedHarbor[] {
+  const span = Math.max(1, ships.length - 1);
+  return ships.map((ship, index) => {
+    const sharePressure = Math.max(0, Math.min(1, ship.sharePct / 50));
+    const concentration = Math.max(0, Math.min(1, ship.dominantSharePct / 100));
+    const waveOffset = index % 2 === 0 ? -8 : 14;
+
+    return {
+      ...ship,
+      sceneX: Math.round(HORIZON_START_X + ((HORIZON_END_X - HORIZON_START_X) / span) * index),
+      sceneY: HORIZON_Y + waveOffset,
+      signalHeight: 38 + Math.round(sharePressure * 76),
+      dockWidth: 66 + Math.round(concentration * 78),
+    };
+  });
 }
 
-function ShipCargo({ count, color }: { count: number; color: string }) {
+function CargoMarks({ count, color, dockWidth }: { count: number; color: string; dockWidth: number }) {
+  const spacing = dockWidth / Math.max(1, count + 1);
   return (
     <g aria-hidden="true">
       {Array.from({ length: count }).map((_, index) => (
-        <circle key={index} cx={-22 + index * 14} cy={-3} r="3.2" fill={color} opacity={index === 0 ? 0.95 : 0.72} />
+        <rect
+          key={index}
+          x={-dockWidth / 2 + spacing * (index + 1) - 4}
+          y={-10 - (index % 2) * 4}
+          width="8"
+          height="8"
+          rx="2"
+          fill={color}
+          opacity={index === 0 ? 0.94 : 0.68}
+        />
       ))}
     </g>
   );
 }
 
-function LighthouseShip({
-  ship,
+function WakeTrace({ harbor }: { harbor: ProjectedHarbor }) {
+  if (harbor.wakeDirection === 0) return null;
+  const sign = harbor.wakeDirection > 0 ? -1 : 1;
+  const length = 38 + Math.abs(harbor.wakeLength) * 150;
+  return (
+    <path
+      d={`M ${-sign * 30} 30 C ${-sign * 52} 36 ${-sign * length} 30 ${-sign * (length + 30)} 38`}
+      className="lh-harbor-wake"
+      fill="none"
+      stroke="oklch(0.76 0.06 205 / 0.42)"
+      strokeWidth="1.6"
+      strokeLinecap="round"
+      aria-hidden="true"
+    />
+  );
+}
+
+function ProjectedHarborTarget({
+  harbor,
   selected,
   onSelect,
+  onPreview,
+  onPreviewEnd,
 }: {
-  ship: LighthouseShipRow;
+  harbor: ProjectedHarbor;
   selected: boolean;
   onSelect: (id: string) => void;
+  onPreview?: (id: string) => void;
+  onPreviewEnd?: () => void;
 }) {
-  const hullFill = healthColor(ship.healthBand);
-  const sailFill = ship.healthBand ? `${hullFill}cc` : "oklch(0.82 0.02 250 / 0.85)";
-  const beamColor = selected ? watchColor(ship.healthBand ?? null) : "oklch(0.95 0.11 92 / 0.9)";
+  const color = healthColor(harbor.healthBand);
+  const signalRadius = selected ? 18 : 14;
 
   return (
     <g
       role="button"
       tabIndex={0}
       aria-pressed={selected}
-      aria-label={`${ship.name}, ${formatCompactUsd(ship.totalUsd)}, ${formatPercent(ship.sharePct, 1)} of supply, ${ship.healthBand ?? "unrated"} harbor, ${formatSignedPercent(ship.change7dPct * 100, 1)} over 7d`}
-      className={cn("lh-ship-target", selected && "lh-ship-target-selected")}
-      data-testid={`lighthouse-ship-${ship.id}`}
-      onClick={() => onSelect(ship.id)}
+      aria-label={`${harbor.name}, ${formatCompactUsd(harbor.totalUsd)}, ${formatPercent(harbor.sharePct, 1)} of supply, ${harbor.healthBand ?? "unrated"} harbor, dominant cargo ${harbor.dominantSymbol} ${formatPercent(harbor.dominantSharePct, 1)}, ${formatSignedPercent(harbor.change7dPct * 100, 1)} over 7d`}
+      className={cn("lh-harbor-target", selected && "lh-harbor-target--selected")}
+      data-testid={`lighthouse-ship-${harbor.id}`}
+      onPointerEnter={() => onPreview?.(harbor.id)}
+      onPointerLeave={() => onPreviewEnd?.()}
+      onFocus={() => onPreview?.(harbor.id)}
+      onBlur={() => onPreviewEnd?.()}
+      onClick={() => onSelect(harbor.id)}
       onKeyDown={(event) => {
         if (event.key !== "Enter" && event.key !== " ") return;
         event.preventDefault();
-        onSelect(ship.id);
+        onSelect(harbor.id);
       }}
-      transform={`translate(${ship.centerX} ${ship.deckY})`}
+      transform={`translate(${harbor.sceneX} ${harbor.sceneY})`}
     >
-      <title>{`${ship.name}: ${formatCompactUsd(ship.totalUsd)} supply, ${formatSignedPercent(ship.change7dPct * 100, 1)} 7d`}</title>
-
-      <ellipse className="lh-ship-shadow" cx="0" cy="18" rx={ship.hullWidth * 0.56} ry="10" />
+      <title>{`${harbor.name}: ${formatCompactUsd(harbor.totalUsd)} supply, ${formatSignedPercent(harbor.change7dPct * 100, 1)} 7d`}</title>
       <rect
-        className="lh-ship-focus-ring"
-        x={-ship.hullWidth * 0.5 - 14}
-        y={-ship.mastHeight - 26}
-        width={ship.hullWidth + 28}
-        height={ship.mastHeight + 56}
-        rx="20"
+        className="lh-harbor-focus-ring"
+        x={-harbor.dockWidth / 2 - 22}
+        y={-harbor.signalHeight - 58}
+        width={harbor.dockWidth + 44}
+        height={harbor.signalHeight + 112}
+        rx="18"
         fill="none"
-        stroke={beamColor}
+        stroke={color}
         strokeWidth="2"
-        opacity="0.34"
       />
-
+      <WakeTrace harbor={harbor} />
       <path
-        className="lh-hull"
-        d={`M ${-ship.hullWidth / 2} 12
-            Q ${-ship.hullWidth / 2 + 14} ${ship.hullHeight - 2} ${-ship.hullWidth / 2 + 30} ${ship.hullHeight - 2}
-            L ${ship.hullWidth / 2 - 20} ${ship.hullHeight - 2}
-            Q ${ship.hullWidth / 2 - 6} ${ship.hullHeight - 2} ${ship.hullWidth / 2} ${ship.hullHeight - 16}
-            L ${ship.hullWidth / 2 - 12} 0
-            L ${-ship.hullWidth / 2 + 14} 0
-            Z`}
-        fill={hullFill}
-        stroke="oklch(0.12 0.02 250 / 0.45)"
+        className="lh-harbor-reflection"
+        d={`M ${-harbor.dockWidth * 0.42} 38 C ${-harbor.dockWidth * 0.12} 46 ${harbor.dockWidth * 0.12} 45 ${harbor.dockWidth * 0.42} 38`}
+        fill="none"
+        stroke={color}
+        strokeWidth="2"
+        opacity="0.28"
+      />
+      <rect
+        x={-harbor.dockWidth / 2}
+        y="4"
+        width={harbor.dockWidth}
+        height="18"
+        rx="5"
+        fill="oklch(0.17 0.03 42)"
+        stroke="oklch(0.92 0.07 70 / 0.24)"
         strokeWidth="1"
       />
-      <rect
-        x={-ship.hullWidth * 0.34}
-        y={-2}
-        width={ship.hullWidth * 0.68}
-        height="5"
-        rx="2.5"
-        fill="oklch(1 0 0 / 0.28)"
-      />
-      <line x1="0" y1="0" x2="0" y2={-ship.mastHeight} stroke="oklch(0.92 0.02 250 / 0.7)" strokeWidth="3" />
-
       <path
-        className="lh-sail"
-        d={`M 0 ${-ship.mastHeight + 4} L ${ship.hullWidth * 0.28} ${-ship.mastHeight + 22} L 0 ${-ship.mastHeight + 40} Z`}
-        fill={sailFill}
+        d={`M ${-harbor.dockWidth * 0.42} 4 L ${-harbor.dockWidth * 0.2} -12 L ${harbor.dockWidth * 0.34} -12 L ${harbor.dockWidth * 0.48} 4 Z`}
+        fill="oklch(0.12 0.025 248)"
+        stroke={color}
+        strokeOpacity="0.38"
+        strokeWidth="1"
       />
-      <path
-        className="lh-sail lh-sail-secondary"
-        d={`M 0 ${-ship.mastHeight + 18} L ${-ship.hullWidth * 0.22} ${-ship.mastHeight + 34} L 0 ${-ship.mastHeight + 48} Z`}
-        fill="oklch(0.96 0.03 250 / 0.72)"
-      />
-
-      <circle
-        cx="0"
-        cy={-ship.mastHeight + 18}
-        r="16"
-        fill="oklch(0.05 0.03 248 / 0.72)"
-        stroke={beamColor}
+      <CargoMarks count={harbor.cargoCount} color={color} dockWidth={harbor.dockWidth} />
+      <line
+        x1="0"
+        y1="-10"
+        x2="0"
+        y2={-harbor.signalHeight}
+        stroke="oklch(0.9 0.02 250 / 0.62)"
         strokeWidth="2"
       />
-      {ship.logoPath ? (
+      <path
+        className="lh-harbor-pennant"
+        d={`M 0 ${-harbor.signalHeight + 4} L ${harbor.pennantWidth} ${-harbor.signalHeight + 12} L 0 ${-harbor.signalHeight + 22} Z`}
+        fill={color}
+        opacity="0.74"
+      />
+      <circle
+        className="lh-harbor-signal"
+        cx="0"
+        cy={-harbor.signalHeight - 16}
+        r={signalRadius}
+        fill="oklch(0.04 0.025 248 / 0.88)"
+        stroke={color}
+        strokeWidth={selected ? 2.6 : 2}
+      />
+      {harbor.logoPath ? (
         <image
-          href={ship.logoPath}
-          x={-11}
-          y={-ship.mastHeight + 7}
-          width="22"
-          height="22"
+          href={harbor.logoPath}
+          x={-10}
+          y={-harbor.signalHeight - 26}
+          width="20"
+          height="20"
           preserveAspectRatio="xMidYMid meet"
           aria-hidden="true"
         />
       ) : (
-        <circle cx="0" cy={-ship.mastHeight + 18} r="5" fill={beamColor} aria-hidden="true" />
+        <circle cx="0" cy={-harbor.signalHeight - 16} r="5" fill={color} aria-hidden="true" />
       )}
-
-      <ShipCargo count={ship.cargoCount} color={beamColor} />
-
-      <g aria-hidden="true">
-        {Array.from({ length: ship.draftLayers }).map((_, index) => (
-          <line
-            key={index}
-            x1={-ship.hullWidth * 0.24 + index * 10}
-            y1={ship.hullHeight + 2 + index * 6}
-            x2={ship.hullWidth * 0.22 - index * 8}
-            y2={ship.hullHeight + 2 + index * 6}
-            stroke="oklch(0.72 0.03 248 / 0.55)"
-            strokeWidth="1"
-          />
-        ))}
-      </g>
-
-      {ship.wakeDirection !== 0 ? (
-        <path
-          d={
-            ship.wakeDirection > 0
-              ? `M ${-ship.hullWidth / 2 - 8} ${ship.hullHeight + 12}
-                 C ${-ship.hullWidth / 2 - 24 - Math.abs(ship.wakeLength) * 38} ${ship.hullHeight + 12}
-                 ${-ship.hullWidth / 2 - 42 - Math.abs(ship.wakeLength) * 38} ${ship.hullHeight + 8}
-                 ${-ship.hullWidth / 2 - 64 - Math.abs(ship.wakeLength) * 58} ${ship.hullHeight + 8}`
-              : `M ${ship.hullWidth / 2 + 8} ${ship.hullHeight + 12}
-                 C ${ship.hullWidth / 2 + 24 + Math.abs(ship.wakeLength) * 38} ${ship.hullHeight + 12}
-                 ${ship.hullWidth / 2 + 42 + Math.abs(ship.wakeLength) * 38} ${ship.hullHeight + 8}
-                 ${ship.hullWidth / 2 + 64 + Math.abs(ship.wakeLength) * 58} ${ship.hullHeight + 8}`
-          }
-          fill="none"
-          stroke="oklch(0.78 0.05 196 / 0.45)"
-          strokeWidth="2"
-          strokeLinecap="round"
-          className="lh-wake"
-        />
-      ) : null}
-
-      <text x="0" y="46" textAnchor="middle" className="lh-ship-label" aria-hidden="true">
-        {ship.name}
+      <text x="0" y="54" textAnchor="middle" className="lh-harbor-label" aria-hidden="true">
+        {harbor.name}
       </text>
-      <text x="0" y="62" textAnchor="middle" className="lh-ship-subtitle" aria-hidden="true">
-        {formatPercent(ship.sharePct, 1)} of supply
-      </text>
-      <text x="0" y="78" textAnchor="middle" className="lh-ship-subtitle" aria-hidden="true">
-        {formatSignedPercent(ship.change7dPct * 100, 1)} 7d
+      <text x="0" y="70" textAnchor="middle" className="lh-harbor-subtitle" aria-hidden="true">
+        {formatPercent(harbor.sharePct, 1)}
       </text>
     </g>
   );
 }
 
-function LighthouseTower({
-  lighthouseX,
-  lighthouseY,
-  targetX,
-  targetY,
-  watchBand,
-  selectedShipBand,
-}: {
-  lighthouseX: number;
-  lighthouseY: number;
-  targetX: number;
-  targetY: number;
-  watchBand: string | null;
-  selectedShipBand: LighthouseShipRow["healthBand"];
-}) {
-  const beamAngle = Math.atan2(targetY - lighthouseY, targetX - lighthouseX) * (180 / Math.PI);
-  const flameColor = watchColor(watchBand);
+function LensAssembly({ glowId, watchBand }: { glowId: string; watchBand: string | null }) {
+  const label = watchBand ? `${watchBand} light` : "chain-data light";
+  return (
+    <g className="lh-lens-assembly" aria-label={label}>
+      <ellipse cx={LENS_X} cy="516" rx="168" ry="32" fill="oklch(0.02 0.01 248 / 0.48)" aria-hidden="true" />
+      <path
+        d="M 126 496 C 156 430 174 360 184 284 C 192 220 214 162 262 120 C 310 162 332 220 340 284 C 350 360 368 430 398 496 Z"
+        fill="oklch(0.12 0.026 248 / 0.88)"
+        stroke="oklch(0.7 0.08 80 / 0.22)"
+        strokeWidth="1.4"
+      />
+      <circle cx={LENS_X} cy={LENS_Y} r="122" fill={`url(#${glowId})`} stroke="oklch(0.95 0.1 86 / 0.3)" />
+      <circle cx={LENS_X} cy={LENS_Y} r="94" fill="none" stroke="oklch(0.94 0.09 88 / 0.42)" strokeWidth="1.5" />
+      <circle cx={LENS_X} cy={LENS_Y} r="63" fill="none" stroke="oklch(0.98 0.08 91 / 0.46)" strokeWidth="1.2" />
+      <circle cx={LENS_X} cy={LENS_Y} r="28" fill="oklch(0.97 0.11 88 / 0.84)" />
+      {Array.from({ length: 11 }).map((_, index) => {
+        const angle = -62 + index * 12.4;
+        return (
+          <line
+            key={index}
+            x1={LENS_X}
+            y1={LENS_Y - 108}
+            x2={LENS_X}
+            y2={LENS_Y + 108}
+            transform={`rotate(${angle} ${LENS_X} ${LENS_Y})`}
+            stroke="oklch(1 0.02 92 / 0.18)"
+            strokeWidth="1.2"
+          />
+        );
+      })}
+      <path
+        className="lh-lens-sweep"
+        d="M 262 150 A 126 126 0 0 1 384 276"
+        fill="none"
+        stroke="oklch(1 0.1 90 / 0.42)"
+        strokeWidth="4"
+        strokeLinecap="round"
+      />
+      <rect x="164" y="418" width="196" height="20" rx="5" fill="oklch(0.18 0.035 58)" />
+      <rect x="186" y="438" width="152" height="68" rx="9" fill="oklch(0.11 0.024 248)" />
+    </g>
+  );
+}
+
+function BeamPath({ selectedHarbor }: { selectedHarbor: ProjectedHarbor | null }) {
+  const targetX = selectedHarbor?.sceneX ?? 980;
+  const targetY = selectedHarbor ? selectedHarbor.sceneY - selectedHarbor.signalHeight - 18 : 300;
+  const upperX = targetX + 124;
+  const lowerX = targetX + 78;
+  const upperY = targetY - 62;
+  const lowerY = targetY + 80;
 
   return (
-    <g aria-hidden="true">
+    <g className="lh-projection-beam" data-testid="lighthouse-beam" aria-hidden="true">
       <path
-        d={`M ${lighthouseX - 66} 394
-          Q ${lighthouseX - 46} 356 ${lighthouseX - 28} 350
-          Q ${lighthouseX - 16} 344 ${lighthouseX + 2} 346
-          Q ${lighthouseX + 18} 348 ${lighthouseX + 38} 357
-          Q ${lighthouseX + 58} 366 ${lighthouseX + 70} 394 Z`}
-        fill="oklch(0.09 0.02 248)"
+        d={`M ${LENS_X + 24} ${LENS_Y - 22} C 432 202 548 190 ${upperX} ${upperY} L ${lowerX} ${lowerY} C 556 372 420 352 ${LENS_X + 20} ${LENS_Y + 24} Z`}
+        fill="url(#lh-beam-gradient)"
       />
       <path
-        d={`M ${lighthouseX - 44} 396 Q ${lighthouseX - 18} 368 ${lighthouseX + 8} 364 Q ${lighthouseX + 34} 360 ${lighthouseX + 58} 396 Z`}
-        fill="oklch(0.14 0.02 248)"
+        d={`M ${LENS_X + 34} ${LENS_Y + 4} C 488 272 664 254 ${targetX} ${targetY + 18}`}
+        fill="none"
+        stroke="oklch(1 0.1 88 / 0.32)"
+        strokeWidth="1.4"
+        strokeLinecap="round"
       />
-
-      <g
-        className="lh-beam"
-        transform={`translate(${lighthouseX} ${lighthouseY}) rotate(${beamAngle})`}
-        data-testid="lighthouse-beam"
-      >
-        <path d={`M 0 0 L ${-BEAM_LENGTH} -92 L ${-BEAM_LENGTH} 92 Z`} fill="oklch(0.98 0.11 92 / 0.72)" />
-      </g>
-
-      <g>
-        <rect
-          x={lighthouseX - 18}
-          y={lighthouseY + 18}
-          width="36"
-          height="138"
-          rx="8"
-          fill="url(#lh-lighthouse-stone)"
-          stroke="oklch(0.18 0.02 58)"
-          strokeWidth="1"
-        />
-        <rect x={lighthouseX - 25} y={lighthouseY + 6} width="50" height="18" rx="5" fill="oklch(0.93 0.04 58)" />
-        <rect x={lighthouseX - 12} y={lighthouseY + 42} width="24" height="18" rx="4" fill="oklch(0.86 0.03 58)" />
-        <rect x={lighthouseX - 15} y={lighthouseY - 20} width="30" height="40" rx="8" fill="oklch(0.94 0.04 58)" />
-        <circle cx={lighthouseX} cy={lighthouseY - 38} r="22" fill="oklch(0.95 0.12 35 / 0.2)" />
-        <circle cx={lighthouseX} cy={lighthouseY - 38} r="8" fill={flameColor} />
-        <path
-          d={`M ${lighthouseX - 6} ${lighthouseY - 34} L ${lighthouseX} ${lighthouseY - 54} L ${lighthouseX + 6} ${lighthouseY - 34} Z`}
-          fill="oklch(1 0.15 78)"
-          opacity="0.9"
-        />
-        <rect x={lighthouseX - 5} y={lighthouseY - 60} width="10" height="18" rx="3" fill="oklch(0.55 0.06 58)" />
-        <path
-          d={`M ${lighthouseX - 8} ${lighthouseY - 68} Q ${lighthouseX} ${lighthouseY - 84} ${lighthouseX + 8} ${lighthouseY - 68}`}
-          fill="none"
-          stroke="oklch(0.45 0.03 58)"
-          strokeWidth="2"
-        />
-      </g>
-
-      {selectedShipBand ? (
-        <circle
-          cx={lighthouseX}
-          cy={lighthouseY - 38}
-          r="30"
-          fill="none"
-          stroke={flameColor}
-          strokeWidth="1.5"
-          opacity="0.5"
-        />
-      ) : null}
     </g>
+  );
+}
+
+function SceneStars() {
+  const stars = [
+    [458, 76, 1.1],
+    [552, 112, 0.8],
+    [650, 82, 1.4],
+    [732, 132, 0.9],
+    [854, 66, 1.1],
+    [932, 118, 0.8],
+    [1068, 86, 1.2],
+    [1192, 146, 0.9],
+    [1260, 78, 1.1],
+  ];
+  return (
+    <g className="lh-stars" aria-hidden="true">
+      {stars.map(([x, y, r], index) => (
+        <circle key={index} cx={x} cy={y} r={r} fill="oklch(0.98 0 0 / 0.88)" />
+      ))}
+    </g>
+  );
+}
+
+function TailFleet({ model }: { model: LighthouseSceneModel }) {
+  if (!model.tailFleet) return null;
+  return (
+    <g className="lh-tail-fleet" aria-hidden="true">
+      {Array.from({ length: 9 }).map((_, index) => (
+        <circle key={index} cx={1192 + index * 14} cy={336 + (index % 3) * 5} r="2.3" fill="oklch(0.72 0.04 205 / 0.45)" />
+      ))}
+      <text x="1190" y="374" className="lh-map-annotation">
+        {model.tailFleet.label} / {formatPercentFromRatio(model.tailFleet.remainingSharePct, 1)}
+      </text>
+    </g>
+  );
+}
+
+function SelectedReadout({ selectedHarbor }: { selectedHarbor: ProjectedHarbor | null }) {
+  if (!selectedHarbor) return null;
+  return (
+    <div className="lh-stage-readout" data-testid="lighthouse-selected-manifest">
+      <div className="lh-readout-identity">
+        <span
+          className="lh-readout-signal"
+          style={{ backgroundColor: healthColor(selectedHarbor.healthBand) }}
+          aria-hidden="true"
+        />
+        <div>
+          <p className="pharos-kicker">Inspected Harbor</p>
+          <p className="lh-readout-title">{selectedHarbor.name}</p>
+        </div>
+      </div>
+      <div className="lh-readout-grid">
+        <div>
+          <span>Supply</span>
+          <strong>{formatCompactUsd(selectedHarbor.totalUsd)}</strong>
+        </div>
+        <div>
+          <span>Tracked Share</span>
+          <strong>{formatPercent(selectedHarbor.sharePct, 1)}</strong>
+        </div>
+        <div>
+          <span>Dominant Cargo</span>
+          <strong>
+            {selectedHarbor.dominantSymbol} {formatPercent(selectedHarbor.dominantSharePct, 1)}
+          </strong>
+        </div>
+        <div>
+          <span>7d Wake</span>
+          <strong>{formatSignedPercent(selectedHarbor.change7dPct * 100, 1)}</strong>
+        </div>
+      </div>
+    </div>
   );
 }
 
@@ -273,19 +349,25 @@ export function LighthouseScene({
   model,
   className,
   onSelect,
+  onPreview,
+  onPreviewEnd,
+  showSelectedManifest = true,
 }: {
   model: LighthouseSceneModel;
   className?: string;
   onSelect: (id: string) => void;
+  onPreview?: (id: string) => void;
+  onPreviewEnd?: () => void;
+  showSelectedManifest?: boolean;
 }) {
-  const lighthouseStoneId = useId();
-  const selectedShip = model.selectedShip ?? model.ships[0] ?? null;
-  const beamTargetX = selectedShip ? selectedShip.centerX : model.lighthouseX - 260;
-  const beamTargetY = selectedShip ? selectedShip.deckY - selectedShip.mastHeight * 0.86 : model.waterlineY - 96;
+  const lensGlowId = useId();
+  const harbors = projectHarbors(model.ships);
+  const selectedHarbor =
+    harbors.find((harbor) => harbor.id === model.selectedId) ?? harbors.find((harbor) => harbor.isSelected) ?? harbors[0] ?? null;
 
   return (
     <section className={cn("lh-scene-shell", className)}>
-      <div className="lh-scene-frame">
+      <div className="lh-cinematic-stage">
         <svg
           className="lh-scene"
           viewBox={`0 0 ${SCENE_WIDTH} ${SCENE_HEIGHT}`}
@@ -298,85 +380,85 @@ export function LighthouseScene({
           data-fleet-band={model.fleetBand}
         >
           <defs>
-            <linearGradient id={lighthouseStoneId} x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stopColor="oklch(0.95 0.03 58)" />
-              <stop offset="100%" stopColor="oklch(0.78 0.03 58)" />
-            </linearGradient>
+            <radialGradient id={lensGlowId} cx="50%" cy="50%" r="60%">
+              <stop offset="0%" stopColor="oklch(1 0.14 90 / 0.78)" />
+              <stop offset="58%" stopColor="oklch(0.84 0.08 93 / 0.18)" />
+              <stop offset="100%" stopColor="oklch(0.08 0.02 248 / 0.2)" />
+            </radialGradient>
             <linearGradient id="lh-sky-gradient" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stopColor="oklch(0.13 0.03 248)" />
-              <stop offset="100%" stopColor="oklch(0.08 0.03 248)" />
+              <stop offset="0%" stopColor="oklch(0.11 0.034 248)" />
+              <stop offset="56%" stopColor="oklch(0.075 0.032 244)" />
+              <stop offset="100%" stopColor="oklch(0.045 0.026 235)" />
             </linearGradient>
             <linearGradient id="lh-water-gradient" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stopColor="oklch(0.11 0.05 226)" />
-              <stop offset="100%" stopColor="oklch(0.05 0.04 230)" />
+              <stop offset="0%" stopColor="oklch(0.13 0.055 222)" />
+              <stop offset="100%" stopColor="oklch(0.048 0.036 232)" />
             </linearGradient>
+            <linearGradient id="lh-beam-gradient" x1="0" y1="0" x2="1" y2="0">
+              <stop offset="0%" stopColor="oklch(1 0.13 88 / 0.54)" />
+              <stop offset="52%" stopColor="oklch(0.96 0.1 88 / 0.28)" />
+              <stop offset="100%" stopColor="oklch(0.98 0.08 88 / 0.04)" />
+            </linearGradient>
+            <pattern id="lh-sea-grid" width="46" height="22" patternUnits="userSpaceOnUse">
+              <path d="M 0 21 H 46" stroke="oklch(0.55 0.07 205 / 0.1)" strokeWidth="1" />
+              <path d="M 22 0 V 22" stroke="oklch(0.55 0.07 205 / 0.05)" strokeWidth="1" />
+            </pattern>
           </defs>
 
           <rect x="0" y="0" width={SCENE_WIDTH} height={SCENE_HEIGHT} fill="url(#lh-sky-gradient)" aria-hidden="true" />
-          <g aria-hidden="true" className={cn("lh-fog-wash", model.fleetBand === "fog" && "lh-fog-wash--heavy")}>
-            <rect x="0" y="0" width={SCENE_WIDTH} height="260" fill="oklch(0.85 0.02 250 / 0.04)" />
-          </g>
-          <g aria-hidden="true" className="lh-stars">
-            {[
-              [42, 42, 1.2],
-              [138, 74, 0.9],
-              [240, 28, 1.1],
-              [332, 64, 0.8],
-              [410, 24, 1],
-              [628, 56, 0.9],
-              [774, 40, 0.8],
-              [958, 68, 1],
-            ].map(([x, y, r], index) => (
-              <circle key={index} cx={x} cy={y} r={r} fill="oklch(0.98 0 0)" opacity="0.85" />
-            ))}
-          </g>
-
-          <rect
-            x="0"
-            y={model.waterlineY}
-            width={SCENE_WIDTH}
-            height={SCENE_HEIGHT - model.waterlineY}
-            fill="url(#lh-water-gradient)"
-            aria-hidden="true"
-          />
+          <SceneStars />
           <path
-            d={`M 0 ${model.waterlineY} C 120 ${model.waterlineY - 2}, 240 ${model.waterlineY + 4}, 360 ${model.waterlineY} S 600 ${model.waterlineY - 4}, 760 ${model.waterlineY} S 1020 ${model.waterlineY + 3}, 1360 ${model.waterlineY - 1}`}
-            fill="none"
-            stroke="oklch(0.6 0.08 198 / 0.28)"
-            strokeWidth="1.5"
+            className={cn("lh-fog-bank", model.fleetBand === "fog" && "lh-fog-bank--heavy")}
+            d="M 420 302 C 560 268 694 302 836 278 C 976 256 1094 278 1284 248 L 1360 248 L 1360 422 L 420 422 Z"
+            fill="oklch(0.8 0.02 250 / 0.08)"
             aria-hidden="true"
-            className="lh-waterline"
+          />
+          <rect x="0" y="404" width={SCENE_WIDTH} height={SCENE_HEIGHT - 404} fill="url(#lh-water-gradient)" aria-hidden="true" />
+          <rect x="0" y="404" width={SCENE_WIDTH} height={SCENE_HEIGHT - 404} fill="url(#lh-sea-grid)" aria-hidden="true" />
+          <path
+            className="lh-horizon-line"
+            d="M 408 402 C 552 392 650 410 792 397 C 940 384 1062 398 1266 386"
+            fill="none"
+            stroke="oklch(0.62 0.08 205 / 0.32)"
+            strokeWidth="1.4"
+            aria-hidden="true"
           />
 
-          {model.tailFleet ? (
-            <g aria-hidden="true" className="lh-tail-fleet">
-              <g transform="translate(74 318)">
-                <ellipse cx="0" cy="14" rx="38" ry="10" fill="oklch(0.25 0.02 248 / 0.38)" />
-                <path d="M -28 12 Q 0 -14 28 12 Q 0 22 -28 12 Z" fill="oklch(0.52 0.02 248 / 0.42)" />
-                <text x="0" y="44" textAnchor="middle" className="lh-ship-subtitle">
-                  {model.tailFleet.label}
-                </text>
-                <text x="0" y="60" textAnchor="middle" className="lh-ship-subtitle">
-                  {formatCompactUsd(model.tailFleet.remainingUsd)} ·{" "}
-                  {formatPercent(model.tailFleet.remainingSharePct, 1)}
-                </text>
-              </g>
-            </g>
-          ) : null}
+          <BeamPath selectedHarbor={selectedHarbor} />
+          <LensAssembly glowId={lensGlowId} watchBand={model.watchBand} />
+          <TailFleet model={model} />
 
-          <LighthouseTower
-            lighthouseX={model.lighthouseX}
-            lighthouseY={model.lighthouseY}
-            targetX={beamTargetX}
-            targetY={beamTargetY}
-            watchBand={model.watchBand}
-            selectedShipBand={selectedShip?.healthBand ?? null}
-          />
-
-          {model.ships.map((ship) => (
-            <LighthouseShip key={ship.id} ship={ship} selected={ship.id === model.selectedId} onSelect={onSelect} />
+          {harbors.map((harbor) => (
+            <ProjectedHarborTarget
+              key={harbor.id}
+              harbor={harbor}
+              selected={harbor.id === selectedHarbor?.id}
+              onSelect={onSelect}
+              onPreview={onPreview}
+              onPreviewEnd={onPreviewEnd}
+            />
           ))}
+
+          <g className="lh-scene-map-labels" aria-hidden="true">
+            <text x="74" y="92" className="lh-map-kicker">
+              Watch State
+            </text>
+            <text x="74" y="116" className="lh-map-value">
+              {model.watchLabel}
+            </text>
+            <text x="74" y="146" className="lh-map-annotation">
+              {model.sceneSubtitle}
+            </text>
+            <text x="74" y="552" className="lh-map-kicker">
+              Fleet
+            </text>
+            <text x="74" y="576" className="lh-map-value">
+              {model.visibleShipCount} visible / {model.chainCount} chains
+            </text>
+          </g>
         </svg>
+
+        {showSelectedManifest ? <SelectedReadout selectedHarbor={selectedHarbor} /> : null}
       </div>
 
       <div className="lh-scene-caption">
@@ -387,53 +469,18 @@ export function LighthouseScene({
         <div className="lh-scene-caption__metrics">
           <div>
             <span className="pharos-kicker">Fleet</span>
-            <p className="font-mono text-sm font-semibold text-foreground">{model.visibleShipCount} visible</p>
+            <p className="font-mono text-sm font-semibold text-foreground">{model.visibleShipCount} signals</p>
           </div>
           <div>
-            <span className="pharos-kicker">Watch</span>
+            <span className="pharos-kicker">Light Source</span>
             <p className="font-mono text-sm font-semibold text-foreground">{model.watchLabel}</p>
           </div>
           <div>
             <span className="pharos-kicker">Largest Harbor</span>
-            <p className="font-mono text-sm font-semibold text-foreground">{model.largestHarbor ?? "—"}</p>
+            <p className="font-mono text-sm font-semibold text-foreground">{model.largestHarbor ?? "-"}</p>
           </div>
         </div>
       </div>
-
-      {selectedShip ? (
-        <div className="lh-selected-manifest" data-testid="lighthouse-selected-manifest">
-          <div className="space-y-1">
-            <p className="pharos-kicker">Selected Harbor</p>
-            <p className="text-base font-semibold text-foreground">{selectedShip.name}</p>
-            <p className="text-sm text-muted-foreground">
-              {formatCompactUsd(selectedShip.totalUsd)} supply · {formatPercent(selectedShip.sharePct, 1)} of tracked
-              supply · {selectedShip.healthBand ?? "unrated"}
-            </p>
-          </div>
-          <div className="grid gap-3 sm:grid-cols-3">
-            <div className="lh-manifest-pill">
-              <span className="pharos-kicker">Dominant Cargo</span>
-              <p className="font-mono text-sm font-semibold text-foreground">
-                {selectedShip.dominantSymbol} · {formatPercent(selectedShip.dominantSharePct, 1)}
-              </p>
-            </div>
-            <div className="lh-manifest-pill">
-              <span className="pharos-kicker">Wake</span>
-              <p className="font-mono text-sm font-semibold text-foreground">
-                {formatSignedPercent(selectedShip.change7dPct * 100, 1)}
-              </p>
-            </div>
-            <div className="lh-manifest-pill">
-              <span className="pharos-kicker">Cargo Marks</span>
-              <p className="font-mono text-sm font-semibold text-foreground">{selectedShip.cargoCount}</p>
-            </div>
-          </div>
-          <p className="text-xs text-muted-foreground">
-            Ship hull width follows chain supply, the beam marks the currently inspected harbor, and the manifest below
-            keeps the scene grounded in the data.
-          </p>
-        </div>
-      ) : null}
     </section>
   );
 }
