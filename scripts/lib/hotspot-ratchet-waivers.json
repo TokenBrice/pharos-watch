@@ -35,10 +35,6 @@
     "disposition": "queued-p4",
     "notes": "The audit/repair handler still mixes validation, replay planning, and mutation orchestration. Keep it explicitly owned as a later admin-path hotspot rather than widening this tranche."
   },
-  "worker/src/api/mint-burn-flows.ts": {
-    "disposition": "queued-p4",
-    "notes": "Mint/burn flow API handling now crosses the hotspot threshold with request parsing, aggregation, formatting, and response shaping in one handler. Track it for the repo-wide strategic cleanup pass instead of folding worker API refactors into the website cleanup slice."
-  },
   "worker/src/cron/blacklist/amount-recovery.ts": {
     "disposition": "queued-p4",
     "notes": "Blacklist amount recovery still mixes provider fanout, pricing fallback, event-shape branching, and batch-write orchestration in one branch-heavy module. Track it for a dedicated blacklist recovery simplification pass rather than folding that work into the current reserve/pricing/status tranche."
@@ -74,6 +70,10 @@
   "src/lib/contagion-layout.ts": {
     "disposition": "queued-p4",
     "notes": "The contagion layout engine still combines graph shaping, simulation setup, radius heuristics, and clamp/label rules in one branchy module. Track it for the next dedicated contagion graph simplification pass rather than mixing a layout-engine breakup into the current status/pricing tranche."
+  },
+  "src/app/lighthouse/cinematic-model.ts": {
+    "disposition": "queued-p4",
+    "notes": "The lighthouse cinematic model intentionally centralizes the scene map, zone descriptors, and responsive staging constants while the visual language is still being iterated. Split the module data, animation timing, and layout helpers after the lighthouse world stabilizes."
   },
   "worker/src/cron/daily-digest/prompt.ts": {
     "disposition": "queued-p4",
