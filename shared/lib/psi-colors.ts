@@ -51,3 +51,17 @@ export const PSI_PULSE_DURATION: Record<ConditionBand, number> = {
   CRISIS: 1,
   MELTDOWN: 0.7,
 };
+
+/** Lighthouse beam sweep duration (seconds per revolution) per PSI band — slower = calmer. */
+export const PSI_SWEEP_DURATION: Record<ConditionBand, number> = {
+  BEDROCK: 12,
+  STEADY: 9,
+  TREMOR: 6,
+  FRACTURE: 4,
+  CRISIS: 2.5,
+  MELTDOWN: 1.2,
+};
+
+export function psiSweepDuration(band: string): number {
+  return PSI_SWEEP_DURATION[band as ConditionBand] ?? PSI_SWEEP_DURATION.BEDROCK;
+}
