@@ -1,11 +1,11 @@
 import { HARBOR_PALETTE } from "../systems/palette";
 
 export const LIGHTHOUSE_GEOM = {
-  base:    { w: 24, h: 12 },
-  shaft:   { w: 18, h: 32 },
-  gallery: { w: 22, h: 4  },
-  lantern: { w: 16, h: 18 },
-  cap:     { w: 18, h: 30 },
+  base:    { w: 48, h: 24 },
+  shaft:   { w: 36, h: 64 },
+  gallery: { w: 44, h: 8  },
+  lantern: { w: 32, h: 36 },
+  cap:     { w: 36, h: 60 },
 };
 
 export interface LighthouseDrawState {
@@ -15,8 +15,8 @@ export interface LighthouseDrawState {
   lanternAlpha: number;
 }
 
-const BEAM_LEN = 200;
-const BEAM_HALF_SPREAD = 50;
+const BEAM_LEN = 300;
+const BEAM_HALF_SPREAD = 70;
 
 /**
  * Draws the lighthouse sprite anchored at the waterline center (ax, ay).
@@ -36,52 +36,52 @@ export function drawLighthouse(
 
   // Base — stone block + lighter top stripe
   ctx.fillStyle = HARBOR_PALETTE.stone_dark;
-  ctx.fillRect(ax - 12, baseTop, 24, LIGHTHOUSE_GEOM.base.h);
+  ctx.fillRect(ax - 24, baseTop, 48, LIGHTHOUSE_GEOM.base.h);
   ctx.fillStyle = HARBOR_PALETTE.stone_mid;
-  ctx.fillRect(ax - 12, baseTop, 24, 4);
+  ctx.fillRect(ax - 24, baseTop, 48, 8);
 
   // Shaft — vertical stones, lit windows
   ctx.fillStyle = HARBOR_PALETTE.stone_mid;
-  ctx.fillRect(ax - 9, shaftTop, 18, LIGHTHOUSE_GEOM.shaft.h);
+  ctx.fillRect(ax - 18, shaftTop, 36, LIGHTHOUSE_GEOM.shaft.h);
   ctx.strokeStyle = HARBOR_PALETTE.stone_dark;
   ctx.lineWidth = 1;
-  for (let y = shaftTop + 6; y < shaftTop + LIGHTHOUSE_GEOM.shaft.h; y += 6) {
-    ctx.beginPath(); ctx.moveTo(ax - 9, y); ctx.lineTo(ax + 9, y); ctx.stroke();
+  for (let y = shaftTop + 12; y < shaftTop + LIGHTHOUSE_GEOM.shaft.h; y += 12) {
+    ctx.beginPath(); ctx.moveTo(ax - 18, y); ctx.lineTo(ax + 18, y); ctx.stroke();
   }
   ctx.fillStyle = HARBOR_PALETTE.lantern_warm;
-  ctx.fillRect(ax - 1, shaftTop + 8, 2, 3);
-  ctx.fillRect(ax - 1, shaftTop + 18, 2, 3);
+  ctx.fillRect(ax - 2, shaftTop + 16, 4, 6);
+  ctx.fillRect(ax - 2, shaftTop + 36, 4, 6);
 
   // Gallery deck
   ctx.fillStyle = HARBOR_PALETTE.iron_dark;
-  ctx.fillRect(ax - 11, galleryTop, 22, LIGHTHOUSE_GEOM.gallery.h);
+  ctx.fillRect(ax - 22, galleryTop, 44, LIGHTHOUSE_GEOM.gallery.h);
 
   // Lantern room — iron shell + warm interior + 4 fresnel pane lines
   ctx.fillStyle = HARBOR_PALETTE.iron_dark;
-  ctx.fillRect(ax - 8, lanternTop, 16, LIGHTHOUSE_GEOM.lantern.h);
+  ctx.fillRect(ax - 16, lanternTop, 32, LIGHTHOUSE_GEOM.lantern.h);
   ctx.globalAlpha = 0.85;
   ctx.fillStyle = HARBOR_PALETTE.lantern_warm;
-  ctx.fillRect(ax - 7, lanternTop + 1, 14, 16);
+  ctx.fillRect(ax - 14, lanternTop + 2, 28, 32);
   ctx.globalAlpha = 1;
   ctx.strokeStyle = HARBOR_PALETTE.iron_dark;
-  for (let x = -7; x < 7; x += 4) {
+  for (let x = -14; x < 14; x += 8) {
     ctx.beginPath();
-    ctx.moveTo(ax + x + 2, lanternTop + 1);
-    ctx.lineTo(ax + x + 2, lanternTop + 17);
+    ctx.moveTo(ax + x + 4, lanternTop + 2);
+    ctx.lineTo(ax + x + 4, lanternTop + 34);
     ctx.stroke();
   }
 
   // Cap — triangular roof + weathervane
   ctx.fillStyle = HARBOR_PALETTE.stone_dark;
   ctx.beginPath();
-  ctx.moveTo(ax - 9, capTop + 4);
-  ctx.lineTo(ax,     capTop - 4);
-  ctx.lineTo(ax + 9, capTop + 4);
+  ctx.moveTo(ax - 18, capTop + 8);
+  ctx.lineTo(ax,      capTop - 8);
+  ctx.lineTo(ax + 18, capTop + 8);
   ctx.closePath();
   ctx.fill();
   ctx.strokeStyle = HARBOR_PALETTE.iron_dark;
-  ctx.beginPath(); ctx.moveTo(ax, capTop - 4); ctx.lineTo(ax, capTop - 12); ctx.stroke();
-  ctx.beginPath(); ctx.moveTo(ax - 3, capTop - 10); ctx.lineTo(ax + 3, capTop - 10); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(ax, capTop - 8); ctx.lineTo(ax, capTop - 24); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(ax - 6, capTop - 20); ctx.lineTo(ax + 6, capTop - 20); ctx.stroke();
 
   // Beam — rotated triangle around the lantern center; tweened by GSAP each frame
   const lanternCx = ax;
@@ -103,9 +103,9 @@ export function drawLighthouse(
   // Lantern halo (always upright; alpha tweened by GSAP at a different rhythm than the beam)
   ctx.fillStyle = HARBOR_PALETTE.lantern_glow;
   ctx.globalAlpha = s.lanternAlpha;
-  ctx.beginPath(); ctx.arc(lanternCx, lanternCy, 4, 0, Math.PI * 2); ctx.fill();
+  ctx.beginPath(); ctx.arc(lanternCx, lanternCy, 8, 0, Math.PI * 2); ctx.fill();
   ctx.fillStyle = HARBOR_PALETTE.lantern_warm;
   ctx.globalAlpha = 0.35 * s.lanternAlpha;
-  ctx.beginPath(); ctx.arc(lanternCx, lanternCy, 8, 0, Math.PI * 2); ctx.fill();
+  ctx.beginPath(); ctx.arc(lanternCx, lanternCy, 16, 0, Math.PI * 2); ctx.fill();
   ctx.globalAlpha = 1;
 }

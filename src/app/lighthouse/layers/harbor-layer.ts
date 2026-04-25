@@ -3,17 +3,18 @@ import { worldToScreen } from "../systems/isometric";
 import type { DrawableLayer, FrameState } from "../systems/scene-render";
 import type { SceneHarbor } from "../systems/scene-data";
 
-const TRIANGLE_TILES: { tileX: number; tileY: number }[] = [
-  // Hero positions (around lighthouse at tile origin)
-  { tileX: 22, tileY: 12 }, // NE
-  { tileX: 8,  tileY: 24 }, // SW
-  { tileX: 26, tileY: 22 }, // E
-  // Mid-tier
-  { tileX: 12, tileY: 8  },
-  { tileX: 28, tileY: 8  },
-  { tileX: 6,  tileY: 14 },
-  { tileX: 30, tileY: 16 },
-  { tileX: 18, tileY: 28 },
+// Harbours arrayed in a ring around the lighthouse anchor.
+// Every entry has tileX+tileY ≤ -1 so screenY is negative (north of anchor).
+// Spread is symmetric: tileX-tileY ∈ [-8, +8] so screenX ∈ [-256, +256].
+const HARBOR_RING_TILES: { tileX: number; tileY: number }[] = [
+  { tileX: -7, tileY: -1 }, // NW-far    screen(-192, -128)
+  { tileX:  1, tileY: -7 }, // NE-far    screen(+256,  -96)
+  { tileX: -6, tileY:  2 }, // W         screen(-256,  -64)
+  { tileX:  2, tileY: -6 }, // E         screen(+256,  -64)
+  { tileX: -3, tileY: -2 }, // NW-mid    screen( -32,  -80)
+  { tileX: -2, tileY: -3 }, // NE-mid    screen( +32,  -80)
+  { tileX: -4, tileY:  3 }, // SW-near   screen(-224,  -16)
+  { tileX:  3, tileY: -4 }, // SE-near   screen(+224,  -16)
 ];
 
 export interface HarborPlacement {
@@ -44,8 +45,8 @@ export function buildHarborLayer(): HarborLayerAPI {
   return {
     syncHarbors(harbors, originX, originY) {
       const map = new Map<string, HarborPlacement>();
-      _placements = harbors.slice(0, TRIANGLE_TILES.length).map((harbor, i) => {
-        const tile = TRIANGLE_TILES[i];
+      _placements = harbors.slice(0, HARBOR_RING_TILES.length).map((harbor, i) => {
+        const tile = HARBOR_RING_TILES[i];
         const screen = worldToScreen(tile);
         const placement: HarborPlacement = {
           harbor,

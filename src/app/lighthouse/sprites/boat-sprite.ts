@@ -16,19 +16,25 @@ export interface BoatDrawProps {
   auraHex: string | null;
 }
 
+export const BOAT_SCALE = 2;
+
 /** Draws a boat anchored at the hull base center (ax, ay). */
 export function drawBoat(ctx: CanvasRenderingContext2D, ax: number, ay: number, p: BoatDrawProps): void {
+  ctx.save();
+  ctx.translate(ax, ay);
+  ctx.scale(BOAT_SCALE, BOAT_SCALE);
   const dim = BOAT_DIMENSIONS[p.style][p.size];
   const halfW = dim.w / 2;
-  const lx = (x: number) => ax + x;
-  const ly = (y: number) => ay + (y - dim.h);
+  // Local coords: x=0 is boat center; y=0 is hull base. Helpers reframed against (0,0).
+  const lx = (x: number) => x;
+  const ly = (y: number) => y - dim.h;
 
   // Aura
   if (p.auraHex) {
     ctx.fillStyle = p.auraHex;
     ctx.globalAlpha = 0.22;
     ctx.beginPath();
-    ctx.arc(ax, ay - 4, halfW + 4, 0, Math.PI * 2);
+    ctx.arc(0, -4, halfW + 4, 0, Math.PI * 2);
     ctx.fill();
     ctx.globalAlpha = 1;
   }
@@ -125,6 +131,8 @@ export function drawBoat(ctx: CanvasRenderingContext2D, ax: number, ay: number, 
   // Pennant — small flag at top of foremast, color from peg-health THREAT_BAND_HEX
   ctx.fillStyle = p.pennantHex;
   ctx.fillRect(lx(2), ly(0), 3, 2);
+
+  ctx.restore();
 }
 
 function polyFill(ctx: CanvasRenderingContext2D, pts: number[]): void {

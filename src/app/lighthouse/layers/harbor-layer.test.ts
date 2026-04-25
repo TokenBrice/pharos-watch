@@ -28,9 +28,9 @@ describe("buildHarborLayer", () => {
     const layer = buildHarborLayer();
     const map = layer.syncHarbors([makeHarbor("a")], 500, 300);
     const p = map.get("a")!;
-    // First slot is { tileX: 22, tileY: 12 } -> screen (22-12)*32 = 320, (22+12)*16 = 544
-    expect(p.worldX).toBe(500 + 320);
-    expect(p.worldY).toBe(300 + 544);
+    // First slot is { tileX: -7, tileY: -1 } -> screen (-7 - -1)*32 = -192, (-7 + -1)*16 = -128
+    expect(p.worldX).toBe(500 - 192); // 308
+    expect(p.worldY).toBe(300 - 128); // 172
   });
 
   it("re-sync replaces the placement set deterministically", () => {
