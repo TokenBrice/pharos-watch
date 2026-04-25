@@ -4,9 +4,11 @@
 
 **Goal:** Replace `/lighthouse` and `/lighthouse-2` routes with a single, fully data-bound 2D isometric pixel-art harbor scene at `/lighthouse` — Pharos as a beacon-island, chains as harbours, stablecoins as boats, PSI as the beam, DEWS as the sea state.
 
-**Architecture:** PixiJS v8 inside a `dynamic({ ssr: false })` React shell, GSAP-driven motion, a runtime-neutral `systems/` adapter that consumes existing TanStack Query hooks (`useChains`, `useStablecoins`, `useStabilityIndexDetail`, `useStressSignals`) and emits a `SceneData` object diffed onto live sprites. Pixel-art discipline enforced by a 24-color anchor palette and a hex-literal lint check.
+**Architecture:** Canvas 2D inside a `dynamic({ ssr: false })` React shell, GSAP-driven value tweens (renderer-agnostic — `requestAnimationFrame` loop reads tweened state per frame), a runtime-neutral `systems/` adapter that consumes existing TanStack Query hooks (`useChains`, `useStablecoins`, `useStabilityIndexDetail`, `useStressSignals`) and emits a `SceneData` object rendered by layered draw functions. Pixel-art discipline enforced by a 24-color anchor palette, `imageSmoothingEnabled = false`, integer-pixel positioning, and a hex-literal lint check.
 
-**Tech Stack:** `pixi.js@^8.18`, `@pixi/react@^8.0.5`, `gsap@^3.15` (MotionPathPlugin free under Webflow). React 19, Next 16 static export, Vitest + Playwright.
+**Tech Stack:** Plain DOM `<canvas>` + 2D context, `gsap@^3.15` for value tweens. React 19, Next 16 static export, Vitest + Playwright.
+
+**Phase 0 outcome (recorded 2026-04-25):** PixiJS v8.18.1 throws `_unsafeEvalCheck` under the production CSP. Verdict NO-GO; Fork A (Canvas 2D rewrite) selected. See `docs/superpowers/audits/2026-04-25-pixi-v8-csp.md`. The plan from §3 onward (Phase 2+) implements Fork A directly. Phase 1 below is renderer-agnostic and ships unchanged.
 
 **Source spec:** `docs/superpowers/specs/2026-04-25-lighthouse-2-isometric-harbor-design.md` — this plan supersedes that spec for execution and resolves three review streams (RPG visual direction, data-binding coherence, technical architecture).
 
@@ -111,44 +113,47 @@ This replaces Section 6 of the source spec. Every entry cites a real symbol veri
 src/app/lighthouse/
 ├── page.tsx                              # SEO/metadata; static
 ├── client.tsx                            # SSR boundary, hooks, error wrapper
-├── harbor-scene-client.tsx               # Pixi <Application>; ssr:false dynamic-imported
+├── harbor-scene-client.tsx               # Canvas 2D mount, RAF loop; ssr:false dynamic-imported
 ├── harbor-scene.css                      # Canvas sizing, image-rendering, overlay positioning
-├── lighthouse-fullscreen-dialog.tsx      # Reused pattern from old /lighthouse
 ├── lighthouse-a11y-ledger.tsx            # Single sr-only ledger (replaces both legacy ledgers)
 ├── layers/
-│   ├── sky-layer.ts                      # Stars, moon, gulls, clouds — Container builder
-│   ├── water-layer.ts                    # TilingSprite + 3-frequency wave shader
+│   ├── sky-layer.ts                      # Stars, moon, gulls, clouds — draw fn
+│   ├── water-layer.ts                    # 3-frequency scanline wave draw fn
 │   ├── lamp-layer.ts                     # Dock lanterns, warehouse windows, ship lights
-│   ├── harbor-layer.ts                   # Per-chain harbour Container (island, dock, warehouses, flag, lighthouse)
-│   ├── boat-layer.ts                     # Per-coin boat Container (moored + sailing)
+│   ├── harbor-layer.ts                   # Per-chain harbour state (island, dock, warehouses, flag)
+│   ├── boat-layer.ts                     # Per-coin boat state (moored + sailing)
 │   ├── horizon-layer.ts                  # Alt-peg flagged silhouettes
 │   └── ui-overlay.tsx                    # HTML overlay (chain labels, hover, tooltips, kbd targets)
 ├── sprites/
-│   ├── lighthouse-sprite.ts              # Tower blocks + volumetric beam + lantern halo
-│   ├── boat-sprite.ts                    # Galleon / Brigantine / Schooner / Junk factory
-│   ├── harbor-island-sprite.ts           # Tile stack, dock, warehouse builders
-│   ├── water-tile.ts                     # Per-tile water polygon (NOT used per-frame; see water-layer)
-│   └── horizon-island-sprite.ts          # Distant silhouettes + flag pole
+│   ├── lighthouse-sprite.ts              # drawLighthouse(ctx, x, y, beamRot, beamColor)
+│   ├── boat-sprite.ts                    # drawBoat(ctx, x, y, style, size, pennantHex, auraHex)
+│   ├── harbor-island-sprite.ts           # drawHarborIsland(ctx, x, y, harborState)
+│   ├── water-tile.ts                     # drawWaterTile(ctx, x, y, tint) helper
+│   └── horizon-island-sprite.ts          # drawHorizonIsland(ctx, x, y, cohort)
 ├── systems/
 │   ├── palette.ts                        # 24-color anchor + tint utility
 │   ├── isometric.ts                      # Tile↔screen, depth key, hit-test inverse
-│   ├── patrol.ts                         # Bezier path generator + GSAP MotionPath wiring
+│   ├── patrol.ts                         # Bezier path generator
 │   ├── scene-data.ts                     # Hooks → SceneData adapter
-│   ├── scene-sync.ts                     # Diff SceneData → mutate Pixi sprites
+│   ├── scene-render.ts                   # Per-frame draw orchestrator (sorts + paints layers)
 │   ├── classification-to-boat.ts         # (governance, backing) → BoatStyle
-│   ├── reduced-motion.ts                 # mq listener + parent-timeline pause helper
-│   └── timeline-registry.ts              # Single parent timeline owner (pause/resume target)
+│   ├── reduced-motion.ts                 # mq listener helper
+│   └── timeline-registry.ts              # GSAP parent timeline (pauses on reduced-motion)
 └── __fixtures__/
     └── scene-data.ts                     # Deterministic SceneData for tests
 ```
 
-Tests live alongside their pure-TS modules (`isometric.test.ts`, `scene-data.test.ts`, `classification-to-boat.test.ts`, `palette.test.ts`).
+Tests live alongside their pure-TS modules (`isometric.test.ts`, `scene-data.test.ts`, `classification-to-boat.test.ts`, `palette.test.ts`, `patrol.test.ts`).
+
+**Architectural pattern (Canvas 2D specific):** layers and sprites are pure functions over `(ctx, frameState)`, not Container objects. The render orchestrator (`systems/scene-render.ts`) owns the `requestAnimationFrame` loop, calls `ctx.clearRect`, then invokes each layer's draw function in painter's order. GSAP tweens animate value objects (e.g., `{ rotation: 0, alpha: 0.85 }`); layers read those values per frame. Pause = `parentTimeline.pause()` + setting a `reducedMotion` flag the layers respect (e.g., the water layer skips its scanline displacement and renders a static composition).
 
 ---
 
-## 1. Phase 0 — CSP Smoke Test (BLOCKER)
+## 1. Phase 0 — CSP Smoke Test (COMPLETED 2026-04-25 — VERDICT: NO-GO)
 
-Pharos's CSP is `script-src 'self' 'unsafe-inline' https://www.googletagmanager.com https://static.cloudflareinsights.com` (`public/_headers:14`) — **no `unsafe-eval`**. PixiJS v8's WebGL shader path historically requires `unsafe-eval` via `new Function()`. **No further work happens until this is verified.**
+Pharos's CSP is `script-src 'self' 'unsafe-inline' https://www.googletagmanager.com https://static.cloudflareinsights.com` (`public/_headers:14`) — **no `unsafe-eval`**. PixiJS v8's WebGL shader path requires `unsafe-eval` via `AbstractRenderer._unsafeEvalCheck` and the check cannot be disabled.
+
+**Result:** Probe failed cleanly. Audit at `docs/superpowers/audits/2026-04-25-pixi-v8-csp.md`. Switched to **Fork A — Canvas 2D rewrite**. The tasks below (0.1-0.5) document what was done; Phase 1+ implements the Canvas 2D path.
 
 ### Task 0.1: Install dependencies on a smoke branch
 
@@ -333,30 +338,9 @@ Once Plan-B is decided, this plan's Phase 1+ tasks are re-templated against the 
 
 Goal: ship a deletable scaffold (route + dynamic boundary + a11y ledger + palette + isometric math + scene-data adapter) that **does not yet render Pixi**. This validates SSR, hooks, types, and tests before touching WebGL.
 
-### Task 1.1: Install dependencies
+### Task 1.1: Install dependencies — DONE (commit `272581ae`)
 
-**Files:** `package.json`, `package-lock.json`
-
-- [ ] **Step 1: Install**
-
-```bash
-npm install --save pixi.js@^8.18 @pixi/react@^8.0.5 gsap@^3.15
-```
-
-- [ ] **Step 2: Verify bundle hint**
-
-```bash
-npx --yes bundle-phobia pixi.js @pixi/react gsap
-```
-
-Expected: PixiJS minzipped 250–290 KB, GSAP core ~25 KB. Capture the output in the PR description.
-
-- [ ] **Step 3: Commit**
-
-```bash
-git add package.json package-lock.json
-git commit -m "feat(lighthouse): add pixi v8, @pixi/react v8, gsap"
-```
+`gsap@3.15.0` and `playwright@1.59.1` are installed on the feature branch from the Phase 0 → Fork A pivot. The Pixi-specific deps (`pixi.js`, `@pixi/react`) are intentionally NOT installed for the Canvas 2D fork. Skip this task and proceed to Task 1.2.
 
 ### Task 1.2: Anchor palette constant + tint helper
 
@@ -1412,15 +1396,50 @@ export function LighthouseClient() {
 }
 ```
 
-- [ ] **Step 4: Stub `harbor-scene-client.tsx` (renders nothing yet)**
+- [ ] **Step 4: Stub `harbor-scene-client.tsx` (renders empty canvas)**
 
 ```tsx
 // src/app/lighthouse/harbor-scene-client.tsx
 "use client";
+import { useEffect, useRef } from "react";
 import type { SceneData } from "./systems/scene-data";
+import "./harbor-scene.css";
 
 export function HarborSceneClient(_props: { scene: SceneData }) {
-  return <div className="relative h-[70vh] w-full bg-[#0a0e1d]" aria-hidden="true" />;
+  const ref = useRef<HTMLCanvasElement>(null);
+  useEffect(() => {
+    const cvs = ref.current;
+    if (!cvs) return;
+    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+    const resize = () => {
+      const r = cvs.getBoundingClientRect();
+      cvs.width = Math.floor(r.width * dpr);
+      cvs.height = Math.floor(r.height * dpr);
+      const ctx = cvs.getContext("2d");
+      if (!ctx) return;
+      ctx.imageSmoothingEnabled = false;
+      ctx.fillStyle = "#0a0e1d";
+      ctx.fillRect(0, 0, cvs.width, cvs.height);
+    };
+    resize();
+    const ro = new ResizeObserver(resize);
+    ro.observe(cvs);
+    return () => ro.disconnect();
+  }, []);
+  return <canvas ref={ref} className="harbor-scene-canvas" aria-hidden="true" />;
+}
+```
+
+Also create `src/app/lighthouse/harbor-scene.css`:
+
+```css
+.harbor-scene-canvas {
+  display: block;
+  width: 100%;
+  height: 70vh;
+  background: #0a0e1d;
+  image-rendering: pixelated;
+  image-rendering: crisp-edges;
 }
 ```
 
@@ -1536,66 +1555,150 @@ EOF
 
 ---
 
-## 3. Phase 2 — Pixi Application + Sky + Water (PR2)
+## 3. Phase 2 — Canvas 2D shell + Sky + Water + Lamps (PR2)
 
-Goal: stand up the WebGL canvas with strict palette discipline. Static composition only — no boats, no harbors, no lighthouse yet. The water shimmer is the test of perf and reduced-motion.
+Goal: stand up the Canvas 2D render loop with strict palette discipline. Static composition only — no boats, no harbors, no lighthouse yet. The water shimmer is the test of perf and reduced-motion.
 
-### Task 2.1: Pixi `<Application>` shell with `extend` registry
+**Architectural pattern locked here:**
+
+- `harbor-scene-client.tsx` owns the canvas, the DPR-aware sizing, the RAF loop, and a `frame: FrameState` object passed to each layer.
+- Each layer in `layers/*` exports a builder that returns `{ draw(ctx, frame), dispose() }`. No state on layers besides what the builder closes over.
+- All hex literals come from `HARBOR_PALETTE`. The lint guard rejects everything else.
+- Reduced-motion is a single `frame.reducedMotion` flag layers respect.
+
+```ts
+// FrameState contract — referenced by every layer
+export interface FrameState {
+  t: number;                  // seconds since first frame
+  width: number;              // CSS px
+  height: number;             // CSS px
+  dpr: number;                // capped at 2
+  reducedMotion: boolean;
+  scene: SceneData;
+  beam: { rotationRad: number; alpha: number; colorHex: string };
+  lantern: { alpha: number };
+}
+```
+
+### Task 2.1: Canvas mount, DPR-aware sizing, RAF loop
 
 **Files:**
-- Modify: `src/app/lighthouse/harbor-scene-client.tsx` (replace stub)
-- Create: `src/app/lighthouse/harbor-scene.css`
+- Modify: `src/app/lighthouse/harbor-scene-client.tsx`
+- Modify: `src/app/lighthouse/harbor-scene.css`
+- Create: `src/app/lighthouse/systems/scene-render.ts`
 
-- [ ] **Step 1: Replace stub with real Pixi shell**
+- [ ] **Step 1: Implement the render orchestrator**
+
+```ts
+// src/app/lighthouse/systems/scene-render.ts
+import type { SceneData } from "./scene-data";
+
+export interface FrameState {
+  t: number;
+  width: number;
+  height: number;
+  dpr: number;
+  reducedMotion: boolean;
+  scene: SceneData;
+  beam: { rotationRad: number; alpha: number; colorHex: string };
+  lantern: { alpha: number };
+}
+
+export interface DrawableLayer {
+  draw(ctx: CanvasRenderingContext2D, frame: FrameState): void;
+  dispose?: () => void;
+}
+
+export function createInitialFrameState(scene: SceneData): FrameState {
+  return {
+    t: 0,
+    width: 0,
+    height: 0,
+    dpr: 1,
+    reducedMotion: false,
+    scene,
+    beam: { rotationRad: 0, alpha: 0.55, colorHex: scene.beam.color },
+    lantern: { alpha: 0.85 },
+  };
+}
+```
+
+- [ ] **Step 2: Replace stub with real Canvas 2D shell + RAF loop**
 
 ```tsx
 // src/app/lighthouse/harbor-scene-client.tsx
 "use client";
-import { useEffect, useRef, useState } from "react";
-import { Application, Container, Graphics, Sprite, Texture, Ticker, ColorMatrixFilter, TilingSprite } from "pixi.js";
-import { extend, Application as ReactApp } from "@pixi/react";
-import { hexToInt, HARBOR_PALETTE } from "./systems/palette";
+import { useEffect, useRef } from "react";
+import { HARBOR_PALETTE } from "./systems/palette";
 import type { SceneData } from "./systems/scene-data";
+import { createInitialFrameState, type DrawableLayer, type FrameState } from "./systems/scene-render";
 import { observeReducedMotion } from "./systems/reduced-motion";
 import "./harbor-scene.css";
 
-extend({ Container, Graphics, Sprite, TilingSprite });
-
 export function HarborSceneClient({ scene }: { scene: SceneData }) {
-  const wrapRef = useRef<HTMLDivElement>(null);
-  const [size, setSize] = useState({ width: 0, height: 0 });
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const sceneRef = useRef(scene);
+  sceneRef.current = scene;
 
   useEffect(() => {
-    if (!wrapRef.current) return;
-    const ro = new ResizeObserver((entries) => {
-      for (const e of entries) setSize({ width: Math.floor(e.contentRect.width), height: Math.floor(e.contentRect.height) });
-    });
-    ro.observe(wrapRef.current);
-    return () => ro.disconnect();
+    const cvs = canvasRef.current;
+    if (!cvs) return;
+    const ctx = cvs.getContext("2d", { alpha: false });
+    if (!ctx) return;
+
+    const frame = createInitialFrameState(sceneRef.current);
+    frame.dpr = Math.min(window.devicePixelRatio || 1, 2);
+
+    const layers: DrawableLayer[] = []; // populated in subsequent tasks
+
+    const resize = () => {
+      const r = cvs.getBoundingClientRect();
+      frame.width = Math.floor(r.width);
+      frame.height = Math.floor(r.height);
+      cvs.width = Math.floor(r.width * frame.dpr);
+      cvs.height = Math.floor(r.height * frame.dpr);
+      ctx.imageSmoothingEnabled = false;
+    };
+    resize();
+    const ro = new ResizeObserver(resize);
+    ro.observe(cvs);
+
+    const disposeRm = observeReducedMotion((m) => { frame.reducedMotion = m; });
+
+    const start = performance.now();
+    let rafId = 0;
+    const tick = () => {
+      frame.t = (performance.now() - start) / 1000;
+      frame.scene = sceneRef.current;
+      ctx.save();
+      ctx.scale(frame.dpr, frame.dpr);
+      ctx.fillStyle = HARBOR_PALETTE.deep_sea_2;
+      ctx.fillRect(0, 0, frame.width, frame.height);
+      for (const layer of layers) layer.draw(ctx, frame);
+      ctx.restore();
+      rafId = requestAnimationFrame(tick);
+    };
+    rafId = requestAnimationFrame(tick);
+
+    return () => {
+      cancelAnimationFrame(rafId);
+      ro.disconnect();
+      disposeRm();
+      for (const layer of layers) layer.dispose?.();
+    };
   }, []);
 
   return (
-    <div ref={wrapRef} className="harbor-scene-wrap" data-testid="harbor-scene">
-      {size.width > 0 && size.height > 0 && (
-        <ReactApp
-          width={size.width}
-          height={size.height}
-          background={hexToInt(HARBOR_PALETTE.deep_sea_2)}
-          resolution={Math.min(typeof window !== "undefined" ? window.devicePixelRatio : 1, 2)}
-          autoDensity
-          antialias={false}
-          roundPixels
-          skipExtensionImports
-        >
-          <pixiContainer />
-        </ReactApp>
-      )}
+    <div className="harbor-scene-wrap" data-testid="harbor-scene">
+      <canvas ref={canvasRef} className="harbor-scene-canvas" aria-hidden="true" />
     </div>
   );
 }
 ```
 
-- [ ] **Step 2: CSS**
+(The empty `layers: DrawableLayer[] = []` is intentional — Tasks 2.2/2.3/2.4 push real layers into this slot.)
+
+- [ ] **Step 3: CSS**
 
 ```css
 /* src/app/lighthouse/harbor-scene.css */
@@ -1606,76 +1709,44 @@ export function HarborSceneClient({ scene }: { scene: SceneData }) {
   overflow: hidden;
   background: #0a0e1d;
 }
-.harbor-scene-wrap canvas {
-  image-rendering: pixelated;
-  image-rendering: crisp-edges; /* Safari fallback */
+.harbor-scene-canvas {
   display: block;
+  width: 100%;
+  height: 100%;
+  background: #0a0e1d;
+  image-rendering: pixelated;
+  image-rendering: crisp-edges;
 }
 ```
 
-- [ ] **Step 3: Build + smoke-check**
+- [ ] **Step 4: Build + smoke-check**
 
 ```bash
 npm run build
 ```
 
-Expected: build succeeds, no SSR errors. Open `/lighthouse/` in dev — confirm a black 70vh box renders.
+Expected: build succeeds, no SSR errors. `/lighthouse/` renders a flat 70vh dark canvas.
 
-- [ ] **Step 4: Commit**
+- [ ] **Step 5: Commit**
 
 ```bash
-git add src/app/lighthouse/harbor-scene-client.tsx src/app/lighthouse/harbor-scene.css
-git commit -m "feat(lighthouse): pixi v8 application shell with palette background"
+git add src/app/lighthouse/harbor-scene-client.tsx \
+        src/app/lighthouse/harbor-scene.css \
+        src/app/lighthouse/systems/scene-render.ts
+git commit -m "feat(lighthouse): canvas 2d shell with DPR-aware RAF loop"
 ```
 
-### Task 2.2: Sky layer (stars + moon)
+### Task 2.2: Sky layer (gradient + stars + moon)
 
 **Files:**
 - Create: `src/app/lighthouse/layers/sky-layer.ts`
-- Create: `src/app/lighthouse/sprites/sky-sprite.ts`
+- Create: `src/app/lighthouse/systems/rng.ts` (deterministic LCG used by multiple layers)
 
-- [ ] **Step 1: Implement the builder**
+- [ ] **Step 1: Deterministic RNG**
 
 ```ts
-// src/app/lighthouse/sprites/sky-sprite.ts
-import { Container, Graphics } from "pixi.js";
-import { HARBOR_PALETTE, hexToInt } from "../systems/palette";
-
-export function buildSkySprite(width: number, height: number): Container {
-  const c = new Container();
-  // Gradient by stacking 8 horizontal bands
-  const bandH = Math.ceil(height / 8);
-  const stops = [
-    HARBOR_PALETTE.sky_night, HARBOR_PALETTE.sky_night, HARBOR_PALETTE.sky_night,
-    HARBOR_PALETTE.sky_horizon, HARBOR_PALETTE.sky_horizon,
-    HARBOR_PALETTE.fog_blue, HARBOR_PALETTE.fog_blue, HARBOR_PALETTE.fog_pale,
-  ];
-  for (let i = 0; i < 8; i++) {
-    const g = new Graphics();
-    g.rect(0, i * bandH, width, bandH).fill({ color: hexToInt(stops[i]) });
-    c.addChild(g);
-  }
-  // Stars (deterministic pattern via simple LCG)
-  const rng = mulberry32(0xcafef00d);
-  const stars = new Graphics();
-  for (let i = 0; i < 70; i++) {
-    const sx = Math.floor(rng() * width);
-    const sy = Math.floor(rng() * height * 0.55);
-    const a = 0.5 + rng() * 0.5;
-    stars.rect(sx, sy, 1, 1).fill({ color: hexToInt(HARBOR_PALETTE.moonlight), alpha: a });
-  }
-  c.addChild(stars);
-  // Moon
-  const moon = new Graphics();
-  const mx = Math.floor(width * 0.18);
-  const my = Math.floor(height * 0.16);
-  moon.circle(mx, my, 14).fill({ color: hexToInt(HARBOR_PALETTE.moonlight) });
-  moon.circle(mx - 3, my - 3, 11).fill({ color: hexToInt(HARBOR_PALETTE.lantern_glow), alpha: 0.6 });
-  c.addChild(moon);
-  return c;
-}
-
-function mulberry32(seed: number) {
+// src/app/lighthouse/systems/rng.ts
+export function mulberry32(seed: number): () => number {
   let s = seed >>> 0;
   return () => {
     s = (s + 0x6d2b79f5) >>> 0;
@@ -1687,40 +1758,75 @@ function mulberry32(seed: number) {
 }
 ```
 
+- [ ] **Step 2: Sky layer builder**
+
 ```ts
 // src/app/lighthouse/layers/sky-layer.ts
-import { Container } from "pixi.js";
-import { buildSkySprite } from "../sprites/sky-sprite";
+import { HARBOR_PALETTE } from "../systems/palette";
+import type { DrawableLayer, FrameState } from "../systems/scene-render";
+import { mulberry32 } from "../systems/rng";
 
-export function buildSkyLayer(width: number, height: number): Container {
-  const layer = new Container();
-  layer.label = "sky-layer";
-  layer.addChild(buildSkySprite(width, height));
-  return layer;
+interface Star { x: number; y: number; alpha: number; }
+
+export function buildSkyLayer(): DrawableLayer {
+  let cachedW = 0;
+  let cachedH = 0;
+  let stars: Star[] = [];
+
+  const ensureStars = (w: number, h: number) => {
+    if (w === cachedW && h === cachedH) return;
+    cachedW = w; cachedH = h;
+    const rng = mulberry32(0xcafef00d);
+    stars = [];
+    for (let i = 0; i < 70; i++) {
+      stars.push({ x: Math.floor(rng() * w), y: Math.floor(rng() * h * 0.55), alpha: 0.5 + rng() * 0.5 });
+    }
+  };
+
+  return {
+    draw(ctx, frame: FrameState) {
+      ensureStars(frame.width, frame.height);
+      // Eight horizontal gradient bands
+      const stops = [
+        HARBOR_PALETTE.sky_night, HARBOR_PALETTE.sky_night, HARBOR_PALETTE.sky_night,
+        HARBOR_PALETTE.sky_horizon, HARBOR_PALETTE.sky_horizon,
+        HARBOR_PALETTE.fog_blue, HARBOR_PALETTE.fog_blue, HARBOR_PALETTE.fog_pale,
+      ];
+      const bandH = Math.ceil(frame.height / stops.length);
+      for (let i = 0; i < stops.length; i++) {
+        ctx.fillStyle = stops[i];
+        ctx.fillRect(0, i * bandH, frame.width, bandH);
+      }
+      // Stars
+      ctx.fillStyle = HARBOR_PALETTE.moonlight;
+      for (const s of stars) {
+        ctx.globalAlpha = s.alpha;
+        ctx.fillRect(s.x, s.y, 1, 1);
+      }
+      ctx.globalAlpha = 1;
+      // Moon
+      const mx = Math.floor(frame.width * 0.18);
+      const my = Math.floor(frame.height * 0.16);
+      ctx.fillStyle = HARBOR_PALETTE.moonlight;
+      ctx.beginPath(); ctx.arc(mx, my, 14, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = HARBOR_PALETTE.lantern_glow;
+      ctx.globalAlpha = 0.6;
+      ctx.beginPath(); ctx.arc(mx - 3, my - 3, 11, 0, Math.PI * 2); ctx.fill();
+      ctx.globalAlpha = 1;
+    },
+  };
 }
 ```
 
-- [ ] **Step 2: Mount the sky in the scene**
+- [ ] **Step 3: Push it into the layer stack in `harbor-scene-client.tsx`**
 
-Replace the empty `<pixiContainer />` in `harbor-scene-client.tsx` with a `useEffect` that mounts a top-level Container containing the sky:
-
-```tsx
-// inside HarborSceneClient — add a stage ref and mount sky on size change
-const stageRef = useRef<import("pixi.js").Container | null>(null);
-useEffect(() => {
-  if (!stageRef.current || size.width === 0) return;
-  const stage = stageRef.current;
-  stage.removeChildren();
-  const sky = buildSkyLayer(size.width, size.height);
-  stage.addChild(sky);
-}, [size.width, size.height]);
-
-// In JSX: <pixiContainer ref={stageRef} />
+```ts
+import { buildSkyLayer } from "./layers/sky-layer";
+// ...
+const layers: DrawableLayer[] = [buildSkyLayer()];
 ```
 
-(Import `buildSkyLayer` at the top.)
-
-- [ ] **Step 3: Verify in browser**
+- [ ] **Step 4: Verify in browser**
 
 ```bash
 npm run dev
@@ -1728,119 +1834,85 @@ npm run dev
 
 Open `/lighthouse/` — confirm a starry night gradient renders with a moon top-left.
 
-- [ ] **Step 4: Commit**
+- [ ] **Step 5: Commit**
 
 ```bash
-git add src/app/lighthouse/layers/sky-layer.ts src/app/lighthouse/sprites/sky-sprite.ts src/app/lighthouse/harbor-scene-client.tsx
-git commit -m "feat(lighthouse): sky layer with gradient bands, stars, moon"
+git add src/app/lighthouse/layers/sky-layer.ts \
+        src/app/lighthouse/systems/rng.ts \
+        src/app/lighthouse/harbor-scene-client.tsx
+git commit -m "feat(lighthouse): sky layer (gradient + stars + moon)"
 ```
 
-### Task 2.3: Water layer — TilingSprite + 3-layer wave shader
+### Task 2.3: Water layer — 3-frequency scanline waves
 
-**Files:**
-- Create: `src/app/lighthouse/layers/water-layer.ts`
-- Create: `src/app/lighthouse/sprites/water-tile.ts`
+**Files:** `src/app/lighthouse/layers/water-layer.ts`
 
-- [ ] **Step 1: Build the water layer**
-
-```ts
-// src/app/lighthouse/sprites/water-tile.ts
-import { Graphics } from "pixi.js";
-import { HARBOR_PALETTE, hexToInt } from "../systems/palette";
-
-export function buildWaterTextureSource(): Graphics {
-  // 64x32 base water diamond, two-tone diagonal stripes for tiling
-  const g = new Graphics();
-  g.poly([0, 16, 32, 0, 64, 16, 32, 32]).fill({ color: hexToInt(HARBOR_PALETTE.deep_sea_1) });
-  g.moveTo(8, 16).lineTo(32, 4).stroke({ color: hexToInt(HARBOR_PALETTE.deep_sea_2), width: 1 });
-  g.moveTo(56, 16).lineTo(32, 28).stroke({ color: hexToInt(HARBOR_PALETTE.shallow_teal), width: 1, alpha: 0.5 });
-  return g;
-}
-```
+- [ ] **Step 1: Implement**
 
 ```ts
 // src/app/lighthouse/layers/water-layer.ts
-import { Container, Graphics, Ticker } from "pixi.js";
-import { HARBOR_PALETTE, hexToInt } from "../systems/palette";
+import { HARBOR_PALETTE } from "../systems/palette";
+import type { DrawableLayer, FrameState } from "../systems/scene-render";
 
-export interface WaterLayer {
-  container: Container;
-  setAmplitude(px: number): void;
-  setReducedMotion(reduced: boolean): void;
-  destroy(): void;
-}
-
-export function buildWaterLayer(width: number, height: number): WaterLayer {
-  const container = new Container();
-  container.label = "water-layer";
-  // Base flat fill so we never see canvas clear color while scrolling
-  const base = new Graphics();
-  base.rect(0, 0, width, height).fill({ color: hexToInt(HARBOR_PALETTE.deep_sea_2) });
-  container.addChild(base);
-
-  // Wave overlay drawn as horizontal scanlines that we re-draw per tick
-  const overlay = new Graphics();
-  container.addChild(overlay);
-
-  let amplitude = 1.5;
-  let reduced = false;
-  let t = 0;
-
-  const handler = (ticker: Ticker) => {
-    if (reduced) return;
-    t += ticker.deltaTime * 0.01;
-    overlay.clear();
-    const rows = 16;
-    const rowH = Math.ceil(height / rows);
-    for (let r = 0; r < rows; r++) {
-      const y = r * rowH;
-      const swell = Math.sin(t * 0.3 + r * 0.7) * 1.5 * amplitude;
-      const chop  = Math.sin(t * 1.4 + r * 1.1) * 0.6 * amplitude;
-      const ripple = Math.sin(t * 3.2 + r * 2.3) * 0.3 * amplitude;
-      const dy = swell + chop + ripple;
-      const tint = r > rows * 0.6 ? HARBOR_PALETTE.deep_sea_1 : HARBOR_PALETTE.deep_sea_2;
-      overlay.rect(0, y + dy, width, rowH).fill({ color: hexToInt(tint), alpha: 0.55 });
-    }
-  };
-  Ticker.shared.add(handler);
-
+export function buildWaterLayer(): DrawableLayer {
   return {
-    container,
-    setAmplitude(px) { amplitude = px; },
-    setReducedMotion(r) { reduced = r; if (r) overlay.clear(); },
-    destroy() { Ticker.shared.remove(handler); container.destroy({ children: true }); },
+    draw(ctx, frame: FrameState) {
+      // Base wash (covers anything the sky band did not paint)
+      ctx.fillStyle = HARBOR_PALETTE.deep_sea_2;
+      ctx.fillRect(0, Math.floor(frame.height * 0.45), frame.width, frame.height);
+
+      const amp = frame.scene.sea.amplitudePx;
+      const rows = 16;
+      const rowH = Math.ceil(frame.height * 0.55 / rows);
+      const y0 = Math.floor(frame.height * 0.45);
+      const t = frame.reducedMotion ? 0 : frame.t;
+      for (let r = 0; r < rows; r++) {
+        const y = y0 + r * rowH;
+        const swell = Math.sin(t * 0.3 + r * 0.7) * 1.5 * amp;
+        const chop = Math.sin(t * 1.4 + r * 1.1) * 0.6 * amp;
+        const ripple = Math.sin(t * 3.2 + r * 2.3) * 0.3 * amp;
+        const dy = frame.reducedMotion ? 0 : Math.round(swell + chop + ripple);
+        const tint = r > rows * 0.6 ? HARBOR_PALETTE.deep_sea_1 : HARBOR_PALETTE.deep_sea_2;
+        ctx.fillStyle = tint;
+        ctx.globalAlpha = 0.55;
+        ctx.fillRect(0, y + dy, frame.width, rowH);
+      }
+      ctx.globalAlpha = 1;
+
+      // Foam intensity at "shoreline" (a horizontal band) — uses amplitude even when motion is reduced
+      const foamY = y0 - 1;
+      ctx.fillStyle = HARBOR_PALETTE.foam_white;
+      ctx.globalAlpha = Math.min(0.4, 0.08 + amp * 0.05);
+      ctx.fillRect(0, foamY, frame.width, 1);
+      ctx.globalAlpha = 1;
+    },
   };
 }
 ```
 
-(Note: this is the **chunked-scanline** approximation. If FPS drops below 50 on iPhone 12-class hardware, replace `overlay` with a `TilingSprite` whose `tilePosition.x/y` advances per tick — that path is the §3 perf fallback recommended by the technical review and requires no algorithmic change to data binding.)
+(Note: scanline approximation. If FPS drops below 50 on iPhone 12-class hardware, switch to an offscreen-canvas pre-render of one tileable wave row and `ctx.drawImage` it with translation.)
 
-- [ ] **Step 2: Mount it after the sky**
-
-In `harbor-scene-client.tsx`'s effect:
+- [ ] **Step 2: Push into layer stack**
 
 ```ts
-const sky = buildSkyLayer(size.width, size.height);
-const water = buildWaterLayer(size.width, size.height);
-water.setAmplitude(scene.sea.amplitudePx);
-stage.addChild(sky);
-stage.addChild(water.container);
-const dispose = observeReducedMotion((r) => water.setReducedMotion(r));
-return () => { dispose(); water.destroy(); };
+import { buildWaterLayer } from "./layers/water-layer";
+// ...
+const layers: DrawableLayer[] = [buildSkyLayer(), buildWaterLayer()];
 ```
 
-- [ ] **Step 3: Verify in browser + reduced-motion devtools toggle**
+- [ ] **Step 3: Verify in browser + reduced-motion toggle**
 
-Open Chrome devtools → Rendering → Emulate CSS media feature `prefers-reduced-motion: reduce` → confirm waves freeze. Re-enable → waves resume.
+DevTools → Rendering → Emulate CSS media feature `prefers-reduced-motion: reduce` → confirm waves freeze with foam still visible. Re-enable → waves resume.
 
 - [ ] **Step 4: Commit**
 
 ```bash
-git add src/app/lighthouse/layers/water-layer.ts src/app/lighthouse/sprites/water-tile.ts src/app/lighthouse/harbor-scene-client.tsx
-git commit -m "feat(lighthouse): water layer with 3-frequency waves, reduced-motion gate"
+git add src/app/lighthouse/layers/water-layer.ts \
+        src/app/lighthouse/harbor-scene-client.tsx
+git commit -m "feat(lighthouse): water layer with 3-frequency waves + foam"
 ```
 
-### Task 2.4: Lamp/window light layer (always-on atmosphere)
+### Task 2.4: Lamp/window light layer (atmosphere)
 
 **Files:** `src/app/lighthouse/layers/lamp-layer.ts`
 
@@ -1848,73 +1920,74 @@ git commit -m "feat(lighthouse): water layer with 3-frequency waves, reduced-mot
 
 ```ts
 // src/app/lighthouse/layers/lamp-layer.ts
-import { Container, Graphics, Ticker } from "pixi.js";
-import { HARBOR_PALETTE, hexToInt } from "../systems/palette";
+import { HARBOR_PALETTE } from "../systems/palette";
+import type { DrawableLayer, FrameState } from "../systems/scene-render";
 
-export interface Lamp { x: number; y: number; warm?: boolean; phase: number; }
+export interface Lamp { x: number; y: number; warm: boolean; phase: number; }
 
-export function buildLampLayer(lamps: Lamp[]): { container: Container; setReducedMotion(r: boolean): void; destroy(): void } {
-  const container = new Container();
-  container.label = "lamp-layer";
-  const g = new Graphics();
-  container.addChild(g);
-  let reduced = false;
-  let t = 0;
-  const handler = (ticker: Ticker) => {
-    if (reduced) return;
-    t += ticker.deltaTime * 0.03;
-    g.clear();
-    for (const l of lamps) {
-      const flicker = 0.85 + 0.15 * Math.sin(t * 4 + l.phase);
-      const color = hexToInt(l.warm ? HARBOR_PALETTE.lantern_warm : HARBOR_PALETTE.lantern_cold);
-      g.circle(l.x, l.y, 1).fill({ color });
-      g.circle(l.x, l.y, 6).fill({ color, alpha: 0.18 * flicker });
-    }
-  };
-  Ticker.shared.add(handler);
+export interface LampLayerAPI extends DrawableLayer {
+  setLamps(lamps: Lamp[]): void;
+}
+
+export function buildLampLayer(): LampLayerAPI {
+  let lamps: Lamp[] = [];
   return {
-    container,
-    setReducedMotion(r) { reduced = r; if (r) { g.clear(); for (const l of lamps) { const c = hexToInt(l.warm ? HARBOR_PALETTE.lantern_warm : HARBOR_PALETTE.lantern_cold); g.circle(l.x, l.y, 1).fill({ color: c }); g.circle(l.x, l.y, 5).fill({ color: c, alpha: 0.15 }); } } },
-    destroy() { Ticker.shared.remove(handler); container.destroy({ children: true }); },
+    draw(ctx, frame: FrameState) {
+      const t = frame.reducedMotion ? 0 : frame.t;
+      for (const l of lamps) {
+        const flicker = frame.reducedMotion ? 1 : 0.85 + 0.15 * Math.sin(t * 4 + l.phase);
+        const color = l.warm ? HARBOR_PALETTE.lantern_warm : HARBOR_PALETTE.lantern_cold;
+        // Halo
+        ctx.fillStyle = color;
+        ctx.globalAlpha = 0.18 * flicker;
+        ctx.beginPath(); ctx.arc(l.x, l.y, 6, 0, Math.PI * 2); ctx.fill();
+        // Hot pixel
+        ctx.globalAlpha = 1;
+        ctx.fillRect(l.x - 1, l.y - 1, 2, 2);
+      }
+      ctx.globalAlpha = 1;
+    },
+    setLamps(next) { lamps = next; },
   };
 }
 ```
 
-- [ ] **Step 2: Mount with placeholder lamp positions** (real positions land in PR3 with harbor sprites)
+- [ ] **Step 2: Push into layer stack with empty lamp set** (real positions land in PR4 with harbor sprites)
 
 ```ts
-const lamps = buildLampLayer([]); // empty in PR2; PR3 populates
-stage.addChild(lamps.container);
+import { buildLampLayer } from "./layers/lamp-layer";
+const lampLayer = buildLampLayer();
+const layers: DrawableLayer[] = [buildSkyLayer(), buildWaterLayer(), lampLayer];
 ```
 
 - [ ] **Step 3: Commit**
 
 ```bash
-git add src/app/lighthouse/layers/lamp-layer.ts src/app/lighthouse/harbor-scene-client.tsx
-git commit -m "feat(lighthouse): lamp/light layer scaffold (atmosphere)"
+git add src/app/lighthouse/layers/lamp-layer.ts \
+        src/app/lighthouse/harbor-scene-client.tsx
+git commit -m "feat(lighthouse): lamp layer scaffold (atmosphere)"
 ```
 
 ### Task 2.5: Auto-drift parallax breath
 
-**Files:** modify `harbor-scene-client.tsx`
+**Files:** modify `src/app/lighthouse/harbor-scene-client.tsx`
 
-- [ ] **Step 1: Add a per-frame stage offset**
+- [ ] **Step 1: Wrap the layer pass in a translated context**
+
+In the RAF tick, after `ctx.scale(frame.dpr, frame.dpr)` and the background fill, add:
 
 ```ts
-const breathHandler = (ticker: import("pixi.js").Ticker) => {
-  if (reducedRef.current) return;
-  const t = performance.now() * 0.00005;
-  stage.x = Math.sin(t * 1.0) * 8;
-  stage.y = Math.cos(t * 0.8) * 4;
-};
-Ticker.shared.add(breathHandler);
+const driftX = frame.reducedMotion ? 0 : Math.sin(frame.t * 0.05) * 8;
+const driftY = frame.reducedMotion ? 0 : Math.cos(frame.t * 0.04) * 4;
+ctx.translate(driftX, driftY);
+for (const layer of layers) layer.draw(ctx, frame);
 ```
 
-(Use `reducedRef = useRef(false)` and update it from the same `observeReducedMotion` callback.)
+Wrap the whole layer loop between `ctx.save()` / `ctx.restore()` so subsequent frames are not cumulative.
 
 - [ ] **Step 2: Verify in browser**
 
-Confirm the scene drifts gently; reduced-motion mode locks position.
+Confirm the scene drifts gently (~3 minute cycle period); reduced-motion locks position.
 
 - [ ] **Step 3: Commit**
 
@@ -1925,7 +1998,7 @@ git commit -m "feat(lighthouse): auto-drift parallax breath (reduced-motion safe
 
 ### Task 2.6: Open PR2
 
-PR title: `feat(lighthouse): isometric harbor — Phase 2 sky/water/lamps`. Test plan: visual checks above + Lighthouse perf score not regressing more than 3 points on `/`. Confirm the bundle delta on `/lighthouse/` matches the 290–325 KB gz estimate (use `npm run build` output).
+PR title: `feat(lighthouse): isometric harbor — Phase 2 canvas shell + sky/water/lamps`. Test plan: visual checks above + Lighthouse perf score on `/lighthouse/` not regressing other routes' perf. Bundle delta on `/lighthouse/` ≈ +25 KB gz (GSAP only — Pixi removed via Fork A).
 
 ---
 
@@ -1933,7 +2006,7 @@ PR title: `feat(lighthouse): isometric harbor — Phase 2 sky/water/lamps`. Test
 
 Goal: the hero island lighthouse with volumetric beam + boat factories for all four styles, plus motion timelines (decoupled lantern pulse vs. beam sweep).
 
-### Task 3.1: Lighthouse sprite — tower + lantern + beam
+### Task 3.1: Lighthouse sprite — tower + lantern + beam (Canvas 2D draw fn)
 
 **Files:**
 - Create: `src/app/lighthouse/sprites/lighthouse-sprite.ts`
@@ -1959,103 +2032,118 @@ describe("lighthouse geometry", () => {
 });
 ```
 
-- [ ] **Step 2: Implement the sprite factory**
+- [ ] **Step 2: Implement the draw function**
 
 ```ts
 // src/app/lighthouse/sprites/lighthouse-sprite.ts
-import { Container, Graphics } from "pixi.js";
-import { HARBOR_PALETTE, hexToInt } from "../systems/palette";
+import { HARBOR_PALETTE } from "../systems/palette";
 
 export const LIGHTHOUSE_GEOM = {
   base:    { w: 24, h: 12 },
   shaft:   { w: 18, h: 32 },
   gallery: { w: 22, h: 4  },
   lantern: { w: 16, h: 18 },
-  cap:     { w: 18, h: 30 }, // hex roof + weathervane
+  cap:     { w: 18, h: 30 },
 };
 
-export interface LighthouseSpriteAPI {
-  container: Container;
-  beamContainer: Container;
-  lanternHalo: Graphics;
-  setBeamColor(hex: string): void;
+export interface LighthouseDrawState {
+  beamRotationRad: number;
+  beamColorHex: string;
+  beamAlpha: number;
+  lanternAlpha: number;
 }
 
-export function buildLighthouseSprite(): LighthouseSpriteAPI {
-  const c = new Container();
-  c.label = "lighthouse";
+const BEAM_LEN = 200;
+const BEAM_HALF_SPREAD = 50;
+
+export function drawLighthouse(
+  ctx: CanvasRenderingContext2D,
+  ax: number,
+  ay: number, // anchor: waterline center
+  s: LighthouseDrawState,
+): void {
+  // Coordinates derived bottom-up so cap height extends UP from anchor
+  const baseTop = ay - LIGHTHOUSE_GEOM.base.h;
+  const shaftTop = baseTop - LIGHTHOUSE_GEOM.shaft.h;
+  const galleryTop = shaftTop - LIGHTHOUSE_GEOM.gallery.h;
+  const lanternTop = galleryTop - LIGHTHOUSE_GEOM.lantern.h;
+  const capTop = lanternTop - 4; // roof rises 4 px above lantern
 
   // Base
-  const base = new Graphics();
-  base.rect(-12, -12, 24, 12).fill({ color: hexToInt(HARBOR_PALETTE.stone_dark) });
-  base.rect(-12, -12, 24, 4).fill({ color: hexToInt(HARBOR_PALETTE.stone_mid) });
-  c.addChild(base);
+  ctx.fillStyle = HARBOR_PALETTE.stone_dark;
+  ctx.fillRect(ax - 12, baseTop, 24, LIGHTHOUSE_GEOM.base.h);
+  ctx.fillStyle = HARBOR_PALETTE.stone_mid;
+  ctx.fillRect(ax - 12, baseTop, 24, 4);
 
   // Shaft
-  const shaftY = -12 - 32;
-  const shaft = new Graphics();
-  shaft.rect(-9, shaftY, 18, 32).fill({ color: hexToInt(HARBOR_PALETTE.stone_mid) });
-  // course lines
-  for (let y = shaftY + 6; y < shaftY + 32; y += 6) {
-    shaft.moveTo(-9, y).lineTo(9, y).stroke({ color: hexToInt(HARBOR_PALETTE.stone_dark), width: 1 });
+  ctx.fillStyle = HARBOR_PALETTE.stone_mid;
+  ctx.fillRect(ax - 9, shaftTop, 18, LIGHTHOUSE_GEOM.shaft.h);
+  ctx.strokeStyle = HARBOR_PALETTE.stone_dark;
+  ctx.lineWidth = 1;
+  for (let y = shaftTop + 6; y < shaftTop + LIGHTHOUSE_GEOM.shaft.h; y += 6) {
+    ctx.beginPath(); ctx.moveTo(ax - 9, y); ctx.lineTo(ax + 9, y); ctx.stroke();
   }
-  // windows
-  shaft.rect(-1, shaftY + 8, 2, 3).fill({ color: hexToInt(HARBOR_PALETTE.lantern_warm) });
-  shaft.rect(-1, shaftY + 18, 2, 3).fill({ color: hexToInt(HARBOR_PALETTE.lantern_warm) });
-  c.addChild(shaft);
+  // Two lit windows
+  ctx.fillStyle = HARBOR_PALETTE.lantern_warm;
+  ctx.fillRect(ax - 1, shaftTop + 8, 2, 3);
+  ctx.fillRect(ax - 1, shaftTop + 18, 2, 3);
 
   // Gallery deck
-  const galleryY = shaftY - 4;
-  const gallery = new Graphics();
-  gallery.rect(-11, galleryY, 22, 4).fill({ color: hexToInt(HARBOR_PALETTE.iron_dark) });
-  c.addChild(gallery);
+  ctx.fillStyle = HARBOR_PALETTE.iron_dark;
+  ctx.fillRect(ax - 11, galleryTop, 22, LIGHTHOUSE_GEOM.gallery.h);
 
   // Lantern room
-  const lanternY = galleryY - 18;
-  const lantern = new Graphics();
-  lantern.rect(-8, lanternY, 16, 18).fill({ color: hexToInt(HARBOR_PALETTE.iron_dark) });
-  lantern.rect(-7, lanternY + 1, 14, 16).fill({ color: hexToInt(HARBOR_PALETTE.lantern_warm), alpha: 0.85 });
-  // 4 fresnel panes
+  ctx.fillStyle = HARBOR_PALETTE.iron_dark;
+  ctx.fillRect(ax - 8, lanternTop, 16, LIGHTHOUSE_GEOM.lantern.h);
+  ctx.globalAlpha = 0.85;
+  ctx.fillStyle = HARBOR_PALETTE.lantern_warm;
+  ctx.fillRect(ax - 7, lanternTop + 1, 14, 16);
+  ctx.globalAlpha = 1;
+  ctx.strokeStyle = HARBOR_PALETTE.iron_dark;
   for (let x = -7; x < 7; x += 4) {
-    lantern.moveTo(x + 2, lanternY + 1).lineTo(x + 2, lanternY + 17).stroke({ color: hexToInt(HARBOR_PALETTE.iron_dark), width: 1 });
+    ctx.beginPath();
+    ctx.moveTo(ax + x + 2, lanternTop + 1);
+    ctx.lineTo(ax + x + 2, lanternTop + 17);
+    ctx.stroke();
   }
-  c.addChild(lantern);
 
-  // Cap (hex roof simplified as triangle + weathervane)
-  const cap = new Graphics();
-  const capY = lanternY - 4;
-  cap.poly([-9, capY + 4, 0, capY - 4, 9, capY + 4]).fill({ color: hexToInt(HARBOR_PALETTE.stone_dark) });
-  cap.moveTo(0, capY - 4).lineTo(0, capY - 12).stroke({ color: hexToInt(HARBOR_PALETTE.iron_dark), width: 1 });
-  cap.moveTo(-3, capY - 10).lineTo(3, capY - 10).stroke({ color: hexToInt(HARBOR_PALETTE.iron_dark), width: 1 });
-  c.addChild(cap);
+  // Cap (triangle + weathervane)
+  ctx.fillStyle = HARBOR_PALETTE.stone_dark;
+  ctx.beginPath();
+  ctx.moveTo(ax - 9, capTop + 4);
+  ctx.lineTo(ax,     capTop - 4);
+  ctx.lineTo(ax + 9, capTop + 4);
+  ctx.closePath();
+  ctx.fill();
+  ctx.strokeStyle = HARBOR_PALETTE.iron_dark;
+  ctx.beginPath(); ctx.moveTo(ax, capTop - 4); ctx.lineTo(ax, capTop - 12); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(ax - 3, capTop - 10); ctx.lineTo(ax + 3, capTop - 10); ctx.stroke();
 
-  // Lantern halo
-  const lanternHalo = new Graphics();
-  lanternHalo.circle(0, lanternY + 9, 4).fill({ color: hexToInt(HARBOR_PALETTE.lantern_glow), alpha: 0.85 });
-  lanternHalo.circle(0, lanternY + 9, 8).fill({ color: hexToInt(HARBOR_PALETTE.lantern_warm), alpha: 0.35 });
-  c.addChild(lanternHalo);
+  // Beam — drawn rotated around lantern center
+  const lanternCx = ax;
+  const lanternCy = lanternTop + Math.floor(LIGHTHOUSE_GEOM.lantern.h / 2);
+  ctx.save();
+  ctx.translate(lanternCx, lanternCy);
+  ctx.rotate(s.beamRotationRad);
+  ctx.fillStyle = s.beamColorHex;
+  ctx.globalAlpha = s.beamAlpha;
+  ctx.beginPath();
+  ctx.moveTo(0, 0);
+  ctx.lineTo(BEAM_LEN, -BEAM_HALF_SPREAD);
+  ctx.lineTo(BEAM_LEN, BEAM_HALF_SPREAD);
+  ctx.closePath();
+  ctx.fill();
+  ctx.globalAlpha = 1;
+  ctx.restore();
 
-  // Beam container — child rotates; the beam itself is a triangle
-  const beamContainer = new Container();
-  beamContainer.label = "beam";
-  beamContainer.position.set(0, lanternY + 9);
-  const beam = new Graphics();
-  // 200 px long, 28 deg spread → at 200, half-width = 200 * tan(14deg) ≈ 50
-  beam.poly([0, 0, 200, -50, 200, 50]).fill({ color: hexToInt(HARBOR_PALETTE.lantern_warm), alpha: 0.55 });
-  beam.blendMode = "add";
-  beamContainer.addChild(beam);
-  c.addChild(beamContainer);
-
-  return {
-    container: c,
-    beamContainer,
-    lanternHalo,
-    setBeamColor(hex) {
-      // Re-tint the beam on PSI band change
-      beam.clear();
-      beam.poly([0, 0, 200, -50, 200, 50]).fill({ color: hexToInt(hex), alpha: 0.55 });
-    },
-  };
+  // Lantern halo (always upright; alpha tweened by GSAP)
+  ctx.fillStyle = HARBOR_PALETTE.lantern_glow;
+  ctx.globalAlpha = s.lanternAlpha;
+  ctx.beginPath(); ctx.arc(lanternCx, lanternCy, 4, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = HARBOR_PALETTE.lantern_warm;
+  ctx.globalAlpha = 0.35 * s.lanternAlpha;
+  ctx.beginPath(); ctx.arc(lanternCx, lanternCy, 8, 0, Math.PI * 2); ctx.fill();
+  ctx.globalAlpha = 1;
 }
 ```
 
@@ -2068,11 +2156,12 @@ npx vitest run src/app/lighthouse/sprites/lighthouse-sprite.test.ts
 - [ ] **Step 4: Commit**
 
 ```bash
-git add src/app/lighthouse/sprites/lighthouse-sprite.ts src/app/lighthouse/sprites/lighthouse-sprite.test.ts
-git commit -m "feat(lighthouse): lighthouse sprite (tower + lantern + beam)"
+git add src/app/lighthouse/sprites/lighthouse-sprite.ts \
+        src/app/lighthouse/sprites/lighthouse-sprite.test.ts
+git commit -m "feat(lighthouse): lighthouse draw fn (tower + lantern + beam)"
 ```
 
-### Task 3.2: Boat sprite factory (4 styles, S/L sizes)
+### Task 3.2: Boat sprite (4 styles, S/L sizes — Canvas 2D draw fn)
 
 **Files:**
 - Create: `src/app/lighthouse/sprites/boat-sprite.ts`
@@ -2101,12 +2190,11 @@ describe("boat dimensions", () => {
 });
 ```
 
-- [ ] **Step 2: Implement (with the four signature silhouettes)**
+- [ ] **Step 2: Implement the draw function**
 
 ```ts
 // src/app/lighthouse/sprites/boat-sprite.ts
-import { Container, Graphics } from "pixi.js";
-import { HARBOR_PALETTE, hexToInt } from "../systems/palette";
+import { HARBOR_PALETTE } from "../systems/palette";
 import type { BoatStyle } from "../systems/classification-to-boat";
 
 export const BOAT_DIMENSIONS: Record<BoatStyle, { S: { w: number; h: number }; L: { w: number; h: number } }> = {
@@ -2116,96 +2204,120 @@ export const BOAT_DIMENSIONS: Record<BoatStyle, { S: { w: number; h: number }; L
   junk:       { S: { w: 13, h: 18 }, L: { w: 20, h: 28 } },
 };
 
-export interface BoatSpriteAPI {
-  container: Container;
-  setPennant(hex: string): void;
-  setAura(hex: string | null): void;
+export interface BoatDrawProps {
+  style: BoatStyle;
+  size: "S" | "L";
+  pennantHex: string;
+  auraHex: string | null;
 }
 
-export function buildBoatSprite(style: BoatStyle, size: "S" | "L"): BoatSpriteAPI {
-  const c = new Container();
-  c.label = `boat-${style}-${size}`;
-  const dim = BOAT_DIMENSIONS[style][size];
+export function drawBoat(ctx: CanvasRenderingContext2D, ax: number, ay: number, p: BoatDrawProps): void {
+  const dim = BOAT_DIMENSIONS[p.style][p.size];
   const halfW = dim.w / 2;
+  // Convert local coords (0..dim.w, 0..dim.h) to canvas with anchor at hull base center
+  const lx = (x: number) => ax + x;
+  const ly = (y: number) => ay + (y - dim.h);
 
-  // Aura under hull
-  const aura = new Graphics();
-  c.addChild(aura);
+  // Aura
+  if (p.auraHex) {
+    ctx.fillStyle = p.auraHex;
+    ctx.globalAlpha = 0.22;
+    ctx.beginPath();
+    ctx.arc(ax, ay - 4, halfW + 4, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.globalAlpha = 1;
+  }
 
-  // Hull (isometric polygon — different per style)
-  const hull = new Graphics();
-  switch (style) {
+  // Hull (per-style polygon)
+  switch (p.style) {
     case "galleon":
-      hull.poly([-halfW, dim.h - 4, -halfW + 2, dim.h, halfW - 2, dim.h, halfW, dim.h - 4, halfW - 1, dim.h - 8, -halfW + 1, dim.h - 8])
-          .fill({ color: hexToInt(HARBOR_PALETTE.timber_warm) });
-      // stern castle
-      hull.rect(-halfW + 1, dim.h - 11, 5, 4).fill({ color: hexToInt(HARBOR_PALETTE.timber_dark) });
-      // stern lantern
-      hull.circle(-halfW + 3, dim.h - 12, 1).fill({ color: hexToInt(HARBOR_PALETTE.lantern_warm) });
+      ctx.fillStyle = HARBOR_PALETTE.timber_warm;
+      polyFill(ctx, [
+        lx(-halfW), ly(dim.h - 4), lx(-halfW + 2), ly(dim.h), lx(halfW - 2), ly(dim.h),
+        lx(halfW), ly(dim.h - 4), lx(halfW - 1), ly(dim.h - 8), lx(-halfW + 1), ly(dim.h - 8),
+      ]);
+      // Stern castle
+      ctx.fillStyle = HARBOR_PALETTE.timber_dark;
+      ctx.fillRect(lx(-halfW + 1), ly(dim.h - 11), 5, 4);
+      // Stern lantern
+      ctx.fillStyle = HARBOR_PALETTE.lantern_warm;
+      ctx.beginPath(); ctx.arc(lx(-halfW + 3), ly(dim.h - 12), 1, 0, Math.PI * 2); ctx.fill();
       break;
     case "brigantine":
-      hull.poly([-halfW + 1, dim.h - 3, -halfW + 2, dim.h, halfW - 2, dim.h, halfW, dim.h - 4, halfW - 1, dim.h - 7, -halfW, dim.h - 8])
-          .fill({ color: hexToInt(HARBOR_PALETTE.timber_mid) });
+      ctx.fillStyle = HARBOR_PALETTE.timber_mid;
+      polyFill(ctx, [
+        lx(-halfW + 1), ly(dim.h - 3), lx(-halfW + 2), ly(dim.h), lx(halfW - 2), ly(dim.h),
+        lx(halfW), ly(dim.h - 4), lx(halfW - 1), ly(dim.h - 7), lx(-halfW), ly(dim.h - 8),
+      ]);
       break;
     case "schooner":
-      hull.poly([-halfW, dim.h - 2, -halfW + 1, dim.h, halfW - 1, dim.h, halfW, dim.h - 3, halfW - 1, dim.h - 6, -halfW + 1, dim.h - 6])
-          .fill({ color: hexToInt(HARBOR_PALETTE.timber_mid) });
+      ctx.fillStyle = HARBOR_PALETTE.timber_mid;
+      polyFill(ctx, [
+        lx(-halfW), ly(dim.h - 2), lx(-halfW + 1), ly(dim.h), lx(halfW - 1), ly(dim.h),
+        lx(halfW), ly(dim.h - 3), lx(halfW - 1), ly(dim.h - 6), lx(-halfW + 1), ly(dim.h - 6),
+      ]);
       break;
     case "junk":
-      // Curved hull — both ends raised
-      hull.poly([-halfW, dim.h - 6, -halfW + 1, dim.h - 1, halfW - 1, dim.h - 1, halfW, dim.h - 6, halfW - 2, dim.h - 9, -halfW + 2, dim.h - 9])
-          .fill({ color: hexToInt(HARBOR_PALETTE.timber_dark) });
+      ctx.fillStyle = HARBOR_PALETTE.timber_dark;
+      polyFill(ctx, [
+        lx(-halfW), ly(dim.h - 6), lx(-halfW + 1), ly(dim.h - 1), lx(halfW - 1), ly(dim.h - 1),
+        lx(halfW), ly(dim.h - 6), lx(halfW - 2), ly(dim.h - 9), lx(-halfW + 2), ly(dim.h - 9),
+      ]);
       break;
   }
-  c.addChild(hull);
 
   // Masts + sails
-  const sails = new Graphics();
-  if (style === "galleon") {
+  ctx.strokeStyle = HARBOR_PALETTE.iron_dark;
+  ctx.lineWidth = 1;
+  if (p.style === "galleon") {
     for (const mx of [-4, 0, 4]) {
-      sails.moveTo(mx, dim.h - 8).lineTo(mx, 2).stroke({ color: hexToInt(HARBOR_PALETTE.iron_dark), width: 1 });
-      sails.rect(mx - 3, 4, 6, 10).fill({ color: hexToInt(HARBOR_PALETTE.foam_white), alpha: 0.85 });
+      strokeLine(ctx, lx(mx), ly(dim.h - 8), lx(mx), ly(2));
+      ctx.fillStyle = HARBOR_PALETTE.foam_white;
+      ctx.globalAlpha = 0.85;
+      ctx.fillRect(lx(mx - 3), ly(4), 6, 10);
+      ctx.globalAlpha = 1;
     }
-  } else if (style === "brigantine") {
-    sails.moveTo(-2, dim.h - 7).lineTo(-2, 2).stroke({ color: hexToInt(HARBOR_PALETTE.iron_dark), width: 1 });
-    sails.rect(-5, 4, 6, 10).fill({ color: hexToInt(HARBOR_PALETTE.foam_white), alpha: 0.85 });
-    sails.moveTo(3, dim.h - 7).lineTo(3, 4).stroke({ color: hexToInt(HARBOR_PALETTE.iron_dark), width: 1 });
-    sails.poly([3, 4, 7, 12, 3, 12]).fill({ color: hexToInt(HARBOR_PALETTE.foam_white), alpha: 0.85 });
-  } else if (style === "schooner") {
-    // Raked masts (slanted backward 8°)
+  } else if (p.style === "brigantine") {
+    strokeLine(ctx, lx(-2), ly(dim.h - 7), lx(-2), ly(2));
+    ctx.fillStyle = HARBOR_PALETTE.foam_white;
+    ctx.globalAlpha = 0.85;
+    ctx.fillRect(lx(-5), ly(4), 6, 10);
+    strokeLine(ctx, lx(3), ly(dim.h - 7), lx(3), ly(4));
+    polyFill(ctx, [lx(3), ly(4), lx(7), ly(12), lx(3), ly(12)]);
+    ctx.globalAlpha = 1;
+  } else if (p.style === "schooner") {
     const slant = 1;
-    sails.moveTo(-1 - slant, dim.h - 6).lineTo(-1, 2).stroke({ color: hexToInt(HARBOR_PALETTE.iron_dark), width: 1 });
-    sails.poly([-1, 2, -5, 12, -1, 12]).fill({ color: hexToInt(HARBOR_PALETTE.sail_teal), alpha: 0.9 });
-    sails.moveTo(3 - slant, dim.h - 6).lineTo(3, 4).stroke({ color: hexToInt(HARBOR_PALETTE.iron_dark), width: 1 });
-    sails.poly([3, 4, 7, 12, 3, 12]).fill({ color: hexToInt(HARBOR_PALETTE.sail_teal), alpha: 0.9 });
-  } else if (style === "junk") {
-    sails.moveTo(0, dim.h - 9).lineTo(0, 1).stroke({ color: hexToInt(HARBOR_PALETTE.iron_dark), width: 1 });
-    // Battened sail with 3 ribs
-    sails.rect(-5, 3, 10, 12).fill({ color: hexToInt(HARBOR_PALETTE.sail_red), alpha: 0.9 });
-    for (let y = 6; y < 14; y += 3) {
-      sails.moveTo(-5, y).lineTo(5, y).stroke({ color: hexToInt(HARBOR_PALETTE.iron_dark), width: 1 });
-    }
+    strokeLine(ctx, lx(-1 - slant), ly(dim.h - 6), lx(-1), ly(2));
+    ctx.fillStyle = HARBOR_PALETTE.sail_teal;
+    ctx.globalAlpha = 0.9;
+    polyFill(ctx, [lx(-1), ly(2), lx(-5), ly(12), lx(-1), ly(12)]);
+    strokeLine(ctx, lx(3 - slant), ly(dim.h - 6), lx(3), ly(4));
+    polyFill(ctx, [lx(3), ly(4), lx(7), ly(12), lx(3), ly(12)]);
+    ctx.globalAlpha = 1;
+  } else if (p.style === "junk") {
+    strokeLine(ctx, lx(0), ly(dim.h - 9), lx(0), ly(1));
+    ctx.fillStyle = HARBOR_PALETTE.sail_red;
+    ctx.globalAlpha = 0.9;
+    ctx.fillRect(lx(-5), ly(3), 10, 12);
+    ctx.globalAlpha = 1;
+    for (let y = 6; y < 14; y += 3) strokeLine(ctx, lx(-5), ly(y), lx(5), ly(y));
   }
-  c.addChild(sails);
 
-  // Pennant — colored 2x3 flag at masthead, replaceable by setPennant
-  const pennant = new Graphics();
-  pennant.rect(2, 0, 3, 2).fill({ color: hexToInt(HARBOR_PALETTE.fog_pale) });
-  c.addChild(pennant);
+  // Pennant
+  ctx.fillStyle = p.pennantHex;
+  ctx.fillRect(lx(2), ly(0), 3, 2);
+}
 
-  return {
-    container: c,
-    setPennant(hex) {
-      pennant.clear();
-      pennant.rect(2, 0, 3, 2).fill({ color: hexToInt(hex) });
-    },
-    setAura(hex) {
-      aura.clear();
-      if (hex !== null) {
-        aura.circle(0, dim.h - 4, halfW + 4).fill({ color: hexToInt(hex), alpha: 0.22 });
-      }
-    },
-  };
+function polyFill(ctx: CanvasRenderingContext2D, pts: number[]): void {
+  ctx.beginPath();
+  ctx.moveTo(pts[0], pts[1]);
+  for (let i = 2; i < pts.length; i += 2) ctx.lineTo(pts[i], pts[i + 1]);
+  ctx.closePath();
+  ctx.fill();
+}
+
+function strokeLine(ctx: CanvasRenderingContext2D, x1: number, y1: number, x2: number, y2: number): void {
+  ctx.beginPath(); ctx.moveTo(x1, y1); ctx.lineTo(x2, y2); ctx.stroke();
 }
 ```
 
@@ -2218,11 +2330,12 @@ npx vitest run src/app/lighthouse/sprites/boat-sprite.test.ts
 - [ ] **Step 4: Commit**
 
 ```bash
-git add src/app/lighthouse/sprites/boat-sprite.ts src/app/lighthouse/sprites/boat-sprite.test.ts
-git commit -m "feat(lighthouse): boat sprite factory — 4 styles, 2 sizes, pennant + aura"
+git add src/app/lighthouse/sprites/boat-sprite.ts \
+        src/app/lighthouse/sprites/boat-sprite.test.ts
+git commit -m "feat(lighthouse): boat draw fn — 4 styles, 2 sizes, pennant + aura"
 ```
 
-### Task 3.3: Boat layer + moored bob
+### Task 3.3: Boat layer (state map + per-frame draw with idle bob)
 
 **Files:** `src/app/lighthouse/layers/boat-layer.ts`
 
@@ -2230,70 +2343,56 @@ git commit -m "feat(lighthouse): boat sprite factory — 4 styles, 2 sizes, penn
 
 ```ts
 // src/app/lighthouse/layers/boat-layer.ts
-import { Container, Ticker } from "pixi.js";
-import { buildBoatSprite } from "../sprites/boat-sprite";
+import type { DrawableLayer, FrameState } from "../systems/scene-render";
+import { drawBoat } from "../sprites/boat-sprite";
 import type { SceneBoat } from "../systems/scene-data";
 
-export interface BoatLayerAPI {
-  container: Container;
+interface BoatPlacement { boat: SceneBoat; baseX: number; baseY: number; phase: number; }
+
+export interface BoatLayerAPI extends DrawableLayer {
   upsertBoat(boat: SceneBoat, screen: { x: number; y: number }): void;
   removeBoat(coinId: string): void;
-  setReducedMotion(reduced: boolean): void;
-  destroy(): void;
+  pruneExcept(ids: Set<string>): void;
+  positionFor(coinId: string): { x: number; y: number } | null;
 }
 
 export function buildBoatLayer(): BoatLayerAPI {
-  const container = new Container();
-  container.label = "boat-layer";
-  container.sortableChildren = true;
-
-  const map = new Map<string, { sprite: ReturnType<typeof buildBoatSprite>; baseY: number; phase: number }>();
-  let reduced = false;
-  let t = 0;
-
-  const handler = (ticker: Ticker) => {
-    if (reduced) return;
-    t += ticker.deltaTime * 0.05;
-    for (const entry of map.values()) {
-      entry.sprite.container.y = entry.baseY + Math.sin(t + entry.phase) * 1;
-    }
-  };
-  Ticker.shared.add(handler);
+  const map = new Map<string, BoatPlacement>();
 
   return {
-    container,
     upsertBoat(boat, screen) {
       const existing = map.get(boat.coinId);
       if (existing) {
-        existing.sprite.setPennant(boat.pennantHex);
-        existing.sprite.container.x = screen.x;
+        existing.boat = boat;
+        existing.baseX = screen.x;
         existing.baseY = screen.y;
         return;
       }
-      const sprite = buildBoatSprite(boat.style, boat.hullSize);
-      sprite.container.x = screen.x;
-      sprite.container.y = screen.y;
-      sprite.container.zIndex = screen.y;
-      sprite.setPennant(boat.pennantHex);
-      container.addChild(sprite.container);
-      map.set(boat.coinId, { sprite, baseY: screen.y, phase: hashPhase(boat.coinId) });
+      map.set(boat.coinId, { boat, baseX: screen.x, baseY: screen.y, phase: hashPhase(boat.coinId) });
     },
     removeBoat(coinId) {
-      const e = map.get(coinId);
-      if (!e) return;
-      container.removeChild(e.sprite.container);
-      e.sprite.container.destroy({ children: true });
       map.delete(coinId);
     },
-    setReducedMotion(r) {
-      reduced = r;
-      if (r) for (const e of map.values()) e.sprite.container.y = e.baseY;
+    pruneExcept(ids) {
+      for (const id of map.keys()) if (!ids.has(id)) map.delete(id);
     },
-    destroy() {
-      Ticker.shared.remove(handler);
-      for (const e of map.values()) e.sprite.container.destroy({ children: true });
-      map.clear();
-      container.destroy();
+    positionFor(coinId) {
+      const e = map.get(coinId);
+      return e ? { x: e.baseX, y: e.baseY } : null;
+    },
+    draw(ctx, frame: FrameState) {
+      const t = frame.reducedMotion ? 0 : frame.t * 1.0;
+      // Painter's order — sort by Y so boats further south render on top
+      const sorted = Array.from(map.values()).sort((a, b) => a.baseY - b.baseY);
+      for (const e of sorted) {
+        const dy = frame.reducedMotion ? 0 : Math.round(Math.sin(t + e.phase));
+        drawBoat(ctx, Math.round(e.baseX), Math.round(e.baseY + dy), {
+          style: e.boat.style,
+          size: e.boat.hullSize,
+          pennantHex: e.boat.pennantHex,
+          auraHex: null,
+        });
+      }
     },
   };
 }
@@ -2309,24 +2408,29 @@ function hashPhase(id: string): number {
 
 ```bash
 git add src/app/lighthouse/layers/boat-layer.ts
-git commit -m "feat(lighthouse): boat layer with moored bob and id-stable diff"
+git commit -m "feat(lighthouse): boat layer with id-stable bob and Y-sort"
 ```
 
-### Task 3.4: GSAP timelines — beam sweep + lantern pulse
+### Task 3.4: GSAP timelines — beam sweep + decoupled lantern pulse + lighthouse layer
 
-**Files:** `src/app/lighthouse/systems/animation.ts`
+**Files:**
+- Create: `src/app/lighthouse/systems/animation.ts`
+- Create: `src/app/lighthouse/layers/lighthouse-layer.ts`
 
-- [ ] **Step 1: Implement**
+- [ ] **Step 1: Animation helpers (renderer-agnostic — tween value objects)**
 
 ```ts
 // src/app/lighthouse/systems/animation.ts
 import gsap from "gsap";
-import type { Container, Graphics } from "pixi.js";
 import type { TimelineRegistry } from "./timeline-registry";
 
-export function startBeamSweep(beam: Container, sweepSeconds: number, registry: TimelineRegistry) {
-  const tween = gsap.to(beam, {
-    rotation: Math.PI * 2,
+export interface BeamState { rotationRad: number; alpha: number; colorHex: string; }
+export interface LanternState { alpha: number; }
+
+export function startBeamSweep(state: BeamState, sweepSeconds: number, registry: TimelineRegistry): gsap.core.Tween {
+  state.rotationRad = 0;
+  const tween = gsap.to(state, {
+    rotationRad: Math.PI * 2,
     duration: sweepSeconds,
     ease: "none",
     repeat: -1,
@@ -2335,8 +2439,9 @@ export function startBeamSweep(beam: Container, sweepSeconds: number, registry: 
   return tween;
 }
 
-export function startLanternPulse(halo: Graphics, registry: TimelineRegistry) {
-  const tween = gsap.to(halo, {
+export function startLanternPulse(state: LanternState, registry: TimelineRegistry): gsap.core.Tween {
+  state.alpha = 0.85;
+  const tween = gsap.to(state, {
     alpha: 0.7,
     duration: 0.42,
     ease: "sine.inOut",
@@ -2347,54 +2452,105 @@ export function startLanternPulse(halo: Graphics, registry: TimelineRegistry) {
   return tween;
 }
 
-export function setBeamSweepDuration(tween: gsap.core.Tween, seconds: number) {
+export function setBeamSweepDuration(tween: gsap.core.Tween, seconds: number): void {
   const progress = tween.progress();
   tween.duration(seconds);
   tween.progress(progress);
 }
 ```
 
-- [ ] **Step 2: Wire the lighthouse + animation in the scene**
+- [ ] **Step 2: Lighthouse layer — reads tweened state, draws each frame**
 
-In `harbor-scene-client.tsx` mount effect:
+```ts
+// src/app/lighthouse/layers/lighthouse-layer.ts
+import { drawLighthouse } from "../sprites/lighthouse-sprite";
+import type { DrawableLayer, FrameState } from "../systems/scene-render";
+
+export interface LighthouseLayerAPI extends DrawableLayer {
+  setAnchor(x: number, y: number): void;
+  anchor(): { x: number; y: number };
+}
+
+export function buildLighthouseLayer(): LighthouseLayerAPI {
+  let ax = 0;
+  let ay = 0;
+  return {
+    setAnchor(x, y) { ax = x; ay = y; },
+    anchor() { return { x: ax, y: ay }; },
+    draw(ctx, frame: FrameState) {
+      drawLighthouse(ctx, ax, ay, {
+        beamRotationRad: frame.beam.rotationRad,
+        beamColorHex: frame.beam.colorHex,
+        beamAlpha: frame.beam.alpha,
+        lanternAlpha: frame.lantern.alpha,
+      });
+    },
+  };
+}
+```
+
+- [ ] **Step 3: Wire into the scene**
+
+In `harbor-scene-client.tsx`:
 
 ```ts
 import gsap from "gsap";
 import { createTimelineRegistry } from "./systems/timeline-registry";
-import { buildLighthouseSprite } from "./sprites/lighthouse-sprite";
 import { startBeamSweep, startLanternPulse, setBeamSweepDuration } from "./systems/animation";
-// ...
-const registry = createTimelineRegistry(gsap);
-const lh = buildLighthouseSprite();
-lh.setBeamColor(scene.beam.color);
-lh.container.x = Math.round(size.width * 0.45);
-lh.container.y = Math.round(size.height * 0.65);
-stage.addChild(lh.container);
-const beamTween = startBeamSweep(lh.beamContainer, scene.beam.sweepSeconds, registry);
-startLanternPulse(lh.lanternHalo, registry);
+import { buildLighthouseLayer } from "./layers/lighthouse-layer";
 
-const dispose = observeReducedMotion((r) => {
-  if (r) registry.pause(); else registry.resume();
-  reducedRef.current = r;
+// Inside the useEffect:
+const registry = createTimelineRegistry(gsap);
+const lighthouseLayer = buildLighthouseLayer();
+lighthouseLayer.setAnchor(Math.round(frame.width * 0.45), Math.round(frame.height * 0.65));
+const boatLayer = buildBoatLayer();
+
+frame.beam.colorHex = sceneRef.current.beam.color;
+const beamTween = startBeamSweep(frame.beam, sceneRef.current.beam.sweepSeconds, registry);
+startLanternPulse(frame.lantern, registry);
+
+const layers: DrawableLayer[] = [
+  buildSkyLayer(),
+  buildWaterLayer(),
+  lampLayer,
+  boatLayer,
+  lighthouseLayer,
+];
+
+// observeReducedMotion: also pauses GSAP parent timeline
+const disposeRm = observeReducedMotion((m) => {
+  frame.reducedMotion = m;
+  if (m) registry.pause(); else registry.resume();
 });
 
-return () => { dispose(); registry.destroy(); /* destroy water, lamps, etc. */ };
+// Cleanup
+return () => {
+  cancelAnimationFrame(rafId);
+  ro.disconnect();
+  disposeRm();
+  registry.destroy();
+  for (const layer of layers) layer.dispose?.();
+};
 ```
 
-- [ ] **Step 3: Verify in browser**
+(Anchor needs to update on resize — re-set inside the `resize` callback.)
 
-Open `/lighthouse/` — beam rotates, lantern pulses on its own slower rhythm. Toggle reduced-motion → both pause.
+- [ ] **Step 4: Verify in browser**
 
-- [ ] **Step 4: Commit**
+Open `/lighthouse/` — beam rotates around the lantern (volumetric triangle), lantern halo pulses on its own slower rhythm. Toggle reduced-motion → both freeze.
+
+- [ ] **Step 5: Commit**
 
 ```bash
-git add src/app/lighthouse/systems/animation.ts src/app/lighthouse/harbor-scene-client.tsx
-git commit -m "feat(lighthouse): GSAP beam sweep + lantern pulse via parent timeline"
+git add src/app/lighthouse/systems/animation.ts \
+        src/app/lighthouse/layers/lighthouse-layer.ts \
+        src/app/lighthouse/harbor-scene-client.tsx
+git commit -m "feat(lighthouse): GSAP beam sweep + decoupled lantern pulse"
 ```
 
 ### Task 3.5: Open PR3
 
-PR title: `feat(lighthouse): isometric harbor — Phase 3 lighthouse + boats`. Test plan: lighthouse renders at center-ish, beam rotates, lantern pulses, boats can be programmatically inserted via `upsertBoat()` (no harbours yet).
+PR title: `feat(lighthouse): isometric harbor — Phase 3 lighthouse + boats`. Test plan: lighthouse renders at off-center anchor, beam rotates and changes color with PSI band, lantern pulses on its own rhythm, boats render at programmatically inserted positions (harbours follow in PR4).
 
 ---
 
@@ -2402,7 +2558,7 @@ PR title: `feat(lighthouse): isometric harbor — Phase 3 lighthouse + boats`. T
 
 Goal: real harbours from real chains data, full diff-and-mutate sync, patrol routes for sailing boats. **This is where the page becomes a dashboard.**
 
-### Task 4.1: Harbor island sprite
+### Task 4.1: Harbor island draw fn
 
 **Files:** `src/app/lighthouse/sprites/harbor-island-sprite.ts`
 
@@ -2410,60 +2566,89 @@ Goal: real harbours from real chains data, full diff-and-mutate sync, patrol rou
 
 ```ts
 // src/app/lighthouse/sprites/harbor-island-sprite.ts
-import { Container, Graphics } from "pixi.js";
-import { HARBOR_PALETTE, hexToInt } from "../systems/palette";
+import { HARBOR_PALETTE } from "../systems/palette";
 import type { SceneHarbor } from "../systems/scene-data";
 
-export function buildHarborIsland(harbor: SceneHarbor): { container: Container; lampPositions: { x: number; y: number; warm: boolean; phase: number }[] } {
-  const c = new Container();
-  c.label = `harbor-${harbor.id}`;
-  c.sortableChildren = true;
+export interface HarborIslandResult {
+  lampPositions: { x: number; y: number; warm: boolean; phase: number }[];
+  dockEndX: number;  // canvas-space x where dock terminus is — for boat anchoring
+  dockEndY: number;
+}
 
-  // Footprint: log-scaled box
+export function drawHarborIsland(
+  ctx: CanvasRenderingContext2D,
+  ax: number,
+  ay: number,
+  harbor: SceneHarbor,
+): HarborIslandResult {
   const footprintW = 80 + Math.min(80, Math.log10(Math.max(1, harbor.totalUsd / 1e6)) * 18);
   const footprintH = footprintW * 0.6;
   const halfW = footprintW / 2;
 
-  // Resilience tier dictates dock material
-  const dockColor = hexToInt(
+  const dockColor =
     harbor.resilienceTier === 1 ? HARBOR_PALETTE.stone_pale
     : harbor.resilienceTier === 3 ? HARBOR_PALETTE.timber_dark
-    : HARBOR_PALETTE.timber_mid,
-  );
-  // Island base — 3 isometric faces
-  const island = new Graphics();
-  island.poly([-halfW, 0, 0, -footprintH / 2, halfW, 0, 0, footprintH / 2]).fill({ color: hexToInt(HARBOR_PALETTE.stone_dark) });
-  island.poly([-halfW, 0, 0, footprintH / 2, 0, footprintH / 2 + 6, -halfW, 6]).fill({ color: hexToInt(HARBOR_PALETTE.stone_mid) });
-  island.poly([0, footprintH / 2, halfW, 0, halfW, 6, 0, footprintH / 2 + 6]).fill({ color: hexToInt(HARBOR_PALETTE.stone_dark) });
-  c.addChild(island);
+    : HARBOR_PALETTE.timber_mid;
 
-  // Dock pier — 3 plank rows
-  const dock = new Graphics();
-  dock.rect(-halfW * 0.6, footprintH / 2 + 6, halfW * 1.2, 8).fill({ color: dockColor });
-  c.addChild(dock);
+  // Island top (diamond)
+  ctx.fillStyle = HARBOR_PALETTE.stone_dark;
+  poly(ctx, [
+    ax - halfW, ay,
+    ax,         ay - footprintH / 2,
+    ax + halfW, ay,
+    ax,         ay + footprintH / 2,
+  ]);
+  // Left face
+  ctx.fillStyle = HARBOR_PALETTE.stone_mid;
+  poly(ctx, [
+    ax - halfW, ay,
+    ax,         ay + footprintH / 2,
+    ax,         ay + footprintH / 2 + 6,
+    ax - halfW, ay + 6,
+  ]);
+  // Right face
+  ctx.fillStyle = HARBOR_PALETTE.stone_dark;
+  poly(ctx, [
+    ax,         ay + footprintH / 2,
+    ax + halfW, ay,
+    ax + halfW, ay + 6,
+    ax,         ay + footprintH / 2 + 6,
+  ]);
 
-  // Warehouses — N = ceil(stablecoinCount / 3), max 4
+  // Dock pier
+  ctx.fillStyle = dockColor;
+  ctx.fillRect(ax - halfW * 0.6, ay + footprintH / 2 + 6, halfW * 1.2, 8);
+
+  // Warehouses
   const lampPositions: { x: number; y: number; warm: boolean; phase: number }[] = [];
   const wHouseCount = Math.min(4, Math.max(1, Math.ceil(harbor.stablecoinCount / 3)));
   for (let i = 0; i < wHouseCount; i++) {
-    const wx = -halfW * 0.7 + i * 16;
-    const wy = -footprintH * 0.1;
-    const w = new Graphics();
-    w.rect(wx, wy - 12, 12, 12).fill({ color: hexToInt(HARBOR_PALETTE.timber_dark) });
-    w.poly([wx - 1, wy - 12, wx + 6, wy - 16, wx + 13, wy - 12]).fill({ color: hexToInt(HARBOR_PALETTE.stone_dark) });
-    // 1 lit window
-    if ((i % 2) === 0) {
-      w.rect(wx + 4, wy - 8, 3, 2).fill({ color: hexToInt(HARBOR_PALETTE.lantern_warm) });
+    const wx = ax - halfW * 0.7 + i * 16;
+    const wy = ay - footprintH * 0.1;
+    ctx.fillStyle = HARBOR_PALETTE.timber_dark;
+    ctx.fillRect(wx, wy - 12, 12, 12);
+    ctx.fillStyle = HARBOR_PALETTE.stone_dark;
+    poly(ctx, [wx - 1, wy - 12, wx + 6, wy - 16, wx + 13, wy - 12]);
+    if (i % 2 === 0) {
+      ctx.fillStyle = HARBOR_PALETTE.lantern_warm;
+      ctx.fillRect(wx + 4, wy - 8, 3, 2);
     }
-    c.addChild(w);
-    // Lantern position next to warehouse door
     lampPositions.push({ x: wx + 6, y: wy - 2, warm: true, phase: i * 0.7 });
   }
 
-  // Dock terminus lantern
-  lampPositions.push({ x: halfW * 0.5, y: footprintH / 2 + 14, warm: true, phase: 0.3 });
+  const dockEndX = ax + halfW * 0.5;
+  const dockEndY = ay + footprintH / 2 + 14;
+  lampPositions.push({ x: dockEndX, y: dockEndY, warm: true, phase: 0.3 });
 
-  return { container: c, lampPositions };
+  return { lampPositions, dockEndX, dockEndY };
+}
+
+function poly(ctx: CanvasRenderingContext2D, pts: number[]): void {
+  ctx.beginPath();
+  ctx.moveTo(pts[0], pts[1]);
+  for (let i = 2; i < pts.length; i += 2) ctx.lineTo(pts[i], pts[i + 1]);
+  ctx.closePath();
+  ctx.fill();
 }
 ```
 
@@ -2471,10 +2656,10 @@ export function buildHarborIsland(harbor: SceneHarbor): { container: Container; 
 
 ```bash
 git add src/app/lighthouse/sprites/harbor-island-sprite.ts
-git commit -m "feat(lighthouse): harbor island sprite (resilience-tiered docks)"
+git commit -m "feat(lighthouse): harbor island draw fn (resilience-tiered docks)"
 ```
 
-### Task 4.2: Harbor layer + scene placement
+### Task 4.2: Harbor layer + scene placement (Canvas 2D)
 
 **Files:** `src/app/lighthouse/layers/harbor-layer.ts`
 
@@ -2482,9 +2667,9 @@ git commit -m "feat(lighthouse): harbor island sprite (resilience-tiered docks)"
 
 ```ts
 // src/app/lighthouse/layers/harbor-layer.ts
-import { Container } from "pixi.js";
-import { buildHarborIsland } from "../sprites/harbor-island-sprite";
+import { drawHarborIsland } from "../sprites/harbor-island-sprite";
 import { worldToScreen } from "../systems/isometric";
+import type { DrawableLayer, FrameState } from "../systems/scene-render";
 import type { SceneHarbor } from "../systems/scene-data";
 
 const TRIANGLE_TILES = [
@@ -2500,54 +2685,51 @@ const TRIANGLE_TILES = [
   { tileX: 18, tileY: 28 },
 ];
 
-export interface HarborLayerAPI {
-  container: Container;
-  syncHarbors(harbors: SceneHarbor[]): { harborById: Map<string, { container: Container; lamps: { x: number; y: number; warm: boolean; phase: number }[] }> };
-  destroy(): void;
+export interface HarborPlacement {
+  harbor: SceneHarbor;
+  worldX: number;
+  worldY: number;
+  dockEndX: number;
+  dockEndY: number;
+  lamps: { x: number; y: number; warm: boolean; phase: number }[];
+}
+
+export interface HarborLayerAPI extends DrawableLayer {
+  syncHarbors(harbors: SceneHarbor[], originX: number, originY: number): Map<string, HarborPlacement>;
 }
 
 export function buildHarborLayer(): HarborLayerAPI {
-  const container = new Container();
-  container.label = "harbor-layer";
-  container.sortableChildren = true;
-
-  const harborById = new Map<string, { container: Container; lamps: { x: number; y: number; warm: boolean; phase: number }[] }>();
+  let placements: HarborPlacement[] = [];
 
   return {
-    container,
-    syncHarbors(harbors) {
-      const seen = new Set<string>();
-      harbors.slice(0, TRIANGLE_TILES.length).forEach((harbor, i) => {
-        seen.add(harbor.id);
+    syncHarbors(harbors, originX, originY) {
+      const map = new Map<string, HarborPlacement>();
+      placements = harbors.slice(0, TRIANGLE_TILES.length).map((harbor, i) => {
         const tile = TRIANGLE_TILES[i];
         const screen = worldToScreen(tile);
-        const existing = harborById.get(harbor.id);
-        if (!existing) {
-          const built = buildHarborIsland(harbor);
-          built.container.x = screen.x;
-          built.container.y = screen.y;
-          built.container.zIndex = tile.tileX + tile.tileY;
-          container.addChild(built.container);
-          // Translate lamp positions into world coords
-          const worldLamps = built.lampPositions.map((l) => ({ x: l.x + screen.x, y: l.y + screen.y, warm: l.warm, phase: l.phase }));
-          harborById.set(harbor.id, { container: built.container, lamps: worldLamps });
-        }
+        const placement: HarborPlacement = {
+          harbor,
+          worldX: originX + screen.x,
+          worldY: originY + screen.y,
+          dockEndX: 0,
+          dockEndY: 0,
+          lamps: [],
+        };
+        map.set(harbor.id, placement);
+        return placement;
       });
-      // Remove stale
-      for (const id of harborById.keys()) {
-        if (!seen.has(id)) {
-          const e = harborById.get(id)!;
-          container.removeChild(e.container);
-          e.container.destroy({ children: true });
-          harborById.delete(id);
-        }
-      }
-      return { harborById };
+      return map;
     },
-    destroy() {
-      for (const e of harborById.values()) e.container.destroy({ children: true });
-      harborById.clear();
-      container.destroy();
+    draw(ctx, _frame: FrameState) {
+      // Painter's order — sort by Y (further south paints later)
+      const sorted = placements.slice().sort((a, b) => a.worldY - b.worldY);
+      for (const p of sorted) {
+        const result = drawHarborIsland(ctx, Math.round(p.worldX), Math.round(p.worldY), p.harbor);
+        // Mutate placement so scene-render can read accurate lamp + dock positions
+        p.lamps = result.lampPositions;
+        p.dockEndX = result.dockEndX;
+        p.dockEndY = result.dockEndY;
+      }
     },
   };
 }
@@ -2628,80 +2810,65 @@ git add src/app/lighthouse/systems/patrol.ts src/app/lighthouse/systems/patrol.t
 git commit -m "feat(lighthouse): deterministic Bezier patrol path generator"
 ```
 
-### Task 4.4: Scene sync — diff SceneData → mutate sprites
+### Task 4.4: Scene render — apply SceneData to layers each render
 
-**Files:** `src/app/lighthouse/systems/scene-sync.ts`
+**Files:** modify `src/app/lighthouse/harbor-scene-client.tsx`
 
-- [ ] **Step 1: Implement** the diff-and-mutate orchestrator
+- [ ] **Step 1: Apply scene whenever `scene` prop or canvas size changes**
 
-```ts
-// src/app/lighthouse/systems/scene-sync.ts
-import type { SceneData } from "./scene-data";
-import type { HarborLayerAPI } from "../layers/harbor-layer";
-import type { BoatLayerAPI } from "../layers/boat-layer";
-import { worldToScreen } from "./isometric";
-
-export interface SceneSyncDeps {
-  harborLayer: HarborLayerAPI;
-  boatLayer: BoatLayerAPI;
-  setBeamColor: (hex: string) => void;
-  setBeamSweepSeconds: (s: number) => void;
-  setSeaAmplitude: (px: number) => void;
-  setLamps: (lamps: { x: number; y: number; warm: boolean; phase: number }[]) => void;
-}
-
-export function applyScene(scene: SceneData, d: SceneSyncDeps) {
-  d.setBeamColor(scene.beam.color);
-  d.setBeamSweepSeconds(scene.beam.sweepSeconds);
-  d.setSeaAmplitude(scene.sea.amplitudePx);
-  const { harborById } = d.harborLayer.syncHarbors(scene.harbors);
-  const allLamps: { x: number; y: number; warm: boolean; phase: number }[] = [];
-  const seenBoats = new Set<string>();
-  for (const harbor of scene.harbors) {
-    const placed = harborById.get(harbor.id);
-    if (!placed) continue;
-    allLamps.push(...placed.lamps);
-    const dockX = placed.container.x;
-    const dockY = placed.container.y;
-    harbor.boats.forEach((boat, idx) => {
-      seenBoats.add(boat.coinId);
-      const offset = idx * 14 - (harbor.boats.length - 1) * 7;
-      d.boatLayer.upsertBoat(boat, { x: dockX + offset, y: dockY + 18 });
-    });
-  }
-  d.setLamps(allLamps);
-}
-```
-
-- [ ] **Step 2: Wire into `harbor-scene-client.tsx`**
+In `harbor-scene-client.tsx`, add an effect that reacts to `scene` prop changes:
 
 ```ts
 useEffect(() => {
-  if (!stageRef.current || size.width === 0) return;
-  const stage = stageRef.current;
-  // ... build sky, water, lamps, harborLayer, boatLayer, lighthouse ...
-  applyScene(scene, {
-    harborLayer,
-    boatLayer,
-    setBeamColor: (hex) => lh.setBeamColor(hex),
-    setBeamSweepSeconds: (s) => setBeamSweepDuration(beamTween, s),
-    setSeaAmplitude: (px) => water.setAmplitude(px),
-    setLamps: (lamps) => lampLayer.replaceLamps(lamps),
+  if (!harborLayerRef.current || !boatLayerRef.current) return;
+  const originX = Math.round(frame.width * 0.45);
+  const originY = Math.round(frame.height * 0.65);
+  lighthouseLayerRef.current?.setAnchor(originX, originY);
+  const placements = harborLayerRef.current.syncHarbors(scene.harbors, originX, originY);
+
+  // Boats — anchored at each harbour's dock end, fanned out
+  const seen = new Set<string>();
+  for (const harbor of scene.harbors) {
+    const placement = placements.get(harbor.id);
+    if (!placement) continue;
+    harbor.boats.forEach((boat, i) => {
+      seen.add(boat.coinId);
+      const offset = i * 14 - (harbor.boats.length - 1) * 7;
+      boatLayerRef.current!.upsertBoat(boat, {
+        x: placement.dockEndX + offset,
+        y: placement.dockEndY + 4,
+      });
+    });
+  }
+  boatLayerRef.current.pruneExcept(seen);
+
+  // Lamps — collect from placements (filled in after first draw of harbor-layer)
+  // We can't read placements before harborLayer.draw runs; instead expose a
+  // post-draw callback in scene-render. Simpler: query positions on the next
+  // animation frame.
+  requestAnimationFrame(() => {
+    const allLamps: { x: number; y: number; warm: boolean; phase: number }[] = [];
+    for (const p of placements.values()) allLamps.push(...p.lamps);
+    lampLayerRef.current?.setLamps(allLamps);
   });
-}, [scene, size.width, size.height]);
+
+  // Beam state — driven by GSAP tween (color/duration here, rotation by tween)
+  frame.beam.colorHex = scene.beam.color;
+  if (beamTweenRef.current) setBeamSweepDuration(beamTweenRef.current, scene.beam.sweepSeconds);
+}, [scene, frame.width, frame.height]);
 ```
 
-(Adjust `lampLayer` API to add `replaceLamps`.)
+(Refs: store `harborLayerRef`, `boatLayerRef`, `lampLayerRef`, `lighthouseLayerRef`, `beamTweenRef` so the effect can read them without re-mounting.)
 
-- [ ] **Step 3: Verify live data**
+- [ ] **Step 2: Verify live data**
 
-`npm run dev` → load `/lighthouse/` → boats appear at chains, beam color = current PSI band, sea amplitude follows DEWS.
+`npm run dev` → load `/lighthouse/` → boats appear at chains, beam color matches current PSI band, sea amplitude follows DEWS.
 
-- [ ] **Step 4: Commit**
+- [ ] **Step 3: Commit**
 
 ```bash
-git add src/app/lighthouse/systems/scene-sync.ts src/app/lighthouse/harbor-scene-client.tsx src/app/lighthouse/layers/lamp-layer.ts
-git commit -m "feat(lighthouse): scene-sync diff/mutate orchestrator"
+git add src/app/lighthouse/harbor-scene-client.tsx
+git commit -m "feat(lighthouse): scene application effect (live data)"
 ```
 
 ### Task 4.5: UI overlay (chain labels + keyboard targets)
@@ -2760,55 +2927,76 @@ git commit -m "feat(lighthouse): keyboard-accessible HTML overlay for harbour la
 
 ### Task 4.6: Reduced-motion freeze logic (deterministic composition)
 
-**Files:** `src/app/lighthouse/systems/reduced-motion-freeze.ts` + wiring
+**Files:** modify `src/app/lighthouse/harbor-scene-client.tsx`
 
-- [ ] **Step 1: Implement**
+When reduced-motion fires (already pausing GSAP via parent timeline + `frame.reducedMotion = true`), we want a deterministic frozen frame:
+- Beam: rotate to point at the largest harbour (highest `totalUsd`).
+- Boats: drawn at base position (no bob).
+- Water: scanline displacement zero, foam intensity preserved.
+- Lamp flicker: held at full brightness.
 
-When reduced-motion fires:
-- Sailing boats freeze at `t=0.5` of their patrol path (midpoint).
-- Wave amplitude visualised as foam-density on shoreline (clear `overlay`, draw foam intensity).
-- Beam freezes pointing at the largest harbour.
+The water/lamp/boat layers already check `frame.reducedMotion`. The only thing missing is rotating the beam to the largest harbour.
+
+- [ ] **Step 1: Add a freeze helper**
 
 ```ts
 // src/app/lighthouse/systems/reduced-motion-freeze.ts
-import gsap from "gsap";
 import type { SceneData } from "./scene-data";
+import type { HarborPlacement } from "../layers/harbor-layer";
 
-export function applyReducedMotionFreeze(scene: SceneData, opts: {
-  beamContainer: import("pixi.js").Container;
-  beamTween: gsap.core.Tween;
-  largestHarborTilePx: { x: number; y: number };
-}) {
-  // Pause beam, then rotate beam container to point at largest harbour
-  opts.beamTween.pause();
-  const angle = Math.atan2(opts.largestHarborTilePx.y, opts.largestHarborTilePx.x);
-  opts.beamContainer.rotation = angle;
+export function pickLargestHarborPlacement(
+  scene: SceneData,
+  placements: Map<string, HarborPlacement>,
+): HarborPlacement | null {
+  let best: HarborPlacement | null = null;
+  let bestUsd = -1;
+  for (const harbor of scene.harbors) {
+    const p = placements.get(harbor.id);
+    if (!p) continue;
+    if (harbor.totalUsd > bestUsd) { best = p; bestUsd = harbor.totalUsd; }
+  }
+  return best;
+}
+
+export function aimBeamAt(
+  beam: { rotationRad: number },
+  fromX: number,
+  fromY: number,
+  toX: number,
+  toY: number,
+): void {
+  beam.rotationRad = Math.atan2(toY - fromY, toX - fromX);
 }
 ```
 
-(Resume logic is `opts.beamTween.resume()` on motion-allowed.)
-
-- [ ] **Step 2: Wire into scene's reduced-motion observer**
+- [ ] **Step 2: Wire it in `harbor-scene-client.tsx` reduced-motion observer**
 
 ```ts
-const dispose = observeReducedMotion((r) => {
-  reducedRef.current = r;
-  if (r) {
+const disposeRm = observeReducedMotion((m) => {
+  frame.reducedMotion = m;
+  if (m) {
     registry.pause();
-    applyReducedMotionFreeze(scene, { beamContainer: lh.beamContainer, beamTween, largestHarborTilePx: { x: 22, y: 12 } });
+    const placements = lastPlacementsRef.current;
+    if (placements) {
+      const largest = pickLargestHarborPlacement(sceneRef.current, placements);
+      if (largest) {
+        const anchor = lighthouseLayer.anchor();
+        aimBeamAt(frame.beam, anchor.x, anchor.y, largest.worldX, largest.worldY);
+      }
+    }
   } else {
     registry.resume();
   }
-  water.setReducedMotion(r);
-  lampLayer.setReducedMotion(r);
-  boatLayer.setReducedMotion(r);
 });
 ```
+
+(Stash placements in `lastPlacementsRef` from the scene-application effect in Task 4.4.)
 
 - [ ] **Step 3: Commit**
 
 ```bash
-git add src/app/lighthouse/systems/reduced-motion-freeze.ts src/app/lighthouse/harbor-scene-client.tsx
+git add src/app/lighthouse/systems/reduced-motion-freeze.ts \
+        src/app/lighthouse/harbor-scene-client.tsx
 git commit -m "feat(lighthouse): deterministic reduced-motion freeze composition"
 ```
 
@@ -2905,7 +3093,7 @@ The boundary between this plan and "future polish" is set at: **everything drive
 **Type consistency:** `SceneData`, `SceneBoat`, `SceneHarbor`, `BoatStyle`, `BoatSpriteAPI`, `LighthouseSpriteAPI`, `HarborLayerAPI`, `BoatLayerAPI`, `WaterLayer`, `TimelineRegistry` all defined where first used and referenced consistently downstream. Tween-duration helper (`setBeamSweepDuration`) and patrol generator are used in PR3/PR4 with the same signatures defined at PR3.
 
 **Risk register:**
-- Phase 0 (CSP) is the single hardest gate. If it fails, this plan re-templates against Canvas 2D — that fork is preserved at §1 Task 0.3.
-- Pixi v8 + `@pixi/react@^8.0.5` are recent. PR2 includes a build/dev check before any rendering work.
-- Water shimmer at 60 fps on iPhone 12-class is the perf risk; T2.3 commits to scanline approximation with a `TilingSprite` fallback path noted.
-- Bundle ~290–325 KB gz on `/lighthouse/` only is verified by dynamic import + bundle-phobia step in T1.1.
+- Phase 0 (CSP) — RESOLVED 2026-04-25 as NO-GO. Switched to Fork A (Canvas 2D). Audit: `docs/superpowers/audits/2026-04-25-pixi-v8-csp.md`.
+- Canvas 2D perf at 60 fps on iPhone 12-class is the new perf risk. Mitigation: scanline approximation (Task 2.3), id-stable boat list (Task 3.3), DPR cap at 2 in canvas init.
+- Bundle: GSAP-only, ~25 KB gz delta on `/lighthouse/` (PixiJS removed). Verified by dynamic import + npm-side check.
+- `image-rendering: pixelated` Safari fallback handled with `crisp-edges` cascade (Task 2.1).
