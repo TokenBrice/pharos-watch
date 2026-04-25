@@ -8,6 +8,7 @@ const BOAT: SceneBoat = {
   style: "galleon",
   hullSize: "L",
   pennantHex: "#22c55e",
+  auraHex: null,
   homeChainId: "ethereum",
   supplyUsd: 250_000_000,
 };

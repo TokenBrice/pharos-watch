@@ -45,6 +45,32 @@ describe("buildSceneData", () => {
     expect(scene.harbors[1].boats[0].pennantHex).toBeDefined();
   });
 
+  it("boats with non-CALM stress band get an aura color", () => {
+    // dai is mapped to ALERT band in fixtureStress
+    const eth = scene.harbors[0];
+    const dai = eth.boats.find((b) => b.coinId === "dai");
+    expect(dai?.auraHex).toMatch(/^#[0-9a-f]{6}$/);
+  });
+
+  it("boats in CALM band have null aura", () => {
+    // usdc is mapped to CALM band in fixtureStress
+    const eth = scene.harbors[0];
+    const usdc = eth.boats.find((b) => b.coinId === "usdc");
+    expect(usdc?.auraHex).toBeNull();
+  });
+
+  it("boats with no stress signal have null aura", () => {
+    // Build a harbor with a coin id that is not present in fixtureStress.
+    const sceneNoStress = buildSceneData({
+      chains: fixtureChains,
+      stability: fixtureStability,
+      stress: { ...fixtureStress, signals: {} },
+      stablecoins: fixtureStablecoins,
+      metaById: fixtureMetaById,
+    });
+    expect(sceneNoStress.harbors[0].boats[0].auraHex).toBeNull();
+  });
+
   it("beam color matches PSI band STEADY", () => {
     expect(scene.beam.color).toBe("#14b8a6");
     expect(scene.beam.sweepSeconds).toBe(9);

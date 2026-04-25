@@ -59,7 +59,7 @@ export function buildBoatLayer(): BoatLayerAPI {
           style: e.boat.style,
           size: e.boat.hullSize,
           pennantHex: e.boat.pennantHex,
-          auraHex: null,
+          auraHex: e.boat.auraHex,
         });
       }
     },

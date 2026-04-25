@@ -17,6 +17,7 @@ export interface SceneBoat {
   style: BoatStyle;
   hullSize: "S" | "L";
   pennantHex: string;
+  auraHex: string | null;
   homeChainId: string;
   supplyUsd: number;
 }
@@ -171,12 +172,20 @@ function buildBoat(
     sig && sig.band in THREAT_BAND_HEX
       ? THREAT_BAND_HEX[sig.band as keyof typeof THREAT_BAND_HEX]
       : NEUTRAL_PENNANT;
+  // Aura is a brighter peg-deviation signal: null when CALM, otherwise tracks
+  // the threat band. Boats in stress get a visible glow regardless of their
+  // pennant size/visibility.
+  const auraHex =
+    sig && sig.band !== "CALM" && sig.band in THREAT_BAND_HEX
+      ? THREAT_BAND_HEX[sig.band as keyof typeof THREAT_BAND_HEX]
+      : null;
   return {
     coinId: c.id,
     symbol: c.symbol,
     style,
     hullSize: c.supplyUsd / maxSupply > 0.5 ? "L" : "S",
     pennantHex,
+    auraHex,
     homeChainId: chainId,
     supplyUsd: c.supplyUsd,
   };

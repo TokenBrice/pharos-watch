@@ -55,7 +55,26 @@ export function drawHarborIsland(
 
   // Dock pier
   ctx.fillStyle = dockColor;
-  ctx.fillRect(ax - halfW * 0.6, ay + footprintH / 2 + 6, halfW * 1.2, 8);
+  if (harbor.resilienceTier === 3) {
+    // Weathered — broken into two short planks with a 2-px gap
+    const dockY = ay + footprintH / 2 + 6;
+    const dockTotalW = halfW * 1.2;
+    const plankW = (dockTotalW - 2) / 2;
+    ctx.fillRect(ax - halfW * 0.6, dockY, plankW, 8);
+    ctx.fillRect(ax - halfW * 0.6 + plankW + 2, dockY, plankW, 8);
+  } else {
+    ctx.fillRect(ax - halfW * 0.6, ay + footprintH / 2 + 6, halfW * 1.2, 8);
+  }
+
+  // Tier 1 — add crenellation along the top of the island diamond
+  if (harbor.resilienceTier === 1) {
+    ctx.fillStyle = HARBOR_PALETTE.stone_pale;
+    // 4 small merlons spaced across the top of the island
+    for (let m = 0; m < 5; m++) {
+      const mx = ax - halfW * 0.4 + (m / 4) * halfW * 0.8;
+      ctx.fillRect(Math.floor(mx) - 1, Math.floor(ay - footprintH * 0.45), 3, 2);
+    }
+  }
 
   // Warehouses — N = ceil(stablecoinCount / 3), capped at 4
   const lampPositions: HarborIslandResult["lampPositions"] = [];
