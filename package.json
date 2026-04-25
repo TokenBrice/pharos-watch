@@ -50,6 +50,7 @@
     "check:unused-code": "node scripts/check-unused-code.mjs",
     "check:shared-cycles": "node scripts/check-shared-cycles.mjs",
     "check:hotspot-ratchet": "node scripts/check-hotspot-ratchet.mjs",
+    "check:harbor-palette": "node scripts/check-harbor-palette.mjs",
     "check:redemption-backstops": "tsx scripts/check-redemption-backstops.ts",
     "check:hotspot-ratchet:update-baseline": "node scripts/update-hotspot-ratchet-baseline.mjs",
     "check:cron-sync": "tsx scripts/check-cron-schedule-sync.ts",
