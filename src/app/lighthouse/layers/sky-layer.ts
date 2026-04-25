@@ -5,7 +5,10 @@ import { mulberry32 } from "../systems/rng";
 interface Star {
   x: number;
   y: number;
-  alpha: number;
+  size: 1 | 2;
+  baseAlpha: number;
+  twinkle: boolean;
+  phase: number;
 }
 
 export function buildSkyLayer(): DrawableLayer {
@@ -19,11 +22,21 @@ export function buildSkyLayer(): DrawableLayer {
     cachedH = h;
     const rng = mulberry32(0xcafef00d);
     stars = [];
-    for (let i = 0; i < 70; i++) {
+    // Density-scaled count: roughly 1 star per 3500 px² in the upper 55% of the canvas.
+    const starCount = Math.max(40, Math.floor((w * h * 0.55) / 3500));
+    for (let i = 0; i < starCount; i++) {
+      const tier = rng();
+      const size: 1 | 2 = tier > 0.95 ? 2 : 1; // 5% hero stars
+      const baseAlpha = tier > 0.7 ? 0.85 : 0.45 + rng() * 0.3;
+      const twinkle = rng() < 0.12; // 12% twinkle
+      const phase = rng() * Math.PI * 2;
       stars.push({
         x: Math.floor(rng() * w),
         y: Math.floor(rng() * h * 0.55),
-        alpha: 0.5 + rng() * 0.5,
+        size,
+        baseAlpha,
+        twinkle,
+        phase,
       });
     }
   };
@@ -49,9 +62,13 @@ export function buildSkyLayer(): DrawableLayer {
       }
       // Stars
       ctx.fillStyle = HARBOR_PALETTE.moonlight;
+      const t = frame.reducedMotion ? 0 : frame.t;
       for (const s of stars) {
-        ctx.globalAlpha = s.alpha;
-        ctx.fillRect(s.x, s.y, 1, 1);
+        const a = s.twinkle
+          ? s.baseAlpha * (0.6 + 0.4 * Math.sin(t * 1.5 + s.phase))
+          : s.baseAlpha;
+        ctx.globalAlpha = a;
+        ctx.fillRect(s.x, s.y, s.size, s.size);
       }
       ctx.globalAlpha = 1;
       // Moon
