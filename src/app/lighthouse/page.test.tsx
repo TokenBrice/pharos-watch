@@ -10,13 +10,8 @@ vi.mock("next/dynamic", () => ({
   default: () => () => <div data-testid="lighthouse-client">lighthouse-client</div>,
 }));
 
-vi.mock("@/components/feature-page-shell", () => ({
-  FeaturePageShell: ({ title, children }: { title: string; children: ReactNode }) => (
-    <div>
-      <h1>{title}</h1>
-      {children}
-    </div>
-  ),
+vi.mock("@/components/breadcrumb-json-ld", () => ({
+  BreadcrumbJsonLd: () => <script data-testid="breadcrumb-json-ld" />,
 }));
 
 vi.mock("@/components/section-error-boundary", () => ({
@@ -29,10 +24,11 @@ function withQueryClient(children: ReactNode): ReactNode {
 }
 
 describe("LighthousePage", () => {
-  it("renders the lighthouse route shell and client placeholder", () => {
+  it("renders the textless lighthouse route shell and client placeholder", () => {
     render(withQueryClient(<LighthousePage />));
 
     expect(screen.getByRole("heading", { name: "Pharos Lighthouse" })).toBeTruthy();
+    expect(screen.getByTestId("breadcrumb-json-ld")).toBeTruthy();
     expect(screen.getByTestId("lighthouse-client")).toBeTruthy();
   });
 });

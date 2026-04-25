@@ -1,0 +1,377 @@
+.lh-cinematic-experience {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.lh-stage-frame {
+  position: relative;
+  isolation: isolate;
+  min-height: min(47rem, calc(100svh - 7rem));
+  overflow: hidden;
+  border: 1px solid color-mix(in oklch, var(--border) 58%, transparent);
+  border-radius: 0;
+  background: oklch(0.035 0.024 240);
+  box-shadow:
+    inset 0 1px 0 oklch(1 0 0 / 0.05),
+    0 24px 80px oklch(0 0 0 / 0.28);
+}
+
+.lh-stage-frame::after {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+  content: "";
+  background:
+    radial-gradient(circle at 50% 38%, oklch(0.95 0.08 86 / 0.08), transparent 24%),
+    linear-gradient(180deg, transparent 68%, oklch(0 0 0 / 0.26));
+  mix-blend-mode: screen;
+}
+
+.lh-stage-svg {
+  position: absolute;
+  inset: 0;
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.lh-stage-controls {
+  position: absolute;
+  top: 0.85rem;
+  right: 0.85rem;
+  z-index: 3;
+  display: flex;
+  gap: 0.35rem;
+  border: 1px solid oklch(1 0 0 / 0.1);
+  background: oklch(0.035 0.02 245 / 0.68);
+  padding: 0.3rem;
+  backdrop-filter: blur(8px);
+}
+
+.lh-stage-control {
+  display: inline-grid;
+  width: 2.1rem;
+  height: 2.1rem;
+  place-items: center;
+  border: 1px solid transparent;
+  color: oklch(0.86 0.035 245 / 0.76);
+  transition:
+    border-color 180ms cubic-bezier(0.22, 1, 0.36, 1),
+    color 180ms cubic-bezier(0.22, 1, 0.36, 1),
+    background 180ms cubic-bezier(0.22, 1, 0.36, 1),
+    transform 180ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.lh-stage-control:hover,
+.lh-stage-control--active {
+  border-color: oklch(0.72 0.14 248 / 0.48);
+  background: oklch(0.72 0.14 248 / 0.14);
+  color: oklch(0.93 0.05 245);
+}
+
+.lh-stage-control:active {
+  transform: scale(0.96);
+}
+
+.lh-main-beam {
+  filter: drop-shadow(0 0 32px var(--lh-lens-color, #f8d77a));
+}
+
+.lh-pharos-layer {
+  filter: drop-shadow(0 24px 42px oklch(0 0 0 / 0.38));
+}
+
+.lh-lens-prism,
+.lh-lens-halo,
+.lh-flame {
+  transform-box: fill-box;
+  transform-origin: center;
+}
+
+.lh-dews-radar-layer {
+  opacity: 0.34;
+  transition: opacity 280ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.lh-dews-radar-layer--active {
+  opacity: 0.86;
+}
+
+.lh-radar-sweep {
+  transform-origin: 0 0;
+}
+
+.lh-dews-blip {
+  filter: drop-shadow(0 0 14px var(--lh-radar-color, #22c55e));
+}
+
+.lh-alt-peg-layer {
+  opacity: 0.28;
+  transition: opacity 280ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.lh-alt-peg-layer--active {
+  opacity: 0.84;
+}
+
+.lh-harbor-mark {
+  cursor: pointer;
+  outline: none;
+  transition: opacity 220ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.lh-stage-frame[data-mode="radar"] .lh-harbor-mark,
+.lh-stage-frame[data-mode="atlas"] .lh-harbor-mark {
+  opacity: 0.72;
+}
+
+.lh-harbor-mark:hover,
+.lh-harbor-mark:focus-visible,
+.lh-harbor-mark--selected {
+  opacity: 1 !important;
+}
+
+.lh-harbor-mark:hover .lh-harbor-signal,
+.lh-harbor-mark:focus-visible .lh-harbor-signal,
+.lh-harbor-mark--selected .lh-harbor-signal {
+  filter: drop-shadow(0 0 18px var(--lh-harbor-color));
+}
+
+.lh-harbor-wake,
+.lh-harbor-reflection,
+.lh-harbor-pennant,
+.lh-tail-fleet {
+  transform-box: fill-box;
+  transform-origin: center;
+}
+
+.lh-a11y-ledger {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+}
+
+.lh-a11y-ledger--visible {
+  position: relative;
+  width: auto;
+  height: auto;
+  overflow: visible;
+  clip: auto;
+  white-space: normal;
+}
+
+.lh-ledger-inner {
+  display: grid;
+  gap: 0.9rem;
+  border: 1px solid color-mix(in oklch, var(--border) 72%, transparent);
+  background: color-mix(in oklch, var(--card) 88%, transparent);
+  padding: 1rem;
+}
+
+.lh-ledger-heading {
+  font-size: 0.95rem;
+  font-weight: 700;
+  letter-spacing: 0;
+}
+
+.lh-ledger-grid {
+  display: grid;
+  gap: 0.75rem;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.lh-ledger-row {
+  display: grid;
+  gap: 0.25rem;
+}
+
+.lh-ledger-row dt,
+.lh-ledger-harbors span:last-child {
+  color: var(--text-tertiary);
+  font-size: 0.72rem;
+}
+
+.lh-ledger-row dd {
+  display: grid;
+  gap: 0.2rem;
+  margin: 0;
+}
+
+.lh-ledger-row strong,
+.lh-ledger-harbors span:first-child {
+  color: var(--foreground);
+  font-family: var(--font-mono);
+  font-size: 0.82rem;
+}
+
+.lh-ledger-row span {
+  color: var(--text-secondary);
+  font-size: 0.8rem;
+}
+
+.lh-ledger-harbors {
+  display: grid;
+  gap: 0.5rem;
+  margin: 0;
+  padding-left: 1.2rem;
+}
+
+.lh-ledger-harbors li {
+  display: grid;
+  gap: 0.18rem;
+}
+
+.lh-ledger-harbors li[data-selected="true"] span:first-child {
+  color: var(--frost-blue);
+}
+
+@media (max-width: 860px) {
+  .lh-stage-frame {
+    min-height: clamp(33rem, 112vw, 43rem);
+  }
+
+  .lh-stage-controls {
+    top: 0.65rem;
+    right: 0.65rem;
+  }
+
+  .lh-stage-control {
+    width: 2.35rem;
+    height: 2.35rem;
+  }
+
+  .lh-a11y-ledger {
+    position: relative;
+    width: auto;
+    height: auto;
+    overflow: visible;
+    clip: auto;
+    white-space: normal;
+  }
+
+  .lh-ledger-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 520px) {
+  .lh-stage-frame {
+    min-height: 31rem;
+    margin-inline: -0.5rem;
+  }
+
+  .lh-stage-controls {
+    left: 0.5rem;
+    right: auto;
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  @keyframes lh-radar-rotate {
+    to {
+      transform: rotate(360deg);
+    }
+  }
+
+  @keyframes lh-lens-glint {
+    0%,
+    100% {
+      transform: rotate(0deg) scale(1);
+      opacity: 0.9;
+    }
+    50% {
+      transform: rotate(12deg) scale(1.04);
+      opacity: 1;
+    }
+  }
+
+  @keyframes lh-flame-flicker {
+    0%,
+    100% {
+      transform: translateY(0) scale(1);
+      opacity: 0.88;
+    }
+    50% {
+      transform: translateY(-3px) scale(1.08);
+      opacity: 1;
+    }
+  }
+
+  @keyframes lh-harbor-drift {
+    0%,
+    100% {
+      transform: translateY(0);
+    }
+    50% {
+      transform: translateY(-4px);
+    }
+  }
+
+  @keyframes lh-pennant-drift {
+    0%,
+    100% {
+      transform: skewY(0deg);
+    }
+    50% {
+      transform: skewY(-4deg);
+    }
+  }
+
+  @keyframes lh-water-drift {
+    0%,
+    100% {
+      transform: translateX(0);
+    }
+    50% {
+      transform: translateX(-16px);
+    }
+  }
+
+  .lh-radar-sweep {
+    animation: lh-radar-rotate var(--lh-radar-sweep-duration, 12s) linear infinite;
+  }
+
+  .lh-lens-prism {
+    animation: lh-lens-glint 10.5s cubic-bezier(0.22, 1, 0.36, 1) infinite;
+  }
+
+  .lh-flame {
+    animation: lh-flame-flicker 2.8s cubic-bezier(0.22, 1, 0.36, 1) infinite;
+  }
+
+  .lh-harbor-mark {
+    animation: lh-harbor-drift 6.5s cubic-bezier(0.45, 0, 0.55, 1) infinite;
+  }
+
+  .lh-harbor-mark:nth-of-type(2n) {
+    animation-delay: -2.2s;
+  }
+
+  .lh-harbor-pennant {
+    animation: lh-pennant-drift 5s cubic-bezier(0.45, 0, 0.55, 1) infinite;
+  }
+
+  .lh-waterline,
+  .lh-tail-fleet,
+  .lh-haze-bank {
+    animation: lh-water-drift 18s cubic-bezier(0.45, 0, 0.55, 1) infinite;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .lh-radar-sweep,
+  .lh-lens-prism,
+  .lh-flame,
+  .lh-harbor-mark,
+  .lh-harbor-pennant,
+  .lh-waterline,
+  .lh-tail-fleet,
+  .lh-haze-bank {
+    animation: none !important;
+    transition: none !important;
+  }
+}

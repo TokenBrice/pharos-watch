@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
-import { createClientFeaturePage } from "@/lib/client-feature-page";
+import dynamic from "next/dynamic";
+import { BreadcrumbJsonLd } from "@/components/breadcrumb-json-ld";
+import { SectionErrorBoundary } from "@/components/section-error-boundary";
 import { buildPageMetadata } from "@/lib/page-metadata";
 
 export const metadata: Metadata = buildPageMetadata({
@@ -9,25 +11,33 @@ export const metadata: Metadata = buildPageMetadata({
   canonical: "/lighthouse/",
 });
 
-export default createClientFeaturePage({
-  loadClient: () => import("./client").then((mod) => ({ default: mod.LighthouseClient })),
-  loading: (
-    <div className="space-y-6">
-      <div className="h-[30rem] w-full animate-pulse rounded-[1.25rem] border border-border/60 bg-muted/20" />
-      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-        {Array.from({ length: 6 }).map((_, index) => (
-          <div key={index} className="h-28 animate-pulse rounded-xl border border-border/60 bg-muted/20" />
-        ))}
-      </div>
-    </div>
-  ),
-  shell: {
-    breadcrumbName: "Lighthouse",
-    path: "/lighthouse/",
-    title: "Pharos Lighthouse",
-    statusBadge: { status: "experimental" },
-    leadParagraphs: [
-      "The beam is an inspection signal, not a new score. The lens projects the largest chain harbors onto the horizon while the readout and signal reel keep the scene auditable on every viewport.",
-    ],
+const LighthouseClient = dynamic(
+  () => import("./client").then((mod) => ({ default: mod.LighthouseClient })),
+  {
+    loading: () => (
+      <div
+        className="min-h-[min(47rem,calc(100svh-7rem))] animate-pulse border border-border/50 bg-muted/20"
+        aria-busy="true"
+      />
+    ),
   },
-});
+);
+
+export default function LighthousePage() {
+  return (
+    <div className="mx-auto w-full max-w-[94rem]">
+      <BreadcrumbJsonLd
+        items={[
+          { name: "Home", url: "/" },
+          { name: "Lighthouse", url: "/lighthouse/" },
+        ]}
+      />
+      <h1 id="lighthouse-heading" className="sr-only">
+        Pharos Lighthouse
+      </h1>
+      <SectionErrorBoundary name="Pharos Lighthouse" supportingText="Refresh the page to retry the lighthouse view.">
+        <LighthouseClient />
+      </SectionErrorBoundary>
+    </div>
+  );
+}
