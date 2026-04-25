@@ -1,9 +1,11 @@
 import type { ChainsResponse, ChainSummary, ChainTopStablecoin } from "@shared/types/chains";
-import type { StablecoinData, StablecoinListResponse, StressSignalsAllResponse } from "@shared/types/market";
+import type { StablecoinListResponse, StressSignalsAllResponse } from "@shared/types/market";
 import type { StabilityIndexResponse } from "@shared/types/stability";
+import type { StablecoinMeta } from "@shared/types";
 import { PSI_HEX_COLORS, psiSweepDuration } from "@shared/lib/psi-colors";
 import { THREAT_BAND_HEX } from "@shared/lib/classification";
 import { getChainResilienceTier } from "@shared/lib/chains";
+import { ACTIVE_META_BY_ID } from "@shared/lib/stablecoins";
 import { boatStyleFor, type BoatStyle } from "./classification-to-boat";
 import { buildPegDiversityHero } from "@/lib/alt-peg-hero";
 
@@ -61,6 +63,8 @@ interface Inputs {
   stability: StabilityIndexResponse | null | undefined;
   stress: StressSignalsAllResponse | null | undefined;
   stablecoins: StablecoinListResponse | null | undefined;
+  /** Stablecoin meta registry for boat-style flag lookups. Defaults to ACTIVE_META_BY_ID. */
+  metaById?: ReadonlyMap<string, StablecoinMeta>;
 }
 
 const SEA_AMPLITUDE: Record<string, number> = {
@@ -71,15 +75,18 @@ const SEA_AMPLITUDE: Record<string, number> = {
   DANGER: 4.0,
 };
 
-export function buildSceneData({ chains, stability, stress, stablecoins }: Inputs): SceneData {
+export function buildSceneData({
+  chains,
+  stability,
+  stress,
+  stablecoins,
+  metaById = ACTIVE_META_BY_ID,
+}: Inputs): SceneData {
   const chainList = (chains?.chains ?? []).slice().sort((a, b) => b.totalUsd - a.totalUsd);
-  const stablecoinByIdMap = new Map(
-    (stablecoins?.peggedAssets ?? []).map((c) => [c.id, c]),
-  );
   const stressById = stress?.signals ?? {};
 
   const harbors: SceneHarbor[] = chainList.map((chain) =>
-    buildHarbor(chain, stablecoinByIdMap, stressById),
+    buildHarbor(chain, metaById, stressById),
   );
 
   const band = stability?.current?.band ?? "BEDROCK";
@@ -123,13 +130,13 @@ function highestStressBand(signals: Record<string, { band: string }>): string {
 
 function buildHarbor(
   chain: ChainSummary,
-  coinsById: Map<string, StablecoinData>,
+  metaById: ReadonlyMap<string, StablecoinMeta>,
   stressById: Record<string, { band: string }>,
 ): SceneHarbor {
   const top = chain.topStablecoins ?? [];
   const maxSupply = top.reduce((m, c) => Math.max(m, c.supplyUsd), 1);
   const boats: SceneBoat[] = top.map((c) =>
-    buildBoat(c, chain.id, coinsById, stressById, maxSupply),
+    buildBoat(c, chain.id, metaById, stressById, maxSupply),
   );
   return {
     id: chain.id,
@@ -150,15 +157,14 @@ function clampTier(tier: number | undefined): 1 | 2 | 3 {
 function buildBoat(
   c: ChainTopStablecoin,
   chainId: string,
-  coinsById: Map<string, StablecoinData>,
+  metaById: ReadonlyMap<string, StablecoinMeta>,
   stressById: Record<string, { band: string }>,
   maxSupply: number,
 ): SceneBoat {
-  const coin = coinsById.get(c.id);
-  const flags = (coin as { flags?: { governance?: string; backing?: string } } | undefined)?.flags;
+  const flags = metaById.get(c.id)?.flags;
   const style = boatStyleFor({
-    governance: flags?.governance as never,
-    backing: flags?.backing as never,
+    governance: flags?.governance,
+    backing: flags?.backing,
   });
   const sig = stressById[c.id];
   const pennantHex =

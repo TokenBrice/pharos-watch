@@ -1,4 +1,4 @@
-import type { GovernanceType, BackingType } from "@shared/lib/classification";
+import type { GovernanceType, BackingType } from "@shared/types";
 
 export type BoatStyle = "galleon" | "brigantine" | "schooner" | "junk";
 

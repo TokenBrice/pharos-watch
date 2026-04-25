@@ -2,6 +2,7 @@ import type { ChainsResponse, ChainSummary } from "@shared/types/chains";
 import type { StablecoinListResponse } from "@shared/types/market";
 import type { StabilityIndexResponse } from "@shared/types/stability";
 import type { StressSignalsAllResponse } from "@shared/types/market";
+import type { StablecoinMeta } from "@shared/types";
 
 const ETH_CHAIN: ChainSummary = {
   id: "ethereum",
@@ -115,83 +116,84 @@ export const fixtureStress: StressSignalsAllResponse = {
   methodology: {} as StressSignalsAllResponse["methodology"],
 };
 
-// The adapter looks up `flags` via a permissive cast on each stablecoin record
-// because StablecoinData doesn't carry classification flags directly. The
-// fixture extends the runtime shape with the flags the adapter reads, so the
-// cast in the adapter resolves to the values the tests assert against.
+function makeAsset(id: string, name: string, symbol: string, supplyUsd: number) {
+  return {
+    id,
+    name,
+    symbol,
+    geckoId: null,
+    pegType: "peggedUSD",
+    pegMechanism: "fiat-backed",
+    price: 1,
+    priceSource: "test",
+    priceConfidence: null,
+    priceUpdatedAt: null,
+    priceObservedAt: null,
+    priceObservedAtMode: null,
+    priceSyncedAt: null,
+    consensusSources: [],
+    agreeSources: [],
+    circulating: { peggedUSD: supplyUsd },
+    circulatingPrevDay: {},
+    circulatingPrevWeek: {},
+    circulatingPrevMonth: {},
+    chainCirculating: {},
+    chains: ["ethereum"],
+  };
+}
+
 export const fixtureStablecoins = {
   peggedAssets: [
-    {
-      id: "usdt",
-      name: "Tether",
-      symbol: "USDT",
-      geckoId: null,
-      pegType: "peggedUSD",
-      pegMechanism: "fiat-backed",
-      price: 1,
-      priceSource: "test",
-      priceConfidence: null,
-      priceUpdatedAt: null,
-      priceObservedAt: null,
-      priceObservedAtMode: null,
-      priceSyncedAt: null,
-      consensusSources: [],
-      agreeSources: [],
-      circulating: { peggedUSD: 250_000_000 },
-      circulatingPrevDay: {},
-      circulatingPrevWeek: {},
-      circulatingPrevMonth: {},
-      chainCirculating: {},
-      chains: ["ethereum"],
-      flags: { governance: "centralized", backing: "rwa-backed" },
-    },
-    {
-      id: "usdc",
-      name: "USD Coin",
-      symbol: "USDC",
-      geckoId: null,
-      pegType: "peggedUSD",
-      pegMechanism: "fiat-backed",
-      price: 1,
-      priceSource: "test",
-      priceConfidence: null,
-      priceUpdatedAt: null,
-      priceObservedAt: null,
-      priceObservedAtMode: null,
-      priceSyncedAt: null,
-      consensusSources: [],
-      agreeSources: [],
-      circulating: { peggedUSD: 200_000_000 },
-      circulatingPrevDay: {},
-      circulatingPrevWeek: {},
-      circulatingPrevMonth: {},
-      chainCirculating: {},
-      chains: ["ethereum"],
-      flags: { governance: "centralized", backing: "rwa-backed" },
-    },
-    {
-      id: "dai",
-      name: "Dai",
-      symbol: "DAI",
-      geckoId: null,
-      pegType: "peggedUSD",
-      pegMechanism: "crypto-backed",
-      price: 1,
-      priceSource: "test",
-      priceConfidence: null,
-      priceUpdatedAt: null,
-      priceObservedAt: null,
-      priceObservedAtMode: null,
-      priceSyncedAt: null,
-      consensusSources: [],
-      agreeSources: [],
-      circulating: { peggedUSD: 80_000_000 },
-      circulatingPrevDay: {},
-      circulatingPrevWeek: {},
-      circulatingPrevMonth: {},
-      chainCirculating: {},
-      chains: ["ethereum"],
-      flags: { governance: "decentralized", backing: "crypto-backed" },
-    },
+    makeAsset("usdt", "Tether", "USDT", 250_000_000),
+    makeAsset("usdc", "USD Coin", "USDC", 200_000_000),
+    makeAsset("dai", "Dai", "DAI", 80_000_000),
   ],
 } as unknown as StablecoinListResponse;
+
+/**
+ * Test-only meta registry. Production reads from `ACTIVE_META_BY_ID`, but the
+ * fixture's bare coin IDs (`usdt`, `usdc`, `dai`) are not in the production
+ * registry (which uses suffixed IDs like `usdt-tether`). Tests pass this as
+ * the `metaById` input to `buildSceneData`.
+ */
+export const fixtureMetaById: ReadonlyMap<string, StablecoinMeta> = new Map<string, StablecoinMeta>([
+  [
+    "usdt",
+    {
+      flags: {
+        governance: "centralized",
+        backing: "rwa-backed",
+        pegCurrency: "USD",
+        yieldBearing: false,
+        rwa: false,
+        navToken: false,
+      },
+    } as StablecoinMeta,
+  ],
+  [
+    "usdc",
+    {
+      flags: {
+        governance: "centralized",
+        backing: "rwa-backed",
+        pegCurrency: "USD",
+        yieldBearing: false,
+        rwa: false,
+        navToken: false,
+      },
+    } as StablecoinMeta,
+  ],
+  [
+    "dai",
+    {
+      flags: {
+        governance: "decentralized",
+        backing: "crypto-backed",
+        pegCurrency: "USD",
+        yieldBearing: false,
+        rwa: false,
+        navToken: false,
+      },
+    } as StablecoinMeta,
+  ],
+]);

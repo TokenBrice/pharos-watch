@@ -5,6 +5,7 @@ import {
   fixtureStability,
   fixtureStress,
   fixtureStablecoins,
+  fixtureMetaById,
 } from "../__fixtures__/scene-data";
 
 describe("buildSceneData", () => {
@@ -13,6 +14,7 @@ describe("buildSceneData", () => {
     stability: fixtureStability,
     stress: fixtureStress,
     stablecoins: fixtureStablecoins,
+    metaById: fixtureMetaById,
   });
 
   it("emits one harbor per chain", () => {
@@ -58,7 +60,22 @@ describe("buildSceneData", () => {
       stability: fixtureStability,
       stress: fixtureStress,
       stablecoins: fixtureStablecoins,
+      metaById: fixtureMetaById,
     });
     expect(scene2).toEqual(scene);
+  });
+
+  it("falls back to schooner when metaById is empty (production-shaped lookup)", () => {
+    const sceneNoMeta = buildSceneData({
+      chains: fixtureChains,
+      stability: fixtureStability,
+      stress: fixtureStress,
+      stablecoins: fixtureStablecoins,
+      metaById: new Map(),
+    });
+    // With no flags, every boat falls through to "schooner" (the default).
+    for (const harbor of sceneNoMeta.harbors) {
+      for (const boat of harbor.boats) expect(boat.style).toBe("schooner");
+    }
   });
 });
