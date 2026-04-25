@@ -176,6 +176,24 @@ Worker cron refactors should place reusable stage contracts under `worker/src/cr
 - `src/app/sitemap.ts` owns sitemap output for indexable routes. `/compare/`, `/portfolio/`, and `/admin/` are omitted; `/compare/[slug]/` static comparison pages are included. `/funding/` uses the latest of route edit time and checked-in funding data timestamps for `lastModified`. `LAST_EDITED` dates are auto-generated from git history during prebuild (`scripts/generate-sitemap-dates.ts`) and written to a generated JSON file (gitignored). Public docs use `scripts/generate-docs-metadata.ts` for git-derived first/last modified dates.
 - `src/app/robots.ts` publishes an allow-all crawl policy, explicit AI crawler allow groups, disallows for operator surfaces (`/admin`, `/admin/`, `/api/admin`, `/api/admin/`), and the sitemap location.
 
+### Lighthouse (/lighthouse)
+
+A Canvas 2D pixel-art harbor scene. PixiJS was rejected during the
+2026-04-25 spike (see `docs/superpowers/audits/2026-04-25-pixi-v8-csp.md`)
+because the v8 shader path requires `unsafe-eval`, which Pharos's CSP
+disallows. The Canvas 2D implementation lives at `src/app/lighthouse/`:
+- Pure-TS systems in `systems/` (FrameState contract, isometric math,
+  scene-data adapter, GSAP tween helpers).
+- Pure draw fns in `sprites/` (lighthouse, boats, harbour islands).
+- DrawableLayer wrappers in `layers/` (sky/water/lamps/harbours/
+  boats/lighthouse + HTML overlay).
+- A 24-color anchor palette + hex-literal lint guard
+  (`scripts/check-harbor-palette.mjs`) keeps the pixel-art aesthetic
+  coherent.
+
+Visual regression is gated by Playwright under `prefers-reduced-motion:
+reduce` (deterministic) — see `tests/visual/lighthouse.spec.ts`.
+
 ---
 
 ## CSS Build Pipeline
