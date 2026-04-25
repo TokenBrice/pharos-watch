@@ -1,11 +1,15 @@
 "use client";
 
 import { useState } from "react";
+import { usePathname } from "next/navigation";
 import { MessageSquarePlus } from "lucide-react";
 import { FeedbackModal } from "@/components/feedback-modal";
 
 export function FeedbackButton() {
   const [open, setOpen] = useState(false);
+  const pathname = usePathname();
+
+  if (pathname?.startsWith("/lighthouse")) return null;
 
   return (
     <>
