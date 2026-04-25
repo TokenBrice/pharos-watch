@@ -17,7 +17,13 @@ export const metadata: Metadata = buildPageMetadata({
   ogImage: `${SITE_URL}/og-digest.png`,
 });
 
-const digestEntries = digests as { date: string; title: string; text: string }[];
+const digestEntries = digests as {
+  date: string;
+  title: string;
+  text: string;
+  generatedAt?: number;
+  digestType?: "daily" | "weekly";
+}[];
 
 export default function DigestArchivePage() {
   return (
@@ -81,8 +87,8 @@ export default function DigestArchivePage() {
 
       {/* Server-rendered digest links for SEO crawlability (client component loads the interactive list) */}
       <nav aria-label="Digest archive index" className="sr-only">
-        {digestEntries.map((d) => (
-          <Link key={d.date} href={`/digest/${d.date}/`}>
+        {digestEntries.map((d, index) => (
+          <Link key={`${d.date}-${d.digestType ?? "daily"}-${d.generatedAt ?? index}`} href={`/digest/${d.date}/`}>
             {d.title} — {d.date}
           </Link>
         ))}

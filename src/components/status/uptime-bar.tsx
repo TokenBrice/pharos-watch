@@ -36,12 +36,12 @@ function buildDaySegments(
   days: number,
 ): DaySegment[] {
   const now = new Date();
+  const todayUtc = Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate());
   const segments: DaySegment[] = [];
 
   // Build daily slots (oldest first).
   for (let i = days - 1; i >= 0; i--) {
-    const d = new Date(now);
-    d.setDate(d.getDate() - i);
+    const d = new Date(todayUtc - i * 86400_000);
     segments.push({
       date: d.toISOString().slice(0, 10),
       status: "unknown",

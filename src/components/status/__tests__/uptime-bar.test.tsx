@@ -56,4 +56,24 @@ describe("UptimeBar", () => {
 
     expect(screen.getByText("2d healthy · 1d stale")).toBeTruthy();
   });
+
+  it("keeps runway dates unique across daylight-saving transitions", () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-04-25T01:53:00+02:00"));
+
+    const { container } = render(
+      <UptimeBar
+        transitions={[]}
+        currentStatus="healthy"
+        lastChangedAt={null}
+      />,
+    );
+
+    const dates = Array.from(container.querySelectorAll("[title]"), (node) =>
+      node.getAttribute("title")?.slice(0, 10),
+    );
+
+    expect(dates).toHaveLength(30);
+    expect(new Set(dates).size).toBe(30);
+  });
 });
