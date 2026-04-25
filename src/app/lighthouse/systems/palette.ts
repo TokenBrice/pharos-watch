@@ -38,3 +38,17 @@ export function paletteOrThrow(key: HarborPaletteKey): string {
   }
   return HARBOR_PALETTE[key];
 }
+
+/**
+ * Build an `rgba(r, g, b, a)` CSS color string from a palette entry. Used by
+ * gradient layers (vignette, horizon haze) where a hex literal can't carry
+ * an alpha and a parallel hex constant would defeat the palette guard.
+ */
+export function paletteRgba(key: HarborPaletteKey, alpha: number): string {
+  const hex = HARBOR_PALETTE[key];
+  const n = parseInt(hex.slice(1), 16);
+  const r = (n >> 16) & 0xff;
+  const g = (n >> 8) & 0xff;
+  const b = n & 0xff;
+  return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+}
