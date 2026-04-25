@@ -7,7 +7,7 @@ import { buildPageMetadata } from "@/lib/page-metadata";
 export const metadata: Metadata = buildPageMetadata({
   title: "Pharos Lighthouse",
   description:
-    "A cinematic night watch inside the Pharos lens room, projecting chain harbors, PSI, and aggregate stress signals back into exact dashboard data.",
+    "An isometric pixel-art harbor: Pharos as the lighthouse, blockchains as harbours, stablecoins as boats. PSI is the beam. DEWS is the sea.",
   canonical: "/lighthouse/",
 });
 
@@ -23,15 +23,8 @@ const LighthouseClient = dynamic(
 export default function LighthousePage() {
   return (
     <div className="relative left-1/2 w-[100vw] -translate-x-1/2 md:w-[calc(100vw-var(--sidebar-width-expanded))]">
-      <BreadcrumbJsonLd
-        items={[
-          { name: "Home", url: "/" },
-          { name: "Lighthouse", url: "/lighthouse/" },
-        ]}
-      />
-      <h1 id="lighthouse-heading" className="sr-only">
-        Pharos Lighthouse
-      </h1>
+      <BreadcrumbJsonLd items={[{ name: "Home", url: "/" }, { name: "Lighthouse", url: "/lighthouse/" }]} />
+      <h1 id="lighthouse-heading" className="sr-only">Pharos Lighthouse</h1>
       <SectionErrorBoundary name="Pharos Lighthouse" supportingText="Refresh the page to retry the lighthouse view.">
         <LighthouseClient />
       </SectionErrorBoundary>

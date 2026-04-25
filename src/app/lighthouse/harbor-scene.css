@@ -1,0 +1,9 @@
+/* src/app/lighthouse/harbor-scene.css */
+.harbor-scene-canvas {
+  display: block;
+  width: 100%;
+  height: 70vh;
+  background: #0a0e1d;
+  image-rendering: pixelated;
+  image-rendering: crisp-edges;
+}
