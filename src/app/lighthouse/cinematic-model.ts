@@ -11,24 +11,39 @@ import { buildChainHarborEntries } from "../chains/harbor-map";
 import { aggregateSkyBand, cargoCapacityForHull, depthLayers, hullWidth, wakeLength } from "../chains/nautical-scene-math";
 import { computeBandCounts, computePositions, CX as DEWS_CX, CY as DEWS_CY } from "@/components/dews-summary-model";
 
-export type LighthouseMode = "watch" | "radar" | "atlas";
+export type LighthouseMode = "watch" | "lens" | "radar" | "atlas";
+export type LighthouseModuleId = "harbors" | "lens" | "radar" | "atlas";
 
-export const LIGHTHOUSE_STAGE_VIEWBOX = { width: 1440, height: 900 } as const;
+export const LIGHTHOUSE_STAGE_VIEWBOX = { width: 1920, height: 1080 } as const;
 export const LIGHTHOUSE_VISIBLE_HARBORS = 8;
 
-const STAGE_CENTER_X = 720;
-const STAGE_WATERLINE_Y = 635;
-const HARBOR_ORBIT_CENTER_Y = 672;
-const HARBOR_ORBIT_RX = 520;
-const HARBOR_ORBIT_RY = 172;
-const HARBOR_START_DEG = 205;
-const HARBOR_END_DEG = 335;
+const STAGE_CENTER_X = 960;
+const STAGE_WATERLINE_Y = 742;
+const HARBOR_ISLAND_X = 465;
+const HARBOR_ISLAND_Y = 760;
+const HARBOR_ORBIT_RX = 276;
+const HARBOR_ORBIT_RY = 104;
+const HARBOR_START_DEG = 188;
+const HARBOR_END_DEG = 352;
+const LENS_ISLAND_X = 960;
+const LENS_ISLAND_Y = 244;
+const RADAR_ISLAND_X = 1530;
+const RADAR_ISLAND_Y = 400;
+const ATLAS_ISLAND_X = 1452;
+const ATLAS_ISLAND_Y = 780;
 const NEUTRAL_HEX = "#64748b";
 const NEUTRAL_LENS_HEX = "#f8d77a";
 
 export interface LighthousePoint {
   x: number;
   y: number;
+}
+
+export interface LighthouseCanvasBlock {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
 }
 
 export interface LighthouseHarborMark {
@@ -63,6 +78,15 @@ export interface LighthouseTailMark {
   remainingUsd: number;
   remainingSharePct: number;
   lights: LighthousePoint[];
+  ariaLabel: string;
+}
+
+export interface LighthouseLensFacet {
+  id: "severity" | "breadth" | "stressBreadth" | "trend";
+  value: number;
+  angleDeg: number;
+  length: number;
+  opacity: number;
   ariaLabel: string;
 }
 
@@ -110,16 +134,31 @@ export interface LighthouseLedgerRow {
   detail: string;
 }
 
+export interface LighthouseModuleIsland {
+  id: LighthouseModuleId;
+  bounds: LighthouseCanvasBlock;
+  x: number;
+  y: number;
+  rx: number;
+  ry: number;
+  target: LighthousePoint;
+  colorHex: string;
+  isActive: boolean;
+  ariaLabel: string;
+}
+
 export interface LighthouseCinematicModel {
   stage: {
     viewBox: typeof LIGHTHOUSE_STAGE_VIEWBOX;
     sceneLabel: string;
     mode: LighthouseMode;
+    activeModuleId: LighthouseModuleId;
     selectedHarborId: string | null;
     activeTarget: LighthousePoint | null;
     hasCompleteData: boolean;
     lighthouse: LighthousePoint;
     waterlineY: number;
+    modules: Record<LighthouseModuleId, LighthouseModuleIsland>;
   };
   lens: {
     score: number | null;
@@ -128,6 +167,7 @@ export interface LighthouseCinematicModel {
     beamReachPct: number;
     beamOpacity: number;
     sweepDurationSec: number;
+    facets: LighthouseLensFacet[];
   };
   harbors: {
     visible: LighthouseHarborMark[];
@@ -208,8 +248,8 @@ function harborPoint(index: number, count: number): LighthousePoint {
   const angleDeg = count <= 1 ? 270 : HARBOR_START_DEG + ((HARBOR_END_DEG - HARBOR_START_DEG) * index) / span;
   const angle = (angleDeg * Math.PI) / 180;
   return {
-    x: Math.round(STAGE_CENTER_X + HARBOR_ORBIT_RX * Math.cos(angle)),
-    y: Math.round(HARBOR_ORBIT_CENTER_Y + HARBOR_ORBIT_RY * Math.sin(angle)),
+    x: Math.round(HARBOR_ISLAND_X + HARBOR_ORBIT_RX * Math.cos(angle)),
+    y: Math.round(HARBOR_ISLAND_Y + HARBOR_ORBIT_RY * Math.sin(angle)),
   };
 }
 
@@ -274,8 +314,8 @@ function buildHarborMarks(
   const tailEntries = entries.slice(LIGHTHOUSE_VISIBLE_HARBORS);
   const remainingUsd = tailEntries.reduce((sum, entry) => sum + finiteNumber(entry.totalUsd), 0);
   const tailLights = tailEntries.slice(0, 18).map((entry, index) => ({
-    x: 210 + index * 58,
-    y: 426 + ((entry.id.length + index) % 4) * 9,
+    x: HARBOR_ISLAND_X - 330 + index * 39,
+    y: HARBOR_ISLAND_Y - 166 + ((entry.id.length + index) % 4) * 8,
   }));
 
   return {
@@ -295,6 +335,27 @@ function buildHarborMarks(
   };
 }
 
+function buildLensFacets(stabilityIndex: StabilityIndexCurrent | null | undefined): LighthouseLensFacet[] {
+  const componentEntries = [
+    ["severity", stabilityIndex?.components?.severity ?? 0, -112],
+    ["breadth", stabilityIndex?.components?.breadth ?? 0, -36],
+    ["stressBreadth", stabilityIndex?.components?.stressBreadth ?? 0, 36],
+    ["trend", stabilityIndex?.components?.trend ?? 0, 112],
+  ] as const;
+
+  return componentEntries.map(([id, rawValue, angleDeg]) => {
+    const value = clamp(Math.abs(finiteNumber(rawValue)), 0, 100);
+    return {
+      id,
+      value,
+      angleDeg,
+      length: 30 + value * 0.76,
+      opacity: 0.28 + (value / 100) * 0.58,
+      ariaLabel: `${id} PSI component ${formatScore(value)}`,
+    };
+  });
+}
+
 function buildLens(stabilityIndex: StabilityIndexCurrent | null | undefined): LighthouseCinematicModel["lens"] {
   const score = stabilityIndex ? clamp(stabilityIndex.score, 0, 100) : null;
   const band = stabilityIndex?.band ?? null;
@@ -307,6 +368,7 @@ function buildLens(stabilityIndex: StabilityIndexCurrent | null | undefined): Li
     beamReachPct: 42 + scoreRatio * 52,
     beamOpacity: 0.24 + scoreRatio * 0.5,
     sweepDurationSec: 10.5,
+    facets: buildLensFacets(stabilityIndex),
   };
 }
 
@@ -323,7 +385,7 @@ function sanitizeStressSignals(stressSignals: StressSignalsAllResponse | null | 
 function buildRadar(stressSignals: StressSignalsAllResponse | null | undefined): LighthouseCinematicModel["radar"] {
   const sanitized = sanitizeStressSignals(stressSignals);
   const elevated = computePositions(sanitized, undefined).map((coin) => {
-    const scale = 0.72;
+    const scale = 0.56;
     return {
       id: coin.id,
       symbol: coin.symbol,
@@ -331,8 +393,8 @@ function buildRadar(stressSignals: StressSignalsAllResponse | null | undefined):
       score: coin.score,
       band: coin.band,
       colorHex: THREAT_BAND_HEX[coin.band],
-      x: Math.round(STAGE_CENTER_X + (coin.x - DEWS_CX) * scale),
-      y: Math.round(318 + (coin.y - DEWS_CY) * scale),
+      x: Math.round(RADAR_ISLAND_X + (coin.x - DEWS_CX) * scale),
+      y: Math.round(RADAR_ISLAND_Y + (coin.y - DEWS_CY) * scale),
       radius: coin.band === "DANGER" ? 10 : coin.band === "WARNING" ? 8 : 6,
     };
   });
@@ -389,8 +451,8 @@ function mapSkyCoin(coin: SkyCohort["coins"][number], colorHex: string, bounds: 
 
 function buildAltPeg(stablecoins: readonly StablecoinData[] | undefined): LighthouseCinematicModel["altPeg"] {
   const hero = buildPegDiversityHero(stablecoins);
-  const mapBounds = { x: 180, y: 158, width: 1080, height: 242 };
-  const skyBounds = { x: 218, y: 78, width: 1004, height: 176 };
+  const mapBounds = { x: ATLAS_ISLAND_X - 300, y: ATLAS_ISLAND_Y - 94, width: 600, height: 156 };
+  const skyBounds = { x: ATLAS_ISLAND_X - 270, y: ATLAS_ISLAND_Y - 224, width: 540, height: 142 };
   const clusters = hero.pegClusters.slice(0, 12).map((cluster) => ({
     peg: cluster.peg,
     colorHex: cluster.colorHex,
@@ -418,6 +480,78 @@ function buildAltPeg(stablecoins: readonly StablecoinData[] | undefined): Lighth
     skyCohorts.reduce((sum, cohort) => sum + cohort.coins.length, 0);
 
   return { clusters, skyCohorts, visibleCoinCount };
+}
+
+function activeModuleForMode(mode: LighthouseMode): LighthouseModuleId {
+  return mode === "watch" ? "harbors" : mode;
+}
+
+function buildModuleIslands({
+  activeModuleId,
+  lens,
+  radar,
+  altPeg,
+  harborCount,
+}: {
+  activeModuleId: LighthouseModuleId;
+  lens: LighthouseCinematicModel["lens"];
+  radar: LighthouseCinematicModel["radar"];
+  altPeg: LighthouseCinematicModel["altPeg"];
+  harborCount: number;
+}): Record<LighthouseModuleId, LighthouseModuleIsland> {
+  const islands: Record<LighthouseModuleId, Omit<LighthouseModuleIsland, "isActive">> = {
+    harbors: {
+      id: "harbors",
+      bounds: { x: 72, y: 520, width: 760, height: 430 },
+      x: HARBOR_ISLAND_X,
+      y: HARBOR_ISLAND_Y,
+      rx: 360,
+      ry: 128,
+      target: { x: HARBOR_ISLAND_X, y: HARBOR_ISLAND_Y - 118 },
+      colorHex: harborCount > 0 ? "#38bdf8" : NEUTRAL_HEX,
+      ariaLabel: `${harborCount} visible chain harbor island`,
+    },
+    lens: {
+      id: "lens",
+      bounds: { x: 720, y: 78, width: 480, height: 330 },
+      x: LENS_ISLAND_X,
+      y: LENS_ISLAND_Y,
+      rx: 218,
+      ry: 96,
+      target: { x: LENS_ISLAND_X, y: LENS_ISLAND_Y - 42 },
+      colorHex: lens.colorHex,
+      ariaLabel: lens.score == null || !lens.band ? "PSI lens island unavailable" : `PSI lens island ${lens.band} ${formatScore(lens.score)}`,
+    },
+    radar: {
+      id: "radar",
+      bounds: { x: 1248, y: 156, width: 600, height: 410 },
+      x: RADAR_ISLAND_X,
+      y: RADAR_ISLAND_Y,
+      rx: 292,
+      ry: 160,
+      target: { x: RADAR_ISLAND_X, y: RADAR_ISLAND_Y - 36 },
+      colorHex: radar.highestColorHex,
+      ariaLabel: `DEWS radar island highest ${radar.highestBand}`,
+    },
+    atlas: {
+      id: "atlas",
+      bounds: { x: 1112, y: 612, width: 734, height: 360 },
+      x: ATLAS_ISLAND_X,
+      y: ATLAS_ISLAND_Y,
+      rx: 368,
+      ry: 132,
+      target: { x: ATLAS_ISLAND_X, y: ATLAS_ISLAND_Y - 80 },
+      colorHex: altPeg.visibleCoinCount > 0 ? "#a78bfa" : NEUTRAL_HEX,
+      ariaLabel: `Alt-peg map island with ${altPeg.visibleCoinCount} visible marks`,
+    },
+  };
+
+  return {
+    harbors: { ...islands.harbors, isActive: activeModuleId === "harbors" },
+    lens: { ...islands.lens, isActive: activeModuleId === "lens" },
+    radar: { ...islands.radar, isActive: activeModuleId === "radar" },
+    atlas: { ...islands.atlas, isActive: activeModuleId === "atlas" },
+  };
 }
 
 function buildFallbackRows({
@@ -475,8 +609,17 @@ export function buildLighthouseCinematicModel({
   const radar = buildRadar(stressSignals);
   const altPeg = buildAltPeg(stablecoins);
   const selected = harbors.visible.find((harbor) => harbor.id === harbors.selectedId) ?? null;
+  const activeModuleId = activeModuleForMode(mode);
+  const modules = buildModuleIslands({
+    activeModuleId,
+    lens,
+    radar,
+    altPeg,
+    harborCount: harbors.visible.length,
+  });
+  const activeTarget = activeModuleId === "harbors" ? (selected?.target ?? modules.harbors.target) : modules[activeModuleId].target;
   const sceneLabel = [
-    `Pharos Lighthouse cinematic watch`,
+    `Pharos Lighthouse modular archipelago`,
     `${harbors.visible.length} visible chain harbors`,
     harbors.largestId ? `largest ${harbors.visible[0]?.name ?? harbors.largestId}` : "no chain harbors",
     lens.score == null || !lens.band ? "PSI unavailable" : `PSI ${lens.band} ${formatScore(lens.score)}`,
@@ -489,11 +632,13 @@ export function buildLighthouseCinematicModel({
       viewBox: LIGHTHOUSE_STAGE_VIEWBOX,
       sceneLabel,
       mode,
+      activeModuleId,
       selectedHarborId: harbors.selectedId,
-      activeTarget: selected?.target ?? null,
+      activeTarget,
       hasCompleteData: harbors.visible.length > 0 && lens.score != null && Object.keys(radar.bandCounts).length > 0,
       lighthouse: { x: STAGE_CENTER_X, y: 585 },
       waterlineY: STAGE_WATERLINE_Y,
+      modules,
     },
     lens,
     harbors: {

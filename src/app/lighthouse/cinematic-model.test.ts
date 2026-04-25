@@ -114,6 +114,8 @@ describe("buildLighthouseCinematicModel", () => {
 
     expect(first.harbors.visible.map((harbor) => harbor.id)).toEqual(["ethereum", "tron", "base"]);
     expect(first.stage.selectedHarborId).toBe("ethereum");
+    expect(first.stage.activeModuleId).toBe("harbors");
+    expect(first.stage.modules.harbors.isActive).toBe(true);
     expect(first.stage.activeTarget).toEqual(first.harbors.visible[0]?.target);
     expect(first).toEqual(second);
   });
@@ -180,6 +182,8 @@ describe("buildLighthouseCinematicModel", () => {
     });
 
     expect(model.stage.mode).toBe("radar");
+    expect(model.stage.activeModuleId).toBe("radar");
+    expect(model.stage.activeTarget).toEqual(model.stage.modules.radar.target);
     expect(model.radar.highestBand).toBe("DANGER");
     expect(model.radar.bandCounts.DANGER).toBe(1);
     expect(model.radar.bandCounts.CALM).toBe(1);
@@ -198,6 +202,7 @@ describe("buildLighthouseCinematicModel", () => {
     });
 
     expect(model.stage.mode).toBe("atlas");
+    expect(model.stage.activeModuleId).toBe("atlas");
     expect(model.altPeg.visibleCoinCount).toBe(0);
     expect(model.altPeg.clusters).toEqual([]);
     expect(model.fallbackRows.find((row) => row.id === "alt-pegs")?.value).toBe("0 visible marks");

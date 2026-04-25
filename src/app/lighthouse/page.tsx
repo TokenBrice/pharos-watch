@@ -15,17 +15,14 @@ const LighthouseClient = dynamic(
   () => import("./client").then((mod) => ({ default: mod.LighthouseClient })),
   {
     loading: () => (
-      <div
-        className="min-h-[min(47rem,calc(100svh-7rem))] animate-pulse border border-border/50 bg-muted/20"
-        aria-busy="true"
-      />
+      <div className="min-h-[calc(100svh-1.5rem)] animate-pulse border border-border/50 bg-muted/20" aria-busy="true" />
     ),
   },
 );
 
 export default function LighthousePage() {
   return (
-    <div className="mx-auto w-full max-w-[94rem]">
+    <div className="relative left-1/2 w-[100vw] -translate-x-1/2 md:w-[calc(100vw-var(--sidebar-width-expanded))]">
       <BreadcrumbJsonLd
         items={[
           { name: "Home", url: "/" },

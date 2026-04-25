@@ -1,25 +1,21 @@
 import type { LighthouseCinematicModel } from "./cinematic-model";
-import { cn } from "@/lib/utils";
 
 export function LighthouseA11yLedger({
   model,
-  visible,
 }: {
   model: LighthouseCinematicModel;
-  visible: boolean;
 }) {
-  const selected = model.harbors.visible.find((harbor) => harbor.id === model.stage.selectedHarborId) ?? null;
   return (
     <section
-      className={cn("lh-a11y-ledger", visible && "lh-a11y-ledger--visible")}
+      className="sr-only"
       aria-label="Lighthouse data ledger"
       data-testid="lighthouse-a11y-ledger"
     >
-      <div className="lh-ledger-inner">
-        <h2 className="lh-ledger-heading">Lighthouse data ledger</h2>
-        <dl className="lh-ledger-grid">
+      <div>
+        <h2>Lighthouse data ledger</h2>
+        <dl>
           {model.fallbackRows.map((row) => (
-            <div key={row.id} className="lh-ledger-row">
+            <div key={row.id}>
               <dt>{row.label}</dt>
               <dd>
                 <strong>{row.value}</strong>
@@ -28,9 +24,9 @@ export function LighthouseA11yLedger({
             </div>
           ))}
         </dl>
-        <ol className="lh-ledger-harbors">
+        <ol>
           {model.harbors.visible.map((harbor) => (
-            <li key={harbor.id} data-selected={harbor.id === selected?.id || undefined}>
+            <li key={harbor.id}>
               <span>{harbor.name}</span>
               <span>{harbor.ariaLabel}</span>
             </li>

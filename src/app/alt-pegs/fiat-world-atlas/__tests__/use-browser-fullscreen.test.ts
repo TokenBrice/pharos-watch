@@ -2,7 +2,7 @@
 
 import { act, renderHook } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { useBrowserFullscreen } from "@/app/alt-pegs/fiat-world-atlas/use-browser-fullscreen";
+import { useBrowserFullscreen } from "@/hooks/use-browser-fullscreen";
 
 type FullscreenStub = {
   enabled: boolean;

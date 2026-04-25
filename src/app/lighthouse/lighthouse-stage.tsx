@@ -1,43 +1,67 @@
 "use client";
 
-import type { LighthouseCinematicModel, LighthouseMode } from "./cinematic-model";
+import type { LighthouseCinematicModel, LighthouseMode, LighthouseModuleId } from "./cinematic-model";
 import { AtmosphereLayer } from "./layers/atmosphere-layer";
 import { AltPegProjectionLayer } from "./layers/alt-peg-projection-layer";
 import { DewsRadarLayer } from "./layers/dews-radar-layer";
 import { HarborFleetLayer } from "./layers/harbor-fleet-layer";
+import { ModuleIslandBaseLayer } from "./layers/module-island-base-layer";
 import { PharosTowerLayer } from "./layers/pharos-tower-layer";
+import { PsiLensIslandLayer } from "./layers/psi-lens-island-layer";
 import { StageControlsLayer } from "./layers/stage-controls-layer";
 import { LighthouseA11yLedger } from "./lighthouse-a11y-ledger";
 import "./lighthouse-stage.css";
 
 export function LighthouseStage({
   model,
-  ledgerOpen,
+  variant = "inline",
+  ariaLabelledBy = "lighthouse-heading",
+  ariaLabel,
+  fullscreenOpen = false,
   onModeChange,
-  onToggleLedger,
+  onExpandStage,
+  onPreviewModule,
+  onPreviewModuleEnd,
+  onSelectModule,
   onSelectHarbor,
   onPreviewHarbor,
   onPreviewEnd,
 }: {
   model: LighthouseCinematicModel;
-  ledgerOpen: boolean;
+  variant?: "inline" | "fullscreen";
+  ariaLabelledBy?: string;
+  ariaLabel?: string;
+  fullscreenOpen?: boolean;
   onModeChange: (mode: LighthouseMode) => void;
-  onToggleLedger: () => void;
+  onExpandStage?: () => void;
+  onPreviewModule?: (id: LighthouseModuleId) => void;
+  onPreviewModuleEnd?: () => void;
+  onSelectModule?: (id: LighthouseModuleId) => void;
   onSelectHarbor: (id: string) => void;
   onPreviewHarbor?: (id: string) => void;
   onPreviewEnd?: () => void;
 }) {
+  const sectionLabelProps = ariaLabel ? { "aria-label": ariaLabel } : { "aria-labelledby": ariaLabelledBy };
+
   return (
-    <section className="lh-cinematic-experience" aria-labelledby="lighthouse-heading">
-      <div className="lh-stage-frame" data-mode={model.stage.mode} data-testid="lighthouse-cinematic-stage">
+    <section
+      className={variant === "fullscreen" ? "lh-cinematic-experience lh-cinematic-experience--fullscreen" : "lh-cinematic-experience"}
+      {...sectionLabelProps}
+    >
+      <div
+        className={variant === "fullscreen" ? "lh-stage-frame lh-stage-frame--fullscreen" : "lh-stage-frame"}
+        data-mode={model.stage.mode}
+        data-testid="lighthouse-cinematic-stage"
+      >
         <svg
           className="lh-stage-svg"
           viewBox={`0 0 ${model.stage.viewBox.width} ${model.stage.viewBox.height}`}
           role="img"
           aria-label={model.stage.sceneLabel}
-          preserveAspectRatio="xMidYMid meet"
+          preserveAspectRatio="none"
           data-testid="lighthouse-stage-svg"
           data-mode={model.stage.mode}
+          data-active-module-id={model.stage.activeModuleId}
           data-selected-id={model.stage.selectedHarborId ?? ""}
         >
           <defs>
@@ -79,8 +103,15 @@ export function LighthouseStage({
             </pattern>
           </defs>
           <AtmosphereLayer model={model} />
+          <ModuleIslandBaseLayer
+            model={model}
+            onPreviewModule={onPreviewModule}
+            onPreviewModuleEnd={onPreviewModuleEnd}
+            onSelectModule={onSelectModule}
+          />
           <AltPegProjectionLayer model={model} />
           <DewsRadarLayer model={model} />
+          <PsiLensIslandLayer model={model} />
           <PharosTowerLayer model={model} />
           <HarborFleetLayer
             harbors={model.harbors.visible}
@@ -92,12 +123,12 @@ export function LighthouseStage({
         </svg>
         <StageControlsLayer
           mode={model.stage.mode}
-          ledgerOpen={ledgerOpen}
+          fullscreenOpen={fullscreenOpen}
           onModeChange={onModeChange}
-          onToggleLedger={onToggleLedger}
+          onExpandStage={onExpandStage}
         />
       </div>
-      <LighthouseA11yLedger model={model} visible={ledgerOpen} />
+      <LighthouseA11yLedger model={model} />
     </section>
   );
 }

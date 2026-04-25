@@ -11,7 +11,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { PegDiversityHeroLive } from "@/app/alt-pegs/fiat-world-atlas/peg-diversity-hero-live";
 import { WorldMap } from "@/app/alt-pegs/fiat-world-atlas/world-map";
-import { useBrowserFullscreen } from "@/app/alt-pegs/fiat-world-atlas/use-browser-fullscreen";
+import { useBrowserFullscreen } from "@/hooks/use-browser-fullscreen";
 
 const DIALOG_CONTENT_CLASSES =
   "atlas-fullscreen-dialog__content fixed inset-2 top-2 left-2 h-auto w-auto max-w-none translate-x-0 translate-y-0 gap-0 overflow-hidden rounded-2xl border-border/70 p-0 shadow-2xl sm:inset-4 sm:top-4 sm:left-4 sm:max-w-none";

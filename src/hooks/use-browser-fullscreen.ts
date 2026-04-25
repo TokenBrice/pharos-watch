@@ -15,9 +15,8 @@ export function useBrowserFullscreen(open: boolean): RefObject<HTMLDivElement | 
       const requested = target.requestFullscreen?.();
       if (requested && typeof requested.catch === "function") {
         requested.catch(() => {
-          // MDN: rejects with TypeError when denied (no activation, permissions
-          // policy, iframe without allowfullscreen, etc.). Silently accept —
-          // the Radix Dialog remains the fallback.
+          // Browsers can deny fullscreen without user activation or permission.
+          // The Dialog remains the supported fallback surface.
         });
       }
     }
@@ -27,7 +26,7 @@ export function useBrowserFullscreen(open: boolean): RefObject<HTMLDivElement | 
         const exited = document.exitFullscreen?.();
         if (exited && typeof exited.catch === "function") {
           exited.catch(() => {
-            // Swallow — browser may have already exited via Esc/F11.
+            // Browser may have already exited fullscreen through Esc/F11.
           });
         }
       }
