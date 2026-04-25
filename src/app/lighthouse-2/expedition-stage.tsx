@@ -89,29 +89,29 @@ function ModuleGround({
 }) {
   return (
     <g className="lh2-module-ground">
-      {Object.values(modules).map((module) => (
+      {Object.values(modules).map((moduleZone) => (
         <g
-          key={module.id}
+          key={moduleZone.id}
           role="button"
           tabIndex={0}
-          data-module-id={module.id}
-          aria-label={module.ariaLabel}
-          aria-pressed={module.isActive}
-          className={classNames("lh2-module-zone", module.isActive && "lh2-module-zone--active")}
-          style={{ "--lh2-module-color": module.colorHex } as CSSProperties}
-          onPointerEnter={() => onPreviewModule?.(module.id)}
+          data-module-id={moduleZone.id}
+          aria-label={moduleZone.ariaLabel}
+          aria-pressed={moduleZone.isActive}
+          className={classNames("lh2-module-zone", moduleZone.isActive && "lh2-module-zone--active")}
+          style={{ "--lh2-module-color": moduleZone.colorHex } as CSSProperties}
+          onPointerEnter={() => onPreviewModule?.(moduleZone.id)}
           onPointerLeave={onPreviewEnd}
-          onFocus={() => onPreviewModule?.(module.id)}
+          onFocus={() => onPreviewModule?.(moduleZone.id)}
           onBlur={onPreviewEnd}
-          onClick={() => onSelectModule?.(module.id)}
-          onKeyDown={(event) => handleSvgKey(event, () => onSelectModule?.(module.id))}
+          onClick={() => onSelectModule?.(moduleZone.id)}
+          onKeyDown={(event) => handleSvgKey(event, () => onSelectModule?.(moduleZone.id))}
         >
-          <ellipse className="lh2-zone-hit" cx={module.x} cy={module.y} rx={module.rx} ry={module.ry} />
-          <path className="lh2-island-shadow" d={islandPath(module.x, module.y + module.ry * 0.24, module.rx * 0.94, module.ry * 0.42)} />
-          <path className="lh2-island-mass" d={islandPath(module.x, module.y, module.rx, module.ry)} />
+          <ellipse className="lh2-zone-hit" cx={moduleZone.x} cy={moduleZone.y} rx={moduleZone.rx} ry={moduleZone.ry} />
+          <path className="lh2-island-shadow" d={islandPath(moduleZone.x, moduleZone.y + moduleZone.ry * 0.24, moduleZone.rx * 0.94, moduleZone.ry * 0.42)} />
+          <path className="lh2-island-mass" d={islandPath(moduleZone.x, moduleZone.y, moduleZone.rx, moduleZone.ry)} />
           <path
             className="lh2-island-rim"
-            d={`M ${module.x - module.rx * 0.74} ${module.y - module.ry * 0.08} C ${module.x - module.rx * 0.24} ${module.y - module.ry * 0.42} ${module.x + module.rx * 0.26} ${module.y - module.ry * 0.38} ${module.x + module.rx * 0.78} ${module.y - module.ry * 0.02}`}
+            d={`M ${moduleZone.x - moduleZone.rx * 0.74} ${moduleZone.y - moduleZone.ry * 0.08} C ${moduleZone.x - moduleZone.rx * 0.24} ${moduleZone.y - moduleZone.ry * 0.42} ${moduleZone.x + moduleZone.rx * 0.26} ${moduleZone.y - moduleZone.ry * 0.38} ${moduleZone.x + moduleZone.rx * 0.78} ${moduleZone.y - moduleZone.ry * 0.02}`}
           />
         </g>
       ))}
@@ -215,9 +215,9 @@ function ChainHarbors({
 }
 
 function PsiInstrument({ model }: { model: Lighthouse2Model }) {
-  const module = model.stage.modules.psi;
+  const psiModule = model.stage.modules.psi;
   return (
-    <g className="lh2-psi-instrument" transform={`translate(${module.x} ${module.y - 4})`} style={{ "--lh2-psi-color": model.psi.colorHex } as CSSProperties} aria-hidden="true">
+    <g className="lh2-psi-instrument" transform={`translate(${psiModule.x} ${psiModule.y - 4})`} style={{ "--lh2-psi-color": model.psi.colorHex } as CSSProperties} aria-hidden="true">
       <ellipse className="lh2-brass-shadow" cx="0" cy="28" rx="148" ry="54" />
       <circle className="lh2-brass-dial" r="86" />
       <circle className="lh2-dial-face" r="64" />
@@ -247,10 +247,10 @@ function StormCompass({
   onPreviewEnd?: () => void;
   onSelectMark?: (id: string, moduleId: Lighthouse2ModuleId) => void;
 }) {
-  const module = model.stage.modules.dews;
+  const dewsModule = model.stage.modules.dews;
   return (
     <g className="lh2-storm-compass" style={{ "--lh2-dews-color": model.dews.highestColorHex } as CSSProperties}>
-      <g transform={`translate(${module.x} ${module.y})`} aria-hidden="true">
+      <g transform={`translate(${dewsModule.x} ${dewsModule.y})`} aria-hidden="true">
         <ellipse className="lh2-brass-shadow" cx="0" cy="52" rx="218" ry="76" />
         <circle className="lh2-storm-dial" r="132" />
         {[42, 76, 108].map((ring) => (

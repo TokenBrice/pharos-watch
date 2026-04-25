@@ -20,25 +20,22 @@ export function Lighthouse2Client() {
 
   const activeModuleId = previewModuleId ?? moduleId;
   const activeMarkId = previewMarkId ?? selectedMarkId;
+  const chains = chainsQuery.data?.chains;
+  const totalUsd = chainsQuery.data?.globalTotalUsd ?? 0;
+  const stabilityIndex = stabilityQuery.data?.current ?? null;
+  const stressSignals = stressQuery.data ?? null;
+  const stablecoins = stablecoinsQuery.data?.peggedAssets;
   const model = useMemo(
     () => buildLighthouse2Model({
-      chains: chainsQuery.data?.chains ?? [],
-      totalUsd: chainsQuery.data?.globalTotalUsd ?? 0,
-      stabilityIndex: stabilityQuery.data?.current ?? null,
-      stressSignals: stressQuery.data ?? null,
-      stablecoins: stablecoinsQuery.data?.peggedAssets,
+      chains: chains ?? [],
+      totalUsd,
+      stabilityIndex,
+      stressSignals,
+      stablecoins,
       activeModuleId,
       selectedMarkId: activeMarkId,
     }),
-    [
-      activeMarkId,
-      activeModuleId,
-      chainsQuery.data?.chains,
-      chainsQuery.data?.globalTotalUsd,
-      stablecoinsQuery.data?.peggedAssets,
-      stabilityQuery.data?.current,
-      stressQuery.data,
-    ],
+    [activeMarkId, activeModuleId, chains, stablecoins, stabilityIndex, stressSignals, totalUsd],
   );
 
   const handleSelectModule = (id: Lighthouse2ModuleId) => {
