@@ -9,6 +9,10 @@ export const metadata: Metadata = buildPageMetadata({
   description:
     "An isometric pixel-art harbor: Pharos as the lighthouse, blockchains as harbours, stablecoins as boats. PSI is the beam. DEWS is the sea.",
   canonical: "/lighthouse/",
+  robots: {
+    index: false,
+    follow: true,
+  },
 });
 
 const LighthouseClient = dynamic(
