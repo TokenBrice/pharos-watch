@@ -6,6 +6,18 @@ description: "Weekly release notes for Pharos."
 
 # Changelog
 
+## 2026-04-20 to 2026-04-26
+
+Harbor and canal metaphors redraw /chains and /liquidity, public /api/* goes keyed-only, and tracked coverage hits 215.
+
+- **Visualization metaphors**: /chains becomes a nautical harbor chart with ships scaled by supply, /liquidity turns into a canal with mitre lock gates and chain basins, and the PSI hero gets a lighthouse mini-scene.
+- **Lighthouse cinematic concept**: New /lighthouse route ships an isometric canvas 2D harbor: 25-color palette, modular scene layers (sky, water, lamps, sprites), reduced-motion timeline registry, and Playwright visual regression.
+- **Alt-pegs world atlas**: Alt-pegs hub gains a docked world map with country-fill colors driven by peg taxonomy, a celestial band for Gold/Silver/CPI, fullscreen inspection mode, and a non-USD market structure route.
+- **Coverage and variants framework**: Tracked coverage grows from 191 to 215 across a flat RWA issuer batch, risk-wrapper assets, and a redemption-modeling pass; a new variants framework links wrappers to parents with inherited blacklist status.
+- **/api/* keyed-only**: Public /api/* lane is removed in favor of X-API-Key on every request; /_site-data/* is gated on Origin/Referer headers, with a tested 401 floor and a narrow exempt carve-out for feedback/og/health.
+- **Pipeline correctness hardening**: Reserve/chart/yield-rankings cache validators, freshness sentinels, supply-history validation, malformed payload handling, abort-signal propagation, cron lane isolation, and onchain-only detail fallback.
+- **Tier 1 refactor wave**: Repo-wide dedup: shared isRecord/CircuitRecord/admin-gates, GradeBadge and DetailSectionTitle primitives, error boundaries, dead layouts, retired legacy stablecoin routes, and frontend module splits.
+
 ## 2026-04-13 to 2026-04-19
 
 Pricing pipeline v5.0 lands, 40+ new risk-coverage entries across backstops/blacklist/reserves, and /funding launches.
