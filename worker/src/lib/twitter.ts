@@ -55,15 +55,14 @@ async function buildOAuthHeader(method: string, url: string, creds: TwitterCreds
   );
 }
 
-/** Inject $ cashtag prefix on the first mention of each tracked ticker in text. */
+/** Inject a `$` cashtag prefix on the earliest tracked-ticker mention in text.
+ *  Twitter rejects posts containing more than one cashtag, so only the first
+ *  match wins; subsequent ticker mentions remain plain text. */
 function injectCashtags(text: string): string {
   const symbols = [...new Set(ACTIVE_STABLECOINS.map((s) => s.symbol))];
-  let result = text;
-  for (const sym of symbols) {
-    // eslint-disable-next-line security/detect-non-literal-regexp -- tracked symbols are curated and bounded to whole-word matches.
-    result = result.replace(new RegExp(`\\b${sym}\\b`, "i"), `$${sym}`);
-  }
-  return result;
+  // eslint-disable-next-line security/detect-non-literal-regexp -- tracked symbols are curated and bounded to whole-word matches.
+  const pattern = new RegExp(`\\b(?:${symbols.join("|")})\\b`, "i");
+  return text.replace(pattern, (match) => `$${match.toUpperCase()}`);
 }
 
 /** Truncate text to fit within maxLen chars, breaking at a word boundary. */

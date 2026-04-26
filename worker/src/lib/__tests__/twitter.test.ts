@@ -24,10 +24,13 @@ describe("twitter helpers", () => {
     vi.unstubAllGlobals();
   });
 
-  it("builds tweet text with title stripping, first-mention cashtags, and truncation", () => {
+  it("builds tweet text with title stripping, single earliest-mention cashtag, and truncation", () => {
+    // Twitter rejects posts with >1 cashtag, so only the earliest ticker match gets the `$` prefix.
     expect(buildTweetText("Daily Digest", "Daily Digest: USDT held while usdt volume rose and USDC followed.")).toBe(
-      "Daily Digest\n\n$USDT held while usdt volume rose and $USDC followed.",
+      "Daily Digest\n\n$USDT held while usdt volume rose and USDC followed.",
     );
+    // Lowercase first mention is normalized to canonical uppercase.
+    expect(buildTweetText("", "usdc traded above usdt today.")).toBe("$USDC traded above usdt today.");
 
     const longWord = buildTweetText("", "x".repeat(400));
     expect(longWord).toHaveLength(270);
@@ -65,7 +68,7 @@ describe("twitter helpers", () => {
     expect((init?.headers as Record<string, string>).Authorization).toContain('oauth_signature="AQID"');
     expect((init?.headers as Record<string, string>).Authorization).toContain('oauth_timestamp="1700000000"');
     expect(JSON.parse(String(init?.body))).toEqual({
-      text: "Daily Digest\n\n$USDT outpaced $USDC.",
+      text: "Daily Digest\n\n$USDT outpaced USDC.",
     });
     expect(response.bodyUsed).toBe(true);
   });
