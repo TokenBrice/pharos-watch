@@ -27,7 +27,7 @@ describe("FrozenStateBanner", () => {
 
   it("renders the epitaph headline", () => {
     render(<FrozenStateBanner symbol="USR" frozenAt="2026-04-27" obituary={obituary} />);
-    expect(screen.getByText("Sunset by issuer.")).toBeTruthy();
+    expect(screen.getByRole("heading", { name: /Sunset by issuer\./ })).toBeTruthy();
   });
 
   it("renders the cause-of-death label", () => {

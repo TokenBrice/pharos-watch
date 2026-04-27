@@ -149,11 +149,11 @@ describe("StablecoinDetailClient (frozen)", () => {
     cleanup();
   });
 
-  it("renders the FrozenStateBanner above the hero when status === frozen", () => {
+  it("renders the FrozenStateBanner alongside the hero when status === frozen", () => {
     const coin = TRACKED_META_BY_ID.get("usds-sky")!;
     useStablecoinDetailViewModelMock.mockReturnValue(makeFrozenViewModel(coin));
     render(<StablecoinDetailClient id={coin.id} summary={null} coin={coin} />);
-    expect(screen.getByText("Sunset by issuer.")).toBeTruthy();
+    expect(screen.getByRole("heading", { name: /Sunset by issuer\./ })).toBeTruthy();
     expect(screen.getByRole("link", { name: /cemetery/i })).toBeTruthy();
   });
 
