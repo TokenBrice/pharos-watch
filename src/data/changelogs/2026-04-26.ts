@@ -12,12 +12,6 @@ export const entry: ChangelogEntry = {
         "/chains becomes a nautical harbor chart with ships scaled by supply, /liquidity turns into a canal with mitre lock gates and chain basins, and the PSI hero gets a lighthouse mini-scene.",
     },
     {
-      label: "Lighthouse cinematic concept",
-      tag: "design",
-      description:
-        "New /lighthouse route ships an isometric canvas 2D harbor: 25-color palette, modular scene layers (sky, water, lamps, sprites), reduced-motion timeline registry, and Playwright visual regression.",
-    },
-    {
       label: "Alt-pegs world atlas",
       tag: "design",
       description:
