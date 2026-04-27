@@ -74,10 +74,12 @@ obituary?: StablecoinObituary;
 
 - [ ] **Step 3: Define `StablecoinObituary` shape and import `CauseOfDeath`**
 
+`CauseOfDeath` currently lives in `shared/types/market.ts:88` (verified via `grep -n "type CauseOfDeath" shared/types/market.ts`). Import from there for now; Task 2 will move it to `shared/lib/cause-of-death.ts` and re-export from `market.ts` for back-compat.
+
 Add (near other interface declarations in the same file, before `StablecoinMeta`):
 
 ```ts
-import type { CauseOfDeath } from "./cemetery";
+import type { CauseOfDeath } from "./market";
 
 export interface StablecoinObituary {
   /** Cemetery cause-of-death enum, shared with `DeadStablecoin`. */
@@ -94,8 +96,6 @@ export interface StablecoinObituary {
   sourceLabel: string;
 }
 ```
-
-If `./cemetery` does not currently export `CauseOfDeath`, defer the import to Task 2 and use `import type { CauseOfDeath } from "../lib/cause-of-death";` instead.
 
 - [ ] **Step 4: Add a TypeScript-only assertion test**
 
@@ -391,7 +391,7 @@ describe("StablecoinMeta schema — frozen status", () => {
         },
       },
     ];
-    expect(() => parseStablecoinMetaAssets(json, "fixture")).toThrow(/obituary.*active|active.*obituary/i);
+    expect(() => parseStablecoinMetaAssets(json, "fixture")).toThrow(/obituary is only allowed when status is frozen/);
   });
 });
 ```
@@ -440,13 +440,13 @@ const obituarySchema = z.object({
       ctx.addIssue({ code: z.ZodIssueCode.custom, message: "frozenAt is only allowed when status is frozen", path: ["frozenAt"] });
     }
     if (meta.obituary) {
-      ctx.addIssue({ code: z.ZodIssueCode.custom, message: "obituary is only allowed when status is active or frozen", path: ["obituary"] });
+      ctx.addIssue({ code: z.ZodIssueCode.custom, message: "obituary is only allowed when status is frozen", path: ["obituary"] });
     }
   }
 });
 ```
 
-(Adjust `else` branch wording to match the design — obituary is allowed *only* when frozen.)
+The current schema in `shared/lib/stablecoins/schema.ts` is `z.object({...}).strict().superRefine(variantCheck)`. The chained `superRefine` returns `ZodEffects`, which lacks `.shape`, so the new field additions and the new `superRefine` block must be inserted on the underlying object literal — not appended to the `ZodEffects`. Concretely: edit the object literal to add the `frozenAt`/`obituary` fields, then chain a second `.superRefine(...)` call after the existing `variantCheck` one (Zod allows multiple chained `superRefine`s).
 
 - [ ] **Step 5: Verify tests pass**
 
@@ -599,7 +599,7 @@ npm test -- --run shared/lib/stablecoins
 npx tsc --noEmit
 cd worker && npx tsc --noEmit && cd ..
 ```
-Expected: registry tests pass; **TypeScript may surface new errors at consumers expecting the old `ACTIVE_*` semantics** — those are intentional and addressed by later phases. Record any errors but do NOT fix consumers in this task.
+Expected: registry tests pass; the type signatures of `ACTIVE_STABLECOINS`/`ACTIVE_IDS`/`ACTIVE_META_BY_ID` are unchanged (still `StablecoinMeta[]`/`Set<string>`/`Map<string, StablecoinMeta>`), so there should be NO TypeScript errors at consumers. Runtime semantics are also unchanged today because there are zero frozen coins in the registry — `ACTIVE_STABLECOINS` returns the same set as before. The intermediate-state risk window only opens once PR #2 lands a real frozen coin; PR #1 is functionally a no-op at runtime. If you DO see TypeScript errors, treat them as a sign that a consumer was relying on accidentally over-broad behavior — flag and address per the relevant later task.
 
 - [ ] **Step 5: Commit**
 
@@ -1180,7 +1180,25 @@ export function shouldCloseOrphanedDepeg(
 }
 ```
 
-In the orphan-close loop (around lines 596-617), replace the inline condition `if (!trackedCoinIds.has(...))` with `if (shouldCloseOrphanedDepeg(eventCoinId, trackedCoinIds))`.
+In the orphan-close loop (around lines 596-617), the existing code uses positive-skip on `row.stablecoin_id`:
+
+```ts
+// existing
+for (const row of openEvents) {
+  if (trackedCoinIds.has(row.stablecoin_id)) continue;
+  // … force-close logic
+}
+```
+
+Replace the guard line with the helper (note: helper returns `true` when the row SHOULD be closed, so polarity is preserved by inverting the skip):
+
+```ts
+// after
+for (const row of openEvents) {
+  if (!shouldCloseOrphanedDepeg(row.stablecoin_id, trackedCoinIds)) continue;
+  // … force-close logic
+}
+```
 
 In the depeg-write iteration (around lines 395-557), replace `TRACKED_META_BY_ID.get(asset.id)` lookups that **gate write decisions** with `ACTIVE_META_BY_ID.get(asset.id)`. Read-only lookups (e.g., display name) keep `TRACKED_META_BY_ID`. Audit each call site individually.
 
@@ -1466,20 +1484,23 @@ const frozenRejection = assertNotFrozen(stablecoinId);
 if (frozenRejection) return frozenRejection;
 ```
 
-Files (verify with `ls worker/src/api/backfill-*.ts`):
+Files (verify with `ls worker/src/api/backfill-*.ts` — list MUST be exhaustive):
 - `backfill-depegs.ts`
 - `backfill-depegs-replay.ts`
 - `backfill-depegs-window.ts`
+- `backfill-depegs-extraction.ts` (flagged by validator — verify if it takes a stablecoinId param)
+- `backfill-depegs-preview.ts` (flagged by validator — verify if it takes a stablecoinId param)
 - `backfill-cg-prices.ts`
 - `backfill-supply-history.ts`
 - `backfill-dews.ts`
 - `backfill-stability-index.ts`
-- `backfill-fx.ts` (if it takes a stablecoinId param; otherwise skip)
+- `backfill-fx.ts` (already filters via ACTIVE; verify and skip if so)
 - `backfill-mint-burn.ts`
 - `backfill-mint-burn-prices.ts`
 - `backfill-blacklist-current-balances.ts`
+- `backfill-price-sources.ts` (flagged by validator — verify if it takes a stablecoinId param)
 
-For backfills that don't take a stablecoinId param (global passes), skip — they don't need the guard.
+For backfills that don't take a stablecoinId param (global passes), skip — they don't need the guard. Audit-and-decide each in turn; do not assume.
 
 - [ ] **Step 4: Verify**
 
@@ -1504,17 +1525,17 @@ Three eviction patterns would actively destroy frozen-coin rows under the new AC
 ### Task 12: Widen `dex-liquidity/persistence.ts` cleanup to TRACKED
 
 **Files:**
-- Modify: `worker/src/cron/dex-liquidity/persistence.ts:188-209`
+- Modify: `worker/src/cron/dex-liquidity/persistence.ts:188-209` (and the actual line range — re-read before editing)
 - Test: `worker/src/cron/dex-liquidity/__tests__/persistence-frozen.test.ts` (new)
 
-The current cleanup deletes rows for stablecoin_ids "no longer in ACTIVE". The new ACTIVE excludes frozen, so this would wipe DEX history. Widen the preserve set to TRACKED (which still contains frozen).
+The current cleanup deletes rows for stablecoin_ids "no longer in ACTIVE", iterating over the DEX tables `dex_liquidity`, `dex_liquidity_history`, and `dex_discovery_meta` (per-table inline DELETE — there is NO shared `loadAllStablecoinIdsFromDexTables` helper in the repo today). It also keeps an `__global__` row for aggregate liquidity. Under the new ACTIVE semantics, this would wipe frozen-coin DEX history. Widen the preserve set to `TRACKED_IDS ∪ {"__global__"}`.
 
 - [ ] **Step 1: Read the cleanup function**
 
 ```bash
-sed -n '180,220p' worker/src/cron/dex-liquidity/persistence.ts
+sed -n '180,240p' worker/src/cron/dex-liquidity/persistence.ts
 ```
-Identify the function and the `validIds` construction.
+Identify (a) the per-table loop, (b) the `validIds` construction, (c) the `__global__` augmentation.
 
 - [ ] **Step 2: Write the failing test**
 
@@ -1522,51 +1543,50 @@ Create `worker/src/cron/dex-liquidity/__tests__/persistence-frozen.test.ts`:
 
 ```ts
 import { describe, expect, it } from "vitest";
-import { computePruneSet } from "../persistence";
+import { computeDexPruneSet } from "../persistence";
 
 describe("dex-liquidity prune set", () => {
-  it("preserves rows for frozen coin ids", () => {
+  it("preserves rows for frozen coin ids and the __global__ aggregate", () => {
+    const allDbIds = new Set(["usdt-tether", "usr-resolv", "zombie-coin", "__global__"]);
     const trackedIds = new Set(["usdt-tether", "usr-resolv"]);
-    const allDbIds = new Set(["usdt-tether", "usr-resolv", "zombie-coin"]);
-    const prune = computePruneSet(allDbIds, trackedIds);
+    const prune = computeDexPruneSet(allDbIds, trackedIds);
     expect(prune).toEqual(new Set(["zombie-coin"]));
     expect(prune.has("usr-resolv")).toBe(false);
+    expect(prune.has("__global__")).toBe(false);
   });
 });
 ```
 
-- [ ] **Step 3: Refactor and export `computePruneSet`**
+- [ ] **Step 3: Refactor and export `computeDexPruneSet`**
 
-In `worker/src/cron/dex-liquidity/persistence.ts`:
+In `worker/src/cron/dex-liquidity/persistence.ts`, add at module scope:
 
 ```ts
 import { TRACKED_IDS } from "@shared/lib/stablecoins";
 
+const DEX_AGGREGATE_PRESERVE_IDS = new Set(["__global__"]);
+
 /**
  * Compute the set of stablecoin ids whose DEX rows should be deleted.
- * Preserves rows for any tracked coin (active OR frozen) — only orphaned
- * ids that no longer exist in the registry get pruned.
+ * Preserves rows for any tracked coin (active OR frozen) plus the
+ * `__global__` aggregate sentinel. Only orphaned ids that no longer
+ * exist in the registry get pruned.
  */
-export function computePruneSet(allDbIds: Set<string>, trackedIds: Set<string> = TRACKED_IDS): Set<string> {
+export function computeDexPruneSet(
+  allDbIds: Set<string>,
+  trackedIds: Set<string> = TRACKED_IDS,
+): Set<string> {
   const prune = new Set<string>();
   for (const id of allDbIds) {
-    if (!trackedIds.has(id)) prune.add(id);
+    if (trackedIds.has(id)) continue;
+    if (DEX_AGGREGATE_PRESERVE_IDS.has(id)) continue;
+    prune.add(id);
   }
   return prune;
 }
 ```
 
-Replace the inline `validIds = new Set(ACTIVE_STABLECOINS.map(...))` block (around line 188) with:
-```ts
-const allDbIds = await loadAllStablecoinIdsFromDexTables(db); // existing or extracted helper
-const idsToPrune = computePruneSet(allDbIds);
-if (idsToPrune.size > 0) {
-  await db.exec(`DELETE FROM dex_prices WHERE stablecoin_id IN (${[...idsToPrune].map(id => `'${id}'`).join(",")})`);
-  await db.exec(`DELETE FROM dex_pools WHERE stablecoin_id IN (${[...idsToPrune].map(id => `'${id}'`).join(",")})`);
-}
-```
-
-(Use parameterized queries — the snippet above uses inline literals for brevity. Match the existing query style in the file.)
+In the existing per-table cleanup loop, replace each `validIds = new Set(ACTIVE_STABLECOINS.map(...))` (or equivalent) construction with `computeDexPruneSet(thisTableIds)`. Keep the existing per-table iteration and parameterized-query style — only the preserve-set semantics change.
 
 - [ ] **Step 4: Verify**
 
@@ -1653,18 +1673,22 @@ git commit -m "fix(dews/persistence): preserve frozen-coin stress-signal rows"
 **Files:**
 - Modify: `worker/src/cron/stability-index.ts:250` (sample retention)
 - Modify: `worker/src/cron/dews/persistence.ts:131,137` (history retention)
-- Modify: `worker/src/cron/prune-cron-history.ts` (general housekeeping)
-- Modify: any other prune cron found via `grep -rln "stored_at < \|recorded_at < \|created_at <" worker/src/cron/`
+- Modify: `worker/src/cron/yield-sync/publication.ts:360` (`yield_history` retention — flagged by validator)
+- Modify: `worker/src/cron/yield-sync/history.ts:120,144` (yield-data retention — flagged by validator)
+- Modify: `worker/src/lib/mint-burn-pipeline/persistence.ts:131` (`mint_burn_hourly` retention — flagged by validator)
+- Modify: `worker/src/lib/live-reserves-store-write.ts:200` (generic time prune — flagged by validator)
+- Modify: any additional prune cron found via the audit step below
+- Note: `worker/src/cron/prune-cron-history.ts` and `prune-status-probe-runs.ts` are NOT per-stablecoin (they prune cron job history, not coin data) — leave alone.
 
-Goal: every time-based DELETE adds `AND stablecoin_id NOT IN <frozen_ids>` so retention doesn't eventually delete preserved frozen rows.
+Goal: every per-stablecoin time-based DELETE adds `AND stablecoin_id NOT IN <frozen_ids>` so retention doesn't eventually delete preserved frozen rows.
 
-- [ ] **Step 1: Audit**
+- [ ] **Step 1: Audit (final pass)**
 
 ```bash
-grep -rln "stored_at <\|recorded_at <\|created_at <" worker/src/cron/
-grep -rln "stored_at <\|recorded_at <\|created_at <" worker/src/lib/
+grep -rln "stored_at <\|recorded_at <\|created_at <" worker/src/cron/ worker/src/lib/
+grep -rln "DELETE.*FROM.*WHERE.*NOT IN" worker/src/cron/ worker/src/lib/
 ```
-List every file that prunes by time. Confirm with the user before proceeding if the list exceeds 6 files.
+Cross-reference against the file list above. Each new match must either be added to this task or explicitly justified as not-coin-keyed.
 
 - [ ] **Step 2: For each prune query, add the frozen carve-out**
 
@@ -1697,7 +1721,7 @@ If `FROZEN_IDS` is empty, the `NOT IN ()` clause is a SQL error — skip the cla
 
 ```bash
 cd worker && npx tsc --noEmit && cd ..
-git add worker/src/cron/stability-index.ts worker/src/cron/dews/persistence.ts worker/src/cron/prune-cron-history.ts
+git add worker/src/cron/stability-index.ts worker/src/cron/dews/persistence.ts worker/src/cron/yield-sync/publication.ts worker/src/cron/yield-sync/history.ts worker/src/lib/mint-burn-pipeline/persistence.ts worker/src/lib/live-reserves-store-write.ts
 git commit -m "fix(crons): exempt frozen coins from time-based retention prunes"
 ```
 
@@ -1759,19 +1783,22 @@ pre-launch coins are rejected (no past data to read)."
 ### Task 16: Widen the OG image gate; add a frozen subtitle
 
 **Files:**
-- Modify: `worker/src/api/og.tsx:14,168`
+- Modify: `worker/src/api/og.tsx` (gate, currently uses `ACTIVE_IDS`)
+- Modify: `worker/src/lib/og-templates/` (the actual Satori template — locate via `grep -rln "stablecoin\|peggedAsset" worker/src/lib/og-templates/`)
 - Test: `worker/src/api/__tests__/og.test.ts` (extend or create)
 
-Goal: shared frozen URLs (Twitter, Discord) render a correct OG image with a "Frozen archive" subtitle, not a 404.
+Goal: shared frozen URLs (Twitter, Discord) render a correct OG image with a "Frozen archive" subtitle, not a 404. Note: `og.tsx` is the route handler / gate; the JSX/Satori template lives in `worker/src/lib/og-templates/`. Edits land in two files.
 
 - [ ] **Step 1: Read the current gate and template**
 
 ```bash
-sed -n '1,30p' worker/src/api/og.tsx
-sed -n '160,200p' worker/src/api/og.tsx
+grep -n "ACTIVE_IDS\|FROZEN_IDS\|READABLE_IDS" worker/src/api/og.tsx
+ls worker/src/lib/og-templates/
+grep -rn "stablecoin\|symbol\|name" worker/src/lib/og-templates/ | head -20
 ```
+Identify (a) the gate in `og.tsx` (likely an `if (!ACTIVE_IDS.has(id))` early-return), and (b) the template file that renders the per-coin card.
 
-- [ ] **Step 2: Replace `ACTIVE_IDS` with `READABLE_IDS` at line 14 and 168**
+- [ ] **Step 2: Replace `ACTIVE_IDS` with `READABLE_IDS` in `og.tsx` gate**
 
 ```ts
 import { READABLE_IDS, READABLE_META_BY_ID, FROZEN_IDS } from "@shared/lib/stablecoins";
@@ -1783,17 +1810,34 @@ const meta = READABLE_META_BY_ID.get(id);
 const isFrozen = FROZEN_IDS.has(id);
 ```
 
-- [ ] **Step 3: Add a "Frozen archive" subtitle to the OG template when `isFrozen`**
+Pass `isFrozen` (or `meta.status`) into the template invocation so the template can branch.
 
-Locate the existing JSX/SVG template that renders the title block. Insert immediately after the title:
+- [ ] **Step 3: Add a "Frozen archive" subtitle to the Satori template when frozen**
+
+In the per-coin card template under `worker/src/lib/og-templates/`, after the title row, insert:
+
 ```tsx
 {isFrozen ? (
-  <div tw="mt-2 inline-flex items-center rounded-md border border-zinc-500/30 px-3 py-1 text-sm uppercase tracking-wide text-zinc-300">
+  <div
+    style={{
+      marginTop: 8,
+      display: "inline-flex",
+      alignItems: "center",
+      borderRadius: 6,
+      border: "1px solid rgba(113, 113, 122, 0.4)",
+      padding: "4px 12px",
+      fontSize: 18,
+      letterSpacing: 1,
+      textTransform: "uppercase",
+      color: "rgb(212, 212, 216)",
+    }}
+  >
     Frozen archive
   </div>
 ) : null}
 ```
-(Adjust to match the file's actual JSX style.)
+
+Use inline `style` rather than `tw=` strings — Satori supports both, but inline styles avoid the JIT class-resolution risk that affects runtime-built Tailwind class names. Match the canvas dimensions and typography of surrounding rows (typical OG canvas is 1200x630; adjust `fontSize` if the rest of the template uses a different scale).
 
 - [ ] **Step 4: Verify and commit**
 
@@ -1808,34 +1852,42 @@ git commit -m "feat(og): keep OG image rendering for frozen coins; add archive s
 ### Task 17: Add `frozen` and `frozenAt` fields to `/api/stablecoins` payload
 
 **Files:**
-- Modify: the file that builds the per-coin entry in the `/api/stablecoins` cache (likely `worker/src/cron/sync-stablecoins/post-enrichment.ts` or `worker/src/lib/stablecoins-cache.ts`; find via `grep -rn "frozen\|peggedAssets\.push" worker/src/`)
-- Modify: `shared/lib/stablecoins-cache-shape.ts` (or wherever the response Zod / TypeScript type is defined)
+- Modify: `shared/types/market.ts` (`StablecoinDataRawSchema` and `StablecoinDataSchema` / `StablecoinListResponseSchema` — confirmed location via validator inspection)
+- Modify: `worker/src/cron/sync-stablecoins/post-enrichment.ts` — populate the new fields when building each cache entry, AFTER `mergeFrozenSnapshots` (Task 6) so injected rows also get tagged
 - Test: shape test covering the new fields
 
 Goal: the frontend can read `entry.frozen` and `entry.frozenAt` from `/api/stablecoins` to render the banner without a second round-trip.
 
-- [ ] **Step 1: Identify the build site and shape**
+- [ ] **Step 1: Confirm the schema location**
 
 ```bash
-grep -rn "peggedAssets.push\|peggedAssets:" worker/src/cron/sync-stablecoins/
-grep -rn "PeggedAsset\b" shared/lib/
+grep -n "StablecoinDataRawSchema\|StablecoinDataSchema\|StablecoinListResponseSchema" shared/types/market.ts
 ```
+Expected: `StablecoinDataRawSchema` is the input shape (DefiLlama row), `StablecoinDataSchema` is the transform output, `StablecoinListResponseSchema` is the wrapper.
 
-- [ ] **Step 2: Extend the Zod / TypeScript type**
+- [ ] **Step 2: Extend `StablecoinDataRawSchema` and the transform**
 
-In whichever file defines `PeggedAsset` for the cache payload, add:
+In `shared/types/market.ts`:
+- Add `frozen: z.boolean().optional()` and `frozenAt: z.string().optional()` to `StablecoinDataRawSchema`.
+- In the `.transform(...)` body where the output object is composed, conditionally include both fields when present:
 ```ts
-/**
- * True for stablecoins whose status === "frozen": no new data is being
- * collected, but the row is preserved from a freeze-time snapshot.
- */
-frozen?: boolean;
-frozenAt?: string;
+...(input.frozen != null ? { frozen: input.frozen } : {}),
+...(input.frozenAt != null ? { frozenAt: input.frozenAt } : {}),
 ```
 
 - [ ] **Step 3: Populate the fields at write time**
 
-In the cache-build site, when iterating `TRACKED_STABLECOINS`, for each frozen coin set `entry.frozen = true; entry.frozenAt = meta.frozenAt;`.
+In `post-enrichment.ts`, where each per-coin entry is composed for the `peggedAssets` cache, add:
+```ts
+import { FROZEN_IDS, FROZEN_META_BY_ID } from "@shared/lib/stablecoins";
+// ...
+const isFrozen = FROZEN_IDS.has(asset.id);
+if (isFrozen) {
+  asset.frozen = true;
+  asset.frozenAt = FROZEN_META_BY_ID.get(asset.id)?.frozenAt;
+}
+```
+This must run after `mergeFrozenSnapshots` so injected rows also get tagged.
 
 - [ ] **Step 4: Add a unit test**
 
@@ -1868,6 +1920,8 @@ git commit -m "feat(api/stablecoins): expose frozen and frozenAt per-coin"
 - Test: `worker/src/lib/__tests__/report-cards-snapshot-finalize.test.ts` (new)
 
 Goal: report-cards snapshot includes an "F-card" for each frozen coin so the detail page shows a defunct-styled report card instead of a missing one.
+
+**Spec deviation (decision F2=a, intentional v1 simplification):** The spec proposed reusing the frozen coin's *last successful* report-card content from D1 (or a freeze-time snapshot). For v1 we instead emit the same all-F stub that `DEAD_STABLECOINS` produces today. Rationale: matches the existing dead-stablecoins pattern, requires zero additional snapshot machinery, and is honest about the coin being defunct. Operators who want the last-real grade preserved can revisit in a v2 alongside the rolling-window snapshot work also deferred to v2. Document this in the runbook (Task 32) under "Known behaviors".
 
 - [ ] **Step 1: Write the failing test**
 
@@ -2096,7 +2150,28 @@ npm test -- --run src/components/stablecoin-detail/__tests__/frozen-state-banner
 ```
 Expected: module does not exist.
 
-- [ ] **Step 3: Implement the component**
+- [ ] **Step 3a: Add a static intense-border class table to `cause-of-death.ts`**
+
+Tailwind's JIT only resolves class names that appear literally in source. `cause.borderColor.replace("/30", "/70")` would silently fail. Add a paired table.
+
+In `shared/lib/cause-of-death.ts`, after the existing `CAUSE_META` declaration, append:
+
+```ts
+/**
+ * Higher-intensity border classes (matching CAUSE_META's `borderColor` but
+ * at /70 opacity) for prominent surfaces like the frozen-state banner.
+ * Listed literally so Tailwind JIT picks them up.
+ */
+export const CAUSE_BORDER_INTENSE: Record<CauseOfDeath, string> = {
+  "algorithmic-failure": "border-red-500/70",
+  "counterparty-failure": "border-amber-500/70",
+  "liquidity-drain": "border-orange-500/70",
+  regulatory: "border-blue-500/70",
+  abandoned: "border-zinc-500/70",
+};
+```
+
+- [ ] **Step 3b: Implement the component**
 
 Create `src/components/stablecoin-detail/frozen-state-banner.tsx`:
 
@@ -2106,7 +2181,7 @@ import Link from "next/link";
 import { useState } from "react";
 import { ChevronDown, ChevronRight, ExternalLink } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { CAUSE_META } from "@shared/lib/cause-of-death";
+import { CAUSE_META, CAUSE_BORDER_INTENSE } from "@shared/lib/cause-of-death";
 import type { StablecoinObituary } from "@shared/types";
 
 interface FrozenStateBannerProps {
@@ -2118,11 +2193,12 @@ interface FrozenStateBannerProps {
 export function FrozenStateBanner({ symbol, frozenAt, obituary }: FrozenStateBannerProps) {
   const [expanded, setExpanded] = useState(false);
   const cause = CAUSE_META[obituary.causeOfDeath];
+  const intenseBorder = CAUSE_BORDER_INTENSE[obituary.causeOfDeath];
   return (
     <div
       className={cn(
         "pharos-card-shell border-l-4 p-4 sm:p-5",
-        cause.borderColor.replace("/30", "/70"),
+        intenseBorder,
       )}
       role="status"
       aria-label={`${symbol} is a frozen stablecoin archive`}
@@ -2292,7 +2368,7 @@ Then use `{frozenNote}` at each of the six sites.
 
 - [ ] **Step 3: Adjust `buildStablecoinDetailMetadata` for frozen coins**
 
-Modify `src/lib/page-metadata.ts`. Find `buildStablecoinDetailMetadata` and branch on `status === "frozen"`:
+Modify `src/lib/page-metadata.ts`. Find `buildStablecoinDetailMetadata` and branch on `status === "frozen"`. **Preserve every field the existing live branch sets** — in particular, `ogImage` is what powers social-share previews; if omitted the frozen page falls back to a generic Pharos OG and the social card looks broken on Twitter/Discord shares.
 
 ```ts
 export function buildStablecoinDetailMetadata(coin: StablecoinMeta): Metadata {
@@ -2301,12 +2377,15 @@ export function buildStablecoinDetailMetadata(coin: StablecoinMeta): Metadata {
       title: `${coin.name} (${coin.symbol}) — Frozen Stablecoin Archive`,
       description: `Historical data and obituary for ${coin.name} (${coin.symbol}), a now-defunct stablecoin tracked by Pharos through ${coin.frozenAt}. ${coin.obituary?.epitaph ?? ""}`.trim(),
       canonical: `/stablecoin/${coin.id}/`,
+      ogImage: buildApiOgImageUrl(coin), // KEEP — preserves social-share rendering for frozen pages
     });
   }
   // existing live-data branch unchanged
   // ...
 }
 ```
+
+Confirm `buildApiOgImageUrl` is the same helper the live branch uses (read the file to verify the import / call signature). The OG endpoint at `worker/src/api/og.tsx` already accepts frozen ids after Task 16.
 
 - [ ] **Step 4: Verify**
 
@@ -2772,6 +2851,8 @@ import { DEAD_STABLECOINS } from "../shared/lib/dead-stablecoins";
 import { MINT_BURN_CONFIG_SPECS } from "../worker/src/lib/mint-burn-contracts-data";
 import { CONTRACT_CONFIGS } from "../worker/src/lib/blacklist-contracts";
 import { BLUECHIP_SLUG_MAP } from "../worker/src/lib/bluechip-slugs";
+import { YIELD_POOL_MAP } from "../worker/src/cron/yield-history-backfill";
+import { STATIC_COMPARE_PAIRS } from "../src/lib/compare-pages";
 
 const failures: string[] = [];
 
@@ -2811,6 +2892,19 @@ for (const config of CONTRACT_CONFIGS) {
 for (const id of Object.keys(BLUECHIP_SLUG_MAP)) {
   if (FROZEN_IDS.has(id)) {
     failures.push(`${id}: still in BLUECHIP_SLUG_MAP — remove per freeze runbook`);
+  }
+}
+for (const id of Object.keys(YIELD_POOL_MAP)) {
+  if (FROZEN_IDS.has(id)) {
+    failures.push(`${id}: still in YIELD_POOL_MAP — remove per freeze runbook`);
+  }
+}
+for (const [leftId, rightId] of STATIC_COMPARE_PAIRS) {
+  if (FROZEN_IDS.has(leftId)) {
+    failures.push(`STATIC_COMPARE_PAIRS contains frozen left id ${leftId} — remove pair per freeze runbook`);
+  }
+  if (FROZEN_IDS.has(rightId)) {
+    failures.push(`STATIC_COMPARE_PAIRS contains frozen right id ${rightId} — remove pair per freeze runbook`);
   }
 }
 
@@ -2892,34 +2986,50 @@ git commit -m "chore(docs): de-hardcode tracked-coin counts in preparation for f
 
 ## Phase 11 — Docs + methodology + runbook
 
-### Task 31: Add the `/methodology` "Frozen status" section; bump to v5.81
+### Task 31: Add the `/methodology` "Lifecycle phases" section (no numeric version bump)
 
 **Files:**
-- Modify: `src/app/methodology/page.tsx` (or wherever methodology content lives — find via `find src/app/methodology -type f`)
-- Modify: methodology version constant (find via `grep -rn "METHODOLOGY_VERSION" shared/`)
+- Modify: `src/app/methodology/page.tsx` and the section components under `src/app/methodology/sections/` and `src/app/methodology/methodology-sections.tsx`
 
-- [ ] **Step 1: Bump version**
+**Decision F1=c (intentional, recorded in the spec).** Frozen status is a data-collection lifecycle policy, not a scoring algorithm change. Each scoring methodology (Safety 7.14, Liquidity 5.5, Depeg/DEWS 5.95, PSI 3.2, Yield 7.43, etc.) lives in its own per-domain version constant under `shared/lib/*-version*.ts`. None of those algorithms change when a coin freezes — they simply stop receiving inputs for that coin via the registry filter. Mirroring how `pre-launch` is treated today (it has no version constant, just a lifecycle definition), frozen status is documented as a lifecycle phase without bumping any per-domain version.
 
-Update `METHODOLOGY_VERSION` constant from current value to `5.81`. The constant is referenced by report cards and several docs.
+If a future implementer believes a specific scoring methodology *did* change because of frozen handling (e.g., PSI's denominator semantics), bump that specific constant in a separate commit with its own changelog entry.
 
-- [ ] **Step 2: Add the "Frozen status" subsection**
+- [ ] **Step 1: Add the "Lifecycle phases" section to `/methodology`**
 
-Inside the `/methodology` page, add a new section explaining:
-- What "frozen" means lifecycle-wise
-- That no new data is collected for frozen coins
-- That historical data and detail page remain accessible
-- Cross-link to the cemetery
-- The deterministic freezing procedure (point at `docs/freezing-stablecoins.md`)
+Inside the methodology page, add a section explaining the three lifecycle phases:
+- **Active** — full data collection and inclusion in every aggregate
+- **Pre-launch** — present in the registry, listed on `/upcoming/`, no live data yet
+- **Frozen** — no new data collected; historical data and detail page preserved; appears in the cemetery with an archive link
 
-- [ ] **Step 3: Add a methodology timeline entry**
+For each phase, list which surfaces include/exclude the coin (TRACKED/ACTIVE/READABLE/FROZEN universes from the registry).
 
-If there's a methodology timeline doc, add an entry for v5.81 dated 2026-04-27.
+Cross-link to:
+- `/cemetery/` for the frozen archive view
+- `/upcoming/` for pre-launch
+- `docs/freezing-stablecoins.md` for the operator runbook
+
+- [ ] **Step 2: Add a sentence in the methodology landing copy**
+
+In the methodology landing page header or intro, add one line acknowledging that scoring methodologies operate over the active subset of tracked stablecoins; frozen and pre-launch coins are excluded from new computations.
+
+- [ ] **Step 3: Verify no per-domain version constant changes**
+
+```bash
+git diff -- shared/lib/*version*.ts
+```
+Expected: empty. If any per-domain version constant has been modified, justify with a separate commit + changelog entry.
 
 - [ ] **Step 4: Commit**
 
 ```bash
-git add src/app/methodology shared/lib/report-cards.ts docs/methodology
-git commit -m "docs(methodology): v5.81 — frozen stablecoin lifecycle phase"
+git add src/app/methodology
+git commit -m "docs(methodology): document frozen lifecycle phase
+
+Frozen status is a data-collection policy, not a scoring algorithm change.
+Mirrors how pre-launch is treated — no per-domain version bump. Each
+scoring constant (safety 7.14, liquidity 5.5, depeg-dews 5.95, PSI 3.2,
+yield 7.43, etc.) is unchanged."
 ```
 
 ---
@@ -2998,9 +3108,13 @@ npm run prebuild  # regenerates the cemetery dataset
 
 ### 5. Update docs
 
-- Update `/methodology` version + timeline entry if this is a notable freeze.
 - Add a changelog entry.
 - Confirm the count of "tracked stablecoins" in `/about` and any docs is current.
+- Per-domain methodology version constants are NOT bumped (frozen status is a lifecycle policy, not a scoring change). If the freeze is tied to a specific methodology revision (rare), bump that constant in a separate commit.
+
+### 5b. Leave the AI summary alone
+
+`data/ai-summaries.json` contains the editorial summary rendered on each detail page. **Do not regenerate** the frozen coin's summary — the model has no signal of the freeze beyond what we feed it, and rewriting risks losing nuance. The obituary lives in registry meta and renders via the `<FrozenStateBanner>` independently of the AI summary. Do NOT run the `write-ai-summaries` skill on a frozen coin.
 
 ### 6. Open PR
 
@@ -3019,6 +3133,9 @@ PR title: `feat(stablecoin): freeze <symbol> (<coin-id>)`. Include a brief obitu
 - Pinned stablecoins drop the coin silently. Users who pinned the coin lose it from their pinned list.
 - Live-comparison URL `/compare/?coins=<id>,...` keeps the coin (badged) but live metric cells render "—" with a tooltip.
 - Rolling-window metrics (24h flows, 7d depeg counts) gradually decay to zero/null past the rolling window.
+- The report-card for a frozen coin shows an all-F stub (matching the existing `DEAD_STABLECOINS` defunct-card pattern) rather than the coin's last-real grade. This is an intentional v1 simplification (decision F2=a in the spec); a future v2 could read the last-real card from D1 if richer history is wanted.
+- The AI editorial summary (from `data/ai-summaries.json`) continues to render as-is. We do not regenerate it on freeze — preserving the pre-freeze editorial framing.
+- Per-domain methodology versions (Safety 7.14, Liquidity 5.5, Depeg/DEWS 5.95, PSI 3.2, etc.) are NOT bumped on freeze. Frozen status is a lifecycle policy, not a scoring change.
 ```
 
 - [ ] **Step 5: Commit**
@@ -3090,9 +3207,9 @@ describe("frozen fixture — end-to-end", () => {
   });
 
   it("dex-liquidity prune set preserves the fixture coin", async () => {
-    const { computePruneSet } = await import("../cron/dex-liquidity/persistence");
+    const { computeDexPruneSet } = await import("../cron/dex-liquidity/persistence");
     const allDbIds = new Set(["fixture-frozen", "zombie-coin"]);
-    const prune = computePruneSet(allDbIds);
+    const prune = computeDexPruneSet(allDbIds);
     expect(prune.has("fixture-frozen")).toBe(false);
     expect(prune.has("zombie-coin")).toBe(true);
   });
