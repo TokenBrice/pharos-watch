@@ -1,4 +1,5 @@
 import { CONTRACT_CONFIGS } from "../../lib/blacklist-contracts";
+import { excludeFrozenIds } from "../shared/exclude-frozen";
 import { getLastBlock } from "../../lib/db";
 import { backfillTronFromLedger } from "./amount-recovery";
 
@@ -50,8 +51,9 @@ type SyncBlacklistCounters = {
 export async function loadBlacklistConfigStates(
   db: D1Database,
 ): Promise<{ configStates: BlacklistConfigState[]; zeroCursorConfigs: string[] }> {
+  const eligibleConfigs = excludeFrozenIds(CONTRACT_CONFIGS, (c) => c.stablecoinId);
   const configStates = await Promise.all(
-    CONTRACT_CONFIGS.map(async (config) => {
+    eligibleConfigs.map(async (config) => {
       const configKey = config.configKey;
       const lastBlock = await getLastBlock(db, configKey);
       return { config, configKey, lastBlock };

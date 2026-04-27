@@ -55,6 +55,17 @@ const StablecoinIdSchema = z.string().refine(isSlugLikeId, {
   message: "Invalid stablecoin id",
 });
 
+const obituarySchema = z.object({
+  causeOfDeath: z.enum(CAUSE_OF_DEATH_VALUES),
+  // eslint-disable-next-line security/detect-unsafe-regex -- anchored fixed-width date pattern; finite quantifiers, no backtracking risk.
+  deathDate: z.string().regex(/^\d{4}-\d{2}(-\d{2})?$/),
+  epitaph: z.string().min(1),
+  obituary: z.string().min(1),
+  peakMcap: z.number().positive().optional(),
+  sourceUrl: z.string().url(),
+  sourceLabel: z.string().min(1),
+});
+
 export const StablecoinMetaAssetSchema = z.object({
   id: StablecoinIdSchema,
   llamaId: z.string().optional(),
@@ -91,6 +102,8 @@ export const StablecoinMetaAssetSchema = z.object({
   tags: z.array(z.string()).optional(),
   yieldConfig: YieldConfigSchema.optional(),
   status: StablecoinMetaEnumSchemas.status.optional(),
+  frozenAt: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
+  obituary: obituarySchema.optional(),
   launchDate: z.string().optional(),
   announcedDate: z.string().optional(),
   expectedLaunchDate: z.string().optional(),
@@ -109,6 +122,22 @@ export const StablecoinMetaAssetSchema = z.object({
     message: "variantOf and variantKind must both be set or both be absent",
     path: ["variantOf"],
   });
+}).superRefine((meta, ctx) => {
+  if (meta.status === "frozen") {
+    if (!meta.frozenAt) {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, message: "frozen coins require frozenAt", path: ["frozenAt"] });
+    }
+    if (!meta.obituary) {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, message: "frozen coins require obituary", path: ["obituary"] });
+    }
+  } else {
+    if (meta.frozenAt) {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, message: "frozenAt is only allowed when status is frozen", path: ["frozenAt"] });
+    }
+    if (meta.obituary) {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, message: "obituary is only allowed when status is frozen", path: ["obituary"] });
+    }
+  }
 });
 
 export const StablecoinMetaAssetArraySchema = z.array(StablecoinMetaAssetSchema);

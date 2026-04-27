@@ -218,6 +218,25 @@ Both the root tsconfig and worker tsconfig target ES2022. Shared modules in `sha
 
 ---
 
+## Stablecoin lifecycle phases
+
+Every entry in `TRACKED_STABLECOINS` is in one of three lifecycle phases. The phase controls which write-side crons ingest the coin, which read-side endpoints serve it, and which UI surfaces list it. Phase transitions are a data-collection policy, not a scoring algorithm change — per-domain methodology version constants under `shared/lib/*-version*.ts` are unaffected.
+
+| Phase | `status` field | New data collected? | Score recomputation? | Listed on |
+| --- | --- | --- | --- | --- |
+| Active | `"active"` (or omitted) | Yes | Yes | Homepage table, search, compare picker, sitemap, every aggregate |
+| Pre-launch | `"pre-launch"` | No (no live data yet) | No | `/upcoming/` only |
+| Frozen | `"frozen"` (requires `frozenAt`, `obituary`) | No (archive) | No | `/cemetery/` (with archived-data link) and the preserved detail page at `/stablecoin/<id>/` |
+
+The registry exposes four universes from `shared/lib/stablecoins/registry.ts`:
+
+- `TRACKED_STABLECOINS` — every tracked coin (active + pre-launch + frozen). Used for canonical-ID lookups, registry validation, and shared metadata reads.
+- `ACTIVE_STABLECOINS` — `status === "active"` only. Used by every write-side cron, live aggregator, PSI/DEWS/Bank-Run-Gauge inputs, and Telegram alert eligibility.
+- `READABLE_STABLECOINS` — active + frozen. Used by the sitemap, search, compare picker, OG renderer, and detail-page API endpoints (`stablecoin-reserves`, `stress-signals`, `stablecoin-summary`) so frozen archives stay reachable.
+- `FROZEN_STABLECOINS` — `status === "frozen"` only. Drives the cemetery merge, the static cemetery dataset export, and the frozen detail-page banner/footer.
+
+The freeze procedure is documented in [`docs/freezing-stablecoins.md`](./freezing-stablecoins.md).
+
 ## Funding page
 
 The `/funding` route is a static page backed by two hand-maintained JSON files in `shared/data/funding/` (costs and donations). No cron, no D1, no API endpoint. Donations are appended to `donations.json` via the `funding-update` Claude skill on a weekly cadence — the skill researches inbound transfers to `pharos-watch.eth` across six chains (Ethereum/Base/Optimism/Arbitrum/Polygon via Alchemy `alchemy_getAssetTransfers`, Gnosis via Gnosisscan REST), prices each donation in USD at receipt via CoinGecko `/coins/{id}/history`, forward-verifies ENS, and writes after explicit user approval. See `docs/funding-page.md` for the data model and the rationale for the intentionally-simple architecture.

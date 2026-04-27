@@ -1,21 +1,20 @@
-import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins";
+import { READABLE_STABLECOINS } from "@shared/lib/stablecoins";
 import type { CoinOption, ComparePreset } from "@/lib/compare-types";
 import { decodeStablecoinUrlToken } from "@/lib/stablecoin-url-codec";
 
 export const MAX_COMPARE_COINS = 5;
 export const COMPARE_COLORS = ["#3b82f6", "#ef4444", "#10b981", "#f59e0b", "#8b5cf6"] as const;
 
-export const COMPARE_COIN_OPTIONS: CoinOption[] = ACTIVE_STABLECOINS.map((c) => ({
+export const COMPARE_COIN_OPTIONS: CoinOption[] = READABLE_STABLECOINS.map((c) => ({
   id: c.id,
   name: c.name,
   symbol: c.symbol,
+  frozen: c.status === "frozen",
+  frozenAt: c.frozenAt,
 }));
 
 export const ID_TO_COMPARE_COIN = new Map<string, CoinOption>(
-  ACTIVE_STABLECOINS.map((coin) => [
-    coin.id,
-    { id: coin.id, name: coin.name, symbol: coin.symbol },
-  ]),
+  COMPARE_COIN_OPTIONS.map((option) => [option.id, option]),
 );
 
 export const COMPARISON_PRESETS: readonly ComparePreset[] = [

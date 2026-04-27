@@ -1,4 +1,6 @@
 import { REGISTRY_BY_LLAMA_ID } from "@shared/lib/stablecoin-id-registry";
+import { FROZEN_SNAPSHOTS } from "@shared/lib/stablecoins/frozen-snapshots";
+import type { FrozenSnapshot } from "@shared/lib/stablecoins/frozen-snapshots";
 import { fetchWithRetry } from "../../lib/fetch-retry";
 import { sleepWithSignal, throwIfAborted } from "../../lib/abort";
 import { cancelResponseBodyQuietly } from "../../lib/response-body";
@@ -111,6 +113,33 @@ async function fetchDefillamaStablecoinsPayload(
     lastError,
     lastHttpStatus,
   };
+}
+
+/**
+ * Append captured frozen-coin rows for any id absent from the upstream payload.
+ * Upstream rows always win — if DefiLlama still serves the asset, that's the
+ * authoritative copy. Returns the input array unchanged when there is nothing
+ * to inject (so existing identity tests pass).
+ */
+export function mergeFrozenSnapshots(
+  upstream: PeggedAsset[],
+  snapshots: FrozenSnapshot[],
+): PeggedAsset[] {
+  if (snapshots.length === 0) {
+    return upstream;
+  }
+  const upstreamIds = new Set(upstream.map((a) => String((a as { id?: unknown }).id ?? "")));
+  const additions: PeggedAsset[] = [];
+  for (const snapshot of snapshots) {
+    if (upstreamIds.has(snapshot.id)) {
+      continue;
+    }
+    additions.push(snapshot.peggedAssetRow as unknown as PeggedAsset);
+  }
+  if (additions.length === 0) {
+    return upstream;
+  }
+  return [...upstream, ...additions];
 }
 
 export async function loadStablecoinsIntake(
@@ -273,6 +302,13 @@ export async function loadStablecoinsIntake(
       `[sync-stablecoins] Supplemental resolution: restored=${supplementalResolution.restoredCount}, ` +
       `skippedDuplicates=${supplementalResolution.skippedDuplicates}`,
     );
+  }
+
+  const beforeFrozenInjection = llamaData.peggedAssets.length;
+  llamaData.peggedAssets = mergeFrozenSnapshots(llamaData.peggedAssets, FROZEN_SNAPSHOTS);
+  const injected = llamaData.peggedAssets.length - beforeFrozenInjection;
+  if (injected > 0) {
+    console.log(`[sync-stablecoins] Injected ${injected} frozen-snapshot row(s)`);
   }
 
   applyTrackedAssetOverrides(llamaData.peggedAssets);

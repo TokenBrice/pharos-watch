@@ -4,6 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 
 export const METHODOLOGY_SECTIONS = [
+  { id: "lifecycle-phases-methodology", label: "Lifecycle Phases" },
   { id: "pricing-pipeline-methodology", label: "Pricing Pipeline" },
   { id: "stability-index-methodology", label: "Stability Index" },
   { id: "safety-scores-methodology", label: "Safety Scores" },

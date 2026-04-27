@@ -28,10 +28,10 @@ function isMajorCemeteryCollapse(coin: DeadStablecoin): boolean {
   return (coin.peakMcap ?? 0) >= MAJOR_CEMETERY_COLLAPSE_MCAP;
 }
 
-export function sortCemeteryCoins(
-  coins: DeadStablecoin[],
+export function sortCemeteryCoins<T extends DeadStablecoin>(
+  coins: T[],
   sortMode: CemeterySortMode = "newest",
-): DeadStablecoin[] {
+): T[] {
   return [...coins].sort((a, b) => {
     const deathDiff = sortMode === "newest"
       ? getDeathMonthValue(b.deathDate) - getDeathMonthValue(a.deathDate)

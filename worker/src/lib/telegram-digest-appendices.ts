@@ -1,6 +1,6 @@
 import { DEAD_STABLECOINS } from "@shared/lib/dead-stablecoins";
 import { formatCurrency } from "@shared/lib/format";
-import { TRACKED_STABLECOINS } from "@shared/lib/stablecoins";
+import { FROZEN_IDS, FROZEN_META_BY_ID, TRACKED_STABLECOINS } from "@shared/lib/stablecoins";
 import type { CauseOfDeath, DeadStablecoin } from "@shared/types/market";
 import { getCache, setCache } from "./db-cache";
 import { escapeHtml } from "./telegram";
@@ -9,6 +9,7 @@ const CEMETERY_SNAPSHOT_CACHE_KEY = "telegram:cemetery-snapshot";
 const CEMETERY_FOOTER_INDEX_CACHE_KEY = "telegram:cemetery-footer-index";
 const TRACKED_SNAPSHOT_CACHE_KEY = "telegram:tracked-stablecoins-snapshot";
 const TRACKED_PENDING_CACHE_KEY = "telegram:tracked-stablecoins-pending";
+const FROZEN_SNAPSHOT_CACHE_KEY = "frozen_ids_snapshot";
 
 const CAUSE_LABELS: Record<CauseOfDeath, string> = {
   "algorithmic-failure": "Algorithmic Failure",
@@ -44,9 +45,11 @@ export interface TelegramDigestAppendixMetadata {
   cemeteryDetected: number;
   trackedDetected: number;
   preLaunchDetected: number;
+  frozenDetected: number;
   cemeterySymbols: string[];
   trackedSymbols: string[];
   preLaunchSymbols: string[];
+  frozenSymbols: string[];
   seededSnapshots: string[];
 }
 
@@ -83,6 +86,30 @@ function wasDeadStablecoinPreviouslySeen(previousKeys: Set<string>, coin: DeadSt
 
 function buildCemeterySnapshotPayload(): string {
   return JSON.stringify(DEAD_STABLECOINS.map(buildDeadStablecoinKey));
+}
+
+function buildFrozenSnapshotPayload(): string {
+  return JSON.stringify([...FROZEN_IDS]);
+}
+
+export function diffFrozenIds(current: Set<string>, previous: Set<string>): Set<string> {
+  const added = new Set<string>();
+  for (const id of current) {
+    if (!previous.has(id)) added.add(id);
+  }
+  return added;
+}
+
+function buildFrozenAppendix(ids: Iterable<string>): string {
+  const lines: string[] = ["<b>Newly Frozen Stablecoins</b>"];
+  for (const id of ids) {
+    const meta = FROZEN_META_BY_ID.get(id);
+    if (!meta?.obituary) continue;
+    lines.push(
+      `<code>${escapeHtml(meta.symbol)}</code> ${escapeHtml(meta.name)} — <i>${escapeHtml(meta.obituary.epitaph)}</i>`,
+    );
+  }
+  return lines.join("\n");
 }
 
 function buildTrackedSnapshotPayload(): string {
@@ -220,9 +247,11 @@ export async function prepareTelegramDigestAppendices(
     cemeteryDetected: 0,
     trackedDetected: 0,
     preLaunchDetected: 0,
+    frozenDetected: 0,
     cemeterySymbols: [],
     trackedSymbols: [],
     preLaunchSymbols: [],
+    frozenSymbols: [],
     seededSnapshots: [],
   };
 
@@ -360,6 +389,48 @@ export async function prepareTelegramDigestAppendices(
         }
       } else {
         appendTrackedCoins(appendixTrackedIds);
+      }
+    }
+  }
+
+  const frozenSnapshotPayload = buildFrozenSnapshotPayload();
+  const cachedFrozenSnapshot = await getCache(db, FROZEN_SNAPSHOT_CACHE_KEY);
+
+  if (!cachedFrozenSnapshot) {
+    immediateWrites.push({
+      key: FROZEN_SNAPSHOT_CACHE_KEY,
+      value: frozenSnapshotPayload,
+    });
+    metadata.seededSnapshots.push("frozen:first-run");
+  } else {
+    const previousFrozenKeys = parseSnapshotKeys(cachedFrozenSnapshot.value);
+    if (!previousFrozenKeys) {
+      immediateWrites.push({
+        key: FROZEN_SNAPSHOT_CACHE_KEY,
+        value: frozenSnapshotPayload,
+      });
+      metadata.seededSnapshots.push("frozen:invalid-reseeded");
+    } else {
+      const addedFrozen = diffFrozenIds(FROZEN_IDS, previousFrozenKeys);
+      if (addedFrozen.size === 0) {
+        if (cachedFrozenSnapshot.value !== frozenSnapshotPayload) {
+          immediateWrites.push({
+            key: FROZEN_SNAPSHOT_CACHE_KEY,
+            value: frozenSnapshotPayload,
+          });
+        }
+      } else {
+        appendixSections.push(buildFrozenAppendix(addedFrozen));
+        metadata.frozenDetected = addedFrozen.size;
+        metadata.frozenSymbols = [...addedFrozen]
+          .map((id) => FROZEN_META_BY_ID.get(id)?.symbol)
+          .filter((symbol): symbol is string => typeof symbol === "string");
+
+        preCommitValues.set(FROZEN_SNAPSHOT_CACHE_KEY, cachedFrozenSnapshot.value);
+        postSuccessWrites.push({
+          key: FROZEN_SNAPSHOT_CACHE_KEY,
+          value: frozenSnapshotPayload,
+        });
       }
     }
   }

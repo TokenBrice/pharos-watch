@@ -1,4 +1,5 @@
 import { DEAD_STABLECOINS } from "@shared/lib/dead-stablecoins";
+import { FROZEN_STABLECOINS } from "@shared/lib/stablecoins";
 import {
   METHODOLOGY_VERSION,
   DIMENSION_WEIGHTS,
@@ -22,29 +23,51 @@ import type { CollateralDriftEntry } from "./collateral-drift";
 import type { ReportCardsInputFreshness } from "./report-cards-snapshot-inputs";
 
 export function buildDefunctReportCards(): ReportCard[] {
-  return DEAD_STABLECOINS.map((dead) => {
-    const nrDim = { grade: "F" as const, score: 0, detail: "Defunct stablecoin" };
-    return {
-      id: dead.id,
-      name: dead.name,
-      symbol: dead.symbol,
-      overallGrade: "F" as const,
-      overallScore: 0,
-      baseScore: null,
-      overallCapped: false,
-      uncappedOverallScore: null,
-      dimensions: {
-        pegStability: nrDim,
-        liquidity: nrDim,
-        resilience: nrDim,
-        decentralization: nrDim,
-        dependencyRisk: nrDim,
-      },
-      ratedDimensions: 5,
-      rawInputs: createReportCardRawInputs(),
-      isDefunct: true,
-    };
-  });
+  const nrDim = { grade: "F" as const, score: 0, detail: "Defunct stablecoin" };
+
+  const fromDead = DEAD_STABLECOINS.map((dead) => ({
+    id: dead.id,
+    name: dead.name,
+    symbol: dead.symbol,
+    overallGrade: "F" as const,
+    overallScore: 0,
+    baseScore: null,
+    overallCapped: false,
+    uncappedOverallScore: null,
+    dimensions: {
+      pegStability: nrDim,
+      liquidity: nrDim,
+      resilience: nrDim,
+      decentralization: nrDim,
+      dependencyRisk: nrDim,
+    },
+    ratedDimensions: 5,
+    rawInputs: createReportCardRawInputs(),
+    isDefunct: true,
+  }));
+
+  const fromFrozen = FROZEN_STABLECOINS.map((coin) => ({
+    id: coin.id,
+    name: coin.name,
+    symbol: coin.symbol,
+    overallGrade: "F" as const,
+    overallScore: 0,
+    baseScore: null,
+    overallCapped: false,
+    uncappedOverallScore: null,
+    dimensions: {
+      pegStability: nrDim,
+      liquidity: nrDim,
+      resilience: nrDim,
+      decentralization: nrDim,
+      dependencyRisk: nrDim,
+    },
+    ratedDimensions: 5,
+    rawInputs: createReportCardRawInputs(),
+    isDefunct: true,
+  }));
+
+  return [...fromDead, ...fromFrozen];
 }
 
 export function sortReportCards(cards: ReportCard[]): ReportCard[] {

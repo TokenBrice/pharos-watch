@@ -4,6 +4,7 @@ import { batchExecute } from "../lib/db";
 import { writeReportCardCache } from "../lib/report-card-cache";
 import type { CronResult } from "../lib/cron-logger";
 import type { ReportCardGrade } from "@shared/types/report-cards";
+import { FROZEN_IDS } from "@shared/lib/stablecoins";
 
 interface LatestSafetyGradeRow {
   stablecoin_id: string;
@@ -35,7 +36,9 @@ export async function snapshotSafetyGradeHistory(
       metadata: JSON.stringify({ reason: "snapshot-build-failed", error: String(err).slice(0, 200) }),
     };
   }
-  const liveCards = snapshot.cards.filter((card) => card.isDefunct !== true);
+  const liveCards = snapshot.cards.filter(
+    (card) => card.isDefunct !== true && !FROZEN_IDS.has(card.id),
+  );
 
   const latestRows = await db
     .prepare(

@@ -2,6 +2,7 @@ import { D1_BATCH_SIZE, USER_AGENT } from "../lib/constants";
 import { batchExecute } from "../lib/db";
 import { fetchWithRetry } from "../lib/fetch-retry";
 import { YIELD_POOL_MAP } from "./yield-config";
+import { FROZEN_IDS } from "@shared/lib/stablecoins";
 
 const DL_CHART_BASE = "https://yields.llama.fi/chart";
 const MAX_BACKFILL_DAYS = 365;
@@ -62,6 +63,7 @@ async function _backfillYieldHistory(
   stablecoinId: string,
   signal?: AbortSignal,
 ): Promise<{ inserted: number; skipped: number }> {
+  if (FROZEN_IDS.has(stablecoinId)) return { inserted: 0, skipped: 0 };
   const poolUuid = YIELD_POOL_MAP[stablecoinId];
   if (!poolUuid) return { inserted: 0, skipped: 0 };
 

@@ -1,4 +1,5 @@
 import { DAY_SECONDS } from "@shared/lib/time-constants";
+import { FROZEN_IDS } from "@shared/lib/stablecoins";
 import { batchExecute, buildInClause } from "../../lib/db";
 import { chunkArray } from "../../lib/collections";
 import { writeFreshnessSentinel } from "../../lib/db-cache";
@@ -9,6 +10,26 @@ const DEWS_TABLES = new Set([
   "stress_signals",
   "stress_signal_history",
 ]);
+
+/**
+ * Compute the set of stablecoin ids whose stress-signal rows should be
+ * deleted. Preserves rows for any currently eligible coin AND any frozen
+ * coin (which are excluded from PSI eligibility but whose history we
+ * keep).
+ */
+export function computeStressSignalPruneIds(
+  allDbIds: Set<string>,
+  eligibleIds: Set<string>,
+  frozenIds: Set<string> = FROZEN_IDS,
+): Set<string> {
+  const prune = new Set<string>();
+  for (const id of allDbIds) {
+    if (eligibleIds.has(id)) continue;
+    if (frozenIds.has(id)) continue;
+    prune.add(id);
+  }
+  return prune;
+}
 
 async function deleteOrphansForTable(
   db: D1Database,
@@ -21,9 +42,8 @@ async function deleteOrphansForTable(
     // SAFETY: validated against DEWS_TABLES allowlist above.
     .prepare(`SELECT DISTINCT stablecoin_id FROM ${table}`)
     .all<{ stablecoin_id: string }>();
-  const orphanIds = (existingIds.results ?? [])
-    .map((row) => row.stablecoin_id)
-    .filter((stablecoinId) => !eligibleIds.has(stablecoinId));
+  const allDbIds = new Set((existingIds.results ?? []).map((row) => row.stablecoin_id));
+  const orphanIds = [...computeStressSignalPruneIds(allDbIds, eligibleIds)];
 
   if (orphanIds.length === 0) return 0;
 
@@ -127,15 +147,21 @@ export async function persistDewsResults(params: {
     rowsDropped += await deleteOrphansForTable(params.db, "stress_signal_history", params.eligibleIds);
   }
 
+  const frozenIdsList = [...FROZEN_IDS];
+  const frozenClause =
+    frozenIdsList.length > 0
+      ? `AND stablecoin_id NOT IN (${frozenIdsList.map(() => "?").join(",")})`
+      : "";
+
   const oldSignals = await params.db
-    .prepare("DELETE FROM stress_signals WHERE computed_at < ?")
-    .bind(params.nowSec - 7 * DAY_SECONDS)
+    .prepare(`DELETE FROM stress_signals WHERE computed_at < ? ${frozenClause}`)
+    .bind(params.nowSec - 7 * DAY_SECONDS, ...frozenIdsList)
     .run();
   rowsDropped += oldSignals.meta?.changes ?? 0;
 
   const oldHistory = await params.db
-    .prepare("DELETE FROM stress_signal_history WHERE snapshot_date < ?")
-    .bind(params.nowSec - 365 * DAY_SECONDS)
+    .prepare(`DELETE FROM stress_signal_history WHERE snapshot_date < ? ${frozenClause}`)
+    .bind(params.nowSec - 365 * DAY_SECONDS, ...frozenIdsList)
     .run();
   rowsDropped += oldHistory.meta?.changes ?? 0;
 

@@ -24,6 +24,7 @@ export interface StablecoinCardData {
   change24h: number | null;
   variantLabel?: string | null;
   variantParentSymbol?: string | null;
+  isFrozen?: boolean;
   lastUpdated?: string;
 }
 
@@ -114,6 +115,26 @@ export function StablecoinCard({ data }: { data: StablecoinCardData }) {
     >
       {/* Top section: metrics */}
       <div style={{ display: "flex", flexDirection: "column" }}>
+        {data.isFrozen ? (
+          <div
+            style={{
+              display: "inline-flex",
+              alignItems: "center",
+              alignSelf: "flex-start",
+              marginBottom: 18,
+              borderRadius: 6,
+              border: "1px solid rgba(113, 113, 122, 0.4)",
+              padding: "4px 12px",
+              fontFamily: "Geist Mono",
+              fontSize: 16,
+              letterSpacing: "0.08em",
+              textTransform: "uppercase",
+              color: "rgb(212, 212, 216)",
+            }}
+          >
+            Frozen archive
+          </div>
+        ) : null}
         {data.variantLabel && data.variantParentSymbol ? (
           <div
             style={{

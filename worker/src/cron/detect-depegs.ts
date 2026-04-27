@@ -36,12 +36,29 @@ import { buildUpsertPendingDepegStmt } from "../lib/depeg-pending";
 import { fetchCurrentNativePegQuotes } from "../lib/native-peg-quotes";
 import { derivePegRates, getPegReference } from "@shared/lib/peg-rates";
 import { PSI_ELIGIBLE_META_BY_ID } from "@shared/lib/psi-eligible";
+import { FROZEN_IDS } from "@shared/lib/stablecoins";
 import type { DepegEvent } from "@shared/types/market";
 import type { PegAssetBase } from "@shared/types/core";
 import { sumPegBuckets } from "@shared/lib/supply";
 import { POOL_CHALLENGE_MIN_TVL } from "../lib/constants";
 
 // --- Helpers ---
+
+/**
+ * Whether the orphan-close pass should force-close a depeg event for the
+ * given coin id. Returns false for currently-tracked active coins (their
+ * row is just temporarily missing from the cache iteration) and for frozen
+ * coins (preserved historical data must not be falsified).
+ */
+export function shouldCloseOrphanedDepeg(
+  coinId: string,
+  iteratedTrackedIds: Set<string>,
+  frozenIds: Set<string> = FROZEN_IDS,
+): boolean {
+  if (iteratedTrackedIds.has(coinId)) return false;
+  if (frozenIds.has(coinId)) return false;
+  return true;
+}
 
 interface DexPoolChallenger {
   price: number;
@@ -607,7 +624,8 @@ export async function detectDepegEvents(
     // Skip events just created in this run (their IDs weren't known during the loop)
     if (row.started_at >= syncStart) continue;
     // Skip tracked coins even if not observed this run (usually missing/stale inputs).
-    if (trackedCoinIds.has(row.stablecoin_id)) continue;
+    // Also skip frozen coins — their historical events must not be force-closed.
+    if (!shouldCloseOrphanedDepeg(row.stablecoin_id, trackedCoinIds)) continue;
     // This event is orphaned — close it
     orphanStmts.push(
       db.prepare(

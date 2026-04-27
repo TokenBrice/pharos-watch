@@ -1,5 +1,5 @@
 import { jsonFreshResponse, errorResponse, withErrorHandler } from "../lib/api-utils";
-import { ACTIVE_IDS, TRACKED_META_BY_ID } from "@shared/lib/stablecoins";
+import { READABLE_IDS, TRACKED_META_BY_ID } from "@shared/lib/stablecoins";
 import type { ReservePresentationMode, StablecoinReservesResponse } from "@shared/types/live-reserves";
 import { resolveReserveResult } from "../lib/live-reserves-store";
 
@@ -17,7 +17,7 @@ export const handleStablecoinReserves = withErrorHandler("stablecoin-reserves", 
   db: D1Database,
   stablecoinId: string,
 ): Promise<Response> => {
-  if (!ACTIVE_IDS.has(stablecoinId)) {
+  if (!READABLE_IDS.has(stablecoinId)) {
     return errorResponse(404, "Not found");
   }
 

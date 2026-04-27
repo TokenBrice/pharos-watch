@@ -1,6 +1,7 @@
 import { z } from "zod";
 import type { DependencyType } from "./dependency-types";
 import type { LiveReservesConfig } from "./live-reserves";
+import type { CauseOfDeath } from "../lib/cause-of-death";
 import type { ReserveSlice } from "./reserves";
 export type { DependencyType } from "./dependency-types";
 export type { ReserveRisk, ReserveSlice } from "./reserves";
@@ -206,8 +207,23 @@ export interface FeaturedContent {
   source?: string;
 }
 
-export const STABLECOIN_STATUS_VALUES = ["pre-launch", "active"] as const;
+export const STABLECOIN_STATUS_VALUES = ["pre-launch", "active", "frozen"] as const;
 export type StablecoinStatus = (typeof STABLECOIN_STATUS_VALUES)[number];
+
+export interface StablecoinObituary {
+  /** Cemetery cause-of-death enum, shared with `DeadStablecoin`. */
+  causeOfDeath: CauseOfDeath;
+  /** YYYY-MM or YYYY-MM-DD; precision must match `dead-stablecoins.json` entries. */
+  deathDate: string;
+  /** Headline shown in detail-page banner and cemetery tombstone. */
+  epitaph: string;
+  /** Full obituary paragraph — collapsible in the banner. */
+  obituary: string;
+  /** Computed at freeze time from `MAX(circulating_usd)` over preserved supply_history. */
+  peakMcap?: number;
+  sourceUrl: string;
+  sourceLabel: string;
+}
 
 export interface StablecoinMeta {
   id: string;
@@ -245,6 +261,10 @@ export interface StablecoinMeta {
   tags?: string[];
   yieldConfig?: YieldConfig;
   status?: StablecoinStatus;
+  /** YYYY-MM-DD; required when status === "frozen". */
+  frozenAt?: string;
+  /** Obituary content surfaced on the detail page banner and cemetery tombstone; required when status === "frozen". */
+  obituary?: StablecoinObituary;
   launchDate?: string;
   announcedDate?: string;
   expectedLaunchDate?: string;

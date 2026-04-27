@@ -4,6 +4,7 @@ import { mockD1 } from "../../api/__tests__/helpers/mock-d1";
 vi.mock("@shared/lib/stablecoins", () => ({
   TRACKED_META_BY_ID: new Map(),
   TRACKED_STABLECOINS: [],
+  ACTIVE_IDS: new Set(["usdt-tether"]),
 }));
 
 vi.mock("@shared/lib/supply", () => ({

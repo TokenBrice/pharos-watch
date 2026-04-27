@@ -1,7 +1,7 @@
 import { canonicalizeChainCirculating } from "@shared/lib/chain-circulating";
 import { CHAIN_META } from "@shared/lib/chains";
 import { sumPegBuckets } from "@shared/lib/supply";
-import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins";
+import { ACTIVE_META_BY_ID } from "@shared/lib/stablecoins";
 import { cgHeaders, cgUrl } from "../../lib/coingecko";
 import { DEFILLAMA_BASE, USER_AGENT } from "../../lib/constants";
 import { fetchWithRetry } from "../../lib/fetch-retry";
@@ -54,7 +54,7 @@ function toPositiveFiniteNumber(value: unknown): number | null {
 }
 
 function buildMetadataChainIds(assetId: string): string[] {
-  const meta = TRACKED_META_BY_ID.get(assetId);
+  const meta = ACTIVE_META_BY_ID.get(assetId);
   if (!meta?.contracts?.length) return [];
 
   const seen = new Set<string>();
@@ -238,7 +238,7 @@ function buildSupplyGapCandidates(
 
   for (const asset of assets) {
     const assetId = String(asset.id);
-    const meta = TRACKED_META_BY_ID.get(assetId);
+    const meta = ACTIVE_META_BY_ID.get(assetId);
     if (!meta || meta.detailProvider !== "defillama") continue;
 
     const pegKey = asset.pegType ?? Object.keys(asset.circulating ?? {})[0];
@@ -328,7 +328,7 @@ export async function reconcileTrackedSupplyGaps(
   const candidateGeckoIds = [...new Set(
     assets.flatMap((asset) => {
       const assetId = String(asset.id);
-      const meta = TRACKED_META_BY_ID.get(assetId);
+      const meta = ACTIVE_META_BY_ID.get(assetId);
       if (!meta || meta.detailProvider !== "defillama" || !meta.geckoId) return [];
 
       if (sumPegBuckets(asset.circulating) <= 0) {

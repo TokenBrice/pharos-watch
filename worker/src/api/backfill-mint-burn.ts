@@ -4,6 +4,7 @@ import { createBudget, budgetExhausted } from "../lib/evm-logs";
 import { MINT_BURN_CONFIGS, type MintBurnContractConfig, type MintBurnEventDef } from "../lib/mint-burn-contracts";
 import type { MintBurnTxContext } from "../lib/mint-burn-bridge-classifier";
 import { errorResponse, jsonResponse, parseQueryParams } from "../lib/api-utils";
+import { assertNotFrozen } from "../lib/frozen-guards";
 import type { TopicFilter } from "../lib/evm-logs";
 import { classifyBridgeBurnRows } from "../lib/mint-burn-pipeline/classification";
 import { loadMintBurnPriceContext } from "../lib/mint-burn-pipeline/context";
@@ -147,6 +148,8 @@ export async function handleBackfillMintBurn(
     if (!selectedConfig.ok) return selectedConfig.response;
 
     const { config, selectionMode, autoSelectedReason } = selectedConfig;
+    const frozenRejection = assertNotFrozen(config.stablecoinId);
+    if (frozenRejection) return frozenRejection;
     const alchemyUrl = buildAlchemyUrl(config.chain.chainId, alchemyApiKey);
     if (!alchemyUrl) {
       return errorResponse(400, `Alchemy URL is not configured for chain ${config.chain.chainId}`);

@@ -101,6 +101,8 @@ vi.mock("@shared/lib/stablecoins", () => {
   ]),
   TRACKED_IDS: ids,
   ACTIVE_IDS: ids,
+  FROZEN_IDS: new Set<string>(),
+  FROZEN_META_BY_ID: new Map<string, never>(),
   };
 });
 
@@ -387,6 +389,8 @@ describe("generateDailyDigest", () => {
         cemeterySymbols: [],
         trackedSymbols: [],
         preLaunchSymbols: [],
+        frozenDetected: 0,
+        frozenSymbols: [],
         seededSnapshots: [],
       },
       commitSuccess: commitTelegramAppendices,
@@ -913,6 +917,8 @@ describe("generateDailyDigest", () => {
         cemeterySymbols: [],
         trackedSymbols: ["USDX"],
         preLaunchSymbols: [],
+        frozenDetected: 0,
+        frozenSymbols: [],
         seededSnapshots: [],
       },
       commitSuccess: commitTelegramAppendices,
@@ -954,6 +960,8 @@ describe("generateDailyDigest", () => {
         cemeterySymbols: ["UST"],
         trackedSymbols: [],
         preLaunchSymbols: [],
+        frozenDetected: 0,
+        frozenSymbols: [],
         seededSnapshots: [],
       },
       commitSuccess: commitTelegramAppendices,

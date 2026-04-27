@@ -44,6 +44,8 @@ const StablecoinDataRawSchema = z.object({
   circulatingPrevMonth: PegBucketsSchema.nullish(),
   chainCirculating: ChainCirculatingSchema,
   chains: z.array(z.string()),
+  frozen: z.boolean().optional(),
+  frozenAt: z.string().optional(),
 });
 
 const StablecoinDataSchema = StablecoinDataRawSchema.transform((asset) => ({
@@ -69,6 +71,8 @@ const StablecoinDataSchema = StablecoinDataRawSchema.transform((asset) => ({
   circulatingPrevMonth: asset.circulatingPrevMonth ?? {},
   chainCirculating: asset.chainCirculating,
   chains: asset.chains,
+  ...(asset.frozen != null ? { frozen: asset.frozen } : {}),
+  ...(asset.frozenAt != null ? { frozenAt: asset.frozenAt } : {}),
 }));
 export type StablecoinData = z.infer<typeof StablecoinDataSchema>;
 
@@ -78,14 +82,10 @@ export const StablecoinListResponseSchema = z.object({
 });
 export type StablecoinListResponse = z.infer<typeof StablecoinListResponseSchema>;
 
-export const CAUSE_OF_DEATH_VALUES = [
-  "algorithmic-failure",
-  "counterparty-failure",
-  "liquidity-drain",
-  "regulatory",
-  "abandoned",
-] as const;
-export type CauseOfDeath = (typeof CAUSE_OF_DEATH_VALUES)[number];
+import type { CauseOfDeath } from "../lib/cause-of-death";
+
+export { CAUSE_OF_DEATH_VALUES } from "../lib/cause-of-death";
+export type { CauseOfDeath } from "../lib/cause-of-death";
 
 export interface DeadStablecoin {
   id: string;

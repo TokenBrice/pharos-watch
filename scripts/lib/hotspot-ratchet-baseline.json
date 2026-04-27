@@ -72,8 +72,8 @@
     "notes": "The chain detail route now has dedicated tests, but it still combines hero, health, composition, filtering, and table behavior in one client module. Continue splitting view-model and section concerns out of the route shell."
   },
   "worker/src/cron/sync-stablecoins.ts": {
-    "fileLines": 222,
-    "maxFunctionLines": 194,
+    "fileLines": 220,
+    "maxFunctionLines": 192,
     "branchCount": 11,
     "disposition": "stabilized",
     "targetBudget": {
@@ -288,8 +288,8 @@
     "notes": "Extracted from orchestrator-metadata during the Wave 4 liquidity split. Drift detection, score-family analysis, and alert assembly still live in one pipeline function; split into drift/analysis/alerting before adding more signal types."
   },
   "worker/src/cron/sync-mint-burn.ts": {
-    "fileLines": 359,
-    "maxFunctionLines": 281,
+    "fileLines": 361,
+    "maxFunctionLines": 282,
     "branchCount": 21,
     "disposition": "stabilized",
     "targetBudget": {
@@ -348,9 +348,9 @@
     "notes": "Post-fetch balance hydration now lives in `blacklist/post-fetch.ts`. The next pass should still separate source crawling/orchestration from per-family normalization."
   },
   "worker/src/cron/sync-fx-rates.ts": {
-    "fileLines": 237,
-    "maxFunctionLines": 197,
-    "branchCount": 21,
+    "fileLines": 230,
+    "maxFunctionLines": 189,
+    "branchCount": 20,
     "disposition": "queued-p4",
     "targetBudget": {
       "fileLines": 300,

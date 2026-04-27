@@ -18,7 +18,7 @@ const DefiLlamaPriceSchema = z.object({
   coins: z.record(z.string(), z.object({ price: z.number().optional() })).optional(),
 });
 import { batchExecute } from "../lib/db";
-import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins";
+import { ACTIVE_META_BY_ID } from "@shared/lib/stablecoins";
 import { fetchWithRetry } from "../lib/fetch-retry";
 import { cgUrl, cgHeaders } from "../lib/coingecko";
 import { throwIfAborted } from "../lib/abort";
@@ -84,7 +84,7 @@ export async function confirmPendingDepegs(
   const assetById = new Map(assets.map((a) => [a.id, a]));
   const nativePegQuotes = await fetchCurrentNativePegQuotes(
     rows.map((row) => {
-      const meta = TRACKED_META_BY_ID.get(row.stablecoin_id);
+      const meta = ACTIVE_META_BY_ID.get(row.stablecoin_id);
       return {
         stablecoinId: row.stablecoin_id,
         geckoId: meta?.geckoId ?? null,
@@ -96,7 +96,7 @@ export async function confirmPendingDepegs(
   );
 
   // Compute peg rates for reference price lookups
-  const { rates: pegRates } = derivePegRates(assets, TRACKED_META_BY_ID, fxFallbackRates);
+  const { rates: pegRates } = derivePegRates(assets, ACTIVE_META_BY_ID, fxFallbackRates);
 
   // Load DEX prices
   throwIfAborted(signal);
@@ -153,7 +153,7 @@ export async function confirmPendingDepegs(
     }
 
     const asset = assetById.get(row.stablecoin_id);
-    const meta = TRACKED_META_BY_ID.get(row.stablecoin_id);
+    const meta = ACTIVE_META_BY_ID.get(row.stablecoin_id);
     const threshold = getDepegThresholdBps(row.peg_type);
     const secondaryBar = Math.round(threshold * DEPEG_SECONDARY_THRESHOLD_RATIO);
     const primaryTrust = asset ? classifyPrimaryDepegTrust(asset, now) : "unusable";

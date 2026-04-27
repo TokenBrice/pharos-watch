@@ -3,6 +3,7 @@ import { batchExecute } from "../lib/db";
 import { loadMintBurnPriceHistoryBatch, findMintBurnHistoricalPrice } from "../lib/mint-burn-pipeline/context";
 import { rebuildHourlyForStablecoinIds } from "../lib/mint-burn-pipeline/persistence";
 import { runAdminRoute } from "../lib/route-wrappers";
+import { FROZEN_IDS } from "@shared/lib/stablecoins";
 
 interface CoinRepairSummary {
   id: string;
@@ -83,6 +84,7 @@ export async function handleBackfillMintBurnPrices(
       let rowsStillMissingAudit = 0;
 
       for (const row of incompleteRows) {
+        if (FROZEN_IDS.has(row.stablecoin_id)) continue;
         const coin = coinStats.get(row.stablecoin_id) ?? {
           id: row.stablecoin_id,
           updated: 0,

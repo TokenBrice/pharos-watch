@@ -48,6 +48,20 @@ The stable `id` field is the primary dead-coin identifier across the cemetery UI
 
 The `/cemetery/` page links directly to both exports from the route header so researchers and journalists can cite/download the dataset without inspecting the repository.
 
+### Frozen entries in the cemetery
+
+Frozen tracked stablecoins (registry entries with `status: "frozen"`) merge into the cemetery alongside curated `DEAD_STABLECOINS`:
+
+- The cemetery client builds its rendered list by concatenating `DEAD_STABLECOINS` with each `FROZEN_STABLECOINS` entry, mapping `frozenAt` to `deathDate` and the registry `obituary` block to `epitaph` / `obituary` / `causeOfDeath` / `sourceUrl` / `sourceLabel`. Frozen rows are flagged with `archivedDataAvailable: true` so the tombstone and obituary panels render a "View archived data →" link to `/stablecoin/<id>/` (which serves the frozen detail page with the `<FrozenStateBanner>` and "Data frozen on YYYY-MM-DD" chart footer). Curated `DEAD_STABLECOINS` entries leave `archivedDataAvailable` falsy and link only to the cemetery anchor.
+- Identifier rules: the merged `id` for a frozen row is the registry `id` (the same canonical ticker-issuer ID used everywhere else on the site). Curated dead-coin ids (e.g. `ust-luna-2022`) keep their stable cemetery-only identifiers.
+- Sort and grouping: the merged list keeps the same year-grouped, newest-first behavior the cemetery already uses. `frozenAt` participates in the same sort key as `deathDate`.
+
+The static cemetery dataset export reflects the merge:
+
+- `scripts/generate-cemetery-dataset.ts` consumes both `DEAD_STABLECOINS` and `FROZEN_STABLECOINS` and writes one combined row set to `public/datasets/stablecoin-cemetery.json` and `public/datasets/stablecoin-cemetery.csv`.
+- `archivedDataAvailable` is exposed as a row field, with a schema description, and `pharosUrl` resolves to `/stablecoin/<id>/` when archived data is available and to the cemetery anchor otherwise.
+- `npm run check:cemetery-dataset` continues to guard drift across both sources.
+
 ### Telegram channel notifications
 
 The cemetery dataset now has a worker-side Telegram notification path:
