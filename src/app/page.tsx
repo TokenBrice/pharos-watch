@@ -82,11 +82,11 @@ export default function HomePage() {
       />
       <div className="space-y-5">
         <SiteHeader total={total} pegCount={PEG_CURRENCY_COUNT} chainCount={Object.keys(CHAIN_META).length} />
-        <div className="flex flex-col gap-5 lg:contents">
-          <div className="order-1 empty:hidden lg:order-2">
+        <div className="flex flex-col gap-5">
+          <div className="empty:hidden">
             <HomepageStartHereCallout />
           </div>
-          <div className="order-2 lg:order-1">
+          <div>
             <KpiBar />
           </div>
         </div>
