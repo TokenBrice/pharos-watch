@@ -129,6 +129,20 @@ export function buildStablecoinDetailDescription(coin: StablecoinMeta): string {
 }
 
 export function buildStablecoinDetailMetadata(coin: StablecoinMeta): Metadata {
+  if (coin.status === "frozen") {
+    const epitaph = coin.obituary?.epitaph ?? "";
+    const description = trimTextAtWordBoundary(
+      `Historical data and obituary for ${coin.name} (${coin.symbol}), a now-defunct stablecoin tracked by Pharos through ${coin.frozenAt ?? "freeze date"}. ${epitaph}`.trim(),
+      160,
+    );
+    return buildPageMetadata({
+      title: `${coin.name} (${coin.symbol}) — Frozen Stablecoin Archive`,
+      description,
+      canonical: buildStablecoinUrl(coin.id),
+      // Preserve OG image so social previews render the same card as live coins.
+      ogImage: buildApiOgImageUrl(`/api/og/stablecoin/${coin.id}`),
+    });
+  }
   const backingLabel = BACKING_BADGE_STYLES[coin.flags.backing]?.label ?? "";
   const title = backingLabel
     ? `${coin.name} (${coin.symbol}) — ${backingLabel} Stablecoin Analytics`

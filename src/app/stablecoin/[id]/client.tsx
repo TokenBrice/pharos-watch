@@ -12,6 +12,8 @@ import { StaleDataBanner } from "@/components/stale-data-banner";
 import { QueryErrorNotice } from "@/components/query-error-notice";
 import { SectionErrorBoundary } from "@/components/section-error-boundary";
 import { LongformScrollspyNav } from "@/components/longform-scrollspy-nav";
+import { FrozenStateBanner } from "@/components/stablecoin-detail/frozen-state-banner";
+import { FrozenDataNote } from "@/components/stablecoin-detail/frozen-data-note";
 import { HeroCard } from "@/components/stablecoin-detail/hero-card";
 import { StablecoinDetailLoadingShell } from "@/components/stablecoin-detail/loading-shell";
 import { NoticesAndSummarySection } from "@/components/stablecoin-detail/notices-and-summary-section";
@@ -195,6 +197,10 @@ export default function StablecoinDetailClient({ id, summary, coin, logoSrc }: S
 
   const hasPriceTransparency =
     !!viewModel.coinData && (viewModel.coinData.price != null || !!viewModel.dexPriceCheck);
+  const frozenNote =
+    viewModel.coin.status === "frozen" && viewModel.coin.frozenAt ? (
+      <FrozenDataNote frozenAt={viewModel.coin.frozenAt} />
+    ) : null;
   const s = DETAIL_SECTION_DEFS;
   const detailSections = [
     s.safety,
@@ -226,6 +232,13 @@ export default function StablecoinDetailClient({ id, summary, coin, logoSrc }: S
 
       {/* ── Identity zone ── */}
       <div className="space-y-4">
+        {viewModel.coin.status === "frozen" && viewModel.coin.obituary && viewModel.coin.frozenAt ? (
+          <FrozenStateBanner
+            symbol={viewModel.coin.symbol}
+            frozenAt={viewModel.coin.frozenAt}
+            obituary={viewModel.coin.obituary}
+          />
+        ) : null}
         <HeroCard
           coin={viewModel.coin}
           coinData={viewModel.coinData}
@@ -339,10 +352,12 @@ export default function StablecoinDetailClient({ id, summary, coin, logoSrc }: S
       {/* ── Market zone ── */}
       <div className="mt-12 space-y-6">
         <section id="chart">
+          {frozenNote}
           <McapChart data={viewModel.supplyHistory} />
         </section>
 
         <section id="distribution">
+          {frozenNote}
           <SectionErrorBoundary name="distribution">
             <DistributionSection stablecoinId={viewModel.id} />
           </SectionErrorBoundary>
@@ -352,20 +367,25 @@ export default function StablecoinDetailClient({ id, summary, coin, logoSrc }: S
       {/* ── Activity zone ── */}
       <div className="mt-12 space-y-6">
         <section id="liquidity">
+          {frozenNote}
           <SectionErrorBoundary name="liquidity">
             <DexLiquidityCard stablecoinId={viewModel.id} />
           </SectionErrorBoundary>
         </section>
 
+        {viewModel.hasFlows ? frozenNote : null}
         <FlowsSection stablecoinId={viewModel.id} hasFlows={viewModel.hasFlows} />
 
         {viewModel.hasBlacklist && (
-          <SectionErrorBoundary name="blacklist">
-            <BlacklistSection
-              stablecoinId={viewModel.id}
-              symbol={viewModel.coin.symbol as BlacklistStablecoin}
-            />
-          </SectionErrorBoundary>
+          <div>
+            {frozenNote}
+            <SectionErrorBoundary name="blacklist">
+              <BlacklistSection
+                stablecoinId={viewModel.id}
+                symbol={viewModel.coin.symbol as BlacklistStablecoin}
+              />
+            </SectionErrorBoundary>
+          </div>
         )}
       </div>
 
@@ -373,6 +393,7 @@ export default function StablecoinDetailClient({ id, summary, coin, logoSrc }: S
       {!viewModel.isNavToken ? (
         <div className="mt-12">
           <section id="history">
+            {frozenNote}
             <DepegHistory
               stablecoinId={viewModel.id}
               earliestTrackingDate={viewModel.earliestTrackingDate}
