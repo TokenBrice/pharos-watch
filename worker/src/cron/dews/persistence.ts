@@ -1,4 +1,5 @@
 import { DAY_SECONDS } from "@shared/lib/time-constants";
+import { FROZEN_IDS } from "@shared/lib/stablecoins";
 import { batchExecute, buildInClause } from "../../lib/db";
 import { chunkArray } from "../../lib/collections";
 import { writeFreshnessSentinel } from "../../lib/db-cache";
@@ -9,6 +10,26 @@ const DEWS_TABLES = new Set([
   "stress_signals",
   "stress_signal_history",
 ]);
+
+/**
+ * Compute the set of stablecoin ids whose stress-signal rows should be
+ * deleted. Preserves rows for any currently eligible coin AND any frozen
+ * coin (which are excluded from PSI eligibility but whose history we
+ * keep).
+ */
+export function computeStressSignalPruneIds(
+  allDbIds: Set<string>,
+  eligibleIds: Set<string>,
+  frozenIds: Set<string> = FROZEN_IDS,
+): Set<string> {
+  const prune = new Set<string>();
+  for (const id of allDbIds) {
+    if (eligibleIds.has(id)) continue;
+    if (frozenIds.has(id)) continue;
+    prune.add(id);
+  }
+  return prune;
+}
 
 async function deleteOrphansForTable(
   db: D1Database,
@@ -21,9 +42,8 @@ async function deleteOrphansForTable(
     // SAFETY: validated against DEWS_TABLES allowlist above.
     .prepare(`SELECT DISTINCT stablecoin_id FROM ${table}`)
     .all<{ stablecoin_id: string }>();
-  const orphanIds = (existingIds.results ?? [])
-    .map((row) => row.stablecoin_id)
-    .filter((stablecoinId) => !eligibleIds.has(stablecoinId));
+  const allDbIds = new Set((existingIds.results ?? []).map((row) => row.stablecoin_id));
+  const orphanIds = [...computeStressSignalPruneIds(allDbIds, eligibleIds)];
 
   if (orphanIds.length === 0) return 0;
 
