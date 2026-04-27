@@ -48,6 +48,16 @@ Some worker subsystems maintain their own per-coin tables. Remove the frozen coi
 
 The CI guards in `npm run check:frozen-invariants` enforce that frozen coins do not appear in any of the above.
 
+### 3b. Add the cemetery logo
+
+Copy the active logo into the cemetery directory using the symbol-derived filename `frozenToDeadShape` resolves:
+
+```bash
+cp public/logos/<llamaId>-<symbol>.png public/logos/cemetery/<symbol-lowercase>.png
+```
+
+(e.g. `public/logos/197-usr.png` → `public/logos/cemetery/usr.png`.) The cemetery tombstone falls back to a single-letter glyph when the file is missing.
+
 ### 4. Validate
 
 ```bash
