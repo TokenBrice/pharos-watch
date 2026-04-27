@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { getFilterTags } from "../../lib/filter-tags";
-import type { StablecoinMeta } from "../core";
+import { STABLECOIN_STATUS_VALUES, type StablecoinMeta } from "../core";
 
 function makeCoin(overrides: Partial<StablecoinMeta> = {}): StablecoinMeta {
   return {
@@ -18,6 +18,34 @@ function makeCoin(overrides: Partial<StablecoinMeta> = {}): StablecoinMeta {
     ...overrides,
   } as StablecoinMeta;
 }
+
+describe("STABLECOIN_STATUS_VALUES", () => {
+  it("includes the three lifecycle phases", () => {
+    expect(STABLECOIN_STATUS_VALUES).toEqual(["pre-launch", "active", "frozen"]);
+  });
+});
+
+describe("StablecoinMeta", () => {
+  it("accepts a frozen coin with obituary block", () => {
+    const meta: StablecoinMeta = {
+      id: "fixture-frozen",
+      name: "Fixture",
+      symbol: "FXT",
+      flags: { pegCurrency: "USD", governance: "centralized", backing: "fiat" } as never,
+      status: "frozen",
+      frozenAt: "2026-04-27",
+      obituary: {
+        causeOfDeath: "abandoned",
+        deathDate: "2026-04",
+        epitaph: "Closed without ceremony.",
+        obituary: "FXT was sunset by its issuer in April 2026.",
+        sourceUrl: "https://example.com/fxt-shutdown",
+        sourceLabel: "Issuer announcement",
+      },
+    };
+    expect(meta.status).toBe("frozen");
+  });
+});
 
 describe("getFilterTags — infrastructures", () => {
   it("emits no infrastructure tag when infrastructures is unset", () => {
