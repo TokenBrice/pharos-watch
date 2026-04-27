@@ -4,6 +4,7 @@ import type { CronResult } from "../lib/cron-logger";
 import { loadStablecoinsCache } from "../lib/stablecoins-cache";
 import { getCache, setCache } from "../lib/db-cache";
 import { canonicalizeChainCirculating } from "@shared/lib/chain-circulating";
+import { ACTIVE_IDS } from "@shared/lib/stablecoins";
 
 export async function snapshotChainSupply(db: D1Database, signal?: AbortSignal): Promise<CronResult> {
   if (signal?.aborted) {
@@ -33,6 +34,7 @@ export async function snapshotChainSupply(db: D1Database, signal?: AbortSignal):
   const chainTotals = new Map<string, { totalUsd: number; coinCount: number }>();
 
   for (const asset of cache.payload.peggedAssets) {
+    if (!ACTIVE_IDS.has(String(asset.id))) continue;
     const canonicalChainCirculating = canonicalizeChainCirculating(asset.chainCirculating);
 
     for (const [chainId, data] of canonicalChainCirculating) {

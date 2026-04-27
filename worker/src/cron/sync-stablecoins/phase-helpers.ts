@@ -1,4 +1,4 @@
-import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins";
+import { ACTIVE_META_BY_ID } from "@shared/lib/stablecoins";
 import { sumPegBuckets } from "@shared/lib/supply";
 import { getCache } from "../../lib/db-cache";
 import { throwIfAborted } from "../../lib/abort";
@@ -112,7 +112,7 @@ export function normalizeChainCirculating(assets: PeggedAsset[]): void {
 
 export function applyTrackedAssetOverrides(assets: PeggedAsset[]): void {
   for (const asset of assets) {
-    const meta = TRACKED_META_BY_ID.get(String(asset.id));
+    const meta = ACTIVE_META_BY_ID.get(String(asset.id));
 
     if (meta?.geckoId) {
       asset.geckoId = meta.geckoId;

@@ -6,7 +6,7 @@
  */
 import { isPricingSourceSoftGuardrailExempt } from "@shared/lib/pricing-source-registry";
 import { splitCompositePriceSource } from "@shared/lib/pricing-sources";
-import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins";
+import { ACTIVE_META_BY_ID } from "@shared/lib/stablecoins";
 import { fetchAuthoritativeLivePriceOverrides } from "../../lib/authoritative-price-sources";
 import { setCacheIfNewer, getPriceCache, savePriceCache } from "../../lib/db-cache";
 import { validatePayloadWithSchema } from "../../lib/api-utils";
@@ -181,7 +181,7 @@ export async function runPostEnrichmentPricePipeline(
 
   const nativePegImpliedUsdQuotes = await fetchCurrentNativePegImpliedUsdQuotes(
     nativePegHardeningCandidates.map((asset) => {
-      const meta = TRACKED_META_BY_ID.get(asset.id);
+      const meta = ACTIVE_META_BY_ID.get(asset.id);
       const validationContext = validationContexts.get(asset);
       return {
         stablecoinId: asset.id,
