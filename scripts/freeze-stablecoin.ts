@@ -1,0 +1,134 @@
+#!/usr/bin/env tsx
+/**
+ * Freeze a tracked stablecoin: capture its current peggedAssets row,
+ * compute peakMcap from supply_history, and print the JSON edits the
+ * operator must paste into the registry source files.
+ *
+ * Usage:
+ *   API_KEY=... npx tsx scripts/freeze-stablecoin.ts <coinId>
+ *
+ * Inputs:
+ *   - <coinId>: must already exist in shared/data/stablecoins/*.json
+ *   - $PHAROS_API_KEY: required to call api.pharos.watch
+ *
+ * Outputs (printed to stdout):
+ *   - The full JSON entry to append to shared/data/stablecoins/frozen-snapshots.json
+ *   - The patch to apply to the coin's existing entry in usd-major.json /
+ *     usd-minor.json / etc. — set status=frozen, frozenAt, obituary skeleton.
+ *
+ * The operator finalizes the obituary copy (causeOfDeath, deathDate,
+ * epitaph, obituary, sourceUrl, sourceLabel) by hand and reviews the diff.
+ */
+import process from "node:process";
+
+const API_BASE = process.env.PHAROS_API_BASE ?? "https://api.pharos.watch/api";
+
+interface BuildFreezePlanInput {
+  coinId: string;
+  peakMcap: number;
+  peggedAssetRow: Record<string, unknown> & { id: string };
+  frozenAt: string;
+  capturedAt: string;
+}
+
+export interface FreezePlan {
+  frozenSnapshotsEntry: {
+    id: string;
+    capturedAt: string;
+    peggedAssetRow: Record<string, unknown> & { id: string };
+  };
+  metaPatch: {
+    status: "frozen";
+    frozenAt: string;
+    obituary: {
+      causeOfDeath: "TBD";
+      deathDate: string;
+      epitaph: string;
+      obituary: string;
+      peakMcap: number;
+      sourceUrl: string;
+      sourceLabel: string;
+    };
+  };
+}
+
+export function buildFreezePlan(input: BuildFreezePlanInput): FreezePlan {
+  return {
+    frozenSnapshotsEntry: {
+      id: input.coinId,
+      capturedAt: input.capturedAt,
+      peggedAssetRow: input.peggedAssetRow,
+    },
+    metaPatch: {
+      status: "frozen",
+      frozenAt: input.frozenAt,
+      obituary: {
+        causeOfDeath: "TBD",
+        deathDate: input.frozenAt.slice(0, 7),
+        epitaph: "<one-line headline — replace before commit>",
+        obituary: "<full paragraph — replace before commit>",
+        peakMcap: input.peakMcap,
+        sourceUrl: "<source URL — replace before commit>",
+        sourceLabel: "<source label — replace before commit>",
+      },
+    },
+  };
+}
+
+async function fetchPeggedAssetRow(coinId: string): Promise<Record<string, unknown> & { id: string }> {
+  const apiKey = process.env.PHAROS_API_KEY;
+  if (!apiKey) throw new Error("PHAROS_API_KEY env var required");
+  const res = await fetch(`${API_BASE}/stablecoins`, { headers: { "X-API-Key": apiKey } });
+  if (!res.ok) throw new Error(`/api/stablecoins returned ${res.status}`);
+  const body = (await res.json()) as { peggedAssets?: Array<Record<string, unknown> & { id?: unknown }> };
+  const row = (body.peggedAssets ?? []).find((a) => String(a.id) === coinId);
+  if (!row) throw new Error(`coin ${coinId} not found in /api/stablecoins payload`);
+  return row as Record<string, unknown> & { id: string };
+}
+
+async function fetchPeakMcap(coinId: string): Promise<number> {
+  const apiKey = process.env.PHAROS_API_KEY;
+  if (!apiKey) throw new Error("PHAROS_API_KEY env var required");
+  const res = await fetch(`${API_BASE}/supply-history?stablecoin=${coinId}&days=1825`, { headers: { "X-API-Key": apiKey } });
+  if (!res.ok) throw new Error(`/api/supply-history returned ${res.status}`);
+  const body = (await res.json()) as { history?: Array<{ circulatingUsd?: number | null }> };
+  const max = Math.max(...((body.history ?? []).map((p) => p.circulatingUsd ?? 0)));
+  if (!Number.isFinite(max) || max <= 0) {
+    throw new Error(`unable to compute peakMcap from supply-history for ${coinId}`);
+  }
+  return Math.round(max);
+}
+
+async function main() {
+  const coinId = process.argv[2];
+  if (!coinId) {
+    console.error("Usage: npx tsx scripts/freeze-stablecoin.ts <coinId>");
+    process.exit(2);
+  }
+  const today = new Date();
+  const frozenAt = today.toISOString().slice(0, 10);
+  const capturedAt = today.toISOString();
+
+  console.log(`Fetching peggedAssets row for ${coinId}…`);
+  const peggedAssetRow = await fetchPeggedAssetRow(coinId);
+  console.log(`Computing peakMcap from supply-history…`);
+  const peakMcap = await fetchPeakMcap(coinId);
+  console.log(`peakMcap = $${peakMcap.toLocaleString()}`);
+
+  const plan = buildFreezePlan({ coinId, peakMcap, peggedAssetRow, frozenAt, capturedAt });
+
+  console.log("\n=== APPEND THIS ENTRY TO shared/data/stablecoins/frozen-snapshots.json ===\n");
+  console.log(JSON.stringify(plan.frozenSnapshotsEntry, null, 2));
+  console.log("\n=== APPLY THIS PATCH TO THE COIN'S EXISTING REGISTRY ENTRY ===\n");
+  console.log("// Add these top-level fields (alongside id, name, symbol, …):");
+  console.log(JSON.stringify(plan.metaPatch, null, 2));
+  console.log("\nReview the obituary fields, replace placeholders, run `npm run check:frozen-invariants`,");
+  console.log("then commit. See docs/freezing-stablecoins.md for the full procedure.");
+}
+
+if (import.meta.url === `file://${process.argv[1]}`) {
+  main().catch((err) => {
+    console.error(err);
+    process.exit(1);
+  });
+}

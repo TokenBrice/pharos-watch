@@ -35,6 +35,7 @@
     "validate:prebuild": "node scripts/run-validate-prebuild.mjs",
     "test:watch": "vitest",
     "audit:pricing-providers": "tsx scripts/audit-pricing-provider-config.ts",
+    "freeze-stablecoin": "tsx scripts/freeze-stablecoin.ts",
     "sync:digests": "tsx scripts/sync-digests.ts",
     "serve:static-export": "npx --yes tsx scripts/serve-static-export.mjs",
     "test:smoke-api": "node scripts/smoke-api.mjs",
