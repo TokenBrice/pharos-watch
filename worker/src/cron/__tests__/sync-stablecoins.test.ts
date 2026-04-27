@@ -210,6 +210,11 @@ vi.mock("@shared/lib/stablecoins", () => {
     };
 });
 
+vi.mock("@shared/lib/stablecoins/frozen-snapshots", () => ({
+  FROZEN_SNAPSHOTS: [],
+  FROZEN_SNAPSHOTS_BY_ID: new Map(),
+}));
+
 // Stub enrich-prices to avoid complex 5-pass pipeline
 vi.mock("../sync-stablecoins/enrich-prices", () => ({
   enrichMissingPrices: vi.fn(async () => ({

@@ -1,5 +1,12 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
+vi.mock("@shared/lib/stablecoins", async () => {
+  const actual = await vi.importActual<typeof import("@shared/lib/stablecoins")>(
+    "@shared/lib/stablecoins",
+  );
+  return { ...actual, FROZEN_IDS: new Set<string>() };
+});
+
 vi.mock("@shared/lib/psi-eligible", () => ({
   PSI_ELIGIBLE_STABLECOINS: [
     {

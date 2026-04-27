@@ -224,10 +224,10 @@ describe("computeAndStoreStabilityIndex", () => {
       payload: {
         peggedAssets: [
           {
-            id: "usr-resolv",
-            name: "Resolv USD",
-            symbol: "USR",
-            geckoId: "resolv-usr",
+            id: "usdf-falcon",
+            name: "Falcon USD",
+            symbol: "USDf",
+            geckoId: "falcon-finance",
             pegType: "peggedUSD",
             pegMechanism: "crypto-backed",
             price: null,
@@ -255,14 +255,14 @@ describe("computeAndStoreStabilityIndex", () => {
     const db = makeDb({
       depegRows: [
         {
-          stablecoin_id: "usr-resolv",
+          stablecoin_id: "usdf-falcon",
           peg_reference: 1,
           started_at: nowSec - 3_600,
         },
       ],
       priceCacheRows: [
         {
-          asset_id: "usr-resolv",
+          asset_id: "usdf-falcon",
           price: 0.5413,
           updated_at: nowSec - 300,
         },
@@ -277,7 +277,7 @@ describe("computeAndStoreStabilityIndex", () => {
     expect(snapshot.replayPriceFallbackCount).toBe(1);
     expect(snapshot.depegCount).toBe(1);
     expect(contributors).toHaveLength(1);
-    expect(contributors[0]?.id).toBe("usr-resolv");
+    expect(contributors[0]?.id).toBe("usdf-falcon");
     expect(contributors[0]?.bps).toBe(-4587);
   });
 
@@ -343,10 +343,10 @@ describe("computeAndStoreStabilityIndex", () => {
       payload: {
         peggedAssets: [
           {
-            id: "usr-resolv",
-            name: "Resolv USD",
-            symbol: "USR",
-            geckoId: "resolv-usr",
+            id: "usdf-falcon",
+            name: "Falcon USD",
+            symbol: "USDf",
+            geckoId: "falcon-finance",
             pegType: "peggedUSD",
             pegMechanism: "crypto-backed",
             price: null,
@@ -374,14 +374,14 @@ describe("computeAndStoreStabilityIndex", () => {
     const db = makeDb({
       depegRows: [
         {
-          stablecoin_id: "usr-resolv",
+          stablecoin_id: "usdf-falcon",
           peg_reference: 1,
           started_at: nowSec - 3_600,
         },
       ],
       priceCacheRows: [
         {
-          asset_id: "usr-resolv",
+          asset_id: "usdf-falcon",
           price: 0.5413,
           updated_at: nowSec - (6 * 60 * 60) - 1,
         },
