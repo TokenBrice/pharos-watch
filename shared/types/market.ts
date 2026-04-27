@@ -78,14 +78,10 @@ export const StablecoinListResponseSchema = z.object({
 });
 export type StablecoinListResponse = z.infer<typeof StablecoinListResponseSchema>;
 
-export const CAUSE_OF_DEATH_VALUES = [
-  "algorithmic-failure",
-  "counterparty-failure",
-  "liquidity-drain",
-  "regulatory",
-  "abandoned",
-] as const;
-export type CauseOfDeath = (typeof CAUSE_OF_DEATH_VALUES)[number];
+import type { CauseOfDeath } from "../lib/cause-of-death";
+
+export { CAUSE_OF_DEATH_VALUES } from "../lib/cause-of-death";
+export type { CauseOfDeath } from "../lib/cause-of-death";
 
 export interface DeadStablecoin {
   id: string;
