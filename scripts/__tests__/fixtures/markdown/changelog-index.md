@@ -6,16 +6,6 @@ description: "Weekly release notes for Pharos."
 
 # Changelog
 
-## 2026-04-27 to 2026-05-03
-
-Frozen stablecoin lifecycle phase preserves dead-coin detail pages alongside the existing cemetery archive.
-
-- **Frozen lifecycle phase**: Tracked stablecoins gain a third lifecycle phase — frozen — for coins that have effectively died. Frozen coins keep their detail page and historical data as a read-only archive, drop out of every live aggregate and score recomputation, and surface in the cemetery with an archived-data link.
-- **Registry universes split**: shared/lib/stablecoins/registry.ts now exposes TRACKED, ACTIVE, READABLE, and FROZEN universes. Write-side crons key off ACTIVE_IDS so frozen coins receive no new INSERT/UPDATE rows; read-side endpoints (sitemap, search, compare picker, OG, detail-page reserves/stress-signals) key off READABLE_IDS so archives stay reachable.
-- **Cemetery merge + dataset export**: /cemetery merges DEAD_STABLECOINS with FROZEN_STABLECOINS, badging each frozen entry with a 'View archived data →' link to the preserved detail page. The static cemetery dataset (JSON + CSV) carries a new archivedDataAvailable column.
-- **Detail-page archive surfaces**: Frozen detail pages render a FrozenStateBanner above the hero, a 'Data frozen on YYYY-MM-DD' footer above each chart section, and an archive-themed metadata variant. The compare picker badges frozen coins and renders null-cell tooltips for live-only metrics.
-- **Operator runbook + CI guards**: New docs/freezing-stablecoins.md captures the freeze procedure end-to-end. npm run check:frozen-invariants enforces every cross-file invariant (no frozen coins in independent registries, schema-required obituary, snapshot presence). Per-domain methodology version constants are unchanged — frozen is a data-collection lifecycle policy, not a scoring change.
-
 ## 2026-04-20 to 2026-04-26
 
 Harbor and canal metaphors redraw /chains and /liquidity, public /api/* goes keyed-only, and tracked coverage hits 215.
