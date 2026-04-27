@@ -57,6 +57,7 @@ const StablecoinIdSchema = z.string().refine(isSlugLikeId, {
 
 const obituarySchema = z.object({
   causeOfDeath: z.enum(CAUSE_OF_DEATH_VALUES),
+  // eslint-disable-next-line security/detect-unsafe-regex -- anchored fixed-width date pattern; finite quantifiers, no backtracking risk.
   deathDate: z.string().regex(/^\d{4}-\d{2}(-\d{2})?$/),
   epitaph: z.string().min(1),
   obituary: z.string().min(1),

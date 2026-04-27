@@ -33,12 +33,20 @@ function formatMatches(matches) {
   }
 }
 
+// Cross-boundary validators that intentionally import worker sources to
+// assert invariants. Keep this list minimal and document why each entry
+// exists in the file's header comment.
+const BOUNDARY_EXEMPT_FILES = new Set([
+  "scripts/check-frozen-invariants.ts",
+]);
+
 function runBoundaryCheck(label, { excludeTests, rootDir, forbiddenPattern }) {
   try {
     const files = collectFiles(rootDir);
     const matches = [];
     for (const file of files) {
       if (excludeTests && file.includes("/__tests__/")) continue;
+      if (BOUNDARY_EXEMPT_FILES.has(file)) continue;
       const lines = readFileSync(file, "utf8").split("\n");
       for (let i = 0; i < lines.length; i += 1) {
         if (forbiddenPattern.test(lines[i])) {

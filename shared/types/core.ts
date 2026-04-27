@@ -1,7 +1,7 @@
 import { z } from "zod";
 import type { DependencyType } from "./dependency-types";
 import type { LiveReservesConfig } from "./live-reserves";
-import type { CauseOfDeath } from "./market";
+import type { CauseOfDeath } from "../lib/cause-of-death";
 import type { ReserveSlice } from "./reserves";
 export type { DependencyType } from "./dependency-types";
 export type { ReserveRisk, ReserveSlice } from "./reserves";
