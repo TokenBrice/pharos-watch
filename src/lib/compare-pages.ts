@@ -1,5 +1,5 @@
 import { BACKING_LABELS_SHORT, GOVERNANCE_LABELS, PEG_LABELS_SHORT } from "@shared/lib/classification";
-import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins";
+import { FROZEN_IDS, TRACKED_META_BY_ID } from "@shared/lib/stablecoins";
 import type { StablecoinMeta } from "@shared/types";
 import { getResolvedBlacklistStatus } from "@/lib/blacklist-status";
 import { trimTextAtWordBoundary } from "@/lib/page-metadata";
@@ -93,7 +93,9 @@ export function buildLiveCompareUrl(coinIds: readonly string[]): string {
   return `/compare/?coins=${coinIds.map((coinId) => encodeURIComponent(coinId)).join(",")}`;
 }
 
-export const STATIC_COMPARISON_PAGES: StaticComparisonPage[] = STATIC_COMPARE_PAIRS.map(([leftId, rightId]) => {
+export const STATIC_COMPARISON_PAGES: StaticComparisonPage[] = STATIC_COMPARE_PAIRS
+  .filter(([leftId, rightId]) => !FROZEN_IDS.has(leftId) && !FROZEN_IDS.has(rightId))
+  .map(([leftId, rightId]) => {
   const left = getStablecoinOrThrow(leftId);
   const right = getStablecoinOrThrow(rightId);
   const shortTitle = `${left.symbol} vs ${right.symbol}`;
