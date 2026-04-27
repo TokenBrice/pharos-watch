@@ -2,9 +2,11 @@ import { describe, expect, it } from "vitest";
 import { FROZEN_SNAPSHOTS, FROZEN_SNAPSHOTS_BY_ID, parseFrozenSnapshots } from "../frozen-snapshots";
 
 describe("frozen-snapshots", () => {
-  it("starts empty", () => {
-    expect(FROZEN_SNAPSHOTS).toEqual([]);
-    expect(FROZEN_SNAPSHOTS_BY_ID.size).toBe(0);
+  it("indexes every registered snapshot by id", () => {
+    expect(FROZEN_SNAPSHOTS.length).toBe(FROZEN_SNAPSHOTS_BY_ID.size);
+    for (const snapshot of FROZEN_SNAPSHOTS) {
+      expect(FROZEN_SNAPSHOTS_BY_ID.get(snapshot.id)).toBe(snapshot);
+    }
   });
 
   it("parses a well-formed snapshot", () => {

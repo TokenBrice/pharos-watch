@@ -370,15 +370,6 @@ export const MINT_BURN_CONFIG_SPECS: MintBurnContractConfigSpec[] = [
   },
   {
     chain: ETHEREUM,
-    stablecoinId: "usr-resolv",
-    dustThreshold: 10_000,
-    startBlock: 21_900_000,
-    tier: "extended",
-    isDefaultStartBlock: true,
-    events: transferMintBurn(),
-  },
-  {
-    chain: ETHEREUM,
     stablecoinId: "frax-frax",
     dustThreshold: 10_000,
     startBlock: 21_900_000,
