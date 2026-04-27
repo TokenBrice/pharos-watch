@@ -1,5 +1,26 @@
-import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins";
+import { ACTIVE_STABLECOINS, TRACKED_IDS } from "@shared/lib/stablecoins";
 import { LIQUIDITY_METHODOLOGY_VERSION } from "@shared/lib/liquidity-score-version";
+
+const DEX_AGGREGATE_PRESERVE_IDS = new Set(["__global__"]);
+
+/**
+ * Compute the set of stablecoin ids whose DEX rows should be deleted.
+ * Preserves rows for any tracked coin (active OR frozen) plus the
+ * `__global__` aggregate sentinel. Only orphaned ids that no longer
+ * exist in the registry get pruned.
+ */
+export function computeDexPruneSet(
+  allDbIds: Set<string>,
+  trackedIds: Set<string> = TRACKED_IDS,
+): Set<string> {
+  const prune = new Set<string>();
+  for (const id of allDbIds) {
+    if (trackedIds.has(id)) continue;
+    if (DEX_AGGREGATE_PRESERVE_IDS.has(id)) continue;
+    prune.add(id);
+  }
+  return prune;
+}
 import { batchExecute } from "../../lib/db";
 import { writeFreshnessSentinel } from "../../lib/db-cache";
 import type { LiquidityMetrics, FullScoreResult, GlobalAgg } from "./types";
@@ -185,9 +206,8 @@ export async function persistScores(
   );
 
   // Clean up orphaned rows from stablecoins no longer in the tracked set.
-  // These can accumulate when coins are removed from ACTIVE_STABLECOINS.
-  const validIds = new Set(ACTIVE_STABLECOINS.map((m) => m.id));
-  validIds.add("__global__");
+  // Preserve TRACKED (active + frozen) plus the `__global__` aggregate so
+  // frozen coins keep their historical DEX rows.
   const DEX_LIQUIDITY_TABLES = new Set([
     "dex_liquidity",
     "dex_liquidity_history",
@@ -201,14 +221,14 @@ export async function persistScores(
         // SAFETY: validated against DEX_LIQUIDITY_TABLES allowlist above.
         .prepare(`SELECT DISTINCT stablecoin_id FROM ${table}`)
         .all<{ stablecoin_id: string }>();
-      for (const row of existingRows.results ?? []) {
-        if (!validIds.has(row.stablecoin_id)) {
-          orphanRowsDeleted++;
-          stmts.push(
-            // SAFETY: validated against DEX_LIQUIDITY_TABLES allowlist above.
-            db.prepare(`DELETE FROM ${table} WHERE stablecoin_id = ?`).bind(row.stablecoin_id),
-          );
-        }
+      const tableIds = new Set((existingRows.results ?? []).map((row) => row.stablecoin_id));
+      const pruneIds = computeDexPruneSet(tableIds);
+      for (const id of pruneIds) {
+        orphanRowsDeleted++;
+        stmts.push(
+          // SAFETY: validated against DEX_LIQUIDITY_TABLES allowlist above.
+          db.prepare(`DELETE FROM ${table} WHERE stablecoin_id = ?`).bind(id),
+        );
       }
     }
   } catch (err) {
