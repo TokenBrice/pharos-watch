@@ -11,7 +11,7 @@ import { resolveOrReject } from "../lib/api-utils";
 import { loadDexLiquidityMap } from "../lib/dex-liquidity";
 import { getConditionBand } from "../lib/stability-index";
 import { sumPegBuckets } from "@shared/lib/supply";
-import { ACTIVE_IDS, TRACKED_META_BY_ID } from "@shared/lib/stablecoins";
+import { ACTIVE_IDS, FROZEN_IDS, READABLE_IDS, TRACKED_META_BY_ID } from "@shared/lib/stablecoins";
 import { hasUsableStablecoinsPayload, loadStablecoinsCache } from "../lib/stablecoins-cache";
 import { loadReportCardCache } from "../lib/report-card-cache";
 import { derivePegAnalyticsSnapshot } from "../lib/peg-analytics";
@@ -108,6 +108,7 @@ interface StablecoinOgSignalsInput {
   change24h: number | null;
   variantLabel?: string | null;
   variantParentSymbol?: string | null;
+  isFrozen?: boolean;
 }
 
 export function deriveStablecoinOgCardData({
@@ -125,6 +126,7 @@ export function deriveStablecoinOgCardData({
   change24h,
   variantLabel,
   variantParentSymbol,
+  isFrozen,
 }: StablecoinOgSignalsInput): StablecoinCardData {
   const pegPrice = coin.price ?? 1;
   const mcap = sumPegBuckets(coin.circulating);
@@ -150,6 +152,7 @@ export function deriveStablecoinOgCardData({
     change24h,
     variantLabel: variantLabel ?? null,
     variantParentSymbol: variantParentSymbol ?? null,
+    isFrozen: isFrozen ?? false,
     lastUpdated: new Date().toISOString().slice(0, 16).replace("T", " ") + " UTC",
   };
 }
@@ -165,9 +168,10 @@ async function handleStablecoinOg(db: D1Database, coinId: string): Promise<Respo
   }
   const id = resolved.canonicalId;
 
-  if (!ACTIVE_IDS.has(id)) {
+  if (!READABLE_IDS.has(id)) {
     return new Response("Unknown stablecoin", { status: 404, headers: { "Content-Type": "text/plain" } });
   }
+  const isFrozen = FROZEN_IDS.has(id);
 
   // Parallel queries: stablecoins cache, dex liquidity, DEWS, report card, 7d price sparkline,
   // active depeg, 7d flow, and 24h price change.
@@ -276,6 +280,7 @@ async function handleStablecoinOg(db: D1Database, coinId: string): Promise<Respo
     change24h,
     variantLabel,
     variantParentSymbol,
+    isFrozen,
   });
 
   const png = await renderPng(<StablecoinCard data={data} />);
