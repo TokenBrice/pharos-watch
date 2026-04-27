@@ -24,15 +24,3 @@ export const CAUSE_META: Record<CauseOfDeath, { label: string; textColor: string
   abandoned: { label: "Abandoned", textColor: "text-zinc-700 dark:text-zinc-400", borderColor: "border-zinc-500/30" },
 };
 
-/**
- * Higher-intensity border classes (matching CAUSE_META's `borderColor` but
- * at /70 opacity) for prominent surfaces like the frozen-state banner.
- * Listed literally so Tailwind JIT picks them up.
- */
-export const CAUSE_BORDER_INTENSE: Record<CauseOfDeath, string> = {
-  "algorithmic-failure": "border-red-500/70",
-  "counterparty-failure": "border-amber-500/70",
-  "liquidity-drain": "border-orange-500/70",
-  regulatory: "border-blue-500/70",
-  abandoned: "border-zinc-500/70",
-};

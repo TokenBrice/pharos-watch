@@ -232,13 +232,6 @@ export default function StablecoinDetailClient({ id, summary, coin, logoSrc }: S
 
       {/* ── Identity zone ── */}
       <div className="space-y-4">
-        {viewModel.coin.status === "frozen" && viewModel.coin.obituary && viewModel.coin.frozenAt ? (
-          <FrozenStateBanner
-            symbol={viewModel.coin.symbol}
-            frozenAt={viewModel.coin.frozenAt}
-            obituary={viewModel.coin.obituary}
-          />
-        ) : null}
         <HeroCard
           coin={viewModel.coin}
           coinData={viewModel.coinData}
@@ -265,6 +258,14 @@ export default function StablecoinDetailClient({ id, summary, coin, logoSrc }: S
         />
 
         <ExploitNoticeBanner notices={viewModel.coin.notices} />
+
+        {viewModel.coin.status === "frozen" && viewModel.coin.obituary && viewModel.coin.frozenAt ? (
+          <FrozenStateBanner
+            symbol={viewModel.coin.symbol}
+            frozenAt={viewModel.coin.frozenAt}
+            obituary={viewModel.coin.obituary}
+          />
+        ) : null}
       </div>
 
       {/* ── Navigation zone ── */}

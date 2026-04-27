@@ -41,7 +41,7 @@
       "name": "Resolv USD",
       "symbol": "USR",
       "llamaId": null,
-      "logoUrl": null,
+      "logoUrl": "https://pharos.watch/logos/cemetery/usr.png",
       "pegCurrency": "USD",
       "causeOfDeath": "counterparty-failure",
       "causeLabel": "Counterparty Failure",
