@@ -128,7 +128,7 @@ async function loadMintBurnHealth(
   mintBurnBootstrap: boolean;
 }> {
   try {
-    const [latestRun, latestSuccessfulSyncAt] = await Promise.all([
+    const [latestRun, latestSuccessfulSyncAt, totalEvents] = await Promise.all([
       db
         .prepare(
           `SELECT status
@@ -147,11 +147,19 @@ async function loadMintBurnHealth(
         .first<{ started_at: number | null }>()
         .then((row) => row?.started_at ?? null)
         .catch(() => null),
+      // O(1) row count via sqlite_sequence — avoids the 283M-rows/day SUM scan
+      // the previous COALESCE(SUM(mint_count + burn_count)) hit.
+      db
+        .prepare("SELECT seq FROM sqlite_sequence WHERE name = ?")
+        .bind("mint_burn_events")
+        .first<{ seq: number | null }>()
+        .then((row) => row?.seq ?? null)
+        .catch(() => null),
     ]);
 
     const sync = buildMintBurnSyncHealth(now, latestSuccessfulSyncAt, latestRun?.status ?? null);
     const mintBurn: HealthResponse["mintBurn"] = {
-      totalEvents: null,
+      totalEvents,
       latestEventTs: null,
       latestHourlyTs: null,
       freshnessAgeSec: null,
