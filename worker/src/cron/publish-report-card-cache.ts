@@ -6,6 +6,7 @@ import {
 import { setCache } from "../lib/db-cache";
 import { writeReportCardCache } from "../lib/report-card-cache";
 import type { CronResult } from "../lib/cron-logger";
+import { FROZEN_IDS } from "@shared/lib/stablecoins";
 
 export async function publishReportCardCache(
   db: D1Database,
@@ -21,12 +22,13 @@ export async function publishReportCardCache(
     throw signal.reason ?? new Error("publish-report-card-cache aborted");
   }
 
-  const { writtenCount } = await writeReportCardCache(db, snapshot.cards, snapshot.updatedAt);
+  const writableCards = snapshot.cards.filter((card) => !FROZEN_IDS.has(card.id));
+  const { writtenCount } = await writeReportCardCache(db, writableCards, snapshot.updatedAt);
   await setCache(
     db,
     ALERT_SAFETY_SOURCE_CACHE_KEY,
     JSON.stringify(buildAlertSafetySourceEnvelope(
-      snapshot.cards,
+      writableCards,
       snapshot.methodology.version,
       snapshot.updatedAt,
     )),

@@ -18,6 +18,7 @@ vi.mock("@shared/lib/stablecoins", async (importOriginal) => {
   return {
     ...actual,
     TRACKED_META_BY_ID,
+    ACTIVE_META_BY_ID: TRACKED_META_BY_ID,
   };
 });
 

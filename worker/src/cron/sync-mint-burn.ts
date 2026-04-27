@@ -28,6 +28,7 @@ import {
   resolveStartIndex,
   rotateArray,
 } from "./mint-burn/run-state";
+import { excludeFrozenIds } from "./shared/exclude-frozen";
 
 const MAX_SCAN_RANGE = 50_000;
 const EVM_SAFETY_MARGIN_BLOCKS = 75; // Math.ceil(900s indexing safety / 12s block time)
@@ -99,8 +100,9 @@ export async function syncMintBurn(
   const disabledConfigIds = normalizeDisabledConfigIdSet(options.disabledConfigIds);
   const disabledSymbols = normalizeDisabledSymbolSet(options.disabledSymbols);
 
-  const allTrackableConfigs = MINT_BURN_CONFIGS.filter(
-    (config) => laneIncludesConfig(lane, config),
+  const allTrackableConfigs = excludeFrozenIds(
+    MINT_BURN_CONFIGS.filter((config) => laneIncludesConfig(lane, config)),
+    (config) => config.stablecoinId,
   );
   const enabledConfigs: MintBurnContractConfig[] = [];
   const disabledConfigReasons = new Map<string, string>();

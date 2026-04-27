@@ -132,10 +132,7 @@ vi.mock("@shared/lib/stablecoins", () => {
     },
       ...fallbackTrackedTokens,
     ];
-    return {
-    TRACKED_STABLECOINS: stablecoins,
-    ACTIVE_STABLECOINS: stablecoins,
-    TRACKED_META_BY_ID: new Map([
+    const trackedMetaById = new Map<string, unknown>([
       ["usdt-tether", { geckoId: "tether", cmcSlug: undefined }],
       ["usdc-circle", { geckoId: "usd-coin", cmcSlug: undefined }],
       ["eurcv-societe-generale-forge", {
@@ -198,8 +195,13 @@ vi.mock("@shared/lib/stablecoins", () => {
         commodityOunces: 0.001,
         flags: { navToken: false },
       }],
-    ]),
-  };
+    ]);
+    return {
+      TRACKED_STABLECOINS: stablecoins,
+      ACTIVE_STABLECOINS: stablecoins,
+      TRACKED_META_BY_ID: trackedMetaById,
+      ACTIVE_META_BY_ID: trackedMetaById,
+    };
 });
 
 // Stub enrich-prices to avoid complex 5-pass pipeline
