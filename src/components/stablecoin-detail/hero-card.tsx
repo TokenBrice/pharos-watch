@@ -302,7 +302,7 @@ export function HeroCard({
     },
     {
       key: "blacklistable",
-      label: <MethodologyLabel topic="freezable">Freezable</MethodologyLabel>,
+      label: <MethodologyLabel topic={blacklistStatus === "inherited" ? "freezableUpstream" : blacklistStatus === false ? "freezableNo" : blacklistStatus === "possible" ? "freezablePossible" : "freezable"}>Freezable</MethodologyLabel>,
       value: blacklistDisplay.value,
       subValue: blacklistDisplay.sub,
       colorClass: blacklistDisplay.color,

@@ -49,6 +49,9 @@ export type MethodologyContextKey =
   | "safetyScore"
   | "resilience"
   | "freezable"
+  | "freezableUpstream"
+  | "freezableNo"
+  | "freezablePossible"
   | "dependencyRisk"
   | "redemptionBackstop"
   | "effectiveExit"
@@ -140,6 +143,30 @@ export const METHODOLOGY_CONTEXT: Record<MethodologyContextKey, MethodologyConte
     title: "Freezable",
     summary:
       "The issuer can freeze tokens in any wallet via on-contract admin functions. This is a trust/centralization risk, not an instant harm.",
+    methodologyPath: "/methodology/#safety-scores-methodology",
+    versionLabel: SAFETY_SCORE_VERSION_LABEL,
+    changelogPath: SAFETY_SCORE_METHODOLOGY_CHANGELOG_PATH,
+  },
+  freezableUpstream: {
+    title: "Freezable",
+    summary:
+      "While this stablecoin has no direct freeze function, it uses collateral which can be frozen by an upstream issuer: individual balances cannot be frozen, but protocol-held collateral balances could. This is a trust/centralization risk, not an instant harm.",
+    methodologyPath: "/methodology/#safety-scores-methodology",
+    versionLabel: SAFETY_SCORE_VERSION_LABEL,
+    changelogPath: SAFETY_SCORE_METHODOLOGY_CHANGELOG_PATH,
+  },
+  freezableNo: {
+    title: "Freezable",
+    summary:
+      "No admin function exists to freeze, seize or destroy user assets. This stablecoin is trustless.",
+    methodologyPath: "/methodology/#safety-scores-methodology",
+    versionLabel: SAFETY_SCORE_VERSION_LABEL,
+    changelogPath: SAFETY_SCORE_METHODOLOGY_CHANGELOG_PATH,
+  },
+  freezablePossible: {
+    title: "Freezable",
+    summary:
+      "An admin function exists to enable an admin to freeze, seize or destroy assets, but the function has not yet been activated.",
     methodologyPath: "/methodology/#safety-scores-methodology",
     versionLabel: SAFETY_SCORE_VERSION_LABEL,
     changelogPath: SAFETY_SCORE_METHODOLOGY_CHANGELOG_PATH,
