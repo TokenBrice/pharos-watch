@@ -3,8 +3,9 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import Image from "next/image";
 import { CAUSE_META, CAUSE_HEX } from "@shared/lib/dead-stablecoins";
+import type { CemeteryEntry } from "@shared/lib/cemetery-merged";
 import { formatCurrency, formatDeathDate } from "@shared/lib/format";
-import type { DeadStablecoin, CauseOfDeath } from "@shared/types";
+import type { CauseOfDeath } from "@shared/types";
 import { buildCemeteryYearSections } from "@/lib/cemetery";
 import { YEAR_MS } from "@/lib/constants";
 import { cn } from "@/lib/utils";
@@ -162,7 +163,7 @@ function Tombstone({
   flowerCount,
   onPayRespects,
 }: {
-  coin: DeadStablecoin;
+  coin: CemeteryEntry;
   index: number;
   onSelect: (coinId: string) => void;
   flowerCount: number;
@@ -383,7 +384,7 @@ function Tombstone({
 }
 
 interface CemeteryTombstonesProps {
-  coins: DeadStablecoin[];
+  coins: CemeteryEntry[];
   onSelect: (coinId: string) => void;
 }
 

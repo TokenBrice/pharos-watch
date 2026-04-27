@@ -7,7 +7,7 @@ import { FaqSection } from "@/components/faq-section";
 import { safeJsonLd } from "@/lib/json-ld";
 import { buildPageMetadata } from "@/lib/page-metadata";
 import { SITE_ORIGIN as SITE_URL } from "@shared/lib/runtime-origins";
-import { DEAD_STABLECOINS } from "@shared/lib/dead-stablecoins";
+import { CEMETERY_ENTRIES as DEAD_STABLECOINS } from "@shared/lib/cemetery-merged";
 import type { FaqItem } from "@/lib/faq";
 import { sortCemeteryCoins } from "@/lib/cemetery";
 

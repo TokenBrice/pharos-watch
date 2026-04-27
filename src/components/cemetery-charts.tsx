@@ -18,7 +18,8 @@ import {
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ChartSkeleton } from "@/components/chart-skeleton";
 import { useHydrated } from "@/hooks/use-hydrated";
-import { DEAD_STABLECOINS, CAUSE_META, CAUSE_HEX } from "@shared/lib/dead-stablecoins";
+import { CAUSE_META, CAUSE_HEX } from "@shared/lib/dead-stablecoins";
+import { CEMETERY_ENTRIES as DEAD_STABLECOINS } from "@shared/lib/cemetery-merged";
 import { CHART_RED, CHART_BLUE } from "@/lib/chart-colors";
 import { PharosChartTooltip } from "@/components/pharos-chart-tooltip";
 import { formatCurrency, formatChartDate } from "@shared/lib/format";
