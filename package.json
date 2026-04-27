@@ -56,6 +56,7 @@
     "check:hotspot-ratchet:update-baseline": "node scripts/update-hotspot-ratchet-baseline.mjs",
     "check:cron-sync": "tsx scripts/check-cron-schedule-sync.ts",
     "check:doc-counts": "node scripts/check-doc-counts.mjs",
+    "check:frozen-invariants": "tsx scripts/check-frozen-invariants.ts",
     "check:verified-doc-links": "node scripts/check-verified-doc-links.mjs",
     "check:doc-source-paths": "node scripts/check-doc-source-paths.mjs",
     "check:doc-sync": "tsx scripts/check-doc-sync.ts",

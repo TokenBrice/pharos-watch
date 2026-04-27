@@ -5,7 +5,7 @@ import { getResolvedBlacklistStatus } from "@/lib/blacklist-status";
 import { trimTextAtWordBoundary } from "@/lib/page-metadata";
 import { buildStablecoinUrl } from "@/lib/urls";
 
-const STATIC_COMPARE_PAIRS = [
+export const STATIC_COMPARE_PAIRS = [
   ["usdt-tether", "usdc-circle"],
   ["usdt-tether", "usde-ethena"],
   ["usdt-tether", "dai-makerdao"],

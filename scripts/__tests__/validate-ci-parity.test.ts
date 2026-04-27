@@ -139,6 +139,7 @@ describe("validate-ci parity", () => {
       "npm run check:doc-sync",
       "npm run check:duplicate-exports",
       "npm run check:env-contract",
+      "npm run check:frozen-invariants",
       "npm run check:hotspot-ratchet",
       "npm run check:llms-txt",
       "npm run check:migrations",
