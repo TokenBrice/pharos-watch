@@ -201,6 +201,12 @@ vi.mock("@shared/lib/stablecoins", () => {
       ACTIVE_STABLECOINS: stablecoins,
       TRACKED_META_BY_ID: trackedMetaById,
       ACTIVE_META_BY_ID: trackedMetaById,
+      FROZEN_IDS: new Set<string>(),
+      FROZEN_META_BY_ID: new Map<string, never>(),
+      FROZEN_STABLECOINS: [],
+      READABLE_IDS: new Set(stablecoins.map((s) => s.id)),
+      READABLE_STABLECOINS: stablecoins,
+      READABLE_META_BY_ID: trackedMetaById,
     };
 });
 
