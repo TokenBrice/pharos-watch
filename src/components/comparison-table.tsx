@@ -99,6 +99,22 @@ function bestGradeIndex(grades: (ReportCardGrade | null)[]): number | null {
 }
 
 const BEST_CLASS = "text-green-600 dark:text-green-400 font-semibold";
+const FROZEN_NULL_TITLE = "No live data — coin is frozen";
+
+function NullCell({ frozen }: { frozen: boolean }) {
+  return frozen ? <span title={FROZEN_NULL_TITLE}>—</span> : <>—</>;
+}
+
+function FrozenBadge({ frozenAt }: { frozenAt?: string }) {
+  return (
+    <span
+      className="ml-1 rounded border border-zinc-500/30 px-1 text-[9px] uppercase tracking-wide text-zinc-500"
+      title={frozenAt ? `Frozen on ${frozenAt}` : "Frozen"}
+    >
+      Frozen
+    </span>
+  );
+}
 
 export const ComparisonTable = memo(function ComparisonTable({ coins, pegRates, logos, detailErrors }: ComparisonTableProps) {
   // Pre-compute row data
@@ -187,7 +203,10 @@ export const ComparisonTable = memo(function ComparisonTable({ coins, pegRates, 
             <div className="flex items-center gap-2">
               <StablecoinLogo src={logos?.[coin.id]} name={coin.name} size={28} />
               <div className="min-w-0">
-                <h3 className="text-sm font-semibold">{coin.symbol}</h3>
+                <h3 className="text-sm font-semibold">
+                  {coin.symbol}
+                  {coin.meta.status === "frozen" ? <FrozenBadge frozenAt={coin.meta.frozenAt} /> : null}
+                </h3>
                 <p className="truncate text-xs text-muted-foreground">{coin.name}</p>
               </div>
               {detailErrors?.[coin.id] && (
@@ -199,7 +218,7 @@ export const ComparisonTable = memo(function ComparisonTable({ coins, pegRates, 
               <dd className={`text-right font-mono tabular-nums ${i === rowData.bestPrice ? BEST_CLASS : ""}`}>{rowData.prices[i]}</dd>
               <dt className="text-muted-foreground"><MethodologyLabel topic="pegScore">Peg Score</MethodologyLabel></dt>
               <dd className={`text-right font-mono tabular-nums ${i === rowData.bestPegScore ? BEST_CLASS : ""}`}>
-                {rowData.pegScores[i] != null ? formatScore(rowData.pegScores[i]) : "—"}
+                {rowData.pegScores[i] != null ? formatScore(rowData.pegScores[i]) : <NullCell frozen={coin.meta.status === "frozen"} />}
               </dd>
               <dt className="text-muted-foreground">Market Cap</dt>
               <dd className="text-right font-mono tabular-nums">{formatCurrency(rowData.marketCaps[i])}</dd>
@@ -207,11 +226,11 @@ export const ComparisonTable = memo(function ComparisonTable({ coins, pegRates, 
               <dd className="text-right font-mono tabular-nums">
                 {rowData.weeklyChanges[i] != null
                   ? `${rowData.weeklyChanges[i]! >= 0 ? "+" : ""}${rowData.weeklyChanges[i]!.toFixed(2)}%`
-                  : "—"}
+                  : <NullCell frozen={coin.meta.status === "frozen"} />}
               </dd>
               <dt className="text-muted-foreground"><MethodologyLabel topic="liquidityScore">Liquidity</MethodologyLabel></dt>
               <dd className={`text-right font-mono tabular-nums ${i === rowData.bestLiquidity ? BEST_CLASS : ""}`}>
-                {rowData.liquidityScores[i] != null ? formatScore(rowData.liquidityScores[i]) : "—"}
+                {rowData.liquidityScores[i] != null ? formatScore(rowData.liquidityScores[i]) : <NullCell frozen={coin.meta.status === "frozen"} />}
               </dd>
               <dt className="text-muted-foreground">Governance</dt>
               <dd className="text-right">{rowData.governanceLabels[i]}</dd>
@@ -221,13 +240,13 @@ export const ComparisonTable = memo(function ComparisonTable({ coins, pegRates, 
               <dd className="text-right">{rowData.pegCurrencies[i]}</dd>
               <dt className="text-muted-foreground"><MethodologyLabel topic="safetyScore">Safety Rating</MethodologyLabel></dt>
               <dd className={`text-right ${i === rowData.bestGrade ? BEST_CLASS : ""}`}>
-                {rowData.safetyGrades[i] ?? "—"}
+                {rowData.safetyGrades[i] ?? <NullCell frozen={coin.meta.status === "frozen"} />}
               </dd>
               <dt className="text-muted-foreground">Net Flow 30D</dt>
               <dd className={`text-right font-mono tabular-nums ${i === rowData.bestNetFlow30d ? BEST_CLASS : rowData.netFlow30dValues[i] != null ? getNetColor(rowData.netFlow30dValues[i]!) : ""}`}>
                 {rowData.netFlow30dValues[i] != null
                   ? formatSignedCurrency(rowData.netFlow30dValues[i]!)
-                  : "—"}
+                  : <NullCell frozen={coin.meta.status === "frozen"} />}
               </dd>
             </dl>
           </div>
@@ -249,7 +268,10 @@ export const ComparisonTable = memo(function ComparisonTable({ coins, pegRates, 
                         name={coin.name}
                         size={28}
                       />
-                      <span className="text-xs font-semibold">{coin.symbol}</span>
+                      <span className="text-xs font-semibold">
+                        {coin.symbol}
+                        {coin.meta.status === "frozen" ? <FrozenBadge frozenAt={coin.meta.frozenAt} /> : null}
+                      </span>
                       <span className="text-xs text-muted-foreground font-normal">{coin.name}</span>
                       {detailErrors?.[coin.id] && (
                         <span className="text-xs text-destructive">Chart data unavailable</span>
@@ -283,7 +305,7 @@ export const ComparisonTable = memo(function ComparisonTable({ coins, pegRates, 
                   >
                     {rowData.pegScores[i] != null
                       ? formatScore(rowData.pegScores[i])
-                      : "—"}
+                      : <NullCell frozen={coin.meta.status === "frozen"} />}
                   </TableCell>
                 ))}
               </TableRow>
@@ -312,7 +334,7 @@ export const ComparisonTable = memo(function ComparisonTable({ coins, pegRates, 
                     key={coin.id}
                     className="text-center font-mono tabular-nums"
                   >
-                    {change != null ? `${sign}${change.toFixed(2)}%` : "—"}
+                    {change != null ? `${sign}${change.toFixed(2)}%` : <NullCell frozen={coin.meta.status === "frozen"} />}
                   </TableCell>
                 );
               })}
@@ -328,7 +350,7 @@ export const ComparisonTable = memo(function ComparisonTable({ coins, pegRates, 
                 >
                   {rowData.liquidityScores[i] != null
                     ? formatScore(rowData.liquidityScores[i])
-                    : "—"}
+                    : <NullCell frozen={coin.meta.status === "frozen"} />}
                 </TableCell>
               ))}
             </TableRow>
@@ -371,7 +393,7 @@ export const ComparisonTable = memo(function ComparisonTable({ coins, pegRates, 
                   key={coin.id}
                   className={`text-center ${i === rowData.bestGrade ? BEST_CLASS : ""}`}
                 >
-                  {rowData.safetyGrades[i] ?? "—"}
+                  {rowData.safetyGrades[i] ?? <NullCell frozen={coin.meta.status === "frozen"} />}
                 </TableCell>
               ))}
             </TableRow>
@@ -386,7 +408,7 @@ export const ComparisonTable = memo(function ComparisonTable({ coins, pegRates, 
                     key={coin.id}
                     className={`text-center font-mono tabular-nums ${i === rowData.bestNetFlow30d ? BEST_CLASS : val != null ? getNetColor(val) : ""}`}
                   >
-                    {val != null ? formatSignedCurrency(val) : "—"}
+                    {val != null ? formatSignedCurrency(val) : <NullCell frozen={coin.meta.status === "frozen"} />}
                   </TableCell>
                 );
               })}

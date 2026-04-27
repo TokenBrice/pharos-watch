@@ -2,6 +2,8 @@ export interface CoinOption {
   id: string;
   name: string;
   symbol: string;
+  frozen?: boolean;
+  frozenAt?: string;
 }
 
 export interface ComparePreset {
