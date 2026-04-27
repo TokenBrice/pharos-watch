@@ -71,6 +71,8 @@ vi.mock("@shared/lib/stablecoins", () => ({
       flags: { yieldBearing: false },
     },
   ],
+  FROZEN_IDS: new Set<string>(),
+  FROZEN_META_BY_ID: new Map<string, never>(),
 }));
 
 vi.mock("../db-cache", () => ({
@@ -99,9 +101,9 @@ describe("prepareTelegramDigestAppendices", () => {
     expect(prepared.appendixHtml).toBeNull();
     expect(prepared.metadata).toMatchObject({
       hasAppendix: false,
-      seededSnapshots: ["cemetery:first-run", "tracked:first-run"],
+      seededSnapshots: ["cemetery:first-run", "tracked:first-run", "frozen:first-run"],
     });
-    expect(mockSetCache).toHaveBeenCalledTimes(2);
+    expect(mockSetCache).toHaveBeenCalledTimes(3);
     expect(mockSetCache.mock.calls[0]).toEqual([
       {},
       "telegram:cemetery-snapshot",
@@ -116,9 +118,14 @@ describe("prepareTelegramDigestAppendices", () => {
       "telegram:tracked-stablecoins-snapshot",
       JSON.stringify(["usdt-tether", "usdx-example", "eurx-example"]),
     ]);
+    expect(mockSetCache.mock.calls[2]).toEqual([
+      {},
+      "frozen_ids_snapshot",
+      JSON.stringify([]),
+    ]);
 
     await prepared.commitSuccess();
-    expect(mockSetCache).toHaveBeenCalledTimes(2);
+    expect(mockSetCache).toHaveBeenCalledTimes(3);
   });
 
   it("queues newly tracked active coins from the previous stablecoins cache baseline", async () => {
@@ -179,22 +186,27 @@ describe("prepareTelegramDigestAppendices", () => {
       trackedDetected: 1,
       preLaunchDetected: 0,
       trackedSymbols: ["USDX"],
-      seededSnapshots: ["tracked:first-run"],
+      seededSnapshots: ["tracked:first-run", "frozen:first-run"],
     });
     expect(prepared.appendixHtml).toContain("<b>Tracking Changes</b>");
     expect(prepared.appendixHtml).toContain("<code>USDX</code> Example USD");
 
-    expect(mockSetCache).not.toHaveBeenCalled();
+    expect(mockSetCache).toHaveBeenCalledTimes(1);
+    expect(mockSetCache.mock.calls[0]).toEqual([
+      {},
+      "frozen_ids_snapshot",
+      JSON.stringify([]),
+    ]);
 
     await prepared.commitSuccess();
 
-    expect(mockSetCache).toHaveBeenCalledTimes(2);
-    expect(mockSetCache.mock.calls[0]).toEqual([
+    expect(mockSetCache).toHaveBeenCalledTimes(3);
+    expect(mockSetCache.mock.calls[1]).toEqual([
       {},
       "telegram:tracked-stablecoins-snapshot",
       JSON.stringify(["usdt-tether", "usdx-example", "eurx-example"]),
     ]);
-    expect(mockSetCache.mock.calls[1]).toEqual([
+    expect(mockSetCache.mock.calls[2]).toEqual([
       {},
       "telegram:tracked-stablecoins-pending",
       JSON.stringify([]),
@@ -252,12 +264,17 @@ describe("prepareTelegramDigestAppendices", () => {
     expect(prepared.appendixHtml).toContain("Newly tracked pre-launch stablecoins:");
     expect(prepared.appendixHtml).toContain("<code>EURX</code> Example Euro");
 
-    expect(mockSetCache).not.toHaveBeenCalled();
+    expect(mockSetCache).toHaveBeenCalledTimes(1);
+    expect(mockSetCache.mock.calls[0]).toEqual([
+      {},
+      "frozen_ids_snapshot",
+      JSON.stringify([]),
+    ]);
 
     await prepared.commitSuccess();
 
-    expect(mockSetCache).toHaveBeenCalledTimes(4);
-    expect(mockSetCache.mock.calls[0]).toEqual([
+    expect(mockSetCache).toHaveBeenCalledTimes(5);
+    expect(mockSetCache.mock.calls[1]).toEqual([
       {},
       "telegram:cemetery-snapshot",
       JSON.stringify([
@@ -266,17 +283,17 @@ describe("prepareTelegramDigestAppendices", () => {
         "usda-angle-usda-2026-03",
       ]),
     ]);
-    expect(mockSetCache.mock.calls[1]).toEqual([
+    expect(mockSetCache.mock.calls[2]).toEqual([
       {},
       "telegram:cemetery-footer-index",
       "9",
     ]);
-    expect(mockSetCache.mock.calls[2]).toEqual([
+    expect(mockSetCache.mock.calls[3]).toEqual([
       {},
       "telegram:tracked-stablecoins-snapshot",
       JSON.stringify(["usdt-tether", "usdx-example", "eurx-example"]),
     ]);
-    expect(mockSetCache.mock.calls[3]).toEqual([
+    expect(mockSetCache.mock.calls[4]).toEqual([
       {},
       "telegram:tracked-stablecoins-pending",
       JSON.stringify([]),
@@ -311,7 +328,7 @@ describe("prepareTelegramDigestAppendices", () => {
       hasAppendix: false,
       cemeteryDetected: 0,
     });
-    expect(mockSetCache).toHaveBeenCalledTimes(1);
+    expect(mockSetCache).toHaveBeenCalledTimes(2);
     expect(mockSetCache.mock.calls[0]).toEqual([
       {},
       "telegram:cemetery-snapshot",
@@ -320,6 +337,11 @@ describe("prepareTelegramDigestAppendices", () => {
         "eura-angle-eura-2026-03",
         "usda-angle-usda-2026-03",
       ]),
+    ]);
+    expect(mockSetCache.mock.calls[1]).toEqual([
+      {},
+      "frozen_ids_snapshot",
+      JSON.stringify([]),
     ]);
   });
 });
