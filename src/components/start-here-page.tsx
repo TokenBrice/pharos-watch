@@ -178,13 +178,13 @@ export function StartHerePage() {
               </h2>
               <p className="max-w-xl text-base leading-8 text-muted-foreground lg:max-w-[42ch]">
                 <span className="sm:hidden">
-                  Pharos is a stablecoin risk monitoring platform. Start with one route below, learn the core terms,
-                  then branch into monitoring, research, yield, or alerts only when you need more.
+                  Pharos tracks peg stability, liquidity, dependency exposure, and issuer behavior across every
+                  tracked stablecoin. Start with one route below — the core terms come second.
                 </span>
                 <span className="hidden sm:inline">
-                  Pharos is a stablecoin risk monitoring platform — it watches every peg so you don&rsquo;t have to.
-                  This page gives you the shortest path into the product instead of asking you to memorize the entire
-                  map first.
+                  Pharos is a stablecoin risk monitoring platform. We track peg stability, liquidity, dependency
+                  exposure, and issuer behavior across every tracked stablecoin so you don&rsquo;t have to. This page
+                  is the shortest path into the product.
                 </span>
               </p>
             </div>

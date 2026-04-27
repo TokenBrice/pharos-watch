@@ -6,7 +6,9 @@ import {
   BookOpen,
   Compass,
   Droplets,
+  FileText,
   FlaskConical,
+  Heart,
   Info,
   Layers,
   LayoutDashboard,
@@ -137,21 +139,33 @@ export const START_HERE_GLOSSARY: readonly StartHereGlossaryItem[] = [
       "When a stablecoin's market price drifts away from its target. Small deviations are common; sustained or sharp moves are the danger signal.",
   },
   {
-    term: "Peg score",
-    meaning: "How tightly a stablecoin has held its target over time, including penalties for real depeg events.",
+    term: "Peg stability",
+    meaning:
+      "How tightly a stablecoin has held its target over time, including penalties for real depeg events. Surfaces as a sub-factor inside the Safety Score, not as a standalone grade.",
   },
   {
     term: "DEWS",
     meaning: "Early warning system. Detects stress building in a stablecoin before a visible depeg event occurs.",
   },
   {
-    term: "Safety score",
+    term: "Safety Score",
     meaning:
-      "The composite risk grade that rolls peg behavior, liquidity, resilience, decentralization, and dependency into one view.",
+      "The composite risk grade rendered as a letter (A+ to F). Blends peg stability, liquidity, resilience, decentralization, dependency, live reserves, and redemption-backstop quality into one view. Surfaced on every detail page and the Safety Scores leaderboard.",
   },
   {
-    term: "Liquidity score",
-    meaning: "A 0-100 measure of how easily you can trade in or out of a stablecoin on-chain.",
+    term: "Report Card",
+    meaning:
+      "Per-coin grade artifact rendered on every detail page. Breaks the Safety Score down into its component pillars so you can see where a coin earns or loses points.",
+  },
+  {
+    term: "Liquidity grade",
+    meaning:
+      "How easily you can trade in or out of a stablecoin on-chain. Rendered as a letter grade (A+ to F) on directories and detail pages, with a 0–100 underlying score.",
+  },
+  {
+    term: "Chain Health Score",
+    meaning:
+      "0–100 composite per chain, rolling stablecoin supply, dominance concentration, and infrastructure signals into one barometer. The lede on /chains/.",
   },
   {
     term: "Dependency risk",
@@ -164,7 +178,13 @@ export const START_HERE_GLOSSARY: readonly StartHereGlossaryItem[] = [
   },
   {
     term: "PSI",
-    meaning: "Pharos Stability Index. The market-wide stress barometer for the whole stablecoin system.",
+    meaning:
+      "Pharos Stability Index. The market-wide stress barometer for the whole stablecoin system. Updates every 30 minutes; also referenced as 'Stability Index' across the app.",
+  },
+  {
+    term: "Frozen",
+    meaning:
+      "A tracked stablecoin whose data collection has been halted but whose detail page remains as a read-only archive. Different from cemetery entries: frozen coins still have their original page; cemetery entries are summarized obituaries only.",
   },
 ] as const;
 
@@ -183,7 +203,7 @@ export const START_HERE_ATLAS: readonly StartHereAtlasGroup[] = [
         icon: LayoutDashboard,
       },
       {
-        title: "Stability Index",
+        title: "Stability Index (PSI)",
         description: "Market-wide stress trend and risk condition bands, updated every 30 minutes.",
         href: "/stability-index/",
         icon: Compass,
@@ -208,7 +228,7 @@ export const START_HERE_ATLAS: readonly StartHereAtlasGroup[] = [
       },
       {
         title: "Stables per Chain",
-        description: "Stablecoin activity, supply, and dominance across chains.",
+        description: "Per-chain Chain Health Score (0–100) plus stablecoin supply, activity, and dominance.",
         href: "/chains/",
         icon: Layers,
       },
@@ -227,9 +247,16 @@ export const START_HERE_ATLAS: readonly StartHereAtlasGroup[] = [
       },
       {
         title: "Safety Scores",
-        description: "Risk grades across all tracked stablecoins with stress-test scenarios.",
+        description:
+          "Risk grades across all tracked stablecoins, blending live reserve feeds, transitive dependency scoring, and redemption-backstop quality into letter grades.",
         href: "/safety-scores/",
         icon: FlaskConical,
+      },
+      {
+        title: "Report Cards",
+        description: "Per-coin grade breakdown shown on every detail page, with each Safety Score pillar isolated.",
+        href: "/safety-scores/",
+        icon: FileText,
       },
       {
         title: "DEX Liquidity",
@@ -313,9 +340,16 @@ export const START_HERE_ATLAS: readonly StartHereAtlasGroup[] = [
       },
       {
         title: "Cemetery",
-        description: "Failure patterns from dead and discontinued stablecoins.",
+        description:
+          "Failure patterns from dead, discontinued, and frozen stablecoins. Frozen entries link back to their preserved detail page.",
         href: "/cemetery/",
         icon: Skull,
+      },
+      {
+        title: "Funding",
+        description: "On-chain donations, running costs, and how Pharos stays freely accessible.",
+        href: "/funding/",
+        icon: Heart,
       },
     ],
   },
