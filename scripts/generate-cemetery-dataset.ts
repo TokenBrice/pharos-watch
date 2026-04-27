@@ -3,7 +3,8 @@ import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { sortCemeteryCoins } from "../shared/lib/cemetery";
-import { CAUSE_META, DEAD_STABLECOINS } from "../shared/lib/dead-stablecoins";
+import { CAUSE_META } from "../shared/lib/dead-stablecoins";
+import { CEMETERY_ENTRIES, type CemeteryEntry } from "../shared/lib/cemetery-merged";
 import { SITE_ORIGIN } from "../shared/lib/runtime-origins";
 import type { DeadStablecoin } from "../shared/types";
 import { syncGeneratedArtifacts } from "./lib/generated-artifacts";
@@ -33,6 +34,7 @@ interface CemeteryDatasetRow {
   sourceUrl: string;
   sourceLabel: string;
   contracts: { chain: string; address: string }[];
+  archivedDataAvailable: boolean;
   pharosUrl: string;
 }
 
@@ -52,6 +54,7 @@ const CSV_COLUMNS = [
   "obituary",
   "sourceUrl",
   "sourceLabel",
+  "archivedDataAvailable",
   "contracts",
   "pharosUrl",
 ] as const satisfies readonly (keyof CemeteryDatasetRow)[];
@@ -63,7 +66,8 @@ function getDeathDatePrecision(deathDate: string): CemeteryDatasetRow["deathDate
   return "unknown";
 }
 
-function coinToRow(coin: DeadStablecoin): CemeteryDatasetRow {
+function coinToRow(coin: CemeteryEntry): CemeteryDatasetRow {
+  const archivedDataAvailable = coin.archivedDataAvailable === true;
   return {
     id: coin.id,
     name: coin.name,
@@ -80,8 +84,11 @@ function coinToRow(coin: DeadStablecoin): CemeteryDatasetRow {
     obituary: coin.obituary,
     sourceUrl: coin.sourceUrl,
     sourceLabel: coin.sourceLabel,
+    archivedDataAvailable,
     contracts: coin.contracts ?? [],
-    pharosUrl: `${SITE_ORIGIN}/cemetery/`,
+    pharosUrl: archivedDataAvailable
+      ? `${SITE_ORIGIN}/stablecoin/${coin.id}/`
+      : `${SITE_ORIGIN}/cemetery/#${coin.id}`,
   };
 }
 
@@ -162,14 +169,15 @@ function renderJson(rows: CemeteryDatasetRow[]): string {
       obituary: "Curated explanation of the failure mode.",
       sourceUrl: "Primary source URL for the cemetery entry.",
       sourceLabel: "Primary source label for the cemetery entry.",
+      archivedDataAvailable: "True when Pharos preserves a frozen detail page with archived data for this entry.",
       contracts: "Known historical token contracts when available.",
-      pharosUrl: "Canonical Pharos Cemetery page for the dataset.",
+      pharosUrl: "Canonical Pharos URL: the frozen detail page when archived data is available, otherwise the cemetery anchor.",
     },
     rows,
   }, null, 2)}\n`;
 }
 
-const rows = sortCemeteryCoins(DEAD_STABLECOINS, "newest").map(coinToRow);
+const rows = sortCemeteryCoins(CEMETERY_ENTRIES, "newest").map(coinToRow);
 assertUniqueRowIds(rows);
 const nextJson = renderJson(rows);
 const nextCsv = renderCsv(rows);
