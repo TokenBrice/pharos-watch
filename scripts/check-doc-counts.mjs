@@ -37,23 +37,30 @@ const [
   shadowStablecoinsModule,
   reserveAdaptersModule,
   bluechipSlugsModule,
+  deadStablecoinsModule,
 ] = await Promise.all([
   import("../shared/lib/stablecoins/index.ts"),
   import("../shared/lib/shadow-stablecoins.ts"),
   import("../shared/lib/live-reserve-adapters-definitions.ts"),
   import("../shared/lib/bluechip-slugs.ts"),
+  import("../shared/lib/dead-stablecoins.ts"),
 ]);
 
 const TRACKED_STABLECOINS = getModuleExport(stablecoinsModule, "TRACKED_STABLECOINS");
+const ACTIVE_STABLECOINS = getModuleExport(stablecoinsModule, "ACTIVE_STABLECOINS");
+const PRE_LAUNCH_STABLECOINS = getModuleExport(stablecoinsModule, "PRE_LAUNCH_STABLECOINS");
 const SHADOW_STABLECOINS = getModuleExport(shadowStablecoinsModule, "SHADOW_STABLECOINS");
 const LIVE_RESERVE_ADAPTER_DEFINITIONS = getModuleExport(
   reserveAdaptersModule,
   "LIVE_RESERVE_ADAPTER_DEFINITIONS",
 );
 const BLUECHIP_SLUG_MAP = getModuleExport(bluechipSlugsModule, "BLUECHIP_SLUG_MAP");
+const DEAD_STABLECOINS = getModuleExport(deadStablecoinsModule, "DEAD_STABLECOINS");
 
 // 1. Tracked stablecoins
 const trackedCount = TRACKED_STABLECOINS.length;
+const activeCount = ACTIVE_STABLECOINS.length;
+const preLaunchCount = PRE_LAUNCH_STABLECOINS.length;
 
 // 2. Shadow stablecoins
 const shadowCount = SHADOW_STABLECOINS.length;
@@ -71,8 +78,13 @@ const liveEnabledCount = TRACKED_STABLECOINS.filter(
   (coin) => Object.hasOwn(coin, "liveReservesConfig"),
 ).length;
 
+// 6. Cemetery / dead-stablecoins.json count (used in report-cards.md)
+const cemeteryCount = DEAD_STABLECOINS.length;
+// Report-cards "snapshot size" = active scored + cemetery entries (pre-launch excluded).
+const reportCardSnapshotCount = activeCount + cemeteryCount;
+
 console.log(
-  `Authoritative counts: ${trackedCount} tracked, ${shadowCount} shadow, ${psiCount} PSI-eligible, ${adapterCount} adapters, ${bluechipCount} bluechip slugs, ${liveEnabledCount} live-enabled`,
+  `Authoritative counts: ${trackedCount} tracked (${activeCount} active + ${preLaunchCount} pre-launch), ${shadowCount} shadow, ${psiCount} PSI-eligible, ${adapterCount} adapters, ${bluechipCount} bluechip slugs, ${liveEnabledCount} live-enabled, ${cemeteryCount} cemetery, ${reportCardSnapshotCount} report-card snapshot`,
 );
 
 // --- Check primary docs for stale counts ---
@@ -98,9 +110,45 @@ const CHECKS = [
   },
   {
     file: "docs/report-cards.md",
-    pattern: /(\d+) tracked/,
+    pattern: /(\d+) tracked metadata entries/,
     expected: trackedCount,
     label: "tracked",
+  },
+  {
+    file: "docs/report-cards.md",
+    pattern: /score the (\d+) active tracked assets/,
+    expected: activeCount,
+    label: "active",
+  },
+  {
+    file: "docs/report-cards.md",
+    pattern: /score the \d+ active tracked assets plus the (\d+) cemetery assets/,
+    expected: cemeteryCount,
+    label: "cemetery",
+  },
+  {
+    file: "docs/report-cards.md",
+    pattern: /snapshot size is (\d+) cards/,
+    expected: reportCardSnapshotCount,
+    label: "report-card snapshot",
+  },
+  {
+    file: "docs/report-cards.md",
+    pattern: /(\d+) cards \((\d+) active tracked assets plus (\d+) cemetery entries/,
+    expected: reportCardSnapshotCount,
+    label: "report-card snapshot",
+  },
+  {
+    file: "README.md",
+    pattern: /(\d+) active assets on public data surfaces/,
+    expected: activeCount,
+    label: "active",
+  },
+  {
+    file: "README.md",
+    pattern: /(\d+) pre-launch entries/,
+    expected: preLaunchCount,
+    label: "pre-launch",
   },
   {
     file: "docs/supply-snapshot.md",
