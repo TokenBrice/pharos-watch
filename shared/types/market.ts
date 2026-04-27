@@ -44,6 +44,8 @@ const StablecoinDataRawSchema = z.object({
   circulatingPrevMonth: PegBucketsSchema.nullish(),
   chainCirculating: ChainCirculatingSchema,
   chains: z.array(z.string()),
+  frozen: z.boolean().optional(),
+  frozenAt: z.string().optional(),
 });
 
 const StablecoinDataSchema = StablecoinDataRawSchema.transform((asset) => ({
@@ -69,6 +71,8 @@ const StablecoinDataSchema = StablecoinDataRawSchema.transform((asset) => ({
   circulatingPrevMonth: asset.circulatingPrevMonth ?? {},
   chainCirculating: asset.chainCirculating,
   chains: asset.chains,
+  ...(asset.frozen != null ? { frozen: asset.frozen } : {}),
+  ...(asset.frozenAt != null ? { frozenAt: asset.frozenAt } : {}),
 }));
 export type StablecoinData = z.infer<typeof StablecoinDataSchema>;
 

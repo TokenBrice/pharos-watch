@@ -6,7 +6,7 @@
  */
 import { isPricingSourceSoftGuardrailExempt } from "@shared/lib/pricing-source-registry";
 import { splitCompositePriceSource } from "@shared/lib/pricing-sources";
-import { ACTIVE_META_BY_ID } from "@shared/lib/stablecoins";
+import { ACTIVE_META_BY_ID, FROZEN_IDS, FROZEN_META_BY_ID } from "@shared/lib/stablecoins";
 import { fetchAuthoritativeLivePriceOverrides } from "../../lib/authoritative-price-sources";
 import { setCacheIfNewer, getPriceCache, savePriceCache } from "../../lib/db-cache";
 import { validatePayloadWithSchema } from "../../lib/api-utils";
@@ -455,6 +455,18 @@ export async function validateAndWriteStablecoinsCache(
     validationContext,
     returnIfAborted,
   } = input;
+
+  // Tag frozen coins so /api/stablecoins exposes `frozen` and `frozenAt` per-coin.
+  // Runs after intake's mergeFrozenSnapshots so injected rows also get tagged here.
+  for (const asset of assets) {
+    if (FROZEN_IDS.has(asset.id)) {
+      asset.frozen = true;
+      const frozenAt = FROZEN_META_BY_ID.get(asset.id)?.frozenAt;
+      if (frozenAt != null) {
+        asset.frozenAt = frozenAt;
+      }
+    }
+  }
 
   const llamaData: StablecoinsPayload = { peggedAssets: assets, fxFallbackRates };
   const normalizedPayload = normalizeStablecoinsPayload(llamaData);

@@ -48,6 +48,8 @@ export interface PeggedAsset {
   chainCirculating?: Record<string, Record<string, unknown>>;
   consensusSources?: string[];
   agreeSources?: string[];
+  frozen?: boolean;
+  frozenAt?: string;
 }
 
 export function hasMissingPrice(asset: PeggedAsset): boolean {
