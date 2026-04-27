@@ -20,6 +20,24 @@ import {
   type CommandPaletteActionId,
 } from "@/components/command-palette-model";
 
+// ── Ranking helper ───────────────────────────────────────────────────────────
+
+/**
+ * Pure ranking helper: sorts items by score descending and demotes entries
+ * whose status is "frozen" on tied scores so live (non-frozen) results appear
+ * first when relevance is otherwise equal.
+ */
+export function rankCommandPaletteResults<T extends { score: number; status?: string }>(
+  items: T[],
+): T[] {
+  return [...items].sort((a, b) => {
+    if (b.score !== a.score) return b.score - a.score;
+    const aFrozen = a.status === "frozen" ? 1 : 0;
+    const bFrozen = b.status === "frozen" ? 1 : 0;
+    return aFrozen - bFrozen;
+  });
+}
+
 // ── Types ────────────────────────────────────────────────────────────────────
 
 interface SearchResult {
@@ -29,6 +47,7 @@ interface SearchResult {
   section: "Recent" | "Stablecoins" | "Pages" | "Actions";
   logoUrl?: string;
   icon?: React.ReactNode;
+  frozen?: boolean;
   onSelect: () => void;
   keywords?: string[];
 }
@@ -150,27 +169,38 @@ export function CommandPalette() {
 
     // Stablecoins
     if (q) {
+      const matched: Array<{ coin: typeof TRACKED_STABLECOINS[number]; score: number; status: string }> = [];
       for (const coin of TRACKED_STABLECOINS) {
-        if (
-          fuzzyMatch(q, coin.name) ||
-          fuzzyMatch(q, coin.symbol) ||
-          fuzzyMatch(q, coin.id)
-        ) {
-          const logoUrl = logos[coin.id];
-          const href = buildStablecoinUrl(coin.id);
-          items.push({
-            id: `coin-${coin.id}`,
-            label: coin.name,
-            sublabel: coin.status === "pre-launch" ? `${coin.symbol} · Pre-launch` : coin.symbol,
-            section: "Stablecoins",
-            logoUrl,
-            onSelect: () => {
-              addToHistory(coin.id, "stablecoin", coin.name, coin.symbol, href);
-              router.push(href);
-              closePalette();
-            },
-          });
-        }
+        const symbolMatch = fuzzyMatch(q, coin.symbol);
+        const nameMatch = fuzzyMatch(q, coin.name);
+        const idMatch = fuzzyMatch(q, coin.id);
+        if (!symbolMatch && !nameMatch && !idMatch) continue;
+        const score = (symbolMatch ? 3 : 0) + (nameMatch ? 2 : 0) + (idMatch ? 1 : 0);
+        matched.push({ coin, score, status: coin.status ?? "active" });
+      }
+      const ranked = rankCommandPaletteResults(matched);
+      for (const { coin } of ranked) {
+        const logoUrl = logos[coin.id];
+        const href = buildStablecoinUrl(coin.id);
+        const sublabel =
+          coin.status === "pre-launch"
+            ? `${coin.symbol} · Pre-launch`
+            : coin.status === "frozen"
+              ? `${coin.symbol} · Frozen${coin.frozenAt ? ` ${coin.frozenAt}` : ""}`
+              : coin.symbol;
+        items.push({
+          id: `coin-${coin.id}`,
+          label: coin.name,
+          sublabel,
+          section: "Stablecoins",
+          logoUrl,
+          frozen: coin.status === "frozen",
+          onSelect: () => {
+            addToHistory(coin.id, "stablecoin", coin.name, coin.symbol, href);
+            router.push(href);
+            closePalette();
+          },
+        });
       }
     }
 
@@ -427,7 +457,14 @@ export function CommandPalette() {
                     )}
 
                     <div className="flex-1 min-w-0">
-                      <span className="truncate block">{item.label}</span>
+                      <span className="truncate block">
+                        {item.label}
+                        {item.frozen ? (
+                          <span className="ml-2 rounded border border-zinc-500/30 px-1 text-[9px] uppercase tracking-wide text-zinc-500">
+                            Frozen
+                          </span>
+                        ) : null}
+                      </span>
                       {item.sublabel && (
                         <span className="text-muted-foreground text-xs truncate block">
                           {item.sublabel}
