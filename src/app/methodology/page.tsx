@@ -103,7 +103,9 @@ export default function MethodologyPage() {
               <h1 className="text-4xl font-extrabold tracking-tighter sm:text-[3.4rem]">Methodology</h1>
               <p className="max-w-3xl text-sm leading-relaxed text-muted-foreground">
                 How Pharos grades stablecoins: transparent scoring across safety, peg stability, liquidity, yield, and
-                contagion risk. Treat this page like a reference manual, not a marketing explainer.
+                contagion risk. Treat this page like a reference manual, not a marketing explainer. All scoring
+                methodologies operate over the active subset of tracked stablecoins; pre-launch and frozen coins are
+                excluded from new computations and live aggregates.
               </p>
             </div>
             <div className="rounded-2xl border border-border/60 bg-card/72 px-4 py-4 md:hidden">
