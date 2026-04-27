@@ -56,11 +56,13 @@ const LIVE_RESERVE_ADAPTER_DEFINITIONS = getModuleExport(
 );
 const BLUECHIP_SLUG_MAP = getModuleExport(bluechipSlugsModule, "BLUECHIP_SLUG_MAP");
 const DEAD_STABLECOINS = getModuleExport(deadStablecoinsModule, "DEAD_STABLECOINS");
+const FROZEN_STABLECOINS = getModuleExport(stablecoinsModule, "FROZEN_STABLECOINS");
 
 // 1. Tracked stablecoins
 const trackedCount = TRACKED_STABLECOINS.length;
 const activeCount = ACTIVE_STABLECOINS.length;
 const preLaunchCount = PRE_LAUNCH_STABLECOINS.length;
+const frozenCount = FROZEN_STABLECOINS.length;
 
 // 2. Shadow stablecoins
 const shadowCount = SHADOW_STABLECOINS.length;
@@ -80,11 +82,12 @@ const liveEnabledCount = TRACKED_STABLECOINS.filter(
 
 // 6. Cemetery / dead-stablecoins.json count (used in report-cards.md)
 const cemeteryCount = DEAD_STABLECOINS.length;
-// Report-cards "snapshot size" = active scored + cemetery entries (pre-launch excluded).
-const reportCardSnapshotCount = activeCount + cemeteryCount;
+// Report-cards "snapshot size" = active scored + cemetery entries + frozen archive (pre-launch excluded).
+// buildDefunctReportCards emits stub F-cards for both DEAD_STABLECOINS and FROZEN_STABLECOINS.
+const reportCardSnapshotCount = activeCount + cemeteryCount + frozenCount;
 
 console.log(
-  `Authoritative counts: ${trackedCount} tracked (${activeCount} active + ${preLaunchCount} pre-launch), ${shadowCount} shadow, ${psiCount} PSI-eligible, ${adapterCount} adapters, ${bluechipCount} bluechip slugs, ${liveEnabledCount} live-enabled, ${cemeteryCount} cemetery, ${reportCardSnapshotCount} report-card snapshot`,
+  `Authoritative counts: ${trackedCount} tracked (${activeCount} active + ${preLaunchCount} pre-launch + ${frozenCount} frozen), ${shadowCount} shadow, ${psiCount} PSI-eligible, ${adapterCount} adapters, ${bluechipCount} bluechip slugs, ${liveEnabledCount} live-enabled, ${cemeteryCount} cemetery, ${reportCardSnapshotCount} report-card snapshot`,
 );
 
 // --- Check primary docs for stale counts ---

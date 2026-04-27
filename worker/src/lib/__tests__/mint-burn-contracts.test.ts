@@ -197,7 +197,6 @@ describe("mint-burn-contracts top-50 Ethereum additions", () => {
     { stablecoinId: "usd0-usual", symbol: "USD0", address: "0x73a15fed60bf67631dc6cd7bc5b6e8da8190acf5", decimals: 18 },
     { stablecoinId: "tusd-trueusd", symbol: "TUSD", address: "0x0000000000085d4780b73119b644ae5ecd22b376", decimals: 18 },
     { stablecoinId: "cusd-cap", symbol: "CUSD", address: "0xcccc62962d17b8914c62d74ffb843d73b2a3cccc", decimals: 18 },
-    { stablecoinId: "usr-resolv", symbol: "USR", address: "0x66a1e37c9b0eaddca17d3662d6c05f4decf3e110", decimals: 18 },
     { stablecoinId: "frax-frax", symbol: "FRAX", address: "0x853d955acef822db058eb8505911ed77f175b99e", decimals: 18 },
     { stablecoinId: "dola-inverse-finance", symbol: "DOLA", address: "0x865377367054516e17014ccded1e7d814edc9ce4", decimals: 18 },
     { stablecoinId: "iusd-infinifi", symbol: "IUSD", address: "0x48f9e38f3070ad8945dfeae3fa70987722e3d89c", decimals: 18 },

@@ -1,6 +1,6 @@
 # Pharos
 
-> Pharos tracks 204 active stablecoins across major chains with depeg alerts, liquidity scores, on-chain safety signals, dependency-risk scoring, and report-card-style risk summaries. Data refreshes multiple times per day from the Pharos Cloudflare Worker API.
+> Pharos tracks 203 active stablecoins across major chains with depeg alerts, liquidity scores, on-chain safety signals, dependency-risk scoring, and report-card-style risk summaries. Data refreshes multiple times per day from the Pharos Cloudflare Worker API.
 
 ## Core Data
 
@@ -134,7 +134,6 @@ Docs support `Accept: text/markdown` content negotiation for agent consumption.
 - [Cap cUSD (CUSD)](https://pharos.watch/stablecoin/cusd-cap/): CeFi-dependent stablecoin backed by real-world assets pegged to US Dollar.
 - [Staked Cap USD (stcUSD)](https://pharos.watch/stablecoin/stcusd-cap/): CeFi-dependent stablecoin backed by real-world assets pegged to US Dollar.
 - [EURC (EURC)](https://pharos.watch/stablecoin/eurc-circle/): centralized stablecoin backed by real-world assets pegged to Euro.
-- [Resolv USD (USR)](https://pharos.watch/stablecoin/usr-resolv/): CeFi-dependent stablecoin collateralized by crypto assets pegged to US Dollar.
 - [YLDS (YLDS)](https://pharos.watch/stablecoin/ylds-figure/): centralized stablecoin backed by real-world assets pegged to US Dollar.
 - [crvUSD (crvUSD)](https://pharos.watch/stablecoin/crvusd-curve/): CeFi-dependent stablecoin collateralized by crypto assets pegged to US Dollar.
 - [Savings crvUSD (scrvUSD)](https://pharos.watch/stablecoin/scrvusd-curve/): CeFi-dependent stablecoin collateralized by crypto assets pegged to US Dollar.

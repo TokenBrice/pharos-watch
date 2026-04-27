@@ -9,7 +9,7 @@
   "sourceDataPath": "shared/data/dead-stablecoins.json",
   "sourceChecksum": "sha256:490b87d9b7aef29b71b116be626c9637e69d22563cd799e480f48394a8e65882",
   "recordsOrderedBy": "deathDate descending, then peakMcapUsd descending, then symbol ascending",
-  "rowCount": 88,
+  "rowCount": 89,
   "limitations": [
     "Death dates are month-level unless a row explicitly uses a day-level date.",
     "Peak market capitalization is optional and may be absent when no reliable public figure was curated.",
@@ -36,6 +36,62 @@
     "pharosUrl": "Canonical Pharos URL: the frozen detail page when archived data is available, otherwise the cemetery anchor."
   },
   "rows": [
+    {
+      "id": "usr-resolv",
+      "name": "Resolv USD",
+      "symbol": "USR",
+      "llamaId": null,
+      "logoUrl": null,
+      "pegCurrency": "USD",
+      "causeOfDeath": "counterparty-failure",
+      "causeLabel": "Counterparty Failure",
+      "deathDate": "2026-03",
+      "deathDatePrecision": "month",
+      "peakMcapUsd": 586592926,
+      "epitaph": "When one key minted eighty million",
+      "obituary": "On 22 March 2026, an attacker exploited Resolv's single-EOA minter — no oracle, no amount cap, no max-mint guard — depositing 100K USDC and receiving 50M USR in return, then iterating until 80M unbacked USR existed for ~$25M of extracted ETH. USR crashed to $0.025 in 17 minutes; the RLP insurance layer absorbed the bad debt and was wiped out, dragging Stream Finance's $17M position down with it. Resolv burned 46M of the unbacked supply via a blacklist freeze, but USR never recovered — by April it traded at $0.16 with $95M of collateral against $173M of liabilities. Delta-neutral collateral and Apostro-attested reserves were no defense against an operator-level privilege failure.",
+      "sourceUrl": "https://www.theblock.co/post/394582/resolvs-usr-stablecoin-depegs-after-attacker-mints-80-million-unbacked-tokens-extracts-roughly-25-million",
+      "sourceLabel": "The Block",
+      "archivedDataAvailable": true,
+      "contracts": [
+        {
+          "chain": "ethereum",
+          "address": "0x66a1e37c9b0eaddca17d3662d6c05f4decf3e110",
+          "decimals": 18
+        },
+        {
+          "chain": "base",
+          "address": "0x35e5db674d8e93a03d814fa0ada70731efe8a4b9",
+          "decimals": 18
+        },
+        {
+          "chain": "bsc",
+          "address": "0x2492d0006411af6c8bbb1c8afc1b0197350a79e9",
+          "decimals": 18
+        },
+        {
+          "chain": "berachain",
+          "address": "0x2492d0006411af6c8bbb1c8afc1b0197350a79e9",
+          "decimals": 18
+        },
+        {
+          "chain": "hyperevm",
+          "address": "0x0ad339d66bf4aed5ce31c64bc37b3244b6394a77",
+          "decimals": 18
+        },
+        {
+          "chain": "arbitrum",
+          "address": "0x2492d0006411af6c8bbb1c8afc1b0197350a79e9",
+          "decimals": 18
+        },
+        {
+          "chain": "soneium",
+          "address": "0xb1b385542b6e80f77b94393ba8342c3af699f15c",
+          "decimals": 18
+        }
+      ],
+      "pharosUrl": "https://pharos.watch/stablecoin/usr-resolv/"
+    },
     {
       "id": "eura-angle-eura-2026-03",
       "name": "Angle EURA",

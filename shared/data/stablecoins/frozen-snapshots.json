@@ -1,1 +1,122 @@
-[]
+[
+  {
+    "id": "usr-resolv",
+    "capturedAt": "2026-04-27T14:42:18Z",
+    "peggedAssetRow": {
+      "id": "usr-resolv",
+      "name": "Resolv USD",
+      "symbol": "USR",
+      "gecko_id": "resolv-usr",
+      "pegType": "peggedUSD",
+      "priceSource": "defillama",
+      "pegMechanism": "crypto-backed",
+      "circulating": {
+        "peggedUSD": 7381048.66629154
+      },
+      "circulatingPrevDay": {
+        "peggedUSD": 7393799.592371771
+      },
+      "circulatingPrevWeek": {
+        "peggedUSD": 7393799.592371771
+      },
+      "circulatingPrevMonth": {
+        "peggedUSD": 27476267.3507254
+      },
+      "chainCirculating": {
+        "BSC": {
+          "current": {
+            "peggedUSD": 107297.99528087168
+          },
+          "circulatingPrevDay": {
+            "peggedUSD": 107297.99528087168
+          },
+          "circulatingPrevWeek": {
+            "peggedUSD": 107297.9634830483
+          },
+          "circulatingPrevMonth": {
+            "peggedUSD": 109232.93367260588
+          }
+        },
+        "Hyperliquid L1": {
+          "current": {
+            "peggedUSD": 9206.489219137151
+          },
+          "circulatingPrevDay": {
+            "peggedUSD": 9157.496982091676
+          },
+          "circulatingPrevWeek": {
+            "peggedUSD": 9072.048435143155
+          },
+          "circulatingPrevMonth": {
+            "peggedUSD": 8217.615897109685
+          }
+        },
+        "Ethereum": {
+          "current": {
+            "peggedUSD": 6868570.877061802
+          },
+          "circulatingPrevDay": {
+            "peggedUSD": 6880811.240223324
+          },
+          "circulatingPrevWeek": {
+            "peggedUSD": 6881031.344264618
+          },
+          "circulatingPrevMonth": {
+            "peggedUSD": 26946653.272218417
+          }
+        },
+        "Soneium": {
+          "current": {
+            "peggedUSD": 56573.2297996451
+          },
+          "circulatingPrevDay": {
+            "peggedUSD": 56573.2297996451
+          },
+          "circulatingPrevWeek": {
+            "peggedUSD": 56573.2297996451
+          },
+          "circulatingPrevMonth": {
+            "peggedUSD": 56572.880198476065
+          }
+        },
+        "Berachain": {
+          "current": {
+            "peggedUSD": 177.08346759226183
+          },
+          "circulatingPrevDay": {
+            "peggedUSD": 177.08346759226183
+          },
+          "circulatingPrevWeek": {
+            "peggedUSD": 177.08346759226183
+          },
+          "circulatingPrevMonth": {
+            "peggedUSD": 177.40144582595792
+          }
+        },
+        "Base": {
+          "current": {
+            "peggedUSD": 339222.9914624919
+          },
+          "circulatingPrevDay": {
+            "peggedUSD": 339782.5466182466
+          },
+          "circulatingPrevWeek": {
+            "peggedUSD": 339647.92292172526
+          },
+          "circulatingPrevMonth": {
+            "peggedUSD": 355413.2472929685
+          }
+        }
+      },
+      "chains": [
+        "Ethereum",
+        "Base",
+        "BSC",
+        "Soneium",
+        "Hyperliquid L1",
+        "Berachain"
+      ],
+      "price": 0.15898911684805064
+    }
+  }
+]

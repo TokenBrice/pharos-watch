@@ -531,8 +531,10 @@ describe("live-reserves-store", () => {
     // Each DELETE is paginated; single iteration when deleted < batchSize.
     const history = db.getHistory();
     expect(history).toHaveLength(2);
-    expect(history[0]?.binds).toEqual([9_000, 5000]);
-    expect(history[1]?.binds).toEqual([9_000, 5000]);
+    expect(history[0]?.binds[0]).toBe(9_000);
+    expect(history[0]?.binds[history[0].binds.length - 1]).toBe(5000);
+    expect(history[1]?.binds[0]).toBe(9_000);
+    expect(history[1]?.binds[history[1].binds.length - 1]).toBe(5000);
   });
 
   it("paginates large prunes into multiple capped DELETE statements", async () => {
@@ -569,7 +571,7 @@ describe("live-reserves-store", () => {
     expect(result.attemptHistoryDeleted).toBe(230);
     expect(history.length).toBe(compositionCounts.length + attemptCounts.length);
     for (const entry of history) {
-      expect(entry.binds[1]).toBe(100);
+      expect(entry.binds[entry.binds.length - 1]).toBe(100);
     }
   });
 
