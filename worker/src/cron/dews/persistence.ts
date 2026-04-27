@@ -147,15 +147,21 @@ export async function persistDewsResults(params: {
     rowsDropped += await deleteOrphansForTable(params.db, "stress_signal_history", params.eligibleIds);
   }
 
+  const frozenIdsList = [...FROZEN_IDS];
+  const frozenClause =
+    frozenIdsList.length > 0
+      ? `AND stablecoin_id NOT IN (${frozenIdsList.map(() => "?").join(",")})`
+      : "";
+
   const oldSignals = await params.db
-    .prepare("DELETE FROM stress_signals WHERE computed_at < ?")
-    .bind(params.nowSec - 7 * DAY_SECONDS)
+    .prepare(`DELETE FROM stress_signals WHERE computed_at < ? ${frozenClause}`)
+    .bind(params.nowSec - 7 * DAY_SECONDS, ...frozenIdsList)
     .run();
   rowsDropped += oldSignals.meta?.changes ?? 0;
 
   const oldHistory = await params.db
-    .prepare("DELETE FROM stress_signal_history WHERE snapshot_date < ?")
-    .bind(params.nowSec - 365 * DAY_SECONDS)
+    .prepare(`DELETE FROM stress_signal_history WHERE snapshot_date < ? ${frozenClause}`)
+    .bind(params.nowSec - 365 * DAY_SECONDS, ...frozenIdsList)
     .run();
   rowsDropped += oldHistory.meta?.changes ?? 0;
 

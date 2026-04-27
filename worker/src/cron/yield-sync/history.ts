@@ -1,4 +1,5 @@
 import { THIRTY_DAYS_SECONDS } from "@shared/lib/time-constants";
+import { FROZEN_IDS } from "@shared/lib/stablecoins";
 import { buildInClause } from "../../lib/db";
 import { chunkArray } from "../../lib/collections";
 import {
@@ -113,14 +114,19 @@ export async function deleteStaleYieldRows(
   managedYieldIds: string[],
   startSec: number,
 ): Promise<void> {
+  const frozenIdsList = [...FROZEN_IDS];
+  const frozenClause =
+    frozenIdsList.length > 0
+      ? `AND stablecoin_id NOT IN (${frozenIdsList.map(() => "?").join(",")})`
+      : "";
   for (const idChunk of chunkArray(managedYieldIds, D1_SAFE_SQL_IN_CHUNK_SIZE)) {
     const staleRowInClause = buildInClause(idChunk);
     await db
       .prepare(
         `DELETE FROM yield_data
-         WHERE stablecoin_id IN (${staleRowInClause.sql}) AND updated_at < ?`,
+         WHERE stablecoin_id IN (${staleRowInClause.sql}) AND updated_at < ? ${frozenClause}`,
       )
-      .bind(...staleRowInClause.binds, startSec)
+      .bind(...staleRowInClause.binds, startSec, ...frozenIdsList)
       .run();
   }
 }
@@ -135,7 +141,7 @@ export async function deleteOrphanYieldRows(
     .all<{ stablecoin_id: string }>();
   const orphanIds = (existingIds.results ?? [])
     .map((row) => row.stablecoin_id)
-    .filter((id) => !managedYieldIdSet.has(id));
+    .filter((id) => !managedYieldIdSet.has(id) && !FROZEN_IDS.has(id));
 
   for (const idChunk of chunkArray(orphanIds, D1_SAFE_SQL_IN_CHUNK_SIZE)) {
     const orphanInClause = buildInClause(idChunk);

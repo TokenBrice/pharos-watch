@@ -1,3 +1,4 @@
+import { FROZEN_IDS } from "@shared/lib/stablecoins";
 import { chunkArray } from "./collections";
 import { buildInClause } from "./db";
 import {
@@ -196,13 +197,21 @@ async function deleteHistoryInBatches(
   cutoff: number,
   batchSize: number,
 ): Promise<number> {
+  const frozenIdsList = [...FROZEN_IDS];
+  const frozenClause =
+    frozenIdsList.length > 0
+      ? `AND stablecoin_id NOT IN (${frozenIdsList.map(() => "?").join(",")})`
+      : "";
   // SAFETY: table and column are TypeScript string literal union types; every call site passes a hardcoded allowlisted literal, not user input.
-  const sql = `DELETE FROM ${table} WHERE ${column} < ? LIMIT ?`;
+  const sql = `DELETE FROM ${table} WHERE ${column} < ? ${frozenClause} LIMIT ?`;
   let totalDeleted = 0;
   // Loop until a batch deletes fewer rows than the budget, which implies the
   // table is drained. Keeps each DELETE inside D1's 30s per-statement limit.
   for (;;) {
-    const result = await db.prepare(sql).bind(cutoff, batchSize).run();
+    const result = await db
+      .prepare(sql)
+      .bind(cutoff, ...frozenIdsList, batchSize)
+      .run();
     const deleted = result.meta.changes ?? 0;
     totalDeleted += deleted;
     if (deleted < batchSize) break;
