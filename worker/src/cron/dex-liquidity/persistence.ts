@@ -1,5 +1,8 @@
 import { ACTIVE_STABLECOINS, TRACKED_IDS } from "@shared/lib/stablecoins";
 import { LIQUIDITY_METHODOLOGY_VERSION } from "@shared/lib/liquidity-score-version";
+import { batchExecute } from "../../lib/db";
+import { writeFreshnessSentinel } from "../../lib/db-cache";
+import type { LiquidityMetrics, FullScoreResult, GlobalAgg } from "./types";
 
 const DEX_AGGREGATE_PRESERVE_IDS = new Set(["__global__"]);
 
@@ -21,9 +24,6 @@ export function computeDexPruneSet(
   }
   return prune;
 }
-import { batchExecute } from "../../lib/db";
-import { writeFreshnessSentinel } from "../../lib/db-cache";
-import type { LiquidityMetrics, FullScoreResult, GlobalAgg } from "./types";
 
 const DEX_LIQUIDITY_UPSERT_SQL = `INSERT INTO dex_liquidity
   (stablecoin_id, symbol, total_tvl_usd, total_volume_24h_usd, total_volume_7d_usd,

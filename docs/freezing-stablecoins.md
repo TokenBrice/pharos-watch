@@ -44,6 +44,7 @@ Some worker subsystems maintain their own per-coin tables. Remove the frozen coi
 - `worker/src/cron/yield-history-backfill.ts` — remove from `YIELD_POOL_MAP` if present.
 - `src/lib/compare-pages.ts` — remove from `STATIC_COMPARE_PAIRS` if any pair includes the coin.
 - Any per-coin sync cron (e.g. `sync-usds-status.ts`, `sync-kinesis-supply.ts`) — disable or remove.
+- **`liveReservesConfig` block in the coin's own meta JSON.** If the frozen coin has a `liveReservesConfig` field on its `StablecoinMeta`, **delete that field**. Otherwise the live-reserves cron's `ACTIVE_STABLECOINS.filter(coin.liveReservesConfig)` would still include the coin once the registry filter widens (it is currently safe because `ACTIVE_STABLECOINS` excludes frozen, but removing the config eliminates ambiguity and matches the "no live data sources" intent of the freeze).
 
 The CI guards in `npm run check:frozen-invariants` enforce that frozen coins do not appear in any of the above.
 

@@ -122,8 +122,11 @@ async function main() {
   console.log("\n=== APPLY THIS PATCH TO THE COIN'S EXISTING REGISTRY ENTRY ===\n");
   console.log("// Add these top-level fields (alongside id, name, symbol, …):");
   console.log(JSON.stringify(plan.metaPatch, null, 2));
-  console.log("\nReview the obituary fields, replace placeholders, run `npm run check:frozen-invariants`,");
-  console.log("then commit. See docs/freezing-stablecoins.md for the full procedure.");
+  console.log("\nIMPORTANT: 'causeOfDeath: \"TBD\"' is NOT a valid enum value.");
+  console.log("Replace with one of: algorithmic-failure, counterparty-failure, liquidity-drain, regulatory, abandoned.");
+  console.log("Other placeholder strings (epitaph, obituary, sourceUrl, sourceLabel) must also be replaced.");
+  console.log("Run `npm run check:frozen-invariants` after edits to validate.");
+  console.log("\nSee docs/freezing-stablecoins.md for the full procedure.");
 }
 
 if (import.meta.url === `file://${process.argv[1]}`) {
