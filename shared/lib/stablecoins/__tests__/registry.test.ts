@@ -9,6 +9,7 @@ import {
   READABLE_STABLECOINS,
   TRACKED_STABLECOINS,
 } from "../registry";
+import { FROZEN_SNAPSHOTS_BY_ID } from "../frozen-snapshots";
 
 describe("registry universes", () => {
   it("ACTIVE = status === 'active'", () => {
@@ -40,6 +41,20 @@ describe("registry universes", () => {
   it("ACTIVE_IDS and FROZEN_IDS are disjoint", () => {
     for (const id of FROZEN_IDS) {
       expect(ACTIVE_IDS.has(id)).toBe(false);
+    }
+  });
+});
+
+describe("frozen invariants", () => {
+  it("every FROZEN_STABLECOIN has a matching frozen-snapshots.json entry", () => {
+    for (const coin of FROZEN_STABLECOINS) {
+      expect(FROZEN_SNAPSHOTS_BY_ID.has(coin.id)).toBe(true);
+    }
+  });
+
+  it("no orphan frozen-snapshots.json entries", () => {
+    for (const id of FROZEN_SNAPSHOTS_BY_ID.keys()) {
+      expect(FROZEN_IDS.has(id)).toBe(true);
     }
   });
 });
