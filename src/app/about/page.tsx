@@ -246,6 +246,16 @@ export default function AboutPage() {
             the full picture before a crisis makes the headlines.
           </p>
           <p>
+            When a tracked stablecoin effectively dies — issuer abandonment, supply trending to zero, irrecoverable
+            depeg, regulatory shutdown — Pharos freezes it rather than deletes it. Frozen coins keep their detail page
+            and historical data as a read-only archive, drop out of every live aggregate and score recomputation, and
+            surface in the{" "}
+            <Link href="/cemetery/" className={INLINE_EXTERNAL_LINK_CLASS}>
+              cemetery
+            </Link>{" "}
+            with an obituary and an &quot;archived data&quot; link back to the preserved detail page.
+          </p>
+          <p>
             Pharos is a public good. The dashboard stays free, the code is open source, and sustainability comes
             from community support plus future paid API access for heavy programmatic usage.{" "}
             <Link href="/funding/" className={INLINE_EXTERNAL_LINK_CLASS}>
