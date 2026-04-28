@@ -366,6 +366,12 @@ _No notes yet._
 - Deferred items or follow-ups: none
 - Residual risks: no current runbook/source-of-truth blocker; only historical timeline/process wording intentionally preserves old history
 
-### Phase 10 - Toolchain and dependency policy completion
+### Phase 10 - Toolchain and dependency policy completion, 2026-04-28
 
-_No notes yet._
+- Reviewer: phase reviewer
+- PRs/commits: `570a279dd` Node 24 baseline, `205cbab95` Phase 10 dependency recheck, `23c250874` Node 24 blocker tracker closure
+- Findings addressed: J1-J2 / Phase 10; S006, S007, C005. J2 routine updates deferred.
+- Validation run: Node 24 validation reported clean, including `npm ci`, targeted workflow/deploy-impact Vitest tests, docs checks, root and worker typechecks, worker scripts typecheck, lint, migrations, `npm run audit:deps`, and full `npm run test:merge-gate`
+- Docs updated: handover record updated; Node 24 LTS is now the primary baseline across root/worker engines, `.nvmrc`, CI/deploy workflows, lockfile, and docs
+- Deferred items or follow-ups: wait for a supported Next.js patch that updates vendored PostCSS; routine dependency updates remain normal maintenance
+- Residual risks: accepted moderate build-time Next/PostCSS advisory until upstream patch availability; no remaining Phase 10 blocker
