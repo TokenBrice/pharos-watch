@@ -56,6 +56,8 @@ describe("motion", () => {
     const singleRoute = onlyRoute(singleChainWorld);
     const multiRoute = onlyRoute(multiChainWorld);
 
+    expect(singleRoute.cycleSeconds).toBeGreaterThanOrEqual(130);
+    expect(multiRoute.cycleSeconds).toBeGreaterThanOrEqual(130);
     expect(multiRoute.cycleSeconds).toBeLessThan(singleRoute.cycleSeconds);
     expect(singleRoute.dockStopSchedule.slice(0, 1)).toHaveLength(1);
     expect(multiRoute.dockStopSchedule.slice(0, 3)).toHaveLength(3);
@@ -125,6 +127,18 @@ describe("motion", () => {
 
     expect(route.points.length).toBeGreaterThan(1);
     for (const point of route.points) {
+      expect(tileKindForSample(point)).toMatch(/water/);
+    }
+  });
+
+  it("uses deterministic water-only detours for longer crossings", () => {
+    const map = buildPharosVilleMap();
+    const firstRoute = buildShipWaterRoute({ from: { x: 8, y: 16 }, to: { x: 55, y: 16 }, map });
+    const secondRoute = buildShipWaterRoute({ from: { x: 8, y: 16 }, to: { x: 55, y: 16 }, map });
+
+    expect(firstRoute.points).toEqual(secondRoute.points);
+    expect(firstRoute.points.some((point) => pointLineDistance(point, firstRoute.from, firstRoute.to) > 2)).toBe(true);
+    for (const point of firstRoute.points) {
       expect(tileKindForSample(point)).toMatch(/water/);
     }
   });
@@ -295,4 +309,10 @@ function riskVsDockDwell(sampleWorld: PharosVilleWorld): { dockSamples: number; 
 
 function distance(a: { x: number; y: number }, b: { x: number; y: number }) {
   return Math.hypot(a.x - b.x, a.y - b.y);
+}
+
+function pointLineDistance(point: { x: number; y: number }, from: { x: number; y: number }, to: { x: number; y: number }) {
+  const numerator = Math.abs((to.y - from.y) * point.x - (to.x - from.x) * point.y + to.x * from.y - to.y * from.x);
+  const denominator = Math.hypot(to.y - from.y, to.x - from.x);
+  return denominator === 0 ? 0 : numerator / denominator;
 }

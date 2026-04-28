@@ -41,6 +41,16 @@ import type {
   ShipWaterZone,
 } from "./world-types";
 
+const SHIP_SCATTER_RADIUS: Record<ShipRiskPlacement, { x: number; y: number }> = {
+  "safe-harbor": { x: 15, y: 9 },
+  "breakwater-edge": { x: 10, y: 7 },
+  "harbor-mouth-watch": { x: 11, y: 8 },
+  "outer-rough-water": { x: 9, y: 10 },
+  "storm-shelf": { x: 8, y: 8 },
+  "data-fog": { x: 12, y: 7 },
+  "ledger-mooring": { x: 9, y: 9 },
+};
+
 export interface PharosVilleInputs {
   stablecoins: StablecoinListResponse | null | undefined;
   chains: ChainsResponse | null | undefined;
@@ -113,10 +123,13 @@ function normalizeDockVisitWeights(visits: ShipDockVisit[]): ShipDockVisit[] {
 
 function shipTile(asset: StablecoinData, placement: ShipNode["riskPlacement"]): { x: number; y: number } {
   const base = REGION_TILES[placement];
+  const radius = SHIP_SCATTER_RADIUS[placement];
+  const angle = stableUnit(`${asset.id}.${placement}.angle`) * Math.PI * 2;
+  const distance = 0.28 + Math.sqrt(stableUnit(`${asset.id}.${placement}.distance`)) * 0.72;
   return nearestWaterTile({
-    x: Math.max(0, Math.min(63, base.x + stableOffset(asset.id, 4))),
-    y: Math.max(0, Math.min(63, base.y + stableOffset(`${asset.id}.y`, 4))),
-  });
+    x: Math.round(clamp(base.x + Math.cos(angle) * radius.x * distance + stableOffset(`${asset.id}.risk.x`, 2) * 0.35, 0, 63)),
+    y: Math.round(clamp(base.y + Math.sin(angle) * radius.y * distance + stableOffset(`${asset.id}.risk.y`, 2) * 0.35, 0, 63)),
+  }, 18);
 }
 
 function buildShips(inputs: PharosVilleInputs, docks: readonly DockNode[]): ShipNode[] {
@@ -236,6 +249,16 @@ function buildDetailIndex(world: Omit<PharosVilleWorld, "detailIndex" | "visualC
     ...world.graves.map(detailForGrave),
   ];
   return Object.fromEntries(details.map((detail) => [detail.id, detail]));
+}
+
+function stableUnit(id: string) {
+  let hash = 0;
+  for (let index = 0; index < id.length; index += 1) hash = (hash * 31 + id.charCodeAt(index)) >>> 0;
+  return hash / 0xffffffff;
+}
+
+function clamp(value: number, min: number, max: number) {
+  return Math.max(min, Math.min(max, value));
 }
 
 export function buildPharosVilleWorld(inputs: PharosVilleInputs): PharosVilleWorld {

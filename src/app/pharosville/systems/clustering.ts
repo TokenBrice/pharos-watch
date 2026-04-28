@@ -1,5 +1,7 @@
 import type { ShipClusterNode, ShipNode, ShipRiskPlacement } from "./world-types";
-import { nearestWaterTile, REGION_TILES } from "./world-layout";
+import { nearestAvailableWaterTile, REGION_TILES } from "./world-layout";
+
+const MAX_SHIPS_PER_CLUSTER = 36;
 
 export function clusterLongTailShips(ships: readonly ShipNode[], maxIndividualShips = 80): {
   visibleShips: ShipNode[];
@@ -16,23 +18,66 @@ export function clusterLongTailShips(ships: readonly ShipNode[], maxIndividualSh
     groups.set(ship.riskPlacement, group);
   }
 
-  const clusters = [...groups.entries()].map(([riskPlacement, group]) => ({
-    id: `cluster.${riskPlacement}`,
-    kind: "ship-cluster" as const,
-    label: `${group.length} ships`,
-    tile: nearestWaterTile(REGION_TILES[riskPlacement]),
-    riskPlacement,
-    shipIds: group.map((ship) => ship.id),
-    ships: group.map((ship) => ({
-      id: ship.id,
-      label: ship.label,
-      symbol: ship.symbol,
-      marketCapUsd: ship.marketCapUsd,
-    })),
-    count: group.length,
-    totalUsd: group.reduce((sum, ship) => sum + ship.marketCapUsd, 0),
-    detailId: `cluster.${riskPlacement}`,
-  }));
+  const occupied = new Set<string>();
+  const clusters = [...groups.entries()].flatMap(([riskPlacement, group]) => {
+    const chunks = chunkShips(group, MAX_SHIPS_PER_CLUSTER);
+    return chunks.map((chunk, index) => {
+      const suffix = chunks.length === 1 ? "" : `.${index + 1}`;
+      return {
+        id: `cluster.${riskPlacement}${suffix}`,
+        kind: "ship-cluster" as const,
+        label: `${chunk.length} ships`,
+        tile: clusterTile(riskPlacement, index, chunks.length, occupied),
+        riskPlacement,
+        shipIds: chunk.map((ship) => ship.id),
+        ships: chunk.map((ship) => ({
+          id: ship.id,
+          label: ship.label,
+          symbol: ship.symbol,
+          marketCapUsd: ship.marketCapUsd,
+        })),
+        count: chunk.length,
+        totalUsd: chunk.reduce((sum, ship) => sum + ship.marketCapUsd, 0),
+        detailId: `cluster.${riskPlacement}${suffix}`,
+      } satisfies ShipClusterNode;
+    });
+  });
 
   return { visibleShips, clusters };
+}
+
+function chunkShips(ships: ShipNode[], size: number): ShipNode[][] {
+  const chunks: ShipNode[][] = [];
+  for (let index = 0; index < ships.length; index += size) {
+    chunks.push(ships.slice(index, index + size));
+  }
+  return chunks;
+}
+
+function clusterTile(
+  riskPlacement: ShipRiskPlacement,
+  index: number,
+  count: number,
+  occupied: Set<string>,
+): { x: number; y: number } {
+  const base = REGION_TILES[riskPlacement];
+  const angle = stableUnit(`cluster.${riskPlacement}.${index}.angle`) * Math.PI * 2
+    + (count > 1 ? (Math.PI * 2 * index) / count : 0);
+  const radius = count > 1 ? 4.5 + index * 1.4 : 1.5;
+  const tile = nearestAvailableWaterTile({
+    x: Math.round(clamp(base.x + Math.cos(angle) * radius * 1.35, 0, 63)),
+    y: Math.round(clamp(base.y + Math.sin(angle) * radius * 0.92, 0, 63)),
+  }, occupied, 18);
+  occupied.add(`${tile.x}.${tile.y}`);
+  return tile;
+}
+
+function stableUnit(id: string) {
+  let hash = 0;
+  for (let index = 0; index < id.length; index += 1) hash = (hash * 31 + id.charCodeAt(index)) >>> 0;
+  return hash / 0xffffffff;
+}
+
+function clamp(value: number, min: number, max: number): number {
+  return Math.max(min, Math.min(max, value));
 }

@@ -56,4 +56,16 @@ describe("clusterLongTailShips", () => {
     expect(clusterTile).toBeDefined();
     expect(["water", "deep-water"]).toContain(tileKindAt(clusterTile?.x ?? -1, clusterTile?.y ?? -1));
   });
+
+  it("splits large long-tail groups into smaller water clusters", () => {
+    const ships = Array.from({ length: 109 }, (_, index) => makeShip(index, 1_000 - index));
+
+    const result = clusterLongTailShips(ships, 0);
+
+    expect(result.clusters).toHaveLength(4);
+    expect(Math.max(...result.clusters.map((cluster) => cluster.count))).toBeLessThanOrEqual(36);
+    expect(result.clusters.reduce((sum, cluster) => sum + cluster.count, 0)).toBe(109);
+    expect(new Set(result.clusters.map((cluster) => `${cluster.tile.x}.${cluster.tile.y}`)).size).toBe(result.clusters.length);
+    expect(result.clusters.every((cluster) => ["water", "deep-water"].includes(tileKindAt(cluster.tile.x, cluster.tile.y)))).toBe(true);
+  });
 });

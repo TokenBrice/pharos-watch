@@ -109,6 +109,9 @@ export function buildShipWaterRoute(input: {
   const to = nearestMapWaterTile(input.to, input.map);
   if (sameTile(from, to)) return waterPathFromPoints(from, to, [from]);
 
+  const detouredPoints = findDetouredWaterPath(from, to, input.map);
+  if (detouredPoints.length > 0) return waterPathFromPoints(from, to, detouredPoints);
+
   const points = findWaterPath(from, to, input.map);
   if (points.length > 0) return waterPathFromPoints(from, to, points);
 
@@ -253,10 +256,10 @@ function buildShipMotionRoute(ship: ShipNode, map: PharosVilleMap): ShipMotionRo
 function shipCycleSeconds(ship: ShipNode): number {
   const positiveChainCount = ship.chainPresence.length;
   const renderedDockCount = ship.dockVisits.length;
-  const base = 96;
-  const breadthBonus = Math.min(36, positiveChainCount * 7 + renderedDockCount * 5);
-  const jitter = stableOffset(`${ship.id}.cycle`, 8);
-  return clamp(base - breadthBonus + jitter, 42, 108);
+  const base = 220;
+  const breadthBonus = Math.min(80, positiveChainCount * 10 + renderedDockCount * 8);
+  const jitter = stableOffset(`${ship.id}.cycle`, 18);
+  return clamp(base - breadthBonus + jitter, 130, 280);
 }
 
 function weightedDockStopSchedule(shipId: string, visits: readonly ShipDockVisit[]): string[] {
@@ -291,6 +294,52 @@ function dockStopCount(renderedDockCount: number) {
   if (renderedDockCount === 1) return 1;
   if (renderedDockCount <= 3) return 2;
   return 3;
+}
+
+function findDetouredWaterPath(from: { x: number; y: number }, to: { x: number; y: number }, map: PharosVilleMap): Array<{ x: number; y: number }> {
+  const waypoints = detourWaterWaypoints(from, to, map);
+  if (waypoints.length === 0) return [];
+  return findWaterPathThroughPoints([from, ...waypoints, to], map);
+}
+
+function findWaterPathThroughPoints(points: Array<{ x: number; y: number }>, map: PharosVilleMap): Array<{ x: number; y: number }> {
+  const route: Array<{ x: number; y: number }> = [];
+  for (let index = 1; index < points.length; index += 1) {
+    const leg = findWaterPath(points[index - 1]!, points[index]!, map);
+    if (leg.length === 0) return [];
+    route.push(...(route.length === 0 ? leg : leg.slice(1)));
+  }
+  return route;
+}
+
+function detourWaterWaypoints(from: { x: number; y: number }, to: { x: number; y: number }, map: PharosVilleMap): Array<{ x: number; y: number }> {
+  const dx = to.x - from.x;
+  const dy = to.y - from.y;
+  const distance = Math.hypot(dx, dy);
+  if (distance < 8) return [];
+
+  const seed = stableHash(`${from.x}.${from.y}->${to.x}.${to.y}.wander`);
+  const waypointCount = distance > 24 ? 2 : 1;
+  const primarySign = seed % 2 === 0 ? 1 : -1;
+  const perpendicular = { x: -dy / distance, y: dx / distance };
+  const waypoints: Array<{ x: number; y: number }> = [];
+
+  for (let index = 0; index < waypointCount; index += 1) {
+    const ratioBase = waypointCount === 1 ? 0.5 : (index + 1) / (waypointCount + 1);
+    const ratio = clamp(ratioBase + stableOffset(`${seed}.${index}.ratio`, 4) * 0.018, 0.2, 0.8);
+    const sign = waypointCount === 1 ? primarySign : primarySign * (index % 2 === 0 ? 1 : -1);
+    const detour = clamp(distance * (0.18 + (stableUnit(`${seed}.${index}.detour`) * 0.12)), 3, 9);
+    const candidate = nearestMapWaterTile({
+      x: from.x + dx * ratio + perpendicular.x * detour * sign,
+      y: from.y + dy * ratio + perpendicular.y * detour * sign,
+    }, map);
+
+    if (sameTile(candidate, from) || sameTile(candidate, to)) continue;
+    if (waypoints.some((waypoint) => sameTile(waypoint, candidate))) continue;
+    waypoints.push(candidate);
+  }
+
+  return waypoints;
 }
 
 function findWaterPath(from: { x: number; y: number }, to: { x: number; y: number }, map: PharosVilleMap): Array<{ x: number; y: number }> {
@@ -429,18 +478,18 @@ function transitSample(input: {
 }
 
 function riskDriftSample(route: ShipMotionRoute, timeSeconds: number, progress: number): ShipMotionSample {
-  const angle = timeSeconds * 0.45 + route.routeSeed * 0.0001 + progress * Math.PI * 2;
+  const angle = timeSeconds * 0.12 + route.routeSeed * 0.0001 + progress * Math.PI * 2;
   return {
     shipId: route.shipId,
     tile: {
-      x: route.riskTile.x + Math.cos(angle) * 0.18,
-      y: route.riskTile.y + Math.sin(angle * 0.8) * 0.14,
+      x: route.riskTile.x + Math.cos(angle) * 0.12,
+      y: route.riskTile.y + Math.sin(angle * 0.8) * 0.09,
     },
     state: "risk-drift",
     zone: route.zone,
     currentDockId: null,
     heading: normalizeHeading({ x: -Math.sin(angle), y: Math.cos(angle * 0.8) }),
-    wakeIntensity: 0.12,
+    wakeIntensity: 0.08,
   };
 }
 
