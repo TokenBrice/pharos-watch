@@ -25,6 +25,8 @@ The current implementation includes the desktop PharosVille v0.1 baseline:
 - live aggregate Pharos queries mounted only after the desktop gate
 - pure world model for PSI, docks, active ships, clusters, cemetery, details, and visual cues
 - docks are capped to the top six chains by stablecoin supply; each dock uses a distinct Pixellab harbor sprite by rank and lists that chain's highest-supply stablecoins in DOM details
+- active ships use distinct Pixellab base sprites by governance class: CeFi treasury galleons, CeFi-dependent chartered brigantines, and DeFi DAO schooners
+- ship scale uses compressed market-cap tiers, not linear supply area, so USDT and USDC read as large without dominating the map
 - stablecoin ships with a rendered dominant-chain dock are moored around that dock, with their logo drawn on the sail when a local logo asset is available
 - visible RPG-styled toolbar, click-anchored detail panel, blank-map click-to-close behavior, collapsible map key, collapsible keyboard entity browser, and screen-reader accessibility ledger
 - canvas hit testing for lighthouse, docks, ships, clusters, and graves
@@ -44,6 +46,8 @@ The planned PharosVille visual grammar is:
 - dock footprint = top-six chain stablecoin supply
 - dock harbor detail = highest-supply stablecoins on that chain
 - ships = active stablecoins only, moored at the dominant-chain dock when that chain is in the top-six harbor set
+- ship base sprite = governance class (`centralized` CeFi, `centralized-dependent` CeFi-Dep, `decentralized` DeFi), with legacy algorithmic backing reserved as a fallback hull
+- ship scale = compressed market-cap tier from Micro/Unknown through Flagship, with exact market cap exposed in the detail panel
 - ship sail mark = stablecoin logo, falling back to a short symbol mark
 - ship distance from shore = peg/depeg risk first, with DEWS escalation
 - sea/weather = aggregate DEWS breadth

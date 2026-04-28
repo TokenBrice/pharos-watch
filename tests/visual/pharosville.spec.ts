@@ -55,29 +55,58 @@ async function mockPharosVillePayloads(page: Page, payload: {
 }
 
 async function clickMapTarget(page: Page, kind: string, detailId?: string) {
+  return (await clickMapTargetWithPoint(page, kind, detailId)).detailId;
+}
+
+async function clickMapTargetWithPoint(page: Page, kind: string, detailId?: string) {
   const target = await page.waitForFunction(({ targetKind, targetDetailId }) => {
     const debug = (window as typeof window & {
       __pharosVilleDebug?: {
         targets: Array<{
           detailId: string;
           kind: string;
+          priority: number;
           rect: { height: number; width: number; x: number; y: number };
         }>;
       };
     }).__pharosVilleDebug;
-    return debug?.targets.find((entry) => entry.kind === targetKind && (!targetDetailId || entry.detailId === targetDetailId)) ?? null;
+    const candidates = debug?.targets.filter((entry) => entry.kind === targetKind && (!targetDetailId || entry.detailId === targetDetailId)) ?? [];
+    for (const candidate of candidates) {
+      const points = [
+        [0.5, 0.5],
+        [0.25, 0.25],
+        [0.75, 0.25],
+        [0.25, 0.75],
+        [0.75, 0.75],
+      ].map(([x, y]) => ({
+        x: candidate.rect.x + candidate.rect.width * x,
+        y: candidate.rect.y + candidate.rect.height * y,
+      }));
+      const point = points.find((candidatePoint) => {
+        const topTarget = debug?.targets
+          .filter((entry) => (
+            candidatePoint.x >= entry.rect.x
+            && candidatePoint.x <= entry.rect.x + entry.rect.width
+            && candidatePoint.y >= entry.rect.y
+            && candidatePoint.y <= entry.rect.y + entry.rect.height
+          ))
+          .toSorted((a, b) => b.priority - a.priority)[0] ?? null;
+        return topTarget?.detailId === candidate.detailId;
+      });
+      if (point) return { ...candidate, point };
+    }
+    return null;
   }, { targetDetailId: detailId, targetKind: kind });
   const value = await target.jsonValue() as {
     detailId: string;
+    point: { x: number; y: number };
     rect: { height: number; width: number; x: number; y: number };
   };
   await page.getByTestId("pharosville-canvas").click({
-    position: {
-      x: value.rect.x + value.rect.width / 2,
-      y: value.rect.y + value.rect.height / 2,
-    },
+    force: true,
+    position: value.point,
   });
-  return value.detailId;
+  return { detailId: value.detailId, point: value.point };
 }
 
 test("pharosville renders desktop canvas shell", async ({ page }) => {
@@ -311,6 +340,8 @@ test("pharosville canvas interactions update details and camera", async ({ page 
 
   const dockDetailId = await clickMapTarget(page, "dock");
   await waitForSelectedDetail(page, dockDetailId);
+  await page.getByRole("button", { name: "Clear selection" }).click();
+  await waitForSelectedDetail(page, null);
 
   const shipDetailId = await clickMapTarget(page, "ship");
   await waitForSelectedDetail(page, shipDetailId);

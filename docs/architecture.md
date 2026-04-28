@@ -188,6 +188,11 @@ DOM desktop-only fallback and must not mount world queries, canvas runtime,
 manifest fetches, or sprite decoding. Eligible desktop viewports mount the
 browser-only PharosVille world.
 
+PharosVille ship base sprites follow the stablecoin governance class (CeFi,
+CeFi-Dep, DeFi), and ship scale uses compressed market-cap tiers rather than
+linear area. Exact values remain exposed through DOM detail surfaces because the
+canvas is not the only source of analytical truth.
+
 Canvas 2D remains the renderer choice. PixiJS v8 was rejected during the
 2026-04-25 spike (see `docs/superpowers/audits/2026-04-25-pixi-v8-csp.md`)
 because the shader path requires `unsafe-eval`, which Pharos's CSP disallows.
