@@ -124,6 +124,32 @@ afterEach(() => {
 });
 
 describe("ContagionGraph", () => {
+  it("renders no graph for an empty dataset", () => {
+    const { container } = render(<ContagionGraph cards={[]} mcapMap={new Map()} />);
+
+    expect(container.firstChild).toBeNull();
+  });
+
+  it("renders the expected visible node and edge counts", () => {
+    const { container } = render(
+      <ContagionGraph cards={CARDS} dependencyEdges={DEPENDENCY_EDGES} mcapMap={MCAP_MAP} />,
+    );
+
+    expect(screen.getAllByRole("button", { name: /market cap/i })).toHaveLength(4);
+    expect(container.querySelectorAll('svg line[stroke="transparent"]')).toHaveLength(3);
+  });
+
+  it("shows focused node styling and announces the focused node", () => {
+    const { container } = render(
+      <ContagionGraph cards={CARDS} dependencyEdges={DEPENDENCY_EDGES} mcapMap={MCAP_MAP} />,
+    );
+
+    fireEvent.focus(screen.getByRole("button", { name: /USDC/i }));
+
+    expect(container.querySelector('circle[stroke="var(--color-ring)"][stroke-dasharray="4 2"]')).not.toBeNull();
+    expect(container.querySelector('[aria-live="polite"]')?.textContent).toContain("USDC, Grade A");
+  });
+
   it("supports keyboard neighborhood focus and directional node navigation", () => {
     render(<ContagionGraph cards={CARDS} dependencyEdges={DEPENDENCY_EDGES} mcapMap={MCAP_MAP} />);
 
