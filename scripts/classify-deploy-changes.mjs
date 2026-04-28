@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-import { execSync } from "node:child_process";
+import { execFileSync } from "node:child_process";
 import { pathToFileURL } from "node:url";
 import {
   hasDeployImpact,
@@ -23,7 +23,7 @@ export function normalizeChangedFiles(rawOutput) {
 export function classifyDeployChanges({
   baseSha,
   eventName,
-  exec = execSync,
+  execFile = execFileSync,
   headSha,
 } = {}) {
   if (eventName !== "push") {
@@ -48,7 +48,7 @@ export function classifyDeployChanges({
 
   let changedFiles = [];
   try {
-    const raw = exec(`git diff --name-only ${baseSha}...${headSha}`, { encoding: "utf8" });
+    const raw = execFile("git", ["diff", "--name-only", `${baseSha}...${headSha}`], { encoding: "utf8" });
     changedFiles = normalizeChangedFiles(raw);
   } catch {
     return {

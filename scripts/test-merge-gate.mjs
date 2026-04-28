@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-import { execSync, spawn } from "node:child_process";
+import { execFileSync, spawn } from "node:child_process";
 import { pathToFileURL } from "node:url";
 import {
   hasDeployImpact,
@@ -59,9 +59,9 @@ export function buildCommandPlan(changedFiles) {
   return plan;
 }
 
-export function getChangedFiles({ stagedMode = false, baseRef = "origin/main", exec = execSync } = {}) {
+export function getChangedFiles({ stagedMode = false, baseRef = "origin/main", execFile = execFileSync } = {}) {
   if (stagedMode) {
-    const raw = exec("git diff --name-only --cached", { encoding: "utf8" });
+    const raw = execFile("git", ["diff", "--name-only", "--cached"], { encoding: "utf8" });
     return raw
       .split(/\r?\n/g)
       .map((line) => normalizePath(line.trim()))
@@ -70,12 +70,12 @@ export function getChangedFiles({ stagedMode = false, baseRef = "origin/main", e
 
   let mergeBase;
   try {
-    mergeBase = exec(`git merge-base ${baseRef} HEAD`, { encoding: "utf8" }).trim();
+    mergeBase = execFile("git", ["merge-base", baseRef, "HEAD"], { encoding: "utf8" }).trim();
   } catch {
     throw new Error(`[merge-gate] Could not resolve merge-base with ${baseRef}. Set MERGE_GATE_BASE_REF explicitly.`);
   }
 
-  const raw = exec(`git diff --name-only ${mergeBase}...HEAD`, { encoding: "utf8" });
+  const raw = execFile("git", ["diff", "--name-only", `${mergeBase}...HEAD`], { encoding: "utf8" });
   return raw
     .split(/\r?\n/g)
     .map((line) => normalizePath(line.trim()))

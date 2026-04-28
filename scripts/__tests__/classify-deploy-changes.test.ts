@@ -121,12 +121,12 @@ describe("classifyDeployChanges", () => {
   });
 
   it("runs only the Pages path for frontend-only push diffs", () => {
-    const exec = () => "src/app/page.tsx\ndocs/testing.md\n";
+    const execFile = () => "src/app/page.tsx\ndocs/testing.md\n";
 
     const result = classifyDeployChanges({
       baseSha: "70ed0512d6a23dccc2e5a4e65ff3ab3f4c0e45e2",
       eventName: "push",
-      exec,
+      execFile,
       headSha: "25197af364c3c9ada9f9f394e4d65f62e6554f6e",
     });
 
@@ -137,12 +137,12 @@ describe("classifyDeployChanges", () => {
   });
 
   it("runs only the worker path for worker-only push diffs", () => {
-    const exec = () => "worker/src/api/health.ts\ndocs/testing.md\n";
+    const execFile = () => "worker/src/api/health.ts\ndocs/testing.md\n";
 
     const result = classifyDeployChanges({
       baseSha: "70ed0512d6a23dccc2e5a4e65ff3ab3f4c0e45e2",
       eventName: "push",
-      exec,
+      execFile,
       headSha: "25197af364c3c9ada9f9f394e4d65f62e6554f6e",
     });
 
@@ -153,12 +153,12 @@ describe("classifyDeployChanges", () => {
   });
 
   it("keeps both deploy paths enabled for shared or deploy-infra changes", () => {
-    const exec = () => "src/app/page.tsx\nshared/lib/classification.ts\n";
+    const execFile = () => "src/app/page.tsx\nshared/lib/classification.ts\n";
 
     const result = classifyDeployChanges({
       baseSha: "70ed0512d6a23dccc2e5a4e65ff3ab3f4c0e45e2",
       eventName: "push",
-      exec,
+      execFile,
       headSha: "25197af364c3c9ada9f9f394e4d65f62e6554f6e",
     });
 
@@ -169,12 +169,12 @@ describe("classifyDeployChanges", () => {
   });
 
   it("treats pages workflow-only changes as Pages-impacting", () => {
-    const exec = () => ".github/workflows/pages-prepare.yml\n";
+    const execFile = () => ".github/workflows/pages-prepare.yml\n";
 
     const result = classifyDeployChanges({
       baseSha: "70ed0512d6a23dccc2e5a4e65ff3ab3f4c0e45e2",
       eventName: "push",
-      exec,
+      execFile,
       headSha: "25197af364c3c9ada9f9f394e4d65f62e6554f6e",
     });
 
@@ -185,12 +185,12 @@ describe("classifyDeployChanges", () => {
   });
 
   it("skips the deploy path for docs-only push diffs", () => {
-    const exec = () => "docs/testing.md\nagents/plans/notes.md\n";
+    const execFile = () => "docs/testing.md\nagents/plans/notes.md\n";
 
     const result = classifyDeployChanges({
       baseSha: "70ed0512d6a23dccc2e5a4e65ff3ab3f4c0e45e2",
       eventName: "push",
-      exec,
+      execFile,
       headSha: "25197af364c3c9ada9f9f394e4d65f62e6554f6e",
     });
 
@@ -200,20 +200,22 @@ describe("classifyDeployChanges", () => {
     expect(result.changedFiles).toEqual(["docs/testing.md", "agents/plans/notes.md"]);
   });
 
-  it("uses three-dot diff syntax so merge-base is the comparison point", () => {
-    const received: string[] = [];
-    const exec = (cmd: string) => {
-      received.push(cmd);
+  it("passes push refs to git diff as arguments", () => {
+    const received: unknown[] = [];
+    const execFile = (cmd: string, args: string[]) => {
+      received.push([cmd, args]);
       return "src/app/page.tsx\n";
     };
 
     classifyDeployChanges({
-      baseSha: "aaa",
+      baseSha: "aaa; touch /tmp/should-not-run",
       eventName: "push",
-      exec,
-      headSha: "bbb",
+      execFile,
+      headSha: "bbb && echo injected",
     });
 
-    expect(received).toEqual(["git diff --name-only aaa...bbb"]);
+    expect(received).toEqual([
+      ["git", ["diff", "--name-only", "aaa; touch /tmp/should-not-run...bbb && echo injected"]],
+    ]);
   });
 });

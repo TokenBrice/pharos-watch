@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { buildExecutionBatches, buildCommandPlan, runExecutionBatches } from "../test-merge-gate.mjs";
+import { buildExecutionBatches, buildCommandPlan, getChangedFiles, runExecutionBatches } from "../test-merge-gate.mjs";
 import { getCommandEnv } from "../test-merge-gate.mjs";
 import {
   buildCiValidateCommands,
@@ -127,6 +127,36 @@ describe("buildCommandPlan", () => {
       "npm run typecheck:worker",
       "npm run typecheck:worker-scripts",
     ]);
+  });
+});
+
+describe("getChangedFiles", () => {
+  it("passes the merge base ref to git as an argument", () => {
+    const calls: unknown[] = [];
+    const execFile = (cmd: string, args: string[]) => {
+      calls.push([cmd, args]);
+      if (args[0] === "merge-base") return "abc123\n";
+      return "worker/src/api/status.ts\n";
+    };
+
+    expect(getChangedFiles({ baseRef: "origin/main; touch /tmp/should-not-run", execFile })).toEqual([
+      "worker/src/api/status.ts",
+    ]);
+    expect(calls).toEqual([
+      ["git", ["merge-base", "origin/main; touch /tmp/should-not-run", "HEAD"]],
+      ["git", ["diff", "--name-only", "abc123...HEAD"]],
+    ]);
+  });
+
+  it("uses argument arrays for staged diffs", () => {
+    const calls: unknown[] = [];
+    const execFile = (cmd: string, args: string[]) => {
+      calls.push([cmd, args]);
+      return "src/app/page.tsx\n";
+    };
+
+    expect(getChangedFiles({ stagedMode: true, execFile })).toEqual(["src/app/page.tsx"]);
+    expect(calls).toEqual([["git", ["diff", "--name-only", "--cached"]]]);
   });
 });
 
