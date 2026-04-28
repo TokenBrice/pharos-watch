@@ -296,9 +296,15 @@ _No notes yet._
 - Deferred items or follow-ups: continue to the next planned audit-remediation phase
 - Residual risks: no blockers reported; the remaining low-level audit exit is the documented Next/PostCSS advisory tracked by A6
 
-### Phase 3 - Runtime boundary correctness completion
+### Phase 3 - Runtime boundary correctness completion, 2026-04-28
 
-_No notes yet._
+- Reviewer: phase reviewer
+- PRs/commits: `fa7f2d32a` price cache schema fallback classification, `9bf342867` Cloudflare D1 usage payload validation
+- Findings addressed: C1-C2 / Phase 3; Q002, Q003, C002
+- Validation run: `npx vitest run worker/src/lib/status/__tests__/d1-usage.test.ts`, `cd worker && npx tsc --noEmit`, `npm run lint`
+- Docs updated: handover record updated
+- Deferred items or follow-ups: ensure new C1/C2 test files were included before commit if not already verified; optional future parser/fallback edge coverage
+- Residual risks: no blockers reported; next focus is Phase 4 D1-D4 redundancy cleanup with deployed-state verification before removing compatibility paths
 
 ### Phase 4 - Small source-of-truth cleanups completion
 
