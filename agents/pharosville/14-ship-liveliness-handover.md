@@ -235,6 +235,7 @@ Commits:
 
 - `6d044a463` `feat(pharosville): tune ship motion pacing`
 - `d0b144ecd` `chore(pharosville): track motion hotspot follow-ups`
+- `ba0b27b55` `test(pharosville): harden moving ship coverage`
 
 Validation:
 
@@ -254,8 +255,8 @@ Validation:
 
 Remaining next steps:
 
-- Before final shipping or additional commits, re-run `git status --short` and intentionally separate Phase 5 dirty edits from unrelated PharosVille/cemetery/docs/assets work.
-- Decide whether remaining `tests/visual/pharosville.spec.ts` and docs dirty edits should be committed as part of Phase 5 follow-up, docs finalization, or left to unrelated work.
+- Before final shipping or additional commits, re-run `git status --short` and intentionally separate remaining dirty edits from unrelated PharosVille/cemetery/docs/assets work.
+- A narrow Playwright motion hardening patch was committed in `ba0b27b55`; broader `tests/visual/pharosville.spec.ts` and docs dirty edits remain in the worktree and still need an explicit ownership decision.
 - Keep the hotspot follow-up tracked by `d0b144ecd` visible for later cleanup; do not fold it into this completed liveliness phase unless explicitly requested.
 
 ## Validation Command Ledger
