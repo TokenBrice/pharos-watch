@@ -356,9 +356,15 @@ _No notes yet._
 - Deferred items or follow-ups: none
 - Residual risks: no remaining reviewer blockers reported after `bbfaac095`; Phase 8 approved and complete
 
-### Phase 9 - Stablecoin catalog migration completion
+### Phase 9 - Stablecoin catalog migration completion, 2026-04-28
 
-_No notes yet._
+- Reviewer: phase reviewer
+- PRs/commits: `2b3700e23` per-coin data migration with empty legacy shells, `5ae69c5ee` per-coin generated aggregate runtime/tooling validation, `ed0a5f6c7` docs/process source-of-truth update, `57571bfeb` reviewer feedback for freeze/yield source references
+- Findings addressed: I1 / Phase 9; S001, C003
+- Validation run: semantic migration check for 215 old/current/generated entries with no missing/extra/changed IDs, zero legacy shard counts, and generated filename order match; `npm run check:stablecoin-data`; `npx tsx scripts/generate-stablecoin-per-coin-asset.ts --check`; focused catalog/registry/stablecoin ID Vitest suite, 4 files and 58 tests; `npm run check:doc-counts`; `npm run check:doc-source-paths`; `npm run check:verified-doc-links`; `npm run typecheck`; `cd worker && npx tsc --noEmit`; `npm run lint`; `npm run check:unused-code`; `npm run check:shared-cycles`; `git diff --check`; `npm test`, 696 files and 6230 tests; `npm run build`, 440 static pages and 269 markdown variants with no tracked diffs
+- Docs updated: handover record updated; docs/process now identify per-coin catalog files as the source of truth
+- Deferred items or follow-ups: none
+- Residual risks: no current runbook/source-of-truth blocker; only historical timeline/process wording intentionally preserves old history
 
 ### Phase 10 - Toolchain and dependency policy completion
 
