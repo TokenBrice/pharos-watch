@@ -84,8 +84,8 @@ export function fitCameraToMap(input: {
   const padding = {
     bottom: input.padding?.bottom ?? 24,
     left: input.padding?.left ?? 24,
-    right: input.padding?.right ?? 420,
-    top: input.padding?.top ?? 112,
+    right: input.padding?.right ?? 24,
+    top: input.padding?.top ?? 56,
   };
   const bounds = mapIsoBounds(input.map);
   const boundsWidth = Math.max(1, bounds.maxX - bounds.minX);

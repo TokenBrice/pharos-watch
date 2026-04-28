@@ -31,7 +31,7 @@ function ellipseValue(x: number, y: number, cx: number, cy: number, rx: number, 
 
 export function tileKindAt(x: number, y: number): TileKind {
   const main = ellipseValue(x, y, 31.5, 31.5, 13.5, 10.6);
-  const cemetery = ellipseValue(x, y, 17.5, 45, 4.3, 3.6);
+  const cemetery = ellipseValue(x, y, 22.8, 40.8, 5.2, 3.8);
 
   if (main < 1 || cemetery < 1) {
     if (main < 0.78 && (Math.abs(x - y) < 2 || Math.abs(x + y - 62) < 2)) return "road";
@@ -128,8 +128,8 @@ export function graveNodesFromEntries(entries: readonly CemeteryEntry[]): GraveN
     label: entry.symbol,
     entry,
     tile: {
-      x: 15 + (index % columns) * 0.62,
-      y: 42.3 + Math.floor(index / columns) * 0.42,
+      x: 20.3 + (index % columns) * 0.62,
+      y: 38.9 + Math.floor(index / columns) * 0.42,
     },
     detailId: `grave.${entry.id}`,
   }));

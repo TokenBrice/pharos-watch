@@ -3,26 +3,20 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { KeyboardEvent as ReactKeyboardEvent, PointerEvent as ReactPointerEvent, WheelEvent as ReactWheelEvent } from "react";
 import { Maximize2, Minimize2 } from "lucide-react";
 import { AccessibilityLedger } from "./components/accessibility-ledger";
-import { DetailPanel } from "./components/detail-panel";
-import { KeyboardEntityBrowser } from "./components/keyboard-entity-browser";
-import { MapKey } from "./components/map-key";
-import { QueryStatusBanner } from "./components/query-status-banner";
-import { WorldToolbar } from "./components/world-toolbar";
 import { useFullscreenMode } from "./hooks/use-fullscreen-mode";
 import { PharosVilleAssetManager } from "./renderer/asset-manager";
 import { collectHitTargets, hitTest, type HitTarget } from "./renderer/hit-testing";
 import { drawPharosVille } from "./renderer/world-canvas";
-import { cameraZoomLabel, clampCameraToMap, defaultCamera, followTile, panCamera, zoomIn, zoomOut } from "./systems/camera";
+import { clampCameraToMap, defaultCamera, panCamera } from "./systems/camera";
 import { resolveCanvasBudget } from "./systems/canvas-budget";
 import { buildMotionPlan } from "./systems/motion";
-import { screenToTile, zoomCameraAt, type IsoCamera, type ScreenPoint } from "./systems/projection";
+import { zoomCameraAt, type IsoCamera, type ScreenPoint } from "./systems/projection";
 import { observeReducedMotion } from "./systems/reduced-motion";
-import type { PharosVilleWorld as PharosVilleWorldModel, TileKind } from "./systems/world-types";
+import type { PharosVilleWorld as PharosVilleWorldModel } from "./systems/world-types";
 
 export function PharosVilleWorld({ world }: { world: PharosVilleWorldModel }) {
   const [assetManager] = useState(() => new PharosVilleAssetManager());
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const minimapRef = useRef<HTMLCanvasElement>(null);
   const dragRef = useRef<{ last: ScreenPoint; moved: boolean; pointerId: number } | null>(null);
   const animationFramePendingRef = useRef(false);
   const canvasBudgetRef = useRef<ReturnType<typeof resolveCanvasBudget> | null>(null);
@@ -38,11 +32,6 @@ export function PharosVilleWorld({ world }: { world: PharosVilleWorldModel }) {
   const [reducedMotion, setReducedMotion] = useState(true);
   const shellRef = useRef<HTMLElement | null>(null);
   const { exitFullscreen, fullscreenMode, toggleFullscreen } = useFullscreenMode(shellRef);
-  const selectedDetail = useMemo(
-    () => selectedDetailId ? (world.detailIndex[selectedDetailId] ?? null) : null,
-    [selectedDetailId, world.detailIndex],
-  );
-  const selectedEntity = useMemo(() => collectEntityByDetailId(world, selectedDetailId), [selectedDetailId, world]);
   const motionPlan = useMemo(() => buildMotionPlan(world, selectedDetailId), [selectedDetailId, world]);
   const hitTargets = useMemo(() => {
     void assetLoadTick;
@@ -56,21 +45,6 @@ export function PharosVilleWorld({ world }: { world: PharosVilleWorldModel }) {
     setSelectedDetailId(detailId);
     setAnnouncement(detail ? `Selected ${detail.title}.` : "Selected map entity.");
   }, [world.detailIndex]);
-
-  const resetCamera = useCallback(() => {
-    if (canvasSize.x <= 0 || canvasSize.y <= 0) return;
-    setCamera(defaultCamera({ width: canvasSize.x, height: canvasSize.y, map: world.map }));
-  }, [canvasSize.x, canvasSize.y, world.map]);
-
-  const followSelected = useCallback(() => {
-    if (!camera || !selectedEntity || canvasSize.x <= 0 || canvasSize.y <= 0) return;
-    setCamera(followTile({
-      camera,
-      map: world.map,
-      tile: selectedEntity.tile,
-      viewport: canvasSize,
-    }));
-  }, [camera, canvasSize, selectedEntity, world.map]);
 
   const clearSelection = useCallback(() => {
     setSelectedDetailId(null);
@@ -175,12 +149,6 @@ export function PharosVilleWorld({ world }: { world: PharosVilleWorldModel }) {
   }, [assetLoadTick, assetManager, camera, canvasSize.x, canvasSize.y, hitTargets, hoveredTarget, motionPlan, reducedMotion, selectedTarget, world]);
 
   useEffect(() => {
-    const minimap = minimapRef.current;
-    if (!minimap || !camera) return;
-    drawMinimap(minimap, world, selectedEntity, camera, canvasSize);
-  }, [camera, canvasSize, selectedEntity, world]);
-
-  useEffect(() => {
     if (process.env.NODE_ENV === "production" && window.location.hostname !== "localhost") return;
     const debugWindow = window as typeof window & {
       __pharosVilleDebug?: {
@@ -192,6 +160,7 @@ export function PharosVilleWorld({ world }: { world: PharosVilleWorldModel }) {
         animationFramePending: boolean;
         motionFrameCount: number;
         reducedMotion: boolean;
+        selectedDetailId: string | null;
         targets: readonly HitTarget[];
       };
     };
@@ -204,12 +173,13 @@ export function PharosVilleWorld({ world }: { world: PharosVilleWorldModel }) {
       canvasSize,
       motionFrameCount: motionFrameCountRef.current,
       reducedMotion,
+      selectedDetailId,
       targets: hitTargets,
     };
     return () => {
       delete debugWindow.__pharosVilleDebug;
     };
-  }, [assetsLoaded, camera, canvasSize, hitTargets, reducedMotion, world.map]);
+  }, [assetsLoaded, camera, canvasSize, hitTargets, reducedMotion, selectedDetailId, world.map]);
 
   const canvasPoint = useCallback((event: ReactPointerEvent<HTMLCanvasElement> | ReactWheelEvent<HTMLCanvasElement>) => {
     const canvas = canvasRef.current;
@@ -286,14 +256,6 @@ export function PharosVilleWorld({ world }: { world: PharosVilleWorldModel }) {
     }
   }, [camera, canvasSize, clearSelection, exitFullscreen, fullscreenMode, world.map]);
 
-  const handleMinimapClick = useCallback((event: ReactPointerEvent<HTMLCanvasElement>) => {
-    if (!camera) return;
-    const rect = event.currentTarget.getBoundingClientRect();
-    const x = ((event.clientX - rect.left) / rect.width) * world.map.width;
-    const y = ((event.clientY - rect.top) / rect.height) * world.map.height;
-    setCamera(followTile({ camera, map: world.map, tile: { x, y }, viewport: canvasSize }));
-  }, [camera, canvasSize, world.map]);
-
   return (
     <main
       ref={shellRef}
@@ -322,56 +284,10 @@ export function PharosVilleWorld({ world }: { world: PharosVilleWorldModel }) {
       >
         {fullscreenMode ? <Minimize2 aria-hidden="true" size={17} /> : <Maximize2 aria-hidden="true" size={17} />}
       </button>
-      <WorldToolbar
-        world={world}
-        selectedDetailId={selectedDetailId}
-        zoomLabel={camera ? cameraZoomLabel(camera) : "Fit"}
-        onClearSelection={clearSelection}
-        onFollowSelected={selectedEntity ? followSelected : undefined}
-        onPan={(delta) => setCamera((previous) => previous ? panCamera(previous, delta, { map: world.map, viewport: canvasSize }) : previous)}
-        onResetView={resetCamera}
-        onZoomIn={() => setCamera((previous) => previous ? zoomIn(previous, canvasSize, world.map) : previous)}
-        onZoomOut={() => setCamera((previous) => previous ? zoomOut(previous, canvasSize, world.map) : previous)}
-      />
-      <canvas
-        ref={minimapRef}
-        className="pharosville-minimap"
-        aria-label="Minimap, click to pan PharosVille"
-        data-testid="pharosville-minimap"
-        height={128}
-        onKeyDown={(event) => {
-          if (event.key === "Enter" || event.key === " ") {
-            event.preventDefault();
-            resetCamera();
-          }
-        }}
-        onPointerDown={handleMinimapClick}
-        role="button"
-        tabIndex={0}
-        title="Click to pan the PharosVille map"
-        width={128}
-      />
-      <aside className="pharosville-panel" aria-labelledby="pharosville-panel-title">
-        <h2 id="pharosville-panel-title">PharosVille</h2>
-        <QueryStatusBanner world={world} />
-        <MapKey world={world} />
-        <DetailPanel detail={selectedDetail} onClose={clearSelection} />
-        <KeyboardEntityBrowser
-          world={world}
-          selectedDetailId={selectedDetailId}
-          onSelectDetail={selectDetail}
-        />
-      </aside>
       <p className="sr-only" aria-live="polite">{announcement}</p>
       <AccessibilityLedger world={world} />
     </main>
   );
-}
-
-function collectEntityByDetailId(world: PharosVilleWorldModel, detailId: string | null) {
-  if (!detailId) return null;
-  return [world.lighthouse, ...world.docks, ...world.ships, ...world.shipClusters, ...world.graves]
-    .find((entity) => entity.detailId === detailId) ?? null;
 }
 
 function isCameraWithinBounds(camera: IsoCamera | null, map: PharosVilleWorldModel["map"], viewport: ScreenPoint) {
@@ -395,45 +311,4 @@ function updateDebugMotion(input: { frameCount: number; reducedMotion: boolean }
   if (!debugWindow.__pharosVilleDebug) return;
   debugWindow.__pharosVilleDebug.motionFrameCount = input.frameCount;
   debugWindow.__pharosVilleDebug.reducedMotion = input.reducedMotion;
-}
-
-function drawMinimap(
-  canvas: HTMLCanvasElement,
-  world: PharosVilleWorldModel,
-  selectedEntity: ReturnType<typeof collectEntityByDetailId>,
-  camera: IsoCamera,
-  viewport: ScreenPoint,
-) {
-  const ctx = canvas.getContext("2d");
-  if (!ctx) return;
-  ctx.clearRect(0, 0, canvas.width, canvas.height);
-  ctx.fillStyle = "#061721";
-  ctx.fillRect(0, 0, canvas.width, canvas.height);
-  const scaleX = canvas.width / world.map.width;
-  const scaleY = canvas.height / world.map.height;
-  const colors: Record<TileKind, string> = {
-    "deep-water": "#052033",
-    water: "#0d5f70",
-    shore: "#b8af7f",
-    land: "#d3c89a",
-    road: "#9b835d",
-  };
-  for (const tile of world.map.tiles) {
-    ctx.fillStyle = colors[tile.kind];
-    ctx.fillRect(tile.x * scaleX, tile.y * scaleY, Math.ceil(scaleX), Math.ceil(scaleY));
-  }
-  if (selectedEntity) {
-    ctx.strokeStyle = "#ffcc62";
-    ctx.lineWidth = 2;
-    ctx.strokeRect(selectedEntity.tile.x * scaleX - 3, selectedEntity.tile.y * scaleY - 3, 8, 8);
-  }
-  const center = screenToTile({ x: viewport.x / 2, y: viewport.y / 2 }, camera);
-  ctx.strokeStyle = "#80d6ce";
-  ctx.lineWidth = 2;
-  ctx.strokeRect(
-    Math.max(0, Math.min(canvas.width - 16, center.x * scaleX - 8)),
-    Math.max(0, Math.min(canvas.height - 16, center.y * scaleY - 8)),
-    16,
-    16,
-  );
 }

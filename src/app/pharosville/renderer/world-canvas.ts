@@ -72,7 +72,6 @@ export function drawPharosVille(input: DrawPharosVilleInput) {
   drawClusters(input);
   drawGraves(input);
   drawSelection(input);
-  drawHud(input);
 }
 
 function drawTerrain({ camera, ctx, motion, world }: DrawPharosVilleInput) {
@@ -227,23 +226,6 @@ function drawGraves({ assets, camera, ctx, world }: DrawPharosVilleInput) {
 function drawSelection({ ctx, hoveredTarget, selectedTarget }: DrawPharosVilleInput) {
   if (hoveredTarget) drawSelectionRing(ctx, hoveredTarget, "rgba(128, 214, 206, 0.85)");
   if (selectedTarget) drawSelectionRing(ctx, selectedTarget, "rgba(255, 204, 98, 0.95)");
-}
-
-function drawHud({ ctx, targets, width, world }: DrawPharosVilleInput) {
-  ctx.fillStyle = "rgba(3, 10, 18, 0.34)";
-  ctx.fillRect(0, 0, width, 72);
-  ctx.fillStyle = "#f5edce";
-  ctx.font = "700 20px ui-sans-serif, system-ui, sans-serif";
-  ctx.fillText("PharosVille", 28, 34);
-  ctx.font = "500 12px ui-sans-serif, system-ui, sans-serif";
-  ctx.fillStyle = "#a9d9d3";
-  ctx.fillText(`${world.ships.length} ships, ${world.docks.length} docks, ${world.graves.length} graves`, 28, 55);
-
-  if (targets.length > 0 && process.env.NODE_ENV !== "production") {
-    ctx.fillStyle = "rgba(128, 214, 206, 0.72)";
-    ctx.font = "500 11px ui-sans-serif, system-ui, sans-serif";
-    ctx.fillText(`${targets.length} hit targets`, 28, 70);
-  }
 }
 
 function drawDiamond(ctx: CanvasRenderingContext2D, x: number, y: number, width: number, height: number, fill: string) {

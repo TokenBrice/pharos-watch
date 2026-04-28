@@ -16,8 +16,8 @@ function cameraPadding(input?: CameraBoundsInput["padding"]) {
   return {
     bottom: input?.bottom ?? 24,
     left: input?.left ?? 24,
-    right: input?.right ?? 420,
-    top: input?.top ?? 112,
+    right: input?.right ?? 24,
+    top: input?.top ?? 56,
   };
 }
 

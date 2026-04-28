@@ -87,8 +87,10 @@ test("pharosville renders desktop canvas shell", async ({ page }) => {
   await page.goto("/pharosville/");
   const canvas = page.getByTestId("pharosville-canvas");
   await expect(canvas).toBeVisible();
-  await expect(page.getByLabel("Map entity count")).toHaveText("94 entities");
-  await expect(page.getByTestId("pharosville-accessibility-ledger")).toContainText("85.7% water");
+  await expect(page.getByTestId("pharosville-world-toolbar")).toHaveCount(0);
+  await expect(page.getByTestId("pharosville-minimap")).toHaveCount(0);
+  await expect(page.getByTestId("pharosville-detail-panel")).toHaveCount(0);
+  await expect(page.getByTestId("pharosville-accessibility-ledger")).toContainText("86.2% water");
   await page.waitForFunction(() => {
     const debug = (window as typeof window & {
       __pharosVilleDebug?: { assetsLoaded?: boolean; camera: unknown; targets: unknown[] };
@@ -172,9 +174,7 @@ test("pharosville renders a stressed ship in storm-shelf detail", async ({ page 
 
   const clickedDetailId = await clickMapTarget(page, "ship", "ship.usdt-tether");
   expect(clickedDetailId).toBe("ship.usdt-tether");
-  await expect(page.getByTestId("pharosville-detail-panel")).toContainText("Tether");
-  await expect(page.getByTestId("pharosville-detail-panel")).toContainText("Active depeg event");
-  await expect(page.getByTestId("pharosville-detail-panel")).toContainText("storm-shelf");
+  await waitForSelectedDetail(page, "ship.usdt-tether");
 });
 
 async function captureWorldRequests(page: Page) {
@@ -302,25 +302,39 @@ test("pharosville canvas interactions update details and camera", async ({ page 
   await page.emulateMedia({ reducedMotion: "reduce" });
   await page.setViewportSize({ width: 1440, height: 1000 });
   await page.goto("/pharosville/");
-  await expect(page.getByLabel("Map entity count")).toHaveText("94 entities");
+  await expect(page.getByTestId("pharosville-world-toolbar")).toHaveCount(0);
+  await expect(page.getByTestId("pharosville-minimap")).toHaveCount(0);
+  await expect(page.getByTestId("pharosville-detail-panel")).toHaveCount(0);
 
   await clickMapTarget(page, "lighthouse");
-  await expect(page.getByTestId("pharosville-detail-panel")).toContainText("Pharos lighthouse");
+  await waitForSelectedDetail(page, "lighthouse");
 
-  await clickMapTarget(page, "dock");
-  await expect(page.getByTestId("pharosville-detail-panel")).toContainText("Dock footprint");
+  const dockDetailId = await clickMapTarget(page, "dock");
+  await waitForSelectedDetail(page, dockDetailId);
 
-  await clickMapTarget(page, "ship");
-  await expect(page.getByTestId("pharosville-detail-panel")).toContainText("Market cap");
+  const shipDetailId = await clickMapTarget(page, "ship");
+  await waitForSelectedDetail(page, shipDetailId);
 
   await page.getByTestId("pharosville-world").focus();
   await page.keyboard.press("Escape");
-  await expect(page.getByTestId("pharosville-detail-panel")).toContainText("No map entity selected");
+  await waitForSelectedDetail(page, null);
 
-  const zoom = page.getByLabel("Current zoom");
-  const beforeZoom = await zoom.textContent();
-  await page.getByRole("button", { name: "Zoom in" }).click();
-  await expect(zoom).not.toHaveText(beforeZoom ?? "");
+  const canvasBoxForZoom = await page.getByTestId("pharosville-canvas").boundingBox();
+  expect(canvasBoxForZoom).not.toBeNull();
+  const cameraBeforeZoom = await page.evaluate(() => {
+    const debug = (window as typeof window & {
+      __pharosVilleDebug?: { camera: { offsetX: number; offsetY: number; zoom: number } | null };
+    }).__pharosVilleDebug;
+    return debug?.camera ?? null;
+  });
+  await page.mouse.move(canvasBoxForZoom!.x + canvasBoxForZoom!.width / 2, canvasBoxForZoom!.y + canvasBoxForZoom!.height / 2);
+  await page.mouse.wheel(0, -320);
+  await page.waitForFunction((previous) => {
+    const debug = (window as typeof window & {
+      __pharosVilleDebug?: { camera: { offsetX: number; offsetY: number; zoom: number } | null };
+    }).__pharosVilleDebug;
+    return Boolean(debug?.camera && previous && debug.camera.zoom !== previous.zoom);
+  }, cameraBeforeZoom);
 
   const fullscreenButton = page.getByRole("button", { name: "Enter fullscreen" });
   await expect(fullscreenButton).toBeVisible();
@@ -350,22 +364,6 @@ test("pharosville canvas interactions update details and camera", async ({ page 
     ));
   }, cameraBeforeDrag);
 
-  const cameraBeforeMinimap = await page.evaluate(() => {
-    const debug = (window as typeof window & {
-      __pharosVilleDebug?: { camera: { offsetX: number; offsetY: number; zoom: number } | null };
-    }).__pharosVilleDebug;
-    return debug?.camera ?? null;
-  });
-
-  await page.getByTestId("pharosville-minimap").click({ position: { x: 96, y: 96 } });
-  await page.waitForFunction((previous) => {
-    const debug = (window as typeof window & {
-      __pharosVilleDebug?: { camera: { offsetX: number; offsetY: number; zoom: number } | null };
-    }).__pharosVilleDebug;
-    return Boolean(debug?.camera && previous && (
-      debug.camera.offsetX !== previous.offsetX || debug.camera.offsetY !== previous.offsetY
-    ));
-  }, cameraBeforeMinimap);
   await expect(page.getByTestId("pharosville-canvas")).toBeVisible();
 
   await page.setViewportSize({ width: 1280, height: 760 });
@@ -401,6 +399,15 @@ test("pharosville canvas interactions update details and camera", async ({ page 
   expect(resizedDebug?.animationFramePending).toBe(false);
   expect(resizedDebug?.motionFrameCount ?? 0).toBe(0);
 });
+
+async function waitForSelectedDetail(page: Page, detailId: string | null) {
+  await page.waitForFunction((expectedDetailId) => {
+    const debug = (window as typeof window & {
+      __pharosVilleDebug?: { selectedDetailId?: string | null };
+    }).__pharosVilleDebug;
+    return debug?.selectedDetailId === expectedDetailId;
+  }, detailId);
+}
 
 test.describe("pharosville normal motion", () => {
   test.use({ reducedMotion: "no-preference" });
