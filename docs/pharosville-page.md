@@ -27,11 +27,14 @@ The current implementation includes the desktop PharosVille v0.1 baseline:
 - docks are capped to the top six chains by stablecoin supply; each dock uses a distinct Pixellab harbor sprite by rank, scales from both global share and absolute billion-dollar supply tiers, and lists that chain's highest-supply stablecoins in DOM details
 - active ships use distinct Pixellab base sprites by governance class: CeFi treasury galleons, CeFi-dependent chartered brigantines, and DeFi DAO schooners
 - ship scale uses exaggerated compressed market-cap tiers, not linear supply area, so $1B+ issuers are spottable while USDT and USDC remain capped
-- stablecoin ships with a rendered dominant-chain dock are moored around that dock, with their logo drawn on the sail when a local logo asset is available
+- ship risk placement is the reduced-motion/static anchor; normal-motion ships follow slow deterministic water-only routes, with seeded detours between their peg/DEWS risk water and any rendered positive-supply chain docks
+- ship docking cadence comes from `stablecoins.chainCirculating` chain presence, while risk water comes from `pegSummary.coins[]` and `stress.signals[]`; DOM details expose the route source, risk water, home dock, chain-presence count, and cadence text
+- active ships draw their logo on the sail when a local logo asset is available
+- long-tail stablecoins beyond the individual ship budget are split into count-capped water-zone cluster markers rather than one large pile
 - visible RPG-styled toolbar, click-anchored detail panel, blank-map click-to-close behavior, collapsible map key, collapsible keyboard entity browser, and screen-reader accessibility ledger
 - canvas hit testing for lighthouse, docks, ships, clusters, and graves
 - mouse/touch drag pan, wheel zoom, toolbar pan/zoom/reset/follow/clear controls, keyboard arrow pan, Escape clear, and fullscreen inspection mode
-- normal-motion canvas loop for the lighthouse great-fire flicker, water shimmer, and capped selected/top/recent ship effects
+- normal-motion canvas loop for the lighthouse great-fire flicker, water shimmer, and deterministic ship route sampling, with expensive wake effects capped to selected/top/recent ships
 - deterministic reduced-motion render with no running animation frame loop
 - desktop, stressed-ship, short-screen, ultrawide backing-store, interaction, and motion visual coverage
 - controlled Pixellab asset manifest with critical and deferred sprite loading under `public/pharosville/assets/`
@@ -45,11 +48,12 @@ The planned PharosVille visual grammar is:
 - lighthouse = PSI composite status
 - dock footprint = top-six chain stablecoin supply, with absolute size floors for billion-dollar hubs so Ethereum, Base, Arbitrum-class ports read as major harbors
 - dock harbor detail = highest-supply stablecoins on that chain
-- ships = active stablecoins only, moored at the dominant-chain dock when that chain is in the top-six harbor set
+- ships = active stablecoins only, with risk anchors plus rendered-dock route visits for positive chain supply
 - ship base sprite = governance class (`centralized` CeFi, `centralized-dependent` CeFi-Dep, `decentralized` DeFi), with legacy algorithmic backing reserved as a fallback hull
 - ship scale = exaggerated compressed market-cap tier from Micro/Unknown through Flagship, with exact market cap exposed in the detail panel
 - ship sail mark = stablecoin logo, falling back to a short symbol mark
 - ship distance from shore = peg/depeg risk first, with DEWS escalation
+- ship route and docking cadence = positive chain supply across the rendered top-six docks, shown as slow water-only passages rather than real-time transfer flow
 - sea/weather = aggregate DEWS breadth
 - cemetery = dead and frozen assets from merged cemetery data
 - fog = missing, low-confidence, or stale evidence
@@ -83,7 +87,8 @@ Compensating gates:
 - visible toolbar/detail/browser surfaces, click-anchored detail placement, blank-map click-to-close behavior, and canvas click/selection/camera interaction
 - fullscreen control visibility and mode toggle
 - ultrawide canvas DPR/backing-store caps
-- reduced-motion determinism and normal-motion RAF startup
+- reduced-motion ship sample stability with no RAF loop
+- normal-motion RAF startup, moving ship samples, moving ship click targets, and DOM/detail route parity
 - no world API, site-data, manifest, or asset requests under the fallback
 
 Visual tests route-mock `/api/*` and `/_site-data/*` data before asserting map semantics.
