@@ -90,6 +90,35 @@
   display: block;
   width: 100%;
   height: calc(100svh - 1.5rem);
+  cursor: grab;
+  touch-action: none;
+}
+
+.pharosville-canvas:active {
+  cursor: grabbing;
+}
+
+.pharosville-canvas--selectable {
+  cursor: pointer;
+}
+
+.pharosville-canvas--selectable:active {
+  cursor: grabbing;
+}
+
+.pharosville-minimap {
+  position: absolute;
+  left: 24px;
+  bottom: 24px;
+  z-index: 2;
+  width: 128px;
+  height: 128px;
+  border: 1px solid rgba(169, 217, 211, 0.28);
+  border-radius: 8px;
+  background: rgba(3, 14, 22, 0.76);
+  box-shadow: 0 12px 36px rgba(0, 0, 0, 0.24);
+  cursor: crosshair;
+  image-rendering: pixelated;
 }
 
 .pharosville-panel {
@@ -138,6 +167,7 @@
 }
 
 .pharosville-panel dl > div {
+  min-width: 0;
   min-height: 70px;
   border: 1px solid rgba(169, 217, 211, 0.18);
   border-radius: 6px;
@@ -156,6 +186,11 @@
   margin: 6px 0 0;
   color: rgba(245, 237, 206, 0.82);
   font-size: 0.82rem;
+  overflow-wrap: anywhere;
+}
+
+.pharosville-map-key__cues {
+  grid-template-columns: 1fr;
 }
 
 .pharosville-panel ul,
@@ -184,6 +219,13 @@
 .pharosville-panel button[aria-current="true"] {
   border-color: rgba(255, 204, 98, 0.65);
   color: #ffcc62;
+}
+
+.pharosville-panel button:focus-visible,
+.pharosville-shell [role="toolbar"] button:focus-visible,
+.pharosville-minimap:focus-visible {
+  outline: 2px solid #ffcc62;
+  outline-offset: 2px;
 }
 
 .pharosville-shell [role="toolbar"] {

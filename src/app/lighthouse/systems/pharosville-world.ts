@@ -22,7 +22,7 @@ import {
   detailForLighthouse,
   detailForShip,
 } from "./detail-model";
-import { buildPharosVilleMap, graveNodesFromEntries, nearestWaterTile, REGION_TILES, stableOffset } from "./world-layout";
+import { buildPharosVilleMap, graveNodesFromEntries, nearestAvailableWaterTile, nearestWaterTile, REGION_TILES, stableOffset } from "./world-layout";
 import { getRecentChange } from "./recent-change";
 import { resolveShipRiskPlacement } from "./risk-placement";
 import { resolveShipVisual } from "./ship-visuals";
@@ -93,7 +93,7 @@ function buildShips(inputs: PharosVilleInputs): ShipNode[] {
   const reportCardById = buildReportCardMap(inputs.reportCards?.cards) ?? {};
   const stressById = inputs.stress?.signals ?? {};
 
-  return activeAssets(inputs.stablecoins).map((asset) => {
+  const ships = activeAssets(inputs.stablecoins).map((asset) => {
     const meta = ACTIVE_META_BY_ID.get(asset.id);
     if (!meta) throw new Error(`Active asset ${asset.id} is missing metadata`);
     const reportCard = reportCardById[asset.id] ?? null;
@@ -107,7 +107,7 @@ function buildShips(inputs: PharosVilleInputs): ShipNode[] {
     const recent = getRecentChange(asset);
     return {
       id: asset.id,
-      kind: "ship",
+      kind: "ship" as const,
       label: asset.name,
       symbol: asset.symbol,
       asset,
@@ -124,6 +124,18 @@ function buildShips(inputs: PharosVilleInputs): ShipNode[] {
       detailId: `ship.${asset.id}`,
     };
   });
+  return spreadShipsAcrossWater(ships);
+}
+
+function spreadShipsAcrossWater(ships: ShipNode[]): ShipNode[] {
+  const occupied = new Set<string>();
+  return ships
+    .toSorted((a, b) => b.marketCapUsd - a.marketCapUsd || a.id.localeCompare(b.id))
+    .map((ship) => {
+      const tile = nearestAvailableWaterTile(ship.tile, occupied);
+      occupied.add(`${tile.x}.${tile.y}`);
+      return { ...ship, tile };
+    });
 }
 
 function buildDetailIndex(world: Omit<PharosVilleWorld, "detailIndex" | "visualCues">): Record<string, DetailModel> {

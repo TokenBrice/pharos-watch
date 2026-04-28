@@ -1,0 +1,245 @@
+{
+  "schemaVersion": 1,
+  "style": {
+    "assetVersion": "2026-04-28-v1",
+    "anchor": "old-school 16-bit maritime isometric RPG pixel art, crisp pixel edges, low top-down view, deep navy and teal sea, pale limestone island city, bronze and gold beacon light, restrained analytics palette, readable silhouettes, no text, no logos, no UI",
+    "palette": ["#061721", "#0d5f70", "#d3c89a", "#ffcc62"],
+    "generationDefaults": {
+      "view": "low top-down",
+      "outline": "single color outline",
+      "shading": "medium shading",
+      "detail": "medium detail",
+      "transparentBackground": true
+    }
+  },
+  "requiredForFirstRender": [
+    "landmark.lighthouse",
+    "dock.wooden-pier",
+    "ship.treasury-galleon",
+    "prop.tombstone"
+  ],
+  "assets": [
+    {
+      "id": "terrain.deep-water",
+      "path": "terrain/deep-water.png",
+      "category": "terrain",
+      "layer": "terrain",
+      "width": 64,
+      "height": 64,
+      "displayScale": 1,
+      "anchor": [32, 32],
+      "footprint": [32, 16],
+      "hitbox": [0, 0, 64, 64],
+      "loadPriority": "deferred",
+      "tool": "mcp:create_tiles_pro",
+      "promptProvenance": {
+        "jobId": "96c4d9ac-c577-4120-a52e-3d6b3038c737",
+        "seed": 42801,
+        "styleAnchorVersion": "2026-04-28-v1"
+      }
+    },
+    {
+      "id": "terrain.harbor-water",
+      "path": "terrain/harbor-water.png",
+      "category": "terrain",
+      "layer": "terrain",
+      "width": 64,
+      "height": 64,
+      "displayScale": 1,
+      "anchor": [32, 32],
+      "footprint": [32, 16],
+      "hitbox": [0, 0, 64, 64],
+      "loadPriority": "deferred",
+      "tool": "mcp:create_tiles_pro",
+      "promptProvenance": {
+        "jobId": "96c4d9ac-c577-4120-a52e-3d6b3038c737",
+        "seed": 42801,
+        "styleAnchorVersion": "2026-04-28-v1"
+      }
+    },
+    {
+      "id": "terrain.land",
+      "path": "terrain/land.png",
+      "category": "terrain",
+      "layer": "terrain",
+      "width": 64,
+      "height": 64,
+      "displayScale": 1,
+      "anchor": [32, 32],
+      "footprint": [32, 16],
+      "hitbox": [0, 0, 64, 64],
+      "loadPriority": "deferred",
+      "tool": "mcp:create_tiles_pro",
+      "promptProvenance": {
+        "jobId": "96c4d9ac-c577-4120-a52e-3d6b3038c737",
+        "seed": 42801,
+        "styleAnchorVersion": "2026-04-28-v1"
+      }
+    },
+    {
+      "id": "terrain.shore",
+      "path": "terrain/shore.png",
+      "category": "terrain",
+      "layer": "terrain",
+      "width": 64,
+      "height": 64,
+      "displayScale": 1,
+      "anchor": [32, 32],
+      "footprint": [32, 16],
+      "hitbox": [0, 0, 64, 64],
+      "loadPriority": "deferred",
+      "tool": "mcp:create_tiles_pro",
+      "promptProvenance": {
+        "jobId": "96c4d9ac-c577-4120-a52e-3d6b3038c737",
+        "seed": 42801,
+        "styleAnchorVersion": "2026-04-28-v1"
+      }
+    },
+    {
+      "id": "terrain.road",
+      "path": "terrain/road.png",
+      "category": "terrain",
+      "layer": "terrain",
+      "width": 64,
+      "height": 64,
+      "displayScale": 1,
+      "anchor": [32, 32],
+      "footprint": [32, 16],
+      "hitbox": [0, 0, 64, 64],
+      "loadPriority": "deferred",
+      "tool": "mcp:create_tiles_pro",
+      "promptProvenance": {
+        "jobId": "96c4d9ac-c577-4120-a52e-3d6b3038c737",
+        "seed": 42801,
+        "styleAnchorVersion": "2026-04-28-v1"
+      }
+    },
+    {
+      "id": "terrain.storm-water",
+      "path": "terrain/storm-water.png",
+      "category": "terrain",
+      "layer": "terrain",
+      "width": 64,
+      "height": 64,
+      "displayScale": 1,
+      "anchor": [32, 32],
+      "footprint": [32, 16],
+      "hitbox": [0, 0, 64, 64],
+      "loadPriority": "deferred",
+      "tool": "mcp:create_tiles_pro",
+      "promptProvenance": {
+        "jobId": "96c4d9ac-c577-4120-a52e-3d6b3038c737",
+        "seed": 42801,
+        "styleAnchorVersion": "2026-04-28-v1"
+      }
+    },
+    {
+      "id": "landmark.lighthouse",
+      "path": "landmarks/lighthouse.png",
+      "category": "landmark",
+      "layer": "landmarks",
+      "width": 96,
+      "height": 128,
+      "displayScale": 1,
+      "anchor": [48, 116],
+      "footprint": [24, 20],
+      "hitbox": [18, 8, 60, 112],
+      "loadPriority": "critical",
+      "tool": "mcp:create_map_object",
+      "promptProvenance": {
+        "jobId": "477d33bc-696b-4a77-9f39-40520cfed0b6",
+        "styleAnchorVersion": "2026-04-28-v1"
+      }
+    },
+    {
+      "id": "dock.wooden-pier",
+      "path": "docks/wooden-pier.png",
+      "category": "dock",
+      "layer": "docks",
+      "width": 96,
+      "height": 64,
+      "displayScale": 1,
+      "anchor": [48, 46],
+      "footprint": [42, 18],
+      "hitbox": [8, 12, 80, 42],
+      "loadPriority": "critical",
+      "tool": "mcp:create_map_object",
+      "promptProvenance": {
+        "jobId": "3af5f1a1-f579-43ed-850c-70dfa9051cac",
+        "styleAnchorVersion": "2026-04-28-v1"
+      }
+    },
+    {
+      "id": "ship.treasury-galleon",
+      "path": "ships/treasury-galleon.png",
+      "category": "ship",
+      "layer": "ships",
+      "width": 80,
+      "height": 64,
+      "displayScale": 1,
+      "anchor": [40, 50],
+      "footprint": [20, 12],
+      "hitbox": [8, 8, 64, 48],
+      "loadPriority": "critical",
+      "tool": "mcp:create_map_object",
+      "promptProvenance": {
+        "jobId": "06082e1e-ba3a-4a40-a2e2-f8edef511e0b",
+        "styleAnchorVersion": "2026-04-28-v1"
+      }
+    },
+    {
+      "id": "ship.crypto-caravel",
+      "path": "ships/crypto-caravel.png",
+      "category": "ship",
+      "layer": "ships",
+      "width": 80,
+      "height": 64,
+      "displayScale": 1,
+      "anchor": [40, 50],
+      "footprint": [20, 12],
+      "hitbox": [8, 8, 64, 48],
+      "loadPriority": "deferred",
+      "tool": "mcp:create_map_object",
+      "promptProvenance": {
+        "jobId": "2a6b720a-32c7-45da-bfea-a5b3972fbd51",
+        "styleAnchorVersion": "2026-04-28-v1"
+      }
+    },
+    {
+      "id": "ship.algo-junk",
+      "path": "ships/algo-junk.png",
+      "category": "ship",
+      "layer": "ships",
+      "width": 80,
+      "height": 64,
+      "displayScale": 1,
+      "anchor": [40, 50],
+      "footprint": [20, 12],
+      "hitbox": [8, 8, 64, 48],
+      "loadPriority": "deferred",
+      "tool": "mcp:create_map_object",
+      "promptProvenance": {
+        "jobId": "741bd01a-e7d2-4bb2-880d-d241b55be180",
+        "styleAnchorVersion": "2026-04-28-v1"
+      }
+    },
+    {
+      "id": "prop.tombstone",
+      "path": "props/tombstone.png",
+      "category": "prop",
+      "layer": "props",
+      "width": 48,
+      "height": 48,
+      "displayScale": 1,
+      "anchor": [24, 40],
+      "footprint": [10, 8],
+      "hitbox": [10, 8, 28, 34],
+      "loadPriority": "critical",
+      "tool": "mcp:create_map_object",
+      "promptProvenance": {
+        "jobId": "16da5c1a-3e9f-4bb9-9439-b98dc3a48afa",
+        "styleAnchorVersion": "2026-04-28-v1"
+      }
+    }
+  ]
+}

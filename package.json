@@ -47,6 +47,7 @@
     "check:openapi": "tsx scripts/generate-openapi-spec.ts --check",
     "check:postman": "tsx scripts/generate-postman-collection.ts --check",
     "check:world-map": "tsx scripts/build-world-map-svg.ts --check",
+    "check:pharosville-assets": "node scripts/pharosville/validate-assets.mjs",
     "check:unused-code": "node scripts/check-unused-code.mjs",
     "check:shared-cycles": "node scripts/check-shared-cycles.mjs",
     "check:hotspot-ratchet": "node scripts/check-hotspot-ratchet.mjs",

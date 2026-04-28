@@ -31,6 +31,7 @@ describe("buildPharosVilleWorld", () => {
     expect(world.docks).toHaveLength(2);
     expect(world.ships.map((ship) => ship.id)).toEqual(["usdt-tether", "usdc-circle"]);
     expect(world.ships.every((ship) => ["water", "deep-water"].includes(tileKindAt(ship.tile.x, ship.tile.y)))).toBe(true);
+    expect(new Set(world.ships.map((ship) => `${ship.tile.x}.${ship.tile.y}`)).size).toBe(world.ships.length);
     expect(world.graves).toHaveLength(3);
     expect(world.detailIndex["lighthouse"]).toBeDefined();
     expect(world.visualCues.length).toBeGreaterThan(0);

@@ -69,6 +69,39 @@ export function nearestWaterTile(tile: { x: number; y: number }, maxRadius = 10)
   return tile;
 }
 
+export function nearestAvailableWaterTile(
+  tile: { x: number; y: number },
+  occupied: ReadonlySet<string>,
+  maxRadius = 12,
+): { x: number; y: number } {
+  const initialKind = tileKindAt(tile.x, tile.y);
+  const initialKey = `${tile.x}.${tile.y}`;
+  if ((initialKind === "water" || initialKind === "deep-water") && !occupied.has(initialKey)) return tile;
+
+  let bestTile: { x: number; y: number } | null = null;
+  let bestDistance = Number.POSITIVE_INFINITY;
+  for (let radius = 1; radius <= maxRadius; radius += 1) {
+    for (let dx = -radius; dx <= radius; dx += 1) {
+      for (let dy = -radius; dy <= radius; dy += 1) {
+        if (Math.max(Math.abs(dx), Math.abs(dy)) !== radius) continue;
+        const x = Math.max(0, Math.min(PHAROSVILLE_MAP_WIDTH - 1, tile.x + dx));
+        const y = Math.max(0, Math.min(PHAROSVILLE_MAP_HEIGHT - 1, tile.y + dy));
+        if (occupied.has(`${x}.${y}`)) continue;
+        const kind = tileKindAt(x, y);
+        if (kind !== "water" && kind !== "deep-water") continue;
+        const distance = Math.abs(dx) + Math.abs(dy);
+        if (distance < bestDistance) {
+          bestTile = { x, y };
+          bestDistance = distance;
+        }
+      }
+    }
+    if (bestTile) return bestTile;
+  }
+
+  return nearestWaterTile(tile, maxRadius);
+}
+
 export function buildPharosVilleMap(): PharosVilleMap {
   const tiles: PharosVilleTile[] = [];
   let waterTiles = 0;

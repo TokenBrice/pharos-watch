@@ -9,7 +9,7 @@ export function MapKey({ world, headingId = "pharosville-map-key-title" }: MapKe
   return (
     <section aria-labelledby={headingId} data-testid="pharosville-map-key">
       <h2 id={headingId}>Map key</h2>
-      <dl>
+      <dl className="pharosville-map-key__legend">
         {world.legends.map((item) => (
           <div key={item.id}>
             <dt>{item.label}</dt>
@@ -19,7 +19,7 @@ export function MapKey({ world, headingId = "pharosville-map-key-title" }: MapKe
       </dl>
 
       <h3>Visual cues</h3>
-      <dl>
+      <dl className="pharosville-map-key__cues">
         {world.visualCues.map((cue) => (
           <div key={cue.id}>
             <dt>{cue.visual}</dt>

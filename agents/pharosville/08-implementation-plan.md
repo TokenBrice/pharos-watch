@@ -8,7 +8,7 @@ Replace the current `/lighthouse/` experience with PharosVille.
 
 The public URL remains `/lighthouse/` for now, because that route already exists in metadata, sitemap generation, docs, smoke UI, and public LLM exports. The product name inside the page can be "PharosVille" while the route remains the existing Lighthouse slot.
 
-Mobile and narrow layouts are out of scope for MVP. Screens narrower than `1280px` should render a polished desktop-only notice with links to existing analytical pages and no canvas runtime, no world data queries, no asset manifest fetch, and no sprite decode.
+Mobile, narrow, and short layouts are out of scope for MVP. Screens narrower than `1280px` or shorter than `760px` should render a polished desktop-only notice with links to existing analytical pages and no canvas runtime, no world data queries, no asset manifest fetch, and no sprite decode.
 
 This document supersedes earlier research-pack assumptions that proposed a new `/pharosville/` route or mobile/tablet canvas. Supporting notes should be read through this replacement plan.
 
@@ -19,21 +19,21 @@ V0.1 is the first beta-quality `/lighthouse/` PharosVille release:
 - desktop gate
 - pure world model
 - semantic visual cue registry
-- placeholder Canvas 2D renderer
-- basic camera/viewport culling
+- Canvas 2D renderer with code fallbacks for unloaded sprites
+- basic camera navigation and hit-target collection
 - clustering
 - DOM ledger, map key, keyboard entity browser, and detail panel
 - route-mocked visual tests
 - reduced-motion deterministic render
 - performance budget assertions
 
-Full 45-60 PNG asset coverage, richer minimap polish, semantic motion, mint/burn cargo flows, DEX channel effects, and yield gardens are v0.1.x/v0.2 unless the v0.1 baseline is already stable.
+Full 45-60 PNG asset coverage, richer minimap polish, semantic motion, mint/burn cargo flows, DEX channel effects, and yield gardens are v0.1.x/v0.2 unless the v0.1 baseline is already stable. The first committed sprite batch may be smaller than the 28-34 core target if it proves the manifest, validator, critical/deferred loading, and in-world scaling contract.
 
 ## Success Criteria
 
-- `/lighthouse/` renders PharosVille on screens `>= 1280px` wide.
-- Screens `< 1280px` render a desktop-only fallback and do not initialize heavy canvas/sprite systems.
-- Screens `< 1280px` do not mount the query-backed world component.
+- `/lighthouse/` renders PharosVille on screens `>= 1280px` wide and `>= 760px` tall.
+- Screens `< 1280px` wide or `< 760px` tall render a desktop-only fallback and do not initialize heavy canvas/sprite systems.
+- Screens below the desktop gate do not mount the query-backed world component.
 - The world is an old-school RPG island city with at least `68%` and at most `74%` water by map-tile count.
 - Ships are built from active stablecoins only.
 - Frozen/dead stablecoins appear only in the cemetery model.
@@ -821,7 +821,7 @@ Asset visual gates:
 Package script:
 
 - Add `check:pharosville-assets`.
-- Once production assets exist, wire it into `scripts/lib/validate-contract.mjs` and update `docs/scripts.md`.
+- Wire it into `scripts/lib/validate-contract.mjs` once the manifest owns production sprites, and update `docs/scripts.md`.
 - Remove `check:harbor-palette` only after all old palette-guarded files are deleted and no validation references it.
 
 ## Phase 7 — Purposeful Motion And Reduced Motion

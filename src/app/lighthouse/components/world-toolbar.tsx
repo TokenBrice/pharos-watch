@@ -1,6 +1,7 @@
 "use client";
 
 import type { PharosVilleWorld } from "../systems/world-types";
+import type { ScreenPoint } from "../systems/projection";
 
 export interface WorldToolbarProps {
   world: PharosVilleWorld;
@@ -8,6 +9,9 @@ export interface WorldToolbarProps {
   ledgerVisible?: boolean;
   selectedDetailId?: string | null;
   zoomLabel?: string;
+  onClearSelection?: () => void;
+  onFollowSelected?: () => void;
+  onPan?: (delta: ScreenPoint) => void;
   onResetView?: () => void;
   onToggleLedger?: () => void;
   onZoomIn?: () => void;
@@ -20,6 +24,9 @@ export function WorldToolbar({
   ledgerVisible = false,
   selectedDetailId,
   zoomLabel = "100%",
+  onClearSelection,
+  onFollowSelected,
+  onPan,
   onResetView,
   onToggleLedger,
   onZoomIn,
@@ -39,8 +46,26 @@ export function WorldToolbar({
       <button type="button" onClick={onZoomIn} disabled={!onZoomIn} aria-label="Zoom in">
         +
       </button>
+      <button type="button" onClick={() => onPan?.({ x: 0, y: 32 })} disabled={!onPan} aria-label="Pan north">
+        N
+      </button>
+      <button type="button" onClick={() => onPan?.({ x: -32, y: 0 })} disabled={!onPan} aria-label="Pan east">
+        E
+      </button>
+      <button type="button" onClick={() => onPan?.({ x: 0, y: -32 })} disabled={!onPan} aria-label="Pan south">
+        S
+      </button>
+      <button type="button" onClick={() => onPan?.({ x: 32, y: 0 })} disabled={!onPan} aria-label="Pan west">
+        W
+      </button>
       <button type="button" onClick={onResetView} disabled={!onResetView}>
         Reset view
+      </button>
+      <button type="button" onClick={onFollowSelected} disabled={!onFollowSelected}>
+        Follow
+      </button>
+      <button type="button" onClick={onClearSelection} disabled={!onClearSelection}>
+        Clear
       </button>
       <button type="button" aria-pressed={ledgerVisible} onClick={onToggleLedger} disabled={!onToggleLedger}>
         Ledger

@@ -1463,13 +1463,13 @@ git commit -m "feat(lighthouse): replace legacy routes with new shell + a11y led
 ### Task 1.10: Hex-literal lint guard
 
 **Files:**
-- Create: `scripts/check-harbor-palette.mjs`
+- Create: `scripts/check-pharosville-colors.mjs`
 - Modify: `package.json` to add `check:harbor-palette` script and wire into `test:merge-gate` if appropriate
 
 - [ ] **Step 1: Write the script**
 
 ```js
-// scripts/check-harbor-palette.mjs
+// scripts/check-pharosville-colors.mjs
 #!/usr/bin/env node
 import { readFileSync } from "node:fs";
 import { execSync } from "node:child_process";

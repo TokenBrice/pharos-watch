@@ -12,23 +12,26 @@ Contract for `/lighthouse/`, the beta PharosVille route.
 - **World shell:** `src/app/lighthouse/pharosville-world.tsx`
 - **Route styles:** `src/app/lighthouse/pharosville.css`
 
-The Server Component owns metadata, canonical `/lighthouse/`, breadcrumb JSON-LD, and the screen-reader H1. The client component performs the `1280px` desktop gate before mounting the browser-only world module.
+The Server Component owns metadata, canonical `/lighthouse/`, breadcrumb JSON-LD, and the screen-reader H1. The client component performs the desktop viewport gate before mounting the browser-only world module.
 
-Screens below `1280px` render a DOM fallback with links to the main analytical pages. They must not mount the canvas, world queries, asset manifest loader, or sprite decode path.
+Screens below `1280px` wide or `760px` tall render a DOM fallback with links to the main analytical pages. They must not mount the canvas, world queries, asset manifest loader, or sprite decode path.
 
 ## Current Phase
 
-The current implementation includes the Phase 1 shell plus the first pure model/live binding slice:
+The current implementation includes the desktop PharosVille v0.1 baseline:
 
-- desktop-gated route
-- Canvas 2D island map on desktop
+- desktop-gated route, with a short-screen fallback as well as the narrow-screen fallback
+- Canvas 2D island map on eligible desktop viewports
 - live aggregate Pharos queries mounted only after the desktop gate
 - pure world model for PSI, docks, active ships, clusters, cemetery, details, and visual cues
-- DOM map key, query status, detail panel, keyboard entity browser, toolbar, and accessibility ledger
-- no Pixellab asset manifest yet
+- DOM map key, query status, detail panel, keyboard entity browser, toolbar, minimap, and accessibility ledger
+- canvas hit testing for lighthouse, docks, ships, clusters, and graves
+- mouse/touch drag pan, wheel zoom, toolbar pan/zoom/reset/follow/clear controls, keyboard arrow pan, Escape clear, and minimap click-to-pan
+- controlled Pixellab asset manifest with critical and deferred sprite loading under `public/pharosville/assets/`
+- asset validation through `npm run check:pharosville-assets`
 - no production fixture/default market data
 
-The next phases add camera controls, richer interaction, route-mocked semantic visual tests, and the controlled asset manifest.
+The next phases add richer semantic motion, renderer budget instrumentation, broader semantic visual assertions, and additional curated asset coverage.
 
 ## Data Mapping Target
 
@@ -55,6 +58,7 @@ Compensating gates:
 - reduced-motion deterministic render
 - canvas nonblank and backing-pixel budget tests
 - no canvas/runtime work below `1280px`
+- no canvas/runtime work below `760px` viewport height
 - no CSP relaxation
 
 ## Visual Regression
@@ -64,9 +68,11 @@ Compensating gates:
 - desktop canvas shell at `1440 x 1000`
 - nonblank canvas pixels
 - `<1280px` fallback
+- short desktop fallback
+- canvas click/selection, toolbar zoom/clear, and minimap interaction
 - no world API, site-data, manifest, or asset requests under the fallback
 
-Future visual tests must route-mock `/api/*` and `/_site-data/*` data before asserting live map semantics.
+Visual tests route-mock `/api/*` and `/_site-data/*` data before asserting map semantics.
 
 ## Color Guard
 
