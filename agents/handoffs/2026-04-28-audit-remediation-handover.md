@@ -316,9 +316,15 @@ _No notes yet._
 - Deferred items or follow-ups: keep the mint/burn legacy sync-key fallback until production and preview D1 confirm migration `0093_cleanup_legacy_mint_burn_sync_keys.sql` and zero colon-delimited keys
 - Residual risks: no remaining blockers for completed D1-D3; D4 remains blocked because non-interactive Wrangler auth failed with `Failed to fetch auth token: 400 Bad Request` and no `CLOUDFLARE_*` / `WRANGLER_*` token was present
 
-### Phase 5 - Validation tooling consolidation completion
+### Phase 5 - Validation tooling consolidation completion, 2026-04-28
 
-_No notes yet._
+- Reviewer: phase reviewer
+- PRs/commits: `f88fc2254` (`refactor: consolidate validation command runner`)
+- Findings addressed: E1 / Phase 5; R002, C005
+- Validation run: `npx vitest run scripts/__tests__/test-merge-gate.test.ts scripts/__tests__/command-runner.test.ts scripts/__tests__/validate-ci-parity.test.ts` passed, 30 tests; `npm run lint`; `MERGE_GATE_DRY_RUN=1 npm run test:merge-gate -- --staged`; `git diff --check -- <phase-5-files>`
+- Docs updated: handover record updated
+- Deferred items or follow-ups: none
+- Residual risks: no blockers reported; `run-node-lts-validation.mjs` now uses the shared async Bash/process-group runner, acceptable for the current CI/Linux validation lane
 
 ### Phase 6 - Medium hotspot extractions completion
 
