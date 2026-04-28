@@ -346,9 +346,15 @@ _No notes yet._
 - Deferred items or follow-ups: none
 - Residual risks: no blockers reported; checker treats 5/6 slots as HEADROOM FULL for new fetch-heavy work and fails at 6/6 via `CRON_CONNECTION_BUDGET.failAt`
 
-### Phase 8 - High-risk runtime hotspot refactors completion
+### Phase 8 - High-risk runtime hotspot refactors completion, 2026-04-28
 
-_No notes yet._
+- Reviewer: Phase 8 reviewer
+- PRs/commits: `de43a5291` depeg detection stage split, `a36bbdd77` stablecoin fallback phase split, `78f67866a` hotspot/unused-code guardrail update, `bbfaac095` fallback tracked-additions follow-through coverage
+- Findings addressed: H1-H2 / Phase 8; S002, S003, C002, C004
+- Validation run: targeted Phase 8 Vitest suite now 92 tests; focused fallback phase follow-up test; `npm run check:hotspot-ratchet`; `npm run check:unused-code`; `npm run check:cron-connections`; `cd worker && npx tsc --noEmit`; `npm run typecheck`; `npm run lint`; `git diff --check`
+- Docs updated: handover record updated; no methodology/docs update required because the Phase 8 work was behavior-preserving structural extraction
+- Deferred items or follow-ups: none
+- Residual risks: no remaining reviewer blockers reported after `bbfaac095`; Phase 8 approved and complete
 
 ### Phase 9 - Stablecoin catalog migration completion
 
