@@ -96,7 +96,7 @@ Compensating gates:
 
 The first credible version should include:
 
-- A hand-authored island city map with 70% water by tile count.
+- A hand-authored sea-first island city map with roughly 86% water by tile count.
 - Central Pharos lighthouse island.
 - Chain docks sized by chain stablecoin TVL.
 - Stablecoin boats derived from aggregate data, with clustering when overloaded.

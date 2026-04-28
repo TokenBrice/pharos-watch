@@ -18,7 +18,7 @@ The map should answer:
 Recommended base grid:
 
 - `64 x 64` isometric tiles for production.
-- At least `70%` water tiles by count.
+- At least `84%` and at most `88%` water tiles by count.
 - One central island cluster occupying roughly `24-30%` of tiles.
 - Deep water ring around the map edge.
 - Shallow harbor water around the city.
@@ -29,8 +29,8 @@ Water ratio should be enforced by a map fixture test. Example invariant:
 
 ```ts
 const waterRatio = waterTiles.length / (MAP_WIDTH * MAP_HEIGHT);
-expect(waterRatio).toBeGreaterThanOrEqual(0.68);
-expect(waterRatio).toBeLessThanOrEqual(0.74);
+expect(waterRatio).toBeGreaterThanOrEqual(0.84);
+expect(waterRatio).toBeLessThanOrEqual(0.88);
 ```
 
 ## Districts

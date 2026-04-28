@@ -2,7 +2,7 @@
 
 Created: 2026-04-28
 
-Goal: plan a ClaudeVille-like Pharos special page: an old-school fantasy RPG island city with roughly 70% water, where Pharos data becomes a readable spatial world.
+Goal: plan a ClaudeVille-like Pharos special page: an old-school fantasy RPG island city where the sea is the main character, with roughly 86% water, where Pharos data becomes a readable spatial world.
 
 ## Documents
 

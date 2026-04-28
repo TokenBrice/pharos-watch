@@ -15,14 +15,14 @@ export const REGION_TILES: Record<ShipRiskPlacement, { x: number; y: number }> =
 };
 
 export const DOCK_TILES = [
-  { x: 20, y: 28 },
-  { x: 25, y: 21 },
+  { x: 18, y: 31 },
+  { x: 24, y: 22 },
   { x: 39, y: 22 },
-  { x: 45, y: 35 },
-  { x: 32, y: 46 },
-  { x: 17, y: 38 },
-  { x: 48, y: 28 },
-  { x: 27, y: 48 },
+  { x: 45, y: 31 },
+  { x: 42, y: 39 },
+  { x: 32, y: 43 },
+  { x: 22, y: 40 },
+  { x: 15, y: 42 },
 ];
 
 function ellipseValue(x: number, y: number, cx: number, cy: number, rx: number, ry: number): number {
@@ -30,8 +30,8 @@ function ellipseValue(x: number, y: number, cx: number, cy: number, rx: number, 
 }
 
 export function tileKindAt(x: number, y: number): TileKind {
-  const main = ellipseValue(x, y, 31.5, 31.5, 19, 15);
-  const cemetery = ellipseValue(x, y, 17.5, 45, 6, 5);
+  const main = ellipseValue(x, y, 31.5, 31.5, 13.5, 10.6);
+  const cemetery = ellipseValue(x, y, 17.5, 45, 4.3, 3.6);
 
   if (main < 1 || cemetery < 1) {
     if (main < 0.78 && (Math.abs(x - y) < 2 || Math.abs(x + y - 62) < 2)) return "road";
@@ -121,14 +121,15 @@ export function buildPharosVilleMap(): PharosVilleMap {
 }
 
 export function graveNodesFromEntries(entries: readonly CemeteryEntry[]): GraveNode[] {
+  const columns = 9;
   return entries.map((entry, index) => ({
     id: `grave.${entry.id}`,
     kind: "grave",
     label: entry.symbol,
     entry,
     tile: {
-      x: 14 + (index % 9),
-      y: 42 + Math.floor(index / 9),
+      x: 15 + (index % columns) * 0.62,
+      y: 42.3 + Math.floor(index / columns) * 0.42,
     },
     detailId: `grave.${entry.id}`,
   }));

@@ -86,12 +86,25 @@
   background: #061721;
 }
 
+.pharosville-shell--fullscreen,
+.pharosville-shell:fullscreen {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  min-height: 100svh;
+}
+
 .pharosville-canvas {
   display: block;
   width: 100%;
   height: calc(100svh - 1.5rem);
   cursor: grab;
   touch-action: none;
+}
+
+.pharosville-shell--fullscreen .pharosville-canvas,
+.pharosville-shell:fullscreen .pharosville-canvas {
+  height: 100svh;
 }
 
 .pharosville-canvas:active {
@@ -119,6 +132,28 @@
   box-shadow: 0 12px 36px rgba(0, 0, 0, 0.24);
   cursor: crosshair;
   image-rendering: pixelated;
+}
+
+.pharosville-fullscreen-button {
+  position: absolute;
+  top: 24px;
+  right: 396px;
+  z-index: 4;
+  display: inline-grid;
+  width: 44px;
+  height: 44px;
+  place-items: center;
+  border: 1px solid rgba(169, 217, 211, 0.28);
+  border-radius: 8px;
+  background: rgba(3, 14, 22, 0.78);
+  color: #f5edce;
+  box-shadow: 0 12px 36px rgba(0, 0, 0, 0.22);
+  backdrop-filter: blur(10px);
+}
+
+.pharosville-fullscreen-button:hover {
+  border-color: rgba(255, 204, 98, 0.58);
+  color: #ffcc62;
 }
 
 .pharosville-panel {
@@ -223,6 +258,7 @@
 
 .pharosville-panel button:focus-visible,
 .pharosville-shell [role="toolbar"] button:focus-visible,
+.pharosville-fullscreen-button:focus-visible,
 .pharosville-minimap:focus-visible {
   outline: 2px solid #ffcc62;
   outline-offset: 2px;

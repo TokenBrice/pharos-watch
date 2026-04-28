@@ -88,6 +88,7 @@ test("pharosville renders desktop canvas shell", async ({ page }) => {
   const canvas = page.getByTestId("pharosville-canvas");
   await expect(canvas).toBeVisible();
   await expect(page.getByLabel("Map entity count")).toHaveText("94 entities");
+  await expect(page.getByTestId("pharosville-accessibility-ledger")).toContainText("85.7% water");
   await page.waitForFunction(() => {
     const debug = (window as typeof window & {
       __pharosVilleDebug?: { assetsLoaded?: boolean; camera: unknown; targets: unknown[] };
@@ -114,8 +115,9 @@ test("pharosville renders desktop canvas shell", async ({ page }) => {
   expect(await nonBlankPixels.jsonValue()).toBeGreaterThan(10_000);
   const pixelStats = await canvasPixelStats(page);
   expect(pixelStats.backingPixels).toBeLessThanOrEqual(1440 * 1000 * 4);
-  expect(pixelStats.landPixels).toBeGreaterThan(10_000);
+  expect(pixelStats.landPixels).toBeGreaterThan(6_000);
   expect(pixelStats.waterPixels).toBeGreaterThan(25_000);
+  expect(pixelStats.waterPixels).toBeGreaterThan(pixelStats.landPixels * 2);
   await expect(page).toHaveScreenshot("pharosville-desktop-shell.png");
 });
 
@@ -320,6 +322,13 @@ test("pharosville canvas interactions update details and camera", async ({ page 
   await page.getByRole("button", { name: "Zoom in" }).click();
   await expect(zoom).not.toHaveText(beforeZoom ?? "");
 
+  const fullscreenButton = page.getByRole("button", { name: "Enter fullscreen" });
+  await expect(fullscreenButton).toBeVisible();
+  await fullscreenButton.click();
+  await expect(page.getByTestId("pharosville-world")).toHaveClass(/pharosville-shell--fullscreen/);
+  await page.getByRole("button", { name: "Exit fullscreen" }).click();
+  await expect(page.getByTestId("pharosville-world")).not.toHaveClass(/pharosville-shell--fullscreen/);
+
   const cameraBeforeDrag = await page.evaluate(() => {
     const debug = (window as typeof window & {
       __pharosVilleDebug?: { camera: { offsetX: number; offsetY: number; zoom: number } | null };
@@ -419,8 +428,8 @@ async function canvasPixelStats(page: Page) {
     const canvas = node as HTMLCanvasElement;
     const context = canvas.getContext("2d");
     if (!context) return { backingPixels: 0, landPixels: 0, waterPixels: 0 };
-    const sampleWidth = Math.min(canvas.width, 640);
-    const sampleHeight = Math.min(canvas.height, 420);
+    const sampleWidth = canvas.width;
+    const sampleHeight = canvas.height;
     const { data } = context.getImageData(0, 0, sampleWidth, sampleHeight);
     let landPixels = 0;
     let waterPixels = 0;

@@ -8,8 +8,8 @@ describe("buildPharosVilleMap", () => {
     expect(map.width).toBe(64);
     expect(map.height).toBe(64);
     expect(map.tiles).toHaveLength(64 * 64);
-    expect(map.waterRatio).toBeGreaterThanOrEqual(0.68);
-    expect(map.waterRatio).toBeLessThanOrEqual(0.74);
+    expect(map.waterRatio).toBeGreaterThanOrEqual(0.84);
+    expect(map.waterRatio).toBeLessThanOrEqual(0.88);
   });
 
   it("resolves inland placement anchors back to water", () => {

@@ -1,12 +1,14 @@
 "use client";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { KeyboardEvent as ReactKeyboardEvent, PointerEvent as ReactPointerEvent, WheelEvent as ReactWheelEvent } from "react";
+import { Maximize2, Minimize2 } from "lucide-react";
 import { AccessibilityLedger } from "./components/accessibility-ledger";
 import { DetailPanel } from "./components/detail-panel";
 import { KeyboardEntityBrowser } from "./components/keyboard-entity-browser";
 import { MapKey } from "./components/map-key";
 import { QueryStatusBanner } from "./components/query-status-banner";
 import { WorldToolbar } from "./components/world-toolbar";
+import { useFullscreenMode } from "./hooks/use-fullscreen-mode";
 import { PharosVilleAssetManager } from "./renderer/asset-manager";
 import { collectHitTargets, hitTest, type HitTarget } from "./renderer/hit-testing";
 import { drawPharosVille } from "./renderer/world-canvas";
@@ -34,6 +36,8 @@ export function PharosVilleWorld({ world }: { world: PharosVilleWorldModel }) {
   const [assetLoadTick, setAssetLoadTick] = useState(0);
   const [assetsLoaded, setAssetsLoaded] = useState(false);
   const [reducedMotion, setReducedMotion] = useState(true);
+  const shellRef = useRef<HTMLElement | null>(null);
+  const { exitFullscreen, fullscreenMode, toggleFullscreen } = useFullscreenMode(shellRef);
   const selectedDetail = useMemo(
     () => selectedDetailId ? (world.detailIndex[selectedDetailId] ?? null) : null,
     [selectedDetailId, world.detailIndex],
@@ -261,6 +265,11 @@ export function PharosVilleWorld({ world }: { world: PharosVilleWorldModel }) {
   const handleKeyDown = useCallback((event: ReactKeyboardEvent<HTMLElement>) => {
     if (!camera) return;
     if (event.key === "Escape") {
+      if (fullscreenMode) {
+        event.preventDefault();
+        exitFullscreen();
+        return;
+      }
       clearSelection();
       return;
     }
@@ -275,7 +284,7 @@ export function PharosVilleWorld({ world }: { world: PharosVilleWorldModel }) {
       };
       setCamera(panCamera(camera, deltas[event.key], { map: world.map, viewport: canvasSize }));
     }
-  }, [camera, canvasSize, clearSelection, world.map]);
+  }, [camera, canvasSize, clearSelection, exitFullscreen, fullscreenMode, world.map]);
 
   const handleMinimapClick = useCallback((event: ReactPointerEvent<HTMLCanvasElement>) => {
     if (!camera) return;
@@ -287,7 +296,8 @@ export function PharosVilleWorld({ world }: { world: PharosVilleWorldModel }) {
 
   return (
     <main
-      className="pharosville-desktop pharosville-shell"
+      ref={shellRef}
+      className={fullscreenMode ? "pharosville-desktop pharosville-shell pharosville-shell--fullscreen" : "pharosville-desktop pharosville-shell"}
       data-testid="pharosville-world"
       onKeyDown={handleKeyDown}
       tabIndex={-1}
@@ -303,6 +313,15 @@ export function PharosVilleWorld({ world }: { world: PharosVilleWorldModel }) {
         onPointerUp={handlePointerUp}
         onWheel={handleWheel}
       />
+      <button
+        type="button"
+        className="pharosville-fullscreen-button"
+        aria-label={fullscreenMode ? "Exit fullscreen" : "Enter fullscreen"}
+        title={fullscreenMode ? "Exit fullscreen" : "Enter fullscreen"}
+        onClick={toggleFullscreen}
+      >
+        {fullscreenMode ? <Minimize2 aria-hidden="true" size={17} /> : <Maximize2 aria-hidden="true" size={17} />}
+      </button>
       <WorldToolbar
         world={world}
         selectedDetailId={selectedDetailId}

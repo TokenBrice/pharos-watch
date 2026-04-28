@@ -34,7 +34,7 @@ Full 45-60 PNG asset coverage, richer minimap polish, semantic motion, mint/burn
 - `/lighthouse/` renders PharosVille on screens `>= 1280px` wide and `>= 760px` tall.
 - Screens `< 1280px` wide or `< 760px` tall render a desktop-only fallback and do not initialize heavy canvas/sprite systems.
 - Screens below the desktop gate do not mount the query-backed world component.
-- The world is an old-school RPG island city with at least `68%` and at most `74%` water by map-tile count.
+- The world is an old-school RPG island city where the sea is the main character, with at least `84%` and at most `88%` water by map-tile count.
 - Ships are built from active stablecoins only.
 - Frozen/dead stablecoins appear only in the cemetery model.
 - Chain docks are sized from chain stablecoin supply.
@@ -388,7 +388,7 @@ Recent change:
 Map layout:
 
 - Fixed authored map, recommended `64 x 64` tiles.
-- Required water ratio: `0.68 <= waterTiles / totalTiles <= 0.74`.
+- Required water ratio: `0.84 <= waterTiles / totalTiles <= 0.88`.
 - Required regions:
   - central lighthouse island
   - main island/city
@@ -552,7 +552,7 @@ renderer/render-loop.test.ts
 Validation:
 
 - Visual smoke with fixture data shows:
-  - 70% water island map
+  - sea-first island map with roughly 86% water
   - lighthouse
   - docks
   - ships/clusters
@@ -909,7 +909,7 @@ Test cases:
    - target-size/overlap smoke passes for toolbar and detail controls
 5. Full-map deterministic overview:
    - use test-only `fitToMap`
-   - assert `68%`-`74%` water visual footprint is evident by tile/pixel sampling where practical
+   - assert `84%`-`88%` water visual footprint is evident by tile/pixel sampling where practical
 6. Ultrawide budget:
    - viewport `2560 x 1440`
    - assert effective DPR/backing-store caps hold

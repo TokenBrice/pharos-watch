@@ -21,12 +21,12 @@ Screens below `1280px` wide or `760px` tall render a DOM fallback with links to 
 The current implementation includes the desktop PharosVille v0.1 baseline:
 
 - desktop-gated route, with a short-screen fallback as well as the narrow-screen fallback
-- Canvas 2D island map on eligible desktop viewports
+- Canvas 2D sea-first island map on eligible desktop viewports, with roughly 86% water by tile count
 - live aggregate Pharos queries mounted only after the desktop gate
 - pure world model for PSI, docks, active ships, clusters, cemetery, details, and visual cues
 - DOM map key, query status, detail panel, keyboard entity browser, toolbar, minimap, and accessibility ledger
 - canvas hit testing for lighthouse, docks, ships, clusters, and graves
-- mouse/touch drag pan, wheel zoom, toolbar pan/zoom/reset/follow/clear controls, keyboard arrow pan, Escape clear, and minimap click-to-pan
+- mouse/touch drag pan, wheel zoom, toolbar pan/zoom/reset/follow/clear controls, keyboard arrow pan, Escape clear, minimap click-to-pan, and fullscreen inspection mode
 - normal-motion canvas loop for the lighthouse sweep, water shimmer, and capped selected/top/recent ship effects
 - deterministic reduced-motion render with no running animation frame loop
 - desktop, stressed-ship, short-screen, ultrawide backing-store, interaction, and motion visual coverage
@@ -68,10 +68,12 @@ Compensating gates:
 
 - desktop canvas shell at `1440 x 1000`
 - nonblank canvas pixels, terrain/water pixel coverage, and backing-store budget
+- sea-first tile ratio
 - stressed ship detail semantics for active depeg and storm-shelf placement
 - `<1280px` fallback
 - short desktop fallback
 - canvas click/selection, toolbar zoom/clear, and minimap interaction
+- fullscreen control visibility and mode toggle
 - ultrawide canvas DPR/backing-store caps
 - reduced-motion determinism and normal-motion RAF startup
 - no world API, site-data, manifest, or asset requests under the fallback

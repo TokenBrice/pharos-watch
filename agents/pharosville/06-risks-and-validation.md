@@ -134,7 +134,7 @@ Mitigation:
 
 ## Acceptance Criteria For MVP
 
-- The map visibly reads as an island city with roughly 70% water.
+- The map visibly reads as a sea-first island city with roughly 86% water.
 - Lighthouse is the central visual anchor and accurately reflects PSI.
 - Major chains appear as docks sized by stablecoin TVL.
 - Top stablecoins appear as distinct ship classes.
