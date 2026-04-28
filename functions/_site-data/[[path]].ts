@@ -95,6 +95,19 @@ function canCacheResponse(response: Response): boolean {
     && !/(?:^|,\s*)110\b/.test(warning);
 }
 
+function queuePagesCacheWrite(context: SiteDataProxyContext, cacheKey: Request, response: Response): void {
+  const write = getDefaultCache().put(cacheKey, response.clone()).catch((err) => {
+    console.warn("[site-data-proxy] Failed to write Pages cache:", err);
+  });
+
+  if (typeof context.waitUntil === "function") {
+    context.waitUntil(write);
+    return;
+  }
+
+  void write;
+}
+
 function hasConditionalRequestHeaders(request: Request): boolean {
   return request.headers.has("If-None-Match") || request.headers.has("If-Modified-Since");
 }
@@ -189,7 +202,7 @@ export const onRequest = async (context: SiteDataProxyContext): Promise<Response
   const response = buildProxyResponse(upstreamResult.response);
   await queueSiteDataTelemetry(context, upstreamPath, "pages-upstream-fetch", "site-api");
   if (!bypassPagesCache && canCacheResponse(response)) {
-    await getDefaultCache().put(cacheKey, response.clone());
+    queuePagesCacheWrite(context, cacheKey, response);
   }
   return response;
 };

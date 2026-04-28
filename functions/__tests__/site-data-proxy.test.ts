@@ -48,6 +48,20 @@ function makeEnv(db = makeTestDb(), overrides: Record<string, unknown> = {}) {
   };
 }
 
+function makeWaitUntil() {
+  const pending: Promise<unknown>[] = [];
+  const waitUntil = vi.fn((promise: Promise<unknown>) => {
+    pending.push(promise);
+  });
+
+  return {
+    waitUntil,
+    flush: async () => {
+      await Promise.all(pending);
+    },
+  };
+}
+
 describe("site-data proxy", () => {
   const cacheMatch = vi.fn();
   const cachePut = vi.fn(async () => undefined);
@@ -228,6 +242,37 @@ describe("site-data proxy", () => {
       && entry.binds[2] === "/api/stablecoin-summary/:id"
       && entry.binds[3] === "pages-upstream-fetch"
       && entry.binds[4] === "site-api")).toBe(true);
+  });
+
+  it("returns the upstream response when the background Pages cache write fails", async () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    cachePut.mockRejectedValueOnce(new Error("cache unavailable"));
+    const fetchSpy = vi.fn(async () => new Response(JSON.stringify({ ok: true }), {
+      status: 200,
+      headers: {
+        "Cache-Control": "public, max-age=60",
+        "Content-Type": "application/json",
+      },
+    }));
+    vi.stubGlobal("fetch", fetchSpy);
+    const ctx = makeWaitUntil();
+
+    const response = await onRequest({
+      request: new Request("https://pharos.watch/_site-data/stablecoins", {
+        headers: { Origin: "https://pharos.watch" },
+      }),
+      env: makeEnv(),
+      params: { path: "stablecoins" },
+      waitUntil: ctx.waitUntil,
+    });
+
+    expect(response.status).toBe(200);
+    await expect(response.json()).resolves.toEqual({ ok: true });
+    expect(cachePut).toHaveBeenCalledTimes(1);
+    expect(ctx.waitUntil).toHaveBeenCalled();
+
+    await ctx.flush();
+    expect(warn).toHaveBeenCalledWith("[site-data-proxy] Failed to write Pages cache:", expect.any(Error));
   });
 
   it("does not cache upstream responses marked no-store", async () => {
