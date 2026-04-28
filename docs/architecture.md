@@ -183,16 +183,19 @@ canonical path while replacing the old harbor scene with a Canvas 2D island-city
 experience.
 
 The page uses a Server Component shell for metadata and JSON-LD, then a Client
-Component viewport gate. Screens below `1280px` render a DOM desktop-only
-fallback and must not mount world queries, canvas runtime, manifest fetches, or
-sprite decoding. Desktop viewports mount the browser-only PharosVille world.
+Component viewport gate. Screens below `1280px` wide or `760px` tall render a
+DOM desktop-only fallback and must not mount world queries, canvas runtime,
+manifest fetches, or sprite decoding. Eligible desktop viewports mount the
+browser-only PharosVille world.
 
 Canvas 2D remains the renderer choice. PixiJS v8 was rejected during the
 2026-04-25 spike (see `docs/superpowers/audits/2026-04-25-pixi-v8-csp.md`)
 because the shader path requires `unsafe-eval`, which Pharos's CSP disallows.
 
 Visual coverage lives in `tests/visual/lighthouse.spec.ts` and currently checks
-the desktop canvas shell plus the `<1280px` fallback/no-runtime contract.
+the reduced-motion desktop canvas shell, stressed ship semantics, narrow and
+short fallback/no-runtime contracts, interaction/camera/minimap behavior,
+ultrawide backing-store caps, and normal-motion RAF startup.
 
 ---
 

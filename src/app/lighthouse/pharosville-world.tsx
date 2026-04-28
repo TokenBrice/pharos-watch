@@ -11,6 +11,7 @@ import { PharosVilleAssetManager } from "./renderer/asset-manager";
 import { collectHitTargets, hitTest, type HitTarget } from "./renderer/hit-testing";
 import { drawPharosVille } from "./renderer/world-canvas";
 import { cameraZoomLabel, clampCameraToMap, defaultCamera, followTile, panCamera, zoomIn, zoomOut } from "./systems/camera";
+import { resolveCanvasBudget } from "./systems/canvas-budget";
 import { buildMotionPlan } from "./systems/motion";
 import { screenToTile, zoomCameraAt, type IsoCamera, type ScreenPoint } from "./systems/projection";
 import { observeReducedMotion } from "./systems/reduced-motion";
@@ -21,6 +22,8 @@ export function PharosVilleWorld({ world }: { world: PharosVilleWorldModel }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const minimapRef = useRef<HTMLCanvasElement>(null);
   const dragRef = useRef<{ last: ScreenPoint; moved: boolean; pointerId: number } | null>(null);
+  const animationFramePendingRef = useRef(false);
+  const canvasBudgetRef = useRef<ReturnType<typeof resolveCanvasBudget> | null>(null);
   const motionStartTimeRef = useRef<number | null>(null);
   const motionFrameCountRef = useRef(0);
   const [camera, setCamera] = useState<IsoCamera | null>(null);
@@ -97,9 +100,14 @@ export function PharosVilleWorld({ world }: { world: PharosVilleWorldModel }) {
       const rect = canvas.getBoundingClientRect();
       const cssWidth = Math.max(1, Math.floor(rect.width));
       const cssHeight = Math.max(1, Math.floor(rect.height));
-      const dpr = Math.min(window.devicePixelRatio || 1, 2);
-      const nextWidth = Math.floor(cssWidth * dpr);
-      const nextHeight = Math.floor(cssHeight * dpr);
+      const budget = resolveCanvasBudget({
+        cssHeight,
+        cssWidth,
+        requestedDpr: window.devicePixelRatio || 1,
+      });
+      canvasBudgetRef.current = budget;
+      const nextWidth = budget.backingWidth;
+      const nextHeight = budget.backingHeight;
       if (canvas.width !== nextWidth) canvas.width = nextWidth;
       if (canvas.height !== nextHeight) canvas.height = nextHeight;
       const nextCanvasSize = { x: cssWidth, y: cssHeight };
@@ -120,9 +128,15 @@ export function PharosVilleWorld({ world }: { world: PharosVilleWorldModel }) {
     if (!canvas || !camera || canvasSize.x <= 0 || canvasSize.y <= 0) return;
     const ctx = canvas.getContext("2d", { alpha: false });
     if (!ctx) return;
-    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+    const budget = canvasBudgetRef.current ?? resolveCanvasBudget({
+      cssHeight: canvasSize.y,
+      cssWidth: canvasSize.x,
+      requestedDpr: window.devicePixelRatio || 1,
+    });
+    const dpr = budget.effectiveDpr;
     let frameId = 0;
     const drawFrame = (time: number) => {
+      animationFramePendingRef.current = false;
       if (motionStartTimeRef.current == null) motionStartTimeRef.current = time;
       const timeSeconds = reducedMotion ? 0 : (time - motionStartTimeRef.current) / 1000;
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
@@ -145,11 +159,13 @@ export function PharosVilleWorld({ world }: { world: PharosVilleWorldModel }) {
       if (!reducedMotion) {
         motionFrameCountRef.current += 1;
         updateDebugMotion({ frameCount: motionFrameCountRef.current, reducedMotion });
+        animationFramePendingRef.current = true;
         frameId = requestAnimationFrame(drawFrame);
       }
     };
     drawFrame(performance.now());
     return () => {
+      animationFramePendingRef.current = false;
       if (frameId) cancelAnimationFrame(frameId);
     };
   }, [assetLoadTick, assetManager, camera, canvasSize.x, canvasSize.y, hitTargets, hoveredTarget, motionPlan, reducedMotion, selectedTarget, world]);
@@ -167,7 +183,9 @@ export function PharosVilleWorld({ world }: { world: PharosVilleWorldModel }) {
         camera: IsoCamera | null;
         cameraWithinBounds: boolean;
         assetsLoaded: boolean;
+        canvasBudget: ReturnType<typeof resolveCanvasBudget> | null;
         canvasSize: ScreenPoint;
+        animationFramePending: boolean;
         motionFrameCount: number;
         reducedMotion: boolean;
         targets: readonly HitTarget[];
@@ -177,6 +195,8 @@ export function PharosVilleWorld({ world }: { world: PharosVilleWorldModel }) {
       camera,
       cameraWithinBounds: isCameraWithinBounds(camera, world.map, canvasSize),
       assetsLoaded,
+      animationFramePending: animationFramePendingRef.current,
+      canvasBudget: canvasBudgetRef.current,
       canvasSize,
       motionFrameCount: motionFrameCountRef.current,
       reducedMotion,

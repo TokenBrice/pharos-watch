@@ -29,11 +29,10 @@ The current implementation includes the desktop PharosVille v0.1 baseline:
 - mouse/touch drag pan, wheel zoom, toolbar pan/zoom/reset/follow/clear controls, keyboard arrow pan, Escape clear, and minimap click-to-pan
 - normal-motion canvas loop for the lighthouse sweep, water shimmer, and capped selected/top/recent ship effects
 - deterministic reduced-motion render with no running animation frame loop
+- desktop, stressed-ship, short-screen, ultrawide backing-store, interaction, and motion visual coverage
 - controlled Pixellab asset manifest with critical and deferred sprite loading under `public/pharosville/assets/`
 - asset validation through `npm run check:pharosville-assets`
 - no production fixture/default market data
-
-The next phases add renderer budget instrumentation, broader semantic visual assertions, stressed/fog scenario screenshots, and additional curated asset coverage.
 
 ## Data Mapping Target
 
@@ -58,7 +57,7 @@ Compensating gates:
 - pure tested world model before renderer complexity
 - DOM ledger/detail parity for encoded signals
 - reduced-motion deterministic render
-- canvas nonblank and backing-pixel budget tests
+- canvas nonblank, semantic terrain/water, and backing-pixel budget tests
 - no canvas/runtime work below `1280px`
 - no canvas/runtime work below `760px` viewport height
 - no CSP relaxation
@@ -68,10 +67,12 @@ Compensating gates:
 `tests/visual/lighthouse.spec.ts` covers:
 
 - desktop canvas shell at `1440 x 1000`
-- nonblank canvas pixels
+- nonblank canvas pixels, terrain/water pixel coverage, and backing-store budget
+- stressed ship detail semantics for active depeg and storm-shelf placement
 - `<1280px` fallback
 - short desktop fallback
 - canvas click/selection, toolbar zoom/clear, and minimap interaction
+- ultrawide canvas DPR/backing-store caps
 - reduced-motion determinism and normal-motion RAF startup
 - no world API, site-data, manifest, or asset requests under the fallback
 
