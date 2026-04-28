@@ -30,7 +30,7 @@ jobs:
           fetch-depth: 0
       - uses: ./.github/actions/setup-workspace
         with:
-          node-version: 25
+          node-version: 24
           tooling-cache: "true"
       - name: Fetch digests from the target API environment
         run: npx tsx scripts/sync-digests.ts --output data/digests.json

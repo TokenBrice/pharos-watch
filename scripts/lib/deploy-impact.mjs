@@ -52,7 +52,6 @@ const FULL_DEPLOY_GUARDRAIL_EXACT_PATHS = new Set([
   "scripts/generate-cemetery-dataset.ts",
   "scripts/rollback-pages-deployment.mjs",
   "scripts/run-critical-coverage.mjs",
-  "scripts/run-node-lts-validation.mjs",
   "scripts/run-noncritical-tests.mjs",
   "scripts/run-validate-postbuild.mjs",
   "scripts/run-validate-prebuild.mjs",

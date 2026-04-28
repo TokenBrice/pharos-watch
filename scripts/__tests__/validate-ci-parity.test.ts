@@ -94,7 +94,7 @@ describe("validate-ci parity", () => {
       resolve(process.cwd(), ".github/actions/setup-workspace/action.yml"),
       "utf8",
     );
-    const validateJob = extractJobBlock(workflow, "validate", "validate-lts");
+    const validateJob = extractJobBlock(workflow, "validate");
     const setupWorkspaceRunSteps = extractRunSteps(setupWorkspaceAction);
 
     expect([...setupWorkspaceRunSteps, ...extractRunSteps(validateJob)]).toEqual([
@@ -107,14 +107,24 @@ describe("validate-ci parity", () => {
     ]);
   });
 
-  it("threads the coverage compare ref through the LTS validate lane", () => {
+  it("does not keep a duplicate LTS validate lane after Node 24 became the baseline", () => {
     const workflow = readFileSync(resolve(process.cwd(), ".github/workflows/validate-ci.yml"), "utf8");
-    const validateLtsJob = extractJobBlock(workflow, "validate-lts");
 
-    expect(extractRunSteps(validateLtsJob)).toContainEqual({
-      cmd: "npm run validate:lts -- --pages-changed=${{ inputs.pages_changed }} --worker-changed=${{ inputs.worker_changed }} --coverage-compare-ref=${{ inputs.coverage-compare-ref }}",
-      condition: null,
-    });
+    expect(workflow).not.toContain("validate-lts:");
+    expect(workflow).not.toContain("validate:lts");
+  });
+
+  it("runs the shared validate workflow on the Node 24 baseline", () => {
+    const workflow = readFileSync(resolve(process.cwd(), ".github/workflows/validate-ci.yml"), "utf8");
+    const setupWorkspaceAction = readFileSync(
+      resolve(process.cwd(), ".github/actions/setup-workspace/action.yml"),
+      "utf8",
+    );
+
+    expect(extractJobBlock(workflow, "validate")).toContain("node-version: 24.x");
+    expect(setupWorkspaceAction).toContain('default: "24"');
+    expect(workflow).not.toContain("node-version: 25");
+    expect(setupWorkspaceAction).not.toContain('default: "25"');
   });
 
   it("keeps validate:prebuild delegated to the shared registry", () => {

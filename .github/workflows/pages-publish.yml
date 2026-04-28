@@ -24,7 +24,7 @@ jobs:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
       - uses: ./.github/actions/setup-workspace
         with:
-          node-version: 25
+          node-version: 24
       - id: capture
         name: Capture current production Pages deployment id (best effort)
         continue-on-error: true
@@ -78,7 +78,7 @@ jobs:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
       - uses: ./.github/actions/setup-workspace
         with:
-          node-version: 25
+          node-version: 24
           cache-npm: "false"
           install-deps: "false"
       - run: npm run test:smoke-ui -- --url https://pharos.watch --mode live
@@ -90,7 +90,7 @@ jobs:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
       - uses: ./.github/actions/setup-workspace
         with:
-          node-version: 25
+          node-version: 24
           cache-npm: "false"
           install-deps: "false"
       - run: npm run test:smoke-ops
@@ -107,7 +107,7 @@ jobs:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
       - uses: ./.github/actions/setup-workspace
         with:
-          node-version: 25
+          node-version: 24
           cache-npm: "false"
           install-deps: "false"
       - run: npm run test:smoke-transport
@@ -133,7 +133,7 @@ jobs:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
       - uses: ./.github/actions/setup-workspace
         with:
-          node-version: 25
+          node-version: 24
           cache-npm: "false"
           install-deps: "false"
       - name: Roll back Pages production to previous successful deployment

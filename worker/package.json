@@ -3,7 +3,7 @@
   "private": true,
   "license": "MIT",
   "engines": {
-    "node": ">=25 <26"
+    "node": ">=24 <25"
   },
   "scripts": {
     "dev": "wrangler dev",

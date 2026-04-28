@@ -78,7 +78,6 @@ describe("hasDeployImpact", () => {
       "scripts/check-sql-interpolation-safety.mjs",
       "scripts/generate-cemetery-dataset.ts",
       "scripts/run-critical-coverage.mjs",
-      "scripts/run-node-lts-validation.mjs",
       "scripts/run-noncritical-tests.mjs",
       "scripts/run-validate-postbuild.mjs",
       "scripts/run-validate-prebuild.mjs",

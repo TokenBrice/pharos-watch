@@ -82,7 +82,7 @@ DEX discovery sources write to `dex_pool_staging` every 2 hours on the dedicated
 
 ## Getting Started
 
-Requires Node 25 (`package.json#engines.node`, `.nvmrc`). Install dependencies from the repo root; npm workspaces will wire both the frontend and `worker/` package:
+Requires Node 24 LTS (`package.json#engines.node`, `.nvmrc`). Install dependencies from the repo root; npm workspaces will wire both the frontend and `worker/` package:
 
 ```bash
 npm install
