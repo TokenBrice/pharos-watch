@@ -22,15 +22,12 @@ import { toMethodologyVersionLabel } from "@shared/lib/methodology-version";
 import { API_FRESHNESS_MAX_AGE_SEC } from "@shared/lib/api-freshness";
 import {
   BLACKLIST_STABLECOINS,
+  type BlacklistEvent,
   type BlacklistSortDirection,
   type BlacklistSortKey,
   type BlacklistStablecoin,
 } from "@shared/types/market";
-import {
-  mapBlacklistEventRow,
-  type BlacklistEventApiRecord,
-  type BlacklistEventRow,
-} from "../lib/blacklist-api";
+import { mapBlacklistEventRow, type BlacklistEventRow } from "../lib/blacklist-api";
 
 const VALID_STABLECOINS = new Set<BlacklistStablecoin>(BLACKLIST_STABLECOINS);
 const VALID_CHAIN_NAMES = new Set(Object.values(CHAIN_META).map((m) => m.name));
@@ -108,10 +105,7 @@ export const handleBlacklist = withErrorHandler("blacklist", async (db: D1Databa
     filterBindings.push(`%${escaped}%`);
   }
 
-  const { events, total } = await fetchPaginatedEvents<
-    BlacklistEventRow,
-    BlacklistEventApiRecord
-  >(db, {
+  const { events, total } = await fetchPaginatedEvents<BlacklistEventRow, BlacklistEvent>(db, {
     tableName: "blacklist_events",
     orderBy: BLACKLIST_ORDER_BY[sortBy][sortDirection],
     conditions,

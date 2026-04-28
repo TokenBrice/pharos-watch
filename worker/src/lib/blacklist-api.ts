@@ -31,30 +31,6 @@ export interface BlacklistEventRow {
   explorer_address_url: string;
 }
 
-export interface BlacklistEventApiRecord {
-  methodologyVersion: string;
-  id: string;
-  stablecoin: BlacklistStablecoin;
-  chainId: string;
-  chainName: string;
-  eventType: BlacklistEventType;
-  address: string;
-  amountNative: number | null;
-  amountUsdAtEvent: number | null;
-  amountSource: BlacklistAmountSource;
-  amountStatus: BlacklistAmountStatus;
-  txHash: string;
-  blockNumber: number;
-  timestamp: number;
-  explorerTxUrl: string;
-  explorerAddressUrl: string;
-  contractAddress: string | null;
-  configKey: string | null;
-  eventSignature: string | null;
-  eventTopic0: string | null;
-  suppressionReason?: string | null;
-}
-
 export function mapBlacklistEventRow(row: BlacklistEventRow): BlacklistEvent {
   return {
     methodologyVersion: row.methodology_version ?? getBlacklistTrackerMethodologyVersionAt(row.timestamp),
