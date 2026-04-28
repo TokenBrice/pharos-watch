@@ -326,9 +326,15 @@ _No notes yet._
 - Deferred items or follow-ups: none
 - Residual risks: no blockers reported; `run-node-lts-validation.mjs` now uses the shared async Bash/process-group runner, acceptable for the current CI/Linux validation lane
 
-### Phase 6 - Medium hotspot extractions completion
+### Phase 6 - Medium hotspot extractions completion, 2026-04-28
 
-_No notes yet._
+- Reviewer: phase reviewer
+- PRs/commits: `7d84228bc` DEX discovery provider stages, `365a6790d` contagion graph split, `062a2c52d` env contract registry/renderers split, `4af8a315e` hotspot ratchet update
+- Findings addressed: F1-F3 / Phase 6; Q005, Q006, S004, C004
+- Validation run: targeted Phase 6 Vitest suite, 58 tests; F1 revalidation Vitest suite, 16 tests; `npm run typecheck`; `cd worker && npx tsc --noEmit`; `npm run lint`; `npm run check:env-contract`; `npm run check:doc-sync`; `npm run check:hotspot-ratchet`; `npm run check:unused-code`; `npm run check:shared-cycles`; `npm run check:worker-boundary`; `npm run check:cron-connections`; `git diff --check` for Phase 6 files
+- Docs updated: handover record updated; hotspot ratchet metadata updated in `4af8a315e`
+- Deferred items or follow-ups: consider adding direct provider-stage unit tests for timeout/dependency paths
+- Residual risks: no blockers reported; F3 env-contract exports and generated env/doc output were spot-checked byte-for-byte against HEAD
 
 ### Phase 7 - Cron capacity governance completion
 
