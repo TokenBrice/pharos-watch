@@ -1,31 +1,11 @@
 import type { Metadata } from "next";
-import { StablecoinTaxonomyHub } from "@/components/stablecoin-taxonomy-hub";
-import { buildPageMetadata } from "@/lib/page-metadata";
-import {
-  STABLECOIN_TAXONOMY_HUB_ROUTES,
-  getStablecoinTaxonomyHubBreadcrumbItems,
-  getStablecoinTaxonomyHubTotal,
-} from "@/lib/stablecoin-taxonomy";
+import { STABLECOIN_TAXONOMY_HUB_ROUTES } from "@/lib/stablecoin-taxonomy";
+import { buildStablecoinTaxonomyHubMetadata, createStablecoinTaxonomyHubPage } from "../taxonomy-page";
 
 const ROUTE = STABLECOIN_TAXONOMY_HUB_ROUTES.backing;
-const TOTAL = getStablecoinTaxonomyHubTotal(ROUTE);
 
-export const metadata: Metadata = buildPageMetadata({
-  title: ROUTE.title,
-  description: ROUTE.description(TOTAL),
-  canonical: ROUTE.path,
-});
+export const metadata: Metadata = buildStablecoinTaxonomyHubMetadata(ROUTE);
 
-export default function StablecoinBackingHubPage() {
-  return (
-    <StablecoinTaxonomyHub
-      breadcrumbName={ROUTE.breadcrumbName}
-      path={ROUTE.path}
-      breadcrumbItems={getStablecoinTaxonomyHubBreadcrumbItems(ROUTE)}
-      title={ROUTE.title}
-      leadParagraphs={ROUTE.leadParagraphs}
-      itemListName={ROUTE.itemListName}
-      pages={ROUTE.pages}
-    />
-  );
-}
+const StablecoinBackingHubPage = createStablecoinTaxonomyHubPage(ROUTE);
+
+export default StablecoinBackingHubPage;

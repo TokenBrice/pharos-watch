@@ -1,10 +1,35 @@
 import { describe, expect, it } from "vitest";
 import { renderToStaticMarkup } from "react-dom/server";
-import StablecoinBackingHubPage from "../backing/page";
-import StablecoinGovernanceHubPage from "../governance/page";
-import StablecoinInfrastructureHubPage from "../infrastructure/page";
+import StablecoinBackingHubPage, { metadata as backingMetadata } from "../backing/page";
+import StablecoinGovernanceHubPage, { metadata as governanceMetadata } from "../governance/page";
+import StablecoinInfrastructureHubPage, { metadata as infrastructureMetadata } from "../infrastructure/page";
+import { STABLECOIN_TAXONOMY_HUB_ROUTES, getStablecoinTaxonomyHubTotal } from "@/lib/stablecoin-taxonomy";
+
+function expectMetadataForRoute(
+  metadata: typeof backingMetadata,
+  route: (typeof STABLECOIN_TAXONOMY_HUB_ROUTES)[keyof typeof STABLECOIN_TAXONOMY_HUB_ROUTES],
+) {
+  const description = route.description(getStablecoinTaxonomyHubTotal(route));
+
+  expect(metadata).toMatchObject({
+    title: route.title,
+    description,
+    alternates: { canonical: route.path },
+    openGraph: {
+      title: route.title,
+      description,
+      url: route.path,
+    },
+  });
+}
 
 describe("stablecoin taxonomy hub pages", () => {
+  it("exports metadata for each taxonomy hub route", () => {
+    expectMetadataForRoute(backingMetadata, STABLECOIN_TAXONOMY_HUB_ROUTES.backing);
+    expectMetadataForRoute(governanceMetadata, STABLECOIN_TAXONOMY_HUB_ROUTES.governance);
+    expectMetadataForRoute(infrastructureMetadata, STABLECOIN_TAXONOMY_HUB_ROUTES.infrastructure);
+  });
+
   it("renders backing hub links and JSON-LD item list", () => {
     const html = renderToStaticMarkup(<StablecoinBackingHubPage />);
 
