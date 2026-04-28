@@ -1,25 +1,25 @@
-import { execFileSync } from "node:child_process";
-import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
-import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { pathToFileURL } from "node:url";
 import { createPublicClient, http, toHex } from "viem";
 import { mainnet } from "viem/chains";
 import { computeBlacklistAmountUsdAtEvent } from "../../shared/lib/blacklist";
 import { getBlacklistTrackerMethodologyVersionAt } from "../../shared/lib/blacklist-tracker-version";
+import type { BlacklistRow } from "../src/cron/blacklist/shared";
 import {
   getBlacklistConfigsForSymbolAndChain,
   getBlacklistEventByTopic,
   type ContractEventConfig,
 } from "../src/lib/blacklist-contracts";
 import { decodeAddress, decodeUint256 } from "../src/lib/evm-logs";
-import type { BlacklistRow } from "../src/cron/blacklist/shared";
-
-type ExternalRow = {
-  address: string;
-  asset: "USDT" | "USDC";
-  chain: "ETH" | "TRON";
-  tx_hash: string;
-};
+import {
+  fetchKycRipRows,
+  type KycRipEventRow,
+  type KycRipValidationStats,
+} from "./lib/kyc-rip";
+import {
+  createRemoteD1Client,
+  sqlString,
+  type RemoteD1Client,
+} from "./lib/remote-d1";
 
 type ExistingRow = {
   stablecoin: "USDT" | "USDC";
@@ -37,60 +37,114 @@ type ParsedReceiptLog = {
   timeStamp: `0x${string}`;
 };
 
-function query(sql: string): unknown[] {
-  const workerCwd = process.cwd().endsWith("/worker") ? process.cwd() : join(process.cwd(), "worker");
-  const raw = execFileSync("npx", ["wrangler", "d1", "execute", "stablecoin-db", "--remote", "--json", "--command", sql], {
-    cwd: workerCwd,
-    encoding: "utf8",
-    maxBuffer: 1024 * 1024 * 64,
-    stdio: "pipe",
-  });
-  return JSON.parse(raw)[0]?.results ?? [];
-}
+type ReceiptClient = {
+  getTransactionReceipt(args: { hash: `0x${string}` }): Promise<{
+    blockNumber: bigint;
+    logs: Array<{
+      address: `0x${string}`;
+      topics: readonly `0x${string}`[];
+      data: `0x${string}`;
+      blockNumber: bigint;
+      transactionHash: `0x${string}`;
+      logIndex: number;
+    }>;
+  }>;
+  getBlock(args: { blockNumber: bigint }): Promise<{ timestamp: bigint }>;
+};
 
-function executeWrangler(file: string): void {
-  const workerCwd = process.cwd().endsWith("/worker") ? process.cwd() : join(process.cwd(), "worker");
-  execFileSync("npx", ["wrangler", "d1", "execute", "stablecoin-db", "--remote", "--json", "--file", file], {
-    cwd: workerCwd,
-    encoding: "utf8",
-    maxBuffer: 1024 * 1024 * 64,
-    stdio: "pipe",
-  });
-}
+export type EventCliOptions = {
+  apply: boolean;
+  remote: true;
+  database: string;
+  timeoutMs: number;
+  minRows: number;
+  providerUrl?: string;
+};
 
-function sqlString(value: string | null): string {
-  if (value == null) return "NULL";
-  return `'${value.replace(/'/g, "''")}'`;
-}
+export type EventReconcileDependencies = {
+  fetchImpl?: typeof fetch;
+  d1?: RemoteD1Client;
+  client?: ReceiptClient;
+  log?: (message: string) => void;
+};
 
-async function fetchAllExternalRows(): Promise<ExternalRow[]> {
-  const rows: ExternalRow[] = [];
-  const limit = 1000;
-  let offset = 0;
+const DEFAULT_TIMEOUT_MS = 15_000;
+const DEFAULT_MIN_ROWS = 100;
+const DEFAULT_DATABASE = "stablecoin-db";
 
-  while (true) {
-    const res = await fetch(`https://api.kyc.rip/v1/tools/ban-list?limit=${limit}&offset=${offset}`);
-    if (!res.ok) throw new Error(`kyc.rip returned ${res.status}`);
-    const json = await res.json() as { data?: ExternalRow[] };
-    const batch = json.data ?? [];
-    rows.push(...batch);
-    if (batch.length < limit) return rows;
-    offset += limit;
+export function parseEventArgs(argv: string[]): EventCliOptions {
+  const options: EventCliOptions = {
+    apply: false,
+    remote: true,
+    database: DEFAULT_DATABASE,
+    timeoutMs: DEFAULT_TIMEOUT_MS,
+    minRows: DEFAULT_MIN_ROWS,
+  };
+
+  for (let index = 0; index < argv.length; index++) {
+    const arg = argv[index];
+    if (arg === "--help") {
+      printHelp();
+      process.exit(0);
+    }
+    if (arg === "--apply") {
+      options.apply = true;
+      continue;
+    }
+    if (arg === "--remote") {
+      continue;
+    }
+    if (arg === "--timeout-ms" || arg === "--min-rows" || arg === "--database" || arg === "--provider-url") {
+      const value = argv[index + 1];
+      if (!value || value.startsWith("--")) throw new Error(`${arg} requires a value`);
+      if (arg === "--timeout-ms") options.timeoutMs = parsePositiveInteger(value, arg);
+      if (arg === "--min-rows") options.minRows = parsePositiveInteger(value, arg);
+      if (arg === "--database") options.database = value;
+      if (arg === "--provider-url") options.providerUrl = value;
+      index++;
+      continue;
+    }
+    throw new Error(`Unknown argument: ${arg}`);
   }
+
+  return options;
+}
+
+function parsePositiveInteger(value: string, flag: string): number {
+  const parsed = Number(value);
+  if (!Number.isInteger(parsed) || parsed <= 0) {
+    throw new Error(`${flag} must be a positive integer`);
+  }
+  return parsed;
+}
+
+function printHelp(): void {
+  console.log(`Usage: tsx worker/scripts/reconcile-blacklist-events-from-kyc-rip.ts [options]
+
+Default mode is dry-run. Remote D1 writes require --apply.
+
+Options:
+  --apply                Execute remote D1 reads and inserts
+  --remote               Target remote D1 (default and only supported D1 target)
+  --timeout-ms <ms>      kyc.rip request timeout (default: ${DEFAULT_TIMEOUT_MS})
+  --min-rows <count>     Minimum accepted rows before reconciliation (default: ${DEFAULT_MIN_ROWS})
+  --database <name>      D1 database name (default: ${DEFAULT_DATABASE})
+  --provider-url <url>   Override kyc.rip ban-list URL
+  --help                 Show this help`);
 }
 
 function buildAddressKey(stablecoin: "USDT" | "USDC", address: string): string {
   return `${stablecoin}:${address.toLowerCase()}`;
 }
 
-function loadExistingEthereumBlacklistSet(): Set<string> {
-  const rows = query(
+function loadExistingEthereumBlacklistSet(d1: RemoteD1Client): Set<string> {
+  const rows = d1.query<ExistingRow>(
     `SELECT stablecoin, chain_id, address
      FROM blacklist_events
      WHERE chain_id = 'ethereum'
        AND stablecoin IN ('USDT', 'USDC')
        AND event_type = 'blacklist'`,
-  ) as ExistingRow[];
+  );
 
   return new Set(rows.map((row) => buildAddressKey(row.stablecoin, row.address)));
 }
@@ -102,11 +156,11 @@ function getEthereumConfig(stablecoin: "USDT" | "USDC"): ContractEventConfig {
 }
 
 async function fetchReceiptRow(
-  client: ReturnType<typeof createPublicClient>,
+  client: ReceiptClient,
   config: ContractEventConfig,
   address: string,
   txHash: `0x${string}`,
-) {
+): Promise<BlacklistRow | null> {
   const receipt = await client.getTransactionReceipt({ hash: txHash });
   const block = await client.getBlock({ blockNumber: receipt.blockNumber });
   const parsed = parseReceiptLogs(
@@ -188,17 +242,58 @@ function buildInsertStatement(row: BlacklistRow): string {
     VALUES (${sqlString(row.id)}, ${sqlString(row.stablecoin)}, ${sqlString(row.chain_id)}, ${sqlString(row.chain_name)}, ${sqlString(row.event_type)}, ${sqlString(row.address)}, ${row.amount_native == null ? "NULL" : row.amount_native}, ${row.amount_native == null ? "NULL" : row.amount_native}, ${row.amount_usd_at_event == null ? "NULL" : row.amount_usd_at_event}, ${sqlString(row.amount_source)}, ${sqlString(row.amount_status)}, ${sqlString(row.tx_hash)}, ${row.block_number}, ${row.timestamp}, ${sqlString(row.methodology_version)}, ${sqlString(row.contract_address)}, ${sqlString(row.config_key)}, ${sqlString(row.event_signature)}, ${sqlString(row.event_topic0)}, ${row.amount_attempt_count}, ${row.amount_last_attempted_at == null ? "NULL" : row.amount_last_attempted_at}, ${sqlString(row.amount_last_error_class)}, ${sqlString(row.amount_last_provider)}, ${sqlString(row.explorer_tx_url)}, ${sqlString(row.explorer_address_url)});`;
 }
 
-async function main() {
-  const externalRows = await fetchAllExternalRows();
-  const existing = loadExistingEthereumBlacklistSet();
-  const candidates = externalRows.filter((row) =>
-    row.chain === "ETH"
-    && (row.asset === "USDT" || row.asset === "USDC")
-    && !existing.has(buildAddressKey(row.asset, row.address)),
-  );
+function buildSummary(
+  options: EventCliOptions,
+  providerUrl: string,
+  stats: KycRipValidationStats,
+  candidates: KycRipEventRow[],
+  insertedRows: BlacklistRow[],
+): Record<string, unknown> {
+  return {
+    mode: options.apply ? "apply" : "dry-run",
+    remote: options.remote,
+    database: options.database,
+    providerUrl,
+    timeoutMs: options.timeoutMs,
+    minRows: options.minRows,
+    fetchedRows: stats.fetchedRows,
+    acceptedRows: stats.acceptedRows,
+    skippedUnsupportedRows: stats.skippedUnsupportedRows,
+    malformedRows: stats.malformedRows,
+    malformedExamples: stats.malformedExamples,
+    candidates: candidates.length,
+    inserted: insertedRows.length,
+    dryRunD1Skipped: options.apply ? undefined : true,
+    byStablecoin: insertedRows.reduce<Record<string, number>>((acc, row) => {
+      acc[row.stablecoin] = (acc[row.stablecoin] ?? 0) + 1;
+      return acc;
+    }, {}),
+  };
+}
 
-  const client = createPublicClient({ chain: mainnet, transport: http("https://ethereum-rpc.publicnode.com") });
-  const insertedRows = [];
+export async function runEventReconciliation(
+  options: EventCliOptions,
+  dependencies: EventReconcileDependencies = {},
+): Promise<Record<string, unknown>> {
+  const { rows, stats, providerUrl } = await fetchKycRipRows<KycRipEventRow>({
+    mode: "events",
+    timeoutMs: options.timeoutMs,
+    minRows: options.minRows,
+    providerUrl: options.providerUrl,
+    fetchImpl: dependencies.fetchImpl,
+  });
+
+  if (!options.apply) {
+    const summary = buildSummary(options, providerUrl, stats, rows, []);
+    dependencies.log?.(JSON.stringify(summary, null, 2));
+    return summary;
+  }
+
+  const d1 = dependencies.d1 ?? createRemoteD1Client(options.database);
+  const existing = loadExistingEthereumBlacklistSet(d1);
+  const candidates = rows.filter((row) => !existing.has(buildAddressKey(row.asset, row.address)));
+  const client = dependencies.client ?? createPublicClient({ chain: mainnet, transport: http("https://ethereum-rpc.publicnode.com") });
+  const insertedRows: BlacklistRow[] = [];
 
   for (const candidate of candidates) {
     const config = getEthereumConfig(candidate.asset);
@@ -213,30 +308,24 @@ async function main() {
     }
   }
 
+  const summary = buildSummary(options, providerUrl, stats, candidates, insertedRows);
+  dependencies.log?.(JSON.stringify(summary, null, 2));
+
   if (insertedRows.length > 0) {
-    const tmpDir = mkdtempSync(join(tmpdir(), "blacklist-kyc-rip-events-"));
-    try {
-      const sqlFile = join(tmpDir, "reconcile-events.sql");
-      // Temp SQL file is created under mkdtempSync() and never leaves this function.
-      // eslint-disable-next-line security/detect-non-literal-fs-filename
-      writeFileSync(sqlFile, insertedRows.map(buildInsertStatement).join("\n"));
-      executeWrangler(sqlFile);
-    } finally {
-      rmSync(tmpDir, { recursive: true, force: true });
-    }
+    d1.executeStatements(insertedRows.map(buildInsertStatement), "blacklist-kyc-rip-events");
   }
 
-  console.log(JSON.stringify({
-    candidates: candidates.length,
-    inserted: insertedRows.length,
-    byStablecoin: insertedRows.reduce<Record<string, number>>((acc, row) => {
-      acc[row.stablecoin] = (acc[row.stablecoin] ?? 0) + 1;
-      return acc;
-    }, {}),
-  }, null, 2));
+  return summary;
 }
 
-main().catch((error) => {
-  console.error(error);
-  process.exit(1);
-});
+async function main(): Promise<void> {
+  const options = parseEventArgs(process.argv.slice(2));
+  await runEventReconciliation(options, { log: console.log });
+}
+
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
+  main().catch((error) => {
+    console.error(error);
+    process.exit(1);
+  });
+}
