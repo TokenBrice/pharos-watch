@@ -60,7 +60,7 @@ Use this checklist as the canonical handover status tracker. Future reviewers sh
 | Phase | Goal | Status | Completed by | Notes |
 | --- | --- | --- | --- | --- |
 | 1. Palette and renderer structure | Make later visual changes surgical by clarifying active renderer color groups. | Complete | Phase 1 reviewer | Re-check complete; see Phase 1 completion notes. |
-| 2. World-layout reshape | Replace central ellipse with authored island, corner hill, harbor cove, and moved lighthouse. | Not started | TBD | TBD |
+| 2. World-layout reshape | Replace central ellipse with authored island, corner hill, harbor cove, and moved lighthouse. | Complete | Phase 2 blocker re-check reviewer | Visual test hardening blockers cleared for `tests/visual/pharosville.spec.ts`; movement files remain external. |
 | 3. Terrain and water drawing | Replace flat diamonds with terrain-specific land and water rendering. | Not started | TBD | TBD |
 | 4. Lighthouse headland and landmark | Make lighthouse the compositional anchor with hill, cliff, beacon, and correct hit target. | Not started | TBD | TBD |
 | 5. Atmosphere and ambient life | Add restrained birds, fog, lamps, waves, and decorative/encoded atmosphere with parity where needed. | Not started | TBD | TBD |
@@ -179,12 +179,17 @@ Append future phase completion notes here. Keep entries factual and include scop
 
 ### Phase 2 Completion Notes
 
-- Completed by: TBD
-- Date: TBD
-- Files changed: TBD
-- Validation run: TBD
-- Residual risks: TBD
-- Next handoff: TBD
+- Completed by: Phase 2 blocker re-check reviewer
+- Date: 2026-04-29
+- Files changed: `tests/visual/pharosville.spec.ts` reviewed externally; this handover update did not modify app code.
+- Scope reviewed: Prior visual-test blockers were addressed.
+- Scope reviewed: The second water-band classifier now requires stronger blue/cyan dominance.
+- Scope reviewed: Ratio caps were added for land and water coverage against backing pixels.
+- Reviewer finding: No remaining blockers in Phase 2 visual test hardening review scope.
+- Validation run: Reviewer performed blocker re-check for `tests/visual/pharosville.spec.ts`; no broader tests, lint, build, or movement-file review recorded in this note.
+- Residual risks: Movement files remain external and were not reviewed.
+- Residual risks: Risk outside Phase 2 visual test hardening scope remains with the owning workers/reviewers.
+- Next handoff: Safe to commit from the Phase 2 visual test hardening review scope; do not treat this as approval of externally owned movement files.
 
 ### Phase 3 Completion Notes
 

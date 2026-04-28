@@ -889,7 +889,7 @@ function drawShips({ assets, camera, ctx, motion, selectedTarget, shipMotionSamp
     const p = tileToScreen(sample?.tile ?? ship.tile, camera);
     const phase = motion.plan.shipPhases.get(ship.id) ?? 0;
     const animated = !motion.reducedMotion && motion.plan.animatedShipIds.has(ship.id);
-    const bob = animated ? Math.round(Math.sin(motion.timeSeconds * 2.2 + phase) * 2 * camera.zoom) : 0;
+    const bob = animated ? Math.round(Math.sin(motion.timeSeconds * 0.7 + phase) * 2 * camera.zoom) : 0;
     const drawsWake = !motion.reducedMotion
       && (
         motion.plan.effectShipIds.has(ship.id)
