@@ -1,0 +1,444 @@
+.scene {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  border-radius: 1rem;
+  border: 1px solid color-mix(in oklch, var(--border) 78%, transparent);
+  background:
+    linear-gradient(180deg, color-mix(in oklch, var(--card) 92%, var(--background)) 0%, color-mix(in oklch, var(--card) 84%, var(--background)) 36%, color-mix(in oklch, var(--background) 88%, #163221) 100%),
+    radial-gradient(ellipse at 50% 105%, color-mix(in oklch, var(--severity-healthy) 16%, transparent) 0%, transparent 62%);
+  box-shadow:
+    inset 0 1px 0 color-mix(in oklch, white 6%, transparent),
+    inset 0 -70px 95px color-mix(in oklch, #12251a 28%, transparent);
+}
+
+.scene::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background:
+    radial-gradient(ellipse at 50% 0%, color-mix(in oklch, var(--primary) 13%, transparent) 0%, transparent 46%),
+    linear-gradient(180deg, color-mix(in oklch, #d7e4ed 7%, transparent) 0%, transparent 32%),
+    repeating-linear-gradient(90deg, transparent 0 31px, color-mix(in oklch, var(--border) 18%, transparent) 31px 32px);
+  opacity: 0.52;
+}
+
+.scene::after {
+  content: "";
+  position: absolute;
+  inset: 18% -12% auto -12%;
+  z-index: 1;
+  height: 58%;
+  pointer-events: none;
+  background:
+    radial-gradient(ellipse at 20% 62%, color-mix(in oklch, var(--muted-foreground) 10%, transparent) 0%, transparent 36%),
+    radial-gradient(ellipse at 78% 38%, color-mix(in oklch, var(--primary) 8%, transparent) 0%, transparent 34%),
+    linear-gradient(180deg, transparent 0%, color-mix(in oklch, var(--background) 26%, transparent) 42%, transparent 100%);
+  filter: blur(18px);
+  opacity: 0.72;
+}
+
+.horizon {
+  position: absolute;
+  inset: 0 0 auto;
+  z-index: 1;
+  height: 9rem;
+  pointer-events: none;
+  background:
+    linear-gradient(180deg, color-mix(in oklch, var(--background) 42%, transparent) 0%, transparent 100%),
+    radial-gradient(ellipse at 15% 100%, color-mix(in oklch, #263323 60%, transparent) 0%, transparent 48%),
+    radial-gradient(ellipse at 82% 100%, color-mix(in oklch, #1f3026 64%, transparent) 0%, transparent 54%);
+}
+
+.path {
+  position: absolute;
+  inset: 4.5rem 12% 0.5rem;
+  z-index: 1;
+  pointer-events: none;
+  background:
+    linear-gradient(90deg, transparent 0%, color-mix(in oklch, #847e6f 14%, transparent) 44%, color-mix(in oklch, #a6a08d 18%, transparent) 53%, transparent 100%),
+    radial-gradient(ellipse at 50% 100%, color-mix(in oklch, #b2a486 22%, transparent) 0%, transparent 68%);
+  clip-path: polygon(47% 0%, 53% 0%, 64% 100%, 36% 100%);
+  filter: blur(12px);
+  mask-image: linear-gradient(180deg, transparent 0%, black 12%, black 88%, transparent 100%);
+  opacity: 0.42;
+}
+
+.field {
+  position: relative;
+  z-index: 2;
+  padding: clamp(1rem, 2.6vw, 1.75rem);
+}
+
+.field::before {
+  content: "";
+  position: absolute;
+  inset: auto 1rem 0;
+  z-index: -1;
+  height: 5.5rem;
+  pointer-events: none;
+  background:
+    linear-gradient(180deg, transparent 0%, color-mix(in oklch, #16341f 22%, transparent) 38%, color-mix(in oklch, #0f2418 42%, transparent) 100%),
+    repeating-linear-gradient(96deg, color-mix(in oklch, #8ca57c 16%, transparent) 0 1px, transparent 1px 14px);
+  opacity: 0.8;
+}
+
+.sections {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: clamp(0.75rem, 1.6vw, 1.25rem);
+}
+
+.yearSection {
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(4.25rem, 5.75rem) minmax(0, 1fr);
+  gap: clamp(0.75rem, 2vw, 1.5rem);
+  align-items: start;
+  padding-block: clamp(1rem, 2vw, 1.45rem) clamp(1.2rem, 2.6vw, 2rem);
+}
+
+.yearSection + .yearSection {
+  border-top: 1px solid color-mix(in oklch, var(--border) 55%, transparent);
+}
+
+.yearSection::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0.35rem;
+  z-index: 0;
+  height: 3.6rem;
+  pointer-events: none;
+  border-top: 1px solid color-mix(in oklch, var(--border) 38%, transparent);
+  background:
+    linear-gradient(180deg, color-mix(in oklch, #345236 13%, transparent) 0%, color-mix(in oklch, #18291c 29%, transparent) 100%),
+    repeating-linear-gradient(104deg, color-mix(in oklch, #a5b28d 18%, transparent) 0 1px, transparent 1px 17px);
+  opacity: 0.78;
+}
+
+.yearMarker {
+  position: relative;
+  z-index: 3;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  align-items: flex-start;
+  padding-top: 0.55rem;
+}
+
+.yearPillar {
+  display: inline-flex;
+  min-width: 3.75rem;
+  align-items: center;
+  justify-content: center;
+  border-radius: 0.5rem 0.5rem 0.22rem 0.22rem;
+  border: 1px solid color-mix(in oklch, var(--border) 82%, transparent);
+  background:
+    linear-gradient(160deg, color-mix(in oklch, var(--card) 92%, #a6a6a6) 0%, color-mix(in oklch, var(--muted) 86%, #777) 100%);
+  box-shadow:
+    inset 0 1px 0 color-mix(in oklch, white 9%, transparent),
+    0 12px 20px color-mix(in oklch, black 18%, transparent);
+  padding: 0.45rem 0.5rem;
+  color: var(--foreground);
+  font-family: var(--font-geist-mono, ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace);
+  font-size: 0.75rem;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.graveCount {
+  color: var(--muted-foreground);
+  font-size: 0.69rem;
+  line-height: 1.25;
+}
+
+.gravesGrid {
+  position: relative;
+  z-index: 2;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(132px, 1fr));
+  align-items: end;
+  justify-items: center;
+  gap: clamp(1.1rem, 2.4vw, 1.8rem) clamp(0.9rem, 2.2vw, 1.6rem);
+  min-width: 0;
+}
+
+.tombRoot {
+  --tomb-accent: var(--muted-foreground);
+  --tomb-rotation: 0deg;
+  --tomb-stagger: 0px;
+  --tomb-width: 112px;
+  --tomb-height: 172px;
+  position: relative;
+  z-index: 2;
+  display: flex;
+  min-height: calc(var(--tomb-height) + 3.25rem);
+  width: min(100%, calc(var(--tomb-width) + 1.5rem));
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-end;
+  padding-top: 2.75rem;
+  padding-bottom: 1.15rem;
+}
+
+.tombRoot:focus-visible {
+  z-index: 40;
+}
+
+.graveMound {
+  position: absolute;
+  left: 50%;
+  bottom: 0.7rem;
+  z-index: 0;
+  width: calc(var(--tomb-width) * 0.92);
+  height: 1.15rem;
+  transform: translateX(-50%);
+  border-radius: 999px;
+  background:
+    radial-gradient(ellipse at 50% 28%, color-mix(in oklch, var(--tomb-accent) 17%, transparent) 0%, transparent 58%),
+    linear-gradient(180deg, color-mix(in oklch, #4b6140 24%, transparent), color-mix(in oklch, #141d15 54%, transparent));
+  box-shadow: 0 14px 20px color-mix(in oklch, black 22%, transparent);
+}
+
+.tombstone {
+  position: relative;
+  z-index: 2;
+  overflow: hidden;
+  border-color: color-mix(in oklch, var(--border) 88%, transparent);
+  background:
+    linear-gradient(150deg, color-mix(in oklch, var(--card) 90%, #d8d5cc) 0%, color-mix(in oklch, var(--muted) 88%, #8d8a82) 62%, color-mix(in oklch, var(--card) 84%, #5e625d) 100%);
+  transform: translateY(var(--tomb-stagger)) rotate(var(--tomb-rotation));
+  transform-origin: bottom center;
+  transition:
+    transform 180ms ease-out,
+    box-shadow 180ms ease-out,
+    border-color 180ms ease-out,
+    filter 180ms ease-out;
+}
+
+.tombstone::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background:
+    radial-gradient(circle at 28% 24%, color-mix(in oklch, white 13%, transparent) 0 1px, transparent 2px),
+    radial-gradient(circle at 72% 58%, color-mix(in oklch, black 13%, transparent) 0 1px, transparent 2px),
+    linear-gradient(180deg, transparent 0%, color-mix(in oklch, #2c6b3b 12%, transparent) 100%);
+  opacity: 0.75;
+}
+
+.tombstone::after {
+  content: "";
+  position: absolute;
+  inset: 0.55rem 0.75rem auto auto;
+  width: 1.5rem;
+  height: 3.4rem;
+  z-index: 0;
+  pointer-events: none;
+  border-right: 1px solid color-mix(in oklch, var(--foreground) 14%, transparent);
+  border-bottom: 1px solid color-mix(in oklch, var(--foreground) 10%, transparent);
+  transform: skew(-12deg);
+  opacity: 0.42;
+}
+
+.tombstoneActive {
+  border-color: color-mix(in oklch, var(--tomb-accent) 70%, var(--border));
+}
+
+.logoWell {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  border-radius: 999px;
+  border: 1px solid color-mix(in oklch, var(--border) 76%, transparent);
+  background:
+    radial-gradient(circle at 35% 25%, color-mix(in oklch, white 12%, transparent), transparent 42%),
+    color-mix(in oklch, var(--background) 74%, var(--card));
+  box-shadow:
+    inset 0 0 0 1px color-mix(in oklch, white 5%, transparent),
+    0 8px 15px color-mix(in oklch, black 18%, transparent);
+}
+
+.logoImage {
+  border-radius: 999px;
+  opacity: 0.92;
+  filter: saturate(0.88) contrast(0.96);
+  transition:
+    filter 180ms ease-out,
+    opacity 180ms ease-out,
+    transform 180ms ease-out;
+}
+
+.tombRoot:hover .tombstone,
+.tombRoot:focus-visible .tombstone {
+  transform: translateY(calc(var(--tomb-stagger) - 6px)) rotate(0deg);
+}
+
+.tombRoot:hover .logoImage,
+.tombRoot:focus-visible .logoImage {
+  opacity: 1;
+  filter: saturate(1.08) contrast(1.02);
+  transform: scale(1.04);
+}
+
+.rip {
+  position: relative;
+  z-index: 1;
+  color: color-mix(in oklch, var(--muted-foreground) 58%, transparent);
+  font-size: 0.56rem;
+  line-height: 1;
+}
+
+.symbol {
+  position: relative;
+  z-index: 1;
+  max-width: 82%;
+  overflow-wrap: anywhere;
+  color: var(--foreground);
+  text-align: center;
+  font-size: 0.82rem;
+  font-weight: 700;
+  line-height: 1.05;
+  text-decoration-line: line-through;
+  text-decoration-color: color-mix(in oklch, var(--muted-foreground) 58%, transparent);
+}
+
+.deathDate,
+.epitaph {
+  position: relative;
+  z-index: 1;
+}
+
+.plaque {
+  position: absolute;
+  left: 50%;
+  bottom: calc(100% - 15.5rem);
+  z-index: 50;
+  width: min(18rem, calc(100vw - 2rem));
+  border-radius: 0.8rem;
+  border: 1px solid color-mix(in oklch, var(--tomb-accent) 38%, var(--border));
+  background:
+    linear-gradient(180deg, color-mix(in oklch, var(--popover) 94%, var(--background)) 0%, var(--popover) 100%);
+  box-shadow:
+    0 24px 55px color-mix(in oklch, black 34%, transparent),
+    inset 0 1px 0 color-mix(in oklch, white 7%, transparent);
+  opacity: 0;
+  padding: 0.75rem;
+  text-align: left;
+  transform: translateX(calc(-50% + var(--plaque-shift, 0px))) scale(0.98);
+  transition:
+    opacity 150ms ease-out,
+    transform 150ms ease-out,
+    visibility 150ms ease-out;
+  visibility: hidden;
+}
+
+.plaque::before {
+  content: "";
+  position: absolute;
+  left: 50%;
+  bottom: -0.43rem;
+  width: 0.8rem;
+  height: 0.8rem;
+  transform: translateX(-50%) rotate(45deg);
+  border-right: 1px solid color-mix(in oklch, var(--tomb-accent) 34%, var(--border));
+  border-bottom: 1px solid color-mix(in oklch, var(--tomb-accent) 34%, var(--border));
+  background: var(--popover);
+}
+
+.plaqueLogo {
+  display: flex;
+  height: 2rem;
+  width: 2rem;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  border-radius: 999px;
+  border: 1px solid color-mix(in oklch, var(--border) 72%, transparent);
+  background: var(--background);
+}
+
+.tombRoot:hover .plaque,
+.tombRoot:focus-visible .plaque {
+  opacity: 1;
+  transform: translateX(calc(-50% + var(--plaque-shift, 0px))) scale(1);
+  visibility: visible;
+}
+
+.detailGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.5rem;
+  margin-top: 0.65rem;
+}
+
+.detailCell {
+  min-width: 0;
+  border-radius: 0.5rem;
+  border: 1px solid color-mix(in oklch, var(--border) 54%, transparent);
+  background: color-mix(in oklch, var(--background) 54%, transparent);
+  padding: 0.45rem 0.5rem;
+}
+
+.legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  border-top: 1px solid color-mix(in oklch, var(--border) 72%, transparent);
+  padding-top: 0.85rem;
+}
+
+@media (max-width: 640px) {
+  .field {
+    padding: 0.9rem 0.7rem 1rem;
+  }
+
+  .path {
+    inset-inline: 0;
+    opacity: 0.34;
+  }
+
+  .yearSection {
+    grid-template-columns: 1fr;
+    gap: 0.75rem;
+  }
+
+  .yearMarker {
+    flex-direction: row;
+    align-items: center;
+    padding-top: 0;
+  }
+
+  .gravesGrid {
+    grid-template-columns: repeat(auto-fit, minmax(138px, 1fr));
+    gap: 0.9rem 0.65rem;
+  }
+
+  .plaque {
+    bottom: calc(100% - 13.5rem);
+  }
+}
+
+@media (max-width: 360px) {
+  .gravesGrid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tombstone,
+  .logoImage {
+    transition: none;
+  }
+}

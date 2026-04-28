@@ -1,5 +1,6 @@
 "use client";
 
+import { ArrowDown, ArrowLeft, ArrowRight, ArrowUp, LocateFixed, Minus, Plus, RotateCcw, X } from "lucide-react";
 import type { PharosVilleWorld } from "../systems/world-types";
 import type { ScreenPoint } from "../systems/projection";
 
@@ -8,6 +9,7 @@ export interface WorldToolbarProps {
   headingId?: string;
   ledgerVisible?: boolean;
   selectedDetailId?: string | null;
+  selectedDetailLabel?: string | null;
   zoomLabel?: string;
   onClearSelection?: () => void;
   onFollowSelected?: () => void;
@@ -23,6 +25,7 @@ export function WorldToolbar({
   headingId = "pharosville-world-toolbar-title",
   ledgerVisible = false,
   selectedDetailId,
+  selectedDetailLabel,
   zoomLabel = "100%",
   onClearSelection,
   onFollowSelected,
@@ -39,43 +42,45 @@ export function WorldToolbar({
       <h2 id={headingId} className="sr-only">
         World toolbar
       </h2>
-      <button type="button" onClick={onZoomOut} disabled={!onZoomOut} aria-label="Zoom out">
-        -
+      <button type="button" onClick={onZoomOut} disabled={!onZoomOut} aria-label="Zoom out" title="Zoom out">
+        <Minus aria-hidden="true" size={16} />
       </button>
       <output aria-label="Current zoom">{zoomLabel}</output>
-      <button type="button" onClick={onZoomIn} disabled={!onZoomIn} aria-label="Zoom in">
-        +
+      <button type="button" onClick={onZoomIn} disabled={!onZoomIn} aria-label="Zoom in" title="Zoom in">
+        <Plus aria-hidden="true" size={16} />
       </button>
-      <button type="button" onClick={() => onPan?.({ x: 0, y: 32 })} disabled={!onPan} aria-label="Pan north">
-        N
+      <button type="button" onClick={() => onPan?.({ x: 0, y: 32 })} disabled={!onPan} aria-label="Pan north" title="Pan north">
+        <ArrowUp aria-hidden="true" size={16} />
       </button>
-      <button type="button" onClick={() => onPan?.({ x: -32, y: 0 })} disabled={!onPan} aria-label="Pan east">
-        E
+      <button type="button" onClick={() => onPan?.({ x: -32, y: 0 })} disabled={!onPan} aria-label="Pan east" title="Pan east">
+        <ArrowRight aria-hidden="true" size={16} />
       </button>
-      <button type="button" onClick={() => onPan?.({ x: 0, y: -32 })} disabled={!onPan} aria-label="Pan south">
-        S
+      <button type="button" onClick={() => onPan?.({ x: 0, y: -32 })} disabled={!onPan} aria-label="Pan south" title="Pan south">
+        <ArrowDown aria-hidden="true" size={16} />
       </button>
-      <button type="button" onClick={() => onPan?.({ x: 32, y: 0 })} disabled={!onPan} aria-label="Pan west">
-        W
+      <button type="button" onClick={() => onPan?.({ x: 32, y: 0 })} disabled={!onPan} aria-label="Pan west" title="Pan west">
+        <ArrowLeft aria-hidden="true" size={16} />
       </button>
-      <button type="button" onClick={onResetView} disabled={!onResetView}>
-        Reset view
+      <button type="button" onClick={onResetView} disabled={!onResetView} aria-label="Reset view" title="Reset view">
+        <RotateCcw aria-hidden="true" size={16} />
       </button>
-      <button type="button" onClick={onFollowSelected} disabled={!onFollowSelected}>
-        Follow
+      <button type="button" onClick={onFollowSelected} disabled={!onFollowSelected} aria-label="Follow selected" title="Follow selected">
+        <LocateFixed aria-hidden="true" size={16} />
       </button>
-      <button type="button" onClick={onClearSelection} disabled={!onClearSelection}>
-        Clear
+      <button type="button" onClick={onClearSelection} disabled={!onClearSelection || !selectedDetailId} aria-label="Clear selection" title="Clear selection">
+        <X aria-hidden="true" size={16} />
       </button>
-      <button type="button" aria-pressed={ledgerVisible} onClick={onToggleLedger} disabled={!onToggleLedger}>
-        Ledger
-      </button>
+      {onToggleLedger && (
+        <button type="button" aria-pressed={ledgerVisible} onClick={onToggleLedger}>
+          Ledger
+        </button>
+      )}
       <output aria-live="polite" aria-label="Map entity count">
         {entityCount} entities
       </output>
       {selectedDetailId && (
         <output aria-live="polite" aria-label="Selected detail">
-          {selectedDetailId}
+          {selectedDetailLabel ?? selectedDetailId}
         </output>
       )}
     </div>

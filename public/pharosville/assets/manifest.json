@@ -141,19 +141,19 @@
     },
     {
       "id": "landmark.lighthouse",
-      "path": "landmarks/lighthouse.png",
+      "path": "landmarks/lighthouse-alexandria.png",
       "category": "landmark",
       "layer": "landmarks",
-      "width": 96,
-      "height": 128,
+      "width": 128,
+      "height": 192,
       "displayScale": 1,
-      "anchor": [48, 116],
-      "footprint": [24, 20],
-      "hitbox": [18, 8, 60, 112],
+      "anchor": [64, 180],
+      "footprint": [32, 28],
+      "hitbox": [26, 10, 76, 168],
       "loadPriority": "critical",
       "tool": "mcp:create_map_object",
       "promptProvenance": {
-        "jobId": "477d33bc-696b-4a77-9f39-40520cfed0b6",
+        "jobId": "4eb52366-3404-48cb-8a6c-5d81ace01f3d",
         "styleAnchorVersion": "2026-04-29-ship-classes-v1"
       }
     },

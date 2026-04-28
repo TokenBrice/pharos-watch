@@ -25,14 +25,13 @@ function targetSize(entity: SelectableEntity): { height: number; width: number; 
   if (entity.kind === "dock") return { height: 38, width: 96, yOffset: 0 };
   if (entity.kind === "ship") return { height: 48, width: 56, yOffset: -16 };
   if (entity.kind === "ship-cluster") return { height: 48, width: 48, yOffset: -12 };
-  return { height: 28, width: 28, yOffset: -8 };
+  return { height: 34 * entity.visual.scale, width: 30 * entity.visual.scale, yOffset: -10 * entity.visual.scale };
 }
 
 function assetIdForEntity(entity: SelectableEntity) {
   if (entity.kind === "lighthouse") return "landmark.lighthouse";
   if (entity.kind === "dock") return entity.assetId;
   if (entity.kind === "ship") return `ship.${entity.visual.hull}`;
-  if (entity.kind === "grave") return "prop.tombstone";
   return null;
 }
 
@@ -57,7 +56,7 @@ function assetDrawPoint(input: {
     scale *= entity.visual.scale * 0.7;
   } else if (entity.kind === "grave") {
     y += 2 * camera.zoom;
-    scale *= 0.54;
+    scale *= 0.47 * entity.visual.scale;
   }
   return { scale, x, y };
 }

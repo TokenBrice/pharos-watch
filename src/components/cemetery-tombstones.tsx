@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback, useRef, type CSSProperties } from "react";
 import Image from "next/image";
 import { CAUSE_META, CAUSE_HEX } from "@shared/lib/dead-stablecoins";
 import type { CemeteryEntry } from "@shared/lib/cemetery-merged";
@@ -9,11 +9,12 @@ import type { CauseOfDeath } from "@shared/types";
 import { buildCemeteryYearSections } from "@/lib/cemetery";
 import { YEAR_MS } from "@/lib/constants";
 import { cn } from "@/lib/utils";
+import styles from "./cemetery-tombstones.module.css";
 
 /**
  * Visual note: SVG illustrations (hammer, flowers) use semantic CSS variables with
- * hex fallbacks so they adapt to both light and dark themes. The tombstone card itself
- * uses Tailwind theme classes (bg-stone-100 dark:bg-card etc.).
+ * hex fallbacks so they adapt to both light and dark themes. The cemetery scene uses
+ * local CSS modules because its atmosphere is a one-off memorial treatment.
  */
 
 type TombSize = "lg" | "md" | "sm";
@@ -26,9 +27,9 @@ function getTombSize(peakMcap?: number): TombSize {
 }
 
 const SIZE = {
-  lg: { w: "w-[160px]", h: "h-[240px]", arch: "rounded-t-[80px]", logo: 48, px: 160 },
-  md: { w: "w-[132px]", h: "h-[200px]", arch: "rounded-t-[66px]", logo: 40, px: 132 },
-  sm: { w: "w-[112px]", h: "h-[172px]", arch: "rounded-t-[56px]", logo: 34, px: 112 },
+  lg: { w: "w-[160px]", h: "h-[240px]", arch: "rounded-t-[80px]", logo: 48, px: 160, heightPx: 240 },
+  md: { w: "w-[132px]", h: "h-[200px]", arch: "rounded-t-[66px]", logo: 40, px: 132, heightPx: 200 },
+  sm: { w: "w-[112px]", h: "h-[172px]", arch: "rounded-t-[56px]", logo: 34, px: 112, heightPx: 172 },
 } as const;
 
 const CROSS_SIZE = {
@@ -156,6 +157,11 @@ function getWeathering(deathDate: string): { brightness: number; mossIntensity: 
   return { brightness, mossIntensity };
 }
 
+function getObituaryLead(obituary: string): string {
+  const [lead] = obituary.split(". ");
+  return lead.endsWith(".") ? lead : `${lead}.`;
+}
+
 function Tombstone({
   coin,
   index,
@@ -179,12 +185,17 @@ function Tombstone({
       return;
     }
     const rect = tombRef.current.getBoundingClientRect();
-    const tooltipW = 224; // w-56 = 14rem = 224px
+    const tooltipW = 288;
     const center = rect.left + rect.width / 2;
     const leftOverflow = 8 - (center - tooltipW / 2);
     const rightOverflow = (center + tooltipW / 2) - (window.innerWidth - 8);
     setTooltipShift(leftOverflow > 0 ? leftOverflow : rightOverflow > 0 ? -rightOverflow : 0);
   }, []);
+
+  const activateHover = useCallback(() => {
+    setHovered(true);
+    updateTooltipShift();
+  }, [updateTooltipShift]);
 
   // "Press F to pay respects" — listen while hovered
   const handleF = useCallback(
@@ -204,10 +215,11 @@ function Tombstone({
   const size = getTombSize(coin.peakMcap);
   const cfg = SIZE[size];
   const color = CAUSE_HEX[coin.causeOfDeath];
+  const cause = CAUSE_META[coin.causeOfDeath];
   const logoUrl = coin.logo ? `/logos/cemetery/${coin.logo}` : undefined;
   const staggerLevel = index % 3;
-  const staggerClass = staggerLevel === 0 ? "mt-0" : staggerLevel === 1 ? "mt-3" : "mt-6";
-  const rotation = (index % 3 - 1) * 0.5;
+  const staggerOffset = staggerLevel * 10;
+  const rotation = ((index % 5) - 2) * 0.65;
 
   const shape = getTombShape(coin.causeOfDeath);
   const topRounding = cfg.arch;
@@ -227,26 +239,37 @@ function Tombstone({
 
   // Cross dimensions
   const cross = CROSS_SIZE[size];
+  const tombStyle = {
+    "--tomb-accent": color,
+    "--tomb-height": `${cfg.heightPx}px`,
+    "--tomb-rotation": `${rotation}deg`,
+    "--tomb-stagger": `${staggerOffset}px`,
+    "--tomb-width": `${cfg.px}px`,
+  } as CSSProperties;
+  const tombstoneStyle: CSSProperties = {
+    borderTopColor: color,
+    borderTopWidth: "3px",
+    boxShadow: buildBoxShadow(),
+    filter: `brightness(${brightness})`,
+  };
 
   return (
     <div
       ref={tombRef}
-      className={cn("pharos-focus-ring relative flex flex-col items-center", staggerClass)}
+      className={cn("pharos-focus-ring cursor-pointer", styles.tombRoot)}
+      style={tombStyle}
       tabIndex={0}
       role="button"
-      aria-label={`${coin.symbol} — ${coin.name}, ${CAUSE_META[coin.causeOfDeath].label}`}
-      onMouseEnter={() => {
-        setHovered(true);
-        updateTooltipShift();
+      aria-label={`${coin.symbol} — ${coin.name}, ${cause.label}`}
+      onMouseEnter={activateHover}
+      onMouseMove={() => {
+        if (!hovered) activateHover();
       }}
       onMouseLeave={() => {
         setHovered(false);
         setTooltipShift(0);
       }}
-      onFocus={() => {
-        setHovered(true);
-        updateTooltipShift();
-      }}
+      onFocus={activateHover}
       onBlur={() => {
         setHovered(false);
         setTooltipShift(0);
@@ -261,11 +284,13 @@ function Tombstone({
         }
       }}
     >
+      <span className={styles.graveMound} aria-hidden="true" />
+
       {/* Cross top for abandoned tombstones */}
       {shape === "cross" && (
         <div
           className="absolute z-0 pointer-events-none"
-          style={{ top: cross.top }}
+          style={{ top: cross.top, left: "50%", transform: "translateX(-50%)" }}
         >
           {/* Vertical bar */}
           <div
@@ -287,39 +312,32 @@ function Tombstone({
 
       <div
         className={cn(
-          "relative bg-stone-100 dark:bg-card border border-border",
+          styles.tombstone,
+          hovered && styles.tombstoneActive,
+          "border",
           "flex flex-col items-center justify-center gap-1.5",
-          "cursor-pointer transition-all duration-200 hover:-translate-y-1",
           cfg.w, cfg.h, topRounding,
         )}
-        style={{
-          borderTopWidth: "3px",
-          borderTopColor: color,
-          boxShadow: buildBoxShadow(),
-          filter: `brightness(${brightness})`,
-          transform: hovered
-            ? "translateY(-4px) rotate(0deg)"
-            : `rotate(${rotation}deg)`,
-        }}
+        style={tombstoneStyle}
       >
         {/* Hammer smashing into tombstone for regulatory kills */}
         {shape === "hammer" && <HammerStrike size={size} />}
 
-        <span className="text-[9px] text-muted-foreground/40 tracking-widest" aria-hidden="true">
+        <span className={styles.rip} aria-hidden="true">
           R.I.P.
         </span>
 
         <div
-          className="rounded-full overflow-hidden bg-muted flex items-center justify-center shrink-0"
+          className={styles.logoWell}
           style={{ width: cfg.logo, height: cfg.logo }}
         >
           {logoUrl ? (
             <Image
               src={logoUrl}
-              alt={coin.symbol}
+              alt={`${coin.name} logo`}
               width={cfg.logo}
               height={cfg.logo}
-              className={cn("rounded-full transition-all duration-300", !hovered && "grayscale")}
+              className={styles.logoImage}
               unoptimized
             />
           ) : (
@@ -329,16 +347,16 @@ function Tombstone({
           )}
         </div>
 
-        <span className="text-sm font-semibold line-through decoration-muted-foreground/50 text-center leading-tight">
+        <span className={styles.symbol}>
           {coin.symbol}
         </span>
 
-        <span className="text-[11px] font-mono tabular-nums text-muted-foreground/90">
+        <span className={cn(styles.deathDate, "text-[11px] font-mono tabular-nums text-muted-foreground/90")}>
           {formatDeathDate(coin.deathDate)}
         </span>
 
         {coin.epitaph && (
-          <span className="text-[11px] italic text-muted-foreground/80 text-center leading-snug px-2">
+          <span className={cn(styles.epitaph, "px-2 text-center text-[11px] italic leading-snug text-muted-foreground/80")}>
             {coin.epitaph}
           </span>
         )}
@@ -357,27 +375,59 @@ function Tombstone({
       </div>
 
       {/* Tooltip */}
-      {hovered && (
-        <div
-          className="absolute bottom-full mb-2 left-1/2 z-30 w-56 rounded-lg border bg-popover p-3 text-xs shadow-lg pointer-events-none"
-          style={{ transform: `translateX(calc(-50% + ${tooltipShift}px))` }}
-        >
-          <p className="font-semibold">{coin.name}</p>
-          <p className="text-muted-foreground mt-1 leading-relaxed">
-            {coin.obituary.split(". ")[0]}.
-          </p>
-          <div className="mt-1.5 flex items-center justify-between">
-            <span className={CAUSE_META[coin.causeOfDeath].textColor}>
-              {CAUSE_META[coin.causeOfDeath].label}
-            </span>
-            {coin.peakMcap && (
-              <span className="font-mono tabular-nums text-muted-foreground">
-                {formatCurrency(coin.peakMcap, 1)}
-              </span>
+      <div
+        className={cn(styles.plaque, "pointer-events-none")}
+        style={{ "--plaque-shift": `${tooltipShift}px` } as CSSProperties}
+      >
+        <div className="flex items-start gap-2.5">
+          <span className={styles.plaqueLogo}>
+            {logoUrl ? (
+              <Image
+                src={logoUrl}
+                alt=""
+                width={32}
+                height={32}
+                className="rounded-full"
+                unoptimized
+              />
+            ) : (
+              <span className="text-xs font-bold text-muted-foreground">{coin.symbol.charAt(0)}</span>
             )}
+          </span>
+          <span className="min-w-0">
+            <span className="block truncate text-sm font-semibold leading-tight text-popover-foreground">{coin.name}</span>
+            <span className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-[11px] text-muted-foreground">
+              <span className="font-mono tabular-nums">{coin.symbol}</span>
+              <span className={cause.textColor}>{cause.label}</span>
+            </span>
+          </span>
+        </div>
+        <p className="mt-2 text-xs leading-relaxed text-muted-foreground">
+          {getObituaryLead(coin.obituary)}
+        </p>
+        <div className={styles.detailGrid}>
+          <div className={styles.detailCell}>
+            <div className="text-[10px] text-muted-foreground">Death</div>
+            <div className="mt-0.5 font-mono text-[11px] tabular-nums text-popover-foreground">{formatDeathDate(coin.deathDate)}</div>
+          </div>
+          <div className={styles.detailCell}>
+            <div className="text-[10px] text-muted-foreground">Peak</div>
+            <div className="mt-0.5 font-mono text-[11px] tabular-nums text-popover-foreground">
+              {coin.peakMcap ? formatCurrency(coin.peakMcap, 1) : "Unrecorded"}
+            </div>
+          </div>
+          <div className={styles.detailCell}>
+            <div className="text-[10px] text-muted-foreground">Peg</div>
+            <div className="mt-0.5 font-mono text-[11px] text-popover-foreground">{coin.pegCurrency}</div>
+          </div>
+          <div className={styles.detailCell}>
+            <div className="text-[10px] text-muted-foreground">Archive</div>
+            <div className="mt-0.5 text-[11px] text-popover-foreground">
+              {coin.archivedDataAvailable ? "Frozen page" : "Cemetery row"}
+            </div>
           </div>
         </div>
-      )}
+      </div>
 
     </div>
   );
@@ -402,45 +452,42 @@ export function CemeteryTombstones({ coins, onSelect }: CemeteryTombstonesProps)
 
   return (
     <div>
-      <div className="relative pb-8">
-        <div className="space-y-6 pb-4">
-          {sections.map((section) => (
-            <section key={section.year} className="space-y-5">
-              <div className="flex items-end justify-between gap-4 border-b border-border/60 pb-2">
-                <h3 className="text-lg font-semibold tracking-tight">{section.year}</h3>
-                <div className="text-right text-xs text-muted-foreground">
-                  <div>{section.coins.length} graves</div>
+      <div className={styles.scene}>
+        <div className={styles.horizon} aria-hidden="true" />
+        <div className={styles.path} aria-hidden="true" />
+        <div className={styles.field}>
+          <div className={styles.sections}>
+            {sections.map((section) => (
+              <section key={section.year} className={styles.yearSection}>
+                <div className={styles.yearMarker}>
+                  <h3 className={styles.yearPillar}>{section.year}</h3>
+                  <div className={styles.graveCount}>
+                    {section.coins.length} {section.coins.length === 1 ? "grave" : "graves"}
+                  </div>
                 </div>
-              </div>
 
-              {section.coins.length > 0 && (
-                <div
-                  className={cn(
-                    "grid grid-cols-2 justify-items-center gap-x-5 gap-y-8 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6",
-                  )}
-                >
-                  {section.coins.map((coin, i) => (
-                    <Tombstone
-                      key={coin.id}
-                      coin={coin}
-                      index={i}
-                      onSelect={onSelect}
-                      flowerCount={flowers[coin.id] ?? 0}
-                      onPayRespects={() => handlePayRespects(coin.id)}
-                    />
-                  ))}
-                </div>
-              )}
-            </section>
-          ))}
+                {section.coins.length > 0 && (
+                  <div className={styles.gravesGrid}>
+                    {section.coins.map((coin, i) => (
+                      <Tombstone
+                        key={coin.id}
+                        coin={coin}
+                        index={i}
+                        onSelect={onSelect}
+                        flowerCount={flowers[coin.id] ?? 0}
+                        onPayRespects={() => handlePayRespects(coin.id)}
+                      />
+                    ))}
+                  </div>
+                )}
+              </section>
+            ))}
+          </div>
         </div>
-
-        {/* Ground gradient */}
-        <div className="absolute bottom-0 left-0 right-0 h-10 bg-gradient-to-t from-emerald-950/15 dark:from-emerald-950/25 to-transparent pointer-events-none" />
       </div>
 
       {/* Legend */}
-      <div className="mt-2 flex flex-wrap gap-3 border-t pt-3">
+      <div className={cn(styles.legend, "mt-3")}>
         {Object.entries(CAUSE_META).map(([key, meta]) => (
           <div key={key} className="flex items-center gap-1.5">
             <div
@@ -453,7 +500,7 @@ export function CemeteryTombstones({ coins, onSelect }: CemeteryTombstonesProps)
           </div>
         ))}
         <span className="ml-auto text-xs text-muted-foreground/70 italic">
-          Order follows the archive toggle. Tombstone size reflects peak market cap.
+          Order follows the archive toggle. Tombstone size reflects peak market cap; logos use the cemetery dataset.
         </span>
       </div>
     </div>

@@ -21,9 +21,12 @@ export const DOCK_TILES = [
   { x: 45, y: 31 },
   { x: 42, y: 39 },
   { x: 32, y: 43 },
-  { x: 22, y: 40 },
-  { x: 15, y: 42 },
 ];
+
+export const CEMETERY_CENTER = { x: 21.85, y: 41.75 } as const;
+export const CEMETERY_RADIUS = { x: 4.1, y: 2.95 } as const;
+
+type GraveMarker = GraveNode["visual"]["marker"];
 
 function ellipseValue(x: number, y: number, cx: number, cy: number, rx: number, ry: number): number {
   return ((x - cx) / rx) ** 2 + ((y - cy) / ry) ** 2;
@@ -31,7 +34,7 @@ function ellipseValue(x: number, y: number, cx: number, cy: number, rx: number, 
 
 export function tileKindAt(x: number, y: number): TileKind {
   const main = ellipseValue(x, y, 31.5, 31.5, 13.5, 10.6);
-  const cemetery = ellipseValue(x, y, 22.8, 40.8, 5.2, 3.8);
+  const cemetery = ellipseValue(x, y, CEMETERY_CENTER.x, CEMETERY_CENTER.y, CEMETERY_RADIUS.x, CEMETERY_RADIUS.y);
 
   if (main < 1 || cemetery < 1) {
     if (main < 0.78 && (Math.abs(x - y) < 2 || Math.abs(x + y - 62) < 2)) return "road";
@@ -121,18 +124,113 @@ export function buildPharosVilleMap(): PharosVilleMap {
 }
 
 export function graveNodesFromEntries(entries: readonly CemeteryEntry[]): GraveNode[] {
-  const columns = 9;
-  return entries.map((entry, index) => ({
-    id: `grave.${entry.id}`,
-    kind: "grave",
-    label: entry.symbol,
-    entry,
-    tile: {
-      x: 20.3 + (index % columns) * 0.62,
-      y: 38.9 + Math.floor(index / columns) * 0.42,
-    },
-    detailId: `grave.${entry.id}`,
-  }));
+  const placed: Array<{ scale: number; x: number; y: number }> = [];
+  return entries.map((entry, index) => {
+    const visual = graveVisual(entry, index);
+    const tile = cemeteryScatterTile(entry, index, placed, visual.scale);
+    placed.push({ ...tile, scale: visual.scale });
+
+    return {
+      id: `grave.${entry.id}`,
+      kind: "grave",
+      label: entry.symbol,
+      entry,
+      logoSrc: entry.logo ? `/logos/cemetery/${entry.logo}` : null,
+      tile,
+      visual,
+      detailId: `grave.${entry.id}`,
+    };
+  });
+}
+
+function cemeteryScatterTile(
+  entry: CemeteryEntry,
+  index: number,
+  placed: readonly { scale: number; x: number; y: number }[],
+  scale: number,
+): { x: number; y: number } {
+  let bestTile: { x: number; y: number } | null = null;
+  let bestScore = Number.NEGATIVE_INFINITY;
+  for (let attempt = 0; attempt < 80; attempt += 1) {
+    const angle = stableUnit(`${entry.id}.angle.${attempt}`) * Math.PI * 2;
+    const radius = Math.sqrt(stableUnit(`${entry.id}.radius.${attempt}`)) * 0.96;
+    const drift = stableUnit(`${index}.grave.drift`) * 0.34 - 0.17;
+    const tile = {
+      x: CEMETERY_CENTER.x + Math.cos(angle + drift) * CEMETERY_RADIUS.x * radius,
+      y: CEMETERY_CENTER.y + Math.sin(angle - drift) * CEMETERY_RADIUS.y * radius,
+    };
+    if (cemeteryValue(tile.x, tile.y) > 0.97 || cemeteryReserved(tile) || tileKindAt(tile.x, tile.y) !== "land") continue;
+    const nearest = placed.reduce((minimum, grave) => {
+      const requiredSpace = 0.36 + (grave.scale + scale) * 0.2;
+      const distance = Math.hypot((tile.x - grave.x) * 1.05, (tile.y - grave.y) * 1.45) - requiredSpace;
+      return Math.min(minimum, distance);
+    }, Number.POSITIVE_INFINITY);
+    const edgePenalty = Math.abs(0.58 - radius) * 0.18;
+    const score = nearest - edgePenalty - attempt * 0.001;
+    if (score > bestScore) {
+      bestScore = score;
+      bestTile = tile;
+    }
+    if (nearest > 0.62 && attempt > 16) return tile;
+  }
+  return bestTile ?? {
+    x: CEMETERY_CENTER.x + stableOffset(`${entry.id}.fallback.x`, 5) * 0.45,
+    y: CEMETERY_CENTER.y + stableOffset(`${entry.id}.fallback.y`, 5) * 0.32,
+  };
+}
+
+function graveVisual(entry: CemeteryEntry, index: number): GraveNode["visual"] {
+  const peakMcap = Math.max(0, entry.peakMcap ?? 0);
+  const peakScale = peakMcap > 0 ? Math.min(1, Math.max(0, (Math.log10(peakMcap) - 6) / 4)) : 0;
+  const fullScale = 0.72 + peakScale * 0.48 + (stableUnit(`${entry.id}.grave.scale`) - 0.5) * 0.16;
+  const scale = clamp(fullScale * 0.36, 0.25, 0.45);
+  const marker = graveMarkerFor(entry, index, peakScale);
+  return { marker, scale };
+}
+
+function graveMarkerFor(entry: CemeteryEntry, index: number, peakScale: number): GraveMarker {
+  const largeMemorial = peakScale > 0.72 && stableUnit(`${entry.id}.marker.major`) > 0.42;
+  if (entry.causeOfDeath === "regulatory") return "cross";
+  if (entry.causeOfDeath === "liquidity-drain") {
+    const roll = stableUnit(`${entry.id}.marker.liquidity`);
+    if (roll > 0.66) return "ledger";
+    return roll > 0.34 ? "tablet" : "headstone";
+  }
+  if (entry.causeOfDeath === "counterparty-failure") {
+    return largeMemorial || stableUnit(`${entry.id}.marker.counterparty`) > 0.38 ? "tablet" : "reliquary";
+  }
+  if (entry.causeOfDeath === "algorithmic-failure") {
+    return largeMemorial || stableUnit(`${entry.id}.marker.algorithmic`) > 0.58 ? "reliquary" : "headstone";
+  }
+  const markers: GraveMarker[] = ["headstone", "headstone", "tablet", "reliquary"];
+  return markers[Math.floor(stableUnit(`${entry.id}.${index}.marker`) * markers.length)] ?? "headstone";
+}
+
+function cemeteryValue(x: number, y: number) {
+  return ((x - CEMETERY_CENTER.x) / CEMETERY_RADIUS.x) ** 2
+    + ((y - CEMETERY_CENTER.y) / CEMETERY_RADIUS.y) ** 2;
+}
+
+function cemeteryReserved(tile: { x: number; y: number }) {
+  const chapel = ellipseValue(tile.x, tile.y, 19.42, 40.28, 0.72, 0.54) < 1;
+  const memorial = ellipseValue(tile.x, tile.y, CEMETERY_CENTER.x, CEMETERY_CENTER.y, 0.67, 0.49) < 1;
+  const northPath = Math.abs(tile.x - (CEMETERY_CENTER.x + Math.sin((tile.y - CEMETERY_CENTER.y) * 1.12) * 0.16)) < 0.17
+    && tile.y > CEMETERY_CENTER.y - CEMETERY_RADIUS.y * 0.94
+    && tile.y < CEMETERY_CENTER.y + CEMETERY_RADIUS.y * 0.98;
+  const crossPath = Math.abs(tile.y - (CEMETERY_CENTER.y + Math.sin((tile.x - CEMETERY_CENTER.x) * 1.05) * 0.12)) < 0.14
+    && tile.x > CEMETERY_CENTER.x - CEMETERY_RADIUS.x * 0.92
+    && tile.x < CEMETERY_CENTER.x + CEMETERY_RADIUS.x * 0.92;
+  return chapel || memorial || northPath || crossPath;
+}
+
+function stableUnit(id: string): number {
+  let hash = 0;
+  for (let index = 0; index < id.length; index += 1) hash = (hash * 31 + id.charCodeAt(index)) >>> 0;
+  return hash / 0xffffffff;
+}
+
+function clamp(value: number, min: number, max: number): number {
+  return Math.max(min, Math.min(max, value));
 }
 
 export function stableOffset(id: string, span: number): number {

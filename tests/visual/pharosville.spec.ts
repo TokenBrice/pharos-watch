@@ -126,10 +126,14 @@ test("pharosville renders desktop canvas shell", async ({ page }) => {
   await page.goto("/pharosville/");
   const canvas = page.getByTestId("pharosville-canvas");
   await expect(canvas).toBeVisible();
-  await expect(page.getByTestId("pharosville-world-toolbar")).toHaveCount(0);
+  await expect(page.getByTestId("pharosville-world-toolbar")).toBeVisible();
+  await expect(page.getByTestId("pharosville-query-status-banner")).toHaveCount(0);
+  await expect(page.getByTestId("pharosville-detail-panel")).toBeVisible();
+  await expect(page.getByTestId("pharosville-detail-panel")).toContainText("Pharos lighthouse");
+  await expect(page.getByTestId("pharosville-map-key")).toHaveCount(0);
+  await expect(page.getByTestId("pharosville-keyboard-entity-browser")).toHaveCount(0);
   await expect(page.getByTestId("pharosville-minimap")).toHaveCount(0);
-  await expect(page.getByTestId("pharosville-detail-panel")).toHaveCount(0);
-  await expect(page.getByTestId("pharosville-accessibility-ledger")).toContainText("86.2% water");
+  await expect(page.getByTestId("pharosville-accessibility-ledger")).toContainText("86.3% water");
   await page.waitForFunction(() => {
     const debug = (window as typeof window & {
       __pharosVilleDebug?: { assetsLoaded?: boolean; camera: unknown; targets: unknown[] };
@@ -337,24 +341,38 @@ test("pharosville ultrawide canvas keeps DPR backing store capped", async ({ bas
 });
 
 test("pharosville canvas interactions update details and camera", async ({ page }) => {
+  test.setTimeout(45_000);
   await mockPharosVilleData(page);
   await page.emulateMedia({ reducedMotion: "reduce" });
   await page.setViewportSize({ width: 1440, height: 1000 });
   await page.goto("/pharosville/");
-  await expect(page.getByTestId("pharosville-world-toolbar")).toHaveCount(0);
+  await expect(page.getByTestId("pharosville-world-toolbar")).toBeVisible();
+  await expect(page.getByTestId("pharosville-query-status-banner")).toHaveCount(0);
+  await expect(page.getByTestId("pharosville-detail-panel")).toBeVisible();
+  await expect(page.getByTestId("pharosville-map-key")).toHaveCount(0);
+  await expect(page.getByTestId("pharosville-keyboard-entity-browser")).toHaveCount(0);
   await expect(page.getByTestId("pharosville-minimap")).toHaveCount(0);
-  await expect(page.getByTestId("pharosville-detail-panel")).toHaveCount(0);
+  await expectDetailPanelClearOfFullscreenButton(page);
 
   await clickMapTarget(page, "lighthouse");
   await waitForSelectedDetail(page, "lighthouse");
+  await page.getByRole("button", { name: "Clear selection" }).click();
+  await waitForSelectedDetail(page, null);
+  await expect(page.getByTestId("pharosville-detail-panel")).toHaveCount(0);
 
   const dockDetailId = await clickMapTarget(page, "dock");
   await waitForSelectedDetail(page, dockDetailId);
   await page.getByRole("button", { name: "Clear selection" }).click();
   await waitForSelectedDetail(page, null);
 
-  const shipDetailId = await clickMapTarget(page, "ship");
-  await waitForSelectedDetail(page, shipDetailId);
+  const shipSelection = await clickMapTargetWithPoint(page, "ship");
+  await waitForSelectedDetail(page, shipSelection.detailId);
+  const shipAnchor = await selectedDetailAnchor(page);
+  expect(shipAnchor?.x).toBeCloseTo(shipSelection.point.x, 0);
+  expect(shipAnchor?.y).toBeCloseTo(shipSelection.point.y, 0);
+  await clickBlankMap(page);
+  await waitForSelectedDetail(page, null);
+  await expect(page.getByTestId("pharosville-detail-panel")).toHaveCount(0);
 
   await page.getByTestId("pharosville-world").focus();
   await page.keyboard.press("Escape");
@@ -441,6 +459,29 @@ test("pharosville canvas interactions update details and camera", async ({ page 
   expect(resizedDebug?.motionFrameCount ?? 0).toBe(0);
 });
 
+test("pharosville reduced motion keeps ship samples static without RAF", async ({ page }) => {
+  await mockPharosVilleData(page);
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  await page.setViewportSize({ width: 1440, height: 1000 });
+  await page.goto("/pharosville/");
+  await waitForRuntimeDebug(page, true);
+
+  const first = await readRuntimeSnapshot(page);
+  await page.waitForTimeout(250);
+  const second = await readRuntimeSnapshot(page);
+
+  expect(first.reducedMotion).toBe(true);
+  expect(second.reducedMotion).toBe(true);
+  expect(first.motionFrameCount).toBe(0);
+  expect(second.motionFrameCount).toBe(0);
+  expect(first.animationFramePending).toBe(false);
+  expect(second.animationFramePending).toBe(false);
+  expect(first.timeSeconds).toBe(0);
+  expect(second.timeSeconds).toBe(0);
+  expect(first.shipMotionSamples.length).toBeGreaterThan(0);
+  expect(second.shipMotionSamples).toEqual(first.shipMotionSamples);
+});
+
 async function waitForSelectedDetail(page: Page, detailId: string | null) {
   await page.waitForFunction((expectedDetailId) => {
     const debug = (window as typeof window & {
@@ -448,6 +489,34 @@ async function waitForSelectedDetail(page: Page, detailId: string | null) {
     }).__pharosVilleDebug;
     return debug?.selectedDetailId === expectedDetailId;
   }, detailId);
+}
+
+async function clickBlankMap(page: Page) {
+  const box = await page.getByTestId("pharosville-canvas").boundingBox();
+  expect(box).not.toBeNull();
+  await page.getByTestId("pharosville-canvas").click({
+    position: {
+      x: Math.min(44, box!.width - 4),
+      y: Math.max(4, box!.height - 44),
+    },
+  });
+}
+
+async function selectedDetailAnchor(page: Page) {
+  return page.evaluate(() => {
+    const debug = (window as typeof window & {
+      __pharosVilleDebug?: { selectedDetailAnchor?: { side: "left" | "right"; x: number; y: number } | null };
+    }).__pharosVilleDebug;
+    return debug?.selectedDetailAnchor ?? null;
+  });
+}
+
+async function expectDetailPanelClearOfFullscreenButton(page: Page) {
+  const detailBox = await page.locator(".pharosville-detail-dock").boundingBox();
+  const fullscreenBox = await page.getByRole("button", { name: "Enter fullscreen" }).boundingBox();
+  expect(detailBox).not.toBeNull();
+  expect(fullscreenBox).not.toBeNull();
+  expect(detailBox!.y).toBeGreaterThanOrEqual(fullscreenBox!.y + fullscreenBox!.height + 8);
 }
 
 test.describe("pharosville normal motion", () => {
@@ -462,7 +531,7 @@ test.describe("pharosville normal motion", () => {
     await waitForRuntimeDebug(page, false);
 
     const movedSample = await waitForMovingShipSample(page);
-    const movingDetailId = "ship." + movedSample.id;
+    const movingDetailId = `ship.${movedSample.id}`;
     const selection = await clickMapTargetWithPoint(page, "ship", movingDetailId);
     expect(selection.detailId).toBe(movingDetailId);
     await waitForSelectedDetail(page, movingDetailId);

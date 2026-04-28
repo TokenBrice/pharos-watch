@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useCallback, useEffect, useRef } from "react";
-import { Card, CardAction, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { CEMETERY_ENTRIES as DEAD_STABLECOINS } from "@shared/lib/cemetery-merged";
 import { CemeteryTombstones } from "@/components/cemetery-tombstones";
 import { StablecoinCemetery } from "@/components/stablecoin-cemetery";
@@ -56,20 +56,20 @@ export function CemeteryClient() {
 
   return (
     <div className="space-y-6">
-      {/* Tombstone grid */}
+      {/* Cemetery field */}
       <Card className="rounded-xl gap-2">
         <CardHeader className="gap-3">
-          <div className="space-y-1.5">
-            <CardTitle as="h2" className="pharos-kicker">
-              The Cemetery
-            </CardTitle>
-            <CardDescription className="leading-relaxed">
-              {sortMode === "newest"
-                ? "Newest graves surface first. Year bands preserve the archive without breaking the field into separate buckets."
-                : "Oldest graves surface first. Year bands keep the memorial chronological without breaking the field into separate buckets."}
-            </CardDescription>
-          </div>
-          <CardAction className="w-full max-w-full @min-[560px]/card-header:w-auto">
+          <div className="flex flex-col gap-3 @min-[560px]/card-header:flex-row @min-[560px]/card-header:items-start @min-[560px]/card-header:justify-between">
+            <div className="min-w-0 space-y-1.5">
+              <CardTitle as="h2" className="pharos-kicker">
+                The Cemetery
+              </CardTitle>
+              <CardDescription className="leading-relaxed">
+                {sortMode === "newest"
+                  ? "Newest graves surface first inside one continuous field. Each marker carries the coin logo, failure cause, date, and hover memorial."
+                  : "Oldest graves surface first inside one continuous field. Each marker carries the coin logo, failure cause, date, and hover memorial."}
+              </CardDescription>
+            </div>
             <div className="inline-flex w-full flex-wrap gap-2 rounded-full border border-border/70 bg-muted/30 p-1 @min-[560px]/card-header:w-auto">
               {SORT_OPTIONS.map((option) => (
                 <button
@@ -88,7 +88,7 @@ export function CemeteryClient() {
                 </button>
               ))}
             </div>
-          </CardAction>
+          </div>
         </CardHeader>
         <CardContent className="pt-0">
           <CemeteryTombstones coins={orderedCoins} onSelect={handleTombstoneSelect} />
