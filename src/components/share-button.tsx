@@ -76,7 +76,7 @@ export function ShareButton({ ogPath, label = "Share" }: ShareButtonProps) {
       a.href = url;
       a.download = `pharos-${ogPath.split("/").pop() ?? "card"}.png`;
       a.click();
-      URL.revokeObjectURL(url);
+      setTimeout(() => URL.revokeObjectURL(url), 0);
       setStatus("idle");
     } catch (err) {
       console.warn("[share] download failed:", err instanceof Error ? err.message : String(err));

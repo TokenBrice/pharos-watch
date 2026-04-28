@@ -28,5 +28,5 @@ export function downloadCsv<T>(
   a.href = url;
   a.download = `${filename}-${new Date().toISOString().split("T")[0]}.csv`;
   a.click();
-  URL.revokeObjectURL(url);
+  setTimeout(() => URL.revokeObjectURL(url), 0);
 }
