@@ -102,6 +102,11 @@ function parseJsonStringArray(value: string | null | undefined): string[] {
   }
 }
 
+function isMissingColumnError(error: unknown): boolean {
+  const message = error instanceof Error ? error.message : String(error);
+  return message.toLowerCase().includes("no such column");
+}
+
 export async function getPriceCache(db: D1Database): Promise<Map<string, PriceCacheEntry>> {
   const map = new Map<string, PriceCacheEntry>();
 
@@ -138,14 +143,15 @@ export async function getPriceCache(db: D1Database): Promise<Map<string, PriceCa
     }
     return map;
   } catch (err) {
-    const msg = err instanceof Error ? err.message : String(err);
-    if (!msg.includes("no such column")) {
-      console.warn("[db-cache] Full-column price_cache query failed, trying core-only fallback:", msg);
+    if (!isMissingColumnError(err)) {
+      console.warn("[db-cache] Full-column price_cache query failed:", err instanceof Error ? err.message : String(err));
+      throw err;
     }
+    console.warn("[db-cache] price_cache metadata columns missing; trying core-only fallback");
   }
 
-  // Fallback: core columns only (schema may be missing metadata columns,
-  // or the full-column query hit a transient D1 error).
+  // Fallback: core columns only for deployed databases that have not received
+  // price_cache metadata columns yet.
   try {
     const result = await db
       .prepare("SELECT asset_id, price, updated_at FROM price_cache")
