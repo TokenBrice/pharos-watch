@@ -1,0 +1,181 @@
+import { describe, expect, it } from "vitest";
+import { mockD1 } from "../../../api/__tests__/helpers/mock-d1";
+import {
+  buildFallbackAssetsFromCoinGecko,
+  buildInsufficientFallbackResult,
+} from "../fallback-intake";
+import { restoreFallbackCacheState, runFallbackStalenessGate } from "../fallback-cache";
+import type { PeggedAsset } from "../enrich-prices";
+
+const NOW_SEC = 1_700_000_000;
+
+function makeAsset(overrides: Partial<PeggedAsset> = {}): PeggedAsset {
+  return {
+    id: "fixture-usd",
+    name: "Fixture USD",
+    symbol: "FUSD",
+    geckoId: "fixture-usd",
+    pegType: "peggedUSD",
+    pegMechanism: "fiat-backed",
+    price: 1,
+    priceSource: "coingecko",
+    priceConfidence: "single-source",
+    priceUpdatedAt: NOW_SEC,
+    circulating: { peggedUSD: 1_000_000 },
+    chainCirculating: {},
+    chains: [],
+    ...overrides,
+  };
+}
+
+describe("CoinGecko fallback phases", () => {
+  it("builds fallback intake assets from positive CoinGecko market caps", () => {
+    const assets = buildFallbackAssetsFromCoinGecko({
+      syncStartSec: NOW_SEC,
+      cgData: {
+        "fixture-usd": { usd: 0.999, usd_market_cap: 12_000_000 },
+        "fixture-zero": { usd: 1, usd_market_cap: 0 },
+      },
+      stablecoins: [
+        {
+          id: "fixture-usd",
+          name: "Fixture USD",
+          symbol: "FUSD",
+          geckoId: "fixture-usd",
+          flags: { pegCurrency: "USD", backing: "fiat-backed" },
+        },
+        {
+          id: "fixture-zero",
+          name: "Fixture Zero",
+          symbol: "FZERO",
+          geckoId: "fixture-zero",
+          flags: { pegCurrency: "USD", backing: "fiat-backed" },
+        },
+      ],
+    });
+
+    expect(assets).toHaveLength(1);
+    expect(assets[0]).toMatchObject({
+      id: "fixture-usd",
+      price: 0.999,
+      priceSource: "coingecko",
+      priceConfidence: "single-source",
+      priceObservedAt: NOW_SEC,
+      priceObservedAtMode: "local_fetch",
+      priceSyncedAt: NOW_SEC,
+      supplySource: "coingecko-fallback",
+      circulating: { peggedUSD: 12_000_000 },
+      circulatingPrevDay: null,
+      circulatingPrevWeek: null,
+      circulatingPrevMonth: null,
+      chains: [],
+      chainCirculating: {},
+    });
+  });
+
+  it("keeps insufficient fallback metadata in no-write degraded mode", () => {
+    const result = buildInsufficientFallbackResult(2);
+    const metadata = JSON.parse(result.metadata ?? "{}") as Record<string, unknown>;
+
+    expect(result.itemCount).toBeUndefined();
+    expect(metadata).toMatchObject({
+      rowsRead: 2,
+      rowsWritten: 0,
+      fallbackMode: "coingecko-supply-fallback",
+      validationFailures: 1,
+      cacheWriteMode: "no-write",
+      downstreamSafe: false,
+      capabilities: {
+        stablecoinsCache: false,
+        depegPipeline: false,
+      },
+    });
+  });
+
+  it("restores chain and supply-history fields from the previous stablecoins cache", async () => {
+    const current = makeAsset({
+      circulatingPrevDay: null,
+      circulatingPrevWeek: null,
+      circulatingPrevMonth: null,
+      chainCirculating: {},
+      chains: [],
+    });
+    const previous = makeAsset({
+      chainCirculating: { Ethereum: { current: 1_000_000 } },
+      chains: ["Ethereum"],
+      circulatingPrevDay: { peggedUSD: 990_000 },
+      circulatingPrevWeek: { peggedUSD: 980_000 },
+      circulatingPrevMonth: { peggedUSD: 970_000 },
+    });
+    const db = mockD1([
+      {
+        match: "SELECT value, updated_at FROM cache WHERE key = ?",
+        matchBinds: ["stablecoins"],
+        rows: [],
+        first: {
+          value: JSON.stringify({ peggedAssets: [previous] }),
+          updated_at: NOW_SEC - 60,
+        },
+      },
+    ]);
+
+    const result = await restoreFallbackCacheState({ db, assets: [current] });
+
+    expect(result.previousAssetsById.get("fixture-usd")).toMatchObject({
+      id: "fixture-usd",
+      chains: ["Ethereum"],
+    });
+    expect(current.chainCirculating).toEqual({ Ethereum: { current: 1_000_000 } });
+    expect(current.chains).toEqual(["Ethereum"]);
+    expect(current.circulatingPrevDay).toEqual({ peggedUSD: 990_000 });
+    expect(current.circulatingPrevWeek).toEqual({ peggedUSD: 980_000 });
+    expect(current.circulatingPrevMonth).toEqual({ peggedUSD: 970_000 });
+  });
+
+  it("returns the fallback stale-blocked result before cache publication", async () => {
+    const assets = Array.from({ length: 50 }, (_, index) =>
+      makeAsset({
+        id: `fixture-${index}`,
+        geckoId: `fixture-${index}`,
+        price: 1,
+      }),
+    );
+    const previousPayload = {
+      peggedAssets: assets.map((asset) => ({ id: asset.id, price: asset.price })),
+    };
+    const db = mockD1([
+      {
+        match: "SELECT value, updated_at FROM cache WHERE key = ?",
+        matchBinds: ["stablecoins"],
+        rows: [],
+        first: {
+          value: JSON.stringify(previousPayload),
+          updated_at: NOW_SEC - 8 * 3600,
+        },
+      },
+    ]);
+
+    const result = await runFallbackStalenessGate({
+      db,
+      assets,
+      syncStartSec: NOW_SEC,
+    });
+
+    expect("metadata" in result).toBe(true);
+    const metadata = JSON.parse(("metadata" in result ? result.metadata : null) ?? "{}") as Record<string, unknown>;
+    expect(result).toMatchObject({
+      status: "degraded",
+      itemCount: 50,
+    });
+    expect(metadata).toMatchObject({
+      rowsRead: 50,
+      rowsWritten: 0,
+      fallbackMode: "coingecko-supply-fallback-stale-blocked",
+      stalenessWarning: true,
+      staleWriteBlocked: true,
+      cacheWriteMode: "no-write",
+      cacheWriteSucceeded: false,
+      depegPipelineSucceeded: false,
+    });
+  });
+});
