@@ -10,12 +10,6 @@ export function mintBurnConfigKey(config: MintBurnContractConfig): string {
   return `${config.chain.chainId}-${config.contractAddress}`;
 }
 
-// Temporary compatibility key for the March 2026 refactor regression that
-// wrote sync state under `stablecoinId:chainId:address`.
-function legacyMintBurnConfigKey(config: MintBurnContractConfig): string {
-  return `${config.stablecoinId}:${config.chain.chainId}:${config.contractAddress.toLowerCase()}`;
-}
-
 export async function ensureMintBurnSyncStateRows(
   db: D1Database,
   configs: MintBurnContractConfig[],
@@ -44,12 +38,7 @@ export async function readMintBurnSyncStateBatch(
   const lastBlocks = new Map<string, number>();
   if (configs.length === 0) return lastBlocks;
 
-  const configKeys = [...new Set(
-    configs.flatMap((config) => [
-      mintBurnConfigKey(config),
-      legacyMintBurnConfigKey(config),
-    ]),
-  )];
+  const configKeys = [...new Set(configs.map(mintBurnConfigKey))];
   const fetchedLastBlocks = new Map<string, number>();
 
   for (let i = 0; i < configKeys.length; i += READ_SYNC_STATE_BATCH_SIZE) {
@@ -71,12 +60,7 @@ export async function readMintBurnSyncStateBatch(
 
   for (const config of configs) {
     const key = mintBurnConfigKey(config);
-    const legacyKey = legacyMintBurnConfigKey(config);
-    const resolvedLastBlock = Math.max(
-      fetchedLastBlocks.get(key) ?? (config.startBlock - 1),
-      fetchedLastBlocks.get(legacyKey) ?? (config.startBlock - 1),
-    );
-    lastBlocks.set(key, resolvedLastBlock);
+    lastBlocks.set(key, fetchedLastBlocks.get(key) ?? (config.startBlock - 1));
   }
 
   return lastBlocks;

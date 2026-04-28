@@ -298,10 +298,10 @@ describe("syncMintBurn", () => {
     expect(toBlock - fromBlock + 1).toBe(50_000);
   });
 
-  it("resumes from legacy sync-state progress and rewrites the canonical key", async () => {
+  it("resumes from canonical sync-state progress", async () => {
     const db = makeDb({
       syncRows: [{
-        config_key: "usdt-tether:ethereum:0xdac17f958d2ee523a2206206994597c13d831ec7",
+        config_key: "ethereum-0xdac17f958d2ee523a2206206994597c13d831ec7",
         last_block: 21_955_000,
       }],
     });
