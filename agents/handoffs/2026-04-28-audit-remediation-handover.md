@@ -242,7 +242,7 @@ Validation/commit expectation:
 ## Known Blockers and Risks
 
 - **B1 destructive-write risk:** Current KYC current-balance reconciliation should not be run against remote D1 until dry-run/apply, validation, timeout, retry, and minimum-row guards are merged.
-- **D4 deployed-state dependency:** Mint/burn legacy sync-key removal is blocked until production and preview D1 confirm migration `0093` and zero legacy colon-delimited keys.
+- **D4 deployed-state dependency:** resolved on 2026-04-28 after Wrangler auth was restored. Remote `stablecoin-db` had migration `0093_cleanup_legacy_mint_burn_sync_keys.sql` applied once, no pending migrations, and `0` colon-delimited legacy sync keys. No separate preview D1 database was present in Wrangler or `worker/wrangler.toml`; preview Worker environments use the same configured `stablecoin-db` binding unless a separate database is added later.
 - **A4 before E1:** Validation runner consolidation should wait until git-ref shell interpolation is removed.
 - **Hotspot refactor regression risk:** F1, F2, F3, H1, and H2 need characterization tests before movement and should not include behavior changes in extraction PRs.
 - **Methodology documentation risk:** Changes to depeg, fallback sync, pricing/fallback behavior, mint/burn, PSI, PegScore/DEWS, LiquidityScore, Report Cards, blacklist tracker, yield intelligence, or Chain Health must update `/methodology` and the relevant timeline/changelog doc.
@@ -312,9 +312,20 @@ _No notes yet._
 - PRs/commits: `5cc858486` shared blacklist event type, `2d649f8be` stablecoin taxonomy page factory, `057062971` FX cadence classification, `e30dc238a` D4 deferral record
 - Findings addressed: D1-D3 / Phase 4; R004, R005, R003, C003. D4 / R001 deferred.
 - Validation run: targeted Vitest suites for blacklist, taxonomy, FX cadence/state, FX sync, and related blacklist frontend parsing; `npm run typecheck`; `cd worker && npx tsc --noEmit`; `npm run lint`; `git diff --check -- <phase-4-files>`
-- Docs updated: handover record updated; `agents/tasks/2026-04-28-phase-4-d4-mint-burn-sync-key-removal-blocked.md` records the D4 blocker
-- Deferred items or follow-ups: keep the mint/burn legacy sync-key fallback until production and preview D1 confirm migration `0093_cleanup_legacy_mint_burn_sync_keys.sql` and zero colon-delimited keys
-- Residual risks: no remaining blockers for completed D1-D3; D4 remains blocked because non-interactive Wrangler auth failed with `Failed to fetch auth token: 400 Bad Request` and no `CLOUDFLARE_*` / `WRANGLER_*` token was present
+- Docs updated: handover record updated; the D4 blocker was recorded and is now resolved in `agents/tasks/2026-04-28-phase-4-d4-mint-burn-sync-key-removal-resolved.md`
+- Deferred items or follow-ups: D4 was deferred here until production and preview D1 confirmed migration `0093_cleanup_legacy_mint_burn_sync_keys.sql` and zero colon-delimited keys; resolved in the follow-up entry below
+- Residual risks: no remaining blockers for completed D1-D3; the former D4 Wrangler-auth blocker was resolved in the follow-up entry below
+
+### Phase 4 D4 follow-up completion, 2026-04-28
+
+- Reviewer: operator follow-up after Wrangler auth restoration
+- PRs/commits: D4 follow-up commit
+- Findings addressed: D4 / R001, C002
+- Wrangler verification: `npx wrangler whoami` authenticated as `me@tokenbrice.com`; `npx wrangler d1 list` exposed one configured D1 database, `stablecoin-db` (`8f3f54ca-e035-4cdf-9ec5-a4fbbe48b27a`, version `production`); `npx wrangler d1 migrations list stablecoin-db --remote` reported `No migrations to apply!`; `d1_migrations` contains `0093_cleanup_legacy_mint_burn_sync_keys.sql` exactly once, id `102`, applied at `2026-04-08 15:55:51`; `SELECT COUNT(*) AS legacy_count FROM mint_burn_sync_state WHERE config_key LIKE '%:%';` returned `0`
+- Source resolution: removed `legacyMintBurnConfigKey()`, removed dual-read/max fallback logic, kept only canonical `chainId-contractAddress` sync-state reads, and removed or rewrote legacy-only tests
+- Docs updated: `agents/tasks/2026-04-28-phase-4-d4-mint-burn-sync-key-removal-resolved.md` records exact verification commands and results
+- Deferred items or follow-ups: none for D4
+- Residual risks: if a separate preview D1 database is introduced later, rerun the migration and legacy-row checks for that database before assigning preview traffic to it
 
 ### Phase 5 - Validation tooling consolidation completion, 2026-04-28
 
