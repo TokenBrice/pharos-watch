@@ -4,6 +4,14 @@ vi.mock("../../dex-liquidity/crawl-helpers", () => ({
   crawlTokenPools: vi.fn().mockResolvedValue({ stoppedEarly: false }),
 }));
 
+vi.mock("../../../lib/abort", async () => {
+  const actual = await vi.importActual<typeof import("../../../lib/abort")>("../../../lib/abort");
+  return {
+    ...actual,
+    sleepWithSignal: vi.fn(async () => {}),
+  };
+});
+
 vi.mock("../../../lib/coingecko-onchain", async () => {
   const actual = await vi.importActual<typeof import("../../../lib/coingecko-onchain")>("../../../lib/coingecko-onchain");
   return {
@@ -59,6 +67,7 @@ function createMockDb(): D1Database {
 
 describe("crawlCoin DexScreener hardening", () => {
   beforeEach(() => {
+    vi.mocked(crawlTokenPools).mockReset();
     vi.mocked(crawlTokenPools).mockResolvedValue({ stoppedEarly: false });
     vi.mocked(fetchDsTokenPoolsWithStatus).mockReset();
     vi.mocked(fetchCgTokenPoolsWithStatus).mockReset();
@@ -214,6 +223,9 @@ describe("crawlCoin DexScreener hardening", () => {
       CIRCUIT_SOURCE.CG_ONCHAIN,
       true,
     );
+    expect(crawlTokenPools).not.toHaveBeenCalled();
+    expect(fetchDsTokenPoolsWithStatus).not.toHaveBeenCalled();
+    expect(fetchWithRetry).not.toHaveBeenCalled();
   });
 
   it("records CoinGecko onchain failures when the helper reports a bad response", async () => {
@@ -232,6 +244,55 @@ describe("crawlCoin DexScreener hardening", () => {
       expect.anything(),
       CIRCUIT_SOURCE.CG_ONCHAIN,
       false,
+    );
+  });
+
+  it("preserves provider order and fallback target policy when earlier stages miss", async () => {
+    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+    const events: string[] = [];
+
+    vi.mocked(fetchCgTokenPoolsWithStatus).mockImplementation(async (network) => {
+      events.push(`cg:${network}`);
+      return { ok: true, pools: [] };
+    });
+    vi.mocked(crawlTokenPools).mockImplementation(async () => {
+      events.push("gt");
+      return { stoppedEarly: false };
+    });
+    vi.mocked(fetchDsTokenPoolsWithStatus).mockImplementation(async (chain) => {
+      events.push(`ds:${chain}`);
+      return { ok: true, pairs: [] };
+    });
+    vi.mocked(fetchWithRetry).mockImplementation(async () => {
+      events.push("tickers");
+      return new Response(JSON.stringify({ tickers: [] }), { status: 200 });
+    });
+
+    const result = await crawlCoin(
+      createMockDb(),
+      "usdc-circle",
+      [
+        { chain: "ethereum", address: "0xabc", decimals: 6 },
+        { chain: "plasma", address: "0xdef", decimals: 6 },
+      ],
+      "test-key",
+      new Set(),
+    );
+
+    expect(result).toEqual({
+      pools: [],
+      priceObs: [],
+      unresolvedChains: ["plasma"],
+    });
+    expect(events).toEqual([
+      "cg:eth",
+      "gt",
+      "ds:ethereum",
+      "ds:plasma",
+      "tickers",
+    ]);
+    expect(warnSpy).toHaveBeenCalledWith(
+      expect.stringContaining('Chain "plasma" not in CG registry for usdc-circle, skipping'),
     );
   });
 
