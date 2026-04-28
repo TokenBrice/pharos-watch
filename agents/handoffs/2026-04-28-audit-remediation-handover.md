@@ -336,9 +336,15 @@ _No notes yet._
 - Deferred items or follow-ups: consider adding direct provider-stage unit tests for timeout/dependency paths
 - Residual risks: no blockers reported; F3 env-contract exports and generated env/doc output were spot-checked byte-for-byte against HEAD
 
-### Phase 7 - Cron capacity governance completion
+### Phase 7 - Cron capacity governance completion, 2026-04-28
 
-_No notes yet._
+- Reviewer: phase reviewer
+- PRs/commits: `23295ac42` (`chore: document cron connection headroom policy`)
+- Findings addressed: G1 / Phase 7; S005
+- Validation run: `npm run check:cron-connections`, `npm run check:cron-sync`, `npm run check:doc-sync`, `npm run typecheck`, `npm run lint`
+- Docs updated: handover record updated; worker/API limits documentation records the 5/6 headroom-full policy and current owners
+- Deferred items or follow-ups: none
+- Residual risks: no blockers reported; checker treats 5/6 slots as HEADROOM FULL for new fetch-heavy work and fails at 6/6 via `CRON_CONNECTION_BUDGET.failAt`
 
 ### Phase 8 - High-risk runtime hotspot refactors completion
 
