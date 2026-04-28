@@ -306,9 +306,15 @@ _No notes yet._
 - Deferred items or follow-ups: ensure new C1/C2 test files were included before commit if not already verified; optional future parser/fallback edge coverage
 - Residual risks: no blockers reported; next focus is Phase 4 D1-D4 redundancy cleanup with deployed-state verification before removing compatibility paths
 
-### Phase 4 - Small source-of-truth cleanups completion
+### Phase 4 - Small source-of-truth cleanups completion, 2026-04-28
 
-_No notes yet._
+- Reviewer: phase reviewer
+- PRs/commits: `5cc858486` shared blacklist event type, `2d649f8be` stablecoin taxonomy page factory, `057062971` FX cadence classification, `e30dc238a` D4 deferral record
+- Findings addressed: D1-D3 / Phase 4; R004, R005, R003, C003. D4 / R001 deferred.
+- Validation run: targeted Vitest suites for blacklist, taxonomy, FX cadence/state, FX sync, and related blacklist frontend parsing; `npm run typecheck`; `cd worker && npx tsc --noEmit`; `npm run lint`; `git diff --check -- <phase-4-files>`
+- Docs updated: handover record updated; `agents/tasks/2026-04-28-phase-4-d4-mint-burn-sync-key-removal-blocked.md` records the D4 blocker
+- Deferred items or follow-ups: keep the mint/burn legacy sync-key fallback until production and preview D1 confirm migration `0093_cleanup_legacy_mint_burn_sync_keys.sql` and zero colon-delimited keys
+- Residual risks: no remaining blockers for completed D1-D3; D4 remains blocked because non-interactive Wrangler auth failed with `Failed to fetch auth token: 400 Bad Request` and no `CLOUDFLARE_*` / `WRANGLER_*` token was present
 
 ### Phase 5 - Validation tooling consolidation completion
 
