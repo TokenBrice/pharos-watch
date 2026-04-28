@@ -2,12 +2,6 @@ import type { D1UsageSummary } from "@shared/types/status";
 import type { CloudflareD1StatusConfig } from "../env";
 import { cancelResponseBodyQuietly } from "../response-body";
 
-interface CloudflareApiEnvelope<T> {
-  success?: boolean;
-  errors?: Array<{ message?: string }>;
-  result?: T;
-}
-
 interface D1DatabaseInfoResult {
   uuid?: string;
   name?: string;
@@ -19,39 +13,158 @@ interface D1DatabaseInfoResult {
   } | null;
 }
 
-interface D1AnalyticsGraphqlResponse {
-  data?: {
-    viewer?: {
-      accounts?: Array<{
-        d1AnalyticsAdaptiveGroups?: Array<{
-          sum?: {
-            readQueries?: number | null;
-            writeQueries?: number | null;
-            rowsRead?: number | null;
-            rowsWritten?: number | null;
-          } | null;
-        } | null> | null;
-      } | null> | null;
-    } | null;
-  };
-  errors?: Array<{ message?: string }>;
+type UnknownRecord = Record<string, unknown>;
+
+class D1UsagePayloadError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "D1UsagePayloadError";
+  }
+}
+
+function isRecord(value: unknown): value is UnknownRecord {
+  return typeof value === "object" && value != null && !Array.isArray(value);
 }
 
 function toNumber(value: unknown): number | null {
   if (typeof value === "number" && Number.isFinite(value)) return value;
   if (typeof value === "string") {
-    const parsed = Number(value);
+    const trimmed = value.trim();
+    if (!trimmed) return null;
+    const parsed = Number(trimmed);
     if (Number.isFinite(parsed)) return parsed;
   }
   return null;
 }
 
-function getErrorMessage(errors: Array<{ message?: string }> | undefined): string | null {
-  const first = errors?.find((error) => typeof error?.message === "string" && error.message.trim().length > 0);
-  return first?.message?.trim() ?? null;
+function getErrorMessage(errors: unknown): string | null {
+  if (!Array.isArray(errors)) return null;
+  for (const error of errors) {
+    if (!isRecord(error)) continue;
+    const message = error.message;
+    if (typeof message === "string" && message.trim().length > 0) {
+      return message.trim();
+    }
+  }
+  return null;
 }
 
-async function fetchJson<T>(url: string, init: RequestInit, errorPrefix: string): Promise<T> {
+function parseOptionalString(value: unknown, fieldName: string): string | null {
+  if (value == null) return null;
+  if (typeof value === "string") return value;
+  throw new D1UsagePayloadError(`${fieldName} must be a string when present`);
+}
+
+function parseOptionalNumber(value: unknown, fieldName: string): number | null {
+  if (value == null) return null;
+  const parsed = toNumber(value);
+  if (parsed != null) return parsed;
+  throw new D1UsagePayloadError(`${fieldName} must be a finite number when present`);
+}
+
+function parseDatabaseInfoEnvelope(payload: unknown): D1DatabaseInfoResult {
+  if (!isRecord(payload)) {
+    throw new D1UsagePayloadError("Cloudflare D1 database info response was not an object");
+  }
+
+  if (payload.success === false) {
+    throw new D1UsagePayloadError(getErrorMessage(payload.errors) ?? "Cloudflare D1 database info fetch failed");
+  }
+
+  if (payload.success !== true) {
+    throw new D1UsagePayloadError("Cloudflare D1 database info response was missing success=true");
+  }
+
+  if (!isRecord(payload.result)) {
+    throw new D1UsagePayloadError("Cloudflare D1 database info response was missing result");
+  }
+
+  const readReplication = payload.result.read_replication;
+  if (readReplication != null && !isRecord(readReplication)) {
+    throw new D1UsagePayloadError("Cloudflare D1 database info read_replication must be an object when present");
+  }
+
+  return {
+    uuid: parseOptionalString(payload.result.uuid, "Cloudflare D1 database info result.uuid") ?? undefined,
+    name: parseOptionalString(payload.result.name, "Cloudflare D1 database info result.name") ?? undefined,
+    file_size: parseOptionalNumber(payload.result.file_size, "Cloudflare D1 database info result.file_size"),
+    num_tables: parseOptionalNumber(payload.result.num_tables, "Cloudflare D1 database info result.num_tables"),
+    region: parseOptionalString(payload.result.region, "Cloudflare D1 database info result.region"),
+    read_replication: readReplication
+      ? {
+          mode: parseOptionalString(readReplication.mode, "Cloudflare D1 database info result.read_replication.mode"),
+        }
+      : null,
+  };
+}
+
+function parseAnalyticsMetric(value: unknown, fieldName: string): number {
+  if (value == null) return 0;
+  const parsed = toNumber(value);
+  if (parsed != null) return parsed;
+  throw new D1UsagePayloadError(`${fieldName} must be a finite number when present`);
+}
+
+function parseAnalyticsEnvelope(
+  payload: unknown,
+): Pick<D1UsageSummary, "readQueries24h" | "writeQueries24h" | "rowsRead24h" | "rowsWritten24h"> {
+  if (!isRecord(payload)) {
+    throw new D1UsagePayloadError("Cloudflare D1 analytics response was not an object");
+  }
+
+  if (payload.errors != null && !Array.isArray(payload.errors)) {
+    throw new D1UsagePayloadError("Cloudflare D1 analytics errors field must be an array when present");
+  }
+
+  if (Array.isArray(payload.errors) && payload.errors.length > 0) {
+    throw new D1UsagePayloadError(getErrorMessage(payload.errors) ?? "Cloudflare D1 analytics fetch failed");
+  }
+
+  if (!isRecord(payload.data)) {
+    throw new D1UsagePayloadError("Cloudflare D1 analytics response was missing data");
+  }
+  if (!isRecord(payload.data.viewer)) {
+    throw new D1UsagePayloadError("Cloudflare D1 analytics response was missing viewer");
+  }
+  if (!Array.isArray(payload.data.viewer.accounts)) {
+    throw new D1UsagePayloadError("Cloudflare D1 analytics response was missing accounts");
+  }
+
+  const account = payload.data.viewer.accounts[0];
+  if (!isRecord(account)) {
+    throw new D1UsagePayloadError("Cloudflare D1 analytics response was missing account");
+  }
+  if (!Array.isArray(account.d1AnalyticsAdaptiveGroups)) {
+    throw new D1UsagePayloadError("Cloudflare D1 analytics response was missing d1AnalyticsAdaptiveGroups");
+  }
+
+  let readQueries = 0;
+  let writeQueries = 0;
+  let rowsRead = 0;
+  let rowsWritten = 0;
+
+  for (const group of account.d1AnalyticsAdaptiveGroups) {
+    if (!isRecord(group)) {
+      throw new D1UsagePayloadError("Cloudflare D1 analytics group must be an object");
+    }
+    if (!isRecord(group.sum)) {
+      throw new D1UsagePayloadError("Cloudflare D1 analytics group was missing sum");
+    }
+    readQueries += parseAnalyticsMetric(group.sum.readQueries, "Cloudflare D1 analytics sum.readQueries");
+    writeQueries += parseAnalyticsMetric(group.sum.writeQueries, "Cloudflare D1 analytics sum.writeQueries");
+    rowsRead += parseAnalyticsMetric(group.sum.rowsRead, "Cloudflare D1 analytics sum.rowsRead");
+    rowsWritten += parseAnalyticsMetric(group.sum.rowsWritten, "Cloudflare D1 analytics sum.rowsWritten");
+  }
+
+  return {
+    readQueries24h: readQueries,
+    writeQueries24h: writeQueries,
+    rowsRead24h: rowsRead,
+    rowsWritten24h: rowsWritten,
+  };
+}
+
+async function fetchJson(url: string, init: RequestInit, errorPrefix: string): Promise<unknown> {
   const response = await fetch(url, {
     ...init,
     signal: AbortSignal.timeout(5_000),
@@ -60,11 +173,15 @@ async function fetchJson<T>(url: string, init: RequestInit, errorPrefix: string)
     await cancelResponseBodyQuietly(response);
     throw new Error(`${errorPrefix} (${response.status})`);
   }
-  return await response.json() as T;
+  try {
+    return await response.json() as unknown;
+  } catch {
+    throw new Error(`${errorPrefix}: invalid JSON response`);
+  }
 }
 
 async function fetchDatabaseInfo(config: CloudflareD1StatusConfig): Promise<D1DatabaseInfoResult> {
-  const payload = await fetchJson<CloudflareApiEnvelope<D1DatabaseInfoResult>>(
+  const payload = await fetchJson(
     `https://api.cloudflare.com/client/v4/accounts/${config.accountId}/d1/database/${config.databaseId}`,
     {
       headers: {
@@ -74,16 +191,7 @@ async function fetchDatabaseInfo(config: CloudflareD1StatusConfig): Promise<D1Da
     },
     "Cloudflare D1 database info fetch failed",
   );
-
-  if (payload.success === false) {
-    throw new Error(getErrorMessage(payload.errors) ?? "Cloudflare D1 database info fetch failed");
-  }
-
-  if (!payload.result) {
-    throw new Error("Cloudflare D1 database info response was missing result");
-  }
-
-  return payload.result;
+  return parseDatabaseInfoEnvelope(payload);
 }
 
 async function fetchAnalytics(
@@ -91,7 +199,7 @@ async function fetchAnalytics(
   windowStartIso: string,
   windowEndIso: string,
 ): Promise<Pick<D1UsageSummary, "readQueries24h" | "writeQueries24h" | "rowsRead24h" | "rowsWritten24h">> {
-  const payload = await fetchJson<D1AnalyticsGraphqlResponse>(
+  const payload = await fetchJson(
     "https://api.cloudflare.com/client/v4/graphql",
     {
       method: "POST",
@@ -131,30 +239,7 @@ async function fetchAnalytics(
     },
     "Cloudflare D1 analytics fetch failed",
   );
-
-  if (payload.errors?.length) {
-    throw new Error(getErrorMessage(payload.errors) ?? "Cloudflare D1 analytics fetch failed");
-  }
-
-  const groups = payload.data?.viewer?.accounts?.[0]?.d1AnalyticsAdaptiveGroups ?? [];
-  let readQueries = 0;
-  let writeQueries = 0;
-  let rowsRead = 0;
-  let rowsWritten = 0;
-
-  for (const group of groups) {
-    readQueries += toNumber(group?.sum?.readQueries) ?? 0;
-    writeQueries += toNumber(group?.sum?.writeQueries) ?? 0;
-    rowsRead += toNumber(group?.sum?.rowsRead) ?? 0;
-    rowsWritten += toNumber(group?.sum?.rowsWritten) ?? 0;
-  }
-
-  return {
-    readQueries24h: readQueries,
-    writeQueries24h: writeQueries,
-    rowsRead24h: rowsRead,
-    rowsWritten24h: rowsWritten,
-  };
+  return parseAnalyticsEnvelope(payload);
 }
 
 export async function getCacheBlobSizes(db: D1Database): Promise<Record<string, number>> {
