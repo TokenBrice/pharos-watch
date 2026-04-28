@@ -192,9 +192,9 @@ Use authored layout, not dynamic random layout.
 
 Recommended files:
 
-- `systems/layout.ts` — district/dock/landmark coordinates.
+- `systems/world-layout.ts` — district/dock/landmark coordinates.
 - `systems/map-fixture.ts` — water/land tile masks.
-- `systems/layout.test.ts` — no overlaps, water ratio, required landmarks present.
+- `systems/world-layout.test.ts` — no overlaps, water ratio, required landmarks present.
 
 The map should be deterministic and stable across reloads. Data changes should move ships and effects, not reshuffle the island itself.
 
@@ -308,7 +308,7 @@ Unit:
 
 - `world-adapter.test.ts`
 - `risk-placement.test.ts`
-- `layout.test.ts`
+- `world-layout.test.ts`
 - `projection.test.ts`
 - `hit-testing.test.ts`
 - `clustering.test.ts`

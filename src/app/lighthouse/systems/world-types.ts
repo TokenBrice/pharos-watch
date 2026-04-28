@@ -1,0 +1,172 @@
+import type { ChainSummary } from "@shared/types/chains";
+import type { CemeteryEntry } from "@shared/lib/cemetery-merged";
+import type { ReportCard, StablecoinData, StablecoinMeta } from "@shared/types";
+
+export type TileKind = "deep-water" | "water" | "shore" | "land" | "road";
+
+export interface PharosVilleTile {
+  x: number;
+  y: number;
+  kind: TileKind;
+}
+
+export interface PharosVilleMap {
+  width: number;
+  height: number;
+  tiles: PharosVilleTile[];
+  waterRatio: number;
+}
+
+export type RouteMode = "world" | "desktop-only" | "loading" | "error";
+
+export type ShipRiskPlacement =
+  | "safe-harbor"
+  | "breakwater-edge"
+  | "harbor-mouth-watch"
+  | "outer-rough-water"
+  | "storm-shelf"
+  | "data-fog"
+  | "ledger-mooring";
+
+export interface PlacementEvidence {
+  reason: string;
+  sourceFields: string[];
+  stale: boolean;
+}
+
+export interface ShipVisual {
+  hull: "treasury-galleon" | "crypto-caravel" | "algo-junk";
+  rigging: "issuer-rig" | "dependent-rig" | "dao-rig";
+  pennant: string;
+  overlay: "none" | "yield" | "nav" | "watch";
+  scale: number;
+}
+
+export interface LighthouseNode {
+  id: "lighthouse";
+  kind: "lighthouse";
+  label: string;
+  tile: { x: number; y: number };
+  psiBand: string | null;
+  score: number | null;
+  color: string;
+  unavailable: boolean;
+  detailId: string;
+}
+
+export interface DockNode {
+  id: string;
+  kind: "dock";
+  label: string;
+  chainId: string;
+  tile: { x: number; y: number };
+  totalUsd: number;
+  size: number;
+  healthBand: ChainSummary["healthBand"];
+  stablecoinCount: number;
+  concentration: number | null;
+  detailId: string;
+}
+
+export interface ShipNode {
+  id: string;
+  kind: "ship";
+  label: string;
+  symbol: string;
+  asset: StablecoinData;
+  meta: StablecoinMeta;
+  reportCard: ReportCard | null;
+  tile: { x: number; y: number };
+  dockChainId: string | null;
+  marketCapUsd: number;
+  riskPlacement: ShipRiskPlacement;
+  placementEvidence: PlacementEvidence;
+  visual: ShipVisual;
+  change24hUsd: number | null;
+  change24hPct: number | null;
+  detailId: string;
+}
+
+export interface ShipClusterNode {
+  id: string;
+  kind: "ship-cluster";
+  label: string;
+  tile: { x: number; y: number };
+  riskPlacement: ShipRiskPlacement;
+  shipIds: string[];
+  ships: Array<{
+    id: string;
+    label: string;
+    symbol: string;
+    marketCapUsd: number;
+  }>;
+  count: number;
+  totalUsd: number;
+  detailId: string;
+}
+
+export interface GraveNode {
+  id: string;
+  kind: "grave";
+  label: string;
+  entry: CemeteryEntry;
+  tile: { x: number; y: number };
+  detailId: string;
+}
+
+export interface WorldEffect {
+  id: string;
+  kind: "recent-change" | "fog" | "storm";
+  entityId: string;
+  intensity: number;
+}
+
+export interface LegendItem {
+  id: string;
+  label: string;
+  description: string;
+}
+
+export interface DetailModel {
+  id: string;
+  title: string;
+  kind: string;
+  summary: string;
+  facts: Array<{ label: string; value: string }>;
+  links: Array<{ label: string; href: string }>;
+  members?: Array<{ id: string; label: string; href: string; value?: string }>;
+}
+
+export interface VisualCue {
+  id: string;
+  visual: string;
+  sourceField: string;
+  questionAnswered: string;
+  failureState: string;
+  domEquivalent: string;
+}
+
+export interface PharosVilleFreshness {
+  stablecoinsStale?: boolean;
+  chainsStale?: boolean;
+  stabilityStale?: boolean;
+  pegSummaryStale?: boolean;
+  stressStale?: boolean;
+  reportCardsStale?: boolean;
+}
+
+export interface PharosVilleWorld {
+  generatedAt: number;
+  routeMode: RouteMode;
+  freshness: PharosVilleFreshness;
+  map: PharosVilleMap;
+  lighthouse: LighthouseNode;
+  docks: DockNode[];
+  ships: ShipNode[];
+  shipClusters: ShipClusterNode[];
+  graves: GraveNode[];
+  effects: WorldEffect[];
+  detailIndex: Record<string, DetailModel>;
+  legends: LegendItem[];
+  visualCues: VisualCue[];
+}

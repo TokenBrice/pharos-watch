@@ -1,43 +1,49 @@
 "use client";
-import { useChains } from "@/hooks/use-chains";
-import { useStablecoins } from "@/hooks/use-stablecoins";
-import { useStabilityIndexDetail, useStressSignals } from "@/hooks/api-hooks";
-import { QueryErrorNotice } from "@/components/query-error-notice";
-import { LighthouseA11yLedger } from "./lighthouse-a11y-ledger";
-import { HarborSceneClient } from "./harbor-scene-client";
-import { buildSceneData } from "./systems/scene-data";
+import dynamic from "next/dynamic";
+import { useEffect, useState } from "react";
+import { DesktopOnlyFallback } from "./desktop-only-fallback";
+import "./pharosville.css";
+
+const DESKTOP_QUERY = "(min-width: 1280px) and (min-height: 760px)";
+
+const PharosVilleDesktopData = dynamic(
+  () => import("./pharosville-desktop-data").then((mod) => ({ default: mod.PharosVilleDesktopData })),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="pharosville-loading pharosville-desktop" aria-busy="true">
+        Preparing PharosVille
+      </div>
+    ),
+  },
+);
+
+function useDesktopViewport() {
+  const [isDesktop, setIsDesktop] = useState<boolean | null>(null);
+
+  useEffect(() => {
+    const query = window.matchMedia(DESKTOP_QUERY);
+    const sync = () => setIsDesktop(query.matches);
+    sync();
+    query.addEventListener("change", sync);
+    return () => query.removeEventListener("change", sync);
+  }, []);
+
+  return isDesktop;
+}
 
 export function LighthouseClient() {
-  const chainsQuery = useChains();
-  const stabilityQuery = useStabilityIndexDetail();
-  const stressQuery = useStressSignals();
-  const stablecoinsQuery = useStablecoins();
+  const isDesktop = useDesktopViewport();
 
-  const scene = buildSceneData({
-    chains: chainsQuery.data,
-    stability: stabilityQuery.data,
-    stress: stressQuery.data,
-    stablecoins: stablecoinsQuery.data,
-  });
-
-  if (chainsQuery.isError && !chainsQuery.data) {
-    return <QueryErrorNotice error={chainsQuery.error} onRetry={() => void chainsQuery.refetch()} />;
+  if (isDesktop === null) {
+    return (
+      <>
+        <DesktopOnlyFallback />
+        <div className="pharosville-loading pharosville-desktop" aria-busy="true">Preparing PharosVille</div>
+      </>
+    );
   }
+  if (!isDesktop) return <DesktopOnlyFallback />;
 
-  return (
-    <>
-      <QueryErrorNotice
-        error={chainsQuery.error ?? stabilityQuery.error ?? stressQuery.error ?? stablecoinsQuery.error}
-        hasData={!!chainsQuery.data?.chains?.length}
-        onRetry={() => {
-          void chainsQuery.refetch();
-          void stabilityQuery.refetch();
-          void stressQuery.refetch();
-          void stablecoinsQuery.refetch();
-        }}
-      />
-      <HarborSceneClient scene={scene} />
-      <LighthouseA11yLedger scene={scene} />
-    </>
-  );
+  return <PharosVilleDesktopData />;
 }

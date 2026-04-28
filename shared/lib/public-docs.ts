@@ -116,8 +116,8 @@ export const PUBLIC_DOCS: readonly PublicDoc[] = [
   {
     source: "lighthouse-page.md",
     slug: "lighthouse-page",
-    title: "Lighthouse Page",
-    summary: "The Pharos Lighthouse concept route, scene model, and selection contract.",
+    title: "PharosVille Page",
+    summary: "The PharosVille route, desktop gate, canvas exception, and data-to-world contract.",
     group: "system",
   },
   {

@@ -245,7 +245,7 @@ systems/risk-placement.ts
 systems/recent-change.ts
 systems/chain-docks.ts
 systems/clustering.ts
-systems/layout.ts
+systems/world-layout.ts
 systems/detail-model.ts
 systems/ship-visuals.ts
 systems/visual-cue-registry.ts
@@ -410,7 +410,7 @@ systems/risk-placement.test.ts
 systems/recent-change.test.ts
 systems/chain-docks.test.ts
 systems/clustering.test.ts
-systems/layout.test.ts
+systems/world-layout.test.ts
 systems/detail-model.test.ts
 systems/ship-visuals.test.ts
 systems/visual-cue-registry.test.ts

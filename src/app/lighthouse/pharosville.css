@@ -1,0 +1,210 @@
+.pharosville-loading {
+  display: grid;
+  min-height: calc(100svh - 1.5rem);
+  place-items: center;
+  background: hsl(var(--muted) / 0.18);
+  color: hsl(var(--muted-foreground));
+  font-size: 0.875rem;
+}
+
+@media (max-width: 1279px), (max-height: 759px) {
+  .pharosville-desktop {
+    display: none;
+  }
+}
+
+@media (min-width: 1280px) and (min-height: 760px) {
+  .pharosville-narrow {
+    display: none;
+  }
+}
+
+.pharosville-narrow {
+  min-height: calc(100svh - 1.5rem);
+  padding: 32px 18px;
+  background:
+    linear-gradient(180deg, rgba(10, 47, 69, 0.92), rgba(6, 23, 33, 0.98)),
+    hsl(var(--background));
+  color: #f5edce;
+}
+
+.pharosville-narrow__inner {
+  margin: 0 auto;
+  max-width: 680px;
+  padding-top: min(18svh, 120px);
+}
+
+.pharosville-narrow__kicker,
+.pharosville-panel__eyebrow {
+  margin: 0 0 10px;
+  color: #80d6ce;
+  font-size: 0.76rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.pharosville-narrow h2 {
+  margin: 0;
+  max-width: 12ch;
+  color: #fff7da;
+  font-size: clamp(2.4rem, 10vw, 4.75rem);
+  font-weight: 800;
+  line-height: 0.95;
+}
+
+.pharosville-narrow p {
+  margin: 20px 0 0;
+  max-width: 52ch;
+  color: rgba(245, 237, 206, 0.82);
+  font-size: 1rem;
+  line-height: 1.65;
+}
+
+.pharosville-narrow__links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 28px;
+}
+
+.pharosville-narrow__links a {
+  min-height: 44px;
+  border: 1px solid rgba(169, 217, 211, 0.34);
+  border-radius: 6px;
+  padding: 11px 14px;
+  background: rgba(8, 35, 55, 0.72);
+  color: #f5edce;
+  font-size: 0.9rem;
+  font-weight: 700;
+}
+
+.pharosville-shell {
+  position: relative;
+  min-height: calc(100svh - 1.5rem);
+  overflow: hidden;
+  background: #061721;
+}
+
+.pharosville-canvas {
+  display: block;
+  width: 100%;
+  height: calc(100svh - 1.5rem);
+}
+
+.pharosville-panel {
+  position: absolute;
+  top: 24px;
+  right: 24px;
+  width: min(360px, calc(100% - 48px));
+  max-height: calc(100svh - 72px);
+  overflow: auto;
+  border: 1px solid rgba(169, 217, 211, 0.24);
+  border-radius: 8px;
+  padding: 18px;
+  background: rgba(3, 14, 22, 0.78);
+  box-shadow: 0 18px 48px rgba(0, 0, 0, 0.24);
+  color: #f5edce;
+  backdrop-filter: blur(10px);
+}
+
+.pharosville-panel h2 {
+  margin: 0;
+  color: #fff7da;
+  font-size: 1.45rem;
+  line-height: 1.1;
+}
+
+.pharosville-panel h3 {
+  margin: 16px 0 8px;
+  color: #fff7da;
+  font-size: 0.88rem;
+  line-height: 1.2;
+}
+
+.pharosville-panel p,
+.pharosville-panel li {
+  margin: 12px 0 0;
+  color: rgba(245, 237, 206, 0.78);
+  font-size: 0.9rem;
+  line-height: 1.55;
+}
+
+.pharosville-panel dl {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin: 18px 0 0;
+}
+
+.pharosville-panel dl > div {
+  min-height: 70px;
+  border: 1px solid rgba(169, 217, 211, 0.18);
+  border-radius: 6px;
+  padding: 10px;
+  background: rgba(8, 35, 55, 0.62);
+}
+
+.pharosville-panel dt {
+  color: #80d6ce;
+  font-size: 0.72rem;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.pharosville-panel dd {
+  margin: 6px 0 0;
+  color: rgba(245, 237, 206, 0.82);
+  font-size: 0.82rem;
+}
+
+.pharosville-panel ul,
+.pharosville-panel ol {
+  margin: 8px 0 0;
+  padding-left: 18px;
+}
+
+.pharosville-panel a {
+  color: #80d6ce;
+  font-weight: 700;
+}
+
+.pharosville-panel button,
+.pharosville-shell [role="toolbar"] button {
+  min-height: 44px;
+  border: 1px solid rgba(169, 217, 211, 0.25);
+  border-radius: 6px;
+  padding: 8px 11px;
+  background: rgba(8, 35, 55, 0.78);
+  color: #f5edce;
+  font-size: 0.84rem;
+  font-weight: 700;
+}
+
+.pharosville-panel button[aria-current="true"] {
+  border-color: rgba(255, 204, 98, 0.65);
+  color: #ffcc62;
+}
+
+.pharosville-shell [role="toolbar"] {
+  position: absolute;
+  top: 82px;
+  left: 24px;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  max-width: min(620px, calc(100% - 448px));
+  border: 1px solid rgba(169, 217, 211, 0.24);
+  border-radius: 8px;
+  padding: 10px;
+  background: rgba(3, 14, 22, 0.72);
+  color: #f5edce;
+  backdrop-filter: blur(10px);
+}
+
+.pharosville-shell [role="toolbar"] output {
+  color: rgba(245, 237, 206, 0.82);
+  font-size: 0.82rem;
+}

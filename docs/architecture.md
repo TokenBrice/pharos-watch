@@ -134,7 +134,6 @@ Worker cron refactors should place reusable stage contracts under `worker/src/cr
   - `/alt-pegs/`
   - `/coverage/`
   - `/chains/` and `/chains/[chain]/`
-  - `/lighthouse/`
   - `/stablecoin/[id]/`
   - `/stablecoins/`
   - `/stablecoins/[peg]/`
@@ -147,10 +146,11 @@ Worker cron refactors should place reusable stage contracts under `worker/src/cr
   - `/docs/` and `/docs/[slug]/` for the curated public documentation archive; the allowlist lives in `shared/lib/public-docs.ts`
   - `/about/api/`
   - `/changelog/`
-  - major feature pages with standalone static copy (`/start/`, `/alt-pegs/`, `/upcoming/`, `/blacklist/`, `/depeg/`, `/liquidity/`, `/lighthouse/`, `/safety-scores/`, `/stability-index/`, `/yield/`, `/flows/`, `/dependency-map/`, `/cemetery/`, `/telegram/`, `/funding/`, `/status/`, `/about/`, `/privacy/`)
+  - major feature pages with standalone static copy (`/start/`, `/alt-pegs/`, `/upcoming/`, `/blacklist/`, `/depeg/`, `/liquidity/`, `/safety-scores/`, `/stability-index/`, `/yield/`, `/flows/`, `/dependency-map/`, `/cemetery/`, `/telegram/`, `/funding/`, `/status/`, `/about/`, `/privacy/`)
 - Tool roots intentionally marked `noindex,follow`:
   - `/compare/`
   - `/portfolio/`
+  - `/lighthouse/` while PharosVille is in beta
 - Tracked-variant browse ownership stays on the homepage query state (`/?variant=...`). The repo does not ship a dedicated `/stablecoins/variants/*` family.
 - Private operator routes marked `noindex,nofollow`:
   - `/admin/`
@@ -176,23 +176,23 @@ Worker cron refactors should place reusable stage contracts under `worker/src/cr
 - `src/app/sitemap.ts` owns sitemap output for indexable routes. `/compare/`, `/portfolio/`, and `/admin/` are omitted; `/compare/[slug]/` static comparison pages are included. `/funding/` uses the latest of route edit time and checked-in funding data timestamps for `lastModified`. `LAST_EDITED` dates are auto-generated from git history during prebuild (`scripts/generate-sitemap-dates.ts`) and written to a generated JSON file (gitignored). Public docs use `scripts/generate-docs-metadata.ts` for git-derived first/last modified dates.
 - `src/app/robots.ts` publishes an allow-all crawl policy, explicit AI crawler allow groups, disallows for operator surfaces (`/admin`, `/admin/`, `/api/admin`, `/api/admin/`), and the sitemap location.
 
-### Lighthouse (/lighthouse)
+### PharosVille (/lighthouse)
 
-A Canvas 2D pixel-art harbor scene. PixiJS was rejected during the
+`/lighthouse/` is the beta PharosVille route. It keeps the existing URL and
+canonical path while replacing the old harbor scene with a Canvas 2D island-city
+experience.
+
+The page uses a Server Component shell for metadata and JSON-LD, then a Client
+Component viewport gate. Screens below `1280px` render a DOM desktop-only
+fallback and must not mount world queries, canvas runtime, manifest fetches, or
+sprite decoding. Desktop viewports mount the browser-only PharosVille world.
+
+Canvas 2D remains the renderer choice. PixiJS v8 was rejected during the
 2026-04-25 spike (see `docs/superpowers/audits/2026-04-25-pixi-v8-csp.md`)
-because the v8 shader path requires `unsafe-eval`, which Pharos's CSP
-disallows. The Canvas 2D implementation lives at `src/app/lighthouse/`:
-- Pure-TS systems in `systems/` (FrameState contract, isometric math,
-  scene-data adapter, GSAP tween helpers).
-- Pure draw fns in `sprites/` (lighthouse, boats, harbour islands).
-- DrawableLayer wrappers in `layers/` (sky/water/lamps/harbours/
-  boats/lighthouse + HTML overlay).
-- A 24-color anchor palette + hex-literal lint guard
-  (`scripts/check-harbor-palette.mjs`) keeps the pixel-art aesthetic
-  coherent.
+because the shader path requires `unsafe-eval`, which Pharos's CSP disallows.
 
-Visual regression is gated by Playwright under `prefers-reduced-motion:
-reduce` (deterministic) — see `tests/visual/lighthouse.spec.ts`.
+Visual coverage lives in `tests/visual/lighthouse.spec.ts` and currently checks
+the desktop canvas shell plus the `<1280px` fallback/no-runtime contract.
 
 ---
 

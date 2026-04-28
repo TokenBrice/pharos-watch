@@ -36,7 +36,7 @@ Files:
 
 - `src/app/lighthouse/systems/world-types.ts`
 - `src/app/lighthouse/systems/pharosville-world.ts`
-- `src/app/lighthouse/systems/layout.ts`
+- `src/app/lighthouse/systems/world-layout.ts`
 - `src/app/lighthouse/systems/clustering.ts`
 - tests beside these modules
 

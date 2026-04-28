@@ -129,12 +129,14 @@ Z-order is controlled by DOM order in SVG; supplement with CSS `z-index` only fo
 
 ### SVG over Canvas, CSS over JS animation
 
-All four modules are SVG-based. Canvas is never necessary at Pharos’ data volumes (≤250 coins, ≤8 primary harbors, ≤50 stars). SVG gives you:
+Most Pharos narrative modules are SVG-based. For standard data volumes (≤250 coins, ≤8 primary harbors, ≤50 stars), SVG gives you:
 - Real `<text>` for a11y and selection
 - Per-element CSS classes and transforms
 - Native DOM focus and keyboard handling
 
 Animation is **CSS keyframes**, not JS rAF loops. The React component injects CSS custom properties for values that depend on data (`--psi-pulse-dur`, `--psi-beam-origin-x`, `--nc-beam-angle`). Keyframes stay static. No animation frame loops, no react-spring, no GSAP.
+
+Exception: PharosVille at `/lighthouse/` deliberately uses Canvas 2D for a ClaudeVille-style isometric world with tile projection, camera bounds, depth sorting, sprite layers, culling, and 200+ possible entities. Its compensating requirements are documented in [lighthouse-page.md](./lighthouse-page.md): pure world model, DOM parity, reduced-motion deterministic render, no canvas runtime below `1280px`, and no CSP relaxation.
 
 ### `prefers-reduced-motion` is a hard requirement
 
