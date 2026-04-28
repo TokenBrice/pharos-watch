@@ -128,6 +128,33 @@ describe("buildCommandPlan", () => {
       "npm run typecheck:worker-scripts",
     ]);
   });
+
+  it("passes changed-file env only to coverage during execution", async () => {
+    const envByCommand = new Map<string, Record<string, string>>();
+
+    await runExecutionBatches(
+      [
+        { cmd: "npm run test:noncritical", reasons: ["test"] },
+        { cmd: "npm run coverage:critical", reasons: ["test"] },
+      ],
+      ["src/app/page.tsx", "worker/src/api/status.ts"],
+      { MERGE_GATE_SERIAL: "1" },
+      {
+        exit: () => {
+          throw new Error("unexpected exit");
+        },
+        runCommandImpl: (cmd, extraEnv) => {
+          envByCommand.set(cmd, extraEnv);
+          return 0;
+        },
+      },
+    );
+
+    expect(envByCommand.get("npm run test:noncritical")).toEqual({});
+    expect(envByCommand.get("npm run coverage:critical")).toEqual({
+      CRITICAL_COVERAGE_CHANGED_FILES: "src/app/page.tsx,worker/src/api/status.ts",
+    });
+  });
 });
 
 describe("getChangedFiles", () => {

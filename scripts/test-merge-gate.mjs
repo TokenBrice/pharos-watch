@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-import { execFileSync, spawn } from "node:child_process";
+import { execFileSync } from "node:child_process";
 import { pathToFileURL } from "node:url";
 import {
   hasDeployImpact,
@@ -7,6 +7,7 @@ import {
   hasWorkerDeployImpact,
   normalizeRepoPath,
 } from "./lib/deploy-impact.mjs";
+import { createExecutionUnit, runCommandBatches, runShellCommand } from "./lib/command-runner.mjs";
 import {
   COMMON_VALIDATE_POSTBUILD_COMMANDS,
   COMMON_VALIDATE_PREBUILD_COMMANDS,
@@ -92,10 +93,6 @@ export function getCommandEnv(cmd, changedFiles) {
   };
 }
 
-function createExecutionUnit(commands) {
-  return { commands };
-}
-
 function findPlanItem(plan, cmd) {
   return plan.find((item) => item.cmd === cmd);
 }
@@ -131,146 +128,21 @@ export function buildExecutionBatches(plan) {
   ];
 }
 
-function killProcessGroup(child, signal) {
-  if (!child.pid) {
-    return;
-  }
-
-  try {
-    if (process.platform === "win32") {
-      child.kill(signal);
-      return;
-    }
-    process.kill(-child.pid, signal);
-  } catch {
-    // The process may already have exited between failure detection and abort.
-  }
-}
-
-function runCommand(cmd, extraEnv = {}, { signal } = {}) {
-  return new Promise((resolve) => {
-    if (signal?.aborted) {
-      resolve({ status: 130, aborted: true });
-      return;
-    }
-
-    const child = spawn("bash", ["-lc", cmd], {
-      stdio: "inherit",
-      detached: process.platform !== "win32",
-      env: {
-        ...process.env,
-        ...extraEnv,
-      },
-    });
-
-    let aborted = false;
-    let killTimer;
-    const abort = () => {
-      aborted = true;
-      killProcessGroup(child, "SIGTERM");
-      killTimer = setTimeout(() => killProcessGroup(child, "SIGKILL"), 2000);
-      killTimer.unref?.();
-    };
-    signal?.addEventListener("abort", abort, { once: true });
-
-    child.on("error", () => {
-      signal?.removeEventListener("abort", abort);
-      if (killTimer) {
-        clearTimeout(killTimer);
-      }
-      resolve({ status: aborted ? 130 : 1, aborted });
-    });
-    child.on("close", (code) => {
-      signal?.removeEventListener("abort", abort);
-      if (killTimer) {
-        clearTimeout(killTimer);
-      }
-      resolve({ status: aborted ? 130 : (code ?? 1), aborted });
-    });
-  });
-}
-
-function normalizeCommandResult(result) {
-  if (typeof result === "number") {
-    return { status: result, aborted: false };
-  }
-  return {
-    status: result?.status ?? 1,
-    aborted: result?.aborted === true,
-  };
-}
-
-async function runExecutionUnit(unit, changedFiles, { runCommandImpl = runCommand, signal } = {}) {
-  for (const item of unit.commands) {
-    if (signal?.aborted) {
-      return { status: 130, failedCmd: item.cmd, aborted: true };
-    }
-    console.log(`[merge-gate] Running: ${item.cmd}`);
-    const result = normalizeCommandResult(
-      await runCommandImpl(item.cmd, getCommandEnv(item.cmd, changedFiles), { signal }),
-    );
-    const { status } = result;
-    if (status !== 0) {
-      return { status, failedCmd: item.cmd, aborted: result.aborted };
-    }
-  }
-  return { status: 0, failedCmd: null, aborted: false };
-}
-
-function reportFailedCommand(result) {
-  if (result.aborted) {
-    return;
-  }
-  console.error(`[merge-gate] FAILED: ${result.failedCmd} exited with status ${result.status}`);
-}
-
 export async function runExecutionBatches(
   plan,
   changedFiles,
   env = process.env,
-  { runCommandImpl = runCommand, exit = process.exit } = {},
+  { runCommandImpl = runShellCommand, exit = process.exit } = {},
 ) {
   const serialMode = env.MERGE_GATE_SERIAL === "1";
   const batches = serialMode ? plan.map((item) => [createExecutionUnit([item])]) : buildExecutionBatches(plan);
 
-  for (const batch of batches) {
-    if (batch.length === 1) {
-      const result = await runExecutionUnit(batch[0], changedFiles, { runCommandImpl });
-      if (result.status !== 0) {
-        reportFailedCommand(result);
-        exit(result.status);
-        return;
-      }
-      continue;
-    }
-
-    console.log(`[merge-gate] Running ${batch.length} independent command groups in parallel.`);
-    const controllers = batch.map(() => new AbortController());
-    const pending = new Map(
-      batch.map((unit, index) => [
-        index,
-        runExecutionUnit(unit, changedFiles, {
-          runCommandImpl,
-          signal: controllers[index].signal,
-        }).then((result) => ({ index, result })),
-      ]),
-    );
-
-    while (pending.size > 0) {
-      const settled = await Promise.race(pending.values());
-      pending.delete(settled.index);
-
-      if (settled.result.status !== 0) {
-        reportFailedCommand(settled.result);
-        for (const [index] of pending) {
-          controllers[index].abort();
-        }
-        await Promise.allSettled(pending.values());
-        exit(settled.result.status);
-        return;
-      }
-    }
-  }
+  await runCommandBatches(batches, {
+    exit,
+    getCommandEnv: (item) => getCommandEnv(item.cmd, changedFiles),
+    label: "merge-gate",
+    runCommandImpl,
+  });
 }
 
 export async function runMergeGate({ argv = process.argv.slice(2), env = process.env } = {}) {

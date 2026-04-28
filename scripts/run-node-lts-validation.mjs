@@ -1,4 +1,4 @@
-import { spawnSync } from "node:child_process";
+import { runShellCommand } from "./lib/command-runner.mjs";
 import { COMMON_VALIDATE_PREBUILD_COMMANDS } from "./lib/validate-contract.mjs";
 import { runPostPrebuildValidation } from "./run-validate-postbuild.mjs";
 
@@ -31,19 +31,12 @@ function parseStringArg(name, defaultValue = "") {
   return match.slice(prefix.length);
 }
 
-function runCommand(cmd) {
+async function runCommand(cmd) {
   console.log(`\n[lts] ${cmd}`);
-  const result = spawnSync(cmd, {
-    shell: true,
-    stdio: "inherit",
-  });
+  const result = await runShellCommand(cmd);
 
   if (result.status !== 0) {
     process.exit(result.status ?? 1);
-  }
-
-  if (result.error) {
-    throw result.error;
   }
 }
 
@@ -66,7 +59,7 @@ async function main() {
   );
 
   for (const cmd of COMMON_VALIDATE_PREBUILD_COMMANDS) {
-    runCommand(cmd);
+    await runCommand(cmd);
   }
 
   await runPostPrebuildValidation({
