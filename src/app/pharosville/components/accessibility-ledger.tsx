@@ -61,7 +61,8 @@ export function AccessibilityLedger({
         {world.docks.map((dock) => (
           <li key={dock.id}>
             {dock.label}: {compactUsd.format(dock.totalUsd)} stablecoin supply, {dock.stablecoinCount} stablecoins,
-            health {dock.healthBand ?? "unavailable"}.
+            health {dock.healthBand ?? "unavailable"}, harboring{" "}
+            {dock.harboredStablecoins.map((coin) => `${coin.symbol} ${compactUsd.format(coin.supplyUsd)}`).join(", ") || "no listed stablecoins"}.
           </li>
         ))}
       </ol>
@@ -71,7 +72,9 @@ export function AccessibilityLedger({
         {world.ships.map((ship) => (
           <li key={ship.id}>
             {ship.label} ({ship.symbol}): {compactUsd.format(ship.marketCapUsd)} market cap, placed at{" "}
-            {ship.riskPlacement}; evidence {ship.placementEvidence.sourceFields.join(", ") || "unavailable"}.
+            {ship.riskPlacement}; route summary: {pluralize(ship.chainPresence.length, "positive chain deployment")},{" "}
+            {pluralize(ship.dockVisits.length, "rendered dock stop")}, risk zone {ship.riskZone}; placement evidence{" "}
+            {ship.placementEvidence.reason}; source fields {ship.placementEvidence.sourceFields.join(", ") || "unavailable"}.
           </li>
         ))}
       </ol>
@@ -107,6 +110,10 @@ export function AccessibilityLedger({
       </ol>
     </section>
   );
+}
+
+function pluralize(count: number, singular: string, plural: string = `${singular}s`): string {
+  return `${count} ${count === 1 ? singular : plural}`;
 }
 
 function freshnessEntries(world: PharosVilleWorld) {

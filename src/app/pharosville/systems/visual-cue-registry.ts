@@ -4,7 +4,7 @@ export function buildVisualCueRegistry(): VisualCue[] {
   return [
     {
       id: "cue.lighthouse.psi",
-      visual: "lighthouse flame and beam",
+      visual: "lighthouse great fire",
       sourceField: "stability.current.band",
       questionAnswered: "What is the overall Pharos Stability Index state?",
       failureState: "unlit/fogged lighthouse",
@@ -12,9 +12,9 @@ export function buildVisualCueRegistry(): VisualCue[] {
     },
     {
       id: "cue.dock.size",
-      visual: "dock footprint",
-      sourceField: "chains.chains[].totalUsd",
-      questionAnswered: "Which chains hold the largest stablecoin supply?",
+      visual: "dock footprint and harbor style",
+      sourceField: "chains.chains[].totalUsd, chains.chains[].topStablecoins",
+      questionAnswered: "Which chains hold the largest stablecoin supply, and which stablecoins dominate each chain?",
       failureState: "dock unavailable state",
       domEquivalent: "dock ledger rows",
     },
@@ -25,6 +25,14 @@ export function buildVisualCueRegistry(): VisualCue[] {
       questionAnswered: "Which stablecoins are under peg or DEWS stress?",
       failureState: "data fog",
       domEquivalent: "ship detail placement explanation",
+    },
+    {
+      id: "cue.ship.motion",
+      visual: "ship route and docking cadence",
+      sourceField: "stablecoins.peggedAssets[].chainCirculating, pegSummary.coins[], stress.signals[]",
+      questionAnswered: "Where can this ship dock, how often does it visit, and which risk water anchors its route?",
+      failureState: "reduced-motion static risk position / data fog",
+      domEquivalent: "ship detail route facts and accessibility ledger",
     },
     {
       id: "cue.ship.hull",
@@ -44,11 +52,11 @@ export function buildVisualCueRegistry(): VisualCue[] {
     },
     {
       id: "cue.ship.pennant",
-      visual: "ship pennant color",
-      sourceField: "stablecoinMeta.flags.pegCurrency",
-      questionAnswered: "What is the peg currency?",
-      failureState: "slate pennant",
-      domEquivalent: "ship detail peg row",
+      visual: "ship sail logo and pennant color",
+      sourceField: "data/logos.json, stablecoinMeta.flags.pegCurrency",
+      questionAnswered: "Which stablecoin is this, and what is its peg currency?",
+      failureState: "symbol monogram on slate pennant",
+      domEquivalent: "ship detail identity and peg rows",
     },
     {
       id: "cue.ship.scale",
