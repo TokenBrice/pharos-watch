@@ -5,6 +5,8 @@ import { beforeEach, describe, expect, it } from "vitest";
 
 import { useCommandPaletteHistory } from "@/hooks/use-command-palette-history";
 
+const STORAGE_KEY = "pharos-command-palette-history";
+
 describe("useCommandPaletteHistory", () => {
   beforeEach(() => {
     window.localStorage.clear();
@@ -46,6 +48,73 @@ describe("useCommandPaletteHistory", () => {
     });
 
     expect(result.current.history).toEqual([]);
-    expect(window.localStorage.getItem("pharos-command-palette-history")).toBeNull();
+    expect(window.localStorage.getItem(STORAGE_KEY)).toBeNull();
+  });
+
+  it("reads valid array history from localStorage", () => {
+    window.localStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify([
+        {
+          id: "about",
+          type: "page",
+          label: "About",
+          href: "/about/",
+          timestamp: Date.now(),
+        },
+      ]),
+    );
+
+    const { result } = renderHook(() => useCommandPaletteHistory());
+
+    expect(result.current.history).toEqual([
+      expect.objectContaining({
+        id: "about",
+        type: "page",
+        label: "About",
+        href: "/about/",
+      }),
+    ]);
+  });
+
+  it.each([
+    ["object", { id: "about" }],
+    ["null", null],
+    ["primitive", "about"],
+  ])("treats %s JSON as empty history", (_label, stored) => {
+    window.localStorage.setItem(STORAGE_KEY, JSON.stringify(stored));
+
+    const { result } = renderHook(() => useCommandPaletteHistory());
+
+    expect(result.current.history).toEqual([]);
+  });
+
+  it("ignores malformed items inside a valid history array", () => {
+    window.localStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify([
+        null,
+        { id: "missing-fields" },
+        {
+          id: "usdc-usd-coin",
+          type: "stablecoin",
+          label: "USD Coin",
+          sublabel: "USDC",
+          href: "/stablecoin/usdc-usd-coin/",
+          timestamp: Date.now(),
+        },
+      ]),
+    );
+
+    const { result } = renderHook(() => useCommandPaletteHistory());
+
+    expect(result.current.history).toHaveLength(1);
+    expect(result.current.history[0]).toMatchObject({
+      id: "usdc-usd-coin",
+      type: "stablecoin",
+      label: "USD Coin",
+      sublabel: "USDC",
+      href: "/stablecoin/usdc-usd-coin/",
+    });
   });
 });

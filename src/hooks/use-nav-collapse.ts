@@ -10,13 +10,26 @@ export const STORAGE_KEY = "pharos-nav-groups";
 
 /* ── Pure helpers (exported for testing) ──────────────────────── */
 
+function normalizeExpandedState(value: unknown): Record<string, boolean> {
+  if (value === null || typeof value !== "object" || Array.isArray(value)) {
+    return {};
+  }
+
+  return Object.fromEntries(
+    Object.entries(value).filter(
+      (entry): entry is [string, boolean] =>
+        typeof entry[0] === "string" && typeof entry[1] === "boolean",
+    ),
+  );
+}
+
 export function getExpandedState(): Record<string, boolean> {
   const storage = getWindowStorage("local");
   const raw = safeStorageGetItem(storage, STORAGE_KEY);
   let persisted: Record<string, boolean> = {};
   if (raw) {
     try {
-      persisted = JSON.parse(raw);
+      persisted = normalizeExpandedState(JSON.parse(raw) as unknown);
     } catch {
       // corrupted — ignore
     }

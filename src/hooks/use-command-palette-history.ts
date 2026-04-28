@@ -37,9 +37,24 @@ function subscribeHistory(onStoreChange: () => void) {
   };
 }
 
-function normalizeHistory(items: HistoryItem[]): HistoryItem[] {
+function isHistoryItem(item: unknown): item is HistoryItem {
+  if (item === null || typeof item !== "object") return false;
+
+  const candidate = item as Partial<HistoryItem>;
+  return (
+    typeof candidate.id === "string" &&
+    (candidate.type === "stablecoin" || candidate.type === "page") &&
+    typeof candidate.label === "string" &&
+    (candidate.sublabel === undefined || typeof candidate.sublabel === "string") &&
+    typeof candidate.href === "string" &&
+    typeof candidate.timestamp === "number" &&
+    Number.isFinite(candidate.timestamp)
+  );
+}
+
+function normalizeHistory(items: unknown[]): HistoryItem[] {
   const weekAgo = Date.now() - HISTORY_RETENTION_MS;
-  const filtered = items.filter((item) => item.timestamp > weekAgo);
+  const filtered = items.filter((item): item is HistoryItem => isHistoryItem(item) && item.timestamp > weekAgo);
   return filtered.length > 0 ? filtered : EMPTY_HISTORY;
 }
 
@@ -61,7 +76,8 @@ function readHistorySnapshot(): HistoryItem[] {
   try {
     if (!stored) return cacheHistorySnapshot(null, EMPTY_HISTORY);
 
-    const parsed = JSON.parse(stored) as HistoryItem[];
+    const parsed = JSON.parse(stored) as unknown;
+    if (!Array.isArray(parsed)) return cacheHistorySnapshot(stored, EMPTY_HISTORY);
     return cacheHistorySnapshot(stored, normalizeHistory(parsed));
   } catch {
     return cacheHistorySnapshot(stored, EMPTY_HISTORY);

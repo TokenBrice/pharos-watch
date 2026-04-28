@@ -68,6 +68,34 @@ describe("getExpandedState", () => {
     expect(state["monitor"]).toBe(false);
     expect(state["info"]).toBe(false);
   });
+
+  it("ignores valid JSON with an invalid persisted shape", () => {
+    mockStorage.setItem(STORAGE_KEY, JSON.stringify(["data", false]));
+    const state = getExpandedState();
+    expect(state["data"]).toBe(true);
+    expect(state["tools"]).toBe(false);
+    expect(state["monitor"]).toBe(false);
+    expect(state["info"]).toBe(false);
+  });
+
+  it("keeps only boolean values from mixed persisted entries", () => {
+    mockStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify({
+        data: false,
+        tools: "true",
+        monitor: true,
+        info: null,
+      }),
+    );
+
+    const state = getExpandedState();
+
+    expect(state["data"]).toBe(false);
+    expect(state["tools"]).toBe(false);
+    expect(state["monitor"]).toBe(true);
+    expect(state["info"]).toBe(false);
+  });
 });
 
 describe("setExpandedState", () => {
