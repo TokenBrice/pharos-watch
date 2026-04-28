@@ -78,8 +78,57 @@ export async function setLastBlock(db: D1Database, configKey: string, block: num
 
 // --- Coin first-seen dates (for peg score tracking window) ---
 
+const FIRST_SEEN_CACHE_KEY = "supply-history:first-seen-dates";
+const FIRST_SEEN_CACHE_MAX_AGE_SEC = 24 * 60 * 60;
+
+interface FirstSeenCachePayload {
+  version: 1;
+  firstSeenById: Record<string, number>;
+}
+
+function parseFirstSeenCache(value: string): Map<string, number> | null {
+  try {
+    const payload = JSON.parse(value) as Partial<FirstSeenCachePayload>;
+    if (payload.version !== 1 || !payload.firstSeenById || typeof payload.firstSeenById !== "object") {
+      return null;
+    }
+    const map = new Map<string, number>();
+    for (const [id, firstSeen] of Object.entries(payload.firstSeenById)) {
+      if (typeof id !== "string" || typeof firstSeen !== "number" || !Number.isFinite(firstSeen)) {
+        return null;
+      }
+      map.set(id, firstSeen);
+    }
+    return map;
+  } catch {
+    return null;
+  }
+}
+
+async function readFirstSeenCache(db: D1Database, nowSec: number): Promise<Map<string, number> | null> {
+  const row = await db
+    .prepare("SELECT value, updated_at FROM cache WHERE key = ?")
+    .bind(FIRST_SEEN_CACHE_KEY)
+    .first<{ value: string; updated_at: number }>();
+  if (!row || nowSec - row.updated_at > FIRST_SEEN_CACHE_MAX_AGE_SEC) return null;
+  return parseFirstSeenCache(row.value);
+}
+
+async function writeFirstSeenCache(db: D1Database, firstSeen: Map<string, number>, nowSec: number): Promise<void> {
+  const firstSeenById = Object.fromEntries(firstSeen);
+  const payload: FirstSeenCachePayload = { version: 1, firstSeenById };
+  await db
+    .prepare("INSERT OR REPLACE INTO cache (key, value, updated_at) VALUES (?, ?, ?)")
+    .bind(FIRST_SEEN_CACHE_KEY, JSON.stringify(payload), nowSec)
+    .run();
+}
+
 /** Earliest supply_history snapshot per coin — used so young coins aren't scored over a phantom 4-year window. */
 export async function getFirstSeenDates(db: D1Database): Promise<Map<string, number>> {
+  const nowSec = Math.floor(Date.now() / 1000);
+  const cached = await readFirstSeenCache(db, nowSec);
+  if (cached) return cached;
+
   const result = await db
     .prepare("SELECT stablecoin_id, MIN(snapshot_date) as first_seen FROM supply_history GROUP BY stablecoin_id")
     .all<{ stablecoin_id: string; first_seen: number }>();
@@ -87,5 +136,6 @@ export async function getFirstSeenDates(db: D1Database): Promise<Map<string, num
   for (const row of result.results ?? []) {
     map.set(row.stablecoin_id, row.first_seen);
   }
+  await writeFirstSeenCache(db, map, nowSec);
   return map;
 }

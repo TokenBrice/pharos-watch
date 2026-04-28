@@ -1,5 +1,6 @@
 import { CIRCUIT_SOURCE } from "../../lib/constants";
 import { syncMintBurn, type MintBurnLane } from "../../cron/sync-mint-burn";
+import type { CronResult } from "../../lib/cron-logger";
 import type { ScheduledRuntimeContext } from "./context";
 import { runCircuitGatedLeasedScheduledJob } from "./run-circuit-gated-job";
 
@@ -7,7 +8,7 @@ interface MintBurnSlotOptions {
   lane: MintBurnLane;
   jobName: string;
   skipMessage: string;
-  onSettledSuccess?: (runtime: ScheduledRuntimeContext) => Promise<void>;
+  onSettledSuccess?: (runtime: ScheduledRuntimeContext, result: CronResult | void) => Promise<void>;
 }
 
 export async function runMintBurnSlot(
@@ -27,9 +28,9 @@ export async function runMintBurnSlot(
         lane: options.lane,
         jobName: options.jobName,
         onProgress: reportProgress,
-      }),
+    }),
     onSettledSuccess: options.onSettledSuccess
-      ? async (settledRuntime) => options.onSettledSuccess?.(settledRuntime)
+      ? async (settledRuntime, result) => options.onSettledSuccess?.(settledRuntime, result)
       : undefined,
   });
 }

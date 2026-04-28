@@ -39,6 +39,7 @@ const cronMocks = vi.hoisted(() => ({
   generateDailyDigest: vi.fn(async () => ({ status: "ok", itemCount: 1, metadata: "{}" })),
   generateWeeklyRecap: vi.fn(async () => ({ status: "ok", itemCount: 1, metadata: "{}" })),
   runDiscoveryScan: vi.fn(async () => ({ status: "ok", itemCount: 1, metadata: "{}" })),
+  refreshAggregateMintBurnFlowCache: vi.fn(async () => new Response("{}")),
   logCronRun: vi.fn(async (
     _db: D1Database,
     _job: string,
@@ -108,6 +109,9 @@ vi.mock("../cron/sync-bluechip", () => ({ syncBluechip: cronMocks.syncBluechip }
 vi.mock("../cron/daily-digest", () => ({ generateDailyDigest: cronMocks.generateDailyDigest }));
 vi.mock("../cron/weekly-recap", () => ({ generateWeeklyRecap: cronMocks.generateWeeklyRecap }));
 vi.mock("../cron/discovery-scan", () => ({ runDiscoveryScan: cronMocks.runDiscoveryScan }));
+vi.mock("../api/mint-burn-flows", () => ({
+  refreshAggregateMintBurnFlowCache: cronMocks.refreshAggregateMintBurnFlowCache,
+}));
 
 vi.mock("../lib/db-cache", () => ({
   getCache: cronMocks.getCache,
@@ -671,6 +675,9 @@ describe("worker.scheduled", () => {
       lane: "critical",
       jobName: "sync-mint-burn",
     });
+    expect(cronMocks.refreshAggregateMintBurnFlowCache).toHaveBeenCalledTimes(2);
+    expect(cronMocks.refreshAggregateMintBurnFlowCache).toHaveBeenCalledWith(db, 24);
+    expect(cronMocks.refreshAggregateMintBurnFlowCache).toHaveBeenCalledWith(db, 168);
     expect(db.getHistory().some((entry) => entry.sql.includes("FROM mint_burn_events"))).toBe(false);
     expect(cronMocks.syncBlacklist).not.toHaveBeenCalled();
     expect(cronMocks.syncDexDiscovery).not.toHaveBeenCalled();
@@ -737,6 +744,7 @@ describe("worker.scheduled", () => {
       lane: "extended",
       jobName: "sync-mint-burn-extended",
     });
+    expect(cronMocks.refreshAggregateMintBurnFlowCache).not.toHaveBeenCalled();
     expect(cronMocks.syncBlacklist).not.toHaveBeenCalled();
     expect(cronMocks.syncDexDiscovery).not.toHaveBeenCalled();
   });

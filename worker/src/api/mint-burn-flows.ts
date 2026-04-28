@@ -50,6 +50,7 @@ import {
   MINT_BURN_CRON_JOB,
   mintBurnPairKey,
   perCoinFlowCacheKey,
+  readCachedMintBurnFlowResponse,
   readMintBurnCronSnapshot,
   resolveFlowUpdatedAt,
   selectLargestEvents,
@@ -432,80 +433,86 @@ function buildCoinSummaries(
 // Aggregate mode (no stablecoin param)
 // ---------------------------------------------------------------------------
 
+export async function refreshAggregateMintBurnFlowCache(db: D1Database, hours: number): Promise<Response> {
+  const cacheKey = aggregateFlowCacheKey(hours);
+  const nowSec = Math.floor(Date.now() / 1000);
+  const syncStartSec = nowSec;
+  const nowDayTs = bucketDay(nowSec);
+  const params: AggregateQueryParams = {
+    nowSec,
+    windowStart: nowSec - hours * 3600,
+    window24h: nowSec - FLOW_DEFAULT_WINDOW_HOURS * 3600,
+    window7d: nowSec - 7 * 24 * 3600,
+    window30d: nowSec - 30 * 24 * 3600,
+    window90d: nowSec - 90 * 24 * 3600,
+    nowDayTs,
+    baselineWindowStart: nowDayTs - BASELINE_WINDOW_DAYS * DAY_SECONDS,
+  };
+
+  // Load grade-based classification (FTQ disabled when cache unavailable)
+  const reportCardCache = await loadReportCardCache(db, { maxAgeMs: REPORT_CARD_MAX_AGE_MS });
+  const gradeClassification = reportCardCache.kind === "ok"
+    ? buildFlightToQualityClassification(reportCardCache.payload)
+    : null;
+  const classificationWarning = reportCardCache.kind === "ok"
+    ? null
+    : `Report-card FTQ classification unavailable (${reportCardCache.reason})`;
+  const classificationSource = reportCardCache.kind === "ok" ? "report-card-cache" : "unavailable";
+  if (classificationWarning) console.warn(`[mint-burn-flows] ${classificationWarning}`);
+
+  // Load stablecoins cache for mcap lookup
+  const mcapById = new Map<string, number>();
+  const stablecoinsCacheResult = await loadStablecoinsCache(db, { mode: "lenient", allowLegacyArray: true });
+  if (stablecoinsCacheResult.kind !== "ok") {
+    const cached = await getCache(db, cacheKey);
+    if (cached) {
+      console.error(
+        `[mint-burn-flows] stablecoins cache ${stablecoinsCacheResult.kind} (${stablecoinsCacheResult.reason}), serving fallback cache (${cacheKey})`,
+      );
+      return cachedFlowFallbackResponse(cached);
+    }
+    return errorResponse(503, "Stablecoins data not yet available");
+  }
+  for (const asset of stablecoinsCacheResult.payload.peggedAssets as StablecoinData[]) {
+    if (TRACKED_IDS.has(asset.id)) {
+      mcapById.set(asset.id, sumMcapForTrackedChains(asset.id, asset.chainCirculating, asset.circulating));
+    }
+  }
+
+  const data = await fetchAggregateData(db, params);
+  const { coins, gaugeInputs, safeNet24h, riskyNet24h, trackedMcapUsd } =
+    buildCoinSummaries(data, mcapById, gradeClassification);
+
+  const gaugeScore = computeGaugeScore(gaugeInputs);
+  const gaugeBand = gaugeScore !== null ? getGaugeBand(gaugeScore) : null;
+  const ftq = detectFlightToQuality({ safeNet24h, riskyNet24h });
+  const hourly = buildHourlyFlowSeries(data.hourlyRows);
+  const updatedAt = resolveFlowUpdatedAt(data.hourlyRows, nowSec);
+
+  const body = {
+    gauge: {
+      score: gaugeScore, band: gaugeBand?.label ?? null, intensitySemantics: "signed-v2",
+      flightToQuality: ftq.active, flightIntensity: ftq.intensity, classificationSource,
+      trackedCoins: coins.length, trackedMcapUsd,
+    },
+    coins, hourly, updatedAt, windowHours: hours,
+    scope: buildMintBurnScope(MINT_BURN_CONFIGS),
+    sync: {
+      ...data.sync,
+      warning: appendSyncWarning(data.sync.warning, data.freshnessLookupWarning),
+      classificationWarning,
+    },
+  };
+
+  return finalizeMintBurnFlowResponse(db, cacheKey, syncStartSec, body, data.latestSuccessfulSyncAt ?? 0);
+}
+
 async function handleAggregate(db: D1Database, hours: number): Promise<Response> {
   const cacheKey = aggregateFlowCacheKey(hours);
-  return withMintBurnFlowFallback(db, "aggregate", cacheKey, async () => {
-    const nowSec = Math.floor(Date.now() / 1000);
-    const syncStartSec = nowSec;
-    const nowDayTs = bucketDay(nowSec);
-    const params: AggregateQueryParams = {
-      nowSec,
-      windowStart: nowSec - hours * 3600,
-      window24h: nowSec - FLOW_DEFAULT_WINDOW_HOURS * 3600,
-      window7d: nowSec - 7 * 24 * 3600,
-      window30d: nowSec - 30 * 24 * 3600,
-      window90d: nowSec - 90 * 24 * 3600,
-      nowDayTs,
-      baselineWindowStart: nowDayTs - BASELINE_WINDOW_DAYS * DAY_SECONDS,
-    };
-
-    // Load grade-based classification (FTQ disabled when cache unavailable)
-    const reportCardCache = await loadReportCardCache(db, { maxAgeMs: REPORT_CARD_MAX_AGE_MS });
-    const gradeClassification = reportCardCache.kind === "ok"
-      ? buildFlightToQualityClassification(reportCardCache.payload)
-      : null;
-    const classificationWarning = reportCardCache.kind === "ok"
-      ? null
-      : `Report-card FTQ classification unavailable (${reportCardCache.reason})`;
-    const classificationSource = reportCardCache.kind === "ok" ? "report-card-cache" : "unavailable";
-    if (classificationWarning) console.warn(`[mint-burn-flows] ${classificationWarning}`);
-
-    // Load stablecoins cache for mcap lookup
-    const mcapById = new Map<string, number>();
-    const stablecoinsCacheResult = await loadStablecoinsCache(db, { mode: "lenient", allowLegacyArray: true });
-    if (stablecoinsCacheResult.kind !== "ok") {
-      const cached = await getCache(db, cacheKey);
-      if (cached) {
-        console.error(
-          `[mint-burn-flows] stablecoins cache ${stablecoinsCacheResult.kind} (${stablecoinsCacheResult.reason}), serving fallback cache (${cacheKey})`,
-        );
-        return cachedFlowFallbackResponse(cached);
-      }
-      return errorResponse(503, "Stablecoins data not yet available");
-    }
-    for (const asset of stablecoinsCacheResult.payload.peggedAssets as StablecoinData[]) {
-      if (TRACKED_IDS.has(asset.id)) {
-        mcapById.set(asset.id, sumMcapForTrackedChains(asset.id, asset.chainCirculating, asset.circulating));
-      }
-    }
-
-    const data = await fetchAggregateData(db, params);
-    const { coins, gaugeInputs, safeNet24h, riskyNet24h, trackedMcapUsd } =
-      buildCoinSummaries(data, mcapById, gradeClassification);
-
-    const gaugeScore = computeGaugeScore(gaugeInputs);
-    const gaugeBand = gaugeScore !== null ? getGaugeBand(gaugeScore) : null;
-    const ftq = detectFlightToQuality({ safeNet24h, riskyNet24h });
-    const hourly = buildHourlyFlowSeries(data.hourlyRows);
-    const updatedAt = resolveFlowUpdatedAt(data.hourlyRows, nowSec);
-
-    const body = {
-      gauge: {
-        score: gaugeScore, band: gaugeBand?.label ?? null, intensitySemantics: "signed-v2",
-        flightToQuality: ftq.active, flightIntensity: ftq.intensity, classificationSource,
-        trackedCoins: coins.length, trackedMcapUsd,
-      },
-      coins, hourly, updatedAt, windowHours: hours,
-      scope: buildMintBurnScope(MINT_BURN_CONFIGS),
-      sync: {
-        ...data.sync,
-        warning: appendSyncWarning(data.sync.warning, data.freshnessLookupWarning),
-        classificationWarning,
-      },
-    };
-
-    return finalizeMintBurnFlowResponse(db, cacheKey, syncStartSec, body, data.latestSuccessfulSyncAt ?? 0);
-  });
+  const cached = await readCachedMintBurnFlowResponse(db, cacheKey);
+  if (cached?.ok) return cached;
+  return withMintBurnFlowFallback(db, "aggregate", cacheKey, () =>
+    refreshAggregateMintBurnFlowCache(db, hours));
 }
 
 // ---------------------------------------------------------------------------

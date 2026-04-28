@@ -852,7 +852,48 @@ describe("handleMintBurnFlows contract tests", () => {
     expect(usdt?.burnVolume24hUsd).toBe(5_000_000);
   });
 
-  it("serves cached aggregate fallback when live query fails", async () => {
+  it("serves cached aggregate responses before running live aggregate queries", async () => {
+    const now = Math.floor(Date.now() / 1000);
+    const cachedBody = {
+      gauge: {
+        score: 0,
+        band: "NEUTRAL",
+        intensitySemantics: "signed-v2",
+        flightToQuality: false,
+        flightIntensity: 0,
+        trackedCoins: 1,
+        trackedMcapUsd: 0,
+      },
+      coins: [],
+      hourly: [],
+      updatedAt: now - 60,
+      sync: { lastSuccessfulSyncAt: now - 120 },
+    };
+    const cachedDb = mockD1([
+      {
+        match: "cache",
+        rows: [{
+          key: "mint-burn-flows:v3:aggregate:24",
+          value: JSON.stringify(cachedBody),
+          updated_at: now,
+        }],
+      },
+      {
+        match: "FROM mint_burn_hourly",
+        rows: [],
+        throwError: new Error("live aggregate query should not run"),
+      },
+    ]);
+
+    const res = await handleMintBurnFlows(cachedDb, new URL("https://x/api/mint-burn-flows"));
+    expect(res.status).toBe(200);
+    await expect(res.json()).resolves.toEqual(cachedBody);
+
+    const history = cachedDb.getHistory();
+    expect(history.some((entry) => entry.sql.includes("FROM mint_burn_hourly"))).toBe(false);
+  });
+
+  it("serves cached aggregate fallback when live query fails after a cache miss", async () => {
     const now = Math.floor(Date.now() / 1000);
     const cachedBody = {
       gauge: {
@@ -868,6 +909,7 @@ describe("handleMintBurnFlows contract tests", () => {
       hourly: [],
       updatedAt: now - 60,
     };
+    let aggregateCacheLookups = 0;
 
     const failingDb = {
       prepare: (sql: string) => ({
@@ -882,6 +924,8 @@ describe("handleMintBurnFlows contract tests", () => {
             if (sql.includes("SELECT value, updated_at FROM cache WHERE key = ?")) {
               const key = String(args[0] ?? "");
               if (key.startsWith("mint-burn-flows:v3:aggregate:")) {
+                aggregateCacheLookups += 1;
+                if (aggregateCacheLookups === 1) return null;
                 return {
                   value: JSON.stringify(cachedBody),
                   updated_at: now,

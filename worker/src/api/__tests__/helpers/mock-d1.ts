@@ -59,6 +59,10 @@ async function maybeDelay(table: MockTableConfig | undefined): Promise<void> {
   await new Promise((resolve) => setTimeout(resolve, table.delayMs));
 }
 
+function isCacheKeyLookup(sql: string): boolean {
+  return /FROM\s+cache\s+WHERE\s+key\s*=\s*\?/i.test(sql);
+}
+
 export function mockD1(tables: MockTableConfig[] = [], options: MockD1Options = {}): MockD1Database {
   const history: Array<{ sql: string; binds: unknown[] }> = [];
   const matchHits = new Map<MockTableConfig, number>();
@@ -111,6 +115,14 @@ export function mockD1(tables: MockTableConfig[] = [], options: MockD1Options = 
       }
       if (table?.throwError != null) throw toError(table.throwError);
       await maybeDelay(table);
+      if (table && isCacheKeyLookup(sql) && typeof boundValues[0] === "string") {
+        const keyedRows = table.rows.filter((row) => typeof row.key === "string");
+        const keyedFirst = table.first && typeof table.first.key === "string" ? table.first : null;
+        const matchingRow = keyedRows.find((row) => row.key === boundValues[0]);
+        if (matchingRow) return matchingRow as T;
+        if (keyedFirst?.key === boundValues[0]) return keyedFirst as T;
+        if (keyedRows.length > 0 || keyedFirst) return null;
+      }
       return (table?.first ?? table?.rows?.[0] ?? null) as T | null;
     };
 

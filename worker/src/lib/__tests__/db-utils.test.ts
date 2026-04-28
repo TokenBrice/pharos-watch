@@ -285,4 +285,32 @@ describe("db utility helpers", () => {
     expect(firstSeen.get("usdt-tether")).toBe(1690000000);
     expect(firstSeen.get("usdc-circle")).toBe(1680000000);
   });
+
+  it("uses a fresh first-seen cache row when available", async () => {
+    const { db, calls } = makeDb({
+      cache: new Map([
+        [
+          "supply-history:first-seen-dates",
+          {
+            value: JSON.stringify({
+              version: 1,
+              firstSeenById: {
+                "usdt-tether": 1690000000,
+                "usdc-circle": 1680000000,
+              },
+            }),
+            updated_at: Math.floor(Date.now() / 1000),
+          },
+        ],
+      ]),
+      firstSeenRows: [
+        { stablecoin_id: "ignored", first_seen: 1 },
+      ],
+    });
+
+    const firstSeen = await getFirstSeenDates(db);
+    expect(firstSeen.get("usdt-tether")).toBe(1690000000);
+    expect(firstSeen.get("usdc-circle")).toBe(1680000000);
+    expect(calls.some((call) => call.sql.includes("MIN(snapshot_date)"))).toBe(false);
+  });
 });

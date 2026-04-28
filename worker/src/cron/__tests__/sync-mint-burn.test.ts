@@ -6,6 +6,38 @@ const TRANSFER_TOPIC = "0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a
 const CCIP_SEND_REQUESTED_TOPIC = "0xd0c3c799bf9e2639de44391e7f524d229b2b55f5b1ea94b2bf7da42f7243dddd";
 
 vi.mock("../../lib/mint-burn-contracts", () => ({
+  buildMintBurnScope: vi.fn((configs: Array<{ chain: { chainId: string } }>) => ({
+    chainIds: [...new Set(configs.map((config) => config.chain.chainId))],
+    label: "Ethereum",
+  })),
+  getMintBurnConfigsForStablecoin: vi.fn((stablecoinId: string) =>
+    stablecoinId === "usdt-tether"
+      ? [{
+          chain: {
+            chainId: "ethereum",
+            chainName: "Ethereum",
+            evmChainId: 1,
+            explorerUrl: "https://etherscan.io",
+            type: "evm",
+          },
+          stablecoinId: "usdt-tether",
+          symbol: "USDT",
+          contractAddress: "0xdac17f958d2ee523a2206206994597c13d831ec7",
+          decimals: 6,
+          dustThreshold: 10_000,
+          startBlock: 21_900_000,
+          adapterKind: "mixed",
+          startBlockSource: "reviewed-contract-specific",
+          startBlockConfidence: "high",
+          tier: "critical",
+          events: [],
+        }]
+      : [],
+  ),
+  getMintBurnTrackedPairs: vi.fn(() => new Set([
+    "usdt-tether|ethereum",
+    "usdc-circle|ethereum",
+  ])),
   MINT_BURN_CONFIGS: [
     {
       chain: {
@@ -148,6 +180,7 @@ import { createBudget } from "../../lib/evm-logs";
 function makeDb(opts: {
   runState?: { nextIndex: number; degradedStreak: number } | null;
   syncRows?: Array<{ last_block: number; config_key?: string }>;
+  cacheRows?: Array<{ key: string; value: string; updated_at: number }>;
 } = {}): D1Database {
   const runState = opts.runState ?? { nextIndex: 0, degradedStreak: 0 };
   return mockD1([
@@ -161,6 +194,9 @@ function makeDb(opts: {
     { match: "supply_history", rows: [] },
     { match: "mint_burn_hourly", rows: [] },
     { match: "mint_burn_events", rows: [] },
+    ...(opts.cacheRows
+      ? [{ match: "cache", rows: opts.cacheRows }]
+      : []),
   ]);
 }
 

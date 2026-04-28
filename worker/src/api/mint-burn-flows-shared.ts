@@ -51,6 +51,7 @@ export const BASELINE_WINDOW_DAYS = 30;
 export const FLOW_CACHE_PREFIX = "mint-burn-flows:v3";
 export const ETHEREUM_CHAIN_ID = "ethereum";
 export const FLOW_DEFAULT_WINDOW_HOURS = 24;
+export const MINT_BURN_AGGREGATE_PUBLISH_WINDOWS = [FLOW_DEFAULT_WINDOW_HOURS, 168] as const;
 export const MINT_BURN_CRON_JOB = "sync-mint-burn";
 const COVERAGE_LAG_THRESHOLD_BLOCKS = 10_000;
 
@@ -326,6 +327,14 @@ export function cachedFlowFallbackResponse(cached: { value: string; updatedAt: n
     "Cache-Control": CACHE_PROFILES.standard,
   }, freshnessTs, MINT_BURN_PUBLIC_FRESHNESS_MAX_AGE_SEC);
   return new Response(cached.value, { headers });
+}
+
+export async function readCachedMintBurnFlowResponse(
+  db: D1Database,
+  cacheKey: string,
+): Promise<Response | null> {
+  const cached = await getCache(db, cacheKey);
+  return cached ? cachedFlowFallbackResponse(cached) : null;
 }
 
 export async function finalizeMintBurnFlowResponse(

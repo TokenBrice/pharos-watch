@@ -2054,7 +2054,7 @@ For the five tracked savings-wrapper handoffs (`USDe`, `USDS`, `DAI`, `frxUSD`, 
 
 ### `GET /api/mint-burn-flows`
 
-Mint/burn flow data across tracked stablecoins — aggregate gauge score, per-coin net-flow + pressure-shift signals, and hourly timeseries. Updated every 30 minutes by the sync cron.
+Mint/burn flow data across tracked stablecoins — aggregate gauge score, per-coin net-flow + pressure-shift signals, and hourly timeseries. Updated every 30 minutes by the sync cron. Aggregate responses without `stablecoin` are served cache-first; the critical sync lane pre-publishes the default 24h and 168h windows after successful runs so public reads avoid rescanning hourly mint/burn aggregates.
 
 **Cache:** standard
 

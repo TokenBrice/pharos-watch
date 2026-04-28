@@ -49,6 +49,7 @@ Applied sequentially after the baseline (fresh setup) or after the previous indi
 | 0103     | `0103_blacklist_backfill_indexes.sql`           | Composite indexes for blacklist backfill + public API query paths                              |
 | 0104     | `0104_blacklist_mirror_zero_permanently_unavailable.sql` | Stamp EURC mirror-zero rows as permanently_unavailable to exit backfill pool         |
 | 0105     | `0105_depeg_event_provenance.sql`               | Add `confirmation_sources` + `pending_reason` nullable TEXT columns to `depeg_events` for post-promotion provenance              |
+| 0106     | `0106_mbe_counted_coin_chain_index.sql`         | Add partial counted-flow index for mint/burn event totals and page reads                       |
 
 ## Retired Individual Migrations
 
