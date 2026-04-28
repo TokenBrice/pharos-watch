@@ -14,6 +14,12 @@
   },
   "requiredForFirstRender": [
     "landmark.lighthouse",
+    "dock.grand-quay",
+    "dock.container-wharf",
+    "dock.twin-slip",
+    "dock.stone-breakwater",
+    "dock.market-marina",
+    "dock.relay-pontoon",
     "dock.wooden-pier",
     "ship.treasury-galleon",
     "prop.tombstone"
@@ -166,6 +172,114 @@
       "tool": "mcp:create_map_object",
       "promptProvenance": {
         "jobId": "3af5f1a1-f579-43ed-850c-70dfa9051cac",
+        "styleAnchorVersion": "2026-04-29-ship-classes-v1"
+      }
+    },
+    {
+      "id": "dock.grand-quay",
+      "path": "docks/grand-quay.png",
+      "category": "dock",
+      "layer": "docks",
+      "width": 224,
+      "height": 160,
+      "displayScale": 1,
+      "anchor": [112, 124],
+      "footprint": [112, 48],
+      "hitbox": [16, 18, 190, 126],
+      "loadPriority": "critical",
+      "tool": "mcp:create_map_object",
+      "promptProvenance": {
+        "jobId": "09936639-0920-44bc-9c95-b2da9a40a315",
+        "styleAnchorVersion": "2026-04-29-ship-classes-v1"
+      }
+    },
+    {
+      "id": "dock.container-wharf",
+      "path": "docks/container-wharf.png",
+      "category": "dock",
+      "layer": "docks",
+      "width": 224,
+      "height": 160,
+      "displayScale": 1,
+      "anchor": [112, 124],
+      "footprint": [118, 44],
+      "hitbox": [12, 28, 198, 110],
+      "loadPriority": "critical",
+      "tool": "mcp:create_map_object",
+      "promptProvenance": {
+        "jobId": "74433a05-055e-4344-a806-2a3e33bf8c77",
+        "styleAnchorVersion": "2026-04-29-ship-classes-v1"
+      }
+    },
+    {
+      "id": "dock.twin-slip",
+      "path": "docks/twin-slip.png",
+      "category": "dock",
+      "layer": "docks",
+      "width": 208,
+      "height": 152,
+      "displayScale": 1,
+      "anchor": [104, 118],
+      "footprint": [104, 46],
+      "hitbox": [14, 20, 180, 116],
+      "loadPriority": "critical",
+      "tool": "mcp:create_map_object",
+      "promptProvenance": {
+        "jobId": "122723cd-dac2-4480-8fda-0fae619adc04",
+        "styleAnchorVersion": "2026-04-29-ship-classes-v1"
+      }
+    },
+    {
+      "id": "dock.stone-breakwater",
+      "path": "docks/stone-breakwater.png",
+      "category": "dock",
+      "layer": "docks",
+      "width": 192,
+      "height": 136,
+      "displayScale": 1,
+      "anchor": [96, 110],
+      "footprint": [98, 42],
+      "hitbox": [8, 14, 176, 108],
+      "loadPriority": "critical",
+      "tool": "mcp:create_map_object",
+      "promptProvenance": {
+        "jobId": "f5f1eb36-5bc4-4c99-bf98-888ef762e587",
+        "styleAnchorVersion": "2026-04-29-ship-classes-v1"
+      }
+    },
+    {
+      "id": "dock.market-marina",
+      "path": "docks/market-marina.png",
+      "category": "dock",
+      "layer": "docks",
+      "width": 176,
+      "height": 128,
+      "displayScale": 1,
+      "anchor": [88, 100],
+      "footprint": [88, 38],
+      "hitbox": [12, 14, 152, 100],
+      "loadPriority": "critical",
+      "tool": "mcp:create_map_object",
+      "promptProvenance": {
+        "jobId": "49e0ddbe-c128-472a-ae25-18803fbb8741",
+        "styleAnchorVersion": "2026-04-29-ship-classes-v1"
+      }
+    },
+    {
+      "id": "dock.relay-pontoon",
+      "path": "docks/relay-pontoon.png",
+      "category": "dock",
+      "layer": "docks",
+      "width": 160,
+      "height": 120,
+      "displayScale": 1,
+      "anchor": [80, 94],
+      "footprint": [76, 34],
+      "hitbox": [8, 18, 144, 86],
+      "loadPriority": "critical",
+      "tool": "mcp:create_map_object",
+      "promptProvenance": {
+        "jobId": "e4006f7e-e11f-4266-bec7-5d1bdc07d82d",
         "styleAnchorVersion": "2026-04-29-ship-classes-v1"
       }
     },

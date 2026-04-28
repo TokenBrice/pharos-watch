@@ -220,14 +220,15 @@ function drawDocks({ assets, camera, ctx, world }: DrawPharosVilleInput) {
   for (const dock of world.docks) {
     const p = tileToScreen(dock.tile, camera);
     const reach = (26 + dock.size * 6) * camera.zoom;
-    const dockAsset = assets?.get("dock.wooden-pier");
+    const dockAsset = assets?.get(dock.assetId) ?? assets?.get("dock.wooden-pier");
+    const dockScale = dockRenderScale(dock.size);
     if (dockAsset) {
       drawAsset(
         ctx,
         dockAsset,
         p.x + (dock.tile.x < 32 ? -reach * 0.25 : reach * 0.25),
         p.y + 10 * camera.zoom,
-        camera.zoom * Math.max(0.7, dock.size / 5),
+        camera.zoom * dockScale,
       );
     } else {
       ctx.lineWidth = (3 + dock.size) * camera.zoom;
@@ -237,6 +238,10 @@ function drawDocks({ assets, camera, ctx, world }: DrawPharosVilleInput) {
       ctx.stroke();
     }
   }
+}
+
+function dockRenderScale(size: number): number {
+  return Math.max(0.43, Math.min(0.79, (0.66 + size * 0.092) * 0.5));
 }
 
 function drawShips({ assets, camera, ctx, motion, selectedTarget, shipMotionSamples, world }: DrawPharosVilleInput) {

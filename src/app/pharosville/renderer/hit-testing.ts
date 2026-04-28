@@ -30,7 +30,7 @@ function targetSize(entity: SelectableEntity): { height: number; width: number; 
 
 function assetIdForEntity(entity: SelectableEntity) {
   if (entity.kind === "lighthouse") return "landmark.lighthouse";
-  if (entity.kind === "dock") return "dock.wooden-pier";
+  if (entity.kind === "dock") return entity.assetId;
   if (entity.kind === "ship") return `ship.${entity.visual.hull}`;
   if (entity.kind === "grave") return "prop.tombstone";
   return null;
@@ -51,7 +51,7 @@ function assetDrawPoint(input: {
     const reach = (26 + entity.size * 6) * camera.zoom;
     x += entity.tile.x < mapWidth / 2 ? -reach * 0.25 : reach * 0.25;
     y += 10 * camera.zoom;
-    scale *= Math.max(0.7, entity.size / 5);
+    scale *= dockRenderScale(entity.size);
   } else if (entity.kind === "ship") {
     y += 12 * camera.zoom;
     scale *= entity.visual.scale * 0.7;
@@ -60,6 +60,10 @@ function assetDrawPoint(input: {
     scale *= 0.54;
   }
   return { scale, x, y };
+}
+
+function dockRenderScale(size: number): number {
+  return Math.max(0.43, Math.min(0.79, (0.66 + size * 0.092) * 0.5));
 }
 
 function assetTargetRect(input: {

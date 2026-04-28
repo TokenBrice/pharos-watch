@@ -24,7 +24,7 @@ The current implementation includes the desktop PharosVille v0.1 baseline:
 - Canvas 2D sea-first island map on eligible desktop viewports, with roughly 86% water by tile count
 - live aggregate Pharos queries mounted only after the desktop gate
 - pure world model for PSI, docks, active ships, clusters, cemetery, details, and visual cues
-- docks are capped to the top six chains by stablecoin supply; each dock uses a distinct Pixellab harbor sprite by rank and lists that chain's highest-supply stablecoins in DOM details
+- docks are capped to the top six chains by stablecoin supply; each dock uses a distinct Pixellab harbor sprite by rank, scales from both global share and absolute billion-dollar supply tiers, and lists that chain's highest-supply stablecoins in DOM details
 - active ships use distinct Pixellab base sprites by governance class: CeFi treasury galleons, CeFi-dependent chartered brigantines, and DeFi DAO schooners
 - ship scale uses exaggerated compressed market-cap tiers, not linear supply area, so $1B+ issuers are spottable while USDT and USDC remain capped
 - stablecoin ships with a rendered dominant-chain dock are moored around that dock, with their logo drawn on the sail when a local logo asset is available
@@ -43,7 +43,7 @@ The current implementation includes the desktop PharosVille v0.1 baseline:
 The planned PharosVille visual grammar is:
 
 - lighthouse = PSI composite status
-- dock footprint = top-six chain stablecoin supply
+- dock footprint = top-six chain stablecoin supply, with absolute size floors for billion-dollar hubs so Ethereum, Base, Arbitrum-class ports read as major harbors
 - dock harbor detail = highest-supply stablecoins on that chain
 - ships = active stablecoins only, moored at the dominant-chain dock when that chain is in the top-six harbor set
 - ship base sprite = governance class (`centralized` CeFi, `centralized-dependent` CeFi-Dep, `decentralized` DeFi), with legacy algorithmic backing reserved as a fallback hull
