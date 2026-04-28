@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   acquireCronLease,
   CronLeaseLostError,
+  isRetriableD1OverloadError,
   releaseCronLease,
   renewCronLease,
   runCronWithLease,
@@ -314,6 +315,14 @@ describe("cron lease primitives", () => {
     await expect(releaseCronLease(db, "sync-stablecoins", "owner-a")).resolves.toBeUndefined();
     const acquiredAfterRelease = await acquireCronLease(db, "sync-stablecoins", "owner-c", 120);
     expect(acquiredAfterRelease).toBe(true);
+  });
+});
+
+describe("D1 overload retry classification", () => {
+  it("treats queued-too-long and internal-reference D1 errors as retriable", () => {
+    expect(isRetriableD1OverloadError(new Error("D1_ERROR: D1 DB is overloaded. Requests queued for too long."))).toBe(true);
+    expect(isRetriableD1OverloadError(new Error("D1_ERROR: internal error; reference = abc123"))).toBe(true);
+    expect(isRetriableD1OverloadError(new Error("D1_ERROR: no such table: cache"))).toBe(false);
   });
 });
 

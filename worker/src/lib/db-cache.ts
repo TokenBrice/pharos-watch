@@ -1,4 +1,5 @@
 import { batchExecute } from "./db";
+import { runWithOverloadRetry } from "./cron-lease";
 import type { PriceConfidence, PriceObservedAtMode } from "@shared/types/core";
 import {
   getFreshnessSentinelCacheKey,
@@ -7,23 +8,27 @@ import {
 } from "./freshness-sentinels";
 
 export async function getCache(db: D1Database, key: string): Promise<{ value: string; updatedAt: number } | null> {
-  const row = await db
-    .prepare("SELECT value, updated_at FROM cache WHERE key = ?")
-    .bind(key)
-    .first<{ value: string; updated_at: number }>();
+  const row = await runWithOverloadRetry(() =>
+    db
+      .prepare("SELECT value, updated_at FROM cache WHERE key = ?")
+      .bind(key)
+      .first<{ value: string; updated_at: number }>(),
+  );
   if (!row) return null;
   return { value: row.value, updatedAt: row.updated_at };
 }
 
 export async function setCache(db: D1Database, key: string, value: string): Promise<void> {
-  await db
-    .prepare("INSERT OR REPLACE INTO cache (key, value, updated_at) VALUES (?, ?, ?)")
-    .bind(key, value, Math.floor(Date.now() / 1000))
-    .run();
+  await runWithOverloadRetry(() =>
+    db
+      .prepare("INSERT OR REPLACE INTO cache (key, value, updated_at) VALUES (?, ?, ?)")
+      .bind(key, value, Math.floor(Date.now() / 1000))
+      .run(),
+  );
 }
 
 export async function deleteCache(db: D1Database, key: string): Promise<void> {
-  await db.prepare("DELETE FROM cache WHERE key = ?").bind(key).run();
+  await runWithOverloadRetry(() => db.prepare("DELETE FROM cache WHERE key = ?").bind(key).run());
 }
 
 
@@ -48,14 +53,16 @@ export async function setCacheIfNewer(
   value: string,
   syncStartSec: number,
 ): Promise<CacheWriteResult> {
-  const result = await db
-    .prepare(
-      `INSERT INTO cache (key, value, updated_at) VALUES (?, ?, ?)
-       ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated_at = excluded.updated_at
-       WHERE cache.updated_at <= excluded.updated_at`,
-    )
-    .bind(key, value, syncStartSec)
-    .run();
+  const result = await runWithOverloadRetry(() =>
+    db
+      .prepare(
+        `INSERT INTO cache (key, value, updated_at) VALUES (?, ?, ?)
+         ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated_at = excluded.updated_at
+         WHERE cache.updated_at <= excluded.updated_at`,
+      )
+      .bind(key, value, syncStartSec)
+      .run(),
+  );
   if (result.meta.changes === 0) {
     console.log(`[cache] Skipped write for "${key}" — existing data is newer (started_at > ${syncStartSec})`);
     return { written: false, skippedBecauseNewer: true };

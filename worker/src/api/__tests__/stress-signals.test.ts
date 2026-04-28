@@ -298,7 +298,7 @@ describe("handleStressSignals contract tests", () => {
     expect(body.history[1].amplifiers).toEqual({ psi: 1.05, contagion: 1.2 });
   });
 
-  it("uses the oldest returned aggregate row for freshness headers", async () => {
+  it("uses the latest aggregate publication for freshness headers while exposing the oldest row", async () => {
     const requestNowSec = Math.floor(Date.now() / 1000);
     const freshComputedAt = requestNowSec - 60;
     const staleComputedAt = requestNowSec - 15_000;
@@ -333,8 +333,8 @@ describe("handleStressSignals contract tests", () => {
     };
     expect(body.updatedAt).toBe(freshComputedAt);
     expect(body.oldestComputedAt).toBe(staleComputedAt);
-    expect(Number(res.headers.get("X-Data-Age"))).toBeGreaterThanOrEqual(15_000);
-    expect(res.headers.get("Warning")).toContain("Response is stale");
+    expect(Number(res.headers.get("X-Data-Age"))).toBeLessThan(120);
+    expect(res.headers.get("Warning")).toBeNull();
   });
 
   it("does not warn on DEWS aggregate data that is inside the 30-minute cadence runway", async () => {

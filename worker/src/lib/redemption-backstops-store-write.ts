@@ -1,6 +1,7 @@
 import type { RedemptionBackstopEntry } from "@shared/types/redemption";
 import { DAY_SECONDS } from "@shared/lib/time-constants";
 import { batchExecute } from "./db";
+import { runWithOverloadRetry } from "./cron-lease";
 
 export type RedemptionBackstopSnapshotRecord = RedemptionBackstopEntry;
 
@@ -254,13 +255,15 @@ export async function upsertRedemptionBackstopSnapshots(
   const runId = options?.runId ?? createRedemptionBackstopRunId();
   const startedAt = Math.floor(Date.now() / 1000);
   const snapshotDate = Math.floor(Date.now() / 1000 / DAY_SECONDS) * DAY_SECONDS;
-  await buildRunStartInsert(db, {
-    runId,
-    startedAt,
-    expectedCount: options?.expectedCount ?? records.length,
-    methodologyVersion: records[0].methodologyVersion,
-    metadata: options?.metadata,
-  }).run();
+  await runWithOverloadRetry(() =>
+    buildRunStartInsert(db, {
+      runId,
+      startedAt,
+      expectedCount: options?.expectedCount ?? records.length,
+      methodologyVersion: records[0].methodologyVersion,
+      metadata: options?.metadata,
+    }).run(),
+  );
 
   const stmts: D1PreparedStatement[] = [];
   for (const record of records) {
@@ -273,12 +276,14 @@ export async function upsertRedemptionBackstopSnapshots(
   await batchExecute(db, stmts, 20);
 
   const { minUpdatedAt, maxUpdatedAt } = resolveRunBounds(records);
-  await buildRunCompleteUpdate(db, {
-    runId,
-    completedAt: Math.floor(Date.now() / 1000),
-    writtenCount: records.length,
-    minUpdatedAt,
-    maxUpdatedAt,
-    metadata: options?.metadata,
-  }).run();
+  await runWithOverloadRetry(() =>
+    buildRunCompleteUpdate(db, {
+      runId,
+      completedAt: Math.floor(Date.now() / 1000),
+      writtenCount: records.length,
+      minUpdatedAt,
+      maxUpdatedAt,
+      metadata: options?.metadata,
+    }).run(),
+  );
 }

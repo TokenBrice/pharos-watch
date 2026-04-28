@@ -3,6 +3,7 @@ import { REDEMPTION_SEVERE_ACTIVE_DEPEG_BPS } from "@shared/lib/report-card-acti
 import { CRON_INTERVALS } from "@shared/lib/cron-jobs";
 import type { CronResult } from "../lib/cron-logger";
 import { batchExecute } from "../lib/db";
+import { runWithOverloadRetry } from "../lib/cron-lease";
 import { loadDexLiquiditySnapshot } from "../lib/dex-liquidity";
 import { loadReserveSnapshotMetadataMap } from "../lib/live-reserves-store";
 import { upsertRedemptionBackstopSnapshots } from "../lib/redemption-backstops-store";
@@ -31,7 +32,9 @@ async function pruneRemovedRedemptionBackstops(
   configuredIds: readonly string[],
 ): Promise<void> {
   const configuredIdSet = new Set(configuredIds);
-  const existingRows = await db.prepare("SELECT stablecoin_id FROM redemption_backstop").all<{ stablecoin_id: string }>();
+  const existingRows = await runWithOverloadRetry(() =>
+    db.prepare("SELECT stablecoin_id FROM redemption_backstop").all<{ stablecoin_id: string }>(),
+  );
   const staleIds = (existingRows.results ?? [])
     .map((row) => row.stablecoin_id)
     .filter((stablecoinId) => !configuredIdSet.has(stablecoinId));

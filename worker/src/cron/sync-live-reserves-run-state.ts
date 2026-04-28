@@ -1,4 +1,5 @@
 import { deleteCache, getCache } from "../lib/db-cache";
+import { batchExecute } from "../lib/db";
 import { breakerKeyForConfig, type ConfiguredCoin } from "./sync-live-reserves-shared";
 import { rotateFromCursor } from "./shared/cursor-rotation";
 import {
@@ -105,7 +106,7 @@ export async function recordDeferredTail(
 
   if (statements.length > 0) {
     try {
-      await db.batch(statements);
+      await batchExecute(db, statements);
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
       throw new Error(`Failed to record deferred reserve tail state: ${message}`);

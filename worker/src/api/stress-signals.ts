@@ -175,7 +175,6 @@ export const handleStressSignals = withErrorHandler(
     }
 
     const asOf = updatedAt > 0 ? updatedAt : Math.floor(Date.now() / 1000);
-    const freshnessAsOf = oldestComputedAt ?? asOf;
     const methodologyVersion = getDepegDewsMethodologyVersionAt(asOf);
 
     return jsonResponse({ signals, updatedAt, oldestComputedAt: oldestComputedAt ?? undefined, malformedRows, methodology: buildMethodologyEnvelope({
@@ -187,6 +186,6 @@ export const handleStressSignals = withErrorHandler(
       asOf,
     }) }, addFreshnessHeaders({
       "Cache-Control": CACHE_PROFILES.standard,
-    }, freshnessAsOf, API_FRESHNESS_MAX_AGE_SEC.stressSignals));
+    }, asOf, API_FRESHNESS_MAX_AGE_SEC.stressSignals));
   },
 );

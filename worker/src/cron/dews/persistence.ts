@@ -3,6 +3,7 @@ import { FROZEN_IDS } from "@shared/lib/stablecoins";
 import { batchExecute, buildInClause } from "../../lib/db";
 import { chunkArray } from "../../lib/collections";
 import { writeFreshnessSentinel } from "../../lib/db-cache";
+import { runWithOverloadRetry } from "../../lib/cron-lease";
 import type { DewsComputedRow } from "./contracts";
 
 const D1_SAFE_SQL_IN_CHUNK_SIZE = 90;
@@ -38,10 +39,12 @@ async function deleteOrphansForTable(
 ): Promise<number> {
   if (!DEWS_TABLES.has(table)) throw new Error(`Invalid DEWS table: ${table}`);
 
-  const existingIds = await db
-    // SAFETY: validated against DEWS_TABLES allowlist above.
-    .prepare(`SELECT DISTINCT stablecoin_id FROM ${table}`)
-    .all<{ stablecoin_id: string }>();
+  const existingIds = await runWithOverloadRetry(() =>
+    db
+      // SAFETY: validated against DEWS_TABLES allowlist above.
+      .prepare(`SELECT DISTINCT stablecoin_id FROM ${table}`)
+      .all<{ stablecoin_id: string }>(),
+  );
   const allDbIds = new Set((existingIds.results ?? []).map((row) => row.stablecoin_id));
   const orphanIds = [...computeStressSignalPruneIds(allDbIds, eligibleIds)];
 
@@ -50,11 +53,13 @@ async function deleteOrphansForTable(
   let deleted = 0;
   for (const idChunk of chunkArray(orphanIds, D1_SAFE_SQL_IN_CHUNK_SIZE)) {
     const inClause = buildInClause(idChunk);
-    const result = await db
-      // SAFETY: validated against DEWS_TABLES allowlist above.
-      .prepare(`DELETE FROM ${table} WHERE stablecoin_id IN (${inClause.sql})`)
-      .bind(...inClause.binds)
-      .run();
+    const result = await runWithOverloadRetry(() =>
+      db
+        // SAFETY: validated against DEWS_TABLES allowlist above.
+        .prepare(`DELETE FROM ${table} WHERE stablecoin_id IN (${inClause.sql})`)
+        .bind(...inClause.binds)
+        .run(),
+    );
     deleted += result.meta?.changes ?? 0;
   }
   return deleted;
@@ -70,10 +75,12 @@ async function deleteCurrentStressSignalRowsForIds(
   let deleted = 0;
   for (const idChunk of chunkArray(ids, D1_SAFE_SQL_IN_CHUNK_SIZE)) {
     const inClause = buildInClause(idChunk);
-    const result = await db
-      .prepare(`DELETE FROM stress_signals WHERE stablecoin_id IN (${inClause.sql})`)
-      .bind(...inClause.binds)
-      .run();
+    const result = await runWithOverloadRetry(() =>
+      db
+        .prepare(`DELETE FROM stress_signals WHERE stablecoin_id IN (${inClause.sql})`)
+        .bind(...inClause.binds)
+        .run(),
+    );
     deleted += result.meta?.changes ?? 0;
   }
   return deleted;
@@ -115,10 +122,12 @@ export async function persistDewsResults(params: {
   const rowsRetiredCurrent = await deleteCurrentStressSignalRowsForIds(params.db, noCurrentSupplyIds);
 
   const todayMidnight = getTodayMidnightUtcSec();
-  const existing = await params.db
-    .prepare("SELECT COUNT(*) as cnt FROM stress_signal_history WHERE snapshot_date = ?")
-    .bind(todayMidnight)
-    .first<{ cnt: number }>();
+  const existing = await runWithOverloadRetry(() =>
+    params.db
+      .prepare("SELECT COUNT(*) as cnt FROM stress_signal_history WHERE snapshot_date = ?")
+      .bind(todayMidnight)
+      .first<{ cnt: number }>(),
+  );
   const existingCount = existing?.cnt ?? 0;
 
   if (params.results.length > 0 && existingCount < params.results.length) {
@@ -153,16 +162,20 @@ export async function persistDewsResults(params: {
       ? `AND stablecoin_id NOT IN (${frozenIdsList.map(() => "?").join(",")})`
       : "";
 
-  const oldSignals = await params.db
-    .prepare(`DELETE FROM stress_signals WHERE computed_at < ? ${frozenClause}`)
-    .bind(params.nowSec - 7 * DAY_SECONDS, ...frozenIdsList)
-    .run();
+  const oldSignals = await runWithOverloadRetry(() =>
+    params.db
+      .prepare(`DELETE FROM stress_signals WHERE computed_at < ? ${frozenClause}`)
+      .bind(params.nowSec - 7 * DAY_SECONDS, ...frozenIdsList)
+      .run(),
+  );
   rowsDropped += oldSignals.meta?.changes ?? 0;
 
-  const oldHistory = await params.db
-    .prepare(`DELETE FROM stress_signal_history WHERE snapshot_date < ? ${frozenClause}`)
-    .bind(params.nowSec - 365 * DAY_SECONDS, ...frozenIdsList)
-    .run();
+  const oldHistory = await runWithOverloadRetry(() =>
+    params.db
+      .prepare(`DELETE FROM stress_signal_history WHERE snapshot_date < ? ${frozenClause}`)
+      .bind(params.nowSec - 365 * DAY_SECONDS, ...frozenIdsList)
+      .run(),
+  );
   rowsDropped += oldHistory.meta?.changes ?? 0;
 
   return { rowsDropped, rowsRetiredCurrent };

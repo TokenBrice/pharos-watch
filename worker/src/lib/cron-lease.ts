@@ -24,7 +24,11 @@ export const DEFAULT_CRON_TIMEOUT_MS = 5 * 60_000;
 
 export function isRetriableD1OverloadError(err: unknown): boolean {
   const msg = String(err);
-  return msg.includes("D1 DB is overloaded") || msg.includes("Requests queued for too long");
+  return (
+    msg.includes("D1 DB is overloaded") ||
+    msg.includes("Requests queued for too long") ||
+    msg.includes("D1_ERROR: internal error; reference")
+  );
 }
 
 export async function runWithOverloadRetry<T>(
