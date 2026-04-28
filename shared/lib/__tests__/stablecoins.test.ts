@@ -51,12 +51,12 @@ describe("tracked stablecoin metadata", () => {
     const perCoinGenerated = parseStablecoinMetaAssets(perCoinGeneratedAsset, "coins.generated");
     const canonicalOrder = parseCanonicalOrderAsset(canonicalOrderAsset, "canonical-order");
 
-    expect(usdMajor).toHaveLength(36);
-    expect(usdMinor).toHaveLength(118);
-    expect(nonUsd).toHaveLength(41);
-    expect(commodity).toHaveLength(9);
-    expect(preLaunch).toHaveLength(11);
-    expect(perCoinGenerated).toHaveLength(0);
+    expect(usdMajor).toHaveLength(0);
+    expect(usdMinor).toHaveLength(0);
+    expect(nonUsd).toHaveLength(0);
+    expect(commodity).toHaveLength(0);
+    expect(preLaunch).toHaveLength(0);
+    expect(perCoinGenerated).toHaveLength(215);
     expect(canonicalOrder).toHaveLength(215);
     expect(
       usdMajor.length + usdMinor.length + nonUsd.length + commodity.length + preLaunch.length + perCoinGenerated.length,
@@ -66,27 +66,25 @@ describe("tracked stablecoin metadata", () => {
 
   it("keeps canonical order references limited to known tracked IDs", () => {
     const knownIds = new Set([
-      ...parseStablecoinMetaAssets(usdMajorAsset, "usd-major"),
-      ...parseStablecoinMetaAssets(usdMinorAsset, "usd-minor"),
-      ...parseStablecoinMetaAssets(nonUsdAsset, "non-usd"),
-      ...parseStablecoinMetaAssets(commodityAsset, "commodity"),
-      ...parseStablecoinMetaAssets(preLaunchAsset, "pre-launch"),
       ...parseStablecoinMetaAssets(perCoinGeneratedAsset, "coins.generated"),
     ].map((coin) => coin.id));
 
     expect(parseCanonicalOrderAsset(canonicalOrderAsset, "canonical-order").filter((id) => !knownIds.has(id))).toEqual([]);
   });
 
-  it("keeps pre-launch metadata in the dedicated data asset", () => {
-    const activeFileCoins = [
+  it("keeps pre-launch metadata in per-coin assets", () => {
+    const legacyShellCoins = [
       ...parseStablecoinMetaAssets(usdMajorAsset, "usd-major"),
       ...parseStablecoinMetaAssets(usdMinorAsset, "usd-minor"),
       ...parseStablecoinMetaAssets(nonUsdAsset, "non-usd"),
       ...parseStablecoinMetaAssets(commodityAsset, "commodity"),
+      ...parseStablecoinMetaAssets(preLaunchAsset, "pre-launch"),
     ];
-    const preLaunchCoins = parseStablecoinMetaAssets(preLaunchAsset, "pre-launch");
+    const perCoinGenerated = parseStablecoinMetaAssets(perCoinGeneratedAsset, "coins.generated");
+    const preLaunchCoins = perCoinGenerated.filter((coin) => coin.status === "pre-launch");
 
-    expect(activeFileCoins.filter((coin) => coin.status === "pre-launch")).toEqual([]);
+    expect(legacyShellCoins).toEqual([]);
+    expect(preLaunchCoins).toHaveLength(11);
     expect(preLaunchCoins.every((coin) => coin.status === "pre-launch")).toBe(true);
   });
 

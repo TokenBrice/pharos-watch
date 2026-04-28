@@ -34,6 +34,13 @@ export interface StablecoinDuplicateIdIssue {
   id: string;
 }
 
+export interface StablecoinLegacyShardEntriesIssue {
+  count: number;
+  entries: StablecoinSourceEntry[];
+  file: string;
+  legacyShard: StablecoinLegacyAssetFile;
+}
+
 export interface CanonicalOrderIssues {
   duplicateIds: string[];
   missingIds: string[];
@@ -152,6 +159,52 @@ export function findDuplicateStablecoinIds(entries: StablecoinSourceEntry[]): St
     .map((group) => ({ entries: group, id: group[0]!.id }));
 }
 
+export function findNonEmptyLegacyStablecoinShards(
+  entries: StablecoinSourceEntry[],
+): StablecoinLegacyShardEntriesIssue[] {
+  const byShard = new Map<StablecoinLegacyAssetFile, StablecoinSourceEntry[]>();
+
+  for (const entry of entries) {
+    if (entry.sourceKind !== "legacy" || !entry.legacyShard) {
+      continue;
+    }
+
+    const existing = byShard.get(entry.legacyShard);
+    if (existing) {
+      existing.push(entry);
+    } else {
+      byShard.set(entry.legacyShard, [entry]);
+    }
+  }
+
+  return [...byShard.entries()]
+    .map(([legacyShard, shardEntries]) => ({
+      count: shardEntries.length,
+      entries: shardEntries,
+      file: `${STABLECOIN_DATA_DIR}/${legacyShard}`,
+      legacyShard,
+    }))
+    .sort((a, b) => a.file.localeCompare(b.file));
+}
+
+export function formatLegacyShardEntriesIssue(issue: StablecoinLegacyShardEntriesIssue): string {
+  const sampleIds = issue.entries
+    .slice(0, 8)
+    .map((entry) => entry.id)
+    .join(", ");
+  const extraCount = issue.count - 8;
+  const idDetails = sampleIds
+    ? ` IDs: ${sampleIds}${extraCount > 0 ? `, and ${extraCount} more` : ""}.`
+    : "";
+
+  return (
+    `${issue.file}: legacy stablecoin shard contains ${issue.count} ` +
+    `${issue.count === 1 ? "entry" : "entries"}.${idDetails} ` +
+    `Legacy shards are read-only compatibility shells; edit ${PER_COIN_SOURCE_DIR}/<id>.json ` +
+    `and regenerate ${GENERATED_PER_COIN_ASSET_FILE} instead.`
+  );
+}
+
 export function findCanonicalOrderIssues(
   canonicalOrder: string[],
   entries: StablecoinSourceEntry[],
@@ -193,16 +246,15 @@ export function syncGeneratedPerCoinAsset({
   check = false,
   rootDir = process.cwd(),
 }: SyncGeneratedPerCoinAssetOptions = {}): SyncGeneratedPerCoinAssetResult {
-  const legacyEntries = loadLegacyStablecoinEntries(rootDir);
   const perCoinEntries = loadPerCoinStablecoinEntries(rootDir);
-  const duplicateIssues = findDuplicateStablecoinIds([...legacyEntries, ...perCoinEntries]);
+  const duplicateIssues = findDuplicateStablecoinIds(perCoinEntries);
   if (duplicateIssues.length > 0) {
     const details = duplicateIssues
       .map((issue) => (
         `"${issue.id}" in ${issue.entries.map((entry) => entry.file).join(", ")}`
       ))
       .join("; ");
-    throw new Error(`Duplicate stablecoin IDs detected while generating per-coin asset: ${details}`);
+    throw new Error(`Duplicate per-coin stablecoin IDs detected while generating per-coin asset: ${details}`);
   }
 
   const expected = formatJson(buildGeneratedPerCoinAsset(perCoinEntries));

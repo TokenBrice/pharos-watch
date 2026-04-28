@@ -8,6 +8,8 @@ import {
   CANONICAL_ORDER_ASSET_FILE,
   findCanonicalOrderIssues,
   findDuplicateStablecoinIds,
+  findNonEmptyLegacyStablecoinShards,
+  formatLegacyShardEntriesIssue,
   GENERATED_PER_COIN_ASSET_FILE,
   LEGACY_STABLECOIN_ASSET_FILES,
   loadGeneratedPerCoinCoins,
@@ -93,22 +95,6 @@ function getRuntimeAdmissionIssue(coin: StablecoinMeta): string | null {
     "active asset lacks a /api/stablecoins cache admission path; add llamaId, or mark detailProvider=coingecko " +
     "with geckoId or a supported on-chain supply contract"
   );
-}
-
-function getStatusPartitionIssue(entry: StablecoinSourceEntry): string | null {
-  if (entry.sourceKind !== "legacy") {
-    return null;
-  }
-
-  if (entry.legacyShard === "pre-launch.json") {
-    return entry.coin.status === "pre-launch"
-      ? null
-      : "pre-launch.json may only contain assets with status=pre-launch";
-  }
-
-  return entry.coin.status === "pre-launch"
-    ? "pre-launch assets belong in shared/data/stablecoins/pre-launch.json"
-    : null;
 }
 
 function getReserveTotalIssue(coin: StablecoinMeta): string | null {
@@ -226,8 +212,12 @@ if (errorCount === 0) {
 }
 
 if (errorCount === 0) {
-  const allEntries = [...legacyEntries, ...perCoinEntries];
-  const knownIds = new Set(allEntries.map((entry) => entry.coin.id));
+  const allEntries = perCoinEntries;
+  const knownIds = new Set(perCoinEntries.map((entry) => entry.coin.id));
+
+  for (const issue of findNonEmptyLegacyStablecoinShards(legacyEntries)) {
+    reportError(formatLegacyShardEntriesIssue(issue));
+  }
 
   for (const issue of findDuplicateStablecoinIds(allEntries)) {
     reportError(
@@ -249,11 +239,6 @@ if (errorCount === 0) {
   }
 
   for (const entry of allEntries) {
-    const partitionIssue = getStatusPartitionIssue(entry);
-    if (partitionIssue) {
-      reportError(`${entry.file} (${entry.coin.id}): ${partitionIssue}`);
-    }
-
     const reserveTotalIssue = getReserveTotalIssue(entry.coin);
     if (reserveTotalIssue) {
       reportError(`${entry.file} (${entry.coin.id}): ${reserveTotalIssue}`);
