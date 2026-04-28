@@ -30,6 +30,12 @@ export const CRON_SCHEDULES = {
   monthlyYieldAudit: "0 6 1 * *",
 } as const;
 
+export const CRON_CONNECTION_BUDGET = {
+  maxPerTrigger: 6,
+  failAt: 6,
+  fullForNewFetchHeavyWorkAt: 5,
+} as const;
+
 export type CronScheduleKey = keyof typeof CRON_SCHEDULES;
 export type CronScheduleExpression = (typeof CRON_SCHEDULES)[CronScheduleKey];
 export type CronTriggerMode = "shared" | "isolated";
@@ -204,7 +210,7 @@ const CRON_JOB_DEFINITIONS_BASE: readonly CronJobDefinition[] = [
     intervalSec: 300,
     scheduleKey: "fiveMinuteTelegramAlerts",
     triggerMode: "isolated",
-    maxConnections: 5, // Telegram sendMessage batches run with SEND_BATCH_SIZE=5
+    maxConnections: 5, // Headroom-full slot: Telegram sendMessage batches run with SEND_BATCH_SIZE=5
   },
   {
     job: "sync-blacklist",
@@ -267,7 +273,7 @@ const CRON_JOB_DEFINITIONS_BASE: readonly CronJobDefinition[] = [
     intervalSec: 4 * 3600,
     scheduleKey: "fourHourlyYieldSupplemental",
     triggerMode: "isolated",
-    maxConnections: 5, // Morpho/Pendle/Yearn/Beefy run in parallel (peak 5), then Compound/Aave consume the isolated lane
+    maxConnections: 5, // Headroom-full slot: Morpho/Pendle/Yearn/Beefy run in parallel (peak 5), then Compound/Aave consume the isolated lane
   },
   {
     // Runs on the quarter-hourly trigger after a safe stablecoins cache write.
@@ -371,6 +377,8 @@ const CRON_JOB_DEFINITIONS_BASE: readonly CronJobDefinition[] = [
     connectionGroup: "reserve-sync-chain",
   },
   {
+    // daily0805Utc is a headroom-full shared slot: Bluechip peak 3 plus
+    // digest-chain peak 1 plus coverage discovery peak 1 totals 5/6.
     job: "sync-bluechip",
     label: "Bluechip sync",
     group: "daily",

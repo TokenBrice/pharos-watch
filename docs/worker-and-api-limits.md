@@ -52,8 +52,17 @@ The scheduler is deliberately structured around the repo's six-connection-per-tr
 - heavy lanes get isolated trigger slots (`sync-blacklist`, `sync-mint-burn`, `sync-mint-burn-extended`, `sync-dex-discovery`, `sync-dex-liquidity`)
 - shared slots bundle only related work
 - the quarter-hourly handler sequences jobs instead of fanning them out blindly
+- `npm run check:cron-connections` fails any trigger at or above `6/6` and reports `5/6` triggers as **headroom full**
 
-Treat any new fetch-heavy work added to an existing trigger slot as competing for the same trigger-wide outbound connection budget.
+Treat any new fetch-heavy work added to an existing trigger slot as competing for the same trigger-wide outbound connection budget. A trigger at `5/6` must be treated as full for new fetch-heavy work unless the change also reduces existing peak usage or moves work to a different slot.
+
+Current `5/6` headroom-full owners:
+
+| Trigger slot | Current ownership | Why it is full for new fetch-heavy work |
+| --- | --- | --- |
+| `fiveMinuteTelegramAlerts` | `dispatch-telegram-alerts` | Telegram `sendMessage` batches can use `5` concurrent outbound requests. |
+| `fourHourlyYieldSupplemental` | `sync-yield-supplemental` | Morpho/Pendle/Yearn/Beefy run in a parallel provider wave with peak `5`. |
+| `daily0805Utc` | `sync-bluechip`, digest chain (`daily-digest` / `weekly-recap`), `discovery-scan` | Bluechip peak `3` plus digest-chain peak `1` plus coverage discovery peak `1` totals `5/6`. |
 
 For `sync-stablecoins`, failed upstream responses must be consumed or canceled before later passes start. Leaving non-OK bodies unread can strand the same trigger-local connection slots and starve the late fallback phase (`CoinMarketCap` -> `Jupiter` -> `DexScreener`).
 
@@ -166,6 +175,7 @@ Before adding a worker feature that touches external services:
 2. Add explicit throttle constants and an overall time budget before writing the fetch loop.
 3. Prefer chunked / batched writes and bounded SQL fan-out.
 4. Add or reuse a circuit breaker when the feature depends on a flaky upstream.
-5. Update this doc only with limits the repo actually enforces or depends on architecturally.
+5. Run `npm run check:cron-connections` and document the trigger-slot impact for any new outbound I/O.
+6. Update this doc only with limits the repo actually enforces or depends on architecturally.
 
 If you need current provider-plan quotas, verify them outside the repo before relying on them.
