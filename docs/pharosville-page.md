@@ -31,7 +31,8 @@ The current implementation includes the desktop PharosVille v0.1 baseline:
 - ship docking cadence comes from `stablecoins.chainCirculating` chain presence, while risk water comes from `pegSummary.coins[]` and `stress.signals[]`; DOM details expose the route source, risk water, home dock, chain-presence count, and cadence text
 - active ships draw their logo on the sail when a local logo asset is available
 - long-tail stablecoins beyond the individual ship budget are split into count-capped water-zone cluster markers rather than one large pile
-- visible RPG-styled toolbar, click-anchored detail panel, blank-map click-to-close behavior, collapsible map key, collapsible keyboard entity browser, and screen-reader accessibility ledger
+- the cemetery is rendered as a compact memorial precinct with scattered grave placement, small varied cause-aware tomb marker scale/shape, contextual mausoleum/tree/shrub details, cause-of-death plaques using the shared cemetery legend colors, local cemetery logos on tomb markers, and light atmospheric mist
+- visible RPG-styled toolbar, click-anchored detail panel, blank-map click-to-close behavior, and screen-reader accessibility ledger
 - canvas hit testing for lighthouse, docks, ships, clusters, and graves
 - mouse/touch drag pan, wheel zoom, toolbar pan/zoom/reset/follow/clear controls, keyboard arrow pan, Escape clear, and fullscreen inspection mode
 - normal-motion canvas loop for the lighthouse great-fire flicker, water shimmer, and deterministic ship route sampling, with expensive wake effects capped to selected/top/recent ships
@@ -55,7 +56,7 @@ The planned PharosVille visual grammar is:
 - ship distance from shore = peg/depeg risk first, with DEWS escalation
 - ship route and docking cadence = positive chain supply across the rendered top-six docks, shown as slow water-only passages rather than real-time transfer flow
 - sea/weather = aggregate DEWS breadth
-- cemetery = dead and frozen assets from merged cemetery data
+- cemetery = dead and frozen assets from merged cemetery data, with each tomb marker using its local cemetery logo when available and a cause-of-death plaque keyed to the same color taxonomy as the cemetery legend
 - fog = missing, low-confidence, or stale evidence
 
 Exact values and placement explanations must be available in DOM panels. The canvas must never be the only source of analytical truth.
@@ -84,7 +85,7 @@ Compensating gates:
 - stressed ship detail semantics for active depeg and storm-shelf placement
 - `<1280px` fallback
 - short desktop fallback
-- visible toolbar/detail/browser surfaces, click-anchored detail placement, blank-map click-to-close behavior, and canvas click/selection/camera interaction
+- visible toolbar/detail surfaces, click-anchored detail placement, blank-map click-to-close behavior, and canvas click/selection/camera interaction
 - fullscreen control visibility and mode toggle
 - ultrawide canvas DPR/backing-store caps
 - reduced-motion ship sample stability with no RAF loop

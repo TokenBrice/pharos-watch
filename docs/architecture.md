@@ -188,17 +188,21 @@ DOM desktop-only fallback and must not mount world queries, canvas runtime,
 manifest fetches, or sprite decoding. Eligible desktop viewports mount the
 browser-only PharosVille world.
 
-PharosVille ship base sprites follow the stablecoin governance class (CeFi,
-CeFi-Dep, DeFi), and ship scale uses compressed market-cap tiers rather than
-linear area, with intentionally exaggerated $1B+ tiers so major issuers are
+The world model maps active stablecoins to ships and merged cemetery entries to
+grave nodes with local logo paths, deterministic scatter placement, and varied
+marker scale/shape. Ship base sprites follow the stablecoin governance class
+(CeFi, CeFi-Dep, DeFi), and ship scale uses compressed market-cap tiers rather
+than linear area, with intentionally exaggerated $1B+ tiers so major issuers are
 recognizable landmarks. Ship tile placement is the peg/DEWS risk anchor and the
-reduced-motion representative position; normal-motion routing samples slow
-deterministic water-only paths with seeded detours from that anchor to rendered
-positive-supply chain docks using `stablecoins.chainCirculating`,
+reduced-motion representative position; normal-motion routing samples
+slow deterministic water-only paths with seeded detours from that anchor to
+rendered positive-supply chain docks using `stablecoins.chainCirculating`,
 `pegSummary.coins[]`, and `stress.signals[]`. Long-tail ships beyond the
 individual rendering budget are split into count-capped water-zone clusters
-instead of one large marker. Exact values remain exposed through DOM detail
-surfaces because the canvas is not the only source of analytical truth.
+instead of one large marker. The canvas renderer uses local logos for ship sails and
+cemetery tomb markers while the DOM detail panel remains the accessible source
+of analytical truth, including route source, risk water, home dock, chain
+presence, and docking cadence.
 
 Canvas 2D remains the renderer choice. PixiJS v8 was rejected during the
 2026-04-25 spike (see `docs/superpowers/audits/2026-04-25-pixi-v8-csp.md`)
@@ -206,9 +210,11 @@ because the shader path requires `unsafe-eval`, which Pharos's CSP disallows.
 
 Visual coverage lives in `tests/visual/pharosville.spec.ts` and currently checks
 the reduced-motion desktop canvas shell, stressed ship semantics, narrow and
-short fallback/no-runtime contracts, interaction/camera/minimap behavior,
-ultrawide backing-store caps, normal-motion RAF startup, moving ship samples,
-moving ship hit targets, and route-fact parity.
+short fallback/no-runtime contracts, visible toolbar/detail surfaces,
+click-anchored detail placement, blank-map click-to-close behavior,
+interaction/camera behavior, ultrawide backing-store caps, reduced-motion static ship samples with no RAF,
+normal-motion moving ship samples, moving ship hit targets, and DOM route-fact
+parity.
 
 ---
 

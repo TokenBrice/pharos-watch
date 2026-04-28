@@ -81,7 +81,7 @@ export default function CemeteryPage() {
         </nav>
         <h1 className="text-4xl font-extrabold tracking-tighter">Stablecoin Cemetery</h1>
         <p className="text-sm text-muted-foreground">
-          Defunct, depegged, and discontinued. Newest graves surface first, and the biggest collapses stand tallest.{" "}
+          Defunct, depegged, and discontinued. Logos mark each grave, biggest collapses stand tallest, and hover plaques surface the autopsy context.{" "}
           <span className="hidden md:inline">Press F on hover to pay respects.</span>
         </p>
         <p className="text-sm text-muted-foreground">

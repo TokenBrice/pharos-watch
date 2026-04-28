@@ -92,6 +92,10 @@ The same rule applies to Worker-side integration clients. Telegram delivery, X p
 | Mint/burn SQL `IN` chunk size          | `90` ids            | `worker/src/cron/sync-mint-burn.ts`                               | Current safeguard for large batched SQL                                     |
 | Mint/burn event insert batch size      | `50` statements     | `worker/src/lib/mint-burn-pipeline/persistence.ts`                | Each insert binds 18 values; chunked to stay below D1 batch bind ceilings   |
 
+### D1 overload retry posture
+
+Cron persistence helpers retry transient D1 queue pressure through `runWithOverloadRetry()` in `worker/src/lib/cron-lease.ts`. Retried errors include `D1 DB is overloaded`, `Requests queued for too long`, and Cloudflare D1 internal-reference errors (`D1_ERROR: internal error; reference = ...`). Live reserve, redemption-backstop, cache-sentinel, and DEWS persistence paths should route bursty run-manifest writes, cleanup, prune, and chunked batch work through this helper or `batchExecute()` so one transient D1 queue spike does not fail a whole scheduled run.
+
 ---
 
 ## Upstream Fetch Budgets

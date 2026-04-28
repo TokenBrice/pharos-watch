@@ -186,7 +186,7 @@ Score = `min(100, sum of active signal points)`.
 
 ### `GET /api/stress-signals`
 
-**All coins (no params):** Returns latest DEWS for active tracked stablecoins only. Pre-launch tracked entries are excluded because the handler gates on `ACTIVE_IDS`.
+**All coins (no params):** Returns latest DEWS for readable tracked stablecoins. The response-level freshness headers use the latest aggregate publication timestamp (`updatedAt`) so one retained frozen/long-tail row does not stale the entire `/depeg` surface; `oldestComputedAt` remains in the body for consumers that need to detect per-coin lag. Pre-launch tracked entries are excluded because the handler gates on readable tracked IDs.
 
 When a coin has insufficient data in a cycle (`computeDEWS() === null`), that run skips writes for the coin, so this endpoint continues serving the last valid cached row.
 

@@ -19,7 +19,7 @@ Public-facing analytics dashboard tracking 215 stablecoins in repo metadata: 203
 - **Compare** — side-by-side stablecoin comparison across key metrics
 - **Daily Digest** — AI-generated daily summary of market movements and notable events
 - **Stability Index** — composite ecosystem health score (0–100) combining active depeg severity, depeg breadth, DEWS stress breadth, and 7-day market-cap trend
-- **Stablecoin Cemetery** — 88 dead stablecoins documented with cause of death, peak market cap, and obituaries
+- **Stablecoin Cemetery** — 89 dead stablecoins documented with cause of death, peak market cap, and obituaries
 - **Bluechip Safety Ratings** — independent stablecoin safety ratings from the SMIDGE framework
 - **Redemption Backstops** — modeled issuer / protocol redemption routes with effective-exit scoring for 179 configured assets
 - **Detail pages** — full analytics dossiers for tracked live assets plus dedicated pre-launch detail views, with conditional reserve, redemption backstop, liquidity, and safety surfaces when data exists
@@ -152,6 +152,7 @@ src/                              Frontend (Next.js static export)
 │   ├── liquidity/                DEX liquidity scores and pool breakdown
 │   ├── methodology/              Detailed methodology + changelog routes
 │   ├── portfolio/                Portfolio stress testing & upstream exposure
+│   ├── pharosville/              Beta isometric stablecoin world
 │   ├── privacy/                  Privacy policy
 │   ├── safety-scores/            Stablecoin safety grade cards with radar charts
 │   ├── start/                    First-time-user orientation route
