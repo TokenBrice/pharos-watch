@@ -3,10 +3,6 @@
     "disposition": "queued-p4",
     "notes": "Promoted into the candidate window after the lighthouse rewrite removed cinematic-model.ts and lighthouse-stage.tsx (~1100 LOC combined), shifting the file-lines ranking. The mint-burn-flows endpoint still combines flow aggregation, pagination, and shape projection — defer decomposition until the dedicated worker-API tranche."
   },
-  "worker/src/api/mint-burn-flows-shared.ts": {
-    "disposition": "queued-p4",
-    "notes": "Newly extracted helper surface for the mint-burn flow read path. It concentrates fallback cache handling, freshness helpers, baseline aggregation, and coverage shaping after the D1 read-reduction change; keep it waived for this production fix and split baseline/coverage helpers in the next worker-API cleanup pass."
-  },
   "src/lib/coverage.ts": {
     "disposition": "deferred",
     "notes": "Coverage aggregation and scenario logic are still evolving with the matrix surface. Defer decomposition until the coverage data model settles."
@@ -18,6 +14,18 @@
   "src/app/chains/nautical-chart.tsx": {
     "disposition": "queued-p4",
     "notes": "The chains harbor scene intentionally concentrates SVG ship, lighthouse, water, and label primitives during the nautical redesign. Split ship rendering, harbor background, and scene view-model helpers in the next chains visualization cleanup pass."
+  },
+  "src/app/pharosville/pharosville-world.tsx": {
+    "disposition": "queued-p4",
+    "notes": "PharosVille route shell now coordinates desktop gating, canvas frame state, sampled ship positions, debug state, and overlay controls after the ship-liveliness phase. Keep it waived for the feature delivery; split runtime frame orchestration and overlay/debug view-model helpers in the next PharosVille decomposition pass."
+  },
+  "src/app/pharosville/renderer/world-canvas.ts": {
+    "disposition": "queued-p4",
+    "notes": "PharosVille canvas rendering intentionally concentrates terrain, cemetery, dock, ship, cluster, and selection drawing while the sprite/animation language stabilizes. Keep it waived for the ship-liveliness rollout; extract terrain/cemetery/ship render modules in a dedicated renderer cleanup pass."
+  },
+  "src/app/pharosville/systems/motion.ts": {
+    "disposition": "queued-p4",
+    "notes": "Ship motion routing now centralizes deterministic water-path construction, seeded detours, dwell timing, and route sampling for the initial liveliness release. Keep it waived until the next PharosVille systems pass can split pathfinding, scheduling, and sampling without changing behavior."
   },
   "src/components/command-palette.tsx": {
     "disposition": "queued-p4",
@@ -98,13 +106,5 @@
   "src/app/yield/client.tsx": {
     "disposition": "queued-p4",
     "notes": "Surfaced after Phase 6 reduced larger hotspots. The yield client still combines filter state, table shaping, and interaction handling in one route shell; split view-model and table controls in the next yield UI cleanup pass."
-  },
-  "worker/src/cron/dex-liquidity/pool-helpers.ts": {
-    "disposition": "deferred",
-    "notes": "Surfaced after Phase 6 DEX-discovery extraction. Pool helper branch count reflects shared DEX classification policy used across scoring/discovery; defer decomposition until a dedicated DEX-liquidity policy cleanup can preserve current scoring semantics."
-  },
-  "src/components/pre-launch-detail.tsx": {
-    "disposition": "queued-p4",
-    "notes": "Surfaced after Phase 8 removed the depeg and fallback cron waivers. The pre-launch detail surface still combines page model shaping, timeline rendering, and section composition; keep it waived until the planned frontend route cleanup pass."
   }
 }
