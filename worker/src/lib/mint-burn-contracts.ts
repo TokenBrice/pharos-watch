@@ -60,11 +60,9 @@ export const MINT_BURN_CONFIGS: MintBurnContractConfig[] = MINT_BURN_CONFIG_SPEC
   resolveMintBurnContractConfig,
 );
 
-// Audit-and-report: validate every existing bridge config without aborting
-// the worker. If any errors surface in CF logs, fix them. Once the operator
-// confirms two full cron cycles with an empty error list, escalate to
-// throw-on-error by uncommenting the strict gate at the bottom of this file
-// (see `STRICT_BRIDGE_CONFIG_VALIDATION` comment below).
+// Audit-and-report: validate every existing bridge config without aborting the
+// worker. Invalid metadata should surface in logs for data cleanup while keeping
+// mint/burn sync available for unaffected assets.
 const bridgeValidationErrors: string[] = [];
 for (const cfg of MINT_BURN_CONFIGS) {
   if (!cfg.bridgeDetection) continue;
@@ -79,15 +77,6 @@ for (const cfg of MINT_BURN_CONFIGS) {
 if (bridgeValidationErrors.length > 0) {
   console.error("[mint-burn-contracts] BRIDGE CONFIG VALIDATION ERRORS:", bridgeValidationErrors);
 }
-
-// STRICT_BRIDGE_CONFIG_VALIDATION (deferred, see plan task 2.1 commit 3):
-// When ops confirm the log above is silent across two full cron cycles,
-// replace the `console.error(...)` block above with:
-//   if (bridgeValidationErrors.length > 0) {
-//     throw new Error(`mint-burn bridge config validation failed:\n${bridgeValidationErrors.join("\n")}`);
-//   }
-// AND add this line to resolveMintBurnContractConfig(), before returning:
-//   if (resolved.bridgeDetection) validateMintBurnBridgeDetection(resolved.bridgeDetection);
 
 export function getMintBurnConfigsForStablecoin(stablecoinId: string): MintBurnContractConfig[] {
   return MINT_BURN_CONFIGS.filter((config) => config.stablecoinId === stablecoinId);
