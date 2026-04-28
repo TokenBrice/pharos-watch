@@ -13,6 +13,21 @@ import type { PegSummaryResponse, StressSignalsAllResponse } from "@shared/types
 
 test.use({ reducedMotion: "reduce" });
 
+type DebugShipMotionSample = {
+  id: string;
+  state: string;
+  x: number;
+  y: number;
+  zone: string;
+};
+
+type DebugTarget = {
+  detailId: string;
+  kind: string;
+  priority: number;
+  rect: { height: number; width: number; x: number; y: number };
+};
+
 const meta = { updatedAt: 1_700_000_000, ageSeconds: 60, status: "fresh" };
 async function mockPharosVilleData(page: Page) {
   await mockPharosVillePayloads(page, {
@@ -62,12 +77,7 @@ async function clickMapTargetWithPoint(page: Page, kind: string, detailId?: stri
   const target = await page.waitForFunction(({ targetKind, targetDetailId }) => {
     const debug = (window as typeof window & {
       __pharosVilleDebug?: {
-        targets: Array<{
-          detailId: string;
-          kind: string;
-          priority: number;
-          rect: { height: number; width: number; x: number; y: number };
-        }>;
+        targets: DebugTarget[];
       };
     }).__pharosVilleDebug;
     const candidates = debug?.targets.filter((entry) => entry.kind === targetKind && (!targetDetailId || entry.detailId === targetDetailId)) ?? [];
@@ -443,23 +453,90 @@ async function waitForSelectedDetail(page: Page, detailId: string | null) {
 test.describe("pharosville normal motion", () => {
   test.use({ reducedMotion: "no-preference" });
 
-  test("starts bounded world animation only on eligible desktop", async ({ page }) => {
+  test("starts bounded world animation and keeps moving ship targets selectable", async ({ page }) => {
     await mockPharosVilleData(page);
+    await page.clock.install({ time: new Date("2026-04-28T00:00:00Z") });
     await page.emulateMedia({ reducedMotion: "no-preference" });
     await page.setViewportSize({ width: 1440, height: 1000 });
     await page.goto("/pharosville/");
+    await waitForRuntimeDebug(page, false);
 
-    await page.waitForFunction(() => {
-      const debug = (window as typeof window & {
-        __pharosVilleDebug?: {
-          motionFrameCount?: number;
-          reducedMotion?: boolean;
-        };
-      }).__pharosVilleDebug;
-      return Boolean(debug && debug.reducedMotion === false && (debug.motionFrameCount ?? 0) >= 2);
-    });
+    const movedSample = await waitForMovingShipSample(page);
+    const movingDetailId = "ship." + movedSample.id;
+    const selection = await clickMapTargetWithPoint(page, "ship", movingDetailId);
+    expect(selection.detailId).toBe(movingDetailId);
+    await waitForSelectedDetail(page, movingDetailId);
+    await expect(page.getByTestId("pharosville-detail-panel")).toContainText("Risk water");
+    await expect(page.getByTestId("pharosville-detail-panel")).toContainText("Home dock");
+    await expect(page.getByTestId("pharosville-detail-panel")).toContainText("Chains present");
+    await expect(page.getByTestId("pharosville-detail-panel")).toContainText("Docking cadence");
+    await expect(page.getByTestId("pharosville-detail-panel")).toContainText("Route source");
+    await expect(page.getByTestId("pharosville-detail-panel")).toContainText("stablecoins.chainCirculating, pegSummary.coins[], stress.signals[]");
+    await expect(page.getByTestId("pharosville-accessibility-ledger")).toContainText("route summary:");
+    await expect(page.getByTestId("pharosville-accessibility-ledger")).toContainText("risk zone");
   });
 });
+
+async function waitForRuntimeDebug(page: Page, reducedMotion: boolean) {
+  await page.waitForFunction((expectedReducedMotion) => {
+    const debug = (window as typeof window & {
+      __pharosVilleDebug?: {
+        assetsLoaded?: boolean;
+        camera?: unknown;
+        motionFrameCount?: number;
+        reducedMotion?: boolean;
+        shipMotionSamples?: DebugShipMotionSample[];
+        targets?: DebugTarget[];
+      };
+    }).__pharosVilleDebug;
+    return Boolean(
+      debug?.assetsLoaded
+      && debug.camera
+      && debug.reducedMotion === expectedReducedMotion
+      && (debug.shipMotionSamples?.length ?? 0) > 0
+      && (debug.targets?.some((target) => target.kind === "ship") ?? false)
+      && (expectedReducedMotion || (debug.motionFrameCount ?? 0) >= 2),
+    );
+  }, reducedMotion);
+}
+
+async function readRuntimeSnapshot(page: Page) {
+  return page.evaluate(() => {
+    const debug = (window as typeof window & {
+      __pharosVilleDebug?: {
+        animationFramePending?: boolean;
+        motionFrameCount?: number;
+        reducedMotion?: boolean;
+        shipMotionSamples?: DebugShipMotionSample[];
+        timeSeconds?: number;
+      };
+    }).__pharosVilleDebug;
+    return {
+      animationFramePending: debug?.animationFramePending ?? true,
+      motionFrameCount: debug?.motionFrameCount ?? -1,
+      reducedMotion: debug?.reducedMotion ?? null,
+      shipMotionSamples: debug?.shipMotionSamples ?? [],
+      timeSeconds: debug?.timeSeconds ?? -1,
+    };
+  });
+}
+
+async function waitForMovingShipSample(page: Page) {
+  const first = await readRuntimeSnapshot(page);
+  expect(first.reducedMotion).toBe(false);
+  expect(first.shipMotionSamples.length).toBeGreaterThan(0);
+  await page.clock.fastForward(30_000);
+  const second = await readRuntimeSnapshot(page);
+  expect(second.motionFrameCount).toBeGreaterThan(first.motionFrameCount);
+
+  const firstById = new Map(first.shipMotionSamples.map((sample) => [sample.id, sample]));
+  const movedSample = second.shipMotionSamples.find((sample) => {
+    const previous = firstById.get(sample.id);
+    return Boolean(previous && sample.state !== "moored" && Math.hypot(sample.x - previous.x, sample.y - previous.y) > 0.001);
+  });
+  expect(movedSample).toBeDefined();
+  return movedSample!;
+}
 
 async function canvasPixelStats(page: Page) {
   return page.getByTestId("pharosville-canvas").evaluate((node) => {
