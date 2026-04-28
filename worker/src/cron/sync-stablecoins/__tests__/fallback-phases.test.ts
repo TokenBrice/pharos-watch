@@ -1,11 +1,30 @@
-import { describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { mockD1 } from "../../../api/__tests__/helpers/mock-d1";
 import {
   buildFallbackAssetsFromCoinGecko,
   buildInsufficientFallbackResult,
 } from "../fallback-intake";
 import { restoreFallbackCacheState, runFallbackStalenessGate } from "../fallback-cache";
+import { runFallbackDepegFollowThrough } from "../fallback-publish";
 import type { PeggedAsset } from "../enrich-prices";
+
+const fallbackMocks = vi.hoisted(() => ({
+  runDepegPipeline: vi.fn(async (..._args: unknown[]) => ({
+    depegErrorCount: 0,
+    depegErrors: [],
+    providerDiagnostics: [],
+  })),
+  queueTrackedAdditionsNotice: vi.fn(async (..._args: unknown[]) => undefined),
+}));
+
+vi.mock("../post-enrichment", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("../post-enrichment")>()),
+  runDepegPipeline: fallbackMocks.runDepegPipeline,
+}));
+
+vi.mock("../telegram-tracked-additions", () => ({
+  queueTrackedAdditionsNotice: fallbackMocks.queueTrackedAdditionsNotice,
+}));
 
 const NOW_SEC = 1_700_000_000;
 
@@ -29,6 +48,11 @@ function makeAsset(overrides: Partial<PeggedAsset> = {}): PeggedAsset {
 }
 
 describe("CoinGecko fallback phases", () => {
+  beforeEach(() => {
+    fallbackMocks.runDepegPipeline.mockClear();
+    fallbackMocks.queueTrackedAdditionsNotice.mockClear();
+  });
+
   it("builds fallback intake assets from positive CoinGecko market caps", () => {
     const assets = buildFallbackAssetsFromCoinGecko({
       syncStartSec: NOW_SEC,
@@ -177,5 +201,53 @@ describe("CoinGecko fallback phases", () => {
       cacheWriteSucceeded: false,
       depegPipelineSucceeded: false,
     });
+  });
+
+  it("queues tracked-additions notice before fallback depeg follow-through", async () => {
+    const db = mockD1([]);
+    const assets = [
+      makeAsset({ id: "fixture-new", geckoId: "fixture-new" }),
+    ];
+    const previousAssetsById = new Map<string, PeggedAsset>([
+      ["fixture-old", makeAsset({ id: "fixture-old", geckoId: "fixture-old" })],
+    ]);
+
+    const result = await runFallbackDepegFollowThrough({
+      db,
+      assets,
+      previousAssetsById,
+      syncStartSec: NOW_SEC,
+      returnIfAborted: () => null,
+      abortResult: () => ({ metadata: "{}" }),
+    });
+
+    expect(result).toMatchObject({
+      depegErrorCount: 0,
+      depegErrors: [],
+      providerDiagnostics: [],
+    });
+    const noticeOrder = fallbackMocks.queueTrackedAdditionsNotice.mock.invocationCallOrder[0];
+    const depegOrder = fallbackMocks.runDepegPipeline.mock.invocationCallOrder[0];
+    expect(noticeOrder).toBeDefined();
+    expect(depegOrder).toBeDefined();
+    expect(noticeOrder!).toBeLessThan(depegOrder!);
+    expect(fallbackMocks.queueTrackedAdditionsNotice).toHaveBeenCalledTimes(1);
+    const noticeCall = fallbackMocks.queueTrackedAdditionsNotice.mock.calls[0];
+    expect(noticeCall).toBeDefined();
+    const [noticeDb, previousIds, noticeAssets] = noticeCall!;
+    expect(noticeDb).toBe(db);
+    expect(Array.from(previousIds as Iterable<string>)).toEqual(["fixture-old"]);
+    expect(noticeAssets).toBe(assets);
+    expect(fallbackMocks.runDepegPipeline).toHaveBeenCalledWith(
+      db,
+      assets,
+      undefined,
+      undefined,
+      undefined,
+      expect.any(Function),
+      expect.any(Function),
+      "fallback-",
+      " (CG fallback)",
+    );
   });
 });
