@@ -1,0 +1,83 @@
+{
+  "id": "gyen-gyen",
+  "name": "GYEN",
+  "symbol": "GYEN",
+  "flags": {
+    "backing": "rwa-backed",
+    "pegCurrency": "JPY",
+    "governance": "centralized",
+    "yieldBearing": false,
+    "rwa": false,
+    "navToken": false
+  },
+  "collateral": "Japanese yen reserves held in FDIC-insured financial institutions, government money-market funds, or U.S. Treasury bills (≤3 months to maturity) per NYDFS guidelines",
+  "pegMechanism": "Direct 1:1 redemption for JPY through GMO Trust (NYDFS-chartered trust company)",
+  "llamaId": "122",
+  "detailProvider": "defillama",
+  "geckoId": "gyen",
+  "proofOfReserves": {
+    "type": "independent-audit",
+    "url": "https://stablecoin.z.com/attestation/",
+    "provider": "The Network Firm"
+  },
+  "links": [
+    {
+      "label": "Website",
+      "url": "https://stablecoin.z.com/"
+    },
+    {
+      "label": "Twitter",
+      "url": "https://x.com/GMOTrust"
+    },
+    {
+      "label": "Docs",
+      "url": "https://stablecoin.z.com/what-are-gyen-and-zusd/"
+    }
+  ],
+  "jurisdiction": {
+    "country": "United States",
+    "regulator": "NYDFS",
+    "license": "Trust Charter"
+  },
+  "contracts": [
+    {
+      "chain": "ethereum",
+      "address": "0xc08512927d12348f6620a698105e1baac6ecd911",
+      "decimals": 6
+    },
+    {
+      "chain": "arbitrum",
+      "address": "0x589d35656641d6ab57a545f08cf473ecd9b6d5f7",
+      "decimals": 6
+    }
+  ],
+  "custodyModel": "institutional-regulated",
+  "reserves": [
+    {
+      "name": "JPY in FDIC-insured institutions or T-bills (≤3 months)",
+      "pct": 100,
+      "risk": "very-low"
+    }
+  ],
+  "liveReservesConfig": {
+    "adapter": "single-asset",
+    "version": 1,
+    "semantics": "single-asset",
+    "breakerScope": "gyen-gyen",
+    "display": {
+      "url": "https://stablecoin.z.com/attestation/",
+      "label": "GMO Trust"
+    },
+    "inputs": {
+      "primary": {
+        "kind": "onchain-evm",
+        "chain": "ethereum",
+        "rpcMode": "public-rpc"
+      }
+    },
+    "params": {
+      "label": "JPY fiat reserves",
+      "risk": "very-low"
+    }
+  }
+}

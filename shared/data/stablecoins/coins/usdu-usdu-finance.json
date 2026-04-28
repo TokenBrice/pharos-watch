@@ -1,0 +1,66 @@
+{
+  "id": "usdu-usdu-finance",
+  "name": "USDU Finance",
+  "symbol": "USDU",
+  "flags": {
+    "backing": "crypto-backed",
+    "pegCurrency": "USD",
+    "governance": "centralized-dependent",
+    "yieldBearing": false,
+    "rwa": false,
+    "navToken": false
+  },
+  "collateral": "Modular adapter system: Curve, Morpho, and TermMax vault assets as on-chain backing",
+  "pegMechanism": "Protocol-minted via DAO-approved adapters; convertible to USDC via Curve pools",
+  "llamaId": "304",
+  "detailProvider": "defillama",
+  "cmcSlug": "usdu",
+  "links": [
+    {
+      "label": "Website",
+      "url": "https://usdu.finance/"
+    },
+    {
+      "label": "Twitter",
+      "url": "https://x.com/USDUfinance"
+    },
+    {
+      "label": "Docs",
+      "url": "https://usdu.gitbook.io/docs/"
+    }
+  ],
+  "contracts": [
+    {
+      "chain": "ethereum",
+      "address": "0xdde3ec717f220fc6a29d6a4be73f91da5b718e55",
+      "decimals": 18
+    }
+  ],
+  "collateralQuality": "exotic",
+  "reserves": [
+    {
+      "name": "Curve USDC/USDU LP tokens",
+      "pct": 35,
+      "risk": "medium",
+      "coinId": "usdc-circle",
+      "depType": "mechanism"
+    },
+    {
+      "name": "TermMax fixed-rate lending vault shares",
+      "pct": 35,
+      "risk": "high"
+    },
+    {
+      "name": "Morpho USDU Core vault shares",
+      "pct": 30,
+      "risk": "medium"
+    }
+  ],
+  "notices": [
+    {
+      "type": "danger",
+      "title": "Undercollateralized by design",
+      "message": "USDU Finance's transparency page shows a ~43% collateralization ratio. The protocol is minted through DAO-approved adapters and is intentionally undercollateralized for professional market participants."
+    }
+  ]
+}

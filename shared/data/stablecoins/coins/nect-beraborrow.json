@@ -1,0 +1,104 @@
+{
+  "id": "nect-beraborrow",
+  "name": "Nectar",
+  "symbol": "NECT",
+  "flags": {
+    "backing": "crypto-backed",
+    "pegCurrency": "USD",
+    "governance": "centralized-dependent",
+    "yieldBearing": false,
+    "rwa": false,
+    "navToken": false
+  },
+  "collateral": "Berachain-native assets: WBERA, iBGT, pumpBTC, solvBTC, uniBTC, beraETH, Stakestone ETH, WETH, ylstETH, rsETH, and Kodiak Island LP pairs (WBTC-HONEY, WETH-HONEY, WETH-WBTC)",
+  "pegMechanism": "Overcollateralized CDP with redemption for collateral at $1 face value (Liquity-style); operates on Berachain (not Ethereum or a Stage 1 L2)",
+  "llamaId": "329",
+  "detailProvider": "defillama",
+  "geckoId": "nectar",
+  "links": [
+    {
+      "label": "Website",
+      "url": "https://www.beraborrow.com/"
+    },
+    {
+      "label": "Twitter",
+      "url": "https://x.com/beraborrow"
+    },
+    {
+      "label": "Docs",
+      "url": "https://beraborrow.gitbook.io/docs"
+    }
+  ],
+  "jurisdiction": {
+    "country": "Croatia"
+  },
+  "contracts": [
+    {
+      "chain": "berachain",
+      "address": "0x1ce0a25d13ce4d52071ae7e02cf1f6606f4c79d3",
+      "decimals": 18
+    }
+  ],
+  "dependencies": [
+    {
+      "id": "usdt-tether",
+      "weight": 0.05
+    },
+    {
+      "id": "usdc-circle",
+      "weight": 0.05
+    }
+  ],
+  "chainTier": "unproven",
+  "collateralQuality": "exotic",
+  "infrastructures": [
+    "liquity-v2"
+  ],
+  "reserves": [
+    {
+      "name": "iBGT (Infrared liquid staked BGT)",
+      "pct": 40,
+      "risk": "high",
+      "blacklistable": true
+    },
+    {
+      "name": "iBERA / WBERA (Berachain native)",
+      "pct": 25,
+      "risk": "high",
+      "blacklistable": true
+    },
+    {
+      "name": "Wrapped BTC variants (pumpBTC, solvBTC, uniBTC)",
+      "pct": 15,
+      "risk": "high",
+      "blacklistable": true
+    },
+    {
+      "name": "ETH variants (beraETH, WETH, ylstETH, rsETH)",
+      "pct": 10,
+      "risk": "high"
+    },
+    {
+      "name": "Kodiak LP positions (WBTC-HONEY, WETH-HONEY, WETH-WBTC)",
+      "pct": 10,
+      "risk": "high",
+      "blacklistable": true
+    }
+  ],
+  "liveReservesConfig": {
+    "adapter": "curated-validated",
+    "version": 1,
+    "semantics": "collateral-mix",
+    "breakerScope": "nect-beraborrow",
+    "inputs": {
+      "primary": {
+        "kind": "onchain-evm",
+        "chain": "berachain",
+        "rpcMode": "public-rpc"
+      }
+    },
+    "params": {
+      "rpcUrl": "https://rpc.berachain.com"
+    }
+  }
+}

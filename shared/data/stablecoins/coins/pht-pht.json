@@ -1,0 +1,80 @@
+{
+  "id": "pht-pht",
+  "name": "PHT Stablecoin",
+  "symbol": "PHT",
+  "flags": {
+    "backing": "crypto-backed",
+    "pegCurrency": "PHP",
+    "governance": "centralized-dependent",
+    "yieldBearing": false,
+    "rwa": false,
+    "navToken": false
+  },
+  "collateral": "apcxUSDT (1:1 USDT-backed custodial token) in overcollateralized CDP vaults; future phases to add USDC, USDT, and other approved stablecoins as collateral types",
+  "pegMechanism": "Overcollateralized CDP vaults (MakerDAO MCD fork): users deposit apcxUSDT as collateral to mint PHT; undercollateralized vaults liquidated via Dutch auction; Chainlink PHP/USD oracle; LayerZero OFT for cross-chain bridging",
+  "llamaId": "299",
+  "detailProvider": "defillama",
+  "geckoId": "pht-stablecoin",
+  "links": [
+    {
+      "label": "Website",
+      "url": "https://www.apacx.io/PHT"
+    },
+    {
+      "label": "Twitter",
+      "url": "https://x.com/apacx_io"
+    },
+    {
+      "label": "Docs",
+      "url": "https://docs.apacx.io/"
+    },
+    {
+      "label": "Audit",
+      "url": "https://docs.apacx.io/technical-references/smart-contract-audits"
+    }
+  ],
+  "jurisdiction": {
+    "country": "Singapore"
+  },
+  "contracts": [
+    {
+      "chain": "ethereum",
+      "address": "0xbe370ad45d44eb45174c4ec60b88839fef32c077",
+      "decimals": 18
+    }
+  ],
+  "collateralQuality": "exotic",
+  "custodyModel": "institutional-regulated",
+  "reserves": [
+    {
+      "name": "apcxUSDT (custodial 1:1 USDT wrapper)",
+      "pct": 100,
+      "risk": "high",
+      "coinId": "usdt-tether",
+      "depType": "wrapper"
+    }
+  ],
+  "liveReservesConfig": {
+    "adapter": "single-asset",
+    "version": 1,
+    "semantics": "single-asset",
+    "breakerScope": "pht-pht",
+    "display": {
+      "url": "https://www.apacx.io/PHT",
+      "label": "APACX"
+    },
+    "inputs": {
+      "primary": {
+        "kind": "onchain-evm",
+        "chain": "ethereum",
+        "rpcMode": "public-rpc"
+      }
+    },
+    "params": {
+      "label": "apcxUSDT custodial wrapper",
+      "risk": "high",
+      "coinId": "usdt-tether",
+      "depType": "wrapper"
+    }
+  }
+}

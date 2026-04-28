@@ -1,0 +1,76 @@
+{
+  "id": "syrupusdt-maple",
+  "name": "Maple syrupUSDT",
+  "symbol": "syrupUSDT",
+  "flags": {
+    "backing": "rwa-backed",
+    "pegCurrency": "USD",
+    "governance": "centralized-dependent",
+    "yieldBearing": true,
+    "rwa": false,
+    "navToken": true
+  },
+  "collateral": "USDT deposits lent to institutional borrowers via overcollateralized, fixed-rate loans on Maple Finance",
+  "pegMechanism": "ERC-4626 vault; USDT deposited into Maple lending pools, NAV appreciates with accrued interest; protocol withdrawals are requested onchain and serviced through a FIFO queue as liquidity becomes available",
+  "detailProvider": "coingecko",
+  "geckoId": "syrupusdt",
+  "links": [
+    {
+      "label": "Website",
+      "url": "https://maple.finance/"
+    },
+    {
+      "label": "Twitter",
+      "url": "https://x.com/maplefinance"
+    }
+  ],
+  "contracts": [
+    {
+      "chain": "ethereum",
+      "address": "0x356b8d89c1e1239cbbb9de4815c39a1474d5ba7d",
+      "decimals": 6
+    }
+  ],
+  "collateralQuality": "rwa",
+  "custodyModel": "onchain",
+  "governanceQuality": "wrapper",
+  "reserves": [
+    {
+      "name": "USDT (deployed as overcollateralized institutional loans)",
+      "pct": 100,
+      "risk": "medium",
+      "coinId": "usdt-tether",
+      "depType": "wrapper"
+    }
+  ],
+  "liveReservesConfig": {
+    "adapter": "erc4626-single-asset",
+    "version": 1,
+    "semantics": "single-asset",
+    "breakerScope": "syrupusdt-maple",
+    "display": {
+      "url": "https://app.maple.finance/earn",
+      "label": "Maple App"
+    },
+    "inputs": {
+      "primary": {
+        "kind": "onchain-evm",
+        "chain": "ethereum",
+        "rpcMode": "alchemy"
+      }
+    },
+    "params": {
+      "slice": {
+        "name": "USDT-denominated loan receivables",
+        "risk": "medium",
+        "coinId": "usdt-tether",
+        "depType": "wrapper",
+        "expectedAssetAddress": "0xdac17f958d2ee523a2206206994597c13d831ec7"
+      }
+    }
+  },
+  "yieldConfig": {
+    "yieldSource": "Maple Finance lending",
+    "yieldType": "nav-appreciation"
+  }
+}

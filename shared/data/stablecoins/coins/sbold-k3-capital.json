@@ -1,0 +1,91 @@
+{
+  "id": "sbold-k3-capital",
+  "name": "sBOLD by K3 Capital",
+  "symbol": "sBOLD",
+  "flags": {
+    "backing": "crypto-backed",
+    "pegCurrency": "USD",
+    "governance": "centralized-dependent",
+    "yieldBearing": true,
+    "rwa": false,
+    "navToken": true
+  },
+  "variantOf": "bold-liquity",
+  "variantKind": "risk-absorption",
+  "pegReferenceId": "bold-liquity",
+  "collateral": "BOLD deposited into K3's ERC-4626 sBOLD vault and allocated across Liquity V2 Stability Pools to earn interest and liquidation gains",
+  "pegMechanism": "Vault shares appreciate against BOLD as Stability Pool interest and liquidation gains are compounded; liquidation collateral is converted back to BOLD by mutable solver/swap infrastructure, so final value inherits BOLD peg and K3 execution risk",
+  "detailProvider": "coingecko",
+  "geckoId": "sbold-by-k3-capital",
+  "links": [
+    {
+      "label": "Website",
+      "url": "https://www.k3.capital/"
+    },
+    {
+      "label": "Twitter",
+      "url": "https://x.com/k3_capital"
+    },
+    {
+      "label": "Docs",
+      "url": "https://k3-capital.gitbook.io/sbold"
+    },
+    {
+      "label": "GitHub",
+      "url": "https://github.com/K3Capital"
+    }
+  ],
+  "contracts": [
+    {
+      "chain": "ethereum",
+      "address": "0x50bd66d59911f5e086ec87ae43c811e0d059dd11",
+      "decimals": 18
+    }
+  ],
+  "deploymentModel": "single-chain",
+  "collateralQuality": "alt-lst-bridged-or-mixed",
+  "custodyModel": "onchain",
+  "governanceQuality": "wrapper",
+  "infrastructures": [
+    "liquity-v2"
+  ],
+  "reserves": [
+    {
+      "name": "BOLD deployed into Liquity V2 Stability Pools",
+      "pct": 100,
+      "risk": "medium",
+      "coinId": "bold-liquity",
+      "depType": "wrapper"
+    }
+  ],
+  "yieldConfig": {
+    "yieldSource": "K3 sBOLD Stability Pool vault",
+    "yieldType": "lending-vault"
+  },
+  "liveReservesConfig": {
+    "adapter": "erc4626-single-asset",
+    "version": 1,
+    "semantics": "single-asset",
+    "breakerScope": "sbold-k3-capital",
+    "display": {
+      "url": "https://www.liquity.org/blog/sbold---the-on-chain-defi-savings-account",
+      "label": "sBOLD"
+    },
+    "inputs": {
+      "primary": {
+        "kind": "onchain-evm",
+        "chain": "ethereum",
+        "rpcMode": "alchemy"
+      }
+    },
+    "params": {
+      "slice": {
+        "name": "BOLD deployed into Liquity V2 Stability Pools",
+        "risk": "medium",
+        "coinId": "bold-liquity",
+        "depType": "wrapper",
+        "expectedAssetAddress": "0x6440f144b7e50d6a8439336510312d2f54beb01d"
+      }
+    }
+  }
+}

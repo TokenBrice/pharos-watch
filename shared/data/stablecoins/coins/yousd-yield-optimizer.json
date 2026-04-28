@@ -1,0 +1,95 @@
+{
+  "id": "yousd-yield-optimizer",
+  "name": "Yield Optimizer USD",
+  "symbol": "yoUSD",
+  "flags": {
+    "backing": "crypto-backed",
+    "pegCurrency": "USD",
+    "governance": "centralized-dependent",
+    "yieldBearing": true,
+    "rwa": false,
+    "navToken": true
+  },
+  "collateral": "USDC deposits continuously rebalanced across 50+ whitelisted DeFi yield sources on Ethereum, Base, Arbitrum, and Unichain; allocations ranked by Exponential.fi risk-adjusted ratings with per-pool caps (max 50%) and per-protocol caps (max 70%); 5 smart contract audits by Offbeat Security, Hunter Security, Spearbit/Cantina, Aether Labs, and Paladin with no critical or high findings; admin multisig with <4 signers controls protocol whitelisting; backed by Paradigm, Haun Ventures, and Coinbase Ventures",
+  "pegMechanism": "ERC-4626 vault on Base; USDC deposited via yoGateway, rebalanced cross-chain to whitelisted DeFi pools; NAV appreciates with accrued yield (e.g. ~$1.069 at launch anniversary); instant redemptions up to liquidity buffer, larger withdrawals up to 24h as cross-chain positions unwind",
+  "detailProvider": "coingecko",
+  "geckoId": "yield-optimizer-usd",
+  "links": [
+    {
+      "label": "Website",
+      "url": "https://yo.xyz/"
+    },
+    {
+      "label": "Twitter",
+      "url": "https://x.com/yield"
+    },
+    {
+      "label": "Docs",
+      "url": "https://docs.yo.xyz"
+    }
+  ],
+  "contracts": [
+    {
+      "chain": "base",
+      "address": "0x0000000f2eb9f69274678c76222b35eec7588a65",
+      "decimals": 6
+    }
+  ],
+  "collateralQuality": "exotic",
+  "custodyModel": "onchain",
+  "governanceQuality": "single-entity",
+  "reserves": [
+    {
+      "name": "Morpho vaults (Ethereum, Base, Arbitrum, Unichain)",
+      "pct": 39,
+      "risk": "medium",
+      "coinId": "usdc-circle",
+      "depType": "wrapper"
+    },
+    {
+      "name": "Auto Finance (autoUSD, baseUSD)",
+      "pct": 21,
+      "risk": "high"
+    },
+    {
+      "name": "Aave markets (sGHO)",
+      "pct": 4.5,
+      "risk": "medium",
+      "coinId": "gho-aave"
+    },
+    {
+      "name": "Aave markets (RLUSD)",
+      "pct": 4.5,
+      "risk": "medium",
+      "coinId": "rlusd-ripple"
+    },
+    {
+      "name": "InfiniFi liUSD (1-week lock)",
+      "pct": 8,
+      "risk": "high"
+    },
+    {
+      "name": "Liquid USDC buffer (undeployed)",
+      "pct": 7,
+      "risk": "low",
+      "coinId": "usdc-circle",
+      "depType": "wrapper"
+    },
+    {
+      "name": "Avantis avUSDC (perpetuals collateral)",
+      "pct": 6,
+      "risk": "high",
+      "coinId": "usdc-circle",
+      "depType": "wrapper"
+    },
+    {
+      "name": "Other DeFi (Fluid, Resolv RLP, Euler, Revert Lend)",
+      "pct": 10,
+      "risk": "high"
+    }
+  ],
+  "yieldConfig": {
+    "yieldSource": "Yield Optimizer strategies",
+    "yieldType": "nav-appreciation"
+  }
+}

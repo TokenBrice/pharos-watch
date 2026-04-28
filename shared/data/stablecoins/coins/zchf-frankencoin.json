@@ -1,0 +1,114 @@
+{
+  "id": "zchf-frankencoin",
+  "name": "Frankencoin",
+  "symbol": "ZCHF",
+  "flags": {
+    "backing": "crypto-backed",
+    "pegCurrency": "CHF",
+    "governance": "decentralized",
+    "yieldBearing": true,
+    "rwa": false,
+    "navToken": false
+  },
+  "collateral": "ETH, BTC derivatives (WBTC, cbBTC), ETH LSTs (wstETH, LsETH), gold tokens (PAXG, XAUt), tokenized RWAs (SPYon, LENDS, REALU), and governance tokens (CRV, GNO) in oracle-free overcollateralized positions; any collateral can be whitelisted by governance",
+  "pegMechanism": "Auction-based collateral valuation with veto governance; no price oracle dependency",
+  "llamaId": "226",
+  "detailProvider": "defillama",
+  "geckoId": "frankencoin",
+  "links": [
+    {
+      "label": "Website",
+      "url": "https://www.frankencoin.com/"
+    },
+    {
+      "label": "Twitter",
+      "url": "https://x.com/frankencoinzchf"
+    },
+    {
+      "label": "Docs",
+      "url": "https://docs.frankencoin.com/"
+    }
+  ],
+  "contracts": [
+    {
+      "chain": "ethereum",
+      "address": "0xb58e61c3098d85632df34eecfb899a1ed80921cb",
+      "decimals": 18
+    },
+    {
+      "chain": "optimism",
+      "address": "0x4f8a84c442f9675610c680990eddb2ccddb8ab6f",
+      "decimals": 18
+    },
+    {
+      "chain": "gnosis",
+      "address": "0xd4dd9e2f021bb459d5a5f6c24c12fe09c5d45553",
+      "decimals": 18
+    },
+    {
+      "chain": "base",
+      "address": "0xd4dd9e2f021bb459d5a5f6c24c12fe09c5d45553",
+      "decimals": 18
+    }
+  ],
+  "collateralQuality": "alt-lst-bridged-or-mixed",
+  "reserves": [
+    {
+      "name": "Wrapped Bitcoin (WBTC, cbBTC)",
+      "pct": 45,
+      "risk": "medium"
+    },
+    {
+      "name": "ETH / wstETH / LsETH",
+      "pct": 30,
+      "risk": "low"
+    },
+    {
+      "name": "Gold tokens (PAXG, XAUt)",
+      "pct": 10,
+      "risk": "medium",
+      "coinId": "paxg-paxos"
+    },
+    {
+      "name": "Tokenized RWAs (SPYon, LENDS, REALU)",
+      "pct": 10,
+      "risk": "high"
+    },
+    {
+      "name": "Other (CRV, GNO, governance tokens)",
+      "pct": 5,
+      "risk": "very-high"
+    }
+  ],
+  "liveReservesConfig": {
+    "adapter": "collateral-positions-api",
+    "version": 2,
+    "semantics": "collateral-mix",
+    "breakerScope": "zchf-frankencoin",
+    "display": {
+      "url": "https://app.frankencoin.com/",
+      "label": "App"
+    },
+    "inputs": {
+      "primary": {
+        "kind": "http-json",
+        "url": "https://api.frankencoin.com/ecosystem/collateral/positions/details"
+      }
+    },
+    "params": {
+      "pricesUrl": "https://api.frankencoin.com/prices/mapping",
+      "otherThresholdPct": 2,
+      "redemptionBridge": {
+        "chain": "ethereum",
+        "rpcMode": "public-rpc",
+        "holder": "0x3b71ba73299f925a837836160c3e1fec74340403",
+        "tokenAddress": "0x79d4f0232a66c4c91b89c76362016a1707cfbf4f",
+        "tokenDecimals": 18
+      }
+    }
+  },
+  "yieldConfig": {
+    "yieldSource": "Frankencoin Savings",
+    "yieldType": "lending-vault"
+  }
+}

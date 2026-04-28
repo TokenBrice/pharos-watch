@@ -1,0 +1,84 @@
+{
+  "id": "sdai-sky",
+  "name": "Savings Dai",
+  "symbol": "sDAI",
+  "flags": {
+    "backing": "crypto-backed",
+    "pegCurrency": "USD",
+    "governance": "centralized-dependent",
+    "yieldBearing": true,
+    "rwa": false,
+    "navToken": true
+  },
+  "variantOf": "dai-makerdao",
+  "variantKind": "savings-passthrough",
+  "pegReferenceId": "dai-makerdao",
+  "collateral": "DAI deposited into the sDAI savings vault; the wrapper remains fully backed by DAI while the exchange rate compounds with the Dai Savings Rate",
+  "pegMechanism": "Deposit DAI to mint sDAI and redeem sDAI for the current convertToAssets amount of DAI; the share price rises as DSR accrues, and Spark's savings front-end documents withdrawals without slippage or platform fees",
+  "detailProvider": "coingecko",
+  "geckoId": "savings-dai",
+  "links": [
+    {
+      "label": "Website",
+      "url": "https://spark.fi/"
+    },
+    {
+      "label": "Twitter",
+      "url": "https://x.com/sparkdotfi"
+    },
+    {
+      "label": "Docs",
+      "url": "https://docs.spark.fi/"
+    }
+  ],
+  "contracts": [
+    {
+      "chain": "ethereum",
+      "address": "0x83f20f44975d03b1b09e64809b757c47f942beea",
+      "decimals": 18
+    }
+  ],
+  "deploymentModel": "single-chain",
+  "collateralQuality": "rwa",
+  "custodyModel": "institutional-top",
+  "governanceQuality": "wrapper",
+  "reserves": [
+    {
+      "name": "DAI savings vault shares",
+      "pct": 100,
+      "risk": "low",
+      "coinId": "dai-makerdao",
+      "depType": "wrapper"
+    }
+  ],
+  "yieldConfig": {
+    "yieldSource": "Dai Savings Rate (sDAI)",
+    "yieldType": "nav-appreciation"
+  },
+  "liveReservesConfig": {
+    "adapter": "erc4626-single-asset",
+    "version": 1,
+    "semantics": "single-asset",
+    "breakerScope": "sdai-sky",
+    "display": {
+      "url": "https://spark.fi/",
+      "label": "Spark sDAI"
+    },
+    "inputs": {
+      "primary": {
+        "kind": "onchain-evm",
+        "chain": "ethereum",
+        "rpcMode": "alchemy"
+      }
+    },
+    "params": {
+      "slice": {
+        "name": "DAI savings vault shares",
+        "risk": "low",
+        "coinId": "dai-makerdao",
+        "depType": "wrapper",
+        "expectedAssetAddress": "0x6b175474e89094c44da98b954eedeac495271d0f"
+      }
+    }
+  }
+}

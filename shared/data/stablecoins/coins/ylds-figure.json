@@ -1,0 +1,92 @@
+{
+  "id": "ylds-figure",
+  "name": "YLDS",
+  "symbol": "YLDS",
+  "flags": {
+    "backing": "rwa-backed",
+    "pegCurrency": "USD",
+    "governance": "centralized",
+    "yieldBearing": true,
+    "rwa": true,
+    "navToken": true
+  },
+  "collateral": "Short-dated U.S. Treasury securities and overnight Treasury repo agreements held by Figure Certificate Company (FCC), an SEC-registered face-amount certificate company; custodian UMB Bank NA, audited by KPMG LLP; reserves maintained at 100% with 0.5% excess buffer",
+  "pegMechanism": "Fixed $1.00 face-amount certificate; daily interest accrual at SOFR minus 50bps (minimum 0%), paid monthly in USD or YLDS; 1:1 mint and redemption through Figure Certificate Company with mandatory KYC; registered under the Securities Act of 1933 and Investment Company Act of 1940",
+  "llamaId": "272",
+  "detailProvider": "defillama",
+  "geckoId": "ylds",
+  "proofOfReserves": {
+    "type": "independent-audit",
+    "url": "https://cdn.figure.com/docs/markets/fcc-prospectus.pdf",
+    "provider": "KPMG LLP"
+  },
+  "links": [
+    {
+      "label": "Website",
+      "url": "https://www.ylds.com/"
+    },
+    {
+      "label": "Twitter",
+      "url": "https://x.com/FigureMarkets"
+    },
+    {
+      "label": "Docs",
+      "url": "https://docs.provenance.io/learn/the-ylds-stablecoin"
+    }
+  ],
+  "jurisdiction": {
+    "country": "United States",
+    "regulator": "SEC",
+    "license": "SEC-Registered Security"
+  },
+  "contracts": [
+    {
+      "chain": "solana",
+      "address": "8fr7WGTVFszfyNWRMXj6fRjZZAnDwmXwEpCrtzmUkdih",
+      "decimals": 6
+    },
+    {
+      "chain": "provenance",
+      "address": "uylds.fcc",
+      "decimals": 6
+    }
+  ],
+  "custodyModel": "institutional-top",
+  "reserves": [
+    {
+      "name": "Overnight Treasury repo agreements (UMB Bank)",
+      "pct": 86,
+      "risk": "very-low"
+    },
+    {
+      "name": "Money market funds",
+      "pct": 13,
+      "risk": "very-low"
+    },
+    {
+      "name": "Digital assets (USDC + USDT, operational)",
+      "pct": 1,
+      "risk": "low",
+      "coinId": "usdc-circle"
+    }
+  ],
+  "liveReservesConfig": {
+    "adapter": "curated-validated",
+    "version": 1,
+    "semantics": "single-asset",
+    "breakerScope": "ylds-figure",
+    "display": {
+      "url": "https://www.figure.com/yield-dollar",
+      "label": "Figure Markets"
+    },
+    "inputs": {
+      "primary": {
+        "kind": "onchain-solana"
+      }
+    }
+  },
+  "yieldConfig": {
+    "yieldSource": "Figure yield fund",
+    "yieldType": "nav-appreciation"
+  }
+}

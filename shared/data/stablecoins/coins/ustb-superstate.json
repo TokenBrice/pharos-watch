@@ -1,0 +1,93 @@
+{
+  "id": "ustb-superstate",
+  "name": "Superstate USTB",
+  "symbol": "USTB",
+  "flags": {
+    "backing": "rwa-backed",
+    "pegCurrency": "USD",
+    "governance": "centralized",
+    "yieldBearing": true,
+    "rwa": true,
+    "navToken": true
+  },
+  "collateral": "Short-duration U.S. Treasury Bills and government agency securities (weighted average maturity ~28 days), held in a segregated non-rehypothecated account at The Bank of New York Mellon; holdings disclosed publicly on a daily basis; sub-advised by Federated Hermes",
+  "pegMechanism": "NAV-accreting fund share token (not pegged to $1); price launched at ~$10/share and appreciates continuously as Treasury income accrues; subscription and redemption at daily NAV in USDC or USD; NAV calculated by NAV Fund Services each NYSE/Federal Reserve business day",
+  "detailProvider": "coingecko",
+  "geckoId": "superstate-short-duration-us-government-securities-fund-ustb",
+  "proofOfReserves": {
+    "type": "independent-audit",
+    "url": "https://superstate.com/assets/ustb",
+    "provider": "Ernst & Young LLP (annual audit); Chronicle VAO + Chainlink oracle provide daily on-chain NAV transparency"
+  },
+  "links": [
+    {
+      "label": "Website",
+      "url": "https://superstate.com/assets/ustb"
+    },
+    {
+      "label": "Twitter",
+      "url": "https://x.com/SuperstateInc"
+    },
+    {
+      "label": "Docs",
+      "url": "https://docs.superstate.com/ustb"
+    }
+  ],
+  "jurisdiction": {
+    "country": "United States",
+    "regulator": "SEC",
+    "license": "Reg D Rule 506(c); Delaware Statutory Trust; restricted to U.S. Qualified Purchasers and Accredited Investors"
+  },
+  "contracts": [
+    {
+      "chain": "ethereum",
+      "address": "0x43415eb6ff9db7e26a15b704e7a3edce97d31c4e",
+      "decimals": 6
+    },
+    {
+      "chain": "plume",
+      "address": "0xe4fa682f94610ccd170680cc3b045d77d9e528a8",
+      "decimals": 6
+    }
+  ],
+  "deploymentModel": "native-multichain",
+  "collateralQuality": "rwa",
+  "custodyModel": "institutional-top",
+  "governanceQuality": "regulated-entity",
+  "reserves": [
+    {
+      "name": "Short-term U.S. Treasury Bills and government agency securities (WAM ~28 days)",
+      "pct": 100,
+      "risk": "very-low"
+    }
+  ],
+  "liveReservesConfig": {
+    "adapter": "superstate-liquidity",
+    "version": 1,
+    "semantics": "single-asset",
+    "breakerScope": "ustb-superstate",
+    "display": {
+      "url": "https://superstate.com/assets/ustb",
+      "label": "Superstate Oracle"
+    },
+    "inputs": {
+      "primary": {
+        "kind": "onchain-evm",
+        "chain": "ethereum",
+        "rpcMode": "etherscan-proxy"
+      }
+    },
+    "params": {
+      "oracleAddress": "0x289B5036cd942e619E1Ee48670F98d214E745AAC",
+      "tokenAddress": "0x43415eB6ff9DB7E26A15b704e7A3eDCe97d31C4e",
+      "assetLabel": "Short-duration U.S. government securities",
+      "assetRisk": "very-low",
+      "liquidityUrl": "https://api.superstate.com/v1/funds/liquidity",
+      "ticker": "USTB"
+    }
+  },
+  "yieldConfig": {
+    "yieldSource": "Superstate T-bill fund",
+    "yieldType": "nav-appreciation"
+  }
+}

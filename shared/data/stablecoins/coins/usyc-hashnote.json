@@ -1,0 +1,93 @@
+{
+  "id": "usyc-hashnote",
+  "name": "Hashnote USYC",
+  "symbol": "USYC",
+  "flags": {
+    "backing": "rwa-backed",
+    "pegCurrency": "USD",
+    "governance": "centralized",
+    "yieldBearing": true,
+    "rwa": true,
+    "navToken": true
+  },
+  "collateral": "Short-term U.S. Treasury bills and reverse repo agreements held in segregated prime brokerage accounts",
+  "pegMechanism": "Same-day subscription and redemption via USDC at NAV-based token price",
+  "llamaId": "237",
+  "detailProvider": "defillama",
+  "geckoId": "hashnote-usyc",
+  "links": [
+    {
+      "label": "Website",
+      "url": "https://usyc.hashnote.com/"
+    },
+    {
+      "label": "Twitter",
+      "url": "https://x.com/Hashnote_Labs"
+    },
+    {
+      "label": "Docs",
+      "url": "https://usyc.docs.hashnote.com/"
+    }
+  ],
+  "jurisdiction": {
+    "country": "Bermuda",
+    "regulator": "BMA",
+    "license": "DABA License"
+  },
+  "contracts": [
+    {
+      "chain": "ethereum",
+      "address": "0x136471a34f6ef19fe571effc1ca711fdb8e49f2b",
+      "decimals": 6
+    },
+    {
+      "chain": "bsc",
+      "address": "0x8D0fA28f221eB5735BC71d3a0Da67EE5bC821311",
+      "decimals": 6
+    }
+  ],
+  "deploymentModel": "third-party-bridge",
+  "custodyModel": "institutional-regulated",
+  "reserves": [
+    {
+      "name": "U.S. Treasury Bills",
+      "pct": 80,
+      "risk": "very-low"
+    },
+    {
+      "name": "Reverse Repo Agreements",
+      "pct": 20,
+      "risk": "very-low"
+    }
+  ],
+  "liveReservesConfig": {
+    "adapter": "chainlink-nav",
+    "version": 2,
+    "semantics": "single-asset",
+    "breakerScope": "usyc-hashnote",
+    "display": {
+      "url": "https://usyc.hashnote.com/",
+      "label": "Hashnote"
+    },
+    "inputs": {
+      "primary": {
+        "kind": "onchain-evm",
+        "chain": "ethereum",
+        "rpcMode": "public-rpc"
+      }
+    },
+    "params": {
+      "oracleAddress": "0x74f2199AEb743f68f05943e5715A33EaF2b61f53",
+      "tokenAddress": "0x136471a34f6ef19fe571effc1ca711fdb8e49f2b",
+      "assetLabel": "U.S. Treasury Bills and reverse repos",
+      "assetRisk": "very-low",
+      "rpcUrl": "https://ethereum-rpc.publicnode.com",
+      "fallbackRpcUrl": "https://eth.llamarpc.com",
+      "maxOracleAgeSec": 345600
+    }
+  },
+  "yieldConfig": {
+    "yieldSource": "Hashnote T-bill fund",
+    "yieldType": "nav-appreciation"
+  }
+}

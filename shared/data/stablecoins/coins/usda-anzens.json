@@ -1,0 +1,47 @@
+{
+  "id": "usda-anzens",
+  "name": "Anzens USDA",
+  "symbol": "USDA",
+  "flags": {
+    "backing": "rwa-backed",
+    "pegCurrency": "USD",
+    "governance": "centralized",
+    "yieldBearing": false,
+    "rwa": false,
+    "navToken": false
+  },
+  "collateral": "USD and dollar-equivalent reserves including U.S. Treasuries, held in segregated accounts custodied by BitGo Trust (Qualified Custodian)",
+  "pegMechanism": "Direct 1:1 USD redemption through Anzens via KYC-verified bank transfers; minting and burning available to retail and institutional users in eligible U.S. states",
+  "llamaId": "245",
+  "detailProvider": "defillama",
+  "geckoId": "anzens-usda",
+  "cmcSlug": "anzens-usda",
+  "links": [
+    {
+      "label": "Website",
+      "url": "https://www.anzens.com/"
+    },
+    {
+      "label": "Twitter",
+      "url": "https://x.com/AnzensOfficial"
+    }
+  ],
+  "jurisdiction": {
+    "country": "United States",
+    "regulator": "FinCEN",
+    "license": "Money Service Business (MSB)"
+  },
+  "custodyModel": "institutional-regulated",
+  "reserves": [
+    {
+      "name": "USD cash deposits",
+      "pct": 60,
+      "risk": "very-low"
+    },
+    {
+      "name": "U.S. Treasury securities",
+      "pct": 40,
+      "risk": "very-low"
+    }
+  ]
+}

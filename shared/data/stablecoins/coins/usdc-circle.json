@@ -1,0 +1,308 @@
+{
+  "id": "usdc-circle",
+  "name": "USD Coin",
+  "symbol": "USDC",
+  "flags": {
+    "backing": "rwa-backed",
+    "pegCurrency": "USD",
+    "governance": "centralized",
+    "yieldBearing": false,
+    "rwa": false,
+    "navToken": false
+  },
+  "collateral": "Cash and cash equivalents held in the Circle Reserve Fund (SEC-registered 2a-7 government money market fund), managed by BlackRock and custodied at BNY Mellon; assets include short-dated U.S. Treasuries, overnight Treasury repos, and cash",
+  "pegMechanism": "Direct 1:1 redemption through Circle",
+  "llamaId": "2",
+  "detailProvider": "defillama",
+  "geckoId": "usd-coin",
+  "pythFeedId": "0xeaa020c61cc479712813461ce153894a96a6c00b21ed0cfc2798d1f9a9e9c94a",
+  "proofOfReserves": {
+    "type": "independent-audit",
+    "url": "https://www.circle.com/transparency",
+    "provider": "Deloitte"
+  },
+  "links": [
+    {
+      "label": "Website",
+      "url": "https://www.circle.com/usdc"
+    },
+    {
+      "label": "Twitter",
+      "url": "https://x.com/circle"
+    },
+    {
+      "label": "Docs",
+      "url": "https://developers.circle.com/stablecoins/what-is-usdc"
+    }
+  ],
+  "jurisdiction": {
+    "country": "United States",
+    "regulator": "NYDFS / 50-state MTL",
+    "license": "Virtual Currency License (BitLicense)"
+  },
+  "contracts": [
+    {
+      "chain": "ethereum",
+      "address": "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
+      "decimals": 6
+    },
+    {
+      "chain": "arbitrum",
+      "address": "0xaf88d065e77c8cc2239327c5edb3a432268e5831",
+      "decimals": 6
+    },
+    {
+      "chain": "base",
+      "address": "0x833589fcd6edb6e08f4c7c32d4f71b54bda02913",
+      "decimals": 6
+    },
+    {
+      "chain": "optimism",
+      "address": "0x0b2c639c533813f4aa9d7837caf62653d097ff85",
+      "decimals": 6
+    },
+    {
+      "chain": "polygon",
+      "address": "0x3c499c542cef5e3811e1192ce70d8cc03d5c3359",
+      "decimals": 6
+    },
+    {
+      "chain": "avalanche",
+      "address": "0xb97ef9ef8734c71904d8002f8b6bc66dd9c48a6e",
+      "decimals": 6
+    },
+    {
+      "chain": "celo",
+      "address": "0xceba9300f2b948710d2653dd7b07f33a8b32118c",
+      "decimals": 6
+    },
+    {
+      "chain": "gnosis",
+      "address": "0xddafbb505ad214d7b80b1f830fccc89b60fb7a83",
+      "decimals": 6
+    },
+    {
+      "chain": "solana",
+      "address": "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v",
+      "decimals": 6
+    },
+    {
+      "chain": "sui",
+      "address": "0xdba34672e30cb065b1f93e3ab55318768fd6fef66c15942c9f7cb846e2f900e7::usdc::USDC",
+      "decimals": 6
+    },
+    {
+      "chain": "aptos",
+      "address": "0xbae207659db88bea0cbead6da0ed00aac12edcdda169e591cd41c94180b46f3b",
+      "decimals": 6
+    },
+    {
+      "chain": "tron",
+      "address": "TEkxiTehnzSmSe2XqrBj4w32RUN966rdz8",
+      "decimals": 6
+    },
+    {
+      "chain": "zksync",
+      "address": "0x1d17cbcf0d6d143135ae902365d2e5e2a16538d4",
+      "decimals": 6
+    },
+    {
+      "chain": "sonic",
+      "address": "0x29219dd400f2bf60e5a23d13be72b486d4038894",
+      "decimals": 6
+    },
+    {
+      "chain": "starknet",
+      "address": "0x33068f6539f8e6e6b131e6b2b814e6c34a5224bc66947c47dab9dfee93b35fb",
+      "decimals": 6
+    },
+    {
+      "chain": "near",
+      "address": "17208628f84f5d6ad33f0da3bbbeb27ffcb398eac501a31bd6ad2011e36133a1",
+      "decimals": 6
+    },
+    {
+      "chain": "algorand",
+      "address": "31566704",
+      "decimals": 5
+    },
+    {
+      "chain": "hedera",
+      "address": "0.0.456858",
+      "decimals": 6
+    },
+    {
+      "chain": "sei",
+      "address": "0xe15fc38f6d8c56af07bbcbe3baf5708a2bf42392",
+      "decimals": 6
+    },
+    {
+      "chain": "worldchain",
+      "address": "0x79a02482a880bce3f13e09da970dc34db4cd24d1",
+      "decimals": 6
+    },
+    {
+      "chain": "unichain",
+      "address": "0x078d782b760474a361dda0af3839290b0ef57ad6",
+      "decimals": 6
+    },
+    {
+      "chain": "ink",
+      "address": "0x2d270e6886d130d724215a266106e6832161eaed",
+      "decimals": 6
+    },
+    {
+      "chain": "polkadot",
+      "address": "1337",
+      "decimals": 6
+    },
+    {
+      "chain": "xrpl",
+      "address": "5553444300000000000000000000000000000000.rGm7WCVp9gb4jZHWTEtGUr4dd74z2XuWhE",
+      "decimals": 6
+    },
+    {
+      "chain": "moonriver",
+      "address": "0xffffffff7d2b0b761af01ca8e25242976ac0ad7d",
+      "decimals": 6
+    },
+    {
+      "chain": "plume",
+      "address": "0x222365ef19f7947e5484218551b56bb3965aa7af",
+      "decimals": 6
+    },
+    {
+      "chain": "hyperevm",
+      "address": "0xb88339cb7199b77e23db6e890353e22632ba630f",
+      "decimals": 6
+    },
+    {
+      "chain": "monad",
+      "address": "0x754704bc059f8c67012fed69bc8a327a5aafb603",
+      "decimals": 6
+    },
+    {
+      "chain": "xdc",
+      "address": "0xfa2958cb79b0491cc627c1557f441ef849ca8eb1",
+      "decimals": 6
+    },
+    {
+      "chain": "bsc",
+      "address": "0x8ac76a51cc950d9822d68b83fe1ad97b32cd580d",
+      "decimals": 18
+    },
+    {
+      "chain": "stellar",
+      "address": "USDC-GA5ZSEJYB37JRC5AVCIA5MOP4RHTM335X2KGX3IHOJAPP5RE34K4KZVN",
+      "decimals": 7
+    },
+    {
+      "chain": "fantom",
+      "address": "0x04068da6c83afcfa0e13ba15a6696662335d5b75",
+      "decimals": 6
+    },
+    {
+      "chain": "cronos",
+      "address": "0xc21223249ca28397b4b6541dffaecc539bff0c59",
+      "decimals": 6
+    },
+    {
+      "chain": "noble",
+      "address": "uusdc",
+      "decimals": 6
+    },
+    {
+      "chain": "mantle",
+      "address": "0x09bc4e0d864854c6afb6eb9a9cdf58ac190d0df9",
+      "decimals": 6
+    },
+    {
+      "chain": "linea",
+      "address": "0x176211869ca2b568f2a7d4ee941e073a821ee1ff",
+      "decimals": 6
+    },
+    {
+      "chain": "scroll",
+      "address": "0x06efdbff2a14a7c8e15944d1f4a48f9f95f663a4",
+      "decimals": 6
+    },
+    {
+      "chain": "osmosis",
+      "address": "ibc/498A0751C798A0D9A389AA3691123DADA57DAA4FE165D5C75894505B876BA6E4",
+      "decimals": 6
+    },
+    {
+      "chain": "stacks",
+      "address": "SP120SBRBQJ00MCWS7TM5R8WJNTTKD5K0HFRC2CNE.usdcx",
+      "decimals": 6
+    },
+    {
+      "chain": "etherlink",
+      "address": "0x796ea11fa2dd751ed01b53c372ffdb4aaa8f00f9",
+      "decimals": 6
+    },
+    {
+      "chain": "cardano",
+      "address": "1f3aec8bfe7ea4fe14c5f121e2a92e301afe414147860d557cac7e345553444378",
+      "decimals": 6
+    },
+    {
+      "chain": "pulsechain",
+      "address": "0x15d38573d2feeb82e7ad5187ab8c1d52810b1f07",
+      "decimals": 6
+    },
+    {
+      "chain": "abstract",
+      "address": "0x84a71ccd554cc1b02749b35d22f684cc8ec987e1",
+      "decimals": 6
+    },
+    {
+      "chain": "berachain",
+      "address": "0x549943e04f40284185054145c6e4e9568c1d3241",
+      "decimals": 6
+    },
+    {
+      "chain": "katana",
+      "address": "0x203a662b0bd271a6ed5a60edfbd04bfce608fd36",
+      "decimals": 6
+    }
+  ],
+  "deploymentModel": "native-multichain",
+  "custodyModel": "institutional-top",
+  "reserves": [
+    {
+      "name": "U.S. Treasuries",
+      "pct": 75,
+      "risk": "very-low"
+    },
+    {
+      "name": "Overnight Repos",
+      "pct": 18,
+      "risk": "very-low"
+    },
+    {
+      "name": "Cash Deposits",
+      "pct": 7,
+      "risk": "very-low"
+    }
+  ],
+  "liveReservesConfig": {
+    "adapter": "circle-transparency",
+    "version": 1,
+    "semantics": "attestation-mix",
+    "breakerScope": "circle-usdc-reserves",
+    "display": {
+      "url": "https://www.circle.com/transparency",
+      "label": "Circle Transparency"
+    },
+    "inputs": {
+      "primary": {
+        "kind": "http-html",
+        "url": "https://www.circle.com/transparency"
+      }
+    },
+    "params": {
+      "coinType": "usdc"
+    }
+  }
+}

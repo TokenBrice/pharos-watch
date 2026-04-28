@@ -1,0 +1,95 @@
+{
+  "id": "ctusd-citrea",
+  "name": "Citrea USD",
+  "symbol": "ctUSD",
+  "flags": {
+    "backing": "rwa-backed",
+    "pegCurrency": "USD",
+    "governance": "centralized",
+    "yieldBearing": false,
+    "rwa": true,
+    "navToken": false
+  },
+  "infrastructures": [
+    "m0"
+  ],
+  "collateral": "Short-term U.S. Treasury bills and cash, held for the benefit of token holders via M0 Protocol's bankruptcy-remote SPV structure; issued by MoonPay under U.S. Money Transmitter Licenses across 49 states (excl. New York)",
+  "pegMechanism": "1:1 fiat-backed mint and redemption via MoonPay using M0 Protocol infrastructure; reserves cryptographically attested on-chain by independent M0 Validators before minting; fiat on/off ramp via Visa, Mastercard, Apple Pay, Google Pay, and PayPal through MoonPay's 30M+ verified user base",
+  "llamaId": "350",
+  "detailProvider": "defillama",
+  "geckoId": "citrea-usd",
+  "proofOfReserves": {
+    "type": "real-time",
+    "url": "https://dashboard.m0.org/",
+    "provider": "M0 Protocol"
+  },
+  "links": [
+    {
+      "label": "Website",
+      "url": "https://citrea.xyz/"
+    },
+    {
+      "label": "Twitter",
+      "url": "https://x.com/citrea_xyz"
+    },
+    {
+      "label": "Docs",
+      "url": "https://docs.citrea.xyz/developer-documentation/citrea-usd-ctusd"
+    },
+    {
+      "label": "Blog",
+      "url": "https://www.blog.citrea.xyz/introducing-citrea-usd-ctusd-the-native-stablecoin-for-bitcoin-issued-by-moonpay-and-powered-by-m0/"
+    }
+  ],
+  "jurisdiction": {
+    "country": "United States",
+    "license": "Money Transmitter Licenses (49 states)"
+  },
+  "contracts": [
+    {
+      "chain": "citrea",
+      "address": "0x8d82c4e3c936c7b5724a382a9c5a4e6eb7ab6d5d",
+      "decimals": 6
+    }
+  ],
+  "canBeBlacklisted": true,
+  "custodyModel": "institutional-regulated",
+  "governanceQuality": "regulated-entity",
+  "collateralQuality": "rwa",
+  "deploymentModel": "single-chain",
+  "reserves": [
+    {
+      "name": "Short-term U.S. Treasury Bills",
+      "pct": 85,
+      "risk": "very-low"
+    },
+    {
+      "name": "Cash and cash equivalents",
+      "pct": 15,
+      "risk": "very-low"
+    }
+  ],
+  "dependencies": [
+    {
+      "id": "m-m0",
+      "weight": 1,
+      "type": "mechanism"
+    }
+  ],
+  "liveReservesConfig": {
+    "adapter": "m0",
+    "version": 1,
+    "semantics": "protocol-reserve",
+    "breakerScope": "m0",
+    "display": {
+      "url": "https://dashboard.m0.org/",
+      "label": "M0 Dashboard"
+    },
+    "inputs": {
+      "primary": {
+        "kind": "http-json",
+        "url": "https://protocol-api.m0.org/graphql"
+      }
+    }
+  }
+}

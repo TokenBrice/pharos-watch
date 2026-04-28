@@ -1,0 +1,91 @@
+{
+  "id": "buck-buck-assets",
+  "name": "Buck",
+  "symbol": "BUCK",
+  "flags": {
+    "backing": "rwa-backed",
+    "pegCurrency": "USD",
+    "governance": "centralized",
+    "yieldBearing": true,
+    "rwa": true,
+    "navToken": false
+  },
+  "collateral": "USDC liquidity reserve for redemptions plus Strategy Inc. perpetual preferred stock (STRC), a BTC-backed equity instrument; treasury reported at 1.79× reserve ratio (Mar 2026 attestation by The Network Firm)",
+  "pegMechanism": "1:1 mint and redemption against USDC via the LiquidityWindow smart contract; AML-verified primary market participants only; yield distributed monthly as additional BUCK tokens (rebase)",
+  "detailProvider": "coingecko",
+  "geckoId": "buck-2",
+  "canBeBlacklisted": true,
+  "proofOfReserves": {
+    "type": "independent-audit",
+    "url": "https://buck.io/transparency",
+    "provider": "The Network Firm"
+  },
+  "links": [
+    {
+      "label": "Website",
+      "url": "https://buck.io"
+    },
+    {
+      "label": "Twitter",
+      "url": "https://x.com/BuckToken"
+    },
+    {
+      "label": "Whitepaper",
+      "url": "https://buck.io/documents/Buck_Token_MiCA_Whitepaper_-_Publication_date_12.16.25_Update_date_1.4.26.pdf"
+    }
+  ],
+  "jurisdiction": {
+    "country": "British Virgin Islands"
+  },
+  "contracts": [
+    {
+      "chain": "ethereum",
+      "address": "0xdb13997f4d83ef343845d0baeb27d1173df8c224",
+      "decimals": 18
+    }
+  ],
+  "deploymentModel": "single-chain",
+  "collateralQuality": "exotic",
+  "custodyModel": "institutional-unregulated",
+  "governanceQuality": "single-entity",
+  "reserves": [
+    {
+      "name": "Strategy Inc. perpetual preferred stock (STRC)",
+      "pct": 77,
+      "risk": "medium"
+    },
+    {
+      "name": "USDC liquidity reserve",
+      "pct": 23,
+      "risk": "low",
+      "coinId": "usdc-circle"
+    }
+  ],
+  "dependencies": [
+    {
+      "id": "usdc-circle",
+      "weight": 0.23,
+      "type": "collateral"
+    }
+  ],
+  "yieldConfig": {
+    "yieldSource": "Strategy Inc. STRC dividends (BTC-backed preferred equity)",
+    "yieldType": "rebase"
+  },
+  "liveReservesConfig": {
+    "adapter": "buck-io-transparency",
+    "version": 1,
+    "semantics": "attestation-mix",
+    "breakerScope": "buck-buck-assets",
+    "display": {
+      "url": "https://buck.io/transparency",
+      "label": "Buck Transparency"
+    },
+    "inputs": {
+      "primary": {
+        "kind": "http-html",
+        "url": "https://buck.io/transparency"
+      }
+    }
+  }
+}

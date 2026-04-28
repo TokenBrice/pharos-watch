@@ -1,0 +1,103 @@
+{
+  "id": "m-m0",
+  "name": "M by M0",
+  "symbol": "M",
+  "flags": {
+    "backing": "rwa-backed",
+    "pegCurrency": "USD",
+    "governance": "centralized",
+    "yieldBearing": false,
+    "rwa": true,
+    "navToken": false
+  },
+  "infrastructures": [
+    "m0"
+  ],
+  "collateral": "Short-term U.S. Treasury bills (30–90 day) held in bankruptcy-remote SPVs by permissioned Minters; Validators independently attest collateral sufficiency on-chain before minting",
+  "pegMechanism": "Permissioned Minters lock eligible T-bill collateral in bankruptcy-remote SPVs; Validators cryptographically attest off-chain collateral sufficiency, enabling on-chain minting of M 1:1 against attested reserves; POWER token holders govern eligible collateral and Minter/Validator permissions",
+  "llamaId": "213",
+  "detailProvider": "defillama",
+  "proofOfReserves": {
+    "type": "self-reported",
+    "url": "https://dashboard.m0.org/",
+    "provider": "M0 Protocol (on-chain Validator attestations)"
+  },
+  "links": [
+    {
+      "label": "Website",
+      "url": "https://www.m0.org/"
+    },
+    {
+      "label": "Twitter",
+      "url": "https://x.com/m0"
+    },
+    {
+      "label": "Docs",
+      "url": "https://docs.m0.org/"
+    },
+    {
+      "label": "GitHub",
+      "url": "https://github.com/m0-foundation"
+    }
+  ],
+  "jurisdiction": {
+    "country": "Switzerland"
+  },
+  "contracts": [
+    {
+      "chain": "ethereum",
+      "address": "0x866a2bf4e572cbcf37d5071a7a58503bfb36be1b",
+      "decimals": 6
+    },
+    {
+      "chain": "optimism",
+      "address": "0x866a2bf4e572cbcf37d5071a7a58503bfb36be1b",
+      "decimals": 6
+    },
+    {
+      "chain": "arbitrum",
+      "address": "0x866a2bf4e572cbcf37d5071a7a58503bfb36be1b",
+      "decimals": 6
+    },
+    {
+      "chain": "base",
+      "address": "0x866a2bf4e572cbcf37d5071a7a58503bfb36be1b",
+      "decimals": 6
+    },
+    {
+      "chain": "solana",
+      "address": "mzerokyEX9TNDoK4o2YZQBDmMzjokAeN6M2g2S3pLJo",
+      "decimals": 6
+    },
+    {
+      "chain": "hyperevm",
+      "address": "0x866a2bf4e572cbcf37d5071a7a58503bfb36be1b",
+      "decimals": 6
+    }
+  ],
+  "deploymentModel": "third-party-bridge",
+  "custodyModel": "institutional-unregulated",
+  "reserves": [
+    {
+      "name": "Short-term U.S. Treasury Bills (30-90 day)",
+      "pct": 100,
+      "risk": "very-low"
+    }
+  ],
+  "liveReservesConfig": {
+    "adapter": "m0",
+    "version": 1,
+    "semantics": "protocol-reserve",
+    "breakerScope": "m0",
+    "display": {
+      "url": "https://dashboard.m0.org/",
+      "label": "M0 Dashboard"
+    },
+    "inputs": {
+      "primary": {
+        "kind": "http-json",
+        "url": "https://protocol-api.m0.org/graphql"
+      }
+    }
+  }
+}

@@ -1,0 +1,79 @@
+{
+  "id": "fidd-fidelity",
+  "name": "Fidelity Digital Dollar",
+  "symbol": "FIDD",
+  "flags": {
+    "backing": "rwa-backed",
+    "pegCurrency": "USD",
+    "governance": "centralized",
+    "yieldBearing": false,
+    "rwa": false,
+    "navToken": false
+  },
+  "collateral": "Cash, U.S. Treasury securities, and cash equivalents held at The Bank of New York Mellon",
+  "pegMechanism": "Direct 1:1 redemption through Fidelity Digital Assets platforms",
+  "llamaId": "348",
+  "detailProvider": "defillama",
+  "geckoId": "fidelity-digital-dollar",
+  "proofOfReserves": {
+    "type": "independent-audit",
+    "url": "https://www.fidelitydigitalassets.com/stablecoin",
+    "provider": "PricewaterhouseCoopers"
+  },
+  "links": [
+    {
+      "label": "Website",
+      "url": "https://www.fidelitydigitalassets.com/stablecoin"
+    },
+    {
+      "label": "Twitter",
+      "url": "https://x.com/DigitalAssets"
+    },
+    {
+      "label": "Docs",
+      "url": "https://www.fidelitydigitalassets.com/stablecoin-developer-resources"
+    }
+  ],
+  "jurisdiction": {
+    "country": "United States",
+    "regulator": "OCC",
+    "license": "National Trust Bank Charter"
+  },
+  "contracts": [
+    {
+      "chain": "ethereum",
+      "address": "0x7c135549504245b5eae64fc0e99fa5ebabb8e35d",
+      "decimals": 18
+    }
+  ],
+  "custodyModel": "institutional-top",
+  "reserves": [
+    {
+      "name": "U.S. Treasury securities (short-term)",
+      "pct": 80,
+      "risk": "very-low"
+    },
+    {
+      "name": "Cash and cash equivalents",
+      "pct": 20,
+      "risk": "very-low"
+    }
+  ],
+  "liveReservesConfig": {
+    "adapter": "curated-validated",
+    "version": 1,
+    "semantics": "attestation-mix",
+    "breakerScope": "fidd-fidelity",
+    "display": {
+      "url": "https://www.fidelitydigitalassets.com/stablecoin",
+      "label": "Fidelity"
+    },
+    "inputs": {
+      "primary": {
+        "kind": "onchain-evm",
+        "chain": "ethereum",
+        "rpcMode": "public-rpc"
+      }
+    }
+  }
+}

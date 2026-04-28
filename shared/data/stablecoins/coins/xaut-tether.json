@@ -1,0 +1,84 @@
+{
+  "id": "xaut-tether",
+  "name": "Tether Gold",
+  "symbol": "XAUT",
+  "flags": {
+    "backing": "rwa-backed",
+    "pegCurrency": "GOLD",
+    "governance": "centralized",
+    "yieldBearing": false,
+    "rwa": true,
+    "navToken": false
+  },
+  "collateral": "LBMA Good Delivery gold bars held in Swiss vaults by an undisclosed Swiss custodian; each token represents one fine troy ounce",
+  "pegMechanism": "Direct 1:1 redemption for physical gold through TG Commodities, S.A. de C.V.; minimum 430 XAUt for a full bar; physical delivery to Switzerland only. Supply figures include XAUt0 (omnichain variant via LayerZero lock-and-mint) deployed on TON, Solana, Arbitrum, and other chains",
+  "commodityOunces": 1,
+  "detailProvider": "commodity",
+  "geckoId": "tether-gold",
+  "pythFeedId": "0x44465e17d2e9d390e70c999d5a11fda4f092847fcd2e3e5aa089d96c98a30e67",
+  "protocolSlug": "tether-gold",
+  "proofOfReserves": {
+    "type": "independent-audit",
+    "url": "https://gold.tether.to/reports",
+    "provider": "BDO Italia"
+  },
+  "links": [
+    {
+      "label": "Website",
+      "url": "https://gold.tether.to/"
+    },
+    {
+      "label": "Docs",
+      "url": "https://gold.tether.to/faq"
+    },
+    {
+      "label": "Twitter",
+      "url": "https://x.com/tethergold"
+    },
+    {
+      "label": "XAUt0",
+      "url": "https://usdt0.to/"
+    }
+  ],
+  "jurisdiction": {
+    "country": "El Salvador",
+    "regulator": "CNAD",
+    "license": "Stablecoin Issuer & DASP"
+  },
+  "contracts": [
+    {
+      "chain": "ethereum",
+      "address": "0x68749665ff8d2d112fa859aa293f07a622782f38",
+      "decimals": 6
+    }
+  ],
+  "custodyModel": "institutional-regulated",
+  "reserves": [
+    {
+      "name": "Physical gold bars (LBMA Good Delivery, Swiss vaults)",
+      "pct": 100,
+      "risk": "very-low"
+    }
+  ],
+  "liveReservesConfig": {
+    "adapter": "single-asset",
+    "version": 1,
+    "semantics": "single-asset",
+    "breakerScope": "xaut-tether",
+    "display": {
+      "url": "https://gold.tether.to/",
+      "label": "Tether Gold"
+    },
+    "inputs": {
+      "primary": {
+        "kind": "onchain-evm",
+        "chain": "ethereum",
+        "rpcMode": "public-rpc"
+      }
+    },
+    "params": {
+      "label": "Physical gold bars (LBMA Good Delivery)",
+      "risk": "very-low"
+    }
+  }
+}

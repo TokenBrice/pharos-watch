@@ -1,0 +1,84 @@
+{
+  "id": "usdcv-societe-generale-forge",
+  "name": "USD CoinVertible",
+  "symbol": "USDCV",
+  "flags": {
+    "backing": "rwa-backed",
+    "pegCurrency": "USD",
+    "governance": "centralized",
+    "yieldBearing": false,
+    "rwa": false,
+    "navToken": false
+  },
+  "collateral": "U.S. dollar cash deposits and high-quality liquid assets held 1:1 in segregated accounts at Bank of New York Mellon (BNY), managed by independent fiduciaries and bankruptcy-remote from SG-FORGE; daily public disclosure of reserve composition",
+  "pegMechanism": "Direct 1:1 redemption through SG-FORGE",
+  "llamaId": "307",
+  "detailProvider": "defillama",
+  "geckoId": "usd-coinvertible",
+  "proofOfReserves": {
+    "type": "self-reported",
+    "url": "https://www.sgforge.com/product/coinvertible/",
+    "provider": "SG-FORGE"
+  },
+  "links": [
+    {
+      "label": "Website",
+      "url": "https://www.sgforge.com/product/coinvertible/"
+    },
+    {
+      "label": "Twitter",
+      "url": "https://x.com/SG_Forge"
+    },
+    {
+      "label": "Docs",
+      "url": "https://www.sgforge.com/wp-content/uploads/2025/08/SG-Forge-USDCV-White-Paper_V2.0_Ethereum_Solana_11082025.pdf"
+    }
+  ],
+  "jurisdiction": {
+    "country": "France",
+    "regulator": "ACPR",
+    "license": "EMI (MiCA)"
+  },
+  "contracts": [
+    {
+      "chain": "ethereum",
+      "address": "0x5422374b27757da72d5265cc745ea906e0446634",
+      "decimals": 18
+    },
+    {
+      "chain": "solana",
+      "address": "8smindLdDuySY6i2bStQX9o8DVhALCXCMbNxD98unx35",
+      "decimals": 2
+    }
+  ],
+  "deploymentModel": "native-multichain",
+  "custodyModel": "institutional-top",
+  "reserves": [
+    {
+      "name": "USD cash deposits at BNY Mellon (segregated)",
+      "pct": 100,
+      "risk": "very-low"
+    }
+  ],
+  "liveReservesConfig": {
+    "adapter": "single-asset",
+    "version": 1,
+    "semantics": "single-asset",
+    "breakerScope": "usdcv-societe-generale-forge",
+    "display": {
+      "url": "https://www.sgforge.com/product/coinvertible/",
+      "label": "SG Forge"
+    },
+    "inputs": {
+      "primary": {
+        "kind": "onchain-evm",
+        "chain": "ethereum",
+        "rpcMode": "public-rpc"
+      }
+    },
+    "params": {
+      "label": "USD cash deposits (BNY Mellon segregated)",
+      "risk": "very-low"
+    }
+  }
+}

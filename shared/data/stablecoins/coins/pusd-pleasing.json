@@ -1,0 +1,80 @@
+{
+  "id": "pusd-pleasing",
+  "name": "Pleasing USD",
+  "symbol": "PUSD",
+  "flags": {
+    "backing": "rwa-backed",
+    "pegCurrency": "USD",
+    "governance": "centralized-dependent",
+    "yieldBearing": false,
+    "rwa": false,
+    "navToken": false
+  },
+  "collateral": "USDT deposits held by Pleasing International; ecosystem interoperability with tokenized gold (PGOLD)",
+  "pegMechanism": "1:1 mint and redemption against USDT through the Pleasing Golden platform",
+  "llamaId": "341",
+  "detailProvider": "defillama",
+  "geckoId": "pleasing-usd",
+  "cmcSlug": "pleasing-usd",
+  "links": [
+    {
+      "label": "Website",
+      "url": "https://www.pleasinggold.com/"
+    },
+    {
+      "label": "Twitter",
+      "url": "https://x.com/PleasingGolden"
+    },
+    {
+      "label": "Docs",
+      "url": "https://pleasing.gitbook.io/docs"
+    }
+  ],
+  "jurisdiction": {
+    "country": "Hong Kong"
+  },
+  "contracts": [
+    {
+      "chain": "arbitrum",
+      "address": "0xc8fb643d18f1e53698cfda5c8fdf0cdc03c1dbec",
+      "decimals": 18
+    },
+    {
+      "chain": "apechain",
+      "address": "0x764387ae46fc504b0682bc1ad31963250007e58e",
+      "decimals": 18
+    }
+  ],
+  "custodyModel": "institutional-unregulated",
+  "reserves": [
+    {
+      "name": "USDT deposits (1:1 minting collateral)",
+      "pct": 90,
+      "risk": "low",
+      "coinId": "usdt-tether",
+      "depType": "wrapper"
+    },
+    {
+      "name": "Tokenized gold exposure (PGOLD interoperability)",
+      "pct": 10,
+      "risk": "medium"
+    }
+  ],
+  "liveReservesConfig": {
+    "adapter": "curated-validated",
+    "version": 1,
+    "semantics": "collateral-mix",
+    "breakerScope": "pusd-pleasing",
+    "display": {
+      "url": "https://www.pleasinggold.com/",
+      "label": "Pleasing"
+    },
+    "inputs": {
+      "primary": {
+        "kind": "onchain-evm",
+        "chain": "arbitrum",
+        "rpcMode": "public-rpc"
+      }
+    }
+  }
+}

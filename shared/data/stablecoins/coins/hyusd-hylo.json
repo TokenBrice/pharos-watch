@@ -1,0 +1,64 @@
+{
+  "id": "hyusd-hylo",
+  "name": "Hylo HYUSD",
+  "symbol": "HYUSD",
+  "flags": {
+    "backing": "crypto-backed",
+    "pegCurrency": "USD",
+    "governance": "decentralized",
+    "yieldBearing": false,
+    "rwa": false,
+    "navToken": false
+  },
+  "collateral": "Diversified basket of Solana LSTs (mSOL, jitoSOL, bSOL, JupSOL)",
+  "pegMechanism": "Overcollateralization (150%+) with companion leveraged token (xSOL) absorbing SOL volatility; operates on Solana (not Ethereum or a Stage 1 L2)",
+  "llamaId": "302",
+  "detailProvider": "defillama",
+  "geckoId": "hylo-usd",
+  "links": [
+    {
+      "label": "Website",
+      "url": "https://hylo.so/"
+    },
+    {
+      "label": "Twitter",
+      "url": "https://x.com/hylo_so"
+    },
+    {
+      "label": "Docs",
+      "url": "https://docs.hylo.so/protocol-overview/hyUSD-&-xSOL"
+    }
+  ],
+  "contracts": [
+    {
+      "chain": "solana",
+      "address": "5YMkXAYccHSGnHn9nob9xEvv6Pvka9DZWH7nTbotTu9E",
+      "decimals": 6
+    }
+  ],
+  "chainTier": "mature-alt-l1",
+  "collateralQuality": "alt-lst-bridged-or-mixed",
+  "reserves": [
+    {
+      "name": "JitoSOL",
+      "pct": 90,
+      "risk": "high"
+    },
+    {
+      "name": "Other Solana LSTs (mSOL, bSOL, JupSOL)",
+      "pct": 10,
+      "risk": "high"
+    }
+  ],
+  "liveReservesConfig": {
+    "adapter": "curated-validated",
+    "version": 1,
+    "semantics": "single-asset",
+    "breakerScope": "hyusd-hylo",
+    "inputs": {
+      "primary": {
+        "kind": "onchain-solana"
+      }
+    }
+  }
+}

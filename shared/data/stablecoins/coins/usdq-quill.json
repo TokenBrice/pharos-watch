@@ -1,0 +1,134 @@
+{
+  "id": "usdq-quill",
+  "name": "Quill USD",
+  "symbol": "USDQ",
+  "flags": {
+    "backing": "crypto-backed",
+    "pegCurrency": "USD",
+    "governance": "decentralized",
+    "yieldBearing": false,
+    "rwa": false,
+    "navToken": false
+  },
+  "collateral": "wETH, wstETH, weETH, and SCR in overcollateralized CDP markets on Scroll",
+  "pegMechanism": "Overcollateralized CDP with user-set interest rates and direct on-chain redemption for underlying collateral; Stability Pools absorb liquidations per collateral market",
+  "llamaId": "228",
+  "detailProvider": "defillama",
+  "geckoId": "quill-usdq",
+  "canBeBlacklisted": false,
+  "links": [
+    {
+      "label": "Website",
+      "url": "https://app.quill.finance/"
+    },
+    {
+      "label": "Twitter",
+      "url": "https://x.com/QuillFi"
+    },
+    {
+      "label": "Docs",
+      "url": "https://docs.quill.finance/faq/usdusdq"
+    }
+  ],
+  "contracts": [
+    {
+      "chain": "scroll",
+      "address": "0xdb9e8f82d6d45fff803161f2a5f75543972b229a",
+      "decimals": 18
+    }
+  ],
+  "chainTier": "unproven",
+  "collateralQuality": "alt-lst-bridged-or-mixed",
+  "governanceQuality": "immutable-code",
+  "infrastructures": [
+    "liquity-v2"
+  ],
+  "reserves": [
+    {
+      "name": "wETH",
+      "pct": 25,
+      "risk": "very-low"
+    },
+    {
+      "name": "wstETH (Lido)",
+      "pct": 25,
+      "risk": "low"
+    },
+    {
+      "name": "weETH (Ether.fi)",
+      "pct": 25,
+      "risk": "low"
+    },
+    {
+      "name": "SCR (Scroll)",
+      "pct": 25,
+      "risk": "high"
+    }
+  ],
+  "liveReservesConfig": {
+    "adapter": "liquity-v2-branches",
+    "version": 1,
+    "semantics": "collateral-mix",
+    "breakerScope": "usdq-quill",
+    "display": {
+      "url": "https://docs.quill.finance/documentation/contract-addresses",
+      "label": "Quill contract addresses"
+    },
+    "inputs": {
+      "primary": {
+        "kind": "onchain-evm",
+        "chain": "scroll",
+        "rpcMode": "public-rpc"
+      }
+    },
+    "params": {
+      "rpcUrl": "https://rpc.scroll.io",
+      "redemptionRateProbe": {
+        "contract": "0x358d90036e70542ae24b3813c0efecc1f8811442",
+        "selector": "0xc52861f2"
+      },
+      "branches": [
+        {
+          "name": "WETH",
+          "holder": "0x9e5f7b870867a829b9dc3e4b3b1e3680b7a52eda",
+          "token": {
+            "chain": "scroll",
+            "address": "0x5300000000000000000000000000000000000004",
+            "decimals": 18
+          },
+          "risk": "very-low"
+        },
+        {
+          "name": "wstETH (Lido)",
+          "holder": "0x7fa3dc8729b7d56dc36651d01ab4a27e882fdcf1",
+          "token": {
+            "chain": "scroll",
+            "address": "0xf610a9dfb7c89644979b4a0f27063e9e7d7cda32",
+            "decimals": 18
+          },
+          "risk": "low"
+        },
+        {
+          "name": "weETH (Ether.fi)",
+          "holder": "0x08e6b6333cdc86f5cbd47a1c4f72f6b5fbef6b36",
+          "token": {
+            "chain": "scroll",
+            "address": "0x01f0a31698c4d065659b9bdc21b3610292a1c506",
+            "decimals": 18
+          },
+          "risk": "low"
+        },
+        {
+          "name": "SCR",
+          "holder": "0xdbfeee5139af44ed0cdc6a56de35aaaba207d69b",
+          "token": {
+            "chain": "scroll",
+            "address": "0xd29687c813d741e2f938f4ac377128810e217b1b",
+            "decimals": 18
+          },
+          "risk": "high"
+        }
+      ]
+    }
+  }
+}

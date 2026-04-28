@@ -1,0 +1,109 @@
+{
+  "id": "yusd-yieldfi",
+  "name": "YieldFi yUSD",
+  "symbol": "YUSD",
+  "flags": {
+    "backing": "crypto-backed",
+    "pegCurrency": "USD",
+    "governance": "centralized-dependent",
+    "yieldBearing": true,
+    "rwa": false,
+    "navToken": true
+  },
+  "pegReferenceId": "usdc-circle",
+  "collateral": "USDC deposited into YieldFi yUSD and actively allocated across Pendle principal tokens, Morpho and Silo vaults, and private-credit vaults",
+  "pegMechanism": "ERC-4626 vault token over USDC; the vault targets stable returns while preserving dollar value, with yield vesting and active allocator limits across supported strategies",
+  "detailProvider": "coingecko",
+  "geckoId": "yieldfi-ytoken",
+  "links": [
+    {
+      "label": "Website",
+      "url": "https://yield.fi/"
+    },
+    {
+      "label": "Docs",
+      "url": "https://docs.yield.fi/technical-docs/ytokens/yusd"
+    }
+  ],
+  "contracts": [
+    {
+      "chain": "ethereum",
+      "address": "0x19ebd191f7a24ece672ba13a302212b5ef7f35cb",
+      "decimals": 18
+    },
+    {
+      "chain": "arbitrum",
+      "address": "0x4772d2e014f9fc3a820c444e3313968e9a5c8121",
+      "decimals": 18
+    },
+    {
+      "chain": "base",
+      "address": "0x4772d2e014f9fc3a820c444e3313968e9a5c8121",
+      "decimals": 18
+    },
+    {
+      "chain": "optimism",
+      "address": "0x4772d2e014f9fc3a820c444e3313968e9a5c8121",
+      "decimals": 18
+    },
+    {
+      "chain": "sonic",
+      "address": "0x4772d2e014f9fc3a820c444e3313968e9a5c8121",
+      "decimals": 18
+    },
+    {
+      "chain": "plume",
+      "address": "0x4772d2e014f9fc3a820c444e3313968e9a5c8121",
+      "decimals": 18
+    },
+    {
+      "chain": "katana",
+      "address": "0x4772d2e014f9fc3a820c444e3313968e9a5c8121",
+      "decimals": 18
+    }
+  ],
+  "canBeBlacklisted": "possible",
+  "deploymentModel": "third-party-bridge",
+  "collateralQuality": "exotic",
+  "custodyModel": "onchain",
+  "governanceQuality": "multisig",
+  "reserves": [
+    {
+      "name": "USDC active strategy vaults and private-credit positions",
+      "pct": 100,
+      "risk": "high",
+      "coinId": "usdc-circle",
+      "depType": "wrapper"
+    }
+  ],
+  "yieldConfig": {
+    "yieldSource": "YieldFi yUSD strategies",
+    "yieldType": "nav-appreciation"
+  },
+  "liveReservesConfig": {
+    "adapter": "erc4626-single-asset",
+    "version": 1,
+    "semantics": "single-asset",
+    "breakerScope": "yusd-yieldfi",
+    "display": {
+      "url": "https://docs.yield.fi/technical-docs/ytokens/yusd",
+      "label": "YieldFi yUSD"
+    },
+    "inputs": {
+      "primary": {
+        "kind": "onchain-evm",
+        "chain": "ethereum",
+        "rpcMode": "alchemy"
+      }
+    },
+    "params": {
+      "slice": {
+        "name": "USDC active strategy vaults and private-credit positions",
+        "risk": "high",
+        "coinId": "usdc-circle",
+        "depType": "wrapper",
+        "expectedAssetAddress": "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48"
+      }
+    }
+  }
+}

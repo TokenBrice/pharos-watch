@@ -1,0 +1,113 @@
+{
+  "id": "usn-noon",
+  "name": "Noon USN",
+  "symbol": "USN",
+  "flags": {
+    "backing": "crypto-backed",
+    "pegCurrency": "USD",
+    "governance": "centralized-dependent",
+    "yieldBearing": true,
+    "rwa": false,
+    "navToken": false
+  },
+  "collateral": "Current Accountable deployment disclosure is concentrated in Fasanara private credit, Janus Henderson JAAA CLOs, DeFi lending, Pendle principal tokens, and a smaller tokenized U.S. Treasury bill sleeve; USN is minted and redeemed 1:1 against USDC or USDT",
+  "pegMechanism": "1:1 mint/redeem against USDC/USDT; delta-neutral yield strategies on centralized exchanges",
+  "llamaId": "230",
+  "detailProvider": "defillama",
+  "geckoId": "noon-usn",
+  "proofOfReserves": {
+    "type": "real-time",
+    "url": "https://noon.accountable.capital/",
+    "provider": "Accountable"
+  },
+  "links": [
+    {
+      "label": "Website",
+      "url": "https://noon.capital"
+    },
+    {
+      "label": "Twitter",
+      "url": "https://x.com/noon_capital"
+    },
+    {
+      "label": "Docs",
+      "url": "https://docs.noon.capital"
+    }
+  ],
+  "jurisdiction": {
+    "country": "British Virgin Islands"
+  },
+  "contracts": [
+    {
+      "chain": "ethereum",
+      "address": "0xda67b4284609d2d48e5d10cfac411572727dc1ed",
+      "decimals": 18
+    },
+    {
+      "chain": "sophon",
+      "address": "0x0469d9d1de0ee58fa1153ef00836b9bbcb84c0b6",
+      "decimals": 18
+    }
+  ],
+  "canBeBlacklisted": "possible",
+  "collateralQuality": "exotic",
+  "custodyModel": "institutional-regulated",
+  "reserves": [
+    {
+      "name": "Private Credit (Fasanara FTAC)",
+      "pct": 68.4,
+      "risk": "high"
+    },
+    {
+      "name": "CLOs (JAAA)",
+      "pct": 13,
+      "risk": "high"
+    },
+    {
+      "name": "DeFi Lending",
+      "pct": 8,
+      "risk": "medium"
+    },
+    {
+      "name": "Principal Tokens (PTs)",
+      "pct": 6.9,
+      "risk": "high"
+    },
+    {
+      "name": "US Treasury Bills",
+      "pct": 3.7,
+      "risk": "very-low"
+    }
+  ],
+  "liveReservesConfig": {
+    "adapter": "accountable",
+    "version": 1,
+    "semantics": "protocol-reserve",
+    "breakerScope": "usn-noon",
+    "display": {
+      "url": "https://noon.accountable.capital/",
+      "label": "Accountable Dashboard"
+    },
+    "inputs": {
+      "primary": {
+        "kind": "http-json",
+        "url": "https://cache.accountable.capital/dashboard/noon"
+      }
+    },
+    "params": {
+      "bucket": "deployment",
+      "riskMap": {
+        "Private Credit (Fasanara FTAC)": "high",
+        "DeFi Lending": "medium",
+        "CLOs (JAAA)": "high",
+        "US Treasury Bills": "very-low",
+        "Principal Tokens (PTs)": "high",
+        "Funding Rate (BTC)": "high"
+      }
+    }
+  },
+  "yieldConfig": {
+    "yieldSource": "Noon savings (sUSN)",
+    "yieldType": "governance-set"
+  }
+}

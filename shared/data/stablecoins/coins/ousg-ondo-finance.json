@@ -1,0 +1,114 @@
+{
+  "id": "ousg-ondo-finance",
+  "name": "Ondo OUSG",
+  "symbol": "OUSG",
+  "flags": {
+    "backing": "rwa-backed",
+    "pegCurrency": "USD",
+    "governance": "centralized",
+    "yieldBearing": true,
+    "rwa": true,
+    "navToken": true
+  },
+  "collateral": "Primarily BlackRock USD Institutional Digital Liquidity Fund (BUIDL), which holds short-term U.S. Treasury bills, cash, and repurchase agreements; secondary allocations to BlackRock FedFund (TFDXX) and USDC for liquidity; Ondo I LP is the largest single holder of BUIDL; migrated from iShares SHV ETF to BUIDL in March 2024",
+  "pegMechanism": "NAV-accreting fund share token (not pegged to $1); token price rises daily as Treasury income accrues; instant mint/redemption at daily NAV via OUSGInstantManager against USDC (T+0 settlement via BUIDL on-chain liquidity); token transfers restricted to KYC-verified whitelisted addresses on-chain",
+  "detailProvider": "coingecko",
+  "geckoId": "ousg",
+  "proofOfReserves": {
+    "type": "self-reported",
+    "url": "https://drive.google.com/drive/folders/1Ti8IzoXTibM3B2RWxystT38ISrPH-rRP?usp=sharing",
+    "provider": "NAV Consulting, Inc. (fund administrator; daily NAV reports published with up to 3-day lag)"
+  },
+  "links": [
+    {
+      "label": "Website",
+      "url": "https://ondo.finance/ousg"
+    },
+    {
+      "label": "Twitter",
+      "url": "https://x.com/ondofinance"
+    },
+    {
+      "label": "Docs",
+      "url": "https://docs.ondo.finance/qualified-access-products/ousg"
+    },
+    {
+      "label": "Proof of Reserve",
+      "url": "https://drive.google.com/drive/folders/1Ti8IzoXTibM3B2RWxystT38ISrPH-rRP?usp=sharing"
+    }
+  ],
+  "jurisdiction": {
+    "country": "United States",
+    "regulator": "SEC",
+    "license": "Reg D Rule 506(c); Section 3(c)(7) exemption; restricted to U.S. Qualified Purchasers"
+  },
+  "contracts": [
+    {
+      "chain": "ethereum",
+      "address": "0x1b19c19393e2d034d8ff31ff34c81252fcbbee92",
+      "decimals": 18
+    },
+    {
+      "chain": "polygon",
+      "address": "0xba11c5effa33c4d6f8f593cfa394241cfe925811",
+      "decimals": 18
+    },
+    {
+      "chain": "solana",
+      "address": "i7u4r16TcsJTgq1kAG8opmVZyVnAKBwLKu6ZPMwzxNc",
+      "decimals": 6
+    }
+  ],
+  "deploymentModel": "third-party-bridge",
+  "collateralQuality": "rwa",
+  "custodyModel": "institutional-regulated",
+  "governanceQuality": "regulated-entity",
+  "reserves": [
+    {
+      "name": "BlackRock BUIDL (U.S. T-bills, cash, repos)",
+      "pct": 85,
+      "risk": "low",
+      "coinId": "buidl-blackrock"
+    },
+    {
+      "name": "BlackRock FedFund (TFDXX)",
+      "pct": 12,
+      "risk": "very-low"
+    },
+    {
+      "name": "USDC liquidity buffer",
+      "pct": 3,
+      "risk": "low",
+      "coinId": "usdc-circle"
+    }
+  ],
+  "liveReservesConfig": {
+    "adapter": "chainlink-nav",
+    "version": 1,
+    "semantics": "single-asset",
+    "breakerScope": "ousg-ondo",
+    "display": {
+      "url": "https://ondo.finance/ousg",
+      "label": "Ondo NAV Oracle"
+    },
+    "inputs": {
+      "primary": {
+        "kind": "onchain-evm",
+        "chain": "ethereum",
+        "rpcMode": "etherscan-proxy"
+      }
+    },
+    "params": {
+      "oracleAddress": "0x9Cad45a8BF0Ed41Ff33074449B357C7a1fAb4094",
+      "tokenAddress": "0x1b19c19393e2d034d8ff31ff34c81252fcbbee92",
+      "assetLabel": "BlackRock BUIDL (U.S. T-bills, cash, repos)",
+      "assetRisk": "very-low",
+      "oracleMethod": "getAssetPrice",
+      "maxOracleAgeSec": 345600
+    }
+  },
+  "yieldConfig": {
+    "yieldSource": "Ondo Finance T-bill fund",
+    "yieldType": "nav-appreciation"
+  }
+}

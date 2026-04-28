@@ -1,0 +1,125 @@
+{
+  "id": "veur-vnx",
+  "name": "VNX EURO",
+  "symbol": "VEUR",
+  "flags": {
+    "backing": "rwa-backed",
+    "pegCurrency": "EUR",
+    "governance": "centralized",
+    "yieldBearing": false,
+    "rwa": false,
+    "navToken": false
+  },
+  "collateral": "Fiat reserves (euro-denominated cash and cash equivalents) held in bank/custody accounts of VNX Commodities AG",
+  "pegMechanism": "Direct 1:1 redemption through VNX Commodities AG (registered KYC/AML customers only)",
+  "llamaId": "158",
+  "detailProvider": "defillama",
+  "geckoId": "vnx-euro",
+  "proofOfReserves": {
+    "type": "independent-audit",
+    "url": "https://vnx.li/transparency/",
+    "provider": "AREVA General Auditing and Trust Company Limited"
+  },
+  "links": [
+    {
+      "label": "Website",
+      "url": "https://vnx.li/"
+    },
+    {
+      "label": "Twitter",
+      "url": "https://x.com/VNX_Platform"
+    }
+  ],
+  "jurisdiction": {
+    "country": "Liechtenstein",
+    "regulator": "FMA",
+    "license": "Blockchain Act"
+  },
+  "contracts": [
+    {
+      "chain": "ethereum",
+      "address": "0x6ba75d640bebfe5da1197bb5a2aff3327789b5d3",
+      "decimals": 18
+    },
+    {
+      "chain": "avalanche",
+      "address": "0x7678e162f38ec9ef2bfd1d0aaf9fd93355e5fa0b",
+      "decimals": 18
+    },
+    {
+      "chain": "arbitrum",
+      "address": "0x4883c8f0529f37e40ebea870f3c13cdfad5d01f8",
+      "decimals": 18
+    },
+    {
+      "chain": "base",
+      "address": "0x4ed9df25d38795a47f52614126e47f564d37f347",
+      "decimals": 18
+    },
+    {
+      "chain": "polygon",
+      "address": "0xe4095d9372e68d108225c306a4491cacfb33b097",
+      "decimals": 18
+    },
+    {
+      "chain": "celo",
+      "address": "0x9346f43c1588b6df1d52bdd6bf846064f92d9cba",
+      "decimals": 18
+    },
+    {
+      "chain": "solana",
+      "address": "C4Kkr9NZU3VbyedcgutU6LKmi6MKz81sx6gRmk5pX519",
+      "decimals": 9
+    },
+    {
+      "chain": "xrpl",
+      "address": "VEUR-rLPtwF4FZi8bNVmbQ8JgoDUooozhwMNXr3",
+      "decimals": 6
+    },
+    {
+      "chain": "tezos",
+      "address": "KT1FenS7BCUjn1otfFyfrfxguiGnL4UTF3aG",
+      "decimals": 13
+    },
+    {
+      "chain": "fraxtal",
+      "address": "0x4c0bd74da8237c08840984fdb33a84b4586aaee6",
+      "decimals": 18
+    },
+    {
+      "chain": "icp",
+      "address": "wu6g4-6qaaa-aaaan-qmrza-cai",
+      "decimals": 8
+    }
+  ],
+  "deploymentModel": "native-multichain",
+  "custodyModel": "institutional-regulated",
+  "reserves": [
+    {
+      "name": "Euro cash and cash equivalents (bank/custody accounts)",
+      "pct": 100,
+      "risk": "very-low"
+    }
+  ],
+  "liveReservesConfig": {
+    "adapter": "single-asset",
+    "version": 1,
+    "semantics": "single-asset",
+    "breakerScope": "veur-vnx",
+    "display": {
+      "url": "https://vnx.li/transparency/",
+      "label": "VNX Transparency"
+    },
+    "inputs": {
+      "primary": {
+        "kind": "onchain-evm",
+        "chain": "ethereum",
+        "rpcMode": "public-rpc"
+      }
+    },
+    "params": {
+      "label": "Euro cash & equivalents",
+      "risk": "very-low"
+    }
+  }
+}

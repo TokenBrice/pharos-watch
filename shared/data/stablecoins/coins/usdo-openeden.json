@@ -1,0 +1,101 @@
+{
+  "id": "usdo-openeden",
+  "name": "OpenDollar USDO",
+  "symbol": "USDO",
+  "flags": {
+    "backing": "rwa-backed",
+    "pegCurrency": "USD",
+    "governance": "centralized",
+    "yieldBearing": false,
+    "rwa": false,
+    "navToken": false
+  },
+  "collateral": "U.S. Treasury bills via tokenized TBILL and BUIDL tokens held in a bankruptcy-remote segregated account; 100% collateralization ratio maintained",
+  "pegMechanism": "Rebasing stablecoin fixed at $1; supply rebases daily to distribute yield; mint/redemption at 1:1 with USDC via OpenEden platform",
+  "llamaId": "241",
+  "detailProvider": "defillama",
+  "geckoId": "openeden-open-dollar",
+  "proofOfReserves": {
+    "type": "real-time",
+    "url": "https://openeden.com/usdo/transparency",
+    "provider": "Chainlink PoR"
+  },
+  "links": [
+    {
+      "label": "Website",
+      "url": "https://openeden.com/"
+    },
+    {
+      "label": "Twitter",
+      "url": "https://x.com/OpenEden_X"
+    },
+    {
+      "label": "Docs",
+      "url": "https://docs.openeden.com/usdo/introduction"
+    }
+  ],
+  "jurisdiction": {
+    "country": "Bermuda",
+    "regulator": "BMA",
+    "license": "DABA License"
+  },
+  "contracts": [
+    {
+      "chain": "ethereum",
+      "address": "0x8238884ec9668ef77b90c6dff4d1a9f4f4823bfe",
+      "decimals": 18
+    },
+    {
+      "chain": "base",
+      "address": "0xad55aebc9b8c03fc43cd9f62260391c13c23e7c0",
+      "decimals": 18
+    },
+    {
+      "chain": "bsc",
+      "address": "0x302e52aff9815b9d1682473dbfb9c74f9b750aa8",
+      "decimals": 18
+    }
+  ],
+  "deploymentModel": "third-party-bridge",
+  "custodyModel": "institutional-regulated",
+  "reserves": [
+    {
+      "name": "OpenEden TBILL tokens (tokenized U.S. T-bills)",
+      "pct": 70,
+      "risk": "very-low"
+    },
+    {
+      "name": "BlackRock BUIDL (tokenized money market fund)",
+      "pct": 15,
+      "risk": "low",
+      "coinId": "buidl-blackrock"
+    },
+    {
+      "name": "Franklin Templeton BENJI (tokenized govt money fund)",
+      "pct": 5,
+      "risk": "low"
+    },
+    {
+      "name": "USDC cash buffer",
+      "pct": 10,
+      "risk": "low",
+      "coinId": "usdc-circle"
+    }
+  ],
+  "liveReservesConfig": {
+    "adapter": "openeden-usdo",
+    "version": 1,
+    "semantics": "collateral-mix",
+    "breakerScope": "openeden",
+    "display": {
+      "url": "https://openeden.com/usdo/transparency",
+      "label": "OpenEden Transparency"
+    },
+    "inputs": {
+      "primary": {
+        "kind": "http-json",
+        "url": "https://prod-gw.openeden.com/usdo/sys/reserve-composition-last"
+      }
+    }
+  }
+}

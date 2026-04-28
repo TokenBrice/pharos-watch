@@ -1,0 +1,73 @@
+{
+  "id": "axcnh-anchorx",
+  "name": "AxCNH",
+  "symbol": "AxCNH",
+  "flags": {
+    "backing": "rwa-backed",
+    "pegCurrency": "CNH",
+    "governance": "centralized",
+    "yieldBearing": false,
+    "rwa": false,
+    "navToken": false
+  },
+  "collateral": "Offshore Chinese yuan (CNH) cash reserves held 1:1 at regulated financial institutions; issuer materials describe AxCNH as fully reserved and redeemable for CNH",
+  "pegMechanism": "Direct 1:1 issuance and redemption through AnchorX for CNH transfers; the issuer publishes reported circulating AxCNH and corresponding CNH reserves on its transparency page",
+  "detailProvider": "coingecko",
+  "geckoId": "axcnh",
+  "links": [
+    {
+      "label": "Website",
+      "url": "https://www.anchorx.org/"
+    },
+    {
+      "label": "Twitter",
+      "url": "https://x.com/AnchorX_Ltd"
+    }
+  ],
+  "jurisdiction": {
+    "country": "Kazakhstan",
+    "regulator": "AFSA",
+    "license": "AFSA-A-LA-2025-0013"
+  },
+  "contracts": [
+    {
+      "chain": "conflux",
+      "address": "0x70bfd7f7eadf9b9827541272589a6b2bb760ae2e",
+      "decimals": 6
+    },
+    {
+      "chain": "ethereum",
+      "address": "0x2925ac3be7d585874b88ea51ed50add376ad8239",
+      "decimals": 6
+    }
+  ],
+  "custodyModel": "institutional-unregulated",
+  "reserves": [
+    {
+      "name": "CNH cash reserves at regulated financial institutions",
+      "pct": 100,
+      "risk": "very-low"
+    }
+  ],
+  "liveReservesConfig": {
+    "adapter": "single-asset",
+    "version": 1,
+    "semantics": "single-asset",
+    "breakerScope": "axcnh-anchorx",
+    "display": {
+      "url": "https://www.anchorx.org/",
+      "label": "AnchorX"
+    },
+    "inputs": {
+      "primary": {
+        "kind": "onchain-evm",
+        "chain": "ethereum",
+        "rpcMode": "public-rpc"
+      }
+    },
+    "params": {
+      "label": "CNH cash reserves",
+      "risk": "very-low"
+    }
+  }
+}

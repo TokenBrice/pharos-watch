@@ -1,0 +1,93 @@
+{
+  "id": "eur-qivalis",
+  "name": "Qivalis Euro",
+  "symbol": "QEUR",
+  "flags": {
+    "backing": "rwa-backed",
+    "pegCurrency": "EUR",
+    "governance": "centralized",
+    "yieldBearing": false,
+    "rwa": false,
+    "navToken": false
+  },
+  "detailProvider": "defillama",
+  "links": [
+    {
+      "label": "Website",
+      "url": "https://qivalis.eu"
+    },
+    {
+      "label": "Twitter",
+      "url": "https://x.com/qivaliseu"
+    }
+  ],
+  "jurisdiction": {
+    "country": "Netherlands"
+  },
+  "custodyModel": "institutional-unregulated",
+  "status": "pre-launch",
+  "announcedDate": "2025-09",
+  "expectedLaunchDate": "2026-Q4",
+  "launchPhase": "announced",
+  "launchPhaseDetail": "12-bank consortium (incl. ING, UniCredit, BNP Paribas, BBVA, CaixaBank); French Finance Minister Lescure publicly endorses project at Paris crypto conference (Apr 17) — sharp reversal from previous administration's hostility; EMI license application with Dutch Central Bank reportedly in final stages; advanced exchange/market-maker discussions (Bit2Me named); launching on Ethereum (primary), Polygon, Base with permissioned KYC layer",
+  "featuredContent": [
+    {
+      "type": "article",
+      "url": "https://www.caixabank.com/comunicacion/noticia/caixabank-and-qivalis-partner-to-launch-a-euro-stablecoin_en.html",
+      "title": "CaixaBank and Qivalis partner to launch a euro stablecoin",
+      "description": "Spanish banking giant CaixaBank partners with Qivalis to develop a fully regulated euro stablecoin under MiCA, targeting crypto exchanges and DeFi protocols.",
+      "image": "/featured/qivalis-caixabank.png",
+      "source": "CaixaBank"
+    },
+    {
+      "type": "article",
+      "url": "https://group.bnpparibas/en/press-release/bnp-paribas-joins-european-consortium-to-launch-euro-backed-stablecoin",
+      "title": "BNP Paribas joins European consortium to launch euro-backed stablecoin",
+      "description": "12 European banks — including ING, UniCredit, BNP Paribas, CaixaBank, and BBVA — unite under Qivalis for a MiCA-compliant euro stablecoin targeting H2 2026.",
+      "source": "BNP Paribas"
+    },
+    {
+      "type": "article",
+      "url": "https://www.coindesk.com/policy/2026/04/17/french-government-pivots-from-slamming-privately-issued-stablecoins-to-supporting-them",
+      "title": "France's finance minister calls for more euro stablecoins, expresses Qivalis support",
+      "description": "Roland Lescure reverses Paris's prior hostility to private stablecoins, specifically backing Qivalis and urging EU banks to accelerate tokenized deposits.",
+      "source": "CoinDesk"
+    }
+  ],
+  "milestones": [
+    {
+      "date": "2025-09-15",
+      "type": "announcement",
+      "title": "CaixaBank and Qivalis announce euro stablecoin initiative",
+      "sourceUrl": "https://www.caixabank.com/comunicacion/noticia/caixabank-and-qivalis-partner-to-launch-a-euro-stablecoin_en.html"
+    },
+    {
+      "date": "2026-02-15",
+      "type": "partnership",
+      "title": "BNP Paribas joins consortium, bringing total to 12 European banks",
+      "description": "ING, UniCredit, BNP Paribas, CaixaBank, BBVA, Banca Sella, Danske Bank, DekaBank, DZ BANK, KBC, Raiffeisen Bank International, and SEB.",
+      "sourceUrl": "https://group.bnpparibas/en/press-release/bnp-paribas-joins-european-consortium-to-launch-euro-backed-stablecoin"
+    },
+    {
+      "date": "2026-03-02",
+      "type": "milestone",
+      "title": "Advanced talks with crypto exchanges for day-one liquidity",
+      "description": "Qivalis in discussions with exchanges, market makers, and liquidity providers for regulated platform listings.",
+      "sourceUrl": "https://www.coindesk.com/business/2026/03/02/eu-banks-euro-pegged-stablecoin-in-talks-with-crypto-exchanges-to-ensure-liquidity"
+    },
+    {
+      "date": "2026-03-31",
+      "type": "milestone",
+      "title": "CEO warns of 'digital dollarization' without euro stablecoin infrastructure",
+      "description": "Jan-Oliver Sell highlights euro's 0.2% on-chain share; EMI license described as in final stages; positions Qivalis as euro infrastructure layer, not just a token.",
+      "sourceUrl": "https://www.coindesk.com/business/2026/03/31/europe-faces-digital-dollarization-without-a-euro-stablecoin-of-its-own-warns-qivalis-ceo"
+    },
+    {
+      "date": "2026-04-17",
+      "type": "regulatory",
+      "title": "French Finance Minister Lescure publicly endorses Qivalis and euro stablecoins",
+      "description": "At a Paris crypto conference, Lescure called current euro stablecoin volumes 'not satisfactory' and urged EU banks to accelerate tokenized deposits — a sharp reversal from predecessor Bruno Le Maire's stance that private stablecoins had 'no place on European soil'.",
+      "sourceUrl": "https://www.coindesk.com/policy/2026/04/17/french-government-pivots-from-slamming-privately-issued-stablecoins-to-supporting-them"
+    }
+  ]
+}

@@ -1,0 +1,94 @@
+{
+  "id": "sfrxusd-frax",
+  "name": "Staked Frax USD",
+  "symbol": "sfrxUSD",
+  "flags": {
+    "backing": "rwa-backed",
+    "pegCurrency": "USD",
+    "governance": "centralized-dependent",
+    "yieldBearing": true,
+    "rwa": false,
+    "navToken": true
+  },
+  "variantOf": "frxusd-frax",
+  "variantKind": "savings-passthrough",
+  "pegReferenceId": "frxusd-frax",
+  "collateral": "frxUSD deposited into Frax's savings vault; the wrapper remains fully backed by frxUSD while protocol income and custodian yield accrue through the vault exchange rate",
+  "pegMechanism": "Deposit frxUSD to mint sfrxUSD and redeem sfrxUSD for the current convertToAssets amount of frxUSD; the share price rises as Frax routes frxUSD yield to the staking vault",
+  "detailProvider": "coingecko",
+  "geckoId": "staked-frax-usd",
+  "links": [
+    {
+      "label": "Website",
+      "url": "https://frax.com/"
+    },
+    {
+      "label": "Twitter",
+      "url": "https://x.com/fraxfinance"
+    },
+    {
+      "label": "Docs",
+      "url": "https://docs.frax.com/protocol/assets/frxusd/sfrxusd"
+    },
+    {
+      "label": "Addresses",
+      "url": "https://docs.frax.com/protocol/assets/frxusd/addresses"
+    }
+  ],
+  "contracts": [
+    {
+      "chain": "ethereum",
+      "address": "0xcf62f905562626cfcdd2261162a51fd02fc9c5b6",
+      "decimals": 18
+    },
+    {
+      "chain": "fraxtal",
+      "address": "0xfc00000000000000000000000000000000000008",
+      "decimals": 18
+    }
+  ],
+  "canBeBlacklisted": true,
+  "deploymentModel": "native-multichain",
+  "collateralQuality": "rwa",
+  "custodyModel": "institutional-top",
+  "governanceQuality": "wrapper",
+  "reserves": [
+    {
+      "name": "frxUSD savings vault shares",
+      "pct": 100,
+      "risk": "low",
+      "coinId": "frxusd-frax",
+      "depType": "wrapper"
+    }
+  ],
+  "yieldConfig": {
+    "yieldSource": "Frax staking (sfrxUSD)",
+    "yieldType": "nav-appreciation"
+  },
+  "liveReservesConfig": {
+    "adapter": "erc4626-single-asset",
+    "version": 1,
+    "semantics": "single-asset",
+    "breakerScope": "sfrxusd-frax",
+    "display": {
+      "url": "https://docs.frax.com/protocol/assets/frxusd/sfrxusd",
+      "label": "Frax sfrxUSD"
+    },
+    "inputs": {
+      "primary": {
+        "kind": "onchain-evm",
+        "chain": "ethereum",
+        "rpcMode": "alchemy"
+      }
+    },
+    "params": {
+      "slice": {
+        "name": "frxUSD savings vault shares",
+        "risk": "low",
+        "coinId": "frxusd-frax",
+        "depType": "wrapper",
+        "expectedAssetAddress": "0xcacd6fd266af91b8aed52accc382b4e165586e29"
+      }
+    }
+  }
+}

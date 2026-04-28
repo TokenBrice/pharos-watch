@@ -1,0 +1,109 @@
+{
+  "id": "fdusd-first-digital",
+  "name": "First Digital USD",
+  "symbol": "FDUSD",
+  "flags": {
+    "backing": "rwa-backed",
+    "pegCurrency": "USD",
+    "governance": "centralized",
+    "yieldBearing": false,
+    "rwa": false,
+    "navToken": false
+  },
+  "collateral": "Cash, U.S. Treasury bills, bank deposits, and overnight reverse repos held in fully segregated custodial accounts",
+  "pegMechanism": "Direct 1:1 redemption through FD121 (BVI) Limited; reserves custodied by First Digital Trust Limited",
+  "llamaId": "119",
+  "detailProvider": "defillama",
+  "geckoId": "first-digital-usd",
+  "pythFeedId": "0xccdc1a08923e2e4f4b1e6ea89de6acbc5fe1948e9706f5604b8cb50bc1ed3979",
+  "proofOfReserves": {
+    "type": "independent-audit",
+    "url": "https://www.firstdigitallabs.com/transparency",
+    "provider": "IAPA International / Prism"
+  },
+  "links": [
+    {
+      "label": "Website",
+      "url": "https://www.firstdigitallabs.com/fdusd"
+    },
+    {
+      "label": "Twitter",
+      "url": "https://x.com/FDLabsHQ"
+    }
+  ],
+  "jurisdiction": {
+    "country": "British Virgin Islands"
+  },
+  "contracts": [
+    {
+      "chain": "ethereum",
+      "address": "0xc5f0f7b66764f6ec8c8dff7ba683102295e16409",
+      "decimals": 18
+    },
+    {
+      "chain": "bsc",
+      "address": "0xc5f0f7b66764f6ec8c8dff7ba683102295e16409",
+      "decimals": 18
+    },
+    {
+      "chain": "arbitrum",
+      "address": "0x93c9932e4afa59201f0b5e63f7d816516f1669fe",
+      "decimals": 18
+    },
+    {
+      "chain": "sui",
+      "address": "0xf16e6b723f242ec745dfd7634ad072c42d5c1d9ac9d62a39c381303eaa57693a::fdusd::FDUSD",
+      "decimals": 6
+    },
+    {
+      "chain": "ton",
+      "address": "EQD0Evpk4timFOHmy4Sv3l_KEUXlM-dN1_KhroTCfB2wkO89",
+      "decimals": 6
+    },
+    {
+      "chain": "solana",
+      "address": "9zNQRsGLjNKwCUU5Gq5LR8beUCPzQMVMqKAi3SSZh54u",
+      "decimals": 6
+    }
+  ],
+  "deploymentModel": "native-multichain",
+  "custodyModel": "institutional-regulated",
+  "reserves": [
+    {
+      "name": "U.S. Treasury Bills",
+      "pct": 74,
+      "risk": "very-low"
+    },
+    {
+      "name": "Cash",
+      "pct": 18,
+      "risk": "very-low"
+    },
+    {
+      "name": "Bank Deposits",
+      "pct": 6,
+      "risk": "very-low"
+    },
+    {
+      "name": "Overnight Reverse Repos",
+      "pct": 2,
+      "risk": "very-low"
+    }
+  ],
+  "liveReservesConfig": {
+    "adapter": "fdusd-transparency",
+    "version": 1,
+    "semantics": "attestation-mix",
+    "breakerScope": "fdusd-first-digital",
+    "display": {
+      "url": "https://www.firstdigitallabs.com/transparency",
+      "label": "First Digital Labs Transparency"
+    },
+    "inputs": {
+      "primary": {
+        "kind": "http-html",
+        "url": "https://www.firstdigitallabs.com/transparency"
+      }
+    }
+  }
+}

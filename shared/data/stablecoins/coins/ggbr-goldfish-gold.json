@@ -1,0 +1,64 @@
+{
+  "id": "ggbr-goldfish-gold",
+  "name": "Goldfish Gold",
+  "symbol": "GGBR",
+  "flags": {
+    "backing": "rwa-backed",
+    "pegCurrency": "GOLD",
+    "governance": "centralized",
+    "yieldBearing": false,
+    "rwa": true,
+    "navToken": false
+  },
+  "collateral": "Issuer materials and CoinGecko describe GGBR as 1/1000th of a troy ounce of gold per token, backed through issuer-managed gold exposure on the balance sheet of I-On Digital",
+  "pegMechanism": "Issuer-managed gold reference rather than on-chain redemption logic; GGBR is marketed as tracking fractional tokenized gold exposure off-chain",
+  "commodityOunces": 0.001,
+  "detailProvider": "commodity",
+  "geckoId": "goldfish-gold",
+  "links": [
+    {
+      "label": "Website",
+      "url": "https://goldfishgold.com/"
+    },
+    {
+      "label": "Twitter",
+      "url": "https://x.com/goldfishggbr"
+    }
+  ],
+  "contracts": [
+    {
+      "chain": "ethereum",
+      "address": "0x7e2ac793f3e692f388e66c7dc28f739d13b0b71a",
+      "decimals": 18
+    }
+  ],
+  "custodyModel": "institutional-unregulated",
+  "reserves": [
+    {
+      "name": "Issuer-managed gold backing / balance-sheet gold exposure",
+      "pct": 100,
+      "risk": "high"
+    }
+  ],
+  "liveReservesConfig": {
+    "adapter": "single-asset",
+    "version": 1,
+    "semantics": "single-asset",
+    "breakerScope": "ggbr-goldfish-gold",
+    "display": {
+      "url": "https://goldfishgold.com/",
+      "label": "Goldfish Gold"
+    },
+    "inputs": {
+      "primary": {
+        "kind": "onchain-evm",
+        "chain": "ethereum",
+        "rpcMode": "public-rpc"
+      }
+    },
+    "params": {
+      "label": "Issuer-managed gold backing",
+      "risk": "high"
+    }
+  }
+}

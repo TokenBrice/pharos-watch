@@ -1,0 +1,77 @@
+{
+  "id": "pusd-plume",
+  "name": "Plume USD",
+  "symbol": "pUSD",
+  "flags": {
+    "backing": "rwa-backed",
+    "pegCurrency": "USD",
+    "governance": "centralized",
+    "yieldBearing": false,
+    "rwa": false,
+    "navToken": false
+  },
+  "collateral": "1:1 backed by USDC and USDT deposited into a Nucleus BoringVault; USD1 and AUSD also approved as collateral",
+  "pegMechanism": "Zero-fee mint/redeem at 1:1 for USDC on Ethereum or Plume Chain; reserves managed by Nucleus BoringVault contracts with OFAC compliance checks",
+  "llamaId": "266",
+  "detailProvider": "defillama",
+  "geckoId": "plume-usd",
+  "cmcSlug": "plume-usd",
+  "links": [
+    {
+      "label": "Website",
+      "url": "https://plume.org/pusd"
+    },
+    {
+      "label": "Twitter",
+      "url": "https://x.com/plumenetwork"
+    },
+    {
+      "label": "Docs",
+      "url": "https://docs.plume.org/plume/tokens/plume-usd"
+    }
+  ],
+  "contracts": [
+    {
+      "chain": "ethereum",
+      "address": "0xdddd73f5df1f0dc31373357beac77545dc5a6f3f",
+      "decimals": 6
+    },
+    {
+      "chain": "plume",
+      "address": "0xdddd73f5df1f0dc31373357beac77545dc5a6f3f",
+      "decimals": 6
+    }
+  ],
+  "deploymentModel": "native-multichain",
+  "custodyModel": "onchain",
+  "reserves": [
+    {
+      "name": "USDC (via Nucleus BoringVault)",
+      "pct": 100,
+      "risk": "medium",
+      "coinId": "usdc-circle"
+    }
+  ],
+  "liveReservesConfig": {
+    "adapter": "single-asset",
+    "version": 1,
+    "semantics": "single-asset",
+    "breakerScope": "pusd-plume",
+    "display": {
+      "url": "https://plume.org/pusd",
+      "label": "Plume"
+    },
+    "inputs": {
+      "primary": {
+        "kind": "onchain-evm",
+        "chain": "ethereum",
+        "rpcMode": "public-rpc"
+      }
+    },
+    "params": {
+      "label": "USDC via Nucleus BoringVault",
+      "risk": "medium",
+      "coinId": "usdc-circle"
+    }
+  }
+}

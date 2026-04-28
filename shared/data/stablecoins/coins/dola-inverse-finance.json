@@ -1,0 +1,135 @@
+{
+  "id": "dola-inverse-finance",
+  "name": "Dola",
+  "symbol": "DOLA",
+  "flags": {
+    "backing": "crypto-backed",
+    "pegCurrency": "USD",
+    "governance": "centralized-dependent",
+    "yieldBearing": true,
+    "rwa": false,
+    "navToken": false
+  },
+  "collateral": "Over-collateralized crypto assets (wstETH, WETH, INV, WBTC, LP tokens, and others) deposited in Inverse Finance's FiRM fixed-rate lending markets; USDS in the PSM as a peg backstop",
+  "pegMechanism": "Fed contracts govern DOLA supply: FiRM Fed mints/burns DOLA in overcollateralized lending markets (~98% of supply); PSM Fed enables 1:1 swaps with USDS as a peg floor; DEX Liquidity Feds adjust supply in AMM pools",
+  "llamaId": "15",
+  "detailProvider": "defillama",
+  "geckoId": "dola-usd",
+  "proofOfReserves": {
+    "type": "self-reported",
+    "url": "https://www.inverse.finance/transparency"
+  },
+  "links": [
+    {
+      "label": "Website",
+      "url": "https://www.inverse.finance/"
+    },
+    {
+      "label": "Docs",
+      "url": "https://docs.inverse.finance/"
+    },
+    {
+      "label": "GitHub",
+      "url": "https://github.com/InverseFinance"
+    },
+    {
+      "label": "Twitter",
+      "url": "https://x.com/InverseFinance"
+    }
+  ],
+  "contracts": [
+    {
+      "chain": "ethereum",
+      "address": "0x865377367054516e17014ccded1e7d814edc9ce4",
+      "decimals": 18
+    },
+    {
+      "chain": "arbitrum",
+      "address": "0x6a7661795c374c0bfc635934efaddff3a7ee23b6",
+      "decimals": 18
+    },
+    {
+      "chain": "base",
+      "address": "0x4621b7a9c75199271f773ebd9a499dbd165c3191",
+      "decimals": 18
+    },
+    {
+      "chain": "optimism",
+      "address": "0x8ae125e8653821e851f12a49f7765db9a9ce7384",
+      "decimals": 18
+    },
+    {
+      "chain": "fantom",
+      "address": "0x3129662808bec728a27ab6a6b9afd3cbaca8a43c",
+      "decimals": 18
+    },
+    {
+      "chain": "bsc",
+      "address": "0x2f29bc0ffaf9bff337b31cbe6cb5fb3bf12e5840",
+      "decimals": 18
+    }
+  ],
+  "deploymentModel": "third-party-bridge",
+  "governanceQuality": "dao-governance",
+  "reserves": [
+    {
+      "name": "wstETH (Lido)",
+      "pct": 35,
+      "risk": "low"
+    },
+    {
+      "name": "sUSDe / PT-sUSDe (Ethena)",
+      "pct": 15,
+      "risk": "medium",
+      "coinId": "usde-ethena"
+    },
+    {
+      "name": "cbBTC (Coinbase wrapped Bitcoin)",
+      "pct": 12,
+      "risk": "medium"
+    },
+    {
+      "name": "WETH",
+      "pct": 10,
+      "risk": "very-low"
+    },
+    {
+      "name": "USDS in PSM (peg backstop)",
+      "pct": 8,
+      "risk": "low",
+      "coinId": "usds-sky",
+      "depType": "mechanism"
+    },
+    {
+      "name": "LP tokens (Curve, cvxCRV, st-yCRV)",
+      "pct": 8,
+      "risk": "high"
+    },
+    {
+      "name": "Other (sFRAX, INV, st-yETH)",
+      "pct": 12,
+      "risk": "very-high",
+      "coinId": "frax-frax"
+    }
+  ],
+  "yieldConfig": {
+    "yieldSource": "Inverse Finance Savings (sDOLA)",
+    "yieldType": "governance-set"
+  },
+  "liveReservesConfig": {
+    "adapter": "dola-inverse",
+    "version": 1,
+    "semantics": "collateral-mix",
+    "breakerScope": "dola-inverse",
+    "display": {
+      "url": "https://www.inverse.finance/transparency",
+      "label": "Inverse Finance Transparency"
+    },
+    "inputs": {
+      "primary": {
+        "kind": "http-json",
+        "url": "https://www.inverse.finance/api/f2/fixed-markets"
+      }
+    }
+  }
+}

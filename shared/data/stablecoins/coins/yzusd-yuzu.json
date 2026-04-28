@@ -1,0 +1,143 @@
+{
+  "id": "yzusd-yuzu",
+  "name": "Yuzu USD",
+  "symbol": "YZUSD",
+  "flags": {
+    "backing": "crypto-backed",
+    "pegCurrency": "USD",
+    "governance": "centralized-dependent",
+    "yieldBearing": true,
+    "rwa": false,
+    "navToken": false
+  },
+  "collateral": "Overcollateralized by diversified on-chain DeFi yield strategies (leveraged loops, Pendle liquidity, Euler lending markets) deployed on Plasma chain; backed by >$1 in on-chain assets per yzUSD",
+  "pegMechanism": "Eligible investors (accredited/institutional, KYC/AML required) mint/redeem at 1:1 with USDT0; peg maintained by overcollateralization and risk tranching via yzPP junior tranche absorbing first losses",
+  "llamaId": "344",
+  "detailProvider": "defillama",
+  "geckoId": "yuzu-usd",
+  "proofOfReserves": {
+    "type": "real-time",
+    "url": "https://yuzu.accountable.capital/",
+    "provider": "Accountable"
+  },
+  "links": [
+    {
+      "label": "Website",
+      "url": "https://yuzu.money/"
+    },
+    {
+      "label": "Twitter",
+      "url": "https://x.com/YuzuMoneyX"
+    },
+    {
+      "label": "Docs",
+      "url": "https://yuzu-money.gitbook.io/yuzu-money"
+    },
+    {
+      "label": "Proof of Reserve",
+      "url": "https://yuzu.accountable.capital/"
+    }
+  ],
+  "contracts": [
+    {
+      "chain": "plasma",
+      "address": "0x6695c0f8706c5ace3bdf8995073179cca47926dc",
+      "decimals": 18
+    }
+  ],
+  "chainTier": "unproven",
+  "collateralQuality": "exotic",
+  "reserves": [
+    {
+      "name": "Pendle PT/LP positions (leveraged DeFi yield)",
+      "pct": 50,
+      "risk": "high"
+    },
+    {
+      "name": "Euler/Morpho lending positions",
+      "pct": 20,
+      "risk": "high"
+    },
+    {
+      "name": "Other DeFi strategies (Equilibria, Penpie, AutoFinance, TermFinance)",
+      "pct": 20,
+      "risk": "high"
+    },
+    {
+      "name": "USDT0 / stablecoin liquidity buffer",
+      "pct": 10,
+      "risk": "low",
+      "coinId": "usdt-tether",
+      "depType": "wrapper"
+    }
+  ],
+  "liveReservesConfig": {
+    "adapter": "accountable",
+    "version": 1,
+    "semantics": "protocol-reserve",
+    "breakerScope": "yzusd-yuzu",
+    "display": {
+      "url": "https://yuzu.accountable.capital/",
+      "label": "Accountable Dashboard"
+    },
+    "inputs": {
+      "primary": {
+        "kind": "http-json",
+        "url": "https://cache.accountable.capital/dashboard/yuzu"
+      }
+    },
+    "params": {
+      "bucket": "exposure_split",
+      "riskMap": {
+        "[Fluid]_fUSDT0": "low",
+        "Liquidity_Buffer": "low",
+        "[Aave]_USDT": "medium",
+        "[Aave]_Gho_Savings": "low",
+        "[Cap]_stcUSD": "medium",
+        "[Fluent]_fUSDnr": "medium",
+        "[GlobalDollar]_USDG": "low",
+        "[Ripple]_Sentora_RLUSD": "medium",
+        "[Securitize]_VBILL_Loop": "high",
+        "[Sky]_Sky_Savings_Vault": "low",
+        "[Superstate]_USTB_Loop": "high",
+        "[Maple]_syrupUSDC_Loop": "high",
+        "[Morpho]_sky.money_USDT_Savings": "medium",
+        "[Maple]_syrupUSDC": "medium",
+        "[OpenEden]_cUSDO_Pendle_LP": "high",
+        "Rest_of_Assets": "high",
+        "[Maple]_syrupUSDT_Loop": "high",
+        "[Fluid]_syrupUSDT_Loop": "high",
+        "[Sky]_sUSDS_Loop": "high",
+        "[Paypal]_PYUSD_Loop": "high",
+        "[Ethena]_sUSDe_Loop": "high"
+      },
+      "renameMap": {
+        "[Fluid]_fUSDT0": "Fluid fUSDT0",
+        "Liquidity_Buffer": "Liquidity buffer",
+        "[Aave]_USDT": "Aave USDT",
+        "[Aave]_Gho_Savings": "Aave GHO Savings",
+        "[Cap]_stcUSD": "Cap stcUSD",
+        "[Fluent]_fUSDnr": "Fluent fUSDnr",
+        "[GlobalDollar]_USDG": "Global Dollar USDG",
+        "[Ripple]_Sentora_RLUSD": "Ripple RLUSD Sentora",
+        "[Securitize]_VBILL_Loop": "Securitize VBILL loop",
+        "[Sky]_Sky_Savings_Vault": "Sky Savings Vault",
+        "[Superstate]_USTB_Loop": "Superstate USTB loop",
+        "[Maple]_syrupUSDC_Loop": "Maple syrupUSDC loop",
+        "[Morpho]_sky.money_USDT_Savings": "Morpho Sky money USDT savings",
+        "[Maple]_syrupUSDC": "Maple syrupUSDC",
+        "[OpenEden]_cUSDO_Pendle_LP": "OpenEden cUSDO Pendle LP",
+        "Rest_of_Assets": "Other reserve assets",
+        "[Maple]_syrupUSDT_Loop": "Maple syrupUSDT loop",
+        "[Fluid]_syrupUSDT_Loop": "Fluid syrupUSDT loop",
+        "[Sky]_sUSDS_Loop": "Sky sUSDS loop",
+        "[Paypal]_PYUSD_Loop": "PayPal PYUSD loop",
+        "[Ethena]_sUSDe_Loop": "Ethena sUSDe loop"
+      }
+    }
+  },
+  "yieldConfig": {
+    "yieldSource": "Yuzu savings (syzUSD)",
+    "yieldType": "lending-vault"
+  }
+}

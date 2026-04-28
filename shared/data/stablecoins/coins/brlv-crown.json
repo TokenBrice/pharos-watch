@@ -1,0 +1,99 @@
+{
+  "id": "brlv-crown",
+  "name": "Crown BRLV",
+  "symbol": "BRLV",
+  "flags": {
+    "backing": "rwa-backed",
+    "pegCurrency": "BRL",
+    "governance": "centralized",
+    "yieldBearing": false,
+    "rwa": false,
+    "navToken": false
+  },
+  "collateral": "Brazilian federal government bonds, Tesouro Selic-linked ETFs, and de minimis cash/equivalents held in legally segregated, bankruptcy-remote reserve custody through Crown's guarantor/security-agent structure",
+  "pegMechanism": "KYC-gated primary-market mint and redemption at 1 BRL per BRLV through Crown; reserves are pledged to BRLV holders through a Brazilian security-agent and fiduciary-assignment structure, while secondary-market price can deviate",
+  "detailProvider": "coingecko",
+  "geckoId": "crown-brlv",
+  "proofOfReserves": {
+    "type": "independent-audit",
+    "url": "https://crown-brlv.com/en/transparency/",
+    "provider": "Fact Finance"
+  },
+  "links": [
+    {
+      "label": "Website",
+      "url": "https://www.crown-brlv.com/en/"
+    },
+    {
+      "label": "Twitter",
+      "url": "https://x.com/CrownBRLV"
+    },
+    {
+      "label": "Docs",
+      "url": "https://crown-2b36dce9.mintlify.app/whitepaper"
+    },
+    {
+      "label": "Proof of Reserve",
+      "url": "https://crown-brlv.com/en/transparency/"
+    }
+  ],
+  "jurisdiction": {
+    "country": "Brazil",
+    "regulator": "Banco Central do Brasil"
+  },
+  "contracts": [
+    {
+      "chain": "base",
+      "address": "0xd2047ebdb205ee6862b69ae9fb3501652cc97d36",
+      "decimals": 18
+    },
+    {
+      "chain": "ethereum",
+      "address": "0xd7ca0e2c36d647446b782d1b72308e598373e2f5",
+      "decimals": 18
+    }
+  ],
+  "canBeBlacklisted": true,
+  "chainTier": "stage1-l2",
+  "deploymentModel": "native-multichain",
+  "collateralQuality": "rwa",
+  "custodyModel": "institutional-regulated",
+  "governanceQuality": "single-entity",
+  "reserves": [
+    {
+      "name": "Brazilian Treasury bonds",
+      "pct": 99.9597,
+      "risk": "low"
+    },
+    {
+      "name": "ETFs linked to Tesouro Selic",
+      "pct": 0.0371,
+      "risk": "low"
+    },
+    {
+      "name": "Cash and equivalents",
+      "pct": 0.0032,
+      "risk": "low"
+    }
+  ],
+  "liveReservesConfig": {
+    "adapter": "curated-validated",
+    "version": 1,
+    "semantics": "attestation-mix",
+    "breakerScope": "brlv-crown",
+    "display": {
+      "url": "https://crown-brlv.com/en/transparency/",
+      "label": "Crown BRLV Transparency"
+    },
+    "inputs": {
+      "primary": {
+        "kind": "onchain-evm",
+        "chain": "base",
+        "rpcMode": "public-rpc"
+      }
+    },
+    "params": {
+      "rpcUrl": "https://mainnet.base.org"
+    }
+  }
+}

@@ -1,0 +1,87 @@
+{
+  "id": "scrvusd-curve",
+  "name": "Savings crvUSD",
+  "symbol": "scrvUSD",
+  "flags": {
+    "backing": "crypto-backed",
+    "pegCurrency": "USD",
+    "governance": "centralized-dependent",
+    "yieldBearing": true,
+    "rwa": false,
+    "navToken": true
+  },
+  "variantOf": "crvusd-curve",
+  "variantKind": "savings-passthrough",
+  "pegReferenceId": "crvusd-curve",
+  "collateral": "crvUSD deposited into Curve's savings vault; the wrapper remains fully backed by crvUSD while a share of borrower interest and protocol revenue compounds through the vault exchange rate",
+  "pegMechanism": "Deposit crvUSD to mint scrvUSD and redeem scrvUSD for the current convertToAssets amount of crvUSD; the share price rises as Curve redirects part of crvUSD borrowing revenue to scrvUSD depositors",
+  "detailProvider": "coingecko",
+  "geckoId": "savings-crvusd",
+  "links": [
+    {
+      "label": "Website",
+      "url": "https://www.curve.finance/"
+    },
+    {
+      "label": "Twitter",
+      "url": "https://x.com/CurveFinance"
+    },
+    {
+      "label": "Docs",
+      "url": "https://resources.curve.finance/"
+    },
+    {
+      "label": "Overview",
+      "url": "https://news.curve.finance/savings-crvusd-a-month-in-review/"
+    }
+  ],
+  "contracts": [
+    {
+      "chain": "ethereum",
+      "address": "0x0655977feb2f289a4ab78af67bab0d17aab84367",
+      "decimals": 18
+    }
+  ],
+  "deploymentModel": "single-chain",
+  "collateralQuality": "alt-lst-bridged-or-mixed",
+  "governanceQuality": "wrapper",
+  "reserves": [
+    {
+      "name": "crvUSD savings vault shares",
+      "pct": 100,
+      "risk": "medium",
+      "coinId": "crvusd-curve",
+      "depType": "wrapper"
+    }
+  ],
+  "yieldConfig": {
+    "yieldSource": "Curve savings (scrvUSD)",
+    "yieldType": "nav-appreciation"
+  },
+  "liveReservesConfig": {
+    "adapter": "erc4626-single-asset",
+    "version": 1,
+    "semantics": "single-asset",
+    "breakerScope": "scrvusd-curve",
+    "display": {
+      "url": "https://news.curve.finance/savings-crvusd-a-month-in-review/",
+      "label": "Curve scrvUSD"
+    },
+    "inputs": {
+      "primary": {
+        "kind": "onchain-evm",
+        "chain": "ethereum",
+        "rpcMode": "alchemy"
+      }
+    },
+    "params": {
+      "slice": {
+        "name": "crvUSD savings vault shares",
+        "risk": "medium",
+        "coinId": "crvusd-curve",
+        "depType": "wrapper",
+        "expectedAssetAddress": "0xf939e0a03fb07f59a73314e73794be0e57ac1b4e"
+      }
+    }
+  }
+}

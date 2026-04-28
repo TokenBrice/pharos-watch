@@ -1,0 +1,75 @@
+{
+  "id": "usdn-noble",
+  "name": "Noble Dollar",
+  "symbol": "USDN",
+  "flags": {
+    "backing": "rwa-backed",
+    "pegCurrency": "USD",
+    "governance": "centralized",
+    "yieldBearing": false,
+    "rwa": false,
+    "navToken": false
+  },
+  "infrastructures": [
+    "m0"
+  ],
+  "collateral": "Short-term U.S. Treasury Bills held in bankruptcy-remote SPVs via M0 Protocol; over 100% collateral coverage maintained by M0 Minters (including Superstate and MXON); collateral verified daily on-chain",
+  "pegMechanism": "Rebasing yield-bearing stablecoin; USDN is collateralized by M0's $M token on Ethereum via M0's Portal bridge (Wormhole NTT); the Noble chain module tracks each holder's principal against the latest rebasing multiplier from M0 on Ethereum, accruing T-bill yield directly to USDN balances; users mint/redeem via USDC through the Noble Express app",
+  "llamaId": "282",
+  "detailProvider": "defillama",
+  "geckoId": "noble-dollar-usdn",
+  "pythFeedId": "0xee8e0a7de474035b5cbc1a5f762a74d654e5006b25bfe18f390cc5a3915b88ac",
+  "proofOfReserves": {
+    "type": "real-time",
+    "url": "https://dashboard.m0.org/",
+    "provider": "M0 Protocol"
+  },
+  "links": [
+    {
+      "label": "Website",
+      "url": "https://noble.xyz/usdn"
+    },
+    {
+      "label": "Twitter",
+      "url": "https://x.com/noble_xyz"
+    },
+    {
+      "label": "Docs",
+      "url": "https://docs.noble.xyz/"
+    }
+  ],
+  "jurisdiction": {
+    "country": "United States"
+  },
+  "contracts": [
+    {
+      "chain": "noble",
+      "address": "uusdn",
+      "decimals": 6
+    }
+  ],
+  "custodyModel": "institutional-regulated",
+  "reserves": [
+    {
+      "name": "Short-term U.S. Treasury Bills (via M0 SPVs)",
+      "pct": 100,
+      "risk": "very-low"
+    }
+  ],
+  "liveReservesConfig": {
+    "adapter": "m0",
+    "version": 1,
+    "semantics": "protocol-reserve",
+    "breakerScope": "m0",
+    "display": {
+      "url": "https://dashboard.m0.org/",
+      "label": "M0 Dashboard"
+    },
+    "inputs": {
+      "primary": {
+        "kind": "http-json",
+        "url": "https://protocol-api.m0.org/graphql"
+      }
+    }
+  }
+}

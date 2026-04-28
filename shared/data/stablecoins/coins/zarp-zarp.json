@@ -1,0 +1,91 @@
+{
+  "id": "zarp-zarp",
+  "name": "ZARP Stablecoin",
+  "symbol": "ZARP",
+  "flags": {
+    "backing": "rwa-backed",
+    "pegCurrency": "ZAR",
+    "governance": "centralized",
+    "yieldBearing": false,
+    "rwa": false,
+    "navToken": false
+  },
+  "collateral": "South African rand cash reserves held 1:1 in a treasury managed by Old Mutual Wealth, independently audited by Kempen Audit",
+  "pegMechanism": "Mint/burn 1:1 with ZAR through ZARP Stablecoin (Pty) Ltd issuing partners; reserves may not be used for any purpose other than redemption",
+  "detailProvider": "coingecko",
+  "geckoId": "zarp-stablecoin",
+  "proofOfReserves": {
+    "type": "independent-audit",
+    "url": "https://kempengroup.co.za/wp-content/uploads/2025/09/ZARP-Stablecoin-Pty-Ltd-Agreed-upon-procedures-report-2025-09-04-1757061801998.pdf",
+    "provider": "Kempen Audit"
+  },
+  "links": [
+    {
+      "label": "Website",
+      "url": "https://www.zarpstablecoin.com/"
+    },
+    {
+      "label": "Twitter",
+      "url": "https://x.com/ZARP_Stablecoin"
+    },
+    {
+      "label": "Docs",
+      "url": "https://docs.zarpstablecoin.com/zarp-stablecoin"
+    },
+    {
+      "label": "GitHub",
+      "url": "https://github.com/venox-digital-assets/zarp.contract"
+    }
+  ],
+  "jurisdiction": {
+    "country": "South Africa",
+    "regulator": "FSCA",
+    "license": "CASP license pending"
+  },
+  "contracts": [
+    {
+      "chain": "ethereum",
+      "address": "0xb755506531786c8ac63b756bab1ac387bacb0c04",
+      "decimals": 18
+    },
+    {
+      "chain": "base",
+      "address": "0xb755506531786c8ac63b756bab1ac387bacb0c04",
+      "decimals": 18
+    },
+    {
+      "chain": "polygon",
+      "address": "0xb755506531786c8ac63b756bab1ac387bacb0c04",
+      "decimals": 18
+    }
+  ],
+  "custodyModel": "institutional-regulated",
+  "reserves": [
+    {
+      "name": "ZAR treasury at Old Mutual Wealth (Kempen audited)",
+      "pct": 100,
+      "risk": "low"
+    }
+  ],
+  "liveReservesConfig": {
+    "adapter": "single-asset",
+    "version": 1,
+    "semantics": "single-asset",
+    "breakerScope": "zarp-zarp",
+    "display": {
+      "url": "https://www.zarpstablecoin.com/",
+      "label": "ZARP Stablecoin"
+    },
+    "inputs": {
+      "primary": {
+        "kind": "onchain-evm",
+        "chain": "ethereum",
+        "rpcMode": "public-rpc"
+      }
+    },
+    "params": {
+      "label": "ZAR fiat reserves",
+      "risk": "low"
+    }
+  }
+}

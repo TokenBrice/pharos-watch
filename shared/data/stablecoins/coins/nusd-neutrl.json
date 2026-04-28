@@ -1,0 +1,100 @@
+{
+  "id": "nusd-neutrl",
+  "name": "Neutrl USD",
+  "symbol": "NUSD",
+  "flags": {
+    "backing": "crypto-backed",
+    "pegCurrency": "USD",
+    "governance": "centralized-dependent",
+    "yieldBearing": true,
+    "rwa": false,
+    "navToken": false
+  },
+  "collateral": "Accountable currently shows reserves concentrated in liquid stablecoins, with smaller OTC aggregate and other hedged reserve assets; Neutrl describes NUSD as a fully collateralized synthetic dollar backed by delta-neutral strategies and other crypto assets",
+  "pegMechanism": "1:1 mint and redeem via permissionless router using USDC, USDT, or USDe; peg maintained by arbitrage incentives, delta hedging of derivatives positions, and rapid reserve deployment from liquid stablecoin buffer",
+  "llamaId": "346",
+  "detailProvider": "defillama",
+  "geckoId": "nusd-2",
+  "proofOfReserves": {
+    "type": "real-time",
+    "url": "https://accountable.neutrl.fi/",
+    "provider": "Accountable"
+  },
+  "links": [
+    {
+      "label": "Website",
+      "url": "https://www.neutrl.fi/"
+    },
+    {
+      "label": "Twitter",
+      "url": "https://x.com/Neutrl"
+    },
+    {
+      "label": "Docs",
+      "url": "https://docs.neutrl.fi/"
+    }
+  ],
+  "contracts": [
+    {
+      "chain": "ethereum",
+      "address": "0xe556aba6fe6036275ec1f87eda296be72c811bce",
+      "decimals": 18
+    }
+  ],
+  "canBeBlacklisted": true,
+  "collateralQuality": "exotic",
+  "custodyModel": "institutional-regulated",
+  "reserves": [
+    {
+      "name": "Stablecoin reserves",
+      "pct": 93.5,
+      "risk": "low",
+      "coinId": "usdc-circle"
+    },
+    {
+      "name": "OTC aggregate positions",
+      "pct": 3.4,
+      "risk": "high"
+    },
+    {
+      "name": "Other reserve assets",
+      "pct": 3.1,
+      "risk": "high"
+    }
+  ],
+  "liveReservesConfig": {
+    "adapter": "accountable",
+    "version": 1,
+    "semantics": "protocol-reserve",
+    "breakerScope": "nusd-neutrl",
+    "display": {
+      "url": "https://accountable.neutrl.fi/",
+      "label": "Accountable Dashboard"
+    },
+    "inputs": {
+      "primary": {
+        "kind": "http-json",
+        "url": "https://cache.accountable.capital/dashboard/neutrl"
+      }
+    },
+    "params": {
+      "bucket": "type_split",
+      "riskMap": {
+        "Stablecoin": "low",
+        "ETH": "very-low",
+        "OTC Aggregate": "high",
+        "Other": "high"
+      },
+      "renameMap": {
+        "Stablecoin": "Stablecoin reserves",
+        "ETH": "ETH collateral",
+        "OTC Aggregate": "OTC aggregate positions",
+        "Other": "Other reserve assets"
+      }
+    }
+  },
+  "yieldConfig": {
+    "yieldSource": "Neutrl savings (sNUSD)",
+    "yieldType": "lending-vault"
+  }
+}

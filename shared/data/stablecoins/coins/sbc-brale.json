@@ -1,0 +1,119 @@
+{
+  "id": "sbc-brale",
+  "name": "Brale SBC",
+  "symbol": "SBC",
+  "flags": {
+    "backing": "rwa-backed",
+    "pegCurrency": "USD",
+    "governance": "centralized",
+    "yieldBearing": false,
+    "rwa": false,
+    "navToken": false
+  },
+  "collateral": "Cash, cash equivalents, and short-duration U.S. Treasuries held in segregated accounts at regulated financial institutions",
+  "pegMechanism": "Direct 1:1 redemption through Brale (registered MSB and licensed U.S. money transmitter)",
+  "llamaId": "324",
+  "detailProvider": "defillama",
+  "geckoId": "stable-coin-2",
+  "proofOfReserves": {
+    "type": "independent-audit",
+    "url": "https://brale.xyz/stablecoins/SBC",
+    "provider": "Abdo"
+  },
+  "links": [
+    {
+      "label": "Website",
+      "url": "https://stablecoin.xyz"
+    },
+    {
+      "label": "Twitter",
+      "url": "https://x.com/stablecoin_xyz"
+    },
+    {
+      "label": "Github",
+      "url": "https://github.com/stablecoinxyz"
+    },
+    {
+      "label": "Proof of Reserve",
+      "url": "https://brale.xyz/stablecoins/SBC"
+    }
+  ],
+  "jurisdiction": {
+    "country": "United States",
+    "regulator": "FinCEN",
+    "license": "Money Services Business / Money Transmitter"
+  },
+  "contracts": [
+    {
+      "chain": "ethereum",
+      "address": "0xf9fb20b8e097904f0ab7d12e9dbee88f2dcd0f16",
+      "decimals": 18
+    },
+    {
+      "chain": "arbitrum",
+      "address": "0xfdcc3dd6671eab0709a4c0f3f53de9a333d80798",
+      "decimals": 18
+    },
+    {
+      "chain": "optimism",
+      "address": "0xf9fb20b8e097904f0ab7d12e9dbee88f2dcd0f16",
+      "decimals": 18
+    },
+    {
+      "chain": "base",
+      "address": "0xfdcc3dd6671eab0709a4c0f3f53de9a333d80798",
+      "decimals": 18
+    },
+    {
+      "chain": "polygon",
+      "address": "0xfdcc3dd6671eab0709a4c0f3f53de9a333d80798",
+      "decimals": 18
+    },
+    {
+      "chain": "avalanche",
+      "address": "0xf9fb20b8e097904f0ab7d12e9dbee88f2dcd0f16",
+      "decimals": 18
+    },
+    {
+      "chain": "celo",
+      "address": "0xde093684c796204224bc081f937aa059d903c52a",
+      "decimals": 18
+    },
+    {
+      "chain": "solana",
+      "address": "DBAzBUXaLj1qANCseUPZz4sp9F8d2sc78C4vKjhbTGMA",
+      "decimals": 9
+    }
+  ],
+  "deploymentModel": "third-party-bridge",
+  "custodyModel": "institutional-regulated",
+  "reserves": [
+    {
+      "name": "Cash and cash equivalents",
+      "pct": 50,
+      "risk": "very-low"
+    },
+    {
+      "name": "Short-duration U.S. Treasury securities",
+      "pct": 50,
+      "risk": "very-low"
+    }
+  ],
+  "liveReservesConfig": {
+    "adapter": "curated-validated",
+    "version": 1,
+    "semantics": "attestation-mix",
+    "breakerScope": "sbc-brale",
+    "display": {
+      "url": "https://brale.xyz/stablecoins/SBC",
+      "label": "Brale"
+    },
+    "inputs": {
+      "primary": {
+        "kind": "onchain-evm",
+        "chain": "ethereum",
+        "rpcMode": "public-rpc"
+      }
+    }
+  }
+}

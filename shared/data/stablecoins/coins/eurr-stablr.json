@@ -1,0 +1,74 @@
+{
+  "id": "eurr-stablr",
+  "name": "StablR Euro",
+  "symbol": "EURR",
+  "flags": {
+    "backing": "rwa-backed",
+    "pegCurrency": "EUR",
+    "governance": "centralized",
+    "yieldBearing": false,
+    "rwa": false,
+    "navToken": false
+  },
+  "collateral": "Cash and cash equivalents held in segregated accounts at European financial institutions",
+  "pegMechanism": "Direct 1:1 redemption through StablR",
+  "llamaId": "239",
+  "detailProvider": "defillama",
+  "geckoId": "stablr-euro",
+  "proofOfReserves": {
+    "type": "independent-audit",
+    "url": "https://www.stablr.com/proof-of-reserve",
+    "provider": "Grant Thornton"
+  },
+  "links": [
+    {
+      "label": "Website",
+      "url": "https://www.stablr.com/eurr"
+    },
+    {
+      "label": "Twitter",
+      "url": "https://x.com/StablREuro"
+    }
+  ],
+  "jurisdiction": {
+    "country": "Malta",
+    "regulator": "MFSA",
+    "license": "EMI (MiCA)"
+  },
+  "contracts": [
+    {
+      "chain": "ethereum",
+      "address": "0x50753cfaf86c094925bf976f218d043f8791e408",
+      "decimals": 6
+    }
+  ],
+  "custodyModel": "institutional-regulated",
+  "reserves": [
+    {
+      "name": "Fiat reserves (euro cash at regulated financial institutions)",
+      "pct": 100,
+      "risk": "very-low"
+    }
+  ],
+  "liveReservesConfig": {
+    "adapter": "single-asset",
+    "version": 1,
+    "semantics": "single-asset",
+    "breakerScope": "eurr-stablr",
+    "display": {
+      "url": "https://www.stablr.com/proof-of-reserve",
+      "label": "StablR Proof of Reserve"
+    },
+    "inputs": {
+      "primary": {
+        "kind": "onchain-evm",
+        "chain": "ethereum",
+        "rpcMode": "public-rpc"
+      }
+    },
+    "params": {
+      "label": "Fiat euro reserves",
+      "risk": "very-low"
+    }
+  }
+}

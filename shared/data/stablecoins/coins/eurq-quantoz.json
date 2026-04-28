@@ -1,0 +1,73 @@
+{
+  "id": "eurq-quantoz",
+  "name": "Quantoz EURQ",
+  "symbol": "EURQ",
+  "flags": {
+    "backing": "rwa-backed",
+    "pegCurrency": "EUR",
+    "governance": "centralized",
+    "yieldBearing": false,
+    "rwa": false,
+    "navToken": false
+  },
+  "collateral": "Euro-denominated reserves in bank accounts and liquid euro bonds (102% reserve ratio)",
+  "pegMechanism": "Direct 1:1 redemption through Quantoz Payments",
+  "detailProvider": "coingecko",
+  "geckoId": "quantoz-eurq",
+  "proofOfReserves": {
+    "type": "self-reported",
+    "url": "https://quantoz.com/transparency"
+  },
+  "links": [
+    {
+      "label": "Website",
+      "url": "https://www.quantoz.com/products/eurq-usdq"
+    },
+    {
+      "label": "Twitter",
+      "url": "https://x.com/Quantoz"
+    }
+  ],
+  "jurisdiction": {
+    "country": "Netherlands",
+    "regulator": "DNB",
+    "license": "EMI (MiCA)"
+  },
+  "contracts": [
+    {
+      "chain": "ethereum",
+      "address": "0x8df723295214ea6f21026eeeb4382d475f146f9f",
+      "decimals": 6
+    }
+  ],
+  "custodyModel": "institutional-regulated",
+  "reserves": [
+    {
+      "name": "Government bonds (NL, DE, US)",
+      "pct": 68,
+      "risk": "very-low"
+    },
+    {
+      "name": "Cash deposits (Tier 1 European banks)",
+      "pct": 32,
+      "risk": "very-low"
+    }
+  ],
+  "liveReservesConfig": {
+    "adapter": "curated-validated",
+    "version": 1,
+    "semantics": "attestation-mix",
+    "breakerScope": "eurq-quantoz",
+    "display": {
+      "url": "https://quantoz.com/transparency",
+      "label": "Quantoz Transparency"
+    },
+    "inputs": {
+      "primary": {
+        "kind": "onchain-evm",
+        "chain": "ethereum",
+        "rpcMode": "public-rpc"
+      }
+    }
+  }
+}

@@ -1,0 +1,98 @@
+{
+  "id": "uty-xsy",
+  "name": "XSY UTY",
+  "symbol": "UTY",
+  "flags": {
+    "backing": "crypto-backed",
+    "pegCurrency": "USD",
+    "governance": "centralized-dependent",
+    "yieldBearing": false,
+    "rwa": false,
+    "navToken": false
+  },
+  "collateral": "USDC deposits hedged via delta-neutral pairing of long AVAX spot positions with short perpetual futures; yield generated from perpetual contract funding rates; custody via Ceffu & Copper Clearloop",
+  "pegMechanism": "Users deposit USDC to mint UTY at 1:1; XSY maintains peg by delta-neutral hedging with long AVAX spot and short perpetual futures positions; users redeem UTY back to USDC after a 7-day unbonding period",
+  "llamaId": "305",
+  "detailProvider": "defillama",
+  "geckoId": "unity-2",
+  "links": [
+    {
+      "label": "Website",
+      "url": "https://xsy.fi/"
+    },
+    {
+      "label": "Twitter",
+      "url": "https://x.com/xsy_fi"
+    },
+    {
+      "label": "Docs",
+      "url": "https://xsy-1.gitbook.io/xsy-main"
+    }
+  ],
+  "contracts": [
+    {
+      "chain": "avalanche",
+      "address": "0xdbc5192a6b6ffee7451301bb4ec312f844f02b4a",
+      "decimals": 18
+    }
+  ],
+  "canBeBlacklisted": "possible",
+  "chainTier": "established-alt-l1",
+  "collateralQuality": "exotic",
+  "custodyModel": "cex",
+  "reserves": [
+    {
+      "name": "USDC deposits (initial user deposits)",
+      "pct": 30,
+      "risk": "low",
+      "coinId": "usdc-circle",
+      "depType": "wrapper"
+    },
+    {
+      "name": "Long AVAX spot positions",
+      "pct": 35,
+      "risk": "high"
+    },
+    {
+      "name": "Short AVAX perpetual futures (delta-neutral hedge)",
+      "pct": 35,
+      "risk": "high"
+    }
+  ],
+  "liveReservesConfig": {
+    "adapter": "accountable",
+    "version": 1,
+    "semantics": "collateral-mix",
+    "breakerScope": "uty-xsy",
+    "display": {
+      "url": "https://accountable.xsy.fi/",
+      "label": "Accountable"
+    },
+    "inputs": {
+      "primary": {
+        "kind": "http-json",
+        "url": "https://accountable.xsy.fi:10443/dashboard"
+      },
+      "fallbacks": [
+        {
+          "kind": "http-json",
+          "url": "https://cache.accountable.capital/dashboard/xsy"
+        }
+      ]
+    },
+    "params": {
+      "bucket": "reserves_split",
+      "riskMap": {
+        "Avalanche": "high",
+        "Copper": "medium",
+        "Katana": "high",
+        "Ethereum": "medium",
+        "Base": "medium",
+        "Plasma": "medium",
+        "Arbitrum": "medium",
+        "Monad": "high",
+        "Bybit": "medium"
+      }
+    }
+  }
+}

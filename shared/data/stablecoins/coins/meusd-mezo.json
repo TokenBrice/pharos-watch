@@ -1,0 +1,83 @@
+{
+  "id": "meusd-mezo",
+  "name": "Mezo USD",
+  "symbol": "meUSD",
+  "flags": {
+    "backing": "crypto-backed",
+    "pegCurrency": "USD",
+    "governance": "centralized-dependent",
+    "yieldBearing": false,
+    "rwa": false,
+    "navToken": false
+  },
+  "collateral": "Bitcoin only; minimum 110% collateral ratio",
+  "pegMechanism": "BTC-only overcollateralized CDP with direct $1 BTC redemption; operates on Mezo (Bitcoin L2, not Ethereum or a Stage 1 L2)",
+  "llamaId": "303",
+  "detailProvider": "defillama",
+  "geckoId": "mezo-usd",
+  "pythFeedId": "0x0617a9b725011a126a2b9fd53563f4236501f32cf76d877644b943394606c6de",
+  "links": [
+    {
+      "label": "Website",
+      "url": "https://mezo.org/"
+    },
+    {
+      "label": "Twitter",
+      "url": "https://x.com/MezoNetwork"
+    },
+    {
+      "label": "Docs",
+      "url": "https://mezo.org/docs/users/musd"
+    }
+  ],
+  "contracts": [
+    {
+      "chain": "ethereum",
+      "address": "0xdd468a1ddc392dcdbef6db6e34e89aa338f9f186",
+      "decimals": 18
+    },
+    {
+      "chain": "mezo",
+      "address": "0xdd468a1ddc392dcdbef6db6e34e89aa338f9f186",
+      "decimals": 18
+    }
+  ],
+  "chainTier": "unproven",
+  "collateralQuality": "alt-lst-bridged-or-mixed",
+  "infrastructures": [
+    "liquity-v1"
+  ],
+  "reserves": [
+    {
+      "name": "Bitcoin (BTC) — native and wrapped variants (tBTC, WBTC, SolvBTC, cbBTC)",
+      "pct": 100,
+      "risk": "medium"
+    }
+  ],
+  "liveReservesConfig": {
+    "adapter": "single-asset",
+    "version": 1,
+    "semantics": "single-asset",
+    "breakerScope": "meusd-mezo",
+    "display": {
+      "url": "https://explorer.mezo.org/address/0xdd468a1ddc392dcdbef6db6e34e89aa338f9f186",
+      "label": "Explorer"
+    },
+    "inputs": {
+      "primary": {
+        "kind": "http-json",
+        "url": "https://api.explorer.mezo.org/api/v2/tokens/0xdd468a1ddc392dcdbef6db6e34e89aa338f9f186"
+      }
+    },
+    "params": {
+      "label": "Bitcoin (BTC) — native and wrapped variants (tBTC, WBTC, SolvBTC, cbBTC)",
+      "risk": "medium",
+      "probe": {
+        "kind": "json-path",
+        "path": [
+          "total_supply"
+        ]
+      }
+    }
+  }
+}

@@ -1,0 +1,74 @@
+{
+  "id": "usdr-stablr",
+  "name": "StablR USD",
+  "symbol": "USDR",
+  "flags": {
+    "backing": "rwa-backed",
+    "pegCurrency": "USD",
+    "governance": "centralized",
+    "yieldBearing": false,
+    "rwa": false,
+    "navToken": false
+  },
+  "collateral": "Cash and short-term government bonds held with regulated European financial institutions",
+  "pegMechanism": "Direct 1:1 redemption through StablR (MFSA-supervised EMI)",
+  "llamaId": "240",
+  "detailProvider": "defillama",
+  "geckoId": "stablr-usd",
+  "proofOfReserves": {
+    "type": "independent-audit",
+    "url": "https://www.stablr.com/proof-of-reserve",
+    "provider": "Grant Thornton"
+  },
+  "links": [
+    {
+      "label": "Website",
+      "url": "https://www.stablr.com/usdr"
+    },
+    {
+      "label": "Twitter",
+      "url": "https://x.com/stablrusd"
+    }
+  ],
+  "jurisdiction": {
+    "country": "Malta",
+    "regulator": "MFSA",
+    "license": "EMI (MiCA)"
+  },
+  "contracts": [
+    {
+      "chain": "ethereum",
+      "address": "0x7b43e3875440b44613dc3bc08e7763e6da63c8f8",
+      "decimals": 6
+    }
+  ],
+  "custodyModel": "institutional-regulated",
+  "reserves": [
+    {
+      "name": "Cash and short-term government bonds (EU financial institutions)",
+      "pct": 100,
+      "risk": "very-low"
+    }
+  ],
+  "liveReservesConfig": {
+    "adapter": "single-asset",
+    "version": 1,
+    "semantics": "single-asset",
+    "breakerScope": "usdr-stablr",
+    "display": {
+      "url": "https://www.stablr.com/proof-of-reserve",
+      "label": "StablR Proof of Reserve"
+    },
+    "inputs": {
+      "primary": {
+        "kind": "onchain-evm",
+        "chain": "ethereum",
+        "rpcMode": "public-rpc"
+      }
+    },
+    "params": {
+      "label": "Cash & short-term government bonds",
+      "risk": "very-low"
+    }
+  }
+}

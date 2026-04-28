@@ -1,0 +1,126 @@
+{
+  "id": "usd1-world-liberty-financial",
+  "name": "World Liberty Financial USD",
+  "symbol": "USD1",
+  "flags": {
+    "backing": "rwa-backed",
+    "pegCurrency": "USD",
+    "governance": "centralized",
+    "yieldBearing": false,
+    "rwa": false,
+    "navToken": false
+  },
+  "collateral": "Short-term U.S. government Treasury bills, U.S. dollar deposits, and other cash equivalents held by BitGo Trust Company",
+  "pegMechanism": "Direct 1:1 mint and redemption through BitGo Trust Company (issuer); arbitrage incentivizes peg maintenance",
+  "llamaId": "262",
+  "detailProvider": "defillama",
+  "geckoId": "usd1-wlfi",
+  "pythFeedId": "0x0a2425d43486780990d8b63543029e20556be51fd756cca584212f4d539611d4",
+  "proofOfReserves": {
+    "type": "independent-audit",
+    "url": "https://www.bitgo.com/usd1/attestations/",
+    "provider": "BitGo"
+  },
+  "links": [
+    {
+      "label": "Website",
+      "url": "https://worldlibertyfinancial.com/usd1"
+    },
+    {
+      "label": "Twitter",
+      "url": "https://x.com/worldlibertyfi"
+    }
+  ],
+  "jurisdiction": {
+    "country": "United States",
+    "regulator": "South Dakota Division of Banking",
+    "license": "South Dakota Trust Charter"
+  },
+  "contracts": [
+    {
+      "chain": "ethereum",
+      "address": "0x8d0d000ee44948fc98c9b98a4fa4921476f08b0d",
+      "decimals": 18
+    },
+    {
+      "chain": "bsc",
+      "address": "0x8d0d000ee44948fc98c9b98a4fa4921476f08b0d",
+      "decimals": 18
+    },
+    {
+      "chain": "tron",
+      "address": "TPFqcBAaaUMCSVRCqPaQ9QnzKhmuoLR6Rc",
+      "decimals": 18
+    },
+    {
+      "chain": "solana",
+      "address": "USD1ttGY1N17NEEHLmELoaybftRBUSErhqYiQzvEmuB",
+      "decimals": 6
+    },
+    {
+      "chain": "plume",
+      "address": "0x111111d2bf19e43c34263401e0cad979ed1cdb61",
+      "decimals": 18
+    },
+    {
+      "chain": "monad",
+      "address": "0x111111d2bf19e43c34263401e0cad979ed1cdb61",
+      "decimals": 6
+    },
+    {
+      "chain": "mantle",
+      "address": "0x111111d2bf19e43c34263401e0cad979ed1cdb61",
+      "decimals": 18
+    },
+    {
+      "chain": "aptos",
+      "address": "0x05fabd1b12e39967a3c24e91b7b8f67719a6dacee74f3c8b9fb7d93e855437d2",
+      "decimals": 6
+    },
+    {
+      "chain": "abcore",
+      "address": "0x111111d2bf19e43c34263401e0cad979ed1cdb61",
+      "decimals": 18
+    }
+  ],
+  "deploymentModel": "third-party-bridge",
+  "custodyModel": "institutional-regulated",
+  "reserves": [
+    {
+      "name": "U.S. Treasury Bills",
+      "pct": 60,
+      "risk": "very-low"
+    },
+    {
+      "name": "U.S. Government Money Market Funds",
+      "pct": 25,
+      "risk": "very-low"
+    },
+    {
+      "name": "Cash Deposits",
+      "pct": 15,
+      "risk": "very-low"
+    }
+  ],
+  "liveReservesConfig": {
+    "adapter": "usd1-bundle-oracle",
+    "version": 2,
+    "semantics": "single-asset",
+    "breakerScope": "usd1-world-liberty-financial",
+    "display": {
+      "url": "https://por.worldlibertyfinancial.com",
+      "label": "USD1 Proof of Reserves"
+    },
+    "inputs": {
+      "primary": {
+        "kind": "onchain-evm",
+        "chain": "ethereum",
+        "rpcMode": "public-rpc"
+      }
+    },
+    "params": {
+      "rpcUrl": "https://ethereum-rpc.publicnode.com",
+      "fallbackRpcUrl": "https://eth.llamarpc.com"
+    }
+  }
+}

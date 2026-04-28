@@ -1,0 +1,77 @@
+{
+  "id": "usbd-bima",
+  "name": "Bima USBD",
+  "symbol": "USBD",
+  "flags": {
+    "backing": "crypto-backed",
+    "pegCurrency": "USD",
+    "governance": "centralized-dependent",
+    "yieldBearing": true,
+    "rwa": false,
+    "navToken": false
+  },
+  "collateral": "Bitcoin liquid staking/restaking derivatives and other approved BTC wrappers deposited into BIMA vaults; the Peg Stability Module can also hold approved stablecoins such as USDC, USDP, and GUSD for peg operations",
+  "pegMechanism": "Liquity-style overcollateralized vaults with a 150% minimum collateral ratio; USBD can be redeemed permissionlessly for $1 of BTC-denominated collateral from the lowest-ratio vaults with a fee of coreRate + 75 bps; a Peg Stability Module adds near-1:1 USDC/USDP/GUSD swaps",
+  "llamaId": "253",
+  "detailProvider": "defillama",
+  "geckoId": "usbd",
+  "links": [
+    {
+      "label": "Website",
+      "url": "https://bima.money/"
+    },
+    {
+      "label": "Twitter",
+      "url": "https://x.com/BimaBTC"
+    },
+    {
+      "label": "Docs",
+      "url": "https://docs.bima.money/"
+    }
+  ],
+  "contracts": [
+    {
+      "chain": "ethereum",
+      "address": "0x6bede1c6009a78c222d9bdb7974bb67847fdb68c",
+      "decimals": 18
+    },
+    {
+      "chain": "hemi",
+      "address": "0x6bede1c6009a78c222d9bdb7974bb67847fdb68c",
+      "decimals": 18
+    },
+    {
+      "chain": "plume",
+      "address": "0x6bede1c6009a78c222d9bdb7974bb67847fdb68c",
+      "decimals": 18
+    },
+    {
+      "chain": "sonic",
+      "address": "0x6bede1c6009a78c222d9bdb7974bb67847fdb68c",
+      "decimals": 18
+    },
+    {
+      "chain": "bsc",
+      "address": "0x6bede1c6009a78c222d9bdb7974bb67847fdb68c",
+      "decimals": 18
+    }
+  ],
+  "deploymentModel": "native-multichain",
+  "collateralQuality": "alt-lst-bridged-or-mixed",
+  "custodyModel": "onchain",
+  "governanceQuality": "dao-governance",
+  "infrastructures": [
+    "liquity-v1"
+  ],
+  "reserves": [
+    {
+      "name": "Bitcoin LSTs / LRTs and approved BTC wrappers",
+      "pct": 100,
+      "risk": "high"
+    }
+  ],
+  "yieldConfig": {
+    "yieldSource": "BIMA savings (sUSBD)",
+    "yieldType": "lending-vault"
+  }
+}

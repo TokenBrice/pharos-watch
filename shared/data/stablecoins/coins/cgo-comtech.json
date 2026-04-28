@@ -1,0 +1,46 @@
+{
+  "id": "cgo-comtech",
+  "name": "Comtech Gold",
+  "symbol": "CGO",
+  "flags": {
+    "backing": "rwa-backed",
+    "pegCurrency": "GOLD",
+    "governance": "centralized",
+    "yieldBearing": false,
+    "rwa": true,
+    "navToken": false
+  },
+  "collateral": "Physical gold (999.9 fineness, 24-carat) stored in insured, segregated vaults with Transguard (Emirates Group) in the UAE; each bar registered on DMCC Tradeflow with unique ID and refiner certificates; 1 CGO = 1 gram of gold",
+  "pegMechanism": "Direct redemption for physical gold coins via the ComTech Gold app; minimum physical delivery is 10 grams (in 1-gram multiples); gold movements endorsed and approved by DMCC",
+  "commodityOunces": 0.03215072258749015,
+  "detailProvider": "commodity",
+  "geckoId": "comtech-gold",
+  "proofOfReserves": {
+    "type": "independent-audit",
+    "url": "https://comtechgold.com/Routine",
+    "provider": "unnamed"
+  },
+  "links": [
+    {
+      "label": "Website",
+      "url": "https://www.comtechgold.com/"
+    },
+    {
+      "label": "Twitter",
+      "url": "https://x.com/ComTechOfficial"
+    }
+  ],
+  "jurisdiction": {
+    "country": "United Arab Emirates",
+    "regulator": "DAFZA",
+    "license": "DAFZA; endorsed by DMCC"
+  },
+  "custodyModel": "institutional-regulated",
+  "reserves": [
+    {
+      "name": "Physical gold (24K 999.9, Transguard vaults UAE)",
+      "pct": 100,
+      "risk": "very-low"
+    }
+  ]
+}

@@ -1,0 +1,64 @@
+{
+  "id": "usp-pikudao",
+  "name": "PikuDAO USP",
+  "symbol": "USP",
+  "flags": {
+    "backing": "crypto-backed",
+    "pegCurrency": "USD",
+    "governance": "centralized-dependent",
+    "yieldBearing": true,
+    "rwa": false,
+    "navToken": true
+  },
+  "collateral": "Diversified basket of off-chain and on-chain yield strategies: BMMF Turkey FX arbitrage (delta-neutral), DeFi protocol allocations (Ethena, Aave, Cap, Giza, Almanak, USD.AI), and cash stablecoins (USDC/USDT) as a buffer; allocation governed by PikuDAO",
+  "pegMechanism": "NAV-appreciating: starts at $1.00 backing; 90% of strategy yield flows back into backing pool, increasing token value over time; redemptions processed via FIFO smart-contract queue (0.2% fee, settled within 24 hours) with KYC/KYB required for minting and redeeming",
+  "llamaId": "331",
+  "detailProvider": "defillama",
+  "geckoId": "usp-yield-optimized-stablecoin",
+  "links": [
+    {
+      "label": "Website",
+      "url": "https://piku.co/"
+    },
+    {
+      "label": "Twitter",
+      "url": "https://x.com/piku_dao"
+    },
+    {
+      "label": "Docs",
+      "url": "https://docs.piku.co/piku"
+    }
+  ],
+  "contracts": [
+    {
+      "chain": "ethereum",
+      "address": "0x098697ba3fee4ea76294c5d6a466a4e3b3e95fe6",
+      "decimals": 18
+    }
+  ],
+  "canBeBlacklisted": true,
+  "collateralQuality": "exotic",
+  "custodyModel": "institutional-regulated",
+  "reserves": [
+    {
+      "name": "BMMF Turkey FX arbitrage (Balsa Technologies, delta-neutral TRY/USD)",
+      "pct": 50,
+      "risk": "very-high"
+    },
+    {
+      "name": "DeFi protocols (Giza, Almanak, USD.AI, Ethena, Aave, Cap)",
+      "pct": 40,
+      "risk": "high"
+    },
+    {
+      "name": "Cash stablecoins (USDC/USDT buffer)",
+      "pct": 10,
+      "risk": "low",
+      "coinId": "usdc-circle"
+    }
+  ],
+  "yieldConfig": {
+    "yieldSource": "PikuDAO lending vault",
+    "yieldType": "lending-vault"
+  }
+}

@@ -1,0 +1,74 @@
+{
+  "id": "brla-brla-digital",
+  "name": "BRLA Digital",
+  "symbol": "BRLA",
+  "flags": {
+    "backing": "rwa-backed",
+    "pegCurrency": "BRL",
+    "governance": "centralized",
+    "yieldBearing": false,
+    "rwa": false,
+    "navToken": false
+  },
+  "collateral": "Brazilian government bonds (titulos publicos) and BRL cash held in regulated custody in Brazil; reserves audited monthly by a third-party firm with attestations published on a transparency page",
+  "pegMechanism": "Fiat-backed 1:1 peg to the Brazilian Real; mint/redeem 1:1 for BRL through Avenia (formerly BRLA Digital) platform after KYC; native multichain deployment without wrapping or bridge dependencies",
+  "llamaId": "365",
+  "detailProvider": "defillama",
+  "geckoId": "brla-digital-brla",
+  "proofOfReserves": {
+    "type": "self-reported",
+    "url": "https://brladigital.notion.site/BRLA-Transparency-Page-238ba143aa2f4338902ee91ebe50298a",
+    "provider": "Avenia"
+  },
+  "links": [
+    {
+      "label": "Website",
+      "url": "https://avenia.io/brla"
+    },
+    {
+      "label": "Twitter",
+      "url": "https://x.com/BRLAdigital"
+    },
+    {
+      "label": "GitHub",
+      "url": "https://github.com/Ada-Capital"
+    }
+  ],
+  "jurisdiction": {
+    "country": "Brazil"
+  },
+  "contracts": [
+    {
+      "chain": "polygon",
+      "address": "0xe6a537a407488807f0bbeb0038b79004f19dddfb",
+      "decimals": 18
+    },
+    {
+      "chain": "gnosis",
+      "address": "0xfecb3f7c54e2caae9dc6ac9060a822d47e053760",
+      "decimals": 18
+    },
+    {
+      "chain": "celo",
+      "address": "0xfecb3f7c54e2caae9dc6ac9060a822d47e053760",
+      "decimals": 18
+    },
+    {
+      "chain": "moonbeam",
+      "address": "0xfeb25f3fddad13f82c4d6dbc1481516f62236429",
+      "decimals": 18
+    }
+  ],
+  "canBeBlacklisted": true,
+  "deploymentModel": "native-multichain",
+  "custodyModel": "institutional-unregulated",
+  "collateralQuality": "rwa",
+  "governanceQuality": "single-entity",
+  "reserves": [
+    {
+      "name": "Brazilian government bonds and BRL cash in regulated custody",
+      "pct": 100,
+      "risk": "low"
+    }
+  ]
+}

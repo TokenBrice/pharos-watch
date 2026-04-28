@@ -1,0 +1,112 @@
+{
+  "id": "mtbill-midas",
+  "name": "Midas mTBILL",
+  "symbol": "mTBILL",
+  "flags": {
+    "backing": "rwa-backed",
+    "pegCurrency": "USD",
+    "governance": "centralized",
+    "yieldBearing": true,
+    "rwa": true,
+    "navToken": true
+  },
+  "collateral": "Short-duration U.S. Treasury Bills (maturity <3 months) via BlackRock iShares $ Treasury Bond 0-1yr UCITS ETF (IB01); physical custody by Maerki Baumann & Co. AG (Switzerland); security ring-fencing by ATG Azimut Treuhandgesellschaft mbH; target return = 8-week U.S. T-Bill yield minus ~50 bps",
+  "pegMechanism": "NAV-accreting token (not pegged to $1); price launched at ~$1.00 and appreciates continuously as T-bill yield accrues; permissioned mint/redeem at daily NAV via Midas smart contracts in USDC/USDT or fiat; NAV oracle published daily by Ankura Trust Company",
+  "detailProvider": "coingecko",
+  "geckoId": "midas-mtbill",
+  "proofOfReserves": {
+    "type": "independent-audit",
+    "url": "https://midas.app/transparency",
+    "provider": "Ankura Trust Company (independent third-party; provides daily on-chain NAV attestations)"
+  },
+  "links": [
+    {
+      "label": "Website",
+      "url": "https://midas.app/mtbill"
+    },
+    {
+      "label": "Twitter",
+      "url": "https://x.com/MidasRWA"
+    },
+    {
+      "label": "Docs",
+      "url": "https://docs.midas.app/tokens/mtbill"
+    }
+  ],
+  "jurisdiction": {
+    "country": "Germany",
+    "regulator": "Liechtenstein FMA",
+    "license": "MiFID II Derivative Debt Instrument; EEA-passported; not available to U.S. or UK retail persons"
+  },
+  "contracts": [
+    {
+      "chain": "ethereum",
+      "address": "0xdd629e5241cbc5919847783e6c96b2de4754e438",
+      "decimals": 18
+    },
+    {
+      "chain": "base",
+      "address": "0xdd629e5241cbc5919847783e6c96b2de4754e438",
+      "decimals": 18
+    },
+    {
+      "chain": "rootstock",
+      "address": "0xdd629e5241cbc5919847783e6c96b2de4754e438",
+      "decimals": 18
+    },
+    {
+      "chain": "plume",
+      "address": "0xe85f2b707ec5ae8e07238f99562264f304e30109",
+      "decimals": 18
+    },
+    {
+      "chain": "etherlink",
+      "address": "0xdd629e5241cbc5919847783e6c96b2de4754e438",
+      "decimals": 18
+    }
+  ],
+  "deploymentModel": "native-multichain",
+  "collateralQuality": "rwa",
+  "custodyModel": "institutional-regulated",
+  "governanceQuality": "regulated-entity",
+  "reserves": [
+    {
+      "name": "BlackRock iShares $ Treasury Bond 0-1yr UCITS ETF (IB01)",
+      "pct": 97,
+      "risk": "very-low"
+    },
+    {
+      "name": "USD cash buffer",
+      "pct": 3,
+      "risk": "very-low"
+    }
+  ],
+  "liveReservesConfig": {
+    "adapter": "chainlink-nav",
+    "version": 1,
+    "semantics": "single-asset",
+    "breakerScope": "mtbill-midas",
+    "display": {
+      "url": "https://midas.app/transparency",
+      "label": "Ankura Trust Oracle"
+    },
+    "inputs": {
+      "primary": {
+        "kind": "onchain-evm",
+        "chain": "ethereum",
+        "rpcMode": "etherscan-proxy"
+      }
+    },
+    "params": {
+      "oracleAddress": "0x056339C044055819E8Db84E71f5f2E1F536b2E5b",
+      "tokenAddress": "0xDD629E5241CbC5919847783e6C96B2De4754e438",
+      "assetLabel": "BlackRock IB01 T-Bill ETF",
+      "assetRisk": "very-low",
+      "maxOracleAgeSec": 345600
+    }
+  },
+  "yieldConfig": {
+    "yieldSource": "Midas T-bill fund",
+    "yieldType": "nav-appreciation"
+  }
+}

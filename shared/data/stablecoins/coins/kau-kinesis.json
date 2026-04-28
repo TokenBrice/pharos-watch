@@ -1,0 +1,46 @@
+{
+  "id": "kau-kinesis",
+  "name": "Kinesis Gold",
+  "symbol": "KAU",
+  "flags": {
+    "backing": "rwa-backed",
+    "pegCurrency": "GOLD",
+    "governance": "centralized",
+    "yieldBearing": false,
+    "rwa": true,
+    "navToken": false
+  },
+  "collateral": "LBMA-approved physical gold bullion (1 KAU = 1 gram, 999.9 fineness), held in fully allocated, insured vaults globally via ABX (Allocated Bullion Exchange)",
+  "pegMechanism": "Direct redemption for physical gold through Kinesis; yield via transaction fee sharing",
+  "commodityOunces": 0.03215072258749015,
+  "detailProvider": "commodity",
+  "geckoId": "kinesis-gold",
+  "proofOfReserves": {
+    "type": "independent-audit",
+    "url": "https://kinesis.money/audits/",
+    "provider": "Bureau Veritas (Inspectorate International)"
+  },
+  "links": [
+    {
+      "label": "Website",
+      "url": "https://kinesis.money/gold/"
+    },
+    {
+      "label": "Twitter",
+      "url": "https://x.com/KinesisMonetary"
+    }
+  ],
+  "jurisdiction": {
+    "country": "Cayman Islands",
+    "regulator": "CIMA",
+    "license": "VASP Registration"
+  },
+  "custodyModel": "institutional-regulated",
+  "reserves": [
+    {
+      "name": "Physical gold bullion (LBMA-approved, ABX/Brink's/Loomis vaults)",
+      "pct": 100,
+      "risk": "very-low"
+    }
+  ]
+}

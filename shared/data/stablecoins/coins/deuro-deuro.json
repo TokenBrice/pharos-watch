@@ -1,0 +1,118 @@
+{
+  "id": "deuro-deuro",
+  "name": "Decentralized Euro",
+  "symbol": "DEURO",
+  "flags": {
+    "backing": "crypto-backed",
+    "pegCurrency": "EUR",
+    "governance": "decentralized",
+    "yieldBearing": false,
+    "rwa": false,
+    "navToken": false
+  },
+  "collateral": "BTC, ETH, and other crypto assets in oracle-free overcollateralized positions",
+  "pegMechanism": "Overcollateralized CDP with automated liquidation; no oracle dependency (same architecture as Frankencoin ZCHF)",
+  "detailProvider": "coingecko",
+  "geckoId": "decentralized-euro",
+  "links": [
+    {
+      "label": "Website",
+      "url": "https://www.deuro.com/"
+    },
+    {
+      "label": "Twitter",
+      "url": "https://x.com/dEURO_com"
+    },
+    {
+      "label": "Docs",
+      "url": "https://docs.deuro.com/"
+    },
+    {
+      "label": "GitHub",
+      "url": "https://github.com/d-EURO"
+    }
+  ],
+  "contracts": [
+    {
+      "chain": "ethereum",
+      "address": "0xba3f535bbcccca2a154b573ca6c5a49baae0a3ea",
+      "decimals": 18
+    },
+    {
+      "chain": "polygon",
+      "address": "0xc2ff25dd99e467d2589b2c26edd270f220f14e47",
+      "decimals": 18
+    },
+    {
+      "chain": "arbitrum",
+      "address": "0x5e85faf503621830ca857a5f38b982e0cc57d537",
+      "decimals": 18
+    },
+    {
+      "chain": "optimism",
+      "address": "0x1b5f7fa46ed0f487f049c42f374ca4827d65a264",
+      "decimals": 18
+    },
+    {
+      "chain": "base",
+      "address": "0x1b5f7fa46ed0f487f049c42f374ca4827d65a264",
+      "decimals": 18
+    }
+  ],
+  "deploymentModel": "canonical-bridge",
+  "reserves": [
+    {
+      "name": "WBTC / cbBTC / kBTC (wrapped Bitcoin variants)",
+      "pct": 40,
+      "risk": "medium"
+    },
+    {
+      "name": "WETH (wrapped Ether)",
+      "pct": 25,
+      "risk": "very-low"
+    },
+    {
+      "name": "USDC (stablecoins)",
+      "pct": 7.5,
+      "risk": "low",
+      "coinId": "usdc-circle"
+    },
+    {
+      "name": "DAI (stablecoins)",
+      "pct": 7.5,
+      "risk": "low",
+      "coinId": "dai-makerdao"
+    },
+    {
+      "name": "XAUT (tokenized gold)",
+      "pct": 10,
+      "risk": "medium",
+      "coinId": "xaut-tether"
+    },
+    {
+      "name": "UNI / ZCHF (governance / other)",
+      "pct": 10,
+      "risk": "very-high"
+    }
+  ],
+  "liveReservesConfig": {
+    "adapter": "collateral-positions-api",
+    "version": 1,
+    "semantics": "collateral-mix",
+    "breakerScope": "deuro-deuro",
+    "display": {
+      "url": "https://app.deuro.com/",
+      "label": "App"
+    },
+    "inputs": {
+      "primary": {
+        "kind": "http-json",
+        "url": "https://api.deuro.com/ecosystem/collateral/positions/details"
+      }
+    },
+    "params": {
+      "pricesUrl": "https://api.deuro.com/prices/mapping",
+      "otherThresholdPct": 2
+    }
+  }
+}

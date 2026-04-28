@@ -1,0 +1,77 @@
+{
+  "id": "mxnb-juno",
+  "name": "MXNB",
+  "symbol": "MXNB",
+  "flags": {
+    "backing": "rwa-backed",
+    "pegCurrency": "MXN",
+    "governance": "centralized",
+    "yieldBearing": false,
+    "rwa": false,
+    "navToken": false
+  },
+  "collateral": "Mexican peso (MXN) fiat reserves and cash-equivalent assets held across multiple regulated financial institutions in Mexico; quarterly third-party attestation reports published following International Valuation Standards (ASA/FASB); operated through NVIO PAGOS MEXICO SAPI DE CV, a licensed IFPE",
+  "pegMechanism": "1:1 fiat-collateralized; issuance via SPEI deposit or Bitso transfer to Juno account; redemption via API burning tokens and settling to linked bank account; reserves audited quarterly to confirm they exceed circulating supply",
+  "detailProvider": "coingecko",
+  "geckoId": "mxnb",
+  "proofOfReserves": {
+    "type": "independent-audit",
+    "url": "https://mxnb.mx/transparency"
+  },
+  "links": [
+    {
+      "label": "Website",
+      "url": "https://mxnb.mx/"
+    },
+    {
+      "label": "Twitter",
+      "url": "https://x.com/mxnb_token"
+    },
+    {
+      "label": "Docs",
+      "url": "https://docs.bitso.com/juno"
+    },
+    {
+      "label": "Transparency",
+      "url": "https://mxnb.mx/transparency"
+    }
+  ],
+  "jurisdiction": {
+    "country": "Mexico",
+    "regulator": "CNBV"
+  },
+  "contracts": [
+    {
+      "chain": "ethereum",
+      "address": "0xf197ffc28c23e0309b5559e7a166f2c6164c80aa",
+      "decimals": 6
+    },
+    {
+      "chain": "polygon",
+      "address": "0xf197ffc28c23e0309b5559e7a166f2c6164c80aa",
+      "decimals": 6
+    },
+    {
+      "chain": "arbitrum",
+      "address": "0xf197ffc28c23e0309b5559e7a166f2c6164c80aa",
+      "decimals": 6
+    },
+    {
+      "chain": "avalanche",
+      "address": "0xf197ffc28c23e0309b5559e7a166f2c6164c80aa",
+      "decimals": 6
+    }
+  ],
+  "canBeBlacklisted": true,
+  "deploymentModel": "native-multichain",
+  "custodyModel": "institutional-regulated",
+  "collateralQuality": "rwa",
+  "governanceQuality": "regulated-entity",
+  "reserves": [
+    {
+      "name": "MXN fiat reserves and cash-equivalents at Mexican financial institutions",
+      "pct": 100,
+      "risk": "low"
+    }
+  ]
+}

@@ -1,0 +1,69 @@
+{
+  "id": "usdgo-osl",
+  "name": "USDGO",
+  "symbol": "USDGO",
+  "flags": {
+    "backing": "rwa-backed",
+    "pegCurrency": "USD",
+    "governance": "centralized",
+    "yieldBearing": false,
+    "rwa": false,
+    "navToken": false
+  },
+  "collateral": "U.S. Treasuries and high-quality liquid assets held by Anchorage Digital Bank",
+  "pegMechanism": "1:1 USD redemption through Anchorage Digital Bank under U.S. federal oversight",
+  "llamaId": "347",
+  "detailProvider": "defillama",
+  "geckoId": "usdgo",
+  "links": [
+    {
+      "label": "Website",
+      "url": "https://www.usdgo.com/"
+    },
+    {
+      "label": "Twitter",
+      "url": "https://x.com/osldotcom"
+    }
+  ],
+  "jurisdiction": {
+    "country": "United States",
+    "regulator": "OCC",
+    "license": "Federal Bank Charter"
+  },
+  "contracts": [
+    {
+      "chain": "solana",
+      "address": "72puLt71H93Z9CzHuBRTwFpL4TG3WZUhnoCC7p8gxigu",
+      "decimals": 6
+    }
+  ],
+  "custodyModel": "institutional-regulated",
+  "reserves": [
+    {
+      "name": "U.S. Treasury bills",
+      "pct": 80,
+      "risk": "very-low"
+    },
+    {
+      "name": "Cash and cash equivalents",
+      "pct": 20,
+      "risk": "very-low"
+    }
+  ],
+  "liveReservesConfig": {
+    "adapter": "usdgo-transparency",
+    "version": 1,
+    "semantics": "attestation-mix",
+    "breakerScope": "usdgo-osl",
+    "display": {
+      "url": "https://www.usdgo.com/transparency",
+      "label": "USDGO Transparency"
+    },
+    "inputs": {
+      "primary": {
+        "kind": "http-json",
+        "url": "https://www.usdgo.com/api/lark-bitable"
+      }
+    }
+  }
+}

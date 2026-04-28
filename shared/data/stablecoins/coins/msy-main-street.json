@@ -1,0 +1,89 @@
+{
+  "id": "msy-main-street",
+  "name": "Main Street Yield",
+  "symbol": "msY",
+  "flags": {
+    "backing": "crypto-backed",
+    "pegCurrency": "USD",
+    "governance": "centralized-dependent",
+    "yieldBearing": true,
+    "rwa": false,
+    "navToken": true
+  },
+  "variantOf": "msusd-main-street",
+  "variantKind": "strategy-vault",
+  "pegReferenceId": "msusd-main-street",
+  "collateral": "msUSD strategy vault shares backed by Main Street's delta-neutral options and derivatives strategy reserve; exchange-rate gains accrue to msY holders",
+  "pegMechanism": "ERC-4626-style staking token over msUSD; users stake msUSD for msY, whose exchange rate appreciates with strategy returns, while final USDC redemption inherits Main Street's primary-market caps and cooldowns",
+  "detailProvider": "coingecko",
+  "geckoId": "main-street-yield",
+  "links": [
+    {
+      "label": "Website",
+      "url": "https://mainstreet.finance/"
+    },
+    {
+      "label": "Twitter",
+      "url": "https://x.com/Main_St_Finance"
+    },
+    {
+      "label": "Docs",
+      "url": "https://mainstreet-finance.gitbook.io/mainstreet.finance/"
+    },
+    {
+      "label": "GitHub",
+      "url": "https://github.com/Mainstreet-Labs"
+    }
+  ],
+  "contracts": [
+    {
+      "chain": "ethereum",
+      "address": "0x890a5122aa1da30fec4286de7904ff808f0bd74a",
+      "decimals": 18
+    }
+  ],
+  "deploymentModel": "single-chain",
+  "collateralQuality": "exotic",
+  "custodyModel": "cex",
+  "governanceQuality": "wrapper",
+  "reserves": [
+    {
+      "name": "msUSD options strategy vault shares",
+      "pct": 100,
+      "risk": "high",
+      "coinId": "msusd-main-street",
+      "depType": "wrapper"
+    }
+  ],
+  "yieldConfig": {
+    "defiLlamaPoolId": "8a28570f-2316-488a-94a7-67c87e76c1f1",
+    "yieldSource": "Main Street savings (msY)",
+    "yieldType": "nav-appreciation"
+  },
+  "liveReservesConfig": {
+    "adapter": "erc4626-single-asset",
+    "version": 1,
+    "semantics": "single-asset",
+    "breakerScope": "msy-main-street",
+    "display": {
+      "url": "https://mainstreet-finance.gitbook.io/mainstreet.finance/technical/key-addresses",
+      "label": "Main Street msY"
+    },
+    "inputs": {
+      "primary": {
+        "kind": "onchain-evm",
+        "chain": "ethereum",
+        "rpcMode": "alchemy"
+      }
+    },
+    "params": {
+      "slice": {
+        "name": "msUSD options strategy vault shares",
+        "risk": "high",
+        "coinId": "msusd-main-street",
+        "depType": "wrapper",
+        "expectedAssetAddress": "0x4ba01f22827018b4772cd326c7627fb4956a7c00"
+      }
+    }
+  }
+}

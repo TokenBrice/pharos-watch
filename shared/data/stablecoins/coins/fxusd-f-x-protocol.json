@@ -1,0 +1,77 @@
+{
+  "id": "fxusd-f-x-protocol",
+  "name": "fxUSD",
+  "symbol": "fxUSD",
+  "flags": {
+    "backing": "crypto-backed",
+    "pegCurrency": "USD",
+    "governance": "centralized-dependent",
+    "yieldBearing": true,
+    "rwa": false,
+    "navToken": false
+  },
+  "collateral": "WBTC (majority) and wstETH deposited as collateral into f(x) Protocol CDP vaults; xPOSITIONs represent looped leveraged positions as NFTs; fully overcollateralized; WBTC custody by BitGo/Coinbase introduces centralized dependency",
+  "pegMechanism": "CDP-style with overcollateralization and liquidations; f(x) Protocol Stability Pool arbitrages the USDC/fxUSD Curve pool to defend the peg; two yield strategies: (1) Curve LP with FXN gauge, (2) Stability Pool with wstETH real yield, fxSAVE autocompound, or FXN gauge; fxUSD redeemable at oracle price for underlying collateral when below peg; automatic rebalancing and liquidation of under-collateralized positions",
+  "llamaId": "168",
+  "detailProvider": "defillama",
+  "geckoId": "f-x-protocol-fxusd",
+  "proofOfReserves": {
+    "type": "independent-audit",
+    "url": "https://www.openzeppelin.com/news/fx-v2-audit",
+    "provider": "OpenZeppelin"
+  },
+  "links": [
+    {
+      "label": "Website",
+      "url": "https://fx.aladdin.club"
+    },
+    {
+      "label": "Twitter",
+      "url": "https://x.com/protocol_fx"
+    },
+    {
+      "label": "Docs",
+      "url": "https://fxprotocol.gitbook.io/fx-docs"
+    }
+  ],
+  "contracts": [
+    {
+      "chain": "ethereum",
+      "address": "0x085780639cc2cacd35e474e71f4d000e2405d8f6",
+      "decimals": 18
+    }
+  ],
+  "reserves": [
+    {
+      "name": "WBTC",
+      "pct": 58,
+      "risk": "medium",
+      "blacklistable": true
+    },
+    {
+      "name": "wstETH (Lido)",
+      "pct": 42,
+      "risk": "low"
+    }
+  ],
+  "liveReservesConfig": {
+    "adapter": "fx",
+    "version": 1,
+    "semantics": "collateral-mix",
+    "breakerScope": "fxusd-f-x-protocol",
+    "display": {
+      "url": "https://fx.aladdin.club/",
+      "label": "Website"
+    },
+    "inputs": {
+      "primary": {
+        "kind": "http-json",
+        "url": "https://api.aladdin.club/api1/get_fx_tvl"
+      }
+    }
+  },
+  "yieldConfig": {
+    "yieldSource": "f(x) Protocol Stability Pool",
+    "yieldType": "lending-vault"
+  }
+}

@@ -1,0 +1,98 @@
+{
+  "id": "eurau-allunity",
+  "name": "AllUnity EUR",
+  "symbol": "EURAU",
+  "flags": {
+    "backing": "rwa-backed",
+    "pegCurrency": "EUR",
+    "governance": "centralized",
+    "yieldBearing": false,
+    "rwa": false,
+    "navToken": false
+  },
+  "collateral": "Euro-denominated reserves held at CRR credit institutions within the EU, under a multi-bank full reserve model; not used for lending or investment",
+  "pegMechanism": "Direct 1:1 redemption through AllUnity",
+  "llamaId": "319",
+  "detailProvider": "defillama",
+  "geckoId": "allunity-eur",
+  "proofOfReserves": {
+    "type": "self-reported",
+    "url": "https://allunity.com/trust-center/"
+  },
+  "links": [
+    {
+      "label": "Website",
+      "url": "https://allunity.com/eurau/"
+    },
+    {
+      "label": "Twitter",
+      "url": "https://x.com/AllUnityStable"
+    },
+    {
+      "label": "Whitepaper",
+      "url": "https://allunity.com/whitepaper/"
+    }
+  ],
+  "jurisdiction": {
+    "country": "Germany",
+    "regulator": "BaFin",
+    "license": "EMI (MiCA)"
+  },
+  "contracts": [
+    {
+      "chain": "ethereum",
+      "address": "0x4933a85b5b5466fbaf179f72d3de273c287ec2c2",
+      "decimals": 6
+    },
+    {
+      "chain": "arbitrum",
+      "address": "0x4933a85b5b5466fbaf179f72d3de273c287ec2c2",
+      "decimals": 6
+    },
+    {
+      "chain": "optimism",
+      "address": "0x4933a85b5b5466fbaf179f72d3de273c287ec2c2",
+      "decimals": 6
+    },
+    {
+      "chain": "base",
+      "address": "0x4933a85b5b5466fbaf179f72d3de273c287ec2c2",
+      "decimals": 6
+    },
+    {
+      "chain": "polygon",
+      "address": "0x4933a85b5b5466fbaf179f72d3de273c287ec2c2",
+      "decimals": 6
+    }
+  ],
+  "deploymentModel": "third-party-bridge",
+  "custodyModel": "institutional-regulated",
+  "reserves": [
+    {
+      "name": "Euro bank deposits (CRR credit institutions, EU)",
+      "pct": 100,
+      "risk": "very-low"
+    }
+  ],
+  "liveReservesConfig": {
+    "adapter": "single-asset",
+    "version": 1,
+    "semantics": "single-asset",
+    "breakerScope": "eurau-allunity",
+    "display": {
+      "url": "https://allunity.com/trust-center/",
+      "label": "AllUnity Trust Center"
+    },
+    "inputs": {
+      "primary": {
+        "kind": "onchain-evm",
+        "chain": "ethereum",
+        "rpcMode": "public-rpc"
+      }
+    },
+    "params": {
+      "label": "Euro bank deposits (CRR institutions)",
+      "risk": "very-low"
+    }
+  }
+}

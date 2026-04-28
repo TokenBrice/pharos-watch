@@ -1,0 +1,107 @@
+{
+  "id": "audm-macropod",
+  "name": "Macropod",
+  "symbol": "AUDM",
+  "flags": {
+    "backing": "rwa-backed",
+    "pegCurrency": "AUD",
+    "governance": "centralized",
+    "yieldBearing": false,
+    "rwa": true,
+    "navToken": false
+  },
+  "collateral": "Australian dollar cash held in segregated AUDM Trust reserve accounts at regulated Australian ADIs, currently Westpac Banking Corporation and Australian Settlements Ltd trading as Banking Circle",
+  "pegMechanism": "Approved Macropod clients deposit AUD into the reserve to mint AUDM and return AUDM to Macropod for 1:1 AUD redemption by bank transfer, subject to onboarding, KYC/AML, sanctions, and compliance checks",
+  "llamaId": "334",
+  "detailProvider": "defillama",
+  "geckoId": "macropod",
+  "cmcSlug": "macropod",
+  "proofOfReserves": {
+    "type": "self-reported",
+    "url": "https://www.macropod.com/transparency/reserves",
+    "provider": "Macropod"
+  },
+  "links": [
+    {
+      "label": "Website",
+      "url": "https://www.macropod.com/product/audm"
+    },
+    {
+      "label": "Twitter",
+      "url": "https://x.com/Macropod_AU"
+    },
+    {
+      "label": "Docs",
+      "url": "https://docs.macropod.com/"
+    },
+    {
+      "label": "Proof of Reserve",
+      "url": "https://www.macropod.com/transparency/reserves"
+    },
+    {
+      "label": "Legal",
+      "url": "https://www.macropod.com/transparency/legal"
+    }
+  ],
+  "jurisdiction": {
+    "country": "Australia",
+    "regulator": "ASIC / AUSTRAC",
+    "license": "AFSL 566313; AUSTRAC DCE100887005-001"
+  },
+  "contracts": [
+    {
+      "chain": "ethereum",
+      "address": "0x081599e4936d12c46bd48913b2329115cd26cbdd",
+      "decimals": 18
+    },
+    {
+      "chain": "solana",
+      "address": "CiYXBwHPrdNkMtxR8YEWKv78K6bQjFoEWhPQrZqEmubi",
+      "decimals": 6
+    },
+    {
+      "chain": "redbelly",
+      "address": "0x081599e4936d12c46bd48913b2329115cd26cbdd",
+      "decimals": 18
+    }
+  ],
+  "canBeBlacklisted": true,
+  "chainTier": "ethereum",
+  "deploymentModel": "native-multichain",
+  "collateralQuality": "rwa",
+  "custodyModel": "institutional-regulated",
+  "governanceQuality": "regulated-entity",
+  "reserves": [
+    {
+      "name": "Westpac Banking Corporation AUD reserve account",
+      "pct": 91.96,
+      "risk": "very-low"
+    },
+    {
+      "name": "Australian Settlements Ltd / Banking Circle AUD reserve account",
+      "pct": 8.04,
+      "risk": "very-low"
+    }
+  ],
+  "liveReservesConfig": {
+    "adapter": "curated-validated",
+    "version": 1,
+    "semantics": "attestation-mix",
+    "breakerScope": "audm-macropod",
+    "display": {
+      "url": "https://www.macropod.com/transparency/reserves",
+      "label": "Macropod reserves"
+    },
+    "inputs": {
+      "primary": {
+        "kind": "onchain-evm",
+        "chain": "ethereum",
+        "rpcMode": "public-rpc"
+      }
+    },
+    "params": {
+      "rpcUrl": "https://ethereum-rpc.publicnode.com",
+      "fallbackRpcUrl": "https://eth.llamarpc.com"
+    }
+  }
+}

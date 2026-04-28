@@ -1,0 +1,156 @@
+{
+  "id": "eusd-electronic-usd",
+  "name": "Electronic USD",
+  "symbol": "EUSD",
+  "flags": {
+    "backing": "crypto-backed",
+    "pegCurrency": "USD",
+    "governance": "centralized-dependent",
+    "yieldBearing": false,
+    "rwa": false,
+    "navToken": false
+  },
+  "collateral": "Diversified basket of yield-bearing stablecoin derivatives: Aave V3 USDC, Compound V3 USDC, and Compound V3 USDT; RSR stakers provide first-loss overcollateralization",
+  "pegMechanism": "Permissionless 1:1 mint and redemption against underlying collateral basket; RSR stakers absorb first losses in case of collateral default; basket rebalances via Dutch/batch auctions",
+  "llamaId": "106",
+  "detailProvider": "defillama",
+  "geckoId": "electronic-usd",
+  "proofOfReserves": {
+    "type": "real-time",
+    "url": "https://app.reserve.org/ethereum/token/0xa0d69e286b938e21cbf7e51d71f6a4c8918f482f/overview"
+  },
+  "links": [
+    {
+      "label": "Website",
+      "url": "https://reserve.org/"
+    },
+    {
+      "label": "Twitter",
+      "url": "https://x.com/reserveprotocol"
+    },
+    {
+      "label": "Docs",
+      "url": "https://docs.reserve.org/"
+    }
+  ],
+  "contracts": [
+    {
+      "chain": "ethereum",
+      "address": "0xa0d69e286b938e21cbf7e51d71f6a4c8918f482f",
+      "decimals": 18
+    },
+    {
+      "chain": "base",
+      "address": "0xcfa3ef56d303ae4faaba0592388f19d7c3399fb4",
+      "decimals": 18
+    },
+    {
+      "chain": "arbitrum",
+      "address": "0x12275dcb9048680c4be40942ea4d92c74c63b844",
+      "decimals": 18
+    }
+  ],
+  "deploymentModel": "native-multichain",
+  "collateralQuality": "exotic",
+  "reserves": [
+    {
+      "name": "Compound V3 USDC (cUSDCv3)",
+      "pct": 33,
+      "risk": "low",
+      "coinId": "usdc-circle"
+    },
+    {
+      "name": "Aave V3 USDC (aUSDCv3)",
+      "pct": 33,
+      "risk": "low",
+      "coinId": "usdc-circle"
+    },
+    {
+      "name": "Compound V3 USDT (cUSDTv3)",
+      "pct": 34,
+      "risk": "low",
+      "coinId": "usdt-tether"
+    }
+  ],
+  "liveReservesConfig": {
+    "adapter": "evm-branch-balances",
+    "version": 1,
+    "semantics": "collateral-mix",
+    "breakerScope": "eusd-electronic-usd",
+    "display": {
+      "url": "https://app.reserve.org/ethereum/token/0xa0d69e286b938e21cbf7e51d71f6a4c8918f482f/overview",
+      "label": "Reserve Protocol"
+    },
+    "inputs": {
+      "primary": {
+        "kind": "onchain-evm",
+        "chain": "ethereum",
+        "rpcMode": "alchemy"
+      }
+    },
+    "params": {
+      "branches": [
+        {
+          "name": "Static Aave USDC (saEthUSDC) — Primary BM",
+          "holder": "0xF014FEF41cCB703975827C8569a3f0940cFD80A4",
+          "token": {
+            "chain": "ethereum",
+            "address": "0x0adc69041a2b086f8772acce2a754f410f211bed",
+            "decimals": 6
+          },
+          "risk": "low",
+          "coinId": "usdc-circle",
+          "depType": "wrapper"
+        },
+        {
+          "name": "Static Aave USDC (saEthUSDC) — Secondary BM",
+          "holder": "0x4B0b3d40b0623f3a9eac09d2E01F592710ee59F0",
+          "token": {
+            "chain": "ethereum",
+            "address": "0x0adc69041a2b086f8772acce2a754f410f211bed",
+            "decimals": 6
+          },
+          "risk": "low",
+          "coinId": "usdc-circle",
+          "depType": "wrapper"
+        },
+        {
+          "name": "Wrapped Compound USDC (wcUSDCv3) — Primary BM",
+          "holder": "0xF014FEF41cCB703975827C8569a3f0940cFD80A4",
+          "token": {
+            "chain": "ethereum",
+            "address": "0x27f2f159fe990ba83d57f39fd69661764bebf37a",
+            "decimals": 6
+          },
+          "risk": "low",
+          "coinId": "usdc-circle",
+          "depType": "wrapper"
+        },
+        {
+          "name": "Wrapped Compound USDC (wcUSDCv3) — Secondary BM",
+          "holder": "0x4B0b3d40b0623f3a9eac09d2E01F592710ee59F0",
+          "token": {
+            "chain": "ethereum",
+            "address": "0x27f2f159fe990ba83d57f39fd69661764bebf37a",
+            "decimals": 6
+          },
+          "risk": "low",
+          "coinId": "usdc-circle",
+          "depType": "wrapper"
+        },
+        {
+          "name": "Wrapped Compound USDT (wcUSDTv3)",
+          "holder": "0xF014FEF41cCB703975827C8569a3f0940cFD80A4",
+          "token": {
+            "chain": "ethereum",
+            "address": "0xeb74ec1d4c1dab412d5d6674f6833fd19d3118ce",
+            "decimals": 6
+          },
+          "risk": "low",
+          "coinId": "usdt-tether",
+          "depType": "wrapper"
+        }
+      ]
+    }
+  }
+}

@@ -1,0 +1,136 @@
+{
+  "id": "iusd-infinifi",
+  "name": "infiniFi USD",
+  "symbol": "IUSD",
+  "flags": {
+    "backing": "crypto-backed",
+    "pegCurrency": "USD",
+    "governance": "centralized-dependent",
+    "yieldBearing": true,
+    "rwa": false,
+    "navToken": false
+  },
+  "collateral": "USDC; deployed across institutional private credit strategies (Fasanara, Sentora, FalconX, Maple) and liquid DeFi markets (Spark, Fluid, Aave), duration-matched to user lock-up periods",
+  "pegMechanism": "1:1 mint/redeem against USDC with no fees; on-chain fractional reserve — liquid portion available for instant withdrawals, illiquid portion deployed to time-locked institutional lending strategies; redemptions queue when liquid reserves are insufficient",
+  "llamaId": "298",
+  "detailProvider": "defillama",
+  "geckoId": "infinifi-usd",
+  "proofOfReserves": {
+    "type": "real-time",
+    "url": "https://eth-api.infinifi.xyz/api/protocol/data",
+    "provider": "infiniFi"
+  },
+  "links": [
+    {
+      "label": "Website",
+      "url": "https://infinifi.xyz/"
+    },
+    {
+      "label": "Twitter",
+      "url": "https://x.com/infiniFi"
+    },
+    {
+      "label": "Docs",
+      "url": "https://docs.infinifi.xyz/"
+    },
+    {
+      "label": "Stats",
+      "url": "https://stats.infinifi.xyz/"
+    }
+  ],
+  "contracts": [
+    {
+      "chain": "ethereum",
+      "address": "0x48f9e38f3070ad8945dfeae3fa70987722e3d89c",
+      "decimals": 18
+    }
+  ],
+  "collateralQuality": "exotic",
+  "reserves": [
+    {
+      "name": "Fasanara Capital (mGLOBAL + Genesis, private credit illiquid)",
+      "pct": 21,
+      "risk": "high"
+    },
+    {
+      "name": "Sentora PYUSD (institutional lending, illiquid)",
+      "pct": 18,
+      "risk": "high",
+      "coinId": "pyusd-paypal",
+      "depType": "wrapper"
+    },
+    {
+      "name": "FalconX Institutional (prime broker lending, illiquid)",
+      "pct": 15,
+      "risk": "high"
+    },
+    {
+      "name": "Maple Institutional (private credit, illiquid)",
+      "pct": 12,
+      "risk": "high"
+    },
+    {
+      "name": "Spark sUSDC (liquid money market)",
+      "pct": 12,
+      "risk": "low",
+      "coinId": "usdc-circle",
+      "depType": "wrapper"
+    },
+    {
+      "name": "Fluid USDC (liquid DeFi lending)",
+      "pct": 7,
+      "risk": "low",
+      "coinId": "usdc-circle",
+      "depType": "wrapper"
+    },
+    {
+      "name": "AutoUSD (illiquid yield strategy)",
+      "pct": 5,
+      "risk": "medium"
+    },
+    {
+      "name": "Morpho infiniFi Ecosystem (steakUSDCinfinifi, illiquid)",
+      "pct": 4,
+      "risk": "medium",
+      "coinId": "usdc-circle",
+      "depType": "wrapper"
+    },
+    {
+      "name": "Cap stcUSD (illiquid vault)",
+      "pct": 3,
+      "risk": "medium"
+    },
+    {
+      "name": "Aave Horizon USDC/RLUSD (institutional pools)",
+      "pct": 2,
+      "risk": "low",
+      "coinId": "usdc-circle",
+      "depType": "wrapper"
+    },
+    {
+      "name": "sGHO (Aave GHO staking)",
+      "pct": 1,
+      "risk": "medium",
+      "coinId": "gho-aave"
+    }
+  ],
+  "liveReservesConfig": {
+    "adapter": "infinifi",
+    "version": 1,
+    "semantics": "collateral-mix",
+    "display": {
+      "url": "https://stats.infinifi.xyz/",
+      "label": "Stats"
+    },
+    "inputs": {
+      "primary": {
+        "kind": "http-json",
+        "url": "https://eth-api.infinifi.xyz/api/protocol/data"
+      }
+    }
+  },
+  "yieldConfig": {
+    "yieldSource": "infiniFi savings (siUSD)",
+    "yieldType": "lending-vault"
+  }
+}

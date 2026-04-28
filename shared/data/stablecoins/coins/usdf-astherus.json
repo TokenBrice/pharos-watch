@@ -1,0 +1,61 @@
+{
+  "id": "usdf-astherus",
+  "name": "Astherus",
+  "symbol": "USDF",
+  "flags": {
+    "backing": "crypto-backed",
+    "pegCurrency": "USD",
+    "governance": "centralized-dependent",
+    "yieldBearing": false,
+    "rwa": false,
+    "navToken": false
+  },
+  "collateral": "USDT held by custodian Ceffu; deployed in delta-neutral strategies (long spot + short perpetuals) executed via Ceffu MirrorX on Binance",
+  "pegMechanism": "1:1 USDT mint/redeem; yield from funding rate arbitrage via delta-neutral positions on Binance through Ceffu MirrorX",
+  "llamaId": "219",
+  "detailProvider": "defillama",
+  "geckoId": "astherus-usdf",
+  "cmcSlug": "astherus",
+  "links": [
+    {
+      "label": "Website",
+      "url": "https://www.asterdex.com/en/usdf"
+    },
+    {
+      "label": "Twitter",
+      "url": "https://x.com/Aster_DEX"
+    },
+    {
+      "label": "Docs",
+      "url": "https://docs.asterdex.com/"
+    }
+  ],
+  "contracts": [
+    {
+      "chain": "bsc",
+      "address": "0x5a110fc00474038f6c02e89c707d638602ea44b5",
+      "decimals": 18
+    }
+  ],
+  "collateralQuality": "exotic",
+  "custodyModel": "cex",
+  "reserves": [
+    {
+      "name": "USDT (held in Ceffu custody)",
+      "pct": 50,
+      "risk": "low",
+      "coinId": "usdt-tether",
+      "depType": "wrapper"
+    },
+    {
+      "name": "Spot crypto (BTC/ETH, delta-hedged via perp shorts)",
+      "pct": 25,
+      "risk": "high"
+    },
+    {
+      "name": "Perpetual short positions margin (Binance via MirrorX)",
+      "pct": 25,
+      "risk": "high"
+    }
+  ]
+}

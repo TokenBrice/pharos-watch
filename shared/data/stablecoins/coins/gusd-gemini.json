@@ -1,0 +1,90 @@
+{
+  "id": "gusd-gemini",
+  "name": "Gemini Dollar",
+  "symbol": "GUSD",
+  "flags": {
+    "backing": "rwa-backed",
+    "pegCurrency": "USD",
+    "governance": "centralized",
+    "yieldBearing": false,
+    "rwa": false,
+    "navToken": false
+  },
+  "collateral": "Cash deposits at State Street and Western Alliance Bank, U.S. Treasury bills (maturities ≤3 months), and government money market funds, held in segregated accounts for the benefit of GUSD holders",
+  "pegMechanism": "Direct 1:1 redemption through Gemini",
+  "llamaId": "19",
+  "detailProvider": "defillama",
+  "geckoId": "gemini-dollar",
+  "cmcSlug": "gemini-dollar",
+  "pythFeedId": "0xe186e116f2c7642d0d8aa89c32345d83ebeb350242b2274c46a19ea82e04fb8d",
+  "proofOfReserves": {
+    "type": "independent-audit",
+    "url": "https://www.gemini.com/dollar",
+    "provider": "BPM LLP"
+  },
+  "links": [
+    {
+      "label": "Website",
+      "url": "https://www.gemini.com/dollar"
+    },
+    {
+      "label": "GitHub",
+      "url": "https://github.com/gemini/dollar"
+    },
+    {
+      "label": "Twitter",
+      "url": "https://x.com/gemini"
+    }
+  ],
+  "jurisdiction": {
+    "country": "United States",
+    "regulator": "NYDFS",
+    "license": "Trust Charter"
+  },
+  "contracts": [
+    {
+      "chain": "ethereum",
+      "address": "0x056fd409e1d7a124bd7017459dfea2f387b6d5cd",
+      "decimals": 2
+    },
+    {
+      "chain": "near",
+      "address": "056fd409e1d7a124bd7017459dfea2f387b6d5cd.factory.bridge.near",
+      "decimals": 2
+    }
+  ],
+  "custodyModel": "institutional-top",
+  "reserves": [
+    {
+      "name": "U.S. Treasury bills (<=3 month maturity)",
+      "pct": 62,
+      "risk": "very-low"
+    },
+    {
+      "name": "Cash deposits (State Street, Western Alliance Bank)",
+      "pct": 38,
+      "risk": "very-low"
+    }
+  ],
+  "liveReservesConfig": {
+    "adapter": "single-asset",
+    "version": 1,
+    "semantics": "single-asset",
+    "breakerScope": "gusd-gemini",
+    "display": {
+      "url": "https://www.gemini.com/dollar",
+      "label": "Gemini Transparency"
+    },
+    "inputs": {
+      "primary": {
+        "kind": "onchain-evm",
+        "chain": "ethereum",
+        "rpcMode": "public-rpc"
+      }
+    },
+    "params": {
+      "label": "U.S. Treasury bills & cash deposits",
+      "risk": "very-low"
+    }
+  }
+}

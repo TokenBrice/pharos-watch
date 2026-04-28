@@ -1,0 +1,103 @@
+{
+  "id": "cusdo-openeden",
+  "name": "Compounding OpenDollar",
+  "symbol": "cUSDO",
+  "flags": {
+    "backing": "rwa-backed",
+    "pegCurrency": "USD",
+    "governance": "centralized",
+    "yieldBearing": true,
+    "rwa": false,
+    "navToken": true
+  },
+  "variantOf": "usdo-openeden",
+  "variantKind": "savings-passthrough",
+  "pegReferenceId": "usdo-openeden",
+  "collateral": "USDO wrapped into OpenEden's non-rebasing cUSDO format; the wrapper keeps the same Treasury-backed reserve stack as USDO while yield accrues through price appreciation instead of rebasing",
+  "pegMechanism": "Users can wrap USDO into cUSDO or unwrap cUSDO back into USDO at any time; unlike rebasing USDO, cUSDO compounds by increasing in redeemable USDO per token",
+  "detailProvider": "coingecko",
+  "geckoId": "compounding-open-dollar",
+  "links": [
+    {
+      "label": "Website",
+      "url": "https://openeden.com/"
+    },
+    {
+      "label": "Twitter",
+      "url": "https://x.com/OpenEden_X"
+    },
+    {
+      "label": "Docs",
+      "url": "https://docs.openeden.com/usdo/cusdo-token"
+    },
+    {
+      "label": "Integration Guide",
+      "url": "https://docs.openeden.com/usdo/developers/integration-guide"
+    }
+  ],
+  "contracts": [
+    {
+      "chain": "ethereum",
+      "address": "0xad55aebc9b8c03fc43cd9f62260391c13c23e7c0",
+      "decimals": 18
+    },
+    {
+      "chain": "base",
+      "address": "0x83db73ef5192de4b6a4c92bd0141ba1a0dc87c65",
+      "decimals": 18
+    },
+    {
+      "chain": "bsc",
+      "address": "0x64748ea3e31d0b7916f0ff91b017b9f404ded8ef",
+      "decimals": 18
+    },
+    {
+      "chain": "solana",
+      "address": "BnANu5CtUogLqcvBNByJuwaRvRxNtVuDcAytwjsUUtqs",
+      "decimals": 9
+    }
+  ],
+  "deploymentModel": "third-party-bridge",
+  "collateralQuality": "rwa",
+  "custodyModel": "institutional-regulated",
+  "governanceQuality": "wrapper",
+  "reserves": [
+    {
+      "name": "USDO wrapper shares",
+      "pct": 100,
+      "risk": "low",
+      "coinId": "usdo-openeden",
+      "depType": "wrapper"
+    }
+  ],
+  "yieldConfig": {
+    "yieldSource": "OpenEden cUSDO wrapper",
+    "yieldType": "nav-appreciation"
+  },
+  "liveReservesConfig": {
+    "adapter": "erc4626-single-asset",
+    "version": 1,
+    "semantics": "single-asset",
+    "breakerScope": "cusdo-openeden",
+    "display": {
+      "url": "https://docs.openeden.com/usdo/cusdo-token",
+      "label": "OpenEden cUSDO"
+    },
+    "inputs": {
+      "primary": {
+        "kind": "onchain-evm",
+        "chain": "ethereum",
+        "rpcMode": "alchemy"
+      }
+    },
+    "params": {
+      "slice": {
+        "name": "USDO wrapper shares",
+        "risk": "low",
+        "coinId": "usdo-openeden",
+        "depType": "wrapper",
+        "expectedAssetAddress": "0x8238884ec9668ef77b90c6dff4d1a9f4f4823bfe"
+      }
+    }
+  }
+}

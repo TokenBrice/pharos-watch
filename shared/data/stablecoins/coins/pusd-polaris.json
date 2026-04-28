@@ -1,0 +1,68 @@
+{
+  "id": "pusd-polaris",
+  "name": "Polaris USD",
+  "symbol": "pUSD",
+  "flags": {
+    "backing": "crypto-backed",
+    "pegCurrency": "USD",
+    "governance": "decentralized",
+    "yieldBearing": true,
+    "rwa": false,
+    "navToken": false
+  },
+  "detailProvider": "defillama",
+  "links": [
+    {
+      "label": "Website",
+      "url": "https://polarisfinance.io"
+    },
+    {
+      "label": "Twitter",
+      "url": "https://x.com/polarisfinance_"
+    }
+  ],
+  "status": "pre-launch",
+  "announcedDate": "2026-01",
+  "expectedLaunchDate": "2026-Q4",
+  "launchPhase": "testnet",
+  "launchPhaseDetail": "Private testnet live",
+  "featuredContent": [
+    {
+      "type": "tweet",
+      "url": "https://x.com/polarisfinance_/status/2016180350087549420",
+      "title": "pUSD announcement thread",
+      "source": "@polarisfinance_"
+    },
+    {
+      "type": "blog",
+      "url": "https://polarisfinance.io/blog/pusd-no-counterparty/",
+      "title": "pUSD: No Counterparty, No Ceiling",
+      "description": "How pUSD delivers counterparty-free yield that scales alongside protocol adoption and the developing ecosystem supporting it.",
+      "image": "/featured/polaris-pusd-no-counterparty.png",
+      "source": "Polaris Finance Blog"
+    },
+    {
+      "type": "blog",
+      "url": "https://polarisfinance.io/blog/polaris-flows/",
+      "title": "Sustaining the Ecosystem: pETH & pUSD Flows",
+      "description": "Polaris replaces emission-based incentives with an autonomous protocol-revenue distribution mechanism that flows to participants based on their asset holdings — no governance-driven allocation, no bribery.",
+      "image": "/featured/polaris-flows-cover.png",
+      "source": "Polaris Finance Blog"
+    }
+  ],
+  "milestones": [
+    {
+      "date": "2026-01-27",
+      "type": "announcement",
+      "title": "Polaris introduces self-scaling stablecoin operating system",
+      "description": "Three-token model (pETH, pUSD, POLAR) with immutable code design and uncorrelated yield from protocol revenues.",
+      "sourceUrl": "https://x.com/polarisfinance_/status/2016180350087549420"
+    },
+    {
+      "date": "2026-03-04",
+      "type": "testnet",
+      "title": "Private testnet goes live",
+      "sourceUrl": "https://x.com/polarisfinance_/status/2029136552564056238"
+    }
+  ]
+}

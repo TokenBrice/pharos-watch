@@ -1,0 +1,75 @@
+{
+  "id": "pgold-pleasing",
+  "name": "Pleasing Gold",
+  "symbol": "PGOLD",
+  "flags": {
+    "backing": "rwa-backed",
+    "pegCurrency": "GOLD",
+    "governance": "centralized",
+    "yieldBearing": false,
+    "rwa": true,
+    "navToken": false
+  },
+  "collateral": "LBMA-standard 99.99% physical gold with 1 PGOLD representing 1 fine troy ounce; issuer materials describe fully gold-backed reserves and physical redemption support",
+  "pegMechanism": "Issuer-managed gold-backed token with off-chain custody and redemption workflow; documentation describes physical redemption and delivery through the Pleasing platform subject to KYC and size requirements",
+  "commodityOunces": 1,
+  "detailProvider": "commodity",
+  "geckoId": "pleasing-gold",
+  "protocolSlug": "pleasing-gold",
+  "links": [
+    {
+      "label": "Website",
+      "url": "https://www.pleasinggold.com/"
+    },
+    {
+      "label": "Docs",
+      "url": "https://pleasing.gitbook.io/docs/pleasing-gold-pgold/token-features"
+    },
+    {
+      "label": "Twitter",
+      "url": "https://x.com/PleasingGolden"
+    }
+  ],
+  "contracts": [
+    {
+      "chain": "arbitrum",
+      "address": "0x3e76bb02286bfeaa89dd35f11253f2cbce634f91",
+      "decimals": 18
+    },
+    {
+      "chain": "apechain",
+      "address": "0x64ae250e044688ddd04262f17daca23c28d241c2",
+      "decimals": 18
+    }
+  ],
+  "deploymentModel": "native-multichain",
+  "custodyModel": "institutional-unregulated",
+  "reserves": [
+    {
+      "name": "Physical gold bullion (LBMA-standard, 99.99% purity)",
+      "pct": 100,
+      "risk": "very-low"
+    }
+  ],
+  "liveReservesConfig": {
+    "adapter": "single-asset",
+    "version": 1,
+    "semantics": "single-asset",
+    "breakerScope": "pgold-pleasing",
+    "display": {
+      "url": "https://www.pleasinggold.com/",
+      "label": "Pleasing Gold"
+    },
+    "inputs": {
+      "primary": {
+        "kind": "onchain-evm",
+        "chain": "arbitrum",
+        "rpcMode": "public-rpc"
+      }
+    },
+    "params": {
+      "label": "Physical gold bars (LBMA 99.99%)",
+      "risk": "very-low"
+    }
+  }
+}

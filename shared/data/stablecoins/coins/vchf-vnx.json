@@ -1,0 +1,93 @@
+{
+  "id": "vchf-vnx",
+  "name": "VNX Swiss Franc",
+  "symbol": "VCHF",
+  "flags": {
+    "backing": "rwa-backed",
+    "pegCurrency": "CHF",
+    "governance": "centralized",
+    "yieldBearing": false,
+    "rwa": false,
+    "navToken": false
+  },
+  "collateral": "CHF held 1:1 in bank and custody accounts of VNX Commodities AG in Switzerland and Liechtenstein, independently audited by Areva General Auditing and Trust Company Limited",
+  "pegMechanism": "Direct 1:1 redemption through VNX Commodities AG; tokens minted on demand for verified customers depositing equivalent CHF value",
+  "llamaId": "157",
+  "detailProvider": "defillama",
+  "geckoId": "vnx-swiss-franc",
+  "links": [
+    {
+      "label": "Website",
+      "url": "https://vnx.li/"
+    },
+    {
+      "label": "Twitter",
+      "url": "https://x.com/VNX_Platform"
+    },
+    {
+      "label": "Docs",
+      "url": "https://vnx.gitbook.io/vnx-platform/"
+    }
+  ],
+  "jurisdiction": {
+    "country": "Liechtenstein",
+    "regulator": "FMA",
+    "license": "TVTG (Blockchain Act)"
+  },
+  "contracts": [
+    {
+      "chain": "ethereum",
+      "address": "0x79d4f0232a66c4c91b89c76362016a1707cfbf4f",
+      "decimals": 18
+    },
+    {
+      "chain": "base",
+      "address": "0x1fca74d9ef54a6ac80ffe7d3b14e76c4330fd5d8",
+      "decimals": 18
+    },
+    {
+      "chain": "arbitrum",
+      "address": "0x02cea97794d2cfb5f560e1ff4e9c59d1bec75969",
+      "decimals": 18
+    },
+    {
+      "chain": "avalanche",
+      "address": "0x228a48df6819ccc2eca01e2192ebafffdad56c19",
+      "decimals": 18
+    },
+    {
+      "chain": "solana",
+      "address": "AhhdRu5YZdjVkKR3wbnUDaymVQL2ucjMQ63sZ3LFHsch",
+      "decimals": 9
+    }
+  ],
+  "custodyModel": "institutional-regulated",
+  "reserves": [
+    {
+      "name": "CHF 1:1 reserves (Areva audited)",
+      "pct": 100,
+      "risk": "very-low"
+    }
+  ],
+  "liveReservesConfig": {
+    "adapter": "single-asset",
+    "version": 1,
+    "semantics": "single-asset",
+    "breakerScope": "vchf-vnx",
+    "display": {
+      "url": "https://vnx.li/",
+      "label": "VNX Platform"
+    },
+    "inputs": {
+      "primary": {
+        "kind": "onchain-evm",
+        "chain": "ethereum",
+        "rpcMode": "public-rpc"
+      }
+    },
+    "params": {
+      "label": "CHF cash & equivalents",
+      "risk": "very-low"
+    }
+  }
+}

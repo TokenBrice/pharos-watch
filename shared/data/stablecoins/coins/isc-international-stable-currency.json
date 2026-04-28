@@ -1,0 +1,68 @@
+{
+  "id": "isc-international-stable-currency",
+  "name": "International Stable Currency",
+  "symbol": "ISC",
+  "flags": {
+    "backing": "rwa-backed",
+    "pegCurrency": "VAR",
+    "governance": "centralized-dependent",
+    "yieldBearing": false,
+    "rwa": false,
+    "navToken": true
+  },
+  "collateral": "Basket of real-world assets (gold, bonds, T-bills, equity, cash)",
+  "pegMechanism": "RWA-indexed basket tracking purchasing power; price appreciates over time",
+  "llamaId": "186",
+  "detailProvider": "defillama",
+  "geckoId": "international-stable-currency",
+  "links": [
+    {
+      "label": "Website",
+      "url": "https://www.isc.money/"
+    },
+    {
+      "label": "Twitter",
+      "url": "https://x.com/ISC_money"
+    },
+    {
+      "label": "Docs",
+      "url": "https://wp.isc.money/"
+    }
+  ],
+  "contracts": [
+    {
+      "chain": "solana",
+      "address": "J9BcrQfX4p9D1bvLzRNCbMDv8f44a9LFdeqNE4Yk2WMD",
+      "decimals": 6
+    }
+  ],
+  "reserves": [
+    {
+      "name": "Physical gold holdings",
+      "pct": 20,
+      "risk": "very-low"
+    },
+    {
+      "name": "Investment-grade bonds",
+      "pct": 20,
+      "risk": "low"
+    },
+    {
+      "name": "Short-term Treasury bills",
+      "pct": 20,
+      "risk": "very-low"
+    },
+    {
+      "name": "Global equity exposure",
+      "pct": 20,
+      "risk": "medium"
+    },
+    {
+      "name": "Cash reserves",
+      "pct": 20,
+      "risk": "very-low"
+    }
+  ],
+  "chainTier": "established-alt-l1",
+  "custodyModel": "institutional-unregulated"
+}

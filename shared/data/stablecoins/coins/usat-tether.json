@@ -1,0 +1,74 @@
+{
+  "id": "usat-tether",
+  "name": "Tether USA-T",
+  "symbol": "USAT",
+  "flags": {
+    "backing": "rwa-backed",
+    "pegCurrency": "USD",
+    "governance": "centralized",
+    "yieldBearing": false,
+    "rwa": false,
+    "navToken": false
+  },
+  "collateral": "U.S. Treasury bills and cash deposits held by Cantor Fitzgerald as reserve custodian; issued 1:1 by Anchorage Digital Bank, N.A. under GENIUS Act federal regulation",
+  "pegMechanism": "Direct 1:1 redemption through Tether/Anchorage Digital Bank",
+  "llamaId": "343",
+  "detailProvider": "defillama",
+  "geckoId": "usa",
+  "links": [
+    {
+      "label": "Website",
+      "url": "https://usat.io/"
+    },
+    {
+      "label": "Twitter",
+      "url": "https://x.com/usat"
+    }
+  ],
+  "jurisdiction": {
+    "country": "United States",
+    "regulator": "OCC",
+    "license": "Federal Bank Charter"
+  },
+  "contracts": [
+    {
+      "chain": "ethereum",
+      "address": "0x07041776f5007aca2a54844f50503a18a72a8b68",
+      "decimals": 6
+    }
+  ],
+  "custodyModel": "institutional-regulated",
+  "reserves": [
+    {
+      "name": "U.S. Treasury bills",
+      "pct": 80,
+      "risk": "very-low"
+    },
+    {
+      "name": "Cash deposits",
+      "pct": 20,
+      "risk": "very-low"
+    }
+  ],
+  "liveReservesConfig": {
+    "adapter": "single-asset",
+    "version": 1,
+    "semantics": "single-asset",
+    "breakerScope": "usat-tether",
+    "display": {
+      "url": "https://usat.io/",
+      "label": "USA-T"
+    },
+    "inputs": {
+      "primary": {
+        "kind": "onchain-evm",
+        "chain": "ethereum",
+        "rpcMode": "public-rpc"
+      }
+    },
+    "params": {
+      "label": "U.S. Treasury bills & cash deposits",
+      "risk": "very-low"
+    }
+  }
+}

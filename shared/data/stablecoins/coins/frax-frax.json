@@ -1,0 +1,146 @@
+{
+  "id": "frax-frax",
+  "name": "Frax",
+  "symbol": "FRAX",
+  "flags": {
+    "backing": "rwa-backed",
+    "pegCurrency": "USD",
+    "governance": "centralized-dependent",
+    "yieldBearing": false,
+    "rwa": false,
+    "navToken": false
+  },
+  "collateral": "Short-dated U.S. Treasury bills, Federal Reserve overnight repurchase agreements, FDIC-insured deposits, and USDC held off-chain by FinresPBC (a Delaware public benefit corporation) on behalf of the Frax DAO; fully collateralized since FIP-188 (2023)",
+  "pegMechanism": "AMO smart contracts maintain ≥100% collateral ratio; peg tracked via Chainlink oracles and governance-approved USD reference rates; defended by recollateralization through RWA purchases and on-chain AMO rebalancing",
+  "llamaId": "6",
+  "detailProvider": "defillama",
+  "geckoId": "frax",
+  "pythFeedId": "0x735f591e4fed988cd38df74d8fcedecf2fe8d9111664e0fd500db9aa78b316b1",
+  "links": [
+    {
+      "label": "Website",
+      "url": "https://frax.com/"
+    },
+    {
+      "label": "Twitter",
+      "url": "https://x.com/fraxfinance"
+    },
+    {
+      "label": "Docs",
+      "url": "https://docs.frax.finance"
+    }
+  ],
+  "jurisdiction": {
+    "country": "United States"
+  },
+  "contracts": [
+    {
+      "chain": "ethereum",
+      "address": "0x853d955acef822db058eb8505911ed77f175b99e",
+      "decimals": 18
+    },
+    {
+      "chain": "arbitrum",
+      "address": "0x17fc002b466eec40dae837fc4be5c67993ddbd6f",
+      "decimals": 18
+    },
+    {
+      "chain": "optimism",
+      "address": "0x2e3d870790dc77a83dd1d18184acc7439a53f475",
+      "decimals": 18
+    },
+    {
+      "chain": "polygon",
+      "address": "0x45c32fa6df82ead1e2ef74d17b76547eddfaff89",
+      "decimals": 18
+    },
+    {
+      "chain": "avalanche",
+      "address": "0xd24c2ad096400b6fbcd2ad8b24e7acbc21a1da64",
+      "decimals": 18
+    },
+    {
+      "chain": "bsc",
+      "address": "0x90c97f71e18723b0cf0dfa30ee176ab653e89f40",
+      "decimals": 18
+    },
+    {
+      "chain": "fantom",
+      "address": "0xdc301622e621166bd8e82f2ca0a26c13ad0be355",
+      "decimals": 18
+    },
+    {
+      "chain": "moonriver",
+      "address": "0x1a93b23281cc1cde4c4741353f3064709a16197d",
+      "decimals": 18
+    },
+    {
+      "chain": "polygon-zkevm",
+      "address": "0xff8544fed5379d9ffa8d47a74ce6b91e632ac44d",
+      "decimals": 18
+    },
+    {
+      "chain": "moonbeam",
+      "address": "0x322e86852e492a7ee17f28a78c663da38fb33bfb",
+      "decimals": 18
+    },
+    {
+      "chain": "boba",
+      "address": "0x7562f525106f5d54e891e005867bf489b5988cd9",
+      "decimals": 18
+    },
+    {
+      "chain": "aurora",
+      "address": "0xe4b9e004389d91e4134a28f19bd833cba1d994b6",
+      "decimals": 18
+    },
+    {
+      "chain": "fraxtal",
+      "address": "0xfc00000000000000000000000000000000000002",
+      "decimals": 18
+    }
+  ],
+  "deploymentModel": "third-party-bridge",
+  "governanceQuality": "dao-governance",
+  "custodyModel": "institutional-regulated",
+  "reserves": [
+    {
+      "name": "USTB (Superstate tokenized T-bills)",
+      "pct": 50,
+      "risk": "low",
+      "coinId": "ustb-superstate"
+    },
+    {
+      "name": "BUIDL (BlackRock tokenized T-bills/cash/repos)",
+      "pct": 42,
+      "risk": "low",
+      "coinId": "buidl-blackrock"
+    },
+    {
+      "name": "USCC (Superstate crypto arbitrage)",
+      "pct": 3,
+      "risk": "medium"
+    },
+    {
+      "name": "Other tokenized assets (WTGXX, AUSD, JTRSY)",
+      "pct": 5,
+      "risk": "low"
+    }
+  ],
+  "liveReservesConfig": {
+    "adapter": "frax-balance-sheet",
+    "version": 2,
+    "semantics": "attestation-mix",
+    "breakerScope": "frax-frax",
+    "display": {
+      "url": "https://frax.com/transparency",
+      "label": "Frax Transparency"
+    },
+    "inputs": {
+      "primary": {
+        "kind": "http-json",
+        "url": "https://api.frax.finance/v2/frax/balance-sheet/latest"
+      }
+    }
+  }
+}

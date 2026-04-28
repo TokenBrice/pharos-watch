@@ -1,0 +1,76 @@
+{
+  "id": "usg-tangent",
+  "name": "Tangent USD",
+  "symbol": "USG",
+  "flags": {
+    "backing": "crypto-backed",
+    "pegCurrency": "USD",
+    "governance": "decentralized",
+    "yieldBearing": true,
+    "rwa": false,
+    "navToken": false
+  },
+  "detailProvider": "defillama",
+  "links": [
+    {
+      "label": "Website",
+      "url": "https://www.tangent.finance/"
+    },
+    {
+      "label": "Docs",
+      "url": "https://docs.tangent.finance/docs/overview"
+    },
+    {
+      "label": "Twitter",
+      "url": "https://x.com/Tangent_fi"
+    }
+  ],
+  "status": "pre-launch",
+  "announcedDate": "2026-03",
+  "expectedLaunchDate": "2026-Q2",
+  "launchPhase": "beta",
+  "launchPhaseDetail": "Four audits completed (Sherlock, Egis, Pashov x2 through Dec 2025); beta testing underway; mainnet launch pending",
+  "featuredContent": [
+    {
+      "type": "tweet",
+      "url": "https://x.com/Tangent_fi/status/2033564442982592623",
+      "title": "USG announcement thread",
+      "source": "@Tangent_fi"
+    },
+    {
+      "type": "article",
+      "url": "https://audits.sherlock.xyz/contests/1073",
+      "title": "USG — Tangent Sherlock Audit (Completed)",
+      "description": "Competitive audit covering lending mechanism, dynamic interest rate model, LP oracle, and integrations with Curve, Convex, and Pendle. Led by Senior Watson Obsidian.",
+      "source": "Sherlock"
+    }
+  ],
+  "milestones": [
+    {
+      "date": "2025-09-11",
+      "type": "audit",
+      "title": "Sherlock audit contest completed ($50K USDC prize pool)",
+      "description": "Competitive audit covering lending mechanism, dynamic interest rate model, LP oracle, Curve/Convex/Pendle integrations. Led by Senior Watson Obsidian.",
+      "sourceUrl": "https://audits.sherlock.xyz/contests/1073"
+    },
+    {
+      "date": "2025-10-30",
+      "type": "audit",
+      "title": "Pashov Audit Group first security review completed",
+      "sourceUrl": "https://docs.tangent.finance/docs/faq/audits"
+    },
+    {
+      "date": "2025-12-08",
+      "type": "audit",
+      "title": "Pashov Audit Group second security review completed",
+      "sourceUrl": "https://docs.tangent.finance/docs/faq/audits"
+    },
+    {
+      "date": "2026-03-01",
+      "type": "announcement",
+      "title": "Tangent announces USG stablecoin backed by productive DeFi collateral",
+      "description": "0% interest borrowing, backed by Curve LP and Pendle PT positions. sUSG (ERC4626) as yield-bearing wrapper.",
+      "sourceUrl": "https://www.tangent.finance/"
+    }
+  ]
+}

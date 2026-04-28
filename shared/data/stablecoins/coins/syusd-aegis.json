@@ -1,0 +1,93 @@
+{
+  "id": "syusd-aegis",
+  "name": "Aegis Staked YUSD",
+  "symbol": "sYUSD",
+  "flags": {
+    "backing": "crypto-backed",
+    "pegCurrency": "USD",
+    "governance": "centralized",
+    "yieldBearing": true,
+    "rwa": false,
+    "navToken": true
+  },
+  "variantOf": "yusd-aegis",
+  "variantKind": "savings-passthrough",
+  "pegReferenceId": "yusd-aegis",
+  "collateral": "YUSD deposited into Aegis's ERC-4626 staking contract; the wrapper remains backed by YUSD while funding-rate income accrues through the rising exchange rate",
+  "pegMechanism": "Deposit YUSD to receive sYUSD; the exchange rate versus YUSD increases as rewards accrue, while unstaking enters Aegis's documented 7-day cooldown before YUSD can be withdrawn",
+  "detailProvider": "coingecko",
+  "geckoId": "staked-yusd",
+  "links": [
+    {
+      "label": "Website",
+      "url": "https://aegis.im/"
+    },
+    {
+      "label": "Twitter",
+      "url": "https://x.com/aegis_im"
+    },
+    {
+      "label": "Docs",
+      "url": "https://docs.aegis.im/tokens/syusd-yield-bearing-token"
+    },
+    {
+      "label": "Smart Contracts",
+      "url": "https://docs.aegis.im/smart-contracts"
+    }
+  ],
+  "contracts": [
+    {
+      "chain": "ethereum",
+      "address": "0xfe0ccc9942e98c963fe6b4e5194eb6e3baa4cb64",
+      "decimals": 18
+    },
+    {
+      "chain": "bsc",
+      "address": "0x24db057b19241eefb9b522e8627c293ed8f93af2",
+      "decimals": 18
+    }
+  ],
+  "deploymentModel": "third-party-bridge",
+  "collateralQuality": "exotic",
+  "custodyModel": "cex",
+  "governanceQuality": "wrapper",
+  "reserves": [
+    {
+      "name": "YUSD staking vault shares",
+      "pct": 100,
+      "risk": "medium",
+      "coinId": "yusd-aegis",
+      "depType": "wrapper"
+    }
+  ],
+  "yieldConfig": {
+    "yieldSource": "Aegis staking (sYUSD)",
+    "yieldType": "nav-appreciation"
+  },
+  "liveReservesConfig": {
+    "adapter": "erc4626-single-asset",
+    "version": 1,
+    "semantics": "single-asset",
+    "breakerScope": "syusd-aegis",
+    "display": {
+      "url": "https://docs.aegis.im/tokens/syusd-yield-bearing-token",
+      "label": "Aegis sYUSD"
+    },
+    "inputs": {
+      "primary": {
+        "kind": "onchain-evm",
+        "chain": "ethereum",
+        "rpcMode": "alchemy"
+      }
+    },
+    "params": {
+      "slice": {
+        "name": "YUSD staking vault shares",
+        "risk": "medium",
+        "coinId": "yusd-aegis",
+        "depType": "wrapper",
+        "expectedAssetAddress": "0x4274cd7277c7bb0806bd5fe84b9adae466a8da0a"
+      }
+    }
+  }
+}

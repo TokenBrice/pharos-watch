@@ -1,0 +1,93 @@
+{
+  "id": "usdtb-ethena",
+  "name": "Ethena USDtb",
+  "symbol": "USDTB",
+  "flags": {
+    "backing": "rwa-backed",
+    "pegCurrency": "USD",
+    "governance": "centralized",
+    "yieldBearing": false,
+    "rwa": true,
+    "navToken": false
+  },
+  "collateral": "~90% BlackRock USD Institutional Digital Liquidity Fund (BUIDL), investing in cash, U.S. Treasury Bills/Notes, and repurchase agreements; remainder in USDC stablecoin reserve for rapid redemptions; issued by Anchorage Digital Bank N.A.; U.S. Bank acts as reserve custodian",
+  "pegMechanism": "Direct 1:1 mint and redemption; BUIDL shares redeemable 24/7 via atomic swap with Securitize; LayerZero OFT cross-chain transfers",
+  "llamaId": "221",
+  "detailProvider": "defillama",
+  "geckoId": "usdtb",
+  "pythFeedId": "0xe4731214382d8ed70a766930a7722c68064fc7ed4e6d70dbce3c84d4be81bc92",
+  "proofOfReserves": {
+    "type": "independent-audit",
+    "url": "https://www.anchorage.com/platform/usdtb-reserve-attestations",
+    "provider": "Big Four accounting firm via Anchorage Digital Bank"
+  },
+  "links": [
+    {
+      "label": "Website",
+      "url": "https://usdtb.money/"
+    },
+    {
+      "label": "Twitter",
+      "url": "https://x.com/ethena"
+    },
+    {
+      "label": "Docs",
+      "url": "https://docs.usdtb.money/"
+    }
+  ],
+  "jurisdiction": {
+    "country": "United States",
+    "regulator": "OCC",
+    "license": "Federal Bank Charter"
+  },
+  "contracts": [
+    {
+      "chain": "ethereum",
+      "address": "0xc139190f447e929f090edeb554d95abb8b18ac1c",
+      "decimals": 18
+    },
+    {
+      "chain": "arbitrum",
+      "address": "0xc708b6887db46005da033501f8aebee72d191a5d",
+      "decimals": 18
+    },
+    {
+      "chain": "base",
+      "address": "0xc708b6887db46005da033501f8aebee72d191a5d",
+      "decimals": 18
+    }
+  ],
+  "deploymentModel": "third-party-bridge",
+  "custodyModel": "institutional-regulated",
+  "reserves": [
+    {
+      "name": "BlackRock BUIDL (U.S. T-Bills, cash, repos)",
+      "pct": 90,
+      "risk": "low",
+      "coinId": "buidl-blackrock"
+    },
+    {
+      "name": "USDC (redemption reserve)",
+      "pct": 10,
+      "risk": "low",
+      "coinId": "usdc-circle"
+    }
+  ],
+  "liveReservesConfig": {
+    "adapter": "curated-validated",
+    "version": 1,
+    "semantics": "collateral-mix",
+    "breakerScope": "usdtb-ethena",
+    "display": {
+      "url": "https://www.anchorage.com/platform/usdtb-reserve-attestations",
+      "label": "Anchorage Attestations"
+    },
+    "inputs": {
+      "primary": {
+        "kind": "onchain-evm",
+        "chain": "ethereum",
+        "rpcMode": "public-rpc"
+      }
+    }
+  }
+}

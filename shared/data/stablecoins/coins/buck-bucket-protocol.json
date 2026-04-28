@@ -1,0 +1,65 @@
+{
+  "id": "buck-bucket-protocol",
+  "name": "Bucket Protocol BUCK",
+  "symbol": "BUCK",
+  "flags": {
+    "backing": "crypto-backed",
+    "pegCurrency": "USD",
+    "governance": "centralized-dependent",
+    "yieldBearing": false,
+    "rwa": false,
+    "navToken": false
+  },
+  "collateral": "SUI, BTC, ETH, and LSTs via CDPs; USDC/USDT via Peg Stability Module",
+  "pegMechanism": "Overcollateralized CDPs with per-asset minimum collateral ratios (e.g. 110% for SUI); hard peg via direct BUCK redemption for collateral with dynamic redemption fee; soft peg via PSM enabling 1:1 swaps with USDC/USDT; liquidations via Tank module",
+  "llamaId": "154",
+  "detailProvider": "defillama",
+  "geckoId": "bucket-protocol-buck-stablecoin",
+  "pythFeedId": "0xfdf28a46570252b25fd31cb257973f865afc5ca2f320439e45d95e0394bc7382",
+  "links": [
+    {
+      "label": "Website",
+      "url": "https://www.bucketprotocol.io/"
+    },
+    {
+      "label": "Twitter",
+      "url": "https://x.com/bucket_protocol"
+    },
+    {
+      "label": "Docs",
+      "url": "https://docs.bucketprotocol.io/"
+    }
+  ],
+  "contracts": [
+    {
+      "chain": "sui",
+      "address": "0xce7ff77a83ea0cb6fd39bd8748e2ec89a3f41e8efdc3f4eb123e0ca37b184db2::buck::BUCK",
+      "decimals": 9
+    }
+  ],
+  "chainTier": "established-alt-l1",
+  "collateralQuality": "alt-lst-bridged-or-mixed",
+  "reserves": [
+    {
+      "name": "SUI (native token CDPs)",
+      "pct": 45,
+      "risk": "high"
+    },
+    {
+      "name": "USDC/USDT (via PSM)",
+      "pct": 25,
+      "risk": "low",
+      "coinId": "usdc-circle"
+    },
+    {
+      "name": "BTC (wrapped, via CDPs)",
+      "pct": 15,
+      "risk": "medium"
+    },
+    {
+      "name": "ETH & LSTs (via CDPs)",
+      "pct": 15,
+      "risk": "low"
+    }
+  ]
+}

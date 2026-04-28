@@ -1,0 +1,97 @@
+{
+  "id": "usdat-saturn",
+  "name": "Saturn USDat",
+  "symbol": "USDat",
+  "flags": {
+    "backing": "rwa-backed",
+    "pegCurrency": "USD",
+    "governance": "centralized",
+    "yieldBearing": true,
+    "rwa": true,
+    "navToken": false
+  },
+  "infrastructures": [
+    "m0"
+  ],
+  "collateral": "100% backed by M (M0 Protocol's tokenized short-term U.S. Treasury bills) at launch — capital is held directly in the USDat smart contract and verifiable on-chain; protocol roadmap allows reserves to shift toward digital credit instruments (e.g. Strategy STRC preferred equity) over time",
+  "pegMechanism": "Permissioned 1:1 mint by depositing USDC via the M0 Swap Facility (Uniswap V3 1bps tier) which routes through wM; redemption returns USDC by unwrapping USDat back to wM and burning the USDat. Only KYC-onboarded addresses can mint, redeem, or hold USDat; geofenced away from US, EEA, and OFAC-sanctioned jurisdictions",
+  "detailProvider": "coingecko",
+  "geckoId": "saturn-dollar",
+  "proofOfReserves": {
+    "type": "self-reported",
+    "url": "https://app.saturn.credit/insights/saturn-protocol",
+    "provider": "Saturn Protocol (on-chain reserve, with Accountable + Chainlink NAV oracle integration in progress)"
+  },
+  "links": [
+    {
+      "label": "Website",
+      "url": "https://saturn.credit/"
+    },
+    {
+      "label": "Twitter",
+      "url": "https://x.com/saturn_credit"
+    },
+    {
+      "label": "Docs",
+      "url": "https://saturncredit.gitbook.io/saturn-docs"
+    },
+    {
+      "label": "App",
+      "url": "https://app.saturn.credit/"
+    },
+    {
+      "label": "Audits",
+      "url": "https://saturncredit.gitbook.io/saturn-docs/operations-and-governance/transparency-and-audits"
+    }
+  ],
+  "jurisdiction": {
+    "country": "British Virgin Islands"
+  },
+  "contracts": [
+    {
+      "chain": "ethereum",
+      "address": "0x23238f20b894f29041f48d88ee91131c395aaa71",
+      "decimals": 6
+    }
+  ],
+  "canBeBlacklisted": true,
+  "collateralQuality": "rwa",
+  "custodyModel": "institutional-unregulated",
+  "governanceQuality": "single-entity",
+  "deploymentModel": "single-chain",
+  "chainTier": "ethereum",
+  "dependencies": [
+    {
+      "id": "m-m0",
+      "weight": 1,
+      "type": "wrapper"
+    }
+  ],
+  "reserves": [
+    {
+      "name": "Short-term U.S. Treasury Bills (via M0 Protocol)",
+      "pct": 100,
+      "risk": "very-low"
+    }
+  ],
+  "liveReservesConfig": {
+    "adapter": "m0",
+    "version": 1,
+    "semantics": "protocol-reserve",
+    "breakerScope": "m0",
+    "display": {
+      "url": "https://dashboard.m0.org/",
+      "label": "M0 Dashboard"
+    },
+    "inputs": {
+      "primary": {
+        "kind": "http-json",
+        "url": "https://protocol-api.m0.org/graphql"
+      }
+    }
+  },
+  "yieldConfig": {
+    "yieldSource": "Saturn staking (sUSDat → STRC + Treasuries)",
+    "yieldType": "nav-appreciation"
+  }
+}

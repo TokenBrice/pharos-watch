@@ -1,0 +1,76 @@
+{
+  "id": "klarnausd-klarna",
+  "name": "KlarnaUSD",
+  "symbol": "KLARNAUSD",
+  "flags": {
+    "backing": "rwa-backed",
+    "pegCurrency": "USD",
+    "governance": "centralized",
+    "yieldBearing": false,
+    "rwa": false,
+    "navToken": false
+  },
+  "detailProvider": "defillama",
+  "links": [
+    {
+      "label": "Website",
+      "url": "https://www.klarna.com"
+    },
+    {
+      "label": "Twitter",
+      "url": "https://x.com/Klarna"
+    }
+  ],
+  "jurisdiction": {
+    "country": "Sweden"
+  },
+  "status": "pre-launch",
+  "announcedDate": "2025-11",
+  "expectedLaunchDate": "2026",
+  "launchPhase": "testnet",
+  "launchPhaseDetail": "Tempo mainnet live since March 18; KlarnaUSD still on testnet; Bridge OCC charter approved Feb 2026; mainnet deployment could come at any time",
+  "featuredContent": [
+    {
+      "type": "tweet",
+      "url": "https://x.com/Klarna/status/1993303819715854549",
+      "title": "Klarna announces KlarnaUSD stablecoin",
+      "source": "Klarna"
+    }
+  ],
+  "custodyModel": "institutional-unregulated",
+  "milestones": [
+    {
+      "date": "2025-11-25",
+      "type": "announcement",
+      "title": "Klarna announces KlarnaUSD, first bank stablecoin on Tempo",
+      "description": "Built on Bridge (Stripe) Open Issuance infrastructure. 114M customers, $112B annual GMV as adoption base.",
+      "sourceUrl": "https://investors.klarna.com/News--Events/news/news-details/2025/Klarna-Launches-KlarnaUSD-as-Stablecoin-Transactions-Hit-27-Trillion-Annually/default.aspx"
+    },
+    {
+      "date": "2025-11-25",
+      "type": "partnership",
+      "title": "Built on Bridge (Stripe) Open Issuance; first bank token on Tempo blockchain",
+      "sourceUrl": "https://www.theblock.co/post/380365/bnpl-firm-klarna-announces-usd-stablecoin-on-stripe-paradigms-tempo-blockchain-to-cut-payment-costs"
+    },
+    {
+      "date": "2025-11-25",
+      "type": "testnet",
+      "title": "Live on Tempo testnet for early integration and prototyping",
+      "sourceUrl": "https://fintechobserve.com/klarnausd-stablecoin-launch/"
+    },
+    {
+      "date": "2026-02-17",
+      "type": "regulatory",
+      "title": "Bridge (Stripe subsidiary) receives conditional OCC national bank trust charter",
+      "description": "Approval enables Bridge to custody crypto assets, issue stablecoins, and manage reserves as a federally regulated entity.",
+      "sourceUrl": "https://www.coindesk.com/business/2026/02/17/stripe-s-stablecoin-firm-bridge-wins-initial-approval-of-national-bank-trust-charter/"
+    },
+    {
+      "date": "2026-03-18",
+      "type": "milestone",
+      "title": "Tempo mainnet launches; KlarnaUSD not yet migrated from testnet",
+      "description": "Tempo L1 goes live with sub-second finality, Machine Payments Protocol for AI agents, and partners including Anthropic, Mastercard, Visa, and Revolut. Klarna absent from mainnet launch partners.",
+      "sourceUrl": "https://www.coindesk.com/tech/2026/03/18/stripe-led-payments-blockchain-tempo-goes-live-with-protocol-for-ai-agents"
+    }
+  ]
+}

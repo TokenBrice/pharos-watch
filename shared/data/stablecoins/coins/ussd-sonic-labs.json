@@ -1,0 +1,118 @@
+{
+  "id": "ussd-sonic-labs",
+  "name": "US Sonic Dollar",
+  "symbol": "USSD",
+  "flags": {
+    "backing": "rwa-backed",
+    "pegCurrency": "USD",
+    "governance": "centralized",
+    "yieldBearing": false,
+    "rwa": true,
+    "navToken": false
+  },
+  "collateral": "Short-duration tokenized U.S. Treasury products held by approved custodians: BlackRock BUIDL (USD Institutional Digital Liquidity Fund), Superstate USTB (Short Duration U.S. Government Securities Fund), and WisdomTree WTGXX (Government Money Market Digital Fund); supported minting collateral also includes USDC, USDT, PYUSD, and USDB",
+  "pegMechanism": "1:1 permissionless mint and redemption via non-custodial smart contracts built on Frax's frxUSD infrastructure; users mint with any approved USD asset (USDC, USDT, PYUSD, USDB, BUIDL, USTB, WTGXX) at zero fee; redeem into any supported USD asset at any time with no lockup or withdrawal delay; cross-chain via CCTP; yield from Treasury reserves flows to the Sonic ecosystem rather than to USSD holders",
+  "detailProvider": "coingecko",
+  "geckoId": "us-sonic-dollar",
+  "proofOfReserves": {
+    "type": "real-time",
+    "url": "https://net.frax.com/embed/balance-sheet/0x000000000eCcFf26B795F73fb0A70d48da657fEf",
+    "provider": "Frax Finance"
+  },
+  "links": [
+    {
+      "label": "Website",
+      "url": "https://soniclabs.com/ussd"
+    },
+    {
+      "label": "Twitter",
+      "url": "https://x.com/SonicLabs"
+    },
+    {
+      "label": "Docs",
+      "url": "https://docs.soniclabs.com/sonic/ussd"
+    }
+  ],
+  "jurisdiction": {
+    "country": "United States"
+  },
+  "contracts": [
+    {
+      "chain": "sonic",
+      "address": "0x000000000eccff26b795f73fb0a70d48da657fef",
+      "decimals": 18
+    },
+    {
+      "chain": "ethereum",
+      "address": "0x000000000eccff26b795f73fb0a70d48da657fef",
+      "decimals": 18
+    },
+    {
+      "chain": "base",
+      "address": "0x000000000eccff26b795f73fb0a70d48da657fef",
+      "decimals": 18
+    },
+    {
+      "chain": "arbitrum",
+      "address": "0x000000000eccff26b795f73fb0a70d48da657fef",
+      "decimals": 18
+    },
+    {
+      "chain": "optimism",
+      "address": "0x000000000eccff26b795f73fb0a70d48da657fef",
+      "decimals": 18
+    },
+    {
+      "chain": "scroll",
+      "address": "0x000000000eccff26b795f73fb0a70d48da657fef",
+      "decimals": 18
+    }
+  ],
+  "canBeBlacklisted": true,
+  "deploymentModel": "native-multichain",
+  "collateralQuality": "rwa",
+  "custodyModel": "institutional-regulated",
+  "governanceQuality": "single-entity",
+  "dependencies": [
+    {
+      "id": "frxusd-frax",
+      "weight": 1,
+      "type": "wrapper"
+    }
+  ],
+  "reserves": [
+    {
+      "name": "BlackRock BUIDL (USD Institutional Digital Liquidity Fund)",
+      "pct": 50,
+      "risk": "low",
+      "coinId": "buidl-blackrock"
+    },
+    {
+      "name": "Superstate USTB (Short Duration U.S. Government Securities Fund)",
+      "pct": 30,
+      "risk": "low",
+      "coinId": "ustb-superstate"
+    },
+    {
+      "name": "WisdomTree WTGXX (Government Money Market Digital Fund)",
+      "pct": 20,
+      "risk": "low"
+    }
+  ],
+  "liveReservesConfig": {
+    "adapter": "frax-balance-sheet",
+    "version": 1,
+    "semantics": "attestation-mix",
+    "breakerScope": "ussd-sonic-labs",
+    "display": {
+      "url": "https://net.frax.com/embed/balance-sheet/0x000000000eCcFf26B795F73fb0A70d48da657fEf",
+      "label": "Frax Balance Sheet"
+    },
+    "inputs": {
+      "primary": {
+        "kind": "http-json",
+        "url": "https://api.frax.finance/v2/frxusd/balance-sheet/latest"
+      }
+    }
+  }
+}

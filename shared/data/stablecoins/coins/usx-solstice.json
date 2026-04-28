@@ -1,0 +1,78 @@
+{
+  "id": "usx-solstice",
+  "name": "Solstice USX",
+  "symbol": "USX",
+  "flags": {
+    "backing": "crypto-backed",
+    "pegCurrency": "USD",
+    "governance": "centralized-dependent",
+    "yieldBearing": false,
+    "rwa": false,
+    "navToken": false
+  },
+  "collateral": "USDC and USDT deposited 1:1; plans to expand to SOL, ETH, and BTC collateral",
+  "pegMechanism": "1:1 collateralization with multi-oracle pricing via Chainlink and Pyth; Chainlink Proof of Reserve provides real-time on-chain verification of reserves; institutional minting ($500K minimum, KYC-gated); permissionless access via Solana DEXs",
+  "llamaId": "310",
+  "detailProvider": "defillama",
+  "geckoId": "usx",
+  "pythFeedId": "0x80950327494d0e7f29bdddb061ed7d1def1d712cec73bc167af02f0664137a16",
+  "links": [
+    {
+      "label": "Website",
+      "url": "https://solstice.finance/usx"
+    },
+    {
+      "label": "Twitter",
+      "url": "https://x.com/solsticefi"
+    },
+    {
+      "label": "Docs",
+      "url": "https://docs.solstice.finance"
+    }
+  ],
+  "jurisdiction": {
+    "country": "Switzerland"
+  },
+  "contracts": [
+    {
+      "chain": "solana",
+      "address": "6FrrzDk5mQARGc1TDYoyVnSyRdds1t4PbtohCD6p3tgG",
+      "decimals": 6
+    }
+  ],
+  "chainTier": "mature-alt-l1",
+  "collateralQuality": "alt-lst-bridged-or-mixed",
+  "governanceQuality": "wrapper",
+  "reserves": [
+    {
+      "name": "USDC",
+      "pct": 55,
+      "risk": "low",
+      "coinId": "usdc-circle",
+      "depType": "wrapper"
+    },
+    {
+      "name": "USDT",
+      "pct": 45,
+      "risk": "low",
+      "coinId": "usdt-tether",
+      "depType": "wrapper"
+    }
+  ],
+  "liveReservesConfig": {
+    "adapter": "solstice-attestation",
+    "version": 1,
+    "semantics": "protocol-reserve",
+    "breakerScope": "usx-solstice",
+    "display": {
+      "url": "https://attestation.solstice.finance/",
+      "label": "Solstice Attestation"
+    },
+    "inputs": {
+      "primary": {
+        "kind": "http-json",
+        "url": "https://attestation-api.solstice.finance/dashboard"
+      }
+    }
+  }
+}

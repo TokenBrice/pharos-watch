@@ -1,0 +1,85 @@
+{
+  "id": "xusd-straitsx",
+  "name": "StraitsX XUSD",
+  "symbol": "XUSD",
+  "flags": {
+    "backing": "rwa-backed",
+    "pegCurrency": "USD",
+    "governance": "centralized",
+    "yieldBearing": false,
+    "rwa": false,
+    "navToken": false
+  },
+  "collateral": "Cash, cash equivalents, and short-term U.S. government securities held at regulated financial institutions (DBS, Standard Chartered, UOB), segregated from corporate assets in custody accounts maintained with MAS-licensed custodians",
+  "pegMechanism": "Fiat-backed 1:1 mint and redeem: users deposit USD to a StraitsX-designated bank account to mint XUSD; redemption returns USD to a whitelisted beneficiary bank account within 5 business days; reserve assets held at 100%+ of circulating supply at all times per MAS SCS framework",
+  "llamaId": "290",
+  "detailProvider": "defillama",
+  "geckoId": "straitsx-xusd",
+  "proofOfReserves": {
+    "type": "independent-audit",
+    "url": "https://www.straitsx.com/xusd",
+    "provider": "KK Yap & Associates"
+  },
+  "links": [
+    {
+      "label": "Website",
+      "url": "https://www.straitsx.com/xusd"
+    },
+    {
+      "label": "Twitter",
+      "url": "https://x.com/straitsx"
+    }
+  ],
+  "jurisdiction": {
+    "country": "Singapore",
+    "regulator": "MAS",
+    "license": "Major Payment Institution"
+  },
+  "contracts": [
+    {
+      "chain": "ethereum",
+      "address": "0xc08e7e23c235073c6807c2efe7021304cb7c2815",
+      "decimals": 6
+    },
+    {
+      "chain": "bsc",
+      "address": "0xf81ac2e1a0373dde1bce01e2fe694a9b7e3bfcb9",
+      "decimals": 6
+    }
+  ],
+  "deploymentModel": "native-multichain",
+  "custodyModel": "institutional-top",
+  "reserves": [
+    {
+      "name": "Cash deposits at Tier 1 banks (DBS, Standard Chartered, UOB)",
+      "pct": 50,
+      "risk": "very-low"
+    },
+    {
+      "name": "Short-term U.S. / MAS government securities",
+      "pct": 50,
+      "risk": "very-low"
+    }
+  ],
+  "liveReservesConfig": {
+    "adapter": "single-asset",
+    "version": 1,
+    "semantics": "single-asset",
+    "breakerScope": "xusd-straitsx",
+    "display": {
+      "url": "https://www.straitsx.com/xusd",
+      "label": "StraitsX"
+    },
+    "inputs": {
+      "primary": {
+        "kind": "onchain-evm",
+        "chain": "ethereum",
+        "rpcMode": "public-rpc"
+      }
+    },
+    "params": {
+      "label": "Tier 1 bank deposits & short-term securities",
+      "risk": "very-low"
+    }
+  }
+}

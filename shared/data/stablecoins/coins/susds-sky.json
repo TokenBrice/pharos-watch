@@ -1,0 +1,94 @@
+{
+  "id": "susds-sky",
+  "name": "Sky Savings USDS",
+  "symbol": "sUSDS",
+  "flags": {
+    "backing": "crypto-backed",
+    "pegCurrency": "USD",
+    "governance": "centralized-dependent",
+    "yieldBearing": true,
+    "rwa": false,
+    "navToken": true
+  },
+  "variantOf": "usds-sky",
+  "variantKind": "savings-passthrough",
+  "pegReferenceId": "usds-sky",
+  "collateral": "USDS deposited into Sky's ERC-4626 savings vault; the wrapper remains fully backed by USDS while the exchange rate compounds with the Sky Savings Rate",
+  "pegMechanism": "Deposit USDS to mint sUSDS and withdraw USDS directly from the vault with no protocol fee; sUSDS and sDAI are both savings wrappers but are not exchangeable 1:1 because they have accrued different amounts of yield",
+  "detailProvider": "coingecko",
+  "geckoId": "susds",
+  "links": [
+    {
+      "label": "Website",
+      "url": "https://spark.fi/"
+    },
+    {
+      "label": "Twitter",
+      "url": "https://x.com/sparkdotfi"
+    },
+    {
+      "label": "Docs",
+      "url": "https://developers.sky.money/core-protocol/susds/"
+    },
+    {
+      "label": "Deployments",
+      "url": "https://developers.sky.money/quick-start/deployments-tracker/"
+    }
+  ],
+  "contracts": [
+    {
+      "chain": "ethereum",
+      "address": "0xa3931d71877c0e7a3148cb7eb4463524fec27fbd",
+      "decimals": 18
+    },
+    {
+      "chain": "base",
+      "address": "0x5875eee11cf8398102fdad704c9e96607675467a",
+      "decimals": 18
+    }
+  ],
+  "canBeBlacklisted": "possible",
+  "deploymentModel": "third-party-bridge",
+  "collateralQuality": "rwa",
+  "custodyModel": "institutional-top",
+  "governanceQuality": "wrapper",
+  "reserves": [
+    {
+      "name": "USDS savings vault shares",
+      "pct": 100,
+      "risk": "low",
+      "coinId": "usds-sky",
+      "depType": "wrapper"
+    }
+  ],
+  "yieldConfig": {
+    "yieldSource": "Sky Savings Rate (sUSDS)",
+    "yieldType": "nav-appreciation"
+  },
+  "liveReservesConfig": {
+    "adapter": "erc4626-single-asset",
+    "version": 1,
+    "semantics": "single-asset",
+    "breakerScope": "susds-sky",
+    "display": {
+      "url": "https://developers.sky.money/core-protocol/susds/",
+      "label": "Sky sUSDS"
+    },
+    "inputs": {
+      "primary": {
+        "kind": "onchain-evm",
+        "chain": "ethereum",
+        "rpcMode": "alchemy"
+      }
+    },
+    "params": {
+      "slice": {
+        "name": "USDS savings vault shares",
+        "risk": "low",
+        "coinId": "usds-sky",
+        "depType": "wrapper",
+        "expectedAssetAddress": "0xdc035d45d973e3ec169d2276ddab16f1e407384f"
+      }
+    }
+  }
+}

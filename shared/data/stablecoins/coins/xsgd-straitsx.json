@@ -1,0 +1,95 @@
+{
+  "id": "xsgd-straitsx",
+  "name": "StraitsX XSGD",
+  "symbol": "XSGD",
+  "flags": {
+    "backing": "rwa-backed",
+    "pegCurrency": "SGD",
+    "governance": "centralized",
+    "yieldBearing": false,
+    "rwa": false,
+    "navToken": false
+  },
+  "collateral": "Singapore dollar cash reserves held at Tier-1 banking institutions DBS and Standard Chartered, fully backed 1:1",
+  "pegMechanism": "Direct 1:1 redemption for SGD through StraitsX (MAS-licensed Major Payment Institution); independent attestation reports issued twice monthly",
+  "llamaId": "289",
+  "detailProvider": "defillama",
+  "geckoId": "xsgd",
+  "pythFeedId": "0xc6e12cd46d605b3762d21373d04f3a3ca81c321a48329a5e6e1c27c26f743c8d",
+  "proofOfReserves": {
+    "type": "independent-audit",
+    "url": "https://www.straitsx.com/xsgd",
+    "provider": "Independent public accountants (ISCA standards)"
+  },
+  "links": [
+    {
+      "label": "Website",
+      "url": "https://www.straitsx.com/xsgd"
+    },
+    {
+      "label": "Twitter",
+      "url": "https://x.com/straitsx"
+    }
+  ],
+  "jurisdiction": {
+    "country": "Singapore",
+    "regulator": "MAS",
+    "license": "Major Payment Institution"
+  },
+  "contracts": [
+    {
+      "chain": "ethereum",
+      "address": "0x70e8de73ce538da2beed35d14187f6959a8eca96",
+      "decimals": 6
+    },
+    {
+      "chain": "polygon",
+      "address": "0xdc3326e71d45186f113a2f448984ca0e8d201995",
+      "decimals": 6
+    },
+    {
+      "chain": "arbitrum",
+      "address": "0xe333e7754a2dc1e020a162ecab019254b9dab653",
+      "decimals": 6
+    },
+    {
+      "chain": "avalanche",
+      "address": "0xb2f85b7ab3c2b6f62df06de6ae7d09c010a5096e",
+      "decimals": 6
+    },
+    {
+      "chain": "base",
+      "address": "0x0a4c9cb2778ab3302996a34befcf9a8bc288c33b",
+      "decimals": 6
+    }
+  ],
+  "custodyModel": "institutional-regulated",
+  "reserves": [
+    {
+      "name": "SGD at Tier-1 banks (DBS, Standard Chartered)",
+      "pct": 100,
+      "risk": "very-low"
+    }
+  ],
+  "liveReservesConfig": {
+    "adapter": "single-asset",
+    "version": 1,
+    "semantics": "single-asset",
+    "breakerScope": "xsgd-straitsx",
+    "display": {
+      "url": "https://www.straitsx.com/xsgd",
+      "label": "StraitsX"
+    },
+    "inputs": {
+      "primary": {
+        "kind": "onchain-evm",
+        "chain": "ethereum",
+        "rpcMode": "public-rpc"
+      }
+    },
+    "params": {
+      "label": "SGD deposits & MAS-eligible securities",
+      "risk": "very-low"
+    }
+  }
+}

@@ -1,0 +1,112 @@
+{
+  "id": "ceur-celo",
+  "name": "Celo Euro",
+  "symbol": "CEUR",
+  "flags": {
+    "backing": "crypto-backed",
+    "pegCurrency": "EUR",
+    "governance": "centralized-dependent",
+    "yieldBearing": false,
+    "rwa": false,
+    "navToken": false
+  },
+  "collateral": "Mento Reserve holding sUSDS, EURC, CELO, stETH, USDT, USDC, and ETH; overcollateralized at 136%+ with 100% stable-asset backing mandate",
+  "pegMechanism": "Virtual AMM (BiPoolManager) pools on Celo enable arbitrageurs to mint/burn EURm against reserve assets at oracle-enforced EUR rates; trading limits enforced by on-chain circuit breaker",
+  "llamaId": "52",
+  "detailProvider": "defillama",
+  "geckoId": "celo-euro",
+  "proofOfReserves": {
+    "type": "real-time",
+    "url": "https://reserve.mento.org/",
+    "provider": "Mento Reserve (on-chain, publicly verifiable)"
+  },
+  "links": [
+    {
+      "label": "Website",
+      "url": "https://www.mento.org/"
+    },
+    {
+      "label": "Twitter",
+      "url": "https://x.com/MentoLabs"
+    },
+    {
+      "label": "Docs",
+      "url": "https://docs.mento.org/mento"
+    },
+    {
+      "label": "GitHub",
+      "url": "https://github.com/mento-protocol"
+    }
+  ],
+  "contracts": [
+    {
+      "chain": "celo",
+      "address": "0xd8763cba276a3738e6de85b4b3bf5fded6d6ca73",
+      "decimals": 18
+    }
+  ],
+  "chainTier": "established-alt-l1",
+  "collateralQuality": "alt-lst-bridged-or-mixed",
+  "reserves": [
+    {
+      "name": "sUSDS (Sky savings USDS)",
+      "pct": 56,
+      "risk": "low",
+      "coinId": "usds-sky"
+    },
+    {
+      "name": "EURC (Circle euro stablecoin)",
+      "pct": 22,
+      "risk": "low",
+      "coinId": "eurc-circle"
+    },
+    {
+      "name": "CELO",
+      "pct": 12,
+      "risk": "high"
+    },
+    {
+      "name": "USDGLO (Glo Dollar)",
+      "pct": 4,
+      "risk": "low"
+    },
+    {
+      "name": "stETH (Lido staked ETH)",
+      "pct": 2,
+      "risk": "low"
+    },
+    {
+      "name": "USDC",
+      "pct": 2,
+      "risk": "low",
+      "coinId": "usdc-circle"
+    },
+    {
+      "name": "USDT",
+      "pct": 1,
+      "risk": "low",
+      "coinId": "usdt-tether"
+    },
+    {
+      "name": "ETH",
+      "pct": 1,
+      "risk": "very-low"
+    }
+  ],
+  "liveReservesConfig": {
+    "adapter": "mento",
+    "version": 1,
+    "semantics": "collateral-mix",
+    "breakerScope": "mento-reserve",
+    "display": {
+      "url": "https://reserve.mento.org/",
+      "label": "Reserve"
+    },
+    "inputs": {
+      "primary": {
+        "kind": "http-json",
+        "url": "https://mento-analytics-api-12390052758.us-central1.run.app/api/v2/reserve"
+      }
+    }
+  }
+}

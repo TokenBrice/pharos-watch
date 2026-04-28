@@ -1,0 +1,82 @@
+{
+  "id": "jpyc-jpyc",
+  "name": "JPY Coin",
+  "symbol": "JPYC",
+  "flags": {
+    "backing": "rwa-backed",
+    "pegCurrency": "JPY",
+    "governance": "centralized",
+    "yieldBearing": false,
+    "rwa": false,
+    "navToken": false
+  },
+  "collateral": "Japanese yen deposits and Japanese government bonds (100% backed)",
+  "pegMechanism": "Direct 1:1 redemption for JPY through JPYC Inc. via the JPYC EX platform; issuance and redemption via bank transfer after KYC; JPYC Inc. holds a Type II Funds Transfer Service Provider license under Japan's Payment Services Act",
+  "detailProvider": "coingecko",
+  "geckoId": "jpycoin",
+  "links": [
+    {
+      "label": "Website",
+      "url": "https://jpyc.co.jp/"
+    },
+    {
+      "label": "Twitter",
+      "url": "https://x.com/jpyc_official"
+    },
+    {
+      "label": "GitHub",
+      "url": "https://github.com/jpycoin"
+    }
+  ],
+  "jurisdiction": {
+    "country": "Japan",
+    "regulator": "FSA",
+    "license": "Type II Funds Transfer Service Provider (Payment Services Act)"
+  },
+  "contracts": [
+    {
+      "chain": "ethereum",
+      "address": "0xe7c3d8c9a439fede00d2600032d5db0be71c3c29",
+      "decimals": 18
+    },
+    {
+      "chain": "polygon",
+      "address": "0xe7c3d8c9a439fede00d2600032d5db0be71c3c29",
+      "decimals": 18
+    },
+    {
+      "chain": "avalanche",
+      "address": "0xe7c3d8c9a439fede00d2600032d5db0be71c3c29",
+      "decimals": 18
+    }
+  ],
+  "custodyModel": "institutional-regulated",
+  "reserves": [
+    {
+      "name": "JPY deposits & Japanese government bonds",
+      "pct": 100,
+      "risk": "very-low"
+    }
+  ],
+  "liveReservesConfig": {
+    "adapter": "single-asset",
+    "version": 1,
+    "semantics": "single-asset",
+    "breakerScope": "jpyc-jpyc",
+    "display": {
+      "url": "https://jpyc.co.jp/",
+      "label": "JPYC Official"
+    },
+    "inputs": {
+      "primary": {
+        "kind": "onchain-evm",
+        "chain": "ethereum",
+        "rpcMode": "public-rpc"
+      }
+    },
+    "params": {
+      "label": "JPY reserves",
+      "risk": "very-low"
+    }
+  }
+}

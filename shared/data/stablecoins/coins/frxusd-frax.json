@@ -1,0 +1,214 @@
+{
+  "id": "frxusd-frax",
+  "name": "Frax USD",
+  "symbol": "FRXUSD",
+  "flags": {
+    "backing": "rwa-backed",
+    "pegCurrency": "USD",
+    "governance": "centralized-dependent",
+    "yieldBearing": false,
+    "rwa": false,
+    "navToken": false
+  },
+  "collateral": "Tokenized cash-equivalent reserves held by governance-approved enshrined custodians: BlackRock BUIDL (U.S. Treasuries/repos via Securitize), Superstate USTB (T-bills) and USCC (U.S. government securities), Centrifuge JTRSY (T-bills), WisdomTree WTGXX (U.S. government money market), Agora AUSD, and Circle USDC; each custodian mints and redeems frxUSD 1:1 against reserves they hold on-chain",
+  "pegMechanism": "1:1 mint and redemption through governance-approved enshrined custodians; each custodian holds provable on-chain reserves and can mint or burn frxUSD 1:1; redeemable from any custodian with available collateral",
+  "llamaId": "235",
+  "detailProvider": "defillama",
+  "geckoId": "frax-usd",
+  "pythFeedId": "0x7c53208632935ba5122c3cf65a0f4b3e72ba4955b49ad6ba0acf3d9ba405aef3",
+  "proofOfReserves": {
+    "type": "real-time",
+    "url": "https://frax.com/transparency",
+    "provider": "Chaos Labs"
+  },
+  "links": [
+    {
+      "label": "Website",
+      "url": "https://frax.com/"
+    },
+    {
+      "label": "Twitter",
+      "url": "https://x.com/fraxfinance"
+    },
+    {
+      "label": "Docs",
+      "url": "https://docs.frax.com/protocol/assets/frxusd/frxusd"
+    }
+  ],
+  "jurisdiction": {
+    "country": "United States"
+  },
+  "contracts": [
+    {
+      "chain": "ethereum",
+      "address": "0xcacd6fd266af91b8aed52accc382b4e165586e29",
+      "decimals": 18
+    },
+    {
+      "chain": "arbitrum",
+      "address": "0x80eede496655fb9047dd39d9f418d5483ed600df",
+      "decimals": 18
+    },
+    {
+      "chain": "base",
+      "address": "0xe5020a6d073a794b6e7f05678707de47986fb0b6",
+      "decimals": 18
+    },
+    {
+      "chain": "optimism",
+      "address": "0x80eede496655fb9047dd39d9f418d5483ed600df",
+      "decimals": 18
+    },
+    {
+      "chain": "polygon",
+      "address": "0x80eede496655fb9047dd39d9f418d5483ed600df",
+      "decimals": 18
+    },
+    {
+      "chain": "avalanche",
+      "address": "0x80eede496655fb9047dd39d9f418d5483ed600df",
+      "decimals": 18
+    },
+    {
+      "chain": "bsc",
+      "address": "0x80eede496655fb9047dd39d9f418d5483ed600df",
+      "decimals": 18
+    },
+    {
+      "chain": "solana",
+      "address": "GzX1ireZDU865FiMaKrdVB1H6AE8LAqWYCg6chrMrfBw",
+      "decimals": 9
+    },
+    {
+      "chain": "aptos",
+      "address": "0xe067037681385b86d8344e6b7746023604c6ac90ddc997ba3c58396c258ad17b",
+      "decimals": 6
+    },
+    {
+      "chain": "sonic",
+      "address": "0x80eede496655fb9047dd39d9f418d5483ed600df",
+      "decimals": 18
+    },
+    {
+      "chain": "linea",
+      "address": "0xc7346783f5e645aa998b106ef9e7f499528673d8",
+      "decimals": 18
+    },
+    {
+      "chain": "scroll",
+      "address": "0x397f939c3b91a74c321ea7129396492ba9cdce82",
+      "decimals": 18
+    },
+    {
+      "chain": "blast",
+      "address": "0x80eede496655fb9047dd39d9f418d5483ed600df",
+      "decimals": 18
+    },
+    {
+      "chain": "mode",
+      "address": "0x80eede496655fb9047dd39d9f418d5483ed600df",
+      "decimals": 18
+    },
+    {
+      "chain": "zksync",
+      "address": "0xea77c590bb36c43ef7139ce649cfbcfd6163170d",
+      "decimals": 18
+    },
+    {
+      "chain": "plume",
+      "address": "0x80eede496655fb9047dd39d9f418d5483ed600df",
+      "decimals": 18
+    },
+    {
+      "chain": "unichain",
+      "address": "0x80eede496655fb9047dd39d9f418d5483ed600df",
+      "decimals": 18
+    },
+    {
+      "chain": "ink",
+      "address": "0x80eede496655fb9047dd39d9f418d5483ed600df",
+      "decimals": 18
+    },
+    {
+      "chain": "sei",
+      "address": "0x80eede496655fb9047dd39d9f418d5483ed600df",
+      "decimals": 18
+    },
+    {
+      "chain": "berachain",
+      "address": "0x80eede496655fb9047dd39d9f418d5483ed600df",
+      "decimals": 18
+    },
+    {
+      "chain": "fraxtal",
+      "address": "0xfc00000000000000000000000000000000000001",
+      "decimals": 18
+    },
+    {
+      "chain": "aurora",
+      "address": "0x80eede496655fb9047dd39d9f418d5483ed600df",
+      "decimals": 18
+    },
+    {
+      "chain": "polygon-zkevm",
+      "address": "0x80eede496655fb9047dd39d9f418d5483ed600df",
+      "decimals": 18
+    },
+    {
+      "chain": "xlayer",
+      "address": "0x80eede496655fb9047dd39d9f418d5483ed600df",
+      "decimals": 18
+    }
+  ],
+  "canBeBlacklisted": true,
+  "deploymentModel": "third-party-bridge",
+  "custodyModel": "institutional-top",
+  "governanceQuality": "dao-governance",
+  "reserves": [
+    {
+      "name": "WTGXX (WisdomTree Government Money Market)",
+      "pct": 48,
+      "risk": "low"
+    },
+    {
+      "name": "USTB (Superstate tokenized T-bills)",
+      "pct": 37,
+      "risk": "low",
+      "coinId": "ustb-superstate"
+    },
+    {
+      "name": "BUIDL (BlackRock tokenized T-bills)",
+      "pct": 13,
+      "risk": "low",
+      "coinId": "buidl-blackrock"
+    },
+    {
+      "name": "USDB (DBS tokenized deposits)",
+      "pct": 2,
+      "risk": "low"
+    }
+  ],
+  "dependencies": [
+    {
+      "id": "usdc-circle",
+      "weight": 0.01,
+      "type": "collateral"
+    }
+  ],
+  "liveReservesConfig": {
+    "adapter": "frax-balance-sheet",
+    "version": 2,
+    "semantics": "attestation-mix",
+    "breakerScope": "frxusd-frax",
+    "display": {
+      "url": "https://frax.com/transparency",
+      "label": "Frax Transparency"
+    },
+    "inputs": {
+      "primary": {
+        "kind": "http-json",
+        "url": "https://api.frax.finance/v2/frxusd/balance-sheet/latest"
+      }
+    }
+  }
+}

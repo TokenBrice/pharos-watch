@@ -1,0 +1,103 @@
+{
+  "id": "wm-m0",
+  "name": "Wrapped M",
+  "symbol": "wM",
+  "flags": {
+    "backing": "rwa-backed",
+    "pegCurrency": "USD",
+    "governance": "centralized",
+    "yieldBearing": false,
+    "rwa": true,
+    "navToken": false
+  },
+  "infrastructures": [
+    "m0"
+  ],
+  "collateral": "Underlying M (M0 Protocol) is backed 100% by short-term U.S. Treasury bills (30–90 day WAM) held in bankruptcy-remote SPVs by permissioned Minters; M0 Validators independently attest collateral sufficiency on-chain before any M can be minted, and wM holds M 1:1 inside the Wrapped M Token contract",
+  "pegMechanism": "Non-rebasing 1:1 ERC-20 wrapper around M: anyone can call wrap() to deposit M and mint wM, or unwrap() to redeem wM back to M at any time without fees or queues; wM holders are non-earning by default, so yield accrued by the underlying M is redirected via TTG-approved earner accounts and the claimExcess() mechanism to ecosystem yield recipients (downstream M0 extensions and apps), leaving wM as a flat USD-denominated unit",
+  "detailProvider": "coingecko",
+  "geckoId": "wrappedm-by-m0",
+  "proofOfReserves": {
+    "type": "self-reported",
+    "url": "https://dashboard.m0.org/",
+    "provider": "M0 Protocol (on-chain Validator attestations)"
+  },
+  "links": [
+    {
+      "label": "Website",
+      "url": "https://www.m0.org/"
+    },
+    {
+      "label": "Twitter",
+      "url": "https://x.com/m0foundation"
+    },
+    {
+      "label": "Docs",
+      "url": "https://docs.m0.org/"
+    },
+    {
+      "label": "Dashboard",
+      "url": "https://dashboard.m0.org/extensions/wm"
+    }
+  ],
+  "jurisdiction": {
+    "country": "Switzerland"
+  },
+  "contracts": [
+    {
+      "chain": "ethereum",
+      "address": "0x437cc33344a0b27a429f795ff6b469c72698b291",
+      "decimals": 6
+    },
+    {
+      "chain": "arbitrum",
+      "address": "0x437cc33344a0b27a429f795ff6b469c72698b291",
+      "decimals": 6
+    },
+    {
+      "chain": "plume",
+      "address": "0x437cc33344a0b27a429f795ff6b469c72698b291",
+      "decimals": 6
+    },
+    {
+      "chain": "solana",
+      "address": "mzeroXDoBpRVhnEXBra27qzAMdxgpWVY3DzQW7xMVJp",
+      "decimals": 6
+    }
+  ],
+  "canBeBlacklisted": true,
+  "collateralQuality": "rwa",
+  "custodyModel": "institutional-unregulated",
+  "governanceQuality": "wrapper",
+  "deploymentModel": "third-party-bridge",
+  "dependencies": [
+    {
+      "id": "m-m0",
+      "weight": 1,
+      "type": "wrapper"
+    }
+  ],
+  "reserves": [
+    {
+      "name": "Short-term U.S. Treasury Bills (via M0 Protocol)",
+      "pct": 100,
+      "risk": "very-low"
+    }
+  ],
+  "liveReservesConfig": {
+    "adapter": "m0",
+    "version": 1,
+    "semantics": "protocol-reserve",
+    "breakerScope": "m0",
+    "display": {
+      "url": "https://dashboard.m0.org/",
+      "label": "M0 Dashboard"
+    },
+    "inputs": {
+      "primary": {
+        "kind": "http-json",
+        "url": "https://protocol-api.m0.org/graphql"
+      }
+    }
+  }
+}

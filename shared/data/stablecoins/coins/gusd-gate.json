@@ -1,0 +1,81 @@
+{
+  "id": "gusd-gate",
+  "name": "Gate USD",
+  "symbol": "GUSD",
+  "flags": {
+    "backing": "rwa-backed",
+    "pegCurrency": "USD",
+    "governance": "centralized",
+    "yieldBearing": false,
+    "rwa": false,
+    "navToken": false
+  },
+  "collateral": "Short-term U.S. Treasury bonds and stablecoin-backed yield instruments held by Gate; users mint GUSD 1:1 by staking USDT or USDC",
+  "pegMechanism": "1:1 mint by staking USDT or USDC on Gate; upon redemption, users receive USDC equal to principal plus accrued interest; GUSD is yield-bearing — appreciation is baked in at redemption",
+  "llamaId": "306",
+  "detailProvider": "defillama",
+  "geckoId": "gusd",
+  "cmcSlug": "gatechain-token",
+  "proofOfReserves": {
+    "type": "self-reported",
+    "url": "https://www.gate.com/gusd",
+    "provider": "Gate"
+  },
+  "links": [
+    {
+      "label": "Website",
+      "url": "https://www.gate.com/gusd"
+    },
+    {
+      "label": "Twitter",
+      "url": "https://x.com/Gate"
+    }
+  ],
+  "jurisdiction": {
+    "country": "Cayman Islands"
+  },
+  "contracts": [
+    {
+      "chain": "ethereum",
+      "address": "0xaf6186b3521b60e27396b5d23b48abc34bf585c5",
+      "decimals": 6
+    }
+  ],
+  "collateralQuality": "exotic",
+  "custodyModel": "cex",
+  "reserves": [
+    {
+      "name": "Short-term U.S. Treasury bonds",
+      "pct": 70,
+      "risk": "very-low"
+    },
+    {
+      "name": "USDT/USDC deposits (minting collateral)",
+      "pct": 25,
+      "risk": "low",
+      "coinId": "usdt-tether"
+    },
+    {
+      "name": "Yield strategies (CEX-managed, undisclosed composition)",
+      "pct": 5,
+      "risk": "high"
+    }
+  ],
+  "liveReservesConfig": {
+    "adapter": "curated-validated",
+    "version": 1,
+    "semantics": "collateral-mix",
+    "breakerScope": "gusd-gate",
+    "display": {
+      "url": "https://www.gate.com/gusd",
+      "label": "Gate USD"
+    },
+    "inputs": {
+      "primary": {
+        "kind": "onchain-evm",
+        "chain": "ethereum",
+        "rpcMode": "public-rpc"
+      }
+    }
+  }
+}

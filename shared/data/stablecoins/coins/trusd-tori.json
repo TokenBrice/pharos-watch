@@ -1,0 +1,107 @@
+{
+  "id": "trusd-tori",
+  "name": "Tori trUSD",
+  "symbol": "trUSD",
+  "flags": {
+    "backing": "crypto-backed",
+    "pegCurrency": "USD",
+    "governance": "centralized-dependent",
+    "yieldBearing": true,
+    "rwa": false,
+    "navToken": false
+  },
+  "collateral": "Delta-neutral trading positions across global markets: hedged money markets, futures arbitrage, calendar spreads, and options strategies; all positions backed by USDC and USDT deposits with real-time verification via Accountable DVN",
+  "pegMechanism": "1:1 mint and redeem against USDC or USDT with 0.1% fee; peg maintained by arbitrage incentives and delta-neutral portfolio construction offsetting directional exposure",
+  "detailProvider": "defillama",
+  "proofOfReserves": {
+    "type": "real-time",
+    "url": "https://tori.finance/",
+    "provider": "Accountable"
+  },
+  "links": [
+    {
+      "label": "Website",
+      "url": "https://tori.finance/"
+    },
+    {
+      "label": "Twitter",
+      "url": "https://x.com/tori_finance"
+    },
+    {
+      "label": "Docs",
+      "url": "https://docs.tori.finance/"
+    },
+    {
+      "label": "App",
+      "url": "https://app.tori.finance/"
+    }
+  ],
+  "status": "pre-launch",
+  "announcedDate": "2026-03",
+  "launchPhase": "beta",
+  "launchPhaseDetail": "Dual audits completed (Sherlock Jan 2026, Nethermind Mar 2026); seed round led by Delphi Ventures announced Mar 25; contract addresses still TBA in docs; app not yet live; not tracked on DefiLlama or CoinGecko",
+  "featuredContent": [
+    {
+      "type": "tweet",
+      "url": "https://x.com/tori_finance/status/2036533806774231309",
+      "title": "Tori Finance launch announcement",
+      "description": "Tori wraps institutional strategies into strUSD — a liquid, composable, yield-bearing token backed by delta-neutral positions verified in real time.",
+      "source": "X / @tori_finance"
+    },
+    {
+      "type": "article",
+      "url": "https://cryip.co/tori-secures-backing-from-delphi-ventures-for-on-chain-yield-protocol/",
+      "title": "Tori Secures Backing from Delphi Ventures",
+      "description": "Tori Finance raises seed funding from Delphi Ventures to bring institutional yield on-chain through trUSD.",
+      "source": "Cryip"
+    }
+  ],
+  "custodyModel": "onchain",
+  "collateralQuality": "exotic",
+  "governanceQuality": "single-entity",
+  "milestones": [
+    {
+      "date": "2026-01-22",
+      "type": "audit",
+      "title": "Sherlock collaborative audit completed",
+      "description": "Full protocol scope audit covering core protocol, trUSD token, strUSD staking, access control, and oracle integration.",
+      "sourceUrl": "https://github.com/sherlock-protocol/sherlock-reports/blob/main/audits/2026.02.10%20-%20Final%20-%20Tori%20Finance%20Collaborative%20Audit%20Report%201770734349.pdf"
+    },
+    {
+      "date": "2026-03-24",
+      "type": "announcement",
+      "title": "Tori Finance announces trUSD launch on X",
+      "description": "Launch announcement for trUSD and strUSD with mint/redeem via USDC and USDT; ~15% advertised APY from delta-neutral strategies; contracts not yet deployed as of early April.",
+      "sourceUrl": "https://x.com/tori_finance/status/2036533806774231309"
+    },
+    {
+      "date": "2026-03-25",
+      "type": "partnership",
+      "title": "Delphi Ventures leads seed round; QInvest, CMCC Global, Bering Waters also participate",
+      "sourceUrl": "https://cryip.co/tori-secures-backing-from-delphi-ventures-for-on-chain-yield-protocol/"
+    },
+    {
+      "date": "2026-03-26",
+      "type": "audit",
+      "title": "Nethermind security review completed",
+      "description": "Full protocol scope security review; all findings addressed.",
+      "sourceUrl": "https://github.com/NethermindEth/PublicAuditReports/blob/main/NM_0854_Tori.pdf"
+    }
+  ],
+  "dependencies": [
+    {
+      "id": "usdc-circle",
+      "weight": 0.5,
+      "type": "collateral"
+    },
+    {
+      "id": "usdt-tether",
+      "weight": 0.5,
+      "type": "collateral"
+    }
+  ],
+  "yieldConfig": {
+    "yieldSource": "Tori staking (strUSD)",
+    "yieldType": "fee-sharing"
+  }
+}

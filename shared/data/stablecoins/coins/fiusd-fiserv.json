@@ -1,0 +1,89 @@
+{
+  "id": "fiusd-fiserv",
+  "name": "Fiserv USD",
+  "symbol": "FIUSD",
+  "flags": {
+    "backing": "rwa-backed",
+    "pegCurrency": "USD",
+    "governance": "centralized-dependent",
+    "yieldBearing": false,
+    "rwa": false,
+    "navToken": false
+  },
+  "detailProvider": "defillama",
+  "links": [
+    {
+      "label": "Website",
+      "url": "https://www.fiserv.com"
+    },
+    {
+      "label": "Twitter",
+      "url": "https://x.com/Fiserv"
+    }
+  ],
+  "jurisdiction": {
+    "country": "United States"
+  },
+  "status": "pre-launch",
+  "announcedDate": "2025-06",
+  "expectedLaunchDate": "2026",
+  "launchPhase": "beta",
+  "launchPhaseDetail": "Platform live; INDX cash settlement launched Feb 2026; StoneCastle acquired; Roughrider pilot approved by ND IC; bank onboarding continues",
+  "featuredContent": [
+    {
+      "type": "article",
+      "url": "https://www.coindesk.com/business/2025/06/23/fiserv-joins-stablecoin-fray-teaming-up-with-circle-paxos-paypal-for-launch-on-solana",
+      "title": "Fiserv Joins Stablecoin Fray, Teaming Up With Circle and Paxos",
+      "description": "Fiserv enters the stablecoin space with FIUSD, a bank-friendly coin built on Solana targeting its network of 10,000 financial institutions and 6 million merchant locations.",
+      "image": "/featured/fiusd-coindesk.jpg",
+      "source": "CoinDesk"
+    }
+  ],
+  "custodyModel": "institutional-regulated",
+  "milestones": [
+    {
+      "date": "2025-06-23",
+      "type": "announcement",
+      "title": "Fiserv announces FIUSD stablecoin on Solana",
+      "description": "FIUSD built for 10,000 financial institution clients and 6 million merchant locations, leveraging Paxos and Circle infrastructure.",
+      "sourceUrl": "https://investors.fiserv.com/newsroom/detail/2848/fiserv-launches-new-fiusd-stablecoin-for-financial-institutions"
+    },
+    {
+      "date": "2025-06-23",
+      "type": "partnership",
+      "title": "Mastercard partnership to integrate FIUSD across 150M+ merchants",
+      "sourceUrl": "https://www.mastercard.com/us/en/news-and-trends/press/2025/june/mastercard-fiserv-stablecoin-adoption.html"
+    },
+    {
+      "date": "2025-06-23",
+      "type": "partnership",
+      "title": "PayPal partnership for FIUSD interoperability",
+      "sourceUrl": "https://investors.fiserv.com/newsroom/detail/2849/fiserv-and-paypal-expand-partnership-to-advance-stablecoin-payments"
+    },
+    {
+      "date": "2025-09-29",
+      "type": "partnership",
+      "title": "StoneCastle acquisition announced to help FIs retain funds from FIUSD issuance",
+      "sourceUrl": "https://investors.fiserv.com/news-releases/news-release-details/fiserv-completes-stonecastle-acquisition-extending-insured"
+    },
+    {
+      "date": "2025-10-08",
+      "type": "partnership",
+      "title": "Fiserv powers Roughrider Coin for Bank of North Dakota",
+      "sourceUrl": "https://investors.fiserv.com/newsroom/detail/2868/bank-of-north-dakota-and-fiserv-partner-to-launch-roughrider-coin-north-dakotas-first-stablecoin"
+    },
+    {
+      "date": "2025-12-17",
+      "type": "milestone",
+      "title": "StoneCastle acquisition completed",
+      "sourceUrl": "https://investors.fiserv.com/news-releases/news-release-details/fiserv-completes-stonecastle-acquisition-extending-insured"
+    },
+    {
+      "date": "2026-02-12",
+      "type": "milestone",
+      "title": "INDX real-time cash settlement platform launched for digital asset firms",
+      "description": "Up to $25M FDIC insurance, distributes across 1,100+ insured financial institutions.",
+      "sourceUrl": "https://investors.fiserv.com/news-releases/news-release-details/fiserv-introduces-indx-real-time-cash-settlement-platform"
+    }
+  ]
+}

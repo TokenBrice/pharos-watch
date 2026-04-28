@@ -1,0 +1,128 @@
+{
+  "id": "buidl-blackrock",
+  "name": "BlackRock USD",
+  "symbol": "BUIDL",
+  "flags": {
+    "backing": "rwa-backed",
+    "pegCurrency": "USD",
+    "governance": "centralized",
+    "yieldBearing": true,
+    "rwa": true,
+    "navToken": false
+  },
+  "collateral": "Cash, U.S. Treasury bills, and repurchase agreements held by Bank of New York Mellon as custodian; tokenized and administered by Securitize",
+  "pegMechanism": "NAV-based pricing with institutional redemption through BlackRock/Securitize",
+  "llamaId": "173",
+  "detailProvider": "defillama",
+  "geckoId": "blackrock-usd-institutional-digital-liquidity-fund",
+  "proofOfReserves": {
+    "type": "self-reported",
+    "url": "https://securitize.io/blackrock/buidl",
+    "provider": "Bank of New York Mellon"
+  },
+  "links": [
+    {
+      "label": "Website",
+      "url": "https://securitize.io/blackrock/buidl"
+    },
+    {
+      "label": "Twitter",
+      "url": "https://x.com/BlackRock"
+    }
+  ],
+  "jurisdiction": {
+    "country": "British Virgin Islands",
+    "regulator": "SEC (Reg D)",
+    "license": "Regulation D Exemption"
+  },
+  "contracts": [
+    {
+      "chain": "ethereum",
+      "address": "0x7712c34205737192402172409a8f7ccef8aa2aec",
+      "decimals": 6
+    },
+    {
+      "chain": "bsc",
+      "address": "0x2d5bdc96d9c8aabbdb38c9a27398513e7e5ef84f",
+      "decimals": 6
+    },
+    {
+      "chain": "optimism",
+      "address": "0xa1cdab15bba75a80df4089cafba013e376957cf5",
+      "decimals": 6
+    },
+    {
+      "chain": "arbitrum",
+      "address": "0xa6525ae43edcd03dc08e775774dcabd3bb925872",
+      "decimals": 6
+    },
+    {
+      "chain": "avalanche",
+      "address": "0x53fc82f14f009009b440a706e31c9021e1196a2f",
+      "decimals": 6
+    },
+    {
+      "chain": "polygon",
+      "address": "0x2893ef551b6dd69f661ac00f11d93e5dc5dc0e99",
+      "decimals": 6
+    },
+    {
+      "chain": "solana",
+      "address": "GyWgeqpy5GueU2YbkE8xqUeVEokCMMCEeUrfbtMw6phr",
+      "decimals": 6
+    },
+    {
+      "chain": "aptos",
+      "address": "0x50038be55be5b964cfa32cf128b5cf05f123959f286b4cc02b86cafd48945f89",
+      "decimals": 6
+    }
+  ],
+  "deploymentModel": "third-party-bridge",
+  "custodyModel": "institutional-top",
+  "reserves": [
+    {
+      "name": "U.S. Treasury Bills",
+      "pct": 60,
+      "risk": "very-low"
+    },
+    {
+      "name": "Overnight Repos",
+      "pct": 30,
+      "risk": "very-low"
+    },
+    {
+      "name": "Cash",
+      "pct": 10,
+      "risk": "very-low"
+    }
+  ],
+  "liveReservesConfig": {
+    "adapter": "chainlink-nav",
+    "version": 1,
+    "semantics": "single-asset",
+    "breakerScope": "buidl-blackrock",
+    "display": {
+      "url": "https://data.chain.link/feeds/ethereum/mainnet/buidl-nav",
+      "label": "Chainlink BUIDL NAV"
+    },
+    "inputs": {
+      "primary": {
+        "kind": "onchain-evm",
+        "chain": "ethereum",
+        "rpcMode": "etherscan-proxy"
+      }
+    },
+    "params": {
+      "oracleAddress": "0x6029F53A5Df21E5e70C460F5E4c9Aad20427B090",
+      "tokenAddress": "0x7712c34205737192402172409a8f7ccef8aa2aec",
+      "assetLabel": "U.S. Treasury Bills (BUIDL)",
+      "assetRisk": "very-low",
+      "oracleMethod": "latestRoundData",
+      "maxOracleAgeSec": 345600
+    }
+  },
+  "yieldConfig": {
+    "yieldSource": "BlackRock T-bill fund",
+    "yieldType": "nav-appreciation"
+  }
+}

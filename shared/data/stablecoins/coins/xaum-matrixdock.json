@@ -1,0 +1,81 @@
+{
+  "id": "xaum-matrixdock",
+  "name": "Matrixdock Gold",
+  "symbol": "XAUm",
+  "flags": {
+    "backing": "rwa-backed",
+    "pegCurrency": "GOLD",
+    "governance": "centralized",
+    "yieldBearing": false,
+    "rwa": true,
+    "navToken": false
+  },
+  "collateral": "LBMA-certified 99.99% pure gold bars stored in Brink's and Malca-Amit vaults in Singapore and Hong Kong",
+  "pegMechanism": "Direct redemption for physical gold through Matrixdock; minimum 32.148 XAUm (1 kg bar) for physical delivery; available to KYC-verified accredited investors in Singapore and Hong Kong",
+  "commodityOunces": 1,
+  "detailProvider": "commodity",
+  "geckoId": "matrixdock-gold",
+  "proofOfReserves": {
+    "type": "independent-audit",
+    "url": "https://www.matrixdock.com/blog/announcements/matrixdock-publishes-its-second-independent-audit-report-on-xaum-gold",
+    "provider": "Bureau Veritas"
+  },
+  "links": [
+    {
+      "label": "Website",
+      "url": "https://www.matrixdock.com/xaum"
+    },
+    {
+      "label": "Docs",
+      "url": "https://matrixdock.gitbook.io/matrixdock-docs/english/gold-token-xaum"
+    },
+    {
+      "label": "Twitter",
+      "url": "https://x.com/matrixdock"
+    }
+  ],
+  "jurisdiction": {
+    "country": "Singapore"
+  },
+  "contracts": [
+    {
+      "chain": "ethereum",
+      "address": "0x2103e845c5e135493bb6c2a4f0b8651956ea8682",
+      "decimals": 18
+    },
+    {
+      "chain": "bsc",
+      "address": "0x23ae4fd8e7844cdbc97775496ebd0e8248656028",
+      "decimals": 18
+    }
+  ],
+  "custodyModel": "institutional-regulated",
+  "reserves": [
+    {
+      "name": "Physical gold bars (LBMA-certified 99.99%, Brink's & Malca-Amit, Singapore & Hong Kong)",
+      "pct": 100,
+      "risk": "very-low"
+    }
+  ],
+  "liveReservesConfig": {
+    "adapter": "single-asset",
+    "version": 1,
+    "semantics": "single-asset",
+    "breakerScope": "xaum-matrixdock",
+    "display": {
+      "url": "https://www.matrixdock.com/xaum",
+      "label": "Matrixdock"
+    },
+    "inputs": {
+      "primary": {
+        "kind": "onchain-evm",
+        "chain": "ethereum",
+        "rpcMode": "public-rpc"
+      }
+    },
+    "params": {
+      "label": "Physical gold bars (LBMA 99.99%)",
+      "risk": "very-low"
+    }
+  }
+}

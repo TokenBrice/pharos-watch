@@ -1,0 +1,78 @@
+{
+  "id": "dgld-gold-token-sa",
+  "name": "DGLD Tokenized Gold",
+  "symbol": "DGLD",
+  "flags": {
+    "backing": "rwa-backed",
+    "pegCurrency": "GOLD",
+    "governance": "centralized",
+    "yieldBearing": false,
+    "rwa": true,
+    "navToken": false
+  },
+  "collateral": "LBMA Good Delivery PAMP® gold bars allocated in insured Swiss vaults operated by MKS PAMP SA (1 DGLD = 1 troy ounce)",
+  "pegMechanism": "Direct 1:1 redemption for physical PAMP® gold through Gold Token SA; minimum 1 gram, no custody or transfer fees",
+  "commodityOunces": 1,
+  "detailProvider": "commodity",
+  "geckoId": "gold-token-sa-dgld-tokenized-gold",
+  "proofOfReserves": {
+    "type": "real-time",
+    "url": "https://explorer.dgld.ch/",
+    "provider": "MKS PAMP (bar serial numbers + independent physical audits)"
+  },
+  "links": [
+    {
+      "label": "Website",
+      "url": "https://dgld.ch/"
+    },
+    {
+      "label": "Twitter",
+      "url": "https://x.com/DGLD_Official"
+    }
+  ],
+  "jurisdiction": {
+    "country": "Switzerland",
+    "regulator": "VQF (FINMA SRO)"
+  },
+  "contracts": [
+    {
+      "chain": "ethereum",
+      "address": "0xa9299c296d7830a99414d1e5546f5171fa01e9c8",
+      "decimals": 18
+    },
+    {
+      "chain": "base",
+      "address": "0xd02f50e1017f493ffffa70c8fcf09e349e11d6c9",
+      "decimals": 18
+    }
+  ],
+  "custodyModel": "institutional-regulated",
+  "reserves": [
+    {
+      "name": "Allocated LBMA Good Delivery PAMP gold (Swiss vaults)",
+      "pct": 100,
+      "risk": "very-low"
+    }
+  ],
+  "liveReservesConfig": {
+    "adapter": "single-asset",
+    "version": 1,
+    "semantics": "single-asset",
+    "breakerScope": "dgld-gold-token-sa",
+    "display": {
+      "url": "https://dgld.ch/",
+      "label": "DGLD Official"
+    },
+    "inputs": {
+      "primary": {
+        "kind": "onchain-evm",
+        "chain": "ethereum",
+        "rpcMode": "public-rpc"
+      }
+    },
+    "params": {
+      "label": "Allocated LBMA gold bars (PAMP SA vaults)",
+      "risk": "very-low"
+    }
+  }
+}

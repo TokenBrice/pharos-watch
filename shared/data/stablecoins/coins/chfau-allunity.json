@@ -1,0 +1,77 @@
+{
+  "id": "chfau-allunity",
+  "name": "AllUnity CHF",
+  "symbol": "CHFAU",
+  "flags": {
+    "backing": "rwa-backed",
+    "pegCurrency": "CHF",
+    "governance": "centralized",
+    "yieldBearing": false,
+    "rwa": false,
+    "navToken": false
+  },
+  "collateral": "CHF-denominated reserves held 1:1 at CRR credit institutions within the EU in segregated accounts; not used for lending or investment",
+  "pegMechanism": "Direct 1:1 redemption through AllUnity; holders have statutory right of redemption at par value under MiCA Article 49; mint and redeem via AllUnity platform with straight-through processing",
+  "detailProvider": "coingecko",
+  "geckoId": "allunity-chf",
+  "canBeBlacklisted": true,
+  "proofOfReserves": {
+    "type": "self-reported",
+    "url": "https://allunity.com/trust-center/"
+  },
+  "links": [
+    {
+      "label": "Website",
+      "url": "https://allunity.com/chfau/"
+    },
+    {
+      "label": "Twitter",
+      "url": "https://x.com/AllUnityStable"
+    },
+    {
+      "label": "Whitepaper",
+      "url": "https://allunity.com/whitepaper/"
+    }
+  ],
+  "jurisdiction": {
+    "country": "Germany",
+    "regulator": "BaFin",
+    "license": "EMI (MiCA)"
+  },
+  "contracts": [
+    {
+      "chain": "ethereum",
+      "address": "0xbd4dfc058eb95b8de5ceaf39966a1a70f5556f78",
+      "decimals": 6
+    }
+  ],
+  "custodyModel": "institutional-regulated",
+  "reserves": [
+    {
+      "name": "CHF bank deposits (CRR credit institutions, EU)",
+      "pct": 100,
+      "risk": "very-low"
+    }
+  ],
+  "liveReservesConfig": {
+    "adapter": "single-asset",
+    "version": 1,
+    "semantics": "single-asset",
+    "breakerScope": "chfau-allunity",
+    "display": {
+      "url": "https://allunity.com/trust-center/",
+      "label": "AllUnity Trust Center"
+    },
+    "inputs": {
+      "primary": {
+        "kind": "onchain-evm",
+        "chain": "ethereum",
+        "rpcMode": "public-rpc"
+      }
+    },
+    "params": {
+      "label": "CHF bank deposits (CRR institutions)",
+      "risk": "very-low"
+    }
+  }
+}

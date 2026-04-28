@@ -1,0 +1,89 @@
+{
+  "id": "eurcv-societe-generale-forge",
+  "name": "EUR CoinVertible",
+  "symbol": "EURCV",
+  "flags": {
+    "backing": "rwa-backed",
+    "pegCurrency": "EUR",
+    "governance": "centralized",
+    "yieldBearing": false,
+    "rwa": false,
+    "navToken": false
+  },
+  "collateral": "Euro-denominated cash deposits and high-quality securities held in a segregated fiduciary estate at Societe Generale, with daily public disclosure of reserve composition",
+  "pegMechanism": "Direct 1:1 redemption through SG-FORGE",
+  "llamaId": "254",
+  "detailProvider": "defillama",
+  "geckoId": "societe-generale-forge-eurcv",
+  "pythFeedId": "0x61162fa272ef591637241b80887bad05a3aac7590424541707171cc1dbea6e74",
+  "proofOfReserves": {
+    "type": "self-reported",
+    "url": "https://www.sgforge.com/product/coinvertible/",
+    "provider": "SG-FORGE"
+  },
+  "links": [
+    {
+      "label": "Website",
+      "url": "https://www.sgforge.com/product/coinvertible/"
+    },
+    {
+      "label": "Twitter",
+      "url": "https://x.com/SG_Forge"
+    }
+  ],
+  "jurisdiction": {
+    "country": "France",
+    "regulator": "ACPR",
+    "license": "EMI (MiCA)"
+  },
+  "contracts": [
+    {
+      "chain": "ethereum",
+      "address": "0x5f7827fdeb7c20b443265fc2f40845b715385ff2",
+      "decimals": 18
+    },
+    {
+      "chain": "xrpl",
+      "address": "4555524356000000000000000000000000000000.rUNaS5sqRuxZz6V7rBGhoSaZiVYA3ut4UL",
+      "decimals": 0
+    },
+    {
+      "chain": "stellar",
+      "address": "GCEYGIVOLAVBF2TG2RUSGTUJCIN75KEX3NGLMY4VPL4GFE5L355AXW3G",
+      "decimals": 7
+    },
+    {
+      "chain": "solana",
+      "address": "DghpMkatCiUsofbTmid3M3kAbDTPqDwKiYHnudXeGG52",
+      "decimals": 2
+    }
+  ],
+  "deploymentModel": "native-multichain",
+  "custodyModel": "institutional-top",
+  "reserves": [
+    {
+      "name": "Euro cash deposits at Societe Generale",
+      "pct": 100,
+      "risk": "very-low"
+    }
+  ],
+  "liveReservesConfig": {
+    "adapter": "sgforge-coinvertible",
+    "version": 1,
+    "semantics": "attestation-mix",
+    "breakerScope": "eurcv-societe-generale-forge",
+    "display": {
+      "url": "https://www.sgforge.com/product/coinvertible/",
+      "label": "SG Forge CoinVertible"
+    },
+    "inputs": {
+      "primary": {
+        "kind": "http-html",
+        "url": "https://www.sgforge.com/product/coinvertible/"
+      }
+    },
+    "params": {
+      "coinType": "eur"
+    }
+  }
+}

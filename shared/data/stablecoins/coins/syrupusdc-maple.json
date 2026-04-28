@@ -1,0 +1,88 @@
+{
+  "id": "syrupusdc-maple",
+  "name": "Maple syrupUSDC",
+  "symbol": "syrupUSDC",
+  "flags": {
+    "backing": "rwa-backed",
+    "pegCurrency": "USD",
+    "governance": "centralized-dependent",
+    "yieldBearing": true,
+    "rwa": false,
+    "navToken": true
+  },
+  "collateral": "USDC deposits lent to institutional borrowers via overcollateralized, fixed-rate loans on Maple Finance",
+  "pegMechanism": "ERC-4626 vault; USDC deposited into Maple lending pools, NAV appreciates with accrued interest; protocol withdrawals are requested onchain and serviced through a FIFO queue as liquidity becomes available",
+  "detailProvider": "coingecko",
+  "geckoId": "syrupusdc",
+  "pythFeedId": "0xe616297dab48626eaacf6d030717b25823b13ae6520b83f4735bf8deec8e2c9a",
+  "links": [
+    {
+      "label": "Website",
+      "url": "https://maple.finance/"
+    },
+    {
+      "label": "Twitter",
+      "url": "https://x.com/maplefinance"
+    }
+  ],
+  "contracts": [
+    {
+      "chain": "ethereum",
+      "address": "0x80ac24aa929eaf5013f6436cda2a7ba190f5cc0b",
+      "decimals": 6
+    },
+    {
+      "chain": "base",
+      "address": "0x660975730059246a68521a3e2fbd4740173100f5",
+      "decimals": 6
+    },
+    {
+      "chain": "arbitrum",
+      "address": "0x41ca7586cc1311807b4605fbb748a3b8862b42b5",
+      "decimals": 6
+    }
+  ],
+  "deploymentModel": "third-party-bridge",
+  "collateralQuality": "rwa",
+  "custodyModel": "onchain",
+  "governanceQuality": "wrapper",
+  "reserves": [
+    {
+      "name": "USDC (deployed as overcollateralized institutional loans)",
+      "pct": 100,
+      "risk": "medium",
+      "coinId": "usdc-circle",
+      "depType": "wrapper"
+    }
+  ],
+  "liveReservesConfig": {
+    "adapter": "erc4626-single-asset",
+    "version": 1,
+    "semantics": "single-asset",
+    "breakerScope": "syrupusdc-maple",
+    "display": {
+      "url": "https://app.maple.finance/earn",
+      "label": "Maple App"
+    },
+    "inputs": {
+      "primary": {
+        "kind": "onchain-evm",
+        "chain": "ethereum",
+        "rpcMode": "alchemy"
+      }
+    },
+    "params": {
+      "slice": {
+        "name": "USDC-denominated loan receivables",
+        "risk": "medium",
+        "coinId": "usdc-circle",
+        "depType": "wrapper",
+        "expectedAssetAddress": "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48"
+      }
+    }
+  },
+  "yieldConfig": {
+    "yieldSource": "Maple Finance lending",
+    "yieldType": "nav-appreciation"
+  }
+}

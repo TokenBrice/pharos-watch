@@ -1,0 +1,83 @@
+{
+  "id": "aeur-anchored-coins",
+  "name": "Anchored Coins AEUR",
+  "symbol": "AEUR",
+  "flags": {
+    "backing": "rwa-backed",
+    "pegCurrency": "EUR",
+    "governance": "centralized",
+    "yieldBearing": false,
+    "rwa": false,
+    "navToken": false
+  },
+  "collateral": "Euro reserves held 1:1 at Swissquote Bank SA (FINMA-licensed Swiss bank)",
+  "pegMechanism": "Direct 1:1 redemption through Anchored Coins",
+  "llamaId": "147",
+  "detailProvider": "defillama",
+  "geckoId": "anchored-coins-eur",
+  "links": [
+    {
+      "label": "Website",
+      "url": "https://www.anchoredcoins.com/en/landing/aeur"
+    },
+    {
+      "label": "Twitter",
+      "url": "https://x.com/AnchoredCoins"
+    }
+  ],
+  "jurisdiction": {
+    "country": "Switzerland",
+    "regulator": "VQF (FINMA-recognized SRO)",
+    "license": "SRO Member"
+  },
+  "contracts": [
+    {
+      "chain": "ethereum",
+      "address": "0xa40640458fbc27b6eefedea1e9c9e17d4cee7a21",
+      "decimals": 18
+    },
+    {
+      "chain": "bsc",
+      "address": "0xa40640458fbc27b6eefedea1e9c9e17d4cee7a21",
+      "decimals": 18
+    }
+  ],
+  "deploymentModel": "native-multichain",
+  "custodyModel": "institutional-regulated",
+  "reserves": [
+    {
+      "name": "Euro deposits at Swissquote Bank SA",
+      "pct": 85,
+      "risk": "very-low"
+    },
+    {
+      "name": "Euro deposits at FlowBank SA (bankruptcy recovery)",
+      "pct": 15,
+      "risk": "high"
+    }
+  ],
+  "notices": [
+    {
+      "type": "danger",
+      "title": "Winding down",
+      "message": "FlowBank SA (reserve partner) declared bankruptcy in June 2024. A portion of AEUR collateral is locked in bankruptcy proceedings. Anchored Coins has ceased new issuance and was delisted from Binance EEA in March 2025."
+    }
+  ],
+  "liveReservesConfig": {
+    "adapter": "curated-validated",
+    "version": 1,
+    "semantics": "collateral-mix",
+    "breakerScope": "aeur-anchored-coins",
+    "display": {
+      "url": "https://www.anchoredcoins.com/en/landing/aeur",
+      "label": "Anchored Coins"
+    },
+    "inputs": {
+      "primary": {
+        "kind": "onchain-evm",
+        "chain": "ethereum",
+        "rpcMode": "public-rpc"
+      }
+    }
+  }
+}

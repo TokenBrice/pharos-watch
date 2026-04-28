@@ -1,0 +1,97 @@
+{
+  "id": "usdp-paxos",
+  "name": "Pax Dollar",
+  "symbol": "USDP",
+  "flags": {
+    "backing": "rwa-backed",
+    "pegCurrency": "USD",
+    "governance": "centralized",
+    "yieldBearing": false,
+    "rwa": false,
+    "navToken": false
+  },
+  "collateral": "Cash in FDIC-insured bank accounts and U.S. Treasury bills (including overnight reverse repos and T-bill money market funds) held in segregated, bankruptcy-remote accounts",
+  "pegMechanism": "Direct 1:1 redemption through Paxos",
+  "llamaId": "11",
+  "detailProvider": "defillama",
+  "geckoId": "paxos-standard",
+  "cmcSlug": "pax-dollar",
+  "pythFeedId": "0xa6c8eca9aea31d6bb81fd6576638f30692d4afaa73237c097c193477aa5003b3",
+  "proofOfReserves": {
+    "type": "independent-audit",
+    "url": "https://www.paxos.com/usdp-transparency",
+    "provider": "KPMG"
+  },
+  "links": [
+    {
+      "label": "Website",
+      "url": "https://www.paxos.com/usdp"
+    },
+    {
+      "label": "Docs",
+      "url": "https://docs.paxos.com/guides/stablecoin/usdp"
+    },
+    {
+      "label": "Twitter",
+      "url": "https://x.com/paxos"
+    }
+  ],
+  "jurisdiction": {
+    "country": "United States",
+    "regulator": "OCC",
+    "license": "National Trust Charter"
+  },
+  "contracts": [
+    {
+      "chain": "ethereum",
+      "address": "0x8e870d67f660d95d5be530380d0ec0bd388289e1",
+      "decimals": 18
+    },
+    {
+      "chain": "solana",
+      "address": "HVbpJAQGNpkgBaYBZQBR1t7yFdvaYVp2vCQQfKKEN4tM",
+      "decimals": 6
+    },
+    {
+      "chain": "bsc",
+      "address": "0xb7f8cd00c5a06c0537e2abff0b58033d02e5e094",
+      "decimals": 18
+    }
+  ],
+  "deploymentModel": "native-multichain",
+  "custodyModel": "institutional-top",
+  "reserves": [
+    {
+      "name": "U.S. Treasury bills (<90 day maturity)",
+      "pct": 60,
+      "risk": "very-low"
+    },
+    {
+      "name": "Overnight reverse repos (secured by Treasuries)",
+      "pct": 20,
+      "risk": "very-low"
+    },
+    {
+      "name": "Cash in FDIC-insured bank accounts",
+      "pct": 20,
+      "risk": "very-low"
+    }
+  ],
+  "liveReservesConfig": {
+    "adapter": "curated-validated",
+    "version": 1,
+    "semantics": "attestation-mix",
+    "breakerScope": "usdp-paxos",
+    "display": {
+      "url": "https://www.paxos.com/usdp-transparency",
+      "label": "Paxos Transparency"
+    },
+    "inputs": {
+      "primary": {
+        "kind": "onchain-evm",
+        "chain": "ethereum",
+        "rpcMode": "public-rpc"
+      }
+    }
+  }
+}

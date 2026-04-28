@@ -1,0 +1,182 @@
+{
+  "id": "usnd-nerite",
+  "name": "Nerite USND",
+  "symbol": "USND",
+  "flags": {
+    "backing": "crypto-backed",
+    "pegCurrency": "USD",
+    "governance": "decentralized",
+    "yieldBearing": false,
+    "rwa": false,
+    "navToken": false
+  },
+  "collateral": "tBTC, WETH, wstETH, rETH, rsETH, weETH, ARB, and COMP in immutable overcollateralized CDP markets on Arbitrum",
+  "pegMechanism": "Overcollateralized CDP with user-set interest rates and direct on-chain redemption for underlying collateral; separate Stability Pools absorb liquidations per collateral market",
+  "llamaId": "287",
+  "detailProvider": "defillama",
+  "geckoId": "us-nerite-dollar",
+  "links": [
+    {
+      "label": "Website",
+      "url": "https://www.nerite.org/"
+    },
+    {
+      "label": "Twitter",
+      "url": "https://x.com/NeriteOrg"
+    },
+    {
+      "label": "Docs",
+      "url": "https://docs.nerite.org/"
+    },
+    {
+      "label": "GitHub",
+      "url": "https://github.com/NeriteOrg/nerite"
+    }
+  ],
+  "contracts": [
+    {
+      "chain": "arbitrum",
+      "address": "0x4ecf61a6c2fab8a047ceb3b3b263b401763e9d49",
+      "decimals": 18
+    }
+  ],
+  "chainTier": "stage1-l2",
+  "collateralQuality": "alt-lst-bridged-or-mixed",
+  "governanceQuality": "immutable-code",
+  "infrastructures": [
+    "liquity-v2"
+  ],
+  "reserves": [
+    {
+      "name": "tBTC",
+      "pct": 86.5,
+      "risk": "medium"
+    },
+    {
+      "name": "rETH (Rocket Pool)",
+      "pct": 10.2,
+      "risk": "low"
+    },
+    {
+      "name": "WETH",
+      "pct": 2.1,
+      "risk": "very-low"
+    },
+    {
+      "name": "wstETH (Lido)",
+      "pct": 1,
+      "risk": "low"
+    },
+    {
+      "name": "Other collateral (ARB, rsETH, weETH, COMP)",
+      "pct": 0.2,
+      "risk": "high"
+    }
+  ],
+  "liveReservesConfig": {
+    "adapter": "liquity-v2-branches",
+    "version": 1,
+    "semantics": "collateral-mix",
+    "breakerScope": "usnd-nerite",
+    "display": {
+      "url": "https://www.nerite.org/",
+      "label": "Website"
+    },
+    "inputs": {
+      "primary": {
+        "kind": "onchain-evm",
+        "chain": "arbitrum",
+        "rpcMode": "alchemy"
+      }
+    },
+    "params": {
+      "rpcUrl": "https://arb1.arbitrum.io/rpc",
+      "redemptionRateProbe": {
+        "contract": "0x7f7fbc2711c0d6e8ef757dbb82038032dd168e68",
+        "selector": "0xc52861f2"
+      },
+      "branches": [
+        {
+          "name": "tBTC",
+          "holder": "0x620fe90b1eacaea936ea199e7b05f998ca65836a",
+          "token": {
+            "chain": "arbitrum",
+            "address": "0x6c84a8f1c29108f47a79964b5fe888d4f4d0de40",
+            "decimals": 18
+          },
+          "risk": "medium"
+        },
+        {
+          "name": "WETH",
+          "holder": "0x9981abdbc8af32f8e660314b3497e4033e15f054",
+          "token": {
+            "chain": "arbitrum",
+            "address": "0x82af49447d8a07e3bd95bd0d56f35241523fbab1",
+            "decimals": 18
+          },
+          "risk": "very-low"
+        },
+        {
+          "name": "wstETH (Lido)",
+          "holder": "0xfb002caf4d75061959cb40a0b6c294f9b6a86e82",
+          "token": {
+            "chain": "arbitrum",
+            "address": "0x5979d7b546e38e414f7e9822514be443a4800529",
+            "decimals": 18
+          },
+          "risk": "low"
+        },
+        {
+          "name": "rETH (Rocket Pool)",
+          "holder": "0xbc86903e82cd5d815e595e4a0de9b2b7ba9a2042",
+          "token": {
+            "chain": "arbitrum",
+            "address": "0xec70dcb4a1efa46b8f2d97c310c9c4790ba5ffa8",
+            "decimals": 18
+          },
+          "risk": "low"
+        },
+        {
+          "name": "rsETH",
+          "holder": "0x268dc0089d71a89800f3f4aaa3f9a7f0a950c7a7",
+          "token": {
+            "chain": "arbitrum",
+            "address": "0x4186bfc76e2e237523cbc30fd220fe055156b41f",
+            "decimals": 18
+          },
+          "risk": "high"
+        },
+        {
+          "name": "weETH",
+          "holder": "0x7bb26e1e65e41c96bf4b56c6b9037391bcaa04c5",
+          "token": {
+            "chain": "arbitrum",
+            "address": "0x35751007a407ca6feffe80b3cb397736d2cf4dbe",
+            "decimals": 18
+          },
+          "risk": "high"
+        },
+        {
+          "name": "ARB",
+          "holder": "0xff27f56681613dbd002ee89ec895ec2e39ea8d3a",
+          "token": {
+            "chain": "arbitrum",
+            "address": "0x912ce59144191c1204e64559fe8253a0e49e6548",
+            "decimals": 18
+          },
+          "risk": "high"
+        },
+        {
+          "name": "COMP",
+          "holder": "0xc26ff6e1edabafba55ba18854cbc9706b2ec0543",
+          "token": {
+            "chain": "arbitrum",
+            "address": "0x354a6da3fcde098f8389cad84b0182725c6c91de",
+            "decimals": 18
+          },
+          "risk": "high"
+        }
+      ]
+    }
+  }
+}

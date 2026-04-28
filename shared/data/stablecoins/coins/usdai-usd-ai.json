@@ -1,0 +1,88 @@
+{
+  "id": "usdai-usd-ai",
+  "name": "USD.AI",
+  "symbol": "USDai",
+  "flags": {
+    "backing": "rwa-backed",
+    "pegCurrency": "USD",
+    "governance": "centralized-dependent",
+    "yieldBearing": false,
+    "rwa": false,
+    "navToken": false
+  },
+  "infrastructures": [
+    "m0"
+  ],
+  "collateral": "PYUSD (PayPal USD) reserves used as the liquid settlement layer for USD.AI's base stablecoin mint and redeem rail",
+  "pegMechanism": "Minted and redeemed through the USD.AI platform on a stablecoin/PYUSD rail; base USDai is the liquid, non-yielding token, while staking into sUSDai is a separate queued yield product",
+  "llamaId": "309",
+  "detailProvider": "defillama",
+  "geckoId": "usdai",
+  "pythFeedId": "0x2062b35e2893383ffcd1699b01622618fec1d95d1bc6fa81111df38940ee3134",
+  "links": [
+    {
+      "label": "Website",
+      "url": "https://usd.ai/"
+    },
+    {
+      "label": "Twitter",
+      "url": "https://x.com/USDai_Official"
+    },
+    {
+      "label": "Docs",
+      "url": "https://docs.usd.ai"
+    }
+  ],
+  "jurisdiction": {
+    "country": "United States"
+  },
+  "contracts": [
+    {
+      "chain": "ethereum",
+      "address": "0x0a1a1a107e45b7ced86833863f482bc5f4ed82ef",
+      "decimals": 18
+    },
+    {
+      "chain": "arbitrum",
+      "address": "0x0a1a1a107e45b7ced86833863f482bc5f4ed82ef",
+      "decimals": 18
+    },
+    {
+      "chain": "base",
+      "address": "0x0a1a1a107e45b7ced86833863f482bc5f4ed82ef",
+      "decimals": 18
+    },
+    {
+      "chain": "plasma",
+      "address": "0x0a1a1a107e45b7ced86833863f482bc5f4ed82ef",
+      "decimals": 18
+    }
+  ],
+  "deploymentModel": "third-party-bridge",
+  "custodyModel": "institutional-regulated",
+  "reserves": [
+    {
+      "name": "PYUSD (PayPal USD)",
+      "pct": 100,
+      "risk": "low",
+      "coinId": "pyusd-paypal"
+    }
+  ],
+  "liveReservesConfig": {
+    "adapter": "curated-validated",
+    "version": 2,
+    "semantics": "single-asset",
+    "breakerScope": "usdai-usd-ai",
+    "display": {
+      "url": "https://usd.ai/usdai",
+      "label": "USD.AI USDai"
+    },
+    "inputs": {
+      "primary": {
+        "kind": "onchain-evm",
+        "chain": "arbitrum",
+        "rpcMode": "public-rpc"
+      }
+    }
+  }
+}

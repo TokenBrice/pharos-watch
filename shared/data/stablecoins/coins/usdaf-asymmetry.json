@@ -1,0 +1,100 @@
+{
+  "id": "usdaf-asymmetry",
+  "name": "Asymmetry USDaf",
+  "symbol": "USDaf",
+  "flags": {
+    "backing": "crypto-backed",
+    "pegCurrency": "USD",
+    "governance": "decentralized",
+    "yieldBearing": false,
+    "rwa": false,
+    "navToken": false
+  },
+  "collateral": "wBTC, tBTC, sUSDS, sfrxUSD, scrvUSD, and ysyBOLD in immutable overcollateralized CDP markets on Ethereum",
+  "pegMechanism": "Overcollateralized CDP with Liquity v2-style redemptions and user-set interest rates; the hard redemption floor is effectively $0.995 because Liquity v2 deployments include a 0.5% fee floor",
+  "llamaId": "295",
+  "detailProvider": "defillama",
+  "geckoId": "asymmetry-usdaf-2",
+  "links": [
+    {
+      "label": "Website",
+      "url": "https://www.asymmetry.finance/"
+    },
+    {
+      "label": "Twitter",
+      "url": "https://x.com/asymmetryfin"
+    },
+    {
+      "label": "Docs",
+      "url": "https://docs.asymmetry.finance/"
+    }
+  ],
+  "contracts": [
+    {
+      "chain": "ethereum",
+      "address": "0x9cf12ccd6020b6888e4d4c4e4c7aca33c1eb91f8",
+      "decimals": 18
+    }
+  ],
+  "collateralQuality": "alt-lst-bridged-or-mixed",
+  "governanceQuality": "immutable-code",
+  "infrastructures": [
+    "liquity-v2"
+  ],
+  "reserves": [
+    {
+      "name": "ysyBOLD (Yearn savings BOLD)",
+      "pct": 65.4,
+      "risk": "medium",
+      "coinId": "bold-liquity",
+      "depType": "wrapper"
+    },
+    {
+      "name": "scrvUSD (Savings crvUSD)",
+      "pct": 22.5,
+      "risk": "medium",
+      "coinId": "crvusd-curve",
+      "depType": "wrapper"
+    },
+    {
+      "name": "sUSDS (Sky savings USDS)",
+      "pct": 7.4,
+      "risk": "low",
+      "coinId": "usds-sky",
+      "depType": "wrapper"
+    },
+    {
+      "name": "tBTC",
+      "pct": 2.3,
+      "risk": "medium"
+    },
+    {
+      "name": "sfrxUSD (Staked Frax USD)",
+      "pct": 1.9,
+      "risk": "medium",
+      "coinId": "frax-frax",
+      "depType": "wrapper"
+    },
+    {
+      "name": "WBTC",
+      "pct": 0.5,
+      "risk": "medium"
+    }
+  ],
+  "liveReservesConfig": {
+    "adapter": "asymmetry",
+    "version": 1,
+    "semantics": "collateral-mix",
+    "breakerScope": "usdaf-asymmetry",
+    "display": {
+      "url": "https://app.asymmetry.finance/",
+      "label": "Asymmetry Finance"
+    },
+    "inputs": {
+      "primary": {
+        "kind": "http-json",
+        "url": "https://app.asymmetry.finance/api/stats"
+      }
+    }
+  }
+}

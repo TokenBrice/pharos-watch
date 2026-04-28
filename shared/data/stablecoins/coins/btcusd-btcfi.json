@@ -1,0 +1,75 @@
+{
+  "id": "btcusd-btcfi",
+  "name": "Bitcoin USD",
+  "symbol": "BtcUSD",
+  "flags": {
+    "backing": "crypto-backed",
+    "pegCurrency": "USD",
+    "governance": "centralized-dependent",
+    "yieldBearing": false,
+    "rwa": false,
+    "navToken": false
+  },
+  "collateral": "Overcollateralized Bitcoin (WBTC, BTCB, cbBTC, native BTC) via CDP vaults",
+  "pegMechanism": "Overcollateralized CDP with liquidation mechanisms",
+  "llamaId": "183",
+  "detailProvider": "defillama",
+  "geckoId": "bitcoin-usd-btcfi",
+  "links": [
+    {
+      "label": "Website",
+      "url": "https://www.btcfi.one/"
+    },
+    {
+      "label": "Twitter",
+      "url": "https://x.com/Bifrost_Network"
+    },
+    {
+      "label": "Docs",
+      "url": "https://docs.bifrostnetwork.com/eng.btcfi.one"
+    }
+  ],
+  "contracts": [
+    {
+      "chain": "base",
+      "address": "0xe4b20925d9e9a62f1e492e15a81dc0de62804dd4",
+      "decimals": 18
+    },
+    {
+      "chain": "bifrost",
+      "address": "0x6906ccda405926fc3f04240187dd4fad5df6d555",
+      "decimals": 18
+    }
+  ],
+  "chainTier": "unproven",
+  "collateralQuality": "alt-lst-bridged-or-mixed",
+  "infrastructures": [
+    "liquity-v1"
+  ],
+  "reserves": [
+    {
+      "name": "BTC / WBTC / BTCB / cbBTC (overcollateralized CDP vaults)",
+      "pct": 100,
+      "risk": "medium"
+    }
+  ],
+  "liveReservesConfig": {
+    "adapter": "btcfi",
+    "version": 1,
+    "semantics": "collateral-mix",
+    "breakerScope": "btcusd-btcfi",
+    "display": {
+      "url": "https://www.btcfi.one/",
+      "label": "Website"
+    },
+    "inputs": {
+      "primary": {
+        "kind": "http-json",
+        "url": "https://www.btcfi.one/api/getBtcfiMarket?isTestnet=false"
+      }
+    },
+    "params": {
+      "handlersUrl": "https://www.btcfi.one/api/getAvailableBtcfiHandlers?isTestnet=false"
+    }
+  }
+}

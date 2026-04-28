@@ -1,0 +1,93 @@
+{
+  "id": "zeusd-zoth",
+  "name": "Zoth ZeUSD",
+  "symbol": "ZeUSD",
+  "flags": {
+    "backing": "rwa-backed",
+    "pegCurrency": "USD",
+    "governance": "centralized",
+    "yieldBearing": false,
+    "rwa": true,
+    "navToken": false
+  },
+  "collateral": "U.S. Treasury bills, ETFs, money market funds, and reverse repos (off-chain), and tokenized on-chain RWAs (e.g., Hashnote USYC, Matrixdock STBT, OpenEden TBILL); held in smart contract escrow vaults or traditional/omnibus escrow accounts",
+  "pegMechanism": "CDP: users deposit eligible RWA collateral to mint ZeUSD; peg maintained through LTV ratios and collateral redemption (repay ZeUSD to reclaim collateral)",
+  "llamaId": "225",
+  "detailProvider": "defillama",
+  "geckoId": "zeusd",
+  "links": [
+    {
+      "label": "Website",
+      "url": "https://zoth.io/"
+    },
+    {
+      "label": "Twitter",
+      "url": "https://x.com/zothdotio"
+    },
+    {
+      "label": "Docs",
+      "url": "https://docs.zoth.io/zoth/products/zeusd-an-omni-chain-and-composable-stable-token"
+    },
+    {
+      "label": "Discord",
+      "url": "https://discord.com/invite/s9WC5nHeAZ"
+    },
+    {
+      "label": "Telegram",
+      "url": "https://t.me/zothio"
+    }
+  ],
+  "jurisdiction": {
+    "country": "Cayman Islands"
+  },
+  "contracts": [
+    {
+      "chain": "ethereum",
+      "address": "0x7dc9748da8e762e569f9269f48f69a1a9f8ea761",
+      "decimals": 6
+    },
+    {
+      "chain": "manta",
+      "address": "0x7dc9748da8e762e569f9269f48f69a1a9f8ea761",
+      "decimals": 6
+    }
+  ],
+  "custodyModel": "institutional-unregulated",
+  "reserves": [
+    {
+      "name": "Tokenized U.S. T-Bills & MMFs (USYC, STBT, TBILL, ZTLN-P)",
+      "pct": 70,
+      "risk": "low",
+      "coinId": "usyc-hashnote"
+    },
+    {
+      "name": "USD0++ (Usual)",
+      "pct": 15,
+      "risk": "medium",
+      "coinId": "usd0-usual"
+    },
+    {
+      "name": "Wrapped M (M0 tokenized T-bills)",
+      "pct": 15,
+      "risk": "medium",
+      "coinId": "m-m0"
+    }
+  ],
+  "liveReservesConfig": {
+    "adapter": "curated-validated",
+    "version": 1,
+    "semantics": "collateral-mix",
+    "breakerScope": "zeusd-zoth",
+    "display": {
+      "url": "https://zoth.io/",
+      "label": "Zoth Finance"
+    },
+    "inputs": {
+      "primary": {
+        "kind": "onchain-evm",
+        "chain": "ethereum",
+        "rpcMode": "public-rpc"
+      }
+    }
+  }
+}

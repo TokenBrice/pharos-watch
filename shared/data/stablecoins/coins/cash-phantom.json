@@ -1,0 +1,86 @@
+{
+  "id": "cash-phantom",
+  "name": "CASH",
+  "symbol": "CASH",
+  "flags": {
+    "backing": "rwa-backed",
+    "pegCurrency": "USD",
+    "governance": "centralized",
+    "yieldBearing": false,
+    "rwa": false,
+    "navToken": false
+  },
+  "collateral": "U.S. Treasury bills (≤3 months maturity), reverse repurchase agreements backed by U.S. Treasuries, U.S. government money-market funds, deposit accounts, and tokenized equivalents held in segregated bankruptcy-remote accounts",
+  "pegMechanism": "Direct 1:1 redemption via Bridge Building Inc. (BBI) with reserves held in bankruptcy-remote custodial accounts",
+  "llamaId": "316",
+  "detailProvider": "defillama",
+  "geckoId": "cash-4",
+  "pythFeedId": "0xdf3320ef0f4617337b8dbb924f2aaa4f9db08f522a5435b44f9066c1ac4c7f95",
+  "links": [
+    {
+      "label": "Website",
+      "url": "https://www.usecash.xyz/"
+    },
+    {
+      "label": "Twitter",
+      "url": "https://x.com/usecash"
+    }
+  ],
+  "jurisdiction": {
+    "country": "United States",
+    "regulator": "FinCEN / state MTL authorities",
+    "license": "Money Services Business (NMLS #2450917)"
+  },
+  "contracts": [
+    {
+      "chain": "solana",
+      "address": "CASHx9KJUStyftLFWGvEVf59SGeG9sh5FfcnZMVPCASH",
+      "decimals": 6
+    }
+  ],
+  "chainTier": "mature-alt-l1",
+  "custodyModel": "institutional-regulated",
+  "reserves": [
+    {
+      "name": "U.S. Treasury bills (<=3mo maturity)",
+      "pct": 50,
+      "risk": "very-low"
+    },
+    {
+      "name": "Reverse repos (overnight, UST-collateralized)",
+      "pct": 15,
+      "risk": "very-low"
+    },
+    {
+      "name": "U.S. government money-market funds",
+      "pct": 15,
+      "risk": "very-low"
+    },
+    {
+      "name": "Bank deposit accounts",
+      "pct": 10,
+      "risk": "very-low"
+    },
+    {
+      "name": "Tokenized treasuries (BUIDL, USTB)",
+      "pct": 10,
+      "risk": "low",
+      "coinId": "buidl-blackrock"
+    }
+  ],
+  "liveReservesConfig": {
+    "adapter": "curated-validated",
+    "version": 1,
+    "semantics": "single-asset",
+    "breakerScope": "cash-phantom",
+    "display": {
+      "url": "https://phantom.com/cash",
+      "label": "Phantom Cash"
+    },
+    "inputs": {
+      "primary": {
+        "kind": "onchain-solana"
+      }
+    }
+  }
+}

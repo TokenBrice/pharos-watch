@@ -1,0 +1,123 @@
+{
+  "id": "usdglo-glo",
+  "name": "Glo Dollar",
+  "symbol": "USDGLO",
+  "flags": {
+    "backing": "rwa-backed",
+    "pegCurrency": "USD",
+    "governance": "centralized",
+    "yieldBearing": false,
+    "rwa": false,
+    "navToken": false
+  },
+  "collateral": "Cash, cash equivalents, and U.S. government-backed debt held by Brale in segregated, unencumbered accounts",
+  "pegMechanism": "Brale-issued fiat-backed stablecoin redeemable 1:1 for USD or USDC by eligible Brale customers; Brale manages reserves and liquidity for redemption obligations",
+  "llamaId": "155",
+  "detailProvider": "defillama",
+  "geckoId": "glo-dollar",
+  "cmcSlug": "glo-dollar",
+  "proofOfReserves": {
+    "type": "self-reported",
+    "url": "https://brale.xyz/stablecoins/USDGLO",
+    "provider": "Brale"
+  },
+  "links": [
+    {
+      "label": "Website",
+      "url": "https://www.glodollar.org/"
+    },
+    {
+      "label": "Twitter",
+      "url": "https://x.com/glodollar"
+    },
+    {
+      "label": "Docs",
+      "url": "https://www.glodollar.org/articles/smart-contract-addresses"
+    },
+    {
+      "label": "Proof of Reserve",
+      "url": "https://brale.xyz/stablecoins/USDGLO"
+    }
+  ],
+  "jurisdiction": {
+    "country": "United States",
+    "regulator": "FinCEN / state money transmitter regulators",
+    "license": "Money Services Business / Money Transmitter, NMLS ID #2376957"
+  },
+  "contracts": [
+    {
+      "chain": "ethereum",
+      "address": "0x4f604735c1cf31399c6e711d5962b2b3e0225ad3",
+      "decimals": 18
+    },
+    {
+      "chain": "celo",
+      "address": "0x4f604735c1cf31399c6e711d5962b2b3e0225ad3",
+      "decimals": 18
+    },
+    {
+      "chain": "optimism",
+      "address": "0x4f604735c1cf31399c6e711d5962b2b3e0225ad3",
+      "decimals": 18
+    },
+    {
+      "chain": "base",
+      "address": "0x4f604735c1cf31399c6e711d5962b2b3e0225ad3",
+      "decimals": 18
+    },
+    {
+      "chain": "polygon",
+      "address": "0x4f604735c1cf31399c6e711d5962b2b3e0225ad3",
+      "decimals": 18
+    },
+    {
+      "chain": "arbitrum",
+      "address": "0x4f604735c1cf31399c6e711d5962b2b3e0225ad3",
+      "decimals": 18
+    },
+    {
+      "chain": "stellar",
+      "address": "USDGLO-GBBS25EGYQPGEZCGCFBKG4OAGFXU6DSOQBGTHELLJT3HZXZJ34HWS6XV",
+      "decimals": 7
+    }
+  ],
+  "canBeBlacklisted": true,
+  "chainTier": "ethereum",
+  "deploymentModel": "native-multichain",
+  "collateralQuality": "rwa",
+  "custodyModel": "institutional-regulated",
+  "governanceQuality": "regulated-entity",
+  "reserves": [
+    {
+      "name": "Cash and cash equivalents",
+      "pct": 62.79,
+      "risk": "very-low"
+    },
+    {
+      "name": "U.S. government-backed debt",
+      "pct": 37.21,
+      "risk": "very-low"
+    }
+  ],
+  "liveReservesConfig": {
+    "adapter": "curated-validated",
+    "version": 1,
+    "semantics": "attestation-mix",
+    "breakerScope": "usdglo-glo",
+    "display": {
+      "url": "https://brale.xyz/stablecoins/USDGLO",
+      "label": "Brale USDGLO"
+    },
+    "inputs": {
+      "primary": {
+        "kind": "onchain-evm",
+        "chain": "ethereum",
+        "rpcMode": "public-rpc"
+      }
+    },
+    "params": {
+      "rpcUrl": "https://ethereum-rpc.publicnode.com",
+      "fallbackRpcUrl": "https://eth.llamarpc.com"
+    }
+  }
+}

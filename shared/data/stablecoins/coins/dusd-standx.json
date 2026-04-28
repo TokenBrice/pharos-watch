@@ -1,0 +1,76 @@
+{
+  "id": "dusd-standx",
+  "name": "StandX DUSD",
+  "symbol": "DUSD",
+  "flags": {
+    "backing": "crypto-backed",
+    "pegCurrency": "USD",
+    "governance": "centralized-dependent",
+    "yieldBearing": false,
+    "rwa": false,
+    "navToken": false
+  },
+  "collateral": "USDT/USDC deposits converted to hedged crypto positions (BTC, ETH, SOL) via Ceffu",
+  "pegMechanism": "Delta-neutral hedging on centralized exchanges; 1:1 USDT/USDC redemption",
+  "llamaId": "252",
+  "detailProvider": "defillama",
+  "geckoId": "standx-dusd",
+  "cmcSlug": "standx-dusd",
+  "links": [
+    {
+      "label": "Website",
+      "url": "https://standx.com/"
+    },
+    {
+      "label": "Twitter",
+      "url": "https://x.com/StandX_Official"
+    },
+    {
+      "label": "Docs",
+      "url": "https://docs.standx.com/"
+    }
+  ],
+  "contracts": [
+    {
+      "chain": "bsc",
+      "address": "0xaf44a1e76f56ee12adbb7ba8acd3cbd474888122",
+      "decimals": 18
+    },
+    {
+      "chain": "solana",
+      "address": "DUSDt4AeLZHWYmcXnVGYdgAzjtzU5mXUVnTMdnSzAttM",
+      "decimals": 6
+    }
+  ],
+  "canBeBlacklisted": "possible",
+  "dependencies": [
+    {
+      "id": "usdt-tether",
+      "weight": 0.5
+    },
+    {
+      "id": "usdc-circle",
+      "weight": 0.5
+    }
+  ],
+  "deploymentModel": "native-multichain",
+  "collateralQuality": "exotic",
+  "custodyModel": "cex",
+  "reserves": [
+    {
+      "name": "Spot crypto (BTC/ETH/SOL/BNB, delta-hedged via perp shorts)",
+      "pct": 50,
+      "risk": "high"
+    },
+    {
+      "name": "Perpetual short futures positions (CEX via Ceffu custody)",
+      "pct": 45,
+      "risk": "high"
+    },
+    {
+      "name": "Stability reserve fund (stablecoins, multisig)",
+      "pct": 5,
+      "risk": "medium"
+    }
+  ]
+}

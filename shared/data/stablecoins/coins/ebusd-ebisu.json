@@ -1,0 +1,154 @@
+{
+  "id": "ebusd-ebisu",
+  "name": "Ebisu ebUSD",
+  "symbol": "ebUSD",
+  "flags": {
+    "backing": "crypto-backed",
+    "pegCurrency": "USD",
+    "governance": "centralized-dependent",
+    "yieldBearing": false,
+    "rwa": false,
+    "navToken": false
+  },
+  "collateral": "Overcollateralized CDP markets on Ethereum and Plasma using weETH, sUSDe, WBTC, stcUSD, and XAUt0, with additional configured WETH, XPL, and LBTC branches",
+  "pegMechanism": "Overcollateralized CDP with Liquity v2-style user-set interest rates and redemptions; production deployments mint natively on both Ethereum and Plasma",
+  "llamaId": "288",
+  "detailProvider": "defillama",
+  "geckoId": "ebusd-stablecoin",
+  "links": [
+    {
+      "label": "Website",
+      "url": "https://ebisu.money/"
+    },
+    {
+      "label": "Twitter",
+      "url": "https://x.com/ebisu_finance"
+    }
+  ],
+  "contracts": [
+    {
+      "chain": "ethereum",
+      "address": "0x09fd37d9aa613789c517e76df1c53aece2b60df4",
+      "decimals": 18
+    },
+    {
+      "chain": "plasma",
+      "address": "0xef7b1a03e0897c33b63159e38d779e3970c0e2fc",
+      "decimals": 18
+    }
+  ],
+  "deploymentModel": "native-multichain",
+  "collateralQuality": "alt-lst-bridged-or-mixed",
+  "infrastructures": [
+    "liquity-v2"
+  ],
+  "reserves": [
+    {
+      "name": "sUSDe (Ethena savings)",
+      "pct": 43.9,
+      "risk": "medium",
+      "coinId": "usde-ethena",
+      "depType": "wrapper"
+    },
+    {
+      "name": "WBTC",
+      "pct": 24.2,
+      "risk": "medium"
+    },
+    {
+      "name": "XAUt0 (tokenized gold)",
+      "pct": 23.6,
+      "risk": "medium",
+      "coinId": "xaut-tether"
+    },
+    {
+      "name": "stcUSD",
+      "pct": 5.7,
+      "risk": "medium"
+    },
+    {
+      "name": "weETH",
+      "pct": 2.6,
+      "risk": "low"
+    }
+  ],
+  "liveReservesConfig": {
+    "adapter": "liquity-v2-branches",
+    "version": 1,
+    "semantics": "collateral-mix",
+    "breakerScope": "ebusd-ebisu",
+    "display": {
+      "url": "https://ebisu.money/",
+      "label": "Website"
+    },
+    "inputs": {
+      "primary": {
+        "kind": "onchain-evm",
+        "chain": "ethereum",
+        "rpcMode": "public-rpc"
+      }
+    },
+    "params": {
+      "rpcUrl": "https://ethereum-rpc.publicnode.com",
+      "fallbackRpcUrl": "https://eth.llamarpc.com",
+      "redemptionRateProbe": {
+        "contract": "0x5e159fac2d137f7b83a12b9f30ac6ab2ba6d45e7",
+        "selector": "0xc52861f2"
+      },
+      "branches": [
+        {
+          "name": "weETH",
+          "holder": "0x99a5a86d6e5a6f8b96d15cb71be5bace474f81a6",
+          "token": {
+            "chain": "ethereum",
+            "address": "0xcd5fe23c85820f7b72d0926fc9b05b43e359b7ee",
+            "decimals": 18
+          },
+          "risk": "low"
+        },
+        {
+          "name": "sUSDe (Ethena savings)",
+          "holder": "0x83a095a74839ad88c24e77f1e9a54baaa7ff5157",
+          "token": {
+            "chain": "ethereum",
+            "address": "0x9d39a5de30e57443bff2a8307a4256c8797a3497",
+            "decimals": 18
+          },
+          "risk": "medium",
+          "coinId": "usde-ethena",
+          "depType": "wrapper"
+        },
+        {
+          "name": "WBTC",
+          "holder": "0x5c806d1f8ea290fe39642048e64b9f2ee031036f",
+          "token": {
+            "chain": "ethereum",
+            "address": "0x2260fac5e5542a773aa44fbcfedf7c193bc2c599",
+            "decimals": 8
+          },
+          "risk": "medium"
+        },
+        {
+          "name": "LBTC",
+          "holder": "0x89fd2c36d0134ea7c8c069e2c641f3dec95d3d73",
+          "token": {
+            "chain": "ethereum",
+            "address": "0x8236a87084f8b84306f72007f36f2618a5634494",
+            "decimals": 8
+          },
+          "risk": "medium"
+        },
+        {
+          "name": "stcUSD",
+          "holder": "0xff88be162e679517d9d3729be67495084fb98b69",
+          "token": {
+            "chain": "ethereum",
+            "address": "0x88887be419578051ff9f4eb6c858a951921d8888",
+            "decimals": 18
+          },
+          "risk": "medium"
+        }
+      ]
+    }
+  }
+}

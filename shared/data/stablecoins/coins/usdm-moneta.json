@@ -1,0 +1,60 @@
+{
+  "id": "usdm-moneta",
+  "name": "Moneta",
+  "symbol": "USDM",
+  "flags": {
+    "backing": "rwa-backed",
+    "pegCurrency": "USD",
+    "governance": "centralized",
+    "yieldBearing": false,
+    "rwa": false,
+    "navToken": false
+  },
+  "collateral": "USD bank deposits and money market funds managed by Fidelity and Western Asset Management (Moneta/USA issuance) and Sparebanken Norge / Amundi USD MM fund (NBX/EEA issuance), held in segregated reserve accounts",
+  "pegMechanism": "Direct 1:1 redemption through Moneta (USA) or NBX (EEA); KYC required; Charli3 oracle verifies reserve backing on-chain before each mint on Cardano",
+  "llamaId": "215",
+  "detailProvider": "defillama",
+  "geckoId": "usdm-2",
+  "cmcSlug": "moneta-usdm",
+  "proofOfReserves": {
+    "type": "real-time",
+    "url": "https://portal.charli3.io/dev/feeds/usdm-reserves?network=Mainnet",
+    "provider": "Charli3"
+  },
+  "links": [
+    {
+      "label": "Website",
+      "url": "https://moneta.global/"
+    },
+    {
+      "label": "Twitter",
+      "url": "https://x.com/USDMOfficial"
+    }
+  ],
+  "jurisdiction": {
+    "country": "Norway",
+    "regulator": "Finanstilsynet",
+    "license": "MiCA E-Money Token (EMT)"
+  },
+  "contracts": [
+    {
+      "chain": "cardano",
+      "address": "c48cbb3d5e57ed56e276bc45f99ab39abe94e6cd7ac39fb402da47ad0014df105553444d",
+      "decimals": 6
+    }
+  ],
+  "chainTier": "established-alt-l1",
+  "custodyModel": "institutional-regulated",
+  "reserves": [
+    {
+      "name": "USD bank deposits",
+      "pct": 40,
+      "risk": "very-low"
+    },
+    {
+      "name": "Money market funds (Fidelity / Amundi)",
+      "pct": 60,
+      "risk": "very-low"
+    }
+  ]
+}

@@ -1,0 +1,83 @@
+{
+  "id": "mnee-mnee",
+  "name": "MNEE USD",
+  "symbol": "MNEE",
+  "flags": {
+    "backing": "rwa-backed",
+    "pegCurrency": "USD",
+    "governance": "centralized",
+    "yieldBearing": false,
+    "rwa": false,
+    "navToken": false
+  },
+  "collateral": "U.S. Treasury bills (≤90-day duration) and USD cash held by a qualified custodian, invested in accordance with NYDFS permissible investment rules",
+  "pegMechanism": "Fiat-backed 1:1 with USD; tokens minted upon deposit of USD and burned upon redemption; reserves held at qualified custodian compliant with NYDFS permissible investment standards",
+  "llamaId": "284",
+  "detailProvider": "defillama",
+  "geckoId": "mnee-usd-stablecoin",
+  "proofOfReserves": {
+    "type": "independent-audit",
+    "url": "https://www.mnee.io/transparency",
+    "provider": "Wolf and Company, P.C."
+  },
+  "links": [
+    {
+      "label": "Website",
+      "url": "https://www.mnee.io/"
+    },
+    {
+      "label": "Twitter",
+      "url": "https://x.com/MNEE_cash"
+    },
+    {
+      "label": "Docs",
+      "url": "https://docs.mnee.io"
+    }
+  ],
+  "jurisdiction": {
+    "country": "Antigua and Barbuda",
+    "regulator": "FSRC",
+    "license": "Class A Digital Asset Business License"
+  },
+  "contracts": [
+    {
+      "chain": "ethereum",
+      "address": "0x8ccedbae4916b79da7f3f612efb2eb93a2bfd6cf",
+      "decimals": 18
+    }
+  ],
+  "custodyModel": "institutional-unregulated",
+  "reserves": [
+    {
+      "name": "U.S. Treasury bills (<=90-day duration)",
+      "pct": 85,
+      "risk": "very-low"
+    },
+    {
+      "name": "USD cash at qualified custodian",
+      "pct": 15,
+      "risk": "very-low"
+    }
+  ],
+  "liveReservesConfig": {
+    "adapter": "single-asset",
+    "version": 1,
+    "semantics": "single-asset",
+    "breakerScope": "mnee-mnee",
+    "display": {
+      "url": "https://www.mnee.io/transparency",
+      "label": "MNEE Transparency"
+    },
+    "inputs": {
+      "primary": {
+        "kind": "onchain-evm",
+        "chain": "ethereum",
+        "rpcMode": "public-rpc"
+      }
+    },
+    "params": {
+      "label": "U.S. Treasury bills & USD cash",
+      "risk": "very-low"
+    }
+  }
+}

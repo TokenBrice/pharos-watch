@@ -1,0 +1,87 @@
+{
+  "id": "stkgho-umbrella-aave",
+  "name": "Aave Umbrella stkGHO",
+  "symbol": "stkGHO.v1",
+  "flags": {
+    "backing": "crypto-backed",
+    "pegCurrency": "USD",
+    "governance": "centralized-dependent",
+    "yieldBearing": true,
+    "rwa": false,
+    "navToken": true
+  },
+  "variantOf": "gho-aave",
+  "variantKind": "risk-absorption",
+  "pegReferenceId": "gho-aave",
+  "collateral": "GHO staked into Aave Umbrella as a slashable safety-module asset covering GHO deficits; holders earn Umbrella rewards while accepting cooldown and automated slashing risk",
+  "pegMechanism": "ERC-4626-style staking receipt over GHO with 1:1 convertToAssets under normal conditions; unstaking requires Aave Umbrella cooldown and withdrawal-window mechanics, and deficit events can reduce redeemable value through slashing",
+  "detailProvider": "coingecko",
+  "links": [
+    {
+      "label": "Website",
+      "url": "https://aave.com/"
+    },
+    {
+      "label": "Twitter",
+      "url": "https://x.com/aave"
+    },
+    {
+      "label": "Docs",
+      "url": "https://aave.com/help/umbrella/umbrella"
+    },
+    {
+      "label": "GitHub",
+      "url": "https://github.com/aave-dao/aave-address-book"
+    }
+  ],
+  "contracts": [
+    {
+      "chain": "ethereum",
+      "address": "0x4f827a63755855cdf3e8f3bcd20265c833f15033",
+      "decimals": 18
+    }
+  ],
+  "deploymentModel": "single-chain",
+  "collateralQuality": "exotic",
+  "custodyModel": "onchain",
+  "governanceQuality": "wrapper",
+  "reserves": [
+    {
+      "name": "GHO staked in Aave Umbrella safety module",
+      "pct": 100,
+      "risk": "high",
+      "coinId": "gho-aave",
+      "depType": "wrapper"
+    }
+  ],
+  "yieldConfig": {
+    "yieldSource": "Aave Umbrella stkGHO rewards",
+    "yieldType": "governance-set"
+  },
+  "liveReservesConfig": {
+    "adapter": "erc4626-single-asset",
+    "version": 1,
+    "semantics": "single-asset",
+    "breakerScope": "stkgho-umbrella-aave",
+    "display": {
+      "url": "https://aave.com/help/umbrella/umbrella",
+      "label": "Aave Umbrella"
+    },
+    "inputs": {
+      "primary": {
+        "kind": "onchain-evm",
+        "chain": "ethereum",
+        "rpcMode": "alchemy"
+      }
+    },
+    "params": {
+      "slice": {
+        "name": "GHO staked in Aave Umbrella safety module",
+        "risk": "high",
+        "coinId": "gho-aave",
+        "depType": "wrapper",
+        "expectedAssetAddress": "0x40d16fc0246ad3160ccc09b8d0d3a2cd28ae6c2f"
+      }
+    }
+  }
+}

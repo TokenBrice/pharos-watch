@@ -1,0 +1,90 @@
+{
+  "id": "wusd-worldwide",
+  "name": "Worldwide USD",
+  "symbol": "WUSD",
+  "flags": {
+    "backing": "rwa-backed",
+    "pegCurrency": "USD",
+    "governance": "centralized",
+    "yieldBearing": false,
+    "rwa": false,
+    "navToken": false
+  },
+  "collateral": "Cash, cash equivalents, and short-term U.S. Treasury bills held in segregated accounts; Basel III-inspired 6% liquidity buffer maintained on non-cash reserves",
+  "pegMechanism": "Direct 1:1 redemption through WSPN; fiat minted/burned on deposit/withdrawal with reserves verified by independent third-party audits",
+  "llamaId": "234",
+  "detailProvider": "defillama",
+  "geckoId": "worldwide-usd",
+  "links": [
+    {
+      "label": "Website",
+      "url": "https://wspn.io/"
+    },
+    {
+      "label": "Twitter",
+      "url": "https://x.com/wspnpayment"
+    },
+    {
+      "label": "Whitepaper",
+      "url": "https://www.wspn.io/Documents/Whitepaper%20for%20WSPN.pdf"
+    }
+  ],
+  "jurisdiction": {
+    "country": "British Virgin Islands",
+    "regulator": "FinCEN (USA)",
+    "license": "MSB registration (USA); VASP license application (BVI)"
+  },
+  "contracts": [
+    {
+      "chain": "ethereum",
+      "address": "0x7cd017ca5ddb86861fa983a34b5f495c6f898c41",
+      "decimals": 18
+    },
+    {
+      "chain": "polygon",
+      "address": "0x7cd017ca5ddb86861fa983a34b5f495c6f898c41",
+      "decimals": 18
+    },
+    {
+      "chain": "viction",
+      "address": "0xba73e59f11597c1c13b0d9114688efb6a6d430f6",
+      "decimals": 18
+    }
+  ],
+  "deploymentModel": "native-multichain",
+  "custodyModel": "institutional-unregulated",
+  "reserves": [
+    {
+      "name": "Cash and cash equivalents",
+      "pct": 40,
+      "risk": "very-low"
+    },
+    {
+      "name": "Short-term U.S. Treasury bills",
+      "pct": 55,
+      "risk": "very-low"
+    },
+    {
+      "name": "Basel III liquidity buffer (6% of non-cash)",
+      "pct": 5,
+      "risk": "low"
+    }
+  ],
+  "liveReservesConfig": {
+    "adapter": "curated-validated",
+    "version": 1,
+    "semantics": "attestation-mix",
+    "breakerScope": "wusd-worldwide",
+    "display": {
+      "url": "https://wspn.io/",
+      "label": "WSPN Payment"
+    },
+    "inputs": {
+      "primary": {
+        "kind": "onchain-evm",
+        "chain": "ethereum",
+        "rpcMode": "public-rpc"
+      }
+    }
+  }
+}

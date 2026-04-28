@@ -1,0 +1,116 @@
+{
+  "id": "reusd-re-protocol",
+  "name": "Re Protocol reUSD",
+  "symbol": "reUSD",
+  "flags": {
+    "backing": "crypto-backed",
+    "pegCurrency": "USD",
+    "governance": "centralized-dependent",
+    "yieldBearing": true,
+    "rwa": false,
+    "navToken": true
+  },
+  "collateral": "USDC, USDe, and sUSDe deployed into delta-neutral ETH basis trades or short-duration U.S. Treasury bills via the Re Protocol Insurance Capital Layer",
+  "pegMechanism": "NAV-based token price recalculated daily at UTC 00:00 via Chainlink price feed; yield accrues from delta-neutral ETH basis trade or T-bill returns plus 250 bps protocol spread; atomic redemptions when instant liquidity available, otherwise queue mode",
+  "llamaId": "339",
+  "detailProvider": "defillama",
+  "geckoId": "re-protocol-reusd",
+  "cmcSlug": "re-protocol-reusd",
+  "proofOfReserves": {
+    "type": "real-time",
+    "url": "https://app.re.xyz/transparency",
+    "provider": "The Network Firm / Chainlink"
+  },
+  "links": [
+    {
+      "label": "Website",
+      "url": "https://re.xyz/"
+    },
+    {
+      "label": "Twitter",
+      "url": "https://x.com/re"
+    },
+    {
+      "label": "Docs",
+      "url": "https://docs.re.xyz"
+    }
+  ],
+  "jurisdiction": {
+    "country": "British Virgin Islands",
+    "regulator": "FSC",
+    "license": "BVI Securities and Investment Business Act"
+  },
+  "contracts": [
+    {
+      "chain": "ethereum",
+      "address": "0x5086bf358635b81d8c47c66d1c8b9e567db70c72",
+      "decimals": 18
+    },
+    {
+      "chain": "avalanche",
+      "address": "0x180af87b47bf272b2df59dccf2d76a6eafa625bf",
+      "decimals": 18
+    },
+    {
+      "chain": "arbitrum",
+      "address": "0x76ce01f0ef25aa66cc5f1e546a005e4a63b25609",
+      "decimals": 18
+    },
+    {
+      "chain": "base",
+      "address": "0x7d214438d0f27afccc23b3d1e1a53906ace5cfea",
+      "decimals": 18
+    },
+    {
+      "chain": "bsc",
+      "address": "0xba9425ec55ee0e72216d18e0ad8bbba2553bfb60",
+      "decimals": 18
+    },
+    {
+      "chain": "ink",
+      "address": "0x5bcf6b008bf80b9296238546bace1797657b05d6",
+      "decimals": 18
+    }
+  ],
+  "deploymentModel": "native-multichain",
+  "collateralQuality": "exotic",
+  "liveReservesConfig": {
+    "adapter": "re-metrics",
+    "version": 1,
+    "semantics": "collateral-mix",
+    "breakerScope": "reusd-re-protocol",
+    "display": {
+      "url": "https://app.re.xyz/metrics",
+      "label": "Re Metrics"
+    },
+    "inputs": {
+      "primary": {
+        "kind": "http-html",
+        "url": "https://app.re.xyz/metrics"
+      }
+    }
+  },
+  "reserves": [
+    {
+      "name": "Delta-neutral ETH basis trade positions (via sUSDe/USDe)",
+      "pct": 50,
+      "risk": "high",
+      "coinId": "usde-ethena"
+    },
+    {
+      "name": "Short-duration U.S. Treasury bills",
+      "pct": 30,
+      "risk": "very-low"
+    },
+    {
+      "name": "USDC reserves (instant redemption buffer)",
+      "pct": 20,
+      "risk": "low",
+      "coinId": "usdc-circle"
+    }
+  ],
+  "yieldConfig": {
+    "yieldSource": "Re Protocol vault",
+    "yieldType": "governance-set"
+  }
+}

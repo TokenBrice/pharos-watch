@@ -1,0 +1,88 @@
+{
+  "id": "idrx-idrx",
+  "name": "IDRX",
+  "symbol": "IDRX",
+  "flags": {
+    "backing": "rwa-backed",
+    "pegCurrency": "IDR",
+    "governance": "centralized",
+    "yieldBearing": false,
+    "rwa": false,
+    "navToken": false
+  },
+  "collateral": "Indonesian rupiah (IDR) fiat reserves and government bonds held 1:1 by PT IDRX Indo Inovasi; CertiK-audited smart contracts with multisig + timelock controls",
+  "pegMechanism": "Direct 1:1 mint and redemption of IDRX for Indonesian rupiah through IDRX platform after KYC verification; native multichain deployment with built-in bridge functions",
+  "detailProvider": "coingecko",
+  "geckoId": "idrx",
+  "links": [
+    {
+      "label": "Website",
+      "url": "https://idrx.co/"
+    },
+    {
+      "label": "Docs",
+      "url": "https://docs.idrx.co/"
+    },
+    {
+      "label": "Twitter",
+      "url": "https://x.com/idrx_co"
+    }
+  ],
+  "jurisdiction": {
+    "country": "Indonesia"
+  },
+  "contracts": [
+    {
+      "chain": "polygon",
+      "address": "0x649a2da7b28e0d54c13d5eff95d3a660652742cc",
+      "decimals": 2
+    },
+    {
+      "chain": "base",
+      "address": "0x18bc5bcc660cf2b9ce3cd51a404afe1a0cbd3c22",
+      "decimals": 2
+    },
+    {
+      "chain": "bsc",
+      "address": "0x649a2da7b28e0d54c13d5eff95d3a660652742cc",
+      "decimals": 2
+    },
+    {
+      "chain": "klaytn",
+      "address": "0x18bc5bcc660cf2b9ce3cd51a404afe1a0cbd3c22",
+      "decimals": 2
+    },
+    {
+      "chain": "gnosis",
+      "address": "0x18bc5bcc660cf2b9ce3cd51a404afe1a0cbd3c22",
+      "decimals": 2
+    },
+    {
+      "chain": "etherlink",
+      "address": "0x18bc5bcc660cf2b9ce3cd51a404afe1a0cbd3c22",
+      "decimals": 2
+    },
+    {
+      "chain": "worldchain",
+      "address": "0x18bc5bcc660cf2b9ce3cd51a404afe1a0cbd3c22",
+      "decimals": 2
+    },
+    {
+      "chain": "solana",
+      "address": "idrxZcP8xiKkYk6XGD4uz1dxEYCWSgKDHqgjsBbwDur",
+      "decimals": 2
+    }
+  ],
+  "canBeBlacklisted": true,
+  "deploymentModel": "native-multichain",
+  "custodyModel": "institutional-unregulated",
+  "collateralQuality": "rwa",
+  "governanceQuality": "single-entity",
+  "reserves": [
+    {
+      "name": "IDR fiat reserves and government bonds",
+      "pct": 100,
+      "risk": "low"
+    }
+  ]
+}

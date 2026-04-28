@@ -1,0 +1,146 @@
+{
+  "id": "bold-liquity",
+  "name": "Liquity BOLD",
+  "symbol": "BOLD",
+  "flags": {
+    "backing": "crypto-backed",
+    "pegCurrency": "USD",
+    "governance": "decentralized",
+    "yieldBearing": true,
+    "rwa": false,
+    "navToken": false
+  },
+  "collateral": "WETH, wstETH, and rETH only; immutable contracts with no governance over collateral selection",
+  "pegMechanism": "Overcollateralized CDPs with direct on-chain redemption for $1 of collateral; user-set interest rates adapt to peg conditions, with 75% of interest revenue flowing to Stability Pools",
+  "llamaId": "269",
+  "detailProvider": "defillama",
+  "geckoId": "liquity-bold-2",
+  "pythFeedId": "0xd6134dbb0427240f901e3e596d6e63f7d85088f96cd4cd4ae2f89c0819b5d623",
+  "links": [
+    {
+      "label": "Website",
+      "url": "https://www.liquity.org/bold"
+    },
+    {
+      "label": "Twitter",
+      "url": "https://x.com/LiquityProtocol"
+    },
+    {
+      "label": "Docs",
+      "url": "https://docs.liquity.org/"
+    },
+    {
+      "label": "GitHub",
+      "url": "https://github.com/liquity/bold"
+    }
+  ],
+  "contracts": [
+    {
+      "chain": "ethereum",
+      "address": "0x6440f144b7e50d6a8439336510312d2f54beb01d",
+      "decimals": 18
+    },
+    {
+      "chain": "arbitrum",
+      "address": "0x03569cc076654f82679c4ba2124d64774781b01d",
+      "decimals": 18
+    },
+    {
+      "chain": "base",
+      "address": "0x03569cc076654f82679c4ba2124d64774781b01d",
+      "decimals": 18
+    },
+    {
+      "chain": "optimism",
+      "address": "0x03569cc076654f82679c4ba2124d64774781b01d",
+      "decimals": 18
+    },
+    {
+      "chain": "avalanche",
+      "address": "0x03569cc076654f82679c4ba2124d64774781b01d",
+      "decimals": 18
+    }
+  ],
+  "deploymentModel": "third-party-bridge",
+  "governanceQuality": "immutable-code",
+  "infrastructures": [
+    "liquity-v2"
+  ],
+  "reserves": [
+    {
+      "name": "wstETH (Lido)",
+      "pct": 50,
+      "risk": "low"
+    },
+    {
+      "name": "WETH",
+      "pct": 30,
+      "risk": "very-low"
+    },
+    {
+      "name": "rETH (Rocket Pool)",
+      "pct": 20,
+      "risk": "low"
+    }
+  ],
+  "liveReservesConfig": {
+    "adapter": "liquity-v2-branches",
+    "version": 2,
+    "semantics": "collateral-mix",
+    "breakerScope": "bold-liquity",
+    "display": {
+      "url": "https://www.liquity.org/bold",
+      "label": "Website"
+    },
+    "inputs": {
+      "primary": {
+        "kind": "onchain-evm",
+        "chain": "ethereum",
+        "rpcMode": "alchemy"
+      }
+    },
+    "params": {
+      "rpcUrl": "https://ethereum-rpc.publicnode.com",
+      "redemptionRateProbe": {
+        "contract": "0xf949982b91c8c61e952b3ba942cbbfaef5386684",
+        "selector": "0xc52861f2"
+      },
+      "branches": [
+        {
+          "name": "wstETH (Lido)",
+          "holder": "0x531a8f99c70d6a56a7cee02d6b4281650d7919a0",
+          "token": {
+            "chain": "ethereum",
+            "address": "0x7f39c581f595b53c5cb19bd0b3f8da6c935e2ca0",
+            "decimals": 18
+          },
+          "risk": "low"
+        },
+        {
+          "name": "WETH",
+          "holder": "0xeb5a8c825582965f1d84606e078620a84ab16afe",
+          "token": {
+            "chain": "ethereum",
+            "address": "0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2",
+            "decimals": 18
+          },
+          "risk": "very-low"
+        },
+        {
+          "name": "rETH (Rocket Pool)",
+          "holder": "0x9074d72cc82dad1e13e454755aa8f144c479532f",
+          "token": {
+            "chain": "ethereum",
+            "address": "0xae78736cd615f374d3085123a210448e74fc6393",
+            "decimals": 18
+          },
+          "risk": "low"
+        }
+      ]
+    }
+  },
+  "yieldConfig": {
+    "yieldSource": "Liquity Stability Pool (via Yearn yBOLD)",
+    "yieldType": "lending-vault"
+  }
+}

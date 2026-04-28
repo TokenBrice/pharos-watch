@@ -1,0 +1,53 @@
+{
+  "id": "doc-money-on-chain",
+  "name": "Dollar on Chain",
+  "symbol": "DOC",
+  "flags": {
+    "backing": "crypto-backed",
+    "pegCurrency": "USD",
+    "governance": "decentralized",
+    "yieldBearing": false,
+    "rwa": false,
+    "navToken": false
+  },
+  "collateral": "rBTC locked in Money On Chain smart contracts on Rootstock",
+  "pegMechanism": "DOC targets 1 USD through overcollateralized rBTC backing, protocol incentives, and permissionless DOC-to-rBTC redemption through the Money On Chain dApp",
+  "llamaId": "30",
+  "detailProvider": "defillama",
+  "geckoId": "dollar-on-chain",
+  "links": [
+    {
+      "label": "Website",
+      "url": "https://moneyonchain.com/doc-stablecoin/"
+    },
+    {
+      "label": "Docs",
+      "url": "https://docs.moneyonchain.com/main-rbtc-contract/money-on-chain-platform/main-concepts"
+    },
+    {
+      "label": "Dapp",
+      "url": "https://dapp.moneyonchain.com/"
+    }
+  ],
+  "contracts": [
+    {
+      "chain": "rootstock",
+      "address": "0xe700691da7b9851f2f35f8b8182c69c53ccad9db",
+      "decimals": 18
+    },
+    {
+      "chain": "arbitrum",
+      "address": "0x2ad62eb9744c720364f6ac856360a43e8a2229b5",
+      "decimals": 18
+    }
+  ],
+  "chainTier": "mature-alt-l1",
+  "deploymentModel": "third-party-bridge",
+  "reserves": [
+    {
+      "name": "Rootstock BTC (rBTC) collateral",
+      "pct": 100,
+      "risk": "medium"
+    }
+  ]
+}

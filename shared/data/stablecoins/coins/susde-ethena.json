@@ -1,0 +1,89 @@
+{
+  "id": "susde-ethena",
+  "name": "Ethena Staked USDe",
+  "symbol": "sUSDe",
+  "flags": {
+    "backing": "crypto-backed",
+    "pegCurrency": "USD",
+    "governance": "centralized-dependent",
+    "yieldBearing": true,
+    "rwa": false,
+    "navToken": true
+  },
+  "variantOf": "usde-ethena",
+  "variantKind": "savings-passthrough",
+  "pegReferenceId": "usde-ethena",
+  "collateral": "USDe deposited into Ethena's ERC-4626 staking contract; the wrapper remains fully backed by USDe while additional USDe rewards accrue inside the vault",
+  "pegMechanism": "Stake USDe to receive sUSDe; the exchange rate versus USDe rises as rewards are transferred into the staking contract, while unstaking burns sUSDe immediately and releases USDe after Ethena's documented 7-day cooldown",
+  "detailProvider": "coingecko",
+  "geckoId": "ethena-staked-usde",
+  "links": [
+    {
+      "label": "Website",
+      "url": "https://ethena.fi/"
+    },
+    {
+      "label": "Twitter",
+      "url": "https://x.com/ethena"
+    },
+    {
+      "label": "Docs",
+      "url": "https://docs.ethena.fi/solution-design/staking-usde"
+    },
+    {
+      "label": "Key Addresses",
+      "url": "https://docs.ethena.fi/solution-design/key-addresses"
+    }
+  ],
+  "contracts": [
+    {
+      "chain": "ethereum",
+      "address": "0x9d39a5de30e57443bff2a8307a4256c8797a3497",
+      "decimals": 18
+    }
+  ],
+  "canBeBlacklisted": true,
+  "deploymentModel": "single-chain",
+  "collateralQuality": "exotic",
+  "custodyModel": "cex",
+  "governanceQuality": "wrapper",
+  "reserves": [
+    {
+      "name": "USDe staking vault shares",
+      "pct": 100,
+      "risk": "medium",
+      "coinId": "usde-ethena",
+      "depType": "wrapper"
+    }
+  ],
+  "yieldConfig": {
+    "yieldSource": "Ethena staking (sUSDe)",
+    "yieldType": "nav-appreciation"
+  },
+  "liveReservesConfig": {
+    "adapter": "erc4626-single-asset",
+    "version": 1,
+    "semantics": "single-asset",
+    "breakerScope": "susde-ethena",
+    "display": {
+      "url": "https://docs.ethena.fi/solution-design/staking-usde",
+      "label": "Ethena sUSDe"
+    },
+    "inputs": {
+      "primary": {
+        "kind": "onchain-evm",
+        "chain": "ethereum",
+        "rpcMode": "alchemy"
+      }
+    },
+    "params": {
+      "slice": {
+        "name": "USDe staking vault shares",
+        "risk": "medium",
+        "coinId": "usde-ethena",
+        "depType": "wrapper",
+        "expectedAssetAddress": "0x4c9edd5852cd905f086c759e8383e09bff1e68b3"
+      }
+    }
+  }
+}

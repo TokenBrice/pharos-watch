@@ -1,0 +1,98 @@
+{
+  "id": "tryb-bilira",
+  "name": "BiLira",
+  "symbol": "TRYB",
+  "flags": {
+    "backing": "rwa-backed",
+    "pegCurrency": "TRY",
+    "governance": "centralized",
+    "yieldBearing": false,
+    "rwa": false,
+    "navToken": false
+  },
+  "collateral": "Turkish lira cash reserves held 1:1 by BiLira; issuer materials describe full fiat backing for minted TRYB across supported chains",
+  "pegMechanism": "Direct 1:1 issuance and redemption through BiLira; issuer-managed native deployments extend TRYB across multiple chains",
+  "llamaId": "300",
+  "detailProvider": "defillama",
+  "geckoId": "bilira",
+  "links": [
+    {
+      "label": "Website",
+      "url": "https://www.bilira.co/en/product/tryb-stablecoin"
+    },
+    {
+      "label": "Twitter",
+      "url": "https://x.com/BiLira_Official"
+    }
+  ],
+  "jurisdiction": {
+    "country": "Turkey"
+  },
+  "contracts": [
+    {
+      "chain": "ethereum",
+      "address": "0x2c537e5624e4af88a7ae4060c022609376c8d0eb",
+      "decimals": 6
+    },
+    {
+      "chain": "base",
+      "address": "0xfb8718a69aed7726afb3f04d2bd4bfde1bdcb294",
+      "decimals": 6
+    },
+    {
+      "chain": "bsc",
+      "address": "0xc1fdbed7dac39cae2ccc0748f7a80dc446f6a594",
+      "decimals": 6
+    },
+    {
+      "chain": "avalanche",
+      "address": "0x564a341df6c126f90cf3ecb92120fd7190acb401",
+      "decimals": 6
+    },
+    {
+      "chain": "polygon",
+      "address": "0x4fb71290ac171e1d144f7221d882becac7196eb5",
+      "decimals": 6
+    },
+    {
+      "chain": "plasma",
+      "address": "0x90729a45948c3078890bc80f2a4e7870a2ea4c5e",
+      "decimals": 6
+    },
+    {
+      "chain": "solana",
+      "address": "A94X2fRy3wydNShU4dRaDyap2UuoeWJGWyATtyp61WZf",
+      "decimals": 6
+    }
+  ],
+  "deploymentModel": "native-multichain",
+  "custodyModel": "institutional-unregulated",
+  "reserves": [
+    {
+      "name": "TRY cash reserves",
+      "pct": 100,
+      "risk": "very-low"
+    }
+  ],
+  "liveReservesConfig": {
+    "adapter": "single-asset",
+    "version": 1,
+    "semantics": "single-asset",
+    "breakerScope": "tryb-bilira",
+    "display": {
+      "url": "https://www.bilira.co/en/product/tryb-stablecoin",
+      "label": "BiLira"
+    },
+    "inputs": {
+      "primary": {
+        "kind": "onchain-evm",
+        "chain": "ethereum",
+        "rpcMode": "public-rpc"
+      }
+    },
+    "params": {
+      "label": "TRY cash reserves",
+      "risk": "very-low"
+    }
+  }
+}

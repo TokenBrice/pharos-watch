@@ -1,0 +1,86 @@
+{
+  "id": "apxusd-apyx",
+  "name": "apxUSD",
+  "symbol": "apxUSD",
+  "flags": {
+    "backing": "rwa-backed",
+    "pegCurrency": "USD",
+    "governance": "centralized",
+    "yieldBearing": false,
+    "rwa": true,
+    "navToken": false
+  },
+  "collateral": "Preferred shares issued by Digital Asset Treasuries (DATs) — publicly traded preferred equity from companies holding digital assets (e.g., Strategy STRC); variable-rate instruments designed to trade near par value",
+  "pegMechanism": "1:1 collateral deposit and redemption through the Apyx protocol; Protocol-Owned Liquidity (POL) provides a stability buffer during market stress",
+  "llamaId": "354",
+  "detailProvider": "defillama",
+  "geckoId": "apxusd",
+  "links": [
+    {
+      "label": "Website",
+      "url": "https://apyx.fi"
+    },
+    {
+      "label": "Twitter",
+      "url": "https://x.com/apyx_fi"
+    },
+    {
+      "label": "Docs",
+      "url": "https://docs.apyx.fi"
+    }
+  ],
+  "contracts": [
+    {
+      "chain": "ethereum",
+      "address": "0x98a878b1cd98131b271883b390f68d2c90674665",
+      "decimals": 18
+    }
+  ],
+  "collateralQuality": "rwa",
+  "custodyModel": "institutional-regulated",
+  "governanceQuality": "single-entity",
+  "reserves": [
+    {
+      "name": "STRC (Strategy preferred equity, BTC-linked)",
+      "pct": 40,
+      "risk": "high"
+    },
+    {
+      "name": "BMNR preferred equity (ETH-linked)",
+      "pct": 15,
+      "risk": "high"
+    },
+    {
+      "name": "SATA (Strive preferred equity, BTC-linked)",
+      "pct": 10,
+      "risk": "high"
+    },
+    {
+      "name": "DFDV preferred equity (SOL-linked)",
+      "pct": 10,
+      "risk": "high"
+    },
+    {
+      "name": "U.S. Treasury Bills (liquidity buffer)",
+      "pct": 25,
+      "risk": "very-low"
+    }
+  ],
+  "liveReservesConfig": {
+    "adapter": "curated-validated",
+    "version": 1,
+    "semantics": "collateral-mix",
+    "breakerScope": "apxusd-apyx",
+    "display": {
+      "url": "https://apyx.fi",
+      "label": "APYX Finance"
+    },
+    "inputs": {
+      "primary": {
+        "kind": "onchain-evm",
+        "chain": "ethereum",
+        "rpcMode": "public-rpc"
+      }
+    }
+  }
+}

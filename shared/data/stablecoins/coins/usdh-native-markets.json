@@ -1,0 +1,99 @@
+{
+  "id": "usdh-native-markets",
+  "name": "USDH Stablecoin",
+  "symbol": "USDH",
+  "flags": {
+    "backing": "rwa-backed",
+    "pegCurrency": "USD",
+    "governance": "centralized",
+    "yieldBearing": false,
+    "rwa": false,
+    "navToken": false
+  },
+  "collateral": "Cash, short-term U.S. Treasuries, repo agreements, treasury-focused funds (e.g., BlackRock TTTXX), and tokenized treasury products (e.g., BlackRock BUIDL, Superstate USTB); cash custodied at US-regulated banks, TradFi assets custodied at JP Morgan Chase; on-chain reserves managed by Superstate and custodied in Bridge's MPC infrastructure via Fireblocks; designed by Native Markets, issued by Bridge Building Inc (a Stripe company)",
+  "pegMechanism": "Direct 1:1 redemption through Bridge (a Stripe company); high-quality liquid reserves (cash, U.S. Treasuries) maintain the peg; monthly third-party reserve attestations beginning November 2025",
+  "llamaId": "321",
+  "detailProvider": "defillama",
+  "geckoId": "usdh-2",
+  "pythFeedId": "0xf364e785775b4cb2f159ea823f8b5b9b669a4c221a3f845e518ba0e09611c553",
+  "proofOfReserves": {
+    "type": "independent-audit",
+    "url": "https://www.usdh.com/transparency",
+    "provider": "BPM LLP"
+  },
+  "links": [
+    {
+      "label": "Website",
+      "url": "https://usdh.com/"
+    },
+    {
+      "label": "Twitter",
+      "url": "https://x.com/nativemarkets"
+    },
+    {
+      "label": "Docs",
+      "url": "https://docs.usdh.com"
+    },
+    {
+      "label": "Github",
+      "url": "https://github.com/native-markets"
+    }
+  ],
+  "jurisdiction": {
+    "country": "United States",
+    "regulator": "FinCEN",
+    "license": "Money Services Business (Bridge Building, Inc.)"
+  },
+  "contracts": [
+    {
+      "chain": "hyperevm",
+      "address": "0x111111a1a0667d36bd57c0a9f569b98057111111",
+      "decimals": 6
+    }
+  ],
+  "custodyModel": "institutional-regulated",
+  "reserves": [
+    {
+      "name": "Short-term U.S. Treasuries (BlackRock-managed, JP Morgan custody)",
+      "pct": 40,
+      "risk": "very-low"
+    },
+    {
+      "name": "Cash deposits (JP Morgan, Lead Bank)",
+      "pct": 20,
+      "risk": "very-low"
+    },
+    {
+      "name": "Repo agreements (UST-collateralized)",
+      "pct": 10,
+      "risk": "very-low"
+    },
+    {
+      "name": "Treasury-focused funds (BlackRock TTTXX)",
+      "pct": 10,
+      "risk": "very-low"
+    },
+    {
+      "name": "Tokenized treasuries (BUIDL, USTB)",
+      "pct": 20,
+      "risk": "low",
+      "coinId": "buidl-blackrock"
+    }
+  ],
+  "liveReservesConfig": {
+    "adapter": "usdh-native-markets",
+    "version": 1,
+    "semantics": "attestation-mix",
+    "breakerScope": "usdh-native-markets",
+    "display": {
+      "url": "https://usdh.com/reserves",
+      "label": "USDH Reserves"
+    },
+    "inputs": {
+      "primary": {
+        "kind": "http-html",
+        "url": "https://usdh.com/reserves"
+      }
+    }
+  }
+}

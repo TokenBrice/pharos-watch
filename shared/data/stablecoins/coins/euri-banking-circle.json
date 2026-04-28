@@ -1,0 +1,81 @@
+{
+  "id": "euri-banking-circle",
+  "name": "Eurite",
+  "symbol": "EURI",
+  "flags": {
+    "backing": "rwa-backed",
+    "pegCurrency": "EUR",
+    "governance": "centralized",
+    "yieldBearing": false,
+    "rwa": false,
+    "navToken": false
+  },
+  "collateral": "Euro cash and low-risk liquid assets held in segregated fiduciary accounts, bankruptcy-remote from Banking Circle S.A.",
+  "pegMechanism": "Direct 1:1 redemption at par (fee-free) by Banking Circle S.A.",
+  "llamaId": "325",
+  "detailProvider": "defillama",
+  "geckoId": "eurite",
+  "proofOfReserves": {
+    "type": "independent-audit",
+    "url": "https://www.eurite.com/",
+    "provider": "Ernst & Young"
+  },
+  "links": [
+    {
+      "label": "Website",
+      "url": "https://www.eurite.com/"
+    },
+    {
+      "label": "Twitter",
+      "url": "https://x.com/Eurite_BC"
+    }
+  ],
+  "jurisdiction": {
+    "country": "Luxembourg",
+    "regulator": "CSSF",
+    "license": "Credit Institution (MiCA)"
+  },
+  "contracts": [
+    {
+      "chain": "ethereum",
+      "address": "0x9d1a7a3191102e9f900faa10540837ba84dcbae7",
+      "decimals": 18
+    },
+    {
+      "chain": "bsc",
+      "address": "0x9d1a7a3191102e9f900faa10540837ba84dcbae7",
+      "decimals": 18
+    }
+  ],
+  "deploymentModel": "native-multichain",
+  "custodyModel": "institutional-regulated",
+  "reserves": [
+    {
+      "name": "Euro cash in segregated fiduciary accounts",
+      "pct": 70,
+      "risk": "very-low"
+    },
+    {
+      "name": "Low-risk liquid assets (EU government securities)",
+      "pct": 30,
+      "risk": "very-low"
+    }
+  ],
+  "liveReservesConfig": {
+    "adapter": "curated-validated",
+    "version": 1,
+    "semantics": "attestation-mix",
+    "breakerScope": "euri-banking-circle",
+    "display": {
+      "url": "https://www.eurite.com/",
+      "label": "Eurite"
+    },
+    "inputs": {
+      "primary": {
+        "kind": "onchain-evm",
+        "chain": "ethereum",
+        "rpcMode": "public-rpc"
+      }
+    }
+  }
+}

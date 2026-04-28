@@ -1,0 +1,159 @@
+{
+  "id": "usd0-usual",
+  "name": "Usual USD",
+  "symbol": "USD0",
+  "flags": {
+    "backing": "rwa-backed",
+    "pegCurrency": "USD",
+    "governance": "centralized-dependent",
+    "yieldBearing": false,
+    "rwa": true,
+    "navToken": false
+  },
+  "infrastructures": [
+    "m0"
+  ],
+  "collateral": "Tokenized short-term U.S. Treasury bills and reverse repos, primarily via Hashnote USYC; also M by M0, USDtb by Ethena, OUSG by Ondo, and BUIDL by BlackRock",
+  "pegMechanism": "1:1 minting by depositing approved RWA tokens (e.g. USYC) directly, or depositing USDC via a gateway; redeemable 1:1 for underlying RWA assets via the DaoCollateral contract at any time; arbitrageurs enforce the peg",
+  "llamaId": "195",
+  "detailProvider": "defillama",
+  "geckoId": "usual-usd",
+  "pythFeedId": "0x5e8c65917af89ed66d03d082b1ae5ac93b8ed8e32363a61842c33f7d66cb2e00",
+  "links": [
+    {
+      "label": "Website",
+      "url": "https://usual.money/"
+    },
+    {
+      "label": "Twitter",
+      "url": "https://x.com/usualmoney"
+    },
+    {
+      "label": "Docs",
+      "url": "https://docs.usual.money/"
+    }
+  ],
+  "jurisdiction": {
+    "country": "France"
+  },
+  "contracts": [
+    {
+      "chain": "ethereum",
+      "address": "0x73a15fed60bf67631dc6cd7bc5b6e8da8190acf5",
+      "decimals": 18
+    },
+    {
+      "chain": "arbitrum",
+      "address": "0x35f1c5cb7fb977e669fd244c567da99d8a3a6850",
+      "decimals": 18
+    },
+    {
+      "chain": "base",
+      "address": "0x758a3e0b1f842c9306b783f8a4078c6c8c03a270",
+      "decimals": 18
+    },
+    {
+      "chain": "bsc",
+      "address": "0x758a3e0b1f842c9306b783f8a4078c6c8c03a270",
+      "decimals": 18
+    }
+  ],
+  "deploymentModel": "third-party-bridge",
+  "custodyModel": "institutional-regulated",
+  "reserves": [
+    {
+      "name": "Hashnote USYC (tokenized T-bills/reverse repos)",
+      "pct": 65,
+      "risk": "low",
+      "coinId": "usyc-hashnote"
+    },
+    {
+      "name": "M by M^0 (tokenized T-bills)",
+      "pct": 15,
+      "risk": "low",
+      "coinId": "m-m0"
+    },
+    {
+      "name": "USDtb by Ethena (BUIDL + USDC)",
+      "pct": 10,
+      "risk": "low",
+      "coinId": "usdtb-ethena"
+    },
+    {
+      "name": "BlackRock BUIDL",
+      "pct": 5,
+      "risk": "low",
+      "coinId": "buidl-blackrock"
+    },
+    {
+      "name": "OUSG by Ondo (tokenized T-bills)",
+      "pct": 3,
+      "risk": "low",
+      "coinId": "ousg-ondo-finance"
+    },
+    {
+      "name": "USDC (Circle)",
+      "pct": 2,
+      "risk": "low",
+      "coinId": "usdc-circle"
+    }
+  ],
+  "liveReservesConfig": {
+    "adapter": "evm-branch-balances",
+    "version": 1,
+    "semantics": "collateral-mix",
+    "breakerScope": "usd0-usual",
+    "display": {
+      "url": "https://usual.money/",
+      "label": "Usual"
+    },
+    "inputs": {
+      "primary": {
+        "kind": "onchain-evm",
+        "chain": "ethereum",
+        "rpcMode": "etherscan-proxy"
+      }
+    },
+    "params": {
+      "branches": [
+        {
+          "name": "Hashnote USYC",
+          "holder": "0xdd82875f0840AAD58a455A70B88eEd9F59ceC7c7",
+          "token": {
+            "chain": "ethereum",
+            "address": "0x136471a34f6ef19fE571EFFC1CA711fdb8E49f2b",
+            "decimals": 6
+          },
+          "risk": "low",
+          "coinId": "usyc-hashnote"
+        },
+        {
+          "name": "M by M^0 (via UsualM wrapper)",
+          "holder": "0xdd82875f0840AAD58a455A70B88eEd9F59ceC7c7",
+          "token": {
+            "chain": "ethereum",
+            "address": "0x4Cbc25559DbBD1272EC5B64c7b5F48a2405e6470",
+            "decimals": 18
+          },
+          "risk": "low",
+          "coinId": "m-m0",
+          "depType": "wrapper",
+          "priceUsd": 1
+        },
+        {
+          "name": "USDtb by Ethena (via UsualUSDtb wrapper)",
+          "holder": "0xdd82875f0840AAD58a455A70B88eEd9F59ceC7c7",
+          "token": {
+            "chain": "ethereum",
+            "address": "0x58073531a2809744D1bF311D30FD76B27D662abB",
+            "decimals": 18
+          },
+          "risk": "low",
+          "coinId": "usdtb-ethena",
+          "depType": "wrapper",
+          "priceUsd": 1
+        }
+      ]
+    }
+  }
+}

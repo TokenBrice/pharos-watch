@@ -1,0 +1,157 @@
+{
+  "id": "dai-makerdao",
+  "name": "Dai",
+  "symbol": "DAI",
+  "flags": {
+    "backing": "crypto-backed",
+    "pegCurrency": "USD",
+    "governance": "centralized-dependent",
+    "yieldBearing": false,
+    "rwa": false,
+    "navToken": false
+  },
+  "collateral": "Multi-collateral: RWA (U.S. Treasuries via Spark/BlockTower ~40%), USDC via LitePSM (~33%), ETH/wstETH (~20%), WBTC (~5%), other vaults; managed by Sky/MakerDAO governance",
+  "pegMechanism": "Overcollateralized CDP vaults (auto-liquidated if ratio drops below minimum); LitePSM enabling 1:1 USDC↔DAI swaps; MKR acts as backstop (minted and sold to cover bad debt)",
+  "llamaId": "5",
+  "detailProvider": "defillama",
+  "geckoId": "dai",
+  "pythFeedId": "0xb0948a5e5313200c632b51bb5ca32f6de0d36e9950a942d19751e833f70dabfd",
+  "links": [
+    {
+      "label": "Website",
+      "url": "https://makerdao.com/"
+    },
+    {
+      "label": "Twitter",
+      "url": "https://x.com/MakerDAO"
+    },
+    {
+      "label": "Docs",
+      "url": "https://docs.makerdao.com/"
+    }
+  ],
+  "jurisdiction": {
+    "country": "Denmark"
+  },
+  "contracts": [
+    {
+      "chain": "ethereum",
+      "address": "0x6b175474e89094c44da98b954eedeac495271d0f",
+      "decimals": 18
+    },
+    {
+      "chain": "polygon",
+      "address": "0x8f3cf7ad23cd3cadbd9735aff958023239c6a063",
+      "decimals": 18
+    },
+    {
+      "chain": "arbitrum",
+      "address": "0xda10009cbd5d07dd0cecc66161fc93d7c9000da1",
+      "decimals": 18
+    },
+    {
+      "chain": "optimism",
+      "address": "0xda10009cbd5d07dd0cecc66161fc93d7c9000da1",
+      "decimals": 18
+    },
+    {
+      "chain": "bsc",
+      "address": "0x1af3f329e8be154074d8769d1ffa4ee058b1dbc3",
+      "decimals": 18
+    },
+    {
+      "chain": "avalanche",
+      "address": "0xd586e7f844cea2f87f50152665bcbc2c279d8d70",
+      "decimals": 18
+    },
+    {
+      "chain": "fantom",
+      "address": "0x8d11ec38a3eb5e956b052f67da8bdc9bef8abf3e",
+      "decimals": 18
+    },
+    {
+      "chain": "base",
+      "address": "0x50c5725949a6f0c72e6c4a641f24049a917db0cb",
+      "decimals": 18
+    },
+    {
+      "chain": "klaytn",
+      "address": "0x5c74070fdea071359b86082bd9f9b3deaafbe32b",
+      "decimals": 18
+    },
+    {
+      "chain": "kava",
+      "address": "0x765277eebeca2e31912c9946eae1021199b39c61",
+      "decimals": 18
+    },
+    {
+      "chain": "near",
+      "address": "6b175474e89094c44da98b954eedeac495271d0f.factory.bridge.near",
+      "decimals": 18
+    },
+    {
+      "chain": "pulsechain",
+      "address": "0xefd766ccb38eaf1dfd701853bfce31359239f305",
+      "decimals": 18
+    }
+  ],
+  "deploymentModel": "canonical-bridge",
+  "collateralQuality": "rwa",
+  "custodyModel": "institutional-top",
+  "governanceQuality": "dao-governance",
+  "reserves": [
+    {
+      "name": "Stablecoins (PSM)",
+      "pct": 38,
+      "risk": "very-low",
+      "coinId": "usdc-circle",
+      "depType": "mechanism"
+    },
+    {
+      "name": "Spark (lending)",
+      "pct": 28,
+      "risk": "low"
+    },
+    {
+      "name": "Grove (RWA)",
+      "pct": 23,
+      "risk": "low"
+    },
+    {
+      "name": "Obex",
+      "pct": 5,
+      "risk": "medium"
+    },
+    {
+      "name": "Core (crypto vaults)",
+      "pct": 4,
+      "risk": "medium"
+    },
+    {
+      "name": "Staking Engine",
+      "pct": 1,
+      "risk": "high"
+    },
+    {
+      "name": "Legacy RWA",
+      "pct": 1,
+      "risk": "low"
+    }
+  ],
+  "liveReservesConfig": {
+    "adapter": "sky-makercore",
+    "version": 1,
+    "semantics": "collateral-mix",
+    "breakerScope": "sky-makercore-collateral",
+    "display": {
+      "url": "https://info.sky.money/",
+      "label": "Sky Info"
+    },
+    "inputs": {
+      "primary": {
+        "kind": "http-json",
+        "url": "https://info-sky.blockanalitica.com/groups/?days_ago=1&order=-debt"
+      }
+    }
+  }
+}

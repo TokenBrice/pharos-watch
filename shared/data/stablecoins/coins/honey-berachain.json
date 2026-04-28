@@ -1,0 +1,137 @@
+{
+  "id": "honey-berachain",
+  "name": "Honey",
+  "symbol": "HONEY",
+  "flags": {
+    "backing": "crypto-backed",
+    "pegCurrency": "USD",
+    "governance": "centralized-dependent",
+    "yieldBearing": false,
+    "rwa": false,
+    "navToken": false
+  },
+  "collateral": "1:1 basket of USDC, USDT0, pyUSD, and USDe on Berachain",
+  "pegMechanism": "Direct 1:1 mint/redeem against centralized stablecoin collateral with Basket Mode safety",
+  "llamaId": "231",
+  "detailProvider": "defillama",
+  "geckoId": "honey-3",
+  "pythFeedId": "0xf67b033925d73d43ba4401e00308d9b0f26ab4fbd1250e8b5407b9eaade7e1f4",
+  "links": [
+    {
+      "label": "Website",
+      "url": "https://honey.berachain.com/"
+    },
+    {
+      "label": "Twitter",
+      "url": "https://x.com/berachain"
+    },
+    {
+      "label": "Docs",
+      "url": "https://docs.berachain.com/learn/pol/tokens/honey"
+    },
+    {
+      "label": "Discord",
+      "url": "https://discord.gg/berachain"
+    }
+  ],
+  "contracts": [
+    {
+      "chain": "berachain",
+      "address": "0xfcbd14dc51f0a4d49d5e53c2e0950e0bc26d0dce",
+      "decimals": 18
+    }
+  ],
+  "chainTier": "unproven",
+  "collateralQuality": "alt-lst-bridged-or-mixed",
+  "reserves": [
+    {
+      "name": "USDC (Circle)",
+      "pct": 40,
+      "risk": "low",
+      "coinId": "usdc-circle"
+    },
+    {
+      "name": "USDT0 (Tether via LayerZero)",
+      "pct": 25,
+      "risk": "low",
+      "coinId": "usdt-tether"
+    },
+    {
+      "name": "pyUSD / BYUSD (PayPal)",
+      "pct": 20,
+      "risk": "low",
+      "coinId": "pyusd-paypal"
+    },
+    {
+      "name": "USDe (Ethena)",
+      "pct": 15,
+      "risk": "high",
+      "coinId": "usde-ethena"
+    }
+  ],
+  "liveReservesConfig": {
+    "adapter": "evm-branch-balances",
+    "version": 1,
+    "semantics": "collateral-mix",
+    "breakerScope": "honey-berachain",
+    "display": {
+      "url": "https://honey.berachain.com/",
+      "label": "Berachain Honey"
+    },
+    "inputs": {
+      "primary": {
+        "kind": "onchain-evm",
+        "chain": "berachain",
+        "rpcMode": "public-rpc"
+      }
+    },
+    "params": {
+      "rpcUrl": "https://rpc.berachain.com",
+      "branches": [
+        {
+          "name": "USDe (Ethena)",
+          "holder": "0x551fb0309dd7e1c6e1a59d9389ef10da864a552e",
+          "token": {
+            "chain": "berachain",
+            "address": "0x5d3a1ff2b6bab83b63cd9ad0787074081a52ef34",
+            "decimals": 18
+          },
+          "risk": "high",
+          "coinId": "usde-ethena"
+        },
+        {
+          "name": "USDC.e (bridged Circle)",
+          "holder": "0x90bc07408f5b5eac4de38af76ea6069e1fcee363",
+          "token": {
+            "chain": "berachain",
+            "address": "0x549943e04f40284185054145c6e4e9568c1d3241",
+            "decimals": 6
+          },
+          "risk": "low",
+          "coinId": "usdc-circle"
+        },
+        {
+          "name": "USD₮0 (Tether via LayerZero)",
+          "holder": "0xcf02d03cfaeb8a8419bf718e92875b0187d3b190",
+          "token": {
+            "chain": "berachain",
+            "address": "0x779ded0c9e1022225f8e0630b35a9b54be713736",
+            "decimals": 6
+          },
+          "risk": "low",
+          "coinId": "usdt-tether"
+        },
+        {
+          "name": "BYUSD (Berachain Yield USD)",
+          "holder": "0x36a9975acd3b6f2e2cad4e191967ebf80f99d7ce",
+          "token": {
+            "chain": "berachain",
+            "address": "0x688e72142674041f8f6af4c808a4045ca1d6ac82",
+            "decimals": 6
+          },
+          "risk": "low"
+        }
+      ]
+    }
+  }
+}

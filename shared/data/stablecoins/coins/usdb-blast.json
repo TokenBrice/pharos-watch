@@ -1,0 +1,87 @@
+{
+  "id": "usdb-blast",
+  "name": "USDB Blast",
+  "symbol": "USDB",
+  "flags": {
+    "backing": "crypto-backed",
+    "pegCurrency": "USD",
+    "governance": "centralized-dependent",
+    "yieldBearing": true,
+    "rwa": false,
+    "navToken": false
+  },
+  "collateral": "USDC and USDT bridged to Blast L2; yield from Maker DSR and T-bills",
+  "pegMechanism": "Automatic rebasing with yield from underlying centralized stablecoin strategies",
+  "llamaId": "172",
+  "detailProvider": "defillama",
+  "geckoId": "usdb",
+  "pythFeedId": "0xf85d863ce3b640bf85307be333dedc563aa3a27961c9042f89ed8300ebd3c855",
+  "links": [
+    {
+      "label": "Website",
+      "url": "https://blast.io/"
+    },
+    {
+      "label": "Twitter",
+      "url": "https://x.com/Blast_L2"
+    },
+    {
+      "label": "Docs",
+      "url": "https://docs.blast.io/"
+    }
+  ],
+  "contracts": [
+    {
+      "chain": "blast",
+      "address": "0x4300000000000000000000000000000000000003",
+      "decimals": 18
+    }
+  ],
+  "chainTier": "stage1-l2",
+  "collateralQuality": "alt-lst-bridged-or-mixed",
+  "reserves": [
+    {
+      "name": "DAI / sDAI (via MakerDAO DSR)",
+      "pct": 60,
+      "risk": "low",
+      "coinId": "dai-makerdao",
+      "blacklistable": true
+    },
+    {
+      "name": "USDC (bridged)",
+      "pct": 25,
+      "risk": "low",
+      "coinId": "usdc-circle"
+    },
+    {
+      "name": "USDT (bridged)",
+      "pct": 15,
+      "risk": "low",
+      "coinId": "usdt-tether"
+    }
+  ],
+  "liveReservesConfig": {
+    "adapter": "curated-validated",
+    "version": 1,
+    "semantics": "collateral-mix",
+    "breakerScope": "usdb-blast",
+    "display": {
+      "url": "https://blast.io/",
+      "label": "Blast"
+    },
+    "inputs": {
+      "primary": {
+        "kind": "onchain-evm",
+        "chain": "blast",
+        "rpcMode": "public-rpc"
+      }
+    },
+    "params": {
+      "rpcUrl": "https://rpc.blast.io"
+    }
+  },
+  "yieldConfig": {
+    "yieldSource": "Blast native yield",
+    "yieldType": "governance-set"
+  }
+}

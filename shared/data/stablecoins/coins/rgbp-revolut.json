@@ -1,0 +1,73 @@
+{
+  "id": "rgbp-revolut",
+  "name": "Revolut GBP Stablecoin",
+  "symbol": "RGBP",
+  "flags": {
+    "backing": "rwa-backed",
+    "pegCurrency": "GBP",
+    "governance": "centralized",
+    "yieldBearing": false,
+    "rwa": false,
+    "navToken": false
+  },
+  "detailProvider": "defillama",
+  "links": [
+    {
+      "label": "Website",
+      "url": "https://www.revolut.com"
+    },
+    {
+      "label": "Twitter",
+      "url": "https://x.com/RevolutApp"
+    }
+  ],
+  "jurisdiction": {
+    "country": "United Kingdom",
+    "regulator": "FCA"
+  },
+  "custodyModel": "institutional-regulated",
+  "status": "pre-launch",
+  "announcedDate": "2026-02",
+  "expectedLaunchDate": "2027",
+  "launchPhase": "announced",
+  "launchPhaseDetail": "Selected as one of four firms for FCA Regulatory Sandbox stablecoin cohort (Feb 25); testing began Q1 2026; full UK banking licence granted Mar 11, but GBP stablecoin would be issued from Revolut Ltd (e-money entity), not Revolut Bank UK, per BoE proposed rule on subsidiary issuance; Head of UK Policy Rory Tanner outlined proposition to House of Lords (Mar 25), flagging UK→India remittance corridor as priority use case; ticker not publicly confirmed; Bank of England's proposed ban on 'branded' stablecoins and 40% unremunerated-reserve requirement remain open commercial risks; UK full authorisation regime not active until October 2027",
+  "featuredContent": [
+    {
+      "type": "article",
+      "url": "https://www.theblock.co/post/391237/revolut-firms-picked-uk-fca-test-stablecoin-sandbox",
+      "title": "Revolut among firms picked by UK FCA to test stablecoin sandbox",
+      "description": "FCA selects Revolut, Monee, ReStabilise and VVTX from 20 applicants for a regulatory sandbox cohort testing GBP-denominated stablecoin products.",
+      "source": "The Block"
+    },
+    {
+      "type": "article",
+      "url": "https://paymentexpert.com/2026/03/25/revolut-uk-legal-head-gbp-stablecoin/",
+      "title": "Revolut UK Legal Head calls for GBP stablecoin",
+      "description": "Rory Tanner tells House of Lords the UK is 'already behind' the US and EU on GBP stablecoins; highlights UK→India remittance corridor (seventh-largest globally) as priority B2B use case.",
+      "source": "Payment Expert"
+    }
+  ],
+  "milestones": [
+    {
+      "date": "2026-02-25",
+      "type": "regulatory",
+      "title": "FCA selects Revolut for UK Regulatory Sandbox stablecoin cohort",
+      "description": "Revolut chosen alongside Monee Financial Technologies, ReStabilise, and VVTX from a pool of 20 applicants to test stablecoin issuance under proposed UK rules; testing began Q1 2026.",
+      "sourceUrl": "https://www.theblock.co/post/391237/revolut-firms-picked-uk-fca-test-stablecoin-sandbox"
+    },
+    {
+      "date": "2026-03-11",
+      "type": "regulatory",
+      "title": "Revolut granted full UK banking licence by PRA",
+      "description": "PRA and FCA lift mobilisation restrictions after a 20-month phase; banking services move to Revolut Bank UK Ltd, but any GBP stablecoin would be issued from Revolut Ltd (the e-money entity) per BoE's proposed rule prohibiting the same group from issuing stablecoins across affiliated subsidiaries.",
+      "sourceUrl": "https://www.coindesk.com/policy/2026/03/11/crypto-friendly-fintech-revolut-gains-full-uk-banking-license"
+    },
+    {
+      "date": "2026-03-25",
+      "type": "milestone",
+      "title": "Revolut UK Head of Policy testifies to House of Lords on GBP stablecoin strategy",
+      "description": "Rory Tanner tells peers the UK is 'already behind' the US and EU; outlines UK→India remittance corridor (seventh-largest globally) as priority B2B use case; flags Bank of England's proposed 'branded stablecoin' ban as a commercial blocker.",
+      "sourceUrl": "https://paymentexpert.com/2026/03/25/revolut-uk-legal-head-gbp-stablecoin/"
+    }
+  ]
+}

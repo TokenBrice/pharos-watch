@@ -1,0 +1,89 @@
+{
+  "id": "stcusd-cap",
+  "name": "Staked Cap USD",
+  "symbol": "stcUSD",
+  "flags": {
+    "backing": "rwa-backed",
+    "pegCurrency": "USD",
+    "governance": "centralized-dependent",
+    "yieldBearing": true,
+    "rwa": false,
+    "navToken": true
+  },
+  "variantOf": "cusd-cap",
+  "variantKind": "strategy-vault",
+  "pegReferenceId": "cusd-cap",
+  "collateral": "ERC-4626 staked cUSD shares backed by Cap's reserve basket and operator-lending framework; yield comes from reserve yield and overcollateralized operator borrowing",
+  "pegMechanism": "Users stake cUSD for stcUSD; the stcUSD exchange rate appreciates versus cUSD as yield accrues, and final USD exit inherits cUSD proportional basket redemption and Cap's slashing protections",
+  "detailProvider": "coingecko",
+  "geckoId": "staked-cap-usd",
+  "links": [
+    {
+      "label": "Website",
+      "url": "https://cap.app"
+    },
+    {
+      "label": "Twitter",
+      "url": "https://x.com/capmoney_"
+    },
+    {
+      "label": "Docs",
+      "url": "https://docs.cap.app/protocol-overview/stcusd-mechanics"
+    },
+    {
+      "label": "GitHub",
+      "url": "https://github.com/cap-labs-dev"
+    }
+  ],
+  "contracts": [
+    {
+      "chain": "ethereum",
+      "address": "0x88887be419578051ff9f4eb6c858a951921d8888",
+      "decimals": 18
+    }
+  ],
+  "deploymentModel": "single-chain",
+  "collateralQuality": "exotic",
+  "custodyModel": "institutional-regulated",
+  "governanceQuality": "wrapper",
+  "reserves": [
+    {
+      "name": "cUSD ERC-4626 vault shares and operator-lending receivable",
+      "pct": 100,
+      "risk": "high",
+      "coinId": "cusd-cap",
+      "depType": "wrapper"
+    }
+  ],
+  "yieldConfig": {
+    "defiLlamaPoolId": "bf6ca887-e357-49ec-8031-0d1a6141c455",
+    "yieldSource": "Cap savings (stcUSD)",
+    "yieldType": "lending-vault"
+  },
+  "liveReservesConfig": {
+    "adapter": "erc4626-single-asset",
+    "version": 1,
+    "semantics": "single-asset",
+    "breakerScope": "stcusd-cap",
+    "display": {
+      "url": "https://docs.cap.app/protocol-overview/stcusd-mechanics",
+      "label": "Cap stcUSD"
+    },
+    "inputs": {
+      "primary": {
+        "kind": "onchain-evm",
+        "chain": "ethereum",
+        "rpcMode": "alchemy"
+      }
+    },
+    "params": {
+      "slice": {
+        "name": "cUSD ERC-4626 vault shares and operator-lending receivable",
+        "risk": "high",
+        "coinId": "cusd-cap",
+        "depType": "wrapper",
+        "expectedAssetAddress": "0xcccc62962d17b8914c62d74ffb843d73b2a3cccc"
+      }
+    }
+  }
+}

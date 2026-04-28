@@ -1,0 +1,155 @@
+{
+  "id": "gho-aave",
+  "name": "GHO",
+  "symbol": "GHO",
+  "flags": {
+    "backing": "crypto-backed",
+    "pegCurrency": "USD",
+    "governance": "centralized-dependent",
+    "yieldBearing": false,
+    "rwa": false,
+    "navToken": false
+  },
+  "collateral": "Any Aave V3 Ethereum market collateral asset (ETH, wBTC, USDC, USDT, and others), overcollateralized per Aave's risk parameters",
+  "pegMechanism": "Overcollateralized minting via the Aave V3 facilitator model; live GSM redemption is centered on yield-bearing stability modules such as stataUSDC and stataUSDT, with steward-managed facilitator limits reinforcing the peg",
+  "llamaId": "118",
+  "detailProvider": "defillama",
+  "geckoId": "gho",
+  "pythFeedId": "0x2a0e948f637a8c251d9f06055e72eb4b3880dd57848bbdb02993c8165d7df4ee",
+  "proofOfReserves": {
+    "type": "independent-audit",
+    "url": "https://github.com/aave-dao/gho-origin/tree/main/audits",
+    "provider": "OpenZeppelin, ABDK, Sigma Prime, Certora"
+  },
+  "links": [
+    {
+      "label": "Website",
+      "url": "https://aave.com/gho"
+    },
+    {
+      "label": "Analytics",
+      "url": "https://aave.tokenlogic.xyz/gho"
+    },
+    {
+      "label": "Twitter",
+      "url": "https://x.com/GHO"
+    },
+    {
+      "label": "Docs",
+      "url": "https://aave.com/docs/ecosystem/gho"
+    },
+    {
+      "label": "GitHub",
+      "url": "https://github.com/aave-dao/gho-origin"
+    }
+  ],
+  "contracts": [
+    {
+      "chain": "ethereum",
+      "address": "0x40d16fc0246ad3160ccc09b8d0d3a2cd28ae6c2f",
+      "decimals": 18
+    },
+    {
+      "chain": "arbitrum",
+      "address": "0x7dff72693f6a4149b17e7c6314655f6a9f7c8b33",
+      "decimals": 18
+    },
+    {
+      "chain": "base",
+      "address": "0x6bb7a212910682dcfdbd5bcbb3e28fb4e8da10ee",
+      "decimals": 18
+    },
+    {
+      "chain": "gnosis",
+      "address": "0xfc421ad3c883bf9e7c4f42de845c4e4405799e73",
+      "decimals": 18
+    },
+    {
+      "chain": "ink",
+      "address": "0xfc421ad3c883bf9e7c4f42de845c4e4405799e73",
+      "decimals": 18
+    },
+    {
+      "chain": "avalanche",
+      "address": "0xfc421ad3c883bf9e7c4f42de845c4e4405799e73",
+      "decimals": 18
+    },
+    {
+      "chain": "mantle",
+      "address": "0xfc421aD3C883Bf9E7C4f42dE845C4e4405799e73",
+      "decimals": 18
+    }
+  ],
+  "deploymentModel": "third-party-bridge",
+  "collateralQuality": "alt-lst-bridged-or-mixed",
+  "governanceQuality": "dao-governance",
+  "reserves": [
+    {
+      "name": "GhoDirectFacilitator GSMs Mainnet",
+      "pct": 38.4,
+      "risk": "medium"
+    },
+    {
+      "name": "CoreGhoDirectMinter",
+      "pct": 22.7,
+      "risk": "medium"
+    },
+    {
+      "name": "stataUSDC GSM",
+      "pct": 19.7,
+      "risk": "low",
+      "coinId": "usdc-circle"
+    },
+    {
+      "name": "LidoGhoDirectMinter",
+      "pct": 7.6,
+      "risk": "medium"
+    },
+    {
+      "name": "GhoDirectFacilitator Plasma",
+      "pct": 6.9,
+      "risk": "medium"
+    },
+    {
+      "name": "HorizonGhoDirectMinter",
+      "pct": 4.7,
+      "risk": "medium"
+    }
+  ],
+  "liveReservesConfig": {
+    "adapter": "gho",
+    "version": 2,
+    "semantics": "protocol-reserve",
+    "display": {
+      "url": "https://aave.tokenlogic.xyz/gho",
+      "label": "Aave GHO"
+    },
+    "inputs": {
+      "primary": {
+        "kind": "onchain-evm",
+        "chain": "ethereum",
+        "rpcMode": "etherscan-proxy"
+      }
+    },
+    "params": {
+      "gsmModules": [
+        {
+          "address": "0x3a3868898305f04bec7fea77becff04c13444112",
+          "label": "stataUSDC GSM",
+          "coinId": "usdc-circle",
+          "risk": "low"
+        },
+        {
+          "address": "0x882285e62656b9623af136ce3078c6bdcc33f5e3",
+          "label": "stataUSDT GSM",
+          "coinId": "usdt-tether",
+          "risk": "low"
+        }
+      ]
+    }
+  },
+  "yieldConfig": {
+    "yieldSource": "Aave Safety Module (sGHO)",
+    "yieldType": "lending-vault"
+  }
+}

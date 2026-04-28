@@ -1,0 +1,131 @@
+{
+  "id": "crvusd-curve",
+  "name": "crvUSD",
+  "symbol": "crvUSD",
+  "flags": {
+    "backing": "crypto-backed",
+    "pegCurrency": "USD",
+    "governance": "centralized-dependent",
+    "yieldBearing": false,
+    "rwa": false,
+    "navToken": false
+  },
+  "collateral": "WBTC, cbBTC (majority), wstETH, sfrxETH, weETH, tBTC, and ETH deposited as collateral; LLAMMA (Lending-Liquidating AMM) performs soft liquidations; WBTC/cbBTC custody by BitGo/Coinbase introduces centralized dependency",
+  "pegMechanism": "Peg Stability Reserve (PegKeeper) contracts deposit or withdraw pre-minted crvUSD into Curve pools paired with USDC, USDT, PYUSD, and frxUSD to restore the peg; borrow rate adjusts dynamically — rising when crvUSD trades below $1 to incentivize repayments",
+  "llamaId": "110",
+  "detailProvider": "defillama",
+  "geckoId": "crvusd",
+  "links": [
+    {
+      "label": "Website",
+      "url": "https://www.curve.finance/"
+    },
+    {
+      "label": "Twitter",
+      "url": "https://x.com/CurveFinance"
+    },
+    {
+      "label": "Docs",
+      "url": "https://resources.curve.finance/"
+    },
+    {
+      "label": "GitHub",
+      "url": "https://github.com/curvefi/curve-stablecoin"
+    },
+    {
+      "label": "Dune crvUSD Balance Sheet",
+      "url": "https://dune.com/warshine/crvusd-balance-sheet"
+    }
+  ],
+  "jurisdiction": {
+    "country": "Switzerland"
+  },
+  "contracts": [
+    {
+      "chain": "ethereum",
+      "address": "0xf939e0a03fb07f59a73314e73794be0e57ac1b4e",
+      "decimals": 18
+    },
+    {
+      "chain": "arbitrum",
+      "address": "0x498bf2b1e120fed3ad3d42ea2165e9b73f99c1e5",
+      "decimals": 18
+    },
+    {
+      "chain": "base",
+      "address": "0x417ac0e078398c154edfadd9ef675d30be60af93",
+      "decimals": 18
+    },
+    {
+      "chain": "gnosis",
+      "address": "0xabef652195f98a91e490f047a5006b71c85f058d",
+      "decimals": 18
+    },
+    {
+      "chain": "polygon",
+      "address": "0xc4ce1d6f5d98d65ee25cf85e9f2e9dcfee6cb5d6",
+      "decimals": 18
+    },
+    {
+      "chain": "bsc",
+      "address": "0xe2fb3f127f5450dee44afe054385d74c392bdef4",
+      "decimals": 18
+    },
+    {
+      "chain": "optimism",
+      "address": "0xc52d7f23a2e460248db6ee192cb23dd12bddcbf6",
+      "decimals": 18
+    },
+    {
+      "chain": "taiko",
+      "address": "0xc8f4518ed4bab9a972808a493107926ce8237068",
+      "decimals": 18
+    },
+    {
+      "chain": "fraxtal",
+      "address": "0xb102f7efa0d5de071a8d37b3548e1c7cb148caf3",
+      "decimals": 18
+    }
+  ],
+  "deploymentModel": "canonical-bridge",
+  "governanceQuality": "dao-governance",
+  "reserves": [
+    {
+      "name": "WBTC / cbBTC",
+      "pct": 69,
+      "risk": "medium",
+      "blacklistable": true
+    },
+    {
+      "name": "tBTC",
+      "pct": 11,
+      "risk": "medium"
+    },
+    {
+      "name": "wstETH / sfrxETH / weETH",
+      "pct": 12,
+      "risk": "low"
+    },
+    {
+      "name": "ETH",
+      "pct": 8,
+      "risk": "very-low"
+    }
+  ],
+  "liveReservesConfig": {
+    "adapter": "crvusd",
+    "version": 2,
+    "semantics": "collateral-mix",
+    "breakerScope": "crvusd-curve",
+    "display": {
+      "url": "https://www.curve.finance/crvusd/",
+      "label": "Markets"
+    },
+    "inputs": {
+      "primary": {
+        "kind": "http-json",
+        "url": "https://prices.curve.finance/v1/crvusd/markets"
+      }
+    }
+  }
+}

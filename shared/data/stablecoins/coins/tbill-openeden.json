@@ -1,0 +1,102 @@
+{
+  "id": "tbill-openeden",
+  "name": "OpenEden TBILL",
+  "symbol": "TBILL",
+  "flags": {
+    "backing": "rwa-backed",
+    "pegCurrency": "USD",
+    "governance": "centralized",
+    "yieldBearing": true,
+    "rwa": true,
+    "navToken": true
+  },
+  "collateral": "Short-term U.S. Treasury bills (weighted-average maturity <3 months) managed by BNY Investment Management, custodied by BNY; small USD cash buffer",
+  "pegMechanism": "NAV-based pricing; institutional mint/redeem through regulated BVI fund structure",
+  "llamaId": "257",
+  "detailProvider": "defillama",
+  "geckoId": "openeden-tbill",
+  "proofOfReserves": {
+    "type": "independent-audit",
+    "url": "https://openeden.com/tbill/transparency"
+  },
+  "links": [
+    {
+      "label": "Website",
+      "url": "https://openeden.com/tbill"
+    },
+    {
+      "label": "Twitter",
+      "url": "https://x.com/OpenEden_X"
+    },
+    {
+      "label": "Docs",
+      "url": "https://docs.openeden.com/"
+    }
+  ],
+  "jurisdiction": {
+    "country": "British Virgin Islands",
+    "regulator": "BVI FSC",
+    "license": "Registered Professional Fund"
+  },
+  "contracts": [
+    {
+      "chain": "ethereum",
+      "address": "0xdd50c053c096cb04a3e3362e2b622529ec5f2e8a",
+      "decimals": 6
+    },
+    {
+      "chain": "arbitrum",
+      "address": "0xf84d28a8d28292842dd73d1c5f99476a80b6666a",
+      "decimals": 6
+    },
+    {
+      "chain": "solana",
+      "address": "4MmJVdwYN8LwvbGeCowYjSx7KoEi6BJWg8XXnW4fDDp6",
+      "decimals": 6
+    }
+  ],
+  "deploymentModel": "native-multichain",
+  "custodyModel": "institutional-top",
+  "reserves": [
+    {
+      "name": "Short-dated U.S. Treasury bills (WAM <3mo)",
+      "pct": 95,
+      "risk": "very-low"
+    },
+    {
+      "name": "USD cash buffer",
+      "pct": 5,
+      "risk": "very-low"
+    }
+  ],
+  "yieldConfig": {
+    "yieldSource": "OpenEden T-bill vault",
+    "yieldType": "nav-appreciation"
+  },
+  "liveReservesConfig": {
+    "adapter": "chainlink-nav",
+    "version": 2,
+    "semantics": "single-asset",
+    "breakerScope": "tbill-openeden",
+    "display": {
+      "url": "https://openeden.com/tbill/transparency",
+      "label": "OpenEden Transparency"
+    },
+    "inputs": {
+      "primary": {
+        "kind": "onchain-evm",
+        "chain": "ethereum",
+        "rpcMode": "public-rpc"
+      }
+    },
+    "params": {
+      "oracleAddress": "0xCe9a6626Eb99eaeA829D7fA613d5D0A2eaE45F40",
+      "tokenAddress": "0xdd50c053c096cb04a3e3362e2b622529ec5f2e8a",
+      "assetLabel": "U.S. Treasury bills (WAM <3 months)",
+      "assetRisk": "very-low",
+      "rpcUrl": "https://ethereum-rpc.publicnode.com",
+      "fallbackRpcUrl": "https://eth.llamarpc.com",
+      "maxOracleAgeSec": 345600
+    }
+  }
+}

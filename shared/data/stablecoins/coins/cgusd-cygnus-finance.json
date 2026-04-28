@@ -1,0 +1,75 @@
+{
+  "id": "cgusd-cygnus-finance",
+  "name": "Cygnus Finance Global USD",
+  "symbol": "cgUSD",
+  "flags": {
+    "backing": "rwa-backed",
+    "pegCurrency": "USD",
+    "governance": "centralized",
+    "yieldBearing": false,
+    "rwa": false,
+    "navToken": false
+  },
+  "collateral": "Short-term U.S. Treasury bills held off-chain, supplemented by on-chain stablecoins (USDC/USDT); supply rebases daily on New York banking days to match portfolio net asset value including accrued interest",
+  "pegMechanism": "Daily rebase on NYC banking days aligning total supply with portfolio NAV; 1:1 USDC redemption via two-step withdrawal (request + claim, 5–7 day settlement); Transmuter enables instant 1:1 conversion between cgUSD and USDC; Elixir AMO manages on-chain liquidity",
+  "llamaId": "166",
+  "detailProvider": "defillama",
+  "geckoId": "cygnus-finance-global-usd",
+  "links": [
+    {
+      "label": "Website",
+      "url": "https://www.cygnus.finance/"
+    },
+    {
+      "label": "Twitter",
+      "url": "https://x.com/CygnusFi"
+    },
+    {
+      "label": "Docs",
+      "url": "https://wiki.cygnus.finance/whitepaper/"
+    }
+  ],
+  "contracts": [
+    {
+      "chain": "base",
+      "address": "0xca72827a3d211cfd8f6b00ac98824872b72cab49",
+      "decimals": 6
+    }
+  ],
+  "custodyModel": "institutional-unregulated",
+  "reserves": [
+    {
+      "name": "Short-term U.S. Treasury bills (off-chain)",
+      "pct": 80,
+      "risk": "very-low"
+    },
+    {
+      "name": "On-chain stablecoins (USDC/USDT)",
+      "pct": 15,
+      "risk": "low",
+      "coinId": "usdc-circle"
+    },
+    {
+      "name": "Accrued interest",
+      "pct": 5,
+      "risk": "very-low"
+    }
+  ],
+  "liveReservesConfig": {
+    "adapter": "curated-validated",
+    "version": 1,
+    "semantics": "attestation-mix",
+    "breakerScope": "cgusd-cygnus-finance",
+    "display": {
+      "url": "https://www.cygnus.finance/",
+      "label": "Cygnus Finance"
+    },
+    "inputs": {
+      "primary": {
+        "kind": "onchain-evm",
+        "chain": "base",
+        "rpcMode": "alchemy"
+      }
+    }
+  }
+}

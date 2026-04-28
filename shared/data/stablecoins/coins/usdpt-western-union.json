@@ -1,0 +1,86 @@
+{
+  "id": "usdpt-western-union",
+  "name": "US Dollar Payment Token",
+  "symbol": "USDPT",
+  "flags": {
+    "backing": "rwa-backed",
+    "pegCurrency": "USD",
+    "governance": "centralized",
+    "yieldBearing": false,
+    "rwa": false,
+    "navToken": false
+  },
+  "detailProvider": "defillama",
+  "links": [
+    {
+      "label": "Website",
+      "url": "https://www.westernunion.com"
+    },
+    {
+      "label": "Twitter",
+      "url": "https://x.com/WesternUnion"
+    }
+  ],
+  "jurisdiction": {
+    "country": "United States"
+  },
+  "geckoId": "usdpt-western-union",
+  "status": "pre-launch",
+  "announcedDate": "2025-10",
+  "expectedLaunchDate": "2026-Q2",
+  "launchPhase": "beta",
+  "launchPhaseDetail": "Crossmint wallet partnership live; CEO presented at Digital Asset Summit NYC (Mar 2026); U.S. Bank confirmed as reserve custodian via Anchorage Digital; Rain/Visa prepaid card partnership for inflation zones; CoinGecko preview listing (zero supply); token not yet deployed on Solana",
+  "featuredContent": [
+    {
+      "type": "tweet",
+      "url": "https://x.com/solana/status/1983222673841775098",
+      "title": "USDPT and the Digital Asset Network, built on Solana",
+      "source": "@solana"
+    },
+    {
+      "type": "article",
+      "url": "https://www.coindesk.com/business/2025/10/28/western-union-to-launch-stablecoin-on-solana-with-anchorage-digital",
+      "title": "Western Union to Launch Stablecoin on Solana With Anchorage Digital",
+      "description": "Western Union plans to launch USDPT for its 100-million-user payment network, becoming the latest traditional finance firm tapping blockchain rails for global transfers.",
+      "image": "/featured/usdpt-coindesk.jpg",
+      "source": "CoinDesk"
+    },
+    {
+      "type": "article",
+      "url": "https://www.americanbanker.com/payments/news/western-union-has-big-plans-for-stablecoins",
+      "title": "Western Union has big plans for stablecoins",
+      "description": "CEO Devin McGranahan outlines strategy: converting negative float to positive float revenue, opening network to community banks, and enabling dollar-denominated holdings in inflationary regions.",
+      "source": "American Banker"
+    }
+  ],
+  "custodyModel": "institutional-regulated",
+  "milestones": [
+    {
+      "date": "2025-10-28",
+      "type": "announcement",
+      "title": "Western Union announces USDPT on Solana with Anchorage Digital",
+      "description": "USDPT to be issued by Anchorage Digital Bank, connecting on-chain dollar transfers to Western Union's cash network spanning 200+ countries.",
+      "sourceUrl": "https://ir.westernunion.com/news/archived-press-releases/press-release-details/2025/Western-Union-Announces-USDPT-Stablecoin-on-Solana-and-Digital-Asset-Network/default.aspx"
+    },
+    {
+      "date": "2025-10-28",
+      "type": "partnership",
+      "title": "Anchorage Digital Bank named as federally regulated issuer",
+      "sourceUrl": "https://www.coindesk.com/business/2025/10/28/western-union-to-launch-stablecoin-on-solana-with-anchorage-digital"
+    },
+    {
+      "date": "2026-03-05",
+      "type": "partnership",
+      "title": "Crossmint partnership for wallet infrastructure and payment APIs",
+      "description": "Crossmint integrates USDPT into wallet infrastructure, enabling fintech developers to build on Solana with cash-out through Western Union locations.",
+      "sourceUrl": "https://crypto.news/western-union-usdpt-stablecoin-solana-crossmint-2026/"
+    },
+    {
+      "date": "2026-03-24",
+      "type": "milestone",
+      "title": "CEO speaks at Digital Asset Summit NYC; U.S. Bank confirmed as reserve custodian",
+      "description": "McGranahan outlines float-revenue model, community bank onboarding vision, and dollar-denominated holdings for inflationary regions; confirms U.S. Bank as custodian via Anchorage Digital.",
+      "sourceUrl": "https://www.americanbanker.com/payments/news/western-union-has-big-plans-for-stablecoins"
+    }
+  ]
+}

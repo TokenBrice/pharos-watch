@@ -1,0 +1,93 @@
+{
+  "id": "cadc-cad-coin",
+  "name": "CAD Coin",
+  "symbol": "CADC",
+  "flags": {
+    "backing": "rwa-backed",
+    "pegCurrency": "CAD",
+    "governance": "centralized",
+    "yieldBearing": false,
+    "rwa": false,
+    "navToken": false
+  },
+  "collateral": "Canadian dollars and cash equivalents (liquid securities with original maturity ≤ 90 days) held 1:1 in a segregated account at a Canadian financial institution, in trust for CADC holders",
+  "pegMechanism": "Direct 1:1 redemption for CAD through Loon (FINTRAC-registered MSB, formerly issued by PayTrie); CADC is burned on redemption and minted on deposit",
+  "llamaId": "145",
+  "detailProvider": "defillama",
+  "geckoId": "cad-coin",
+  "proofOfReserves": {
+    "type": "self-reported",
+    "url": "https://dune.com/cadc/stablecoin",
+    "provider": "Loon (on-chain Dune dashboard)"
+  },
+  "links": [
+    {
+      "label": "Website",
+      "url": "https://loon.finance/"
+    },
+    {
+      "label": "Twitter",
+      "url": "https://x.com/LoonFinance"
+    },
+    {
+      "label": "Docs",
+      "url": "https://faq.paytrie.com/col/cadc-faqs"
+    }
+  ],
+  "jurisdiction": {
+    "country": "Canada",
+    "regulator": "FINTRAC",
+    "license": "C10001420"
+  },
+  "contracts": [
+    {
+      "chain": "ethereum",
+      "address": "0xcadc0acd4b445166f12d2c07eac6e2544fbe2eef",
+      "decimals": 18
+    },
+    {
+      "chain": "polygon",
+      "address": "0x9de41aff9f55219d5bf4359f167d1d0c772a396d",
+      "decimals": 18
+    },
+    {
+      "chain": "arbitrum",
+      "address": "0x2b28e826b55e399f4d4699b85f68666ac51e6f70",
+      "decimals": 18
+    },
+    {
+      "chain": "base",
+      "address": "0x043eb4b75d0805c43d7c834902e335621983cf03",
+      "decimals": 18
+    }
+  ],
+  "custodyModel": "institutional-regulated",
+  "reserves": [
+    {
+      "name": "CAD & short-term securities in segregated trust",
+      "pct": 100,
+      "risk": "very-low"
+    }
+  ],
+  "liveReservesConfig": {
+    "adapter": "single-asset",
+    "version": 1,
+    "semantics": "single-asset",
+    "breakerScope": "cadc-cad-coin",
+    "display": {
+      "url": "https://loon.finance/",
+      "label": "Loon Finance"
+    },
+    "inputs": {
+      "primary": {
+        "kind": "onchain-evm",
+        "chain": "ethereum",
+        "rpcMode": "public-rpc"
+      }
+    },
+    "params": {
+      "label": "CAD bank deposits",
+      "risk": "very-low"
+    }
+  }
+}

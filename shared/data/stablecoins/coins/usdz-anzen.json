@@ -1,0 +1,104 @@
+{
+  "id": "usdz-anzen",
+  "name": "Anzen USDz",
+  "symbol": "USDz",
+  "flags": {
+    "backing": "rwa-backed",
+    "pegCurrency": "USD",
+    "governance": "centralized",
+    "yieldBearing": false,
+    "rwa": true,
+    "navToken": false
+  },
+  "collateral": "Diversified U.S. private credit assets (SMB merchant receivables, factored invoices, PO financing, auto lease financing, consumer installment lending) tokenized as Secured Private Credit Tokens (SPCT), underwritten by Percent (U.S.-licensed broker-dealer)",
+  "pegMechanism": "Each USDz backed 1:1 by SPCT locked in the smart contract; peg maintained by arbitrage — if below $1, traders buy at discount; if above $1, Qualified Market Makers mint at 1:1 USDz/USDC and sell",
+  "llamaId": "202",
+  "detailProvider": "defillama",
+  "geckoId": "anzen-usdz",
+  "proofOfReserves": {
+    "type": "real-time",
+    "url": "https://rwa.anzen.finance/transparency",
+    "provider": "on-chain SPCT collateralization"
+  },
+  "links": [
+    {
+      "label": "Website",
+      "url": "https://anzen.finance/"
+    },
+    {
+      "label": "Twitter",
+      "url": "https://x.com/AnzenFinance"
+    },
+    {
+      "label": "Docs",
+      "url": "https://docs.anzen.finance/"
+    }
+  ],
+  "jurisdiction": {
+    "country": "British Virgin Islands"
+  },
+  "contracts": [
+    {
+      "chain": "ethereum",
+      "address": "0xa469b7ee9ee773642b3e93e842e5d9b5baa10067",
+      "decimals": 18
+    },
+    {
+      "chain": "base",
+      "address": "0x04d5ddf5f3a8939889f11e97f8c4bb48317f1938",
+      "decimals": 18
+    },
+    {
+      "chain": "arbitrum",
+      "address": "0x5018609ab477cc502e170a5accf5312b86a4b94f",
+      "decimals": 18
+    },
+    {
+      "chain": "blast",
+      "address": "0x52056ed29fe015f4ba2e3b079d10c0b87f46e8c6",
+      "decimals": 18
+    },
+    {
+      "chain": "manta",
+      "address": "0x73d23f3778a90be8846e172354a115543df2a7e4",
+      "decimals": 18
+    }
+  ],
+  "deploymentModel": "third-party-bridge",
+  "custodyModel": "institutional-regulated",
+  "reserves": [
+    {
+      "name": "U.S. private credit ABS (SMB receivables, auto leases, consumer lending, litigation finance via Percent)",
+      "pct": 80,
+      "risk": "high"
+    },
+    {
+      "name": "Superstate USTB/USCC (tokenized T-bills and crypto carry)",
+      "pct": 15,
+      "risk": "medium",
+      "coinId": "ustb-superstate"
+    },
+    {
+      "name": "Cash and cash equivalents",
+      "pct": 5,
+      "risk": "very-low"
+    }
+  ],
+  "liveReservesConfig": {
+    "adapter": "anzen-usdz",
+    "version": 1,
+    "semantics": "single-asset",
+    "breakerScope": "usdz-anzen",
+    "display": {
+      "url": "https://rwa.anzen.finance/transparency",
+      "label": "Anzen transparency"
+    },
+    "inputs": {
+      "primary": {
+        "kind": "onchain-evm",
+        "chain": "ethereum",
+        "rpcMode": "public-rpc"
+      }
+    }
+  }
+}

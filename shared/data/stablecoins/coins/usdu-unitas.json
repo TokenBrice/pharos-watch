@@ -1,0 +1,102 @@
+{
+  "id": "usdu-unitas",
+  "name": "Unitas",
+  "symbol": "USDU",
+  "flags": {
+    "backing": "crypto-backed",
+    "pegCurrency": "USD",
+    "governance": "centralized-dependent",
+    "yieldBearing": true,
+    "rwa": false,
+    "navToken": false
+  },
+  "collateral": "USDC deposits: 80% converted to JLP (a basket of BTC, ETH, SOL, and USDC earning Jupiter Perps trading fees); 20% held at Copper/Ceffu as margin for delta-neutral short perp positions; ~10% of protocol fees route to an Insurance Fund",
+  "pegMechanism": "Overcollateralized, delta-neutral: long JLP + short perpetuals rebalanced hourly via Copper/Ceffu off-exchange settlement; whitelisted KYC/KYB participants mint/redeem 1:1 with USDC via API; most users acquire USDu on secondary markets",
+  "llamaId": "283",
+  "detailProvider": "defillama",
+  "geckoId": "usdu",
+  "cmcSlug": "unitas-protocol",
+  "proofOfReserves": {
+    "type": "real-time",
+    "url": "https://accountable.unitas.so/",
+    "provider": "Accountable"
+  },
+  "links": [
+    {
+      "label": "Website",
+      "url": "https://unitas.so/"
+    },
+    {
+      "label": "Twitter",
+      "url": "https://x.com/UnitasLabs"
+    },
+    {
+      "label": "Docs",
+      "url": "https://docs.unitas.so/"
+    }
+  ],
+  "jurisdiction": {
+    "country": "Singapore"
+  },
+  "contracts": [
+    {
+      "chain": "bsc",
+      "address": "0xea953ea6634d55dac6697c436b1e81a679db5882",
+      "decimals": 18
+    },
+    {
+      "chain": "solana",
+      "address": "9ckR7pPPvyPadACDTzLwK2ZAEeUJ3qGSnzPs8bVaHrSy",
+      "decimals": 6
+    }
+  ],
+  "dependencies": [
+    {
+      "id": "usdc-circle",
+      "weight": 0.8
+    }
+  ],
+  "deploymentModel": "native-multichain",
+  "collateralQuality": "exotic",
+  "custodyModel": "institutional-regulated",
+  "reserves": [
+    {
+      "name": "JLP (Jupiter Perps LP: BTC, ETH, SOL, USDC basket)",
+      "pct": 80,
+      "risk": "high"
+    },
+    {
+      "name": "Short perp margin (Copper/Ceffu off-exchange)",
+      "pct": 20,
+      "risk": "high"
+    }
+  ],
+  "yieldConfig": {
+    "yieldSource": "Unitas savings (sUSDu)",
+    "yieldType": "governance-set"
+  },
+  "liveReservesConfig": {
+    "adapter": "accountable",
+    "version": 1,
+    "semantics": "protocol-reserve",
+    "breakerScope": "usdu-unitas",
+    "display": {
+      "url": "https://accountable.unitas.so/",
+      "label": "Accountable Dashboard"
+    },
+    "inputs": {
+      "primary": {
+        "kind": "http-json",
+        "url": "https://cache.accountable.capital/dashboard/unitas"
+      }
+    },
+    "params": {
+      "bucket": "reserves_split",
+      "riskMap": {
+        "Binance": "high",
+        "Solana": "low",
+        "BNB Smart Chain": "low"
+      }
+    }
+  }
+}

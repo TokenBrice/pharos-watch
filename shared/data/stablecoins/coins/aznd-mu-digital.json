@@ -1,0 +1,92 @@
+{
+  "id": "aznd-mu-digital",
+  "name": "Mu Digital AZND",
+  "symbol": "AZND",
+  "flags": {
+    "backing": "rwa-backed",
+    "pegCurrency": "USD",
+    "governance": "centralized",
+    "yieldBearing": true,
+    "rwa": true,
+    "navToken": true
+  },
+  "collateral": "Accountable currently shows the Asset Pool concentrated in short-term cash and liquid bonds; Mu Digital's published mandate still targets an Asia credit portfolio with illiquid private credit capped at 20%, and the muBOND junior tranche overcollateralizes AZND at ~118%",
+  "pegMechanism": "KYC-gated 1:1 mint using USDC, USDT, or AUSD; redemptions processed weekly (~7 calendar days) per Singapore fund liquidity calendar; muBOND junior tranche absorbs NAV losses first; insurance fund provides additional backstop; permissionless secondary swaps via DEX partners on Monad",
+  "llamaId": "327",
+  "detailProvider": "defillama",
+  "geckoId": "mu-digital-aznd",
+  "proofOfReserves": {
+    "type": "real-time",
+    "url": "https://mu.accountable.capital/",
+    "provider": "Accountable"
+  },
+  "links": [
+    {
+      "label": "Website",
+      "url": "https://mudigital.net/"
+    },
+    {
+      "label": "Twitter",
+      "url": "https://x.com/MuDigitalHQ"
+    },
+    {
+      "label": "Docs",
+      "url": "https://docs.mudigital.net"
+    },
+    {
+      "label": "Proof of Reserve",
+      "url": "https://mu.accountable.capital/"
+    }
+  ],
+  "jurisdiction": {
+    "country": "Singapore",
+    "license": "Portfolio managed by Golden Hill Asset Management (GHAM), a Singapore-regulated fund manager; assets held in a regulated fund vehicle"
+  },
+  "contracts": [
+    {
+      "chain": "monad",
+      "address": "0x4917a5ec9fcb5e10f47cbb197abe6ab63be81fe8",
+      "decimals": 18
+    }
+  ],
+  "custodyModel": "institutional-unregulated",
+  "reserves": [
+    {
+      "name": "Short Term Cash",
+      "pct": 80.9,
+      "risk": "very-low"
+    },
+    {
+      "name": "Liquid Bonds",
+      "pct": 19.1,
+      "risk": "high"
+    }
+  ],
+  "liveReservesConfig": {
+    "adapter": "accountable",
+    "version": 1,
+    "semantics": "protocol-reserve",
+    "breakerScope": "aznd-mu-digital",
+    "display": {
+      "url": "https://mu.accountable.capital/",
+      "label": "Accountable Dashboard"
+    },
+    "inputs": {
+      "primary": {
+        "kind": "http-json",
+        "url": "https://mu.accountable.capital:10443/dashboard"
+      }
+    },
+    "params": {
+      "bucket": "type",
+      "riskMap": {
+        "Liquid Bonds": "high",
+        "Short Term Cash": "very-low"
+      }
+    }
+  },
+  "yieldConfig": {
+    "yieldSource": "Mu Digital AUD yield fund",
+    "yieldType": "nav-appreciation"
+  }
+}

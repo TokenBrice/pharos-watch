@@ -1,0 +1,125 @@
+{
+  "id": "usdd-tron-dao-reserve",
+  "name": "USDD",
+  "symbol": "USDD",
+  "flags": {
+    "backing": "crypto-backed",
+    "pegCurrency": "USD",
+    "governance": "centralized-dependent",
+    "yieldBearing": false,
+    "rwa": false,
+    "navToken": false
+  },
+  "collateral": "Current reserves are split across Smart Allocator stablecoin deployments, TRX and sTRX CDP vault collateral, and USDT held in PSM/direct vaults; Bitcoin was removed from reserves in August 2024",
+  "pegMechanism": "CDP model with minimum 130% collateral ratio; Peg Stability Module enables 1:1 minting/redemption against USDT and USDC",
+  "llamaId": "14",
+  "detailProvider": "defillama",
+  "geckoId": "usdd",
+  "pythFeedId": "0x6d20210495d6518787b72e4ad06bc4df21e68d89a802cf6bced2fca6c29652a6",
+  "proofOfReserves": {
+    "type": "self-reported",
+    "url": "https://usdd.io/"
+  },
+  "links": [
+    {
+      "label": "Website",
+      "url": "https://usdd.io/"
+    },
+    {
+      "label": "Docs",
+      "url": "https://docs.usdd.io"
+    },
+    {
+      "label": "Twitter",
+      "url": "https://x.com/usddio"
+    }
+  ],
+  "jurisdiction": {
+    "country": "Dominica"
+  },
+  "contracts": [
+    {
+      "chain": "tron",
+      "address": "TXDk8mbtRbXeYuMNS83CfKPaYYT8XWv9Hz",
+      "decimals": 18
+    },
+    {
+      "chain": "ethereum",
+      "address": "0x4f8e5de400de08b164e7421b3ee387f461becd1a",
+      "decimals": 18
+    },
+    {
+      "chain": "bsc",
+      "address": "0x45e51bc23d592eb2dba86da3985299f7895d66ba",
+      "decimals": 18
+    },
+    {
+      "chain": "near",
+      "address": "0c10bf8fcb7bf5412187a595ab97a3609160b5c6.factory.bridge.near",
+      "decimals": 18
+    },
+    {
+      "chain": "avalanche",
+      "address": "0xb514cabd09ef5b169ed3fe0fa8dbd590741e81c2",
+      "decimals": 18
+    },
+    {
+      "chain": "arbitrum",
+      "address": "0x680447595e8b7b3aa1b43beb9f6098c79ac2ab3f",
+      "decimals": 18
+    },
+    {
+      "chain": "bittorrent",
+      "address": "0x392004bee213f1ff580c867359c246924f21e6ad",
+      "decimals": 18
+    }
+  ],
+  "chainTier": "established-alt-l1",
+  "deploymentModel": "native-multichain",
+  "collateralQuality": "alt-lst-bridged-or-mixed",
+  "liveReservesConfig": {
+    "adapter": "usdd-data-platform",
+    "version": 1,
+    "semantics": "collateral-mix",
+    "breakerScope": "usdd-tron-dao-reserve",
+    "display": {
+      "url": "https://usdd.io/data",
+      "label": "USDD Data"
+    },
+    "inputs": {
+      "primary": {
+        "kind": "http-json",
+        "url": "https://app-api.usdd.io/data-platform/latest-collateral?chain=tron"
+      },
+      "fallbacks": [
+        {
+          "kind": "http-json",
+          "url": "https://app-api.usdd.io/data-platform/latest-collateral?chain=ethereum"
+        }
+      ]
+    }
+  },
+  "reserves": [
+    {
+      "name": "TRX",
+      "pct": 62.5,
+      "risk": "high"
+    },
+    {
+      "name": "Smart Allocator (stablecoin DeFi via Aave/JustLend)",
+      "pct": 31.5,
+      "risk": "medium"
+    },
+    {
+      "name": "USDT (PSM vaults)",
+      "pct": 4.9,
+      "risk": "low",
+      "coinId": "usdt-tether"
+    },
+    {
+      "name": "sTRX (direct vaults)",
+      "pct": 1.1,
+      "risk": "high"
+    }
+  ]
+}

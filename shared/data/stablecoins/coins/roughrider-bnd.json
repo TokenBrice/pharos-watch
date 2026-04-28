@@ -1,0 +1,89 @@
+{
+  "id": "roughrider-bnd",
+  "name": "Roughrider Coin",
+  "symbol": "ROUGHRIDER",
+  "flags": {
+    "backing": "rwa-backed",
+    "pegCurrency": "USD",
+    "governance": "centralized",
+    "yieldBearing": false,
+    "rwa": false,
+    "navToken": false
+  },
+  "detailProvider": "defillama",
+  "links": [
+    {
+      "label": "Website",
+      "url": "https://bnd.nd.gov/roughrider/"
+    },
+    {
+      "label": "Docs",
+      "url": "https://bnd.nd.gov/fintech/"
+    },
+    {
+      "label": "Twitter",
+      "url": "https://x.com/BankofND"
+    }
+  ],
+  "jurisdiction": {
+    "country": "United States"
+  },
+  "status": "pre-launch",
+  "announcedDate": "2025-10",
+  "expectedLaunchDate": "2026-09",
+  "launchPhase": "beta",
+  "launchPhaseDetail": "IC unanimously approved bank-to-bank pilot March 25; risk rated low-to-moderate; 10 local banks interested; cost-neutral model; September 2026 on track; Fiserv contract entering finalization",
+  "featuredContent": [
+    {
+      "type": "tweet",
+      "url": "https://x.com/GovArmstrong/status/1975965566390370469",
+      "title": "Governor Armstrong announces Roughrider Coin",
+      "source": "@GovArmstrong"
+    },
+    {
+      "type": "article",
+      "url": "https://bnd.nd.gov/bank-of-north-dakota-and-fiserv-partner-to-launch-roughrider-coin/",
+      "title": "Bank of North Dakota and Fiserv Partner to Launch Roughrider Coin",
+      "description": "North Dakota's first stablecoin — fully USD-backed, built on Fiserv's digital asset platform, targeting bank-to-bank transactions for 2026 launch.",
+      "image": "/featured/roughrider-bnd-press.jpg",
+      "source": "Bank of North Dakota"
+    },
+    {
+      "type": "article",
+      "url": "https://www.route-fifty.com/finance/2026/03/north-dakota-moves-forward-stablecoin-local-banks-express-interest-pilot-project/412436/",
+      "title": "North Dakota Moves Forward With Stablecoin as Local Banks Express Interest",
+      "description": "Post-IC-vote deep dive: risk rated low-to-moderate, cost-neutral model, 10 banks interested, Fiserv contract entering finalization.",
+      "source": "Route Fifty"
+    }
+  ],
+  "custodyModel": "institutional-regulated",
+  "milestones": [
+    {
+      "date": "2025-10-08",
+      "type": "announcement",
+      "title": "Bank of North Dakota announces Roughrider Coin",
+      "description": "North Dakota's first stablecoin, targeting bank-to-bank transactions for state banking system.",
+      "sourceUrl": "https://bnd.nd.gov/bank-of-north-dakota-and-fiserv-partner-to-launch-roughrider-coin/"
+    },
+    {
+      "date": "2025-10-08",
+      "type": "partnership",
+      "title": "Fiserv confirmed as technology and platform partner",
+      "sourceUrl": "https://investors.fiserv.com/newsroom/detail/2868/bank-of-north-dakota-and-fiserv-partner-to-launch-roughrider-coin-north-dakotas-first-stablecoin"
+    },
+    {
+      "date": "2026-03-09",
+      "type": "regulatory",
+      "title": "ND Industrial Commission to review stablecoin pilot at March 25 meeting",
+      "description": "Review includes utilization plan, risk assessment, safeguards, and cost projections. September 2026 launch pending approval.",
+      "sourceUrl": "https://northdakotamonitor.com/2026/03/09/next-steps-for-bank-of-north-dakota-stablecoin-to-be-reviewed-this-month/"
+    },
+    {
+      "date": "2026-03-25",
+      "type": "regulatory",
+      "title": "ND Industrial Commission unanimously approves bank-to-bank use case",
+      "description": "10 local banks express pilot interest; risk rated 'low to moderate'; project cost-neutral; September 2026 launch reaffirmed; Fiserv contract finalization underway.",
+      "sourceUrl": "https://www.kvrr.com/2026/03/26/north-dakota-moves-forward-with-stablecoin-as-local-banks-express-interest-in-pilot-project/"
+    }
+  ]
+}

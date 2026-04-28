@@ -1,0 +1,48 @@
+{
+  "id": "usdrif-rif",
+  "name": "RIF US Dollar",
+  "symbol": "USDRIF",
+  "flags": {
+    "backing": "crypto-backed",
+    "pegCurrency": "USD",
+    "governance": "decentralized",
+    "yieldBearing": false,
+    "rwa": false,
+    "navToken": false
+  },
+  "collateral": "RIF tokens locked in the RIF On Chain protocol on Rootstock",
+  "pegMechanism": "USDRIF is minted against RIF collateral and can be redeemed for the same dollar value in RIF through the protocol, with smart-contract rules and scheduled settlement supporting the peg",
+  "llamaId": "159",
+  "detailProvider": "defillama",
+  "geckoId": "rif-us-dollar",
+  "links": [
+    {
+      "label": "Website",
+      "url": "https://rifonchain.com/"
+    },
+    {
+      "label": "Docs",
+      "url": "https://wiki.rifonchain.com/frequently-asked-questions/web-app-faq"
+    },
+    {
+      "label": "Dapp",
+      "url": "https://dapp.rifonchain.com/"
+    }
+  ],
+  "contracts": [
+    {
+      "chain": "rootstock",
+      "address": "0x3a15461d8ae0f0fb5fa2629e9da7d66a794a6e37",
+      "decimals": 18
+    }
+  ],
+  "chainTier": "mature-alt-l1",
+  "collateralQuality": "exotic",
+  "reserves": [
+    {
+      "name": "RIF collateral locked in RIF On Chain smart contracts",
+      "pct": 100,
+      "risk": "high"
+    }
+  ]
+}

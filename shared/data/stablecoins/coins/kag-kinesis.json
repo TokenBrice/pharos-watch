@@ -1,0 +1,78 @@
+{
+  "id": "kag-kinesis",
+  "name": "Kinesis Silver",
+  "symbol": "KAG",
+  "flags": {
+    "backing": "rwa-backed",
+    "pegCurrency": "SILVER",
+    "governance": "centralized",
+    "yieldBearing": false,
+    "rwa": true,
+    "navToken": false
+  },
+  "collateral": "Investment-grade physical silver bullion (1 KAG = 1 troy ounce)",
+  "pegMechanism": "Direct redemption for physical silver through Kinesis; yield via transaction fee sharing",
+  "commodityOunces": 1,
+  "detailProvider": "commodity",
+  "geckoId": "kinesis-silver",
+  "proofOfReserves": {
+    "type": "independent-audit",
+    "url": "https://kinesis.money/trust-security/",
+    "provider": "Bureau Veritas (Inspectorate International)"
+  },
+  "links": [
+    {
+      "label": "Website",
+      "url": "https://kinesis.money/silver/"
+    },
+    {
+      "label": "Docs",
+      "url": "https://kinesis.money/trust-security/"
+    },
+    {
+      "label": "Twitter",
+      "url": "https://x.com/KinesisMonetary"
+    }
+  ],
+  "jurisdiction": {
+    "country": "Cayman Islands",
+    "regulator": "CIMA",
+    "license": "VASP License (conditional)"
+  },
+  "contracts": [
+    {
+      "chain": "ethereum",
+      "address": "0xf94d9b6dc4eacd89fe3235d9a3c2465fea405157",
+      "decimals": 9
+    }
+  ],
+  "custodyModel": "institutional-regulated",
+  "reserves": [
+    {
+      "name": "Physical silver bullion (999 fine, ABX global vaults)",
+      "pct": 100,
+      "risk": "very-low"
+    }
+  ],
+  "liveReservesConfig": {
+    "adapter": "single-asset",
+    "version": 1,
+    "semantics": "single-asset",
+    "breakerScope": "kag-kinesis",
+    "display": {
+      "url": "https://kinesis.money/silver/",
+      "label": "Kinesis"
+    },
+    "inputs": {
+      "primary": {
+        "kind": "onchain-evm",
+        "chain": "ethereum",
+        "rpcMode": "public-rpc"
+      }
+    },
+    "params": {
+      "label": "Physical silver bullion (LBMA 999 fine)",
+      "risk": "very-low"
+    }
+  }
+}

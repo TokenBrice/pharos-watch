@@ -1,0 +1,93 @@
+{
+  "id": "thbill-theo",
+  "name": "Theo thBILL",
+  "symbol": "thBILL",
+  "flags": {
+    "backing": "rwa-backed",
+    "pegCurrency": "USD",
+    "governance": "centralized",
+    "yieldBearing": true,
+    "rwa": true,
+    "navToken": true
+  },
+  "collateral": "Basket of institutional-grade tokenized U.S. Treasury bills; currently 100% tULTRA, a wrapped representation of Standard Chartered Libeara's ULTRA fund (Delta Wellington Ultra Short Treasury On-Chain Fund), managed by Wellington Management, custodied by Standard Chartered, fund administration by FundBridge Capital",
+  "pegMechanism": "NAV-accreting token (not pegged to $1); price launched at ~$1.00 and appreciates as T-bill yield accrues; KYC-gated mint/redemption processed instantly in USDC, underlying collateral settled within T+4 business days; restricted to institutional and non-U.S. accredited investors",
+  "detailProvider": "coingecko",
+  "geckoId": "theo-short-duration-us-treasury-fund",
+  "links": [
+    {
+      "label": "Website",
+      "url": "https://theo.xyz"
+    },
+    {
+      "label": "Twitter",
+      "url": "https://x.com/Theo_Network"
+    },
+    {
+      "label": "Docs",
+      "url": "https://docs.theo.xyz"
+    }
+  ],
+  "jurisdiction": {
+    "country": "Panama"
+  },
+  "contracts": [
+    {
+      "chain": "ethereum",
+      "address": "0x5fa487bca6158c64046b2813623e20755091da0b",
+      "decimals": 6
+    },
+    {
+      "chain": "arbitrum",
+      "address": "0xfdd22ce6d1f66bc0ec89b20bf16ccb6670f55a5a",
+      "decimals": 6
+    },
+    {
+      "chain": "base",
+      "address": "0xfdd22ce6d1f66bc0ec89b20bf16ccb6670f55a5a",
+      "decimals": 6
+    },
+    {
+      "chain": "hyperevm",
+      "address": "0xfdd22ce6d1f66bc0ec89b20bf16ccb6670f55a5a",
+      "decimals": 6
+    }
+  ],
+  "canBeBlacklisted": true,
+  "deploymentModel": "native-multichain",
+  "collateralQuality": "rwa",
+  "custodyModel": "institutional-regulated",
+  "governanceQuality": "single-entity",
+  "reserves": [
+    {
+      "name": "tULTRA — Standard Chartered Libeara tokenized U.S. T-bills (Wellington Mgmt)",
+      "pct": 100,
+      "risk": "low"
+    }
+  ],
+  "yieldConfig": {
+    "yieldSource": "tULTRA (Standard Chartered Libeara tokenized T-bills)",
+    "yieldType": "nav-appreciation"
+  },
+  "liveReservesConfig": {
+    "adapter": "single-asset",
+    "version": 1,
+    "semantics": "single-asset",
+    "breakerScope": "thbill-theo",
+    "display": {
+      "url": "https://theo.xyz",
+      "label": "Theo Network"
+    },
+    "inputs": {
+      "primary": {
+        "kind": "onchain-evm",
+        "chain": "ethereum",
+        "rpcMode": "public-rpc"
+      }
+    },
+    "params": {
+      "label": "tULTRA tokenized U.S. Treasury bills",
+      "risk": "low"
+    }
+  }
+}

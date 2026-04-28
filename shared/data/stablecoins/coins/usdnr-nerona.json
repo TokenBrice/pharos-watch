@@ -1,0 +1,86 @@
+{
+  "id": "usdnr-nerona",
+  "name": "Nerona USD",
+  "symbol": "USDnr",
+  "flags": {
+    "backing": "rwa-backed",
+    "pegCurrency": "USD",
+    "governance": "centralized",
+    "yieldBearing": false,
+    "rwa": true,
+    "navToken": false
+  },
+  "infrastructures": [
+    "m0"
+  ],
+  "collateral": "Backed 1:1 by M (M0 Protocol's tokenized short-term U.S. Treasury bills, routed through USTB / Superstate Short Duration U.S. Government Securities Fund); per the M0 dashboard the wrapper holds ~$50.25M of USTB-collateralised M against ~$50M USDnr in circulation, with the surplus held in a Stability Reserve buffer. Reserves sit in M0 SPVs managed by the M0 Minter (MXON)",
+  "pegMechanism": "Permissioned 1:1 wrapper around M0's $M token: USDnr is minted by Nerona by depositing/wrapping $M (sourced from MXON, the legal Minter on the M0 network) and burned 1:1 against $M on redemption. T-bill yield earned by the underlying M accrues to the M0 reserve / Nerona — USDnr holders receive no rebase or NAV growth themselves. Mint/redeem is gated to permissioned, KYC-onboarded clients of Nerona's private wealth platform",
+  "detailProvider": "coingecko",
+  "proofOfReserves": {
+    "type": "real-time",
+    "url": "https://dashboard.m0.org/stablecoins/usdnr",
+    "provider": "M0 Protocol"
+  },
+  "links": [
+    {
+      "label": "Website",
+      "url": "https://www.nerona.xyz/"
+    },
+    {
+      "label": "M0 Dashboard",
+      "url": "https://dashboard.m0.org/stablecoins/usdnr"
+    },
+    {
+      "label": "M0 Docs",
+      "url": "https://docs.m0.org/"
+    }
+  ],
+  "contracts": [
+    {
+      "chain": "ethereum",
+      "address": "0xd48e565561416de59da1050ed70b8d75e8ef28f9",
+      "decimals": 6
+    }
+  ],
+  "canBeBlacklisted": "possible",
+  "collateralQuality": "rwa",
+  "custodyModel": "institutional-unregulated",
+  "governanceQuality": "single-entity",
+  "deploymentModel": "single-chain",
+  "chainTier": "ethereum",
+  "dependencies": [
+    {
+      "id": "m-m0",
+      "weight": 1,
+      "type": "wrapper"
+    }
+  ],
+  "reserves": [
+    {
+      "name": "Short-term U.S. Treasury Bills (via USTB / M0 Protocol)",
+      "pct": 99,
+      "risk": "very-low"
+    },
+    {
+      "name": "Stability Reserve buffer",
+      "pct": 1,
+      "risk": "very-low"
+    }
+  ],
+  "liveReservesConfig": {
+    "adapter": "m0",
+    "version": 1,
+    "semantics": "protocol-reserve",
+    "breakerScope": "m0",
+    "display": {
+      "url": "https://dashboard.m0.org/stablecoins/usdnr",
+      "label": "M0 Dashboard"
+    },
+    "inputs": {
+      "primary": {
+        "kind": "http-json",
+        "url": "https://protocol-api.m0.org/graphql"
+      }
+    }
+  }
+}

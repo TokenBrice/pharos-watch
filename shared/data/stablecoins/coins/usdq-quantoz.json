@@ -1,0 +1,102 @@
+{
+  "id": "usdq-quantoz",
+  "name": "Quantoz USDQ",
+  "symbol": "USDQ",
+  "flags": {
+    "backing": "rwa-backed",
+    "pegCurrency": "USD",
+    "governance": "centralized",
+    "yieldBearing": false,
+    "rwa": false,
+    "navToken": false
+  },
+  "collateral": "U.S. dollar deposits and government bonds (Netherlands, Germany, US) held in segregated, bankruptcy-remote accounts at Tier 1 European banks by Stichting Quantoz, supervised by DNB; reserves maintained at ≥102% of circulating supply per MiCAR requirements",
+  "pegMechanism": "Direct 1:1 redemption through Quantoz Payments for onboarded customers; reserves held at ≥102% overcollateralization per MiCAR",
+  "llamaId": "275",
+  "detailProvider": "defillama",
+  "geckoId": "quantoz-usdq",
+  "proofOfReserves": {
+    "type": "self-reported",
+    "url": "https://www.quantoz.com/transparency"
+  },
+  "links": [
+    {
+      "label": "Website",
+      "url": "https://www.quantoz.com/products/eurq-usdq"
+    },
+    {
+      "label": "Twitter",
+      "url": "https://x.com/Quantoz"
+    },
+    {
+      "label": "Docs",
+      "url": "https://www.quantoz.com/resources"
+    },
+    {
+      "label": "Proof of Reserve",
+      "url": "https://www.quantoz.com/transparency"
+    }
+  ],
+  "jurisdiction": {
+    "country": "Netherlands",
+    "regulator": "DNB",
+    "license": "EMI (MiCAR)"
+  },
+  "contracts": [
+    {
+      "chain": "ethereum",
+      "address": "0xc83e27f270cce0a3a3a29521173a83f402c1768b",
+      "decimals": 6
+    },
+    {
+      "chain": "polygon",
+      "address": "0xb291996477504506bf5f583102b5b5ea5d1e40e0",
+      "decimals": 6
+    },
+    {
+      "chain": "xrpl",
+      "address": "USDQ.rDk1xiArDMjDqnrR2yWypwQAKg4mKnQYvs",
+      "decimals": 0
+    },
+    {
+      "chain": "algorand",
+      "address": "2768603795",
+      "decimals": 6
+    }
+  ],
+  "deploymentModel": "third-party-bridge",
+  "custodyModel": "institutional-regulated",
+  "reserves": [
+    {
+      "name": "Government bonds (NL, DE, US)",
+      "pct": 69,
+      "risk": "very-low"
+    },
+    {
+      "name": "Cash deposits at Tier 1 European banks",
+      "pct": 31,
+      "risk": "very-low"
+    }
+  ],
+  "liveReservesConfig": {
+    "adapter": "single-asset",
+    "version": 1,
+    "semantics": "single-asset",
+    "breakerScope": "usdq-quantoz",
+    "display": {
+      "url": "https://quantoz.com/transparency",
+      "label": "Quantoz Transparency"
+    },
+    "inputs": {
+      "primary": {
+        "kind": "onchain-evm",
+        "chain": "ethereum",
+        "rpcMode": "public-rpc"
+      }
+    },
+    "params": {
+      "label": "Government bonds & cash deposits",
+      "risk": "very-low"
+    }
+  }
+}

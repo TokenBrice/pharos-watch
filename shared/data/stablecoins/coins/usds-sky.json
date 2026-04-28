@@ -1,0 +1,128 @@
+{
+  "id": "usds-sky",
+  "name": "Sky Dollar",
+  "symbol": "USDS",
+  "flags": {
+    "backing": "crypto-backed",
+    "pegCurrency": "USD",
+    "governance": "centralized-dependent",
+    "yieldBearing": false,
+    "rwa": false,
+    "navToken": false
+  },
+  "collateral": "RWA (U.S. Treasuries ~40%), USDC via PSM (~30%), crypto (ETH/wstETH ~20%), other vaults; USDS is the upgraded DAI (1:1 swap), same vault system",
+  "pegMechanism": "Peg Stability Modules enabling 1:1 swaps with USDC and DAI",
+  "llamaId": "209",
+  "detailProvider": "defillama",
+  "geckoId": "usds",
+  "pythFeedId": "0x77f0971af11cc8bac224917275c1bf55f2319ed5c654a1ca955c82fa2d297ea1",
+  "links": [
+    {
+      "label": "Website",
+      "url": "https://sky.money/"
+    },
+    {
+      "label": "Twitter",
+      "url": "https://x.com/SkyEcosystem"
+    },
+    {
+      "label": "Docs",
+      "url": "https://docs.sky.money/"
+    }
+  ],
+  "jurisdiction": {
+    "country": "Cayman Islands"
+  },
+  "contracts": [
+    {
+      "chain": "ethereum",
+      "address": "0xdc035d45d973e3ec169d2276ddab16f1e407384f",
+      "decimals": 18
+    },
+    {
+      "chain": "arbitrum",
+      "address": "0x6491c05a82219b8d1479057361ff1654749b876b",
+      "decimals": 18
+    },
+    {
+      "chain": "base",
+      "address": "0x820c137fa70c8691f0e44dc420a5e53c168921dc",
+      "decimals": 18
+    },
+    {
+      "chain": "solana",
+      "address": "USDSwr9ApdHk5bvJKMjzff41FfuX8bSxdKcR81vTwcA",
+      "decimals": 6
+    },
+    {
+      "chain": "optimism",
+      "address": "0x4f13a96ec5c4cf34e442b46bbd98a0791f20edc3",
+      "decimals": 18
+    },
+    {
+      "chain": "unichain",
+      "address": "0x7e10036acc4b56d4dfca3b77810356ce52313f9c",
+      "decimals": 18
+    }
+  ],
+  "canBeBlacklisted": "possible",
+  "deploymentModel": "third-party-bridge",
+  "collateralQuality": "rwa",
+  "custodyModel": "institutional-top",
+  "governanceQuality": "dao-governance",
+  "reserves": [
+    {
+      "name": "Stablecoins (PSM)",
+      "pct": 38,
+      "risk": "very-low",
+      "coinId": "usdc-circle",
+      "depType": "mechanism"
+    },
+    {
+      "name": "Spark (lending)",
+      "pct": 28,
+      "risk": "low"
+    },
+    {
+      "name": "Grove (RWA)",
+      "pct": 23,
+      "risk": "low"
+    },
+    {
+      "name": "Obex",
+      "pct": 5,
+      "risk": "medium"
+    },
+    {
+      "name": "Core (crypto vaults)",
+      "pct": 4,
+      "risk": "medium"
+    },
+    {
+      "name": "Staking Engine",
+      "pct": 1,
+      "risk": "high"
+    },
+    {
+      "name": "Legacy RWA",
+      "pct": 1,
+      "risk": "low"
+    }
+  ],
+  "liveReservesConfig": {
+    "adapter": "sky-makercore",
+    "version": 1,
+    "semantics": "collateral-mix",
+    "breakerScope": "sky-makercore-collateral",
+    "display": {
+      "url": "https://info.sky.money/",
+      "label": "Sky Info"
+    },
+    "inputs": {
+      "primary": {
+        "kind": "http-json",
+        "url": "https://info-sky.blockanalitica.com/groups/?days_ago=1&order=-debt"
+      }
+    }
+  }
+}

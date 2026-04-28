@@ -1,0 +1,84 @@
+{
+  "id": "paxg-paxos",
+  "name": "PAX Gold",
+  "symbol": "PAXG",
+  "flags": {
+    "backing": "rwa-backed",
+    "pegCurrency": "GOLD",
+    "governance": "centralized",
+    "yieldBearing": false,
+    "rwa": true,
+    "navToken": false
+  },
+  "collateral": "LBMA Good Delivery physical gold bars allocated in Brink's London vaults; each token represents one fine troy ounce; insured against theft and loss; bankruptcy-remote custody under Paxos Trust Company",
+  "pegMechanism": "Direct 1:1 redemption through Paxos Trust Company for physical gold bars or cash equivalent; monthly independent attestation by KPMG LLP under AICPA standards confirms full backing",
+  "commodityOunces": 1,
+  "detailProvider": "commodity",
+  "geckoId": "pax-gold",
+  "pythFeedId": "0x273717b49430906f4b0c230e99aa1007f83758e3199edbc887c0d06c3e332494",
+  "protocolSlug": "paxos-gold",
+  "proofOfReserves": {
+    "type": "independent-audit",
+    "url": "https://www.paxos.com/paxg-transparency",
+    "provider": "KPMG"
+  },
+  "links": [
+    {
+      "label": "Website",
+      "url": "https://www.paxos.com/pax-gold"
+    },
+    {
+      "label": "Docs",
+      "url": "https://docs.paxos.com/guides/dashboard/paxg"
+    },
+    {
+      "label": "GitHub",
+      "url": "https://github.com/paxosglobal/paxos-gold-contract"
+    },
+    {
+      "label": "Twitter",
+      "url": "https://x.com/paxos"
+    }
+  ],
+  "jurisdiction": {
+    "country": "United States",
+    "regulator": "OCC",
+    "license": "National Trust Charter"
+  },
+  "contracts": [
+    {
+      "chain": "ethereum",
+      "address": "0x45804880de22913dafe09f4980848ece6ecbaf78",
+      "decimals": 18
+    }
+  ],
+  "custodyModel": "institutional-top",
+  "reserves": [
+    {
+      "name": "Physical gold bars (LBMA Good Delivery, Brink's London vaults)",
+      "pct": 100,
+      "risk": "very-low"
+    }
+  ],
+  "liveReservesConfig": {
+    "adapter": "single-asset",
+    "version": 1,
+    "semantics": "single-asset",
+    "breakerScope": "paxg-paxos",
+    "display": {
+      "url": "https://www.paxos.com/paxg-transparency",
+      "label": "Paxos Transparency"
+    },
+    "inputs": {
+      "primary": {
+        "kind": "onchain-evm",
+        "chain": "ethereum",
+        "rpcMode": "public-rpc"
+      }
+    },
+    "params": {
+      "label": "Physical gold bars (LBMA Good Delivery, Brink's London vaults)",
+      "risk": "very-low"
+    }
+  }
+}

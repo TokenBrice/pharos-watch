@@ -1,0 +1,89 @@
+{
+  "id": "eurs-stasis",
+  "name": "Stasis Euro",
+  "symbol": "EURS",
+  "flags": {
+    "backing": "rwa-backed",
+    "pegCurrency": "EUR",
+    "governance": "centralized",
+    "yieldBearing": false,
+    "rwa": false,
+    "navToken": false
+  },
+  "collateral": "100% liquid euro balances held at licensed European financial institutions (EXT LTD, XNT LTD, UAB NexPay), including Central Bank accounts",
+  "pegMechanism": "Direct 1:1 redemption through STSS (Malta) Limited; users send EURS to the treasury wallet, euros are transferred from a segregated bank account, and redeemed tokens are frozen or burned",
+  "llamaId": "51",
+  "detailProvider": "defillama",
+  "geckoId": "stasis-eurs",
+  "proofOfReserves": {
+    "type": "independent-audit",
+    "url": "https://stasis.net/transparency",
+    "provider": "BDO Malta"
+  },
+  "links": [
+    {
+      "label": "Website",
+      "url": "https://stasis.net/"
+    },
+    {
+      "label": "Twitter",
+      "url": "https://x.com/stasisnet"
+    },
+    {
+      "label": "GitHub",
+      "url": "https://github.com/STASISNET/STASIS-EURS-token-smart-contract"
+    }
+  ],
+  "jurisdiction": {
+    "country": "Malta",
+    "regulator": "MFSA",
+    "license": "MiCA"
+  },
+  "contracts": [
+    {
+      "chain": "ethereum",
+      "address": "0xdb25f211ab05b1c97d595516f45794528a807ad8",
+      "decimals": 2
+    },
+    {
+      "chain": "polygon",
+      "address": "0xe111178a87a3bff0c8d18decba5798827539ae99",
+      "decimals": 2
+    },
+    {
+      "chain": "stellar",
+      "address": "EURS-GC5FGCDEOGOGSNWCCNKS3OMEVDHTE3Q5A5FEQWQKV3AXA7N6KDQ2CUZJ",
+      "decimals": 7
+    }
+  ],
+  "deploymentModel": "native-multichain",
+  "custodyModel": "institutional-regulated",
+  "reserves": [
+    {
+      "name": "Euro balances at licensed EU institutions",
+      "pct": 100,
+      "risk": "very-low"
+    }
+  ],
+  "liveReservesConfig": {
+    "adapter": "single-asset",
+    "version": 1,
+    "semantics": "single-asset",
+    "breakerScope": "eurs-stasis",
+    "display": {
+      "url": "https://stasis.net/transparency",
+      "label": "STASIS Transparency"
+    },
+    "inputs": {
+      "primary": {
+        "kind": "onchain-evm",
+        "chain": "ethereum",
+        "rpcMode": "public-rpc"
+      }
+    },
+    "params": {
+      "label": "Euro fiat reserves",
+      "risk": "very-low"
+    }
+  }
+}

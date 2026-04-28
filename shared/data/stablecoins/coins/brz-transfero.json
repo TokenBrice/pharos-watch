@@ -1,0 +1,109 @@
+{
+  "id": "brz-transfero",
+  "name": "Brazilian Digital",
+  "symbol": "BRZ",
+  "flags": {
+    "backing": "rwa-backed",
+    "pegCurrency": "BRL",
+    "governance": "centralized",
+    "yieldBearing": false,
+    "rwa": false,
+    "navToken": false
+  },
+  "collateral": "Brazilian real (BRL) cash reserves held at a financial institution authorized by the Central Bank of Brazil",
+  "pegMechanism": "1:1 mint and redemption at Transfero for BRL; KYC verification required; redemption incurs a 1% fee in Brazil",
+  "llamaId": "249",
+  "detailProvider": "defillama",
+  "geckoId": "brz",
+  "proofOfReserves": {
+    "type": "self-reported",
+    "url": "https://transfero.com/wp-content/uploads/2024/12/daily-report.pdf",
+    "provider": "Transfero"
+  },
+  "launchDate": "2019-07-19",
+  "links": [
+    {
+      "label": "Website",
+      "url": "https://transfero.com/stablecoins/brz/"
+    },
+    {
+      "label": "Twitter",
+      "url": "https://x.com/BrzToken"
+    },
+    {
+      "label": "Docs",
+      "url": "https://docs.transfero.com/"
+    }
+  ],
+  "jurisdiction": {
+    "country": "Switzerland",
+    "regulator": "FINMA",
+    "license": "VQF"
+  },
+  "contracts": [
+    {
+      "chain": "ethereum",
+      "address": "0x01d33fd36ec67c6ada32cf36b31e88ee190b1839",
+      "decimals": 18
+    },
+    {
+      "chain": "polygon",
+      "address": "0x4ed141110f6eeeaba9a1df36d8c26f684d2475dc",
+      "decimals": 18
+    },
+    {
+      "chain": "bsc",
+      "address": "0x71be881e9c5d4465b3fff61e89c6f3651e69b5bb",
+      "decimals": 4
+    },
+    {
+      "chain": "gnosis",
+      "address": "0x0a06c8354a6cc1a07549a38701eac205942e3ac6",
+      "decimals": 18
+    },
+    {
+      "chain": "base",
+      "address": "0xe9185ee218cae427af7b9764a011bb89fea761b4",
+      "decimals": 18
+    },
+    {
+      "chain": "arbitrum",
+      "address": "0xa8940698fda5a07abaef4a5ccdf2f1bb525b47a2",
+      "decimals": 18
+    },
+    {
+      "chain": "solana",
+      "address": "FtgGSFADXBtroxq8VCausXRr2of47QBf5AS1NtZCu4GD",
+      "decimals": 4
+    }
+  ],
+  "custodyModel": "institutional-regulated",
+  "reserves": [
+    {
+      "name": "BRL cash at authorized Brazilian financial institution",
+      "pct": 100,
+      "risk": "low"
+    }
+  ],
+  "liveReservesConfig": {
+    "adapter": "single-asset",
+    "version": 1,
+    "semantics": "single-asset",
+    "breakerScope": "brz-transfero",
+    "display": {
+      "url": "https://transfero.com/stablecoins/brz/",
+      "label": "Transfero"
+    },
+    "inputs": {
+      "primary": {
+        "kind": "onchain-evm",
+        "chain": "ethereum",
+        "rpcMode": "public-rpc"
+      }
+    },
+    "params": {
+      "label": "BRL fiat reserves",
+      "risk": "low"
+    }
+  }
+}

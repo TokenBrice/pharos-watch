@@ -1,0 +1,94 @@
+{
+  "id": "xo-exodus",
+  "name": "XO Cash",
+  "symbol": "XO",
+  "flags": {
+    "backing": "rwa-backed",
+    "pegCurrency": "USD",
+    "governance": "centralized",
+    "yieldBearing": false,
+    "rwa": true,
+    "navToken": false
+  },
+  "infrastructures": [
+    "m0"
+  ],
+  "collateral": "Fully reserved 1:1 by U.S. dollar deposits and short-term U.S. Treasury bills held for the benefit of token holders via M0 Protocol's bankruptcy-remote SPV structure; reserves issued and managed by MoonPay under U.S. Money Transmitter Licenses; native M0 yield is retained by MoonPay/Exodus rather than passed through to XO holders",
+  "pegMechanism": "1:1 fiat-backed mint and redemption operated by MoonPay via M0 Protocol infrastructure on Solana; collateral cryptographically attested on-chain by independent M0 Validators before minting; consumer access is gated through the Exodus self-custodial wallet and Exodus Pay app, with on/off ramps via MoonPay's payment rails (cards, Apple/Google Pay, PayPal); the Solana SPL Token-2022 mint includes pausable, permanent-delegate, and transfer-hook controls held by MoonPay",
+  "detailProvider": "coingecko",
+  "geckoId": "xo-cash",
+  "proofOfReserves": {
+    "type": "real-time",
+    "url": "https://dashboard.m0.org/",
+    "provider": "M0 Protocol"
+  },
+  "links": [
+    {
+      "label": "Website",
+      "url": "https://www.exodus.com/"
+    },
+    {
+      "label": "Press Release",
+      "url": "https://www.exodus.com/investors/news-events/press-releases/detail/95/exodus-moonpay-and-m0-unveil-a-new-digital-dollar-for-everyday-payments"
+    },
+    {
+      "label": "Twitter",
+      "url": "https://x.com/exodus"
+    },
+    {
+      "label": "M0 Dashboard",
+      "url": "https://dashboard.m0.org/stablecoins"
+    }
+  ],
+  "jurisdiction": {
+    "country": "United States",
+    "license": "MoonPay Money Transmitter Licenses (49 states), New York BitLicense, New York Trust Charter"
+  },
+  "contracts": [
+    {
+      "chain": "solana",
+      "address": "xoUSDq85Rjsb6SbUwJyreFgeWQvxdkT7R3c3g7s6p5Y",
+      "decimals": 6
+    }
+  ],
+  "canBeBlacklisted": true,
+  "collateralQuality": "rwa",
+  "custodyModel": "institutional-regulated",
+  "governanceQuality": "regulated-entity",
+  "deploymentModel": "single-chain",
+  "dependencies": [
+    {
+      "id": "m-m0",
+      "weight": 1,
+      "type": "mechanism"
+    }
+  ],
+  "reserves": [
+    {
+      "name": "Short-term U.S. Treasury Bills (via M0 SPVs)",
+      "pct": 85,
+      "risk": "very-low"
+    },
+    {
+      "name": "Cash and cash equivalents",
+      "pct": 15,
+      "risk": "very-low"
+    }
+  ],
+  "liveReservesConfig": {
+    "adapter": "m0",
+    "version": 1,
+    "semantics": "protocol-reserve",
+    "breakerScope": "m0",
+    "display": {
+      "url": "https://dashboard.m0.org/",
+      "label": "M0 Dashboard"
+    },
+    "inputs": {
+      "primary": {
+        "kind": "http-json",
+        "url": "https://protocol-api.m0.org/graphql"
+      }
+    }
+  }
+}

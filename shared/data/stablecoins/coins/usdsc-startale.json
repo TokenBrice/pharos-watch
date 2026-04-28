@@ -1,0 +1,88 @@
+{
+  "id": "usdsc-startale",
+  "name": "Startale USD",
+  "symbol": "USDSC",
+  "flags": {
+    "backing": "rwa-backed",
+    "pegCurrency": "USD",
+    "governance": "centralized",
+    "yieldBearing": false,
+    "rwa": true,
+    "navToken": false
+  },
+  "infrastructures": [
+    "m0"
+  ],
+  "collateral": "Short-term U.S. Treasury bills held in bankruptcy-remote SPVs via M0 Protocol's permissioned Minter infrastructure; M0 Validators independently attest collateral sufficiency on-chain before minting",
+  "pegMechanism": "1:1 wrapper around M (M0) token — USDSC is minted by wrapping M via the Soneium-native UsdscToken contract; underlying M is backed by T-bill collateral attested by M0 Validators; redemption unwinds the wrapper back to M",
+  "detailProvider": "coingecko",
+  "geckoId": "startale-usd",
+  "proofOfReserves": {
+    "type": "self-reported",
+    "url": "https://dashboard.m0.org/",
+    "provider": "M0 Protocol (on-chain Validator attestations)"
+  },
+  "links": [
+    {
+      "label": "Website",
+      "url": "https://usd.startale.com/"
+    },
+    {
+      "label": "Twitter",
+      "url": "https://x.com/StartaleGroup"
+    },
+    {
+      "label": "Docs",
+      "url": "https://docs.m0.org/"
+    },
+    {
+      "label": "Audits",
+      "url": "https://github.com/StartaleGroup/stablecoin-vault-contracts/tree/main/audits"
+    }
+  ],
+  "jurisdiction": {
+    "country": "Singapore"
+  },
+  "contracts": [
+    {
+      "chain": "soneium",
+      "address": "0x3f99231dd03a9f0e7e3421c92b7b90fbe012985a",
+      "decimals": 6
+    }
+  ],
+  "canBeBlacklisted": true,
+  "collateralQuality": "rwa",
+  "custodyModel": "institutional-unregulated",
+  "governanceQuality": "single-entity",
+  "deploymentModel": "single-chain",
+  "dependencies": [
+    {
+      "id": "m-m0",
+      "weight": 1,
+      "type": "wrapper"
+    }
+  ],
+  "reserves": [
+    {
+      "name": "Short-term U.S. Treasury Bills (via M0 Protocol)",
+      "pct": 100,
+      "risk": "very-low"
+    }
+  ],
+  "liveReservesConfig": {
+    "adapter": "m0",
+    "version": 1,
+    "semantics": "protocol-reserve",
+    "breakerScope": "m0",
+    "display": {
+      "url": "https://dashboard.m0.org/",
+      "label": "M0 Dashboard"
+    },
+    "inputs": {
+      "primary": {
+        "kind": "http-json",
+        "url": "https://protocol-api.m0.org/graphql"
+      }
+    }
+  }
+}

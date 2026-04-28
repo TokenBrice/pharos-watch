@@ -1,0 +1,86 @@
+{
+  "id": "said-gaib",
+  "name": "GAIB sAID",
+  "symbol": "sAID",
+  "flags": {
+    "backing": "rwa-backed",
+    "pegCurrency": "USD",
+    "governance": "centralized",
+    "yieldBearing": true,
+    "rwa": true,
+    "navToken": true
+  },
+  "variantOf": "aid-gaib",
+  "variantKind": "strategy-vault",
+  "pegReferenceId": "aid-gaib",
+  "collateral": "AID staked into GAIB's ERC-4626 sAID vault, representing a NAV share of AI infrastructure financing positions plus stable reserve buffers",
+  "pegMechanism": "sAID is not pegged to $1; it is minted by staking AID at deposit NAV and redeemed through a 30-day FIFO withdrawal cycle at unstaking NAV, which can reflect unrealized losses",
+  "detailProvider": "coingecko",
+  "geckoId": "gaib-said",
+  "links": [
+    {
+      "label": "Website",
+      "url": "https://gaib.ai/"
+    },
+    {
+      "label": "Twitter",
+      "url": "https://x.com/gaib_ai"
+    },
+    {
+      "label": "Docs",
+      "url": "https://docs.gaib.ai/products/gaib-products/staked-ai-dollar-said"
+    }
+  ],
+  "contracts": [
+    {
+      "chain": "ethereum",
+      "address": "0xb3b3c527ba57cd61648e2ec2f5e006a0b390a9f8",
+      "decimals": 18
+    }
+  ],
+  "canBeBlacklisted": true,
+  "deploymentModel": "single-chain",
+  "collateralQuality": "exotic",
+  "custodyModel": "institutional-unregulated",
+  "governanceQuality": "single-entity",
+  "reserves": [
+    {
+      "name": "AID vault shares and AI infrastructure financing portfolio",
+      "pct": 100,
+      "risk": "high",
+      "coinId": "aid-gaib",
+      "depType": "wrapper"
+    }
+  ],
+  "yieldConfig": {
+    "defiLlamaPoolId": "e575606e-5642-4f87-b9ad-3e53d6f83c82",
+    "yieldSource": "GAIB savings (sAID)",
+    "yieldType": "nav-appreciation"
+  },
+  "liveReservesConfig": {
+    "adapter": "erc4626-single-asset",
+    "version": 1,
+    "semantics": "single-asset",
+    "breakerScope": "said-gaib",
+    "display": {
+      "url": "https://docs.gaib.ai/products/gaib-products/staked-ai-dollar-said",
+      "label": "GAIB sAID"
+    },
+    "inputs": {
+      "primary": {
+        "kind": "onchain-evm",
+        "chain": "ethereum",
+        "rpcMode": "alchemy"
+      }
+    },
+    "params": {
+      "slice": {
+        "name": "AID vault shares and AI infrastructure financing portfolio",
+        "risk": "high",
+        "coinId": "aid-gaib",
+        "depType": "wrapper",
+        "expectedAssetAddress": "0x18f52b3fb465118731d9e0d276d4eb3599d57596"
+      }
+    }
+  }
+}

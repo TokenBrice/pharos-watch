@@ -1,0 +1,83 @@
+{
+  "id": "ousd-origin-protocol",
+  "name": "Origin Dollar",
+  "symbol": "OUSD",
+  "flags": {
+    "backing": "crypto-backed",
+    "pegCurrency": "USD",
+    "governance": "centralized-dependent",
+    "yieldBearing": true,
+    "rwa": false,
+    "navToken": false
+  },
+  "collateral": "USDC deployed into DeFi strategies (Morpho, Curve)",
+  "pegMechanism": "1:1 minting/redemption backed by stablecoins; yield distributed via rebasing",
+  "llamaId": "23",
+  "detailProvider": "defillama",
+  "geckoId": "origin-dollar",
+  "links": [
+    {
+      "label": "Website",
+      "url": "https://www.ousd.com/"
+    },
+    {
+      "label": "Twitter",
+      "url": "https://x.com/OriginProtocol"
+    },
+    {
+      "label": "GitHub",
+      "url": "https://github.com/OriginProtocol/origin-dollar"
+    }
+  ],
+  "contracts": [
+    {
+      "chain": "ethereum",
+      "address": "0x2a8e1e676ec238d8a992307b495b45b3feaa5e86",
+      "decimals": 18
+    },
+    {
+      "chain": "astar",
+      "address": "0x29f6e49c6e3397c3a84f715885f9f233a441165c",
+      "decimals": 18
+    }
+  ],
+  "collateralQuality": "exotic",
+  "governanceQuality": "wrapper",
+  "reserves": [
+    {
+      "name": "USDC (via Morpho/Yearn vault)",
+      "pct": 65,
+      "risk": "medium",
+      "coinId": "usdc-circle",
+      "depType": "wrapper"
+    },
+    {
+      "name": "USDC (via Curve AMO LP)",
+      "pct": 35,
+      "risk": "medium",
+      "coinId": "usdc-circle",
+      "depType": "wrapper"
+    }
+  ],
+  "liveReservesConfig": {
+    "adapter": "curated-validated",
+    "version": 1,
+    "semantics": "single-asset",
+    "breakerScope": "ousd-origin-protocol",
+    "display": {
+      "url": "https://analytics.ousd.com",
+      "label": "Origin Analytics"
+    },
+    "inputs": {
+      "primary": {
+        "kind": "onchain-evm",
+        "chain": "ethereum",
+        "rpcMode": "public-rpc"
+      }
+    }
+  },
+  "yieldConfig": {
+    "yieldSource": "Origin lending + DeFi strategies",
+    "yieldType": "rebase"
+  }
+}

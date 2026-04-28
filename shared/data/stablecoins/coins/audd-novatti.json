@@ -1,0 +1,93 @@
+{
+  "id": "audd-novatti",
+  "name": "AUDD",
+  "symbol": "AUDD",
+  "flags": {
+    "backing": "rwa-backed",
+    "pegCurrency": "AUD",
+    "governance": "centralized",
+    "yieldBearing": false,
+    "rwa": false,
+    "navToken": false
+  },
+  "collateral": "Australian dollar cash and cash equivalents, including Treasury bills and notes, held in segregated accounts at Australian Authorised Deposit-taking Institutions by AUDC Pty Ltd",
+  "pegMechanism": "Direct 1:1 redemption for AUD through AUDC Pty Ltd (AFSL No. 700123, Novatti subsidiary), with monthly independent reserve attestations by William Buck",
+  "llamaId": "165",
+  "detailProvider": "defillama",
+  "geckoId": "novatti-australian-digital-dollar",
+  "pythFeedId": "0xab7fce8eccc9b1ab1e1050efd235bbe53c61936698de3c4ad6f9ebd7814cfd8d",
+  "proofOfReserves": {
+    "type": "independent-audit",
+    "url": "https://www.audd.digital/transparency/",
+    "provider": "William Buck"
+  },
+  "links": [
+    {
+      "label": "Website",
+      "url": "https://www.audd.digital/"
+    },
+    {
+      "label": "Twitter",
+      "url": "https://x.com/AUDD_digital"
+    },
+    {
+      "label": "Docs",
+      "url": "https://www.audd.digital/wp-content/uploads/2024/05/AUDD-Whitepaper_MAY2024.pdf"
+    },
+    {
+      "label": "Proof of Reserve",
+      "url": "https://www.audd.digital/transparency/"
+    }
+  ],
+  "jurisdiction": {
+    "country": "Australia",
+    "regulator": "ASIC",
+    "license": "AFSL No. 700123"
+  },
+  "contracts": [
+    {
+      "chain": "ethereum",
+      "address": "0x4cce605ed955295432958d8951d0b176c10720d5",
+      "decimals": 6
+    },
+    {
+      "chain": "base",
+      "address": "0x449b3317a6d1efb1bc3ba0700c9eaa4ffff4ae65",
+      "decimals": 6
+    },
+    {
+      "chain": "stellar",
+      "address": "AUDD-GDC7X2MXTYSAKUUGAIQ7J7RPEIM7GXSAIWFYWWH4GLNFECQVJJLB2EEU",
+      "decimals": 7
+    }
+  ],
+  "custodyModel": "institutional-regulated",
+  "reserves": [
+    {
+      "name": "AUD cash & Treasury bills at ADIs",
+      "pct": 100,
+      "risk": "very-low"
+    }
+  ],
+  "liveReservesConfig": {
+    "adapter": "single-asset",
+    "version": 1,
+    "semantics": "single-asset",
+    "breakerScope": "audd-novatti",
+    "display": {
+      "url": "https://www.audd.digital/transparency/",
+      "label": "AUDD Transparency"
+    },
+    "inputs": {
+      "primary": {
+        "kind": "onchain-evm",
+        "chain": "ethereum",
+        "rpcMode": "public-rpc"
+      }
+    },
+    "params": {
+      "label": "AUD bank deposits",
+      "risk": "very-low"
+    }
+  }
+}

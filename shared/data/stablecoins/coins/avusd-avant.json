@@ -1,0 +1,87 @@
+{
+  "id": "avusd-avant",
+  "name": "Avant USD",
+  "symbol": "avUSD",
+  "flags": {
+    "backing": "rwa-backed",
+    "pegCurrency": "USD",
+    "governance": "centralized",
+    "yieldBearing": true,
+    "rwa": false,
+    "navToken": false
+  },
+  "collateral": "USDC deposits backing avUSD are deployed through Avant's actively managed market-neutral strategy framework, including basis trades, lending-rate arbitrage, yield trading, lending markets, liquidity provisioning, and private liquidity deals",
+  "pegMechanism": "1:1 redemption for USDC via Avant Protocol with a 0.05% redemption fee and 1–7 day settlement window",
+  "llamaId": "271",
+  "detailProvider": "defillama",
+  "geckoId": "avant-usd",
+  "links": [
+    {
+      "label": "Website",
+      "url": "https://www.avantprotocol.com/"
+    },
+    {
+      "label": "Twitter",
+      "url": "https://x.com/avantprotocol"
+    },
+    {
+      "label": "Docs",
+      "url": "https://docs.avantprotocol.com/"
+    },
+    {
+      "label": "GitHub",
+      "url": "https://github.com/Avant-Protocol"
+    }
+  ],
+  "jurisdiction": {
+    "country": "British Virgin Islands"
+  },
+  "contracts": [
+    {
+      "chain": "avalanche",
+      "address": "0x24de8771bc5ddb3362db529fc3358f2df3a0e346",
+      "decimals": 18
+    },
+    {
+      "chain": "ethereum",
+      "address": "0xf4c13d631450de6b12a19829e37c8e2826891dc4",
+      "decimals": 18
+    }
+  ],
+  "deploymentModel": "third-party-bridge",
+  "custodyModel": "institutional-unregulated",
+  "reserves": [
+    {
+      "name": "USDC (1:1 backing, deployed into delta-neutral strategies via 0xPartners)",
+      "pct": 95,
+      "risk": "high",
+      "coinId": "usdc-circle"
+    },
+    {
+      "name": "Loss-absorption reserve (0xPartners managed)",
+      "pct": 5,
+      "risk": "high"
+    }
+  ],
+  "yieldConfig": {
+    "yieldSource": "Avant savings (savUSD)",
+    "yieldType": "lending-vault"
+  },
+  "liveReservesConfig": {
+    "adapter": "curated-validated",
+    "version": 1,
+    "semantics": "collateral-mix",
+    "breakerScope": "avusd-avant",
+    "display": {
+      "url": "https://www.avantprotocol.com/",
+      "label": "Avant Protocol"
+    },
+    "inputs": {
+      "primary": {
+        "kind": "onchain-evm",
+        "chain": "ethereum",
+        "rpcMode": "public-rpc"
+      }
+    }
+  }
+}

@@ -1,0 +1,89 @@
+{
+  "id": "msusd-metronome",
+  "name": "Metronome Synth USD",
+  "symbol": "MSUSD",
+  "flags": {
+    "backing": "crypto-backed",
+    "pegCurrency": "USD",
+    "governance": "centralized-dependent",
+    "yieldBearing": false,
+    "rwa": false,
+    "navToken": false
+  },
+  "collateral": "USDC, DAI, ETH, WBTC, sfrxETH, and Vesper Finance yield-bearing tokens (vaUSDC, vaETH, vaSTETH, vaRETH, vaCBETH); FRAX and vaFRAX accepted but currently inactive; collateral factors range 75–85%",
+  "pegMechanism": "Overcollateralized CDP: users deposit crypto collateral (CF 75–85%) to mint msUSD at a fixed 1% annual fee; no direct redemption — only debt repayment to reclaim collateral. Peg maintained by zero-slippage intra-protocol synth swaps (Synth Marketplace) that arbitrageurs exploit when msUSD trades below par, plus collateral-provider buybacks of discounted msUSD",
+  "llamaId": "326",
+  "detailProvider": "defillama",
+  "geckoId": "metronome-synth-usd",
+  "cmcSlug": "metronome-synth-usd",
+  "pythFeedId": "0xc753c899ffdfcc8d1a02440fe380501b454b559122998bcd245d9063d07cc162",
+  "links": [
+    {
+      "label": "Website",
+      "url": "https://metronome.io/"
+    },
+    {
+      "label": "Twitter",
+      "url": "https://x.com/MetronomeDAO"
+    },
+    {
+      "label": "Docs",
+      "url": "https://docs.metronome.io/metronome-synth/metronome-synth-protocol"
+    }
+  ],
+  "contracts": [
+    {
+      "chain": "ethereum",
+      "address": "0xab5eb14c09d416f0ac63661e57edb7aecdb9befa",
+      "decimals": 18
+    },
+    {
+      "chain": "optimism",
+      "address": "0x9dabae7274d28a45f0b65bf8ed201a5731492ca0",
+      "decimals": 18
+    },
+    {
+      "chain": "base",
+      "address": "0x526728dbc96689597f85ae4cd716d4f7fccbae9d",
+      "decimals": 18
+    },
+    {
+      "chain": "plasma",
+      "address": "0x29ad7fe4516909b9e498b5a65339e54791293234",
+      "decimals": 18
+    }
+  ],
+  "deploymentModel": "third-party-bridge",
+  "collateralQuality": "alt-lst-bridged-or-mixed",
+  "reserves": [
+    {
+      "name": "USDC",
+      "pct": 30,
+      "risk": "low",
+      "coinId": "usdc-circle"
+    },
+    {
+      "name": "DAI",
+      "pct": 20,
+      "risk": "low",
+      "coinId": "dai-makerdao"
+    },
+    {
+      "name": "Vesper yield tokens (vaUSDC, vaETH, vaSTETH, vaRETH, vaCBETH)",
+      "pct": 25,
+      "risk": "high",
+      "coinId": "usdc-circle"
+    },
+    {
+      "name": "ETH / WBTC / sfrxETH",
+      "pct": 20,
+      "risk": "medium"
+    },
+    {
+      "name": "FRAX / vaFRAX (inactive)",
+      "pct": 5,
+      "risk": "high",
+      "coinId": "frax-frax"
+    }
+  ]
+}

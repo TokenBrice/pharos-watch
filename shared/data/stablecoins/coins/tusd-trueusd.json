@@ -1,0 +1,110 @@
+{
+  "id": "tusd-trueusd",
+  "name": "TrueUSD",
+  "symbol": "TUSD",
+  "flags": {
+    "backing": "rwa-backed",
+    "pegCurrency": "USD",
+    "governance": "centralized",
+    "yieldBearing": false,
+    "rwa": false,
+    "navToken": false
+  },
+  "collateral": "U.S. dollars held in segregated accounts at regulated financial institutions, attested daily by Moore Hong Kong",
+  "pegMechanism": "Direct 1:1 redemption through Techteryx; minting controlled by Chainlink Proof of Reserve feed preventing supply from exceeding attested reserves",
+  "llamaId": "7",
+  "detailProvider": "defillama",
+  "geckoId": "true-usd",
+  "pythFeedId": "0x433faaa801ecdb6618e3897177a118b273a8e18cc3ff545aadfc207d58d028f7",
+  "proofOfReserves": {
+    "type": "real-time",
+    "url": "https://tusd.io/transparency",
+    "provider": "Moore Hong Kong / Chainlink"
+  },
+  "links": [
+    {
+      "label": "Website",
+      "url": "https://tusd.io/"
+    },
+    {
+      "label": "Twitter",
+      "url": "https://x.com/tusdio"
+    }
+  ],
+  "jurisdiction": {
+    "country": "Dominica"
+  },
+  "contracts": [
+    {
+      "chain": "ethereum",
+      "address": "0x0000000000085d4780b73119b644ae5ecd22b376",
+      "decimals": 18
+    },
+    {
+      "chain": "tron",
+      "address": "TUpMhErZL2fhh4sVNULAbNKLokS4GjC1F4",
+      "decimals": 18
+    },
+    {
+      "chain": "avalanche",
+      "address": "0x1c20e891bab6b1727d14da358fae2984ed9b59eb",
+      "decimals": 18
+    },
+    {
+      "chain": "polygon",
+      "address": "0x2e1ad108ff1d8c782fcbbb89aad783ac49586756",
+      "decimals": 18
+    },
+    {
+      "chain": "arbitrum",
+      "address": "0x4d15a3a2286d883af0aa1b3f21367843fac63e07",
+      "decimals": 18
+    },
+    {
+      "chain": "optimism",
+      "address": "0xcb59a0a753fdb7491d5f3d794316f1ade197b21e",
+      "decimals": 18
+    },
+    {
+      "chain": "bsc",
+      "address": "0x40af3827f39d0eacbf4a168f8d4ee67c121d11c9",
+      "decimals": 18
+    }
+  ],
+  "deploymentModel": "native-multichain",
+  "custodyModel": "institutional-regulated",
+  "reserves": [
+    {
+      "name": "First Digital Trust fund investments (at cost, opaque)",
+      "pct": 99,
+      "risk": "very-high"
+    },
+    {
+      "name": "Cash at depository institutions",
+      "pct": 1,
+      "risk": "very-low"
+    }
+  ],
+  "liveReservesConfig": {
+    "adapter": "chainlink-por",
+    "version": 1,
+    "semantics": "attestation-mix",
+    "breakerScope": "tusd-archblock",
+    "display": {
+      "url": "https://data.chain.link/feeds/ethereum/mainnet/tusd-por",
+      "label": "Chainlink PoR"
+    },
+    "inputs": {
+      "primary": {
+        "kind": "onchain-evm",
+        "chain": "ethereum",
+        "rpcMode": "etherscan-proxy"
+      }
+    },
+    "params": {
+      "porFeedAddress": "0xBE456fd14720C3aCCc30A2013Bffd782c9Cb75D5",
+      "assetLabel": "USD reserves (Moore Hong Kong attested)",
+      "assetRisk": "very-low"
+    }
+  }
+}

@@ -1,0 +1,93 @@
+{
+  "id": "tgbp-tokenised",
+  "name": "Tokenised GBP",
+  "symbol": "tGBP",
+  "flags": {
+    "backing": "rwa-backed",
+    "pegCurrency": "GBP",
+    "governance": "centralized",
+    "yieldBearing": false,
+    "rwa": false,
+    "navToken": false
+  },
+  "collateral": "Cash and short-term UK government bonds (zero-coupon gilts) held in a segregated account at a UK-regulated financial institution, custodied by Enumis Limited",
+  "pegMechanism": "Direct 1:1 redemption through BCP Technologies Ltd; clients deposit GBP off-chain and receive minted tGBP on-chain; redemption burns tokens and triggers fiat withdrawal",
+  "llamaId": "317",
+  "detailProvider": "defillama",
+  "geckoId": "tokenised-gbp",
+  "links": [
+    {
+      "label": "Website",
+      "url": "https://www.tokenisedgbp.com/"
+    },
+    {
+      "label": "Twitter",
+      "url": "https://x.com/tokenGBP"
+    },
+    {
+      "label": "Audit",
+      "url": "https://www.openzeppelin.com/news/tgbp-audit"
+    }
+  ],
+  "jurisdiction": {
+    "country": "United Kingdom",
+    "regulator": "FCA",
+    "license": "Cryptoasset AML Registration (FRN: 928840)"
+  },
+  "contracts": [
+    {
+      "chain": "ethereum",
+      "address": "0x27f6c8289550fce67f6b50bed1f519966afe5287",
+      "decimals": 18
+    },
+    {
+      "chain": "base",
+      "address": "0x27f6c8289550fce67f6b50bed1f519966afe5287",
+      "decimals": 18
+    },
+    {
+      "chain": "bsc",
+      "address": "0x27f6c8289550fce67f6b50bed1f519966afe5287",
+      "decimals": 18
+    },
+    {
+      "chain": "polygon",
+      "address": "0x27f6c8289550fce67f6b50bed1f519966afe5287",
+      "decimals": 18
+    },
+    {
+      "chain": "avalanche",
+      "address": "0x27f6c8289550fce67f6b50bed1f519966afe5287",
+      "decimals": 18
+    }
+  ],
+  "custodyModel": "institutional-regulated",
+  "reserves": [
+    {
+      "name": "GBP & UK gilts, custodied by Enumis",
+      "pct": 100,
+      "risk": "very-low"
+    }
+  ],
+  "liveReservesConfig": {
+    "adapter": "single-asset",
+    "version": 1,
+    "semantics": "single-asset",
+    "breakerScope": "tgbp-tokenised",
+    "display": {
+      "url": "https://www.tokenisedgbp.com/",
+      "label": "Tokenised"
+    },
+    "inputs": {
+      "primary": {
+        "kind": "onchain-evm",
+        "chain": "ethereum",
+        "rpcMode": "public-rpc"
+      }
+    },
+    "params": {
+      "label": "GBP bank deposits",
+      "risk": "very-low"
+    }
+  }
+}

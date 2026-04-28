@@ -1,0 +1,53 @@
+{
+  "id": "fpi-frax",
+  "name": "Frax Price Index",
+  "symbol": "FPI",
+  "flags": {
+    "backing": "crypto-backed",
+    "pegCurrency": "VAR",
+    "governance": "centralized-dependent",
+    "yieldBearing": false,
+    "rwa": false,
+    "navToken": true
+  },
+  "collateral": "FRAX stablecoins held at 100% collateral ratio, with AMOs generating yield; FPIS tokens sold via TWAMM when AMO yield falls below CPI inflation rate",
+  "pegMechanism": "Redemption price grows on-chain per second at the 12-month US CPI-U rate (BLS data); updated monthly via Chainlink oracle; 100% collateral ratio maintained via AMOs",
+  "llamaId": "66",
+  "detailProvider": "defillama",
+  "geckoId": "frax-price-index",
+  "links": [
+    {
+      "label": "Website",
+      "url": "https://frax.com/"
+    },
+    {
+      "label": "Twitter",
+      "url": "https://x.com/fraxfinance"
+    },
+    {
+      "label": "Docs",
+      "url": "https://docs.frax.finance/frax-price-index/overview-cpi-peg-and-mechanics"
+    }
+  ],
+  "jurisdiction": {
+    "country": "United States"
+  },
+  "contracts": [
+    {
+      "chain": "ethereum",
+      "address": "0x5ca135cb8527d76e932f34b5145575f9d8cbe08e",
+      "decimals": 18
+    }
+  ],
+  "reserves": [
+    {
+      "name": "FRAX stablecoin reserves",
+      "pct": 100,
+      "risk": "low",
+      "coinId": "frax-frax",
+      "depType": "wrapper"
+    }
+  ],
+  "collateralQuality": "rwa",
+  "governanceQuality": "wrapper"
+}

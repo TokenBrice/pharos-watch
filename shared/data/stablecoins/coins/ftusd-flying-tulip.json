@@ -1,0 +1,81 @@
+{
+  "id": "ftusd-flying-tulip",
+  "name": "Flying Tulip USD",
+  "symbol": "ftUSD",
+  "flags": {
+    "backing": "crypto-backed",
+    "pegCurrency": "USD",
+    "governance": "centralized-dependent",
+    "yieldBearing": true,
+    "rwa": false,
+    "navToken": false
+  },
+  "collateral": "USDC and USDT supplied to Aave as long-side collateral in a delta-neutral strategy; native assets borrowed against stablecoin deposits and staked to generate carry, with equal short exposure hedging directional risk",
+  "pegMechanism": "Delta-neutral portfolio construction balancing long stablecoin lending positions with offsetting short perpetual/futures exposure; mint and redeem 1:1 against USDC or USDT through on-chain MintAndRedeem contract; circuit breaker contracts enforce position caps and rebalancing bands",
+  "detailProvider": "coingecko",
+  "geckoId": "flying-tulip-usd",
+  "proofOfReserves": {
+    "type": "self-reported",
+    "url": "https://flyingtulip.com/ftusd/dashboard/"
+  },
+  "links": [
+    {
+      "label": "Website",
+      "url": "https://flyingtulip.com/"
+    },
+    {
+      "label": "Twitter",
+      "url": "https://x.com/flyingtulip_"
+    },
+    {
+      "label": "Docs",
+      "url": "https://docs.flyingtulip.com/"
+    }
+  ],
+  "contracts": [
+    {
+      "chain": "ethereum",
+      "address": "0xf7d85ec4e7710f71992752eac2111312e73e9c9c",
+      "decimals": 6
+    },
+    {
+      "chain": "sonic",
+      "address": "0xf7d85ec4e7710f71992752eac2111312e73e9c9c",
+      "decimals": 6
+    }
+  ],
+  "canBeBlacklisted": true,
+  "collateralQuality": "exotic",
+  "custodyModel": "onchain",
+  "governanceQuality": "single-entity",
+  "dependencies": [
+    {
+      "id": "usdc-circle",
+      "weight": 0.5,
+      "type": "collateral"
+    },
+    {
+      "id": "usdt-tether",
+      "weight": 0.5,
+      "type": "collateral"
+    }
+  ],
+  "reserves": [
+    {
+      "name": "USDC (Aave lending positions)",
+      "pct": 50,
+      "risk": "low",
+      "coinId": "usdc-circle"
+    },
+    {
+      "name": "USDT (Aave lending positions)",
+      "pct": 50,
+      "risk": "low",
+      "coinId": "usdt-tether"
+    }
+  ],
+  "yieldConfig": {
+    "yieldSource": "Flying Tulip staking (sftUSD)",
+    "yieldType": "fee-sharing"
+  }
+}

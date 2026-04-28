@@ -1,0 +1,118 @@
+{
+  "id": "satusd-river",
+  "name": "River Stablecoin",
+  "symbol": "satUSD",
+  "flags": {
+    "backing": "crypto-backed",
+    "pegCurrency": "USD",
+    "governance": "decentralized",
+    "yieldBearing": false,
+    "rwa": false,
+    "navToken": false
+  },
+  "collateral": "BTC, ETH, BNB, and liquid staking tokens; no centralized stablecoin collateral accepted",
+  "pegMechanism": "Omni-CDP overcollateralized by BTC, ETH, BNB, or LSTs; collateral stays on its source chain and satUSD is minted natively on the destination chain via LayerZero OFT messaging; peg maintained through stability pools, on-chain liquidations, and $1-of-collateral redemption arbitrage",
+  "llamaId": "218",
+  "detailProvider": "defillama",
+  "geckoId": "satoshi-stablecoin",
+  "links": [
+    {
+      "label": "Website",
+      "url": "https://river.inc/"
+    },
+    {
+      "label": "Twitter",
+      "url": "https://x.com/RiverdotInc"
+    },
+    {
+      "label": "Docs",
+      "url": "https://docs.river.inc"
+    }
+  ],
+  "contracts": [
+    {
+      "chain": "ethereum",
+      "address": "0x1958853a8be062dc4f401750eb233f5850f0d0d2",
+      "decimals": 18
+    },
+    {
+      "chain": "arbitrum",
+      "address": "0xb4818bb69478730ef4e33cc068dd94278e2766cb",
+      "decimals": 18
+    },
+    {
+      "chain": "base",
+      "address": "0x70654aad8b7734dc319d0c3608ec7b32e03fa162",
+      "decimals": 18
+    },
+    {
+      "chain": "bsc",
+      "address": "0xb4818bb69478730ef4e33cc068dd94278e2766cb",
+      "decimals": 18
+    },
+    {
+      "chain": "sonic",
+      "address": "0xb4818bb69478730ef4e33cc068dd94278e2766cb",
+      "decimals": 18
+    },
+    {
+      "chain": "bob",
+      "address": "0xecf21b335b41f9d5a89f6186a99c19a3c467871f",
+      "decimals": 18
+    },
+    {
+      "chain": "bitlayer",
+      "address": "0xba50ddac6b2f5482ca064efac621e0c7c0f6a783",
+      "decimals": 18
+    },
+    {
+      "chain": "bsquared",
+      "address": "0x8dd8b12d55c73c08294664a5915475ed1c8b1f6f",
+      "decimals": 18
+    }
+  ],
+  "chainTier": "unproven",
+  "deploymentModel": "third-party-bridge",
+  "collateralQuality": "alt-lst-bridged-or-mixed",
+  "infrastructures": [
+    "liquity-v1"
+  ],
+  "reserves": [
+    {
+      "name": "BTC (overcollateralized CDP)",
+      "pct": 40,
+      "risk": "medium"
+    },
+    {
+      "name": "ETH (overcollateralized CDP)",
+      "pct": 30,
+      "risk": "medium"
+    },
+    {
+      "name": "BNB (overcollateralized CDP)",
+      "pct": 15,
+      "risk": "medium"
+    },
+    {
+      "name": "Liquid staking tokens (solvBTC, stETH, etc.)",
+      "pct": 15,
+      "risk": "medium"
+    }
+  ],
+  "liveReservesConfig": {
+    "adapter": "river-protocol-info",
+    "version": 1,
+    "semantics": "protocol-reserve",
+    "breakerScope": "satusd-river",
+    "display": {
+      "url": "https://river.inc/",
+      "label": "River Protocol Info"
+    },
+    "inputs": {
+      "primary": {
+        "kind": "http-json",
+        "url": "https://api-v2.satoshiprotocol.org/protocol-info"
+      }
+    }
+  }
+}

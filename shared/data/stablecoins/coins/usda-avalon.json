@@ -1,0 +1,95 @@
+{
+  "id": "usda-avalon",
+  "name": "Avalon USDa",
+  "symbol": "USDA",
+  "flags": {
+    "backing": "crypto-backed",
+    "pegCurrency": "USD",
+    "governance": "centralized-dependent",
+    "yieldBearing": true,
+    "rwa": false,
+    "navToken": false
+  },
+  "collateral": "BTC and BTC LSTs (e.g. FBTC) deposited as overcollateralized CDP; USDT can also be deposited 1:1; $2B institutional credit lines via Cobo, Ceffu, and Coinbase Prime",
+  "pegMechanism": "1:1 USDT convertibility; dynamic supply scaling against BTC collateral; liquidation via proprietary HFT algorithm through Ceffu/Coinbase Prime custody; cross-chain via LayerZero OFT",
+  "llamaId": "220",
+  "detailProvider": "defillama",
+  "geckoId": "usda-2",
+  "cmcSlug": "avalon-usda",
+  "links": [
+    {
+      "label": "Website",
+      "url": "https://www.avalonfinance.xyz/"
+    },
+    {
+      "label": "Twitter",
+      "url": "https://x.com/avalonfinance_"
+    },
+    {
+      "label": "Docs",
+      "url": "https://docs.avalonfinance.xyz"
+    }
+  ],
+  "contracts": [
+    {
+      "chain": "ethereum",
+      "address": "0x8a60e489004ca22d775c5f2c657598278d17d9c2",
+      "decimals": 18
+    },
+    {
+      "chain": "bsc",
+      "address": "0x9356086146be5158e98ad827e21b5cf944699894",
+      "decimals": 18
+    },
+    {
+      "chain": "mantle",
+      "address": "0x075df695b8e7f4361fa7f8c1426c63f11b06e326",
+      "decimals": 18
+    },
+    {
+      "chain": "klaytn",
+      "address": "0xdc3cf1961b08da169b078f7df6f26676bf6a4ff6",
+      "decimals": 18
+    },
+    {
+      "chain": "berachain",
+      "address": "0xff12470a969dd362eb6595ffb44c82c959fe9acc",
+      "decimals": 18
+    },
+    {
+      "chain": "movement",
+      "address": "0x48b904a97eafd065ced05168ec44638a63e1e3bcaec49699f6b8dabbd1424650",
+      "decimals": 18
+    },
+    {
+      "chain": "nibiru",
+      "address": "0xf4e097e36d2064e2bdca96e60439f3a369522003",
+      "decimals": 18
+    }
+  ],
+  "canBeBlacklisted": true,
+  "deploymentModel": "third-party-bridge",
+  "collateralQuality": "alt-lst-bridged-or-mixed",
+  "reserves": [
+    {
+      "name": "FBTC (tokenized BTC via Cobo custody)",
+      "pct": 45,
+      "risk": "medium"
+    },
+    {
+      "name": "USDT (1:1 minted deposits)",
+      "pct": 40,
+      "risk": "low",
+      "coinId": "usdt-tether"
+    },
+    {
+      "name": "BTC LSTs (SolvBTC, LBTC, pumpBTC, etc.)",
+      "pct": 15,
+      "risk": "high"
+    }
+  ],
+  "yieldConfig": {
+    "yieldSource": "Avalon savings (sUSDa)",
+    "yieldType": "lending-vault"
+  }
+}

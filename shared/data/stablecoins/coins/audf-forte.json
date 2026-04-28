@@ -1,0 +1,75 @@
+{
+  "id": "audf-forte",
+  "name": "Forte AUD",
+  "symbol": "AUDF",
+  "flags": {
+    "backing": "rwa-backed",
+    "pegCurrency": "AUD",
+    "governance": "centralized",
+    "yieldBearing": false,
+    "rwa": false,
+    "navToken": false
+  },
+  "collateral": "Australian dollar reserves and cash-equivalent reserve assets held separately from Forte's operational funds",
+  "pegMechanism": "Direct 1:1 redemption for AUD through Forte Tech Solutions for eligible account holders to approved bank accounts, with monthly independent reserve audits and daily reserve monitoring",
+  "detailProvider": "coingecko",
+  "geckoId": "forte-aud",
+  "deploymentModel": "native-multichain",
+  "proofOfReserves": {
+    "type": "independent-audit",
+    "url": "https://www.forteaud.com/new-page"
+  },
+  "links": [
+    {
+      "label": "Website",
+      "url": "https://www.forteaud.com/"
+    },
+    {
+      "label": "Docs",
+      "url": "https://www.forteaud.com/s/Forte-AUDF-Whitepaper-140324.pdf"
+    },
+    {
+      "label": "Proof of Reserve",
+      "url": "https://www.forteaud.com/new-page"
+    },
+    {
+      "label": "Legal",
+      "url": "https://www.forteaud.com/s/ForteAUDTermsofUseJanuary2026.pdf"
+    }
+  ],
+  "jurisdiction": {
+    "country": "Australia",
+    "regulator": "ASIC",
+    "license": "AFSL No. 492490"
+  },
+  "contracts": [
+    {
+      "chain": "ethereum",
+      "address": "0xd2a530170d71a9cfe1651fb468e2b98f7ed7456b",
+      "decimals": 6
+    },
+    {
+      "chain": "polygon",
+      "address": "0xd2a530170d71a9cfe1651fb468e2b98f7ed7456b",
+      "decimals": 6
+    },
+    {
+      "chain": "avalanche",
+      "address": "0xd2a530170d71a9cfe1651fb468e2b98f7ed7456b",
+      "decimals": 6
+    },
+    {
+      "chain": "base",
+      "address": "0xd2a530170d71a9cfe1651fb468e2b98f7ed7456b",
+      "decimals": 6
+    }
+  ],
+  "custodyModel": "institutional-regulated",
+  "reserves": [
+    {
+      "name": "AUD reserves and cash-equivalent reserve assets",
+      "pct": 100,
+      "risk": "very-low"
+    }
+  ]
+}

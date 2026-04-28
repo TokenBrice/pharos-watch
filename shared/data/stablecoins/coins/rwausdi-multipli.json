@@ -1,0 +1,93 @@
+{
+  "id": "rwausdi-multipli",
+  "name": "rwaUSDi",
+  "symbol": "rwaUSDi",
+  "flags": {
+    "backing": "crypto-backed",
+    "pegCurrency": "USD",
+    "governance": "centralized-dependent",
+    "yieldBearing": false,
+    "rwa": true,
+    "navToken": false
+  },
+  "collateral": "Basket of 100+ Treasury-backed stablecoins and tokenized gold assets aggregated by Multipli; peg stability backed by Lloyd's insurance covering de-pegging risk",
+  "pegMechanism": "NAV-based valuation of underlying RWA basket; KYB-gated 1:1 minting and redemption restricted to verified institutional counterparties",
+  "llamaId": "340",
+  "detailProvider": "defillama",
+  "proofOfReserves": {
+    "type": "independent-audit",
+    "url": "https://verification.afiprotocol.xyz/multipli",
+    "provider": "AFI"
+  },
+  "links": [
+    {
+      "label": "Website",
+      "url": "https://multipli.fi/"
+    },
+    {
+      "label": "Twitter",
+      "url": "https://x.com/multiplifi"
+    },
+    {
+      "label": "Docs",
+      "url": "https://docs.multipli.fi/"
+    },
+    {
+      "label": "Proof of Reserve",
+      "url": "https://verification.afiprotocol.xyz/multipli"
+    }
+  ],
+  "jurisdiction": {
+    "country": "UAE"
+  },
+  "contracts": [
+    {
+      "chain": "ethereum",
+      "address": "0xA39986F96B80d04e8d7AeAaF47175F47C23FD0f4",
+      "decimals": 6
+    }
+  ],
+  "deploymentModel": "native-multichain",
+  "collateralQuality": "rwa",
+  "reserves": [
+    {
+      "name": "Tokenized U.S. Treasury products (BUIDL, USDY, OUSG, etc.)",
+      "pct": 50,
+      "risk": "low",
+      "coinId": "buidl-blackrock"
+    },
+    {
+      "name": "Aggregated treasury-backed stablecoins (100+ via Multipli)",
+      "pct": 25,
+      "risk": "medium",
+      "blacklistable": true
+    },
+    {
+      "name": "Tokenized gold assets (10+ aggregated)",
+      "pct": 15,
+      "risk": "medium"
+    },
+    {
+      "name": "Market-neutral fund units (Nomura, Fasanara, Edge Capital)",
+      "pct": 10,
+      "risk": "high"
+    }
+  ],
+  "liveReservesConfig": {
+    "adapter": "curated-validated",
+    "version": 1,
+    "semantics": "collateral-mix",
+    "breakerScope": "rwausdi-multipli",
+    "display": {
+      "url": "https://verification.afiprotocol.xyz/multipli",
+      "label": "AFi Verification"
+    },
+    "inputs": {
+      "primary": {
+        "kind": "onchain-evm",
+        "chain": "ethereum",
+        "rpcMode": "public-rpc"
+      }
+    }
+  }
+}

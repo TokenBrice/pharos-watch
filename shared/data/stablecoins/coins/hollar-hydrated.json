@@ -1,0 +1,78 @@
+{
+  "id": "hollar-hydrated",
+  "name": "Hydrated Dollar",
+  "symbol": "HOLLAR",
+  "flags": {
+    "backing": "crypto-backed",
+    "pegCurrency": "USD",
+    "governance": "centralized-dependent",
+    "yieldBearing": false,
+    "rwa": false,
+    "navToken": false
+  },
+  "collateral": "Overcollateralized by DOT, ETH, vDOT, WBTC, tBTC, USDT, USDC, and giga-token variants (GIGADOT, GIGAETH) on the Hydration appchain; built on Aave v3-forked code",
+  "pegMechanism": "Overcollateralized CDP with automated partial liquidations per block; peg stabilized by the HOLLAR Stability Module (HSM), which enables direct stablecoin swaps near $1 and deploys received stablecoins into yield strategies",
+  "llamaId": "312",
+  "detailProvider": "defillama",
+  "geckoId": "hydrated-dollar",
+  "links": [
+    {
+      "label": "Website",
+      "url": "https://hydration.net/"
+    },
+    {
+      "label": "Twitter",
+      "url": "https://x.com/hydration_net"
+    },
+    {
+      "label": "Docs",
+      "url": "https://docs.hydration.net/quick_start/hollar/"
+    },
+    {
+      "label": "GitHub",
+      "url": "https://github.com/galacticcouncil"
+    }
+  ],
+  "contracts": [
+    {
+      "chain": "hydration",
+      "address": "0x531a654d1696ed52e7275a8cede955e82620f99a",
+      "decimals": 18
+    }
+  ],
+  "chainTier": "unproven",
+  "collateralQuality": "alt-lst-bridged-or-mixed",
+  "reserves": [
+    {
+      "name": "DOT",
+      "pct": 40,
+      "risk": "high"
+    },
+    {
+      "name": "ETH",
+      "pct": 15,
+      "risk": "very-low"
+    },
+    {
+      "name": "vDOT (liquid staked DOT)",
+      "pct": 15,
+      "risk": "high"
+    },
+    {
+      "name": "WBTC / tBTC",
+      "pct": 10,
+      "risk": "medium"
+    },
+    {
+      "name": "USDT / USDC (stablecoins)",
+      "pct": 15,
+      "risk": "low",
+      "coinId": "usdt-tether"
+    },
+    {
+      "name": "GIGADOT / GIGAETH",
+      "pct": 5,
+      "risk": "very-high"
+    }
+  ]
+}

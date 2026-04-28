@@ -1,0 +1,66 @@
+{
+  "id": "usdsui-sui",
+  "name": "Sui Dollar",
+  "symbol": "USDsui",
+  "flags": {
+    "backing": "rwa-backed",
+    "pegCurrency": "USD",
+    "governance": "centralized",
+    "yieldBearing": false,
+    "rwa": false,
+    "navToken": false
+  },
+  "collateral": "Bridge Open Issuance USD reserves backed at least 1:1 by equivalent fiat value, including short-dated U.S. Treasuries, overnight Treasury repos, government money-market funds, and cash in segregated bankruptcy-remote accounts",
+  "pegMechanism": "Bridge Open Issuance mint and burn rail: Bridge mints USDsui when fiat or supported crypto/stablecoin deposits are allocated to reserves, and burns USDsui on redemption before releasing equivalent fiat value or supported stablecoin output",
+  "llamaId": "373",
+  "detailProvider": "defillama",
+  "geckoId": "usdsui",
+  "pythFeedId": "0xd510fcdb3a63f35d3bb118d5db3afc5815a3f13bc55d48abb893b63f0315902a",
+  "links": [
+    {
+      "label": "Sui Launch",
+      "url": "https://blog.sui.io/sui-dollar-launch-bridge/"
+    },
+    {
+      "label": "Bridge",
+      "url": "https://www.bridge.xyz/"
+    },
+    {
+      "label": "Bridge Issuance Docs",
+      "url": "https://apidocs.bridge.xyz/platform/issuance/overview"
+    },
+    {
+      "label": "Reserve Docs",
+      "url": "https://apidocs.bridge.xyz/platform/issuance/reserve-management"
+    },
+    {
+      "label": "Twitter",
+      "url": "https://x.com/SuiNetwork"
+    }
+  ],
+  "jurisdiction": {
+    "country": "United States",
+    "regulator": "FinCEN / state MTL authorities",
+    "license": "Money Services Business (NMLS #2450917)"
+  },
+  "contracts": [
+    {
+      "chain": "sui",
+      "address": "0x44f838219cf67b058f3b37907b655f226153c18e33dfcd0da559a844fea9b1c1::usdsui::USDSUI",
+      "decimals": 6
+    }
+  ],
+  "canBeBlacklisted": true,
+  "chainTier": "established-alt-l1",
+  "deploymentModel": "single-chain",
+  "collateralQuality": "rwa",
+  "custodyModel": "institutional-regulated",
+  "governanceQuality": "regulated-entity",
+  "reserves": [
+    {
+      "name": "Bridge USD reserves (short-dated Treasuries, Treasury repos, government MMFs, and cash)",
+      "pct": 100,
+      "risk": "very-low"
+    }
+  ]
+}

@@ -1,0 +1,95 @@
+{
+  "id": "susdai-usd-ai",
+  "name": "Staked USDai",
+  "symbol": "sUSDai",
+  "flags": {
+    "backing": "rwa-backed",
+    "pegCurrency": "USD",
+    "governance": "centralized-dependent",
+    "yieldBearing": true,
+    "rwa": false,
+    "navToken": true
+  },
+  "variantOf": "usdai-usd-ai",
+  "variantKind": "strategy-vault",
+  "pegReferenceId": "usdai-usd-ai",
+  "collateral": "Yield-bearing USD.AI position backed by a mixed reserve stack that currently pairs a large PYUSD liquid sleeve with GPU-backed infrastructure loans financing AI compute; current issuer materials describe value-warranty coverage on new GPU loans",
+  "pegMechanism": "Stake USDai to receive sUSDai; the token appreciates versus USDai as yield accrues, while unstaking enters the protocol's queued withdrawal flow with fixed 30-day processing windows and a limited instant-liquidity buffer",
+  "detailProvider": "coingecko",
+  "geckoId": "susdai",
+  "links": [
+    {
+      "label": "Website",
+      "url": "https://usd.ai/"
+    },
+    {
+      "label": "Twitter",
+      "url": "https://x.com/USDai_Official"
+    },
+    {
+      "label": "Docs",
+      "url": "https://docs.usd.ai"
+    }
+  ],
+  "jurisdiction": {
+    "country": "United States"
+  },
+  "contracts": [
+    {
+      "chain": "ethereum",
+      "address": "0x0b2b2b2076d95dda7817e785989fe353fe955ef9",
+      "decimals": 18
+    },
+    {
+      "chain": "arbitrum",
+      "address": "0x0b2b2b2076d95dda7817e785989fe353fe955ef9",
+      "decimals": 18
+    },
+    {
+      "chain": "base",
+      "address": "0x0b2b2b2076d95dda7817e785989fe353fe955ef9",
+      "decimals": 18
+    },
+    {
+      "chain": "plasma",
+      "address": "0x0b2b2b2076d95dda7817e785989fe353fe955ef9",
+      "decimals": 18
+    }
+  ],
+  "deploymentModel": "third-party-bridge",
+  "collateralQuality": "exotic",
+  "custodyModel": "institutional-unregulated",
+  "reserves": [
+    {
+      "name": "PYUSD (PayPal USD)",
+      "pct": 94.4,
+      "risk": "low",
+      "coinId": "pyusd-paypal"
+    },
+    {
+      "name": "GPU-backed infrastructure loans (NVIDIA hardware)",
+      "pct": 5.6,
+      "risk": "high"
+    }
+  ],
+  "yieldConfig": {
+    "yieldSource": "USD.AI savings (sUSDai)",
+    "yieldType": "nav-appreciation"
+  },
+  "liveReservesConfig": {
+    "adapter": "usdai-proof-of-reserves",
+    "version": 2,
+    "semantics": "collateral-mix",
+    "breakerScope": "susdai-usd-ai",
+    "display": {
+      "url": "https://app.usd.ai/reserves",
+      "label": "USD.AI Reserves"
+    },
+    "inputs": {
+      "primary": {
+        "kind": "http-json",
+        "url": "https://api.usd.ai/usdai/dashboard/proof-of-reserves?chainId=42161"
+      }
+    }
+  }
+}

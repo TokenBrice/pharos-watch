@@ -1,0 +1,83 @@
+{
+  "id": "aid-gaib",
+  "name": "GAIB AID",
+  "symbol": "AID",
+  "flags": {
+    "backing": "rwa-backed",
+    "pegCurrency": "USD",
+    "governance": "centralized",
+    "yieldBearing": false,
+    "rwa": true,
+    "navToken": false
+  },
+  "collateral": "U.S. Treasury bills and accepted stablecoins (USDC, USDT, and other approved stable assets); staking into sAID is the separate route into GAIB's AI infrastructure financing portfolio",
+  "pegMechanism": "1:1 mint and burn against accepted stablecoins through GAIB AID contracts; whitelisted partners can mint or redeem directly while other users trade through the app or DEX liquidity",
+  "llamaId": "353",
+  "detailProvider": "defillama",
+  "geckoId": "gaib-aid",
+  "links": [
+    {
+      "label": "Website",
+      "url": "https://gaib.ai"
+    },
+    {
+      "label": "Twitter",
+      "url": "https://x.com/gaib_ai"
+    },
+    {
+      "label": "Docs",
+      "url": "https://docs.gaib.ai"
+    }
+  ],
+  "jurisdiction": {
+    "country": "Singapore"
+  },
+  "contracts": [
+    {
+      "chain": "ethereum",
+      "address": "0x18f52b3fb465118731d9e0d276d4eb3599d57596",
+      "decimals": 18
+    },
+    {
+      "chain": "arbitrum",
+      "address": "0x18f52b3fb465118731d9e0d276d4eb3599d57596",
+      "decimals": 18
+    },
+    {
+      "chain": "base",
+      "address": "0x18f52b3fb465118731d9e0d276d4eb3599d57596",
+      "decimals": 18
+    }
+  ],
+  "collateralQuality": "rwa",
+  "custodyModel": "institutional-regulated",
+  "governanceQuality": "single-entity",
+  "reserves": [
+    {
+      "name": "U.S. Treasuries and accepted stablecoin reserves",
+      "pct": 100,
+      "risk": "low"
+    }
+  ],
+  "liveReservesConfig": {
+    "adapter": "single-asset",
+    "version": 1,
+    "semantics": "single-asset",
+    "breakerScope": "aid-gaib",
+    "display": {
+      "url": "https://gaib.ai",
+      "label": "GAIB AI"
+    },
+    "inputs": {
+      "primary": {
+        "kind": "onchain-evm",
+        "chain": "ethereum",
+        "rpcMode": "public-rpc"
+      }
+    },
+    "params": {
+      "label": "U.S. Treasury and accepted stablecoin reserves",
+      "risk": "low"
+    }
+  }
+}

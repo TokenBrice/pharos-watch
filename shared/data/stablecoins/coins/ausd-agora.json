@@ -1,0 +1,144 @@
+{
+  "id": "ausd-agora",
+  "name": "Agora Dollar",
+  "symbol": "AUSD",
+  "flags": {
+    "backing": "rwa-backed",
+    "pegCurrency": "USD",
+    "governance": "centralized",
+    "yieldBearing": false,
+    "rwa": false,
+    "navToken": false
+  },
+  "collateral": "Cash (USD deposits), short-dated U.S. Treasury bills, and overnight reverse repurchase agreements; managed by VanEck in a bankruptcy-remote Delaware Statutory Trust custodied by State Street",
+  "pegMechanism": "Fiat-backed 1:1; users deposit USD and mint AUSD at par; direct redemption for USD through Agora; reserves held in bankruptcy-remote Delaware Statutory Trust administered by State Street",
+  "llamaId": "205",
+  "detailProvider": "defillama",
+  "geckoId": "agora-dollar",
+  "pythFeedId": "0xd9912df360b5b7f21a122f15bdd5e27f62ce5e72bd316c291f7c86620e07fb2a",
+  "proofOfReserves": {
+    "type": "real-time",
+    "url": "https://oracles.chaoslabs.xyz/por-feeds/agora",
+    "provider": "Chaos Labs"
+  },
+  "links": [
+    {
+      "label": "Website",
+      "url": "https://www.agora.finance/"
+    },
+    {
+      "label": "Twitter",
+      "url": "https://x.com/withAUSD"
+    },
+    {
+      "label": "Docs",
+      "url": "https://docs.agora.finance/"
+    },
+    {
+      "label": "GitHub",
+      "url": "https://github.com/agora-finance"
+    }
+  ],
+  "jurisdiction": {
+    "country": "Bermuda",
+    "regulator": "Bermuda Monetary Authority (SAC Act)"
+  },
+  "contracts": [
+    {
+      "chain": "ethereum",
+      "address": "0x00000000efe302beaa2b3e6e1b18d08d69a9012a",
+      "decimals": 6
+    },
+    {
+      "chain": "arbitrum",
+      "address": "0x00000000efe302beaa2b3e6e1b18d08d69a9012a",
+      "decimals": 6
+    },
+    {
+      "chain": "base",
+      "address": "0x00000000efe302beaa2b3e6e1b18d08d69a9012a",
+      "decimals": 6
+    },
+    {
+      "chain": "avalanche",
+      "address": "0x00000000efe302beaa2b3e6e1b18d08d69a9012a",
+      "decimals": 6
+    },
+    {
+      "chain": "bsc",
+      "address": "0x00000000efe302beaa2b3e6e1b18d08d69a9012a",
+      "decimals": 6
+    },
+    {
+      "chain": "polygon",
+      "address": "0x00000000efe302beaa2b3e6e1b18d08d69a9012a",
+      "decimals": 6
+    },
+    {
+      "chain": "monad",
+      "address": "0x00000000efe302beaa2b3e6e1b18d08d69a9012a",
+      "decimals": 6
+    },
+    {
+      "chain": "solana",
+      "address": "AUSD1jCcCyPLybk1YnvPWsHQSrZ46dxwoMniN4N2UEB9",
+      "decimals": 6
+    },
+    {
+      "chain": "sui",
+      "address": "0x2053d08c1e2bd02791056171aab0fd12bd7cd7efad2ab8f6b9c8902f14df2ff2::ausd::AUSD",
+      "decimals": 6
+    },
+    {
+      "chain": "mantle",
+      "address": "0x00000000efe302beaa2b3e6e1b18d08d69a9012a",
+      "decimals": 6
+    },
+    {
+      "chain": "katana",
+      "address": "0x00000000efe302beaa2b3e6e1b18d08d69a9012a",
+      "decimals": 6
+    },
+    {
+      "chain": "immutable-zkevm",
+      "address": "0x00000000efe302beaa2b3e6e1b18d08d69a9012a",
+      "decimals": 6
+    }
+  ],
+  "deploymentModel": "third-party-bridge",
+  "custodyModel": "institutional-top",
+  "reserves": [
+    {
+      "name": "Short-dated U.S. Treasury Bills",
+      "pct": 60,
+      "risk": "very-low"
+    },
+    {
+      "name": "Overnight Reverse Repurchase Agreements",
+      "pct": 25,
+      "risk": "low"
+    },
+    {
+      "name": "Cash (USD deposits at State Street)",
+      "pct": 15,
+      "risk": "very-low"
+    }
+  ],
+  "liveReservesConfig": {
+    "adapter": "curated-validated",
+    "version": 1,
+    "semantics": "attestation-mix",
+    "breakerScope": "ausd-agora",
+    "display": {
+      "url": "https://www.agora.finance/",
+      "label": "Agora"
+    },
+    "inputs": {
+      "primary": {
+        "kind": "onchain-evm",
+        "chain": "ethereum",
+        "rpcMode": "public-rpc"
+      }
+    }
+  }
+}

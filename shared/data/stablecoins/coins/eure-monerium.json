@@ -1,0 +1,109 @@
+{
+  "id": "eure-monerium",
+  "name": "Monerium EUR emoney",
+  "symbol": "EURE",
+  "flags": {
+    "backing": "rwa-backed",
+    "pegCurrency": "EUR",
+    "governance": "centralized",
+    "yieldBearing": false,
+    "rwa": false,
+    "navToken": false
+  },
+  "collateral": "Euro deposits held in segregated accounts with credit institutions and high-quality liquid assets (HQLA) denominated in EUR, separated from Monerium's own funds; over 100% backing maintained as required under MiCA",
+  "pegMechanism": "Mint-and-burn: EURe is minted when users deposit EUR via SEPA bank transfer after KYC/AML verification, and burned upon redemption back to EUR; peg maintained by licensed EMI with 1:1 backing",
+  "llamaId": "101",
+  "detailProvider": "defillama",
+  "geckoId": "monerium-eur-money-2",
+  "proofOfReserves": {
+    "type": "self-reported",
+    "url": "https://monerium.com/financial-information/"
+  },
+  "links": [
+    {
+      "label": "Website",
+      "url": "https://monerium.com/"
+    },
+    {
+      "label": "Twitter",
+      "url": "https://x.com/monerium"
+    },
+    {
+      "label": "Docs",
+      "url": "https://monerium.dev/docs/welcome"
+    }
+  ],
+  "jurisdiction": {
+    "country": "Iceland",
+    "regulator": "Financial Supervisory Authority of the Central Bank of Iceland",
+    "license": "Electronic Money Institution (EMI)"
+  },
+  "contracts": [
+    {
+      "chain": "ethereum",
+      "address": "0x39b8b6385416f4ca36a20319f70d28621895279d",
+      "decimals": 18
+    },
+    {
+      "chain": "gnosis",
+      "address": "0x420ca0f9b9b604ce0fd9c18ef134c705e5fa3430",
+      "decimals": 18
+    },
+    {
+      "chain": "linea",
+      "address": "0x3ff47c5bf409c86533fe1f4907524d304062428d",
+      "decimals": 18
+    },
+    {
+      "chain": "scroll",
+      "address": "0xd7bb130a48595fcdf9480e36c1ae97ff2938ac21",
+      "decimals": 18
+    },
+    {
+      "chain": "arbitrum",
+      "address": "0x0c06ccf38114ddfc35e07427b9424adcca9f44f8",
+      "decimals": 18
+    },
+    {
+      "chain": "polygon",
+      "address": "0xe0aea583266584dafbb3f9c3211d5588c73fea8d",
+      "decimals": 18
+    },
+    {
+      "chain": "osmosis",
+      "address": "ibc/92AE2F53284505223A1BB80D132F859A00E190C6A738772F0B3EF65E20BA484F",
+      "decimals": 6
+    }
+  ],
+  "deploymentModel": "native-multichain",
+  "custodyModel": "institutional-top",
+  "reserves": [
+    {
+      "name": "State Street EUR Liquidity LVNAV Fund (AAA-rated)",
+      "pct": 70,
+      "risk": "very-low"
+    },
+    {
+      "name": "EUR bank deposits (Arion Bank, LHV Bank)",
+      "pct": 30,
+      "risk": "very-low"
+    }
+  ],
+  "liveReservesConfig": {
+    "adapter": "curated-validated",
+    "version": 1,
+    "semantics": "attestation-mix",
+    "breakerScope": "eure-monerium",
+    "display": {
+      "url": "https://monerium.com/financial-information/",
+      "label": "Monerium"
+    },
+    "inputs": {
+      "primary": {
+        "kind": "onchain-evm",
+        "chain": "ethereum",
+        "rpcMode": "public-rpc"
+      }
+    }
+  }
+}

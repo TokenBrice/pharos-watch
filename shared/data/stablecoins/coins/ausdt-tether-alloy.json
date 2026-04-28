@@ -1,0 +1,111 @@
+{
+  "id": "ausdt-tether-alloy",
+  "name": "Alloy Tether",
+  "symbol": "aUSD₮",
+  "flags": {
+    "backing": "rwa-backed",
+    "pegCurrency": "USD",
+    "governance": "centralized",
+    "yieldBearing": false,
+    "rwa": true,
+    "navToken": false
+  },
+  "collateral": "Overcollateralized Tether Gold (XAUT) deposited into the Alloy by Tether Ethereum vault; XAUT represents physical gold stored in Swiss vaults",
+  "pegMechanism": "KYC-verified, whitelisted users mint aUSDT by depositing Ethereum XAUT into Alloy vaults, with positions limited by a 75% maximum mint-to-value ratio. Users return aUSDT to withdraw XAUT collateral, and whitelisted liquidators can repay aUSDT against undercollateralized positions.",
+  "detailProvider": "coingecko",
+  "geckoId": "alloy-tether",
+  "proofOfReserves": {
+    "type": "real-time",
+    "url": "https://docs.alloy.tether.to/alloy-by-tether/alloy-by-tether-vaults",
+    "provider": "Alloy by Tether Ethereum Vault"
+  },
+  "links": [
+    {
+      "label": "Website",
+      "url": "https://alloy.tether.to/en/"
+    },
+    {
+      "label": "Twitter",
+      "url": "https://x.com/Alloy_tether"
+    },
+    {
+      "label": "Docs",
+      "url": "https://docs.alloy.tether.to/"
+    },
+    {
+      "label": "App",
+      "url": "https://alloy.tether.to/en/app/"
+    },
+    {
+      "label": "Contracts",
+      "url": "https://dev.alloy.tether.to/deployments/ethereum-mainnet"
+    },
+    {
+      "label": "CNAD Registration",
+      "url": "https://cnad.gob.sv/first-registered-stablecoin-issued-and-regulated-in-el-salvador/"
+    }
+  ],
+  "jurisdiction": {
+    "country": "El Salvador",
+    "regulator": "CNAD",
+    "license": "Stablecoin Issuer and DASP registrations"
+  },
+  "contracts": [
+    {
+      "chain": "ethereum",
+      "address": "0x9eead9ce15383caeed975427340b3a369410cfbf",
+      "decimals": 6
+    }
+  ],
+  "canBeBlacklisted": true,
+  "chainTier": "ethereum",
+  "deploymentModel": "single-chain",
+  "collateralQuality": "rwa",
+  "custodyModel": "institutional-regulated",
+  "governanceQuality": "regulated-entity",
+  "reserves": [
+    {
+      "name": "Tether Gold (XAUT) collateral in Alloy vault",
+      "pct": 100,
+      "risk": "medium",
+      "coinId": "xaut-tether",
+      "depType": "collateral",
+      "blacklistable": true
+    }
+  ],
+  "liveReservesConfig": {
+    "adapter": "evm-branch-balances",
+    "version": 1,
+    "semantics": "collateral-mix",
+    "breakerScope": "ausdt-tether-alloy",
+    "display": {
+      "url": "https://dev.alloy.tether.to/deployments/ethereum-mainnet",
+      "label": "Alloy CMPVault"
+    },
+    "inputs": {
+      "primary": {
+        "kind": "onchain-evm",
+        "chain": "ethereum",
+        "rpcMode": "public-rpc"
+      }
+    },
+    "params": {
+      "rpcUrl": "https://ethereum-rpc.publicnode.com",
+      "fallbackRpcUrl": "https://eth.llamarpc.com",
+      "branches": [
+        {
+          "name": "XAUT collateral",
+          "holder": "0x4c1ec3d1519225f36958408fdd33a0d5ba1f2fa7",
+          "token": {
+            "chain": "ethereum",
+            "address": "0x68749665ff8d2d112fa859aa293f07a622782f38",
+            "decimals": 6
+          },
+          "risk": "medium",
+          "coinId": "xaut-tether",
+          "depType": "collateral"
+        }
+      ]
+    }
+  }
+}

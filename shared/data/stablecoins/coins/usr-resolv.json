@@ -1,0 +1,119 @@
+{
+  "id": "usr-resolv",
+  "name": "Resolv USD",
+  "symbol": "USR",
+  "status": "frozen",
+  "frozenAt": "2026-04-27",
+  "obituary": {
+    "causeOfDeath": "counterparty-failure",
+    "deathDate": "2026-03",
+    "epitaph": "When one key minted eighty million",
+    "obituary": "On 22 March 2026, an attacker exploited Resolv's single-EOA minter — no oracle, no amount cap, no max-mint guard — depositing 100K USDC and receiving 50M USR in return, then iterating until 80M unbacked USR existed for ~$25M of extracted ETH. USR crashed to $0.025 in 17 minutes; the RLP insurance layer absorbed the bad debt and was wiped out, dragging Stream Finance's $17M position down with it. Resolv burned 46M of the unbacked supply via a blacklist freeze, but USR never recovered — by April it traded at $0.16 with $95M of collateral against $173M of liabilities. Delta-neutral collateral and Apostro-attested reserves were no defense against an operator-level privilege failure.",
+    "peakMcap": 586592926,
+    "sourceUrl": "https://www.theblock.co/post/394582/resolvs-usr-stablecoin-depegs-after-attacker-mints-80-million-unbacked-tokens-extracts-roughly-25-million",
+    "sourceLabel": "The Block"
+  },
+  "flags": {
+    "backing": "crypto-backed",
+    "pegCurrency": "USD",
+    "governance": "centralized-dependent",
+    "yieldBearing": false,
+    "rwa": false,
+    "navToken": false
+  },
+  "collateral": "ETH, wstETH (Lido), LBTC, and weETH held on-chain via Fireblocks; yield from liquid staking rewards and perpetual futures funding rates",
+  "pegMechanism": "Delta-neutral portfolio: long spot ETH/BTC on-chain balanced by equal short perpetual futures on CEXs (Binance, Hyperliquid, Deribit) via Fireblocks Off-Exchange; USR redeemable 1:1 at any time; RLP (Resolv Liquidity Pool) absorbs negative funding-rate and liquidation risk",
+  "llamaId": "197",
+  "detailProvider": "defillama",
+  "geckoId": "resolv-usr",
+  "pythFeedId": "0x10b013adec14c0fe839ca0fe54cec9e4d0b6c1585ac6d7e70010dac015e57f9c",
+  "proofOfReserves": {
+    "type": "real-time",
+    "url": "https://info.apostro.xyz/resolv-reserves",
+    "provider": "Apostro"
+  },
+  "links": [
+    {
+      "label": "Website",
+      "url": "https://resolv.xyz/"
+    },
+    {
+      "label": "Twitter",
+      "url": "https://x.com/ResolvLabs"
+    },
+    {
+      "label": "Docs",
+      "url": "https://docs.resolv.xyz/"
+    },
+    {
+      "label": "GitHub",
+      "url": "https://github.com/resolv-im/resolv-contracts-public"
+    }
+  ],
+  "jurisdiction": {
+    "country": "British Virgin Islands"
+  },
+  "contracts": [
+    {
+      "chain": "ethereum",
+      "address": "0x66a1e37c9b0eaddca17d3662d6c05f4decf3e110",
+      "decimals": 18
+    },
+    {
+      "chain": "base",
+      "address": "0x35e5db674d8e93a03d814fa0ada70731efe8a4b9",
+      "decimals": 18
+    },
+    {
+      "chain": "bsc",
+      "address": "0x2492d0006411af6c8bbb1c8afc1b0197350a79e9",
+      "decimals": 18
+    },
+    {
+      "chain": "berachain",
+      "address": "0x2492d0006411af6c8bbb1c8afc1b0197350a79e9",
+      "decimals": 18
+    },
+    {
+      "chain": "hyperevm",
+      "address": "0x0ad339d66bf4aed5ce31c64bc37b3244b6394a77",
+      "decimals": 18
+    },
+    {
+      "chain": "arbitrum",
+      "address": "0x2492d0006411af6c8bbb1c8afc1b0197350a79e9",
+      "decimals": 18
+    },
+    {
+      "chain": "soneium",
+      "address": "0xb1b385542b6e80f77b94393ba8342c3af699f15c",
+      "decimals": 18
+    }
+  ],
+  "deploymentModel": "third-party-bridge",
+  "collateralQuality": "exotic",
+  "custodyModel": "institutional-regulated",
+  "reserves": [
+    {
+      "name": "ETH + wstETH (delta-neutral via short perps)",
+      "pct": 55,
+      "risk": "medium"
+    },
+    {
+      "name": "BTC (delta-neutral via short perps)",
+      "pct": 20,
+      "risk": "medium"
+    },
+    {
+      "name": "RLP insurance layer (surplus ETH + BTC)",
+      "pct": 15,
+      "risk": "medium"
+    },
+    {
+      "name": "USD stablecoins (USDC/USDT)",
+      "pct": 10,
+      "risk": "low",
+      "coinId": "usdc-circle"
+    }
+  ]
+}

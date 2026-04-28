@@ -1,0 +1,85 @@
+{
+  "id": "alusd-alchemix",
+  "name": "Alchemix USD",
+  "symbol": "ALUSD",
+  "flags": {
+    "backing": "crypto-backed",
+    "pegCurrency": "USD",
+    "governance": "centralized-dependent",
+    "yieldBearing": false,
+    "rwa": false,
+    "navToken": false
+  },
+  "collateral": "DAI, USDC, and USDT deposited into yield strategies (Yearn, Aave) via Alchemix CDPs; yield automatically repays debt",
+  "pegMechanism": "Self-repaying loans: yield from deposited stablecoin collateral automatically repays debt; Transmuter guarantees 1:1 redemption",
+  "llamaId": "20",
+  "detailProvider": "defillama",
+  "geckoId": "alchemix-usd",
+  "links": [
+    {
+      "label": "Website",
+      "url": "https://alchemix.fi/"
+    },
+    {
+      "label": "Docs",
+      "url": "https://v2-docs.alchemix.fi/"
+    },
+    {
+      "label": "GitHub",
+      "url": "https://github.com/alchemix-finance"
+    },
+    {
+      "label": "Twitter",
+      "url": "https://x.com/alchemixfi"
+    }
+  ],
+  "contracts": [
+    {
+      "chain": "ethereum",
+      "address": "0xbc6da0fe9ad5f3b0d58160288917aa56653660e9",
+      "decimals": 18
+    },
+    {
+      "chain": "arbitrum",
+      "address": "0xcb8fa9a76b8e203d8c3797bf438d8fb81ea3326a",
+      "decimals": 18
+    },
+    {
+      "chain": "optimism",
+      "address": "0xcb8fa9a76b8e203d8c3797bf438d8fb81ea3326a",
+      "decimals": 18
+    },
+    {
+      "chain": "fantom",
+      "address": "0xb67fa6defce4042070eb1ae1511dcd6dcc6a532e",
+      "decimals": 18
+    },
+    {
+      "chain": "metis",
+      "address": "0x303241e2b3b4aed0bb0f8623e7442368fed8faf3",
+      "decimals": 18
+    }
+  ],
+  "deploymentModel": "third-party-bridge",
+  "collateralQuality": "exotic",
+  "reserves": [
+    {
+      "name": "DAI (in Yearn/Aave yield strategies)",
+      "pct": 35,
+      "risk": "medium",
+      "coinId": "dai-makerdao"
+    },
+    {
+      "name": "USDC (in Yearn/Aave yield strategies)",
+      "pct": 35,
+      "risk": "medium",
+      "coinId": "usdc-circle"
+    },
+    {
+      "name": "USDT (in Yearn/Aave yield strategies)",
+      "pct": 30,
+      "risk": "medium",
+      "coinId": "usdt-tether"
+    }
+  ]
+}

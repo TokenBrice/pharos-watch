@@ -1,0 +1,115 @@
+{
+  "id": "usdf-falcon",
+  "name": "Falcon USD",
+  "symbol": "USDf",
+  "flags": {
+    "backing": "crypto-backed",
+    "pegCurrency": "USD",
+    "governance": "centralized-dependent",
+    "yieldBearing": true,
+    "rwa": false,
+    "navToken": false
+  },
+  "collateral": "Overcollateralized: stablecoins (USDC, USDT, USD1, FDUSD) minted 1:1; volatile assets (BTC, ETH, SOL, select altcoins) with dynamic overcollateralization ratios based on volatility and liquidity",
+  "pegMechanism": "Overcollateralized synthetic dollar; liquidation mechanisms and arbitrage maintain the $1 peg; delta-neutral strategies power sUSDf yield",
+  "llamaId": "246",
+  "detailProvider": "defillama",
+  "geckoId": "falcon-finance",
+  "cmcSlug": "falcon-finance",
+  "pythFeedId": "0xfeb26a319cfbb09cfa85b382e4d97f48e6b8727a2b5e7e2fff0692ff676d5239",
+  "proofOfReserves": {
+    "type": "real-time",
+    "url": "https://app.falcon.finance/transparency",
+    "provider": "ht.digital"
+  },
+  "links": [
+    {
+      "label": "Website",
+      "url": "https://falcon.finance/"
+    },
+    {
+      "label": "Twitter",
+      "url": "https://x.com/falconfinance"
+    },
+    {
+      "label": "Docs",
+      "url": "https://docs.falcon.finance"
+    }
+  ],
+  "jurisdiction": {
+    "country": "British Virgin Islands"
+  },
+  "contracts": [
+    {
+      "chain": "ethereum",
+      "address": "0xfa2b947eec368f42195f24f36d2af29f7c24cec2",
+      "decimals": 18
+    },
+    {
+      "chain": "bsc",
+      "address": "0xb3b02e4a9fb2bd28cc2ff97b0ab3f6b3ec1ee9d2",
+      "decimals": 18
+    },
+    {
+      "chain": "base",
+      "address": "0x8210c0634ab8f273806e4b7866e9db353773c44b",
+      "decimals": 18
+    },
+    {
+      "chain": "xdc",
+      "address": "0x8210c0634ab8f273806e4b7866e9db353773c44b",
+      "decimals": 18
+    }
+  ],
+  "deploymentModel": "third-party-bridge",
+  "collateralQuality": "exotic",
+  "reserves": [
+    {
+      "name": "BTC (delta-neutral)",
+      "pct": 45,
+      "risk": "medium"
+    },
+    {
+      "name": "Stablecoins (USDC/USDT)",
+      "pct": 30,
+      "risk": "low",
+      "coinId": "usdc-circle"
+    },
+    {
+      "name": "Altcoins (DOGE, FET, TRX, TON)",
+      "pct": 15,
+      "risk": "high"
+    },
+    {
+      "name": "ETH (delta-neutral)",
+      "pct": 5,
+      "risk": "medium"
+    },
+    {
+      "name": "Tokenized Treasuries (USTB)",
+      "pct": 5,
+      "risk": "low",
+      "coinId": "ustb-superstate"
+    }
+  ],
+  "liveReservesConfig": {
+    "adapter": "falcon",
+    "version": 1,
+    "semantics": "collateral-mix",
+    "breakerScope": "falcon",
+    "display": {
+      "url": "https://app.falcon.finance/transparency",
+      "label": "Transparency"
+    },
+    "inputs": {
+      "primary": {
+        "kind": "http-json",
+        "url": "https://api.falcon.finance/api/v1/transparency"
+      }
+    }
+  },
+  "yieldConfig": {
+    "yieldSource": "Falcon Finance savings (sUSDf)",
+    "yieldType": "lending-vault"
+  }
+}

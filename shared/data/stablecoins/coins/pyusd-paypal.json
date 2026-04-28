@@ -1,0 +1,105 @@
+{
+  "id": "pyusd-paypal",
+  "name": "PayPal USD",
+  "symbol": "PYUSD",
+  "flags": {
+    "backing": "rwa-backed",
+    "pegCurrency": "USD",
+    "governance": "centralized",
+    "yieldBearing": false,
+    "rwa": false,
+    "navToken": false
+  },
+  "collateral": "U.S. dollar deposits, U.S. Treasury securities, and reverse repurchase agreements",
+  "pegMechanism": "Direct 1:1 redemption through PayPal/Paxos",
+  "llamaId": "120",
+  "detailProvider": "defillama",
+  "geckoId": "paypal-usd",
+  "pythFeedId": "0xc1da1b73d7f01e7ddd54b3766cf7fcd644395ad14f70aa706ec5384c59e76692",
+  "proofOfReserves": {
+    "type": "independent-audit",
+    "url": "https://www.paxos.com/pyusd-transparency",
+    "provider": "KPMG"
+  },
+  "links": [
+    {
+      "label": "Website",
+      "url": "https://www.paypal.com/us/digital-wallet/manage-money/crypto/pyusd"
+    },
+    {
+      "label": "Twitter",
+      "url": "https://x.com/paypal"
+    },
+    {
+      "label": "Docs",
+      "url": "https://developer.paypal.com/dev-center/pyusd/"
+    }
+  ],
+  "jurisdiction": {
+    "country": "United States",
+    "regulator": "OCC",
+    "license": "National Trust Charter"
+  },
+  "contracts": [
+    {
+      "chain": "ethereum",
+      "address": "0x6c3ea9036406852006290770bedfcaba0e23a0e8",
+      "decimals": 6
+    },
+    {
+      "chain": "arbitrum",
+      "address": "0x46850ad61c2b7d64d08c9c754f45254596696984",
+      "decimals": 6
+    },
+    {
+      "chain": "solana",
+      "address": "2b1kV6DkPAnxd5ixfnxCpjxmKwqjjaYmCZfHsFu24GXo",
+      "decimals": 6
+    },
+    {
+      "chain": "stellar",
+      "address": "PYUSD-GDQE7IXJ4HUHV6RQHIUPRJSEZE4DRS5WY577O2FY6YQ5LVWZ7JZTU2V5",
+      "decimals": 7
+    },
+    {
+      "chain": "flow",
+      "address": "0x99af3eea856556646c98c8b9b2548fe815240750",
+      "decimals": 6
+    }
+  ],
+  "deploymentModel": "third-party-bridge",
+  "custodyModel": "institutional-top",
+  "reserves": [
+    {
+      "name": "U.S. Treasury Reverse Repos",
+      "pct": 97,
+      "risk": "very-low"
+    },
+    {
+      "name": "Cash Deposits",
+      "pct": 3,
+      "risk": "very-low"
+    }
+  ],
+  "liveReservesConfig": {
+    "adapter": "single-asset",
+    "version": 1,
+    "semantics": "single-asset",
+    "breakerScope": "pyusd-paypal",
+    "display": {
+      "url": "https://www.paxos.com/pyusd-transparency",
+      "label": "Paxos Transparency"
+    },
+    "inputs": {
+      "primary": {
+        "kind": "onchain-evm",
+        "chain": "ethereum",
+        "rpcMode": "public-rpc"
+      }
+    },
+    "params": {
+      "label": "USD deposits, U.S. Treasuries & reverse repos",
+      "risk": "very-low"
+    }
+  }
+}

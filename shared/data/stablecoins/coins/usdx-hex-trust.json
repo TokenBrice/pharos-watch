@@ -1,0 +1,84 @@
+{
+  "id": "usdx-hex-trust",
+  "name": "Hex Trust USDX",
+  "symbol": "USDX",
+  "flags": {
+    "backing": "rwa-backed",
+    "pegCurrency": "USD",
+    "governance": "centralized",
+    "yieldBearing": false,
+    "rwa": false,
+    "navToken": false
+  },
+  "collateral": "Cash and cash equivalents, primarily 1–3 month U.S. Treasury bills held at global tier-1 financial institutions",
+  "pegMechanism": "Direct 1:1 redemption through Hex Trust",
+  "llamaId": "263",
+  "detailProvider": "defillama",
+  "geckoId": "hex-trust-usdx",
+  "links": [
+    {
+      "label": "Website",
+      "url": "https://www.htdigitalassets.com/"
+    },
+    {
+      "label": "Twitter",
+      "url": "https://x.com/_HTDA"
+    }
+  ],
+  "jurisdiction": {
+    "country": "Hong Kong",
+    "regulator": "Companies Registry",
+    "license": "TCSP License"
+  },
+  "contracts": [
+    {
+      "chain": "ethereum",
+      "address": "0xf8750b54d86be7ae9e32b4a0c826811198d63313",
+      "decimals": 18
+    },
+    {
+      "chain": "flare",
+      "address": "0x4a771cc1a39fdd8aa08b8ea51f7fd412e73b3d2b",
+      "decimals": 6
+    },
+    {
+      "chain": "songbird",
+      "address": "0x4a771cc1a39fdd8aa08b8ea51f7fd412e73b3d2b",
+      "decimals": 6
+    }
+  ],
+  "custodyModel": "institutional-regulated",
+  "reserves": [
+    {
+      "name": "U.S. Treasury bills (1-3 month maturity)",
+      "pct": 80,
+      "risk": "very-low"
+    },
+    {
+      "name": "Cash and cash equivalents",
+      "pct": 20,
+      "risk": "very-low"
+    }
+  ],
+  "liveReservesConfig": {
+    "adapter": "single-asset",
+    "version": 1,
+    "semantics": "single-asset",
+    "breakerScope": "usdx-hex-trust",
+    "display": {
+      "url": "https://www.htdigitalassets.com/",
+      "label": "HT Digital Assets"
+    },
+    "inputs": {
+      "primary": {
+        "kind": "onchain-evm",
+        "chain": "ethereum",
+        "rpcMode": "public-rpc"
+      }
+    },
+    "params": {
+      "label": "U.S. Treasury bills & cash",
+      "risk": "very-low"
+    }
+  }
+}

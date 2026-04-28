@@ -1,0 +1,99 @@
+{
+  "id": "usdon-ondo",
+  "name": "Ondo U.S. Dollar Token",
+  "symbol": "USDon",
+  "flags": {
+    "backing": "rwa-backed",
+    "pegCurrency": "USD",
+    "governance": "centralized",
+    "yieldBearing": false,
+    "rwa": true,
+    "navToken": false
+  },
+  "collateral": "U.S. dollar cash or cash equivalents held in Ondo Global Markets brokerage accounts at regulated U.S. custodial broker-dealers",
+  "pegMechanism": "USDon is used as the native settlement stablecoin for Ondo Global Markets; USDC can be swapped 1:1 into USDon for purchases, and tokenized-asset redemptions can settle to USDon or to USDC when swapper liquidity is available",
+  "detailProvider": "coingecko",
+  "geckoId": "ondo-u-s-dollar-token",
+  "cmcSlug": "us-dollar-tokenized-currency-ondo",
+  "proofOfReserves": {
+    "type": "independent-audit",
+    "url": "https://docs.ondo.finance/ondo-global-markets/trust-and-transparency",
+    "provider": "Ankura Trust Company daily verification"
+  },
+  "links": [
+    {
+      "label": "Website",
+      "url": "https://app.ondo.finance/"
+    },
+    {
+      "label": "Twitter",
+      "url": "https://x.com/ondofinance"
+    },
+    {
+      "label": "Docs",
+      "url": "https://docs.ondo.finance/ondo-global-markets/available-assets"
+    },
+    {
+      "label": "Contracts",
+      "url": "https://docs.ondo.finance/addresses"
+    },
+    {
+      "label": "Proof of Reserve",
+      "url": "https://docs.ondo.finance/ondo-global-markets/trust-and-transparency"
+    }
+  ],
+  "jurisdiction": {
+    "country": "British Virgin Islands",
+    "license": "Ondo Global Markets SPV; Regulation S restrictions"
+  },
+  "contracts": [
+    {
+      "chain": "ethereum",
+      "address": "0xace8e719899f6e91831b18ae746c9a965c2119f1",
+      "decimals": 18
+    },
+    {
+      "chain": "bsc",
+      "address": "0x1f8955e640cbd9abc3c3bb408c9e2e1f5f20dfe6",
+      "decimals": 18
+    },
+    {
+      "chain": "solana",
+      "address": "ZPFtoCe7WWqG4N3ZFRccS8T9SMBeHsd1Vmgv2i7ondo",
+      "decimals": 9
+    }
+  ],
+  "canBeBlacklisted": true,
+  "deploymentModel": "native-multichain",
+  "collateralQuality": "rwa",
+  "custodyModel": "institutional-regulated",
+  "governanceQuality": "single-entity",
+  "reserves": [
+    {
+      "name": "U.S. dollar cash and cash equivalents in Global Markets brokerage accounts",
+      "pct": 100,
+      "risk": "very-low"
+    }
+  ],
+  "liveReservesConfig": {
+    "adapter": "curated-validated",
+    "version": 1,
+    "semantics": "attestation-mix",
+    "breakerScope": "usdon-ondo",
+    "display": {
+      "url": "https://docs.ondo.finance/ondo-global-markets/trust-and-transparency",
+      "label": "Ondo Global Markets"
+    },
+    "inputs": {
+      "primary": {
+        "kind": "onchain-evm",
+        "chain": "ethereum",
+        "rpcMode": "public-rpc"
+      }
+    },
+    "params": {
+      "rpcUrl": "https://ethereum-rpc.publicnode.com",
+      "fallbackRpcUrl": "https://eth.llamarpc.com"
+    }
+  }
+}

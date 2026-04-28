@@ -1,0 +1,134 @@
+{
+  "id": "feusd-felix",
+  "name": "Felix feUSD",
+  "symbol": "FEUSD",
+  "flags": {
+    "backing": "crypto-backed",
+    "pegCurrency": "USD",
+    "governance": "decentralized",
+    "yieldBearing": false,
+    "rwa": false,
+    "navToken": false
+  },
+  "collateral": "HYPE, kHYPE, wstHYPE, UBTC (feUBTC), ETH, and SOL via overcollateralized CDPs on Hyperliquid (Liquity V2 fork)",
+  "pegMechanism": "Overcollateralized CDP (Liquity V2 fork) with direct redemption for $1 of collateral; interest-rate-sorted redemption queue (lower-rate positions redeemed first); stability pools absorb liquidations",
+  "llamaId": "251",
+  "detailProvider": "defillama",
+  "geckoId": "felix-feusd",
+  "pythFeedId": "0x7f2e9a7365eb634c543e9ca72683a9cf778cdc16ee5b8bca73abe6d08c1410d5",
+  "links": [
+    {
+      "label": "Website",
+      "url": "https://usefelix.xyz/"
+    },
+    {
+      "label": "Twitter",
+      "url": "https://x.com/felixprotocol"
+    },
+    {
+      "label": "Docs",
+      "url": "https://usefelix.gitbook.io/docs"
+    }
+  ],
+  "contracts": [
+    {
+      "chain": "hyperevm",
+      "address": "0x02c6a2fa58cc01a18b8d9e00ea48d65e4df26c70",
+      "decimals": 18
+    }
+  ],
+  "chainTier": "unproven",
+  "collateralQuality": "alt-lst-bridged-or-mixed",
+  "infrastructures": [
+    "liquity-v2"
+  ],
+  "reserves": [
+    {
+      "name": "HYPE / kHYPE / wstHYPE (Hyperliquid native + LSTs)",
+      "pct": 60,
+      "risk": "very-high"
+    },
+    {
+      "name": "BTC (bridged UBTC)",
+      "pct": 15,
+      "risk": "medium"
+    },
+    {
+      "name": "ETH (bridged)",
+      "pct": 15,
+      "risk": "medium"
+    },
+    {
+      "name": "SOL (bridged)",
+      "pct": 10,
+      "risk": "high"
+    }
+  ],
+  "liveReservesConfig": {
+    "adapter": "liquity-v2-branches",
+    "version": 1,
+    "semantics": "collateral-mix",
+    "breakerScope": "feusd-felix",
+    "display": {
+      "url": "https://usefelix.xyz/",
+      "label": "Felix Protocol"
+    },
+    "inputs": {
+      "primary": {
+        "kind": "onchain-evm",
+        "chain": "hyperevm",
+        "rpcMode": "public-rpc"
+      }
+    },
+    "params": {
+      "rpcUrl": "https://rpc.hyperliquid.xyz/evm",
+      "debtSelector": "0x75755a87",
+      "redemptionRateProbe": {
+        "contract": "0x9de1e57049c475736289cb006212f3e1dce4711b",
+        "selector": "0xc52861f2"
+      },
+      "branches": [
+        {
+          "name": "WHYPE",
+          "holder": "0x39ebba742b6917d49d4a9ac7cf5c70f84d34cc9e",
+          "token": {
+            "chain": "hyperevm",
+            "address": "0x5555555555555555555555555555555555555555",
+            "decimals": 18
+          },
+          "risk": "very-high"
+        },
+        {
+          "name": "kHYPE (KittenFinance)",
+          "holder": "0xbfd0b103a49faf426f36864d19f5d871bf411a5a",
+          "token": {
+            "chain": "hyperevm",
+            "address": "0xfd739d4e423301ce9385c1fb8850539d657c296d",
+            "decimals": 18
+          },
+          "risk": "very-high"
+        },
+        {
+          "name": "UBTC (bridged Bitcoin)",
+          "holder": "0x8d99575ebbbda038a626ca769561c16fdd7a5939",
+          "token": {
+            "chain": "hyperevm",
+            "address": "0xefbd9cfe88235f0e648aefb52c8e8dc152a9ad6f",
+            "decimals": 18
+          },
+          "risk": "medium"
+        },
+        {
+          "name": "wstHYPE",
+          "holder": "0x7abca40474d6b5f000f801d7fe7e0df4c89425ff",
+          "token": {
+            "chain": "hyperevm",
+            "address": "0x94e8396e0869c9f2200760af0621afd240e1cf38",
+            "decimals": 18
+          },
+          "risk": "very-high"
+        }
+      ]
+    }
+  }
+}

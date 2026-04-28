@@ -1,0 +1,78 @@
+{
+  "id": "vgbp-vnx",
+  "name": "VNX British Pound",
+  "symbol": "VGBP",
+  "flags": {
+    "backing": "rwa-backed",
+    "pegCurrency": "GBP",
+    "governance": "centralized",
+    "yieldBearing": false,
+    "rwa": false,
+    "navToken": false
+  },
+  "collateral": "GBP deposits held in bank accounts in Switzerland and Liechtenstein, confirmed 1:1 by Areva General Auditing and Trust Company Limited (December 2024)",
+  "pegMechanism": "Direct 1:1 redemption through VNX Commodities AG; tokens minted on demand for verified customers depositing equivalent GBP value",
+  "llamaId": "292",
+  "detailProvider": "defillama",
+  "geckoId": "vnx-british-pound",
+  "links": [
+    {
+      "label": "Website",
+      "url": "https://vnx.li/"
+    },
+    {
+      "label": "Twitter",
+      "url": "https://x.com/VNX_Platform"
+    },
+    {
+      "label": "Docs",
+      "url": "https://vnx.gitbook.io/vnx-platform/"
+    }
+  ],
+  "jurisdiction": {
+    "country": "Liechtenstein",
+    "regulator": "FMA",
+    "license": "TVTG (Blockchain Act)"
+  },
+  "contracts": [
+    {
+      "chain": "base",
+      "address": "0xaeb4bb7debd1e5e82266f7c3b5cff56b3a7bf411",
+      "decimals": 18
+    },
+    {
+      "chain": "celo",
+      "address": "0x7ae4265ecfc1f31bc0e112dfcfe3d78e01f4bb7f",
+      "decimals": 18
+    }
+  ],
+  "custodyModel": "institutional-regulated",
+  "reserves": [
+    {
+      "name": "GBP deposits, Switzerland/Liechtenstein (Areva audited)",
+      "pct": 100,
+      "risk": "very-low"
+    }
+  ],
+  "liveReservesConfig": {
+    "adapter": "single-asset",
+    "version": 1,
+    "semantics": "single-asset",
+    "breakerScope": "vgbp-vnx",
+    "display": {
+      "url": "https://vnx.li/",
+      "label": "VNX Platform"
+    },
+    "inputs": {
+      "primary": {
+        "kind": "onchain-evm",
+        "chain": "base",
+        "rpcMode": "alchemy"
+      }
+    },
+    "params": {
+      "label": "GBP cash & equivalents",
+      "risk": "very-low"
+    }
+  }
+}

@@ -1,0 +1,120 @@
+{
+  "id": "usdk-orki",
+  "name": "Orki USD",
+  "symbol": "USDK",
+  "flags": {
+    "backing": "crypto-backed",
+    "pegCurrency": "USD",
+    "governance": "decentralized",
+    "yieldBearing": false,
+    "rwa": false,
+    "navToken": false
+  },
+  "collateral": "LST/LRT assets including swETH and rswETH in overcollateralized CDP markets on Swellchain",
+  "pegMechanism": "Overcollateralized CDP with Liquity v2-style user-set interest rates and direct on-chain redemption for underlying collateral; Stability Pools absorb liquidations per collateral market",
+  "llamaId": "265",
+  "detailProvider": "defillama",
+  "canBeBlacklisted": false,
+  "links": [
+    {
+      "label": "Website",
+      "url": "https://app.orki.finance/"
+    },
+    {
+      "label": "Twitter",
+      "url": "https://x.com/OrkiFi"
+    },
+    {
+      "label": "Docs",
+      "url": "https://orki-finance.gitbook.io/orki-finance-docs/products/usdk"
+    }
+  ],
+  "contracts": [
+    {
+      "chain": "swellchain",
+      "address": "0x0000baa0b1678229863c0a941c1056b83a1955f5",
+      "decimals": 18
+    }
+  ],
+  "collateralQuality": "alt-lst-bridged-or-mixed",
+  "governanceQuality": "immutable-code",
+  "infrastructures": [
+    "liquity-v2"
+  ],
+  "liveReservesConfig": {
+    "adapter": "liquity-v2-branches",
+    "version": 1,
+    "semantics": "collateral-mix",
+    "breakerScope": "usdk-orki",
+    "display": {
+      "url": "https://app.orki.finance/",
+      "label": "Website"
+    },
+    "inputs": {
+      "primary": {
+        "kind": "onchain-evm",
+        "chain": "swellchain",
+        "rpcMode": "public-rpc"
+      }
+    },
+    "params": {
+      "rpcUrl": "https://swell-mainnet.alt.technology",
+      "redemptionRateProbe": {
+        "contract": "0xce9f80a0dcd51fb3dd4f0d6bec3afdcaea10c912",
+        "selector": "0xc52861f2"
+      },
+      "branches": [
+        {
+          "name": "WETH",
+          "holder": "0xf709e16ceb143bd59d20a01163d2ede98148bf20",
+          "token": {
+            "chain": "swellchain",
+            "address": "0x4200000000000000000000000000000000000006",
+            "decimals": 18
+          },
+          "risk": "very-low"
+        },
+        {
+          "name": "rswETH",
+          "holder": "0x62b9ddeb8299e3c924510bf2b4edde4aa34b67f2",
+          "token": {
+            "chain": "swellchain",
+            "address": "0x18d33689ae5d02649a859a1cf16c9f0563975258",
+            "decimals": 18
+          },
+          "risk": "medium"
+        },
+        {
+          "name": "swETH",
+          "holder": "0xb102b2116e50b491dd53946f959c9260ec872110",
+          "token": {
+            "chain": "swellchain",
+            "address": "0x09341022ea237a4db1644de7ccf8fa0e489d85b7",
+            "decimals": 18
+          },
+          "risk": "medium"
+        },
+        {
+          "name": "SWELL",
+          "holder": "0xb7977a8dea3089fc0746889da247620cd7ad523e",
+          "token": {
+            "chain": "swellchain",
+            "address": "0x2826d136f5630ada89c1678b64a61620aab77aea",
+            "decimals": 18
+          },
+          "risk": "very-high"
+        },
+        {
+          "name": "weETH",
+          "holder": "0xe65e267ed1a0d45ee3d611792a97ec2527f76eda",
+          "token": {
+            "chain": "swellchain",
+            "address": "0xa6cb988942610f6731e664379d15ffcfbf282b44",
+            "decimals": 18
+          },
+          "risk": "low"
+        }
+      ]
+    }
+  }
+}

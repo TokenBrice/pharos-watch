@@ -1,0 +1,64 @@
+{
+  "id": "uusd-youves",
+  "name": "Youves uUSD",
+  "symbol": "UUSD",
+  "flags": {
+    "backing": "crypto-backed",
+    "pegCurrency": "USD",
+    "governance": "centralized-dependent",
+    "yieldBearing": false,
+    "rwa": false,
+    "navToken": false
+  },
+  "collateral": "Overcollateralized by XTZ, tzBTC, USDt, or SIRS (tez/tzBTC LP); target ratios vary by collateral (200% for XTZ, 115% for stablecoins); 300% applied only to legacy v1/v2 vaults",
+  "pegMechanism": "Overcollateralized CDP on Tezos with variable collateral ratios; liquidations triggered at emergency ratio with 12.5% reward; savings pool provides additional peg stability",
+  "llamaId": "75",
+  "detailProvider": "defillama",
+  "geckoId": "youves-uusd",
+  "links": [
+    {
+      "label": "Website",
+      "url": "https://youves.com"
+    },
+    {
+      "label": "Docs",
+      "url": "https://docs.youves.com"
+    },
+    {
+      "label": "GitHub",
+      "url": "https://github.com/youves-com"
+    }
+  ],
+  "contracts": [
+    {
+      "chain": "tezos",
+      "address": "KT1XRPEPXbZK25r3Htzp2o1x7xdMMmfocKNW",
+      "decimals": 12
+    }
+  ],
+  "chainTier": "established-alt-l1",
+  "collateralQuality": "alt-lst-bridged-or-mixed",
+  "reserves": [
+    {
+      "name": "XTZ (Tezos)",
+      "pct": 60,
+      "risk": "high"
+    },
+    {
+      "name": "USDt (Tether on Tezos)",
+      "pct": 20,
+      "risk": "low",
+      "coinId": "usdt-tether"
+    },
+    {
+      "name": "tzBTC (wrapped Bitcoin)",
+      "pct": 10,
+      "risk": "medium"
+    },
+    {
+      "name": "SIRS (XTZ/tzBTC LP tokens)",
+      "pct": 10,
+      "risk": "high"
+    }
+  ]
+}

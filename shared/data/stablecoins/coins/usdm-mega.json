@@ -1,0 +1,55 @@
+{
+  "id": "usdm-mega",
+  "name": "MegaUSD",
+  "symbol": "USDM",
+  "flags": {
+    "backing": "rwa-backed",
+    "pegCurrency": "USD",
+    "governance": "centralized-dependent",
+    "yieldBearing": false,
+    "rwa": true,
+    "navToken": false
+  },
+  "collateral": "~90% USDtb (BlackRock BUIDL tokenized Treasuries via Securitize) with liquid stablecoins for redemptions",
+  "pegMechanism": "Issued on Ethena's USDtb rails; reserve yield funds MegaETH sequencer costs",
+  "llamaId": "342",
+  "detailProvider": "defillama",
+  "geckoId": "megausd",
+  "cmcSlug": "mega-usdm",
+  "links": [
+    {
+      "label": "Website",
+      "url": "https://www.megaeth.com/"
+    },
+    {
+      "label": "Twitter",
+      "url": "https://x.com/megaeth"
+    },
+    {
+      "label": "Docs",
+      "url": "https://docs.megaeth.com"
+    }
+  ],
+  "contracts": [
+    {
+      "chain": "megaeth",
+      "address": "0xFAfDdbb3FC7688494971a79cc65DCa3EF82079E7",
+      "decimals": 18
+    }
+  ],
+  "custodyModel": "institutional-regulated",
+  "reserves": [
+    {
+      "name": "USDtb (BlackRock BUIDL tokenized U.S. Treasuries via Securitize)",
+      "pct": 90,
+      "risk": "low",
+      "coinId": "usdtb-ethena"
+    },
+    {
+      "name": "Liquid stablecoins (USDC/USDT) for redemptions",
+      "pct": 10,
+      "risk": "low",
+      "coinId": "usdc-circle"
+    }
+  ]
+}

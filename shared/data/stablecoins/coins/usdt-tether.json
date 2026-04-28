@@ -1,0 +1,262 @@
+{
+  "id": "usdt-tether",
+  "name": "Tether",
+  "symbol": "USDT",
+  "flags": {
+    "backing": "rwa-backed",
+    "pegCurrency": "USD",
+    "governance": "centralized",
+    "yieldBearing": false,
+    "rwa": false,
+    "navToken": false
+  },
+  "collateral": "U.S. Treasury Bills (~63%), overnight reverse repos (~10%), precious metals / gold (~9%), secured loans (~9%), Bitcoin (~4%), and other investments; quarterly attestations by BDO Italia (Q4 2025 data)",
+  "pegMechanism": "Direct 1:1 redemption through Tether. Supply figures include USDT0 (omnichain variant via LayerZero lock-and-mint) deployed on 20+ additional chains",
+  "llamaId": "1",
+  "detailProvider": "defillama",
+  "geckoId": "tether",
+  "pythFeedId": "0x2b89b9dc8fdf9f34709a5b106b472f0f39bb6ca9ce04b0fd7f2e971688e2e53b",
+  "proofOfReserves": {
+    "type": "independent-audit",
+    "url": "https://tether.to/en/transparency",
+    "provider": "BDO Italia"
+  },
+  "links": [
+    {
+      "label": "Website",
+      "url": "https://tether.to/"
+    },
+    {
+      "label": "Twitter",
+      "url": "https://x.com/tether"
+    },
+    {
+      "label": "Transparency",
+      "url": "https://tether.to/en/transparency"
+    },
+    {
+      "label": "USDT0",
+      "url": "https://usdt0.to/"
+    }
+  ],
+  "jurisdiction": {
+    "country": "El Salvador",
+    "regulator": "CNAD",
+    "license": "Digital Asset Issuance / DASP"
+  },
+  "contracts": [
+    {
+      "chain": "ethereum",
+      "address": "0xdac17f958d2ee523a2206206994597c13d831ec7",
+      "decimals": 6
+    },
+    {
+      "chain": "tron",
+      "address": "TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t",
+      "decimals": 6
+    },
+    {
+      "chain": "arbitrum",
+      "address": "0xfd086bc7cd5c481dcc9c85ebe478a1c0b69fcbb9",
+      "decimals": 6
+    },
+    {
+      "chain": "optimism",
+      "address": "0x94b008aa00579c1307b0ef2c499ad98a8ce58e58",
+      "decimals": 6
+    },
+    {
+      "chain": "polygon",
+      "address": "0xc2132d05d31c914a87c6611c10748aeb04b58e8f",
+      "decimals": 6
+    },
+    {
+      "chain": "avalanche",
+      "address": "0x9702230a8ea53601f5cd2dc00fdbc13d4df4a8c7",
+      "decimals": 6
+    },
+    {
+      "chain": "bsc",
+      "address": "0x55d398326f99059ff775485246999027b3197955",
+      "decimals": 18
+    },
+    {
+      "chain": "celo",
+      "address": "0x48065fbbe25f71c9282ddf5e1cd6d6a887483d5e",
+      "decimals": 6
+    },
+    {
+      "chain": "solana",
+      "address": "Es9vMFrzaCERmJfrF4H2FYD4KCoNkY11McCe8BenwNYB",
+      "decimals": 6
+    },
+    {
+      "chain": "ton",
+      "address": "EQCxE6mUtQJKFnGfaROTKOt1lZbDiiX1kCixRv7Nw2Id_sDs",
+      "decimals": 6
+    },
+    {
+      "chain": "near",
+      "address": "usdt.tether-token.near",
+      "decimals": 6
+    },
+    {
+      "chain": "aptos",
+      "address": "0x357b0b74bc833e95a115ad22604854d6b0fca151cecd94111770e5d6ffc9dc2b",
+      "decimals": 6
+    },
+    {
+      "chain": "klaytn",
+      "address": "0xd077a400968890eacc75cdc901f0356c943e4fdb",
+      "decimals": 6
+    },
+    {
+      "chain": "kava",
+      "address": "0x919c1c267bc06a7039e03fcc2ef738525769109c",
+      "decimals": 6
+    },
+    {
+      "chain": "sui",
+      "address": "0x375f70cf2ae4c00bf37117d0c85a2c71545e6ee05c4a5c7d282cd66a4504b068::usdt::USDT",
+      "decimals": 6
+    },
+    {
+      "chain": "polkadot",
+      "address": "1984",
+      "decimals": 6
+    },
+    {
+      "chain": "tezos",
+      "address": "KT1XnTn74bUtxHfDtBmm2bGZAQfhPbvKWR8o",
+      "decimals": 6
+    },
+    {
+      "chain": "injective",
+      "address": "peggy0xdAC17F958D2ee523a2206206994597C13D831ec7",
+      "decimals": 6
+    },
+    {
+      "chain": "scroll",
+      "address": "0xf55bec9cafdbe8730f096aa55dad6d22d44099df",
+      "decimals": 6
+    },
+    {
+      "chain": "fantom",
+      "address": "0x049d68029688eabf473097a2fc38ef61633a3c7a",
+      "decimals": 6
+    },
+    {
+      "chain": "mantle",
+      "address": "0x779ded0c9e1022225f8e0630b35a9b54be713736",
+      "decimals": 6
+    },
+    {
+      "chain": "ink",
+      "address": "0x0200c29006150606b650577bbe7b6248f58470c1",
+      "decimals": 6
+    },
+    {
+      "chain": "berachain",
+      "address": "0x779ded0c9e1022225f8e0630b35a9b54be713736",
+      "decimals": 6
+    },
+    {
+      "chain": "unichain",
+      "address": "0x9151434b16b9763660705744891fa906f660ecc5",
+      "decimals": 6
+    },
+    {
+      "chain": "hyperevm",
+      "address": "0xb8ce59fc3717ada4c02eadf9682a9e934f625ebb",
+      "decimals": 6
+    },
+    {
+      "chain": "monad",
+      "address": "0xe7cd86e13ac4309349f30b3435a9d337750fc82d",
+      "decimals": 6
+    },
+    {
+      "chain": "xlayer",
+      "address": "0x779ded0c9e1022225f8e0630b35a9b54be713736",
+      "decimals": 6
+    },
+    {
+      "chain": "flare",
+      "address": "0xe7cd86e13ac4309349f30b3435a9d337750fc82d",
+      "decimals": 6
+    },
+    {
+      "chain": "corn",
+      "address": "0xb8ce59fc3717ada4c02eadf9682a9e934f625ebb",
+      "decimals": 6
+    },
+    {
+      "chain": "megaeth",
+      "address": "0xb8ce59fc3717ada4c02eadf9682a9e934f625ebb",
+      "decimals": 6
+    },
+    {
+      "chain": "plasma",
+      "address": "0xb8ce59fc3717ada4c02eadf9682a9e934f625ebb",
+      "decimals": 6
+    }
+  ],
+  "tradedContracts": [
+    {
+      "chain": "optimism",
+      "address": "0x01bFF41798a0BcF287b996046Ca68b395DbC1071",
+      "decimals": 6
+    }
+  ],
+  "deploymentModel": "native-multichain",
+  "custodyModel": "institutional-regulated",
+  "reserves": [
+    {
+      "name": "U.S. Treasury Bills",
+      "pct": 63,
+      "risk": "very-low"
+    },
+    {
+      "name": "Overnight Reverse Repos",
+      "pct": 10,
+      "risk": "very-low"
+    },
+    {
+      "name": "Precious Metals (Gold)",
+      "pct": 9,
+      "risk": "medium"
+    },
+    {
+      "name": "Secured Loans",
+      "pct": 9,
+      "risk": "medium"
+    },
+    {
+      "name": "Bitcoin",
+      "pct": 4,
+      "risk": "high"
+    },
+    {
+      "name": "Other Investments (cash, corporate bonds)",
+      "pct": 5,
+      "risk": "medium"
+    }
+  ],
+  "liveReservesConfig": {
+    "adapter": "curated-validated",
+    "version": 1,
+    "semantics": "attestation-mix",
+    "breakerScope": "usdt-tether",
+    "display": {
+      "url": "https://tether.to/en/transparency",
+      "label": "Tether Transparency"
+    },
+    "inputs": {
+      "primary": {
+        "kind": "onchain-evm",
+        "chain": "ethereum",
+        "rpcMode": "public-rpc"
+      }
+    }
+  }
+}

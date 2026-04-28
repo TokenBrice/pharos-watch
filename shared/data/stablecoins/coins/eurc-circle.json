@@ -1,0 +1,108 @@
+{
+  "id": "eurc-circle",
+  "name": "EURC",
+  "symbol": "EURC",
+  "flags": {
+    "backing": "rwa-backed",
+    "pegCurrency": "EUR",
+    "governance": "centralized",
+    "yieldBearing": false,
+    "rwa": false,
+    "navToken": false
+  },
+  "collateral": "Euro-denominated cash and short-term euro government securities held in segregated, bankruptcy-remote accounts at regulated financial institutions in the EEA",
+  "pegMechanism": "Direct 1:1 redemption through Circle Internet Financial Europe SAS (licensed EMI under MiCA); Circle Mint enables institutional mint/redeem at zero fees with near-instant settlement",
+  "llamaId": "50",
+  "detailProvider": "defillama",
+  "geckoId": "euro-coin",
+  "pythFeedId": "0x76fa85158bf14ede77087fe3ae472f66213f6ea2f5b411cb2de472794990fa5c",
+  "proofOfReserves": {
+    "type": "independent-audit",
+    "url": "https://www.circle.com/transparency",
+    "provider": "Deloitte"
+  },
+  "links": [
+    {
+      "label": "Website",
+      "url": "https://www.circle.com/eurc"
+    },
+    {
+      "label": "Twitter",
+      "url": "https://x.com/circle"
+    },
+    {
+      "label": "Docs",
+      "url": "https://developers.circle.com/stablecoins/what-is-eurc"
+    }
+  ],
+  "jurisdiction": {
+    "country": "France",
+    "regulator": "ACPR",
+    "license": "EMI (MiCA)"
+  },
+  "contracts": [
+    {
+      "chain": "ethereum",
+      "address": "0x1abaea1f7c830bd89acc67ec4af516284b1bc33c",
+      "decimals": 6
+    },
+    {
+      "chain": "base",
+      "address": "0x60a3e35cc302bfa44cb288bc5a4f316fdb1adb42",
+      "decimals": 6
+    },
+    {
+      "chain": "avalanche",
+      "address": "0xc891eb4cbdeff6e073e859e987815ed1505c2acd",
+      "decimals": 6
+    },
+    {
+      "chain": "worldchain",
+      "address": "0x1c60ba0a0ed1019e8eb035e6daf4155a5ce2380b",
+      "decimals": 6
+    },
+    {
+      "chain": "stellar",
+      "address": "EURC-GDHU6WRG4IEQXM5NZ4BMPKOXHW76MZM4Y2IEMFDVXBSDP6SJY4ITNPP2",
+      "decimals": 7
+    },
+    {
+      "chain": "solana",
+      "address": "HzwqbKZw8HxMN6bF2yFZNrht3c2iXXzpKcFu7uBEDKtr",
+      "decimals": 6
+    }
+  ],
+  "deploymentModel": "native-multichain",
+  "custodyModel": "institutional-top",
+  "reserves": [
+    {
+      "name": "Deposits at Systemically Important Institutions (EUR)",
+      "pct": 99,
+      "risk": "very-low"
+    },
+    {
+      "name": "Other Bank Deposits (EUR)",
+      "pct": 1,
+      "risk": "very-low"
+    }
+  ],
+  "liveReservesConfig": {
+    "adapter": "circle-transparency",
+    "version": 1,
+    "semantics": "attestation-mix",
+    "breakerScope": "circle-eurc-reserves",
+    "display": {
+      "url": "https://www.circle.com/transparency",
+      "label": "Circle Transparency"
+    },
+    "inputs": {
+      "primary": {
+        "kind": "http-html",
+        "url": "https://www.circle.com/transparency"
+      }
+    },
+    "params": {
+      "coinType": "eurc"
+    }
+  }
+}

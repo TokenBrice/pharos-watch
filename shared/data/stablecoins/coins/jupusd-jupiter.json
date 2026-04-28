@@ -1,0 +1,73 @@
+{
+  "id": "jupusd-jupiter",
+  "name": "JupUSD",
+  "symbol": "JUPUSD",
+  "flags": {
+    "backing": "rwa-backed",
+    "pegCurrency": "USD",
+    "governance": "centralized-dependent",
+    "yieldBearing": false,
+    "rwa": true,
+    "navToken": false
+  },
+  "collateral": "90% USDtb (BlackRock BUIDL tokenized U.S. Treasuries issued by Ethena under GENIUS-compliant framework, custodied by Porto/Anchorage Digital) and 10% USDC liquidity buffer",
+  "pegMechanism": "Reserve-backed 1:1 mint and redeem on Solana against USDC; Ethena manages day-to-day reserve operations (custody, bridging, rebalancing between USDtb and USDC)",
+  "llamaId": "335",
+  "detailProvider": "defillama",
+  "geckoId": "jupusd",
+  "cmcSlug": "jupusd",
+  "pythFeedId": "0x8ed858a2214e892c9371694fb6c8a9037b6ed4052c4edf209f8cb988484e81d9",
+  "links": [
+    {
+      "label": "Website",
+      "url": "https://jupusd.money/"
+    },
+    {
+      "label": "Twitter",
+      "url": "https://x.com/JupiterExchange"
+    }
+  ],
+  "contracts": [
+    {
+      "chain": "solana",
+      "address": "JuprjznTrTSp2UFa3ZBUFgwdAmtZCq4MQCwysN55USD",
+      "decimals": 6
+    }
+  ],
+  "chainTier": "mature-alt-l1",
+  "custodyModel": "institutional-regulated",
+  "reserves": [
+    {
+      "name": "USDtb (BlackRock BUIDL tokenized U.S. Treasuries)",
+      "pct": 90,
+      "risk": "low",
+      "coinId": "usdtb-ethena"
+    },
+    {
+      "name": "USDC liquidity buffer",
+      "pct": 10,
+      "risk": "low",
+      "coinId": "usdc-circle"
+    }
+  ],
+  "liveReservesConfig": {
+    "adapter": "jupusd",
+    "version": 1,
+    "semantics": "collateral-mix",
+    "breakerScope": "jupusd-jupiter",
+    "display": {
+      "url": "https://jupusd.money/transparency",
+      "label": "JupUSD transparency"
+    },
+    "inputs": {
+      "primary": {
+        "kind": "http-json",
+        "url": "https://api.jupusd.money/api/data"
+      }
+    },
+    "params": {
+      "snapshotsUrl": "https://api.jupusd.money/api/snapshots",
+      "oracleUrl": "https://api.jupusd.money/api/oracle"
+    }
+  }
+}

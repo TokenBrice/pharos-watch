@@ -1,0 +1,131 @@
+{
+  "id": "dusd-dtrinity",
+  "name": "dTRINITY dUSD",
+  "symbol": "dUSD",
+  "flags": {
+    "backing": "crypto-backed",
+    "pegCurrency": "USD",
+    "governance": "centralized-dependent",
+    "yieldBearing": true,
+    "rwa": false,
+    "navToken": false
+  },
+  "collateral": "Yield-bearing USD stablecoins held in chain-isolated on-chain reserves; eligible assets vary by chain. Ethereum: USDC, USDT, USDS, sUSDS (Sky/MakerDAO), frxUSD, sfrxUSD (Frax Finance), and Curve AMO positions. Fraxtal: USDC, USDT, DAI, sDAI (bridged via Fraxtal canonical bridge), frxUSD, sfrxUSD (native), and Curve AMO positions. Katana: vbUSDC, vbUSDT (Vault Bridge tokens backed by Ethereum lending vaults), AUSD (Agora), frxUSD, sfrxUSD. Each network deployment maintains fully isolated reserves with no cross-chain collateral sharing.",
+  "pegMechanism": "Atomic 1:1 mint (no fee) and redemption (up to 50 bps fee) against whitelisted reserve stablecoins; Algorithmic Market Operations (AMO) pre-mint dUSD into Curve liquidity pools to programmatically support the peg; Stability Market Operations (SMO) buy back and burn dUSD from Curve when it trades at a significant discount; dUSD price is hard-coded at $1 in all protocol-internal operations to prevent oracle manipulation.",
+  "detailProvider": "coingecko",
+  "geckoId": "dtrinity-usd",
+  "cmcSlug": "dtrinity-dusd",
+  "links": [
+    {
+      "label": "Website",
+      "url": "https://dtrinity.org"
+    },
+    {
+      "label": "Twitter",
+      "url": "https://x.com/dtrinity_defi"
+    },
+    {
+      "label": "Docs",
+      "url": "https://docs.dtrinity.org"
+    },
+    {
+      "label": "App",
+      "url": "https://app.dtrinity.org/mint/dusd/"
+    }
+  ],
+  "contracts": [
+    {
+      "chain": "ethereum",
+      "address": "0x07fff99e1664d9b116fbc158c0e99785f81ca236",
+      "decimals": 18
+    },
+    {
+      "chain": "fraxtal",
+      "address": "0x788d96f655735f52c676a133f4dfc53cec614d4a",
+      "decimals": 6
+    },
+    {
+      "chain": "katana",
+      "address": "0xca52d08737e6af8763a2bf6034b3b03868f24dda",
+      "decimals": 18
+    },
+    {
+      "chain": "sonic",
+      "address": "0x53a6abb52b2f968fa80df6a894e4f1b1020da975",
+      "decimals": 18
+    }
+  ],
+  "dependencies": [
+    {
+      "id": "usdc-circle",
+      "weight": 0.3
+    },
+    {
+      "id": "usdt-tether",
+      "weight": 0.25
+    },
+    {
+      "id": "frxusd-frax",
+      "weight": 0.2
+    },
+    {
+      "id": "usds-sky",
+      "weight": 0.15
+    },
+    {
+      "id": "dai-makerdao",
+      "weight": 0.1
+    }
+  ],
+  "collateralQuality": "exotic",
+  "custodyModel": "onchain",
+  "governanceQuality": "multisig",
+  "reserves": [
+    {
+      "name": "sfrxUSD (Staked Frax USD)",
+      "pct": 42,
+      "risk": "medium",
+      "coinId": "frxusd-frax"
+    },
+    {
+      "name": "Curve AMO positions (dUSD/sfrxUSD LP)",
+      "pct": 35,
+      "risk": "high",
+      "coinId": "frxusd-frax"
+    },
+    {
+      "name": "frxUSD / DAI / sDAI (Fraxtal)",
+      "pct": 14,
+      "risk": "medium",
+      "coinId": "frxusd-frax"
+    },
+    {
+      "name": "vbUSDT / vbUSDC (Katana Vault Bridge)",
+      "pct": 6,
+      "risk": "medium",
+      "coinId": "usdt-tether"
+    },
+    {
+      "name": "sUSDS (Sky Savings Rate)",
+      "pct": 3,
+      "risk": "medium",
+      "coinId": "usds-sky"
+    }
+  ],
+  "yieldConfig": {
+    "yieldSource": "dTRINITY dStake (sdUSD)",
+    "yieldType": "lending-vault"
+  },
+  "notices": [
+    {
+      "type": "danger",
+      "title": "Recent Exploit",
+      "message": "dTRINITY protocol was exploited on March 17 2026, dUSD should be considered at risk. https://x.com/DefimonAlerts/status/2033868831504965995"
+    },
+    {
+      "type": "warning",
+      "title": "Sonic deployment paused",
+      "message": "dUSD minting and redemption on Sonic is currently paused per the dTRINITY app."
+    }
+  ]
+}

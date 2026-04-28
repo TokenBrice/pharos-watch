@@ -1,0 +1,150 @@
+{
+  "id": "usdy-ondo-finance",
+  "name": "Ondo US Dollar Yield",
+  "symbol": "USDY",
+  "flags": {
+    "backing": "rwa-backed",
+    "pegCurrency": "USD",
+    "governance": "centralized",
+    "yieldBearing": true,
+    "rwa": true,
+    "navToken": true
+  },
+  "collateral": "Short-term U.S. Treasuries, iShares Short Treasury Bond ETF shares, and bank demand deposits",
+  "pegMechanism": "Bank wire redemption at NAV-based price with independent verification and collateral agent oversight",
+  "llamaId": "129",
+  "detailProvider": "defillama",
+  "geckoId": "ondo-us-dollar-yield",
+  "pythFeedId": "0xe393449f6aff8a4b6d3e1165a7c9ebec103685f3b41e60db4277b5b6d10e7326",
+  "proofOfReserves": {
+    "type": "real-time",
+    "url": "https://ondo.finance/usdy",
+    "provider": "Ankura Trust"
+  },
+  "links": [
+    {
+      "label": "Website",
+      "url": "https://ondo.finance/usdy"
+    },
+    {
+      "label": "Twitter",
+      "url": "https://x.com/OndoFinance"
+    },
+    {
+      "label": "Docs",
+      "url": "https://docs.ondo.finance/"
+    }
+  ],
+  "jurisdiction": {
+    "country": "British Virgin Islands"
+  },
+  "contracts": [
+    {
+      "chain": "ethereum",
+      "address": "0x96f6ef951840721adbf46ac996b59e0235cb985c",
+      "decimals": 18
+    },
+    {
+      "chain": "arbitrum",
+      "address": "0x35e050d3c0ec2d29d269a8ecea763a183bdf9a9d",
+      "decimals": 18
+    },
+    {
+      "chain": "mantle",
+      "address": "0x5be26527e817998a7206475496fde1e68957c5a6",
+      "decimals": 18
+    },
+    {
+      "chain": "plume",
+      "address": "0xd2b65e851be3d80d3c2ce795eb2e78f16cb088b2",
+      "decimals": 18
+    },
+    {
+      "chain": "sei",
+      "address": "0x54cd901491aef397084453f4372b93c33260e2a6",
+      "decimals": 18
+    },
+    {
+      "chain": "sui",
+      "address": "0x960b531667636f39e85867775f52f6b1f220a058c4de786905bdf761e06a56bb::usdy::USDY",
+      "decimals": 6
+    },
+    {
+      "chain": "solana",
+      "address": "A1KLoBrKBde8Ty9qtNQUtq3C2ortoC3u7twggz7sEto6",
+      "decimals": 6
+    },
+    {
+      "chain": "aptos",
+      "address": "0xcfea864b32833f157f042618bd845145256b1bf4c0da34a7013b76e42daa53cc",
+      "decimals": 6
+    },
+    {
+      "chain": "stellar",
+      "address": "USDY-GAJMPX5NBOG6TQFPQGRABJEEB2YE7RFRLUKJDZAZGAD5GFX4J7TADAZ6",
+      "decimals": 7
+    },
+    {
+      "chain": "noble",
+      "address": "ausdy",
+      "decimals": 18
+    },
+    {
+      "chain": "osmosis",
+      "address": "ibc/23104D411A6EB6031FA92FB75F227422B84989969E91DCAD56A535DD7FF0A373",
+      "decimals": 18
+    },
+    {
+      "chain": "mantra",
+      "address": "ibc/6749D16BC09F419C090C330FC751FFF1C96143DB7A4D2FCAEC2F348A3E17618A",
+      "decimals": 6
+    }
+  ],
+  "deploymentModel": "third-party-bridge",
+  "custodyModel": "institutional-regulated",
+  "reserves": [
+    {
+      "name": "Short-Term U.S. Treasuries",
+      "pct": 80,
+      "risk": "very-low"
+    },
+    {
+      "name": "iShares Short Treasury Bond ETF",
+      "pct": 15,
+      "risk": "very-low"
+    },
+    {
+      "name": "Bank Demand Deposits",
+      "pct": 5,
+      "risk": "very-low"
+    }
+  ],
+  "liveReservesConfig": {
+    "adapter": "chainlink-nav",
+    "version": 1,
+    "semantics": "single-asset",
+    "breakerScope": "usdy-ondo",
+    "display": {
+      "url": "https://ondo.finance/usdy",
+      "label": "Ondo NAV Oracle"
+    },
+    "inputs": {
+      "primary": {
+        "kind": "onchain-evm",
+        "chain": "ethereum",
+        "rpcMode": "etherscan-proxy"
+      }
+    },
+    "params": {
+      "oracleAddress": "0xA0219AA5B31e65Bc920B5b6DFb8EdF0988121De0",
+      "tokenAddress": "0x96F6eF951840721AdBF46Ac996b59E0235CB985C",
+      "assetLabel": "Short-term U.S. Treasuries and bank deposits",
+      "assetRisk": "very-low",
+      "oracleMethod": "getPrice"
+    }
+  },
+  "yieldConfig": {
+    "yieldSource": "Ondo T-bill fund",
+    "yieldType": "nav-appreciation"
+  }
+}

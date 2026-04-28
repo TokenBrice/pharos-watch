@@ -1,0 +1,53 @@
+{
+  "id": "bd-basedollar",
+  "name": "Base Dollar",
+  "symbol": "BD",
+  "flags": {
+    "backing": "crypto-backed",
+    "pegCurrency": "USD",
+    "governance": "decentralized",
+    "yieldBearing": true,
+    "rwa": false,
+    "navToken": false
+  },
+  "collateral": "LP-collateralized stablecoin forking Liquity V2 on Base L2; yield generated from AERO farming, with revenue split between users, protocol-owned liquidity treasury, and BD stakers",
+  "detailProvider": "defillama",
+  "links": [
+    {
+      "label": "Website",
+      "url": "https://basedollar.org/"
+    },
+    {
+      "label": "Twitter",
+      "url": "https://x.com/BaseDollarOrg"
+    },
+    {
+      "label": "Docs",
+      "url": "https://docs.basedollar.org/"
+    },
+    {
+      "label": "GitHub",
+      "url": "https://github.com/basedollar/basedollar"
+    }
+  ],
+  "status": "pre-launch",
+  "expectedLaunchDate": "2026-Q2",
+  "launchPhase": "auditing",
+  "launchPhaseDetail": "Fork of Liquity V2 on Base; external security audit completed; high and medium severity fixes merged; not yet deployed to mainnet",
+  "milestones": [
+    {
+      "date": "2026-04-03",
+      "type": "announcement",
+      "title": "Base Dollar announced as Liquity V2 fork on Base L2",
+      "description": "LP-collateralized stablecoin with yield from AERO farming; revenue shared between users, POL treasury, and BD stakers.",
+      "sourceUrl": "https://docs.basedollar.org/"
+    },
+    {
+      "date": "2026-04-03",
+      "type": "audit",
+      "title": "External security audit remediation: high and medium severity fixes merged",
+      "description": "Merged fixes for LP token price manipulation vulnerability (H01) and timelock bypass bug (M02); fuzz tests added for Aero LP pricing.",
+      "sourceUrl": "https://github.com/basedollar/basedollar/pull/98"
+    }
+  ]
+}

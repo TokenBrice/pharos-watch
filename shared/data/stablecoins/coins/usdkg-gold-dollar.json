@@ -1,0 +1,65 @@
+{
+  "id": "usdkg-gold-dollar",
+  "name": "USDKG",
+  "symbol": "USDKG",
+  "flags": {
+    "backing": "rwa-backed",
+    "pegCurrency": "USD",
+    "governance": "centralized",
+    "yieldBearing": false,
+    "rwa": true,
+    "navToken": false
+  },
+  "collateral": "Physical gold bars (~376 kg, 30 bars) sourced from the Kyrgyz Ministry of Finance via state gold enterprise Kyrgyzaltyn (LBMA Good Delivery listed); stored in sealed boxes at an unnamed bank under custody of LLC Virelint Group",
+  "pegMechanism": "1:1 mint and redemption against USD, Kyrgyzstani som, physical gold, or approved cryptocurrencies through Gold Dollar; KYC/AML verification required for all redemptions",
+  "detailProvider": "coingecko",
+  "geckoId": "usdkg",
+  "proofOfReserves": {
+    "type": "independent-audit",
+    "url": "https://www.usdkg.com/transparency",
+    "provider": "Kreston Global"
+  },
+  "links": [
+    {
+      "label": "Website",
+      "url": "https://www.usdkg.com/"
+    },
+    {
+      "label": "Twitter",
+      "url": "https://x.com/USDKG_Official"
+    },
+    {
+      "label": "Proof of Reserve",
+      "url": "https://www.usdkg.com/transparency"
+    }
+  ],
+  "jurisdiction": {
+    "country": "Kyrgyz Republic",
+    "regulator": "Ministry of Finance",
+    "license": "Law on Virtual Assets (2022) / Cabinet Resolution No. 514"
+  },
+  "contracts": [
+    {
+      "chain": "tron",
+      "address": "TXZo12qvnEVKvU2zbfuQeMXKusWyxonwEG",
+      "decimals": 6
+    },
+    {
+      "chain": "ethereum",
+      "address": "0xe820c06321e60d36257c666643fa5436643445e3",
+      "decimals": 6
+    }
+  ],
+  "canBeBlacklisted": true,
+  "collateralQuality": "exotic",
+  "custodyModel": "institutional-unregulated",
+  "governanceQuality": "single-entity",
+  "deploymentModel": "native-multichain",
+  "reserves": [
+    {
+      "name": "Physical gold (LBMA Good Delivery bars)",
+      "pct": 100,
+      "risk": "very-low"
+    }
+  ]
+}

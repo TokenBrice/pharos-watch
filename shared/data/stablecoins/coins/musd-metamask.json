@@ -1,0 +1,85 @@
+{
+  "id": "musd-metamask",
+  "name": "Metamask USD",
+  "symbol": "MUSD",
+  "flags": {
+    "backing": "rwa-backed",
+    "pegCurrency": "USD",
+    "governance": "centralized",
+    "yieldBearing": false,
+    "rwa": false,
+    "navToken": false
+  },
+  "infrastructures": [
+    "m0"
+  ],
+  "collateral": "Cash and short-term U.S. Treasury securities held in bankruptcy-remote custody, issued by Bridge (a Stripe company) using the M0 protocol",
+  "pegMechanism": "1:1 mint and redemption via Bridge using M0 protocol infrastructure; reserves continuously validated on-chain by independent validators; arbitrage corrects price drift; monthly public attestations",
+  "llamaId": "313",
+  "detailProvider": "defillama",
+  "geckoId": "metamask-usd",
+  "proofOfReserves": {
+    "type": "real-time",
+    "url": "https://dashboard.m0.org",
+    "provider": "M0 Protocol"
+  },
+  "links": [
+    {
+      "label": "Website",
+      "url": "https://metamask.io/"
+    },
+    {
+      "label": "Twitter",
+      "url": "https://x.com/MetaMask"
+    },
+    {
+      "label": "Audit",
+      "url": "https://diligence.security/audits/2025/08/metamask-usd-token/"
+    }
+  ],
+  "jurisdiction": {
+    "country": "United States"
+  },
+  "contracts": [
+    {
+      "chain": "ethereum",
+      "address": "0xaca92e438df0b2401ff60da7e4337b687a2435da",
+      "decimals": 6
+    },
+    {
+      "chain": "linea",
+      "address": "0xaca92e438df0b2401ff60da7e4337b687a2435da",
+      "decimals": 6
+    }
+  ],
+  "deploymentModel": "third-party-bridge",
+  "custodyModel": "institutional-regulated",
+  "reserves": [
+    {
+      "name": "U.S. Treasury bills (0-180 day maturity)",
+      "pct": 85,
+      "risk": "very-low"
+    },
+    {
+      "name": "Cash in bankruptcy-remote custody",
+      "pct": 15,
+      "risk": "very-low"
+    }
+  ],
+  "liveReservesConfig": {
+    "adapter": "m0",
+    "version": 1,
+    "semantics": "protocol-reserve",
+    "breakerScope": "m0",
+    "display": {
+      "url": "https://dashboard.m0.org/",
+      "label": "M0 Dashboard"
+    },
+    "inputs": {
+      "primary": {
+        "kind": "http-json",
+        "url": "https://protocol-api.m0.org/graphql"
+      }
+    }
+  }
+}

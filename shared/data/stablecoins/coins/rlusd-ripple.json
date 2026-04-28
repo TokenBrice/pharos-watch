@@ -1,0 +1,86 @@
+{
+  "id": "rlusd-ripple",
+  "name": "Ripple USD",
+  "symbol": "RLUSD",
+  "flags": {
+    "backing": "rwa-backed",
+    "pegCurrency": "USD",
+    "governance": "centralized",
+    "yieldBearing": false,
+    "rwa": false,
+    "navToken": false
+  },
+  "collateral": "U.S. dollar deposits, cash equivalents, and short-term U.S. government Treasuries held in segregated accounts",
+  "pegMechanism": "Direct 1:1 redemption through Ripple",
+  "llamaId": "250",
+  "detailProvider": "defillama",
+  "geckoId": "ripple-usd",
+  "pythFeedId": "0x65652029e7acde632e80192dcaa6ea88e61d84a4c78a982a63e98f4bbcb288d5",
+  "proofOfReserves": {
+    "type": "independent-audit",
+    "url": "https://ripple.com/solutions/stablecoin/transparency/",
+    "provider": "BPM LLP"
+  },
+  "links": [
+    {
+      "label": "Website",
+      "url": "https://ripple.com/solutions/stablecoin/"
+    },
+    {
+      "label": "Twitter",
+      "url": "https://x.com/Ripple"
+    }
+  ],
+  "jurisdiction": {
+    "country": "United States",
+    "regulator": "NYDFS",
+    "license": "Trust Charter"
+  },
+  "contracts": [
+    {
+      "chain": "ethereum",
+      "address": "0x8292bb45bf1ee4d140127049757c2e0ff06317ed",
+      "decimals": 18
+    },
+    {
+      "chain": "xrpl",
+      "address": "524C555344000000000000000000000000000000.rMxCKbEDwqr76QuheSUMdEGf4B9xJ8m5De",
+      "decimals": 6
+    }
+  ],
+  "custodyModel": "institutional-regulated",
+  "reserves": [
+    {
+      "name": "U.S. Treasury Bills",
+      "pct": 36,
+      "risk": "very-low"
+    },
+    {
+      "name": "Government Money Market Funds",
+      "pct": 36,
+      "risk": "very-low"
+    },
+    {
+      "name": "Cash Deposits",
+      "pct": 28,
+      "risk": "very-low"
+    }
+  ],
+  "liveReservesConfig": {
+    "adapter": "curated-validated",
+    "version": 1,
+    "semantics": "attestation-mix",
+    "breakerScope": "rlusd-ripple",
+    "display": {
+      "url": "https://ripple.com/solutions/stablecoin/",
+      "label": "Ripple"
+    },
+    "inputs": {
+      "primary": {
+        "kind": "onchain-evm",
+        "chain": "ethereum",
+        "rpcMode": "public-rpc"
+      }
+    }
+  }
+}

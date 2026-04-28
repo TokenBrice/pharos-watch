@@ -1,0 +1,87 @@
+{
+  "id": "stusds-sky",
+  "name": "Staked USDS",
+  "symbol": "stUSDS",
+  "flags": {
+    "backing": "crypto-backed",
+    "pegCurrency": "USD",
+    "governance": "centralized-dependent",
+    "yieldBearing": true,
+    "rwa": false,
+    "navToken": true
+  },
+  "variantOf": "usds-sky",
+  "variantKind": "risk-absorption",
+  "pegReferenceId": "usds-sky",
+  "collateral": "USDS supplied to Sky's stUSDS risk-capital module, where idle liquidity earns the Sky Savings Rate and borrowed liquidity funds SKY-backed positions; holders absorb staked-SKY loan shortfall and governance slashing risk",
+  "pegMechanism": "ERC-4626 NAV shares over USDS; users deposit USDS to mint stUSDS and withdraw USDS subject to unutilized module liquidity, while bad debt or governance slashing can reduce redeemable value",
+  "detailProvider": "coingecko",
+  "links": [
+    {
+      "label": "Website",
+      "url": "https://sky.money/stusds"
+    },
+    {
+      "label": "Twitter",
+      "url": "https://x.com/SkyEcosystem"
+    },
+    {
+      "label": "Docs",
+      "url": "https://developers.skyeco.com/protocol/tokens/stusds/"
+    },
+    {
+      "label": "GitHub",
+      "url": "https://github.com/sky-ecosystem/stusds"
+    }
+  ],
+  "contracts": [
+    {
+      "chain": "ethereum",
+      "address": "0x99cd4ec3f88a45940936f469e4bb72a2a701eeb9",
+      "decimals": 18
+    }
+  ],
+  "deploymentModel": "single-chain",
+  "collateralQuality": "exotic",
+  "custodyModel": "onchain",
+  "governanceQuality": "dao-governance",
+  "reserves": [
+    {
+      "name": "USDS risk-capital module and SKY-backed loan receivable",
+      "pct": 100,
+      "risk": "high",
+      "coinId": "usds-sky",
+      "depType": "collateral"
+    }
+  ],
+  "yieldConfig": {
+    "yieldSource": "Sky stUSDS Rate",
+    "yieldType": "lending-vault"
+  },
+  "liveReservesConfig": {
+    "adapter": "erc4626-single-asset",
+    "version": 1,
+    "semantics": "single-asset",
+    "breakerScope": "stusds-sky",
+    "display": {
+      "url": "https://sky.money/stusds",
+      "label": "Sky stUSDS"
+    },
+    "inputs": {
+      "primary": {
+        "kind": "onchain-evm",
+        "chain": "ethereum",
+        "rpcMode": "alchemy"
+      }
+    },
+    "params": {
+      "slice": {
+        "name": "USDS risk-capital module and SKY-backed loan receivable",
+        "risk": "high",
+        "coinId": "usds-sky",
+        "depType": "collateral",
+        "expectedAssetAddress": "0xdc035d45d973e3ec169d2276ddab16f1e407384f"
+      }
+    }
+  }
+}

@@ -1,0 +1,221 @@
+{
+  "id": "usde-ethena",
+  "name": "Ethena USDe",
+  "symbol": "USDe",
+  "flags": {
+    "backing": "crypto-backed",
+    "pegCurrency": "USD",
+    "governance": "centralized-dependent",
+    "yieldBearing": false,
+    "rwa": false,
+    "navToken": false
+  },
+  "collateral": "Predominantly liquid stablecoins (~77%: USDtb by Ethena backed by BlackRock BUIDL, plus USDC, USDT, pyUSD, and yield-bearing variants deposited in Aave/Morpho) as non-hedged backing; remainder in delta-neutral positions — BTC (~16%) and ETH/stETH (~8%) spot long + equal short perpetual futures on CEXes (Binance, Bybit, OKX)",
+  "pegMechanism": "Delta-neutral hedging: spot collateral custodied off-exchange (Copper, Ceffu, Coinbase) with equal short perpetual positions on CEXes (Binance, Bybit, OKX)",
+  "llamaId": "146",
+  "detailProvider": "defillama",
+  "geckoId": "ethena-usde",
+  "pythFeedId": "0x6ec879b1e9963de5ee97e9c8710b742d6228252a5e2ca12d4ae81d7fe5ee8c5d",
+  "proofOfReserves": {
+    "type": "real-time",
+    "url": "https://app.ethena.fi/dashboards/transparency",
+    "provider": "Chaos Labs / Chainlink / Harris & Trotter / LlamaRisk"
+  },
+  "links": [
+    {
+      "label": "Website",
+      "url": "https://ethena.fi/"
+    },
+    {
+      "label": "Twitter",
+      "url": "https://x.com/ethena"
+    },
+    {
+      "label": "Docs",
+      "url": "https://docs.ethena.fi/"
+    }
+  ],
+  "jurisdiction": {
+    "country": "British Virgin Islands"
+  },
+  "contracts": [
+    {
+      "chain": "ethereum",
+      "address": "0x4c9edd5852cd905f086c759e8383e09bff1e68b3",
+      "decimals": 18
+    },
+    {
+      "chain": "arbitrum",
+      "address": "0x5d3a1ff2b6bab83b63cd9ad0787074081a52ef34",
+      "decimals": 18
+    },
+    {
+      "chain": "base",
+      "address": "0x5d3a1ff2b6bab83b63cd9ad0787074081a52ef34",
+      "decimals": 18
+    },
+    {
+      "chain": "optimism",
+      "address": "0x5d3a1ff2b6bab83b63cd9ad0787074081a52ef34",
+      "decimals": 18
+    },
+    {
+      "chain": "bsc",
+      "address": "0x5d3a1ff2b6bab83b63cd9ad0787074081a52ef34",
+      "decimals": 18
+    },
+    {
+      "chain": "polygon",
+      "address": "0x5d3a1ff2b6bab83b63cd9ad0787074081a52ef34",
+      "decimals": 18
+    },
+    {
+      "chain": "avalanche",
+      "address": "0x5d3a1ff2b6bab83b63cd9ad0787074081a52ef34",
+      "decimals": 18
+    },
+    {
+      "chain": "zksync",
+      "address": "0x39fe7a0dacce31bd90418e3e659fb0b5f0b3db0d",
+      "decimals": 18
+    },
+    {
+      "chain": "mantle",
+      "address": "0x5d3a1ff2b6bab83b63cd9ad0787074081a52ef34",
+      "decimals": 18
+    },
+    {
+      "chain": "linea",
+      "address": "0x5d3a1ff2b6bab83b63cd9ad0787074081a52ef34",
+      "decimals": 18
+    },
+    {
+      "chain": "scroll",
+      "address": "0x5d3a1ff2b6bab83b63cd9ad0787074081a52ef34",
+      "decimals": 18
+    },
+    {
+      "chain": "blast",
+      "address": "0x5d3a1ff2b6bab83b63cd9ad0787074081a52ef34",
+      "decimals": 18
+    },
+    {
+      "chain": "mode",
+      "address": "0x5d3a1ff2b6bab83b63cd9ad0787074081a52ef34",
+      "decimals": 18
+    },
+    {
+      "chain": "manta",
+      "address": "0x5d3a1ff2b6bab83b63cd9ad0787074081a52ef34",
+      "decimals": 18
+    },
+    {
+      "chain": "berachain",
+      "address": "0x5d3a1ff2b6bab83b63cd9ad0787074081a52ef34",
+      "decimals": 18
+    },
+    {
+      "chain": "kava",
+      "address": "0x5d3a1ff2b6bab83b63cd9ad0787074081a52ef34",
+      "decimals": 18
+    },
+    {
+      "chain": "hyperevm",
+      "address": "0x5d3a1ff2b6bab83b63cd9ad0787074081a52ef34",
+      "decimals": 18
+    },
+    {
+      "chain": "ton",
+      "address": "EQAIb6KmdfdDR7CN1GBqVJuP25iCnLKCvBlJ07Evuu2dzP5f",
+      "decimals": 6
+    },
+    {
+      "chain": "aptos",
+      "address": "0xf37a8864fe737eb8ec2c2931047047cbaed1beed3fb0e5b7c5526dafd3b9c2e9",
+      "decimals": 6
+    },
+    {
+      "chain": "solana",
+      "address": "DEkqHyPN7GMRJ5cArtQFAWefqbZb33Hyf6s5iCwjEonT",
+      "decimals": 9
+    },
+    {
+      "chain": "plasma",
+      "address": "0x5d3a1ff2b6bab83b63cd9ad0787074081a52ef34",
+      "decimals": 18
+    },
+    {
+      "chain": "zircuit",
+      "address": "0x5d3a1ff2b6bab83b63cd9ad0787074081a52ef34",
+      "decimals": 18
+    },
+    {
+      "chain": "metis",
+      "address": "0x5d3a1ff2b6bab83b63cd9ad0787074081a52ef34",
+      "decimals": 18
+    },
+    {
+      "chain": "morph-l2",
+      "address": "0x5d3a1ff2b6bab83b63cd9ad0787074081a52ef34",
+      "decimals": 18
+    },
+    {
+      "chain": "swellchain",
+      "address": "0x5d3a1ff2b6bab83b63cd9ad0787074081a52ef34",
+      "decimals": 18
+    },
+    {
+      "chain": "xlayer",
+      "address": "0x5d3a1ff2b6bab83b63cd9ad0787074081a52ef34",
+      "decimals": 18
+    },
+    {
+      "chain": "fraxtal",
+      "address": "0x5d3a1ff2b6bab83b63cd9ad0787074081a52ef34",
+      "decimals": 18
+    }
+  ],
+  "deploymentModel": "third-party-bridge",
+  "collateralQuality": "exotic",
+  "custodyModel": "cex",
+  "reserves": [
+    {
+      "name": "Liquid Stables (USDtb / USDC / USDT)",
+      "pct": 76,
+      "risk": "low",
+      "coinId": "usdtb-ethena"
+    },
+    {
+      "name": "BTC (delta-neutral)",
+      "pct": 16,
+      "risk": "medium"
+    },
+    {
+      "name": "ETH / ETH LSTs (delta-neutral)",
+      "pct": 8,
+      "risk": "medium"
+    }
+  ],
+  "liveReservesConfig": {
+    "adapter": "ethena",
+    "version": 1,
+    "semantics": "collateral-mix",
+    "breakerScope": "ethena",
+    "display": {
+      "url": "https://app.ethena.fi/dashboards/transparency",
+      "label": "Transparency"
+    },
+    "inputs": {
+      "primary": {
+        "kind": "http-json",
+        "url": "https://app.ethena.fi/api/positions/current/collateral"
+      },
+      "fallbacks": [
+        {
+          "kind": "http-json",
+          "url": "https://ethena.fi/api/positions/current/collateral"
+        }
+      ]
+    }
+  }
+}

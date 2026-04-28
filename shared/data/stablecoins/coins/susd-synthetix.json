@@ -1,0 +1,89 @@
+{
+  "id": "susd-synthetix",
+  "name": "sUSD",
+  "symbol": "SUSD",
+  "flags": {
+    "backing": "crypto-backed",
+    "pegCurrency": "USD",
+    "governance": "centralized-dependent",
+    "yieldBearing": false,
+    "rwa": false,
+    "navToken": false
+  },
+  "collateral": "SNX, ETH, and USDC/stataUSDC via Synthetix V3; direct SNX minting deprecated in 2025; sUSD now backed primarily by delta-neutral basis-trade vaults and protocol treasury activity",
+  "pegMechanism": "Overcollateralization via C-ratio (200%+); V3 expanded collateral to SNX, ETH, USDC/stataUSDC; sUSD minting against SNX deprecated in 2025; peg sustained via SLP Vault basis-trade strategy and protocol fee buybacks",
+  "llamaId": "22",
+  "detailProvider": "defillama",
+  "geckoId": "nusd",
+  "links": [
+    {
+      "label": "Website",
+      "url": "https://www.synthetix.io/"
+    },
+    {
+      "label": "Twitter",
+      "url": "https://x.com/synthetix_io"
+    },
+    {
+      "label": "Docs",
+      "url": "https://docs.synthetix.io/"
+    }
+  ],
+  "jurisdiction": {
+    "country": "Australia"
+  },
+  "contracts": [
+    {
+      "chain": "ethereum",
+      "address": "0x57ab1ec28d129707052df4df418d58a2d46d5f51",
+      "decimals": 18
+    },
+    {
+      "chain": "optimism",
+      "address": "0x8c6f28f2f1a3c87f0f938b96d27520d9751ec8d9",
+      "decimals": 18
+    },
+    {
+      "chain": "fantom",
+      "address": "0x0e1694483ebb3b74d3054e383840c6cf011e518e",
+      "decimals": 18
+    },
+    {
+      "chain": "arbitrum",
+      "address": "0xa970af1a584579b618be4d69ad6f73459d112f95",
+      "decimals": 18
+    }
+  ],
+  "deploymentModel": "third-party-bridge",
+  "collateralQuality": "exotic",
+  "reserves": [
+    {
+      "name": "SNX (via legacy V2 420 pool, 200% C-ratio)",
+      "pct": 50,
+      "risk": "very-high"
+    },
+    {
+      "name": "USDC / stataUSDC (V3 Base pool collateral)",
+      "pct": 25,
+      "risk": "low",
+      "coinId": "usdc-circle"
+    },
+    {
+      "name": "ETH and LSTs (V3 multi-collateral)",
+      "pct": 15,
+      "risk": "low"
+    },
+    {
+      "name": "Protocol treasury buybacks / SLP vault activity",
+      "pct": 10,
+      "risk": "high"
+    }
+  ],
+  "notices": [
+    {
+      "type": "warning",
+      "title": "Prolonged depeg",
+      "message": "sUSD has been trading at ~$0.83-0.85 since the SIP-420 C-ratio reduction in late 2024. Peg restoration is targeted for mid-2026 via the V3 transition and SLP vault strategy."
+    }
+  ]
+}

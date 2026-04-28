@@ -1,0 +1,71 @@
+{
+  "id": "msusd-main-street",
+  "name": "Main Street USD",
+  "symbol": "MSUSD",
+  "flags": {
+    "backing": "crypto-backed",
+    "pegCurrency": "USD",
+    "governance": "centralized-dependent",
+    "yieldBearing": false,
+    "rwa": false,
+    "navToken": false
+  },
+  "collateral": "USDC plus a delta-neutral options and derivatives strategy reserve; yield accrues to the separate msY staking token rather than to unstaked msUSD holders",
+  "pegMechanism": "KYC-verified users mint and redeem against USDC through Main Street contracts, while secondary-market liquidity supports non-primary exits; staking msUSD into msY is a separate NAV-appreciating yield path",
+  "llamaId": "297",
+  "detailProvider": "defillama",
+  "geckoId": "main-street-usd",
+  "cmcSlug": "main-street-usd",
+  "links": [
+    {
+      "label": "Website",
+      "url": "https://mainstreet.finance/"
+    },
+    {
+      "label": "Twitter",
+      "url": "https://x.com/Main_St_Finance"
+    },
+    {
+      "label": "Docs",
+      "url": "https://mainstreet-finance.gitbook.io/mainstreet.finance/"
+    }
+  ],
+  "contracts": [
+    {
+      "chain": "ethereum",
+      "address": "0x4ba01f22827018b4772cd326c7627fb4956a7c00",
+      "decimals": 18
+    }
+  ],
+  "collateralQuality": "exotic",
+  "custodyModel": "cex",
+  "reserves": [
+    {
+      "name": "USDC and delta-neutral options strategy reserve",
+      "pct": 100,
+      "risk": "high",
+      "coinId": "usdc-circle"
+    }
+  ],
+  "liveReservesConfig": {
+    "adapter": "single-asset",
+    "version": 1,
+    "semantics": "single-asset",
+    "breakerScope": "msusd-main-street",
+    "display": {
+      "url": "https://mainstreet.finance/",
+      "label": "Main Street Finance"
+    },
+    "inputs": {
+      "primary": {
+        "kind": "onchain-evm",
+        "chain": "ethereum",
+        "rpcMode": "public-rpc"
+      }
+    },
+    "params": {
+      "label": "USDC and delta-neutral strategy reserve",
+      "risk": "high"
+    }
+  }
+}

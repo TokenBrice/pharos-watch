@@ -1,0 +1,100 @@
+{
+  "id": "europ-schuman",
+  "name": "Schuman EUROP",
+  "symbol": "EUROP",
+  "flags": {
+    "backing": "rwa-backed",
+    "pegCurrency": "EUR",
+    "governance": "centralized",
+    "yieldBearing": false,
+    "rwa": false,
+    "navToken": false
+  },
+  "collateral": "Euro cash and cash equivalents held at EU banks including Société Générale, with an additional 2% reserve fund",
+  "pegMechanism": "Direct 1:1 redemption through Schuman Financial",
+  "llamaId": "247",
+  "detailProvider": "defillama",
+  "geckoId": "schuman-europ",
+  "proofOfReserves": {
+    "type": "independent-audit",
+    "url": "https://schuman.io/reserve-audits/",
+    "provider": "KPMG"
+  },
+  "links": [
+    {
+      "label": "Website",
+      "url": "https://schuman.io/europ/"
+    },
+    {
+      "label": "Twitter",
+      "url": "https://x.com/Schuman_io"
+    },
+    {
+      "label": "Whitepaper",
+      "url": "https://schuman.io/wp-content/uploads/2025/02/EUROP-White-Paper_1.3.pdf"
+    }
+  ],
+  "jurisdiction": {
+    "country": "France",
+    "regulator": "ACPR",
+    "license": "EMI (MiCA)"
+  },
+  "contracts": [
+    {
+      "chain": "ethereum",
+      "address": "0x888883b5f5d21fb10dfeb70e8f9722b9fb0e5e51",
+      "decimals": 6
+    },
+    {
+      "chain": "polygon",
+      "address": "0x888883b5f5d21fb10dfeb70e8f9722b9fb0e5e51",
+      "decimals": 6
+    },
+    {
+      "chain": "avalanche",
+      "address": "0x8835a2f66a7aaccb297cb985831a616b75e2e16c",
+      "decimals": 6
+    },
+    {
+      "chain": "xrpl",
+      "address": "rMkEuRii9w9uBMQDnWV5AA43gvYZR9JxVK",
+      "decimals": 6
+    },
+    {
+      "chain": "plasma",
+      "address": "0x98658bd74ef231158cadc21d8aba733a4e947e6a",
+      "decimals": 6
+    }
+  ],
+  "deploymentModel": "native-multichain",
+  "custodyModel": "institutional-regulated",
+  "reserves": [
+    {
+      "name": "Euro cash and cash equivalents (EU banks incl. Societe Generale)",
+      "pct": 98,
+      "risk": "very-low"
+    },
+    {
+      "name": "Additional reserve fund",
+      "pct": 2,
+      "risk": "low"
+    }
+  ],
+  "liveReservesConfig": {
+    "adapter": "curated-validated",
+    "version": 1,
+    "semantics": "attestation-mix",
+    "breakerScope": "europ-schuman",
+    "display": {
+      "url": "https://schuman.io/reserve-audits/",
+      "label": "Schuman Reserve Audits"
+    },
+    "inputs": {
+      "primary": {
+        "kind": "onchain-evm",
+        "chain": "ethereum",
+        "rpcMode": "public-rpc"
+      }
+    }
+  }
+}

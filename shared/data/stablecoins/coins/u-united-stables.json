@@ -1,0 +1,87 @@
+{
+  "id": "u-united-stables",
+  "name": "United Stables",
+  "symbol": "U",
+  "flags": {
+    "backing": "rwa-backed",
+    "pegCurrency": "USD",
+    "governance": "centralized",
+    "yieldBearing": false,
+    "rwa": false,
+    "navToken": false
+  },
+  "collateral": "Fiat USD, USDC, USDT, and USD1 held in segregated custody via Wallets Trust Limited (Bermuda trustee); fiat reserves with accredited banking institutions, digital assets with licensed custodians",
+  "pegMechanism": "Smart contracts mint U 1:1 only upon receipt of USD or whitelisted stablecoins (USDC, USDT, USD1); redemption burns U and returns USD or stablecoins; on-chain oracles enforce total supply never exceeds collateral",
+  "llamaId": "336",
+  "detailProvider": "defillama",
+  "geckoId": "united-stables",
+  "links": [
+    {
+      "label": "Website",
+      "url": "https://u.tech/"
+    },
+    {
+      "label": "Twitter",
+      "url": "https://x.com/UTechStables"
+    }
+  ],
+  "jurisdiction": {
+    "country": "British Virgin Islands"
+  },
+  "contracts": [
+    {
+      "chain": "bsc",
+      "address": "0xce24439f2d9c6a2289f741120fe202248b666666",
+      "decimals": 18
+    },
+    {
+      "chain": "ethereum",
+      "address": "0xce24439f2d9c6a2289f741120fe202248b666666",
+      "decimals": 18
+    }
+  ],
+  "deploymentModel": "native-multichain",
+  "custodyModel": "institutional-unregulated",
+  "reserves": [
+    {
+      "name": "USDC",
+      "pct": 35,
+      "risk": "low",
+      "coinId": "usdc-circle"
+    },
+    {
+      "name": "USDT",
+      "pct": 35,
+      "risk": "low",
+      "coinId": "usdt-tether"
+    },
+    {
+      "name": "USD1 (WLFI stablecoin)",
+      "pct": 15,
+      "risk": "medium",
+      "coinId": "usd1-world-liberty-financial"
+    },
+    {
+      "name": "Fiat USD / U.S. Treasury Bills",
+      "pct": 15,
+      "risk": "very-low"
+    }
+  ],
+  "liveReservesConfig": {
+    "adapter": "curated-validated",
+    "version": 1,
+    "semantics": "collateral-mix",
+    "breakerScope": "u-united-stables",
+    "display": {
+      "url": "https://u.tech/",
+      "label": "United Stables"
+    },
+    "inputs": {
+      "primary": {
+        "kind": "onchain-evm",
+        "chain": "ethereum",
+        "rpcMode": "public-rpc"
+      }
+    }
+  }
+}

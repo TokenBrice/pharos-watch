@@ -1,0 +1,54 @@
+{
+  "id": "usdh-hermetica",
+  "name": "Hermetica USDh",
+  "symbol": "USDh",
+  "flags": {
+    "backing": "crypto-backed",
+    "pegCurrency": "USD",
+    "governance": "centralized",
+    "yieldBearing": true,
+    "rwa": false,
+    "navToken": false
+  },
+  "collateral": "BTC spot holdings paired with equal short BTC perpetual futures positions on centralized exchanges, creating a delta-neutral synthetic dollar position; collateral custodied through institutional off-exchange settlement providers",
+  "pegMechanism": "Delta-neutral hedging: BTC spot long + equal BTC short perpetual futures neutralize directional exposure; mint and redeem via KYC-gated Hermetica app; DIA oracle provides reserve-backed fair value pricing on Stacks",
+  "llamaId": "242",
+  "detailProvider": "defillama",
+  "geckoId": "hermetica-usdh",
+  "links": [
+    {
+      "label": "Website",
+      "url": "https://hermetica.fi/"
+    },
+    {
+      "label": "Twitter",
+      "url": "https://x.com/HermeticaFi"
+    },
+    {
+      "label": "Docs",
+      "url": "https://docs.hermetica.fi/usdh/usdh-and-susdh"
+    }
+  ],
+  "contracts": [
+    {
+      "chain": "stacks",
+      "address": "SPN5AKG35QZSK2M8GAMR4AFX45659RJHDW353HSG.usdh-token-v1",
+      "decimals": 8
+    }
+  ],
+  "collateralQuality": "exotic",
+  "custodyModel": "cex",
+  "governanceQuality": "single-entity",
+  "deploymentModel": "single-chain",
+  "reserves": [
+    {
+      "name": "BTC spot + short BTC perpetual futures (delta-neutral)",
+      "pct": 100,
+      "risk": "high"
+    }
+  ],
+  "yieldConfig": {
+    "yieldSource": "Hermetica staking (sUSDh)",
+    "yieldType": "lending-vault"
+  }
+}

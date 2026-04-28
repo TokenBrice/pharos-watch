@@ -1,0 +1,65 @@
+{
+  "id": "busd0-usual",
+  "name": "Bond USD0",
+  "symbol": "bUSD0",
+  "flags": {
+    "backing": "rwa-backed",
+    "pegCurrency": "USD",
+    "governance": "centralized-dependent",
+    "yieldBearing": true,
+    "rwa": true,
+    "navToken": true
+  },
+  "variantOf": "usd0-usual",
+  "variantKind": "bond-maturity",
+  "pegReferenceId": "usd0-usual",
+  "collateral": "Locked USD0 bond position backed by the Usual USD0 reserve stack; bUSD0 is the fixed-notional bond leg formerly known as USD0++",
+  "pegMechanism": "Depositing 1 USD0 mints 1 bUSD0 plus 1 rt-bUSD0 early-exit right; before June 11, 2028 par redemption requires both tokens, while bUSD0 alone redeems 1:1 for USD0 at maturity and may trade below par before then",
+  "detailProvider": "coingecko",
+  "geckoId": "usd0-liquid-bond",
+  "cmcSlug": "usd0-liquid-bond",
+  "links": [
+    {
+      "label": "Website",
+      "url": "https://usual.money/"
+    },
+    {
+      "label": "Twitter",
+      "url": "https://x.com/usualmoney"
+    },
+    {
+      "label": "Docs",
+      "url": "https://docs.usual.money/resources-and-ecosystem/fact-sheets/usual-products/busd0"
+    }
+  ],
+  "contracts": [
+    {
+      "chain": "ethereum",
+      "address": "0x35d8949372d46b7a3d5a56006ae77b215fc69bc0",
+      "decimals": 18
+    },
+    {
+      "chain": "arbitrum",
+      "address": "0x2b65f9d2e4b84a2df6ff0525741b75d1276a9c2f",
+      "decimals": 18
+    }
+  ],
+  "canBeBlacklisted": "possible",
+  "deploymentModel": "third-party-bridge",
+  "custodyModel": "institutional-regulated",
+  "governanceQuality": "dao-governance",
+  "reserves": [
+    {
+      "name": "Locked USD0",
+      "pct": 100,
+      "risk": "low",
+      "coinId": "usd0-usual",
+      "depType": "wrapper"
+    }
+  ],
+  "yieldConfig": {
+    "defiLlamaPoolId": "55b0893b-1dbb-47fd-9912-5e439cd3d511",
+    "yieldSource": "Usual bUSD0 daily USUAL coupons",
+    "yieldType": "fee-sharing"
+  }
+}

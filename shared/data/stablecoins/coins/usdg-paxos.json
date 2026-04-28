@@ -1,0 +1,97 @@
+{
+  "id": "usdg-paxos",
+  "name": "Global Dollar",
+  "symbol": "USDG",
+  "flags": {
+    "backing": "rwa-backed",
+    "pegCurrency": "USD",
+    "governance": "centralized",
+    "yieldBearing": false,
+    "rwa": false,
+    "navToken": false
+  },
+  "collateral": "U.S. dollar deposits, short-duration U.S. government securities, and other high-quality liquid assets held in segregated custodial accounts at DBS Bank and Standard Chartered",
+  "pegMechanism": "Direct 1:1 redemption for U.S. dollars through Paxos Digital Singapore for KYC-verified users; reserves fully segregated and held at custodian banks; EU issuance by Paxos Issuance Europe OY under MiCA",
+  "llamaId": "286",
+  "detailProvider": "defillama",
+  "geckoId": "global-dollar",
+  "pythFeedId": "0xdaa58c6a3ce7d4b9c46c32a6e646012c17c4a2b24c08dd8c5e476118b855a7da",
+  "proofOfReserves": {
+    "type": "independent-audit",
+    "url": "https://www.paxos.com/usdg-transparency",
+    "provider": "Enrome LLP"
+  },
+  "links": [
+    {
+      "label": "Website",
+      "url": "https://globaldollar.com/"
+    },
+    {
+      "label": "Twitter",
+      "url": "https://x.com/global_dollar"
+    }
+  ],
+  "jurisdiction": {
+    "country": "Singapore",
+    "regulator": "MAS",
+    "license": "Major Payment Institution"
+  },
+  "contracts": [
+    {
+      "chain": "ethereum",
+      "address": "0xe343167631d89b6ffc58b88d6b7fb0228795491d",
+      "decimals": 6
+    },
+    {
+      "chain": "solana",
+      "address": "2u1tszSeqZ3qBWF3uNGPFc8TzMk2tdiwknnRMWGWjGWH",
+      "decimals": 6
+    },
+    {
+      "chain": "ink",
+      "address": "0xe343167631d89b6ffc58b88d6b7fb0228795491d",
+      "decimals": 6
+    },
+    {
+      "chain": "xlayer",
+      "address": "0x4ae46a509f6b1d9056937ba4500cb143933d2dc8",
+      "decimals": 6
+    }
+  ],
+  "deploymentModel": "native-multichain",
+  "custodyModel": "institutional-top",
+  "reserves": [
+    {
+      "name": "U.S. Government Securities",
+      "pct": 50,
+      "risk": "very-low"
+    },
+    {
+      "name": "Cash Deposits (DBS/StanChart)",
+      "pct": 35,
+      "risk": "very-low"
+    },
+    {
+      "name": "Cash Equivalents",
+      "pct": 15,
+      "risk": "very-low"
+    }
+  ],
+  "liveReservesConfig": {
+    "adapter": "curated-validated",
+    "version": 1,
+    "semantics": "attestation-mix",
+    "breakerScope": "usdg-paxos",
+    "display": {
+      "url": "https://globaldollar.com/",
+      "label": "Global Dollar"
+    },
+    "inputs": {
+      "primary": {
+        "kind": "onchain-evm",
+        "chain": "ethereum",
+        "rpcMode": "public-rpc"
+      }
+    }
+  }
+}

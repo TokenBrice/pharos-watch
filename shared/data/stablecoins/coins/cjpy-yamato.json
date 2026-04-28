@@ -1,0 +1,57 @@
+{
+  "id": "cjpy-yamato",
+  "name": "Convertible JPY Token",
+  "symbol": "CJPY",
+  "flags": {
+    "backing": "crypto-backed",
+    "pegCurrency": "JPY",
+    "governance": "decentralized",
+    "yieldBearing": false,
+    "rwa": false,
+    "navToken": false
+  },
+  "collateral": "ETH only; 130% minimum collateralization ratio at issuance (110% MCR for liquidation); one-time borrowing fee with no accrued interest",
+  "pegMechanism": "Overcollateralized ETH CDPs (pledges) with game-theory peg maintenance: (1) hard floor via on-chain redemption of 1 CJPY for 1 JPY worth of ETH from the riskiest pledge; (2) subrogation mechanism uses accumulated protocol fees to automatically repay positions below 100% health rate; (3) non-forced liquidation where any user can redeem debt positions below 130% using market-purchased CJPY",
+  "llamaId": "179",
+  "detailProvider": "defillama",
+  "geckoId": "convertible-jpy-token",
+  "links": [
+    {
+      "label": "Website",
+      "url": "https://app.yamato.fi/"
+    },
+    {
+      "label": "Twitter",
+      "url": "https://x.com/YamatoProtocol"
+    },
+    {
+      "label": "Docs",
+      "url": "https://docs.yamato.fi/v/en"
+    },
+    {
+      "label": "GitHub",
+      "url": "https://github.com/DeFiGeek-Community/yamato"
+    }
+  ],
+  "contracts": [
+    {
+      "chain": "ethereum",
+      "address": "0x1cfa5641c01406ab8ac350ded7d735ec41298372",
+      "decimals": 18
+    }
+  ],
+  "canBeBlacklisted": false,
+  "deploymentModel": "single-chain",
+  "custodyModel": "onchain",
+  "governanceQuality": "dao-governance",
+  "infrastructures": [
+    "liquity-v1"
+  ],
+  "reserves": [
+    {
+      "name": "ETH",
+      "pct": 100,
+      "risk": "very-low"
+    }
+  ]
+}

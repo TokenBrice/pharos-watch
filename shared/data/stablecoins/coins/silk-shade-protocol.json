@@ -1,0 +1,67 @@
+{
+  "id": "silk-shade-protocol",
+  "name": "SILK",
+  "symbol": "SILK",
+  "flags": {
+    "backing": "crypto-backed",
+    "pegCurrency": "VAR",
+    "governance": "decentralized",
+    "yieldBearing": false,
+    "rwa": false,
+    "navToken": true
+  },
+  "collateral": "Crypto assets via ShadeLend overcollateralized vaults (ATOM, SCRT, stablecoins like USDC, SHD governance token) plus stablecoin redemption pools; targets 100-150% system-wide collateralization ratio",
+  "pegMechanism": "Basket peg tracking GDP-weighted currencies of the top 20 economies (USD 30%, CNY 22%, EUR 14%, JPY 7%, GBP 4%, etc.); stability maintained via overcollateralized lending (ShadeLend), redemption pools, bounded minting, collateral liquidations, and ShadeDAO bond mechanism",
+  "llamaId": "113",
+  "detailProvider": "defillama",
+  "geckoId": "silk-bcec1136-561c-4706-a42c-8b67d0d7f7d2",
+  "links": [
+    {
+      "label": "Website",
+      "url": "https://app.shadeprotocol.io"
+    },
+    {
+      "label": "Twitter",
+      "url": "https://x.com/Shade_Protocol"
+    },
+    {
+      "label": "Docs",
+      "url": "https://docs.shadeprotocol.io/shade-protocol/"
+    },
+    {
+      "label": "GitHub",
+      "url": "https://github.com/securesecrets/shade"
+    }
+  ],
+  "contracts": [
+    {
+      "chain": "secret",
+      "address": "secret1fl449muk5yq8dlad7a22nje4p5d2pnsgymhjfd",
+      "decimals": 6
+    }
+  ],
+  "canBeBlacklisted": false,
+  "chainTier": "unproven",
+  "deploymentModel": "single-chain",
+  "custodyModel": "onchain",
+  "collateralQuality": "alt-lst-bridged-or-mixed",
+  "governanceQuality": "dao-governance",
+  "reserves": [
+    {
+      "name": "Overcollateralized vault collateral (ATOM, SCRT, stablecoins)",
+      "pct": 70,
+      "risk": "medium"
+    },
+    {
+      "name": "Stablecoin redemption pools (USDC, other stables)",
+      "pct": 20,
+      "risk": "low",
+      "coinId": "usdc-circle"
+    },
+    {
+      "name": "SHD governance token (bounded minting backing)",
+      "pct": 10,
+      "risk": "high"
+    }
+  ]
+}

@@ -1,0 +1,52 @@
+{
+  "id": "pmusd-precious-metals",
+  "name": "pmUSD",
+  "symbol": "pmUSD",
+  "flags": {
+    "backing": "rwa-backed",
+    "pegCurrency": "USD",
+    "governance": "centralized",
+    "yieldBearing": false,
+    "rwa": true,
+    "navToken": false
+  },
+  "collateral": "TokenBlender (TB) base token held on-chain in RAAC's RWf(x) Treasury; TB is minted against I-ON Digital's ION.au token held in the TokenBlender contract, and ION.au represents a gold-backed digital security and in-situ gold claim",
+  "pegMechanism": "RWf(x), an f(x) protocol fork, mints pmUSD as the fToken against TB / ION.au-linked collateral; xPM absorbs collateral-price volatility while pmUSD is configured for stable fNAV; minting and system operations are manager-only through authorized silo multisigs",
+  "llamaId": "332",
+  "detailProvider": "defillama",
+  "geckoId": "precious-metals-usd",
+  "proofOfReserves": {
+    "type": "real-time",
+    "url": "https://pmusd.raac.io/",
+    "provider": "RAAC / Instruxi dashboard"
+  },
+  "links": [
+    {
+      "label": "Website",
+      "url": "https://pmusd.raac.io/"
+    },
+    {
+      "label": "Twitter",
+      "url": "https://x.com/Raacfi"
+    },
+    {
+      "label": "Docs",
+      "url": "https://docs.raac.io/"
+    }
+  ],
+  "contracts": [
+    {
+      "chain": "ethereum",
+      "address": "0xc0c17dd08263c16f6b64e772fb9b723bf1344ddf",
+      "decimals": 18
+    }
+  ],
+  "custodyModel": "institutional-unregulated",
+  "reserves": [
+    {
+      "name": "On-chain TokenBlender (TB) backed by ION.au / in-situ gold claims",
+      "pct": 100,
+      "risk": "high"
+    }
+  ]
+}
