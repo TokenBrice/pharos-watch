@@ -27,11 +27,13 @@ The current implementation includes the desktop PharosVille v0.1 baseline:
 - DOM map key, query status, detail panel, keyboard entity browser, toolbar, minimap, and accessibility ledger
 - canvas hit testing for lighthouse, docks, ships, clusters, and graves
 - mouse/touch drag pan, wheel zoom, toolbar pan/zoom/reset/follow/clear controls, keyboard arrow pan, Escape clear, and minimap click-to-pan
+- normal-motion canvas loop for the lighthouse sweep, water shimmer, and capped selected/top/recent ship effects
+- deterministic reduced-motion render with no running animation frame loop
 - controlled Pixellab asset manifest with critical and deferred sprite loading under `public/pharosville/assets/`
 - asset validation through `npm run check:pharosville-assets`
 - no production fixture/default market data
 
-The next phases add richer semantic motion, renderer budget instrumentation, broader semantic visual assertions, and additional curated asset coverage.
+The next phases add renderer budget instrumentation, broader semantic visual assertions, stressed/fog scenario screenshots, and additional curated asset coverage.
 
 ## Data Mapping Target
 
@@ -70,6 +72,7 @@ Compensating gates:
 - `<1280px` fallback
 - short desktop fallback
 - canvas click/selection, toolbar zoom/clear, and minimap interaction
+- reduced-motion determinism and normal-motion RAF startup
 - no world API, site-data, manifest, or asset requests under the fallback
 
 Visual tests route-mock `/api/*` and `/_site-data/*` data before asserting map semantics.

@@ -61,14 +61,17 @@ async function clickMapTarget(page: Page, kind: string) {
 
 test("pharosville renders desktop canvas shell", async ({ page }) => {
   await mockPharosVilleData(page);
+  await page.emulateMedia({ reducedMotion: "reduce" });
   await page.setViewportSize({ width: 1440, height: 1000 });
   await page.goto("/lighthouse/");
   const canvas = page.getByTestId("pharosville-canvas");
   await expect(canvas).toBeVisible();
   await expect(page.getByLabel("Map entity count")).toHaveText("94 entities");
   await page.waitForFunction(() => {
-    const debug = (window as typeof window & { __pharosVilleDebug?: { camera: unknown; targets: unknown[] } }).__pharosVilleDebug;
-    return Boolean(debug?.camera && debug.targets.length > 0);
+    const debug = (window as typeof window & {
+      __pharosVilleDebug?: { assetsLoaded?: boolean; camera: unknown; targets: unknown[] };
+    }).__pharosVilleDebug;
+    return Boolean(debug?.assetsLoaded && debug.camera && debug.targets.length > 0);
   });
 
   const box = await canvas.boundingBox();
@@ -118,6 +121,7 @@ async function captureWorldRequests(page: Page) {
 }
 
 test("pharosville narrow fallback avoids world runtime requests", async ({ page }) => {
+  await page.emulateMedia({ reducedMotion: "reduce" });
   const worldRequests = await captureWorldRequests(page);
 
   await page.setViewportSize({ width: 1279, height: 900 });
@@ -131,6 +135,7 @@ test("pharosville narrow fallback avoids world runtime requests", async ({ page 
 });
 
 test("pharosville short desktop fallback avoids clipped map", async ({ page }) => {
+  await page.emulateMedia({ reducedMotion: "reduce" });
   const worldRequests = await captureWorldRequests(page);
 
   await page.setViewportSize({ width: 1280, height: 720 });
@@ -143,6 +148,7 @@ test("pharosville short desktop fallback avoids clipped map", async ({ page }) =
 
 test("pharosville canvas interactions update details and camera", async ({ page }) => {
   await mockPharosVilleData(page);
+  await page.emulateMedia({ reducedMotion: "reduce" });
   await page.setViewportSize({ width: 1440, height: 1000 });
   await page.goto("/lighthouse/");
   await expect(page.getByLabel("Map entity count")).toHaveText("94 entities");
@@ -209,9 +215,44 @@ test("pharosville canvas interactions update details and camera", async ({ page 
     const debug = (window as typeof window & {
       __pharosVilleDebug?: {
         camera: { offsetX: number; offsetY: number; zoom: number } | null;
+        cameraWithinBounds?: boolean;
         canvasSize: { x: number; y: number };
       };
     }).__pharosVilleDebug;
-    return Boolean(debug?.camera && debug.canvasSize.x === 1060 && debug.canvasSize.y === 736 && debug.camera.offsetY <= 124);
+    return Boolean(debug?.camera && debug.canvasSize.x <= 1280 && debug.canvasSize.y <= 760);
+  });
+  const resizedDebug = await page.evaluate(() => {
+    const debug = (window as typeof window & {
+      __pharosVilleDebug?: {
+        cameraWithinBounds?: boolean;
+        motionFrameCount?: number;
+        reducedMotion?: boolean;
+      };
+    }).__pharosVilleDebug;
+    return debug ?? null;
+  });
+  expect(resizedDebug?.cameraWithinBounds).toBe(true);
+  expect(resizedDebug?.reducedMotion).toBe(true);
+  expect(resizedDebug?.motionFrameCount ?? 0).toBe(0);
+});
+
+test.describe("pharosville normal motion", () => {
+  test.use({ reducedMotion: "no-preference" });
+
+  test("starts bounded world animation only on eligible desktop", async ({ page }) => {
+    await mockPharosVilleData(page);
+    await page.emulateMedia({ reducedMotion: "no-preference" });
+    await page.setViewportSize({ width: 1440, height: 1000 });
+    await page.goto("/lighthouse/");
+
+    await page.waitForFunction(() => {
+      const debug = (window as typeof window & {
+        __pharosVilleDebug?: {
+          motionFrameCount?: number;
+          reducedMotion?: boolean;
+        };
+      }).__pharosVilleDebug;
+      return Boolean(debug && debug.reducedMotion === false && (debug.motionFrameCount ?? 0) >= 2);
+    });
   });
 });

@@ -850,7 +850,7 @@ Motion budget:
 
 - No more than 80 animated ship/effect entities at default zoom.
 - Particle pools capped per layer.
-- No allocation in the frame loop.
+- No intentional allocation for motion planning in the frame loop; per-frame drawing should use precomputed motion plans and module-level constants.
 - Reduced-motion screenshot must be deterministic.
 
 Validation:

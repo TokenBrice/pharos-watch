@@ -9,272 +9,34 @@ import { QueryStatusBanner } from "./components/query-status-banner";
 import { WorldToolbar } from "./components/world-toolbar";
 import { PharosVilleAssetManager } from "./renderer/asset-manager";
 import { collectHitTargets, hitTest, type HitTarget } from "./renderer/hit-testing";
+import { drawPharosVille } from "./renderer/world-canvas";
 import { cameraZoomLabel, clampCameraToMap, defaultCamera, followTile, panCamera, zoomIn, zoomOut } from "./systems/camera";
-import { screenToTile, tileToScreen, zoomCameraAt, type IsoCamera, type ScreenPoint } from "./systems/projection";
+import { buildMotionPlan } from "./systems/motion";
+import { screenToTile, zoomCameraAt, type IsoCamera, type ScreenPoint } from "./systems/projection";
+import { observeReducedMotion } from "./systems/reduced-motion";
 import type { PharosVilleWorld as PharosVilleWorldModel, TileKind } from "./systems/world-types";
-
-function drawDiamond(ctx: CanvasRenderingContext2D, x: number, y: number, width: number, height: number, fill: string) {
-  ctx.beginPath();
-  ctx.moveTo(x, y - height / 2);
-  ctx.lineTo(x + width / 2, y);
-  ctx.lineTo(x, y + height / 2);
-  ctx.lineTo(x - width / 2, y);
-  ctx.closePath();
-  ctx.fillStyle = fill;
-  ctx.fill();
-}
-
-function drawBuilding(ctx: CanvasRenderingContext2D, x: number, y: number, color: string, roof: string, zoom: number) {
-  ctx.save();
-  ctx.translate(x, y);
-  ctx.scale(zoom, zoom);
-  ctx.fillStyle = color;
-  ctx.fillRect(-8, -22, 16, 18);
-  ctx.fillStyle = roof;
-  ctx.beginPath();
-  ctx.moveTo(-10, -22);
-  ctx.lineTo(0, -34);
-  ctx.lineTo(10, -22);
-  ctx.closePath();
-  ctx.fill();
-  ctx.restore();
-}
-
-function drawShip(ctx: CanvasRenderingContext2D, x: number, y: number, scale: number, sail: string, hull: string, zoom: number) {
-  ctx.save();
-  ctx.translate(x, y);
-  ctx.scale(scale * zoom, scale * zoom);
-  ctx.fillStyle = hull;
-  ctx.beginPath();
-  ctx.moveTo(-14, 0);
-  ctx.lineTo(14, 0);
-  ctx.lineTo(8, 8);
-  ctx.lineTo(-9, 8);
-  ctx.closePath();
-  ctx.fill();
-  ctx.strokeStyle = "#271b12";
-  ctx.lineWidth = 1.5;
-  ctx.stroke();
-  ctx.fillStyle = "#5c4932";
-  ctx.fillRect(-1, -22, 2, 23);
-  ctx.fillStyle = sail;
-  ctx.beginPath();
-  ctx.moveTo(1, -21);
-  ctx.lineTo(1, -3);
-  ctx.lineTo(14, -6);
-  ctx.closePath();
-  ctx.fill();
-  ctx.restore();
-}
-
-function drawSelectionRing(ctx: CanvasRenderingContext2D, target: HitTarget, color: string) {
-  ctx.strokeStyle = color;
-  ctx.lineWidth = 2;
-  ctx.strokeRect(target.rect.x, target.rect.y, target.rect.width, target.rect.height);
-}
-
-function drawAsset(
-  ctx: CanvasRenderingContext2D,
-  asset: NonNullable<ReturnType<PharosVilleAssetManager["get"]>>,
-  x: number,
-  y: number,
-  scale: number,
-) {
-  const { entry, image } = asset;
-  const width = entry.width * entry.displayScale * scale;
-  const height = entry.height * entry.displayScale * scale;
-  ctx.drawImage(
-    image,
-    Math.round(x - entry.anchor[0] * entry.displayScale * scale),
-    Math.round(y - entry.anchor[1] * entry.displayScale * scale),
-    Math.round(width),
-    Math.round(height),
-  );
-}
-
-function drawPharosVille(input: {
-  camera: IsoCamera;
-  ctx: CanvasRenderingContext2D;
-  height: number;
-  hoveredTarget: HitTarget | null;
-  selectedTarget: HitTarget | null;
-  targets: readonly HitTarget[];
-  width: number;
-  world: PharosVilleWorldModel;
-  assets: PharosVilleAssetManager | null;
-}) {
-  const { assets, camera, ctx, height, hoveredTarget, selectedTarget, targets, width, world } = input;
-  ctx.imageSmoothingEnabled = false;
-  const gradient = ctx.createLinearGradient(0, 0, 0, height);
-  gradient.addColorStop(0, "#082337");
-  gradient.addColorStop(0.55, "#0c4a5b");
-  gradient.addColorStop(1, "#061721");
-  ctx.fillStyle = gradient;
-  ctx.fillRect(0, 0, width, height);
-
-  const colors: Record<TileKind, string> = {
-    "deep-water": "#061a2b",
-    water: "#0d5f70",
-    shore: "#b8af7f",
-    land: "#d3c89a",
-    road: "#9b835d",
-  };
-
-  for (const tile of world.map.tiles) {
-    const p = tileToScreen(tile, camera);
-    drawDiamond(ctx, p.x, p.y, 32 * camera.zoom, 16 * camera.zoom, colors[tile.kind]);
-    if (tile.kind === "water" && (tile.x + tile.y) % 9 === 0) {
-      ctx.fillStyle = "rgba(186, 231, 225, 0.22)";
-      ctx.fillRect(p.x - 7 * camera.zoom, p.y - 1, 14 * camera.zoom, Math.max(1, camera.zoom));
-    }
-  }
-
-  const center = tileToScreen(world.lighthouse.tile, camera);
-  const lighthouseAsset = assets?.get("landmark.lighthouse");
-  if (lighthouseAsset) {
-    drawAsset(ctx, lighthouseAsset, center.x, center.y, camera.zoom);
-    ctx.strokeStyle = "rgba(255, 204, 98, 0.35)";
-    ctx.lineWidth = 18 * camera.zoom;
-    ctx.beginPath();
-    ctx.moveTo(center.x, center.y - 88 * camera.zoom);
-    ctx.lineTo(center.x + 260 * camera.zoom, center.y - 150 * camera.zoom);
-    ctx.stroke();
-  } else {
-    ctx.save();
-    ctx.translate(center.x, center.y);
-    ctx.scale(camera.zoom, camera.zoom);
-    ctx.fillStyle = "#f4f0d2";
-    ctx.fillRect(-14, -76, 28, 62);
-    ctx.fillStyle = "#d8d0ad";
-    ctx.fillRect(-19, -17, 38, 15);
-    ctx.fillStyle = "#a97b34";
-    ctx.fillRect(-10, -88, 20, 12);
-    ctx.fillStyle = world.lighthouse.color;
-    ctx.beginPath();
-    ctx.arc(0, -90, 12, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.strokeStyle = "rgba(255, 204, 98, 0.35)";
-    ctx.lineWidth = 18;
-    ctx.beginPath();
-    ctx.moveTo(0, -88);
-    ctx.lineTo(260, -150);
-    ctx.stroke();
-    ctx.restore();
-  }
-
-  const buildings = [
-    [27, 27, "#d8cfaa", "#6f4e37"],
-    [36, 30, "#efe4ba", "#7b3f35"],
-    [31, 38, "#cbbd8e", "#5d5548"],
-    [24, 35, "#e5d9ad", "#8a6841"],
-    [40, 35, "#d8cfaa", "#6a7546"],
-  ] as const;
-  for (const [x, y, color, roof] of buildings) {
-    const p = tileToScreen({ x, y }, camera);
-    drawBuilding(ctx, p.x, p.y, color, roof, camera.zoom);
-  }
-
-  ctx.strokeStyle = "#6d4c2f";
-  ctx.lineWidth = 5;
-  for (const dock of world.docks) {
-    const p = tileToScreen(dock.tile, camera);
-    const reach = (26 + dock.size * 6) * camera.zoom;
-    const dockAsset = assets?.get("dock.wooden-pier");
-    if (dockAsset) {
-      drawAsset(ctx, dockAsset, p.x + (dock.tile.x < 32 ? -reach * 0.25 : reach * 0.25), p.y + 10 * camera.zoom, camera.zoom * Math.max(0.7, dock.size / 5));
-    } else {
-      ctx.lineWidth = (3 + dock.size) * camera.zoom;
-      ctx.beginPath();
-      ctx.moveTo(p.x, p.y);
-      ctx.lineTo(p.x + (dock.tile.x < 32 ? -reach : reach), p.y + 10);
-      ctx.stroke();
-    }
-  }
-
-  const shipColors = {
-    "treasury-galleon": "#8a4f2b",
-    "crypto-caravel": "#58433a",
-    "algo-junk": "#774734",
-  };
-  const pennants: Record<string, string> = {
-    emerald: "#d7f0df",
-    blue: "#d7e6f7",
-    cyan: "#d7f0ee",
-    gold: "#ffe1a0",
-    silver: "#e5e7eb",
-    slate: "#c7d0d8",
-  };
-  for (const ship of world.ships) {
-    const p = tileToScreen(ship.tile, camera);
-    const shipAsset = assets?.get(`ship.${ship.visual.hull}`);
-    if (shipAsset) {
-      drawAsset(ctx, shipAsset, p.x, p.y + 12 * camera.zoom, camera.zoom * ship.visual.scale * 0.7);
-    } else {
-      drawShip(ctx, p.x, p.y - 4 * camera.zoom, ship.visual.scale, pennants[ship.visual.pennant] ?? pennants.slate, shipColors[ship.visual.hull], camera.zoom);
-    }
-  }
-
-  for (const cluster of world.shipClusters) {
-    const p = tileToScreen(cluster.tile, camera);
-    const radius = Math.min(18, 7 + Math.sqrt(cluster.count) * 2) * camera.zoom;
-    ctx.fillStyle = "rgba(255, 204, 98, 0.85)";
-    ctx.beginPath();
-    ctx.arc(p.x, p.y - 4, radius, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.fillStyle = "#061721";
-    ctx.font = `700 ${Math.max(10, 10 * camera.zoom)}px ui-sans-serif, system-ui, sans-serif`;
-    ctx.textAlign = "center";
-    ctx.fillText(String(cluster.count), p.x, p.y);
-    ctx.textAlign = "start";
-  }
-
-  ctx.fillStyle = "#4d584c";
-  const tombstoneAsset = assets?.get("prop.tombstone");
-  for (const grave of world.graves) {
-    const p = tileToScreen(grave.tile, camera);
-    if (tombstoneAsset) {
-      drawAsset(ctx, tombstoneAsset, p.x, p.y + 2 * camera.zoom, camera.zoom * 0.54);
-    } else {
-      ctx.fillRect(p.x - 3 * camera.zoom, p.y - 8 * camera.zoom, 6 * camera.zoom, 9 * camera.zoom);
-      ctx.fillRect(p.x - 5 * camera.zoom, p.y, 10 * camera.zoom, 2 * camera.zoom);
-    }
-  }
-
-  if (hoveredTarget) drawSelectionRing(ctx, hoveredTarget, "rgba(128, 214, 206, 0.85)");
-  if (selectedTarget) drawSelectionRing(ctx, selectedTarget, "rgba(255, 204, 98, 0.95)");
-
-  ctx.fillStyle = "rgba(3, 10, 18, 0.34)";
-  ctx.fillRect(0, 0, width, 72);
-  ctx.fillStyle = "#f5edce";
-  ctx.font = "700 20px ui-sans-serif, system-ui, sans-serif";
-  ctx.fillText("PharosVille", 28, 34);
-  ctx.font = "500 12px ui-sans-serif, system-ui, sans-serif";
-  ctx.fillStyle = "#a9d9d3";
-  ctx.fillText(`${world.ships.length} ships, ${world.docks.length} docks, ${world.graves.length} graves`, 28, 55);
-
-  if (targets.length > 0 && process.env.NODE_ENV !== "production") {
-    ctx.fillStyle = "rgba(128, 214, 206, 0.72)";
-    ctx.font = "500 11px ui-sans-serif, system-ui, sans-serif";
-    ctx.fillText(`${targets.length} hit targets`, 28, 70);
-  }
-}
 
 export function PharosVilleWorld({ world }: { world: PharosVilleWorldModel }) {
   const [assetManager] = useState(() => new PharosVilleAssetManager());
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const minimapRef = useRef<HTMLCanvasElement>(null);
   const dragRef = useRef<{ last: ScreenPoint; moved: boolean; pointerId: number } | null>(null);
+  const motionStartTimeRef = useRef<number | null>(null);
+  const motionFrameCountRef = useRef(0);
   const [camera, setCamera] = useState<IsoCamera | null>(null);
   const [canvasSize, setCanvasSize] = useState<ScreenPoint>({ x: 0, y: 0 });
   const [hoveredDetailId, setHoveredDetailId] = useState<string | null>(null);
   const [selectedDetailId, setSelectedDetailId] = useState<string | null>("lighthouse");
   const [announcement, setAnnouncement] = useState("PharosVille ready.");
   const [assetLoadTick, setAssetLoadTick] = useState(0);
+  const [assetsLoaded, setAssetsLoaded] = useState(false);
+  const [reducedMotion, setReducedMotion] = useState(true);
   const selectedDetail = useMemo(
     () => selectedDetailId ? (world.detailIndex[selectedDetailId] ?? null) : null,
     [selectedDetailId, world.detailIndex],
   );
   const selectedEntity = useMemo(() => collectEntityByDetailId(world, selectedDetailId), [selectedDetailId, world]);
+  const motionPlan = useMemo(() => buildMotionPlan(world, selectedDetailId), [selectedDetailId, world]);
   const hitTargets = useMemo(() => {
     void assetLoadTick;
     return camera ? collectHitTargets({ assets: assetManager, camera, hoveredDetailId, selectedDetailId, world }) : [];
@@ -315,12 +77,17 @@ export function PharosVilleWorld({ world }: { world: PharosVilleWorldModel }) {
         setAssetLoadTick((tick) => tick + 1);
         return assetManager.loadDeferred(controller.signal);
       })
-      .then(() => setAssetLoadTick((tick) => tick + 1))
+      .then(() => {
+        setAssetsLoaded(true);
+        setAssetLoadTick((tick) => tick + 1);
+      })
       .catch(() => setAssetLoadTick((tick) => tick + 1));
     return () => {
       controller.abort();
     };
   }, [assetManager]);
+
+  useEffect(() => observeReducedMotion(setReducedMotion), []);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -354,19 +121,38 @@ export function PharosVilleWorld({ world }: { world: PharosVilleWorldModel }) {
     const ctx = canvas.getContext("2d", { alpha: false });
     if (!ctx) return;
     const dpr = Math.min(window.devicePixelRatio || 1, 2);
-    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-    drawPharosVille({
-      camera,
-      ctx,
-      height: canvasSize.y,
-      hoveredTarget,
-      selectedTarget,
-      targets: hitTargets,
-      width: canvasSize.x,
-      world,
-      assets: assetManager,
-    });
-  }, [assetLoadTick, assetManager, camera, canvasSize.x, canvasSize.y, hitTargets, hoveredTarget, selectedTarget, world]);
+    let frameId = 0;
+    const drawFrame = (time: number) => {
+      if (motionStartTimeRef.current == null) motionStartTimeRef.current = time;
+      const timeSeconds = reducedMotion ? 0 : (time - motionStartTimeRef.current) / 1000;
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      drawPharosVille({
+        camera,
+        ctx,
+        height: canvasSize.y,
+        hoveredTarget,
+        motion: {
+          plan: motionPlan,
+          reducedMotion,
+          timeSeconds,
+        },
+        selectedTarget,
+        targets: hitTargets,
+        width: canvasSize.x,
+        world,
+        assets: assetManager,
+      });
+      if (!reducedMotion) {
+        motionFrameCountRef.current += 1;
+        updateDebugMotion({ frameCount: motionFrameCountRef.current, reducedMotion });
+        frameId = requestAnimationFrame(drawFrame);
+      }
+    };
+    drawFrame(performance.now());
+    return () => {
+      if (frameId) cancelAnimationFrame(frameId);
+    };
+  }, [assetLoadTick, assetManager, camera, canvasSize.x, canvasSize.y, hitTargets, hoveredTarget, motionPlan, reducedMotion, selectedTarget, world]);
 
   useEffect(() => {
     const minimap = minimapRef.current;
@@ -379,15 +165,27 @@ export function PharosVilleWorld({ world }: { world: PharosVilleWorldModel }) {
     const debugWindow = window as typeof window & {
       __pharosVilleDebug?: {
         camera: IsoCamera | null;
+        cameraWithinBounds: boolean;
+        assetsLoaded: boolean;
         canvasSize: ScreenPoint;
+        motionFrameCount: number;
+        reducedMotion: boolean;
         targets: readonly HitTarget[];
       };
     };
-    debugWindow.__pharosVilleDebug = { camera, canvasSize, targets: hitTargets };
+    debugWindow.__pharosVilleDebug = {
+      camera,
+      cameraWithinBounds: isCameraWithinBounds(camera, world.map, canvasSize),
+      assetsLoaded,
+      canvasSize,
+      motionFrameCount: motionFrameCountRef.current,
+      reducedMotion,
+      targets: hitTargets,
+    };
     return () => {
       delete debugWindow.__pharosVilleDebug;
     };
-  }, [camera, canvasSize, hitTargets]);
+  }, [assetsLoaded, camera, canvasSize, hitTargets, reducedMotion, world.map]);
 
   const canvasPoint = useCallback((event: ReactPointerEvent<HTMLCanvasElement> | ReactWheelEvent<HTMLCanvasElement>) => {
     const canvas = canvasRef.current;
@@ -535,6 +333,29 @@ function collectEntityByDetailId(world: PharosVilleWorldModel, detailId: string 
   if (!detailId) return null;
   return [world.lighthouse, ...world.docks, ...world.ships, ...world.shipClusters, ...world.graves]
     .find((entity) => entity.detailId === detailId) ?? null;
+}
+
+function isCameraWithinBounds(camera: IsoCamera | null, map: PharosVilleWorldModel["map"], viewport: ScreenPoint) {
+  if (!camera || viewport.x <= 0 || viewport.y <= 0) return false;
+  const clamped = clampCameraToMap(camera, { map, viewport });
+  return (
+    Math.abs(clamped.offsetX - camera.offsetX) <= 1
+    && Math.abs(clamped.offsetY - camera.offsetY) <= 1
+    && clamped.zoom === camera.zoom
+  );
+}
+
+function updateDebugMotion(input: { frameCount: number; reducedMotion: boolean }) {
+  if (process.env.NODE_ENV === "production" && window.location.hostname !== "localhost") return;
+  const debugWindow = window as typeof window & {
+    __pharosVilleDebug?: {
+      motionFrameCount?: number;
+      reducedMotion?: boolean;
+    };
+  };
+  if (!debugWindow.__pharosVilleDebug) return;
+  debugWindow.__pharosVilleDebug.motionFrameCount = input.frameCount;
+  debugWindow.__pharosVilleDebug.reducedMotion = input.reducedMotion;
 }
 
 function drawMinimap(
