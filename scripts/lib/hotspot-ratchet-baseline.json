@@ -48,16 +48,16 @@
     "notes": "Request-entry shell is intentionally thin after router extraction. Any new dispatch logic should move downward."
   },
   "src/components/contagion-graph.tsx": {
-    "fileLines": 554,
-    "maxFunctionLines": 506,
-    "branchCount": 48,
-    "disposition": "deferred",
+    "fileLines": 104,
+    "maxFunctionLines": 81,
+    "branchCount": 1,
+    "disposition": "stabilized",
     "targetBudget": {
-      "fileLines": 560,
-      "maxFunctionLines": 320,
-      "branchCount": 80
+      "fileLines": 140,
+      "maxFunctionLines": 120,
+      "branchCount": 10
     },
-    "notes": "The graph renderer still mixes data shaping, simulation wiring, and view concerns. Split graph math, legend controls, and rendering shells before growing the feature further."
+    "notes": "Phase 6 split graph model, controls, legend, and SVG rendering into dedicated modules. Keep the top-level shell thin and move future graph behavior into those focused modules."
   },
   "src/app/chains/[chain]/client.tsx": {
     "fileLines": 136,

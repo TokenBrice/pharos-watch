@@ -31,10 +31,6 @@
     "disposition": "deferred",
     "notes": "Fallback stablecoin sync still mixes fallback intake, enrichment setup, cache publication, and post-enrichment orchestration. Keep this explicitly waived for the dedicated stablecoin-sync decomposition lane rather than folding a broad refactor into the current CAS visibility fix."
   },
-  "worker/src/cron/dex-discovery/crawl-sources.ts": {
-    "disposition": "queued-p4",
-    "notes": "DEX discovery crawling is still source-dense and branchy. Track it for a later crawler-family extraction rather than expanding the current worker tranche."
-  },
   "worker/src/api/audit-depeg-history.ts": {
     "disposition": "queued-p4",
     "notes": "The audit/repair handler still mixes validation, replay planning, and mutation orchestration. Keep it explicitly owned as a later admin-path hotspot rather than widening this tranche."
@@ -62,10 +58,6 @@
   "src/app/admin/status-dashboard.tsx": {
     "disposition": "queued-p4",
     "notes": "Admin status dashboard still centralizes top-fold triage, section composition, and operator controls in one client shell. Keep waived until the dedicated admin-status decomposition lane is scheduled instead of widening the current mixed status/frontend tranche."
-  },
-  "shared/lib/env-contract.ts": {
-    "disposition": "queued-p4",
-    "notes": "The shared env-contract manifest now centralizes the binding inventory plus generated example/docs views. Keep it waived until a dedicated follow-up pass decides whether to split generation helpers from the manifest definition without regressing the single-source-of-truth contract."
   },
   "shared/lib/classification.ts": {
     "disposition": "deferred",
@@ -98,6 +90,18 @@
   "worker/src/lib/dews.ts": {
     "disposition": "queued-p4",
     "notes": "DEWS scoring and contagion policy remain intentionally concentrated while the early-warning surface is still evolving. Split signal derivation, contagion weighting, and aggregate scoring in a dedicated DEWS cleanup pass."
+  },
+  "worker/src/cron/reserve-adapters/gho.ts": {
+    "disposition": "queued-p4",
+    "notes": "Surfaced after Phase 6 removed completed hotspot waivers. The GHO reserve adapter mixes facilitator discovery, reserve parsing, and scenario-specific classification; keep it waived until the next reserve-adapter simplification pass."
+  },
+  "src/app/yield/client.tsx": {
+    "disposition": "queued-p4",
+    "notes": "Surfaced after Phase 6 reduced larger hotspots. The yield client still combines filter state, table shaping, and interaction handling in one route shell; split view-model and table controls in the next yield UI cleanup pass."
+  },
+  "worker/src/cron/dex-liquidity/pool-helpers.ts": {
+    "disposition": "deferred",
+    "notes": "Surfaced after Phase 6 DEX-discovery extraction. Pool helper branch count reflects shared DEX classification policy used across scoring/discovery; defer decomposition until a dedicated DEX-liquidity policy cleanup can preserve current scoring semantics."
   },
   "worker/src/cron/detect-depegs.ts": {
     "disposition": "queued-p4",
