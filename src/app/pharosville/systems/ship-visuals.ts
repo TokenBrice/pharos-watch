@@ -75,14 +75,14 @@ export function resolveShipClass(meta: StablecoinMeta): ShipClassDefinition {
 
 export function resolveShipSizeTier(marketCapUsd: number): ShipSizeDefinition {
   if (!Number.isFinite(marketCapUsd) || marketCapUsd <= 0) {
-    return { label: "Unknown", scale: 0.72, tier: "unknown" };
+    return { label: "Unknown", scale: 0.7, tier: "unknown" };
   }
-  if (marketCapUsd >= 10_000_000_000) return { label: "Flagship", scale: 1.18, tier: "flagship" };
-  if (marketCapUsd >= 1_000_000_000) return { label: "Major", scale: 1.06, tier: "major" };
-  if (marketCapUsd >= 100_000_000) return { label: "Regional", scale: 0.96, tier: "regional" };
-  if (marketCapUsd >= 10_000_000) return { label: "Local", scale: 0.86, tier: "local" };
+  if (marketCapUsd >= 10_000_000_000) return { label: "Flagship", scale: 3, tier: "flagship" };
+  if (marketCapUsd >= 1_000_000_000) return { label: "Major", scale: 1.8, tier: "major" };
+  if (marketCapUsd >= 100_000_000) return { label: "Regional", scale: 1.25, tier: "regional" };
+  if (marketCapUsd >= 10_000_000) return { label: "Local", scale: 0.95, tier: "local" };
   if (marketCapUsd >= 1_000_000) return { label: "Skiff", scale: 0.78, tier: "skiff" };
-  return { label: "Micro", scale: 0.72, tier: "micro" };
+  return { label: "Micro", scale: 0.7, tier: "micro" };
 }
 
 export function resolveShipVisual(asset: StablecoinData, meta: StablecoinMeta, reportCard: ReportCard | null): ShipVisual {

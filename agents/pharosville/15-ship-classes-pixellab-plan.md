@@ -51,14 +51,14 @@ Replace the current `0.75 / 1 / 1.25` scale bands with named compressed tiers:
 
 | Tier | Market cap | Scale |
 | --- | ---: | ---: |
-| Flagship | `>= $10B` | `1.18` |
-| Major | `$1B - $10B` | `1.06` |
-| Regional | `$100M - $1B` | `0.96` |
-| Local | `$10M - $100M` | `0.86` |
+| Flagship | `>= $10B` | `3.0` |
+| Major | `$1B - $10B` | `1.8` |
+| Regional | `$100M - $1B` | `1.25` |
+| Local | `$10M - $100M` | `0.95` |
 | Skiff | `$1M - $10M` | `0.78` |
-| Micro / unknown | `< $1M`, invalid, missing | `0.72` |
+| Micro / unknown | `< $1M`, invalid, missing | `0.7` |
 
-This keeps USDT and USDC visually larger without letting them consume the map. Exact market cap remains available in the detail panel.
+This intentionally exaggerates larger ships so $1B+ assets are spottable and the top issuers can read as major map landmarks, while still capping scale instead of making area linear to market cap. Exact market cap remains available in the detail panel.
 
 ## PixelLab Asset Plan
 

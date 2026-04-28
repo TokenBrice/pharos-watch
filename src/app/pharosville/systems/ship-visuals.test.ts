@@ -50,13 +50,14 @@ describe("resolveShipVisual", () => {
   });
 
   it("maps market caps to compressed size tiers", () => {
-    expect(resolveShipSizeTier(20_000_000_000)).toEqual({ label: "Flagship", scale: 1.18, tier: "flagship" });
-    expect(resolveShipSizeTier(2_000_000_000)).toEqual({ label: "Major", scale: 1.06, tier: "major" });
-    expect(resolveShipSizeTier(200_000_000)).toEqual({ label: "Regional", scale: 0.96, tier: "regional" });
-    expect(resolveShipSizeTier(20_000_000)).toEqual({ label: "Local", scale: 0.86, tier: "local" });
+    expect(resolveShipSizeTier(20_000_000_000)).toEqual({ label: "Flagship", scale: 3, tier: "flagship" });
+    expect(resolveShipSizeTier(2_000_000_000)).toEqual({ label: "Major", scale: 1.8, tier: "major" });
+    expect(resolveShipSizeTier(200_000_000)).toEqual({ label: "Regional", scale: 1.25, tier: "regional" });
+    expect(resolveShipSizeTier(20_000_000)).toEqual({ label: "Local", scale: 0.95, tier: "local" });
     expect(resolveShipSizeTier(2_000_000)).toEqual({ label: "Skiff", scale: 0.78, tier: "skiff" });
-    expect(resolveShipSizeTier(500_000)).toEqual({ label: "Micro", scale: 0.72, tier: "micro" });
-    expect(resolveShipSizeTier(0)).toEqual({ label: "Unknown", scale: 0.72, tier: "unknown" });
+    expect(resolveShipSizeTier(500_000)).toEqual({ label: "Micro", scale: 0.7, tier: "micro" });
+    expect(resolveShipSizeTier(0)).toEqual({ label: "Unknown", scale: 0.7, tier: "unknown" });
+    expect(resolveShipSizeTier(2_000_000_000).scale).toBeGreaterThan(1.5);
   });
 
   it("preserves peg, overlay, and compressed scale channels", () => {
@@ -79,6 +80,6 @@ describe("resolveShipVisual", () => {
     expect(visual.overlay).toBe("nav");
     expect(visual.sizeTier).toBe("flagship");
     expect(visual.sizeLabel).toBe("Flagship");
-    expect(visual.scale).toBe(1.18);
+    expect(visual.scale).toBe(3);
   });
 });
