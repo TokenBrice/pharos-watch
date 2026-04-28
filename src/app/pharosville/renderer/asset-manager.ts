@@ -6,8 +6,14 @@ export interface LoadedPharosVilleAsset {
   image: HTMLImageElement;
 }
 
+export interface LoadedPharosVilleLogo {
+  image: HTMLImageElement;
+  src: string;
+}
+
 export class PharosVilleAssetManager {
   private assets = new Map<string, LoadedPharosVilleAsset>();
+  private logos = new Map<string, LoadedPharosVilleLogo>();
   private manifest: PharosVilleAssetManifest | null = null;
 
   get(id: string): LoadedPharosVilleAsset | null {
@@ -16,6 +22,11 @@ export class PharosVilleAssetManager {
 
   getManifest(): PharosVilleAssetManifest | null {
     return this.manifest;
+  }
+
+  getLogo(src: string | null | undefined): LoadedPharosVilleLogo | null {
+    if (!src) return null;
+    return this.logos.get(src) ?? null;
   }
 
   async loadCritical(signal?: AbortSignal): Promise<PharosVilleAssetManifest> {
@@ -53,6 +64,20 @@ export class PharosVilleAssetManager {
     const loaded = { entry: asset, image };
     this.assets.set(asset.id, loaded);
     return loaded;
+  }
+
+  async loadLogo(src: string, signal?: AbortSignal): Promise<LoadedPharosVilleLogo> {
+    const cached = this.logos.get(src);
+    if (cached) return cached;
+    const image = await loadImage(src, signal);
+    const loaded = { image, src };
+    this.logos.set(src, loaded);
+    return loaded;
+  }
+
+  async loadLogos(srcs: Iterable<string>, signal?: AbortSignal): Promise<LoadedPharosVilleLogo[]> {
+    const uniqueSrcs = [...new Set([...srcs].filter((src) => src.startsWith("/")))];
+    return Promise.all(uniqueSrcs.map((src) => this.loadLogo(src, signal)));
   }
 }
 

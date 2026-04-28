@@ -1,4 +1,4 @@
-import type { PharosVilleMotionPlan } from "../systems/motion";
+import type { PharosVilleMotionPlan, ShipMotionSample } from "../systems/motion";
 import { tileToScreen, type IsoCamera, type ScreenPoint } from "../systems/projection";
 import type { PharosVilleWorld, TileKind } from "../systems/world-types";
 import type { PharosVilleAssetManager } from "./asset-manager";
@@ -51,6 +51,7 @@ export interface DrawPharosVilleInput {
   hoveredTarget: HitTarget | null;
   motion: PharosVilleCanvasMotion;
   selectedTarget: HitTarget | null;
+  shipMotionSamples?: ReadonlyMap<string, ShipMotionSample>;
   targets: readonly HitTarget[];
   width: number;
   world: PharosVilleWorld;
@@ -92,24 +93,13 @@ function drawTerrain({ camera, ctx, motion, world }: DrawPharosVilleInput) {
 
 function drawLighthouse({ assets, camera, ctx, motion, world }: DrawPharosVilleInput) {
   const center = tileToScreen(world.lighthouse.tile, camera);
-  const beamAngle = motion.reducedMotion
-    ? -0.23
-    : -0.34 + Math.sin(motion.timeSeconds * motion.plan.lighthouseSweepRadiansPerSecond) * 0.26;
-  const beamLength = 260 * camera.zoom;
-  const beamEnd = {
-    x: center.x + Math.cos(beamAngle) * beamLength,
-    y: center.y - 88 * camera.zoom + Math.sin(beamAngle) * beamLength * 0.58,
-  };
   const lighthouseAsset = assets?.get("landmark.lighthouse");
+  const firePoint = lighthouseAsset
+    ? lighthouseBeaconPoint(lighthouseAsset, center, camera.zoom)
+    : { x: center.x, y: center.y - 88 * camera.zoom };
   if (lighthouseAsset) {
     drawAsset(ctx, lighthouseAsset, center.x, center.y, camera.zoom);
-    strokeLighthouseBeam(
-      ctx,
-      world.lighthouse.color,
-      16 * camera.zoom,
-      { x: center.x, y: center.y - 88 * camera.zoom },
-      beamEnd,
-    );
+    drawLighthouseFire(ctx, firePoint, camera.zoom, world.lighthouse.color, motion);
     return;
   }
 
@@ -126,13 +116,95 @@ function drawLighthouse({ assets, camera, ctx, motion, world }: DrawPharosVilleI
   ctx.beginPath();
   ctx.arc(0, -90, 12, 0, Math.PI * 2);
   ctx.fill();
-  ctx.strokeStyle = "rgba(255, 204, 98, 0.35)";
-  ctx.lineWidth = 18;
-  ctx.beginPath();
-  ctx.moveTo(0, -88);
-  ctx.lineTo((beamEnd.x - center.x) / camera.zoom, (beamEnd.y - center.y) / camera.zoom);
-  ctx.stroke();
   ctx.restore();
+  drawLighthouseFire(ctx, firePoint, camera.zoom, world.lighthouse.color, motion);
+}
+
+function lighthouseBeaconPoint(
+  asset: NonNullable<ReturnType<PharosVilleAssetManager["get"]>>,
+  center: ScreenPoint,
+  zoom: number,
+): ScreenPoint {
+  const scale = asset.entry.displayScale * zoom;
+  return {
+    x: center.x + (asset.entry.width / 2 - asset.entry.anchor[0]) * scale,
+    y: center.y - (asset.entry.anchor[1] - 30) * scale,
+  };
+}
+
+function drawLighthouseFire(
+  ctx: CanvasRenderingContext2D,
+  point: ScreenPoint,
+  zoom: number,
+  psiColor: string,
+  motion: PharosVilleCanvasMotion,
+) {
+  const flickerSpeed = motion.plan.lighthouseFireFlickerPerSecond;
+  const flicker = motion.reducedMotion ? 0 : Math.sin(motion.timeSeconds * 14 * flickerSpeed) * 0.12
+    + Math.sin(motion.timeSeconds * 21 * flickerSpeed) * 0.06;
+  const scale = zoom * (1 + flicker);
+  ctx.save();
+  ctx.translate(point.x, point.y);
+  ctx.scale(scale, scale);
+
+  ctx.globalAlpha = 0.42;
+  ctx.fillStyle = psiColor;
+  ctx.beginPath();
+  ctx.ellipse(0, 3, 24, 14, 0, 0, Math.PI * 2);
+  ctx.fill();
+
+  ctx.globalAlpha = 0.55;
+  ctx.fillStyle = psiColor;
+  ctx.beginPath();
+  ctx.arc(0, -6, 15, 0, Math.PI * 2);
+  ctx.fill();
+
+  ctx.globalAlpha = 1;
+  drawPixelFlame(ctx, [
+    [-11, 2],
+    [-7, -11],
+    [-3, -6],
+    [0, -25],
+    [5, -8],
+    [10, -14],
+    [13, 2],
+    [6, 10],
+    [-5, 10],
+  ], psiColor);
+  drawPixelFlame(ctx, [
+    [-6, 4],
+    [-3, -8],
+    [0, -18],
+    [4, -7],
+    [8, 4],
+    [3, 9],
+    [-3, 9],
+  ], "#ffcc62");
+  drawPixelFlame(ctx, [
+    [-3, 5],
+    [0, -8],
+    [4, 5],
+    [0, 8],
+  ], "#fff2a8");
+
+  ctx.fillStyle = "#4b2d1d";
+  ctx.fillRect(-12, 8, 24, 5);
+  ctx.fillStyle = "#9a5a2a";
+  ctx.fillRect(-9, 6, 18, 3);
+  ctx.restore();
+}
+
+function drawPixelFlame(ctx: CanvasRenderingContext2D, points: Array<[number, number]>, color: string) {
+  ctx.fillStyle = color;
+  ctx.beginPath();
+  points.forEach(([x, y], index) => {
+    const px = Math.round(x);
+    const py = Math.round(y);
+    if (index === 0) ctx.moveTo(px, py);
+    else ctx.lineTo(px, py);
+  });
+  ctx.closePath();
+  ctx.fill();
 }
 
 function drawBuildings({ camera, ctx }: DrawPharosVilleInput) {
@@ -167,30 +239,59 @@ function drawDocks({ assets, camera, ctx, world }: DrawPharosVilleInput) {
   }
 }
 
-function drawShips({ assets, camera, ctx, motion, world }: DrawPharosVilleInput) {
+function drawShips({ assets, camera, ctx, motion, selectedTarget, shipMotionSamples, world }: DrawPharosVilleInput) {
   for (const ship of world.ships) {
-    const p = tileToScreen(ship.tile, camera);
+    const sample = shipMotionSamples?.get(ship.id) ?? null;
+    const p = tileToScreen(sample?.tile ?? ship.tile, camera);
     const phase = motion.plan.shipPhases.get(ship.id) ?? 0;
     const animated = !motion.reducedMotion && motion.plan.animatedShipIds.has(ship.id);
     const bob = animated ? Math.round(Math.sin(motion.timeSeconds * 2.2 + phase) * 2 * camera.zoom) : 0;
-    if (!motion.reducedMotion && motion.plan.moverShipIds.has(ship.id)) {
-      const intensity = Math.min(1, Math.abs(ship.change24hPct ?? 0) * 18 + 0.2);
-      drawWake(ctx, p.x, p.y + 8 * camera.zoom + bob, camera.zoom, intensity);
+    const drawsWake = !motion.reducedMotion
+      && (
+        motion.plan.effectShipIds.has(ship.id)
+        || selectedTarget?.id === ship.id
+        || motion.plan.moverShipIds.has(ship.id)
+      );
+    if (drawsWake) {
+      const changeIntensity = Math.min(1, Math.abs(ship.change24hPct ?? 0) * 18 + 0.2);
+      const sampleIntensity = sample?.wakeIntensity ?? 0;
+      const intensity = Math.max(sampleIntensity, motion.plan.moverShipIds.has(ship.id) ? changeIntensity : 0.18);
+      drawWake(ctx, p.x, p.y + 8 * camera.zoom + bob, camera.zoom, intensity, sample?.heading ?? { x: -1, y: 0 });
     }
 
     const shipAsset = assets?.get(`ship.${ship.visual.hull}`);
     if (shipAsset) {
-      drawAsset(ctx, shipAsset, p.x, p.y + 12 * camera.zoom + bob, camera.zoom * ship.visual.scale * 0.7);
+      const assetScale = camera.zoom * ship.visual.scale * 0.7;
+      const drawY = p.y + 12 * camera.zoom + bob;
+      drawAsset(ctx, shipAsset, p.x, drawY, assetScale);
+      drawSailLogo({
+        ctx,
+        logo: assets?.getLogo(ship.logoSrc) ?? null,
+        mark: ship.symbol,
+        radius: 5.5 * assetScale,
+        x: p.x + 9 * assetScale,
+        y: drawY - 29 * assetScale,
+      });
     } else {
+      const proceduralScale = camera.zoom * ship.visual.scale;
+      const drawY = p.y - 4 * camera.zoom + bob;
       drawShip(
         ctx,
         p.x,
-        p.y - 4 * camera.zoom + bob,
+        drawY,
         ship.visual.scale,
         PENNANTS[ship.visual.pennant] ?? PENNANTS.slate,
         SHIP_COLORS[ship.visual.hull],
         camera.zoom,
       );
+      drawSailLogo({
+        ctx,
+        logo: assets?.getLogo(ship.logoSrc) ?? null,
+        mark: ship.symbol,
+        radius: 4.2 * proceduralScale,
+        x: p.x + 7 * proceduralScale,
+        y: drawY - 10 * proceduralScale,
+      });
     }
   }
 }
@@ -284,6 +385,46 @@ function drawShip(ctx: CanvasRenderingContext2D, x: number, y: number, scale: nu
   ctx.restore();
 }
 
+function drawSailLogo(input: {
+  ctx: CanvasRenderingContext2D;
+  logo: ReturnType<PharosVilleAssetManager["getLogo"]>;
+  mark: string;
+  radius: number;
+  x: number;
+  y: number;
+}) {
+  const { ctx, logo, mark, radius, x, y } = input;
+  const safeRadius = Math.max(2.5, radius);
+  ctx.save();
+  ctx.translate(Math.round(x), Math.round(y));
+  ctx.fillStyle = "rgba(247, 244, 218, 0.92)";
+  ctx.strokeStyle = "#2b1c12";
+  ctx.lineWidth = Math.max(1, safeRadius * 0.18);
+  ctx.beginPath();
+  ctx.arc(0, 0, safeRadius, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.stroke();
+
+  if (logo) {
+    ctx.save();
+    ctx.beginPath();
+    ctx.arc(0, 0, Math.max(1, safeRadius - 1), 0, Math.PI * 2);
+    ctx.clip();
+    const size = Math.round((safeRadius - 1) * 2);
+    ctx.drawImage(logo.image, -size / 2, -size / 2, size, size);
+    ctx.restore();
+  } else {
+    ctx.fillStyle = "#102333";
+    ctx.font = `700 ${Math.max(5, safeRadius * 1.15)}px ui-sans-serif, system-ui, sans-serif`;
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.fillText(mark.slice(0, 2).toUpperCase(), 0, 0.4);
+    ctx.textAlign = "start";
+    ctx.textBaseline = "alphabetic";
+  }
+  ctx.restore();
+}
+
 function drawSelectionRing(ctx: CanvasRenderingContext2D, target: HitTarget, color: string) {
   ctx.strokeStyle = color;
   ctx.lineWidth = 2;
@@ -309,34 +450,38 @@ function drawAsset(
   );
 }
 
-function drawWake(ctx: CanvasRenderingContext2D, x: number, y: number, zoom: number, intensity: number) {
+function drawWake(
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  zoom: number,
+  intensity: number,
+  heading: { x: number; y: number },
+) {
+  const headingMagnitude = Math.hypot(heading.x, heading.y);
+  const forward = headingMagnitude > 0
+    ? { x: heading.x / headingMagnitude, y: heading.y / headingMagnitude }
+    : { x: -1, y: 0 };
+  const wakeDirection = { x: -forward.x, y: -forward.y };
+  const cross = { x: -forward.y, y: forward.x };
   ctx.save();
   ctx.strokeStyle = `rgba(186, 231, 225, ${0.26 + intensity * 0.16})`;
   ctx.lineWidth = Math.max(1, zoom);
   for (let index = 0; index < 3; index += 1) {
     const offset = index * 7 * zoom;
+    const baseDistance = (16 + offset) * zoom;
+    const spread = (4 + index * 2) * zoom;
+    const length = (12 + index * 3) * zoom;
     ctx.beginPath();
-    ctx.moveTo(x - (16 + offset) * zoom, y + (4 + index * 2) * zoom);
-    ctx.lineTo(x - (28 + offset) * zoom, y + (8 + index * 3) * zoom);
+    ctx.moveTo(
+      x + wakeDirection.x * baseDistance + cross.x * spread,
+      y + wakeDirection.y * baseDistance + cross.y * spread,
+    );
+    ctx.lineTo(
+      x + wakeDirection.x * (baseDistance + length) + cross.x * spread * 1.45,
+      y + wakeDirection.y * (baseDistance + length) + cross.y * spread * 1.45,
+    );
     ctx.stroke();
   }
-  ctx.restore();
-}
-
-function strokeLighthouseBeam(
-  ctx: CanvasRenderingContext2D,
-  color: string,
-  width: number,
-  from: ScreenPoint,
-  to: ScreenPoint,
-) {
-  ctx.save();
-  ctx.globalAlpha = 0.36;
-  ctx.strokeStyle = color;
-  ctx.lineWidth = width;
-  ctx.beginPath();
-  ctx.moveTo(from.x, from.y);
-  ctx.lineTo(to.x, to.y);
-  ctx.stroke();
   ctx.restore();
 }

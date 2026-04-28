@@ -1,15 +1,17 @@
 "use client";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import type { KeyboardEvent as ReactKeyboardEvent, PointerEvent as ReactPointerEvent, WheelEvent as ReactWheelEvent } from "react";
+import type { CSSProperties, KeyboardEvent as ReactKeyboardEvent, PointerEvent as ReactPointerEvent, WheelEvent as ReactWheelEvent } from "react";
 import { Maximize2, Minimize2 } from "lucide-react";
 import { AccessibilityLedger } from "./components/accessibility-ledger";
+import { DetailPanel } from "./components/detail-panel";
+import { WorldToolbar } from "./components/world-toolbar";
 import { useFullscreenMode } from "./hooks/use-fullscreen-mode";
 import { PharosVilleAssetManager } from "./renderer/asset-manager";
 import { collectHitTargets, hitTest, type HitTarget } from "./renderer/hit-testing";
 import { drawPharosVille } from "./renderer/world-canvas";
-import { clampCameraToMap, defaultCamera, panCamera } from "./systems/camera";
+import { cameraZoomLabel, clampCameraToMap, defaultCamera, followTile, panCamera, zoomIn, zoomOut } from "./systems/camera";
 import { resolveCanvasBudget } from "./systems/canvas-budget";
-import { buildMotionPlan } from "./systems/motion";
+import { buildMotionPlan, resolveShipMotionSample, type ShipMotionSample } from "./systems/motion";
 import { zoomCameraAt, type IsoCamera, type ScreenPoint } from "./systems/projection";
 import { observeReducedMotion } from "./systems/reduced-motion";
 import type { PharosVilleWorld as PharosVilleWorldModel } from "./systems/world-types";
@@ -22,10 +24,18 @@ export function PharosVilleWorld({ world }: { world: PharosVilleWorldModel }) {
   const canvasBudgetRef = useRef<ReturnType<typeof resolveCanvasBudget> | null>(null);
   const motionStartTimeRef = useRef<number | null>(null);
   const motionFrameCountRef = useRef(0);
+  const currentShipMotionSamplesRef = useRef<ReadonlyMap<string, ShipMotionSample>>(new Map());
+  const currentHitTargetsRef = useRef<readonly HitTarget[]>([]);
+  const frameStateRef = useRef<{
+    samples: ReadonlyMap<string, ShipMotionSample>;
+    targets: readonly HitTarget[];
+    timeSeconds: number;
+  }>({ samples: new Map(), targets: [], timeSeconds: 0 });
   const [camera, setCamera] = useState<IsoCamera | null>(null);
   const [canvasSize, setCanvasSize] = useState<ScreenPoint>({ x: 0, y: 0 });
   const [hoveredDetailId, setHoveredDetailId] = useState<string | null>(null);
   const [selectedDetailId, setSelectedDetailId] = useState<string | null>("lighthouse");
+  const [selectedDetailAnchor, setSelectedDetailAnchor] = useState<DetailAnchor | null>(null);
   const [announcement, setAnnouncement] = useState("PharosVille ready.");
   const [assetLoadTick, setAssetLoadTick] = useState(0);
   const [assetsLoaded, setAssetsLoaded] = useState(false);
@@ -33,23 +43,39 @@ export function PharosVilleWorld({ world }: { world: PharosVilleWorldModel }) {
   const shellRef = useRef<HTMLElement | null>(null);
   const { exitFullscreen, fullscreenMode, toggleFullscreen } = useFullscreenMode(shellRef);
   const motionPlan = useMemo(() => buildMotionPlan(world, selectedDetailId), [selectedDetailId, world]);
-  const hitTargets = useMemo(() => {
-    void assetLoadTick;
-    return camera ? collectHitTargets({ assets: assetManager, camera, hoveredDetailId, selectedDetailId, world }) : [];
-  }, [assetLoadTick, assetManager, camera, hoveredDetailId, selectedDetailId, world]);
-  const hoveredTarget = hitTargets.find((target) => target.detailId === hoveredDetailId) ?? null;
-  const selectedTarget = hitTargets.find((target) => target.detailId === selectedDetailId) ?? null;
+  const selectedEntity = useMemo(() => findWorldEntity(world, selectedDetailId), [selectedDetailId, world]);
+  const selectedDetail = selectedDetailId ? world.detailIndex[selectedDetailId] ?? null : null;
 
-  const selectDetail = useCallback((detailId: string) => {
+  const selectDetail = useCallback((detailId: string, anchor: DetailAnchor | null = null) => {
     const detail = world.detailIndex[detailId];
     setSelectedDetailId(detailId);
+    setSelectedDetailAnchor(anchor);
     setAnnouncement(detail ? `Selected ${detail.title}.` : "Selected map entity.");
   }, [world.detailIndex]);
 
   const clearSelection = useCallback(() => {
     setSelectedDetailId(null);
+    setSelectedDetailAnchor(null);
     setAnnouncement("Selection cleared.");
   }, []);
+
+  useEffect(() => {
+    if (!selectedDetailId) return;
+
+    const handleOutsidePointerDown = (event: PointerEvent) => {
+      const target = event.target;
+      if (!(target instanceof Node)) return;
+      const shell = shellRef.current;
+      if (!shell?.contains(target)) return;
+      const detailPanel = document.getElementById("pharosville-detail-panel");
+      if (detailPanel?.contains(target)) return;
+      if (target instanceof Element && target.closest(".pharosville-overlay, .pharosville-fullscreen-button")) return;
+      clearSelection();
+    };
+
+    document.addEventListener("pointerdown", handleOutsidePointerDown, true);
+    return () => document.removeEventListener("pointerdown", handleOutsidePointerDown, true);
+  }, [clearSelection, selectedDetailId]);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -67,6 +93,23 @@ export function PharosVilleWorld({ world }: { world: PharosVilleWorldModel }) {
       controller.abort();
     };
   }, [assetManager]);
+
+  useEffect(() => {
+    const logoSrcs = [
+      ...world.ships.map((ship) => ship.logoSrc),
+      ...world.graves.map((grave) => grave.logoSrc),
+    ]
+      .filter((src): src is string => typeof src === "string" && src.startsWith("/"));
+    if (logoSrcs.length === 0) return;
+
+    const controller = new AbortController();
+    assetManager.loadLogos(logoSrcs, controller.signal)
+      .then(() => setAssetLoadTick((tick) => tick + 1))
+      .catch(() => setAssetLoadTick((tick) => tick + 1));
+    return () => {
+      controller.abort();
+    };
+  }, [assetManager, world.graves, world.ships]);
 
   useEffect(() => observeReducedMotion(setReducedMotion), []);
 
@@ -117,53 +160,73 @@ export function PharosVilleWorld({ world }: { world: PharosVilleWorldModel }) {
       animationFramePendingRef.current = false;
       if (motionStartTimeRef.current == null) motionStartTimeRef.current = time;
       const timeSeconds = reducedMotion ? 0 : (time - motionStartTimeRef.current) / 1000;
+      const shipMotionSamples = collectShipMotionSamples({
+        motionPlan,
+        reducedMotion,
+        timeSeconds,
+        world,
+      });
+      const targets = collectHitTargets({
+        assets: assetManager,
+        camera,
+        hoveredDetailId,
+        selectedDetailId,
+        shipMotionSamples,
+        world,
+      });
+      const nextFrameState = {
+        samples: shipMotionSamples,
+        targets,
+        timeSeconds,
+      };
+      frameStateRef.current = nextFrameState;
+      currentShipMotionSamplesRef.current = shipMotionSamples;
+      currentHitTargetsRef.current = targets;
+      const nextHoveredTarget = targets.find((target) => target.detailId === hoveredDetailId) ?? null;
+      const nextSelectedTarget = targets.find((target) => target.detailId === selectedDetailId) ?? null;
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
       drawPharosVille({
         camera,
         ctx,
         height: canvasSize.y,
-        hoveredTarget,
+        hoveredTarget: nextHoveredTarget,
         motion: {
           plan: motionPlan,
           reducedMotion,
           timeSeconds,
         },
-        selectedTarget,
-        targets: hitTargets,
+        selectedTarget: nextSelectedTarget,
+        shipMotionSamples,
+        targets,
         width: canvasSize.x,
         world,
         assets: assetManager,
       });
       if (!reducedMotion) {
         motionFrameCountRef.current += 1;
-        updateDebugMotion({ frameCount: motionFrameCountRef.current, reducedMotion });
         animationFramePendingRef.current = true;
         frameId = requestAnimationFrame(drawFrame);
       }
+      updateDebugFrame({
+        animationFramePending: animationFramePendingRef.current,
+        frameCount: motionFrameCountRef.current,
+        frameState: nextFrameState,
+        reducedMotion,
+      });
     };
     drawFrame(performance.now());
     return () => {
       animationFramePendingRef.current = false;
       if (frameId) cancelAnimationFrame(frameId);
     };
-  }, [assetLoadTick, assetManager, camera, canvasSize.x, canvasSize.y, hitTargets, hoveredTarget, motionPlan, reducedMotion, selectedTarget, world]);
+  }, [assetLoadTick, assetManager, camera, canvasSize.x, canvasSize.y, hoveredDetailId, motionPlan, reducedMotion, selectedDetailId, world]);
 
   useEffect(() => {
     if (process.env.NODE_ENV === "production" && window.location.hostname !== "localhost") return;
     const debugWindow = window as typeof window & {
-      __pharosVilleDebug?: {
-        camera: IsoCamera | null;
-        cameraWithinBounds: boolean;
-        assetsLoaded: boolean;
-        canvasBudget: ReturnType<typeof resolveCanvasBudget> | null;
-        canvasSize: ScreenPoint;
-        animationFramePending: boolean;
-        motionFrameCount: number;
-        reducedMotion: boolean;
-        selectedDetailId: string | null;
-        targets: readonly HitTarget[];
-      };
+      __pharosVilleDebug?: PharosVilleDebugState;
     };
+    const frameState = frameStateRef.current;
     debugWindow.__pharosVilleDebug = {
       camera,
       cameraWithinBounds: isCameraWithinBounds(camera, world.map, canvasSize),
@@ -173,13 +236,16 @@ export function PharosVilleWorld({ world }: { world: PharosVilleWorldModel }) {
       canvasSize,
       motionFrameCount: motionFrameCountRef.current,
       reducedMotion,
+      selectedDetailAnchor,
       selectedDetailId,
-      targets: hitTargets,
+      shipMotionSamples: compactShipMotionSamples(frameState.samples),
+      targets: frameState.targets,
+      timeSeconds: frameState.timeSeconds,
     };
     return () => {
       delete debugWindow.__pharosVilleDebug;
     };
-  }, [assetsLoaded, camera, canvasSize, hitTargets, reducedMotion, selectedDetailId, world.map]);
+  }, [assetsLoaded, camera, canvasSize, reducedMotion, selectedDetailAnchor, selectedDetailId, world.map]);
 
   const canvasPoint = useCallback((event: ReactPointerEvent<HTMLCanvasElement> | ReactWheelEvent<HTMLCanvasElement>) => {
     const canvas = canvasRef.current;
@@ -191,9 +257,9 @@ export function PharosVilleWorld({ world }: { world: PharosVilleWorldModel }) {
   }, []);
 
   const updateHover = useCallback((point: ScreenPoint) => {
-    const target = hitTest(hitTargets, point);
+    const target = hitTest(currentHitTargetsRef.current, point);
     setHoveredDetailId((previous) => previous === target?.detailId ? previous : (target?.detailId ?? null));
-  }, [hitTargets]);
+  }, []);
 
   const handlePointerDown = useCallback((event: ReactPointerEvent<HTMLCanvasElement>) => {
     event.currentTarget.setPointerCapture(event.pointerId);
@@ -221,9 +287,13 @@ export function PharosVilleWorld({ world }: { world: PharosVilleWorldModel }) {
     dragRef.current = null;
     event.currentTarget.releasePointerCapture(event.pointerId);
     if (drag?.moved) return;
-    const target = hitTest(hitTargets, point);
-    if (target) selectDetail(target.detailId);
-  }, [canvasPoint, hitTargets, selectDetail]);
+    const target = hitTest(currentHitTargetsRef.current, point);
+    if (target) {
+      selectDetail(target.detailId, detailAnchorForPoint(point, canvasSize));
+      return;
+    }
+    if (selectedDetailId) clearSelection();
+  }, [canvasPoint, canvasSize, clearSelection, selectDetail, selectedDetailId]);
 
   const handleWheel = useCallback((event: ReactWheelEvent<HTMLCanvasElement>) => {
     if (!camera) return;
@@ -231,6 +301,36 @@ export function PharosVilleWorld({ world }: { world: PharosVilleWorldModel }) {
     const direction = event.deltaY < 0 ? 1.12 : 1 / 1.12;
     setCamera(clampCameraToMap(zoomCameraAt(camera, canvasPoint(event), camera.zoom * direction), { map: world.map, viewport: canvasSize }));
   }, [camera, canvasPoint, canvasSize, world.map]);
+
+  const handleToolbarPan = useCallback((delta: ScreenPoint) => {
+    setCamera((previous) => previous ? panCamera(previous, delta, { map: world.map, viewport: canvasSize }) : previous);
+  }, [canvasSize, world.map]);
+
+  const handleResetView = useCallback(() => {
+    if (canvasSize.x <= 0 || canvasSize.y <= 0) return;
+    setCamera(defaultCamera({ height: canvasSize.y, map: world.map, width: canvasSize.x }));
+  }, [canvasSize, world.map]);
+
+  const handleToolbarZoomIn = useCallback(() => {
+    setCamera((previous) => previous ? zoomIn(previous, canvasSize, world.map) : previous);
+  }, [canvasSize, world.map]);
+
+  const handleToolbarZoomOut = useCallback(() => {
+    setCamera((previous) => previous ? zoomOut(previous, canvasSize, world.map) : previous);
+  }, [canvasSize, world.map]);
+
+  const handleFollowSelected = useCallback(() => {
+    if (!selectedEntity) return;
+    const sampledTile = selectedEntity.kind === "ship"
+      ? currentShipMotionSamplesRef.current.get(selectedEntity.id)?.tile ?? selectedEntity.tile
+      : selectedEntity.tile;
+    setCamera((previous) => previous ? followTile({
+      camera: previous,
+      map: world.map,
+      tile: sampledTile,
+      viewport: canvasSize,
+    }) : previous);
+  }, [canvasSize, selectedEntity, world.map]);
 
   const handleKeyDown = useCallback((event: ReactKeyboardEvent<HTMLElement>) => {
     if (!camera) return;
@@ -245,6 +345,7 @@ export function PharosVilleWorld({ world }: { world: PharosVilleWorldModel }) {
     }
     const step = event.shiftKey ? 72 : 32;
     if (event.key === "ArrowLeft" || event.key === "ArrowRight" || event.key === "ArrowUp" || event.key === "ArrowDown") {
+      if (isInteractiveEventTarget(event.target)) return;
       event.preventDefault();
       const deltas: Record<string, ScreenPoint> = {
         ArrowDown: { x: 0, y: -step },
@@ -256,17 +357,28 @@ export function PharosVilleWorld({ world }: { world: PharosVilleWorldModel }) {
     }
   }, [camera, canvasSize, clearSelection, exitFullscreen, fullscreenMode, world.map]);
 
+  const detailDockStyle = selectedDetailAnchor
+    ? ({
+        "--pv-detail-x": `${selectedDetailAnchor.x}px`,
+        "--pv-detail-y": `${selectedDetailAnchor.y}px`,
+      } as CSSProperties)
+    : undefined;
+
   return (
     <main
       ref={shellRef}
       className={fullscreenMode ? "pharosville-desktop pharosville-shell pharosville-shell--fullscreen" : "pharosville-desktop pharosville-shell"}
       data-testid="pharosville-world"
+      aria-describedby="pharosville-world-instructions"
       onKeyDown={handleKeyDown}
-      tabIndex={-1}
+      tabIndex={0}
     >
+      <p id="pharosville-world-instructions" className="sr-only">
+        Use the visible toolbar, wheel zoom, drag pan, arrow keys, and canvas selection to inspect PharosVille map data.
+      </p>
       <canvas
         ref={canvasRef}
-        className={hoveredTarget ? "pharosville-canvas pharosville-canvas--selectable" : "pharosville-canvas"}
+        className={hoveredDetailId ? "pharosville-canvas pharosville-canvas--selectable" : "pharosville-canvas"}
         data-testid="pharosville-canvas"
         aria-hidden="true"
         onPointerDown={handlePointerDown}
@@ -275,6 +387,30 @@ export function PharosVilleWorld({ world }: { world: PharosVilleWorldModel }) {
         onPointerUp={handlePointerUp}
         onWheel={handleWheel}
       />
+      <div className="pharosville-overlay" aria-label="PharosVille controls and details">
+        <div className="pharosville-hud">
+          <WorldToolbar
+            world={world}
+            selectedDetailId={selectedDetailId}
+            selectedDetailLabel={selectedDetail?.title ?? null}
+            zoomLabel={camera ? cameraZoomLabel(camera) : "100%"}
+            onClearSelection={clearSelection}
+            onFollowSelected={selectedEntity ? handleFollowSelected : undefined}
+            onPan={handleToolbarPan}
+            onResetView={handleResetView}
+            onZoomIn={handleToolbarZoomIn}
+            onZoomOut={handleToolbarZoomOut}
+          />
+        </div>
+        {selectedDetail && (
+          <div
+            className={selectedDetailAnchor ? `pharosville-detail-dock pharosville-detail-dock--anchored pharosville-detail-dock--${selectedDetailAnchor.side}` : "pharosville-detail-dock"}
+            style={detailDockStyle}
+          >
+            <DetailPanel detail={selectedDetail} onClose={clearSelection} />
+          </div>
+        )}
+      </div>
       <button
         type="button"
         className="pharosville-fullscreen-button"
@@ -290,6 +426,38 @@ export function PharosVilleWorld({ world }: { world: PharosVilleWorldModel }) {
   );
 }
 
+interface DetailAnchor extends ScreenPoint {
+  side: "left" | "right";
+}
+
+function detailAnchorForPoint(point: ScreenPoint, viewport: ScreenPoint): DetailAnchor {
+  const side = point.x > viewport.x * 0.6 ? "left" : "right";
+  return { ...point, side };
+}
+
+type SelectableWorldEntity =
+  | PharosVilleWorldModel["lighthouse"]
+  | PharosVilleWorldModel["docks"][number]
+  | PharosVilleWorldModel["ships"][number]
+  | PharosVilleWorldModel["shipClusters"][number]
+  | PharosVilleWorldModel["graves"][number];
+
+function findWorldEntity(world: PharosVilleWorldModel, detailId: string | null): SelectableWorldEntity | null {
+  if (!detailId) return null;
+  return [
+    world.lighthouse,
+    ...world.docks,
+    ...world.ships,
+    ...world.shipClusters,
+    ...world.graves,
+  ].find((entity) => entity.detailId === detailId) ?? null;
+}
+
+function isInteractiveEventTarget(target: EventTarget | null) {
+  return target instanceof HTMLElement
+    && Boolean(target.closest("a, button, input, select, textarea, summary, [role='button']"));
+}
+
 function isCameraWithinBounds(camera: IsoCamera | null, map: PharosVilleWorldModel["map"], viewport: ScreenPoint) {
   if (!camera || viewport.x <= 0 || viewport.y <= 0) return false;
   const clamped = clampCameraToMap(camera, { map, viewport });
@@ -300,15 +468,79 @@ function isCameraWithinBounds(camera: IsoCamera | null, map: PharosVilleWorldMod
   );
 }
 
-function updateDebugMotion(input: { frameCount: number; reducedMotion: boolean }) {
+type CompactShipMotionSample = {
+  id: string;
+  state: ShipMotionSample["state"];
+  x: number;
+  y: number;
+  zone: ShipMotionSample["zone"];
+};
+
+type PharosVilleDebugState = {
+  camera: IsoCamera | null;
+  cameraWithinBounds: boolean;
+  assetsLoaded: boolean;
+  canvasBudget: ReturnType<typeof resolveCanvasBudget> | null;
+  canvasSize: ScreenPoint;
+  animationFramePending: boolean;
+  motionFrameCount: number;
+  reducedMotion: boolean;
+  selectedDetailAnchor: DetailAnchor | null;
+  selectedDetailId: string | null;
+  shipMotionSamples: CompactShipMotionSample[];
+  targets: readonly HitTarget[];
+  timeSeconds: number;
+};
+
+function collectShipMotionSamples(input: {
+  motionPlan: ReturnType<typeof buildMotionPlan>;
+  reducedMotion: boolean;
+  timeSeconds: number;
+  world: PharosVilleWorldModel;
+}) {
+  const samples = new Map<string, ShipMotionSample>();
+  for (const ship of input.world.ships) {
+    samples.set(ship.id, resolveShipMotionSample({
+      plan: input.motionPlan,
+      reducedMotion: input.reducedMotion,
+      ship,
+      timeSeconds: input.timeSeconds,
+    }));
+  }
+  return samples;
+}
+
+function compactShipMotionSamples(samples: ReadonlyMap<string, ShipMotionSample>): CompactShipMotionSample[] {
+  return Array.from(samples.values(), (sample) => ({
+    id: sample.shipId,
+    state: sample.state,
+    x: sample.tile.x,
+    y: sample.tile.y,
+    zone: sample.zone,
+  }));
+}
+
+function updateDebugFrame(input: {
+  animationFramePending: boolean;
+  frameCount: number;
+  frameState: {
+    samples: ReadonlyMap<string, ShipMotionSample>;
+    targets: readonly HitTarget[];
+    timeSeconds: number;
+  };
+  reducedMotion: boolean;
+}) {
   if (process.env.NODE_ENV === "production" && window.location.hostname !== "localhost") return;
   const debugWindow = window as typeof window & {
-    __pharosVilleDebug?: {
-      motionFrameCount?: number;
-      reducedMotion?: boolean;
-    };
+    __pharosVilleDebug?: Partial<PharosVilleDebugState>;
   };
   if (!debugWindow.__pharosVilleDebug) return;
-  debugWindow.__pharosVilleDebug.motionFrameCount = input.frameCount;
-  debugWindow.__pharosVilleDebug.reducedMotion = input.reducedMotion;
+  Object.assign(debugWindow.__pharosVilleDebug, {
+    animationFramePending: input.animationFramePending,
+    motionFrameCount: input.frameCount,
+    reducedMotion: input.reducedMotion,
+    shipMotionSamples: compactShipMotionSamples(input.frameState.samples),
+    targets: input.frameState.targets,
+    timeSeconds: input.frameState.timeSeconds,
+  });
 }

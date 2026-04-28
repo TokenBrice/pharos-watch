@@ -1,5 +1,6 @@
 import type { IsoCamera, ScreenPoint } from "../systems/projection";
 import { tileToScreen } from "../systems/projection";
+import type { ShipMotionSample } from "../systems/motion";
 import type { PharosVilleWorld } from "../systems/world-types";
 import type { PharosVilleAssetManager, LoadedPharosVilleAsset } from "./asset-manager";
 
@@ -81,8 +82,8 @@ function assetTargetRect(input: {
 
 function targetPriority(entity: SelectableEntity, selectedDetailId: string | null, hoveredDetailId: string | null): number {
   let priority = 0;
-  if (entity.detailId === selectedDetailId) priority += 1000;
-  if (entity.detailId === hoveredDetailId) priority += 800;
+  if (entity.detailId === selectedDetailId) priority += 32;
+  if (entity.detailId === hoveredDetailId) priority += 24;
   if (entity.kind === "ship") priority += 500;
   if (entity.kind === "lighthouse") priority += 450;
   if (entity.kind === "dock") priority += 350;
@@ -96,6 +97,7 @@ export function collectHitTargets(input: {
   camera: IsoCamera;
   hoveredDetailId?: string | null;
   selectedDetailId?: string | null;
+  shipMotionSamples?: ReadonlyMap<string, ShipMotionSample>;
   world: PharosVilleWorld;
 }): HitTarget[] {
   const entities: SelectableEntity[] = [
@@ -107,7 +109,10 @@ export function collectHitTargets(input: {
   ];
 
   return entities.map((entity) => {
-    const point = tileToScreen(entity.tile, input.camera);
+    const tile = entity.kind === "ship"
+      ? input.shipMotionSamples?.get(entity.id)?.tile ?? entity.tile
+      : entity.tile;
+    const point = tileToScreen(tile, input.camera);
     const assetId = assetIdForEntity(entity);
     const asset = assetId ? input.assets?.get(assetId) ?? null : null;
     const size = targetSize(entity);
