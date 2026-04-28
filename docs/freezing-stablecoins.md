@@ -30,7 +30,8 @@ The script prints two artifacts:
 ### 2. Apply the JSON edits
 
 - Append the snapshot entry to `frozen-snapshots.json`.
-- In the coin's source file (`shared/data/stablecoins/usd-major.json`, `shared/data/stablecoins/coins/<id>.json`, or wherever it lives), set `status: "frozen"`, add `frozenAt: "YYYY-MM-DD"`, and add the `obituary` block. Replace the placeholder strings (`causeOfDeath`, `epitaph`, `obituary`, `sourceUrl`, `sourceLabel`) with finalized copy.
+- In the coin's per-coin source file (`shared/data/stablecoins/coins/<id>.json`), set `status: "frozen"`, add `frozenAt: "YYYY-MM-DD"`, and add the `obituary` block. Replace the placeholder strings (`causeOfDeath`, `epitaph`, `obituary`, `sourceUrl`, `sourceLabel`) with finalized copy.
+- Regenerate `shared/data/stablecoins/coins.generated.json` with `tsx scripts/generate-stablecoin-per-coin-asset.ts`. Do not edit the generated aggregate or legacy category shells by hand.
 
 The schema enforces the invariant: `frozenAt` is required when `status === "frozen"`, and `obituary` is only allowed when `status === "frozen"`.
 
@@ -61,6 +62,8 @@ cp public/logos/<llamaId>-<symbol>.png public/logos/cemetery/<symbol-lowercase>.
 ### 4. Validate
 
 ```bash
+tsx scripts/generate-stablecoin-per-coin-asset.ts
+npm run check:stablecoin-data
 npm run check:frozen-invariants
 npm run lint
 npm test -- --run
