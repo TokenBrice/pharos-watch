@@ -25,9 +25,13 @@ function makeShip(index: number, marketCapUsd: number): ShipNode {
     placementEvidence: { reason: "fixture", sourceFields: [], stale: false },
     visual: {
       hull: "treasury-galleon",
+      shipClass: "cefi",
+      classLabel: "CeFi",
       rigging: "issuer-rig",
       pennant: "emerald",
       overlay: "none",
+      sizeTier: "major",
+      sizeLabel: "Major",
       scale: 1,
     },
     change24hUsd: null,

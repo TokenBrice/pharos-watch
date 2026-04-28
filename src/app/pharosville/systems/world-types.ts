@@ -34,11 +34,38 @@ export interface PlacementEvidence {
   stale: boolean;
 }
 
+export type ShipHull =
+  | "treasury-galleon"
+  | "chartered-brigantine"
+  | "dao-schooner"
+  | "crypto-caravel"
+  | "algo-junk";
+
+export type ShipClass =
+  | "cefi"
+  | "cefi-dependent"
+  | "defi"
+  | "legacy-algo"
+  | "unclassified";
+
+export type ShipSizeTier =
+  | "flagship"
+  | "major"
+  | "regional"
+  | "local"
+  | "skiff"
+  | "micro"
+  | "unknown";
+
 export interface ShipVisual {
-  hull: "treasury-galleon" | "crypto-caravel" | "algo-junk";
+  hull: ShipHull;
+  shipClass: ShipClass;
+  classLabel: string;
   rigging: "issuer-rig" | "dependent-rig" | "dao-rig";
   pennant: string;
   overlay: "none" | "yield" | "nav" | "watch";
+  sizeTier: ShipSizeTier;
+  sizeLabel: string;
   scale: number;
 }
 

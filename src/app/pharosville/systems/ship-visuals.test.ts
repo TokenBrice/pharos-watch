@@ -1,23 +1,84 @@
 import { describe, expect, it } from "vitest";
-import { ACTIVE_META_BY_ID } from "@shared/lib/stablecoins";
+import type { BackingType, GovernanceType, PegCurrency, StablecoinMeta } from "@shared/types";
 import { makeAsset } from "../__fixtures__/pharosville-world";
-import { resolveShipVisual } from "./ship-visuals";
+import { resolveShipClass, resolveShipSizeTier, resolveShipVisual } from "./ship-visuals";
+
+function makeMeta(input: {
+  backing?: BackingType;
+  governance?: GovernanceType;
+  navToken?: boolean;
+  pegCurrency?: PegCurrency;
+  yieldBearing?: boolean;
+}): StablecoinMeta {
+  return {
+    flags: {
+      backing: input.backing ?? "rwa-backed",
+      governance: input.governance,
+      navToken: input.navToken ?? false,
+      pegCurrency: input.pegCurrency ?? "USD",
+      rwa: input.backing !== "crypto-backed",
+      yieldBearing: input.yieldBearing ?? false,
+    },
+  } as StablecoinMeta;
+}
 
 describe("resolveShipVisual", () => {
-  it("uses separate channels for backing, governance, peg, overlay, and scale", () => {
-    const meta = ACTIVE_META_BY_ID.get("susde-ethena");
-    expect(meta).toBeDefined();
+  it("uses governance class for base ship models", () => {
+    expect(resolveShipClass(makeMeta({ governance: "centralized" }))).toMatchObject({
+      hull: "treasury-galleon",
+      label: "CeFi",
+      shipClass: "cefi",
+    });
+    expect(resolveShipClass(makeMeta({ governance: "centralized-dependent" }))).toMatchObject({
+      hull: "chartered-brigantine",
+      label: "CeFi-Dep",
+      shipClass: "cefi-dependent",
+    });
+    expect(resolveShipClass(makeMeta({ governance: "decentralized" }))).toMatchObject({
+      hull: "dao-schooner",
+      label: "DeFi",
+      shipClass: "defi",
+    });
+  });
 
+  it("keeps algorithmic backing on the defensive legacy fallback", () => {
+    expect(resolveShipClass(makeMeta({ backing: "algorithmic", governance: "centralized" }))).toMatchObject({
+      hull: "algo-junk",
+      label: "Legacy algorithmic",
+      shipClass: "legacy-algo",
+    });
+  });
+
+  it("maps market caps to compressed size tiers", () => {
+    expect(resolveShipSizeTier(20_000_000_000)).toEqual({ label: "Flagship", scale: 1.18, tier: "flagship" });
+    expect(resolveShipSizeTier(2_000_000_000)).toEqual({ label: "Major", scale: 1.06, tier: "major" });
+    expect(resolveShipSizeTier(200_000_000)).toEqual({ label: "Regional", scale: 0.96, tier: "regional" });
+    expect(resolveShipSizeTier(20_000_000)).toEqual({ label: "Local", scale: 0.86, tier: "local" });
+    expect(resolveShipSizeTier(2_000_000)).toEqual({ label: "Skiff", scale: 0.78, tier: "skiff" });
+    expect(resolveShipSizeTier(500_000)).toEqual({ label: "Micro", scale: 0.72, tier: "micro" });
+    expect(resolveShipSizeTier(0)).toEqual({ label: "Unknown", scale: 0.72, tier: "unknown" });
+  });
+
+  it("preserves peg, overlay, and compressed scale channels", () => {
+    const meta = makeMeta({
+      backing: "crypto-backed",
+      governance: "centralized-dependent",
+      navToken: true,
+    });
     const visual = resolveShipVisual(makeAsset({
       id: "susde-ethena",
       symbol: "sUSDe",
       circulating: { peggedUSD: 11_000_000_000 },
-    }), meta!, null);
+    }), meta, null);
 
-    expect(visual.hull).toBe("crypto-caravel");
+    expect(visual.hull).toBe("chartered-brigantine");
+    expect(visual.shipClass).toBe("cefi-dependent");
+    expect(visual.classLabel).toBe("CeFi-Dep");
     expect(visual.rigging).toBe("dependent-rig");
     expect(visual.pennant).toBe("emerald");
     expect(visual.overlay).toBe("nav");
-    expect(visual.scale).toBe(1.25);
+    expect(visual.sizeTier).toBe("flagship");
+    expect(visual.sizeLabel).toBe("Flagship");
+    expect(visual.scale).toBe(1.18);
   });
 });

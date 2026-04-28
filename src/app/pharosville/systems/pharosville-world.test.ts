@@ -35,6 +35,10 @@ describe("buildPharosVilleWorld", () => {
     expect(world.ships.every((ship) => ["water", "deep-water"].includes(tileKindAt(ship.tile.x, ship.tile.y)))).toBe(true);
     expect(new Set(world.ships.map((ship) => `${ship.tile.x}.${ship.tile.y}`)).size).toBe(world.ships.length);
     expect(world.ships.find((ship) => ship.id === "usdt-tether")?.logoSrc).toBe("/logos/1-usdt.svg");
+    expect(world.detailIndex["ship.usdt-tether"]?.facts).toEqual(expect.arrayContaining([
+      { label: "Ship class", value: "CeFi" },
+      { label: "Size tier", value: "Flagship" },
+    ]));
     expect(world.graves).toHaveLength(3);
     expect(world.graves[0]?.logoSrc).toBe("/logos/cemetery/nubits.png");
     expect(world.detailIndex["lighthouse"]).toBeDefined();

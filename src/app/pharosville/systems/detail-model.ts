@@ -2,6 +2,10 @@ import type { DetailModel, DockNode, GraveNode, LighthouseNode, ShipClusterNode,
 
 const usd = new Intl.NumberFormat("en-US", { maximumFractionDigits: 0, style: "currency", currency: "USD" });
 
+function marketCapLabel(value: number): string {
+  return Number.isFinite(value) && value > 0 ? usd.format(value) : "Unavailable";
+}
+
 export function detailForLighthouse(node: LighthouseNode): DetailModel {
   return {
     id: node.detailId,
@@ -38,7 +42,9 @@ export function detailForShip(node: ShipNode): DetailModel {
     title: node.label,
     summary: node.placementEvidence.reason,
     facts: [
-      { label: "Market cap", value: usd.format(node.marketCapUsd) },
+      { label: "Market cap", value: marketCapLabel(node.marketCapUsd) },
+      { label: "Ship class", value: node.visual.classLabel },
+      { label: "Size tier", value: node.visual.sizeLabel },
       { label: "Risk placement", value: node.riskPlacement },
       { label: "Evidence", value: node.placementEvidence.sourceFields.join(", ") },
     ],

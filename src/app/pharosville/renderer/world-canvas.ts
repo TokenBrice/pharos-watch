@@ -22,6 +22,8 @@ const BUILDINGS = [
 
 const SHIP_COLORS = {
   "treasury-galleon": "#8a4f2b",
+  "chartered-brigantine": "#735233",
+  "dao-schooner": "#35606c",
   "crypto-caravel": "#58433a",
   "algo-junk": "#774734",
 };
