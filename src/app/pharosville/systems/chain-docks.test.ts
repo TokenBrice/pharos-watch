@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { fixtureChains, makeChain } from "../__fixtures__/pharosville-world";
 import { buildChainDocks } from "./chain-docks";
+import { DOCK_TILES, isLandTileKind, isWaterTileKind, tileKindAt } from "./world-layout";
 
 describe("buildChainDocks", () => {
   it("sizes docks from chain totalUsd and keeps concentration separate", () => {
@@ -13,6 +14,16 @@ describe("buildChainDocks", () => {
     expect(docks[0]?.size).toBeGreaterThanOrEqual(7);
     expect(docks[1]?.size).toBeGreaterThanOrEqual(6);
     expect(docks[0]?.assetId).toBe("dock.grand-quay");
+  });
+
+  it("anchors rendered docks on land-adjacent harbor water", () => {
+    const docks = buildChainDocks(fixtureChains);
+
+    expect(docks.map((dock) => dock.tile)).toEqual(DOCK_TILES.slice(0, docks.length));
+    expect(docks.every((dock) => isLandTileKind(tileKindAt(dock.tile.x, dock.tile.y)))).toBe(true);
+    expect(docks.every((dock) => cardinalNeighbors(dock.tile).some((neighbor) => (
+      isWaterTileKind(tileKindAt(neighbor.x, neighbor.y))
+    )))).toBe(true);
   });
 
   it("keeps billion-dollar hubs large even when their global share is modest", () => {
@@ -62,3 +73,12 @@ describe("buildChainDocks", () => {
     expect(docks[0]?.harboredStablecoins.map((coin) => coin.symbol)).toEqual(["A0", "B0"]);
   });
 });
+
+function cardinalNeighbors(tile: { x: number; y: number }): { x: number; y: number }[] {
+  return [
+    { x: tile.x + 1, y: tile.y },
+    { x: tile.x - 1, y: tile.y },
+    { x: tile.x, y: tile.y + 1 },
+    { x: tile.x, y: tile.y - 1 },
+  ];
+}

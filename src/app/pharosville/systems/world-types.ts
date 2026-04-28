@@ -4,10 +4,22 @@ import type { ReportCard, StablecoinData, StablecoinMeta } from "@shared/types";
 
 export type TileKind = "deep-water" | "water" | "shore" | "land" | "road";
 
+export type TerrainKind =
+  | TileKind
+  | "harbor-water"
+  | "storm-water"
+  | "fog-water"
+  | "beach"
+  | "grass"
+  | "rock"
+  | "cliff"
+  | "hill";
+
 export interface PharosVilleTile {
   x: number;
   y: number;
   kind: TileKind;
+  terrain?: TerrainKind;
 }
 
 export interface PharosVilleMap {

@@ -23,7 +23,7 @@ import {
   detailForLighthouse,
   detailForShip,
 } from "./detail-model";
-import { buildPharosVilleMap, graveNodesFromEntries, nearestAvailableWaterTile, nearestWaterTile, REGION_TILES, stableOffset } from "./world-layout";
+import { buildPharosVilleMap, graveNodesFromEntries, isWaterTileKind, LIGHTHOUSE_TILE, nearestAvailableWaterTile, nearestWaterTile, REGION_TILES, stableOffset, tileKindAt } from "./world-layout";
 import { getRecentChange } from "./recent-change";
 import { resolveShipRiskPlacement } from "./risk-placement";
 import { resolveShipVisual } from "./ship-visuals";
@@ -42,13 +42,71 @@ import type {
 } from "./world-types";
 
 const SHIP_SCATTER_RADIUS: Record<ShipRiskPlacement, { x: number; y: number }> = {
-  "safe-harbor": { x: 15, y: 9 },
-  "breakwater-edge": { x: 10, y: 7 },
-  "harbor-mouth-watch": { x: 11, y: 8 },
-  "outer-rough-water": { x: 9, y: 10 },
-  "storm-shelf": { x: 8, y: 8 },
-  "data-fog": { x: 12, y: 7 },
-  "ledger-mooring": { x: 9, y: 9 },
+  "safe-harbor": { x: 5, y: 4 },
+  "breakwater-edge": { x: 4, y: 3 },
+  "harbor-mouth-watch": { x: 4, y: 3 },
+  "outer-rough-water": { x: 5, y: 5 },
+  "storm-shelf": { x: 5, y: 5 },
+  "data-fog": { x: 5, y: 4 },
+  "ledger-mooring": { x: 4, y: 3 },
+};
+
+const SHIP_WATER_ANCHORS: Record<ShipRiskPlacement, readonly { x: number; y: number }[]> = {
+  "safe-harbor": [
+    { x: 16, y: 27 },
+    { x: 22, y: 20 },
+    { x: 31, y: 19 },
+    { x: 43, y: 21 },
+    { x: 49, y: 31 },
+    { x: 47, y: 36 },
+    { x: 40, y: 45 },
+    { x: 31, y: 45 },
+    { x: 20, y: 45 },
+    { x: 18, y: 36 },
+  ],
+  "breakwater-edge": [
+    { x: 21, y: 22 },
+    { x: 27, y: 20 },
+    { x: 39, y: 19 },
+    { x: 46, y: 24 },
+    { x: 49, y: 38 },
+    { x: 40, y: 45 },
+    { x: 26, y: 45 },
+  ],
+  "harbor-mouth-watch": [
+    { x: 43, y: 21 },
+    { x: 49, y: 24 },
+    { x: 49, y: 31 },
+    { x: 47, y: 36 },
+    { x: 44, y: 43 },
+    { x: 36, y: 45 },
+  ],
+  "outer-rough-water": [
+    { x: 50, y: 44 },
+    { x: 55, y: 36 },
+    { x: 57, y: 48 },
+    { x: 48, y: 55 },
+    { x: 36, y: 55 },
+  ],
+  "storm-shelf": [
+    { x: 54, y: 52 },
+    { x: 58, y: 44 },
+    { x: 57, y: 57 },
+    { x: 46, y: 56 },
+  ],
+  "data-fog": [
+    { x: 10, y: 16 },
+    { x: 8, y: 24 },
+    { x: 14, y: 20 },
+    { x: 7, y: 12 },
+    { x: 18, y: 18 },
+  ],
+  "ledger-mooring": [
+    { x: 36, y: 43 },
+    { x: 32, y: 46 },
+    { x: 40, y: 45 },
+    { x: 29, y: 46 },
+  ],
 };
 
 export interface PharosVilleInputs {
@@ -74,7 +132,7 @@ function buildLighthouse(stability: StabilityIndexResponse | null | undefined): 
     id: "lighthouse",
     kind: "lighthouse",
     label: "Pharos lighthouse",
-    tile: { x: 32, y: 31 },
+    tile: { ...LIGHTHOUSE_TILE },
     psiBand: band,
     score: current?.score ?? null,
     color: isConditionBand(band) ? PSI_HEX_COLORS[band] : "#8aa0a6",
@@ -121,15 +179,24 @@ function normalizeDockVisitWeights(visits: ShipDockVisit[]): ShipDockVisit[] {
   }));
 }
 
+function shipPlacementAnchor(asset: StablecoinData, placement: ShipNode["riskPlacement"]): { x: number; y: number } {
+  const anchors = SHIP_WATER_ANCHORS[placement];
+  return anchors[stableHash(`${asset.id}.${placement}.anchor`) % anchors.length] ?? REGION_TILES[placement];
+}
+
 function shipTile(asset: StablecoinData, placement: ShipNode["riskPlacement"]): { x: number; y: number } {
-  const base = REGION_TILES[placement];
+  const base = shipPlacementAnchor(asset, placement);
   const radius = SHIP_SCATTER_RADIUS[placement];
-  const angle = stableUnit(`${asset.id}.${placement}.angle`) * Math.PI * 2;
-  const distance = 0.28 + Math.sqrt(stableUnit(`${asset.id}.${placement}.distance`)) * 0.72;
-  return nearestWaterTile({
-    x: Math.round(clamp(base.x + Math.cos(angle) * radius.x * distance + stableOffset(`${asset.id}.risk.x`, 2) * 0.35, 0, 63)),
-    y: Math.round(clamp(base.y + Math.sin(angle) * radius.y * distance + stableOffset(`${asset.id}.risk.y`, 2) * 0.35, 0, 63)),
-  }, 18);
+  for (let attempt = 0; attempt < 12; attempt += 1) {
+    const angle = stableUnit(`${asset.id}.${placement}.angle.${attempt}`) * Math.PI * 2;
+    const distance = 0.25 + Math.sqrt(stableUnit(`${asset.id}.${placement}.distance.${attempt}`)) * 0.75;
+    const tile = {
+      x: Math.round(clamp(base.x + Math.cos(angle) * radius.x * distance + stableOffset(`${asset.id}.risk.x.${attempt}`, 1) * 0.3, 0, 63)),
+      y: Math.round(clamp(base.y + Math.sin(angle) * radius.y * distance + stableOffset(`${asset.id}.risk.y.${attempt}`, 1) * 0.3, 0, 63)),
+    };
+    if (isWaterTileKind(tileKindAt(tile.x, tile.y))) return tile;
+  }
+  return nearestWaterTile(base, 18);
 }
 
 function buildShips(inputs: PharosVilleInputs, docks: readonly DockNode[]): ShipNode[] {
@@ -182,17 +249,22 @@ function buildShips(inputs: PharosVilleInputs, docks: readonly DockNode[]): Ship
 }
 
 function dockMooringTile(dock: DockNode, index: number, occupied: ReadonlySet<string>): { x: number; y: number } {
-  const outwardX = dock.tile.x < 31.5 ? -1 : dock.tile.x > 31.5 ? 1 : 0;
-  const outwardY = dock.tile.y < 31.5 ? -1 : dock.tile.y > 31.5 ? 1 : 0;
-  const fanX = outwardY === 0 ? 0 : -outwardY;
-  const fanY = outwardX === 0 ? 0 : outwardX;
-  const depth = 2 + Math.floor(index / 5);
-  const lane = (index % 5) - 2;
+  const outward = dockOutwardVector(dock);
+  const fan = { x: -outward.y, y: outward.x };
+  const depth = 2 + Math.floor(index / 7);
+  const lane = (index % 7) - 3;
 
   return nearestAvailableWaterTile({
-    x: Math.max(0, Math.min(63, dock.tile.x + outwardX * depth + fanX * lane)),
-    y: Math.max(0, Math.min(63, dock.tile.y + outwardY * depth + fanY * lane)),
+    x: Math.max(0, Math.min(63, dock.tile.x + outward.x * depth + fan.x * lane)),
+    y: Math.max(0, Math.min(63, dock.tile.y + outward.y * depth + fan.y * lane)),
   }, occupied);
+}
+
+function dockOutwardVector(dock: DockNode): { x: -1 | 0 | 1; y: -1 | 0 | 1 } {
+  const dx = dock.tile.x - 31.5;
+  const dy = dock.tile.y - 31.5;
+  if (Math.abs(dx) >= Math.abs(dy)) return { x: dx < 0 ? -1 : 1, y: 0 };
+  return { x: 0, y: dy < 0 ? -1 : 1 };
 }
 
 function assignDockVisits(ships: readonly ShipNode[], docks: readonly DockNode[]): ShipNode[] {
@@ -252,9 +324,13 @@ function buildDetailIndex(world: Omit<PharosVilleWorld, "detailIndex" | "visualC
 }
 
 function stableUnit(id: string) {
+  return stableHash(id) / 0xffffffff;
+}
+
+function stableHash(id: string) {
   let hash = 0;
   for (let index = 0; index < id.length; index += 1) hash = (hash * 31 + id.charCodeAt(index)) >>> 0;
-  return hash / 0xffffffff;
+  return hash;
 }
 
 function clamp(value: number, min: number, max: number) {

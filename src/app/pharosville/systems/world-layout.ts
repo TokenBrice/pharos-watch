@@ -1,30 +1,31 @@
-import type { GraveNode, PharosVilleMap, PharosVilleTile, ShipRiskPlacement, TileKind } from "./world-types";
+import type { GraveNode, PharosVilleMap, PharosVilleTile, ShipRiskPlacement, TerrainKind, TileKind } from "./world-types";
 import type { CemeteryEntry } from "@shared/lib/cemetery-merged";
 
 export const PHAROSVILLE_MAP_WIDTH = 64;
 export const PHAROSVILLE_MAP_HEIGHT = 64;
+export const LIGHTHOUSE_TILE = { x: 44, y: 18 } as const;
 
 export const REGION_TILES: Record<ShipRiskPlacement, { x: number; y: number }> = {
-  "safe-harbor": { x: 32, y: 36 },
-  "breakwater-edge": { x: 24, y: 22 },
-  "harbor-mouth-watch": { x: 44, y: 24 },
+  "safe-harbor": { x: 28, y: 41 },
+  "breakwater-edge": { x: 23, y: 47 },
+  "harbor-mouth-watch": { x: 36, y: 47 },
   "outer-rough-water": { x: 50, y: 44 },
   "storm-shelf": { x: 54, y: 52 },
   "data-fog": { x: 10, y: 16 },
-  "ledger-mooring": { x: 36, y: 42 },
+  "ledger-mooring": { x: 32, y: 48 },
 };
 
 export const DOCK_TILES = [
-  { x: 18, y: 31 },
-  { x: 24, y: 22 },
-  { x: 39, y: 22 },
-  { x: 45, y: 31 },
-  { x: 42, y: 39 },
-  { x: 32, y: 43 },
+  { x: 19, y: 39 },
+  { x: 23, y: 35 },
+  { x: 35, y: 39 },
+  { x: 34, y: 44 },
+  { x: 22, y: 46 },
+  { x: 33, y: 46 },
 ];
 
-export const CEMETERY_CENTER = { x: 21.85, y: 41.75 } as const;
-export const CEMETERY_RADIUS = { x: 4.1, y: 2.95 } as const;
+export const CEMETERY_CENTER = { x: 15.8, y: 47.6 } as const;
+export const CEMETERY_RADIUS = { x: 5.1, y: 3.65 } as const;
 
 type GraveMarker = GraveNode["visual"]["marker"];
 
@@ -32,22 +33,149 @@ function ellipseValue(x: number, y: number, cx: number, cy: number, rx: number, 
   return ((x - cx) / rx) ** 2 + ((y - cy) / ry) ** 2;
 }
 
-export function tileKindAt(x: number, y: number): TileKind {
-  const main = ellipseValue(x, y, 31.5, 31.5, 13.5, 10.6);
-  const cemetery = ellipseValue(x, y, CEMETERY_CENTER.x, CEMETERY_CENTER.y, CEMETERY_RADIUS.x, CEMETERY_RADIUS.y);
+const WATER_TERRAIN_KINDS = new Set<TerrainKind>([
+  "deep-water",
+  "water",
+  "harbor-water",
+  "storm-water",
+  "fog-water",
+]);
 
-  if (main < 1 || cemetery < 1) {
-    if (main < 0.78 && (Math.abs(x - y) < 2 || Math.abs(x + y - 62) < 2)) return "road";
-    return "land";
+const ELEVATED_TERRAIN_KINDS = new Set<TerrainKind>(["hill", "rock", "cliff"]);
+
+export function isWaterTileKind(kind: TileKind | TerrainKind): boolean {
+  return WATER_TERRAIN_KINDS.has(kind as TerrainKind);
+}
+
+export function isLandTileKind(kind: TileKind | TerrainKind): boolean {
+  return !isWaterTileKind(kind);
+}
+
+export function isElevatedTileKind(kind: TileKind | TerrainKind): boolean {
+  return ELEVATED_TERRAIN_KINDS.has(kind as TerrainKind);
+}
+
+export function isShoreTileKind(kind: TileKind | TerrainKind): boolean {
+  return kind === "shore" || kind === "beach";
+}
+
+export function isRoadTileKind(kind: TileKind | TerrainKind): boolean {
+  return kind === "road";
+}
+
+export function tileKindAt(x: number, y: number): TileKind {
+  return canonicalTileKind(terrainKindAt(x, y));
+}
+
+export function terrainKindAt(x: number, y: number): TerrainKind {
+  const island = islandValue(x, y);
+  const harbor = harborCoveValue(x, y);
+  const approach = harborApproachValue(x, y);
+  const headland = lighthouseHeadlandValue(x, y);
+  const cemetery = cemeteryValue(x, y);
+  const nearIslandEdge = island > 0.82;
+  const harborWater = island < 1 && ((harbor < 0.9 && y > 34 && x < 37) || (approach < 0.94 && y > 42));
+
+  if (isOutOfBounds(x, y) || island >= 1 || harborWater) {
+    if (harborWater) return "harbor-water";
+    if (isStormShelf(x, y)) return "storm-water";
+    if (isDataFog(x, y)) return "fog-water";
+    if (x < 8 || y < 8 || x > 55 || y > 55) return "deep-water";
+    return "water";
   }
-  if (main < 1.18 || cemetery < 1.18) return "shore";
-  if (x < 8 || y < 8 || x > 55 || y > 55) return "deep-water";
-  return "water";
+
+  if (x === LIGHTHOUSE_TILE.x && y === LIGHTHOUSE_TILE.y) return "hill";
+  if (isRoadTile(x, y) && cemetery > 1.08) return "road";
+  if ((harbor < 1.23 && y > 33 && x < 38) || (approach < 1.2 && y > 42)) return "beach";
+  if (headland < 1.04) {
+    if (headland > 0.78 || x > LIGHTHOUSE_TILE.x + 3 || y < LIGHTHOUSE_TILE.y - 2) return "cliff";
+    if (headland > 0.48) return "rock";
+    return "hill";
+  }
+  if (nearIslandEdge) return "shore";
+  if (cemetery < 1) return "grass";
+  if (ellipseValue(x, y, 38.2, 27.8, 8.7, 6.5) < 0.52) return "rock";
+  return "grass";
+}
+
+function canonicalTileKind(kind: TerrainKind): TileKind {
+  if (kind === "deep-water") return "deep-water";
+  if (isWaterTileKind(kind)) return "water";
+  if (kind === "road") return "road";
+  if (kind === "shore" || kind === "beach" || kind === "cliff") return "shore";
+  return "land";
+}
+
+function islandValue(x: number, y: number): number {
+  return Math.min(
+    ellipseValue(x, y, 31.5, 32.2, 18.3, 13.1),
+    ellipseValue(x, y, 42.3, 21.8, 8.2, 7.0),
+    ellipseValue(x, y, 43.2, 28.7, 7.4, 7.8),
+    ellipseValue(x, y, 28.8, 43.8, 12.8, 6.6),
+    ellipseValue(x, y, CEMETERY_CENTER.x, CEMETERY_CENTER.y, CEMETERY_RADIUS.x + 1.25, CEMETERY_RADIUS.y + 0.9),
+  );
+}
+
+function lighthouseHeadlandValue(x: number, y: number): number {
+  return Math.min(
+    ellipseValue(x, y, 43.5, 20.2, 6.7, 5.6),
+    ellipseValue(x, y, 45.4, 18.8, 4.2, 3.8),
+  );
+}
+
+function harborCoveValue(x: number, y: number): number {
+  return ellipseValue(x, y, 27.0, 40.0, 8.0, 5.5);
+}
+
+function harborApproachValue(x: number, y: number): number {
+  return ellipseValue(x, y, 28.0, 51.0, 5.2, 9.0);
+}
+
+function isOutOfBounds(x: number, y: number): boolean {
+  return x < 0 || y < 0 || x >= PHAROSVILLE_MAP_WIDTH || y >= PHAROSVILLE_MAP_HEIGHT;
+}
+
+function isStormShelf(x: number, y: number): boolean {
+  return ellipseValue(x, y, 53.2, 51.6, 11.0, 9.5) < 1.05;
+}
+
+function isDataFog(x: number, y: number): boolean {
+  return ellipseValue(x, y, 10.5, 16.4, 10.8, 7.2) < 1;
+}
+
+function isRoadTile(x: number, y: number): boolean {
+  const path = [
+    { x: 19, y: 39 },
+    { x: 21, y: 35 },
+    { x: 30, y: 33 },
+    { x: 37, y: 29 },
+    { x: 41, y: 23 },
+    { x: 43, y: 19 },
+  ];
+  return path.some((point, index) => {
+    const next = path[index + 1];
+    if (!next) return false;
+    return distanceToSegment(x, y, point, next) <= 0.62;
+  });
+}
+
+function distanceToSegment(
+  x: number,
+  y: number,
+  start: { x: number; y: number },
+  end: { x: number; y: number },
+): number {
+  const dx = end.x - start.x;
+  const dy = end.y - start.y;
+  const lengthSquared = dx * dx + dy * dy;
+  if (lengthSquared === 0) return Math.hypot(x - start.x, y - start.y);
+  const t = clamp(((x - start.x) * dx + (y - start.y) * dy) / lengthSquared, 0, 1);
+  return Math.hypot(x - (start.x + dx * t), y - (start.y + dy * t));
 }
 
 export function nearestWaterTile(tile: { x: number; y: number }, maxRadius = 10): { x: number; y: number } {
   const initialKind = tileKindAt(tile.x, tile.y);
-  if (initialKind === "water" || initialKind === "deep-water") return tile;
+  if (isWaterTileKind(initialKind)) return tile;
 
   let bestTile: { x: number; y: number } | null = null;
   let bestDistance = Number.POSITIVE_INFINITY;
@@ -58,7 +186,7 @@ export function nearestWaterTile(tile: { x: number; y: number }, maxRadius = 10)
         const x = Math.max(0, Math.min(PHAROSVILLE_MAP_WIDTH - 1, tile.x + dx));
         const y = Math.max(0, Math.min(PHAROSVILLE_MAP_HEIGHT - 1, tile.y + dy));
         const kind = tileKindAt(x, y);
-        if (kind !== "water" && kind !== "deep-water") continue;
+        if (!isWaterTileKind(kind)) continue;
         const distance = Math.abs(dx) + Math.abs(dy);
         if (distance < bestDistance) {
           bestTile = { x, y };
@@ -79,7 +207,7 @@ export function nearestAvailableWaterTile(
 ): { x: number; y: number } {
   const initialKind = tileKindAt(tile.x, tile.y);
   const initialKey = `${tile.x}.${tile.y}`;
-  if ((initialKind === "water" || initialKind === "deep-water") && !occupied.has(initialKey)) return tile;
+  if (isWaterTileKind(initialKind) && !occupied.has(initialKey)) return tile;
 
   let bestTile: { x: number; y: number } | null = null;
   let bestDistance = Number.POSITIVE_INFINITY;
@@ -91,7 +219,7 @@ export function nearestAvailableWaterTile(
         const y = Math.max(0, Math.min(PHAROSVILLE_MAP_HEIGHT - 1, tile.y + dy));
         if (occupied.has(`${x}.${y}`)) continue;
         const kind = tileKindAt(x, y);
-        if (kind !== "water" && kind !== "deep-water") continue;
+        if (!isWaterTileKind(kind)) continue;
         const distance = Math.abs(dx) + Math.abs(dy);
         if (distance < bestDistance) {
           bestTile = { x, y };
@@ -110,9 +238,10 @@ export function buildPharosVilleMap(): PharosVilleMap {
   let waterTiles = 0;
   for (let y = 0; y < PHAROSVILLE_MAP_HEIGHT; y += 1) {
     for (let x = 0; x < PHAROSVILLE_MAP_WIDTH; x += 1) {
-      const kind = tileKindAt(x, y);
-      if (kind === "water" || kind === "deep-water") waterTiles += 1;
-      tiles.push({ x, y, kind });
+      const terrain = terrainKindAt(x, y);
+      const kind = canonicalTileKind(terrain);
+      if (isWaterTileKind(kind)) waterTiles += 1;
+      tiles.push({ x, y, kind, terrain });
     }
   }
   return {
@@ -212,7 +341,7 @@ function cemeteryValue(x: number, y: number) {
 }
 
 function cemeteryReserved(tile: { x: number; y: number }) {
-  const chapel = ellipseValue(tile.x, tile.y, 19.42, 40.28, 0.72, 0.54) < 1;
+  const chapel = ellipseValue(tile.x, tile.y, 13.42, 46.28, 0.72, 0.54) < 1;
   const memorial = ellipseValue(tile.x, tile.y, CEMETERY_CENTER.x, CEMETERY_CENTER.y, 0.67, 0.49) < 1;
   const northPath = Math.abs(tile.x - (CEMETERY_CENTER.x + Math.sin((tile.y - CEMETERY_CENTER.y) * 1.12) * 0.16)) < 0.17
     && tile.y > CEMETERY_CENTER.y - CEMETERY_RADIUS.y * 0.94

@@ -1,18 +1,52 @@
 import type { PharosVilleMotionPlan, ShipMotionSample } from "../systems/motion";
 import { tileToScreen, type IsoCamera, type ScreenPoint } from "../systems/projection";
-import { CEMETERY_CENTER, CEMETERY_RADIUS } from "../systems/world-layout";
-import type { PharosVilleWorld, TileKind } from "../systems/world-types";
+import {
+  CEMETERY_CENTER,
+  CEMETERY_RADIUS,
+  isElevatedTileKind,
+  isShoreTileKind,
+  isWaterTileKind,
+} from "../systems/world-layout";
+import type { PharosVilleWorld, TerrainKind } from "../systems/world-types";
 import type { PharosVilleAssetManager } from "./asset-manager";
 import type { HitTarget } from "./hit-testing";
 import { CAUSE_HEX, type CauseOfDeath } from "@shared/lib/cause-of-death";
 
-const TILE_COLORS: Record<TileKind, string> = {
+const TILE_COLORS: Record<string, string> = {
+  beach: "#c7a66c",
+  cliff: "#5a625d",
   "deep-water": "#071225",
-  water: "#15375a",
-  shore: "#9d7f50",
-  land: "#c5a766",
+  "fog-water": "#24314a",
+  grass: "#617444",
+  "harbor-water": "#1f5f68",
+  hill: "#76814d",
+  land: "#b89155",
   road: "#7a5938",
+  rock: "#6f7369",
+  shore: "#aa8755",
+  "storm-water": "#0b2236",
+  water: "#15375a",
 };
+
+const TERRAIN_TEXTURE = {
+  cliffFace: "rgba(31, 35, 31, 0.54)",
+  foam: "rgba(224, 238, 220, 0.68)",
+  grassDark: "rgba(43, 78, 43, 0.44)",
+  grassLight: "rgba(168, 177, 103, 0.32)",
+  roadLight: "rgba(184, 146, 91, 0.32)",
+  rockLight: "rgba(176, 177, 160, 0.24)",
+  sandLight: "rgba(237, 204, 137, 0.28)",
+  shallow: "rgba(88, 153, 139, 0.22)",
+  waterLine: "rgba(175, 225, 220, 0.28)",
+} as const;
+
+const LIGHTHOUSE_HEADLAND = {
+  cliff: "#4d564e",
+  grass: "#6f7d50",
+  road: "#8e6740",
+  shadow: "rgba(10, 12, 12, 0.42)",
+  stone: "#7b7d70",
+} as const;
 
 const BUILDINGS = [
   [27, 27, "#d6b56b", "#5d3527"],
@@ -20,6 +54,31 @@ const BUILDINGS = [
   [31, 38, "#b9a066", "#474031"],
   [24, 35, "#dcc078", "#74522f"],
   [40, 35, "#d6b56b", "#566139"],
+] as const;
+
+const VILLAGE_LIGHTS = [
+  { x: 26.35, y: 27.75, size: 0.72 },
+  { x: 35.45, y: 30.55, size: 0.74 },
+  { x: 30.75, y: 37.4, size: 0.58 },
+  { x: 39.6, y: 34.7, size: 0.62 },
+  { x: 24.2, y: 34.65, size: 0.56 },
+  { x: 31.7, y: 31.9, size: 0.5 },
+] as const;
+
+const BIRDS = [
+  { anchorX: -2.8, anchorY: -2.1, radiusX: 2.6, radiusY: 1.1, scale: 0.78, speed: 0.34, phase: 0.1 },
+  { anchorX: -1.4, anchorY: -3.3, radiusX: 3.1, radiusY: 1.4, scale: 0.68, speed: 0.27, phase: 1.9 },
+  { anchorX: 1.8, anchorY: -2.7, radiusX: 2.2, radiusY: 0.95, scale: 0.62, speed: 0.31, phase: 3.4 },
+  { anchorX: -18.5, anchorY: -9.2, radiusX: 6.5, radiusY: 1.8, scale: 0.54, speed: 0.18, phase: 0.6 },
+  { anchorX: -27.5, anchorY: 5.4, radiusX: 5.8, radiusY: 1.5, scale: 0.48, speed: 0.21, phase: 2.8 },
+  { anchorX: 9.5, anchorY: -13.5, radiusX: 7.2, radiusY: 2.1, scale: 0.5, speed: 0.16, phase: 4.2 },
+  { anchorX: 16.2, anchorY: 4.2, radiusX: 4.6, radiusY: 1.2, scale: 0.42, speed: 0.24, phase: 5.3 },
+] as const;
+
+const ATMOSPHERE_BANDS = [
+  { alpha: 0.11, rx: 280, ry: 24, tileX: 16, tileY: 13, phase: 0.3 },
+  { alpha: 0.08, rx: 230, ry: 19, tileX: 48, tileY: 11, phase: 2.1 },
+  { alpha: 0.07, rx: 210, ry: 16, tileX: 53, tileY: 39, phase: 4.4 },
 ] as const;
 
 const SHIP_COLORS = {
@@ -77,30 +136,241 @@ export function drawPharosVille(input: DrawPharosVilleInput) {
   ctx.fillRect(0, 0, width, height);
 
   drawTerrain(input);
+  drawAtmosphere(input);
   drawCemeteryGround(input);
+  drawLighthouseHeadland(input);
   drawCemeteryContext(input);
   drawBuildings(input);
   drawDocks(input);
+  drawDecorativeLights(input);
   drawShips(input);
   drawClusters(input);
   drawGraves(input);
   drawCemeteryMist(input);
   drawLighthouse(input);
+  drawBirds(input);
   drawSelection(input);
 }
 
 function drawTerrain({ camera, ctx, motion, world }: DrawPharosVilleInput) {
   for (const tile of world.map.tiles) {
+    const terrain = tile.terrain ?? tile.kind;
+    if (!isWaterTileKind(terrain)) continue;
     const p = tileToScreen(tile, camera);
-    drawDiamond(ctx, p.x, p.y, 32 * camera.zoom, 16 * camera.zoom, TILE_COLORS[tile.kind]);
-    if (tile.kind === "water" && (tile.x + tile.y) % 9 === 0) {
-      const shimmer = motion.reducedMotion
-        ? 0.22
-        : 0.16 + Math.sin(motion.timeSeconds * 1.3 + tile.x * 0.2 + tile.y * 0.15) * 0.05;
-      ctx.fillStyle = `rgba(186, 231, 225, ${Math.max(0.08, shimmer)})`;
-      ctx.fillRect(p.x - 7 * camera.zoom, p.y - 1, 14 * camera.zoom, Math.max(1, camera.zoom));
-    }
+    drawWaterTile(ctx, p.x, p.y, camera.zoom, terrain, tile.x, tile.y, motion);
   }
+
+  for (const tile of world.map.tiles) {
+    const terrain = tile.terrain ?? tile.kind;
+    if (isWaterTileKind(terrain)) continue;
+    const p = tileToScreen(tile, camera);
+    drawLandTile(ctx, p.x, p.y, camera.zoom, terrain, tile.x, tile.y);
+  }
+}
+
+function terrainColor(kind: TerrainKind) {
+  const value = String(kind);
+  const directColor = TILE_COLORS[value];
+  if (directColor) return directColor;
+  if (value.includes("water")) return value.includes("deep") ? "#071225" : "#15375a";
+  if (value.includes("road") || value.includes("stair")) return "#7a5938";
+  if (value.includes("cliff")) return "#5a625d";
+  if (value.includes("rock")) return "#6f7369";
+  if (value.includes("hill")) return "#76814d";
+  if (value.includes("grass")) return "#617444";
+  if (value.includes("beach")) return "#c7a66c";
+  return "#b89155";
+}
+
+function drawWaterTile(
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  zoom: number,
+  kind: TerrainKind,
+  tileX: number,
+  tileY: number,
+  motion: PharosVilleCanvasMotion,
+) {
+  const value = String(kind);
+  const width = 32 * zoom;
+  const height = 16 * zoom;
+  drawDiamond(ctx, x, y, width, height, terrainColor(kind));
+
+  if (value === "harbor-water" || value.includes("harbor")) {
+    drawDiamond(ctx, x, y + 1 * zoom, width * 0.82, height * 0.72, TERRAIN_TEXTURE.shallow);
+  } else if (value === "fog-water" || value.includes("fog")) {
+    drawDiamond(ctx, x, y + 1 * zoom, width * 0.9, height * 0.78, "rgba(197, 208, 206, 0.16)");
+  } else if (value === "storm-water" || value.includes("storm")) {
+    drawDiamond(ctx, x, y + 1 * zoom, width * 0.9, height * 0.78, "rgba(6, 12, 22, 0.24)");
+  } else if (value === "deep-water" || value.includes("deep")) {
+    drawDiamond(ctx, x, y + 1 * zoom, width * 0.86, height * 0.76, "rgba(2, 6, 15, 0.24)");
+  }
+
+  if ((tileX * 13 + tileY * 17) % 5 !== 0) return;
+  const wave = motion.reducedMotion
+    ? 0.2
+    : 0.16 + Math.sin(motion.timeSeconds * 1.25 + tileX * 0.27 + tileY * 0.19) * 0.05;
+  ctx.save();
+  ctx.strokeStyle = `rgba(186, 231, 225, ${Math.max(0.08, wave)})`;
+  ctx.lineWidth = Math.max(1, zoom);
+  ctx.beginPath();
+  ctx.moveTo(x - 9 * zoom, y - 2 * zoom);
+  ctx.lineTo(x + 7 * zoom, y + 2 * zoom);
+  ctx.stroke();
+  if ((tileX + tileY) % 3 === 0) {
+    ctx.strokeStyle = TERRAIN_TEXTURE.waterLine;
+    ctx.beginPath();
+    ctx.moveTo(x - 3 * zoom, y + 4 * zoom);
+    ctx.lineTo(x + 10 * zoom, y + 7 * zoom);
+    ctx.stroke();
+  }
+  ctx.restore();
+}
+
+function drawLandTile(
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  zoom: number,
+  kind: TerrainKind,
+  tileX: number,
+  tileY: number,
+) {
+  const value = String(kind);
+  const width = 32 * zoom;
+  const height = 16 * zoom;
+  drawDiamond(ctx, x, y, width, height, terrainColor(kind));
+
+  if (isElevatedTileKind(kind)) {
+    drawTileLowerFacet(ctx, x, y, width, height, value === "cliff" || value.includes("cliff")
+      ? TERRAIN_TEXTURE.cliffFace
+      : "rgba(54, 63, 45, 0.32)");
+  }
+
+  if (isShoreTileKind(kind)) {
+    drawShoreFoam(ctx, x, y, zoom, tileX, tileY);
+  } else if (value === "road" || value.includes("road") || value.includes("stair")) {
+    drawRoadTexture(ctx, x, y, zoom);
+  } else if (value === "rock" || value === "cliff" || value.includes("rock") || value.includes("cliff")) {
+    drawRockTexture(ctx, x, y, zoom, tileX, tileY);
+  } else if ((tileX * 19 + tileY * 23) % 6 === 0) {
+    drawGrassTexture(ctx, x, y, zoom, tileX, tileY);
+  }
+}
+
+function drawTileLowerFacet(ctx: CanvasRenderingContext2D, x: number, y: number, width: number, height: number, fill: string) {
+  ctx.save();
+  ctx.fillStyle = fill;
+  ctx.beginPath();
+  ctx.moveTo(x - width / 2, y);
+  ctx.lineTo(x, y + height / 2);
+  ctx.lineTo(x + width / 2, y);
+  ctx.lineTo(x, y + height * 0.24);
+  ctx.closePath();
+  ctx.fill();
+  ctx.restore();
+}
+
+function drawShoreFoam(ctx: CanvasRenderingContext2D, x: number, y: number, zoom: number, tileX: number, tileY: number) {
+  ctx.save();
+  ctx.strokeStyle = TERRAIN_TEXTURE.foam;
+  ctx.lineWidth = Math.max(1, zoom);
+  ctx.beginPath();
+  if ((tileX + tileY) % 2 === 0) {
+    ctx.moveTo(x - 12 * zoom, y + 1 * zoom);
+    ctx.lineTo(x - 2 * zoom, y + 6 * zoom);
+  } else {
+    ctx.moveTo(x + 2 * zoom, y + 6 * zoom);
+    ctx.lineTo(x + 12 * zoom, y + 1 * zoom);
+  }
+  ctx.stroke();
+  ctx.strokeStyle = TERRAIN_TEXTURE.sandLight;
+  ctx.beginPath();
+  ctx.moveTo(x - 6 * zoom, y - 2 * zoom);
+  ctx.lineTo(x + 6 * zoom, y + 1 * zoom);
+  ctx.stroke();
+  ctx.restore();
+}
+
+function drawRoadTexture(ctx: CanvasRenderingContext2D, x: number, y: number, zoom: number) {
+  ctx.save();
+  ctx.strokeStyle = TERRAIN_TEXTURE.roadLight;
+  ctx.lineWidth = Math.max(1, zoom);
+  ctx.beginPath();
+  ctx.moveTo(x - 10 * zoom, y - 1 * zoom);
+  ctx.lineTo(x + 10 * zoom, y + 2 * zoom);
+  ctx.stroke();
+  ctx.restore();
+}
+
+function drawRockTexture(ctx: CanvasRenderingContext2D, x: number, y: number, zoom: number, tileX: number, tileY: number) {
+  const offset = ((tileX * 7 + tileY * 11) % 5 - 2) * zoom;
+  ctx.save();
+  ctx.strokeStyle = TERRAIN_TEXTURE.rockLight;
+  ctx.lineWidth = Math.max(1, zoom);
+  ctx.beginPath();
+  ctx.moveTo(x - 7 * zoom + offset, y - 2 * zoom);
+  ctx.lineTo(x - 1 * zoom + offset, y + 1 * zoom);
+  ctx.lineTo(x + 6 * zoom + offset, y - 1 * zoom);
+  ctx.stroke();
+  ctx.restore();
+}
+
+function drawGrassTexture(ctx: CanvasRenderingContext2D, x: number, y: number, zoom: number, tileX: number, tileY: number) {
+  const offset = ((tileX * 5 + tileY * 3) % 7 - 3) * zoom;
+  ctx.save();
+  ctx.fillStyle = TERRAIN_TEXTURE.grassDark;
+  ctx.fillRect(Math.round(x - 2 * zoom + offset), Math.round(y - 1 * zoom), Math.max(1, Math.round(2 * zoom)), Math.max(1, Math.round(3 * zoom)));
+  ctx.fillStyle = TERRAIN_TEXTURE.grassLight;
+  ctx.fillRect(Math.round(x + 2 * zoom + offset), Math.round(y + 1 * zoom), Math.max(1, Math.round(2 * zoom)), Math.max(1, Math.round(2 * zoom)));
+  ctx.restore();
+}
+
+function drawAtmosphere({ camera, ctx, motion }: DrawPharosVilleInput) {
+  const time = motion.reducedMotion ? 0 : motion.timeSeconds;
+  ctx.save();
+  for (const band of ATMOSPHERE_BANDS) {
+    const p = tileToScreen({ x: band.tileX, y: band.tileY }, camera);
+    const drift = Math.sin(time * 0.18 + band.phase) * 12 * camera.zoom;
+    ctx.strokeStyle = `rgba(200, 219, 205, ${band.alpha})`;
+    ctx.lineWidth = Math.max(1, 5 * camera.zoom);
+    ctx.beginPath();
+    ctx.ellipse(p.x + drift, p.y, band.rx * camera.zoom, band.ry * camera.zoom, -0.1, 0, Math.PI * 2);
+    ctx.stroke();
+  }
+  ctx.restore();
+}
+
+function drawLighthouseHeadland({ camera, ctx, world }: DrawPharosVilleInput) {
+  const center = tileToScreen(world.lighthouse.tile, camera);
+  const zoom = camera.zoom;
+  ctx.save();
+  drawDiamond(ctx, center.x, center.y + 11 * zoom, 58 * zoom, 29 * zoom, LIGHTHOUSE_HEADLAND.shadow);
+  drawDiamond(ctx, center.x, center.y + 6 * zoom, 52 * zoom, 25 * zoom, LIGHTHOUSE_HEADLAND.cliff);
+  drawTileLowerFacet(ctx, center.x, center.y + 6 * zoom, 52 * zoom, 25 * zoom, "rgba(25, 29, 27, 0.58)");
+  drawDiamond(ctx, center.x, center.y - 2 * zoom, 42 * zoom, 21 * zoom, LIGHTHOUSE_HEADLAND.grass);
+  drawDiamond(ctx, center.x + 1 * zoom, center.y - 3 * zoom, 30 * zoom, 15 * zoom, LIGHTHOUSE_HEADLAND.stone);
+
+  ctx.strokeStyle = LIGHTHOUSE_HEADLAND.road;
+  ctx.lineCap = "round";
+  ctx.lineJoin = "round";
+  ctx.lineWidth = Math.max(2, 3.2 * zoom);
+  ctx.beginPath();
+  ctx.moveTo(center.x - 2 * zoom, center.y + 4 * zoom);
+  ctx.lineTo(center.x - 15 * zoom, center.y + 15 * zoom);
+  ctx.lineTo(center.x - 26 * zoom, center.y + 17 * zoom);
+  ctx.stroke();
+
+  ctx.strokeStyle = "rgba(223, 198, 132, 0.3)";
+  ctx.lineWidth = Math.max(1, zoom);
+  ctx.beginPath();
+  ctx.moveTo(center.x - 14 * zoom, center.y + 13 * zoom);
+  ctx.lineTo(center.x - 19 * zoom, center.y + 18 * zoom);
+  ctx.moveTo(center.x - 8 * zoom, center.y + 9 * zoom);
+  ctx.lineTo(center.x - 13 * zoom, center.y + 14 * zoom);
+  ctx.stroke();
+  ctx.restore();
 }
 
 function drawCemeteryGround({ camera, ctx, world }: DrawPharosVilleInput) {
@@ -418,6 +688,7 @@ function drawLighthouse({ assets, camera, ctx, motion, world }: DrawPharosVilleI
     : { x: center.x, y: center.y - 88 * camera.zoom };
   if (lighthouseAsset) {
     drawAsset(ctx, lighthouseAsset, center.x, center.y, camera.zoom);
+    if (!world.lighthouse.unavailable) drawLighthouseBeam(ctx, firePoint, camera.zoom, motion);
     drawLighthouseFire(ctx, firePoint, camera.zoom, world.lighthouse.color, motion);
     return;
   }
@@ -436,6 +707,7 @@ function drawLighthouse({ assets, camera, ctx, motion, world }: DrawPharosVilleI
   ctx.arc(0, -90, 12, 0, Math.PI * 2);
   ctx.fill();
   ctx.restore();
+  if (!world.lighthouse.unavailable) drawLighthouseBeam(ctx, firePoint, camera.zoom, motion);
   drawLighthouseFire(ctx, firePoint, camera.zoom, world.lighthouse.color, motion);
 }
 
@@ -513,6 +785,32 @@ function drawLighthouseFire(
   ctx.restore();
 }
 
+function drawLighthouseBeam(
+  ctx: CanvasRenderingContext2D,
+  point: ScreenPoint,
+  zoom: number,
+  motion: PharosVilleCanvasMotion,
+) {
+  const time = motion.reducedMotion ? 0 : motion.timeSeconds;
+  const pulse = 0.11 + Math.sin(time * 0.7) * 0.025;
+  ctx.save();
+  ctx.globalAlpha = pulse;
+  ctx.fillStyle = "#f5d176";
+  ctx.beginPath();
+  ctx.moveTo(point.x + 4 * zoom, point.y - 2 * zoom);
+  ctx.lineTo(point.x + 190 * zoom, point.y - 55 * zoom);
+  ctx.lineTo(point.x + 172 * zoom, point.y + 18 * zoom);
+  ctx.closePath();
+  ctx.fill();
+
+  ctx.globalAlpha = 0.18;
+  ctx.fillStyle = "#ffe2a0";
+  ctx.beginPath();
+  ctx.ellipse(point.x, point.y - 2 * zoom, 42 * zoom, 18 * zoom, -0.08, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.restore();
+}
+
 function drawPixelFlame(ctx: CanvasRenderingContext2D, points: Array<[number, number]>, color: string) {
   ctx.fillStyle = color;
   ctx.beginPath();
@@ -531,6 +829,28 @@ function drawBuildings({ camera, ctx }: DrawPharosVilleInput) {
     const p = tileToScreen({ x, y }, camera);
     drawBuilding(ctx, p.x, p.y, color, roof, camera.zoom);
   }
+}
+
+function drawDecorativeLights({ camera, ctx, motion }: DrawPharosVilleInput) {
+  const time = motion.reducedMotion ? 0 : motion.timeSeconds;
+  for (const light of VILLAGE_LIGHTS) {
+    const p = tileToScreen(light, camera);
+    drawLamp(ctx, p.x, p.y, camera.zoom * light.size, time + light.x * 0.31 + light.y * 0.17);
+  }
+}
+
+function drawLamp(ctx: CanvasRenderingContext2D, x: number, y: number, zoom: number, phase: number) {
+  const glow = 0.22 + Math.sin(phase * 1.6) * 0.04;
+  ctx.save();
+  ctx.fillStyle = `rgba(255, 197, 95, ${glow})`;
+  ctx.beginPath();
+  ctx.ellipse(x, y - 7 * zoom, 12 * zoom, 7 * zoom, 0, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.fillStyle = "#3f2d1f";
+  ctx.fillRect(Math.round(x - zoom), Math.round(y - 12 * zoom), Math.max(1, Math.round(2 * zoom)), Math.max(4, Math.round(12 * zoom)));
+  ctx.fillStyle = "#f5c766";
+  ctx.fillRect(Math.round(x - 2 * zoom), Math.round(y - 14 * zoom), Math.max(2, Math.round(4 * zoom)), Math.max(2, Math.round(3 * zoom)));
+  ctx.restore();
 }
 
 function drawDocks({ assets, camera, ctx, world }: DrawPharosVilleInput) {
@@ -1087,6 +1407,42 @@ function drawCemeteryMist({ camera, ctx, motion }: DrawPharosVilleInput) {
     ctx.ellipse(p.x + drift, p.y, band.rx * camera.zoom, band.ry * camera.zoom, -0.08, 0, Math.PI * 2);
     ctx.stroke();
   }
+  ctx.restore();
+}
+
+function drawBirds({ camera, ctx, motion, world }: DrawPharosVilleInput) {
+  const time = motion.reducedMotion ? 0 : motion.timeSeconds;
+  const origin = world.lighthouse.tile;
+  ctx.save();
+  for (const bird of BIRDS) {
+    const angle = time * bird.speed + bird.phase;
+    const tile = {
+      x: origin.x + bird.anchorX + Math.cos(angle) * bird.radiusX,
+      y: origin.y + bird.anchorY + Math.sin(angle) * bird.radiusY,
+    };
+    const p = tileToScreen(tile, camera);
+    const wing = motion.reducedMotion ? 0.34 : 0.34 + Math.sin(time * 5.2 + bird.phase) * 0.18;
+    drawBird(ctx, p.x, p.y - 34 * camera.zoom * bird.scale, camera.zoom * bird.scale, wing);
+  }
+  ctx.restore();
+}
+
+function drawBird(ctx: CanvasRenderingContext2D, x: number, y: number, zoom: number, wing: number) {
+  ctx.save();
+  ctx.strokeStyle = "rgba(231, 232, 216, 0.78)";
+  ctx.lineWidth = Math.max(1, 1.4 * zoom);
+  ctx.lineCap = "round";
+  ctx.beginPath();
+  ctx.moveTo(x - 8 * zoom, y);
+  ctx.quadraticCurveTo(x - 4 * zoom, y - 8 * zoom * wing, x, y);
+  ctx.quadraticCurveTo(x + 4 * zoom, y - 8 * zoom * wing, x + 8 * zoom, y);
+  ctx.stroke();
+  ctx.strokeStyle = "rgba(31, 40, 43, 0.28)";
+  ctx.lineWidth = Math.max(1, zoom);
+  ctx.beginPath();
+  ctx.moveTo(x - 3 * zoom, y + 1 * zoom);
+  ctx.lineTo(x + 3 * zoom, y + 1 * zoom);
+  ctx.stroke();
   ctx.restore();
 }
 
