@@ -1,39 +1,10 @@
-import type { FxRateSourceMode, FxRateState, FxSourceCadence } from "./fx-rate-state";
+import type { FxRateSourceMode, FxRateState } from "./fx-rate-state";
 import { getFxSourceStatus } from "./fx-rate-state";
-
-const BUSINESS_DAILY_FX_PEG_KEYS = new Set<string>([
-  "peggedEUR",
-  "peggedGBP",
-  "peggedCHF",
-  "peggedREAL",
-  "peggedJPY",
-  "peggedIDR",
-  "peggedSGD",
-  "peggedTRY",
-  "peggedAUD",
-  "peggedZAR",
-  "peggedCAD",
-  "peggedCNY",
-  "peggedPHP",
-  "peggedMXN",
-]);
-
-const CALENDAR_DAILY_FX_PEG_KEYS = new Set<string>([
-  "peggedCNH",
-  "peggedRUB",
-  "peggedUAH",
-  "peggedARS",
-]);
+import { getNaturalFxCadence, type FxSourceCadence } from "./fx-cadence";
 
 function formatIsoDateFromTimestamp(updatedAt: number | null | undefined): string | null {
   if (updatedAt == null || !Number.isFinite(updatedAt) || updatedAt <= 0) return null;
   return new Date(updatedAt * 1000).toISOString().slice(0, 10);
-}
-
-function getNaturalFxCadence(pegKey: string): FxSourceCadence | null {
-  if (BUSINESS_DAILY_FX_PEG_KEYS.has(pegKey)) return "business-daily";
-  if (CALENDAR_DAILY_FX_PEG_KEYS.has(pegKey)) return "calendar-daily";
-  return null;
 }
 
 function normalizeFiatCarryForwardMetadata(

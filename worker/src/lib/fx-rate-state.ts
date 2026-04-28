@@ -4,6 +4,7 @@ import { DAY_SECONDS } from "@shared/lib/time-constants";
 import { getCache, setCacheIfNewer, type CacheWriteResult } from "./db-cache";
 import { decodeJsonString } from "./cache-json";
 import { sanitizeRecordValues } from "./normalizers";
+import { inferFxSourceCadence, type FxSourceCadence } from "./fx-cadence";
 
 const FX_RATES_KEY = "fx-rates";
 const FX_RATES_META_KEY = "fx-rates-meta";
@@ -12,33 +13,9 @@ const FX_INTRADAY_SOURCE_STALE_AGE_SEC = 24 * 3600;
 const FX_CALENDAR_DAILY_ROLLOVER_HOUR_UTC = 6;
 const FX_BUSINESS_DAILY_PUBLISH_HOUR_UTC = 16;
 
-const BUSINESS_DAILY_FX_PEGS = new Set([
-  "peggedEUR",
-  "peggedGBP",
-  "peggedCHF",
-  "peggedREAL",
-  "peggedJPY",
-  "peggedIDR",
-  "peggedSGD",
-  "peggedTRY",
-  "peggedAUD",
-  "peggedZAR",
-  "peggedCAD",
-  "peggedCNY",
-  "peggedPHP",
-  "peggedMXN",
-]);
-
-const CALENDAR_DAILY_FX_PEGS = new Set([
-  "peggedCNH",
-  "peggedRUB",
-  "peggedUAH",
-  "peggedARS",
-]);
-
 export type FxRateSyncMode = "live" | "cached-fallback";
 export type FxRateSourceMode = "live" | "cached" | "hardcoded";
-export type FxSourceCadence = "intraday" | "calendar-daily" | "business-daily";
+export type { FxSourceCadence } from "./fx-cadence";
 export type FxSourceStatus = "fresh" | "degraded" | "stale" | "none";
 
 export interface FxRatesMeta {
@@ -184,18 +161,6 @@ function parseFxMeta(value: string, fallback: CacheRow, rates: Record<string, nu
 
 export function getFxRatesMetaKey(): string {
   return FX_RATES_META_KEY;
-}
-
-function inferFxSourceCadence(
-  pegKey: string,
-  mode: FxRateSourceMode | undefined,
-  explicitCadence?: FxSourceCadence,
-): FxSourceCadence {
-  if (explicitCadence) return explicitCadence;
-  if (mode === "hardcoded") return "intraday";
-  if (CALENDAR_DAILY_FX_PEGS.has(pegKey)) return "calendar-daily";
-  if (BUSINESS_DAILY_FX_PEGS.has(pegKey)) return "business-daily";
-  return "intraday";
 }
 
 function startOfUtcDaySec(nowSec: number): number {
