@@ -27,10 +27,6 @@
     "disposition": "deferred",
     "notes": "Supplemental asset intake still mixes multiple provider families. Defer further splitting until the stablecoin sync surface stabilizes after the current tranche."
   },
-  "worker/src/cron/sync-stablecoins/fallback.ts": {
-    "disposition": "deferred",
-    "notes": "Fallback stablecoin sync still mixes fallback intake, enrichment setup, cache publication, and post-enrichment orchestration. Keep this explicitly waived for the dedicated stablecoin-sync decomposition lane rather than folding a broad refactor into the current CAS visibility fix."
-  },
   "worker/src/api/audit-depeg-history.ts": {
     "disposition": "queued-p4",
     "notes": "The audit/repair handler still mixes validation, replay planning, and mutation orchestration. Keep it explicitly owned as a later admin-path hotspot rather than widening this tranche."
@@ -103,8 +99,8 @@
     "disposition": "deferred",
     "notes": "Surfaced after Phase 6 DEX-discovery extraction. Pool helper branch count reflects shared DEX classification policy used across scoring/discovery; defer decomposition until a dedicated DEX-liquidity policy cleanup can preserve current scoring semantics."
   },
-  "worker/src/cron/detect-depegs.ts": {
+  "src/components/pre-launch-detail.tsx": {
     "disposition": "queued-p4",
-    "notes": "Depeg detection still mixes fetch orchestration, signal arbitration, and persistence decisions in one large cron module. Keep it waived until the next depeg pipeline simplification pass."
+    "notes": "Surfaced after Phase 8 removed the depeg and fallback cron waivers. The pre-launch detail surface still combines page model shaping, timeline rendering, and section composition; keep it waived until the planned frontend route cleanup pass."
   }
 }

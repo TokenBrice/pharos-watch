@@ -78,6 +78,8 @@ const EXPORT_ALLOWLIST = new Set([
   "src/lib/compare-config.ts::ID_TO_COMPARE_COIN",
   // Consumed by scripts/check-frozen-invariants.ts (out-of-scan-scope).
   "src/lib/compare-pages.ts::STATIC_COMPARE_PAIRS",
+  // Consumed by scripts/check-cron-connection-budget.ts (out-of-scan-scope).
+  "shared/lib/cron-jobs.ts::CRON_CONNECTION_BUDGET",
   "src/lib/contagion-layout.ts::MAX_RADIUS",
   "src/lib/contagion-layout.ts::CORE_PAIR_X_JITTER",
   "src/lib/contagion-layout.ts::CORE_PAIR_Y_OFFSET",

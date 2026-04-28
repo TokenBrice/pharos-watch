@@ -26,7 +26,7 @@ export interface GeckoTerminalPoolsStageDependencies {
   sleepWithSignal: typeof sleepWithSignal;
 }
 
-export const defaultGeckoTerminalPoolsStageDependencies: GeckoTerminalPoolsStageDependencies = {
+const defaultGeckoTerminalPoolsStageDependencies: GeckoTerminalPoolsStageDependencies = {
   crawlTokenPools,
   fetchGtTokenPools,
   sleepWithSignal,

@@ -23,7 +23,7 @@ export interface CoinGeckoTickersStageDependencies {
   sleepWithSignal: typeof sleepWithSignal;
 }
 
-export const defaultCoinGeckoTickersStageDependencies: CoinGeckoTickersStageDependencies = {
+const defaultCoinGeckoTickersStageDependencies: CoinGeckoTickersStageDependencies = {
   fetchWithRetry,
   sleepWithSignal,
 };

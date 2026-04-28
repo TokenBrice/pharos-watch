@@ -27,7 +27,7 @@ export interface CoinGeckoPoolsStageDependencies {
   sleepWithSignal: typeof sleepWithSignal;
 }
 
-export const defaultCoinGeckoPoolsStageDependencies: CoinGeckoPoolsStageDependencies = {
+const defaultCoinGeckoPoolsStageDependencies: CoinGeckoPoolsStageDependencies = {
   shouldAttemptFetch,
   recordOutcome,
   fetchCgTokenPoolsWithStatus,

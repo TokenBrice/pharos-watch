@@ -30,7 +30,7 @@ export interface DexScreenerPoolsStageDependencies {
   getDsTrackedTokenPriceUsd: typeof getDsTrackedTokenPriceUsd;
 }
 
-export const defaultDexScreenerPoolsStageDependencies: DexScreenerPoolsStageDependencies = {
+const defaultDexScreenerPoolsStageDependencies: DexScreenerPoolsStageDependencies = {
   shouldAttemptFetch,
   recordOutcome,
   dsRateLimit,
